@@ -1,0 +1,3 @@
+{
+  "extends": "@horizon/typescript-config/base.json"
+}
