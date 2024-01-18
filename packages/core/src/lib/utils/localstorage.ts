@@ -1,0 +1,59 @@
+import { writable } from 'svelte/store'
+
+type Value = string | number | boolean | { [key: string]: unknown } | Value[]
+
+export const setValue = (key: string, value: Value) => {
+  const stringValue = typeof value !== 'string' ? JSON.stringify(value) : value
+  localStorage.setItem(key, stringValue)
+}
+
+export const getValue = <T>(key: string, parse = false) => {
+  const stringValue = localStorage.getItem(key)
+  if (!stringValue) return null
+
+  if (parse) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return JSON.parse(stringValue) as T
+  }
+
+  return stringValue as T
+}
+
+export const useLocalStorageItem = <T extends Value>(
+  itemId: string,
+  scope?: string,
+  defaultValue?: T,
+  autoSave = true
+) => {
+  const ITEM_KEY = scope ? `${scope}_${itemId}` : itemId
+
+  const value =
+    defaultValue !== undefined
+      ? writable<T>(defaultValue)
+      : writable<T | null>(null)
+
+  const revalidate = () => {
+    const stored = getValue<T>(ITEM_KEY, true)
+    if (stored !== null) {
+      value.set(stored)
+    }
+  }
+
+  const persist = (value: T) => {
+    setValue(ITEM_KEY, value)
+  }
+
+  revalidate()
+
+  if (autoSave) {
+    value.subscribe(value => {
+      if (value === null) {
+        localStorage.removeItem(ITEM_KEY)
+      } else {
+        persist(value)
+      }
+    })
+  }
+
+  return { value, revalidate, persist }
+}
