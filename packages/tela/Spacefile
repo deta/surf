@@ -1,0 +1,12 @@
+# Spacefile Docs: https://go.deta.dev/docs/spacefile/v0
+v: 0
+# icon: icon.png
+micros:
+  - name: blank
+    src: ./
+    engine: svelte-kit
+    public_routes:
+      - /shared/*
+      - /
+      # - /_app/*
+    primary: true

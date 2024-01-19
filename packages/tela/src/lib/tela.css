@@ -1,0 +1,44 @@
+.tela-board.mode-pan * {
+  user-select: none;
+  pointer-events: none;
+}
+.tela-board.mode-dragging * {
+  user-select: none;
+  pointer-events: none;
+}
+.tela-board.mode-resizing * {
+  user-select: none;
+  pointer-events: none;
+}
+
+.draggable {
+  cursor: grab;
+}
+.tela-container:has(.draggable.dragging) {
+  cursor: grabbing;
+}
+
+.resizable.top {
+  cursor: ns-resize;
+}
+.resizable.right {
+  cursor: ew-resize;
+}
+.resizable.bottom {
+  cursor: ns-resize;
+}
+.resizable.left {
+  cursor: ew-resize;
+}
+.resizable.top-left {
+  cursor: nwse-resize;
+}
+.resizable.top-right {
+  cursor: nesw-resize;
+}
+.resizable.bottom-right {
+  cursor: nwse-resize;
+}
+.resizable.bottom-left {
+  cursor: nesw-resize;
+}
