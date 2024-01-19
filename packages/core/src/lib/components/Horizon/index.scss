@@ -75,6 +75,9 @@
         background: #e2e2e2;
         flex-shrink: 0;
         padding: 0.25rem 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
 
     .content {

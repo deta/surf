@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, session } from 'electron'
+import { app, shell, BrowserWindow, session, globalShortcut } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -39,7 +39,39 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  registerShortcuts()
+  mainWindow.on('focus', registerShortcuts)
+  mainWindow.on('blur', unregisterShortcuts)
 }
+
+const sendShortcutToHorizon = (key: string) => {
+  console.log('sending shortcut', key)
+
+  const window = BrowserWindow.getFocusedWindow()
+  if (window) {
+    window.webContents.sendInputEvent({
+      type: 'keyDown',
+      keyCode: key,
+      modifiers: ['meta', 'ctrl'],
+    })
+  }
+}
+
+function registerShortcuts () {
+  globalShortcut.register(`CommandOrControl+n`, () => sendShortcutToHorizon('n'))
+  Array.from(Array(9).keys()).map((idx) => {
+    globalShortcut.register(`CommandOrControl+${idx + 1}`, () => sendShortcutToHorizon((idx + 1).toString()))
+  })
+}
+
+function unregisterShortcuts () {
+  globalShortcut.unregister(`CommandOrControl+n`)
+  Array.from(Array(9).keys()).map((idx) => {
+    globalShortcut.unregister(`CommandOrControl+${idx + 1}`)
+  })
+}
+
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('space.deta')

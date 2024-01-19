@@ -2,8 +2,8 @@
     import { onMount } from "svelte";
     import { get, writable, type Readable, type Writable } from "svelte/store";
 
-    import { Board, Grid, createSettings, createBoard, clamp } from "@deta/tela";
-    import type { IBoard, IPositionable } from "@deta/tela";
+    import { Board, Grid, createSettings, createBoard, clamp, snapToGrid } from "@deta/tela";
+    import type { IBoard, IPositionable, Vec4 } from "@deta/tela";
 
     import './index.scss'
 
@@ -44,6 +44,8 @@
     )
 
     const state = board.state
+    const selection = $state.selection
+    const selectionCss = $state.selectionCss
 
     let containerEl: HTMLElement
 
@@ -60,6 +62,56 @@
         $state.viewOffset.set({ x: $data.viewOffsetX, y: 0 })
     }
 
+    const onModSelectEnd = (
+        e: CustomEvent<{
+            event: MouseEvent
+            rect: Vec4
+        }>
+    ) => {
+        const { rect } = e.detail
+        let pos = { x: rect.x, y: rect.y }
+        let size = { x: rect.w, y: rect.h }
+        // Snap
+        pos.x = $settings.SNAP_TO_GRID
+        ? snapToGrid(pos.x, $settings.GRID_SIZE!)
+        : pos.x
+        pos.y = $settings.SNAP_TO_GRID
+        ? snapToGrid(pos.y, $settings.GRID_SIZE!)
+        : pos.y
+        size.x = $settings.SNAP_TO_GRID
+        ? snapToGrid(size.x, $settings.GRID_SIZE!)
+        : size.x
+        size.y = $settings.SNAP_TO_GRID
+        ? snapToGrid(size.y, $settings.GRID_SIZE!)
+        : size.y
+
+        if (size.x < 90 || size.y < 90) {
+            return
+            // if (!e.detail.event.shiftKey) return
+            pos = {
+                x: pos.x - 90,
+                y: pos.y - 90,
+            }
+            size = {
+                x: 180,
+                y: 180,
+            }
+        }
+
+        horizon.addCard({
+            x: pos.x,
+            y: pos.y,
+            width: size.x,
+            height: size.y,
+            data: {
+                title: "Google",
+                src: "https://google.com"
+            }
+        })
+
+        $state.stackingOrder.set($cards.map(e => get(e).id))
+    }
+
     onMount(() => {
         loadHorizon()
         handleWindowResize()
@@ -74,9 +126,14 @@
         {settings}
         {board}
         positionables={cards}
+        on:modSelectEnd={onModSelectEnd}
         bind:containerEl
         let:positionable
     >
+        <svelte:fragment slot="selectRect">
+            <div class="selectionRect" style={$selectionCss} />
+        </svelte:fragment>
+
         <svelte:fragment slot="raw">
             <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
         </svelte:fragment>

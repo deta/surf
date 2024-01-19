@@ -3,6 +3,7 @@ import type { Card } from "../types"
 import type { API } from "./api"
 import { parseError } from "../utils/errors"
 import log, { useLogScope, type ScopedLogger } from "../utils/log"
+import { generateID } from "../utils/id"
 
 
 /*
@@ -54,12 +55,14 @@ export class Horizon {
 
     async loadCards() {
         this.log.debug(`Loading cards`)
-        // this.api.getHorizon(this.id)
-        const { default: data } = await import('../data/cards.json')
-
-        this.log.debug(`Loaded ${data.length} cards`)
-        const transformed = data.map((d) => writable({ ...d, id: `${this.id}-${d.id}`}))
-        this.cards.set(transformed)
+        if (this.id === 'horizon_1_dummy') {
+            const { default: data } = await import('../data/cards.json')
+            this.log.debug(`Loaded ${data.length} cards`)
+            const transformed = data.map((d) => writable({ ...d, id: `${this.id}-${d.id}`}))
+            this.cards.set(transformed)
+        } else {
+            // this.api.getHorizon(this.id)
+        }
     }
 
     async updateData(updates: Partial<HorizonData>) {
@@ -79,6 +82,15 @@ export class Horizon {
 
         this.changeState('warm')
     }
+
+    async addCard(card: Omit<Card, 'id' | 'stacking_order'>) {
+        const newCard = writable({
+            ...card,
+            id: generateID(),
+            stacking_order: 1,
+        })
+        this.cards.update((c) => [...c, newCard])
+    }
 }
 
 export class HorizonsManager {
@@ -88,8 +100,6 @@ export class HorizonsManager {
     horizonStates: Writable<Map<string, HorizonState>>
 
     activeHorizon: Readable<Horizon | null>
-    coldHorizons: Readable<Horizon[]>
-    warmHorizons: Readable<Horizon[]>
     hotHorizons: Readable<Horizon[]>
 
     api: API
@@ -193,7 +203,7 @@ export class HorizonsManager {
     async createHorizon(name: string) {
         // const res = await this.api.createHorizon(name)
         const data = {
-            id: 'new-horizon',
+            id: generateID(),
             name,
             viewOffsetX: 0,
             default: false,

@@ -18,6 +18,10 @@ const maxSize = { x: Infinity, y: Infinity }
 let el: HTMLElement
 let webview: HTMLIFrameElement
 
+$: src = webview?.src
+
+$: console.log('src', src)
+
 const getHostname = (text: string) => {
     try {
         const url = new URL(text)
@@ -27,12 +31,23 @@ const getHostname = (text: string) => {
     }
 }
 
-$: title = getHostname($positionable.data.src)
+$: title = $positionable.data.title
+$: hostname = getHostname($positionable.data.src)
 
 onMount(() => {
     console.log('card mounted')
 
     webview.src = $positionable.data.src
+
+    webview.addEventListener('did-navigate', (e) => {
+        console.log('did-navigate', e)
+        $positionable.data.src = e.url
+    })
+
+    webview.addEventListener('page-title-updated', (e) => {
+        console.log('page-title-updated', e)
+        $positionable.data.title = e.title
+    })
 })
 </script>
   
@@ -52,11 +67,14 @@ onMount(() => {
         positionable={positionable}
         class=""
     >
-        <div class="top-bar">{title}</div>
+        <div class="top-bar">
+            <div>{title}</div>
+            <div>{hostname}</div>
+        </div>
     </Draggable>
 
     <div class="content tela-ignore">
-     <webview bind:this={webview} src="" partition="persist:horizon" frameborder="0"></webview>
+        <webview bind:this={webview} src="" partition="persist:horizon" frameborder="0"></webview>
     </div>
 </Positionable>
 
