@@ -46,8 +46,6 @@ function createWindow(): void {
 }
 
 const sendShortcutToHorizon = (key: string) => {
-  console.log('sending shortcut', key)
-
   const window = BrowserWindow.getFocusedWindow()
   if (window) {
     window.webContents.sendInputEvent({

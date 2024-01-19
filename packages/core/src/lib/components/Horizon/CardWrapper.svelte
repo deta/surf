@@ -18,10 +18,6 @@ const maxSize = { x: Infinity, y: Infinity }
 let el: HTMLElement
 let webview: HTMLIFrameElement
 
-$: src = webview?.src
-
-$: console.log('src', src)
-
 const getHostname = (text: string) => {
     try {
         const url = new URL(text)
@@ -35,17 +31,13 @@ $: title = $positionable.data.title
 $: hostname = getHostname($positionable.data.src)
 
 onMount(() => {
-    console.log('card mounted')
-
     webview.src = $positionable.data.src
 
     webview.addEventListener('did-navigate', (e) => {
-        console.log('did-navigate', e)
         $positionable.data.src = e.url
     })
 
     webview.addEventListener('page-title-updated', (e) => {
-        console.log('page-title-updated', e)
         $positionable.data.title = e.title
     })
 })
