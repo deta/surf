@@ -69,10 +69,15 @@ export class Horizon {
         this.data.update((d) => ({ ...d, ...updates }))
     }
 
-    async coolDown() {
-        this.log.debug(`Cooling down`)
+    async freeze() {
+        this.log.debug(`Freezing`)
         this.cards.set([])
         this.changeState('cold')
+    }
+
+    async coolDown() {
+        this.log.debug(`Cooling down`)
+        this.changeState('warm')
     }
 
     async warmUp() {
@@ -97,10 +102,12 @@ export class HorizonsManager {
     activeHorizonId: Writable<string | null>
     horizons: Writable<Horizon[]>
 
-    horizonStates: Writable<Map<string, HorizonState>>
+    horizonStates: Writable<Map<string, { state: HorizonState, since: Date }>>
 
     activeHorizon: Readable<Horizon | null>
     hotHorizons: Readable<Horizon[]>
+
+    hotHorizonsThreshold: number
 
     api: API
     log: ScopedLogger
@@ -113,10 +120,13 @@ export class HorizonsManager {
         this.horizons = writable([])
         this.horizonStates = writable(new Map())
 
+        // how many horizons to keep in the dom
+        this.hotHorizonsThreshold = 3
+
         this.hotHorizons = derived([this.horizons, this.horizonStates], ([horizons, horizonStates]) => {
             return horizons.filter((h) => {
-                const state = horizonStates.get(h.id)
-                return state === 'hot'
+                const horizonState = horizonStates.get(h.id)
+                return horizonState?.state === 'hot'
             })
         })
 
@@ -151,7 +161,7 @@ export class HorizonsManager {
         }, this.api))
 
         this.horizons.set(horizons)
-        this.horizonStates.set(new Map(horizons.map((h) => [h.id, h.getState()])))
+        this.horizonStates.set(new Map(horizons.map((h) => [h.id, { state: h.getState(), since: new Date() }])))
     }
 
     getDefaultHorizon() {
@@ -172,32 +182,53 @@ export class HorizonsManager {
         return horizon
     }
 
-    async warmUpHorizon(id: string) {
-        const horizon = this.getHorizon(id)
+    changeHorizonState(id: string, state: HorizonState) {
+        this.horizonStates.update((s) => s.set(id, { state, since: new Date() }))
+    }
+
+    async warmUpHorizon(idOrHorizon: string | Horizon) {
+        const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
         await horizon.warmUp()
-        this.horizonStates.update((s) => s.set(id, 'warm'))
+        this.changeHorizonState(horizon.id, 'warm')
     }
 
-    async coolDownHorizon(id: string) {
-        const horizon = this.getHorizon(id)
+    async coolDownHorizon(idOrHorizon: string | Horizon) {
+        const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
         await horizon.coolDown()
-        this.horizonStates.update((s) => s.set(id, 'cold'))
+        this.changeHorizonState(horizon.id, 'cold')
     }
 
-    async switchHorizon(id: string) {
-        const horizon = this.getHorizon(id)
+    async switchHorizon(idOrHorizon: string | Horizon) {
+        const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
 
         if (horizon.getState() === 'cold') {
             await horizon.warmUp()
         }
 
-        horizon.changeState('hot')
-        this.horizonStates.update((s) => s.set(id, 'hot'))
+        if (horizon.getState() !== 'hot') {
+            horizon.changeState('hot')
+            this.changeHorizonState(horizon.id, 'hot')
 
-        // TODO: cool down other older horizons
+            // cool down other older hot horizons
+            if (get(this.hotHorizons).length > this.hotHorizonsThreshold) {
+                this.log.debug(`Cooling down older hot horizons`)
+                const horizonStates = get(this.horizonStates)
+                const hotHorizons = Array.from(horizonStates.entries())
+                    .map(([id, state]) => ({ id, ...state }))
+                    .filter((horizon) => horizon.state === 'hot')
+                    .sort((a, b) => a.since.getTime() - b.since.getTime()) // oldest first
 
-        this.log.debug(`Making horizon ${id} active`)
-        this.activeHorizonId.set(id)
+                this.log.debug(`Found ${hotHorizons.length} hot horizons`)
+                while (hotHorizons.length > this.hotHorizonsThreshold) {
+                    const horizon = hotHorizons.shift()
+                    if (!horizon) break
+                    await this.coolDownHorizon(horizon.id)
+                }
+            }
+        }
+
+        this.log.debug(`Making horizon ${horizon.id} active`)
+        this.activeHorizonId.set(horizon.id)
     }
 
     async createHorizon(name: string) {

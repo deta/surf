@@ -6,26 +6,38 @@
 
     import Horizon from "./Horizon.svelte";
     import { generateRandomHue } from "../../utils/color";
+  import { derived } from "svelte/store";
 
     const api = new API()
     const horizonManager = new HorizonsManager(api)
 
     const horizons = horizonManager.horizons
     const hotHorizons = horizonManager.hotHorizons
+    const horizonStates = horizonManager.horizonStates
     const activeHorizonId = horizonManager.activeHorizonId
     const activeHorizon = horizonManager.activeHorizon
 
     horizons.subscribe(e => console.log('horizons changed', e))
 
-    $: console.log('horizons', $horizons.map(e => ({...e, state: e.getState()})))
-    $: console.log('hotHorizons', $hotHorizons.map(e => ({...e, state: e.getState()})))
-    $: console.log('activeHorizonId', $activeHorizonId)
-    $: console.log('activeHorizon', $activeHorizon)
+    const hotHorizonsSorted = derived(horizonStates, (horizonStates) => {
+        return Array.from(horizonStates.entries())
+            .map(([id, state]) => ({ id, ...state }))
+            .filter((horizon) => horizon.state === 'hot')
+            .sort((a, b) => a.since.getTime() - b.since.getTime()) // oldest first
+    })
+
+    // $: console.log('horizons', $horizons.map(e => ({...e, state: e.getState()})))
+    // $: console.log('hotHorizons', $hotHorizons.map(e => ({...e, state: e.getState()})))
+    // $: console.log('activeHorizonId', $activeHorizonId)
+    // $: console.log('activeHorizon', $activeHorizon)
+    $: console.log('hotHorizonsSorted', $hotHorizonsSorted)
 
     const switchHorizon = (id: string) => {
         const nextHorizon = $horizons.find(e => e.id === id)
         if (nextHorizon) {
             horizonManager.switchHorizon(nextHorizon.id)
+        } else {
+            console.error('Horizon not found', id)
         }
     }
 
@@ -67,7 +79,7 @@
                 class="list-item horizon-item"
                 style="--item-color-hue: {generateRandomHue(idx + horizon.id)};"
             >
-                {idx + 1}
+                {idx + 1} {$hotHorizons.includes(horizon) ? '🔥' : '🧊'}
             </div>
         {/each}
 
