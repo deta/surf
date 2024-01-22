@@ -5,6 +5,7 @@
     "dev": "turbo dev",
     "dev:desktop": "turbo dev --filter=desktop",
     "build": "turbo build",
+    "build:packages": "turbo build --filter=!desktop",
     "build:desktop": "yarn workspace desktop build",
     "build:desktop:mac": "yarn workspace desktop build:mac",
     "build:desktop:win": "yarn workspace desktop build:win",
