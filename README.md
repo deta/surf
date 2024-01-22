@@ -2,6 +2,15 @@
 
 Monorepo containing the Horizon desktop app, a future web version and all related UI components and logic.
 
+## Installation
+
+To use on MacOS:
+
+- download [`desktop-0.0.1.arm64.dmg`](https://github.com/deta/horizon/releases/latest/download/desktop-0.0.1.arm64.dmg) from the [latest release](https://github.com/deta/horizon/releases/latest)
+- move it to your `Applications` folder
+- run `xattr -cr /Applications/spaceOS.app` in your Terminal
+- start the app
+
 ## Setup
 
 Run the following command:
