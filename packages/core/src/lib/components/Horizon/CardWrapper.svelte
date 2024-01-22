@@ -7,10 +7,7 @@
   import { Draggable, Positionable, Resizable } from '@horizon/tela'
   import WebviewWrapper from './WebviewWrapper.svelte'
 
-  export let positionable: Writable<Positionable<any>>
-
-  $: card = $positionable as unknown as Card
-
+  export let positionable: Writable<Card>
   const dispatch = createEventDispatcher<{ change: void; load: void }>()
 
   const minSize = { x: 100, y: 100 }
@@ -21,12 +18,11 @@
   let webview: WebviewWrapper | undefined
 
   const updateCard = () => {
-    console.log('updateCard', card)
-    // horizon.updateCard($card)
+    console.log('updateCard', $positionable)
     dispatch('change')
   }
 
-  const handleDragEnd = (e: any) => {
+  const handleDragEnd = (_: any) => {
     updateCard()
   }
 
@@ -35,10 +31,6 @@
     // el.addEventListener('draggable_move', onDragMove)
     el.addEventListener('draggable_end', handleDragEnd)
     el.addEventListener('resizable_end', updateCard)
-
-    // webview.addEventListener('did-finish-load', (e: any) => {
-    //    dispatch('load')
-    // })
   })
 
   onDestroy(() => {
@@ -101,7 +93,12 @@
   </Draggable>
 
   <div class="content tela-ignore">
-    <WebviewWrapper bind:this={webview} src={initialSrc} partition="persist:horizon" />
+    <WebviewWrapper
+      bind:this={webview}
+      src={initialSrc}
+      partition="persist:horizon"
+      on:didFinishLoad={() => dispatch('load')}
+    />
   </div>
 </Positionable>
 

@@ -1,6 +1,9 @@
 <script lang="ts">
   import { writable } from 'svelte/store'
   import type { WebviewTag } from 'electron'
+  import { createEventDispatcher } from 'svelte'
+
+  const dispatch = createEventDispatcher<{ didFinishLoad: void; }>()
 
   export let src: string
   export let partition: string
@@ -12,6 +15,7 @@
   export const title = writable('')
 
   let webview: WebviewTag
+
 
   $: if (webview) {
     webview.addEventListener('did-navigate', (e: any) => {
@@ -28,6 +32,7 @@
     webview.addEventListener('did-start-loading', () => ($isLoading = true))
     webview.addEventListener('did-stop-loading', () => ($isLoading = false))
     webview.addEventListener('page-title-updated', (e: any) => ($title = e.title))
+    webview.addEventListener('did-finish-load', (_: any) => dispatch('didFinishLoad'))
   }
 
   export function navigate(targetUrl: string): void {

@@ -2,7 +2,6 @@ import { app, shell, BrowserWindow, session, globalShortcut, ipcMain } from 'ele
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-// import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 function createWindow(): void {
   const spaceSession = session.fromPartition('persist:horizon-session-v0')
@@ -14,13 +13,12 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       session: spaceSession,
-      webSecurity: false,
       webviewTag: true
     }
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow.showInactive()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
