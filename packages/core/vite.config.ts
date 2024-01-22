@@ -11,7 +11,7 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/lib/main.ts'),
       name: 'Index',
       // the proper extensions will be added
-      fileName: 'index',
+      fileName: 'index'
     },
     rollupOptions: {
       // make sure to externalize deps that shouldn't be bundled
@@ -21,9 +21,9 @@ export default defineConfig({
         // Provide global variables to use in the UMD build
         // for externalized deps
         globals: {
-          svelte: 'Svelte',
-        },
-      },
-    },
-  },
+          svelte: 'Svelte'
+        }
+      }
+    }
+  }
 })

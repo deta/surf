@@ -43,7 +43,7 @@ export const useLogScope = (scope: string) => {
     debug: (...data: any[]) => debug(`[${scope}]`, ...data),
     error: (...data: any[]) => error(`[${scope}]`, ...data),
     warn: (...data: any[]) => warn(`[${scope}]`, ...data),
-    json: (data: any) => json(data),
+    json: (data: any) => json(data)
   }
 }
 
@@ -55,5 +55,5 @@ export default {
   debug,
   error,
   warn,
-  json,
+  json
 }

@@ -61,9 +61,11 @@
       round((1 - value / maxValue) * GRAPH_HEIGHT)
     );
   }
-  onDestroy(value.subscribe((v) => {
-    if (canvasEl) update(v.value, v.maxValue)
-  }));
+  onDestroy(
+    value.subscribe((v) => {
+      if (canvasEl) update(v.value, v.maxValue);
+    })
+  );
 
   onMount(() => {
     PR = round(window.devicePixelRatio || 1);
@@ -100,4 +102,4 @@
   });
 </script>
 
-<canvas bind:this={canvasEl}/>
+<canvas bind:this={canvasEl} />

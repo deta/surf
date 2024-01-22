@@ -34,20 +34,36 @@ export function posToAbsolute(
 }
 
 /**
-   * @param x
-   * @param y
-   * @param width
-   * @param height
-   * @param viewX
-   * @param viewY
-   * @param viewPort
-   * @param zoom
-   * @param CULL_MARGIN_WIDHT
-   * @param CULL_MARGIN_HEIGHT
-   */
-  export function isInsideViewport(x: number, y: number, width: number, height: number, viewX: number, viewY: number, viewPort: Vec4, zoom: number, marginWidth = 0, marginHeight = 0) {
-    return x + width + marginWidth >= viewX && y + height + marginHeight >= viewY && x - marginWidth <= viewX + viewPort.w / (zoom * 1) && y - marginHeight <= viewY + viewPort.h / (zoom * 1);
-  }
+ * @param x
+ * @param y
+ * @param width
+ * @param height
+ * @param viewX
+ * @param viewY
+ * @param viewPort
+ * @param zoom
+ * @param CULL_MARGIN_WIDHT
+ * @param CULL_MARGIN_HEIGHT
+ */
+export function isInsideViewport(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  viewX: number,
+  viewY: number,
+  viewPort: Vec4,
+  zoom: number,
+  marginWidth = 0,
+  marginHeight = 0
+) {
+  return (
+    x + width + marginWidth >= viewX &&
+    y + height + marginHeight >= viewY &&
+    x - marginWidth <= viewX + viewPort.w / (zoom * 1) &&
+    y - marginHeight <= viewY + viewPort.h / (zoom * 1)
+  );
+}
 
 export function hasClassOrParentWithClass(element: HTMLElement, className: string): boolean {
   if (!element) {

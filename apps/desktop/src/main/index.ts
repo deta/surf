@@ -51,7 +51,7 @@ const sendShortcutToHorizon = (key: string) => {
     window.webContents.sendInputEvent({
       type: 'keyDown',
       keyCode: key,
-      modifiers: ['meta', 'ctrl'],
+      modifiers: ['meta', 'ctrl']
     })
   }
 }
@@ -59,7 +59,9 @@ const sendShortcutToHorizon = (key: string) => {
 function registerShortcuts() {
   globalShortcut.register(`CommandOrControl+n`, () => sendShortcutToHorizon('n'))
   Array.from(Array(9).keys()).map((idx) => {
-    globalShortcut.register(`CommandOrControl+${idx + 1}`, () => sendShortcutToHorizon((idx + 1).toString()))
+    globalShortcut.register(`CommandOrControl+${idx + 1}`, () =>
+      sendShortcutToHorizon((idx + 1).toString())
+    )
   })
 }
 
@@ -87,7 +89,6 @@ async function handleCaptureWebContents() {
 
   return null
 }
-
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('space.deta')

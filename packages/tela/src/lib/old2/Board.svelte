@@ -57,7 +57,12 @@
     y: number,
     duration: number = 400,
     delay: number = 0,
-    bounds: { minX: number | null, maxX: number | null, minY: number | null, maxY: number | null } = {
+    bounds: {
+      minX: number | null;
+      maxX: number | null;
+      minY: number | null;
+      maxY: number | null;
+    } = {
       minX: null,
       maxX: null,
       minY: null,
@@ -66,15 +71,15 @@
   ) {
     // todo: add gta pan mode
     const boundX = clamp(
-        x,
-        bounds.minX !== null ? bounds.minX : -Infinity,
-        bounds.maxX !== null ? bounds.maxX - window.innerWidth : Infinity // todo: use bounding rect
-      );
-      const boundY = clamp(
-        y,
-        bounds.minY !== null ? bounds.minY : -Infinity,
-        bounds.maxY !== null ? bounds.maxY! - window.innerHeight : Infinity
-      );
+      x,
+      bounds.minX !== null ? bounds.minX : -Infinity,
+      bounds.maxX !== null ? bounds.maxX - window.innerWidth : Infinity // todo: use bounding rect
+    );
+    const boundY = clamp(
+      y,
+      bounds.minY !== null ? bounds.minY : -Infinity,
+      bounds.maxY !== null ? bounds.maxY! - window.innerHeight : Infinity
+    );
     return Promise.all([
       viewOffset.x.set(boundX, { duration, delay }),
       viewOffset.y.set(boundY, { duration, delay })
@@ -107,7 +112,10 @@
     }>,
     settings: Writable<IBoardSettings>,
     handlers: {
-      onChunksChanged?: (chunks: Writable<Map<string, Writable<IPositionable[]>>>, changed: Set<string>) => void;
+      onChunksChanged?: (
+        chunks: Writable<Map<string, Writable<IPositionable[]>>>,
+        changed: Set<string>
+      ) => void;
     } = {}
   ): IBoard {
     initialState.viewOffset = {
@@ -135,7 +143,8 @@
       easing: cubicOut
     });
     initialState.mode = initialState.mode !== undefined ? initialState.mode : "draw";
-    initialState.selection = initialState.selection !== undefined ? initialState.selection : writable(new Set());
+    initialState.selection =
+      initialState.selection !== undefined ? initialState.selection : writable(new Set());
 
     const state = writable<IBoardState>(initialState as unknown as IBoardState); // hack: types
 
@@ -143,7 +152,10 @@
       state,
 
       // Handlers
-      onChunksChanged: (chunks: Writable<Map<string, Writable<IPositionable[]>>>, changed: Set<string>) => {
+      onChunksChanged: (
+        chunks: Writable<Map<string, Writable<IPositionable[]>>>,
+        changed: Set<string>
+      ) => {
         handlers.onChunksChanged && handlers.onChunksChanged(chunks, changed);
       },
 
@@ -155,31 +167,31 @@
         });
       },
       panTo: (x: number, y: number, duration = 400, delay = 0) => {
-        state.update(s => {
+        state.update((s) => {
           s.mode = "auto-panning";
           return s;
-        })
+        });
         const p = panTo(get(state).viewOffset, x, y, duration, delay, get(settings).BOUNDS);
         p.then(() => {
-          state.update(s => {
+          state.update((s) => {
             s.mode = "draw";
             return s;
-          })
-        })
+          });
+        });
         return p;
       },
       zoomTo: (zoom: number, duration = 400, delay = 0) => {
-        state.update(s => {
+        state.update((s) => {
           s.mode = "auto-zooming";
           return s;
-        })
+        });
         const p = zoomTo(get(state), zoom, duration, delay);
         p.then(() => {
-          state.update(s => {
+          state.update((s) => {
             s.mode = "draw";
             return s;
-          })
-        })
+          });
+        });
         return p;
       }
     };
@@ -188,7 +200,7 @@
   export function moveToStackingTop(stack: Writable<string[]>, key: string) {
     const l = get(stack).length;
     // console.time(`[StackingOrder-update :: n = ${l}]`); // todo: make debug only
-    stack.update(s => {
+    stack.update((s) => {
       const i = s.indexOf(key);
       s.push(key);
       if (i === -1) return s;
@@ -243,7 +255,7 @@
     size: { x: 0, y: 0 }
   };
 
-  $: transformCss = `transform-origin: top left; transform: ${preTransform || ''} ${$zoom !== 1 ? `scale(${$zoom})` : ''} translate3d(${-$viewX}px, ${-$viewY}px, 0) ${postTransform || ''};`;
+  $: transformCss = `transform-origin: top left; transform: ${preTransform || ""} ${$zoom !== 1 ? `scale(${$zoom})` : ""} translate3d(${-$viewX}px, ${-$viewY}px, 0) ${postTransform || ""};`;
 
   // $: selectionCss = `transform: translate(${
   //   $settings.SNAP_TO_GRID ? snapToGrid(Math.floor($viewX + (selectState.pos.x - 0.5) / $zoom), $settings.GRID_SIZE!) : $viewX + selectState.pos.x / $zoom
@@ -257,9 +269,7 @@
 
   $: selectionCss = `transform: translate(${selectState.pos.x}px, ${
     selectState.pos.y
-  }px); width: ${Math.round(selectState.size.x)}px; height: ${Math.round(
-    selectState.size.y
-  )}px;`;
+  }px); width: ${Math.round(selectState.size.x)}px; height: ${Math.round(selectState.size.y)}px;`;
 
   // if ($settings.BOUNDS?.minX !== null && $viewX < $settings.BOUNDS!.minX) {
   //   $viewX = $settings.BOUNDS!.minX;
@@ -278,7 +288,7 @@
   function posToViewportPos(x: number, y: number) {
     return {
       x: $viewX + x / $zoom,
-      y: $viewY + y / $zoom//y - $viewY + window.scrollY // todo: fix
+      y: $viewY + y / $zoom //y - $viewY + window.scrollY // todo: fix
     };
   }
   function stopDrawing() {
@@ -315,7 +325,11 @@
       const absoluteMouseYOld = $viewY + e.clientY / $zoom;
 
       const delta = e.deltaY;
-      const newZoom = clamp($zoom - delta / 500, $settings.BOUNDS?.minZoom!, $settings.BOUNDS?.maxZoom!);
+      const newZoom = clamp(
+        $zoom - delta / 500,
+        $settings.BOUNDS?.minZoom!,
+        $settings.BOUNDS?.maxZoom!
+      );
 
       const absoluteMouseXNew = $viewX + e.clientX / newZoom;
       const absoluteMouseYNew = $viewY + e.clientY / newZoom;
@@ -327,16 +341,19 @@
       $state.viewOffset.y.set($viewY + offsetY, { duration: 0 });
       $state.zoom.set(newZoom, { duration: 0 });
 
-      debounce("tela_zoomModeReset", 50, () => $state.mode = "draw");
+      debounce("tela_zoomModeReset", 50, () => ($state.mode = "draw"));
     } else {
-      if (!$settings.CAN_PAN || hasClassOrParentWithClass(e.target as HTMLElement, "tela-ignore")) return;
+      if (!$settings.CAN_PAN || hasClassOrParentWithClass(e.target as HTMLElement, "tela-ignore"))
+        return;
       e.preventDefault();
       e.stopPropagation();
 
       $state.mode = "panning";
 
-      const deltaX = ($settings.PAN_DIRECTION === "xy" || $settings.PAN_DIRECTION === "x") ? e.deltaX / $zoom : 0;
-      const deltaY = ($settings.PAN_DIRECTION === "xy" || $settings.PAN_DIRECTION === "y") ? e.deltaY / $zoom : 0;
+      const deltaX =
+        $settings.PAN_DIRECTION === "xy" || $settings.PAN_DIRECTION === "x" ? e.deltaX / $zoom : 0;
+      const deltaY =
+        $settings.PAN_DIRECTION === "xy" || $settings.PAN_DIRECTION === "y" ? e.deltaY / $zoom : 0;
 
       const boundX = clamp(
         $viewX + deltaX,
@@ -352,11 +369,14 @@
       $state.viewOffset.x.set(boundX, { duration: 0 });
       $state.viewOffset.y.set(boundY, { duration: 0 });
 
-      if (boundX % 3 === 0) { // todo: not only x !!
-        debounce("tela_board_pan_done", 250, () => dispatch("panDone", { offset: $state.viewOffset }));
+      if (boundX % 3 === 0) {
+        // todo: not only x !!
+        debounce("tela_board_pan_done", 250, () =>
+          dispatch("panDone", { offset: $state.viewOffset })
+        );
       }
 
-      debounce("tela_trackpadPanModeReset", 60, () => $state.mode = "draw");
+      debounce("tela_trackpadPanModeReset", 60, () => ($state.mode = "draw"));
     }
   }
 
@@ -402,7 +422,8 @@
 
       document.addEventListener("mousemove", onMouseMoveDraw);
       document.addEventListener("mouseup", onMouseUp, { once: true });
-    } else if ($mode === "panning") { // Todo: fix panning
+    } else if ($mode === "panning") {
+      // Todo: fix panning
       e.stopPropagation();
 
       dragState.init = { x: clientX, y: clientY };
@@ -427,10 +448,10 @@
   }
 
   function onBoardMouseDown(e: MouseEvent) {
-    $state.selection.update(_selection => {
+    $state.selection.update((_selection) => {
       _selection.clear();
       return _selection;
-    })
+    });
   }
 
   function onMouseMovePan(e: MouseEvent | TouchEvent) {
@@ -536,12 +557,12 @@
     }
     $state.mode = "draw";
     selectState = {
-        init: { x: 0, y: 0 },
-        curr: { x: 0, y: 0 },
-        offset: { x: 0, y: 0 },
-        pos: { x: 0, y: 0 },
-        size: { x: 0, y: 0 }
-      };
+      init: { x: 0, y: 0 },
+      curr: { x: 0, y: 0 },
+      offset: { x: 0, y: 0 },
+      pos: { x: 0, y: 0 },
+      size: { x: 0, y: 0 }
+    };
   }
 
   //console.debug("Handling n positionables:", Array.from($chunks.values()).reduce((a, b) => a + b.length, 0));
@@ -549,12 +570,12 @@
 
   onMount(() => {
     const rec = containerEl.getBoundingClientRect();
-    console.log("rec", rec)
+    console.log("rec", rec);
     $state.viewPort = {
       x: rec.x,
       y: rec.y,
-      w: window.innerWidth,//rec.right - rec.left,
-      h: window.innerHeight//rec.bottom - rec.top
+      w: window.innerWidth, //rec.right - rec.left,
+      h: window.innerHeight //rec.bottom - rec.top
     };
   });
 </script>
@@ -565,7 +586,11 @@
     style="position: absolute; right: 1ch; top: 1ch; background: darkblue; z-index: 200; color: #fff; padding: 4px; display: flex; gap: 2ch; user-select: none; pointer-events: none;"
   >
     {#if $settings.DEV?.SHOW_POS}
-      <span>{Math.floor($viewX / $settings.CHUNK_SIZE)} // {Math.floor($viewY / $settings.CHUNK_SIZE)}</span>
+      <span
+        >{Math.floor($viewX / $settings.CHUNK_SIZE)} // {Math.floor(
+          $viewY / $settings.CHUNK_SIZE
+        )}</span
+      >
       <span>{$viewX} // {$viewY} // {$zoom}x</span>
     {/if}
     {#if $settings.DEV?.SHOW_MODE}
@@ -574,7 +599,7 @@
   </div>
 {/if}
 
-<svelte:window on:keydown={onKeyDown} on:keyup={onKeyUp} on:wheel|nonpassive={onWheel}/>
+<svelte:window on:keydown={onKeyDown} on:keyup={onKeyUp} on:wheel|nonpassive={onWheel} />
 
 <div
   class="tela-container"
@@ -582,7 +607,11 @@
   on:touchstart|nonpassive={onMouseDown}
   bind:this={containerEl}
 >
-  <div class="board mode-{$mode}" style="{transformCss} {$$restProps.style || ''}" on:mousedown={onBoardMouseDown}>
+  <div
+    class="board mode-{$mode}"
+    style="{transformCss} {$$restProps.style || ''}"
+    on:mousedown={onBoardMouseDown}
+  >
     <!-- {#if ["select", "zoom", "pan", "panning"].includes($mode)}
     <div class="dragIntercept"></div>
   {/if} -->
@@ -595,8 +624,8 @@
 
     <slot name="meta" />
 
-    <slot/>
-    </div>
+    <slot />
+  </div>
 </div>
 
 <style>

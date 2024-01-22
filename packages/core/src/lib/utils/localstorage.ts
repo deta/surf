@@ -27,10 +27,7 @@ export const useLocalStorageItem = <T extends Value>(
 ) => {
   const ITEM_KEY = scope ? `${scope}_${itemId}` : itemId
 
-  const value =
-    defaultValue !== undefined
-      ? writable<T>(defaultValue)
-      : writable<T | null>(null)
+  const value = defaultValue !== undefined ? writable<T>(defaultValue) : writable<T | null>(null)
 
   const revalidate = () => {
     const stored = getValue<T>(ITEM_KEY, true)
@@ -46,7 +43,7 @@ export const useLocalStorageItem = <T extends Value>(
   revalidate()
 
   if (autoSave) {
-    value.subscribe(value => {
+    value.subscribe((value) => {
       if (value === null) {
         localStorage.removeItem(ITEM_KEY)
       } else {

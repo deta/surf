@@ -3,9 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { getContext, setContext } from 'svelte'
 
-import type {
-  Metadata,
-} from '@horizon/types'
+import type { Metadata } from '@horizon/types'
 
 import log from '@horizon/core/src/lib/utils/log'
 import { APIError, NetworkError } from '@horizon/core/src/lib/utils/errors'
@@ -18,7 +16,7 @@ export const ENDPOINTS = {
   horizons: '/v0/horizons',
   card: '/v0/horizons/card',
   resource: '/v0/horizons/resource',
-  metadata: '/v0/metadata',
+  metadata: '/v0/metadata'
 }
 
 export interface PaginationRequest {
@@ -40,11 +38,7 @@ export type PaginatedResponse<T> = {
   pages: Pagination
 }
 
-export type Sorting =
-  | 'created_at_asc'
-  | 'created_at_desc'
-  | 'updated_at_asc'
-  | 'updated_at_desc'
+export type Sorting = 'created_at_asc' | 'created_at_desc' | 'updated_at_asc' | 'updated_at_desc'
 
 export class API {
   baseUrl: string
@@ -52,8 +46,7 @@ export class API {
 
   constructor(baseUrl?: string, captureExceptions?: boolean) {
     this.baseUrl = baseUrl || `${location.origin}/api`
-    this.captureExceptions =
-      captureExceptions !== undefined ? captureExceptions : true
+    this.captureExceptions = captureExceptions !== undefined ? captureExceptions : true
   }
 
   static provide = (endpoint?: string) => {
@@ -87,7 +80,7 @@ export class API {
     pagination,
     timeout = 15000,
     rawPayload = false,
-    options,
+    options
   }: {
     method: string
     path: string
@@ -103,10 +96,8 @@ export class API {
     const url = this.buildUrl(path, base)
 
     if (pagination) {
-      if (pagination.page)
-        url.searchParams.set('page', pagination.page.toString())
-      if (pagination.per_page)
-        url.searchParams.set('per_page', pagination.per_page.toString())
+      if (pagination.page) url.searchParams.set('page', pagination.page.toString())
+      if (pagination.per_page) url.searchParams.set('per_page', pagination.per_page.toString())
     }
 
     return fetch(url, {
@@ -117,25 +108,24 @@ export class API {
         'Content-Type': 'application/json',
         Accept: 'application/json', // TODO: this might break stuff.?
         [HEADER_SPACE_CLIENT_KEY]: 'bridge',
-        ...headers,
+        ...headers
       },
       body: rawPayload ? (payload as BodyInit) : JSON.stringify(payload),
-      ...options,
+      ...options
     })
-      .catch(err => {
+      .catch((err) => {
         log.error(err)
         if (err instanceof Error) {
           throw new NetworkError({
-            cause: err,
+            cause: err
           })
         } else {
           throw err
         }
       })
-      .then(async response => {
+      .then(async (response) => {
         const contentType = response.headers.get('content-type')
-        const isJson =
-          contentType && contentType.indexOf('application/json') !== -1
+        const isJson = contentType && contentType.indexOf('application/json') !== -1
 
         if (!response.ok) {
           log.error(response)
@@ -153,7 +143,7 @@ export class API {
               message: response.statusText,
               detail: json.detail as string,
               body: json,
-              response,
+              response
             })
 
             throw err
@@ -162,7 +152,7 @@ export class API {
           const err = new APIError({
             status: response.status,
             message: response.statusText,
-            response,
+            response
           })
 
           throw err
@@ -176,7 +166,7 @@ export class API {
     try {
       const url = this.buildUrl(ENDPOINTS.space)
       const response = await fetch(url, {
-        method: 'GET',
+        method: 'GET'
       })
 
       if (response.ok) {
@@ -192,7 +182,7 @@ export class API {
   async logout(): Promise<boolean> {
     const url = this.buildUrl(ENDPOINTS.auth + '/logout')
     const response = await fetch(url, {
-      method: 'GET',
+      method: 'GET'
     })
 
     if (response.ok) {
@@ -212,7 +202,7 @@ export class API {
     const response = await this.request({
       method: 'GET',
       path: ENDPOINTS.metadata,
-      skipAuthRedirect: true,
+      skipAuthRedirect: true
     })
 
     log.debug(response)
@@ -224,7 +214,7 @@ export class API {
     const response = await this.request({
       method: 'PATCH',
       path: ENDPOINTS.metadata,
-      payload: metadata,
+      payload: metadata
     })
 
     log.debug(response)

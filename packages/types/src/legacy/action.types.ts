@@ -24,10 +24,7 @@ export interface ScheduleAction extends ScheduleActionBase {
 }
 
 export type ScheduleActionUpdatePayload = Partial<
-  Pick<
-    ScheduleActionBase,
-    'enabled' | 'interval' | 'interval_type' | 'interval_start'
-  >
+  Pick<ScheduleActionBase, 'enabled' | 'interval' | 'interval_type' | 'interval_start'>
 >
 
 export type Action = ScheduleAction

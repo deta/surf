@@ -28,7 +28,7 @@ export enum ViewType {
   RAW = '@deta/raw',
   FILE = '@deta/file',
   LIST = '@deta/list',
-  TABLE = '@deta/table',
+  TABLE = '@deta/table'
 }
 
 export type BaseView = {

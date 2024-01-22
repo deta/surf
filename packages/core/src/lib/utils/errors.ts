@@ -16,9 +16,7 @@ export class APIError extends Error {
 
     this.detail =
       meta.detail ||
-      (meta.status
-        ? `Server error ${meta.status || 500}`
-        : 'Unknown server error ocurred')
+      (meta.status ? `Server error ${meta.status || 500}` : 'Unknown server error ocurred')
 
     this.body = meta.body
     this.status = meta.status
@@ -33,8 +31,7 @@ export interface NetworkErrorMeta {
 
 export class NetworkError extends Error {
   constructor(meta: NetworkErrorMeta) {
-    const msg =
-      meta.message || meta.cause?.message || 'Unknown network error ocurred'
+    const msg = meta.message || meta.cause?.message || 'Unknown network error ocurred'
 
     super(msg, { cause: meta.cause })
 

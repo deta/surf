@@ -1,10 +1,10 @@
 [
-    {
-        "id": "horizon_1_dummy",
-        "name": "Default",
-        "default": true,
-        "viewOffsetX": 0,
-        "cards": null,
-        "created_at": "2023-11-17T15:37:01.889938Z"
-    }
+  {
+    "id": "horizon_1_dummy",
+    "name": "Default",
+    "default": true,
+    "viewOffsetX": 0,
+    "cards": null,
+    "created_at": "2023-11-17T15:37:01.889938Z"
+  }
 ]

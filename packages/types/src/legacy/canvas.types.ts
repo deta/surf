@@ -4,7 +4,7 @@ import type { App } from './app.types'
 export enum CanvasItemType {
   SYSTEM_APP = 'system_app',
   PROJECT = 'project',
-  INSTANCE = 'instance',
+  INSTANCE = 'instance'
 }
 
 export interface CanvasItemBase {
@@ -31,10 +31,7 @@ export interface CanvasItemSystemApp extends CanvasItemBase {
   data: null
 }
 
-export type CanvasItem =
-  | CanvasItemSystemApp
-  | CanvasItemInstance
-  | CanvasItemProject
+export type CanvasItem = CanvasItemSystemApp | CanvasItemInstance | CanvasItemProject
 
 export interface ILegacyCanvas {
   items: CanvasItem[]

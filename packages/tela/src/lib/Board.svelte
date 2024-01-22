@@ -322,7 +322,6 @@
   const chunks = writable(new Map<string, Writable<Writable<IPositionable<any>>[]>>());
   onDestroy(
     positionables.subscribe((_positionables) => {
-
       hoistedPositionables.update((_hoisted) => {
         chunks.update((_chunks) => {
           // Remove unused from hoisted.
@@ -337,16 +336,16 @@
           for (const chunk of _chunks.entries()) {
             const [chunkId, chunkPositionables] = chunk;
             let empty = false;
-            chunkPositionables.update(_chunkPositionables => {
-              _chunkPositionables.forEach(_cP => {
+            chunkPositionables.update((_chunkPositionables) => {
+              _chunkPositionables.forEach((_cP) => {
                 if (!_positionables.includes(_cP)) {
                   const index = _chunkPositionables.indexOf(_cP);
                   if (index !== -1) _chunkPositionables.splice(index, 1);
                   if (_chunkPositionables.length <= 0) empty = true;
                 }
-              })
+              });
               return _chunkPositionables;
-            })
+            });
             if (empty) _chunks.delete(chunkId);
           }
 
@@ -658,56 +657,63 @@
 
   // Store IDS of old visible positionables fro comparison to fire onPositionableEnter/Leave events
   let oldVisiblePositionables: string[] = [];
-  const visiblePositionables = derived([positionables, hoistedPositionables, visibleChunks], (values) => {
-    const _positionables = values[0];
-    const _hoistedPositionables = values[1];
-    const _visibleChunks = values[2];
-    // TODO: Remove dev
-    const visible = _positionables.length <= 0
-      ? _positionables
-      : [
-          ..._hoistedPositionables,
-          ...fastFilter((e) => {
-            const _e = get(e);
-            return (
-              !_e.hoisted ||
-              isInsideViewport(
-                _e.x,
-                _e.y,
-                _e.width,
-                _e.height,
-                $viewOffset.x,
-                $viewOffset.y,
-                $viewPort,
-                $zoom,
-                0,
-                0
+  const visiblePositionables = derived(
+    [positionables, hoistedPositionables, visibleChunks],
+    (values) => {
+      const _positionables = values[0];
+      const _hoistedPositionables = values[1];
+      const _visibleChunks = values[2];
+      // TODO: Remove dev
+      const visible =
+        _positionables.length <= 0
+          ? _positionables
+          : [
+              ..._hoistedPositionables,
+              ...fastFilter(
+                (e) => {
+                  const _e = get(e);
+                  return (
+                    !_e.hoisted ||
+                    isInsideViewport(
+                      _e.x,
+                      _e.y,
+                      _e.width,
+                      _e.height,
+                      $viewOffset.x,
+                      $viewOffset.y,
+                      $viewPort,
+                      $zoom,
+                      0,
+                      0
+                    )
+                  );
+                },
+                _visibleChunks.map((_p) => get(_p[1])).flat()
               )
-            );
-          }, _visibleChunks.map((_p) => get(_p[1])).flat())
-        ];
+            ];
 
-    const visibleIds = visible.map(e => get(e)[POSITIONABLE_KEY]);
+      const visibleIds = visible.map((e) => get(e)[POSITIONABLE_KEY]);
 
-    // Leave events.
-    for (let i = 0; i < oldVisiblePositionables.length; i++) {
-      const id = oldVisiblePositionables[i];
-      if (!visibleIds.includes(id)) {
-        dispatch("positionableLeave", id);
+      // Leave events.
+      for (let i = 0; i < oldVisiblePositionables.length; i++) {
+        const id = oldVisiblePositionables[i];
+        if (!visibleIds.includes(id)) {
+          dispatch("positionableLeave", id);
+        }
       }
-    }
 
-    // Enter events.
-    for (let i = 0; i < visibleIds.length; i++) {
-      const id = visibleIds[i];
-      if (!oldVisiblePositionables.includes(id)) {
-        dispatch("positionableEnter", id);
+      // Enter events.
+      for (let i = 0; i < visibleIds.length; i++) {
+        const id = visibleIds[i];
+        if (!oldVisiblePositionables.includes(id)) {
+          dispatch("positionableEnter", id);
+        }
       }
-    }
-    oldVisiblePositionables = visibleIds;
+      oldVisiblePositionables = visibleIds;
 
-    return visible;
-  });
+      return visible;
+    }
+  );
 
   onMount(() => {
     if (!resizeObserver) {
@@ -1163,7 +1169,7 @@
 
       // Remove from old chunk (It will automatically get added to the new one by the reactive logic at the beginning).
       if (!p.hoisted) {
-        chunks.update(_chunks => {
+        chunks.update((_chunks) => {
           const initChunkId = `${initChunkX}:${initChunkY}`;
           const targetChunkId = `${targetChunkX}:${targetChunkY}`;
           if (initChunkId === targetChunkId) return _chunks;
@@ -1189,13 +1195,13 @@
           }
 
           return _chunks;
-        })
+        });
       }
 
       return p;
     });
 
-    positionables.update(v => v);
+    positionables.update((v) => v);
 
     //const initChunkX = Math.floor((dragState.init.x - dragState.relativeOffset.x) / CHUNK_WIDTH);
     //const initChunkY = Math.floor((dragState.init.y - dragState.relativeOffset.y) / CHUNK_HEIGHT);
@@ -1500,7 +1506,7 @@
       return p;
     });
 
-    positionables.update(v => v);
+    positionables.update((v) => v);
   }
   function positionable_unHoist(e: CustomEvent<string>) {
     const key = e.detail;
@@ -1510,16 +1516,16 @@
       return;
     }
     if (!get(positionable).hoisted) return;
-    hoistedPositionables.update(_hoisted => {
+    hoistedPositionables.update((_hoisted) => {
       return _hoisted;
-    })
+    });
     positionable.update((p) => {
       // @ts-ignore we want this!
       p.hoisted = false;
       return p;
     });
 
-    positionables.update(v => v);
+    positionables.update((v) => v);
   }
 
   onMount(() => {

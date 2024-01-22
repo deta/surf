@@ -22,9 +22,7 @@
     $viewX - ($viewX % $settings.GRID_SIZE!)
   }px, ${$viewY - ($viewY % $settings.GRID_SIZE!)}px, 0);`;
 
-  $: svgShiftCss = `transform: translate3d(-${
-    $viewX % $settings.GRID_SIZE!
-  }px, 0px, 0);`;
+  $: svgShiftCss = `transform: translate3d(-${$viewX % $settings.GRID_SIZE!}px, 0px, 0);`;
 </script>
 
 <div class="grid" style={transformCss}>

@@ -17,23 +17,13 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "paths": {
-      "@deta/*": [
-        "./packages/*"
-      ],
-      "~/*": [
-        "./*"
-      ]
+      "@deta/*": ["./packages/*"],
+      "~/*": ["./*"]
     },
     "noErrorTruncation": true
   },
-  "exclude": [
-    "node_modules",
-    "**/*/dist",
-    "**/*.test.ts"
-  ],
-  "include": [
-    ".eslintrc.cjs"
-  ],
+  "exclude": ["node_modules", "**/*/dist", "**/*.test.ts"],
+  "include": [".eslintrc.cjs"],
   "ts-node": {
     "transpileOnly": true,
     "compilerOptions": {

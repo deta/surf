@@ -48,8 +48,8 @@
     let cY = e.clientY;
     // todo: handle touch
 
-    const sX = cX//$settings.SNAP_TO_GRID ? snapToGrid(cX, $settings.GRID_SIZE!) : cX;
-    const sY = cY//$settings.SNAP_TO_GRID ? snapToGrid(cY, $settings.GRID_SIZE!) : cY;
+    const sX = cX; //$settings.SNAP_TO_GRID ? snapToGrid(cX, $settings.GRID_SIZE!) : cX;
+    const sY = cY; //$settings.SNAP_TO_GRID ? snapToGrid(cY, $settings.GRID_SIZE!) : cY;
 
     resizeState.init = { x: sX, y: sY };
     resizeState.curr = { x: sX, y: sY };
@@ -77,19 +77,16 @@
       // todo: optimize setting pos?
       width += resizeState.offset.x;
       height += resizeState.offset.y;
-    }
-    else if (direction === "ne") {
+    } else if (direction === "ne") {
       width -= resizeState.offset.x;
       height += resizeState.offset.y;
       x += resizeState.offset.x;
-    }
-    else if (direction === "es") {
+    } else if (direction === "es") {
       width -= resizeState.offset.x;
       height -= resizeState.offset.y;
       y += resizeState.offset.y;
       x += resizeState.offset.x;
-    }
-    else if (direction === "sw") {
+    } else if (direction === "sw") {
       width += resizeState.offset.x;
       height -= resizeState.offset.y;
       y += resizeState.offset.y;
@@ -99,14 +96,14 @@
     width = clamped.x;
     height = clamped.y;
 
-      htmlEl.dispatchEvent(
-        new CustomEvent("resizable_change", {
-          detail: { key, x, y, width, height },
-          bubbles: true
-        })
-      );
-      dispatch("resize", { key, x, y, width, height });
-    }
+    htmlEl.dispatchEvent(
+      new CustomEvent("resizable_change", {
+        detail: { key, x, y, width, height },
+        bubbles: true
+      })
+    );
+    dispatch("resize", { key, x, y, width, height });
+  }
 
   function onMouseUp(e: MouseEvent) {
     $state.mode = "draw"; // todo: fix
@@ -121,18 +118,18 @@
     // positionable.height = clamped.y;
 
     htmlEl.dispatchEvent(
-        new CustomEvent("resizable_move_end", {
-          detail: { key, x, y, width, height },
-          bubbles: true
-        })
-      );
+      new CustomEvent("resizable_move_end", {
+        detail: { key, x, y, width, height },
+        bubbles: true
+      })
+    );
     document.removeEventListener("mousemove", onMouseMove);
     htmlEl.dispatchEvent(
-        new CustomEvent("resizable_change", {
-          detail: { key, x, y, width, height },
-          bubbles: true
-        })
-      );
+      new CustomEvent("resizable_change", {
+        detail: { key, x, y, width, height },
+        bubbles: true
+      })
+    );
     dispatch("resizeEnd", { key, x, y, width, height });
   }
 </script>
@@ -142,7 +139,7 @@
   {...$$restProps}
   class="resizable {$$restProps.class || ''}"
   on:mousedown={onMouseDown}
-    bind:this={htmlEl}
+  bind:this={htmlEl}
 >
   <slot />
 </svelte:element>

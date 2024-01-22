@@ -1,1 +1,1 @@
-export * from './legacy/index';
+export * from './legacy/index'

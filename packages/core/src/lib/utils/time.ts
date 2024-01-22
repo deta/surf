@@ -1,8 +1,7 @@
 import { format, formatDistanceToNow, isToday } from 'date-fns'
 
 export const diffToNow = (timestamp: number | string) => {
-  const ms =
-    typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
+  const ms = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
 
   return ms - Date.now()
 }
@@ -23,7 +22,7 @@ const formatDistanceLocale = {
   aboutXYears: '{{count}}y',
   xYears: '{{count}}y',
   overXYears: '{{count}}y',
-  almostXYears: '{{count}}y',
+  almostXYears: '{{count}}y'
 }
 
 const formatDistance = (
@@ -51,8 +50,7 @@ const formatDistance = (
 }
 
 export const getHumanDistanceToNow = (timestamp: number | string) => {
-  const ms =
-    typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
+  const ms = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
 
   if (timestamp === '0001-01-01T00:00:00Z') {
     return 'long ago'
@@ -62,28 +60,25 @@ export const getHumanDistanceToNow = (timestamp: number | string) => {
     addSuffix: true,
     includeSeconds: true,
     locale: {
-      formatDistance,
-    },
+      formatDistance
+    }
   })
 }
 
 export const getFormattedTime = (timestamp: number | string) => {
-  const ms =
-    typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
+  const ms = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
 
   return format(ms, 'HH:mm:ss.SSS')
 }
 
 export const getFormattedDate = (timestamp: number | string) => {
-  const ms =
-    typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
+  const ms = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
 
   return format(ms, 'MMMM dd, yyyy')
 }
 
 export const isDateToday = (timestamp: number | string) => {
-  const ms =
-    typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
+  const ms = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
 
   return isToday(ms)
 }

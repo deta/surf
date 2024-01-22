@@ -34,8 +34,7 @@ export const parseStringIntoUrl = (raw: string) => {
 }
 
 export const checkIfYoutubeUrl = (url: URL) => {
-  const youtubeRegex =
-    /^(https?:\/\/)?(www\.)?(m\.)?(youtube(-nocookie)?\.com|youtu\.?be)\/.+$/
+  const youtubeRegex = /^(https?:\/\/)?(www\.)?(m\.)?(youtube(-nocookie)?\.com|youtu\.?be)\/.+$/
 
   return youtubeRegex.test(url.toString())
 }

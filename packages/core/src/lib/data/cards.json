@@ -1,26 +1,26 @@
 [
-    {
-        "id": "c_1",
-        "x": 50,
-        "y": 50,
-        "width": 512,
-        "height": 420,
-        "stacking_order": 1,
-        "data": {
-            "title": "Google",
-            "src": "https://google.com"
-        }
-    },
-    {
-        "id": "c_2",
-        "x": 600,
-        "y": 50,
-        "width": 512,
-        "height": 420,
-        "stacking_order": 2,
-        "data": {
-            "title": "Github",
-            "src": "https://github.com"
-        }
+  {
+    "id": "c_1",
+    "x": 50,
+    "y": 50,
+    "width": 512,
+    "height": 420,
+    "stacking_order": 1,
+    "data": {
+      "title": "Google",
+      "src": "https://google.com"
     }
+  },
+  {
+    "id": "c_2",
+    "x": 600,
+    "y": 50,
+    "width": 512,
+    "height": 420,
+    "stacking_order": 2,
+    "data": {
+      "title": "Github",
+      "src": "https://github.com"
+    }
+  }
 ]

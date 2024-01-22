@@ -33,7 +33,6 @@ export {
 export type { IBoard, IBoardSettings, IBoardState, TBoardMode } from "./types/Board.type.js";
 export type { Vec2, DeepPartial, Vec4 } from "./types/Utils.type.js";
 
-
 // Reexport your entry components here
 
 // export default {
