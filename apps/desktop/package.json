@@ -26,6 +26,7 @@
     "@electron-toolkit/eslint-config-prettier": "^1.0.1",
     "@electron-toolkit/eslint-config-ts": "^1.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron/fuses": "^1.7.0",
     "@horizon/core": "*",
     "@horizon/types": "*",
     "@sveltejs/vite-plugin-svelte": "^2.4.5",

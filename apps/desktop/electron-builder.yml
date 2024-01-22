@@ -11,6 +11,7 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+afterPack: ./build/afterpack.js
 win:
   executableName: spaceOS
 nsis:
