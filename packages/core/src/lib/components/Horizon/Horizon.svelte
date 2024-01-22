@@ -2,8 +2,8 @@
     import { onMount } from "svelte";
     import { get, writable, type Writable } from "svelte/store";
 
-    import { Board, Grid, createSettings, createBoard, clamp, snapToGrid } from "@deta/tela";
-    import type { IBoard, IPositionable, Vec4 } from "@deta/tela";
+    import { Board, Grid, createSettings, createBoard, clamp, snapToGrid } from "@horizon/tela";
+    import type { IBoard, IPositionable, Vec4 } from "@horizon/tela";
 
     import './index.scss'
 

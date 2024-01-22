@@ -2,6 +2,22 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
   "pipeline": {
+    "desktop#build:mac": {
+      "dependsOn": ["^build"],
+      "outputs": [".dist/**"]
+    },
+    "desktop#build:win": {
+      "dependsOn": ["^build"],
+      "outputs": [".dist/**"]
+    },
+    "@horizon/tela#build": {
+      "outputs": [".dist/**"],
+      "outputMode": "new-only"
+    },
+    "@horizon/types#build": {
+      "outputs": [".build/**"],
+      "outputMode": "new-only"
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".dist/**"]
@@ -10,6 +26,7 @@
       "dependsOn": ["^lint"]
     },
     "dev": {
+      "dependsOn": ["@horizon/tela#build"],
       "cache": false,
       "persistent": true
     }

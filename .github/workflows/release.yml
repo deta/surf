@@ -28,9 +28,6 @@ jobs:
       #   if: matrix.os == 'ubuntu-latest'
       #   run: npm run build:linux
 
-      - name: Build Packages
-        run: npm run build:packages
-
       - name: Build Mac App
         if: matrix.os == 'macos-latest'
         run: npm run build:desktop:mac -- --arm64 --x64

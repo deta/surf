@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@horizon/eslint-config": "*",
+    "@horizon/tela": "*",
     "@horizon/types": "*",
     "@horizon/typescript-config": "*",
     "@sveltejs/vite-plugin-svelte": "^3.0.1",

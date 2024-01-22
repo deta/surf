@@ -1,4 +1,4 @@
-import type { IPositionable } from "@deta/tela"
+import type { IPositionable } from "@horizon/tela"
 
 export interface Card extends IPositionable<'id'> {
     id: string

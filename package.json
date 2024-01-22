@@ -7,8 +7,8 @@
     "build": "turbo build",
     "build:packages": "turbo build --filter=!desktop",
     "build:desktop": "yarn workspace desktop build",
-    "build:desktop:mac": "yarn workspace desktop build:mac",
-    "build:desktop:win": "yarn workspace desktop build:win",
+    "build:desktop:mac": "yarn turbo run desktop#build:mac",
+    "build:desktop:win": "yarn turbo run desktop#build:win",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },

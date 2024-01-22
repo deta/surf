@@ -6,7 +6,7 @@ import {
     Positionable,
     Resizable,
     type IPositionable,
-} from '@deta/tela'
+} from '@horizon/tela'
 import { type Writable } from 'svelte/store'
 import type { Card } from '../../types';
 import { onMount } from 'svelte';
