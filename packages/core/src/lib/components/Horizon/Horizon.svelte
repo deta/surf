@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { get, writable, type Readable, type Writable } from "svelte/store";
+    import { get, writable, type Writable } from "svelte/store";
 
     import { Board, Grid, createSettings, createBoard, clamp, snapToGrid } from "@deta/tela";
     import type { IBoard, IPositionable, Vec4 } from "@deta/tela";
@@ -44,7 +44,6 @@
     )
 
     const state = board.state
-    const selection = $state.selection
     const selectionCss = $state.selectionCss
 
     let containerEl: HTMLElement
@@ -112,6 +111,9 @@
         $state.stackingOrder.set($cards.map(e => get(e).id))
     }
 
+    // TODO fix types to get rid of this type conversion
+    $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
+
     onMount(() => {
         loadHorizon()
         handleWindowResize()
@@ -125,7 +127,7 @@
     <Board
         {settings}
         {board}
-        positionables={cards}
+        positionables={positionables}
         on:modSelectEnd={onModSelectEnd}
         bind:containerEl
         let:positionable

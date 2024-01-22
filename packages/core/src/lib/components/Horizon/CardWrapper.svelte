@@ -5,12 +5,15 @@ import {
     Draggable,
     Positionable,
     Resizable,
+    type IPositionable,
 } from '@deta/tela'
 import { type Writable } from 'svelte/store'
-import type { Card } from '../../service/horizon';
-  import { onMount } from 'svelte';
+import type { Card } from '../../types';
+import { onMount } from 'svelte';
 
-export let positionable: Writable<Card>
+export let positionable: Writable<IPositionable<any>>
+
+$: card = $positionable as unknown as Card
 
 const minSize = { x: 100, y: 100 }
 const maxSize = { x: Infinity, y: Infinity }
@@ -27,18 +30,18 @@ const getHostname = (text: string) => {
     }
 }
 
-$: title = $positionable.data.title
-$: hostname = getHostname($positionable.data.src)
+$: title = card.data.title
+$: hostname = getHostname(card.data.src)
 
 onMount(() => {
-    webview.src = $positionable.data.src
+    webview.src = card.data.src
 
-    webview.addEventListener('did-navigate', (e) => {
-        $positionable.data.src = e.url
+    webview.addEventListener('did-navigate', (e: any) => {
+        card.data.src = e.url
     })
 
-    webview.addEventListener('page-title-updated', (e) => {
-        $positionable.data.title = e.title
+    webview.addEventListener('page-title-updated', (e: any) => {
+        card.data.title = e.title
     })
 })
 </script>

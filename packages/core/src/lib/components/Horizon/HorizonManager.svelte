@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { derived } from "svelte/store";
 
     import { API } from "@horizon/core/src/lib/service/api";
     import { HorizonsManager } from "@horizon/core/src/lib/service/horizon";
 
     import Horizon from "./Horizon.svelte";
     import { generateRandomHue } from "../../utils/color";
-  import { derived } from "svelte/store";
 
     const api = new API()
     const horizonManager = new HorizonsManager(api)
@@ -15,7 +15,6 @@
     const hotHorizons = horizonManager.hotHorizons
     const horizonStates = horizonManager.horizonStates
     const activeHorizonId = horizonManager.activeHorizonId
-    const activeHorizon = horizonManager.activeHorizon
 
     horizons.subscribe(e => console.log('horizons changed', e))
 
@@ -52,7 +51,7 @@
                 event.preventDefault()
                 addHorizon()
             } else {
-                const indexes = $horizons.map((e, idx) => idx + 1)
+                const indexes = $horizons.map((_e, idx) => idx + 1)
                 const index = indexes.indexOf(Number(event.key))
                 if (index !== -1) {
                     event.preventDefault()

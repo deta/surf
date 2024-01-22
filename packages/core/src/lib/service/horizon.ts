@@ -1,10 +1,8 @@
 import { get, writable, type Readable, type Writable, derived } from "svelte/store"
 import type { Card } from "../types"
 import type { API } from "./api"
-import { parseError } from "../utils/errors"
-import log, { useLogScope, type ScopedLogger } from "../utils/log"
+import { useLogScope, type ScopedLogger } from "../utils/log"
 import { generateID } from "../utils/id"
-
 
 /*
 - `cold`: only basic Horizon information is in memory (initial state for all Horizons)
