@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
     import { get, writable, type Writable } from "svelte/store";
 
-    import { Board, Grid, createSettings, createBoard, clamp, snapToGrid } from "@horizon/tela";
+    import { Board, Grid, createSettings, createBoard, clamp, snapToGrid, hoistPositionable } from "@horizon/tela";
     import type { IBoard, IPositionable, Vec4 } from "@horizon/tela";
 
     import './index.scss'
@@ -123,6 +123,10 @@
         $state.stackingOrder.set($cards.map(e => get(e).id))
     }
 
+    const handlePositionableEnter = (e: CustomEvent<string>) => {
+        hoistPositionable(e.detail, containerEl)
+    }
+
     const handleCardChange = () => {
         log.debug('card changed')
         updatePreview()
@@ -151,6 +155,7 @@
         {board}
         positionables={positionables}
         on:modSelectEnd={onModSelectEnd}
+        on:positionableEnter={handlePositionableEnter}
         bind:containerEl
         let:positionable
     >

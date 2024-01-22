@@ -60,7 +60,7 @@ export class Horizon {
         if (this.id === 'horizon_1_dummy') {
             const { default: data } = await import('../data/cards.json')
             this.log.debug(`Loaded ${data.length} cards`)
-            const transformed = data.map((d) => writable({ ...d, id: `${this.id}-${d.id}`}))
+            const transformed = data.map((d) => writable({ ...d, id: `${this.id}-${d.id}`, hoisted: true}))
             this.cards.set(transformed)
         } else {
             // this.api.getHorizon(this.id)
@@ -95,6 +95,7 @@ export class Horizon {
             ...card,
             id: generateID(),
             stacking_order: 1,
+            hoisted: true,
         })
         this.cards.update((c) => [...c, newCard])
     }

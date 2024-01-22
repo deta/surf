@@ -28,12 +28,23 @@
         if (!shouldShowPreview) return
 
         timeout = setTimeout(() => {
-            showPreview = true
+            if (hot) {
+                const elem = document.querySelector(`[data-hot-horizon="${horizon.id}"]`) as HTMLElement
+                elem.classList.add('preview-horizon')
+            } else {
+                showPreview = true
+            }
         }, 400)
     }
 
     const hidePreview = () => {
-        showPreview = false
+        if (hot) {
+            const elem = document.querySelector(`[data-hot-horizon="${horizon.id}"]`) as HTMLElement
+            elem.classList.remove('preview-horizon')
+        } else {
+            showPreview = false
+        }
+
         clearTimeout(timeout)
     }
 </script>

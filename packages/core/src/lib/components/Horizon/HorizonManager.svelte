@@ -86,7 +86,7 @@
         </div>
     </div>
     {#each $hotHorizons as hotHorizon (hotHorizon.id)}
-        <div data-hot-horizon={hotHorizon.id} class:hidden={hotHorizon.id !== $activeHorizonId}>
+        <div data-hot-horizon={hotHorizon.id} class:hidden={hotHorizon.id !== $activeHorizonId} style="--offset: {$horizons.findIndex(h => h.id === hotHorizon.id)}">
             <Horizon horizon={hotHorizon} />
         </div>
     {/each}
@@ -95,6 +95,10 @@
 <style lang="scss">
 
     .horizon-list {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1000;
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -126,5 +130,19 @@
         opacity: 0;
         pointer-events: none;
         position: absolute;
+    }
+
+    :global(.preview-horizon) {
+        position: absolute !important;
+        opacity: 1 !important;
+        top: 3.5rem;
+        left: calc(1rem + (var(--offset) * (32px + 0.5rem)));
+        transform: scale(0.45);
+        transform-origin: 0 0;
+        z-index: 100;
+        border: 10px solid #fbc7ff;
+        border-radius: 2rem;
+        overflow: hidden;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     }
 </style>
