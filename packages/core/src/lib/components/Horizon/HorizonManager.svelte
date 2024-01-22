@@ -6,17 +6,22 @@
     import { HorizonsManager } from "@horizon/core/src/lib/service/horizon";
 
     import Horizon from "./Horizon.svelte";
-    import { generateRandomHue } from "../../utils/color";
+    import { useLogScope } from "../../utils/log";
+    import HorizonSwitcherItem from "./HorizonSwitcherItem.svelte";
+    import { useFPS } from "../../utils/performance";
 
+    const log = useLogScope('HorizonManager')
     const api = new API()
     const horizonManager = new HorizonsManager(api)
+    // const fps = useFPS()
 
     const horizons = horizonManager.horizons
     const hotHorizons = horizonManager.hotHorizons
     const horizonStates = horizonManager.horizonStates
     const activeHorizonId = horizonManager.activeHorizonId
+    const activeHorizon = horizonManager.activeHorizon
 
-    horizons.subscribe(e => console.log('horizons changed', e))
+    horizons.subscribe(e => log.debug('horizons changed', e))
 
     const hotHorizonsSorted = derived(horizonStates, (horizonStates) => {
         return Array.from(horizonStates.entries())
@@ -29,14 +34,14 @@
     // $: console.log('hotHorizons', $hotHorizons.map(e => ({...e, state: e.getState()})))
     // $: console.log('activeHorizonId', $activeHorizonId)
     // $: console.log('activeHorizon', $activeHorizon)
-    $: console.log('hotHorizonsSorted', $hotHorizonsSorted)
+    $: log.debug('hotHorizonsSorted', $hotHorizonsSorted)
 
-    const switchHorizon = (id: string) => {
+    const switchHorizon = async (id: string) => {
         const nextHorizon = $horizons.find(e => e.id === id)
         if (nextHorizon) {
             horizonManager.switchHorizon(nextHorizon.id)
         } else {
-            console.error('Horizon not found', id)
+            log.error('Horizon not found', id)
         }
     }
 
@@ -69,21 +74,14 @@
 <svelte:window on:keydown={handleKeyDown} />
 
 <main class="">
+    <!-- fps {$fps} -->
     <div class="horizon-list">
         {#each $horizons as horizon, idx (horizon.id)}
-            <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-            <div
-                on:click={() => switchHorizon(horizon.id)}
-                class:active={$activeHorizonId === horizon.id}
-                class="list-item horizon-item"
-                style="--item-color-hue: {generateRandomHue(idx + horizon.id)};"
-            >
-                {idx + 1} {$hotHorizons.includes(horizon) ? '🔥' : '🧊'}
-            </div>
+            <HorizonSwitcherItem horizon={horizon} active={$activeHorizonId === horizon.id} idx={idx + 1} hot={$hotHorizons.includes(horizon)} on:click={() => switchHorizon(horizon.id)} />
         {/each}
 
         <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-        <div on:click={() => addHorizon()} class="list-item add-horizon" style="--item-color: #f2f2f2;">
+        <div on:click={() => addHorizon()} class="add-horizon" style="--item-color: #f2f2f2;">
             +
         </div>
     </div>
@@ -100,11 +98,11 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.25rem;
+        padding: 0.5rem;
         padding-left: 1rem;
     }
 
-    .list-item {
+    .add-horizon {
         width: 2rem;
         height: 2rem;
         border-radius: 8px;
@@ -116,25 +114,12 @@
         opacity: 0.5;
         border: 2px solid transparent;
         box-sizing: border-box;
+        background-color: #ececec;
+        font-size: 1.1rem;
 
         &:hover {
             filter: brightness(0.95);
         }
-    }
-
-    .horizon-item {
-        background: hsl(var(--item-color-hue), 100%, 85%);
-        color: hsl(var(--item-color-hue), 100%, 30%);
-
-        &.active {
-            opacity: 1;
-            border-color: hsl(var(--item-color-hue), 100%, 80%);
-        }
-    }
-
-    .add-horizon {
-        background-color: #ececec;
-        font-size: 1.1rem;
     }
 
     .hidden {

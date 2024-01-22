@@ -9,11 +9,16 @@
 
     import CardWrapper from "./CardWrapper.svelte";
     import { Horizon } from "../../service/horizon";
+  import { useLogScope } from "../../utils/log";
+  import { takePageScreenshot } from "../../utils/screenshot";
 
+    export let active: boolean = true
     export let horizon: Horizon
 
     const cards = horizon.cards
     const data = horizon.data
+
+    const log = useLogScope('Horizon Component')
   
     const settings = createSettings({
         CAN_PAN: true,
@@ -59,6 +64,13 @@
     const loadHorizon = () => {
         $state.stackingOrder.set($cards.map(e => get(e).id))
         $state.viewOffset.set({ x: $data.viewOffsetX, y: 0 })
+    }
+
+    const updatePreview = async () => {       
+        if (!active) return
+        log.debug('generating preview image')
+        const previewImage = await takePageScreenshot()
+        horizon.updateData({ previewImage: previewImage })
     }
 
     const onModSelectEnd = (
@@ -111,6 +123,16 @@
         $state.stackingOrder.set($cards.map(e => get(e).id))
     }
 
+    const handleCardChange = () => {
+        log.debug('card changed')
+        updatePreview()
+    }
+
+    const handleCardLoad = () => {
+        log.debug('card finished loading')
+        updatePreview()
+    }
+
     // TODO fix types to get rid of this type conversion
     $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
 
@@ -140,6 +162,6 @@
             <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
         </svelte:fragment>
 
-        <CardWrapper {positionable} />
+        <CardWrapper {positionable} on:change={handleCardChange} on:load={handleCardLoad} />
     </Board>
 </div>

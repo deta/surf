@@ -4,6 +4,9 @@ import type { API } from "./api"
 import { useLogScope, type ScopedLogger } from "../utils/log"
 import { generateID } from "../utils/id"
 
+// how many horizons to keep in the dom
+const HOT_HORIZONS_THRESHOLD = 5
+
 /*
 - `cold`: only basic Horizon information is in memory (initial state for all Horizons)
 - `warm`: its cards and all required data for rendering are stored in memory
@@ -13,6 +16,7 @@ export type HorizonState = 'cold' | 'warm' | 'hot'
 
 export type HorizonData = {
     name: string
+    previewImage?: string
     isDefault: boolean
     viewOffsetX: number
     createdAt: string
@@ -112,14 +116,13 @@ export class HorizonsManager {
 
     constructor(api: API) {
         this.api = api
-        this.log = useLogScope(`HorizonManager`)
+        this.log = useLogScope(`HorizonService`)
 
         this.activeHorizonId = writable(null)
         this.horizons = writable([])
         this.horizonStates = writable(new Map())
 
-        // how many horizons to keep in the dom
-        this.hotHorizonsThreshold = 3
+        this.hotHorizonsThreshold = HOT_HORIZONS_THRESHOLD
 
         this.hotHorizons = derived([this.horizons, this.horizonStates], ([horizons, horizonStates]) => {
             return horizons.filter((h) => {

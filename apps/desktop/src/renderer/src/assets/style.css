@@ -1,6 +1,4 @@
 body {
-  display: flex;
-  flex-direction: column;
   font-family:
     Roboto,
     -apple-system,
@@ -12,43 +10,13 @@ body {
     'Cantarell',
     'Open Sans',
     sans-serif;
-  color: #86a5b1;
-  background-color: #2f3241;
+  color: black;
+  background-color: white;
+  padding: 0;
+  margin: 0;
 }
 
 * {
   padding: 0;
   margin: 0;
-}
-
-ul {
-  list-style: none;
-}
-
-code {
-  font-weight: 600;
-  padding: 3px 5px;
-  border-radius: 2px;
-  background-color: #26282e;
-  font-family:
-    ui-monospace,
-    SFMono-Regular,
-    SF Mono,
-    Menlo,
-    Consolas,
-    Liberation Mono,
-    monospace;
-  font-size: 85%;
-}
-
-a {
-  color: #9feaf9;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  outline: none;
-}
-
-a:hover {
-  border-bottom: 1px solid;
 }

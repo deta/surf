@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, session, globalShortcut } from 'electron'
+import { app, shell, BrowserWindow, session, globalShortcut, ipcMain } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -56,18 +56,36 @@ const sendShortcutToHorizon = (key: string) => {
   }
 }
 
-function registerShortcuts () {
+function registerShortcuts() {
   globalShortcut.register(`CommandOrControl+n`, () => sendShortcutToHorizon('n'))
   Array.from(Array(9).keys()).map((idx) => {
     globalShortcut.register(`CommandOrControl+${idx + 1}`, () => sendShortcutToHorizon((idx + 1).toString()))
   })
 }
 
-function unregisterShortcuts () {
+function unregisterShortcuts() {
   globalShortcut.unregister(`CommandOrControl+n`)
   Array.from(Array(9).keys()).map((idx) => {
     globalShortcut.unregister(`CommandOrControl+${idx + 1}`)
   })
+}
+
+async function handleCaptureWebContents() {
+  console.log('capture-web-contents')
+  const window = BrowserWindow.getFocusedWindow()
+  if (window) {
+    const PADDING = 40
+    const rect = window.getContentBounds()
+
+    const image = await window.webContents.capturePage({
+      ...rect,
+      x: 0,
+      y: PADDING
+    })
+    return image.toDataURL()
+  }
+
+  return null
 }
 
 
@@ -77,6 +95,8 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  ipcMain.handle('capture-web-contents', handleCaptureWebContents)
 
   createWindow()
 
