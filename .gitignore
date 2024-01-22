@@ -24,8 +24,10 @@ coverage
 # Build Outputs
 .next/
 out/
-build
 dist
+build
+# required build files for the electron app
+!apps/desktop/build
 
 
 # Debug
