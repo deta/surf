@@ -115,8 +115,8 @@
             width: size.x,
             height: size.y,
             data: {
-                title: "Google",
-                src: "https://google.com"
+                title: "",
+                src: "about:blank"
             }
         })
 
@@ -140,7 +140,6 @@
         loadHorizon()
         handleWindowResize()
     })
-    
 </script>
 
 <svelte:window on:resize={handleWindowResize} />
