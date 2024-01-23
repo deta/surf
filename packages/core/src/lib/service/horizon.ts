@@ -55,50 +55,52 @@ export class Horizon {
     // this.api.getHorizon(this.id)
   }
 
-    async loadCards() {
-        this.log.debug(`Loading cards`)
-        if (this.id === 'horizon_1_dummy') {
-            const { default: data } = await import('../data/cards.json')
-            this.log.debug(`Loaded ${data.length} cards`)
-            const transformed = data.map((d) => writable({ ...d, id: `${this.id}-${d.id}`, hoisted: true}))
-            this.cards.set(transformed)
-        } else {
-            // this.api.getHorizon(this.id)
-        }
+  async loadCards() {
+    this.log.debug(`Loading cards`)
+    if (this.id === 'horizon_1_dummy') {
+      const { default: data } = await import('../data/cards.json')
+      this.log.debug(`Loaded ${data.length} cards`)
+      const transformed = data.map((d) =>
+        writable({ ...d, id: `${this.id}-${d.id}`, hoisted: true })
+      )
+      this.cards.set(transformed)
+    } else {
+      // this.api.getHorizon(this.id)
     }
+  }
 
-    async updateData(updates: Partial<HorizonData>) {
-        this.data.update((d) => ({ ...d, ...updates }))
-    }
+  async updateData(updates: Partial<HorizonData>) {
+    this.data.update((d) => ({ ...d, ...updates }))
+  }
 
-    async freeze() {
-        this.log.debug(`Freezing`)
-        this.cards.set([])
-        this.changeState('cold')
-    }
+  async freeze() {
+    this.log.debug(`Freezing`)
+    this.cards.set([])
+    this.changeState('cold')
+  }
 
-    async coolDown() {
-        this.log.debug(`Cooling down`)
-        this.changeState('warm')
-    }
+  async coolDown() {
+    this.log.debug(`Cooling down`)
+    this.changeState('warm')
+  }
 
-    async warmUp() {
-        this.log.debug(`Warming up`)
-        // TODO: rely on cache to only fetch cards that are not already in memory
-        await this.loadCards()
+  async warmUp() {
+    this.log.debug(`Warming up`)
+    // TODO: rely on cache to only fetch cards that are not already in memory
+    await this.loadCards()
 
-        this.changeState('warm')
-    }
+    this.changeState('warm')
+  }
 
-    async addCard(card: Omit<Card, 'id' | 'stacking_order'>) {
-        const newCard = writable({
-            ...card,
-            id: generateID(),
-            stacking_order: 1,
-            hoisted: true,
-        })
-        this.cards.update((c) => [...c, newCard])
-    }
+  async addCard(card: Omit<Card, 'id' | 'stacking_order'>) {
+    const newCard = writable({
+      ...card,
+      id: generateID(),
+      stacking_order: 1,
+      hoisted: true
+    })
+    this.cards.update((c) => [...c, newCard])
+  }
 }
 
 export class HorizonsManager {
