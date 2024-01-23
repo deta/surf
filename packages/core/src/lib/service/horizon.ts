@@ -111,6 +111,7 @@ export class HorizonsManager {
 
   activeHorizon: Readable<Horizon | null>
   hotHorizons: Readable<Horizon[]>
+  sortedHotHorizons: Readable<string[]>
 
   hotHorizonsThreshold: number
 
@@ -128,10 +129,28 @@ export class HorizonsManager {
     this.hotHorizonsThreshold = HOT_HORIZONS_THRESHOLD
 
     this.hotHorizons = derived([this.horizons, this.horizonStates], ([horizons, horizonStates]) => {
-      return horizons.filter((h) => {
-        const horizonState = horizonStates.get(h.id)
-        return horizonState?.state === 'hot'
-      })
+      return horizons
+        .filter((h) => {
+            const horizonState = horizonStates.get(h.id)
+            return horizonState?.state === 'hot'
+        })
+        // .sort((a, b) => {
+        //     const aState = horizonStates.get(a.id)
+        //     const bState = horizonStates.get(b.id)
+        //     if (!aState || !bState) return 0
+        //     return bState.since.getTime() - aState.since.getTime()
+        // })
+    })
+
+    this.sortedHotHorizons = derived([this.horizons, this.horizonStates], ([horizons, horizonStates]) => {
+      return [...horizons]
+        .sort((a, b) => {
+            const aState = horizonStates.get(a.id)
+            const bState = horizonStates.get(b.id)
+            if (!aState || !bState) return 0
+            return bState.since.getTime() - aState.since.getTime()
+        })
+        .map((h) => h.id)
     })
 
     this.activeHorizon = derived(
@@ -217,14 +236,17 @@ export class HorizonsManager {
   async switchHorizon(idOrHorizon: string | Horizon) {
     const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
 
-    if (horizon.getState() === 'cold') {
+    const oldHorizonState = horizon.getState()
+
+    if (oldHorizonState === 'cold') {
       await horizon.warmUp()
     }
 
-    if (horizon.getState() !== 'hot') {
-      horizon.changeState('hot')
-      this.changeHorizonState(horizon.id, 'hot')
+    horizon.changeState('hot')
+    this.changeHorizonState(horizon.id, 'hot')
 
+    // only if the horizon was not already hot
+    if (oldHorizonState !== 'hot') {
       // cool down other older hot horizons
       if (get(this.hotHorizons).length > this.hotHorizonsThreshold) {
         this.log.debug(`Cooling down older hot horizons`)

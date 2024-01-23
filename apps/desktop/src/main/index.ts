@@ -3,6 +3,8 @@ import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
+const validShortcuts = ['k', 'n', ...Array.from(Array(9).keys()).map((idx) => `${idx + 1}`)]
+
 function createWindow(): void {
   const spaceSession = session.fromPartition('persist:horizon-session-v0')
   const mainWindow = new BrowserWindow({
@@ -55,19 +57,11 @@ const sendShortcutToHorizon = (key: string) => {
 }
 
 function registerShortcuts() {
-  globalShortcut.register(`CommandOrControl+n`, () => sendShortcutToHorizon('n'))
-  Array.from(Array(9).keys()).map((idx) => {
-    globalShortcut.register(`CommandOrControl+${idx + 1}`, () =>
-      sendShortcutToHorizon((idx + 1).toString())
-    )
-  })
+  validShortcuts.map((shortcut) => globalShortcut.register(`CommandOrControl+${shortcut}`, () => sendShortcutToHorizon(shortcut)))
 }
 
 function unregisterShortcuts() {
-  globalShortcut.unregister(`CommandOrControl+n`)
-  Array.from(Array(9).keys()).map((idx) => {
-    globalShortcut.unregister(`CommandOrControl+${idx + 1}`)
-  })
+  validShortcuts.map((shortcut) => globalShortcut.unregister(`CommandOrControl+${shortcut}`))
 }
 
 async function handleCaptureWebContents() {

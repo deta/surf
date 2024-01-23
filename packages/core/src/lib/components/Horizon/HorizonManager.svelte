@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import { derived } from 'svelte/store'
 
   import { API } from '@horizon/core/src/lib/service/api'
@@ -17,9 +17,13 @@
 
   const horizons = horizonManager.horizons
   const hotHorizons = horizonManager.hotHorizons
+  const sortedHotHorizons = horizonManager.sortedHotHorizons
   const horizonStates = horizonManager.horizonStates
   const activeHorizonId = horizonManager.activeHorizonId
   const activeHorizon = horizonManager.activeHorizon
+
+  let showOverview = false
+  let horizonListElem: HTMLElement
 
   horizons.subscribe((e) => log.debug('horizons changed', e))
 
@@ -50,11 +54,25 @@
     horizonManager.switchHorizon(newHorizon.id)
   }
 
+  const handleAddHorizon = () => {
+    addHorizon()
+    closeOverview()
+  }
+
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.metaKey || event.ctrlKey) {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
+      if (event.key === 'n') {
         event.preventDefault()
         addHorizon()
+      } else if (event.key === 'k') {
+        event.preventDefault()
+        log.debug('toggle overview')
+
+        if (showOverview) {
+            closeOverview()
+        } else {
+            showOverview = true
+        }
       } else {
         const indexes = $horizons.map((_e, idx) => idx + 1)
         const index = indexes.indexOf(Number(event.key))
@@ -66,6 +84,60 @@
     }
   }
 
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  const waitForScrollToFinish = (elem: HTMLElement) => {
+    return new Promise<void>((resolve) => {
+        let scrollTimeout: ReturnType<typeof setTimeout>;
+
+        const handleScroll = () => {
+            clearTimeout(scrollTimeout)
+            scrollTimeout = setTimeout(() => {
+                elem.removeEventListener('scroll', handleScroll)
+                resolve()
+            }, 100)
+        }
+
+        elem.addEventListener('scroll', handleScroll)
+    })
+  }
+
+  let nextHorizonId: string | null = null
+  let transitioning = false
+
+  $: console.log('transitioning', transitioning)
+
+  const closeOverview = () => {
+    const nextHorizonElem = document.querySelector(`[data-hot-horizon="${$activeHorizonId}"]`) as HTMLElement
+
+    // elem.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    // await waitForScrollToFinish(horizonListElem)
+    // console.log('scroll finished')
+    
+    transitioning = true
+    showOverview = false
+    horizonListElem.scrollTop = 0
+
+    nextHorizonElem.ontransitionend = () => {
+        console.log('transition finished')
+        transitioning = false
+        nextHorizonElem.ontransitionend = null
+    }
+  }
+
+  const handleHorizonClick = async (e: MouseEvent, id: string) => {
+    if (!showOverview) return
+
+    e.preventDefault()
+    $activeHorizonId = id
+
+    closeOverview()
+
+    await wait(500)
+    
+    switchHorizon(id)
+  }
+
   onMount(() => {
     horizonManager.init()
   })
@@ -75,22 +147,45 @@
 
 <main class="">
     <!-- fps {$fps} -->
-    <div class="horizon-list">
+    <!-- <div class="horizon-list">
         {#each $horizons as horizon, idx (horizon.id)}
             <HorizonSwitcherItem horizon={horizon} active={$activeHorizonId === horizon.id} idx={idx + 1} hot={$hotHorizons.includes(horizon)} on:click={() => switchHorizon(horizon.id)} />
         {/each}
 
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div on:click={() => addHorizon()} class="add-horizon" style="--item-color: #f2f2f2;">
             +
         </div>
-    </div>
+    </div> -->
 
-    {#each $hotHorizons as hotHorizon (hotHorizon.id)}
-        <div data-hot-horizon={hotHorizon.id} class:hidden={hotHorizon.id !== $activeHorizonId} style="--offset: {$horizons.findIndex(h => h.id === hotHorizon.id)}">
-            <Horizon horizon={hotHorizon} />
+    <div class="horizons-wrapper" class:overview={showOverview}>
+        {#if showOverview}
+            <div class="overview-header">
+                <div class="add-horizon" on:click={handleAddHorizon}>
+                    +
+                </div>
+            </div>
+        {/if}
+
+        <div bind:this={horizonListElem} class="horizons-list">
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            {#each $hotHorizons as hotHorizon, idx (hotHorizon.id)}
+                {@const order = $sortedHotHorizons.findIndex(h => h === hotHorizon.id) + 1}
+                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                <div
+                    on:click={(e) => handleHorizonClick(e, hotHorizon.id)}
+                    class="hot-horizon"
+                    style="--offset: {idx}; --order: {order};"
+                    data-first={order === 1}
+                    data-last={order === $sortedHotHorizons.length}
+                    data-hot-horizon={hotHorizon.id}
+                    class:list-view={nextHorizonId !== hotHorizon.id && showOverview}
+                    class:hidden={$activeHorizonId !== hotHorizon.id && !showOverview}
+                >
+                    <Horizon horizon={hotHorizon} />
+                </div>
+            {/each}
         </div>
-    {/each}
+    </div>
 </main>
 
 <style lang="scss">
@@ -118,7 +213,7 @@
         opacity: 0.5;
         border: 2px solid transparent;
         box-sizing: border-box;
-        background-color: #ececec;
+        // background-color: #ececec;
         font-size: 1.1rem;
 
         &:hover {
@@ -126,10 +221,115 @@
         }
     }
 
-    .hidden {
-        opacity: 0;
-        pointer-events: none;
+    .overview-header {
         position: absolute;
+        top: 0;
+        left: 0;
+        box-sizing: border-box;
+        width: 100vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .horizons-wrapper {
+        min-height: 100vh;
+        // padding: 0;
+        // transition: padding var(--transition-duration) ease-out;
+    }
+
+    .horizons-list {
+        --height: 100vh;
+        --width: 100vw;
+        --transition-duration: 0.3s;
+        --scale-factor: 0.65;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3rem;
+        height: 100vh;
+    }
+
+    .overview {
+        // padding: 4rem;
+
+        & .horizons-list {
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+            height: 100vh;
+
+            & [data-first="true"] {
+                margin-top: 50vh;
+            }
+
+            & [data-last="true"] {
+                margin-bottom: 50vh;
+            }
+        }
+    }
+
+    .hot-horizon {
+        position: relative;
+        transition-property: width, height, border-color, border-radius;
+        transition-duration: var(--transition-duration);
+        transition-timing-function: ease-out;
+        width: var(--width);
+        height: var(--height);
+        border: 5px solid transparent;
+        overflow: hidden;
+        border-radius: 0;
+        margin-top: auto;
+        margin-bottom: auto;
+
+        &.transitioning-out {
+            position: absolute;
+            opacity: 1;
+            pointer-events: none;
+            top: 100%;
+            transform: translateY(-10%);
+            height: calc(var(--height) * var(--scale-factor));
+            width: calc(var(--width) * var(--scale-factor));
+
+            & :global(.horizon) {
+                pointer-events: none;
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(var(--scale-factor));
+            }
+        }
+
+        &.hidden {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+        }
+
+        &.list-view {
+            flex-shrink: 0;
+            scroll-snap-align: center;
+            height: calc(var(--height) * var(--scale-factor));
+            width: calc(var(--width) * var(--scale-factor));
+            opacity: 1;
+            border-radius: 2rem;
+            border-color: #cfcfcf;
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            order: var(--order);
+
+            & :global(.horizon) {
+                pointer-events: none;
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(var(--scale-factor));
+            }
+        }
+
+        & :global(.horizon) {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            transition: transform var(--transition-duration) ease-out;
+        }
     }
 
     :global(.preview-horizon) {
