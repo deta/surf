@@ -1,74 +1,74 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { derived } from "svelte/store";
+  import { onMount } from 'svelte'
+  import { derived } from 'svelte/store'
 
-    import { API } from "@horizon/core/src/lib/service/api";
-    import { HorizonsManager } from "@horizon/core/src/lib/service/horizon";
+  import { API } from '@horizon/core/src/lib/service/api'
+  import { HorizonsManager } from '@horizon/core/src/lib/service/horizon'
 
-    import Horizon from "./Horizon.svelte";
-    import { useLogScope } from "../../utils/log";
-    import HorizonSwitcherItem from "./HorizonSwitcherItem.svelte";
-    import { useFPS } from "../../utils/performance";
+  import Horizon from './Horizon.svelte'
+  import { useLogScope } from '../../utils/log'
+  import HorizonSwitcherItem from './HorizonSwitcherItem.svelte'
+  import { useFPS } from '../../utils/performance'
 
-    const log = useLogScope('HorizonManager')
-    const api = new API()
-    const horizonManager = new HorizonsManager(api)
-    // const fps = useFPS()
+  const log = useLogScope('HorizonManager')
+  const api = new API()
+  const horizonManager = new HorizonsManager(api)
+  // const fps = useFPS()
 
-    const horizons = horizonManager.horizons
-    const hotHorizons = horizonManager.hotHorizons
-    const horizonStates = horizonManager.horizonStates
-    const activeHorizonId = horizonManager.activeHorizonId
-    const activeHorizon = horizonManager.activeHorizon
+  const horizons = horizonManager.horizons
+  const hotHorizons = horizonManager.hotHorizons
+  const horizonStates = horizonManager.horizonStates
+  const activeHorizonId = horizonManager.activeHorizonId
+  const activeHorizon = horizonManager.activeHorizon
 
-    horizons.subscribe(e => log.debug('horizons changed', e))
+  horizons.subscribe((e) => log.debug('horizons changed', e))
 
-    const hotHorizonsSorted = derived(horizonStates, (horizonStates) => {
-        return Array.from(horizonStates.entries())
-            .map(([id, state]) => ({ id, ...state }))
-            .filter((horizon) => horizon.state === 'hot')
-            .sort((a, b) => a.since.getTime() - b.since.getTime()) // oldest first
-    })
+  const hotHorizonsSorted = derived(horizonStates, (horizonStates) => {
+    return Array.from(horizonStates.entries())
+      .map(([id, state]) => ({ id, ...state }))
+      .filter((horizon) => horizon.state === 'hot')
+      .sort((a, b) => a.since.getTime() - b.since.getTime()) // oldest first
+  })
 
-    // $: console.log('horizons', $horizons.map(e => ({...e, state: e.getState()})))
-    // $: console.log('hotHorizons', $hotHorizons.map(e => ({...e, state: e.getState()})))
-    // $: console.log('activeHorizonId', $activeHorizonId)
-    // $: console.log('activeHorizon', $activeHorizon)
-    $: log.debug('hotHorizonsSorted', $hotHorizonsSorted)
+  // $: console.log('horizons', $horizons.map(e => ({...e, state: e.getState()})))
+  // $: console.log('hotHorizons', $hotHorizons.map(e => ({...e, state: e.getState()})))
+  // $: console.log('activeHorizonId', $activeHorizonId)
+  // $: console.log('activeHorizon', $activeHorizon)
+  $: log.debug('hotHorizonsSorted', $hotHorizonsSorted)
 
-    const switchHorizon = async (id: string) => {
-        const nextHorizon = $horizons.find(e => e.id === id)
-        if (nextHorizon) {
-            horizonManager.switchHorizon(nextHorizon.id)
-        } else {
-            log.error('Horizon not found', id)
+  const switchHorizon = async (id: string) => {
+    const nextHorizon = $horizons.find((e) => e.id === id)
+    if (nextHorizon) {
+      horizonManager.switchHorizon(nextHorizon.id)
+    } else {
+      log.error('Horizon not found', id)
+    }
+  }
+
+  const addHorizon = async () => {
+    const newHorizon = await horizonManager.createHorizon('New Horizon' + $horizons.length)
+    horizonManager.switchHorizon(newHorizon.id)
+  }
+
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.metaKey || event.ctrlKey) {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
+        event.preventDefault()
+        addHorizon()
+      } else {
+        const indexes = $horizons.map((_e, idx) => idx + 1)
+        const index = indexes.indexOf(Number(event.key))
+        if (index !== -1) {
+          event.preventDefault()
+          switchHorizon($horizons[index].id)
         }
+      }
     }
+  }
 
-    const addHorizon = async () => {
-        const newHorizon = await horizonManager.createHorizon('New Horizon' + $horizons.length)
-        horizonManager.switchHorizon(newHorizon.id)
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.metaKey || event.ctrlKey) {
-            if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
-                event.preventDefault()
-                addHorizon()
-            } else {
-                const indexes = $horizons.map((_e, idx) => idx + 1)
-                const index = indexes.indexOf(Number(event.key))
-                if (index !== -1) {
-                    event.preventDefault()
-                    switchHorizon($horizons[index].id)
-                }
-            }
-        }
-    }
-
-    onMount(() => {
-        horizonManager.init()
-    })
+  onMount(() => {
+    horizonManager.init()
+  })
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -85,6 +85,7 @@
             +
         </div>
     </div>
+
     {#each $hotHorizons as hotHorizon (hotHorizon.id)}
         <div data-hot-horizon={hotHorizon.id} class:hidden={hotHorizon.id !== $activeHorizonId} style="--offset: {$horizons.findIndex(h => h.id === hotHorizon.id)}">
             <Horizon horizon={hotHorizon} />
@@ -93,7 +94,6 @@
 </main>
 
 <style lang="scss">
-
     .horizon-list {
         position: fixed;
         top: 0;

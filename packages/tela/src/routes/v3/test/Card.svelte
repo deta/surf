@@ -14,8 +14,7 @@
   function clickHoist() {
     if ($card.hoisted) {
       unHoistPositionable($card.key, el);
-    }
-    else {
+    } else {
       hoistPositionable($card.key, el);
     }
   }
@@ -29,7 +28,7 @@
 
 <Positionable positionable={card} bind:el>
   <!-- TODO: Switch to mouse logic only -->
-  <Resizable positionable={card} direction="top"/>
+  <Resizable positionable={card} direction="top" />
   <Resizable positionable={card} direction="right" />
   <Resizable positionable={card} direction="bottom" />
   <Resizable positionable={card} direction="left" />
@@ -39,10 +38,10 @@
   <Resizable positionable={card} direction="bottom-left" />
   <Draggable positionable={card}>
     card
-    <button on:click={clickHoist}>{$card.hoisted ? 'unHoist' : 'hoist'}</button>
+    <button on:click={clickHoist}>{$card.hoisted ? "unHoist" : "hoist"}</button>
     <button on:click={onDelete}>delete</button>
-    <br>
-    <br>
+    <br />
+    <br />
     <input type="range" min="0" max="2000" />
     <textarea rows="3" />
     <br />

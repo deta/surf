@@ -234,18 +234,18 @@ If you want to dynamically render multiple elements on the board, you can simply
   const settings = writable({} satisfies TBoardSettings); // <- used to configure the board
   const board = writable({ viewOffset: { x: 0, y: 0 }, zoom: 1 } satisfies TBoard); // <- determines the initial state of the board
 
-  const elements: { pos: { x: number, y: number }, size: { x: number, y: number} }[] = [
-    { pos: { x: 0, y: 0 }, size: { x: 150, y: 150} },
-    { pos: { x: 400, y: 400 }, size: { x: 400, y: 300} }
+  const elements: { pos: { x: number; y: number }; size: { x: number; y: number } }[] = [
+    { pos: { x: 0, y: 0 }, size: { x: 150, y: 150 } },
+    { pos: { x: 400, y: 400 }, size: { x: 400, y: 300 } }
   ];
 </script>
 
 <main>
   <Board {settings} {board}>
     {#each elements as element}
-      <Positionable pos={element.pos} size={element.size} z={1}>
-        I am a positionable element.
-      </Positionable>
+    <Positionable pos="{element.pos}" size="{element.size}" z="{1}">
+      I am a positionable element.
+    </Positionable>
     {/each}
   </Board>
 </main>
@@ -278,15 +278,13 @@ A draggable element can be used inside of a Positionable element to enable movin
   const settings = writable({} satisfies TBoardSettings); // <- used to configure the board
   const board = writable({ viewOffset: { x: 0, y: 0 }, zoom: 1 } satisfies TBoard); // <- determines the initial state of the board
 
-  const element = { pos: { x: 0, y: 0 }, size: { x: 150, y: 150} };
+  const element = { pos: { x: 0, y: 0 }, size: { x: 150, y: 150 } };
 </script>
 
 <main>
   <Board {settings} {board}>
-    <Positionable pos={element.pos} size={element.size} z={1}>
-      <Draggable bind:pos={element.pos} bind:size={element.size}>
-      drag here.
-      </Draggable>
+    <Positionable pos="{element.pos}" size="{element.size}" z="{1}">
+      <Draggable bind:pos="{element.pos}" bind:size="{element.size}"> drag here. </Draggable>
       I am a positionable element.
     </Positionable>
   </Board>
@@ -316,15 +314,16 @@ The Grid component can be placed inside a board to display an infinite backgroun
 ```html
 ...
 <Board ...>
-  <Grid dotColor="black" dotOpacity={30} dotSize={1}/>
+  <Grid dotColor="black" dotOpacity="{30}" dotSize="{1}" />
 </Board>
 ...
 ```
 
 #### Grid Props
-- `dotColor`: string    | css color for dots.
-- `dotOpacity`: number  | opacity (0-100)
-- `dotSize`: number     | size
+
+- `dotColor`: string | css color for dots.
+- `dotOpacity`: number | opacity (0-100)
+- `dotSize`: number | size
 
 ## Styling
 

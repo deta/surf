@@ -34,9 +34,9 @@ var globals =
   typeof window !== "undefined"
     ? window
     : typeof globalThis !== "undefined"
-    ? globalThis
-    : // @ts-ignore Node typings have this
-      global;
+      ? globalThis
+      : // @ts-ignore Node typings have this
+        global;
 
 // http-url:https://unpkg.com/svelte@4.2.2/src/runtime/internal/ResizeObserverSingleton.js
 var ResizeObserverSingleton = class _ResizeObserverSingleton {
@@ -625,11 +625,14 @@ function timeoutFn(fn, interval = 1, options = {}) {
     clear();
     active.set(true);
     if (immediateCallback) fn();
-    timer = setTimeout(() => {
-      active.set(false);
-      timer = null;
-      fn();
-    }, unstore(interval) * 1e3);
+    timer = setTimeout(
+      () => {
+        active.set(false);
+        timer = null;
+        fn();
+      },
+      unstore(interval) * 1e3
+    );
   }
   if (immediate) resume();
   on_destroy(pause);
@@ -819,10 +822,10 @@ function support(feature, from = "navigator") {
       from === "navigator"
         ? navigator
         : from === "window"
-        ? window
-        : from === "document"
-        ? document
-        : performance;
+          ? window
+          : from === "document"
+            ? document
+            : performance;
     set(_from && feature in _from);
   }
   return { subscribe: subscribe2 };
@@ -1746,20 +1749,20 @@ function guess_serializer_type(value) {
   return value == null
     ? "any"
     : value instanceof Set
-    ? "set"
-    : value instanceof Map
-    ? "map"
-    : value instanceof Date
-    ? "date"
-    : typeof value === "boolean"
-    ? "boolean"
-    : typeof value === "string"
-    ? "string"
-    : typeof value === "object"
-    ? "object"
-    : !Number.isNaN(value)
-    ? "number"
-    : "any";
+      ? "set"
+      : value instanceof Map
+        ? "map"
+        : value instanceof Date
+          ? "date"
+          : typeof value === "boolean"
+            ? "boolean"
+            : typeof value === "string"
+              ? "string"
+              : typeof value === "object"
+                ? "object"
+                : !Number.isNaN(value)
+                  ? "number"
+                  : "any";
 }
 function get_store(store) {
   if (store === "session")

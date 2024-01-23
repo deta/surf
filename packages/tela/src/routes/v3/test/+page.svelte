@@ -71,7 +71,7 @@
     SNAP_TO_GRID: true,
     GRID_SIZE: 30,
     CHUNK_WIDTH: 300,
-    CHUNK_HEIGHT: 300,
+    CHUNK_HEIGHT: 300
   });
   const board = createBoard(settings, stackingOrder, {}, "idle", {
     idle: { select: "select", pan: "pan" },
@@ -82,20 +82,20 @@
 
   let state = board.state;
   $: ({ selectionCss } = $state);
-  state.update(v => {
+  state.update((v) => {
     v.stackingOrder.set(get(stackingOrder));
     return v;
-  })
+  });
 
   function onDelete(e: any) {
     const key = e.detail;
-    cards.update(_cards => {
-        const index = _cards.findIndex(e => get(e).key === key)
-        if (index !== -1) {
-          _cards.splice(index, 1)
-        }
-        return _cards
-      })
+    cards.update((_cards) => {
+      const index = _cards.findIndex((e) => get(e).key === key);
+      if (index !== -1) {
+        _cards.splice(index, 1);
+      }
+      return _cards;
+    });
   }
 
   // let lazyCard = () => import("./Card.svelte").then((m) => m.default);
@@ -125,7 +125,7 @@
 
     <LazyComponent this={() => import("./Card.svelte")}>
       <svelte:fragment slot="component" let:Component>
-        <Component card={positionable} on:delete={onDelete}/>
+        <Component card={positionable} on:delete={onDelete} />
       </svelte:fragment>
     </LazyComponent>
 

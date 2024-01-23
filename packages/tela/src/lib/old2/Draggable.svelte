@@ -35,7 +35,7 @@
     init: { x: 0, y: 0 },
     curr: { x: 0, y: 0 },
     offset: { x: 0, y: 0 },
-    autoPanOffset : { x: 0, y: 0 },
+    autoPanOffset: { x: 0, y: 0 },
     initChunk: { x: 0, y: 0 }
   };
 
@@ -107,7 +107,7 @@
     );
 
     dragState.offset = {
-      x: ((clientX - dragState.curr.x) / $zoom),
+      x: (clientX - dragState.curr.x) / $zoom,
       y: (clientY - dragState.curr.y) / $zoom
     };
 

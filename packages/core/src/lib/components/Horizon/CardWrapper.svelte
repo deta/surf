@@ -1,111 +1,147 @@
 <!-- <svelte:options immutable={true} /> -->
 
 <script lang="ts">
-import {
-    Draggable,
-    Positionable,
-    Resizable,
-    type IPositionable,
-} from '@horizon/tela'
-import { type Writable } from 'svelte/store'
-import type { Card } from '../../types';
-import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { get, type Writable } from 'svelte/store'
+  import type { Card } from '../../types'
+  import { Draggable, Positionable, Resizable } from '@horizon/tela'
+  import WebviewWrapper from './WebviewWrapper.svelte'
 
-export let positionable: Writable<IPositionable<any>>
+  export let positionable: Writable<Card>
+  const dispatch = createEventDispatcher<{ change: void; load: void }>()
 
-$: card = $positionable as unknown as Card
+  const minSize = { x: 100, y: 100 }
+  const maxSize = { x: Infinity, y: Infinity }
+  const initialSrc = $positionable.data.src
 
-const dispatch = createEventDispatcher<{ change: void, load: void }>()
+  let el: HTMLElement
+  let webview: WebviewWrapper | undefined
 
-const minSize = { x: 100, y: 100 }
-const maxSize = { x: Infinity, y: Infinity }
-    
-let el: HTMLElement
-let webview: HTMLIFrameElement
-
-const getHostname = (text: string) => {
-    try {
-        const url = new URL(text)
-        return url.hostname
-    } catch (e) {
-        return text
-    }
-}
-
-const updateCard = () => {
-    console.log('updateCard', card)
-    // horizon.updateCard($card)
+  const updateCard = () => {
+    console.log('updateCard', $positionable)
     dispatch('change')
-}
+  }
 
-const handleDragEnd = (e: any) => {
+  const handleDragEnd = (_: any) => {
     updateCard()
-}
+  }
 
-$: title = card.data.title
-$: hostname = getHostname(card.data.src)
-
-onMount(() => {
+  onMount(() => {
     // el.addEventListener('draggable_start', onDragStart)
     // el.addEventListener('draggable_move', onDragMove)
     el.addEventListener('draggable_end', handleDragEnd)
     el.addEventListener('resizable_end', updateCard)
+  })
 
-    webview.src = card.data.src
-
-    webview.addEventListener('did-navigate', (e: any) => {
-        card.data.src = e.url
-    })
-
-    webview.addEventListener('page-title-updated', (e: any) => {
-        card.data.title = e.title
-    })
-
-    webview.addEventListener('did-finish-load', (e: any) => {
-       dispatch('load')
-    })
-})
-
-onDestroy(() => {
+  onDestroy(() => {
     // el && el.addEventListener('draggable_start', onDragStart)
     // el && el.addEventListener('draggable_move', onDragMove)
     el && el.removeEventListener('draggable_end', handleDragEnd)
     el && el.removeEventListener('resizable_end', updateCard)
-})
-</script>
-  
-<Positionable
-    positionable={positionable}
-    data-id={$positionable.id}
-    class="card {$positionable.id}"
-    contained={false}
-    bind:el
-  >
-    <Resizable positionable={positionable} direction="top-right" {minSize} {maxSize} />
-    <Resizable positionable={positionable} direction="top-left" {minSize} {maxSize} />
-    <Resizable positionable={positionable} direction="bottom-right" {minSize} {maxSize} />
-    <Resizable positionable={positionable} direction="bottom-left" {minSize} {maxSize} />
-  
-    <Draggable
-        positionable={positionable}
-        class=""
-    >
-        <div class="top-bar">
-            <div>{title}</div>
-            <div>{hostname}</div>
-        </div>
-    </Draggable>
+  })
 
-    <div class="content tela-ignore">
-        <webview bind:this={webview} src="" partition="persist:horizon" frameborder="0"></webview>
+  $: url = webview?.url
+  $: title = webview?.title
+  $: isLoading = webview?.isLoading
+  $: canGoBack = webview?.canGoBack
+  $: canGoForward = webview?.canGoForward
+  $: $positionable.data.src = $url ?? get(positionable).data.src
+  $: {
+    console.log({
+      url: $url,
+      title: $title,
+      isLoading: $isLoading,
+      canGoBack: $canGoBack,
+      canGoForward: $canGoForward
+    })
+  }
+</script>
+
+<Positionable
+  {positionable}
+  data-id={$positionable.id}
+  class="card {$positionable.id}"
+  contained={false}
+  bind:el
+>
+  <Resizable {positionable} direction="top-right" {minSize} {maxSize} />
+  <Resizable {positionable} direction="top-left" {minSize} {maxSize} />
+  <Resizable {positionable} direction="bottom-right" {minSize} {maxSize} />
+  <Resizable {positionable} direction="bottom-left" {minSize} {maxSize} />
+
+  <Draggable {positionable} class="">
+    <div class="top-bar">
+      <button class="nav-button" on:click={webview?.goBack} disabled={!$canGoBack}> ← </button>
+      <button class="nav-button" on:click={webview?.goForward} disabled={!$canGoForward}>
+        →
+      </button>
+      <button class="nav-button" on:click={webview?.reload}> ↻ </button>
+      <input
+        type="text"
+        class="address-bar"
+        bind:value={$positionable.data.src}
+        on:keyup={(e) => {
+          if (e.key === 'Enter') {
+            $positionable.data.src =
+              'https://' + $positionable.data.src.replace('https://', '').replace('http://', '')
+            webview?.navigate($positionable.data.src)
+          }
+        }}
+      />
+      <div class="page-title">{$title}</div>
     </div>
+  </Draggable>
+
+  <div class="content tela-ignore">
+    <WebviewWrapper
+      bind:this={webview}
+      src={initialSrc}
+      partition="persist:horizon"
+      on:didFinishLoad={() => dispatch('load')}
+    />
+  </div>
 </Positionable>
 
 <style>
-    webview {
-      user-select: none;
-      width: 100%;
-      height: 100%;
-    }
-  </style>
-  
+  .top-bar {
+    display: flex;
+    align-items: center;
+    background-color: #f5f5f5;
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .nav-button {
+    background-color: #e0e0e0;
+    border: none;
+    padding: 6px 12px;
+    margin-right: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .nav-button:disabled {
+    background-color: #cccccc;
+    cursor: default;
+  }
+
+  .nav-button:hover:enabled {
+    background-color: #d5d5d5;
+  }
+
+  .address-bar {
+    flex-grow: 1;
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin: 0 12px;
+  }
+
+  .page-title {
+    margin-left: auto;
+    padding: 0 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>

@@ -24,15 +24,18 @@
     const clientX = (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX;
     const clientY = (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY;
 
-    if (isTagsOrParentWithTags(target as HTMLElement, [
-      "INPUT",
-      "BUTTON",
-      "TEXTAREA",
-      "SELECT",
-      "OPTION",
-      "A",
-      "IFRAME"
-    ])) return;
+    if (
+      isTagsOrParentWithTags(target as HTMLElement, [
+        "INPUT",
+        "BUTTON",
+        "TEXTAREA",
+        "SELECT",
+        "OPTION",
+        "A",
+        "IFRAME"
+      ])
+    )
+      return;
 
     // dragInit.x = clientX;
     // dragInit.y = clientY;
@@ -47,8 +50,18 @@
       e.stopPropagation();
 
       // TODO: Combine these events
-      el.dispatchEvent(new CustomEvent("draggable_onMouseDown", { bubbles: true, detail: { event: e, positionable, clientX, clientY } }));
-      el.dispatchEvent(new CustomEvent("draggable_start", { bubbles: true, detail: { event: e, positionable, clientX, clientY } }));
+      el.dispatchEvent(
+        new CustomEvent("draggable_onMouseDown", {
+          bubbles: true,
+          detail: { event: e, positionable, clientX, clientY }
+        })
+      );
+      el.dispatchEvent(
+        new CustomEvent("draggable_start", {
+          bubbles: true,
+          detail: { event: e, positionable, clientX, clientY }
+        })
+      );
       // TODO: check if event canceled, if not:
       dragging = true;
     }, 100);
@@ -65,8 +78,18 @@
     const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target;
     const clientX = (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX;
     const clientY = (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY;
-    el.dispatchEvent(new CustomEvent("draggable_onMouseMove", { bubbles: true, detail: { event: e, positionable, clientX, clientY } }));
-    el.dispatchEvent(new CustomEvent("draggable_move", { bubbles: true, detail: { event: e, positionable, clientX, clientY } }));
+    el.dispatchEvent(
+      new CustomEvent("draggable_onMouseMove", {
+        bubbles: true,
+        detail: { event: e, positionable, clientX, clientY }
+      })
+    );
+    el.dispatchEvent(
+      new CustomEvent("draggable_move", {
+        bubbles: true,
+        detail: { event: e, positionable, clientX, clientY }
+      })
+    );
   }
 
   function onMouseUp(e: MouseEvent | TouchEvent) {
@@ -85,8 +108,18 @@
     const clientX = (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX;
     const clientY = (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY;
 
-    el.dispatchEvent(new CustomEvent("draggable_onMouseUp", { bubbles: true, detail: { event: e, positionable, clientX, clientY } }));
-    el.dispatchEvent(new CustomEvent("draggable_end", { bubbles: true, detail: { event: e, positionable, clientX, clientY } }));
+    el.dispatchEvent(
+      new CustomEvent("draggable_onMouseUp", {
+        bubbles: true,
+        detail: { event: e, positionable, clientX, clientY }
+      })
+    );
+    el.dispatchEvent(
+      new CustomEvent("draggable_end", {
+        bubbles: true,
+        detail: { event: e, positionable, clientX, clientY }
+      })
+    );
 
     dragging = false;
     document.removeEventListener("mousemove", onMouseMove);

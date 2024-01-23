@@ -9,5 +9,5 @@ export interface TBoard {
   viewOffset: Vec2;
   zoom: number;
   positionables: Writable<TPositionable[]>;
-  inView: Writable<string[]>;   // Stores keys of draggables in view
+  inView: Writable<string[]>; // Stores keys of draggables in view
 }

@@ -31,23 +31,23 @@
     return [Math.floor(x / chunkSize), Math.floor(y / chunkSize)];
   }
   export function positionableInView(
-      posX: number,
-      posY: number,
-      width: number,
-      height: number,
-      vX: number,
-      vY: number,
-      CULL_MARGIN: number,
-      viewPort: Vec2<number>,
-      zoom: number
-    ) {
-      return (
-        posX + width + CULL_MARGIN >= vX &&
-        posY + height + CULL_MARGIN >= vY &&
-        posX - CULL_MARGIN <= vX + viewPort.x / (zoom * 0.5) &&
-        posY - CULL_MARGIN <= vY + viewPort.y / (zoom * 0.5)
-      );
-    }
+    posX: number,
+    posY: number,
+    width: number,
+    height: number,
+    vX: number,
+    vY: number,
+    CULL_MARGIN: number,
+    viewPort: Vec2<number>,
+    zoom: number
+  ) {
+    return (
+      posX + width + CULL_MARGIN >= vX &&
+      posY + height + CULL_MARGIN >= vY &&
+      posX - CULL_MARGIN <= vX + viewPort.x / (zoom * 0.5) &&
+      posY - CULL_MARGIN <= vY + viewPort.y / (zoom * 0.5)
+    );
+  }
 </script>
 
 <script lang="ts">
@@ -85,7 +85,7 @@
     return (
       posX + width + $settings.CULL_MARGIN >= vX &&
       posY + height + $settings.CULL_MARGIN >= vY &&
-      posX - $settings.CULL_MARGIN <= vX + viewPort.w / $zoom  &&
+      posX - $settings.CULL_MARGIN <= vX + viewPort.w / $zoom &&
       posY - $settings.CULL_MARGIN <= vY + viewPort.h / $zoom
     );
   }
@@ -96,20 +96,21 @@
     <span style="font-size: 4rem;">{`${chunkX} : ${chunkY}`}</span>
   {/if}
 </div>
-{#if $zoom > 0.2} <!-- todo: make cfg val -->
-    {#each $positionables as positionable, i (positionable.key)}
-      {#if positionableInView(positionable.posX, positionable.posY, positionable.width, positionable.height, $viewX, $viewY)}
-        <slot
-          item={positionable}
-          key={positionable.key}
-          x={positionable.posX}
-          y={positionable.posY}
-          width={positionable.width}
-          height={positionable.height}
-        />
-      {/if}
-    {/each}
-  {/if}
+{#if $zoom > 0.2}
+  <!-- todo: make cfg val -->
+  {#each $positionables as positionable, i (positionable.key)}
+    {#if positionableInView(positionable.posX, positionable.posY, positionable.width, positionable.height, $viewX, $viewY)}
+      <slot
+        item={positionable}
+        key={positionable.key}
+        x={positionable.posX}
+        y={positionable.posY}
+        width={positionable.width}
+        height={positionable.height}
+      />
+    {/if}
+  {/each}
+{/if}
 
 <style>
   .chunk {

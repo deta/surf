@@ -4,5 +4,5 @@ export enum JobStatus {
   COMPLETE = 'complete',
   FAILED = 'failed',
   INTERNAL_ERROR = 'internal-error',
-  TIMED_OUT = 'timed-out',
+  TIMED_OUT = 'timed-out'
 }

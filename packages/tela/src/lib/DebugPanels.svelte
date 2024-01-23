@@ -13,7 +13,7 @@
   let frames = 0;
 
   const _fps = fps();
-  const { supported, result: _mem } = memory()
+  const { supported, result: _mem } = memory();
 
   function begin() {
     beginTime = (performance || Date).now();
@@ -79,7 +79,7 @@
     _mem.subscribe((val) => {
       vMB.update((v) => {
         v.value = val?.usedJSHeapSize / 1048576;
-        v.maxValue = 100//val?.jsHeapSizeLimit / 1048576;
+        v.maxValue = 100; //val?.jsHeapSizeLimit / 1048576;
         return v;
       });
     })

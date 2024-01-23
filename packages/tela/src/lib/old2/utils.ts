@@ -26,12 +26,7 @@ export function snapToGrid(value: number, snap: number): number {
 }
 
 export function rectsIntersect(a: Vec4, b: Vec4) {
-  return (
-    a.x < b.x + b.w &&
-    a.x + a.w > b.x &&
-    a.y < b.y + b.h &&
-    a.y + a.h > b.y
-  );
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
 const debounceMap = new Map();

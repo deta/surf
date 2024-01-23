@@ -1,12 +1,13 @@
 # Features
 
 - [ ] Board
+
   - [ ] Configuration
     - [ ] Modes
       - [ ] Dragging
       - [ ] Selecting
       - [ ] Pan
-      - [X] Zoom
+      - [x] Zoom
     - [ ] Bounds
       - [ ] Offset
       - [ ] Zoom
@@ -26,30 +27,35 @@
     - [ ] Respect parent container boundingRect
 
 - [X]] Background Grid
-  - [X] Configuration
-    - [X] dotColor
-    - [X] dotOpacity
-    - [X] dotSize
-    - [X] gridSize -> always linked to board
+
+  - [x] Configuration
+    - [x] dotColor
+    - [x] dotOpacity
+    - [x] dotSize
+    - [x] gridSize -> always linked to board
 
 - [ ] Positionable
+
   - [ ] Configuration
     - [ ] SnapToGrid override
     - [ ] Cull override
   - [ ] Implementation
-    - [X] Update position
+    - [x] Update position
     - [ ] Respect bounds (maybe damp out of bound return dep on cfg)
     - [ ]
 
 - [ ] Draggable
+
   - [ ] Events -> Rethink them & usefullness / cancelability
 
 - [ ] Resizable -> Maybe turn into ResizeHandle -> + direction cfg
+
   - [ ] Configurability
     - [ ] Min/Max width/height
   - [ ] Support all directions
 
 - [ ] Optimizations
+
   - [ ] Position updates if snapping to grid
   - [ ] Make culling work correctly
 
@@ -59,8 +65,6 @@
 - Add full touch support
 - Extract default styling to importable css (mode cursors etc)
 - Auto pan board when dragging to the edge
-
-
 
 # Bugs / Missing
 
@@ -75,8 +79,8 @@
 
 importing into ohe
 "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "svelte": "./dist/index.js"
-    }
-  },
+".": {
+"types": "./dist/index.d.ts",
+"svelte": "./dist/index.js"
+}
+},

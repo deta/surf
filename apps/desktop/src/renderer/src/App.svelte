@@ -1,14 +1,14 @@
 <script lang="ts">
-    import { HorizonManager } from '@horizon/core'
+  import { HorizonManager } from '@horizon/core'
 </script>
 
 <div class="main">
-    <HorizonManager />
+  <HorizonManager />
 </div>
 
 <style>
-    .main {
-        height: 100vh;
-        width: 100vw;
-    }
+  .main {
+    height: 100vh;
+    width: 100vw;
+  }
 </style>

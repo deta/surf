@@ -2,7 +2,6 @@ import { app, shell, BrowserWindow, session, globalShortcut, ipcMain } from 'ele
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-// import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 function createWindow(): void {
   const spaceSession = session.fromPartition('persist:horizon-session-v0')
@@ -14,13 +13,12 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       session: spaceSession,
-      webSecurity: false,
       webviewTag: true
     }
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow.showInactive()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -51,7 +49,7 @@ const sendShortcutToHorizon = (key: string) => {
     window.webContents.sendInputEvent({
       type: 'keyDown',
       keyCode: key,
-      modifiers: ['meta', 'ctrl'],
+      modifiers: ['meta', 'ctrl']
     })
   }
 }
@@ -59,7 +57,9 @@ const sendShortcutToHorizon = (key: string) => {
 function registerShortcuts() {
   globalShortcut.register(`CommandOrControl+n`, () => sendShortcutToHorizon('n'))
   Array.from(Array(9).keys()).map((idx) => {
-    globalShortcut.register(`CommandOrControl+${idx + 1}`, () => sendShortcutToHorizon((idx + 1).toString()))
+    globalShortcut.register(`CommandOrControl+${idx + 1}`, () =>
+      sendShortcutToHorizon((idx + 1).toString())
+    )
   })
 }
 
@@ -87,7 +87,6 @@ async function handleCaptureWebContents() {
 
   return null
 }
-
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('space.deta')

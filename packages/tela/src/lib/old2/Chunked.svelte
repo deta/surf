@@ -6,6 +6,7 @@
     };
   }
 </script>
+
 <script lang="ts">
   import { createEventDispatcher, getContext, onDestroy, onMount } from "svelte";
   import Chunk from "./Chunk.svelte";
@@ -52,7 +53,7 @@
   });
 
   $: {
-    ($viewChunkX || $viewChunkY);
+    $viewChunkX || $viewChunkY;
     dispatch("warmChunksChanged", { warmChunks: calcWarmChunks() });
   }
 
@@ -66,8 +67,16 @@
     const viewChunkW = Math.ceil(viewPort.w / $settings.CHUNK_SIZE / $zoom);
     const viewChunkH = Math.ceil(viewPort.h / $settings.CHUNK_SIZE / $zoom);
 
-    for (let x = $viewChunkX - $settings.CHUNK_WARM_MARGIN; x < $viewChunkX + viewChunkW + $settings.CHUNK_WARM_MARGIN; x++) {
-      for (let y = $viewChunkY - $settings.CHUNK_WARM_MARGIN; y < $viewChunkY + viewChunkH + $settings.CHUNK_WARM_MARGIN; y++) {
+    for (
+      let x = $viewChunkX - $settings.CHUNK_WARM_MARGIN;
+      x < $viewChunkX + viewChunkW + $settings.CHUNK_WARM_MARGIN;
+      x++
+    ) {
+      for (
+        let y = $viewChunkY - $settings.CHUNK_WARM_MARGIN;
+        y < $viewChunkY + viewChunkH + $settings.CHUNK_WARM_MARGIN;
+        y++
+      ) {
         warmChunks.add(`${x}:${y}`);
       }
     }
@@ -87,26 +96,32 @@
   }
 
   // Handlers
-  function onDraggableMoveEnd(e: CustomEvent<{ key: string, initChunk: Vec2<number>, newPos: Vec2<number> }>) {
+  function onDraggableMoveEnd(
+    e: CustomEvent<{ key: string; initChunk: Vec2<number>; newPos: Vec2<number> }>
+  ) {
     e.stopPropagation();
     const changed = new Set<string>();
     changed.add(`${e.detail.initChunk.x}:${e.detail.initChunk.y}`);
 
     // Handle chunk move
-    const { chunkX: newChunkX, chunkY: newChunkY } = posToChunkPos(e.detail.newPos.x, e.detail.newPos.y, $settings);
+    const { chunkX: newChunkX, chunkY: newChunkY } = posToChunkPos(
+      e.detail.newPos.x,
+      e.detail.newPos.y,
+      $settings
+    );
 
     if (newChunkX !== e.detail.initChunk.x || newChunkY !== e.detail.initChunk.y) {
       changed.add(`${newChunkX}:${newChunkY}`);
-      chunks.update(_chunks => {
+      chunks.update((_chunks) => {
         const initChunk = _chunks.get(`${e.detail.initChunk.x}:${e.detail.initChunk.y}`);
         let positionable: IPositionable | undefined;
         if (initChunk) {
-          const _positionable = get(initChunk).find(p => p.key === e.detail.key);
+          const _positionable = get(initChunk).find((p) => p.key === e.detail.key);
           if (_positionable) {
             positionable = _positionable;
           }
-          initChunk.update(ck => {
-            ck = ck.filter(p => p.key !== e.detail.key);
+          initChunk.update((ck) => {
+            ck = ck.filter((p) => p.key !== e.detail.key);
             return ck;
           });
         }
@@ -117,33 +132,39 @@
         const newChunk = _chunks.get(`${newChunkX}:${newChunkY}`);
         if (!newChunk) {
           _chunks.set(`${newChunkX}:${newChunkY}`, writable([positionable]));
-        }
-        else {
-          newChunk.update(ck => {
+        } else {
+          newChunk.update((ck) => {
             ck.push(positionable!);
             return ck;
           });
         }
 
         return _chunks;
-      })
+      });
     }
 
     // Sync chunk & page
     board.onChunksChanged(chunks, changed);
   }
-  function onPositionableChunkChanged(e: CustomEvent<{ key: string, initChunk: { x: number, y: number }, newChunk: { x: number, y: number }, newPos: { x: number, y: number } }>) {
+  function onPositionableChunkChanged(
+    e: CustomEvent<{
+      key: string;
+      initChunk: { x: number; y: number };
+      newChunk: { x: number; y: number };
+      newPos: { x: number; y: number };
+    }>
+  ) {
     const { key, initChunk, currChunk, newPos } = e.detail;
 
-    chunks.update(cks => {
+    chunks.update((cks) => {
       const initCk = cks.get(`${initChunk.x}:${initChunk.y}`);
       if (!initCk) return cks; // todo: warn? dont rly need cuz if !chunked positionable should be fine.
 
       // Extract positionable & remove init chunk if empty.
       let positionable: IPositionable | undefined;
-      initCk.update(ck => {
-        positionable = ck.find(p => p.key === key);
-        if (positionable) ck = ck.filter(p => p.key !== positionable!.key);
+      initCk.update((ck) => {
+        positionable = ck.find((p) => p.key === key);
+        if (positionable) ck = ck.filter((p) => p.key !== positionable!.key);
         return ck;
       });
       if (!positionable) return cks; // todo: warn? dont rly need cuz if !chunked positionable should be fine.
@@ -159,7 +180,7 @@
       if (!cks.has(`${currChunk.x}:${currChunk.y}`)) {
         cks.set(`${currChunk.x}:${currChunk.y}`, writable([]));
       }
-      cks.get(`${currChunk.x}:${currChunk.y}`)!.update(s => {
+      cks.get(`${currChunk.x}:${currChunk.y}`)!.update((s) => {
         s.push(positionable!);
         return s;
       });
@@ -170,7 +191,7 @@
 
   onMount(() => {
     htmlEl.addEventListener("draggable_move_end", onPositionableChunkChanged);
-  })
+  });
   onMount(() => {
     dispatch("warmChunksChanged", { warmChunks: calcWarmChunks() });
   });
@@ -180,38 +201,32 @@
 </script>
 
 <div class="chunked" bind:this={htmlEl}>
-<!-- {#key $chunksUpdate} -->
+  <!-- {#key $chunksUpdate} -->
   {#each $chunks.entries() as [k, v] (k)}
     {@const cX = parseInt(k.split(":")[0])}
     {@const cY = parseInt(k.split(":")[1])}
     {#if chunkInView(cX, cY, $viewChunkX, $viewChunkY)}
       {#if lazy}
-      {#await chunkComponent then c}
-        <svelte:component
-          this={c.default}
-          {board}
-          positionables={v}
-          chunkX={cX}
-          chunkY={cY}
-          let:item
-        >
-          <slot {item}/>
-        </svelte:component>
-      {/await}
-      {:else}
-      <Chunk
-          {board}
+        {#await chunkComponent then c}
+          <svelte:component
+            this={c.default}
+            {board}
             positionables={v}
             chunkX={cX}
             chunkY={cY}
             let:item
           >
-            <slot {item}/>
-          </Chunk>
+            <slot {item} />
+          </svelte:component>
+        {/await}
+      {:else}
+        <Chunk {board} positionables={v} chunkX={cX} chunkY={cY} let:item>
+          <slot {item} />
+        </Chunk>
       {/if}
     {/if}
   {/each}
-<!-- {/key} -->
+  <!-- {/key} -->
 </div>
 
 <style>

@@ -4,7 +4,7 @@
     pos_y: number;
     width: number;
     height: number;
-  } & {[P in KeyName]: string};
+  } & { [P in KeyName]: string };
 </script>
 
 <script lang="ts">
@@ -43,8 +43,8 @@
     zIndex !== undefined
       ? zIndex
       : $stackingOrder.indexOf(key) === -1
-      ? 0
-      : $stackingOrder.indexOf(key);
+        ? 0
+        : $stackingOrder.indexOf(key);
 
   $: transformCss = `transform: ${preTransform || ""} translate3d(${x}px, ${y}px, 0) ${
     postTransform || ""
@@ -53,13 +53,17 @@
   let dragging = false;
 
   // Handlers
-  function onDraggableMove(e: CustomEvent<{ key: string, x: number, y: number, width: number, height: number }>) {
+  function onDraggableMove(
+    e: CustomEvent<{ key: string; x: number; y: number; width: number; height: number }>
+  ) {
     //e.stopPropagation();
     // const { key, x: newPosX, y: newPosY } = e.detail;
     // x = newPosX;
     // x = newPosY; // todo: prob from chunk stuff -> use context to figure if in chunked mode
   }
-  function onResizableChanged(e: CustomEvent<{ key: string, x: number, y: number, width: number, height: number }>) {
+  function onResizableChanged(
+    e: CustomEvent<{ key: string; x: number; y: number; width: number; height: number }>
+  ) {
     e.stopPropagation();
     x = e.detail.x;
     y = e.detail.y;

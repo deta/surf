@@ -1,243 +1,279 @@
 :root {
-    --theme-border-radius: 0.7rem;
-    --theme-transparency: 0%;
-    --theme-shadow: unset;
-    --theme-font: system-ui, sans-serif;
+  --theme-border-radius: 0.7rem;
+  --theme-transparency: 0%;
+  --theme-shadow: unset;
+  --theme-font: system-ui, sans-serif;
 }
-  
+
 .light {
-    --dm: 0; // used in HSL calculations
-  
-    // Colors
-    --lightness-hell: 230;
-    --lightness: 100;
-    --lightness-muted: 30;
-  
-    --theme-tint-hue: 0;
-    --theme-tint-saturation: 100%;
-    --theme-tint-lightness: 100%;
-  
-    --color-active-hue: 203; //100%,62%
-  
-    --background: hsla(var(--theme-tint-hue), var(--theme-tint-saturation), max(var(--theme-tint-lightness), 70%), 1);
-    --color-text: hsla(var(--theme-text-hue), var(--theme-text-saturation), min(var(--theme-text-lightness), 50%), 1);
-    --color-text-muted: hsla(var(--theme-text-hue), var(--theme-text-saturation), max(min(var(--theme-text-lightness), 70%), 30%), 0.8);
+  --dm: 0; // used in HSL calculations
+
+  // Colors
+  --lightness-hell: 230;
+  --lightness: 100;
+  --lightness-muted: 30;
+
+  --theme-tint-hue: 0;
+  --theme-tint-saturation: 100%;
+  --theme-tint-lightness: 100%;
+
+  --color-active-hue: 203; //100%,62%
+
+  --background: hsla(
+    var(--theme-tint-hue),
+    var(--theme-tint-saturation),
+    max(var(--theme-tint-lightness), 70%),
+    1
+  );
+  --color-text: hsla(
+    var(--theme-text-hue),
+    var(--theme-text-saturation),
+    min(var(--theme-text-lightness), 50%),
+    1
+  );
+  --color-text-muted: hsla(
+    var(--theme-text-hue),
+    var(--theme-text-saturation),
+    max(min(var(--theme-text-lightness), 70%), 30%),
+    0.8
+  );
 }
-  
+
 .dark {
-    --dm: 1 !important; // used in HSL calculations
-  
-    // Colors
-    --lightness-hell: 60 !important;
-    --lightness: 140 !important;
-    --lightness-muted: 200 !important;
-  
-    --theme-tint-hue: 250;
-    --theme-tint-saturation: 20% !important;
-    --theme-tint-lightness: 20% !important;
-  
-    --color-active-hue: 203; //100%,62%
-  
-    --background: hsla(var(--theme-tint-hue), var(--theme-tint-saturation), 7%, 1);
-    --color-text: hsla(var(--theme-text-hue), var(--theme-text-saturation), max(var(--theme-text-lightness), 30%), 1);
-    --color-text-muted: hsla(var(--theme-text-hue), var(--theme-text-saturation), max(var(--theme-text-lightness), 40%), 0.8);
+  --dm: 1 !important; // used in HSL calculations
+
+  // Colors
+  --lightness-hell: 60 !important;
+  --lightness: 140 !important;
+  --lightness-muted: 200 !important;
+
+  --theme-tint-hue: 250;
+  --theme-tint-saturation: 20% !important;
+  --theme-tint-lightness: 20% !important;
+
+  --color-active-hue: 203; //100%,62%
+
+  --background: hsla(var(--theme-tint-hue), var(--theme-tint-saturation), 7%, 1);
+  --color-text: hsla(
+    var(--theme-text-hue),
+    var(--theme-text-saturation),
+    max(var(--theme-text-lightness), 30%),
+    1
+  );
+  --color-text-muted: hsla(
+    var(--theme-text-hue),
+    var(--theme-text-saturation),
+    max(var(--theme-text-lightness), 40%),
+    0.8
+  );
 }
-  
+
 * {
-    overscroll-behavior: contain;
+  overscroll-behavior: contain;
 }
 
 .horizon {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    position: relative;
-    z-index: 1;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
 
-    background: var(hsl(var(--theme-background-hue, 0), var(--theme-background-saturation, 0%), var(--theme-background-lightness, 100%)));
-    background-color: hsl(var(--theme-background-hue, 0), var(--theme-background-saturation, 0%), var(--theme-background-lightness, 100%));
-    background-size: cover;
-    background-position: center center;
+  background: var(
+    hsl(
+      var(--theme-background-hue, 0),
+      var(--theme-background-saturation, 0%),
+      var(--theme-background-lightness, 100%)
+    )
+  );
+  background-color: hsl(
+    var(--theme-background-hue, 0),
+    var(--theme-background-saturation, 0%),
+    var(--theme-background-lightness, 100%)
+  );
+  background-size: cover;
+  background-position: center center;
 }
 
 .card {
-    cursor: initial;
+  cursor: initial;
+  display: flex;
+  flex-direction: column;
+  background: #ededed;
+
+  .top-bar {
+    background: #e2e2e2;
+    flex-shrink: 0;
+    padding: 0.25rem 0.5rem;
     display: flex;
-    flex-direction: column;
-    background: #ededed;
+    align-items: center;
+    justify-content: space-between;
+  }
 
-    .top-bar {
-        background: #e2e2e2;
-        flex-shrink: 0;
-        padding: 0.25rem 0.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .content {
-        position: relative;
-        z-index: 2;
-        flex: 1;
-    }
+  .content {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+  }
 }
 
-
 .tela-board {
-    p,
-    span,
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6,
-    button,
-    a {
-      font-family: var(--theme-font);
+  p,
+  span,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  button,
+  a {
+    font-family: var(--theme-font);
+  }
+
+  /* Board states */
+  &.mode-pan *,
+  &.mode-dragging *,
+  &.mode-resizing *,
+  &.mode-select *,
+  &.mode-modSelect * {
+    pointer-events: none !important;
+    user-select: none !important;
+  }
+
+  .draggable {
+    cursor: grab;
+  }
+
+  .resizable {
+    // background: lime;
+    width: 10px;
+    height: 10px;
+    position: absolute;
+    z-index: 300;
+  }
+
+  .resizable.top {
+    cursor: ns-resize;
+    top: -10px;
+    left: 50%;
+    width: 100%;
+    transform: translateX(-50%);
+  }
+
+  .resizable.right {
+    cursor: ew-resize;
+    top: 50%;
+    right: -10px;
+    height: 100%;
+    transform: translateY(-50%);
+  }
+
+  .resizable.bottom {
+    cursor: ns-resize;
+    bottom: -10px;
+    left: 50%;
+    width: 100%;
+    transform: translateX(-50%);
+  }
+
+  .resizable.left {
+    cursor: ew-resize;
+    top: 50%;
+    left: -10px;
+    height: 100%;
+    transform: translateY(-50%);
+  }
+
+  .resizable.top-left {
+    cursor: nwse-resize;
+    top: -10px;
+    left: -10px;
+    width: calc(10px + (var(--theme-border-radius) / 2));
+    height: calc(10px + (var(--theme-border-radius) / 2));
+  }
+
+  .resizable.top-right {
+    cursor: nesw-resize;
+    top: -10px;
+    right: -10px;
+    width: calc(10px + (var(--theme-border-radius) / 2));
+    height: calc(10px + (var(--theme-border-radius) / 2));
+  }
+
+  .resizable.bottom-right {
+    cursor: nwse-resize;
+    bottom: -10px;
+    right: -10px;
+    width: calc(10px + (var(--theme-border-radius) / 2));
+    height: calc(10px + (var(--theme-border-radius) / 2));
+  }
+
+  .resizable.bottom-left {
+    cursor: nesw-resize;
+    bottom: -10px;
+    left: -10px;
+    width: calc(10px + (var(--theme-border-radius) / 2));
+    height: calc(10px + (var(--theme-border-radius) / 2));
+  }
+
+  &.mode-select .card:not(.active) * {
+    // pointer-events: none !important;
+    user-select: none !important;
+  }
+
+  cursor: crosshair;
+  cursor: cell;
+  transform-origin: center center;
+
+  .positionable {
+    transform-origin: center center !important;
+    perspective-origin: 50% 50%;
+  }
+
+  .selectionRect {
+    position: absolute;
+    background: #abd5ff68; // TODO: remov as tel does no set it anymore
+    border: 2px solid hsla(var(--color-active-hue), 100%, 62%, 0.8);
+    border-color: hsla(
+      var(--theme-selection-hue),
+      var(--theme-selection-saturation),
+      var(--theme-selection-lightness),
+      1
+    );
+    background: hsla(var(--theme-selection-hue), var(--theme-selection-saturation), 62%, 0.2);
+  }
+
+  &.mode-modSelect .selectionRect {
+    border-style: dashed;
+  }
+
+  .card {
+    &.dragging {
+      cursor: grabbing;
+
+      * {
+        user-select: none !important;
+        pointer-events: none;
+      }
+
+      box-shadow: rgba(0, 0, 0, 0.05) var(--tiltXDeg) var(--tiltYDeg) 12px !important;
     }
-  
-    /* Board states */
-    &.mode-pan *,
-    &.mode-dragging *,
-    &.mode-resizing *,
-    &.mode-select *,
-    &.mode-modSelect * {
-      pointer-events: none !important;
-      user-select: none !important;
-    }
-  
+
     .draggable {
       cursor: grab;
     }
-  
-    .resizable {
-      // background: lime;
-      width: 10px;
-      height: 10px;
-      position: absolute;
-      z-index: 300;
+
+    > .draggable {
+      border-radius: var(--theme-border-radius);
+      z-index: 0;
+
+      cursor: grab;
     }
-  
-    .resizable.top {
-      cursor: ns-resize;
-      top: -10px;
-      left: 50%;
-      width: 100%;
-      transform: translateX(-50%);
-    }
-  
-    .resizable.right {
-      cursor: ew-resize;
-      top: 50%;
-      right: -10px;
-      height: 100%;
-      transform: translateY(-50%);
-    }
-  
-    .resizable.bottom {
-      cursor: ns-resize;
-      bottom: -10px;
-      left: 50%;
-      width: 100%;
-      transform: translateX(-50%);
-    }
-  
-    .resizable.left {
-      cursor: ew-resize;
-      top: 50%;
-      left: -10px;
-      height: 100%;
-      transform: translateY(-50%);
-    }
-  
-    .resizable.top-left {
-      cursor: nwse-resize;
-      top: -10px;
-      left: -10px;
-      width: calc(10px + (var(--theme-border-radius) / 2));
-      height: calc(10px + (var(--theme-border-radius) / 2));
-    }
-  
-    .resizable.top-right {
-      cursor: nesw-resize;
-      top: -10px;
-      right: -10px;
-      width: calc(10px + (var(--theme-border-radius) / 2));
-      height: calc(10px + (var(--theme-border-radius) / 2));
-    }
-  
-    .resizable.bottom-right {
-      cursor: nwse-resize;
-      bottom: -10px;
-      right: -10px;
-      width: calc(10px + (var(--theme-border-radius) / 2));
-      height: calc(10px + (var(--theme-border-radius) / 2));
-    }
-  
-    .resizable.bottom-left {
-      cursor: nesw-resize;
-      bottom: -10px;
-      left: -10px;
-      width: calc(10px + (var(--theme-border-radius) / 2));
-      height: calc(10px + (var(--theme-border-radius) / 2));
-    }
-  
-    &.mode-select .card:not(.active) * {
-      // pointer-events: none !important;
-      user-select: none !important;
-    }
-  
-    cursor: crosshair;
-    cursor: cell;
-    transform-origin: center center;
-  
-    .positionable {
-      transform-origin: center center !important;
-      perspective-origin: 50% 50%;
-    }
-  
-    .selectionRect {
-      position: absolute;
-      background: #abd5ff68; // TODO: remov as tel does no set it anymore
-      border: 2px solid hsla(var(--color-active-hue), 100%,
-          62%, 0.8);
-      border-color: hsla(var(--theme-selection-hue), var(--theme-selection-saturation), var(--theme-selection-lightness), 1);
-      background: hsla(var(--theme-selection-hue),
-          var(--theme-selection-saturation), 62%, 0.2)
-    }
-  
-    &.mode-modSelect .selectionRect {
-      border-style: dashed;
-    }
-  
-    .card {
-      &.dragging {
-        cursor: grabbing;
-  
-        * {
-          user-select: none !important;
-          pointer-events: none;
-        }
-  
-        box-shadow: rgba(0, 0, 0, 0.05) var(--tiltXDeg) var(--tiltYDeg) 12px !important;
-      }
-  
-      .draggable {
-        cursor: grab;
-      }
-  
-      >.draggable {
-        border-radius: var(--theme-border-radius);
-        z-index: 0;
-  
-  
-        cursor: grab;
-      }
-    }
+  }
 }

@@ -35,21 +35,25 @@
 
   let dragging = false;
 
-  $: transformCss = `left: ${$positionable.x}px; top: ${$positionable.y}px; width: ${$positionable.width}px; height: ${$positionable.height}px; z-index: ${$positionable.z !== undefined ? $positionable.z : $stackingOrder.indexOf($positionable[POSITIONABLE_KEY])}; contain-intrinsic-size: ${$positionable.width}px ${$positionable.height}px; ${contained ? 'contain: strict;' : ''}`;
+  $: transformCss = `left: ${$positionable.x}px; top: ${$positionable.y}px; width: ${$positionable.width}px; height: ${$positionable.height}px; z-index: ${$positionable.z !== undefined ? $positionable.z : $stackingOrder.indexOf($positionable[POSITIONABLE_KEY])}; contain-intrinsic-size: ${$positionable.width}px ${$positionable.height}px; ${contained ? "contain: strict;" : ""}`;
   // $: transformCss = `left: ${$positionable.x - (Math.floor($positionable.x / CHUNK_WIDTH) * CHUNK_WIDTH)}px; top: ${$positionable.y  - (Math.floor($positionable.y / CHUNK_HEIGHT) * CHUNK_HEIGHT)}px; width: ${$positionable.width}px; height: ${$positionable.height}px; z-index: ${$positionable.key !== undefined ? $positionable.key : 0};`; // ${!visible ? 'display: none;' : ''} ${!visible ? 'content-visibility: hidden;' : ''}
   // $: transformCss = `left: 0; top: 0;transform: translate3d(${$positionable.x}px, ${$positionable.y}px, 0) scale(${$state.zoom}); width: ${$positionable.width}px; height: ${$positionable.height}px; z-index: ${$positionable.key !== undefined ? $positionable.key : 0};`;
 
-  function onDraggableStart() { dragging = true; }
-  function onDraggableEnd() { dragging = false; }
+  function onDraggableStart() {
+    dragging = true;
+  }
+  function onDraggableEnd() {
+    dragging = false;
+  }
 
   onMount(() => {
     el.addEventListener("draggable_start", onDraggableStart);
     el.addEventListener("draggable_end", onDraggableEnd);
-  })
+  });
   onDestroy(() => {
     el && el.removeEventListener("draggable_start", onDraggableStart);
     el && el.removeEventListener("draggable_end", onDraggableEnd);
-  })
+  });
 </script>
 
 <!-- TODO: For Readonly mode, custom immutable version of this cmp -->
@@ -64,7 +68,6 @@
   class:selected={$selection.has($positionable[POSITIONABLE_KEY])}
   class:hoisted={$positionable.hoisted}
   class:dragging
-
   bind:this={el}
 >
   <slot />

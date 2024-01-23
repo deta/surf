@@ -16,7 +16,7 @@ export const generateRandomHue = (seed?: string) => {
   }
   const seedNumber = seed
     .split('')
-    .map(char => char.charCodeAt(0))
+    .map((char) => char.charCodeAt(0))
     .reduce((acc, val) => acc + val, 0)
 
   const hue = seedNumber % 360

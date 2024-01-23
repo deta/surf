@@ -46,7 +46,7 @@ export interface IBoardSettings {
   };
 }
 export interface IBoardState {
-  viewOffset: { x: Tweened<number>, y: Tweened<number> };
+  viewOffset: { x: Tweened<number>; y: Tweened<number> };
   viewPort: Vec4; // Store viewport position in case container el is not full window
   zoom: Tweened<number>;
   mode: TBoardMode;
@@ -91,6 +91,7 @@ export type TBoardMode =
   | "dragging"
   // Used when positionable is being resized
   | "resizing";
-export interface TIBoardState { // todo; kill?
+export interface TIBoardState {
+  // todo; kill?
   mode: TBoardMode;
 }

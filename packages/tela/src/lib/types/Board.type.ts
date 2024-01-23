@@ -61,7 +61,7 @@ export type TBoardMode =
   | "resizing";
 
 export interface IBoardState<BaseSt extends BaseState, Actions> {
-  viewOffset: Tweened<{ x: number, y: number }> | Spring<{ x: number, y: number }>;
+  viewOffset: Tweened<{ x: number; y: number }> | Spring<{ x: number; y: number }>;
   viewPort: Writable<Vec4>;
   zoom: Tweened<number>;
   mode: StateMachine<BaseSt, Actions>;
@@ -79,5 +79,8 @@ export interface IBoard<BaseSt extends BaseState, Actions> {
     y: number,
     opts: { delay?: number; duration?: number; hard?: boolean }
   ) => void;
-  zoomTo: (zoom: number, opts?: { delay?: number; duration?: number; soft?: string | number | boolean }) => Promise<void>;
+  zoomTo: (
+    zoom: number,
+    opts?: { delay?: number; duration?: number; soft?: string | number | boolean }
+  ) => Promise<void>;
 }

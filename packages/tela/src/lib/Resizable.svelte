@@ -1,3 +1,5 @@
+<svelte:options immutable={true} />
+
 <script context="module" lang="ts">
   export type TResizeDirection =
     | "top"
@@ -78,8 +80,6 @@
     document.removeEventListener("touchend", onMouseUp);
   }
 </script>
-
-<svelte:options immutable={true} />
 
 <div
   class="resizable {direction} {$$restProps.class || ''}"

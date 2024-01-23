@@ -5,7 +5,6 @@
   let componentPromise = loadComponent();
 </script>
 
-{#await componentPromise}
-{:then { default: Component }}
+{#await componentPromise then { default: Component }}
   <slot name="component" {Component} />
 {/await}
