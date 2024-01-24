@@ -5,10 +5,13 @@
   import { API } from '@horizon/core/src/lib/service/api'
   import { HorizonsManager } from '@horizon/core/src/lib/service/horizon'
 
+  import './index.scss'
+
   import Horizon from './Horizon.svelte'
   import { useLogScope } from '../../utils/log'
   import Stack from '../Stack/Stack.svelte'
   import StackItem from '../Stack/StackItem.svelte'
+    import HorizonPreview from './HorizonPreview.svelte'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -17,7 +20,8 @@
 
   const horizons = horizonManager.horizons
   const hotHorizons = horizonManager.hotHorizons
-  // const sortedHotHorizons = horizonManager.sortedHotHorizons
+  const coldHorizons = horizonManager.coldHorizons
+  const sortedHorizons = horizonManager.sortedHorizons
   const horizonStates = horizonManager.horizonStates
   // const activeHorizonId = horizonManager.activeHorizonId
   // const activeHorizon = horizonManager.activeHorizon
@@ -27,57 +31,77 @@
 
   horizons.subscribe((e) => log.debug('horizons changed', e))
 
-  const hotHorizonsSorted = derived(horizonStates, (horizonStates) => {
-    return Array.from(horizonStates.entries())
-      .map(([id, state]) => ({ id, ...state }))
-      .filter((horizon) => horizon.state === 'hot')
-      .sort((a, b) => a.since.getTime() - b.since.getTime()) // oldest first
-  })
+//   const hotHorizonsSorted = derived(horizonStates, (horizonStates) => {
+//     return Array.from(horizonStates.entries())
+//       .map(([id, state]) => ({ id, ...state }))
+//       .filter((horizon) => horizon.state === 'hot')
+//       .sort((a, b) => a.since.getTime() - b.since.getTime()) // oldest first
+//   })
 
   // $: console.log('horizons', $horizons.map(e => ({...e, state: e.getState()})))
   // $: console.log('hotHorizons', $hotHorizons.map(e => ({...e, state: e.getState()})))
   // $: console.log('activeHorizonId', $activeHorizonId)
   // $: console.log('activeHorizon', $activeHorizon)
-  $: log.debug('hotHorizonsSorted', $hotHorizonsSorted)
+  $: log.debug('sortedHorizons', $sortedHorizons)
+  $: log.debug('activeStackItemIdx', activeStackItemIdx)
+  $: log.debug('horizonStates', Array.from($horizonStates).map(([id, state]) => ({ id, ...state })))
 
   const addHorizon = async () => {
     const newHorizon = await horizonManager.createHorizon('New Horizon' + $horizons.length)
     await horizonManager.switchHorizon(newHorizon.id)
 
-    activeStackItemIdx = $hotHorizons.length - 1
+    activeStackItemIdx = $horizons.length - 1
+    showStackOverview = false
   }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.metaKey || event.ctrlKey) {
-            if (event.key === 'n') {
-                event.preventDefault()
-                addHorizon()
-            } else if (event.key === 'k' || event.key === ' ' || event.code === 'Space') {
-                event.preventDefault()
-                showStackOverview = !showStackOverview
-            } else if (event.key === 'ArrowUp') {
-                event.preventDefault()
-                activeStackItemIdx = Math.max(0, activeStackItemIdx - 1)
-            } else if (event.key === 'ArrowDown') {
-                event.preventDefault()
-                activeStackItemIdx = Math.min($hotHorizons.length - 1, activeStackItemIdx + 1)
+        if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
+            event.preventDefault()
+            addHorizon()
+        } else if (((event.metaKey || event.ctrlKey) && event.key === 'k') || event.key === ' ' || event.code === 'Space') {
+            event.preventDefault()
+            if (showStackOverview) {
+                horizonManager.switchHorizon($horizons[activeStackItemIdx])
+                showStackOverview = false
+            } else {
+                showStackOverview = true
             }
-            // } else {
-            //     const indexes = $horizons.map((_e, idx) => idx + 1)
-            //     const index = indexes.indexOf(Number(event.key))
-            //     if (index !== -1) {
-            //         event.preventDefault()
-            //         switchHorizon($horizons[index].id)
-            //     }
-            // }
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault()
+            activeStackItemIdx = Math.max(0, activeStackItemIdx - 1)
+            if (!showStackOverview) {
+                horizonManager.switchHorizon($horizons[activeStackItemIdx])
+            }
+        } else if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            activeStackItemIdx = Math.min($horizons.length - 1, activeStackItemIdx + 1)
+            if (!showStackOverview) {
+                horizonManager.switchHorizon($horizons[activeStackItemIdx])
+            }
         }
+        // } else {
+        //     const indexes = $horizons.map((_e, idx) => idx + 1)
+        //     const index = indexes.indexOf(Number(event.key))
+        //     if (index !== -1) {
+        //         event.preventDefault()
+        //         switchHorizon($horizons[index].id)
+        //     }
+        // }
     }
 
-    const handleStackItemSelect = (e: CustomEvent<number>) => {
-        log.debug('select stack item', e.detail)
-        const selectedHorizon = $hotHorizons[e.detail]
+    const handleStackItemSelect = async (e: CustomEvent<number>) => {
+        log.debug('select stack item idx', e.detail)
+        const selectedHorizon = $horizons[e.detail]
         if (selectedHorizon) {
+            log.debug('switch horizon', selectedHorizon)
             horizonManager.switchHorizon(selectedHorizon)
+
+            activeStackItemIdx = e.detail
+            showStackOverview = false
+
+
+            // const newIdx = $sortedHorizons.findIndex((h) => h === selectedHorizon)
+            // activeStackItemIdx = newIdx
         }
     }
 
@@ -101,18 +125,40 @@
     </div> -->
 
     <Stack
-        len={$hotHorizons.length - 1}
         options={{ transitionDuration: 0.2 }}
         bind:activeIdx={activeStackItemIdx}
         bind:showOverview={showStackOverview}
         on:select={handleStackItemSelect}
-        let:selectItem={selectStackItem}
     >
-        {#each $hotHorizons as hotHorizon, idx (hotHorizon.id)}
-            <StackItem showOverview={showStackOverview} on:select={() => selectStackItem(idx)}>
+        {#each $horizons as horizon, idx (horizon.id)}
+            <StackItem index={idx} showOverview={showStackOverview} highlight={activeStackItemIdx === idx} on:select={handleStackItemSelect}>
+                {#if $horizonStates.get(horizon.id)?.state === 'hot'}
+                    <Horizon horizon={horizon} />
+                {:else}
+                    <HorizonPreview horizon={horizon} />
+                {/if}
+            </StackItem>
+        {/each}
+
+        <!-- {#each $hotHorizons as hotHorizon (hotHorizon.id)}
+            {@const idx = $sortedHorizons.findIndex((h) => h === hotHorizon.id)}
+            <StackItem showOverview={showStackOverview} index={idx} on:select={() => selectStackItem(idx)}>
                 <Horizon horizon={hotHorizon} />
             </StackItem>
         {/each}
+
+        {#each $coldHorizons as coldHorizon (coldHorizon.id)}
+            {@const idx = $sortedHorizons.findIndex((h) => h === coldHorizon.id)}
+            <StackItem showOverview={showStackOverview} index={idx} on:select={() => selectStackItem(idx)}>
+                <div>
+                    {#if coldHorizon.data.previewImage}
+                        <img src={coldHorizon.data.previewImage} alt="preview" />
+                    {:else}
+                    <p>no preview available</p>
+                    {/if}
+                </div>
+            </StackItem>
+        {/each} -->
     </Stack>
 </main>
 

@@ -5,8 +5,6 @@
   import { Board, Grid, createSettings, createBoard, clamp, snapToGrid, hoistPositionable } from "@horizon/tela";
   import type { IBoard, IPositionable, Vec4 } from "@horizon/tela";
 
-  import './index.scss'
-
   import CardWrapper from './CardWrapper.svelte'
   import { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
@@ -59,7 +57,7 @@
 
   const loadHorizon = () => {
     $state.stackingOrder.set($cards.map((e) => get(e).id))
-    $state.viewOffset.set({ x: $data.viewOffsetX, y: 0 })
+    $state.viewOffset.set({ x: data.viewOffsetX, y: 0 })
   }
 
   const updatePreview = async () => {

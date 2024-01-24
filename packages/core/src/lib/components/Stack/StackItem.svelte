@@ -2,20 +2,22 @@
     import { createEventDispatcher } from "svelte"
 
     export let showOverview: boolean
+    export let index: number
+    export let highlight = false
 
-    const dispatch = createEventDispatcher<{select: void}>()
+    const dispatch = createEventDispatcher<{select: number}>()
 
     const handleClick = (e: MouseEvent) => {
         if (!showOverview) return
         console.log('click')
 
         e.preventDefault()
-        dispatch('select')
+        dispatch('select', index)
     }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
-<div on:click={handleClick} class="item" class:overview={showOverview}>
+<div on:click={handleClick} class="item" class:overview={showOverview} class:highlight={highlight} style="--order: {index + 1}; --index: {index};">
     <div class="content">
         <slot></slot>
     </div>
@@ -28,6 +30,7 @@
         transition-property: height, border-radius, border;
         transition-duration: var(--transition-duration);
         transition-timing-function: var(--transition-timing-function);
+        // order: var(--order);
 
         width: 100%;
         overflow: hidden;
@@ -50,6 +53,10 @@
             border-radius: 2rem;
             cursor: pointer;
         }
+
+        // &.highlight {
+        //     border-color: #f26daa;
+        // }
 
         .content {
             pointer-events: none;

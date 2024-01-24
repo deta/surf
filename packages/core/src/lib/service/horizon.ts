@@ -25,7 +25,7 @@ export type HorizonData = {
 export class Horizon {
   readonly id: string
   state: HorizonState
-  data: Writable<HorizonData>
+  data: HorizonData
   cards: Writable<Writable<Card>[]>
 
   api: API
@@ -37,7 +37,7 @@ export class Horizon {
     this.log = useLogScope(`Horizon ${id}`)
 
     this.state = 'cold'
-    this.data = writable(data)
+    this.data = data
     this.cards = writable([])
 
     this.log.debug(`Created`)
@@ -70,7 +70,8 @@ export class Horizon {
   }
 
   async updateData(updates: Partial<HorizonData>) {
-    this.data.update((d) => ({ ...d, ...updates }))
+    this.data = { ...this.data, ...updates }
+    this.log.debug(`Updated data`, this.data)
   }
 
   async freeze() {
@@ -111,7 +112,8 @@ export class HorizonsManager {
 
   activeHorizon: Readable<Horizon | null>
   hotHorizons: Readable<Horizon[]>
-  sortedHotHorizons: Readable<string[]>
+  coldHorizons: Readable<Horizon[]>
+  sortedHorizons: Readable<string[]>
 
   hotHorizonsThreshold: number
 
@@ -142,7 +144,15 @@ export class HorizonsManager {
         // })
     })
 
-    this.sortedHotHorizons = derived([this.horizons, this.horizonStates], ([horizons, horizonStates]) => {
+    this.coldHorizons = derived([this.horizons, this.horizonStates], ([horizons, horizonStates]) => {
+        return horizons
+          .filter((h) => {
+              const horizonState = horizonStates.get(h.id)
+              return horizonState?.state !== 'hot'
+          })
+      })
+
+    this.sortedHorizons = derived([this.horizons, this.horizonStates], ([horizons, horizonStates]) => {
       return [...horizons]
         .sort((a, b) => {
             const aState = horizonStates.get(a.id)
@@ -200,7 +210,7 @@ export class HorizonsManager {
   }
 
   getDefaultHorizon() {
-    const horizon = get(this.horizons).find((h) => get(h.data).isDefault)
+    const horizon = get(this.horizons).find((h) => h.data.isDefault)
     if (!horizon) {
       throw new Error(`Default horizon not found`)
     }
@@ -236,7 +246,7 @@ export class HorizonsManager {
   async switchHorizon(idOrHorizon: string | Horizon) {
     const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
 
-    const oldHorizonState = horizon.getState()
+    const oldHorizonState = get(this.horizonStates).get(horizon.id)?.state ?? 'cold'
 
     if (oldHorizonState === 'cold') {
       await horizon.warmUp()

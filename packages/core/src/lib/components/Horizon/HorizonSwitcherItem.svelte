@@ -16,7 +16,7 @@
   let showPreview = false
   let timeout: ReturnType<typeof setTimeout>
 
-  $: shouldShowPreview = !active && $data.previewImage
+  $: shouldShowPreview = !active && data.previewImage
 
   const handleClick = async (e: MouseEvent) => {
     e.preventDefault()
