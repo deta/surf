@@ -722,7 +722,7 @@
         const { x, y, width, height } = containerEl.getBoundingClientRect();
         viewPort.update((v) => {
           v.x = x;
-          v.y = y;
+          v.y = 0; // HACK: this is needed so the viewport matches the visual board position in the new horizon switcher
           v.w = width;
           v.h = height;
           return v;
@@ -948,6 +948,10 @@
       $viewPort,
       $zoom
     );
+    console.log('viewport', $viewPort)
+    console.log('viewoffset', $viewOffset.x, $viewOffset.y)
+    console.log('targetTouches', (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX, (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY)
+    console.log({ absX, absY })
     const offsetX = absX - select_init.x;
     const offsetY = absY - select_init.y;
 
