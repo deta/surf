@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte'
+  import { onMount } from 'svelte'
   import { derived } from 'svelte/store'
 
   import { API } from '@horizon/core/src/lib/service/api'
@@ -7,11 +7,8 @@
 
   import Horizon from './Horizon.svelte'
   import { useLogScope } from '../../utils/log'
-  import HorizonSwitcherItem from './HorizonSwitcherItem.svelte'
-  import { useFPS } from '../../utils/performance'
-    import Switcher from '../SwitcherPrototype.svelte'
-    import Stack from '../Stack/Stack.svelte'
-    import StackItem from '../Stack/StackItem.svelte'
+  import Stack from '../Stack/Stack.svelte'
+  import StackItem from '../Stack/StackItem.svelte'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -20,10 +17,10 @@
 
   const horizons = horizonManager.horizons
   const hotHorizons = horizonManager.hotHorizons
-  const sortedHotHorizons = horizonManager.sortedHotHorizons
+  // const sortedHotHorizons = horizonManager.sortedHotHorizons
   const horizonStates = horizonManager.horizonStates
-  const activeHorizonId = horizonManager.activeHorizonId
-  const activeHorizon = horizonManager.activeHorizon
+  // const activeHorizonId = horizonManager.activeHorizonId
+  // const activeHorizon = horizonManager.activeHorizon
 
   let activeStackItemIdx = 0
   let showStackOverview = false
