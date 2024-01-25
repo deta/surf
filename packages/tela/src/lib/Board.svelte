@@ -803,8 +803,9 @@
       debounce("end_zoom", 100, mode.idle);
     } else if ($settings.CAN_PAN) {
       if (hasClassOrParentWithClass(e.target as HTMLElement, "tela-ignore")) return;
-      e.preventDefault();
-      e.stopPropagation();
+      // e.preventDefault();
+      // e.stopPropagation();
+      console.log("PAN")
       mode.pan(); // TODO: only if not already?
 
       let deltaX =
@@ -814,7 +815,10 @@
 
       // if (!hasClassOrParentWithClass(e.target as HTMLElement, "draggable")) {
       if ($settings.PAN_DIRECTION === "x") {
-        deltaX += e.deltaY / $zoom;
+        if (deltaX === 0) {
+          mode.idle()
+        }
+        // deltaX += e.deltaY / $zoom;
         // mode.pan();
       }
       // } else {
@@ -863,7 +867,10 @@
 
       // TODO: Done event --> use native pan method
 
-      debounce("end_scroll_pan", 100, mode.idle);
+      debounce("end_scroll_pan", 100, () => {
+        console.log("end_scroll_pan")
+        mode.idle()
+      });
     }
   }
 

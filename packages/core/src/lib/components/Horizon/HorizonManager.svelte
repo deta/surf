@@ -2,6 +2,8 @@
   import { onMount } from 'svelte'
   import { derived } from 'svelte/store'
 
+  import { twoFingers, type Gesture } from "@skilitics-public/two-fingers";
+
   import { API } from '@horizon/core/src/lib/service/api'
   import { HorizonsManager } from '@horizon/core/src/lib/service/horizon'
 
@@ -54,6 +56,25 @@
     showStackOverview = false
   }
 
+  const moveToNextHorizon = () => {
+    const nextIdx = activeStackItemIdx + 1
+    if (nextIdx >= $horizons.length) {
+        addHorizon()
+    } else {
+        activeStackItemIdx = nextIdx
+        if (!showStackOverview) {
+            horizonManager.switchHorizon($horizons[activeStackItemIdx])
+        }
+    }
+  }
+
+  const moveToPreviousHorizon = () => {
+    activeStackItemIdx = Math.max(0, activeStackItemIdx - 1)
+    if (!showStackOverview) {
+        horizonManager.switchHorizon($horizons[activeStackItemIdx])
+    }
+  }
+
     const handleKeyDown = (event: KeyboardEvent) => {
         if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
             event.preventDefault()
@@ -68,16 +89,10 @@
             }
         } else if (event.key === 'ArrowUp') {
             event.preventDefault()
-            activeStackItemIdx = Math.max(0, activeStackItemIdx - 1)
-            if (!showStackOverview) {
-                horizonManager.switchHorizon($horizons[activeStackItemIdx])
-            }
+            moveToPreviousHorizon()
         } else if (event.key === 'ArrowDown') {
             event.preventDefault()
-            activeStackItemIdx = Math.min($horizons.length - 1, activeStackItemIdx + 1)
-            if (!showStackOverview) {
-                horizonManager.switchHorizon($horizons[activeStackItemIdx])
-            }
+            moveToNextHorizon()
         }
         // } else {
         //     const indexes = $horizons.map((_e, idx) => idx + 1)
@@ -105,8 +120,90 @@
         }
     }
 
+    let lockSwipe = false
+    let SWIPE_LOCK_DURATION = 1300
+    let SWIPE_THRESHOLD = 300
+
+    const handleGestureStart = (g: Gesture) => {
+        log.debug('gesture start', g)
+
+        // const event = (g as any).event as WheelEvent | undefined
+        // if (event) {
+        //     event.preventDefault()
+        //     event.stopPropagation()
+        // }
+
+        // lockSwipe = false
+    }
+
+    const handleGestureChange = (g: Gesture) => {
+        // log.debug('gesture change', g)
+
+        if (lockSwipe) return
+
+        if (g.translation.y > SWIPE_THRESHOLD) {
+            moveToPreviousHorizon()
+            
+            lockSwipe = true
+            setTimeout(() => {
+                lockSwipe = false
+            }, SWIPE_LOCK_DURATION)
+        } else if (g.translation.y < -SWIPE_THRESHOLD) {
+            moveToNextHorizon()
+
+            lockSwipe = true
+            setTimeout(() => {
+                lockSwipe = false
+            }, SWIPE_LOCK_DURATION)
+        }
+    }
+
+    const handleGestureEnd = (g: Gesture) => {
+        log.debug('gesture end', g)
+
+        const event = (g as any).event as TouchEvent | undefined
+
+        if (g.scale < 1 && !showStackOverview) {
+            log.debug('scale down')
+            showStackOverview = true
+        } else if (g.scale > 1 && showStackOverview) {
+            log.debug('scale up')
+            showStackOverview = false
+        }
+
+        // if (g.translation.y > 0) {
+        //     activeStackItemIdx = Math.max(0, activeStackItemIdx - 1)
+        // } else if (g.translation.y < 0) {
+        //     activeStackItemIdx = Math.min($horizons.length - 1, activeStackItemIdx + 1)
+        // }
+    }
+
+    // const handleWheel = (e: WheelEvent) => {
+    //     if (!showStackOverview) return
+
+    //     e.preventDefault()
+    //     e.stopPropagation()
+
+    //     log.debug('wheel', e.deltaY)
+
+
+    //     if (e.deltaY < 0) {
+    //         activeStackItemIdx = Math.max(0, activeStackItemIdx - 1)
+    //     } else if (e.deltaY > 0) {
+    //         activeStackItemIdx = Math.min($horizons.length - 1, activeStackItemIdx + 1)
+    //     }
+    // }
+
   onMount(() => {
     horizonManager.init()
+
+    const unregister = twoFingers(document as unknown as HTMLElement, {
+        onGestureStart: handleGestureStart,
+        onGestureChange: handleGestureChange,
+        onGestureEnd: handleGestureEnd,
+    });
+
+
   })
 </script>
 
