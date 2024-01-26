@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { derived } from 'svelte/store'
-
+ 
   import { twoFingers, type Gesture } from "@skilitics-public/two-fingers";
 
   import { API } from '@horizon/core/src/lib/service/api'
@@ -13,20 +12,15 @@
   import { useLogScope } from '../../utils/log'
   import Stack from '../Stack/Stack.svelte'
   import StackItem from '../Stack/StackItem.svelte'
-    import HorizonPreview from './HorizonPreview.svelte'
+  import HorizonPreview from './HorizonPreview.svelte'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
   const horizonManager = new HorizonsManager(api)
-  // const fps = useFPS()
 
   const horizons = horizonManager.horizons
-  const hotHorizons = horizonManager.hotHorizons
-  const coldHorizons = horizonManager.coldHorizons
-  const sortedHorizons = horizonManager.sortedHorizons
-  const horizonStates = horizonManager.horizonStates
   const activeHorizonId = horizonManager.activeHorizonId
-  // const activeHorizon = horizonManager.activeHorizon
+  const activeHorizon = horizonManager.activeHorizon
 
   let activeStackItemIdx = 0
   let showStackOverview = false
@@ -36,22 +30,8 @@
     activeStackItemIdx = newIdx
   })
 
-  horizons.subscribe((e) => log.debug('horizons changed', e))
-
-//   const hotHorizonsSorted = derived(horizonStates, (horizonStates) => {
-//     return Array.from(horizonStates.entries())
-//       .map(([id, state]) => ({ id, ...state }))
-//       .filter((horizon) => horizon.state === 'hot')
-//       .sort((a, b) => a.since.getTime() - b.since.getTime()) // oldest first
-//   })
-
-  // $: console.log('horizons', $horizons.map(e => ({...e, state: e.getState()})))
-  // $: console.log('hotHorizons', $hotHorizons.map(e => ({...e, state: e.getState()})))
-  // $: console.log('activeHorizonId', $activeHorizonId)
-  // $: console.log('activeHorizon', $activeHorizon)
-  $: log.debug('sortedHorizons', $sortedHorizons)
+  $: log.debug('horizons changed', $horizons)
   $: log.debug('activeStackItemIdx', activeStackItemIdx)
-  $: log.debug('horizonStates', Array.from($horizonStates).map(([id, state]) => ({ id, ...state })))
 
   const addHorizon = async () => {
     const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
@@ -105,14 +85,6 @@
             event.preventDefault()
             moveToNextHorizon()
         }
-        // } else {
-        //     const indexes = $horizons.map((_e, idx) => idx + 1)
-        //     const index = indexes.indexOf(Number(event.key))
-        //     if (index !== -1) {
-        //         event.preventDefault()
-        //         switchHorizon($horizons[index].id)
-        //     }
-        // }
     }
 
     const handleStackItemSelect = async (e: CustomEvent<number>) => {
@@ -124,10 +96,6 @@
 
             activeStackItemIdx = e.detail
             showStackOverview = false
-
-
-            // const newIdx = $sortedHorizons.findIndex((h) => h === selectedHorizon)
-            // activeStackItemIdx = newIdx
         }
     }
 
@@ -213,12 +181,14 @@
         onGestureChange: handleGestureChange,
         onGestureEnd: handleGestureEnd,
     });
-
-
   })
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
+
+<svelte:head>
+    <title>{$activeHorizon?.data?.name ?? 'Space OS'} {$activeHorizon?.state}</title>
+</svelte:head>
 
 <main class="" class:overview={showStackOverview}>
     <!-- fps {$fps} -->
@@ -240,7 +210,7 @@
     >
         {#each $horizons as horizon, idx (horizon.id)}
             <StackItem index={idx} showOverview={showStackOverview} highlight={activeStackItemIdx === idx} on:select={handleStackItemSelect}>
-                {#if $horizonStates.get(horizon.id)?.state === 'hot'}
+                {#if horizon?.state === 'hot'}
                     <Horizon horizon={horizon} on:change={handleHorizonChange} />
                 {:else}
                     <HorizonPreview horizon={horizon} />
