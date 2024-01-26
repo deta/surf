@@ -211,7 +211,7 @@
         {#each $horizons as horizon, idx (horizon.id)}
             <StackItem index={idx} showOverview={showStackOverview} highlight={activeStackItemIdx === idx} on:select={handleStackItemSelect}>
                 {#if horizon?.state === 'hot'}
-                    <Horizon horizon={horizon} on:change={handleHorizonChange} />
+                    <Horizon horizon={horizon} active={$activeHorizonId === horizon.id} on:change={handleHorizonChange} />
                 {:else}
                     <HorizonPreview horizon={horizon} />
                 {/if}

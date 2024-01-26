@@ -60,7 +60,7 @@
     el.addEventListener('resizable_end', updateCard)
 
     if (initialSrc === 'about:blank') {
-      inputEl?.focus()
+      // inputEl?.focus()
     }
 
     let oldSrc = initialSrc
