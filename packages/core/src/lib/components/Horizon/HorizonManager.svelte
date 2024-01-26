@@ -322,10 +322,6 @@
     <title>{$activeHorizon?.data?.name ?? 'Space OS'} {$activeHorizon?.state}</title>
 </svelte:head>
 
-<svelte:head>
-    <title>{$activeHorizon?.data.name}</title>
-</svelte:head>
-
 <main class="" class:overview={showStackOverview}>
     <!-- fps {$fps} -->
     <!-- <div class="horizon-list">
