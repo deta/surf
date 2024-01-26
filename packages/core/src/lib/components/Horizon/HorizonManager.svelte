@@ -3,6 +3,8 @@
   import { derived } from 'svelte/store'
 
   import { twoFingers, type Gesture } from "@skilitics-public/two-fingers";
+  import { Lethargy } from "lethargy-ts";
+
 
   import { API } from '@horizon/core/src/lib/service/api'
   import { HorizonsManager } from '@horizon/core/src/lib/service/horizon'
@@ -14,10 +16,13 @@
   import Stack from '../Stack/Stack.svelte'
   import StackItem from '../Stack/StackItem.svelte'
     import HorizonPreview from './HorizonPreview.svelte'
+    import { tweened } from 'svelte/motion'
+    import { cubicIn, quintIn } from 'svelte/easing'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
   const horizonManager = new HorizonsManager(api)
+  const lethargy = new Lethargy();
   // const fps = useFPS()
 
   const horizons = horizonManager.horizons
@@ -25,31 +30,19 @@
   const coldHorizons = horizonManager.coldHorizons
   const sortedHorizons = horizonManager.sortedHorizons
   const horizonStates = horizonManager.horizonStates
-  // const activeHorizonId = horizonManager.activeHorizonId
-  // const activeHorizon = horizonManager.activeHorizon
+  const activeHorizon = horizonManager.activeHorizon
 
   let activeStackItemIdx = 0
   let showStackOverview = false
 
   horizons.subscribe((e) => log.debug('horizons changed', e))
 
-//   const hotHorizonsSorted = derived(horizonStates, (horizonStates) => {
-//     return Array.from(horizonStates.entries())
-//       .map(([id, state]) => ({ id, ...state }))
-//       .filter((horizon) => horizon.state === 'hot')
-//       .sort((a, b) => a.since.getTime() - b.since.getTime()) // oldest first
-//   })
-
-  // $: console.log('horizons', $horizons.map(e => ({...e, state: e.getState()})))
-  // $: console.log('hotHorizons', $hotHorizons.map(e => ({...e, state: e.getState()})))
-  // $: console.log('activeHorizonId', $activeHorizonId)
-  // $: console.log('activeHorizon', $activeHorizon)
   $: log.debug('sortedHorizons', $sortedHorizons)
   $: log.debug('activeStackItemIdx', activeStackItemIdx)
   $: log.debug('horizonStates', Array.from($horizonStates).map(([id, state]) => ({ id, ...state })))
 
   const addHorizon = async () => {
-    const newHorizon = await horizonManager.createHorizon('New Horizon' + $horizons.length)
+    const newHorizon = await horizonManager.createHorizon(`Horizon ${$horizons.length + 1}`)
     await horizonManager.switchHorizon(newHorizon.id)
 
     activeStackItemIdx = $horizons.length - 1
@@ -113,10 +106,6 @@
 
             activeStackItemIdx = e.detail
             showStackOverview = false
-
-
-            // const newIdx = $sortedHorizons.findIndex((h) => h === selectedHorizon)
-            // activeStackItemIdx = newIdx
         }
     }
 
@@ -125,7 +114,7 @@
     let SWIPE_THRESHOLD = 300
 
     const handleGestureStart = (g: Gesture) => {
-        log.debug('gesture start', g)
+        // log.debug('gesture start', g)
 
         // const event = (g as any).event as WheelEvent | undefined
         // if (event) {
@@ -139,28 +128,26 @@
     const handleGestureChange = (g: Gesture) => {
         // log.debug('gesture change', g)
 
-        if (lockSwipe) return
+        // if (lockSwipe) return
 
-        if (g.translation.y > SWIPE_THRESHOLD) {
-            moveToPreviousHorizon()
+        // if (g.translation.y > SWIPE_THRESHOLD) {
+        //     moveToPreviousHorizon()
             
-            lockSwipe = true
-            setTimeout(() => {
-                lockSwipe = false
-            }, SWIPE_LOCK_DURATION)
-        } else if (g.translation.y < -SWIPE_THRESHOLD) {
-            moveToNextHorizon()
+        //     lockSwipe = true
+        //     setTimeout(() => {
+        //         lockSwipe = false
+        //     }, SWIPE_LOCK_DURATION)
+        // } else if (g.translation.y < -SWIPE_THRESHOLD) {
+        //     moveToNextHorizon()
 
-            lockSwipe = true
-            setTimeout(() => {
-                lockSwipe = false
-            }, SWIPE_LOCK_DURATION)
-        }
+        //     lockSwipe = true
+        //     setTimeout(() => {
+        //         lockSwipe = false
+        //     }, SWIPE_LOCK_DURATION)
+        // }
     }
 
     const handleGestureEnd = (g: Gesture) => {
-        log.debug('gesture end', g)
-
         const event = (g as any).event as TouchEvent | undefined
 
         if (g.scale < 1 && !showStackOverview) {
@@ -170,29 +157,99 @@
             log.debug('scale up')
             showStackOverview = false
         }
-
-        // if (g.translation.y > 0) {
-        //     activeStackItemIdx = Math.max(0, activeStackItemIdx - 1)
-        // } else if (g.translation.y < 0) {
-        //     activeStackItemIdx = Math.min($horizons.length - 1, activeStackItemIdx + 1)
-        // }
     }
 
-    // const handleWheel = (e: WheelEvent) => {
-    //     if (!showStackOverview) return
+    /* 
+        Flow:
 
-    //     e.preventDefault()
-    //     e.stopPropagation()
+        - on wheel event, check if it's intentional scroll
+        - if it is, start tracking the movement and apply movementOffset to the stack to reflect user's intention
+        - if threshold is reached, switch to next/previous horizon and reset movementOffset
+        - if intentional scroll ends reset movementOffset
+    */
 
-    //     log.debug('wheel', e.deltaY)
+    let lastWheelDeltaY = 0
+    let accelarating = false
+    let movementOffset = 0
+    const movementOffsetTweened = tweened(0, { duration: 100, easing: cubicIn })
 
+    let timeout: ReturnType<typeof setTimeout> | undefined
 
-    //     if (e.deltaY < 0) {
-    //         activeStackItemIdx = Math.max(0, activeStackItemIdx - 1)
-    //     } else if (e.deltaY > 0) {
-    //         activeStackItemIdx = Math.min($horizons.length - 1, activeStackItemIdx + 1)
-    //     }
-    // }
+    const SCROLL_TIMEOUT = 300
+    const INTENTIONAL_SCROLL_DELAY = 300
+    const SCROLL_BOUNDS = window.innerHeight
+    const INTENTIONAL_SCROLL_THRESHOLD = SCROLL_BOUNDS * 0.3
+
+    let lastIntentionalScrollTime = 0
+    let scrollDistance = 0
+    let trackingMovement = false
+
+    // $: console.log('movementOffset', $movementOffsetTweened)
+
+    const scrollToMovement = (scrollDistance: number) => {
+        const limitedScroll = Math.max(Math.min(scrollDistance, SCROLL_BOUNDS), -SCROLL_BOUNDS) * -1
+        
+        const eased = quintIn(limitedScroll / 100)
+
+        return limitedScroll
+    }
+
+    const handleIntentionalScrollChange = (e: WheelEvent) => {
+        // round to get rid of jitter
+        // movementOffset += Math.round((e.deltaY * -1) / 10) * 10
+        // movementOffsetTweened.set(movementOffset)
+    }
+
+    const handleIntentionalScrollStart = (e: WheelEvent) => {
+        trackingMovement = true
+        log.debug('intentional scroll start')
+    }
+
+    const handleIntentionalScrollEnd = (e: WheelEvent) => {
+        trackingMovement = false
+        scrollDistance = 0
+        movementOffset = 0
+        log.debug('intentional scroll end')
+    }
+
+    const handleWheel = (e: WheelEvent) => {
+        const isIntentional = lethargy.check(e);
+
+        clearTimeout(timeout)
+
+        if (trackingMovement) {
+            scrollDistance += e.deltaY
+
+            movementOffset = scrollToMovement(scrollDistance)
+
+            if (movementOffset >= INTENTIONAL_SCROLL_THRESHOLD) {
+                handleIntentionalScrollEnd(e)
+                moveToPreviousHorizon()
+            } else if (movementOffset <= -INTENTIONAL_SCROLL_THRESHOLD) {
+                handleIntentionalScrollEnd(e)
+                moveToNextHorizon()
+            }
+        }
+
+        if (isIntentional) {
+            lastIntentionalScrollTime = Date.now()
+
+            if (!trackingMovement) {
+                handleIntentionalScrollStart(e)
+            }
+
+            handleIntentionalScrollChange(e)
+        } else {
+            const timeDelta = Date.now() - lastIntentionalScrollTime
+            if (trackingMovement && timeDelta > INTENTIONAL_SCROLL_DELAY) {
+                handleIntentionalScrollEnd(e)
+            }
+        }
+
+        timeout = setTimeout(() => {
+            handleIntentionalScrollEnd(e)
+        }, SCROLL_TIMEOUT)
+    }
 
   onMount(() => {
     horizonManager.init()
@@ -207,7 +264,11 @@
   })
 </script>
 
-<svelte:window on:keydown={handleKeyDown} />
+<svelte:window on:keydown={handleKeyDown} on:wheel={handleWheel} />
+
+<svelte:head>
+    <title>{$activeHorizon?.data.name}</title>
+</svelte:head>
 
 <main class="" class:overview={showStackOverview}>
     <!-- fps {$fps} -->
@@ -223,6 +284,7 @@
 
     <Stack
         options={{ transitionDuration: 0.2 }}
+        movementOffset={movementOffset}
         bind:activeIdx={activeStackItemIdx}
         bind:showOverview={showStackOverview}
         on:select={handleStackItemSelect}

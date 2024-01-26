@@ -805,7 +805,7 @@
       if (hasClassOrParentWithClass(e.target as HTMLElement, "tela-ignore")) return;
       // e.preventDefault();
       // e.stopPropagation();
-      console.log("PAN")
+      // console.log("PAN")
       mode.pan(); // TODO: only if not already?
 
       let deltaX =

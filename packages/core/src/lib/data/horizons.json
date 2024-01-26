@@ -1,7 +1,7 @@
 [
   {
     "id": "horizon_1_dummy",
-    "name": "Default",
+    "name": "Horizon 1",
     "default": true,
     "viewOffsetX": 0,
     "cards": null,

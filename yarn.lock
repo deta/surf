@@ -3700,6 +3700,11 @@ lazy-val@^1.0.4, lazy-val@^1.0.5:
   resolved "https://registry.yarnpkg.com/lazy-val/-/lazy-val-1.0.5.tgz#6cf3b9f5bc31cee7ee3e369c0832b7583dcd923d"
   integrity sha512-0/BnGCCfyUMkBpeDgWihanIAF9JmZhHBgUhEqzvf+adhNGLoP6TaiI5oF8oyb3I45P+PcnrqihSf01M0l0G5+Q==
 
+lethargy-ts@^0.0.5:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/lethargy-ts/-/lethargy-ts-0.0.5.tgz#a6eeded9e028f4400b425c5d87e9650cc7668799"
+  integrity sha512-zgtxmwztrhTjiWOsNWM8vvI/UodRfzLb86F+mah9paNGngM+mlbZqiT5DIOQ6DwbZn+uVy5v6BYUHbhn+ThlbA==
+
 levn@^0.4.1:
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/levn/-/levn-0.4.1.tgz#ae4562c007473b932a6200d403268dd2fffc6ade"

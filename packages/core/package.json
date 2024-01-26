@@ -26,6 +26,7 @@
     "@sveltejs/vite-plugin-svelte": "^3.0.1",
     "@tsconfig/svelte": "^5.0.2",
     "date-fns": "^3.2.0",
+    "lethargy-ts": "^0.0.5",
     "sass": "^1.70.0",
     "svelte": "^4.2.8",
     "svelte-check": "^3.6.2",

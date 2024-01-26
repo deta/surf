@@ -10,6 +10,11 @@
 <script lang="ts">
     export let showOverview = false
     export let activeIdx = 0
+    export let movementOffset = 0
+
+    const MOVEMENT_LIMIT = window.innerHeight / 2
+
+    $: limitedOffset = Math.max(Math.min(movementOffset, MOVEMENT_LIMIT), -MOVEMENT_LIMIT)
 
     export let options: Partial<StackOptions> = {}
 
@@ -21,7 +26,7 @@
 </script>
 
 <div class="wrapper" class:overview={showOverview} style="--transition-duration: {opts.transitionDuration}s; --transition-timing-function: {opts.transitionTimingFunction}; --down-scaled: {opts.scaling};">
-    <div class="list" style="--current: {activeIdx};">
+    <div class="list" style="--current: {activeIdx}; --movement-offset: {limitedOffset}px;" class:movement={limitedOffset !== 0}>
         <slot></slot>
     </div>
 </div>
@@ -56,12 +61,16 @@
         display: flex;
         flex-direction: column;
         gap: var(--padding);
-        transform: translateY(calc(var(--current) * var(--offset)));
+        transform: translateY(calc((var(--current) * var(--offset)) + var(--movement-offset)));
         transform-origin: center 0;
 
         transition-property: transform, gap;
         transition-duration: var(--transition-duration);
         transition-timing-function: var(--transition-timing-function);
+
+        &.movement {
+            transition: none;
+        }
     }
 
     .wrapper.overview {
