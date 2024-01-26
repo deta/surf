@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { derived } from 'svelte/store'
+  import { derived, writable } from 'svelte/store'
 
-  import { twoFingers, type Gesture } from "@skilitics-public/two-fingers";
   import { Lethargy } from "lethargy-ts";
 
 
@@ -15,14 +14,18 @@
   import { useLogScope } from '../../utils/log'
   import Stack from '../Stack/Stack.svelte'
   import StackItem from '../Stack/StackItem.svelte'
-    import HorizonPreview from './HorizonPreview.svelte'
-    import { tweened } from 'svelte/motion'
-    import { cubicIn, quintIn } from 'svelte/easing'
+  import HorizonPreview from './HorizonPreview.svelte'
+  import HorizonSwitcherItem from './HorizonSwitcherItem.svelte'
+  import { spring } from 'svelte/motion'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
   const horizonManager = new HorizonsManager(api)
-  const lethargy = new Lethargy();
+  const lethargy = new Lethargy({
+    sensitivity: 70,
+    delay: 20,
+    inertiaDecay: 200,
+  });
   // const fps = useFPS()
 
   const horizons = horizonManager.horizons
@@ -109,45 +112,93 @@
         }
     }
 
-    let lockSwipe = false
+    /* NEW GESTURE STUFF */
+
+    // const snapSpring = spring(0, {
+    //   stiffness: 0.85,
+    //   damping: 0.97,
+    // });
+    const snapSpring = writable(0);
+    const snapWheel = writable(0);
+    const snapInertia = writable(0);
+    let stillScrolling = false;
+
+    let canSwitchAgain = true;
+    let canSwitchTimer: any = null;
+
+    $: if (Math.abs($snapSpring) > 720 && !showStackOverview && canSwitchAgain) {
+      let cancel = false;
+      if (Math.sign($snapSpring) > 0) {
+        moveToNextHorizon();
+      } else {
+        moveToPreviousHorizon();
+        if (activeStackItemIdx === 0) cancel = true;
+      }
+
+      if (!cancel) {
+        snapSpring.set(-$snapSpring);
+        canSwitchTimer && clearTimeout(canSwitchTimer);
+        canSwitchTimer = setTimeout(() => {
+          canSwitchAgain = true;
+        }, 800);
+        canSwitchAgain = false;
+      }
+    }
+
+    let wheelResetTimer: any = null;
+    function handleWheel(e: WheelEvent) {
+      if (showStackOverview) return;
+      const isIntentional = lethargy.check(e);
+
+      if (isIntentional) {
+        if (!stillScrolling) stillScrolling = true;
+        if (!isAnimating) requestAnimationFrame(frame);
+        snapSpring.update((v) => {
+          v += e.deltaY;
+          return v;
+        });
+        console.log('intentional', e.deltaY);
+
+        wheelResetTimer && clearTimeout(wheelResetTimer);
+        wheelResetTimer = setTimeout(() => {
+          stillScrolling = false;
+        }, 80);
+      }
+    }
+
+    let isAnimating = false;
+    function frame() {
+      requestAnimationFrame(frame);
+      isAnimating = true;
+      snapSpring.update(v => {
+        if (stillScrolling) return v;// * 0.97;
+        v *= 0.96;
+        if (Math.abs(v) < 0.01) {
+          v = 0;
+          isAnimating = false;
+        }
+        return v;
+      });
+      // Calculate the velocity from the change in scroll
+      // const velocity = (scrollCounter - lastScrollCnt) / diff;
+
+      // scrollRate.update(v => {
+      //   v = $scrollCounter - lastScrollCnt // (Date.now() - lastFrameTime)
+      //   // v *= 0.9;
+      //   // if (v < 0.01) v = 0;
+      //   return v;
+      // });
+      // lastScrollCnt = $scrollCounter;
+      // lastFrameTime = Date.now();
+      // $snapWheel = 0;
+    }
+    onMount(frame)
+
+    /*let lockSwipe = false
     let SWIPE_LOCK_DURATION = 1300
     let SWIPE_THRESHOLD = 300
 
-    const handleGestureStart = (g: Gesture) => {
-        // log.debug('gesture start', g)
-
-        // const event = (g as any).event as WheelEvent | undefined
-        // if (event) {
-        //     event.preventDefault()
-        //     event.stopPropagation()
-        // }
-
-        // lockSwipe = false
-    }
-
-    const handleGestureChange = (g: Gesture) => {
-        // log.debug('gesture change', g)
-
-        // if (lockSwipe) return
-
-        // if (g.translation.y > SWIPE_THRESHOLD) {
-        //     moveToPreviousHorizon()
-            
-        //     lockSwipe = true
-        //     setTimeout(() => {
-        //         lockSwipe = false
-        //     }, SWIPE_LOCK_DURATION)
-        // } else if (g.translation.y < -SWIPE_THRESHOLD) {
-        //     moveToNextHorizon()
-
-        //     lockSwipe = true
-        //     setTimeout(() => {
-        //         lockSwipe = false
-        //     }, SWIPE_LOCK_DURATION)
-        // }
-    }
-
-    const handleGestureEnd = (g: Gesture) => {
+    const handleGestureEnd = (g: any) => {
         const event = (g as any).event as TouchEvent | undefined
 
         if (g.scale < 1 && !showStackOverview) {
@@ -157,9 +208,9 @@
             log.debug('scale up')
             showStackOverview = false
         }
-    }
+    }*/
 
-    /* 
+    /*
         Flow:
 
         - on wheel event, check if it's intentional scroll
@@ -168,7 +219,7 @@
         - if intentional scroll ends reset movementOffset
     */
 
-    let lastWheelDeltaY = 0
+    /*let lastWheelDeltaY = 0
     let accelarating = false
     let movementOffset = 0
     const movementOffsetTweened = tweened(0, { duration: 100, easing: cubicIn })
@@ -184,11 +235,9 @@
     let scrollDistance = 0
     let trackingMovement = false
 
-    // $: console.log('movementOffset', $movementOffsetTweened)
-
     const scrollToMovement = (scrollDistance: number) => {
         const limitedScroll = Math.max(Math.min(scrollDistance, SCROLL_BOUNDS), -SCROLL_BOUNDS) * -1
-        
+
         const eased = quintIn(limitedScroll / 100)
 
         return limitedScroll
@@ -249,18 +298,10 @@
         timeout = setTimeout(() => {
             handleIntentionalScrollEnd(e)
         }, SCROLL_TIMEOUT)
-    }
+    }*/
 
   onMount(() => {
     horizonManager.init()
-
-    const unregister = twoFingers(document as unknown as HTMLElement, {
-        onGestureStart: handleGestureStart,
-        onGestureChange: handleGestureChange,
-        onGestureEnd: handleGestureEnd,
-    });
-
-
   })
 </script>
 
@@ -284,7 +325,7 @@
 
     <Stack
         options={{ transitionDuration: 0.2 }}
-        movementOffset={movementOffset}
+        movementOffset={snapSpring}
         bind:activeIdx={activeStackItemIdx}
         bind:showOverview={showStackOverview}
         on:select={handleStackItemSelect}
@@ -335,37 +376,37 @@
         transition: transform var(--transition-duration) var(--transition-timing-function);
     }
 
-    // .horizon-list {
-    //     position: fixed;
-    //     top: 0;
-    //     left: 0;
-    //     z-index: 1000;
-    //     display: flex;
-    //     align-items: center;
-    //     gap: 0.5rem;
-    //     padding: 0.5rem;
-    //     padding-left: 1rem;
-    // }
+    .horizon-list {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        padding-left: 1rem;
+    }
 
-    // .add-horizon {
-    //     width: 2rem;
-    //     height: 2rem;
-    //     border-radius: 8px;
-    //     cursor: pointer;
-    //     display: flex;
-    //     align-items: center;
-    //     justify-content: center;
-    //     font-size: 0.8rem;
-    //     opacity: 0.5;
-    //     border: 2px solid transparent;
-    //     box-sizing: border-box;
-    //     // background-color: #ececec;
-    //     font-size: 1.1rem;
+    .add-horizon {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        opacity: 0.5;
+        border: 2px solid transparent;
+        box-sizing: border-box;
+        // background-color: #ececec;
+        font-size: 1.1rem;
 
-    //     &:hover {
-    //         filter: brightness(0.95);
-    //     }
-    // }
+        &:hover {
+            filter: brightness(0.95);
+        }
+    }
 
     // .overview-header {
     //     position: absolute;
