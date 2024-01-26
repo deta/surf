@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { get, writable, type Writable } from 'svelte/store'
 
   import { Board, Grid, createSettings, createBoard, clamp, snapToGrid, hoistPositionable } from "@horizon/tela";
@@ -9,6 +9,7 @@
   import { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
   import { takePageScreenshot } from '../../utils/screenshot'
+  import type { Card } from '../../types'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -17,6 +18,7 @@
   const data = horizon.data
 
   const log = useLogScope('Horizon Component')
+  const dispatch = createEventDispatcher<{ change: Horizon }>()
 
   const settings = createSettings({
     CAN_PAN: true,
@@ -64,7 +66,8 @@
     if (!active) return
     log.debug('generating preview image')
     const previewImage = await takePageScreenshot()
-    horizon.updateData({ previewImage: previewImage })
+    await horizon.updateData({ previewImage: previewImage })
+    dispatch('change', horizon)
   }
 
   const onModSelectEnd = (
@@ -109,13 +112,22 @@
     $state.stackingOrder.set($cards.map((e) => get(e).id))
   }
 
-  const handleCardChange = () => {
-    log.debug('card changed')
+  const handleCardChange = async (e: CustomEvent<Card>) => {
+    const card = e.detail
+    log.debug('card changed', card)
+    await horizon.updateCard(card)
     updatePreview()
   }
 
   const handleCardLoad = () => {
     log.debug('card finished loading')
+    updatePreview()
+  }
+
+  const handleCardDelete = async (e: CustomEvent<Card>) => {
+    const card = e.detail
+    log.debug('deleting card', card)
+    await horizon.deleteCard(card.id)
     updatePreview()
   }
 
@@ -153,6 +165,6 @@
             <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
         </svelte:fragment>
 
-        <CardWrapper {positionable} on:change={handleCardChange} on:load={handleCardLoad} />
+        <CardWrapper {positionable} on:change={handleCardChange} on:load={handleCardLoad} on:delete={handleCardDelete} />
   </Board>
 </div>
