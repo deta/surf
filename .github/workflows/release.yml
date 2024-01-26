@@ -82,7 +82,7 @@ jobs:
           script: |
             const { RELEASE_ID, VERSION } = process.env
             
-            octokit.rest.repos.updateRelease({
+            github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: `${RELEASE_ID}`,
