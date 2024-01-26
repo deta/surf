@@ -26,7 +26,7 @@
     // $: limitedMovementOffset = Math.max(Math.min($movementOffset, 100), -100)
 
     $: verticalOffset = activeIdx * -1027 - (48 * activeIdx);
-    $: targetOffset = verticalOffset - (showOverview ? ($overviewOffset) : 0) - Math.max(-10, ($movementOffset / 2.8));
+    $: targetOffset = verticalOffset - (showOverview ? ($overviewOffset) : 0) - (activeIdx === 0 ? Math.max(-10, ($movementOffset / 2.8)) : ($movementOffset / 2.8));
     $: transformCss = `transform: translate3d(0px, ${targetOffset}px, 0px)`
 
     // function frame() {
