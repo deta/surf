@@ -87,6 +87,6 @@ jobs:
               repo: context.repo.repo,
               release_id: `${RELEASE_ID}`,
               draft: false,
-              tag: `${VERSION}`,
+              tag_name: `${VERSION}`,
               name: `${VERSION}`
             })  
