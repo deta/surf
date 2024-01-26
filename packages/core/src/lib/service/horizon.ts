@@ -3,6 +3,7 @@ import type { Card } from '../types'
 import type { API } from './api'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { generateID } from '../utils/id'
+import { LocalStorage } from './storage'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 5
@@ -15,6 +16,7 @@ const HOT_HORIZONS_THRESHOLD = 5
 export type HorizonState = 'cold' | 'warm' | 'hot'
 
 export type HorizonData = {
+  id: string
   name: string
   previewImage?: string
   isDefault: boolean
@@ -25,20 +27,36 @@ export type HorizonData = {
 export class Horizon {
   readonly id: string
   state: HorizonState
+  inStateSince: number
   data: HorizonData
   cards: Writable<Writable<Card>[]>
+  signalChange: (horizon: Horizon) => void
 
   api: API
   log: ScopedLogger
+  storage: LocalStorage<Card[]>
 
-  constructor(id: string, data: HorizonData, api: API) {
+  constructor(id: string, data: HorizonData, api: API, signalChange: (horizon: Horizon) => void) {
     this.id = id
     this.api = api
     this.log = useLogScope(`Horizon ${id}`)
+    this.storage = new LocalStorage<Card[]>(`horizon_${id}_cards`)
 
     this.state = 'cold'
+    this.inStateSince = Date.now()
     this.data = data
     this.cards = writable([])
+    this.signalChange = signalChange
+    
+    this.cards.subscribe((cards) => {
+      if (cards.length === 0) {
+        this.log.debug(`No cards, skipping persist`)
+        return
+      }
+
+      this.log.debug(`Persisting ${cards.length} cards`)
+      this.storage.set(cards.map((c) => get(c)))
+    })
 
     this.log.debug(`Created`)
   }
@@ -48,7 +66,10 @@ export class Horizon {
   }
 
   changeState(state: HorizonState) {
+    this.log.debug(`Changing state to ${state}`)
     this.state = state
+    this.inStateSince = Date.now()
+    this.signalChange(this)
   }
 
   async refreshData() {
@@ -57,21 +78,33 @@ export class Horizon {
 
   async loadCards() {
     this.log.debug(`Loading cards`)
-    if (this.id === 'horizon_1_dummy') {
-      const { default: data } = await import('../data/cards.json')
-      this.log.debug(`Loaded ${data.length} cards`)
-      const transformed = data.map((d) =>
-        writable({ ...d, id: `${this.id}-${d.id}`, hoisted: true })
-      )
-      this.cards.set(transformed)
-    } else {
-      // this.api.getHorizon(this.id)
-    }
+
+    // load cards from storage and persist any future changes
+    const storedCards = this.storage.get() ?? []
+    this.cards.set(storedCards.map((c) => writable(c)))
+    this.signalChange(this)
   }
 
   async updateData(updates: Partial<HorizonData>) {
     this.data = { ...this.data, ...updates }
-    this.log.debug(`Updated data`, this.data)
+    this.signalChange(this)
+  }
+
+  async updateCard(updates: Partial<Card>) {
+    this.cards.update((c) => {
+      const card = c.find((c) => get(c).id === updates.id)
+      if (!card) return c
+      card.update((c) => ({ ...c, ...updates }))
+      return c
+    })
+    this.log.debug(`Updated card ${updates.id}`)
+    this.signalChange(this)
+  }
+
+  async deleteCard(id: string) {
+    this.cards.update((c) => c.filter((c) => get(c).id !== id))
+    this.log.debug(`Deleted card ${id}`)
+    this.signalChange(this)
   }
 
   async freeze() {
@@ -101,14 +134,13 @@ export class Horizon {
       hoisted: true
     })
     this.cards.update((c) => [...c, newCard])
+    this.signalChange(this)
   }
 }
 
 export class HorizonsManager {
   activeHorizonId: Writable<string | null>
   horizons: Writable<Horizon[]>
-
-  horizonStates: Writable<Map<string, { state: HorizonState; since: Date }>>
 
   activeHorizon: Readable<Horizon | null>
   hotHorizons: Readable<Horizon[]>
@@ -119,22 +151,25 @@ export class HorizonsManager {
 
   api: API
   log: ScopedLogger
+  storage: LocalStorage<HorizonData[]>
+  activeHorizonStorage: LocalStorage<string>
 
   constructor(api: API) {
     this.api = api
     this.log = useLogScope(`HorizonService`)
+    this.storage = new LocalStorage<HorizonData[]>('horizons')
+    this.activeHorizonStorage = new LocalStorage<string>('active_horizon')
 
     this.activeHorizonId = writable(null)
     this.horizons = writable([])
-    this.horizonStates = writable(new Map())
+    this.horizons.subscribe((h) => this.persistHorizons(h))
 
     this.hotHorizonsThreshold = HOT_HORIZONS_THRESHOLD
 
-    this.hotHorizons = derived([this.horizons, this.horizonStates], ([horizons, horizonStates]) => {
+    this.hotHorizons = derived([this.horizons], ([horizons]) => {
       return horizons
         .filter((h) => {
-            const horizonState = horizonStates.get(h.id)
-            return horizonState?.state === 'hot'
+            return h?.state === 'hot'
         })
         // .sort((a, b) => {
         //     const aState = horizonStates.get(a.id)
@@ -144,21 +179,20 @@ export class HorizonsManager {
         // })
     })
 
-    this.coldHorizons = derived([this.horizons, this.horizonStates], ([horizons, horizonStates]) => {
+    this.coldHorizons = derived([this.horizons], ([horizons]) => {
         return horizons
           .filter((h) => {
-              const horizonState = horizonStates.get(h.id)
-              return horizonState?.state !== 'hot'
+              return h?.state !== 'hot'
           })
       })
 
-    this.sortedHorizons = derived([this.horizons, this.horizonStates], ([horizons, horizonStates]) => {
+    this.sortedHorizons = derived([this.horizons], ([horizons]) => {
       return [...horizons]
         .sort((a, b) => {
-            const aState = horizonStates.get(a.id)
-            const bState = horizonStates.get(b.id)
+            const aState = a
+            const bState = b
             if (!aState || !bState) return 0
-            return bState.since.getTime() - aState.since.getTime()
+            return bState.inStateSince - aState.inStateSince
         })
         .map((h) => h.id)
     })
@@ -168,7 +202,7 @@ export class HorizonsManager {
       ([horizons, activeHorizonId]) => {
         if (!activeHorizonId) return null
         const horizon = horizons.find((h) => h.id === activeHorizonId) ?? null
-        if (horizon?.getState() === 'cold') {
+        if (horizon?.state === 'cold') {
           this.log.warn(`Active horizon ${activeHorizonId} is cold`)
         }
         return horizon
@@ -180,33 +214,70 @@ export class HorizonsManager {
     this.log.debug(`Initializing`)
     await this.loadHorizons()
 
-    const defaultHorizon = this.getDefaultHorizon()
-    this.log.debug(`Switching to default horizon ${defaultHorizon.id}`)
-    await this.switchHorizon(defaultHorizon.id)
+    const storedHorizonId = this.activeHorizonStorage.getRaw()
+    this.log.debug(`Stored active horizon`, storedHorizonId)
+
+    if (get(this.horizons).length === 0) {
+      this.log.debug(`No horizons found, creating default`)
+      const defaultHorizon = await this.createHorizon('Default', true)
+      await this.switchHorizon(defaultHorizon)
+    } else if (!storedHorizonId) { 
+      this.log.debug(`No active horizon found, switching to default`)
+      const defaultHorizon = this.getDefaultHorizon()
+      await this.switchHorizon(defaultHorizon.id)
+    } else {
+      await this.switchHorizon(storedHorizonId)
+    }
+
+    this.activeHorizonId.subscribe((id) => this.activeHorizonStorage.setRaw(id ?? ''))
+  }
+
+  handleHorizonChange(horizon: Horizon) {
+    this.log.debug(`Horizon changed`, horizon)
+    this.horizons.update((h) => {
+      const index = h.findIndex((h) => h.id === horizon.id)
+      if (index === -1) return h
+      h[index] = horizon
+      return h
+    })
   }
 
   async loadHorizons() {
+    const storedHorizons = this.storage.get() ?? []
+    this.log.debug(`Loading ${storedHorizons.length} stored horizons`)
+    
     // const res = await this.api.getHorizons()
-    const { default: data } = await import('../data/horizons.json')
+    // const { default: data } = await import('../data/horizons.json')
 
-    const horizons = data.map(
+    const horizons = storedHorizons.map(
       (d) =>
         new Horizon(
           d.id,
           {
+            id: d.id,
             name: d.name,
+            previewImage: d.previewImage,
             viewOffsetX: d.viewOffsetX,
-            isDefault: d.default,
-            createdAt: d.created_at
+            isDefault: d.isDefault,
+            createdAt: d.createdAt
           },
-          this.api
+          this.api,
+          (h) => this.handleHorizonChange(h)
         )
     )
 
     this.horizons.set(horizons)
-    this.horizonStates.set(
-      new Map(horizons.map((h) => [h.id, { state: h.getState(), since: new Date() }]))
-    )
+  }
+
+  persistHorizons(horizons: Horizon[]) {
+    if (horizons.length === 0) {
+      this.log.debug(`No horizons, skipping persist`)
+      return
+    }
+    this.log.debug(`Persisting ${horizons.length} horizons`)
+    const horizonsData = horizons.map((h) => h.data)
+    this.log.debug(`Horizons data`, horizonsData)
+    this.storage.set(horizonsData)
   }
 
   getDefaultHorizon() {
@@ -227,44 +298,35 @@ export class HorizonsManager {
     return horizon
   }
 
-  changeHorizonState(id: string, state: HorizonState) {
-    this.horizonStates.update((s) => s.set(id, { state, since: new Date() }))
-  }
-
   async warmUpHorizon(idOrHorizon: string | Horizon) {
     const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
     await horizon.warmUp()
-    this.changeHorizonState(horizon.id, 'warm')
   }
 
   async coolDownHorizon(idOrHorizon: string | Horizon) {
     const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
     await horizon.coolDown()
-    this.changeHorizonState(horizon.id, 'cold')
   }
 
   async switchHorizon(idOrHorizon: string | Horizon) {
     const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
 
-    const oldHorizonState = get(this.horizonStates).get(horizon.id)?.state ?? 'cold'
+    const oldHorizonState = horizon.state ?? 'cold'
 
     if (oldHorizonState === 'cold') {
       await horizon.warmUp()
     }
 
     horizon.changeState('hot')
-    this.changeHorizonState(horizon.id, 'hot')
 
     // only if the horizon was not already hot
     if (oldHorizonState !== 'hot') {
       // cool down other older hot horizons
       if (get(this.hotHorizons).length > this.hotHorizonsThreshold) {
         this.log.debug(`Cooling down older hot horizons`)
-        const horizonStates = get(this.horizonStates)
-        const hotHorizons = Array.from(horizonStates.entries())
-          .map(([id, state]) => ({ id, ...state }))
+        const hotHorizons = get(this.horizons)
           .filter((horizon) => horizon.state === 'hot')
-          .sort((a, b) => a.since.getTime() - b.since.getTime()) // oldest first
+          .sort((a, b) => a.inStateSince - b.inStateSince) // oldest first
 
         this.log.debug(`Found ${hotHorizons.length} hot horizons`)
         while (hotHorizons.length > this.hotHorizonsThreshold) {
@@ -279,24 +341,33 @@ export class HorizonsManager {
     this.activeHorizonId.set(horizon.id)
   }
 
-  async createHorizon(name: string) {
+  async updateHorizon(idOrHorizon: string | Horizon, updates: Partial<HorizonData>) {
+    const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
+    await horizon.updateData(updates)
+    horizon.log.debug(`Updated data`, horizon.data)
+    this.persistHorizons(get(this.horizons))
+  }
+
+  async createHorizon(name: string, isDefault = false) {
     // const res = await this.api.createHorizon(name)
     const data = {
       id: generateID(),
       name,
       viewOffsetX: 0,
-      default: false,
+      default: isDefault,
       created_at: new Date().toISOString()
     }
     const horizon = new Horizon(
       data.id,
       {
+        id: data.id,
         name: data.name,
         viewOffsetX: data.viewOffsetX,
         isDefault: data.default,
         createdAt: data.created_at
       },
-      this.api
+      this.api,
+      (h) => this.handleHorizonChange(h)
     )
 
     this.horizons.update((h) => [...h, horizon])

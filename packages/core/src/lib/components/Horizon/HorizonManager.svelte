@@ -6,7 +6,7 @@
 
 
   import { API } from '@horizon/core/src/lib/service/api'
-  import { HorizonsManager } from '@horizon/core/src/lib/service/horizon'
+  import { HorizonsManager, Horizon as IHorizon } from '@horizon/core/src/lib/service/horizon'
 
   import './index.scss'
 
@@ -29,23 +29,22 @@
   // const fps = useFPS()
 
   const horizons = horizonManager.horizons
-  const hotHorizons = horizonManager.hotHorizons
-  const coldHorizons = horizonManager.coldHorizons
-  const sortedHorizons = horizonManager.sortedHorizons
-  const horizonStates = horizonManager.horizonStates
+  const activeHorizonId = horizonManager.activeHorizonId
   const activeHorizon = horizonManager.activeHorizon
 
   let activeStackItemIdx = 0
   let showStackOverview = false
 
-  horizons.subscribe((e) => log.debug('horizons changed', e))
+  activeHorizonId.subscribe((e) => {
+    const newIdx = $horizons.findIndex((h) => h.id === e)
+    activeStackItemIdx = newIdx
+  })
 
-  $: log.debug('sortedHorizons', $sortedHorizons)
+  $: log.debug('horizons changed', $horizons)
   $: log.debug('activeStackItemIdx', activeStackItemIdx)
-  $: log.debug('horizonStates', Array.from($horizonStates).map(([id, state]) => ({ id, ...state })))
 
   const addHorizon = async () => {
-    const newHorizon = await horizonManager.createHorizon(`Horizon ${$horizons.length + 1}`)
+    const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
     await horizonManager.switchHorizon(newHorizon.id)
 
     activeStackItemIdx = $horizons.length - 1
@@ -71,9 +70,11 @@
     }
   }
 
-  // const openOverview = () => {
-  //   stackOverviewScrollOffset.set(0)
-  // }
+  const handleHorizonChange = async (e: CustomEvent<IHorizon>) => {
+    const horizon = e.detail
+    log.debug('horizon changed', horizon)
+    await horizonManager.updateHorizon(horizon.id, horizon.data)
+  }
 
     const handleKeyDown = (event: KeyboardEvent) => {
         if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
@@ -94,14 +95,6 @@
             event.preventDefault()
             moveToNextHorizon()
         }
-        // } else {
-        //     const indexes = $horizons.map((_e, idx) => idx + 1)
-        //     const index = indexes.indexOf(Number(event.key))
-        //     if (index !== -1) {
-        //         event.preventDefault()
-        //         switchHorizon($horizons[index].id)
-        //     }
-        // }
     }
 
     const handleStackItemSelect = async (e: CustomEvent<number>) => {
@@ -326,6 +319,10 @@
 <svelte:window on:keydown={handleKeyDown} on:wheel={handleWheel} />
 
 <svelte:head>
+    <title>{$activeHorizon?.data?.name ?? 'Space OS'} {$activeHorizon?.state}</title>
+</svelte:head>
+
+<svelte:head>
     <title>{$activeHorizon?.data.name}</title>
 </svelte:head>
 
@@ -351,8 +348,8 @@
     >
         {#each $horizons as horizon, idx (horizon.id)}
             <StackItem index={idx} showOverview={showStackOverview} highlight={activeStackItemIdx === idx} on:select={handleStackItemSelect}>
-                {#if $horizonStates.get(horizon.id)?.state === 'hot'}
-                    <Horizon horizon={horizon} />
+                {#if horizon?.state === 'hot'}
+                    <Horizon horizon={horizon} active={$activeHorizonId === horizon.id} on:change={handleHorizonChange} />
                 {:else}
                     <HorizonPreview horizon={horizon} />
                 {/if}
