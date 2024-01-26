@@ -71,6 +71,10 @@
     }
   }
 
+  // const openOverview = () => {
+  //   stackOverviewScrollOffset.set(0)
+  // }
+
     const handleKeyDown = (event: KeyboardEvent) => {
         if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
             event.preventDefault()
@@ -109,18 +113,22 @@
 
             activeStackItemIdx = e.detail
             showStackOverview = false
+            setTimeout(() => $stackOverviewScrollOffset = 0, 200)
         }
     }
 
     /* NEW GESTURE STUFF */
+
+    const stackOverviewScrollOffset = spring(0, {
+        stiffness: 0.85,
+        damping: 0.97,
+    });
 
     // const snapSpring = spring(0, {
     //   stiffness: 0.85,
     //   damping: 0.97,
     // });
     const snapSpring = writable(0);
-    const snapWheel = writable(0);
-    const snapInertia = writable(0);
     let stillScrolling = false;
 
     let canSwitchAgain = true;
@@ -147,22 +155,32 @@
 
     let wheelResetTimer: any = null;
     function handleWheel(e: WheelEvent) {
-      if (showStackOverview) return;
-      const isIntentional = lethargy.check(e);
-
-      if (isIntentional) {
-        if (!stillScrolling) stillScrolling = true;
-        if (!isAnimating) requestAnimationFrame(frame);
-        snapSpring.update((v) => {
+      if (showStackOverview) {
+        stackOverviewScrollOffset.update((v) => {
           v += e.deltaY;
+          // v = Math.min(0, Math.max(v, 2000));
+          // v = Math.min(Math.max(v, 0),  2000);
           return v;
         });
-        console.log('intentional', e.deltaY);
+        // if ($stackOverviewScrollOffset < 0) stackOverviewScrollOffset.set(0, { hard: true  })
+      }
+      else {
+        const isIntentional = lethargy.check(e);
 
-        wheelResetTimer && clearTimeout(wheelResetTimer);
-        wheelResetTimer = setTimeout(() => {
-          stillScrolling = false;
-        }, 80);
+        if (isIntentional) {
+          if (!stillScrolling) stillScrolling = true;
+          if (!isAnimating) requestAnimationFrame(frame);
+          snapSpring.update((v) => {
+            v += e.deltaY;
+            return v;
+          });
+          console.log('intentional', e.deltaY);
+
+          wheelResetTimer && clearTimeout(wheelResetTimer);
+          wheelResetTimer = setTimeout(() => {
+            stillScrolling = false;
+          }, 80);
+        }
       }
     }
 
@@ -326,6 +344,7 @@
     <Stack
         options={{ transitionDuration: 0.2 }}
         movementOffset={snapSpring}
+        overviewOffset={stackOverviewScrollOffset}
         bind:activeIdx={activeStackItemIdx}
         bind:showOverview={showStackOverview}
         on:select={handleStackItemSelect}

@@ -16,6 +16,7 @@
     export let showOverview = false
     export let activeIdx = 0
     export let movementOffset: Writable<number>
+    export let overviewOffset: Writable<number>
 
     const MOVEMENT_LIMIT = window.innerHeight / 2
 
@@ -25,7 +26,7 @@
     // $: limitedMovementOffset = Math.max(Math.min($movementOffset, 100), -100)
 
     $: verticalOffset = activeIdx * -1027 - (48 * activeIdx);
-    $: targetOffset = verticalOffset - Math.max(-10, ($movementOffset / 2.8));
+    $: targetOffset = verticalOffset - (showOverview ? ($overviewOffset) : 0) - Math.max(-10, ($movementOffset / 2.8));
     $: transformCss = `transform: translate3d(0px, ${targetOffset}px, 0px)`
 
     // function frame() {
