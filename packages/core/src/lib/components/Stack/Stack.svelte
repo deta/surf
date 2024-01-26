@@ -18,6 +18,8 @@
     export let movementOffset: Writable<number>
     export let overviewOffset: Writable<number>
 
+    let windowHeight: number;
+
     const MOVEMENT_LIMIT = window.innerHeight / 2
 
     $: limitedOffset = Math.max(Math.min($movementOffset, MOVEMENT_LIMIT), -MOVEMENT_LIMIT)
@@ -25,7 +27,7 @@
     // $: lerpedMovement = $movementOffset * lerp(1, 0.8, Math.abs($movementOffset) / 1000);
     // $: limitedMovementOffset = Math.max(Math.min($movementOffset, 100), -100)
 
-    $: verticalOffset = activeIdx * -1027 - (48 * activeIdx);
+    $: verticalOffset = activeIdx * -windowHeight - (48 * activeIdx);
     $: targetOffset = verticalOffset - (showOverview ? ($overviewOffset) : 0) - (activeIdx === 0 ? Math.max(-10, ($movementOffset / 2.8)) : ($movementOffset / 2.8));
     $: transformCss = `transform: translate3d(0px, ${targetOffset}px, 0px)`
 
@@ -46,6 +48,8 @@
         scaling: 0.6
     }, options)
 </script>
+
+<svelte:window bind:innerHeight={windowHeight} />
 
 <div class="wrapper" class:overview={showOverview} style="--transition-duration: {opts.transitionDuration}s; --transition-timing-function: {opts.transitionTimingFunction}; --down-scaled: {opts.scaling};">
     <div class="list" style="{transformCss};--current: {activeIdx}; --movement-offset: -{limitedOffset}px;" class:movement={limitedOffset !== 0}>
