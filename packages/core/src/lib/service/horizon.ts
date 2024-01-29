@@ -47,7 +47,7 @@ export class Horizon {
     this.data = data
     this.cards = writable([])
     this.signalChange = signalChange
-    
+
     this.cards.subscribe((cards) => {
       if (cards.length === 0) {
         this.log.debug(`No cards, skipping persist`)
@@ -168,32 +168,30 @@ export class HorizonsManager {
     this.hotHorizonsThreshold = HOT_HORIZONS_THRESHOLD
 
     this.hotHorizons = derived([this.horizons], ([horizons]) => {
-      return horizons
-        .filter((h) => {
-            return h?.state === 'hot'
-        })
-        // .sort((a, b) => {
-        //     const aState = horizonStates.get(a.id)
-        //     const bState = horizonStates.get(b.id)
-        //     if (!aState || !bState) return 0
-        //     return bState.since.getTime() - aState.since.getTime()
-        // })
+      return horizons.filter((h) => {
+        return h?.state === 'hot'
+      })
+      // .sort((a, b) => {
+      //     const aState = horizonStates.get(a.id)
+      //     const bState = horizonStates.get(b.id)
+      //     if (!aState || !bState) return 0
+      //     return bState.since.getTime() - aState.since.getTime()
+      // })
     })
 
     this.coldHorizons = derived([this.horizons], ([horizons]) => {
-        return horizons
-          .filter((h) => {
-              return h?.state !== 'hot'
-          })
+      return horizons.filter((h) => {
+        return h?.state !== 'hot'
       })
+    })
 
     this.sortedHorizons = derived([this.horizons], ([horizons]) => {
       return [...horizons]
         .sort((a, b) => {
-            const aState = a
-            const bState = b
-            if (!aState || !bState) return 0
-            return bState.inStateSince - aState.inStateSince
+          const aState = a
+          const bState = b
+          if (!aState || !bState) return 0
+          return bState.inStateSince - aState.inStateSince
         })
         .map((h) => h.id)
     })
@@ -222,7 +220,7 @@ export class HorizonsManager {
       this.log.debug(`No horizons found, creating default`)
       const defaultHorizon = await this.createHorizon('Default', true)
       await this.switchHorizon(defaultHorizon)
-    } else if (!storedHorizonId) { 
+    } else if (!storedHorizonId) {
       this.log.debug(`No active horizon found, switching to default`)
       const defaultHorizon = this.getDefaultHorizon()
       await this.switchHorizon(defaultHorizon.id)
@@ -246,7 +244,7 @@ export class HorizonsManager {
   async loadHorizons() {
     const storedHorizons = this.storage.get() ?? []
     this.log.debug(`Loading ${storedHorizons.length} stored horizons`)
-    
+
     // const res = await this.api.getHorizons()
     // const { default: data } = await import('../data/horizons.json')
 

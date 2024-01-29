@@ -5,7 +5,8 @@
 export const useDebounce = <F extends (...args: any[]) => any>(func: F, value = 250) => {
   let debounceTimer: ReturnType<typeof setTimeout>
   const debounce = (...args: Parameters<F>) => {
-    return new Promise<Awaited<ReturnType<F>>>((resolve, reject) => { // check if Awaited is needed
+    return new Promise<Awaited<ReturnType<F>>>((resolve, reject) => {
+      // check if Awaited is needed
       clearTimeout(debounceTimer)
       debounceTimer = setTimeout(async () => {
         try {

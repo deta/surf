@@ -10,7 +10,7 @@
     "build:desktop:mac": "yarn turbo run desktop#build:mac",
     "build:desktop:win": "yarn turbo run desktop#build:win",
     "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md,svelte}\""
   },
   "devDependencies": {
     "@horizon/eslint-config": "*",

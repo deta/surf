@@ -10,7 +10,7 @@
   import { parseStringIntoUrl } from '../../utils/url'
 
   export let positionable: Writable<Card>
-  const dispatch = createEventDispatcher<{ change: Card; load: void, delete: Card }>()
+  const dispatch = createEventDispatcher<{ change: Card; load: void; delete: Card }>()
   const log = useLogScope('CardWrapper')
 
   const minSize = { x: 100, y: 100 }
@@ -23,7 +23,6 @@
   let inputEl: HTMLInputElement
   let el: HTMLElement
   let webview: WebviewWrapper | undefined
-
 
   const updateCard = () => {
     log.debug('updateCard', $positionable)
@@ -118,7 +117,7 @@
         class="address-bar"
         placeholder="Enter URL or search term"
         bind:this={inputEl}
-        bind:value={value}
+        bind:value
         on:keyup={handleKeyUp}
       />
       <div class="page-title">{$title}</div>

@@ -2,8 +2,16 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { get, writable, type Writable } from 'svelte/store'
 
-  import { Board, Grid, createSettings, createBoard, clamp, snapToGrid, hoistPositionable } from "@horizon/tela";
-  import type { IBoard, IPositionable, Vec4 } from "@horizon/tela";
+  import {
+    Board,
+    Grid,
+    createSettings,
+    createBoard,
+    clamp,
+    snapToGrid,
+    hoistPositionable
+  } from '@horizon/tela'
+  import type { IBoard, IPositionable, Vec4 } from '@horizon/tela'
 
   import CardWrapper from './CardWrapper.svelte'
   import { Horizon } from '../../service/horizon'
@@ -153,32 +161,37 @@
   // TODO fix types to get rid of this type conversion
   $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
 
-    onMount(() => {
-        loadHorizon()
-        handleWindowResize()
-    })
+  onMount(() => {
+    loadHorizon()
+    handleWindowResize()
+  })
 </script>
 
 <svelte:window on:resize={handleWindowResize} />
 
 <div data-horizon={horizon.id} class="horizon">
-    <Board
-        {settings}
-        {board}
-        positionables={positionables}
-        on:modSelectEnd={onModSelectEnd}
-        on:positionableEnter={handlePositionableEnter}
-        bind:containerEl
-        let:positionable
-    >
-        <svelte:fragment slot="selectRect">
-            <div class="selectionRect" style={$selectionCss} />
-        </svelte:fragment>
+  <Board
+    {settings}
+    {board}
+    {positionables}
+    on:modSelectEnd={onModSelectEnd}
+    on:positionableEnter={handlePositionableEnter}
+    bind:containerEl
+    let:positionable
+  >
+    <svelte:fragment slot="selectRect">
+      <div class="selectionRect" style={$selectionCss} />
+    </svelte:fragment>
 
-        <svelte:fragment slot="raw">
-            <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
-        </svelte:fragment>
+    <svelte:fragment slot="raw">
+      <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
+    </svelte:fragment>
 
-        <CardWrapper {positionable} on:change={handleCardChange} on:load={handleCardLoad} on:delete={handleCardDelete} />
+    <CardWrapper
+      {positionable}
+      on:change={handleCardChange}
+      on:load={handleCardLoad}
+      on:delete={handleCardDelete}
+    />
   </Board>
 </div>
