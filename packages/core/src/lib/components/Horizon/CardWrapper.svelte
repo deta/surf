@@ -12,6 +12,7 @@
   // TODO: fix this unnecessary cast
   const BrowserCard = () => import('../Cards/Browser/BrowserCard.svelte') as unknown as Promise<typeof SvelteComponent>
   const TextCard = () => import('../Cards/Text/TextCard.svelte') as unknown as Promise<typeof SvelteComponent>
+  const LinkCard = () => import('../Cards/Link/LinkCard.svelte') as unknown as Promise<typeof SvelteComponent>
 
   export let positionable: Writable<IPositionable<any>>
     
@@ -45,11 +46,6 @@
     el.addEventListener('draggable_end', handleDragEnd)
     el.addEventListener('resizable_end', updateCard)
   })
-
-  const handleChange = (e: CustomEvent<CardEvents['change']>) => {
-    log.debug('handleChange', e.detail)
-    dispatch('change', e.detail)
-  }
 
   onDestroy(() => {
     // el && el.addEventListener('draggable_start', onDragStart)
@@ -88,7 +84,13 @@
     {:else if $card.type === 'text'}
       <LazyComponent this={TextCard}>
         <svelte:fragment slot="component" let:Component>
-          <Component {card} on:load on:change={handleChange} on:delete />
+          <Component {card} on:load on:change on:delete />
+        </svelte:fragment>
+      </LazyComponent>
+    {:else if $card.type === 'link'}
+      <LazyComponent this={LinkCard}>
+        <svelte:fragment slot="component" let:Component>
+          <Component {card} on:load on:change on:delete />
         </svelte:fragment>
       </LazyComponent>
     {/if}

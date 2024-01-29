@@ -158,6 +158,16 @@ export class Horizon {
       }
     })
   }
+
+  async addCardLink(url: string, position: CardPosition) {
+    await this.addCard({
+      ...position,
+      type: 'link',
+      data: {
+        url: url
+      }
+    })
+  }
 }
 
 export class HorizonsManager {

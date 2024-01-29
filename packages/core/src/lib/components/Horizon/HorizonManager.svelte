@@ -13,6 +13,7 @@
   import Stack from '../Stack/Stack.svelte'
   import StackItem from '../Stack/StackItem.svelte'
   import HorizonPreview from './HorizonPreview.svelte'
+    import MediaImporter from './MediaImporter.svelte'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -203,6 +204,10 @@
             +
         </div>
     </div> -->
+
+  {#if !showStackOverview && $activeHorizon}
+    <MediaImporter horizon={$activeHorizon} />
+  {/if}
 
   <Stack
     options={{ transitionDuration: 0.2 }}
