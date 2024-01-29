@@ -30,8 +30,8 @@
     activeStackItemIdx = newIdx
   })
 
-  $: log.debug('horizons changed', $horizons)
-  $: log.debug('activeStackItemIdx', activeStackItemIdx)
+//   $: log.debug('horizons changed', $horizons)
+//   $: log.debug('activeStackItemIdx', activeStackItemIdx)
 
   const addHorizon = async () => {
     const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
@@ -63,7 +63,6 @@
   const handleHorizonChange = async (e: CustomEvent<IHorizon>) => {
     const horizon = e.detail
     log.debug('horizon changed', horizon)
-    await horizonManager.updateHorizon(horizon.id, horizon.data)
   }
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -88,10 +87,8 @@
     }
 
     const handleStackItemSelect = async (e: CustomEvent<number>) => {
-        log.debug('select stack item idx', e.detail)
         const selectedHorizon = $horizons[e.detail]
         if (selectedHorizon) {
-            log.debug('switch horizon', selectedHorizon)
             horizonManager.switchHorizon(selectedHorizon)
 
             activeStackItemIdx = e.detail

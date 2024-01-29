@@ -2,15 +2,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 // eslint-disable-next-line @typescript-eslint/ban-types
-export const useDebounce = <T>(func: Function, value = 250) => {
+export const useDebounce = <F extends (...args: any[]) => any>(func: F, value = 250) => {
   let debounceTimer: ReturnType<typeof setTimeout>
-  const debounce = (...args: any[]) => {
-    return new Promise<T>((resolve, reject) => {
+  const debounce = (...args: Parameters<F>) => {
+    return new Promise<Awaited<ReturnType<F>>>((resolve, reject) => { // check if Awaited is needed
       clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => {
+      debounceTimer = setTimeout(async () => {
         try {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          const result = func(...args)
+          const result = await func(...args)
           resolve(result)
         } catch (err) {
           reject(err)
@@ -22,15 +22,15 @@ export const useDebounce = <T>(func: Function, value = 250) => {
   return debounce
 }
 
-export const useCancelableDebounce = <T>(func: Function, value = 250) => {
+export const useCancelableDebounce = <F extends (...args: any[]) => any>(func: F, value = 250) => {
   let debounceTimer: ReturnType<typeof setTimeout>
-  const execute = (...args: any[]) => {
-    return new Promise<T>((resolve, reject) => {
+  const execute = (...args: Parameters<F>) => {
+    return new Promise<Awaited<ReturnType<F>>>((resolve, reject) => {
       clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => {
+      debounceTimer = setTimeout(async () => {
         try {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          const result = func(...args)
+          const result = await func(...args)
           resolve(result)
         } catch (err) {
           reject(err)

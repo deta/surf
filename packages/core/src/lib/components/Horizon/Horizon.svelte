@@ -10,6 +10,7 @@
   import { useLogScope } from '../../utils/log'
   import { takePageScreenshot } from '../../utils/screenshot'
   import type { Card } from '../../types'
+  import { useDebounce } from '../../utils/debounce'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -46,8 +47,17 @@
 
   const state = board.state
   const selectionCss = $state.selectionCss
+  const viewOffset = $state.viewOffset
 
   let containerEl: HTMLElement
+
+  const debouncedHorizonUpdate = useDebounce((...args: Parameters<typeof horizon.updateCard>) => {
+    return horizon.updateData(...args)
+  }, 500)
+
+  const debouncedCardUpdate = useDebounce((...args: Parameters<typeof horizon.updateCard>) => {
+    return horizon.updateCard(...args)
+  }, 500)
 
   // Responsible for the scaling of the entire Horizon on bigger screens
   const handleWindowResize = () => {
@@ -60,13 +70,17 @@
   const loadHorizon = () => {
     $state.stackingOrder.set($cards.map((e) => get(e).id))
     $state.viewOffset.set({ x: data.viewOffsetX, y: 0 })
+
+    viewOffset.subscribe((e) => {
+      debouncedHorizonUpdate({ viewOffsetX: e.x })
+    })
   }
 
   const updatePreview = async () => {
     if (!active) return
     log.debug('generating preview image')
     const previewImage = await takePageScreenshot()
-    await horizon.updateData({ previewImage: previewImage })
+    await debouncedHorizonUpdate({ previewImage: previewImage })
     dispatch('change', horizon)
   }
 
@@ -115,8 +129,9 @@
   const handleCardChange = async (e: CustomEvent<Card>) => {
     const card = e.detail
     log.debug('card changed', card)
-    await horizon.updateCard(card)
-    updatePreview()
+    debouncedCardUpdate(card).then(() => {
+      updatePreview()
+    })
   }
 
   const handleCardLoad = () => {
@@ -142,7 +157,6 @@
         loadHorizon()
         handleWindowResize()
     })
-    
 </script>
 
 <svelte:window on:resize={handleWindowResize} />

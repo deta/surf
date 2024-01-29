@@ -88,6 +88,7 @@ export class Horizon {
   async updateData(updates: Partial<HorizonData>) {
     this.data = { ...this.data, ...updates }
     this.signalChange(this)
+    return this.data
   }
 
   async updateCard(updates: Partial<Card>) {
@@ -132,7 +133,7 @@ export class Horizon {
       id: generateID(),
       stacking_order: 1,
       hoisted: true
-    })
+    } as Card)
     this.cards.update((c) => [...c, newCard])
     this.signalChange(this)
   }
@@ -276,7 +277,6 @@ export class HorizonsManager {
     }
     this.log.debug(`Persisting ${horizons.length} horizons`)
     const horizonsData = horizons.map((h) => h.data)
-    this.log.debug(`Horizons data`, horizonsData)
     this.storage.set(horizonsData)
   }
 
@@ -339,13 +339,6 @@ export class HorizonsManager {
 
     this.log.debug(`Making horizon ${horizon.id} active`)
     this.activeHorizonId.set(horizon.id)
-  }
-
-  async updateHorizon(idOrHorizon: string | Horizon, updates: Partial<HorizonData>) {
-    const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
-    await horizon.updateData(updates)
-    horizon.log.debug(`Updated data`, horizon.data)
-    this.persistHorizons(get(this.horizons))
   }
 
   async createHorizon(name: string, isDefault = false) {
