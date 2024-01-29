@@ -98,7 +98,7 @@
       rect: Vec4
     }>
   ) => {
-    const { rect } = e.detail
+    const { rect, event } = e.detail
     let pos = { x: rect.x, y: rect.y }
     let size = { x: rect.w, y: rect.h }
     // Snap
@@ -120,16 +120,22 @@
       }
     }
 
-    horizon.addCard({
+    log.debug('mod select end', e.detail.event)
+
+    const position = {
       x: pos.x,
       y: pos.y,
       width: size.x,
-      height: size.y,
-      data: {
-        title: '',
-        src: 'about:blank'
-      }
-    })
+      height: size.y
+    }
+
+    if (event.metaKey || event.ctrlKey) {
+      log.debug('creating new browser card', position)
+      horizon.addCardBrowser('about:blank', position)
+    } else {
+      log.debug('creating new text card', position)
+      horizon.addCardText('', position)
+    }
 
     $state.stackingOrder.set($cards.map((e) => get(e).id))
   }
@@ -189,8 +195,8 @@
 
     <CardWrapper
       {positionable}
-      on:change={handleCardChange}
       on:load={handleCardLoad}
+      on:change={handleCardChange}
       on:delete={handleCardDelete}
     />
   </Board>

@@ -1,55 +1,43 @@
 <!-- <svelte:options immutable={true} /> -->
 
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { get, type Writable } from 'svelte/store'
-  import type { Card } from '../../types'
-  import { Draggable, Positionable, Resizable } from '@horizon/tela'
-  import WebviewWrapper from './WebviewWrapper.svelte'
-  import { useLogScope } from '../../utils/log'
-  import { parseStringIntoUrl } from '../../utils/url'
+  import { SvelteComponent, createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import type { Writable } from 'svelte/store'
 
-  export let positionable: Writable<Card>
-  const dispatch = createEventDispatcher<{ change: Card; load: void; delete: Card }>()
+  import { Draggable, Positionable, Resizable, type IPositionable } from '@horizon/tela'
+
+  import type { Card, CardEvents } from '../../types'
+  import { useLogScope } from '../../utils/log'
+  import Lazy from '../Lazy.svelte'
+
+  // TODO: fix this unnecessary cast
+  const BrowserCard = () => import('../Cards/Browser/BrowserCard.svelte') as unknown as Promise<typeof SvelteComponent>
+  const TextCard = () => import('../Cards/Text/TextCard.svelte') as unknown as Promise<typeof SvelteComponent>
+
+  export let positionable: Writable<IPositionable<any>>
+    
+  const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('CardWrapper')
 
   const minSize = { x: 100, y: 100 }
   const maxSize = { x: Infinity, y: Infinity }
-  const initialSrc = $positionable.data.src
 
-  let value = ''
-  let editing = false
-
-  let inputEl: HTMLInputElement
   let el: HTMLElement
-  let webview: WebviewWrapper | undefined
+
+  $: card = positionable as Writable<Card> // todo: fix this unnecessary cast
+  $: cardTitle = $card.type[0].toUpperCase() + $card.type.slice(1)
 
   const updateCard = () => {
-    log.debug('updateCard', $positionable)
-    dispatch('change', $positionable)
+    log.debug('updateCard', card)
+    dispatch('change', $card)
   }
 
   const handleDragEnd = (_: any) => {
     updateCard()
   }
 
-  const handleKeyUp = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      let url = parseStringIntoUrl(value)
-
-      if (!url) {
-        url = new URL(`https://google.com/search?q=${value}`)
-      }
-
-      value = url.href
-      $positionable.data.src = value
-      webview?.navigate(value)
-      inputEl.blur()
-    }
-  }
-
   const handleDelete = () => {
-    dispatch('delete', $positionable)
+    dispatch('delete', $card)
   }
 
   onMount(() => {
@@ -57,18 +45,6 @@
     // el.addEventListener('draggable_move', onDragMove)
     el.addEventListener('draggable_end', handleDragEnd)
     el.addEventListener('resizable_end', updateCard)
-
-    if (initialSrc === 'about:blank') {
-      // inputEl?.focus()
-    }
-
-    let oldSrc = initialSrc
-    positionable.subscribe((card) => {
-      if (oldSrc !== card.data.src) {
-        oldSrc = card.data.src
-        updateCard()
-      }
-    })
   })
 
   onDestroy(() => {
@@ -77,17 +53,6 @@
     el && el.removeEventListener('draggable_end', handleDragEnd)
     el && el.removeEventListener('resizable_end', updateCard)
   })
-
-  $: url = webview?.url
-  $: title = webview?.title
-  $: isLoading = webview?.isLoading
-  $: canGoBack = webview?.canGoBack
-  $: canGoForward = webview?.canGoForward
-  $: $positionable.data.src = $url ?? $positionable.data.src
-
-  $: if (!editing && $url !== 'about:blank' && $positionable.data.src !== 'about:blank') {
-    value = $url ?? $positionable.data.src
-  }
 </script>
 
 <Positionable
@@ -103,49 +68,37 @@
   <Resizable {positionable} direction="bottom-left" {minSize} {maxSize} />
 
   <Draggable {positionable} class="">
-    <div class="top-bar">
-      <button class="nav-button" on:click={handleDelete}> ✕ </button>
-      <button class="nav-button" on:click={webview?.goBack} disabled={!$canGoBack}> ← </button>
-      <button class="nav-button" on:click={webview?.goForward} disabled={!$canGoForward}>
-        →
-      </button>
-      <button class="nav-button" on:click={webview?.reload}> ↻ </button>
-      <input
-        on:focus={() => (editing = true)}
-        on:blur={() => (editing = false)}
-        type="text"
-        class="address-bar"
-        placeholder="Enter URL or search term"
-        bind:this={inputEl}
-        bind:value
-        on:keyup={handleKeyUp}
-      />
-      <div class="page-title">{$title}</div>
+    <div class="card-header">
+      <div class="card-title">{cardTitle}</div>
+      <button class="card-action" on:click={handleDelete}> ✕ </button>
     </div>
   </Draggable>
 
   <div class="content tela-ignore">
-    <WebviewWrapper
-      bind:this={webview}
-      src={initialSrc}
-      partition="persist:horizon"
-      on:didFinishLoad={() => dispatch('load')}
-    />
+    {#if $card.type === 'browser'}
+      <Lazy component={BrowserCard} {card} on:load on:change on:delete>
+        <!-- <p>Loading Browser Card</p> -->
+      </Lazy>
+    {:else if $card.type === 'text'}
+      <Lazy component={TextCard} {card} on:load on:change on:delete>
+        <!-- <p>Loading Text Card</p> -->
+      </Lazy>
+    {/if}
   </div>
 </Positionable>
 
 <style>
-  .top-bar {
+  .card-header {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
     background-color: #f5f5f5;
     padding: 8px;
     border-bottom: 1px solid #ddd;
     overflow: hidden;
   }
 
-  .nav-button {
+  .card-action {
     background-color: #e0e0e0;
     border: none;
     padding: 6px 12px;
@@ -155,25 +108,16 @@
     border-radius: 3px;
   }
 
-  .nav-button:disabled {
+  .card-action:disabled {
     background-color: #cccccc;
     cursor: default;
   }
 
-  .nav-button:hover:enabled {
+  .card-action:hover:enabled {
     background-color: #d5d5d5;
   }
 
-  .address-bar {
-    flex-grow: 1;
-    padding: 6px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin: 0 12px;
-  }
-
-  .page-title {
-    margin-left: auto;
+  .card-title {
     padding: 0 10px;
     white-space: nowrap;
     overflow: hidden;

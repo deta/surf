@@ -1,5 +1,5 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
-import type { Card } from '../types'
+import type { Card, CardBrowser, CardPosition } from '../types'
 import type { API } from './api'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { generateID } from '../utils/id'
@@ -48,16 +48,6 @@ export class Horizon {
     this.cards = writable([])
     this.signalChange = signalChange
 
-    this.cards.subscribe((cards) => {
-      if (cards.length === 0) {
-        this.log.debug(`No cards, skipping persist`)
-        return
-      }
-
-      this.log.debug(`Persisting ${cards.length} cards`)
-      this.storage.set(cards.map((c) => get(c)))
-    })
-
     this.log.debug(`Created`)
   }
 
@@ -85,6 +75,12 @@ export class Horizon {
     this.signalChange(this)
   }
 
+  async storeCards() {
+    const cards = get(this.cards)
+    this.log.debug(`Persisting ${cards.length} cards`)
+    this.storage.set(cards.map((c) => get(c)))
+  }
+
   async updateData(updates: Partial<HorizonData>) {
     this.data = { ...this.data, ...updates }
     this.signalChange(this)
@@ -98,12 +94,14 @@ export class Horizon {
       card.update((c) => ({ ...c, ...updates }))
       return c
     })
+    await this.storeCards()
     this.log.debug(`Updated card ${updates.id}`)
     this.signalChange(this)
   }
 
   async deleteCard(id: string) {
     this.cards.update((c) => c.filter((c) => get(c).id !== id))
+    await this.storeCards()
     this.log.debug(`Deleted card ${id}`)
     this.signalChange(this)
   }
@@ -111,6 +109,7 @@ export class Horizon {
   async freeze() {
     this.log.debug(`Freezing`)
     this.cards.set([])
+    await this.storeCards()
     this.changeState('cold')
   }
 
@@ -135,7 +134,29 @@ export class Horizon {
       hoisted: true
     } as Card)
     this.cards.update((c) => [...c, newCard])
+    await this.storeCards()
     this.signalChange(this)
+  }
+
+  async addCardBrowser(location: string, position: CardPosition) {
+    await this.addCard({
+      ...position,
+      type: 'browser',
+      data: {
+        initialLocation: location,
+        currentLocation: location
+      }
+    })
+  }
+
+  async addCardText(content: string, position: CardPosition) {
+    await this.addCard({
+      ...position,
+      type: 'text',
+      data: {
+        content: content
+      }
+    })
   }
 }
 
@@ -163,7 +184,7 @@ export class HorizonsManager {
 
     this.activeHorizonId = writable(null)
     this.horizons = writable([])
-    this.horizons.subscribe((h) => this.persistHorizons(h))
+    this.horizons.subscribe((h) => this.persistHorizons(h)) // TODO: probably better to persist manually than on every change
 
     this.hotHorizonsThreshold = HOT_HORIZONS_THRESHOLD
 

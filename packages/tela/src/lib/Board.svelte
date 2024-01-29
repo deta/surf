@@ -1039,10 +1039,10 @@
       return v;
     });
 
-    dispatch("modSelectChange", { rect: $selectionRect });
+    dispatch("modSelectChange", { rect: $selectionRect, event: e });
   }
   function onMouseUp_modSelect(e: MouseEvent | TouchEvent) {
-    dispatch("modSelectEnd", { rect: $selectionRect });
+    dispatch("modSelectEnd", { rect: $selectionRect, event: e });
     mode.idle();
   }
 

@@ -9,6 +9,7 @@
     "build:desktop": "yarn workspace desktop build",
     "build:desktop:mac": "yarn turbo run desktop#build:mac",
     "build:desktop:win": "yarn turbo run desktop#build:win",
+    "build:tela": "yarn workspace @horizon/tela build",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,svelte}\""
   },
