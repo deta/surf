@@ -73,7 +73,7 @@
     }
   </script>
   
-<div>
+<div class="browser-card">
     <div class="top-bar">
       <button class="nav-button" on:click={webview?.goBack} disabled={!$canGoBack}> ← </button>
       <button class="nav-button" on:click={webview?.goForward} disabled={!$canGoForward}>
@@ -93,7 +93,7 @@
       <div class="page-title">{$title}</div>
     </div>
 
-  <div class="">
+  <div class="browser-wrapper">
     <WebviewWrapper
       bind:this={webview}
       src={initialSrc}
@@ -104,6 +104,18 @@
 </div>
   
 <style>
+  .browser-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-wrapper {
+    width: 100%;
+    height: 100%;
+  }
+
   .top-bar {
     display: flex;
     align-items: center;
