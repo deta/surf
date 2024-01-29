@@ -4,22 +4,23 @@
 
     import type { CardEvents, CardText } from "../../../types"
     import { useLogScope } from "../../../utils/log"
+    import { useDebounce } from "../../../utils/debounce"
 
     export let card: Writable<CardText>
 
     const dispatch = createEventDispatcher<CardEvents>()
-    const log = useLogScope('BrowserCard')
+    const log = useLogScope('TextCard')
 
     const value = writable($card.data.content)
 
-    const updateCard = () => {
-        log.debug('updateCard', $card)
+    const debouncedSaveContent = useDebounce((value: string) => {
+        log.debug('saving content', $card)
         dispatch('change', $card)
-    }
+        $card.data.content = value
+    }, 500)
 
     value.subscribe((value) => {
-        $card.data.content = value
-        updateCard()
+        debouncedSaveContent(value)
     })
 </script>
 

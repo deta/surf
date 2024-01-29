@@ -70,9 +70,11 @@
       event.preventDefault()
       addHorizon()
     } else if (
-      ((event.metaKey || event.ctrlKey) && event.key === 'k') ||
-      event.key === ' ' ||
-      event.code === 'Space'
+        (event.metaKey || event.ctrlKey)
+        && (event.key === 'k' ||
+            event.key === ' ' ||
+            event.code === 'Space'
+        )
     ) {
       event.preventDefault()
       if (showStackOverview) {

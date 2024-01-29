@@ -4,11 +4,10 @@
   import { SvelteComponent, createEventDispatcher, onDestroy, onMount } from 'svelte'
   import type { Writable } from 'svelte/store'
 
-  import { Draggable, Positionable, Resizable, type IPositionable } from '@horizon/tela'
+  import { Draggable, Positionable, Resizable, type IPositionable, LazyComponent } from '@horizon/tela'
 
   import type { Card, CardEvents } from '../../types'
   import { useLogScope } from '../../utils/log'
-  import Lazy from '../Lazy.svelte'
 
   // TODO: fix this unnecessary cast
   const BrowserCard = () => import('../Cards/Browser/BrowserCard.svelte') as unknown as Promise<typeof SvelteComponent>
@@ -47,6 +46,11 @@
     el.addEventListener('resizable_end', updateCard)
   })
 
+  const handleChange = (e: CustomEvent<CardEvents['change']>) => {
+    log.debug('handleChange', e.detail)
+    dispatch('change', e.detail)
+  }
+
   onDestroy(() => {
     // el && el.addEventListener('draggable_start', onDragStart)
     // el && el.addEventListener('draggable_move', onDragMove)
@@ -76,13 +80,17 @@
 
   <div class="content tela-ignore">
     {#if $card.type === 'browser'}
-      <Lazy component={BrowserCard} {card} on:load on:change on:delete>
-        <!-- <p>Loading Browser Card</p> -->
-      </Lazy>
+      <LazyComponent this={BrowserCard}>
+        <svelte:fragment slot="component" let:Component>
+          <Component {card} on:load on:change on:delete />
+        </svelte:fragment>
+      </LazyComponent>
     {:else if $card.type === 'text'}
-      <Lazy component={TextCard} {card} on:load on:change on:delete>
-        <!-- <p>Loading Text Card</p> -->
-      </Lazy>
+      <LazyComponent this={TextCard}>
+        <svelte:fragment slot="component" let:Component>
+          <Component {card} on:load on:change={handleChange} on:delete />
+        </svelte:fragment>
+      </LazyComponent>
     {/if}
   </div>
 </Positionable>
