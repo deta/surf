@@ -4,18 +4,27 @@
   import { SvelteComponent, createEventDispatcher, onDestroy, onMount } from 'svelte'
   import type { Writable } from 'svelte/store'
 
-  import { Draggable, Positionable, Resizable, type IPositionable, LazyComponent } from '@horizon/tela'
+  import {
+    Draggable,
+    Positionable,
+    Resizable,
+    type IPositionable,
+    LazyComponent
+  } from '@horizon/tela'
 
   import type { Card, CardEvents } from '../../types'
   import { useLogScope } from '../../utils/log'
 
   // TODO: fix this unnecessary cast
-  const BrowserCard = () => import('../Cards/Browser/BrowserCard.svelte') as unknown as Promise<typeof SvelteComponent>
-  const TextCard = () => import('../Cards/Text/TextCard.svelte') as unknown as Promise<typeof SvelteComponent>
-  const LinkCard = () => import('../Cards/Link/LinkCard.svelte') as unknown as Promise<typeof SvelteComponent>
+  const BrowserCard = () =>
+    import('../Cards/Browser/BrowserCard.svelte') as unknown as Promise<typeof SvelteComponent>
+  const TextCard = () =>
+    import('../Cards/Text/TextCard.svelte') as unknown as Promise<typeof SvelteComponent>
+  const LinkCard = () =>
+    import('../Cards/Link/LinkCard.svelte') as unknown as Promise<typeof SvelteComponent>
 
   export let positionable: Writable<IPositionable<any>>
-    
+
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('CardWrapper')
 

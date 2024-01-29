@@ -13,7 +13,7 @@
   import Stack from '../Stack/Stack.svelte'
   import StackItem from '../Stack/StackItem.svelte'
   import HorizonPreview from './HorizonPreview.svelte'
-    import MediaImporter from './MediaImporter.svelte'
+  import MediaImporter from './MediaImporter.svelte'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -71,11 +71,8 @@
       event.preventDefault()
       addHorizon()
     } else if (
-        (event.metaKey || event.ctrlKey)
-        && (event.key === 'k' ||
-            event.key === ' ' ||
-            event.code === 'Space'
-        )
+      (event.metaKey || event.ctrlKey) &&
+      (event.key === 'k' || event.key === ' ' || event.code === 'Space')
     ) {
       event.preventDefault()
       if (showStackOverview) {

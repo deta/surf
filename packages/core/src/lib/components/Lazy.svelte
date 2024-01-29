@@ -6,7 +6,7 @@
   let loadedComponent: typeof SvelteComponent | null = null
 
   onMount(() => {
-    component().then(module => {
+    component().then((module) => {
       loadedComponent = module.default
     })
   })

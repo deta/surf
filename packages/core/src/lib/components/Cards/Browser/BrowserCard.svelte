@@ -1,97 +1,95 @@
 <!-- <svelte:options immutable={true} /> -->
 
 <script lang="ts">
-    import { createEventDispatcher, onMount } from 'svelte'
-    import type { Writable } from 'svelte/store'
+  import { createEventDispatcher, onMount } from 'svelte'
+  import type { Writable } from 'svelte/store'
 
-    import WebviewWrapper from './WebviewWrapper.svelte'
-    import type { CardBrowser, CardEvents } from '../../../types'
-    import { useLogScope } from '../../../utils/log'
-    import { parseStringIntoUrl } from '../../../utils/url'
-  
-    export let card: Writable<CardBrowser>
+  import WebviewWrapper from './WebviewWrapper.svelte'
+  import type { CardBrowser, CardEvents } from '../../../types'
+  import { useLogScope } from '../../../utils/log'
+  import { parseStringIntoUrl } from '../../../utils/url'
 
-    const dispatch = createEventDispatcher<CardEvents>()
-    const log = useLogScope('BrowserCard')
-  
-    const initialSrc = $card.data.currentLocation
-  
-    let value = ''
-    let editing = false
-  
-    let inputEl: HTMLInputElement
-    let webview: WebviewWrapper | undefined
-  
-    const updateCard = () => {
-      log.debug('updateCard', $card)
-      dispatch('change', $card)
-    }
-  
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        let url = parseStringIntoUrl(value)
-  
-        if (!url) {
-          url = new URL(`https://google.com/search?q=${value}`)
-        }
-  
-        value = url.href
-        $card.data.currentLocation = value
-        webview?.navigate(value)
-        inputEl.blur()
+  export let card: Writable<CardBrowser>
+
+  const dispatch = createEventDispatcher<CardEvents>()
+  const log = useLogScope('BrowserCard')
+
+  const initialSrc = $card.data.currentLocation
+
+  let value = ''
+  let editing = false
+
+  let inputEl: HTMLInputElement
+  let webview: WebviewWrapper | undefined
+
+  const updateCard = () => {
+    log.debug('updateCard', $card)
+    dispatch('change', $card)
+  }
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      let url = parseStringIntoUrl(value)
+
+      if (!url) {
+        url = new URL(`https://google.com/search?q=${value}`)
       }
+
+      value = url.href
+      $card.data.currentLocation = value
+      webview?.navigate(value)
+      inputEl.blur()
+    }
+  }
+
+  const handleFinishLoading = () => {
+    log.debug('finished loading', $card)
+    dispatch('load', $card)
+  }
+
+  onMount(() => {
+    if (initialSrc === 'about:blank') {
+      // inputEl?.focus()
     }
 
-    const handleFinishLoading = () => {
-      log.debug('finished loading', $card)
-      dispatch('load', $card)
-    }
-  
-    onMount(() => {  
-      if (initialSrc === 'about:blank') {
-        // inputEl?.focus()
+    let oldSrc = initialSrc
+    card.subscribe((card) => {
+      if (oldSrc !== card.data.currentLocation) {
+        oldSrc = card.data.currentLocation
+        updateCard()
       }
-  
-      let oldSrc = initialSrc
-      card.subscribe((card) => {
-        if (oldSrc !== card.data.currentLocation) {
-          oldSrc = card.data.currentLocation
-          updateCard()
-        }
-      })
     })
-  
-    $: url = webview?.url
-    $: title = webview?.title
-    $: isLoading = webview?.isLoading
-    $: canGoBack = webview?.canGoBack
-    $: canGoForward = webview?.canGoForward
-    $: $card.data.currentLocation = $url ?? $card.data.initialLocation
-  
-    $: if (!editing && $url !== 'about:blank' && $card.data.currentLocation !== 'about:blank') {
-      value = $url ?? $card.data.currentLocation
-    }
-  </script>
-  
+  })
+
+  $: url = webview?.url
+  $: title = webview?.title
+  $: isLoading = webview?.isLoading
+  $: canGoBack = webview?.canGoBack
+  $: canGoForward = webview?.canGoForward
+  $: $card.data.currentLocation = $url ?? $card.data.initialLocation
+
+  $: if (!editing && $url !== 'about:blank' && $card.data.currentLocation !== 'about:blank') {
+    value = $url ?? $card.data.currentLocation
+  }
+</script>
+
 <div class="browser-card">
-    <div class="top-bar">
-      <button class="nav-button" on:click={webview?.goBack} disabled={!$canGoBack}> ← </button>
-      <button class="nav-button" on:click={webview?.goForward} disabled={!$canGoForward}>
-        →
-      </button>
-      <button class="nav-button" on:click={webview?.reload}> ↻ </button>
-      <input
-        on:focus={() => (editing = true)}
-        on:blur={() => (editing = false)}
-        type="text"
-        class="address-bar"
-        placeholder="Enter URL or search term"
-        bind:this={inputEl}
-        bind:value
-        on:keyup={handleKeyUp}
-      />
-      <div class="page-title">{$title}</div>
-    </div>
+  <div class="top-bar">
+    <button class="nav-button" on:click={webview?.goBack} disabled={!$canGoBack}> ← </button>
+    <button class="nav-button" on:click={webview?.goForward} disabled={!$canGoForward}> → </button>
+    <button class="nav-button" on:click={webview?.reload}> ↻ </button>
+    <input
+      on:focus={() => (editing = true)}
+      on:blur={() => (editing = false)}
+      type="text"
+      class="address-bar"
+      placeholder="Enter URL or search term"
+      bind:this={inputEl}
+      bind:value
+      on:keyup={handleKeyUp}
+    />
+    <div class="page-title">{$title}</div>
+  </div>
 
   <div class="browser-wrapper">
     <WebviewWrapper
@@ -102,7 +100,7 @@
     />
   </div>
 </div>
-  
+
 <style>
   .browser-card {
     width: 100%;
@@ -162,4 +160,3 @@
     font-size: 0.9rem;
   }
 </style>
-  
