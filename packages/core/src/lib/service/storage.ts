@@ -1,4 +1,8 @@
 import { generateID } from '../utils/id'
+import Dexie from 'dexie'
+
+import { type HorizonData } from './horizon'
+import { type Card, type Resource } from '../types'
 
 export class LocalStorage<T> {
   key: string
@@ -71,5 +75,55 @@ export class Storage<T extends Record<string, any>> {
 
   list() {
     return this.items
+  }
+}
+
+export class HorizonStore<T extends { id: string }> {
+  constructor(public t: Dexie.Table<T, string>) {}
+
+  async create(item: T): Promise<string> {
+    item.id = generateID()
+    await this.t.add(item as T)
+    return item.id
+  }
+
+  async all(): Promise<T[]> {
+    return await this.t.toArray()
+  }
+
+  async read(id: string): Promise<T | undefined> {
+    return await this.t.get(id)
+  }
+
+  async update(id: string, updatedItem: Partial<T>): Promise<number> {
+    return await this.t.update(id, updatedItem)
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.t.delete(id)
+  }
+}
+
+export class HorizonDatabase extends Dexie {
+  cards: HorizonStore<Card>
+  horizons: HorizonStore<HorizonData>
+  resources: HorizonStore<Resource>
+
+  constructor() {
+    super('HorizonDatabase')
+
+    this.version(1).stores({
+      cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
+      horizons: 'id, name, isDefault, createdAt, updatedAt',
+      resources: 'id'
+    })
+
+    this.cards = new HorizonStore<Card>(this.table('cards'))
+    this.horizons = new HorizonStore<HorizonData>(this.table('horizons'))
+    this.resources = new HorizonStore<Resource>(this.table('resources'))
+  }
+
+  async getCardsByHorizonId(horizonId: string) {
+    return await this.cards.t.where({ horizon_id: horizonId }).toArray()
   }
 }

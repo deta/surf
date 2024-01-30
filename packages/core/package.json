@@ -34,5 +34,8 @@
     "tslib": "^2.6.2",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"
+  },
+  "dependencies": {
+    "dexie": "^3.2.4"
   }
 }
