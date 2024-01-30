@@ -170,10 +170,6 @@
         if (isIntentional) {
           if (!stillScrolling) stillScrolling = true;
           if (!isAnimating) requestAnimationFrame(frame);
-          snapSpring.update((v) => {
-            v += e.deltaY;
-            return v;
-          });
 
           flickSpring.update((v: number) => {
             const eased = 1 - ((v+e.deltaY*1) / 1.3)^2;
