@@ -1,4 +1,5 @@
 import type { IPositionable } from '@horizon/tela'
+import type { JSONContent } from '@horizon/editor'
 
 export type CardEvents = {
   change: Card
@@ -29,7 +30,7 @@ export interface CardBrowser extends Card {
 export interface CardText extends Card {
   type: 'text'
   data: {
-    content: string
+    content: JSONContent
   }
 }
 
