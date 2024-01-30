@@ -3,7 +3,7 @@ import type { Card, CardBrowser, CardPosition } from '../types'
 import type { API } from './api'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { generateID } from '../utils/id'
-import { LocalStorage } from './storage'
+import { HorizonDatabase, LocalStorage } from './storage'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 5
@@ -35,13 +35,13 @@ export class Horizon {
 
   api: API
   log: ScopedLogger
-  storage: LocalStorage<Card[]>
+  storage: HorizonDatabase
 
   constructor(id: string, data: HorizonData, api: API, signalChange: (horizon: Horizon) => void) {
     this.id = id
     this.api = api
     this.log = useLogScope(`Horizon ${id}`)
-    this.storage = new LocalStorage<Card[]>(`horizon_${id}_cards`)
+    this.storage = new HorizonDatabase()
 
     this.state = 'cold'
     this.inStateSince = Date.now()
@@ -78,16 +78,17 @@ export class Horizon {
     this.log.debug(`Loading cards`)
 
     // load cards from storage and persist any future changes
-    const storedCards = this.storage.get() ?? []
+    // const storedCards = await this.storage.cards.all() ?? []
+    const storedCards = (await this.storage.getCardsByHorizonId(this.data.id)) ?? []
     this.cards.set(storedCards.map((c) => writable(c)))
     this.signalChange(this)
   }
 
-  async storeCards() {
-    const cards = get(this.cards)
-    this.log.debug(`Persisting ${cards.length} cards`)
-    this.storage.set(cards.map((c) => get(c)))
-  }
+  // async storeCards() {
+  //   const cards = get(this.cards)
+  //   this.log.debug(`Persisting ${cards.length} cards`)
+  //   this.storage.set(cards.map((c) => get(c)))
+  // }
 
   async updateData(updates: Partial<HorizonData>) {
     this.data = { ...this.data, ...updates }
@@ -102,14 +103,16 @@ export class Horizon {
       card.update((c) => ({ ...c, ...updates }))
       return c
     })
-    await this.storeCards()
+    // TODO: assumes that `id` is always included?
+    // need sth that is `Partial` but doesn't exclude the id
+    await this.storage.cards.update(updates.id ?? '', updates)
     this.log.debug(`Updated card ${updates.id}`)
     this.signalChange(this)
   }
 
   async deleteCard(id: string) {
     this.cards.update((c) => c.filter((c) => get(c).id !== id))
-    await this.storeCards()
+    await this.storage.cards.delete(id)
     this.log.debug(`Deleted card ${id}`)
     this.signalChange(this)
   }
@@ -117,7 +120,6 @@ export class Horizon {
   async freeze() {
     this.log.debug(`Freezing`)
     this.cards.set([])
-    await this.storeCards()
     this.changeState('cold')
   }
 
@@ -135,14 +137,17 @@ export class Horizon {
   }
 
   async addCard(card: Omit<Card, 'id' | 'stacking_order'>) {
-    const newCard = writable({
+    const cardData = {
       ...card,
-      id: generateID(),
+      id: 'placeholder',
+      horizon_id: this.data.id,
       stacking_order: 1,
       hoisted: true
-    } as Card)
-    this.cards.update((c) => [...c, newCard])
-    await this.storeCards()
+    } as Card
+    const id = await this.storage.cards.create(cardData)
+    cardData.id = id
+    const cardStore = writable(cardData)
+    this.cards.update((c) => [...c, cardStore])
     this.signalChange(this)
   }
 
@@ -192,13 +197,15 @@ export class HorizonsManager {
 
   api: API
   log: ScopedLogger
-  storage: LocalStorage<HorizonData[]>
+  storage: HorizonDatabase
   activeHorizonStorage: LocalStorage<string>
 
   constructor(api: API) {
     this.api = api
     this.log = useLogScope(`HorizonService`)
-    this.storage = new LocalStorage<HorizonData[]>('horizons')
+    this.storage = new HorizonDatabase()
+    // TODO: replace this with something
+    // that stores application state
     this.activeHorizonStorage = new LocalStorage<string>('active_horizon')
 
     this.activeHorizonId = writable(null)
@@ -282,7 +289,7 @@ export class HorizonsManager {
   }
 
   async loadHorizons() {
-    const storedHorizons = this.storage.get() ?? []
+    const storedHorizons = (await this.storage.horizons.all()) ?? []
     this.log.debug(`Loading ${storedHorizons.length} stored horizons`)
 
     // const res = await this.api.getHorizons()
@@ -315,7 +322,12 @@ export class HorizonsManager {
     }
     this.log.debug(`Persisting ${horizons.length} horizons`)
     const horizonsData = horizons.map((h) => h.data)
-    this.storage.set(horizonsData)
+    // this.storage.set(horizonsData)
+    Promise.allSettled(
+      horizonsData.map(async (h) => {
+        this.storage.horizons.update(h.id, h)
+      })
+    )
   }
 
   getDefaultHorizon() {
@@ -383,25 +395,16 @@ export class HorizonsManager {
   async createHorizon(name: string, isDefault = false) {
     // const res = await this.api.createHorizon(name)
     const data = {
-      id: generateID(),
+      id: 'placeholder',
       name,
       viewOffsetX: 0,
-      default: isDefault,
-      created_at: new Date().toISOString()
-    }
-    const horizon = new Horizon(
-      data.id,
-      {
-        id: data.id,
-        name: data.name,
-        viewOffsetX: data.viewOffsetX,
-        isDefault: data.default,
-        createdAt: data.created_at
-      },
-      this.api,
-      (h) => this.handleHorizonChange(h)
-    )
+      isDefault: isDefault,
+      createdAt: new Date().toISOString()
+    } as HorizonData
+    const id = await this.storage.horizons.create(data)
+    data.id = id
 
+    const horizon = new Horizon(data.id, data, this.api, (h) => this.handleHorizonChange(h))
     this.horizons.update((h) => [...h, horizon])
 
     return horizon
