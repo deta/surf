@@ -119,10 +119,6 @@
         damping: 0.97,
     });
 
-    // const snapSpring = spring(0, {
-    //   stiffness: 0.85,
-    //   damping: 0.97,
-    // });
     const flickSpring = advancedSpring(0, {
       // stiffness: 0.25,
       // damping: 0.9,
@@ -133,7 +129,6 @@
     })
     const flickInertia = flickSpring.inertia;
 
-    const snapSpring = writable(0);
     let stillScrolling = false;
 
     let canSwitchAgain = true;
@@ -210,123 +205,9 @@
         }
         return v;
       });
-      snapSpring.update(v => {
-        if (stillScrolling) return v;// * 0.97;
-        v *= 0.96;
-        if (Math.abs(v) < 0.01) {
-          v = 0;
-          isAnimating = false;
-        }
-        return v;
-      });
     }
+    // TODO: (Performance) We shuld only kick it off once the spring is changed probably and stop it after it settled!
     onMount(frame)
-
-    /*let lockSwipe = false
-    let SWIPE_LOCK_DURATION = 1300
-    let SWIPE_THRESHOLD = 300
-
-    const handleGestureEnd = (g: any) => {
-        const event = (g as any).event as TouchEvent | undefined
-
-        if (g.scale < 1 && !showStackOverview) {
-            log.debug('scale down')
-            showStackOverview = true
-        } else if (g.scale > 1 && showStackOverview) {
-            log.debug('scale up')
-            showStackOverview = false
-        }
-    }*/
-
-    /*
-        Flow:
-
-        - on wheel event, check if it's intentional scroll
-        - if it is, start tracking the movement and apply movementOffset to the stack to reflect user's intention
-        - if threshold is reached, switch to next/previous horizon and reset movementOffset
-        - if intentional scroll ends reset movementOffset
-    */
-
-    /*let lastWheelDeltaY = 0
-    let accelarating = false
-    let movementOffset = 0
-    const movementOffsetTweened = tweened(0, { duration: 100, easing: cubicIn })
-
-    let timeout: ReturnType<typeof setTimeout> | undefined
-
-    const SCROLL_TIMEOUT = 300
-    const INTENTIONAL_SCROLL_DELAY = 300
-    const SCROLL_BOUNDS = window.innerHeight
-    const INTENTIONAL_SCROLL_THRESHOLD = SCROLL_BOUNDS * 0.3
-
-    let lastIntentionalScrollTime = 0
-    let scrollDistance = 0
-    let trackingMovement = false
-
-    const scrollToMovement = (scrollDistance: number) => {
-        const limitedScroll = Math.max(Math.min(scrollDistance, SCROLL_BOUNDS), -SCROLL_BOUNDS) * -1
-
-        const eased = quintIn(limitedScroll / 100)
-
-        return limitedScroll
-    }
-
-    const handleIntentionalScrollChange = (e: WheelEvent) => {
-        // round to get rid of jitter
-        // movementOffset += Math.round((e.deltaY * -1) / 10) * 10
-        // movementOffsetTweened.set(movementOffset)
-    }
-
-    const handleIntentionalScrollStart = (e: WheelEvent) => {
-        trackingMovement = true
-        log.debug('intentional scroll start')
-    }
-
-    const handleIntentionalScrollEnd = (e: WheelEvent) => {
-        trackingMovement = false
-        scrollDistance = 0
-        movementOffset = 0
-        log.debug('intentional scroll end')
-    }
-
-    const handleWheel = (e: WheelEvent) => {
-        const isIntentional = lethargy.check(e);
-
-        clearTimeout(timeout)
-
-        if (trackingMovement) {
-            scrollDistance += e.deltaY
-
-            movementOffset = scrollToMovement(scrollDistance)
-
-            if (movementOffset >= INTENTIONAL_SCROLL_THRESHOLD) {
-                handleIntentionalScrollEnd(e)
-                moveToPreviousHorizon()
-            } else if (movementOffset <= -INTENTIONAL_SCROLL_THRESHOLD) {
-                handleIntentionalScrollEnd(e)
-                moveToNextHorizon()
-            }
-        }
-
-        if (isIntentional) {
-            lastIntentionalScrollTime = Date.now()
-
-            if (!trackingMovement) {
-                handleIntentionalScrollStart(e)
-            }
-
-            handleIntentionalScrollChange(e)
-        } else {
-            const timeDelta = Date.now() - lastIntentionalScrollTime
-            if (trackingMovement && timeDelta > INTENTIONAL_SCROLL_DELAY) {
-                handleIntentionalScrollEnd(e)
-            }
-        }
-
-        timeout = setTimeout(() => {
-            handleIntentionalScrollEnd(e)
-        }, SCROLL_TIMEOUT)
-    }*/
 
   onMount(() => {
     horizonManager.init()
