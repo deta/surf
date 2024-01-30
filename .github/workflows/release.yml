@@ -32,7 +32,6 @@ jobs:
       #   run: npm run build:linux
 
       - name: Build Mac App
-        if: matrix.os == 'macos-latest'
         run: npm run build:desktop:mac
 
       #- name: Build Win App
