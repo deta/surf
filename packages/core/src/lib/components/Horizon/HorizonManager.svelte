@@ -18,6 +18,7 @@
   import HorizonSwitcherItem from './HorizonSwitcherItem.svelte'
   import { spring } from 'svelte/motion'
   import MediaImporter from './MediaImporter.svelte'
+    import { advancedSpring } from '../../utils/advancedSpring'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -107,7 +108,7 @@
 
             activeStackItemIdx = e.detail
             showStackOverview = false
-            setTimeout(() => $stackOverviewScrollOffset = 0, 200)
+            setTimeout(() => $stackOverviewScrollOffset = activeStackItemIdx * 708 - (64 * activeStackItemIdx), 200)
         }
     }
 
@@ -122,15 +123,25 @@
     //   stiffness: 0.85,
     //   damping: 0.97,
     // });
+    const flickSpring = advancedSpring(0, {
+      // stiffness: 0.25,
+      // damping: 0.9,
+      stiffness: 0.65, // <- Juicy
+      damping: 0.7, // <- Juicy
+      min: -400,
+      max: 400
+    })
+    const flickInertia = flickSpring.inertia;
+
     const snapSpring = writable(0);
     let stillScrolling = false;
 
     let canSwitchAgain = true;
     let canSwitchTimer: any = null;
 
-    $: if (Math.abs($snapSpring) > 720 && !showStackOverview && canSwitchAgain) {
+    $: if (Math.abs($flickSpring) > 400 && !showStackOverview && canSwitchAgain) {
       let cancel = false;
-      if (Math.sign($snapSpring) > 0) {
+      if (Math.sign($flickSpring) > 0) {
         moveToNextHorizon();
       } else {
         moveToPreviousHorizon();
@@ -138,7 +149,7 @@
       }
 
       if (!cancel) {
-        snapSpring.set(-$snapSpring);
+        flickSpring.set(-$flickSpring);
         canSwitchTimer && clearTimeout(canSwitchTimer);
         canSwitchTimer = setTimeout(() => {
           canSwitchAgain = true;
@@ -168,6 +179,14 @@
             v += e.deltaY;
             return v;
           });
+
+          flickSpring.update((v: number) => {
+            const eased = 1 - ((v+e.deltaY*1) / 1.3)^2;
+            v = -eased;
+            //v += e.deltaY;
+            return v;
+          });
+
           console.log('intentional', e.deltaY);
 
           wheelResetTimer && clearTimeout(wheelResetTimer);
@@ -182,6 +201,15 @@
     function frame() {
       requestAnimationFrame(frame);
       isAnimating = true;
+      flickSpring.update((v: number) => {
+        if (stillScrolling) return v;// * 0.97;
+        v *= 0.96;
+        if (Math.abs(v) < 0.01) {
+          v = 0;
+          isAnimating = false;
+        }
+        return v;
+      });
       snapSpring.update(v => {
         if (stillScrolling) return v;// * 0.97;
         v *= 0.96;
@@ -191,18 +219,6 @@
         }
         return v;
       });
-      // Calculate the velocity from the change in scroll
-      // const velocity = (scrollCounter - lastScrollCnt) / diff;
-
-      // scrollRate.update(v => {
-      //   v = $scrollCounter - lastScrollCnt // (Date.now() - lastFrameTime)
-      //   // v *= 0.9;
-      //   // if (v < 0.01) v = 0;
-      //   return v;
-      // });
-      // lastScrollCnt = $scrollCounter;
-      // lastFrameTime = Date.now();
-      // $snapWheel = 0;
     }
     onMount(frame)
 
@@ -341,7 +357,7 @@
 
   <Stack
     options={{ transitionDuration: 0.2 }}
-    movementOffset={snapSpring}
+    movementOffset={flickSpring}
     overviewOffset={stackOverviewScrollOffset}
     bind:activeIdx={activeStackItemIdx}
     bind:showOverview={showStackOverview}

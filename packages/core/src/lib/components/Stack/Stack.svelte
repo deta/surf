@@ -26,8 +26,16 @@
     // $: lerpedMovement = $movementOffset * lerp(1, 0.8, Math.abs($movementOffset) / 1000);
     // $: limitedMovementOffset = Math.max(Math.min($movementOffset, 100), -100)
 
-    $: verticalOffset = activeIdx * -windowHeight - (48 * activeIdx);
-    $: targetOffset = verticalOffset - (showOverview ? ($overviewOffset) : 0) - (activeIdx === 0 ? Math.max(-10, ($movementOffset / 2.8)) : ($movementOffset / 2.8));
+    $: verticalOffsetZoom = activeIdx * -windowHeight - (48 * activeIdx);
+    $: verticalOffsetOverview = activeIdx * 708 - (64 * activeIdx);
+
+    $: targetOffsetZoom = verticalOffsetZoom - (activeIdx === 0 ? Math.max(-20, ($movementOffset / 2.8)) : ($movementOffset / 2.8));
+    $: targetOffsetOverview = verticalOffsetOverview - $overviewOffset;
+
+    $: targetOffset = showOverview ? targetOffsetOverview : targetOffsetZoom;
+
+    // $: verticalOffset = activeIdx * -windowHeight - (48 * activeIdx);
+    // $: targetOffset = verticalOffset - (showOverview ? ($overviewOffset) : 0) - (activeIdx === 0 ? Math.max(-10, ($movementOffset / 2.8)) : ($movementOffset / 2.8));
     $: transformCss = `transform: translate3d(0px, ${targetOffset}px, 0px)`
 
     // function frame() {
@@ -91,7 +99,7 @@
         transition-property: transform, gap;
         // transition-duration: var(--transition-duration);
         // transition-timing-function: var(--transition-timing-function);
-        transition-duration: 0.185s;
+        transition-duration: 0.205s; //0.185s
         /* easeOutCubic */
         // transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
         transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
