@@ -341,8 +341,8 @@
 
   <Stack
     options={{ transitionDuration: 0.2 }}
-        movementOffset={snapSpring}
-        overviewOffset={stackOverviewScrollOffset}
+    movementOffset={snapSpring}
+    overviewOffset={stackOverviewScrollOffset}
     bind:activeIdx={activeStackItemIdx}
     bind:showOverview={showStackOverview}
     on:select={handleStackItemSelect}
