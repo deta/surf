@@ -3,7 +3,14 @@ import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
-const validShortcuts = ['Up', 'Down', 'Space', 'k', 'n', ...Array.from(Array(9).keys()).map((idx) => `${idx + 1}`)]
+const validShortcuts = [
+  'Up',
+  'Down',
+  'Space',
+  'k',
+  'n',
+  ...Array.from(Array(9).keys()).map((idx) => `${idx + 1}`)
+]
 
 function createWindow(): void {
   const spaceSession = session.fromPartition('persist:horizon-session-v0')
@@ -57,7 +64,9 @@ const sendShortcutToHorizon = (key: string) => {
 }
 
 function registerShortcuts() {
-  validShortcuts.map((shortcut) => globalShortcut.register(`CommandOrControl+${shortcut}`, () => sendShortcutToHorizon(shortcut)))
+  validShortcuts.map((shortcut) =>
+    globalShortcut.register(`CommandOrControl+${shortcut}`, () => sendShortcutToHorizon(shortcut))
+  )
 }
 
 function unregisterShortcuts() {

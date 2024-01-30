@@ -21,6 +21,7 @@
     "@horizon/eslint-config": "*",
     "@horizon/tela": "*",
     "@horizon/types": "*",
+    "@horizon/editor": "*",
     "@horizon/typescript-config": "*",
     "@skilitics-public/two-fingers": "^2.1.0",
     "@sveltejs/vite-plugin-svelte": "^3.0.1",

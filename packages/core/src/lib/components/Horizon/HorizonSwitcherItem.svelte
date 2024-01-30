@@ -24,29 +24,29 @@
     dispatch('click', horizon.id)
   }
 
-    const handleMouseEnter = () => {
-        if (!shouldShowPreview) return
+  const handleMouseEnter = () => {
+    if (!shouldShowPreview) return
 
-        timeout = setTimeout(() => {
-            if (hot) {
-                const elem = document.querySelector(`[data-hot-horizon="${horizon.id}"]`) as HTMLElement
-                elem.classList.add('preview-horizon')
-            } else {
-                showPreview = true
-            }
-        }, 400)
+    timeout = setTimeout(() => {
+      if (hot) {
+        const elem = document.querySelector(`[data-hot-horizon="${horizon.id}"]`) as HTMLElement
+        elem.classList.add('preview-horizon')
+      } else {
+        showPreview = true
+      }
+    }, 400)
+  }
+
+  const hidePreview = () => {
+    if (hot) {
+      const elem = document.querySelector(`[data-hot-horizon="${horizon.id}"]`) as HTMLElement
+      elem.classList.remove('preview-horizon')
+    } else {
+      showPreview = false
     }
 
-    const hidePreview = () => {
-        if (hot) {
-            const elem = document.querySelector(`[data-hot-horizon="${horizon.id}"]`) as HTMLElement
-            elem.classList.remove('preview-horizon')
-        } else {
-            showPreview = false
-        }
-
-        clearTimeout(timeout)
-    }
+    clearTimeout(timeout)
+  }
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->

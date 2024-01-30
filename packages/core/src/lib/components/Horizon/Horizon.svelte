@@ -2,14 +2,23 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { get, writable, type Writable } from 'svelte/store'
 
-  import { Board, Grid, createSettings, createBoard, clamp, snapToGrid, hoistPositionable } from "@horizon/tela";
-  import type { IBoard, IPositionable, Vec4 } from "@horizon/tela";
+  import {
+    Board,
+    Grid,
+    createSettings,
+    createBoard,
+    clamp,
+    snapToGrid,
+    hoistPositionable
+  } from '@horizon/tela'
+  import type { IBoard, IPositionable, Vec4 } from '@horizon/tela'
 
   import CardWrapper from './CardWrapper.svelte'
   import { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
   import { takePageScreenshot } from '../../utils/screenshot'
   import type { Card } from '../../types'
+  import { useDebounce } from '../../utils/debounce'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -46,8 +55,17 @@
 
   const state = board.state
   const selectionCss = $state.selectionCss
+  const viewOffset = $state.viewOffset
 
   let containerEl: HTMLElement
+
+  const debouncedHorizonUpdate = useDebounce((...args: Parameters<typeof horizon.updateCard>) => {
+    return horizon.updateData(...args)
+  }, 500)
+
+  const debouncedCardUpdate = useDebounce((...args: Parameters<typeof horizon.updateCard>) => {
+    return horizon.updateCard(...args)
+  }, 500)
 
   // Responsible for the scaling of the entire Horizon on bigger screens
   const handleWindowResize = () => {
@@ -60,13 +78,17 @@
   const loadHorizon = () => {
     $state.stackingOrder.set($cards.map((e) => get(e).id))
     $state.viewOffset.set({ x: data.viewOffsetX, y: 0 })
+
+    viewOffset.subscribe((e) => {
+      debouncedHorizonUpdate({ viewOffsetX: e.x })
+    })
   }
 
   const updatePreview = async () => {
     if (!active) return
     log.debug('generating preview image')
     const previewImage = await takePageScreenshot()
-    await horizon.updateData({ previewImage: previewImage })
+    await debouncedHorizonUpdate({ previewImage: previewImage })
     dispatch('change', horizon)
   }
 
@@ -76,7 +98,7 @@
       rect: Vec4
     }>
   ) => {
-    const { rect } = e.detail
+    const { rect, event } = e.detail
     let pos = { x: rect.x, y: rect.y }
     let size = { x: rect.w, y: rect.h }
     // Snap
@@ -98,16 +120,22 @@
       }
     }
 
-    horizon.addCard({
+    log.debug('mod select end', e.detail.event)
+
+    const position = {
       x: pos.x,
       y: pos.y,
       width: size.x,
-      height: size.y,
-      data: {
-        title: '',
-        src: 'about:blank'
-      }
-    })
+      height: size.y
+    }
+
+    if (event.metaKey || event.ctrlKey) {
+      log.debug('creating new browser card', position)
+      horizon.addCardBrowser('about:blank', position)
+    } else {
+      log.debug('creating new text card', position)
+      horizon.addCardText('', position)
+    }
 
     $state.stackingOrder.set($cards.map((e) => get(e).id))
   }
@@ -115,8 +143,9 @@
   const handleCardChange = async (e: CustomEvent<Card>) => {
     const card = e.detail
     log.debug('card changed', card)
-    await horizon.updateCard(card)
-    updatePreview()
+    debouncedCardUpdate(card).then(() => {
+      updatePreview()
+    })
   }
 
   const handleCardLoad = () => {
@@ -138,33 +167,37 @@
   // TODO fix types to get rid of this type conversion
   $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
 
-    onMount(() => {
-        loadHorizon()
-        handleWindowResize()
-    })
-    
+  onMount(() => {
+    loadHorizon()
+    handleWindowResize()
+  })
 </script>
 
 <svelte:window on:resize={handleWindowResize} />
 
 <div data-horizon={horizon.id} class="horizon">
-    <Board
-        {settings}
-        {board}
-        positionables={positionables}
-        on:modSelectEnd={onModSelectEnd}
-        on:positionableEnter={handlePositionableEnter}
-        bind:containerEl
-        let:positionable
-    >
-        <svelte:fragment slot="selectRect">
-            <div class="selectionRect" style={$selectionCss} />
-        </svelte:fragment>
+  <Board
+    {settings}
+    {board}
+    {positionables}
+    on:modSelectEnd={onModSelectEnd}
+    on:positionableEnter={handlePositionableEnter}
+    bind:containerEl
+    let:positionable
+  >
+    <svelte:fragment slot="selectRect">
+      <div class="selectionRect" style={$selectionCss} />
+    </svelte:fragment>
 
-        <svelte:fragment slot="raw">
-            <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
-        </svelte:fragment>
+    <svelte:fragment slot="raw">
+      <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
+    </svelte:fragment>
 
-        <CardWrapper {positionable} on:change={handleCardChange} on:load={handleCardLoad} on:delete={handleCardDelete} />
+    <CardWrapper
+      {positionable}
+      on:load={handleCardLoad}
+      on:change={handleCardChange}
+      on:delete={handleCardDelete}
+    />
   </Board>
 </div>

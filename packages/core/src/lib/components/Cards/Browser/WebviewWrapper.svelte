@@ -3,7 +3,7 @@
   import type { WebviewTag } from 'electron'
   import { createEventDispatcher } from 'svelte'
 
-  const dispatch = createEventDispatcher<{ didFinishLoad: void; }>()
+  const dispatch = createEventDispatcher<{ didFinishLoad: void }>()
 
   export let src: string
   export let partition: string
@@ -15,7 +15,6 @@
   export const title = writable('')
 
   let webview: WebviewTag
-
 
   $: if (webview) {
     webview.addEventListener('did-navigate', (e: any) => {

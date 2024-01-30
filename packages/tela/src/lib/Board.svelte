@@ -805,7 +805,7 @@
       if (hasClassOrParentWithClass(e.target as HTMLElement, "tela-ignore")) return;
       // e.preventDefault();
       // e.stopPropagation();
-      // console.log("PAN")
+      console.log("PAN");
       mode.pan(); // TODO: only if not already?
 
       let deltaX =
@@ -816,7 +816,7 @@
       // if (!hasClassOrParentWithClass(e.target as HTMLElement, "draggable")) {
       if ($settings.PAN_DIRECTION === "x") {
         if (deltaX === 0) {
-          mode.idle()
+          mode.idle();
         }
         // deltaX += e.deltaY / $zoom;
         // mode.pan();
@@ -868,8 +868,8 @@
       // TODO: Done event --> use native pan method
 
       debounce("end_scroll_pan", 100, () => {
-        console.log("end_scroll_pan")
-        mode.idle()
+        console.log("end_scroll_pan");
+        mode.idle();
       });
     }
   }
@@ -955,10 +955,14 @@
       $viewPort,
       $zoom
     );
-    console.log('viewport', $viewPort)
-    console.log('viewoffset', $viewOffset.x, $viewOffset.y)
-    console.log('targetTouches', (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX, (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY)
-    console.log({ absX, absY })
+    console.log("viewport", $viewPort);
+    console.log("viewoffset", $viewOffset.x, $viewOffset.y);
+    console.log(
+      "targetTouches",
+      (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX,
+      (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY
+    );
+    console.log({ absX, absY });
     const offsetX = absX - select_init.x;
     const offsetY = absY - select_init.y;
 
@@ -1035,10 +1039,10 @@
       return v;
     });
 
-    dispatch("modSelectChange", { rect: $selectionRect });
+    dispatch("modSelectChange", { rect: $selectionRect, event: e });
   }
   function onMouseUp_modSelect(e: MouseEvent | TouchEvent) {
-    dispatch("modSelectEnd", { rect: $selectionRect });
+    dispatch("modSelectEnd", { rect: $selectionRect, event: e });
     mode.idle();
   }
 

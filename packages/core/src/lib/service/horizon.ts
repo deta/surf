@@ -1,5 +1,5 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
-import type { Card } from '../types'
+import type { Card, CardBrowser, CardPosition } from '../types'
 import type { API } from './api'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { generateID } from '../utils/id'
@@ -47,16 +47,6 @@ export class Horizon {
     this.data = data
     this.cards = writable([])
     this.signalChange = signalChange
-    
-    this.cards.subscribe((cards) => {
-      if (cards.length === 0) {
-        this.log.debug(`No cards, skipping persist`)
-        return
-      }
-
-      this.log.debug(`Persisting ${cards.length} cards`)
-      this.storage.set(cards.map((c) => get(c)))
-    })
 
     this.log.debug(`Created`)
   }
@@ -85,9 +75,16 @@ export class Horizon {
     this.signalChange(this)
   }
 
+  async storeCards() {
+    const cards = get(this.cards)
+    this.log.debug(`Persisting ${cards.length} cards`)
+    this.storage.set(cards.map((c) => get(c)))
+  }
+
   async updateData(updates: Partial<HorizonData>) {
     this.data = { ...this.data, ...updates }
     this.signalChange(this)
+    return this.data
   }
 
   async updateCard(updates: Partial<Card>) {
@@ -97,12 +94,14 @@ export class Horizon {
       card.update((c) => ({ ...c, ...updates }))
       return c
     })
+    await this.storeCards()
     this.log.debug(`Updated card ${updates.id}`)
     this.signalChange(this)
   }
 
   async deleteCard(id: string) {
     this.cards.update((c) => c.filter((c) => get(c).id !== id))
+    await this.storeCards()
     this.log.debug(`Deleted card ${id}`)
     this.signalChange(this)
   }
@@ -110,6 +109,7 @@ export class Horizon {
   async freeze() {
     this.log.debug(`Freezing`)
     this.cards.set([])
+    await this.storeCards()
     this.changeState('cold')
   }
 
@@ -132,9 +132,41 @@ export class Horizon {
       id: generateID(),
       stacking_order: 1,
       hoisted: true
-    })
+    } as Card)
     this.cards.update((c) => [...c, newCard])
+    await this.storeCards()
     this.signalChange(this)
+  }
+
+  async addCardBrowser(location: string, position: CardPosition) {
+    await this.addCard({
+      ...position,
+      type: 'browser',
+      data: {
+        initialLocation: location,
+        currentLocation: location
+      }
+    })
+  }
+
+  async addCardText(content: string, position: CardPosition) {
+    await this.addCard({
+      ...position,
+      type: 'text',
+      data: {
+        content: content
+      }
+    })
+  }
+
+  async addCardLink(url: string, position: CardPosition) {
+    await this.addCard({
+      ...position,
+      type: 'link',
+      data: {
+        url: url
+      }
+    })
   }
 }
 
@@ -162,37 +194,35 @@ export class HorizonsManager {
 
     this.activeHorizonId = writable(null)
     this.horizons = writable([])
-    this.horizons.subscribe((h) => this.persistHorizons(h))
+    this.horizons.subscribe((h) => this.persistHorizons(h)) // TODO: probably better to persist manually than on every change
 
     this.hotHorizonsThreshold = HOT_HORIZONS_THRESHOLD
 
     this.hotHorizons = derived([this.horizons], ([horizons]) => {
-      return horizons
-        .filter((h) => {
-            return h?.state === 'hot'
-        })
-        // .sort((a, b) => {
-        //     const aState = horizonStates.get(a.id)
-        //     const bState = horizonStates.get(b.id)
-        //     if (!aState || !bState) return 0
-        //     return bState.since.getTime() - aState.since.getTime()
-        // })
+      return horizons.filter((h) => {
+        return h?.state === 'hot'
+      })
+      // .sort((a, b) => {
+      //     const aState = horizonStates.get(a.id)
+      //     const bState = horizonStates.get(b.id)
+      //     if (!aState || !bState) return 0
+      //     return bState.since.getTime() - aState.since.getTime()
+      // })
     })
 
     this.coldHorizons = derived([this.horizons], ([horizons]) => {
-        return horizons
-          .filter((h) => {
-              return h?.state !== 'hot'
-          })
+      return horizons.filter((h) => {
+        return h?.state !== 'hot'
       })
+    })
 
     this.sortedHorizons = derived([this.horizons], ([horizons]) => {
       return [...horizons]
         .sort((a, b) => {
-            const aState = a
-            const bState = b
-            if (!aState || !bState) return 0
-            return bState.inStateSince - aState.inStateSince
+          const aState = a
+          const bState = b
+          if (!aState || !bState) return 0
+          return bState.inStateSince - aState.inStateSince
         })
         .map((h) => h.id)
     })
@@ -221,7 +251,7 @@ export class HorizonsManager {
       this.log.debug(`No horizons found, creating default`)
       const defaultHorizon = await this.createHorizon('Default', true)
       await this.switchHorizon(defaultHorizon)
-    } else if (!storedHorizonId) { 
+    } else if (!storedHorizonId) {
       this.log.debug(`No active horizon found, switching to default`)
       const defaultHorizon = this.getDefaultHorizon()
       await this.switchHorizon(defaultHorizon.id)
@@ -245,7 +275,7 @@ export class HorizonsManager {
   async loadHorizons() {
     const storedHorizons = this.storage.get() ?? []
     this.log.debug(`Loading ${storedHorizons.length} stored horizons`)
-    
+
     // const res = await this.api.getHorizons()
     // const { default: data } = await import('../data/horizons.json')
 
@@ -276,7 +306,6 @@ export class HorizonsManager {
     }
     this.log.debug(`Persisting ${horizons.length} horizons`)
     const horizonsData = horizons.map((h) => h.data)
-    this.log.debug(`Horizons data`, horizonsData)
     this.storage.set(horizonsData)
   }
 
@@ -339,13 +368,6 @@ export class HorizonsManager {
 
     this.log.debug(`Making horizon ${horizon.id} active`)
     this.activeHorizonId.set(horizon.id)
-  }
-
-  async updateHorizon(idOrHorizon: string | Horizon, updates: Partial<HorizonData>) {
-    const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
-    await horizon.updateData(updates)
-    horizon.log.debug(`Updated data`, horizon.data)
-    this.persistHorizons(get(this.horizons))
   }
 
   async createHorizon(name: string, isDefault = false) {

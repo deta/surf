@@ -1,10 +1,9 @@
 <script lang="ts" context="module">
-    export type StackOptions = {
-        transitionDuration: number
-        transitionTimingFunction: string
-        scaling: number
-    }
-
+  export type StackOptions = {
+    transitionDuration: number
+    transitionTimingFunction: string
+    scaling: number
+  }
 </script>
 
 <script lang="ts">
@@ -57,31 +56,29 @@
     </div>
 </div>
 
-
 <style lang="scss">
-    .wrapper {
-        --border-color: #dcdcdc;
+  .wrapper {
+    --border-color: #dcdcdc;
 
-        --padding: 3rem;
-        --scale: 1;
-        --width: calc(100vw * var(--scale));
-        --height: calc(100vh * var(--scale));
-        --offset: calc((var(--height) * -1) - var(--padding));
-        --padding-top: 0;
+    --padding: 3rem;
+    --scale: 1;
+    --width: calc(100vw * var(--scale));
+    --height: calc(100vh * var(--scale));
+    --offset: calc((var(--height) * -1) - var(--padding));
+    --padding-top: 0;
 
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        margin: auto;
-        height: 100vh;
-        width: var(--width);
-        padding-top: var(--padding-top);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: auto;
+    height: 100vh;
+    width: var(--width);
+    padding-top: var(--padding-top);
 
-        transition-property: width, height, transform, padding;
-        transition-duration: var(--transition-duration);
-        transition-timing-function: var(--transition-timing-function);
-
-    }
+    transition-property: width, height, transform, padding;
+    transition-duration: var(--transition-duration);
+    transition-timing-function: var(--transition-timing-function);
+  }
 
     .list {
         display: flex;
@@ -104,12 +101,12 @@
         // }
     }
 
-    .wrapper.overview {
-        --padding: 4rem;
-        --scale: var(--down-scaled);
-        --width: calc(100vw * var(--scale));
-        --height: calc(100vh * var(--scale));
-        --offset: calc((var(--height) * -1) - var(--padding));
-        --padding-top: calc(var(--height) / 3);
-    }
+  .wrapper.overview {
+    --padding: 4rem;
+    --scale: var(--down-scaled);
+    --width: calc(100vw * var(--scale));
+    --height: calc(100vh * var(--scale));
+    --offset: calc((var(--height) * -1) - var(--padding));
+    --padding-top: calc(var(--height) / 3);
+  }
 </style>

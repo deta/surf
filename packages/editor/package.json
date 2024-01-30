@@ -1,0 +1,44 @@
+{
+  "name": "@horizon/editor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "svelte": "./src/lib/main.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./src/lib/main.ts",
+  "files": [
+    "dist",
+    "src/lib"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "devDependencies": {
+    "@horizon/eslint-config": "*",
+    "@horizon/typescript-config": "*",
+    "@skilitics-public/two-fingers": "^2.1.0",
+    "@sveltejs/vite-plugin-svelte": "^3.0.1",
+    "@tiptap/core": "^2.1.11",
+    "@tiptap/extension-bubble-menu": "^2.1.13",
+    "@tiptap/extension-floating-menu": "^2.1.13",
+    "@tiptap/extension-link": "^2.1.11",
+    "@tiptap/extension-placeholder": "^2.1.11",
+    "@tiptap/extension-task-item": "^2.1.11",
+    "@tiptap/extension-task-list": "^2.1.11",
+    "@tiptap/pm": "^2.1.11",
+    "@tiptap/starter-kit": "^2.1.12",
+    "@tiptap/suggestion": "^2.1.13",
+    "@tsconfig/svelte": "^5.0.2",
+    "sass": "^1.70.0",
+    "svelte": "^4.2.8",
+    "svelte-check": "^3.6.2",
+    "svelte-tiptap": "^1.1.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  }
+}

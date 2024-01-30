@@ -1,65 +1,71 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte"
+  import { createEventDispatcher } from 'svelte'
 
-    export let showOverview: boolean
-    export let index: number
-    export let highlight = false
+  export let showOverview: boolean
+  export let index: number
+  export let highlight = false
 
-    const dispatch = createEventDispatcher<{select: number}>()
+  const dispatch = createEventDispatcher<{ select: number }>()
 
-    const handleClick = (e: MouseEvent) => {
-        if (!showOverview) return
-        console.log('click')
+  const handleClick = (e: MouseEvent) => {
+    if (!showOverview) return
+    console.log('click')
 
-        e.preventDefault()
-        dispatch('select', index)
-    }
+    e.preventDefault()
+    dispatch('select', index)
+  }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
-<div on:click={handleClick} class="item" class:overview={showOverview} class:highlight={highlight} style="--order: {index + 1}; --index: {index};">
-    <div class="content">
-        <slot></slot>
-    </div>
+<div
+  on:click={handleClick}
+  class="item"
+  class:overview={showOverview}
+  class:highlight
+  style="--order: {index + 1}; --index: {index};"
+>
+  <div class="content">
+    <slot />
+  </div>
 </div>
 
 <style lang="scss">
-    .item {
-        flex-shrink: 0;
-        height: var(--height);
-        transition-property: height, border-radius, border;
-        transition-duration: var(--transition-duration);
-        transition-timing-function: var(--transition-timing-function);
-        // order: var(--order);
+  .item {
+    flex-shrink: 0;
+    height: var(--height);
+    transition-property: height, border-radius, border;
+    transition-duration: var(--transition-duration);
+    transition-timing-function: var(--transition-timing-function);
+    // order: var(--order);
 
-        width: 100%;
-        overflow: hidden;
+    width: 100%;
+    overflow: hidden;
 
-        box-sizing: border-box;
-        border: 0px solid transparent;
-        border-radius: 0;
+    box-sizing: border-box;
+    border: 0px solid transparent;
+    border-radius: 0;
+  }
+
+  .content {
+    height: 100%;
+    width: 100%;
+    position: relative;
+  }
+
+  .overview {
+    &.item {
+      border-width: 4px;
+      border-color: var(--border-color);
+      border-radius: 2rem;
+      cursor: pointer;
     }
+
+    // &.highlight {
+    //     border-color: #f26daa;
+    // }
 
     .content {
-        height: 100%;
-        width: 100%;
-        position: relative;
+      pointer-events: none;
     }
-
-    .overview {
-        &.item {
-            border-width: 4px;
-            border-color: var(--border-color);
-            border-radius: 2rem;
-            cursor: pointer;
-        }
-
-        // &.highlight {
-        //     border-color: #f26daa;
-        // }
-
-        .content {
-            pointer-events: none;
-        }
-    }
+  }
 </style>
