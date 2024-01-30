@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte'
 
   export let showOverview: boolean
-  export let index: number
+  export let order: number
   export let highlight = false
 
   const dispatch = createEventDispatcher<{ select: number }>()
@@ -12,7 +12,7 @@
     console.log('click')
 
     e.preventDefault()
-    dispatch('select', index)
+    dispatch('select', order)
   }
 </script>
 
@@ -22,7 +22,7 @@
   class="item"
   class:overview={showOverview}
   class:highlight
-  style="--order: {index + 1}; --index: {index};"
+  style="--order: {order + 1}; --index: {order};"
 >
   <div class="content">
     <slot />
@@ -36,7 +36,7 @@
     transition-property: height, border-radius, border;
     transition-duration: var(--transition-duration);
     transition-timing-function: var(--transition-timing-function);
-    // order: var(--order);
+    order: var(--order);
 
     width: 100%;
     overflow: hidden;
@@ -50,6 +50,13 @@
     height: 100%;
     width: 100%;
     position: relative;
+    pointer-events: none;
+  }
+
+  .highlight {
+    .content {
+      pointer-events: unset;
+    }
   }
 
   .overview {

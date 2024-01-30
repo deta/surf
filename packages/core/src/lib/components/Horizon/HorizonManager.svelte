@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import { derived, writable } from 'svelte/store'
 
   import { Lethargy } from "lethargy-ts";
@@ -19,6 +19,7 @@
   import { spring } from 'svelte/motion'
   import MediaImporter from './MediaImporter.svelte'
     import { advancedSpring } from '../../utils/advancedSpring'
+    import { wait } from '../../utils/time'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -34,16 +35,14 @@
   const activeHorizonId = horizonManager.activeHorizonId
   const activeHorizon = horizonManager.activeHorizon
 
+  const SORTING_TIMEOUT = 2000
+
   let activeStackItemIdx = 0
   let showStackOverview = false
-
-  activeHorizonId.subscribe((e) => {
-    const newIdx = $horizons.findIndex((h) => h.id === e)
-    activeStackItemIdx = newIdx
-  })
-
-  //   $: log.debug('horizons changed', $horizons)
-  //   $: log.debug('activeStackItemIdx', activeStackItemIdx)
+  let sortingInProgress = false
+  let sortingTimeout: ReturnType<typeof setTimeout> | null = null
+  let sortedHorizons: string[] = []
+  let initialSorting = false
 
   const addHorizon = async () => {
     const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
@@ -53,23 +52,74 @@
     showStackOverview = false
   }
 
+  const sortHorizons = async () => {
+    sortingInProgress = true
+    log.debug('test sortHorizons', $horizons)
+    const oldHorizonStackIdx = sortedHorizons.findIndex((h) => h === $activeHorizonId)
+
+    const newSorting = [...$horizons]
+      .sort((a, b) => {
+        if (!a || !b) return 0
+        return b.lastUsed - a.lastUsed
+      })
+      .map((h) => h.id)
+
+    const newHorizonStackIdx = newSorting.findIndex((h) => h === $activeHorizonId)
+
+    log.debug('test sorting', { old: sortedHorizons, new: newSorting })
+    log.debug('test indexing', { old: oldHorizonStackIdx, new: newHorizonStackIdx })
+
+    sortedHorizons = newSorting
+    activeStackItemIdx = newHorizonStackIdx
+
+    await wait(200) // TODO: probably a better way to do this but needed to wait for the stack to update
+    sortingInProgress = false
+  }
+
+  const createSortingTimeout = () => {
+    sortingTimeout = setTimeout(() => {
+      log.debug('sorting timeout reached')
+      sortingTimeout = null
+      sortHorizons()
+    }, SORTING_TIMEOUT)
+  }
+
+  const changeActiveHorizon = async (horizonId: string) => {
+    await horizonManager.switchHorizon(horizonId)
+
+    const horizonStackIdx = sortedHorizons.findIndex((h) => h === horizonId)
+    activeStackItemIdx = horizonStackIdx
+
+    if (sortingTimeout) {
+      clearTimeout(sortingTimeout)
+      sortingTimeout = null
+    }
+
+    createSortingTimeout()
+  }
+
   const moveToNextHorizon = () => {
+    // $preventSorting = true
     const nextIdx = activeStackItemIdx + 1
     if (nextIdx >= $horizons.length) {
       addHorizon()
     } else {
-      activeStackItemIdx = nextIdx
-      if (!showStackOverview) {
-        horizonManager.switchHorizon($horizons[activeStackItemIdx])
-      }
+      changeActiveHorizon(sortedHorizons[nextIdx])
+      // activeStackItemIdx = nextIdx
+      // if (!showStackOverview) {
+      //   horizonManager.switchHorizon($horizons[activeStackItemIdx])
+      // }
     }
   }
 
   const moveToPreviousHorizon = () => {
-    activeStackItemIdx = Math.max(0, activeStackItemIdx - 1)
-    if (!showStackOverview) {
-      horizonManager.switchHorizon($horizons[activeStackItemIdx])
-    }
+    // $preventSorting = true
+    const nextIdx = Math.max(0, activeStackItemIdx - 1)
+    changeActiveHorizon(sortedHorizons[nextIdx])
+    // activeStackItemIdx = Math.max(0, activeStackItemIdx - 1)
+    // if (!showStackOverview) {
+    //   horizonManager.switchHorizon($horizons[activeStackItemIdx])
+    // }
   }
 
   const handleHorizonChange = async (e: CustomEvent<IHorizon>) => {
@@ -102,15 +152,31 @@
   }
 
   const handleStackItemSelect = async (e: CustomEvent<number>) => {
-    const selectedHorizon = $horizons[e.detail]
+    const selectedHorizon = sortedHorizons[e.detail]
     if (selectedHorizon) {
-      horizonManager.switchHorizon(selectedHorizon)
+        changeActiveHorizon(selectedHorizon)
+        showStackOverview = false
+        $stackOverviewScrollOffset = 0
+        // setTimeout(() => $stackOverviewScrollOffset = activeStackItemIdx * 708 - (64 * activeStackItemIdx), 200)
+      }
+  }
+  
+  $: if (!initialSorting && $horizons && $horizons.length > 0) {
+    // log.debug('initial sorting')
+    initialSorting = true
+    sortedHorizons = $horizons.map((h) => h.id)
+  }
 
-            activeStackItemIdx = e.detail
-            showStackOverview = false
-            setTimeout(() => $stackOverviewScrollOffset = activeStackItemIdx * 708 - (64 * activeStackItemIdx), 200)
-        }
-    }
+  // prevent sorting when overview is open
+  $: if (showStackOverview && sortingTimeout) {
+    clearTimeout(sortingTimeout)
+    sortingTimeout = null
+  }
+
+  $: if (!showStackOverview && activeStackItemIdx !== 0 && !sortingTimeout) {
+    log.debug('edge case, no sorting timeout but not on first horizon')
+    createSortingTimeout()
+  }
 
     /* NEW GESTURE STUFF */
 
@@ -236,13 +302,14 @@
     options={{ transitionDuration: 0.2 }}
     movementOffset={flickSpring}
     overviewOffset={stackOverviewScrollOffset}
+    showTransitions={!sortingInProgress}
     bind:activeIdx={activeStackItemIdx}
     bind:showOverview={showStackOverview}
     on:select={handleStackItemSelect}
   >
     {#each $horizons as horizon, idx (horizon.id)}
       <StackItem
-        index={idx}
+        order={sortedHorizons.findIndex((h) => h === horizon.id)}
         showOverview={showStackOverview}
         highlight={activeStackItemIdx === idx}
         on:select={handleStackItemSelect}

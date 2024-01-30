@@ -28,7 +28,7 @@
 </script>
 
 <div class="text-card">
-  <Editor bind:content={$value} placeholder="Jot something down…" />
+  <Editor bind:content={$value} placeholder="Jot something down…" autofocus={false} />
 </div>
 
 <style lang="scss">

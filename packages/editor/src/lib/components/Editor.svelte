@@ -13,6 +13,7 @@
   export let content: JSONContent
   export let readOnly: boolean = false
   export let placeholder: string = `Write something or type '/' for options…`
+  export let autofocus: boolean = true
 
   const dispatch = createEventDispatcher<{ update: JSONContent }>()
 
@@ -24,7 +25,7 @@
       extensions: createEditorExtensions({ placeholder }),
       content: content,
       editable: !readOnly,
-      autofocus: !readOnly ? 'end' : false,
+      autofocus: !autofocus || readOnly ? false : 'end',
       onUpdate: ({ editor }) => {
         editor = editor
         const json = editor.getJSON()

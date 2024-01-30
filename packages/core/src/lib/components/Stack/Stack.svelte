@@ -16,6 +16,7 @@
     export let activeIdx = 0
     export let movementOffset: Writable<number>
     export let overviewOffset: Writable<number>
+    export let showTransitions = true
 
     let windowHeight: number;
 
@@ -32,7 +33,7 @@
     $: targetOffsetZoom = verticalOffsetZoom - (activeIdx === 0 ? Math.max(-20, ($movementOffset / 2.8)) : ($movementOffset / 2.8));
     $: targetOffsetOverview = verticalOffsetOverview - $overviewOffset;
 
-    $: targetOffset = showOverview ? targetOffsetOverview : targetOffsetZoom;
+    $: targetOffset = showOverview ? $overviewOffset : (activeIdx === 0 ? Math.max(-20, ($movementOffset / 2.8)) : ($movementOffset / 2.8));
 
     // $: verticalOffset = activeIdx * -windowHeight - (48 * activeIdx);
     // $: targetOffset = verticalOffset - (showOverview ? ($overviewOffset) : 0) - (activeIdx === 0 ? Math.max(-10, ($movementOffset / 2.8)) : ($movementOffset / 2.8));
@@ -58,8 +59,8 @@
 
 <svelte:window bind:innerHeight={windowHeight} />
 
-<div class="wrapper" class:overview={showOverview} style="--transition-duration: {opts.transitionDuration}s; --transition-timing-function: {opts.transitionTimingFunction}; --down-scaled: {opts.scaling};">
-    <div class="list" style="{transformCss};--current: {activeIdx}; --movement-offset: -{limitedOffset}px;" class:movement={limitedOffset !== 0}>
+<div class="wrapper" class:overview={showOverview} class:transitions={showTransitions} style="--transition-duration: {opts.transitionDuration}s; --transition-timing-function: {opts.transitionTimingFunction}; --down-scaled: {opts.scaling};">
+    <div class="list" style="--current: {activeIdx}; --target-offset: {targetOffset}px;" class:movement={limitedOffset !== 0}>
         <slot></slot>
     </div>
 </div>
@@ -83,20 +84,27 @@
     width: var(--width);
     padding-top: var(--padding-top);
 
-    transition-property: width, height, transform, padding;
+    transition-property: width, height, padding;
     transition-duration: var(--transition-duration);
     transition-timing-function: var(--transition-timing-function);
+
+    &.transitions {
+      transition-property: width, height, transform, padding;
+
+      .list {
+          transition-property: transform, gap;
+        }
+    }
   }
 
     .list {
         display: flex;
         flex-direction: column;
         gap: var(--padding);
-        // transform: translateY(calc((var(--current) * var(--offset)) + var(--movement-offset)));
+        transform: translate3d(0, calc((var(--current) * var(--offset)) - var(--target-offset)), 0);
         transform-origin: center 0;
         will-change: transform;
-
-        transition-property: transform, gap;
+        transition-property: gap;
         // transition-duration: var(--transition-duration);
         // transition-timing-function: var(--transition-timing-function);
         transition-duration: 0.205s; //0.185s

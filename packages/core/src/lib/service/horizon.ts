@@ -28,6 +28,7 @@ export class Horizon {
   readonly id: string
   state: HorizonState
   inStateSince: number
+  lastUsed: number
   data: HorizonData
   cards: Writable<Writable<Card>[]>
   signalChange: (horizon: Horizon) => void
@@ -44,6 +45,8 @@ export class Horizon {
 
     this.state = 'cold'
     this.inStateSince = Date.now()
+    this.lastUsed = Date.now()
+
     this.data = data
     this.cards = writable([])
     this.signalChange = signalChange
@@ -60,6 +63,11 @@ export class Horizon {
     this.state = state
     this.inStateSince = Date.now()
     this.signalChange(this)
+  }
+
+  markAsUsed() {
+    this.log.debug(`Marking as used`)
+    this.lastUsed = Date.now()
   }
 
   async refreshData() {
@@ -367,6 +375,7 @@ export class HorizonsManager {
     }
 
     this.log.debug(`Making horizon ${horizon.id} active`)
+    horizon.markAsUsed()
     this.activeHorizonId.set(horizon.id)
   }
 

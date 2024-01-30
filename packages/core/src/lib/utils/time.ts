@@ -82,3 +82,5 @@ export const isDateToday = (timestamp: number | string) => {
 
   return isToday(ms)
 }
+
+export const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
