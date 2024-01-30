@@ -18,6 +18,8 @@
     export let overviewOffset: Writable<number>
     export let showTransitions = true
 
+    export let flickVisualWeight: number;
+
     let windowHeight: number;
 
     const MOVEMENT_LIMIT = window.innerHeight / 2
@@ -30,10 +32,10 @@
     $: verticalOffsetZoom = activeIdx * -windowHeight - (48 * activeIdx);
     $: verticalOffsetOverview = activeIdx * 708 - (64 * activeIdx);
 
-    $: targetOffsetZoom = verticalOffsetZoom - (activeIdx === 0 ? Math.max(-20, ($movementOffset / 2.8)) : ($movementOffset / 2.8));
+    $: targetOffsetZoom = verticalOffsetZoom - (activeIdx === 0 ? Math.max(-20, ($movementOffset / flickVisualWeight)) : ($movementOffset / flickVisualWeight));
     $: targetOffsetOverview = verticalOffsetOverview - $overviewOffset;
 
-    $: targetOffset = showOverview ? $overviewOffset : (activeIdx === 0 ? Math.max(-20, ($movementOffset / 2.8)) : ($movementOffset / 2.8));
+    $: targetOffset = showOverview ? $overviewOffset : (activeIdx === 0 ? Math.max(-20, ($movementOffset / flickVisualWeight)) : ($movementOffset / flickVisualWeight));
 
     // $: verticalOffset = activeIdx * -windowHeight - (48 * activeIdx);
     // $: targetOffset = verticalOffset - (showOverview ? ($overviewOffset) : 0) - (activeIdx === 0 ? Math.max(-10, ($movementOffset / 2.8)) : ($movementOffset / 2.8));

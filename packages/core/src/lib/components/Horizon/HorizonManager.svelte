@@ -25,9 +25,16 @@
   const api = new API()
   const horizonManager = new HorizonsManager(api)
   const lethargy = new Lethargy({
+
+    // ORIGINAL MAXU:
+    // sensitivity: 70,
+    // delay: 80,
+    // inertiaDecay: 200,
+
+    // TEST MAXU
     sensitivity: 70,
-    delay: 20,
-    inertiaDecay: 200,
+    delay: 0,
+    inertiaDecay: 43,
   });
   // const fps = useFPS()
 
@@ -149,6 +156,9 @@
       event.preventDefault()
       moveToNextHorizon()
     }
+    else if (event.ctrlKey && event.key === "9") {
+      showFlickSettings = !showFlickSettings;
+    }
   }
 
   const handleStackItemSelect = async (e: CustomEvent<number>) => {
@@ -180,27 +190,36 @@
 
     /* NEW GESTURE STUFF */
 
+    // TODO: Remove, only for letting people adjust settings
+    let showFlickSettings = false;
+    let flickWeight = 1.43;
+    let flickVisualWeight = 2.8;
+    let flickThreshold = 135;
+    let flickSpringReturn = 0.9;
+
     const stackOverviewScrollOffset = spring(0, {
         stiffness: 0.85,
         damping: 0.97,
     });
 
-    const flickSpring = advancedSpring(0, {
+    let flickSpring = advancedSpring(0, {
       // stiffness: 0.25,
       // damping: 0.9,
-      stiffness: 0.65, // <- Juicy
-      damping: 0.7, // <- Juicy
+      // stiffness: 0.65, // <- Juicy
+      // damping: 0.7, // <- Juicy
+      stiffness: 0.93, // <- Hefty
+      damping: 1, // <- Hefty
       min: -400,
       max: 400
     })
-    const flickInertia = flickSpring.inertia;
+    $: ({ inertia: flickInertia } = flickSpring);
 
     let stillScrolling = false;
 
     let canSwitchAgain = true;
     let canSwitchTimer: any = null;
 
-    $: if (Math.abs($flickSpring) > 400 && !showStackOverview && canSwitchAgain) {
+    $: if (Math.abs($flickSpring) > flickThreshold && !showStackOverview && canSwitchAgain) {
       let cancel = false;
       if (Math.sign($flickSpring) > 0) {
         moveToNextHorizon();
@@ -211,6 +230,7 @@
 
       if (!cancel) {
         flickSpring.set(-$flickSpring);
+        //flickSpring.set(0);
         canSwitchTimer && clearTimeout(canSwitchTimer);
         canSwitchTimer = setTimeout(() => {
           canSwitchAgain = true;
@@ -238,7 +258,7 @@
           if (!isAnimating) requestAnimationFrame(frame);
 
           flickSpring.update((v: number) => {
-            const eased = 1 - ((v+e.deltaY*1) / 1.3)^2;
+            const eased = 1 - ((v+e.deltaY*1) / (1 * flickWeight))^2; // .../1.3)^2
             v = -eased;
             //v += e.deltaY;
             return v;
@@ -259,8 +279,8 @@
       requestAnimationFrame(frame);
       isAnimating = true;
       flickSpring.update((v: number) => {
-        if (stillScrolling) return v;// * 0.97;
-        v *= 0.96;
+        //if (stillScrolling) return v;// * 0.97;
+        v *= flickSpringReturn;
         if (Math.abs(v) < 0.01) {
           v = 0;
           isAnimating = false;
@@ -283,10 +303,58 @@
 </svelte:head>
 
 <main class="" class:overview={showStackOverview}>
-  <!-- fps {$fps} -->
-  <!-- <div class="horizon-list">
+  {#if showFlickSettings}
+  <ul style="position: fixed;width:24%; top:0;right:0;z-index:5000;background:darkblue;font-family:monospace;color:white;padding:0.5rem;display:flex;gap:1rem;">
+      <li style="display:flex;flex-direction:column;font-weight:600;">
+        <span>activeStackItem:</span>
+        <span>flickSpring:</span>
+        <span>flickInertia:</span>
+        <span>stillscrolling:</span>
+        <hr style="margin-block: 0.25rem;">
+        <span>Scroll Sensitivity ({lethargy.sensitivity}):</span>
+        <span>Scroll Delay ({lethargy.delay}):</span>
+        <span>Scroll Decay ({lethargy.inertiaDecay}):</span>
+        <br>
+        <span>Flick Weight ({flickWeight}):</span>
+        <span>Flick Visual Weight ({flickVisualWeight}):</span>
+        <span>Flick Threshold ({flickThreshold}):</span>
+        <br>
+        <span>Spring Stiffness ({flickSpring.stiffness}):</span>
+        <span>Spring Damping ({flickSpring.damping}):</span>
+        <span>Spring Return ({flickSpringReturn}):</span>
+      </li>
+      <li style="display:flex;flex-direction:column;">
+        <span>{activeStackItemIdx}</span>
+        <span>{Math.floor($flickSpring)}</span>
+        <span>{Math.floor(Math.abs($flickInertia))}</span>
+        <span>{stillScrolling}</span>
+        <hr style="margin-block: 0.25rem;">
+        <input type="range" bind:value={lethargy.sensitivity} min="1" max="100" step="1">
+        <input type="range" bind:value={lethargy.delay} min="0" max="200" step="1">
+        <input type="range" bind:value={lethargy.inertiaDecay} min="0" max="200" step="1">
+        <br>
+        <input type="range" bind:value={flickWeight} min="0.5" max="3" step="0.01">
+        <input type="range" bind:value={flickVisualWeight} min="0.1" max="5" step="0.01">
+        <input type="range" bind:value={flickThreshold} min="5" max="1000" step="1">
+        <br>
+        <input type="range" bind:value={flickSpring.stiffness} min="0" max="1" step="0.01">
+        <input type="range" bind:value={flickSpring.damping} min="0" max="1" step="0.01">
+        <input type="range" bind:value={flickSpringReturn} min="0" max="1" step="0.01">
+      </li>
+    <!-- <span>overviewOffset: {Math.floor($stackOverviewScrollOffset)}</span> -->
+  </ul>
+  {/if}
+    <!-- fps {$fps} -->
+    <!-- <div style="position: fixed;width:50%; top:0;right:0;z-index:5000;background: white;color:black;padding:0.5rem;display:flex;flex-direction:column;">
+      <span>activeStackItem: {activeStackItemIdx}</span>
+      <span>flickSpring: {Math.floor($flickSpring)}</span>
+      <span>flickInertia: {Math.floor(Math.abs($flickInertia))}</span>
+      <span>overviewOffset: {Math.floor($stackOverviewScrollOffset)}</span>
+      <span>stillscrolling: {stillScrolling}</span>
+    </div> -->
+    <!-- <div class="horizon-list">
         {#each $horizons as horizon, idx (horizon.id)}
-            <HorizonSwitcherItem horizon={horizon} active={$activeHorizonId === horizon.id} idx={idx + 1} hot={$hotHorizons.includes(horizon)} on:click={() => switchHorizon(horizon.id)} />
+            <HorizonSwitcherItem horizon={horizon} active={$activeHorizon?.id === horizon.id} idx={idx + 1} hot={$hotHorizons.includes(horizon)} /> <!-- on:click={() => switchHorizon(horizon.id)}
         {/each}
 
         <div on:click={() => addHorizon()} class="add-horizon" style="--item-color: #f2f2f2;">
@@ -303,6 +371,7 @@
     movementOffset={flickSpring}
     overviewOffset={stackOverviewScrollOffset}
     showTransitions={!sortingInProgress}
+    flickVisualWeight={flickVisualWeight}
     bind:activeIdx={activeStackItemIdx}
     bind:showOverview={showStackOverview}
     on:select={handleStackItemSelect}
