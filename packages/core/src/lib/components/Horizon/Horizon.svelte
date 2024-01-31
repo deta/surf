@@ -92,12 +92,30 @@
     dispatch('change', horizon)
   }
 
+
+  let showSelectTooltip = false
+  let selectPos = { x: 0, y: 0 }
+  let selectModKey = false
+  const onModSelectChange = (e: CustomEvent<{
+      event: MouseEvent
+      rect: Vec4
+    }>) => {    
+    showSelectTooltip = true
+    selectPos = {
+      x: e.detail.event.clientX,
+      y: e.detail.event.clientY
+    }
+
+    selectModKey = e.detail.event.ctrlKey || e.detail.event.metaKey
+  }
+
   const onModSelectEnd = (
     e: CustomEvent<{
       event: MouseEvent
       rect: Vec4
     }>
   ) => {
+    showSelectTooltip = false
     const { rect, event } = e.detail
     let pos = { x: rect.x, y: rect.y }
     let size = { x: rect.w, y: rect.h }
@@ -184,11 +202,18 @@
 
 <svelte:window on:resize={handleWindowResize} />
 
+{#if showSelectTooltip}
+  <div class="cursor-tooltip" style="--select-x: {selectPos.x}px; --select-y: {selectPos.y}px;">
+    {selectModKey ? 'New Browser Card' : 'New Text Card'}
+  </div>
+{/if}
+
 <div data-horizon={horizon.id} class="horizon">
   <Board
     {settings}
     {board}
     {positionables}
+    on:modSelectChange={onModSelectChange}
     on:modSelectEnd={onModSelectEnd}
     on:positionableEnter={handlePositionableEnter}
     bind:containerEl
@@ -211,3 +236,19 @@
     />
   </Board>
 </div>
+
+<style>
+  .cursor-tooltip {
+    position: absolute;
+    top: var(--select-y);
+    left: var(--select-x);
+    background: #000;
+    color: #fff;
+    font-size: 0.8rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid #1c1c1c;
+    pointer-events: none;
+    z-index: 1000;
+  }
+</style>
