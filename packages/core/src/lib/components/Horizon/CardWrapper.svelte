@@ -142,27 +142,33 @@
   .card-header {
     position: absolute;
     z-index: 10;
-    top: 0;
-    left: 50%;
-    transform: translate(-50%, -100%);
-    width: 90%;
-    max-width: 400px;
+    right: 0;
+    top: 50%;
+    transform: translate(calc(100%), -50%);
+    height: 90%;
+    max-height: 200px;
     opacity: 0;
     transition: opacity 0.2s ease;
   }
 
   .card-header-content {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
     border: 1px solid #ddd;
-    border-bottom: none;
+    border-left: none;
     background-color: #f5f5f5;
-    padding: 5px 8px;
+    padding: 8px 5px;
+    height: 100%;
     overflow: hidden;
     border-top-right-radius: var(--theme-border-radius);
-    border-top-left-radius: var(--theme-border-radius);
+    border-bottom-right-radius: var(--theme-border-radius);
+  }
+
+  :global(.draggable) {
+    height: 100%;
   }
 
   :global(.card:hover), :global(.dragging) {
@@ -175,7 +181,7 @@
   .card-header-actions {
     flex: 1;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.5rem;
     color: #979797;
 
@@ -201,13 +207,12 @@
   .card-drag-indicator {
     flex-grow: 1;
     display: flex;
-    flex-direction: column;
     gap: 4px;
 
     div {
-      background:  #ddd;
-      height: 1px;
-      width: 100%;
+      background:  #999999;
+      height: 100%;
+      width: 1px;
     }
   }
 
