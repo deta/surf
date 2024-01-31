@@ -97,6 +97,7 @@
       bind:this={webview}
       src={initialSrc}
       partition="persist:horizon"
+      on:wheelWebview={(event) => console.log('wheel event from the webview: ', event.detail)}
       on:didFinishLoad={handleFinishLoading}
     />
   </div>

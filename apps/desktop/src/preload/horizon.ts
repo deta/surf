@@ -10,8 +10,9 @@ const captureWebContents = () => {
 
 export const mainWorld = {
   captureWebContents: captureWebContents,
-  webviewPreloadPath: join(__dirname, '../preload/webview.js')
+  webviewPreloadPath: join(__dirname, '../preload/webview.js'),
 }
+
 
 if (process.contextIsolated) {
   try {
