@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { join } from 'path'
 
 const api = {}
 
@@ -8,8 +9,10 @@ const captureWebContents = () => {
 }
 
 export const mainWorld = {
-  captureWebContents: captureWebContents
+  captureWebContents: captureWebContents,
+  webviewPreloadPath: join(__dirname, '../preload/webview.js'),
 }
+
 
 if (process.contextIsolated) {
   try {

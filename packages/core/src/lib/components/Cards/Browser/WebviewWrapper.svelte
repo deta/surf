@@ -3,7 +3,7 @@
   import type { WebviewTag } from 'electron'
   import { createEventDispatcher } from 'svelte'
 
-  const dispatch = createEventDispatcher<{ didFinishLoad: void }>()
+  const dispatch = createEventDispatcher<{ wheelWebview: any; didFinishLoad: void }>()
 
   export let src: string
   export let partition: string
@@ -48,6 +48,20 @@
 
   $: if (webview) {
     updateNavigationState()
+
+    webview.addEventListener('ipc-message', (event) => {
+      if (event.channel !== 'webview-page-event') return
+
+      const eventData = event.args[0]
+      const eventType = eventData.type as string
+      delete eventData.type
+
+      switch (eventType) {
+        case 'wheel':
+          dispatch('wheelWebview', eventData)
+          break
+      }
+    })
 
     webview.addEventListener('did-navigate', (e: any) => url.set(e.url))
     webview.addEventListener('did-navigate-in-page', (e: any) => url.set(e.url))
@@ -95,7 +109,12 @@
   }
 </script>
 
-<webview bind:this={webview} {src} {partition} />
+<webview
+  bind:this={webview}
+  {src}
+  {partition}
+  preload={`file://${window.electronAPI.webviewPreloadPath}`}
+/>
 
 <style>
   webview {
