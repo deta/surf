@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { get, writable, type Writable } from 'svelte/store'
 
   import {
@@ -167,9 +167,18 @@
   // TODO fix types to get rid of this type conversion
   $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
 
+  let unsubscribeCards: (() => void) | undefined
   onMount(() => {
     loadHorizon()
     handleWindowResize()
+
+    unsubscribeCards = cards.subscribe((e) => {
+      $state.stackingOrder.set(e.map((e) => get(e).id))
+    })
+  })
+
+  onDestroy(() => {
+    if (unsubscribeCards) unsubscribeCards()
   })
 </script>
 
