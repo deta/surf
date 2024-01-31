@@ -105,24 +105,17 @@
   cursor: initial;
   display: flex;
   flex-direction: column;
-  background: #ededed;
-  border: 1px solid #e2e2e2;
-  border-radius: var(--theme-border-radius);
-  overflow: hidden;
-
-  .top-bar {
-    background: #e2e2e2;
-    flex-shrink: 0;
-    padding: 0.25rem 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
+  // overflow: hidden;
+  position: relative;
 
   .content {
     position: relative;
     z-index: 2;
     flex: 1;
+    background: #ededed;
+    border: 1px solid #e2e2e2;
+    border-radius: var(--theme-border-radius);
+    overflow: hidden;
   }
 }
 
