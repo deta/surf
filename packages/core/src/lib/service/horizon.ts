@@ -138,16 +138,14 @@ export class Horizon {
     this.changeState('warm')
   }
 
-  async createResource(data: Blob) {
-    const resource = await this.storage.resources.create({
+  createResource(data: Blob) {
+    return this.storage.resources.create({
       data: data,
     })
-    return resource
   }
 
-  async getResource(id: string) {
-    const resource = await this.storage.resources.read(id)
-    return resource
+  getResource(id: string) {
+    return this.storage.resources.read(id)
   }
 
   async addCard(data: Optional<Card, 'id' | 'stacking_order'>) {
@@ -164,8 +162,8 @@ export class Horizon {
     return cardStore
   }
 
-  async addCardBrowser(location: string, position: CardPosition) {
-    await this.addCard({
+  addCardBrowser(location: string, position: CardPosition) {
+    return this.addCard({
       ...position,
       type: 'browser',
       data: {
@@ -176,7 +174,7 @@ export class Horizon {
     })
   }
 
-  async addCardText(content: string, position: CardPosition) {
+  addCardText(content: string, position: CardPosition) {
     return this.addCard({
       ...position,
       type: 'text',
@@ -186,7 +184,7 @@ export class Horizon {
     })
   }
 
-  async addCardLink(url: string, position: CardPosition) {
+  addCardLink(url: string, position: CardPosition) {
     return this.addCard({
       ...position,
       type: 'link',
