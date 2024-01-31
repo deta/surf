@@ -78,13 +78,15 @@ export class Storage<T extends Record<string, any>> {
   }
 }
 
-export class HorizonStore<T extends { id: string }> {
+export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: string }> {
   constructor(public t: Dexie.Table<T, string>) {}
 
-  async create(item: T): Promise<string> {
+  async create(item: T): Promise<T> {
     item.id = generateID()
+    item.createdAt = new Date().toISOString()
+    item.updatedAt = item.createdAt
     await this.t.add(item as T)
-    return item.id
+    return item
   }
 
   async all(): Promise<T[]> {
@@ -96,6 +98,8 @@ export class HorizonStore<T extends { id: string }> {
   }
 
   async update(id: string, updatedItem: Partial<T>): Promise<number> {
+    delete updatedItem.createdAt
+    updatedItem.updatedAt = new Date().toISOString()
     return await this.t.update(id, updatedItem)
   }
 
@@ -115,7 +119,7 @@ export class HorizonDatabase extends Dexie {
     this.version(1).stores({
       cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
       horizons: 'id, name, isDefault, createdAt, updatedAt',
-      resources: 'id'
+      resources: 'id, createdAt, updatedAt'
     })
 
     this.cards = new HorizonStore<Card>(this.table('cards'))

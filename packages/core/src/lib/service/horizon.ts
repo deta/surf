@@ -1,28 +1,12 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
-import type { Card, CardBrowser, CardPosition } from '../types'
+import type { Card, CardPosition } from '../types'
 import type { API } from './api'
+import type { HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
-import { generateID } from '../utils/id'
 import { HorizonDatabase, LocalStorage } from './storage'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 5
-
-/*
-- `cold`: only basic Horizon information is in memory (initial state for all Horizons)
-- `warm`: its cards and all required data for rendering are stored in memory
-- `hot`: the Horizon is rendered in the DOM and ready for immediate interaction
-*/
-export type HorizonState = 'cold' | 'warm' | 'hot'
-
-export type HorizonData = {
-  id: string
-  name: string
-  previewImage?: string
-  isDefault: boolean
-  viewOffsetX: number
-  createdAt: string
-}
 
 export class Horizon {
   readonly id: string
@@ -137,15 +121,14 @@ export class Horizon {
   }
 
   async addCard(card: Omit<Card, 'id' | 'stacking_order'>) {
-    const cardData = {
+    let cardData = {
       ...card,
-      id: 'placeholder',
       horizon_id: this.data.id,
       stacking_order: 1,
       hoisted: true
     } as Card
-    const id = await this.storage.cards.create(cardData)
-    cardData.id = id
+    cardData = await this.storage.cards.create(cardData)
+
     const cardStore = writable(cardData)
     this.cards.update((c) => [...c, cardStore])
     this.signalChange(this)
@@ -296,20 +279,7 @@ export class HorizonsManager {
     // const { default: data } = await import('../data/horizons.json')
 
     const horizons = storedHorizons.map(
-      (d) =>
-        new Horizon(
-          d.id,
-          {
-            id: d.id,
-            name: d.name,
-            previewImage: d.previewImage,
-            viewOffsetX: d.viewOffsetX,
-            isDefault: d.isDefault,
-            createdAt: d.createdAt
-          },
-          this.api,
-          (h) => this.handleHorizonChange(h)
-        )
+      (d) => new Horizon(d.id, d, this.api, (h) => this.handleHorizonChange(h))
     )
 
     this.horizons.set(horizons)
@@ -394,15 +364,12 @@ export class HorizonsManager {
 
   async createHorizon(name: string, isDefault = false) {
     // const res = await this.api.createHorizon(name)
-    const data = {
-      id: 'placeholder',
+    let data = {
       name,
       viewOffsetX: 0,
-      isDefault: isDefault,
-      createdAt: new Date().toISOString()
+      isDefault: isDefault
     } as HorizonData
-    const id = await this.storage.horizons.create(data)
-    data.id = id
+    data = await this.storage.horizons.create(data)
 
     const horizon = new Horizon(data.id, data, this.api, (h) => this.handleHorizonChange(h))
     this.horizons.update((h) => [...h, horizon])

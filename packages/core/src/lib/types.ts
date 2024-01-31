@@ -7,16 +7,43 @@ export type CardEvents = {
   delete: Card
 }
 
+/*
+- `cold`: only basic Horizon information is in memory (initial state for all Horizons)
+- `warm`: its cards and all required data for rendering are stored in memory
+- `hot`: the Horizon is rendered in the DOM and ready for immediate interaction
+*/
+export type HorizonState = 'cold' | 'warm' | 'hot'
+
 export type CardType = 'browser' | 'text' | 'file' | 'link'
 
 export type CardPosition = Pick<IPositionable<'id'>, 'x' | 'y' | 'width' | 'height'>
 
+export type HorizonData = {
+  id: string
+  name: string
+  previewImage?: string
+  isDefault: boolean
+  viewOffsetX: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Card extends IPositionable<'id'> {
   id: string
   horizon_id: string
+  createdAt: string
+  updatedAt: string
   stacking_order: number
   type: CardType
   data: CardBrowser['data'] | CardText['data'] | CardFile['data'] | CardLink['data']
+  [key: string]: any
+}
+
+export interface Resource {
+  id: string
+  data: Blob
+  createdAt: string
+  updatedAt: string
   [key: string]: any
 }
 
@@ -51,10 +78,4 @@ export interface CardLink extends Card {
     title?: string
     url: string
   }
-}
-
-export interface Resource {
-  id: string
-  data: Blob
-  [key: string]: any
 }
