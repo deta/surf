@@ -14,6 +14,7 @@
 
   import type { Card, CardEvents } from '../../types'
   import { useLogScope } from '../../utils/log'
+  import type { Horizon } from '../../service/horizon'
 
   // TODO: fix this unnecessary cast
   const BrowserCard = () =>
@@ -22,8 +23,11 @@
     import('../Cards/Text/TextCard.svelte') as unknown as Promise<typeof SvelteComponent>
   const LinkCard = () =>
     import('../Cards/Link/LinkCard.svelte') as unknown as Promise<typeof SvelteComponent>
+  const FileCard = () =>
+    import('../Cards/File/FileCard.svelte') as unknown as Promise<typeof SvelteComponent>
 
   export let positionable: Writable<IPositionable<any>>
+  export let horizon: Horizon
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('CardWrapper')
@@ -37,7 +41,7 @@
   $: cardTitle = $card.type[0].toUpperCase() + $card.type.slice(1)
 
   const updateCard = () => {
-    log.debug('updateCard', card)
+    log.debug('updateCard', $card)
     dispatch('change', $card)
   }
 
@@ -87,19 +91,25 @@
     {#if $card.type === 'browser'}
       <LazyComponent this={BrowserCard}>
         <svelte:fragment slot="component" let:Component>
-          <Component {card} on:load on:change on:delete />
+          <Component {card} {horizon} on:load on:change on:delete />
         </svelte:fragment>
       </LazyComponent>
     {:else if $card.type === 'text'}
       <LazyComponent this={TextCard}>
         <svelte:fragment slot="component" let:Component>
-          <Component {card} on:load on:change on:delete />
+          <Component {card} {horizon} on:load on:change on:delete />
         </svelte:fragment>
       </LazyComponent>
     {:else if $card.type === 'link'}
       <LazyComponent this={LinkCard}>
         <svelte:fragment slot="component" let:Component>
-          <Component {card} on:load on:change on:delete />
+          <Component {card} {horizon} on:load on:change on:delete />
+        </svelte:fragment>
+      </LazyComponent>
+    {:else if $card.type === 'file'}
+      <LazyComponent this={FileCard}>
+        <svelte:fragment slot="component" let:Component>
+          <Component {card} {horizon} on:load on:change on:delete />
         </svelte:fragment>
       </LazyComponent>
     {/if}

@@ -59,7 +59,7 @@
 
   let containerEl: HTMLElement
 
-  const debouncedHorizonUpdate = useDebounce((...args: Parameters<typeof horizon.updateCard>) => {
+  const debouncedHorizonUpdate = useDebounce((...args: Parameters<typeof horizon.updateData>) => {
     return horizon.updateData(...args)
   }, 500)
 
@@ -143,7 +143,7 @@
   const handleCardChange = async (e: CustomEvent<Card>) => {
     const card = e.detail
     log.debug('card changed', card)
-    debouncedCardUpdate(card).then(() => {
+    debouncedCardUpdate(card.id, card).then(() => {
       updatePreview()
     })
   }
@@ -195,6 +195,7 @@
 
     <CardWrapper
       {positionable}
+      {horizon}
       on:load={handleCardLoad}
       on:change={handleCardChange}
       on:delete={handleCardDelete}

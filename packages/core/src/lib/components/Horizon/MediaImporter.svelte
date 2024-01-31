@@ -5,6 +5,7 @@
   import { parseClipboardItems, shouldIgnorePaste } from '../../service/clipboard'
   import { parseStringIntoUrl } from '../../utils/url'
   import { DEFAULT_CARD_SIZE } from '../../constants/card'
+    import { get } from 'svelte/store'
 
   export let horizon: Horizon
 
@@ -38,30 +39,41 @@
 
   const handleImage = async (blob: Blob) => {
     log.debug('Pasted Image:', blob)
+
+    const pos = getNewCardPosition()
+    const card = await horizon.addCardFile(blob, {
+      x: pos.x,
+      y: pos.y,
+      width: DEFAULT_CARD_SIZE.width,
+      height: DEFAULT_CARD_SIZE.height
+    })
+    log.debug('created card', get(card))
   }
 
   const handleURL = async (url: URL) => {
     log.debug('Pasted URL:', url)
 
     const pos = getNewCardPosition()
-    await horizon.addCardLink(url.href, {
+    const card = await horizon.addCardLink(url.href, {
       x: pos.x,
       y: pos.y,
       width: DEFAULT_CARD_SIZE.width,
       height: DEFAULT_CARD_SIZE.height
     })
+    log.debug('created card', get(card))
   }
 
   const handleText = async (text: string) => {
     log.debug('Pasted Text:', text)
 
     const pos = getNewCardPosition()
-    await horizon.addCardText(text, {
+    const card = await horizon.addCardText(text, {
       x: pos.x,
       y: pos.y,
       width: DEFAULT_CARD_SIZE.width,
       height: DEFAULT_CARD_SIZE.height
     })
+    log.debug('created card', get(card))
   }
 
   const handlePaste = async (e: ClipboardEvent) => {

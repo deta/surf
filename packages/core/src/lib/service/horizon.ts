@@ -1,5 +1,5 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
-import type { Card, CardPosition } from '../types'
+import type { Card, CardFile, CardPosition, Optional } from '../types'
 import type { API } from './api'
 import type { HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
@@ -80,23 +80,41 @@ export class Horizon {
     return this.data
   }
 
-  async updateCard(updates: Partial<Card>) {
+  async getCard(id: string) {
+    const localCard = get(this.cards).find((c) => get(c).id === id)
+    if (localCard) return get(localCard)
+    
+    // TODO: maybe check storage as fallback?
+    return null
+  }
+
+  async updateCard(id: string, updates: Partial<Card>) {
+    const card = await this.getCard(id)
+    if (!card) throw new Error(`Card ${id} not found`)
+
     this.cards.update((c) => {
-      const card = c.find((c) => get(c).id === updates.id)
+      const card = c.find((c) => get(c).id === id)
       if (!card) return c
       card.update((c) => ({ ...c, ...updates }))
       return c
     })
-    // TODO: assumes that `id` is always included?
-    // need sth that is `Partial` but doesn't exclude the id
-    await this.storage.cards.update(updates.id ?? '', updates)
-    this.log.debug(`Updated card ${updates.id}`)
+    await this.storage.cards.update(id, updates)
+    this.log.debug(`Updated card ${id}`)
     this.signalChange(this)
   }
 
   async deleteCard(id: string) {
+    const card = await this.getCard(id)
+    if (!card) throw new Error(`Card ${id} not found`)
+
     this.cards.update((c) => c.filter((c) => get(c).id !== id))
     await this.storage.cards.delete(id)
+
+    if (card.type === 'file') {
+      this.log.debug(`Deleting card file resource ${(card as CardFile).data.resourceId}`)
+      await this.storage.resources.delete((card as CardFile).data.resourceId)
+    }
+
     this.log.debug(`Deleted card ${id}`)
     this.signalChange(this)
   }
@@ -120,22 +138,32 @@ export class Horizon {
     this.changeState('warm')
   }
 
-  async addCard(card: Omit<Card, 'id' | 'stacking_order'>) {
-    let cardData = {
-      ...card,
-      horizon_id: this.data.id,
-      stacking_order: 1,
-      hoisted: true
-    } as Card
-    cardData = await this.storage.cards.create(cardData)
-
-    const cardStore = writable(cardData)
-    this.cards.update((c) => [...c, cardStore])
-    this.signalChange(this)
+  createResource(data: Blob) {
+    return this.storage.resources.create({
+      data: data,
+    })
   }
 
-  async addCardBrowser(location: string, position: CardPosition) {
-    await this.addCard({
+  getResource(id: string) {
+    return this.storage.resources.read(id)
+  }
+
+  async addCard(data: Optional<Card, 'id' | 'stacking_order'>) {
+    const card = await this.storage.cards.create({
+      horizon_id: this.data.id,
+      stacking_order: 1,
+      hoisted: true,
+      ...data
+    })
+
+    const cardStore = writable(card)
+    this.cards.update((c) => [...c, cardStore])
+    this.signalChange(this)
+    return cardStore
+  }
+
+  addCardBrowser(location: string, position: CardPosition) {
+    return this.addCard({
       ...position,
       type: 'browser',
       data: {
@@ -146,8 +174,8 @@ export class Horizon {
     })
   }
 
-  async addCardText(content: string, position: CardPosition) {
-    await this.addCard({
+  addCardText(content: string, position: CardPosition) {
+    return this.addCard({
       ...position,
       type: 'text',
       data: {
@@ -156,12 +184,25 @@ export class Horizon {
     })
   }
 
-  async addCardLink(url: string, position: CardPosition) {
-    await this.addCard({
+  addCardLink(url: string, position: CardPosition) {
+    return this.addCard({
       ...position,
       type: 'link',
       data: {
         url: url
+      }
+    })
+  }
+
+  async addCardFile(data: Blob, position: CardPosition) {
+    const resource = await this.createResource(data)
+    return this.addCard({
+      ...position,
+      type: 'file',
+      data: {
+        name: 'Untitled',
+        mimetype: data.type,
+        resourceId: resource.id,
       }
     })
   }

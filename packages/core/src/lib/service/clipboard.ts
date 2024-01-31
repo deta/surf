@@ -36,6 +36,7 @@ export const shouldIgnorePaste = (elem: HTMLElement) => {
     ['INPUT', 'TEXTAREA'].includes(elem.tagName) || elem.hasAttribute('contenteditable')
   const isCardElem = hasClassOrParentWithClass(elem, 'card')
 
+  // TODO: needs check for active card otherwise focus might cause issues
   return isInputElem || isCardElem
 }
 

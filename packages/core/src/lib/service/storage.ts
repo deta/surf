@@ -1,8 +1,7 @@
-import { generateID } from '../utils/id'
 import Dexie from 'dexie'
 
-import { type HorizonData } from './horizon'
-import { type Card, type Resource } from '../types'
+import { generateID } from '../utils/id'
+import type { Card, Optional, Resource, HorizonData } from '../types'
 
 export class LocalStorage<T> {
   key: string
@@ -81,11 +80,16 @@ export class Storage<T extends Record<string, any>> {
 export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: string }> {
   constructor(public t: Dexie.Table<T, string>) {}
 
-  async create(item: T): Promise<T> {
-    item.id = generateID()
-    item.createdAt = new Date().toISOString()
-    item.updatedAt = item.createdAt
-    await this.t.add(item as T)
+  async create(data: Optional<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T> {
+    const datetime = new Date().toISOString()
+    const item = {
+      id: generateID(),
+      createdAt: datetime,
+      updatedAt: datetime,
+      ...data
+    } as T
+    
+    await this.t.add(item)
     return item
   }
 
