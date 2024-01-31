@@ -94,17 +94,17 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
   }
 
   async all(): Promise<T[]> {
-    return this.t.toArray()
+    return await this.t.toArray()
   }
 
   async read(id: string): Promise<T | undefined> {
-    return this.t.get(id)
+    return await this.t.get(id)
   }
 
   async update(id: string, updatedItem: Partial<T>): Promise<number> {
     delete updatedItem.createdAt
     updatedItem.updatedAt = new Date().toISOString()
-    return this.t.update(id, updatedItem)
+    return await this.t.update(id, updatedItem)
   }
 
   async delete(id: string): Promise<void> {
