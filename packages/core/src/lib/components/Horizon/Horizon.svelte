@@ -190,12 +190,15 @@
     loadHorizon()
     handleWindowResize()
 
+    horizon.attachBoard(board)
+
     unsubscribeCards = cards.subscribe((e) => {
       $state.stackingOrder.set(e.map((e) => get(e).id))
     })
   })
 
   onDestroy(() => {
+    horizon.detachBoard()
     if (unsubscribeCards) unsubscribeCards()
   })
 </script>

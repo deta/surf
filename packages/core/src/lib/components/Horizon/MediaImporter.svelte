@@ -1,15 +1,20 @@
 <script lang="ts">
-  import { hasClassOrParentWithClass, posToAbsolute } from '@horizon/tela'
+  import { posToAbsolute } from '@horizon/tela'
   import type { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
   import { parseClipboardItems, shouldIgnorePaste } from '../../service/clipboard'
   import { parseStringIntoUrl } from '../../utils/url'
   import { DEFAULT_CARD_SIZE } from '../../constants/card'
-    import { get } from 'svelte/store'
+  import { get } from 'svelte/store'
 
   export let horizon: Horizon
 
   const log = useLogScope('MediaImporter')
+
+  $: board = horizon.board
+  $: state = board?.state
+  $: viewOffset = $state?.viewOffset
+  $: zoom = $state?.zoom
 
   let mouseX = 0
   let mouseY = 0
@@ -23,15 +28,15 @@
     const viewportPos = posToAbsolute(
       mouseX,
       mouseY,
-      0, // TODO: get $viewOffset.x from board
-      0,
+      $viewOffset?.x ?? 0,
+      $viewOffset?.y ?? 0,
       {
         x: 0,
         y: 0,
         w: window.innerWidth,
         h: window.innerHeight
       },
-      1
+      $zoom ?? 1
     )
 
     return viewportPos
@@ -116,6 +121,24 @@
       }
     })
   }
+
+  const handleDrop = (e: DragEvent) => {
+    log.debug('drop', e)
+
+    const files = Array.from(e.dataTransfer?.files ?? [])
+    log.debug('files', files)
+
+    files.forEach(async (file) => {
+      const type = file.type
+
+      if (type.startsWith('image')) {
+        handleImage(file)
+      } else {
+        log.warn('unhandled file type', type)
+      }
+    })
+  }
 </script>
 
+<svelte:body on:dragover|preventDefault={() => {}} on:drop|preventDefault={handleDrop} />
 <svelte:window on:paste={handlePaste} on:mousemove={handleMouseMove} />

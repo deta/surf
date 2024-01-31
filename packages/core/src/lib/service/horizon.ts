@@ -4,6 +4,7 @@ import type { API } from './api'
 import type { HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { HorizonDatabase, LocalStorage } from './storage'
+import type { IBoard } from '@horizon/tela'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 5
@@ -16,6 +17,7 @@ export class Horizon {
   data: HorizonData
   cards: Writable<Writable<Card>[]>
   signalChange: (horizon: Horizon) => void
+  board: IBoard<any, any> | null
 
   api: API
   log: ScopedLogger
@@ -34,8 +36,19 @@ export class Horizon {
     this.data = data
     this.cards = writable([])
     this.signalChange = signalChange
+    this.board = null
 
     this.log.debug(`Created`)
+  }
+
+  attachBoard(board: IBoard<any, any>) {
+    this.log.debug(`Attaching board`)
+    this.board = board
+  }
+
+  detachBoard() {
+    this.log.debug(`Detaching board`)
+    this.board = null
   }
 
   getState() {
