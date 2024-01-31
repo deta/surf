@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { writable } from 'svelte/store'
+  import { writable, get } from 'svelte/store'
   import type { WebviewTag } from 'electron'
   import { createEventDispatcher } from 'svelte'
 
@@ -14,29 +14,51 @@
   export const isLoading = writable(false)
   export const title = writable('')
 
+  export const historyStack = writable([] as string[])
+  export const currentHistoryIndex = writable(-1)
+  let programmaticNavigation = false
+
   let webview: WebviewTag
 
-  $: if (webview) {
-    webview.addEventListener('did-navigate', (e: any) => {
-      $url = e.url
-      $canGoBack = webview.canGoBack()
-      $canGoForward = webview.canGoForward()
-    })
-    webview.addEventListener('did-navigate-in-page', (e: any) => {
-      $url = e.url
-      $canGoBack = webview.canGoBack()
-      $canGoForward = webview.canGoForward()
-    })
+  const updateNavigationState = () => {
+    canGoBack.set(get(currentHistoryIndex) > 0)
+    canGoForward.set(get(currentHistoryIndex) < get(historyStack).length - 1)
+  }
 
-    webview.addEventListener('did-start-loading', () => ($isLoading = true))
-    webview.addEventListener('did-stop-loading', () => ($isLoading = false))
-    webview.addEventListener('page-title-updated', (e: any) => ($title = e.title))
-    webview.addEventListener('did-finish-load', (_: any) => dispatch('didFinishLoad'))
+  $: {
+    if (
+      webview &&
+      !programmaticNavigation &&
+      $url !== get(historyStack)[get(currentHistoryIndex)]
+    ) {
+      historyStack.update((stack) => {
+        let index = get(currentHistoryIndex)
+        if (index < stack.length - 1) {
+          stack = stack.slice(0, index + 1)
+        }
+        stack.push($url)
+        return stack
+      })
+      currentHistoryIndex.update((n) => n + 1)
+      updateNavigationState()
+    }
+
+    programmaticNavigation = false
+  }
+
+  $: if (webview) {
+    updateNavigationState()
+
+    webview.addEventListener('did-navigate', (e: any) => url.set(e.url))
+    webview.addEventListener('did-navigate-in-page', (e: any) => url.set(e.url))
+    webview.addEventListener('did-start-loading', () => isLoading.set(true))
+    webview.addEventListener('did-stop-loading', () => isLoading.set(false))
+    webview.addEventListener('page-title-updated', (e: any) => title.set(e.title))
+    webview.addEventListener('did-finish-load', () => dispatch('didFinishLoad'))
   }
 
   export function navigate(targetUrl: string): void {
     if (webview) {
-      $url = targetUrl
       webview.src = targetUrl
     }
   }
@@ -46,15 +68,30 @@
   }
 
   export function goBack(): void {
-    if (webview?.canGoBack()) {
-      webview.goBack()
-    }
+    currentHistoryIndex.update((n) => {
+      if (n > 0) {
+        n--
+        programmaticNavigation = true
+        navigate(get(historyStack)[n])
+        updateNavigationState()
+        return n
+      }
+      return n
+    })
   }
 
   export function goForward(): void {
-    if (webview?.canGoForward()) {
-      webview.goForward()
-    }
+    currentHistoryIndex.update((n) => {
+      const stack = get(historyStack)
+      if (n < stack.length - 1) {
+        n++
+        programmaticNavigation = true
+        navigate(stack[n])
+        updateNavigationState()
+        return n
+      }
+      return n
+    })
   }
 </script>
 

@@ -152,7 +152,8 @@ export class Horizon {
       type: 'browser',
       data: {
         initialLocation: location,
-        currentLocation: location
+        historyStack: [] as string[],
+        currentHistoryIndex: -1,
       }
     })
   }

@@ -23,7 +23,8 @@ export interface CardBrowser extends Card {
   type: 'browser'
   data: {
     initialLocation: string
-    currentLocation: string
+    historyStack: string[]
+    currentHistoryIndex: number
   }
 }
 

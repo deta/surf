@@ -1,8 +1,8 @@
 <!-- <svelte:options immutable={true} /> -->
 
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
-  import type { Writable } from 'svelte/store'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { get, type Unsubscriber, type Writable } from 'svelte/store'
 
   import WebviewWrapper from './WebviewWrapper.svelte'
   import type { CardBrowser, CardEvents } from '../../../types'
@@ -14,62 +14,63 @@
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('BrowserCard')
 
-  const initialSrc = $card.data.currentLocation
-
-  let value = ''
-  let editing = false
-
-  let inputEl: HTMLInputElement
   let webview: WebviewWrapper | undefined
+  let inputEl: HTMLInputElement
 
-  const updateCard = () => {
-    log.debug('updateCard', $card)
-    dispatch('change', $card)
-  }
+  const initialSrc =
+    $card.data.historyStack[$card.data.currentHistoryIndex] || $card.data.initialLocation
+  const unsubTracker: Unsubscriber[] = []
+
+  onMount(() => {
+    if (webview) {
+      webview.historyStack.set($card.data.historyStack)
+      webview.currentHistoryIndex.set($card.data.currentHistoryIndex)
+
+      // TODO: no need to invoke two changes in most cases
+      unsubTracker.push(
+        webview.historyStack.subscribe((stack) => {
+          $card.data.historyStack = stack
+          dispatch('change', get(card))
+        })
+      )
+      unsubTracker.push(
+        webview.currentHistoryIndex.subscribe((index) => {
+          $card.data.currentHistoryIndex = index
+          dispatch('change', get(card))
+        })
+      )
+    }
+  })
+
+  onDestroy(() => {
+    unsubTracker.forEach((u) => u())
+  })
 
   const handleKeyUp = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
       let url = parseStringIntoUrl(value)
-
-      if (!url) {
-        url = new URL(`https://google.com/search?q=${value}`)
-      }
-
-      value = url.href
-      $card.data.currentLocation = value
-      webview?.navigate(value)
+      if (!url) url = new URL(`https://google.com/search?q=${value}`)
+      webview?.navigate(url.href)
       inputEl.blur()
     }
   }
 
-  const handleFinishLoading = () => {
-    log.debug('finished loading', $card)
-    dispatch('load', $card)
-  }
-
-  onMount(() => {
-    if (initialSrc === 'about:blank') {
-      // inputEl?.focus()
-    }
-
-    let oldSrc = initialSrc
-    card.subscribe((card) => {
-      if (oldSrc !== card.data.currentLocation) {
-        oldSrc = card.data.currentLocation
-        updateCard()
-      }
-    })
-  })
+  let value = ''
+  let editing = false
 
   $: url = webview?.url
   $: title = webview?.title
   $: isLoading = webview?.isLoading
   $: canGoBack = webview?.canGoBack
   $: canGoForward = webview?.canGoForward
-  $: $card.data.currentLocation = $url ?? $card.data.initialLocation
 
-  $: if (!editing && $url !== 'about:blank' && $card.data.currentLocation !== 'about:blank') {
-    value = $url ?? $card.data.currentLocation
+  $: if (!editing && $url !== 'about:blank') {
+    value = $url ?? ''
+  }
+
+  const handleFinishLoading = () => {
+    log.debug('finished loading', get(card))
+    dispatch('load', get(card))
   }
 </script>
 
