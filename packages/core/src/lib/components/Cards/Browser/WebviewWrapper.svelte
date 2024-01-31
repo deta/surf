@@ -95,7 +95,12 @@
   }
 </script>
 
-<webview bind:this={webview} {src} {partition} />
+<webview
+  bind:this={webview}
+  {src}
+  {partition}
+  preload={`file://${window.electronAPI.webviewPreloadPath}`}
+/>
 
 <style>
   webview {
