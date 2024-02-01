@@ -58,10 +58,12 @@
 
   const addHorizon = async () => {
     const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
-    await horizonManager.switchHorizon(newHorizon.id)
 
-    activeStackItemIdx = $horizons.length - 1
-    showStackOverview = false
+    changeActiveHorizon(newHorizon.id, true)
+
+    if (showStackOverview) {
+      closeOverview()
+    }
   }
 
   const sortHorizons = async () => {
@@ -106,12 +108,16 @@
     // $stackOverviewScrollOffset = 0
   }
 
-  const changeActiveHorizon = async (horizonId: string) => {
+  const changeActiveHorizon = async (horizonId: string, sortImmediately = false) => {
     await horizonManager.switchHorizon(horizonId)
 
     changeSelectedHorizon(horizonId)
 
-    createSortingTimeout()
+    if (sortImmediately) {
+      sortHorizons()
+    } else {
+      createSortingTimeout()
+    }
   }
 
   const closeOverview = async () => {
