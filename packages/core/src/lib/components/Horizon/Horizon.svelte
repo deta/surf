@@ -27,7 +27,7 @@
   const data = horizon.data
 
   const log = useLogScope('Horizon Component')
-  const dispatch = createEventDispatcher<{ change: Horizon }>()
+  const dispatch = createEventDispatcher<{ change: Horizon, cardChange: Card }>()
 
   const settings = createSettings({
     CAN_PAN: true,
@@ -58,6 +58,12 @@
   const viewOffset = $state.viewOffset
 
   let containerEl: HTMLElement
+
+  $: log.debug('horizon state changed', horizon.state)
+
+  $: if (!active && horizon.state !== 'hot') {
+    log.error('edge case! horizon is active but not hot')
+  }
 
   const debouncedHorizonUpdate = useDebounce((...args: Parameters<typeof horizon.updateData>) => {
     return horizon.updateData(...args)
@@ -91,7 +97,6 @@
     await debouncedHorizonUpdate({ previewImage: previewImage })
     dispatch('change', horizon)
   }
-
 
   let showSelectTooltip = false
   let selectPos = { x: 0, y: 0 }
@@ -162,6 +167,7 @@
     const card = e.detail
     log.debug('card changed', card)
     debouncedCardUpdate(card.id, card).then(() => {
+      dispatch('cardChange', card)
       updatePreview()
     })
   }
@@ -211,7 +217,7 @@
   </div>
 {/if}
 
-<div data-horizon={horizon.id} class="horizon">
+<div data-horizon={horizon.id} data-horizon-state={horizon.state} data-horizon-active={active} class="horizon">
   <Board
     {settings}
     {board}

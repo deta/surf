@@ -3,7 +3,7 @@
 
   export let showOverview: boolean
   export let order: number
-  export let highlight = false
+  export let active = false
 
   const dispatch = createEventDispatcher<{ select: number }>()
 
@@ -21,7 +21,7 @@
   on:click={handleClick}
   class="item"
   class:overview={showOverview}
-  class:highlight
+  class:active={active}
   style="--order: {order + 1}; --index: {order};"
 >
   <div class="content">
@@ -33,7 +33,7 @@
   .item {
     flex-shrink: 0;
     height: var(--height);
-    transition-property: height, border-radius, border;
+    transition-property: border-radius, border;
     transition-duration: var(--transition-duration);
     transition-timing-function: var(--transition-timing-function);
     order: var(--order);
@@ -53,7 +53,7 @@
     pointer-events: none;
   }
 
-  .highlight {
+  .active {
     .content {
       pointer-events: unset;
     }
@@ -63,7 +63,7 @@
     &.item {
       border-width: 4px;
       border-color: var(--border-color);
-      border-radius: 2rem;
+      border-radius: calc(var(--theme-border-radius) * 2);
       cursor: pointer;
     }
 
