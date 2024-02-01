@@ -7,7 +7,7 @@ import { HorizonDatabase, LocalStorage } from './storage'
 import type { IBoard } from '@horizon/tela'
 
 // how many horizons to keep in the dom
-const HOT_HORIZONS_THRESHOLD = 5
+const HOT_HORIZONS_THRESHOLD = 8
 
 export class Horizon {
   readonly id: string
@@ -300,19 +300,25 @@ export class HorizonsManager {
     const storedHorizonId = this.activeHorizonStorage.getRaw()
     this.log.debug(`Stored active horizon`, storedHorizonId)
 
+    let switchedTo = null
     if (get(this.horizons).length === 0) {
       this.log.debug(`No horizons found, creating default`)
       const defaultHorizon = await this.createHorizon('Default', true)
       await this.switchHorizon(defaultHorizon)
+      switchedTo = defaultHorizon.id
     } else if (!storedHorizonId) {
       this.log.debug(`No active horizon found, switching to default`)
       const defaultHorizon = this.getDefaultHorizon()
       await this.switchHorizon(defaultHorizon.id)
+      switchedTo = defaultHorizon.id
     } else {
       await this.switchHorizon(storedHorizonId)
+      switchedTo = storedHorizonId
     }
 
     this.activeHorizonId.subscribe((id) => this.activeHorizonStorage.setRaw(id ?? ''))
+
+    return switchedTo
   }
 
   handleHorizonChange(horizon: Horizon) {
