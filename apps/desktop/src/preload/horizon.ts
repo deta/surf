@@ -2,24 +2,20 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { join } from 'path'
 
-const api = {}
-
-const captureWebContents = () => {
-  return ipcRenderer.invoke('capture-web-contents')
-}
-
-export const mainWorld = {
-  captureWebContents: captureWebContents,
+const api = {
   webviewPreloadPath: join(__dirname, '../preload/webview.js'),
+  captureWebContents: () => ipcRenderer.invoke('capture-web-contents'),
+  onNewWindowRequest: (callback) => {
+    ipcRenderer.on('new-window-request', (event, data) => {
+      callback(data)
+    })
+  }
 }
-
 
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
-
-    contextBridge.exposeInMainWorld('electronAPI', mainWorld)
   } catch (error) {
     console.error(error)
   }

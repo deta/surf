@@ -24,7 +24,18 @@ export function createWindow(): void {
     else mainWindow?.show()
   })
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
+  mainWindow.webContents.on('did-attach-webview', (_, contents) => {
+    contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
+      mainWindow?.webContents.send('new-window-request', {
+        ...details,
+        webContentsId: contents.id
+      })
+
+      return { action: details.disposition === 'new-window' ? 'allow' : 'deny' }
+    })
+  })
+
+  mainWindow.webContents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })

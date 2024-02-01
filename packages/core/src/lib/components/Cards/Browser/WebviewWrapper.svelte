@@ -1,9 +1,11 @@
 <script lang="ts">
   import { writable, get } from 'svelte/store'
   import type { WebviewTag } from 'electron'
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
 
-  const dispatch = createEventDispatcher<{ wheelWebview: any; didFinishLoad: void; focusWebview : any; }>()
+  const dispatch = createEventDispatcher<{ wheelWebview: any; didFinishLoad: void; focusWebview : any;
+    newWindowWebview: any
+   }>()
 
   export let src: string
   export let partition: string
@@ -25,6 +27,7 @@
     canGoForward.set(get(currentHistoryIndex) < get(historyStack).length - 1)
   }
 
+  $: webview, updateNavigationState()
   $: {
     if (
       webview &&
@@ -46,9 +49,12 @@
     programmaticNavigation = false
   }
 
-  $: if (webview) {
-    updateNavigationState()
-
+  onMount(() => {
+    window.api.onNewWindowRequest((data) => {
+      if (webview.getWebContentsId().toString() === data.webContentsId.toString()) {
+        dispatch('newWindowWebview', data)
+      }
+    })
     webview.addEventListener('ipc-message', (event) => {
       if (event.channel !== 'webview-page-event') return
 
@@ -72,7 +78,7 @@
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
     webview.addEventListener('page-title-updated', (e: any) => title.set(e.title))
     webview.addEventListener('did-finish-load', () => dispatch('didFinishLoad'))
-  }
+  })
 
   export function navigate(targetUrl: string): void {
     if (webview) {
@@ -116,7 +122,8 @@
   bind:this={webview}
   {src}
   {partition}
-  preload={`file://${window.electronAPI.webviewPreloadPath}`}
+  preload={`file://${window.api.webviewPreloadPath}`}
+  allowpopups
 />
 
 <style>

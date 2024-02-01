@@ -8,7 +8,7 @@
   import type { CardBrowser, CardEvents } from '../../../types'
   import { useLogScope } from '../../../utils/log'
   import { parseStringIntoUrl } from '../../../utils/url'
-    import Horizon from '../../Horizon/Horizon.svelte'
+  import Horizon from '../../Horizon/Horizon.svelte'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -105,6 +105,7 @@
       partition="persist:horizon"
       on:wheelWebview={(event) => log.debug('wheel event from the webview: ', event.detail)}
       on:focusWebview={handleWebviewFocus}
+      on:newWindowWebview={(event) => console.log('new window event: ', event.detail)}
       on:didFinishLoad={handleFinishLoading}
     />
   </div>
