@@ -15,7 +15,7 @@ window.addEventListener('wheel', (event: WheelEvent) => {
   })
 })
 
-window.addEventListener('focus', (event: MouseEvent) => {
+window.addEventListener('focus', (_event: FocusEvent) => {
   sendPageEvent('focus', {})
 })
 
