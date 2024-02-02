@@ -72,7 +72,6 @@ export default function DragHandle(options: DragHandleOptions) {
         if (!(node instanceof Element)) return
 
         const nodePos = nodePosAtDOM(node, view)
-        console.log('nodePos', nodePos)
         if (nodePos === undefined) return
 
         view.dispatch(
