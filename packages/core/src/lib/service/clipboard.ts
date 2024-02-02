@@ -49,8 +49,6 @@ export const parseClipboardItems = async (clipboardItems: ClipboardItem[]) => {
         return canConsume(type)
       })
 
-      console.log(supportedTypes)
-
       // prevent duplicate cards by removing overlapping types
       if (supportedTypes.includes('text/html') && supportedTypes.includes('text/plain')) {
         supportedTypes.splice(supportedTypes.indexOf('text/plain'), 1)

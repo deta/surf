@@ -805,7 +805,6 @@
       if (hasClassOrParentWithClass(e.target as HTMLElement, "tela-ignore")) return;
       // e.preventDefault();
       // e.stopPropagation();
-      console.log("PAN");
       mode.pan(); // TODO: only if not already?
 
       let deltaX =
@@ -868,7 +867,6 @@
       // TODO: Done event --> use native pan method
 
       debounce("end_scroll_pan", 100, () => {
-        console.log("end_scroll_pan");
         mode.idle();
       });
     }
@@ -955,14 +953,14 @@
       $viewPort,
       $zoom
     );
-    console.log("viewport", $viewPort);
-    console.log("viewoffset", $viewOffset.x, $viewOffset.y);
-    console.log(
-      "targetTouches",
-      (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX,
-      (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY
-    );
-    console.log({ absX, absY });
+    // console.log("viewport", $viewPort);
+    // console.log("viewoffset", $viewOffset.x, $viewOffset.y);
+    // console.log(
+    //   "targetTouches",
+    //   (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX,
+    //   (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY
+    // );
+    // console.log({ absX, absY });
     const offsetX = absX - select_init.x;
     const offsetY = absY - select_init.y;
 

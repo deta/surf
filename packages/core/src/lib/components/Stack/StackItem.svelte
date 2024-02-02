@@ -9,7 +9,6 @@
 
   const handleClick = (e: MouseEvent) => {
     if (!showOverview) return
-    console.log('click')
 
     e.preventDefault()
     dispatch('select', order)
