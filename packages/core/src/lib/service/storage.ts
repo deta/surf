@@ -122,7 +122,7 @@ export class HorizonDatabase extends Dexie {
 
     this.version(1).stores({
       cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
-      horizons: 'id, name, isDefault, createdAt, updatedAt',
+      horizons: 'id, name, createdAt, updatedAt',
       resources: 'id, createdAt, updatedAt'
     })
 

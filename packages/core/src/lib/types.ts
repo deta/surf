@@ -22,7 +22,6 @@ export type HorizonData = {
   id: string
   name: string
   previewImage?: string
-  isDefault: boolean
   viewOffsetX: number
   createdAt: string
   updatedAt: string

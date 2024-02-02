@@ -290,22 +290,28 @@ export class HorizonsManager {
 
   async init() {
     this.log.debug(`Initializing`)
-    await this.loadHorizons()
+    const horizons = await this.loadHorizons()
 
-    const storedHorizonId = this.activeHorizonStorage.getRaw()
+    let storedHorizonId = this.activeHorizonStorage.getRaw()
     this.log.debug(`Stored active horizon`, storedHorizonId)
 
+    const storedActiveHorizon = horizons.find((h) => h.id === storedHorizonId)
+    if (!storedActiveHorizon) {
+      this.log.warn(`Stored active horizon not found`)
+      storedHorizonId = null
+    }
+
     let switchedTo = null
-    if (get(this.horizons).length === 0) {
-      this.log.debug(`No horizons found, creating default`)
-      const defaultHorizon = await this.createHorizon('Default', true)
-      await this.switchHorizon(defaultHorizon)
-      switchedTo = defaultHorizon.id
+    if (horizons.length === 0) {
+      this.log.debug(`No horizons found, creating new one`)
+      const newHorizon = await this.createHorizon('Horizon 1')
+      await this.switchHorizon(newHorizon)
+      switchedTo = newHorizon.id
     } else if (!storedHorizonId) {
-      this.log.debug(`No active horizon found, switching to default`)
-      const defaultHorizon = this.getDefaultHorizon()
-      await this.switchHorizon(defaultHorizon.id)
-      switchedTo = defaultHorizon.id
+      this.log.debug(`No active horizon found, using first one`)
+      const newHorizon = horizons[0]
+      await this.switchHorizon(newHorizon.id)
+      switchedTo = newHorizon.id
     } else {
       await this.switchHorizon(storedHorizonId)
       switchedTo = storedHorizonId
@@ -338,6 +344,8 @@ export class HorizonsManager {
     )
 
     this.horizons.set(horizons)
+
+    return horizons
   }
 
   persistHorizons(horizons: Horizon[]) {
@@ -353,15 +361,6 @@ export class HorizonsManager {
         this.storage.horizons.update(h.id, h)
       })
     )
-  }
-
-  getDefaultHorizon() {
-    const horizon = get(this.horizons).find((h) => h.data.isDefault)
-    if (!horizon) {
-      throw new Error(`Default horizon not found`)
-    }
-
-    return horizon
   }
 
   getHorizon(id: string) {
@@ -417,12 +416,11 @@ export class HorizonsManager {
     this.activeHorizonId.set(horizon.id)
   }
 
-  async createHorizon(name: string, isDefault = false) {
+  async createHorizon(name: string) {
     // const res = await this.api.createHorizon(name)
     let data = {
       name,
       viewOffsetX: 0,
-      isDefault: isDefault
     } as HorizonData
     data = await this.storage.horizons.create(data)
 
