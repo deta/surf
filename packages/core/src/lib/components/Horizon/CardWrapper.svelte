@@ -61,8 +61,8 @@
     dispatch('delete', $card)
   }
 
-  const handleCopy = () => {
-    // dispatch('delete', $card)
+  const handleDuplicate = () => {
+    dispatch('duplicate', $card)
   }
 
   onMount(() => {
@@ -114,7 +114,11 @@
             <div></div>
           </div>
 
-          <div class="end-placement"></div>
+          <div class="card-header-actions end-placement">
+            <button on:click={handleDuplicate}>
+              <Icon name="copy" />
+            </button>
+          </div>
         </div>
       </Draggable>
     </div>
@@ -228,6 +232,7 @@
 
   .end-placement {
     flex: 1;
+    align-items: flex-end;
   }
 
   // .card-title {

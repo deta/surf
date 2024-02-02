@@ -5,6 +5,7 @@ export type CardEvents = {
   change: Card
   load: Card
   delete: Card
+  duplicate: Card
 }
 
 /*

@@ -190,6 +190,12 @@
     updatePreview()
   }
 
+  const handleCardDuplicate = (e: CustomEvent<Card>) => {
+    const card = e.detail
+    log.debug('duplicating card', card)
+    horizon.duplicateCard(card.id, { width: card.width, height: card.height, x: card.x + card.width + 50, y: card.y })
+  }
+
   const handlePositionableEnter = (e: CustomEvent<string>) => {
     hoistPositionable(e.detail, containerEl)
   }
@@ -260,6 +266,7 @@
       on:load={handleCardLoad}
       on:change={handleCardChange}
       on:delete={handleCardDelete}
+      on:duplicate={handleCardDuplicate}
     />
   </Board>
 </div>
