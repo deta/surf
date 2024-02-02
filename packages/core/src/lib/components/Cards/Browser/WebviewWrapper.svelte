@@ -85,7 +85,8 @@
     webview.addEventListener('page-title-updated', (e: any) => title.set(e.title))
     webview.addEventListener('did-finish-load', () => dispatch('didFinishLoad'))
     webview.addEventListener('page-favicon-updated', (e:any) => {
-      faviconURL.set(e.favicons)
+      // Get the biggest favicon (last favicon in array)
+      faviconURL.set(e.favicons[e.favicons.length - 1])
     })
   })
 
