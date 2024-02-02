@@ -3,7 +3,7 @@
   import type { WebviewTag } from 'electron'
   import { createEventDispatcher } from 'svelte'
 
-  const dispatch = createEventDispatcher<{ wheelWebview: any; didFinishLoad: void }>()
+  const dispatch = createEventDispatcher<{ wheelWebview: any; didFinishLoad: void; focusWebview : any; }>()
 
   export let src: string
   export let partition: string
@@ -59,6 +59,9 @@
       switch (eventType) {
         case 'wheel':
           dispatch('wheelWebview', eventData)
+          break
+        case 'focus':
+          dispatch('focusWebview', eventData)
           break
       }
     })

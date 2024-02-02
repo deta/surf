@@ -8,8 +8,10 @@
   import type { CardBrowser, CardEvents } from '../../../types'
   import { useLogScope } from '../../../utils/log'
   import { parseStringIntoUrl } from '../../../utils/url'
+    import Horizon from '../../Horizon/Horizon.svelte'
 
   export let card: Writable<CardBrowser>
+  export let horizon: Horizon
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('BrowserCard')
@@ -55,6 +57,10 @@
     }
   }
 
+  const handleWebviewFocus = (e: MouseEvent) => {
+    horizon.setActiveCard($card.id)
+  }
+
   let value = ''
   let editing = false
 
@@ -98,6 +104,7 @@
       src={initialSrc}
       partition="persist:horizon"
       on:wheelWebview={(event) => console.log('wheel event from the webview: ', event.detail)}
+      on:focusWebview={handleWebviewFocus}
       on:didFinishLoad={handleFinishLoading}
     />
   </div>
