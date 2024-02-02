@@ -101,7 +101,7 @@
 
 
   function generateRootDomain (url: string | URL) : string {
-      if(url === ''){ return }
+      if(url === ''){ return ""}
       if (typeof url === 'string')
           url = new URL(url);
 
@@ -208,7 +208,6 @@
     margin-left: 8px;
     border-radius: 6px;
     padding: 4px;
-    background: #FBEAF2;
     backdrop-filter: blur(2px);
     border: 0.5px solid rgba(0,0,0, 0.05)
   }
@@ -230,7 +229,7 @@
   }
 
   .nav-button:hover:enabled {
-    background-color: #ffffff;
+    background: #F3D8F2;
   }
 
   .address-bar-wrapper { 
@@ -249,30 +248,23 @@
     padding: 6px 0 6px 6px;
     border-radius: 4px;
     border: none;
-    background: #FBEAF2;
+    background: #ffffff;
     color: #212121;
     letter-spacing: 0.02rem;
     outline-offset: -2px;
     outline-style: hidden;
     transition: background 120ms ease-out, outline-offset 200ms cubic-bezier(.33, 1, .68, 1);
   }
-  
-  .address-bar:before {
-    content: "";
-    display: block;
-    width: 10px;
-    height: 10px;
-    background: red;
-  }
+
 
   .address-bar:focus {
-    background: #ffffff;
+    background: #FBEAF2;
     outline: 2px solid #E173A8;
     outline-offset: 2px;
   }
 
   .address-bar:hover {
-    background: #ffffff;
+    background: #F3D8F2;
   }
 
   .page-title {
