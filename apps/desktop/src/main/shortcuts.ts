@@ -6,6 +6,7 @@ const validShortcuts = [
   'Space',
   'k',
   'n',
+  'b',
   ...Array.from(Array(9).keys()).map((idx) => `${idx + 1}`)
 ]
 

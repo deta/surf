@@ -45,6 +45,7 @@
   const OVERVIEW_HORIZON_SCALING = 0.6
   const OVERVIEW_HORIZON_GAP = 64
   const TRANSITION_DURATION = 200 // ms
+  const SAFE_AREA_PADDING = 64
 
   let activeStackItemIdx = 0
   let showStackOverview = false
@@ -58,6 +59,24 @@
 
   const addHorizon = async () => {
     const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
+
+    changeActiveHorizon(newHorizon.id, true)
+
+    if (showStackOverview) {
+      closeOverview()
+    }
+  }
+
+  const addBrowserHorizon = async () => {
+    const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
+    const browserCard = await newHorizon.addCardBrowser('about:blank', {
+      x: SAFE_AREA_PADDING / 2,
+      y: SAFE_AREA_PADDING / 2,
+      width: window.innerWidth - SAFE_AREA_PADDING,
+      height: window.innerHeight - SAFE_AREA_PADDING,
+    })
+
+    log.debug('Create new browser horizon', browserCard, newHorizon)
 
     changeActiveHorizon(newHorizon.id, true)
 
@@ -218,11 +237,12 @@
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
+    const modKeyPressed = event.metaKey || event.ctrlKey
+    if (modKeyPressed && event.key === 'n') {
       event.preventDefault()
       addHorizon()
     } else if (
-      (event.metaKey || event.ctrlKey) &&
+      modKeyPressed &&
       (event.key === 'k' || event.key === ' ' || event.code === 'Space')
     ) {
       event.preventDefault()
@@ -231,6 +251,10 @@
       } else {
         showStackOverview = true
       }
+    } else if (modKeyPressed && event.key === 'b') {
+      addBrowserHorizon()
+    } else if (event.key === 'Escape') {
+      window.location.reload()
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
       moveToPreviousHorizon()
