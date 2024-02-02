@@ -9,7 +9,10 @@
     createBoard,
     clamp,
     snapToGrid,
-    hoistPositionable
+    hoistPositionable,
+
+    hasClassOrParentWithClass
+
   } from '@horizon/tela'
   import type { IBoard, IPositionable, Vec4 } from '@horizon/tela'
 
@@ -56,6 +59,7 @@
   const state = board.state
   const selectionCss = $state.selectionCss
   const viewOffset = $state.viewOffset
+  const activeCardId = horizon.activeCardId
 
   let containerEl: HTMLElement
 
@@ -104,7 +108,7 @@
   const onModSelectChange = (e: CustomEvent<{
       event: MouseEvent
       rect: Vec4
-    }>) => {    
+    }>) => {
     showSelectTooltip = true
     selectPos = {
       x: e.detail.event.clientX,
@@ -188,6 +192,12 @@
     hoistPositionable(e.detail, containerEl)
   }
 
+  const handleMouseDown = (e: MouseEvent) => {
+    if (!hasClassOrParentWithClass(e.target as HTMLElement, 'card')) {
+      $activeCardId = null
+    }
+  }
+
   // TODO fix types to get rid of this type conversion
   $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
 
@@ -217,6 +227,7 @@
   </div>
 {/if}
 
+
 <div data-horizon={horizon.id} data-horizon-state={horizon.state} data-horizon-active={active} class="horizon">
   <Board
     {settings}
@@ -225,6 +236,7 @@
     on:modSelectChange={onModSelectChange}
     on:modSelectEnd={onModSelectEnd}
     on:positionableEnter={handlePositionableEnter}
+    on:mousedown={handleMouseDown}
     bind:containerEl
     let:positionable
   >

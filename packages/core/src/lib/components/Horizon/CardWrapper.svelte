@@ -36,18 +36,26 @@
   const minSize = { x: 100, y: 100 }
   const maxSize = { x: Infinity, y: Infinity }
 
+  $: activeCardId = horizon.activeCardId
+
   let el: HTMLElement
 
   $: card = positionable as Writable<Card> // todo: fix this unnecessary cast
   $: cardTitle = $card.type[0].toUpperCase() + $card.type.slice(1)
+  $: active = $activeCardId === $card.id
 
   const updateCard = () => {
     log.debug('updateCard', $card)
     dispatch('change', $card)
   }
 
+  const handleMouseDown = () => {
+    $activeCardId = $card.id
+  }
+
   const handleDragEnd = (_: any) => {
     updateCard()
+    $activeCardId = $card.id
   }
 
   const handleDelete = () => {
@@ -73,11 +81,14 @@
   })
 </script>
 
+<!-- TODO: Obacht! Had the issue on old Horizon app, that ids can start
+  with numbers -> Cannot use them in css selctors for example. Maybe add `id-` prefix -->
 <Positionable
   {positionable}
   data-id={$positionable.id}
-  class="card {$positionable.id}"
+  class="card {$positionable.id} {active && 'active'}"
   contained={false}
+  on:mousedown={handleMouseDown}
   bind:el
 >
   <Resizable {positionable} direction="top-right" {minSize} {maxSize} />
@@ -196,7 +207,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      
+
 
       &:hover {
         color: #7b7b7b;

@@ -251,6 +251,9 @@
   }
 
   .card {
+    &.active > .content {
+      border-color: #9f9f9f;
+    }
     &.dragging {
       cursor: grabbing;
 

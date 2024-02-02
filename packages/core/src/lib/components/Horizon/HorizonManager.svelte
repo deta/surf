@@ -54,7 +54,7 @@
   let sortingTimeout: ReturnType<typeof setTimeout> | null = null
   let sortedHorizons: string[] = []
   let initialSorting = false
-  let overScrollTimeout: ReturnType<typeof setTimeout> | null = null; 
+  let overScrollTimeout: ReturnType<typeof setTimeout> | null = null;
 
   $: selectedHorizonId = sortedHorizons[activeStackItemIdx]
 
@@ -141,6 +141,7 @@
   }
 
   const changeActiveHorizon = async (horizonId: string, sortImmediately = false) => {
+    $activeHorizon?.activeCardId.set(null)
     await horizonManager.switchHorizon(horizonId)
 
     changeSelectedHorizon(horizonId)
@@ -160,7 +161,7 @@
     }, TRANSITION_DURATION * 2)
 
     await tick()
-    
+
     showStackOverview = false
     $stackOverviewScrollOffset = 0
   }
@@ -173,7 +174,7 @@
       const horizonHeight = (window.innerHeight * OVERVIEW_HORIZON_SCALING) + OVERVIEW_HORIZON_GAP
       const horizonsIndexOffset = Math.round($stackOverviewScrollOffset / horizonHeight)
       const closestHorizonId = sortedHorizons[activeStackItemIdx + horizonsIndexOffset]
-      
+
       log.debug('switching to closest horizon', closestHorizonId)
       if (closestHorizonId !== $activeHorizonId) {
         changeActiveHorizon(closestHorizonId)
@@ -201,7 +202,7 @@
     }
 
     const nextHorizon = sortedHorizons[nextIdx]
-   
+
     if (showStackOverview) {
       changeSelectedHorizon(nextHorizon)
       $stackOverviewScrollOffset = 0
@@ -212,7 +213,7 @@
 
   const moveToPreviousHorizon = async () => {
     if (overScrollTimeout) clearTimeout(overScrollTimeout)
-  
+
     const nextIdx = activeStackItemIdx - 1
 
     // if we are on the first horizon and the user presses up we create a new horizon
@@ -242,7 +243,7 @@
   const handleCardChange = async (e: CustomEvent<Card>) => {
     const card = e.detail
     log.debug('card changed', card)
-    
+
     const activeHorizonIdx = sortedHorizons.findIndex((h) => h === $activeHorizonId)
     if (activeHorizonIdx !== 0) {
       sortHorizons()
@@ -287,7 +288,7 @@
       closeOverview()
     }
   }
-  
+
   $: if (!initialSorting && $horizons && $horizons.length > 0) {
     // log.debug('initial sorting')
     initialSorting = true
@@ -360,7 +361,7 @@
     function handleWheel(e: WheelEvent) {
       if (showStackOverview) {
         const isIntentional = lethargy.check(e);
-        
+
         const horizonHeight = (window.innerHeight * OVERVIEW_HORIZON_SCALING) + OVERVIEW_HORIZON_GAP
         stackOverviewScrollOffset.update((v) => {
           v += e.deltaY;
@@ -382,7 +383,7 @@
             }, 200)
 
             return min - 200
-          } 
+          }
 
           return v;
         });
@@ -534,7 +535,7 @@
         {:else}
           <HorizonPreview {horizon} />
         {/if}
-        
+
         <svelte:fragment slot="layer">
           {#if showStackOverview}
             <div transition:fade={{ duration: TRANSITION_DURATION / 2 }} class="horizon-info">
