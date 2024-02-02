@@ -96,7 +96,7 @@ export class Horizon {
   async getCard(id: string) {
     const localCard = get(this.cards).find((c) => get(c).id === id)
     if (localCard) return get(localCard)
-    
+
     // TODO: maybe check storage as fallback?
     return null
   }
@@ -116,19 +116,14 @@ export class Horizon {
     this.signalChange(this)
   }
 
-  async deleteCard(id: string) {
-    const card = await this.getCard(id)
-    if (!card) throw new Error(`Card ${id} not found`)
+  async deleteCard(idOrCard: string | Card) {
+    const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
+    if (!card) throw new Error(`Card ${idOrCard} not found`)
 
-    this.cards.update((c) => c.filter((c) => get(c).id !== id))
-    await this.storage.cards.delete(id)
+    this.cards.update((c) => c.filter((c) => get(c).id !== card.id))
+    await this.storage.deleteCardWithResource(card)
 
-    if (card.type === 'file') {
-      this.log.debug(`Deleting card file resource ${(card as CardFile).data.resourceId}`)
-      await this.storage.resources.delete((card as CardFile).data.resourceId)
-    }
-
-    this.log.debug(`Deleted card ${id}`)
+    this.log.debug(`Deleted card ${card.id}`)
     this.signalChange(this)
   }
 
@@ -153,7 +148,7 @@ export class Horizon {
 
   createResource(data: Blob) {
     return this.storage.resources.create({
-      data: data,
+      data: data
     })
   }
 
@@ -182,7 +177,7 @@ export class Horizon {
       data: {
         initialLocation: location,
         historyStack: [] as string[],
-        currentHistoryIndex: -1,
+        currentHistoryIndex: -1
       }
     })
   }
@@ -215,7 +210,7 @@ export class Horizon {
       data: {
         name: 'Untitled',
         mimetype: data.type,
-        resourceId: resource.id,
+        resourceId: resource.id
       }
     })
   }
@@ -441,7 +436,7 @@ export class HorizonsManager {
     const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
 
     this.log.debug(`Deleting horizon ${horizon.id}`)
-    
+
     await this.storage.horizons.delete(horizon.id)
     await this.storage.deleteCardsByHorizonId(horizon.id)
 

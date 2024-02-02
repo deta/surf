@@ -88,7 +88,7 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
       updatedAt: datetime,
       ...data
     } as T
-    
+
     await this.t.add(item)
     return item
   }
@@ -135,7 +135,23 @@ export class HorizonDatabase extends Dexie {
     return await this.cards.t.where({ horizon_id: horizonId }).toArray()
   }
 
+  async deleteCardWithResource(card: Card) {
+    if (card && card.type === 'file') {
+      await this.resources.delete((card as CardFile).data.resourceId)
+    }
+
+    await this.cards.delete(card.id)
+  }
+
   async deleteCardsByHorizonId(horizonId: string) {
+    const fileCardsResourceIds = (
+      await this.cards.t.where({ horizon_id: horizonId, type: 'file' }).toArray()
+    ).map((card: Card) => (card as CardFile).data.resourceId)
+
+    if (fileCardsResourceIds.length > 0) {
+      await this.resources.t.where('id').anyOf(fileCardsResourceIds).delete()
+    }
+
     await this.cards.t.where({ horizon_id: horizonId }).delete()
   }
 }
