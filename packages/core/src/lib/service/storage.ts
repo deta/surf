@@ -1,7 +1,7 @@
 import Dexie from 'dexie'
 
 import { generateID } from '../utils/id'
-import type { Card, Optional, Resource, HorizonData } from '../types'
+import type { Card, Optional, Resource, HorizonData, CardFile } from '../types'
 
 export class LocalStorage<T> {
   key: string
@@ -133,5 +133,9 @@ export class HorizonDatabase extends Dexie {
 
   async getCardsByHorizonId(horizonId: string) {
     return await this.cards.t.where({ horizon_id: horizonId }).toArray()
+  }
+
+  async deleteCardsByHorizonId(horizonId: string) {
+    await this.cards.t.where({ horizon_id: horizonId }).delete()
   }
 }

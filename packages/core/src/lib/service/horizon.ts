@@ -436,4 +436,17 @@ export class HorizonsManager {
 
     return horizon
   }
+
+  async deleteHorizon(idOrHorizon: string | Horizon) {
+    const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
+
+    this.log.debug(`Deleting horizon ${horizon.id}`)
+    
+    await this.storage.horizons.delete(horizon.id)
+    await this.storage.deleteCardsByHorizonId(horizon.id)
+
+    // TODO: delete resources
+
+    this.horizons.update((h) => h.filter((h) => h.id !== horizon.id))
+  }
 }
