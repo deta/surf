@@ -15,6 +15,10 @@ window.addEventListener('wheel', (event: WheelEvent) => {
   })
 })
 
+window.addEventListener('focus', (event: MouseEvent) => {
+  sendPageEvent('focus', {})
+})
+
 function sendPageEvent(eventType: string, data: any) {
   ipcRenderer.sendToHost('webview-page-event', { type: eventType, ...data })
 }
