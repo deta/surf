@@ -4,7 +4,7 @@ import type { API } from './api'
 import type { HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { HorizonDatabase, LocalStorage } from './storage'
-import type { IBoard } from '@horizon/tela'
+import { moveToStackingTop, type IBoard } from '@horizon/tela'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 8
@@ -17,6 +17,7 @@ export class Horizon {
   data: HorizonData
   cards: Writable<Writable<Card>[]>
   activeCardId: Writable<string | null>
+  stackingOrder: Writable<string[]>
   signalChange: (horizon: Horizon) => void
   board: IBoard<any, any> | null
 
@@ -37,6 +38,8 @@ export class Horizon {
     this.data = data
     this.cards = writable([])
     this.activeCardId = writable(null)
+    data.stackingOrder = data.stackingOrder || []
+    this.stackingOrder = writable(data.stackingOrder)
     this.signalChange = signalChange
     this.board = null
 
@@ -104,6 +107,14 @@ export class Horizon {
   }
 
   setActiveCard(id: string | null) {
+    if (!this.board) {
+      console.warn("[Horizon Service] setActiveCard called with board === undefined!")
+      return
+    }
+    if (id) {
+      moveToStackingTop(get(this.board?.state).stackingOrder, id)
+      this.signalChange(this)
+    }
     this.activeCardId.set(id)
   }
 
@@ -165,13 +176,14 @@ export class Horizon {
   async addCard(data: Optional<Card, 'id' | 'stacking_order'>) {
     const card = await this.storage.cards.create({
       horizon_id: this.data.id,
-      stacking_order: 1,
+      //stacking_order: 1,
       hoisted: true,
       ...data
     })
 
     const cardStore = writable(card)
     this.cards.update((c) => [...c, cardStore])
+    this.stackingOrder.update((s) => { s.push(card.id); console.warn("s", s); return s; })
     this.signalChange(this)
     return cardStore
   }

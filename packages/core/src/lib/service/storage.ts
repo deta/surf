@@ -98,10 +98,14 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
   }
 
   async read(id: string): Promise<T | undefined> {
+    const idasff = await this.t.get(id);
+    // console.warn('updating', id, idasff)
     return await this.t.get(id)
   }
 
   async update(id: string, updatedItem: Partial<T>): Promise<number> {
+    // console.warn("updating", id, updatedItem)
+    // console.warn("typeofT", typeof updatedItem);
     delete updatedItem.createdAt
     updatedItem.updatedAt = new Date().toISOString()
     return await this.t.update(id, updatedItem)
@@ -122,7 +126,7 @@ export class HorizonDatabase extends Dexie {
 
     this.version(1).stores({
       cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
-      horizons: 'id, name, createdAt, updatedAt',
+      horizons: 'id, name, stackingOrder, createdAt, updatedAt',
       resources: 'id, createdAt, updatedAt'
     })
 

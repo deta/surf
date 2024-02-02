@@ -24,6 +24,7 @@ export type HorizonData = {
   name: string
   previewImage?: string
   viewOffsetX: number
+  stackingOrder: string[]
   createdAt: string
   updatedAt: string
 }

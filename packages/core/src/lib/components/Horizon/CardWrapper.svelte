@@ -2,7 +2,7 @@
 
 <script lang="ts">
   import { SvelteComponent, createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import type { Writable } from 'svelte/store'
+  import { get, type Writable } from 'svelte/store'
 
   import {
     Draggable,
@@ -54,6 +54,11 @@
   }
 
   const handleDragEnd = (_: any) => {
+    console.warn(horizon)
+    const board = horizon.board;
+    if (!board) console.error('No board found ond rag end')
+    const state = get(board!.state);
+    $card.stacking_order = get(state.stackingOrder).indexOf($card.id)
     updateCard()
   }
 
@@ -123,6 +128,7 @@
       </Draggable>
     </div>
 
+    {$card.id}
   <div class="content tela-ignore">
     {#if $card.type === 'browser'}
       <LazyComponent this={BrowserCard}>

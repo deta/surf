@@ -10,7 +10,10 @@
     snapToGrid,
     hoistPositionable,
 
-    hasClassOrParentWithClass
+    hasClassOrParentWithClass,
+
+    moveToStackingTop
+
 
   } from '@horizon/tela'
   import type { IBoard, IPositionable, Vec4 } from '@horizon/tela'
@@ -56,7 +59,8 @@
     POSITIONABLE_KEY: 'id'
   })
 
-  const board: IBoard<any, any> = createBoard(settings, writable([]), {}, 'idle', {})
+  const stack = writable([] as string[]);
+  const board: IBoard<any, any> = createBoard(settings, stack, {}, 'idle', {})
 
   const state = board.state
   const selectionCss = $state.selectionCss
@@ -88,7 +92,20 @@
   }
 
   const loadHorizon = () => {
-    $state.stackingOrder.set($cards.map((e) => get(e).id))
+    // console.warn("Loading with", $cards.map(e => { return get(e)}))
+    console.warn("Loadign with stack", get(horizon.stackingOrder))
+
+    $state.stackingOrder = horizon.stackingOrder
+
+    $state.stackingOrder.subscribe(async (e) => {
+      if (horizon) {
+        await horizon.storage.horizons.update(horizon.id, {
+        ...horizon.data,
+        stackingOrder: get(horizon.stackingOrder)
+       })
+      }
+     })
+    // $state.stackingOrder.set([...$cards].sort((a, b) => { return get(a).stacking_order - get(b).stacking_order }).map((e) => get(e).id))
     $state.viewOffset.set({ x: data.viewOffsetX, y: 0 })
 
     viewOffset.subscribe((e) => {
@@ -158,15 +175,18 @@
       height: size.y
     }
 
+
     if (event.metaKey || event.ctrlKey) {
       log.debug('creating new browser card', position)
-      horizon.addCardBrowser('about:blank', position)
+      horizon.addCardBrowser('about:blank', position).then((e) => {
+        moveToStackingTop($state.stackingOrder, get(e).id)
+      })
     } else {
       log.debug('creating new text card', position)
-      horizon.addCardText('', position)
+      horizon.addCardText('', position).then((e) => {
+        moveToStackingTop($state.stackingOrder, get(e).id)
+      })
     }
-
-    $state.stackingOrder.set($cards.map((e) => get(e).id))
   }
 
   const handleCardChange = async (e: CustomEvent<Card>) => {
@@ -209,21 +229,31 @@
   // TODO fix types to get rid of this type conversion
   $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
 
-  let unsubscribeCards: (() => void) | undefined
+  onDestroy($state.stackingOrder.subscribe((e) => {
+    $cards.forEach(c => { // TODO: THis succs for many perf reason. get rid of it!
+      c.update(_c => {
+        _c.stacking_order = get($state.stackingOrder).indexOf(get(c).id)
+        horizon.updateCard(_c.id, { stacking_order: _c.stacking_order})
+        return _c
+      })
+    })
+  }));
+
   onMount(() => {
+
+    // const stack = [...$cards].sort((a, b) => { return get(a).stacking_order - get(b).stacking_order }).map((e) => get(e).id);
+
     loadHorizon()
     handleWindowResize()
 
     horizon.attachBoard(board)
 
-    unsubscribeCards = cards.subscribe((e) => {
-      $state.stackingOrder.set(e.map((e) => get(e).id))
-    })
+    stack.set(get(horizon.stackingOrder))
+    $state.stackingOrder = stack;
   })
 
   onDestroy(() => {
     horizon.detachBoard()
-    if (unsubscribeCards) unsubscribeCards()
   })
 </script>
 
