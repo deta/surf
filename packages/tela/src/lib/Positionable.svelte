@@ -69,6 +69,7 @@
   class:hoisted={$positionable.hoisted}
   class:dragging
   bind:this={el}
+  on:mousedown
 >
   <slot />
 </div>

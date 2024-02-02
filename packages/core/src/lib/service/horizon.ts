@@ -16,6 +16,7 @@ export class Horizon {
   lastUsed: number
   data: HorizonData
   cards: Writable<Writable<Card>[]>
+  activeCardId: Writable<string | null>
   signalChange: (horizon: Horizon) => void
   board: IBoard<any, any> | null
 
@@ -35,6 +36,7 @@ export class Horizon {
 
     this.data = data
     this.cards = writable([])
+    this.activeCardId = writable(null)
     this.signalChange = signalChange
     this.board = null
 
