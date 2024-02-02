@@ -176,9 +176,9 @@
 
         <div class="favicon-wrapper">
           {#if !$isLoading}
-            <img in:fly={{ y: 10, delay: 500, duration: 500 }} out:fly={{ y: -10, delay: 500, duration: 500 }} class="bottom-bar-favicon" src={$faviconURL} alt={$title}/>
+            <img in:fly={{ y: 10, duration: 500 }} out:fly={{ y: -10, duration: 500 }} class="bottom-bar-favicon" src={$faviconURL} alt={$title}/>
           {:else}
-            <img in:fly={{ y: 10, delay: 500, duration: 500 }} out:fly={{ y: -10, delay: 500, duration: 500 }} class="bottom-bar-favicon" src={defaultFavicon} alt={$title}/>
+            <img in:fly={{ y: 10, duration: 500 }} out:fly={{ y: -10, duration: 500 }} class="bottom-bar-favicon" src={defaultFavicon} alt={$title}/>
           {/if}
         </div>
       
