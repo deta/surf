@@ -128,7 +128,6 @@
       </Draggable>
     </div>
 
-    {$card.id}
   <div class="content tela-ignore">
     {#if $card.type === 'browser'}
       <LazyComponent this={BrowserCard}>
