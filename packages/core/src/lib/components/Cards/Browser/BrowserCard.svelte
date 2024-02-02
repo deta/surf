@@ -93,23 +93,6 @@
 </script>
 
 <div class="browser-card">
-  <div class="top-bar">
-    <button class="nav-button" on:click={webview?.goBack} disabled={!$canGoBack}> ← </button>
-    <button class="nav-button" on:click={webview?.goForward} disabled={!$canGoForward}> → </button>
-    <button class="nav-button" on:click={webview?.reload}> ↻ </button>
-    <input
-      on:focus={() => (editing = true)}
-      on:blur={() => (editing = false)}
-      type="text"
-      class="address-bar"
-      placeholder="Enter URL or search term"
-      bind:this={inputEl}
-      bind:value
-      on:keyup={handleKeyUp}
-    />
-    <div class="page-title">{$title}</div>
-  </div>
-
   <div class="browser-wrapper">
     <WebviewWrapper
       bind:this={webview}
@@ -121,10 +104,34 @@
       on:didFinishLoad={handleFinishLoading}
     />
   </div>
+  <div class="bottom-bar">
+    <div class="bottom-bar-trigger">
+      <img class="bottom-bar-favicon" src="https://deta.space/favicon.png" />
+    </div>
+    <div class="bottom-bar-collapse">
+      <button class="nav-button" on:click={webview?.goBack} disabled={!$canGoBack}> ← </button>
+      <button class="nav-button" on:click={webview?.goForward} disabled={!$canGoForward}> → </button>
+      <div class="address-bar-wrapper">
+        <input
+        on:focus={() => (editing = true)}
+        on:blur={() => (editing = false)}
+        type="text"
+        class="address-bar"
+        placeholder="Enter URL or search term"
+        bind:this={inputEl}
+        bind:value
+        on:keyup={handleKeyUp}
+      />
+      </div>
+      <button class="nav-button" on:click={webview?.reload}> ↻ </button>
+      <!-- <div class="page-title">{$title}</div> -->
+    </div>
+  </div>
 </div>
 
 <style>
   .browser-card {
+    position: relative;
     width: 100%;
     height: 100%;
     display: flex;
@@ -136,41 +143,104 @@
     height: 100%;
   }
 
-  .top-bar {
+  .bottom-bar {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    background-color: #f5f5f5;
-    padding: 8px;
-    border-bottom: 1px solid #ddd;
+    background-color: rgba(255,255,255,0.8);
+    backdrop-filter: blur(16px);
+    padding: 4px;
+    border-radius: 8px;
     overflow: hidden;
+    border: 0.5px solid rgba(0,0,0, 0.05)
+  }
+
+  .bottom-bar-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bottom-bar-favicon {
+      width: 60%;
+      height: 60%;
+      max-width: 32px;
+      max-height: 32px;
+  }
+
+  .bottom-bar-collapse {
+    position: relative;
+    margin-left: 8px;
+    border-radius: 6px;
+    padding: 4px;
+    background: #FBEAF2;
+    backdrop-filter: blur(2px);
+    border: 0.5px solid rgba(0,0,0, 0.05)
   }
 
   .nav-button {
-    background-color: #e0e0e0;
     border: none;
     padding: 6px 12px;
-    margin-right: 8px;
+    font-size: 1rem;
     cursor: pointer;
     transition: background-color 0.3s;
     border-radius: 3px;
+    background: none;
+    color: #E173A8;
   }
 
   .nav-button:disabled {
-    background-color: #cccccc;
+    opacity: .4;
     cursor: default;
   }
 
   .nav-button:hover:enabled {
-    background-color: #d5d5d5;
+    background-color: #ffffff;
   }
 
+  .address-bar-wrapper { 
+    position: relative;
+    top: 0;
+    display: inline-block;
+  }
+
+
   .address-bar {
-    flex-grow: 1;
-    padding: 6px 12px;
-    border: 1px solid #ddd;
+    position: relative;
+    display: inline-block;
+    top: -1.5px;
+    height: 100%;
+    width: 20rem;
+    padding: 6px 0 6px 6px;
     border-radius: 4px;
-    margin: 0 12px;
+    border: none;
+    background: #FBEAF2;
+    color: #212121;
+    letter-spacing: 0.02rem;
+    outline-offset: -2px;
+    outline-style: hidden;
+    transition: background 120ms ease-out, outline-offset 200ms cubic-bezier(.33, 1, .68, 1);
+  }
+  
+  .address-bar:before {
+    content: "";
+    display: block;
+    width: 10px;
+    height: 10px;
+    background: red;
+  }
+
+  .address-bar:focus {
+    background: #ffffff;
+    outline: 2px solid #E173A8;
+    outline-offset: 2px;
+  }
+
+  .address-bar:hover {
+    background: #ffffff;
   }
 
   .page-title {
