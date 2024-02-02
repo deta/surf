@@ -27,6 +27,8 @@
   <div class="content">
     <slot />
   </div>
+
+  <slot name="layer" />
 </div>
 
 <style lang="scss">
@@ -44,6 +46,7 @@
     box-sizing: border-box;
     border: 0px solid transparent;
     border-radius: 0;
+    position: relative;
   }
 
   .content {
