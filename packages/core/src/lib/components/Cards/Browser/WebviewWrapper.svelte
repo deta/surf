@@ -3,9 +3,12 @@
   import type { WebviewTag } from 'electron'
   import { createEventDispatcher, onMount } from 'svelte'
 
-  const dispatch = createEventDispatcher<{ wheelWebview: any; didFinishLoad: void; focusWebview : any;
+  const dispatch = createEventDispatcher<{
+    wheelWebview: any
+    didFinishLoad: void
+    focusWebview: any
     newWindowWebview: any
-   }>()
+  }>()
 
   export let src: string
   export let partition: string
@@ -71,6 +74,8 @@
           break
       }
     })
+
+    // webview.addEventListener('dom-ready', (_) => webview.openDevTools())
 
     webview.addEventListener('did-navigate', (e: any) => url.set(e.url))
     webview.addEventListener('did-navigate-in-page', (e: any) => url.set(e.url))
