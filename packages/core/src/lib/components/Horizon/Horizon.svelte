@@ -4,7 +4,6 @@
 
   import {
     Board,
-    Grid,
     createSettings,
     createBoard,
     clamp,
@@ -23,6 +22,7 @@
   import type { Card } from '../../types'
   import { useDebounce } from '../../utils/debounce'
   import HorizonInfo from './HorizonInfo.svelte'
+  import Grid from './Grid.svelte'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -41,7 +41,7 @@
     CAN_SELECT: true,
     PAN_DIRECTION: 'x',
     SNAP_TO_GRID: true,
-    GRID_SIZE: 30,
+    GRID_SIZE: 10,
     BOUNDS: {
       minX: 0,
       minY: 0,
