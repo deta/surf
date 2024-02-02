@@ -424,8 +424,6 @@
             return v;
           });
 
-          console.log('intentional', e.deltaY);
-
           wheelResetTimer && clearTimeout(wheelResetTimer);
           wheelResetTimer = setTimeout(() => {
             stillScrolling = false;
