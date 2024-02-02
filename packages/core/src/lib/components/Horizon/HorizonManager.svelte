@@ -21,6 +21,7 @@
   import { wait } from '../../utils/time'
   import type { Card } from '../../types'
   import { Icon } from '..'
+  import HorizonInfo from './HorizonInfo.svelte'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -558,6 +559,7 @@
           <Horizon
             {horizon}
             active={$activeHorizonId === horizon.id && !showStackOverview}
+            inOverview={showStackOverview}
             on:change={handleHorizonChange}
             on:cardChange={handleCardChange}
           />
@@ -567,9 +569,7 @@
 
         <svelte:fragment slot="layer">
           {#if showStackOverview}
-            <div transition:fade={{ duration: TRANSITION_DURATION / 2 }} class="horizon-info">
-              {horizon.data.name} {horizon.state === 'hot' ? '🔥' : '🧊'}
-            </div>
+            <HorizonInfo horizon={horizon} />
 
             <button on:click|preventDefault|stopPropagation={() => deleteHorizon(horizon)} transition:fade={{ duration: TRANSITION_DURATION / 2 }} class="horizon-action">
               <Icon name="close" />
@@ -615,22 +615,6 @@
     // transition: transform var(--transition-duration) var(--transition-timing-function);
   }
 
-  .horizon-info {
-    position: absolute;
-    z-index: 100;
-    bottom: 0.75rem;
-    left: 0.75rem;
-    padding: 0.3rem 0.5rem;
-    background: #52525248;
-    border: 2px solid #52525232;
-    border-radius: var(--theme-border-radius);
-    backdrop-filter: blur(10px);
-    color: white;
-    font-size: 0.7rem;
-    font-weight: 500;
-    pointer-events: none;
-  }
-
   .horizon-action {
     appearance: none;
     outline: none;
@@ -641,12 +625,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.3rem;
-    background: #52525248;
-    border: 2px solid #52525232;
+    background: #f5f5f5;
+    padding: 0.5rem;
     border-radius: var(--theme-border-radius);
-    backdrop-filter: blur(10px);
-    color: white;
+    border: 1px solid #ddd;
     cursor: pointer;
   }
 </style>

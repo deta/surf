@@ -22,9 +22,11 @@
   import { takePageScreenshot } from '../../utils/screenshot'
   import type { Card } from '../../types'
   import { useDebounce } from '../../utils/debounce'
+  import HorizonInfo from './HorizonInfo.svelte'
 
   export let active: boolean = true
   export let horizon: Horizon
+  export let inOverview: boolean = false
 
   const cards = horizon.cards
   const data = horizon.data
@@ -229,6 +231,10 @@
 
 
 <div data-horizon={horizon.id} data-horizon-state={horizon.state} data-horizon-active={active} class="horizon">
+  {#if !inOverview}
+    <HorizonInfo horizon={horizon} on:change />
+  {/if}
+
   <Board
     {settings}
     {board}
