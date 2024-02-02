@@ -71,10 +71,10 @@
   const addBrowserHorizon = async () => {
     const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
     const browserCard = await newHorizon.addCardBrowser('about:blank', {
-      x: SAFE_AREA_PADDING / 2,
-      y: SAFE_AREA_PADDING / 2,
-      width: window.innerWidth - SAFE_AREA_PADDING,
-      height: window.innerHeight - SAFE_AREA_PADDING,
+      x: SAFE_AREA_PADDING,
+      y: SAFE_AREA_PADDING,
+      width: window.innerWidth - (SAFE_AREA_PADDING * 2),
+      height: window.innerHeight - (SAFE_AREA_PADDING * 2),
     })
 
     log.debug('Create new browser horizon', browserCard, newHorizon)
@@ -88,11 +88,18 @@
 
   const deleteHorizon = async(horizon: IHorizon) => {
     log.debug('Confirm delete horizon', horizon.id)
-
     const confirm = window.confirm(`Are you sure you want to delete ${horizon.data.name}?`)
     if (confirm) {
       await horizonManager.deleteHorizon(horizon)
-      sortHorizons()
+
+      if (horizon.id === $activeHorizonId || horizon.id === selectedHorizonId) {
+        const nextHorizon = sortedHorizons[activeStackItemIdx - 1]
+        if (nextHorizon) {
+          changeActiveHorizon(nextHorizon, true)
+        } else {
+          changeActiveHorizon(sortedHorizons[activeStackItemIdx + 1], true)
+        }
+      }
     } else {
       log.debug('Delete horizon canceled')
     }
