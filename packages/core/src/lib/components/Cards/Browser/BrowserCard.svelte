@@ -1,5 +1,4 @@
 <!-- <svelte:options immutable={true} /> -->
-
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { get, type Unsubscriber, type Writable } from 'svelte/store'
@@ -83,6 +82,7 @@
   let value = ''
   let editing = false
   let defaultFavicon = 'https://deta.space/favicon.png'
+  let showNavbar = false
   
 
   $: url = webview?.url
@@ -104,6 +104,13 @@
     value = $url ?? ''
   }
 
+  function displayNavbar () {
+    showNavbar = true
+  }
+
+  function disableNavbar () {
+    showNavbar = false
+  }
 
   function generateRootDomain(urlInput: string | URL): string {
     if (!urlInput) {
@@ -163,33 +170,38 @@
     />
   </div>
   <div class="bottom-bar">
-    <div class="bottom-bar-trigger">
-      <div class="favicon-wrapper">
-        {#if !$isLoading}
-          <img in:fly={{ y: 10, delay: 500, duration: 500 }} out:fly={{ y: -10, delay: 500, duration: 500 }} class="bottom-bar-favicon" src={$faviconURL} alt={$title}/>
-        {:else}
-          <img in:fly={{ y: 10, delay: 500, duration: 500 }} out:fly={{ y: -10, delay: 500, duration: 500 }} class="bottom-bar-favicon" src={defaultFavicon} alt={$title}/>
-        {/if}
-      </div>
-    </div>
-    <div class="bottom-bar-collapse">
-      <button class="nav-button" on:click={webview?.goBack} disabled={!$canGoBack}> ← </button>
-      <button class="nav-button" on:click={webview?.goForward} disabled={!$canGoForward}> → </button>
-      <div class="address-bar-wrapper">
-        <input
-        on:focus={() => (editing = true)}
-        on:blur={() => (editing = false)}
-        type="text"
-        class="address-bar"
-        placeholder="Enter URL or search term"
-        bind:this={inputEl}
-        bind:value
-        on:keyup={handleKeyUp}
-      />
-      </div>
-      <button class="nav-button" on:click={webview?.reload}> ↻ </button>
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <div class="bottom-bar-trigger" on:mouseenter={displayNavbar} on:mouseleave={disableNavbar}>
 
-      <!-- <div class="page-title">{$title}</div> -->
+        <div class="favicon-wrapper">
+          {#if !$isLoading}
+            <img in:fly={{ y: 10, delay: 500, duration: 500 }} out:fly={{ y: -10, delay: 500, duration: 500 }} class="bottom-bar-favicon" src={$faviconURL} alt={$title}/>
+          {:else}
+            <img in:fly={{ y: 10, delay: 500, duration: 500 }} out:fly={{ y: -10, delay: 500, duration: 500 }} class="bottom-bar-favicon" src={defaultFavicon} alt={$title}/>
+          {/if}
+        </div>
+      
+        {#if showNavbar}
+        <div class="bottom-bar-collapse" in:fly={{ x: -10, duration: 160 }} out:fly={{ x: -10, duration: 60 }}>
+          <button class="nav-button" on:click={webview?.goBack} disabled={!$canGoBack}> ← </button>
+          <button class="nav-button" on:click={webview?.goForward} disabled={!$canGoForward}> → </button>
+          <div class="address-bar-wrapper">
+            <input
+            on:focus={() => (editing = true)}
+            on:blur={() => (editing = false)}
+            type="text"
+            class="address-bar"
+            placeholder="Enter URL or search term"
+            bind:this={inputEl}
+            bind:value
+            on:keyup={handleKeyUp}
+          />
+          </div>
+          <button class="nav-button" on:click={webview?.reload}> ↻ </button>
+          <!-- <div class="page-title">{$title}</div> -->
+        </div>
+      {/if}
     </div>
   </div>
 </div>
@@ -238,6 +250,7 @@
 
   .favicon-wrapper {
     position: relative;
+    margin: 4px;
     width: 32px;
     height: 32px;
   }
