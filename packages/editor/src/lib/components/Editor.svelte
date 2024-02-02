@@ -59,4 +59,8 @@
     overflow-y: auto;
     cursor: text;
   }
+
+  :global(.editor-wrapper > div) {
+    height: 100%;
+  }
 </style>
