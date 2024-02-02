@@ -148,13 +148,6 @@
         return ""; // or return some default error indication as needed
     }
 }
-
-
-
-  const handleFinishLoading = () => {
-    log.debug('finished loading', get(card))
-    dispatch('load', get(card))
-  }
 </script>
 
 <div class="browser-card">
