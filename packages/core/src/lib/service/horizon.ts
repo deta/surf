@@ -16,6 +16,7 @@ export class Horizon {
   lastUsed: number
   data: HorizonData
   cards: Writable<Writable<Card>[]>
+  activeCardId: Writable<string | null>
   signalChange: (horizon: Horizon) => void
   board: IBoard<any, any> | null
 
@@ -35,6 +36,7 @@ export class Horizon {
 
     this.data = data
     this.cards = writable([])
+    this.activeCardId = writable(null)
     this.signalChange = signalChange
     this.board = null
 
@@ -96,7 +98,7 @@ export class Horizon {
   async getCard(id: string) {
     const localCard = get(this.cards).find((c) => get(c).id === id)
     if (localCard) return get(localCard)
-    
+
     // TODO: maybe check storage as fallback?
     return null
   }
@@ -441,7 +443,7 @@ export class HorizonsManager {
     const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
 
     this.log.debug(`Deleting horizon ${horizon.id}`)
-    
+
     await this.storage.horizons.delete(horizon.id)
     await this.storage.deleteCardsByHorizonId(horizon.id)
 
