@@ -103,6 +103,10 @@ export class Horizon {
     return null
   }
 
+  setActiveCard(id: string | null) {
+    this.activeCardId.set(id)
+  }
+
   async updateCard(id: string, updates: Partial<Card>) {
     const card = await this.getCard(id)
     if (!card) throw new Error(`Card ${id} not found`)

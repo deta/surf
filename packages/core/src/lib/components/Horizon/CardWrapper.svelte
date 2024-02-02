@@ -36,12 +36,12 @@
   const minSize = { x: 100, y: 100 }
   const maxSize = { x: Infinity, y: Infinity }
 
-  $: activeCardId = horizon.activeCardId
 
   let el: HTMLElement
 
   $: card = positionable as Writable<Card> // todo: fix this unnecessary cast
   $: cardTitle = $card.type[0].toUpperCase() + $card.type.slice(1)
+  $: activeCardId = horizon.activeCardId
   $: active = $activeCardId === $card.id
 
   const updateCard = () => {
@@ -50,12 +50,11 @@
   }
 
   const handleMouseDown = () => {
-    $activeCardId = $card.id
+    horizon.setActiveCard($card.id)
   }
 
   const handleDragEnd = (_: any) => {
     updateCard()
-    $activeCardId = $card.id
   }
 
   const handleDelete = () => {
