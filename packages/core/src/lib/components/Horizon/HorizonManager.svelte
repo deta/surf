@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte'
+  import { onDestroy, onMount, tick } from 'svelte'
   import { fade } from 'svelte/transition'
 
   import { Lethargy } from "lethargy-ts";
+  import { twoFingers, type Gesture } from '@skilitics-public/two-fingers'
 
   import { API } from '@horizon/core/src/lib/service/api'
   import { HorizonsManager, Horizon as IHorizon } from '@horizon/core/src/lib/service/horizon'
@@ -363,6 +364,18 @@
       }
     }
 
+    const handleGestureEnd = (g: Gesture) => {
+      log.debug('gesture end', g)
+
+      if (g.scale < 1 && !showStackOverview) {
+        log.debug('pinch out')
+        showStackOverview = true
+      } else if (g.scale > 1 && showStackOverview) {
+        log.debug('pinch in')
+        selectHorizonAndCloseOverview()
+      }
+    }
+
     let wheelResetTimer: any = null;
     function handleWheel(e: WheelEvent) {
       if (showStackOverview) {
@@ -436,11 +449,20 @@
     // TODO: (Performance) We shuld only kick it off once the spring is changed probably and stop it after it settled!
     onMount(frame)
 
+  let unregisterTwoFingers: ReturnType<typeof twoFingers> | null = null
   onMount(async () => {
+    unregisterTwoFingers = twoFingers(window as unknown as HTMLElement, {
+      onGestureEnd: handleGestureEnd
+    })
+
     const horizonId = await horizonManager.init()
     log.debug('initialized', horizonId)
 
     sortHorizons()
+  })
+
+  onDestroy(() => {
+    if (unregisterTwoFingers) unregisterTwoFingers()
   })
 </script>
 
