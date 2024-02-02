@@ -61,6 +61,23 @@
     horizon.setActiveCard($card.id)
   }
 
+  const handleFinishLoading = () => {
+    log.debug('finished loading', get(card))
+    dispatch('load', get(card))
+  }
+
+  const handleWebviewNewWindow = (e: any) => {
+    if (e.detail.disposition === 'new-window') return
+
+    // TODO: edge case: can potentially be out of view
+    horizon.addCardBrowser(e.detail.url, {
+      x: $card.x + $card.width + 30,
+      y: $card.y,
+      width: $card.width,
+      height: $card.height
+    })
+  }
+
   let value = ''
   let editing = false
 
@@ -72,11 +89,6 @@
 
   $: if (!editing && $url !== 'about:blank') {
     value = $url ?? ''
-  }
-
-  const handleFinishLoading = () => {
-    log.debug('finished loading', get(card))
-    dispatch('load', get(card))
   }
 </script>
 
@@ -105,7 +117,7 @@
       partition="persist:horizon"
       on:wheelWebview={(event) => log.debug('wheel event from the webview: ', event.detail)}
       on:focusWebview={handleWebviewFocus}
-      on:newWindowWebview={(event) => console.log('new window event: ', event.detail)}
+      on:newWindowWebview={handleWebviewNewWindow}
       on:didFinishLoad={handleFinishLoading}
     />
   </div>
