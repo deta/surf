@@ -18,8 +18,9 @@
   export const canGoForward = writable(false)
   export const isLoading = writable(false)
   export const title = writable('')
+  export const faviconURL = writable<string[]>([])
 
-  export const historyStack = writable([] as string[])
+  export const historyStack = writable<string[]>([])
   export const currentHistoryIndex = writable(-1)
   let programmaticNavigation = false
 
@@ -83,6 +84,9 @@
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
     webview.addEventListener('page-title-updated', (e: any) => title.set(e.title))
     webview.addEventListener('did-finish-load', () => dispatch('didFinishLoad'))
+    webview.addEventListener('page-favicon-updated', (e:any) => {
+      faviconURL.set(e.favicons)
+    })
   })
 
   export function navigate(targetUrl: string): void {

@@ -4,6 +4,8 @@
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { get, type Unsubscriber, type Writable } from 'svelte/store'
 
+  import { fade, fly } from 'svelte/transition';
+
   import WebviewWrapper from './WebviewWrapper.svelte'
   import type { CardBrowser, CardEvents } from '../../../types'
   import { useLogScope } from '../../../utils/log'
@@ -80,12 +82,15 @@
 
   let value = ''
   let editing = false
+  let defaultFavicon = 'https://deta.space/favicon.png'
+  
 
   $: url = webview?.url
   $: title = webview?.title
   $: isLoading = webview?.isLoading
   $: canGoBack = webview?.canGoBack
   $: canGoForward = webview?.canGoForward
+  $: faviconURL = webview?.faviconURL
 
   $: if (!editing && $url !== 'about:blank') {
     value = $url ?? ''
@@ -100,28 +105,49 @@
   }
 
 
-  function generateRootDomain (url: string | URL) : string {
-      if(url === ''){ return ""}
-      if (typeof url === 'string')
-          url = new URL(url);
+  function generateRootDomain(urlInput: string | URL): string {
+    if (!urlInput) {
+        return ""; // Return empty string if input is falsy (empty, null, undefined, etc.)
+    }
 
-      const domain = url.hostname;
-      const elems = domain.split('.');
-      const iMax = elems.length - 1;
+    let url;
+    try {
+        // If urlInput is a string, validate and parse it. Otherwise, use it directly.
+        if (typeof urlInput === 'string') {
+            // Basic validation to check if string resembles a URL
+            if (/^https?:\/\/[^ "]+$/.test(urlInput)) {
+                url = new URL(urlInput);
+            } else {
+                throw new Error("Invalid URL format");
+            }
+        } else {
+            url = urlInput;
+        }
 
-      const elem1 = elems[iMax - 1];
-      const elem2 = elems[iMax];
+        const domain = url.hostname;
+        const elems = domain.split('.');
+        if (elems.length < 2) {
+            return ""; // Not enough domain parts
+        }
 
-      const isSecondLevelDomain = iMax >= 3 && (elem1 + elem2).length <= 5;
-      return (isSecondLevelDomain ? elems[iMax - 2] + '.' : '') + elem1 + '.' + elem2;
-  }
+        const iMax = elems.length - 1;
+        const elem1 = elems[iMax - 1];
+        const elem2 = elems[iMax];
+        const isSecondLevelDomain = iMax >= 3 && (elem1 + elem2).length <= 5;
+
+        return (isSecondLevelDomain ? elems[iMax - 2] + '.' : '') + elem1 + '.' + elem2;
+    } catch (error) {
+        console.error('Error parsing URL:', error);
+        return ""; // or return some default error indication as needed
+    }
+}
+
+
 
   const handleFinishLoading = () => {
     log.debug('finished loading', get(card))
     dispatch('load', get(card))
   }
-
-  
 </script>
 
 <div class="browser-card">
@@ -138,7 +164,13 @@
   </div>
   <div class="bottom-bar">
     <div class="bottom-bar-trigger">
-      <img class="bottom-bar-favicon" src="https://deta.space/favicon.png" />
+      <div class="favicon-wrapper">
+        {#if !$isLoading}
+          <img in:fly={{ y: 10, delay: 500, duration: 500 }} out:fly={{ y: -10, delay: 500, duration: 500 }} class="bottom-bar-favicon" src={$faviconURL} alt={$title}/>
+        {:else}
+          <img in:fly={{ y: 10, delay: 500, duration: 500 }} out:fly={{ y: -10, delay: 500, duration: 500 }} class="bottom-bar-favicon" src={defaultFavicon} alt={$title}/>
+        {/if}
+      </div>
     </div>
     <div class="bottom-bar-collapse">
       <button class="nav-button" on:click={webview?.goBack} disabled={!$canGoBack}> ← </button>
@@ -156,6 +188,7 @@
       />
       </div>
       <button class="nav-button" on:click={webview?.reload}> ↻ </button>
+
       <!-- <div class="page-title">{$title}</div> -->
     </div>
   </div>
@@ -201,6 +234,19 @@
       height: 60%;
       max-width: 32px;
       max-height: 32px;
+  }
+
+  .favicon-wrapper {
+    position: relative;
+    width: 32px;
+    height: 32px;
+  }
+
+  .favicon-wrapper > img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%)
   }
 
   .bottom-bar-collapse {
