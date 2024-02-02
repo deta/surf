@@ -220,6 +220,17 @@ export class Horizon {
       }
     })
   }
+  
+  async duplicateCard(idOrCard: Card | string, position: CardPosition) {
+    const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
+    if (!card) throw new Error(`Card ${idOrCard} not found`)
+
+    return this.addCard({
+      ...position,
+      type: card.type,
+      data: card.data
+    })
+  }
 }
 
 export class HorizonsManager {
