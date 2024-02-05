@@ -16,7 +16,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.style.background = 'blue'
       div.style.position = 'absolute'
       div.style.left = `${e.clientX + window.scrollX}px`
-      div.style.top = `${e.clientY + window.scrollY}px`
+      div.style.top = `${e.clientY + window.scrollY - 30}px`
       div.draggable = true
 
       document.body.appendChild(div)
@@ -30,7 +30,8 @@ window.addEventListener('DOMContentLoaded', (_) => {
   document.addEventListener('mousedown', (e: MouseEvent) => {
     const div = document.getElementById('horizonTextDragHandle')
     if (div && e.target !== div) {
-      div.parentNode?.removeChild(div)
+        div.parentNode?.removeChild(div)
+        window.getSelection()?.removeAllRanges()
     }
   })
 
