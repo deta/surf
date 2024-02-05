@@ -261,11 +261,12 @@
 
   const handleKeyDown = (event: KeyboardEvent) => {
     const modKeyPressed = event.metaKey || event.ctrlKey
-    if (modKeyPressed && event.key === 'n') {
+    if (!modKeyPressed) return
+
+    if (event.key === 'n') {
       event.preventDefault()
       addHorizon()
     } else if (
-      modKeyPressed &&
       (event.key === 'k' || event.key === ' ' || event.code === 'Space')
     ) {
       event.preventDefault()
@@ -274,7 +275,7 @@
       } else {
         showStackOverview = true
       }
-    } else if (modKeyPressed && event.key === 'b') {
+    } else if (event.key === 'b') {
       addBrowserHorizon()
     } else if (event.key === 'Escape') {
       window.location.reload()
@@ -284,8 +285,7 @@
     } else if (event.key === 'ArrowDown') {
       event.preventDefault()
       moveToNextHorizon()
-    }
-    else if (event.ctrlKey && event.key === "9") {
+    } else if (event.key === "9") {
       showFlickSettings = !showFlickSettings;
     }
   }
