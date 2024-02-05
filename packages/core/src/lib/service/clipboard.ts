@@ -1,5 +1,3 @@
-import { hasClassOrParentWithClass } from '@horizon/tela'
-
 export const SUPPORTED_MIMES = [
   'text/plain',
   'text/html',
