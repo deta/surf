@@ -10,6 +10,8 @@
   import { useLogScope } from '../../../utils/log'
   import { parseStringIntoUrl } from '../../../utils/url'
   import Horizon from '../../Horizon/Horizon.svelte'
+  import defaultFavicon from '../../../../../public/assets/deta.svg'
+
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -81,7 +83,6 @@
 
   let value = ''
   let editing = true
-  let defaultFavicon = 'https://deta.space/favicon.png'
   let showNavbar = true
   
 
