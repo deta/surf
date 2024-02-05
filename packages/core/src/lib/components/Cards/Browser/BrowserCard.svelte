@@ -83,7 +83,7 @@
 
   let value = ''
   let editing = true
-  let showNavbar = true
+  let showNavbar = false
   
 
   $: url = webview?.url
@@ -99,6 +99,7 @@
   }
 
   $: if (!editing) {
+    // Shortens URL from xyz.com/sss-www-www to xyz.com
     value = generateRootDomain(value)
   }
 
@@ -106,12 +107,20 @@
     value = $url ?? ''
   }
 
+  // Opens the navbar when a new browser card is created
+  $: if($url == 'about:blank' || $url == '') {
+    showNavbar = true
+  }
+
   function displayNavbar () {
     showNavbar = true
   }
 
   function disableNavbar () {
+    // prevents navbar from being closed on intial card
     if($url == 'about:blank' || $url == '') {return}
+    // ...also when the bar is focussed
+    if(editing) {return}
     showNavbar = false
   }
 
