@@ -10,6 +10,7 @@
   import { useLogScope } from '../../../utils/log'
   import { parseStringIntoUrl } from '../../../utils/url'
   import Horizon from '../../Horizon/Horizon.svelte'
+  import browserBackground from '../../../../../public/assets/browser-background.png'
   import defaultFavicon from '../../../../../public/assets/deta.svg'
 
 
@@ -98,6 +99,11 @@
     value = $url ?? ''
   }
 
+   // Reactive statement to autofocus input when it's available
+   $: if (inputEl && ($url == 'about:blank' || $url == '')) {
+    inputEl.focus();
+  }
+
   $: if (!editing) {
     // Shortens URL from xyz.com/sss-www-www to xyz.com
     value = generateRootDomain(value)
@@ -163,6 +169,9 @@
 </script>
 
 <div class="browser-card">
+  {#if !$didFinishLoad }
+    <img class="browser-background" src={browserBackground} alt={$title}/>
+  {/if}
   <div class="browser-wrapper">
     <WebviewWrapper
       bind:this={webview}
@@ -223,6 +232,14 @@
   .browser-wrapper {
     width: 100%;
     height: 100%;
+  }
+
+  .browser-background {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
   }
 
   .bottom-bar {
