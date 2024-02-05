@@ -10,6 +10,8 @@
   import { useLogScope } from '../../../utils/log'
   import { parseStringIntoUrl } from '../../../utils/url'
   import Horizon from '../../Horizon/Horizon.svelte'
+  import defaultFavicon from '../../../../../public/assets/deta.svg'
+
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -81,13 +83,13 @@
 
   let value = ''
   let editing = false
-  let defaultFavicon = 'https://deta.space/favicon.png'
   let showNavbar = false
   
 
   $: url = webview?.url
   $: title = webview?.title
   $: isLoading = webview?.isLoading
+  $: didFinishLoad = webview?.didFinishLoad
   $: canGoBack = webview?.canGoBack
   $: canGoForward = webview?.canGoForward
   $: faviconURL = webview?.faviconURL
@@ -97,6 +99,7 @@
   }
 
   $: if (!editing) {
+    // Shortens URL from xyz.com/sss-www-www to xyz.com
     value = generateRootDomain(value)
   }
 
@@ -104,11 +107,20 @@
     value = $url ?? ''
   }
 
+  // Opens the navbar when a new browser card is created
+  $: if($url == 'about:blank' || $url == '') {
+    showNavbar = true
+  }
+
   function displayNavbar () {
     showNavbar = true
   }
 
   function disableNavbar () {
+    // prevents navbar from being closed on intial card
+    if($url == 'about:blank' || $url == '') {return}
+    // ...also when the bar is focussed
+    if(editing) {return}
     showNavbar = false
   }
 
@@ -166,9 +178,8 @@
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div class="bottom-bar-trigger" on:mouseenter={displayNavbar} on:mouseleave={disableNavbar}>
-
         <div class="favicon-wrapper">
-          {#if !$isLoading}
+          {#if $didFinishLoad }
             <img in:fly={{ y: 10, duration: 500 }} out:fly={{ y: -10, duration: 500 }} class="bottom-bar-favicon" src={$faviconURL} alt={$title}/>
           {:else}
             <img in:fly={{ y: 10, duration: 500 }} out:fly={{ y: -10, duration: 500 }} class="bottom-bar-favicon" src={defaultFavicon} alt={$title}/>
@@ -206,6 +217,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    container-type: size;
   }
 
   .browser-wrapper {
@@ -233,13 +245,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
   }
 
   .bottom-bar-favicon {
-      width: 60%;
-      height: 60%;
-      max-width: 32px;
-      max-height: 32px;
+      width: 100%;
+      height: 100%;
+      max-width: 28px;
+      max-height: 28px;
   }
 
   .favicon-wrapper {
@@ -247,17 +260,23 @@
     margin: 4px;
     width: 32px;
     height: 32px;
+    padding: 8px 12px;
   }
 
   .favicon-wrapper > img {
     position: absolute;
     top: 50%;
+    width: 16px;
+    height: 16px;
     left: 50%;
     transform: translateX(-50%) translateY(-50%)
   }
 
   .bottom-bar-collapse {
     position: relative;
+    display: flex;
+    width: 100%;
+    width: 22rem;
     margin-left: 8px;
     border-radius: 6px;
     padding: 4px;
@@ -288,6 +307,7 @@
   .address-bar-wrapper { 
     position: relative;
     top: 0;
+    width: 100%;
     display: inline-block;
   }
 
@@ -295,9 +315,8 @@
   .address-bar {
     position: relative;
     display: inline-block;
-    top: -1.5px;
     height: 100%;
-    width: 20rem;
+    width: 100%;
     padding: 6px 0 6px 6px;
     border-radius: 4px;
     border: none;
@@ -327,5 +346,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 0.9rem;
+  }
+
+  @container (max-width: 428px) {
+    .bottom-bar-collapse {
+      width: calc(100% - 1rem);
+    }
+    .bottom-bar {
+      left: 0.5rem;
+      bottom: 0.5rem;
+    }
   }
 </style>

@@ -178,7 +178,7 @@
 
     if (event.metaKey || event.ctrlKey) {
       log.debug('creating new browser card', position)
-      horizon.addCardBrowser('about:blank', position).then((e) => {
+      horizon.addCardBrowser('', position).then((e) => {
         moveToStackingTop($state.stackingOrder, get(e).id)
       })
     } else {

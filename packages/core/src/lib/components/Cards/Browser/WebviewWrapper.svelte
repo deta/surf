@@ -17,6 +17,7 @@
   export const canGoBack = writable(false)
   export const canGoForward = writable(false)
   export const isLoading = writable(false)
+  export const didFinishLoad = writable(false)
   export const title = writable('')
   export const faviconURL = writable<string[]>([])
 
@@ -83,7 +84,10 @@
     webview.addEventListener('did-start-loading', () => isLoading.set(true))
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
     webview.addEventListener('page-title-updated', (e: any) => title.set(e.title))
-    webview.addEventListener('did-finish-load', () => dispatch('didFinishLoad'))
+    webview.addEventListener('did-finish-load', () => {
+      dispatch('didFinishLoad')
+      didFinishLoad.set(true)
+    })
     webview.addEventListener('page-favicon-updated', (e:any) => {
       // Get the biggest favicon (last favicon in array)
       faviconURL.set(e.favicons[e.favicons.length - 1])
