@@ -82,7 +82,7 @@
   }
 
   let value = ''
-  let editing = true
+  let editing = false
   let showNavbar = false
   
 
@@ -229,9 +229,6 @@
     position: absolute;
     bottom: 1rem;
     left: 1rem;
-    right: 1rem;
-    width: calc(100% - 2rem);
-    max-width: 25rem;
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -252,10 +249,10 @@
   }
 
   .bottom-bar-favicon {
-      width: 60%;
-      height: 60%;
-      max-width: 32px;
-      max-height: 32px;
+      width: 100%;
+      height: 100%;
+      max-width: 28px;
+      max-height: 28px;
   }
 
   .favicon-wrapper {
@@ -263,11 +260,14 @@
     margin: 4px;
     width: 32px;
     height: 32px;
+    padding: 8px 12px;
   }
 
   .favicon-wrapper > img {
     position: absolute;
     top: 50%;
+    width: 16px;
+    height: 16px;
     left: 50%;
     transform: translateX(-50%) translateY(-50%)
   }
@@ -276,6 +276,7 @@
     position: relative;
     display: flex;
     width: 100%;
+    width: 22rem;
     margin-left: 8px;
     border-radius: 6px;
     padding: 4px;
@@ -314,7 +315,6 @@
   .address-bar {
     position: relative;
     display: inline-block;
-    top: -1.5px;
     height: 100%;
     width: 100%;
     padding: 6px 0 6px 6px;
@@ -349,11 +349,12 @@
   }
 
   @container (max-width: 428px) {
+    .bottom-bar-collapse {
+      width: calc(100% - 1rem);
+    }
     .bottom-bar {
       left: 0.5rem;
-      right: 0.5rem;
       bottom: 0.5rem;
-      width: calc(100% - 1rem);
     }
   }
 </style>
