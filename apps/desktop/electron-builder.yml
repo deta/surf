@@ -13,7 +13,7 @@ asarUnpack:
   - resources/**
 afterPack: ./build/afterpack.js
 win:
-  executableName: ${productName}
+  executableName: Horizon # can not reference `${productName}` in here for some reason
 nsis:
   artifactName: ${productName}-${version}-setup.${ext}
   shortcutName: ${productName}
