@@ -1,4 +1,4 @@
-appId: space.deta.horizon
+appId: space.deta.spaceos.ea
 productName: Horizon
 directories:
   buildResources: build
@@ -20,13 +20,22 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  hardenedRuntime: true
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
+  ## notarize needs the following environment variables
+  # APPLE_ID: Apple ID email
+  # APPLE_APP_SPECIFIC_PASSWORD: App-specific password used only for signing apps, the password is not used for notarization itself but for signing the app before notarization
+  # CSC_LINK: base64 encoded developer application certificate and private key, export both from Keychain Access and run `openssl base64 -in <file>`
+  # CSC_KEY_PASSWORD: password to open the certificate and private key encoded in CSC_LINK
+  notarize:
+    # TDOO: figure out why {env.APPLE_TEAM_ID} is not working
+    teamId: 5ZDWGTC857
+
 dmg:
   artifactName: ${productName}-${env.APP_VERSION}.${arch}.${ext}
 linux:
