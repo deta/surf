@@ -14,7 +14,7 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
-    "build:win": "npm run build && electron-builder --win --config",
+    "build:win": "npm run build && electron-builder --win --config --arm64 --x64",
     "build:mac": "npm run build && electron-builder --mac --config --arm64 --x64",
     "build:linux": "npm run build && electron-builder --linux --config"
   },

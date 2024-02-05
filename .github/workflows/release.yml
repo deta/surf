@@ -1,23 +1,50 @@
-name: Build/Release the spaceOS app
+name: Release the Horizon Desktop app
 
 on:
   workflow_dispatch:
+    inputs:
+      increment_type:
+        description: 'Version increment type (patch, minor, major)'
+        required: true
+        default: 'patch'
 
 jobs:
-  build:
-    runs-on: macos-latest #${{ matrix.os }}
+  prepare:
+    runs-on: ubuntu-latest
 
     outputs:
-      release-id: ${{ steps.release.outputs.id }}
-
-    #strategy:
-     # matrix:
-        # os: [ubuntu-latest, macos-latest, windows-latest]
-      #  os: [macos-latest, windows-latest]
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v3
+
+      - name: Get next version
+        uses: reecetech/version-increment@2023.9.3
+        id: version
+        with:
+          scheme: semver
+          increment: ${{ github.event.inputs.increment_type }}
+
+  build:
+    needs: prepare
+    runs-on: macos-latest
+    # runs-on: ${{ matrix.os }}
+
+    # strategy:
+    #   matrix:
+    #     os: [macos-latest, windows-latest]
+
+    outputs:
+      release-id: ${{ steps.release.outputs.id }}
+      version: ${{ needs.prepare.outputs.version }}
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Set version as env variable
+        run: echo "APP_VERSION=${{ needs.prepare.outputs.version }}" >> $GITHUB_ENV
 
       - name: Install Node.js
         uses: actions/setup-node@v3
@@ -27,16 +54,17 @@ jobs:
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
-      # - name: build-linux
-      #   if: matrix.os == 'ubuntu-latest'
-      #   run: npm run build:linux
-
-      - name: Build Mac App
+      - name: Build on Mac
+        # if: matrix.os == 'macos-latest'
         run: npm run build:desktop:mac
+        env:
+          APP_VERSION: ${{ env.APP_VERSION }}
 
-      #- name: Build Win App
-      #  if: matrix.os == 'windows-latest'
-      #  run: npm run build:desktop:win
+      - name: Build on Windows
+        # if: matrix.os == 'windows-latest'
+        run: npm run build:desktop:win
+        env:
+          APP_VERSION: ${{ env.APP_VERSION }}
 
       - id: release
         name: Upload assets to release
@@ -55,28 +83,20 @@ jobs:
             apps/desktop/dist/*.yml
             apps/desktop/dist/*.blockmap
         env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   release:
     needs: build
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v3
 
-      - name: Get next version
-        uses: reecetech/version-increment@2023.9.3
-        id: version
-        with:
-          scheme: semver
-          increment: patch
-  
       - name: Publish release
         uses: actions/github-script@v6
         env:
           RELEASE_ID: ${{ needs.build.outputs.release-id }}
-          VERSION: ${{ steps.version.outputs.version }}
-
+          VERSION: ${{ needs.build.outputs.version }}
         with:
           script: |
             const { RELEASE_ID, VERSION } = process.env
@@ -84,8 +104,8 @@ jobs:
             github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              release_id: `${RELEASE_ID}`,
+              release_id: RELEASE_ID,
               draft: false,
               tag_name: `v${VERSION}`,
               name: `v${VERSION}`
-            })  
+            })
