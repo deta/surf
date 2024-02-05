@@ -80,9 +80,9 @@
   }
 
   let value = ''
-  let editing = false
+  let editing = true
   let defaultFavicon = 'https://deta.space/favicon.png'
-  let showNavbar = false
+  let showNavbar = true
   
 
   $: url = webview?.url
@@ -109,6 +109,7 @@
   }
 
   function disableNavbar () {
+    if($url == 'about:blank' || $url == '') {return}
     showNavbar = false
   }
 
