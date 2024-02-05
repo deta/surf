@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { posToAbsolute } from '@horizon/tela'
+  import { hasClassOrParentWithClass, posToAbsolute } from '@horizon/tela'
   import type { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
-  import { parseClipboardItems, shouldIgnorePaste } from '../../service/clipboard'
+  import { parseClipboardItems } from '../../service/clipboard'
   import { checkIfUrl, parseStringIntoUrl } from '../../utils/url'
   import { DEFAULT_CARD_SIZE } from '../../constants/card'
   import { get } from 'svelte/store'
@@ -11,6 +11,7 @@
 
   const log = useLogScope('MediaImporter')
 
+  $: activeCardId = horizon.activeCardId
   $: board = horizon.board
   $: state = board?.state
   $: viewOffset = $state?.viewOffset
@@ -43,6 +44,7 @@
 
     return viewportPos
   }
+  
   const getNewCardHorizontalPositionCreator = (gap: number, basePosition: any) => {
     const initialPos = getNewCardPosition(basePosition)
 
@@ -52,6 +54,14 @@
         y: initialPos.y
       }
     }
+  }
+
+  const shouldIgnorePaste = (elem: HTMLElement) => {
+    const isInputElem =
+      ['INPUT', 'TEXTAREA'].includes(elem.tagName) || elem.hasAttribute('contenteditable')
+    const isCardElem = hasClassOrParentWithClass(elem, 'card')
+
+    return isInputElem || isCardElem || $activeCardId !== null
   }
 
   const handlePaste = async (e: ClipboardEvent) => {

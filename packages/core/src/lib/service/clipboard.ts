@@ -31,15 +31,6 @@ export const canConsume = (mimeType: string) => {
   return true
 }
 
-export const shouldIgnorePaste = (elem: HTMLElement) => {
-  const isInputElem =
-    ['INPUT', 'TEXTAREA'].includes(elem.tagName) || elem.hasAttribute('contenteditable')
-  const isCardElem = hasClassOrParentWithClass(elem, 'card')
-
-  // TODO: needs check for active card otherwise focus might cause issues
-  return isInputElem || isCardElem
-}
-
 export const parseClipboardItems = async (clipboardItems: ClipboardItem[]) => {
   // let parsedItems: Blob[] = []
 
