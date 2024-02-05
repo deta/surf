@@ -106,6 +106,7 @@
 
   $: if (!editing) {
     // Shortens URL from xyz.com/sss-www-www to xyz.com
+    disableNavbar()
     value = generateRootDomain(value)
   }
 
