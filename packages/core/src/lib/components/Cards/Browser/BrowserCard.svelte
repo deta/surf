@@ -217,6 +217,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    container-type: size;
   }
 
   .browser-wrapper {
@@ -228,6 +229,9 @@
     position: absolute;
     bottom: 1rem;
     left: 1rem;
+    right: 1rem;
+    width: calc(100% - 2rem);
+    max-width: 25rem;
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -244,6 +248,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
   }
 
   .bottom-bar-favicon {
@@ -269,6 +274,8 @@
 
   .bottom-bar-collapse {
     position: relative;
+    display: flex;
+    width: 100%;
     margin-left: 8px;
     border-radius: 6px;
     padding: 4px;
@@ -299,6 +306,7 @@
   .address-bar-wrapper { 
     position: relative;
     top: 0;
+    width: 100%;
     display: inline-block;
   }
 
@@ -308,7 +316,7 @@
     display: inline-block;
     top: -1.5px;
     height: 100%;
-    width: 20rem;
+    width: 100%;
     padding: 6px 0 6px 6px;
     border-radius: 4px;
     border: none;
@@ -338,5 +346,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 0.9rem;
+  }
+
+  @container (max-width: 428px) {
+    .bottom-bar {
+      left: 0.5rem;
+      right: 0.5rem;
+      bottom: 0.5rem;
+      width: calc(100% - 1rem);
+    }
   }
 </style>
