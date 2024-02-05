@@ -89,6 +89,7 @@
   $: url = webview?.url
   $: title = webview?.title
   $: isLoading = webview?.isLoading
+  $: didFinishLoad = webview?.didFinishLoad
   $: canGoBack = webview?.canGoBack
   $: canGoForward = webview?.canGoForward
   $: faviconURL = webview?.faviconURL
@@ -168,9 +169,8 @@
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div class="bottom-bar-trigger" on:mouseenter={displayNavbar} on:mouseleave={disableNavbar}>
-
         <div class="favicon-wrapper">
-          {#if !$isLoading}
+          {#if $didFinishLoad }
             <img in:fly={{ y: 10, duration: 500 }} out:fly={{ y: -10, duration: 500 }} class="bottom-bar-favicon" src={$faviconURL} alt={$title}/>
           {:else}
             <img in:fly={{ y: 10, duration: 500 }} out:fly={{ y: -10, duration: 500 }} class="bottom-bar-favicon" src={defaultFavicon} alt={$title}/>
