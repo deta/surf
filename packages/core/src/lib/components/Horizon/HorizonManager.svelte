@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte'
+  import { writable } from 'svelte/store'
   import { fade } from 'svelte/transition'
 
   import { Lethargy } from "lethargy-ts";
@@ -50,42 +51,59 @@
   const TRANSITION_DURATION = 200 // ms
   const SAFE_AREA_PADDING = 64
 
-  let activeStackItemIdx = 0
-  let showStackOverview = false
+  const activeStackItemIdx = writable(0)
+  const showStackOverview = writable(false)
+
   let disabledTransitions = true
   let sortingTimeout: ReturnType<typeof setTimeout> | null = null
   let sortedHorizons: string[] = []
   let initialSorting = false
   let overScrollTimeout: ReturnType<typeof setTimeout> | null = null;
+  let moveToStackItem: (idx: number) => Promise<void>;
 
-  $: selectedHorizonId = sortedHorizons[activeStackItemIdx]
+  $: selectedHorizonId = sortedHorizons[$activeStackItemIdx]
 
   const addHorizon = async () => {
+    disabledTransitions = true
+    
     const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
+    if ($showStackOverview) {
+      $showStackOverview = false
+      $stackOverviewScrollOffset = 0
 
-    changeActiveHorizon(newHorizon.id, true)
-
-    if (showStackOverview) {
-      closeOverview()
+      await wait(TRANSITION_DURATION)
     }
+    
+    await horizonManager.switchHorizon(newHorizon.id)
+    await moveToStackItem(0)
+    await sortHorizons()
   }
 
   const addBrowserHorizon = async () => {
+    disabledTransitions = true
+    
     const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
-    const browserCard = await newHorizon.addCardBrowser('about:blank', {
+    await horizonManager.switchHorizon(newHorizon.id)
+
+    if ($showStackOverview) {
+      $showStackOverview = false
+      $stackOverviewScrollOffset = 0
+
+      await wait(TRANSITION_DURATION)
+    }
+
+    await moveToStackItem(0)
+
+    await newHorizon.addCardBrowser('about:blank', {
       x: SAFE_AREA_PADDING,
       y: SAFE_AREA_PADDING,
       width: window.innerWidth - (SAFE_AREA_PADDING * 2),
       height: window.innerHeight - (SAFE_AREA_PADDING * 2),
     })
 
-    log.debug('Create new browser horizon', browserCard, newHorizon)
+    await sortHorizons()
 
-    changeActiveHorizon(newHorizon.id, true)
-
-    if (showStackOverview) {
-      closeOverview()
-    }
+    log.debug('Created new browser horizon', newHorizon)
   }
 
   const deleteHorizon = async(horizon: IHorizon) => {
@@ -95,12 +113,14 @@
       await horizonManager.deleteHorizon(horizon)
 
       if (horizon.id === $activeHorizonId || horizon.id === selectedHorizonId) {
-        const nextHorizon = sortedHorizons[activeStackItemIdx - 1]
+        const nextHorizon = sortedHorizons[$activeStackItemIdx - 1]
         if (nextHorizon) {
           changeActiveHorizon(nextHorizon, true)
         } else {
-          changeActiveHorizon(sortedHorizons[activeStackItemIdx + 1], true)
+          changeActiveHorizon(sortedHorizons[$activeStackItemIdx + 1], true)
         }
+      } else {
+        closeOverview()
       }
     } else {
       log.debug('Delete horizon canceled')
@@ -125,7 +145,7 @@
     log.debug('test indexing', { old: oldHorizonStackIdx, new: newHorizonStackIdx })
 
     sortedHorizons = newSorting
-    activeStackItemIdx = newHorizonStackIdx
+    $activeStackItemIdx = newHorizonStackIdx
 
     await wait(200) // TODO: probably a better way to do this but needed to wait for the stack to update
     disabledTransitions = false
@@ -145,15 +165,20 @@
 
   const changeSelectedHorizon = (horizonId: string) => {
     const horizonStackIdx = sortedHorizons.findIndex((h) => h === horizonId)
-    activeStackItemIdx = horizonStackIdx
+    $activeStackItemIdx = horizonStackIdx
     // $stackOverviewScrollOffset = 0
   }
 
   const changeActiveHorizon = async (horizonId: string, sortImmediately = false) => {
+    log.debug('Changing active horizon', horizonId)
+    
     $activeHorizon?.activeCardId.set(null)
-    await horizonManager.switchHorizon(horizonId)
+    $showStackOverview = false
+    
+    const horizonStackIdx = sortedHorizons.findIndex((h) => h === horizonId)
+    await moveToStackItem(horizonStackIdx)
 
-    changeSelectedHorizon(horizonId)
+    await horizonManager.switchHorizon(horizonId)
 
     if (sortImmediately) {
       sortHorizons()
@@ -171,8 +196,10 @@
 
     await tick()
 
-    showStackOverview = false
+    $showStackOverview = false
     $stackOverviewScrollOffset = 0
+
+    await wait(TRANSITION_DURATION)
   }
 
   const selectHorizonAndCloseOverview = () => {
@@ -182,7 +209,7 @@
     if ($stackOverviewScrollOffset !== 0) {
       const horizonHeight = (window.innerHeight * OVERVIEW_HORIZON_SCALING) + OVERVIEW_HORIZON_GAP
       const horizonsIndexOffset = Math.round($stackOverviewScrollOffset / horizonHeight)
-      const closestHorizonId = sortedHorizons[activeStackItemIdx + horizonsIndexOffset]
+      const closestHorizonId = sortedHorizons[$activeStackItemIdx + horizonsIndexOffset]
 
       log.debug('switching to closest horizon', closestHorizonId)
       if (closestHorizonId !== $activeHorizonId) {
@@ -194,14 +221,12 @@
       log.debug('switching to selected horizon', selectedHorizonId)
       changeActiveHorizon(selectedHorizonId)
     }
-
-    closeOverview()
   }
 
   const moveToNextHorizon = async () => {
     if (overScrollTimeout) clearTimeout(overScrollTimeout)
 
-    const nextIdx = activeStackItemIdx + 1
+    const nextIdx = $activeStackItemIdx + 1
     if (nextIdx >= $horizons.length) {
       $stackOverviewScrollOffset = 200
       overScrollTimeout = setTimeout(() => {
@@ -212,7 +237,7 @@
 
     const nextHorizon = sortedHorizons[nextIdx]
 
-    if (showStackOverview) {
+    if ($showStackOverview) {
       changeSelectedHorizon(nextHorizon)
       $stackOverviewScrollOffset = 0
     } else {
@@ -223,7 +248,7 @@
   const moveToPreviousHorizon = async () => {
     if (overScrollTimeout) clearTimeout(overScrollTimeout)
 
-    const nextIdx = activeStackItemIdx - 1
+    const nextIdx = $activeStackItemIdx - 1
 
     // if we are on the first horizon and the user presses up we create a new horizon
     if (nextIdx < 0) {
@@ -236,7 +261,7 @@
     }
 
     const nextHorizon = sortedHorizons[nextIdx]
-    if (showStackOverview) {
+    if ($showStackOverview) {
       changeSelectedHorizon(nextHorizon)
       $stackOverviewScrollOffset = 0
     } else {
@@ -253,15 +278,15 @@
     const card = e.detail
     log.debug('card changed', card)
 
-    const activeHorizonIdx = sortedHorizons.findIndex((h) => h === $activeHorizonId)
-    if (activeHorizonIdx !== 0) {
-      sortHorizons()
-    }
+    // const activeHorizonIdx = sortedHorizons.findIndex((h) => h === $activeHorizonId)
+    // if (activeHorizonIdx !== 0) {
+    //   sortHorizons()
+    // }
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
     const modKeyPressed = event.metaKey || event.ctrlKey
-    if (!modKeyPressed) return
+    if (!modKeyPressed && !$showStackOverview) return
 
     if (event.key === 'n') {
       event.preventDefault()
@@ -270,10 +295,10 @@
       (event.key === 'k' || event.key === ' ' || event.code === 'Space')
     ) {
       event.preventDefault()
-      if (showStackOverview) {
+      if ($showStackOverview) {
         selectHorizonAndCloseOverview()
       } else {
-        showStackOverview = true
+        $showStackOverview = true
       }
     } else if (event.key === 'b') {
       addBrowserHorizon()
@@ -294,7 +319,6 @@
     const selectedHorizon = sortedHorizons[e.detail]
     if (selectedHorizon) {
       changeActiveHorizon(selectedHorizon)
-      closeOverview()
     }
   }
 
@@ -305,12 +329,12 @@
   }
 
   // prevent sorting when overview is open
-  $: if (showStackOverview && sortingTimeout) {
+  $: if ($showStackOverview && sortingTimeout) {
     clearTimeout(sortingTimeout)
     sortingTimeout = null
   }
 
-  $: if (!showStackOverview && activeStackItemIdx !== 0 && !sortingTimeout) {
+  $: if (!$showStackOverview && $activeStackItemIdx !== 0 && !sortingTimeout) {
     log.debug('edge case, no sorting timeout but not on first horizon')
     createSortingTimeout()
   }
@@ -346,13 +370,13 @@
     let canSwitchAgain = true;
     let canSwitchTimer: any = null;
 
-    $: if (Math.abs($flickSpring) > flickThreshold && !showStackOverview && canSwitchAgain) {
+    $: if (Math.abs($flickSpring) > flickThreshold && !$showStackOverview && canSwitchAgain) {
       let cancel = false;
       if (Math.sign($flickSpring) > 0) {
         moveToNextHorizon();
       } else {
         moveToPreviousHorizon();
-        if (activeStackItemIdx === 0) cancel = true;
+        if ($activeStackItemIdx === 0) cancel = true;
       }
 
       if (!cancel) {
@@ -369,10 +393,10 @@
     const handleGestureEnd = (g: Gesture) => {
       log.debug('gesture end', g)
 
-      if (g.scale < 1 && !showStackOverview) {
+      if (g.scale < 1 && !$showStackOverview) {
         log.debug('pinch out')
-        showStackOverview = true
-      } else if (g.scale > 1 && showStackOverview) {
+        $showStackOverview = true
+      } else if (g.scale > 1 && $showStackOverview) {
         log.debug('pinch in')
         selectHorizonAndCloseOverview()
       }
@@ -380,15 +404,15 @@
 
     let wheelResetTimer: any = null;
     function handleWheel(e: WheelEvent) {
-      if (showStackOverview) {
+      if ($showStackOverview) {
         const isIntentional = lethargy.check(e);
 
         const horizonHeight = (window.innerHeight * OVERVIEW_HORIZON_SCALING) + OVERVIEW_HORIZON_GAP
         stackOverviewScrollOffset.update((v) => {
           v += e.deltaY;
           // v = Math.min(0, Math.max(v, 2000));
-          const max = ($horizons.length - activeStackItemIdx - 1) * horizonHeight;
-          const min = activeStackItemIdx * horizonHeight * -1;
+          const max = ($horizons.length - $activeStackItemIdx - 1) * horizonHeight;
+          const min = $activeStackItemIdx * horizonHeight * -1;
           if (overScrollTimeout) clearTimeout(overScrollTimeout);
           if (v > max) {
             if (!isIntentional) return max;
@@ -469,10 +493,10 @@
 <svelte:window on:keydown={handleKeyDown} on:wheel={handleWheel} />
 
 <svelte:head>
-  <title>{showStackOverview ? 'Horizon Overview' : $activeHorizon?.data?.name ?? 'Space OS'} {showStackOverview ? '' : $activeHorizon?.state === 'hot' ? '🔥' : '🧊'}</title>
+  <title>{$showStackOverview ? 'Horizon Overview' : $activeHorizon?.data?.name ?? 'Space OS'} {$showStackOverview ? '' : $activeHorizon?.state === 'hot' ? '🔥' : '🧊'}</title>
 </svelte:head>
 
-<main class="" class:overview={showStackOverview}>
+<main class="" class:overview={$showStackOverview}>
   {#if showFlickSettings}
   <ul style="position: fixed;width:24%; top:0;right:0;z-index:5000;background:darkblue;font-family:monospace;color:white;padding:0.5rem;display:flex;gap:1rem;">
       <li style="display:flex;flex-direction:column;font-weight:600;">
@@ -494,7 +518,7 @@
         <span>Spring Return ({flickSpringReturn}):</span>
       </li>
       <li style="display:flex;flex-direction:column;">
-        <span>{activeStackItemIdx}</span>
+        <span>{$activeStackItemIdx}</span>
         <span>{Math.floor($flickSpring)}</span>
         <span>{Math.floor(Math.abs($flickInertia))}</span>
         <span>{stillScrolling}</span>
@@ -516,7 +540,7 @@
   {/if}
     <!-- fps {$fps} -->
     <!-- <div style="position: fixed;width:50%; top:0;right:0;z-index:5000;background: white;color:black;padding:0.5rem;display:flex;flex-direction:column;">
-      <span>activeStackItem: {activeStackItemIdx}</span>
+      <span>activeStackItem: {$activeStackItemIdx}</span>
       <span>flickSpring: {Math.floor($flickSpring)}</span>
       <span>flickInertia: {Math.floor(Math.abs($flickInertia))}</span>
       <span>overviewOffset: {Math.floor($stackOverviewScrollOffset)}</span>
@@ -532,7 +556,7 @@
         </div>
     </div> -->
 
-  {#if !showStackOverview && $activeHorizon}
+  {#if !$showStackOverview && $activeHorizon}
     <MediaImporter horizon={$activeHorizon} />
   {/if}
 
@@ -541,23 +565,23 @@
     movementOffset={flickSpring}
     overviewOffset={stackOverviewScrollOffset}
     showTransitions={!disabledTransitions}
-    flickVisualWeight={flickVisualWeight}
-    bind:activeIdx={activeStackItemIdx}
-    bind:showOverview={showStackOverview}
+    activeIdx={activeStackItemIdx}
+    showOverview={showStackOverview}
     on:select={handleStackItemSelect}
+    bind:moveToStackItem={moveToStackItem}
   >
-    {#each $horizons as horizon, idx (horizon.id)}
+    {#each $horizons as horizon (horizon.id)}
       <StackItem
         order={sortedHorizons.findIndex((h) => h === horizon.id)}
-        showOverview={showStackOverview}
-        active={$activeHorizonId === horizon.id && !showStackOverview}
+        showOverview={$showStackOverview}
+        active={$activeHorizonId === horizon.id && !$showStackOverview}
         on:select={handleStackItemSelect}
       >
         {#if horizon?.state === 'hot'}
           <Horizon
             {horizon}
-            active={$activeHorizonId === horizon.id && !showStackOverview}
-            inOverview={showStackOverview}
+            active={$activeHorizonId === horizon.id && !$showStackOverview}
+            inOverview={$showStackOverview}
             on:change={handleHorizonChange}
             on:cardChange={handleCardChange}
           />
@@ -566,7 +590,7 @@
         {/if}
 
         <svelte:fragment slot="layer">
-          {#if showStackOverview}
+          {#if $showStackOverview}
             <HorizonInfo horizon={horizon} />
 
             <button on:click|preventDefault|stopPropagation={() => deleteHorizon(horizon)} transition:fade={{ duration: TRANSITION_DURATION / 2 }} class="horizon-action">
@@ -579,14 +603,14 @@
 
     <!-- {#each $hotHorizons as hotHorizon (hotHorizon.id)}
             {@const idx = $sortedHorizons.findIndex((h) => h === hotHorizon.id)}
-            <StackItem showOverview={showStackOverview} index={idx} on:select={() => selectStackItem(idx)}>
+            <StackItem showOverview={$showStackOverview} index={idx} on:select={() => selectStackItem(idx)}>
                 <Horizon horizon={hotHorizon} />
             </StackItem>
         {/each}
 
         {#each $coldHorizons as coldHorizon (coldHorizon.id)}
             {@const idx = $sortedHorizons.findIndex((h) => h === coldHorizon.id)}
-            <StackItem showOverview={showStackOverview} index={idx} on:select={() => selectStackItem(idx)}>
+            <StackItem showOverview={$showStackOverview} index={idx} on:select={() => selectStackItem(idx)}>
                 <div>
                     {#if coldHorizon.data.previewImage}
                         <img src={coldHorizon.data.previewImage} alt="preview" />
