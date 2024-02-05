@@ -13,13 +13,14 @@ asarUnpack:
   - resources/**
 afterPack: ./build/afterpack.js
 win:
-  executableName: Horizon # can not reference `${productName}` in here for some reason
+  executableName: Horizon
 nsis:
-  artifactName: ${productName}-${env.APP_VERSION}-setup.${arch}.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
+  artifactName: Horizon-setup.${ext}
+  shortcutName: Horizon
+  uninstallDisplayName: Horizon
   createDesktopShortcut: always
 mac:
+  target: dmg
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
@@ -28,7 +29,7 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
 dmg:
-  artifactName: ${productName}-${env.APP_VERSION}.${arch}.${ext}
+  artifactName: Horizon.${arch}.${ext}
 linux:
   target:
     - AppImage
@@ -37,7 +38,7 @@ linux:
   maintainer: electronjs.org
   category: Utility
 appImage:
-  artifactName: ${productName}-${env.APP_VERSION}.${ext}
+  artifactName: Horizon.${ext}
 npmRebuild: false
 publish:
   provider: generic
