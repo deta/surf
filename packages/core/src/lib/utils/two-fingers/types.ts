@@ -8,6 +8,7 @@ export type Coords = {
     translation: Coords;
     scale: number;
     rotation?: number;
+    shiftKey: boolean;
   };
   
   export type GestureCallbacks = {

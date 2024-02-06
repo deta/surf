@@ -105,6 +105,7 @@ export const twoFingers = (
         scale: 1,
         translation: { x: 0, y: 0 },
         origin: { x: event.clientX, y: event.clientY },
+        shiftKey: event.shiftKey,
       };
       onGestureStart?.(gesture);
     } else {
@@ -117,6 +118,7 @@ export const twoFingers = (
               y: gesture.translation.y - dy,
             }
           : { x: 0, y: 0 },
+        shiftKey: event.shiftKey
       };
 
       onGestureChange?.(gesture);
@@ -151,6 +153,7 @@ export const twoFingers = (
           y: currentMidpoint.y - initialMidpoint.y,
         },
         origin: initialMidpoint,
+        shiftKey: e.shiftKey,
       };
 
       onGestureChange?.(gesture);
@@ -168,6 +171,7 @@ export const twoFingers = (
         rotation: 0,
         translation: { x: 0, y: 0 },
         origin: midpoint(initialTouches),
+        shiftKey: e.shiftKey,
       };
 
       /*
@@ -204,6 +208,7 @@ export const twoFingers = (
       scale,
       rotation,
       origin: { x: clientX, y: clientY },
+      shiftKey: false,
     });
 
     preventDefault();
@@ -215,6 +220,7 @@ export const twoFingers = (
       scale,
       rotation,
       origin: { x: clientX, y: clientY },
+      shiftKey: false,
     });
 
     preventDefault();
@@ -226,6 +232,7 @@ export const twoFingers = (
       scale,
       rotation,
       origin: { x: clientX, y: clientY },
+      shiftKey: false,
     });
   };
 
