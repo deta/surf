@@ -12,6 +12,7 @@
   import Horizon from '../../Horizon/Horizon.svelte'
   import browserBackground from '../../../../../public/assets/browser-background.png'
   import defaultFavicon from '../../../../../public/assets/deta.svg'
+  import type { Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
 
   export let card: Writable<CardBrowser>
@@ -81,6 +82,18 @@
       width: $card.width,
       height: $card.height
     })
+  }
+
+  const handleWebviewPinch = (e: CustomEvent<Gesture>) => {
+    log.debug('pinch event', e.detail)
+
+    // send event to window so HorizonManagaer can handle it
+    document.dispatchEvent(
+      new CustomEvent("webview_pinch", {
+        bubbles: true,
+        detail: e.detail
+      })
+    );
   }
 
   let value = ''
@@ -182,6 +195,7 @@
       on:wheelWebview={(event) => log.debug('wheel event from the webview: ', event.detail)}
       on:focusWebview={handleWebviewFocus}
       on:newWindowWebview={handleWebviewNewWindow}
+      on:pinchWebview={handleWebviewPinch}
       on:didFinishLoad={handleFinishLoading}
     />
   </div>
