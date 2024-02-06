@@ -128,7 +128,7 @@
       </Draggable>
     </div>
 
-  <div class="content tela-ignore">
+  <div class="content tela-ignore" style={!active ? 'pointer-events: none;' : ''}>
     {#if $card.type === 'browser'}
       <LazyComponent this={BrowserCard}>
         <svelte:fragment slot="component" let:Component>
