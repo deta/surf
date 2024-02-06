@@ -432,7 +432,6 @@
 
           return v;
         });
-        // if ($stackOverviewScrollOffset < 0) stackOverviewScrollOffset.set(0, { hard: true  })
       }
       else {
         const isIntentional = lethargy.check(e);
@@ -441,12 +440,13 @@
           if (!stillScrolling) stillScrolling = true;
           if (!isAnimating) requestAnimationFrame(frame);
 
-          flickSpring.update((v: number) => {
-            const eased = 1 - ((v+e.deltaY*1) / (1 * flickWeight))^2; // .../1.3)^2
-            v = -eased;
-            //v += e.deltaY;
-            return v;
-          });
+          // DISABLE FLICKING FOR USER-TESTING BUILD
+          // flickSpring.update((v: number) => {
+          //   const eased = 1 - ((v+e.deltaY*1) / (1 * flickWeight))^2; // .../1.3)^2
+          //   v = -eased;
+          //   //v += e.deltaY;
+          //   return v;
+          // });
 
           wheelResetTimer && clearTimeout(wheelResetTimer);
           wheelResetTimer = setTimeout(() => {
