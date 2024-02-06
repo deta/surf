@@ -107,14 +107,20 @@ export class Horizon {
     return null
   }
 
-  setActiveCard(id: string | null) {
+  moveCardToStackingTop(id: string) {
     if (!this.board) {
       console.warn("[Horizon Service] setActiveCard called with board === undefined!")
+      moveToStackingTop(this.stackingOrder, id)
       return
     }
+
+    moveToStackingTop(get(this.board?.state).stackingOrder, id)
+    this.signalChange(this)
+  }
+
+  setActiveCard(id: string | null) {
     if (id) {
-      moveToStackingTop(get(this.board?.state).stackingOrder, id)
-      this.signalChange(this)
+      this.moveCardToStackingTop(id)
     }
     this.activeCardId.set(id)
   }
@@ -188,6 +194,8 @@ export class Horizon {
     if (makeActive) {
       this.log.debug(`Making card ${card.id} active`)
       this.setActiveCard(card.id)
+    } else {
+      this.moveCardToStackingTop(card.id)
     }
 
     this.signalChange(this)
