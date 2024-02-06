@@ -100,8 +100,9 @@
   }
 
    // Reactive statement to autofocus input when it's available
-   $: if (inputEl && ($url == 'about:blank' || $url == '')) {
+   $: if (inputEl && $url == '') {
     inputEl.focus();
+    showNavbar = true
   }
 
   $: if (!editing) {
@@ -115,7 +116,7 @@
   }
 
   // Opens the navbar when a new browser card is created
-  $: if($url == 'about:blank' || $url == '') {
+  $: if($url == '') {
     showNavbar = true
   }
 
