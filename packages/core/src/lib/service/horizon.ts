@@ -1,10 +1,11 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
-import type { Card, CardFile, CardPosition, Optional } from '../types'
+import type { Card, CardPosition, Optional } from '../types'
 import type { API } from './api'
 import type { HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
+import { Telemetry, EventTypes } from "./telemetry";
 import { moveToStackingTop, type IBoard } from '@horizon/tela'
 
 // how many horizons to keep in the dom
@@ -25,10 +26,12 @@ export class Horizon {
   api: API
   log: ScopedLogger
   storage: HorizonDatabase
+  telemetry: Telemetry
 
-  constructor(id: string, data: HorizonData, api: API, signalChange: (horizon: Horizon) => void) {
+  constructor(id: string, data: HorizonData, api: API, telemetry: Telemetry, signalChange: (horizon: Horizon) => void) {
     this.id = id
     this.api = api
+    this.telemetry = telemetry
     this.log = useLogScope(`Horizon ${id}`)
     this.storage = new HorizonDatabase()
 
@@ -138,6 +141,7 @@ export class Horizon {
     await this.storage.cards.update(id, updates)
     this.log.debug(`Updated card ${id}`)
     this.signalChange(this)
+    await this.telemetry.trackEvent(EventTypes.UpdateCard, this.telemetry.extractEventPropertiesFromCard(updates))
   }
 
   async deleteCard(idOrCard: string | Card) {
@@ -149,6 +153,7 @@ export class Horizon {
 
     this.log.debug(`Deleted card ${card.id}`)
     this.signalChange(this)
+    await this.telemetry.trackEvent(EventTypes.DeleteCard, { horizonId: this.id, cardId: card.id })
   }
 
   async freeze() {
@@ -180,7 +185,7 @@ export class Horizon {
     return this.storage.resources.read(id)
   }
 
-  async addCard(data: Optional<Card, 'id' | 'stacking_order'>, makeActive: boolean = false) {
+  async addCard(data: Optional<Card, 'id' | 'stacking_order'>, makeActive: boolean = false, duplicated: boolean = false) {
     const card = await this.storage.cards.create({
       horizon_id: this.data.id,
       //stacking_order: 1,
@@ -199,7 +204,7 @@ export class Horizon {
     }
 
     this.signalChange(this)
-    
+    await this.telemetry.trackEvent(EventTypes.AddCard, this.telemetry.extractEventPropertiesFromCard(card, duplicated))
     return cardStore
   }
 
@@ -256,7 +261,7 @@ export class Horizon {
       ...position,
       type: card.type,
       data: card.data
-    }, makeActive)
+    }, makeActive, true)
   }
 }
 
@@ -274,12 +279,14 @@ export class HorizonsManager {
   api: API
   log: ScopedLogger
   storage: HorizonDatabase
+  telemetry: Telemetry
   activeHorizonStorage: LocalStorage<string>
 
-  constructor(api: API) {
+  constructor(api: API, telemetryAPIKey: string) {
     this.api = api
     this.log = useLogScope(`HorizonService`)
     this.storage = new HorizonDatabase()
+    this.telemetry = new Telemetry(telemetryAPIKey, this.storage)
     // TODO: replace this with something
     // that stores application state
     this.activeHorizonStorage = new LocalStorage<string>('active_horizon')
@@ -334,6 +341,7 @@ export class HorizonsManager {
 
   async init() {
     this.log.debug(`Initializing`)
+    await this.telemetry.init()
     const horizons = await this.loadHorizons()
 
     let storedHorizonId = this.activeHorizonStorage.getRaw()
@@ -386,7 +394,7 @@ export class HorizonsManager {
     // const { default: data } = await import('../data/horizons.json')
 
     const horizons = storedHorizons.map(
-      (d) => new Horizon(d.id, d, this.api, (h) => this.handleHorizonChange(h))
+      (d) => new Horizon(d.id, d, this.api, this.telemetry, (h) => this.handleHorizonChange(h))
     )
 
     this.horizons.set(horizons)
@@ -460,6 +468,7 @@ export class HorizonsManager {
     this.log.debug(`Making horizon ${horizon.id} active`)
     horizon.markAsUsed()
     this.activeHorizonId.set(horizon.id)
+    await this.telemetry.trackActivateHorizonEvent(horizon.id)
   }
 
   async createHorizon(name: string) {
@@ -470,9 +479,10 @@ export class HorizonsManager {
     } as HorizonData
     data = await this.storage.horizons.create(data)
 
-    const horizon = new Horizon(data.id, data, this.api, (h) => this.handleHorizonChange(h))
+    const horizon = new Horizon(data.id, data, this.api, this.telemetry, (h) => this.handleHorizonChange(h))
     this.horizons.update((h) => [...h, horizon])
 
+    await this.telemetry.trackEvent(EventTypes.CreateHorizon, { "name": name, "id": horizon.id})
     return horizon
   }
 
@@ -487,5 +497,6 @@ export class HorizonsManager {
     // TODO: delete resources
 
     this.horizons.update((h) => h.filter((h) => h.id !== horizon.id))
+    await this.telemetry.trackEvent(EventTypes.DeleteHorizon, { "id": horizon.id})
   }
 }

@@ -19,6 +19,11 @@ export type CardType = 'browser' | 'text' | 'file' | 'link'
 
 export type CardPosition = Pick<IPositionable<'id'>, 'x' | 'y' | 'width' | 'height'>
 
+export type UserData = {
+  id: string
+  user_id: string
+}
+
 export type HorizonData = {
   id: string
   name: string

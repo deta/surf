@@ -55,7 +55,12 @@
   })
 
   const stack = writable([] as string[]);
-  const board: IBoard<any, any> = createBoard(settings, stack, {}, 'idle', {})
+  const board: IBoard<any, any> = createBoard(settings, stack, {
+    viewPort: {
+      x: 10,
+      y: 25,
+    } as any
+  }, 'idle', {})
 
   const state = board.state
   const selectionCss = $state.selectionCss

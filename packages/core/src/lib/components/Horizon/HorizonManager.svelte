@@ -26,7 +26,14 @@
 
   const log = useLogScope('HorizonManager')
   const api = new API()
-  const horizonManager = new HorizonsManager(api)
+
+  // TODO: use env vars properly
+  let telemetryAPIKey = undefined
+  if (import.meta.env.PROD){
+    telemetryAPIKey = "40d38f34c97de0270d9f4e099dae4f48"
+  }
+  const horizonManager = new HorizonsManager(api, telemetryAPIKey)
+
   const lethargy = new Lethargy({
 
     // ORIGINAL MAXU:
@@ -94,11 +101,11 @@
 
     await moveToStackItem(0)
 
-    await newHorizon.addCardBrowser('about:blank', {
-      x: SAFE_AREA_PADDING,
-      y: SAFE_AREA_PADDING,
-      width: window.innerWidth - (SAFE_AREA_PADDING * 2),
-      height: window.innerHeight - (SAFE_AREA_PADDING * 2),
+    await newHorizon.addCardBrowser('', {
+      x: 8,
+      y: 20,
+      width: 1200,
+      height: 840,
     })
 
     await sortHorizons()

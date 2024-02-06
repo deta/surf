@@ -1,7 +1,7 @@
 import Dexie from 'dexie'
 
-import { generateID } from '../utils/id'
-import type { Card, Optional, Resource, HorizonData, CardFile } from '../types'
+import {generateID, generateUUID} from '../utils/id'
+import type {Card, Optional, Resource, HorizonData, CardFile, UserData} from '../types'
 
 export class LocalStorage<T> {
   key: string
@@ -77,6 +77,25 @@ export class Storage<T extends Record<string, any>> {
   }
 }
 
+export class UserStore<UserData> {
+  constructor(public t: Dexie.Table<UserData, string>) {}
+
+  async create(data: Optional<UserData, 'id'>): Promise<UserData> {
+    const item = {
+      id: 'main', // only singe user data must exist
+      ...data
+    } as UserData
+
+    await this.t.add(item)
+    return item
+  }
+
+  // only singe user data must exist
+  async get(): Promise<UserData | undefined> {
+    return this.t.get('main');
+  }
+}
+
 export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: string }> {
   constructor(public t: Dexie.Table<T, string>) {}
 
@@ -117,6 +136,7 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
 }
 
 export class HorizonDatabase extends Dexie {
+  userData: UserStore<UserData>
   cards: HorizonStore<Card>
   horizons: HorizonStore<HorizonData>
   resources: HorizonStore<Resource>
@@ -124,15 +144,25 @@ export class HorizonDatabase extends Dexie {
   constructor() {
     super('HorizonDatabase')
 
-    this.version(1).stores({
+    this.version(2).stores({
+      userData: 'id, user_id',
       cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
       horizons: 'id, name, stackingOrder, createdAt, updatedAt',
       resources: 'id, createdAt, updatedAt'
     })
 
+    this.userData = new UserStore<UserData>(this.table('userData'))
     this.cards = new HorizonStore<Card>(this.table('cards'))
     this.horizons = new HorizonStore<HorizonData>(this.table('horizons'))
     this.resources = new HorizonStore<Resource>(this.table('resources'))
+  }
+
+  async getUserID() {
+    return (await this.userData.get())?.user_id
+  }
+
+  async createUserData() {
+    return await this.userData.create({user_id: generateUUID()} as UserData)
   }
 
   async getCardsByHorizonId(horizonId: string) {
