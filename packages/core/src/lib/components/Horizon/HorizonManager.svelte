@@ -94,11 +94,11 @@
 
     await moveToStackItem(0)
 
-    await newHorizon.addCardBrowser('about:blank', {
-      x: SAFE_AREA_PADDING,
-      y: SAFE_AREA_PADDING,
-      width: window.innerWidth - (SAFE_AREA_PADDING * 2),
-      height: window.innerHeight - (SAFE_AREA_PADDING * 2),
+    await newHorizon.addCardBrowser('', {
+      x: 8,
+      y: 20,
+      width: 1200,
+      height: 840,
     })
 
     await sortHorizons()
