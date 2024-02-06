@@ -395,6 +395,11 @@
     const handleGestureEnd = (g: Gesture) => {
       log.debug('gesture end', g)
 
+      if (g.shiftKey) {
+        log.debug('ignoring gesture as shift is pressed')
+        return 
+      }
+
       if (g.scale < 1 && !$showStackOverview) {
         log.debug('pinch out')
         $showStackOverview = true
