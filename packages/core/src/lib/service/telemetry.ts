@@ -37,6 +37,14 @@ export class Telemetry {
         })
     }
 
+    getHostnameFromURL(url: string){
+        try {
+            return new URL(url).hostname
+        } catch (e) {
+            return ""
+        }
+    }
+
     extractEventPropertiesFromCard(card: Partial<Card>, duplicated: boolean = false){
         let eventProperties = {
             id: card.id,
@@ -52,7 +60,7 @@ export class Telemetry {
             case 'browser':
                 let location = card.data.initialLocation
                 if (card.data.currentHistoryIndex > 0){
-                    location = card.data.historyStack[card.data.currentHistoryIndex]
+                    location = this.getHostnameFromURL(card.data.historyStack[card.data.currentHistoryIndex])
                 }
                 eventProperties = {
                     ...eventProperties,
@@ -60,9 +68,9 @@ export class Telemetry {
                 }
                 break
             case 'link':
-                eventProperties= {
+                eventProperties = {
                     ...eventProperties,
-                    url: card.data.url
+                    hostname: this.getHostnameFromURL(card.data.url)
                 }
                 break
             case 'file':
