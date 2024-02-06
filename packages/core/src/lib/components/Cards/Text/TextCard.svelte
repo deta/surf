@@ -6,6 +6,7 @@
   import '@horizon/editor/src/editor.scss'
 
   import type { CardEvents, CardText } from '../../../types'
+  import { copyToClipboard } from '../../../utils/clipboard'
   import { useLogScope } from '../../../utils/log'
   import { useDebounce } from '../../../utils/debounce'
 
@@ -34,16 +35,6 @@
       focusEditor()
     }
   })
-
-  async function copyToClipboard(content : any) {
-    try {
-      await navigator.clipboard.writeText(content);
-      console.log('Content copied to clipboard');
-      // You can also show a user-friendly message or indication that the content was copied
-    } catch (err) {
-      console.error('Failed to copy: ', err);
-    }
-  }
 </script>
 
 <div class="text-card">
