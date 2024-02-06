@@ -39,9 +39,9 @@
 
 <div class="text-card">
   <Editor bind:focus={focusEditor} bind:content={$value} placeholder="Jot something down…" autofocus={false} />
-  <button on:click={() => copyToClipboard(JSON.stringify($value))}>
+  <!-- <button on:click={() => copyToClipboard(JSON.stringify($value))}>
     Copy to Clipboard
-  </button>
+  </button> -->
 </div>
 
 <style lang="scss">
