@@ -12,10 +12,12 @@
   import Horizon from '../../Horizon/Horizon.svelte'
   import browserBackground from '../../../../../public/assets/browser-background.png'
   import defaultFavicon from '../../../../../public/assets/deta.svg'
+  import type { Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
+  export let active: boolean = false
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('BrowserCard')
@@ -82,6 +84,18 @@
     })
   }
 
+  const handleWebviewPinch = (e: CustomEvent<Gesture>) => {
+    log.debug('pinch event', e.detail)
+
+    // send event to window so HorizonManagaer can handle it
+    document.dispatchEvent(
+      new CustomEvent("webview_pinch", {
+        bubbles: true,
+        detail: e.detail
+      })
+    );
+  }
+
   let value = ''
   let editing = false
   let showNavbar = false
@@ -100,7 +114,8 @@
   }
 
    // Reactive statement to autofocus input when it's available
-   $: if (inputEl && $url == '') {
+
+   $: if (active && inputEl && ($url == 'about:blank' || $url == '')) {
     inputEl.focus();
     showNavbar = true
   }
@@ -182,6 +197,7 @@
       on:wheelWebview={(event) => log.debug('wheel event from the webview: ', event.detail)}
       on:focusWebview={handleWebviewFocus}
       on:newWindowWebview={handleWebviewNewWindow}
+      on:pinchWebview={handleWebviewPinch}
       on:didFinishLoad={handleFinishLoading}
     />
   </div>

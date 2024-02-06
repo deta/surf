@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron'
+import { twoFingers, type Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
 window.addEventListener('DOMContentLoaded', (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
@@ -13,7 +14,8 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.id = 'horizonTextDragHandle'
       div.style.width = '30px'
       div.style.height = '30px'
-      div.style.background = 'blue'
+      div.style.borderRadius = '50%'
+      div.style.background = 'red'
       div.style.position = 'absolute'
       div.style.left = `${e.clientX + window.scrollX}px`
       div.style.top = `${e.clientY + window.scrollY - 30}px`
@@ -40,6 +42,12 @@ window.addEventListener('DOMContentLoaded', (_) => {
     div?.parentNode?.removeChild(div)
     window.getSelection()?.removeAllRanges()
   })
+})
+
+twoFingers(window as unknown as HTMLElement, {
+  onGestureEnd: (gesture: Gesture) => {
+    sendPageEvent('pinch', gesture)
+  }
 })
 
 window.addEventListener('wheel', (event: WheelEvent) => {

@@ -17,6 +17,12 @@
 
   const dispatch = createEventDispatcher<{ update: JSONContent }>()
 
+  export const focus = () => {
+    if ($editor) {
+      $editor.commands.focus()
+    }
+  }
+
   let editor: Readable<Editor>;
   let focused = false
 

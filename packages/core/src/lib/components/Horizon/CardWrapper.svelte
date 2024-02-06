@@ -132,25 +132,25 @@
     {#if $card.type === 'browser'}
       <LazyComponent this={BrowserCard}>
         <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} on:load on:change on:delete />
+          <Component {card} {horizon} {active} on:load on:change on:delete />
         </svelte:fragment>
       </LazyComponent>
     {:else if $card.type === 'text'}
       <LazyComponent this={TextCard}>
         <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} on:load on:change on:delete />
+          <Component {card} {horizon} {active} on:load on:change on:delete />
         </svelte:fragment>
       </LazyComponent>
     {:else if $card.type === 'link'}
       <LazyComponent this={LinkCard}>
         <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} on:load on:change on:delete />
+          <Component {card} {horizon} {active} on:load on:change on:delete />
         </svelte:fragment>
       </LazyComponent>
     {:else if $card.type === 'file'}
       <LazyComponent this={FileCard}>
         <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} on:load on:change on:delete />
+          <Component {card} {horizon} {active} on:load on:change on:delete />
         </svelte:fragment>
       </LazyComponent>
     {/if}

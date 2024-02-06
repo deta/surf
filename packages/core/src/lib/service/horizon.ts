@@ -3,6 +3,7 @@ import type { Card, CardFile, CardPosition, Optional } from '../types'
 import type { API } from './api'
 import type { HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
+import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
 import { moveToStackingTop, type IBoard } from '@horizon/tela'
 
@@ -106,14 +107,20 @@ export class Horizon {
     return null
   }
 
-  setActiveCard(id: string | null) {
+  moveCardToStackingTop(id: string) {
     if (!this.board) {
       console.warn("[Horizon Service] setActiveCard called with board === undefined!")
+      moveToStackingTop(this.stackingOrder, id)
       return
     }
+
+    moveToStackingTop(get(this.board?.state).stackingOrder, id)
+    this.signalChange(this)
+  }
+
+  setActiveCard(id: string | null) {
     if (id) {
-      moveToStackingTop(get(this.board?.state).stackingOrder, id)
-      this.signalChange(this)
+      this.moveCardToStackingTop(id)
     }
     this.activeCardId.set(id)
   }
@@ -173,7 +180,7 @@ export class Horizon {
     return this.storage.resources.read(id)
   }
 
-  async addCard(data: Optional<Card, 'id' | 'stacking_order'>) {
+  async addCard(data: Optional<Card, 'id' | 'stacking_order'>, makeActive: boolean = false) {
     const card = await this.storage.cards.create({
       horizon_id: this.data.id,
       //stacking_order: 1,
@@ -183,12 +190,20 @@ export class Horizon {
 
     const cardStore = writable(card)
     this.cards.update((c) => [...c, cardStore])
-    this.stackingOrder.update((s) => { s.push(card.id); console.warn("s", s); return s; })
+
+    if (makeActive) {
+      this.log.debug(`Making card ${card.id} active`)
+      this.setActiveCard(card.id)
+    } else {
+      this.moveCardToStackingTop(card.id)
+    }
+
     this.signalChange(this)
+    
     return cardStore
   }
 
-  addCardBrowser(location: string, position: CardPosition) {
+  addCardBrowser(location: string, position: CardPosition, makeActive: boolean = false) {
     return this.addCard({
       ...position,
       type: 'browser',
@@ -197,30 +212,30 @@ export class Horizon {
         historyStack: [] as string[],
         currentHistoryIndex: -1
       }
-    })
+    }, makeActive)
   }
 
-  addCardText(content: string, position: CardPosition) {
+  addCardText(content: string, position: CardPosition, makeActive: boolean = false) {
     return this.addCard({
       ...position,
       type: 'text',
       data: {
         content: content
       }
-    })
+    }, makeActive)
   }
 
-  addCardLink(url: string, position: CardPosition) {
+  addCardLink(url: string, position: CardPosition, makeActive: boolean = false) {
     return this.addCard({
       ...position,
       type: 'link',
       data: {
         url: url
       }
-    })
+    }, makeActive)
   }
 
-  async addCardFile(data: Blob, position: CardPosition) {
+  async addCardFile(data: Blob, position: CardPosition, makeActive: boolean = false) {
     const resource = await this.createResource(data)
     return this.addCard({
       ...position,
@@ -230,10 +245,10 @@ export class Horizon {
         mimetype: data.type,
         resourceId: resource.id
       }
-    })
+    }, makeActive)
   }
   
-  async duplicateCard(idOrCard: Card | string, position: CardPosition) {
+  async duplicateCard(idOrCard: Card | string, position: CardPosition, makeActive: boolean = false) {
     const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
@@ -241,7 +256,7 @@ export class Horizon {
       ...position,
       type: card.type,
       data: card.data
-    })
+    }, makeActive)
   }
 }
 
@@ -333,7 +348,9 @@ export class HorizonsManager {
     let switchedTo = null
     if (horizons.length === 0) {
       this.log.debug(`No horizons found, creating new one`)
-      const newHorizon = await this.createHorizon('Horizon 1')
+      const newHorizon = await this.createHorizon('How to use Horizons')
+      initDemoHorizon(newHorizon)
+      await this.createHorizon('Horizon 1')
       await this.switchHorizon(newHorizon)
       switchedTo = newHorizon.id
     } else if (!storedHorizonId) {

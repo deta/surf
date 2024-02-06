@@ -1,20 +1,24 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
 
   import { Editor, type JSONContent } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
 
   import type { CardEvents, CardText } from '../../../types'
+  import { copyToClipboard } from '../../../utils/clipboard'
   import { useLogScope } from '../../../utils/log'
   import { useDebounce } from '../../../utils/debounce'
 
   export let card: Writable<CardText>
+  export let active: boolean = false
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('TextCard')
 
   const value = writable($card.data.content)
+
+  let focusEditor: () => void
 
   const debouncedSaveContent = useDebounce((value: JSONContent) => {
     log.debug('saving content', $card)
@@ -25,10 +29,19 @@
   value.subscribe((value) => {
     debouncedSaveContent(value)
   })
+
+  onMount(() => {
+    if (active) {
+      focusEditor()
+    }
+  })
 </script>
 
 <div class="text-card">
-  <Editor bind:content={$value} placeholder="Jot something down…" autofocus={false} />
+  <Editor bind:focus={focusEditor} bind:content={$value} placeholder="Jot something down…" autofocus={false} />
+  <!-- <button on:click={() => copyToClipboard(JSON.stringify($value))}>
+    Copy to Clipboard
+  </button> -->
 </div>
 
 <style lang="scss">

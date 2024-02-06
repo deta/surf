@@ -4,7 +4,7 @@
   import { fade } from 'svelte/transition'
 
   import { Lethargy } from "lethargy-ts";
-  import { twoFingers, type Gesture } from '@skilitics-public/two-fingers'
+  import { twoFingers, type Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
   import { API } from '@horizon/core/src/lib/service/api'
   import { HorizonsManager, Horizon as IHorizon } from '@horizon/core/src/lib/service/horizon'
@@ -220,6 +220,8 @@
     } else if ($activeHorizonId !== selectedHorizonId) {
       log.debug('switching to selected horizon', selectedHorizonId)
       changeActiveHorizon(selectedHorizonId)
+    } else {
+      closeOverview()
     }
   }
 
@@ -393,6 +395,11 @@
     const handleGestureEnd = (g: Gesture) => {
       log.debug('gesture end', g)
 
+      if (g.shiftKey) {
+        log.debug('ignoring gesture as shift is pressed')
+        return 
+      }
+
       if (g.scale < 1 && !$showStackOverview) {
         log.debug('pinch out')
         $showStackOverview = true
@@ -432,7 +439,6 @@
 
           return v;
         });
-        // if ($stackOverviewScrollOffset < 0) stackOverviewScrollOffset.set(0, { hard: true  })
       }
       else {
         const isIntentional = lethargy.check(e);
@@ -441,12 +447,13 @@
           if (!stillScrolling) stillScrolling = true;
           if (!isAnimating) requestAnimationFrame(frame);
 
-          flickSpring.update((v: number) => {
-            const eased = 1 - ((v+e.deltaY*1) / (1 * flickWeight))^2; // .../1.3)^2
-            v = -eased;
-            //v += e.deltaY;
-            return v;
-          });
+          // DISABLE FLICKING FOR USER-TESTING BUILD
+          // flickSpring.update((v: number) => {
+          //   const eased = 1 - ((v+e.deltaY*1) / (1 * flickWeight))^2; // .../1.3)^2
+          //   v = -eased;
+          //   //v += e.deltaY;
+          //   return v;
+          // });
 
           wheelResetTimer && clearTimeout(wheelResetTimer);
           wheelResetTimer = setTimeout(() => {
@@ -473,11 +480,17 @@
     // TODO: (Performance) We shuld only kick it off once the spring is changed probably and stop it after it settled!
     onMount(frame)
 
+  const handleWebviewPinch = (e: CustomEvent<Gesture>) => {
+    handleGestureEnd(e.detail)
+  }
+
   let unregisterTwoFingers: ReturnType<typeof twoFingers> | null = null
   onMount(async () => {
     unregisterTwoFingers = twoFingers(window as unknown as HTMLElement, {
       onGestureEnd: handleGestureEnd
     })
+
+    document.addEventListener('webview_pinch', handleWebviewPinch as EventListener)
 
     const horizonId = await horizonManager.init()
     log.debug('initialized', horizonId)
@@ -487,6 +500,7 @@
 
   onDestroy(() => {
     if (unregisterTwoFingers) unregisterTwoFingers()
+    document.removeEventListener('webview_pinch', handleWebviewPinch as EventListener)
   })
 </script>
 
