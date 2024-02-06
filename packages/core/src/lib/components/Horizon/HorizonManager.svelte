@@ -105,7 +105,7 @@
       x: 8,
       y: 20,
       width: 1200,
-      height: 840,
+      height: 700,
     })
 
     await sortHorizons()
