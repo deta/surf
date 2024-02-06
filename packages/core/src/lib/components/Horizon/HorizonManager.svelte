@@ -94,7 +94,7 @@
 
     await moveToStackItem(0)
 
-    await newHorizon.addCardBrowser('about:blank', {
+    await newHorizon.addCardBrowser('', {
       x: SAFE_AREA_PADDING,
       y: SAFE_AREA_PADDING,
       width: window.innerWidth - (SAFE_AREA_PADDING * 2),
