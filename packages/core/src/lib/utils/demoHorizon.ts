@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store'
 import type { Horizon } from '../components'
-import image from '../../../public/assets/demo/dnd-full-hq.gif';
+import imageDND from '../../../public/assets/demo/dnd-full-hq.gif';
+import imageOverview from '../../../public/assets/demo/overview-demo-full.gif';
 
 export const initDemoHorizon = async (horizon : Horizon) => {
     console.log("CREATING DEMO CARDS")
@@ -22,7 +23,7 @@ export const initDemoHorizon = async (horizon : Horizon) => {
     },true)
 
     horizon.addCardBrowser("https://en.wikipedia.org/wiki/Pea", {
-        x: 500,
+        x: 550,
         y: 50,
         width: 600,
         height: 800
@@ -30,29 +31,20 @@ export const initDemoHorizon = async (horizon : Horizon) => {
 
 
     horizon.addCard({
-        ...{x: 1150, y: 50, width: 300, height: 220},
+        ...{x: 1200, y: 50, width: 300, height: 220},
         type: 'text',
         data: {
             content: {"type":"doc","content":[{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"Demo Zone: Drag stuff from the web."}]},{"type":"paragraph","content":[{"type":"text","text":"Ever wanted to just save an image or a text for later? Try it out by dragging images or text onto your horizon directly."}]},{"type":"paragraph"}]}
         }
     },true)
 
-
-    horizon.addCard({
-        ...{x: 1150, y: 50, width: 300, height: 220},
-        type: 'text',
-        data: {
-            content: {"type":"doc","content":[{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"Want to have another Horizon?"}]},{"type":"paragraph","content":[{"type":"text","text":"Simply create a new Horizon by"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Pressing "},{"type":"text","marks":[{"type":"code"}],"text":"CMD"},{"type":"text","text":" / "},{"type":"text","marks":[{"type":"code"}],"text":"Strg"},{"type":"text","text":" + "},{"type":"text","marks":[{"type":"code"}],"text":"N"}]}]}]},{"type":"paragraph"},{"type":"paragraph","content":[{"type":"text","text":"You also can create a new Horizon with a new Browser by:"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Pressing "},{"type":"text","marks":[{"type":"code"}],"text":"CMD"},{"type":"text","text":" / "},{"type":"text","marks":[{"type":"code"}],"text":"Strg"},{"type":"text","text":" + "},{"type":"text","marks":[{"type":"code"}],"text":"T"}]}]}]}]}
-        }
-    },true)
-
-    // Using the imported image
+    // Set Card for drag and drop demo
     try {
-        const response = await fetch(image);
+        const response = await fetch(imageDND);
         const imageBlob = await response.blob();
 
         await horizon.addCardFile(imageBlob, {
-            x: 1150,
+            x: 1200,
             y: 280,
             width: 400,
             height: 250
@@ -60,6 +52,44 @@ export const initDemoHorizon = async (horizon : Horizon) => {
     } catch (error) {
         console.error('Error in initDemoHorizon:', error);
     }
+
+
+    horizon.addCard({
+        ...{x: 1800, y: 50, width: 300, height: 220},
+        type: 'text',
+        data: {
+            content: {"type":"doc","content":[{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"Lets see your Horizons"}]},{"type":"paragraph","content":[{"type":"text","text":"By pressing "},{"type":"text","marks":[{"type":"code"}],"text":"CMD"},{"type":"text","text":" / "},{"type":"text","marks":[{"type":"code"}],"text":"Ctrl"},{"type":"text","text":" + "},{"type":"text","marks":[{"type":"code"}],"text":"K"},{"type":"text","text":" or pinching with your trackpad, you get into the horizon overview, from where you can select, create and delete your horizons."}]}]}
+        }
+    },true)
+
+    // Set Card for overview
+    try {
+        const response = await fetch(imageOverview);
+        const imageBlob = await response.blob();
+
+        await horizon.addCardFile(imageBlob, {
+            x: 1800,
+            y: 300,
+            width: 600,
+            height: 500
+        });
+    } catch (error) {
+        console.error('Error in initDemoHorizon:', error);
+    }
+
+
+    horizon.addCard({
+        ...{x: 2700, y: 300, width: 300, height: 400},
+        type: 'text',
+        data: {
+            content: {"type":"doc","content":[{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"Want to have another Horizon?"}]},{"type":"paragraph","content":[{"type":"text","text":"Simply create a new Horizon by"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Pressing "},{"type":"text","marks":[{"type":"code"}],"text":"CMD"},{"type":"text","text":" / "},{"type":"text","marks":[{"type":"code"}],"text":"Ctrl"},{"type":"text","text":" + "},{"type":"text","marks":[{"type":"code"}],"text":"N"}]}]}]},{"type":"paragraph"},{"type":"paragraph","content":[{"type":"text","text":"You also can create a new Horizon with a new Browser by:"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Pressing "},{"type":"text","marks":[{"type":"code"}],"text":"CMD"},{"type":"text","text":" / "},{"type":"text","marks":[{"type":"code"}],"text":"Ctrl"},{"type":"text","text":" + "},{"type":"text","marks":[{"type":"code"}],"text":"T"}]}]}]}]}
+        }
+    },true)
+
+    
+
+
+
 }
 
 
