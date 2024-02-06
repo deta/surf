@@ -54,7 +54,7 @@ export const initDemoHorizon = async (horizon : Horizon) => {
         ...{x: 1800, y: 50, width: 300, height: 220},
         type: 'text',
         data: {
-            content: {"type":"doc","content":[{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"Lets see your Horizons"}]},{"type":"paragraph","content":[{"type":"text","text":"By pressing "},{"type":"text","marks":[{"type":"code"}],"text":"CMD"},{"type":"text","text":" / "},{"type":"text","marks":[{"type":"code"}],"text":"Ctrl"},{"type":"text","text":" + "},{"type":"text","marks":[{"type":"code"}],"text":"K"},{"type":"text","text":" or pinching with your trackpad, you get into the horizon overview, from where you can select, create and delete your horizons."}]}]}
+            content: {"type":"doc","content":[{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"Lets see your Horizons"}]},{"type":"paragraph","content":[{"type":"text","text":"By pressing "},{"type":"text","marks":[{"type":"code"}],"text":"CMD"},{"type":"text","text":" / "},{"type":"text","marks":[{"type":"code"}],"text":"Ctrl"},{"type":"text","text":" + "},{"type":"text","marks":[{"type":"code"}],"text":"O"},{"type":"text","text":" or pinching with your trackpad, you get into the horizon overview, from where you can select, create and delete your horizons."}]}]}
         }
     })
 

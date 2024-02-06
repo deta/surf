@@ -1,12 +1,11 @@
 import { globalShortcut, BrowserWindow } from 'electron'
 
 const validShortcuts = [
-  'Up',
-  'Down',
-  'Space',
-  'k',
-  'n',
-  'b',
+  // 'Up',
+  // 'Down',
+  'o', // open overview
+  't', // new browser horizon
+  'n', // new horizon
   ...Array.from(Array(9).keys()).map((idx) => `${idx + 1}`)
 ]
 

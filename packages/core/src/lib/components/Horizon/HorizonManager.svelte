@@ -300,25 +300,25 @@
     if (event.key === 'n') {
       event.preventDefault()
       addHorizon()
-    } else if (
-      (event.key === 'k' || event.key === ' ' || event.code === 'Space')
-    ) {
+    } else if (event.key === 'o') {
       event.preventDefault()
       if ($showStackOverview) {
         selectHorizonAndCloseOverview()
       } else {
         $showStackOverview = true
       }
-    } else if (event.key === 'b') {
+    } else if (event.key === 't') {
+      event.preventDefault()
       addBrowserHorizon()
     } else if (event.key === 'Escape') {
+      event.preventDefault()
       window.location.reload()
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      moveToPreviousHorizon()
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      moveToNextHorizon()
+    // } else if (event.key === 'ArrowUp') {
+    //   event.preventDefault()
+    //   moveToPreviousHorizon()
+    // } else if (event.key === 'ArrowDown') {
+    //   event.preventDefault()
+    //   moveToNextHorizon()
     } else if (event.key === "9") {
       showFlickSettings = !showFlickSettings;
     }
