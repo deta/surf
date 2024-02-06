@@ -26,7 +26,14 @@
 
   const log = useLogScope('HorizonManager')
   const api = new API()
-  const horizonManager = new HorizonsManager(api)
+
+  // TODO: use env vars properly
+  let telemetryAPIKey = undefined
+  if (import.meta.env.PROD){
+    telemetryAPIKey = "40d38f34c97de0270d9f4e099dae4f48"
+  }
+  const horizonManager = new HorizonsManager(api, telemetryAPIKey)
+
   const lethargy = new Lethargy({
 
     // ORIGINAL MAXU:

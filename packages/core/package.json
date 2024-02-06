@@ -18,10 +18,10 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
+    "@horizon/editor": "*",
     "@horizon/eslint-config": "*",
     "@horizon/tela": "*",
     "@horizon/types": "*",
-    "@horizon/editor": "*",
     "@horizon/typescript-config": "*",
     "@skilitics-public/two-fingers": "^2.1.0",
     "@sveltejs/vite-plugin-svelte": "^3.0.1",
@@ -36,6 +36,8 @@
     "vite": "^5.0.8"
   },
   "dependencies": {
-    "dexie": "^3.2.4"
+    "@amplitude/analytics-browser": "^2.4.0",
+    "dexie": "^3.2.4",
+    "uuid": "^9.0.1"
   }
 }
