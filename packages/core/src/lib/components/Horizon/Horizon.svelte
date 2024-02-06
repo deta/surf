@@ -178,14 +178,10 @@
 
     if (event.metaKey || event.ctrlKey) {
       log.debug('creating new browser card', position)
-      horizon.addCardBrowser('', position).then((e) => {
-        moveToStackingTop($state.stackingOrder, get(e).id)
-      })
+      horizon.addCardBrowser('', position, true)
     } else {
       log.debug('creating new text card', position)
-      horizon.addCardText('', position).then((e) => {
-        moveToStackingTop($state.stackingOrder, get(e).id)
-      })
+      horizon.addCardText('', position, true)
     }
   }
 

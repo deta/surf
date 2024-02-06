@@ -16,6 +16,7 @@
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
+  export let active: boolean = false
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('BrowserCard')
@@ -100,7 +101,7 @@
   }
 
    // Reactive statement to autofocus input when it's available
-   $: if (inputEl && ($url == 'about:blank' || $url == '')) {
+   $: if (active && inputEl && ($url == 'about:blank' || $url == '')) {
     inputEl.focus();
   }
 

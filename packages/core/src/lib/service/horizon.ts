@@ -173,7 +173,7 @@ export class Horizon {
     return this.storage.resources.read(id)
   }
 
-  async addCard(data: Optional<Card, 'id' | 'stacking_order'>) {
+  async addCard(data: Optional<Card, 'id' | 'stacking_order'>, makeActive: boolean = false) {
     const card = await this.storage.cards.create({
       horizon_id: this.data.id,
       //stacking_order: 1,
@@ -183,12 +183,18 @@ export class Horizon {
 
     const cardStore = writable(card)
     this.cards.update((c) => [...c, cardStore])
-    this.stackingOrder.update((s) => { s.push(card.id); console.warn("s", s); return s; })
+
+    if (makeActive) {
+      this.log.debug(`Making card ${card.id} active`)
+      this.setActiveCard(card.id)
+    }
+
     this.signalChange(this)
+    
     return cardStore
   }
 
-  addCardBrowser(location: string, position: CardPosition) {
+  addCardBrowser(location: string, position: CardPosition, makeActive: boolean = false) {
     return this.addCard({
       ...position,
       type: 'browser',
@@ -197,30 +203,30 @@ export class Horizon {
         historyStack: [] as string[],
         currentHistoryIndex: -1
       }
-    })
+    }, makeActive)
   }
 
-  addCardText(content: string, position: CardPosition) {
+  addCardText(content: string, position: CardPosition, makeActive: boolean = false) {
     return this.addCard({
       ...position,
       type: 'text',
       data: {
         content: content
       }
-    })
+    }, makeActive)
   }
 
-  addCardLink(url: string, position: CardPosition) {
+  addCardLink(url: string, position: CardPosition, makeActive: boolean = false) {
     return this.addCard({
       ...position,
       type: 'link',
       data: {
         url: url
       }
-    })
+    }, makeActive)
   }
 
-  async addCardFile(data: Blob, position: CardPosition) {
+  async addCardFile(data: Blob, position: CardPosition, makeActive: boolean = false) {
     const resource = await this.createResource(data)
     return this.addCard({
       ...position,
@@ -230,10 +236,10 @@ export class Horizon {
         mimetype: data.type,
         resourceId: resource.id
       }
-    })
+    }, makeActive)
   }
   
-  async duplicateCard(idOrCard: Card | string, position: CardPosition) {
+  async duplicateCard(idOrCard: Card | string, position: CardPosition, makeActive: boolean = false) {
     const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
@@ -241,7 +247,7 @@ export class Horizon {
       ...position,
       type: card.type,
       data: card.data
-    })
+    }, makeActive)
   }
 }
 
