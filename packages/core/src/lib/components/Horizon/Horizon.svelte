@@ -9,12 +9,7 @@
     clamp,
     snapToGrid,
     hoistPositionable,
-
     hasClassOrParentWithClass,
-
-    moveToStackingTop
-
-
   } from '@horizon/tela'
   import type { IBoard, IPositionable, Vec4 } from '@horizon/tela'
 

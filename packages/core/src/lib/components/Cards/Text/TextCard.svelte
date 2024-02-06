@@ -6,6 +6,7 @@
   import '@horizon/editor/src/editor.scss'
 
   import type { CardEvents, CardText } from '../../../types'
+  import { copyToClipboard } from '../../../utils/clipboard'
   import { useLogScope } from '../../../utils/log'
   import { useDebounce } from '../../../utils/debounce'
 
@@ -38,6 +39,9 @@
 
 <div class="text-card">
   <Editor bind:focus={focusEditor} bind:content={$value} placeholder="Jot something down…" autofocus={false} />
+  <!-- <button on:click={() => copyToClipboard(JSON.stringify($value))}>
+    Copy to Clipboard
+  </button> -->
 </div>
 
 <style lang="scss">

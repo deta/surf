@@ -3,6 +3,7 @@ import type { Card, CardFile, CardPosition, Optional } from '../types'
 import type { API } from './api'
 import type { HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
+import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
 import { moveToStackingTop, type IBoard } from '@horizon/tela'
 
@@ -106,14 +107,20 @@ export class Horizon {
     return null
   }
 
-  setActiveCard(id: string | null) {
+  moveCardToStackingTop(id: string) {
     if (!this.board) {
       console.warn("[Horizon Service] setActiveCard called with board === undefined!")
+      moveToStackingTop(this.stackingOrder, id)
       return
     }
+
+    moveToStackingTop(get(this.board?.state).stackingOrder, id)
+    this.signalChange(this)
+  }
+
+  setActiveCard(id: string | null) {
     if (id) {
-      moveToStackingTop(get(this.board?.state).stackingOrder, id)
-      this.signalChange(this)
+      this.moveCardToStackingTop(id)
     }
     this.activeCardId.set(id)
   }
@@ -187,6 +194,8 @@ export class Horizon {
     if (makeActive) {
       this.log.debug(`Making card ${card.id} active`)
       this.setActiveCard(card.id)
+    } else {
+      this.moveCardToStackingTop(card.id)
     }
 
     this.signalChange(this)
@@ -339,7 +348,9 @@ export class HorizonsManager {
     let switchedTo = null
     if (horizons.length === 0) {
       this.log.debug(`No horizons found, creating new one`)
-      const newHorizon = await this.createHorizon('Horizon 1')
+      const newHorizon = await this.createHorizon('How to use Horizons')
+      initDemoHorizon(newHorizon)
+      await this.createHorizon('Horizon 1')
       await this.switchHorizon(newHorizon)
       switchedTo = newHorizon.id
     } else if (!storedHorizonId) {
