@@ -96,6 +96,11 @@
     );
   }
 
+  const handleWebviewKeyup = (e: any) => {
+    log.debug('keyup event', e.detail)
+    if (e.detail.key === 'Escape') horizon.activeCardId.set(null);
+  }
+
   let value = ''
   let editing = false
   let showNavbar = false
@@ -198,6 +203,7 @@
       on:focusWebview={handleWebviewFocus}
       on:newWindowWebview={handleWebviewNewWindow}
       on:pinchWebview={handleWebviewPinch}
+      on:keyupWebview={handleWebviewKeyup}
       on:didFinishLoad={handleFinishLoading}
     />
   </div>

@@ -9,7 +9,7 @@
     clamp,
     snapToGrid,
     hoistPositionable,
-    hasClassOrParentWithClass,
+    hasClassOrParentWithClass
   } from '@horizon/tela'
   import type { IBoard, IPositionable, Vec4 } from '@horizon/tela'
 
@@ -30,7 +30,7 @@
   const data = horizon.data
 
   const log = useLogScope('Horizon Component')
-  const dispatch = createEventDispatcher<{ change: Horizon, cardChange: Card }>()
+  const dispatch = createEventDispatcher<{ change: Horizon; cardChange: Card }>()
 
   const settings = createSettings({
     CAN_PAN: true,
@@ -54,13 +54,19 @@
     POSITIONABLE_KEY: 'id'
   })
 
-  const stack = writable([] as string[]);
-  const board: IBoard<any, any> = createBoard(settings, stack, {
-    viewPort: {
-      x: 10,
-      y: 25,
-    } as any
-  }, 'idle', {})
+  const stack = writable([] as string[])
+  const board: IBoard<any, any> = createBoard(
+    settings,
+    stack,
+    {
+      viewPort: {
+        x: 10,
+        y: 25
+      } as any
+    },
+    'idle',
+    {}
+  )
 
   const state = board.state
   const selectionCss = $state.selectionCss
@@ -93,18 +99,18 @@
 
   const loadHorizon = () => {
     // console.warn("Loading with", $cards.map(e => { return get(e)}))
-    console.warn("Loadign with stack", get(horizon.stackingOrder))
+    console.warn('Loadign with stack', get(horizon.stackingOrder))
 
     $state.stackingOrder = horizon.stackingOrder
 
     $state.stackingOrder.subscribe(async (e) => {
       if (horizon) {
         await horizon.storage.horizons.update(horizon.id, {
-        ...horizon.data,
-        stackingOrder: get(horizon.stackingOrder)
-       })
+          ...horizon.data,
+          stackingOrder: get(horizon.stackingOrder)
+        })
       }
-     })
+    })
     // $state.stackingOrder.set([...$cards].sort((a, b) => { return get(a).stacking_order - get(b).stacking_order }).map((e) => get(e).id))
     $state.viewOffset.set({ x: data.viewOffsetX, y: 0 })
 
@@ -124,10 +130,12 @@
   let showSelectTooltip = false
   let selectPos = { x: 0, y: 0 }
   let selectModKey = false
-  const onModSelectChange = (e: CustomEvent<{
+  const onModSelectChange = (
+    e: CustomEvent<{
       event: MouseEvent
       rect: Vec4
-    }>) => {
+    }>
+  ) => {
     showSelectTooltip = true
     selectPos = {
       x: e.detail.event.clientX,
@@ -175,7 +183,6 @@
       height: size.y
     }
 
-
     if (event.metaKey || event.ctrlKey) {
       log.debug('creating new browser card', position)
       horizon.addCardBrowser('', position, true)
@@ -209,7 +216,12 @@
   const handleCardDuplicate = (e: CustomEvent<Card>) => {
     const card = e.detail
     log.debug('duplicating card', card)
-    horizon.duplicateCard(card.id, { width: card.width, height: card.height, x: card.x + card.width + 50, y: card.y })
+    horizon.duplicateCard(card.id, {
+      width: card.width,
+      height: card.height,
+      x: card.x + card.width + 50,
+      y: card.y
+    })
   }
 
   const handlePositionableEnter = (e: CustomEvent<string>) => {
@@ -222,21 +234,29 @@
     }
   }
 
+  const handleKeyup = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') $activeCardId = null
+    // if (!hasClassOrParentWithClass(e.target as HTMLElement, 'card')) {
+    // }
+  }
+
   // TODO fix types to get rid of this type conversion
   $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
 
-  onDestroy($state.stackingOrder.subscribe((e) => {
-    $cards.forEach(c => { // TODO: THis succs for many perf reason. get rid of it!
-      c.update(_c => {
-        _c.stacking_order = get($state.stackingOrder).indexOf(get(c).id)
-        horizon.updateCard(_c.id, { stacking_order: _c.stacking_order})
-        return _c
+  onDestroy(
+    $state.stackingOrder.subscribe((e) => {
+      $cards.forEach((c) => {
+        // TODO: THis succs for many perf reason. get rid of it!
+        c.update((_c) => {
+          _c.stacking_order = get($state.stackingOrder).indexOf(get(c).id)
+          horizon.updateCard(_c.id, { stacking_order: _c.stacking_order })
+          return _c
+        })
       })
     })
-  }));
+  )
 
   onMount(() => {
-
     // const stack = [...$cards].sort((a, b) => { return get(a).stacking_order - get(b).stacking_order }).map((e) => get(e).id);
 
     loadHorizon()
@@ -245,7 +265,7 @@
     horizon.attachBoard(board)
 
     stack.set(get(horizon.stackingOrder))
-    $state.stackingOrder = stack;
+    $state.stackingOrder = stack
   })
 
   onDestroy(() => {
@@ -253,7 +273,7 @@
   })
 </script>
 
-<svelte:window on:resize={handleWindowResize} />
+<svelte:window on:resize={handleWindowResize} on:keyup={handleKeyup}/>
 
 {#if showSelectTooltip}
   <div class="cursor-tooltip" style="--select-x: {selectPos.x}px; --select-y: {selectPos.y}px;">
@@ -261,10 +281,14 @@
   </div>
 {/if}
 
-
-<div data-horizon={horizon.id} data-horizon-state={horizon.state} data-horizon-active={active} class="horizon">
+<div
+  data-horizon={horizon.id}
+  data-horizon-state={horizon.state}
+  data-horizon-active={active}
+  class="horizon"
+>
   {#if !inOverview}
-    <HorizonInfo horizon={horizon} on:change />
+    <HorizonInfo {horizon} on:change />
   {/if}
 
   <Board

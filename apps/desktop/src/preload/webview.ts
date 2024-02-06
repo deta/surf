@@ -32,8 +32,8 @@ window.addEventListener('DOMContentLoaded', (_) => {
   document.addEventListener('mousedown', (e: MouseEvent) => {
     const div = document.getElementById('horizonTextDragHandle')
     if (div && e.target !== div) {
-        div.parentNode?.removeChild(div)
-        window.getSelection()?.removeAllRanges()
+      div.parentNode?.removeChild(div)
+      window.getSelection()?.removeAllRanges()
     }
   })
 
@@ -48,6 +48,10 @@ twoFingers(window as unknown as HTMLElement, {
   onGestureEnd: (gesture: Gesture) => {
     sendPageEvent('pinch', gesture)
   }
+})
+
+window.addEventListener('keyup', (event: KeyboardEvent) => {
+  sendPageEvent('keyup', { key: event.key })
 })
 
 window.addEventListener('wheel', (event: WheelEvent) => {

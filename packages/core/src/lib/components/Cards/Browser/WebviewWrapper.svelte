@@ -11,6 +11,7 @@
     focusWebview: any
     newWindowWebview: any
     pinchWebview: Gesture
+    keyupWebview: any
   }>()
 
   export let src: string
@@ -79,6 +80,9 @@
           break
         case 'pinch':
           dispatch('pinchWebview', eventData)
+          break
+        case 'keyup':
+          dispatch('keyupWebview', eventData)
           break
       }
     })
