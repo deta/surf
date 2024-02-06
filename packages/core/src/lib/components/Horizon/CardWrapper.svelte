@@ -130,6 +130,10 @@
   <Resizable {positionable} direction="top-left" {minSize} {maxSize} />
   <Resizable {positionable} direction="bottom-right" {minSize} {maxSize} />
   <Resizable {positionable} direction="bottom-left" {minSize} {maxSize} />
+  <Resizable {positionable} direction="top" {minSize} {maxSize} />
+  <Resizable {positionable} direction="bottom" {minSize} {maxSize} />
+  <Resizable {positionable} direction="left" {minSize} {maxSize} />
+  <Resizable {positionable} direction="right" {minSize} {maxSize} />
 
     <div class="card-header" data-position={menuPosition}>
       <Draggable {positionable} class="">
