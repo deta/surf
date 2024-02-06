@@ -3,6 +3,7 @@ import type { Card, CardFile, CardPosition, Optional } from '../types'
 import type { API } from './api'
 import type { HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
+import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
 import { moveToStackingTop, type IBoard } from '@horizon/tela'
 
@@ -339,7 +340,9 @@ export class HorizonsManager {
     let switchedTo = null
     if (horizons.length === 0) {
       this.log.debug(`No horizons found, creating new one`)
-      const newHorizon = await this.createHorizon('Horizon 1')
+      const newHorizon = await this.createHorizon('How to use Horizons')
+      initDemoHorizon(newHorizon)
+      await this.createHorizon('Horizon 1')
       await this.switchHorizon(newHorizon)
       switchedTo = newHorizon.id
     } else if (!storedHorizonId) {
