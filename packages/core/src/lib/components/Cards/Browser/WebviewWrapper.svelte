@@ -3,11 +3,14 @@
   import type { WebviewTag } from 'electron'
   import { createEventDispatcher, onMount } from 'svelte'
 
+  import type { Gesture } from '@horizon/core/src/lib/utils/two-fingers'
+
   const dispatch = createEventDispatcher<{
     wheelWebview: any
     didFinishLoad: void
     focusWebview: any
     newWindowWebview: any
+    pinchWebview: Gesture
   }>()
 
   export let src: string
@@ -73,6 +76,9 @@
           break
         case 'focus':
           dispatch('focusWebview', eventData)
+          break
+        case 'pinch':
+          dispatch('pinchWebview', eventData)
           break
       }
     })

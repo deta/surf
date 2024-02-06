@@ -4,7 +4,7 @@
   import { fade } from 'svelte/transition'
 
   import { Lethargy } from "lethargy-ts";
-  import { twoFingers, type Gesture } from '@skilitics-public/two-fingers'
+  import { twoFingers, type Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
   import { API } from '@horizon/core/src/lib/service/api'
   import { HorizonsManager, Horizon as IHorizon } from '@horizon/core/src/lib/service/horizon'
@@ -220,6 +220,8 @@
     } else if ($activeHorizonId !== selectedHorizonId) {
       log.debug('switching to selected horizon', selectedHorizonId)
       changeActiveHorizon(selectedHorizonId)
+    } else {
+      closeOverview()
     }
   }
 
@@ -473,11 +475,17 @@
     // TODO: (Performance) We shuld only kick it off once the spring is changed probably and stop it after it settled!
     onMount(frame)
 
+  const handleWebviewPinch = (e: CustomEvent<Gesture>) => {
+    handleGestureEnd(e.detail)
+  }
+
   let unregisterTwoFingers: ReturnType<typeof twoFingers> | null = null
   onMount(async () => {
     unregisterTwoFingers = twoFingers(window as unknown as HTMLElement, {
       onGestureEnd: handleGestureEnd
     })
+
+    document.addEventListener('webview_pinch', handleWebviewPinch as EventListener)
 
     const horizonId = await horizonManager.init()
     log.debug('initialized', horizonId)
@@ -487,6 +495,7 @@
 
   onDestroy(() => {
     if (unregisterTwoFingers) unregisterTwoFingers()
+    document.removeEventListener('webview_pinch', handleWebviewPinch as EventListener)
   })
 </script>
 
