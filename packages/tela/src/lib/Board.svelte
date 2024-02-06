@@ -721,8 +721,8 @@
         // Set viewport
         const { x, y, width, height } = containerEl.getBoundingClientRect();
         viewPort.update((v) => {
-          v.x = x;
-          v.y = 0; // HACK: this is needed so the viewport matches the visual board position in the new horizon switcher
+          v.x = v.x;
+          v.y = v.y; // HACK: this is needed so the viewport matches the visual board position in the new horizon switcher
           v.w = width;
           v.h = height;
           return v;
