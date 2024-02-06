@@ -70,6 +70,8 @@
   class:dragging
   bind:this={el}
   on:mousedown
+  on:mousemove
+  on:mouseover
 >
   <slot />
 </div>

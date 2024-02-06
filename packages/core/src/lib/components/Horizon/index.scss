@@ -152,6 +152,10 @@
     user-select: none !important;
   }
 
+  &.mode-dragging {
+    cursor: grabbing;
+  }
+
   .draggable {
     cursor: grab;
   }

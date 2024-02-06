@@ -36,8 +36,9 @@
   const minSize = { x: 100, y: 100 }
   const maxSize = { x: Infinity, y: Infinity }
 
-
   let el: HTMLElement
+  let menuPosition = 'left'
+  let forcing = false
 
   $: card = positionable as Writable<Card> // todo: fix this unnecessary cast
   $: cardTitle = $card.type[0].toUpperCase() + $card.type.slice(1)
@@ -60,6 +61,34 @@
     const state = get(board!.state);
     $card.stacking_order = get(state.stackingOrder).indexOf($card.id)
     updateCard()
+  }
+
+  const handleMouseMove = (e: MouseEvent) => {    
+    if (forcing) return
+  
+    const rect = el.getBoundingClientRect()
+    const x = e.clientX - rect.left
+
+    if (x > rect.width / 2) {
+      menuPosition = 'right'
+    } else {
+      menuPosition = 'left'
+    }
+  }
+
+  const PADDING = 30
+  const handleMouseOver = (e: MouseEvent) => {
+    const rect = el.getBoundingClientRect()
+
+    if ((rect.x + rect.width) + PADDING > window.innerWidth) {
+      menuPosition = 'left'
+      forcing = true
+    } else if (rect.x < PADDING) {
+      menuPosition = 'right'
+      forcing = true
+    } else {
+      forcing = false
+    }
   }
 
   const handleDelete = () => {
@@ -93,6 +122,8 @@
   class="card {$positionable.id} {active && 'active'}"
   contained={false}
   on:mousedown={handleMouseDown}
+  on:mousemove={handleMouseMove}
+  on:mouseover={handleMouseOver}
   bind:el
 >
   <Resizable {positionable} direction="top-right" {minSize} {maxSize} />
@@ -100,7 +131,7 @@
   <Resizable {positionable} direction="bottom-right" {minSize} {maxSize} />
   <Resizable {positionable} direction="bottom-left" {minSize} {maxSize} />
 
-    <div class="card-header">
+    <div class="card-header" data-position={menuPosition}>
       <Draggable {positionable} class="">
         <div class="card-header-content">
           <!-- <div class="card-title">{cardTitle}</div> -->
@@ -161,13 +192,33 @@
   .card-header {
     position: absolute;
     z-index: 10;
-    right: 0;
     top: 50%;
-    transform: translate(calc(100%), -50%);
     height: 90%;
     max-height: 200px;
     opacity: 0;
     transition: opacity 0.2s ease;
+
+    &[data-position="right"] {
+      right: 0;
+      transform: translate(100%, -50%);
+
+      .card-header-content {
+        border-left: none;
+        border-top-right-radius: var(--theme-border-radius);
+        border-bottom-right-radius: var(--theme-border-radius);
+      }
+    }
+
+    &[data-position="left"] {
+      left: 0;
+      transform: translate(-100%, -50%);
+
+      .card-header-content {
+        border-right: none;
+        border-top-left-radius: var(--theme-border-radius);
+        border-bottom-left-radius: var(--theme-border-radius);
+      }
+    }
   }
 
   .card-header-content {
@@ -177,13 +228,10 @@
     justify-content: space-between;
     gap: 1rem;
     border: 1px solid #ddd;
-    border-left: none;
     background-color: #f5f5f5;
     padding: 8px 5px;
     height: 100%;
     overflow: hidden;
-    border-top-right-radius: var(--theme-border-radius);
-    border-bottom-right-radius: var(--theme-border-radius);
   }
 
   :global(.draggable) {
