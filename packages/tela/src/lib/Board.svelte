@@ -1061,7 +1061,8 @@
     curr: { x: 0, y: 0 },
     offset: { x: 0, y: 0 }, // TODO: Do we need this? -> Can we merge with relativeOffset?
     relativeOffset: { x: 0, y: 0 },
-    positionableInit: { x: 0, y: 0 }
+    positionableInit: { x: 0, y: 0 },
+    autoScroll: false
   };
   function draggable_onMouseDown(
     e: CustomEvent<{
@@ -1122,9 +1123,82 @@
       mode.dragging();
     }
 
-    dragState.offset.x = absX - dragState.init.x;
+    const DRAG_AUTO_SCROLL_THRESHOLD = 40 // px
+    const INCREASE_SCROLL_EVERY = 1000 // ms
+    const AUTO_SCROLL_AMOUNTS = [30, 75, 100, 175] // px
+
+    const cursorAtLeftEdge = clientX < DRAG_AUTO_SCROLL_THRESHOLD;
+    const cursorAtRightEdge = clientX > $viewPort.w - DRAG_AUTO_SCROLL_THRESHOLD;
+
+    function performAutoScroll(amount: number, toLeft: boolean) {
+      const newOffsetX = $viewOffset.x + (toLeft ? -amount : amount)
+      const boundOffset = applyBounds(newOffsetX, $viewOffset.y, $viewPort.w, $viewPort.h)
+
+      if (boundOffset.x === $viewOffset.x) return
+
+      viewOffset.update(v => {
+        return { x: boundOffset.x, y: v.y }
+      }, { duration: 0 });
+
+      const { x: newAbsX } = posToAbsolute(
+        clientX,
+        clientY,
+        boundOffset.x,
+        $viewOffset.y,
+        $viewPort,
+        $zoom
+      );
+
+      dragState.offset.x = newAbsX - dragState.init.x;
+      dragState.curr.x = newAbsX;
+
+      positionable.update((p) => {
+        const { x: boundX } = applyBounds(
+          newAbsX - dragState.relativeOffset.x,
+          absY - dragState.relativeOffset.y,
+          p.width,
+          p.height
+        );
+
+        p.x = boundX;
+        return p;
+      });
+    }
+
+    if (cursorAtLeftEdge || cursorAtRightEdge) {
+      if (!dragState.autoScroll) {
+        dragState.autoScroll = true;
+
+        let start: number, previousTimeStamp: number;
+        const stepFunc = (timeStamp: number) => {
+          if (start === undefined) {
+            start = timeStamp;
+          }
+          const elapsed = timeStamp - start;
+
+          if (previousTimeStamp !== timeStamp) {
+            previousTimeStamp = timeStamp;
+
+            const step = Math.min(Math.floor(elapsed / INCREASE_SCROLL_EVERY), AUTO_SCROLL_AMOUNTS.length - 1)
+            const amount = AUTO_SCROLL_AMOUNTS[step]
+
+            performAutoScroll(amount, cursorAtLeftEdge)
+          }
+
+          if (dragState.autoScroll) {
+            window.requestAnimationFrame(stepFunc)
+          }
+        }
+
+        window.requestAnimationFrame(stepFunc)
+      }
+    } else {
+      dragState.autoScroll = false;
+      dragState.offset.x = absX - dragState.init.x;
+      dragState.curr.x = absX;
+    }
+
     dragState.offset.y = absY - dragState.init.y;
-    dragState.curr.x = absX;
     dragState.curr.y = absY;
 
     positionable.update((p) => {
@@ -1135,7 +1209,10 @@
         p.height
       );
 
-      p.x = boundX;
+      if (!cursorAtLeftEdge && !cursorAtRightEdge) {
+        p.x = boundX;
+      }
+
       p.y = boundY;
       return p;
     });
@@ -1161,6 +1238,8 @@
       $viewPort,
       $zoom
     );
+
+    dragState.autoScroll = false;
 
     const initChunkX = Math.floor(dragState.positionableInit.x / CHUNK_WIDTH);
     const initChunkY = Math.floor(dragState.positionableInit.y / CHUNK_WIDTH);
