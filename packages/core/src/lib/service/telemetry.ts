@@ -101,6 +101,6 @@ export class Telemetry {
         }
         const storedCards = await this.storage.getCardsByHorizonId(horizonID) ?? []
         const cardProperties = storedCards.map(card => this.extractEventPropertiesFromCard(card))
-        await this.trackEvent(EventTypes.ActivateHorizon, {cards: cardProperties})
+        await this.trackEvent(EventTypes.ActivateHorizon, {id: horizonID, cards: cardProperties})
     }
 }

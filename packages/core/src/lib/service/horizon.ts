@@ -153,7 +153,7 @@ export class Horizon {
 
     this.log.debug(`Deleted card ${card.id}`)
     this.signalChange(this)
-    await this.telemetry.trackEvent(EventTypes.DeleteCard, { horizonId: this.id, cardId: card.id })
+    await this.telemetry.trackEvent(EventTypes.DeleteCard, { horizonId: this.id, id: card.id })
   }
 
   async freeze() {
