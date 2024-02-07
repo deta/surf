@@ -42,6 +42,8 @@
     padding: 1rem;
     color: inherit;
     text-decoration: none;
+    user-select: none;
+    -webkit-user-drag: none;
   }
 
   .details {
