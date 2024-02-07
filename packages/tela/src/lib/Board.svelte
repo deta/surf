@@ -682,27 +682,24 @@
           ? _positionables
           : [
               ..._hoistedPositionables,
-              ...fastFilter(
-                (e) => {
-                  const _e = get(e);
-                  return (
-                    !_e.hoisted ||
-                    isInsideViewport(
-                      _e.x,
-                      _e.y,
-                      _e.width,
-                      _e.height,
-                      $viewOffset.x,
-                      $viewOffset.y,
-                      $viewPort,
-                      $zoom,
-                      0,
-                      0
-                    )
-                  );
-                },
-                _visibleChunks.map((_p) => get(_p[1])).flat()
-              )
+              ...fastFilter((e) => {
+                const _e = get(e);
+                return (
+                  !_e.hoisted ||
+                  isInsideViewport(
+                    _e.x,
+                    _e.y,
+                    _e.width,
+                    _e.height,
+                    $viewOffset.x,
+                    $viewOffset.y,
+                    $viewPort,
+                    $zoom,
+                    0,
+                    0
+                  )
+                );
+              }, _visibleChunks.map((_p) => get(_p[1])).flat())
             ];
 
       const visibleIds = visible.map((e) => get(e)[POSITIONABLE_KEY]);
@@ -830,8 +827,10 @@
         if (deltaX === 0) {
           mode.idle();
         }
-        // deltaX += e.deltaY / $zoom;
-        // mode.pan();
+        if (!e.ctrlKey) {
+          deltaX += e.deltaY / $zoom;
+          mode.pan();
+        }
       }
       // } else {
       //   if (deltaX < 20 && deltaX > -20) {deltaX = 0;}
