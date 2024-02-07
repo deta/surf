@@ -1,11 +1,24 @@
 import { ipcRenderer } from 'electron'
 import { twoFingers, type Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
+let mouseDownX = 0; 
+
 window.addEventListener('DOMContentLoaded', (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
     const selection = window.getSelection()
     const text = selection?.toString().trim()
     const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor ?? 'white'
+
+    const mouseUpX = e.clientX;
+    const direction = mouseUpX > mouseDownX ? 'left-to-right' : 'right-to-left';
+    const movement = Math.abs(mouseUpX - mouseDownX); // Calculate the absolute mouse movement
+
+    let offset;
+    if (movement < 10) {
+      offset = 10;
+    } else {
+      offset = direction === 'left-to-right' ? 10 : -35;
+    }
 
     if (text) {
       const oldDiv = document.getElementById('horizonTextDragHandle')
@@ -18,6 +31,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.style.justifyContent = 'center'
       div.style.width = '30px'
       div.style.height = '30px'
+      div.style.cursor = 'grab'
       div.style.borderRadius = '50%'
       div.style.padding = '2px 0 0 2px'
       div.style.borderRadius = '3px'
@@ -25,9 +39,9 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.style.boxShadow =
         '0px 1px 3px 0px rgba(0, 0, 0, 0.15), 0px 0px 0.5px 0px rgba(0, 0, 0, 0.30)'
       div.style.position = 'absolute'
-      div.style.zIndex = '1000000'
-      div.style.left = `${e.clientX + window.scrollX}px`
-      div.style.top = `${e.clientY + window.scrollY - 30}px`
+      div.style.zIndex = '100000000000'
+      div.style.left = `${e.clientX + window.scrollX + offset}px`
+      div.style.top = `${e.clientY + window.scrollY - 15}px`
       div.draggable = true
 
       div.innerHTML = `
@@ -42,18 +56,22 @@ window.addEventListener('DOMContentLoaded', (_) => {
       document.body.appendChild(div)
 
       div.addEventListener('dragstart', (event: DragEvent) => {
+        event.stopPropagation()
         event.dataTransfer?.setData('text/plain', text)
       })
     }
   })
 
-  document.addEventListener('mousedown', (e: MouseEvent) => {
+  window.addEventListener('mousedown', (e: MouseEvent) => {
+    mouseDownX = e.clientX; // Store the X-coordinate on mousedown
+
+    // ...existing mousedown functionality
     const div = document.getElementById('horizonTextDragHandle')
     if (div && e.target !== div) {
       div.parentNode?.removeChild(div)
       window.getSelection()?.removeAllRanges()
     }
-  })
+  });
 
   document.addEventListener('dragend', () => {
     const div = document.getElementById('horizonTextDragHandle')
