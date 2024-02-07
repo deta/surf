@@ -3,6 +3,7 @@
   --theme-transparency: 0%;
   --theme-shadow: unset;
   --theme-font: system-ui, sans-serif;
+  --tooltip-arrow-size: 10px;
 }
 
 .light {
@@ -71,6 +72,29 @@
 * {
   overscroll-behavior: contain;
   box-sizing: border-box;
+}
+
+.tooltip {
+  /* Styling for @svelte-plugins/tooltips */
+  --tooltip-arrow-size: 6px;
+  --tooltip-background-color: rgba(0, 0, 0, 0.9);
+  --tooltip-border-radius: 8px;
+  --tooltip-box-shadow: 0 1px 20px rgba(0, 0, 0, 0.25);
+  --tooltip-font-family: inherit;
+  --tooltip-font-size: 12px;
+  --tooltip-font-weight: 400;
+  --tooltip-line-height: 1.25rem;
+  --tooltip-color: #fff;
+  --tooltip-offset-x: 10px;
+  --tooltip-offset-y: 10px;
+  --tooltip-padding: 5px 7px;
+  --tooltip-white-space-hidden: nowrap;
+  --tooltip-white-space-shown: nowrap;
+  --tooltip-z-index: 100000;
+
+  &.top {
+    --tooltip-offset-y: 10px !important;
+  }
 }
 
 .horizon {

@@ -3,6 +3,7 @@
 <script lang="ts">
   import { SvelteComponent, createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { get, type Writable } from 'svelte/store'
+  import { tooltip } from "@svelte-plugins/tooltips";
 
   import {
     Draggable,
@@ -155,9 +156,11 @@
           </div>
 
           <div class="card-header-actions end-placement">
-            <button on:click={handleDuplicate}>
-              <Icon name="copy" />
-            </button>
+            {#if ['text', 'browser'].includes($card.type)}
+              <button use:tooltip={{ content: 'Create similar', action: 'hover' }} on:click={handleDuplicate}>
+                <Icon name="add" />
+              </button>
+            {/if}
           </div>
         </div>
       </Draggable>

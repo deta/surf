@@ -1269,6 +1269,11 @@
   resolved "https://registry.yarnpkg.com/@skilitics-public/two-fingers/-/two-fingers-2.1.0.tgz#5493a4d772fdf4395ac6722432c864e5c9acf8e5"
   integrity sha512-DSIzMuL4B8gu1HvnBdC4Y5pS/wOMdn0x6BOsK6OUxDtIrpIfcYCjJcwxpfLG4E0zj2zkdhggvM2rRrBiPOgf/Q==
 
+"@svelte-plugins/tooltips@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@svelte-plugins/tooltips/-/tooltips-3.0.0.tgz#06d58f63d00e0f69d5ac5aa263402a106749a69a"
+  integrity sha512-lE7LKU01OY8XYwsWmRxEcBZJqVv+f/TP5JQP5eqzb9ppS9UeN8DF/mFP9i2BfELRfYdwl4qwUENTPYBndMI3LA==
+
 "@sveltejs/adapter-node@^1.3.1":
   version "1.3.1"
   resolved "https://registry.yarnpkg.com/@sveltejs/adapter-node/-/adapter-node-1.3.1.tgz#b3d8dee1ae09d008b2add093e84cf085f3333bbc"

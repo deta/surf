@@ -216,7 +216,8 @@
   const handleCardDuplicate = (e: CustomEvent<Card>) => {
     const card = e.detail
     log.debug('duplicating card', card)
-    horizon.duplicateCard(card.id, {
+
+    horizon.duplicateCardWithoutData(card.id, {
       width: card.width,
       height: card.height,
       x: card.x + card.width + 50,

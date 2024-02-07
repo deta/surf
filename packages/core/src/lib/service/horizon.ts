@@ -263,6 +263,42 @@ export class Horizon {
       data: card.data
     }, makeActive, true)
   }
+
+  async duplicateCardWithoutData(idOrCard: Card | string, position: CardPosition, makeActive: boolean = false) {
+    const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
+    if (!card) throw new Error(`Card ${idOrCard} not found`)
+
+    let data = {}
+    if (card.type === 'text') {
+      data = {
+        content: ''
+      }
+    } else if (card.type === 'browser') {
+      data = {
+        initialLocation: '',
+        historyStack: [] as string[],
+        currentHistoryIndex: -1
+      }
+    } else if (card.type === 'link') {
+      data = {
+        url: ''
+      }
+    } else if (card.type === 'file') {
+      data = {
+        name: 'Untitled',
+        mimetype: '',
+        resourceId: ''
+      }
+    } else {
+      throw new Error(`Unknown card type ${card.type}`)
+    }
+
+    return this.addCard({
+      ...position,
+      type: card.type,
+      data: data
+    }, makeActive, true)
+  }
 }
 
 export class HorizonsManager {
