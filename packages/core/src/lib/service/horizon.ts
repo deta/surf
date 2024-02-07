@@ -122,6 +122,7 @@ export class Horizon {
   }
 
   setActiveCard(id: string | null) {
+    if (get(this.activeCardId) === id) return
     if (id) {
       this.moveCardToStackingTop(id)
     }

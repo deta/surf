@@ -98,11 +98,7 @@
   }
 
   const loadHorizon = () => {
-    // console.warn("Loading with", $cards.map(e => { return get(e)}))
-    console.warn('Loadign with stack', get(horizon.stackingOrder))
-
     $state.stackingOrder = horizon.stackingOrder
-
     $state.stackingOrder.subscribe(async (e) => {
       if (horizon) {
         await horizon.storage.horizons.update(horizon.id, {
@@ -111,9 +107,8 @@
         })
       }
     })
-    // $state.stackingOrder.set([...$cards].sort((a, b) => { return get(a).stacking_order - get(b).stacking_order }).map((e) => get(e).id))
-    $state.viewOffset.set({ x: data.viewOffsetX, y: 0 })
 
+    $state.viewOffset.set({ x: data.viewOffsetX, y: 0 })
     viewOffset.subscribe((e) => {
       debouncedHorizonUpdate({ viewOffsetX: e.x })
     })
@@ -248,18 +243,18 @@
   // TODO fix types to get rid of this type conversion
   $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
 
-  onDestroy(
-    $state.stackingOrder.subscribe((e) => {
-      $cards.forEach((c) => {
-        // TODO: THis succs for many perf reason. get rid of it!
-        c.update((_c) => {
-          _c.stacking_order = get($state.stackingOrder).indexOf(get(c).id)
-          horizon.updateCard(_c.id, { stacking_order: _c.stacking_order })
-          return _c
-        })
-      })
-    })
-  )
+  // onDestroy(
+  //   $state.stackingOrder.subscribe((e) => {
+  //     $cards.forEach((c) => {
+  //       // TODO: THis succs for many perf reason. get rid of it!
+  //       c.update((_c) => {
+  //         _c.stacking_order = get($state.stackingOrder).indexOf(get(c).id)
+  //         horizon.updateCard(_c.id, { stacking_order: _c.stacking_order })
+  //         return _c
+  //       })
+  //     })
+  //   })
+  // )
 
   onMount(() => {
     // const stack = [...$cards].sort((a, b) => { return get(a).stacking_order - get(b).stacking_order }).map((e) => get(e).id);
