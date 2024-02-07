@@ -12,14 +12,29 @@ window.addEventListener('DOMContentLoaded', (_) => {
 
       const div = document.createElement('div')
       div.id = 'horizonTextDragHandle'
+      div.style.display = 'flex'
+      div.style.alignItems = 'center'
+      div.style.justifyContent = 'center'
       div.style.width = '30px'
       div.style.height = '30px'
       div.style.borderRadius = '50%'
-      div.style.background = 'red'
+      div.style.padding = '2px 0 0 2px'
+      div.style.borderRadius = '3px'
+      div.style.background = '#F73B95'
+      div.style.boxShadow = '0px 1px 3px 0px rgba(0, 0, 0, 0.15), 0px 0px 0.5px 0px rgba(0, 0, 0, 0.30)'
       div.style.position = 'absolute'
       div.style.left = `${e.clientX + window.scrollX}px`
       div.style.top = `${e.clientY + window.scrollY - 30}px`
       div.draggable = true
+
+      div.innerHTML = `
+        <svg width="22" height="22" viewBox="0 0 7 7" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none;">
+          <circle cx="3.125" cy="0.625" r="0.625" fill="white"/>
+          <circle cx="0.625" cy="3.125" r="0.625" fill="white"/>
+          <circle cx="3.125" cy="3.125" r="0.625" fill="white"/>
+          <circle cx="5.625" cy="3.125" r="0.625" fill="white"/>
+          <circle cx="3.125" cy="5.625" r="0.625" fill="white"/>
+        </svg>`;
 
       document.body.appendChild(div)
 
