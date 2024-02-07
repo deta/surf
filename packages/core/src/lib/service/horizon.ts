@@ -208,7 +208,7 @@ export class Horizon {
     return cardStore
   }
 
-  addCardBrowser(location: string, position: CardPosition, makeActive: boolean = false) {
+  addCardBrowser(location: string, position: CardPosition, makeActive: boolean = false, duplicated: boolean = false) {
     return this.addCard({
       ...position,
       type: 'browser',
@@ -217,30 +217,30 @@ export class Horizon {
         historyStack: [] as string[],
         currentHistoryIndex: -1
       }
-    }, makeActive)
+    }, makeActive, duplicated)
   }
 
-  addCardText(content: string, position: CardPosition, makeActive: boolean = false) {
+  addCardText(content: string, position: CardPosition, makeActive: boolean = false, duplicated: boolean = false) {
     return this.addCard({
       ...position,
       type: 'text',
       data: {
         content: content
       }
-    }, makeActive)
+    }, makeActive, duplicated)
   }
 
-  addCardLink(url: string, position: CardPosition, makeActive: boolean = false) {
+  addCardLink(url: string, position: CardPosition, makeActive: boolean = false, duplicated: boolean = false) {
     return this.addCard({
       ...position,
       type: 'link',
       data: {
         url: url
       }
-    }, makeActive)
+    }, makeActive, duplicated)
   }
 
-  async addCardFile(data: Blob, position: CardPosition, makeActive: boolean = false) {
+  async addCardFile(data: Blob, position: CardPosition, makeActive: boolean = false, duplicated: boolean = false) {
     const resource = await this.createResource(data)
     return this.addCard({
       ...position,
@@ -250,7 +250,7 @@ export class Horizon {
         mimetype: data.type,
         resourceId: resource.id
       }
-    }, makeActive)
+    }, makeActive, duplicated)
   }
   
   async duplicateCard(idOrCard: Card | string, position: CardPosition, makeActive: boolean = false) {
@@ -268,36 +268,17 @@ export class Horizon {
     const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
-    let data = {}
     if (card.type === 'text') {
-      data = {
-        content: ''
-      }
+      return this.addCardText('', position, makeActive, true)
     } else if (card.type === 'browser') {
-      data = {
-        initialLocation: '',
-        historyStack: [] as string[],
-        currentHistoryIndex: -1
-      }
+      return this.addCardBrowser('', position, makeActive, true)
     } else if (card.type === 'link') {
-      data = {
-        url: ''
-      }
+      return this.addCardLink('', position, makeActive, true)
     } else if (card.type === 'file') {
-      data = {
-        name: 'Untitled',
-        mimetype: '',
-        resourceId: ''
-      }
+      return this.addCardFile(new Blob(), position, makeActive, true)
     } else {
       throw new Error(`Unknown card type ${card.type}`)
     }
-
-    return this.addCard({
-      ...position,
-      type: card.type,
-      data: data
-    }, makeActive, true)
   }
 }
 

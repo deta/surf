@@ -45,6 +45,7 @@
   $: cardTitle = $card.type[0].toUpperCase() + $card.type.slice(1)
   $: activeCardId = horizon.activeCardId
   $: active = $activeCardId === $card.id
+  $: allowDuplicating = ['text', 'browser'].includes($card.type)
 
   const updateCard = () => {
     log.debug('updateCard', $card)
@@ -156,7 +157,7 @@
           </div>
 
           <div class="card-header-actions end-placement">
-            {#if ['text', 'browser'].includes($card.type)}
+            {#if allowDuplicating}
               <button use:tooltip={{ content: 'Create similar', action: 'hover' }} on:click={handleDuplicate}>
                 <Icon name="add" />
               </button>
