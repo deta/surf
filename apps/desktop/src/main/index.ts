@@ -4,6 +4,9 @@ import { registerShortcuts, unregisterShortcuts } from './shortcuts'
 import { setupAdblocker, toggleAdblocker } from './adblocker'
 import { setupIpcHandlers } from './ipcHandlers'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
+import { join, dirname } from 'path'
+
+app.setPath('userData', join(dirname(app.getPath('userData')), 'Horizon'))
 
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('space.deta.horizon')
