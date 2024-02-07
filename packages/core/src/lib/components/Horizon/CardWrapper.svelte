@@ -195,7 +195,7 @@
 <style lang="scss">
   .card-header {
     position: absolute;
-    z-index: 10;
+    z-index: 301;
     top: 50%;
     height: 90%;
     max-height: 200px;
