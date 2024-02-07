@@ -4,9 +4,15 @@ import { twoFingers, type Gesture } from '@horizon/core/src/lib/utils/two-finger
 window.addEventListener('DOMContentLoaded', (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
     const selection = window.getSelection()
+    
     const text = selection?.toString().trim()
 
+    const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor ?? 'white';
+    console.debug("[WEBVIEW] Recieving Background Color: ", bodyBackgroundColor)
+
+
     if (text) {
+      console.log("++++ TEXT DND FIRED ++++", "Selected:, ", selection)
       const oldDiv = document.getElementById('horizonTextDragHandle')
       oldDiv?.parentNode?.removeChild(oldDiv)
 
@@ -20,9 +26,10 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.style.borderRadius = '50%'
       div.style.padding = '2px 0 0 2px'
       div.style.borderRadius = '3px'
-      div.style.background = '#F73B95'
+      div.style.background = 'color-mix(in srgb, #F73B95 80%, ' + bodyBackgroundColor + ')'
       div.style.boxShadow = '0px 1px 3px 0px rgba(0, 0, 0, 0.15), 0px 0px 0.5px 0px rgba(0, 0, 0, 0.30)'
       div.style.position = 'absolute'
+      div.style.zIndex = '1000'
       div.style.left = `${e.clientX + window.scrollX}px`
       div.style.top = `${e.clientY + window.scrollY - 30}px`
       div.draggable = true
