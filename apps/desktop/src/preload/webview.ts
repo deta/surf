@@ -35,7 +35,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.draggable = true
 
       div.innerHTML = `
-        <svg width="22" height="22" viewBox="0 0 7 7" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none;">
+        <svg width="16" height="16" viewBox="0 0 7 7" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none;">
           <circle cx="3.125" cy="0.625" r="0.625" fill="white"/>
           <circle cx="0.625" cy="3.125" r="0.625" fill="white"/>
           <circle cx="3.125" cy="3.125" r="0.625" fill="white"/>
