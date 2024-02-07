@@ -129,20 +129,23 @@
 
   let showSelectTooltip = false
   let selectPos = { x: 0, y: 0 }
-  let selectModKey = false
+  let selectSecondaryAction = false // if true, create a text card instead of a browser card
   const onModSelectChange = (
     e: CustomEvent<{
       event: MouseEvent
       rect: Vec4
     }>
   ) => {
+    const event = e.detail.event
+
     showSelectTooltip = true
     selectPos = {
-      x: e.detail.event.clientX,
-      y: e.detail.event.clientY
+      x: event.clientX,
+      y:  event.clientY
     }
 
-    selectModKey = e.detail.event.ctrlKey || e.detail.event.metaKey
+    // Right click
+    selectSecondaryAction = event.which === 3 || event.button === 2
   }
 
   const onModSelectEnd = (
@@ -183,12 +186,13 @@
       height: size.y
     }
 
-    if (event.metaKey || event.ctrlKey) {
-      log.debug('creating new browser card', position)
-      horizon.addCardBrowser('', position, true)
-    } else {
+    // Right click
+    if (event.which === 3 || event.button === 2) {
       log.debug('creating new text card', position)
       horizon.addCardText('', position, true)
+    } else {
+      log.debug('creating new browser card', position)
+      horizon.addCardBrowser('', position, true)
     }
   }
 
@@ -278,7 +282,7 @@
 
 {#if showSelectTooltip}
   <div class="cursor-tooltip" style="--select-x: {selectPos.x}px; --select-y: {selectPos.y}px;">
-    {selectModKey ? 'New Browser Card' : 'New Text Card'}
+    {selectSecondaryAction ? 'New Text Card' : 'New Browser Card'}
   </div>
 {/if}
 
