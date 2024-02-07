@@ -311,7 +311,6 @@ export class HorizonsManager {
 
     this.activeHorizonId = writable(null)
     this.horizons = writable([])
-    this.horizons.subscribe((h) => this.persistHorizons(h)) // TODO: probably better to persist manually than on every change
 
     this.hotHorizonsThreshold = HOT_HORIZONS_THRESHOLD
 
@@ -402,6 +401,7 @@ export class HorizonsManager {
       h[index] = horizon
       return h
     })
+    this.persistHorizon(horizon)
   }
 
   async loadHorizons() {
@@ -420,19 +420,9 @@ export class HorizonsManager {
     return horizons
   }
 
-  persistHorizons(horizons: Horizon[]) {
-    if (horizons.length === 0) {
-      this.log.debug(`No horizons, skipping persist`)
-      return
-    }
-    this.log.debug(`Persisting ${horizons.length} horizons`)
-    const horizonsData = horizons.map((h) => h.data)
-    // this.storage.set(horizonsData)
-    Promise.allSettled(
-      horizonsData.map(async (h) => {
-        this.storage.horizons.update(h.id, h)
-      })
-    )
+  persistHorizon(horizon: Horizon) {
+    this.log.debug(`Persisting Horizon ${horizon.id}`)
+    this.storage.horizons.update(horizon.id, horizon.data)
   }
 
   getHorizon(id: string) {

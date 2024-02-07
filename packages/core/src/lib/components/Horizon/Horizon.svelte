@@ -115,11 +115,11 @@
   }
 
   const updatePreview = async () => {
-    if (!active) return
-    log.debug('generating preview image')
-    const previewImage = await takePageScreenshot()
-    await debouncedHorizonUpdate({ previewImage: previewImage })
-    dispatch('change', horizon)
+    // if (!active) return
+    // log.debug('generating preview image')
+    // const previewImage = await takePageScreenshot()
+    // await debouncedHorizonUpdate({ previewImage: previewImage })
+    // dispatch('change', horizon)
   }
 
   let showSelectTooltip = false
