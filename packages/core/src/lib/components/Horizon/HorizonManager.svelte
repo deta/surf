@@ -487,17 +487,11 @@
     // TODO: (Performance) We shuld only kick it off once the spring is changed probably and stop it after it settled!
     onMount(frame)
 
-  const handleWebviewPinch = (e: CustomEvent<Gesture>) => {
-    handleGestureEnd(e.detail)
-  }
-
   let unregisterTwoFingers: ReturnType<typeof twoFingers> | null = null
   onMount(async () => {
     unregisterTwoFingers = twoFingers(window as unknown as HTMLElement, {
       onGestureEnd: handleGestureEnd
     })
-
-    document.addEventListener('webview_pinch', handleWebviewPinch as EventListener)
 
     const horizonId = await horizonManager.init()
     log.debug('initialized', horizonId)
@@ -507,7 +501,6 @@
 
   onDestroy(() => {
     if (unregisterTwoFingers) unregisterTwoFingers()
-    document.removeEventListener('webview_pinch', handleWebviewPinch as EventListener)
   })
 </script>
 

@@ -10,7 +10,6 @@
     didFinishLoad: void
     focusWebview: any
     newWindowWebview: any
-    pinchWebview: Gesture
     keyupWebview: any
   }>()
 
@@ -77,9 +76,6 @@
           break
         case 'focus':
           dispatch('focusWebview', eventData)
-          break
-        case 'pinch':
-          dispatch('pinchWebview', eventData)
           break
         case 'keyup':
           dispatch('keyupWebview', eventData)

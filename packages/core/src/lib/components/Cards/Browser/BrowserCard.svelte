@@ -84,18 +84,6 @@
     })
   }
 
-  const handleWebviewPinch = (e: CustomEvent<Gesture>) => {
-    log.debug('pinch event', e.detail)
-
-    // send event to window so HorizonManagaer can handle it
-    document.dispatchEvent(
-      new CustomEvent("webview_pinch", {
-        bubbles: true,
-        detail: e.detail
-      })
-    );
-  }
-
   const handleWebviewKeyup = (e: any) => {
     log.debug('keyup event', e.detail)
     if (e.detail.key === 'Escape') horizon.activeCardId.set(null);
@@ -202,7 +190,6 @@
       on:wheelWebview={(event) => log.debug('wheel event from the webview: ', event.detail)}
       on:focusWebview={handleWebviewFocus}
       on:newWindowWebview={handleWebviewNewWindow}
-      on:pinchWebview={handleWebviewPinch}
       on:keyupWebview={handleWebviewKeyup}
       on:didFinishLoad={handleFinishLoading}
     />

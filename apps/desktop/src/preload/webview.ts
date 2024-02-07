@@ -1,5 +1,4 @@
 import { ipcRenderer } from 'electron'
-import { twoFingers, type Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
 let mouseDownX = 0; 
 
@@ -109,12 +108,6 @@ window.addEventListener('DOMContentLoaded', (_) => {
     div?.parentNode?.removeChild(div)
     window.getSelection()?.removeAllRanges()
   })
-})
-
-twoFingers(window as unknown as HTMLElement, {
-  onGestureEnd: (gesture: Gesture) => {
-    sendPageEvent('pinch', gesture)
-  }
 })
 
 window.addEventListener('keyup', (event: KeyboardEvent) => {
