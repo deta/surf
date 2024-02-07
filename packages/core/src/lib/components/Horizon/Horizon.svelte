@@ -71,6 +71,7 @@
   const state = board.state
   const selectionCss = $state.selectionCss
   const viewOffset = $state.viewOffset
+  const viewPort = $state.viewPort
   const activeCardId = horizon.activeCardId
 
   let containerEl: HTMLElement
@@ -310,8 +311,38 @@
       <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
     </svelte:fragment>
 
-    <div class="abyss-indicator" style="position:absolute; top: 1080px; left: {$viewOffset.x - 10}px; z-index: -1;">
-      <!-- <small>Abyss 👇</small> -->
+    <div class="abyss-indicator" style="position:absolute; top: 1080px; left: {$viewOffset.x - 20}px; z-index: -1;">
+      <svg version="1.1"
+        width="{$viewPort.w + 200}"
+        viewBox="0 0 3200 30"
+        xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="clip">
+          <rect x="0" width="100%" height="30"/>
+        </clipPath>
+        <path id="wave" d="m764 23c-8 10-8-10-16 0s-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0"
+              fill="none" stroke="currentColor" stroke-width="3">
+      </defs>
+      <g clip-path="url(#clip)">
+        <use xlink:href="#wave" x="0" y="0" />
+        <use xlink:href="#wave" x="1600" y="0" />
+        <use xlink:href="#wave" x="2400" y="0" />
+        <!-- <path d="m764 23c-8 10-8-10-16 0s-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0"
+              fill="none" stroke="#bbc133" stroke-width="3"> -->
+          <!-- <animateTransform
+                  type="translate"
+                  attributeName="transform"
+                  from="0 0"
+                  to="-16 0"
+                  begin="0s"
+                  dur="2s"
+                  fill="remove"
+                  repeatCount="indefinite"/>
+        </path> -->
+      </g>
+    </svg>
+      <small>Welcome to the Abyss! <br>Stuff down here might not be visible on smaller screens. <br>This line is a temporary measure.</small>
+      <!-- <small>Stuff down here might now be visible on smaller screens.</small> -->
     </div>
 
     <CardWrapper
@@ -340,13 +371,25 @@
     z-index: 1000;
   }
   .abyss-indicator {
-    width: 100%;
-    border-top: 1px solid rgba(169, 169, 169, 0.121);
-    height: 140px;
-    /* background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.015) 100%); */
+    width: 115%;
+    /* border-top: 1px solid rgba(169, 169, 169, 0.031); */
+    height: 120px;
+    background: linear-gradient(0deg, rgba(255, 255, 255, 0) 10%, rgb(245, 245, 245) 100%);
     padding: 0.5rem;
+    position: relative;
+    user-select: none;
+  }
+  .abyss-indicator > svg {
+    position: absolute;
+    top: -23px;
+    color: rgb(236, 236, 236);
   }
   .abyss-indicator > small {
-    /* color: rgb(225, 225, 225); */
+    position: absolute;
+    top: 1.5rem;
+    left: 2rem;
+    color: rgb(196, 196, 196);
+    font-weight: 400;
+    font-size: 0.8rem;
   }
 </style>
