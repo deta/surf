@@ -228,9 +228,12 @@
   const selectionRect = $state.selectionRect;
   const stackingOrder = $state.stackingOrder;
 
-  $: transformCss = `transform-origin: top left; transform: ${
-    $zoom !== 1 ? `scale(${$zoom * 100}%)` : ""
-  } translate3d(${-$viewOffset.x}px, ${-$viewOffset.y}px, 0); ${
+  // $: transformCss = `transform-origin: top left; transform: ${
+  //   $zoom !== 1 ? `scale(${$zoom * 100}%)` : ""
+  // } translate3d(${-$viewOffset.x}px, ${-$viewOffset.y}px, 0); ${
+  //   $mode === "pan" ? "will-change: transform;" : ""
+  // }`;
+  $: transformCss = `transform-origin: top left; transform: translate3d(${-$viewOffset.x}px, ${-$viewOffset.y}px, 0); ${
     $mode === "pan" ? "will-change: transform;" : ""
   }`;
 
@@ -314,6 +317,16 @@
     });
     return v;
   });
+
+  // Bound Zoom
+  onDestroy(zoom.subscribe((e) => {
+    if (e < $settings.BOUNDS.minZoom) {
+      zoom.set($settings.BOUNDS.minZoom)
+    }
+    else if (e > $settings.BOUNDS.maxZoom) {
+      zoom.set($settings.BOUNDS.maxZoom)
+    }
+  }));
 
   let resizeObserver: ResizeObserver;
   const select_init = { x: 0, y: 0 };
