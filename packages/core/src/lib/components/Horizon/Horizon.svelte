@@ -370,7 +370,7 @@
   .abyss-indicator {
     width: 115%;
     height: 120px;
-    background: linear-gradient(0deg, rgba(255, 255, 255, 0) 10%, rgb(245, 245, 245) 100%);
+    /* background: linear-gradient(0deg, rgba(255, 255, 255, 0) 10%, rgb(245, 245, 245) 100%); */
     padding: 0.5rem;
     position: relative;
     user-select: none;
