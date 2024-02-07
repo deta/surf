@@ -11,7 +11,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
 
     const mouseUpX = e.clientX;
     const direction = mouseUpX > mouseDownX ? 'left-to-right' : 'right-to-left';
-    const movement = Math.abs(mouseUpX - mouseDownX); // Calculate the absolute mouse movement
+    const movement = Math.abs(mouseUpX - mouseDownX);
 
     let offset;
     if (movement < 10) {
@@ -54,6 +54,37 @@ window.addEventListener('DOMContentLoaded', (_) => {
         </svg>`
 
       document.body.appendChild(div)
+
+      // Create and style tooltip
+      const tooltip = document.createElement('div');
+      tooltip.innerText = 'Drag me out!'; // Tooltip text
+      tooltip.style.position = 'absolute';
+      tooltip.style.padding = '5px';
+      tooltip.style.display = 'flex'
+      tooltip.style.alignItems = 'center'
+      tooltip.style.justifyContent = 'center'
+      tooltip.style.background = 'black';
+      tooltip.style.color = 'white';
+      tooltip.style.borderRadius = '4px';
+      tooltip.style.width = '5rem';
+      tooltip.style.fontSize = '12px';
+      tooltip.style.visibility = 'hidden'; // Initially hidden
+      tooltip.id = 'horizonTextTooltip';
+
+      div.appendChild(tooltip);
+
+      // Show tooltip on hover
+      div.addEventListener('mouseover', () => {
+        tooltip.style.visibility = 'visible';
+        tooltip.style.left = '-30px';
+        tooltip.style.top = '40px'; // Position above the div
+      });
+
+      // Hide tooltip when not hovering
+      div.addEventListener('mouseout', () => {
+        tooltip.style.visibility = 'hidden';
+      });
+
 
       div.addEventListener('dragstart', (event: DragEvent) => {
         event.stopPropagation()
