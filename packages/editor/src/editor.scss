@@ -54,32 +54,32 @@
     pointer-events: none;
   }
 
-  p.is-empty, h1.is-empty, h2.is-empty, h3.is-empty {
-    .ProseMirror-trailingBreak {
-      display: none;
-    }
-  }
+  // p.is-empty, h1.is-empty, h2.is-empty, h3.is-empty {
+  //   .ProseMirror-trailingBreak {
+  //     display: none;
+  //   }
+  // }
 
-  p.is-empty::after, h1.is-empty::after, h2.is-empty::after, h3.is-empty::after {
-    color: var(--color-text-muted);
-    pointer-events: none;
-  }
+  // p.is-empty::after, h1.is-empty::after, h2.is-empty::after, h3.is-empty::after {
+  //   color: var(--color-text-muted);
+  //   pointer-events: none;
+  // }
 
-  h1.is-empty::after {
-		content: 'Heading 1';
-	}
+  // h1.is-empty::after {
+	// 	content: 'Heading 1';
+	// }
 
-  h2.is-empty::after {
-		content: 'Heading 2';
-	}
+  // h2.is-empty::after {
+	// 	content: 'Heading 2';
+	// }
 
-  h3.is-empty::after {
-		content: 'Heading 3';
-	}
+  // h3.is-empty::after {
+	// 	content: 'Heading 3';
+	// }
 
-  p.is-empty::after {
-		content: attr(data-placeholder);
-	}
+  // p.is-empty::after {
+	// 	content: attr(data-placeholder);
+	// }
 
   p {
     margin: 0.3em 0;
