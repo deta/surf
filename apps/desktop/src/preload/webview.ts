@@ -67,7 +67,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
       tooltip.style.color = 'white';
       tooltip.style.borderRadius = '4px';
       tooltip.style.width = '5rem';
-      tooltip.style.fontSize = '12px';
+      tooltip.style.fontSize = '0.75rem';
       tooltip.style.visibility = 'hidden'; // Initially hidden
       tooltip.id = 'horizonTextTooltip';
 
@@ -76,7 +76,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
       // Show tooltip on hover
       div.addEventListener('mouseover', () => {
         tooltip.style.visibility = 'visible';
-        tooltip.style.left = '-30px';
+        tooltip.style.left = '-90%';
         tooltip.style.top = '40px'; // Position above the div
       });
 
