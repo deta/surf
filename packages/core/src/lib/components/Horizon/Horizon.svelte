@@ -44,7 +44,7 @@
       minX: 0,
       minY: 0,
       maxX: 1920 * 7,
-      maxY: 1080,
+      maxY: Infinity,
       maxZoom: 1,
       minZoom: 1, // todo?: Do we need to make these dynamic?
       limit: 'hard'
@@ -310,6 +310,10 @@
       <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
     </svelte:fragment>
 
+    <div class="abyss-indicator" style="position:absolute; top: 1080px; left: {$viewOffset.x - 10}px; z-index: -1;">
+      <!-- <small>Abyss 👇</small> -->
+    </div>
+
     <CardWrapper
       {positionable}
       {horizon}
@@ -334,5 +338,15 @@
     border: 1px solid #1c1c1c;
     pointer-events: none;
     z-index: 1000;
+  }
+  .abyss-indicator {
+    width: 100%;
+    border-top: 1px solid rgba(169, 169, 169, 0.121);
+    height: 140px;
+    /* background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.015) 100%); */
+    padding: 0.5rem;
+  }
+  .abyss-indicator > small {
+    /* color: rgb(225, 225, 225); */
   }
 </style>
