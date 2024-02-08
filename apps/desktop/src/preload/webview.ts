@@ -1,6 +1,7 @@
 import { ipcRenderer } from 'electron'
 
 let mouseDownX = 0;
+let previouslySelectedText = ''
 
 window.addEventListener('DOMContentLoaded', (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
@@ -19,7 +20,8 @@ window.addEventListener('DOMContentLoaded', (_) => {
       offset = direction === 'left-to-right' ? 10 : -35;
     }
 
-    if (text) {
+    // check if text is available and if the selection has changed
+    if (text && (text != previouslySelectedText)) {
       const oldDiv = document.getElementById('horizonTextDragHandle')
       oldDiv?.parentNode?.removeChild(oldDiv)
 
@@ -38,7 +40,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.style.boxShadow =
         '0px 1px 3px 0px rgba(0, 0, 0, 0.15), 0px 0px 0.5px 0px rgba(0, 0, 0, 0.30)'
       div.style.position = 'absolute'
-      div.style.zIndex = '100000000000'
+      div.style.zIndex = '100000'
       div.style.left = `${e.clientX + window.scrollX + offset}px`
       div.style.top = `${e.clientY + window.scrollY - 15}px`
       div.draggable = true
@@ -90,6 +92,8 @@ window.addEventListener('DOMContentLoaded', (_) => {
         event.dataTransfer?.setData('text/plain', text)
       })
     }
+
+    previouslySelectedText = text
   })
 
   // When a text is selected and the user starts typing again, disable the handle again
@@ -105,8 +109,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
     const div = document.getElementById('horizonTextDragHandle')
     if (div && e.target !== div) {
       div.parentNode?.removeChild(div)
-      window.getSelection()?.removeAllRanges()
-    }
+    } 
   });
 
   document.addEventListener('dragend', () => {
