@@ -204,10 +204,9 @@
     height: 90%;
     max-height: 200px;
     opacity: 0;
-    transition: opacity 0.2s ease;
 
     &[data-position="right"] {
-      right: 0;
+      right: 30px;
       transform: translate(100%, -50%);
 
       .card-header-content {
@@ -218,7 +217,7 @@
     }
 
     &[data-position="left"] {
-      left: 0;
+      left: 30px;
       transform: translate(-100%, -50%);
 
       .card-header-content {
@@ -250,6 +249,14 @@
     .card-header {
       display: block;
       opacity: 1;
+      z-index: 100000;
+      &[data-position="right"] {
+        right: 0;
+      }
+
+      &[data-position="left"] {
+        left: 0;
+      }
     }
   }
 
