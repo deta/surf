@@ -9,7 +9,7 @@ export function createWindow(): void {
   mainWindow = new BrowserWindow({
     show: false,
     autoHideMenuBar: true,
-    titleBarStyle: 'hidden',
+    titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),

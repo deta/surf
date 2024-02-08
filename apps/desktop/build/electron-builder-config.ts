@@ -58,8 +58,6 @@ export default function electronBuilderConfig(){
     linux: {
       target: [
         "AppImage",
-        "snap",
-        "deb"
       ],
       maintainer: "deta.space",
     },

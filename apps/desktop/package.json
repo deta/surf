@@ -1,5 +1,5 @@
 {
-  "name": "desktop",
+  "name": "horizon",
   "productName": "Horizon",
   "version": "0.0.1",
   "description": "An Electron application with Svelte and TypeScript",
@@ -17,7 +17,7 @@
     "build": "npm run typecheck && electron-vite build",
     "build:win": "npm run build && electron-builder --win --config build/electron-builder-config.ts --arm64 --x64",
     "build:mac": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --arm64 --x64",
-    "build:linux": "npm run build && electron-builder --linux --config"
+    "build:linux": "npm run build && electron-builder --linux --config build/electron-builder-config.ts --x64"
   },
   "dependencies": {
     "@cliqz/adblocker-electron": "^1.26.15",
