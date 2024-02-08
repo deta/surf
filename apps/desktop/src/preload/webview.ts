@@ -1,6 +1,6 @@
 import { ipcRenderer } from 'electron'
 
-let mouseDownX = 0; 
+let mouseDownX = 0;
 
 window.addEventListener('DOMContentLoaded', (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
@@ -90,6 +90,12 @@ window.addEventListener('DOMContentLoaded', (_) => {
         event.dataTransfer?.setData('text/plain', text)
       })
     }
+  })
+
+  // When a text is selected and the user starts typing again, disable the handle again
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    const div = document.getElementById('horizonTextDragHandle')
+    div?.parentNode?.removeChild(div)
   })
 
   window.addEventListener('mousedown', (e: MouseEvent) => {
