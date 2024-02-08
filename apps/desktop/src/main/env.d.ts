@@ -2,8 +2,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly R_VITE_BUILD_TAG?: string
-  readonly R_VITE_APP_VERSION?: string
+  readonly M_VITE_BUILD_TAG?: string
+  readonly M_VITE_APP_VERSION?: string
 }
 
 interface ImportMeta {

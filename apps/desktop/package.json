@@ -1,5 +1,6 @@
 {
   "name": "desktop",
+  "productName": "Horizon",
   "version": "0.0.1",
   "description": "An Electron application with Svelte and TypeScript",
   "main": "./out/main/index.js",

@@ -77,6 +77,8 @@ jobs:
           yarn build:desktop:win
         env:
           APP_VERSION: ${{ env.APP_VERSION }}
+          M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
           APPLE_ID : ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -85,6 +87,8 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           PRODUCT_NAME: ${{ inputs.product_name }}
           BUILD_TAG: ${{ env.BUILD_TAG }}
+          M_VITE_BUILD_TAG: ${{ env.BUILD_TAG }}
+          R_VITE_BUILD_TAG: ${{ env.BUILD_TAG }}
           SHOULD_NOTARIZE: ${{ inputs.should_notarize }}
 
       - id: release
