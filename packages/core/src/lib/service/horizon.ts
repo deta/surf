@@ -373,7 +373,7 @@ export class HorizonsManager {
     let switchedTo = null
     if (horizons.length === 0) {
       this.log.debug(`No horizons found, creating new one`)
-      const newHorizon = await this.createHorizon('Welcome to Horizon')
+      const newHorizon = await this.createHorizon('Welcome to Horizon 🌻')
       initDemoHorizon(newHorizon)
       await this.createHorizon('Horizon 1')
       await this.switchHorizon(newHorizon)
