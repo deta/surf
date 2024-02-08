@@ -20,7 +20,7 @@ export const initDemoHorizon = async (horizon : Horizon) => {
     //     }
     // })
 
-    horizon.addCardBrowser("https://deta.space/", {
+    horizon.addCardBrowser("https://en.wikipedia.org/wiki/Common_sunflower", {
         x: 550,
         y: 50,
         width: 600,
