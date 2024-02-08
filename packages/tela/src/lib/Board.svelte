@@ -1660,6 +1660,9 @@
 <!--
   TODO: switch to use resize observer to update viewport
 -->
+<!--
+  TODO: switch to use resize observer to update viewport
+-->
 <div
   class="tela-container {$$restProps.class || ''}"
   bind:this={containerEl}
@@ -1676,44 +1679,14 @@
         <ul class="dev-txt" style="list-style: none;">
           <!-- TODO: Dynamic version inject -->
           <span style="margin-bottom: 8px;"
-            ><i>Tela <small style="color: #b7b7c4;">v3.0.0</small></i></span
+            ><i
+              >Horizon <small style="color: #b7b7c4;"
+                >{import.meta.env.R_VITE_APP_VERSION ?? "unknown release"}
+              </small></i
+            ></span
           >
           <li><span>Mode:</span><span>{$mode}</span></li>
-          <li><span>Zoom:</span><span>{$zoom}</span></li>
-          <li>
-            <!-- <span>Offset:</span><span
-              >{$viewOffset.x}, {$viewOffset.y} // {Math.floor($viewOffset.x / CHUNK_WIDTH)}, {Math.floor(
-                $viewOffset.y / CHUNK_HEIGHT
-              )}</span
-            > -->
-            <span>Offset:</span><span
-              >{$viewOffset.x}, {$viewOffset.y} // {$chunkOffset.x}, {$chunkOffset.y}</span
-            >
-          </li>
-          <li>
-            <span>Viewport:</span><span
-              >{$viewPort.x}, {$viewPort.y}, {$viewPort.w}, {$viewPort.h}</span
-            >
-          </li>
-          <li><span>N-Chunks:</span><span>{$chunks.size}</span></li>
-          <li><span>Hot Chunks:</span><span>{$visibleChunks.length}</span></li>
-          <li><span>N-Cards:</span><span>{$positionables.length}</span></li>
-          <li>
-            <span>Hot Cards:</span><span
-              >{$visiblePositionables.length}
-              <small>({$hoistedPositionables.length} hoisted)</small></span
-            >
-          </li>
-          <!-- <li>
-            <span>Drag Start Delay ({$dragDelay}):</span><span
-              ><input type="range" bind:value={$dragDelay} min="1" max="3000" /></span
-            >
-          </li>
-          <li>
-            <span>Drag Abort Move ({$dragAbortMin}):</span><span
-              ><input type="range" bind:value={$dragAbortMin} min="1" max="200" /></span
-            >
-          </li> -->
+          <li><span>Current Stretch:</span><span>{Math.floor($viewOffset.x / 1920) + 1}</span></li>
           <!-- NOTE: Major perf hit due to conditional slot. -->
           <!-- TODO: Look into optimizing dev overlay perf -->
           <!-- <slot name="dev" /> -->
