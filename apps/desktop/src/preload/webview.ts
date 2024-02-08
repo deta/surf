@@ -1,7 +1,7 @@
 import { ipcRenderer } from 'electron'
 
 let mouseDownX = 0;
-let previouslySelectedText = ''
+let previouslySelectedText : string | undefined = ''
 
 window.addEventListener('DOMContentLoaded', (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
@@ -61,6 +61,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
       // Animate in on appear
       setTimeout(() => {
         div.style.opacity = '1';
+        window.addEventListener('mousedown', () => {return})
       }, 120);
 
       // Create and style tooltip
@@ -82,7 +83,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.appendChild(tooltip);
 
       // Show tooltip on hover and position it dynamically
-      div.addEventListener('mouseover', (event) => {
+      div.addEventListener('mouseover', () => {
         tooltip.style.visibility = 'visible';
         
         // Calculate width of the tooltip after it renders
@@ -113,7 +114,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
   })
 
   // When a text is selected and the user starts typing again, disable the handle again
-  window.addEventListener('keydown', (e: KeyboardEvent) => {
+  window.addEventListener('keydown', () => {
     const div = document.getElementById('horizonTextDragHandle')
     div?.parentNode?.removeChild(div)
   })
