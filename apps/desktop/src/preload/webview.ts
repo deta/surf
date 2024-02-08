@@ -43,6 +43,8 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.style.zIndex = '100000'
       div.style.left = `${e.clientX + window.scrollX + offset}px`
       div.style.top = `${e.clientY + window.scrollY - 15}px`
+      div.style.opacity = '0'; // Set initial opacity to 0
+      div.style.transition = 'opacity 0.2s ease'; // Add transition for opacity
       div.draggable = true
 
       div.innerHTML = `
@@ -55,6 +57,11 @@ window.addEventListener('DOMContentLoaded', (_) => {
         </svg>`
 
       document.body.appendChild(div)
+
+      // Animate in on appear
+      setTimeout(() => {
+        div.style.opacity = '1';
+      }, 120);
 
       // Create and style tooltip
       const tooltip = document.createElement('div');
@@ -91,6 +98,9 @@ window.addEventListener('DOMContentLoaded', (_) => {
         event.stopPropagation()
         event.dataTransfer?.setData('text/plain', text)
       })
+
+      // reset previously selected text after delay, so the user can actually select the same text again.
+      previouslySelectedText = ''
     }
 
     previouslySelectedText = text
