@@ -68,25 +68,31 @@ window.addEventListener('DOMContentLoaded', (_) => {
       tooltip.innerText = 'Drag me out!'; // Tooltip text
       tooltip.style.position = 'absolute';
       tooltip.style.padding = '5px';
-      tooltip.style.display = 'flex'
-      tooltip.style.alignItems = 'center'
-      tooltip.style.justifyContent = 'center'
+      tooltip.style.display = 'flex';
+      tooltip.style.alignItems = 'center';
+      tooltip.style.justifyContent = 'center';
       tooltip.style.background = 'black';
       tooltip.style.color = 'white';
       tooltip.style.borderRadius = '4px';
-      tooltip.style.width = '5rem';
       tooltip.style.fontSize = '0.75rem';
       tooltip.style.visibility = 'hidden'; // Initially hidden
+      tooltip.style.whiteSpace = 'nowrap'; // Keep text in one line
       tooltip.id = 'horizonTextTooltip';
 
       div.appendChild(tooltip);
 
-      // Show tooltip on hover
-      div.addEventListener('mouseover', () => {
+      // Show tooltip on hover and position it dynamically
+      div.addEventListener('mouseover', (event) => {
         tooltip.style.visibility = 'visible';
-        tooltip.style.left = '-90%';
-        tooltip.style.top = '40px'; // Position above the div
+        
+        // Calculate width of the tooltip after it renders
+        const tooltipWidth = tooltip.offsetWidth;
+        
+        // Center tooltip below the drag handle
+        tooltip.style.left = `calc(50% - ${tooltipWidth / 2}px)`;
+        tooltip.style.bottom = '-2rem';
       });
+
 
       // Hide tooltip when not hovering
       div.addEventListener('mouseout', () => {
