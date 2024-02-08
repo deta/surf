@@ -86,7 +86,9 @@
     // webview.addEventListener('dom-ready', (_) => webview.openDevTools())
 
     webview.addEventListener('did-navigate', (e: any) => url.set(e.url))
-    webview.addEventListener('did-navigate-in-page', (e: any) => url.set(e.url))
+    webview.addEventListener('did-navigate-in-page', (e: any) => {
+      if (e.isMainFrame) url.set(e.url)
+    })
     webview.addEventListener('did-start-loading', () => isLoading.set(true))
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
     webview.addEventListener('page-title-updated', (e: any) => title.set(e.title))
@@ -94,7 +96,7 @@
       dispatch('didFinishLoad')
       didFinishLoad.set(true)
     })
-    webview.addEventListener('page-favicon-updated', (e:any) => {
+    webview.addEventListener('page-favicon-updated', (e: any) => {
       // Get the biggest favicon (last favicon in array)
       faviconURL.set(e.favicons[e.favicons.length - 1])
     })
