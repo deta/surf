@@ -16,7 +16,7 @@
   import CardWrapper from './CardWrapper.svelte'
   import { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
-  import { takePageScreenshot } from '../../utils/screenshot'
+  import { requestNewPreviewImage, takePageScreenshot } from '../../utils/screenshot'
   import type { Card } from '../../types'
   import { useDebounce } from '../../utils/debounce'
   import HorizonInfo from './HorizonInfo.svelte'
@@ -26,6 +26,7 @@
   export let horizon: Horizon
   export let inOverview: boolean = false
 
+  const REQUEST_NEW_PREVIEW_INTERVAL = 5e3
   const cards = horizon.cards
   const data = horizon.data
 
@@ -75,6 +76,7 @@
   const activeCardId = horizon.activeCardId
 
   let containerEl: HTMLElement
+  let requestNewPreviewIntervalId: number | undefined
 
   $: log.debug('horizon state changed', horizon.state)
 
@@ -267,10 +269,17 @@
 
     stack.set(get(horizon.stackingOrder))
     $state.stackingOrder = stack
+
+    requestNewPreviewIntervalId = setInterval(async () => {
+      if (horizon && active && !inOverview) {
+        await requestNewPreviewImage(horizon.id)
+      }
+    }, REQUEST_NEW_PREVIEW_INTERVAL)
   })
 
   onDestroy(() => {
     horizon.detachBoard()
+    clearInterval(requestNewPreviewIntervalId)
   })
 </script>
 

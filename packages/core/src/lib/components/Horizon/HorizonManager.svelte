@@ -69,9 +69,12 @@
   let overScrollTimeout: ReturnType<typeof setTimeout> | null = null
   let moveToStackItem: (idx: number) => Promise<void>
 
+  // @ts-ignore
   window.api.onNewPreviewImage((horizonId: string, blob: Blob) => {
-    let horizon: Horizon | undefined = get(horizonManager.horizons)?.find((h) => h.id === horizonId)
-    console.log(horizonId, horizon, blob)
+    let horizon: IHorizon | undefined = get(horizonManager.horizons)?.find(
+      (h) => h.id === horizonId
+    )
+    horizon?.setPreviewImage(blob)
   })
 
   $: selectedHorizonId = sortedHorizons[$activeStackItemIdx]
@@ -283,10 +286,6 @@
       if ($showStackOverview) {
         selectHorizonAndCloseOverview()
       } else {
-        const horizon = get(horizonManager.activeHorizon)
-        if (horizon) {
-          await requestNewPreviewImage(horizon.id)
-        }
         $showStackOverview = true
       }
     } else if (event.key === 'Escape') {
@@ -387,11 +386,6 @@
     }
 
     if (g.scale < 1 && !$showStackOverview) {
-      const horizon = get(horizonManager.activeHorizon)
-      if (horizon) {
-        await requestNewPreviewImage(horizon.id)
-      }
-
       log.debug('pinch out')
       $showStackOverview = true
     } else if (g.scale > 1 && $showStackOverview) {

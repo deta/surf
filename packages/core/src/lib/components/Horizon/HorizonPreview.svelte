@@ -5,8 +5,8 @@
 </script>
 
 <div class="wrapper">
-  {#if horizon?.data?.previewImage}
-    <img src={horizon.data.previewImage} alt="preview" />
+  {#if horizon?.previewImageObjectURL}
+    <img src={horizon.previewImageObjectURL} alt="preview" />
   {:else}
     <div class="empty">
       <svg xmlns="http://www.w3.org/2000/svg" fill="var(--color-text)" fill-opacity="30%">

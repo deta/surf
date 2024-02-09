@@ -1,7 +1,7 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
 import type { Card, CardPosition, Optional } from '../types'
 import type { API } from './api'
-import type { HorizonState, HorizonData } from '../types'
+import type { Resource, HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
@@ -23,6 +23,7 @@ export class Horizon {
   adblockerState: Writable<boolean>
   signalChange: (horizon: Horizon) => void
   board: IBoard<any, any> | null
+  previewImageObjectURL: string | undefined
 
   api: API
   log: ScopedLogger
@@ -34,8 +35,9 @@ export class Horizon {
     data: HorizonData,
     api: API,
     telemetry: Telemetry,
-    signalChange: (horizon: Horizon) => void,
-    adblockerState: Writable<boolean>
+    adblockerState: Writable<boolean>,
+    previewImageResource: Resource | undefined,
+    signalChange: (horizon: Horizon) => void
   ) {
     this.id = id
     this.api = api
@@ -56,6 +58,9 @@ export class Horizon {
     this.board = null
 
     this.adblockerState = adblockerState
+    if (previewImageResource) {
+      this.previewImageObjectURL = URL.createObjectURL(previewImageResource.blob)
+    }
 
     this.log.debug(`Created`)
   }
@@ -137,6 +142,18 @@ export class Horizon {
       this.moveCardToStackingTop(id)
     }
     this.activeCardId.set(id)
+  }
+
+  async setPreviewImage(newPreviewImage: Blob) {
+    if (this.data.previewImage) {
+      this.storage.resources.update(this.data.previewImage, { blob: newPreviewImage })
+    } else {
+      const resource = await this.storage.resources.create({ blob: newPreviewImage })
+      this.data.previewImage = resource.id
+    }
+
+    if (this.previewImageObjectURL) URL.revokeObjectURL(this.previewImageObjectURL)
+    this.previewImageObjectURL = URL.createObjectURL(newPreviewImage)
   }
 
   async updateCard(id: string, updates: Partial<Card>) {
@@ -483,23 +500,28 @@ export class HorizonsManager {
     const storedHorizons = (await this.storage.horizons.all()) ?? []
     this.log.debug(`Loading ${storedHorizons.length} stored horizons`)
 
-    // const res = await this.api.getHorizons()
-    // const { default: data } = await import('../data/horizons.json')
+    const horizons = await Promise.all(
+      storedHorizons.map(async (data) => {
+        let previewImageResource: Resource | undefined
+        if (data.previewImage) {
+          try {
+            previewImageResource = await this.storage.resources.read(data.previewImage)
+          } catch {}
+        }
 
-    const horizons = storedHorizons.map(
-      (d) =>
-        new Horizon(
-          d.id,
-          d,
+        return new Horizon(
+          data.id,
+          data,
           this.api,
           this.telemetry,
-          (h) => this.handleHorizonChange(h),
-          this.adblockerState
+          this.adblockerState,
+          previewImageResource,
+          this.handleHorizonChange.bind(this)
         )
+      })
     )
 
     this.horizons.set(horizons)
-
     return horizons
   }
 
@@ -575,8 +597,9 @@ export class HorizonsManager {
       data,
       this.api,
       this.telemetry,
-      (h) => this.handleHorizonChange(h),
-      this.adblockerState
+      this.adblockerState,
+      undefined,
+      (h) => this.handleHorizonChange(h)
     )
     this.horizons.update((h) => [...h, horizon])
 
