@@ -77,10 +77,11 @@ jobs:
           yarn build:horizon:win
           yarn build:horizon:linux
         env:
+          HUSKY: 0
           APP_VERSION: ${{ env.APP_VERSION }}
           M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
           R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
-          APPLE_ID : ${{ secrets.APPLE_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
