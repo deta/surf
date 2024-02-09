@@ -8,61 +8,59 @@ const params = {
   buildTag: process.env.BUILD_TAG,
   shouldNotarize: process.env.SHOULD_NOTARIZE,
   appleTeamId: process.env.APPLE_TEAM_ID,
-  buildName: process.env.BUILD_TAG? `${process.env.PRODUCT_NAME}-${process.env.BUILD_TAG}` : process.env.PRODUCT_NAME,
+  buildName: process.env.BUILD_TAG
+    ? `${process.env.PRODUCT_NAME}-${process.env.BUILD_TAG}`
+    : process.env.PRODUCT_NAME,
   signIgnore: process.env.SIGN_IGNORE
 }
 
-export default function electronBuilderConfig(){
+export default function electronBuilderConfig() {
   return {
-    appId: "space.deta.spaceos.ea",
+    appId: 'space.deta.spaceos.ea',
     productName: params.buildName,
     directories: {
-      buildResources: "build",
+      buildResources: 'build'
     },
     files: [
-      "!**/.vscode/*",
-      "!src/*",
-      "!electron.vite.config.{js,ts,mjs,cjs}",
-      "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}",
-      "!{.env,.env.*,.npmrc,pnpm-lock.yaml}",
-      "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+      '!**/.vscode/*',
+      '!src/*',
+      '!electron.vite.config.{js,ts,mjs,cjs}',
+      '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}',
+      '!{.env,.env.*,.npmrc,pnpm-lock.yaml}',
+      '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
     ],
-    asarUnpack: [
-      "resources/**"
-    ],
-    afterPack: "build/afterPack.js",
+    asarUnpack: ['resources/**'],
+    afterPack: 'build/afterPack.js',
     win: {
-      executableName: params.buildName,
+      executableName: params.buildName
     },
     nsis: {
       artifactName: `${params.buildName}-setup.$\{ext\}`,
       shortcutName: params.buildName,
       uninstallDisplayName: params.buildName,
-      createDesktopShortcut: "always",
+      createDesktopShortcut: 'always'
     },
     mac: {
       hardenedRuntime: true,
-      target: "dmg",
-      entitlementsInherit: "build/entitlements.mac.plist",
+      target: 'dmg',
+      entitlementsInherit: 'build/entitlements.mac.plist',
       extendInfo: [
         "NSCameraUsageDescription: Application requests access to the device's camera.",
         "NSMicrophoneUsageDescription: Application requests access to the device's microphone.",
         "NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.",
         "NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder."
       ],
-      notarize: params.shouldNotarize === 'true' ? {teamId: params.appleTeamId} : false,
+      notarize: params.shouldNotarize === 'true' ? { teamId: params.appleTeamId } : false
     },
     dmg: {
-      artifactName: `${params.buildName}.$\{arch\}.$\{ext}`,
+      artifactName: `${params.buildName}.$\{arch\}.$\{ext}`
     },
     linux: {
-      target: [
-        "AppImage",
-      ],
-      maintainer: "deta.space",
+      target: ['AppImage'],
+      maintainer: 'deta.space'
     },
     appImage: {
-      artifactName: `${params.buildName}.$\{ext\}`,
+      artifactName: `${params.buildName}.$\{ext\}`
     },
     npmRebuild: false
   }

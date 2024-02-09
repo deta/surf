@@ -137,7 +137,7 @@
     showSelectTooltip = true
     selectPos = {
       x: event.clientX,
-      y:  event.clientY
+      y: event.clientY
     }
 
     // Right click
@@ -274,7 +274,7 @@
   })
 </script>
 
-<svelte:window on:resize={handleWindowResize} on:keyup={handleKeyup}/>
+<svelte:window on:resize={handleWindowResize} on:keyup={handleKeyup} />
 
 {#if showSelectTooltip}
   <div class="cursor-tooltip" style="--select-x: {selectPos.x}px; --select-y: {selectPos.y}px;">
@@ -311,22 +311,33 @@
       <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
     </svelte:fragment>
 
-    <div class="abyss-indicator" style="position:absolute; top: 1080px; left: {$viewOffset.x - 20}px; z-index: -1;">
-      <svg version="1.1"
-        width="{$viewPort.w + 200}"
+    <div
+      class="abyss-indicator"
+      style="position:absolute; top: 1080px; left: {$viewOffset.x - 20}px; z-index: -1;"
+    >
+      <svg
+        version="1.1"
+        width={$viewPort.w + 200}
         viewBox="0 0 3200 30"
-        xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <clipPath id="clip">
-          <rect x="0" width="100%" height="30"/>
-        </clipPath>
-        <path id="wave" d="m764 23c-8 10-8-10-16 0s-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0"
-              fill="none" stroke="currentColor" stroke-width="2">
-      </defs>
-      <g clip-path="url(#clip)">
-        <use xlink:href="#wave" x="0" y="0" />
-        <use xlink:href="#wave" x="1600" y="0" />
-        <use xlink:href="#wave" x="2400" y="0" />
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <clipPath id="clip">
+            <rect x="0" width="100%" height="30" />
+          </clipPath>
+          <path
+            id="wave"
+            d="m764 23c-8 10-8-10-16 0s-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0-8-10-16 0"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+          </path></defs
+        >
+        <g clip-path="url(#clip)">
+          <use xlink:href="#wave" x="0" y="0" />
+          <use xlink:href="#wave" x="1600" y="0" />
+          <use xlink:href="#wave" x="2400" y="0" />
           <!-- <animateTransform
                   type="translate"
                   attributeName="transform"
@@ -337,9 +348,12 @@
                   fill="remove"
                   repeatCount="indefinite"/>
         </path> -->
-      </g>
-    </svg>
-      <small>Welcome to the Abyss! <br>Stuff down here might not be visible on smaller screens. <br>This line is a temporary measure.</small>
+        </g>
+      </svg>
+      <small
+        >Welcome to the Abyss! <br />Stuff down here might not be visible on smaller screens.
+        <br />This line is a temporary measure.</small
+      >
     </div>
 
     <CardWrapper

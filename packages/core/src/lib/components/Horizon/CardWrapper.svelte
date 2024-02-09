@@ -3,7 +3,7 @@
 <script lang="ts">
   import { SvelteComponent, createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { get, type Writable } from 'svelte/store'
-  import { tooltip } from "@svelte-plugins/tooltips";
+  import { tooltip } from '@svelte-plugins/tooltips'
 
   import {
     Draggable,
@@ -16,7 +16,7 @@
   import type { Card, CardEvents } from '../../types'
   import { useLogScope } from '../../utils/log'
   import type { Horizon } from '../../service/horizon'
-    import { Icon } from '..'
+  import { Icon } from '..'
 
   // TODO: fix this unnecessary cast
   const BrowserCard = () =>
@@ -58,16 +58,16 @@
 
   const handleDragEnd = (_: any) => {
     console.warn(horizon)
-    const board = horizon.board;
+    const board = horizon.board
     if (!board) console.error('No board found ond rag end')
-    const state = get(board!.state);
+    const state = get(board!.state)
     $card.stacking_order = get(state.stackingOrder).indexOf($card.id)
     updateCard()
   }
 
-  const handleMouseMove = (e: MouseEvent) => {    
+  const handleMouseMove = (e: MouseEvent) => {
     if (forcing) return
-  
+
     const rect = el.getBoundingClientRect()
     const x = e.clientX - rect.left
 
@@ -82,7 +82,7 @@
   const handleMouseOver = (e: MouseEvent) => {
     const rect = el.getBoundingClientRect()
 
-    if ((rect.x + rect.width) + PADDING > window.innerWidth) {
+    if (rect.x + rect.width + PADDING > window.innerWidth) {
       menuPosition = 'left'
       forcing = true
     } else if (rect.x < PADDING) {
@@ -137,35 +137,38 @@
   <Resizable {positionable} direction="left" {minSize} {maxSize} />
   <Resizable {positionable} direction="right" {minSize} {maxSize} />
 
-    <div class="card-header" data-position={menuPosition}>
-      <Draggable {positionable} class="">
-        <div class="card-header-content">
-          <!-- <div class="card-title">{cardTitle}</div> -->
-          <div class="card-header-actions">
-            <button on:click={handleDelete}>
-              <Icon name="close" />
-            </button>
-            <!-- <button on:click={handleCopy}>
+  <div class="card-header" data-position={menuPosition}>
+    <Draggable {positionable} class="">
+      <div class="card-header-content">
+        <!-- <div class="card-title">{cardTitle}</div> -->
+        <div class="card-header-actions">
+          <button on:click={handleDelete}>
+            <Icon name="close" />
+          </button>
+          <!-- <button on:click={handleCopy}>
               <Icon name="copy" />
             </button> -->
-          </div>
-
-          <div class="card-drag-indicator">
-            <div></div>
-            <div></div>
-            <div></div>
-          </div>
-
-          <div class="card-header-actions end-placement">
-            {#if allowDuplicating}
-              <button use:tooltip={{ content: 'Create similar', action: 'hover' }} on:click={handleDuplicate}>
-                <Icon name="add" />
-              </button>
-            {/if}
-          </div>
         </div>
-      </Draggable>
-    </div>
+
+        <div class="card-drag-indicator">
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+
+        <div class="card-header-actions end-placement">
+          {#if allowDuplicating}
+            <button
+              use:tooltip={{ content: 'Create similar', action: 'hover' }}
+              on:click={handleDuplicate}
+            >
+              <Icon name="add" />
+            </button>
+          {/if}
+        </div>
+      </div>
+    </Draggable>
+  </div>
 
   <div class="content tela-ignore" style={!active ? 'pointer-events: none;' : ''}>
     {#if $card.type === 'browser'}
@@ -205,7 +208,7 @@
     max-height: 200px;
     opacity: 0;
 
-    &[data-position="right"] {
+    &[data-position='right'] {
       right: 30px;
       transform: translate(100%, -50%);
 
@@ -216,7 +219,7 @@
       }
     }
 
-    &[data-position="left"] {
+    &[data-position='left'] {
       left: 30px;
       transform: translate(-100%, -50%);
 
@@ -245,16 +248,17 @@
     height: 100%;
   }
 
-  :global(.card:hover), :global(.dragging) {
+  :global(.card:hover),
+  :global(.dragging) {
     .card-header {
       display: block;
       opacity: 1;
       z-index: 100000;
-      &[data-position="right"] {
+      &[data-position='right'] {
         right: 0;
       }
 
-      &[data-position="left"] {
+      &[data-position='left'] {
         left: 0;
       }
     }
@@ -279,7 +283,6 @@
       align-items: center;
       justify-content: center;
 
-
       &:hover {
         color: #7b7b7b;
       }
@@ -292,7 +295,7 @@
     gap: 4px;
 
     div {
-      background:  #999999;
+      background: #999999;
       height: 100%;
       width: 1px;
     }

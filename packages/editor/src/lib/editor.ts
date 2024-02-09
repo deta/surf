@@ -5,25 +5,25 @@ import TaskList from '@tiptap/extension-task-list'
 import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
 
-import { DragHandle } from './extensions/DragHandle/DragHandleExtension';
-import Slash from './extensions/Slash/SlashExtension';
-import suggestion from './extensions/Slash/suggestion';
+import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
+import Slash from './extensions/Slash/SlashExtension'
+import suggestion from './extensions/Slash/suggestion'
 
 export type ExtensionOptions = { placeholder?: string }
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
   StarterKit.configure({
     heading: {
-      levels: [1, 2, 3],
-    },
+      levels: [1, 2, 3]
+    }
   }),
   Link.extend({
     addAttributes() {
       return {
         href: {
-          default: null,
+          default: null
         },
         'data-sveltekit-reload': {
-          default: true,
+          default: true
         },
         target: {
           default: null,
@@ -33,22 +33,22 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
                 window.location.origin.includes('deta.space') ||
                 window.location.origin.includes('localhost')
                   ? '_self'
-                  : '_blank',
+                  : '_blank'
             }
-          },
-        },
+          }
+        }
       }
-    },
+    }
   }),
   Placeholder.configure({
-    placeholder: opts?.placeholder ?? "Write something or type '/' for options…",
+    placeholder: opts?.placeholder ?? "Write something or type '/' for options…"
   }),
   TaskItem,
-  TaskList,
+  TaskList
   // DragHandle,
   // Slash.configure({
-	// 	suggestion
-	// })
+  // 	suggestion
+  // })
 ]
 
 const extensions = createEditorExtensions()

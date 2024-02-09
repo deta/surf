@@ -44,7 +44,7 @@
 
     return viewportPos
   }
-  
+
   const getNewCardHorizontalPositionCreator = (gap: number, basePosition: any) => {
     const initialPos = getNewCardPosition(basePosition)
 

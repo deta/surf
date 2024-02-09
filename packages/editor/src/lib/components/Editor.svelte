@@ -1,11 +1,11 @@
 <svelte:options immutable={true} />
 
 <script lang="ts">
-  import type { Readable } from 'svelte/store';
+  import type { Readable } from 'svelte/store'
   import { createEventDispatcher, onMount } from 'svelte'
-  
-  import { createEditor, Editor, EditorContent } from 'svelte-tiptap';
-  import type { JSONContent } from '@tiptap/core';
+
+  import { createEditor, Editor, EditorContent } from 'svelte-tiptap'
+  import type { JSONContent } from '@tiptap/core'
 
   import { createEditorExtensions } from '../editor'
   import BubbleMenu from './BubbleMenu.svelte'
@@ -23,7 +23,7 @@
     }
   }
 
-  let editor: Readable<Editor>;
+  let editor: Readable<Editor>
   let focused = false
 
   onMount(() => {
@@ -44,14 +44,14 @@
       },
       onBlur: () => {
         focused = false
-      },
+      }
     })
   })
 </script>
 
 <div class="editor">
   {#if editor && !readOnly}
-    <BubbleMenu editor={editor} />
+    <BubbleMenu {editor} />
   {/if}
 
   <div class="editor-wrapper">

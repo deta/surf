@@ -1,17 +1,17 @@
-import { Extension } from "@tiptap/core"
+import { Extension } from '@tiptap/core'
 
-import DragHandleComp from "./DragHandle"
+import DragHandleComp from './DragHandle'
 
 export interface DragHandleOptions {}
 
 export const DragHandle = Extension.create<DragHandleOptions>({
-    name: "DragHandle",
+  name: 'DragHandle',
 
-    addProseMirrorPlugins() {
-        return [
-            DragHandleComp({
-                dragHandleWidth: 24
-            })
-        ]
-    }
+  addProseMirrorPlugins() {
+    return [
+      DragHandleComp({
+        dragHandleWidth: 24
+      })
+    ]
+  }
 })

@@ -5,7 +5,7 @@ import type { HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
-import { Telemetry, EventTypes } from "./telemetry";
+import { Telemetry, EventTypes } from './telemetry'
 import { moveToStackingTop, type IBoard } from '@horizon/tela'
 
 // how many horizons to keep in the dom
@@ -28,7 +28,13 @@ export class Horizon {
   storage: HorizonDatabase
   telemetry: Telemetry
 
-  constructor(id: string, data: HorizonData, api: API, telemetry: Telemetry, signalChange: (horizon: Horizon) => void) {
+  constructor(
+    id: string,
+    data: HorizonData,
+    api: API,
+    telemetry: Telemetry,
+    signalChange: (horizon: Horizon) => void
+  ) {
     this.id = id
     this.api = api
     this.telemetry = telemetry
@@ -112,7 +118,7 @@ export class Horizon {
 
   moveCardToStackingTop(id: string) {
     if (!this.board) {
-      console.warn("[Horizon Service] setActiveCard called with board === undefined!")
+      console.warn('[Horizon Service] setActiveCard called with board === undefined!')
       moveToStackingTop(this.stackingOrder, id)
       return
     }
@@ -142,7 +148,10 @@ export class Horizon {
     await this.storage.cards.update(id, updates)
     this.log.debug(`Updated card ${id}`)
     this.signalChange(this)
-    await this.telemetry.trackEvent(EventTypes.UpdateCard, this.telemetry.extractEventPropertiesFromCard(updates))
+    await this.telemetry.trackEvent(
+      EventTypes.UpdateCard,
+      this.telemetry.extractEventPropertiesFromCard(updates)
+    )
   }
 
   async deleteCard(idOrCard: string | Card) {
@@ -186,7 +195,11 @@ export class Horizon {
     return this.storage.resources.read(id)
   }
 
-  async addCard(data: Optional<Card, 'id' | 'stacking_order'>, makeActive: boolean = false, duplicated: boolean = false) {
+  async addCard(
+    data: Optional<Card, 'id' | 'stacking_order'>,
+    makeActive: boolean = false,
+    duplicated: boolean = false
+  ) {
     const card = await this.storage.cards.create({
       horizon_id: this.data.id,
       //stacking_order: 1,
@@ -205,67 +218,118 @@ export class Horizon {
     }
 
     this.signalChange(this)
-    await this.telemetry.trackEvent(EventTypes.AddCard, this.telemetry.extractEventPropertiesFromCard(card, duplicated))
+    await this.telemetry.trackEvent(
+      EventTypes.AddCard,
+      this.telemetry.extractEventPropertiesFromCard(card, duplicated)
+    )
     return cardStore
   }
 
-  addCardBrowser(location: string, position: CardPosition, makeActive: boolean = false, duplicated: boolean = false) {
-    return this.addCard({
-      ...position,
-      type: 'browser',
-      data: {
-        initialLocation: location,
-        historyStack: [] as string[],
-        currentHistoryIndex: -1
-      }
-    }, makeActive, duplicated)
+  addCardBrowser(
+    location: string,
+    position: CardPosition,
+    makeActive: boolean = false,
+    duplicated: boolean = false
+  ) {
+    return this.addCard(
+      {
+        ...position,
+        type: 'browser',
+        data: {
+          initialLocation: location,
+          historyStack: [] as string[],
+          currentHistoryIndex: -1
+        }
+      },
+      makeActive,
+      duplicated
+    )
   }
 
-  addCardText(content: string, position: CardPosition, makeActive: boolean = false, duplicated: boolean = false) {
-    return this.addCard({
-      ...position,
-      type: 'text',
-      data: {
-        content: content
-      }
-    }, makeActive, duplicated)
+  addCardText(
+    content: string,
+    position: CardPosition,
+    makeActive: boolean = false,
+    duplicated: boolean = false
+  ) {
+    return this.addCard(
+      {
+        ...position,
+        type: 'text',
+        data: {
+          content: content
+        }
+      },
+      makeActive,
+      duplicated
+    )
   }
 
-  addCardLink(url: string, position: CardPosition, makeActive: boolean = false, duplicated: boolean = false) {
-    return this.addCard({
-      ...position,
-      type: 'link',
-      data: {
-        url: url
-      }
-    }, makeActive, duplicated)
+  addCardLink(
+    url: string,
+    position: CardPosition,
+    makeActive: boolean = false,
+    duplicated: boolean = false
+  ) {
+    return this.addCard(
+      {
+        ...position,
+        type: 'link',
+        data: {
+          url: url
+        }
+      },
+      makeActive,
+      duplicated
+    )
   }
 
-  async addCardFile(data: Blob, position: CardPosition, makeActive: boolean = false, duplicated: boolean = false) {
+  async addCardFile(
+    data: Blob,
+    position: CardPosition,
+    makeActive: boolean = false,
+    duplicated: boolean = false
+  ) {
     const resource = await this.createResource(data)
-    return this.addCard({
-      ...position,
-      type: 'file',
-      data: {
-        name: 'Untitled',
-        mimetype: data.type,
-        resourceId: resource.id
-      }
-    }, makeActive, duplicated)
+    return this.addCard(
+      {
+        ...position,
+        type: 'file',
+        data: {
+          name: 'Untitled',
+          mimetype: data.type,
+          resourceId: resource.id
+        }
+      },
+      makeActive,
+      duplicated
+    )
   }
-  
-  async duplicateCard(idOrCard: Card | string, position: CardPosition, makeActive: boolean = false) {
+
+  async duplicateCard(
+    idOrCard: Card | string,
+    position: CardPosition,
+    makeActive: boolean = false
+  ) {
     const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
-    return this.addCard({
-      ...position,
-      type: card.type,
-      data: card.data
-    }, makeActive, true)
+    return this.addCard(
+      {
+        ...position,
+        type: card.type,
+        data: card.data
+      },
+      makeActive,
+      true
+    )
   }
 
-  async duplicateCardWithoutData(idOrCard: Card | string, position: CardPosition, makeActive: boolean = false) {
+  async duplicateCardWithoutData(
+    idOrCard: Card | string,
+    position: CardPosition,
+    makeActive: boolean = false
+  ) {
     const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
@@ -483,14 +547,16 @@ export class HorizonsManager {
     // const res = await this.api.createHorizon(name)
     let data = {
       name,
-      viewOffsetX: 0,
+      viewOffsetX: 0
     } as HorizonData
     data = await this.storage.horizons.create(data)
 
-    const horizon = new Horizon(data.id, data, this.api, this.telemetry, (h) => this.handleHorizonChange(h))
+    const horizon = new Horizon(data.id, data, this.api, this.telemetry, (h) =>
+      this.handleHorizonChange(h)
+    )
     this.horizons.update((h) => [...h, horizon])
 
-    await this.telemetry.trackEvent(EventTypes.CreateHorizon, { "name": name, "id": horizon.id})
+    await this.telemetry.trackEvent(EventTypes.CreateHorizon, { name: name, id: horizon.id })
     return horizon
   }
 
@@ -505,6 +571,6 @@ export class HorizonsManager {
     // TODO: delete resources
 
     this.horizons.update((h) => h.filter((h) => h.id !== horizon.id))
-    await this.telemetry.trackEvent(EventTypes.DeleteHorizon, { "id": horizon.id})
+    await this.telemetry.trackEvent(EventTypes.DeleteHorizon, { id: horizon.id })
   }
 }

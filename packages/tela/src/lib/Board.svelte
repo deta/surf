@@ -9,7 +9,7 @@
   export function createSettings(settings: DeepPartial<IBoardSettings>): Writable<IBoardSettings> {
     return writable({
       CAN_PAN: true,
-      PAN_DIRECTION: "xy",
+      PAN_DIRECTION: 'xy',
 
       CAN_DRAW: true,
       CAN_ZOOM: true,
@@ -25,7 +25,7 @@
       // CHUNK_CULL_MARGIN: 2000,
       // CHUNK_WARM_MARGIN: 1,
 
-      POSITIONABLE_KEY: "key",
+      POSITIONABLE_KEY: 'key',
 
       DEV: false,
 
@@ -37,10 +37,10 @@
         maxY: Infinity,
         minZoom: 0.3,
         maxZoom: 1,
-        limit: "soft",
+        limit: 'soft',
         ...settings.BOUNDS
       }
-    });
+    })
   }
 
   export function createBoard<BaseSt extends BaseState, Actions>(
@@ -50,14 +50,14 @@
     initMode: string,
     modes: {}
   ): IBoard<BaseSt, Actions> {
-    const cfg = get(settings);
-    const selectionRect = writable({ x: 0, y: 0, w: 0, h: 0 });
+    const cfg = get(settings)
+    const selectionRect = writable({ x: 0, y: 0, w: 0, h: 0 })
 
     initState = {
       zoom: writable(1),
       ...initState,
       viewOffset:
-        cfg.BOUNDS.limit === "soft"
+        cfg.BOUNDS.limit === 'soft'
           ? spring({ x: 0, y: 0 }, { stiffness: 0.499, damping: 0.999 })
           : tweened({ x: 0, y: 0 }, { duration: 0, easing: cubicOut }),
       // mode: fsm(initMode, modes),
@@ -73,11 +73,11 @@
       ),
 
       stackingOrder
-    };
+    }
 
-    const state = writable<IBoardState<BaseSt, Actions>>(initState as IBoardState<BaseSt, Actions>);
-    const viewOffset = get(state).viewOffset;
-    const zoom = get(state).zoom;
+    const state = writable<IBoardState<BaseSt, Actions>>(initState as IBoardState<BaseSt, Actions>)
+    const viewOffset = get(state).viewOffset
+    const zoom = get(state).zoom
 
     const panTo = (
       x: number,
@@ -90,13 +90,13 @@
         soft: false,
         hard: true,
         ...opts
-      };
+      }
       viewOffset.update((v) => {
-        v.x = x;
-        v.y = y;
-        return v;
-      }, opts);
-    };
+        v.x = x
+        v.y = y
+        return v
+      }, opts)
+    }
     const zoomTo = (
       targetZoom: number,
       opts?: { delay?: number; duration?: number; soft?: string | number | boolean }
@@ -107,24 +107,24 @@
         soft: false,
         hard: true,
         ...opts
-      };
-      zoom.set(targetZoom, opts);
-    };
+      }
+      zoom.set(targetZoom, opts)
+    }
 
     return {
       state,
       panTo,
       zoomTo
-    };
+    }
   }
 
   export function moveToStackingTop(stack: Writable<string[]>, key: string) {
     stack.update((_stack) => {
-      const i = _stack.indexOf(key);
-      if (i !== -1) _stack.splice(i, 1);
-      _stack.push(key);
-      return _stack;
-    });
+      const i = _stack.indexOf(key)
+      if (i !== -1) _stack.splice(i, 1)
+      _stack.push(key)
+      return _stack
+    })
 
     // const l = get(stack).length;
     // // console.time(`[StackingOrder-update :: n = ${l}]`); // todo: make debug only
@@ -160,15 +160,15 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, onMount, setContext, tick } from "svelte";
-  import { derived, get, writable, type Writable } from "svelte/store";
-  import type { IBoard, IBoardSettings, IBoardState } from "./types/Board.type.js";
-  import type { DeepPartial, Vec2 } from "./types/Utils.type.js";
-  import { spring, tweened } from "svelte/motion";
-  import { cubicOut } from "svelte/easing";
-  import DebugPanels from "./DebugPanels.svelte";
-  import type { BaseState } from "./state-machine/fsm.js";
-  import fsm from "./state-machine/fsm.js";
+  import { createEventDispatcher, onDestroy, onMount, setContext, tick } from 'svelte'
+  import { derived, get, writable, type Writable } from 'svelte/store'
+  import type { IBoard, IBoardSettings, IBoardState } from './types/Board.type.js'
+  import type { DeepPartial, Vec2 } from './types/Utils.type.js'
+  import { spring, tweened } from 'svelte/motion'
+  import { cubicOut } from 'svelte/easing'
+  import DebugPanels from './DebugPanels.svelte'
+  import type { BaseState } from './state-machine/fsm.js'
+  import fsm from './state-machine/fsm.js'
   import {
     clamp,
     debounce,
@@ -179,54 +179,54 @@
     posToAbsolute,
     rectsIntersect,
     snapToGrid
-  } from "./utils.js";
-  import type { IPositionable } from "./Positionable.svelte";
-  import type { TResizeDirection } from "./Resizable.svelte";
-  import ChunkOverlay from "./ChunkOverlay.svelte";
+  } from './utils.js'
+  import type { IPositionable } from './Positionable.svelte'
+  import type { TResizeDirection } from './Resizable.svelte'
+  import ChunkOverlay from './ChunkOverlay.svelte'
 
-  const dispatch = createEventDispatcher();
-  export let containerEl: HTMLElement;
+  const dispatch = createEventDispatcher()
+  export let containerEl: HTMLElement
 
-  export let settings: Writable<IBoardSettings>;
-  export let board: IBoard<any, any>;
-  export let positionables: Writable<Writable<IPositionable<any>>[]> = writable([]);
+  export let settings: Writable<IBoardSettings>
+  export let board: IBoard<any, any>
+  export let positionables: Writable<Writable<IPositionable<any>>[]> = writable([])
 
-  setContext("board", board);
-  setContext("settings", settings);
+  setContext('board', board)
+  setContext('settings', settings)
 
-  const CHUNK_WIDTH = $settings.CHUNK_WIDTH;
-  const CHUNK_HEIGHT = $settings.CHUNK_HEIGHT;
-  const POSITIONABLE_KEY = $settings.POSITIONABLE_KEY;
+  const CHUNK_WIDTH = $settings.CHUNK_WIDTH
+  const CHUNK_HEIGHT = $settings.CHUNK_HEIGHT
+  const POSITIONABLE_KEY = $settings.POSITIONABLE_KEY
 
-  const state = board.state;
-  const viewOffset = $state.viewOffset; // TODO: Can we use custom stores with requestAnimationFrame for scrolling?
+  const state = board.state
+  const viewOffset = $state.viewOffset // TODO: Can we use custom stores with requestAnimationFrame for scrolling?
 
-  const chunkOffset = writable({ x: 0, y: 0 });
+  const chunkOffset = writable({ x: 0, y: 0 })
   onDestroy(
     viewOffset.subscribe((_offset) => {
-      const chunkX = Math.floor(_offset.x / CHUNK_WIDTH);
-      const chunkY = Math.floor(_offset.y / CHUNK_HEIGHT);
+      const chunkX = Math.floor(_offset.x / CHUNK_WIDTH)
+      const chunkY = Math.floor(_offset.y / CHUNK_HEIGHT)
       if ($chunkOffset.x !== chunkX) {
         chunkOffset.update((v) => {
-          v.x = chunkX;
-          return v;
-        });
+          v.x = chunkX
+          return v
+        })
       }
       if ($chunkOffset.y !== chunkY) {
         chunkOffset.update((v) => {
-          v.y = chunkY;
-          return v;
-        });
+          v.y = chunkY
+          return v
+        })
       }
     })
-  );
+  )
 
-  const viewPort = $state.viewPort;
-  const zoom = $state.zoom;
-  $: mode = $state.mode;
-  const selection = $state.selection;
-  const selectionRect = $state.selectionRect;
-  const stackingOrder = $state.stackingOrder;
+  const viewPort = $state.viewPort
+  const zoom = $state.zoom
+  $: mode = $state.mode
+  const selection = $state.selection
+  const selectionRect = $state.selectionRect
+  const stackingOrder = $state.stackingOrder
 
   // $: transformCss = `transform-origin: top left; transform: ${
   //   $zoom !== 1 ? `scale(${$zoom * 100}%)` : ""
@@ -234,105 +234,106 @@
   //   $mode === "pan" ? "will-change: transform;" : ""
   // }`;
   $: transformCss = `transform-origin: top left; transform: translate3d(${-$viewOffset.x}px, ${-$viewOffset.y}px, 0); ${
-    $mode === "pan" ? "will-change: transform;" : ""
-  }`;
+    $mode === 'pan' ? 'will-change: transform;' : ''
+  }`
 
   board.state.update((v) => {
-    v.mode = fsm("idle", {
+    v.mode = fsm('idle', {
       idle: {
-        pan: "pan",
-        autoPan: "autoPan",
-        zoom: "zoom",
-        autoZoom: "autoZoom",
-        select: "select",
-        modSelect: "modSelect",
+        pan: 'pan',
+        autoPan: 'autoPan',
+        zoom: 'zoom',
+        autoZoom: 'autoZoom',
+        select: 'select',
+        modSelect: 'modSelect',
 
-        dragging: "dragging",
-        resizing: "resizing",
+        dragging: 'dragging',
+        resizing: 'resizing',
 
         _enter() {
-          tick().then(() => containerEl.addEventListener("mousedown", onMouseDown_idle));
+          tick().then(() => containerEl.addEventListener('mousedown', onMouseDown_idle))
           tick().then(() =>
-            containerEl.addEventListener("mousedown", onMouseDown_idleCapture, { capture: true })
-          );
+            containerEl.addEventListener('mousedown', onMouseDown_idleCapture, { capture: true })
+          )
         },
         _exit() {
-          containerEl.removeEventListener("mousedown", onMouseDown_idle);
-          containerEl.removeEventListener("mousedown", onMouseDown_idleCapture);
+          containerEl.removeEventListener('mousedown', onMouseDown_idle)
+          containerEl.removeEventListener('mousedown', onMouseDown_idleCapture)
         }
       },
       pan: {
-        idle: "idle",
+        idle: 'idle',
         _exit() {
-          dispatch("panEnd", {});
+          dispatch('panEnd', {})
         }
       },
       autoPan: {
-        idle: "idle"
+        idle: 'idle'
       },
       zoom: {
-        idle: "idle"
+        idle: 'idle'
       },
       autoZoom: {
-        idle: "idle"
+        idle: 'idle'
       },
       select: {
-        idle: "idle",
+        idle: 'idle',
 
         _enter() {
-          document.addEventListener("mousemove", onMouseMove_select);
-          document.addEventListener("mouseup", mode.idle);
+          document.addEventListener('mousemove', onMouseMove_select)
+          document.addEventListener('mouseup', mode.idle)
         },
         _exit() {
-          $state.selectionRect.set(null);
-          select_init.x = 0;
-          select_init.y = 0;
-          document.removeEventListener("mousemove", onMouseMove_select);
-          document.removeEventListener("mouseup", mode.idle);
+          $state.selectionRect.set(null)
+          select_init.x = 0
+          select_init.y = 0
+          document.removeEventListener('mousemove', onMouseMove_select)
+          document.removeEventListener('mouseup', mode.idle)
         }
       },
       modSelect: {
-        idle: "idle",
+        idle: 'idle',
 
         _enter() {
-          document.addEventListener("mousemove", onMouseMove_modSelect);
-          document.addEventListener("mouseup", onMouseUp_modSelect);
+          document.addEventListener('mousemove', onMouseMove_modSelect)
+          document.addEventListener('mouseup', onMouseUp_modSelect)
         },
         _exit() {
-          $state.selectionRect.set(null);
-          select_init.x = 0;
-          select_init.y = 0;
-          document.removeEventListener("mousemove", onMouseMove_modSelect);
-          document.removeEventListener("mouseup", onMouseUp_modSelect);
+          $state.selectionRect.set(null)
+          select_init.x = 0
+          select_init.y = 0
+          document.removeEventListener('mousemove', onMouseMove_modSelect)
+          document.removeEventListener('mouseup', onMouseUp_modSelect)
         }
       },
 
       dragging: {
-        idle: "idle"
+        idle: 'idle'
       },
       resizing: {
-        idle: "idle"
+        idle: 'idle'
       }
       // TODO: add custom actions
-    });
-    return v;
-  });
+    })
+    return v
+  })
 
   // Bound Zoom
-  onDestroy(zoom.subscribe((e) => {
-    if (e < $settings.BOUNDS.minZoom) {
-      zoom.set($settings.BOUNDS.minZoom)
-    }
-    else if (e > $settings.BOUNDS.maxZoom) {
-      zoom.set($settings.BOUNDS.maxZoom)
-    }
-  }));
+  onDestroy(
+    zoom.subscribe((e) => {
+      if (e < $settings.BOUNDS.minZoom) {
+        zoom.set($settings.BOUNDS.minZoom)
+      } else if (e > $settings.BOUNDS.maxZoom) {
+        zoom.set($settings.BOUNDS.maxZoom)
+      }
+    })
+  )
 
-  let resizeObserver: ResizeObserver;
-  const select_init = { x: 0, y: 0 };
+  let resizeObserver: ResizeObserver
+  const select_init = { x: 0, y: 0 }
   // Hoisted positionables will live outside the chunking / culling -> Always be loaded
-  const hoistedPositionables = writable<Writable<IPositionable<any>>[]>([]);
-  const chunks = writable(new Map<string, Writable<Writable<IPositionable<any>>[]>>());
+  const hoistedPositionables = writable<Writable<IPositionable<any>>[]>([])
+  const chunks = writable(new Map<string, Writable<Writable<IPositionable<any>>[]>>())
   onDestroy(
     positionables.subscribe((_positionables) => {
       hoistedPositionables.update((_hoisted) => {
@@ -341,71 +342,71 @@
           _hoisted.forEach((_h, i) => {
             // TODO: perf .forEach
             if (!_positionables.includes(_h) || get(_h).hoisted !== true) {
-              _hoisted.splice(i, 1);
+              _hoisted.splice(i, 1)
             }
-          });
+          })
 
           // Remove unused from chunks.
           for (const chunk of _chunks.entries()) {
-            const [chunkId, chunkPositionables] = chunk;
-            let empty = false;
+            const [chunkId, chunkPositionables] = chunk
+            let empty = false
             chunkPositionables.update((_chunkPositionables) => {
               _chunkPositionables.forEach((_cP) => {
                 if (!_positionables.includes(_cP)) {
-                  const index = _chunkPositionables.indexOf(_cP);
-                  if (index !== -1) _chunkPositionables.splice(index, 1);
-                  if (_chunkPositionables.length <= 0) empty = true;
+                  const index = _chunkPositionables.indexOf(_cP)
+                  if (index !== -1) _chunkPositionables.splice(index, 1)
+                  if (_chunkPositionables.length <= 0) empty = true
                 }
-              });
-              return _chunkPositionables;
-            });
-            if (empty) _chunks.delete(chunkId);
+              })
+              return _chunkPositionables
+            })
+            if (empty) _chunks.delete(chunkId)
           }
 
           _positionables.forEach((_positionable) => {
-            const p = get(_positionable);
-            const cI = `${Math.floor(p.x / CHUNK_WIDTH)}:${Math.floor(p.y / CHUNK_HEIGHT)}`;
+            const p = get(_positionable)
+            const cI = `${Math.floor(p.x / CHUNK_WIDTH)}:${Math.floor(p.y / CHUNK_HEIGHT)}`
 
             // Add Hoisted.
             // TODO: See if we can make this operate only on the positionable that changed instead of the whole array.
             if (get(_positionable).hoisted === true) {
               // Remove from chunk
               if (_chunks.has(cI)) {
-                const c = _chunks.get(cI)!;
+                const c = _chunks.get(cI)!
                 c.update((_c) => {
-                  const index = _c.indexOf(_positionable);
-                  if (index !== -1) _c.splice(index, 1);
-                  return _c;
-                });
+                  const index = _c.indexOf(_positionable)
+                  if (index !== -1) _c.splice(index, 1)
+                  return _c
+                })
               }
 
               if (!_hoisted.includes(_positionable)) {
-                _hoisted.push(_positionable);
+                _hoisted.push(_positionable)
               }
-              return;
+              return
             }
 
             // Chunked behaviour.
             else {
               if (!_chunks.has(cI)) {
-                _chunks.set(cI, writable([_positionable]));
+                _chunks.set(cI, writable([_positionable]))
               } else {
-                const c = _chunks.get(cI)!;
+                const c = _chunks.get(cI)!
                 if (!get(c).includes(_positionable)) {
                   c.update((_c) => {
-                    _c.push(_positionable);
-                    return _c;
-                  });
+                    _c.push(_positionable)
+                    return _c
+                  })
                 }
               }
             }
-          });
-          return _chunks;
-        });
-        return _hoisted;
-      });
+          })
+          return _chunks
+        })
+        return _hoisted
+      })
     })
-  );
+  )
 
   // $: {
   //   for (let [id, v] of $chunks.entries()) {
@@ -554,9 +555,9 @@
 
   const visibleChunks = derived([chunks, chunkOffset], (values) => {
     return fastFilter((entry) => {
-      const index = entry[0];
-      const chunkX = parseInt(index.split(":")[0]);
-      const chunkY = parseInt(index.split(":")[1]);
+      const index = entry[0]
+      const chunkX = parseInt(index.split(':')[0])
+      const chunkY = parseInt(index.split(':')[1])
       if (
         isInsideViewport(
           chunkX * CHUNK_WIDTH,
@@ -573,12 +574,12 @@
           CHUNK_HEIGHT
         )
       ) {
-        return true;
+        return true
       } else {
-        return false;
+        return false
       }
-    }, Array.from(values[0].entries()));
-  });
+    }, Array.from(values[0].entries()))
+  })
 
   // const visibleChunks = derived([chunks, viewPort], (v) => {
   //   const [chunks, _] = v;
@@ -669,92 +670,95 @@
   //       ];
 
   // Store IDS of old visible positionables fro comparison to fire onPositionableEnter/Leave events
-  let oldVisiblePositionables: string[] = [];
+  let oldVisiblePositionables: string[] = []
   const visiblePositionables = derived(
     [positionables, hoistedPositionables, visibleChunks],
     (values) => {
-      const _positionables = values[0];
-      const _hoistedPositionables = values[1];
-      const _visibleChunks = values[2];
+      const _positionables = values[0]
+      const _hoistedPositionables = values[1]
+      const _visibleChunks = values[2]
       // TODO: Remove dev
       const visible =
         _positionables.length <= 0
           ? _positionables
           : [
               ..._hoistedPositionables,
-              ...fastFilter((e) => {
-                const _e = get(e);
-                return (
-                  !_e.hoisted ||
-                  isInsideViewport(
-                    _e.x,
-                    _e.y,
-                    _e.width,
-                    _e.height,
-                    $viewOffset.x,
-                    $viewOffset.y,
-                    $viewPort,
-                    $zoom,
-                    0,
-                    0
+              ...fastFilter(
+                (e) => {
+                  const _e = get(e)
+                  return (
+                    !_e.hoisted ||
+                    isInsideViewport(
+                      _e.x,
+                      _e.y,
+                      _e.width,
+                      _e.height,
+                      $viewOffset.x,
+                      $viewOffset.y,
+                      $viewPort,
+                      $zoom,
+                      0,
+                      0
+                    )
                   )
-                );
-              }, _visibleChunks.map((_p) => get(_p[1])).flat())
-            ];
+                },
+                _visibleChunks.map((_p) => get(_p[1])).flat()
+              )
+            ]
 
-      const visibleIds = visible.map((e) => get(e)[POSITIONABLE_KEY]);
+      const visibleIds = visible.map((e) => get(e)[POSITIONABLE_KEY])
 
       // Leave events.
       for (let i = 0; i < oldVisiblePositionables.length; i++) {
-        const id = oldVisiblePositionables[i];
+        const id = oldVisiblePositionables[i]
         if (!visibleIds.includes(id)) {
-          dispatch("positionableLeave", id);
+          dispatch('positionableLeave', id)
         }
       }
 
       // Enter events.
       for (let i = 0; i < visibleIds.length; i++) {
-        const id = visibleIds[i];
+        const id = visibleIds[i]
         if (!oldVisiblePositionables.includes(id)) {
-          dispatch("positionableEnter", id);
+          dispatch('positionableEnter', id)
         }
       }
-      oldVisiblePositionables = visibleIds;
+      oldVisiblePositionables = visibleIds
 
-      return visible;
+      return visible
     }
-  );
+  )
 
   onMount(() => {
     if (!resizeObserver) {
       resizeObserver = new ResizeObserver(() => {
         // Set viewport
-        const { x, y, width, height } = containerEl.getBoundingClientRect();
+        const { x, y, width, height } = containerEl.getBoundingClientRect()
         viewPort.update((v) => {
-          v.x = v.x;
-          v.y = v.y; // HACK: this is needed so the viewport matches the visual board position in the new horizon switcher
-          v.w = width;
-          v.h = height;
-          return v;
-        });
-      });
-      resizeObserver.observe(containerEl);
+          v.x = v.x
+          v.y = v.y // HACK: this is needed so the viewport matches the visual board position in the new horizon switcher
+          v.w = width
+          v.h = height
+          return v
+        })
+      })
+      resizeObserver.observe(containerEl)
     }
     // TODO: Initialize visible chunks.
-  });
+  })
 
   onDestroy(() => {
     if (resizeObserver) {
-      resizeObserver.disconnect();
+      resizeObserver.disconnect()
     }
-  });
+  })
 
   // Utils
   function clearSelection() {
     selection.update((v) => {
-      v.clear();
-      return v;
-    });
+      v.clear()
+      return v
+    })
   }
 
   /**
@@ -765,71 +769,71 @@
    * @param height
    */
   function applyBounds(x: number, y: number, width: number, height: number) {
-    let outX = x;
-    let outY = y;
+    let outX = x
+    let outY = y
     if ($settings.BOUNDS?.minX !== null && x < $settings.BOUNDS!.minX) {
-      outX = $settings.BOUNDS!.minX;
+      outX = $settings.BOUNDS!.minX
     } else if ($settings.BOUNDS?.maxX !== null && x + width > $settings.BOUNDS!.maxX) {
-      outX = $settings.BOUNDS!.maxX - width;
+      outX = $settings.BOUNDS!.maxX - width
     }
 
     if ($settings.BOUNDS?.minY !== null && y < $settings.BOUNDS!.minY) {
-      outY = $settings.BOUNDS!.minY;
+      outY = $settings.BOUNDS!.minY
     } else if ($settings.BOUNDS?.maxY !== null && y + height > $settings.BOUNDS!.maxY) {
-      outY = $settings.BOUNDS!.maxY - height;
+      outY = $settings.BOUNDS!.maxY - height
     }
-    return { x: outX, y: outY };
+    return { x: outX, y: outY }
   }
 
   // UI Handlers
-  let lastViewX = 0;
-  let lastViewY = 0;
+  let lastViewX = 0
+  let lastViewY = 0
   function onWheel(e: WheelEvent) {
     // TODO: bypasses from setting
     // TODO: ZOOM
     if (e.ctrlKey && $settings.CAN_ZOOM) {
-      e.preventDefault();
-      e.stopPropagation();
-      mode.zoom();
+      e.preventDefault()
+      e.stopPropagation()
+      mode.zoom()
 
-      const absXOld = $viewOffset.x + e.clientX / $zoom;
-      const absYOld = $viewOffset.y + e.clientY / $zoom;
+      const absXOld = $viewOffset.x + e.clientX / $zoom
+      const absYOld = $viewOffset.y + e.clientY / $zoom
 
-      const delta = e.deltaY / 1000;
-      const newZoom = $zoom - delta * 4; // TODO: CLAMP // TODO: Zoom sensitivity cfg?
+      const delta = e.deltaY / 1000
+      const newZoom = $zoom - delta * 4 // TODO: CLAMP // TODO: Zoom sensitivity cfg?
 
-      const absXNew = $viewOffset.x + e.clientX / newZoom;
-      const absYNew = $viewOffset.y + e.clientY / newZoom;
-      const offsetX = absXOld - absXNew;
-      const offsetY = absYOld - absYNew;
+      const absXNew = $viewOffset.x + e.clientX / newZoom
+      const absYNew = $viewOffset.y + e.clientY / newZoom
+      const offsetX = absXOld - absXNew
+      const offsetY = absYOld - absYNew
 
       viewOffset.set(
         { x: $viewOffset.x + offsetX, y: $viewOffset.y + offsetY },
         { duration: 0, hard: true }
-      );
-      zoom.set(newZoom, { duration: 0 });
+      )
+      zoom.set(newZoom, { duration: 0 })
 
       // TODO: Dispatch zoom reset
-      debounce("end_zoom", 100, mode.idle);
+      debounce('end_zoom', 100, mode.idle)
     } else if ($settings.CAN_PAN) {
       // if (hasClassOrParentWithClass(e.target as HTMLElement, "tela-ignore")) return;
       // e.preventDefault();
       // e.stopPropagation();
-      mode.pan(); // TODO: only if not already?
+      mode.pan() // TODO: only if not already?
 
       let deltaX =
-        $settings.PAN_DIRECTION === "xy" || $settings.PAN_DIRECTION === "x" ? e.deltaX / $zoom : 0;
+        $settings.PAN_DIRECTION === 'xy' || $settings.PAN_DIRECTION === 'x' ? e.deltaX / $zoom : 0
       const deltaY =
-        $settings.PAN_DIRECTION === "xy" || $settings.PAN_DIRECTION === "y" ? e.deltaY / $zoom : 0;
+        $settings.PAN_DIRECTION === 'xy' || $settings.PAN_DIRECTION === 'y' ? e.deltaY / $zoom : 0
 
       // if (!hasClassOrParentWithClass(e.target as HTMLElement, "draggable")) {
-      if ($settings.PAN_DIRECTION === "x") {
+      if ($settings.PAN_DIRECTION === 'x') {
         if (deltaX === 0) {
-          mode.idle();
+          mode.idle()
         }
         if (!e.ctrlKey) {
-          deltaX += e.deltaY / $zoom;
-          mode.pan();
+          deltaX += e.deltaY / $zoom
+          mode.pan()
         }
       }
       // } else {
@@ -840,57 +844,57 @@
       // }
 
       // TODO: BOUND MAX
-      let boundX = Math.floor($viewOffset.x + deltaX); // TODO: works with zoom also? prob. not..
-      let boundY = Math.floor($viewOffset.y + deltaY);
-      if (boundX === lastViewX && boundY === lastViewY) return;
+      let boundX = Math.floor($viewOffset.x + deltaX) // TODO: works with zoom also? prob. not..
+      let boundY = Math.floor($viewOffset.y + deltaY)
+      if (boundX === lastViewX && boundY === lastViewY) return
 
       // This monster is responsible for the "rubber band" effect / hard limits
-      let reachedBounds = false;
+      let reachedBounds = false
 
       if (isFinite($settings.BOUNDS.minX) && boundX < $settings.BOUNDS.minX) {
-        boundX = $settings.BOUNDS.minX;
-        reachedBounds = true;
+        boundX = $settings.BOUNDS.minX
+        reachedBounds = true
       } else if (
         isFinite($settings.BOUNDS.maxX) &&
         boundX + $viewPort.w / $zoom > $settings.BOUNDS.maxX
       ) {
-        boundX = $settings.BOUNDS.maxX - $viewPort.w / $zoom;
-        reachedBounds = true;
+        boundX = $settings.BOUNDS.maxX - $viewPort.w / $zoom
+        reachedBounds = true
       } else if (isFinite($settings.BOUNDS.minY) && boundY < $settings.BOUNDS.minY) {
-        boundY = $settings.BOUNDS.minY;
-        reachedBounds = true;
+        boundY = $settings.BOUNDS.minY
+        reachedBounds = true
       } else if (
         isFinite($settings.BOUNDS.maxY) &&
         boundY + $viewPort.h / $zoom > $settings.BOUNDS.maxY
       ) {
-        boundY = $settings.BOUNDS.maxY - $viewPort.h / $zoom;
-        reachedBounds = true;
+        boundY = $settings.BOUNDS.maxY - $viewPort.h / $zoom
+        reachedBounds = true
       }
 
-      if ($settings.BOUNDS.limit === "soft") {
-        viewOffset.set({ x: boundX, y: boundY }, reachedBounds ? { soft: 0.07 } : { hard: true });
+      if ($settings.BOUNDS.limit === 'soft') {
+        viewOffset.set({ x: boundX, y: boundY }, reachedBounds ? { soft: 0.07 } : { hard: true })
       } else {
-        viewOffset.set({ x: boundX, y: boundY }, { duration: 0 });
+        viewOffset.set({ x: boundX, y: boundY }, { duration: 0 })
       }
 
-      lastViewX = boundX;
-      lastViewY = boundY;
+      lastViewX = boundX
+      lastViewY = boundY
 
       // TODO: Done event --> use native pan method
 
-      debounce("end_scroll_pan", 100, () => {
-        mode.idle();
-      });
+      debounce('end_scroll_pan', 100, () => {
+        mode.idle()
+      })
     }
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    if (e.ctrlKey && e.key === "0") {
-      $settings.DEV = !$settings.DEV;
-    } else if ($mode === "idle" && e.key === "Escape") {
-      clearSelection();
-    } else if (e.key === "Escape") {
-      mode.idle();
+    if (e.ctrlKey && e.key === '0') {
+      $settings.DEV = !$settings.DEV
+    } else if ($mode === 'idle' && e.key === 'Escape') {
+      clearSelection()
+    } else if (e.key === 'Escape') {
+      mode.idle()
     }
   }
 
@@ -900,8 +904,8 @@
    * Use capture, to ensure select also works on top of draggable stuff.
    */
   function onMouseDown_idleCapture(e: MouseEvent | TouchEvent) {
-    if (!e.shiftKey) return;
-    const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target;
+    if (!e.shiftKey) return
+    const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     const { x: absX, y: absY } = posToAbsolute(
       (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX,
       (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY,
@@ -909,28 +913,28 @@
       $viewOffset.y,
       $viewPort,
       $zoom
-    );
+    )
     // e.stopPropagation();
     // e.preventDefault();
 
-    select_init.x = absX;
-    select_init.y = absY;
+    select_init.x = absX
+    select_init.y = absY
     $state.selectionRect.set({
       x: absX,
       y: absY,
       w: 0,
       h: 0
-    });
-    mode.select();
+    })
+    mode.select()
   }
   function onMouseDown_idle(e: MouseEvent | TouchEvent) {
-    const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target;
+    const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     if (
-      hasClassOrParentWithClass(e.target as HTMLElement, "positionable") ||
-      hasClassOrParentWithClass(e.target as HTMLElement, "draggable") ||
-      hasClassOrParentWithClass(e.target as HTMLElement, "resizable")
+      hasClassOrParentWithClass(e.target as HTMLElement, 'positionable') ||
+      hasClassOrParentWithClass(e.target as HTMLElement, 'draggable') ||
+      hasClassOrParentWithClass(e.target as HTMLElement, 'resizable')
     )
-      return;
+      return
     const { x: absX, y: absY } = posToAbsolute(
       (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX,
       (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY,
@@ -938,25 +942,25 @@
       $viewOffset.y,
       $viewPort,
       $zoom
-    );
+    )
 
     // e.stopPropagation();
     // e.preventDefault();
 
-    select_init.x = absX;
-    select_init.y = absY;
+    select_init.x = absX
+    select_init.y = absY
     $state.selectionRect.set({
       x: absX,
       y: absY,
       w: 0,
       h: 0
-    });
-    mode.modSelect();
+    })
+    mode.modSelect()
   }
 
   // Select
   function onMouseMove_select(e: MouseEvent | TouchEvent) {
-    const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target;
+    const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     const { x: absX, y: absY } = posToAbsolute(
       (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX,
       (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY,
@@ -964,7 +968,7 @@
       $viewOffset.y,
       $viewPort,
       $zoom
-    );
+    )
     // console.log("viewport", $viewPort);
     // console.log("viewoffset", $viewOffset.x, $viewOffset.y);
     // console.log(
@@ -973,49 +977,49 @@
     //   (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY
     // );
     // console.log({ absX, absY });
-    const offsetX = absX - select_init.x;
-    const offsetY = absY - select_init.y;
+    const offsetX = absX - select_init.x
+    const offsetY = absY - select_init.y
 
-    let x = select_init.x;
-    let y = select_init.y;
-    let w = offsetX;
-    let h = offsetY;
+    let x = select_init.x
+    let y = select_init.y
+    let w = offsetX
+    let h = offsetY
 
     if (offsetX < 0) {
-      x = absX;
-      w = Math.abs(offsetX);
+      x = absX
+      w = Math.abs(offsetX)
     }
     if (offsetY < 0) {
-      y = absY;
-      h = Math.abs(offsetY);
+      y = absY
+      h = Math.abs(offsetY)
     }
 
     $state.selectionRect.update((v) => {
-      v!.x = x;
-      v!.y = y;
-      v!.w = w;
-      v!.h = h;
-      return v;
-    });
+      v!.x = x
+      v!.y = y
+      v!.w = w
+      v!.h = h
+      return v
+    })
 
     selection.update((_selection) => {
-      _selection.clear(); // TODO: Allow select multiple, off screen also?
+      _selection.clear() // TODO: Allow select multiple, off screen also?
       $visiblePositionables.forEach((_card) => {
-        const c = get(_card);
+        const c = get(_card)
         if (rectsIntersect({ x: c.x, y: c.y, w: c.width, h: c.height }, { x, y, w, h })) {
-          _selection.add(c[POSITIONABLE_KEY]);
+          _selection.add(c[POSITIONABLE_KEY])
         } else {
-          _selection.delete(c[POSITIONABLE_KEY]);
+          _selection.delete(c[POSITIONABLE_KEY])
         }
-      });
-      return _selection;
-    });
+      })
+      return _selection
+    })
     // deprecated: dispatch("selectChange", { rect: { x, y, w, h }, visibleCards });
   }
 
   // MetaSelect
   function onMouseMove_modSelect(e: MouseEvent | TouchEvent) {
-    const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target;
+    const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     const { x: absX, y: absY } = posToAbsolute(
       (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX,
       (e as TouchEvent).targetTouches?.item(0)?.clientY || (e as MouseEvent).clientY,
@@ -1023,37 +1027,37 @@
       $viewOffset.y,
       $viewPort,
       $zoom
-    );
-    const offsetX = absX - select_init.x;
-    const offsetY = absY - select_init.y;
+    )
+    const offsetX = absX - select_init.x
+    const offsetY = absY - select_init.y
 
-    let x = select_init.x;
-    let y = select_init.y;
-    let w = offsetX;
-    let h = offsetY;
+    let x = select_init.x
+    let y = select_init.y
+    let w = offsetX
+    let h = offsetY
 
     if (offsetX < 0) {
-      x = absX;
-      w = Math.abs(offsetX);
+      x = absX
+      w = Math.abs(offsetX)
     }
     if (offsetY < 0) {
-      y = absY;
-      h = Math.abs(offsetY);
+      y = absY
+      h = Math.abs(offsetY)
     }
 
     $state.selectionRect.update((v) => {
-      v!.x = x;
-      v!.y = y;
-      v!.w = w;
-      v!.h = h;
-      return v;
-    });
+      v!.x = x
+      v!.y = y
+      v!.w = w
+      v!.h = h
+      return v
+    })
 
-    dispatch("modSelectChange", { rect: $selectionRect, event: e });
+    dispatch('modSelectChange', { rect: $selectionRect, event: e })
   }
   function onMouseUp_modSelect(e: MouseEvent | TouchEvent) {
-    dispatch("modSelectEnd", { rect: $selectionRect, event: e });
-    mode.idle();
+    dispatch('modSelectEnd', { rect: $selectionRect, event: e })
+    mode.idle()
   }
 
   const dragState = {
@@ -1063,16 +1067,16 @@
     relativeOffset: { x: 0, y: 0 },
     positionableInit: { x: 0, y: 0 },
     autoScroll: false
-  };
+  }
   function draggable_onMouseDown(
     e: CustomEvent<{
-      event: MouseEvent | TouchEvent;
-      positionable: Writable<IPositionable<any>>;
-      clientX: number;
-      clientY: number;
+      event: MouseEvent | TouchEvent
+      positionable: Writable<IPositionable<any>>
+      clientX: number
+      clientY: number
     }>
   ) {
-    const { positionable, clientX, clientY } = e.detail;
+    const { positionable, clientX, clientY } = e.detail
     const { x: absX, y: absY } = posToAbsolute(
       clientX,
       clientY,
@@ -1080,34 +1084,34 @@
       $viewOffset.y,
       $viewPort,
       $zoom
-    );
+    )
 
-    moveToStackingTop(stackingOrder, get(positionable)[POSITIONABLE_KEY]);
+    moveToStackingTop(stackingOrder, get(positionable)[POSITIONABLE_KEY])
 
     positionable.update((p) => {
-      dragState.init.x = absX;
-      dragState.init.y = absY;
-      dragState.curr.x = absX;
-      dragState.curr.y = absY;
-      dragState.relativeOffset.x = absX - p.x;
-      dragState.relativeOffset.y = absY - p.y;
-      dragState.positionableInit.x = p.x;
-      dragState.positionableInit.y = p.y;
+      dragState.init.x = absX
+      dragState.init.y = absY
+      dragState.curr.x = absX
+      dragState.curr.y = absY
+      dragState.relativeOffset.x = absX - p.x
+      dragState.relativeOffset.y = absY - p.y
+      dragState.positionableInit.x = p.x
+      dragState.positionableInit.y = p.y
 
-      p.x = absX - dragState.relativeOffset.x;
-      p.y = absY - dragState.relativeOffset.y;
-      return p;
-    });
+      p.x = absX - dragState.relativeOffset.x
+      p.y = absY - dragState.relativeOffset.y
+      return p
+    })
   }
   function draggable_onMouseMove(
     e: CustomEvent<{
-      event: MouseEvent | TouchEvent;
-      positionable: Writable<IPositionable<any>>;
-      clientX: number;
-      clientY: number;
+      event: MouseEvent | TouchEvent
+      positionable: Writable<IPositionable<any>>
+      clientX: number
+      clientY: number
     }>
   ) {
-    const { positionable, clientX, clientY } = e.detail;
+    const { positionable, clientX, clientY } = e.detail
     const { x: absX, y: absY } = posToAbsolute(
       clientX,
       clientY,
@@ -1115,20 +1119,20 @@
       $viewOffset.y,
       $viewPort,
       $zoom
-    );
+    )
 
-    let startedDragging = false;
-    if ($mode !== "dragging") {
-      startedDragging = true;
-      mode.dragging();
+    let startedDragging = false
+    if ($mode !== 'dragging') {
+      startedDragging = true
+      mode.dragging()
     }
 
     const DRAG_AUTO_SCROLL_THRESHOLD = 40 // px
     const INCREASE_SCROLL_EVERY = 1000 // ms
     const AUTO_SCROLL_AMOUNTS = [30, 75, 100, 175] // px
 
-    const cursorAtLeftEdge = clientX < DRAG_AUTO_SCROLL_THRESHOLD;
-    const cursorAtRightEdge = clientX > $viewPort.w - DRAG_AUTO_SCROLL_THRESHOLD;
+    const cursorAtLeftEdge = clientX < DRAG_AUTO_SCROLL_THRESHOLD
+    const cursorAtRightEdge = clientX > $viewPort.w - DRAG_AUTO_SCROLL_THRESHOLD
 
     function performAutoScroll(amount: number, toLeft: boolean) {
       const newOffsetX = $viewOffset.x + (toLeft ? -amount : amount)
@@ -1136,9 +1140,12 @@
 
       if (boundOffset.x === $viewOffset.x) return
 
-      viewOffset.update(v => {
-        return { x: boundOffset.x, y: v.y }
-      }, { duration: 0 });
+      viewOffset.update(
+        (v) => {
+          return { x: boundOffset.x, y: v.y }
+        },
+        { duration: 0 }
+      )
 
       const { x: newAbsX } = posToAbsolute(
         clientX,
@@ -1147,10 +1154,10 @@
         $viewOffset.y,
         $viewPort,
         $zoom
-      );
+      )
 
-      dragState.offset.x = newAbsX - dragState.init.x;
-      dragState.curr.x = newAbsX;
+      dragState.offset.x = newAbsX - dragState.init.x
+      dragState.curr.x = newAbsX
 
       positionable.update((p) => {
         const { x: boundX } = applyBounds(
@@ -1158,28 +1165,31 @@
           absY - dragState.relativeOffset.y,
           p.width,
           p.height
-        );
+        )
 
-        p.x = boundX;
-        return p;
-      });
+        p.x = boundX
+        return p
+      })
     }
 
     if (cursorAtLeftEdge || cursorAtRightEdge) {
       if (!dragState.autoScroll) {
-        dragState.autoScroll = true;
+        dragState.autoScroll = true
 
-        let start: number, previousTimeStamp: number;
+        let start: number, previousTimeStamp: number
         const stepFunc = (timeStamp: number) => {
           if (start === undefined) {
-            start = timeStamp;
+            start = timeStamp
           }
-          const elapsed = timeStamp - start;
+          const elapsed = timeStamp - start
 
           if (previousTimeStamp !== timeStamp) {
-            previousTimeStamp = timeStamp;
+            previousTimeStamp = timeStamp
 
-            const step = Math.min(Math.floor(elapsed / INCREASE_SCROLL_EVERY), AUTO_SCROLL_AMOUNTS.length - 1)
+            const step = Math.min(
+              Math.floor(elapsed / INCREASE_SCROLL_EVERY),
+              AUTO_SCROLL_AMOUNTS.length - 1
+            )
             const amount = AUTO_SCROLL_AMOUNTS[step]
 
             performAutoScroll(amount, cursorAtLeftEdge)
@@ -1193,13 +1203,13 @@
         window.requestAnimationFrame(stepFunc)
       }
     } else {
-      dragState.autoScroll = false;
-      dragState.offset.x = absX - dragState.init.x;
-      dragState.curr.x = absX;
+      dragState.autoScroll = false
+      dragState.offset.x = absX - dragState.init.x
+      dragState.curr.x = absX
     }
 
-    dragState.offset.y = absY - dragState.init.y;
-    dragState.curr.y = absY;
+    dragState.offset.y = absY - dragState.init.y
+    dragState.curr.y = absY
 
     positionable.update((p) => {
       const { x: boundX, y: boundY } = applyBounds(
@@ -1207,29 +1217,29 @@
         absY - dragState.relativeOffset.y,
         p.width,
         p.height
-      );
+      )
 
       if (!cursorAtLeftEdge && !cursorAtRightEdge) {
-        p.x = boundX;
+        p.x = boundX
       }
 
-      p.y = boundY;
-      return p;
-    });
+      p.y = boundY
+      return p
+    })
 
     if (startedDragging) {
-      dispatch("draggableStart", { positionable });
+      dispatch('draggableStart', { positionable })
     }
   }
   function draggable_onMouseUp(
     e: CustomEvent<{
-      event: MouseEvent | TouchEvent;
-      positionable: Writable<IPositionable<any>>;
-      clientX: number;
-      clientY: number;
+      event: MouseEvent | TouchEvent
+      positionable: Writable<IPositionable<any>>
+      clientX: number
+      clientY: number
     }>
   ) {
-    const { positionable, clientX, clientY } = e.detail;
+    const { positionable, clientX, clientY } = e.detail
     const { x: absX, y: absY } = posToAbsolute(
       clientX,
       clientY,
@@ -1237,14 +1247,14 @@
       $viewOffset.y,
       $viewPort,
       $zoom
-    );
+    )
 
-    dragState.autoScroll = false;
+    dragState.autoScroll = false
 
-    const initChunkX = Math.floor(dragState.positionableInit.x / CHUNK_WIDTH);
-    const initChunkY = Math.floor(dragState.positionableInit.y / CHUNK_WIDTH);
-    let targetChunkX: number;
-    let targetChunkY: number;
+    const initChunkX = Math.floor(dragState.positionableInit.x / CHUNK_WIDTH)
+    const initChunkY = Math.floor(dragState.positionableInit.y / CHUNK_WIDTH)
+    let targetChunkX: number
+    let targetChunkY: number
 
     // TODO3: Issues cuz update positionable before chunks?
     positionable.update((p) => {
@@ -1253,7 +1263,7 @@
         absY - dragState.relativeOffset.y,
         p.width,
         p.height
-      );
+      )
 
       // p.x = boundX;
       // p.y = boundY;
@@ -1261,51 +1271,51 @@
       // let x = absX - dragState.relativeOffset.x;
       // let y = absY - dragState.relativeOffset.y;
       if ($settings.SNAP_TO_GRID) {
-        p.x = snapToGrid(boundX, $settings.GRID_SIZE);
-        p.y = snapToGrid(boundY, $settings.GRID_SIZE);
+        p.x = snapToGrid(boundX, $settings.GRID_SIZE)
+        p.y = snapToGrid(boundY, $settings.GRID_SIZE)
       } else {
-        p.x = boundX;
-        p.y = boundY;
+        p.x = boundX
+        p.y = boundY
       }
 
-      targetChunkX = Math.floor(p.x / CHUNK_WIDTH);
-      targetChunkY = Math.floor(p.y / CHUNK_HEIGHT);
+      targetChunkX = Math.floor(p.x / CHUNK_WIDTH)
+      targetChunkY = Math.floor(p.y / CHUNK_HEIGHT)
 
       // Remove from old chunk (It will automatically get added to the new one by the reactive logic at the beginning).
       if (!p.hoisted) {
         chunks.update((_chunks) => {
-          const initChunkId = `${initChunkX}:${initChunkY}`;
-          const targetChunkId = `${targetChunkX}:${targetChunkY}`;
-          if (initChunkId === targetChunkId) return _chunks;
-          const initChunk = _chunks.get(initChunkId);
+          const initChunkId = `${initChunkX}:${initChunkY}`
+          const targetChunkId = `${targetChunkX}:${targetChunkY}`
+          if (initChunkId === targetChunkId) return _chunks
+          const initChunk = _chunks.get(initChunkId)
 
           if (initChunk === undefined) {
             console.error(
               initChunk !== undefined,
               `[draggable_onMouseUp] Chunk ${initChunkId} not found!`
-            );
+            )
           } else {
-            let empty = false;
+            let empty = false
             initChunk.update((_positionables) => {
-              const i = _positionables.indexOf(positionable);
-              _positionables.splice(i, 1);
-              empty = _positionables.length === 0;
+              const i = _positionables.indexOf(positionable)
+              _positionables.splice(i, 1)
+              empty = _positionables.length === 0
               // TODO: What if indexOf returns -1?
-              return _positionables;
-            });
+              return _positionables
+            })
             if (empty) {
-              _chunks.delete(initChunkId);
+              _chunks.delete(initChunkId)
             }
           }
 
-          return _chunks;
-        });
+          return _chunks
+        })
       }
 
-      return p;
-    });
+      return p
+    })
 
-    positionables.update((v) => v);
+    positionables.update((v) => v)
 
     //const initChunkX = Math.floor((dragState.init.x - dragState.relativeOffset.x) / CHUNK_WIDTH);
     //const initChunkY = Math.floor((dragState.init.y - dragState.relativeOffset.y) / CHUNK_HEIGHT);
@@ -1361,19 +1371,19 @@
     //   });
     // }
 
-    mode.idle();
-    dispatch("draggableEnd", positionable);
+    mode.idle()
+    dispatch('draggableEnd', positionable)
   }
 
   function resizable_onMouseDown(
     e: CustomEvent<{
-      event: MouseEvent | TouchEvent;
-      positionable: Writable<IPositionable<any>>;
-      clientX: number;
-      clientY: number;
+      event: MouseEvent | TouchEvent
+      positionable: Writable<IPositionable<any>>
+      clientX: number
+      clientY: number
     }>
   ) {
-    const { positionable, clientX, clientY } = e.detail;
+    const { positionable, clientX, clientY } = e.detail
     const { x: absX, y: absY } = posToAbsolute(
       clientX,
       clientY,
@@ -1381,32 +1391,32 @@
       $viewOffset.y,
       $viewPort,
       $zoom
-    );
+    )
 
-    mode.resizing();
-    moveToStackingTop(stackingOrder, get(positionable)[POSITIONABLE_KEY]);
+    mode.resizing()
+    moveToStackingTop(stackingOrder, get(positionable)[POSITIONABLE_KEY])
 
-    dragState.init.x = absX;
-    dragState.init.y = absY;
-    dragState.curr.x = absX;
-    dragState.curr.y = absY;
-    dragState.relativeOffset.x = absX - clientX;
-    dragState.relativeOffset.y = absY - clientY;
-    dragState.positionableInit.x = get(positionable).x;
-    dragState.positionableInit.y = get(positionable).y;
+    dragState.init.x = absX
+    dragState.init.y = absY
+    dragState.curr.x = absX
+    dragState.curr.y = absY
+    dragState.relativeOffset.x = absX - clientX
+    dragState.relativeOffset.y = absY - clientY
+    dragState.positionableInit.x = get(positionable).x
+    dragState.positionableInit.y = get(positionable).y
   }
   function resizable_onMouseMove(
     e: CustomEvent<{
-      event: MouseEvent | TouchEvent;
-      positionable: Writable<IPositionable<any>>;
-      clientX: number;
-      clientY: number;
-      direction: TResizeDirection;
-      minSize: Vec2<number>;
-      maxSize: Vec2<number>;
+      event: MouseEvent | TouchEvent
+      positionable: Writable<IPositionable<any>>
+      clientX: number
+      clientY: number
+      direction: TResizeDirection
+      minSize: Vec2<number>
+      maxSize: Vec2<number>
     }>
   ) {
-    const { positionable, clientX, clientY, direction, minSize, maxSize } = e.detail;
+    const { positionable, clientX, clientY, direction, minSize, maxSize } = e.detail
     const { x: absX, y: absY } = posToAbsolute(
       clientX,
       clientY,
@@ -1414,79 +1424,79 @@
       $viewOffset.y,
       $viewPort,
       $zoom
-    );
+    )
 
-    dragState.offset.x = absX - dragState.init.x;
-    dragState.offset.y = absY - dragState.init.y;
-    dragState.curr.x = absX;
-    dragState.curr.y = absY;
+    dragState.offset.x = absX - dragState.init.x
+    dragState.offset.y = absY - dragState.init.y
+    dragState.curr.x = absX
+    dragState.curr.y = absY
 
     positionable.update((p) => {
-      let x = p.x;
-      let y = p.y;
-      let width = p.width;
-      let height = p.height;
+      let x = p.x
+      let y = p.y
+      let width = p.width
+      let height = p.height
 
       // TODO: CLAMPS
       // TODO: PREVENT MOVING OVER INITIAL WIDTH & POS
 
-      if (direction === "right") {
-        width = clamp(absX - p.x, minSize.x, maxSize.x);
-      } else if (direction === "bottom") {
-        height = absY - p.y;
-      } else if (direction === "top") {
-        y = absY;
-        height = p.y + p.height - absY;
-      } else if (direction === "left") {
-        x = absX;
-        width = p.x + p.width - absX;
-      } else if (direction === "top-left") {
-        x = absX;
-        y = absY;
-        width = p.x + p.width - absX;
-        height = p.y + p.height - absY;
-      } else if (direction === "top-right") {
-        y = absY;
-        width = absX - p.x;
-        height = p.y + p.height - absY;
-      } else if (direction === "bottom-left") {
-        x = absX;
-        width = p.x + p.width - absX;
-        height = absY - p.y;
-      } else if (direction === "bottom-right") {
-        width = absX - p.x;
-        height = absY - p.y;
+      if (direction === 'right') {
+        width = clamp(absX - p.x, minSize.x, maxSize.x)
+      } else if (direction === 'bottom') {
+        height = absY - p.y
+      } else if (direction === 'top') {
+        y = absY
+        height = p.y + p.height - absY
+      } else if (direction === 'left') {
+        x = absX
+        width = p.x + p.width - absX
+      } else if (direction === 'top-left') {
+        x = absX
+        y = absY
+        width = p.x + p.width - absX
+        height = p.y + p.height - absY
+      } else if (direction === 'top-right') {
+        y = absY
+        width = absX - p.x
+        height = p.y + p.height - absY
+      } else if (direction === 'bottom-left') {
+        x = absX
+        width = p.x + p.width - absX
+        height = absY - p.y
+      } else if (direction === 'bottom-right') {
+        width = absX - p.x
+        height = absY - p.y
       }
 
       // TODO: MIN HEIGHT
-      width = clamp(width, minSize.x, maxSize.x);
-      height = clamp(height, minSize.y, maxSize.y);
+      width = clamp(width, minSize.x, maxSize.x)
+      height = clamp(height, minSize.y, maxSize.y)
       // TODO: MIN WIDHT
 
       // TODO: BOUNDS CHECKING
-      const { x: boundX, y: boundY } = applyBounds(x, y, width, height);
+      const { x: boundX, y: boundY } = applyBounds(x, y, width, height)
 
-      p.x = boundX;
-      p.y = boundY;
-      p.width = width;
-      p.height = height;
-      return p;
-    });
+      p.x = boundX
+      p.y = boundY
+      p.width = width
+      p.height = height
+      return p
+    })
 
-    dispatch("resizableStart", { positionable });
+    dispatch('resizableStart', { positionable })
   }
   function resizable_onMouseUp(
     e: CustomEvent<{
-      event: MouseEvent | TouchEvent;
-      positionable: Writable<IPositionable<any>>;
-      clientX: number;
-      clientY: number;
-      direction: TResizeDirection;
-      minSize: number;
-      maxSize: number;
+      event: MouseEvent | TouchEvent
+      positionable: Writable<IPositionable<any>>
+      clientX: number
+      clientY: number
+      direction: TResizeDirection
+      minSize: number
+      maxSize: number
     }>
   ) {
-    const { positionable, clientX, clientY } = e.detail;
+    const { positionable, clientX, clientY } = e.detail
     const { x: absX, y: absY } = posToAbsolute(
       clientX,
       clientY,
@@ -1494,164 +1504,164 @@
       $viewOffset.y,
       $viewPort,
       $zoom
-    );
+    )
     // TODO: BOUNDS CHECKING& APPLY final pos
 
-    const initChunkX = Math.floor(dragState.positionableInit.x / CHUNK_WIDTH);
-    const initChunkY = Math.floor(dragState.positionableInit.y / CHUNK_WIDTH);
-    let targetChunkX: number;
-    let targetChunkY: number;
+    const initChunkX = Math.floor(dragState.positionableInit.x / CHUNK_WIDTH)
+    const initChunkY = Math.floor(dragState.positionableInit.y / CHUNK_WIDTH)
+    let targetChunkX: number
+    let targetChunkY: number
 
     positionable.update((p) => {
-      let x = p.x;
-      let y = p.y;
-      let width = p.width;
-      let height = p.height;
+      let x = p.x
+      let y = p.y
+      let width = p.width
+      let height = p.height
 
       if ($settings.SNAP_TO_GRID) {
-        x = snapToGrid(x, $settings.GRID_SIZE);
-        y = snapToGrid(y, $settings.GRID_SIZE);
-        width = snapToGrid(width, $settings.GRID_SIZE);
-        height = snapToGrid(height, $settings.GRID_SIZE);
+        x = snapToGrid(x, $settings.GRID_SIZE)
+        y = snapToGrid(y, $settings.GRID_SIZE)
+        width = snapToGrid(width, $settings.GRID_SIZE)
+        height = snapToGrid(height, $settings.GRID_SIZE)
       }
 
-      const { x: boundX, y: boundY } = applyBounds(x, y, width, height);
+      const { x: boundX, y: boundY } = applyBounds(x, y, width, height)
 
-      p.x = boundX;
-      p.y = boundY;
-      p.width = width;
-      p.height = height;
+      p.x = boundX
+      p.y = boundY
+      p.width = width
+      p.height = height
 
-      targetChunkX = Math.floor(p.x / CHUNK_WIDTH);
-      targetChunkY = Math.floor(p.y / CHUNK_HEIGHT);
-      return p;
-    });
+      targetChunkX = Math.floor(p.x / CHUNK_WIDTH)
+      targetChunkY = Math.floor(p.y / CHUNK_HEIGHT)
+      return p
+    })
 
     // TODO: Move into singel functoon
     // Update chunk
     if (!get(positionable).hoisted) {
       chunks.update((_chunks) => {
-        const initChunkId = `${initChunkX}:${initChunkY}`;
-        const targetChunkId = `${targetChunkX}:${targetChunkY}`;
+        const initChunkId = `${initChunkX}:${initChunkY}`
+        const targetChunkId = `${targetChunkX}:${targetChunkY}`
 
-        if (initChunkId === targetChunkId) return _chunks;
+        if (initChunkId === targetChunkId) return _chunks
 
-        const initChunk = _chunks.get(initChunkId);
-        const targetChunk = _chunks.get(targetChunkId);
+        const initChunk = _chunks.get(initChunkId)
+        const targetChunk = _chunks.get(targetChunkId)
 
         // TODO: THis is broken again!!
         if (initChunk === undefined) {
           console.error(
             initChunk === undefined,
             `[draggable_onMouseUp] Chunk ${initChunkId} not found!`
-          );
+          )
         } else {
-          let empty = false;
+          let empty = false
           initChunk.update((_positionables) => {
-            _positionables.splice(_positionables.indexOf(positionable), 1);
-            empty = _positionables.length === 0;
+            _positionables.splice(_positionables.indexOf(positionable), 1)
+            empty = _positionables.length === 0
             // TODO: What if indexOf returns -1?
-            return _positionables;
-          });
+            return _positionables
+          })
           if (empty) {
-            _chunks.delete(initChunkId);
+            _chunks.delete(initChunkId)
           }
         }
         if (targetChunk === undefined) {
-          _chunks.set(targetChunkId, writable([positionable]));
+          _chunks.set(targetChunkId, writable([positionable]))
         } else {
           targetChunk.update((_positionables) => {
-            _positionables.push(positionable);
-            return _positionables;
-          });
+            _positionables.push(positionable)
+            return _positionables
+          })
         }
 
-        return _chunks;
-      });
+        return _chunks
+      })
     }
 
-    mode.idle();
-    dispatch("resizableEnd", positionable);
+    mode.idle()
+    dispatch('resizableEnd', positionable)
   }
 
   function positionable_hoist(e: CustomEvent<string>) {
-    const key = e.detail;
-    const positionable = $positionables.find((p) => get(p)[POSITIONABLE_KEY] === key);
+    const key = e.detail
+    const positionable = $positionables.find((p) => get(p)[POSITIONABLE_KEY] === key)
     if (!positionable) {
-      console.error(`[TELA] Tried to hoist non-existing positionable: ${key}`);
-      return;
+      console.error(`[TELA] Tried to hoist non-existing positionable: ${key}`)
+      return
     }
-    if (get(positionable).hoisted) return;
+    if (get(positionable).hoisted) return
 
     positionable.update((p) => {
       // Remove from chunk
-      const cI = `${Math.floor(p.x / CHUNK_WIDTH)}:${Math.floor(p.y / CHUNK_HEIGHT)}`;
-      const chunk = $chunks.get(cI);
+      const cI = `${Math.floor(p.x / CHUNK_WIDTH)}:${Math.floor(p.y / CHUNK_HEIGHT)}`
+      const chunk = $chunks.get(cI)
       if (chunk !== undefined) {
         chunks.update((_chunks) => {
-          let empty = false;
+          let empty = false
           chunk.update((_chunk) => {
             // TODO: Perf: Compare perf of findIndex vs indexOf
             // const i = _chunk.findIndex(e => get(e)[POSITIONABLE_KEY] === key);
-            const i = _chunk.indexOf(positionable);
-            if (i !== -1) _chunk.splice(i, 1);
-            if (_chunk.length <= 0) empty = true;
-            return _chunk;
-          });
+            const i = _chunk.indexOf(positionable)
+            if (i !== -1) _chunk.splice(i, 1)
+            if (_chunk.length <= 0) empty = true
+            return _chunk
+          })
           if (empty) {
-            _chunks.delete(cI);
+            _chunks.delete(cI)
           }
-          return _chunks;
-        });
+          return _chunks
+        })
       }
 
       // @ts-ignore we want this!
-      p.hoisted = true;
-      return p;
-    });
+      p.hoisted = true
+      return p
+    })
 
-    positionables.update((v) => v);
+    positionables.update((v) => v)
   }
   function positionable_unHoist(e: CustomEvent<string>) {
-    const key = e.detail;
-    const positionable = $positionables.find((p) => get(p)[POSITIONABLE_KEY] === key);
+    const key = e.detail
+    const positionable = $positionables.find((p) => get(p)[POSITIONABLE_KEY] === key)
     if (!positionable) {
-      console.error(`[TELA] Tried to un-hoist non-existing positionable: ${key}`);
-      return;
+      console.error(`[TELA] Tried to un-hoist non-existing positionable: ${key}`)
+      return
     }
-    if (!get(positionable).hoisted) return;
+    if (!get(positionable).hoisted) return
     hoistedPositionables.update((_hoisted) => {
-      return _hoisted;
-    });
+      return _hoisted
+    })
     positionable.update((p) => {
       // @ts-ignore we want this!
-      p.hoisted = false;
-      return p;
-    });
+      p.hoisted = false
+      return p
+    })
 
-    positionables.update((v) => v);
+    positionables.update((v) => v)
   }
 
   onMount(() => {
-    containerEl.addEventListener("draggable_onMouseDown", draggable_onMouseDown);
-    containerEl.addEventListener("draggable_onMouseMove", draggable_onMouseMove);
-    containerEl.addEventListener("draggable_onMouseUp", draggable_onMouseUp);
-    containerEl.addEventListener("resizable_onMouseDown", resizable_onMouseDown);
-    containerEl.addEventListener("resizable_onMouseMove", resizable_onMouseMove);
-    containerEl.addEventListener("resizable_onMouseUp", resizable_onMouseUp);
-    containerEl.addEventListener("tela_hoist", positionable_hoist);
-    containerEl.addEventListener("tela_unhoist", positionable_unHoist);
-  });
+    containerEl.addEventListener('draggable_onMouseDown', draggable_onMouseDown)
+    containerEl.addEventListener('draggable_onMouseMove', draggable_onMouseMove)
+    containerEl.addEventListener('draggable_onMouseUp', draggable_onMouseUp)
+    containerEl.addEventListener('resizable_onMouseDown', resizable_onMouseDown)
+    containerEl.addEventListener('resizable_onMouseMove', resizable_onMouseMove)
+    containerEl.addEventListener('resizable_onMouseUp', resizable_onMouseUp)
+    containerEl.addEventListener('tela_hoist', positionable_hoist)
+    containerEl.addEventListener('tela_unhoist', positionable_unHoist)
+  })
   onDestroy(() => {
-    containerEl && containerEl.removeEventListener("draggable_onMouseDown", draggable_onMouseDown);
-    containerEl && containerEl.removeEventListener("draggable_onMouseMove", draggable_onMouseMove);
-    containerEl && containerEl.removeEventListener("draggable_onMouseUp", draggable_onMouseUp);
-    containerEl && containerEl.removeEventListener("resizable_onMouseDown", resizable_onMouseDown);
-    containerEl && containerEl.removeEventListener("resizable_onMouseMove", resizable_onMouseMove);
-    containerEl && containerEl.removeEventListener("resizable_onMouseUp", resizable_onMouseUp);
-    containerEl && containerEl.removeEventListener("tela_hoist", positionable_hoist);
-    containerEl && containerEl.removeEventListener("tela_unhoist", positionable_unHoist);
-  });
+    containerEl && containerEl.removeEventListener('draggable_onMouseDown', draggable_onMouseDown)
+    containerEl && containerEl.removeEventListener('draggable_onMouseMove', draggable_onMouseMove)
+    containerEl && containerEl.removeEventListener('draggable_onMouseUp', draggable_onMouseUp)
+    containerEl && containerEl.removeEventListener('resizable_onMouseDown', resizable_onMouseDown)
+    containerEl && containerEl.removeEventListener('resizable_onMouseMove', resizable_onMouseMove)
+    containerEl && containerEl.removeEventListener('resizable_onMouseUp', resizable_onMouseUp)
+    containerEl && containerEl.removeEventListener('tela_hoist', positionable_hoist)
+    containerEl && containerEl.removeEventListener('tela_unhoist', positionable_unHoist)
+  })
 </script>
 
 <svelte:window on:keydown={onKeyDown} />
@@ -1669,7 +1679,7 @@
   on:wheel={onWheel}
   on:wheel
   on:mousedown={(e) => {
-    if (!hasClassOrParentWithClass(e.target, "draggable")) clearSelection();
+    if (!hasClassOrParentWithClass(e.target, 'draggable')) clearSelection()
   }}
   on:mousedown
 >
@@ -1681,7 +1691,7 @@
           <span style="margin-bottom: 8px;"
             ><i
               >Horizon <small style="color: #b7b7c4;"
-                >{import.meta.env.R_VITE_APP_VERSION ?? "unknown release"}
+                >{import.meta.env.R_VITE_APP_VERSION ?? 'unknown release'}
               </small></i
             ></span
           >
@@ -1698,7 +1708,7 @@
   {/if}
 
   <div class="tela-board mode-{$mode}" style={transformCss}>
-    {#if $mode === "select" || $mode === "modSelect"}
+    {#if $mode === 'select' || $mode === 'modSelect'}
       <slot name="selectRect" />
     {/if}
 
@@ -1708,7 +1718,7 @@
       <!-- Depends on implementation using map -->
       <!-- {#each $visibleChunks as [chunkId, _] (chunkId)} -->
       {#each $visibleChunks as [chunkId, _] (chunkId)}
-        {@const index = chunkId.split(":")}
+        {@const index = chunkId.split(':')}
         {@const chunkX = parseInt(index[0])}
         {@const chunkY = parseInt(index[1])}
         <ChunkOverlay {chunkX} {chunkY} />

@@ -1,7 +1,7 @@
 import Dexie from 'dexie'
 
-import {generateID, generateUUID} from '../utils/id'
-import type {Card, Optional, Resource, HorizonData, CardFile, UserData} from '../types'
+import { generateID, generateUUID } from '../utils/id'
+import type { Card, Optional, Resource, HorizonData, CardFile, UserData } from '../types'
 
 export class LocalStorage<T> {
   key: string
@@ -92,7 +92,7 @@ export class UserStore<UserData> {
 
   // only singe user data must exist
   async get(): Promise<UserData | undefined> {
-    return this.t.get('main');
+    return this.t.get('main')
   }
 }
 
@@ -117,7 +117,7 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
   }
 
   async read(id: string): Promise<T | undefined> {
-    const idasff = await this.t.get(id);
+    const idasff = await this.t.get(id)
     // console.warn('updating', id, idasff)
     return await this.t.get(id)
   }
@@ -162,7 +162,7 @@ export class HorizonDatabase extends Dexie {
   }
 
   async createUserData() {
-    return await this.userData.create({user_id: generateUUID()} as UserData)
+    return await this.userData.create({ user_id: generateUUID() } as UserData)
   }
 
   async getCardsByHorizonId(horizonId: string) {

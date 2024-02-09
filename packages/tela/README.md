@@ -45,13 +45,13 @@ Import the components & setup the board data:
 
 ```html
 <script lang="ts">
-  import Board from "$lib/Board.svelte";
-  import Positionable from "$lib/Positionable.svelte";
-  import type { TBoard, TBoardSettings } from "$lib/index.js";
-  import { writable } from "svelte/store";
+  import Board from '$lib/Board.svelte'
+  import Positionable from '$lib/Positionable.svelte'
+  import type { TBoard, TBoardSettings } from '$lib/index.js'
+  import { writable } from 'svelte/store'
 
-  const settings = writable({} satisfies TBoardSettings);
-  const board = writable({} satisfies TBoard);
+  const settings = writable({} satisfies TBoardSettings)
+  const board = writable({} satisfies TBoard)
 </script>
 ```
 
@@ -95,13 +95,13 @@ In this example we also wrap the board in an element that takes up the whole scr
 
 ```html
 <script lang="ts">
-  import Board from "$lib/Board.svelte";
-  import Positionable from "$lib/Positionable.svelte";
-  import type { TBoard, TBoardSettings } from "$lib/index.js";
-  import { writable } from "svelte/store";
+  import Board from '$lib/Board.svelte'
+  import Positionable from '$lib/Positionable.svelte'
+  import type { TBoard, TBoardSettings } from '$lib/index.js'
+  import { writable } from 'svelte/store'
 
-  const settings = writable({} satisfies TBoardSettings); // <- used to configure the board
-  const board = writable({ viewOffset: { x: 0, y: 0 }, zoom: 1 } satisfies TBoard); // <- determines the initial state of the board
+  const settings = writable({} satisfies TBoardSettings) // <- used to configure the board
+  const board = writable({ viewOffset: { x: 0, y: 0 }, zoom: 1 } satisfies TBoard) // <- determines the initial state of the board
 </script>
 
 <main>
@@ -176,13 +176,13 @@ Initial state of the board.
 ```ts
 {
   // X, Y offset on the board
-  viewOffset: Vec2;
+  viewOffset: Vec2
   // Size -> Currently mostly irreleant
-  viewSize: Vec2;
+  viewSize: Vec2
   // Store viewport position in case container el is not full window
-  viewPort: Vec4;
+  viewPort: Vec4
   // Current zoom factor
-  zoom: number;
+  zoom: number
 }
 ```
 
@@ -226,18 +226,18 @@ If you want to dynamically render multiple elements on the board, you can simply
 
 ```html
 <script lang="ts">
-  import Board from "$lib/Board.svelte";
-  import Positionable from "$lib/Positionable.svelte";
-  import type { TBoard, TBoardSettings } from "$lib/index.js";
-  import { writable } from "svelte/store";
+  import Board from '$lib/Board.svelte'
+  import Positionable from '$lib/Positionable.svelte'
+  import type { TBoard, TBoardSettings } from '$lib/index.js'
+  import { writable } from 'svelte/store'
 
-  const settings = writable({} satisfies TBoardSettings); // <- used to configure the board
-  const board = writable({ viewOffset: { x: 0, y: 0 }, zoom: 1 } satisfies TBoard); // <- determines the initial state of the board
+  const settings = writable({} satisfies TBoardSettings) // <- used to configure the board
+  const board = writable({ viewOffset: { x: 0, y: 0 }, zoom: 1 } satisfies TBoard) // <- determines the initial state of the board
 
   const elements: { pos: { x: number; y: number }; size: { x: number; y: number } }[] = [
     { pos: { x: 0, y: 0 }, size: { x: 150, y: 150 } },
     { pos: { x: 400, y: 400 }, size: { x: 400, y: 300 } }
-  ];
+  ]
 </script>
 
 <main>
@@ -269,16 +269,16 @@ A draggable element can be used inside of a Positionable element to enable movin
 
 ```html
 <script lang="ts">
-  import Board from "$lib/Board.svelte";
-  import Positionable from "$lib/Positionable.svelte";
-  import Draggable from "$lib/Draggable.svelte";
-  import type { TBoard, TBoardSettings } from "$lib/index.js";
-  import { writable } from "svelte/store";
+  import Board from '$lib/Board.svelte'
+  import Positionable from '$lib/Positionable.svelte'
+  import Draggable from '$lib/Draggable.svelte'
+  import type { TBoard, TBoardSettings } from '$lib/index.js'
+  import { writable } from 'svelte/store'
 
-  const settings = writable({} satisfies TBoardSettings); // <- used to configure the board
-  const board = writable({ viewOffset: { x: 0, y: 0 }, zoom: 1 } satisfies TBoard); // <- determines the initial state of the board
+  const settings = writable({} satisfies TBoardSettings) // <- used to configure the board
+  const board = writable({ viewOffset: { x: 0, y: 0 }, zoom: 1 } satisfies TBoard) // <- determines the initial state of the board
 
-  const element = { pos: { x: 0, y: 0 }, size: { x: 150, y: 150 } };
+  const element = { pos: { x: 0, y: 0 }, size: { x: 150, y: 150 } }
 </script>
 
 <main>

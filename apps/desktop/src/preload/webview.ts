@@ -1,7 +1,7 @@
 import { ipcRenderer } from 'electron'
 
-let mouseDownX = 0;
-let previouslySelectedText : string | undefined = ''
+let mouseDownX = 0
+let previouslySelectedText: string | undefined = ''
 
 window.addEventListener('DOMContentLoaded', (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
@@ -9,19 +9,19 @@ window.addEventListener('DOMContentLoaded', (_) => {
     const text = selection?.toString().trim()
     const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor ?? 'white'
 
-    const mouseUpX = e.clientX;
-    const direction = mouseUpX > mouseDownX ? 'left-to-right' : 'right-to-left';
-    const movement = Math.abs(mouseUpX - mouseDownX);
+    const mouseUpX = e.clientX
+    const direction = mouseUpX > mouseDownX ? 'left-to-right' : 'right-to-left'
+    const movement = Math.abs(mouseUpX - mouseDownX)
 
-    let offset;
+    let offset
     if (movement < 10) {
-      offset = 10;
+      offset = 10
     } else {
-      offset = direction === 'left-to-right' ? 10 : -35;
+      offset = direction === 'left-to-right' ? 10 : -35
     }
 
     // check if text is available and if the selection has changed
-    if (text && (text != previouslySelectedText)) {
+    if (text && text != previouslySelectedText) {
       const oldDiv = document.getElementById('horizonTextDragHandle')
       oldDiv?.parentNode?.removeChild(oldDiv)
 
@@ -43,8 +43,8 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.style.zIndex = '100000'
       div.style.left = `${e.clientX + window.scrollX + offset}px`
       div.style.top = `${e.clientY + window.scrollY - 15}px`
-      div.style.opacity = '0'; // Set initial opacity to 0
-      div.style.transition = 'opacity 0.2s ease'; // Add transition for opacity
+      div.style.opacity = '0' // Set initial opacity to 0
+      div.style.transition = 'opacity 0.2s ease' // Add transition for opacity
       div.draggable = true
 
       div.innerHTML = `
@@ -60,46 +60,46 @@ window.addEventListener('DOMContentLoaded', (_) => {
 
       // Animate in on appear
       setTimeout(() => {
-        div.style.opacity = '1';
-        window.addEventListener('mousedown', () => {return})
-      }, 120);
+        div.style.opacity = '1'
+        window.addEventListener('mousedown', () => {
+          return
+        })
+      }, 120)
 
       // Create and style tooltip
-      const tooltip = document.createElement('div');
-      tooltip.innerText = 'Drag me out!'; // Tooltip text
-      tooltip.style.position = 'absolute';
-      tooltip.style.padding = '5px';
-      tooltip.style.display = 'flex';
-      tooltip.style.alignItems = 'center';
-      tooltip.style.justifyContent = 'center';
-      tooltip.style.background = 'black';
-      tooltip.style.color = 'white';
-      tooltip.style.borderRadius = '4px';
-      tooltip.style.fontSize = '0.75rem';
-      tooltip.style.visibility = 'hidden'; // Initially hidden
-      tooltip.style.whiteSpace = 'nowrap'; // Keep text in one line
-      tooltip.id = 'horizonTextTooltip';
+      const tooltip = document.createElement('div')
+      tooltip.innerText = 'Drag me out!' // Tooltip text
+      tooltip.style.position = 'absolute'
+      tooltip.style.padding = '5px'
+      tooltip.style.display = 'flex'
+      tooltip.style.alignItems = 'center'
+      tooltip.style.justifyContent = 'center'
+      tooltip.style.background = 'black'
+      tooltip.style.color = 'white'
+      tooltip.style.borderRadius = '4px'
+      tooltip.style.fontSize = '0.75rem'
+      tooltip.style.visibility = 'hidden' // Initially hidden
+      tooltip.style.whiteSpace = 'nowrap' // Keep text in one line
+      tooltip.id = 'horizonTextTooltip'
 
-      div.appendChild(tooltip);
+      div.appendChild(tooltip)
 
       // Show tooltip on hover and position it dynamically
       div.addEventListener('mouseover', () => {
-        tooltip.style.visibility = 'visible';
-        
-        // Calculate width of the tooltip after it renders
-        const tooltipWidth = tooltip.offsetWidth;
-        
-        // Center tooltip below the drag handle
-        tooltip.style.left = `calc(50% - ${tooltipWidth / 2}px)`;
-        tooltip.style.bottom = '-2rem';
-      });
+        tooltip.style.visibility = 'visible'
 
+        // Calculate width of the tooltip after it renders
+        const tooltipWidth = tooltip.offsetWidth
+
+        // Center tooltip below the drag handle
+        tooltip.style.left = `calc(50% - ${tooltipWidth / 2}px)`
+        tooltip.style.bottom = '-2rem'
+      })
 
       // Hide tooltip when not hovering
       div.addEventListener('mouseout', () => {
-        tooltip.style.visibility = 'hidden';
-      });
-
+        tooltip.style.visibility = 'hidden'
+      })
 
       div.addEventListener('dragstart', (event: DragEvent) => {
         event.stopPropagation()
@@ -120,14 +120,14 @@ window.addEventListener('DOMContentLoaded', (_) => {
   })
 
   window.addEventListener('mousedown', (e: MouseEvent) => {
-    mouseDownX = e.clientX; // Store the X-coordinate on mousedown
+    mouseDownX = e.clientX // Store the X-coordinate on mousedown
 
     // ...existing mousedown functionality
     const div = document.getElementById('horizonTextDragHandle')
     if (div && e.target !== div) {
       div.parentNode?.removeChild(div)
-    } 
-  });
+    }
+  })
 
   document.addEventListener('dragend', () => {
     const div = document.getElementById('horizonTextDragHandle')

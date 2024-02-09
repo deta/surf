@@ -28,7 +28,7 @@
   //   )
   // }
   export function absToChunkIndex(x: number, y: number, chunkSize: number) {
-    return [Math.floor(x / chunkSize), Math.floor(y / chunkSize)];
+    return [Math.floor(x / chunkSize), Math.floor(y / chunkSize)]
   }
   export function positionableInView(
     posX: number,
@@ -46,33 +46,33 @@
       posY + height + CULL_MARGIN >= vY &&
       posX - CULL_MARGIN <= vX + viewPort.x / (zoom * 0.5) &&
       posY - CULL_MARGIN <= vY + viewPort.y / (zoom * 0.5)
-    );
+    )
   }
 </script>
 
 <script lang="ts">
-  import { getContext } from "svelte";
-  import type { IBoard, IBoardSettings } from "./types/Board.type.js";
-  import type { Writable } from "svelte/store";
-  import type { IPositionable } from "./Positionable.svelte";
-  import { randomCssColor } from "./utils.js";
+  import { getContext } from 'svelte'
+  import type { IBoard, IBoardSettings } from './types/Board.type.js'
+  import type { Writable } from 'svelte/store'
+  import type { IPositionable } from './Positionable.svelte'
+  import { randomCssColor } from './utils.js'
 
-  export let positionables: Writable<IPositionable[]>;
+  export let positionables: Writable<IPositionable[]>
 
-  export let chunkX: number;
-  export let chunkY: number;
-  export let board: IBoard;
-  const settings = getContext<Writable<IBoardSettings>>("settings");
-  const state = board.state;
-  $: ({ viewPort } = $state);
-  $: ({ x: viewX, y: viewY } = $state.viewOffset);
-  $: ({ zoom } = $state);
+  export let chunkX: number
+  export let chunkY: number
+  export let board: IBoard
+  const settings = getContext<Writable<IBoardSettings>>('settings')
+  const state = board.state
+  $: ({ viewPort } = $state)
+  $: ({ x: viewX, y: viewY } = $state.viewOffset)
+  $: ({ zoom } = $state)
 
   $: cssStyle = `transform: translate3d(${chunkX * $settings.CHUNK_SIZE}px, ${
     chunkY * $settings.CHUNK_SIZE
   }px, 0); width: ${$settings.CHUNK_SIZE}px; height: ${$settings.CHUNK_SIZE}px; ${
-    $settings.DEV.CHUNK_DBG ? `background-color: ${randomCssColor(0.5)};` : ""
-  }`;
+    $settings.DEV.CHUNK_DBG ? `background-color: ${randomCssColor(0.5)};` : ''
+  }`
 
   function positionableInView(
     posX: number,
@@ -87,7 +87,7 @@
       posY + height + $settings.CULL_MARGIN >= vY &&
       posX - $settings.CULL_MARGIN <= vX + viewPort.w / $zoom &&
       posY - $settings.CULL_MARGIN <= vY + viewPort.h / $zoom
-    );
+    )
   }
 </script>
 

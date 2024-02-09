@@ -20,7 +20,7 @@
   on:click={handleClick}
   class="item"
   class:overview={showOverview}
-  class:active={active}
+  class:active
   style="--order: {order + 1}; --index: {order};"
 >
   <div class="content">

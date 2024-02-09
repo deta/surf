@@ -1,30 +1,30 @@
 <script lang="ts">
-    import type { Resource } from "../../../types"
+  import type { Resource } from '../../../types'
 
-    export let resource: Resource
+  export let resource: Resource
 
-    const blob = resource.data
-    const url = URL.createObjectURL(blob)
+  const blob = resource.data
+  const url = URL.createObjectURL(blob)
 </script>
 
 <div class="wrapper">
-    <img src={url} alt="" />
+  <img src={url} alt="" />
 </div>
 
 <style>
-    .wrapper {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        pointer-events: none;
-    }
+  .wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
 
-    img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        user-select: none;
-    }
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    user-select: none;
+  }
 </style>

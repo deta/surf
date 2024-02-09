@@ -1,25 +1,25 @@
 <script lang="ts">
-  import Board, { createBoard, createSettings } from "$lib/Board.svelte";
-  import type { Vec4 } from "$lib/types/Utils.type.js";
-  import { rectsIntersect } from "$lib/utils.js";
-  import { get, writable, type Writable } from "svelte/store";
-  import "$lib/tela.css";
-  import LazyComponent from "./LazyComponent.svelte";
-  import type { IPositionable } from "$lib/Positionable.svelte";
-  import Grid from "$lib/Grid.svelte";
-  import Card from "./Card.svelte";
+  import Board, { createBoard, createSettings } from '$lib/Board.svelte'
+  import type { Vec4 } from '$lib/types/Utils.type.js'
+  import { rectsIntersect } from '$lib/utils.js'
+  import { get, writable, type Writable } from 'svelte/store'
+  import '$lib/tela.css'
+  import LazyComponent from './LazyComponent.svelte'
+  import type { IPositionable } from '$lib/Positionable.svelte'
+  import Grid from '$lib/Grid.svelte'
+  import Card from './Card.svelte'
 
   interface ICard {
-    key: string;
-    pos_x: number;
-    pos_y: number;
-    width: number;
-    height: number;
-    positionable: Writable<IPositionable<"key">>;
+    key: string
+    pos_x: number
+    pos_y: number
+    width: number
+    height: number
+    positionable: Writable<IPositionable<'key'>>
   }
 
-  let stackingOrder = writable<string[]>([]);
-  let cards: Writable<Writable<IPositionable<"key">>[]> = writable(
+  let stackingOrder = writable<string[]>([])
+  let cards: Writable<Writable<IPositionable<'key'>>[]> = writable(
     Array.from({ length: 5000 }, (_, i) => {
       let x = {
         key: crypto.randomUUID() + i,
@@ -31,25 +31,25 @@
         width: 240,
         height: 100,
         hoisted: false
-      };
-      let p = writable(x);
+      }
+      let p = writable(x)
       // return {
       //   ...x, positionable: p
       // }
-      return p;
+      return p
     })
-  );
+  )
   stackingOrder.update((_o) => {
     get(cards).forEach((c) => {
-      let _c = get(c);
-      _o.push(_c.key);
-    });
-    return _o;
-  });
+      let _c = get(c)
+      _o.push(_c.key)
+    })
+    return _o
+  })
 
   // Tela Handlers
   function onMetaSelectEnd(e: CustomEvent<{ rect: Vec4 }>) {
-    const { rect } = e.detail;
+    const { rect } = e.detail
     cards.update((_cards) => {
       _cards.push(
         writable({
@@ -60,9 +60,9 @@
           height: rect.h,
           z: 0
         })
-      );
-      return _cards;
-    });
+      )
+      return _cards
+    })
   }
 
   const settings = createSettings({
@@ -72,30 +72,30 @@
     GRID_SIZE: 30,
     CHUNK_WIDTH: 300,
     CHUNK_HEIGHT: 300
-  });
-  const board = createBoard(settings, stackingOrder, {}, "idle", {
-    idle: { select: "select", pan: "pan" },
-    pan: { idle: "idle" },
-    select: { idle: "idle" },
-    metaSelect: { idle: "idle" }
-  });
+  })
+  const board = createBoard(settings, stackingOrder, {}, 'idle', {
+    idle: { select: 'select', pan: 'pan' },
+    pan: { idle: 'idle' },
+    select: { idle: 'idle' },
+    metaSelect: { idle: 'idle' }
+  })
 
-  let state = board.state;
-  $: ({ selectionCss } = $state);
+  let state = board.state
+  $: ({ selectionCss } = $state)
   state.update((v) => {
-    v.stackingOrder.set(get(stackingOrder));
-    return v;
-  });
+    v.stackingOrder.set(get(stackingOrder))
+    return v
+  })
 
   function onDelete(e: any) {
-    const key = e.detail;
+    const key = e.detail
     cards.update((_cards) => {
-      const index = _cards.findIndex((e) => get(e).key === key);
+      const index = _cards.findIndex((e) => get(e).key === key)
       if (index !== -1) {
-        _cards.splice(index, 1);
+        _cards.splice(index, 1)
       }
-      return _cards;
-    });
+      return _cards
+    })
   }
 
   // let lazyCard = () => import("./Card.svelte").then((m) => m.default);
@@ -110,10 +110,10 @@
     let:positionable
     on:metaSelectChange={() => {}}
     on:metaSelectEnd={onMetaSelectEnd}
-    on:draggableChanged={() => console.log("draggableChanged")}
-    on:resizableChanged={() => console.log("resizableChanged")}
-    on:positionableLeave={(e) => console.log("positionableLeave", e.detail)}
-    on:positionableEnter={(e) => console.log("positionableEnter", e.detail)}
+    on:draggableChanged={() => console.log('draggableChanged')}
+    on:resizableChanged={() => console.log('resizableChanged')}
+    on:positionableLeave={(e) => console.log('positionableLeave', e.detail)}
+    on:positionableEnter={(e) => console.log('positionableEnter', e.detail)}
   >
     <svelte:fragment slot="selectRect">
       <div class="selectionRect" style={$selectionCss} />
@@ -123,7 +123,7 @@
       <Grid />
     </svelte:fragment>
 
-    <LazyComponent this={() => import("./Card.svelte")}>
+    <LazyComponent this={() => import('./Card.svelte')}>
       <svelte:fragment slot="component" let:Component>
         <Component card={positionable} on:delete={onDelete} />
       </svelte:fragment>

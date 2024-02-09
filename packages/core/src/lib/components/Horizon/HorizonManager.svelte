@@ -3,7 +3,7 @@
   import { writable } from 'svelte/store'
   import { fade } from 'svelte/transition'
 
-  import { Lethargy } from "lethargy-ts";
+  import { Lethargy } from 'lethargy-ts'
   import { twoFingers, type Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
   import { API } from '@horizon/core/src/lib/service/api'
@@ -29,13 +29,12 @@
 
   // TODO: use env vars properly
   let telemetryAPIKey = undefined
-  if (import.meta.env.PROD){
-    telemetryAPIKey = "40d38f34c97de0270d9f4e099dae4f48"
+  if (import.meta.env.PROD) {
+    telemetryAPIKey = '40d38f34c97de0270d9f4e099dae4f48'
   }
   const horizonManager = new HorizonsManager(api, telemetryAPIKey)
 
   const lethargy = new Lethargy({
-
     // ORIGINAL MAXU:
     // sensitivity: 70,
     // delay: 80,
@@ -44,8 +43,8 @@
     // TEST MAXU
     sensitivity: 70,
     delay: 0,
-    inertiaDecay: 43,
-  });
+    inertiaDecay: 43
+  })
   // const fps = useFPS()
 
   const horizons = horizonManager.horizons
@@ -65,14 +64,14 @@
   let sortingTimeout: ReturnType<typeof setTimeout> | null = null
   let sortedHorizons: string[] = []
   let initialSorting = false
-  let overScrollTimeout: ReturnType<typeof setTimeout> | null = null;
-  let moveToStackItem: (idx: number) => Promise<void>;
+  let overScrollTimeout: ReturnType<typeof setTimeout> | null = null
+  let moveToStackItem: (idx: number) => Promise<void>
 
   $: selectedHorizonId = sortedHorizons[$activeStackItemIdx]
 
   const addHorizon = async () => {
     disabledTransitions = true
-    
+
     const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
     if ($showStackOverview) {
       $showStackOverview = false
@@ -80,7 +79,7 @@
 
       await wait(TRANSITION_DURATION)
     }
-    
+
     await horizonManager.switchHorizon(newHorizon.id)
     await moveToStackItem(0)
     await sortHorizons()
@@ -88,7 +87,7 @@
 
   const addBrowserHorizon = async () => {
     disabledTransitions = true
-    
+
     const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
     await horizonManager.switchHorizon(newHorizon.id)
 
@@ -105,7 +104,7 @@
       x: 8,
       y: 20,
       width: 1200,
-      height: 700,
+      height: 700
     })
 
     await sortHorizons()
@@ -113,7 +112,7 @@
     log.debug('Created new browser horizon', newHorizon)
   }
 
-  const deleteHorizon = async(horizon: IHorizon) => {
+  const deleteHorizon = async (horizon: IHorizon) => {
     log.debug('Confirm delete horizon', horizon.id)
     const confirm = window.confirm(`Are you sure you want to delete ${horizon.data.name}?`)
     if (confirm) {
@@ -178,10 +177,10 @@
 
   const changeActiveHorizon = async (horizonId: string, sortImmediately = false) => {
     log.debug('Changing active horizon', horizonId)
-    
+
     $activeHorizon?.activeCardId.set(null)
     $showStackOverview = false
-    
+
     const horizonStackIdx = sortedHorizons.findIndex((h) => h === horizonId)
     await moveToStackItem(horizonStackIdx)
 
@@ -214,7 +213,7 @@
 
     // if the user scrolled we switch to the closest horizon
     if ($stackOverviewScrollOffset !== 0) {
-      const horizonHeight = (window.innerHeight * OVERVIEW_HORIZON_SCALING) + OVERVIEW_HORIZON_GAP
+      const horizonHeight = window.innerHeight * OVERVIEW_HORIZON_SCALING + OVERVIEW_HORIZON_GAP
       const horizonsIndexOffset = Math.round($stackOverviewScrollOffset / horizonHeight)
       const closestHorizonId = sortedHorizons[$activeStackItemIdx + horizonsIndexOffset]
 
@@ -223,7 +222,7 @@
         changeActiveHorizon(closestHorizonId)
       }
 
-    // if the user selected a different horizon using the arrow keys we switch to it
+      // if the user selected a different horizon using the arrow keys we switch to it
     } else if ($activeHorizonId !== selectedHorizonId) {
       log.debug('switching to selected horizon', selectedHorizonId)
       changeActiveHorizon(selectedHorizonId)
@@ -313,14 +312,14 @@
     } else if (event.key === 'Escape') {
       event.preventDefault()
       window.location.reload()
-    // } else if (event.key === 'ArrowUp') {
-    //   event.preventDefault()
-    //   moveToPreviousHorizon()
-    // } else if (event.key === 'ArrowDown') {
-    //   event.preventDefault()
-    //   moveToNextHorizon()
-    } else if (event.key === "9") {
-      showFlickSettings = !showFlickSettings;
+      // } else if (event.key === 'ArrowUp') {
+      //   event.preventDefault()
+      //   moveToPreviousHorizon()
+      // } else if (event.key === 'ArrowDown') {
+      //   event.preventDefault()
+      //   moveToNextHorizon()
+    } else if (event.key === '9') {
+      showFlickSettings = !showFlickSettings
     }
   }
 
@@ -348,144 +347,143 @@
     createSortingTimeout()
   }
 
-    /* NEW GESTURE STUFF */
+  /* NEW GESTURE STUFF */
 
-    // TODO: Remove, only for letting people adjust settings
-    let showFlickSettings = false;
-    let flickWeight = 1.43;
-    let flickVisualWeight = 2.8;
-    let flickThreshold = 135;
-    let flickSpringReturn = 0.9;
+  // TODO: Remove, only for letting people adjust settings
+  let showFlickSettings = false
+  let flickWeight = 1.43
+  let flickVisualWeight = 2.8
+  let flickThreshold = 135
+  let flickSpringReturn = 0.9
 
-    const stackOverviewScrollOffset = spring(0, {
-        stiffness: 0.85,
-        damping: 0.97,
-    });
+  const stackOverviewScrollOffset = spring(0, {
+    stiffness: 0.85,
+    damping: 0.97
+  })
 
-    let flickSpring = advancedSpring<number>(0, {
-      // stiffness: 0.25,
-      // damping: 0.9,
-      // stiffness: 0.65, // <- Juicy
-      // damping: 0.7, // <- Juicy
-      stiffness: 0.93, // <- Hefty
-      damping: 1, // <- Hefty
-      min: -400,
-      max: 400
+  let flickSpring = advancedSpring<number>(0, {
+    // stiffness: 0.25,
+    // damping: 0.9,
+    // stiffness: 0.65, // <- Juicy
+    // damping: 0.7, // <- Juicy
+    stiffness: 0.93, // <- Hefty
+    damping: 1, // <- Hefty
+    min: -400,
+    max: 400
+  })
+  $: ({ inertia: flickInertia } = flickSpring)
+
+  let stillScrolling = false
+
+  let canSwitchAgain = true
+  let canSwitchTimer: any = null
+
+  $: if (Math.abs($flickSpring) > flickThreshold && !$showStackOverview && canSwitchAgain) {
+    let cancel = false
+    if (Math.sign($flickSpring) > 0) {
+      moveToNextHorizon()
+    } else {
+      moveToPreviousHorizon()
+      if ($activeStackItemIdx === 0) cancel = true
+    }
+
+    if (!cancel) {
+      flickSpring.set(-$flickSpring)
+      //flickSpring.set(0);
+      canSwitchTimer && clearTimeout(canSwitchTimer)
+      canSwitchTimer = setTimeout(() => {
+        canSwitchAgain = true
+      }, 800)
+      canSwitchAgain = false
+    }
+  }
+
+  const handleGestureEnd = (g: Gesture) => {
+    log.debug('gesture end', g)
+
+    if (g.shiftKey) {
+      log.debug('ignoring gesture as shift is pressed')
+      return
+    }
+
+    if (g.scale < 1 && !$showStackOverview) {
+      log.debug('pinch out')
+      $showStackOverview = true
+    } else if (g.scale > 1 && $showStackOverview) {
+      log.debug('pinch in')
+      selectHorizonAndCloseOverview()
+    }
+  }
+
+  let wheelResetTimer: any = null
+  function handleWheel(e: WheelEvent) {
+    if ($showStackOverview) {
+      const isIntentional = lethargy.check(e)
+
+      const horizonHeight = window.innerHeight * OVERVIEW_HORIZON_SCALING + OVERVIEW_HORIZON_GAP
+      stackOverviewScrollOffset.update((v) => {
+        v += e.deltaY
+        // v = Math.min(0, Math.max(v, 2000));
+        const max = ($horizons.length - $activeStackItemIdx - 1) * horizonHeight
+        const min = $activeStackItemIdx * horizonHeight * -1
+        if (overScrollTimeout) clearTimeout(overScrollTimeout)
+        if (v > max) {
+          if (!isIntentional) return max
+          overScrollTimeout = setTimeout(() => {
+            $stackOverviewScrollOffset = max
+          }, 200)
+
+          return max + 200
+        } else if (v < min) {
+          if (!isIntentional) return min
+          overScrollTimeout = setTimeout(() => {
+            $stackOverviewScrollOffset = min
+          }, 200)
+
+          return min - 200
+        }
+
+        return v
+      })
+    } else {
+      const isIntentional = lethargy.check(e)
+
+      if (isIntentional) {
+        if (!stillScrolling) stillScrolling = true
+        if (!isAnimating) requestAnimationFrame(frame)
+
+        // DISABLE FLICKING FOR USER-TESTING BUILD
+        // flickSpring.update((v: number) => {
+        //   const eased = 1 - ((v+e.deltaY*1) / (1 * flickWeight))^2; // .../1.3)^2
+        //   v = -eased;
+        //   //v += e.deltaY;
+        //   return v;
+        // });
+
+        wheelResetTimer && clearTimeout(wheelResetTimer)
+        wheelResetTimer = setTimeout(() => {
+          stillScrolling = false
+        }, 80)
+      }
+    }
+  }
+
+  let isAnimating = false
+  function frame() {
+    requestAnimationFrame(frame)
+    isAnimating = true
+    flickSpring.update((v: number) => {
+      //if (stillScrolling) return v;// * 0.97;
+      v *= flickSpringReturn
+      if (Math.abs(v) < 0.01) {
+        v = 0
+        isAnimating = false
+      }
+      return v
     })
-    $: ({ inertia: flickInertia } = flickSpring);
-
-    let stillScrolling = false;
-
-    let canSwitchAgain = true;
-    let canSwitchTimer: any = null;
-
-    $: if (Math.abs($flickSpring) > flickThreshold && !$showStackOverview && canSwitchAgain) {
-      let cancel = false;
-      if (Math.sign($flickSpring) > 0) {
-        moveToNextHorizon();
-      } else {
-        moveToPreviousHorizon();
-        if ($activeStackItemIdx === 0) cancel = true;
-      }
-
-      if (!cancel) {
-        flickSpring.set(-$flickSpring);
-        //flickSpring.set(0);
-        canSwitchTimer && clearTimeout(canSwitchTimer);
-        canSwitchTimer = setTimeout(() => {
-          canSwitchAgain = true;
-        }, 800);
-        canSwitchAgain = false;
-      }
-    }
-
-    const handleGestureEnd = (g: Gesture) => {
-      log.debug('gesture end', g)
-
-      if (g.shiftKey) {
-        log.debug('ignoring gesture as shift is pressed')
-        return 
-      }
-
-      if (g.scale < 1 && !$showStackOverview) {
-        log.debug('pinch out')
-        $showStackOverview = true
-      } else if (g.scale > 1 && $showStackOverview) {
-        log.debug('pinch in')
-        selectHorizonAndCloseOverview()
-      }
-    }
-
-    let wheelResetTimer: any = null;
-    function handleWheel(e: WheelEvent) {
-      if ($showStackOverview) {
-        const isIntentional = lethargy.check(e);
-
-        const horizonHeight = (window.innerHeight * OVERVIEW_HORIZON_SCALING) + OVERVIEW_HORIZON_GAP
-        stackOverviewScrollOffset.update((v) => {
-          v += e.deltaY;
-          // v = Math.min(0, Math.max(v, 2000));
-          const max = ($horizons.length - $activeStackItemIdx - 1) * horizonHeight;
-          const min = $activeStackItemIdx * horizonHeight * -1;
-          if (overScrollTimeout) clearTimeout(overScrollTimeout);
-          if (v > max) {
-            if (!isIntentional) return max;
-            overScrollTimeout = setTimeout(() => {
-              $stackOverviewScrollOffset = max;
-            }, 200)
-
-            return max + 200
-          } else if (v < min) {
-            if (!isIntentional) return min;
-            overScrollTimeout = setTimeout(() => {
-              $stackOverviewScrollOffset = min;
-            }, 200)
-
-            return min - 200
-          }
-
-          return v;
-        });
-      }
-      else {
-        const isIntentional = lethargy.check(e);
-
-        if (isIntentional) {
-          if (!stillScrolling) stillScrolling = true;
-          if (!isAnimating) requestAnimationFrame(frame);
-
-          // DISABLE FLICKING FOR USER-TESTING BUILD
-          // flickSpring.update((v: number) => {
-          //   const eased = 1 - ((v+e.deltaY*1) / (1 * flickWeight))^2; // .../1.3)^2
-          //   v = -eased;
-          //   //v += e.deltaY;
-          //   return v;
-          // });
-
-          wheelResetTimer && clearTimeout(wheelResetTimer);
-          wheelResetTimer = setTimeout(() => {
-            stillScrolling = false;
-          }, 80);
-        }
-      }
-    }
-
-    let isAnimating = false;
-    function frame() {
-      requestAnimationFrame(frame);
-      isAnimating = true;
-      flickSpring.update((v: number) => {
-        //if (stillScrolling) return v;// * 0.97;
-        v *= flickSpringReturn;
-        if (Math.abs(v) < 0.01) {
-          v = 0;
-          isAnimating = false;
-        }
-        return v;
-      });
-    }
-    // TODO: (Performance) We shuld only kick it off once the spring is changed probably and stop it after it settled!
-    onMount(frame)
+  }
+  // TODO: (Performance) We shuld only kick it off once the spring is changed probably and stop it after it settled!
+  onMount(frame)
 
   let unregisterTwoFingers: ReturnType<typeof twoFingers> | null = null
   onMount(async () => {
@@ -507,26 +505,31 @@
 <svelte:window on:keydown={handleKeyDown} on:wheel={handleWheel} />
 
 <svelte:head>
-  <title>{$showStackOverview ? 'Horizon Overview' : $activeHorizon?.data?.name ?? 'Space OS'} {$showStackOverview ? '' : $activeHorizon?.state === 'hot' ? '🔥' : '🧊'}</title>
+  <title
+    >{$showStackOverview ? 'Horizon Overview' : $activeHorizon?.data?.name ?? 'Space OS'}
+    {$showStackOverview ? '' : $activeHorizon?.state === 'hot' ? '🔥' : '🧊'}</title
+  >
 </svelte:head>
 
 <main class="" class:overview={$showStackOverview}>
   {#if showFlickSettings}
-  <ul style="position: fixed;width:24%; top:0;right:0;z-index:5000;background:darkblue;font-family:monospace;color:white;padding:0.5rem;display:flex;gap:1rem;">
+    <ul
+      style="position: fixed;width:24%; top:0;right:0;z-index:5000;background:darkblue;font-family:monospace;color:white;padding:0.5rem;display:flex;gap:1rem;"
+    >
       <li style="display:flex;flex-direction:column;font-weight:600;">
         <span>activeStackItem:</span>
         <span>flickSpring:</span>
         <span>flickInertia:</span>
         <span>stillscrolling:</span>
-        <hr style="margin-block: 0.25rem;">
+        <hr style="margin-block: 0.25rem;" />
         <span>Scroll Sensitivity ({lethargy.sensitivity}):</span>
         <span>Scroll Delay ({lethargy.delay}):</span>
         <span>Scroll Decay ({lethargy.inertiaDecay}):</span>
-        <br>
+        <br />
         <span>Flick Weight ({flickWeight}):</span>
         <span>Flick Visual Weight ({flickVisualWeight}):</span>
         <span>Flick Threshold ({flickThreshold}):</span>
-        <br>
+        <br />
         <span>Spring Stiffness ({flickSpring.stiffness}):</span>
         <span>Spring Damping ({flickSpring.damping}):</span>
         <span>Spring Return ({flickSpringReturn}):</span>
@@ -536,31 +539,31 @@
         <span>{Math.floor($flickSpring)}</span>
         <span>{Math.floor(Math.abs($flickInertia))}</span>
         <span>{stillScrolling}</span>
-        <hr style="margin-block: 0.25rem;">
-        <input type="range" bind:value={lethargy.sensitivity} min="1" max="100" step="1">
-        <input type="range" bind:value={lethargy.delay} min="0" max="200" step="1">
-        <input type="range" bind:value={lethargy.inertiaDecay} min="0" max="200" step="1">
-        <br>
-        <input type="range" bind:value={flickWeight} min="0.5" max="3" step="0.01">
-        <input type="range" bind:value={flickVisualWeight} min="0.1" max="5" step="0.01">
-        <input type="range" bind:value={flickThreshold} min="5" max="1000" step="1">
-        <br>
-        <input type="range" bind:value={flickSpring.stiffness} min="0" max="1" step="0.01">
-        <input type="range" bind:value={flickSpring.damping} min="0" max="1" step="0.01">
-        <input type="range" bind:value={flickSpringReturn} min="0" max="1" step="0.01">
+        <hr style="margin-block: 0.25rem;" />
+        <input type="range" bind:value={lethargy.sensitivity} min="1" max="100" step="1" />
+        <input type="range" bind:value={lethargy.delay} min="0" max="200" step="1" />
+        <input type="range" bind:value={lethargy.inertiaDecay} min="0" max="200" step="1" />
+        <br />
+        <input type="range" bind:value={flickWeight} min="0.5" max="3" step="0.01" />
+        <input type="range" bind:value={flickVisualWeight} min="0.1" max="5" step="0.01" />
+        <input type="range" bind:value={flickThreshold} min="5" max="1000" step="1" />
+        <br />
+        <input type="range" bind:value={flickSpring.stiffness} min="0" max="1" step="0.01" />
+        <input type="range" bind:value={flickSpring.damping} min="0" max="1" step="0.01" />
+        <input type="range" bind:value={flickSpringReturn} min="0" max="1" step="0.01" />
       </li>
-    <!-- <span>overviewOffset: {Math.floor($stackOverviewScrollOffset)}</span> -->
-  </ul>
+      <!-- <span>overviewOffset: {Math.floor($stackOverviewScrollOffset)}</span> -->
+    </ul>
   {/if}
-    <!-- fps {$fps} -->
-    <!-- <div style="position: fixed;width:50%; top:0;right:0;z-index:5000;background: white;color:black;padding:0.5rem;display:flex;flex-direction:column;">
+  <!-- fps {$fps} -->
+  <!-- <div style="position: fixed;width:50%; top:0;right:0;z-index:5000;background: white;color:black;padding:0.5rem;display:flex;flex-direction:column;">
       <span>activeStackItem: {$activeStackItemIdx}</span>
       <span>flickSpring: {Math.floor($flickSpring)}</span>
       <span>flickInertia: {Math.floor(Math.abs($flickInertia))}</span>
       <span>overviewOffset: {Math.floor($stackOverviewScrollOffset)}</span>
       <span>stillscrolling: {stillScrolling}</span>
     </div> -->
-    <!-- <div class="horizon-list">
+  <!-- <div class="horizon-list">
         {#each $horizons as horizon, idx (horizon.id)}
             <HorizonSwitcherItem horizon={horizon} active={$activeHorizon?.id === horizon.id} idx={idx + 1} hot={$hotHorizons.includes(horizon)} /> <!-- on:click={() => switchHorizon(horizon.id)}
         {/each}
@@ -575,14 +578,18 @@
   {/if}
 
   <Stack
-    options={{ transitionDuration: TRANSITION_DURATION, scaling: OVERVIEW_HORIZON_SCALING, gap: OVERVIEW_HORIZON_GAP }}
+    options={{
+      transitionDuration: TRANSITION_DURATION,
+      scaling: OVERVIEW_HORIZON_SCALING,
+      gap: OVERVIEW_HORIZON_GAP
+    }}
     movementOffset={flickSpring}
     overviewOffset={stackOverviewScrollOffset}
     showTransitions={!disabledTransitions}
     activeIdx={activeStackItemIdx}
     showOverview={showStackOverview}
     on:select={handleStackItemSelect}
-    bind:moveToStackItem={moveToStackItem}
+    bind:moveToStackItem
   >
     {#each $horizons as horizon (horizon.id)}
       <StackItem
@@ -605,9 +612,13 @@
 
         <svelte:fragment slot="layer">
           {#if $showStackOverview}
-            <HorizonInfo horizon={horizon} />
+            <HorizonInfo {horizon} />
 
-            <button on:click|preventDefault|stopPropagation={() => deleteHorizon(horizon)} transition:fade={{ duration: TRANSITION_DURATION / 2 }} class="horizon-action">
+            <button
+              on:click|preventDefault|stopPropagation={() => deleteHorizon(horizon)}
+              transition:fade={{ duration: TRANSITION_DURATION / 2 }}
+              class="horizon-action"
+            >
               <Icon name="close" />
             </button>
           {/if}

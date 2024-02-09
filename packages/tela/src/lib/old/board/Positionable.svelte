@@ -1,14 +1,14 @@
 <script lang="ts">
-  import type { TBoard } from "$lib/types/Board.type.js";
-  import type { TPositionable } from "$lib/types/Positionable.type.js";
-  import { onMount } from "svelte";
-  import type { Writable } from "svelte/store";
+  import type { TBoard } from '$lib/types/Board.type.js'
+  import type { TPositionable } from '$lib/types/Positionable.type.js'
+  import { onMount } from 'svelte'
+  import type { Writable } from 'svelte/store'
 
-  export let board: Writable<TBoard>, bounds: TPositionable, stackingOrder: string[], wc: boolean;
+  export let board: Writable<TBoard>, bounds: TPositionable, stackingOrder: string[], wc: boolean
 
-  let el: HTMLElement;
+  let el: HTMLElement
 
-  $: transformCss = `transfrom: translate3d(${$board.viewOffset.x + bounds.pos.x}px, ${$board.viewOffset.y + bounds.pos.y}px, 0); width: ${bounds.size.x}px; height: ${bounds.size.y}px;`;
+  $: transformCss = `transfrom: translate3d(${$board.viewOffset.x + bounds.pos.x}px, ${$board.viewOffset.y + bounds.pos.y}px, 0); width: ${bounds.size.x}px; height: ${bounds.size.y}px;`
 
   /*$: positionCss = `left: ${$board.viewOffset.x + bounds.pos.x}px; top: ${
 		$board.viewOffset.y + bounds.pos.y
@@ -23,7 +23,7 @@
 
   onMount(() => {
     //el.style.transform = `translate(${bounds.pos.x}px, ${bounds.pos.y}px)`;
-  });
+  })
 </script>
 
 <!-- <div class="positionable" style="{positionCss}">

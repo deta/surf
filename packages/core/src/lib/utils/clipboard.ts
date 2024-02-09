@@ -16,13 +16,12 @@ export const useClipboard = (delay = 500) => {
   return { copied, copy }
 }
 
-
-export const copyToClipboard = async (content : any) => {
+export const copyToClipboard = async (content: any) => {
   try {
-    await navigator.clipboard.writeText(content);
-    console.log('Content copied to clipboard');
+    await navigator.clipboard.writeText(content)
+    console.log('Content copied to clipboard')
     // You can also show a user-friendly message or indication that the content was copied
   } catch (err) {
-    console.error('Failed to copy: ', err);
+    console.error('Failed to copy: ', err)
   }
 }

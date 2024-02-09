@@ -5,7 +5,7 @@
   import type { CardFile, Resource } from '../../../types'
   import { useLogScope } from '../../../utils/log'
   import type { Horizon } from '../../../service/horizon'
-    import ImageView from './ImageView.svelte'
+  import ImageView from './ImageView.svelte'
 
   export let card: Writable<CardFile>
   export let horizon: Horizon
@@ -44,7 +44,7 @@
     <p>Loading…</p>
   {:else if resource}
     {#if fileType.startsWith('image/')}
-      <ImageView resource={resource} />
+      <ImageView {resource} />
     {:else}
       <h1>Unsupported File Type</h1>
       <p>No view available to display this file.</p>

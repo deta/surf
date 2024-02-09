@@ -1,9 +1,9 @@
-import type { Vec2 } from "./Utils.type.js";
+import type { Vec2 } from './Utils.type.js'
 
 export interface TPositionable {
-  key: string;
+  key: string
 
   // Rendering
-  pos: Vec2;
-  size: Vec2;
+  pos: Vec2
+  size: Vec2
 }
