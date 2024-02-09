@@ -24,13 +24,22 @@ export function setupIpcHandlers() {
       y: PADDING
     })
     console.timeEnd('capturePage')
+    const imageSize = image.getSize()
 
-    // setTimeout(() => {
-    console.time('bitmap')
-    const buffer = image.toBitmap()
-    console.timeEnd('bitmap')
-    event.sender.send('new-preview-image', { horizonId, buffer: buffer })
-    // }, 1)
+    setTimeout(() => {
+      console.time('bitmap')
+      const buffer = image.getBitmap()
+      console.timeEnd('bitmap')
+
+      event.sender.send('new-preview-image', {
+        horizonId,
+        buffer: buffer,
+        width: imageSize.width,
+        height: imageSize.height
+      })
+    }, 0)
+
+    return
   })
 
   ipcMain.handle('capture-web-contents', async () => {

@@ -24,9 +24,16 @@ const api = {
   requestNewPreviewImage: (horizonId: string) =>
     ipcRenderer.invoke('request-new-preview-image', { horizonId }),
 
-  onNewPreviewImage: (_callback: any) => {
-    ipcRenderer.on('new-preview-image', (event, { horizonId, buffer }) => {
-      console.log('new preview image: ', event, horizonId, buffer)
+  onNewPreviewImage: (callback: any) => {
+    ipcRenderer.on('new-preview-image', (_, { horizonId, buffer, width, height }) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+
+      canvas
+        ?.getContext('2d')
+        ?.putImageData(new ImageData(new Uint8ClampedArray(buffer.buffer), width, height), 0, 0)
+      canvas.toBlob((blob) => callback(horizonId, blob), 'image/png', 0.7)
     })
   },
 

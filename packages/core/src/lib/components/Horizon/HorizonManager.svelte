@@ -69,7 +69,10 @@
   let overScrollTimeout: ReturnType<typeof setTimeout> | null = null
   let moveToStackItem: (idx: number) => Promise<void>
 
-  window.api.onNewPreviewImage(() => {})
+  window.api.onNewPreviewImage((horizonId: string, blob: Blob) => {
+    let horizon: Horizon | undefined = get(horizonManager.horizons)?.find((h) => h.id === horizonId)
+    console.log(horizonId, horizon, blob)
+  })
 
   $: selectedHorizonId = sortedHorizons[$activeStackItemIdx]
 
