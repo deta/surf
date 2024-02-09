@@ -233,7 +233,7 @@
   // } translate3d(${-$viewOffset.x}px, ${-$viewOffset.y}px, 0); ${
   //   $mode === "pan" ? "will-change: transform;" : ""
   // }`;
-  $: transformCss = `transform-origin: top left; transform: translate3d(${-$viewOffset.x}px, ${-$viewOffset.y}px, 0); ${
+  $: transformCss = `transform-origin: top left; transform: scale(1) translate3d(${-$viewOffset.x}px, ${-$viewOffset.y}px, 0); ${
     $mode === 'pan' ? 'will-change: transform;' : ''
   }`
 
