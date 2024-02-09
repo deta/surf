@@ -12,12 +12,13 @@
     "build:horizon:linux": "yarn turbo run horizon#build:linux",
     "build:tela": "yarn workspace @horizon/tela build",
     "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md,svelte}\""
+    "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write \"**/*.{js,ts,tsx,json,md,svelte}\""
   },
   "devDependencies": {
     "@horizon/eslint-config": "*",
     "@horizon/typescript-config": "*",
     "prettier": "^3.1.1",
+    "prettier-plugin-svelte": "^3.1.2",
     "turbo": "latest"
   },
   "engines": {
