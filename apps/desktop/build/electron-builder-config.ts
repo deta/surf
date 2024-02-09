@@ -60,7 +60,7 @@ export default function electronBuilderConfig() {
       maintainer: 'deta.space'
     },
     appImage: {
-      artifactName: `${params.buildName}.$\{ext\}`
+      artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`,
     },
     npmRebuild: false
   }
