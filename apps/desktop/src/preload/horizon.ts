@@ -21,6 +21,14 @@ const api = {
       delete webviewNewWindowHandlers[webContentsId]
     }
   },
+  requestNewPreviewImage: (horizonId: string) =>
+    ipcRenderer.invoke('request-new-preview-image', { horizonId }),
+
+  onNewPreviewImage: (_callback: any) => {
+    ipcRenderer.on('new-preview-image', (event, { horizonId, buffer }) => {
+      console.log('new preview image: ', event, horizonId, buffer)
+    })
+  },
 
   fetchAsDataURL: async (url: string) => {
     try {

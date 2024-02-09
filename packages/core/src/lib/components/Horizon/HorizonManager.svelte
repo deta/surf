@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte'
-  import { writable } from 'svelte/store'
+  import { get, writable } from 'svelte/store'
   import { fade } from 'svelte/transition'
 
   import { Lethargy } from 'lethargy-ts'
@@ -24,6 +24,7 @@
   import { Icon } from '..'
   import HorizonInfo from './HorizonInfo.svelte'
   import { isModKeyPressed } from '../../utils/keyboard'
+  import { requestNewPreviewImage } from '../../utils/screenshot'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -67,6 +68,8 @@
   let initialSorting = false
   let overScrollTimeout: ReturnType<typeof setTimeout> | null = null
   let moveToStackItem: (idx: number) => Promise<void>
+
+  window.api.onNewPreviewImage(() => {})
 
   $: selectedHorizonId = sortedHorizons[$activeStackItemIdx]
 
@@ -277,6 +280,10 @@
       if ($showStackOverview) {
         selectHorizonAndCloseOverview()
       } else {
+        const horizon = get(horizonManager.activeHorizon)
+        if (horizon) {
+          await requestNewPreviewImage(horizon.id)
+        }
         $showStackOverview = true
       }
     } else if (event.key === 'Escape') {
@@ -368,7 +375,7 @@
     }
   }
 
-  const handleGestureEnd = (g: Gesture) => {
+  const handleGestureEnd = async (g: Gesture) => {
     log.debug('gesture end', g)
 
     if (g.shiftKey) {
@@ -377,6 +384,11 @@
     }
 
     if (g.scale < 1 && !$showStackOverview) {
+      const horizon = get(horizonManager.activeHorizon)
+      if (horizon) {
+        await requestNewPreviewImage(horizon.id)
+      }
+
       log.debug('pinch out')
       $showStackOverview = true
     } else if (g.scale > 1 && $showStackOverview) {

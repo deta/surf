@@ -11,6 +11,28 @@ export function setupIpcHandlers() {
     return getAdblockerState(partition as string)
   })
 
+  ipcMain.handle('request-new-preview-image', async (event, { horizonId }) => {
+    const window = getMainWindow()
+    if (!window) return
+
+    const PADDING = 40
+    const rect = window.getContentBounds()
+    console.time('capturePage')
+    const image = await window.webContents.capturePage({
+      ...rect,
+      x: 0,
+      y: PADDING
+    })
+    console.timeEnd('capturePage')
+
+    // setTimeout(() => {
+    console.time('bitmap')
+    const buffer = image.toBitmap()
+    console.timeEnd('bitmap')
+    event.sender.send('new-preview-image', { horizonId, buffer: buffer })
+    // }, 1)
+  })
+
   ipcMain.handle('capture-web-contents', async () => {
     const window = getMainWindow()
     if (!window) return
