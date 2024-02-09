@@ -30,9 +30,14 @@ const api = {
       canvas.width = width
       canvas.height = height
 
-      canvas
-        ?.getContext('2d')
-        ?.putImageData(new ImageData(new Uint8ClampedArray(buffer.buffer), width, height), 0, 0)
+      buffer = new Uint8ClampedArray(buffer.buffer)
+      for (let i = 0; i < buffer.length; i += 4) {
+        let temp = buffer[i]
+        buffer[i] = buffer[i + 2]
+        buffer[i + 2] = temp
+      }
+
+      canvas?.getContext('2d')?.putImageData(new ImageData(buffer, width, height), 0, 0)
       canvas.toBlob((blob) => callback(horizonId, blob), 'image/png', 0.7)
     })
   },

@@ -150,6 +150,7 @@ export class Horizon {
     } else {
       const resource = await this.storage.resources.create({ blob: newPreviewImage })
       this.data.previewImage = resource.id
+      this.signalChange(this)
     }
 
     if (this.previewImageObjectURL) URL.revokeObjectURL(this.previewImageObjectURL)

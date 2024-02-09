@@ -74,7 +74,7 @@
     let horizon: IHorizon | undefined = get(horizonManager.horizons)?.find(
       (h) => h.id === horizonId
     )
-    horizon?.setPreviewImage(blob)
+    if (!$showStackOverview) horizon?.setPreviewImage(blob)
   })
 
   $: selectedHorizonId = sortedHorizons[$activeStackItemIdx]
@@ -577,17 +577,32 @@
         active={$activeHorizonId === horizon.id && !$showStackOverview}
         on:select={handleStackItemSelect}
       >
-        {#if horizon?.state === 'hot'}
-          <Horizon
-            {horizon}
-            active={$activeHorizonId === horizon.id && !$showStackOverview}
-            inOverview={$showStackOverview}
-            on:change={handleHorizonChange}
-            on:cardChange={handleCardChange}
-          />
-        {:else}
-          <HorizonPreview {horizon} />
+        {#if horizon.state === 'hot'}
+          <div
+            style="display: {!horizon.previewImageObjectURL || !$showStackOverview
+              ? 'block'
+              : 'none'};"
+          >
+            <Horizon
+              {horizon}
+              active={$activeHorizonId === horizon.id && !$showStackOverview}
+              inOverview={$showStackOverview}
+              on:change={handleHorizonChange}
+              on:cardChange={handleCardChange}
+            />
+          </div>
         {/if}
+
+        <div
+          style="display: {horizon.state !== 'hot' ||
+          (horizon.state === 'hot' && horizon.previewImageObjectURL && $showStackOverview)
+            ? 'block'
+            : 'none'};"
+        >
+          {#key $showStackOverview}
+            <HorizonPreview {horizon} />
+          {/key}
+        </div>
 
         <svelte:fragment slot="layer">
           {#if $showStackOverview}

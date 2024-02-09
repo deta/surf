@@ -26,7 +26,7 @@
   export let horizon: Horizon
   export let inOverview: boolean = false
 
-  const REQUEST_NEW_PREVIEW_INTERVAL = 5e3
+  const REQUEST_NEW_PREVIEW_INTERVAL = 3e3
   const cards = horizon.cards
   const data = horizon.data
 
@@ -272,6 +272,7 @@
 
     requestNewPreviewIntervalId = setInterval(async () => {
       if (horizon && active && !inOverview) {
+        log.debug(horizon.id, 'requesting new preview')
         await requestNewPreviewImage(horizon.id)
       }
     }, REQUEST_NEW_PREVIEW_INTERVAL)
