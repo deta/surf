@@ -597,7 +597,7 @@
           style="display: {horizon.state !== 'hot' ||
           (horizon.state === 'hot' && horizon.previewImageObjectURL && $showStackOverview)
             ? 'block'
-            : 'none'};"
+            : 'none'}; width: 100%; height: 100%"
         >
           {#key $showStackOverview}
             <HorizonPreview {horizon} />
