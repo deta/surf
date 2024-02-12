@@ -1,17 +1,16 @@
 // Set CSC_IDENTITY_AUTO_DISCOVERY=false in the environment
 // to prevent electron-builder from trying to use the Apple signing service in dev
 // there is no way to disable this in the config file directly
-// you can set `identity` to null but in production we don't use key but just rely on env variables
+// you can set `identity` to null but in production we can't set identity to null because we need to sign the app
 
+const productName = process.env.PRODUCT_NAME || 'Horizon'
 const params = {
-  productName: process.env.PRODUCT_NAME,
   buildTag: process.env.BUILD_TAG,
   shouldNotarize: process.env.SHOULD_NOTARIZE,
   appleTeamId: process.env.APPLE_TEAM_ID,
-  buildName: process.env.BUILD_TAG
-    ? `${process.env.PRODUCT_NAME}-${process.env.BUILD_TAG}`
-    : process.env.PRODUCT_NAME,
-  signIgnore: process.env.SIGN_IGNORE
+  buildName: process.env.BUILD_TAG ? `${productName}-${process.env.BUILD_TAG}` : productName,
+  signIgnore: process.env.SIGN_IGNORE,
+  buildResourcesDir: process.env.BUILD_RESOURCES_DIR
 }
 
 export default function electronBuilderConfig() {
@@ -19,7 +18,7 @@ export default function electronBuilderConfig() {
     appId: 'space.deta.spaceos.ea',
     productName: params.buildName,
     directories: {
-      buildResources: 'build'
+      buildResources: params.buildResourcesDir || 'build/resources/prod'
     },
     files: [
       '!**/.vscode/*',
@@ -43,7 +42,7 @@ export default function electronBuilderConfig() {
     mac: {
       hardenedRuntime: true,
       target: 'dmg',
-      entitlementsInherit: 'build/entitlements.mac.plist',
+      entitlementsInherit: `${params.buildResourcesDir || 'build/resources/prod'}/entitlements.mac.plist`,
       extendInfo: [
         "NSCameraUsageDescription: Application requests access to the device's camera.",
         "NSMicrophoneUsageDescription: Application requests access to the device's microphone.",
@@ -60,7 +59,9 @@ export default function electronBuilderConfig() {
       maintainer: 'deta.space'
     },
     appImage: {
-      artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`,
+      // TODO: what category are we lol
+      category: 'WebBrowser',
+      artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
     },
     npmRebuild: false
   }

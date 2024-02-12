@@ -46,6 +46,7 @@ jobs:
   build-and-release:
     needs: prepare
     runs-on: macos-latest
+    timeout-minutes: 20
     outputs:
       release-id: ${{ steps.release.outputs.id }}
       version: ${{ needs.prepare.outputs.version }}
@@ -65,17 +66,18 @@ jobs:
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Set Build Tag
+      - name: Set Build Env Variables
         run: |
           if [ "${{ github.event.inputs.pre_release }}" == "true" ]; then
-              echo "BUILD_TAG=${{ inputs.custom_build_tag || format('{0}-{1}-{2}', github.sha, github.run_id, github.run_attempt) }}" >> $GITHUB_ENV
+              echo "BUILD_TAG=${{ inputs.custom_build_tag || format('{0}-{1}', github.sha, github.run_attempt) }}" >> $GITHUB_ENV
+              echo "BUILD_RESOURCES_DIR=build/resources/dev" >> $GITHUB_ENV
           fi
 
       - name: Build
         run: |
+          yarn build:horizon:linux
           yarn build:horizon:mac
           yarn build:horizon:win
-          yarn build:horizon:linux
         env:
           HUSKY: 0
           APP_VERSION: ${{ env.APP_VERSION }}
@@ -89,9 +91,11 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           PRODUCT_NAME: ${{ inputs.product_name }}
           BUILD_TAG: ${{ env.BUILD_TAG }}
+          BUILD_RESOURCES:DIR: ${{ env.BUILD_RESOURCES_DIR }}
           M_VITE_BUILD_TAG: ${{ env.BUILD_TAG }}
           R_VITE_BUILD_TAG: ${{ env.BUILD_TAG }}
           SHOULD_NOTARIZE: ${{ inputs.should_notarize }}
+          M_VITE_USE_TMP_DATA_DIR: ${{ inputs.pre_release }}
 
       - id: release
         name: Create Github Release

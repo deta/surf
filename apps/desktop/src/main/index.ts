@@ -5,8 +5,21 @@ import { setupAdblocker, toggleAdblocker } from './adblocker'
 import { setupIpcHandlers } from './ipcHandlers'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
+import { mkdirSync } from 'fs'
 
-app.setPath('userData', join(dirname(app.getPath('userData')), 'Horizon'))
+const appName = import.meta.env.M_VITE_PRODUCT_NAME || 'Horizon'
+if (import.meta.env.M_VITE_USE_TMP_DATA_DIR === 'true') {
+  const appPath = join(
+    dirname(
+      // app.getPath('temp') returns a path to the user's OS tmp directory
+      app.getPath('temp')
+    ),
+    import.meta.env.M_VITE_APP_VERSION || '',
+    appName
+  )
+  mkdirSync(appPath, { recursive: true })
+  app.setPath('userData', appPath)
+}
 
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('space.deta.horizon')
