@@ -118,11 +118,10 @@
   }
 
   const updatePreview = async () => {
-    // if (!active) return
-    // log.debug('generating preview image')
-    // const previewImage = await takePageScreenshot()
-    // await debouncedHorizonUpdate({ previewImage: previewImage })
-    // dispatch('change', horizon)
+    if (horizon && active && !inOverview) {
+      log.debug(horizon.id, 'requesting new preview image')
+      await requestNewPreviewImage(horizon.id)
+    }
   }
 
   let showSelectTooltip = false
@@ -270,12 +269,7 @@
     stack.set(get(horizon.stackingOrder))
     $state.stackingOrder = stack
 
-    requestNewPreviewIntervalId = setInterval(async () => {
-      if (horizon && active && !inOverview) {
-        log.debug(horizon.id, 'requesting new preview')
-        await requestNewPreviewImage(horizon.id)
-      }
-    }, REQUEST_NEW_PREVIEW_INTERVAL)
+    requestNewPreviewIntervalId = setInterval(updatePreview, REQUEST_NEW_PREVIEW_INTERVAL)
   })
 
   onDestroy(() => {
