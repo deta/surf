@@ -1417,7 +1417,7 @@
     }>
   ) {
     const { positionable, clientX, clientY, direction, minSize, maxSize } = e.detail
-    const { x: absX, y: absY } = posToAbsolute(
+    let { x: absX, y: absY } = posToAbsolute(
       clientX,
       clientY,
       $viewOffset.x,
@@ -1425,6 +1425,10 @@
       $viewPort,
       $zoom
     )
+
+    // prevent negative values when cursor is outside of the viewport
+    absY = Math.max(absY, 0)
+    absX = Math.max(absX, 0)
 
     dragState.offset.x = absX - dragState.init.x
     dragState.offset.y = absY - dragState.init.y
