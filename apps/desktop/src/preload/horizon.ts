@@ -3,14 +3,21 @@ import { electronAPI } from '@electron-toolkit/preload'
 import { join } from 'path'
 import fetch from 'cross-fetch'
 
+const webviewNewWindowHandlers = {}
+
 const api = {
   webviewPreloadPath: join(__dirname, '../preload/webview.js'),
   captureWebContents: () => ipcRenderer.invoke('capture-web-contents'),
-  onNewWindowRequest: (callback) => {
-    ipcRenderer.on('new-window-request', (_, data) => {
-      callback(data)
-    })
+
+  registerNewWindowHandler: (webContentsId: number, callback: any) => {
+    webviewNewWindowHandlers[webContentsId] = callback
   },
+  unregisterNewWindowHandler: (webContentsId: number) => {
+    if (webviewNewWindowHandlers[webContentsId]) {
+      delete webviewNewWindowHandlers[webContentsId]
+    }
+  },
+
   fetchAsDataURL: async (url: string) => {
     try {
       const response = await fetch(url)
@@ -24,6 +31,13 @@ const api = {
     }
   }
 }
+
+ipcRenderer.on('new-window-request', (_, { webContentsId, ...data }) => {
+  const handler = webviewNewWindowHandlers[webContentsId]
+  if (handler) {
+    handler(data)
+  }
+})
 
 if (process.contextIsolated) {
   try {

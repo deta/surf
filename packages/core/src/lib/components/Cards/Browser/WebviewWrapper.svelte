@@ -1,7 +1,7 @@
 <script lang="ts">
   import { writable, get } from 'svelte/store'
   import type { WebviewTag } from 'electron'
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte'
 
   import type { Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
@@ -27,6 +27,8 @@
   export const historyStack = writable<string[]>([])
   export const currentHistoryIndex = writable(-1)
   let programmaticNavigation = false
+  let newWindowHandlerRegistered = false
+  let webviewWebContentsId: number | null = null
 
   let webview: WebviewTag
 
@@ -58,11 +60,6 @@
   }
 
   onMount(() => {
-    window.api.onNewWindowRequest((data) => {
-      if (webview.getWebContentsId().toString() === data.webContentsId.toString()) {
-        dispatch('newWindowWebview', data)
-      }
-    })
     webview.addEventListener('ipc-message', (event) => {
       if (event.channel !== 'webview-page-event') return
 
@@ -83,7 +80,17 @@
       }
     })
 
-    // webview.addEventListener('dom-ready', (_) => webview.openDevTools())
+    webview.addEventListener('dom-ready', (_) => {
+      webviewWebContentsId = webview.getWebContentsId()
+
+      if (!newWindowHandlerRegistered) {
+        window.api.registerNewWindowHandler(webviewWebContentsId, (data: any) => {
+          dispatch('newWindowWebview', data)
+        })
+
+        newWindowHandlerRegistered = true
+      }
+    })
 
     webview.addEventListener('did-navigate', (e: any) => url.set(e.url))
     webview.addEventListener('did-navigate-in-page', (e: any) => {
@@ -100,6 +107,12 @@
       // Get the biggest favicon (last favicon in array)
       faviconURL.set(e.favicons[e.favicons.length - 1])
     })
+  })
+
+  onDestroy(() => {
+    if (newWindowHandlerRegistered && webviewWebContentsId !== null) {
+      window.api.unregisterNewWindowHandler(webviewWebContentsId)
+    }
   })
 
   export function navigate(targetUrl: string): void {
