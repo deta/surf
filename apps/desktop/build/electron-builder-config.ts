@@ -47,7 +47,8 @@ export default function electronBuilderConfig() {
         "NSCameraUsageDescription: Application requests access to the device's camera.",
         "NSMicrophoneUsageDescription: Application requests access to the device's microphone.",
         "NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.",
-        "NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder."
+        "NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.",
+        'NSScreenCaptureUsageDescription: Application requests access to capture the screen.'
       ],
       notarize: params.shouldNotarize === 'true' ? { teamId: params.appleTeamId } : false
     },
