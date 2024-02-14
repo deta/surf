@@ -28,7 +28,7 @@ export function setupIpcHandlers() {
 
     setTimeout(() => {
       console.time('bitmap')
-      const buffer = image.getBitmap()
+      const buffer = image.toBitmap()
       console.timeEnd('bitmap')
 
       event.sender.send('new-preview-image', {

@@ -264,6 +264,11 @@
     loadHorizon()
     handleWindowResize()
 
+    // @ts-ignore
+    window.api.registerPreviewImageHandler(horizon.id, (blob: Blob) => {
+      horizon?.setPreviewImage(blob)
+    })
+
     horizon.attachBoard(board)
 
     stack.set(get(horizon.stackingOrder))
@@ -275,6 +280,7 @@
   onDestroy(() => {
     horizon.detachBoard()
     clearInterval(requestNewPreviewIntervalId)
+    window.api.unregisterPreviewImageHandler(horizon.id)
   })
 </script>
 

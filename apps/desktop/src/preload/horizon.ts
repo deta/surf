@@ -4,6 +4,7 @@ import { join } from 'path'
 import fetch from 'cross-fetch'
 
 const webviewNewWindowHandlers = {}
+const previewImageHandlers = {}
 
 const api = {
   webviewDevToolsBtn: !import.meta.env.PROD || !!process.env.WEBVIEW_DEV_TOOLS_BTN,
@@ -24,22 +25,13 @@ const api = {
   requestNewPreviewImage: (horizonId: string) =>
     ipcRenderer.invoke('request-new-preview-image', { horizonId }),
 
-  onNewPreviewImage: (callback: any) => {
-    ipcRenderer.on('new-preview-image', (_, { horizonId, buffer, width, height }) => {
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-
-      buffer = new Uint8ClampedArray(buffer.buffer)
-      for (let i = 0; i < buffer.length; i += 4) {
-        let temp = buffer[i]
-        buffer[i] = buffer[i + 2]
-        buffer[i + 2] = temp
-      }
-
-      canvas?.getContext('2d')?.putImageData(new ImageData(buffer, width, height), 0, 0)
-      canvas.toBlob((blob) => callback(horizonId, blob), 'image/png', 0.7)
-    })
+  registerPreviewImageHandler: (horizonId: string, callback: any) => {
+    previewImageHandlers[horizonId] = callback
+  },
+  unregisterPreviewImageHandler: (horizonId: string) => {
+    if (previewImageHandlers[horizonId]) {
+      delete previewImageHandlers[horizonId]
+    }
   },
 
   fetchAsDataURL: async (url: string) => {
@@ -61,6 +53,25 @@ ipcRenderer.on('new-window-request', (_, { webContentsId, ...data }) => {
   if (handler) {
     handler(data)
   }
+})
+
+ipcRenderer.on('new-preview-image', (_, { horizonId, buffer, width, height }) => {
+  const handler = previewImageHandlers[horizonId]
+  if (!handler) return
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+
+  buffer = new Uint8ClampedArray(buffer.buffer)
+  for (let i = 0; i < buffer.length; i += 4) {
+    let temp = buffer[i]
+    buffer[i] = buffer[i + 2]
+    buffer[i + 2] = temp
+  }
+
+  canvas?.getContext('2d')?.putImageData(new ImageData(buffer, width, height), 0, 0)
+  canvas.toBlob((blob) => handler(blob), 'image/png', 0.7)
 })
 
 if (process.contextIsolated) {

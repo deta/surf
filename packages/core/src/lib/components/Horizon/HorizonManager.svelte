@@ -69,14 +69,6 @@
   let overScrollTimeout: ReturnType<typeof setTimeout> | null = null
   let moveToStackItem: (idx: number) => Promise<void>
 
-  // @ts-ignore
-  window.api.onNewPreviewImage((horizonId: string, blob: Blob) => {
-    let horizon: IHorizon | undefined = get(horizonManager.horizons)?.find(
-      (h) => h.id === horizonId
-    )
-    if (!$showStackOverview) horizon?.setPreviewImage(blob)
-  })
-
   $: selectedHorizonId = sortedHorizons[$activeStackItemIdx]
 
   const addHorizon = async () => {
@@ -377,7 +369,7 @@
     }
   }
 
-  const handleGestureEnd = async (g: Gesture) => {
+  const handleGestureEnd = (g: Gesture) => {
     log.debug('gesture end', g)
 
     if (g.shiftKey) {
