@@ -8,18 +8,18 @@ import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
 
 const appName = import.meta.env.M_VITE_PRODUCT_NAME || 'Horizon'
+
+let userDataPath = join(dirname(app.getPath('userData')), appName)
 if (import.meta.env.M_VITE_USE_TMP_DATA_DIR === 'true') {
-  const appPath = join(
-    dirname(
-      // app.getPath('temp') returns a path to the user's OS tmp directory
-      app.getPath('temp')
-    ),
+  userDataPath = join(
+    // app.getPath('temp') returns a path to the user's OS tmp directory
+    app.getPath('temp'),
     import.meta.env.M_VITE_APP_VERSION || '',
     appName
   )
-  mkdirSync(appPath, { recursive: true })
-  app.setPath('userData', appPath)
 }
+mkdirSync(userDataPath, { recursive: true })
+app.setPath('userData', userDataPath)
 
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('space.deta.horizon')
