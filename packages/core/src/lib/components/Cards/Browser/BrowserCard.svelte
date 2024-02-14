@@ -243,6 +243,9 @@
             />
           </div>
           <button class="nav-button" on:click={webview?.reload}> ↻ </button>
+          {#if window.api.webviewDevToolsBtn}
+            <button class="nav-button" on:click={webview?.openDevTools}> ⚙️ </button>
+          {/if}
           <!-- <div class="page-title">{$title}</div> -->
         </div>
       {/if}

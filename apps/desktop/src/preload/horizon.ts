@@ -6,6 +6,7 @@ import fetch from 'cross-fetch'
 const webviewNewWindowHandlers = {}
 
 const api = {
+  webviewDevToolsBtn: !import.meta.env.PROD || !!process.env.WEBVIEW_DEV_TOOLS_BTN,
   webviewPreloadPath: join(__dirname, '../preload/webview.js'),
   captureWebContents: () => ipcRenderer.invoke('capture-web-contents'),
 

@@ -168,6 +168,10 @@
       return n
     })
   }
+
+  export function openDevTools(): void {
+    webview?.openDevTools()
+  }
 </script>
 
 <webview
