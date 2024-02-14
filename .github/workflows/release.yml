@@ -69,7 +69,7 @@ jobs:
       - name: Set Build Env Variables
         run: |
           if [ "${{ github.event.inputs.pre_release }}" == "true" ]; then
-              echo "BUILD_TAG=${{ inputs.custom_build_tag || format('{0}-{1}', github.sha, github.run_attempt) }}" >> $GITHUB_ENV
+              echo "BUILD_TAG=${{ inputs.custom_build_tag || github.ref_name }}" | sed 's/\//-/g' >> $GITHUB_ENV
               echo "BUILD_RESOURCES_DIR=build/resources/dev" >> $GITHUB_ENV
           fi
 
