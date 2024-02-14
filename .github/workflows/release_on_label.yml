@@ -1,0 +1,113 @@
+name: Build & Release On PR Label
+
+on:
+  pull_request:
+    types: [labeled]
+    branches:
+      - main
+
+jobs:
+  prepare:
+    if: ${{ startsWith(github.event.label.name, 'build') }}
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Get next version
+        uses: reecetech/version-increment@2023.9.3
+        id: version
+        with:
+          scheme: semver
+          increment: patch
+
+  build-and-release:
+    if: ${{ startsWith(github.event.label.name, 'build') }}
+    needs: prepare
+    runs-on: macos-latest
+    timeout-minutes: 30
+    outputs:
+      release-id: ${{ steps.release.outputs.id }}
+      version: ${{ needs.prepare.outputs.version }}
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Set version as env variable
+        run: echo "APP_VERSION=${{ needs.prepare.outputs.version }}" >> $GITHUB_ENV
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Set Build Env Variables
+        run: |
+          echo "BUILD_TAG=${{ github.ref_name }}" | sed 's/\//-/g' >> $GITHUB_ENV
+          echo "BUILD_RESOURCES_DIR=build/resources/dev" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          yarn build:horizon:linux
+          yarn build:horizon:mac
+          yarn build:horizon:win
+        env:
+          HUSKY: 0
+          APP_VERSION: ${{ env.APP_VERSION }}
+          M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          PRODUCT_NAME: Horizon
+          BUILD_TAG: ${{ env.BUILD_TAG }}
+          BUILD_RESOURCES:DIR: ${{ env.BUILD_RESOURCES_DIR }}
+          M_VITE_BUILD_TAG: ${{ env.BUILD_TAG }}
+          R_VITE_BUILD_TAG: ${{ env.BUILD_TAG }}
+          SHOULD_NOTARIZE: true
+          M_VITE_USE_TMP_DATA_DIR: true
+
+      - id: release
+        name: Create Github Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: true
+          tag_name: v${{ env.APP_VERSION }}
+          files: |
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.zip
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.AppImage
+            apps/desktop/dist/*.snap
+            apps/desktop/dist/*.deb
+            apps/desktop/dist/*.rpm
+            apps/desktop/dist/*.tar.gz
+            apps/desktop/dist/*.yml
+            apps/desktop/dist/*.blockmap
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Pull Request Status with the Release URL
+        uses: actions/github-script@v4
+        env:
+          RELEASE_URL: ${{ steps.release.outputs.url }}
+        with:
+          script: |
+            await github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Release is available at ${process.env.RELEASE_URL}`
+            })
