@@ -37,6 +37,20 @@
     canGoForward.set(get(currentHistoryIndex) < get(historyStack).length - 1)
   }
 
+  const handleRedirectNav = (newUrl: string) => {
+    historyStack.update((stack) => {
+      const index = get(currentHistoryIndex)
+      if (index >= 0 && index < stack.length) {
+        stack[index] = newUrl
+      }
+      return stack
+    })
+    updateNavigationState()
+
+    programmaticNavigation = true
+    url.set(newUrl)
+  }
+
   $: webview, updateNavigationState()
   $: {
     if (
@@ -95,6 +109,9 @@
     webview.addEventListener('did-navigate', (e: any) => url.set(e.url))
     webview.addEventListener('did-navigate-in-page', (e: any) => {
       if (e.isMainFrame) url.set(e.url)
+    })
+    webview.addEventListener('did-redirect-navigation', (event) => {
+      if (event.isMainFrame && event.isInPlace) handleRedirectNav(event.url)
     })
     webview.addEventListener('did-start-loading', () => isLoading.set(true))
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
