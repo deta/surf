@@ -1416,7 +1416,7 @@
       maxSize: Vec2<number>
     }>
   ) {
-    const { positionable, clientX, clientY, direction, minSize, maxSize } = e.detail
+    const { positionable, clientX, clientY, direction, minSize, maxSize, event } = e.detail
     let { x: absX, y: absY } = posToAbsolute(
       clientX,
       clientY,
@@ -1425,6 +1425,8 @@
       $viewPort,
       $zoom
     )
+
+    const preserveAspectRatio = event.shiftKey
 
     // prevent negative values when cursor is outside of the viewport
     absY = Math.max(absY, 0)
@@ -1441,49 +1443,79 @@
       let width = p.width
       let height = p.height
 
-      // TODO: CLAMPS
-      // TODO: PREVENT MOVING OVER INITIAL WIDTH & POS
+      const aspectRatio = p.width / p.height
 
       if (direction === 'right') {
         width = clamp(absX - p.x, minSize.x, maxSize.x)
+        if (preserveAspectRatio) {
+          height = width / aspectRatio
+          y = p.y + (p.height - height) / 2
+        }
       } else if (direction === 'bottom') {
         height = absY - p.y
+        if (preserveAspectRatio) {
+          width = height * aspectRatio
+          x = p.x + (p.width - width) / 2
+        }
       } else if (direction === 'top') {
         y = absY
         height = p.y + p.height - absY
+        if (preserveAspectRatio) {
+          width = height * aspectRatio
+          x = p.x + (p.width - width) / 2
+        }
       } else if (direction === 'left') {
         x = absX
         width = p.x + p.width - absX
+        if (preserveAspectRatio) {
+          height = width / aspectRatio
+          y = p.y + (p.height - height) / 2
+        }
       } else if (direction === 'top-left') {
         x = absX
-        y = absY
         width = p.x + p.width - absX
-        height = p.y + p.height - absY
+        height = preserveAspectRatio ? width / aspectRatio : p.y + p.height - absY
+        const yOffset = p.height - clamp(height, minSize.y, maxSize.y)
+        y = preserveAspectRatio ? p.y + yOffset : absY
       } else if (direction === 'top-right') {
-        y = absY
         width = absX - p.x
-        height = p.y + p.height - absY
+        height = preserveAspectRatio ? width / aspectRatio : p.y + p.height - absY
+        const yOffset = p.height - clamp(height, minSize.y, maxSize.y)
+        y = preserveAspectRatio ? p.y + yOffset : absY
       } else if (direction === 'bottom-left') {
         x = absX
         width = p.x + p.width - absX
-        height = absY - p.y
+        height = preserveAspectRatio ? width / aspectRatio : absY - p.y
       } else if (direction === 'bottom-right') {
         width = absX - p.x
-        height = absY - p.y
+        height = preserveAspectRatio ? width / aspectRatio : absY - p.y
       }
 
-      // TODO: MIN HEIGHT
-      width = clamp(width, minSize.x, maxSize.x)
-      height = clamp(height, minSize.y, maxSize.y)
-      // TODO: MIN WIDHT
+      const boundWidth = clamp(width, minSize.x, maxSize.x)
+      const boundHeight = clamp(height, minSize.y, maxSize.y)
+      const { x: boundX, y: boundY } = applyBounds(x, y, p.width, p.height)
 
-      // TODO: BOUNDS CHECKING
-      const { x: boundX, y: boundY } = applyBounds(x, y, width, height)
+      const reachedMinHeight = height < minSize.y
+      const reachedMinWidth = width < minSize.x
 
-      p.x = boundX
-      p.y = boundY
-      p.width = width
-      p.height = height
+      // edge case: if we are preserving the aspect ratio and have reached the min sizes,
+      // we should stop further adjustments of the opoosite side as well
+      if (preserveAspectRatio && (reachedMinHeight || reachedMinWidth)) {
+        return p
+      }
+
+      // edge case: prevent moving the positionable when min height is reached
+      if (!reachedMinHeight) {
+        p.y = boundY
+        p.height = boundHeight
+      }
+
+      // edge case: prevent moving the positionable when min width is reached
+      if (!reachedMinWidth) {
+        p.x = boundX
+        p.width = boundWidth
+      }
+
       return p
     })
 
