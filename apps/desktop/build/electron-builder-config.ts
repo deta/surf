@@ -10,7 +10,11 @@ const params = {
   appleTeamId: process.env.APPLE_TEAM_ID,
   buildName: process.env.BUILD_TAG ? `${productName}-${process.env.BUILD_TAG}` : productName,
   signIgnore: process.env.SIGN_IGNORE,
-  buildResourcesDir: process.env.BUILD_RESOURCES_DIR
+  buildResourcesDir: process.env.BUILD_RESOURCES_DIR,
+  appVersion: process.env.APP_VERSION || '0.0.1',
+  publishS3BucketName: process.env.S3_UPDATES_BUCKET_NAME,
+  publishS3BucketRegion: process.env.S3_UPDATES_BUCKET_REGION,
+  releaseChannel: process.env.RELEASE_CHANNEL || 'latest'
 }
 
 export default function electronBuilderConfig() {
@@ -19,6 +23,9 @@ export default function electronBuilderConfig() {
     productName: params.buildName,
     directories: {
       buildResources: params.buildResourcesDir || 'build/resources/prod'
+    },
+    extraMetadata: {
+      version: params.appVersion
     },
     files: [
       '!**/.vscode/*',
@@ -39,9 +46,10 @@ export default function electronBuilderConfig() {
       uninstallDisplayName: params.buildName,
       createDesktopShortcut: 'always'
     },
+    // default targets for mac are 'dmg' and 'zip'
+    // we need zip for supporting auto-updates
     mac: {
       hardenedRuntime: true,
-      target: 'dmg',
       entitlementsInherit: `${params.buildResourcesDir || 'build/resources/prod'}/entitlements.mac.plist`,
       extendInfo: [
         "NSCameraUsageDescription: Application requests access to the device's camera.",
@@ -53,7 +61,7 @@ export default function electronBuilderConfig() {
       notarize: params.shouldNotarize === 'true' ? { teamId: params.appleTeamId } : false
     },
     dmg: {
-      artifactName: `${params.buildName}.$\{arch\}.$\{ext}`
+      artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
     },
     linux: {
       target: ['AppImage'],
@@ -64,6 +72,14 @@ export default function electronBuilderConfig() {
       category: 'WebBrowser',
       artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
     },
-    npmRebuild: false
+    npmRebuild: false,
+    publish: params.publishS3BucketName
+      ? {
+          provider: 's3',
+          bucket: params.publishS3BucketName,
+          region: params.publishS3BucketRegion,
+          channel: params.releaseChannel
+        }
+      : []
   }
 }

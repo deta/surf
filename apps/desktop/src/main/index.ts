@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { createWindow } from './mainWindow'
+import { setAppMenu } from './appMenu'
 import { registerShortcuts, unregisterShortcuts } from './shortcuts'
 import { setupAdblocker, toggleAdblocker } from './adblocker'
 import { setupIpcHandlers } from './ipcHandlers'
@@ -7,15 +8,20 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
 
-const appName = import.meta.env.M_VITE_PRODUCT_NAME || 'Horizon'
+const config = {
+  appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Horizon',
+  appVersion: import.meta.env.M_VITE_APP_VERSION,
+  useTmpDataDir: import.meta.env.M_VITE_USE_TMP_DATA_DIR === 'true',
+  disableAutoUpdate: import.meta.env.M_VITE_DISABLE_AUTO_UPDATE === 'true'
+}
 
-let userDataPath = join(dirname(app.getPath('userData')), appName)
-if (import.meta.env.M_VITE_USE_TMP_DATA_DIR === 'true') {
+let userDataPath = join(dirname(app.getPath('userData')), config.appName)
+if (config.useTmpDataDir) {
   userDataPath = join(
     // app.getPath('temp') returns a path to the user's OS tmp directory
     app.getPath('temp'),
-    import.meta.env.M_VITE_APP_VERSION || '',
-    appName
+    config.appVersion || '',
+    config.appName
   )
 }
 mkdirSync(userDataPath, { recursive: true })
@@ -28,6 +34,7 @@ app.whenReady().then(async () => {
   await setupAdblocker()
   toggleAdblocker('persist:horizon')
 
+  setAppMenu()
   createWindow()
 })
 
