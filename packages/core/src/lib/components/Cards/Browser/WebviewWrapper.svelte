@@ -3,7 +3,7 @@
     wheelWebview: any
     didFinishLoad: void
     focusWebview: any
-    newWindowWebview: any
+    newWindowWebview: Electron.HandlerDetails
     keyupWebview: { key: string }
     keydownWebview: { key: string; ctrlKey: boolean; shiftKey: boolean; metaKey: boolean }
     foundInPage: Electron.FoundInPageEvent
@@ -108,9 +108,12 @@
       webviewWebContentsId = webview.getWebContentsId()
 
       if (!newWindowHandlerRegistered) {
-        window.api.registerNewWindowHandler(webviewWebContentsId, (data: any) => {
-          dispatch('newWindowWebview', data)
-        })
+        window.api.registerNewWindowHandler(
+          webviewWebContentsId,
+          (data: Electron.HandlerDetails) => {
+            dispatch('newWindowWebview', data)
+          }
+        )
 
         newWindowHandlerRegistered = true
       }

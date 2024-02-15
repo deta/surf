@@ -214,16 +214,20 @@
     updatePreview()
   }
 
-  const handleCardDuplicate = (e: CustomEvent<Card>) => {
+  const handleCardDuplicate = async (e: CustomEvent<Card>) => {
     const card = e.detail
     log.debug('duplicating card', card)
 
-    horizon.duplicateCardWithoutData(card.id, {
+    const newCardStore = await horizon.duplicateCardWithoutData(card.id, {
       width: card.width,
       height: card.height,
       x: card.x + card.width + 50,
       y: card.y
     })
+
+    const newCard = get(newCardStore)
+    horizon.scrollToCard(newCard)
+    horizon.setActiveCard(newCard.id)
   }
 
   const handlePositionableEnter = (e: CustomEvent<string>) => {

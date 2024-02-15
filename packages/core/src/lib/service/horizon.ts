@@ -7,6 +7,7 @@ import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
 import { Telemetry, EventTypes } from './telemetry'
 import { moveToStackingTop, type IBoard } from '@horizon/tela'
+import { quintOut } from 'svelte/easing'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 8
@@ -366,6 +367,33 @@ export class Horizon {
     } else {
       throw new Error(`Unknown card type ${card.type}`)
     }
+  }
+
+  async scrollToCard(idOrCard: Card | string) {
+    const board = this.board
+    if (!board) {
+      this.log.warn('scrollToCard called with missing board')
+      return
+    }
+
+    const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
+    if (!card) throw new Error(`Card ${idOrCard} not found`)
+
+    this.log.debug(`Scrolling board to card ${card.id}`)
+
+    const state = get(board.state)
+    const viewportWidth = get(state.viewPort).w
+
+    const cardRightEdge = card.x + card.width
+    const newOffset = cardRightEdge - viewportWidth + 100
+
+    state.viewOffset.update(
+      (viewOffset) => ({
+        x: newOffset,
+        y: viewOffset.y
+      }),
+      { duration: 100, easing: quintOut }
+    )
   }
 }
 

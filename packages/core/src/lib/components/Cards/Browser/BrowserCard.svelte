@@ -9,7 +9,7 @@
   import type { CardBrowser, CardEvents } from '../../../types'
   import { useLogScope } from '../../../utils/log'
   import { parseStringIntoUrl } from '../../../utils/url'
-  import Horizon from '../../Horizon/Horizon.svelte'
+  import type { Horizon } from '../../../service/horizon'
   import browserBackground from '../../../../../public/assets/browser-background.png'
   import defaultFavicon from '../../../../../public/assets/deta.svg'
   import adblockOnIcon from '../../../../../public/assets/adblock.svg'
@@ -89,16 +89,22 @@
     dispatch('load', get(card))
   }
 
-  const handleWebviewNewWindow = (e: any) => {
-    if (e.detail.disposition === 'new-window') return
+  const handleWebviewNewWindow = async (e: CustomEvent<Electron.HandlerDetails>) => {
+    const disposition = e.detail.disposition
+    if (disposition === 'new-window') return
 
-    // TODO: edge case: can potentially be out of view
-    horizon.addCardBrowser(e.detail.url, {
+    const newCardStore = await horizon.addCardBrowser(e.detail.url, {
       x: $card.x + $card.width + 30,
       y: $card.y,
       width: $card.width,
       height: $card.height
     })
+
+    if (disposition === 'foreground-tab') {
+      const newCard = get(newCardStore)
+      horizon.scrollToCard(newCard)
+      horizon.setActiveCard(newCard.id)
+    }
   }
 
   const handleWebviewKeydown = (e: CustomEvent<WebViewWrapperEvents['keydownWebview']>) => {
@@ -136,7 +142,7 @@
   // Reactive statement to autofocus input when it's available
 
   $: if (active && inputEl && ($url == 'about:blank' || $url == '')) {
-    inputEl.focus()
+    inputEl.focus({ preventScroll: true })
     showNavbar = true
   }
 
