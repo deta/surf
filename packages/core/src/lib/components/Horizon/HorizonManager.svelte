@@ -85,33 +85,6 @@
     await sortHorizons()
   }
 
-  const addBrowserHorizon = async () => {
-    disabledTransitions = true
-
-    const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length)
-    await horizonManager.switchHorizon(newHorizon.id)
-
-    if ($showStackOverview) {
-      $showStackOverview = false
-      $stackOverviewScrollOffset = 0
-
-      await wait(TRANSITION_DURATION)
-    }
-
-    await moveToStackItem(0)
-
-    await newHorizon.addCardBrowser('', {
-      x: 8,
-      y: 20,
-      width: 1200,
-      height: 700
-    })
-
-    await sortHorizons()
-
-    log.debug('Created new browser horizon', newHorizon)
-  }
-
   const deleteHorizon = async (horizon: IHorizon) => {
     log.debug('Confirm delete horizon', horizon.id)
     const confirm = window.confirm(`Are you sure you want to delete ${horizon.data.name}?`)
@@ -306,9 +279,6 @@
       } else {
         $showStackOverview = true
       }
-    } else if (event.key === 't') {
-      event.preventDefault()
-      addBrowserHorizon()
     } else if (event.key === 'Escape') {
       event.preventDefault()
       window.location.reload()

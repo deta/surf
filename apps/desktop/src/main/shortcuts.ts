@@ -4,7 +4,6 @@ const validShortcuts = [
   // 'Up',
   // 'Down',
   'o', // open overview
-  't', // new browser horizon
   'n', // new horizon
   ...Array.from(Array(9).keys()).map((idx) => `${idx + 1}`)
 ]
