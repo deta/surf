@@ -816,7 +816,7 @@
       // TODO: Dispatch zoom reset
       debounce('end_zoom', 100, mode.idle)
     } else if ($settings.CAN_PAN) {
-      // if (hasClassOrParentWithClass(e.target as HTMLElement, "tela-ignore")) return;
+      if (hasClassOrParentWithClass(e.target as HTMLElement, 'tela-ignore')) return
       // e.preventDefault();
       // e.stopPropagation();
       mode.pan() // TODO: only if not already?
