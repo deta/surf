@@ -148,13 +148,33 @@
     files.forEach(async (file) => {
       const type = file.type
 
-      if (type.startsWith('image')) {
+      log.debug('file', file)
+
+      const fileType = parseFileType(file)
+      log.debug('parsed file type', fileType)
+
+      if (fileType === 'image') {
         handleImage(file, getNewCardHorizontalPosition(num))
+        num++
+      } else if (fileType === 'text') {
+        const text = await file.text()
+        handleText(text, getNewCardHorizontalPosition(num))
         num++
       } else {
         log.warn('unhandled file type', type)
       }
     })
+  }
+
+  const parseFileType = (file: File) => {
+    if (file.type.startsWith('image')) return 'image'
+    if (file.type.startsWith('text')) return 'text'
+
+    if (file.type === '') {
+      if (file.name.endsWith('.txt') || file.name.endsWith('.md')) return 'text'
+    }
+
+    return 'unknown'
   }
 
   const processHTMLDrop = async (basePos: any, data: string): Promise<boolean> => {

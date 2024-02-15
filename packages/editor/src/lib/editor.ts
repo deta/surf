@@ -4,6 +4,7 @@ import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
 import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
+import { Markdown } from 'tiptap-markdown'
 
 import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
 import Slash from './extensions/Slash/SlashExtension'
@@ -44,7 +45,8 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     placeholder: opts?.placeholder ?? "Write something or type '/' for options…"
   }),
   TaskItem,
-  TaskList
+  TaskList,
+  Markdown
   // DragHandle,
   // Slash.configure({
   // 	suggestion
