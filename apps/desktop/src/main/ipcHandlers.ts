@@ -15,21 +15,19 @@ export function setupIpcHandlers() {
     const window = getMainWindow()
     if (!window) return
 
-    const PADDING = 40
     const rect = window.getContentBounds()
-    console.time('capturePage')
     const image = await window.webContents.capturePage({
       ...rect,
       x: 0,
-      y: PADDING
+      y: 0
     })
-    console.timeEnd('capturePage')
     const imageSize = image.getSize()
 
+    // schedule the closure to run in the
+    // next event loop tick and return from
+    // this function immediately
     setTimeout(() => {
-      console.time('bitmap')
       const buffer = image.toBitmap()
-      console.timeEnd('bitmap')
 
       event.sender.send('new-preview-image', {
         horizonId,
