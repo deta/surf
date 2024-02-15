@@ -137,7 +137,7 @@
     z-index: 2;
     flex: 1;
     background: #ededed;
-    border: 1px solid #e2e2e2;
+    outline: 0.5px solid #e2e2e2;
     border-radius: var(--theme-border-radius);
     overflow: hidden;
   }
@@ -288,9 +288,15 @@
   }
 
   .card {
-    &.active > .content {
-      border-color: #9bd9df;
+    .content {
+      transition: all 160ms cubic-bezier(.34, 1.56, .64, 1);
+      transition-delay: 70ms;
     }
+
+    &.active > .content {
+      outline: 2px solid rgba(223, 39, 127, 0.8);
+    }
+
     &.dragging {
       cursor: grabbing;
 
