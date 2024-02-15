@@ -140,6 +140,16 @@ window.addEventListener('keyup', (event: KeyboardEvent) => {
   sendPageEvent('keyup', { key: event.key })
 })
 
+window.addEventListener('keydown', (event: KeyboardEvent) => {
+  sendPageEvent('keydown', {
+    key: event.key,
+    code: event.code,
+    ctrlKey: event.ctrlKey,
+    metaKey: event.metaKey,
+    shiftKey: event.shiftKey
+  })
+})
+
 window.addEventListener('wheel', (event: WheelEvent) => {
   sendPageEvent('wheel', {
     deltaX: event.deltaX,
@@ -162,3 +172,12 @@ window.addEventListener('focus', (_event: FocusEvent) => {
 function sendPageEvent(eventType: string, data: any) {
   ipcRenderer.sendToHost('webview-page-event', { type: eventType, ...data })
 }
+
+ipcRenderer.on('webview-event', (_event, data) => {
+  if (data.type === 'get-selection') {
+    const selection = window.getSelection()
+    const text = selection?.toString().trim()
+
+    ipcRenderer.sendToHost('selection', text)
+  }
+})

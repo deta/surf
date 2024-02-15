@@ -23,6 +23,7 @@
   import type { Card } from '../../types'
   import { Icon } from '..'
   import HorizonInfo from './HorizonInfo.svelte'
+  import { isModKeyPressed } from '../../utils/keyboard'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -266,8 +267,7 @@
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    const modKeyPressed = event.metaKey || event.ctrlKey
-    if (!modKeyPressed && !$showStackOverview) return
+    if (!isModKeyPressed(event) && !$showStackOverview) return
 
     if (event.key === 'n') {
       event.preventDefault()

@@ -5,7 +5,7 @@
 
   import { fade, fly } from 'svelte/transition'
 
-  import WebviewWrapper from './WebviewWrapper.svelte'
+  import WebviewWrapper, { type WebViewWrapperEvents } from './WebviewWrapper.svelte'
   import type { CardBrowser, CardEvents } from '../../../types'
   import { useLogScope } from '../../../utils/log'
   import { parseStringIntoUrl } from '../../../utils/url'
@@ -13,6 +13,8 @@
   import browserBackground from '../../../../../public/assets/browser-background.png'
   import defaultFavicon from '../../../../../public/assets/deta.svg'
   import type { Gesture } from '@horizon/core/src/lib/utils/two-fingers'
+  import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
+  import FindInPage from './FindInPage.svelte'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -23,6 +25,7 @@
 
   let webview: WebviewWrapper | undefined
   let inputEl: HTMLInputElement
+  let findInPage: FindInPage | undefined
 
   const initialSrc =
     $card.data.historyStack[$card.data.currentHistoryIndex] || $card.data.initialLocation
@@ -62,7 +65,7 @@
     }
   }
 
-  const handleWebviewFocus = (e: MouseEvent) => {
+  const handleWebviewFocus = (e: any) => {
     horizon.setActiveCard($card.id)
   }
 
@@ -83,9 +86,20 @@
     })
   }
 
-  const handleWebviewKeyup = (e: any) => {
-    log.debug('keyup event', e.detail)
-    if (e.detail.key === 'Escape') horizon.activeCardId.set(null)
+  const handleWebviewKeydown = (e: CustomEvent<WebViewWrapperEvents['keydownWebview']>) => {
+    const event = e.detail
+    log.debug('keydown event', event)
+    if (event.key === 'Escape') {
+      if (findInPage?.isOpen()) {
+        findInPage?.close()
+      } else {
+        horizon.activeCardId.set(null)
+      }
+    } else if (isModKeyAndKeyPressed(event as KeyboardEvent, 'f')) {
+      log.debug('mod+f pressed')
+
+      findInPage?.open()
+    }
   }
 
   let value = ''
@@ -184,6 +198,11 @@
   {#if !$didFinishLoad}
     <img class="browser-background" src={browserBackground} alt={$title} />
   {/if}
+
+  {#if webview}
+    <FindInPage bind:this={findInPage} {webview} />
+  {/if}
+
   <div class="browser-wrapper">
     <WebviewWrapper
       bind:this={webview}
@@ -192,7 +211,7 @@
       on:wheelWebview={(event) => log.debug('wheel event from the webview: ', event.detail)}
       on:focusWebview={handleWebviewFocus}
       on:newWindowWebview={handleWebviewNewWindow}
-      on:keyupWebview={handleWebviewKeyup}
+      on:keydownWebview={handleWebviewKeydown}
       on:didFinishLoad={handleFinishLoading}
     />
   </div>

@@ -1,3 +1,16 @@
+<script lang="ts" context="module">
+  export type WebViewWrapperEvents = {
+    wheelWebview: any
+    didFinishLoad: void
+    focusWebview: any
+    newWindowWebview: any
+    keyupWebview: { key: string }
+    keydownWebview: { key: string; ctrlKey: boolean; shiftKey: boolean; metaKey: boolean }
+    foundInPage: Electron.FoundInPageEvent
+    selectionWebview: { text: string }
+  }
+</script>
+
 <script lang="ts">
   import { writable, get } from 'svelte/store'
   import type { WebviewTag } from 'electron'
@@ -5,13 +18,7 @@
 
   import type { Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
-  const dispatch = createEventDispatcher<{
-    wheelWebview: any
-    didFinishLoad: void
-    focusWebview: any
-    newWindowWebview: any
-    keyupWebview: any
-  }>()
+  const dispatch = createEventDispatcher<WebViewWrapperEvents>()
 
   export let src: string
   export let partition: string
@@ -91,6 +98,9 @@
         case 'keyup':
           dispatch('keyupWebview', eventData)
           break
+        case 'keydown':
+          dispatch('keydownWebview', eventData)
+          break
       }
     })
 
@@ -123,6 +133,9 @@
     webview.addEventListener('page-favicon-updated', (e: any) => {
       // Get the biggest favicon (last favicon in array)
       faviconURL.set(e.favicons[e.favicons.length - 1])
+    })
+    webview.addEventListener('found-in-page', (e: Electron.FoundInPageEvent) => {
+      dispatch('foundInPage', e)
     })
   })
 
@@ -166,6 +179,33 @@
         return n
       }
       return n
+    })
+  }
+
+  export function findInPage(text: string, options?: Electron.FindInPageOptions) {
+    return webview?.findInPage(text, options)
+  }
+
+  export function stopFindInPage(action: 'clearSelection' | 'keepSelection' | 'activateSelection') {
+    return webview?.stopFindInPage(action)
+  }
+
+  export function subscribeFindInPageResult(callback: (event: Electron.FoundInPageEvent) => void) {
+    webview?.addEventListener('found-in-page', callback)
+
+    return () => {
+      webview?.removeEventListener('found-in-page', callback)
+    }
+  }
+
+  export function getSelection() {
+    return new Promise<string>((resolve) => {
+      webview.addEventListener('ipc-message', (event) => {
+        if (event.channel !== 'selection') return
+        resolve(event.args[0])
+      })
+
+      webview.send('webview-event', { type: 'get-selection' })
     })
   }
 
