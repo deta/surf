@@ -47,11 +47,12 @@ jobs:
           node-version: 18
 
       - name: Install Dependencies
+        timeout-minutes: 3
         run: yarn install --frozen-lockfile
 
       - name: Set Build Env Variables
         run: |
-          echo "BUILD_TAG=${{ github.ref_name }}" | sed 's/\//-/g' >> $GITHUB_ENV
+          echo "BUILD_TAG=${{ github.head_ref }}" | sed 's/\//-/g' >> $GITHUB_ENV
           echo "BUILD_RESOURCES_DIR=build/resources/dev" >> $GITHUB_ENV
 
       - name: Build

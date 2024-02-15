@@ -64,6 +64,7 @@ jobs:
           node-version: 18
 
       - name: Install Dependencies
+        timeout-minutes: 3
         run: yarn install --frozen-lockfile
 
       - name: Set Build Env Variables
