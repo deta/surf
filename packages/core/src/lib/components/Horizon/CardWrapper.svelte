@@ -31,15 +31,21 @@
   export let positionable: Writable<IPositionable<any>>
   export let horizon: Horizon
 
+  $: board = horizon.board
+  $: state = board?.state
+  $: viewPort = $state?.viewPort
+
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('CardWrapper')
 
   const minSize = { x: 100, y: 100 }
   const maxSize = { x: Infinity, y: Infinity }
+  const DRAGGING_MENU_PADDING = 50
 
   let el: HTMLElement
-  let menuPosition = 'left'
-  let forcing = false
+  let menuPosition = 'top'
+  let insetMenu = false
+  let headerClickTimeout: ReturnType<typeof setTimeout> | null = null
 
   $: card = positionable as Writable<Card> // todo: fix this unnecessary cast
   $: cardTitle = $card.type[0].toUpperCase() + $card.type.slice(1)
@@ -57,7 +63,6 @@
   }
 
   const handleDragEnd = (_: any) => {
-    console.warn(horizon)
     const board = horizon.board
     if (!board) console.error('No board found ond rag end')
     const state = get(board!.state)
@@ -65,31 +70,30 @@
     updateCard()
   }
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (forcing) return
-
+  const handleMouseMove = (_e: MouseEvent) => {
     const rect = el.getBoundingClientRect()
-    const x = e.clientX - rect.left
 
-    if (x > rect.width / 2) {
-      menuPosition = 'right'
+    if (rect.y < DRAGGING_MENU_PADDING) {
+      insetMenu = true
     } else {
-      menuPosition = 'left'
+      insetMenu = false
     }
   }
 
-  const PADDING = 30
-  const handleMouseOver = (e: MouseEvent) => {
-    const rect = el.getBoundingClientRect()
+  const handleCardHeaderMouseDown = (e: MouseEvent) => {
+    if (headerClickTimeout) {
+      clearTimeout(headerClickTimeout)
+      headerClickTimeout = null
+      log.debug('double click')
 
-    if (rect.x + rect.width + PADDING > window.innerWidth) {
-      menuPosition = 'left'
-      forcing = true
-    } else if (rect.x < PADDING) {
-      menuPosition = 'right'
-      forcing = true
+      positionable.update((p) => {
+        p.height = ($viewPort?.h ?? window.innerHeight) - p.y - DRAGGING_MENU_PADDING
+        return p
+      })
     } else {
-      forcing = false
+      headerClickTimeout = setTimeout(() => {
+        headerClickTimeout = null
+      }, 500)
     }
   }
 
@@ -125,7 +129,6 @@
   contained={false}
   on:mousedown={handleMouseDown}
   on:mousemove={handleMouseMove}
-  on:mouseover={handleMouseOver}
   bind:el
 >
   <Resizable {positionable} direction="top-right" {minSize} {maxSize} />
@@ -137,7 +140,17 @@
   <Resizable {positionable} direction="left" {minSize} {maxSize} />
   <Resizable {positionable} direction="right" {minSize} {maxSize} />
 
-  <div class="card-header" data-position={menuPosition}>
+  <div class="draggable-bar">
+    <Draggable {positionable} />
+  </div>
+
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div
+    on:mousedown={handleCardHeaderMouseDown}
+    class="card-header"
+    data-position="top"
+    data-inset={insetMenu}
+  >
     <Draggable {positionable} class="">
       <div class="card-header-content">
         <!-- <div class="card-title">{cardTitle}</div> -->
@@ -150,6 +163,7 @@
             </button> -->
         </div>
 
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
         <div class="card-drag-indicator">
           <div></div>
           <div></div>
@@ -200,13 +214,53 @@
 </Positionable>
 
 <style lang="scss">
+  .draggable-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    z-index: 299;
+  }
+
   .card-header {
     position: absolute;
     z-index: 301;
-    top: 50%;
-    height: 90%;
-    max-height: 200px;
     opacity: 0;
+
+    &[data-position='right'],
+    &[data-position='left'] {
+      height: 90%;
+      max-height: 200px;
+      top: 50%;
+
+      .card-header-content {
+        flex-direction: column;
+        height: 100%;
+        padding: 8px 5px;
+      }
+
+      .card-header-actions {
+        align-items: flex-start;
+      }
+
+      .end-placement {
+        flex: 1;
+        align-items: flex-end;
+      }
+
+      .card-drag-indicator {
+        flex-grow: 1;
+        display: flex;
+        gap: 4px;
+
+        div {
+          background: #999999;
+          height: 100%;
+          width: 1px;
+        }
+      }
+    }
 
     &[data-position='right'] {
       right: 30px;
@@ -229,18 +283,91 @@
         border-bottom-left-radius: var(--theme-border-radius);
       }
     }
+
+    &[data-position='top'],
+    &[data-position='bottom'] {
+      width: 90%;
+      max-width: 200px;
+      left: 50%;
+
+      .card-header-content {
+        width: 100%;
+        padding: 5px 8px;
+      }
+
+      .card-header-actions {
+        align-items: flex-end;
+      }
+
+      .end-placement {
+        flex: 1;
+        justify-content: flex-end;
+      }
+
+      .card-drag-indicator {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        div {
+          background: #999999;
+          height: 1px;
+          width: 100%;
+        }
+      }
+    }
+
+    &[data-position='top'] {
+      // top: 0;
+      transform: translate(-50%, -100%);
+
+      // .card-header-content {
+      //   border-bottom: none;
+      //   border-top-left-radius: var(--theme-border-radius);
+      //   border-top-right-radius: var(--theme-border-radius);
+      // }
+    }
+
+    &[data-position='bottom'] {
+      bottom: 0;
+      transform: translate(-50%, 100%);
+
+      .card-header-content {
+        border-top: none;
+        border-bottom-left-radius: var(--theme-border-radius);
+        border-bottom-right-radius: var(--theme-border-radius);
+      }
+    }
+
+    &[data-position='top']:not([data-inset='true']) {
+      top: 0;
+
+      .card-header-content {
+        border-bottom: none;
+        border-top-left-radius: var(--theme-border-radius);
+        border-top-right-radius: var(--theme-border-radius);
+      }
+    }
+
+    &[data-position='top'][data-inset='true'] {
+      top: 30px;
+
+      .card-header-content {
+        border-top: none;
+        border-bottom-left-radius: var(--theme-border-radius);
+        border-bottom-right-radius: var(--theme-border-radius);
+      }
+    }
   }
 
   .card-header-content {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
     border: 1px solid #ddd;
     background-color: #f5f5f5;
-    padding: 8px 5px;
-    height: 100%;
     overflow: hidden;
   }
 
@@ -267,7 +394,6 @@
   .card-header-actions {
     flex: 1;
     display: flex;
-    align-items: flex-start;
     gap: 0.5rem;
     color: #979797;
 
@@ -287,23 +413,6 @@
         color: #7b7b7b;
       }
     }
-  }
-
-  .card-drag-indicator {
-    flex-grow: 1;
-    display: flex;
-    gap: 4px;
-
-    div {
-      background: #999999;
-      height: 100%;
-      width: 1px;
-    }
-  }
-
-  .end-placement {
-    flex: 1;
-    align-items: flex-end;
   }
 
   // .card-title {
