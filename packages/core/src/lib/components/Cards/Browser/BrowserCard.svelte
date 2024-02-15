@@ -12,6 +12,8 @@
   import Horizon from '../../Horizon/Horizon.svelte'
   import browserBackground from '../../../../../public/assets/browser-background.png'
   import defaultFavicon from '../../../../../public/assets/deta.svg'
+  import adblockOnIcon from '../../../../../public/assets/adblock.svg'
+  import adblockOffIcon from '../../../../../public/assets/adblock-off.svg'
   import type { Gesture } from '@horizon/core/src/lib/utils/two-fingers'
   import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
   import FindInPage from './FindInPage.svelte'
@@ -275,11 +277,11 @@
             />
           </div>
           <button class="nav-button" on:click={handleToggleAdblock}>
-            {#if $adblockerState}
-              disable
-            {:else}
-              enable{/if}</button
-          >
+            <img
+              src={$adblockerState ? adblockOnIcon : adblockOffIcon}
+              alt="adblock"
+            />
+          </button>
           <button class="nav-button" on:click={webview?.reload}> ↻ </button>
           {#if window.api.webviewDevToolsBtn}
             <button class="nav-button" on:click={webview?.openDevTools}> ⚙️ </button>
