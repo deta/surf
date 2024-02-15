@@ -20,6 +20,7 @@
   export let horizon: Horizon
   export let active: boolean = false
 
+  const adblockerState = horizon.adblockerState
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('BrowserCard')
 
@@ -30,6 +31,13 @@
   const initialSrc =
     $card.data.historyStack[$card.data.currentHistoryIndex] || $card.data.initialLocation
   const unsubTracker: Unsubscriber[] = []
+
+  $: {
+    $adblockerState
+    try {
+      webview?.reload()
+    } catch (_) {}
+  }
 
   onMount(() => {
     if (webview) {
@@ -56,6 +64,11 @@
     unsubTracker.forEach((u) => u())
   })
 
+  const handleToggleAdblock = async (_e: MouseEvent) => {
+    //@ts-ignore
+    horizon?.adblockerState.set(await window.api.toggleAdblocker('persist:horizon'))
+  }
+
   const handleKeyUp = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
       let url = parseStringIntoUrl(value)
@@ -65,7 +78,7 @@
     }
   }
 
-  const handleWebviewFocus = (e: any) => {
+  const handleWebviewFocus = (_e: MouseEvent) => {
     horizon.setActiveCard($card.id)
   }
 
@@ -261,6 +274,12 @@
               on:keyup={handleKeyUp}
             />
           </div>
+          <button class="nav-button" on:click={handleToggleAdblock}>
+            {#if $adblockerState}
+              disable
+            {:else}
+              enable{/if}</button
+          >
           <button class="nav-button" on:click={webview?.reload}> ↻ </button>
           {#if window.api.webviewDevToolsBtn}
             <button class="nav-button" on:click={webview?.openDevTools}> ⚙️ </button>

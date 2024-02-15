@@ -32,3 +32,8 @@ export function toggleAdblocker(partition: string): boolean {
 
   return currentState
 }
+
+export function getAdblockerState(_partition: string): boolean {
+  // TODO: no session management
+  return !!blocker && currentState
+}

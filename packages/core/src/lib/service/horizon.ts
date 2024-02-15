@@ -20,6 +20,7 @@ export class Horizon {
   cards: Writable<Writable<Card>[]>
   activeCardId: Writable<string | null>
   stackingOrder: Writable<string[]>
+  adblockerState: Writable<boolean>
   signalChange: (horizon: Horizon) => void
   board: IBoard<any, any> | null
 
@@ -33,7 +34,8 @@ export class Horizon {
     data: HorizonData,
     api: API,
     telemetry: Telemetry,
-    signalChange: (horizon: Horizon) => void
+    signalChange: (horizon: Horizon) => void,
+    adblockerState: Writable<boolean>
   ) {
     this.id = id
     this.api = api
@@ -52,6 +54,8 @@ export class Horizon {
     this.stackingOrder = writable(data.stackingOrder)
     this.signalChange = signalChange
     this.board = null
+
+    this.adblockerState = adblockerState
 
     this.log.debug(`Created`)
   }
@@ -364,11 +368,18 @@ export class HorizonsManager {
   telemetry: Telemetry
   activeHorizonStorage: LocalStorage<string>
 
+  adblockerState: Writable<boolean>
+
   constructor(api: API, telemetryAPIKey: string) {
     this.api = api
     this.log = useLogScope(`HorizonService`)
     this.storage = new HorizonDatabase()
     this.telemetry = new Telemetry(telemetryAPIKey, this.storage)
+    this.adblockerState = writable(true)
+    window.api
+      .getAdblockerState('persist:horizon')
+      .then((state: boolean) => this.adblockerState.set(state))
+
     // TODO: replace this with something
     // that stores application state
     this.activeHorizonStorage = new LocalStorage<string>('active_horizon')
@@ -476,7 +487,15 @@ export class HorizonsManager {
     // const { default: data } = await import('../data/horizons.json')
 
     const horizons = storedHorizons.map(
-      (d) => new Horizon(d.id, d, this.api, this.telemetry, (h) => this.handleHorizonChange(h))
+      (d) =>
+        new Horizon(
+          d.id,
+          d,
+          this.api,
+          this.telemetry,
+          (h) => this.handleHorizonChange(h),
+          this.adblockerState
+        )
     )
 
     this.horizons.set(horizons)
@@ -551,8 +570,13 @@ export class HorizonsManager {
     } as HorizonData
     data = await this.storage.horizons.create(data)
 
-    const horizon = new Horizon(data.id, data, this.api, this.telemetry, (h) =>
-      this.handleHorizonChange(h)
+    const horizon = new Horizon(
+      data.id,
+      data,
+      this.api,
+      this.telemetry,
+      (h) => this.handleHorizonChange(h),
+      this.adblockerState
     )
     this.horizons.update((h) => [...h, horizon])
 

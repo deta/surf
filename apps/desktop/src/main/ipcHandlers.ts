@@ -1,10 +1,14 @@
 import { ipcMain } from 'electron'
-import { toggleAdblocker } from './adblocker'
+import { toggleAdblocker, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
 
 export function setupIpcHandlers() {
   ipcMain.handle('toggle-adblocker', async (_, { partition }) => {
     return toggleAdblocker(partition as string)
+  })
+
+  ipcMain.handle('get-adblocker-state', async (_, { partition }) => {
+    return getAdblockerState(partition as string)
   })
 
   ipcMain.handle('capture-web-contents', async () => {
