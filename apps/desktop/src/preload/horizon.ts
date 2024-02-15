@@ -9,6 +9,7 @@ const api = {
   webviewDevToolsBtn: !import.meta.env.PROD || !!process.env.WEBVIEW_DEV_TOOLS_BTN,
   webviewPreloadPath: join(__dirname, '../preload/webview.js'),
   captureWebContents: () => ipcRenderer.invoke('capture-web-contents'),
+  toggleAdblocker: (partition: string) => ipcRenderer.invoke('toggle-adblocker', { partition }),
 
   registerNewWindowHandler: (webContentsId: number, callback: any) => {
     webviewNewWindowHandlers[webContentsId] = callback

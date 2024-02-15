@@ -3,8 +3,8 @@ import { toggleAdblocker } from './adblocker'
 import { getMainWindow } from './mainWindow'
 
 export function setupIpcHandlers() {
-  ipcMain.on('toggle-adblocker', (_, enable, partition) => {
-    toggleAdblocker(enable, partition)
+  ipcMain.handle('toggle-adblocker', async (_, { partition }) => {
+    return toggleAdblocker(partition as string)
   })
 
   ipcMain.handle('capture-web-contents', async () => {

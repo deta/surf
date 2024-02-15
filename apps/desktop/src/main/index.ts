@@ -26,7 +26,7 @@ app.whenReady().then(async () => {
 
   setupIpcHandlers()
   await setupAdblocker()
-  toggleAdblocker(true, 'persist:horizon')
+  toggleAdblocker('persist:horizon')
 
   createWindow()
 })
