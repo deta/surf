@@ -2,6 +2,7 @@ import { BrowserWindow, shell, session } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { is } from '@electron-toolkit/utils'
+import { attachContextMenu } from './contextMenu'
 
 let mainWindow: BrowserWindow | undefined
 
@@ -33,6 +34,8 @@ export function createWindow(): void {
 
       return { action: details.disposition === 'new-window' ? 'allow' : 'deny' }
     })
+
+    attachContextMenu(contents)
   })
 
   mainWindow.webContents.setWindowOpenHandler((details: Electron.HandlerDetails) => {

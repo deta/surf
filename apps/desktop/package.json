@@ -37,6 +37,7 @@
     "@types/node": "^18.17.5",
     "electron": "25.9.8",
     "electron-builder": "^24.6.3",
+    "electron-context-menu": "^3.6.1",
     "electron-vite": "^1.0.27",
     "eslint": "^8.47.0",
     "eslint-plugin-svelte": "^2.32.4",
