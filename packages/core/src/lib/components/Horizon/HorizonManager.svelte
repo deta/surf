@@ -273,6 +273,16 @@
   }
 
   const handleKeyDown = async (event: KeyboardEvent) => {
+    // prevent tabbing out of an active card
+    if (event.key === 'Tab') {
+      const activeCardId = $activeHorizon?.activeCardId
+      const cardId = activeCardId && get(activeCardId)
+      if (cardId) {
+        log.debug('preventing tab')
+        event.preventDefault()
+      }
+    }
+
     if (!isModKeyPressed(event)) return
 
     if (event.key === 'n') {
