@@ -91,7 +91,7 @@
       const type = blob.type
 
       if (type.startsWith('image')) {
-        handleImage(blob, getNewCardHorizontalPosition(num))
+        createImageCard(blob, getNewCardHorizontalPosition(num))
         num++
       } else if (type.startsWith('text')) {
         const text = await blob.text()
@@ -99,10 +99,10 @@
 
         const url = parseStringIntoUrl(text)
         if (url) {
-          handleURL(url, getNewCardHorizontalPosition(num))
+          createBrowserCard(url, getNewCardHorizontalPosition(num))
           num++
         } else {
-          handleText(text, getNewCardHorizontalPosition(num))
+          createTextCard(text, getNewCardHorizontalPosition(num))
           num++
         }
       } else {
@@ -154,11 +154,11 @@
       log.debug('parsed file type', fileType)
 
       if (fileType === 'image') {
-        handleImage(file, getNewCardHorizontalPosition(num))
+        createImageCard(file, getNewCardHorizontalPosition(num))
         num++
       } else if (fileType === 'text') {
         const text = await file.text()
-        handleText(text, getNewCardHorizontalPosition(num))
+        createTextCard(text, getNewCardHorizontalPosition(num))
         num++
       } else {
         log.warn('unhandled file type', type)
@@ -198,7 +198,7 @@
           const response = await fetch(source)
           if (!response.ok) throw new Error('failed to fetch')
           const blob = await response.blob()
-          handleImage(blob, getNewCardHorizontalPosition(num))
+          createImageCard(blob, getNewCardHorizontalPosition(num))
 
           handledData = true
           num++
@@ -216,9 +216,9 @@
     const pos = getNewCardPosition(basePos)
 
     if (checkIfUrl(data)) {
-      handleURL(new URL(data), pos)
+      createBrowserCard(new URL(data), pos)
     } else {
-      handleText(data, pos)
+      createTextCard(data, pos)
     }
 
     return true
@@ -231,7 +231,7 @@
     const urls = data.split(/\r\n|\r|\n/)
     urls.forEach((url) => {
       if (checkIfUrl(url)) {
-        handleURL(new URL(url), pos)
+        createBrowserCard(new URL(url), pos)
         dataHandled = true
       }
     })
@@ -239,7 +239,7 @@
     return dataHandled
   }
 
-  const handleImage = async (blob: Blob, pos: { x: number; y: number }) => {
+  const createImageCard = async (blob: Blob, pos: { x: number; y: number }) => {
     const card = await horizon.addCardFile(blob, {
       x: pos.x - DEFAULT_CARD_SIZE.width / 2,
       y: pos.y - DEFAULT_CARD_SIZE.height / 2,
@@ -249,7 +249,7 @@
     log.debug('created card', get(card))
   }
 
-  const handleURL = async (url: URL, pos: { x: number; y: number }) => {
+  const createLinkCard = async (url: URL, pos: { x: number; y: number }) => {
     const card = await horizon.addCardLink(url.href, {
       x: pos.x - DEFAULT_CARD_SIZE.width / 2,
       y: pos.y - DEFAULT_CARD_SIZE.height / 2,
@@ -259,7 +259,17 @@
     log.debug('created card', get(card))
   }
 
-  const handleText = async (text: string, pos: { x: number; y: number }) => {
+  const createBrowserCard = async (url: URL, pos: { x: number; y: number }) => {
+    const card = await horizon.addCardBrowser(url.href, {
+      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+      width: DEFAULT_CARD_SIZE.width,
+      height: DEFAULT_CARD_SIZE.height
+    })
+    log.debug('created card', get(card))
+  }
+
+  const createTextCard = async (text: string, pos: { x: number; y: number }) => {
     const card = await horizon.addCardText(text, {
       x: pos.x - DEFAULT_CARD_SIZE.width / 2,
       y: pos.y - DEFAULT_CARD_SIZE.height / 2,
