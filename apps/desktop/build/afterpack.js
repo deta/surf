@@ -21,7 +21,7 @@ module.exports = async function afterPack(context) {
         executableName = executableName.slice(0, -buildTagSuffix.length)
       }
     }
-    executableName = executableName.toLowerCase()
+    executableName = executableName.toLowerCase().split(' ')[0]
   }
   const electronBinaryPath = path.join(context.appOutDir, `${executableName}${ext}`)
 
