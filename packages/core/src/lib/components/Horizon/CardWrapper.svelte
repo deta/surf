@@ -80,7 +80,7 @@
     }
   }
 
-  const handleCardHeaderMouseDown = (e: MouseEvent) => {
+  const handleCardHeaderMouseDown = (_e: MouseEvent) => {
     if (headerClickTimeout) {
       clearTimeout(headerClickTimeout)
       headerClickTimeout = null
@@ -150,6 +150,7 @@
     class="card-header"
     data-position="top"
     data-inset={insetMenu}
+    data-hide={active && insetMenu}
   >
     <Draggable {positionable} class="">
       <div class="card-header-content">
@@ -351,7 +352,7 @@
     }
 
     &[data-position='top'][data-inset='true'] {
-      top: 30px;
+      top: 29px;
 
       .card-header-content {
         border-top: none;
@@ -377,7 +378,7 @@
 
   :global(.card:hover),
   :global(.dragging) {
-    .card-header {
+    .card-header:not([data-hide='true']) {
       display: block;
       opacity: 1;
       z-index: 100000;
@@ -387,6 +388,19 @@
 
       &[data-position='left'] {
         left: 0;
+      }
+    }
+  }
+
+  :global(.card:hover.active),
+  :global(.dragging.active) {
+    .card-header {
+      &[data-position='top'] {
+        z-index: 0;
+      }
+
+      .tela-board .resizable {
+        z-index: 0;
       }
     }
   }
