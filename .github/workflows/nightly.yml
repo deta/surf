@@ -1,0 +1,6 @@
+name: Nightly Releases
+
+on:
+  workflow_dispatch:
+
+jobs:
