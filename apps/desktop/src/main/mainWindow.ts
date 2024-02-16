@@ -3,11 +3,26 @@ import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { is } from '@electron-toolkit/utils'
 import { attachContextMenu } from './contextMenu'
+import { WindowState } from './winState'
 
 let mainWindow: BrowserWindow | undefined
 
 export function createWindow(): void {
+  const winState = new WindowState(
+    {
+      saveImmediately: is.dev
+    },
+    {
+      isMaximized: true
+    }
+  )
+
   mainWindow = new BrowserWindow({
+    width: winState.state.width,
+    height: winState.state.height,
+    x: winState.state.x,
+    y: winState.state.y,
+    fullscreen: winState.state.isFullScreen,
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
@@ -20,9 +35,16 @@ export function createWindow(): void {
     }
   })
 
+  winState.manage(mainWindow)
+
   mainWindow.on('ready-to-show', () => {
-    if (!is.dev) mainWindow?.showInactive()
-    else mainWindow?.show()
+    if (winState.state.isMaximized) {
+      mainWindow?.maximize()
+    } else if (!is.dev) {
+      mainWindow?.showInactive()
+    } else {
+      mainWindow?.show()
+    }
   })
 
   mainWindow.webContents.on('did-attach-webview', (_, contents) => {
