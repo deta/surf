@@ -5,11 +5,6 @@ on:
     # 1:23 AM UTC, Tuesday through Saturday
     - cron: '23 1 * * 2-6'
   workflow_dispatch:
-    inputs:
-      skip_release:
-        description: 'Skip release'
-        required: false
-        default: 'false'
 
 jobs:
   prepare:
@@ -37,7 +32,7 @@ jobs:
       - name: Check if version is already released
         id: skip-release-check
         run: |
-          if [ -z "$(git tag -l v${{ steps.version.outputs.version }}-nightly)" ]; then
+          if [[ "$(git tag -l v${{ steps.version.outputs.version }}-nightly)" ]]; then
             echo "skip_release=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip_release=false" >> "$GITHUB_OUTPUT"
@@ -45,7 +40,7 @@ jobs:
 
   build-and-release:
     needs: prepare
-    if: ${{ needs.prepare.outputs.skip_release == 'false' && inputs.skip_release == 'false'}}
+    if: ${{ needs.prepare.outputs.skip_release == 'false' }}
     runs-on: macos-latest
     timeout-minutes: 30
     outputs:
