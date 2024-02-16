@@ -1,6 +1,6 @@
 import { ElectronBlocker } from '@cliqz/adblocker-electron'
 import fetch from 'cross-fetch'
-import { app as _app, session } from 'electron'
+import { app as _app, session as _session } from 'electron'
 // import { promises as fs } from 'fs'
 // import { join } from 'path'
 
@@ -19,7 +19,7 @@ export async function setupAdblocker() {
   blocker = await ElectronBlocker.fromPrebuiltAdsOnly(fetch)
 }
 
-export function toggleAdblocker(partition: string): boolean {
+export function toggleAdblocker(_partition: string): boolean {
   // if (!blocker) return false
 
   // currentState = !currentState
