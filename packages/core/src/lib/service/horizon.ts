@@ -6,7 +6,7 @@ import { useLogScope, type ScopedLogger } from '../utils/log'
 import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
 import { Telemetry, EventTypes, type TelemetryConfig } from './telemetry'
-import { moveToStackingTop, type IBoard } from '@horizon/tela'
+import { moveToStackingTop, type IBoard, clamp, type IBoardSettings } from '@horizon/tela'
 import { quintOut } from 'svelte/easing'
 
 // how many horizons to keep in the dom
@@ -24,6 +24,7 @@ export class Horizon {
   adblockerState: Writable<boolean>
   signalChange: (horizon: Horizon) => void
   board: IBoard<any, any> | null
+  telaSettings: Writable<IBoardSettings> | null
   previewImageObjectURL: string | undefined
 
   api: API
@@ -57,6 +58,7 @@ export class Horizon {
     this.stackingOrder = writable(data.stackingOrder)
     this.signalChange = signalChange
     this.board = null
+    this.telaSettings = null
 
     this.adblockerState = adblockerState
     if (previewImageResource) {
@@ -74,6 +76,16 @@ export class Horizon {
   detachBoard() {
     this.log.debug(`Detaching board`)
     this.board = null
+  }
+
+  attachSettings(settings: Writable<IBoardSettings>) {
+    this.log.debug(`Attaching settings`)
+    this.telaSettings = settings
+  }
+
+  detachSettings() {
+    this.log.debug(`Detaching settings`)
+    this.telaSettings = null
   }
 
   getState() {
@@ -381,15 +393,18 @@ export class Horizon {
 
     this.log.debug(`Scrolling board to card ${card.id}`)
 
+    const settings = this.telaSettings ? get(this.telaSettings) : null
     const state = get(board.state)
     const viewportWidth = get(state.viewPort).w
 
     const cardRightEdge = card.x + card.width
-    const newOffset = cardRightEdge - viewportWidth + 100
+    const newOffsetX = cardRightEdge - viewportWidth + 100
+
+    const clampedOffsetX = clamp(newOffsetX, 0, settings?.BOUNDS?.maxX ?? 1000)
 
     state.viewOffset.update(
       (viewOffset) => ({
-        x: newOffset,
+        x: clampedOffsetX,
         y: viewOffset.y
       }),
       { duration: 100, easing: quintOut }
