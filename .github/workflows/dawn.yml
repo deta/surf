@@ -1,4 +1,4 @@
-name: Nightly Release
+name: Dawn Release
 
 on:
   schedule:
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      version: ${{ steps.version.outputs.version }}-nightly
+      version: ${{ steps.version.outputs.version }}-dawn
       skip_release: ${{ steps.skip-release-check.outputs.skip_release }}
 
     steps:
@@ -32,7 +32,7 @@ jobs:
       - name: Check if version is already released
         id: skip-release-check
         run: |
-          if [[ "$(git tag -l v${{ steps.version.outputs.version }}-nightly)" ]]; then
+          if [[ "$(git tag -l v${{ steps.version.outputs.version }}-dawn)" ]]; then
             echo "skip_release=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip_release=false" >> "$GITHUB_OUTPUT"
@@ -91,14 +91,12 @@ jobs:
           M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
           R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
           # preset
-          RELEASE_CHANNEL: nightly
-          BUILD_TAG: nightly
-          M_VITE_BUILD_TAG: nightly
-          R_VITE_BUILD_TAG: nightly
-          PRODUCT_NAME: Horizon
+          RELEASE_CHANNEL: dawn
+          PRODUCT_NAME: 'Horizon Dawn'
+          M_VITE_PRODUCT_NAME: 'Horizon Dawn'
           SHOULD_NOTARIZE: true
           M_VITE_USE_TMP_DATA_DIR: true
-          BUILD_RESOURCES_DIR: build/resources/nightly
+          BUILD_RESOURCES_DIR: build/resources/dawn
 
       - id: release
         name: Create Github Release
