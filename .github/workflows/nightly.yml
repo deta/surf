@@ -1,6 +1,127 @@
 name: Nightly Releases
 
 on:
+  schedule:
+    # 1:23 AM UTC, Tuesday through Saturday
+    - cron: '23 1 * * 2-6'
   workflow_dispatch:
+    inputs:
+      skip_release:
+        description: 'Skip release'
+        required: false
+        default: 'false'
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}-nightly
+      skip_release: ${{ steps.skip-release-check.outputs.skip_release }}
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Get next version
+        uses: reecetech/version-increment@2023.9.3
+        id: version
+        with:
+          scheme: semver
+          increment: patch
+          # this is done as a workaround
+          # if the version is set from main, there is no way to increment the version as pre-release
+          release_branch: release
+
+      # to make sure that there are new changes before creating a release
+      - name: Check if version is already released
+        id: skip-release-check
+        run: |
+          if [ -z "$(git tag -l v${{ steps.version.outputs.version }}-nightly)" ]; then
+            echo "skip_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-and-release:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.skip_release == 'false' && inputs.skip_release == 'false'}}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    outputs:
+      release-id: ${{ steps.release.outputs.id }}
+      version: ${{ needs.prepare.outputs.version }}
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Set version as env variable
+        run: echo "APP_VERSION=${{ needs.prepare.outputs.version }}" >> $GITHUB_ENV
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        # using retries as there are recurring cases for unknown reasons where the yarn install gets stuck
+        uses: nick-fields/retry@v3
+        with:
+          - timeout_minutes: 3
+          - max_attempts: 2
+          - command: yarn install --frozen-lockfile
+
+      - name: Build
+        run: |
+          yarn build:horizon:linux
+          yarn build:horizon:mac
+          yarn build:horizon:win
+        env:
+          HUSKY: 0
+          # from secrets
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          S3_UPDATES_BUCKET_NAME: ${{ secrets.S3_UPDATES_BUCKET_NAME }}
+          S3_UPDATES_BUCKET_REGION: ${{ secrets.S3_UPDATES_BUCKET_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          R_VITE_TELEMETRY_API_KEY: ${{ secrets.TELEMETRY_API_KEY }}
+          # from env
+          APP_VERSION: ${{ env.APP_VERSION }}
+          M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          # preset
+          RELEASE_CHANNEL: nightly
+          BUILD_TAG: nightly
+          M_VITE_BUILD_TAG: nightly
+          R_VITE_BUILD_TAG: nightly
+          PRODUCT_NAME: Horizon
+          SHOULD_NOTARIZE: true
+          M_VITE_USE_TMP_DATA_DIR: true
+          BUILD_RESOURCES_DIR: build/resources/nightly
+
+      - id: release
+        name: Create Github Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: true
+          tag_name: v${{ env.APP_VERSION }}
+          files: |
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.zip
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.AppImage
+            apps/desktop/dist/*.snap
+            apps/desktop/dist/*.deb
+            apps/desktop/dist/*.rpm
+            apps/desktop/dist/*.tar.gz
+            apps/desktop/dist/*.yml
+            apps/desktop/dist/*.blockmap
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
