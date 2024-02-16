@@ -65,9 +65,13 @@
   }
 
   export const stopFind = () => {
-    log.debug('stop find')
-    value = ''
-    webview?.stopFindInPage('clearSelection')
+    try {
+      log.debug('stop find')
+      value = ''
+      webview?.stopFindInPage('clearSelection')
+    } catch (error) {
+      // ignore
+    }
   }
 
   export const isOpen = () => show

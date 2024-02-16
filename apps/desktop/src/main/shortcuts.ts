@@ -5,6 +5,7 @@ const validShortcuts = [
   // 'Down',
   'o', // open overview
   'n', // new horizon
+  'w', // close card or horizon
   ...Array.from(Array(9).keys()).map((idx) => `${idx + 1}`)
 ]
 

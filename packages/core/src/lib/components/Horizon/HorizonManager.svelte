@@ -267,8 +267,8 @@
     // }
   }
 
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (!isModKeyPressed(event) && !$showStackOverview) return
+  const handleKeyDown = async (event: KeyboardEvent) => {
+    if (!isModKeyPressed(event)) return
 
     if (event.key === 'n') {
       event.preventDefault()
@@ -279,6 +279,15 @@
         selectHorizonAndCloseOverview()
       } else {
         $showStackOverview = true
+      }
+    } else if (event.key === 'w' && $activeHorizon) {
+      event.preventDefault()
+      const activeCardId = $activeHorizon.activeCardId
+
+      if (activeCardId) {
+        const cardId = get(activeCardId)
+        if (!cardId) return
+        await $activeHorizon.deleteCard(cardId)
       }
     } else if (event.key === 'Escape') {
       event.preventDefault()
