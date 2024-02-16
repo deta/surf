@@ -5,6 +5,7 @@ let previouslySelectedText: string | undefined = ''
 
 window.addEventListener('DOMContentLoaded', (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
+    sendPageEvent('mouseup', {})
     const selection = window.getSelection()
     const text = selection?.toString().trim()
     const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor ?? 'white'
