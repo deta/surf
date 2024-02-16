@@ -283,10 +283,7 @@
             />
           </div>
           <button class="nav-button" on:click={handleToggleAdblock}>
-            <img
-              src={$adblockerState ? adblockOnIcon : adblockOffIcon}
-              alt="adblock"
-            />
+            <img src={$adblockerState ? adblockOnIcon : adblockOffIcon} alt="adblock" />
           </button>
           <button class="nav-button" on:click={webview?.reload}> ↻ </button>
           {#if window.api.webviewDevToolsBtn}

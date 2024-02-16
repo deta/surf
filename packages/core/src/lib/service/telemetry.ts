@@ -1,7 +1,6 @@
 import type { Card } from '../types'
 import { HorizonDatabase } from './storage'
 import * as amplitude from '@amplitude/analytics-browser'
-import { de } from 'date-fns/locale'
 
 export const EventTypes = {
   CreateHorizon: 'Create Horizon',
@@ -13,12 +12,23 @@ export const EventTypes = {
   UpdateCard: 'Update Card'
 }
 
+export type TelemetryConfig = {
+  apiKey: string
+  active: boolean
+  trackHostnames: boolean
+}
+
+// TODO: how much does telemetry hurt performance?
 export class Telemetry {
   storage: HorizonDatabase
   apiKey: string
-  constructor(apiKey: string, storage: HorizonDatabase) {
+  active: boolean
+  trackHostnames: boolean
+  constructor(storage: HorizonDatabase, config: TelemetryConfig) {
     this.storage = storage
-    this.apiKey = apiKey
+    this.apiKey = config.apiKey
+    this.active = config.active
+    this.trackHostnames = config.trackHostnames
   }
   async init() {
     let userID = await this.storage.getUserID()
@@ -35,6 +45,16 @@ export class Telemetry {
         fileDownloads: false
       }
     })
+    amplitude.setOptOut(!this.active)
+  }
+
+  setActive(active: boolean) {
+    this.active = active
+    amplitude.setOptOut(!active)
+  }
+
+  setTrackHostnames(trackHostnames: boolean) {
+    this.trackHostnames = trackHostnames
   }
 
   getHostnameFromURL(url: string) {
@@ -58,6 +78,9 @@ export class Telemetry {
     }
     switch (card.type) {
       case 'browser':
+        if (!this.trackHostnames) {
+          break
+        }
         let location = card.data.initialLocation
         if (card.data.currentHistoryIndex > 0) {
           location = this.getHostnameFromURL(card.data.historyStack[card.data.currentHistoryIndex])
@@ -68,6 +91,9 @@ export class Telemetry {
         }
         break
       case 'link':
+        if (!this.trackHostnames) {
+          break
+        }
         eventProperties = {
           ...eventProperties,
           hostname: this.getHostnameFromURL(card.data.url)
@@ -84,23 +110,22 @@ export class Telemetry {
   }
 
   async trackEvent(eventName: string, eventProperties: Record<string, any> | undefined) {
-    if (!this.apiKey || !this.storage) {
+    if (!this.apiKey || !this.storage || !this.active) {
       return
     }
     // TODO: figure out why this is happening
-    if (eventName == EventTypes.UpdateCard && !eventProperties.id) {
+    if (eventName === EventTypes.UpdateCard && !eventProperties.id) {
       return
     }
     await amplitude.track(eventName, eventProperties)
   }
+
   // this is a separate function as market needs cards metadata when tracking this event
-  // TODO: figure out how much does this hurt performance?
-  async trackActivateHorizonEvent(horizonID: string) {
-    if (!this.storage) {
+  async trackActivateHorizonEvent(horizonID: string, cards: Array<Card>) {
+    if (!this.apiKey || !this.storage || !this.active) {
       return
     }
-    const storedCards = (await this.storage.getCardsByHorizonId(horizonID)) ?? []
-    const cardProperties = storedCards.map((card) => this.extractEventPropertiesFromCard(card))
+    const cardProperties = cards.map((card) => this.extractEventPropertiesFromCard(card))
     await this.trackEvent(EventTypes.ActivateHorizon, { id: horizonID, cards: cardProperties })
   }
 }

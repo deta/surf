@@ -5,7 +5,7 @@ import type { Resource, HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
-import { Telemetry, EventTypes } from './telemetry'
+import { Telemetry, EventTypes, type TelemetryConfig } from './telemetry'
 import { moveToStackingTop, type IBoard } from '@horizon/tela'
 import { quintOut } from 'svelte/easing'
 
@@ -413,14 +413,13 @@ export class HorizonsManager {
   storage: HorizonDatabase
   telemetry: Telemetry
   activeHorizonStorage: LocalStorage<string>
-
   adblockerState: Writable<boolean>
 
-  constructor(api: API, telemetryAPIKey: string) {
+  constructor(api: API, telemetryConfig: TelemetryConfig) {
     this.api = api
     this.log = useLogScope(`HorizonService`)
     this.storage = new HorizonDatabase()
-    this.telemetry = new Telemetry(telemetryAPIKey, this.storage)
+    this.telemetry = new Telemetry(this.storage, telemetryConfig)
     this.adblockerState = writable(true)
     window.api
       .getAdblockerState('persist:horizon')
@@ -609,8 +608,10 @@ export class HorizonsManager {
 
     this.log.debug(`Making horizon ${horizon.id} active`)
     horizon.markAsUsed()
+
     this.activeHorizonId.set(horizon.id)
-    await this.telemetry.trackActivateHorizonEvent(horizon.id)
+    const cards = get(horizon.cards).map((c) => get(c)) || []
+    await this.telemetry.trackActivateHorizonEvent(horizon.id, cards)
   }
 
   async createHorizon(name: string) {

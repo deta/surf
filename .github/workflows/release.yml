@@ -93,6 +93,7 @@ jobs:
           S3_UPDATES_BUCKET_REGION: ${{ secrets.S3_UPDATES_BUCKET_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          R_VITE_TELEMETRY_API_KEY: ${{ secrets.TELEMETRY_API_KEY }}
           # from env
           APP_VERSION: ${{ env.APP_VERSION }}
           M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
