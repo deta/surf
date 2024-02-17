@@ -29,13 +29,13 @@ const template = [
   {
     label: 'File',
     submenu: [
-      isMac
-        ? { role: 'close' }
+      ...(isMac
+        ? [{ role: 'close' }]
         : [
             { label: 'Check for Updates...', click: checkUpdatesMenuClickHandler },
             { type: 'separator' },
             { role: 'quit' }
-          ]
+          ])
     ]
   },
   {
