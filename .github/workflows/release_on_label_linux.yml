@@ -1,4 +1,4 @@
-name: Mac Only Build & Release On PR Label
+name: Linux Only Build & Release On PR Label
 
 on:
   pull_request:
@@ -7,12 +7,13 @@ on:
       - main
 
 jobs:
-  prepare:
-    if: ${{ github.event.label.name == 'mac-build'}}
+  build-and-release:
+    if: ${{ github.event.label.name == 'linux-build' }}
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
     outputs:
-      version: ${{ steps.version.outputs.version }}-mac
+      release-id: ${{ steps.release.outputs.id }}
+      version: ${{ needs.prepare.outputs.version }}
 
     steps:
       - name: Check out Git repository
@@ -25,21 +26,13 @@ jobs:
           scheme: semver
           increment: patch
 
-  build-and-release:
-    if: ${{ github.event.label.name == 'mac-build' }}
-    needs: prepare
-    runs-on: macos-latest
-    timeout-minutes: 30
-    outputs:
-      release-id: ${{ steps.release.outputs.id }}
-      version: ${{ needs.prepare.outputs.version }}
-
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v3
-
       - name: Set version as env variable
-        run: echo "APP_VERSION=${{ needs.prepare.outputs.version }}" >> $GITHUB_ENV
+        run: echo "APP_VERSION=${{ steps.version.outputs.version }}-linux" >> $GITHUB_ENV
+
+      # see https://www.electron.build/multi-platform-build.html#linux
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get install --no-install-recommends -y libopenjp2-tools
 
       - name: Install Node.js
         uses: actions/setup-node@v3
@@ -62,7 +55,7 @@ jobs:
 
       - name: Build
         run: |
-          yarn build:horizon:mac
+          yarn build:horizon:linux
         env:
           # from secrets
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

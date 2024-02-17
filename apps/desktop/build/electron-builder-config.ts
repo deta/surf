@@ -36,7 +36,7 @@ export default function electronBuilderConfig() {
       '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
     ],
     asarUnpack: ['resources/**'],
-    afterPack: 'build/afterPack.js',
+    afterPack: 'build/afterpack.js',
     win: {
       executableName: params.buildName
     },
