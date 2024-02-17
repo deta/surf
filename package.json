@@ -7,6 +7,7 @@
     "build": "turbo build",
     "build:packages": "turbo build --filter=!horizon",
     "build:horizon": "yarn workspace horizon build",
+    "build:horizon:mwl": "yarn turbo run horizon#build:mwl",
     "build:horizon:mac": "yarn turbo run horizon#build:mac",
     "build:horizon:win": "yarn turbo run horizon#build:win",
     "build:horizon:linux": "yarn turbo run horizon#build:linux",

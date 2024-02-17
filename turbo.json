@@ -2,6 +2,10 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
   "pipeline": {
+    "horizon#build:mwl": {
+      "dependsOn": ["^build"],
+      "outputs": [".dist/**"]
+    },
     "horizon#build:mac": {
       "dependsOn": ["^build"],
       "outputs": [".dist/**"]

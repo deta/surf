@@ -68,10 +68,7 @@ jobs:
           command: yarn install --frozen-lockfile
 
       - name: Build
-        run: |
-          yarn build:horizon:linux
-          yarn build:horizon:mac
-          yarn build:horizon:win
+        run: yarn build:horizon:mwl
         env:
           HUSKY: 0
           # from secrets
