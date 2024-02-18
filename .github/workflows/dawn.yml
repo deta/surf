@@ -92,7 +92,6 @@ jobs:
           PRODUCT_NAME: 'Horizon Dawn'
           M_VITE_PRODUCT_NAME: 'Horizon Dawn'
           SHOULD_NOTARIZE: true
-          M_VITE_USE_TMP_DATA_DIR: true
           BUILD_RESOURCES_DIR: build/resources/dawn
 
       - id: release
