@@ -274,7 +274,6 @@
     })
 
     horizon.attachBoard(board)
-    horizon.attachSettings(settings)
 
     stack.set(get(horizon.stackingOrder))
     $state.stackingOrder = stack
@@ -284,7 +283,6 @@
 
   onDestroy(() => {
     horizon.detachBoard()
-    horizon.detachSettings()
     clearInterval(requestNewPreviewIntervalId)
     window.api.unregisterPreviewImageHandler(horizon.id)
   })
