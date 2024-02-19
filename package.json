@@ -2,7 +2,7 @@
   "name": "horizon",
   "private": true,
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "M_VITE_PRODUCT_NAME=Horizon-dev turbo dev",
     "dev:horizon": "turbo dev --filter=horizon",
     "build": "turbo build",
     "build:packages": "turbo build --filter=!horizon",
