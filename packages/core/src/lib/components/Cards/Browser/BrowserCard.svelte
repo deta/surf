@@ -241,8 +241,8 @@
   </div>
   <div class="bottom-bar" class:active={active || value == ''}>
     <div class="bottom-bar-trigger">
-      {#if $canGoBack}
-        <div class="arrow-wrapper">
+      <div class="arrow-wrapper" class:hidden={!$canGoBack}>
+        {#if $canGoBack}
           <button
             class="nav-button"
             on:click={webview?.goBack}
@@ -261,8 +261,8 @@
           >
             →
           </button>
-        </div>
-      {/if}
+        {/if}
+      </div>
 
       <div
         class="address-bar-wrapper"
@@ -438,7 +438,7 @@
     display: flex;
     gap: 0.5rem;
     padding: 0 1.5rem 0 0.5rem;
-    min-width: 4.25rem;
+    min-width: 5rem;
     user-select: none;
   }
 
@@ -588,6 +588,14 @@
       right: 0.5rem;
       width: calc(100% - 1rem);
       bottom: 3.5rem;
+    }
+
+    .arrow-wrapper {
+      min-width: auto;
+      width: auto;
+      &.hidden {
+        padding: 0;
+      }
     }
 
     .navbar-wrapper {
