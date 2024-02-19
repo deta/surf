@@ -595,7 +595,8 @@
       >
         {#if horizon.state === 'hot'}
           <div
-            style="display: {!horizon.previewImageObjectURL || !$showStackOverview
+            style="display: {!horizon.previewImageObjectURL ||
+            (!$showStackOverview && !disabledTransitions)
               ? 'block'
               : 'none'};"
           >
@@ -611,7 +612,9 @@
 
         <div
           style="display: {horizon.state !== 'hot' ||
-          (horizon.state === 'hot' && horizon.previewImageObjectURL && $showStackOverview)
+          (horizon.state === 'hot' &&
+            horizon.previewImageObjectURL &&
+            ($showStackOverview || disabledTransitions))
             ? 'block'
             : 'none'}; width: 100%; height: 100%"
         >
