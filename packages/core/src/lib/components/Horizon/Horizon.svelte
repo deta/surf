@@ -62,7 +62,7 @@
     {
       viewPort: {
         x: 10,
-        y: 25
+        y: 50
       } as any
     },
     'idle',
