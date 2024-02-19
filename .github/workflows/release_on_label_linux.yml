@@ -68,6 +68,8 @@ jobs:
           M_VITE_BUILD_TAG: ${{ env.BUILD_TAG }}
           R_VITE_BUILD_TAG: ${{ env.BUILD_TAG }}
           RELEASE_CHANNEL: ${{ env.RELEASE_CHANNEL }}
+          # composite
+          R_VITE_CHEATSHEET_URL: ${{ secrets.CHEATSHEET_URL_BASE }}/${{ env.APP_VERSION }}
           # default
           HUSKY: 0
           PRODUCT_NAME: Horizon

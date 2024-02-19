@@ -87,6 +87,8 @@ jobs:
           APP_VERSION: ${{ env.APP_VERSION }}
           M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
           R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          # composite
+          R_VITE_CHEATSHEET_URL: ${{ secrets.CHEATSHEET_URL_BASE }}/${{ env.APP_VERSION }}
           # preset
           RELEASE_CHANNEL: dawn
           PRODUCT_NAME: 'Horizon Dawn'
