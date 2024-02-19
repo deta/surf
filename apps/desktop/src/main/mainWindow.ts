@@ -23,6 +23,7 @@ export function createWindow(): void {
     x: winState.state.x,
     y: winState.state.y,
     fullscreen: winState.state.isFullScreen,
+    fullscreenable: true,
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
