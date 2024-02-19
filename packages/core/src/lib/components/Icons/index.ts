@@ -1,19 +1,11 @@
-import AdblockOff from './AdblockOff.svelte'
-import AdblockOn from './AdblockOn.svelte'
-import Add from './Add.svelte'
-import Close from './Close.svelte'
 import Copy from './Copy.svelte'
-import Mute from './Muted.svelte'
-import Unmute from './Unmute.svelte'
+import Close from './Close.svelte'
+import Add from './Add.svelte'
 
 export const icons = {
-  adblockoff: AdblockOff,
-  adblockon: AdblockOn,
-  add: Add,
-  close: Close,
   copy: Copy,
-  mute: Mute,
-  unmute: Unmute
+  close: Close,
+  add: Add
 }
 
 export type Icons = keyof typeof icons

@@ -30,8 +30,6 @@
   export const didFinishLoad = writable(false)
   export const title = writable('')
   export const faviconURL = writable<string[]>([])
-  export const playback = writable(false)
-  export const isMuted = writable(false)
 
   export const historyStack = writable<string[]>([])
   export const currentHistoryIndex = writable(-1)
@@ -139,15 +137,6 @@
       // Get the biggest favicon (last favicon in array)
       faviconURL.set(e.favicons[e.favicons.length - 1])
     })
-
-    webview.addEventListener('media-started-playing', (e: any) => {
-      playback.set(true)
-    })
-
-    webview.addEventListener('media-paused', (e: any) => {
-      playback.set(false)
-    })
-
     webview.addEventListener('found-in-page', (e: Electron.FoundInPageEvent) => {
       dispatch('foundInPage', e)
     })
@@ -167,10 +156,6 @@
 
   export function reload(): void {
     webview?.reload()
-  }
-
-  export function setMute(isMuted: boolean): void {
-    webview?.setAudioMuted(isMuted)
   }
 
   export function goBack(): void {
