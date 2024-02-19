@@ -20,18 +20,17 @@ export async function setupAdblocker() {
 }
 
 export function toggleAdblocker(partition: string): boolean {
-  // if (!blocker) return false
+  if (!blocker) return false
 
-  // currentState = !currentState
-  // const targetSession = session.fromPartition(partition)
-  // if (currentState) {
-  //   blocker.enableBlockingInSession(targetSession)
-  // } else {
-  //   blocker.disableBlockingInSession(targetSession)
-  // }
+  currentState = !currentState
+  const targetSession = session.fromPartition(partition)
+  if (currentState) {
+    blocker.enableBlockingInSession(targetSession)
+  } else {
+    blocker.disableBlockingInSession(targetSession)
+  }
 
-  // return currentState
-  return false
+  return currentState
 }
 
 export function getAdblockerState(_partition: string): boolean {
