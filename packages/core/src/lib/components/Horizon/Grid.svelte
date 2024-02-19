@@ -51,7 +51,7 @@
     contain: strict;
     pointer-events: none;
     opacity: 0.3;
-    margin-top: -25px; /* needed so the grid is behind our drag bar area  */
+    margin-top: -50px; /* needed so the grid is behind our drag bar area  */
   }
   .grid > svg {
     position: absolute;

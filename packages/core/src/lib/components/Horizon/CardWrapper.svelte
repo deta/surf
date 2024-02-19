@@ -40,11 +40,11 @@
 
   const minSize = { x: 100, y: 100 }
   const maxSize = { x: Infinity, y: Infinity }
-  const DRAGGING_MENU_PADDING = 50
+  const DRAGGING_MENU_PADDING = 75
 
   let el: HTMLElement
-  let menuPosition = 'top'
-  let insetMenu = false
+  // let menuPosition = 'top'
+  // let insetMenu = false
   let headerClickTimeout: ReturnType<typeof setTimeout> | null = null
 
   $: card = positionable as Writable<Card> // todo: fix this unnecessary cast
@@ -70,15 +70,15 @@
     updateCard()
   }
 
-  const handleMouseMove = (_e: MouseEvent) => {
-    const rect = el.getBoundingClientRect()
+  // const handleMouseMove = (_e: MouseEvent) => {
+  //   const rect = el.getBoundingClientRect()
 
-    if (rect.y < DRAGGING_MENU_PADDING) {
-      insetMenu = true
-    } else {
-      insetMenu = false
-    }
-  }
+  //   if (rect.y < DRAGGING_MENU_PADDING) {
+  //     insetMenu = true
+  //   } else {
+  //     insetMenu = false
+  //   }
+  // }
 
   const handleCardHeaderMouseDown = (_e: MouseEvent) => {
     if (headerClickTimeout) {
@@ -98,10 +98,18 @@
   }
 
   const handleDelete = () => {
+    if (headerClickTimeout) {
+      clearTimeout(headerClickTimeout)
+      headerClickTimeout = null
+    }
     dispatch('delete', $card)
   }
 
   const handleDuplicate = () => {
+    if (headerClickTimeout) {
+      clearTimeout(headerClickTimeout)
+      headerClickTimeout = null
+    }
     dispatch('duplicate', $card)
   }
 
@@ -128,7 +136,6 @@
   class="card {$positionable.id} {active && 'active'}"
   contained={false}
   on:mousedown={handleMouseDown}
-  on:mousemove={handleMouseMove}
   bind:el
 >
   <Resizable {positionable} direction="top-right" {minSize} {maxSize} />
@@ -149,8 +156,8 @@
     on:mousedown={handleCardHeaderMouseDown}
     class="card-header"
     data-position="top"
-    data-inset={insetMenu}
-    data-hide={active && insetMenu}
+    data-inset={false}
+    data-hide={false}
   >
     <Draggable {positionable} class="">
       <div class="card-header-content">
