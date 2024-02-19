@@ -345,7 +345,6 @@
       top: 0;
 
       .card-header-content {
-        border-bottom: none;
         border-top-left-radius: var(--theme-border-radius);
         border-top-right-radius: var(--theme-border-radius);
       }
@@ -367,7 +366,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    border: 1px solid #ddd;
+    border: 2px solid #ddd;
     background-color: #f5f5f5;
     overflow: hidden;
   }

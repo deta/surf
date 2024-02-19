@@ -141,9 +141,13 @@
     z-index: 2;
     flex: 1;
     background: #ededed;
-    outline: 0.5px solid #e2e2e2;
+    outline: 2px solid #e2e2e2;
     border-radius: var(--theme-border-radius);
     overflow: hidden;
+  }
+
+  &.active > .content {
+    outline-color: rgba(223, 39, 127, 0.8);
   }
 }
 
@@ -295,10 +299,6 @@
     .content {
       transition: all 160ms cubic-bezier(.34, 1.56, .64, 1);
       transition-delay: 70ms;
-    }
-
-    &.active > .content {
-      outline: 2px solid rgba(223, 39, 127, 0.8);
     }
 
     &.dragging {
