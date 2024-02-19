@@ -429,6 +429,7 @@ export class HorizonsManager {
   telemetry: Telemetry
   activeHorizonStorage: LocalStorage<string>
   adblockerState: Writable<boolean>
+  adblockerStateStorage: LocalStorage<boolean>
 
   constructor(api: API, telemetryConfig: TelemetryConfig) {
     this.api = api
@@ -436,13 +437,15 @@ export class HorizonsManager {
     this.storage = new HorizonDatabase()
     this.telemetry = new Telemetry(this.storage, telemetryConfig)
     this.adblockerState = writable(true)
-    window.api
-      .getAdblockerState('persist:horizon')
-      .then((state: boolean) => this.adblockerState.set(state))
 
     // TODO: replace this with something
     // that stores application state
     this.activeHorizonStorage = new LocalStorage<string>('active_horizon')
+    this.adblockerStateStorage = new LocalStorage<boolean>('adblocker_state')
+
+    this.adblockerState.set(this.adblockerStateStorage.get() ?? true)
+    // @ts-ignore
+    window.api.setAdblockerState('persist:horizon', get(this.adblockerState))
 
     this.activeHorizonId = writable(null)
     this.horizons = writable([])
@@ -524,6 +527,11 @@ export class HorizonsManager {
     }
 
     this.activeHorizonId.subscribe((id) => this.activeHorizonStorage.setRaw(id ?? ''))
+    this.adblockerState.subscribe((state) => {
+      // @ts-ignore
+      window.api.setAdblockerState('persist:horizon', state)
+      this.adblockerStateStorage.set(state)
+    })
 
     return switchedTo
   }

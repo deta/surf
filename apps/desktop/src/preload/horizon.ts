@@ -12,7 +12,8 @@ const api = {
   captureWebContents: () => ipcRenderer.invoke('capture-web-contents'),
   getAdblockerState: (partition: string) =>
     ipcRenderer.invoke('get-adblocker-state', { partition }),
-  toggleAdblocker: (partition: string) => ipcRenderer.invoke('toggle-adblocker', { partition }),
+  setAdblockerState: (partition: string, state: boolean) =>
+    ipcRenderer.invoke('set-adblocker-state', { partition, state }),
 
   registerNewWindowHandler: (webContentsId: number, callback: any) => {
     webviewNewWindowHandlers[webContentsId] = callback

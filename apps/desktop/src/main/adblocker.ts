@@ -1,13 +1,8 @@
 import { ElectronBlocker } from '@cliqz/adblocker-electron'
 import fetch from 'cross-fetch'
-import { app as _app, session } from 'electron'
-// import { promises as fs } from 'fs'
-// import { join } from 'path'
+import { session } from 'electron'
 
 let blocker: ElectronBlocker | undefined
-// TODO: we have no session management atm
-// so this tracks only one session
-let currentState = false
 
 export async function setupAdblocker() {
   // blocker = await ElectronBlocker.fromPrebuiltAdsOnly(fetch, {
@@ -19,21 +14,18 @@ export async function setupAdblocker() {
   blocker = await ElectronBlocker.fromPrebuiltAdsOnly(fetch)
 }
 
-export function toggleAdblocker(partition: string): boolean {
-  if (!blocker) return false
+export function setAdblockerState(partition: string, state: boolean): void {
+  if (!blocker) return
 
-  currentState = !currentState
   const targetSession = session.fromPartition(partition)
-  if (currentState) {
-    blocker.enableBlockingInSession(targetSession)
+  if (state) {
+    !blocker.isBlockingEnabled(targetSession) && blocker.enableBlockingInSession(targetSession)
   } else {
-    blocker.disableBlockingInSession(targetSession)
+    blocker.isBlockingEnabled(targetSession) && blocker.disableBlockingInSession(targetSession)
   }
-
-  return currentState
 }
 
-export function getAdblockerState(_partition: string): boolean {
-  // TODO: no session management
-  return !!blocker && currentState
+export function getAdblockerState(partition: string): boolean {
+  if (!blocker) return false
+  return blocker.isBlockingEnabled(session.fromPartition(partition))
 }

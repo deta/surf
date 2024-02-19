@@ -2,8 +2,7 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { get, type Unsubscriber, type Writable } from 'svelte/store'
-
-  import { fade, fly } from 'svelte/transition'
+  import { fly } from 'svelte/transition'
 
   import WebviewWrapper, { type WebViewWrapperEvents } from './WebviewWrapper.svelte'
   import type { CardBrowser, CardEvents } from '../../../types'
@@ -12,7 +11,6 @@
   import type { Horizon } from '../../../service/horizon'
   import browserBackground from '../../../../../public/assets/browser-background.png'
   import defaultFavicon from '../../../../../public/assets/deta.svg'
-  import type { Gesture } from '@horizon/core/src/lib/utils/two-fingers'
 
   import Icon from '@horizon/core/src/lib/components/Icons/Icon.svelte'
 
@@ -77,8 +75,7 @@
   })
 
   const handleToggleAdblock = async (_e: MouseEvent) => {
-    //@ts-ignore
-    horizon?.adblockerState.set(await window.api.toggleAdblocker('persist:horizon'))
+    horizon.adblockerState.set(!get(horizon.adblockerState))
   }
 
   const handleKeyUp = (e: KeyboardEvent) => {

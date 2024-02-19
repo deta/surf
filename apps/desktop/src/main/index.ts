@@ -2,7 +2,7 @@ import { app, BrowserWindow } from 'electron'
 import { createWindow } from './mainWindow'
 import { setAppMenu } from './appMenu'
 import { registerShortcuts, unregisterShortcuts } from './shortcuts'
-import { setupAdblocker, toggleAdblocker } from './adblocker'
+import { setupAdblocker } from './adblocker'
 import { setupIpcHandlers } from './ipcHandlers'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
@@ -32,7 +32,6 @@ app.whenReady().then(async () => {
 
   setupIpcHandlers()
   await setupAdblocker()
-  toggleAdblocker('persist:horizon')
 
   setAppMenu()
   createWindow()
