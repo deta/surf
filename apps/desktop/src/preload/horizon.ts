@@ -46,6 +46,14 @@ const api = {
     } catch (error) {
       throw error
     }
+  },
+
+  onOpenCheatSheet: (callback) => {
+    try {
+      ipcRenderer.on('open-cheat-sheet', () => callback())
+    } catch (error) {
+      // noop
+    }
   }
 }
 

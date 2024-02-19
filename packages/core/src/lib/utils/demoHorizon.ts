@@ -1,6 +1,17 @@
 import type { Horizon } from '../service/horizon'
 import imageDND from '../../../public/assets/demo/dnd-full-hq.gif'
 import imageOverview from '../../../public/assets/demo/overview-demo-full.gif'
+import type { CardPosition } from '../types'
+
+export const createCheatSheetCard = (horizon: Horizon, position: CardPosition) => {
+  // Use environment variable for the cheatsheet URL
+  const cheatsheetUrl = import.meta.env.R_VITE_CHEATSHEET_URL
+  if (typeof cheatsheetUrl === 'string' && cheatsheetUrl.length > 0) {
+    horizon.addCardBrowser(cheatsheetUrl, position)
+  } else {
+    console.error('R_VITE_CHEATSHEET_URL is not defined or invalid.')
+  }
+}
 
 export const initDemoHorizon = async (horizon: Horizon) => {
   console.log('CREATING DEMO CARDS')
@@ -40,16 +51,10 @@ export const initDemoHorizon = async (horizon: Horizon) => {
     }
   })
 
-  // Use environment variable for the cheatsheet URL
-  const cheatsheetUrl = import.meta.env.R_VITE_CHEATSHEET_URL
-  if (typeof cheatsheetUrl === 'string' && cheatsheetUrl.length > 0) {
-    horizon.addCardBrowser(cheatsheetUrl, {
-      x: 550,
-      y: 50,
-      width: 600,
-      height: 800
-    })
-  } else {
-    console.error('R_VITE_CHEATSHEET_URL is not defined or invalid.')
-  }
+  createCheatSheetCard(horizon, {
+    x: 550,
+    y: 50,
+    width: 600,
+    height: 800
+  })
 }

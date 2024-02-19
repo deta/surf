@@ -54,3 +54,15 @@ export function setupIpcHandlers() {
     return image.toDataURL()
   })
 }
+
+export const ipcSenders = {
+  openCheatSheet: () => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('open-cheat-sheet')
+  }
+}

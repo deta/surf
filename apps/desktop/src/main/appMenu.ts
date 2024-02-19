@@ -1,5 +1,6 @@
 import { app, Menu } from 'electron'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
+import { ipcSenders } from './ipcHandlers'
 
 const isMac = process.platform === 'darwin'
 
@@ -72,6 +73,10 @@ const template = [
         ? [{ type: 'separator' }, { role: 'front' }, { type: 'separator' }, { role: 'window' }]
         : [{ role: 'close' }])
     ]
+  },
+  {
+    label: 'Help',
+    submenu: [{ label: 'Open Cheat Sheet', click: () => ipcSenders.openCheatSheet() }]
   }
 ]
 

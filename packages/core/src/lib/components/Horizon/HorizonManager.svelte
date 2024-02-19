@@ -25,6 +25,7 @@
   import HorizonInfo from './HorizonInfo.svelte'
   import { isModKeyPressed } from '../../utils/keyboard'
   import { requestNewPreviewImage } from '../../utils/screenshot'
+  import { createCheatSheetCard } from '../../utils/demoHorizon'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -490,6 +491,26 @@
     log.debug('initialized', horizonId)
 
     sortHorizons()
+
+    window.api.onOpenCheatSheet(() => {
+      log.debug('open cheat sheet')
+      if ($activeHorizon) {
+        const board = $activeHorizon.board
+        if (!board) return
+        const state = get(board.state)
+        const viewport = get(state.viewPort)
+        const viewoffset = get(state.viewOffset)
+        const width = Math.max(viewport.w / 2 - SAFE_AREA_PADDING * 2, 600)
+        const height = viewport.h - SAFE_AREA_PADDING * 2
+
+        createCheatSheetCard($activeHorizon, {
+          x: viewoffset.x + viewport.w / 2 - width / 2,
+          y: viewoffset.y + viewport.h / 2 - height / 2 - 25,
+          width: width,
+          height: height
+        })
+      }
+    })
   })
 
   onDestroy(() => {
