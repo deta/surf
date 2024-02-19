@@ -47,8 +47,12 @@ jobs:
           node-version: 18
 
       - name: Install Dependencies
-        timeout-minutes: 3
-        run: yarn install --frozen-lockfile
+        # using retries as there are recurring cases for unknown reasons where the yarn install gets stuck
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 3
+          max_attempts: 2
+          command: yarn install --frozen-lockfile
 
       - name: Set Build Env Variables
         run: |
