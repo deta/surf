@@ -118,7 +118,7 @@
     }
   }
 
-  const handleWebviewKeydown = (e: CustomEvent<WebViewWrapperEvents['keydownWebview']>) => {
+  const handleWebviewKeydown = async (e: CustomEvent<WebViewWrapperEvents['keydownWebview']>) => {
     const event = e.detail
     log.debug('keydown event', event)
     if (event.key === 'Escape') {
@@ -130,7 +130,18 @@
     } else if (isModKeyAndKeyPressed(event as KeyboardEvent, 'f')) {
       log.debug('mod+f pressed')
 
-      findInPage?.open()
+      if (!findInPage || !webview) return
+
+      if (findInPage.isOpen()) {
+        const selection = await webview.getSelection()
+        if (selection) {
+          findInPage.find(selection)
+        } else {
+          findInPage.close()
+        }
+      } else {
+        findInPage.open()
+      }
     }
   }
 

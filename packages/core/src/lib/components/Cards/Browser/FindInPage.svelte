@@ -4,6 +4,7 @@
   import type WebviewWrapper from './WebviewWrapper.svelte'
   import type { WebViewWrapperEvents } from './WebviewWrapper.svelte'
   import { useLogScope } from '../../../utils/log'
+  import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
 
   export let webview: WebviewWrapper
   export let value = ''
@@ -23,16 +24,20 @@
 
     const selection = await webview.getSelection()
     if (selection) {
-      value = selection
-      inputElem.setSelectionRange(0, value.length)
-      find()
+      find(selection)
     }
 
     inputElem.focus()
   }
 
-  export const find = async () => {
+  export const find = async (searchValue?: string) => {
     log.debug('start find')
+
+    if (searchValue) {
+      value = searchValue
+      inputElem.focus()
+      inputElem.setSelectionRange(0, searchValue.length)
+    }
 
     if (value === '') {
       return
@@ -89,11 +94,29 @@
     activeMatchOrdinal = result.activeMatchOrdinal
   }
 
-  const handleKeyUp = (event: KeyboardEvent) => {
+  const handleKeyDown = async (event: KeyboardEvent) => {
+    console.log('handleKeyDown', event)
     if (event.key === 'Escape') {
       close()
+    } else if (isModKeyAndKeyPressed(event, 'f')) {
+      event.preventDefault()
+
+      const selection = await webview.getSelection()
+      if (selection) {
+        find(selection)
+      } else {
+        close()
+      }
+    } else if (event.key === 'ArrowDown') {
+      findNext()
+    } else if (event.key === 'ArrowUp') {
+      findPrevious()
     } else if (value === '') {
-      stopFind()
+      if (event.key === 'Backspace') {
+        close()
+      } else {
+        stopFind()
+      }
     } else {
       find()
     }
@@ -115,7 +138,7 @@
       <input
         bind:this={inputElem}
         bind:value
-        on:keyup={handleKeyUp}
+        on:keydown={handleKeyDown}
         type="text"
         placeholder="find in page"
       />
@@ -130,8 +153,8 @@
     </div>
 
     <div class="find-actions">
-      <button on:click={findPrevious}> ← </button>
-      <button on:click={findNext}> → </button>
+      <button on:click={findPrevious}> ↑ </button>
+      <button on:click={findNext}> ↓ </button>
       <button on:click={close}> ✕ </button>
     </div>
   </div>
