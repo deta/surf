@@ -48,6 +48,14 @@ export function createWindow(): void {
     }
   })
 
+  mainWindow.on('enter-full-screen', () => {
+    getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: true })
+  })
+
+  mainWindow.on('leave-full-screen', () => {
+    getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: false })
+  })
+
   mainWindow.webContents.on('did-attach-webview', (_, contents) => {
     contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
       mainWindow?.webContents.send('new-window-request', {

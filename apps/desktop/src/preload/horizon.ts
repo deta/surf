@@ -5,6 +5,7 @@ import fetch from 'cross-fetch'
 
 const webviewNewWindowHandlers = {}
 const previewImageHandlers = {}
+const fullscreenHandlers = [] as any[]
 
 const api = {
   webviewDevToolsBtn: !import.meta.env.PROD || !!process.env.WEBVIEW_DEV_TOOLS_BTN,
@@ -14,7 +15,12 @@ const api = {
     ipcRenderer.invoke('get-adblocker-state', { partition }),
   setAdblockerState: (partition: string, state: boolean) =>
     ipcRenderer.invoke('set-adblocker-state', { partition, state }),
+  requestNewPreviewImage: (horizonId: string) =>
+    ipcRenderer.invoke('request-new-preview-image', { horizonId }),
 
+  onFullscreenChange: (callback: any) => {
+    fullscreenHandlers.push(callback)
+  },
   registerNewWindowHandler: (webContentsId: number, callback: any) => {
     webviewNewWindowHandlers[webContentsId] = callback
   },
@@ -23,9 +29,6 @@ const api = {
       delete webviewNewWindowHandlers[webContentsId]
     }
   },
-  requestNewPreviewImage: (horizonId: string) =>
-    ipcRenderer.invoke('request-new-preview-image', { horizonId }),
-
   registerPreviewImageHandler: (horizonId: string, callback: any) => {
     previewImageHandlers[horizonId] = callback
   },
@@ -56,6 +59,10 @@ const api = {
     }
   }
 }
+
+ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {
+  fullscreenHandlers.forEach((handler) => handler(isFullscreen))
+})
 
 ipcRenderer.on('new-window-request', (_, { webContentsId, ...data }) => {
   const handler = webviewNewWindowHandlers[webContentsId]
