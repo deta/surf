@@ -18,6 +18,10 @@ import ListNumbered from './Icons/ListNumbered.svelte'
 import ListCheck from './Icons/ListCheck.svelte'
 import Quote from './Icons/Quote.svelte'
 import CodeBlock from './Icons/CodeBlock.svelte'
+import ArrowHorizontal from './Icons/ArrowHorizontal.svelte'
+import ArrowDiagonalMinimize from './Icons/ArrowDiagonalMinimize.svelte'
+import Search from './Icons/Search.svelte'
+import Info from './Icons/Info.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -40,7 +44,11 @@ export const icons = {
   'list-numbered': ListNumbered,
   'list-check': ListCheck,
   quote: Quote,
-  'code-block': CodeBlock
+  'code-block': CodeBlock,
+  arrowHorizontal: ArrowHorizontal,
+  arrowDiagonalMinimize: ArrowDiagonalMinimize,
+  search: Search,
+  info: Info
 }
 
 export type Icons = keyof typeof icons
@@ -67,5 +75,9 @@ export {
   ListNumbered,
   ListCheck,
   Quote,
-  CodeBlock
+  CodeBlock,
+  ArrowHorizontal,
+  ArrowDiagonalMinimize,
+  Search,
+  Info
 }

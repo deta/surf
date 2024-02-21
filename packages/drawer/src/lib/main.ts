@@ -1,1 +1,1 @@
-export { default as Editor } from './Drawer.svelte'
+export * from './drawer'

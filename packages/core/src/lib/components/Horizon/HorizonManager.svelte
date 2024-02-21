@@ -9,7 +9,10 @@
   import { API } from '@horizon/core/src/lib/service/api'
   import { HorizonsManager, Horizon as IHorizon } from '@horizon/core/src/lib/service/horizon'
 
+  import { Drawer } from '@horizon/drawer'
+
   import './index.scss'
+  import '@horizon/drawer/src/index.scss'
 
   import Horizon from './Horizon.svelte'
   import { useLogScope } from '../../utils/log'
@@ -26,6 +29,7 @@
   import { isModKeyPressed } from '../../utils/keyboard'
   import { requestNewPreviewImage } from '../../utils/screenshot'
   import { createCheatSheetCard } from '../../utils/demoHorizon'
+  import DrawerWrapper from './DrawerWrapper.svelte'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -74,6 +78,7 @@
   let initialSorting = false
   let overScrollTimeout: ReturnType<typeof setTimeout> | null = null
   let moveToStackItem: (idx: number) => Promise<void>
+  let drawer: Drawer
 
   $: selectedHorizonId = sortedHorizons[$activeStackItemIdx]
 
@@ -284,6 +289,13 @@
       }
     }
 
+    if (drawer.isShown()) {
+      if (event.key === 'Escape') {
+        drawer.close()
+        return
+      }
+    }
+
     if (!isModKeyPressed(event)) return
 
     if (event.key === 'n') {
@@ -304,6 +316,24 @@
         const cardId = get(activeCardId)
         if (!cardId) return
         await $activeHorizon.deleteCard(cardId)
+      }
+    } else if (event.key === 'g') {
+      if (drawer.isShown()) {
+        if (drawer.getSize() === 'full') {
+          drawer.setSize('normal')
+        } else {
+          drawer.setSize('full')
+        }
+      } else {
+        drawer.open()
+      }
+    } else if (event.key === 'f') {
+      if (drawer.isShown()) {
+        if (drawer.getSize() === 'full') {
+          drawer.setSize('normal')
+        } else {
+          drawer.setSize('full')
+        }
       }
     } else if (event.key === 'Escape') {
       event.preventDefault()
@@ -591,6 +621,10 @@
 
   {#if !$showStackOverview && $activeHorizon}
     <MediaImporter horizon={$activeHorizon} />
+  {/if}
+
+  {#if $activeHorizon}
+    <DrawerWrapper bind:drawer horizon={$activeHorizon} />
   {/if}
 
   <Stack

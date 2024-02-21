@@ -17,6 +17,7 @@
   import { useLogScope } from '../../utils/log'
   import type { Horizon } from '../../service/horizon'
   import { Icon } from '@horizon/icons'
+  import CardContent from '../Cards/CardContent.svelte'
 
   // TODO: fix this unnecessary cast
   const BrowserCard = () =>
@@ -193,31 +194,7 @@
   </div>
 
   <div class="content tela-ignore" style={!active ? 'pointer-events: none;' : ''}>
-    {#if $card.type === 'browser'}
-      <LazyComponent this={BrowserCard}>
-        <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} {active} on:load on:change on:delete />
-        </svelte:fragment>
-      </LazyComponent>
-    {:else if $card.type === 'text'}
-      <LazyComponent this={TextCard}>
-        <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} {active} on:load on:change on:delete />
-        </svelte:fragment>
-      </LazyComponent>
-    {:else if $card.type === 'link'}
-      <LazyComponent this={LinkCard}>
-        <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} {active} on:load on:change on:delete />
-        </svelte:fragment>
-      </LazyComponent>
-    {:else if $card.type === 'file'}
-      <LazyComponent this={FileCard}>
-        <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} {active} on:load on:change on:delete />
-        </svelte:fragment>
-      </LazyComponent>
-    {/if}
+    <CardContent {positionable} {horizon} on:load on:change on:delete />
   </div>
 </Positionable>
 
