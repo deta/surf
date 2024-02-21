@@ -2,8 +2,8 @@ name: Dawn Release
 
 on:
   schedule:
-    # 1:23 AM UTC, Tuesday through Saturday
-    - cron: '23 1 * * 2-6'
+    # every weekday at 20:03 UTC
+    - cron: '3 20 * * 1-5'
   workflow_dispatch:
 
 jobs:
