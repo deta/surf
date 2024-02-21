@@ -1,5 +1,6 @@
 <script>
   export let size = '18px'
+  export let color = '#8a8a8a'
 </script>
 
 <svg
@@ -8,7 +9,7 @@
   height={size}
   viewBox="0 0 24 24"
   stroke-width="2"
-  stroke="currentColor"
+  stroke={color}
   fill="none"
   stroke-linecap="round"
   stroke-linejoin="round"

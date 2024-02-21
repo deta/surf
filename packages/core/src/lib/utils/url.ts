@@ -58,6 +58,41 @@ export const getInstanceAlias = (url: URL) => {
   return subdomain
 }
 
+export const generateRootDomain = (urlInput: string | URL) => {
+  if (!urlInput) {
+    return ''
+  }
+
+  let url
+  try {
+    if (typeof urlInput === 'string') {
+      if (/^https?:\/\/[^ "]+$/.test(urlInput)) {
+        url = new URL(urlInput)
+      } else {
+        throw new Error('Invalid URL format')
+      }
+    } else {
+      url = urlInput
+    }
+
+    const domain = url.hostname
+    const elems = domain.split('.')
+    if (elems.length < 2) {
+      return ''
+    }
+
+    const iMax = elems.length - 1
+    const elem1 = elems[iMax - 1]
+    const elem2 = elems[iMax]
+    const isSecondLevelDomain = iMax >= 3 && (elem1 + elem2).length <= 5
+
+    return (isSecondLevelDomain ? elems[iMax - 2] + '.' : '') + elem1 + '.' + elem2
+  } catch (error) {
+    console.error('Error parsing URL:', error)
+    return '' // or return some default error indication as needed
+  }
+}
+
 export const checkIfSpaceApp = (url: URL) => {
   return (
     url.hostname.endsWith('deta.app') ||
