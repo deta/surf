@@ -114,6 +114,10 @@
   const handleDrop = async (e: DragEvent) => {
     log.debug('drop', e)
     e.preventDefault()
+
+    // send event to window so that other components know that a drop event has occurred
+    window.dispatchEvent(new CustomEvent('drop', { detail: e }))
+
     e.dataTransfer?.types.map((t) => log.debug(t, e.dataTransfer?.getData(t)))
 
     const dataTypes = ['text/html', 'text/plain', 'text/uri-list']
@@ -263,8 +267,8 @@
     const card = await horizon.addCardBrowser(url.href, {
       x: pos.x - DEFAULT_CARD_SIZE.width / 2,
       y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-      width: DEFAULT_CARD_SIZE.width,
-      height: DEFAULT_CARD_SIZE.height
+      width: 800,
+      height: 500
     })
     log.debug('created card', get(card))
   }

@@ -72,6 +72,10 @@
   on:mousedown
   on:mousemove
   on:mouseover
+  on:dragenter
+  on:dragover
+  on:dragleave
+  on:dragend
 >
   <slot />
 </div>
