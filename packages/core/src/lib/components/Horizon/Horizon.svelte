@@ -44,7 +44,7 @@
     BOUNDS: {
       minX: 0,
       minY: 0,
-      maxX: 1920 * 7,
+      maxX: Infinity, //1920 * 7,
       maxY: Infinity,
       maxZoom: 1,
       minZoom: 1, // todo?: Do we need to make these dynamic?
