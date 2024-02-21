@@ -15,13 +15,14 @@
   import { writable, get } from 'svelte/store'
   import type { WebviewTag } from 'electron'
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
-
-  import type { Gesture } from '@horizon/core/src/lib/utils/two-fingers'
+  import type { HistoryEntriesManager } from '../../../service/horizon'
+  import type { HistoryEntry } from '../../../types'
 
   const dispatch = createEventDispatcher<WebViewWrapperEvents>()
 
   export let src: string
   export let partition: string
+  export let historyEntriesManager: HistoryEntriesManager
 
   export const url = writable(src)
   export const canGoBack = writable(false)
@@ -33,21 +34,26 @@
   export const playback = writable(false)
   export const isMuted = writable(false)
 
-  export const historyStack = writable<string[]>([])
+  export const historyStackIds = writable<string[]>([])
   export const currentHistoryIndex = writable(-1)
   let programmaticNavigation = false
   let newWindowHandlerRegistered = false
   let webviewWebContentsId: number | null = null
+  let initialLoadDone = src == ''
+  let pendingUrlUpdate: { url: string; timestamp: number } | null = null
 
   let webview: WebviewTag
+  window.g = () => historyEntriesManager.entriesStore.subscribe((h) => console.log(h))
+  window.h = () => historyStackIds.subscribe((h) => console.log(h))
+  window.s = (q: string) => historyEntriesManager.searchEntries(q)
 
   const updateNavigationState = () => {
     canGoBack.set(get(currentHistoryIndex) > 0)
-    canGoForward.set(get(currentHistoryIndex) < get(historyStack).length - 1)
+    canGoForward.set(get(currentHistoryIndex) < get(historyStackIds).length - 1)
   }
 
   const handleRedirectNav = (newUrl: string) => {
-    historyStack.update((stack) => {
+    historyStackIds.update((stack) => {
       const index = get(currentHistoryIndex)
       if (index >= 0 && index < stack.length) {
         stack[index] = newUrl
@@ -60,29 +66,67 @@
     url.set(newUrl)
   }
 
-  $: webview, updateNavigationState()
-  $: {
-    if (
-      webview &&
-      !programmaticNavigation &&
-      $url !== get(historyStack)[get(currentHistoryIndex)]
-    ) {
-      historyStack.update((stack) => {
+  const addHistoryEntry = async (url: string, pageTitle: string) => {
+    if (!initialLoadDone) {
+      initialLoadDone = true
+      return
+    }
+    if (programmaticNavigation) return
+
+    try {
+      const entry: HistoryEntry = await historyEntriesManager.addEntry({
+        type: 'navigation',
+        url: url,
+        title: pageTitle
+      } as HistoryEntry)
+
+      historyStackIds.update((stack) => {
         let index = get(currentHistoryIndex)
         if (index < stack.length - 1) {
           stack = stack.slice(0, index + 1)
         }
-        stack.push($url)
+        stack.push(entry.id)
         return stack
       })
+
       currentHistoryIndex.update((n) => n + 1)
       updateNavigationState()
-    }
+    } catch (error) {}
 
     programmaticNavigation = false
   }
 
+  $: webview, updateNavigationState()
+  // $: {
+  //   if (
+  //     webview &&
+  //     !programmaticNavigation &&
+  //     initialLoadDone &&
+  //     $url !== '' &&
+  //     // TODO: extract this into a store of its own
+  //     $url !== historyEntriesManager.getEntry(get(historyStackIds)[get(currentHistoryIndex)])?.url
+  //   ) {
+  //     historyEntriesManager
+  //       .addEntry({ type: 'navigation', url: $url, title: 'TEST' } as HistoryEntry)
+  //       .then((entry: HistoryEntry) => {
+  //         historyStackIds.update((stack) => {
+  //           let index = get(currentHistoryIndex)
+  //           if (index < stack.length - 1) {
+  //             stack = stack.slice(0, index + 1)
+  //           }
+  //           stack.push(entry.id)
+  //           return stack
+  //         })
+  //         currentHistoryIndex.update((n) => n + 1)
+  //         updateNavigationState()
+  //       })
+  //   }
+
+  //   programmaticNavigation = false
+  // }
+
   onMount(() => {
+    console.log(get(historyEntriesManager.entriesStore))
     webview.addEventListener('ipc-message', (event) => {
       if (event.channel !== 'webview-page-event') return
 
@@ -121,16 +165,32 @@
       }
     })
 
-    webview.addEventListener('did-navigate', (e: any) => url.set(e.url))
-    webview.addEventListener('did-navigate-in-page', (e: any) => {
-      if (e.isMainFrame) url.set(e.url)
+    webview.addEventListener('did-navigate', (e: any) => {
+      url.set(e.url)
+      pendingUrlUpdate = { url: e.url, timestamp: Date.now() }
     })
+
+    webview.addEventListener('did-navigate-in-page', (e: any) => {
+      console.log('e, what?')
+      if (e.isMainFrame) {
+        url.set(e.url)
+        // addHistoryEntry(e.url, get(title))
+      }
+    })
+
     webview.addEventListener('did-redirect-navigation', (event) => {
       if (event.isMainFrame && event.isInPlace) handleRedirectNav(event.url)
     })
     webview.addEventListener('did-start-loading', () => isLoading.set(true))
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
-    webview.addEventListener('page-title-updated', (e: any) => title.set(e.title))
+    webview.addEventListener('page-title-updated', (e: any) => {
+      title.set(e.title)
+      if (pendingUrlUpdate) {
+        addHistoryEntry(pendingUrlUpdate.url, e.title)
+        pendingUrlUpdate = null
+      }
+    })
+
     webview.addEventListener('did-finish-load', () => {
       dispatch('didFinishLoad')
       didFinishLoad.set(true)
@@ -178,26 +238,32 @@
       if (n > 0) {
         n--
         programmaticNavigation = true
-        navigate(get(historyStack)[n])
-        updateNavigationState()
+        const historyEntry = historyEntriesManager.getEntry(get(historyStackIds)[n])
+        if (historyEntry) {
+          navigate(historyEntry.url as string)
+        }
         return n
       }
       return n
     })
+    updateNavigationState()
   }
 
   export function goForward(): void {
     currentHistoryIndex.update((n) => {
-      const stack = get(historyStack)
+      const stack = get(historyStackIds)
       if (n < stack.length - 1) {
         n++
         programmaticNavigation = true
-        navigate(stack[n])
-        updateNavigationState()
+        const historyEntry = historyEntriesManager.getEntry(get(historyStackIds)[n])
+        if (historyEntry) {
+          navigate(historyEntry.url as string)
+        }
         return n
       }
       return n
     })
+    updateNavigationState()
   }
 
   export function findInPage(text: string, options?: Electron.FindInPageOptions) {

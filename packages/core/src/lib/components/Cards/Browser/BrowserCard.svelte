@@ -2,10 +2,11 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { get, type Unsubscriber, type Writable } from 'svelte/store'
+
   import { fly } from 'svelte/transition'
 
   import WebviewWrapper, { type WebViewWrapperEvents } from './WebviewWrapper.svelte'
-  import type { CardBrowser, CardEvents } from '../../../types'
+  import type { HistoryEntry, CardBrowser, CardEvents } from '../../../types'
   import { useLogScope } from '../../../utils/log'
   import { parseStringIntoUrl } from '../../../utils/url'
   import type { Horizon } from '../../../service/horizon'
@@ -22,6 +23,7 @@
   export let active: boolean = false
 
   const adblockerState = horizon.adblockerState
+  const historyEntriesManager = horizon.historyEntriesManager
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('BrowserCard')
 
@@ -29,8 +31,15 @@
   let inputEl: HTMLInputElement
   let findInPage: FindInPage | undefined
 
-  const initialSrc =
-    $card.data.historyStack[$card.data.currentHistoryIndex] || $card.data.initialLocation
+  let initialSrc = $card.data.initialLocation
+  if ($card.data.historyStackIds) {
+    let currentEntry = historyEntriesManager.getEntry(
+      $card.data.historyStackIds[$card.data.currentHistoryIndex]
+    )
+    // the historyStack will never have a history entry of type `search`
+    if (currentEntry) initialSrc = currentEntry.url as string
+  }
+
   const unsubTracker: Unsubscriber[] = []
 
   $: {
@@ -42,13 +51,13 @@
 
   onMount(() => {
     if (webview) {
-      webview.historyStack.set($card.data.historyStack)
+      webview.historyStackIds.set($card.data.historyStackIds)
       webview.currentHistoryIndex.set($card.data.currentHistoryIndex)
 
       // TODO: no need to invoke two changes in most cases
       unsubTracker.push(
-        webview.historyStack.subscribe((stack) => {
-          $card.data.historyStack = stack
+        webview.historyStackIds.subscribe((stack) => {
+          $card.data.historyStackIds = stack
           dispatch('change', get(card))
         })
       )
@@ -85,6 +94,12 @@
         const replacedSpaces = value.replace(/ /g, '+')
         const googleSearch = `https://google.com/search?q=${replacedSpaces}`
         url = new URL(googleSearch)
+
+        const historyEntry = {
+          type: 'search',
+          searchQuery: value
+        } as HistoryEntry
+        historyEntriesManager.addEntry(historyEntry)
       }
       webview?.navigate(url.href)
       inputEl.blur()
@@ -161,17 +176,12 @@
   $: if (!editing && $url !== 'about:blank') {
     value = $url ?? ''
   }
-
-  // Reactive statement to autofocus input when it's available
   $: if (active && inputEl && ($url == 'about:blank' || $url == '')) {
     inputEl.focus({ preventScroll: true })
   }
-
   $: if (!editing) {
-    // Shortens URL from xyz.com/sss-www-www to xyz.com
     value = generateRootDomain(value)
   }
-
   $: if (editing) {
     value = $url ?? ''
   }
@@ -188,14 +198,12 @@
 
   function generateRootDomain(urlInput: string | URL): string {
     if (!urlInput) {
-      return '' // Return empty string if input is falsy (empty, null, undefined, etc.)
+      return ''
     }
 
     let url
     try {
-      // If urlInput is a string, validate and parse it. Otherwise, use it directly.
       if (typeof urlInput === 'string') {
-        // Basic validation to check if string resembles a URL
         if (/^https?:\/\/[^ "]+$/.test(urlInput)) {
           url = new URL(urlInput)
         } else {
@@ -208,7 +216,7 @@
       const domain = url.hostname
       const elems = domain.split('.')
       if (elems.length < 2) {
-        return '' // Not enough domain parts
+        return ''
       }
 
       const iMax = elems.length - 1
@@ -240,6 +248,7 @@
       bind:this={webview}
       src={initialSrc}
       partition="persist:horizon"
+      {historyEntriesManager}
       on:wheelWebview={(event) => log.debug('wheel event from the webview: ', event.detail)}
       on:focusWebview={handleWebviewFocus}
       on:newWindowWebview={handleWebviewNewWindow}

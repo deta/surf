@@ -40,6 +40,7 @@
   "dependencies": {
     "@amplitude/analytics-browser": "^2.4.0",
     "dexie": "^3.2.4",
+    "fuse.js": "^7.0.0",
     "uuid": "^9.0.1"
   }
 }
