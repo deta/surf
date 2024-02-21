@@ -12,7 +12,7 @@
   import browserBackground from '../../../../../public/assets/browser-background.png'
   import defaultFavicon from '../../../../../public/assets/deta.svg'
 
-  import Icon from '@horizon/core/src/lib/components/Icons/Icon.svelte'
+  import { Icon } from '@horizon/icons'
 
   import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
   import FindInPage from './FindInPage.svelte'

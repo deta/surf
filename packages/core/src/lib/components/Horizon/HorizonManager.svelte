@@ -21,7 +21,7 @@
   import { advancedSpring } from '../../utils/advancedSpring'
   import { wait } from '../../utils/time'
   import type { Card } from '../../types'
-  import { Icon } from '..'
+  import { Icon } from '@horizon/icons'
   import HorizonInfo from './HorizonInfo.svelte'
   import { isModKeyPressed } from '../../utils/keyboard'
   import { requestNewPreviewImage } from '../../utils/screenshot'

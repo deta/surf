@@ -22,6 +22,7 @@
     "@horizon/eslint-config": "*",
     "@horizon/tela": "*",
     "@horizon/types": "*",
+    "@horizon/icons": "*",
     "@horizon/typescript-config": "*",
     "@skilitics-public/two-fingers": "^2.1.0",
     "@svelte-plugins/tooltips": "^3.0.0",

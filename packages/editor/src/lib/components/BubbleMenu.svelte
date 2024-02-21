@@ -2,7 +2,7 @@
   import type { Readable } from 'svelte/store'
   import { BubbleMenu, type Editor } from 'svelte-tiptap'
 
-  import Icon from '../icons/Icon.svelte'
+  import { Icon } from '@horizon/icons'
 
   export let editor: Readable<Editor>
 
