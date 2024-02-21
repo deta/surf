@@ -16,6 +16,7 @@
   import type { Card, CardEvents } from '../../types'
   import { useLogScope } from '../../utils/log'
   import type { Horizon } from '../../service/horizon'
+  import Horizon from './Horizon.svelte'
   import { Icon } from '@horizon/icons'
 
   // TODO: fix this unnecessary cast
@@ -60,8 +61,13 @@
     dispatch('change', $card)
   }
 
-  const handleMouseDown = () => {
-    horizon.setActiveCard($card.id)
+  const handleMouseDown = (event) => {
+    if (event.metaKey || event.ctrlKey) {
+      horizon.setActiveCard($card.id)
+      horizon.scrollToCardCenter($card.id)
+    } else {
+      horizon.setActiveCard($card.id)
+    }
   }
 
   const handleDragEnd = (_: any) => {
@@ -113,6 +119,14 @@
       headerClickTimeout = null
     }
     dispatch('duplicate', $card)
+  }
+
+  function scrollTo(event: MouseEvent) {
+    const button = event.target as HTMLButtonElement
+    const cardID = button.getAttribute('data-card-id')
+    if (cardID) {
+      horizon.scrollToCardCenter(cardID)
+    }
   }
 
   const clearDragTimeout = () => {

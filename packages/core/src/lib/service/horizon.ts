@@ -7,7 +7,7 @@ import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
 import { Telemetry, EventTypes, type TelemetryConfig } from './telemetry'
 import { moveToStackingTop, type IBoard, clamp, type IBoardSettings } from '@horizon/tela'
-import { quintOut } from 'svelte/easing'
+import { quintOut, expoOut } from 'svelte/easing'
 
 import Fuse, { type FuseResult } from 'fuse.js'
 
@@ -413,6 +413,42 @@ export class Horizon {
         y: viewOffset.y
       }),
       { duration: 100, easing: quintOut }
+    )
+  }
+
+  async scrollToCardCenter(idOrCard: Card | string) {
+    const board = this.board
+    if (!board) {
+      this.log.warn('scrollToCardCenter called with missing board')
+      return
+    }
+
+    const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
+    if (!card) throw new Error(`Card ${idOrCard} not found`)
+
+    this.log.debug(`Centering board to card ${card.id}`)
+
+    const settings = this.telaSettings ? get(this.telaSettings) : null
+    const state = get(board.state)
+    const viewportWidth = get(state.viewPort).w
+
+    // Calculate the horizontal center of the card
+    const cardCenter = card.x + card.width / 2
+
+    // Calculate the new offsetX to center the card in the viewport
+    // The idea is to subtract half of the viewport width from the card's center position
+    const newOffsetX = cardCenter - viewportWidth / 2
+
+    // Clamp the newOffsetX to ensure it's within the bounds (if specified in settings)
+    const clampedOffsetX = clamp(newOffsetX, 0, settings?.BOUNDS?.maxX ?? 1000)
+
+    // Update the viewOffset to center the card
+    state.viewOffset.update(
+      (viewOffset) => ({
+        x: clampedOffsetX,
+        y: viewOffset.y
+      }),
+      { duration: 640, easing: expoOut }
     )
   }
 }
