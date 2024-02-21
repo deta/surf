@@ -16,7 +16,7 @@
   import type { Card, CardEvents } from '../../types'
   import { useLogScope } from '../../utils/log'
   import type { Horizon } from '../../service/horizon'
-  import { Icon } from '..'
+  import { Icon } from '@horizon/icons'
 
   // TODO: fix this unnecessary cast
   const BrowserCard = () =>

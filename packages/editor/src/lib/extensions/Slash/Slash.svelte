@@ -2,16 +2,17 @@
 
 <script context="module" lang="ts">
   import type { Editor } from '@tiptap/core'
+  import type { Icons } from '@horizon/icons'
 
   export type Item = {
-    icon: string
+    icon: Icons
     title: string
     command: (props: { editor: Editor; range: any }) => void
   }
 </script>
 
 <script lang="ts">
-  import Icon from '../../icons/Icon.svelte'
+  import { Icon } from '@horizon/icons'
 
   export let editor: Editor
   export let range: any
