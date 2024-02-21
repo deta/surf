@@ -3,6 +3,7 @@
 
   export let size = '18px'
   export let name: Icons
+  export let color = '#8a8a8a'
 </script>
 
-<svelte:component this={icons[name]} {size} {...$$restProps} />
+<svelte:component this={icons[name]} {size} {color} {...$$restProps} />
