@@ -57,7 +57,7 @@ export interface CardBrowser extends Card {
   type: 'browser'
   data: {
     initialLocation: string
-    historyStack: string[]
+    historyStackIds: string[]
     currentHistoryIndex: number
   }
 }
@@ -84,6 +84,26 @@ export interface CardLink extends Card {
     title?: string
     url: string
   }
+}
+
+export interface HistoryEntry {
+  id: string
+  createdAt: string
+  updatedAt: string
+  sessionId: string
+  type: 'navigation' | 'search'
+  url?: string
+  title?: string
+  searchQuery?: string
+  inPageNavigation?: boolean
+}
+
+export interface Session {
+  id: string
+  createdAt: string
+  updatedAt: string
+  partition: string
+  userId: string
 }
 
 export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>

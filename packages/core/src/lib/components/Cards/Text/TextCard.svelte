@@ -30,6 +30,16 @@
     debouncedSaveContent(value)
   })
 
+  // prevent default drag and drop behavior (i.e. the MediaImporter handling it)
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    log.debug('dropped onto text card')
+
+    // seems like tiptap handles text drag and drop already
+  }
+
   onMount(() => {
     if (active) {
       focusEditor()
@@ -37,7 +47,8 @@
   })
 </script>
 
-<div class="text-card">
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<div on:drop={handleDrop} class="text-card">
   <Editor
     bind:focus={focusEditor}
     bind:content={$value}

@@ -1,5 +1,5 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
-import type { Card, CardPosition, Optional } from '../types'
+import type { Card, CardPosition, HistoryEntry, Optional } from '../types'
 import type { API } from './api'
 import type { Resource, HorizonState, HorizonData } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
@@ -8,6 +8,8 @@ import { HorizonDatabase, LocalStorage } from './storage'
 import { Telemetry, EventTypes, type TelemetryConfig } from './telemetry'
 import { moveToStackingTop, type IBoard, clamp, type IBoardSettings } from '@horizon/tela'
 import { quintOut } from 'svelte/easing'
+
+import Fuse, { type FuseResult } from 'fuse.js'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 8
@@ -31,21 +33,24 @@ export class Horizon {
   log: ScopedLogger
   storage: HorizonDatabase
   telemetry: Telemetry
+  historyEntriesManager: HistoryEntriesManager
 
   constructor(
     id: string,
     data: HorizonData,
     api: API,
     telemetry: Telemetry,
+    historyEntriesManager: HistoryEntriesManager,
     adblockerState: Writable<boolean>,
     previewImageResource: Resource | undefined,
     signalChange: (horizon: Horizon) => void
   ) {
     this.id = id
     this.api = api
-    this.telemetry = telemetry
     this.log = useLogScope(`Horizon ${id}`)
     this.storage = new HorizonDatabase()
+    this.telemetry = telemetry
+    this.historyEntriesManager = historyEntriesManager
 
     this.state = 'cold'
     this.inStateSince = Date.now()
@@ -272,7 +277,7 @@ export class Horizon {
         type: 'browser',
         data: {
           initialLocation: location,
-          historyStack: [] as string[],
+          historyStackIds: [] as string[],
           currentHistoryIndex: -1
         }
       },
@@ -412,6 +417,165 @@ export class Horizon {
   }
 }
 
+export class HistoryEntriesManager {
+  entries: Writable<Map<string, HistoryEntry>>
+  db: HorizonDatabase
+
+  constructor() {
+    this.entries = writable(new Map())
+    this.db = new HorizonDatabase()
+    this.init()
+  }
+
+  // TODO: load only required state, on demand
+  async init() {
+    const allEntries = await this.db.historyEntries.all()
+    const entriesMap = new Map(allEntries.map((entry) => [entry.id, entry]))
+    this.entries.set(entriesMap)
+  }
+
+  get entriesStore() {
+    return this.entries
+  }
+
+  getEntry(id: string): HistoryEntry | undefined {
+    let entry
+    this.entries.subscribe((entries) => (entry = entries.get(id)))()
+    return entry
+  }
+
+  async addEntry(entry: HistoryEntry): Promise<HistoryEntry> {
+    const newEntry = await this.db.historyEntries.create(entry)
+    this.entries.update((entries) => entries.set(newEntry.id, newEntry))
+    return newEntry
+  }
+
+  async updateEntry(id: string, newData: Partial<HistoryEntry>) {
+    await this.db.historyEntries.update(id, newData)
+    this.entries.update((entries) => {
+      const entry = entries.get(id)
+      if (entry) {
+        entries.set(id, { ...entry, ...newData })
+      }
+      return entries
+    })
+  }
+
+  async removeEntry(id: string) {
+    await this.db.historyEntries.delete(id)
+    this.entries.update((entries) => {
+      entries.delete(id)
+      return entries
+    })
+  }
+
+  // extractHostname(url: string): string {
+  //   try {
+  //     // remove the common `www.` prefix
+  //     return new URL(url).hostname.replace('www.', '')
+  //   } catch (error) {
+  //     return ''
+  //   }
+  // }
+
+  // private scoreEntry(entry: HistoryEntry, query: string): number {
+  //   query = query.toLowerCase()
+  //   let score = 0
+
+  //   if (entry.url) {
+  //     const hostname = this.extractHostname(entry.url).toLowerCase()
+  //     if (hostname.includes(query)) {
+  //       score += hostname.startsWith(query) ? 1 : 0.75
+  //     }
+  //   }
+  //   if (entry.title && entry.title.toLowerCase().includes(query)) {
+  //     score += 0.5
+  //   }
+  //   if (entry.searchQuery && entry.searchQuery.toLowerCase().includes(query)) {
+  //     score += 0.5
+  //   }
+
+  //   return score / 2
+  // }
+
+  // searchEntries(query: string, threshold: number = 0.2): HistoryEntry[] {
+  //   const seen = new Set()
+  //   const entries = Array.from(get(this.entries).values())
+
+  //   const urlCount = new Map<string, number>()
+  //   for (const entry of entries) {
+  //     if (entry.url) urlCount.set(entry.url, (urlCount.get(entry.url) || 0) + 1)
+  //   }
+
+  //   const result = Array.from(get(this.entries).values())
+  //     .map((entry) => ({
+  //       entry,
+  //       score: this.scoreEntry(entry, query),
+  //       visitCount: entry.url ? urlCount.get(entry.url) || 0 : 0
+  //     }))
+  //     .filter((item) => {
+  //       return item.score > threshold
+  //     })
+  //     .sort((a, b) => {
+  //       const diff = b.score - a.score
+  //       return diff === 0 ? b.visitCount - a.visitCount : diff
+  //     })
+  //     .map((item) => item.entry)
+  //     .filter((entry) => {
+  //       const dedupKey = `${entry.url}|${entry.title}|${entry.searchQuery}`.toLowerCase()
+  //       if (seen.has(dedupKey)) {
+  //         return false
+  //       } else {
+  //         seen.add(dedupKey)
+  //         return true
+  //       }
+  //     })
+
+  //   return result
+  // }
+
+  searchEntries(query: string, threshold: number = 0.3): HistoryEntry[] {
+    const seen = new Set()
+    const entries = Array.from(get(this.entries).values())
+
+    const urlCount = new Map<string, number>()
+    for (const entry of entries) {
+      if (entry.url) urlCount.set(entry.url, (urlCount.get(entry.url) || 0) + 1)
+    }
+
+    const options = {
+      includeScore: true,
+      keys: ['url', 'title', 'searchQuery'],
+      isCaseSensitive: false,
+      threshold
+    }
+
+    const fuse = new Fuse(entries, options)
+    const fuzzyResults = fuse.search(query)
+
+    const filteredEntries = fuzzyResults
+      .filter((result: FuseResult<HistoryEntry>) => {
+        const dedupKey =
+          `${result.item.url}|${result.item.title}|${result.item.searchQuery}`.toLowerCase()
+        if (seen.has(dedupKey)) {
+          return false
+        } else {
+          seen.add(dedupKey)
+          return true
+        }
+      })
+      .sort((a, b) => {
+        const diff = (b.score ?? 0) - (a.score ?? 0)
+        const aCnt = a.item.url ? urlCount.get(a.item.url) || 0 : 0
+        const bCnt = b.item.url ? urlCount.get(b.item.url) || 0 : 0
+        return diff === 0 ? bCnt - aCnt : diff
+      })
+      .map((result) => result.item)
+
+    return filteredEntries
+  }
+}
+
 export class HorizonsManager {
   activeHorizonId: Writable<string | null>
   horizons: Writable<Horizon[]>
@@ -427,6 +591,7 @@ export class HorizonsManager {
   log: ScopedLogger
   storage: HorizonDatabase
   telemetry: Telemetry
+  historyEntriesManager: HistoryEntriesManager
   activeHorizonStorage: LocalStorage<string>
   adblockerState: Writable<boolean>
   adblockerStateStorage: LocalStorage<boolean>
@@ -437,6 +602,8 @@ export class HorizonsManager {
     this.storage = new HorizonDatabase()
     this.telemetry = new Telemetry(this.storage, telemetryConfig)
     this.adblockerState = writable(true)
+
+    this.historyEntriesManager = new HistoryEntriesManager()
 
     // TODO: replace this with something
     // that stores application state
@@ -565,6 +732,7 @@ export class HorizonsManager {
           data,
           this.api,
           this.telemetry,
+          this.historyEntriesManager,
           this.adblockerState,
           previewImageResource,
           this.handleHorizonChange.bind(this)
@@ -650,6 +818,7 @@ export class HorizonsManager {
       data,
       this.api,
       this.telemetry,
+      this.historyEntriesManager,
       this.adblockerState,
       undefined,
       (h) => this.handleHorizonChange(h)

@@ -1,7 +1,17 @@
 import Dexie from 'dexie'
 
 import { generateID, generateUUID } from '../utils/id'
-import type { Card, Optional, Resource, HorizonData, CardFile, UserData } from '../types'
+import type {
+  Card,
+  Optional,
+  Resource,
+  HorizonData,
+  CardBrowser,
+  CardFile,
+  UserData,
+  Session,
+  HistoryEntry
+} from '../types'
 
 export class LocalStorage<T> {
   key: string
@@ -117,14 +127,10 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
   }
 
   async read(id: string): Promise<T | undefined> {
-    const idasff = await this.t.get(id)
-    // console.warn('updating', id, idasff)
     return await this.t.get(id)
   }
 
   async update(id: string, updatedItem: Partial<T>): Promise<number> {
-    // console.warn("updating", id, updatedItem)
-    // console.warn("typeofT", typeof updatedItem);
     delete updatedItem.createdAt
     updatedItem.updatedAt = new Date().toISOString()
     return await this.t.update(id, updatedItem)
@@ -135,26 +141,50 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
   }
 }
 
+class HistoryStore extends HorizonStore<HistoryEntry> {
+  constructor(public t: Dexie.Table<HistoryEntry, string>) {
+    super(t)
+  }
+
+  async getBySessionId(sessionId: string) {
+    return await this.t.where({ sessionId }).toArray()
+  }
+
+  async fetchHistoryEntriesByIds(ids: string[]): Promise<Map<string, HistoryEntry>> {
+    const historyEntries = await this.t.where('id').anyOf(ids).toArray()
+    const entriesMap = new Map<string, HistoryEntry>()
+    historyEntries.forEach((entry) => entriesMap.set(entry.id, entry))
+    return entriesMap
+  }
+}
+
 export class HorizonDatabase extends Dexie {
   userData: UserStore<UserData>
   cards: HorizonStore<Card>
   horizons: HorizonStore<HorizonData>
   resources: HorizonStore<Resource>
+  sessions: HorizonStore<Session>
+  historyEntries: HistoryStore
 
   constructor() {
     super('HorizonDatabase')
 
-    this.version(2).stores({
+    this.version(3).stores({
       userData: 'id, user_id',
       cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
       horizons: 'id, name, stackingOrder, createdAt, updatedAt',
-      resources: 'id, createdAt, updatedAt'
+      resources: 'id, createdAt, updatedAt',
+      sessions: 'id, userId, partition, createdAt, updatedAt',
+      historyEntries:
+        'id, *url, *title, *searchQuery, *inPageNavigation, sessionId, type, createdAt, updatedAt'
     })
 
     this.userData = new UserStore<UserData>(this.table('userData'))
     this.cards = new HorizonStore<Card>(this.table('cards'))
     this.horizons = new HorizonStore<HorizonData>(this.table('horizons'))
     this.resources = new HorizonStore<Resource>(this.table('resources'))
+    this.sessions = new HorizonStore<Session>(this.table('sessions'))
+    this.historyEntries = new HistoryStore(this.table('historyEntries'))
   }
 
   async getUserID() {
@@ -166,7 +196,37 @@ export class HorizonDatabase extends Dexie {
   }
 
   async getCardsByHorizonId(horizonId: string) {
-    return await this.cards.t.where({ horizon_id: horizonId }).toArray()
+    // TODO: ensure that types are properly initialized with default values going forward
+    const cards = (await this.cards.t.where({ horizon_id: horizonId }).toArray()).map((c) => {
+      if (c.type == 'browser') {
+        const data = c.data as CardBrowser['data']
+        data.historyStackIds = data.historyStackIds ?? []
+      }
+      return c
+    })
+
+    // const allHistoryStackIds = [
+    //   ...new Set(
+    //     cards
+    //       .filter((card) => card.type === 'browser')
+    //       .flatMap((card) => (card.data as CardBrowser['data']).historyStackIds)
+    //   )
+    // ]
+    // let historyEntriesMap = new Map<string, HistoryEntry>()
+    // if (allHistoryStackIds.length > 0) {
+    //   historyEntriesMap = await this.historyEntries.fetchHistoryEntriesByIds(allHistoryStackIds)
+    // }
+
+    // cards.forEach((card) => {
+    //   if (card.type === 'browser') {
+    //     const browserData = card.data as CardBrowser['data']
+    //     browserData.historyStack = browserData.historyStackIds
+    //       .map((id) => historyEntriesMap.get(id))
+    //       .filter((entry) => entry !== undefined) as HistoryEntry[]
+    //   }
+    // })
+
+    return cards
   }
 
   async deleteCardWithResource(card: Card) {

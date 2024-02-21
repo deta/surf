@@ -19,16 +19,6 @@
   import { Icon } from '@horizon/icons'
   import CardContent from '../Cards/CardContent.svelte'
 
-  // TODO: fix this unnecessary cast
-  const BrowserCard = () =>
-    import('../Cards/Browser/BrowserCard.svelte') as unknown as Promise<typeof SvelteComponent>
-  const TextCard = () =>
-    import('../Cards/Text/TextCard.svelte') as unknown as Promise<typeof SvelteComponent>
-  const LinkCard = () =>
-    import('../Cards/Link/LinkCard.svelte') as unknown as Promise<typeof SvelteComponent>
-  const FileCard = () =>
-    import('../Cards/File/FileCard.svelte') as unknown as Promise<typeof SvelteComponent>
-
   export let positionable: Writable<IPositionable<any>>
   export let horizon: Horizon
 
@@ -42,11 +32,13 @@
   const minSize = { x: 100, y: 100 }
   const maxSize = { x: Infinity, y: Infinity }
   const DRAGGING_MENU_PADDING = 75
+  const DRAG_OVER_ACTIVATION_TIMEOUT = 1000
 
   let el: HTMLElement
   // let menuPosition = 'top'
   // let insetMenu = false
   let headerClickTimeout: ReturnType<typeof setTimeout> | null = null
+  let dragOverTimeout: ReturnType<typeof setTimeout> | null = null
 
   $: card = positionable as Writable<Card> // todo: fix this unnecessary cast
   $: cardTitle = $card.type[0].toUpperCase() + $card.type.slice(1)
@@ -114,6 +106,43 @@
     dispatch('duplicate', $card)
   }
 
+  const clearDragTimeout = () => {
+    log.debug('clearing drag over timeout', $card.id)
+    if (dragOverTimeout) {
+      clearTimeout(dragOverTimeout)
+      dragOverTimeout = null
+    }
+
+    window.removeEventListener('drop', clearDragTimeout)
+  }
+
+  const handleDragEnter = (e: DragEvent) => {
+    log.debug('drag enter', $card.id)
+    clearDragTimeout()
+
+    dragOverTimeout = setTimeout(() => {
+      log.debug('drag over, setting active card')
+      horizon.setActiveCard($card.id)
+    }, DRAG_OVER_ACTIVATION_TIMEOUT)
+
+    window.addEventListener('drop', clearDragTimeout)
+  }
+
+  const handleDragOver = (e: DragEvent) => {
+    log.debug('drag over', $card.id)
+
+    if (!dragOverTimeout) {
+      handleDragEnter(e)
+    }
+  }
+
+  const handleDragLeave = (e: DragEvent) => {
+    const target = e.target as HTMLElement
+    log.debug('drag leave', $card.id, target)
+
+    clearDragTimeout()
+  }
+
   onMount(() => {
     // el.addEventListener('draggable_start', onDragStart)
     // el.addEventListener('draggable_move', onDragMove)
@@ -126,6 +155,16 @@
     // el && el.addEventListener('draggable_move', onDragMove)
     el && el.removeEventListener('draggable_end', handleDragEnd)
     el && el.removeEventListener('resizable_end', updateCard)
+
+    if (headerClickTimeout) {
+      clearTimeout(headerClickTimeout)
+      headerClickTimeout = null
+    }
+
+    if (dragOverTimeout) {
+      clearTimeout(dragOverTimeout)
+      dragOverTimeout = null
+    }
   })
 </script>
 
@@ -137,6 +176,9 @@
   class="card {$positionable.id} {active && 'active'}"
   contained={false}
   on:mousedown={handleMouseDown}
+  on:dragenter={handleDragEnter}
+  on:dragover={handleDragOver}
+  on:dragleave={handleDragLeave}
   bind:el
 >
   <Resizable {positionable} direction="top-right" {minSize} {maxSize} />
