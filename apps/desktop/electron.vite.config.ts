@@ -11,7 +11,7 @@ export default defineConfig({
 
   preload: {
     envPrefix: 'P_VITE_',
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: ['@horizon/backend'] })],
     build: {
       rollupOptions: {
         input: {

@@ -12,6 +12,7 @@
     "build:horizon:mac:arm": "yarn turbo run horizon#build:mac:arm",
     "build:horizon:win": "yarn turbo run horizon#build:win",
     "build:horizon:linux": "yarn turbo run horizon#build:linux",
+    "build:backend": "yarn turbo run @horizon/backend#build",
     "build:tela": "yarn workspace @horizon/tela build",
     "lint": "turbo lint",
     "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write \"**/*.{js,ts,tsx,yml,json,md,svelte}\"",
