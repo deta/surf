@@ -2,29 +2,25 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { get, type Unsubscriber, type Writable } from 'svelte/store'
-  import { writable } from 'svelte/store'
+
   import { fly } from 'svelte/transition'
 
   import WebviewWrapper, { type WebViewWrapperEvents } from './WebviewWrapper.svelte'
   import type { HistoryEntry, CardBrowser, CardEvents } from '../../../types'
   import { useLogScope } from '../../../utils/log'
-  import { parseStringIntoUrl, generateRootDomain } from '../../../utils/url'
+  import { parseStringIntoUrl } from '../../../utils/url'
   import type { Horizon } from '../../../service/horizon'
   import browserBackground from '../../../../../public/assets/browser-background.png'
   import defaultFavicon from '../../../../../public/assets/deta.svg'
 
-  import AddressToolbar from './modules/toolbar/AddressToolbar.svelte'
   import { Icon } from '@horizon/icons'
 
   import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
   import FindInPage from './FindInPage.svelte'
-  import StackItem from '../../Stack/StackItem.svelte'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
   export let active: boolean = false
-
-  const deactivateToolbar = writable(false)
 
   const adblockerState = horizon.adblockerState
   const historyEntriesManager = horizon.historyEntriesManager
@@ -34,20 +30,12 @@
   let webview: WebviewWrapper | undefined
   let inputEl: HTMLInputElement
   let findInPage: FindInPage | undefined
-  let currentCardHistory = writable()
 
   let initialSrc = $card.data.initialLocation
-  $: if ($card.data.historyStackIds) {
+  if ($card.data.historyStackIds) {
     let currentEntry = historyEntriesManager.getEntry(
       $card.data.historyStackIds[$card.data.currentHistoryIndex]
     )
-
-    let allEntries = $card.data.historyStackIds.map((item: any) => {
-      return historyEntriesManager.getEntry(item)
-    })
-
-    currentCardHistory.set(allEntries)
-
     // the historyStack will never have a history entry of type `search`
     if (currentEntry) initialSrc = currentEntry.url as string
   }
@@ -95,18 +83,27 @@
     unsubTracker.forEach((u) => u())
   })
 
-  const handleToggleAdblock = async () => {
+  const handleToggleAdblock = async (_e: MouseEvent) => {
     horizon.adblockerState.set(!get(horizon.adblockerState))
   }
 
   const handleKeyUp = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
-      goToURL()
-    }
-  }
+      let url = parseStringIntoUrl(value)
+      if (!url) {
+        const replacedSpaces = value.replace(/ /g, '+')
+        const googleSearch = `https://google.com/search?q=${replacedSpaces}`
+        url = new URL(googleSearch)
 
-  const handleCallFromToolbar = () => {
-    goToURL()
+        const historyEntry = {
+          type: 'search',
+          searchQuery: value
+        } as HistoryEntry
+        historyEntriesManager.addEntry(historyEntry)
+      }
+      webview?.navigate(url.href)
+      inputEl.blur()
+    }
   }
 
   const handleWebviewFocus = (_e: MouseEvent) => {
@@ -189,12 +186,6 @@
     value = $url ?? ''
   }
 
-  function goToURL() {
-    let url = parseStringIntoUrl(value)
-    webview?.navigate(url.href)
-    inputEl.blur()
-  }
-
   function mute() {
     webview?.isMuted.set(true)
     webview?.setMute(true)
@@ -203,6 +194,41 @@
   function unmute() {
     webview?.isMuted.set(false)
     webview?.setMute(false)
+  }
+
+  function generateRootDomain(urlInput: string | URL): string {
+    if (!urlInput) {
+      return ''
+    }
+
+    let url
+    try {
+      if (typeof urlInput === 'string') {
+        if (/^https?:\/\/[^ "]+$/.test(urlInput)) {
+          url = new URL(urlInput)
+        } else {
+          throw new Error('Invalid URL format')
+        }
+      } else {
+        url = urlInput
+      }
+
+      const domain = url.hostname
+      const elems = domain.split('.')
+      if (elems.length < 2) {
+        return ''
+      }
+
+      const iMax = elems.length - 1
+      const elem1 = elems[iMax - 1]
+      const elem2 = elems[iMax]
+      const isSecondLevelDomain = iMax >= 3 && (elem1 + elem2).length <= 5
+
+      return (isSecondLevelDomain ? elems[iMax - 2] + '.' : '') + elem1 + '.' + elem2
+    } catch (error) {
+      console.error('Error parsing URL:', error)
+      return '' // or return some default error indication as needed
+    }
   }
 </script>
 
@@ -230,27 +256,29 @@
       on:didFinishLoad={handleFinishLoading}
     />
   </div>
-  <div class="bottom-bar" class:active={active || value == ''} style={'pointer-events: auto;'}>
+  <div class="bottom-bar" class:active={active || value == ''}>
     <div class="bottom-bar-trigger">
-      <div class="arrow-wrapper">
-        <button
-          class="nav-button"
-          on:click={webview?.goBack}
-          disabled={!$canGoBack}
-          in:fly={{ y: 10, duration: 160 }}
-          out:fly={{ y: 10, duration: 160 }}
-        >
-          ←
-        </button>
-        <button
-          class="nav-button"
-          on:click={webview?.goForward}
-          disabled={!$canGoForward}
-          in:fly={{ y: 10, duration: 160 }}
-          out:fly={{ y: 10, duration: 160 }}
-        >
-          →
-        </button>
+      <div class="arrow-wrapper" class:hidden={!$canGoBack}>
+        {#if $canGoBack}
+          <button
+            class="nav-button"
+            on:click={webview?.goBack}
+            disabled={!$canGoBack}
+            in:fly={{ y: 10, duration: 160 }}
+            out:fly={{ y: 10, duration: 160 }}
+          >
+            ←
+          </button>
+          <button
+            class="nav-button"
+            on:click={webview?.goForward}
+            disabled={!$canGoForward}
+            in:fly={{ y: 10, duration: 160 }}
+            out:fly={{ y: 10, duration: 160 }}
+          >
+            →
+          </button>
+        {/if}
       </div>
 
       <div
@@ -260,35 +288,27 @@
         in:fly={{ x: -10, duration: 160 }}
         out:fly={{ x: -10, duration: 60 }}
       >
-        {#if editing && value !== ''}
-          <div
-            class="address-bar-toolbar"
-            class:isEditing={editing}
-            class:deactivated={$deactivateToolbar}
-            in:fly={{ y: 4, duration: 180, delay: 120 }}
-            out:fly={{ y: 10, duration: 60 }}
-          >
-            <AddressToolbar
-              bind:inputValue={value}
-              adblockerState={$adblockerState}
-              cardHistory={$currentCardHistory}
-              {horizon}
-              on:call-url-from-toolbar={handleCallFromToolbar}
-              on:call-adblock-toggle-from-toolbar={handleToggleAdblock}
-            />
-          </div>
-        {/if}
         <div class="navbar-wrapper">
+          {#if !editing && active}
+            <div class="adblock-wrapper">
+              <div
+                class="adblock"
+                class:navigationActive={active}
+                in:fly={{ y: 10, duration: 160 }}
+              >
+                <button class="nav-button btn-adblock" on:click={handleToggleAdblock}>
+                  {#if $adblockerState}
+                    <Icon name="adblockon" />
+                  {:else}
+                    <Icon name="adblockoff" />
+                  {/if}
+                </button>
+              </div>
+            </div>
+          {/if}
           <input
             on:focus={() => (editing = true)}
-            on:blur={() => {
-              // hide toolbar until the callback performing the action is completed
-              deactivateToolbar.set(true)
-              setTimeout(() => {
-                editing = false
-                deactivateToolbar.set(false)
-              }, 250)
-            }}
+            on:blur={() => (editing = false)}
             type="text"
             class="address-bar"
             class:isActive={active}
@@ -384,7 +404,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    background: radial-gradient(100% 100% at 52.74% 100%, #f2f2f2 0%, #f9f9f9 100%);
+    background-color: #f7f7f8;
     backdrop-filter: blur(16px);
     padding: 4px;
     height: 3rem;
@@ -444,6 +464,17 @@
     .playback {
       padding: 0;
       padding-right: 1rem;
+    }
+  }
+
+  .adblock-wrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+    .btn-adblock {
+      padding: 3px 7px 3px 7px;
     }
   }
 
@@ -520,6 +551,7 @@
     transition:
       background 120ms ease-in,
       outline-offset 200ms cubic-bezier(0.33, 1, 0.68, 1);
+    all: 200ms cubic-bezier(0.33, 1, 0.68, 1);
   }
 
   .address-bar:focus {
@@ -532,7 +564,7 @@
   }
 
   .address-bar:hover {
-    background: radial-gradient(115% 115% at 50% 100%, #ffd3f0 0%, #ffdff4 100%);
+    background: #ffdcee;
   }
 
   .address-bar-toolbar {
@@ -551,9 +583,6 @@
       0px 0px 1px 4px rgba(0, 0, 0, 0.01);
     outline: 2px solid white;
     border-radius: 8px;
-    &.deactivated {
-      opacity: 0;
-    }
   }
 
   .page-title {
@@ -563,11 +592,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 0.9rem;
-  }
-  @container (max-height: 550px) {
-    .address-bar-toolbar {
-      display: none;
-    }
   }
 
   @container (max-width: 560px) {
@@ -606,6 +630,10 @@
   }
 
   @container (max-width: 300px) {
+    .adblock-wrapper {
+      display: none;
+    }
+
     .favicon-wrapper {
       display: none;
     }

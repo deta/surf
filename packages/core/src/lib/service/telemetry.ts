@@ -84,9 +84,7 @@ export class Telemetry {
         let location = card.data.initialLocation
         if (card.data.currentHistoryIndex > 0) {
           // TODO: history: REQUIRES FIX
-          location = this.getHostnameFromURL(
-            card.data.historyStackIds[card.data.currentHistoryIndex]
-          )
+          location = this.getHostnameFromURL(card.data.historyStackIds[card.data.currentHistoryIndex])
         }
         eventProperties = {
           ...eventProperties,
