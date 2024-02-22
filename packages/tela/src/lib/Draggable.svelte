@@ -81,7 +81,7 @@
     el.dispatchEvent(
       new CustomEvent('draggable_onMouseMove', {
         bubbles: true,
-        detail: { event: e, positionable, clientX, clientY }
+        detail: { event: e, positionable, clientX, clientY, draggable: el }
       })
     )
     el.dispatchEvent(
@@ -111,7 +111,7 @@
     el.dispatchEvent(
       new CustomEvent('draggable_onMouseUp', {
         bubbles: true,
-        detail: { event: e, positionable, clientX, clientY }
+        detail: { event: e, positionable, clientX, clientY, draggable: el }
       })
     )
     el.dispatchEvent(

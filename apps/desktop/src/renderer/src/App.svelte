@@ -1,9 +1,18 @@
 <script lang="ts">
   import { HorizonManager } from '@horizon/core'
+  import { onMount } from 'svelte'
+
+  let showDragBar = true
+
+  onMount(() => {
+    window.api.onFullscreenChange((fullscreen) => (showDragBar = !fullscreen))
+  })
 </script>
 
 <div class="main">
-  <div class="drag-bar"></div>
+  {#if showDragBar}
+    <div class="drag-bar"></div>
+  {/if}
   <HorizonManager />
 </div>
 

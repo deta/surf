@@ -6,6 +6,10 @@ export type CardEvents = {
   load: Card
   delete: Card
   duplicate: Card
+  beginDrag: Card
+  endDrag: Card
+  beginResize: Card
+  endResize: Card
 }
 
 /*

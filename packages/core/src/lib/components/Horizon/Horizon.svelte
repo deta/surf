@@ -21,6 +21,12 @@
   import { useDebounce } from '../../utils/debounce'
   import HorizonInfo from './HorizonInfo.svelte'
   import Grid from './Grid.svelte'
+  import {
+    EDGE_SNAP_FACTOR,
+    GRID_SIZE_COARSE,
+    GRID_SIZE_FINE,
+    QUICK_SNAP_THRESHOLD
+  } from '../../constants/horizon'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -40,7 +46,9 @@
     CAN_SELECT: true,
     PAN_DIRECTION: 'x',
     SNAP_TO_GRID: true,
-    GRID_SIZE: 10,
+    GRID_SIZE: GRID_SIZE_COARSE,
+    EDGE_SNAP_FACTOR: EDGE_SNAP_FACTOR,
+    QUICK_SNAP_THRESHOLD: QUICK_SNAP_THRESHOLD,
     BOUNDS: {
       minX: 0,
       minY: 0,
@@ -70,6 +78,7 @@
   )
 
   const state = board.state
+  const selectionRect = $state.selectionRect
   const selectionCss = $state.selectionCss
   const viewOffset = $state.viewOffset
   const viewPort = $state.viewPort
@@ -77,6 +86,7 @@
 
   let containerEl: HTMLElement
   let requestNewPreviewIntervalId: number | undefined
+  let isDraggingCard = false
 
   $: log.debug('horizon state changed', horizon.state)
 
@@ -230,6 +240,21 @@
     horizon.setActiveCard(newCard.id)
   }
 
+  const handleCardBeginDrag = (e: CustomEvent<Card>) => {
+    isDraggingCard = true
+  }
+
+  const handleCardEndDrag = (e: CustomEvent<Card>) => {
+    isDraggingCard = false
+  }
+
+  const handleCardBeginResize = (e: CustomEvent<Card>) => {
+    isDraggingCard = true // well.. actually its resizing this should be one var.. not sure if we need to distinguish sooner or later though.
+  }
+  const handleCardEndResize = (e: CustomEvent<Card>) => {
+    isDraggingCard = false
+  }
+
   const handlePositionableEnter = (e: CustomEvent<string>) => {
     hoistPositionable(e.detail, containerEl)
   }
@@ -240,9 +265,29 @@
     }
   }
 
+  const handleKeydown = (e: KeyboardEvent) => {
+    // TODO: old, remove?
+    // if (e.key === 'Control' && isDraggingCard) {
+    //   $settings.GRID_SIZE = GRID_SIZE_FINE
+    // }
+    // if (!hasClassOrParentWithClass(e.target as HTMLElement, 'card')) {
+    // }
+  }
+
+  // TODO: old, remove?
+  // $: {
+  //   if (!isDraggingCard) {
+  //     $settings.GRID_SIZE = GRID_SIZE_COARSE
+  //   }
+  // }
+
   const handleKeyup = (e: KeyboardEvent) => {
     if (e.key === 'Escape') $activeCardId = null
     // if (!hasClassOrParentWithClass(e.target as HTMLElement, 'card')) {
+    // }
+    // TODO: old, remove?
+    // if (e.key === 'Control') {
+    //   $settings.GRID_SIZE = GRID_SIZE_COARSE
     // }
   }
 
@@ -290,7 +335,7 @@
   })
 </script>
 
-<svelte:window on:resize={handleWindowResize} on:keyup={handleKeyup} />
+<svelte:window on:resize={handleWindowResize} on:keyup={handleKeyup} on:keydown={handleKeydown} />
 
 {#if showSelectTooltip}
   <div class="cursor-tooltip" style="--select-x: {selectPos.x}px; --select-y: {selectPos.y}px;">
@@ -320,11 +365,42 @@
     let:positionable
   >
     <svelte:fragment slot="selectRect">
-      <div class="selectionRect" style={$selectionCss} />
+      <div
+        class="selectionRect"
+        style="left: {snapToGrid($selectionRect?.x || 0, $settings.GRID_SIZE)}px; top: {snapToGrid(
+          $selectionRect?.y || 0,
+          $settings.GRID_SIZE
+        )}px; width: {snapToGrid(
+          $selectionRect?.w || 0,
+          $settings.GRID_SIZE
+        )}px; height: {snapToGrid(
+          $selectionRect?.h || 0,
+          $settings.GRID_SIZE
+        )}px; z-index: 9999999;"
+      >
+        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"
+          ><defs
+            ><pattern
+              id="a"
+              patternUnits="userSpaceOnUse"
+              width="20"
+              height="20"
+              patternTransform="scale(0.5) rotate(135)"
+              ><rect x="0" y="0" width="100%" height="100%" fill="currentColor" /><path
+                d="M0 10h20z"
+                stroke-width="1.5"
+                stroke="currentColor"
+                fill="none"
+              /></pattern
+            ></defs
+          ><rect width="800%" height="800%" transform="translate(0,0)" fill="url(#a)" /></svg
+        >
+      </div>
+      <!-- <div class="selectionRectShadow" style="left: {snapToGrid($selectionRect?.x || 0, $settings.GRID_SIZE)}px; top: {snapToGrid($selectionRect?.y || 0, $settings.GRID_SIZE)}px; width: {snapToGrid($selectionRect?.w || 0, $settings.GRID_SIZE)}px; height: {snapToGrid($selectionRect?.h || 0, $settings.GRID_SIZE)}px; z-index: 9999999;"></div> -->
     </svelte:fragment>
 
     <svelte:fragment slot="raw">
-      <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={20} />
+      <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={isDraggingCard ? 50 : 35} />
     </svelte:fragment>
 
     <div
@@ -379,6 +455,10 @@
       on:change={handleCardChange}
       on:delete={handleCardDelete}
       on:duplicate={handleCardDuplicate}
+      on:beginDrag={handleCardBeginDrag}
+      on:endDrag={handleCardEndDrag}
+      on:beginResize={handleCardBeginResize}
+      on:endResize={handleCardEndResize}
     />
   </Board>
 </div>

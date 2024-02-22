@@ -3,6 +3,9 @@
   --theme-transparency: 0%;
   --theme-shadow: unset;
   --theme-font: system-ui, sans-serif;
+  --theme-selection-hue: 331.3;
+  --theme-selection-saturation: 74%;
+  --theme-selection-lightness: 61%;
   --tooltip-arrow-size: 10px;
 }
 
@@ -20,24 +23,18 @@
 
   --color-active-hue: 203; //100%,62%
 
-  --background: hsla(
-    var(--theme-tint-hue),
-    var(--theme-tint-saturation),
-    max(var(--theme-tint-lightness), 70%),
-    1
-  );
-  --color-text: hsla(
-    var(--theme-text-hue),
-    var(--theme-text-saturation),
-    min(var(--theme-text-lightness), 50%),
-    1
-  );
-  --color-text-muted: hsla(
-    var(--theme-text-hue),
-    var(--theme-text-saturation),
-    max(min(var(--theme-text-lightness), 70%), 30%),
-    0.8
-  );
+  --background: hsla(var(--theme-tint-hue),
+      var(--theme-tint-saturation),
+      max(var(--theme-tint-lightness), 70%),
+      1);
+  --color-text: hsla(var(--theme-text-hue),
+      var(--theme-text-saturation),
+      min(var(--theme-text-lightness), 50%),
+      1);
+  --color-text-muted: hsla(var(--theme-text-hue),
+      var(--theme-text-saturation),
+      max(min(var(--theme-text-lightness), 70%), 30%),
+      0.8);
 }
 
 .dark {
@@ -55,18 +52,14 @@
   --color-active-hue: 203; //100%,62%
 
   --background: hsla(var(--theme-tint-hue), var(--theme-tint-saturation), 7%, 1);
-  --color-text: hsla(
-    var(--theme-text-hue),
-    var(--theme-text-saturation),
-    max(var(--theme-text-lightness), 30%),
-    1
-  );
-  --color-text-muted: hsla(
-    var(--theme-text-hue),
-    var(--theme-text-saturation),
-    max(var(--theme-text-lightness), 40%),
-    0.8
-  );
+  --color-text: hsla(var(--theme-text-hue),
+      var(--theme-text-saturation),
+      max(var(--theme-text-lightness), 30%),
+      1);
+  --color-text-muted: hsla(var(--theme-text-hue),
+      var(--theme-text-saturation),
+      max(var(--theme-text-lightness), 40%),
+      0.8);
 }
 
 * {
@@ -113,18 +106,12 @@
   position: relative;
   z-index: 1;
 
-  background: var(
-    hsl(
-      var(--theme-background-hue, 0),
+  background: var(hsl(var(--theme-background-hue, 0),
+        var(--theme-background-saturation, 0%),
+        var(--theme-background-lightness, 100%)));
+  background-color: hsl(var(--theme-background-hue, 0),
       var(--theme-background-saturation, 0%),
-      var(--theme-background-lightness, 100%)
-    )
-  );
-  background-color: hsl(
-    var(--theme-background-hue, 0),
-    var(--theme-background-saturation, 0%),
-    var(--theme-background-lightness, 100%)
-  );
+      var(--theme-background-lightness, 100%));
   background-size: cover;
   background-position: center center;
 }
@@ -146,21 +133,30 @@
     overflow: hidden;
   }
 
-  &.active > .content {
+  &.active>.content {
     outline-color: rgba(223, 39, 127, 0.8);
   }
 }
 
 .tela-container {
   padding: 10px;
-  padding-top: 50px;
+  padding-top: 30px;
 
   background: url('../../../../public/assets/grid-background.png');
   background-size: 10% 10%;
   background-repeat: repeat;
 }
 
+html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
+.tela-board.mode-resizing,
+.tela-board.mode-select,
+.tela-board.mode-modSelect) * {
+  // pointer-events: none !important;
+  user-select: none !important;
+}
+
 .tela-board {
+
   p,
   span,
   h1,
@@ -280,15 +276,29 @@
 
   .selectionRect {
     position: absolute;
-    background: #abd5ff68; // TODO: remov as tel does no set it anymore
-    border: 2px solid hsla(var(--color-active-hue), 100%, 62%, 0.8);
-    border-color: hsla(
-      var(--theme-selection-hue),
-      var(--theme-selection-saturation),
-      var(--theme-selection-lightness),
-      1
-    );
-    background: hsla(var(--theme-selection-hue), var(--theme-selection-saturation), 62%, 0.2);
+    border: 2px solid hsla(var(--theme-selection-hue), 74%, 51%, 0.8);
+    border-color: hsla(var(--theme-selection-hue),
+        var(--theme-selection-saturation),
+        var(--theme-selection-lightness),
+        1);
+    background: hsla(var(--theme-selection-hue),
+        var(--theme-selection-saturation), calc(var(--theme-selection-lightness) + 10%), 0.3);
+    transition: all 125ms cubic-bezier(.34, 1.56, .64, 1);
+    color: hsla(var(--theme-selection-hue),
+        var(--theme-selection-saturation), calc(var(--theme-selection-lightness) - 10%), 0.5);
+    border-radius: var(--theme-border-radius);
+  }
+
+  .selectionRectShadow {
+    position: absolute;
+    // border: 2px solid hsla(var(--color-active-hue), 100%, 62%, 0.8);
+    // border-color: hsla(var(--theme-selection-hue),
+    //     var(--theme-selection-saturation),
+    //     var(--theme-selection-lightness),
+    //     1);
+    background: hsla(var(--theme-selection-hue),
+        var(--theme-selection-saturation), calc(var(--theme-selection-lightness) + 10%), 0.3);
+    transition: all 160ms cubic-bezier(.34, 1.56, .64, 1);
   }
 
   &.mode-modSelect .selectionRect {
@@ -296,6 +306,15 @@
   }
 
   .card {
+    transition: width 260ms cubic-bezier(.34, 1.56, .64, 1),
+      height 260ms cubic-bezier(.34, 1.56, .64, 1),
+      top 260ms cubic-bezier(.34, 1.56, .64, 1),
+      left 260ms cubic-bezier(.34, 1.56, .64, 1);
+
+    &.no-animation {
+      transition: none;
+    }
+
     .content {
       transition: all 160ms cubic-bezier(.34, 1.56, .64, 1);
       transition-delay: 70ms;
@@ -316,7 +335,7 @@
       cursor: grab;
     }
 
-    > .draggable {
+    >.draggable {
       border-radius: var(--theme-border-radius);
       z-index: 0;
 

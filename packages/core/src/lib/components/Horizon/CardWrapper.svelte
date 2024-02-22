@@ -71,6 +71,7 @@
   }
 
   const handleDragEnd = (_: any) => {
+    dispatch('endDrag', $card)
     const board = horizon.board
     if (!board) console.error('No board found ond rag end')
     const state = get(board!.state)
@@ -89,6 +90,7 @@
   // }
 
   const handleCardHeaderMouseDown = (_e: MouseEvent) => {
+    dispatch('beginDrag', $card)
     if (headerClickTimeout) {
       clearTimeout(headerClickTimeout)
       headerClickTimeout = null
@@ -103,6 +105,13 @@
         headerClickTimeout = null
       }, 500)
     }
+  }
+
+  const handleResizeBegin = () => {
+    dispatch('beginResize', $card)
+  }
+  const handleResizeEnd = () => {
+    dispatch('endResize', $card)
   }
 
   const handleDelete = () => {
@@ -171,6 +180,8 @@
     // el.addEventListener('draggable_move', onDragMove)
     el.addEventListener('draggable_end', handleDragEnd)
     el.addEventListener('resizable_end', updateCard)
+    el.addEventListener('resizable_onMouseDown', handleResizeBegin)
+    el.addEventListener('resizable_onMouseUp', handleResizeEnd)
   })
 
   onDestroy(() => {
@@ -178,6 +189,8 @@
     // el && el.addEventListener('draggable_move', onDragMove)
     el && el.removeEventListener('draggable_end', handleDragEnd)
     el && el.removeEventListener('resizable_end', updateCard)
+    el && el.removeEventListener('resizable_onMouseDown', handleResizeBegin)
+    el && el.removeEventListener('resizable_onMouseUp', handleResizeEnd)
 
     if (headerClickTimeout) {
       clearTimeout(headerClickTimeout)
