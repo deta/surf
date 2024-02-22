@@ -6,7 +6,7 @@
 
   import { type IPositionable, LazyComponent } from '@horizon/tela'
 
-  import type { Card } from '../../types'
+  import type { Card } from '../../types/index'
   import type { Horizon } from '../../service/horizon'
 
   // TODO: fix this unnecessary cast

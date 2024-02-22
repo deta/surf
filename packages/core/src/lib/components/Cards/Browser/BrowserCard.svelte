@@ -6,7 +6,7 @@
   import { fly } from 'svelte/transition'
 
   import WebviewWrapper, { type WebViewWrapperEvents } from './WebviewWrapper.svelte'
-  import type { HistoryEntry, CardBrowser, CardEvents } from '../../../types'
+  import type { HistoryEntry, CardBrowser, CardEvents } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
   import { parseStringIntoUrl } from '../../../utils/url'
   import type { Horizon } from '../../../service/horizon'

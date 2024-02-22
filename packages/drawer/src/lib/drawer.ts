@@ -86,5 +86,7 @@ export const useDrawer = Drawer.useDrawer
 export { default as DrawerProvider } from './Drawer.svelte'
 export { default as DrawerSearch } from './Search.svelte'
 export { default as DrawerNavigation } from './Navigation.svelte'
-export { default as DrawerContent } from './Content.svelte'
+export { default as DrawerContentWrapper } from './ContentWrapper.svelte'
 export { default as DrawerContentItem } from './ContentItem.svelte'
+export { default as DrawerContentMasonry } from './ContentMasonry.svelte'
+export { default as DrawerContenEmpty } from './ContentEmpty.svelte'

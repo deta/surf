@@ -17,7 +17,7 @@
   import { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
   import { requestNewPreviewImage, takePageScreenshot } from '../../utils/screenshot'
-  import type { Card } from '../../types'
+  import type { Card } from '../../types/index'
   import { useDebounce } from '../../utils/debounce'
   import HorizonInfo from './HorizonInfo.svelte'
   import Grid from './Grid.svelte'

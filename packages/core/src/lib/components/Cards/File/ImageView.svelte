@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Resource } from '../../../types'
+  import type { Resource } from '../../../types/index'
 
   export let resource: Resource
 

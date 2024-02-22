@@ -1,4 +1,4 @@
-import type { Card } from '../types'
+import type { Card } from '../types/index'
 import { HorizonDatabase } from './storage'
 import * as amplitude from '@amplitude/analytics-browser'
 

@@ -22,6 +22,8 @@ import ArrowHorizontal from './Icons/ArrowHorizontal.svelte'
 import ArrowDiagonalMinimize from './Icons/ArrowDiagonalMinimize.svelte'
 import Search from './Icons/Search.svelte'
 import Info from './Icons/Info.svelte'
+import File from './Icons/File.svelte'
+import Docs from './Icons/Docs.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -48,7 +50,9 @@ export const icons = {
   arrowHorizontal: ArrowHorizontal,
   arrowDiagonalMinimize: ArrowDiagonalMinimize,
   search: Search,
-  info: Info
+  info: Info,
+  file: File,
+  docs: Docs
 }
 
 export type Icons = keyof typeof icons
@@ -79,5 +83,7 @@ export {
   ArrowHorizontal,
   ArrowDiagonalMinimize,
   Search,
-  Info
+  Info,
+  File,
+  Docs
 }

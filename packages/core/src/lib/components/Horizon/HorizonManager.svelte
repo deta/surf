@@ -23,7 +23,7 @@
   import MediaImporter from './MediaImporter.svelte'
   import { advancedSpring } from '../../utils/advancedSpring'
   import { wait } from '../../utils/time'
-  import type { Card } from '../../types'
+  import type { Card } from '../../types/index'
   import { Icon } from '@horizon/icons'
   import HorizonInfo from './HorizonInfo.svelte'
   import { isModKeyPressed } from '../../utils/keyboard'

@@ -46,8 +46,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem 0.5rem;
-    padding-left: 1rem;
+    padding: 1rem;
 
     input {
       flex: 1;

@@ -5,7 +5,7 @@
   import { Editor, type JSONContent } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
 
-  import type { CardEvents, CardText } from '../../../types'
+  import type { CardEvents, CardText } from '../../../types/index'
   import { copyToClipboard } from '../../../utils/clipboard'
   import { useLogScope } from '../../../utils/log'
   import { useDebounce } from '../../../utils/debounce'

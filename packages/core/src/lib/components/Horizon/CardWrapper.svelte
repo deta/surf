@@ -13,7 +13,7 @@
     LazyComponent
   } from '@horizon/tela'
 
-  import type { Card, CardEvents } from '../../types'
+  import type { Card, CardEvents } from '../../types/index'
   import { useLogScope } from '../../utils/log'
   import type { Horizon } from '../../service/horizon'
   import { Icon } from '@horizon/icons'

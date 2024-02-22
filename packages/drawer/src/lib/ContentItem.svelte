@@ -1,12 +1,14 @@
-<div class="drawer-content-item">
+<script lang="ts">
+</script>
+
+<div class="drawer-item">
   <slot />
 </div>
 
 <style lang="scss">
-  .drawer-content-item {
-    width: calc(50% - 0.5rem);
-    aspect-ratio: 1 / 1;
-    border-radius: 8px;
-    overflow: hidden;
+  .drawer-item {
+    display: block;
+    width: 100%;
+    height: min-content;
   }
 </style>

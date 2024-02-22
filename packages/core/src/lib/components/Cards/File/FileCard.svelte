@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import type { Writable } from 'svelte/store'
 
-  import type { CardFile, Resource } from '../../../types'
+  import type { CardFile, Resource } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
   import type { Horizon } from '../../../service/horizon'
   import ImageView from './ImageView.svelte'
