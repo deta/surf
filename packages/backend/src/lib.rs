@@ -1,6 +1,12 @@
+#![allow(unused)]
+
+mod models;
+mod store;
+
 use neon::{prelude::*, types::Deferred};
 use std::sync::mpsc;
 use std::thread;
+use store::Store;
 
 enum BackendMesasge {
     Print(String, Deferred),
@@ -52,6 +58,13 @@ fn init(mut cx: FunctionContext) -> JsResult<JsBox<Backend>> {
     Ok(cx.boxed(backend))
 }
 
+fn new_tmp_store(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    let db_path_handle = cx.argument::<JsString>(0)?;
+    let db_path = db_path_handle.value(&mut cx);
+    Store::new(&db_path).unwrap();
+    Ok(cx.undefined())
+}
+
 fn send(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let backend = cx.argument::<JsBox<Backend>>(0)?;
     let message = cx.argument::<JsString>(1)?.value(&mut cx);
@@ -65,7 +78,7 @@ fn send(mut cx: FunctionContext) -> JsResult<JsPromise> {
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("init", init)?;
+    cx.export_function("newTmpStore", new_tmp_store)?;
     cx.export_function("send", send)?;
-
     Ok(())
 }

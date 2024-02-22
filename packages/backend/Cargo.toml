@@ -10,9 +10,10 @@ crate-type = ["cdylib"]
 
 [dependencies]
 once_cell = "1.19.0"
-rusqlite = "0.25.0"
+rusqlite = { version = "0.29.0", features = ["bundled", "array"]}
+rust-embed = "8.2.0"
+sqlite-vss = { version = "0.1.2", features = ["download-libs"] }
 tokio = { version = "1.36.0", features = ["full"] }
-# neon = "1.0.0-alpha.4"
 
 [dependencies.neon]
 version = "1.0.0-alpha.4"
