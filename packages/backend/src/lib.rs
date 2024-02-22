@@ -1,84 +1,63 @@
 #![allow(unused)]
 
+mod backend;
 mod models;
 mod store;
 
-use neon::{prelude::*, types::Deferred};
+use neon::prelude::*;
 use std::sync::mpsc;
 use std::thread;
-use store::Store;
 
-enum BackendMesasge {
-    Print(String, Deferred),
+use backend::{message::WorkerMessage, worker::worker_entry_point};
+
+struct WorkerTunnel {
+    pub tx: mpsc::Sender<WorkerMessage>,
 }
 
-struct Backend {
-    tx: mpsc::Sender<BackendMesasge>,
-}
-
-impl Backend {
+impl WorkerTunnel {
     fn new<'a, C>(cx: &mut C) -> Self
     where
         C: Context<'a>,
     {
-        let (tx, rx) = mpsc::channel::<BackendMesasge>();
-        let channel = cx.channel();
-
-        thread::spawn(move || {
-            while let Ok(message) = rx.recv() {
-                match message {
-                    BackendMesasge::Print(content, deferred) => {
-                        println!("{}", content);
-                        let result = "ok";
-
-                        channel.send(move |mut cx| {
-                            let result = cx.string(result);
-                            deferred.resolve(&mut cx, result);
-                            Ok(())
-                        });
-                    }
-                }
-            }
-        });
-
+        let (tx, rx) = mpsc::channel::<WorkerMessage>();
+        let libuv_ch = cx.channel();
+        thread::spawn(move || worker_entry_point(rx, libuv_ch));
         Self { tx }
     }
-
-    fn send(&self, message: String, deferred: Deferred) {
-        self.tx
-            .send(BackendMesasge::Print(message, deferred))
-            .expect("failed to send task");
-    }
 }
 
-impl Finalize for Backend {}
+impl Finalize for WorkerTunnel {}
 
-fn init(mut cx: FunctionContext) -> JsResult<JsBox<Backend>> {
-    let backend = Backend::new(&mut cx);
-    Ok(cx.boxed(backend))
+fn js_init(mut cx: FunctionContext) -> JsResult<JsBox<WorkerTunnel>> {
+    let tunnel = WorkerTunnel::new(&mut cx);
+    Ok(cx.boxed(tunnel))
 }
 
-fn new_tmp_store(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-    let db_path_handle = cx.argument::<JsString>(0)?;
-    let db_path = db_path_handle.value(&mut cx);
-    Store::new(&db_path).unwrap();
-    Ok(cx.undefined())
-}
-
-fn send(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let backend = cx.argument::<JsBox<Backend>>(0)?;
-    let message = cx.argument::<JsString>(1)?.value(&mut cx);
+fn js_send(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let string = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    backend.send(message, deferred);
+    tunnel
+        .tx
+        .send(WorkerMessage::Print(string, deferred))
+        .expect("unbound channel send failed");
 
     Ok(promise)
 }
 
+fn js_new_tmp_store(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    let db_path_handle = cx.argument::<JsString>(0)?;
+    let db_path = db_path_handle.value(&mut cx);
+    store::Store::new(&db_path).unwrap();
+    Ok(cx.undefined())
+}
+
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
-    cx.export_function("init", init)?;
-    cx.export_function("newTmpStore", new_tmp_store)?;
-    cx.export_function("send", send)?;
+    cx.export_function("init", js_init)?;
+    cx.export_function("send", js_send)?;
+    cx.export_function("newTmpStore", js_new_tmp_store)?;
+
     Ok(())
 }

@@ -1,5 +1,0 @@
-[workspace]
-
-members = [
-    "packages/backend"
-]
