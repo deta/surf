@@ -1,4 +1,6 @@
-use rusqlite::{ffi::sqlite3_auto_extension, params_from_iter, Connection, Result};
+use rusqlite::{
+    ffi::sqlite3_auto_extension, params_from_iter, Connection, OptionalExtension, Result,
+};
 use rust_embed::RustEmbed;
 use sqlite_vss::{sqlite3_vector_init, sqlite3_vss_init};
 use std::{error::Error, iter::Enumerate};
@@ -135,9 +137,9 @@ impl Store {
         Ok(())
     }
 
-    pub fn get_resource(&self, id: String) -> Result<Resource, rusqlite::Error> {
+    pub fn get_resource(&self, id: String) -> Result<Option<Resource>, rusqlite::Error> {
         let mut stmt = self.conn.prepare("SELECT id, resource_path, resource_type, created_at, updated_at, deleted FROM resources WHERE id = ?1")?;
-        let resource = stmt.query_row(rusqlite::params![id], |row| {
+        stmt.query_row(rusqlite::params![id], |row| {
             Ok(Resource {
                 id: row.get(0)?,
                 resource_path: row.get(1)?,
@@ -146,8 +148,8 @@ impl Store {
                 updated_at: row.get(4)?,
                 deleted: row.get(5)?,
             })
-        })?;
-        Ok(resource)
+        })
+        .optional()
     }
 
     pub fn remove_resource_tx(

@@ -35,12 +35,19 @@ fn js_init(mut cx: FunctionContext) -> JsResult<JsBox<WorkerTunnel>> {
 
 fn js_send(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let string = cx.argument::<JsString>(1)?.value(&mut cx);
+    let target = cx.argument::<JsString>(1)?.value(&mut cx);
+    let string = cx.argument::<JsString>(2)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
+    let message = match target.as_str() {
+        "print" => WorkerMessage::Print(string, deferred),
+        "get_resource" => WorkerMessage::GetResource(string, deferred),
+        _ => unreachable!(),
+    };
+
     tunnel
         .tx
-        .send(WorkerMessage::Print(string, deferred))
+        .send(message)
         .expect("unbound channel send failed");
 
     Ok(promise)

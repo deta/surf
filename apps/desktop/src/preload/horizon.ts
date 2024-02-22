@@ -116,9 +116,9 @@ const backend = (() => {
     init: () => {
       if (!handle) handle = backend.init()
     },
-    send: (message: string) => {
+    send: (target: string, content: string) => {
       if (!handle) return
-      return backend.send(handle, message)
+      return backend.send(handle, target, content)
     }
   }
 })()

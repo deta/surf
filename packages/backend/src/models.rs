@@ -22,6 +22,7 @@ pub struct Card {
     pub data: Vec<u8>,
 }
 
+#[derive(Debug)]
 pub struct Resource {
     pub id: String,
     pub resource_path: String,
