@@ -1,3 +1,5 @@
+import { get, type Writable } from 'svelte/store'
+import type { IPositionable } from './Positionable.svelte'
 import type { Vec4 } from './types/Utils.type.js'
 
 export function getDevicePixelRatio() {
@@ -117,6 +119,98 @@ export function isInsidePositionable(e: HTMLElement) {
 
 export function snapToGrid(value: number, snap: number): number {
   return Math.floor(Math.round(value / snap) * snap)
+}
+
+/**
+ * Snaps positionable to edges of other positionables.
+ */
+export function snapToEdges(
+  src: IPositionable<any>,
+  snapSources: Writable<IPositionable<any>>[],
+  POSITIONABLE_KEY: string,
+  GRID_SIZE: number,
+  EDGE_SNAP_FACTOR: number
+) {
+  {
+    // Snap Y
+    const snapTargetsTop = snapSources.filter((c) => {
+      const _c = get(c)
+      return (
+        _c[POSITIONABLE_KEY] !== src[POSITIONABLE_KEY] &&
+        Math.abs(_c.y - src.y) < GRID_SIZE * EDGE_SNAP_FACTOR
+      )
+    })
+    if (snapTargetsTop.length > 0) {
+      src.y = get(snapTargetsTop[0]).y
+    }
+    // TODO: Rename all of this to make it more clear which edges are found / snapped
+    const snapTargetsBotEdge = snapSources.filter((c) => {
+      const _c = get(c)
+      return (
+        _c[POSITIONABLE_KEY] !== src[POSITIONABLE_KEY] &&
+        Math.abs(_c.y + _c.height - src.y) < GRID_SIZE * EDGE_SNAP_FACTOR
+      )
+    })
+    if (snapTargetsBotEdge.length > 0) {
+      src.y = get(snapTargetsBotEdge[0]).y + get(snapTargetsBotEdge[0]).height + GRID_SIZE
+    }
+    const snapTargetsBot = snapSources.filter((c) => {
+      const _c = get(c)
+      return (
+        _c[POSITIONABLE_KEY] !== src[POSITIONABLE_KEY] &&
+        Math.abs(_c.y + _c.height - (src.y + src.height)) < GRID_SIZE * EDGE_SNAP_FACTOR
+      )
+    })
+    if (snapTargetsBot.length > 0) {
+      src.y = get(snapTargetsBot[0]).y + get(snapTargetsBot[0]).height - src.height
+    }
+  }
+  {
+    // Snap X
+    const snapTargetsRight = snapSources.filter((c) => {
+      const _c = get(c)
+      return (
+        _c[POSITIONABLE_KEY] !== src[POSITIONABLE_KEY] &&
+        Math.abs(_c.x + _c.width + GRID_SIZE - src.x) < GRID_SIZE * EDGE_SNAP_FACTOR
+      )
+    })
+    if (snapTargetsRight.length > 0) {
+      src.x = get(snapTargetsRight[0]).x + get(snapTargetsRight[0]).width + GRID_SIZE
+    }
+    const snapTargetsLeft = snapSources.filter((c) => {
+      const _c = get(c)
+      return (
+        _c[POSITIONABLE_KEY] !== src[POSITIONABLE_KEY] &&
+        Math.abs(_c.x - src.x) < GRID_SIZE * EDGE_SNAP_FACTOR
+      )
+    })
+    if (snapTargetsLeft.length > 0) {
+      src.x = get(snapTargetsLeft[0]).x
+    }
+  }
+  {
+    // Snap X + Width
+    const snapTargetsRight = snapSources.filter((c) => {
+      const _c = get(c)
+      return (
+        _c[POSITIONABLE_KEY] !== src[POSITIONABLE_KEY] &&
+        Math.abs(_c.x + _c.width - (src.x + src.width)) < GRID_SIZE * EDGE_SNAP_FACTOR
+      )
+    })
+    if (snapTargetsRight.length > 0) {
+      src.x = get(snapTargetsRight[0]).x + get(snapTargetsRight[0]).width - src.width
+    }
+    const snapTargetsLeft = snapSources.filter((c) => {
+      const _c = get(c)
+      return (
+        _c[POSITIONABLE_KEY] !== src[POSITIONABLE_KEY] &&
+        Math.abs(_c.x - GRID_SIZE - (src.x + src.width)) < GRID_SIZE * EDGE_SNAP_FACTOR
+      )
+    })
+    if (snapTargetsLeft.length > 0) {
+      src.x = get(snapTargetsLeft[0]).x - src.width - GRID_SIZE
+    }
+  }
 }
 
 export function rectsIntersect(a: Vec4, b: Vec4) {

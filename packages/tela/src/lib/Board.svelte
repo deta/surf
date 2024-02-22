@@ -1,3 +1,5 @@
+<svelte:options immutable={true} />
+
 <script context="module" lang="ts">
   // TODO: REMOVE
   // export const dragDelay = writable(180);
@@ -16,6 +18,12 @@
       CAN_SELECT: true,
       SNAP_TO_GRID: false,
       GRID_SIZE: 20,
+
+      EDGE_SNAP: true,
+      EDGE_SNAP_FACTOR: 1,
+
+      QUICK_SNAP: true,
+      QUICK_SNAP_THRESHOLD: 25,
 
       // CULL: true,
       // CULL_MARGIN: 200,
@@ -178,6 +186,7 @@
     isInsideViewport,
     posToAbsolute,
     rectsIntersect,
+    snapToEdges,
     snapToGrid
   } from './utils.js'
   import type { IPositionable } from './Positionable.svelte'
@@ -227,6 +236,9 @@
   const selection = $state.selection
   const selectionRect = $state.selectionRect
   const stackingOrder = $state.stackingOrder
+
+  const allowQuickSnap = writable(false)
+  let showQuickSnapGuides = false
 
   // $: transformCss = `transform-origin: top left; transform: ${
   //   $zoom !== 1 ? `scale(${$zoom * 100}%)` : ""
@@ -729,6 +741,37 @@
     }
   )
 
+  // TODO: Figure out if we still need the distinction / can consolidate
+  // For now we are using this additional one because we REALLY do only want the visible ones.
+  // 'visiblePositionables' contains all as they are now hoised permanently!
+  const onScreenPositionables = derived(
+    [positionables, hoistedPositionables, visibleChunks],
+    (values) => {
+      const _positionables = values[0]
+      const _visibleChunks = values[2]
+      // TODO: Remove dev
+      const visible = [
+        ...fastFilter((e) => {
+          const _e = get(e)
+          return isInsideViewport(
+            _e.x,
+            _e.y,
+            _e.width,
+            _e.height,
+            $viewOffset.x,
+            $viewOffset.y,
+            $viewPort,
+            $zoom,
+            0,
+            0
+          )
+        }, _positionables)
+      ]
+
+      return visible
+    }
+  )
+
   onMount(() => {
     if (!resizeObserver) {
       resizeObserver = new ResizeObserver(() => {
@@ -896,6 +939,19 @@
     } else if (e.key === 'Escape') {
       mode.idle()
     }
+
+    if ($mode === 'dragging') {
+      if (e.shiftKey) {
+        allowQuickSnap.set(true)
+        showQuickSnapGuides = true
+      }
+    }
+  }
+  function onKeyUp(e: KeyboardEvent) {
+    if (e.key === 'Shift') {
+      allowQuickSnap.set(false)
+      showQuickSnapGuides = false
+    }
   }
 
   // TELA Handlers
@@ -1061,6 +1117,7 @@
   }
 
   const dragState = {
+    draggingPositionable: null as Writable<IPositionable<any>> | null,
     init: { x: 0, y: 0 },
     curr: { x: 0, y: 0 },
     offset: { x: 0, y: 0 }, // TODO: Do we need this? -> Can we merge with relativeOffset?
@@ -1068,6 +1125,9 @@
     positionableInit: { x: 0, y: 0 },
     autoScroll: false
   }
+  $: cardSnapGuideCss = dragState.draggingPositionable
+    ? `top: ${snapToGrid(get(dragState.draggingPositionable).y, $settings.GRID_SIZE)}px; left: ${snapToGrid(get(dragState.draggingPositionable).x, $settings.GRID_SIZE)}px; width: ${snapToGrid(get(dragState.draggingPositionable).width, $settings.GRID_SIZE)}px; height: ${snapToGrid(get(dragState.draggingPositionable).height, $settings.GRID_SIZE)}px;`
+    : ''
   function draggable_onMouseDown(
     e: CustomEvent<{
       event: MouseEvent | TouchEvent
@@ -1102,6 +1162,14 @@
       p.y = absY - dragState.relativeOffset.y
       return p
     })
+    dragState.draggingPositionable = positionable
+  }
+  let quickPreviewBackup = {
+    id: '',
+    x: -1,
+    y: 0,
+    w: 0,
+    h: 0
   }
   function draggable_onMouseMove(
     e: CustomEvent<{
@@ -1109,8 +1177,12 @@
       positionable: Writable<IPositionable<any>>
       clientX: number
       clientY: number
+      draggable: HTMLElement
     }>
   ) {
+    if (hasClassOrParentWithClass(e.detail.draggable, 'tela-ignore')) {
+      return
+    }
     const { positionable, clientX, clientY } = e.detail
     const { x: absX, y: absY } = posToAbsolute(
       clientX,
@@ -1211,7 +1283,73 @@
     dragState.offset.y = absY - dragState.init.y
     dragState.curr.y = absY
 
+    // Handle classes
+    if (clientY < $settings.QUICK_SNAP_THRESHOLD && $allowQuickSnap) {
+      const domEl = document.querySelector(
+        `[data-id="${get(e.detail.positionable).id}"]`
+      ) as HTMLElement
+      domEl.classList.remove('no-animation')
+    } else {
+      const domEl = document.querySelector(
+        `[data-id="${get(e.detail.positionable).id}"]`
+      ) as HTMLElement
+      domEl.classList.add('no-animation')
+    }
+
     positionable.update((p) => {
+      // Quick Snap
+      if (clientY <= $settings.QUICK_SNAP_THRESHOLD && $allowQuickSnap) {
+        if (quickPreviewBackup.id !== p.id && quickPreviewBackup.x === -1) {
+          quickPreviewBackup.x = p.x
+          quickPreviewBackup.y = p.y
+          quickPreviewBackup.w = p.width
+          quickPreviewBackup.h = p.height
+        }
+        let snapMode: 'third-left' | 'half-left' | 'third-center' | 'half-right' | 'third-right' =
+          'third-center'
+        const PADD = $settings.GRID_SIZE
+        if (clientX <= $viewPort.w / 9) {
+          snapMode = 'third-left'
+        } else if (clientX <= ($viewPort.w / 9) * 3) {
+          snapMode = 'half-left'
+        } else if (clientX <= ($viewPort.w / 9) * 6) {
+          snapMode = 'third-center'
+        } else if (clientX <= ($viewPort.w / 9) * 8) {
+          snapMode = 'half-right'
+        } else {
+          snapMode = 'third-right'
+        }
+
+        if (snapMode === 'third-left') {
+          p.x = $viewOffset.x
+          p.width = $viewPort.w / 3 - PADD
+        } else if (snapMode === 'half-left') {
+          p.x = $viewOffset.x
+          p.width = $viewPort.w / 2 - PADD
+        } else if (snapMode === 'third-center') {
+          p.x = $viewOffset.x + $viewPort.w / 3 + PADD
+          p.width = $viewPort.w / 3 - PADD * 3 - PADD
+        } else if (snapMode === 'half-right') {
+          p.x = $viewOffset.x + $viewPort.w / 2 + PADD
+          p.width = $viewPort.w / 2 - 25 - PADD
+        } else if (snapMode === 'third-right') {
+          p.x = $viewOffset.x + ($viewPort.w / 3) * 2 - PADD
+          p.width = $viewPort.w / 3 - 25 + PADD
+        }
+
+        p.y = 0
+        // TODO: Look into the padding again. Its off as the viewport calculations
+        // dont include padding set on tela-container!
+        p.height = $viewPort.h - 50 - ($viewPort.h % $settings.GRID_SIZE)
+        return p
+      } else {
+        if (quickPreviewBackup.x !== -1) {
+          p.width = quickPreviewBackup.w
+          p.height = quickPreviewBackup.h
+          quickPreviewBackup.x = -1
+        }
+      }
+
       const { x: boundX, y: boundY } = applyBounds(
         absX - dragState.relativeOffset.x,
         absY - dragState.relativeOffset.y,
@@ -1224,6 +1362,15 @@
       }
 
       p.y = boundY
+
+      snapToEdges(
+        p,
+        $onScreenPositionables,
+        POSITIONABLE_KEY,
+        $settings.GRID_SIZE,
+        $settings.EDGE_SNAP_FACTOR
+      )
+
       return p
     })
 
@@ -1237,8 +1384,10 @@
       positionable: Writable<IPositionable<any>>
       clientX: number
       clientY: number
+      draggable: HTMLElement
     }>
   ) {
+    if (hasClassOrParentWithClass(e.detail.draggable, 'tela-ignore')) return
     const { positionable, clientX, clientY } = e.detail
     const { x: absX, y: absY } = posToAbsolute(
       clientX,
@@ -1249,73 +1398,88 @@
       $zoom
     )
 
-    dragState.autoScroll = false
+    const domEl = document.querySelector(
+      `[data-id="${get(e.detail.positionable).id}"]`
+    ) as HTMLElement
+    domEl.classList.remove('no-animation')
 
-    const initChunkX = Math.floor(dragState.positionableInit.x / CHUNK_WIDTH)
-    const initChunkY = Math.floor(dragState.positionableInit.y / CHUNK_WIDTH)
-    let targetChunkX: number
-    let targetChunkY: number
+    if (clientY > $settings.QUICK_SNAP_THRESHOLD) {
+      dragState.autoScroll = false
 
-    // TODO3: Issues cuz update positionable before chunks?
-    positionable.update((p) => {
-      const { x: boundX, y: boundY } = applyBounds(
-        absX - dragState.relativeOffset.x,
-        absY - dragState.relativeOffset.y,
-        p.width,
-        p.height
-      )
+      const initChunkX = Math.floor(dragState.positionableInit.x / CHUNK_WIDTH)
+      const initChunkY = Math.floor(dragState.positionableInit.y / CHUNK_WIDTH)
+      let targetChunkX: number
+      let targetChunkY: number
 
-      // p.x = boundX;
-      // p.y = boundY;
+      // TODO3: Issues cuz update positionable before chunks?
+      positionable.update((p) => {
+        const { x: boundX, y: boundY } = applyBounds(
+          absX - dragState.relativeOffset.x,
+          absY - dragState.relativeOffset.y,
+          p.width,
+          p.height
+        )
 
-      // let x = absX - dragState.relativeOffset.x;
-      // let y = absY - dragState.relativeOffset.y;
-      if ($settings.SNAP_TO_GRID) {
-        p.x = snapToGrid(boundX, $settings.GRID_SIZE)
-        p.y = snapToGrid(boundY, $settings.GRID_SIZE)
-      } else {
-        p.x = boundX
-        p.y = boundY
-      }
+        // p.x = boundX;
+        // p.y = boundY;
 
-      targetChunkX = Math.floor(p.x / CHUNK_WIDTH)
-      targetChunkY = Math.floor(p.y / CHUNK_HEIGHT)
+        // let x = absX - dragState.relativeOffset.x;
+        // let y = absY - dragState.relativeOffset.y;
+        // Perform snapping
+        if ($settings.SNAP_TO_GRID) {
+          p.x = snapToGrid(boundX, $settings.GRID_SIZE)
+          p.y = snapToGrid(boundY, $settings.GRID_SIZE)
+        } else {
+          p.x = boundX
+          p.y = boundY
+        }
+        snapToEdges(
+          p,
+          $onScreenPositionables,
+          POSITIONABLE_KEY,
+          $settings.GRID_SIZE,
+          $settings.EDGE_SNAP_FACTOR
+        )
 
-      // Remove from old chunk (It will automatically get added to the new one by the reactive logic at the beginning).
-      if (!p.hoisted) {
-        chunks.update((_chunks) => {
-          const initChunkId = `${initChunkX}:${initChunkY}`
-          const targetChunkId = `${targetChunkX}:${targetChunkY}`
-          if (initChunkId === targetChunkId) return _chunks
-          const initChunk = _chunks.get(initChunkId)
+        targetChunkX = Math.floor(p.x / CHUNK_WIDTH)
+        targetChunkY = Math.floor(p.y / CHUNK_HEIGHT)
 
-          if (initChunk === undefined) {
-            console.error(
-              initChunk !== undefined,
-              `[draggable_onMouseUp] Chunk ${initChunkId} not found!`
-            )
-          } else {
-            let empty = false
-            initChunk.update((_positionables) => {
-              const i = _positionables.indexOf(positionable)
-              _positionables.splice(i, 1)
-              empty = _positionables.length === 0
-              // TODO: What if indexOf returns -1?
-              return _positionables
-            })
-            if (empty) {
-              _chunks.delete(initChunkId)
+        // Remove from old chunk (It will automatically get added to the new one by the reactive logic at the beginning).
+        if (!p.hoisted) {
+          chunks.update((_chunks) => {
+            const initChunkId = `${initChunkX}:${initChunkY}`
+            const targetChunkId = `${targetChunkX}:${targetChunkY}`
+            if (initChunkId === targetChunkId) return _chunks
+            const initChunk = _chunks.get(initChunkId)
+
+            if (initChunk === undefined) {
+              console.error(
+                initChunk !== undefined,
+                `[draggable_onMouseUp] Chunk ${initChunkId} not found!`
+              )
+            } else {
+              let empty = false
+              initChunk.update((_positionables) => {
+                const i = _positionables.indexOf(positionable)
+                _positionables.splice(i, 1)
+                empty = _positionables.length === 0
+                // TODO: What if indexOf returns -1?
+                return _positionables
+              })
+              if (empty) {
+                _chunks.delete(initChunkId)
+              }
             }
-          }
 
-          return _chunks
-        })
-      }
+            return _chunks
+          })
+        }
 
-      return p
-    })
+        return p
+      })
 
-    positionables.update((v) => v)
+      positionables.update((v) => v)
+    }
 
     //const initChunkX = Math.floor((dragState.init.x - dragState.relativeOffset.x) / CHUNK_WIDTH);
     //const initChunkY = Math.floor((dragState.init.y - dragState.relativeOffset.y) / CHUNK_HEIGHT);
@@ -1371,6 +1535,10 @@
     //   });
     // }
 
+    dragState.draggingPositionable = null
+    // PERF: This is bit hacky, but works for now (Without it, the grid snapping is not as smooth).
+    setTimeout(() => domEl.classList.add('no-animation'), 300)
+
     mode.idle()
     dispatch('draggableEnd', positionable)
   }
@@ -1404,6 +1572,7 @@
     dragState.relativeOffset.y = absY - clientY
     dragState.positionableInit.x = get(positionable).x
     dragState.positionableInit.y = get(positionable).y
+    dragState.draggingPositionable = positionable
   }
   function resizable_onMouseMove(
     e: CustomEvent<{
@@ -1419,12 +1588,17 @@
     const { positionable, clientX, clientY, direction, minSize, maxSize, event } = e.detail
     let { x: absX, y: absY } = posToAbsolute(
       clientX,
-      clientY,
+      clientY + 18,
       $viewOffset.x,
       $viewOffset.y,
       $viewPort,
       $zoom
     )
+
+    const domEl = document.querySelector(
+      `[data-id="${get(e.detail.positionable).id}"]`
+    ) as HTMLElement
+    domEl.classList.add('no-animation')
 
     const preserveAspectRatio = event.shiftKey
 
@@ -1491,9 +1665,60 @@
         height = preserveAspectRatio ? width / aspectRatio : absY - p.y
       }
 
-      const boundWidth = clamp(width, minSize.x, maxSize.x)
-      const boundHeight = clamp(height, minSize.y, maxSize.y)
-      const { x: boundX, y: boundY } = applyBounds(x, y, p.width, p.height)
+      let boundWidth = clamp(width, minSize.x, maxSize.x)
+      let boundHeight = clamp(height, minSize.y, maxSize.y)
+      let { x: boundX, y: boundY } = applyBounds(x, y, p.width, p.height)
+
+      if (direction === 'top' || direction === 'top-left' || direction === 'top-right') {
+        const snapTargets = $onScreenPositionables.filter((c) => {
+          const _c = get(c)
+          return (
+            _c[POSITIONABLE_KEY] !== p[POSITIONABLE_KEY] &&
+            Math.abs(_c.y - boundY) < $settings.GRID_SIZE / 2
+          )
+        })
+        if (snapTargets.length > 0) {
+          boundY = get(snapTargets[0]).y // - (boundY - get(snapTargets[0]).y)
+          boundHeight = p.height + (p.y - get(snapTargets[0]).y)
+        }
+      }
+      if (direction === 'bottom' || direction === 'bottom-left' || direction === 'bottom-right') {
+        const snapTargets = $onScreenPositionables.filter((c) => {
+          const _c = get(c)
+          return (
+            _c[POSITIONABLE_KEY] !== p[POSITIONABLE_KEY] &&
+            Math.abs(_c.y + _c.height - (boundY + boundHeight)) < $settings.GRID_SIZE / 2
+          )
+        })
+        if (snapTargets.length > 0) {
+          boundHeight = get(snapTargets[0]).height - (boundY - get(snapTargets[0]).y)
+        }
+      }
+      if (direction === 'left' || direction === 'top-left' || 'bottom-left') {
+        const snapTargets = $onScreenPositionables.filter((c) => {
+          const _c = get(c)
+          return (
+            _c[POSITIONABLE_KEY] !== p[POSITIONABLE_KEY] &&
+            Math.abs(_c.x - boundX) < $settings.GRID_SIZE / 2
+          )
+        })
+        if (snapTargets.length > 0) {
+          boundX = get(snapTargets[0]).x
+          boundWidth = p.width + (p.x - get(snapTargets[0]).x)
+        }
+      }
+      if (direction === 'right' || direction === 'top-right' || direction === 'bottom-right') {
+        const snapTargets = $onScreenPositionables.filter((c) => {
+          const _c = get(c)
+          return (
+            _c[POSITIONABLE_KEY] !== p[POSITIONABLE_KEY] &&
+            Math.abs(_c.x + _c.width - (boundX + boundWidth)) < $settings.GRID_SIZE / 2
+          )
+        })
+        if (snapTargets.length > 0) {
+          boundWidth = get(snapTargets[0]).width - (boundX - get(snapTargets[0]).x)
+        }
+      }
 
       const reachedMinHeight = height < minSize.y
       const reachedMinWidth = width < minSize.x
@@ -1542,6 +1767,11 @@
       $zoom
     )
     // TODO: BOUNDS CHECKING& APPLY final pos
+
+    const domEl = document.querySelector(
+      `[data-id="${get(e.detail.positionable).id}"]`
+    ) as HTMLElement
+    domEl.classList.remove('no-animation')
 
     const initChunkX = Math.floor(dragState.positionableInit.x / CHUNK_WIDTH)
     const initChunkY = Math.floor(dragState.positionableInit.y / CHUNK_WIDTH)
@@ -1615,6 +1845,10 @@
         return _chunks
       })
     }
+
+    dragState.draggingPositionable = null
+    // PERF: This is bit hacky, but works for now (Without it, the grid snapping is not as smooth).
+    setTimeout(() => domEl.classList.add('no-animation'), 300)
 
     mode.idle()
     dispatch('resizableEnd', positionable)
@@ -1700,15 +1934,8 @@
   })
 </script>
 
-<svelte:window on:keydown={onKeyDown} />
-<!-- <svelte:options immutable={true} /> -->
+<svelte:window on:keydown={onKeyDown} on:keyup={onKeyUp} />
 
-<!--
-  TODO: switch to use resize observer to update viewport
--->
-<!--
-  TODO: switch to use resize observer to update viewport
--->
 <div
   class="tela-container {$$restProps.class || ''}"
   bind:this={containerEl}
@@ -1718,6 +1945,7 @@
     if (!hasClassOrParentWithClass(e.target, 'draggable')) clearSelection()
   }}
   on:mousedown
+  on:keydown
 >
   {#if $settings.DEV}
     <ul class="dev" style="list-style: none;">
@@ -1732,6 +1960,11 @@
             ></span
           >
           <li><span>Mode:</span><span>{$mode}</span></li>
+          <li>
+            <span>Viewport:</span><span
+              >{$viewPort.x}, {$viewPort.y}, {$viewPort.w}, {$viewPort.h}</span
+            >
+          </li>
           <li><span>Current Stretch:</span><span>{Math.floor($viewOffset.x / 1920) + 1}</span></li>
           <!-- NOTE: Major perf hit due to conditional slot. -->
           <!-- TODO: Look into optimizing dev overlay perf -->
@@ -1743,10 +1976,29 @@
     </ul>
   {/if}
 
+  <div class="quickSnapHints" class:visible={showQuickSnapGuides}>
+    <span style="flex: 1;"></span>
+    <!-- <span>|</span> -->
+    <span style="flex: 2;"></span>
+    <!-- <span>|</span> -->
+    <span style="flex: 3;"></span>
+    <!-- <span>|</span> -->
+    <span style="flex: 2;"></span>
+    <!-- <span>|</span> -->
+    <span style="flex: 1;"></span>
+  </div>
+
   <div class="tela-board mode-{$mode}" style={transformCss}>
     {#if $mode === 'select' || $mode === 'modSelect'}
       <slot name="selectRect" />
     {/if}
+
+    <!-- TODO (@maxu): Make this only appear when speed is low -> No big flings -->
+    <!-- <div
+      class="card-snap-guide"
+      class:visible={dragState.draggingPositionable !== null}
+      style={cardSnapGuideCss}
+    ></div> -->
 
     {#if $settings.DEV}
       <!-- TODO: This requires updating lib users to Svelte4 -->
@@ -1819,5 +2071,55 @@
     display: flex;
     justify-content: space-between;
     gap: 1.5ch;
+  }
+
+  .card-snap-guide {
+    opacity: 0%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* border: 2px dashed #ff0000; */
+    background: rgba(191, 191, 191, 0.322);
+    border-radius: var(--theme-border-radius);
+    --transition-duration: 210ms;
+    --transition-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition:
+      width var(--transition-duration) var(--transition-ease),
+      height var(--transition-duration) var(--transition-ease),
+      top var(--transition-duration) var(--transition-ease),
+      left var(--transition-duration) var(--transition-ease),
+      opacity 600ms ease-in-out;
+  }
+  .card-snap-guide.visible {
+    opacity: 100%;
+  }
+
+  .quickSnapHints {
+    display: flex;
+    position: fixed;
+    justify-content: space-evenly;
+    padding: 5px;
+    top: 0;
+    left: 0;
+    right: 0;
+    gap: 0.5rem;
+    opacity: 0%;
+    pointer-events: none;
+    user-select: none;
+    transition: opacity 70ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .quickSnapHints.visible {
+    opacity: 100%;
+  }
+  .quickSnapHints > span {
+    width: 100%;
+    height: 18px;
+    text-align: center;
+    user-select: none;
+    color: rgba(0, 0, 0, 0.286);
+    background: rgba(131, 131, 131, 0.245);
+    border-radius: 8px;
   }
 </style>

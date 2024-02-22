@@ -14,6 +14,12 @@ export interface IBoardSettings {
   SNAP_TO_GRID: boolean
   GRID_SIZE: number
 
+  EDGE_SNAP: boolean
+  EDGE_SNAP_FACTOR: number
+
+  QUICK_SNAP: boolean
+  QUICK_SNAP_THRESHOLD: number
+
   BOUNDS: {
     minX: number
     maxX: number

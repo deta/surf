@@ -2,8 +2,8 @@ name: Dawn Release
 
 on:
   schedule:
-    # 1:23 AM UTC, Tuesday through Saturday
-    - cron: '23 1 * * 2-6'
+    # every weekday at 20:03 UTC
+    - cron: '3 20 * * 1-5'
   workflow_dispatch:
 
 jobs:
@@ -21,7 +21,8 @@ jobs:
       - name: Get latest dawn version
         id: latest-dawn-version
         run: |
-          echo "version=$(git tag -l | grep dawn | sort -rV | head -n 1)" >> "$GITHUB_OUTPUT"
+          git fetch --prune --unshallow --tags
+          echo "version=$(git tag -l | grep dawn | grep -v pre | sort -rV | head -n 1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v3
         with:

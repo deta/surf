@@ -11,21 +11,27 @@
   stroke-width="1.5"
   stroke="currentColor"
   fill="none"
+  stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <circle
-    cx="7.99805"
-    cy="8"
-    r="5.25"
+  <path
+    d="M5 12H19"
     stroke={color}
-    stroke-width="1.96364"
+    stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
   <path
-    d="M16.25 16.2461L11.75 11.7461"
+    d="M13 18L19 12"
     stroke={color}
-    stroke-width="1.96364"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M13 6L19 12"
+    stroke={color}
+    stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
   />

@@ -9,7 +9,6 @@
 
   const board = getContext<IBoard<any, any>>('board')
   const settings = getContext<Writable<IBoardSettings>>('settings')
-  const GRID_SIZE = $settings.GRID_SIZE
 
   const state = board.state
   const viewport = $state.viewPort
@@ -19,8 +18,8 @@
   $: transformCss = `width: ${$viewport.w / $zoom}px; height: ${
     $viewport.h / $zoom
   }px; transform: translate3d(-${dotSize}px, -${dotSize}px, 0) translate3d(${
-    $viewOffset.x - ($viewOffset.x % GRID_SIZE)
-  }px, ${$viewOffset.y - ($viewOffset.y % GRID_SIZE)}px, 0);`
+    $viewOffset.x - ($viewOffset.x % $settings.GRID_SIZE)
+  }px, ${$viewOffset.y - ($viewOffset.y % $settings.GRID_SIZE)}px, 0);`
 
   // $: svgShiftCss = `transform: translate3d(-${$viewX % GRID_SIZE}px, 0px, 0);`;
 </script>
