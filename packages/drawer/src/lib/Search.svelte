@@ -26,7 +26,7 @@
 
 <div class="drawer-search">
   <div class="icon">
-    <Icon name="search" size="22px" />
+    <Icon name="search" size="25px" />
   </div>
 
   <input
@@ -45,7 +45,7 @@
   .drawer-search {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
     padding: 1rem;
 
     input {

@@ -9,9 +9,10 @@
   export let card: Writable<CardText>
   export let limit: number = 200
 
-  $: value = $card.data.content
+  $: value = $card.data.content ?? ''
 
   const generateSummary = (value: JSONContent) => {
+    console.log('value', value)
     const text = getEditorContentText(value)
 
     if (text.length > limit) {

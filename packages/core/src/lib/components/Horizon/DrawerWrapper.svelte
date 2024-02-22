@@ -24,6 +24,7 @@
   } from '../../types/index'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { useLogScope } from '../../utils/log'
+  import { processDrop } from '../../service/mediaImporter'
 
   export const drawer = provideDrawer()
   export let horizon: Horizon
@@ -49,7 +50,10 @@
       .map((card) => {
         if (card.type === 'browser') {
           const data = (card as CardBrowser).data
-          const url = data.historyStackIds[data.currentHistoryIndex] ?? data.initialLocation
+          let currentEntry = horizon.historyEntriesManager.getEntry(
+            data.historyStackIds[data.currentHistoryIndex]
+          )
+          const url = currentEntry?.url ?? data.initialLocation
           return {
             id: card.id,
             cards: [
@@ -85,7 +89,7 @@
             type: 'text',
             createdAt: card.createdAt,
             updatedAt: card.updatedAt,
-            data: data.content
+            data: data.content || ''
           } as MockResource
         } else if (card.type === 'file') {
           const data = (card as CardFile).data
@@ -124,7 +128,7 @@
           return text ? text.toLowerCase().includes(searchQuery.value.toLowerCase()) : false
         } else if (resource.type === 'link') {
           const url = resource.data as any
-          return url ? url.includes(searchQuery.value.toLowerCase()) : false
+          return url ? url.toLowerCase().includes(searchQuery.value.toLowerCase()) : false
         } else if (resource.type === 'file') {
           const data = resource.data as any
           if (data.name) {
@@ -159,12 +163,58 @@
       horizon.scrollToCard(card.id)
     }
   }
+
+  const handleDrop = async (e: CustomEvent<DragEvent>) => {
+    const event = e.detail
+
+    log.debug('Dropped', event)
+
+    const parsed = await processDrop(event)
+
+    log.debug('Parsed', parsed)
+
+    const board = horizon.board
+    if (!board) {
+      log.error('No board found')
+      return
+    }
+
+    const SAFE_AREA_PADDING = 64
+    const state = get(board.state)
+    const viewport = get(state.viewPort)
+    const viewoffset = get(state.viewOffset)
+    const width = 300
+    const height = 300
+
+    const basePosition = {
+      x: viewoffset.x + viewport.w / 2 - width / 2,
+      y: viewoffset.y + viewport.h / 2 - height / 2 - 25,
+      width: width,
+      height: height
+    }
+
+    parsed.map((item, idx) => {
+      log.debug('processed item', item)
+
+      if (item.type === 'text') {
+        horizon.addCardText(item.data, basePosition)
+      } else if (item.type === 'url') {
+        horizon.addCardLink(item.data.href, basePosition)
+      } else if (item.type === 'file') {
+        if (item.data.type.startsWith('image')) {
+          horizon.addCardFile(item.data, basePosition)
+        } else {
+          log.warn('unhandled file type', item.data.type)
+        }
+      }
+    })
+  }
 </script>
 
 <DrawerProvider {drawer} on:search={handleSearch}>
   <DrawerNavigation {tabs} />
   <DrawerSearch />
-  <DrawerContentWrapper>
+  <DrawerContentWrapper on:drop={handleDrop}>
     {#if $result.length === 0}
       <DrawerContenEmpty />
     {:else}
@@ -172,7 +222,9 @@
         items={$result}
         idKey="id"
         animate={false}
-        maxColWidth={520}
+        maxColWidth={650}
+        minColWidth={300}
+        gap={15}
         let:item={resource}
       >
         <DrawerContentItem>

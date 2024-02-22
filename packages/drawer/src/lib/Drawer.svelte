@@ -13,7 +13,7 @@
     dispatch('search', query)
   })
 
-  $: width = $size === 'minimal' ? '400px' : $size === 'normal' ? '33vw' : '100vw'
+  $: width = $size === 'minimal' ? '400px' : $size === 'normal' ? 'calc(max(33vw, 500px))' : '100vw'
 </script>
 
 <div class="drawer-root">
