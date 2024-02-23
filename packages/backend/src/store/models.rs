@@ -1,4 +1,3 @@
-use neon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 pub struct Horizon {

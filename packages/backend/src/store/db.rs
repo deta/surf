@@ -2,12 +2,9 @@ use crate::{BackendError, BackendResult};
 
 use super::models::*;
 
-use rusqlite::{
-    ffi::sqlite3_auto_extension, params_from_iter, Connection, OptionalExtension, Result,
-};
+use rusqlite::{ffi::sqlite3_auto_extension, Connection, OptionalExtension};
 use rust_embed::RustEmbed;
 use sqlite_vss::{sqlite3_vector_init, sqlite3_vss_init};
-use std::{error::Error, iter::Enumerate};
 
 #[derive(RustEmbed)]
 #[folder = "migrations/"]
@@ -698,8 +695,8 @@ impl Database {
         JOIN resources R ON M.resource_id = R.id
         WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1)";
         if !resource_ids.is_empty() {
-            let query = format!("{} AND R.id IN (?2)", query);
-            let params = rusqlite::params![&resource_ids, keyword];
+            let _query = format!("{} AND R.id IN (?2)", query);
+            let _params = rusqlite::params![&resource_ids, keyword];
         }
         let mut stmt = self.conn.prepare(query)?;
         let search_results = stmt.query_map(params, |row| {

@@ -112,19 +112,29 @@ const backend = (() => {
   const backend = require('@horizon/backend')
   let handle = null
 
-  return {
-    init: () => {
-      if (!handle) handle = backend.init()
-    },
-    send: (target: string, content: string) => {
-      if (!handle) return
-      return backend.send(handle, target, content)
-    },
-    createResource: (resource: string) => {
-      if (!handle) return
-      return backend.createResource(handle, resource)
-    }
+  const with_handle =
+    (fn: any) =>
+    (...args: any) =>
+      fn(handle, ...args)
+
+  function init() {
+    let fn = {}
+    handle = backend.js__backend_tunnel_init()
+
+    Object.keys(backend).forEach((key) => {
+      if (
+        typeof backend[key] === 'function' &&
+        key.startsWith('js__') &&
+        key !== 'js__backend_tunnel_init'
+      ) {
+        fn[key] = with_handle(backend[key])
+      }
+    })
+
+    return fn
   }
+
+  return { init }
 })()
 
 if (process.contextIsolated) {
