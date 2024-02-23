@@ -4,7 +4,7 @@ import { setAppMenu } from './appMenu'
 import { registerShortcuts, unregisterShortcuts } from './shortcuts'
 import { setupAdblocker } from './adblocker'
 import { setupIpcHandlers } from './ipcHandlers'
-import { electronApp, optimizer } from '@electron-toolkit/utils'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
 
@@ -31,19 +31,40 @@ mkdirSync(userDataPath, { recursive: true })
 app.setPath('userData', userDataPath)
 
 const handleOpenUrl = (url: string) => {
-  const mainWindow = getMainWindow()
+  try {
+    const mainWindow = getMainWindow()
 
-  if (!mainWindow) {
-    console.error('No main window found, ')
-    return
+    if (!mainWindow || mainWindow?.isDestroyed()) {
+      console.warn('No main window found')
+
+      // If there are no windows, create one and then open the URL once it is ready
+      if (BrowserWindow.getAllWindows().length === 0) {
+        ipcMain.once('app-ready', () => {
+          handleOpenUrl(url)
+        })
+
+        createWindow()
+      } else {
+        console.error('There are windows, but no main window')
+      }
+
+      return
+    }
+
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+    }
+
+    mainWindow.focus()
+    mainWindow.webContents.send('open-url', url)
+  } catch (error) {
+    console.error('Error handling open URL:', error)
+
+    // throw if development
+    if (is.dev) {
+      throw error
+    }
   }
-
-  if (mainWindow.isMinimized()) {
-    mainWindow.restore()
-  }
-
-  mainWindow.focus()
-  mainWindow.webContents.send('open-url', url)
 }
 
 // Windows + Linux, more info: https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app
