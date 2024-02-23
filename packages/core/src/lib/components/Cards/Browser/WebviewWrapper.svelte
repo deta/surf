@@ -17,8 +17,10 @@
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import type { HistoryEntriesManager } from '../../../service/horizon'
   import type { HistoryEntry } from '../../../types'
+  import { useLogScope } from '../../../utils/log'
 
   const dispatch = createEventDispatcher<WebViewWrapperEvents>()
+  const log = useLogScope('WebviewWrapper')
 
   export let src: string
   export let partition: string
@@ -53,6 +55,7 @@
   }
 
   const handleRedirectNav = (newUrl: string) => {
+    log.debug('Handling redirect to', newUrl)
     historyStackIds.update((stack) => {
       const index = get(currentHistoryIndex)
       if (index >= 0 && index < stack.length) {
@@ -67,11 +70,16 @@
   }
 
   const addHistoryEntry = async (url: string, pageTitle: string) => {
+    log.debug('Adding history entry', url)
     if (!initialLoadDone) {
       initialLoadDone = true
       return
     }
-    if (programmaticNavigation) return
+    if (programmaticNavigation) {
+      log.debug('Programmatic navigation, skipping history entry')
+      programmaticNavigation = false
+      return
+    }
 
     try {
       const entry: HistoryEntry = await historyEntriesManager.addEntry({
@@ -166,12 +174,13 @@
     })
 
     webview.addEventListener('did-navigate', (e: any) => {
+      log.debug('did navigate', e.url)
       url.set(e.url)
       pendingUrlUpdate = { url: e.url, timestamp: Date.now() }
     })
 
     webview.addEventListener('did-navigate-in-page', (e: any) => {
-      console.log('e, what?')
+      log.debug('did navigate in page', e.url)
       if (e.isMainFrame) {
         url.set(e.url)
         // addHistoryEntry(e.url, get(title))
@@ -184,6 +193,7 @@
     webview.addEventListener('did-start-loading', () => isLoading.set(true))
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
     webview.addEventListener('page-title-updated', (e: any) => {
+      log.debug('Page title updated', e.title)
       title.set(e.title)
       if (pendingUrlUpdate) {
         addHistoryEntry(pendingUrlUpdate.url, e.title)
@@ -220,12 +230,14 @@
   })
 
   export function navigate(targetUrl: string): void {
+    log.debug('Navigating to', targetUrl)
     if (webview) {
       webview.src = targetUrl
     }
   }
 
   export function reload(): void {
+    log.debug('Reloading')
     webview?.reload()
   }
 
@@ -234,6 +246,7 @@
   }
 
   export function goBack(): void {
+    log.debug('Going back')
     currentHistoryIndex.update((n) => {
       if (n > 0) {
         n--
@@ -250,6 +263,7 @@
   }
 
   export function goForward(): void {
+    log.debug('Going forward')
     currentHistoryIndex.update((n) => {
       const stack = get(historyStackIds)
       if (n < stack.length - 1) {

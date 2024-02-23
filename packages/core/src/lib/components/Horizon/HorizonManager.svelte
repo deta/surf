@@ -550,6 +550,13 @@
         })
       }
     })
+
+    window.api.onAdBlockerStateChange((_partition: string, state: boolean) => {
+      log.debug('adblocker state changed', state)
+      if ($activeHorizon) {
+        $activeHorizon.adblockerState.set(state)
+      }
+    })
   })
 
   onDestroy(() => {

@@ -1,6 +1,7 @@
 import { app, Menu } from 'electron'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
+import { toggleAdblocker } from './adblocker'
 import { resolve } from 'path'
 
 const isMac = process.platform === 'darwin'
@@ -36,6 +37,15 @@ const template = [
                   app.setAsDefaultProtocolClient('http')
                   app.setAsDefaultProtocolClient('https')
                 }
+              }
+            },
+            { type: 'separator' },
+            {
+              id: 'adblocker',
+              label: 'Toggle Adblocker',
+              click: () => {
+                console.log('toggling adblocker')
+                toggleAdblocker('persist:horizon')
               }
             },
             { type: 'separator' },
@@ -101,6 +111,15 @@ const template = [
 ]
 
 export function setAppMenu(): void {
+  const menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
+  Menu.setApplicationMenu(menu)
+}
+
+export function changeMenuItemLabel(id: string, newLabel: string): void {
+  console.log('changing menu item label', id, newLabel)
+
+  template[0].submenu[3].label = newLabel
+
   const menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
   Menu.setApplicationMenu(menu)
 }

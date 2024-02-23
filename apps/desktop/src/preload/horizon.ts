@@ -67,6 +67,12 @@ const api = {
     }
   },
 
+  onAdBlockerStateChange: (callback) => {
+    ipcRenderer.on('adblocker-state-changed', (_, { partition, state }) => {
+      callback(partition, state)
+    })
+  },
+
   appIsReady: () => {
     ipcRenderer.send('app-ready')
   }

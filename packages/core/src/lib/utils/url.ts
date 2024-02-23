@@ -1,6 +1,8 @@
-export const prependProtocol = (url: string) => {
+import { isIP } from 'is-ip'
+
+export const prependProtocol = (url: string, secure = true) => {
   if (!url.startsWith('http')) {
-    return `https://${url}`
+    return secure ? `https://${url}` : `http://${url}`
   }
   return url
 }
@@ -78,7 +80,7 @@ export const generateRootDomain = (urlInput: string | URL) => {
     const domain = url.hostname
     const elems = domain.split('.')
     if (elems.length < 2) {
-      return ''
+      return domain
     }
 
     const iMax = elems.length - 1
@@ -99,4 +101,36 @@ export const checkIfSpaceApp = (url: URL) => {
     url.hostname.endsWith('deta.pizza') ||
     url.hostname.endsWith('deta.dev')
   )
+}
+
+export const checkIfLocalhost = (raw: string) => {
+  return raw.startsWith('localhost') || raw === '127.0.0.1'
+}
+
+export const checkIfIPAddress = (raw: string) => {
+  return isIP(raw)
+}
+
+export const parseStringIntoBrowserLocation = (raw: string) => {
+  const isURL = checkIfUrl(raw)
+  if (isURL) {
+    return raw
+  }
+
+  const url = parseStringIntoUrl(raw)
+  if (url) {
+    return url.href
+  }
+
+  const isLocalhost = checkIfLocalhost(raw)
+  if (isLocalhost) {
+    return prependProtocol(raw, false)
+  }
+
+  const isIPAddress = checkIfIPAddress(raw)
+  if (isIPAddress) {
+    return prependProtocol(raw, false)
+  }
+
+  return null
 }
