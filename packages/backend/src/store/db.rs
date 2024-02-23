@@ -39,6 +39,7 @@ pub struct PaginatedHorizons {
     pub offset: i64,
 }
 
+#[derive(Debug)]
 pub struct CompositeResource {
     pub resource: Resource,
     pub metadata: Option<ResourceMetadata>,
@@ -46,18 +47,21 @@ pub struct CompositeResource {
     pub resource_tags: Option<Vec<ResourceTag>>,
 }
 
+#[derive(Debug)]
 pub enum SearchEngine {
     Metadata,
     TextContent,
     Proximity,
 }
 
+#[derive(Debug)]
 pub struct SearchResultItem {
     pub resource: CompositeResource,
     pub card_ids: Vec<String>,
     pub engine: SearchEngine,
 }
 
+#[derive(Debug)]
 pub struct SearchResult {
     pub items: Vec<SearchResultItem>,
     pub total: i64,
@@ -95,14 +99,14 @@ impl Database {
         Ok(Database { conn })
     }
 
-    pub fn begin(&mut self) -> Result<rusqlite::Transaction, rusqlite::Error> {
-        self.conn.transaction()
+    pub fn begin(&mut self) -> BackendResult<rusqlite::Transaction> {
+        Ok(self.conn.transaction()?)
     }
 
     pub fn create_resource_tx(
         tx: &mut rusqlite::Transaction,
         resource: &Resource,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "INSERT INTO resources (id, resource_path, resource_type, created_at, updated_at, deleted) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             rusqlite::params![resource.id, resource.resource_path, resource.resource_type, resource.created_at, resource.updated_at, resource.deleted]
@@ -121,7 +125,7 @@ impl Database {
     pub fn update_resource_tx(
         tx: &mut rusqlite::Transaction,
         resource: &Resource,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "UPDATE resources SET resource_path = ?2, resource_type = ?3, created_at = ?4, updated_at = ?5, deleted = ?6 WHERE id = ?1",
             rusqlite::params![resource.id, resource.resource_path, resource.resource_type, resource.created_at, resource.updated_at, resource.deleted]
@@ -129,7 +133,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn touch_resource(&self, resource_id: &str) -> Result<(), rusqlite::Error> {
+    pub fn touch_resource(&self, resource_id: &str) -> BackendResult<()> {
         self.conn.execute(
             "UPDATE resources SET updated_at = datetime('now') WHERE id = ?1",
             rusqlite::params![resource_id],
@@ -137,11 +141,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn update_resource_deleted(
-        &self,
-        resource_id: &str,
-        deleted: i32,
-    ) -> Result<(), rusqlite::Error> {
+    pub fn update_resource_deleted(&self, resource_id: &str, deleted: i32) -> BackendResult<()> {
         self.conn.execute(
             "UPDATE resources SET deleted = ?2 WHERE id = ?1",
             rusqlite::params![resource_id, deleted],
@@ -149,41 +149,37 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_resource(&self, id: String) -> Result<Option<Resource>, rusqlite::Error> {
+    pub fn get_resource(&self, id: String) -> BackendResult<Option<Resource>> {
         let mut stmt = self.conn.prepare("SELECT id, resource_path, resource_type, created_at, updated_at, deleted FROM resources WHERE id = ?1")?;
-        stmt.query_row(rusqlite::params![id], |row| {
-            Ok(Resource {
-                id: row.get(0)?,
-                resource_path: row.get(1)?,
-                resource_type: row.get(2)?,
-                created_at: row.get(3)?,
-                updated_at: row.get(4)?,
-                deleted: row.get(5)?,
+        Ok(stmt
+            .query_row(rusqlite::params![id], |row| {
+                Ok(Resource {
+                    id: row.get(0)?,
+                    resource_path: row.get(1)?,
+                    resource_type: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                    deleted: row.get(5)?,
+                })
             })
-        })
-        .optional()
+            .optional()?)
     }
 
-    pub fn remove_resource_tx(
-        tx: &mut rusqlite::Transaction,
-        id: &str,
-    ) -> Result<(), rusqlite::Error> {
+    pub fn remove_resource_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
         tx.execute("DELETE FROM resources WHERE id = ?1", rusqlite::params![id])?;
         Self::remove_resource_metadata_tx(tx, id)?;
         Self::remove_resource_text_content_tx(tx, id)?;
         Ok(())
     }
 
-    pub fn remove_deleted_resources_tx(
-        tx: &mut rusqlite::Transaction,
-    ) -> Result<(), rusqlite::Error> {
+    pub fn remove_deleted_resources_tx(tx: &mut rusqlite::Transaction) -> BackendResult<()> {
         tx.execute("DELETE FROM resource_metadata WHERE resource_id IN (SELECT id FROM resources WHERE deleted=1)", ())?;
         tx.execute("DELETE FROM resource_text_content WHERE resource_id IN (SELECT id FROM resources WHERE deleted=1)", ())?;
         tx.execute("DELETE FROM resources WHERE deleted=1", ())?;
         Ok(())
     }
 
-    pub fn list_all_resources(&self, deleted: i32) -> Result<Vec<Resource>, rusqlite::Error> {
+    pub fn list_all_resources(&self, deleted: i32) -> BackendResult<Vec<Resource>> {
         let mut stmt = self.conn.prepare("SELECT id, resource_path, resource_type, created_at, updated_at, deleted FROM resources WHERE deleted = ?1 ORDER BY updated_at DESC")?;
         let resources = stmt.query_map(rusqlite::params![deleted], |row| {
             Ok(Resource {
@@ -207,7 +203,7 @@ impl Database {
         deleted: i32,
         limit: i64,
         offset: i64,
-    ) -> Result<PaginatedResources, rusqlite::Error> {
+    ) -> BackendResult<PaginatedResources> {
         let mut stmt = self.conn.prepare("SELECT id, resource_path, resource_type, created_at, updated_at, deleted FROM resources WHERE deleted = ?1 ORDER BY updated_at DESC LIMIT ?2 OFFSET ?3")?;
         let resources = stmt.query_map(rusqlite::params![deleted, limit, offset], |row| {
             Ok(Resource {
@@ -236,10 +232,7 @@ impl Database {
         })
     }
 
-    pub fn list_resource_tags(
-        &self,
-        resource_id: &str,
-    ) -> Result<Vec<ResourceTag>, rusqlite::Error> {
+    pub fn list_resource_tags(&self, resource_id: &str) -> BackendResult<Vec<ResourceTag>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, resource_id, tag_name, tag_value FROM resource_tag WHERE resource_id = ?1",
         )?;
@@ -261,7 +254,7 @@ impl Database {
     pub fn create_resource_tag_tx(
         tx: &mut rusqlite::Transaction,
         resource_tag: &ResourceTag,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "INSERT INTO resource_tags (id, resource_id, tag_name, tag_value) VALUES (?1, ?2, ?3, ?4)",
             rusqlite::params![resource_tag.id, resource_tag.resource_id, resource_tag.tag_name, resource_tag.tag_value]
@@ -272,7 +265,7 @@ impl Database {
     pub fn update_resource_tag_tx(
         tx: &mut rusqlite::Transaction,
         resource_tag: &ResourceTag,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "UPDATE resource_tags SET resource_id = ?2, tag_name = ?3, tag_value = ?4 WHERE id = ?1",
             rusqlite::params![resource_tag.id, resource_tag.resource_id, resource_tag.tag_name, resource_tag.tag_value]
@@ -280,10 +273,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn remove_resource_tag_tx(
-        tx: &mut rusqlite::Transaction,
-        id: &str,
-    ) -> Result<(), rusqlite::Error> {
+    pub fn remove_resource_tag_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
         tx.execute(
             "DELETE FROM resource_tags WHERE id = ?1",
             rusqlite::params![id],
@@ -295,7 +285,7 @@ impl Database {
         tx: &mut rusqlite::Transaction,
         resource_id: &str,
         tag_name: &str,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "DELETE FROM resource_tags WHERE resource_id = ?1 AND tag_name = ?2",
             rusqlite::params![resource_id, tag_name],
@@ -306,7 +296,7 @@ impl Database {
     pub fn create_resource_metadata_tx(
         tx: &mut rusqlite::Transaction,
         resource_metadata: &ResourceMetadata,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "INSERT INTO resource_metadata (id, resource_id, name, source_uri, alt) VALUES (?1, ?2, ?3, ?4, ?5)",
             rusqlite::params![resource_metadata.id, resource_metadata.resource_id, resource_metadata.name, resource_metadata.source_uri, resource_metadata.alt]
@@ -317,7 +307,7 @@ impl Database {
     pub fn update_resource_metadata_tx(
         tx: &mut rusqlite::Transaction,
         resource_metadata: &ResourceMetadata,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "UPDATE resource_metadata SET resource_id = ?2, name = ?3, source_uri = ?4, alt = ?5 WHERE id = ?1",
             rusqlite::params![resource_metadata.id, resource_metadata.resource_id, resource_metadata.name, resource_metadata.source_uri, resource_metadata.alt]
@@ -328,7 +318,7 @@ impl Database {
     pub fn remove_resource_metadata_tx(
         tx: &mut rusqlite::Transaction,
         id: &str,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "DELETE FROM resource_metadata WHERE id = ?1",
             rusqlite::params![id],
@@ -336,10 +326,10 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_resource_metadata(
+    pub fn get_resource_metadata_by_resource_id(
         &self,
         resource_id: &str,
-    ) -> Result<Vec<ResourceMetadata>, rusqlite::Error> {
+    ) -> BackendResult<Vec<ResourceMetadata>> {
         let mut stmt = self.conn.prepare("SELECT id, resource_id, name, source_uri, alt FROM resource_metadata WHERE resource_id = ?1")?;
         let resource_metadata = stmt.query_map(rusqlite::params![resource_id], |row| {
             Ok(ResourceMetadata {
@@ -360,7 +350,7 @@ impl Database {
     pub fn create_resource_text_content_tx(
         tx: &mut rusqlite::Transaction,
         resource_text_content: &ResourceTextContent,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "INSERT INTO resource_text_content (id, resource_id, content) VALUES (?1, ?2, ?3)",
             rusqlite::params![
@@ -375,7 +365,7 @@ impl Database {
     pub fn update_resource_text_content_tx(
         tx: &mut rusqlite::Transaction,
         resource_text_content: &ResourceTextContent,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "UPDATE resource_text_content SET resource_id = ?2, content = ?3 WHERE id = ?1",
             rusqlite::params![
@@ -390,7 +380,7 @@ impl Database {
     pub fn remove_resource_text_content_tx(
         tx: &mut rusqlite::Transaction,
         id: &str,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "DELETE FROM resource_text_content WHERE id = ?1",
             rusqlite::params![id],
@@ -401,7 +391,7 @@ impl Database {
     pub fn create_card_position_tx(
         tx: &mut rusqlite::Transaction,
         card_position: &CardPosition,
-    ) -> Result<i64, rusqlite::Error> {
+    ) -> BackendResult<i64> {
         let mut stmt = tx.prepare("INSERT INTO card_positions (position) VALUES (?1)")?;
         stmt.insert(rusqlite::params![card_position.position])?;
         Ok(tx.last_insert_rowid())
@@ -410,7 +400,7 @@ impl Database {
     pub fn remove_card_position_tx(
         tx: &mut rusqlite::Transaction,
         row_id: &i64,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "DELETE FROM card_positions WHERE row_id = ?1",
             rusqlite::params![row_id],
@@ -418,10 +408,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn create_card_tx(
-        tx: &mut rusqlite::Transaction,
-        card: &mut Card,
-    ) -> Result<(), rusqlite::Error> {
+    pub fn create_card_tx(tx: &mut rusqlite::Transaction, card: &mut Card) -> BackendResult<()> {
         let card_position_id = Self::create_card_position_tx(
             tx,
             &CardPosition {
@@ -439,32 +426,31 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_card(&self, id: &str) -> Result<Card, rusqlite::Error> {
+    pub fn get_card(&self, id: &str) -> BackendResult<Option<Card>> {
         let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE id = ?1")?;
-        let card = stmt.query_row(rusqlite::params![id], |row| {
-            Ok(Card {
-                id: row.get(0)?,
-                horizon_id: row.get(1)?,
-                card_type: row.get(2)?,
-                resource_id: row.get(3)?,
-                position_id: row.get(4)?,
-                position_x: row.get(5)?,
-                position_y: row.get(6)?,
-                width: row.get(7)?,
-                height: row.get(8)?,
-                stacking_order: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-                data: row.get(12)?,
+        let card = stmt
+            .query_row(rusqlite::params![id], |row| {
+                Ok(Card {
+                    id: row.get(0)?,
+                    horizon_id: row.get(1)?,
+                    card_type: row.get(2)?,
+                    resource_id: row.get(3)?,
+                    position_id: row.get(4)?,
+                    position_x: row.get(5)?,
+                    position_y: row.get(6)?,
+                    width: row.get(7)?,
+                    height: row.get(8)?,
+                    stacking_order: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
+                    data: row.get(12)?,
+                })
             })
-        })?;
+            .optional()?;
         Ok(card)
     }
 
-    pub fn update_card_tx(
-        tx: &mut rusqlite::Transaction,
-        card: &mut Card,
-    ) -> Result<(), rusqlite::Error> {
+    pub fn update_card_tx(tx: &mut rusqlite::Transaction, card: &mut Card) -> BackendResult<()> {
         tx.execute("DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)", rusqlite::params![card.id])?;
         let card_position_id = Self::create_card_position_tx(
             tx,
@@ -489,7 +475,7 @@ impl Database {
         tx: &mut rusqlite::Transaction,
         card_id: &str,
         resource_id: &str,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "UPDATE cards SET resource_id = ?2, updated_at = datetime('now') WHERE id = ?1",
             rusqlite::params![card_id, resource_id],
@@ -504,7 +490,7 @@ impl Database {
         position_y: i64,
         width: i32,
         height: i32,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute("DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)", rusqlite::params![card_id])?;
         let card_position_id = Self::create_card_position_tx(
             tx,
@@ -525,7 +511,7 @@ impl Database {
         tx: &mut rusqlite::Transaction,
         card_id: &str,
         stacking_order: &str,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "UPDATE cards SET stacking_order = ?2, updated_at = datetime('now') WHERE id = ?1",
             rusqlite::params![card_id, stacking_order],
@@ -533,7 +519,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn remove_card_tx(tx: &mut rusqlite::Transaction, id: &str) -> Result<(), rusqlite::Error> {
+    pub fn remove_card_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
         tx.execute(
             "DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)",
         ())?;
@@ -541,7 +527,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn list_all_cards(&self, horizon_id: &str) -> Result<Vec<Card>, rusqlite::Error> {
+    pub fn list_all_cards(&self, horizon_id: &str) -> BackendResult<Vec<Card>> {
         let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE horizon_id = ?1 ORDER BY position_x")?;
         let cards = stmt.query_map(rusqlite::params![horizon_id], |row| {
             Ok(Card {
@@ -573,7 +559,7 @@ impl Database {
         horizon_id: &str,
         limit: i64,
         offset: i64,
-    ) -> Result<PaginatedCards, rusqlite::Error> {
+    ) -> BackendResult<PaginatedCards> {
         let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE horizon_id = ?1 ORDER BY position_x ?2 OFFSET ?3")?;
         let cards = stmt.query_map(rusqlite::params![horizon_id, limit, offset], |row| {
             Ok(Card {
@@ -609,7 +595,7 @@ impl Database {
         })
     }
 
-    pub fn list_all_horizons(&self) -> Result<Vec<Horizon>, rusqlite::Error> {
+    pub fn list_all_horizons(&self) -> BackendResult<Vec<Horizon>> {
         let mut stmt = self
             .conn
             .prepare("SELECT id, horizon_name, icon_uri, created_at, updated_at FROM horizons")?;
@@ -632,7 +618,7 @@ impl Database {
     pub fn create_horizon_tx(
         tx: &mut rusqlite::Transaction,
         horizon: &Horizon,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "INSERT INTO horizons (id, horizon_name, icon_uri, created_at, updated_at) VALUES (?1, ?2, ?3, datetime('now'), datetime('now'))",
             rusqlite::params![horizon.id, horizon.horizon_name, horizon.icon_uri]
@@ -644,7 +630,7 @@ impl Database {
         tx: &mut rusqlite::Transaction,
         id: &str,
         horizon_name: &str,
-    ) -> Result<(), rusqlite::Error> {
+    ) -> BackendResult<()> {
         tx.execute(
             "UPDATE horizons SET horizon_name = ?2, updated_at = datetime('now') WHERE id = ?1",
             rusqlite::params![id, horizon_name],
@@ -652,10 +638,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn remove_horizon_tx(
-        tx: &mut rusqlite::Transaction,
-        id: &str,
-    ) -> Result<(), rusqlite::Error> {
+    pub fn remove_horizon_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
         tx.execute("DELETE FROM card_positions WHERE row_id IN (SELECT position_id FROM cards WHERE horizon_id = ?1)", rusqlite::params![id])?;
         tx.execute("DELETE FROM horizons WHERE id = ?1", rusqlite::params![id])?;
         Ok(())
@@ -664,7 +647,11 @@ impl Database {
     pub fn list_resource_ids_by_tags(
         &self,
         tags: &mut Vec<ResourceTag>,
-    ) -> Result<Vec<String>, rusqlite::Error> {
+    ) -> BackendResult<Vec<String>> {
+        let mut result = Vec::new();
+        if tags.is_empty() {
+            return Ok(result);
+        }
         let mut query = String::from("SELECT resource_id FROM resource_tags WHERE");
         let mut i = 0;
         let n = tags.len();
@@ -686,7 +673,6 @@ impl Database {
         let mut stmt = self.conn.prepare(&query)?;
         let resource_ids =
             stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
-        let mut result = Vec::new();
         for resource_id in resource_ids {
             result.push(resource_id?);
         }
@@ -698,7 +684,7 @@ impl Database {
         &self,
         keyword: &str,
         tags: &mut Vec<ResourceTag>,
-    ) -> Result<SearchResult, rusqlite::Error> {
+    ) -> BackendResult<SearchResult> {
         let resource_ids = self.list_resource_ids_by_tags(tags)?;
         let resource_ids = std::rc::Rc::new(
             resource_ids
@@ -707,8 +693,16 @@ impl Database {
                 .collect::<Vec<rusqlite::types::Value>>(),
         );
 
-        let mut stmt = self.conn.prepare("SELECT * FROM resource_metadata M JOIN resources R ON M.resource_id = R.id WHERE R.id IN (?1) AND M MATCH ?2")?;
-        let search_results = stmt.query_map(rusqlite::params![&resource_ids, keyword], |row| {
+        let params = rusqlite::params![format!("%{}%", keyword)];
+        let query = "SELECT * FROM resource_metadata M
+        JOIN resources R ON M.resource_id = R.id
+        WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1)";
+        if !resource_ids.is_empty() {
+            let query = format!("{} AND R.id IN (?2)", query);
+            let params = rusqlite::params![&resource_ids, keyword];
+        }
+        let mut stmt = self.conn.prepare(query)?;
+        let search_results = stmt.query_map(params, |row| {
             Ok(SearchResultItem {
                 resource: CompositeResource {
                     metadata: Some(ResourceMetadata {
@@ -726,7 +720,6 @@ impl Database {
                         updated_at: row.get(9)?,
                         deleted: row.get(10)?,
                     },
-
                     text_content: None,
                     resource_tags: None,
                 },

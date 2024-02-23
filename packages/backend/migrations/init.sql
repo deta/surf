@@ -43,13 +43,15 @@ CREATE VIRTUAL TABLE IF NOT EXISTS resource_metadata USING fts5(
     resource_id UNINDEXED,
     name,
     source_uri,
-    alt
+    alt,
+    tokenize="trigram" 
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS resource_text_content USING fts5(
     id UNINDEXED,
     resource_id UNINDEXED,
-    content
+    content,
+    tokenize="trigram"
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS card_positions USING vss0(
