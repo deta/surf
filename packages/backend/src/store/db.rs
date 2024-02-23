@@ -82,16 +82,15 @@ impl Database {
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
         // Connection::open already handles creating the file if it doesn't exist
-        let mut conn = Connection::open(db_path).map_err(BackendError::DatabaseError)?;
+        // let mut conn = Connection::open(db_path).map_err(BackendError::DatabaseError)?;
+        let mut conn = Connection::open(db_path)?;
 
-        let tx = conn.transaction().map_err(BackendError::DatabaseError)?;
-        tx.execute_batch(init_schame)
-            .map_err(BackendError::DatabaseError);
+        let tx = conn.transaction()?;
+        tx.execute_batch(init_schame)?;
         if let Some(schema) = migrations_schema {
-            tx.execute_batch(&schema)
-                .map_err(BackendError::DatabaseError)?;
+            tx.execute_batch(&schema)?;
         }
-        tx.commit().map_err(BackendError::DatabaseError)?;
+        tx.commit()?;
 
         Ok(Database { conn })
     }
@@ -111,7 +110,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn create_resource(&mut self, resource: &Resource) -> Result<(), rusqlite::Error> {
+    pub fn create_resource(&mut self, resource: &Resource) -> BackendResult<()> {
         self.conn.execute(
             "INSERT INTO resources (id, resource_path, resource_type, created_at, updated_at, deleted) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             rusqlite::params![resource.id, resource.resource_path, resource.resource_type, resource.created_at, resource.updated_at, resource.deleted]

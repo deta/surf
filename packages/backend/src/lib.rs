@@ -16,7 +16,7 @@ use store::{db::Database, models::*};
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {
     #[error("Database error: {0}")]
-    DatabaseError(#[source] rusqlite::Error),
+    DatabaseError(#[from] rusqlite::Error),
     #[error("Generic error: {0}")]
     GenericError(String),
 }
