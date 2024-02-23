@@ -492,6 +492,45 @@
 
     sortHorizons()
 
+    // TODO: for safety we wait a bit before we tell the app that we are ready, we need a better way to do this
+    setTimeout(() => {
+      window.api.appIsReady()
+    }, 2000)
+
+    window.api.onOpenURL((url: string) => {
+      log.debug('open url', url)
+
+      if (!$activeHorizon) {
+        log.debug('no active horizon')
+        return
+      }
+
+      const board = $activeHorizon.board
+      if (!board) {
+        log.debug('no active board')
+        return
+      }
+
+      const state = get(board.state)
+      const viewport = get(state.viewPort)
+      const viewoffset = get(state.viewOffset)
+
+      const width = Math.max(viewport.w - SAFE_AREA_PADDING * 2, 800)
+      const height = Math.max(viewport.h - SAFE_AREA_PADDING * 2, 500)
+
+      log.debug('Creating browser card with opened URL:', url)
+      $activeHorizon.addCardBrowser(
+        url,
+        {
+          x: viewoffset.x + viewport.w / 2 - width / 2,
+          y: viewoffset.y + viewport.h / 2 - height / 2 - 50,
+          width: width,
+          height: height
+        },
+        true
+      )
+    })
+
     window.api.onOpenCheatSheet(() => {
       log.debug('open cheat sheet')
       if ($activeHorizon) {
@@ -505,7 +544,7 @@
 
         createCheatSheetCard($activeHorizon, {
           x: viewoffset.x + viewport.w / 2 - width / 2,
-          y: viewoffset.y + viewport.h / 2 - height / 2 - 25,
+          y: viewoffset.y + viewport.h / 2 - height / 2 - 50,
           width: width,
           height: height
         })

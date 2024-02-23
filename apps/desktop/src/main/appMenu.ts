@@ -1,6 +1,7 @@
 import { app, Menu } from 'electron'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
+import { resolve } from 'path'
 
 const isMac = process.platform === 'darwin'
 
@@ -17,6 +18,25 @@ const template = [
             {
               label: 'Check for Updates...',
               click: checkUpdatesMenuClickHandler
+            },
+            {
+              label: 'Use as Default Browser',
+              click: () => {
+                // Register the app to handle URLs (from: https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app)
+                if (process.defaultApp) {
+                  if (process.argv.length >= 2) {
+                    app.setAsDefaultProtocolClient('http', process.execPath, [
+                      resolve(process.argv[1])
+                    ])
+                    app.setAsDefaultProtocolClient('https', process.execPath, [
+                      resolve(process.argv[1])
+                    ])
+                  }
+                } else {
+                  app.setAsDefaultProtocolClient('http')
+                  app.setAsDefaultProtocolClient('https')
+                }
+              }
             },
             { type: 'separator' },
             {

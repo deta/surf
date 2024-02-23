@@ -51,12 +51,24 @@ const api = {
     }
   },
 
+  onOpenURL: (callback) => {
+    try {
+      ipcRenderer.on('open-url', (_, url) => callback(url))
+    } catch (error) {
+      // noop
+    }
+  },
+
   onOpenCheatSheet: (callback) => {
     try {
       ipcRenderer.on('open-cheat-sheet', () => callback())
     } catch (error) {
       // noop
     }
+  },
+
+  appIsReady: () => {
+    ipcRenderer.send('app-ready')
   }
 }
 

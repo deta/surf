@@ -80,6 +80,21 @@ export default function electronBuilderConfig() {
           region: params.publishS3BucketRegion,
           channel: params.releaseChannel
         }
-      : []
+      : [],
+    protocols: [
+      {
+        name: 'Hypertext Transfer Protocol',
+        schemes: ['http', 'https']
+      }
+    ],
+    fileAssociations: [
+      {
+        name: 'Hypertext Markup Language',
+        isPackage: true,
+        role: 'Editor',
+        rank: 'Default',
+        ext: 'html'
+      }
+    ]
   }
 }

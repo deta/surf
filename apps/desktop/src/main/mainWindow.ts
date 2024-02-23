@@ -7,7 +7,7 @@ import { WindowState } from './winState'
 
 let mainWindow: BrowserWindow | undefined
 
-export function createWindow(): void {
+export function createWindow() {
   const winState = new WindowState(
     {
       saveImmediately: is.dev
