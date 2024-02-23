@@ -119,6 +119,10 @@ const backend = (() => {
     send: (target: string, content: string) => {
       if (!handle) return
       return backend.send(handle, target, content)
+    },
+    createResource: (resource: string) => {
+      if (!handle) return
+      return backend.createResource(handle, resource)
     }
   }
 })()

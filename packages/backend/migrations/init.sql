@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS resource (
+CREATE TABLE IF NOT EXISTS resources (
     id TEXT PRIMARY KEY,
     resource_path TEXT NOT NULL, 
     resource_type TEXT NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS cards (
     data BLOB NOT NULL DEFAULT '{}' 
 );
 
-CREATE VIRTUAL TABLE resource_metadata USING fts5(
+CREATE VIRTUAL TABLE IF NOT EXISTS resource_metadata USING fts5(
     id UNINDEXED,
     resource_id UNINDEXED,
     name,
@@ -46,12 +46,12 @@ CREATE VIRTUAL TABLE resource_metadata USING fts5(
     alt
 );
 
-CREATE VIRTUAL TABLE resource_text_content USING fts5(
+CREATE VIRTUAL TABLE IF NOT EXISTS resource_text_content USING fts5(
     id UNINDEXED,
     resource_id UNINDEXED,
     content
 );
 
-CREATE VIRTUAL TABLE card_positions USING vss0(
+CREATE VIRTUAL TABLE IF NOT EXISTS card_positions USING vss0(
     position(3)
 );

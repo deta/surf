@@ -1,20 +1,22 @@
 // TODO: proper error-handling at project level
 
 use super::message::WorkerMessage;
-use crate::store::Store;
+use crate::store::{db::Database, models};
 
 use neon::prelude::*;
+use std::error::Error;
 use std::sync::mpsc;
+use uuid::Uuid;
 
 struct Worker {
-    store: Store,
+    db: Database,
 }
 
 impl Worker {
     fn new() -> Self {
         println!("{:?}", std::env::current_dir().unwrap());
         Self {
-            store: Store::new("./database.sqlite").unwrap(),
+            db: Database::new("./database.sqlite").unwrap(),
         }
     }
 
@@ -27,8 +29,15 @@ impl Worker {
     }
 
     pub fn get_resource(&mut self, id: String) -> String {
-        let resource = self.store.get_resource(id);
-        return format!("{:?}", resource)
+        let resource = self.db.get_resource(id);
+        return format!("{:?}", resource);
+    }
+
+    pub fn create_resource(&mut self, resource: &models::Resource) -> Result<(), Box<dyn Error>> {
+        let mut tx = self.db.begin().unwrap();
+        let result = Database::create_resource_tx(&mut tx, &resource)?;
+        tx.commit()?;
+        Ok(result)
     }
 }
 
@@ -52,6 +61,14 @@ pub fn worker_entry_point(rx: mpsc::Receiver<WorkerMessage>, channel: Channel) {
                 let result = worker.print_job(content);
                 channel.send(move |mut cx| {
                     let result = cx.string(result);
+                    deferred.resolve(&mut cx, result);
+                    Ok(())
+                });
+            }
+            WorkerMessage::CreateResource(resource, deferred) => {
+                let result = worker.create_resource(&resource);
+                channel.send(move |mut cx| {
+                    let result = cx.string("ok");
                     deferred.resolve(&mut cx, result);
                     Ok(())
                 });

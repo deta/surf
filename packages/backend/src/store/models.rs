@@ -1,3 +1,6 @@
+use neon::prelude::*;
+use serde::{Deserialize, Serialize};
+
 pub struct Horizon {
     pub id: String,
     pub horizon_name: String,
@@ -22,7 +25,7 @@ pub struct Card {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Resource {
     pub id: String,
     pub resource_path: String,

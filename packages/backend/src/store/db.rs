@@ -1,3 +1,5 @@
+use super::models::*;
+
 use rusqlite::{
     ffi::sqlite3_auto_extension, params_from_iter, Connection, OptionalExtension, Result,
 };
@@ -5,14 +7,12 @@ use rust_embed::RustEmbed;
 use sqlite_vss::{sqlite3_vector_init, sqlite3_vss_init};
 use std::{error::Error, iter::Enumerate};
 
-use crate::models::*;
-
 #[derive(RustEmbed)]
 #[folder = "migrations/"]
 struct Migrations;
 
 #[derive(Debug)]
-pub struct Store {
+pub struct Database {
     conn: rusqlite::Connection,
 }
 
@@ -61,8 +61,8 @@ pub struct SearchResult {
     pub total: i64,
 }
 
-impl Store {
-    pub fn new(db_path: &str) -> Result<Store, Box<dyn Error>> {
+impl Database {
+    pub fn new(db_path: &str) -> Result<Database, Box<dyn Error>> {
         unsafe {
             // the following only works with rusqlite < 0.29.0 as rusqlite updated the function signatures in later versions
             // we might have to update the sqlite3_vector_init and sqlite3_vss_init bindings ourselves if we want to use a newer version of rusqlite
@@ -86,7 +86,7 @@ impl Store {
             tx.execute_batch(std::str::from_utf8(&schema.data.as_ref())?)?;
         }
         tx.commit()?;
-        Ok(Store { conn })
+        Ok(Database { conn })
     }
 
     pub fn begin(&mut self) -> Result<rusqlite::Transaction, rusqlite::Error> {
@@ -94,7 +94,6 @@ impl Store {
     }
 
     pub fn create_resource_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         resource: &Resource,
     ) -> Result<(), rusqlite::Error> {
@@ -105,8 +104,15 @@ impl Store {
         Ok(())
     }
 
+    pub fn create_resource(&mut self, resource: &Resource) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "INSERT INTO resources (id, resource_path, resource_type, created_at, updated_at, deleted) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            rusqlite::params![resource.id, resource.resource_path, resource.resource_type, resource.created_at, resource.updated_at, resource.deleted]
+        )?;
+        Ok(())
+    }
+
     pub fn update_resource_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         resource: &Resource,
     ) -> Result<(), rusqlite::Error> {
@@ -153,19 +159,16 @@ impl Store {
     }
 
     pub fn remove_resource_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         id: &str,
     ) -> Result<(), rusqlite::Error> {
-        self.conn
-            .execute("DELETE FROM resources WHERE id = ?1", rusqlite::params![id])?;
-        self.remove_resource_metadata_tx(tx, id)?;
-        self.remove_resource_text_content_tx(tx, id)?;
+        tx.execute("DELETE FROM resources WHERE id = ?1", rusqlite::params![id])?;
+        Self::remove_resource_metadata_tx(tx, id)?;
+        Self::remove_resource_text_content_tx(tx, id)?;
         Ok(())
     }
 
     pub fn remove_deleted_resources_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
     ) -> Result<(), rusqlite::Error> {
         tx.execute("DELETE FROM resource_metadata WHERE resource_id IN (SELECT id FROM resources WHERE deleted=1)", ())?;
@@ -250,7 +253,6 @@ impl Store {
     }
 
     pub fn create_resource_tag_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         resource_tag: &ResourceTag,
     ) -> Result<(), rusqlite::Error> {
@@ -262,7 +264,6 @@ impl Store {
     }
 
     pub fn update_resource_tag_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         resource_tag: &ResourceTag,
     ) -> Result<(), rusqlite::Error> {
@@ -274,7 +275,6 @@ impl Store {
     }
 
     pub fn remove_resource_tag_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         id: &str,
     ) -> Result<(), rusqlite::Error> {
@@ -286,7 +286,6 @@ impl Store {
     }
 
     pub fn remove_resource_tag_by_tag_name_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         resource_id: &str,
         tag_name: &str,
@@ -299,7 +298,6 @@ impl Store {
     }
 
     pub fn create_resource_metadata_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         resource_metadata: &ResourceMetadata,
     ) -> Result<(), rusqlite::Error> {
@@ -311,7 +309,6 @@ impl Store {
     }
 
     pub fn update_resource_metadata_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         resource_metadata: &ResourceMetadata,
     ) -> Result<(), rusqlite::Error> {
@@ -323,7 +320,6 @@ impl Store {
     }
 
     pub fn remove_resource_metadata_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         id: &str,
     ) -> Result<(), rusqlite::Error> {
@@ -356,7 +352,6 @@ impl Store {
     }
 
     pub fn create_resource_text_content_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         resource_text_content: &ResourceTextContent,
     ) -> Result<(), rusqlite::Error> {
@@ -372,7 +367,6 @@ impl Store {
     }
 
     pub fn update_resource_text_content_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         resource_text_content: &ResourceTextContent,
     ) -> Result<(), rusqlite::Error> {
@@ -388,7 +382,6 @@ impl Store {
     }
 
     pub fn remove_resource_text_content_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         id: &str,
     ) -> Result<(), rusqlite::Error> {
@@ -400,17 +393,15 @@ impl Store {
     }
 
     pub fn create_card_position_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         card_position: &CardPosition,
     ) -> Result<i64, rusqlite::Error> {
         let mut stmt = tx.prepare("INSERT INTO card_positions (position) VALUES (?1)")?;
         stmt.insert(rusqlite::params![card_position.position])?;
-        Ok(self.conn.last_insert_rowid())
+        Ok(tx.last_insert_rowid())
     }
 
     pub fn remove_card_position_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         row_id: &i64,
     ) -> Result<(), rusqlite::Error> {
@@ -422,11 +413,10 @@ impl Store {
     }
 
     pub fn create_card_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         card: &mut Card,
     ) -> Result<(), rusqlite::Error> {
-        let card_position_id = self.create_card_position_tx(
+        let card_position_id = Self::create_card_position_tx(
             tx,
             &CardPosition {
                 position: format!("[{}, {}]", card.position_x, card.position_y)
@@ -466,12 +456,11 @@ impl Store {
     }
 
     pub fn update_card_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         card: &mut Card,
     ) -> Result<(), rusqlite::Error> {
         tx.execute("DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)", rusqlite::params![card.id])?;
-        let card_position_id = self.create_card_position_tx(
+        let card_position_id = Self::create_card_position_tx(
             tx,
             &CardPosition {
                 position: format!("[{}, {}]", card.position_x, card.position_y)
@@ -503,7 +492,6 @@ impl Store {
     }
 
     pub fn update_card_dimensions_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         card_id: &str,
         position_x: i64,
@@ -512,7 +500,7 @@ impl Store {
         height: i32,
     ) -> Result<(), rusqlite::Error> {
         tx.execute("DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)", rusqlite::params![card_id])?;
-        let card_position_id = self.create_card_position_tx(
+        let card_position_id = Self::create_card_position_tx(
             tx,
             &CardPosition {
                 position: format!("[{}, {}]", position_x, position_y)
@@ -528,7 +516,6 @@ impl Store {
         Ok(())
     }
     pub fn update_card_stacking_order_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         card_id: &str,
         stacking_order: &str,
@@ -540,11 +527,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn remove_card_tx(
-        &self,
-        tx: &mut rusqlite::Transaction,
-        id: &str,
-    ) -> Result<(), rusqlite::Error> {
+    pub fn remove_card_tx(tx: &mut rusqlite::Transaction, id: &str) -> Result<(), rusqlite::Error> {
         tx.execute(
             "DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)",
         ())?;
@@ -641,7 +624,6 @@ impl Store {
     }
 
     pub fn create_horizon_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         horizon: &Horizon,
     ) -> Result<(), rusqlite::Error> {
@@ -653,7 +635,6 @@ impl Store {
     }
 
     pub fn update_horizon_name_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         id: &str,
         horizon_name: &str,
@@ -666,7 +647,6 @@ impl Store {
     }
 
     pub fn remove_horizon_tx(
-        &self,
         tx: &mut rusqlite::Transaction,
         id: &str,
     ) -> Result<(), rusqlite::Error> {
