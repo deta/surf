@@ -34,7 +34,7 @@ pub struct Resource {
     pub deleted: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ResourceTag {
     pub id: String,
     pub resource_id: String,
@@ -42,7 +42,7 @@ pub struct ResourceTag {
     pub tag_value: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ResourceMetadata {
     pub id: String,
     pub resource_id: String,
