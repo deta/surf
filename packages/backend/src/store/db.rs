@@ -1,3 +1,5 @@
+use crate::{BackendError, BackendResult};
+
 use super::models::*;
 
 use rusqlite::{
@@ -62,7 +64,7 @@ pub struct SearchResult {
 }
 
 impl Database {
-    pub fn new(db_path: &str) -> Result<Database, Box<dyn Error>> {
+    pub fn new(db_path: &str) -> BackendResult<Database> {
         unsafe {
             // the following only works with rusqlite < 0.29.0 as rusqlite updated the function signatures in later versions
             // we might have to update the sqlite3_vector_init and sqlite3_vss_init bindings ourselves if we want to use a newer version of rusqlite
@@ -70,22 +72,27 @@ impl Database {
             sqlite3_auto_extension(Some(sqlite3_vss_init));
         }
 
-        let init_schema = Migrations::get("init.sql");
-        let init_schema = match init_schema {
-            Some(schema) => schema,
-            None => return Err("init.sql not found".into()),
-        };
-        let migrations_schema = Migrations::get("migrations.sql");
+        let init_schema = Migrations::get("init.sql")
+            .ok_or(BackendError::GenericError("init.sql not found".into()))?;
+        let init_schame = std::str::from_utf8(init_schema.data.as_ref())
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+        let migrations_schema = Migrations::get("migrations.sql")
+            .map(|f| std::str::from_utf8(f.data.as_ref()).map(|s| s.to_owned()))
+            .transpose()
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
         // Connection::open already handles creating the file if it doesn't exist
-        let mut conn = Connection::open(db_path)?;
+        let mut conn = Connection::open(db_path).map_err(BackendError::DatabaseError)?;
 
-        let tx = conn.transaction()?;
-        tx.execute_batch(std::str::from_utf8(&init_schema.data.as_ref())?)?;
+        let tx = conn.transaction().map_err(BackendError::DatabaseError)?;
+        tx.execute_batch(init_schame)
+            .map_err(BackendError::DatabaseError);
         if let Some(schema) = migrations_schema {
-            tx.execute_batch(std::str::from_utf8(&schema.data.as_ref())?)?;
+            tx.execute_batch(&schema)
+                .map_err(BackendError::DatabaseError)?;
         }
-        tx.commit()?;
+        tx.commit().map_err(BackendError::DatabaseError)?;
+
         Ok(Database { conn })
     }
 

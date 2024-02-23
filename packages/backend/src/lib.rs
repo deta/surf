@@ -1,15 +1,27 @@
 #![allow(unused)]
 
+// TODO: reorganize this file
+
 mod backend;
 mod store;
 
-use neon::prelude::*;
+use neon::{prelude::*, result::ResultExt};
 use serde_json::de;
 use std::sync::mpsc;
 use std::thread;
 
 use backend::{message::WorkerMessage, worker::worker_entry_point};
 use store::{db::Database, models::*};
+
+#[derive(thiserror::Error, Debug)]
+pub enum BackendError {
+    #[error("Database error: {0}")]
+    DatabaseError(#[source] rusqlite::Error),
+    #[error("Generic error: {0}")]
+    GenericError(String),
+}
+
+type BackendResult<T> = Result<T, BackendError>;
 
 struct WorkerTunnel {
     pub tx: mpsc::Sender<WorkerMessage>,
@@ -72,8 +84,11 @@ fn js_send(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_new_tmp_store(mut cx: FunctionContext) -> JsResult<JsUndefined> {
     let db_path_handle = cx.argument::<JsString>(0)?;
     let db_path = db_path_handle.value(&mut cx);
-    Database::new(&db_path).unwrap();
-    Ok(cx.undefined())
+
+    match Database::new(&db_path) {
+        Ok(_) => Ok(cx.undefined()),
+        Err(e) => cx.throw_error(format!("failed to create database: {}", e)),
+    }
 }
 
 #[neon::main]
