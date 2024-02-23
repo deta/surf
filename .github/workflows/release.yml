@@ -36,12 +36,28 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v3
 
+      # this is hack to prevent this github action to tag pre-releases from main as non pre-release semver
+      # the `release_branch` input sets the default release branch for the version increment action
+      # if pre_release is true, the following action will always set this release branch to `release`
+      # so that the version increment action will always increment the version as a pre-release even from `main`
+      # TODO: use better self controlled semver action
+      - name: Set release branch as env variable
+        run: |
+          if [ "${{ github.event.inputs.pre_release }}" == "true" ]; then
+            echo "RELEASE_BRANCH=release >> $GITHUB_ENV
+          else
+            echo "RELEASE_BRANCH=main" >> $GITHUB_ENV
+          fi
+
       - name: Get next version
         uses: reecetech/version-increment@2023.9.3
         id: version
+        env:
+          RELEASE_BRANCH: ${{ env.RELEASE_BRANCH }}
         with:
           scheme: semver
           increment: ${{ github.event.inputs.increment_type }}
+          release_branch: ${{ env.RELEASE_BRANCH }}
 
   build-and-release:
     needs: prepare
