@@ -1,11 +1,6 @@
-<script>
-  export let size = '18px'
-</script>
-
 <svg
   xmlns="http://www.w3.org/2000/svg"
-  width={size}
-  height={size}
+  {...$$restProps}
   viewBox="0 0 24 24"
   stroke-width="2"
   stroke="currentColor"

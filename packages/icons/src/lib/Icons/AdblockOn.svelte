@@ -1,16 +1,11 @@
-<script>
-  export let size = '18px'
-  export let color = '#8a8a8a'
-</script>
-
-<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24">
+<svg xmlns="http://www.w3.org/2000/svg" {...$$restProps} viewBox="0 0 24 24">
   <g id="stopsign">
     <path
       fill-rule="evenodd"
       clip-rule="evenodd"
       d="M8.7 3H15.3C15.6 3 15.8 3.1 16 3.3L20.7 8C20.9 8.2 21 8.4 21 8.7V15.3C21 15.6 20.9 15.8 20.7 16L16 20.7C15.8 20.9 15.6 21 15.3 21H8.7C8.4 21 8.2 20.9 8 20.7L3.3 16C3.1 15.8 3 15.6 3 15.3V8.7C3 8.4 3.1 8.2 3.3 8L8 3.3C8.2 3.1 8.4 3 8.7 3Z"
-      fill={color}
-      stroke={color}
+      fill="currentColor"
+      stroke="currentColor"
       stroke-width="2"
     />
   </g>
