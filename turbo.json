@@ -10,6 +10,10 @@
       "dependsOn": ["^build"],
       "outputs": [".dist/**"]
     },
+    "horizon#build:mac:arm": {
+      "dependsOn": ["^build"],
+      "outputs": [".dist/**"]
+    },
     "horizon#build:win": {
       "dependsOn": ["^build"],
       "outputs": [".dist/**"]
