@@ -28,6 +28,10 @@ export default function electronBuilderConfig() {
       version: params.appVersion
     },
     files: [
+      '!**/backend/target*',
+      '!**/backend/src/*',
+      '!**/backend/migrations/*',
+      // TODO: check if the curly braces `{` and `}` and the following file patterns are actually working
       '!**/.vscode/*',
       '!src/*',
       '!electron.vite.config.{js,ts,mjs,cjs}',

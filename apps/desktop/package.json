@@ -25,7 +25,6 @@
     "@electron-toolkit/utils": "^2.0.0",
     "@sentry/svelte": "^7.99.0",
     "cross-fetch": "^4.0.0",
-    "@horizon/backend": "*",
     "electron-updater": "^6.1.7"
   },
   "devDependencies": {

@@ -26,6 +26,7 @@ coverage
 out/
 dist
 build
+target
 # required build files for the electron app
 !apps/desktop/build
 

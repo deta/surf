@@ -307,6 +307,7 @@
     "@babel/helper-validator-identifier" "^7.22.20"
     to-fast-properties "^2.0.0"
 
+<<<<<<< HEAD
 "@cliqz/adblocker-content@^1.26.15":
   version "1.26.15"
   resolved "https://registry.yarnpkg.com/@cliqz/adblocker-content/-/adblocker-content-1.26.15.tgz#c6e76656da85d6af686cddd2ed21a42375f7c223"
@@ -346,6 +347,47 @@
     "@remusao/small" "^1.2.1"
     "@remusao/smaz" "^1.9.1"
     "@types/chrome" "^0.0.256"
+=======
+"@cliqz/adblocker-content@^1.26.16":
+  version "1.26.16"
+  resolved "https://registry.yarnpkg.com/@cliqz/adblocker-content/-/adblocker-content-1.26.16.tgz#eb0bb6b9155e3886503784777b92725f89bb7a4f"
+  integrity sha512-N1pKg1gxfpnz47w2Sjs2sg3fxFZb113ClUhitgAFSVXeIhZ+S+bCaQtvwtP0mJT+SDfUx2NsPiLwZoPjVRI3wQ==
+  dependencies:
+    "@cliqz/adblocker-extended-selectors" "^1.26.16"
+
+"@cliqz/adblocker-electron-preload@^1.26.16":
+  version "1.26.16"
+  resolved "https://registry.yarnpkg.com/@cliqz/adblocker-electron-preload/-/adblocker-electron-preload-1.26.16.tgz#1a2eb6964cbc01040b462dea5b8fa6ba82e612eb"
+  integrity sha512-ea9RSMo7hXTYaEu2DkSegG/MbYK8jAUBhFhtACDRdjX2SE3bwa5WYKEwDMqP7pb4tFxR2VlS+MvKC5v/E6c1kQ==
+  dependencies:
+    "@cliqz/adblocker-content" "^1.26.16"
+
+"@cliqz/adblocker-electron@^1.26.15":
+  version "1.26.16"
+  resolved "https://registry.yarnpkg.com/@cliqz/adblocker-electron/-/adblocker-electron-1.26.16.tgz#e3004fbc11eab8568f936858934e6fa5248eb8a6"
+  integrity sha512-olpIpWInGoJcDhfY9xvDmA0lCUg9w6Np1vSLIdKiZsFT2n+iLZcN0NJJt5VFSHGaCTGX/h9oNy7ajQJQKpgR6Q==
+  dependencies:
+    "@cliqz/adblocker" "^1.26.16"
+    "@cliqz/adblocker-electron-preload" "^1.26.16"
+    tldts-experimental "^6.0.14"
+
+"@cliqz/adblocker-extended-selectors@^1.26.16":
+  version "1.26.16"
+  resolved "https://registry.yarnpkg.com/@cliqz/adblocker-extended-selectors/-/adblocker-extended-selectors-1.26.16.tgz#d2f3a7bdb0994183ec025afeb929c70cad67ba88"
+  integrity sha512-ePXS3aD1R+0XfCnOj0L2ms0NA5AxKHfFLfw92cZ87IPY8ZEZK/sWwQCv5wawbwBmXksr0YkMfFVCiH/IQgUNBQ==
+
+"@cliqz/adblocker@^1.26.16":
+  version "1.26.16"
+  resolved "https://registry.yarnpkg.com/@cliqz/adblocker/-/adblocker-1.26.16.tgz#c017f853ebf44c12c1a805559f144678ca897f0d"
+  integrity sha512-NQ5WdNeiWiggDhhT/IXbsjKgH44nA9k5GlW00gUWRUpfKHCCInyDJYjM5pbHqxhgC3LkMVmXmU5vIsMUZ4RxFQ==
+  dependencies:
+    "@cliqz/adblocker-content" "^1.26.16"
+    "@cliqz/adblocker-extended-selectors" "^1.26.16"
+    "@remusao/guess-url-type" "^1.2.1"
+    "@remusao/small" "^1.2.1"
+    "@remusao/smaz" "^1.9.1"
+    "@types/chrome" "^0.0.260"
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
     "@types/firefox-webext-browser" "^120.0.0"
     tldts-experimental "^6.0.14"
 
@@ -717,11 +759,14 @@
   resolved "https://registry.yarnpkg.com/@fastify/busboy/-/busboy-2.1.0.tgz#0709e9f4cb252351c609c6e6d8d6779a8d25edff"
   integrity sha512-+KpH+QxZU7O4675t3mnkQKcZZg56u+K/Ct2K+N2AZYNVK8kyeo/bI18tI8aPm3tvNNRyTWfj6s5tnGNlcbQRsA==
 
+<<<<<<< HEAD
 "@gar/promisify@^1.1.3":
   version "1.1.3"
   resolved "https://registry.yarnpkg.com/@gar/promisify/-/promisify-1.1.3.tgz#555193ab2e3bb3b6adc3d551c9c030d9e860daf6"
   integrity sha512-k2Ty1JcVojjJFwrg/ThKi2ujJ7XNLYaFGNB/bWT9wGR+oSMJHMa5w+CUq6p/pVrKeNNgA7pCqEcjSnHVoqJQFw==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 "@humanwhocodes/config-array@^0.11.13":
   version "0.11.14"
   resolved "https://registry.yarnpkg.com/@humanwhocodes/config-array/-/config-array-0.11.14.tgz#d78e481a039f7566ecc9660b4ea7fe6b1fec442b"
@@ -792,6 +837,7 @@
   dependencies:
     cross-spawn "^7.0.1"
 
+<<<<<<< HEAD
 "@malept/cross-spawn-promise@^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@malept/cross-spawn-promise/-/cross-spawn-promise-2.0.0.tgz#d0772de1aa680a0bfb9ba2f32b4c828c7857cb9d"
@@ -799,6 +845,8 @@
   dependencies:
     cross-spawn "^7.0.1"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 "@malept/flatpak-bundler@^0.4.0":
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/@malept/flatpak-bundler/-/flatpak-bundler-0.4.0.tgz#e8a32c30a95d20c2b1bb635cc580981a06389858"
@@ -852,6 +900,7 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+<<<<<<< HEAD
 "@npmcli/fs@^2.1.0":
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/@npmcli/fs/-/fs-2.1.2.tgz#a9e2541a4a2fec2e69c29b35e6060973da79b865"
@@ -868,6 +917,8 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 "@pkgjs/parseargs@^0.11.0":
   version "0.11.0"
   resolved "https://registry.yarnpkg.com/@pkgjs/parseargs/-/parseargs-0.11.0.tgz#a77ea742fab25775145434eb1d2328cf5013ac33"
@@ -1064,6 +1115,7 @@
   resolved "https://registry.yarnpkg.com/@rushstack/eslint-patch/-/eslint-patch-1.7.2.tgz#2d4260033e199b3032a08b41348ac10de21c47e9"
   integrity sha512-RbhOOTCNoCrbfkRyoXODZp75MlpiHMgbE5MEBZAnnnLyQNgrigEj4p0lzsMDyc1zVsJDLrivB58tgg3emX0eEA==
 
+<<<<<<< HEAD
 "@sentry-internal/feedback@7.102.0":
   version "7.102.0"
   resolved "https://registry.yarnpkg.com/@sentry-internal/feedback/-/feedback-7.102.0.tgz#c3c7f5cfe9726b6d4d1917bd5bd01238154f8ee7"
@@ -1093,10 +1145,41 @@
     "@sentry/utils" "7.102.0"
 
 <<<<<<< HEAD
+=======
+"@sentry-internal/feedback@7.102.1":
+  version "7.102.1"
+  resolved "https://registry.yarnpkg.com/@sentry-internal/feedback/-/feedback-7.102.1.tgz#747f88c2881c76fddd16bce57cc4bc17b4c2af93"
+  integrity sha512-vY4hpLLMNLjICtWiizc7KeGbWOTUMGrF7C+9dPCztZww3CLgzWy9A7DvPj5hodRiYzpdRnAMl8yQnMFbYXh7bA==
+  dependencies:
+    "@sentry/core" "7.102.1"
+    "@sentry/types" "7.102.1"
+    "@sentry/utils" "7.102.1"
+
+"@sentry-internal/replay-canvas@7.102.1":
+  version "7.102.1"
+  resolved "https://registry.yarnpkg.com/@sentry-internal/replay-canvas/-/replay-canvas-7.102.1.tgz#f098814ce21fdf95ef6d440d7ff8a6d3bfe73054"
+  integrity sha512-GUX4RWI10uRjdjeyvCLtAAhWRVqnAnG6+yNxWfqUQ3qMA7B7XxG43KT2UhSnulmErNzODQ6hA68rGPwwYeRIww==
+  dependencies:
+    "@sentry/core" "7.102.1"
+    "@sentry/replay" "7.102.1"
+    "@sentry/types" "7.102.1"
+    "@sentry/utils" "7.102.1"
+
+"@sentry-internal/tracing@7.102.1":
+  version "7.102.1"
+  resolved "https://registry.yarnpkg.com/@sentry-internal/tracing/-/tracing-7.102.1.tgz#5c39c8f04a4a1a665fb6d368e1cd13605152f18b"
+  integrity sha512-RkFlFyAC0fQOvBbBqnq0CLmFW5m3JJz9pKbZd5vXPraWAlniKSb1bC/4DF9SlNx0FN1LWG+IU3ISdpzwwTeAGg==
+  dependencies:
+    "@sentry/core" "7.102.1"
+    "@sentry/types" "7.102.1"
+    "@sentry/utils" "7.102.1"
+
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 "@sentry/babel-plugin-component-annotate@2.14.2":
   version "2.14.2"
   resolved "https://registry.yarnpkg.com/@sentry/babel-plugin-component-annotate/-/babel-plugin-component-annotate-2.14.2.tgz#d756bed93495e97a5a2aad56e2a6dc5020305adc"
   integrity sha512-mFBVnIZmdMrpxo61rG5yf0WFt5VrRpy8cpIpJtT3mYkX9vDmcUZaZaD1ctv73iZF3QwaieVdn05Na5mWzZ8h/A==
+<<<<<<< HEAD
 =======
 "@sentry/babel-plugin-component-annotate@2.14.1":
   version "2.14.1"
@@ -1118,6 +1201,22 @@
     "@sentry/utils" "7.102.0"
 
 <<<<<<< HEAD
+=======
+
+"@sentry/browser@7.102.1":
+  version "7.102.1"
+  resolved "https://registry.yarnpkg.com/@sentry/browser/-/browser-7.102.1.tgz#30d3da587b2b6542b3d9e39d923ed28a2704d454"
+  integrity sha512-7BOfPBiM7Kp6q/iy0JIbsBTxIASV+zWXByqqjuEMWGj3X2u4oRIfm3gv4erPU/l+CORQUVQZLSPGoIoM1gbB/A==
+  dependencies:
+    "@sentry-internal/feedback" "7.102.1"
+    "@sentry-internal/replay-canvas" "7.102.1"
+    "@sentry-internal/tracing" "7.102.1"
+    "@sentry/core" "7.102.1"
+    "@sentry/replay" "7.102.1"
+    "@sentry/types" "7.102.1"
+    "@sentry/utils" "7.102.1"
+
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 "@sentry/bundler-plugin-core@2.14.2":
   version "2.14.2"
   resolved "https://registry.yarnpkg.com/@sentry/bundler-plugin-core/-/bundler-plugin-core-2.14.2.tgz#6750c46fa4836b46ea48556b19f5e6789a428a47"
@@ -1125,6 +1224,7 @@
   dependencies:
     "@babel/core" "7.18.5"
     "@sentry/babel-plugin-component-annotate" "2.14.2"
+<<<<<<< HEAD
 =======
 "@sentry/bundler-plugin-core@2.14.1":
   version "2.14.1"
@@ -1134,6 +1234,8 @@
     "@babel/core" "7.18.5"
     "@sentry/babel-plugin-component-annotate" "2.14.1"
 >>>>>>> 92a72ec (packages: backend: init)
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
     "@sentry/cli" "^2.22.3"
     dotenv "^16.3.1"
     find-up "5.0.0"
@@ -1195,6 +1297,7 @@
     "@sentry/cli-win32-i686" "2.28.6"
     "@sentry/cli-win32-x64" "2.28.6"
 
+<<<<<<< HEAD
 "@sentry/core@7.102.0":
   version "7.102.0"
   resolved "https://registry.yarnpkg.com/@sentry/core/-/core-7.102.0.tgz#da5e04a5fe97ed91464944dac40b813e6f8aa453"
@@ -1261,12 +1364,56 @@
     "@sentry/types" "7.102.0"
 
 <<<<<<< HEAD
+=======
+"@sentry/core@7.102.1":
+  version "7.102.1"
+  resolved "https://registry.yarnpkg.com/@sentry/core/-/core-7.102.1.tgz#855d37b6bba9986a9380864c823e696d3fc5aa01"
+  integrity sha512-QjY+LSP3du3J/C8x/FfEbRxgZgsWd0jfTJ4P7s9f219I1csK4OeBMC3UA1HwEa0pY/9OF6H/egW2CjOcMM5Pdg==
+  dependencies:
+    "@sentry/types" "7.102.1"
+    "@sentry/utils" "7.102.1"
+
+"@sentry/replay@7.102.1":
+  version "7.102.1"
+  resolved "https://registry.yarnpkg.com/@sentry/replay/-/replay-7.102.1.tgz#d6c17332d14dc312b124bbbda8f35d6a982b893c"
+  integrity sha512-HR/j9dGIvbrId8fh8mQlODx7JrhRmawEd9e9P3laPtogWCg/5TI+XPb2VGSaXOX9VWtb/6Z2UjHsaGjgg6YcuA==
+  dependencies:
+    "@sentry-internal/tracing" "7.102.1"
+    "@sentry/core" "7.102.1"
+    "@sentry/types" "7.102.1"
+    "@sentry/utils" "7.102.1"
+
+"@sentry/svelte@^7.99.0":
+  version "7.102.1"
+  resolved "https://registry.yarnpkg.com/@sentry/svelte/-/svelte-7.102.1.tgz#cced551718ae3407b19381060df896c04a3bb427"
+  integrity sha512-oXl+28ccsYwGr8DLhK8hfyB4DPJhpBVfqSCC9SOa4aSH5yqaXoCbXPm6yTkFtFY8o3w54OZbXhEAq7qd7Go3iQ==
+  dependencies:
+    "@sentry/browser" "7.102.1"
+    "@sentry/core" "7.102.1"
+    "@sentry/types" "7.102.1"
+    "@sentry/utils" "7.102.1"
+    magic-string "^0.30.0"
+
+"@sentry/types@7.102.1":
+  version "7.102.1"
+  resolved "https://registry.yarnpkg.com/@sentry/types/-/types-7.102.1.tgz#18c35f32ecbd12afb9860ca2de7bfff542d10b27"
+  integrity sha512-htKorf3t/D0XYtM7foTcmG+rM47rDP6XdbvCcX5gBCuCYlzpM1vqCt2rl3FLktZC6TaIpFRJw1TLfx6m+x5jdA==
+
+"@sentry/utils@7.102.1":
+  version "7.102.1"
+  resolved "https://registry.yarnpkg.com/@sentry/utils/-/utils-7.102.1.tgz#45ddcdf2e700d40160347bbdf4233aff3179d398"
+  integrity sha512-+8WcFjHVV/HROXSAwMuUzveElBFC43EiTG7SNEBNgOUeQzQVTmbUZXyTVgLrUmtoWqvnIxCacoLxtZo1o67kdg==
+  dependencies:
+    "@sentry/types" "7.102.1"
+
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 "@sentry/vite-plugin@^2.14.2":
   version "2.14.2"
   resolved "https://registry.yarnpkg.com/@sentry/vite-plugin/-/vite-plugin-2.14.2.tgz#f17cbd5526a95de3d8a7995b4cd90e2c8a548bf1"
   integrity sha512-t8IiRZGxivtODgabjgHlgUhOBEIJdOclJGUKLAJjJqPtYeKjPzxYOo/Z5yt7k1rhBAaMhFk3whW5o7SOq4KVOA==
   dependencies:
     "@sentry/bundler-plugin-core" "2.14.2"
+<<<<<<< HEAD
 =======
 "@sentry/vite-plugin@^2.14.0":
   version "2.14.1"
@@ -1275,6 +1422,8 @@
   dependencies:
     "@sentry/bundler-plugin-core" "2.14.1"
 >>>>>>> 92a72ec (packages: backend: init)
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
     unplugin "1.0.1"
 
 "@sindresorhus/is@^4.0.0":
@@ -1322,11 +1471,19 @@
     undici "^5.28.3"
 
 "@sveltejs/package@^2.0.0":
+<<<<<<< HEAD
   version "2.2.6"
   resolved "https://registry.yarnpkg.com/@sveltejs/package/-/package-2.2.6.tgz#23e3796b77e4da596d9a01a2c570d90aace8e731"
   integrity sha512-rhKL/96M7LCvFI2xN94qsqHtEWr/ypcMGiii3s6dRW7ADt3tiDm8UfExjRR8v5jW3Femz0+VJ0TNevxI4Q9Quw==
   dependencies:
     chokidar "^3.5.3"
+=======
+  version "2.2.7"
+  resolved "https://registry.yarnpkg.com/@sveltejs/package/-/package-2.2.7.tgz#5c2c247d8807f6d683dcd9d51a609860f35cb31b"
+  integrity sha512-/vvmrQO2mMvROdM/iGRHtRn+ValnK9xzB50pqRcX0IvoeVoTq7uhYf+KifrZTluBA+km6AX/WXRXajrgrgbmvw==
+  dependencies:
+    chokidar "^3.6.0"
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
     kleur "^4.1.5"
     sade "^1.8.1"
     semver "^7.5.4"
@@ -1379,6 +1536,7 @@
   dependencies:
     defer-to-connect "^2.0.0"
 
+<<<<<<< HEAD
 "@tiptap/core@^2.1.11", "@tiptap/core@^2.2.3":
   version "2.2.3"
   resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-2.2.3.tgz#54375c27bcca81901e5316e056147ce0cbc89ba6"
@@ -1514,6 +1672,143 @@
   version "2.2.3"
   resolved "https://registry.yarnpkg.com/@tiptap/pm/-/pm-2.2.3.tgz#88c8547015098ebd438211e839de64b043b655f3"
   integrity sha512-jYZX+0fjN+a1J8qY72Poz1LK6X6oHVQkJIq6qzcx3rm0voYZNVRzP2GIfzstncZiEqRXABHY3mWfOi2I4K9tQA==
+=======
+"@tiptap/core@^2.1.11", "@tiptap/core@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-2.2.4.tgz#6f957678eb733e70b9282fb5098d284a77bd09a3"
+  integrity sha512-cRrI8IlLIhCE1hacBQzXIC8dsRvGq6a4lYWQK/BaHuZg21CG7szp3Vd8Ix+ra1f5v0xPOT+Hy+QFNQooRMKMCw==
+
+"@tiptap/extension-blockquote@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-blockquote/-/extension-blockquote-2.2.4.tgz#d733bea016986c0017e308a2540378c9551c7f10"
+  integrity sha512-FrfPnn0VgVrUwWLwja1afX99JGLp6PE9ThVcmri+tLwUZQvTTVcCvHoCdOakav3/nge1+aV4iE3tQdyq1tWI9Q==
+
+"@tiptap/extension-bold@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-bold/-/extension-bold-2.2.4.tgz#3690eea1ebef49f8d30043fdcfc7bf2866a9b887"
+  integrity sha512-v3tTLc8YESFZPOGj5ByFr8VbmQ/PTo49T1vsK50VubxIN/5r9cXlKH8kb3dZlZxCxJa3FrXNO/M8rdGBSWQvSg==
+
+"@tiptap/extension-bubble-menu@^2.1.13":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-bubble-menu/-/extension-bubble-menu-2.2.4.tgz#2477901c78a18c629f7ae828394ff1f91a500c60"
+  integrity sha512-Nx1fS9jcFlhxaTDYlnayz2UulhK6CMaePc36+7PQIVI+u20RhgTCRNr25zKNemvsiM0RPZZVUjlHkxC0l5as1Q==
+  dependencies:
+    tippy.js "^6.3.7"
+
+"@tiptap/extension-bullet-list@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-bullet-list/-/extension-bullet-list-2.2.4.tgz#1763ae7686bc3f209c1662d571e738280d190ff8"
+  integrity sha512-z/MPmW8bhRougMuorl6MAQBXeK4rhlP+jBWlNwT+CT8h5IkXqPnDbM1sZeagp2nYfVV6Yc4RWpzimqHHtGnYTA==
+
+"@tiptap/extension-code-block@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-code-block/-/extension-code-block-2.2.4.tgz#6d72f3e458cf417a4be6b9cc1f9409ad89f55b78"
+  integrity sha512-h6WV9TmaBEZmvqe1ezMR83DhCPUap6P2mSR5pwVk0WVq6rvZjfgU0iF3EetBJOeDgPlz7cNe2NMDfVb1nGTM/g==
+
+"@tiptap/extension-code@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-code/-/extension-code-2.2.4.tgz#ba77dc56daac75bdf83a2aaecff896e9301c2cdf"
+  integrity sha512-JB4SJ2mUU/9qXFUf+K5K9szvovnN9AIcCb0f0UlcVBuddKHSqCl3wO3QJgYt44BfQTLMNuyzr+zVqfFd6BNt/g==
+
+"@tiptap/extension-document@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-document/-/extension-document-2.2.4.tgz#d46c1fdd1ea5b7191112fae4e9f8a63a46309afc"
+  integrity sha512-z+05xGK0OFoXV1GL+/8bzcZuWMdMA3+EKwk5c+iziG60VZcvGTF7jBRsZidlu9Oaj0cDwWHCeeo6L9SgSh6i2A==
+
+"@tiptap/extension-dropcursor@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-dropcursor/-/extension-dropcursor-2.2.4.tgz#df39861159a022029f733924e9a3977a76dfed17"
+  integrity sha512-IHwkEKmqpqXyJi16h7871NrcIqeyN7I6XRE2qdqi+MhGigVWI8nWHoYbjRKa7K/1uhs5zeRYyDlq5EuZyL6mgA==
+
+"@tiptap/extension-floating-menu@^2.1.13":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-floating-menu/-/extension-floating-menu-2.2.4.tgz#a97becec8cedfa1fb282a7a52caed35a80098581"
+  integrity sha512-U25l7PEzOmlAPugNRl8t8lqyhQZS6W/+3f92+FdwW9qXju3i62iX/3OGCC3Gv+vybmQ4fbZmMjvl+VDfenNi3A==
+  dependencies:
+    tippy.js "^6.3.7"
+
+"@tiptap/extension-gapcursor@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-gapcursor/-/extension-gapcursor-2.2.4.tgz#607b2682376c5ced086258f8329eb080e8047627"
+  integrity sha512-Y6htT/RDSqkQ1UwG2Ia+rNVRvxrKPOs3RbqKHPaWr3vbFWwhHyKhMCvi/FqfI3d5pViVHOZQ7jhb5hT/a0BmNw==
+
+"@tiptap/extension-hard-break@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-hard-break/-/extension-hard-break-2.2.4.tgz#2be463b2f23fc8f57004f3481829aa0b236c17f6"
+  integrity sha512-FPvS57GcqHIeLbPKGJa3gnH30Xw+YB1PXXnAWG2MpnMtc2Vtj1l5xaYYBZB+ADdXLAlU0YMbKhFLQO4+pg1Isg==
+
+"@tiptap/extension-heading@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-heading/-/extension-heading-2.2.4.tgz#a90469a879713dc074ce45e3d7d8cf7a02ae6a1f"
+  integrity sha512-gkq7Ns2FcrOCRq7Q+VRYt5saMt2R9g4REAtWy/jEevJ5UV5vA2AiGnYDmxwAkHutoYU0sAUkjqx37wE0wpamNw==
+
+"@tiptap/extension-history@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-history/-/extension-history-2.2.4.tgz#2d37ccfce9a8b7997bb4d46ebb19e986c5eb6f39"
+  integrity sha512-FDM32XYF5NU4mzh+fJ8w2CyUqv0l2Nl15sd6fOhQkVxSj8t57z+DUXc9ZR3zkH+1RAagYJo/2Gu3e99KpMr0tg==
+
+"@tiptap/extension-horizontal-rule@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-horizontal-rule/-/extension-horizontal-rule-2.2.4.tgz#e1fc33a05d337c2871180f569a7af1774c74658a"
+  integrity sha512-iCRHjFQQHApWg3R4fkKkJQhWEOdu1Fdc4YEAukdOXPSg3fg36IwjvsMXjt9SYBtVZ+iio3rORCZGXyMvgCH9uw==
+
+"@tiptap/extension-italic@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-italic/-/extension-italic-2.2.4.tgz#67403ec3aed630062c7063b7e9e7699d07db683e"
+  integrity sha512-qIhGNvWnsQswSgEMRA8jQQjxfkOGNAuNWKEVQX9DPoqAUgknT41hQcAMP8L2+OdACpb2jbVMOO5Cy5Dof2L8/w==
+
+"@tiptap/extension-link@^2.1.11":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-link/-/extension-link-2.2.4.tgz#1cb4c89e15f1fdfb1b7f3f6f26c62f7d51a6c3cb"
+  integrity sha512-Qsx0cFZm4dxbkToXs5TcXbSoUdicv8db1gV1DYIZdETqjBm4wFjlzCUP7hPHFlvNfeSy1BzAMRt+RpeuiwvxWQ==
+  dependencies:
+    linkifyjs "^4.1.0"
+
+"@tiptap/extension-list-item@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-list-item/-/extension-list-item-2.2.4.tgz#2412dd92e51c3cbc4f2abc3c38ec2ab8348c1af9"
+  integrity sha512-lPLKGKsHpM9ClUa8n7GEUn8pG6HCYU0vFruIy3l2t6jZdHkrgBnYtVGMZ13K8UDnj/hlAlccxku0D0P4mA1Vrg==
+
+"@tiptap/extension-ordered-list@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-ordered-list/-/extension-ordered-list-2.2.4.tgz#dfa6c6869a3d16fe5b2a10749ffe5b999346efd2"
+  integrity sha512-TpFy140O9Af1JciXt+xwqYUXxcJ6YG8zi/B5UDJujp+FH5sCmlYYBBnWxiFMhVaj6yEmA2eafu1qUkic/1X5Aw==
+
+"@tiptap/extension-paragraph@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-paragraph/-/extension-paragraph-2.2.4.tgz#9126fafbf984e324bfb3fab34deb689def7eb98d"
+  integrity sha512-m1KwyvTNJxsq7StbspbcOhxO4Wk4YpElDbqOouWi+H4c8azdpI5Pn96ZqhFeE9bSyjByg6OcB/wqoJsLbeFWdQ==
+
+"@tiptap/extension-placeholder@^2.1.11":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-placeholder/-/extension-placeholder-2.2.4.tgz#d75572f6fb0cb3bbbedfa2ced49c55285ae8fdd5"
+  integrity sha512-UL4Fn9T33SoS7vdI3NnSxBJVeGUIgCIutgXZZ5J8CkcRoDIeS78z492z+6J+qGctHwTd0xUL5NzNJI82HfiTdg==
+
+"@tiptap/extension-strike@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-strike/-/extension-strike-2.2.4.tgz#f987a6fe7b85e3179b413792ae3f33dd9c086e01"
+  integrity sha512-/a2EwQgA+PpG17V2tVRspcrIY0SN3blwcgM7lxdW4aucGkqSKnf7+91dkhQEwCZ//o8kv9mBCyRoCUcGy6S5Xg==
+
+"@tiptap/extension-task-item@^2.1.11":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-task-item/-/extension-task-item-2.2.4.tgz#303a561a315c13cc983ab1c4283e256c2cde000d"
+  integrity sha512-Ixzv7bPcgrWelSD0Jy6yAlHxmGWpD5lPt6Ey4POYy7u98duyUFOBMHLcsV24ipQsRacuB+htgmuqOrkiL+hg7w==
+
+"@tiptap/extension-task-list@^2.1.11":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-task-list/-/extension-task-list-2.2.4.tgz#138ebeeb8f0bedd58926094d0e0f52ab36dd7548"
+  integrity sha512-URh1Yzj/YZBOMkobK4/U8s1QYwIIqHm4b0YadLPPZx9IzTjyV/2bvIakphCmBtxWxeTXW5TbO9eNod3qatq21w==
+
+"@tiptap/extension-text@^2.2.4":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-text/-/extension-text-2.2.4.tgz#aa101c568aa78a4ddc06a944eefcd3ac944987d4"
+  integrity sha512-NlKHMPnRJXB+0AGtDlU0P2Pg+SdesA2lMMd7JzDUgJgL7pX2jOb8eUqSeOjFKuSzFSqYfH6C3o6mQiNhuQMv+g==
+
+"@tiptap/pm@^2.1.11":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/pm/-/pm-2.2.4.tgz#701975e3221ac40b1bfba52d89e1345024212411"
+  integrity sha512-Po0klR165zgtinhVp1nwMubjyKx6gAY9kH3IzcniYLCkqhPgiqnAcCr61TBpp4hfK8YURBS4ihvCB1dyfCyY8A==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   dependencies:
     prosemirror-changeset "^2.2.1"
     prosemirror-collab "^1.3.1"
@@ -1535,6 +1830,7 @@
     prosemirror-view "^1.32.7"
 
 "@tiptap/starter-kit@^2.1.12":
+<<<<<<< HEAD
   version "2.2.3"
   resolved "https://registry.yarnpkg.com/@tiptap/starter-kit/-/starter-kit-2.2.3.tgz#d7583bf518147f0561981372a6410b083fd47a6d"
   integrity sha512-Jx+QXz0SE1y+j498TqYEJcjbIV9YSMwcuIJQ04q8KqHuSmZrq9B22Qa4d0fpcM7uL7dLI4AcRrcqaOuIahCJYQ==
@@ -1563,6 +1859,36 @@
   version "2.2.3"
   resolved "https://registry.yarnpkg.com/@tiptap/suggestion/-/suggestion-2.2.3.tgz#d9286d53b0e37816628205a09035c344f6d46e7f"
   integrity sha512-pMInbk8+rYNaCz4oT/uS498mxSGIJXU32mkXv7wdDqMT2nnZQ2AHtJDUtMuB1RX+DS4ll9vdzrKqQHSW5t2ybQ==
+=======
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/starter-kit/-/starter-kit-2.2.4.tgz#7d9c35fc423bb0bb6a9b2e660c41a080d8caa7e7"
+  integrity sha512-Kbk7qUfIZg3+bNa3e/wBeDQt4jJB46uQgM+xy5NSY6H8NZP6gdmmap3aIrn9S/W/hGpxJl4RcXAeaT0CQji9XA==
+  dependencies:
+    "@tiptap/core" "^2.2.4"
+    "@tiptap/extension-blockquote" "^2.2.4"
+    "@tiptap/extension-bold" "^2.2.4"
+    "@tiptap/extension-bullet-list" "^2.2.4"
+    "@tiptap/extension-code" "^2.2.4"
+    "@tiptap/extension-code-block" "^2.2.4"
+    "@tiptap/extension-document" "^2.2.4"
+    "@tiptap/extension-dropcursor" "^2.2.4"
+    "@tiptap/extension-gapcursor" "^2.2.4"
+    "@tiptap/extension-hard-break" "^2.2.4"
+    "@tiptap/extension-heading" "^2.2.4"
+    "@tiptap/extension-history" "^2.2.4"
+    "@tiptap/extension-horizontal-rule" "^2.2.4"
+    "@tiptap/extension-italic" "^2.2.4"
+    "@tiptap/extension-list-item" "^2.2.4"
+    "@tiptap/extension-ordered-list" "^2.2.4"
+    "@tiptap/extension-paragraph" "^2.2.4"
+    "@tiptap/extension-strike" "^2.2.4"
+    "@tiptap/extension-text" "^2.2.4"
+
+"@tiptap/suggestion@^2.1.13":
+  version "2.2.4"
+  resolved "https://registry.yarnpkg.com/@tiptap/suggestion/-/suggestion-2.2.4.tgz#746e4659fb4be2f49ad43ee5aa9801cc8154889c"
+  integrity sha512-g6HHsKM6K3asW+ZlwMYyLCRqCRaswoliZOQofY4iZt5ru5HNTSzm3YW4XSyW5RGXJIuc319yyrOFgtJ3Fyu5rQ==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 
 "@tootallnate/once@2":
   version "2.0.0"
@@ -1584,10 +1910,17 @@
     "@types/node" "*"
     "@types/responselike" "^1.0.0"
 
+<<<<<<< HEAD
 "@types/chrome@^0.0.256":
   version "0.0.256"
   resolved "https://registry.yarnpkg.com/@types/chrome/-/chrome-0.0.256.tgz#366b52f8f5a2d8119ade9eef2519692e6f987ff8"
   integrity sha512-NleTQw4DNzhPwObLNuQ3i3nvX1rZ1mgnx5FNHc2KP+Cj1fgd3BrT5yQ6Xvs+7H0kNsYxCY+lxhiCwsqq3JwtEg==
+=======
+"@types/chrome@^0.0.260":
+  version "0.0.260"
+  resolved "https://registry.yarnpkg.com/@types/chrome/-/chrome-0.0.260.tgz#b694a12a56dc469cd28212ad59a500575a6ee52e"
+  integrity sha512-lX6QpgfsZRTDpNcCJ+3vzfFnFXq9bScFRTlfhbK5oecSAjamsno+ejFTCbNtc5O/TPnVK9Tja/PyecvWQe0F2w==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   dependencies:
     "@types/filesystem" "*"
     "@types/har-format" "*"
@@ -1684,16 +2017,28 @@
   integrity sha512-nG96G3Wp6acyAgJqGasjODb+acrI7KltPiRxzHPXnP3NgI28bpQDRv53olbqGXbfcgF5aiiHmO3xpwEpS5Ld9g==
 
 "@types/node@*":
+<<<<<<< HEAD
   version "20.11.19"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-20.11.19.tgz#b466de054e9cb5b3831bee38938de64ac7f81195"
   integrity sha512-7xMnVEcZFu0DikYjWOlRq7NTPETrm7teqUT2WkQjrTIkEgUyyGdWsj/Zg8bEJt5TNklzbPD1X3fqfsHw3SpapQ==
+=======
+  version "20.11.20"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.11.20.tgz#f0a2aee575215149a62784210ad88b3a34843659"
+  integrity sha512-7/rR21OS+fq8IyHTgtLkDK949uzsa6n8BkziAKtPVpugIkO6D+/ooXMvzXxDnZrmtXVfjb1bKQafYpb8s89LOg==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   dependencies:
     undici-types "~5.26.4"
 
 "@types/node@^18.11.18", "@types/node@^18.17.5":
+<<<<<<< HEAD
   version "18.19.17"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-18.19.17.tgz#a581a9fb4b2cfdbc61f008804f4436b2d5c40354"
   integrity sha512-SzyGKgwPzuWp2SHhlpXKzCX0pIOfcI4V2eF37nNBJOhwlegQ83omtVQ1XxZpDE06V/d6AQvfQdPfnw0tRC//Ng==
+=======
+  version "18.19.18"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-18.19.18.tgz#7526471b28828d1fef1f7e4960fb9477e6e4369c"
+  integrity sha512-80CP7B8y4PzZF0GWx15/gVWRrB5y/bIjNI84NK3cmQJu0WZwvmj2WMA5LcofQFVfLqqCSp545+U2LsrVzX36Zg==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   dependencies:
     undici-types "~5.26.4"
 
@@ -1928,11 +2273,14 @@
   resolved "https://registry.yarnpkg.com/@xmldom/xmldom/-/xmldom-0.8.10.tgz#a1337ca426aa61cef9fe15b5b28e340a72f6fa99"
   integrity sha512-2WALfTl4xo2SkGCYRt6rDTFfk9R1czmBvUQy12gK2KuRKIpWEhcbbzy8EZXtz/jkRqHX8bFEc6FC1HjX4TUWYw==
 
+<<<<<<< HEAD
 abbrev@^1.0.0:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.1.tgz#f8f2c887ad10bf67f634f005b6987fed3179aac8"
   integrity sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 acorn-jsx@^5.3.2:
   version "5.3.2"
   resolved "https://registry.yarnpkg.com/acorn-jsx/-/acorn-jsx-5.3.2.tgz#7ed5bb55908b3b2f1bc55c6af1653bada7f07937"
@@ -1943,13 +2291,18 @@ acorn@^8.10.0, acorn@^8.8.1, acorn@^8.9.0:
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-8.11.3.tgz#71e0b14e13a4ec160724b38fb7b0f233b1b81d7a"
   integrity sha512-Y9rRfJG5jcKOE0CLisYbojUjIrIEE7AGMzA/Sm4BslANhbS+cDMpgBdcPT91oJ7OuJ9hYJBx59RjbhxVnrF8Xg==
 
+<<<<<<< HEAD
 agent-base@6, agent-base@^6.0.2:
+=======
+agent-base@6:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "6.0.2"
   resolved "https://registry.yarnpkg.com/agent-base/-/agent-base-6.0.2.tgz#49fff58577cfee3f37176feab4c22e00f86d7f77"
   integrity sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==
   dependencies:
     debug "4"
 
+<<<<<<< HEAD
 agentkeepalive@^4.2.1:
   version "4.5.0"
   resolved "https://registry.yarnpkg.com/agentkeepalive/-/agentkeepalive-4.5.0.tgz#2673ad1389b3c418c5a20c5d7364f93ca04be923"
@@ -1965,6 +2318,8 @@ aggregate-error@^3.0.0:
     clean-stack "^2.0.0"
     indent-string "^4.0.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 ajv-keywords@^3.4.1:
   version "3.5.2"
   resolved "https://registry.yarnpkg.com/ajv-keywords/-/ajv-keywords-3.5.2.tgz#31f29da5ab6e00d1c2d329acf7b5929614d5014d"
@@ -2055,6 +2410,7 @@ app-builder-lib@24.12.0:
     tar "^6.1.12"
     temp-file "^3.4.0"
 
+<<<<<<< HEAD
 "aproba@^1.0.3 || ^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/aproba/-/aproba-2.0.0.tgz#52520b8ae5b569215b354efc0caa3fe1e45a8adc"
@@ -2068,6 +2424,8 @@ are-we-there-yet@^3.0.0:
     delegates "^1.0.0"
     readable-stream "^3.6.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 argparse@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/argparse/-/argparse-2.0.1.tgz#246f50f3ca78a3240f6c997e8a9bd1eac49e4b38"
@@ -2266,6 +2624,7 @@ binary-extensions@^2.0.0:
   resolved "https://registry.yarnpkg.com/binary-extensions/-/binary-extensions-2.2.0.tgz#75f502eeaf9ffde42fc98829645be4ea76bd9e2d"
   integrity sha512-jDctJ/IVQbZoJykoeHbhXpOlNBqGNcwXJKJog42E5HDPUwQTSdjCHdihjj0DlnheQ7blbT6dHOafNAiS8ooQKA==
 
+<<<<<<< HEAD
 bl@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/bl/-/bl-4.1.0.tgz#451535264182bec2fbbc83a62ab98cf11d9f7b3a"
@@ -2275,6 +2634,8 @@ bl@^4.1.0:
     inherits "^2.0.4"
     readable-stream "^3.4.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 bluebird-lst@^1.0.9:
   version "1.0.9"
   resolved "https://registry.yarnpkg.com/bluebird-lst/-/bluebird-lst-1.0.9.tgz#a64a0e4365658b9ab5fe875eb9dfb694189bb41c"
@@ -2339,7 +2700,11 @@ buffer-from@^1.0.0:
   resolved "https://registry.yarnpkg.com/buffer-from/-/buffer-from-1.1.2.tgz#2b146a6fd72e80b4f55d255f35ed59a3a9a41bd5"
   integrity sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==
 
+<<<<<<< HEAD
 buffer@^5.1.0, buffer@^5.5.0:
+=======
+buffer@^5.1.0:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "5.7.1"
   resolved "https://registry.yarnpkg.com/buffer/-/buffer-5.7.1.tgz#ba62e7c13133053582197160851a8f648e99eed0"
   integrity sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==
@@ -2387,6 +2752,7 @@ cac@^6.7.14:
   resolved "https://registry.yarnpkg.com/cac/-/cac-6.7.14.tgz#804e1e6f506ee363cb0e3ccbb09cad5dd9870959"
   integrity sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==
 
+<<<<<<< HEAD
 cacache@^16.1.0:
   version "16.1.3"
   resolved "https://registry.yarnpkg.com/cacache/-/cacache-16.1.3.tgz#a02b9f34ecfaf9a78c9f4bc16fceb94d5d67a38e"
@@ -2411,6 +2777,8 @@ cacache@^16.1.0:
     tar "^6.1.11"
     unique-filename "^2.0.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 cacheable-lookup@^5.0.3:
   version "5.0.4"
   resolved "https://registry.yarnpkg.com/cacheable-lookup/-/cacheable-lookup-5.0.4.tgz#5a6b865b2c44357be3d5ebc2a467b032719a7005"
@@ -2446,9 +2814,15 @@ callsites@^3.0.0:
   integrity sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==
 
 caniuse-lite@^1.0.30001587:
+<<<<<<< HEAD
   version "1.0.30001588"
   resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001588.tgz#07f16b65a7f95dba82377096923947fb25bce6e3"
   integrity sha512-+hVY9jE44uKLkH0SrUTqxjxqNTOWHsbnQDIKjwkZ3lNTzUUVdBLBGXtj/q5Mp5u98r3droaZAewQuEDzjQdZlQ==
+=======
+  version "1.0.30001589"
+  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001589.tgz#7ad6dba4c9bf6561aec8291976402339dc157dfb"
+  integrity sha512-vNQWS6kI+q6sBlHbh71IIeC+sRwK2N3EDySc/updIGhIee2x5z00J4c1242/5/d6EpEMdOnk/m+6tuk4/tcsqg==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 
 cargo-cp-artifact@^0.1:
   version "0.1.8"
@@ -2469,7 +2843,11 @@ chalk@^2.4.2:
     escape-string-regexp "^1.0.5"
     supports-color "^5.3.0"
 
+<<<<<<< HEAD
 chalk@^4.0.0, chalk@^4.0.2, chalk@^4.1.0, chalk@^4.1.1, chalk@^4.1.2:
+=======
+chalk@^4.0.0, chalk@^4.0.2, chalk@^4.1.1, chalk@^4.1.2:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "4.1.2"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-4.1.2.tgz#aac4e2b7734a740867aeb16bf02aad556a1e7a01"
   integrity sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==
@@ -2477,7 +2855,11 @@ chalk@^4.0.0, chalk@^4.0.2, chalk@^4.1.0, chalk@^4.1.1, chalk@^4.1.2:
     ansi-styles "^4.1.0"
     supports-color "^7.1.0"
 
+<<<<<<< HEAD
 "chokidar@>=3.0.0 <4.0.0", chokidar@^3.4.1, chokidar@^3.5.3:
+=======
+"chokidar@>=3.0.0 <4.0.0", chokidar@^3.4.1, chokidar@^3.5.3, chokidar@^3.6.0:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "3.6.0"
   resolved "https://registry.yarnpkg.com/chokidar/-/chokidar-3.6.0.tgz#197c6cc669ef2a8dc5e7b4d97ee4e092c3eb0d5b"
   integrity sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==
@@ -2514,6 +2896,7 @@ clean-regexp@^1.0.0:
   dependencies:
     escape-string-regexp "^1.0.5"
 
+<<<<<<< HEAD
 clean-stack@^2.0.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/clean-stack/-/clean-stack-2.2.0.tgz#ee8472dbb129e727b31e8a10a427dee9dfe4008b"
@@ -2531,6 +2914,8 @@ cli-spinners@^2.5.0:
   resolved "https://registry.yarnpkg.com/cli-spinners/-/cli-spinners-2.9.2.tgz#1773a8f4b9c4d6ac31563df53b3fc1d79462fe41"
   integrity sha512-ywqV+5MmyL4E7ybXgKys4DugZbX0FC6LnwrhjuykIjnK9k8OQacQ7axGKnjDXWNhns0xot3bZI5h55H8yo9cJg==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 cli-truncate@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/cli-truncate/-/cli-truncate-2.1.0.tgz#c39e28bf05edcde5be3b98992a22deed5a2b93c7"
@@ -2548,6 +2933,7 @@ cliui@^8.0.1:
     strip-ansi "^6.0.1"
     wrap-ansi "^7.0.0"
 
+<<<<<<< HEAD
 clone-regexp@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/clone-regexp/-/clone-regexp-3.0.0.tgz#c6dd5c6b85482306778f3dc4ac2bb967079069c2"
@@ -2555,6 +2941,8 @@ clone-regexp@^3.0.0:
   dependencies:
     is-regexp "^3.0.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 clone-response@^1.0.2:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/clone-response/-/clone-response-1.0.3.tgz#af2032aa47816399cf5f0a1d0db902f517abb8c3"
@@ -2562,11 +2950,14 @@ clone-response@^1.0.2:
   dependencies:
     mimic-response "^1.0.0"
 
+<<<<<<< HEAD
 clone@^1.0.2:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/clone/-/clone-1.0.4.tgz#da309cc263df15994c688ca902179ca3c7cd7c7e"
   integrity sha512-JQHZ2QMW6l3aH/j6xCqQThY/9OH4D/9ls34cgkUBiEeocRTU04tHfKPBsUK1PqZCUQM7GiA0IIXJSuXHI64Kbg==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 code-red@^1.0.3:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/code-red/-/code-red-1.0.4.tgz#59ba5c9d1d320a4ef795bc10a28bd42bfebe3e35"
@@ -2602,11 +2993,14 @@ color-name@~1.1.4:
   resolved "https://registry.yarnpkg.com/color-name/-/color-name-1.1.4.tgz#c2a09a87acbde69543de6f63fa3995c826c536a2"
   integrity sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==
 
+<<<<<<< HEAD
 color-support@^1.1.3:
   version "1.1.3"
   resolved "https://registry.yarnpkg.com/color-support/-/color-support-1.1.3.tgz#93834379a1cc9a0c61f82f52f0d04322251bd5a2"
   integrity sha512-qiBjkpbMLO/HL68y+lh4q0/O1MZFj2RX6X/KmMa3+gJD3z+WwI1ZzDHysvqHGS3mP6mznPckpXmw1nI9cJjyRg==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 combined-stream@^1.0.8:
   version "1.0.8"
   resolved "https://registry.yarnpkg.com/combined-stream/-/combined-stream-1.0.8.tgz#c3d45a8b34fd730631a110a8a2520682b31d5a7f"
@@ -2648,6 +3042,7 @@ config-file-ts@^0.2.4:
     typescript "^5.3.3"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 convert-hrtime@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/convert-hrtime/-/convert-hrtime-5.0.0.tgz#f2131236d4598b95de856926a67100a0a97e9fa3"
@@ -2659,6 +3054,8 @@ console-control-strings@^1.1.0:
   integrity sha512-ty/fTekppD2fIwRvnZAVdeOiGd1c7YXEixbgJTNzqcxJWKQnjJ/V1bNEEE6hygpM3WjwHFUVK6HTjWSzV4a8sQ==
 >>>>>>> 92a72ec (packages: backend: init)
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 convert-source-map@^1.7.0:
   version "1.9.0"
   resolved "https://registry.yarnpkg.com/convert-source-map/-/convert-source-map-1.9.0.tgz#7faae62353fb4213366d0ca98358d22e8368b05f"
@@ -2735,7 +3132,11 @@ date-fns@^3.2.0:
   resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-3.3.1.tgz#7581daca0892d139736697717a168afbb908cfed"
   integrity sha512-y8e109LYGgoQDveiEBD3DYXKba1jWf5BA8YU1FL5Tvm0BTdEfy54WLCwnuYWZNnzzvALy/QQ4Hov+Q9RVRv+Zw==
 
+<<<<<<< HEAD
 debug@4, debug@^4.1.0, debug@^4.1.1, debug@^4.3.1, debug@^4.3.2, debug@^4.3.3, debug@^4.3.4:
+=======
+debug@4, debug@^4.1.0, debug@^4.1.1, debug@^4.3.1, debug@^4.3.2, debug@^4.3.4:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "4.3.4"
   resolved "https://registry.yarnpkg.com/debug/-/debug-4.3.4.tgz#1319f6579357f2338d3337d2cdd4914bb5dcc865"
   integrity sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==
@@ -2771,6 +3172,7 @@ deepmerge@^4.2.2, deepmerge@^4.3.1:
   resolved "https://registry.yarnpkg.com/deepmerge/-/deepmerge-4.3.1.tgz#44b5f2147cd3b00d4b56137685966f26fd25dd4a"
   integrity sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==
 
+<<<<<<< HEAD
 defaults@^1.0.3:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/defaults/-/defaults-1.0.4.tgz#b0b02062c1e2aa62ff5d9528f0f98baa90978d7a"
@@ -2778,6 +3180,8 @@ defaults@^1.0.3:
   dependencies:
     clone "^1.0.2"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 defer-to-connect@^2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/defer-to-connect/-/defer-to-connect-2.0.1.tgz#8016bdb4143e4632b77a3449c6236277de520587"
@@ -2806,11 +3210,14 @@ delayed-stream@~1.0.0:
   resolved "https://registry.yarnpkg.com/delayed-stream/-/delayed-stream-1.0.0.tgz#df3ae199acadfb7d440aaae0b29e2272b24ec619"
   integrity sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==
 
+<<<<<<< HEAD
 delegates@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/delegates/-/delegates-1.0.0.tgz#84c6e159b81904fdca59a0ef44cd870d31250f9a"
   integrity sha512-bd2L678uiWATM6m5Z1VzNCErI3jiGzt6HGY8OVICs40JQq/HALfbyNJmp0UDakEY4pMMaN0Ly5om/B1VI/+xfQ==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 dequal@^2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/dequal/-/dequal-2.0.3.tgz#2644214f1997d39ed0ee0ece72335490a7ac67be"
@@ -2826,11 +3233,14 @@ detect-indent@^7.0.1:
   resolved "https://registry.yarnpkg.com/detect-indent/-/detect-indent-7.0.1.tgz#cbb060a12842b9c4d333f1cac4aa4da1bb66bc25"
   integrity sha512-Mc7QhQ8s+cLrnUfU/Ji94vG/r8M26m8f++vyres4ZoojaRDpZ1eSIh/EpzLNwlWuvzSZ3UbDFspjFvTDXe6e/g==
 
+<<<<<<< HEAD
 detect-libc@^2.0.1:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-2.0.2.tgz#8ccf2ba9315350e1241b88d0ac3b0e1fbd99605d"
   integrity sha512-UX6sGumvvqSaXgdKGUsgZWqcUyIXZ/vZTrlRT/iobiKhGL0zL4d3osHj3uqllWJK+i+sixDS/3COVEOFbupFyw==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 detect-newline@^4.0.0:
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/detect-newline/-/detect-newline-4.0.1.tgz#fcefdb5713e1fb8cb2839b8b6ee22e6716ab8f23"
@@ -2995,6 +3405,7 @@ electron-publish@24.9.4:
     lazy-val "^1.0.5"
     mime "^2.5.2"
 
+<<<<<<< HEAD
 electron-rebuild@^3.2.9:
   version "3.2.9"
   resolved "https://registry.yarnpkg.com/electron-rebuild/-/electron-rebuild-3.2.9.tgz#ea372be15f591f8d6d978ee9bca6526dadbcf20f"
@@ -3019,6 +3430,12 @@ electron-to-chromium@^1.4.668:
   version "1.4.677"
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.677.tgz#49ee77713516740bdde32ac2d1443c444f0dafe7"
   integrity sha512-erDa3CaDzwJOpyvfKhOiJjBVNnMM0qxHq47RheVVwsSQrgBA9ZSGV9kdaOfZDPXcHzhG7lBxhj6A7KvfLJBd6Q==
+=======
+electron-to-chromium@^1.4.668:
+  version "1.4.680"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.680.tgz#18a30d3f557993eda2d5b1e21a06c4d51875392f"
+  integrity sha512-4nToZ5jlPO14W82NkF32wyjhYqQByVaDmLy4J2/tYcAbJfgO2TKJC780Az1V13gzq4l73CJ0yuyalpXvxXXD9A==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 
 electron-updater@^6.1.7:
   version "6.1.8"
@@ -3046,7 +3463,11 @@ electron-vite@^1.0.27:
     magic-string "^0.30.1"
     picocolors "^1.0.0"
 
+<<<<<<< HEAD
 electron@28:
+=======
+electron@28.2.4:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "28.2.4"
   resolved "https://registry.yarnpkg.com/electron/-/electron-28.2.4.tgz#fda9ef789894de836714cda12768127a3bee0284"
   integrity sha512-XrSsqKCmpGwz1pqzmdLhdGonYvatDXor60rBd+TfURMQQRSxyTaSwrds9kV0aab9YRpeYUH6NJDAOwBhQYDDkA==
@@ -3070,6 +3491,7 @@ emoji-regex@^9.2.2:
   resolved "https://registry.yarnpkg.com/emoji-regex/-/emoji-regex-9.2.2.tgz#840c8803b0d8047f4ff0cf963176b32d4ef3ed72"
   integrity sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg==
 
+<<<<<<< HEAD
 encoding@^0.1.13:
   version "0.1.13"
   resolved "https://registry.yarnpkg.com/encoding/-/encoding-0.1.13.tgz#56574afdd791f54a8e9b2785c0582a2d26210fa9"
@@ -3077,6 +3499,8 @@ encoding@^0.1.13:
   dependencies:
     iconv-lite "^0.6.2"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 end-of-stream@^1.1.0:
   version "1.4.4"
   resolved "https://registry.yarnpkg.com/end-of-stream/-/end-of-stream-1.4.4.tgz#5ae64a5f45057baf3626ec14da0ca5e4b2431eb0"
@@ -3663,11 +4087,14 @@ esutils@^2.0.2, esutils@^2.0.3:
   resolved "https://registry.yarnpkg.com/esutils/-/esutils-2.0.3.tgz#74d2eb4de0b8da1293711910d50775b9b710ef64"
   integrity sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==
 
+<<<<<<< HEAD
 exponential-backoff@^3.1.1:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/exponential-backoff/-/exponential-backoff-3.1.1.tgz#64ac7526fe341ab18a39016cd22c787d01e00bf6"
   integrity sha512-dX7e/LHVJ6W3DE1MHWi9S1EYzDESENfLrYohG2G++ovZrYOkm4Knwa0mc1cn84xJOR4KEU0WSchhLbd0UklbHw==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 ext-list@^2.0.0:
   version "2.2.2"
   resolved "https://registry.yarnpkg.com/ext-list/-/ext-list-2.2.2.tgz#0b98e64ed82f5acf0f2931babf69212ef52ddd37"
@@ -3814,9 +4241,15 @@ flat-cache@^3.0.4:
     rimraf "^3.0.2"
 
 flatted@^3.2.9:
+<<<<<<< HEAD
   version "3.3.0"
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-3.3.0.tgz#5fdca2b5e671cd38d1537427a10e02a2caa8257e"
   integrity sha512-noqGuLw158+DuD9UPRKHpJ2hGxpFyDlYYrfM0mWt4XhT4n0lwzTLh70Tkdyy4kyTmyTT9Bv7bWAJqw7cgkEXDg==
+=======
+  version "3.3.1"
+  resolved "https://registry.yarnpkg.com/flatted/-/flatted-3.3.1.tgz#21db470729a6734d4997002f439cb308987f567a"
+  integrity sha512-X8cqMLLie7KsNUDSdzeN8FYK9rEt4Dt67OsG/DNGnYTSDBG4uFAJFBnUeiV+zCVAvwFy56IjM9sH51jVaEhNxw==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 
 for-each@^0.3.3:
   version "0.3.3"
@@ -3879,7 +4312,11 @@ fs-extra@^9.0.0, fs-extra@^9.0.1:
     jsonfile "^6.0.1"
     universalify "^2.0.0"
 
+<<<<<<< HEAD
 fs-minipass@^2.0.0, fs-minipass@^2.1.0:
+=======
+fs-minipass@^2.0.0:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/fs-minipass/-/fs-minipass-2.1.0.tgz#7f5036fdbf12c63c169190cbe4199c852271f9fb"
   integrity sha512-V/JgOLFCS+R6Vcq0slCuaeWEdNC3ouDlJMNIsacH2VtALiu9mV4LPrHc5cDl8k5aw6J8jwgWWpiTo5RYhmIzvg==
@@ -3901,11 +4338,14 @@ function-bind@^1.1.2:
   resolved "https://registry.yarnpkg.com/function-bind/-/function-bind-1.1.2.tgz#2c02d864d97f3ea6c8830c464cbd11ab6eab7a1c"
   integrity sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==
 
+<<<<<<< HEAD
 function-timeout@^0.1.0:
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/function-timeout/-/function-timeout-0.1.1.tgz#6bf71d3d24c894d43b2bec312cabb8c5add2e9da"
   integrity sha512-0NVVC0TaP7dSTvn1yMiy6d6Q8gifzbvQafO46RtLG/kHJUBNd+pVRGOBoK44wNBvtSPUJRfdVvkFdD3p0xvyZg==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 function.prototype.name@^1.1.5, function.prototype.name@^1.1.6:
   version "1.1.6"
   resolved "https://registry.yarnpkg.com/function.prototype.name/-/function.prototype.name-1.1.6.tgz#cdf315b7d90ee77a4c6ee216c3c3362da07533fd"
@@ -3926,6 +4366,7 @@ fuse.js@^7.0.0:
   resolved "https://registry.yarnpkg.com/fuse.js/-/fuse.js-7.0.0.tgz#6573c9fcd4c8268e403b4fc7d7131ffcf99a9eb2"
   integrity sha512-14F4hBIxqKvD4Zz/XjDc3y94mNZN6pRv3U13Udo0lNLCWRBUsrMv2xwcF/y/Z5sV6+FQW+/ow68cHpm4sunt8Q==
 
+<<<<<<< HEAD
 gauge@^4.0.3:
   version "4.0.4"
   resolved "https://registry.yarnpkg.com/gauge/-/gauge-4.0.4.tgz#52ff0652f2bbf607a989793d53b751bef2328dce"
@@ -3940,6 +4381,8 @@ gauge@^4.0.3:
     strip-ansi "^6.0.1"
     wide-align "^1.1.5"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 gensync@^1.0.0-beta.2:
   version "1.0.0-beta.2"
   resolved "https://registry.yarnpkg.com/gensync/-/gensync-1.0.0-beta.2.tgz#32a6ee76c3d7f52d46b2b1ae5d93fea8580a25e0"
@@ -4042,7 +4485,11 @@ glob@^10.3.10:
     minipass "^5.0.0 || ^6.0.2 || ^7.0.0"
     path-scurry "^1.10.1"
 
+<<<<<<< HEAD
 glob@^7.0.3, glob@^7.1.3, glob@^7.1.4, glob@^7.1.6:
+=======
+glob@^7.0.3, glob@^7.1.3, glob@^7.1.6:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "7.2.3"
   resolved "https://registry.yarnpkg.com/glob/-/glob-7.2.3.tgz#b8df0fb802bbfa8e89bd1d938b4e16578ed44f2b"
   integrity sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==
@@ -4054,7 +4501,11 @@ glob@^7.0.3, glob@^7.1.3, glob@^7.1.4, glob@^7.1.6:
     once "^1.3.0"
     path-is-absolute "^1.0.0"
 
+<<<<<<< HEAD
 glob@^8.0.1, glob@^8.0.3:
+=======
+glob@^8.0.3:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "8.1.0"
   resolved "https://registry.yarnpkg.com/glob/-/glob-8.1.0.tgz#d388f656593ef708ee3e34640fdfb99a9fd1c33e"
   integrity sha512-r8hpEjiQEYlF2QU0df3dS+nxxSIreXQS1qRhMJM0Q5NDdR386C7jb7Hwwod8Fgiuex+k0GFjgft18yvxm5XoCQ==
@@ -4147,7 +4598,11 @@ gopd@^1.0.1:
   dependencies:
     get-intrinsic "^1.1.3"
 
+<<<<<<< HEAD
 got@^11.7.0, got@^11.8.5:
+=======
+got@^11.8.5:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "11.8.6"
   resolved "https://registry.yarnpkg.com/got/-/got-11.8.6.tgz#276e827ead8772eddbcfc97170590b841823233a"
   integrity sha512-6tfZ91bOr7bOXnK7PRDCGBLa1H4U080YHNaAQ2KsMGlLEzRbk44nsZF2E1IeRc3vtJHPVbKCYgdFbaGO2ljd8g==
@@ -4164,7 +4619,11 @@ got@^11.7.0, got@^11.8.5:
     p-cancelable "^2.0.0"
     responselike "^2.0.0"
 
+<<<<<<< HEAD
 graceful-fs@^4.1.3, graceful-fs@^4.1.6, graceful-fs@^4.2.0, graceful-fs@^4.2.4, graceful-fs@^4.2.6:
+=======
+graceful-fs@^4.1.3, graceful-fs@^4.1.6, graceful-fs@^4.2.0, graceful-fs@^4.2.4:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "4.2.11"
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.11.tgz#4183e4e8bf08bb6e05bbb2f7d2e0c8f712ca40e3"
   integrity sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==
@@ -4213,11 +4672,14 @@ has-tostringtag@^1.0.0, has-tostringtag@^1.0.1, has-tostringtag@^1.0.2:
   dependencies:
     has-symbols "^1.0.3"
 
+<<<<<<< HEAD
 has-unicode@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/has-unicode/-/has-unicode-2.0.1.tgz#e0e6fe6a28cf51138855e086d1691e771de2a8b9"
   integrity sha512-8Rf9Y83NBReMnx0gFzA8JImQACstCYWUplepDa9xprwwtmgEZUF0h/i5xSA625zB/I37EtrswSST6OXxwaaIJQ==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 hasown@^2.0.0, hasown@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/hasown/-/hasown-2.0.1.tgz#26f48f039de2c0f8d3356c223fb8d50253519faa"
@@ -4237,7 +4699,11 @@ hosted-git-info@^4.1.0:
   dependencies:
     lru-cache "^6.0.0"
 
+<<<<<<< HEAD
 http-cache-semantics@^4.0.0, http-cache-semantics@^4.1.0:
+=======
+http-cache-semantics@^4.0.0:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/http-cache-semantics/-/http-cache-semantics-4.1.1.tgz#abe02fcb2985460bf0323be664436ec3476a6d5a"
   integrity sha512-er295DKPVsV82j5kw1Gjt+ADA/XYHsajl82cGNQG2eyoPkvgUhX+nDIyelzhIWbbsXP39EHcI6l5tYs2FYqYXQ==
@@ -4267,6 +4733,7 @@ https-proxy-agent@^5.0.0, https-proxy-agent@^5.0.1:
     agent-base "6"
     debug "4"
 
+<<<<<<< HEAD
 humanize-ms@^1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/humanize-ms/-/humanize-ms-1.2.1.tgz#c46e3159a293f6b896da29316d8b6fe8bb79bbed"
@@ -4274,6 +4741,8 @@ humanize-ms@^1.2.1:
   dependencies:
     ms "^2.0.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 husky@^9.0.10:
   version "9.0.11"
   resolved "https://registry.yarnpkg.com/husky/-/husky-9.0.11.tgz#fc91df4c756050de41b3e478b2158b87c1e79af9"
@@ -4327,11 +4796,14 @@ indent-string@^4.0.0:
   resolved "https://registry.yarnpkg.com/indent-string/-/indent-string-4.0.0.tgz#624f8f4497d619b2d9768531d58f4122854d7251"
   integrity sha512-EdDDZu4A2OyIK7Lr/2zG+w5jmbuk1DVBnEwREQvBzspBJkCEbRa8GxU1lghYcaGJCnRWibjDXlq779X1/y5xwg==
 
+<<<<<<< HEAD
 infer-owner@^1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/infer-owner/-/infer-owner-1.0.4.tgz#c4cefcaa8e51051c2a40ba2ce8a3d27295af9467"
   integrity sha512-IClj+Xz94+d7irH5qRyfJonOdfTzuDaifE6ZPWfx0N0+/ATZCbuTPq2prFl526urkQd90WyUKIh1DfBQ2hMz9A==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 inflight@^1.0.4:
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/inflight/-/inflight-1.0.6.tgz#49bd6331d7d02d0c09bc910a1075ba8165b56df9"
@@ -4340,7 +4812,11 @@ inflight@^1.0.4:
     once "^1.3.0"
     wrappy "1"
 
+<<<<<<< HEAD
 inherits@2, inherits@^2.0.3, inherits@^2.0.4:
+=======
+inherits@2:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "2.0.4"
   resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.4.tgz#0fa2c64f932917c3433a0ded55363aae37416b7c"
   integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
@@ -4354,6 +4830,7 @@ internal-slot@^1.0.5, internal-slot@^1.0.7:
     hasown "^2.0.0"
     side-channel "^1.0.4"
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 ip-regex@^5.0.0:
   version "5.0.0"
@@ -4373,11 +4850,16 @@ ip-address@^9.0.5:
     jsbn "1.1.0"
     sprintf-js "^1.1.3"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 is-array-buffer@^3.0.4:
   version "3.0.4"
   resolved "https://registry.yarnpkg.com/is-array-buffer/-/is-array-buffer-3.0.4.tgz#7a1f92b3d61edd2bc65d24f130530ea93d7fae98"
   integrity sha512-wcjaerHw0ydZwfhiKbXJWLDY8A7yV7KhjQOpb83hGgGfId/aQa4TOvwyzn2PuswW2gPCYEL/nEAiSVpdOj1lXw==
+<<<<<<< HEAD
 >>>>>>> 92a72ec (packages: backend: init)
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   dependencies:
     call-bind "^1.0.2"
     get-intrinsic "^1.2.1"
@@ -4488,6 +4970,7 @@ is-glob@^4.0.0, is-glob@^4.0.1, is-glob@^4.0.3, is-glob@~4.0.1:
     is-extglob "^2.1.1"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 is-ip@^5.0.1:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/is-ip/-/is-ip-5.0.1.tgz#bec44442c823e591aa6f4d6fb9081d6a9be17e44"
@@ -4507,6 +4990,8 @@ is-lambda@^1.0.1:
   integrity sha512-z7CMFGNrENq5iFB9Bqo64Xk6Y9sg+epq1myIcdHaGnbMTYOxvzsEtdYqQUylB7LxfkvgrrjP32T6Ywciio9UIQ==
 >>>>>>> 92a72ec (packages: backend: init)
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 is-map@^2.0.1:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/is-map/-/is-map-2.0.2.tgz#00922db8c9bf73e81b7a335827bc2a43f2b91127"
@@ -4578,11 +5063,14 @@ is-regex@^1.1.4:
     call-bind "^1.0.2"
     has-tostringtag "^1.0.0"
 
+<<<<<<< HEAD
 is-regexp@^3.0.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/is-regexp/-/is-regexp-3.1.0.tgz#0235eab9cda5b83f96ac4a263d8c32c9d5ad7422"
   integrity sha512-rbku49cWloU5bSMI+zaRaXdQHXnthP6DZ/vLnfdSKyL4zUzuWnomtOEiZZOd+ioQ+avFo/qau3KPTc7Fjy1uPA==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 is-set@^2.0.1:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/is-set/-/is-set-2.0.2.tgz#90755fa4c2562dc1c5d4024760d6119b94ca18ec"
@@ -4616,11 +5104,14 @@ is-typed-array@^1.1.13:
   dependencies:
     which-typed-array "^1.1.14"
 
+<<<<<<< HEAD
 is-unicode-supported@^0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/is-unicode-supported/-/is-unicode-supported-0.1.0.tgz#3f26c76a809593b52bfa2ecb5710ed2779b522a7"
   integrity sha512-knxG2q4UC3u8stRGyAVJCOdxFmv5DZiRcdlIaAQXAbSfJya+OhopNotLQrstBhququ4ZpuKbDc/8S6mgXgPFPw==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 is-weakmap@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/is-weakmap/-/is-weakmap-2.0.1.tgz#5008b59bdc43b698201d18f62b37b2ca243e8cf2"
@@ -4713,11 +5204,14 @@ js-yaml@^4.1.0:
   dependencies:
     argparse "^2.0.1"
 
+<<<<<<< HEAD
 jsbn@1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/jsbn/-/jsbn-1.1.0.tgz#b01307cb29b618a1ed26ec79e911f803c4da0040"
   integrity sha512-4bYVV3aAMtDTTu4+xsDYa6sy9GyJ69/amsu9sYF2zqjiEoZA5xJi3BrfX3uY+/IekIu7MwdObdbDWpoZdBv3/A==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 jsesc@^2.5.1:
   version "2.5.2"
   resolved "https://registry.yarnpkg.com/jsesc/-/jsesc-2.5.2.tgz#80564d2e483dacf6e8ef209650a67df3f0c283a4"
@@ -4916,6 +5410,7 @@ lodash@^4.17.15, lodash@^4.17.21:
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
 
+<<<<<<< HEAD
 log-symbols@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/log-symbols/-/log-symbols-4.1.0.tgz#3fbdbb95b4683ac9fc785111e792e558d4abd503"
@@ -4924,6 +5419,8 @@ log-symbols@^4.1.0:
     chalk "^4.1.0"
     is-unicode-supported "^0.1.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 loose-envify@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/loose-envify/-/loose-envify-1.4.0.tgz#71ee51fa7be4caec1a63839f7e682d8132d30caf"
@@ -4957,16 +5454,20 @@ lru-cache@^6.0.0:
   dependencies:
     yallist "^4.0.0"
 
+<<<<<<< HEAD
 lru-cache@^7.7.1:
   version "7.18.3"
   resolved "https://registry.yarnpkg.com/lru-cache/-/lru-cache-7.18.3.tgz#f793896e0fd0e954a59dfdd82f0773808df6aa89"
   integrity sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 "lru-cache@^9.1.1 || ^10.0.0":
   version "10.2.0"
   resolved "https://registry.yarnpkg.com/lru-cache/-/lru-cache-10.2.0.tgz#0bd445ca57363465900f4d1f9bd8db343a4d95c3"
   integrity sha512-2bIM8x+VAf6JT4bKAljS1qUWgMsqZRPGJS6FSahIMPVvctcNhyVp7AJu7quxOW9jwkryBReKZY5tY5JYv2n/7Q==
 
+<<<<<<< HEAD
 lzma-native@^8.0.5:
   version "8.0.6"
   resolved "https://registry.yarnpkg.com/lzma-native/-/lzma-native-8.0.6.tgz#3ea456209d643bafd9b5d911781bdf0b396b2665"
@@ -4976,6 +5477,8 @@ lzma-native@^8.0.5:
     node-gyp-build "^4.2.1"
     readable-stream "^3.6.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 magic-string@0.27.0:
   version "0.27.0"
   resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.27.0.tgz#e4a3413b4bab6d98d2becffd48b4a257effdbbf3"
@@ -5002,6 +5505,7 @@ make-error@^1.3.6:
   resolved "https://registry.yarnpkg.com/make-error/-/make-error-1.3.6.tgz#2eb2e37ea9b67c4891f684a1394799af484cf7a2"
   integrity sha512-s8UhlNe7vPKomQhC1qFelMokr/Sc3AgNbso3n74mVPA5LTZwkB9NlXf4XPamLxJE8h0gh73rM94xvwRT2CVInw==
 
+<<<<<<< HEAD
 make-fetch-happen@^10.0.3:
   version "10.2.1"
   resolved "https://registry.yarnpkg.com/make-fetch-happen/-/make-fetch-happen-10.2.1.tgz#f5e3835c5e9817b617f2770870d9492d28678164"
@@ -5024,6 +5528,8 @@ make-fetch-happen@^10.0.3:
     socks-proxy-agent "^7.0.0"
     ssri "^9.0.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 markdown-it-task-lists@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/markdown-it-task-lists/-/markdown-it-task-lists-2.1.1.tgz#f68f4d2ac2bad5a2c373ba93081a1a6848417088"
@@ -5104,11 +5610,14 @@ mime@^2.5.2:
   resolved "https://registry.yarnpkg.com/mime/-/mime-2.6.0.tgz#a2a682a95cd4d0cb1d6257e28f83da7e35800367"
   integrity sha512-USPkMeET31rOMiarsBNIHZKLGgvKc/LrjofAnBlOttf5ajRvqiRA8QsenbcooctK6d6Ts6aqZXBA+XbkKthiQg==
 
+<<<<<<< HEAD
 mimic-fn@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/mimic-fn/-/mimic-fn-2.1.0.tgz#7ed2c2ccccaf84d3ffcb7a69b57711fc2083401b"
   integrity sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 mimic-response@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/mimic-response/-/mimic-response-1.0.1.tgz#4923538878eef42063cb8a3e3b0798781487ab1b"
@@ -5157,6 +5666,7 @@ minimist@^1.2.0, minimist@^1.2.5, minimist@^1.2.6:
   resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.8.tgz#c1a464e7693302e082a075cee0c057741ac4772c"
   integrity sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==
 
+<<<<<<< HEAD
 minipass-collect@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/minipass-collect/-/minipass-collect-1.0.2.tgz#22b813bf745dc6edba2576b940022ad6edc8c617"
@@ -5197,6 +5707,9 @@ minipass-sized@^1.0.3:
     minipass "^3.0.0"
 
 minipass@^3.0.0, minipass@^3.1.1, minipass@^3.1.6:
+=======
+minipass@^3.0.0:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "3.3.6"
   resolved "https://registry.yarnpkg.com/minipass/-/minipass-3.3.6.tgz#7bba384db3a1520d18c9c0e5251c3444e95dd94a"
   integrity sha512-DxiNidxSEK+tHG6zOIklvNOwm3hvCrbUrdtzY74U6HKTJxvIDfOUL5W5P2Ghd3DTkhhKPYGqeNUIh5qcM4YBfw==
@@ -5218,7 +5731,11 @@ minipass@^5.0.0:
   resolved "https://registry.yarnpkg.com/minipass/-/minipass-7.0.4.tgz#dbce03740f50a4786ba994c1fb908844d27b038c"
   integrity sha512-jYofLM5Dam9279rdkWzqHozUo4ybjdZmCsDHePy5V/PbBcVMiSZR97gmAy45aqi8CK1lG2ECd356FU86avfwUQ==
 
+<<<<<<< HEAD
 minizlib@^2.1.1, minizlib@^2.1.2:
+=======
+minizlib@^2.1.1:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/minizlib/-/minizlib-2.1.2.tgz#e90d3466ba209b932451508a11ce3d3632145931"
   integrity sha512-bAxsR8BVfj60DWXHE3u30oHzfl4G7khkSuPW+qvpd7jFRHm7dLxOjUk1EHACJ/hxLY8phGJ0YhYHZo7jil7Qdg==
@@ -5233,7 +5750,11 @@ mkdirp@^0.5.1:
   dependencies:
     minimist "^1.2.6"
 
+<<<<<<< HEAD
 mkdirp@^1.0.3, mkdirp@^1.0.4:
+=======
+mkdirp@^1.0.3:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/mkdirp/-/mkdirp-1.0.4.tgz#3eb5ed62622756d79a5f0e2a221dfebad75c2f7e"
   integrity sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==
@@ -5263,7 +5784,11 @@ ms@2.1.2:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.2.tgz#d09d1f357b443f493382a8eb3ccd183872ae6009"
   integrity sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==
 
+<<<<<<< HEAD
 ms@^2.0.0, ms@^2.1.1:
+=======
+ms@^2.1.1:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "2.1.3"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#574c8138ce1d2b5861f0b44579dbadd60c6615b2"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
@@ -5278,11 +5803,14 @@ natural-compare@^1.4.0:
   resolved "https://registry.yarnpkg.com/natural-compare/-/natural-compare-1.4.0.tgz#4abebfeed7541f2c27acfb29bdbbd15c8d5ba4f7"
   integrity sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==
 
+<<<<<<< HEAD
 negotiator@^0.6.3:
   version "0.6.3"
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.3.tgz#58e323a72fedc0d6f9cd4d31fe49f51479590ccd"
   integrity sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 no-case@^3.0.4:
   version "3.0.4"
   resolved "https://registry.yarnpkg.com/no-case/-/no-case-3.0.4.tgz#d361fd5c9800f558551a8369fc0dcd4662b6124d"
@@ -5291,6 +5819,7 @@ no-case@^3.0.4:
     lower-case "^2.0.2"
     tslib "^2.0.3"
 
+<<<<<<< HEAD
 node-abi@^3.0.0:
   version "3.55.0"
   resolved "https://registry.yarnpkg.com/node-abi/-/node-abi-3.55.0.tgz#57bc713082a48d4c7c7d3104d3d0cbb1a0e12ed9"
@@ -5298,11 +5827,14 @@ node-abi@^3.0.0:
   dependencies:
     semver "^7.3.5"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 node-addon-api@^1.6.3:
   version "1.7.2"
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-1.7.2.tgz#3df30b95720b53c24e59948b49532b662444f54d"
   integrity sha512-ibPK3iA+vaY1eEjESkQkM0BbCqFOaZMiXRTtdB0u7b4djtY6JnsjvPdUHVMg6xQt3B8fpTTWHI9A+ADjM9frzg==
 
+<<<<<<< HEAD
 node-addon-api@^3.1.0:
   version "3.2.1"
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-3.2.1.tgz#81325e0a2117789c0128dab65e7e38f07ceba161"
@@ -5315,6 +5847,8 @@ node-api-version@^0.1.4:
   dependencies:
     semver "^7.3.5"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 node-fetch@^2.6.12, node-fetch@^2.6.7:
   version "2.7.0"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.7.0.tgz#d0f0fa6e3e2dc1d27efcd8ad99d550bda94d187d"
@@ -5322,6 +5856,7 @@ node-fetch@^2.6.12, node-fetch@^2.6.7:
   dependencies:
     whatwg-url "^5.0.0"
 
+<<<<<<< HEAD
 node-gyp-build@^4.2.1:
   version "4.8.0"
   resolved "https://registry.yarnpkg.com/node-gyp-build/-/node-gyp-build-4.8.0.tgz#3fee9c1731df4581a3f9ead74664369ff00d26dd"
@@ -5344,11 +5879,14 @@ node-gyp@^9.0.0:
     tar "^6.1.2"
     which "^2.0.2"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 node-releases@^2.0.14:
   version "2.0.14"
   resolved "https://registry.yarnpkg.com/node-releases/-/node-releases-2.0.14.tgz#2ffb053bceb8b2be8495ece1ab6ce600c4461b0b"
   integrity sha512-y10wOWt8yZpqXmOgRo77WaHEmhYQYGNA6y421PKsKYWEK8aW+cqAphborZDhqfyKrbZEN92CN1X2KbafY2s7Yw==
 
+<<<<<<< HEAD
 nopt@^6.0.0:
   version "6.0.0"
   resolved "https://registry.yarnpkg.com/nopt/-/nopt-6.0.0.tgz#245801d8ebf409c6df22ab9d95b65e1309cdb16d"
@@ -5356,6 +5894,8 @@ nopt@^6.0.0:
   dependencies:
     abbrev "^1.0.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 normalize-package-data@^2.5.0:
   version "2.5.0"
   resolved "https://registry.yarnpkg.com/normalize-package-data/-/normalize-package-data-2.5.0.tgz#e66db1838b200c1dfc233225d12cb36520e234a8"
@@ -5376,6 +5916,7 @@ normalize-url@^6.0.1:
   resolved "https://registry.yarnpkg.com/normalize-url/-/normalize-url-6.1.0.tgz#40d0885b535deffe3f3147bec877d05fe4c5668a"
   integrity sha512-DlL+XwOy3NxAQ8xuC0okPgK46iuVNAK01YN7RueYBqqFeGsBjV9XmCAzAdgt+667bCl5kPh9EqKKDwnaPG1I7A==
 
+<<<<<<< HEAD
 npmlog@^6.0.0:
   version "6.0.2"
   resolved "https://registry.yarnpkg.com/npmlog/-/npmlog-6.0.2.tgz#c8166017a42f2dea92d6453168dd865186a70830"
@@ -5386,6 +5927,8 @@ npmlog@^6.0.0:
     gauge "^4.0.3"
     set-blocking "^2.0.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 object-assign@^4.0.1, object-assign@^4.1.1:
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/object-assign/-/object-assign-4.1.1.tgz#2109adc7965887cfc05cbbd442cac8bfbb360863"
@@ -5478,6 +6021,7 @@ once@^1.3.0, once@^1.3.1, once@^1.4.0:
   dependencies:
     wrappy "1"
 
+<<<<<<< HEAD
 onetime@^5.1.0:
   version "5.1.2"
   resolved "https://registry.yarnpkg.com/onetime/-/onetime-5.1.2.tgz#d0e96ebb56b07476df1dd9c4806e5237985ca45e"
@@ -5485,6 +6029,8 @@ onetime@^5.1.0:
   dependencies:
     mimic-fn "^2.1.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 optionator@^0.9.3:
   version "0.9.3"
   resolved "https://registry.yarnpkg.com/optionator/-/optionator-0.9.3.tgz#007397d44ed1872fdc6ed31360190f81814e2c64"
@@ -5497,6 +6043,7 @@ optionator@^0.9.3:
     prelude-ls "^1.2.1"
     type-check "^0.4.0"
 
+<<<<<<< HEAD
 ora@^5.1.0:
   version "5.4.1"
   resolved "https://registry.yarnpkg.com/ora/-/ora-5.4.1.tgz#1b2678426af4ac4a509008e5e4ac9e9959db9e18"
@@ -5512,6 +6059,8 @@ ora@^5.1.0:
     strip-ansi "^6.0.0"
     wcwidth "^1.0.1"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 orderedmap@^2.0.0:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/orderedmap/-/orderedmap-2.1.1.tgz#61481269c44031c449915497bf5a4ad273c512d2"
@@ -5550,6 +6099,7 @@ p-locate@^5.0.0:
   dependencies:
     p-limit "^3.0.2"
 
+<<<<<<< HEAD
 p-map@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/p-map/-/p-map-4.0.0.tgz#bb2f95a5eda2ec168ec9274e06a747c3e2904d2b"
@@ -5557,6 +6107,8 @@ p-map@^4.0.0:
   dependencies:
     aggregate-error "^3.0.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 p-try@^2.0.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/p-try/-/p-try-2.2.0.tgz#cb2868540e313d61de58fafbe35ce9004d5540e6"
@@ -5735,11 +6287,19 @@ prettier-linter-helpers@^1.0.0:
     fast-diff "^1.1.2"
 
 prettier-plugin-packagejson@^2.4.5:
+<<<<<<< HEAD
   version "2.4.11"
   resolved "https://registry.yarnpkg.com/prettier-plugin-packagejson/-/prettier-plugin-packagejson-2.4.11.tgz#90a3211bcda4deb1f05c91d6315dc3bc11e7de03"
   integrity sha512-zmOmM96GkAjT2zUdHSQJnpyVpbisBkewDluo2NLHjI/JN7uOCZlEzWVaMhdqyZ8LVdQDfzamvbvSw4swd3Az1A==
   dependencies:
     sort-package-json "2.7.0"
+=======
+  version "2.4.12"
+  resolved "https://registry.yarnpkg.com/prettier-plugin-packagejson/-/prettier-plugin-packagejson-2.4.12.tgz#eeb917dad83ae42d0caccc9f26d3728b5c4f2434"
+  integrity sha512-hifuuOgw5rHHTdouw9VrhT8+Nd7UwxtL1qco8dUfd4XUFQL6ia3xyjSxhPQTsGnSYFraTWy5Omb+MZm/OWDTpQ==
+  dependencies:
+    sort-package-json "2.8.0"
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
     synckit "0.9.0"
 
 prettier-plugin-svelte@^3.0.3, prettier-plugin-svelte@^3.1.2:
@@ -5757,11 +6317,14 @@ progress@^2.0.3:
   resolved "https://registry.yarnpkg.com/progress/-/progress-2.0.3.tgz#7e8cf8d8f5b8f239c1bc68beb4eb78567d572ef8"
   integrity sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==
 
+<<<<<<< HEAD
 promise-inflight@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/promise-inflight/-/promise-inflight-1.0.1.tgz#98472870bf228132fcbdd868129bad12c3c029e3"
   integrity sha512-6zWPyEOFaQBJYcGMHBKTKJ3u6TBsnMFOIZSa6ce1e/ZrrsOlnHRHbabMjLiBYKp+n44X9eUI6VUPaukCXHuG4g==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 promise-retry@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/promise-retry/-/promise-retry-2.0.1.tgz#ff747a13620ab57ba688f5fc67855410c370da22"
@@ -6009,6 +6572,7 @@ read-pkg@^5.2.0:
     parse-json "^5.0.0"
     type-fest "^0.6.0"
 
+<<<<<<< HEAD
 readable-stream@^3.4.0, readable-stream@^3.6.0:
   version "3.6.2"
   resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-3.6.2.tgz#56a9b36ea965c00c5a93ef31eb111a0f11056967"
@@ -6018,6 +6582,8 @@ readable-stream@^3.4.0, readable-stream@^3.6.0:
     string_decoder "^1.1.1"
     util-deprecate "^1.0.1"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 readdirp@~3.6.0:
   version "3.6.0"
   resolved "https://registry.yarnpkg.com/readdirp/-/readdirp-3.6.0.tgz#74a370bd857116e245b29cc97340cd431a02a6c7"
@@ -6118,6 +6684,7 @@ responselike@^2.0.0:
   dependencies:
     lowercase-keys "^2.0.0"
 
+<<<<<<< HEAD
 restore-cursor@^3.1.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/restore-cursor/-/restore-cursor-3.1.0.tgz#39f67c54b3a7a58cea5236d95cf0034239631f7e"
@@ -6126,6 +6693,8 @@ restore-cursor@^3.1.0:
     onetime "^5.1.0"
     signal-exit "^3.0.2"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 retry@^0.12.0:
   version "0.12.0"
   resolved "https://registry.yarnpkg.com/retry/-/retry-0.12.0.tgz#1b42a6266a21f07421d1b0b54b7dc167b01c013b"
@@ -6220,11 +6789,14 @@ safe-array-concat@^1.1.0:
     has-symbols "^1.0.3"
     isarray "^2.0.5"
 
+<<<<<<< HEAD
 safe-buffer@~5.2.0:
   version "5.2.1"
   resolved "https://registry.yarnpkg.com/safe-buffer/-/safe-buffer-5.2.1.tgz#1eaf9fa9bdb1fdd4ec75f58f9cdb4e6b7827eec6"
   integrity sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 safe-regex-test@^1.0.3:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/safe-regex-test/-/safe-regex-test-1.0.3.tgz#a5b4c0f06e0ab50ea2c395c14d8371232924c377"
@@ -6285,7 +6857,11 @@ semver@^6.0.0, semver@^6.2.0, semver@^6.3.0, semver@^6.3.1:
   resolved "https://registry.yarnpkg.com/semver/-/semver-6.3.1.tgz#556d2ef8689146e46dcea4bfdd095f3434dffcb4"
   integrity sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==
 
+<<<<<<< HEAD
 semver@^7.3.2, semver@^7.3.5, semver@^7.3.7, semver@^7.3.8, semver@^7.5.3, semver@^7.5.4:
+=======
+semver@^7.3.2, semver@^7.3.7, semver@^7.3.8, semver@^7.5.3, semver@^7.5.4:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "7.6.0"
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.6.0.tgz#1a46a4db4bffcccd97b743b5005c8325f23d4e2d"
   integrity sha512-EnwXhrlwXMk9gKu5/flx5sv/an57AkRplG3hTK68W7FRDN+k+OWBj65M7719OkA82XLBxrcX0KSHj+X5COhOVg==
@@ -6299,11 +6875,14 @@ serialize-error@^7.0.1:
   dependencies:
     type-fest "^0.13.1"
 
+<<<<<<< HEAD
 set-blocking@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/set-blocking/-/set-blocking-2.0.0.tgz#045f9782d011ae9a6803ddd382b24392b3d890f7"
   integrity sha512-KiKBS8AnWGEyLzofFfmvKwpdPzqiy16LvQfK3yv/fVH7Bj13/wl3JSR1J+rfgRE9q7xUJK4qvgS8raSOeLUehw==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 set-cookie-parser@^2.6.0:
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/set-cookie-parser/-/set-cookie-parser-2.6.0.tgz#131921e50f62ff1a66a461d7d62d7b21d5d15a51"
@@ -6353,11 +6932,14 @@ side-channel@^1.0.4:
     get-intrinsic "^1.2.4"
     object-inspect "^1.13.1"
 
+<<<<<<< HEAD
 signal-exit@^3.0.2, signal-exit@^3.0.7:
   version "3.0.7"
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-3.0.7.tgz#a9a1767f8af84155114eaabd73f99273c8f59ad9"
   integrity sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 signal-exit@^4.0.1:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-4.1.0.tgz#952188c1cbd546070e2dd20d0f41c0ae0530cb04"
@@ -6398,11 +6980,16 @@ slice-ansi@^3.0.0:
     astral-regex "^2.0.0"
     is-fullwidth-code-point "^3.0.0"
 
+<<<<<<< HEAD
 smart-buffer@^4.0.2, smart-buffer@^4.2.0:
+=======
+smart-buffer@^4.0.2:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "4.2.0"
   resolved "https://registry.yarnpkg.com/smart-buffer/-/smart-buffer-4.2.0.tgz#6e1d71fa4f18c05f7d0ff216dd16a481d0e8d9ae"
   integrity sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==
 
+<<<<<<< HEAD
 socks-proxy-agent@^7.0.0:
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/socks-proxy-agent/-/socks-proxy-agent-7.0.0.tgz#dc069ecf34436621acb41e3efa66ca1b5fed15b6"
@@ -6420,6 +7007,8 @@ socks@^2.6.2:
     ip-address "^9.0.5"
     smart-buffer "^4.2.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 sorcery@^0.11.0:
   version "0.11.0"
   resolved "https://registry.yarnpkg.com/sorcery/-/sorcery-0.11.0.tgz#310c80ee993433854bb55bb9aa4003acd147fca8"
@@ -6449,10 +7038,17 @@ sort-object-keys@^1.1.3:
   resolved "https://registry.yarnpkg.com/sort-object-keys/-/sort-object-keys-1.1.3.tgz#bff833fe85cab147b34742e45863453c1e190b45"
   integrity sha512-855pvK+VkU7PaKYPc+Jjnmt4EzejQHyhhF33q31qG8x7maDzkeFhAAThdCYay11CISO+qAMwjOBP+fPZe0IPyg==
 
+<<<<<<< HEAD
 sort-package-json@2.7.0:
   version "2.7.0"
   resolved "https://registry.yarnpkg.com/sort-package-json/-/sort-package-json-2.7.0.tgz#41b52710939d7e3a4e328eb92c2136db43a6407d"
   integrity sha512-6AayF8bp6L+WROgpbhTMUtB9JSFmpGHjmW7DyaNPS1HwlTw2oSVlUUtlkHSEZmg5o89F3zvLBZNvMeZ1T4fjQg==
+=======
+sort-package-json@2.8.0:
+  version "2.8.0"
+  resolved "https://registry.yarnpkg.com/sort-package-json/-/sort-package-json-2.8.0.tgz#6a46439ad0fef77f091e678e103f03ecbea575c8"
+  integrity sha512-PxeNg93bTJWmDGnu0HADDucoxfFiKkIr73Kv85EBThlI1YQPdc0XovBgg2llD0iABZbu2SlKo8ntGmOP9wOj/g==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   dependencies:
     detect-indent "^7.0.1"
     detect-newline "^4.0.0"
@@ -6506,11 +7102,16 @@ spdx-license-ids@^3.0.0:
   resolved "https://registry.yarnpkg.com/spdx-license-ids/-/spdx-license-ids-3.0.17.tgz#887da8aa73218e51a1d917502d79863161a93f9c"
   integrity sha512-sh8PWc/ftMqAAdFiBu6Fy6JUOYjqDJBJvIhpfDMyHrr0Rbp5liZqd4TjtQ/RgfLjKFZb+LMx5hpml5qOWy0qvg==
 
+<<<<<<< HEAD
 sprintf-js@^1.1.2, sprintf-js@^1.1.3:
+=======
+sprintf-js@^1.1.2:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "1.1.3"
   resolved "https://registry.yarnpkg.com/sprintf-js/-/sprintf-js-1.1.3.tgz#4914b903a2f8b685d17fdf78a70e917e872e444a"
   integrity sha512-Oo+0REFV59/rz3gfJNKQiBlwfHaSESl1pcGyABQsnnIfWOFt6JNj5gCog2U6MLZ//IGYD+nA8nI+mTShREReaA==
 
+<<<<<<< HEAD
 ssri@^9.0.0:
   version "9.0.1"
   resolved "https://registry.yarnpkg.com/ssri/-/ssri-9.0.1.tgz#544d4c357a8d7b71a19700074b6883fcb4eae057"
@@ -6518,12 +7119,18 @@ ssri@^9.0.0:
   dependencies:
     minipass "^3.1.1"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 stat-mode@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/stat-mode/-/stat-mode-1.0.0.tgz#68b55cb61ea639ff57136f36b216a291800d1465"
   integrity sha512-jH9EhtKIjuXZ2cWxmXS8ZP80XyC3iasQxMDV8jzhNJpfDb7VbQLVW4Wvsxz9QZvzV+G4YoSfBUVKDOyxLzi/sg==
 
+<<<<<<< HEAD
 "string-width-cjs@npm:string-width@^4.2.0", "string-width@^1.0.2 || 2 || 3 || 4", string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
+=======
+"string-width-cjs@npm:string-width@^4.2.0", string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "4.2.3"
   resolved "https://registry.yarnpkg.com/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
   integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
@@ -6583,6 +7190,7 @@ string.prototype.trimstart@^1.0.7:
     define-properties "^1.2.0"
     es-abstract "^1.22.1"
 
+<<<<<<< HEAD
 string_decoder@^1.1.1:
   version "1.3.0"
   resolved "https://registry.yarnpkg.com/string_decoder/-/string_decoder-1.3.0.tgz#42f114594a46cf1a8e30b0a84f56c78c3edac21e"
@@ -6590,6 +7198,8 @@ string_decoder@^1.1.1:
   dependencies:
     safe-buffer "~5.2.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 "strip-ansi-cjs@npm:strip-ansi@^6.0.1", strip-ansi@^6.0.0, strip-ansi@^6.0.1:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/strip-ansi/-/strip-ansi-6.0.1.tgz#9e26c63d30f53443e9489495b2105d37b67a85d9"
@@ -6635,6 +7245,7 @@ sumchecker@^3.0.1:
   dependencies:
     debug "^4.1.0"
 
+<<<<<<< HEAD
 super-regex@^0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/super-regex/-/super-regex-0.2.0.tgz#dc1e071e55cdcf56930eb6271f73653a655b2642"
@@ -6644,6 +7255,8 @@ super-regex@^0.2.0:
     function-timeout "^0.1.0"
     time-span "^5.1.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 supports-color@^5.3.0:
   version "5.5.0"
   resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-5.5.0.tgz#e2e69a44ac8772f78a1ec0b35b689df6530efc8f"
@@ -6718,9 +7331,15 @@ svelte2tsx@~0.7.0:
     pascal-case "^3.1.1"
 
 svelte@^4.2.0, svelte@^4.2.2, svelte@^4.2.8:
+<<<<<<< HEAD
   version "4.2.11"
   resolved "https://registry.yarnpkg.com/svelte/-/svelte-4.2.11.tgz#b1a57a41d01686b4f7230611f89a5c25b23a1745"
   integrity sha512-YIQk3J4X89wOLhjsqIW8tqY3JHPuBdtdOIkASP2PZeAMcSW9RsIjQzMesCrxOF3gdWYC0mKknlKF7OqmLM+Zqg==
+=======
+  version "4.2.12"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-4.2.12.tgz#13d98d2274d24d3ad216c8fdc801511171c70bb1"
+  integrity sha512-d8+wsh5TfPwqVzbm4/HCXC783/KPHV60NvwitJnyTA5lWn1elhXMNWhXGCJ7PwPa8qFUnyJNIyuIRt2mT0WMug==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   dependencies:
     "@ampproject/remapping" "^2.2.1"
     "@jridgewell/sourcemap-codec" "^1.4.15"
@@ -6758,7 +7377,11 @@ tapable@^2.2.0:
   resolved "https://registry.yarnpkg.com/tapable/-/tapable-2.2.1.tgz#1967a73ef4060a82f12ab96af86d52fdb76eeca0"
   integrity sha512-GNzQvQTOIP6RyTfE2Qxb8ZVlNmw0n88vp1szwWRimP02mnTsx3Wtn5qRdqY9w2XduFNUgvOwhNnQsjwCp+kqaQ==
 
+<<<<<<< HEAD
 tar@^6.0.5, tar@^6.1.11, tar@^6.1.12, tar@^6.1.2:
+=======
+tar@^6.1.12:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "6.2.0"
   resolved "https://registry.yarnpkg.com/tar/-/tar-6.2.0.tgz#b14ce49a79cb1cd23bc9b016302dea5474493f73"
   integrity sha512-/Wo7DcT0u5HUV486xg675HtjNd3BXZ6xDbzsCUZPt5iw8bTQ63bP0Raut3mvro9u+CUyq7YQd8Cx55fsZXxqLQ==
@@ -6788,6 +7411,7 @@ throttle-debounce@^3.0.1:
   resolved "https://registry.yarnpkg.com/throttle-debounce/-/throttle-debounce-3.0.1.tgz#32f94d84dfa894f786c9a1f290e7a645b6a19abb"
   integrity sha512-dTEWWNu6JmeVXY0ZYoPuH5cRIwc0MeGbJwah9KUNYSJwommQpCzTySTpEe8Gs1J23aeWEuAobe4Ag7EHVt/LOg==
 
+<<<<<<< HEAD
 time-span@^5.1.0:
   version "5.1.0"
   resolved "https://registry.yarnpkg.com/time-span/-/time-span-5.1.0.tgz#80c76cf5a0ca28e0842d3f10a4e99034ce94b90d"
@@ -6795,6 +7419,8 @@ time-span@^5.1.0:
   dependencies:
     convert-hrtime "^5.0.0"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 tiny-glob@^0.2.9:
   version "0.2.9"
   resolved "https://registry.yarnpkg.com/tiny-glob/-/tiny-glob-0.2.9.tgz#2212d441ac17928033b110f8b3640683129d31e2"
@@ -7079,6 +7705,7 @@ undici@^5.28.3:
   dependencies:
     "@fastify/busboy" "^2.0.0"
 
+<<<<<<< HEAD
 unique-filename@^2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/unique-filename/-/unique-filename-2.0.1.tgz#e785f8675a9a7589e0ac77e0b5c34d2eaeac6da2"
@@ -7093,6 +7720,8 @@ unique-slug@^3.0.0:
   dependencies:
     imurmurhash "^0.1.4"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 universalify@^0.1.0:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/universalify/-/universalify-0.1.2.tgz#b646f69be3942dabcecc9d6639c80dc105efaa66"
@@ -7141,7 +7770,11 @@ utf8-byte-length@^1.0.1:
   resolved "https://registry.yarnpkg.com/utf8-byte-length/-/utf8-byte-length-1.0.4.tgz#f45f150c4c66eee968186505ab93fcbb8ad6bf61"
   integrity sha512-4+wkEYLBbWxqTahEsWrhxepcoVOJ+1z5PGIjPZxRkytcdSUaNjIjBM7Xn8E+pdSuV7SzvWovBFA54FO0JSoqhA==
 
+<<<<<<< HEAD
 util-deprecate@^1.0.1, util-deprecate@^1.0.2:
+=======
+util-deprecate@^1.0.2:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
   integrity sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==
@@ -7180,9 +7813,15 @@ vite@^4.4.2, vite@^4.4.9:
     fsevents "~2.3.2"
 
 vite@^5.0.8:
+<<<<<<< HEAD
   version "5.1.3"
   resolved "https://registry.yarnpkg.com/vite/-/vite-5.1.3.tgz#dd072653a80225702265550a4700561740dfde55"
   integrity sha512-UfmUD36DKkqhi/F75RrxvPpry+9+tTkrXfMNZD+SboZqBCMsxKtO52XeGzzuh7ioz+Eo/SYDBbdb0Z7vgcDJew==
+=======
+  version "5.1.4"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-5.1.4.tgz#14e9d3e7a6e488f36284ef13cebe149f060bcfb6"
+  integrity sha512-n+MPqzq+d9nMVTKyewqw6kSt+R3CkvF9QAKY8obiQn8g1fwTscKxyfaYnC632HtBXAQGc1Yjomphwn1dtwGAHg==
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   dependencies:
     esbuild "^0.19.3"
     postcss "^8.4.35"
@@ -7200,6 +7839,7 @@ w3c-keyname@^2.2.0:
   resolved "https://registry.yarnpkg.com/w3c-keyname/-/w3c-keyname-2.2.8.tgz#7b17c8c6883d4e8b86ac8aba79d39e880f8869c5"
   integrity sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==
 
+<<<<<<< HEAD
 wcwidth@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/wcwidth/-/wcwidth-1.0.1.tgz#f0b0dcf915bc5ff1528afadb2c0e17b532da2fe8"
@@ -7207,6 +7847,8 @@ wcwidth@^1.0.1:
   dependencies:
     defaults "^1.0.3"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 webidl-conversions@^3.0.0:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/webidl-conversions/-/webidl-conversions-3.0.1.tgz#24534275e2a7bc6be7bc86611cc16ae0a5654871"
@@ -7287,6 +7929,7 @@ which@^2.0.1, which@^2.0.2:
   dependencies:
     isexe "^2.0.0"
 
+<<<<<<< HEAD
 wide-align@^1.1.5:
   version "1.1.5"
   resolved "https://registry.yarnpkg.com/wide-align/-/wide-align-1.1.5.tgz#df1d4c206854369ecf3c9a4898f1b23fbd9d15d3"
@@ -7294,6 +7937,8 @@ wide-align@^1.1.5:
   dependencies:
     string-width "^1.0.2 || 2 || 3 || 4"
 
+=======
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
 "wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"
@@ -7347,7 +7992,11 @@ yargs-parser@^21.1.1:
   resolved "https://registry.yarnpkg.com/yargs-parser/-/yargs-parser-21.1.1.tgz#9096bceebf990d21bb31fa9516e0ede294a77d35"
   integrity sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==
 
+<<<<<<< HEAD
 yargs@^17.0.1, yargs@^17.6.2:
+=======
+yargs@^17.6.2:
+>>>>>>> 91dfa13 (chore: updates to not copy horizon backend as resources)
   version "17.7.2"
   resolved "https://registry.yarnpkg.com/yargs/-/yargs-17.7.2.tgz#991df39aca675a192b816e1e0363f9d75d2aa269"
   integrity sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w==
