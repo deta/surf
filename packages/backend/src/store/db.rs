@@ -641,14 +641,10 @@ impl Database {
         Ok(())
     }
 
-    pub fn list_resource_ids_by_tags(
-        &self,
-        tags: &mut Vec<ResourceTag>,
-    ) -> BackendResult<Vec<String>> {
-        let mut result = Vec::new();
-        if tags.is_empty() {
-            return Ok(result);
-        }
+    fn list_resource_ids_by_tags_query(
+        tags: &Vec<ResourceTag>,
+        param_start_index: usize,
+    ) -> (String, Vec<String>) {
         let mut query = String::from("SELECT resource_id FROM resource_tags WHERE");
         let mut i = 0;
         let n = tags.len();
@@ -657,8 +653,8 @@ impl Database {
             query = format!(
                 "{} (tag_name = ?{} AND tag_value = ?{})",
                 query,
-                i + 1,
-                i + 2
+                i + 1 + param_start_index,
+                i + 2 + param_start_index
             );
             if i < n - 1 {
                 query = format!("{} OR", query);
@@ -667,6 +663,18 @@ impl Database {
             params.push(tag.tag_name.clone());
             params.push(tag.tag_value.clone());
         }
+        (query, params)
+    }
+
+    pub fn list_resource_ids_by_tags(
+        &self,
+        tags: &mut Vec<ResourceTag>,
+    ) -> BackendResult<Vec<String>> {
+        let mut result = Vec::new();
+        if tags.is_empty() {
+            return Ok(result);
+        }
+        let (query, params) = Self::list_resource_ids_by_tags_query(tags, 0);
         let mut stmt = self.conn.prepare(&query)?;
         let resource_ids =
             stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
@@ -682,23 +690,18 @@ impl Database {
         keyword: &str,
         tags: &mut Vec<ResourceTag>,
     ) -> BackendResult<SearchResult> {
-        let resource_ids = self.list_resource_ids_by_tags(tags)?;
-        let resource_ids = std::rc::Rc::new(
-            resource_ids
-                .into_iter()
-                .map(rusqlite::types::Value::from)
-                .collect::<Vec<rusqlite::types::Value>>(),
-        );
-
-        let params = rusqlite::params![format!("%{}%", keyword)];
-        let query = "SELECT * FROM resource_metadata M
-        JOIN resources R ON M.resource_id = R.id
-        WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1)";
-        if !resource_ids.is_empty() {
-            let _query = format!("{} AND R.id IN (?2)", query);
-            let _params = rusqlite::params![&resource_ids, keyword];
+        let mut params_vector = vec![format!("%{}%", keyword).to_string()];
+        let mut query = "SELECT * FROM resource_metadata M
+        LEFT JOIN resources R ON M.resource_id = R.id
+        WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1)"
+            .to_owned();
+        if !tags.is_empty() {
+            let (subquery, mut params) = Self::list_resource_ids_by_tags_query(tags, 1);
+            params_vector.append(&mut params);
+            query.push_str(format!(" AND R.id IN ({})", subquery).as_str());
         }
-        let mut stmt = self.conn.prepare(query)?;
+        let params = rusqlite::params_from_iter(params_vector.iter());
+        let mut stmt = self.conn.prepare(query.as_str())?;
         let search_results = stmt.query_map(params, |row| {
             Ok(SearchResultItem {
                 resource: CompositeResource {
@@ -718,6 +721,7 @@ impl Database {
                         deleted: row.get(10)?,
                     },
                     text_content: None,
+                    // TODO: should we populate the resource tags?
                     resource_tags: None,
                 },
                 // TODO: proximity search on the card ids

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS resources (
 
 CREATE TABLE IF NOT EXISTS resource_tags (
     id TEXT PRIMARY KEY,
-    resource_id TEXT NOT NULL REFERENCES resource(id) ON DELETE CASCADE,
+    resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
     tag_name TEXT NOT NULL,
     tag_value TEXT NOT NULL,
     UNIQUE (resource_id, tag_name, tag_value) 
