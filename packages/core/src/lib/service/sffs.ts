@@ -10,16 +10,14 @@ export class SFFS {
   sffs: any
   log: ScopedLogger
 
-  constructor() {
+  constructor(basePath = '/sffs/') {
     this.log = useLogScope('SFFS')
 
     if (typeof window.backend === 'undefined') {
       throw new Error('SFFS backend not available')
     }
 
-    this.log.debug('init', window.backend.init)
-
-    this.sffs = window.backend.init()
+    this.sffs = window.backend.init(basePath)
 
     // TODO: remove this, just for debugging
     window.sffs = this.sffs
