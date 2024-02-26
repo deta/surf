@@ -65,7 +65,6 @@
     font-size: 1.25rem;
     font-weight: 500;
     flex-shrink: 0;
-    flex-grow: 1;
   }
 
   .subtitle {
@@ -74,5 +73,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 225px;
   }
 </style>
