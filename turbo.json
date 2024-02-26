@@ -4,7 +4,7 @@
   "pipeline": {
     "@horizon/backend#build": {
       "dependsOn": [],
-      "outputs": [".dist/**"]
+      "outputs": [".dist/**", "index.node", "target/**"]
     },
     "horizon#build:mwl": {
       "dependsOn": ["^build"],
@@ -41,8 +41,11 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
+    "horizon#dev": {
+      "dependsOn": ["@horizon/tela#build", "@horizon/backend#build"]
+    },
     "dev": {
-      "dependsOn": ["@horizon/tela#build"],
+      "dependsOn": ["@horizon/tela#build", "@horizon/backend#build"],
       "cache": false,
       "persistent": true
     }

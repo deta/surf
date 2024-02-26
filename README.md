@@ -54,7 +54,13 @@ yarn build
 
 ### Develop
 
-To develop all apps and packages, run the following command:
+To run the app and required packages in development mode, run the following command:
+
+```
+yarn dev:horizon
+```
+
+To develop all apps and packages, run the following command (not needed most of the time):
 
 ```
 yarn dev
