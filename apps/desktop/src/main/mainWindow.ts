@@ -4,10 +4,11 @@ import icon from '../../resources/icon.png?asset'
 import { is } from '@electron-toolkit/utils'
 import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
+import { initAdblocker } from './adblocker'
 
 let mainWindow: BrowserWindow | undefined
 
-export function createWindow(): void {
+export function createWindow() {
   const winState = new WindowState(
     {
       saveImmediately: is.dev
@@ -35,6 +36,8 @@ export function createWindow(): void {
       webviewTag: true
     }
   })
+
+  initAdblocker('persist:horizon')
 
   winState.manage(mainWindow)
 

@@ -1,6 +1,8 @@
 import { app, Menu } from 'electron'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
+import { toggleAdblocker } from './adblocker'
+import { resolve } from 'path'
 
 const isMac = process.platform === 'darwin'
 
@@ -17,6 +19,34 @@ const template = [
             {
               label: 'Check for Updates...',
               click: checkUpdatesMenuClickHandler
+            },
+            {
+              label: 'Use as Default Browser',
+              click: () => {
+                // Register the app to handle URLs (from: https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app)
+                if (process.defaultApp) {
+                  if (process.argv.length >= 2) {
+                    app.setAsDefaultProtocolClient('http', process.execPath, [
+                      resolve(process.argv[1])
+                    ])
+                    app.setAsDefaultProtocolClient('https', process.execPath, [
+                      resolve(process.argv[1])
+                    ])
+                  }
+                } else {
+                  app.setAsDefaultProtocolClient('http')
+                  app.setAsDefaultProtocolClient('https')
+                }
+              }
+            },
+            { type: 'separator' },
+            {
+              id: 'adblocker',
+              label: 'Toggle Adblocker',
+              click: () => {
+                console.log('toggling adblocker')
+                toggleAdblocker('persist:horizon')
+              }
             },
             { type: 'separator' },
             {
@@ -81,6 +111,15 @@ const template = [
 ]
 
 export function setAppMenu(): void {
+  const menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
+  Menu.setApplicationMenu(menu)
+}
+
+export function changeMenuItemLabel(id: string, newLabel: string): void {
+  console.log('changing menu item label', id, newLabel)
+
+  template[0].submenu[3].label = newLabel
+
   const menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
   Menu.setApplicationMenu(menu)
 }

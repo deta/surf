@@ -28,9 +28,14 @@ export class LocalStorage<T> {
   }
 
   get(): T | null {
-    const raw = this.getRaw()
-    if (raw === null) return null
-    return JSON.parse(raw) as T
+    try {
+      const raw = this.getRaw()
+      if (raw === null) return null
+      return JSON.parse(raw) as T
+    } catch (e) {
+      console.error(e)
+      return null
+    }
   }
 
   set(value: T) {

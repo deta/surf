@@ -51,12 +51,30 @@ const api = {
     }
   },
 
+  onOpenURL: (callback) => {
+    try {
+      ipcRenderer.on('open-url', (_, url) => callback(url))
+    } catch (error) {
+      // noop
+    }
+  },
+
   onOpenCheatSheet: (callback) => {
     try {
       ipcRenderer.on('open-cheat-sheet', () => callback())
     } catch (error) {
       // noop
     }
+  },
+
+  onAdBlockerStateChange: (callback) => {
+    ipcRenderer.on('adblocker-state-changed', (_, { partition, state }) => {
+      callback(partition, state)
+    })
+  },
+
+  appIsReady: () => {
+    ipcRenderer.send('app-ready')
   }
 }
 

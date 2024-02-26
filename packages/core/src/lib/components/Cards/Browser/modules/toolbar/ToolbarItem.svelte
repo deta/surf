@@ -9,9 +9,10 @@
   export let name: string
   export let type: string
   export let inputValue: string
-  export let adblockerState: boolean
   export let index: number
   export let url: string
+  export let group: string
+  export let searchQuery: string = ''
 
   const isOverflowing = writable(false)
 
@@ -38,7 +39,7 @@
       {name}
     </div>
   {/if}
-  {#if type == 'adblock'}
+  <!-- {#if type == 'adblock'}
     <div class="item-adblock">
       <div class="icon-wrapper">
         {#if adblockerState}
@@ -49,11 +50,16 @@
       </div>
       {name}
     </div>
-  {/if}
+  {/if} -->
 
-  {#if type == 'search'}
+  {#if group == 'Search'}
     <div class="item-search">
-      <span class="input-value">{inputValue}</span>
+      <div class="title-wrapper">
+        <div class="title" class:scrolling={$isOverflowing} use:checkOverflow>
+          {searchQuery || inputValue}
+        </div>
+      </div>
+      <!-- <span class="input-value">{searchQuery || inputValue}</span> -->
       <div class="right">
         <span class="service">{name}</span>
         <div class="icon-wrapper">
@@ -61,14 +67,14 @@
         </div>
       </div>
     </div>
-  {:else if type == 'action'}
+    <!-- {:else if type == 'action'}
     <div class="item-action">
       {name}
       <div class="icon-wrapper">
         <Icon name="arrow" color={active ? '#FFFFFF' : '#000000'} />
       </div>
-    </div>
-  {:else if type == 'navigation'}
+    </div> -->
+  {:else if group == 'History'}
     <div class="item-history">
       <div class="title-wrapper">
         <div class="title" class:scrolling={$isOverflowing} use:checkOverflow>
@@ -84,13 +90,27 @@
         </div>
       </div>
     </div>
+  {:else if group == 'Direct'}
+    <div class="item-search">
+      <div class="title-wrapper">
+        <div class="title" class:scrolling={$isOverflowing} use:checkOverflow>
+          {name}
+        </div>
+      </div>
+      <div class="right">
+        <div class="service">Open Directly</div>
+        <div class="icon-wrapper">
+          <Icon name="arrow" color={active ? '#FFFFFF' : '#e173a8'} />
+        </div>
+      </div>
+    </div>
   {/if}
 </div>
 
 <style lang="scss">
   .toolbar-item {
     margin: 0;
-    padding: 0.75rem 0.5rem;
+    padding: 0.65rem 0.5rem;
     font-size: 14px;
     border-radius: 4px;
     &:hover {
@@ -137,6 +157,10 @@
         }
       }
 
+      .item-history .url-string {
+        opacity: 1;
+      }
+
       .item-history > .right > .icon-wrapper {
         opacity: 1;
       }
@@ -152,17 +176,31 @@
         }
 
         display: flex;
+      }
 
-        .title-wrapper {
-          .title {
-            &.scrolling {
-              overflow: visible;
-              white-space: nowrap;
-              animation: scroll-text 10s linear infinite;
-              animation-delay: 800ms;
-            }
+      .title-wrapper {
+        .title {
+          &.scrolling {
+            overflow: visible;
+            white-space: nowrap;
+            animation: scroll-text 10s linear infinite;
+            animation-delay: 800ms;
           }
         }
+      }
+    }
+
+    .title-wrapper {
+      flex-grow: 1;
+      flex-shrink: 1;
+      flex-basis: 100%; // Adjust this value based on your design needs
+      overflow: hidden; // Hide overflow
+      -webkit-mask-image: linear-gradient(to right, #000 95%, transparent 100%);
+      .title {
+        display: flex;
+        white-space: nowrap;
+        overflow: visible;
+        padding: 0 1rem 0 0;
       }
     }
   }
@@ -189,7 +227,6 @@
       align-items: center;
       color: #e173a8;
       .icon-wrapper {
-        margin-top: 4px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -202,19 +239,6 @@
     justify-content: space-between;
     gap: 8px;
     width: 100%; // Ensure the container fills its parent
-    .title-wrapper {
-      flex-grow: 1;
-      flex-shrink: 1;
-      flex-basis: 100%; // Adjust this value based on your design needs
-      overflow: hidden; // Hide overflow
-      -webkit-mask-image: linear-gradient(to right, #000 95%, transparent 100%);
-      .title {
-        display: flex;
-        white-space: nowrap;
-        overflow: visible;
-        padding: 0 1rem 0 0;
-      }
-    }
 
     .right {
       flex-grow: 0; // Do not grow beyond content size

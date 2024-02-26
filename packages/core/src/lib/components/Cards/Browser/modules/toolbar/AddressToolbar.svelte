@@ -1,10 +1,14 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { writable } from 'svelte/store'
-  import { optimisticCheckIfUrl } from '@horizon/core/src/lib/utils/url'
+  import {
+    optimisticCheckIfUrl,
+    parseStringIntoBrowserLocation,
+    parseStringIntoUrl
+  } from '@horizon/core/src/lib/utils/url'
   import { createEventDispatcher } from 'svelte'
 
-  import type { HistoryEntry } from '@horizon/core/src/lib/types'
+  import type { HistoryEntry, Optional } from '@horizon/core/src/lib/types'
 
   import ToolbarItem from './ToolbarItem.svelte'
   import ToolbarGroupHeader from './ToolbarGroupHeader.svelte'
@@ -12,14 +16,13 @@
   import type { HistoryEntriesManager } from '../../../../../service/horizon'
 
   export let inputValue: string
-  export let adblockerState: boolean
   export let horizon: Horizon
   export let cardHistory: any
 
   let toolbar: HTMLElement
 
   let initialValue: string = ''
-  const historyEntriesManager = horizon.historyEntriesManager
+  const historyEntriesManager = horizon.historyEntriesManager as HistoryEntriesManager
 
   const dispatch = createEventDispatcher()
 
@@ -34,23 +37,7 @@
 
   let origin = cardHistory[0]
 
-  let cardActions = [
-    {
-      type: 'return',
-      name: 'Return to origin',
-      group: 'History',
-      url: origin?.url
-    },
-    {
-      type: 'adblock',
-      name: adblockerState ? 'Disable Adblock' : 'Enable Adblock',
-      group: 'Actions'
-    }
-  ]
-
   let originalItems = [
-    ...cardActions,
-
     { type: 'group', name: 'History', group: 'History' },
     ...cardHistoryItems,
 
@@ -64,48 +51,310 @@
 
   let itemElements: HTMLElement[] = []
 
+  // Add additional search results for sites that have no root results
+  const addAddtionalSearchResults = (
+    searchResults: ReturnType<typeof historyEntriesManager.searchEntries>,
+    query: string
+  ) => {
+    const sites = Array.from(
+      new Set(searchResults.map((item) => historyEntriesManager.extractSite(item.entry.url ?? '')))
+    ).filter((site) => site !== '')
+    const rootResults = searchResults.filter(
+      (item) => historyEntriesManager.extractPathname(item.entry.url ?? '') === '/'
+    )
+
+    const scoreHostname = (hostname: string, query: string) => {
+      if (hostname === query) {
+        return 2
+      } else if (hostname.startsWith(query)) {
+        return 1.5
+      } else if (hostname.includes(query)) {
+        return 1
+      } else {
+        return 0
+      }
+    }
+
+    const missingRootResultsForSites = sites
+      .filter(
+        (site) =>
+          !rootResults.some(
+            (item) => historyEntriesManager.extractSite(item.entry.url ?? '') === site
+          )
+      )
+      .map((site) => {
+        const entry = searchResults.find(
+          (item) => historyEntriesManager.extractSite(item.entry.url ?? '') === site
+        )
+        const hostname = historyEntriesManager.extractHostname(entry?.entry.url ?? '')
+        const url = `https://${hostname ?? ''}`
+
+        return {
+          entry: {
+            id: `root:${url}`,
+            updatedAt: new Date().toISOString(),
+            type: 'navigation',
+            title: historyEntriesManager.extractTitle(url),
+            url: url,
+            searchQuery: ''
+          } as HistoryEntry,
+          score: query.split(' ').reduce((acc, word) => acc + scoreHostname(hostname, word), 0)
+        }
+      })
+
+    console.log('missingRootResultsForSites', missingRootResultsForSites)
+
+    return missingRootResultsForSites
+  }
+
+  const DEFAULT_SEARCH_ENGINE = 'google'
+  const searchEngines = [
+    {
+      key: 'google',
+      title: 'Search with Google',
+      shortcuts: ['gg', 'google'],
+      getUrl: (query: string) => `https://google.com/search?q=${query}`
+    },
+    {
+      key: 'perplexity',
+      title: 'Use Perplexity',
+      shortcuts: ['ppx', 'perplexity'],
+      getUrl: (query: string) => `https://www.perplexity.ai/?q=${query}`
+    },
+    {
+      key: 'bing',
+      title: 'Search with Bing',
+      shortcuts: ['bing'],
+      getUrl: (query: string) => `https://www.bing.com/search?q=${query}`
+    },
+    {
+      key: 'copilot',
+      title: 'Use Bing Copilot',
+      shortcuts: ['bing', 'copilot'],
+      getUrl: (query: string) =>
+        `https://www.bing.com/search?q=${query}&qs=SYC&showconv=1&sendquery=1&FORM=ASCHT2&sp=2&lq=0`
+    },
+    {
+      key: 'duckduckgo',
+      title: 'Search with Duckduckgo',
+      shortcuts: ['ddgo', 'duckduckgo'],
+      getUrl: (query: string) => `https://duckduckgo.com/?q=${query}`
+    },
+    {
+      key: 'ecosia',
+      title: 'Search with Ecosia',
+      shortcuts: ['ecosia'],
+      getUrl: (query: string) => `https://www.ecosia.org/search?method=index&q=${query}`
+    },
+    {
+      key: 'startpage',
+      title: 'Search with Startpage',
+      shortcuts: ['startpage'],
+      getUrl: (query: string) => `https://www.startpage.com/sp/search?query=${query}`
+    },
+    {
+      key: 'phind',
+      title: 'Search with Phind',
+      shortcuts: ['phind'],
+      getUrl: (query: string) => `https://www.phind.com/search?q=${query}&ignoreSearchResults=false`
+    },
+    {
+      key: 'wolframalpha',
+      title: 'Search WolframAlpha',
+      shortcuts: ['wolframalpha'],
+      getUrl: (query: string) => `https://www.wolframalpha.com/input?i=${query}`
+    },
+    {
+      key: 'lycos',
+      title: 'Search Lycos',
+      shortcuts: ['lycos'],
+      getUrl: (query: string) => `https://search.lycos.com/web/?q=${query}`
+    },
+    {
+      key: 'twitter',
+      title: 'Search X (Twitter)',
+      shortcuts: ['tw', 'x.com', 'twitter'],
+      getUrl: (query: string) => `https://twitter.com/search?q=${query}&src=typed_query`
+    },
+    {
+      key: 'reddit',
+      title: 'Search Reddit',
+      shortcuts: ['reddit'],
+      getUrl: (query: string) => `https://www.reddit.com/search/?q=${query}`
+    },
+    {
+      key: 'unsplash',
+      title: 'Search Unsplash',
+      shortcuts: ['unsplash'],
+      getUrl: (query: string) => `https://unsplash.com/s/photos/${query}`
+    },
+    {
+      key: 'pinterest',
+      title: 'Search Pinterest',
+      shortcuts: ['pinterest'],
+      getUrl: (query: string) => `https://www.pinterest.com/search/pins/?q=${query}&rs=typed`
+    },
+    {
+      key: 'youtube',
+      title: 'Search YouTube',
+      shortcuts: ['yt', 'youtube'],
+      getUrl: (query: string) => `https://www.youtube.com/results?search_query=${query}`
+    },
+    {
+      key: 'gmail',
+      title: 'Search Gmail',
+      shortcuts: ['gmail', 'googlemail', 'mail'],
+      getUrl: (query: string) => `https://mail.google.com/mail/u/0/#search/${query}`
+    }
+  ]
+
   // Reactive statement to selectively filter items and control visibility of the Search group
   $: {
     if (inputValue) {
       let isInitial = inputValue === initialValue
-      const lowerInputValue = inputValue.toLowerCase()
+      const lowerInputValue = inputValue.toLowerCase().trim()
 
-      let searchResults = horizon?.historyEntriesManager.searchEntries(lowerInputValue)
+      const searchResults = historyEntriesManager.searchEntries(lowerInputValue)
+      const additionalSearchResults = addAddtionalSearchResults(searchResults, lowerInputValue)
 
-      searchResults = searchResults
-        .filter((item: any) => item.type !== 'search') // we need to filter out the search entries bc. we also need to store the search engine
-        .map((item: any) => ({
-          type: item.type,
-          name: item.title,
-          group: 'History',
-          url: item.url
+      let defaultSearchEngine = searchEngines.find((engine) => engine.key === DEFAULT_SEARCH_ENGINE)
+      if (!defaultSearchEngine) {
+        defaultSearchEngine = searchEngines[0]
+      }
+
+      const defaultSearchEngineItem = {
+        entry: {
+          id: `search:${defaultSearchEngine.key}`,
+          updatedAt: new Date().toISOString(),
+          type: 'search',
+          title: defaultSearchEngine.title,
+          searchQuery: inputValue
+        } as HistoryEntry,
+        searchEngine: defaultSearchEngine.key,
+        group: 'Search',
+        score: 0.77
+      }
+
+      const combined = [
+        ...searchResults,
+        ...additionalSearchResults,
+        defaultSearchEngineItem
+      ] as Optional<typeof defaultSearchEngineItem, 'searchEngine'>[]
+
+      const highestScore = combined.reduce((acc, item) => (item.score > acc ? item.score : acc), 0)
+
+      const queryParts = lowerInputValue.split(' ')
+
+      let matchedPart = null
+      const matchingSearchEngine = searchEngines.find((engine) =>
+        queryParts.some((part) =>
+          engine.shortcuts.some((s) => {
+            if (part.length > 2) {
+              const match = s.includes(part)
+              if (match) {
+                matchedPart = part
+              }
+              return match
+            } else {
+              const match = s === part
+              if (match) {
+                matchedPart = part
+              }
+            }
+          })
+        )
+      )
+
+      if (matchingSearchEngine && matchingSearchEngine.key !== 'google') {
+        let searchQuery = lowerInputValue
+
+        if (matchedPart) {
+          searchQuery = searchQuery.replace(matchedPart, '').trim()
+        }
+
+        const exactPartMatch = queryParts.some((part) =>
+          matchingSearchEngine.shortcuts.includes(part)
+        )
+
+        combined.push({
+          entry: {
+            id: `search:${matchingSearchEngine.key}`,
+            updatedAt: new Date().toISOString(),
+            type: 'search',
+            title: matchingSearchEngine.title,
+            searchQuery: searchQuery
+          } as HistoryEntry,
+          searchEngine: matchingSearchEngine.key,
+          group: 'Search',
+          score: exactPartMatch ? highestScore + 1 : 1
+        })
+      }
+
+      const browserLocation = parseStringIntoBrowserLocation(inputValue)
+      if (browserLocation !== null) {
+        combined.push({
+          entry: {
+            id: 'search:direct',
+            updatedAt: new Date().toISOString(),
+            type: 'navigation',
+            title: inputValue,
+            url: browserLocation,
+            searchQuery: inputValue
+          } as HistoryEntry,
+          group: 'Direct',
+          score: highestScore + 2
+        })
+      }
+
+      const results = combined
+        .sort((a, b) => b.score - a.score)
+        .map((item) => ({
+          type: item.entry.type,
+          name: item.entry.title,
+          group: item.group ?? 'History',
+          searchQuery: item.entry.searchQuery,
+          ...(item.searchEngine ? { searchEngine: item.searchEngine } : {}),
+          url: item.entry.url
         }))
         .splice(0, 6)
-        .reverse()
 
-      let historyItemsFiltered = isInitial ? cardHistoryItems : searchResults
+      const resultHasDefaultSearchEngine = results.find(
+        (item) => item.searchEngine === DEFAULT_SEARCH_ENGINE
+      )
+      if (!resultHasDefaultSearchEngine) {
+        results.push({
+          type: defaultSearchEngineItem.entry.type,
+          name: defaultSearchEngineItem.entry.title,
+          group: defaultSearchEngineItem.group,
+          searchQuery: defaultSearchEngineItem.entry.searchQuery,
+          searchEngine: defaultSearchEngineItem.searchEngine,
+          url: defaultSearchEngineItem.entry.url
+        })
+      }
 
-      let historyGroupHeader =
-        historyItemsFiltered.length > 0
-          ? [originalItems.find((item) => item.group === 'History' && item.type === 'group')]
-          : []
+      results.reverse()
 
-      let searchItemsVisibility = optimisticCheckIfUrl(inputValue)
-        ? []
-        : originalItems.filter((item) => item.group === 'Search')
+      let historyItemsFiltered = isInitial ? cardHistoryItems : results
+
+      // let historyGroupHeader =
+      //   historyItemsFiltered.length > 0
+      //     ? [originalItems.find((item) => item.group === 'History' && item.type === 'group')]
+      //     : []
+
+      // let searchItemsVisibility = optimisticCheckIfUrl(inputValue)
+      //   ? []
+      //   : originalItems.filter((item) => item.group === 'Search')
 
       if (isInitial) {
         filteredItems = [
-          ...cardActions,
-          ...historyGroupHeader,
-          ...historyItemsFiltered,
-          ...searchItemsVisibility
+          // ...historyGroupHeader,
+          ...historyItemsFiltered
+          // ...searchItemsVisibility
         ]
       } else {
         filteredItems = [
-          ...cardActions,
-          ...searchItemsVisibility,
-          ...historyGroupHeader,
+          // ...searchItemsVisibility,
+          // ...historyGroupHeader,
           ...historyItemsFiltered
         ]
       }
@@ -152,57 +401,44 @@
 
   const performAction = (currentElement: any) => {
     // Send the user to the URL from the History
-    if (currentElement.group == 'History') {
+    if (currentElement.type == 'navigation') {
       inputValue = currentElement.url
-    }
 
-    // Perform actions for search engines
-    if (currentElement.group == 'Search') {
-      if (currentElement.searchEngine == 'perplexity') {
-        const historyEntry = {
-          type: 'search',
-          searchQuery: inputValue
-        } as HistoryEntry
-        historyEntriesManager.addEntry(historyEntry)
+      // Perform actions for search engines
+    } else if (currentElement.type == 'search') {
+      const matchingSearchEngine = searchEngines.find(
+        (engine) => engine.key === currentElement.searchEngine
+      )
+      if (matchingSearchEngine) {
+        let searchQuery = currentElement.searchQuery
 
-        const replacedSpaces = inputValue.replace(/ /g, '+')
-        inputValue = `https://www.perplexity.ai/?q=${replacedSpaces}`
-      }
-
-      if (currentElement.searchEngine == 'google') {
-        const historyEntry = {
-          type: 'search',
-          searchQuery: inputValue
-        } as HistoryEntry
-        historyEntriesManager.addEntry(historyEntry)
-
-        if (optimisticCheckIfUrl(inputValue)) {
-          return
-        } else {
-          const replacedSpaces = inputValue.replace(/ /g, '+')
-          inputValue = `https://google.com/search?q=${replacedSpaces}`
+        // remove shortcuts from input value
+        if (matchingSearchEngine.key !== 'google') {
+          matchingSearchEngine.shortcuts.forEach((shortcut) => {
+            searchQuery = searchQuery.replace(shortcut, '').trim()
+          })
         }
-      }
-    }
 
-    if (currentElement.type === 'adblock') {
-      handleToggleAdblock()
-      return
+        const historyEntry = {
+          type: 'search',
+          searchQuery: searchQuery
+        } as HistoryEntry
+        historyEntriesManager.addEntry(historyEntry)
+
+        inputValue = new URL(matchingSearchEngine.getUrl(searchQuery)).href
+      }
     }
 
     dispatch('call-url-from-toolbar')
   }
 
-  const handleToggleAdblock = async () => {
-    //@ts-ignore
-    dispatch('call-adblock-toggle-from-toolbar')
-  }
-
   function handleClick(event: MouseEvent): void {
+    console.log('click')
     const target = event.target as HTMLElement
     // Find the closest .toolbar-item ancestor, in case the click was on a child element
     const toolbarItem = target.closest('.toolbar-item')
     if (toolbarItem) {
+      event.preventDefault()
       const dataIndex = toolbarItem.getAttribute('data-index')
 
       let currentElement = filteredItems[dataIndex]
@@ -229,7 +465,8 @@
   })
 </script>
 
-<div class="toolbar" bind:this={toolbar}>
+<!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
+<div class="toolbar" bind:this={toolbar} on:click|preventDefault={handleClick}>
   <ul class="toolbar-list" style="list-style: none;">
     {#each filteredItems as item, index}
       <li bind:this={itemElements[index]} class={item.type}>
@@ -241,7 +478,8 @@
             name={item.name}
             type={item.type}
             url={item.url}
-            {adblockerState}
+            group={item.group}
+            searchQuery={item.searchQuery}
             {inputValue}
             {index}
           />
@@ -265,7 +503,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       width: 100%;
-      gap: 8px;
+      gap: 2px;
     }
 
     .return,

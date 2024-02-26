@@ -1,6 +1,9 @@
 import { ElectronBlocker } from '@cliqz/adblocker-electron'
 import fetch from 'cross-fetch'
 import { session } from 'electron'
+import { changeMenuItemLabel } from './appMenu'
+import { getBrowserConfig, setBrowserConfig } from './config'
+import { ipcSenders } from './ipcHandlers'
 
 let blocker: ElectronBlocker | undefined
 
@@ -14,6 +17,16 @@ export async function setupAdblocker() {
   blocker = await ElectronBlocker.fromPrebuiltAdsOnly(fetch)
 }
 
+export function initAdblocker(partition: string) {
+  if (!blocker) return
+
+  // Get initial state
+  const config = getBrowserConfig()
+  const isEnabled = config.adblockerEnabled ?? true
+
+  setAdblockerState(partition, isEnabled)
+}
+
 export function setAdblockerState(partition: string, state: boolean): void {
   if (!blocker) return
 
@@ -23,9 +36,37 @@ export function setAdblockerState(partition: string, state: boolean): void {
   } else {
     blocker.isBlockingEnabled(targetSession) && blocker.disableBlockingInSession(targetSession)
   }
+
+  // Store state
+  setBrowserConfig({ adblockerEnabled: state })
+
+  // Notify renderer
+  ipcSenders.adBlockChanged(partition, state)
+
+  // Modify menu item status
+  changeMenuItemLabel('adblocker', state ? 'Disable Adblocker' : 'Enable Adblocker')
 }
 
 export function getAdblockerState(partition: string): boolean {
   if (!blocker) return false
-  return blocker.isBlockingEnabled(session.fromPartition(partition))
+  const isEnabled = blocker.isBlockingEnabled(session.fromPartition(partition))
+
+  const config = getBrowserConfig()
+  const stored = config.adblockerEnabled ?? false
+
+  if (stored !== isEnabled) {
+    console.warn('Adblocker state mismatch', { stored, isEnabled })
+    setAdblockerState(partition, isEnabled)
+  }
+
+  return isEnabled
+}
+
+export function toggleAdblocker(partition: string): boolean {
+  const isEnabled = getAdblockerState(partition)
+  const newState = !isEnabled
+
+  setAdblockerState(partition, newState)
+
+  return newState
 }

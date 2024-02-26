@@ -8,7 +8,12 @@
   import WebviewWrapper, { type WebViewWrapperEvents } from './WebviewWrapper.svelte'
   import type { HistoryEntry, CardBrowser, CardEvents } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
-  import { parseStringIntoUrl, generateRootDomain } from '../../../utils/url'
+  import {
+    parseStringIntoUrl,
+    generateRootDomain,
+    checkIfUrl,
+    prependProtocol
+  } from '../../../utils/url'
   import type { Horizon } from '../../../service/horizon'
   import browserBackground from '../../../../../public/assets/browser-background.png'
   import defaultFavicon from '../../../../../public/assets/deta.svg'
@@ -69,12 +74,14 @@
       // TODO: no need to invoke two changes in most cases
       unsubTracker.push(
         webview.historyStackIds.subscribe((stack) => {
+          log.debug('history stack changed', stack)
           $card.data.historyStackIds = stack
           dispatch('change', get(card))
         })
       )
       unsubTracker.push(
         webview.currentHistoryIndex.subscribe((index) => {
+          log.debug('current history index changed', index)
           $card.data.currentHistoryIndex = index
           dispatch('change', get(card))
         })
@@ -94,10 +101,6 @@
   onDestroy(() => {
     unsubTracker.forEach((u) => u())
   })
-
-  const handleToggleAdblock = async () => {
-    horizon.adblockerState.set(!get(horizon.adblockerState))
-  }
 
   const handleKeyUp = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -189,10 +192,27 @@
     value = $url ?? ''
   }
 
+  $: console.log('value', value)
+
   function goToURL() {
-    let url = parseStringIntoUrl(value)
+    const isURL = checkIfUrl(value)
+    if (isURL) {
+      const url = prependProtocol(value, false)
+      webview?.navigate(url)
+      inputEl.blur()
+      return
+    }
+
+    const url = parseStringIntoUrl(value)
+    if (!url) return
+
     webview?.navigate(url.href)
     inputEl.blur()
+  }
+
+  function goHome() {
+    initialSrc = $card.data.initialLocation
+    webview?.navigate(initialSrc)
   }
 
   function mute() {
@@ -203,6 +223,20 @@
   function unmute() {
     webview?.isMuted.set(false)
     webview?.setMute(false)
+  }
+
+  function handleFaviconClick() {
+    log.debug('favicon clicked')
+    const parsedUrl = parseStringIntoUrl($url ?? '')
+    log.debug('parsed url', parsedUrl)
+    if (!parsedUrl) return
+
+    if (parsedUrl.pathname !== '/') {
+      value = parsedUrl.origin
+      goToURL()
+    } else {
+      webview?.reload()
+    }
   }
 </script>
 
@@ -251,6 +285,15 @@
         >
           →
         </button>
+        <!-- <button
+          class="nav-button"
+          on:click={goHome}
+          disabled={value === ''}
+          in:fly={{ y: 10, duration: 160 }}
+          out:fly={{ y: 10, duration: 160 }}
+        >
+          ⌂
+        </button> -->
       </div>
 
       <div
@@ -270,11 +313,9 @@
           >
             <AddressToolbar
               bind:inputValue={value}
-              adblockerState={$adblockerState}
               cardHistory={$currentCardHistory}
               {horizon}
               on:call-url-from-toolbar={handleCallFromToolbar}
-              on:call-adblock-toggle-from-toolbar={handleToggleAdblock}
             />
           </div>
         {/if}
@@ -287,7 +328,7 @@
               setTimeout(() => {
                 editing = false
                 deactivateToolbar.set(false)
-              }, 250)
+              }, 100)
             }}
             type="text"
             class="address-bar"
@@ -330,12 +371,14 @@
 
       <div class="favicon-wrapper">
         {#if $didFinishLoad}
+          <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
           <img
             in:fly={{ y: 10, duration: 500 }}
             out:fly={{ y: -10, duration: 500 }}
             class="bottom-bar-favicon"
             src={$faviconURL}
             alt={$title}
+            on:click={handleFaviconClick}
           />
         {:else}
           <img
@@ -411,6 +454,7 @@
     height: 100%;
     max-width: 28px;
     max-height: 28px;
+    cursor: pointer;
   }
 
   .favicon-wrapper {

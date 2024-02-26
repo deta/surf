@@ -15,6 +15,8 @@
     "build:mwl": "npm run build && electron-builder -mwl --config build/electron-builder-config.ts --arm64 --x64 --publish always",
     "build:win": "npm run build && electron-builder --win --config build/electron-builder-config.ts --arm64 --x64 --publish always",
     "build:mac": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --arm64 --x64 --publish always",
+    "build:mac:arm": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --arm64 --publish always",
+    "build:mac:x64": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --x64 --publish always",
     "build:linux": "npm run build && electron-builder --linux --config build/electron-builder-config.ts --arm64 --x64 --publish always"
   },
   "dependencies": {
@@ -22,7 +24,6 @@
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
     "@sentry/svelte": "^7.99.0",
-    "@sentry/vite-plugin": "^2.14.0",
     "cross-fetch": "^4.0.0",
     "electron-updater": "^6.1.7"
   },
@@ -33,6 +34,7 @@
     "@electron/fuses": "^1.7.0",
     "@horizon/core": "*",
     "@horizon/types": "*",
+    "@sentry/vite-plugin": "^2.14.2",
     "@sveltejs/vite-plugin-svelte": "^2.4.5",
     "@types/node": "^18.17.5",
     "electron": "25.9.8",

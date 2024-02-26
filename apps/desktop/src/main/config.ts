@@ -1,3 +1,4 @@
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -38,4 +39,18 @@ export const setConfig = <T extends Config>(
   } catch (error) {
     console.error('Error writing config file:', error)
   }
+}
+
+export type BrowserConfig = {
+  adblockerEnabled: boolean
+}
+
+const BROWSER_CONFIG_NAME = 'browser.json'
+
+export const getBrowserConfig = () => {
+  return getConfig<BrowserConfig>(app.getPath('userData'), BROWSER_CONFIG_NAME)
+}
+
+export const setBrowserConfig = (config: BrowserConfig) => {
+  setConfig(app.getPath('userData'), config, BROWSER_CONFIG_NAME)
 }

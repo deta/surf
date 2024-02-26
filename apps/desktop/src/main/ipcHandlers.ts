@@ -28,13 +28,15 @@ export function setupIpcHandlers() {
     // this function immediately
     setTimeout(() => {
       const buffer = image.toBitmap()
-
-      event.sender.send('new-preview-image', {
-        horizonId,
-        buffer: buffer,
-        width: imageSize.width,
-        height: imageSize.height
-      })
+      // `send` will throw if the recipient is destroyed
+      try {
+        event.sender.send('new-preview-image', {
+          horizonId,
+          buffer: buffer,
+          width: imageSize.width,
+          height: imageSize.height
+        })
+      } catch (_) {}
     }, 0)
 
     return
@@ -64,5 +66,15 @@ export const ipcSenders = {
     }
 
     window.webContents.send('open-cheat-sheet')
+  },
+
+  adBlockChanged: (partition: string, state: boolean) => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('adblocker-state-changed', { partition, state })
   }
 }
