@@ -4,7 +4,7 @@ use super::models::*;
 
 use rusqlite::{ffi::sqlite3_auto_extension, Connection, OptionalExtension};
 use rust_embed::RustEmbed;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use sqlite_vss::{sqlite3_vector_init, sqlite3_vss_init};
 
 #[derive(RustEmbed)]
@@ -327,22 +327,20 @@ impl Database {
     pub fn get_resource_metadata_by_resource_id(
         &self,
         resource_id: &str,
-    ) -> BackendResult<Vec<ResourceMetadata>> {
-        let mut stmt = self.conn.prepare("SELECT id, resource_id, name, source_uri, alt FROM resource_metadata WHERE resource_id = ?1")?;
-        let resource_metadata = stmt.query_map(rusqlite::params![resource_id], |row| {
-            Ok(ResourceMetadata {
-                id: row.get(0)?,
-                resource_id: row.get(1)?,
-                name: row.get(2)?,
-                source_uri: row.get(3)?,
-                alt: row.get(4)?,
+    ) -> BackendResult<Option<ResourceMetadata>> {
+        let query = "SELECT id, resource_id, name, source_uri, alt FROM resource_metadata WHERE resource_id = ?1 LIMIT 1";
+        self.conn
+            .query_row(query, rusqlite::params![resource_id], |row| {
+                Ok(ResourceMetadata {
+                    id: row.get(0)?,
+                    resource_id: row.get(1)?,
+                    name: row.get(2)?,
+                    source_uri: row.get(3)?,
+                    alt: row.get(4)?,
+                })
             })
-        })?;
-        let mut result = Vec::new();
-        for metadata in resource_metadata {
-            result.push(metadata?);
-        }
-        Ok(result)
+            .optional()
+        .map_err(|e| e.into())
     }
 
     pub fn create_resource_text_content_tx(

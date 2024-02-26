@@ -240,8 +240,21 @@ impl Worker {
         Ok(())
     }
 
-    pub fn read_resource(&mut self, id: String) -> BackendResult<Option<Resource>> {
-        self.db.get_resource(&id)
+    pub fn read_resource(&mut self, id: String) -> BackendResult<Option<CompositeResource>> {
+        let resource = match self.db.get_resource(&id)? {
+            Some(data) => data,
+            None => return Ok(None),
+        };
+        let metadata = self.db.get_resource_metadata_by_resource_id(&resource.id)?;
+        let resource_tags = self.db.list_resource_tags(&resource.id)?;
+        let resource_tags = (!resource_tags.is_empty()).then_some(resource_tags);
+
+        Ok(Some(CompositeResource {
+            resource,
+            metadata,
+            text_content: None,
+            resource_tags,
+        }))
     }
 
     pub fn delete_resource(&mut self, id: String) -> BackendResult<()> {
