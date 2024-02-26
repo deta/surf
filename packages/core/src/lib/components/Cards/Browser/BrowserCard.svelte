@@ -211,8 +211,7 @@
   }
 
   function goHome() {
-    initialSrc = $card.data.initialLocation
-    webview?.navigate(initialSrc)
+    webview?.goToBeginning($card.data.initialLocation)
   }
 
   function mute() {
@@ -285,7 +284,7 @@
         >
           →
         </button>
-        <!-- <button
+        <button
           class="nav-button"
           on:click={goHome}
           disabled={value === ''}
@@ -293,7 +292,7 @@
           out:fly={{ y: 10, duration: 160 }}
         >
           ⌂
-        </button> -->
+        </button>
       </div>
 
       <div
