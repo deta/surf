@@ -117,9 +117,9 @@ const backend = (() => {
     (...args: any) =>
       fn(handle, ...args)
 
-  function init() {
+  function init(resource_path: string) {
     let fn = {}
-    handle = backend.js__backend_tunnel_init()
+    handle = backend.js__backend_tunnel_init(resource_path)
 
     Object.keys(backend).forEach((key) => {
       if (

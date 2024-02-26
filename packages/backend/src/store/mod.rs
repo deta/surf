@@ -54,10 +54,20 @@ fn js_create_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
         .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
         .map(|js_string| js_string.value(&mut cx));
 
-    let resource_tags: Option<Vec<models::ResourceTag>> =
-        resource_tags_json.and_then(|json_str| serde_json::from_str(&json_str).ok());
-    let resource_metadata: Option<models::ResourceMetadata> =
-        resource_metadata_json.and_then(|json_str| serde_json::from_str(&json_str).ok());
+    let resource_tags: Option<Vec<models::ResourceTag>> = match resource_tags_json
+        .map(|json_str| serde_json::from_str(&json_str))
+        .transpose()
+    {
+        Ok(tags) => tags,
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
+    let resource_metadata: Option<models::ResourceMetadata> = match resource_metadata_json
+        .map(|json_str| serde_json::from_str(&json_str))
+        .transpose()
+    {
+        Ok(meta) => meta,
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
 
     let (deferred, promise) = cx.promise();
     tunnel.send(
@@ -175,8 +185,13 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
         .argument_opt(2)
         .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
         .map(|js_string| js_string.value(&mut cx));
-    let resource_tags: Option<Vec<models::ResourceTag>> =
-        resource_tags_json.and_then(|json_str| serde_json::from_str(&json_str).ok());
+    let resource_tags: Option<Vec<models::ResourceTag>> = match resource_tags_json
+        .map(|json_str| serde_json::from_str(&json_str))
+        .transpose()
+    {
+        Ok(tags) => tags,
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
 
     let (deferred, promise) = cx.promise();
     tunnel.send(

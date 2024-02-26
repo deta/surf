@@ -4,21 +4,23 @@ use crate::store::{db::*, models::*};
 use crate::BackendResult;
 
 use chrono::prelude::*;
-use neon::handle;
+
 use neon::{prelude::*, types::Deferred};
 use serde::Serialize;
-use std::slice::Windows;
+use std::path::Path;
 use std::sync::mpsc;
 
 struct Worker {
     db: Database,
+    resource_path: String,
 }
 
+#[allow(dead_code)]
 impl Worker {
-    fn new() -> Self {
-        println!("{:?}", std::env::current_dir().unwrap());
+    fn new(resource_path: String) -> Self {
         Self {
             db: Database::new("./database.sqlite").unwrap(),
+            resource_path,
         }
     }
 
@@ -45,7 +47,11 @@ impl Worker {
         let current_time = Utc::now();
         let resource = Resource {
             id: resource_id.clone(),
-            resource_path: format!("SOME_ROOT_PATH/{resource_id}"),
+            resource_path: Path::new(&self.resource_path)
+                .join(resource_id)
+                .as_os_str()
+                .to_string_lossy()
+                .to_string(),
             resource_type,
             created_at: current_time.clone(),
             updated_at: current_time,
@@ -146,12 +152,12 @@ impl Worker {
             card_type: card_type.to_owned(),
             resource_id: resource_id.to_owned(),
             position_id: 0, // the database will auto update this
-            position_x: position_x,
-            position_y: position_y,
-            width: width,
-            height: height,
+            position_x,
+            position_y,
+            width,
+            height,
             stacking_order: stacking_order.to_owned(),
-            data: data,
+            data,
             created_at: current_time.clone(),
             updated_at: current_time,
         };
@@ -255,8 +261,12 @@ impl Worker {
     }
 }
 
-pub fn worker_entry_point(rx: mpsc::Receiver<TunnelMessage>, mut channel: Channel) {
-    let mut worker = Worker::new();
+pub fn worker_entry_point(
+    rx: mpsc::Receiver<TunnelMessage>,
+    mut channel: Channel,
+    resource_path: String,
+) {
+    let mut worker = Worker::new(resource_path);
 
     while let Ok(TunnelMessage(message, deferred)) = rx.recv() {
         match message {
