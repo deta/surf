@@ -28,13 +28,15 @@ export function setupIpcHandlers() {
     // this function immediately
     setTimeout(() => {
       const buffer = image.toBitmap()
-
-      event.sender.send('new-preview-image', {
-        horizonId,
-        buffer: buffer,
-        width: imageSize.width,
-        height: imageSize.height
-      })
+      // `send` will throw if the recipient is destroyed
+      try {
+        event.sender.send('new-preview-image', {
+          horizonId,
+          buffer: buffer,
+          width: imageSize.width,
+          height: imageSize.height
+        })
+      } catch (_) {}
     }, 0)
 
     return
