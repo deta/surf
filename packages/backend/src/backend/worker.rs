@@ -97,12 +97,12 @@ fn send_worker_response<T: Serialize + Send + 'static>(
     deferred: Deferred,
     result: BackendResult<T>,
 ) {
-    channel.send(move |mut cx| {
-        let serialized_response = match &result {
-            Ok(value) => serde_json::to_string(value),
-            Err(e) => serde_json::to_string(&e.to_string()),
-        };
+    let serialized_response = match &result {
+        Ok(value) => serde_json::to_string(value),
+        Err(e) => serde_json::to_string(&e.to_string()),
+    };
 
+    channel.send(move |mut cx| {
         match serialized_response {
             Ok(response) => {
                 let resp = cx.string(&response);
