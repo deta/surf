@@ -153,10 +153,25 @@ export class SFFS {
     this.log.debug('reading data file', path)
     // return this.sffs.js__store_read_data_file(path)
 
-    // return fake blob as promise for now
+    // return a simple mock image as a blob
     return new Promise((resolve) => {
-      const blob = new Blob([`fake data for ${path}`], { type: 'text/plain' })
-      resolve(blob)
+      const canvas = document.createElement('canvas')
+      canvas.width = 128
+      canvas.height = 128
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        // random color
+        ctx.fillStyle = `#${Math.floor(Math.random() * 16777215).toString(16)}`
+        ctx.fillRect(0, 0, 128, 128)
+
+        // add some text
+        ctx.fillStyle = '#000'
+        ctx.font = '15px sans-serif'
+        ctx.fillText('dummy', 40, 70)
+      }
+      canvas.toBlob((blob) => {
+        resolve(blob as Blob)
+      })
     })
   }
 

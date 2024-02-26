@@ -6,7 +6,7 @@
   import { useLogScope } from '../../../utils/log'
   import type { Horizon } from '../../../service/horizon'
   import ImageView from './ImageView.svelte'
-  import type { SFFSResource } from '../../../service/sffs'
+  import type { Resource } from '../../../service/resources'
 
   export let card: Writable<CardFile>
   export let horizon: Horizon
@@ -15,7 +15,7 @@
 
   let loading = false
   let error: null | string = null
-  let resource: SFFSResource | null = null
+  let resource: Resource | null = null
   let data: Blob | null = null
 
   $: fileType = $card.data.mimetype
@@ -27,11 +27,13 @@
       if (!resource) {
         log.error('Resource not found', $card.data.resourceId)
         error = 'Resource not found'
+        return
       }
 
       // If the resource is not loaded yet, read the data
       if (!resource.rawData) {
         data = await resource.readData()
+        log.debug('Data loaded', data)
       }
     } catch (e) {
       log.error(e)
