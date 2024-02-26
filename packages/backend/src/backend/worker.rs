@@ -1,4 +1,5 @@
 use super::message::WorkerMessage;
+use super::tunnel::TunnelMessage;
 use crate::store::{db::Database, models::*};
 use crate::BackendResult;
 
@@ -67,22 +68,21 @@ impl Worker {
     }
 }
 
-pub fn worker_entry_point(rx: mpsc::Receiver<WorkerMessage>, mut channel: Channel) {
+pub fn worker_entry_point(rx: mpsc::Receiver<TunnelMessage>, mut channel: Channel) {
     let mut worker = Worker::new();
 
-    while let Ok(message) = rx.recv() {
+    while let Ok(TunnelMessage(message, deferred)) = rx.recv() {
         match message {
-            WorkerMessage::Print(content, deferred) => {
+            WorkerMessage::Print(content) => {
                 send_worker_response(&mut channel, deferred, worker.print(content))
             }
-            WorkerMessage::GetResource(resource_id, deferred) => {
+            WorkerMessage::GetResource(resource_id) => {
                 send_worker_response(&mut channel, deferred, worker.get_resource(resource_id))
             }
             WorkerMessage::CreateResource {
                 resource_type,
                 resource_tags,
                 resource_metadata,
-                deferred,
             } => {
                 let result =
                     worker.create_resource(resource_type, resource_tags, resource_metadata);

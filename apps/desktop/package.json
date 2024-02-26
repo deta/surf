@@ -24,6 +24,7 @@
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
     "@sentry/svelte": "^7.99.0",
+    "@horizon/backend": "*",
     "cross-fetch": "^4.0.0",
     "electron-updater": "^6.1.7"
   },

@@ -32,15 +32,14 @@ fn js_create_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
         resource_metadata_json.and_then(|json_str| serde_json::from_str(&json_str).ok());
 
     let (deferred, promise) = cx.promise();
-    tunnel
-        .tx
-        .send(WorkerMessage::CreateResource {
+    tunnel.send(
+        WorkerMessage::CreateResource {
             resource_type,
             resource_tags,
             resource_metadata,
-            deferred,
-        })
-        .expect("unbound channel send failed");
+        },
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -50,10 +49,7 @@ fn js_read_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel
-        .tx
-        .send(WorkerMessage::GetResource(resource_id, deferred))
-        .expect("unbound channel send failed");
+    tunnel.send(WorkerMessage::GetResource(resource_id), deferred);
 
     Ok(promise)
 }
