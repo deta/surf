@@ -4,6 +4,7 @@ use super::models::*;
 
 use rusqlite::{ffi::sqlite3_auto_extension, Connection, OptionalExtension};
 use rust_embed::RustEmbed;
+use serde::{Deserialize, Serialize};
 use sqlite_vss::{sqlite3_vector_init, sqlite3_vss_init};
 
 #[derive(RustEmbed)]
@@ -36,7 +37,7 @@ pub struct PaginatedHorizons {
     pub offset: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CompositeResource {
     pub resource: Resource,
     pub metadata: Option<ResourceMetadata>,
@@ -44,21 +45,21 @@ pub struct CompositeResource {
     pub resource_tags: Option<Vec<ResourceTag>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum SearchEngine {
     Metadata,
     TextContent,
     Proximity,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResultItem {
     pub resource: CompositeResource,
     pub card_ids: Vec<String>,
     pub engine: SearchEngine,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResult {
     pub items: Vec<SearchResultItem>,
     pub total: i64,
@@ -326,22 +327,20 @@ impl Database {
     pub fn get_resource_metadata_by_resource_id(
         &self,
         resource_id: &str,
-    ) -> BackendResult<Vec<ResourceMetadata>> {
-        let mut stmt = self.conn.prepare("SELECT id, resource_id, name, source_uri, alt FROM resource_metadata WHERE resource_id = ?1")?;
-        let resource_metadata = stmt.query_map(rusqlite::params![resource_id], |row| {
-            Ok(ResourceMetadata {
-                id: row.get(0)?,
-                resource_id: row.get(1)?,
-                name: row.get(2)?,
-                source_uri: row.get(3)?,
-                alt: row.get(4)?,
+    ) -> BackendResult<Option<ResourceMetadata>> {
+        let query = "SELECT id, resource_id, name, source_uri, alt FROM resource_metadata WHERE resource_id = ?1 LIMIT 1";
+        self.conn
+            .query_row(query, rusqlite::params![resource_id], |row| {
+                Ok(ResourceMetadata {
+                    id: row.get(0)?,
+                    resource_id: row.get(1)?,
+                    name: row.get(2)?,
+                    source_uri: row.get(3)?,
+                    alt: row.get(4)?,
+                })
             })
-        })?;
-        let mut result = Vec::new();
-        for metadata in resource_metadata {
-            result.push(metadata?);
-        }
-        Ok(result)
+            .optional()
+        .map_err(|e| e.into())
     }
 
     pub fn create_resource_text_content_tx(
@@ -467,8 +466,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn update_card_resource_id(
-        &self,
+    pub fn update_card_resource_id_tx(
         tx: &mut rusqlite::Transaction,
         card_id: &str,
         resource_id: &str,
@@ -504,10 +502,11 @@ impl Database {
 
         Ok(())
     }
+
     pub fn update_card_stacking_order_tx(
         tx: &mut rusqlite::Transaction,
         card_id: &str,
-        stacking_order: &str,
+        stacking_order: chrono::DateTime<chrono::Utc>,
     ) -> BackendResult<()> {
         tx.execute(
             "UPDATE cards SET stacking_order = ?2, updated_at = datetime('now') WHERE id = ?1",
@@ -641,6 +640,36 @@ impl Database {
         Ok(())
     }
 
+    pub fn create_userdata_tx(
+        tx: &mut rusqlite::Transaction,
+        userdata: &Userdata,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "INSERT INTO userdata (id, user_id) VALUES (?1, ?2)",
+            rusqlite::params![userdata.id, userdata.user_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_userdata_by_user_id(&mut self, user_id: &str) -> BackendResult<Option<Userdata>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, user_id FROM userdata WHERE user_id = ?1")?;
+        Ok(stmt
+            .query_row(rusqlite::params![user_id], |row| {
+                Ok(Userdata {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                })
+            })
+            .optional()?)
+    }
+
+    pub fn remove_userdata_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
+        tx.execute("DELETE FROM userdata WHERE id = ?1", rusqlite::params![id])?;
+        Ok(())
+    }
+
     fn list_resource_ids_by_tags_query(
         tags: &Vec<ResourceTag>,
         param_start_index: usize,
@@ -688,15 +717,15 @@ impl Database {
     pub fn search_resource_metadata(
         &self,
         keyword: &str,
-        tags: &mut Vec<ResourceTag>,
+        tags: Option<Vec<ResourceTag>>,
     ) -> BackendResult<SearchResult> {
         let mut params_vector = vec![format!("%{}%", keyword).to_string()];
         let mut query = "SELECT * FROM resource_metadata M
         LEFT JOIN resources R ON M.resource_id = R.id
         WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1)"
             .to_owned();
-        if !tags.is_empty() {
-            let (subquery, mut params) = Self::list_resource_ids_by_tags_query(tags, 1);
+        if let Some(tags) = tags {
+            let (subquery, mut params) = Self::list_resource_ids_by_tags_query(&tags, 1);
             params_vector.append(&mut params);
             query.push_str(format!(" AND R.id IN ({})", subquery).as_str());
         }
