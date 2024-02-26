@@ -24,10 +24,6 @@ impl Worker {
         Ok("ok".to_owned())
     }
 
-    pub fn get_resource(&mut self, id: String) -> BackendResult<Option<Resource>> {
-        self.db.get_resource(id)
-    }
-
     pub fn create_resource(
         &mut self,
         resource_type: String,
@@ -66,6 +62,18 @@ impl Worker {
 
         Ok(tx.commit()?)
     }
+
+    pub fn read_resource(&mut self, id: String) -> BackendResult<Option<Resource>> {
+        self.db.get_resource(&id)
+    }
+
+    pub fn delete_resource(&mut self, id: String) -> BackendResult<()> {
+        self.db.update_resource_deleted(&id, 1)
+    }
+
+    pub fn recover_resource(&mut self, id: String) -> BackendResult<()> {
+        self.db.update_resource_deleted(&id, 0)
+    }
 }
 
 pub fn worker_entry_point(rx: mpsc::Receiver<TunnelMessage>, mut channel: Channel) {
@@ -76,9 +84,6 @@ pub fn worker_entry_point(rx: mpsc::Receiver<TunnelMessage>, mut channel: Channe
             WorkerMessage::Print(content) => {
                 send_worker_response(&mut channel, deferred, worker.print(content))
             }
-            WorkerMessage::GetResource(resource_id) => {
-                send_worker_response(&mut channel, deferred, worker.get_resource(resource_id))
-            }
             WorkerMessage::CreateResource {
                 resource_type,
                 resource_tags,
@@ -87,6 +92,15 @@ pub fn worker_entry_point(rx: mpsc::Receiver<TunnelMessage>, mut channel: Channe
                 let result =
                     worker.create_resource(resource_type, resource_tags, resource_metadata);
                 send_worker_response(&mut channel, deferred, result)
+            }
+            WorkerMessage::ReadResource(resource_id) => {
+                send_worker_response(&mut channel, deferred, worker.read_resource(resource_id))
+            }
+            WorkerMessage::DeleteResource(resource_id) => {
+                send_worker_response(&mut channel, deferred, worker.delete_resource(resource_id))
+            }
+            WorkerMessage::RecoverResource(resource_id) => {
+                send_worker_response(&mut channel, deferred, worker.recover_resource(resource_id))
             }
         }
     }

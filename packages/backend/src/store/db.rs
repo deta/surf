@@ -146,7 +146,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_resource(&self, id: String) -> BackendResult<Option<Resource>> {
+    pub fn get_resource(&self, id: &str) -> BackendResult<Option<Resource>> {
         let mut stmt = self.conn.prepare("SELECT id, resource_path, resource_type, created_at, updated_at, deleted FROM resources WHERE id = ?1")?;
         Ok(stmt
             .query_row(rusqlite::params![id], |row| {
