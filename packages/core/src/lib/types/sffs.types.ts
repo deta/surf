@@ -52,6 +52,6 @@ export type SFFSRawResourceTextContent = {
 export interface SFFSRawCompositeResource {
   resource: SFFSRawResource
   metadata?: SFFSRawResourceMetadata
-  textContent?: SFFSRawResourceTextContent
-  resourceTags?: SFFSRawResourceTag[]
+  text_content?: SFFSRawResourceTextContent
+  resource_tags?: SFFSRawResourceTag[]
 }

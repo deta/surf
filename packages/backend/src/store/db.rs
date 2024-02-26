@@ -232,7 +232,7 @@ impl Database {
 
     pub fn list_resource_tags(&self, resource_id: &str) -> BackendResult<Vec<ResourceTag>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, resource_id, tag_name, tag_value FROM resource_tag WHERE resource_id = ?1",
+            "SELECT id, resource_id, tag_name, tag_value FROM resource_tags WHERE resource_id = ?1",
         )?;
         let resource_tags = stmt.query_map(rusqlite::params![resource_id], |row| {
             Ok(ResourceTag {
