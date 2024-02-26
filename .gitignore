@@ -26,6 +26,7 @@ coverage
 out/
 dist
 build
+target
 # required build files for the electron app
 !apps/desktop/build
 
@@ -38,3 +39,5 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+database.sqlite

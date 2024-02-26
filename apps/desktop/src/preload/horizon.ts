@@ -108,10 +108,40 @@ ipcRenderer.on('new-preview-image', (_, { horizonId, buffer, width, height }) =>
   canvas.toBlob((blob) => handler(blob), 'image/png', 0.7)
 })
 
+const backend = (() => {
+  const backend = require('@horizon/backend')
+  let handle = null
+
+  const with_handle =
+    (fn: any) =>
+    (...args: any) =>
+      fn(handle, ...args)
+
+  function init() {
+    let fn = {}
+    handle = backend.js__backend_tunnel_init()
+
+    Object.keys(backend).forEach((key) => {
+      if (
+        typeof backend[key] === 'function' &&
+        key.startsWith('js__') &&
+        key !== 'js__backend_tunnel_init'
+      ) {
+        fn[key] = with_handle(backend[key])
+      }
+    })
+
+    return fn
+  }
+
+  return { init }
+})()
+
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('backend', backend)
   } catch (error) {
     console.error(error)
   }
@@ -120,4 +150,6 @@ if (process.contextIsolated) {
   window.electron = electronAPI
   // @ts-ignore (define in dts)
   window.api = api
+  // @ts-ignore (define in dts)
+  window.backend = backend
 }
