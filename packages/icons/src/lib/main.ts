@@ -54,7 +54,6 @@ export const icons = {
   'code-block': CodeBlock,
   arrowHorizontal: ArrowHorizontal,
   arrowDiagonalMinimize: ArrowDiagonalMinimize,
-  search: Search,
   info: Info,
   file: File,
   docs: Docs

@@ -12,8 +12,9 @@ export interface SFFSResourceTag {
   value: string
 }
 
-export interface SFFSResource {
+export interface SFFSResourceItem {
   id: string
+  type: string
   path: string
   createdAt: string
   updatedAt: string

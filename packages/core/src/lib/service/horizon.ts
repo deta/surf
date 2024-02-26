@@ -1,5 +1,11 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
-import type { Card, CardPosition, Optional } from '../types/index'
+import type {
+  Card,
+  CardPosition,
+  Optional,
+  SFFSResourceMetadata,
+  SFFSResourceTag
+} from '../types/index'
 import type { API } from './api'
 import type { Resource, HorizonState, HorizonData } from '../types/index'
 import { useLogScope, type ScopedLogger } from '../utils/log'
@@ -10,6 +16,7 @@ import { moveToStackingTop, type IBoard, clamp, type IBoardSettings } from '@hor
 import { quintOut, expoOut } from 'svelte/easing'
 
 import { HistoryEntriesManager } from './history'
+import type { ResourceManager } from './resources'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 8
@@ -34,12 +41,14 @@ export class Horizon {
   storage: HorizonDatabase
   telemetry: Telemetry
   historyEntriesManager: HistoryEntriesManager
+  resourceManager: ResourceManager
 
   constructor(
     id: string,
     data: HorizonData,
     api: API,
     telemetry: Telemetry,
+    resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
     adblockerState: Writable<boolean>,
     previewImageResource: Resource | undefined,
@@ -51,6 +60,7 @@ export class Horizon {
     this.storage = new HorizonDatabase()
     this.telemetry = telemetry
     this.historyEntriesManager = historyEntriesManager
+    this.resourceManager = resourceManager
 
     this.state = 'cold'
     this.inStateSince = Date.now()
@@ -225,14 +235,12 @@ export class Horizon {
     this.changeState('warm')
   }
 
-  createResource(data: Blob) {
-    return this.storage.resources.create({
-      data: data
-    })
+  createResource(data: Blob, metadata?: SFFSResourceMetadata, tags?: SFFSResourceTag[]) {
+    return this.resourceManager.createResource(data.type, data, metadata, tags)
   }
 
   getResource(id: string) {
-    return this.storage.resources.read(id)
+    return this.resourceManager.getResource(id)
   }
 
   async addCard(
@@ -471,14 +479,16 @@ export class HorizonsManager {
   historyEntriesManager: HistoryEntriesManager
   activeHorizonStorage: LocalStorage<string>
   adblockerState: Writable<boolean>
+  resourcesManager: ResourceManager
 
-  constructor(api: API, telemetryConfig: TelemetryConfig) {
+  constructor(api: API, resourcesManager: ResourceManager, telemetryConfig: TelemetryConfig) {
     this.api = api
     this.log = useLogScope(`HorizonService`)
     this.storage = new HorizonDatabase()
     this.telemetry = new Telemetry(this.storage, telemetryConfig)
     this.adblockerState = writable(true)
 
+    this.resourcesManager = resourcesManager
     this.historyEntriesManager = new HistoryEntriesManager()
 
     // TODO: replace this with something
@@ -607,6 +617,7 @@ export class HorizonsManager {
           data,
           this.api,
           this.telemetry,
+          this.resourcesManager,
           this.historyEntriesManager,
           this.adblockerState,
           previewImageResource,
@@ -693,6 +704,7 @@ export class HorizonsManager {
       data,
       this.api,
       this.telemetry,
+      this.resourcesManager,
       this.historyEntriesManager,
       this.adblockerState,
       undefined,

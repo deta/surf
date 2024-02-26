@@ -30,6 +30,7 @@
   import { requestNewPreviewImage } from '../../utils/screenshot'
   import { createCheatSheetCard } from '../../utils/demoHorizon'
   import DrawerWrapper from './DrawerWrapper.svelte'
+  import { ResourceManager } from '../../service/resources'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -40,7 +41,10 @@
     telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
     telemetryActive = true
   }
-  const horizonManager = new HorizonsManager(api, {
+
+  const resourceManager = new ResourceManager()
+
+  const horizonManager = new HorizonsManager(api, resourceManager, {
     apiKey: telemetryAPIKey,
     active: telemetryActive,
     trackHostnames: false
@@ -670,7 +674,7 @@
   {/if}
 
   {#if $activeHorizon}
-    <DrawerWrapper bind:drawer horizon={$activeHorizon} />
+    <DrawerWrapper bind:drawer horizon={$activeHorizon} {resourceManager} />
   {/if}
 
   <Stack

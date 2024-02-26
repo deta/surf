@@ -1,9 +1,8 @@
 <script lang="ts">
   import type { Resource } from '../../../types/index'
 
-  export let resource: Resource
+  export let blob: Blob
 
-  const blob = resource.data
   const url = URL.createObjectURL(blob)
 </script>
 

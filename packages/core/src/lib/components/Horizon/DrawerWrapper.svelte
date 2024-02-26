@@ -14,20 +14,17 @@
   } from '@horizon/drawer'
 
   import type { Horizon } from '../../service/horizon'
-  import type {
-    CardBrowser,
-    CardFile,
-    CardLink,
-    CardText,
-    MockResource,
-    SFFSResource
-  } from '../../types/index'
+  import type { CardBrowser, CardFile, CardLink, CardText, MockResource } from '../../types/index'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { useLogScope } from '../../utils/log'
   import { processDrop } from '../../service/mediaImporter'
+  import type { ResourceManager } from '../../service/resources'
+  import { onMount } from 'svelte'
 
   export const drawer = provideDrawer()
+
   export let horizon: Horizon
+  export let resourceManager: ResourceManager
 
   const log = useLogScope('DrawerWrapper')
 
@@ -221,7 +218,7 @@
     if (resource.type === 'text') {
       e.dataTransfer.setData('text/tiptap', JSON.stringify(resource.data))
     } else if (resource.type === 'link') {
-      e.dataTransfer.setData('text/plain', resource.data ?? '')
+      e.dataTransfer.setData('text/plain', (resource.data as string) ?? '')
     } else if (resource.type === 'file') {
       const fileData = resource.data as CardFile['data']
       const resourceId = fileData.resourceId
@@ -231,6 +228,11 @@
       log.warn('Unhandled resource type', resource.type)
     }
   }
+
+  onMount(async () => {
+    const resources = await resourceManager.readResources()
+    log.debug('Resources', resources)
+  })
 </script>
 
 <DrawerProvider {drawer} on:search={handleSearch}>
