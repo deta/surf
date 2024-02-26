@@ -468,8 +468,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn update_card_resource_id(
-        &self,
+    pub fn update_card_resource_id_tx(
         tx: &mut rusqlite::Transaction,
         card_id: &str,
         resource_id: &str,
@@ -505,10 +504,11 @@ impl Database {
 
         Ok(())
     }
+
     pub fn update_card_stacking_order_tx(
         tx: &mut rusqlite::Transaction,
         card_id: &str,
-        stacking_order: &str,
+        stacking_order: chrono::DateTime<chrono::Utc>,
     ) -> BackendResult<()> {
         tx.execute(
             "UPDATE cards SET stacking_order = ?2, updated_at = datetime('now') WHERE id = ?1",
@@ -639,6 +639,36 @@ impl Database {
     pub fn remove_horizon_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
         tx.execute("DELETE FROM card_positions WHERE row_id IN (SELECT position_id FROM cards WHERE horizon_id = ?1)", rusqlite::params![id])?;
         tx.execute("DELETE FROM horizons WHERE id = ?1", rusqlite::params![id])?;
+        Ok(())
+    }
+
+    pub fn create_userdata_tx(
+        tx: &mut rusqlite::Transaction,
+        userdata: &Userdata,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "INSERT INTO userdata (id, user_id) VALUES (?1, ?2)",
+            rusqlite::params![userdata.id, userdata.user_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_userdata_by_user_id(&mut self, user_id: &str) -> BackendResult<Option<Userdata>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, user_id FROM userdata WHERE user_id = ?1")?;
+        Ok(stmt
+            .query_row(rusqlite::params![user_id], |row| {
+                Ok(Userdata {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                })
+            })
+            .optional()?)
+    }
+
+    pub fn remove_userdata_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
+        tx.execute("DELETE FROM userdata WHERE id = ?1", rusqlite::params![id])?;
         Ok(())
     }
 

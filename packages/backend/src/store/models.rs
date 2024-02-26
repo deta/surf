@@ -1,13 +1,21 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Userdata {
+    pub id: String,
+    pub user_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Horizon {
     pub id: String,
     pub horizon_name: String,
     pub icon_uri: String,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Card {
     pub id: String,
     pub horizon_id: String,
@@ -18,9 +26,9 @@ pub struct Card {
     pub position_y: i64,
     pub width: i32,
     pub height: i32,
-    pub stacking_order: String,
-    pub created_at: String,
-    pub updated_at: String,
+    pub stacking_order: chrono::DateTime<chrono::Utc>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
     pub data: Vec<u8>,
 }
 
@@ -29,8 +37,8 @@ pub struct Resource {
     pub id: String,
     pub resource_path: String,
     pub resource_type: String,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
     pub deleted: i32,
 }
 
@@ -58,6 +66,7 @@ pub struct ResourceTextContent {
     pub content: String,
 }
 
+#[derive(Debug)]
 pub struct CardPosition {
     pub position: Vec<u8>,
 }
