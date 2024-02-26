@@ -12,6 +12,7 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     // cx.export_function("js__store_update_resource", js_update_resource)?;
     cx.export_function("js__store_delete_resource", js_delete_resource)?;
     cx.export_function("js__store_recover_resource", js_recover_resource)?;
+    cx.export_function("js__store_search_resource", js_search_resources)?;
 
     Ok(())
 }
@@ -75,6 +76,29 @@ fn js_recover_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.send(WorkerMessage::RecoverResource(resource_id), deferred);
+
+    Ok(promise)
+}
+
+fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let query = cx.argument::<JsString>(1)?.value(&mut cx);
+    let resource_tags_json = cx
+        .argument_opt(2)
+        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
+        .map(|js_string| js_string.value(&mut cx));
+    let resource_tags: Option<Vec<models::ResourceTag>> =
+        resource_tags_json.and_then(|json_str| serde_json::from_str(&json_str).ok());
+
+    let (deferred, promise) = cx.promise();
+    tunnel.send(
+        WorkerMessage::SearchResources {
+            query,
+            resource_tags,
+        },
+        deferred,
+    );
 
     Ok(promise)
 }

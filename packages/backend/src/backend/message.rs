@@ -10,4 +10,8 @@ pub enum WorkerMessage {
     ReadResource(String),
     DeleteResource(String),
     RecoverResource(String),
+    SearchResources {
+        query: String,
+        resource_tags: Option<Vec<models::ResourceTag>>,
+    }
 }

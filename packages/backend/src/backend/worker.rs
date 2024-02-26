@@ -1,5 +1,6 @@
 use super::message::WorkerMessage;
 use super::tunnel::TunnelMessage;
+use crate::store::db::{CompositeResource, SearchResult};
 use crate::store::{db::Database, models::*};
 use crate::BackendResult;
 
@@ -27,9 +28,9 @@ impl Worker {
     pub fn create_resource(
         &mut self,
         resource_type: String,
-        tags: Option<Vec<ResourceTag>>,
-        metadata: Option<ResourceMetadata>,
-    ) -> BackendResult<()> {
+        mut tags: Option<Vec<ResourceTag>>,
+        mut metadata: Option<ResourceMetadata>,
+    ) -> BackendResult<CompositeResource> {
         let mut tx = self.db.begin()?;
 
         let resource_id = uuid::Uuid::new_v4().to_string();
@@ -44,15 +45,15 @@ impl Worker {
         };
         Database::create_resource_tx(&mut tx, &resource)?;
 
-        if let Some(mut metadata) = metadata {
+        if let Some(metadata) = &mut metadata {
             metadata.id = uuid::Uuid::new_v4().to_string();
             metadata.resource_id = resource.id.clone();
 
             Database::create_resource_metadata_tx(&mut tx, &metadata)?;
         }
 
-        if let Some(mut tags) = tags {
-            for tag in &mut tags {
+        if let Some(tags) = &mut tags {
+            for tag in tags {
                 tag.id = uuid::Uuid::new_v4().to_string();
                 tag.resource_id = resource.id.clone();
 
@@ -60,7 +61,14 @@ impl Worker {
             }
         }
 
-        Ok(tx.commit()?)
+        tx.commit()?;
+
+        Ok(CompositeResource {
+            resource,
+            metadata,
+            text_content: None,
+            resource_tags: tags,
+        })
     }
 
     pub fn read_resource(&mut self, id: String) -> BackendResult<Option<Resource>> {
@@ -73,6 +81,14 @@ impl Worker {
 
     pub fn recover_resource(&mut self, id: String) -> BackendResult<()> {
         self.db.update_resource_deleted(&id, 0)
+    }
+
+    pub fn search_resources(
+        &mut self,
+        query: String,
+        tags: Option<Vec<ResourceTag>>,
+    ) -> BackendResult<SearchResult> {
+        self.db.search_resource_metadata(&query, tags)
     }
 }
 
@@ -102,6 +118,14 @@ pub fn worker_entry_point(rx: mpsc::Receiver<TunnelMessage>, mut channel: Channe
             WorkerMessage::RecoverResource(resource_id) => {
                 send_worker_response(&mut channel, deferred, worker.recover_resource(resource_id))
             }
+            WorkerMessage::SearchResources {
+                query,
+                resource_tags,
+            } => send_worker_response(
+                &mut channel,
+                deferred,
+                worker.search_resources(query, resource_tags),
+            ),
         }
     }
 }

@@ -4,6 +4,7 @@ use super::models::*;
 
 use rusqlite::{ffi::sqlite3_auto_extension, Connection, OptionalExtension};
 use rust_embed::RustEmbed;
+use serde::{Serialize, Deserialize};
 use sqlite_vss::{sqlite3_vector_init, sqlite3_vss_init};
 
 #[derive(RustEmbed)]
@@ -36,7 +37,7 @@ pub struct PaginatedHorizons {
     pub offset: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CompositeResource {
     pub resource: Resource,
     pub metadata: Option<ResourceMetadata>,
@@ -44,21 +45,21 @@ pub struct CompositeResource {
     pub resource_tags: Option<Vec<ResourceTag>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum SearchEngine {
     Metadata,
     TextContent,
     Proximity,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResultItem {
     pub resource: CompositeResource,
     pub card_ids: Vec<String>,
     pub engine: SearchEngine,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResult {
     pub items: Vec<SearchResultItem>,
     pub total: i64,
@@ -688,15 +689,15 @@ impl Database {
     pub fn search_resource_metadata(
         &self,
         keyword: &str,
-        tags: &mut Vec<ResourceTag>,
+        tags: Option<Vec<ResourceTag>>,
     ) -> BackendResult<SearchResult> {
         let mut params_vector = vec![format!("%{}%", keyword).to_string()];
         let mut query = "SELECT * FROM resource_metadata M
         LEFT JOIN resources R ON M.resource_id = R.id
         WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1)"
             .to_owned();
-        if !tags.is_empty() {
-            let (subquery, mut params) = Self::list_resource_ids_by_tags_query(tags, 1);
+        if let Some(tags) = tags {
+            let (subquery, mut params) = Self::list_resource_ids_by_tags_query(&tags, 1);
             params_vector.append(&mut params);
             query.push_str(format!(" AND R.id IN ({})", subquery).as_str());
         }

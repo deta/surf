@@ -51,7 +51,7 @@ pub struct ResourceMetadata {
     pub alt: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ResourceTextContent {
     pub id: String,
     pub resource_id: String,
