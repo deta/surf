@@ -183,7 +183,7 @@
       log.debug('did navigate in page', e.url)
       if (e.isMainFrame) {
         url.set(e.url)
-        // addHistoryEntry(e.url, get(title))
+        pendingUrlUpdate = { url: e.url, timestamp: Date.now() }
       }
     })
 
@@ -275,6 +275,23 @@
         }
         return n
       }
+      return n
+    })
+    updateNavigationState()
+  }
+
+  export function goToBeginning(fallback?: string): void {
+    log.debug('Going to beginning')
+    currentHistoryIndex.update((n) => {
+      n = 0
+      programmaticNavigation = true
+      const historyEntry = historyEntriesManager.getEntry(get(historyStackIds)[0])
+      if (historyEntry) {
+        navigate(historyEntry.url as string)
+      } else if (fallback) {
+        navigate(fallback)
+      }
+
       return n
     })
     updateNavigationState()
