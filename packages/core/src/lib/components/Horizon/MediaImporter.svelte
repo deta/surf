@@ -122,8 +122,23 @@
         } else {
           log.warn('unhandled file type', item.data.type)
         }
+      } else if (item.type === 'resource') {
+        handleResource(item.data, getNewCardHorizontalPosition(idx))
+      } else {
+        log.warn('unhandled item type', item.type)
       }
     })
+  }
+
+  const handleResource = async (resourceId: string, pos: { x: number; y: number }) => {
+    log.debug('handleResource', resourceId)
+
+    const resource = await horizon.getResource(resourceId)
+    if (resource.data.type.startsWith('image')) {
+      createImageCard(resource.data, pos)
+    } else {
+      log.warn('unhandled resource type', resource.data.type)
+    }
   }
 
   const createImageCard = async (blob: Blob, pos: { x: number; y: number }) => {

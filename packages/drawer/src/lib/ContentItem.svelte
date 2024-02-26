@@ -1,7 +1,9 @@
 <script lang="ts">
+  export let draggable = true
 </script>
 
-<div class="drawer-item">
+<!-- svelte-ignore missing-declaration a11y-no-static-element-interactions -->
+<div {draggable} on:dragstart class="drawer-item">
   <slot />
 </div>
 

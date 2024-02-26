@@ -57,17 +57,22 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 1rem;
     flex-grow: 1;
   }
 
   .title {
     font-size: 1.25rem;
     font-weight: 500;
+    flex-shrink: 0;
+    flex-grow: 1;
   }
 
   .subtitle {
     font-size: 1rem;
     font-weight: 300;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

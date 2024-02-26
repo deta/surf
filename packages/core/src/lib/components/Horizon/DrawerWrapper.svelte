@@ -209,6 +209,28 @@
       }
     })
   }
+
+  const handleItemDragStart = async (e: DragEvent, resource: MockResource) => {
+    log.debug('Item drag start', e, resource)
+
+    if (!e.dataTransfer) {
+      log.error('No dataTransfer found')
+      return
+    }
+
+    if (resource.type === 'text') {
+      e.dataTransfer.setData('text/tiptap', JSON.stringify(resource.data))
+    } else if (resource.type === 'link') {
+      e.dataTransfer.setData('text/plain', resource.data ?? '')
+    } else if (resource.type === 'file') {
+      const fileData = resource.data as CardFile['data']
+      const resourceId = fileData.resourceId
+
+      e.dataTransfer.setData('space/resource', resourceId)
+    } else {
+      log.warn('Unhandled resource type', resource.type)
+    }
+  }
 </script>
 
 <DrawerProvider {drawer} on:search={handleSearch}>
@@ -227,7 +249,7 @@
         gap={15}
         let:item={resource}
       >
-        <DrawerContentItem>
+        <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, resource)}>
           <ResourcePreview on:click={handleResourceClick} {resource} {horizon} />
         </DrawerContentItem>
       </DrawerContentMasonry>

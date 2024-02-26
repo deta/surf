@@ -4,7 +4,13 @@ import { checkIfUrl, parseStringIntoUrl } from '../utils/url'
 
 const log = useLogScope('mediaImporter')
 
-export const DATA_TYPES = ['text/html', 'text/plain', 'text/uri-list']
+export const DATA_TYPES = [
+  'text/html',
+  'text/plain',
+  'text/uri-list',
+  'text/tiptap',
+  'space/resource'
+]
 export const SUPPORTED_MIMES = [
   'text/plain',
   'text/html',
@@ -58,6 +64,19 @@ const processTextData = async (data: string) => {
     return new URL(data)
   } else {
     return data
+  }
+}
+
+const processRichTextData = async (data: string) => {
+  try {
+    if (data.trim() === '') return false
+
+    const parsed = JSON.parse(data)
+
+    return parsed
+  } catch (err) {
+    log.debug('failed to parse rich text data', err)
+    return false
   }
 }
 
@@ -155,6 +174,11 @@ export type MediaParserResultFile = {
   type: 'file'
 }
 
+export type MediaParserResultResource = {
+  data: string
+  type: 'resource'
+}
+
 export type MediaParserResultUnknown = {
   data: null
   type: 'unknown'
@@ -164,6 +188,7 @@ export type MediaParserResult =
   | MediaParserResultText
   | MediaParserResultURL
   | MediaParserResultFile
+  | MediaParserResultResource
   | MediaParserResultUnknown
 
 export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
@@ -189,6 +214,13 @@ export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
       case 'text/uri-list':
         const urls = await processUriListData(data)
         results.push(...urls.map((url) => ({ data: url, type: 'url' }) as MediaParserResult))
+        break
+      case 'text/tiptap':
+        const richText = await processRichTextData(data)
+        results.push({ data: richText, type: 'text' })
+        break
+      case 'space/resource':
+        results.push({ data: data, type: 'resource' })
         break
     }
 
