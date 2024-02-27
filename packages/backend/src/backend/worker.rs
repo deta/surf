@@ -257,7 +257,8 @@ impl Worker {
         query: String,
         tags: Option<Vec<ResourceTag>>,
     ) -> BackendResult<SearchResult> {
-        self.db.search_resource_metadata(&query, tags)
+        // TODO: handle deleted resources
+        self.db.search_resources(&query, tags)
     }
 }
 
