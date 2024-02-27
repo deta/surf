@@ -1,4 +1,4 @@
-import { writable, type Writable } from 'svelte/store'
+import { get, writable, type Writable } from 'svelte/store'
 
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { SFFS } from './sffs'
@@ -22,6 +22,7 @@ export class Resource {
 
   rawData: Blob | null
   rawDataPromise: Promise<Blob> | null // used to avoid duplicate reads
+  dataUsed: number // number of times the data is being used
 
   sffs: SFFS
   log: ScopedLogger
@@ -40,9 +41,10 @@ export class Resource {
 
     this.rawData = null
     this.rawDataPromise = null
+    this.dataUsed = 0
   }
 
-  async readData() {
+  private async readData() {
     this.log.debug('reading resource data from', this.path)
 
     if (this.rawDataPromise !== null) {
@@ -94,6 +96,25 @@ export class Resource {
 
     this.tags = [...(this.tags ?? []), ...updates]
     this.updatedAt = new Date().toISOString()
+  }
+
+  getData() {
+    this.dataUsed += 1
+
+    if (this.rawData) {
+      return Promise.resolve(this.rawData)
+    }
+
+    return this.readData()
+  }
+
+  releaseData() {
+    this.dataUsed -= 1
+
+    if (this.dataUsed <= 0) {
+      this.dataUsed = 0
+      this.rawData = null
+    }
   }
 }
 

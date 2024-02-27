@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import type { Writable } from 'svelte/store'
 
   import type { CardFile } from '../../../types/index'
@@ -32,13 +32,19 @@
 
       // If the resource is not loaded yet, read the data
       if (!resource.rawData) {
-        data = await resource.readData()
+        data = await resource.getData()
         log.debug('Data loaded', data)
       }
     } catch (e) {
       log.error(e)
     } finally {
       loading = false
+    }
+  })
+
+  onDestroy(() => {
+    if (resource) {
+      resource.releaseData()
     }
   })
 </script>
