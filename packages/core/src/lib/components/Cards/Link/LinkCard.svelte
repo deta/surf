@@ -1,21 +1,42 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import type { Writable } from 'svelte/store'
 
-  import type { CardLink } from '../../../types/index'
+  import type { Card, SFFSResourceDataBookmark } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
+  import type { ResourceBookmark } from '../../../service/resources'
+  import type { Horizon } from '../../../service/horizon'
 
-  export let card: Writable<CardLink>
+  export let card: Writable<Card>
+  export let horizon: Horizon
 
   const log = useLogScope('LinkCard')
+
+  let resource: ResourceBookmark | null = null
+  let bookmark: SFFSResourceDataBookmark | null = null
 
   let title = ''
   let subtitle = ''
   let error = ''
 
-  onMount(() => {
+  onMount(async () => {
     try {
-      const url = new URL($card.data.url)
+      if (!$card.resourceId) {
+        log.error('No resource id found', $card)
+        error = 'No resource id found'
+        return
+      }
+
+      resource = (await horizon.getResource($card.resourceId)) as ResourceBookmark | null
+      if (!resource) {
+        log.error('Resource not found', $card.resourceId)
+        error = 'Resource not found'
+        return
+      }
+
+      bookmark = await resource.getBookmark()
+
+      const url = new URL(bookmark.url)
 
       const hostname = url.hostname.split('.').slice(-2, -1).join('')
       title = hostname[0].toUpperCase() + hostname.slice(1)
@@ -25,13 +46,19 @@
       error = 'Invalid URL'
     }
   })
+
+  onDestroy(() => {
+    if (resource) {
+      resource.releaseData()
+    }
+  })
 </script>
 
-<a href={$card.data.url} target="_blank" class="link-card">
+<a href={bookmark?.url} target="_blank" class="link-card">
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
-      <div class="subtitle">{$card.data.url}</div>
+      <div class="subtitle">{bookmark?.url}</div>
     {:else}
       <div class="title">{title}</div>
       <div class="subtitle">{subtitle}</div>

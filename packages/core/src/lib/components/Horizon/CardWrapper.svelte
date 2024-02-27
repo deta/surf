@@ -16,7 +16,6 @@
   import type { Card, CardEvents } from '../../types/index'
   import { useLogScope } from '../../utils/log'
   import type { Horizon } from '../../service/horizon'
-  import Horizon from './Horizon.svelte'
   import { Icon } from '@horizon/icons'
   import CardContent from '../Cards/CardContent.svelte'
 
@@ -52,7 +51,7 @@
     dispatch('change', $card)
   }
 
-  const handleMouseDown = (event) => {
+  const handleMouseDown = (event: MouseEvent) => {
     if (event.metaKey || event.ctrlKey) {
       horizon.setActiveCard($card.id)
       horizon.scrollToCardCenter($card.id)

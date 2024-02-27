@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { type Writable } from 'svelte/store'
-
   import '@horizon/editor/src/editor.scss'
 
-  import type { CardText } from '../../../types/index'
-  import { getEditorContentText, type JSONContent } from '@horizon/editor'
+  import { getEditorContentText } from '@horizon/editor'
+  import { onDestroy, onMount } from 'svelte'
+  import type { ResourceNote } from '../../../service/resources'
 
-  export let card: Writable<CardText>
+  export let resource: ResourceNote
   export let limit: number = 200
 
-  $: value = $card.data.content ?? ''
+  let summary = ''
+  let loading = false
 
-  const generateSummary = (value: JSONContent) => {
+  const generateSummary = (value: string) => {
     console.log('value', value)
     const text = getEditorContentText(value)
 
@@ -22,7 +22,17 @@
     }
   }
 
-  $: summary = generateSummary(value)
+  onMount(async () => {
+    loading = true
+    const content = await resource.getContent()
+    summary = generateSummary(content)
+
+    loading = false
+  })
+
+  onDestroy(() => {
+    resource.releaseData()
+  })
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -33,7 +43,11 @@
     autofocus={false}
     readOnly
   /> -->
-  <p>{summary}</p>
+  {#if loading}
+    <p>Loading…</p>
+  {:else}
+    <p>{summary}</p>
+  {/if}
 </div>
 
 <style lang="scss">

@@ -14,7 +14,7 @@
   } from '@horizon/drawer'
 
   import type { Horizon } from '../../service/horizon'
-  import type { CardBrowser, CardFile, CardLink, CardText, MockResource } from '../../types/index'
+  import type { CardBrowser } from '../../types/index'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { useLogScope } from '../../utils/log'
   import { processDrop } from '../../service/mediaImporter'

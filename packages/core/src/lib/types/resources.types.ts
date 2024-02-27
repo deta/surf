@@ -1,4 +1,4 @@
-import type { Card, CardFile, CardLink, CardText } from '.'
+import type { JSONContent } from '@horizon/editor'
 
 export interface SFFSResourceMetadata {
   name: string
@@ -12,9 +12,20 @@ export interface SFFSResourceTag {
   value: string
 }
 
-export interface SFFSResourceItem {
+export enum ResourceTypes {
+  NOTE = 'text/space-notes',
+  LINK = 'application/space-bookmark'
+}
+
+export interface ResourceTagsBuiltIn {
+  savedWithAction: 'download' | 'drag/browser' | 'drag/local' | 'paste'
+}
+
+export type ResourceType = ResourceTypes.NOTE | ResourceTypes.LINK | string
+
+export interface SFFSResource {
   id: string
-  type: string
+  type: ResourceType
   path: string
   createdAt: string
   updatedAt: string
@@ -23,11 +34,18 @@ export interface SFFSResourceItem {
   tags?: SFFSResourceTag[]
 }
 
-export interface MockResource {
-  id: string
-  type: 'file' | 'link' | 'text' | 'unknown'
-  data: CardLink['data']['url'] | CardFile['data'] | CardText['data']['content'] | null
-  createdAt: string
-  updatedAt: string
-  cards: Card[]
+export type SFFSResourceDataNote = string
+export type SFFSResourceDataBookmark = {
+  title: string
+  description: string
+  icon: string
+  image: string
+  keywords: string[]
+  language: string
+  type: string
+  url: string
+  provider: string
+  author: string
+  published: string
+  modified: string
 }

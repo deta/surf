@@ -1,41 +1,38 @@
 <!-- <svelte:options immutable={true} /> -->
 
 <script lang="ts">
-  import { createEventDispatcher, SvelteComponent } from 'svelte'
-  import { writable, type Writable } from 'svelte/store'
-
-  import { type IPositionable, LazyComponent } from '@horizon/tela'
+  import { createEventDispatcher } from 'svelte'
   import { Icon } from '@horizon/icons'
 
-  import type { Card, CardBrowser, MockResource } from '../../types/index'
-  import type { Horizon } from '../../service/horizon'
   import TextPreview from '../Cards/Text/TextPreview.svelte'
   import LinkPreview from '../Cards/Link/LinkPreview.svelte'
-  import FileCard from '../Cards/File/FileCard.svelte'
   import { getHumanDistanceToNow } from '../../utils/time'
+  import type { Resource, ResourceBookmark, ResourceNote } from '../../service/resources'
+  import FilePreview from '../Cards/File/FilePreview.svelte'
 
-  export let resource: MockResource
-  export let horizon: Horizon
+  export let resource: Resource
 
-  $: card = writable<Card>(resource.cards[0])
   $: formattedDate = getHumanDistanceToNow(resource.updatedAt)
 
-  const dispatch = createEventDispatcher<{ click: MockResource }>()
+  const dispatch = createEventDispatcher<{ click: string }>()
 
   const handleClick = () => {
-    dispatch('click', resource)
+    dispatch('click', resource.id)
   }
+
+  $: textResource = resource as ResourceNote
+  $: bookmarkResource = resource as ResourceBookmark
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div on:click={handleClick} class="resource-preview">
   <div class="preview">
     {#if resource.type === 'text'}
-      <TextPreview {card} />
+      <TextPreview resource={textResource} />
     {:else if resource.type === 'link'}
-      <LinkPreview {card} {horizon} />
+      <LinkPreview resource={bookmarkResource} />
     {:else if resource.type === 'file'}
-      <FileCard {card} {horizon} />
+      <FilePreview {resource} />
     {:else}
       <div class="text-base">Unknown</div>
     {/if}

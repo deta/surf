@@ -36,7 +36,14 @@
 {:else if $card.type === 'text'}
   <LazyComponent this={TextCard}>
     <svelte:fragment slot="component" let:Component>
-      <Component {card} {horizon} {active} on:load on:change on:delete />
+      <Component
+        {card}
+        {active}
+        resourceManager={horizon.resourceManager}
+        on:load
+        on:change
+        on:delete
+      />
     </svelte:fragment>
   </LazyComponent>
 {:else if $card.type === 'link'}

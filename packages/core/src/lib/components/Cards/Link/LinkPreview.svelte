@@ -1,21 +1,24 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import type { Writable } from 'svelte/store'
+  import { onDestroy, onMount } from 'svelte'
 
-  import type { CardLink } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
+  import type { ResourceBookmark } from '../../../service/resources'
+  import type { SFFSResourceDataBookmark } from '../../../types'
 
-  export let card: Writable<CardLink>
+  export let resource: ResourceBookmark
 
   const log = useLogScope('LinkCard')
 
+  let bookmark: SFFSResourceDataBookmark | null = null
   let title = ''
   let subtitle = ''
   let error = ''
 
-  onMount(() => {
+  onMount(async () => {
     try {
-      const url = new URL($card.data.url)
+      bookmark = await resource.getBookmark()
+
+      const url = new URL(bookmark.url)
 
       const hostname = url.hostname.split('.').slice(-2, -1).join('')
       title = hostname[0].toUpperCase() + hostname.slice(1)
@@ -25,13 +28,17 @@
       error = 'Invalid URL'
     }
   })
+
+  onDestroy(() => {
+    resource.releaseData()
+  })
 </script>
 
-<a href={$card.data.url} target="_blank" class="link-card">
+<a href={bookmark?.url} target="_blank" class="link-card">
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
-      <div class="subtitle">{$card.data.url}</div>
+      <div class="subtitle">{bookmark?.url}</div>
     {:else}
       <div class="title">{title}</div>
       <div class="subtitle">{subtitle}</div>

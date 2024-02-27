@@ -1,32 +1,37 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
 
-  import { Editor, type JSONContent } from '@horizon/editor'
+  import { Editor } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
 
-  import type { CardEvents, CardText } from '../../../types/index'
-  import { copyToClipboard } from '../../../utils/clipboard'
+  import type { CardEvents, Card } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
   import { useDebounce } from '../../../utils/debounce'
+  import type { ResourceManager, ResourceNote } from '../../../service/resources'
 
-  export let card: Writable<CardText>
+  export let card: Writable<Card>
+  export let resourceManager: ResourceManager
   export let active: boolean = false
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('TextCard')
 
-  const value = writable($card.data.content)
+  const content = writable('')
 
+  let resource: ResourceNote | null = null
   let focusEditor: () => void
 
-  const debouncedSaveContent = useDebounce((value: JSONContent) => {
+  const debouncedSaveContent = useDebounce((value: string) => {
     log.debug('saving content', $card)
     dispatch('change', $card)
-    $card.data.content = value
+
+    if (resource) {
+      resource.updateContent(value)
+    }
   }, 500)
 
-  value.subscribe((value) => {
+  const unsubscribeContent = content.subscribe((value) => {
     debouncedSaveContent(value)
   })
 
@@ -40,21 +45,47 @@
     // seems like tiptap handles text drag and drop already
   }
 
-  onMount(() => {
+  onMount(async () => {
+    if (!$card.resourceId) {
+      log.error('No resource id found', $card)
+      return
+    }
+
+    resource = (await resourceManager.getResource($card.resourceId)) as ResourceNote | null
+    if (!resource) {
+      log.error('Resource not found', $card.resourceId)
+      return
+    }
+
+    const value = await resource.getContent()
+    content.set(value)
+
     if (active) {
       focusEditor()
+    }
+  })
+
+  onDestroy(() => {
+    if (resource) {
+      resource.releaseData()
+    }
+
+    if (unsubscribeContent) {
+      unsubscribeContent()
     }
   })
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div on:drop={handleDrop} class="text-card">
-  <Editor
-    bind:focus={focusEditor}
-    bind:content={$value}
-    placeholder="Jot something down…"
-    autofocus={false}
-  />
+  {#if $content}
+    <Editor
+      bind:focus={focusEditor}
+      bind:content={$content}
+      placeholder="Jot something down…"
+      autofocus={false}
+    />
+  {/if}
   <!-- <button on:click={() => copyToClipboard(JSON.stringify($value))}>
     Copy to Clipboard
   </button> -->

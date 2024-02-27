@@ -2,7 +2,16 @@ import { get, writable, type Writable } from 'svelte/store'
 
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { SFFS } from './sffs'
-import type { SFFSResourceMetadata, SFFSResourceTag, SFFSResourceItem } from '../types'
+import {
+  type SFFSResourceMetadata,
+  type SFFSResourceTag,
+  ResourceTypes,
+  type SFFSResourceDataBookmark,
+  type ResourceType,
+  type SFFSResourceDataNote,
+  type SFFSResource
+} from '../types'
+import type { JSONContent } from '@horizon/editor'
 
 /*
  TODO:
@@ -12,6 +21,7 @@ import type { SFFSResourceMetadata, SFFSResourceTag, SFFSResourceItem } from '..
 
 export class Resource {
   id: string
+  type: ResourceType
   path: string
   createdAt: string
   updatedAt: string
@@ -21,17 +31,18 @@ export class Resource {
   tags?: SFFSResourceTag[]
 
   rawData: Blob | null
-  rawDataPromise: Promise<Blob> | null // used to avoid duplicate reads
+  readDataPromise: Promise<Blob> | null // used to avoid duplicate reads
   dataUsed: number // number of times the data is being used
 
   sffs: SFFS
   log: ScopedLogger
 
-  constructor(sffs: SFFS, data: SFFSResourceItem) {
+  constructor(sffs: SFFS, data: SFFSResource) {
     this.log = useLogScope(`SFFSResource ${data.id}`)
     this.sffs = sffs
 
     this.id = data.id
+    this.type = data.type
     this.path = data.path
     this.createdAt = data.createdAt
     this.updatedAt = data.updatedAt
@@ -40,26 +51,26 @@ export class Resource {
     this.tags = data.tags
 
     this.rawData = null
-    this.rawDataPromise = null
+    this.readDataPromise = null
     this.dataUsed = 0
   }
 
   private async readData() {
     this.log.debug('reading resource data from', this.path)
 
-    if (this.rawDataPromise !== null) {
+    if (this.readDataPromise !== null) {
       this.log.debug('already reading data, piggybacking on existing promise')
-      return this.rawDataPromise
+      return this.readDataPromise
     }
 
     // store promise to avoid duplicate reads
-    this.rawDataPromise = this.sffs.readDataFile(this.path)
-    this.rawData = await this.rawDataPromise
+    this.readDataPromise = this.sffs.readDataFile(this.path)
+    this.readDataPromise.then((data) => {
+      this.rawData = data
+      this.readDataPromise = null
+    })
 
-    // reset state
-    this.rawDataPromise = null
-
-    return this.rawData
+    return this.readDataPromise
   }
 
   async writeData() {
@@ -80,7 +91,9 @@ export class Resource {
     this.updatedAt = new Date().toISOString()
 
     if (write) {
-      this.writeData()
+      return this.writeData()
+    } else {
+      return Promise.resolve()
     }
   }
 
@@ -118,8 +131,56 @@ export class Resource {
   }
 }
 
+export class ResourceNote extends Resource {
+  // data: Writable<SFFSResourceDataNote | null>
+
+  constructor(sffs: SFFS, data: SFFSResource) {
+    super(sffs, data)
+    // this.data = writable(null)
+  }
+
+  async getContent() {
+    const data = await this.getData()
+    return data.text()
+  }
+
+  async updateContent(content: string) {
+    const blob = new Blob([content], { type: ResourceTypes.NOTE })
+    return this.updateData(blob, true)
+  }
+
+  static async create(sffs: SFFS, data: SFFSResource) {
+    return new ResourceNote(sffs, data)
+  }
+}
+
+export class ResourceBookmark extends Resource {
+  // data: Writable<SFFSResourceDataBookmark | null>
+
+  constructor(sffs: SFFS, data: SFFSResource) {
+    super(sffs, data)
+    // this.data = writable(null)
+  }
+
+  async getBookmark() {
+    const data = await this.getData()
+    const text = await data.text()
+    return JSON.parse(text) as SFFSResourceDataBookmark
+  }
+
+  async updateBookmark(content: SFFSResourceDataBookmark) {
+    const blobData = JSON.stringify(content)
+    const blob = new Blob([blobData], { type: ResourceTypes.LINK })
+    return this.updateData(blob, true)
+  }
+
+  static async create(sffs: SFFS, data: SFFSResource) {
+    return new ResourceBookmark(sffs, data)
+  }
+}
+
 export class ResourceManager {
-  resources: Writable<Resource[]>
+  resources: Writable<(Resource | ResourceBookmark | ResourceNote)[]>
 
   log: ScopedLogger
   sffs: SFFS
@@ -128,6 +189,16 @@ export class ResourceManager {
     this.log = useLogScope('SFFSResourceManager')
     this.resources = writable([])
     this.sffs = new SFFS()
+  }
+
+  private createResourceObject(data: SFFSResource): Resource | ResourceBookmark | ResourceNote {
+    if (data.type === ResourceTypes.NOTE) {
+      return new ResourceNote(this.sffs, data)
+    } else if (data.type === ResourceTypes.LINK) {
+      return new ResourceBookmark(this.sffs, data)
+    } else {
+      return new Resource(this.sffs, data)
+    }
   }
 
   async createResource(
@@ -140,7 +211,8 @@ export class ResourceManager {
 
     const sffsItem = await this.sffs.createResource(type, metadata, tags)
 
-    const resource = new Resource(this.sffs, sffsItem)
+    const resource = this.createResourceObject(sffsItem)
+
     this.resources.update((resources) => [...resources, resource])
 
     // store the data in the resource and write it to sffs
@@ -157,13 +229,20 @@ export class ResourceManager {
   }
 
   async getResource(id: string) {
+    // check if resource is already loaded
+    const loadedResources = get(this.resources)
+    const loadedResource = loadedResources.find((r) => r.id === id)
+    if (loadedResource) {
+      return loadedResource
+    }
+
     // read resource from sffs
     const resourceItem = await this.sffs.readResource(id)
     if (!resourceItem) {
       return null
     }
 
-    const resource = new Resource(this.sffs, resourceItem)
+    const resource = this.createResourceObject(resourceItem)
 
     this.resources.update((resources) => {
       const index = resources.findIndex((r) => r.id === id)
@@ -183,5 +262,37 @@ export class ResourceManager {
     // delete resource from sffs
     await this.sffs.deleteResource(id)
     this.resources.update((resources) => resources.filter((r) => r.id !== id))
+  }
+
+  async updateResourceData(id: string, data: Blob, write = true) {
+    const resource = await this.getResource(id)
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    return resource.updateData(data, write)
+  }
+
+  async createResourceNote(
+    content: string,
+    metadata?: SFFSResourceMetadata,
+    tags?: SFFSResourceTag[]
+  ) {
+    const blob = new Blob([content], { type: ResourceTypes.NOTE })
+    return this.createResource(ResourceTypes.NOTE, blob, metadata, tags)
+  }
+
+  async createResourceBookmark(
+    data: Partial<SFFSResourceDataBookmark>,
+    metadata?: SFFSResourceMetadata,
+    tags?: SFFSResourceTag[]
+  ) {
+    const blobData = JSON.stringify(data)
+    const blob = new Blob([blobData], { type: ResourceTypes.LINK })
+    return this.createResource(ResourceTypes.LINK, blob, metadata, tags)
+  }
+
+  async createResourceOther(blob: Blob, metadata?: SFFSResourceMetadata, tags?: SFFSResourceTag[]) {
+    return this.createResource(blob.type, blob, metadata, tags)
   }
 }

@@ -10,7 +10,8 @@ import type {
   CardFile,
   UserData,
   Session,
-  HistoryEntry
+  HistoryEntry,
+  LegacyResource
 } from '../types'
 
 export class LocalStorage<T> {
@@ -167,7 +168,7 @@ export class HorizonDatabase extends Dexie {
   userData: UserStore<UserData>
   cards: HorizonStore<Card>
   horizons: HorizonStore<HorizonData>
-  resources: HorizonStore<Resource>
+  resources: HorizonStore<LegacyResource>
   sessions: HorizonStore<Session>
   historyEntries: HistoryStore
 

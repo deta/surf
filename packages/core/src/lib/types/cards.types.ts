@@ -1,5 +1,4 @@
 import type { IPositionable } from '@horizon/tela'
-import type { JSONContent } from '@horizon/editor'
 
 export type CardEvents = {
   change: Card
@@ -23,11 +22,12 @@ export interface Card extends IPositionable<'id'> {
   updatedAt: string
   stacking_order: number
   type: CardType
-  data: CardBrowser['data'] | CardText['data'] | CardFile['data'] | CardLink['data']
+  data: CardBrowser['data'] | null
+  resourceId: string | null
   [key: string]: any
 }
 
-export interface Resource {
+export interface LegacyResource {
   id: string
   data: Blob
   createdAt: string
@@ -41,29 +41,5 @@ export interface CardBrowser extends Card {
     initialLocation: string
     historyStackIds: string[]
     currentHistoryIndex: number
-  }
-}
-
-export interface CardText extends Card {
-  type: 'text'
-  data: {
-    content: JSONContent
-  }
-}
-
-export interface CardFile extends Card {
-  type: 'file'
-  data: {
-    name?: string
-    mimetype: string
-    resourceId: string
-  }
-}
-
-export interface CardLink extends Card {
-  type: 'link'
-  data: {
-    title?: string
-    url: string
   }
 }

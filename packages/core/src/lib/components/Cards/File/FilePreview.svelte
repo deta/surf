@@ -1,45 +1,23 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
-  import type { Writable } from 'svelte/store'
 
   import { useLogScope } from '../../../utils/log'
-  import type { Horizon } from '../../../service/horizon'
   import ImageView from './ImageView.svelte'
-  import type { Resource } from '../../../service/resources'
-  import type { Card } from '../../../types'
+  import { Resource } from '../../../service/resources'
 
-  export let card: Writable<Card>
-  export let horizon: Horizon
+  export let resource: Resource
 
   const log = useLogScope('FileCard')
 
   let loading = false
   let error: null | string = null
-  let resource: Resource | null = null
   let data: Blob | null = null
 
   onMount(async () => {
     try {
       loading = true
-
-      if (!$card.resourceId) {
-        log.error('No resource id found', $card)
-        error = 'No resource id found'
-        return
-      }
-
-      resource = await horizon.getResource($card.resourceId)
-      if (!resource) {
-        log.error('Resource not found', $card.resourceId)
-        error = 'Resource not found'
-        return
-      }
-
-      // If the resource is not loaded yet, read the data
-      if (!resource.rawData) {
-        data = await resource.getData()
-        log.debug('Data loaded', data)
-      }
+      data = await resource.getData()
+      log.debug('Data loaded', data)
     } catch (e) {
       log.error(e)
     } finally {
@@ -48,9 +26,7 @@
   })
 
   onDestroy(() => {
-    if (resource) {
-      resource.releaseData()
-    }
+    resource.releaseData()
   })
 </script>
 

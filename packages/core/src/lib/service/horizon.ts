@@ -1,13 +1,13 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
-import type {
-  Card,
-  CardPosition,
-  Optional,
-  SFFSResourceMetadata,
-  SFFSResourceTag
+import {
+  type Card,
+  type CardPosition,
+  type Optional,
+  type SFFSResourceMetadata,
+  type SFFSResourceTag
 } from '../types/index'
 import type { API } from './api'
-import type { Resource, HorizonState, HorizonData } from '../types/index'
+import type { LegacyResource, HorizonState, HorizonData } from '../types/index'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
@@ -51,7 +51,7 @@ export class Horizon {
     resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
     adblockerState: Writable<boolean>,
-    previewImageResource: Resource | undefined,
+    previewImageResource: LegacyResource | undefined,
     signalChange: (horizon: Horizon) => void
   ) {
     this.id = id
@@ -243,6 +243,10 @@ export class Horizon {
     return this.resourceManager.getResource(id)
   }
 
+  updateResourceData(resourceId: string, data: Blob, write: boolean = true) {
+    return this.resourceManager.updateResourceData(resourceId, data, write)
+  }
+
   async addCard(
     data: Optional<Card, 'id' | 'stacking_order'>,
     makeActive: boolean = false,
@@ -294,38 +298,38 @@ export class Horizon {
     )
   }
 
-  addCardText(
+  async addCardText(
     content: string,
     position: CardPosition,
     makeActive: boolean = false,
     duplicated: boolean = false
   ) {
+    // TODO: resource metadata and tags
+    const resource = await this.resourceManager.createResourceNote(content)
     return this.addCard(
       {
         ...position,
         type: 'text',
-        data: {
-          content: content
-        }
+        resourceId: resource.id
       },
       makeActive,
       duplicated
     )
   }
 
-  addCardLink(
+  async addCardLink(
     url: string,
     position: CardPosition,
     makeActive: boolean = false,
     duplicated: boolean = false
   ) {
+    // TODO: resource metadata and tags + fetch metadata from url
+    const resource = await this.resourceManager.createResourceBookmark({ url })
     return this.addCard(
       {
         ...position,
         type: 'link',
-        data: {
-          url: url
-        }
+        resourceId: resource.id
       },
       makeActive,
       duplicated
@@ -338,16 +342,13 @@ export class Horizon {
     makeActive: boolean = false,
     duplicated: boolean = false
   ) {
-    const resource = await this.createResource(data)
+    // TODO: resource metadata and tags
+    const resource = await this.resourceManager.createResourceOther(data)
     return this.addCard(
       {
         ...position,
         type: 'file',
-        data: {
-          name: 'Untitled',
-          mimetype: data.type,
-          resourceId: resource.id
-        }
+        resourceId: resource.id
       },
       makeActive,
       duplicated
@@ -605,7 +606,7 @@ export class HorizonsManager {
 
     const horizons = await Promise.all(
       storedHorizons.map(async (data) => {
-        let previewImageResource: Resource | undefined
+        let previewImageResource: LegacyResource | undefined
         if (data.previewImage) {
           try {
             previewImageResource = await this.storage.resources.read(data.previewImage)
