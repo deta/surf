@@ -12,15 +12,25 @@ use std::sync::mpsc;
 
 struct Worker {
     db: Database,
-    resource_path: String,
+    resources_path: String,
 }
 
 #[allow(dead_code)]
 impl Worker {
-    fn new(resource_path: String) -> Self {
+    fn new(backend_root_path: String) -> Self {
+        let db_path = Path::new(&backend_root_path)
+            .join("sffs.sqlite")
+            .as_os_str()
+            .to_string_lossy()
+            .to_string();
+        let resources_path = Path::new(&backend_root_path)
+            .join("resources")
+            .as_os_str()
+            .to_string_lossy()
+            .to_string();
         Self {
-            db: Database::new("./database.sqlite").unwrap(),
-            resource_path,
+            db: Database::new(&db_path).unwrap(),
+            resources_path,
         }
     }
 
@@ -45,7 +55,7 @@ impl Worker {
         let ct = current_time();
         let resource = Resource {
             id: resource_id.clone(),
-            resource_path: Path::new(&self.resource_path)
+            resource_path: Path::new(&self.resources_path)
                 .join(resource_id)
                 .as_os_str()
                 .to_string_lossy()
@@ -254,9 +264,9 @@ impl Worker {
 pub fn worker_entry_point(
     rx: mpsc::Receiver<TunnelMessage>,
     mut channel: Channel,
-    resource_path: String,
+    backend_root_path: String,
 ) {
-    let mut worker = Worker::new(resource_path);
+    let mut worker = Worker::new(backend_root_path);
 
     while let Ok(TunnelMessage(message, deferred)) = rx.recv() {
         match message {

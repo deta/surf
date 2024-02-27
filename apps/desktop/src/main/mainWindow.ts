@@ -1,4 +1,4 @@
-import { BrowserWindow, shell, session } from 'electron'
+import { app, BrowserWindow, shell, session } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { is } from '@electron-toolkit/utils'
@@ -31,6 +31,7 @@ export function createWindow() {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
+      additionalArguments: [`--userDataPath=${app.getPath('userData')}`],
       sandbox: false,
       session: session.fromPartition('persist:horizon-session-v0'),
       webviewTag: true
