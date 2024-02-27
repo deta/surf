@@ -35,11 +35,7 @@
         return
       }
 
-      // If the resource is not loaded yet, read the data
-      if (!resource.rawData) {
-        data = await resource.getData()
-        log.debug('Data loaded', data)
-      }
+      data = await resource.getData()
     } catch (e) {
       log.error(e)
     } finally {
