@@ -3,7 +3,7 @@ use super::tunnel::TunnelMessage;
 use crate::store::{db::*, models::*};
 use crate::BackendResult;
 
-use chrono::prelude::*;
+use chrono::{DateTime, Utc};
 
 use neon::{prelude::*, types::Deferred};
 use serde::Serialize;
@@ -25,9 +25,7 @@ impl Worker {
     }
 
     fn parse_datetime(datetime: &str) -> BackendResult<DateTime<chrono::Utc>> {
-        let format = "%Y-%m-%d %H:%M:%S";
-        let ut = chrono::DateTime::parse_from_str(datetime, format)?;
-        return Ok(ut.with_timezone(&Utc));
+        Ok(parse_datetime_from_str(datetime)?)
     }
 
     pub fn print(&mut self, content: String) -> BackendResult<String> {
@@ -43,8 +41,8 @@ impl Worker {
     ) -> BackendResult<CompositeResource> {
         let mut tx = self.db.begin()?;
 
-        let resource_id = uuid::Uuid::new_v4().to_string();
-        let current_time = Utc::now();
+        let resource_id = random_uuid();
+        let ct = current_time();
         let resource = Resource {
             id: resource_id.clone(),
             resource_path: Path::new(&self.resource_path)
@@ -53,8 +51,8 @@ impl Worker {
                 .to_string_lossy()
                 .to_string(),
             resource_type,
-            created_at: current_time.clone(),
-            updated_at: current_time,
+            created_at: ct.clone(),
+            updated_at: ct,
             deleted: 0,
         };
         Database::create_resource_tx(&mut tx, &resource)?;
@@ -132,35 +130,7 @@ impl Worker {
         Ok(self.db.list_cards(horizon_id, limit, offset)?)
     }
 
-    pub fn create_card(
-        &mut self,
-        horizon_id: &str,
-        card_type: &str,
-        resource_id: &str,
-        position_x: i64,
-        position_y: i64,
-        width: i32,
-        height: i32,
-        stacking_order: chrono::DateTime<chrono::Utc>,
-        data: Vec<u8>,
-    ) -> BackendResult<Card> {
-        let card_id = uuid::Uuid::new_v4().to_string();
-        let current_time = Utc::now();
-        let mut card = Card {
-            id: card_id,
-            horizon_id: horizon_id.to_owned(),
-            card_type: card_type.to_owned(),
-            resource_id: resource_id.to_owned(),
-            position_id: 0, // the database will auto update this
-            position_x,
-            position_y,
-            width,
-            height,
-            stacking_order: stacking_order.to_owned(),
-            data,
-            created_at: current_time.clone(),
-            updated_at: current_time,
-        };
+    pub fn create_card(&mut self, mut card: Card) -> BackendResult<Card> {
         let mut tx = self.db.begin()?;
         Database::create_card_tx(&mut tx, &mut card)?;
         tx.commit()?;
@@ -169,6 +139,13 @@ impl Worker {
 
     pub fn get_card(&mut self, card_id: &str) -> BackendResult<Option<Card>> {
         Ok(self.db.get_card(card_id)?)
+    }
+
+    pub fn update_card_data(&mut self, card_id: &str, data: Vec<u8>) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::update_card_data_tx(&mut tx, card_id, data)?;
+        tx.commit()?;
+        Ok(())
     }
 
     pub fn update_card_dimensions(
@@ -317,10 +294,19 @@ pub fn worker_entry_point(
             WorkerMessage::GetCard(card_id) => {
                 send_worker_response(&mut channel, deferred, worker.get_card(&card_id))
             }
+            WorkerMessage::CreateCard(card) => {
+                let result = worker.create_card(card);
+                send_worker_response(&mut channel, deferred, result)
+            }
             WorkerMessage::UpdateCardResourceID(card_id, resource_id) => send_worker_response(
                 &mut channel,
                 deferred,
                 worker.update_card_resource_id(&card_id, &resource_id),
+            ),
+            WorkerMessage::UpdateCardData(card_id, data) => send_worker_response(
+                &mut channel,
+                deferred,
+                worker.update_card_data(&card_id, data),
             ),
             WorkerMessage::UpdateCardDimensions(card_id, position_x, position_y, width, height) => {
                 send_worker_response(

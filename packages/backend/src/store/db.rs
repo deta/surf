@@ -466,6 +466,18 @@ impl Database {
         Ok(())
     }
 
+    pub fn update_card_data_tx(
+        tx: &mut rusqlite::Transaction,
+        card_id: &str,
+        data: Vec<u8>,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "UPDATE cards SET data = ?2, updated_at = datetime('now') WHERE id = ?1",
+            rusqlite::params![card_id, data],
+        )?;
+        Ok(())
+    }
+
     pub fn update_card_resource_id_tx(
         tx: &mut rusqlite::Transaction,
         card_id: &str,
