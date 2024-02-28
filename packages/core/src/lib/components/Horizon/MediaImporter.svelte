@@ -134,10 +134,16 @@
     log.debug('handleResource', resourceId)
 
     const resource = await horizon.getResource(resourceId)
-    if (resource.data.type.startsWith('image')) {
-      createImageCard(resource.data, pos)
+    if (!resource) {
+      log.error('Resource not found', resourceId)
+      return
+    }
+
+    if (resource.type.startsWith('image')) {
+      const blob = await resource.getData()
+      createImageCard(blob, pos)
     } else {
-      log.warn('unhandled resource type', resource.data.type)
+      log.warn('unhandled resource type', resource.type)
     }
   }
 

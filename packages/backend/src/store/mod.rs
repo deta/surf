@@ -37,7 +37,7 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     // cx.export_function("js__store_update_resource", js_update_resource)?;
     cx.export_function("js__store_delete_resource", js_delete_resource)?;
     cx.export_function("js__store_recover_resource", js_recover_resource)?;
-    cx.export_function("js__store_search_resource", js_search_resources)?;
+    cx.export_function("js__store_search_resources", js_search_resources)?;
     Ok(())
 }
 
