@@ -213,6 +213,13 @@
   const chunkOffset = writable({ x: 0, y: 0 })
   onDestroy(
     viewOffset.subscribe((_offset) => {
+      // Try to safeguard against NaN which would break the Board fully.
+      // This can occur through calculations which set the viewOffset to NaN unintentionally.
+      // e.g. 0/0 = NaN ; doing math with objects can result in undefined -> e.g. 1+undefined=NaN
+      if (isNaN(_offset.x) || isNaN(_offset.y)) {
+        $viewOffset = { x: 0, y: 0 }
+      }
+
       const chunkX = Math.floor(_offset.x / CHUNK_WIDTH)
       const chunkY = Math.floor(_offset.y / CHUNK_HEIGHT)
       if ($chunkOffset.x !== chunkX) {
