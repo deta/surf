@@ -214,7 +214,7 @@ export class ResourceHandle {
   async flush(): Promise<void> {
     await this.fd.sync()
     if (this.writeHappened) {
-      await sffs.js__store_resource_post_process(this.resourceId)
+      await (sffs as any).js__store_resource_post_process(this.resourceId)
     }
     this.writeHappened = false
   }
@@ -222,7 +222,7 @@ export class ResourceHandle {
   async close(): Promise<void> {
     await this.fd.close()
     if (this.writeHappened) {
-      await sffs.js__store_resource_post_process(this.resourceId)
+      await (sffs as any).js__store_resource_post_process(this.resourceId)
     }
     this.writeHappened = false
   }
