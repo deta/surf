@@ -19,6 +19,7 @@
   import defaultFavicon from '../../../../../public/assets/deta.svg'
 
   import AddressToolbar from './modules/toolbar/AddressToolbar.svelte'
+  import BrowserHomescreen from './modules/homescreen/BrowserHomescreen.svelte'
   import { Icon } from '@horizon/icons'
 
   import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
@@ -242,6 +243,9 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="browser-card">
+  {#if $url == ''}
+    <BrowserHomescreen {webview} {horizon} />
+  {/if}
   {#if !$didFinishLoad}
     <img class="browser-background" src={browserBackground} alt={$title} />
   {/if}
@@ -401,6 +405,7 @@
     display: flex;
     flex-direction: column;
     container-type: size;
+    container-name: browsercard;
     overflow: visible;
     will-change: auto;
   }

@@ -29,6 +29,8 @@
     "@sveltejs/vite-plugin-svelte": "^3.0.1",
     "@tsconfig/svelte": "^5.0.2",
     "date-fns": "^3.2.0",
+    "embla-carousel-svelte": "^8.0.0",
+    "embla-carousel-wheel-gestures": "^8.0.0-rc05",
     "is-ip": "^5.0.1",
     "lethargy-ts": "^0.0.5",
     "sass": "^1.70.0",
