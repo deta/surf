@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+use std::string::ToString;
 
 pub fn current_time() -> chrono::DateTime<chrono::Utc> {
     chrono::Utc::now()
@@ -14,6 +16,37 @@ pub fn parse_datetime_from_str(
     let format = "%Y-%m-%d %H:%M:%S";
     let ut = chrono::DateTime::parse_from_str(datetime, format)?;
     return Ok(ut.with_timezone(&chrono::Utc));
+}
+
+pub enum InternalResourceTagNames {
+    Deleted,
+}
+
+impl InternalResourceTagNames {
+    pub fn as_str(&self) -> &str {
+        match self {
+            InternalResourceTagNames::Deleted => "deleted",
+        }
+    }
+}
+
+impl FromStr for InternalResourceTagNames {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "deleted" => Ok(InternalResourceTagNames::Deleted),
+            _ => Err(()),
+        }
+    }
+}
+
+impl ToString for InternalResourceTagNames {
+    fn to_string(&self) -> String {
+        match self {
+            InternalResourceTagNames::Deleted => "deleted".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -100,6 +133,17 @@ pub struct ResourceTag {
     pub resource_id: String,
     pub tag_name: String,
     pub tag_value: String,
+}
+
+impl ResourceTag {
+    pub fn new_deleted(resource_id: &str, deleted: bool) -> ResourceTag {
+        ResourceTag {
+            id: random_uuid(),
+            resource_id: resource_id.to_string(),
+            tag_name: InternalResourceTagNames::Deleted.to_string(),
+            tag_value: deleted.to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

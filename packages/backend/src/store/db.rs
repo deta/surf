@@ -147,6 +147,18 @@ impl Database {
         Ok(())
     }
 
+    pub fn update_resource_deleted_tx(
+        tx: &mut rusqlite::Transaction,
+        resource_id: &str,
+        deleted: i32,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "UPDATE resources SET deleted = ?2 WHERE id = ?1",
+            rusqlite::params![resource_id, deleted],
+        )?;
+        Ok(())
+    }
+
     pub fn get_resource(&self, id: &str) -> BackendResult<Option<Resource>> {
         let mut stmt = self.conn.prepare("SELECT id, resource_path, resource_type, created_at, updated_at, deleted FROM resources WHERE id = ?1")?;
         Ok(stmt
@@ -256,6 +268,21 @@ impl Database {
         tx.execute(
             "INSERT INTO resource_tags (id, resource_id, tag_name, tag_value) VALUES (?1, ?2, ?3, ?4)",
             rusqlite::params![resource_tag.id, resource_tag.resource_id, resource_tag.tag_name, resource_tag.tag_value]
+        )?;
+        Ok(())
+    }
+
+    pub fn update_resource_tag_by_name_tx(
+        tx: &mut rusqlite::Transaction,
+        resource_tag: &ResourceTag,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "UPDATE resource_tags SET tag_value = ?3 WHERE resource_id = ?1 AND tag_name = ?2",
+            rusqlite::params![
+                resource_tag.resource_id,
+                resource_tag.tag_name,
+                resource_tag.tag_value
+            ],
         )?;
         Ok(())
     }

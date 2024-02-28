@@ -1,7 +1,8 @@
 use super::message::WorkerMessage;
 use super::tunnel::TunnelMessage;
 use crate::store::{db::*, models::*};
-use crate::BackendResult;
+use crate::{BackendError, BackendResult};
+use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
 
@@ -68,7 +69,7 @@ impl Worker {
         Database::create_resource_tx(&mut tx, &resource)?;
 
         if let Some(metadata) = &mut metadata {
-            metadata.id = uuid::Uuid::new_v4().to_string();
+            metadata.id = random_uuid();
             metadata.resource_id = resource.id.clone();
 
             Database::create_resource_metadata_tx(&mut tx, &metadata)?;
@@ -76,13 +77,27 @@ impl Worker {
 
         if let Some(tags) = &mut tags {
             for tag in tags {
-                tag.id = uuid::Uuid::new_v4().to_string();
+                let tag_name = InternalResourceTagNames::from_str(&tag.tag_name);
+                match tag_name {
+                    Ok(InternalResourceTagNames::Deleted) => {
+                        return Err(BackendError::GenericError(
+                            format!(
+                                "Tag name {} is reserved",
+                                InternalResourceTagNames::Deleted.to_string(),
+                            )
+                            .to_owned(),
+                        ));
+                    }
+                    _ => {}
+                }
+
+                tag.id = random_uuid();
                 tag.resource_id = resource.id.clone();
 
                 Database::create_resource_tag_tx(&mut tx, &tag)?;
             }
         }
-
+        Database::create_resource_tag_tx(&mut tx, &ResourceTag::new_deleted(&resource.id, false))?;
         tx.commit()?;
 
         Ok(CompositeResource {
@@ -245,11 +260,19 @@ impl Worker {
     }
 
     pub fn delete_resource(&mut self, id: String) -> BackendResult<()> {
-        self.db.update_resource_deleted(&id, 1)
+        let mut tx = self.db.begin()?;
+        Database::update_resource_deleted_tx(&mut tx, &id, 1)?;
+        Database::update_resource_tag_by_name_tx(&mut tx, &ResourceTag::new_deleted(&id, true))?;
+        tx.commit()?;
+        Ok(())
     }
 
     pub fn recover_resource(&mut self, id: String) -> BackendResult<()> {
-        self.db.update_resource_deleted(&id, 0)
+        let mut tx = self.db.begin()?;
+        Database::update_resource_deleted_tx(&mut tx, &id, 1)?;
+        Database::update_resource_tag_by_name_tx(&mut tx, &ResourceTag::new_deleted(&id, false))?;
+        tx.commit()?;
+        Ok(())
     }
 
     pub fn search_resources(
