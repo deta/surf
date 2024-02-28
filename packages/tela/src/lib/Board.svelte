@@ -776,14 +776,18 @@
     if (!resizeObserver) {
       resizeObserver = new ResizeObserver(() => {
         // Set viewport
-        const { x, y, width, height } = containerEl.getBoundingClientRect()
-        viewPort.update((v) => {
-          v.x = v.x
-          v.y = v.y // HACK: this is needed so the viewport matches the visual board position in the new horizon switcher
-          v.w = width
-          v.h = height
-          return v
-        })
+        function _update() {
+          const { x, y, width, height } = containerEl.getBoundingClientRect()
+          viewPort.update((v) => {
+            v.x = v.x
+            v.y = v.y // HACK: this is needed so the viewport matches the visual board position in the new horizon switcher
+            v.w = width
+            v.h = height
+            return v
+          })
+        }
+        _update()
+        setTimeout(_update, 400)
       })
       resizeObserver.observe(containerEl)
     }
@@ -927,6 +931,7 @@
 
       debounce('end_scroll_pan', 100, () => {
         mode.idle()
+        dispatch('panEnd', {})
       })
     }
   }
@@ -940,11 +945,8 @@
       mode.idle()
     }
 
-    if ($mode === 'dragging') {
-      if (e.shiftKey) {
-        allowQuickSnap.set(true)
-        showQuickSnapGuides = true
-      }
+    if (e.shiftKey) {
+      allowQuickSnap.set(true)
     }
   }
   function onKeyUp(e: KeyboardEvent) {
@@ -960,7 +962,9 @@
    * Use capture, to ensure select also works on top of draggable stuff.
    */
   function onMouseDown_idleCapture(e: MouseEvent | TouchEvent) {
-    if (!e.shiftKey) return
+    // TODO(@maxu): this is tmp only
+    return
+    if (!e.shiftKey || !$settings.CAN_SELECT) return
     const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     const { x: absX, y: absY } = posToAbsolute(
       (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX,
@@ -984,6 +988,7 @@
     mode.select()
   }
   function onMouseDown_idle(e: MouseEvent | TouchEvent) {
+    if (!$settings.CAN_DRAW) return
     const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     if (
       hasClassOrParentWithClass(e.target as HTMLElement, 'positionable') ||
@@ -1146,6 +1151,10 @@
       $zoom
     )
 
+    if ($allowQuickSnap) {
+      showQuickSnapGuides = true
+    }
+
     moveToStackingTop(stackingOrder, get(positionable)[POSITIONABLE_KEY])
 
     positionable.update((p) => {
@@ -1282,6 +1291,10 @@
 
     dragState.offset.y = absY - dragState.init.y
     dragState.curr.y = absY
+
+    if ($allowQuickSnap) {
+      showQuickSnapGuides = true
+    }
 
     // Handle classes
     if (clientY < $settings.QUICK_SNAP_THRESHOLD && $allowQuickSnap) {
@@ -1964,6 +1977,9 @@
             <span>Viewport:</span><span
               >{$viewPort.x}, {$viewPort.y}, {$viewPort.w}, {$viewPort.h}</span
             >
+          </li>
+          <li>
+            <span>Offset:</span><span>{$viewOffset.x}, {$viewOffset.y}</span>
           </li>
           <li><span>Current Stretch:</span><span>{Math.floor($viewOffset.x / 1920) + 1}</span></li>
           <!-- NOTE: Major perf hit due to conditional slot. -->

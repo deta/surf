@@ -416,7 +416,7 @@ export class Horizon {
     )
   }
 
-  async scrollToCardCenter(idOrCard: Card | string) {
+  async scrollToCardCenter(idOrCard: Card | string, allowOverride = false) {
     const board = this.board
     if (!board) {
       this.log.warn('scrollToCardCenter called with missing board')
@@ -433,7 +433,9 @@ export class Horizon {
     const viewportWidth = get(state.viewPort).w
 
     // Calculate the horizontal center of the card
-    const cardCenter = card.x + card.width / 2
+    const cardCenter = allowOverride
+      ? (card.xOverride || card.x) + (card.widthOverride || card.width) / 2
+      : card.x + card.width / 2
 
     // Calculate the new offsetX to center the card in the viewport
     // The idea is to subtract half of the viewport width from the card's center position
@@ -443,13 +445,16 @@ export class Horizon {
     const clampedOffsetX = clamp(newOffsetX, 0, settings?.BOUNDS?.maxX ?? 1000)
 
     // Update the viewOffset to center the card
-    state.viewOffset.update(
-      (viewOffset) => ({
-        x: clampedOffsetX,
-        y: viewOffset.y
-      }),
-      { duration: 640, easing: expoOut }
-    )
+    function _update() {
+      state.viewOffset.update(
+        (viewOffset) => ({
+          x: clampedOffsetX,
+          y: viewOffset.y
+        }),
+        { duration: 640, easing: expoOut }
+      )
+    }
+    requestAnimationFrame(_update)
   }
 }
 

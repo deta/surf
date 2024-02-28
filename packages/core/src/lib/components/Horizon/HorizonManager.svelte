@@ -1,3 +1,8 @@
+<script context="module" lang="ts">
+  export const visorEnabled = writable(false)
+  export const visorPinch = writable(0)
+</script>
+
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte'
   import { get, writable } from 'svelte/store'
@@ -26,6 +31,7 @@
   import { isModKeyPressed } from '../../utils/keyboard'
   import { requestNewPreviewImage } from '../../utils/screenshot'
   import { createCheatSheetCard } from '../../utils/demoHorizon'
+  import { expoOut } from 'svelte/easing'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -316,6 +322,8 @@
       //   moveToNextHorizon()
     } else if (event.key === '9') {
       showFlickSettings = !showFlickSettings
+    } else if (event.key === 'f' && !$showStackOverview) {
+      $visorEnabled = !$visorEnabled
     }
   }
 
@@ -343,6 +351,56 @@
     createSortingTimeout()
   }
 
+  /* VISOR */
+  let visorSearchEl: HTMLElement
+  let visorSearchVal = writable('')
+
+  const VISOR_PINCH_WEIGHT = 0.65
+
+  $: if ($visorEnabled) {
+    handleVisorOpen()
+  } else {
+    handleVisorClose()
+  }
+
+  $: if (!$visorEnabled && $visorPinch > 40) $visorEnabled = true
+  $: if ($visorEnabled && $visorPinch < -30) $visorEnabled = false
+
+  const handleVisorOpen = () => {
+    tick().then(() => visorSearchEl?.focus())
+  }
+  const handleVisorClose = () => {
+    visorEnabled.set(false)
+    tick().then(() => ($visorSearchVal = ''))
+  }
+
+  function InvLerp(a, b, v) {
+    return (v - a) / (b - a)
+  }
+
+  function exponentialDecay(x: number, initialValue: number, decayRate: number) {
+    return initialValue * Math.exp(-decayRate * x)
+  }
+
+  let lastTime = performance.now()
+  // TODO: Fix & unify this crappy code
+  let pinchFrameId: number | null = null
+  function frame() {
+    if (Math.abs($visorPinch) > 0.01) requestAnimationFrame(frame)
+    else {
+      $visorPinch = 0
+      pinchFrameId = null
+    }
+    const dt = performance.now() - lastTime
+    // const dtx = mapRange(dt, 0, 16.6, 0, 1);
+    lastTime = performance.now()
+    visorPinch.update((v) => {
+      return exponentialDecay(0.43, v, 0.45)
+    })
+  }
+  $: if (Math.abs($visorPinch) > 0.01 && pinchFrameId === null)
+    pinchFrameId = requestAnimationFrame(frame)
+
   /* NEW GESTURE STUFF */
 
   // TODO: Remove, only for letting people adjust settings
@@ -357,45 +415,46 @@
     damping: 0.97
   })
 
-  let flickSpring = advancedSpring<number>(0, {
+  let flickSpring = spring<number>(0, {
     // stiffness: 0.25,
     // damping: 0.9,
     // stiffness: 0.65, // <- Juicy
     // damping: 0.7, // <- Juicy
     stiffness: 0.93, // <- Hefty
-    damping: 1, // <- Hefty
-    min: -400,
-    max: 400
+    damping: 1 // <- Hefty
+    // min: -400,
+    // max: 400
   })
-  $: ({ inertia: flickInertia } = flickSpring)
+  // $: ({ inertia: flickInertia } = flickSpring)
 
-  let stillScrolling = false
+  // let stillScrolling = false
 
-  let canSwitchAgain = true
-  let canSwitchTimer: any = null
+  // let canSwitchAgain = true
+  // let canSwitchTimer: any = null
 
-  $: if (Math.abs($flickSpring) > flickThreshold && !$showStackOverview && canSwitchAgain) {
-    let cancel = false
-    if (Math.sign($flickSpring) > 0) {
-      moveToNextHorizon()
-    } else {
-      moveToPreviousHorizon()
-      if ($activeStackItemIdx === 0) cancel = true
-    }
+  // $: if (Math.abs($flickSpring) > flickThreshold && !$showStackOverview && canSwitchAgain) {
+  //   let cancel = false
+  //   if (Math.sign($flickSpring) > 0) {
+  //     moveToNextHorizon()
+  //   } else {
+  //     moveToPreviousHorizon()
+  //     if ($activeStackItemIdx === 0) cancel = true
+  //   }
 
-    if (!cancel) {
-      flickSpring.set(-$flickSpring)
-      //flickSpring.set(0);
-      canSwitchTimer && clearTimeout(canSwitchTimer)
-      canSwitchTimer = setTimeout(() => {
-        canSwitchAgain = true
-      }, 800)
-      canSwitchAgain = false
-    }
-  }
+  //   if (!cancel) {
+  //     flickSpring.set(-$flickSpring)
+  //     //flickSpring.set(0);
+  //     canSwitchTimer && clearTimeout(canSwitchTimer)
+  //     canSwitchTimer = setTimeout(() => {
+  //       canSwitchAgain = true
+  //     }, 800)
+  //     canSwitchAgain = false
+  //   }
+  // }
 
   const handleGestureEnd = (g: Gesture) => {
     log.debug('gesture end', g)
+    return
 
     if (g.shiftKey) {
       log.debug('ignoring gesture as shift is pressed')
@@ -411,8 +470,29 @@
     }
   }
 
+  $: if ($showStackOverview) $visorEnabled = false
+
   let wheelResetTimer: any = null
   function handleWheel(e: WheelEvent) {
+    if (e.ctrlKey) {
+      const fac = 1 - InvLerp(0, 100, $visorPinch)
+      $visorPinch += e.deltaY * VISOR_PINCH_WEIGHT * fac
+    }
+    if ($visorEnabled) {
+      const state = $activeHorizon?.board?.state
+      const offset = state && get(state).viewOffset
+      // $activeHorizon?.board?.panTo(get(offset!).x + e.deltaX, get(offset!).y, { hard: true })
+      // offset!.update(
+      //   (viewOffset) => {
+      //     let newX = viewOffset.x + e.deltaX
+      //     return {
+      //       x: newX,
+      //       y: viewOffset.y
+      //     }
+      //   },
+      //   { duration: 350, easing: expoOut }
+      // )
+    }
     if ($showStackOverview) {
       const isIntentional = lethargy.check(e)
 
@@ -442,44 +522,41 @@
         return v
       })
     } else {
-      const isIntentional = lethargy.check(e)
-
-      if (isIntentional) {
-        if (!stillScrolling) stillScrolling = true
-        if (!isAnimating) requestAnimationFrame(frame)
-
-        // DISABLE FLICKING FOR USER-TESTING BUILD
-        // flickSpring.update((v: number) => {
-        //   const eased = 1 - ((v+e.deltaY*1) / (1 * flickWeight))^2; // .../1.3)^2
-        //   v = -eased;
-        //   //v += e.deltaY;
-        //   return v;
-        // });
-
-        wheelResetTimer && clearTimeout(wheelResetTimer)
-        wheelResetTimer = setTimeout(() => {
-          stillScrolling = false
-        }, 80)
-      }
+      // const isIntentional = lethargy.check(e)
+      // if (isIntentional) {
+      //   if (!stillScrolling) stillScrolling = true
+      //   if (!isAnimating) requestAnimationFrame(frame)
+      //   // DISABLE FLICKING FOR USER-TESTING BUILD
+      //   // flickSpring.update((v: number) => {
+      //   //   const eased = 1 - ((v+e.deltaY*1) / (1 * flickWeight))^2; // .../1.3)^2
+      //   //   v = -eased;
+      //   //   //v += e.deltaY;
+      //   //   return v;
+      //   // });
+      //   wheelResetTimer && clearTimeout(wheelResetTimer)
+      //   wheelResetTimer = setTimeout(() => {
+      //     stillScrolling = false
+      //   }, 80)
+      // }
     }
   }
 
-  let isAnimating = false
-  function frame() {
-    requestAnimationFrame(frame)
-    isAnimating = true
-    flickSpring.update((v: number) => {
-      //if (stillScrolling) return v;// * 0.97;
-      v *= flickSpringReturn
-      if (Math.abs(v) < 0.01) {
-        v = 0
-        isAnimating = false
-      }
-      return v
-    })
-  }
-  // TODO: (Performance) We shuld only kick it off once the spring is changed probably and stop it after it settled!
-  onMount(frame)
+  // let isAnimating = false
+  // function frame() {
+  //   requestAnimationFrame(frame)
+  //   isAnimating = true
+  //   flickSpring.update((v: number) => {
+  //     //if (stillScrolling) return v;// * 0.97;
+  //     v *= flickSpringReturn
+  //     if (Math.abs(v) < 0.01) {
+  //       v = 0
+  //       isAnimating = false
+  //     }
+  //     return v
+  //   })
+  // }
+  // // TODO: (Performance) We shuld only kick it off once the spring is changed probably and stop it after it settled!
+  // onMount(frame)
 
   let unregisterTwoFingers: ReturnType<typeof twoFingers> | null = null
   onMount(async () => {
@@ -573,50 +650,23 @@
   >
 </svelte:head>
 
+{#if $visorEnabled}
+  <div id="visor">
+    <form>
+      <input
+        type="text"
+        placeholder="Search for anything"
+        bind:value={$visorSearchVal}
+        bind:this={visorSearchEl}
+      />
+    </form>
+  </div>
+{/if}
+
+<!-- <span style="background:blue;color:white;position:fixed;z-index:9999;top:0;left:40%"
+  >{Math.floor($visorPinch)}</span
+> -->
 <main class="" class:overview={$showStackOverview}>
-  {#if showFlickSettings}
-    <ul
-      style="position: fixed;width:24%; top:0;right:0;z-index:5000;background:darkblue;font-family:monospace;color:white;padding:0.5rem;display:flex;gap:1rem;"
-    >
-      <li style="display:flex;flex-direction:column;font-weight:600;">
-        <span>activeStackItem:</span>
-        <span>flickSpring:</span>
-        <span>flickInertia:</span>
-        <span>stillscrolling:</span>
-        <hr style="margin-block: 0.25rem;" />
-        <span>Scroll Sensitivity ({lethargy.sensitivity}):</span>
-        <span>Scroll Delay ({lethargy.delay}):</span>
-        <span>Scroll Decay ({lethargy.inertiaDecay}):</span>
-        <br />
-        <span>Flick Weight ({flickWeight}):</span>
-        <span>Flick Visual Weight ({flickVisualWeight}):</span>
-        <span>Flick Threshold ({flickThreshold}):</span>
-        <br />
-        <span>Spring Stiffness ({flickSpring.stiffness}):</span>
-        <span>Spring Damping ({flickSpring.damping}):</span>
-        <span>Spring Return ({flickSpringReturn}):</span>
-      </li>
-      <li style="display:flex;flex-direction:column;">
-        <span>{$activeStackItemIdx}</span>
-        <span>{Math.floor($flickSpring)}</span>
-        <span>{Math.floor(Math.abs($flickInertia))}</span>
-        <span>{stillScrolling}</span>
-        <hr style="margin-block: 0.25rem;" />
-        <input type="range" bind:value={lethargy.sensitivity} min="1" max="100" step="1" />
-        <input type="range" bind:value={lethargy.delay} min="0" max="200" step="1" />
-        <input type="range" bind:value={lethargy.inertiaDecay} min="0" max="200" step="1" />
-        <br />
-        <input type="range" bind:value={flickWeight} min="0.5" max="3" step="0.01" />
-        <input type="range" bind:value={flickVisualWeight} min="0.1" max="5" step="0.01" />
-        <input type="range" bind:value={flickThreshold} min="5" max="1000" step="1" />
-        <br />
-        <input type="range" bind:value={flickSpring.stiffness} min="0" max="1" step="0.01" />
-        <input type="range" bind:value={flickSpring.damping} min="0" max="1" step="0.01" />
-        <input type="range" bind:value={flickSpringReturn} min="0" max="1" step="0.01" />
-      </li>
-      <!-- <span>overviewOffset: {Math.floor($stackOverviewScrollOffset)}</span> -->
-    </ul>
-  {/if}
   <!-- fps {$fps} -->
   <!-- <div style="position: fixed;width:50%; top:0;right:0;z-index:5000;background: white;color:black;padding:0.5rem;display:flex;flex-direction:column;">
       <span>activeStackItem: {$activeStackItemIdx}</span>
@@ -670,6 +720,7 @@
             <Horizon
               {horizon}
               active={$activeHorizonId === horizon.id && !$showStackOverview}
+              visorSearchTerm={visorSearchVal}
               inOverview={$showStackOverview}
               on:change={handleHorizonChange}
               on:cardChange={handleCardChange}
@@ -757,5 +808,32 @@
     border-radius: var(--theme-border-radius);
     border: 1px solid #ddd;
     cursor: pointer;
+  }
+
+  #visor {
+    position: fixed;
+    z-index: 100;
+    top: 0;
+    left: 0;
+    bottom: 80%;
+    right: 0;
+
+    form {
+      margin-top: 4rem;
+
+      display: flex;
+      justify-content: center;
+
+      input {
+        background: none;
+        border: none;
+        font-size: 2rem;
+        text-align: center;
+
+        &:focus {
+          outline: none;
+        }
+      }
+    }
   }
 </style>
