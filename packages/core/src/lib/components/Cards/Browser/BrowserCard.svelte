@@ -179,6 +179,9 @@
   $: faviconURL = webview?.faviconURL
   $: playback = webview?.playback
   $: isMuted = webview?.isMuted
+  $: bookmarked = !!$card.resourceId
+
+  console.log('resourceId', $card.resourceId)
 
   $: if (!editing && $url !== 'about:blank') {
     value = $url ?? ''
@@ -238,6 +241,31 @@
       webview?.reload()
     }
   }
+
+  async function handleBookmark() {
+    if (value === '') return
+
+    console.log('bookmarked', bookmarked, $card.resourceId)
+
+    if (bookmarked) {
+      card.update((card) => {
+        card.resourceId = null
+        return card
+      })
+    } else {
+      // TODO: check if similar resource already exists
+      const resource = await horizon.resourceManager.createResourceBookmark(
+        { url: $url },
+        { name: $title ?? '', sourceURI: $url, alt: '' }
+      )
+      card.update((card) => {
+        card.resourceId = resource.id
+        return card
+      })
+    }
+
+    dispatch('change', get(card))
+  }
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -289,13 +317,13 @@
           →
         </button>
         <button
-          class="nav-button"
+          class="nav-button icon-button"
           on:click={goHome}
           disabled={value === ''}
           in:fly={{ y: 10, duration: 160 }}
           out:fly={{ y: 10, duration: 160 }}
         >
-          ⌂
+          <Icon name="home" size="15px" />
         </button>
       </div>
 
@@ -370,6 +398,21 @@
             {/if}
           </div>
         {/if}
+      </div>
+
+      <div>
+        <button
+          class="nav-button icon-button"
+          on:click={handleBookmark}
+          in:fly={{ y: 10, duration: 160 }}
+          out:fly={{ y: 10, duration: 160 }}
+        >
+          {#if bookmarked}
+            <Icon name="bookmarkFilled" size="15px" />
+          {:else}
+            <Icon name="bookmark" size="15px" />
+          {/if}
+        </button>
       </div>
 
       <div class="favicon-wrapper">
@@ -481,10 +524,17 @@
 
   .arrow-wrapper {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
     padding: 0 1.5rem 0 0.5rem;
     min-width: 5rem;
     user-select: none;
+  }
+
+  .icon-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .mute-wrapper {

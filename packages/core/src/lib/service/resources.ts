@@ -228,12 +228,20 @@ export class ResourceManager {
   async createResource(
     type: string,
     data: Blob,
-    metadata?: SFFSResourceMetadata,
+    metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {
     this.log.debug('creating resource', type, data, metadata, tags)
+    const parsedMetadata = Object.assign(
+      {
+        name: '',
+        alt: '',
+        sourceURI: ''
+      },
+      metadata
+    )
 
-    const sffsItem = await this.sffs.createResource(type, metadata, tags)
+    const sffsItem = await this.sffs.createResource(type, parsedMetadata, tags)
 
     const resource = this.createResourceObject(sffsItem)
 
@@ -315,20 +323,12 @@ export class ResourceManager {
     tags?: SFFSResourceTag[]
   ) {
     const blob = new Blob([content], { type: ResourceTypes.NOTE })
-    const parsedMetadata = Object.assign(
-      {
-        name: '',
-        alt: '',
-        sourceURI: ''
-      },
-      metadata
-    )
-    return this.createResource(ResourceTypes.NOTE, blob, parsedMetadata, tags)
+    return this.createResource(ResourceTypes.NOTE, blob, metadata, tags)
   }
 
   async createResourceBookmark(
     data: Partial<SFFSResourceDataBookmark>,
-    metadata?: SFFSResourceMetadata,
+    metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {
     const blobData = JSON.stringify(data)
@@ -336,7 +336,11 @@ export class ResourceManager {
     return this.createResource(ResourceTypes.LINK, blob, metadata, tags)
   }
 
-  async createResourceOther(blob: Blob, metadata?: SFFSResourceMetadata, tags?: SFFSResourceTag[]) {
+  async createResourceOther(
+    blob: Blob,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
     return this.createResource(blob.type, blob, metadata, tags)
   }
 }

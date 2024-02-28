@@ -17,11 +17,12 @@
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { useLogScope } from '../../utils/log'
   import { MEDIA_TYPES, processDrop } from '../../service/mediaImporter'
-  import type {
-    Resource,
-    ResourceBookmark,
-    ResourceManager,
-    ResourceNote
+  import {
+    ResourceTag,
+    type Resource,
+    type ResourceBookmark,
+    type ResourceManager,
+    type ResourceNote
   } from '../../service/resources'
   import { onMount } from 'svelte'
   import type { SFFSResourceTag } from '../../types'
@@ -32,6 +33,7 @@
   export let resourceManager: ResourceManager
 
   const cards = horizon.cards
+  const resourcesInMemory = resourceManager.resources
 
   const log = useLogScope('DrawerWrapper')
 
@@ -51,7 +53,12 @@
   const runSearch = async (query: string, tab: string | null) => {
     log.debug('Searching for', query, 'in', tab)
 
-    const tags = [] as SFFSResourceTag[]
+    const tags = [
+      {
+        name: 'deleted',
+        value: 'false'
+      }
+    ] as SFFSResourceTag[]
 
     const result = await resourceManager.searchResources(query, tags)
 
@@ -92,11 +99,19 @@
 
         let resource
         if (item.type === 'text') {
-          resource = await resourceManager.createResourceNote(item.data)
+          resource = await resourceManager.createResourceNote(item.data, item.metadata, [
+            ResourceTag.dragLocal()
+          ])
         } else if (item.type === 'url') {
-          resource = await resourceManager.createResourceBookmark({ url: item.data.href })
+          resource = await resourceManager.createResourceBookmark(
+            { url: item.data.href },
+            item.metadata,
+            [ResourceTag.dragLocal()]
+          )
         } else if (item.type === 'file') {
-          resource = await resourceManager.createResourceOther(item.data)
+          resource = await resourceManager.createResourceOther(item.data, item.metadata, [
+            ResourceTag.dragLocal()
+          ])
         }
 
         log.debug('Created resource', resource)
@@ -128,6 +143,11 @@
       runSearch($searchQuery.value, $searchQuery.tab)
     })
 
+    const unsubscribeResources = resourcesInMemory.subscribe((resources) => {
+      log.debug('Resources changed', resources)
+      runSearch($searchQuery.value, $searchQuery.tab)
+    })
+
     runSearch('', null)
 
     return () => {
@@ -137,6 +157,10 @@
 
       if (unsubscribeCards) {
         unsubscribeCards()
+      }
+
+      if (unsubscribeResources) {
+        unsubscribeResources()
       }
     }
   })

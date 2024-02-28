@@ -18,10 +18,12 @@
     try {
       bookmark = await resource.getBookmark()
 
+      console.log('bookmark', bookmark)
+
       const url = new URL(bookmark.url)
 
       const hostname = url.hostname.split('.').slice(-2, -1).join('')
-      title = hostname[0].toUpperCase() + hostname.slice(1)
+      title = resource?.metadata?.name ?? hostname[0].toUpperCase() + hostname.slice(1)
       subtitle = `${url.hostname}${url.pathname}`
     } catch (e) {
       log.error(e)

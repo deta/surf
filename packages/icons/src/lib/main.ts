@@ -28,6 +28,9 @@ import Search from './Icons/Search.svelte'
 import Info from './Icons/Info.svelte'
 import File from './Icons/File.svelte'
 import Docs from './Icons/Docs.svelte'
+import Bookmark from './Icons/Bookmark.svelte'
+import BookmarkFilled from './Icons/BookmarkFilled.svelte'
+import Home from './Icons/Home.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -60,7 +63,10 @@ export const icons = {
   arrowDiagonalMinimize: ArrowDiagonalMinimize,
   info: Info,
   file: File,
-  docs: Docs
+  docs: Docs,
+  bookmark: Bookmark,
+  bookmarkFilled: BookmarkFilled,
+  home: Home
 }
 
 export type Icons = keyof typeof icons
@@ -95,5 +101,8 @@ export {
   Search,
   Info,
   File,
-  Docs
+  Docs,
+  Bookmark,
+  BookmarkFilled,
+  Home
 }
