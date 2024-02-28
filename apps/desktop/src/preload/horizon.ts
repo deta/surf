@@ -127,6 +127,7 @@ export class ResourceHandle {
   private fd: fsp.FileHandle
   private filePath: string
   private resourceId: string
+  private writeHappened = false
 
   private constructor(fd: fsp.FileHandle, filePath: string, resourceId: string) {
     this.fd = fd
@@ -189,6 +190,7 @@ export class ResourceHandle {
       throw new Error('invalid data type, only strings, Buffers, and array buffers are supported')
     }
     await this.fd.write(bufferData)
+    this.writeHappened = true
   }
 
   createWriteStream(
@@ -211,10 +213,18 @@ export class ResourceHandle {
 
   async flush(): Promise<void> {
     await this.fd.sync()
+    if (this.writeHappened) {
+      await sffs.js__store_resource_post_process(this.resourceId)
+    }
+    this.writeHappened = false
   }
 
   async close(): Promise<void> {
     await this.fd.close()
+    if (this.writeHappened) {
+      await sffs.js__store_resource_post_process(this.resourceId)
+    }
+    this.writeHappened = false
   }
 }
 

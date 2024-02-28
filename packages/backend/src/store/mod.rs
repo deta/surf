@@ -40,6 +40,8 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_delete_resource", js_delete_resource)?;
     cx.export_function("js__store_recover_resource", js_recover_resource)?;
     cx.export_function("js__store_search_resources", js_search_resources)?;
+    cx.export_function("js__store_resource_post_process", js_resource_post_process)?;
+
     Ok(())
 }
 
@@ -304,6 +306,16 @@ fn js_remove_userdata(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.send(WorkerMessage::RemoveUserdata(user_id), deferred);
+
+    Ok(promise)
+}
+
+fn js_resource_post_process(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.send(WorkerMessage::PostProcessJob(resource_id), deferred);
 
     Ok(promise)
 }
