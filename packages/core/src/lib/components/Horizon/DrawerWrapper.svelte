@@ -17,7 +17,12 @@
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { useLogScope } from '../../utils/log'
   import { MEDIA_TYPES, processDrop } from '../../service/mediaImporter'
-  import type { ResourceManager } from '../../service/resources'
+  import type {
+    Resource,
+    ResourceBookmark,
+    ResourceManager,
+    ResourceNote
+  } from '../../service/resources'
   import { onMount } from 'svelte'
   import type { SFFSResourceTag } from '../../types'
 
@@ -25,6 +30,8 @@
 
   export let horizon: Horizon
   export let resourceManager: ResourceManager
+
+  const cards = horizon.cards
 
   const log = useLogScope('DrawerWrapper')
 
@@ -39,14 +46,18 @@
 
   const searchQuery = writable<SearchQuery>({ value: '', tab: 'all' })
 
-  const result = derived([searchQuery], ([searchQuery]) => {
-    // TODO: use the right tags
-    const tags = [{ name: 'tab', value: searchQuery.tab }] as SFFSResourceTag[]
+  let resources: (Resource | ResourceBookmark | ResourceNote)[] = []
 
-    const result = resourceManager.searchResources(searchQuery.value, tags)
+  const runSearch = async (query: string, tab: string | null) => {
+    log.debug('Searching for', query, 'in', tab)
 
-    return result
-  })
+    const tags = [] as SFFSResourceTag[]
+
+    const result = await resourceManager.searchResources(query, tags)
+
+    log.debug('Search result', result)
+    resources = result
+  }
 
   const handleSearch = (e: CustomEvent<SearchQuery>) => {
     const query = e.detail
@@ -75,16 +86,19 @@
     const parsed = await processDrop(event)
     log.debug('Parsed', parsed)
 
-    parsed.map((item) => {
+    parsed.map(async (item) => {
       log.debug('processed item', item)
 
+      let resource
       if (item.type === 'text') {
-        resourceManager.createResourceNote(item.data)
+        resource = await resourceManager.createResourceNote(item.data)
       } else if (item.type === 'url') {
-        resourceManager.createResourceBookmark({ url: item.data.href })
+        resource = await resourceManager.createResourceBookmark({ url: item.data.href })
       } else if (item.type === 'file') {
-        resourceManager.createResourceOther(item.data)
+        resource = await resourceManager.createResourceOther(item.data)
       }
+
+      log.debug('Created resource', resource)
     })
   }
 
@@ -100,9 +114,25 @@
     e.dataTransfer.setData(MEDIA_TYPES.RESOURCE, resourceId)
   }
 
-  onMount(async () => {
-    const resources = await resourceManager.readResources()
-    log.debug('Resources', resources)
+  onMount(() => {
+    const unsubscribeQuery = searchQuery.subscribe(({ value, tab }) => {
+      runSearch(value, tab)
+    })
+
+    const unsubscribeCards = cards.subscribe((cards) => {
+      log.debug('Cards changed', cards)
+      runSearch($searchQuery.value, $searchQuery.tab)
+    })
+
+    return () => {
+      if (unsubscribeQuery) {
+        unsubscribeQuery()
+      }
+
+      if (unsubscribeCards) {
+        unsubscribeCards()
+      }
+    }
   })
 </script>
 
@@ -110,7 +140,25 @@
   <DrawerNavigation {tabs} />
   <DrawerSearch />
   <DrawerContentWrapper on:drop={handleDrop}>
-    {#await $result}
+    {#if resources.length === 0}
+      <DrawerContenEmpty />
+    {:else}
+      <DrawerContentMasonry
+        items={resources}
+        idKey="id"
+        animate={false}
+        maxColWidth={650}
+        minColWidth={300}
+        gap={15}
+        let:item={resource}
+      >
+        <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, resource.id)}>
+          <ResourcePreview on:click={handleResourceClick} {resource} />
+        </DrawerContentItem>
+      </DrawerContentMasonry>
+    {/if}
+
+    <!-- {#await $result}
       <p>Loading…</p>
     {:then resources}
       {#if resources.length === 0}
@@ -130,7 +178,7 @@
           </DrawerContentItem>
         </DrawerContentMasonry>
       {/if}
-    {/await}
+    {/await} -->
   </DrawerContentWrapper>
 </DrawerProvider>
 

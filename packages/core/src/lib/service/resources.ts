@@ -55,6 +55,12 @@ export class Resource {
     this.dataUsed = 0
   }
 
+  private async readDataAsBlob() {
+    const buffer = await this.sffs.readDataFile(this.path, this.id)
+
+    return new Blob([buffer], { type: this.type })
+  }
+
   private async readData() {
     this.log.debug('reading resource data from', this.path)
 
@@ -64,7 +70,7 @@ export class Resource {
     }
 
     // store promise to avoid duplicate reads
-    this.readDataPromise = this.sffs.readDataFile(this.path)
+    this.readDataPromise = this.readDataAsBlob()
     this.readDataPromise.then((data) => {
       this.rawData = data
       this.readDataPromise = null
@@ -81,7 +87,7 @@ export class Resource {
       return
     }
 
-    await this.sffs.writeDataFile(this.path, this.rawData)
+    await this.sffs.writeDataFile(this.path, this.id, this.rawData)
   }
 
   updateData(data: Blob, write = true) {
@@ -213,11 +219,11 @@ export class ResourceManager {
 
     const resource = this.createResourceObject(sffsItem)
 
-    this.resources.update((resources) => [...resources, resource])
-
     // store the data in the resource and write it to sffs
     resource.rawData = data
-    resource.writeData()
+    await resource.writeData()
+
+    this.resources.update((resources) => [...resources, resource])
 
     return resource
   }

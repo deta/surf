@@ -1,18 +1,16 @@
-import type { SFFSResourceItem } from './resources.types'
-
-export type SFFSSearchResultEngine = 'metadata' | 'content' | 'proximity'
+export type SFFSSearchResultEngine = 'Metadata' | 'content' | 'proximity'
 
 export interface SFFSSearchResultItem {
-  resource: SFFSResourceItem
-  cardIDs: string[]
+  resource: SFFSRawCompositeResource
+  card_ids: string[]
   engine: SFFSSearchResultEngine
 }
 
 export interface SFFSSearchResult {
   items: SFFSSearchResultItem[]
   total: number
-  limit: number
-  offset: number
+  // limit: number
+  // offset: number
 }
 
 /*

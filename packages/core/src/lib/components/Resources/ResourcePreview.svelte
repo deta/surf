@@ -6,13 +6,12 @@
 
   import TextPreview from '../Cards/Text/TextPreview.svelte'
   import LinkPreview from '../Cards/Link/LinkPreview.svelte'
-  import { getHumanDistanceToNow } from '../../utils/time'
   import type { Resource, ResourceBookmark, ResourceNote } from '../../service/resources'
   import FilePreview from '../Cards/File/FilePreview.svelte'
+  import { ResourceTypes } from '../../types'
+  import DateSinceNow from '../DateSinceNow.svelte'
 
   export let resource: Resource
-
-  $: formattedDate = getHumanDistanceToNow(resource.updatedAt)
 
   const dispatch = createEventDispatcher<{ click: string }>()
 
@@ -27,34 +26,32 @@
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div on:click={handleClick} class="resource-preview">
   <div class="preview">
-    {#if resource.type === 'text'}
+    {#if resource.type === ResourceTypes.NOTE}
       <TextPreview resource={textResource} />
-    {:else if resource.type === 'link'}
+    {:else if resource.type === ResourceTypes.LINK}
       <LinkPreview resource={bookmarkResource} />
-    {:else if resource.type === 'file'}
-      <FilePreview {resource} />
     {:else}
-      <div class="text-base">Unknown</div>
+      <FilePreview {resource} />
+      <!-- {:else}
+      <div class="text-base">Unknown</div> -->
     {/if}
   </div>
 
   <div class="details">
     <div class="type">
-      {#if resource.type === 'text'}
+      {#if resource.type === ResourceTypes.NOTE}
         <Icon name="docs" />
         <div class="">Note</div>
-      {:else if resource.type === 'link'}
+      {:else if resource.type === ResourceTypes.LINK}
         <Icon name="link" />
         <div class="">Bookmark</div>
-      {:else if resource.type === 'file'}
+      {:else}
         <Icon name="file" />
         <div class="">File</div>
-      {:else}
-        <div class="">Unknown</div>
       {/if}
     </div>
 
-    <div class="date">last changed {formattedDate}</div>
+    <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div>
   </div>
 
   <!-- {#if resource.image_url}

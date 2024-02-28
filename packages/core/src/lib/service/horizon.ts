@@ -209,7 +209,7 @@ export class Horizon {
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
     this.cards.update((c) => c.filter((c) => get(c).id !== card.id))
-    await this.storage.deleteCardWithResource(card)
+    await this.storage.cards.delete(card.id)
 
     this.log.debug(`Deleted card ${card.id}`)
     this.signalChange(this)
@@ -496,7 +496,6 @@ export class HorizonsManager {
     // that stores application state
     this.activeHorizonStorage = new LocalStorage<string>('active_horizon')
 
-    // @ts-ignore
     window.api.getAdblockerState('persist:horizon').then((state) => {
       this.adblockerState.set(state)
     })

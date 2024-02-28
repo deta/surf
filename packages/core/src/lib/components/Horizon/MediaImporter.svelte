@@ -5,6 +5,7 @@
   import { DEFAULT_CARD_SIZE } from '../../constants/card'
   import { get } from 'svelte/store'
   import { processDrop, processPaste } from '../../service/mediaImporter'
+  import { ResourceTypes } from '../../types'
 
   export let horizon: Horizon
 
@@ -139,12 +140,21 @@
       return
     }
 
-    if (resource.type.startsWith('image')) {
-      const blob = await resource.getData()
-      createImageCard(blob, pos)
-    } else {
-      log.warn('unhandled resource type', resource.type)
+    log.debug('resource', resource)
+
+    const resourceToCardType: Record<string, string> = {
+      [ResourceTypes.NOTE]: 'text',
+      [ResourceTypes.LINK]: 'link'
     }
+
+    horizon.addCard({
+      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+      width: DEFAULT_CARD_SIZE.width,
+      height: DEFAULT_CARD_SIZE.height,
+      type: resourceToCardType[resource.type] ?? 'file',
+      resourceId: resource.id
+    })
   }
 
   const createImageCard = async (blob: Blob, pos: { x: number; y: number }) => {

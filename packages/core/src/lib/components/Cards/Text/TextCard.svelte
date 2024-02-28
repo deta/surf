@@ -19,11 +19,12 @@
 
   const content = writable('')
 
+  let initialLoad = true
   let resource: ResourceNote | null = null
   let focusEditor: () => void
 
   const debouncedSaveContent = useDebounce((value: string) => {
-    log.debug('saving content', $card)
+    log.debug('saving content', value)
     dispatch('change', $card)
 
     if (resource) {
@@ -32,6 +33,8 @@
   }, 500)
 
   const unsubscribeContent = content.subscribe((value) => {
+    log.debug('content changed', value)
+    if (initialLoad) return
     debouncedSaveContent(value)
   })
 
@@ -58,11 +61,14 @@
     }
 
     const value = await resource.getContent()
-    content.set(value)
+    log.debug('got content', value)
 
-    if (active) {
-      focusEditor()
-    }
+    content.set(value)
+    initialLoad = false
+
+    // if (active) {
+    //   focusEditor()
+    // }
   })
 
   onDestroy(() => {
@@ -78,7 +84,7 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div on:drop={handleDrop} class="text-card">
-  {#if $content}
+  {#if !initialLoad}
     <Editor
       bind:focus={focusEditor}
       bind:content={$content}

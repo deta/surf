@@ -234,24 +234,14 @@ export class HorizonDatabase extends Dexie {
     return cards
   }
 
-  async deleteCardWithResource(card: Card) {
-    if (card && card.resourceId !== null) {
-      // TODO: use resource manager
-      await this.resources.delete(card.resourceId)
-    }
-
-    await this.cards.delete(card.id)
-  }
-
   async deleteCardsByHorizonId(horizonId: string) {
-    const fileCardsResourceIds = (
-      await this.cards.t.where({ horizon_id: horizonId, type: 'file' }).toArray()
-    ).map((card: Card) => card.resourceId || '')
+    // const fileCardsResourceIds = (
+    //   await this.cards.t.where({ horizon_id: horizonId, type: 'file' }).toArray()
+    // ).map((card: Card) => card.resourceId || '')
 
-    // TODO: use resource manager
-    if (fileCardsResourceIds.length > 0) {
-      await this.resources.t.where('id').anyOf(fileCardsResourceIds).delete()
-    }
+    // if (fileCardsResourceIds.length > 0) {
+    //   await this.resources.t.where('id').anyOf(fileCardsResourceIds).delete()
+    // }
 
     await this.cards.t.where({ horizon_id: horizonId }).delete()
   }

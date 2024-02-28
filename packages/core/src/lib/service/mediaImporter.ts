@@ -223,7 +223,7 @@ export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
         const richText = await processRichTextData(data)
         results.push({ data: richText, type: 'text' })
         break
-      case 'space/resource':
+      case MEDIA_TYPES.RESOURCE:
         results.push({ data: data, type: 'resource' })
         break
     }

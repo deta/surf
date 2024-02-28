@@ -4,25 +4,25 @@ import type {
   SFFSResourceTag,
   SFFSResource,
   SFFSRawCompositeResource,
-  SFFSRawResourceTag
+  SFFSRawResourceTag,
+  SFFSSearchResult
 } from '../types'
 
 export class SFFS {
   backend: any
+  fs: any
   log: ScopedLogger
 
-  constructor(basePath = '/sffs/') {
+  constructor() {
     this.log = useLogScope('SFFS')
 
-    // @ts-ignore
     if (typeof window.backend === 'undefined') {
       throw new Error('SFFS backend not available')
     }
 
-    // @ts-ignore
-    this.backend = window.backend.init(basePath)
+    this.backend = window.backend.sffs
+    this.fs = window.backend.resources
 
-    // @ts-ignore
     window.sffs = this // TODO: remove this, just for debugging
 
     if (!this.backend) {
@@ -164,39 +164,34 @@ export class SFFS {
           }) as SFFSRawResourceTag
       )
     )
-    const items = await this.backend.js__store_search_resources(query, tagsData)
-    return items.map(this.convertCompositeResourceToResource)
+    const raw = await this.backend.js__store_search_resources(query, tagsData)
+    const parsed = this.parseData<SFFSSearchResult>(raw)
+    const items = parsed?.items ?? []
+
+    this.log.debug('search results', items)
+    return items.map((item) => this.convertCompositeResourceToResource(item.resource))
   }
 
-  readDataFile(path: string): Promise<Blob> {
+  async readDataFile(path: string, resourceId: string): Promise<Uint8Array> {
     this.log.debug('reading data file', path)
-    // return this.sffs.js__store_read_data_file(path)
 
-    // return a simple mock image as a blob
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas')
-      canvas.width = 128
-      canvas.height = 128
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        // random color
-        ctx.fillStyle = `#${Math.floor(Math.random() * 16777215).toString(16)}`
-        ctx.fillRect(0, 0, 128, 128)
+    await this.fs.openResource(path, resourceId, 'r+')
 
-        // add some text
-        ctx.fillStyle = '#000'
-        ctx.font = '15px sans-serif'
-        ctx.fillText('dummy', 40, 70)
-      }
-      canvas.toBlob((blob) => {
-        resolve(blob as Blob)
-      })
-    })
+    const uInt8 = (await this.fs.readResource(resourceId)) as Promise<Uint8Array>
+
+    await this.fs.closeResource(resourceId)
+
+    return uInt8
   }
 
-  writeDataFile(path: string, data: Blob): Promise<any> {
+  async writeDataFile(path: string, resourceId: string, data: Blob): Promise<void> {
     this.log.debug('writing data file', path, data)
-    // return this.sffs.js__store_write_data_file(path, data)
-    return Promise.resolve()
+
+    await this.fs.openResource(path, resourceId, 'w')
+
+    const buffer = await data.arrayBuffer()
+
+    await this.fs.writeResource(resourceId, buffer)
+    await this.fs.closeResource(resourceId)
   }
 }

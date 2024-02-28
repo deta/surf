@@ -151,7 +151,7 @@ export class ResourceHandle {
     return new ResourceHandle(fd, resolvedFilePath, resourceId)
   }
 
-  async readAll(): Promise<Buffer> {
+  async readAll(): Promise<Uint8Array> {
     const stats = await this.fd.stat()
     const buffer = Buffer.alloc(stats.size)
     await this.fd.read(buffer, 0, stats.size, 0)
