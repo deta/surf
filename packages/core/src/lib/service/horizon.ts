@@ -185,13 +185,15 @@ export class Horizon {
       card.update((c) => ({ ...c, ...updates }))
       return c
     })
+    // TODO: getting the card from the svelte writable was not possible because the store already had the updated card at this point
+    // we need to get the existing card from storage to track the update event
+    // this is a workaround, but we should find a better solution if possible
+    // as for latency, the get from storage is very fast, so it should not be a problem
+    const existingCard = await this.storage.cards.read(id)
     await this.storage.cards.update(id, updates)
     this.log.debug(`Updated card ${id}`)
     this.signalChange(this)
-    await this.telemetry.trackEvent(
-      EventTypes.UpdateCard,
-      this.telemetry.extractEventPropertiesFromCard(updates)
-    )
+    await this.telemetry.trackUpdateCardEvent(existingCard, updates)
   }
 
   async deleteCard(idOrCard: string | Card) {

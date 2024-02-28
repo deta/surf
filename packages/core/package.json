@@ -28,6 +28,7 @@
     "@svelte-plugins/tooltips": "^3.0.0",
     "@sveltejs/vite-plugin-svelte": "^3.0.1",
     "@tsconfig/svelte": "^5.0.2",
+    "@types/lodash": "^4.14.202",
     "date-fns": "^3.2.0",
     "embla-carousel-svelte": "^8.0.0",
     "embla-carousel-wheel-gestures": "^8.0.0-rc05",
@@ -44,6 +45,7 @@
     "@amplitude/analytics-browser": "^2.4.0",
     "dexie": "^3.2.4",
     "fuse.js": "^7.0.0",
+    "lodash": "^4.17.21",
     "uuid": "^9.0.1"
   }
 }
