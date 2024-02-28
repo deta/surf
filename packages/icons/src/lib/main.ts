@@ -3,6 +3,8 @@ import AdblockOn from './Icons/AdblockOn.svelte'
 import Add from './Icons/Add.svelte'
 import Arrow from './Icons/Arrow.svelte'
 import ArrowBackUp from './Icons/ArrowBackUp.svelte'
+import ChevronLeft from './Icons/ChevronLeft.svelte'
+import ChevronRight from './Icons/ChevronRight.svelte'
 import Close from './Icons/Close.svelte'
 import Copy from './Icons/Copy.svelte'
 import Mute from './Icons/Muted.svelte'
@@ -33,6 +35,8 @@ export const icons = {
   add: Add,
   arrow: Arrow,
   arrowbackup: ArrowBackUp,
+  'chevron.left': ChevronLeft,
+  'chevron.right': ChevronRight,
   close: Close,
   copy: Copy,
   mute: Mute,
@@ -67,6 +71,8 @@ export {
   AdblockOff,
   AdblockOn,
   Add,
+  ChevronLeft,
+  ChevronRight,
   Close,
   Copy,
   Mute,

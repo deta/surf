@@ -6,6 +6,14 @@
     height: number
     z?: number
     readonly hoisted?: boolean
+
+    // Used for animations / transitions.
+    xOverride?: number
+    yOverride?: number
+    widthOverride?: number
+    heightOverride?: number
+    scaleOverride?: number
+    zOverride?: number
   } & { [P in KeyName]: string }
 </script>
 
@@ -35,7 +43,8 @@
 
   let dragging = false
 
-  $: transformCss = `left: ${$positionable.x}px; top: ${$positionable.y}px; width: ${$positionable.width}px; height: ${$positionable.height}px; z-index: ${$positionable.z !== undefined ? $positionable.z : $stackingOrder.indexOf($positionable[POSITIONABLE_KEY])}; contain-intrinsic-size: ${$positionable.width}px ${$positionable.height}px; ${contained ? 'contain: strict;' : ''}`
+  $: transformCss = `left: ${$positionable.xOverride || $positionable.x}px; top: ${$positionable.yOverride || $positionable.y}px; width: ${$positionable.widthOverride || $positionable.width}px; height: ${$positionable.heightOverride || $positionable.height}px; ${$positionable.scaleOverride ? `scale: ${$positionable.scaleOverride}%;` : ''} z-index: ${$positionable.zOverride ? $positionable.zOverride : $positionable.z !== undefined ? $positionable.z : $stackingOrder.indexOf($positionable[POSITIONABLE_KEY])}; contain-intrinsic-size: ${$positionable.width}px ${$positionable.height}px; ${contained ? 'contain: strict;' : ''}`
+  // $: transformCss = `--x: ${$positionable.x}px; --y: ${$positionable.y}px; --width: ${$positionable.width}px; --height: ${$positionable.height}px; z-index: ${$positionable.z !== undefined ? $positionable.z : $stackingOrder.indexOf($positionable[POSITIONABLE_KEY])}; contain-intrinsic-size: ${$positionable.width}px ${$positionable.height}px; ${contained ? 'contain: strict;' : ''}`
   // $: transformCss = `left: ${$positionable.x - (Math.floor($positionable.x / CHUNK_WIDTH) * CHUNK_WIDTH)}px; top: ${$positionable.y  - (Math.floor($positionable.y / CHUNK_HEIGHT) * CHUNK_HEIGHT)}px; width: ${$positionable.width}px; height: ${$positionable.height}px; z-index: ${$positionable.key !== undefined ? $positionable.key : 0};`; // ${!visible ? 'display: none;' : ''} ${!visible ? 'content-visibility: hidden;' : ''}
   // $: transformCss = `left: 0; top: 0;transform: translate3d(${$positionable.x}px, ${$positionable.y}px, 0) scale(${$state.zoom}); width: ${$positionable.width}px; height: ${$positionable.height}px; z-index: ${$positionable.key !== undefined ? $positionable.key : 0};`;
 
@@ -60,6 +69,7 @@
 <!-- <svelte:options immutable={true} /> -->
 
 <!-- transition:scale={{ duration: 100, opacity: 0, start: 0.8, easing: cubicInOut }} -->
+<!-- --x: {$positionable.x}px; --y: {$positionable.y}px; --width: {$positionable.width}px; --height: {$positionable.height}px; -->
 <div
   data-key={$positionable[POSITIONABLE_KEY]}
   {...$$restProps}
@@ -85,6 +95,10 @@
     position: absolute;
     top: 0;
     left: 0;
+    /* top: var(--y);
+    left: var(--x);
+    width: var(--width);
+    height: var(--height); */
     /* will-change: left, top, width, height; */
     will-change: transform;
     /* transform: translateZ(0); */

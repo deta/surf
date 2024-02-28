@@ -16,11 +16,11 @@
   const viewOffset = $state.viewOffset
   const zoom = $state.zoom
 
-  $: transformCss = `width: ${$viewport.w / $zoom}px; height: ${
-    $viewport.h / $zoom
+  $: transformCss = `width: ${$viewport.w / $zoom + $viewport.x}px; height: ${
+    $viewport.h / $zoom + $viewport.y * 2
   }px; transform: translate3d(-${dotSize}px, -${dotSize}px, 0) translate3d(${
-    $viewOffset.x - ($viewOffset.x % $settings.GRID_SIZE)
-  }px, ${$viewOffset.y - ($viewOffset.y % $settings.GRID_SIZE) - 10}px, 0);`
+    $viewport.x + $viewOffset.x - ($viewOffset.x % $settings.GRID_SIZE)
+  }px, ${$viewport.y + $viewOffset.y - ($viewOffset.y % $settings.GRID_SIZE)}px, 0);`
 
   // $: svgShiftCss = `transform: translate3d(-${$viewX % GRID_SIZE}px, 0px, 0);`;
 </script>

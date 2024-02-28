@@ -1,3 +1,4 @@
+import isEqual from 'lodash/isequal'
 import type { Card } from '../types/index'
 import { HorizonDatabase } from './storage'
 import * as amplitude from '@amplitude/analytics-browser'
@@ -51,6 +52,10 @@ export class Telemetry {
   setActive(active: boolean) {
     this.active = active
     amplitude.setOptOut(!active)
+  }
+
+  isActive() {
+    return this.apiKey && this.active && this.storage
   }
 
   setTrackHostnames(trackHostnames: boolean) {
@@ -112,12 +117,26 @@ export class Telemetry {
     return eventProperties
   }
 
-  async trackEvent(eventName: string, eventProperties: Record<string, any> | undefined) {
-    if (!this.apiKey || !this.storage || !this.active) {
+  // currently the updatedCard is always sent as the full card, not just the updated fields
+  async trackUpdateCardEvent(existingCard: Card, updatedCard: Partial<Card>) {
+    if (!existingCard.id || !updatedCard.id || !this.isActive()) {
       return
     }
-    // TODO: figure out why this is happening
-    if (eventName === EventTypes.UpdateCard && !eventProperties.id) {
+    // the following fields are not relevant for tracking, so we remove them before comparing as they might cause false negatives
+    delete existingCard.createdAt
+    delete existingCard.updatedAt
+    delete existingCard.hoisted
+    delete updatedCard.hoisted
+    delete updatedCard.createdAt
+    delete updatedCard.updatedAt
+    if (isEqual(existingCard, updatedCard)) {
+      return
+    }
+    await amplitude.track(EventTypes.UpdateCard, this.extractEventPropertiesFromCard(updatedCard))
+  }
+
+  async trackEvent(eventName: string, eventProperties: Record<string, any> | undefined) {
+    if (!this.isActive()) {
       return
     }
     await amplitude.track(eventName, eventProperties)
@@ -125,7 +144,7 @@ export class Telemetry {
 
   // this is a separate function as market needs cards metadata when tracking this event
   async trackActivateHorizonEvent(horizonID: string, cards: Array<Card>) {
-    if (!this.apiKey || !this.storage || !this.active) {
+    if (!this.isActive()) {
       return
     }
     const cardProperties = cards.map((card) => this.extractEventPropertiesFromCard(card))

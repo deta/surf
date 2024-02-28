@@ -37,14 +37,14 @@ jobs:
         uses: actions/checkout@v3
 
       # this is hack to prevent this github action to tag pre-releases from main as non pre-release semver
-      # the `release_branch` input sets the default release branch for the version increment action
-      # if pre_release is true, the following action will always set this release branch to `release`
-      # so that the version increment action will always increment the version as a pre-release even from `main`
+      # the 'release_branch' input sets the default release branch for the version increment action
+      # if pre_release is true, the following action will always set this release branch to 'release'
+      # so that the version increment action will always increment the version as a pre-release even from 'main'
       # TODO: use better self controlled semver action
       - name: Set release branch as env variable
         run: |
           if [ "${{ github.event.inputs.pre_release }}" == "true" ]; then
-            echo "RELEASE_BRANCH=release >> $GITHUB_ENV
+            echo "RELEASE_BRANCH=release" >> $GITHUB_ENV
           else
             echo "RELEASE_BRANCH=main" >> $GITHUB_ENV
           fi

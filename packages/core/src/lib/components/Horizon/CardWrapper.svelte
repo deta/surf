@@ -10,7 +10,8 @@
     Positionable,
     Resizable,
     type IPositionable,
-    LazyComponent
+    LazyComponent,
+    hasClassOrParentWithClass
   } from '@horizon/tela'
 
   import type { Card, CardEvents } from '../../types/index'
@@ -18,6 +19,7 @@
   import type { Horizon } from '../../service/horizon'
   import { Icon } from '@horizon/icons'
   import CardContent from '../Cards/CardContent.svelte'
+  import { visorEnabled } from './HorizonManager.svelte'
 
   export let positionable: Writable<IPositionable<any>>
   export let horizon: Horizon
@@ -53,10 +55,27 @@
 
   const handleMouseDown = (event: MouseEvent) => {
     if (event.metaKey || event.ctrlKey) {
-      horizon.setActiveCard($card.id)
-      horizon.scrollToCardCenter($card.id)
+      if ($visorEnabled) {
+        $visorEnabled = false
+        setTimeout(() => {
+          horizon.setActiveCard($card.id)
+          horizon.scrollToCardCenter($card.id)
+        }, 0)
+      } else {
+        horizon.setActiveCard($card.id)
+        horizon.scrollToCardCenter($card.id)
+      }
     } else {
+      // Dirty "hack" to still allow clicking the delete button
+      if (hasClassOrParentWithClass(event.target, 'visor-delete')) return
+
       horizon.setActiveCard($card.id)
+      if ($visorEnabled) {
+        $visorEnabled = false
+        setTimeout(() => {
+          horizon.scrollToCardCenter($card.id)
+        }, 0)
+      }
     }
   }
 
@@ -67,6 +86,10 @@
     const state = get(board!.state)
     $card.stacking_order = get(state.stackingOrder).indexOf($card.id)
     updateCard()
+    horizon.telaSettings?.update((v) => {
+      v.CAN_SELECT = true
+      return v
+    })
   }
 
   // const handleMouseMove = (_e: MouseEvent) => {
@@ -81,6 +104,10 @@
 
   const handleCardHeaderMouseDown = (_e: MouseEvent) => {
     dispatch('beginDrag', $card)
+    horizon.telaSettings?.update((v) => {
+      v.CAN_SELECT = false
+      return v
+    })
     if (headerClickTimeout) {
       clearTimeout(headerClickTimeout)
       headerClickTimeout = null
@@ -139,6 +166,7 @@
   }
 
   const handleDragEnter = (e: DragEvent) => {
+    if ($visorEnabled) return // TODO: Prob make this easier component wide
     log.debug('drag enter', $card.id)
     clearDragTimeout()
 
@@ -151,6 +179,7 @@
   }
 
   const handleDragOver = (e: DragEvent) => {
+    if ($visorEnabled) return // TODO: Prob make this easier component wide
     log.debug('drag over', $card.id)
 
     if (!dragOverTimeout) {
@@ -159,6 +188,7 @@
   }
 
   const handleDragLeave = (e: DragEvent) => {
+    if ($visorEnabled) return // TODO: Prob make this easier component wide
     const target = e.target as HTMLElement
     log.debug('drag leave', $card.id, target)
 
@@ -196,6 +226,7 @@
 
 <!-- TODO: Obacht! Had the issue on old Horizon app, that ids can start
   with numbers -> Cannot use them in css selctors for example. Maybe add `id-` prefix -->
+<!-- style="{$visorEnabled ? 'scale: 0.5;' : ''}" -->
 <Positionable
   {positionable}
   data-id={$positionable.id}
@@ -207,61 +238,67 @@
   on:dragleave={handleDragLeave}
   bind:el
 >
-  <Resizable {positionable} direction="top-right" {minSize} {maxSize} />
-  <Resizable {positionable} direction="top-left" {minSize} {maxSize} />
-  <Resizable {positionable} direction="bottom-right" {minSize} {maxSize} />
-  <Resizable {positionable} direction="bottom-left" {minSize} {maxSize} />
-  <Resizable {positionable} direction="top" {minSize} {maxSize} />
-  <Resizable {positionable} direction="bottom" {minSize} {maxSize} />
-  <Resizable {positionable} direction="left" {minSize} {maxSize} />
-  <Resizable {positionable} direction="right" {minSize} {maxSize} />
+  {#if !$visorEnabled}
+    <Resizable {positionable} direction="top-right" {minSize} {maxSize} />
+    <Resizable {positionable} direction="top-left" {minSize} {maxSize} />
+    <Resizable {positionable} direction="bottom-right" {minSize} {maxSize} />
+    <Resizable {positionable} direction="bottom-left" {minSize} {maxSize} />
+    <Resizable {positionable} direction="top" {minSize} {maxSize} />
+    <Resizable {positionable} direction="bottom" {minSize} {maxSize} />
+    <Resizable {positionable} direction="left" {minSize} {maxSize} />
+    <Resizable {positionable} direction="right" {minSize} {maxSize} />
 
-  <div class="draggable-bar">
-    <Draggable {positionable} />
-  </div>
+    <div class="draggable-bar">
+      <Draggable {positionable} />
+    </div>
 
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div
-    on:mousedown={handleCardHeaderMouseDown}
-    class="card-header"
-    data-position="top"
-    data-inset={false}
-    data-hide={false}
-  >
-    <Draggable {positionable} class="">
-      <div class="card-header-content">
-        <!-- <div class="card-title">{cardTitle}</div> -->
-        <div class="card-header-actions">
-          <button on:click={handleDelete}>
-            <Icon name="close" />
-          </button>
-          <!-- <button on:click={handleCopy}>
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div
+      on:mousedown={handleCardHeaderMouseDown}
+      class="card-header"
+      data-position="top"
+      data-inset={false}
+      data-hide={false}
+    >
+      <Draggable {positionable} class="">
+        <div class="card-header-content">
+          <!-- <div class="card-title">{cardTitle}</div> -->
+          <div class="card-header-actions">
+            <button on:click={handleDelete}>
+              <Icon name="close" />
+            </button>
+            <!-- <button on:click={handleCopy}>
               <Icon name="copy" />
             </button> -->
-        </div>
+          </div>
 
-        <!-- svelte-ignore a11y-no-static-element-interactions -->
-        <div class="card-drag-indicator">
-          <div></div>
-          <div></div>
-          <div></div>
-        </div>
+          <!-- svelte-ignore a11y-no-static-element-interactions -->
+          <div class="card-drag-indicator">
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
 
-        <div class="card-header-actions end-placement">
-          {#if allowDuplicating}
-            <button
-              use:tooltip={{ content: 'Create similar', action: 'hover' }}
-              on:click={handleDuplicate}
-            >
-              <Icon name="add" />
-            </button>
-          {/if}
+          <div class="card-header-actions end-placement">
+            {#if allowDuplicating}
+              <button
+                use:tooltip={{ content: 'Create similar', action: 'hover' }}
+                on:click={handleDuplicate}
+              >
+                <Icon name="add" />
+              </button>
+            {/if}
+          </div>
         </div>
-      </div>
-    </Draggable>
-  </div>
+      </Draggable>
+    </div>
+  {:else}
+    <button class="visor-delete" on:click|capture={handleDelete}>
+      <Icon name="close" />
+    </button>
+  {/if}
 
-  <div class="content tela-ignore" style={!active ? 'pointer-events: none;' : ''}>
+  <div class="content tela-ignore" style={$visorEnabled || !active ? 'pointer-events: none;' : ''}>
     <CardContent {positionable} {horizon} on:load on:change on:delete />
   </div>
 </Positionable>
@@ -274,6 +311,30 @@
     width: 100%;
     height: 5px;
     z-index: 299;
+  }
+
+  :global(.card) {
+    .visor-delete {
+      pointer-events: all;
+      position: absolute;
+      top: -18px;
+      right: -18px;
+      background: #eee;
+      border: 2px solid #eee;
+      z-index: 10;
+      width: 36px;
+      height: 36px;
+      border-radius: 100%;
+      padding: 4px;
+      display: flex;
+      justify-items: center;
+      align-items: center;
+      cursor: pointer;
+      display: none;
+    }
+    &:hover .visor-delete {
+      display: block;
+    }
   }
 
   .card-header {

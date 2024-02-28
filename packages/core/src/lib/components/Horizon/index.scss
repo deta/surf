@@ -309,7 +309,8 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
     transition: width 260ms cubic-bezier(.34, 1.56, .64, 1),
       height 260ms cubic-bezier(.34, 1.56, .64, 1),
       top 260ms cubic-bezier(.34, 1.56, .64, 1),
-      left 260ms cubic-bezier(.34, 1.56, .64, 1);
+      left 260ms cubic-bezier(.34, 1.56, .64, 1),
+      scale 260ms cubic-bezier(.34, 1.56, .64, 1);
 
     &.no-animation {
       transition: none;

@@ -30,11 +30,11 @@
   export const canGoBack = writable(false)
   export const canGoForward = writable(false)
   export const isLoading = writable(false)
-  export const didFinishLoad = writable(false)
   export const title = writable('')
   export const faviconURL = writable<string[]>([])
   export const playback = writable(false)
   export const isMuted = writable(false)
+  export const didFinishLoad = writable(false)
 
   export const historyStackIds = writable<string[]>([])
   export const currentHistoryIndex = writable(-1)
@@ -183,11 +183,16 @@
       log.debug('did navigate in page', e.url)
       if (e.isMainFrame) {
         url.set(e.url)
-        pendingUrlUpdate = { url: e.url, timestamp: Date.now() }
+
+        // HOTFIX: Resolve later
+        if (!e.url.hostname === 'notion.so') {
+          pendingUrlUpdate = { url: e.url, timestamp: Date.now() }
+        }
       }
     })
 
     webview.addEventListener('did-redirect-navigation', (event) => {
+      log.debug('did redirect navigation')
       if (event.isMainFrame && event.isInPlace) handleRedirectNav(event.url)
     })
     webview.addEventListener('did-start-loading', () => isLoading.set(true))

@@ -195,13 +195,15 @@ export class Horizon {
       card.update((c) => ({ ...c, ...updates }))
       return c
     })
+    // TODO: getting the card from the svelte writable was not possible because the store already had the updated card at this point
+    // we need to get the existing card from storage to track the update event
+    // this is a workaround, but we should find a better solution if possible
+    // as for latency, the get from storage is very fast, so it should not be a problem
+    const existingCard = await this.storage.cards.read(id)
     await this.storage.cards.update(id, updates)
     this.log.debug(`Updated card ${id}`)
     this.signalChange(this)
-    await this.telemetry.trackEvent(
-      EventTypes.UpdateCard,
-      this.telemetry.extractEventPropertiesFromCard(updates)
-    )
+    await this.telemetry.trackUpdateCardEvent(existingCard, updates)
   }
 
   async deleteCard(idOrCard: string | Card) {
@@ -451,7 +453,7 @@ export class Horizon {
     )
   }
 
-  async scrollToCardCenter(idOrCard: Card | string) {
+  async scrollToCardCenter(idOrCard: Card | string, allowOverride = false) {
     const board = this.board
     if (!board) {
       this.log.warn('scrollToCardCenter called with missing board')
@@ -468,7 +470,9 @@ export class Horizon {
     const viewportWidth = get(state.viewPort).w
 
     // Calculate the horizontal center of the card
-    const cardCenter = card.x + card.width / 2
+    const cardCenter = allowOverride
+      ? (card.xOverride || card.x) + (card.widthOverride || card.width) / 2
+      : card.x + card.width / 2
 
     // Calculate the new offsetX to center the card in the viewport
     // The idea is to subtract half of the viewport width from the card's center position
@@ -478,13 +482,16 @@ export class Horizon {
     const clampedOffsetX = clamp(newOffsetX, 0, settings?.BOUNDS?.maxX ?? 1000)
 
     // Update the viewOffset to center the card
-    state.viewOffset.update(
-      (viewOffset) => ({
-        x: clampedOffsetX,
-        y: viewOffset.y
-      }),
-      { duration: 640, easing: expoOut }
-    )
+    function _update() {
+      state.viewOffset.update(
+        (viewOffset) => ({
+          x: clampedOffsetX,
+          y: viewOffset.y
+        }),
+        { duration: 640, easing: expoOut }
+      )
+    }
+    requestAnimationFrame(_update)
   }
 }
 

@@ -213,6 +213,13 @@
   const chunkOffset = writable({ x: 0, y: 0 })
   onDestroy(
     viewOffset.subscribe((_offset) => {
+      // Try to safeguard against NaN which would break the Board fully.
+      // This can occur through calculations which set the viewOffset to NaN unintentionally.
+      // e.g. 0/0 = NaN ; doing math with objects can result in undefined -> e.g. 1+undefined=NaN
+      if (isNaN(_offset.x) || isNaN(_offset.y)) {
+        $viewOffset = { x: 0, y: 0 }
+      }
+
       const chunkX = Math.floor(_offset.x / CHUNK_WIDTH)
       const chunkY = Math.floor(_offset.y / CHUNK_HEIGHT)
       if ($chunkOffset.x !== chunkX) {
@@ -776,14 +783,26 @@
     if (!resizeObserver) {
       resizeObserver = new ResizeObserver(() => {
         // Set viewport
-        const { x, y, width, height } = containerEl.getBoundingClientRect()
-        viewPort.update((v) => {
-          v.x = v.x
-          v.y = v.y // HACK: this is needed so the viewport matches the visual board position in the new horizon switcher
-          v.w = width
-          v.h = height
-          return v
-        })
+        function _update() {
+          const { x, y, width, height } = containerEl.getBoundingClientRect()
+          const boardStyle = getComputedStyle(containerEl, null)
+          function _toNum(v: string) {
+            return Number((v.match(/(\d+\.?\d?)/g) || [''])[0])
+          }
+          const paddingLeft = _toNum(boardStyle.getPropertyValue('padding-left'))
+          const paddingTop = _toNum(boardStyle.getPropertyValue('padding-top'))
+          const paddingBottom = _toNum(boardStyle.getPropertyValue('padding-bottom'))
+          const paddingRight = _toNum(boardStyle.getPropertyValue('padding-right'))
+          viewPort.update((v) => {
+            v.x = x + paddingLeft
+            v.y = y + paddingTop
+            v.w = width - paddingLeft - paddingRight
+            v.h = height - paddingTop - paddingBottom
+            return v
+          })
+        }
+        _update()
+        setTimeout(_update, 400)
       })
       resizeObserver.observe(containerEl)
     }
@@ -927,6 +946,7 @@
 
       debounce('end_scroll_pan', 100, () => {
         mode.idle()
+        dispatch('panEnd', {})
       })
     }
   }
@@ -940,11 +960,8 @@
       mode.idle()
     }
 
-    if ($mode === 'dragging') {
-      if (e.shiftKey) {
-        allowQuickSnap.set(true)
-        showQuickSnapGuides = true
-      }
+    if (e.shiftKey) {
+      allowQuickSnap.set(true)
     }
   }
   function onKeyUp(e: KeyboardEvent) {
@@ -960,7 +977,9 @@
    * Use capture, to ensure select also works on top of draggable stuff.
    */
   function onMouseDown_idleCapture(e: MouseEvent | TouchEvent) {
-    if (!e.shiftKey) return
+    // TODO(@maxu): this is tmp only
+    return
+    if (!e.shiftKey || !$settings.CAN_SELECT) return
     const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     const { x: absX, y: absY } = posToAbsolute(
       (e as TouchEvent).targetTouches?.item(0)?.clientX || (e as MouseEvent).clientX,
@@ -984,6 +1003,7 @@
     mode.select()
   }
   function onMouseDown_idle(e: MouseEvent | TouchEvent) {
+    if (!$settings.CAN_DRAW) return
     const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     if (
       hasClassOrParentWithClass(e.target as HTMLElement, 'positionable') ||
@@ -1104,8 +1124,8 @@
     $state.selectionRect.update((v) => {
       v!.x = x
       v!.y = y
-      v!.w = w
-      v!.h = h
+      v!.w = w + (90 - (w % 90))
+      v!.h = h + (90 - (h % 90))
       return v
     })
 
@@ -1145,6 +1165,10 @@
       $viewPort,
       $zoom
     )
+
+    if ($allowQuickSnap) {
+      showQuickSnapGuides = true
+    }
 
     moveToStackingTop(stackingOrder, get(positionable)[POSITIONABLE_KEY])
 
@@ -1282,6 +1306,10 @@
 
     dragState.offset.y = absY - dragState.init.y
     dragState.curr.y = absY
+
+    if ($allowQuickSnap) {
+      showQuickSnapGuides = true
+    }
 
     // Handle classes
     if (clientY < $settings.QUICK_SNAP_THRESHOLD && $allowQuickSnap) {
@@ -1964,6 +1992,9 @@
             <span>Viewport:</span><span
               >{$viewPort.x}, {$viewPort.y}, {$viewPort.w}, {$viewPort.h}</span
             >
+          </li>
+          <li>
+            <span>Offset:</span><span>{$viewOffset.x}, {$viewOffset.y}</span>
           </li>
           <li><span>Current Stretch:</span><span>{Math.floor($viewOffset.x / 1920) + 1}</span></li>
           <!-- NOTE: Major perf hit due to conditional slot. -->
