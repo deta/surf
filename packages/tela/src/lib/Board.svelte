@@ -778,11 +778,19 @@
         // Set viewport
         function _update() {
           const { x, y, width, height } = containerEl.getBoundingClientRect()
+          const boardStyle = getComputedStyle(containerEl, null)
+          function _toNum(v: string) {
+            return Number((v.match(/(\d+\.?\d?)/g) || [''])[0])
+          }
+          const paddingLeft = _toNum(boardStyle.getPropertyValue('padding-left'))
+          const paddingTop = _toNum(boardStyle.getPropertyValue('padding-top'))
+          const paddingBottom = _toNum(boardStyle.getPropertyValue('padding-bottom'))
+          const paddingRight = _toNum(boardStyle.getPropertyValue('padding-right'))
           viewPort.update((v) => {
-            v.x = v.x
-            v.y = v.y // HACK: this is needed so the viewport matches the visual board position in the new horizon switcher
-            v.w = width
-            v.h = height
+            v.x = x + paddingLeft
+            v.y = y + paddingTop
+            v.w = width - paddingLeft - paddingRight
+            v.h = height - paddingTop - paddingBottom
             return v
           })
         }
@@ -1109,8 +1117,8 @@
     $state.selectionRect.update((v) => {
       v!.x = x
       v!.y = y
-      v!.w = w
-      v!.h = h
+      v!.w = w + (90 - (w % 90))
+      v!.h = h + (90 - (h % 90))
       return v
     })
 
