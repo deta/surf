@@ -7,7 +7,7 @@ export interface SFFSResourceMetadata {
 }
 
 export interface SFFSResourceTag {
-  id: string
+  id?: string
   name: string
   value: string
 }
@@ -17,8 +17,12 @@ export enum ResourceTypes {
   LINK = 'application/space-bookmark'
 }
 
+export enum ResourceTagsBuiltInKeys {
+  SAVED_WITH_ACTION = 'savedWithAction'
+}
+
 export interface ResourceTagsBuiltIn {
-  savedWithAction: 'download' | 'drag/browser' | 'drag/local' | 'paste'
+  [ResourceTagsBuiltInKeys.SAVED_WITH_ACTION]: 'download' | 'drag/browser' | 'drag/local' | 'paste'
 }
 
 export type ResourceType = ResourceTypes.NOTE | ResourceTypes.LINK | string

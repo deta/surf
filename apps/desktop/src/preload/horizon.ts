@@ -210,12 +210,10 @@ export class ResourceHandle {
   }
 
   async flush(): Promise<void> {
-    console.log(this.resourceId, 'flushd')
     await this.fd.sync()
   }
 
   async close(): Promise<void> {
-    console.log(this.resourceId, 'closed')
     await this.fd.close()
   }
 }

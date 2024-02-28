@@ -235,8 +235,17 @@ export class Horizon {
     this.changeState('warm')
   }
 
-  createResource(data: Blob, metadata?: SFFSResourceMetadata, tags?: SFFSResourceTag[]) {
-    return this.resourceManager.createResource(data.type, data, metadata, tags)
+  createResource(data: Blob, metadata?: Partial<SFFSResourceMetadata>, tags?: SFFSResourceTag[]) {
+    const parsedMetadata = Object.assign(
+      {
+        name: '',
+        sourceURI: '',
+        alt: ''
+      },
+      metadata ?? {}
+    )
+
+    return this.resourceManager.createResource(data.type, data, parsedMetadata, tags)
   }
 
   getResource(id: string) {
@@ -277,6 +286,21 @@ export class Horizon {
     return cardStore
   }
 
+  async addCardWithResource(
+    type: Card['type'],
+    position: CardPosition,
+    data: Blob,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
+    const resource = await this.createResource(data, metadata, tags)
+    return this.addCard({
+      ...position,
+      type: type,
+      resourceId: resource.id
+    })
+  }
+
   addCardBrowser(
     location: string,
     position: CardPosition,
@@ -301,11 +325,13 @@ export class Horizon {
   async addCardText(
     content: string,
     position: CardPosition,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[],
     makeActive: boolean = false,
     duplicated: boolean = false
   ) {
     // TODO: resource metadata and tags
-    const resource = await this.resourceManager.createResourceNote(content)
+    const resource = await this.resourceManager.createResourceNote(content, metadata, tags)
     return this.addCard(
       {
         ...position,
@@ -383,7 +409,7 @@ export class Horizon {
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
     if (card.type === 'text') {
-      return this.addCardText('', position, makeActive, true)
+      return this.addCardText('', position, {}, [], makeActive, true)
     } else if (card.type === 'browser') {
       return this.addCardBrowser('', position, makeActive, true)
     } else if (card.type === 'link') {

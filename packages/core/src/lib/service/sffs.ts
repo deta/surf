@@ -5,7 +5,8 @@ import type {
   SFFSResource,
   SFFSRawCompositeResource,
   SFFSRawResourceTag,
-  SFFSSearchResult
+  SFFSSearchResult,
+  SFFSRawResourceMetadata
 } from '../types'
 
 export class SFFS {
@@ -69,7 +70,7 @@ export class SFFS {
         alt: resource.metadata?.alt ?? ''
       },
       resource_tags: (resource.tags || []).map((tag) => ({
-        id: tag.id,
+        id: tag.id ?? '',
         resource_id: resource.id,
         tag_name: tag.name,
         tag_value: tag.value
@@ -97,11 +98,10 @@ export class SFFS {
     const metadataData = JSON.stringify({
       id: '',
       resource_id: '',
-      name: '',
-      source_uri: '',
-      alt: '',
-      ...(metadata ?? {})
-    } as SFFSResourceMetadata)
+      name: metadata?.name ?? '',
+      source_uri: metadata?.sourceURI ?? '',
+      alt: metadata?.alt ?? ''
+    } as SFFSRawResourceMetadata)
 
     const tagsData = JSON.stringify(
       (tags ?? []).map(
@@ -117,6 +117,7 @@ export class SFFS {
 
     const dataString = await this.backend.js__store_create_resource(type, tagsData, metadataData)
     const composite = this.parseData<SFFSRawCompositeResource>(dataString)
+
     if (!composite) {
       throw new Error('failed to create resource, invalid data', dataString)
     }

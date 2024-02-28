@@ -1,6 +1,7 @@
 import { hasClassOrParentWithClass } from '@horizon/tela'
 import { useLogScope } from '../utils/log'
 import { checkIfUrl, parseStringIntoUrl } from '../utils/url'
+import type { SFFSResourceMetadata } from '../types'
 
 const log = useLogScope('mediaImporter')
 
@@ -163,27 +164,33 @@ export const parseClipboardItems = async (clipboardItems: ClipboardItem[]) => {
   return parsedItems.flat()
 }
 
-export type MediaParserResultText = {
+export interface MediaParserResultBase {
+  data: any
+  type: string
+  metadata: Partial<SFFSResourceMetadata>
+}
+
+export interface MediaParserResultText extends MediaParserResultBase {
   data: string
   type: 'text'
 }
 
-export type MediaParserResultURL = {
+export interface MediaParserResultURL extends MediaParserResultBase {
   data: URL
   type: 'url'
 }
 
-export type MediaParserResultFile = {
-  data: File
+export interface MediaParserResultFile extends MediaParserResultBase {
+  data: Blob
   type: 'file'
 }
 
-export type MediaParserResultResource = {
+export interface MediaParserResultResource extends MediaParserResultBase {
   data: string
   type: 'resource'
 }
 
-export type MediaParserResultUnknown = {
+export interface MediaParserResultUnknown extends MediaParserResultBase {
   data: null
   type: 'unknown'
 }
@@ -205,14 +212,27 @@ export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
     switch (type) {
       case 'text/html':
         const files = await processHTMLData(data)
-        results.push(...files.map((file) => ({ data: file, type: 'file' }) as MediaParserResult))
+        results.push(
+          ...files.map(
+            (file) =>
+              ({
+                data: file,
+                type: 'file',
+                metadata: {
+                  name: file.name,
+                  alt: '',
+                  sourceURI: file.path
+                }
+              }) as MediaParserResult
+          )
+        )
         break
       case 'text/plain':
         const text = await processTextData(data)
         if (typeof text === 'string') {
-          results.push({ data: text, type: 'text' })
+          results.push({ data: text, type: 'text', metadata: {} })
         } else if (text instanceof URL) {
-          results.push({ data: text, type: 'url' })
+          results.push({ data: text, type: 'url', metadata: {} })
         }
         break
       case 'text/uri-list':
@@ -221,10 +241,10 @@ export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
         break
       case 'text/tiptap':
         const richText = await processRichTextData(data)
-        results.push({ data: richText, type: 'text' })
+        results.push({ data: richText, type: 'text', metadata: {} })
         break
       case MEDIA_TYPES.RESOURCE:
-        results.push({ data: data, type: 'resource' })
+        results.push({ data: data, type: 'resource', metadata: {} })
         break
     }
 
@@ -248,12 +268,33 @@ export const parseDataTransferFiles = async (dataTransfer: DataTransfer) => {
       log.debug('parsed file type', fileType)
 
       if (fileType === 'image') {
-        results.push({ data: file, type: 'file' })
+        results.push({
+          data: file,
+          type: 'file',
+          metadata: {
+            name: file.name,
+            alt: '',
+            sourceURI: file.path
+          }
+        })
       } else if (fileType === 'text') {
         const text = await file.text()
-        results.push({ data: text, type: 'text' })
+        results.push({
+          data: text,
+          type: 'text',
+          metadata: {
+            name: file.name,
+            alt: '',
+            sourceURI: file.path
+          }
+        })
       } else {
-        results.push({ data: null, type: 'unknown' })
+        // TODO: maybe we should handle this case differently
+        results.push({
+          data: null,
+          type: 'unknown',
+          metadata: {}
+        })
       }
     })
   )
@@ -267,6 +308,9 @@ export const processDrop = async (e: DragEvent) => {
   const dataTransfer = e.dataTransfer
   if (!dataTransfer) return results
 
+  const source = dataTransfer.getData('text/space-source')
+  log.debug('dataTransfer source', source)
+
   // Parse data
   const data = await parseDataTransferData(dataTransfer)
   results.push(...data)
@@ -274,6 +318,16 @@ export const processDrop = async (e: DragEvent) => {
   // Parse files
   const files = await parseDataTransferFiles(dataTransfer)
   results.push(...files)
+
+  if (source) {
+    return results.map((result) => {
+      if (!result.metadata.sourceURI) {
+        result.metadata.sourceURI = source
+      }
+
+      return result
+    })
+  }
 
   return results
 }
@@ -302,7 +356,15 @@ export const processPaste = async (e: ClipboardEvent) => {
 
       if (type.startsWith('image')) {
         const file = new File([blob], `image${num}.png`, { type: blob.type })
-        result.push({ data: file, type: 'file' })
+        result.push({
+          data: file,
+          type: 'file',
+          metadata: {
+            name: file.name,
+            alt: '',
+            sourceURI: file.path
+          }
+        })
         num++
       } else if (type.startsWith('text')) {
         const text = await blob.text()
@@ -310,10 +372,18 @@ export const processPaste = async (e: ClipboardEvent) => {
 
         const url = parseStringIntoUrl(text)
         if (url) {
-          result.push({ data: url, type: 'url' })
+          result.push({
+            data: url,
+            type: 'url',
+            metadata: {}
+          })
           num++
         } else {
-          result.push({ data: text, type: 'text' })
+          result.push({
+            data: text,
+            type: 'text',
+            metadata: {}
+          })
           num++
         }
       } else {

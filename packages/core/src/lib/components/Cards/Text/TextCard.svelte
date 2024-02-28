@@ -61,8 +61,6 @@
     }
 
     const value = await resource.getContent()
-    log.debug('got content', value)
-
     content.set(value)
     initialLoad = false
 

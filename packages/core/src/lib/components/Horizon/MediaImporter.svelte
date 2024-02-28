@@ -5,7 +5,8 @@
   import { DEFAULT_CARD_SIZE } from '../../constants/card'
   import { get } from 'svelte/store'
   import { processDrop, processPaste } from '../../service/mediaImporter'
-  import { ResourceTypes } from '../../types'
+  import { ResourceTypes, type SFFSResourceMetadata, type SFFSResourceTag } from '../../types'
+  import { ResourceTag } from '../../service/resources'
 
   export let horizon: Horizon
 
@@ -82,12 +83,16 @@
       log.debug('processed item', item)
 
       if (item.type === 'text') {
-        createTextCard(item.data, getNewCardHorizontalPosition(idx))
+        createTextCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+          ResourceTag.paste()
+        ])
       } else if (item.type === 'url') {
         createBrowserCard(item.data, getNewCardHorizontalPosition(idx))
       } else if (item.type === 'file') {
         if (item.data.type.startsWith('image')) {
-          createImageCard(item.data, getNewCardHorizontalPosition(idx))
+          createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+            ResourceTag.paste()
+          ])
         } else {
           log.warn('unhandled file type', item.data.type)
         }
@@ -102,8 +107,6 @@
     // send event to window so that other components know that a drop event has occurred
     window.dispatchEvent(new CustomEvent('drop', { detail: e }))
 
-    e.dataTransfer?.types.map((t) => log.debug(t, e.dataTransfer?.getData(t)))
-
     const getNewCardHorizontalPosition = getNewCardHorizontalPositionCreator(30, {
       x: e.clientX,
       y: e.clientY
@@ -114,12 +117,16 @@
       log.debug('processed item', item)
 
       if (item.type === 'text') {
-        createTextCard(item.data, getNewCardHorizontalPosition(idx))
+        createTextCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+          ResourceTag.dragLocal()
+        ])
       } else if (item.type === 'url') {
         createBrowserCard(item.data, getNewCardHorizontalPosition(idx))
       } else if (item.type === 'file') {
         if (item.data.type.startsWith('image')) {
-          createImageCard(item.data, getNewCardHorizontalPosition(idx))
+          createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+            ResourceTag.dragLocal()
+          ])
         } else {
           log.warn('unhandled file type', item.data.type)
         }
@@ -157,25 +164,36 @@
     })
   }
 
-  const createImageCard = async (blob: Blob, pos: { x: number; y: number }) => {
-    const card = await horizon.addCardFile(blob, {
-      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
-      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-      width: DEFAULT_CARD_SIZE.width,
-      height: DEFAULT_CARD_SIZE.height
-    })
+  const createFileCard = async (
+    blob: Blob,
+    pos: { x: number; y: number },
+    metadata: Partial<SFFSResourceMetadata>,
+    tags: SFFSResourceTag[]
+  ) => {
+    const card = await horizon.addCardWithResource(
+      'file',
+      {
+        x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+        y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+        width: DEFAULT_CARD_SIZE.width,
+        height: DEFAULT_CARD_SIZE.height
+      },
+      blob,
+      metadata,
+      tags
+    )
     log.debug('created card', get(card))
   }
 
-  const createLinkCard = async (url: URL, pos: { x: number; y: number }) => {
-    const card = await horizon.addCardLink(url.href, {
-      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
-      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-      width: DEFAULT_CARD_SIZE.width,
-      height: DEFAULT_CARD_SIZE.height
-    })
-    log.debug('created card', get(card))
-  }
+  // const createLinkCard = async (url: URL, pos: { x: number; y: number }) => {
+  //   const card = await horizon.addCardLink(url.href, {
+  //     x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+  //     y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+  //     width: DEFAULT_CARD_SIZE.width,
+  //     height: DEFAULT_CARD_SIZE.height
+  //   })
+  //   log.debug('created card', get(card))
+  // }
 
   const createBrowserCard = async (url: URL, pos: { x: number; y: number }) => {
     const card = await horizon.addCardBrowser(url.href, {
@@ -187,13 +205,23 @@
     log.debug('created card', get(card))
   }
 
-  const createTextCard = async (text: string, pos: { x: number; y: number }) => {
-    const card = await horizon.addCardText(text, {
-      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
-      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-      width: DEFAULT_CARD_SIZE.width,
-      height: DEFAULT_CARD_SIZE.height
-    })
+  const createTextCard = async (
+    text: string,
+    pos: { x: number; y: number },
+    metadata: Partial<SFFSResourceMetadata>,
+    tags: SFFSResourceTag[]
+  ) => {
+    const card = await horizon.addCardText(
+      text,
+      {
+        x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+        y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+        width: DEFAULT_CARD_SIZE.width,
+        height: DEFAULT_CARD_SIZE.height
+      },
+      metadata,
+      tags
+    )
     log.debug('created card', get(card))
   }
 </script>

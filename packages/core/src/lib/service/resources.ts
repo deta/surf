@@ -19,6 +19,24 @@ import type { JSONContent } from '@horizon/editor'
  - handle errors
 */
 
+export class ResourceTag {
+  static download() {
+    return { name: 'savedWithAction', value: 'download' }
+  }
+
+  static dragBrowser() {
+    return { name: 'savedWithAction', value: 'drag/browser' }
+  }
+
+  static dragLocal() {
+    return { name: 'savedWithAction', value: 'drag/local' }
+  }
+
+  static paste() {
+    return { name: 'savedWithAction', value: 'paste' }
+  }
+}
+
 export class Resource {
   id: string
   type: ResourceType
@@ -223,6 +241,8 @@ export class ResourceManager {
     resource.rawData = data
     await resource.writeData()
 
+    this.log.debug('created resource', resource)
+
     this.resources.update((resources) => [...resources, resource])
 
     return resource
@@ -291,11 +311,19 @@ export class ResourceManager {
 
   async createResourceNote(
     content: string,
-    metadata?: SFFSResourceMetadata,
+    metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {
     const blob = new Blob([content], { type: ResourceTypes.NOTE })
-    return this.createResource(ResourceTypes.NOTE, blob, metadata, tags)
+    const parsedMetadata = Object.assign(
+      {
+        name: '',
+        alt: '',
+        sourceURI: ''
+      },
+      metadata
+    )
+    return this.createResource(ResourceTypes.NOTE, blob, parsedMetadata, tags)
   }
 
   async createResourceBookmark(

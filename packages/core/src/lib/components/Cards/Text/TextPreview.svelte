@@ -12,7 +12,6 @@
   let loading = false
 
   const generateSummary = (value: string) => {
-    console.log('value', value)
     const text = getEditorContentText(value)
 
     if (text.length > limit) {

@@ -40,8 +40,6 @@
     },
     Array(nCols).fill(null).map(() => []) // prettier-ignore
   )
-
-  $: console.log('masonryWidth', masonryWidth)
 </script>
 
 <div

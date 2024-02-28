@@ -104,6 +104,7 @@ window.addEventListener('DOMContentLoaded', (_) => {
       div.addEventListener('dragstart', (event: DragEvent) => {
         event.stopPropagation()
         event.dataTransfer?.setData('text/plain', text)
+        event.dataTransfer?.setData('text/space-source', window.location.href)
       })
 
       // reset previously selected text after delay, so the user can actually select the same text again.
@@ -133,6 +134,10 @@ window.addEventListener('DOMContentLoaded', (_) => {
     const div = document.getElementById('horizonTextDragHandle')
     div?.parentNode?.removeChild(div)
     window.getSelection()?.removeAllRanges()
+  })
+
+  document.addEventListener('dragstart', (event: DragEvent) => {
+    event.dataTransfer?.setData('text/space-source', window.location.href)
   })
 })
 

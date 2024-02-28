@@ -17,7 +17,6 @@
     try {
       loading = true
       data = await resource.getData()
-      log.debug('Data loaded', data)
     } catch (e) {
       log.error(e)
     } finally {

@@ -124,6 +124,8 @@
       runSearch($searchQuery.value, $searchQuery.tab)
     })
 
+    runSearch('', null)
+
     return () => {
       if (unsubscribeQuery) {
         unsubscribeQuery()
