@@ -174,15 +174,55 @@ export class HorizonDatabase extends Dexie {
   constructor() {
     super('HorizonDatabase')
 
-    this.version(3).stores({
+    this.version(2).stores({
       userData: 'id, user_id',
       cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
       horizons: 'id, name, stackingOrder, createdAt, updatedAt',
-      resources: 'id, createdAt, updatedAt',
-      sessions: 'id, userId, partition, createdAt, updatedAt',
-      historyEntries:
-        'id, *url, *title, *searchQuery, *inPageNavigation, sessionId, type, createdAt, updatedAt'
+      resources: 'id, createdAt, updatedAt'
     })
+    this.version(3)
+      .stores({
+        userData: 'id, user_id',
+        cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
+        horizons: 'id, name, stackingOrder, createdAt, updatedAt',
+        resources: 'id, createdAt, updatedAt',
+        sessions: 'id, userId, partition, createdAt, updatedAt',
+        historyEntries:
+          'id, *url, *title, *searchQuery, *inPageNavigation, sessionId, type, createdAt, updatedAt'
+      })
+      .upgrade(async (transaction) => {
+        const cardsTable = transaction.table('cards')
+        const historyEntriesTable = transaction.table('historyEntries')
+        const cards = await cardsTable.toArray()
+
+        for (const card of cards) {
+          if (card.type !== 'browser') continue
+
+          const browserCardData = card.data
+          let historyStackIds = []
+
+          for (const url of browserCardData.historyStack) {
+            const datetime = new Date().toISOString()
+            let pageTitle = ''
+            try {
+              pageTitle = new URL(url).hostname.replace('www.', '')
+            } catch (_) {}
+
+            const historyEntry = {
+              id: generateID(),
+              createdAt: datetime,
+              updatedAt: datetime,
+              type: 'navigation',
+              url: url,
+              title: pageTitle
+            }
+            historyStackIds.push(await historyEntriesTable.add(historyEntry))
+          }
+
+          browserCardData.historyStackIds = historyStackIds
+          await cardsTable.update(card.id, { data: browserCardData })
+        }
+      })
 
     this.userData = new UserStore<UserData>(this.table('userData'))
     this.cards = new HorizonStore<Card>(this.table('cards'))
@@ -209,27 +249,6 @@ export class HorizonDatabase extends Dexie {
       }
       return c
     })
-
-    // const allHistoryStackIds = [
-    //   ...new Set(
-    //     cards
-    //       .filter((card) => card.type === 'browser')
-    //       .flatMap((card) => (card.data as CardBrowser['data']).historyStackIds)
-    //   )
-    // ]
-    // let historyEntriesMap = new Map<string, HistoryEntry>()
-    // if (allHistoryStackIds.length > 0) {
-    //   historyEntriesMap = await this.historyEntries.fetchHistoryEntriesByIds(allHistoryStackIds)
-    // }
-
-    // cards.forEach((card) => {
-    //   if (card.type === 'browser') {
-    //     const browserData = card.data as CardBrowser['data']
-    //     browserData.historyStack = browserData.historyStackIds
-    //       .map((id) => historyEntriesMap.get(id))
-    //       .filter((entry) => entry !== undefined) as HistoryEntry[]
-    //   }
-    // })
 
     return cards
   }
