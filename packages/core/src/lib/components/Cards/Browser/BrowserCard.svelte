@@ -179,9 +179,6 @@
   $: faviconURL = webview?.faviconURL
   $: playback = webview?.playback
   $: isMuted = webview?.isMuted
-  $: bookmarked = !!$card.resourceId
-
-  console.log('resourceId', $card.resourceId)
 
   $: if (!editing && $url !== 'about:blank') {
     value = $url ?? ''
@@ -245,24 +242,15 @@
   async function handleBookmark() {
     if (value === '') return
 
-    console.log('bookmarked', bookmarked, $card.resourceId)
+    const resource = await horizon.resourceManager.createResourceBookmark(
+      { url: $url },
+      { name: $title ?? '', sourceURI: $url, alt: '' }
+    )
 
-    if (bookmarked) {
-      card.update((card) => {
-        card.resourceId = null
-        return card
-      })
-    } else {
-      // TODO: check if similar resource already exists
-      const resource = await horizon.resourceManager.createResourceBookmark(
-        { url: $url },
-        { name: $title ?? '', sourceURI: $url, alt: '' }
-      )
-      card.update((card) => {
-        card.resourceId = resource.id
-        return card
-      })
-    }
+    card.update((card) => {
+      card.resourceId = resource.id
+      return card
+    })
 
     dispatch('change', get(card))
   }
@@ -407,11 +395,12 @@
           in:fly={{ y: 10, duration: 160 }}
           out:fly={{ y: 10, duration: 160 }}
         >
-          {#if bookmarked}
+          <!-- {#if bookmarked}
             <Icon name="bookmarkFilled" size="15px" />
           {:else}
             <Icon name="bookmark" size="15px" />
-          {/if}
+          {/if} -->
+          <Icon name="bookmark" size="15px" />
         </button>
       </div>
 

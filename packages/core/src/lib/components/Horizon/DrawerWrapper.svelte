@@ -25,7 +25,7 @@
     type ResourceNote
   } from '../../service/resources'
   import { onMount } from 'svelte'
-  import type { SFFSResourceTag } from '../../types'
+  import { ResourceTypes, type SFFSResourceTag } from '../../types'
 
   export const drawer = provideDrawer()
 
@@ -59,6 +59,13 @@
         value: 'false'
       }
     ] as SFFSResourceTag[]
+
+    if (tab === 'link') {
+      tags.push({
+        name: 'type',
+        value: ResourceTypes.LINK
+      })
+    }
 
     const result = await resourceManager.searchResources(query, tags)
 

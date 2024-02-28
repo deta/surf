@@ -6,7 +6,7 @@
   import { get } from 'svelte/store'
   import { processDrop, processPaste } from '../../service/mediaImporter'
   import { ResourceTypes, type SFFSResourceMetadata, type SFFSResourceTag } from '../../types'
-  import { ResourceTag } from '../../service/resources'
+  import { ResourceBookmark, ResourceTag } from '../../service/resources'
 
   export let horizon: Horizon
 
@@ -145,19 +145,19 @@
 
     log.debug('resource', resource)
 
-    const resourceToCardType: Record<string, string> = {
-      [ResourceTypes.NOTE]: 'text',
-      [ResourceTypes.LINK]: 'link'
+    if (resource.type === ResourceTypes.LINK) {
+      const bookmark = await (resource as ResourceBookmark).getBookmark()
+      createBrowserCard(new URL(bookmark.url), pos)
+    } else {
+      horizon.addCard({
+        x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+        y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+        width: DEFAULT_CARD_SIZE.width,
+        height: DEFAULT_CARD_SIZE.height,
+        type: resource.type === ResourceTypes.NOTE ? 'text' : 'file',
+        resourceId: resource.id
+      })
     }
-
-    horizon.addCard({
-      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
-      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-      width: DEFAULT_CARD_SIZE.width,
-      height: DEFAULT_CARD_SIZE.height,
-      type: resourceToCardType[resource.type] ?? 'file',
-      resourceId: resource.id
-    })
   }
 
   const createFileCard = async (
