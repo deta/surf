@@ -4,10 +4,8 @@ import { generateID, generateUUID } from '../utils/id'
 import type {
   Card,
   Optional,
-  Resource,
   HorizonData,
   CardBrowser,
-  CardFile,
   UserData,
   Session,
   HistoryEntry,
@@ -96,8 +94,9 @@ export class Storage<T extends Record<string, any>> {
 export class UserStore<UserData> {
   constructor(public t: Dexie.Table<UserData, string>) {}
 
-  async create(data: Optional<UserData, 'id'>): Promise<UserData> {
+  async create(data: Omit<UserData, 'id'>): Promise<UserData> {
     const item = {
+      // @ts-ignore
       id: 'main', // only singe user data must exist
       ...data
     } as UserData
@@ -188,7 +187,7 @@ export class HorizonDatabase extends Dexie {
     this.userData = new UserStore<UserData>(this.table('userData'))
     this.cards = new HorizonStore<Card>(this.table('cards'))
     this.horizons = new HorizonStore<HorizonData>(this.table('horizons'))
-    this.resources = new HorizonStore<Resource>(this.table('resources'))
+    this.resources = new HorizonStore<LegacyResource>(this.table('resources'))
     this.sessions = new HorizonStore<Session>(this.table('sessions'))
     this.historyEntries = new HistoryStore(this.table('historyEntries'))
   }
@@ -236,8 +235,9 @@ export class HorizonDatabase extends Dexie {
   }
 
   async deleteCardWithResource(card: Card) {
-    if (card && card.type === 'file') {
-      await this.resources.delete((card as CardFile).data.resourceId)
+    if (card && card.resourceId !== null) {
+      // TODO: use resource manager
+      await this.resources.delete(card.resourceId)
     }
 
     await this.cards.delete(card.id)
@@ -246,8 +246,9 @@ export class HorizonDatabase extends Dexie {
   async deleteCardsByHorizonId(horizonId: string) {
     const fileCardsResourceIds = (
       await this.cards.t.where({ horizon_id: horizonId, type: 'file' }).toArray()
-    ).map((card: Card) => (card as CardFile).data.resourceId)
+    ).map((card: Card) => card.resourceId || '')
 
+    // TODO: use resource manager
     if (fileCardsResourceIds.length > 0) {
       await this.resources.t.where('id').anyOf(fileCardsResourceIds).delete()
     }

@@ -2,7 +2,7 @@ import { useLogScope, type ScopedLogger } from '../utils/log'
 import type {
   SFFSResourceMetadata,
   SFFSResourceTag,
-  SFFSResourceItem,
+  SFFSResource,
   SFFSRawCompositeResource,
   SFFSRawResourceTag
 } from '../types'
@@ -14,21 +14,23 @@ export class SFFS {
   constructor(basePath = '/sffs/') {
     this.log = useLogScope('SFFS')
 
+    // @ts-ignore
     if (typeof window.backend === 'undefined') {
       throw new Error('SFFS backend not available')
     }
 
+    // @ts-ignore
     this.backend = window.backend.init(basePath)
 
-    // TODO: remove this, just for debugging
-    window.sffs = this
+    // @ts-ignore
+    window.sffs = this // TODO: remove this, just for debugging
 
     if (!this.backend) {
       throw new Error('SFFS backend failed to initialize')
     }
   }
 
-  convertCompositeResourceToResource(composite: SFFSRawCompositeResource): SFFSResourceItem {
+  convertCompositeResourceToResource(composite: SFFSRawCompositeResource): SFFSResource {
     return {
       id: composite.resource.id,
       type: composite.resource.resource_type,
@@ -49,7 +51,7 @@ export class SFFS {
     }
   }
 
-  convertResourceToCompositeResource(resource: SFFSResourceItem): SFFSRawCompositeResource {
+  convertResourceToCompositeResource(resource: SFFSResource): SFFSRawCompositeResource {
     return {
       resource: {
         id: resource.id,
@@ -88,7 +90,7 @@ export class SFFS {
     type: string,
     metadata?: SFFSResourceMetadata,
     tags?: SFFSResourceTag[]
-  ): Promise<SFFSResourceItem> {
+  ): Promise<SFFSResource> {
     this.log.debug('creating resource of type', type)
 
     // convert metadata and tags to expected format
@@ -122,7 +124,7 @@ export class SFFS {
     return this.convertCompositeResourceToResource(composite)
   }
 
-  async readResource(id: string): Promise<SFFSResourceItem | null> {
+  async readResource(id: string): Promise<SFFSResource | null> {
     this.log.debug('reading resource with id', id)
     const dataString = await this.backend.js__store_read_resource(id)
     const composite = this.parseData<SFFSRawCompositeResource>(dataString)
@@ -143,9 +145,26 @@ export class SFFS {
     await this.backend.js__store_recover_resource(id)
   }
 
-  async readResources(): Promise<SFFSResourceItem[]> {
+  async readResources(): Promise<SFFSResource[]> {
     this.log.debug('reading all resources')
     const items = await this.backend.js__store_read_resources()
+    return items.map(this.convertCompositeResourceToResource)
+  }
+
+  async searchResources(query: string, tags?: SFFSResourceTag[]): Promise<SFFSResource[]> {
+    this.log.debug('searching resources with query', query, 'and tags', tags)
+    const tagsData = JSON.stringify(
+      (tags ?? []).map(
+        (tag) =>
+          ({
+            id: '',
+            resource_id: '',
+            tag_name: tag.name ?? '',
+            tag_value: tag.value ?? ''
+          }) as SFFSRawResourceTag
+      )
+    )
+    const items = await this.backend.js__store_search_resources(query, tagsData)
     return items.map(this.convertCompositeResourceToResource)
   }
 

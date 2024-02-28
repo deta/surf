@@ -4,12 +4,16 @@ import { checkIfUrl, parseStringIntoUrl } from '../utils/url'
 
 const log = useLogScope('mediaImporter')
 
+export enum MEDIA_TYPES {
+  RESOURCE = 'space/resource'
+}
+
 export const DATA_TYPES = [
   'text/html',
   'text/plain',
   'text/uri-list',
   'text/tiptap',
-  'space/resource'
+  MEDIA_TYPES.RESOURCE
 ]
 export const SUPPORTED_MIMES = [
   'text/plain',

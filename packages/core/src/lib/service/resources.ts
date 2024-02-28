@@ -228,6 +228,16 @@ export class ResourceManager {
     this.resources.set(resources)
   }
 
+  async searchResources(query: string, tags?: SFFSResourceTag[]) {
+    const resourceItems = await this.sffs.searchResources(query, tags)
+    const resources = resourceItems.map((item) => this.createResourceObject(item))
+
+    // we probably don't want to overwrite the existing resources
+    // this.resources.set(resources)
+
+    return resources
+  }
+
   async getResource(id: string) {
     // check if resource is already loaded
     const loadedResources = get(this.resources)
