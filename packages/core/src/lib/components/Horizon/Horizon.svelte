@@ -271,6 +271,11 @@
 
   const handleKeydown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || (e.key === 'Escape' && $visorEnabled && $activeCardId !== null)) {
+      // Prevent centering in text cards & browsers for now.
+      const card = $cards.find((c) => get(c).id === $activeCardId)
+      if (!card) return
+      if (get(card).type === 'text' || get(card).type === 'browser') return
+
       $visorEnabled = false
       horizon.scrollToCardCenter($activeCardId)
       horizon.moveCardToStackingTop($activeCardId)
