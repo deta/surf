@@ -123,13 +123,9 @@
       } else if (item.type === 'url') {
         createBrowserCard(item.data, getNewCardHorizontalPosition(idx))
       } else if (item.type === 'file') {
-        if (item.data.type.startsWith('image')) {
-          createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
-            ResourceTag.dragLocal()
-          ])
-        } else {
-          log.warn('unhandled file type', item.data.type)
-        }
+        createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+          ResourceTag.dragLocal()
+        ])
       } else if (item.type === 'resource') {
         handleResource(item.data, getNewCardHorizontalPosition(idx))
       } else {

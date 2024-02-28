@@ -4,6 +4,7 @@
   import { useLogScope } from '../../../utils/log'
   import ImageView from './ImageView.svelte'
   import { Resource } from '../../../service/resources'
+  import UnknownFileView from './UnknownFileView.svelte'
 
   export let resource: Resource
 
@@ -38,8 +39,7 @@
     {#if data.type.startsWith('image/')}
       <ImageView blob={data} />
     {:else}
-      <h1>Unsupported File Type</h1>
-      <p>No view available to display this file.</p>
+      <UnknownFileView {resource} blob={data} hideType />
     {/if}
   {/if}
 </div>

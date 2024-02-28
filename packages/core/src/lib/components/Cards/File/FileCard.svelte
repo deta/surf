@@ -7,6 +7,11 @@
   import ImageView from './ImageView.svelte'
   import type { Resource } from '../../../service/resources'
   import type { Card } from '../../../types'
+  import UnknownFileView from './UnknownFileView.svelte'
+  import PdfView from './PDFView.svelte'
+  import { getFileKind } from '../../../utils/files'
+  import VideoView from './VideoView.svelte'
+  import AudioView from './AudioView.svelte'
 
   export let card: Writable<Card>
   export let horizon: Horizon
@@ -17,6 +22,8 @@
   let error: null | string = null
   let resource: Resource | null = null
   let data: Blob | null = null
+
+  $: fileKind = data ? getFileKind(data.type) : null
 
   onMount(async () => {
     try {
@@ -56,11 +63,16 @@
   {:else if loading}
     <p>Loading…</p>
   {:else if resource && data}
-    {#if data.type.startsWith('image/')}
+    {#if fileKind === 'image'}
       <ImageView blob={data} />
+    {:else if data.type === 'application/pdf'}
+      <PdfView {resource} blob={data} />
+    {:else if fileKind === 'video'}
+      <VideoView {resource} blob={data} />
+    {:else if fileKind === 'audio'}
+      <AudioView {resource} blob={data} />
     {:else}
-      <h1>Unsupported File Type</h1>
-      <p>No view available to display this file.</p>
+      <UnknownFileView {resource} blob={data} />
     {/if}
   {/if}
 </div>
@@ -70,6 +82,7 @@
     width: 100%;
     height: 100%;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     margin: 0;

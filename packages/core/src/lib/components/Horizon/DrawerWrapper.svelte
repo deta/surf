@@ -86,20 +86,24 @@
     const parsed = await processDrop(event)
     log.debug('Parsed', parsed)
 
-    parsed.map(async (item) => {
-      log.debug('processed item', item)
+    await Promise.all(
+      parsed.map(async (item) => {
+        log.debug('processed item', item)
 
-      let resource
-      if (item.type === 'text') {
-        resource = await resourceManager.createResourceNote(item.data)
-      } else if (item.type === 'url') {
-        resource = await resourceManager.createResourceBookmark({ url: item.data.href })
-      } else if (item.type === 'file') {
-        resource = await resourceManager.createResourceOther(item.data)
-      }
+        let resource
+        if (item.type === 'text') {
+          resource = await resourceManager.createResourceNote(item.data)
+        } else if (item.type === 'url') {
+          resource = await resourceManager.createResourceBookmark({ url: item.data.href })
+        } else if (item.type === 'file') {
+          resource = await resourceManager.createResourceOther(item.data)
+        }
 
-      log.debug('Created resource', resource)
-    })
+        log.debug('Created resource', resource)
+      })
+    )
+
+    runSearch($searchQuery.value, $searchQuery.tab)
   }
 
   const handleItemDragStart = async (e: DragEvent, resourceId: string) => {

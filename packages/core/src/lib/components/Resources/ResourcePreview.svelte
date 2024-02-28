@@ -10,6 +10,8 @@
   import FilePreview from '../Cards/File/FilePreview.svelte'
   import { ResourceTypes } from '../../types'
   import DateSinceNow from '../DateSinceNow.svelte'
+  import { getFileKind, getFileType } from '../../utils/files'
+  import FileIcon from '../Cards/File/FileIcon.svelte'
 
   export let resource: Resource
 
@@ -40,14 +42,14 @@
   <div class="details">
     <div class="type">
       {#if resource.type === ResourceTypes.NOTE}
-        <Icon name="docs" />
+        <Icon name="docs" size="20px" />
         <div class="">Note</div>
       {:else if resource.type === ResourceTypes.LINK}
-        <Icon name="link" />
+        <Icon name="link" size="20px" />
         <div class="">Bookmark</div>
       {:else}
-        <Icon name="file" />
-        <div class="">File</div>
+        <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
+        <div class="">{getFileType(resource.type) ?? 'File'}</div>
       {/if}
     </div>
 

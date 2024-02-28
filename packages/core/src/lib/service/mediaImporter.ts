@@ -267,17 +267,7 @@ export const parseDataTransferFiles = async (dataTransfer: DataTransfer) => {
       const fileType = parseFileType(file)
       log.debug('parsed file type', fileType)
 
-      if (fileType === 'image') {
-        results.push({
-          data: file,
-          type: 'file',
-          metadata: {
-            name: file.name,
-            alt: '',
-            sourceURI: file.path
-          }
-        })
-      } else if (fileType === 'text') {
+      if (fileType === 'text') {
         const text = await file.text()
         results.push({
           data: text,
@@ -289,11 +279,14 @@ export const parseDataTransferFiles = async (dataTransfer: DataTransfer) => {
           }
         })
       } else {
-        // TODO: maybe we should handle this case differently
         results.push({
-          data: null,
-          type: 'unknown',
-          metadata: {}
+          data: file,
+          type: 'file',
+          metadata: {
+            name: file.name,
+            alt: '',
+            sourceURI: file.path
+          }
         })
       }
     })
