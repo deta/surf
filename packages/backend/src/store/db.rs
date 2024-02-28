@@ -340,7 +340,7 @@ impl Database {
                 })
             })
             .optional()
-        .map_err(|e| e.into())
+            .map_err(|e| e.into())
     }
 
     pub fn create_resource_text_content_tx(
@@ -462,6 +462,18 @@ impl Database {
             horizon_id = ?2, card_type = ?3, resource_id = ?4, position_x = ?5, position_y = ?6, position_id = ?7,
             width = ?8, height = ?9, stacking_order = ?10, updated_at = datetime('now'), data = ?11 WHERE id = ?1",
             rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.position_id, card.width, card.height, card.stacking_order, card.data]
+        )?;
+        Ok(())
+    }
+
+    pub fn update_card_data_tx(
+        tx: &mut rusqlite::Transaction,
+        card_id: &str,
+        data: Vec<u8>,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "UPDATE cards SET data = ?2, updated_at = datetime('now') WHERE id = ?1",
+            rusqlite::params![card_id, data],
         )?;
         Ok(())
     }
@@ -714,20 +726,24 @@ impl Database {
     }
 
     // full text search on resource metadata after filtering by resource tags
-    pub fn search_resource_metadata(
+    pub fn search_resources(
         &self,
         keyword: &str,
         tags: Option<Vec<ResourceTag>>,
     ) -> BackendResult<SearchResult> {
         let mut params_vector = vec![format!("%{}%", keyword).to_string()];
-        let mut query = "SELECT * FROM resource_metadata M
-        LEFT JOIN resources R ON M.resource_id = R.id
-        WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1)"
+        let mut query = "SELECT M.*, R.*
+            FROM resource_metadata M
+            LEFT JOIN resource_text_content T ON M.resource_id = T.resource_id
+            LEFT JOIN resources R ON M.resource_id = R.id
+            WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1 OR T.content LIKE ?1)"
             .to_owned();
         if let Some(tags) = tags {
-            let (subquery, mut params) = Self::list_resource_ids_by_tags_query(&tags, 1);
-            params_vector.append(&mut params);
-            query.push_str(format!(" AND R.id IN ({})", subquery).as_str());
+            if !tags.is_empty() {
+                let (subquery, mut params) = Self::list_resource_ids_by_tags_query(&tags, 1);
+                params_vector.append(&mut params);
+                query.push_str(format!(" AND R.id IN ({})", subquery).as_str());
+            }
         }
         let params = rusqlite::params_from_iter(params_vector.iter());
         let mut stmt = self.conn.prepare(query.as_str())?;

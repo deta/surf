@@ -13,8 +13,8 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
 }
 
 fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunnel>> {
-    let resource_path = cx.argument::<JsString>(0)?.value(&mut cx);
-    let tunnel = tunnel::WorkerTunnel::new(&mut cx, resource_path);
+    let backend_root_path = cx.argument::<JsString>(0)?.value(&mut cx);
+    let tunnel = tunnel::WorkerTunnel::new(&mut cx, backend_root_path);
 
     Ok(cx.boxed(tunnel))
 }

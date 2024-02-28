@@ -14,10 +14,12 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_remove_horizon", js_remove_horizon)?;
     cx.export_function("js__store_list_cards_in_horizon", js_list_cards_in_horizon)?;
     cx.export_function("js__store_get_card", js_get_card)?;
+    cx.export_function("js__store_create_card", js_create_card)?;
     cx.export_function(
         "js__store_update_card_resource_id",
         js_update_card_resource_id,
     )?;
+    cx.export_function("js__store_update_card_data", js_update_card_data)?;
     cx.export_function(
         "js__store_update_card_dimensions",
         js_update_card_dimensions,
@@ -159,6 +161,36 @@ fn js_get_card(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.send(WorkerMessage::GetCard(card_id), deferred);
+
+    Ok(promise)
+}
+
+fn js_create_card(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let card_json = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let card: models::Card = match serde_json::from_str(&card_json) {
+        Ok(card) => card,
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.send(WorkerMessage::CreateCard(card), deferred);
+
+    Ok(promise)
+}
+
+fn js_update_card_data(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let data = cx
+        .argument::<JsString>(2)?
+        .value(&mut cx)
+        .as_bytes()
+        .to_vec();
+
+    let (deferred, promise) = cx.promise();
+    tunnel.send(WorkerMessage::UpdateCardData(card_id, data), deferred);
 
     Ok(promise)
 }
