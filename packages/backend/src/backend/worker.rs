@@ -283,6 +283,52 @@ impl Worker {
         // TODO: handle deleted resources
         self.db.search_resources(&query, tags)
     }
+
+    pub fn post_process_job(&mut self, resource_id: String) -> BackendResult<()> {
+        let resource = self
+            .db
+            .get_resource(&resource_id)?
+            // mb this should be a `DatabaseError`?
+            .ok_or(BackendError::GenericError(
+                "resource does not exist".to_owned(),
+            ))?;
+
+        // TODO: make use of strum(?) for this
+        match resource.resource_type.as_str() {
+            "text/space-notes" => {
+                let html_data = std::fs::read_to_string(resource.resource_path)?;
+                let mut output = String::new();
+                let mut in_tag = false;
+
+                for c in html_data.chars() {
+                    match (in_tag, c) {
+                        (true, '>') => in_tag = false,
+                        (false, '<') => {
+                            in_tag = true;
+                            output.push(' ');
+                        }
+                        (false, _) => output.push(c),
+                        _ => (),
+                    }
+                }
+
+                let output = output
+                    .chars()
+                    .take(256 * 3)
+                    .collect::<String>()
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ");
+
+                self.db.create_resource_text_content(&ResourceTextContent {
+                    id: random_uuid(),
+                    resource_id,
+                    content: output,
+                })
+            }
+            _ => Ok(()),
+        }
+    }
 }
 
 pub fn worker_entry_point(
@@ -385,6 +431,9 @@ pub fn worker_entry_point(
                 deferred,
                 worker.search_resources(query, resource_tags),
             ),
+            WorkerMessage::PostProcessJob(resource_id) => {
+                send_worker_response(&mut channel, deferred, worker.post_process_job(resource_id))
+            }
         }
     }
 }

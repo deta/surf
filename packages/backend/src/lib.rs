@@ -5,6 +5,8 @@ use neon::{prelude::ModuleContext, result::NeonResult};
 
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {
+    #[error("IO error: {0}")]
+    IOError(#[from] std::io::Error),
     #[error("Database error: {0}")]
     DatabaseError(#[from] rusqlite::Error),
     #[error("Chrono error: {0}")]
