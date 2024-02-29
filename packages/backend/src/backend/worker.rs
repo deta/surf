@@ -293,7 +293,6 @@ impl Worker {
         query: String,
         tags: Option<Vec<ResourceTag>>,
     ) -> BackendResult<SearchResult> {
-        // TODO: handle deleted resources
         self.db.search_resources(&query, tags)
     }
 

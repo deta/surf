@@ -759,7 +759,7 @@ impl Database {
         tags: Option<Vec<ResourceTag>>,
     ) -> BackendResult<SearchResult> {
         let mut params_vector = vec![format!("%{}%", keyword).to_string()];
-        let mut query = "SELECT M.*, R.*
+        let mut query = "SELECT DISTINCT M.*, R.*
             FROM resource_metadata M
             LEFT JOIN resource_text_content T ON M.resource_id = T.resource_id
             LEFT JOIN resources R ON M.resource_id = R.id
