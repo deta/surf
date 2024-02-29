@@ -65,15 +65,13 @@ pub struct Userdata {
 pub struct Horizon {
     #[serde(default = "random_uuid")]
     pub id: String,
-
     pub horizon_name: String,
-
     #[serde(default)]
     pub icon_uri: String,
-
+    #[serde(default)]
+    pub view_offset_x: i64,
     #[serde(default = "current_time")]
     pub created_at: chrono::DateTime<chrono::Utc>,
-
     #[serde(default = "current_time")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
