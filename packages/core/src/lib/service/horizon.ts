@@ -695,10 +695,7 @@ export class HorizonsManager {
   persistHorizon(horizon: Horizon) {
     this.log.debug(`Persisting Horizon ${horizon.id}`)
     // TODO: do we need to update anything else?
-    this.sffs.updateHorizoData(horizon.id, {
-      name: horizon.data.name,
-      viewOffsetX: horizon.data.viewOffsetX
-    })
+    this.sffs.updateHorizoData(horizon.data)
   }
 
   getHorizon(id: string) {

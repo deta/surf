@@ -305,13 +305,11 @@ export class SFFS {
     return horizons.map((h) => this.convertRawHorizonToHorizon(h))
   }
 
-  async updateHorizoData(
-    id: string,
-    data: Pick<HorizonData, 'name' | 'viewOffsetX'>
-  ): Promise<void> {
-    this.log.debug('updating horizon name', id, data)
-    // TODO: update more than just the name
-    await this.backend.js__store_update_horizon_name(id, data.name)
+  async updateHorizoData(data: HorizonData): Promise<void> {
+    this.log.debug('updating horizon', data)
+    const rawHorizon = this.convertHorizonToRawHorizon(data)
+    const stringUpdates = this.stringifyData(rawHorizon)
+    await this.backend.js__store_update_horizon(stringUpdates)
   }
 
   async deleteHorizon(id: string): Promise<void> {
