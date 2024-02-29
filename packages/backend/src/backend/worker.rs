@@ -88,6 +88,15 @@ impl Worker {
                             .to_owned(),
                         ));
                     }
+                    Ok(InternalResourceTagNames::Type) => {
+                        return Err(BackendError::GenericError(
+                            format!(
+                                "Tag name {} is reserved",
+                                InternalResourceTagNames::Type.to_string(),
+                            )
+                            .to_owned(),
+                        ));
+                    }
                     _ => {}
                 }
 
@@ -98,6 +107,10 @@ impl Worker {
             }
         }
         Database::create_resource_tag_tx(&mut tx, &ResourceTag::new_deleted(&resource.id, false))?;
+        Database::create_resource_tag_tx(
+            &mut tx,
+            &ResourceTag::new_type(&resource.id, &resource.resource_type),
+        )?;
         tx.commit()?;
 
         Ok(CompositeResource {
