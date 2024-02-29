@@ -10,7 +10,7 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_create_resource", js_create_resource)?;
     cx.export_function("js__store_list_horizons", js_list_horizons)?;
     cx.export_function("js__store_create_horizon", js_create_horizon)?;
-    cx.export_function("js__store_update_horizon_name", js_create_horizon)?;
+    cx.export_function("js__store_update_horizon", js_update_horizon)?;
     cx.export_function("js__store_remove_horizon", js_remove_horizon)?;
     cx.export_function("js__store_list_cards_in_horizon", js_list_cards_in_horizon)?;
     cx.export_function("js__store_get_card", js_get_card)?;
@@ -259,13 +259,9 @@ fn js_update_card_dimensions(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_update_card_stacking_order(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
     let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
-    let stacking_order = cx.argument::<JsString>(2)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(
-        WorkerMessage::UpdateCardStackingOrder(card_id, stacking_order),
-        deferred,
-    );
+    tunnel.send(WorkerMessage::UpdateCardStackingOrder(card_id), deferred);
 
     Ok(promise)
 }
@@ -316,6 +312,21 @@ fn js_resource_post_process(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.send(WorkerMessage::PostProcessJob(resource_id), deferred);
+
+    Ok(promise)
+}
+
+fn js_update_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let horizon_json = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let horizon: models::Horizon = match serde_json::from_str(&horizon_json) {
+        Ok(horizon) => horizon,
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.send(WorkerMessage::UpdateHorizon(horizon), deferred);
 
     Ok(promise)
 }

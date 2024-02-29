@@ -132,6 +132,7 @@ impl Worker {
             id: horizon_id,
             horizon_name: name.to_owned(),
             icon_uri: "".to_owned(),
+            view_offset_x: 0,
             created_at: current_time.clone(),
             updated_at: current_time,
         };
@@ -141,9 +142,9 @@ impl Worker {
         Ok(horizon)
     }
 
-    pub fn update_horizon_name(&mut self, id: &str, name: &str) -> BackendResult<()> {
+    pub fn update_horizon(&mut self, horizon: Horizon) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
-        Database::update_horizon_name_tx(&mut tx, id, name)?;
+        Database::update_horizon_tx(&mut tx, horizon)?;
         tx.commit()?;
         Ok(())
     }
@@ -213,14 +214,9 @@ impl Worker {
         Ok(())
     }
 
-    pub fn update_card_stacking_order_tx(
-        &mut self,
-        card_id: &str,
-        stacking_order: &str,
-    ) -> BackendResult<()> {
-        let dt = Worker::parse_datetime(stacking_order)?;
+    pub fn update_card_stacking_order_tx(&mut self, card_id: &str) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
-        Database::update_card_stacking_order_tx(&mut tx, card_id, dt)?;
+        Database::update_card_stacking_order_tx(&mut tx, card_id)?;
         tx.commit()?;
         Ok(())
     }
@@ -370,11 +366,9 @@ pub fn worker_entry_point(
             WorkerMessage::CreateHorizon(name) => {
                 send_worker_response(&mut channel, deferred, worker.create_horizon(&name))
             }
-            WorkerMessage::UpdateHorizonName(id, name) => send_worker_response(
-                &mut channel,
-                deferred,
-                worker.update_horizon_name(&id, &name),
-            ),
+            WorkerMessage::UpdateHorizon(horizon) => {
+                send_worker_response(&mut channel, deferred, worker.update_horizon(horizon))
+            }
             WorkerMessage::RemoveHorizon(id) => {
                 send_worker_response(&mut channel, deferred, worker.remove_horizon(&id))
             }
@@ -407,10 +401,10 @@ pub fn worker_entry_point(
                     worker.update_card_dimensions(&card_id, position_x, position_y, width, height),
                 )
             }
-            WorkerMessage::UpdateCardStackingOrder(card_id, datetime) => send_worker_response(
+            WorkerMessage::UpdateCardStackingOrder(card_id) => send_worker_response(
                 &mut channel,
                 deferred,
-                worker.update_card_stacking_order_tx(&card_id, &datetime),
+                worker.update_card_stacking_order_tx(&card_id),
             ),
             WorkerMessage::RemoveCard(card_id) => {
                 send_worker_response(&mut channel, deferred, worker.remove_card(&card_id))

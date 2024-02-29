@@ -546,11 +546,10 @@ impl Database {
     pub fn update_card_stacking_order_tx(
         tx: &mut rusqlite::Transaction,
         card_id: &str,
-        stacking_order: chrono::DateTime<chrono::Utc>,
     ) -> BackendResult<()> {
         tx.execute(
-            "UPDATE cards SET stacking_order = ?2, updated_at = datetime('now') WHERE id = ?1",
-            rusqlite::params![card_id, stacking_order],
+            "UPDATE cards SET stacking_order = datetime('now'), updated_at = datetime('now') WHERE id = ?1",
+            rusqlite::params![card_id],
         )?;
         Ok(())
     }
@@ -634,14 +633,15 @@ impl Database {
     pub fn list_all_horizons(&self) -> BackendResult<Vec<Horizon>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, horizon_name, icon_uri, created_at, updated_at FROM horizons")?;
+            .prepare("SELECT id, horizon_name, icon_uri, view_offset_x, created_at, updated_at FROM horizons")?;
         let horizons = stmt.query_map([], |row| {
             Ok(Horizon {
                 id: row.get(0)?,
                 horizon_name: row.get(1)?,
                 icon_uri: row.get(2)?,
-                created_at: row.get(3)?,
-                updated_at: row.get(4)?,
+                view_offset_x: row.get(3)?,
+                created_at: row.get(4)?,
+                updated_at: row.get(5)?,
             })
         })?;
         let mut result = Vec::new();
@@ -662,14 +662,22 @@ impl Database {
         Ok(())
     }
 
-    pub fn update_horizon_name_tx(
+    pub fn update_horizon_tx(
         tx: &mut rusqlite::Transaction,
-        id: &str,
-        horizon_name: &str,
+        horizon: Horizon,
     ) -> BackendResult<()> {
+        let query = "
+            UPDATE horizons
+            SET horizon_name = ?1, icon_uri = ?2, view_offset_x = ?3, updated_at = datetime('now')
+            WHERE id = ?4";
         tx.execute(
-            "UPDATE horizons SET horizon_name = ?2, updated_at = datetime('now') WHERE id = ?1",
-            rusqlite::params![id, horizon_name],
+            query,
+            rusqlite::params![
+                horizon.horizon_name,
+                horizon.icon_uri,
+                horizon.view_offset_x,
+                horizon.id,
+            ],
         )?;
         Ok(())
     }

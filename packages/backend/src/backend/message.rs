@@ -28,6 +28,6 @@ pub enum WorkerMessage {
     UpdateCardData(String, Vec<u8>),
     UpdateCardDimensions(String, i64, i64, i32, i32),
     UpdateCardResourceID(String, String),
-    UpdateCardStackingOrder(String, String),
-    UpdateHorizonName(String, String),
+    UpdateCardStackingOrder(String),
+    UpdateHorizon(models::Horizon),
 }
