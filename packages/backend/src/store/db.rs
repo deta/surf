@@ -564,7 +564,13 @@ impl Database {
     }
 
     pub fn list_all_cards(&self, horizon_id: &str) -> BackendResult<Vec<Card>> {
-        let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE horizon_id = ?1 ORDER BY position_x")?;
+        let query = "
+        SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data 
+        FROM cards 
+        WHERE horizon_id = ?1 
+        ORDER BY stacking_order ASC";
+
+        let mut stmt = self.conn.prepare(query)?;
         let cards = stmt.query_map(rusqlite::params![horizon_id], |row| {
             Ok(Card {
                 id: row.get(0)?,
@@ -582,10 +588,12 @@ impl Database {
                 data: row.get(12)?,
             })
         })?;
+
         let mut result = Vec::new();
         for card in cards {
             result.push(card?);
         }
+
         Ok(result)
     }
 
