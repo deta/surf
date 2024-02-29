@@ -415,19 +415,20 @@ impl Database {
         tx: &mut rusqlite::Transaction,
         card_position: &CardPosition,
     ) -> BackendResult<i64> {
-        let mut stmt = tx.prepare("INSERT INTO card_positions (position) VALUES (?1)")?;
-        stmt.insert(rusqlite::params![card_position.position])?;
-        Ok(tx.last_insert_rowid())
+        //let mut stmt = tx.prepare("INSERT INTO card_positions (position) VALUES (?1)")?;
+        //stmt.insert(rusqlite::params![card_position.position])?;
+        //Ok(tx.last_insert_rowid())
+        Ok(0)
     }
 
     pub fn remove_card_position_tx(
         tx: &mut rusqlite::Transaction,
         row_id: &i64,
     ) -> BackendResult<()> {
-        tx.execute(
-            "DELETE FROM card_positions WHERE row_id = ?1",
-            rusqlite::params![row_id],
-        )?;
+        //tx.execute(
+        //    "DELETE FROM card_positions WHERE row_id = ?1",
+        //    rusqlite::params![row_id],
+        //)?;
         Ok(())
     }
 
@@ -525,7 +526,7 @@ impl Database {
         width: i32,
         height: i32,
     ) -> BackendResult<()> {
-        tx.execute("DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)", rusqlite::params![card_id])?;
+        //tx.execute("DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)", rusqlite::params![card_id])?;
         let card_position_id = Self::create_card_position_tx(
             tx,
             &CardPosition {
@@ -554,9 +555,9 @@ impl Database {
     }
 
     pub fn remove_card_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
-        tx.execute(
-            "DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)",
-        ())?;
+        //tx.execute(
+        //    "DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)",
+        //())?;
         tx.execute("DELETE FROM cards WHERE id = ?1", rusqlite::params![id])?;
         Ok(())
     }

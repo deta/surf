@@ -17,6 +17,7 @@ import { quintOut, expoOut } from 'svelte/easing'
 
 import { HistoryEntriesManager } from './history'
 import type { ResourceManager } from './resources'
+import { SFFS } from './sffs'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 8
@@ -39,6 +40,7 @@ export class Horizon {
   api: API
   log: ScopedLogger
   storage: HorizonDatabase
+  sffs: SFFS
   telemetry: Telemetry
   historyEntriesManager: HistoryEntriesManager
   resourceManager: ResourceManager
@@ -57,6 +59,7 @@ export class Horizon {
     this.id = id
     this.api = api
     this.log = useLogScope(`Horizon ${id}`)
+    this.sffs = new SFFS() // TODO: maybe share this with the horizon manager
     this.storage = new HorizonDatabase()
     this.telemetry = telemetry
     this.historyEntriesManager = historyEntriesManager
@@ -127,8 +130,7 @@ export class Horizon {
     this.log.debug(`Loading cards`)
 
     // load cards from storage and persist any future changes
-    // const storedCards = await this.storage.cards.all() ?? []
-    const storedCards = (await this.storage.getCardsByHorizonId(this.data.id)) ?? []
+    const storedCards = (await this.sffs.getCardsForHorizon(this.data.id)) ?? []
     this.cards.set(storedCards.map((c) => writable(c)))
     this.signalChange(this)
   }
@@ -153,6 +155,7 @@ export class Horizon {
     return null
   }
 
+  // TODO: this needs to update the cards itself
   moveCardToStackingTop(id: string) {
     if (!this.board) {
       console.warn('[Horizon Service] setActiveCard called with board === undefined!')
@@ -185,6 +188,7 @@ export class Horizon {
     this.previewImageObjectURL = URL.createObjectURL(newPreviewImage)
   }
 
+  // TODO: This needs to be reworked, we shouldn't have to fetch the card from sffs first
   async updateCard(id: string, updates: Partial<Card>) {
     const card = await this.getCard(id)
     if (!card) throw new Error(`Card ${id} not found`)
@@ -199,8 +203,27 @@ export class Horizon {
     // we need to get the existing card from storage to track the update event
     // this is a workaround, but we should find a better solution if possible
     // as for latency, the get from storage is very fast, so it should not be a problem
-    const existingCard = await this.storage.cards.read(id)
-    await this.storage.cards.update(id, updates)
+    const existingCard = await this.sffs.getCard(id)
+    if (!existingCard) throw new Error(`Card ${id} not found in storage`)
+
+    if (updates.data) {
+      await this.sffs.updateCardData(id, updates.data)
+    }
+
+    if (updates.x || updates.y || updates.width || updates.height) {
+      // TODO: can handle sffs only partial card position updates?
+      await this.sffs.updateCardPosition(id, {
+        x: updates.x ?? existingCard.x,
+        y: updates.y ?? existingCard.y,
+        width: updates.width ?? existingCard.width,
+        height: updates.height ?? existingCard.height
+      })
+    }
+
+    if (updates.resourceId) {
+      await this.sffs.updateCardResource(id, updates.resourceId)
+    }
+
     this.log.debug(`Updated card ${id}`)
     this.signalChange(this)
     await this.telemetry.trackUpdateCardEvent(existingCard, updates)
@@ -211,7 +234,7 @@ export class Horizon {
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
     this.cards.update((c) => c.filter((c) => get(c).id !== card.id))
-    await this.storage.cards.delete(card.id)
+    await this.sffs.deleteCard(card.id)
 
     this.log.debug(`Deleted card ${card.id}`)
     this.signalChange(this)
@@ -259,16 +282,20 @@ export class Horizon {
   }
 
   async addCard(
-    data: Optional<Card, 'id' | 'stacking_order'>,
+    data: Optional<Card, 'id' | 'stackingOrder'>,
     makeActive: boolean = false,
     duplicated: boolean = false
   ) {
-    const card = await this.storage.cards.create({
-      horizon_id: this.data.id,
-      //stacking_order: 1,
-      hoisted: true,
+    const newCard = await this.sffs.createCard({
+      horizonId: this.data.id,
+      stackingOrder: Date.now(),
       ...data
     })
+
+    const card = {
+      ...newCard,
+      hoisted: true
+    }
 
     const cardStore = writable(card)
     this.cards.update((c) => [...c, cardStore])
@@ -509,6 +536,7 @@ export class HorizonsManager {
   api: API
   log: ScopedLogger
   storage: HorizonDatabase
+  sffs: SFFS
   telemetry: Telemetry
   historyEntriesManager: HistoryEntriesManager
   activeHorizonStorage: LocalStorage<string>
@@ -519,6 +547,7 @@ export class HorizonsManager {
     this.api = api
     this.log = useLogScope(`HorizonService`)
     this.storage = new HorizonDatabase()
+    this.sffs = new SFFS() // TODO: maybe share this with the resources manager
     this.telemetry = new Telemetry(this.storage, telemetryConfig)
     this.adblockerState = writable(true)
 
@@ -529,7 +558,7 @@ export class HorizonsManager {
     // that stores application state
     this.activeHorizonStorage = new LocalStorage<string>('active_horizon')
 
-    window.api.getAdblockerState('persist:horizon').then((state) => {
+    window.api.getAdblockerState('persist:horizon').then((state: boolean) => {
       this.adblockerState.set(state)
     })
 
@@ -633,7 +662,7 @@ export class HorizonsManager {
   }
 
   async loadHorizons() {
-    const storedHorizons = (await this.storage.horizons.all()) ?? []
+    const storedHorizons = (await this.sffs.getHorizons()) ?? []
     this.log.debug(`Loading ${storedHorizons.length} stored horizons`)
 
     const horizons = await Promise.all(
@@ -665,7 +694,8 @@ export class HorizonsManager {
 
   persistHorizon(horizon: Horizon) {
     this.log.debug(`Persisting Horizon ${horizon.id}`)
-    this.storage.horizons.update(horizon.id, horizon.data)
+    // TODO: do we need to update anything else?
+    this.sffs.updateHorizoData(horizon.data)
   }
 
   getHorizon(id: string) {
@@ -725,12 +755,7 @@ export class HorizonsManager {
   }
 
   async createHorizon(name: string) {
-    // const res = await this.api.createHorizon(name)
-    let data = {
-      name,
-      viewOffsetX: 0
-    } as HorizonData
-    data = await this.storage.horizons.create(data)
+    const data = await this.sffs.createHorizon(name)
 
     const horizon = new Horizon(
       data.id,
@@ -754,10 +779,8 @@ export class HorizonsManager {
 
     this.log.debug(`Deleting horizon ${horizon.id}`)
 
-    await this.storage.horizons.delete(horizon.id)
-    await this.storage.deleteCardsByHorizonId(horizon.id)
-
-    // TODO: delete resources
+    // Note: SFFS will take care of deleting all cards as well
+    await this.sffs.deleteHorizon(horizon.id)
 
     this.horizons.update((h) => h.filter((h) => h.id !== horizon.id))
     await this.telemetry.trackEvent(EventTypes.DeleteHorizon, { id: horizon.id })
