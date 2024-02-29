@@ -655,8 +655,8 @@ impl Database {
         horizon: &Horizon,
     ) -> BackendResult<()> {
         tx.execute(
-            "INSERT INTO horizons (id, horizon_name, icon_uri, created_at, updated_at) VALUES (?1, ?2, ?3, datetime('now'), datetime('now'))",
-            rusqlite::params![horizon.id, horizon.horizon_name, horizon.icon_uri]
+            "INSERT INTO horizons (id, horizon_name, icon_uri, view_offset_x, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, datetime('now'), datetime('now'))",
+            rusqlite::params![horizon.id, horizon.horizon_name, horizon.icon_uri, horizon.view_offset_x]
         )?;
         Ok(())
     }
