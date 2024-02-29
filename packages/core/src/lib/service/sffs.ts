@@ -97,8 +97,9 @@ export class SFFS {
     const uInt8 = new Uint8Array(rawCard.data)
     const stringData = new TextDecoder().decode(uInt8)
     const data = this.parseData<Card['data']>(stringData) || null
+    const stackingOrder = new Date(rawCard.stacking_order).getTime()
 
-    return {
+    const parsed = {
       id: rawCard.id,
       x: rawCard.position_x,
       y: rawCard.position_y,
@@ -107,11 +108,13 @@ export class SFFS {
       horizonId: rawCard.horizon_id,
       createdAt: rawCard.created_at,
       updatedAt: rawCard.updated_at,
-      stackingOrder: new Date(rawCard.stacking_order).getTime(),
+      stackingOrder: stackingOrder,
       type: rawCard.card_type as CardType,
       data: data,
       resourceId: rawCard.resource_id ?? null
     }
+
+    return parsed
   }
 
   convertCardToRawCard(card: CardToCreate | Card): SFFSRawCard | SFFSRawCardToCreate {
@@ -358,7 +361,10 @@ export class SFFS {
       return []
     }
 
-    return cards.map((c) => this.convertRawCardToCard(c))
+    const parsed = cards.map((c) => this.convertRawCardToCard(c))
+    this.log.debug('parsed cards', parsed)
+
+    return parsed
   }
 
   async updateCardResource(id: string, resourceId: string | null): Promise<void> {
@@ -376,10 +382,9 @@ export class SFFS {
     await this.backend.js__store_update_card_data(id, JSON.stringify(data))
   }
 
-  async updateCardStackingOrder(id: string, stackingOrder: number): Promise<void> {
-    this.log.debug('updating card stacking order', id, stackingOrder)
-    const rawStackingOrder = new Date(stackingOrder).toISOString()
-    await this.backend.js__store_update_card_stacking_order(id, rawStackingOrder)
+  async setCardStackingOrderTop(id: string): Promise<void> {
+    this.log.debug('updating card stacking order', id)
+    await this.backend.js__store_update_card_stacking_order(id)
   }
 
   async deleteCard(id: string): Promise<void> {

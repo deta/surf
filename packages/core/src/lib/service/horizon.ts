@@ -72,11 +72,23 @@ export class Horizon {
     this.data = data
     this.cards = writable([])
     this.activeCardId = writable(null)
-    data.stackingOrder = data.stackingOrder || []
-    this.stackingOrder = writable(data.stackingOrder)
+    this.stackingOrder = writable([])
     this.signalChange = signalChange
     this.board = null
     this.telaSettings = null
+
+    this.stackingOrder.subscribe((stack) => {
+      const cards = get(this.cards)
+      cards.forEach((c) => {
+        const card = get(c)
+
+        let idx = stack.indexOf(card.id)
+        c.update((card) => {
+          card.stackingOrder = idx
+          return card
+        })
+      })
+    })
 
     this.adblockerState = adblockerState
     if (previewImageResource) {
@@ -132,6 +144,16 @@ export class Horizon {
     // load cards from storage and persist any future changes
     const storedCards = (await this.sffs.getCardsForHorizon(this.data.id)) ?? []
     this.cards.set(storedCards.map((c) => writable(c)))
+
+    this.log.debug(`Loaded cards`, storedCards)
+
+    const stack = [...storedCards]
+      .sort((a, b) => {
+        return a.stackingOrder - b.stackingOrder
+      })
+      .map((e) => e.id)
+    this.stackingOrder.set(stack)
+
     this.signalChange(this)
   }
 
@@ -159,11 +181,14 @@ export class Horizon {
   moveCardToStackingTop(id: string) {
     if (!this.board) {
       console.warn('[Horizon Service] setActiveCard called with board === undefined!')
-      moveToStackingTop(this.stackingOrder, id)
+      // moveToStackingTop(this.stackingOrder, id)
       return
     }
 
-    moveToStackingTop(get(this.board?.state).stackingOrder, id)
+    moveToStackingTop(this.stackingOrder, id)
+
+    this.sffs.setCardStackingOrderTop(id)
+
     this.signalChange(this)
   }
 
