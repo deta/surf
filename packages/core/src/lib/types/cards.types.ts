@@ -17,10 +17,10 @@ export type CardPosition = Pick<IPositionable<'id'>, 'x' | 'y' | 'width' | 'heig
 
 export interface Card extends IPositionable<'id'> {
   id: string
-  horizon_id: string
+  horizonId: string
   createdAt: string
   updatedAt: string
-  stacking_order: number
+  stackingOrder: number
   type: CardType
   data: CardBrowser['data'] | null
   resourceId: string | null

@@ -6,8 +6,20 @@ import type {
   SFFSRawCompositeResource,
   SFFSRawResourceTag,
   SFFSSearchResult,
-  SFFSRawResourceMetadata
+  SFFSRawResourceMetadata,
+  Card,
+  SFFSRawCard,
+  CardType,
+  Optional,
+  SFFSRawCardToCreate,
+  SFFSRawHorizon,
+  HorizonData,
+  SFFSRawHorizonToCreate,
+  CardPosition
 } from '../types'
+
+export type CardToCreate = Optional<Card, 'id' | 'stackingOrder' | 'createdAt' | 'updatedAt'>
+export type HorizonToCreate = Optional<HorizonData, 'id' | 'createdAt' | 'updatedAt'>
 
 export class SFFS {
   backend: any
@@ -75,6 +87,63 @@ export class SFFS {
         tag_name: tag.name,
         tag_value: tag.value
       }))
+    }
+  }
+
+  convertRawCardToCard(rawCard: SFFSRawCard): Card {
+    const data = this.parseData<Card['data']>(rawCard.data)
+    return {
+      id: rawCard.id,
+      x: rawCard.position_x,
+      y: rawCard.position_y,
+      width: rawCard.width,
+      height: rawCard.height,
+      horizonId: rawCard.horizon_id,
+      createdAt: rawCard.created_at,
+      updatedAt: rawCard.updated_at,
+      stackingOrder: new Date(rawCard.stacking_order).getTime(),
+      type: rawCard.card_type as CardType,
+      data: data,
+      resourceId: rawCard.resource_id ?? null
+    }
+  }
+
+  convertCardToRawCard(card: CardToCreate | Card): SFFSRawCard | SFFSRawCardToCreate {
+    return {
+      id: card.id ?? '',
+      horizon_id: card.horizonId,
+      card_type: card.type,
+      resource_id: card.resourceId ?? undefined,
+      position_id: 0, // TODO: do we need to set this?
+      position_x: card.x,
+      position_y: card.y,
+      width: card.width,
+      height: card.height,
+      stacking_order: card.stackingOrder ? new Date(card.stacking_order).toISOString() : '',
+      created_at: card.createdAt,
+      updated_at: card.updatedAt,
+      data: JSON.stringify(card.data)
+    }
+  }
+
+  convertRawHorizonToHorizon(rawHorizon: SFFSRawHorizon): HorizonData {
+    return {
+      id: rawHorizon.id,
+      name: rawHorizon.horizon_name,
+      viewOffsetX: rawHorizon.view_offset_x,
+      stackingOrder: [],
+      createdAt: rawHorizon.created_at,
+      updatedAt: rawHorizon.updated_at
+    }
+  }
+
+  convertHorizonToRawHorizon(horizon: HorizonToCreate | HorizonData): SFFSRawHorizonToCreate {
+    return {
+      id: horizon.id,
+      horizon_name: horizon.name,
+      view_offset_x: horizon.viewOffsetX,
+      created_at: horizon.createdAt,
+      updated_at: horizon.updatedAt
     }
   }
 
@@ -194,5 +263,81 @@ export class SFFS {
 
     await this.fs.writeResource(resourceId, buffer)
     await this.fs.closeResource(resourceId)
+  }
+
+  async createHorizon(horizon: HorizonToCreate): Promise<HorizonData> {
+    this.log.debug('creating horizon', horizon)
+    const rawHorizon = this.convertHorizonToRawHorizon(horizon)
+    const newRawHorizon = await this.backend.js__store_create_horizon(rawHorizon)
+    return this.convertRawHorizonToHorizon(newRawHorizon)
+  }
+
+  async getHorizons(): Promise<HorizonData[]> {
+    this.log.debug('getting horizons')
+    const rawHorizons = await this.backend.js__store_list_horizons()
+    if (!rawHorizons) {
+      return []
+    }
+
+    return rawHorizons.map(this.convertRawHorizonToHorizon)
+  }
+
+  async updateHorizonName(id: string, name: string): Promise<void> {
+    this.log.debug('updating horizon name', id, name)
+    await this.backend.js__store_update_horizon_name(id, name)
+  }
+
+  async deleteHorizon(id: string): Promise<void> {
+    this.log.debug('deleting horizon', id)
+    await this.backend.js__store_remove_horizon(id)
+  }
+
+  async createCard(card: Optional<Card, 'id' | 'stacking_order'>): Promise<Card> {
+    this.log.debug('creating card', card)
+    const rawCard = this.convertCardToRawCard(card)
+    const newRawCard = await this.backend.js__store_create_card(rawCard)
+    return this.convertRawCardToCard(newRawCard)
+  }
+
+  async getCard(id: string): Promise<Card | null> {
+    this.log.debug('getting card with id', id)
+    const rawCard = await this.backend.js__store_read_card(id)
+    if (!rawCard) {
+      return null
+    }
+
+    return this.convertRawCardToCard(rawCard)
+  }
+
+  async getCardsForHorizon(horizonId: string): Promise<Card[]> {
+    this.log.debug('getting cards for horizon', horizonId)
+    const rawCards = await this.backend.js__store_list_cards_in_horizon(horizonId)
+    return rawCards.map(this.convertRawCardToCard)
+  }
+
+  async updateCardResource(id: string, resourceId: string | null): Promise<void> {
+    this.log.debug('updating card resource', id, resourceId)
+    await this.backend.js__store_update_card_resource_id(id, resourceId)
+  }
+
+  async updateCardPosition(id: string, pos: CardPosition): Promise<void> {
+    this.log.debug('updating card position', id, pos)
+    await this.backend.js__store_update_card_dimensions(id, pos.x, pos.y, pos.width, pos.height)
+  }
+
+  async updateCardData(id: string, data: Card['data']): Promise<void> {
+    this.log.debug('updating card data', id, data)
+    await this.backend.js__store_update_card_data(id, JSON.stringify(data))
+  }
+
+  async updateCardStackingOrder(id: string, stackingOrder: number): Promise<void> {
+    this.log.debug('updating card stacking order', id, stackingOrder)
+    const rawStackingOrder = new Date(stackingOrder).toISOString()
+    await this.backend.js__store_update_card_stacking_order(id, rawStackingOrder)
+  }
+
+  async deleteCard(id: string): Promise<void> {
+    this.log.debug('deleting card', id)
+    await this.backend.js__store_remove_card(id)
   }
 }

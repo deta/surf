@@ -1,3 +1,5 @@
+import type { Optional } from '.'
+
 export type SFFSSearchResultEngine = 'Metadata' | 'content' | 'proximity'
 
 export interface SFFSSearchResultItem {
@@ -53,3 +55,35 @@ export interface SFFSRawCompositeResource {
   text_content?: SFFSRawResourceTextContent
   resource_tags?: SFFSRawResourceTag[]
 }
+
+export interface SFFSRawCard {
+  id: string
+  horizon_id: string
+  card_type: string
+  resource_id?: string
+  position_id: number
+  position_x: number
+  position_y: number
+  width: number
+  height: number
+  stacking_order: string
+  created_at: string
+  updated_at: string
+  data: string
+}
+
+export type SFFSRawCardToCreate = Optional<
+  SFFSRawCard,
+  'id' | 'stacking_order' | 'created_at' | 'updated_at'
+>
+
+export interface SFFSRawHorizon {
+  id: string
+  horizon_name: string
+  view_offset_x: number
+  icon_uri?: string
+  created_at: string
+  updated_at: string
+}
+
+export type SFFSRawHorizonToCreate = Optional<SFFSRawHorizon, 'id' | 'created_at' | 'updated_at'>
