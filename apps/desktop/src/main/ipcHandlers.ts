@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
+import { getUserConfig } from './config'
 
 export function setupIpcHandlers() {
   ipcMain.handle('set-adblocker-state', async (_, { partition, state }) => {
@@ -54,6 +55,10 @@ export function setupIpcHandlers() {
       y: PADDING
     })
     return image.toDataURL()
+  })
+
+  ipcMain.handle('get-user-config', async (_) => {
+    return getUserConfig()
   })
 }
 

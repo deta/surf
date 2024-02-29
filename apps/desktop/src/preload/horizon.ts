@@ -90,7 +90,9 @@ const api = {
 
   appIsReady: () => {
     ipcRenderer.send('app-ready')
-  }
+  },
+
+  getUserData: () => ipcRenderer.invoke('get-user-config')
 }
 
 ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {

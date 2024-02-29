@@ -1,5 +1,5 @@
 import isEqual from 'lodash/isequal'
-import type { Card } from '../types/index'
+import type { Card, UserData } from '../types/index'
 import { HorizonDatabase } from './storage'
 import * as amplitude from '@amplitude/analytics-browser'
 
@@ -32,11 +32,14 @@ export class Telemetry {
     this.trackHostnames = config.trackHostnames
   }
   async init() {
-    let userID = await this.storage.getUserID()
+    const userConfig = (await window.api.getUserConfig()) as UserData
+    let userID = userConfig.user_id
     if (!userID) {
-      const userData = await this.storage.createUserData()
-      userID = userData.user_id
+      console.warn('No user ID found, disabling telemetry')
+      this.active = false
+      return
     }
+
     amplitude.init(this.apiKey, userID, {
       defaultTracking: {
         attribution: false,
