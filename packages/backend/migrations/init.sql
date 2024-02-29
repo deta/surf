@@ -40,6 +40,16 @@ CREATE TABLE IF NOT EXISTS cards (
     data BLOB NOT NULL DEFAULT '{}' 
 );
 
+CREATE TABLE IF NOT EXISTS history_entries (
+    id TEXT PRIMARY KEY,
+    entry_type TEXT NOT NULL,
+    url TEXT,
+    title TEXT,
+    search_query TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS resource_metadata USING fts5(
     id UNINDEXED,
     resource_id UNINDEXED,

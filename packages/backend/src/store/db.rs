@@ -1,6 +1,7 @@
-use crate::{BackendError, BackendResult};
+use std::str::FromStr;
 
 use super::models::*;
+use crate::{BackendError, BackendResult};
 
 use rusqlite::{ffi::sqlite3_auto_extension, Connection, OptionalExtension};
 use rust_embed::RustEmbed;
@@ -820,5 +821,100 @@ impl Database {
             items: results,
             total: n,
         })
+    }
+
+    pub fn create_history_entry(&self, entry: &HistoryEntry) -> BackendResult<()> {
+        let query = "
+            INSERT INTO history_entries (id, entry_type, url, title, search_query, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
+        self.conn.execute(
+            query,
+            rusqlite::params![
+                entry.id,
+                entry.entry_type.as_ref(),
+                entry.url,
+                entry.title,
+                entry.search_query,
+                entry.created_at,
+                entry.updated_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_history_entry(&self, id: &str) -> BackendResult<Option<HistoryEntry>> {
+        let query = "
+            SELECT id, entry_type, url, title, search_query, created_at, updated_at
+            FROM history_entries
+            WHERE id = ?1";
+        self.conn
+            .query_row(query, [id], |row| {
+                Ok(HistoryEntry {
+                    id: row.get(0)?,
+                    // TODO: handle this better
+                    entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str())
+                        .unwrap(),
+                    url: row.get(2)?,
+                    title: row.get(3)?,
+                    search_query: row.get(4)?,
+                    created_at: row.get(5)?,
+                    updated_at: row.get(6)?,
+                })
+            })
+            .optional()
+            .map_err(BackendError::DatabaseError)
+    }
+
+    pub fn update_history_entry(&self, entry: &HistoryEntry) -> BackendResult<()> {
+        let query = "
+            UPDATE history_entries
+            SET entry_type = ?1, url = ?2, title = ?3, search_query = ?4, updated_at = ?5
+            WHERE id = ?6";
+        self.conn.execute(
+            query,
+            rusqlite::params![
+                entry.entry_type.as_ref(),
+                entry.url,
+                entry.title,
+                entry.search_query,
+                entry.updated_at,
+                entry.id,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_history_entry(&self, id: &str) -> BackendResult<()> {
+        let query = "DELETE FROM history_entries WHERE id = ?1";
+        self.conn.execute(query, [id])?;
+        Ok(())
+    }
+
+    pub fn get_all_history_entries(&self) -> BackendResult<Vec<HistoryEntry>> {
+        let mut stmt = self.conn.prepare(
+            "
+            SELECT id, entry_type, url, title, search_query, created_at, updated_at
+            FROM history_entries",
+        )?;
+
+        let history_entry_iter = stmt.query_map([], |row| {
+            Ok(HistoryEntry {
+                id: row.get(0)?,
+                // TODO: handle this better
+                entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str()).unwrap(),
+                url: row.get(2)?,
+                title: row.get(3)?,
+                search_query: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })?;
+
+        let mut history_entries = Vec::new();
+        for entry in history_entry_iter {
+            history_entries.push(entry?);
+        }
+
+        Ok(history_entries)
     }
 }

@@ -1,16 +1,20 @@
-use crate::store::models;
+use crate::store::models::*;
 
 pub enum WorkerMessage {
-    CreateCard(models::Card),
+    CreateCard(Card),
+    CreateHistoryEntry(HistoryEntry),
     CreateHorizon(String),
     CreateResource {
         resource_type: String,
-        resource_tags: Option<Vec<models::ResourceTag>>,
-        resource_metadata: Option<models::ResourceMetadata>,
+        resource_tags: Option<Vec<ResourceTag>>,
+        resource_metadata: Option<ResourceMetadata>,
     },
     CreateUserdata(String),
+    DeleteHistoryEntry(String),
     DeleteResource(String),
+    GetAllHistoryEntries,
     GetCard(String),
+    GetHistoryEntry(String),
     GetUserdataByUserId(String),
     ListCardsInHorizon(String),
     ListHorizons(),
@@ -23,11 +27,12 @@ pub enum WorkerMessage {
     RemoveUserdata(String),
     SearchResources {
         query: String,
-        resource_tags: Option<Vec<models::ResourceTag>>,
+        resource_tags: Option<Vec<ResourceTag>>,
     },
     UpdateCardData(String, Vec<u8>),
     UpdateCardDimensions(String, i64, i64, i32, i32),
     UpdateCardResourceID(String, String),
     UpdateCardStackingOrder(String),
-    UpdateHorizon(models::Horizon),
+    UpdateHistoryEntry(HistoryEntry),
+    UpdateHorizon(Horizon),
 }

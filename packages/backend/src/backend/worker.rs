@@ -337,6 +337,26 @@ impl Worker {
             _ => Ok(()),
         }
     }
+
+    pub fn create_history_entry(&mut self, entry: HistoryEntry) -> BackendResult<()> {
+        self.db.create_history_entry(&entry)
+    }
+
+    pub fn get_history_entry(&mut self, id: String) -> BackendResult<Option<HistoryEntry>> {
+        self.db.get_history_entry(&id)
+    }
+
+    pub fn update_history_entry(&mut self, entry: HistoryEntry) -> BackendResult<()> {
+        self.db.update_history_entry(&entry)
+    }
+
+    pub fn delete_history_entry(&mut self, id: String) -> BackendResult<()> {
+        self.db.delete_history_entry(&id)
+    }
+
+    pub fn get_all_history_entries(&mut self) -> BackendResult<Vec<HistoryEntry>> {
+        self.db.get_all_history_entries()
+    }
 }
 
 pub fn worker_entry_point(
@@ -439,6 +459,21 @@ pub fn worker_entry_point(
             ),
             WorkerMessage::PostProcessJob(resource_id) => {
                 send_worker_response(&mut channel, deferred, worker.post_process_job(resource_id))
+            }
+            WorkerMessage::CreateHistoryEntry(entry) => {
+                send_worker_response(&mut channel, deferred, worker.create_history_entry(entry))
+            }
+            WorkerMessage::GetHistoryEntry(id) => {
+                send_worker_response(&mut channel, deferred, worker.get_history_entry(id))
+            }
+            WorkerMessage::UpdateHistoryEntry(entry) => {
+                send_worker_response(&mut channel, deferred, worker.update_history_entry(entry))
+            }
+            WorkerMessage::DeleteHistoryEntry(id) => {
+                send_worker_response(&mut channel, deferred, worker.delete_history_entry(id))
+            }
+            WorkerMessage::GetAllHistoryEntries => {
+                send_worker_response(&mut channel, deferred, worker.get_all_history_entries())
             }
         }
     }

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+
 use std::str::FromStr;
 use std::string::ToString;
 
@@ -182,4 +183,25 @@ pub struct ResourceTextContent {
 #[derive(Debug)]
 pub struct CardPosition {
     pub position: Vec<u8>,
+}
+
+#[derive(Debug, Serialize, Deserialize, strum::EnumString, strum::AsRefStr)]
+#[strum(ascii_case_insensitive)]
+pub enum HistoryEntryType {
+    Search,
+    Navigation,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HistoryEntry {
+    #[serde(default = "random_uuid")]
+    pub id: String,
+    pub entry_type: HistoryEntryType,
+    pub url: Option<String>,
+    pub title: Option<String>,
+    pub search_query: Option<String>,
+    #[serde(default = "current_time")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(default = "current_time")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
