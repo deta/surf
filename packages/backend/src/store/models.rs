@@ -19,12 +19,14 @@ pub fn parse_datetime_from_str(
 }
 
 pub enum InternalResourceTagNames {
+    Type,
     Deleted,
 }
 
 impl InternalResourceTagNames {
     pub fn as_str(&self) -> &str {
         match self {
+            InternalResourceTagNames::Type => "type",
             InternalResourceTagNames::Deleted => "deleted",
         }
     }
@@ -35,6 +37,7 @@ impl FromStr for InternalResourceTagNames {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "type" => Ok(InternalResourceTagNames::Type),
             "deleted" => Ok(InternalResourceTagNames::Deleted),
             _ => Err(()),
         }
@@ -44,6 +47,7 @@ impl FromStr for InternalResourceTagNames {
 impl ToString for InternalResourceTagNames {
     fn to_string(&self) -> String {
         match self {
+            InternalResourceTagNames::Type => "type".to_string(),
             InternalResourceTagNames::Deleted => "deleted".to_string(),
         }
     }
@@ -142,6 +146,15 @@ impl ResourceTag {
             resource_id: resource_id.to_string(),
             tag_name: InternalResourceTagNames::Deleted.to_string(),
             tag_value: deleted.to_string(),
+        }
+    }
+
+    pub fn new_type(resource_id: &str, resource_type: &str) -> ResourceTag {
+        ResourceTag {
+            id: random_uuid(),
+            resource_id: resource_id.to_string(),
+            tag_name: InternalResourceTagNames::Type.to_string(),
+            tag_value: resource_type.to_string(),
         }
     }
 }
