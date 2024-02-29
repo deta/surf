@@ -84,7 +84,7 @@
     const board = horizon.board
     if (!board) console.error('No board found ond rag end')
     const state = get(board!.state)
-    $card.stacking_order = get(state.stackingOrder).indexOf($card.id)
+    $card.stackingOrder = get(state.stackingOrder).indexOf($card.id)
     updateCard()
     horizon.telaSettings?.update((v) => {
       v.CAN_SELECT = true

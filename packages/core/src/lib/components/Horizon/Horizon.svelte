@@ -751,7 +751,7 @@
   }
 
   onMount(() => {
-    // const stack = [...$cards].sort((a, b) => { return get(a).stacking_order - get(b).stacking_order }).map((e) => get(e).id);
+    // const stack = [...$cards].sort((a, b) => { return get(a).stackingOrder - get(b).stackingOrder }).map((e) => get(e).id);
 
     loadHorizon()
     handleWindowResize()
