@@ -19,7 +19,10 @@ import type {
 } from '../types'
 
 export type CardToCreate = Optional<Card, 'id' | 'stackingOrder' | 'createdAt' | 'updatedAt'>
-export type HorizonToCreate = Optional<HorizonData, 'id' | 'createdAt' | 'updatedAt'>
+export type HorizonToCreate = Optional<
+  HorizonData,
+  'id' | 'stackingOrder' | 'createdAt' | 'updatedAt'
+>
 
 export class SFFS {
   backend: any
@@ -91,7 +94,10 @@ export class SFFS {
   }
 
   convertRawCardToCard(rawCard: SFFSRawCard): Card {
-    const data = this.parseData<Card['data']>(rawCard.data)
+    const uInt8 = new Uint8Array(rawCard.data)
+    const stringData = new TextDecoder().decode(uInt8)
+    const data = this.parseData<Card['data']>(stringData) || null
+
     return {
       id: rawCard.id,
       x: rawCard.position_x,
@@ -109,8 +115,12 @@ export class SFFS {
   }
 
   convertCardToRawCard(card: CardToCreate | Card): SFFSRawCard | SFFSRawCardToCreate {
+    const dataString = card.data ? JSON.stringify(card.data ?? null) : 'null'
+    const uint8ArrayData = new TextEncoder().encode(dataString)
+    const arrayData = Array.from(uint8ArrayData)
+
     return {
-      id: card.id ?? '',
+      id: card.id ?? undefined,
       horizon_id: card.horizonId,
       card_type: card.type,
       resource_id: card.resourceId ?? undefined,
@@ -119,10 +129,10 @@ export class SFFS {
       position_y: card.y,
       width: card.width,
       height: card.height,
-      stacking_order: card.stackingOrder ? new Date(card.stacking_order).toISOString() : '',
+      stacking_order: card.stackingOrder ? new Date(card.stackingOrder).toISOString() : '',
       created_at: card.createdAt,
       updated_at: card.updatedAt,
-      data: JSON.stringify(card.data)
+      data: arrayData
     }
   }
 
@@ -130,7 +140,7 @@ export class SFFS {
     return {
       id: rawHorizon.id,
       name: rawHorizon.horizon_name,
-      viewOffsetX: rawHorizon.view_offset_x,
+      viewOffsetX: rawHorizon.view_offset_x ?? 0,
       stackingOrder: [],
       createdAt: rawHorizon.created_at,
       updatedAt: rawHorizon.updated_at
@@ -154,6 +164,10 @@ export class SFFS {
       this.log.error('failed to parse data', e)
       return null
     }
+  }
+
+  stringifyData(data: any): string {
+    return JSON.stringify(data)
   }
 
   async createResource(
@@ -265,26 +279,39 @@ export class SFFS {
     await this.fs.closeResource(resourceId)
   }
 
-  async createHorizon(horizon: HorizonToCreate): Promise<HorizonData> {
-    this.log.debug('creating horizon', horizon)
-    const rawHorizon = this.convertHorizonToRawHorizon(horizon)
-    const newRawHorizon = await this.backend.js__store_create_horizon(rawHorizon)
-    return this.convertRawHorizonToHorizon(newRawHorizon)
+  async createHorizon(name: string): Promise<HorizonData> {
+    this.log.debug('creating horizon', name)
+
+    const newRawHorizon = await this.backend.js__store_create_horizon(name)
+    const newHorizon = this.parseData<SFFSRawHorizon>(newRawHorizon)
+    if (!newHorizon) {
+      throw new Error('failed to create horizon, invalid data', newRawHorizon)
+    }
+
+    const converted = this.convertRawHorizonToHorizon(newHorizon)
+    this.log.debug('created horizon', converted)
+    return converted
   }
 
   async getHorizons(): Promise<HorizonData[]> {
     this.log.debug('getting horizons')
     const rawHorizons = await this.backend.js__store_list_horizons()
-    if (!rawHorizons) {
+    this.log.debug('raw horizons', rawHorizons)
+    const horizons = this.parseData<SFFSRawHorizon[]>(rawHorizons)
+    if (!horizons) {
       return []
     }
 
-    return rawHorizons.map(this.convertRawHorizonToHorizon)
+    return horizons.map((h) => this.convertRawHorizonToHorizon(h))
   }
 
-  async updateHorizonName(id: string, name: string): Promise<void> {
-    this.log.debug('updating horizon name', id, name)
-    await this.backend.js__store_update_horizon_name(id, name)
+  async updateHorizoData(
+    id: string,
+    data: Pick<HorizonData, 'name' | 'viewOffsetX'>
+  ): Promise<void> {
+    this.log.debug('updating horizon name', id, data)
+    // TODO: update more than just the name
+    await this.backend.js__store_update_horizon_name(id, data.name)
   }
 
   async deleteHorizon(id: string): Promise<void> {
@@ -292,27 +319,48 @@ export class SFFS {
     await this.backend.js__store_remove_horizon(id)
   }
 
-  async createCard(card: Optional<Card, 'id' | 'stacking_order'>): Promise<Card> {
+  async createCard(card: Optional<Card, 'id' | 'stackingOrder'>): Promise<Card> {
     this.log.debug('creating card', card)
     const rawCard = this.convertCardToRawCard(card)
-    const newRawCard = await this.backend.js__store_create_card(rawCard)
-    return this.convertRawCardToCard(newRawCard)
+    this.log.debug('raw card', rawCard)
+
+    const stringCard = this.stringifyData(rawCard)
+    this.log.debug('string card', stringCard)
+
+    const newRawCard = await this.backend.js__store_create_card(stringCard)
+    this.log.debug('new raw card', newRawCard)
+
+    const newCard = this.parseData<SFFSRawCard>(newRawCard)
+    this.log.debug('new card', newCard)
+
+    if (!newCard) {
+      throw new Error('failed to create card, invalid data', newRawCard)
+    }
+
+    return this.convertRawCardToCard(newCard)
   }
 
   async getCard(id: string): Promise<Card | null> {
     this.log.debug('getting card with id', id)
-    const rawCard = await this.backend.js__store_read_card(id)
-    if (!rawCard) {
+    const rawCard = await this.backend.js__store_get_card(id)
+    const card = this.parseData<SFFSRawCard>(rawCard)
+    if (!card) {
       return null
     }
 
-    return this.convertRawCardToCard(rawCard)
+    return this.convertRawCardToCard(card)
   }
 
   async getCardsForHorizon(horizonId: string): Promise<Card[]> {
     this.log.debug('getting cards for horizon', horizonId)
     const rawCards = await this.backend.js__store_list_cards_in_horizon(horizonId)
-    return rawCards.map(this.convertRawCardToCard)
+    const cards = this.parseData<SFFSRawCard[]>(rawCards)
+    this.log.debug('raw cards', cards)
+    if (!cards) {
+      return []
+    }
+
+    return cards.map((c) => this.convertRawCardToCard(c))
   }
 
   async updateCardResource(id: string, resourceId: string | null): Promise<void> {

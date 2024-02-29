@@ -69,7 +69,7 @@ export interface SFFSRawCard {
   stacking_order: string
   created_at: string
   updated_at: string
-  data: string
+  data: number[]
 }
 
 export type SFFSRawCardToCreate = Optional<

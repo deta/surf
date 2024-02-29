@@ -1,16 +1,7 @@
 import Dexie from 'dexie'
 
-import { generateID, generateUUID } from '../utils/id'
-import type {
-  Card,
-  Optional,
-  HorizonData,
-  CardBrowser,
-  UserData,
-  Session,
-  HistoryEntry,
-  LegacyResource
-} from '../types'
+import { generateID } from '../utils/id'
+import type { Optional, Session, HistoryEntry, LegacyResource } from '../types'
 
 export class LocalStorage<T> {
   key: string
@@ -164,9 +155,6 @@ class HistoryStore extends HorizonStore<HistoryEntry> {
 }
 
 export class HorizonDatabase extends Dexie {
-  userData: UserStore<UserData>
-  cards: HorizonStore<Card>
-  horizons: HorizonStore<HorizonData>
   resources: HorizonStore<LegacyResource>
   sessions: HorizonStore<Session>
   historyEntries: HistoryStore
@@ -224,44 +212,8 @@ export class HorizonDatabase extends Dexie {
         }
       })
 
-    this.userData = new UserStore<UserData>(this.table('userData'))
-    this.cards = new HorizonStore<Card>(this.table('cards'))
-    this.horizons = new HorizonStore<HorizonData>(this.table('horizons'))
     this.resources = new HorizonStore<LegacyResource>(this.table('resources'))
     this.sessions = new HorizonStore<Session>(this.table('sessions'))
     this.historyEntries = new HistoryStore(this.table('historyEntries'))
-  }
-
-  async getUserID() {
-    return (await this.userData.get())?.user_id
-  }
-
-  async createUserData() {
-    return await this.userData.create({ user_id: generateUUID() } as UserData)
-  }
-
-  async getCardsByHorizonId(horizonId: string) {
-    // TODO: ensure that types are properly initialized with default values going forward
-    const cards = (await this.cards.t.where({ horizon_id: horizonId }).toArray()).map((c) => {
-      if (c.type == 'browser') {
-        const data = c.data as CardBrowser['data']
-        data.historyStackIds = data.historyStackIds ?? []
-      }
-      return c
-    })
-
-    return cards
-  }
-
-  async deleteCardsByHorizonId(horizonId: string) {
-    // const fileCardsResourceIds = (
-    //   await this.cards.t.where({ horizon_id: horizonId, type: 'file' }).toArray()
-    // ).map((card: Card) => card.resourceId || '')
-
-    // if (fileCardsResourceIds.length > 0) {
-    //   await this.resources.t.where('id').anyOf(fileCardsResourceIds).delete()
-    // }
-
-    await this.cards.t.where({ horizon_id: horizonId }).delete()
   }
 }
