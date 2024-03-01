@@ -42,6 +42,12 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_search_resources", js_search_resources)?;
     cx.export_function("js__store_resource_post_process", js_resource_post_process)?;
 
+    cx.export_function("js__store_create_history_entry", js_create_history_entry)?;
+    cx.export_function("js__store_get_history_entry", js_get_history_entry)?;
+    cx.export_function("js__store_update_history_entry", js_update_history_entry)?;
+    cx.export_function("js__store_delete_history_entry", js_delete_history_entry)?;
+    cx.export_function("js__store_get_all_history_entries", js_get_all_history_entries)?;
+
     Ok(())
 }
 
@@ -327,6 +333,65 @@ fn js_update_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.send(WorkerMessage::UpdateHorizon(horizon), deferred);
+
+    Ok(promise)
+}
+
+fn js_create_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let entry_json = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let entry: models::HistoryEntry = match serde_json::from_str(&entry_json) {
+        Ok(entry) => entry,
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.send(WorkerMessage::CreateHistoryEntry(entry), deferred);
+
+    Ok(promise)
+}
+
+fn js_get_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let entry_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.send(WorkerMessage::GetHistoryEntry(entry_id), deferred);
+
+    Ok(promise)
+}
+
+fn js_update_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let entry_json = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let entry: models::HistoryEntry = match serde_json::from_str(&entry_json) {
+        Ok(entry) => entry,
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.send(WorkerMessage::UpdateHistoryEntry(entry), deferred);
+
+    Ok(promise)
+}
+
+fn js_delete_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let entry_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.send(WorkerMessage::DeleteHistoryEntry(entry_id), deferred);
+
+    Ok(promise)
+}
+
+fn js_get_all_history_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let (deferred, promise) = cx.promise();
+    tunnel.send(WorkerMessage::GetAllHistoryEntries, deferred);
 
     Ok(promise)
 }
