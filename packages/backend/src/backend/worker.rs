@@ -268,7 +268,7 @@ impl Worker {
         }))
     }
 
-    pub fn delete_resource(&mut self, id: String) -> BackendResult<()> {
+    pub fn remove_resource(&mut self, id: String) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::update_resource_deleted_tx(&mut tx, &id, 1)?;
         Database::update_resource_tag_by_name_tx(&mut tx, &ResourceTag::new_deleted(&id, true))?;
@@ -351,12 +351,30 @@ impl Worker {
         self.db.update_history_entry(&entry)
     }
 
-    pub fn delete_history_entry(&mut self, id: String) -> BackendResult<()> {
-        self.db.delete_history_entry(&id)
+    pub fn remove_history_entry(&mut self, id: String) -> BackendResult<()> {
+        self.db.remove_history_entry(&id)
     }
 
     pub fn get_all_history_entries(&mut self) -> BackendResult<Vec<HistoryEntry>> {
         self.db.get_all_history_entries()
+    }
+
+    pub fn update_resource_metadata(&mut self, metadata: ResourceMetadata) -> BackendResult<()> {
+        self.db.update_resource_metadata(&metadata)
+    }
+
+    pub fn create_resource_tag(&mut self, tag: ResourceTag) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::create_resource_tag_tx(&mut tx, &tag)?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn delete_resource_tag_by_id(&mut self, tag_id: String) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::remove_resource_tag_tx(&mut tx, &tag_id)?;
+        tx.commit()?;
+        Ok(())
     }
 }
 
@@ -441,11 +459,11 @@ pub fn worker_entry_point(
             WorkerMessage::RemoveUserdata(user_id) => {
                 send_worker_response(&mut channel, deferred, worker.remove_userdata(&user_id))
             }
-            WorkerMessage::ReadResource(resource_id) => {
+            WorkerMessage::GetResource(resource_id) => {
                 send_worker_response(&mut channel, deferred, worker.read_resource(resource_id))
             }
-            WorkerMessage::DeleteResource(resource_id) => {
-                send_worker_response(&mut channel, deferred, worker.delete_resource(resource_id))
+            WorkerMessage::RemoveResource(resource_id) => {
+                send_worker_response(&mut channel, deferred, worker.remove_resource(resource_id))
             }
             WorkerMessage::RecoverResource(resource_id) => {
                 send_worker_response(&mut channel, deferred, worker.recover_resource(resource_id))
@@ -470,12 +488,25 @@ pub fn worker_entry_point(
             WorkerMessage::UpdateHistoryEntry(entry) => {
                 send_worker_response(&mut channel, deferred, worker.update_history_entry(entry))
             }
-            WorkerMessage::DeleteHistoryEntry(id) => {
-                send_worker_response(&mut channel, deferred, worker.delete_history_entry(id))
+            WorkerMessage::RemoveHistoryEntry(id) => {
+                send_worker_response(&mut channel, deferred, worker.remove_history_entry(id))
             }
             WorkerMessage::GetAllHistoryEntries => {
                 send_worker_response(&mut channel, deferred, worker.get_all_history_entries())
             }
+            WorkerMessage::UpdateResourceMetadata(metadata) => send_worker_response(
+                &mut channel,
+                deferred,
+                worker.update_resource_metadata(metadata),
+            ),
+            WorkerMessage::CreateResourceTag(tag) => {
+                send_worker_response(&mut channel, deferred, worker.create_resource_tag(tag))
+            }
+            WorkerMessage::RemoveResourceTag(tag_id) => send_worker_response(
+                &mut channel,
+                deferred,
+                worker.delete_resource_tag_by_id(tag_id),
+            ),
         }
     }
 }

@@ -330,11 +330,11 @@ impl Database {
         Ok(())
     }
 
-    pub fn update_resource_metadata_tx(
-        tx: &mut rusqlite::Transaction,
+    pub fn update_resource_metadata(
+        &mut self,
         resource_metadata: &ResourceMetadata,
     ) -> BackendResult<()> {
-        tx.execute(
+        self.conn.execute(
             "UPDATE resource_metadata SET resource_id = ?2, name = ?3, source_uri = ?4, alt = ?5 WHERE id = ?1",
             rusqlite::params![resource_metadata.id, resource_metadata.resource_id, resource_metadata.name, resource_metadata.source_uri, resource_metadata.alt]
         )?;
@@ -892,7 +892,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn delete_history_entry(&self, id: &str) -> BackendResult<()> {
+    pub fn remove_history_entry(&self, id: &str) -> BackendResult<()> {
         let query = "DELETE FROM history_entries WHERE id = ?1";
         self.conn.execute(query, [id])?;
         Ok(())

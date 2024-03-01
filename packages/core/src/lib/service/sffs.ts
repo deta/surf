@@ -240,7 +240,7 @@ export class SFFS {
 
   async readResource(id: string): Promise<SFFSResource | null> {
     this.log.debug('reading resource with id', id)
-    const dataString = await this.backend.js__store_read_resource(id)
+    const dataString = await this.backend.js__store_get_resource(id)
     const composite = this.parseData<SFFSRawCompositeResource>(dataString)
     if (!composite) {
       return null
@@ -251,7 +251,7 @@ export class SFFS {
 
   async deleteResource(id: string): Promise<void> {
     this.log.debug('deleting resource with id', id)
-    await this.backend.js__store_delete_resource(id)
+    await this.backend.js__store_remove_resource(id)
   }
 
   async recoverResource(id: string): Promise<void> {
@@ -261,7 +261,7 @@ export class SFFS {
 
   async readResources(): Promise<SFFSResource[]> {
     this.log.debug('reading all resources')
-    const items = await this.backend.js__store_read_resources()
+    const items = await this.backend.js__store_get_resources()
     return items.map(this.convertCompositeResourceToResource)
   }
 
@@ -463,6 +463,6 @@ export class SFFS {
 
   async deleteHistoryEntry(id: string): Promise<void> {
     this.log.debug('deleting history entry', id)
-    await this.backend.js__store_delete_history_entry(id)
+    await this.backend.js__store_remove_history_entry(id)
   }
 }
