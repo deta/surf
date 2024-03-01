@@ -1,7 +1,7 @@
 import Dexie from 'dexie'
 
 import { generateID } from '../utils/id'
-import type { Optional, Session, HistoryEntry, LegacyResource } from '../types'
+import type { Optional, LegacyResource } from '../types'
 
 export class LocalStorage<T> {
   key: string
@@ -137,27 +137,8 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
   }
 }
 
-class HistoryStore extends HorizonStore<HistoryEntry> {
-  constructor(public t: Dexie.Table<HistoryEntry, string>) {
-    super(t)
-  }
-
-  async getBySessionId(sessionId: string) {
-    return await this.t.where({ sessionId }).toArray()
-  }
-
-  async fetchHistoryEntriesByIds(ids: string[]): Promise<Map<string, HistoryEntry>> {
-    const historyEntries = await this.t.where('id').anyOf(ids).toArray()
-    const entriesMap = new Map<string, HistoryEntry>()
-    historyEntries.forEach((entry) => entriesMap.set(entry.id, entry))
-    return entriesMap
-  }
-}
-
 export class HorizonDatabase extends Dexie {
   resources: HorizonStore<LegacyResource>
-  sessions: HorizonStore<Session>
-  historyEntries: HistoryStore
 
   constructor() {
     super('HorizonDatabase')
@@ -213,7 +194,5 @@ export class HorizonDatabase extends Dexie {
       })
 
     this.resources = new HorizonStore<LegacyResource>(this.table('resources'))
-    this.sessions = new HorizonStore<Session>(this.table('sessions'))
-    this.historyEntries = new HistoryStore(this.table('historyEntries'))
   }
 }

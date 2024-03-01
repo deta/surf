@@ -87,3 +87,15 @@ export interface SFFSRawHorizon {
 }
 
 export type SFFSRawHorizonToCreate = Optional<SFFSRawHorizon, 'id' | 'created_at' | 'updated_at'>
+
+export type SFFSRawHistoryEntryType = 'Search' | 'Navigation'
+
+export interface SFFSRawHistoryEntry {
+  id: string
+  entry_type: SFFSRawHistoryEntryType
+  url: string | null
+  title: string | null
+  search_query: string | null
+  created_at: string
+  updated_at: string
+}

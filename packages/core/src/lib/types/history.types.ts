@@ -1,13 +1,13 @@
+export type HistoryEntryType = 'navigation' | 'search'
+
 export interface HistoryEntry {
   id: string
   createdAt: string
   updatedAt: string
-  sessionId: string
-  type: 'navigation' | 'search'
+  type: HistoryEntryType
   url?: string
   title?: string
   searchQuery?: string
-  inPageNavigation?: boolean
 }
 
 export interface Session {

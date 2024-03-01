@@ -3,20 +3,23 @@ import type { HistoryEntry } from '../types/index'
 import { HorizonDatabase } from './storage'
 
 import Fuse, { type FuseResult } from 'fuse.js'
+import { SFFS } from './sffs'
 
 export class HistoryEntriesManager {
   entries: Writable<Map<string, HistoryEntry>>
   db: HorizonDatabase
+  sffs: SFFS
 
   constructor() {
     this.entries = writable(new Map())
     this.db = new HorizonDatabase()
+    this.sffs = new SFFS()
     this.init()
   }
 
   // TODO: load only required state, on demand
   async init() {
-    const allEntries = await this.db.historyEntries.all()
+    const allEntries = await this.sffs.getHistoryEntries()
     const entriesMap = new Map(allEntries.map((entry) => [entry.id, entry]))
     this.entries.set(entriesMap)
   }
@@ -32,24 +35,29 @@ export class HistoryEntriesManager {
   }
 
   async addEntry(entry: HistoryEntry): Promise<HistoryEntry> {
-    const newEntry = await this.db.historyEntries.create(entry)
+    const newEntry = await this.sffs.createHistoryEntry(entry)
     this.entries.update((entries) => entries.set(newEntry.id, newEntry))
     return newEntry
   }
 
   async updateEntry(id: string, newData: Partial<HistoryEntry>) {
-    await this.db.historyEntries.update(id, newData)
+    let updatedEntry: HistoryEntry | undefined
     this.entries.update((entries) => {
       const entry = entries.get(id)
       if (entry) {
-        entries.set(id, { ...entry, ...newData })
+        updatedEntry = { ...entry, ...newData }
+        entries.set(id, updatedEntry)
       }
       return entries
     })
+
+    if (updatedEntry) {
+      await this.sffs.updateHistoryEntry(updatedEntry)
+    }
   }
 
   async removeEntry(id: string) {
-    await this.db.historyEntries.delete(id)
+    await this.sffs.deleteHistoryEntry(id)
     this.entries.update((entries) => {
       entries.delete(id)
       return entries

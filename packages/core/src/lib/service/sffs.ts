@@ -15,7 +15,11 @@ import type {
   SFFSRawHorizon,
   HorizonData,
   SFFSRawHorizonToCreate,
-  CardPosition
+  CardPosition,
+  SFFSRawHistoryEntry,
+  HistoryEntry,
+  HistoryEntryType,
+  SFFSRawHistoryEntryType
 } from '../types'
 
 export type CardToCreate = Optional<Card, 'id' | 'stackingOrder' | 'createdAt' | 'updatedAt'>
@@ -155,6 +159,31 @@ export class SFFS {
       view_offset_x: horizon.viewOffsetX,
       created_at: horizon.createdAt,
       updated_at: horizon.updatedAt
+    }
+  }
+
+  convertRawHistoryEntryToHistoryEntry(rawEntry: SFFSRawHistoryEntry): HistoryEntry {
+    return {
+      id: rawEntry.id,
+      createdAt: rawEntry.created_at,
+      updatedAt: rawEntry.updated_at,
+      type: rawEntry.entry_type.toLowerCase() as HistoryEntryType,
+      url: rawEntry.url ?? undefined,
+      title: rawEntry.title ?? undefined,
+      searchQuery: rawEntry.search_query ?? undefined
+    }
+  }
+
+  convertHistoryEntryToRawHistoryEntry(entry: HistoryEntry): SFFSRawHistoryEntry {
+    return {
+      id: entry.id,
+      created_at: entry.createdAt,
+      updated_at: entry.updatedAt,
+      entry_type: (entry.type.charAt(0).toUpperCase() +
+        entry.type.slice(1)) as SFFSRawHistoryEntryType,
+      url: entry.url ?? null,
+      title: entry.title ?? null,
+      search_query: entry.searchQuery ?? null
     }
   }
 
@@ -388,5 +417,52 @@ export class SFFS {
   async deleteCard(id: string): Promise<void> {
     this.log.debug('deleting card', id)
     await this.backend.js__store_remove_card(id)
+  }
+
+  async createHistoryEntry(entry: HistoryEntry): Promise<HistoryEntry> {
+    this.log.debug('creating history entry', entry)
+    const rawEntry = this.convertHistoryEntryToRawHistoryEntry(entry)
+    const stringEntry = this.stringifyData(rawEntry)
+    const newRawEntry = await this.backend.js__store_create_history_entry(stringEntry)
+    const newEntry = this.parseData<SFFSRawHistoryEntry>(newRawEntry)
+    if (!newEntry) {
+      throw new Error('failed to create history entry, invalid data', newRawEntry)
+    }
+
+    return this.convertRawHistoryEntryToHistoryEntry(newEntry)
+  }
+
+  async getHistoryEntry(id: string): Promise<HistoryEntry | null> {
+    this.log.debug('getting history entry with id', id)
+    const rawEntry = await this.backend.js__store_get_history_entry(id)
+    const entry = this.parseData<SFFSRawHistoryEntry>(rawEntry)
+    if (!entry) {
+      return null
+    }
+
+    return this.convertRawHistoryEntryToHistoryEntry(entry)
+  }
+
+  async getHistoryEntries(): Promise<HistoryEntry[]> {
+    this.log.debug('getting all history entries')
+    const rawEntries = await this.backend.js__store_get_all_history_entries()
+    const entries = this.parseData<SFFSRawHistoryEntry[]>(rawEntries)
+    if (!entries) {
+      return []
+    }
+
+    return entries.map((e) => this.convertRawHistoryEntryToHistoryEntry(e))
+  }
+
+  async updateHistoryEntry(data: Partial<HistoryEntry>): Promise<void> {
+    this.log.debug('updating history entry', data)
+    const rawEntry = this.convertHistoryEntryToRawHistoryEntry(data as HistoryEntry)
+    const stringEntry = this.stringifyData(rawEntry)
+    await this.backend.js__store_update_history_entry(stringEntry)
+  }
+
+  async deleteHistoryEntry(id: string): Promise<void> {
+    this.log.debug('deleting history entry', id)
+    await this.backend.js__store_delete_history_entry(id)
   }
 }
