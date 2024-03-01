@@ -338,8 +338,9 @@ impl Worker {
         }
     }
 
-    pub fn create_history_entry(&mut self, entry: HistoryEntry) -> BackendResult<()> {
-        self.db.create_history_entry(&entry)
+    pub fn create_history_entry(&mut self, entry: HistoryEntry) -> BackendResult<HistoryEntry> {
+        self.db.create_history_entry(&entry)?;
+        Ok(entry)
     }
 
     pub fn get_history_entry(&mut self, id: String) -> BackendResult<Option<HistoryEntry>> {
