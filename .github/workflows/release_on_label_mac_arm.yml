@@ -5,6 +5,7 @@ on:
     types: [labeled]
     branches:
       - main
+      - dev
 
 jobs:
   prepare:
