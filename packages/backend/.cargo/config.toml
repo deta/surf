@@ -2,13 +2,18 @@
 git-fetch-with-cli = true
 
 [target.x86_64-apple-darwin]
-rustflags = [
-  "-C", "link-arg=-undefined",
-  "-C", "link-arg=dynamic_lookup",
-]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
 
 [target.aarch64-apple-darwin]
 rustflags = [
-  "-C", "link-arg=-undefined",
-  "-C", "link-arg=dynamic_lookup",
+  "-C",
+  "link-arg=-Wl",
+  "-C",
+  "link-arg=-undefined",
+  "-C",
+  "link-arg=dynamic_lookup",
+  "-C",
+  "link-arg=-lomp",
+  "-C",
+  "link-arg=-L/opt/homebrew/opt/libomp/lib",
 ]
