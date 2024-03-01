@@ -7,6 +7,7 @@ import { setupIpcHandlers } from './ipcHandlers'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
+import { getUserConfig } from './config'
 
 let isAppLaunched = false
 let appOpenedWithURL: string | null = null
@@ -91,6 +92,7 @@ if (!gotTheLock) {
     isAppLaunched = true
     electronApp.setAppUserModelId('space.deta.horizon')
 
+    getUserConfig()
     setupIpcHandlers()
     await setupAdblocker()
 

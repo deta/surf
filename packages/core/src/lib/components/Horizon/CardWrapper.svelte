@@ -14,22 +14,12 @@
     hasClassOrParentWithClass
   } from '@horizon/tela'
 
-  import type { Card, CardEvents } from '../../types'
+  import type { Card, CardEvents } from '../../types/index'
   import { useLogScope } from '../../utils/log'
   import type { Horizon } from '../../service/horizon'
-  import Horizon from './Horizon.svelte'
   import { Icon } from '@horizon/icons'
+  import CardContent from '../Cards/CardContent.svelte'
   import { visorEnabled } from './HorizonManager.svelte'
-
-  // TODO: fix this unnecessary cast
-  const BrowserCard = () =>
-    import('../Cards/Browser/BrowserCard.svelte') as unknown as Promise<typeof SvelteComponent>
-  const TextCard = () =>
-    import('../Cards/Text/TextCard.svelte') as unknown as Promise<typeof SvelteComponent>
-  const LinkCard = () =>
-    import('../Cards/Link/LinkCard.svelte') as unknown as Promise<typeof SvelteComponent>
-  const FileCard = () =>
-    import('../Cards/File/FileCard.svelte') as unknown as Promise<typeof SvelteComponent>
 
   export let positionable: Writable<IPositionable<any>>
   export let horizon: Horizon
@@ -63,7 +53,7 @@
     dispatch('change', $card)
   }
 
-  const handleMouseDown = (event) => {
+  const handleMouseDown = (event: MouseEvent) => {
     if (event.metaKey || event.ctrlKey) {
       if ($visorEnabled) {
         $visorEnabled = false
@@ -94,7 +84,7 @@
     const board = horizon.board
     if (!board) console.error('No board found ond rag end')
     const state = get(board!.state)
-    $card.stacking_order = get(state.stackingOrder).indexOf($card.id)
+    $card.stackingOrder = get(state.stackingOrder).indexOf($card.id)
     updateCard()
     horizon.telaSettings?.update((v) => {
       v.CAN_SELECT = true
@@ -309,31 +299,7 @@
   {/if}
 
   <div class="content tela-ignore" style={$visorEnabled || !active ? 'pointer-events: none;' : ''}>
-    {#if $card.type === 'browser'}
-      <LazyComponent this={BrowserCard}>
-        <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} {active} on:load on:change on:delete />
-        </svelte:fragment>
-      </LazyComponent>
-    {:else if $card.type === 'text'}
-      <LazyComponent this={TextCard}>
-        <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} {active} on:load on:change on:delete />
-        </svelte:fragment>
-      </LazyComponent>
-    {:else if $card.type === 'link'}
-      <LazyComponent this={LinkCard}>
-        <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} {active} on:load on:change on:delete />
-        </svelte:fragment>
-      </LazyComponent>
-    {:else if $card.type === 'file'}
-      <LazyComponent this={FileCard}>
-        <svelte:fragment slot="component" let:Component>
-          <Component {card} {horizon} {active} on:load on:change on:delete />
-        </svelte:fragment>
-      </LazyComponent>
-    {/if}
+    <CardContent {positionable} {horizon} on:load on:change on:delete />
   </div>
 </Positionable>
 

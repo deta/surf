@@ -20,9 +20,17 @@ import Paragraph from './Icons/Paragraph.svelte'
 import List from './Icons/List.svelte'
 import ListNumbered from './Icons/ListNumbered.svelte'
 import ListCheck from './Icons/ListCheck.svelte'
-import Search from './Icons/Search.svelte'
 import Quote from './Icons/Quote.svelte'
 import CodeBlock from './Icons/CodeBlock.svelte'
+import ArrowHorizontal from './Icons/ArrowHorizontal.svelte'
+import ArrowDiagonalMinimize from './Icons/ArrowDiagonalMinimize.svelte'
+import Search from './Icons/Search.svelte'
+import Info from './Icons/Info.svelte'
+import File from './Icons/File.svelte'
+import Docs from './Icons/Docs.svelte'
+import Bookmark from './Icons/Bookmark.svelte'
+import BookmarkFilled from './Icons/BookmarkFilled.svelte'
+import Home from './Icons/Home.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -50,7 +58,15 @@ export const icons = {
   'list-check': ListCheck,
   search: Search,
   quote: Quote,
-  'code-block': CodeBlock
+  'code-block': CodeBlock,
+  arrowHorizontal: ArrowHorizontal,
+  arrowDiagonalMinimize: ArrowDiagonalMinimize,
+  info: Info,
+  file: File,
+  docs: Docs,
+  bookmark: Bookmark,
+  bookmarkFilled: BookmarkFilled,
+  home: Home
 }
 
 export type Icons = keyof typeof icons
@@ -79,5 +95,14 @@ export {
   ListNumbered,
   ListCheck,
   Quote,
-  CodeBlock
+  CodeBlock,
+  ArrowHorizontal,
+  ArrowDiagonalMinimize,
+  Search,
+  Info,
+  File,
+  Docs,
+  Bookmark,
+  BookmarkFilled,
+  Home
 }

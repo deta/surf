@@ -14,7 +14,10 @@
   import { API } from '@horizon/core/src/lib/service/api'
   import { HorizonsManager, Horizon as IHorizon } from '@horizon/core/src/lib/service/horizon'
 
+  import { Drawer } from '@horizon/drawer'
+
   import './index.scss'
+  import '@horizon/drawer/src/index.scss'
 
   import Horizon from './Horizon.svelte'
   import { useLogScope } from '../../utils/log'
@@ -25,12 +28,14 @@
   import MediaImporter from './MediaImporter.svelte'
   import { advancedSpring } from '../../utils/advancedSpring'
   import { wait } from '../../utils/time'
-  import type { Card } from '../../types'
+  import type { Card } from '../../types/index'
   import { Icon } from '@horizon/icons'
   import HorizonInfo from './HorizonInfo.svelte'
   import { isModKeyPressed } from '../../utils/keyboard'
   import { requestNewPreviewImage } from '../../utils/screenshot'
   import { createCheatSheetCard } from '../../utils/demoHorizon'
+  import DrawerWrapper from './DrawerWrapper.svelte'
+  import { ResourceManager } from '../../service/resources'
   import { expoOut } from 'svelte/easing'
 
   const log = useLogScope('HorizonManager')
@@ -42,7 +47,10 @@
     telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
     telemetryActive = true
   }
-  const horizonManager = new HorizonsManager(api, {
+
+  const resourceManager = new ResourceManager()
+
+  const horizonManager = new HorizonsManager(api, resourceManager, {
     apiKey: telemetryAPIKey,
     active: telemetryActive,
     trackHostnames: false
@@ -80,6 +88,7 @@
   let initialSorting = false
   let overScrollTimeout: ReturnType<typeof setTimeout> | null = null
   let moveToStackItem: (idx: number) => Promise<void>
+  let drawer: Drawer
 
   $: selectedHorizonId = sortedHorizons[$activeStackItemIdx]
 
@@ -290,6 +299,13 @@
       }
     }
 
+    if (drawer.isShown()) {
+      if (event.key === 'Escape') {
+        drawer.close()
+        return
+      }
+    }
+
     if (!isModKeyPressed(event)) return
 
     if (event.key === 'n') {
@@ -310,6 +326,24 @@
         const cardId = get(activeCardId)
         if (!cardId) return
         await $activeHorizon.deleteCard(cardId)
+      }
+    } else if (event.key === 'g') {
+      if (drawer.isShown()) {
+        if (drawer.getSize() === 'full') {
+          drawer.setSize('normal')
+        } else {
+          drawer.setSize('full')
+        }
+      } else {
+        drawer.open()
+      }
+    } else if (event.key === 'f') {
+      if (drawer.isShown()) {
+        if (drawer.getSize() === 'full') {
+          drawer.setSize('normal')
+        } else {
+          drawer.setSize('full')
+        }
       }
     } else if (event.key === 'Escape') {
       event.preventDefault()
@@ -687,6 +721,10 @@
 
   {#if !$showStackOverview && $activeHorizon}
     <MediaImporter horizon={$activeHorizon} />
+  {/if}
+
+  {#if $activeHorizon}
+    <DrawerWrapper bind:drawer horizon={$activeHorizon} {resourceManager} />
   {/if}
 
   <Stack

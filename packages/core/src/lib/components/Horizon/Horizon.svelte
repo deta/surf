@@ -18,7 +18,7 @@
   import { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
   import { requestNewPreviewImage, takePageScreenshot } from '../../utils/screenshot'
-  import type { Card, CardBrowser, CardFile, CardText } from '../../types'
+  import type { Card } from '../../types/index'
   import { useDebounce } from '../../utils/debounce'
   import HorizonInfo from './HorizonInfo.svelte'
   import Grid from './Grid.svelte'
@@ -67,10 +67,9 @@
     POSITIONABLE_KEY: 'id'
   })
 
-  const stack = writable([] as string[])
   const board: IBoard<any, any> = createBoard(
     settings,
-    stack,
+    horizon.stackingOrder,
     {
       viewPort: {
         x: 10,
@@ -91,8 +90,6 @@
   let containerEl: HTMLElement
   let requestNewPreviewIntervalId: number | undefined
   let isDraggingCard = false
-
-  $: log.debug('horizon state changed', horizon.state)
 
   $: if (!active && horizon.state !== 'hot') {
     log.error('edge case! horizon is active but not hot')
@@ -115,16 +112,6 @@
   }
 
   const loadHorizon = () => {
-    $state.stackingOrder = horizon.stackingOrder
-    $state.stackingOrder.subscribe(async (e) => {
-      if (horizon) {
-        await horizon.storage.horizons.update(horizon.id, {
-          ...horizon.data,
-          stackingOrder: get(horizon.stackingOrder)
-        })
-      }
-    })
-
     $state.viewOffset.set({ x: data.viewOffsetX, y: 0 })
     viewOffset.subscribe((e) => {
       debouncedHorizonUpdate({ viewOffsetX: e.x })
@@ -751,7 +738,7 @@
   }
 
   onMount(() => {
-    // const stack = [...$cards].sort((a, b) => { return get(a).stacking_order - get(b).stacking_order }).map((e) => get(e).id);
+    // const stack = [...$cards].sort((a, b) => { return get(a).stackingOrder - get(b).stackingOrder }).map((e) => get(e).id);
 
     loadHorizon()
     handleWindowResize()
@@ -763,9 +750,6 @@
 
     horizon.attachBoard(board)
     horizon.attachSettings(settings)
-
-    stack.set(get(horizon.stackingOrder))
-    $state.stackingOrder = stack
 
     requestNewPreviewIntervalId = setInterval(updatePreview, REQUEST_NEW_PREVIEW_INTERVAL)
   })

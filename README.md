@@ -4,19 +4,29 @@ Monorepo containing the Horizon desktop app, a future web version and all relate
 
 ## Installation
 
-To use on MacOS:
+To use a non-notarized version on MacOS:
 
-- download [`desktop-0.0.1.arm64.dmg`](https://github.com/deta/horizon/releases/latest/download/desktop-0.0.1.arm64.dmg) from the [latest release](https://github.com/deta/horizon/releases/latest)
+- download a suitable `dmg` from [releases](https://github.com/deta/horizon/releases)
 - move it to your `Applications` folder
-- run `xattr -cr /Applications/spaceOS.app` in your Terminal
+- run `xattr -cr /Applications/{release_name}.app` in your Terminal, replace {release_name} with the actual release name
 - start the app
 
 ## Setup
+
+### Install js dependencies
 
 Run the following command:
 
 ```sh
 yarn install
+```
+
+### Install rust and cargo
+
+Run the following command:
+
+```sh
+curl https://sh.rustup.rs -sSf | sh
 ```
 
 ## What's inside?
@@ -27,12 +37,13 @@ This monorepo includes the following packages/apps:
 
 - `desktop`: a Electron app
 - `web`: a svelte app (just a placeholder for now)
+- `@horizon/backend`: a Rust backend
 - `@horizon/core`: Horizon specific components and logic shared by both `desktop` and `web` applications
 - `@horizon/types`: a general Svelte component library shared by both `desktop` and `web` applications
 - `@horizon/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
 - `@horizon/typescript-config`: `tsconfig.json`s used throughout the monorepo
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+Each package/app is 100% [TypeScript](https://www.typescriptlang.org/) except the rust backend.
 
 ### Utilities
 
@@ -54,7 +65,13 @@ yarn build
 
 ### Develop
 
-To develop all apps and packages, run the following command:
+To run the app and required packages in development mode, run the following command:
+
+```
+yarn dev:horizon
+```
+
+To develop all apps and packages, run the following command (not needed most of the time):
 
 ```
 yarn dev

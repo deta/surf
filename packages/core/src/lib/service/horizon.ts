@@ -1,7 +1,13 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
-import type { Card, CardPosition, HistoryEntry, Optional } from '../types'
+import {
+  type Card,
+  type CardPosition,
+  type Optional,
+  type SFFSResourceMetadata,
+  type SFFSResourceTag
+} from '../types/index'
 import type { API } from './api'
-import type { Resource, HorizonState, HorizonData } from '../types'
+import type { LegacyResource, HorizonState, HorizonData } from '../types/index'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
@@ -9,7 +15,9 @@ import { Telemetry, EventTypes, type TelemetryConfig } from './telemetry'
 import { moveToStackingTop, type IBoard, clamp, type IBoardSettings } from '@horizon/tela'
 import { quintOut, expoOut } from 'svelte/easing'
 
-import Fuse, { type FuseResult } from 'fuse.js'
+import { HistoryEntriesManager } from './history'
+import type { ResourceManager } from './resources'
+import { SFFS } from './sffs'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 8
@@ -32,25 +40,30 @@ export class Horizon {
   api: API
   log: ScopedLogger
   storage: HorizonDatabase
+  sffs: SFFS
   telemetry: Telemetry
   historyEntriesManager: HistoryEntriesManager
+  resourceManager: ResourceManager
 
   constructor(
     id: string,
     data: HorizonData,
     api: API,
     telemetry: Telemetry,
+    resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
     adblockerState: Writable<boolean>,
-    previewImageResource: Resource | undefined,
+    previewImageResource: LegacyResource | undefined,
     signalChange: (horizon: Horizon) => void
   ) {
     this.id = id
     this.api = api
     this.log = useLogScope(`Horizon ${id}`)
+    this.sffs = new SFFS() // TODO: maybe share this with the horizon manager
     this.storage = new HorizonDatabase()
     this.telemetry = telemetry
     this.historyEntriesManager = historyEntriesManager
+    this.resourceManager = resourceManager
 
     this.state = 'cold'
     this.inStateSince = Date.now()
@@ -59,11 +72,23 @@ export class Horizon {
     this.data = data
     this.cards = writable([])
     this.activeCardId = writable(null)
-    data.stackingOrder = data.stackingOrder || []
-    this.stackingOrder = writable(data.stackingOrder)
+    this.stackingOrder = writable([])
     this.signalChange = signalChange
     this.board = null
     this.telaSettings = null
+
+    this.stackingOrder.subscribe((stack) => {
+      const cards = get(this.cards)
+      cards.forEach((c) => {
+        const card = get(c)
+
+        let idx = stack.indexOf(card.id)
+        c.update((card) => {
+          card.stackingOrder = idx
+          return card
+        })
+      })
+    })
 
     this.adblockerState = adblockerState
     if (previewImageResource) {
@@ -117,9 +142,18 @@ export class Horizon {
     this.log.debug(`Loading cards`)
 
     // load cards from storage and persist any future changes
-    // const storedCards = await this.storage.cards.all() ?? []
-    const storedCards = (await this.storage.getCardsByHorizonId(this.data.id)) ?? []
+    const storedCards = (await this.sffs.getCardsForHorizon(this.data.id)) ?? []
     this.cards.set(storedCards.map((c) => writable(c)))
+
+    this.log.debug(`Loaded cards`, storedCards)
+
+    const stack = [...storedCards]
+      .sort((a, b) => {
+        return a.stackingOrder - b.stackingOrder
+      })
+      .map((e) => e.id)
+    this.stackingOrder.set(stack)
+
     this.signalChange(this)
   }
 
@@ -143,14 +177,18 @@ export class Horizon {
     return null
   }
 
+  // TODO: this needs to update the cards itself
   moveCardToStackingTop(id: string) {
     if (!this.board) {
       console.warn('[Horizon Service] setActiveCard called with board === undefined!')
-      moveToStackingTop(this.stackingOrder, id)
+      // moveToStackingTop(this.stackingOrder, id)
       return
     }
 
-    moveToStackingTop(get(this.board?.state).stackingOrder, id)
+    moveToStackingTop(this.stackingOrder, id)
+
+    this.sffs.setCardStackingOrderTop(id)
+
     this.signalChange(this)
   }
 
@@ -175,6 +213,7 @@ export class Horizon {
     this.previewImageObjectURL = URL.createObjectURL(newPreviewImage)
   }
 
+  // TODO: This needs to be reworked, we shouldn't have to fetch the card from sffs first
   async updateCard(id: string, updates: Partial<Card>) {
     const card = await this.getCard(id)
     if (!card) throw new Error(`Card ${id} not found`)
@@ -189,8 +228,27 @@ export class Horizon {
     // we need to get the existing card from storage to track the update event
     // this is a workaround, but we should find a better solution if possible
     // as for latency, the get from storage is very fast, so it should not be a problem
-    const existingCard = await this.storage.cards.read(id)
-    await this.storage.cards.update(id, updates)
+    const existingCard = await this.sffs.getCard(id)
+    if (!existingCard) throw new Error(`Card ${id} not found in storage`)
+
+    if (updates.data) {
+      await this.sffs.updateCardData(id, updates.data)
+    }
+
+    if (updates.x || updates.y || updates.width || updates.height) {
+      // TODO: can handle sffs only partial card position updates?
+      await this.sffs.updateCardPosition(id, {
+        x: updates.x ?? existingCard.x,
+        y: updates.y ?? existingCard.y,
+        width: updates.width ?? existingCard.width,
+        height: updates.height ?? existingCard.height
+      })
+    }
+
+    if (updates.resourceId) {
+      await this.sffs.updateCardResource(id, updates.resourceId)
+    }
+
     this.log.debug(`Updated card ${id}`)
     this.signalChange(this)
     await this.telemetry.trackUpdateCardEvent(existingCard, updates)
@@ -201,7 +259,7 @@ export class Horizon {
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
     this.cards.update((c) => c.filter((c) => get(c).id !== card.id))
-    await this.storage.deleteCardWithResource(card)
+    await this.sffs.deleteCard(card.id)
 
     this.log.debug(`Deleted card ${card.id}`)
     this.signalChange(this)
@@ -227,27 +285,42 @@ export class Horizon {
     this.changeState('warm')
   }
 
-  createResource(data: Blob) {
-    return this.storage.resources.create({
-      data: data
-    })
+  createResource(data: Blob, metadata?: Partial<SFFSResourceMetadata>, tags?: SFFSResourceTag[]) {
+    const parsedMetadata = Object.assign(
+      {
+        name: '',
+        sourceURI: '',
+        alt: ''
+      },
+      metadata ?? {}
+    )
+
+    return this.resourceManager.createResource(data.type, data, parsedMetadata, tags)
   }
 
   getResource(id: string) {
-    return this.storage.resources.read(id)
+    return this.resourceManager.getResource(id)
+  }
+
+  updateResourceData(resourceId: string, data: Blob, write: boolean = true) {
+    return this.resourceManager.updateResourceData(resourceId, data, write)
   }
 
   async addCard(
-    data: Optional<Card, 'id' | 'stacking_order'>,
+    data: Optional<Card, 'id' | 'stackingOrder'>,
     makeActive: boolean = false,
     duplicated: boolean = false
   ) {
-    const card = await this.storage.cards.create({
-      horizon_id: this.data.id,
-      //stacking_order: 1,
-      hoisted: true,
+    const newCard = await this.sffs.createCard({
+      horizonId: this.data.id,
+      stackingOrder: Date.now(),
       ...data
     })
+
+    const card = {
+      ...newCard,
+      hoisted: true
+    }
 
     const cardStore = writable(card)
     this.cards.update((c) => [...c, cardStore])
@@ -265,6 +338,21 @@ export class Horizon {
       this.telemetry.extractEventPropertiesFromCard(card, duplicated)
     )
     return cardStore
+  }
+
+  async addCardWithResource(
+    type: Card['type'],
+    position: CardPosition,
+    data: Blob,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
+    const resource = await this.createResource(data, metadata, tags)
+    return this.addCard({
+      ...position,
+      type: type,
+      resourceId: resource.id
+    })
   }
 
   addCardBrowser(
@@ -288,38 +376,40 @@ export class Horizon {
     )
   }
 
-  addCardText(
+  async addCardText(
     content: string,
     position: CardPosition,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[],
     makeActive: boolean = false,
     duplicated: boolean = false
   ) {
+    // TODO: resource metadata and tags
+    const resource = await this.resourceManager.createResourceNote(content, metadata, tags)
     return this.addCard(
       {
         ...position,
         type: 'text',
-        data: {
-          content: content
-        }
+        resourceId: resource.id
       },
       makeActive,
       duplicated
     )
   }
 
-  addCardLink(
+  async addCardLink(
     url: string,
     position: CardPosition,
     makeActive: boolean = false,
     duplicated: boolean = false
   ) {
+    // TODO: resource metadata and tags + fetch metadata from url
+    const resource = await this.resourceManager.createResourceBookmark({ url })
     return this.addCard(
       {
         ...position,
         type: 'link',
-        data: {
-          url: url
-        }
+        resourceId: resource.id
       },
       makeActive,
       duplicated
@@ -332,16 +422,13 @@ export class Horizon {
     makeActive: boolean = false,
     duplicated: boolean = false
   ) {
-    const resource = await this.createResource(data)
+    // TODO: resource metadata and tags
+    const resource = await this.resourceManager.createResourceOther(data)
     return this.addCard(
       {
         ...position,
         type: 'file',
-        data: {
-          name: 'Untitled',
-          mimetype: data.type,
-          resourceId: resource.id
-        }
+        resourceId: resource.id
       },
       makeActive,
       duplicated
@@ -376,7 +463,7 @@ export class Horizon {
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
     if (card.type === 'text') {
-      return this.addCardText('', position, makeActive, true)
+      return this.addCardText('', position, {}, [], makeActive, true)
     } else if (card.type === 'browser') {
       return this.addCardBrowser('', position, makeActive, true)
     } else if (card.type === 'link') {
@@ -460,261 +547,6 @@ export class Horizon {
   }
 }
 
-export class HistoryEntriesManager {
-  entries: Writable<Map<string, HistoryEntry>>
-  db: HorizonDatabase
-
-  constructor() {
-    this.entries = writable(new Map())
-    this.db = new HorizonDatabase()
-    this.init()
-  }
-
-  // TODO: load only required state, on demand
-  async init() {
-    const allEntries = await this.db.historyEntries.all()
-    const entriesMap = new Map(allEntries.map((entry) => [entry.id, entry]))
-    this.entries.set(entriesMap)
-  }
-
-  get entriesStore() {
-    return this.entries
-  }
-
-  getEntry(id: string): HistoryEntry | undefined {
-    let entry
-    this.entries.subscribe((entries) => (entry = entries.get(id)))()
-    return entry
-  }
-
-  async addEntry(entry: HistoryEntry): Promise<HistoryEntry> {
-    const newEntry = await this.db.historyEntries.create(entry)
-    this.entries.update((entries) => entries.set(newEntry.id, newEntry))
-    return newEntry
-  }
-
-  async updateEntry(id: string, newData: Partial<HistoryEntry>) {
-    await this.db.historyEntries.update(id, newData)
-    this.entries.update((entries) => {
-      const entry = entries.get(id)
-      if (entry) {
-        entries.set(id, { ...entry, ...newData })
-      }
-      return entries
-    })
-  }
-
-  async removeEntry(id: string) {
-    await this.db.historyEntries.delete(id)
-    this.entries.update((entries) => {
-      entries.delete(id)
-      return entries
-    })
-  }
-
-  extractHostname(url: string): string {
-    try {
-      // remove the common `www.` prefix
-      return new URL(url).hostname.replace('www.', '')
-    } catch (error) {
-      return ''
-    }
-  }
-
-  extractSite(value: string): string {
-    try {
-      const url = new URL(value)
-      const hostname = url.hostname
-      const site = hostname.split('.').slice(-2, -1).join('')
-
-      return site
-    } catch (error) {
-      return ''
-    }
-  }
-
-  extractPathname(url: string): string {
-    try {
-      return new URL(url).pathname
-    } catch (error) {
-      return ''
-    }
-  }
-
-  extractTitle(value: string): string {
-    try {
-      const site = this.extractSite(value)
-
-      return site.slice(0, 1).toUpperCase() + site.slice(1)
-    } catch (error) {
-      return ''
-    }
-  }
-
-  normalizeTitle(title: string): string {
-    const degoogled = title.replace('- Google Search', '')
-    const normalized = degoogled.replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim()
-    return normalized.toLowerCase()
-  }
-
-  private scoreEntry(entry: HistoryEntry, query: string): number {
-    query = query.toLowerCase()
-
-    const parts = query.split(' ')
-
-    const scorePart = (queryPart: string) => {
-      let score = 0
-      if (entry.url) {
-        const hostname = this.extractHostname(entry.url).toLowerCase()
-        const pathname = this.extractPathname(entry.url).toLowerCase()
-
-        let hostNameMatch = false
-        if (hostname === queryPart) {
-          score += 1.25
-          hostNameMatch = true
-        } else if (hostname.startsWith(queryPart)) {
-          score += 1
-          hostNameMatch = true
-        } else if (hostname.includes(queryPart)) {
-          score += 0.75
-          hostNameMatch = true
-        }
-
-        // if the query is a single word, we give a bonus to homepages
-        if (hostNameMatch && parts.length === 1 && pathname === '/') {
-          score += 1
-        }
-
-        if (pathname.includes(queryPart)) {
-          score += 0.25
-        }
-      }
-
-      const normalizedTitle = this.normalizeTitle(entry.title ?? '')
-      if (normalizedTitle === queryPart) {
-        score += 1
-      } else if (normalizedTitle.startsWith(queryPart)) {
-        score += 0.75
-      } else if (normalizedTitle.includes(queryPart)) {
-        score += 0.5
-      }
-
-      if (entry.searchQuery && entry.searchQuery.toLowerCase().includes(queryPart)) {
-        score += 0.25
-      }
-
-      return score
-    }
-
-    // score entire query
-    let score = scorePart(query)
-
-    if (parts.length > 1) {
-      // score each part
-      const partScores = parts.map((queryPart) => {
-        return scorePart(queryPart)
-      })
-
-      let partsScore = partScores.reduce((a, b) => a + b, 0)
-
-      // if any part has a score of 0, we penalize the entire query
-      if (partScores.some((score) => score === 0)) {
-        partsScore -= 0.5
-      }
-
-      // average the score of the entire query and the parts
-      score += partsScore / parts.length
-    }
-
-    return score
-  }
-
-  searchEntries(query: string, threshold: number = 0.2) {
-    const seen = new Set()
-    const entries = Array.from(get(this.entries).values()).filter(
-      (entry) => entry.url !== undefined
-    )
-
-    const urlCount = new Map<string, number>()
-    for (const entry of entries) {
-      if (entry.url) urlCount.set(entry.url, (urlCount.get(entry.url) || 0) + 1)
-    }
-
-    const exactResult = entries
-      .map((entry) => ({
-        entry,
-        score: this.scoreEntry(entry, query),
-        fuzzy: false
-      }))
-      .filter((item) => {
-        return item.score > threshold
-      })
-
-    const fuzzyResult = this.searchEntriesFuse(entries, query, threshold)
-
-    const combined = [...exactResult, ...fuzzyResult]
-
-    const sorted = combined
-      .map((item) => ({
-        ...item,
-        site: item.entry.url ? this.extractSite(item.entry.url) : '',
-        hostname: item.entry.url ? this.extractHostname(item.entry.url) : '',
-        visitCount: item.entry.url ? urlCount.get(item.entry.url) || 0 : 0
-      }))
-      .sort((a, b) => {
-        const diff = b.score - a.score
-        return diff === 0 ? b.visitCount - a.visitCount : diff
-      })
-      //.map((item) => item.entry)
-      .filter((item) => {
-        const dedupKey =
-          `${item.entry.url}|${item.entry.title}|${item.entry.searchQuery}`.toLowerCase()
-        if (seen.has(dedupKey)) {
-          return false
-        } else {
-          seen.add(dedupKey)
-          return true
-        }
-      })
-
-    console.log('final', sorted)
-
-    return sorted
-  }
-
-  searchEntriesFuse(entries: HistoryEntry[], query: string, threshold: number = 0.3) {
-    const seen = new Set()
-
-    const options = {
-      includeScore: true,
-      keys: ['title', 'url', 'searchQuery'],
-      isCaseSensitive: false,
-      ignoreLocation: true,
-      threshold
-    }
-
-    const fuse = new Fuse(entries, options)
-    const fuzzyResults = fuse.search(query)
-
-    const filteredEntries = fuzzyResults.filter((result: FuseResult<HistoryEntry>) => {
-      const dedupKey =
-        `${result.item.url}|${result.item.title}|${result.item.searchQuery}`.toLowerCase()
-      if (seen.has(dedupKey)) {
-        return false
-      } else {
-        seen.add(dedupKey)
-        return true
-      }
-    })
-
-    return filteredEntries.map((result) => ({
-      entry: result.item,
-      score: result.score || 0,
-      fuzzy: true
-    }))
-  }
-}
-
 export class HorizonsManager {
   activeHorizonId: Writable<string | null>
   horizons: Writable<Horizon[]>
@@ -729,26 +561,29 @@ export class HorizonsManager {
   api: API
   log: ScopedLogger
   storage: HorizonDatabase
+  sffs: SFFS
   telemetry: Telemetry
   historyEntriesManager: HistoryEntriesManager
   activeHorizonStorage: LocalStorage<string>
   adblockerState: Writable<boolean>
+  resourcesManager: ResourceManager
 
-  constructor(api: API, telemetryConfig: TelemetryConfig) {
+  constructor(api: API, resourcesManager: ResourceManager, telemetryConfig: TelemetryConfig) {
     this.api = api
     this.log = useLogScope(`HorizonService`)
     this.storage = new HorizonDatabase()
+    this.sffs = new SFFS() // TODO: maybe share this with the resources manager
     this.telemetry = new Telemetry(this.storage, telemetryConfig)
     this.adblockerState = writable(true)
 
+    this.resourcesManager = resourcesManager
     this.historyEntriesManager = new HistoryEntriesManager()
 
     // TODO: replace this with something
     // that stores application state
     this.activeHorizonStorage = new LocalStorage<string>('active_horizon')
 
-    // @ts-ignore
-    window.api.getAdblockerState('persist:horizon').then((state) => {
+    window.api.getAdblockerState('persist:horizon').then((state: boolean) => {
       this.adblockerState.set(state)
     })
 
@@ -852,12 +687,12 @@ export class HorizonsManager {
   }
 
   async loadHorizons() {
-    const storedHorizons = (await this.storage.horizons.all()) ?? []
+    const storedHorizons = (await this.sffs.getHorizons()) ?? []
     this.log.debug(`Loading ${storedHorizons.length} stored horizons`)
 
     const horizons = await Promise.all(
       storedHorizons.map(async (data) => {
-        let previewImageResource: Resource | undefined
+        let previewImageResource: LegacyResource | undefined
         if (data.previewImage) {
           try {
             previewImageResource = await this.storage.resources.read(data.previewImage)
@@ -869,6 +704,7 @@ export class HorizonsManager {
           data,
           this.api,
           this.telemetry,
+          this.resourcesManager,
           this.historyEntriesManager,
           this.adblockerState,
           previewImageResource,
@@ -883,7 +719,8 @@ export class HorizonsManager {
 
   persistHorizon(horizon: Horizon) {
     this.log.debug(`Persisting Horizon ${horizon.id}`)
-    this.storage.horizons.update(horizon.id, horizon.data)
+    // TODO: do we need to update anything else?
+    this.sffs.updateHorizoData(horizon.data)
   }
 
   getHorizon(id: string) {
@@ -943,18 +780,14 @@ export class HorizonsManager {
   }
 
   async createHorizon(name: string) {
-    // const res = await this.api.createHorizon(name)
-    let data = {
-      name,
-      viewOffsetX: 0
-    } as HorizonData
-    data = await this.storage.horizons.create(data)
+    const data = await this.sffs.createHorizon(name)
 
     const horizon = new Horizon(
       data.id,
       data,
       this.api,
       this.telemetry,
+      this.resourcesManager,
       this.historyEntriesManager,
       this.adblockerState,
       undefined,
@@ -971,10 +804,8 @@ export class HorizonsManager {
 
     this.log.debug(`Deleting horizon ${horizon.id}`)
 
-    await this.storage.horizons.delete(horizon.id)
-    await this.storage.deleteCardsByHorizonId(horizon.id)
-
-    // TODO: delete resources
+    // Note: SFFS will take care of deleting all cards as well
+    await this.sffs.deleteHorizon(horizon.id)
 
     this.horizons.update((h) => h.filter((h) => h.id !== horizon.id))
     await this.telemetry.trackEvent(EventTypes.DeleteHorizon, { id: horizon.id })

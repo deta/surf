@@ -1,13 +1,19 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import type { Writable } from 'svelte/store'
 
-  import type { CardFile, Resource } from '../../../types'
   import { useLogScope } from '../../../utils/log'
   import type { Horizon } from '../../../service/horizon'
   import ImageView from './ImageView.svelte'
+  import type { Resource } from '../../../service/resources'
+  import type { Card } from '../../../types'
+  import UnknownFileView from './UnknownFileView.svelte'
+  import PdfView from './PDFView.svelte'
+  import { getFileKind } from '../../../utils/files'
+  import VideoView from './VideoView.svelte'
+  import AudioView from './AudioView.svelte'
 
-  export let card: Writable<CardFile>
+  export let card: Writable<Card>
   export let horizon: Horizon
 
   const log = useLogScope('FileCard')
@@ -15,24 +21,38 @@
   let loading = false
   let error: null | string = null
   let resource: Resource | null = null
+  let data: Blob | null = null
 
-  $: fileType = $card.data.mimetype
+  $: fileKind = data ? getFileKind(data.type) : null
 
   onMount(async () => {
     try {
       loading = true
-      const fetchedResource = await horizon.getResource($card.data.resourceId)
 
-      if (fetchedResource) {
-        resource = fetchedResource
-      } else {
-        log.error('Resource not found', $card.data.resourceId)
-        error = 'Resource not found'
+      if (!$card.resourceId) {
+        log.error('No resource id found', $card)
+        error = 'No resource id found'
+        return
       }
+
+      resource = await horizon.getResource($card.resourceId)
+      if (!resource) {
+        log.error('Resource not found', $card.resourceId)
+        error = 'Resource not found'
+        return
+      }
+
+      data = await resource.getData()
     } catch (e) {
       log.error(e)
     } finally {
       loading = false
+    }
+  })
+
+  onDestroy(() => {
+    if (resource) {
+      resource.releaseData()
     }
   })
 </script>
@@ -42,12 +62,17 @@
     <p>{error}</p>
   {:else if loading}
     <p>Loading…</p>
-  {:else if resource}
-    {#if fileType.startsWith('image/')}
-      <ImageView {resource} />
+  {:else if resource && data}
+    {#if fileKind === 'image'}
+      <ImageView blob={data} />
+    {:else if data.type === 'application/pdf'}
+      <PdfView {resource} blob={data} />
+    {:else if fileKind === 'video'}
+      <VideoView {resource} blob={data} />
+    {:else if fileKind === 'audio'}
+      <AudioView {resource} blob={data} />
     {:else}
-      <h1>Unsupported File Type</h1>
-      <p>No view available to display this file.</p>
+      <UnknownFileView {resource} blob={data} />
     {/if}
   {/if}
 </div>
@@ -57,6 +82,7 @@
     width: 100%;
     height: 100%;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     margin: 0;

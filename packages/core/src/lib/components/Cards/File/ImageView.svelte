@@ -1,10 +1,13 @@
 <script lang="ts">
-  import type { Resource } from '../../../types'
+  import { onDestroy } from 'svelte'
 
-  export let resource: Resource
+  export let blob: Blob
 
-  const blob = resource.data
   const url = URL.createObjectURL(blob)
+
+  onDestroy(() => {
+    URL.revokeObjectURL(url)
+  })
 </script>
 
 <div class="wrapper">

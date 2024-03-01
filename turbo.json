@@ -2,6 +2,10 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
   "pipeline": {
+    "@horizon/backend#build": {
+      "dependsOn": [],
+      "outputs": [".dist/**", "index.node", "target/**"]
+    },
     "horizon#build:mwl": {
       "dependsOn": ["^build"],
       "outputs": [".dist/**"]
@@ -37,8 +41,11 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
+    "horizon#dev": {
+      "dependsOn": ["@horizon/tela#build", "@horizon/backend#build"]
+    },
     "dev": {
-      "dependsOn": ["@horizon/tela#build"],
+      "dependsOn": ["@horizon/tela#build", "@horizon/backend#build"],
       "cache": false,
       "persistent": true
     }

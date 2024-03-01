@@ -1,4 +1,4 @@
-import { type JSONContent, generateHTML, generateText } from '@tiptap/core'
+import { type JSONContent, generateHTML, generateText, generateJSON } from '@tiptap/core'
 import Link from '@tiptap/extension-link'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
@@ -59,8 +59,13 @@ export const getEditorContentHTML = (content: JSONContent) => {
   return generateHTML(content, extensions)
 }
 
-export const getEditorContentText = (content: JSONContent) => {
-  return generateText(content, extensions)
+export const getEditorContentJSON = (content: string) => {
+  return generateJSON(content, extensions)
+}
+
+export const getEditorContentText = (content: string) => {
+  const json = generateJSON(content, extensions)
+  return generateText(json, extensions)
 }
 
 export type * from '@tiptap/core'

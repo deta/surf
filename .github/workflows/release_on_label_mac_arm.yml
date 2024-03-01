@@ -43,6 +43,12 @@ jobs:
       - name: Set version as env variable
         run: echo "APP_VERSION=${{ needs.prepare.outputs.version }}" >> $GITHUB_ENV
 
+      - name: Install Cargo
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:

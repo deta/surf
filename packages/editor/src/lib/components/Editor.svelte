@@ -5,17 +5,16 @@
   import { createEventDispatcher, onMount } from 'svelte'
 
   import { createEditor, Editor, EditorContent } from 'svelte-tiptap'
-  import type { JSONContent } from '@tiptap/core'
 
   import { createEditorExtensions } from '../editor'
   import BubbleMenu from './BubbleMenu.svelte'
 
-  export let content: JSONContent
+  export let content: string
   export let readOnly: boolean = false
   export let placeholder: string = `Write something or type '/' for options…`
   export let autofocus: boolean = true
 
-  const dispatch = createEventDispatcher<{ update: JSONContent }>()
+  const dispatch = createEventDispatcher<{ update: string }>()
 
   export const focus = () => {
     if ($editor) {
@@ -34,9 +33,9 @@
       autofocus: !autofocus || readOnly ? false : 'end',
       onUpdate: ({ editor }) => {
         editor = editor
-        const json = editor.getJSON()
+        const html = editor.getHTML()
         // const oldContent = content
-        content = json
+        content = html
         dispatch('update', content)
       },
       onFocus: () => {

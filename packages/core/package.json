@@ -18,6 +18,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
+    "@horizon/drawer": "*",
     "@horizon/editor": "*",
     "@horizon/eslint-config": "*",
     "@horizon/icons": "*",
@@ -30,6 +31,7 @@
     "@tsconfig/svelte": "^5.0.2",
     "@types/lodash": "^4.14.202",
     "date-fns": "^3.2.0",
+    "human-filetypes": "^1.1.3",
     "embla-carousel-svelte": "^8.0.0",
     "embla-carousel-wheel-gestures": "^8.0.0-rc05",
     "is-ip": "^5.0.1",

@@ -16,7 +16,7 @@
   import type { WebviewTag } from 'electron'
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import type { HistoryEntriesManager } from '../../../service/horizon'
-  import type { HistoryEntry } from '../../../types'
+  import type { HistoryEntry } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
 
   const dispatch = createEventDispatcher<WebViewWrapperEvents>()

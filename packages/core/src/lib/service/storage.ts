@@ -1,17 +1,7 @@
 import Dexie from 'dexie'
 
-import { generateID, generateUUID } from '../utils/id'
-import type {
-  Card,
-  Optional,
-  Resource,
-  HorizonData,
-  CardBrowser,
-  CardFile,
-  UserData,
-  Session,
-  HistoryEntry
-} from '../types'
+import { generateID } from '../utils/id'
+import type { Optional, LegacyResource } from '../types'
 
 export class LocalStorage<T> {
   key: string
@@ -95,8 +85,9 @@ export class Storage<T extends Record<string, any>> {
 export class UserStore<UserData> {
   constructor(public t: Dexie.Table<UserData, string>) {}
 
-  async create(data: Optional<UserData, 'id'>): Promise<UserData> {
+  async create(data: Omit<UserData, 'id'>): Promise<UserData> {
     const item = {
+      // @ts-ignore
       id: 'main', // only singe user data must exist
       ...data
     } as UserData
@@ -146,30 +137,8 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
   }
 }
 
-class HistoryStore extends HorizonStore<HistoryEntry> {
-  constructor(public t: Dexie.Table<HistoryEntry, string>) {
-    super(t)
-  }
-
-  async getBySessionId(sessionId: string) {
-    return await this.t.where({ sessionId }).toArray()
-  }
-
-  async fetchHistoryEntriesByIds(ids: string[]): Promise<Map<string, HistoryEntry>> {
-    const historyEntries = await this.t.where('id').anyOf(ids).toArray()
-    const entriesMap = new Map<string, HistoryEntry>()
-    historyEntries.forEach((entry) => entriesMap.set(entry.id, entry))
-    return entriesMap
-  }
-}
-
 export class HorizonDatabase extends Dexie {
-  userData: UserStore<UserData>
-  cards: HorizonStore<Card>
-  horizons: HorizonStore<HorizonData>
-  resources: HorizonStore<Resource>
-  sessions: HorizonStore<Session>
-  historyEntries: HistoryStore
+  resources: HorizonStore<LegacyResource>
 
   constructor() {
     super('HorizonDatabase')
@@ -224,52 +193,6 @@ export class HorizonDatabase extends Dexie {
         }
       })
 
-    this.userData = new UserStore<UserData>(this.table('userData'))
-    this.cards = new HorizonStore<Card>(this.table('cards'))
-    this.horizons = new HorizonStore<HorizonData>(this.table('horizons'))
-    this.resources = new HorizonStore<Resource>(this.table('resources'))
-    this.sessions = new HorizonStore<Session>(this.table('sessions'))
-    this.historyEntries = new HistoryStore(this.table('historyEntries'))
-  }
-
-  async getUserID() {
-    return (await this.userData.get())?.user_id
-  }
-
-  async createUserData() {
-    return await this.userData.create({ user_id: generateUUID() } as UserData)
-  }
-
-  async getCardsByHorizonId(horizonId: string) {
-    // TODO: ensure that types are properly initialized with default values going forward
-    const cards = (await this.cards.t.where({ horizon_id: horizonId }).toArray()).map((c) => {
-      if (c.type == 'browser') {
-        const data = c.data as CardBrowser['data']
-        data.historyStackIds = data.historyStackIds ?? []
-      }
-      return c
-    })
-
-    return cards
-  }
-
-  async deleteCardWithResource(card: Card) {
-    if (card && card.type === 'file') {
-      await this.resources.delete((card as CardFile).data.resourceId)
-    }
-
-    await this.cards.delete(card.id)
-  }
-
-  async deleteCardsByHorizonId(horizonId: string) {
-    const fileCardsResourceIds = (
-      await this.cards.t.where({ horizon_id: horizonId, type: 'file' }).toArray()
-    ).map((card: Card) => (card as CardFile).data.resourceId)
-
-    if (fileCardsResourceIds.length > 0) {
-      await this.resources.t.where('id').anyOf(fileCardsResourceIds).delete()
-    }
-
-    await this.cards.t.where({ horizon_id: horizonId }).delete()
+    this.resources = new HorizonStore<LegacyResource>(this.table('resources'))
   }
 }

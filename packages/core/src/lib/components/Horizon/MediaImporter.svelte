@@ -2,10 +2,11 @@
   import { hasClassOrParentWithClass, posToAbsolute } from '@horizon/tela'
   import type { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
-  import { parseClipboardItems } from '../../service/clipboard'
-  import { checkIfUrl, parseStringIntoUrl } from '../../utils/url'
   import { DEFAULT_CARD_SIZE } from '../../constants/card'
   import { get } from 'svelte/store'
+  import { processDrop, processPaste } from '../../service/mediaImporter'
+  import { ResourceTypes, type SFFSResourceMetadata, type SFFSResourceTag } from '../../types'
+  import { ResourceBookmark, ResourceTag } from '../../service/resources'
 
   export let horizon: Horizon
 
@@ -61,7 +62,7 @@
       ['INPUT', 'TEXTAREA'].includes(elem.tagName) || elem.hasAttribute('contenteditable')
     const isCardElem = hasClassOrParentWithClass(elem, 'card')
 
-    return isInputElem || isCardElem || $activeCardId !== null
+    return isInputElem || (isCardElem && $activeCardId !== null)
   }
 
   const handlePaste = async (e: ClipboardEvent) => {
@@ -75,38 +76,26 @@
 
     e.preventDefault()
 
-    const clipboardItems = await navigator.clipboard.read()
-    log.debug('clipboardItems', clipboardItems)
-
-    let num = 0
     const getNewCardHorizontalPosition = getNewCardHorizontalPositionCreator(30, null)
 
-    const blobs = await parseClipboardItems(clipboardItems)
-    log.debug(
-      'parsed items',
-      blobs.map((blob) => blob.type)
-    )
+    const result = await processPaste(e)
+    result.map((item, idx) => {
+      log.debug('processed item', item)
 
-    blobs.forEach(async (blob) => {
-      const type = blob.type
-
-      if (type.startsWith('image')) {
-        createImageCard(blob, getNewCardHorizontalPosition(num))
-        num++
-      } else if (type.startsWith('text')) {
-        const text = await blob.text()
-        log.debug('text', text)
-
-        const url = parseStringIntoUrl(text)
-        if (url) {
-          createBrowserCard(url, getNewCardHorizontalPosition(num))
-          num++
+      if (item.type === 'text') {
+        createTextCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+          ResourceTag.paste()
+        ])
+      } else if (item.type === 'url') {
+        createBrowserCard(item.data, getNewCardHorizontalPosition(idx))
+      } else if (item.type === 'file') {
+        if (item.data.type.startsWith('image')) {
+          createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+            ResourceTag.paste()
+          ])
         } else {
-          createTextCard(text, getNewCardHorizontalPosition(num))
-          num++
+          log.warn('unhandled file type', item.data.type)
         }
-      } else {
-        log.warn('unhandled blob type', type)
       }
     })
   }
@@ -118,150 +107,89 @@
     // send event to window so that other components know that a drop event has occurred
     window.dispatchEvent(new CustomEvent('drop', { detail: e }))
 
-    e.dataTransfer?.types.map((t) => log.debug(t, e.dataTransfer?.getData(t)))
+    const getNewCardHorizontalPosition = getNewCardHorizontalPositionCreator(30, {
+      x: e.clientX,
+      y: e.clientY
+    })
 
-    const dataTypes = ['text/html', 'text/plain', 'text/uri-list']
-    const pos = { x: e.clientX, y: e.clientY }
+    const result = await processDrop(e)
+    result.map((item, idx) => {
+      log.debug('processed item', item)
 
-    for (const type of dataTypes) {
-      let dataHandled = false
-      const data = e.dataTransfer?.getData(type)
-      if (!data || data.trim() === '') continue
-
-      switch (type) {
-        case 'text/html':
-          dataHandled = await processHTMLDrop(pos, data)
-          break
-        case 'text/plain':
-          dataHandled = await processTextData(pos, data)
-          break
-        case 'text/uri-list':
-          dataHandled = await processUriListData(pos, data)
-          break
-      }
-
-      // break out of the loop after handling at least one of the
-      // possible data types
-      if (dataHandled) break
-    }
-
-    let num = 0
-    const getNewCardHorizontalPosition = getNewCardHorizontalPositionCreator(30, pos)
-
-    const files = Array.from(e.dataTransfer?.files ?? [])
-    files.forEach(async (file) => {
-      const type = file.type
-
-      log.debug('file', file)
-
-      const fileType = parseFileType(file)
-      log.debug('parsed file type', fileType)
-
-      if (fileType === 'image') {
-        createImageCard(file, getNewCardHorizontalPosition(num))
-        num++
-      } else if (fileType === 'text') {
-        const text = await file.text()
-        createTextCard(text, getNewCardHorizontalPosition(num))
-        num++
+      if (item.type === 'text') {
+        createTextCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+          ResourceTag.dragLocal()
+        ])
+      } else if (item.type === 'url') {
+        createBrowserCard(item.data, getNewCardHorizontalPosition(idx))
+      } else if (item.type === 'file') {
+        createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+          ResourceTag.dragLocal()
+        ])
+      } else if (item.type === 'resource') {
+        handleResource(item.data, getNewCardHorizontalPosition(idx))
       } else {
-        log.warn('unhandled file type', type)
+        log.warn('unhandled item type', item.type)
       }
     })
   }
 
-  const parseFileType = (file: File) => {
-    if (file.type.startsWith('image')) return 'image'
-    if (file.type.startsWith('text')) return 'text'
+  const handleResource = async (resourceId: string, pos: { x: number; y: number }) => {
+    log.debug('handleResource', resourceId)
 
-    if (file.type === '') {
-      if (file.name.endsWith('.txt') || file.name.endsWith('.md')) return 'text'
+    const resource = await horizon.getResource(resourceId)
+    if (!resource) {
+      log.error('Resource not found', resourceId)
+      return
     }
 
-    return 'unknown'
-  }
+    log.debug('resource', resource)
 
-  const processHTMLDrop = async (basePos: any, data: string): Promise<boolean> => {
-    let handledData = false
-
-    const div = document.createElement('div')
-    div.innerHTML = data ?? ''
-    const images = Array.from(div.querySelectorAll('img'))
-
-    let num = 0
-    const getNewCardHorizontalPosition = getNewCardHorizontalPositionCreator(30, basePos)
-
-    await Promise.allSettled(
-      images.map(async (img) => {
-        try {
-          let source = img.src.startsWith('data:')
-            ? img.src
-            : // @ts-ignore
-              await window.api.fetchAsDataURL(img.src)
-
-          const response = await fetch(source)
-          if (!response.ok) throw new Error('failed to fetch')
-          const blob = await response.blob()
-          createImageCard(blob, getNewCardHorizontalPosition(num))
-
-          handledData = true
-          num++
-        } catch (err) {
-          log.debug('failed to create image card: ', { image: img, err: err })
-        }
-      })
-    )
-
-    return handledData
-  }
-
-  const processTextData = async (basePos: any, data: string): Promise<boolean> => {
-    if (data.trim() === '') return false
-    const pos = getNewCardPosition(basePos)
-
-    if (checkIfUrl(data)) {
-      createBrowserCard(new URL(data), pos)
+    if (resource.type === ResourceTypes.LINK) {
+      const bookmark = await (resource as ResourceBookmark).getBookmark()
+      createBrowserCard(new URL(bookmark.url), pos)
     } else {
-      createTextCard(data, pos)
+      horizon.addCard({
+        x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+        y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+        width: DEFAULT_CARD_SIZE.width,
+        height: DEFAULT_CARD_SIZE.height,
+        type: resource.type === ResourceTypes.NOTE ? 'text' : 'file',
+        resourceId: resource.id
+      })
     }
-
-    return true
   }
 
-  const processUriListData = async (basePos: any, data: string): Promise<boolean> => {
-    let dataHandled = false
-    const pos = getNewCardPosition(basePos)
-
-    const urls = data.split(/\r\n|\r|\n/)
-    urls.forEach((url) => {
-      if (checkIfUrl(url)) {
-        createBrowserCard(new URL(url), pos)
-        dataHandled = true
-      }
-    })
-
-    return dataHandled
-  }
-
-  const createImageCard = async (blob: Blob, pos: { x: number; y: number }) => {
-    const card = await horizon.addCardFile(blob, {
-      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
-      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-      width: DEFAULT_CARD_SIZE.width,
-      height: DEFAULT_CARD_SIZE.height
-    })
+  const createFileCard = async (
+    blob: Blob,
+    pos: { x: number; y: number },
+    metadata: Partial<SFFSResourceMetadata>,
+    tags: SFFSResourceTag[]
+  ) => {
+    const card = await horizon.addCardWithResource(
+      'file',
+      {
+        x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+        y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+        width: DEFAULT_CARD_SIZE.width,
+        height: DEFAULT_CARD_SIZE.height
+      },
+      blob,
+      metadata,
+      tags
+    )
     log.debug('created card', get(card))
   }
 
-  const createLinkCard = async (url: URL, pos: { x: number; y: number }) => {
-    const card = await horizon.addCardLink(url.href, {
-      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
-      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-      width: DEFAULT_CARD_SIZE.width,
-      height: DEFAULT_CARD_SIZE.height
-    })
-    log.debug('created card', get(card))
-  }
+  // const createLinkCard = async (url: URL, pos: { x: number; y: number }) => {
+  //   const card = await horizon.addCardLink(url.href, {
+  //     x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+  //     y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+  //     width: DEFAULT_CARD_SIZE.width,
+  //     height: DEFAULT_CARD_SIZE.height
+  //   })
+  //   log.debug('created card', get(card))
+  // }
 
   const createBrowserCard = async (url: URL, pos: { x: number; y: number }) => {
     const card = await horizon.addCardBrowser(url.href, {
@@ -273,13 +201,23 @@
     log.debug('created card', get(card))
   }
 
-  const createTextCard = async (text: string, pos: { x: number; y: number }) => {
-    const card = await horizon.addCardText(text, {
-      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
-      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-      width: DEFAULT_CARD_SIZE.width,
-      height: DEFAULT_CARD_SIZE.height
-    })
+  const createTextCard = async (
+    text: string,
+    pos: { x: number; y: number },
+    metadata: Partial<SFFSResourceMetadata>,
+    tags: SFFSResourceTag[]
+  ) => {
+    const card = await horizon.addCardText(
+      text,
+      {
+        x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+        y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+        width: DEFAULT_CARD_SIZE.width,
+        height: DEFAULT_CARD_SIZE.height
+      },
+      metadata,
+      tags
+    )
     log.debug('created card', get(card))
   }
 </script>
