@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { hasClassOrParentWithClass, posToAbsolute } from '@horizon/tela'
+  import { clamp, hasClassOrParentWithClass, posToAbsolute } from '@horizon/tela'
   import type { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
   import { parseClipboardItems } from '../../service/clipboard'
@@ -244,11 +244,25 @@
   }
 
   const createImageCard = async (blob: Blob, pos: { x: number; y: number }) => {
+    // Find out size
+    const src = URL.createObjectURL(blob)
+    const [imgWidth, imgHeight] = await new Promise((resolve, reject) => {
+      let img = new Image()
+      img.onload = () => resolve([img.width, img.height])
+      img.onerror = reject
+      img.src = src
+    })
+
+    // TODO: Make this respect our default card size a bit better
+    const aspect = clamp(imgWidth / imgHeight, 0, 4)
+    let targetWidth = DEFAULT_CARD_SIZE.width * aspect
+    let targetHeight = DEFAULT_CARD_SIZE.width
+
     const card = await horizon.addCardFile(blob, {
       x: pos.x - DEFAULT_CARD_SIZE.width / 2,
       y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-      width: DEFAULT_CARD_SIZE.width,
-      height: DEFAULT_CARD_SIZE.height
+      width: targetWidth,
+      height: targetHeight
     })
     log.debug('created card', get(card))
   }
