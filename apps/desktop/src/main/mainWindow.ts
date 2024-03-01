@@ -1,4 +1,4 @@
-import { BrowserWindow, shell, session } from 'electron'
+import { BrowserWindow, shell, session, screen } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { is } from '@electron-toolkit/utils'
@@ -18,11 +18,48 @@ export function createWindow() {
     }
   )
 
+  const currentDisplay =
+    winState.state.x && winState.state.y
+      ? screen.getDisplayMatching({
+          x: winState.state.x,
+          y: winState.state.y,
+          width: winState.state.width,
+          height: winState.state.height
+        })
+      : screen.getPrimaryDisplay()
+  const screenBounds = currentDisplay.bounds
+
+  const clamp = (value: number, min: number, max: number) => {
+    return Math.min(Math.max(value, min), max)
+  }
+
+  const windowBounds = {
+    x: winState.state.x ?? 0,
+    y: winState.state.y ?? 0,
+    width: winState.state.width ?? screenBounds.width,
+    height: winState.state.height ?? screenBounds.height
+  }
+
+  const boundWindow = {
+    x: clamp(
+      windowBounds.x,
+      screenBounds.x,
+      screenBounds.x + screenBounds.width - windowBounds.width
+    ),
+    y: clamp(
+      windowBounds.y,
+      screenBounds.y,
+      screenBounds.y + screenBounds.height - windowBounds.height
+    ),
+    width: Math.min(windowBounds.width, screenBounds.width),
+    height: Math.min(windowBounds.height, screenBounds.height)
+  }
+
   mainWindow = new BrowserWindow({
-    width: winState.state.width,
-    height: winState.state.height,
-    x: winState.state.x,
-    y: winState.state.y,
+    width: boundWindow.width,
+    height: boundWindow.height,
+    x: boundWindow.x,
+    y: boundWindow.y,
     fullscreen: winState.state.isFullScreen,
     fullscreenable: true,
     show: false,
