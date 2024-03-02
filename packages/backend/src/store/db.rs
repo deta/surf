@@ -66,6 +66,12 @@ pub struct SearchResult {
     pub total: i64,
 }
 
+#[derive(Debug)]
+pub struct VectorSearchResult {
+    pub rowid: i64,
+    pub distance: f32,
+}
+
 impl Database {
     pub fn new(db_path: &str) -> BackendResult<Database> {
         unsafe {
@@ -415,44 +421,68 @@ impl Database {
     pub fn create_card_position_tx(
         tx: &mut rusqlite::Transaction,
         card_position: &CardPosition,
-    ) -> BackendResult<i64> {
-        //let mut stmt = tx.prepare("INSERT INTO card_positions (position) VALUES (?1)")?;
-        //stmt.insert(rusqlite::params![card_position.position])?;
-        //Ok(tx.last_insert_rowid())
-        Ok(0)
+    ) -> BackendResult<()> {
+        let rowid = match card_position.rowid {
+            Some(rowid) => rowid,
+            None => Err(BackendError::GenericError(
+                "rowid must be specified for card_position".to_string(),
+            ))?,
+        };
+        let mut stmt =
+            tx.prepare("INSERT INTO card_positions (rowid, position) VALUES (?1, ?2)")?;
+        stmt.insert(rusqlite::params![rowid, card_position.position])?;
+        Ok(())
     }
 
     pub fn remove_card_position_tx(
         tx: &mut rusqlite::Transaction,
-        row_id: &i64,
+        rowid: &i64,
     ) -> BackendResult<()> {
-        //tx.execute(
-        //    "DELETE FROM card_positions WHERE row_id = ?1",
-        //    rusqlite::params![row_id],
-        //)?;
+        tx.execute(
+            "DELETE FROM card_positions WHERE rowid = ?1",
+            rusqlite::params![rowid],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_card_position_by_card_id_tx(
+        tx: &mut rusqlite::Transaction,
+        card_id: &str,
+        position: &str,
+    ) -> BackendResult<()> {
+        let row_id: i64;
+        let mut stmt = tx.prepare("SELECT rowid FROM cards WHERE id = ?1")?;
+        row_id = stmt.query_row(rusqlite::params![card_id], |row| row.get(0))?;
+        tx.execute(
+            "DELETE FROM card_positions WHERE rowid = ?1",
+            rusqlite::params![row_id],
+        )?;
+        tx.execute(
+            "INSERT INTO card_positions (rowid, position) VALUES(?1, ?2)",
+            rusqlite::params![row_id, position],
+        )?;
         Ok(())
     }
 
     pub fn create_card_tx(tx: &mut rusqlite::Transaction, card: &mut Card) -> BackendResult<()> {
-        let card_position_id = Self::create_card_position_tx(
+        tx.execute(
+            "INSERT INTO cards (id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data) 
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.width, card.height, card.stacking_order, card.created_at, card.updated_at, card.data]
+        )?;
+        let rowid = tx.last_insert_rowid();
+        Self::create_card_position_tx(
             tx,
             &CardPosition {
-                position: format!("[{}, {}]", card.position_x, card.position_y)
-                    .as_bytes()
-                    .to_vec(),
+                rowid: Some(rowid),
+                position: format!("[{}, {}]", card.position_x, card.position_y),
             },
-        )?;
-        card.position_id = card_position_id;
-        tx.execute(
-            "INSERT INTO cards (id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data, position_id) 
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
-            rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.width, card.height, card.stacking_order, card.created_at, card.updated_at, card.data, card.position_id]
         )?;
         Ok(())
     }
 
     pub fn get_card(&self, id: &str) -> BackendResult<Option<Card>> {
-        let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE id = ?1")?;
+        let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE id = ?1")?;
         let card = stmt
             .query_row(rusqlite::params![id], |row| {
                 Ok(Card {
@@ -460,15 +490,14 @@ impl Database {
                     horizon_id: row.get(1)?,
                     card_type: row.get(2)?,
                     resource_id: row.get(3)?,
-                    position_id: row.get(4)?,
-                    position_x: row.get(5)?,
-                    position_y: row.get(6)?,
-                    width: row.get(7)?,
-                    height: row.get(8)?,
-                    stacking_order: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
-                    data: row.get(12)?,
+                    position_x: row.get(4)?,
+                    position_y: row.get(5)?,
+                    width: row.get(6)?,
+                    height: row.get(7)?,
+                    stacking_order: row.get(8)?,
+                    created_at: row.get(9)?,
+                    updated_at: row.get(10)?,
+                    data: row.get(11)?,
                 })
             })
             .optional()?;
@@ -476,21 +505,13 @@ impl Database {
     }
 
     pub fn update_card_tx(tx: &mut rusqlite::Transaction, card: &mut Card) -> BackendResult<()> {
-        tx.execute("DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)", rusqlite::params![card.id])?;
-        let card_position_id = Self::create_card_position_tx(
-            tx,
-            &CardPosition {
-                position: format!("[{}, {}]", card.position_x, card.position_y)
-                    .as_bytes()
-                    .to_vec(),
-            },
-        )?;
-        card.position_id = card_position_id;
+        let cp = CardPosition::new(&[card.position_x, card.position_y]);
+        Self::update_card_position_by_card_id_tx(tx, &card.id, &cp.position)?;
         tx.execute(
             "UPDATE cards SET 
-            horizon_id = ?2, card_type = ?3, resource_id = ?4, position_x = ?5, position_y = ?6, position_id = ?7,
-            width = ?8, height = ?9, stacking_order = ?10, updated_at = datetime('now'), data = ?11 WHERE id = ?1",
-            rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.position_id, card.width, card.height, card.stacking_order, card.data]
+            horizon_id = ?2, card_type = ?3, resource_id = ?4, position_x = ?5, position_y = ?6,
+            width = ?7, height = ?9, stacking_order = ?10, updated_at = datetime('now'), data = ?11 WHERE id = ?1",
+            rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.width, card.height, card.stacking_order, card.data]
         )?;
         Ok(())
     }
@@ -527,18 +548,11 @@ impl Database {
         width: i32,
         height: i32,
     ) -> BackendResult<()> {
-        //tx.execute("DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)", rusqlite::params![card_id])?;
-        let card_position_id = Self::create_card_position_tx(
-            tx,
-            &CardPosition {
-                position: format!("[{}, {}]", position_x, position_y)
-                    .as_bytes()
-                    .to_vec(),
-            },
-        )?;
+        let cp = CardPosition::new(&[position_x, position_y]);
+        Self::update_card_position_by_card_id_tx(tx, card_id, &cp.position)?;
         tx.execute(
-            "UPDATE cards SET position_x = ?2, position_y = ?3, width = ?4, height = ?5, position_id=?6, updated_at = datetime('now') WHERE id = ?1",
-            rusqlite::params![card_id, position_x, position_y, width, height, card_position_id]
+            "UPDATE cards SET position_x = ?2, position_y = ?3, width = ?4, height = ?5, updated_at = datetime('now') WHERE id = ?1",
+            rusqlite::params![card_id, position_x, position_y, width, height]
         )?;
 
         Ok(())
@@ -556,16 +570,17 @@ impl Database {
     }
 
     pub fn remove_card_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
-        //tx.execute(
-        //    "DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)",
-        //())?;
+        tx.execute(
+            "DELETE FROM card_positions WHERE rowid = (SELECT rowid FROM cards WHERE id = ?1)",
+            rusqlite::params![id],
+        )?;
         tx.execute("DELETE FROM cards WHERE id = ?1", rusqlite::params![id])?;
         Ok(())
     }
 
     pub fn list_all_cards(&self, horizon_id: &str) -> BackendResult<Vec<Card>> {
         let query = "
-        SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data 
+        SELECT id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data 
         FROM cards 
         WHERE horizon_id = ?1 
         ORDER BY stacking_order ASC";
@@ -577,15 +592,14 @@ impl Database {
                 horizon_id: row.get(1)?,
                 card_type: row.get(2)?,
                 resource_id: row.get(3)?,
-                position_id: row.get(4)?,
-                position_x: row.get(5)?,
-                position_y: row.get(6)?,
-                width: row.get(7)?,
-                height: row.get(8)?,
-                stacking_order: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-                data: row.get(12)?,
+                position_x: row.get(4)?,
+                position_y: row.get(5)?,
+                width: row.get(6)?,
+                height: row.get(7)?,
+                stacking_order: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+                data: row.get(11)?,
             })
         })?;
 
@@ -604,22 +618,21 @@ impl Database {
         limit: i64,
         offset: i64,
     ) -> BackendResult<PaginatedCards> {
-        let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE horizon_id = ?1 ORDER BY position_x ?2 OFFSET ?3")?;
+        let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE horizon_id = ?1 ORDER BY position_x ?2 OFFSET ?3")?;
         let cards = stmt.query_map(rusqlite::params![horizon_id, limit, offset], |row| {
             Ok(Card {
                 id: row.get(0)?,
                 horizon_id: row.get(1)?,
                 card_type: row.get(2)?,
                 resource_id: row.get(3)?,
-                position_id: row.get(4)?,
-                position_x: row.get(5)?,
-                position_y: row.get(6)?,
-                width: row.get(7)?,
-                height: row.get(8)?,
-                stacking_order: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-                data: row.get(12)?,
+                position_x: row.get(4)?,
+                position_y: row.get(5)?,
+                width: row.get(6)?,
+                height: row.get(7)?,
+                stacking_order: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+                data: row.get(11)?,
             })
         })?;
         let mut result = Vec::new();
@@ -692,7 +705,7 @@ impl Database {
     }
 
     pub fn remove_horizon_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
-        tx.execute("DELETE FROM card_positions WHERE row_id IN (SELECT position_id FROM cards WHERE horizon_id = ?1)", rusqlite::params![id])?;
+        tx.execute("DELETE FROM card_positions WHERE rowid IN (SELECT rowid FROM cards WHERE horizon_id = ?1)", rusqlite::params![id])?;
         tx.execute("DELETE FROM horizons WHERE id = ?1", rusqlite::params![id])?;
         Ok(())
     }
@@ -766,6 +779,40 @@ impl Database {
             stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
         for resource_id in resource_ids {
             result.push(resource_id?);
+        }
+        Ok(result)
+    }
+
+    pub fn vector_search_card_positions(
+        &self,
+        horizon_id: &str,
+        cp: &mut CardPosition,
+        distance_threshold: f32,
+        limit: i64,
+    ) -> BackendResult<Vec<VectorSearchResult>> {
+        let mut result = Vec::new();
+        // the limit only applies to the vss_search filter and only after that the rowid and distance filters are applied
+        let mut stmt = self.conn.prepare(
+            "SELECT rowid, distance FROM card_positions 
+                WHERE 
+                    vss_search(position, ?1) 
+            AND
+                rowid IN (SELECT rowid FROM cards WHERE horizon_id=?2)
+            AND
+                distance <= ?3
+            LIMIT ?4",
+        )?;
+        let card_positions = stmt.query_map(
+            rusqlite::params![cp.position, horizon_id, distance_threshold, limit],
+            |row| {
+                Ok(VectorSearchResult {
+                    rowid: row.get(0)?,
+                    distance: row.get(1)?,
+                })
+            },
+        )?;
+        for card_position in card_positions {
+            result.push(card_position?);
         }
         Ok(result)
     }

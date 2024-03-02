@@ -80,6 +80,7 @@ dependencies = [
  "chrono",
  "neon",
  "once_cell",
+ "rand",
  "rusqlite",
  "rust-embed",
  "serde",

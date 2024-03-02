@@ -16,7 +16,7 @@ pub fn parse_datetime_from_str(
 ) -> Result<chrono::DateTime<chrono::Utc>, chrono::ParseError> {
     let format = "%Y-%m-%d %H:%M:%S";
     let ut = chrono::DateTime::parse_from_str(datetime, format)?;
-    return Ok(ut.with_timezone(&chrono::Utc));
+    Ok(ut.with_timezone(&chrono::Utc))
 }
 
 pub enum InternalResourceTagNames {
@@ -87,9 +87,6 @@ pub struct Card {
 
     #[serde(default)]
     pub resource_id: String,
-
-    #[serde(default)]
-    pub position_id: i64,
 
     pub position_x: i64,
     pub position_y: i64,
@@ -182,7 +179,23 @@ pub struct ResourceTextContent {
 
 #[derive(Debug)]
 pub struct CardPosition {
-    pub position: Vec<u8>,
+    pub rowid: Option<i64>,
+    pub position: String,
+}
+
+impl CardPosition {
+    pub fn new(position_array: &[i64; 2]) -> CardPosition {
+        let pos_str = format!(
+            //"[{:?}, {:?}, {:?}]",
+            "[{:?}.0, {:?}.0]",
+            position_array[0],
+            position_array[1] //, position_array[2]
+        );
+        CardPosition {
+            rowid: None,
+            position: pos_str,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, strum::EnumString, strum::AsRefStr)]

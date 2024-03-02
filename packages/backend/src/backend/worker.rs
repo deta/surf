@@ -195,6 +195,15 @@ impl Worker {
         width: i32,
         height: i32,
     ) -> BackendResult<()> {
+        let card = self.db.get_card(card_id)?;
+        let _ = match card {
+            Some(card) => card,
+            None => {
+                return Err(BackendError::GenericError(
+                    format!("Card with id {} does not exist", card_id).to_owned(),
+                ))
+            }
+        };
         let mut tx = self.db.begin()?;
         Database::update_card_dimensions_tx(
             &mut tx, card_id, position_x, position_y, width, height,
