@@ -20,6 +20,7 @@ thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 uuid = { version = "1.7.0", features = ["v4", "fast-rng"] }
 strum = { version = "0.25.0", features = ["derive"] }
+rust-bert = { version = "0.22.0", features = ["download-libtorch"] }
 rand = "0.8.5"
 
 [dependencies.neon]
