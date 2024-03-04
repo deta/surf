@@ -44,15 +44,24 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_recover_resource", js_recover_resource)?;
     cx.export_function("js__store_search_resources", js_search_resources)?;
     cx.export_function("js__store_resource_post_process", js_resource_post_process)?;
-    cx.export_function("js__store_update_resource_metadata", js_update_resource_metadata)?;
+    cx.export_function(
+        "js__store_update_resource_metadata",
+        js_update_resource_metadata,
+    )?;
     cx.export_function("js__store_create_resource_tag", js_create_resource_tag)?;
-    cx.export_function("js__store_remove_resource_tag_by_id", js_remove_resource_tag_by_id)?;
+    cx.export_function(
+        "js__store_remove_resource_tag_by_id",
+        js_remove_resource_tag_by_id,
+    )?;
 
     cx.export_function("js__store_create_history_entry", js_create_history_entry)?;
     cx.export_function("js__store_get_history_entry", js_get_history_entry)?;
     cx.export_function("js__store_update_history_entry", js_update_history_entry)?;
     cx.export_function("js__store_remove_history_entry", js_remove_history_entry)?;
-    cx.export_function("js__store_get_all_history_entries", js_get_all_history_entries)?;
+    cx.export_function(
+        "js__store_get_all_history_entries",
+        js_get_all_history_entries,
+    )?;
 
     Ok(())
 }
@@ -231,7 +240,7 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
         .argument_opt(2)
         .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
         .map(|js_string| js_string.value(&mut cx));
-    let resource_tags: Option<Vec<models::ResourceTag>> = match resource_tags_json
+    let resource_tag_filters: Option<Vec<models::ResourceTagFilter>> = match resource_tags_json
         .map(|json_str| serde_json::from_str(&json_str))
         .transpose()
     {
@@ -243,7 +252,7 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
     tunnel.send(
         WorkerMessage::SearchResources {
             query,
-            resource_tags,
+            resource_tag_filters,
         },
         deferred,
     );
