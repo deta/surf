@@ -185,12 +185,7 @@ pub struct CardPosition {
 
 impl CardPosition {
     pub fn new(position_array: &[i64; 2]) -> CardPosition {
-        let pos_str = format!(
-            //"[{:?}, {:?}, {:?}]",
-            "[{:?}.0, {:?}.0]",
-            position_array[0],
-            position_array[1] //, position_array[2]
-        );
+        let pos_str = format!("[{:?}.0, {:?}.0]", position_array[0], position_array[1],);
         CardPosition {
             rowid: None,
             position: pos_str,
@@ -217,4 +212,24 @@ pub struct HistoryEntry {
     pub created_at: chrono::DateTime<chrono::Utc>,
     #[serde(default = "current_time")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug)]
+pub struct Embedding {
+    pub rowid: Option<i64>,
+    pub embedding: String,
+}
+
+impl Embedding {
+    pub fn new(embedding: &Vec<f32>) -> Embedding {
+        let embedding_str = embedding
+            .iter()
+            .map(|x| format!("{}", x))
+            .collect::<Vec<String>>()
+            .join(", ");
+        Embedding {
+            rowid: None,
+            embedding: format!("[{}]", embedding_str),
+        }
+    }
 }

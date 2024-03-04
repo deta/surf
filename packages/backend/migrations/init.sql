@@ -68,3 +68,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS resource_text_content USING fts5(
 CREATE VIRTUAL TABLE IF NOT EXISTS card_positions USING vss0(
     position(2)
 );
+
+CREATE VIRTUAL TABLE IF NOT EXISTS embeddings USING vss0(
+    embedding(384)
+);

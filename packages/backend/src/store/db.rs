@@ -786,7 +786,7 @@ impl Database {
     pub fn vector_search_card_positions(
         &self,
         horizon_id: &str,
-        cp: &mut CardPosition,
+        cp: &CardPosition,
         distance_threshold: f32,
         limit: i64,
     ) -> BackendResult<Vec<VectorSearchResult>> {
@@ -971,5 +971,53 @@ impl Database {
         }
 
         Ok(history_entries)
+    }
+
+    pub fn create_embedding_tx(
+        tx: &mut rusqlite::Transaction,
+        embedding: &Embedding,
+    ) -> BackendResult<()> {
+        let rowid = match embedding.rowid {
+            Some(rowid) => rowid,
+            None => Err(BackendError::GenericError(
+                "rowid must be specified for embedding".to_string(),
+            ))?,
+        };
+        tx.execute(
+            "INSERT INTO embeddings (rowid, embedding) VALUES (?1, ?2)",
+            rusqlite::params![rowid, embedding.embedding],
+        )?;
+        Ok(())
+    }
+
+    pub fn vector_search_embeddings(
+        &self,
+        embedding: &Embedding,
+        distance_threshold: f32,
+        limit: i64,
+    ) -> BackendResult<Vec<VectorSearchResult>> {
+        let mut result = Vec::new();
+        // the limit only applies to the vss_search filter and only after that the rowid and distance filters are applied
+        let mut stmt = self.conn.prepare(
+            "SELECT rowid, distance FROM embeddings 
+                WHERE 
+                    vss_search(embedding, ?1) 
+            AND
+                distance <= ?2
+            LIMIT ?3",
+        )?;
+        let embeddings = stmt.query_map(
+            rusqlite::params![embedding.embedding, distance_threshold, limit],
+            |row| {
+                Ok(VectorSearchResult {
+                    rowid: row.get(0)?,
+                    distance: row.get(1)?,
+                })
+            },
+        )?;
+        for embedding in embeddings {
+            result.push(embedding?);
+        }
+        Ok(result)
     }
 }
