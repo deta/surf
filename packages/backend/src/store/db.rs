@@ -743,7 +743,7 @@ impl Database {
                 "{}SELECT resource_id FROM resource_tags WHERE ({})",
                 query, where_clause,
             );
-            if i < n {
+            if i < 2 * (n - 1) {
                 query = format!("{} INTERSECT ", query);
             }
             i += 2;
@@ -934,6 +934,19 @@ mod tests {
 
     #[test]
     fn test_list_resource_ids_by_tags_query() {
+        let tags = vec![ResourceTagFilter {
+            tag_name: "tag1".to_string(),
+            tag_value: "value1".to_string(),
+            op: ResourceTagFilterOp::Eq,
+        }];
+
+        let (query, params) = Database::list_resource_ids_by_tags_query(&tags, 0);
+        assert_eq!(
+            query,
+            "SELECT resource_id FROM resource_tags WHERE (tag_name = ?1 AND tag_value = ?2)"
+        );
+        assert_eq!(params, vec!["tag1", "value1"]);
+
         let tags = vec![
             ResourceTagFilter {
                 tag_name: "tag1".to_string(),
@@ -955,6 +968,16 @@ mod tests {
         assert_eq!(
             query,
             "SELECT resource_id FROM resource_tags WHERE (tag_name = ?1 AND tag_value = ?2) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?3 AND tag_value != ?4) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?5 AND tag_value LIKE ?6)"
+        );
+        assert_eq!(
+            params,
+            vec!["tag1", "value1", "tag2", "value2", "tag3", "value%"]
+        );
+
+        let (query, params) = Database::list_resource_ids_by_tags_query(&tags, 2);
+        assert_eq!(
+            query,
+            "SELECT resource_id FROM resource_tags WHERE (tag_name = ?3 AND tag_value = ?4) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?5 AND tag_value != ?6) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?7 AND tag_value LIKE ?8)"
         );
         assert_eq!(
             params,
