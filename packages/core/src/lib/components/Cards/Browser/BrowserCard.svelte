@@ -25,6 +25,7 @@
   import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
   import FindInPage from './FindInPage.svelte'
   import StackItem from '../../Stack/StackItem.svelte'
+  import { visorEnabled } from '../../Horizon/HorizonManager.svelte'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -283,7 +284,11 @@
       on:didFinishLoad={handleFinishLoading}
     />
   </div>
-  <div class="bottom-bar" class:active={active || value == ''} style={'pointer-events: auto;'}>
+  <div
+    class="bottom-bar"
+    class:active={active || value == ''}
+    style={$visorEnabled ? '' : 'pointer-events: auto;'}
+  >
     <div class="bottom-bar-trigger">
       <div class="arrow-wrapper">
         <button

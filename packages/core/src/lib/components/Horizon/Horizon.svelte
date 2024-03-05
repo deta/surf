@@ -162,7 +162,7 @@
     size.x = $settings.SNAP_TO_GRID ? snapToGrid(size.x, $settings.GRID_SIZE!) : size.x
     size.y = $settings.SNAP_TO_GRID ? snapToGrid(size.y, $settings.GRID_SIZE!) : size.y
 
-    if (size.x < 90 || size.y < 90) {
+    if (size.x < 101 || size.y < 101) {
       return
       // if (!e.detail.event.shiftKey) return
       pos = {
@@ -257,19 +257,35 @@
   }
 
   const handleKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' || (e.key === 'Escape' && $visorEnabled && $activeCardId !== null)) {
+    if (e.key === 'Enter' && $visorEnabled && $activeCardId !== null) {
       // Prevent centering in text cards & browsers for now.
       const card = $cards.find((c) => get(c).id === $activeCardId)
-      if (!card) return
-      if (get(card).type === 'text' || get(card).type === 'browser') return
+      if (!card) {
+        console.error(
+          `[Visor] Trying to close and switch to card ${$activeCardId}, but this card doesn't exist!`
+        )
+        return
+      }
 
       $visorEnabled = false
-      horizon.scrollToCardCenter($activeCardId)
-      horizon.moveCardToStackingTop($activeCardId)
+      setTimeout(() => {
+        horizon.scrollToCardCenter($activeCardId)
+        horizon.moveCardToStackingTop($activeCardId)
+      }, 800)
     } else if ((e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey)) && $visorEnabled) {
       visorSelectPrev()
     } else if ((e.key === 'ArrowRight' || e.key === 'Tab') && $visorEnabled) {
       visorSelectNext()
+    } else if (e.key === 'Tab' && e.altKey) {
+      // Alternative alt + K / L ?
+      //if (e.location !== 2) return
+      if (e.shiftKey) {
+        console.warn('Prev card')
+        tryFocusPrevCard()
+      } else {
+        console.warn('Next card')
+        tryFocusNextCard()
+      }
     }
     // TODO: old, remove?
     // if (e.key === 'Control' && isDraggingCard) {
@@ -287,7 +303,10 @@
   // }
 
   const handleKeyup = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') $activeCardId = null
+    if (e.key === 'Escape') {
+      $activeCardId = null
+      $visorEnabled = false
+    }
     // if (!hasClassOrParentWithClass(e.target as HTMLElement, 'card')) {
     // }
     // TODO: old, remove?
@@ -337,6 +356,65 @@
 
   // TODO fix types to get rid of this type conversion
   $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
+
+  /* RAPID SWITCHING */
+  const tryFocusNextCard = () => {
+    if ($activeCardId === null) {
+      const closest = $cards.toSorted((a, b) => {
+        const aCenter = get(a).x + get(a).width / 2
+        const bCenter = get(b).x + get(b).width / 2
+        return (
+          Math.abs($viewOffset.x + $viewPort.w / 2 - aCenter) -
+          Math.abs($viewOffset.x + $viewPort.w / 2 - bCenter)
+        )
+      })[0]
+      horizon.setActiveCard(get(closest).id)
+    }
+
+    // Find card next to it
+    const current = $cards.find((e) => get(e).id === $activeCardId)
+    if (!current) return // TODO: Error
+    const target = $cards
+      .filter(
+        (e) =>
+          get(e).id !== $activeCardId &&
+          (get(e).x > get(current).x || (get(e).x === get(current).x && get(e).y > get(current).y))
+      )
+      //.toSorted((a, b) => get(a).y - get(b).y)
+      .toSorted((a, b) => get(a).x - get(b).x || get(a).y - get(b).y)
+      .at(0)
+    if (!target) return
+    horizon.scrollToCardCenter(get(target).id)
+    horizon.setActiveCard(get(target).id)
+  }
+  const tryFocusPrevCard = () => {
+    if ($activeCardId === null) {
+      const closest = $cards.toSorted((a, b) => {
+        const aCenter = get(a).x + get(a).width / 2
+        const bCenter = get(b).x + get(b).width / 2
+        return (
+          Math.abs($viewOffset.x + $viewPort.w / 2 - aCenter) -
+          Math.abs($viewOffset.x + $viewPort.w / 2 - bCenter)
+        )
+      })[0]
+      horizon.setActiveCard(get(closest).id)
+    }
+
+    // Find card next to it
+    const current = $cards.find((e) => get(e).id === $activeCardId)
+    if (!current) return // TODO: Error
+    const target = $cards
+      .filter(
+        (e) =>
+          get(e).id !== $activeCardId &&
+          (get(e).x < get(current).x || (get(e).x === get(current).x && get(e).y < get(current).y))
+      )
+      .toSorted((a, b) => get(b).x - get(a).x || get(b).y - get(a).y)
+      .at(0)
+    if (!target) return
+    horizon.scrollToCardCenter(get(target).id)
+    horizon.setActiveCard(get(target).id)
+  }
 
   /* VISOR */
 
@@ -689,6 +767,7 @@
   onDestroy(
     cards.subscribe((v) => {
       if ($visorEnabled) handleSearchChange($visorSearchTerm)
+      if (v.length <= 0) $visorEnabled = false
     })
   )
 
@@ -710,23 +789,25 @@
   }
   const handleVisorClose = () => {
     visorActiveCardSub && visorActiveCardSub()
-    if (visorListTargets.length === 0) return
-    function _update() {
-      $cards.forEach((c) => {
-        c.update((_c) => {
-          _c.xOverride = undefined
-          _c.yOverride = undefined
-          _c.widthOverride = undefined
-          _c.heightOverride = undefined
-          _c.scaleOverride = undefined
-          return _c
+    if (visorListTargets.length !== 0) {
+      function _update() {
+        $cards.forEach((c) => {
+          c.update((_c) => {
+            _c.xOverride = undefined
+            _c.yOverride = undefined
+            _c.widthOverride = undefined
+            _c.heightOverride = undefined
+            _c.scaleOverride = undefined
+            return _c
+          })
         })
-      })
-    }
-    requestAnimationFrame(_update)
+      }
+      requestAnimationFrame(_update)
 
-    if ($activeCardId !== backupActiveCardID) {
-      horizon.scrollToCardCenter($activeCardId)
+      if ($activeCardId !== backupActiveCardID) {
+        const target = $cards.find((e) => get(e).id === $activeCardId)
+        if (target) horizon.scrollToCardCenter($activeCardId)
+      }
     }
 
     visorListTargets = []
