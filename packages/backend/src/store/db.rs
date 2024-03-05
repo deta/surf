@@ -728,33 +728,34 @@ impl Database {
     }
 
     fn list_resource_ids_by_tags_query(
-        tags: &Vec<ResourceTag>,
+        tag_filters: &Vec<ResourceTagFilter>,
         param_start_index: usize,
     ) -> (String, Vec<String>) {
-        let mut query = String::from("SELECT resource_id FROM resource_tags WHERE");
+        let mut query = String::from("");
         let mut i = 0;
-        let n = tags.len();
+        let n = tag_filters.len();
         let mut params: Vec<String> = Vec::new();
-        for tag in tags {
+        for filter in tag_filters {
+            let (where_clause, tag_value) = filter
+                .get_sql_filter_with_value((i + 1 + param_start_index, i + 2 + param_start_index));
+
             query = format!(
-                "{} (tag_name = ?{} AND tag_value = ?{})",
-                query,
-                i + 1 + param_start_index,
-                i + 2 + param_start_index
+                "{}SELECT resource_id FROM resource_tags WHERE ({})",
+                query, where_clause,
             );
-            if i < n - 1 {
-                query = format!("{} OR", query);
+            if i < n {
+                query = format!("{} INTERSECT ", query);
             }
             i += 2;
-            params.push(tag.tag_name.clone());
-            params.push(tag.tag_value.clone());
+            params.push(filter.tag_name.clone());
+            params.push(tag_value);
         }
         (query, params)
     }
 
     pub fn list_resource_ids_by_tags(
         &self,
-        tags: &mut Vec<ResourceTag>,
+        tags: &mut Vec<ResourceTagFilter>,
     ) -> BackendResult<Vec<String>> {
         let mut result = Vec::new();
         if tags.is_empty() {
@@ -774,7 +775,7 @@ impl Database {
     pub fn search_resources(
         &self,
         keyword: &str,
-        tags: Option<Vec<ResourceTag>>,
+        tags: Option<Vec<ResourceTagFilter>>,
     ) -> BackendResult<SearchResult> {
         let mut params_vector = vec![format!("%{}%", keyword).to_string()];
         let mut query = "SELECT DISTINCT M.*, R.*
@@ -924,5 +925,40 @@ impl Database {
         }
 
         Ok(history_entries)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_list_resource_ids_by_tags_query() {
+        let tags = vec![
+            ResourceTagFilter {
+                tag_name: "tag1".to_string(),
+                tag_value: "value1".to_string(),
+                op: ResourceTagFilterOp::Eq,
+            },
+            ResourceTagFilter {
+                tag_name: "tag2".to_string(),
+                tag_value: "value2".to_string(),
+                op: ResourceTagFilterOp::Ne,
+            },
+            ResourceTagFilter {
+                tag_name: "tag3".to_string(),
+                tag_value: "value".to_string(),
+                op: ResourceTagFilterOp::Prefix,
+            },
+        ];
+        let (query, params) = Database::list_resource_ids_by_tags_query(&tags, 0);
+        assert_eq!(
+            query,
+            "SELECT resource_id FROM resource_tags WHERE (tag_name = ?1 AND tag_value = ?2) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?3 AND tag_value != ?4) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?5 AND tag_value LIKE ?6)"
+        );
+        assert_eq!(
+            params,
+            vec!["tag1", "value1", "tag2", "value2", "tag3", "value%"]
+        );
     }
 }

@@ -287,9 +287,20 @@ impl Worker {
     pub fn search_resources(
         &mut self,
         query: String,
-        tags: Option<Vec<ResourceTag>>,
+        resource_tag_filters: Option<Vec<ResourceTagFilter>>,
     ) -> BackendResult<SearchResult> {
-        self.db.search_resources(&query, tags)
+        if let Some(resource_tag_filters) = &resource_tag_filters {
+            // we use an `INTERSECT` for each resouce tag filter
+            // so limiting the number of filters
+            if resource_tag_filters.len() > 20 {
+                return Err(BackendError::GenericError(format!(
+                    "Max {} filters allowed",
+                    20
+                )));
+            }
+        }
+
+        self.db.search_resources(&query, resource_tag_filters)
     }
 
     pub fn post_process_job(&mut self, resource_id: String) -> BackendResult<()> {
@@ -470,11 +481,11 @@ pub fn worker_entry_point(
             }
             WorkerMessage::SearchResources {
                 query,
-                resource_tags,
+                resource_tag_filters,
             } => send_worker_response(
                 &mut channel,
                 deferred,
-                worker.search_resources(query, resource_tags),
+                worker.search_resources(query, resource_tag_filters),
             ),
             WorkerMessage::PostProcessJob(resource_id) => {
                 send_worker_response(&mut channel, deferred, worker.post_process_job(resource_id))

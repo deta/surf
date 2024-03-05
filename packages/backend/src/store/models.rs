@@ -19,6 +19,7 @@ pub fn parse_datetime_from_str(
     return Ok(ut.with_timezone(&chrono::Utc));
 }
 
+// TODO: use strum
 pub enum InternalResourceTagNames {
     Type,
     Deleted,
@@ -154,6 +155,49 @@ impl ResourceTag {
             resource_id: resource_id.to_string(),
             tag_name: InternalResourceTagNames::Type.to_string(),
             tag_value: resource_type.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, strum::EnumString, strum::AsRefStr)]
+#[strum(ascii_case_insensitive)]
+#[serde(rename_all = "lowercase")]
+pub enum ResourceTagFilterOp {
+    Eq,
+    Ne,
+    Prefix,
+}
+
+impl Default for ResourceTagFilterOp {
+    fn default() -> Self {
+        ResourceTagFilterOp::Eq
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResourceTagFilter {
+    pub tag_name: String,
+    pub tag_value: String,
+    #[serde(default)]
+    pub op: ResourceTagFilterOp,
+}
+
+impl ResourceTagFilter {
+    pub fn get_sql_filter_with_value(&self, indexes: (usize, usize)) -> (String, String) {
+        let (i1, i2) = indexes;
+        match self.op {
+            ResourceTagFilterOp::Eq => (
+                format!("tag_name = ?{} AND tag_value = ?{}", i1, i2),
+                self.tag_value.clone(),
+            ),
+            ResourceTagFilterOp::Ne => (
+                format!("tag_name = ?{} AND tag_value != ?{}", i1, i2),
+                self.tag_value.clone(),
+            ),
+            ResourceTagFilterOp::Prefix => (
+                format!("tag_name = ?{} AND tag_value LIKE ?{}", i1, i2),
+                format!("{}%", self.tag_value),
+            ),
         }
     }
 }
