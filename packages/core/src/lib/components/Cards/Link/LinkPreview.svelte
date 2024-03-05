@@ -16,7 +16,9 @@
 
   onMount(async () => {
     try {
-      bookmark = await resource.getBookmark()
+      const blob = await resource.getData()
+      const text = await blob.text()
+      bookmark = JSON.parse(text)
 
       console.log('bookmark', bookmark)
 

@@ -1,9 +1,11 @@
 import { ipcRenderer } from 'electron'
+import { WebParser, type WebAppExtractor, DetectedResource } from '@horizon/web-parser'
 
 let mouseDownX = 0
 let previouslySelectedText: string | undefined = ''
+let appParser: WebAppExtractor | null = null
 
-window.addEventListener('DOMContentLoaded', (_) => {
+window.addEventListener('DOMContentLoaded', async (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
     const selection = window.getSelection()
     const text = selection?.toString().trim()
@@ -139,6 +141,28 @@ window.addEventListener('DOMContentLoaded', (_) => {
   document.addEventListener('dragstart', (event: DragEvent) => {
     event.dataTransfer?.setData('text/space-source', window.location.href)
   })
+
+  const webParser = new WebParser(window.location.href)
+
+  const isSupported = webParser.isSupportedApp()
+  console.log('Is supported app', isSupported)
+
+  if (isSupported) {
+    appParser = await webParser.createAppParser()
+  } else {
+    console.warn('No supported app found, using fallback parser')
+    appParser = webParser.useFallbackParser(document)
+  }
+
+  if (!appParser) {
+    console.warn('No app parser found for', window.location.href)
+    return
+  }
+
+  const appInfo = appParser.getInfo()
+
+  console.log('App detected:', appInfo)
+  sendPageEvent('detected-app', appInfo)
 })
 
 window.addEventListener('keyup', (event: KeyboardEvent) => {
@@ -146,6 +170,20 @@ window.addEventListener('keyup', (event: KeyboardEvent) => {
 })
 
 window.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key === 'd' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
+    if (appParser) {
+      const appInfo = appParser.getInfo()
+      if (appInfo.resourceNeedsPicking) {
+        // @ts-ignore TODO: Fix this
+        appParser.startResourcePicker(document, (resource: DetectedResource) => {
+          console.log('Picked resource', resource)
+
+          sendPageEvent('detected-resource', { resource })
+        })
+      }
+    }
+  }
+
   sendPageEvent('keydown', {
     key: event.key,
     code: event.code,
@@ -184,5 +222,12 @@ ipcRenderer.on('webview-event', (_event, data) => {
     const text = selection?.toString().trim()
 
     ipcRenderer.sendToHost('selection', text)
+  } else if (data.type === 'get-resource') {
+    if (appParser) {
+      appParser.extractResourceFromDocument(document).then((resource) => {
+        console.log('Resource', resource)
+        sendPageEvent('detected-resource', { resource })
+      })
+    }
   }
 })

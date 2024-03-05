@@ -9,6 +9,8 @@
   const drawer = useDrawer()
   const { searchValue } = drawer
 
+  const dispatch = createEventDispatcher<{ enter: void }>()
+
   const search = () => {
     console.log('searchValue changed, triggering search')
     drawer.search({ value: $searchValue })
@@ -20,6 +22,8 @@
     // check if key is searchable (alphanumeric, backspace, delete, etc.)
     if (event.key.length === 1 || event.key === 'Backspace' || event.key === 'Delete') {
       debouncedSearch()
+    } else if (event.key === 'Enter') {
+      dispatch('enter')
     }
   }
 </script>
