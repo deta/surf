@@ -4,7 +4,7 @@
   "pipeline": {
     "@horizon/backend#build": {
       "dependsOn": [],
-      "outputs": [".dist/**", "index.node", "target/**"]
+      "outputs": [".dist/**", "index.node"]
     },
     "horizon#build:mwl": {
       "dependsOn": ["^build"],

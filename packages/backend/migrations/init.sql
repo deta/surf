@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS cards (
     horizon_id TEXT NOT NULL REFERENCES horizons(id) ON DELETE CASCADE,
     card_type TEXT NOT NULL,
     resource_id TEXT NOT NULL,
-    position_id INTEGER NOT NULL,
     position_x INTEGER NOT NULL,
     position_y INTEGER NOT NULL,
     width INTEGER NOT NULL,
@@ -39,6 +38,8 @@ CREATE TABLE IF NOT EXISTS cards (
     updated_at TEXT NOT NULL,
     data BLOB NOT NULL DEFAULT '{}' 
 );
+
+CREATE INDEX IF NOT EXISTS cards_resource_id_index ON cards(resource_id);
 
 CREATE TABLE IF NOT EXISTS history_entries (
     id TEXT PRIMARY KEY,
@@ -67,5 +68,5 @@ CREATE VIRTUAL TABLE IF NOT EXISTS resource_text_content USING fts5(
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS card_positions USING vss0(
-    position(3)
+    position(2)
 );

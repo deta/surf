@@ -19,6 +19,7 @@ struct Worker {
 #[allow(dead_code)]
 impl Worker {
     fn new(backend_root_path: String) -> Self {
+        println!("data root path: {}", backend_root_path);
         let db_path = Path::new(&backend_root_path)
             .join("sffs.sqlite")
             .as_os_str()
@@ -288,6 +289,8 @@ impl Worker {
         &mut self,
         query: String,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
+        proximity_distance_threshold: Option<f32>,
+        proximity_limit: Option<i64>,
     ) -> BackendResult<SearchResult> {
         if let Some(resource_tag_filters) = &resource_tag_filters {
             // we use an `INTERSECT` for each resouce tag filter
@@ -299,8 +302,23 @@ impl Worker {
                 )));
             }
         }
+        // TODO: find sane defaults for these
+        let proximity_distance_threshold = match proximity_distance_threshold {
+            Some(threshold) => threshold,
+            None => 100000.0,
+        };
 
-        self.db.search_resources(&query, resource_tag_filters)
+        let proximity_limit = match proximity_limit {
+            Some(limit) => limit,
+            None => 10,
+        };
+
+        self.db.search_resources(
+            &query,
+            resource_tag_filters,
+            proximity_distance_threshold,
+            proximity_limit,
+        )
     }
 
     pub fn post_process_job(&mut self, resource_id: String) -> BackendResult<()> {
@@ -314,7 +332,7 @@ impl Worker {
 
         // TODO: make use of strum(?) for this
         match resource.resource_type.as_str() {
-            "text/space-notes" => {
+            "application/vnd.space.document.space-note" => {
                 let html_data = std::fs::read_to_string(resource.resource_path)?;
                 let mut output = String::new();
                 let mut in_tag = false;
@@ -482,10 +500,17 @@ pub fn worker_entry_point(
             WorkerMessage::SearchResources {
                 query,
                 resource_tag_filters,
+                proximity_distance_threshold,
+                proximity_limit,
             } => send_worker_response(
                 &mut channel,
                 deferred,
-                worker.search_resources(query, resource_tag_filters),
+                worker.search_resources(
+                    query,
+                    resource_tag_filters,
+                    proximity_distance_threshold,
+                    proximity_limit,
+                ),
             ),
             WorkerMessage::PostProcessJob(resource_id) => {
                 send_worker_response(&mut channel, deferred, worker.post_process_job(resource_id))

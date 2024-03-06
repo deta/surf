@@ -26,8 +26,79 @@ yarn install
 Run the following command:
 
 ```sh
+brew install libomp
 curl https://sh.rustup.rs -sSf | sh
 ```
+
+### Troubelshooting Builds
+
+`libomp` is required for sqlite vector search. If `yarn dev` does not work from the start, look at the output of the command:
+
+```sh
+brew info libomp
+```
+
+The output should show the location where the lib is installed at.
+
+```txt
+...
+==> Caveats
+libomp is keg-only, which means it was not symlinked into /opt/homebrew,
+because it can override GCC headers and result in broken builds.
+
+For compilers to find libomp you may need to set:
+  export LDFLAGS="-L/opt/homebrew/opt/libomp/lib"
+  export CPPFLAGS="-I/opt/homebrew/opt/libomp/include"
+```
+
+In the `caveats` section, you will find the `LDFLAGS` flag which shows the location of the lib.
+
+Copy this flag and replace it in the `packages/backend/.cargo/config.toml` file.
+
+```toml
+[net]
+git-fetch-with-cli = true
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+[target.aarch64-apple-darwin]
+rustflags = [
+  "-C",
+  "link-arg=-Wl",
+  "-C",
+  "link-arg=-undefined",
+  "-C",
+  "link-arg=dynamic_lookup",
+  "-C",
+  "link-arg=-lomp",
+  "-C",
+  # this is required for sqlite vss
+  # libomp is installed in /opt/homebrew/opt/libomp/lib normally with homebrew
+  # if you installed it with another package manager, you will need to change this path to where libomp is installed
+  # TODO: have a better way to handle this
+  "link-arg={replace me without the curly braces including the -L flag}",
+]
+
+```
+
+Also the first `yarn dev` might run without the backend being compiled in time. If you see that your backend changes are not reflected in the app, you can run the following command to build the backend first separately:
+
+```sh
+cd packages/backend
+yarn build
+```
+
+### Cleaning up the data directory
+
+When you start the app with `yarn dev`, it will log the location of the data directory.
+
+```txt
+data root path: {path to data directory}
+```
+
+This log might be a bit hidden in the logs, so you might need to search for it.
+Whenever we change the schema of the database, we need to delete the data directory to start with a fresh database.
 
 ## What's inside?
 

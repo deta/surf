@@ -247,12 +247,24 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
         Ok(tags) => tags,
         Err(err) => return cx.throw_error(&err.to_string()),
     };
+    let proximity_distance_threshold = cx.argument_opt(3).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as f32)
+    });
+    let proximity_limit = cx.argument_opt(4).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as i64)
+    });
 
     let (deferred, promise) = cx.promise();
     tunnel.send(
         WorkerMessage::SearchResources {
             query,
             resource_tag_filters,
+            proximity_distance_threshold,
+            proximity_limit,
         },
         deferred,
     );

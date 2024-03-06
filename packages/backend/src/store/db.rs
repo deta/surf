@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::str::FromStr;
 
 use super::models::*;
@@ -38,7 +39,7 @@ pub struct PaginatedHorizons {
     pub offset: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CompositeResource {
     pub resource: Resource,
     pub metadata: Option<ResourceMetadata>,
@@ -46,24 +47,45 @@ pub struct CompositeResource {
     pub resource_tags: Option<Vec<ResourceTag>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum SearchEngine {
-    Metadata,
-    TextContent,
+    Keyword,
     Proximity,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchResultItem {
     pub resource: CompositeResource,
     pub card_ids: Vec<String>,
+    pub ref_resource_id: Option<String>,
     pub engine: SearchEngine,
+}
+
+// TODO: maybe there is a better way to do this
+fn remove_duplicate_search_results(results: &mut Vec<SearchResultItem>) -> Vec<SearchResultItem> {
+    let mut deduped: Vec<SearchResultItem> = Vec::new();
+    let mut seen: Vec<String> = Vec::new();
+    for r in results {
+        if !seen.contains(&r.resource.resource.id) {
+            seen.push(r.resource.resource.id.clone());
+            deduped.push(r.clone());
+        } else {
+            seen.push(r.resource.resource.id.clone());
+        }
+    }
+    deduped
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResult {
     pub items: Vec<SearchResultItem>,
     pub total: i64,
+}
+
+#[derive(Debug)]
+pub struct VectorSearchResult {
+    pub rowid: i64,
+    pub distance: f32,
 }
 
 impl Database {
@@ -94,7 +116,7 @@ impl Database {
             tx.execute_batch(&schema)?;
         }
         tx.commit()?;
-
+        rusqlite::vtab::array::load_module(&conn)?;
         Ok(Database { conn })
     }
 
@@ -415,44 +437,68 @@ impl Database {
     pub fn create_card_position_tx(
         tx: &mut rusqlite::Transaction,
         card_position: &CardPosition,
-    ) -> BackendResult<i64> {
-        //let mut stmt = tx.prepare("INSERT INTO card_positions (position) VALUES (?1)")?;
-        //stmt.insert(rusqlite::params![card_position.position])?;
-        //Ok(tx.last_insert_rowid())
-        Ok(0)
+    ) -> BackendResult<()> {
+        let rowid = match card_position.rowid {
+            Some(rowid) => rowid,
+            None => Err(BackendError::GenericError(
+                "rowid must be specified for card_position".to_string(),
+            ))?,
+        };
+        let mut stmt =
+            tx.prepare("INSERT INTO card_positions (rowid, position) VALUES (?1, ?2)")?;
+        stmt.insert(rusqlite::params![rowid, card_position.position])?;
+        Ok(())
     }
 
     pub fn remove_card_position_tx(
         tx: &mut rusqlite::Transaction,
-        row_id: &i64,
+        rowid: &i64,
     ) -> BackendResult<()> {
-        //tx.execute(
-        //    "DELETE FROM card_positions WHERE row_id = ?1",
-        //    rusqlite::params![row_id],
-        //)?;
+        tx.execute(
+            "DELETE FROM card_positions WHERE rowid = ?1",
+            rusqlite::params![rowid],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_card_position_by_card_id_tx(
+        tx: &mut rusqlite::Transaction,
+        card_id: &str,
+        position: &str,
+    ) -> BackendResult<()> {
+        let row_id: i64;
+        let mut stmt = tx.prepare("SELECT rowid FROM cards WHERE id = ?1")?;
+        row_id = stmt.query_row(rusqlite::params![card_id], |row| row.get(0))?;
+        tx.execute(
+            "DELETE FROM card_positions WHERE rowid = ?1",
+            rusqlite::params![row_id],
+        )?;
+        tx.execute(
+            "INSERT INTO card_positions (rowid, position) VALUES(?1, ?2)",
+            rusqlite::params![row_id, position],
+        )?;
         Ok(())
     }
 
     pub fn create_card_tx(tx: &mut rusqlite::Transaction, card: &mut Card) -> BackendResult<()> {
-        let card_position_id = Self::create_card_position_tx(
+        tx.execute(
+            "INSERT INTO cards (id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data) 
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.width, card.height, card.stacking_order, card.created_at, card.updated_at, card.data]
+        )?;
+        let rowid = tx.last_insert_rowid();
+        Self::create_card_position_tx(
             tx,
             &CardPosition {
-                position: format!("[{}, {}]", card.position_x, card.position_y)
-                    .as_bytes()
-                    .to_vec(),
+                rowid: Some(rowid),
+                position: format!("[{}, {}]", card.position_x, card.position_y),
             },
-        )?;
-        card.position_id = card_position_id;
-        tx.execute(
-            "INSERT INTO cards (id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data, position_id) 
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
-            rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.width, card.height, card.stacking_order, card.created_at, card.updated_at, card.data, card.position_id]
         )?;
         Ok(())
     }
 
     pub fn get_card(&self, id: &str) -> BackendResult<Option<Card>> {
-        let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE id = ?1")?;
+        let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE id = ?1")?;
         let card = stmt
             .query_row(rusqlite::params![id], |row| {
                 Ok(Card {
@@ -460,15 +506,14 @@ impl Database {
                     horizon_id: row.get(1)?,
                     card_type: row.get(2)?,
                     resource_id: row.get(3)?,
-                    position_id: row.get(4)?,
-                    position_x: row.get(5)?,
-                    position_y: row.get(6)?,
-                    width: row.get(7)?,
-                    height: row.get(8)?,
-                    stacking_order: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
-                    data: row.get(12)?,
+                    position_x: row.get(4)?,
+                    position_y: row.get(5)?,
+                    width: row.get(6)?,
+                    height: row.get(7)?,
+                    stacking_order: row.get(8)?,
+                    created_at: row.get(9)?,
+                    updated_at: row.get(10)?,
+                    data: row.get(11)?,
                 })
             })
             .optional()?;
@@ -476,21 +521,13 @@ impl Database {
     }
 
     pub fn update_card_tx(tx: &mut rusqlite::Transaction, card: &mut Card) -> BackendResult<()> {
-        tx.execute("DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)", rusqlite::params![card.id])?;
-        let card_position_id = Self::create_card_position_tx(
-            tx,
-            &CardPosition {
-                position: format!("[{}, {}]", card.position_x, card.position_y)
-                    .as_bytes()
-                    .to_vec(),
-            },
-        )?;
-        card.position_id = card_position_id;
+        let cp = CardPosition::new(&[card.position_x, card.position_y]);
+        Self::update_card_position_by_card_id_tx(tx, &card.id, &cp.position)?;
         tx.execute(
             "UPDATE cards SET 
-            horizon_id = ?2, card_type = ?3, resource_id = ?4, position_x = ?5, position_y = ?6, position_id = ?7,
-            width = ?8, height = ?9, stacking_order = ?10, updated_at = datetime('now'), data = ?11 WHERE id = ?1",
-            rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.position_id, card.width, card.height, card.stacking_order, card.data]
+            horizon_id = ?2, card_type = ?3, resource_id = ?4, position_x = ?5, position_y = ?6,
+            width = ?7, height = ?9, stacking_order = ?10, updated_at = datetime('now'), data = ?11 WHERE id = ?1",
+            rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.width, card.height, card.stacking_order, card.data]
         )?;
         Ok(())
     }
@@ -527,18 +564,11 @@ impl Database {
         width: i32,
         height: i32,
     ) -> BackendResult<()> {
-        //tx.execute("DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)", rusqlite::params![card_id])?;
-        let card_position_id = Self::create_card_position_tx(
-            tx,
-            &CardPosition {
-                position: format!("[{}, {}]", position_x, position_y)
-                    .as_bytes()
-                    .to_vec(),
-            },
-        )?;
+        let cp = CardPosition::new(&[position_x, position_y]);
+        Self::update_card_position_by_card_id_tx(tx, card_id, &cp.position)?;
         tx.execute(
-            "UPDATE cards SET position_x = ?2, position_y = ?3, width = ?4, height = ?5, position_id=?6, updated_at = datetime('now') WHERE id = ?1",
-            rusqlite::params![card_id, position_x, position_y, width, height, card_position_id]
+            "UPDATE cards SET position_x = ?2, position_y = ?3, width = ?4, height = ?5, updated_at = datetime('now') WHERE id = ?1",
+            rusqlite::params![card_id, position_x, position_y, width, height]
         )?;
 
         Ok(())
@@ -556,16 +586,17 @@ impl Database {
     }
 
     pub fn remove_card_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
-        //tx.execute(
-        //    "DELETE FROM card_positions WHERE row_id = (SELECT position_id FROM cards WHERE id = ?1)",
-        //())?;
+        tx.execute(
+            "DELETE FROM card_positions WHERE rowid = (SELECT rowid FROM cards WHERE id = ?1)",
+            rusqlite::params![id],
+        )?;
         tx.execute("DELETE FROM cards WHERE id = ?1", rusqlite::params![id])?;
         Ok(())
     }
 
     pub fn list_all_cards(&self, horizon_id: &str) -> BackendResult<Vec<Card>> {
         let query = "
-        SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data 
+        SELECT id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data 
         FROM cards 
         WHERE horizon_id = ?1 
         ORDER BY stacking_order ASC";
@@ -577,15 +608,14 @@ impl Database {
                 horizon_id: row.get(1)?,
                 card_type: row.get(2)?,
                 resource_id: row.get(3)?,
-                position_id: row.get(4)?,
-                position_x: row.get(5)?,
-                position_y: row.get(6)?,
-                width: row.get(7)?,
-                height: row.get(8)?,
-                stacking_order: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-                data: row.get(12)?,
+                position_x: row.get(4)?,
+                position_y: row.get(5)?,
+                width: row.get(6)?,
+                height: row.get(7)?,
+                stacking_order: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+                data: row.get(11)?,
             })
         })?;
 
@@ -604,22 +634,21 @@ impl Database {
         limit: i64,
         offset: i64,
     ) -> BackendResult<PaginatedCards> {
-        let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE horizon_id = ?1 ORDER BY position_x ?2 OFFSET ?3")?;
+        let mut stmt = self.conn.prepare("SELECT id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data FROM cards WHERE horizon_id = ?1 ORDER BY position_x ?2 OFFSET ?3")?;
         let cards = stmt.query_map(rusqlite::params![horizon_id, limit, offset], |row| {
             Ok(Card {
                 id: row.get(0)?,
                 horizon_id: row.get(1)?,
                 card_type: row.get(2)?,
                 resource_id: row.get(3)?,
-                position_id: row.get(4)?,
-                position_x: row.get(5)?,
-                position_y: row.get(6)?,
-                width: row.get(7)?,
-                height: row.get(8)?,
-                stacking_order: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-                data: row.get(12)?,
+                position_x: row.get(4)?,
+                position_y: row.get(5)?,
+                width: row.get(6)?,
+                height: row.get(7)?,
+                stacking_order: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+                data: row.get(11)?,
             })
         })?;
         let mut result = Vec::new();
@@ -692,7 +721,7 @@ impl Database {
     }
 
     pub fn remove_horizon_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
-        tx.execute("DELETE FROM card_positions WHERE row_id IN (SELECT position_id FROM cards WHERE horizon_id = ?1)", rusqlite::params![id])?;
+        tx.execute("DELETE FROM card_positions WHERE rowid IN (SELECT rowid FROM cards WHERE horizon_id = ?1)", rusqlite::params![id])?;
         tx.execute("DELETE FROM horizons WHERE id = ?1", rusqlite::params![id])?;
         Ok(())
     }
@@ -771,12 +800,143 @@ impl Database {
         Ok(result)
     }
 
-    // full text search on resource metadata after filtering by resource tags
+    pub fn list_card_ids_by_resource_id(&self, resource_id: &str) -> BackendResult<Vec<String>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id FROM cards WHERE resource_id = ?1")?;
+        let card_ids = stmt.query_map(rusqlite::params![resource_id], |row| row.get(0))?;
+        let mut result = Vec::new();
+        for card_id in card_ids {
+            result.push(card_id?);
+        }
+        Ok(result)
+    }
+
+    pub fn vector_search_card_positions(
+        &self,
+        horizon_id: &str,
+        cp: &mut CardPosition,
+        distance_threshold: f32,
+        limit: i64,
+    ) -> BackendResult<Vec<VectorSearchResult>> {
+        let mut result = Vec::new();
+        // the limit only applies to the vss_search filter and only after that the rowid and distance filters are applied
+        let mut stmt = self.conn.prepare(
+            "SELECT rowid, distance FROM card_positions 
+                WHERE 
+                    vss_search(position, ?1) 
+            AND
+                rowid IN (SELECT rowid FROM cards WHERE horizon_id=?2)
+            AND
+                distance <= ?3
+            AND 
+                distance != 0
+            LIMIT ?4",
+        )?;
+        let card_positions = stmt.query_map(
+            rusqlite::params![cp.position, horizon_id, distance_threshold, limit],
+            |row| {
+                Ok(VectorSearchResult {
+                    rowid: row.get(0)?,
+                    distance: row.get(1)?,
+                })
+            },
+        )?;
+        for card_position in card_positions {
+            result.push(card_position?);
+        }
+        Ok(result)
+    }
+
+    pub fn proximity_search_with_resource_id(
+        &self,
+        resource_id: &str,
+        distance_threshold: f32,
+        limit: i64,
+    ) -> BackendResult<Vec<SearchResultItem>> {
+        let mut resources: Vec<SearchResultItem> = Vec::new();
+        let mut card_position_rowids: Vec<rusqlite::types::Value> = Vec::new();
+
+        let mut stmt = self.conn.prepare(
+            "SELECT C.horizon_id, C.position_x, C.position_y FROM cards C WHERE C.resource_id=?1",
+        )?;
+        let card_positions = stmt.query_map(rusqlite::params![resource_id], |row| {
+            let horizon_id: String = row.get(0)?;
+            let card_position: CardPosition = CardPosition::new(&[row.get(1)?, row.get(2)?]);
+            Ok((card_position, horizon_id))
+        })?;
+        for cp in card_positions {
+            let cp = cp?;
+            let mut position = cp.0;
+            let horizon_id = cp.1;
+            let results = self.vector_search_card_positions(
+                &horizon_id,
+                &mut position,
+                distance_threshold,
+                limit,
+            )?;
+            results.iter().for_each(|r| {
+                card_position_rowids.push(rusqlite::types::Value::from(r.rowid));
+            });
+        }
+
+        if card_position_rowids.is_empty() {
+            return Ok(resources);
+        }
+
+        let mut stmt = self.conn.prepare(
+            "SELECT DISTINCT M.*, R.* FROM resource_metadata M
+            LEFT JOIN resources R ON R.id = M.resource_id
+            WHERE R.id IN (SELECT DISTINCT resource_id FROM cards WHERE rowid IN rarray(?1))",
+        )?;
+        let items = stmt.query_map(
+            [Rc::new(card_position_rowids)],
+            //rusqlite::params_from_iter(card_position_rowids.iter()),
+            |row| {
+                let cr = CompositeResource {
+                    metadata: Some(ResourceMetadata {
+                        id: row.get(0)?,
+                        resource_id: row.get(1)?,
+                        name: row.get(2)?,
+                        source_uri: row.get(3)?,
+                        alt: row.get(4)?,
+                    }),
+                    resource: Resource {
+                        id: row.get(5)?,
+                        resource_path: row.get(6)?,
+                        resource_type: row.get(7)?,
+                        created_at: row.get(8)?,
+                        updated_at: row.get(9)?,
+                        deleted: row.get(10)?,
+                    },
+                    text_content: None,
+                    resource_tags: None,
+                };
+                let sr_item = SearchResultItem {
+                    resource: cr,
+                    ref_resource_id: Some(resource_id.to_string()),
+                    card_ids: Vec::new(),
+                    engine: SearchEngine::Proximity,
+                };
+                Ok(sr_item)
+            },
+        )?;
+        for i in items {
+            resources.push(i?);
+        }
+        Ok(resources)
+    }
+
+    // TODO: optimize this
     pub fn search_resources(
         &self,
         keyword: &str,
         tags: Option<Vec<ResourceTagFilter>>,
+        proximity_distance_threshold: f32,
+        proximity_limit: i64,
     ) -> BackendResult<SearchResult> {
+        let mut results: Vec<SearchResultItem> = Vec::new();
+
         let mut params_vector = vec![format!("%{}%", keyword).to_string()];
         let mut query = "SELECT DISTINCT M.*, R.*
             FROM resource_metadata M
@@ -793,7 +953,8 @@ impl Database {
         }
         let params = rusqlite::params_from_iter(params_vector.iter());
         let mut stmt = self.conn.prepare(query.as_str())?;
-        let search_results = stmt.query_map(params, |row| {
+
+        let keyword_search_results = stmt.query_map(params, |row| {
             Ok(SearchResultItem {
                 resource: CompositeResource {
                     metadata: Some(ResourceMetadata {
@@ -815,16 +976,48 @@ impl Database {
                     // TODO: should we populate the resource tags?
                     resource_tags: None,
                 },
-                // TODO: proximity search on the card ids
+                ref_resource_id: None,
                 card_ids: Vec::new(),
-                engine: SearchEngine::Metadata,
+                engine: SearchEngine::Keyword,
             })
         })?;
 
-        let mut results = Vec::new();
-        for search_result in search_results {
-            results.push(search_result?);
+        // as order is important
+        let mut keyword_resource_ids: Vec<String> = Vec::new();
+        for search_result in keyword_search_results {
+            let search_result = search_result?;
+            keyword_resource_ids.push(search_result.resource.resource.id.clone());
+            results.push(search_result);
         }
+
+        // TODO: frontend should use a list endpoint not search if keyword is empty
+        // early return as we don't want to perform proximity search
+        if keyword == "" {
+            let n = results.len() as i64;
+            return Ok(SearchResult {
+                items: results,
+                total: n,
+            });
+        }
+
+        // relooping through the keyword search results to perform proximity search
+        // we did not combine the two loops so that keyword search results are pushed first
+        // as they should be ranked higher
+        for resource_id in keyword_resource_ids {
+            let mut proximity_search_results = self.proximity_search_with_resource_id(
+                &resource_id,
+                proximity_distance_threshold,
+                proximity_limit,
+            )?;
+            results.append(&mut proximity_search_results);
+        }
+
+        let mut results = remove_duplicate_search_results(&mut results);
+        results.iter_mut().try_for_each(|r| -> BackendResult<()> {
+            let card_ids = self.list_card_ids_by_resource_id(&r.resource.resource.id)?;
+            r.card_ids = card_ids;
+            Ok(())
+        })?;
         let n = results.len() as i64;
         Ok(SearchResult {
             items: results,
@@ -939,7 +1132,6 @@ mod tests {
             tag_value: "value1".to_string(),
             op: ResourceTagFilterOp::Eq,
         }];
-
         let (query, params) = Database::list_resource_ids_by_tags_query(&tags, 0);
         assert_eq!(
             query,

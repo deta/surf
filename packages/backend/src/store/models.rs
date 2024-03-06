@@ -16,7 +16,7 @@ pub fn parse_datetime_from_str(
 ) -> Result<chrono::DateTime<chrono::Utc>, chrono::ParseError> {
     let format = "%Y-%m-%d %H:%M:%S";
     let ut = chrono::DateTime::parse_from_str(datetime, format)?;
-    return Ok(ut.with_timezone(&chrono::Utc));
+    Ok(ut.with_timezone(&chrono::Utc))
 }
 
 // TODO: use strum
@@ -89,9 +89,6 @@ pub struct Card {
     #[serde(default)]
     pub resource_id: String,
 
-    #[serde(default)]
-    pub position_id: i64,
-
     pub position_x: i64,
     pub position_y: i64,
     pub width: i32,
@@ -110,7 +107,7 @@ pub struct Card {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Resource {
     #[serde(default = "random_uuid")]
     pub id: String,
@@ -130,7 +127,7 @@ pub struct Resource {
     pub deleted: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceTag {
     #[serde(default = "random_uuid")]
     pub id: String,
@@ -202,7 +199,7 @@ impl ResourceTagFilter {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceMetadata {
     #[serde(default = "random_uuid")]
     pub id: String,
@@ -216,7 +213,7 @@ pub struct ResourceMetadata {
     pub alt: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceTextContent {
     #[serde(default = "random_uuid")]
     pub id: String,
@@ -226,7 +223,23 @@ pub struct ResourceTextContent {
 
 #[derive(Debug)]
 pub struct CardPosition {
-    pub position: Vec<u8>,
+    pub rowid: Option<i64>,
+    pub position: String,
+}
+
+impl CardPosition {
+    pub fn new(position_array: &[i64; 2]) -> CardPosition {
+        let pos_str = format!(
+            //"[{:?}, {:?}, {:?}]",
+            "[{:?}.0, {:?}.0]",
+            position_array[0],
+            position_array[1] //, position_array[2]
+        );
+        CardPosition {
+            rowid: None,
+            position: pos_str,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, strum::EnumString, strum::AsRefStr)]
