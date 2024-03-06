@@ -6,12 +6,20 @@
 
   import TextPreview from '../Cards/Text/TextPreview.svelte'
   import LinkPreview from '../Cards/Link/LinkPreview.svelte'
-  import type { Resource, ResourceBookmark, ResourceNote } from '../../service/resources'
+  import type {
+    Resource,
+    ResourceChatMessage,
+    ResourceLink,
+    ResourceNote,
+    ResourcePost
+  } from '../../service/resources'
   import FilePreview from '../Cards/File/FilePreview.svelte'
   import { ResourceTypes } from '../../types'
   import DateSinceNow from '../DateSinceNow.svelte'
   import { getFileKind, getFileType } from '../../utils/files'
   import FileIcon from '../Cards/File/FileIcon.svelte'
+  import PostPreview from '../Cards/Post/PostPreview.svelte'
+  import ChatMessagePreview from '../Cards/ChatMessage/ChatMessagePreview.svelte'
 
   export let resource: Resource
 
@@ -21,17 +29,24 @@
     dispatch('click', resource.id)
   }
 
+  // TODO: figure out better way to do this
   $: textResource = resource as ResourceNote
-  $: bookmarkResource = resource as ResourceBookmark
+  $: linkResource = resource as ResourceLink
+  $: postResource = resource as ResourcePost
+  $: chatMessageResource = resource as ResourceChatMessage
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div on:click={handleClick} class="resource-preview">
   <div class="preview">
-    {#if resource.type === ResourceTypes.NOTE}
+    {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
       <TextPreview resource={textResource} />
     {:else if resource.type === ResourceTypes.LINK}
-      <LinkPreview resource={bookmarkResource} />
+      <LinkPreview resource={linkResource} />
+    {:else if resource.type.startsWith(ResourceTypes.POST)}
+      <PostPreview resource={postResource} />
+    {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
+      <ChatMessagePreview resource={chatMessageResource} />
     {:else}
       <FilePreview {resource} />
       <!-- {:else}
@@ -41,12 +56,18 @@
 
   <div class="details">
     <div class="type">
-      {#if resource.type === ResourceTypes.NOTE}
+      {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
         <Icon name="docs" size="20px" />
         <div class="">Note</div>
       {:else if resource.type === ResourceTypes.LINK}
         <Icon name="link" size="20px" />
         <div class="">Bookmark</div>
+      {:else if resource.type.startsWith(ResourceTypes.POST)}
+        <Icon name="link" size="20px" />
+        <div class="">Post</div>
+      {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
+        <Icon name="docs" size="20px" />
+        <div class="">Message</div>
       {:else}
         <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
         <div class="">{getFileType(resource.type) ?? 'File'}</div>

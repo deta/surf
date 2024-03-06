@@ -8,6 +8,8 @@
     keydownWebview: { key: string; ctrlKey: boolean; shiftKey: boolean; metaKey: boolean }
     foundInPage: Electron.FoundInPageEvent
     selectionWebview: { text: string }
+    detectedApp: DetectedWebApp
+    detectedResource: DetectedResource
   }
 </script>
 
@@ -18,6 +20,7 @@
   import type { HistoryEntriesManager } from '../../../service/horizon'
   import type { HistoryEntry } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
+  import type { DetectedResource, DetectedWebApp } from '@horizon/web-parser'
 
   const dispatch = createEventDispatcher<WebViewWrapperEvents>()
   const log = useLogScope('WebviewWrapper')
@@ -154,6 +157,12 @@
           break
         case 'keydown':
           dispatch('keydownWebview', eventData)
+          break
+        case 'detected-app':
+          dispatch('detectedApp', eventData)
+          break
+        case 'detected-resource':
+          dispatch('detectedResource', eventData?.resource)
           break
       }
     })
@@ -327,6 +336,10 @@
 
       webview.send('webview-event', { type: 'get-selection' })
     })
+  }
+
+  export function startResourceDetection() {
+    webview.send('webview-event', { type: 'get-resource' })
   }
 
   export function openDevTools(): void {

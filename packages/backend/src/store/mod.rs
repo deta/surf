@@ -240,19 +240,31 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
         .argument_opt(2)
         .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
         .map(|js_string| js_string.value(&mut cx));
-    let resource_tags: Option<Vec<models::ResourceTag>> = match resource_tags_json
+    let resource_tag_filters: Option<Vec<models::ResourceTagFilter>> = match resource_tags_json
         .map(|json_str| serde_json::from_str(&json_str))
         .transpose()
     {
         Ok(tags) => tags,
         Err(err) => return cx.throw_error(&err.to_string()),
     };
+    let proximity_distance_threshold = cx.argument_opt(3).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as f32)
+    });
+    let proximity_limit = cx.argument_opt(4).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as i64)
+    });
 
     let (deferred, promise) = cx.promise();
     tunnel.send(
         WorkerMessage::SearchResources {
             query,
-            resource_tags,
+            resource_tag_filters,
+            proximity_distance_threshold,
+            proximity_limit,
         },
         deferred,
     );

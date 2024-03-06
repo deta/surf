@@ -404,7 +404,7 @@ export class Horizon {
     duplicated: boolean = false
   ) {
     // TODO: resource metadata and tags + fetch metadata from url
-    const resource = await this.resourceManager.createResourceBookmark({ url })
+    const resource = await this.resourceManager.createResourceLink({ url })
     return this.addCard(
       {
         ...position,

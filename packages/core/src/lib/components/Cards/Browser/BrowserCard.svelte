@@ -25,6 +25,8 @@
   import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
   import FindInPage from './FindInPage.svelte'
   import StackItem from '../../Stack/StackItem.svelte'
+  import type { DetectedResource, DetectedWebApp } from '@horizon/web-parser'
+  import { visorEnabled } from '../../Horizon/HorizonManager.svelte'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -242,17 +244,44 @@
   async function handleBookmark() {
     if (value === '') return
 
-    const resource = await horizon.resourceManager.createResourceBookmark(
-      { url: $url },
+    log.debug('bookmarking', value)
+
+    webview?.startResourceDetection()
+
+    // const resource = await horizon.resourceManager.createResourceBookmark(
+    //   { url: $url },
+    //   { name: $title ?? '', sourceURI: $url, alt: '' }
+    // )
+
+    // card.update((card) => {
+    //   card.resourceId = resource.id
+    //   return card
+    // })
+
+    // dispatch('change', get(card))
+  }
+
+  let app: DetectedWebApp | null = null
+  function handleDetectedApp(e: CustomEvent<DetectedWebApp>) {
+    app = e.detail
+    log.debug('detected app', app)
+  }
+
+  async function handleDetectedResource(e: CustomEvent<DetectedResource | null>) {
+    const detectedResource = e.detail
+    log.debug('extracted resource data', detectedResource)
+
+    if (!detectedResource) {
+      log.debug('no resource detected')
+      return
+    }
+
+    const resource = await horizon.resourceManager.createResourceOther(
+      new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
       { name: $title ?? '', sourceURI: $url, alt: '' }
     )
 
-    card.update((card) => {
-      card.resourceId = resource.id
-      return card
-    })
-
-    dispatch('change', get(card))
+    log.debug('created resource', resource)
   }
 </script>
 
@@ -281,9 +310,15 @@
       on:newWindowWebview={handleWebviewNewWindow}
       on:keydownWebview={handleWebviewKeydown}
       on:didFinishLoad={handleFinishLoading}
+      on:detectedApp={handleDetectedApp}
+      on:detectedResource={handleDetectedResource}
     />
   </div>
-  <div class="bottom-bar" class:active={active || value == ''} style={'pointer-events: auto;'}>
+  <div
+    class="bottom-bar"
+    class:active={active || value == ''}
+    style={$visorEnabled ? '' : 'pointer-events: auto;'}
+  >
     <div class="bottom-bar-trigger">
       <div class="arrow-wrapper">
         <button

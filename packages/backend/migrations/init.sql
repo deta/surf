@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS cards (
     data BLOB NOT NULL DEFAULT '{}' 
 );
 
+CREATE INDEX IF NOT EXISTS cards_resource_id_index ON cards(resource_id);
+
 CREATE TABLE IF NOT EXISTS history_entries (
     id TEXT PRIMARY KEY,
     entry_type TEXT NOT NULL,

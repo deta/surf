@@ -19,6 +19,7 @@ pub fn parse_datetime_from_str(
     Ok(ut.with_timezone(&chrono::Utc))
 }
 
+// TODO: use strum
 pub enum InternalResourceTagNames {
     Type,
     Deleted,
@@ -106,7 +107,7 @@ pub struct Card {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Resource {
     #[serde(default = "random_uuid")]
     pub id: String,
@@ -126,7 +127,7 @@ pub struct Resource {
     pub deleted: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceTag {
     #[serde(default = "random_uuid")]
     pub id: String,
@@ -155,7 +156,50 @@ impl ResourceTag {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, strum::EnumString, strum::AsRefStr)]
+#[strum(ascii_case_insensitive)]
+#[serde(rename_all = "lowercase")]
+pub enum ResourceTagFilterOp {
+    Eq,
+    Ne,
+    Prefix,
+}
+
+impl Default for ResourceTagFilterOp {
+    fn default() -> Self {
+        ResourceTagFilterOp::Eq
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ResourceTagFilter {
+    pub tag_name: String,
+    pub tag_value: String,
+    #[serde(default)]
+    pub op: ResourceTagFilterOp,
+}
+
+impl ResourceTagFilter {
+    pub fn get_sql_filter_with_value(&self, indexes: (usize, usize)) -> (String, String) {
+        let (i1, i2) = indexes;
+        match self.op {
+            ResourceTagFilterOp::Eq => (
+                format!("tag_name = ?{} AND tag_value = ?{}", i1, i2),
+                self.tag_value.clone(),
+            ),
+            ResourceTagFilterOp::Ne => (
+                format!("tag_name = ?{} AND tag_value != ?{}", i1, i2),
+                self.tag_value.clone(),
+            ),
+            ResourceTagFilterOp::Prefix => (
+                format!("tag_name = ?{} AND tag_value LIKE ?{}", i1, i2),
+                format!("{}%", self.tag_value),
+            ),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceMetadata {
     #[serde(default = "random_uuid")]
     pub id: String,
@@ -169,7 +213,7 @@ pub struct ResourceMetadata {
     pub alt: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceTextContent {
     #[serde(default = "random_uuid")]
     pub id: String,
@@ -185,7 +229,7 @@ pub struct CardPosition {
 
 impl CardPosition {
     pub fn new(position_array: &[i64; 2]) -> CardPosition {
-        let pos_str = format!("[{:?}.0, {:?}.0]", position_array[0], position_array[1],);
+        let pos_str = format!("[{:?}.0, {:?}.0]", position_array[0], position_array[1]);
         CardPosition {
             rowid: None,
             position: pos_str,

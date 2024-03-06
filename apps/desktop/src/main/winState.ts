@@ -79,8 +79,8 @@ export class WindowState {
       'move',
       useDebounce(() => this.changeHandler(), this.opts.debounce)
     )
-    this.win.on('close', () => this.closeHandler())
-    this.win.on('closed', () => this.closeHandler())
+    this.win.on('close', () => this.unmanage())
+    this.win.on('closed', () => this.saveState())
   }
 
   unmanage() {
@@ -93,8 +93,8 @@ export class WindowState {
         'move',
         useDebounce(() => this.changeHandler(), this.opts.debounce)
       )
-      this.win.removeListener('close', () => this.closeHandler())
-      this.win.removeListener('closed', () => this.closeHandler())
+      this.win.removeListener('close', () => this.unmanage())
+      this.win.removeListener('closed', () => this.saveState())
       this.win = undefined
     }
   }
@@ -121,11 +121,6 @@ export class WindowState {
     } catch (err) {
       // Don't throw an error when window was closed
     }
-  }
-
-  closeHandler() {
-    this.unmanage()
-    this.saveState()
   }
 
   isNormal() {

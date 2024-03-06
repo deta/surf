@@ -29,7 +29,9 @@ pub enum WorkerMessage {
     RemoveUserdata(String),
     SearchResources {
         query: String,
-        resource_tags: Option<Vec<ResourceTag>>,
+        resource_tag_filters: Option<Vec<ResourceTagFilter>>,
+        proximity_distance_threshold: Option<f32>,
+        proximity_limit: Option<i64>,
     },
     UpdateCardData(String, Vec<u8>),
     UpdateCardDimensions(String, i64, i64, i32, i32),

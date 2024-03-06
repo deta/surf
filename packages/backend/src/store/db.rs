@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::str::FromStr;
 
 use super::models::*;
@@ -38,7 +39,7 @@ pub struct PaginatedHorizons {
     pub offset: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CompositeResource {
     pub resource: Resource,
     pub metadata: Option<ResourceMetadata>,
@@ -46,18 +47,33 @@ pub struct CompositeResource {
     pub resource_tags: Option<Vec<ResourceTag>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum SearchEngine {
-    Metadata,
-    TextContent,
+    Keyword,
     Proximity,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchResultItem {
     pub resource: CompositeResource,
     pub card_ids: Vec<String>,
+    pub ref_resource_id: Option<String>,
     pub engine: SearchEngine,
+}
+
+// TODO: maybe there is a better way to do this
+fn remove_duplicate_search_results(results: &mut Vec<SearchResultItem>) -> Vec<SearchResultItem> {
+    let mut deduped: Vec<SearchResultItem> = Vec::new();
+    let mut seen: Vec<String> = Vec::new();
+    for r in results {
+        if !seen.contains(&r.resource.resource.id) {
+            seen.push(r.resource.resource.id.clone());
+            deduped.push(r.clone());
+        } else {
+            seen.push(r.resource.resource.id.clone());
+        }
+    }
+    deduped
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -100,7 +116,7 @@ impl Database {
             tx.execute_batch(&schema)?;
         }
         tx.commit()?;
-
+        rusqlite::vtab::array::load_module(&conn)?;
         Ok(Database { conn })
     }
 
@@ -741,33 +757,34 @@ impl Database {
     }
 
     fn list_resource_ids_by_tags_query(
-        tags: &Vec<ResourceTag>,
+        tag_filters: &Vec<ResourceTagFilter>,
         param_start_index: usize,
     ) -> (String, Vec<String>) {
-        let mut query = String::from("SELECT resource_id FROM resource_tags WHERE");
+        let mut query = String::from("");
         let mut i = 0;
-        let n = tags.len();
+        let n = tag_filters.len();
         let mut params: Vec<String> = Vec::new();
-        for tag in tags {
+        for filter in tag_filters {
+            let (where_clause, tag_value) = filter
+                .get_sql_filter_with_value((i + 1 + param_start_index, i + 2 + param_start_index));
+
             query = format!(
-                "{} (tag_name = ?{} AND tag_value = ?{})",
-                query,
-                i + 1 + param_start_index,
-                i + 2 + param_start_index
+                "{}SELECT resource_id FROM resource_tags WHERE ({})",
+                query, where_clause,
             );
-            if i < n - 1 {
-                query = format!("{} OR", query);
+            if i < 2 * (n - 1) {
+                query = format!("{} INTERSECT ", query);
             }
             i += 2;
-            params.push(tag.tag_name.clone());
-            params.push(tag.tag_value.clone());
+            params.push(filter.tag_name.clone());
+            params.push(tag_value);
         }
         (query, params)
     }
 
     pub fn list_resource_ids_by_tags(
         &self,
-        tags: &mut Vec<ResourceTag>,
+        tags: &mut Vec<ResourceTagFilter>,
     ) -> BackendResult<Vec<String>> {
         let mut result = Vec::new();
         if tags.is_empty() {
@@ -783,10 +800,22 @@ impl Database {
         Ok(result)
     }
 
+    pub fn list_card_ids_by_resource_id(&self, resource_id: &str) -> BackendResult<Vec<String>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id FROM cards WHERE resource_id = ?1")?;
+        let card_ids = stmt.query_map(rusqlite::params![resource_id], |row| row.get(0))?;
+        let mut result = Vec::new();
+        for card_id in card_ids {
+            result.push(card_id?);
+        }
+        Ok(result)
+    }
+
     pub fn vector_search_card_positions(
         &self,
         horizon_id: &str,
-        cp: &CardPosition,
+        cp: &mut CardPosition,
         distance_threshold: f32,
         limit: i64,
     ) -> BackendResult<Vec<VectorSearchResult>> {
@@ -800,6 +829,8 @@ impl Database {
                 rowid IN (SELECT rowid FROM cards WHERE horizon_id=?2)
             AND
                 distance <= ?3
+            AND 
+                distance != 0
             LIMIT ?4",
         )?;
         let card_positions = stmt.query_map(
@@ -817,12 +848,95 @@ impl Database {
         Ok(result)
     }
 
-    // full text search on resource metadata after filtering by resource tags
+    pub fn proximity_search_with_resource_id(
+        &self,
+        resource_id: &str,
+        distance_threshold: f32,
+        limit: i64,
+    ) -> BackendResult<Vec<SearchResultItem>> {
+        let mut resources: Vec<SearchResultItem> = Vec::new();
+        let mut card_position_rowids: Vec<rusqlite::types::Value> = Vec::new();
+
+        let mut stmt = self.conn.prepare(
+            "SELECT C.horizon_id, C.position_x, C.position_y FROM cards C WHERE C.resource_id=?1",
+        )?;
+        let card_positions = stmt.query_map(rusqlite::params![resource_id], |row| {
+            let horizon_id: String = row.get(0)?;
+            let card_position: CardPosition = CardPosition::new(&[row.get(1)?, row.get(2)?]);
+            Ok((card_position, horizon_id))
+        })?;
+        for cp in card_positions {
+            let cp = cp?;
+            let mut position = cp.0;
+            let horizon_id = cp.1;
+            let results = self.vector_search_card_positions(
+                &horizon_id,
+                &mut position,
+                distance_threshold,
+                limit,
+            )?;
+            results.iter().for_each(|r| {
+                card_position_rowids.push(rusqlite::types::Value::from(r.rowid));
+            });
+        }
+
+        if card_position_rowids.is_empty() {
+            return Ok(resources);
+        }
+
+        let mut stmt = self.conn.prepare(
+            "SELECT DISTINCT M.*, R.* FROM resource_metadata M
+            LEFT JOIN resources R ON R.id = M.resource_id
+            WHERE R.id IN (SELECT DISTINCT resource_id FROM cards WHERE rowid IN rarray(?1))",
+        )?;
+        let items = stmt.query_map(
+            [Rc::new(card_position_rowids)],
+            //rusqlite::params_from_iter(card_position_rowids.iter()),
+            |row| {
+                let cr = CompositeResource {
+                    metadata: Some(ResourceMetadata {
+                        id: row.get(0)?,
+                        resource_id: row.get(1)?,
+                        name: row.get(2)?,
+                        source_uri: row.get(3)?,
+                        alt: row.get(4)?,
+                    }),
+                    resource: Resource {
+                        id: row.get(5)?,
+                        resource_path: row.get(6)?,
+                        resource_type: row.get(7)?,
+                        created_at: row.get(8)?,
+                        updated_at: row.get(9)?,
+                        deleted: row.get(10)?,
+                    },
+                    text_content: None,
+                    resource_tags: None,
+                };
+                let sr_item = SearchResultItem {
+                    resource: cr,
+                    ref_resource_id: Some(resource_id.to_string()),
+                    card_ids: Vec::new(),
+                    engine: SearchEngine::Proximity,
+                };
+                Ok(sr_item)
+            },
+        )?;
+        for i in items {
+            resources.push(i?);
+        }
+        Ok(resources)
+    }
+
+    // TODO: optimize this
     pub fn search_resources(
         &self,
         keyword: &str,
-        tags: Option<Vec<ResourceTag>>,
+        tags: Option<Vec<ResourceTagFilter>>,
+        proximity_distance_threshold: f32,
+        proximity_limit: i64,
     ) -> BackendResult<SearchResult> {
+        let mut results: Vec<SearchResultItem> = Vec::new();
+
         let mut params_vector = vec![format!("%{}%", keyword).to_string()];
         let mut query = "SELECT DISTINCT M.*, R.*
             FROM resource_metadata M
@@ -839,7 +953,8 @@ impl Database {
         }
         let params = rusqlite::params_from_iter(params_vector.iter());
         let mut stmt = self.conn.prepare(query.as_str())?;
-        let search_results = stmt.query_map(params, |row| {
+
+        let keyword_search_results = stmt.query_map(params, |row| {
             Ok(SearchResultItem {
                 resource: CompositeResource {
                     metadata: Some(ResourceMetadata {
@@ -861,16 +976,48 @@ impl Database {
                     // TODO: should we populate the resource tags?
                     resource_tags: None,
                 },
-                // TODO: proximity search on the card ids
+                ref_resource_id: None,
                 card_ids: Vec::new(),
-                engine: SearchEngine::Metadata,
+                engine: SearchEngine::Keyword,
             })
         })?;
 
-        let mut results = Vec::new();
-        for search_result in search_results {
-            results.push(search_result?);
+        // as order is important
+        let mut keyword_resource_ids: Vec<String> = Vec::new();
+        for search_result in keyword_search_results {
+            let search_result = search_result?;
+            keyword_resource_ids.push(search_result.resource.resource.id.clone());
+            results.push(search_result);
         }
+
+        // TODO: frontend should use a list endpoint not search if keyword is empty
+        // early return as we don't want to perform proximity search
+        if keyword == "" {
+            let n = results.len() as i64;
+            return Ok(SearchResult {
+                items: results,
+                total: n,
+            });
+        }
+
+        // relooping through the keyword search results to perform proximity search
+        // we did not combine the two loops so that keyword search results are pushed first
+        // as they should be ranked higher
+        for resource_id in keyword_resource_ids {
+            let mut proximity_search_results = self.proximity_search_with_resource_id(
+                &resource_id,
+                proximity_distance_threshold,
+                proximity_limit,
+            )?;
+            results.append(&mut proximity_search_results);
+        }
+
+        let mut results = remove_duplicate_search_results(&mut results);
+        results.iter_mut().try_for_each(|r| -> BackendResult<()> {
+            let card_ids = self.list_card_ids_by_resource_id(&r.resource.resource.id)?;
+            r.card_ids = card_ids;
+            Ok(())
+        })?;
         let n = results.len() as i64;
         Ok(SearchResult {
             items: results,
@@ -1019,5 +1166,62 @@ impl Database {
             result.push(embedding?);
         }
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_list_resource_ids_by_tags_query() {
+        let tags = vec![ResourceTagFilter {
+            tag_name: "tag1".to_string(),
+            tag_value: "value1".to_string(),
+            op: ResourceTagFilterOp::Eq,
+        }];
+        let (query, params) = Database::list_resource_ids_by_tags_query(&tags, 0);
+        assert_eq!(
+            query,
+            "SELECT resource_id FROM resource_tags WHERE (tag_name = ?1 AND tag_value = ?2)"
+        );
+        assert_eq!(params, vec!["tag1", "value1"]);
+
+        let tags = vec![
+            ResourceTagFilter {
+                tag_name: "tag1".to_string(),
+                tag_value: "value1".to_string(),
+                op: ResourceTagFilterOp::Eq,
+            },
+            ResourceTagFilter {
+                tag_name: "tag2".to_string(),
+                tag_value: "value2".to_string(),
+                op: ResourceTagFilterOp::Ne,
+            },
+            ResourceTagFilter {
+                tag_name: "tag3".to_string(),
+                tag_value: "value".to_string(),
+                op: ResourceTagFilterOp::Prefix,
+            },
+        ];
+        let (query, params) = Database::list_resource_ids_by_tags_query(&tags, 0);
+        assert_eq!(
+            query,
+            "SELECT resource_id FROM resource_tags WHERE (tag_name = ?1 AND tag_value = ?2) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?3 AND tag_value != ?4) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?5 AND tag_value LIKE ?6)"
+        );
+        assert_eq!(
+            params,
+            vec!["tag1", "value1", "tag2", "value2", "tag3", "value%"]
+        );
+
+        let (query, params) = Database::list_resource_ids_by_tags_query(&tags, 2);
+        assert_eq!(
+            query,
+            "SELECT resource_id FROM resource_tags WHERE (tag_name = ?3 AND tag_value = ?4) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?5 AND tag_value != ?6) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?7 AND tag_value LIKE ?8)"
+        );
+        assert_eq!(
+            params,
+            vec!["tag1", "value1", "tag2", "value2", "tag3", "value%"]
+        );
     }
 }

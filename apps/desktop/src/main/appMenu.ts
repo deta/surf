@@ -6,6 +6,19 @@ import { resolve } from 'path'
 
 const isMac = process.platform === 'darwin'
 
+const useAsDefaultBrowserClickHandler = () => {
+  // Register the app to handle URLs (from: https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app)
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient('http', process.execPath, [resolve(process.argv[1])])
+      app.setAsDefaultProtocolClient('https', process.execPath, [resolve(process.argv[1])])
+    }
+  } else {
+    app.setAsDefaultProtocolClient('http')
+    app.setAsDefaultProtocolClient('https')
+  }
+}
+
 const template = [
   ...(isMac
     ? [
@@ -22,31 +35,13 @@ const template = [
             },
             {
               label: 'Use as Default Browser',
-              click: () => {
-                // Register the app to handle URLs (from: https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app)
-                if (process.defaultApp) {
-                  if (process.argv.length >= 2) {
-                    app.setAsDefaultProtocolClient('http', process.execPath, [
-                      resolve(process.argv[1])
-                    ])
-                    app.setAsDefaultProtocolClient('https', process.execPath, [
-                      resolve(process.argv[1])
-                    ])
-                  }
-                } else {
-                  app.setAsDefaultProtocolClient('http')
-                  app.setAsDefaultProtocolClient('https')
-                }
-              }
+              click: useAsDefaultBrowserClickHandler
             },
             { type: 'separator' },
             {
               id: 'adblocker',
               label: 'Toggle Adblocker',
-              click: () => {
-                console.log('toggling adblocker')
-                toggleAdblocker('persist:horizon')
-              }
+              click: () => toggleAdblocker('persist:horizon')
             },
             { type: 'separator' },
             {
@@ -64,6 +59,16 @@ const template = [
         ? [{ role: 'close' }]
         : [
             { label: 'Check for Updates...', click: checkUpdatesMenuClickHandler },
+            {
+              label: 'Use as Default Browser',
+              click: useAsDefaultBrowserClickHandler
+            },
+            { type: 'separator' },
+            {
+              id: 'adblocker',
+              label: 'Toggle Adblocker',
+              click: () => toggleAdblocker('persist:horizon')
+            },
             { type: 'separator' },
             { role: 'quit' }
           ])
@@ -116,9 +121,12 @@ export function setAppMenu(): void {
 }
 
 export function changeMenuItemLabel(id: string, newLabel: string): void {
-  console.log('changing menu item label', id, newLabel)
-
-  template[0].submenu[3].label = newLabel
+  if (template[0] && template[0].submenu) {
+    const adBlockItem = template[0].submenu.find((item) => (item as any).id === id)
+    if (adBlockItem && adBlockItem.label) {
+      adBlockItem.label = newLabel
+    }
+  }
 
   const menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
   Menu.setApplicationMenu(menu)

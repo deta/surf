@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { hasClassOrParentWithClass, posToAbsolute } from '@horizon/tela'
+  import { clamp, hasClassOrParentWithClass, posToAbsolute } from '@horizon/tela'
   import type { Horizon } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
   import { DEFAULT_CARD_SIZE } from '../../constants/card'
   import { get } from 'svelte/store'
   import { processDrop, processPaste } from '../../service/mediaImporter'
   import { ResourceTypes, type SFFSResourceMetadata, type SFFSResourceTag } from '../../types'
-  import { ResourceBookmark, ResourceTag } from '../../service/resources'
+  import { ResourceLink, ResourceTag } from '../../service/resources'
 
   export let horizon: Horizon
 
@@ -146,7 +146,7 @@
     log.debug('resource', resource)
 
     if (resource.type === ResourceTypes.LINK) {
-      const bookmark = await (resource as ResourceBookmark).getBookmark()
+      const bookmark = await (resource as ResourceLink).getParsedData()
       createBrowserCard(new URL(bookmark.url), pos)
     } else {
       horizon.addCard({
@@ -154,7 +154,7 @@
         y: pos.y - DEFAULT_CARD_SIZE.height / 2,
         width: DEFAULT_CARD_SIZE.width,
         height: DEFAULT_CARD_SIZE.height,
-        type: resource.type === ResourceTypes.NOTE ? 'text' : 'file',
+        type: resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE ? 'text' : 'file',
         resourceId: resource.id
       })
     }
@@ -178,6 +178,44 @@
       metadata,
       tags
     )
+  }
+
+  const processUriListData = async (basePos: any, data: string): Promise<boolean> => {
+    let dataHandled = false
+    const pos = getNewCardPosition(basePos)
+
+    const urls = data.split(/\r\n|\r|\n/)
+    urls.forEach((url) => {
+      if (checkIfUrl(url)) {
+        createBrowserCard(new URL(url), pos)
+        dataHandled = true
+      }
+    })
+
+    return dataHandled
+  }
+
+  const createImageCard = async (blob: Blob, pos: { x: number; y: number }) => {
+    // Find out size
+    const src = URL.createObjectURL(blob)
+    const [imgWidth, imgHeight] = await new Promise((resolve, reject) => {
+      let img = new Image()
+      img.onload = () => resolve([img.width, img.height])
+      img.onerror = reject
+      img.src = src
+    })
+
+    // TODO: Make this respect our default card size a bit better
+    const aspect = clamp(imgWidth / imgHeight, 0, 4)
+    let targetWidth = DEFAULT_CARD_SIZE.width * aspect
+    let targetHeight = DEFAULT_CARD_SIZE.width
+
+    const card = await horizon.addCardFile(blob, {
+      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+      width: targetWidth,
+      height: targetHeight
+    })
     log.debug('created card', get(card))
   }
 

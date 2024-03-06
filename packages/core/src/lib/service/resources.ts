@@ -6,12 +6,13 @@ import {
   type SFFSResourceMetadata,
   type SFFSResourceTag,
   ResourceTypes,
-  type SFFSResourceDataBookmark,
-  type ResourceType,
-  type SFFSResourceDataNote,
-  type SFFSResource
+  type SFFSResource,
+  type ResourceDataLink,
+  type ResourceDataPost,
+  type ResourceDataArticle,
+  type ResourceDataChatMessage,
+  type ResourceDataChatThread
 } from '../types'
-import type { JSONContent } from '@horizon/editor'
 
 /*
  TODO:
@@ -39,7 +40,7 @@ export class ResourceTag {
 
 export class Resource {
   id: string
-  type: ResourceType
+  type: string
   path: string
   createdAt: string
   updatedAt: string
@@ -155,6 +156,7 @@ export class Resource {
   }
 }
 
+// TODO: adapt to new resource data
 export class ResourceNote extends Resource {
   // data: Writable<SFFSResourceDataNote | null>
 
@@ -169,16 +171,12 @@ export class ResourceNote extends Resource {
   }
 
   async updateContent(content: string) {
-    const blob = new Blob([content], { type: ResourceTypes.NOTE })
+    const blob = new Blob([content], { type: this.type })
     return this.updateData(blob, true)
-  }
-
-  static async create(sffs: SFFS, data: SFFSResource) {
-    return new ResourceNote(sffs, data)
   }
 }
 
-export class ResourceBookmark extends Resource {
+export class ResourceJSON<T> extends Resource {
   // data: Writable<SFFSResourceDataBookmark | null>
 
   constructor(sffs: SFFS, data: SFFSResource) {
@@ -186,25 +184,36 @@ export class ResourceBookmark extends Resource {
     // this.data = writable(null)
   }
 
-  async getBookmark() {
+  async getParsedData() {
     const data = await this.getData()
     const text = await data.text()
-    return JSON.parse(text) as SFFSResourceDataBookmark
+    return JSON.parse(text) as T
   }
 
-  async updateBookmark(content: SFFSResourceDataBookmark) {
-    const blobData = JSON.stringify(content)
-    const blob = new Blob([blobData], { type: ResourceTypes.LINK })
+  async updatePost(data: T) {
+    const blobData = JSON.stringify(data)
+    const blob = new Blob([blobData], { type: this.type })
     return this.updateData(blob, true)
-  }
-
-  static async create(sffs: SFFS, data: SFFSResource) {
-    return new ResourceBookmark(sffs, data)
   }
 }
 
+export class ResourcePost extends ResourceJSON<ResourceDataPost> {}
+export class ResourceArticle extends ResourceJSON<ResourceDataArticle> {}
+export class ResourceLink extends ResourceJSON<ResourceDataLink> {}
+export class ResourceChatMessage extends ResourceJSON<ResourceDataChatMessage> {}
+export class ResourceChatThread extends ResourceJSON<ResourceDataChatThread> {}
+
+export type ResourceObject =
+  | Resource
+  | ResourceArticle
+  | ResourceLink
+  | ResourcePost
+  | ResourceChatMessage
+  | ResourceChatThread
+  | ResourceNote
+
 export class ResourceManager {
-  resources: Writable<(Resource | ResourceBookmark | ResourceNote)[]>
+  resources: Writable<ResourceObject[]>
 
   log: ScopedLogger
   sffs: SFFS
@@ -215,11 +224,19 @@ export class ResourceManager {
     this.sffs = new SFFS()
   }
 
-  private createResourceObject(data: SFFSResource): Resource | ResourceBookmark | ResourceNote {
-    if (data.type === ResourceTypes.NOTE) {
+  private createResourceObject(data: SFFSResource): ResourceObject {
+    if (data.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
       return new ResourceNote(this.sffs, data)
     } else if (data.type === ResourceTypes.LINK) {
-      return new ResourceBookmark(this.sffs, data)
+      return new ResourceLink(this.sffs, data)
+    } else if (data.type.startsWith(ResourceTypes.ARTICLE)) {
+      return new ResourceArticle(this.sffs, data)
+    } else if (data.type.startsWith(ResourceTypes.POST)) {
+      return new ResourcePost(this.sffs, data)
+    } else if (data.type.startsWith(ResourceTypes.CHAT_MESSAGE)) {
+      return new ResourceChatMessage(this.sffs, data)
+    } else if (data.type.startsWith(ResourceTypes.CHAT_THREAD)) {
+      return new ResourceChatThread(this.sffs, data)
     } else {
       return new Resource(this.sffs, data)
     }
@@ -322,12 +339,12 @@ export class ResourceManager {
     metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {
-    const blob = new Blob([content], { type: ResourceTypes.NOTE })
-    return this.createResource(ResourceTypes.NOTE, blob, metadata, tags)
+    const blob = new Blob([content], { type: ResourceTypes.DOCUMENT_SPACE_NOTE })
+    return this.createResource(ResourceTypes.DOCUMENT_SPACE_NOTE, blob, metadata, tags)
   }
 
-  async createResourceBookmark(
-    data: Partial<SFFSResourceDataBookmark>,
+  async createResourceLink(
+    data: Partial<ResourceDataLink>,
     metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {

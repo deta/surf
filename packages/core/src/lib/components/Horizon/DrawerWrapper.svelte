@@ -1,5 +1,6 @@
 <script lang="ts">
   import { derived, writable } from 'svelte/store'
+  import { WebParser, type WebMetadata, type DetectedWebApp } from '@horizon/web-parser'
 
   import {
     DrawerProvider,
@@ -17,15 +18,10 @@
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { useLogScope } from '../../utils/log'
   import { MEDIA_TYPES, processDrop } from '../../service/mediaImporter'
-  import {
-    ResourceTag,
-    type Resource,
-    type ResourceBookmark,
-    type ResourceManager,
-    type ResourceNote
-  } from '../../service/resources'
+  import { ResourceTag, type ResourceManager, type ResourceObject } from '../../service/resources'
   import { onMount } from 'svelte'
   import { ResourceTypes, type SFFSResourceTag } from '../../types'
+  import { parseStringIntoUrl } from '../../utils/url'
 
   export const drawer = provideDrawer()
 
@@ -48,7 +44,13 @@
 
   const searchQuery = writable<SearchQuery>({ value: '', tab: 'all' })
 
-  let resources: (Resource | ResourceBookmark | ResourceNote)[] = []
+  let resources: ResourceObject[] = []
+  let detectedInput = false
+  let parsedInput: {
+    url: string
+    linkMetadata: WebMetadata
+    appInfo: DetectedWebApp | null
+  } | null = null
 
   const runSearch = async (query: string, tab: string | null) => {
     log.debug('Searching for', query, 'in', tab)
@@ -75,9 +77,70 @@
 
   const handleSearch = (e: CustomEvent<SearchQuery>) => {
     const query = e.detail
-    log.debug('Searching for', query.value, 'in', query.tab)
 
+    const url = parseStringIntoUrl(query.value)
+    if (url) {
+      detectedInput = true
+      parseMetadata(url.href)
+    } else {
+      detectedInput = false
+    }
+
+    log.debug('Searching for', query.value, 'in', query.tab)
     searchQuery.set(query)
+  }
+
+  const parseMetadata = async (url: string) => {
+    const webParser = new WebParser(url)
+
+    const appInfo = await webParser.getPageInfo()
+    log.debug('AppInfo', appInfo)
+
+    const metadata = await webParser.getSimpleMetadata()
+    log.debug('Metadata', metadata)
+
+    parsedInput = {
+      url: url,
+      appInfo: appInfo,
+      linkMetadata: metadata
+    }
+  }
+
+  const handleEnter = async () => {
+    if (!detectedInput || !parsedInput) {
+      return
+    }
+
+    const webParser = new WebParser(parsedInput.url)
+
+    if (!parsedInput.appInfo || !parsedInput.appInfo.resourceType) {
+      log.warn('No appInfo found')
+    }
+
+    // Extract a resource from the web page using a webview, this should happen only when saving the resource
+    const extractedResource = await webParser.extractResourceUsingWebview(document)
+    log.debug('extractedResource', extractedResource)
+
+    if (!extractedResource) {
+      log.error('No resource extracted')
+      return
+    }
+
+    const resource = await resourceManager.createResourceOther(
+      new Blob([JSON.stringify(extractedResource.data)], { type: extractedResource.type }),
+      {
+        name: parsedInput.linkMetadata.title,
+        alt: parsedInput.linkMetadata.description,
+        sourceURI: ''
+      }
+    )
+
+    log.debug('Created resource', resource)
+
+    detectedInput = false
+    parsedInput = null
+    drawer.searchValue.set('')
+    searchQuery.set({ value: '', tab: 'all' })
   }
 
   const handleResourceClick = async (e: CustomEvent<string>) => {
@@ -110,7 +173,7 @@
             ResourceTag.dragLocal()
           ])
         } else if (item.type === 'url') {
-          resource = await resourceManager.createResourceBookmark(
+          resource = await resourceManager.createResourceLink(
             { url: item.data.href },
             item.metadata,
             [ResourceTag.dragLocal()]
@@ -175,7 +238,25 @@
 
 <DrawerProvider {drawer} on:search={handleSearch}>
   <DrawerNavigation {tabs} />
-  <DrawerSearch />
+  <DrawerSearch on:enter={handleEnter} />
+  {#if detectedInput}
+    <!-- TODO: move to component, this is more of an example -->
+    <div class="link-info">
+      {#if parsedInput?.linkMetadata && parsedInput.linkMetadata.title}
+        <img src={parsedInput.linkMetadata.image} alt="" width="35px" height="35px" />
+        <div class="details">
+          <div class="title">{parsedInput.linkMetadata.title}</div>
+          <div class="subtitle">{parsedInput.linkMetadata.description}</div>
+        </div>
+        <div class="type">Link Detected</div>
+      {:else}
+        <div class="details">
+          <div class="title">Link Detected</div>
+          <div class="subtitle">{$searchQuery.value}</div>
+        </div>
+      {/if}
+    </div>
+  {/if}
   <DrawerContentWrapper on:drop={handleDrop}>
     {#if resources.length === 0}
       <DrawerContenEmpty />
@@ -220,4 +301,32 @@
 </DrawerProvider>
 
 <style lang="scss">
+  .link-info {
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.33);
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    img {
+      border-radius: 4px;
+    }
+
+    .title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+    }
+
+    .type {
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+      margin-left: auto;
+    }
+  }
 </style>
