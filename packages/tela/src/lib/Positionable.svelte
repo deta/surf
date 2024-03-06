@@ -14,6 +14,11 @@
     heightOverride?: number
     scaleOverride?: number
     zOverride?: number
+
+    /// Not official yet, but used by Horizon
+    /// TODO: See how we handle this
+    // dashHighlight: bool
+    // focusStack: bool
   } & { [P in KeyName]: string }
 </script>
 
@@ -43,7 +48,20 @@
 
   let dragging = false
 
-  $: transformCss = `left: ${$positionable.xOverride || $positionable.x}px; top: ${$positionable.yOverride || $positionable.y}px; width: ${$positionable.widthOverride || $positionable.width}px; height: ${$positionable.heightOverride || $positionable.height}px; ${$positionable.scaleOverride ? `scale: ${$positionable.scaleOverride}%;` : ''} z-index: ${$positionable.zOverride ? $positionable.zOverride : $positionable.z !== undefined ? $positionable.z : $stackingOrder.indexOf($positionable[POSITIONABLE_KEY])}; contain-intrinsic-size: ${$positionable.width}px ${$positionable.height}px; ${contained ? 'contain: strict;' : ''}`
+  $: x = $positionable.xOverride ?? $positionable.x
+  $: y = $positionable.yOverride ?? $positionable.y
+  $: width = $positionable.widthOverride ?? $positionable.width
+  $: height = $positionable.heightOverride ?? $positionable.height
+  $: scaleVal =
+    $positionable.scaleOverride !== undefined ? `scale: ${$positionable.scaleOverride}%;` : ''
+  $: z =
+    $positionable.zOverride !== undefined
+      ? $positionable.zOverride
+      : $positionable.z !== undefined
+        ? $positionable.z
+        : $stackingOrder.indexOf($positionable[POSITIONABLE_KEY])
+
+  $: transformCss = `left: ${x}px; top: ${y}px; width: ${width}px; height: ${height}px; ${scaleVal} z-index: ${z}; contain-intrinsic-size: ${$positionable.width}px ${$positionable.height}px; ${contained ? 'contain: strict;' : ''}`
   // $: transformCss = `--x: ${$positionable.x}px; --y: ${$positionable.y}px; --width: ${$positionable.width}px; --height: ${$positionable.height}px; z-index: ${$positionable.z !== undefined ? $positionable.z : $stackingOrder.indexOf($positionable[POSITIONABLE_KEY])}; contain-intrinsic-size: ${$positionable.width}px ${$positionable.height}px; ${contained ? 'contain: strict;' : ''}`
   // $: transformCss = `left: ${$positionable.x - (Math.floor($positionable.x / CHUNK_WIDTH) * CHUNK_WIDTH)}px; top: ${$positionable.y  - (Math.floor($positionable.y / CHUNK_HEIGHT) * CHUNK_HEIGHT)}px; width: ${$positionable.width}px; height: ${$positionable.height}px; z-index: ${$positionable.key !== undefined ? $positionable.key : 0};`; // ${!visible ? 'display: none;' : ''} ${!visible ? 'content-visibility: hidden;' : ''}
   // $: transformCss = `left: 0; top: 0;transform: translate3d(${$positionable.x}px, ${$positionable.y}px, 0) scale(${$state.zoom}); width: ${$positionable.width}px; height: ${$positionable.height}px; z-index: ${$positionable.key !== undefined ? $positionable.key : 0};`;
@@ -82,6 +100,8 @@
   on:mousedown
   on:mousemove
   on:mouseover
+  on:mouseenter
+  on:mouseleave
   on:dragenter
   on:dragover
   on:dragleave

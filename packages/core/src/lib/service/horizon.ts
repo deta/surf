@@ -36,6 +36,7 @@ export class Horizon {
   board: IBoard<any, any> | null
   telaSettings: Writable<IBoardSettings> | null
   previewImageObjectURL: string | undefined
+  tint: Writable<string>
 
   api: API
   log: ScopedLogger
@@ -76,6 +77,7 @@ export class Horizon {
     this.signalChange = signalChange
     this.board = null
     this.telaSettings = null
+    this.tint = writable('#fefefe')
 
     this.stackingOrder.subscribe((stack) => {
       const cards = get(this.cards)

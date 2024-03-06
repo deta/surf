@@ -11,7 +11,8 @@
     Resizable,
     type IPositionable,
     LazyComponent,
-    hasClassOrParentWithClass
+    hasClassOrParentWithClass,
+    posToAbsolute
   } from '@horizon/tela'
 
   import type { Card, CardEvents } from '../../types/index'
@@ -19,14 +20,23 @@
   import type { Horizon } from '../../service/horizon'
   import { Icon } from '@horizon/icons'
   import CardContent from '../Cards/CardContent.svelte'
-  import { visorEnabled } from './HorizonManager.svelte'
+  import {
+    applyFocusMode,
+    focusModeEnabled,
+    focusModeTargets,
+    get2x2PaneAt,
+    getCardOnPane
+  } from '../../utils/focusMode'
+  import { visorEnabled } from '../../utils/visor'
 
   export let positionable: Writable<IPositionable<any>>
   export let horizon: Horizon
 
   $: board = horizon.board
   $: state = board?.state
+  $: selection = $state?.selection
   $: viewPort = $state?.viewPort
+  $: viewOffset = $state?.viewOffset
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('CardWrapper')
@@ -42,10 +52,16 @@
   let headerClickTimeout: ReturnType<typeof setTimeout> | null = null
   let dragOverTimeout: ReturnType<typeof setTimeout> | null = null
 
+  // Focus Mode
+  let isFocusDragging = false
+  let focusModeBackup: null | { x: number; y: number; width: number; height: number } = null
+  let focusSwitchTarget: null | number = null
+
   $: card = positionable as Writable<Card> // todo: fix this unnecessary cast
   $: cardTitle = $card.type[0].toUpperCase() + $card.type.slice(1)
   $: activeCardId = horizon.activeCardId
   $: active = $activeCardId === $card.id
+  $: selected = $selection?.has($card.id) || false
   $: allowDuplicating = ['text', 'browser'].includes($card.type)
 
   const updateCard = () => {
@@ -77,9 +93,38 @@
         }, 0)
       }
     }
+
+    // Focus Mode
+    if ($focusModeEnabled) {
+      isFocusDragging = true
+      focusModeBackup = { ...$positionable }
+      console.warn(focusModeBackup)
+    }
   }
 
   const handleDragEnd = (_: any) => {
+    isFocusDragging = false
+    if ($focusModeEnabled && focusModeBackup !== null) {
+      if (focusSwitchTarget !== null) {
+        focusModeTargets.update((v) => {
+          const order = v[1]
+          console.warn(`switching to ttagrt ${focusSwitchTarget}`)
+          order[focusSwitchTarget!] = $card.id
+          return v
+        })
+        applyFocusMode($viewOffset!, $viewPort!, true)
+      } else {
+        card.update((p) => {
+          p.xOverride = focusModeBackup!.xOverride
+          p.yOverride = focusModeBackup!.yOverride
+          p.widthOverride = focusModeBackup!.widthOverride
+          p.heightOverride = focusModeBackup!.heightOverride
+          p.focusStack = undefined
+          return p
+        })
+        focusModeBackup = null
+      }
+    }
     dispatch('endDrag', $card)
     const board = horizon.board
     if (!board) console.error('No board found ond rag end')
@@ -122,6 +167,35 @@
         headerClickTimeout = null
       }, 500)
     }
+  }
+
+  const onDragMove = (
+    e: CustomEvent<{ key: string; x: number; y: number; offset: { x: number; y: number } }>
+  ) => {
+    if (!$focusModeEnabled) return
+    const { clientX, clientY, offset } = e.detail
+    const abs = posToAbsolute(clientX, clientY, $viewOffset!.x, $viewOffset!.y, $viewPort!, 1)
+    card.update((v) => {
+      v.xOverride = abs.x
+      v.yOverride = abs.y
+      return v
+    })
+
+    // Check if has to switch places
+    // TODO: This is not very clean but works for now
+    const targetPane = get2x2PaneAt(clientX, clientY, $viewPort!)
+    focusSwitchTarget = targetPane
+    const targetCard = getCardOnPane(targetPane)
+    $focusModeTargets[0].forEach((c) => {
+      c.update((v) => {
+        v.dashHighlight = false
+        return v
+      })
+    })
+    targetCard.update((v) => {
+      v.dashHighlight = true
+      return v
+    })
   }
 
   const handleResizeBegin = () => {
@@ -195,9 +269,26 @@
     clearDragTimeout()
   }
 
+  const handleMouseEnter = (e: MouseEvent) => {
+    if (!get(focusModeEnabled) || !$card.focusStack || isFocusDragging) return
+    card.update((v) => {
+      v.yOverride -= 150
+      // v.zOverride += 9000
+      return v
+    })
+  }
+  const handleMouseLeave = (e: MouseEvent) => {
+    if (!get(focusModeEnabled) || !$card.focusStack || isFocusDragging) return
+    card.update((v) => {
+      v.yOverride += 150
+      // v.zOverride -= 9000
+      return v
+    })
+  }
+
   onMount(() => {
     // el.addEventListener('draggable_start', onDragStart)
-    // el.addEventListener('draggable_move', onDragMove)
+    el.addEventListener('draggable_move', onDragMove)
     el.addEventListener('draggable_end', handleDragEnd)
     el.addEventListener('resizable_end', updateCard)
     el.addEventListener('resizable_onMouseDown', handleResizeBegin)
@@ -206,7 +297,7 @@
 
   onDestroy(() => {
     // el && el.addEventListener('draggable_start', onDragStart)
-    // el && el.addEventListener('draggable_move', onDragMove)
+    el && el.addEventListener('draggable_move', onDragMove)
     el && el.removeEventListener('draggable_end', handleDragEnd)
     el && el.removeEventListener('resizable_end', updateCard)
     el && el.removeEventListener('resizable_onMouseDown', handleResizeBegin)
@@ -230,68 +321,73 @@
 <Positionable
   {positionable}
   data-id={$positionable.id}
-  class="card {$positionable.id} {active && 'active'}"
+  class="card {$positionable.id} {active && 'active'} {selected &&
+    'selected'} {$positionable.dashHighlight && 'dash-highlight'}"
   contained={false}
   on:mousedown={handleMouseDown}
   on:dragenter={handleDragEnter}
   on:dragover={handleDragOver}
   on:dragleave={handleDragLeave}
+  on:mouseenter={handleMouseEnter}
+  on:mouseleave={handleMouseLeave}
   bind:el
 >
   {#if !$visorEnabled}
-    <Resizable {positionable} direction="top-right" {minSize} {maxSize} />
-    <Resizable {positionable} direction="top-left" {minSize} {maxSize} />
-    <Resizable {positionable} direction="bottom-right" {minSize} {maxSize} />
-    <Resizable {positionable} direction="bottom-left" {minSize} {maxSize} />
-    <Resizable {positionable} direction="top" {minSize} {maxSize} />
-    <Resizable {positionable} direction="bottom" {minSize} {maxSize} />
-    <Resizable {positionable} direction="left" {minSize} {maxSize} />
-    <Resizable {positionable} direction="right" {minSize} {maxSize} />
+    {#if !$focusModeEnabled || $card.focusStack}
+      <Resizable {positionable} direction="top-right" {minSize} {maxSize} />
+      <Resizable {positionable} direction="top-left" {minSize} {maxSize} />
+      <Resizable {positionable} direction="bottom-right" {minSize} {maxSize} />
+      <Resizable {positionable} direction="bottom-left" {minSize} {maxSize} />
+      <Resizable {positionable} direction="top" {minSize} {maxSize} />
+      <Resizable {positionable} direction="bottom" {minSize} {maxSize} />
+      <Resizable {positionable} direction="left" {minSize} {maxSize} />
+      <Resizable {positionable} direction="right" {minSize} {maxSize} />
 
-    <div class="draggable-bar">
-      <Draggable {positionable} />
-    </div>
+      <div class="draggable-bar">
+        <Draggable {positionable} />
+      </div>
 
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div
-      on:mousedown={handleCardHeaderMouseDown}
-      class="card-header"
-      data-position="top"
-      data-inset={false}
-      data-hide={false}
-    >
-      <Draggable {positionable} class="">
-        <div class="card-header-content">
-          <!-- <div class="card-title">{cardTitle}</div> -->
-          <div class="card-header-actions">
-            <button on:click={handleDelete}>
-              <Icon name="close" />
-            </button>
-            <!-- <button on:click={handleCopy}>
-              <Icon name="copy" />
-            </button> -->
-          </div>
-
-          <!-- svelte-ignore a11y-no-static-element-interactions -->
-          <div class="card-drag-indicator">
-            <div></div>
-            <div></div>
-            <div></div>
-          </div>
-
-          <div class="card-header-actions end-placement">
-            {#if allowDuplicating}
-              <button
-                use:tooltip={{ content: 'Create similar', action: 'hover' }}
-                on:click={handleDuplicate}
-              >
-                <Icon name="add" />
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <div
+        on:mousedown={handleCardHeaderMouseDown}
+        class="card-header"
+        data-position="top"
+        data-inset={false}
+        data-hide={false}
+      >
+        <Draggable {positionable} class="">
+          <div class="card-header-content">
+            <!-- <div class="card-title">{cardTitle}</div> -->
+            <div class="card-header-actions">
+              <button on:click={handleDelete}>
+                <Icon name="close" />
               </button>
-            {/if}
+              <!-- <button on:click={handleCopy}>
+                <Icon name="copy" />
+              </button> -->
+            </div>
+
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div class="card-drag-indicator">
+              <div></div>
+              <div></div>
+              <div></div>
+            </div>
+
+            <div class="card-header-actions end-placement">
+              {#if allowDuplicating}
+                <button
+                  use:tooltip={{ content: 'Create similar', action: 'hover' }}
+                  on:click={handleDuplicate}
+                >
+                  <Icon name="add" />
+                </button>
+              {/if}
+            </div>
           </div>
-        </div>
-      </Draggable>
-    </div>
+        </Draggable>
+      </div>
+    {/if}
   {:else}
     <button class="visor-delete" on:click|capture={handleDelete}>
       <Icon name="close" />
