@@ -26,7 +26,6 @@
   import FindInPage from './FindInPage.svelte'
   import StackItem from '../../Stack/StackItem.svelte'
   import type { DetectedResource, DetectedWebApp } from '@horizon/web-parser'
-  import { visorEnabled } from '../../Horizon/HorizonManager.svelte'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -43,6 +42,9 @@
   let inputEl: HTMLInputElement
   let findInPage: FindInPage | undefined
   let currentCardHistory = writable()
+
+  // TODO: Move into visor.ts
+  $: visorEnabled = horizon.visorEnabled
 
   let initialSrc = $card.data.initialLocation
   $: if ($card.data.historyStackIds) {

@@ -1,6 +1,5 @@
 import { app, BrowserWindow, shell, session, screen } from 'electron'
 import { join } from 'path'
-import icon from '../../resources/icon.png?asset'
 import { is } from '@electron-toolkit/utils'
 import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
@@ -64,8 +63,9 @@ export function createWindow() {
     fullscreenable: true,
     show: false,
     autoHideMenuBar: true,
-    titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
-    ...(process.platform === 'linux' ? { icon } : {}),
+    frame: false, // TODO: Figure this out for windows but idc
+    // titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
+    // ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [`--userDataPath=${app.getPath('userData')}`],

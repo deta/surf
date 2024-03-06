@@ -1,8 +1,3 @@
-<script context="module" lang="ts">
-  export const visorEnabled = writable(false)
-  export const visorPinch = writable(0)
-</script>
-
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte'
   import { get, writable } from 'svelte/store'
@@ -37,6 +32,9 @@
   import DrawerWrapper from './DrawerWrapper.svelte'
   import { ResourceManager } from '../../service/resources'
   import { expoOut } from 'svelte/easing'
+  import AppBar from './AppBar.svelte'
+  import SplashScreen from '../SplashScreen.svelte'
+  import { visorEnabled, visorPinch } from '../../utils/visor'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -683,6 +681,9 @@
     {$showStackOverview ? '' : $activeHorizon?.state === 'hot' ? '🔥' : '🧊'}</title
   >
 </svelte:head>
+
+<SplashScreen />
+<AppBar horizon={activeHorizon} />
 
 {#if $visorEnabled}
   <div id="visor">

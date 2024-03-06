@@ -23,13 +23,23 @@
   import HorizonInfo from './HorizonInfo.svelte'
   import Grid from './Grid.svelte'
   import {
+    APP_BAR_WIDTH,
     EDGE_SNAP_FACTOR,
     GRID_SIZE_COARSE,
     GRID_SIZE_FINE,
-    QUICK_SNAP_THRESHOLD
+    QUICK_SNAP_THRESHOLD,
+    SAFE_AREA_PADDING
   } from '../../constants/horizon'
   import { debounce, isInsideViewport, lerp, map } from '../../../../../tela/dist/utils'
-  import { visorEnabled, visorPinch } from './HorizonManager.svelte'
+  import { quadInOut } from 'svelte/easing'
+  import { fade } from 'svelte/transition'
+  import {
+    applyFocusMode,
+    focusModeEnabled,
+    focusModeTargets,
+    resetFocusMode
+  } from '../../utils/focusMode'
+  import { visorEnabled, visorPinch } from '../../utils/visor'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -91,6 +101,8 @@
   let requestNewPreviewIntervalId: number | undefined
   let isDraggingCard = false
 
+  $: horizonTint = horizon?.tint
+
   $: if (!active && horizon.state !== 'hot') {
     log.error('edge case! horizon is active but not hot')
   }
@@ -109,6 +121,8 @@
       _state.zoom.set(clamp(window.innerHeight / 1080, 1, Infinity))
       return _state
     })
+    if ($focusModeEnabled) applyFocusMode($viewOffset, $viewPort, true)
+    if ($visorEnabled) applyVisorList()
   }
 
   const loadHorizon = () => {
@@ -257,6 +271,7 @@
   }
 
   const handleKeydown = (e: KeyboardEvent) => {
+    // Visor keys
     if (e.key === 'Enter' && $visorEnabled && $activeCardId !== null) {
       // Prevent centering in text cards & browsers for now.
       const card = $cards.find((c) => get(c).id === $activeCardId)
@@ -272,20 +287,55 @@
         horizon.scrollToCardCenter($activeCardId)
         horizon.moveCardToStackingTop($activeCardId)
       }, 800)
+    } else if (e.key === 'f' && e.metaKey) {
+      visorEnabled.set(!get(visorEnabled))
     } else if ((e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey)) && $visorEnabled) {
       visorSelectPrev()
     } else if ((e.key === 'ArrowRight' || e.key === 'Tab') && $visorEnabled) {
       visorSelectNext()
-    } else if (e.key === 'Tab' && e.altKey) {
+    }
+
+    // Focus Mode keys
+    else if (e.code === 'Space' && e.shiftKey) {
+      // TODO: Need to handle forwared shift + space key frorm browserCard!
+      e.preventDefault()
+      e.stopPropagation()
+      if ($activeCardId !== null) {
+        const target = $cards.find((e) => get(e).id === $activeCardId)
+        if (!target) console.error('Well this shoudl thappen!') // TODO: better err msg
+      }
+
+      if (!$focusModeEnabled && get($state.selection).size > 0) {
+        enableFocusMode([...get($state.selection)])
+      } else if (!$focusModeEnabled && $activeCardId !== null) {
+        enableFocusMode([$activeCardId])
+      } else {
+        disableFocusMode()
+      }
+    } else if (e.key === 'Escape') {
+      if ($focusModeEnabled) {
+        disableFocusMode()
+      }
+    }
+
+    // General keys
+    else if (e.key === 'Tab' && e.altKey) {
       // Alternative alt + K / L ?
       //if (e.location !== 2) return
       if (e.shiftKey) {
-        console.warn('Prev card')
-        tryFocusPrevCard()
+        tryFocusPrevCard() // TODO: refac/rename
       } else {
-        console.warn('Next card')
-        tryFocusNextCard()
+        tryFocusNextCard() // TODO: refac/rename
       }
+    } else if (e.key === 'a' && e.metaKey) {
+      e.preventDefault()
+      $state.selection.update((v) => {
+        v.clear()
+        $cards.forEach((c) => {
+          v.add(get(c).id)
+        })
+        return v
+      })
     }
     // TODO: old, remove?
     // if (e.key === 'Control' && isDraggingCard) {
@@ -356,6 +406,27 @@
 
   // TODO fix types to get rid of this type conversion
   $: positionables = cards as unknown as Writable<Writable<IPositionable<any>>[]>
+
+  /* FOCUS MODE*/
+  const enableFocusMode = (cardIds?: string[]) => {
+    if (cardIds === undefined) return
+    $state.selection.set(new Set())
+
+    const focusCards = $cards.filter((c) => cardIds.includes(get(c).id))
+    focusModeTargets.set([focusCards, [...focusCards.slice(0, 4).map((e) => get(e).id)]]) // TODO: Get order somewhere? nono only for stacks?!
+
+    $settings.CAN_DRAW = false
+    $settings.CAN_PAN = false
+    $settings.CAN_SELECT = false
+    applyFocusMode($viewOffset, $viewPort)
+  }
+  const disableFocusMode = () => {
+    resetFocusMode() // TODO: Can this be auto subscription inside focusMode.ts ?
+
+    $settings.CAN_DRAW = true
+    $settings.CAN_PAN = true
+    $settings.CAN_SELECT = true
+  }
 
   /* RAPID SWITCHING */
   const tryFocusNextCard = () => {
@@ -607,7 +678,7 @@
     applyVisorList()
   }
 
-  // Simple throttle function
+  // TODO: Move this into utils! Simple throttle function
   const throttle = (func: Function, limit: number) => {
     let inThrottle: boolean
     return function () {
@@ -764,6 +835,7 @@
     applyVisorList()
   }
 
+  // Try to cleanup
   onDestroy(
     cards.subscribe((v) => {
       if ($visorEnabled) handleSearchChange($visorSearchTerm)
@@ -836,6 +908,8 @@
   })
 
   onDestroy(() => {
+    if ($focusModeEnabled) disableFocusMode()
+
     horizon.detachBoard()
     horizon.detachSettings()
     clearInterval(requestNewPreviewIntervalId)
@@ -861,10 +935,27 @@
   data-horizon-state={horizon.state}
   data-horizon-active={active}
   class="horizon"
+  style="--horizon-tint: {$horizonTint};"
 >
-  {#if !inOverview}
-    <HorizonInfo {horizon} on:change />
-  {/if}
+  <svg
+    class="noiseBg"
+    viewBox="0 0 {$viewPort.w} {$viewPort.h + $viewPort.y}"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <filter id="noiseFilter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+    </filter>
+
+    <rect width="100%" height="100%" filter="url(#noiseFilter)" />
+  </svg>
+  <!-- <svg class="noiseBg" viewBox="0 0 {$viewPort.w} {$viewPort.h}"><defs><filter id="nnnoise-filter" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse" color-interpolation-filters="linearRGB">
+	      <feTurbulence type="turbulence" baseFrequency="0.171" numOctaves="4" seed="15" stitchTiles="stitch" x="0%" y="0%" width="100%" height="100%" result="turbulence"></feTurbulence>
+	      <feSpecularLighting surfaceScale="4" specularConstant="0.4" specularExponent="20" lighting-color="#6b00ff" x="0%" y="0%" width="100%" height="100%" in="turbulence" result="specularLighting">
+    		<feDistantLight azimuth="3" elevation="60"></feDistantLight>
+  	</feSpecularLighting>
+
+</filter></defs><rect width="100%" height="100%" fill="#ffffffff"></rect><rect width="700" height="700" fill="#6b00ff" filter="url(#nnnoise-filter)"></rect></svg> -->
+  <div class="tintBg"></div>
 
   <Board
     {settings}
@@ -879,7 +970,7 @@
   >
     <svelte:fragment slot="selectRect">
       <div
-        class="selectionRect"
+        class="selectionRect {$state.mode}"
         style="left: {snapToGrid($selectionRect?.x || 0, $settings.GRID_SIZE)}px; top: {snapToGrid(
           $selectionRect?.y || 0,
           $settings.GRID_SIZE
@@ -891,7 +982,24 @@
           $settings.GRID_SIZE
         )}px; z-index: 9999999;"
       >
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"
+        {#if get($state.mode) === 'modSelect'}
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <pattern
+              id="dotGrid"
+              x="{$selectionRect.w / 18 / 2}px"
+              y="{$selectionRect.h / 18 / 2}px"
+              width="{$selectionRect.w / 18}px"
+              height="{$selectionRect.h / 18}px"
+              patternUnits="userSpaceOnUse"
+            >
+              <circle cx="0.5" cy="0.5" r="1" fill="black" fill-opacity="100%" />
+            </pattern>
+
+            <!-- Left square with user space tiles -->
+            <rect x="0" y="0" width="100%" height="100%" fill="url(#dotGrid)" />
+          </svg>
+        {/if}
+        <!-- <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"
           ><defs
             ><pattern
               id="a"
@@ -907,13 +1015,22 @@
               /></pattern
             ></defs
           ><rect width="800%" height="800%" transform="translate(0,0)" fill="url(#a)" /></svg
-        >
+        > -->
       </div>
       <!-- <div class="selectionRectShadow" style="left: {snapToGrid($selectionRect?.x || 0, $settings.GRID_SIZE)}px; top: {snapToGrid($selectionRect?.y || 0, $settings.GRID_SIZE)}px; width: {snapToGrid($selectionRect?.w || 0, $settings.GRID_SIZE)}px; height: {snapToGrid($selectionRect?.h || 0, $settings.GRID_SIZE)}px; z-index: 9999999;"></div> -->
     </svelte:fragment>
 
     <svelte:fragment slot="raw">
-      <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={isDraggingCard ? 50 : 35} />
+      <!-- <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={isDraggingCard ? 50 : 35} /> -->
+
+      {#if $focusModeEnabled}
+        <div
+          class="focus-background"
+          style="top: {-$viewPort.y}px;left: {$viewOffset.x -
+            $viewPort.x}px; bottom: -{$viewPort.y}px;"
+          transition:fade={{ duration: 110, easing: quadInOut }}
+        ></div>
+      {/if}
 
       <div
         class="abyss-indicator"
@@ -1024,5 +1141,25 @@
     color: rgb(196, 196, 196);
     font-weight: 400;
     font-size: 0.8rem;
+  }
+  .noiseBg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    filter: contrast(340%) brightness(200%);
+    /* mix-blend-mode: color-dodge; */
+  }
+  .tintBg {
+    background: linear-gradient(30deg, rgba(17, 13, 244, 0.364) 10%, rgba(155, 119, 233, 0.15) 50%);
+    background: linear-gradient(30deg, var(--horizon-tint) 10%, transparent 50%);
+    position: absolute;
+    z-index: 10;
+    inset: 0;
+    mix-blend-mode: color-dodge;
+
+    transition: all 2.5s ease; /* TODO: This doesnt work!? */
+  }
+  .horizon {
+    /* background: linear-gradient(to top right, rgba(24, 68, 227, 0.657) 10%, transparent 50%); */
   }
 </style>

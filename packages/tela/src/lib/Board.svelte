@@ -977,8 +977,8 @@
    * Use capture, to ensure select also works on top of draggable stuff.
    */
   function onMouseDown_idleCapture(e: MouseEvent | TouchEvent) {
-    // TODO(@maxu): this is tmp only
-    return
+    // // TODO(@maxu): this is tmp only
+    // return
     if (!e.shiftKey || !$settings.CAN_SELECT) return
     const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     const { x: absX, y: absY } = posToAbsolute(
@@ -1268,40 +1268,42 @@
       })
     }
 
-    if (cursorAtLeftEdge || cursorAtRightEdge) {
-      if (!dragState.autoScroll) {
-        dragState.autoScroll = true
+    if ($settings.CAN_PAN) {
+      if (cursorAtLeftEdge || cursorAtRightEdge) {
+        if (!dragState.autoScroll) {
+          dragState.autoScroll = true
 
-        let start: number, previousTimeStamp: number
-        const stepFunc = (timeStamp: number) => {
-          if (start === undefined) {
-            start = timeStamp
+          let start: number, previousTimeStamp: number
+          const stepFunc = (timeStamp: number) => {
+            if (start === undefined) {
+              start = timeStamp
+            }
+            const elapsed = timeStamp - start
+
+            if (previousTimeStamp !== timeStamp) {
+              previousTimeStamp = timeStamp
+
+              const step = Math.min(
+                Math.floor(elapsed / INCREASE_SCROLL_EVERY),
+                AUTO_SCROLL_AMOUNTS.length - 1
+              )
+              const amount = AUTO_SCROLL_AMOUNTS[step]
+
+              performAutoScroll(amount, cursorAtLeftEdge)
+            }
+
+            if (dragState.autoScroll) {
+              window.requestAnimationFrame(stepFunc)
+            }
           }
-          const elapsed = timeStamp - start
 
-          if (previousTimeStamp !== timeStamp) {
-            previousTimeStamp = timeStamp
-
-            const step = Math.min(
-              Math.floor(elapsed / INCREASE_SCROLL_EVERY),
-              AUTO_SCROLL_AMOUNTS.length - 1
-            )
-            const amount = AUTO_SCROLL_AMOUNTS[step]
-
-            performAutoScroll(amount, cursorAtLeftEdge)
-          }
-
-          if (dragState.autoScroll) {
-            window.requestAnimationFrame(stepFunc)
-          }
+          window.requestAnimationFrame(stepFunc)
         }
-
-        window.requestAnimationFrame(stepFunc)
+      } else {
+        dragState.autoScroll = false
+        dragState.offset.x = absX - dragState.init.x
+        dragState.curr.x = absX
       }
-    } else {
-      dragState.autoScroll = false
-      dragState.offset.x = absX - dragState.init.x
-      dragState.curr.x = absX
     }
 
     dragState.offset.y = absY - dragState.init.y
@@ -1335,40 +1337,38 @@
         }
         let snapMode: 'third-left' | 'half-left' | 'third-center' | 'half-right' | 'third-right' =
           'third-center'
-        const PADD = $settings.GRID_SIZE
-        if (clientX <= $viewPort.w / 9) {
+        const PADD = 10
+        if (clientX <= ($viewPort.w - 70) / 9 + 70) {
           snapMode = 'third-left'
-        } else if (clientX <= ($viewPort.w / 9) * 3) {
+        } else if (clientX <= (($viewPort.w - 70) / 9) * 3 + 70) {
           snapMode = 'half-left'
-        } else if (clientX <= ($viewPort.w / 9) * 6) {
+        } else if (clientX <= (($viewPort.w - 70) / 9) * 6 + 70) {
           snapMode = 'third-center'
-        } else if (clientX <= ($viewPort.w / 9) * 8) {
+        } else if (clientX <= (($viewPort.w - 70) / 9) * 8 + 70) {
           snapMode = 'half-right'
         } else {
           snapMode = 'third-right'
         }
 
         if (snapMode === 'third-left') {
-          p.x = $viewOffset.x
-          p.width = $viewPort.w / 3 - PADD
+          p.x = $viewOffset.x + 70
+          p.width = ($viewPort.w - 70) / 3 - PADD / 2
         } else if (snapMode === 'half-left') {
-          p.x = $viewOffset.x
-          p.width = $viewPort.w / 2 - PADD
+          p.x = $viewOffset.x + 70
+          p.width = ($viewPort.w - 70) / 2 - PADD / 2
         } else if (snapMode === 'third-center') {
-          p.x = $viewOffset.x + $viewPort.w / 3 + PADD
-          p.width = $viewPort.w / 3 - PADD * 3 - PADD
+          p.x = $viewOffset.x + 70 + ($viewPort.w - 70) / 3 + PADD / 2
+          p.width = ($viewPort.w - 70) / 3 - PADD / 2
         } else if (snapMode === 'half-right') {
-          p.x = $viewOffset.x + $viewPort.w / 2 + PADD
-          p.width = $viewPort.w / 2 - 25 - PADD
+          p.x = $viewOffset.x + 70 + ($viewPort.w - 70) / 2 + PADD / 2
+          p.width = ($viewPort.w - 70) / 2 - PADD / 2
         } else if (snapMode === 'third-right') {
-          p.x = $viewOffset.x + ($viewPort.w / 3) * 2 - PADD
-          p.width = $viewPort.w / 3 - 25 + PADD
+          p.x = $viewOffset.x + 70 + (($viewPort.w - 70) / 3) * 2 + PADD
+          p.width = ($viewPort.w - 70) / 3 - PADD
         }
 
         p.y = 0
-        // TODO: Look into the padding again. Its off as the viewport calculations
-        // dont include padding set on tela-container!
-        p.height = $viewPort.h - 50 - ($viewPort.h % $settings.GRID_SIZE)
+        p.height = $viewPort.h
         return p
       } else {
         if (quickPreviewBackup.x !== -1) {
@@ -2133,7 +2133,7 @@
     justify-content: space-evenly;
     padding: 5px;
     top: 0;
-    left: 0;
+    left: 70px;
     right: 0;
     gap: 0.5rem;
     opacity: 0%;

@@ -7,6 +7,8 @@
   --theme-selection-saturation: 74%;
   --theme-selection-lightness: 61%;
   --tooltip-arrow-size: 10px;
+
+  --safe-area-size: 10px;
 }
 
 .light {
@@ -106,14 +108,21 @@
   position: relative;
   z-index: 1;
 
-  background: var(hsl(var(--theme-background-hue, 0),
-        var(--theme-background-saturation, 0%),
-        var(--theme-background-lightness, 100%)));
-  background-color: hsl(var(--theme-background-hue, 0),
-      var(--theme-background-saturation, 0%),
-      var(--theme-background-lightness, 100%));
-  background-size: cover;
-  background-position: center center;
+  // background: var(hsl(var(--theme-background-hue, 0),
+  //       var(--theme-background-saturation, 0%),
+  //       var(--theme-background-lightness, 100%)));
+  // background-color: hsl(var(--theme-background-hue, 0),
+  //     var(--theme-background-saturation, 0%),
+  //     var(--theme-background-lightness, 100%));
+  // background-size: cover;
+  // background-position: center center;
+  background: #F7FCFE;
+  background: transparent
+  // background:
+  //     linear-gradient(to right, rgba(24, 68, 227, 0.657), transparent),
+  //     url(https://grainy-gradients.vercel.app/noise.svg);
+  //   filter: contrast(170%) brightness(100%);
+
 }
 
 .card {
@@ -123,34 +132,45 @@
   // overflow: hidden;
   position: relative;
 
+  box-shadow: rgba(255,255,255, 0.4) 0px 0px 25px 10px;
+
   .content {
     position: relative;
     z-index: 2;
     flex: 1;
-    background: #ffffff;
-    outline: 2px solid #e2e2e2;
+    background: #ededed;
+    outline: 1px solid transparent;
+    // outline-offset: 0.5px;
     border-radius: var(--theme-border-radius);
     overflow: hidden;
+    border: 1px solid black;
+  }
+
+  &.dragging {
+    box-shadow: none;
+  }
+
+  &.dash-highlight {
+    .content {
+      border-style: dashed;
+      border-color: red;
+    }
   }
 
   &.active>.content {
-    outline-color: rgba(223, 39, 127, 0.8);
+    outline-color: rgba(9, 9, 9, 0.71);
   }
 }
 
 .tela-container {
   padding: 10px;
-  padding-top: 30px;
-
-  background: url('../../../../public/assets/grid-background.png');
-  background-size: 10% 10%;
-  background-repeat: repeat;
+  z-index: 10;
 }
 
 html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
-.tela-board.mode-resizing,
-.tela-board.mode-select,
-.tela-board.mode-modSelect) * {
+  .tela-board.mode-resizing,
+  .tela-board.mode-select,
+  .tela-board.mode-modSelect) * {
   // pointer-events: none !important;
   user-select: none !important;
 }
@@ -287,6 +307,8 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
     color: hsla(var(--theme-selection-hue),
         var(--theme-selection-saturation), calc(var(--theme-selection-lightness) - 10%), 0.5);
     border-radius: var(--theme-border-radius);
+
+    // mix-blend-mode: color-burn;
   }
 
   .selectionRectShadow {
@@ -301,8 +323,18 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
     transition: all 160ms cubic-bezier(.34, 1.56, .64, 1);
   }
 
-  &.mode-modSelect .selectionRect {
+  .selectionRect.select {
     border-style: dashed;
+    background: transparent !important;
+  }
+
+  .focus-background {
+    position: fixed;
+    width:100vw;
+    height: 100vh;
+    background: rgba(165,165,165,0.15);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
   }
 
   .card {
@@ -319,6 +351,10 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
     .content {
       transition: all 160ms cubic-bezier(.34, 1.56, .64, 1);
       transition-delay: 70ms;
+    }
+
+    &.selected .content {
+      outline-color: blue;
     }
 
     &.dragging {
