@@ -1,8 +1,8 @@
-import { ResourceTypes, type ResourceDataPost, ResourceDataArticle } from '@horizon/types'
+import { ResourceTypes, ResourceDataArticle } from '@horizon/types'
 import { Readability, isProbablyReaderable } from '@mozilla/readability'
 
 import { MetadataExtractor, WebAppExtractor } from '../extractors'
-import type { DetectedWebApp, WebApp } from '../types'
+import type { DetectedWebApp } from '../types'
 import { parseDateString } from '../utils'
 
 export type RawArticleData = {

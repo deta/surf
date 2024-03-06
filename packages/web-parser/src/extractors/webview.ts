@@ -34,6 +34,7 @@ export class WebViewExtractor {
     this.webview.setAttribute('data-webview-extractor', 'true')
     this.webview.src = this.url.href
     this.webview.partition = 'persist:horizon'
+    // @ts-ignore
     this.webview.preload = `file://${window.api.webviewPreloadPath}`
     this.webview.webpreferences = 'autoplayPolicy=user-gesture-required'
     this.webview.allowpopups = true
@@ -111,10 +112,10 @@ export class WebViewExtractor {
       }
 
       this.resourceDetectionCallback = (resource) => {
-        console.log('Detected resource', resource)
+        console.log('Detected resource', resource?.resource)
         this.resourceDetectionCallback = null
         this.destroyWebview()
-        resolve(resource)
+        resolve(resource?.resource ?? null)
       }
 
       this.webview?.send('webview-event', { type: 'get-resource' })

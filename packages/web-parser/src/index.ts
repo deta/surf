@@ -128,7 +128,7 @@ export class WebParser {
 
     const extracted = await webviewExtractor.detectResource()
 
-    return extracted
+    return extracted as DetectedResource | null
   }
 
   static getAppParser(url: string) {

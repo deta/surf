@@ -152,24 +152,22 @@ export class SlackDocumentParser extends DOMExtractor {
       // add hover styles
       let idx = 0
 
-      const removeMouseOverListener = this.attachEventListener(element, 'mouseover', (e) => {
+      const removeMouseOverListener = this.attachEventListener(element, 'mouseover', (_e: any) => {
         idx += 1
 
         if (idx > 1) return
-
         ;(element as HTMLElement).style.backgroundColor = '#99d5ff66'
       })
 
-      const removeMouseOutListener = this.attachEventListener(element, 'mouseout', (e) => {
+      const removeMouseOutListener = this.attachEventListener(element, 'mouseout', (_e: any) => {
         idx -= 1
 
         if (idx > 0) return
-
         ;(element as HTMLElement).style.backgroundColor = 'unset'
       })
 
       // attach click handler
-      const removeListener = this.attachEventListener(element, 'click', (e) => {
+      const removeListener = this.attachEventListener(element, 'click', (e: any) => {
         console.log('Message clicked', e)
         e.preventDefault()
         e.stopPropagation()
@@ -182,7 +180,7 @@ export class SlackDocumentParser extends DOMExtractor {
 
     // click outside
 
-    const removeWindowListener = this.attachEventListener(window, 'click', (e) => {
+    const removeWindowListener = this.attachEventListener(window, 'click', (e: any) => {
       console.log('Window click', e)
 
       callback(null)

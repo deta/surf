@@ -114,16 +114,20 @@
     const webParser = new WebParser(parsedInput.url)
 
     if (!parsedInput.appInfo || !parsedInput.appInfo.resourceType) {
-      log.error('No appInfo found')
-      return
+      log.warn('No appInfo found')
     }
 
     // Extract a resource from the web page using a webview, this should happen only when saving the resource
-    const rawResourceData = await webParser.extractResourceUsingWebview(document)
-    log.debug('ResourceData', rawResourceData)
+    const extractedResource = await webParser.extractResourceUsingWebview(document)
+    log.debug('extractedResource', extractedResource)
+
+    if (!extractedResource) {
+      log.error('No resource extracted')
+      return
+    }
 
     const resource = await resourceManager.createResourceOther(
-      new Blob([JSON.stringify(rawResourceData)], { type: parsedInput.appInfo.resourceType }),
+      new Blob([JSON.stringify(extractedResource.data)], { type: extractedResource.type }),
       {
         name: parsedInput.linkMetadata.title,
         alt: parsedInput.linkMetadata.description,
@@ -133,6 +137,8 @@
 
     log.debug('Created resource', resource)
 
+    detectedInput = false
+    parsedInput = null
     drawer.searchValue.set('')
     searchQuery.set({ value: '', tab: 'all' })
   }

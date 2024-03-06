@@ -1,7 +1,7 @@
 import { ResourceTypes, ResourceDataLink } from '@horizon/types'
 
 import { MetadataExtractor, WebAppExtractor } from '../extractors'
-import type { DetectedWebApp, WebApp } from '../types'
+import type { DetectedWebApp } from '../types'
 
 export class LinkParser extends WebAppExtractor {
   metadataExtractor: MetadataExtractor
