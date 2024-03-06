@@ -211,6 +211,9 @@ pub struct ResourceMetadata {
 
     #[serde(default)]
     pub alt: String,
+
+    #[serde(default)]
+    pub user_context: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -229,12 +232,7 @@ pub struct CardPosition {
 
 impl CardPosition {
     pub fn new(position_array: &[i64; 2]) -> CardPosition {
-        let pos_str = format!(
-            //"[{:?}, {:?}, {:?}]",
-            "[{:?}.0, {:?}.0]",
-            position_array[0],
-            position_array[1] //, position_array[2]
-        );
+        let pos_str = format!("[{:?}.0, {:?}.0]", position_array[0], position_array[1]);
         CardPosition {
             rowid: None,
             position: pos_str,

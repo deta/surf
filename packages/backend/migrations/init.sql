@@ -57,6 +57,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS resource_metadata USING fts5(
     name,
     source_uri,
     alt,
+    user_context,
     tokenize="trigram" 
 );
 

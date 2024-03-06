@@ -346,8 +346,8 @@ impl Database {
         resource_metadata: &ResourceMetadata,
     ) -> BackendResult<()> {
         tx.execute(
-            "INSERT INTO resource_metadata (id, resource_id, name, source_uri, alt) VALUES (?1, ?2, ?3, ?4, ?5)",
-            rusqlite::params![resource_metadata.id, resource_metadata.resource_id, resource_metadata.name, resource_metadata.source_uri, resource_metadata.alt]
+            "INSERT INTO resource_metadata (id, resource_id, name, source_uri, alt, user_context) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            rusqlite::params![resource_metadata.id, resource_metadata.resource_id, resource_metadata.name, resource_metadata.source_uri, resource_metadata.alt, resource_metadata.user_context]
         )?;
         Ok(())
     }
@@ -357,8 +357,8 @@ impl Database {
         resource_metadata: &ResourceMetadata,
     ) -> BackendResult<()> {
         self.conn.execute(
-            "UPDATE resource_metadata SET resource_id = ?2, name = ?3, source_uri = ?4, alt = ?5 WHERE id = ?1",
-            rusqlite::params![resource_metadata.id, resource_metadata.resource_id, resource_metadata.name, resource_metadata.source_uri, resource_metadata.alt]
+            "UPDATE resource_metadata SET resource_id = ?2, name = ?3, source_uri = ?4, alt = ?5, user_context=?6 WHERE id = ?1",
+            rusqlite::params![resource_metadata.id, resource_metadata.resource_id, resource_metadata.name, resource_metadata.source_uri, resource_metadata.alt, resource_metadata.user_context]
         )?;
         Ok(())
     }
@@ -378,7 +378,7 @@ impl Database {
         &self,
         resource_id: &str,
     ) -> BackendResult<Option<ResourceMetadata>> {
-        let query = "SELECT id, resource_id, name, source_uri, alt FROM resource_metadata WHERE resource_id = ?1 LIMIT 1";
+        let query = "SELECT id, resource_id, name, source_uri, alt, user_context FROM resource_metadata WHERE resource_id = ?1 LIMIT 1";
         self.conn
             .query_row(query, rusqlite::params![resource_id], |row| {
                 Ok(ResourceMetadata {
@@ -387,6 +387,7 @@ impl Database {
                     name: row.get(2)?,
                     source_uri: row.get(3)?,
                     alt: row.get(4)?,
+                    user_context: row.get(5)?,
                 })
             })
             .optional()
@@ -900,14 +901,15 @@ impl Database {
                         name: row.get(2)?,
                         source_uri: row.get(3)?,
                         alt: row.get(4)?,
+                        user_context: row.get(5)?,
                     }),
                     resource: Resource {
-                        id: row.get(5)?,
-                        resource_path: row.get(6)?,
-                        resource_type: row.get(7)?,
-                        created_at: row.get(8)?,
-                        updated_at: row.get(9)?,
-                        deleted: row.get(10)?,
+                        id: row.get(6)?,
+                        resource_path: row.get(7)?,
+                        resource_type: row.get(8)?,
+                        created_at: row.get(9)?,
+                        updated_at: row.get(10)?,
+                        deleted: row.get(11)?,
                     },
                     text_content: None,
                     resource_tags: None,
@@ -942,7 +944,7 @@ impl Database {
             FROM resource_metadata M
             LEFT JOIN resource_text_content T ON M.resource_id = T.resource_id
             LEFT JOIN resources R ON M.resource_id = R.id
-            WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1 OR T.content LIKE ?1)"
+            WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1 OR M.user_context LIKE ?1 OR T.content LIKE ?1)"
             .to_owned();
         if let Some(tags) = tags {
             if !tags.is_empty() {
@@ -963,14 +965,15 @@ impl Database {
                         name: row.get(2)?,
                         source_uri: row.get(3)?,
                         alt: row.get(4)?,
+                        user_context: row.get(5)?,
                     }),
                     resource: Resource {
-                        id: row.get(5)?,
-                        resource_path: row.get(6)?,
-                        resource_type: row.get(7)?,
-                        created_at: row.get(8)?,
-                        updated_at: row.get(9)?,
-                        deleted: row.get(10)?,
+                        id: row.get(6)?,
+                        resource_path: row.get(7)?,
+                        resource_type: row.get(8)?,
+                        created_at: row.get(9)?,
+                        updated_at: row.get(10)?,
+                        deleted: row.get(11)?,
                     },
                     text_content: None,
                     // TODO: should we populate the resource tags?
