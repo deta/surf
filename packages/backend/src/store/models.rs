@@ -211,6 +211,9 @@ pub struct ResourceMetadata {
 
     #[serde(default)]
     pub alt: String,
+
+    #[serde(default)]
+    pub user_context: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
