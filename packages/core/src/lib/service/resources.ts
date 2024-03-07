@@ -18,6 +18,7 @@ import {
  TODO:
  - move over other card data to SFFSResource 
  - handle errors
+ - use the relevant enum, and do not hard code the values
 */
 
 export class ResourceTag {
@@ -244,7 +245,7 @@ export class ResourceManager {
 
   async createResource(
     type: string,
-    data: Blob,
+    data?: Blob,
     metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {
@@ -263,8 +264,10 @@ export class ResourceManager {
     const resource = this.createResourceObject(sffsItem)
 
     // store the data in the resource and write it to sffs
-    resource.rawData = data
-    await resource.writeData()
+    if (data) {
+      resource.rawData = data
+      await resource.writeData()
+    }
 
     this.log.debug('created resource', resource)
 
@@ -323,6 +326,27 @@ export class ResourceManager {
     // delete resource from sffs
     await this.sffs.deleteResource(id)
     this.resources.update((resources) => resources.filter((r) => r.id !== id))
+  }
+
+  async reloadResource(id: string) {
+    const resourceItem = await this.sffs.readResource(id)
+    if (!resourceItem) {
+      return null
+    }
+    const resource = this.createResourceObject(resourceItem)
+
+    this.resources.update((resources) => {
+      const index = resources.findIndex((r) => r.id === id)
+      if (index > -1) {
+        resources[index] = resource
+      } else {
+        resources.push(resource)
+      }
+
+      return resources
+    })
+
+    return resource
   }
 
   async updateResourceData(id: string, data: Blob, write = true) {

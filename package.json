@@ -16,12 +16,15 @@
     "build:tela": "yarn workspace @horizon/tela build",
     "lint": "turbo lint",
     "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write \"**/*.{js,ts,tsx,yml,json,md,svelte}\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
     "@horizon/eslint-config": "*",
     "@horizon/typescript-config": "*",
     "husky": "^9.0.10",
+    "patch-package": "^8.0.0",
+    "postinstall-postinstall": "^2.1.0",
     "prettier": "^3.1.1",
     "prettier-plugin-svelte": "^3.1.2",
     "turbo": "latest"

@@ -4,6 +4,12 @@ import { getMainWindow } from './mainWindow'
 export function setupContextMenu(options: contextMenu.Options = {}) {
   const defaultOpts: contextMenu.Options = {
     showSearchWithGoogle: false,
+    showSaveImage: true,
+    showSaveVideo: true,
+    showCopyImage: true,
+    showCopyImageAddress: true,
+    showCopyLink: true,
+    showCopyVideoAddress: true,
     prepend: (defaultActions, parameters) => [
       {
         label: 'Search Google for “{selection}”',

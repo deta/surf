@@ -287,7 +287,12 @@ export class Horizon {
     this.changeState('warm')
   }
 
-  createResource(data: Blob, metadata?: Partial<SFFSResourceMetadata>, tags?: SFFSResourceTag[]) {
+  createResource(
+    type: string,
+    data?: Blob,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
     const parsedMetadata = Object.assign(
       {
         name: '',
@@ -297,7 +302,7 @@ export class Horizon {
       metadata ?? {}
     )
 
-    return this.resourceManager.createResource(data.type, data, parsedMetadata, tags)
+    return this.resourceManager.createResource(type, data, parsedMetadata, tags)
   }
 
   getResource(id: string) {
@@ -349,7 +354,7 @@ export class Horizon {
     metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {
-    const resource = await this.createResource(data, metadata, tags)
+    const resource = await this.createResource(data.type, data, metadata, tags)
     return this.addCard({
       ...position,
       type: type,

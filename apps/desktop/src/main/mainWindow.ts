@@ -4,6 +4,7 @@ import { is } from '@electron-toolkit/utils'
 import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
+import { initDownloadManager } from './downloadManager'
 
 let mainWindow: BrowserWindow | undefined
 
@@ -75,7 +76,9 @@ export function createWindow() {
     }
   })
 
+  // TODO: proper session management?
   initAdblocker('persist:horizon')
+  initDownloadManager('persist:horizon')
 
   winState.manage(mainWindow)
 
