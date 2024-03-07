@@ -247,7 +247,7 @@ export class Horizon {
       })
     }
 
-    if (updates.resourceId) {
+    if (updates.resourceId !== undefined) {
       await this.sffs.updateCardResource(id, updates.resourceId)
     }
 

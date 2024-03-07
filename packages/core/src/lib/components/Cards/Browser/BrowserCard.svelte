@@ -25,6 +25,7 @@
   import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
   import FindInPage from './FindInPage.svelte'
   import StackItem from '../../Stack/StackItem.svelte'
+  import { wait } from '../../../utils/time'
   import type { DetectedResource, DetectedWebApp } from '@horizon/web-parser'
 
   export let card: Writable<CardBrowser>
@@ -32,6 +33,7 @@
   export let active: boolean = false
 
   const deactivateToolbar = writable(false)
+  const bookmarkingInProgress = writable(false)
 
   const adblockerState = horizon.adblockerState
   const historyEntriesManager = horizon.historyEntriesManager
@@ -91,6 +93,8 @@
           dispatch('change', get(card))
         })
       )
+
+      unsubTracker.push(webview.url.subscribe(handleUrlChange))
     }
 
     window.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -146,7 +150,6 @@
 
   const handleWebviewKeydown = async (e: CustomEvent<WebViewWrapperEvents['keydownWebview']>) => {
     const event = e.detail
-    log.debug('keydown event', event)
     if (event.key === 'Escape') {
       if (findInPage?.isOpen()) {
         findInPage?.close()
@@ -183,6 +186,7 @@
   $: faviconURL = webview?.faviconURL
   $: playback = webview?.playback
   $: isMuted = webview?.isMuted
+  $: isBookmarked = !!$card.resourceId
 
   $: if (!editing && $url !== 'about:blank') {
     value = $url ?? ''
@@ -243,47 +247,92 @@
     }
   }
 
+  async function handleUrlChange(url: string) {
+    log.debug('url changed', url)
+
+    if (!$didFinishLoad) return
+
+    // give the webview some time to load the page
+    await wait(500)
+
+    // TODO: do we need to run this on every url change? Since it is running in the webview and is only the lightweight detection it should be fine
+    webview?.startAppDetection() // we will be notified when detection is done in handleDetectedApp
+  }
+
+  function removeResourceLinking() {
+    log.debug('removing resource link')
+    $card.resourceId = ''
+    dispatch('change', $card)
+  }
+
   async function handleBookmark() {
     if (value === '') return
 
-    log.debug('bookmarking', value)
+    if (isBookmarked) {
+      removeResourceLinking()
+    } else {
+      log.debug('bookmarking', value)
 
-    webview?.startResourceDetection()
-
-    // const resource = await horizon.resourceManager.createResourceBookmark(
-    //   { url: $url },
-    //   { name: $title ?? '', sourceURI: $url, alt: '' }
-    // )
-
-    // card.update((card) => {
-    //   card.resourceId = resource.id
-    //   return card
-    // })
-
-    // dispatch('change', get(card))
+      bookmarkingInProgress.set(true)
+      webview?.startResourceDetection()
+      // TODO: use timeout to prevent infinite loading
+    }
   }
 
   let app: DetectedWebApp | null = null
   function handleDetectedApp(e: CustomEvent<DetectedWebApp>) {
-    app = e.detail
-    log.debug('detected app', app)
-  }
-
-  async function handleDetectedResource(e: CustomEvent<DetectedResource | null>) {
-    const detectedResource = e.detail
-    log.debug('extracted resource data', detectedResource)
-
-    if (!detectedResource) {
-      log.debug('no resource detected')
+    const detecteApp = e.detail
+    log.debug('detected app', detecteApp)
+    if (!app) {
+      log.debug('first app detection')
+      app = detecteApp
       return
     }
 
-    const resource = await horizon.resourceManager.createResourceOther(
-      new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-      { name: $title ?? '', sourceURI: $url, alt: '' }
-    )
+    if (
+      app.appId === detecteApp.appId &&
+      app.resourceType === detecteApp.resourceType &&
+      app.appResourceIdentifier === detecteApp.appResourceIdentifier
+    ) {
+      log.debug('no change in app or resource', detecteApp)
+      return
+    }
 
-    log.debug('created resource', resource)
+    if (!!$card.resourceId) {
+      removeResourceLinking()
+    }
+
+    app = detecteApp
+  }
+
+  async function handleDetectedResource(e: CustomEvent<DetectedResource | null>) {
+    try {
+      const detectedResource = e.detail
+      log.debug('extracted resource data', detectedResource)
+
+      if (!detectedResource) {
+        log.debug('no resource detected')
+        return
+      }
+
+      const resource = await horizon.resourceManager.createResourceOther(
+        new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
+        { name: $title ?? '', sourceURI: $url, alt: '' }
+      )
+
+      log.debug('created resource', resource)
+
+      card.update((card) => {
+        card.resourceId = resource.id
+        return card
+      })
+
+      dispatch('change', get(card))
+    } catch (e) {
+      log.error('error creating resource', e)
+    } finally {
+      bookmarkingInProgress.set(false)
+    }
   }
 </script>
 
@@ -307,7 +356,6 @@
       src={initialSrc}
       partition="persist:horizon"
       {historyEntriesManager}
-      on:wheelWebview={(event) => log.debug('wheel event from the webview: ', event.detail)}
       on:focusWebview={handleWebviewFocus}
       on:newWindowWebview={handleWebviewNewWindow}
       on:keydownWebview={handleWebviewKeydown}
@@ -432,12 +480,13 @@
           in:fly={{ y: 10, duration: 160 }}
           out:fly={{ y: 10, duration: 160 }}
         >
-          <!-- {#if bookmarked}
+          {#if $bookmarkingInProgress}
+            <Icon name="spinner" size="15px" />
+          {:else if isBookmarked}
             <Icon name="bookmarkFilled" size="15px" />
           {:else}
             <Icon name="bookmark" size="15px" />
-          {/if} -->
-          <Icon name="bookmark" size="15px" />
+          {/if}
         </button>
       </div>
 

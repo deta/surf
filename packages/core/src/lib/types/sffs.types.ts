@@ -34,6 +34,7 @@ export type SFFSRawResourceMetadata = {
   name: string
   source_uri: string
   alt: string
+  user_context: string
 }
 
 export type SFFSRawResourceTag = {

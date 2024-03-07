@@ -6,17 +6,20 @@ import {
   NotionParser,
   ArticleParser,
   LinkParser,
-  SlackParser
+  SlackParser,
+  YoutubeParser
 } from './sites/index'
 import { DetectedResource, WebApp } from './types'
 import { MetadataExtractor } from './extractors/metadata'
 import { WebViewExtractor } from './extractors/webview'
+import { WebAppExtractor } from './extractors/index'
 
 const ParserModules = {
   reddit: RedditParser,
   twitter: TwitterParser,
   notion: NotionParser,
-  slack: SlackParser
+  slack: SlackParser,
+  youtube: YoutubeParser
 }
 
 export const SUPPORTED_APPS: WebApp[] = [
@@ -43,6 +46,12 @@ export const SUPPORTED_APPS: WebApp[] = [
     name: 'Slack',
     matchHostname: /slack.com/,
     supportedResources: [ResourceTypes.CHAT_MESSAGE_SLACK, ResourceTypes.CHAT_THREAD_SLACK]
+  },
+  {
+    id: 'youtube',
+    name: 'YouTube',
+    matchHostname: /^(?:www\.|m\.)?youtube\.com$|^youtu\.be$/i,
+    supportedResources: [ResourceTypes.POST_YOUTUBE]
   }
 ]
 
@@ -86,7 +95,7 @@ export class WebParser {
     const Parser = ParserModules[app.id as keyof typeof ParserModules]
     if (!Parser) return null
 
-    return new Parser(app, this.url)
+    return new Parser(app, this.url) as WebAppExtractor
   }
 
   useFallbackParser(document: Document) {

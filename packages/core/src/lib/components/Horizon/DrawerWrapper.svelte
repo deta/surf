@@ -131,7 +131,8 @@
       {
         name: parsedInput.linkMetadata.title,
         alt: parsedInput.linkMetadata.description,
-        sourceURI: ''
+        sourceURI: '',
+        userContext: ''
       }
     )
 

@@ -52,12 +52,22 @@ export class RedditParser extends WebAppExtractor {
     }
   }
 
+  private getPostId() {
+    // For "/r/programming/comments/1b690im/native_vs_hybrid_vs_crossplatform_development/"" extract "1b690im"
+    return this.url.pathname.split('/')[4] ?? null
+  }
+
   getInfo(): DetectedWebApp {
+    const resourceType = this.detectResourceType()
+    const appResourceIdentifier =
+      resourceType === ResourceTypes.POST_REDDIT ? this.getPostId() : null
+
     return {
       appId: this.app?.id ?? null,
       appName: this.app?.name ?? null,
       hostname: this.url.hostname,
-      resourceType: this.detectResourceType(),
+      resourceType: resourceType,
+      appResourceIdentifier: appResourceIdentifier,
       resourceNeedsPicking: false
     }
   }
@@ -143,8 +153,7 @@ export class RedditParser extends WebAppExtractor {
       excerpt: post.selftext,
       content_plain: post.selftext,
       content_html: post.selftext_html,
-      lang: 'unknown',
-      direction: 'ltr',
+      lang: null,
 
       links: links,
       images: images,

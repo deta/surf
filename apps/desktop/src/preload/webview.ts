@@ -5,6 +5,63 @@ let mouseDownX = 0
 let previouslySelectedText: string | undefined = ''
 let appParser: WebAppExtractor | null = null
 
+function runAppDetection() {
+  // TODO: pass the URL to the detection function so we don't have to initialize a new WebParser
+  const webParser = new WebParser(window.location.href)
+
+  const isSupported = webParser.isSupportedApp()
+  console.log('Is supported app', isSupported)
+
+  if (isSupported) {
+    appParser = webParser.createAppParser()
+  } else {
+    console.warn('No supported app found, using fallback parser')
+    appParser = webParser.useFallbackParser(document)
+  }
+
+  if (!appParser) {
+    console.warn('No app parser found for', window.location.href)
+    return
+  }
+
+  const appInfo = appParser.getInfo()
+
+  console.log('App detected:', appInfo)
+  sendPageEvent('detected-app', appInfo)
+
+  return appParser
+}
+
+function runResourceDetection() {
+  // We are intentionally re-running the app detection here since the user might have navigated to a different page since the last detection
+  const appParser = runAppDetection()
+  if (appParser) {
+    appParser.extractResourceFromDocument(document).then((resource) => {
+      console.log('Resource', resource)
+      sendPageEvent('detected-resource', { resource })
+    })
+  }
+}
+
+function startResourcePicker() {
+  // We are intentionally re-running the app detection here since the user might have navigated to a different page since the last detection
+  const appParser = runAppDetection()
+  if (appParser) {
+    const appInfo = appParser.getInfo()
+    if (appInfo.resourceNeedsPicking) {
+      // @ts-ignore TODO: Fix this
+      appParser.startResourcePicker(document, (resource: DetectedResource) => {
+        console.log('Picked resource', resource)
+
+        sendPageEvent('detected-resource', { resource })
+      })
+    } else {
+      console.warn('App does not need/support resource picking')
+      sendPageEvent('detected-resource', { resource: null })
+    }
+  }
+}
+
 window.addEventListener('DOMContentLoaded', async (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
     const selection = window.getSelection()
@@ -142,27 +199,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     event.dataTransfer?.setData('text/space-source', window.location.href)
   })
 
-  const webParser = new WebParser(window.location.href)
-
-  const isSupported = webParser.isSupportedApp()
-  console.log('Is supported app', isSupported)
-
-  if (isSupported) {
-    appParser = await webParser.createAppParser()
-  } else {
-    console.warn('No supported app found, using fallback parser')
-    appParser = webParser.useFallbackParser(document)
-  }
-
-  if (!appParser) {
-    console.warn('No app parser found for', window.location.href)
-    return
-  }
-
-  const appInfo = appParser.getInfo()
-
-  console.log('App detected:', appInfo)
-  sendPageEvent('detected-app', appInfo)
+  runAppDetection()
 })
 
 window.addEventListener('keyup', (event: KeyboardEvent) => {
@@ -171,17 +208,7 @@ window.addEventListener('keyup', (event: KeyboardEvent) => {
 
 window.addEventListener('keydown', (event: KeyboardEvent) => {
   if (event.key === 'd' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
-    if (appParser) {
-      const appInfo = appParser.getInfo()
-      if (appInfo.resourceNeedsPicking) {
-        // @ts-ignore TODO: Fix this
-        appParser.startResourcePicker(document, (resource: DetectedResource) => {
-          console.log('Picked resource', resource)
-
-          sendPageEvent('detected-resource', { resource })
-        })
-      }
-    }
+    startResourcePicker()
   }
 
   sendPageEvent('keydown', {
@@ -223,11 +250,8 @@ ipcRenderer.on('webview-event', (_event, data) => {
 
     ipcRenderer.sendToHost('selection', text)
   } else if (data.type === 'get-resource') {
-    if (appParser) {
-      appParser.extractResourceFromDocument(document).then((resource) => {
-        console.log('Resource', resource)
-        sendPageEvent('detected-resource', { resource })
-      })
-    }
+    runResourceDetection()
+  } else if (data.type === 'get-app') {
+    runAppDetection()
   }
 })

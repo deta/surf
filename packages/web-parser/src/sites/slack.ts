@@ -6,6 +6,7 @@ import { DOMExtractor } from '../extractors/dom'
 
 export type SlackMessageData = {
   messageId: string
+  url: string
   author: string
   author_fullname: string
   author_image: string
@@ -17,16 +18,19 @@ export type SlackMessageData = {
   date_published: string
   date_edited: string | null
 
-  channel: string
-  channel_url: string
+  channel: string | null
+  channel_url: string | null
 }
 
 const DOM_NODES = {
   messageContainer: '[data-qa="message_container"]',
   messageContent: '[data-qa="message-text"]',
   messageSender: '[data-qa="message_sender"]',
+  messageSenderName: '[data-qa="message_sender_name"]',
+  messageSenderImage: 'img.c-base_icon.c-base_icon--image',
   messageTimestamp: '[data-qa="timestamp_label"]',
-  threadPane: '[data-qa="threads_flexpane"]'
+  threadPane: '[data-qa="threads_flexpane"]',
+  channelName: '[data-qa="channel_name"]'
 }
 
 export class SlackDocumentParser extends DOMExtractor {
@@ -42,11 +46,56 @@ export class SlackDocumentParser extends DOMExtractor {
     return container.querySelector(DOM_NODES.messageContent)
   }
 
+  parseSenderElement(container: Element, elem: Element) {
+    const imageElem = container.querySelector(DOM_NODES.messageSenderImage)
+    const senderName = container.querySelector(DOM_NODES.messageSenderName)
+    const userId = senderName?.getAttribute('data-message-sender')
+
+    return {
+      name: senderName?.textContent || elem.textContent,
+      id: userId ?? null,
+      image: (imageElem as HTMLImageElement)?.src ?? null
+    }
+  }
+
   getMessageSender(container: Element) {
     const elem = container.querySelector(DOM_NODES.messageSender)
-    if (!elem) return null
+    if (elem) {
+      return this.parseSenderElement(container, elem)
+    }
 
-    return elem.textContent
+    const parentElem = container.parentElement
+    if (parentElem) {
+      // loop through previous siblings until we find a sender or run out of elements
+      let prev = parentElem.previousElementSibling
+      while (prev) {
+        const sender = prev.querySelector(DOM_NODES.messageSender)
+        if (sender) {
+          return this.parseSenderElement(prev, sender)
+        }
+
+        prev = prev.previousElementSibling
+      }
+    }
+
+    return null
+  }
+
+  getMessageUrl(container: Element) {
+    const elem = container.querySelector(DOM_NODES.messageTimestamp)
+    const url = elem?.parentElement?.getAttribute('href')
+    if (!url) return null
+
+    return url
+  }
+
+  getChannel() {
+    const elem = this.document.querySelector(DOM_NODES.channelName)
+    if (!elem) {
+      return null
+    }
+
+    return { name: elem.textContent, url: null }
   }
 
   // getMessageTimestampForContainer(container: Element) {
@@ -74,6 +123,18 @@ export class SlackDocumentParser extends DOMExtractor {
     }
   }
 
+  parseAuthorURL(messageURL: string, userId: string) {
+    try {
+      const url = new URL(messageURL)
+      const workspace = url.hostname.split('.')[0]
+
+      return `https://${workspace}.slack.com/team/${userId}`
+    } catch (e) {
+      console.error('Error parsing author URL', messageURL, userId, e)
+      return null
+    }
+  }
+
   parseMessage(node: Element) {
     const rawMessageId = node.parentElement?.getAttribute('data-item-key')
     if (!rawMessageId) {
@@ -85,7 +146,11 @@ export class SlackDocumentParser extends DOMExtractor {
     console.log('Message ID', messageId)
 
     const timestamp = this.parseRawMessageIDIntoTimestamp(rawMessageId)
-    const author = this.getMessageSender(node)
+    const sender = this.getMessageSender(node)
+
+    const channel = this.getChannel()
+    const messageUrl = this.getMessageUrl(node)
+    const authorUrl = sender?.id && messageUrl ? this.parseAuthorURL(messageUrl, sender.id) : null
 
     const contentElem = this.getMessageContentElem(node)
     if (!contentElem) {
@@ -95,16 +160,17 @@ export class SlackDocumentParser extends DOMExtractor {
 
     const message = {
       messageId: messageId,
+      url: messageUrl,
       content: contentElem.textContent ?? '',
       contentHtml: contentElem.innerHTML,
       date_published: timestamp,
       date_edited: null,
-      author: author,
-      author_fullname: author,
-      author_image: '',
-      author_url: '',
-      channel: '',
-      channel_url: ''
+      author: sender?.name ?? null,
+      author_fullname: sender?.name ?? null,
+      author_image: sender?.image ?? null,
+      author_url: authorUrl,
+      channel: channel?.name ?? null,
+      channel_url: channel?.url ?? null
     }
 
     return message as SlackMessageData
@@ -119,7 +185,9 @@ export class SlackDocumentParser extends DOMExtractor {
     messageNodes.forEach((node) => {
       const message = this.parseMessage(node)
 
-      messages.push(message as any)
+      if (message) {
+        messages.push(message as any)
+      }
     })
 
     return messages
@@ -210,24 +278,38 @@ export class SlackParser extends WebAppExtractor {
     return ResourceTypes.CHAT_THREAD_SLACK
   }
 
+  private getResourceIdentifier() {
+    // for: https://app.slack.com/client/T038ZUQCL/D05EARRB43X
+    const parts = this.url.pathname.split('/')
+    const workspace = parts[2]
+    if (!workspace) return null
+
+    const channel = parts[3]
+    return channel ? `${workspace}/${channel}` : workspace
+  }
+
   getInfo(): DetectedWebApp {
     return {
       appId: this.app?.id ?? null,
       appName: this.app?.name ?? null,
       hostname: this.url.hostname,
       resourceType: this.detectResourceType(),
+      appResourceIdentifier: this.getResourceIdentifier(),
       resourceNeedsPicking: true
     }
   }
 
-  private extractThread(document: Document) {
-    const parser = new SlackDocumentParser(document)
+  private flattenMessages(messages: SlackMessageData[]): string {
+    // turn into single string formmatted like "author at date: message"
+    return messages
+      .map((message) => {
+        return `${message.author} at ${message.date_published}: ${message.content}`
+      })
+      .join('\n')
+  }
 
-    const parent = document.querySelector(DOM_NODES.threadPane)
-    if (!parent) {
-      console.log('No thread pane found')
-      return null
-    }
+  private extractThread(parent: Document | Element) {
+    const parser = new SlackDocumentParser(document)
 
     const messages = parser.getMessages(parent)
     console.log('Messages', messages)
@@ -237,44 +319,19 @@ export class SlackParser extends WebAppExtractor {
     })
 
     const favicon = this.getFavicon(document)
-
-    const author = messages[0]?.author
+    const initialMessage = messages[0]
 
     return {
-      title: author ? `Thread by ${author}` : 'Thread', // TODO: get thread name
+      title: null, // get thread title
       url: this.url.href,
       platform_name: 'Slack',
       platform_icon: favicon,
 
-      creator: author,
-      creator_image: messages[0]?.author_image,
-      creator_url: messages[0]?.author_url,
-      messages: normalizedMessages
-    } as ResourceDataChatThread
-  }
-
-  private extractChannel(document: Document) {
-    const parser = new SlackDocumentParser(document)
-
-    const messages = parser.getMessages(document)
-    console.log('Messages', messages)
-
-    const normalizedMessages = messages.map((message) => {
-      return this.normalizeMessage(message, document)
-    })
-
-    const favicon = this.getFavicon(document)
-
-    return {
-      title: 'Channel', // TODO: get channel name
-      url: this.url.href,
-      platform_name: 'Slack',
-      platform_icon: favicon,
-
-      creator: messages[0]?.author,
-      creator_image: messages[0]?.author_image,
-      creator_url: messages[0]?.author_url,
-      messages: normalizedMessages
+      creator: initialMessage?.author ?? null,
+      creator_image: initialMessage?.author_image ?? null,
+      creator_url: initialMessage?.author_url ?? null,
+      messages: normalizedMessages,
+      content_plain: this.flattenMessages(messages)
     } as ResourceDataChatThread
   }
 
@@ -294,7 +351,7 @@ export class SlackParser extends WebAppExtractor {
 
     const resource = {
       messageId: message.messageId,
-      url: this.url.href,
+      url: message.url || this.url.href,
       date_sent: message.date_published,
       date_edited: message.date_edited,
       platform_name: 'Slack',
@@ -309,7 +366,8 @@ export class SlackParser extends WebAppExtractor {
       images: [],
       video: [],
 
-      parent_url: message.channel_url,
+      parent_title: message.channel,
+      parent_url: message.channel_url ?? this.url.href,
       in_reply_to: null
     } as ResourceDataChatMessage
 
@@ -352,7 +410,13 @@ export class SlackParser extends WebAppExtractor {
 
     if (hasThreadOpen) {
       console.log('Thread open, extracting thread')
-      const thread = this.extractThread(document)
+      const parent = document.querySelector(DOM_NODES.threadPane)
+      if (!parent) {
+        console.log('No thread pane found')
+        return null
+      }
+
+      const thread = this.extractThread(parent)
 
       if (!thread) {
         console.log('No thread found')
@@ -365,7 +429,7 @@ export class SlackParser extends WebAppExtractor {
       }
     } else {
       console.log('Thread closed, extracting channel')
-      const channel = this.extractChannel(document)
+      const channel = this.extractThread(document)
 
       if (!channel) {
         console.log('No channel found')

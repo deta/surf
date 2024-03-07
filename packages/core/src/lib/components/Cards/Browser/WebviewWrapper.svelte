@@ -194,7 +194,7 @@
         url.set(e.url)
 
         // HOTFIX: Resolve later
-        if (!e.url.hostname === 'notion.so') {
+        if (e.url.hostname !== 'notion.so') {
           pendingUrlUpdate = { url: e.url, timestamp: Date.now() }
         }
       }
@@ -340,6 +340,10 @@
 
   export function startResourceDetection() {
     webview.send('webview-event', { type: 'get-resource' })
+  }
+
+  export function startAppDetection() {
+    webview.send('webview-event', { type: 'get-app' })
   }
 
   export function openDevTools(): void {

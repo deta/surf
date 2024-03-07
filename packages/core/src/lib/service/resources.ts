@@ -254,7 +254,8 @@ export class ResourceManager {
       {
         name: '',
         alt: '',
-        sourceURI: ''
+        sourceURI: '',
+        userContext: ''
       },
       metadata
     )
