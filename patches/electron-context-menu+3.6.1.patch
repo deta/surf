@@ -1,0 +1,19 @@
+diff --git a/node_modules/electron-context-menu/index.js b/node_modules/electron-context-menu/index.js
+index 685277d..4c5f514 100644
+--- a/node_modules/electron-context-menu/index.js
++++ b/node_modules/electron-context-menu/index.js
+@@ -1,10 +1,13 @@
+ 'use strict';
+ const electron = require('electron');
+ const cliTruncate = require('cli-truncate');
+-const {download} = require('electron-dl');
+ const isDev = require('electron-is-dev');
++// const {download} = require('electron-dl');
+ 
+ const webContents = win => win.webContents || (win.id && win);
++const download = (contents, url) => {
++  if (!contents.isLoading()) contents.session.downloadURL(url)
++}
+ 
+ const decorateMenuItem = menuItem => {
+ 	return (options = {}) => {

@@ -5,12 +5,20 @@
   import { DEFAULT_CARD_SIZE } from '../../constants/card'
   import { get } from 'svelte/store'
   import { processDrop, processPaste } from '../../service/mediaImporter'
-  import { ResourceTypes, type SFFSResourceMetadata, type SFFSResourceTag } from '../../types'
+  import {
+    ResourceTypes,
+    type DownloadRequestMessage,
+    type SFFSResourceMetadata,
+    type SFFSResourceTag,
+    type DownloadUpdatedMessage,
+    type DownloadDoneMessage
+  } from '../../types'
   import { ResourceLink, ResourceTag } from '../../service/resources'
 
   export let horizon: Horizon
 
   const log = useLogScope('MediaImporter')
+  const downloadResourceMap = new Map<string, string>()
 
   $: activeCardId = horizon.activeCardId
   $: board = horizon.board
@@ -258,6 +266,37 @@
     )
     log.debug('created card', get(card))
   }
+
+  // @ts-ignore
+  window.api.onRequestDownloadPath(async (data: DownloadRequestMessage) => {
+    // TODO: add metadata/tags here
+    const resource = await horizon.createResource(
+      data.mimeType,
+      undefined,
+      {
+        name: data.filename,
+        sourceURI: data.url
+      },
+      [ResourceTag.download()]
+    )
+    downloadResourceMap.set(data.id, resource.id)
+    log.debug('new download request', { ...data, savePath: resource.path })
+    return resource.path
+  })
+  // @ts-ignore
+  window.api.onDownloadUpdated((data: DownloadUpdatedMessage) => {
+    log.debug('download updated', data)
+  })
+  // @ts-ignore
+  window.api.onDownloadDone((data: DownloadDoneMessage) => {
+    // TODO: trigger the post-processing call here
+    log.debug('download done', data)
+
+    const resourceId = downloadResourceMap.get(data.id)
+    if (resourceId && data.state === 'completed') horizon.resourceManager.reloadResource(resourceId)
+
+    downloadResourceMap.delete(data.id)
+  })
 </script>
 
 <svelte:window on:paste={handlePaste} on:mousemove={handleMouseMove} />

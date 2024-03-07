@@ -36,12 +36,21 @@ export class TwitterParser extends WebAppExtractor {
     }
   }
 
+  private getTweetId() {
+    return this.url.pathname.split('/').pop() ?? null
+  }
+
   getInfo(): DetectedWebApp {
+    const resourceType = this.detectResourceType()
+    const appResourceIdentifier =
+      resourceType === ResourceTypes.POST_TWITTER ? this.getTweetId() : null
+
     return {
       appId: this.app?.id ?? null,
       appName: this.app?.name ?? null,
       hostname: this.url.hostname,
-      resourceType: this.detectResourceType(),
+      resourceType: resourceType,
+      appResourceIdentifier: appResourceIdentifier,
       resourceNeedsPicking: false
     }
   }
@@ -141,7 +150,7 @@ export class TwitterParser extends WebAppExtractor {
       url: this.url.href,
       date_published: new Date(data.publishedAt).toISOString(),
       date_edited: null,
-      edited: false,
+      edited: null,
       site_name: 'Twitter',
       site_icon: 'https://abs.twimg.com/responsive-web/web/icon-default.1ea219d5.png',
 
@@ -153,8 +162,7 @@ export class TwitterParser extends WebAppExtractor {
       excerpt: data.content,
       content_plain: data.content,
       content_html: data.contentHtml,
-      lang: 'unknown',
-      direction: 'ltr',
+      lang: null,
 
       links: [],
       images: [],

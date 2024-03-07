@@ -45,12 +45,14 @@ export class ArticleParser extends WebAppExtractor {
       appName: null,
       hostname: this.url.hostname,
       resourceType: this.detectResourceType(),
+      appResourceIdentifier: this.url.pathname,
       resourceNeedsPicking: false
     }
   }
 
   async extractResourceFromDocument(document: Document) {
-    const parsed = new Readability(document).parse()
+    const documentClone = document.cloneNode(true) as Document
+    const parsed = new Readability(documentClone).parse()
     if (!parsed) return null
 
     const metadata = this.metadataExtractor.extractMetadataFromDocument(document)
@@ -80,9 +82,12 @@ export class ArticleParser extends WebAppExtractor {
       // TODO: extract images from the content
       images: [metadata.image],
 
-      category_name: null, // name of the category
-      category_url: null, // url pointing to the category
-      stats: null
+      category_name: null,
+      category_url: null,
+      stats: {
+        views: null,
+        comments: null
+      }
     } as ResourceDataArticle
 
     return {

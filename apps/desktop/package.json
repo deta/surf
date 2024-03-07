@@ -26,7 +26,8 @@
     "@horizon/backend": "*",
     "@sentry/svelte": "^7.99.0",
     "cross-fetch": "^4.0.0",
-    "electron-updater": "^6.1.7"
+    "electron-updater": "^6.1.7",
+    "mime-types": "^2.1.35"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^1.0.1",

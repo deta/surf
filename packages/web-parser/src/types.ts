@@ -12,6 +12,7 @@ export type DetectedWebApp = {
   appName: string | null
   hostname: string
   resourceType: string | null
+  appResourceIdentifier: string | null // e.g. tweet ID
   resourceNeedsPicking: boolean
 }
 

@@ -1,32 +1,50 @@
 use crate::store::models::*;
 
 pub enum WorkerMessage {
+    CardMessage(CardMessage),
+    HistoryMessage(HistoryMessage),
+    HorizonMessage(HorizonMessage),
+    ResourceMessage(ResourceMessage),
+    ResourceTagMessage(ResourceTagMessage),
+    UserdataMessage(UserdataMessage),
+    MiscMessage(MiscMessage),
+}
+
+pub enum CardMessage {
     CreateCard(Card),
+    GetCard(String),
+    RemoveCard(String),
+    UpdateCardData(String, Vec<u8>),
+    UpdateCardDimensions(String, i64, i64, i32, i32),
+    UpdateCardResourceID(String, String),
+    UpdateCardStackingOrder(String),
+    ListCardsInHorizon(String),
+}
+
+pub enum HistoryMessage {
     CreateHistoryEntry(HistoryEntry),
+    GetAllHistoryEntries,
+    GetHistoryEntry(String),
+    RemoveHistoryEntry(String),
+    UpdateHistoryEntry(HistoryEntry),
+}
+
+pub enum HorizonMessage {
     CreateHorizon(String),
+    ListHorizons,
+    UpdateHorizon(Horizon),
+    RemoveHorizon(String),
+}
+
+pub enum ResourceMessage {
     CreateResource {
         resource_type: String,
         resource_tags: Option<Vec<ResourceTag>>,
         resource_metadata: Option<ResourceMetadata>,
     },
-    CreateResourceTag(ResourceTag),
-    CreateUserdata(String),
-    GetAllHistoryEntries,
-    GetCard(String),
-    GetHistoryEntry(String),
     GetResource(String),
-    GetUserdataByUserId(String),
-    ListCardsInHorizon(String),
-    ListHorizons(),
-    PostProcessJob(String),
-    Print(String),
-    RecoverResource(String),
-    RemoveCard(String),
-    RemoveHistoryEntry(String),
-    RemoveHorizon(String),
     RemoveResource(String),
-    RemoveResourceTag(String),
-    RemoveUserdata(String),
+    RecoverResource(String),
     SearchResources {
         query: String,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
@@ -35,11 +53,21 @@ pub enum WorkerMessage {
         embeddings_distance_threshold: Option<f32>,
         embeddings_limit: Option<i64>,
     },
-    UpdateCardData(String, Vec<u8>),
-    UpdateCardDimensions(String, i64, i64, i32, i32),
-    UpdateCardResourceID(String, String),
-    UpdateCardStackingOrder(String),
-    UpdateHistoryEntry(HistoryEntry),
-    UpdateHorizon(Horizon),
     UpdateResourceMetadata(ResourceMetadata),
+    PostProcessJob(String),
+}
+
+pub enum ResourceTagMessage {
+    CreateResourceTag(ResourceTag),
+    RemoveResourceTag(String),
+}
+
+pub enum UserdataMessage {
+    CreateUserdata(String),
+    GetUserdataByUserId(String),
+    RemoveUserdata(String),
+}
+
+pub enum MiscMessage {
+    Print(String),
 }

@@ -2,6 +2,7 @@ export interface SFFSResourceMetadata {
   name: string
   sourceURI: string
   alt: string
+  userContext: string
 }
 
 export interface SFFSResourceTag {
@@ -76,39 +77,38 @@ export interface ResourceDataPost {
   // basic information
   post_id: string // unique identifier for the post
   url: string // URL of the post on the original site
-  title: string // the title of the post
+  title: string | null // the title of the post
   date_published: string // when the post was originally published
   date_edited: string | null // when the post was last updated / modified
-  edited: boolean // whether the post was edited
+  edited: boolean | null // whether the post was edited
 
   // information about the site
   site_name: string // name of the site the post was published on
   site_icon: string // URL to a icon / favicon representing the site
 
   // author related information
-  author: string // who created the post
-  author_fullname: string // the full name of the author
-  author_image: string // a image URL of the author / profile picture
-  author_url: string // a url pointing to the author themselves
+  author: string | null // who created the post
+  author_fullname: string | null // the full name of the author
+  author_image: string | null // a image URL of the author / profile picture
+  author_url: string | null // a url pointing to the author themselves
 
   // content related information
-  excerpt: string // a summary of the collectables content
+  excerpt: string | null // a summary of the collectables content
   content_plain: string // plain text version of the content
   content_html: string // html representation of the content
-  lang: string // language content is written in
-  direction: string // direction the content is written in e.g. ltr/rtl
+  lang: string | null // language content is written in
 
   // associated media
-  images?: string[] // URLs to images used/mentioned in the post
-  video?: string[] // URLs to videos used/mentioned in the post
-  links?: string[] // URLs to other resources mentioned in the post
+  images: string[] // URLs to images used/mentioned in the post
+  video: string[] // URLs to videos used/mentioned in the post
+  links: string[] // URLs to other resources mentioned in the post
 
   // source / associated groups information
-  parent_url?: string // URL to the parent page/group/section
-  parent_title?: string // title of the parent page/group/section
+  parent_url: string | null // URL to the parent page/group/section
+  parent_title: string | null // title of the parent page/group/section
 
   // associated statistics
-  stats?: {
+  stats: {
     views: number | null // number of views / clicks etc.
     up_votes: number | null // number of up votes, likes, thumb ups etc.
     down_votes: number | null // number of down votes, dislikes, thumb downs etc.
@@ -120,17 +120,17 @@ export interface ResourceDataDocument {
   // basic information
   url: string // URL of the document
   date_created: string // when the document was originally created
-  date_edited: string // when the document was last edited
+  date_edited: string | null // when the document was last edited
 
   // information about the document editor
   editor_name: string // name of the editor the document was created with
   editor_icon: string // URL to a icon / favicon representing the editor
 
   // author related information
-  author: string // who created the document
-  author_fullname: string // the full name of the author
-  author_image: string // a image URL of the author / profile picture
-  author_url: string // a url pointing to the author themselves
+  author: string | null // who created the document
+  author_fullname: string | null // the full name of the author
+  author_image: string | null // a image URL of the author / profile picture
+  author_url: string | null // a url pointing to the author themselves
 
   // content related information
   content_plain: string // plain text version of the content
@@ -142,7 +142,7 @@ export interface ResourceDataChatMessage {
   messageId: string // unique identifier for the message within the platform
   url: string // URL of the chat message in the platform
   date_sent: string // when the message was originally sent
-  date_edited: string // when the message was last edited
+  date_edited: string | null // when the message was last edited
 
   // information about the platform
   platform_name: string // name of the site the item was published on
@@ -150,26 +150,26 @@ export interface ResourceDataChatMessage {
 
   // author related information
   author: string // who sent the message
-  author_image: string // a image URL of the author / profile picture
-  author_url: string // a url pointing to the author themselves
+  author_image: string | null // a image URL of the author / profile picture
+  author_url: string | null // a url pointing to the author themselves
 
   // content related information
   content_plain: string // plain text version of the content
   content_html: string // html representation of the content
 
   // associated media
-  images?: string[] // URLs to images used/mentioned in the message
-  video?: string[] // URLs to videos used/mentioned in the message
+  images: string[] // URLs to images used/mentioned in the message
+  video: string[] // URLs to videos used/mentioned in the message
 
   // information about the parent group/channel and related messages
-  parent_url?: string // URL to the parent group/channel
-  parent_title?: string // title of the parent group/channel
+  parent_url: string | null // URL to the parent group/channel
+  parent_title: string | null // title of the parent group/channel
   in_reply_to: string | null // URL of another message this one is replying to
 }
 
 export interface ResourceDataChatThread {
   // basic information
-  title: string // name of the thread
+  title: string | null // name of the thread
   url: string // URL of the thread
 
   // information about the platform
@@ -177,18 +177,19 @@ export interface ResourceDataChatThread {
   platform_icon: string // URL to a icon / favicon representing the site
 
   creator: string // who created the thread
-  creator_image: string // a image URL of the creator / profile picture
-  creator_url: string // a url pointing to the creator themselves
+  creator_image: string | null // a image URL of the creator / profile picture
+  creator_url: string | null // a url pointing to the creator themselves
 
-  // associated messages
-  messages: ResourceDataChatMessage[]
+  messages: ResourceDataChatMessage[] // associated messages
+
+  content_plain: string // plain text version of the thread content
 }
 
 export interface ResourceDataArticle {
   // basic information
   title: string // the title of the article
   url: string // URL of the article
-  date_published: string // when the article was originally published
+  date_published: string | null // when the article was originally published
   date_updated: string | null // when the document was last updated
 
   // information about the site the article was published on
@@ -201,15 +202,15 @@ export interface ResourceDataArticle {
   author_url: string | null // a url pointing to the author themselves
 
   // content related information
-  excerpt: string // a summary of the article
+  excerpt: string | null // a summary of the article
   content_plain: string // plain text version of the content
   content_html: string // html representation of the content
   word_count: number // how many words the content has
-  lang: string // language content is written in
-  direction: string // direction the content is written in e.g. ltr/rtl
+  lang: string | null // language content is written in
+  direction: string | null // direction the content is written in e.g. ltr/rtl
 
   // associated media
-  images?: string[] // URLs to images used/mentioned in the article
+  images: string[] // URLs to images used/mentioned in the article
 
   // more information about the category / section / group the article was published under
   category_name: string | null // name of the category
@@ -217,14 +218,14 @@ export interface ResourceDataArticle {
 
   // associated statistics
   stats: {
-    views?: number // number of views / clicks etc.
-    comments?: number // number of comments
-  } | null
+    views?: number | null // number of views / clicks etc.
+    comments?: number | null // number of comments
+  }
 }
 
 export interface ResourceDataLink {
   title: string
-  description: string
+  description: string | null
   icon: string
   image: string | null
   keywords: string[]

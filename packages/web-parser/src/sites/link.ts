@@ -24,6 +24,7 @@ export class LinkParser extends WebAppExtractor {
       appName: null,
       hostname: this.url.hostname,
       resourceType: this.detectResourceType(),
+      appResourceIdentifier: this.url.pathname,
       resourceNeedsPicking: false
     }
   }

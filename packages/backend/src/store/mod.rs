@@ -1,7 +1,7 @@
 pub mod db;
 pub mod models;
 
-use crate::backend::{message::WorkerMessage, tunnel::WorkerTunnel};
+use crate::backend::{message::*, tunnel::WorkerTunnel};
 use neon::prelude::*;
 
 const _MODULE_PREFIX: &'static str = "store";
@@ -96,11 +96,11 @@ fn js_create_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.send(
-        WorkerMessage::CreateResource {
+        WorkerMessage::ResourceMessage(ResourceMessage::CreateResource {
             resource_type,
             resource_tags,
             resource_metadata,
-        },
+        }),
         deferred,
     );
 
@@ -112,7 +112,10 @@ fn js_get_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::GetResource(resource_id), deferred);
+    tunnel.send(
+        WorkerMessage::ResourceMessage(ResourceMessage::GetResource(resource_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -124,7 +127,10 @@ fn js_remove_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::RemoveResource(resource_id), deferred);
+    tunnel.send(
+        WorkerMessage::ResourceMessage(ResourceMessage::RemoveResource(resource_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -134,7 +140,10 @@ fn js_recover_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::RecoverResource(resource_id), deferred);
+    tunnel.send(
+        WorkerMessage::ResourceMessage(ResourceMessage::RecoverResource(resource_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -143,7 +152,10 @@ fn js_list_horizons(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::ListHorizons(), deferred);
+    tunnel.send(
+        WorkerMessage::HorizonMessage(HorizonMessage::ListHorizons),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -153,7 +165,10 @@ fn js_create_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let horizon_name = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::CreateHorizon(horizon_name), deferred);
+    tunnel.send(
+        WorkerMessage::HorizonMessage(HorizonMessage::CreateHorizon(horizon_name)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -163,7 +178,10 @@ fn js_remove_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let horizon_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::RemoveHorizon(horizon_id), deferred);
+    tunnel.send(
+        WorkerMessage::HorizonMessage(HorizonMessage::RemoveHorizon(horizon_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -173,7 +191,10 @@ fn js_list_cards_in_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let horizon_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::ListCardsInHorizon(horizon_id), deferred);
+    tunnel.send(
+        WorkerMessage::CardMessage(CardMessage::ListCardsInHorizon(horizon_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -183,7 +204,10 @@ fn js_get_card(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::GetCard(card_id), deferred);
+    tunnel.send(
+        WorkerMessage::CardMessage(CardMessage::GetCard(card_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -198,7 +222,10 @@ fn js_create_card(mut cx: FunctionContext) -> JsResult<JsPromise> {
     };
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::CreateCard(card), deferred);
+    tunnel.send(
+        WorkerMessage::CardMessage(CardMessage::CreateCard(card)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -213,7 +240,10 @@ fn js_update_card_data(mut cx: FunctionContext) -> JsResult<JsPromise> {
         .to_vec();
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::UpdateCardData(card_id, data), deferred);
+    tunnel.send(
+        WorkerMessage::CardMessage(CardMessage::UpdateCardData(card_id, data)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -225,7 +255,7 @@ fn js_update_card_resource_id(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.send(
-        WorkerMessage::UpdateCardResourceID(card_id, resource_id),
+        WorkerMessage::CardMessage(CardMessage::UpdateCardResourceID(card_id, resource_id)),
         deferred,
     );
 
@@ -271,14 +301,14 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.send(
-        WorkerMessage::SearchResources {
+        WorkerMessage::ResourceMessage(ResourceMessage::SearchResources {
             query,
             resource_tag_filters,
             proximity_distance_threshold,
             proximity_limit,
             embeddings_distance_threshold,
             embeddings_limit,
-        },
+        }),
         deferred,
     );
 
@@ -295,7 +325,9 @@ fn js_update_card_dimensions(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.send(
-        WorkerMessage::UpdateCardDimensions(card_id, position_x, position_y, width, height),
+        WorkerMessage::CardMessage(CardMessage::UpdateCardDimensions(
+            card_id, position_x, position_y, width, height,
+        )),
         deferred,
     );
 
@@ -307,7 +339,10 @@ fn js_update_card_stacking_order(mut cx: FunctionContext) -> JsResult<JsPromise>
     let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::UpdateCardStackingOrder(card_id), deferred);
+    tunnel.send(
+        WorkerMessage::CardMessage(CardMessage::UpdateCardStackingOrder(card_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -317,7 +352,10 @@ fn js_remove_card(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::RemoveCard(card_id), deferred);
+    tunnel.send(
+        WorkerMessage::CardMessage(CardMessage::RemoveCard(card_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -327,7 +365,10 @@ fn js_create_userdata(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let user_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::CreateUserdata(user_id), deferred);
+    tunnel.send(
+        WorkerMessage::UserdataMessage(UserdataMessage::CreateUserdata(user_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -337,7 +378,10 @@ fn js_get_userdata_by_user_id(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let user_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::GetUserdataByUserId(user_id), deferred);
+    tunnel.send(
+        WorkerMessage::UserdataMessage(UserdataMessage::GetUserdataByUserId(user_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -347,7 +391,10 @@ fn js_remove_userdata(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let user_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::RemoveUserdata(user_id), deferred);
+    tunnel.send(
+        WorkerMessage::UserdataMessage(UserdataMessage::RemoveUserdata(user_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -357,7 +404,10 @@ fn js_resource_post_process(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::PostProcessJob(resource_id), deferred);
+    tunnel.send(
+        WorkerMessage::ResourceMessage(ResourceMessage::PostProcessJob(resource_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -372,7 +422,10 @@ fn js_update_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
     };
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::UpdateHorizon(horizon), deferred);
+    tunnel.send(
+        WorkerMessage::HorizonMessage(HorizonMessage::UpdateHorizon(horizon)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -387,7 +440,10 @@ fn js_create_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
     };
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::CreateHistoryEntry(entry), deferred);
+    tunnel.send(
+        WorkerMessage::HistoryMessage(HistoryMessage::CreateHistoryEntry(entry)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -397,7 +453,10 @@ fn js_get_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let entry_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::GetHistoryEntry(entry_id), deferred);
+    tunnel.send(
+        WorkerMessage::HistoryMessage(HistoryMessage::GetHistoryEntry(entry_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -412,7 +471,10 @@ fn js_update_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
     };
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::UpdateHistoryEntry(entry), deferred);
+    tunnel.send(
+        WorkerMessage::HistoryMessage(HistoryMessage::UpdateHistoryEntry(entry)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -422,7 +484,10 @@ fn js_remove_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let entry_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::RemoveHistoryEntry(entry_id), deferred);
+    tunnel.send(
+        WorkerMessage::HistoryMessage(HistoryMessage::RemoveHistoryEntry(entry_id)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -431,7 +496,10 @@ fn js_get_all_history_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::GetAllHistoryEntries, deferred);
+    tunnel.send(
+        WorkerMessage::HistoryMessage(HistoryMessage::GetAllHistoryEntries),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -446,7 +514,10 @@ fn js_update_resource_metadata(mut cx: FunctionContext) -> JsResult<JsPromise> {
     };
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::UpdateResourceMetadata(metadata), deferred);
+    tunnel.send(
+        WorkerMessage::ResourceMessage(ResourceMessage::UpdateResourceMetadata(metadata)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -461,7 +532,10 @@ fn js_create_resource_tag(mut cx: FunctionContext) -> JsResult<JsPromise> {
     };
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::CreateResourceTag(tag), deferred);
+    tunnel.send(
+        WorkerMessage::ResourceTagMessage(ResourceTagMessage::CreateResourceTag(tag)),
+        deferred,
+    );
 
     Ok(promise)
 }
@@ -471,7 +545,10 @@ fn js_remove_resource_tag_by_id(mut cx: FunctionContext) -> JsResult<JsPromise> 
     let tag_id = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
-    tunnel.send(WorkerMessage::RemoveResourceTag(tag_id), deferred);
+    tunnel.send(
+        WorkerMessage::ResourceTagMessage(ResourceTagMessage::RemoveResourceTag(tag_id)),
+        deferred,
+    );
 
     Ok(promise)
 }

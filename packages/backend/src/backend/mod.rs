@@ -1,6 +1,7 @@
 pub mod message;
 pub mod tunnel;
 pub mod worker;
+pub mod handlers;
 
 use neon::prelude::*;
 

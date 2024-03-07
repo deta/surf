@@ -61,7 +61,8 @@ export class SFFS {
       metadata: {
         name: composite.metadata?.name ?? '',
         sourceURI: composite.metadata?.source_uri ?? '',
-        alt: composite.metadata?.alt ?? ''
+        alt: composite.metadata?.alt ?? '',
+        userContext: composite.metadata?.user_context ?? ''
       },
       tags: (composite.resource_tags || []).map((tag) => ({
         id: tag.id,
@@ -86,7 +87,8 @@ export class SFFS {
         resource_id: resource.id,
         name: resource.metadata?.name ?? '',
         source_uri: resource.metadata?.sourceURI ?? '',
-        alt: resource.metadata?.alt ?? ''
+        alt: resource.metadata?.alt ?? '',
+        user_context: resource.metadata?.userContext ?? ''
       },
       resource_tags: (resource.tags || []).map((tag) => ({
         id: tag.id ?? '',
@@ -213,7 +215,8 @@ export class SFFS {
       resource_id: '',
       name: metadata?.name ?? '',
       source_uri: metadata?.sourceURI ?? '',
-      alt: metadata?.alt ?? ''
+      alt: metadata?.alt ?? '',
+      user_context: metadata?.userContext ?? ''
     } as SFFSRawResourceMetadata)
 
     const tagsData = JSON.stringify(

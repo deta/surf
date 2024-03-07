@@ -110,7 +110,20 @@ const api = {
     ipcRenderer.send('app-ready')
   },
 
-  getUserConfig: () => ipcRenderer.invoke('get-user-config')
+  getUserConfig: () => ipcRenderer.invoke('get-user-config'),
+
+  onRequestDownloadPath: (callback) => {
+    ipcRenderer.on('download-request', async (_event, data) => {
+      const path = await callback(data)
+      ipcRenderer.send(`download-path-response-${data.id}`, path)
+    })
+  },
+  onDownloadUpdated: (callback) => {
+    ipcRenderer.on('download-updated', (_event, data) => callback(data))
+  },
+  onDownloadDone: (callback) => {
+    ipcRenderer.on('download-done', (_event, completion) => callback(completion))
+  }
 }
 
 ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {

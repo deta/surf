@@ -2,31 +2,30 @@
   import { onDestroy, onMount } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
-  import type { ResourceBookmark } from '../../../service/resources'
-  import type { SFFSResourceDataBookmark } from '../../../types'
+  import type { ResourceLink } from '../../../service/resources'
+  import type { ResourceDataLink } from '@horizon/types'
 
-  export let resource: ResourceBookmark
+  export let resource: ResourceLink
 
-  const log = useLogScope('LinkCard')
+  const log = useLogScope('LinkPreview')
 
-  let bookmark: SFFSResourceDataBookmark | null = null
+  let link: ResourceDataLink | null = null
   let title = ''
   let subtitle = ''
   let error = ''
 
   onMount(async () => {
     try {
-      const blob = await resource.getData()
-      const text = await blob.text()
-      bookmark = JSON.parse(text)
+      link = await resource.getParsedData()
 
-      console.log('bookmark', bookmark)
+      console.log('link', link)
 
-      const url = new URL(bookmark.url)
+      const url = new URL(link.url)
 
       const hostname = url.hostname.split('.').slice(-2, -1).join('')
-      title = resource?.metadata?.name ?? hostname[0].toUpperCase() + hostname.slice(1)
-      subtitle = `${url.hostname}${url.pathname}`
+      title =
+        link.title ?? resource?.metadata?.name ?? hostname[0].toUpperCase() + hostname.slice(1)
+      subtitle = link.description ?? `${url.hostname}${url.pathname}`
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
@@ -38,11 +37,11 @@
   })
 </script>
 
-<a href={bookmark?.url} target="_blank" class="link-card">
+<a href={link?.url} target="_blank" class="link-card">
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
-      <div class="subtitle">{bookmark?.url}</div>
+      <div class="subtitle">{link?.url}</div>
     {:else}
       <div class="title">{title}</div>
       <div class="subtitle">{subtitle}</div>

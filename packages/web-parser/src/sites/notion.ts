@@ -24,12 +24,24 @@ export class NotionParser extends WebAppExtractor {
     }
   }
 
+  private getPageID() {
+    const rawPageId = this.url.pathname.split('/').pop()?.split('-').pop()
+    if (!rawPageId) return null
+
+    return `${rawPageId.substring(0, 8)}-${rawPageId.substring(8, 12)}-${rawPageId.substring(12, 16)}-${rawPageId.substring(16, 20)}-${rawPageId.substring(20)}`
+  }
+
   getInfo(): DetectedWebApp {
+    const resourceType = this.detectResourceType()
+    const appResourceIdentifier =
+      resourceType === ResourceTypes.DOCUMENT_NOTION ? this.url.pathname : null
+
     return {
       appId: this.app?.id ?? null,
       appName: this.app?.name ?? null,
       hostname: this.url.hostname,
-      resourceType: this.detectResourceType(),
+      resourceType: resourceType,
+      appResourceIdentifier: appResourceIdentifier,
       resourceNeedsPicking: false
     }
   }
@@ -54,10 +66,11 @@ export class NotionParser extends WebAppExtractor {
 
   private async getPage(document: Document) {
     try {
-      const rawPageId = this.url.pathname.split('/').pop()?.split('-').pop()
-      if (!rawPageId) return null
-
-      const pageId = `${rawPageId.substring(0, 8)}-${rawPageId.substring(8, 12)}-${rawPageId.substring(12, 16)}-${rawPageId.substring(16, 20)}-${rawPageId.substring(20)}`
+      const pageId = this.getPageID()
+      if (!pageId) {
+        console.log('No page id found')
+        return null
+      }
 
       const api = new APIExtractor(this.url.origin)
 
@@ -113,7 +126,7 @@ export class NotionParser extends WebAppExtractor {
         author: author,
         author_fullname: author_fullname,
         author_image: author_image,
-        author_url: '',
+        author_url: null,
 
         content_plain: contentPlain,
         content_html: contentHtml

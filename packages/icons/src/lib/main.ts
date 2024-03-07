@@ -31,6 +31,7 @@ import Docs from './Icons/Docs.svelte'
 import Bookmark from './Icons/Bookmark.svelte'
 import BookmarkFilled from './Icons/BookmarkFilled.svelte'
 import Home from './Icons/Home.svelte'
+import Spinner from './Icons/Spinner.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -66,7 +67,8 @@ export const icons = {
   docs: Docs,
   bookmark: Bookmark,
   bookmarkFilled: BookmarkFilled,
-  home: Home
+  home: Home,
+  spinner: Spinner
 }
 
 export type Icons = keyof typeof icons
@@ -104,5 +106,6 @@ export {
   Docs,
   Bookmark,
   BookmarkFilled,
-  Home
+  Home,
+  Spinner
 }
