@@ -5,8 +5,13 @@ use neon::{
 use std::sync::mpsc;
 
 use super::{message::WorkerMessage, worker::worker_entry_point};
+use crate::BackendResult;
 
-pub struct TunnelMessage(pub WorkerMessage, pub Deferred);
+pub enum TunnelOneshot {
+    Javascript(Deferred),
+    Rust(mpsc::Sender<BackendResult<String>>),
+}
+pub struct TunnelMessage(pub WorkerMessage, pub TunnelOneshot);
 
 pub struct WorkerTunnel {
     pub tx: mpsc::Sender<TunnelMessage>,
@@ -23,9 +28,15 @@ impl WorkerTunnel {
         Self { tx }
     }
 
-    pub fn send(&self, message: WorkerMessage, deferred: Deferred) {
+    pub fn send_js(&self, message: WorkerMessage, deferred: Deferred) {
         self.tx
-            .send(TunnelMessage(message, deferred))
+            .send(TunnelMessage(message, TunnelOneshot::Javascript(deferred)))
+            .expect("unbound channel send failed")
+    }
+
+    pub fn send_rust(&self, message: WorkerMessage, oneshot: mpsc::Sender<BackendResult<String>>) {
+        self.tx
+            .send(TunnelMessage(message, TunnelOneshot::Rust(oneshot)))
             .expect("unbound channel send failed")
     }
 }

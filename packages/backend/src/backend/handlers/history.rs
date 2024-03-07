@@ -1,12 +1,13 @@
 use crate::{
     backend::{
         message::HistoryMessage,
+        tunnel::TunnelOneshot,
         worker::{send_worker_response, Worker},
     },
     store::models::HistoryEntry,
     BackendResult,
 };
-use neon::{prelude::Channel, types::Deferred};
+use neon::prelude::Channel;
 
 impl Worker {
     pub fn create_history_entry(&mut self, entry: HistoryEntry) -> BackendResult<HistoryEntry> {
@@ -34,24 +35,24 @@ impl Worker {
 pub fn handle_history_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    deferred: Deferred,
+    oneshot: TunnelOneshot,
     message: HistoryMessage,
 ) {
     match message {
         HistoryMessage::CreateHistoryEntry(entry) => {
-            send_worker_response(channel, deferred, worker.create_history_entry(entry))
+            send_worker_response(channel, oneshot, worker.create_history_entry(entry))
         }
         HistoryMessage::GetAllHistoryEntries => {
-            send_worker_response(channel, deferred, worker.get_all_history_entries())
+            send_worker_response(channel, oneshot, worker.get_all_history_entries())
         }
         HistoryMessage::GetHistoryEntry(id) => {
-            send_worker_response(channel, deferred, worker.get_history_entry(id))
+            send_worker_response(channel, oneshot, worker.get_history_entry(id))
         }
         HistoryMessage::RemoveHistoryEntry(id) => {
-            send_worker_response(channel, deferred, worker.remove_history_entry(id))
+            send_worker_response(channel, oneshot, worker.remove_history_entry(id))
         }
         HistoryMessage::UpdateHistoryEntry(entry) => {
-            send_worker_response(channel, deferred, worker.update_history_entry(entry))
+            send_worker_response(channel, oneshot, worker.update_history_entry(entry))
         }
     }
 }

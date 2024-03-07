@@ -1,6 +1,7 @@
 use crate::{
     backend::{
         message::CardMessage,
+        tunnel::TunnelOneshot,
         worker::{send_worker_response, Worker},
     },
     store::{
@@ -9,7 +10,7 @@ use crate::{
     },
     BackendError, BackendResult,
 };
-use neon::{prelude::Channel, types::Deferred};
+use neon::prelude::Channel;
 
 impl Worker {
     pub fn list_all_cards_in_horizon(&mut self, horizon_id: &str) -> BackendResult<Vec<Card>> {
@@ -144,42 +145,42 @@ impl Worker {
 pub fn handle_card_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    deferred: Deferred,
+    oneshot: TunnelOneshot,
     message: CardMessage,
 ) {
     match message {
         CardMessage::CreateCard(card) => {
-            send_worker_response(channel, deferred, worker.create_card(card))
+            send_worker_response(channel, oneshot, worker.create_card(card))
         }
         CardMessage::GetCard(card_id) => {
-            send_worker_response(channel, deferred, worker.get_card(&card_id))
+            send_worker_response(channel, oneshot, worker.get_card(&card_id))
         }
         CardMessage::RemoveCard(card_id) => {
-            send_worker_response(channel, deferred, worker.remove_card(&card_id))
+            send_worker_response(channel, oneshot, worker.remove_card(&card_id))
         }
         CardMessage::UpdateCardData(card_id, data) => {
-            send_worker_response(channel, deferred, worker.update_card_data(&card_id, data))
+            send_worker_response(channel, oneshot, worker.update_card_data(&card_id, data))
         }
         CardMessage::UpdateCardDimensions(card_id, position_x, position_y, width, height) => {
             send_worker_response(
                 channel,
-                deferred,
+                oneshot,
                 worker.update_card_dimensions(&card_id, position_x, position_y, width, height),
             )
         }
         CardMessage::UpdateCardResourceID(card_id, resource_id) => send_worker_response(
             channel,
-            deferred,
+            oneshot,
             worker.update_card_resource_id(&card_id, &resource_id),
         ),
         CardMessage::UpdateCardStackingOrder(card_id) => send_worker_response(
             channel,
-            deferred,
+            oneshot,
             worker.update_card_stacking_order(&card_id),
         ),
         CardMessage::ListCardsInHorizon(horizon_id) => send_worker_response(
             channel,
-            deferred,
+            oneshot,
             worker.list_all_cards_in_horizon(&horizon_id),
         ),
     }

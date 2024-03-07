@@ -1,6 +1,7 @@
 use crate::{
     backend::{
         message::{ResourceMessage, ResourceTagMessage},
+        tunnel::TunnelOneshot,
         worker::{send_worker_response, Worker},
     },
     store::{
@@ -12,7 +13,7 @@ use crate::{
     },
     BackendError, BackendResult,
 };
-use neon::{prelude::Channel, types::Deferred};
+use neon::prelude::Channel;
 use std::{path::Path, str::FromStr};
 
 impl Worker {
@@ -238,15 +239,15 @@ impl Worker {
 pub fn handle_resource_tag_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    deferred: Deferred,
+    oneshot: TunnelOneshot,
     message: ResourceTagMessage,
 ) {
     match message {
         ResourceTagMessage::CreateResourceTag(tag) => {
-            send_worker_response(channel, deferred, worker.create_resource_tag(tag))
+            send_worker_response(channel, oneshot, worker.create_resource_tag(tag))
         }
         ResourceTagMessage::RemoveResourceTag(tag_id) => {
-            send_worker_response(channel, deferred, worker.delete_resource_tag_by_id(tag_id))
+            send_worker_response(channel, oneshot, worker.delete_resource_tag_by_id(tag_id))
         }
     }
 }
@@ -254,7 +255,7 @@ pub fn handle_resource_tag_message(
 pub fn handle_resource_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    deferred: Deferred,
+    oneshot: TunnelOneshot,
     message: ResourceMessage,
 ) {
     match message {
@@ -264,17 +265,17 @@ pub fn handle_resource_message(
             resource_metadata,
         } => send_worker_response(
             channel,
-            deferred,
+            oneshot,
             worker.create_resource(resource_type, resource_tags, resource_metadata),
         ),
         ResourceMessage::GetResource(id) => {
-            send_worker_response(channel, deferred, worker.read_resource(id))
+            send_worker_response(channel, oneshot, worker.read_resource(id))
         }
         ResourceMessage::RemoveResource(id) => {
-            send_worker_response(channel, deferred, worker.remove_resource(id))
+            send_worker_response(channel, oneshot, worker.remove_resource(id))
         }
         ResourceMessage::RecoverResource(id) => {
-            send_worker_response(channel, deferred, worker.recover_resource(id))
+            send_worker_response(channel, oneshot, worker.recover_resource(id))
         }
         ResourceMessage::SearchResources {
             query,
@@ -283,7 +284,7 @@ pub fn handle_resource_message(
             proximity_limit,
         } => send_worker_response(
             channel,
-            deferred,
+            oneshot,
             worker.search_resources(
                 query,
                 resource_tag_filters,
@@ -292,10 +293,10 @@ pub fn handle_resource_message(
             ),
         ),
         ResourceMessage::UpdateResourceMetadata(metadata) => {
-            send_worker_response(channel, deferred, worker.update_resource_metadata(metadata))
+            send_worker_response(channel, oneshot, worker.update_resource_metadata(metadata))
         }
         ResourceMessage::PostProcessJob(id) => {
-            send_worker_response(channel, deferred, worker.post_process_job(id))
+            send_worker_response(channel, oneshot, worker.post_process_job(id))
         }
     }
 }
