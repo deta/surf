@@ -1,7 +1,6 @@
 use crate::{
     backend::{
-        message::MiscMessage,
-        tunnel::TunnelOneshot,
+        message::{MiscMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     BackendResult,

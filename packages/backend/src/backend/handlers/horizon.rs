@@ -1,10 +1,6 @@
-use chrono::Utc;
-use neon::prelude::Channel;
-
 use crate::{
     backend::{
-        tunnel::TunnelOneshot,
-        message::{HorizonMessage},
+        message::{HorizonMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     store::{
@@ -13,6 +9,9 @@ use crate::{
     },
     BackendResult,
 };
+
+use chrono::Utc;
+use neon::prelude::Channel;
 
 impl Worker {
     pub fn list_horizons(&mut self) -> BackendResult<Vec<Horizon>> {

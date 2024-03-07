@@ -1,7 +1,6 @@
 use crate::{
     backend::{
-        message::CardMessage,
-        tunnel::TunnelOneshot,
+        message::{CardMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     store::{

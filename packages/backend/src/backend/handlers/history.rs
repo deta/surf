@@ -1,7 +1,6 @@
 use crate::{
     backend::{
-        message::HistoryMessage,
-        tunnel::TunnelOneshot,
+        message::{HistoryMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     store::models::HistoryEntry,

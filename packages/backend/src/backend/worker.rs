@@ -1,13 +1,14 @@
+use super::message::{TunnelMessage, TunnelOneshot, ProcessorMessage};
 use crate::{
-    backend::{handlers::*, message::WorkerMessage, tunnel::TunnelMessage},
+    backend::{handlers::*, message::WorkerMessage},
     store::db::Database,
     BackendError, BackendResult,
 };
+
+use crossbeam_channel as crossbeam;
 use neon::prelude::*;
 use serde::Serialize;
 use std::{path::Path, sync::mpsc};
-
-use super::tunnel::TunnelOneshot;
 
 pub struct Worker {
     pub db: Database,
@@ -34,14 +35,15 @@ impl Worker {
     }
 }
 
-pub fn worker_entry_point(
-    rx: mpsc::Receiver<TunnelMessage>,
+pub fn worker_thread_entry_point(
+    worker_rx: mpsc::Receiver<TunnelMessage>,
+    _tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     mut channel: Channel,
     backend_root_path: String,
 ) {
     let mut worker = Worker::new(backend_root_path);
 
-    while let Ok(TunnelMessage(message, oneshot)) = rx.recv() {
+    while let Ok(TunnelMessage(message, oneshot)) = worker_rx.recv() {
         match message {
             WorkerMessage::MiscMessage(message) => {
                 handle_misc_message(&mut worker, &mut channel, oneshot, message)

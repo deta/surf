@@ -1,4 +1,12 @@
-use crate::store::models::*;
+use crate::{store::models::*, BackendResult};
+
+pub enum TunnelOneshot {
+    Javascript(neon::types::Deferred),
+    Rust(std::sync::mpsc::Sender<BackendResult<String>>),
+}
+pub struct TunnelMessage(pub WorkerMessage, pub TunnelOneshot);
+
+pub enum ProcessorMessage {}
 
 pub enum WorkerMessage {
     CardMessage(CardMessage),

@@ -1,7 +1,6 @@
 use crate::{
     backend::{
-        message::UserdataMessage,
-        tunnel::TunnelOneshot,
+        message::{UserdataMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     store::{db::Database, models::Userdata},

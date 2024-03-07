@@ -1,7 +1,6 @@
 use crate::{
     backend::{
-        message::{ResourceMessage, ResourceTagMessage},
-        tunnel::TunnelOneshot,
+        message::{ResourceMessage, ResourceTagMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     store::{

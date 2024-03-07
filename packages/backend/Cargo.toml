@@ -22,6 +22,7 @@ uuid = { version = "1.7.0", features = ["v4", "fast-rng"] }
 strum = { version = "0.25.0", features = ["derive"] }
 rand = "0.8.5"
 url = "2.5.0"
+crossbeam-channel = "0.5.12"
 
 [dependencies.neon]
 version = "1.0.0-alpha.4"
