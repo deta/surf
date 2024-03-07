@@ -223,6 +223,9 @@ pub struct ResourceMetadata {
 
 // TODO: what is good for semantic search?
 impl EmbeddableContent for ResourceMetadata {
+    // for now we are just using the alt and user context
+    // as embeddable content
+    // source uri and name produce too much noise
     fn get_embeddable_content(&self) -> Vec<String> {
         let mut content = vec![];
         let alt = self.alt.trim();
@@ -243,6 +246,12 @@ pub struct ResourceTextContent {
     pub id: String,
     pub resource_id: String,
     pub content: String,
+}
+
+impl EmbeddableContent for ResourceTextContent {
+    fn get_embeddable_content(&self) -> Vec<String> {
+        vec![self.content.clone()]
+    }
 }
 
 #[derive(Debug)]

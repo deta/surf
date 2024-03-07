@@ -209,7 +209,7 @@ impl Worker {
 
         // TODO: make use of strum(?) for this
         match resource.resource_type.as_str() {
-            "text/space-notes" => {
+            "application/vnd.space.document.space-note" => {
                 let html_data = std::fs::read_to_string(resource.resource_path)?;
                 let mut output = String::new();
                 let mut in_tag = false;
@@ -234,11 +234,28 @@ impl Worker {
                     .collect::<Vec<_>>()
                     .join(" ");
 
-                self.db.create_resource_text_content(&ResourceTextContent {
+                let text_content = ResourceTextContent {
                     id: random_uuid(),
                     resource_id,
                     content: output,
-                })
+                };
+
+                let mut tx = self.db.begin()?;
+                Database::create_resource_text_content_tx(&mut tx, &text_content)?;
+                let embeddings = self.embeddings_model.get_embeddings(&text_content)?;
+                embeddings.iter().try_for_each(|v| -> BackendResult<()> {
+                    let rowid = Database::create_embedding_resource_tx(
+                        &mut tx,
+                        &EmbeddingResource {
+                            rowid: None,
+                            resource_id: text_content.resource_id.clone(),
+                        },
+                    )?;
+                    let em = Embedding::new_with_rowid(rowid, v);
+                    Database::create_embedding_tx(&mut tx, &em)?;
+                    Ok(())
+                })?;
+                Ok(tx.commit()?)
             }
             _ => Ok(()),
         }

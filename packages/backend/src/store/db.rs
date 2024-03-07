@@ -411,6 +411,21 @@ impl Database {
         Ok(())
     }
 
+    pub fn create_resource_text_content_tx(
+        tx: &mut rusqlite::Transaction,
+        resource_text_content: &ResourceTextContent,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "INSERT INTO resource_text_content (id, resource_id, content) VALUES (?1, ?2, ?3)",
+            rusqlite::params![
+                resource_text_content.id,
+                resource_text_content.resource_id,
+                resource_text_content.content
+            ],
+        )?;
+        Ok(())
+    }
+
     pub fn update_resource_text_content_tx(
         tx: &mut rusqlite::Transaction,
         resource_text_content: &ResourceTextContent,

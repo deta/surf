@@ -1,20 +1,30 @@
 use rust_bert::pipelines::sentence_embeddings::{self, SentenceEmbeddingsModelType};
+use text_splitter::{Characters, TextSplitter};
 
 use crate::store::models;
 use crate::BackendResult;
 
+// TODO: find a better chunking strategy
 pub struct EmbeddingModel {
+    max_characters: usize,
+    splitter: text_splitter::TextSplitter<Characters>,
     model: sentence_embeddings::SentenceEmbeddingsModel,
 }
 
 impl EmbeddingModel {
     // TODO: how to get local?
     pub fn new_remote() -> BackendResult<Self> {
+        let max_characters = 1000;
+        let splitter = TextSplitter::default().with_trim_chunks(true);
         let model = sentence_embeddings::SentenceEmbeddingsBuilder::remote(
             SentenceEmbeddingsModelType::AllMiniLmL12V2,
         )
         .create_model()?;
-        Ok(Self { model })
+        Ok(Self {
+            max_characters,
+            splitter,
+            model,
+        })
     }
 
     pub fn get_embedding_dim(&self) -> BackendResult<i64> {
@@ -22,7 +32,14 @@ impl EmbeddingModel {
     }
 
     pub fn encode(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>> {
-        let embeddings = self.model.encode(&sentences)?;
+        let mut embeddings: Vec<Vec<f32>> = vec![];
+        for sentence in sentences {
+            let chunks = self
+                .splitter
+                .chunks(sentence, self.max_characters)
+                .collect::<Vec<_>>();
+            embeddings.append(&mut self.model.encode(&chunks)?);
+        }
         Ok(embeddings)
     }
 
@@ -35,11 +52,11 @@ impl EmbeddingModel {
         &self,
         embeddable: &impl models::EmbeddableContent,
     ) -> BackendResult<Vec<Vec<f32>>> {
-        let content = embeddable.get_embeddable_content();
-        if content.is_empty() {
+        let sentences = embeddable.get_embeddable_content();
+        if sentences.is_empty() {
             return Ok(vec![]);
         }
-        let embeddings = self.model.encode(&content)?;
+        let embeddings = self.model.encode(&sentences)?;
         Ok(embeddings)
     }
 }
@@ -72,6 +89,18 @@ mod tests {
         embeddings.iter().for_each(|e| {
             assert_eq!(e.len(), model.get_embedding_dim().unwrap() as usize);
         });
+    }
+
+    #[test]
+    fn test_sanity_chunking() {
+        let model = EmbeddingModel::new_remote().unwrap();
+        let num_chunks = 2;
+        let sentence = "a".repeat(num_chunks * model.max_characters);
+        let chunks = model
+            .splitter
+            .chunks(&sentence, model.max_characters)
+            .collect::<Vec<_>>();
+        assert_eq!(chunks.len(), num_chunks);
     }
 
     // This test should be an integration test

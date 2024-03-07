@@ -22,6 +22,7 @@ uuid = { version = "1.7.0", features = ["v4", "fast-rng"] }
 strum = { version = "0.25.0", features = ["derive"] }
 rust-bert = { git = "https://github.com/guillaume-be/rust-bert", rev = "29f9a7a0ff832c742db919cbc6fd0b9c865a98ae"}
 rand = "0.8.5"
+text-splitter = { version = "0.6.3" }
 
 [dependencies.neon]
 version = "1.0.0-alpha.4"
