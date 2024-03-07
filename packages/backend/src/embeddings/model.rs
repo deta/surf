@@ -1,5 +1,6 @@
 use rust_bert::pipelines::sentence_embeddings::{self, SentenceEmbeddingsModelType};
 
+use crate::store::models;
 use crate::BackendResult;
 
 pub struct EmbeddingModel {
@@ -7,6 +8,7 @@ pub struct EmbeddingModel {
 }
 
 impl EmbeddingModel {
+    // TODO: how to get local?
     pub fn new_remote() -> BackendResult<Self> {
         let model = sentence_embeddings::SentenceEmbeddingsBuilder::remote(
             SentenceEmbeddingsModelType::AllMiniLmL12V2,
@@ -21,6 +23,23 @@ impl EmbeddingModel {
 
     pub fn encode(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>> {
         let embeddings = self.model.encode(&sentences)?;
+        Ok(embeddings)
+    }
+
+    pub fn encode_single(&self, sentence: &str) -> BackendResult<Vec<f32>> {
+        let embeddings = self.model.encode(&vec![sentence.to_string()])?;
+        Ok(embeddings[0].clone())
+    }
+
+    pub fn get_embeddings(
+        &self,
+        embeddable: &impl models::EmbeddableContent,
+    ) -> BackendResult<Vec<Vec<f32>>> {
+        let content = embeddable.get_embeddable_content();
+        if content.is_empty() {
+            return Ok(vec![]);
+        }
+        let embeddings = self.model.encode(&content)?;
         Ok(embeddings)
     }
 }

@@ -13,6 +13,15 @@ To use a non-notarized version on MacOS:
 
 ## Setup
 
+### Install rust and cargo
+
+Run the following command:
+
+```sh
+brew install libomp
+curl https://sh.rustup.rs -sSf | sh
+```
+
 ### Install js dependencies
 
 Run the following command:
@@ -21,13 +30,23 @@ Run the following command:
 yarn install
 ```
 
-### Install rust and cargo
-
-Run the following command:
+### Install pytorch (needed for semantic search)
 
 ```sh
-brew install libomp
-curl https://sh.rustup.rs -sSf | sh
+brew install pytorch jq
+```
+
+Get your pytorch installation path by running the following command:
+
+```sh
+echo $(brew --cellar pytorch)/$(brew info --json pytorch | jq -r '.[0].installed[0].version')
+```
+
+Get the output of the command and replace the `LIBTORCH` variable, you need to put the following in your `.zshrc` (or whatever shell you use) file:
+
+```sh
+export LIBTORCH={replace me with the output of the command above without the curly braces}
+export LD_LIBRARY_PATH=${LIBTORCH}/lib:$LD_LIBRARY_PATH
 ```
 
 ### Troubelshooting Builds

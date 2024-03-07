@@ -1,5 +1,6 @@
 use super::message::WorkerMessage;
 use super::tunnel::TunnelMessage;
+use crate::embeddings::model::EmbeddingModel;
 use crate::store::{db::*, models::*};
 use crate::{BackendError, BackendResult};
 use std::str::FromStr;
@@ -13,6 +14,7 @@ use std::sync::mpsc;
 
 struct Worker {
     db: Database,
+    embeddings_model: EmbeddingModel,
     resources_path: String,
 }
 
@@ -32,6 +34,7 @@ impl Worker {
             .to_string();
         Self {
             db: Database::new(&db_path).unwrap(),
+            embeddings_model: EmbeddingModel::new_remote().unwrap(),
             resources_path,
         }
     }
@@ -74,6 +77,22 @@ impl Worker {
             metadata.resource_id = resource.id.clone();
 
             Database::create_resource_metadata_tx(&mut tx, &metadata)?;
+
+            // TODO: this needs to move to a different worker thread
+            let vectors = self.embeddings_model.get_embeddings(metadata)?;
+            vectors.iter().try_for_each(|v| -> BackendResult<()> {
+                let rowid = Database::create_embedding_resource_tx(
+                    &mut tx,
+                    &EmbeddingResource {
+                        rowid: None,
+                        resource_id: resource.id.clone(),
+                    },
+                )?;
+                let em = Embedding::new_with_rowid(rowid, v);
+                Database::create_embedding_tx(&mut tx, &em)?;
+                Ok(())
+            })?;
+            // TODO: ---------------- upto here -----
         }
 
         if let Some(tags) = &mut tags {
@@ -300,6 +319,8 @@ impl Worker {
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
         proximity_distance_threshold: Option<f32>,
         proximity_limit: Option<i64>,
+        embeddings_distance_threshold: Option<f32>,
+        embeddings_limit: Option<i64>,
     ) -> BackendResult<SearchResult> {
         if let Some(resource_tag_filters) = &resource_tag_filters {
             // we use an `INTERSECT` for each resouce tag filter
@@ -314,19 +335,34 @@ impl Worker {
         // TODO: find sane defaults for these
         let proximity_distance_threshold = match proximity_distance_threshold {
             Some(threshold) => threshold,
-            None => 100000.0,
+            None => 100_000.0,
         };
-
         let proximity_limit = match proximity_limit {
             Some(limit) => limit,
             None => 10,
         };
+        let embeddings_distance_threshold = match embeddings_distance_threshold {
+            Some(threshold) => threshold,
+            None => 1.0,
+        };
+        let embeddings_limit = match embeddings_limit {
+            Some(limit) => limit,
+            None => 100,
+        };
 
+        let mut query_embedding: Vec<f32> = Vec::new();
+        if query != "" {
+            // TODO: what if query is too big?
+            query_embedding = self.embeddings_model.encode_single(&query)?;
+        }
         self.db.search_resources(
             &query,
+            query_embedding,
             resource_tag_filters,
             proximity_distance_threshold,
             proximity_limit,
+            embeddings_distance_threshold,
+            embeddings_limit,
         )
     }
 
@@ -511,6 +547,8 @@ pub fn worker_entry_point(
                 resource_tag_filters,
                 proximity_distance_threshold,
                 proximity_limit,
+                embeddings_distance_threshold,
+                embeddings_limit,
             } => send_worker_response(
                 &mut channel,
                 deferred,
@@ -519,6 +557,8 @@ pub fn worker_entry_point(
                     resource_tag_filters,
                     proximity_distance_threshold,
                     proximity_limit,
+                    embeddings_distance_threshold,
+                    embeddings_limit,
                 ),
             ),
             WorkerMessage::PostProcessJob(resource_id) => {

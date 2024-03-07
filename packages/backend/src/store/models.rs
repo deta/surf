@@ -19,6 +19,10 @@ pub fn parse_datetime_from_str(
     Ok(ut.with_timezone(&chrono::Utc))
 }
 
+pub trait EmbeddableContent {
+    fn get_embeddable_content(&self) -> Vec<String>;
+}
+
 // TODO: use strum
 pub enum InternalResourceTagNames {
     Type,
@@ -136,6 +140,7 @@ pub struct ResourceTag {
     pub tag_value: String,
 }
 
+// TODO: also implement embeddable content for resouce tags?
 impl ResourceTag {
     pub fn new_deleted(resource_id: &str, deleted: bool) -> ResourceTag {
         ResourceTag {
@@ -216,6 +221,22 @@ pub struct ResourceMetadata {
     pub user_context: String,
 }
 
+// TODO: what is good for semantic search?
+impl EmbeddableContent for ResourceMetadata {
+    fn get_embeddable_content(&self) -> Vec<String> {
+        let mut content = vec![];
+        let alt = self.alt.trim();
+        if alt != "" {
+            content.push(alt.to_string());
+        }
+        let user_context = self.user_context.trim();
+        if user_context != "" {
+            content.push(user_context.to_string());
+        }
+        content
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceTextContent {
     #[serde(default = "random_uuid")]
@@ -261,6 +282,13 @@ pub struct HistoryEntry {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
+// this is needed because one resource can have multiple embeddings
+#[derive(Debug)]
+pub struct EmbeddingResource {
+    pub rowid: Option<i64>, // the rowid will be the same as the embedding rowid
+    pub resource_id: String,
+}
+
 #[derive(Debug)]
 pub struct Embedding {
     pub rowid: Option<i64>,
@@ -268,15 +296,26 @@ pub struct Embedding {
 }
 
 impl Embedding {
-    pub fn new(embedding: &Vec<f32>) -> Embedding {
+    fn format_embedding(embedding: &Vec<f32>) -> String {
         let embedding_str = embedding
             .iter()
             .map(|x| format!("{}", x))
             .collect::<Vec<String>>()
             .join(", ");
+        format!("[{}]", embedding_str)
+    }
+
+    pub fn new(embedding: &Vec<f32>) -> Embedding {
         Embedding {
             rowid: None,
-            embedding: format!("[{}]", embedding_str),
+            embedding: Self::format_embedding(&embedding),
+        }
+    }
+
+    pub fn new_with_rowid(rowid: i64, embedding: &Vec<f32>) -> Embedding {
+        Embedding {
+            rowid: Some(rowid),
+            embedding: Self::format_embedding(&embedding),
         }
     }
 }

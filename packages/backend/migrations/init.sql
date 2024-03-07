@@ -51,6 +51,12 @@ CREATE TABLE IF NOT EXISTS history_entries (
     updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS embedding_resources (
+    resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS embedding_resources_resource_id_index ON embedding_resources(resource_id);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS resource_metadata USING fts5(
     id UNINDEXED,
     resource_id UNINDEXED,

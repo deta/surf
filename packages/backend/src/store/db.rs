@@ -51,6 +51,7 @@ pub struct CompositeResource {
 pub enum SearchEngine {
     Keyword,
     Proximity,
+    Embeddings,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -58,6 +59,7 @@ pub struct SearchResultItem {
     pub resource: CompositeResource,
     pub card_ids: Vec<String>,
     pub ref_resource_id: Option<String>,
+    pub distance: Option<f32>,
     pub engine: SearchEngine,
 }
 
@@ -892,36 +894,7 @@ impl Database {
         )?;
         let items = stmt.query_map(
             [Rc::new(card_position_rowids)],
-            //rusqlite::params_from_iter(card_position_rowids.iter()),
-            |row| {
-                let cr = CompositeResource {
-                    metadata: Some(ResourceMetadata {
-                        id: row.get(0)?,
-                        resource_id: row.get(1)?,
-                        name: row.get(2)?,
-                        source_uri: row.get(3)?,
-                        alt: row.get(4)?,
-                        user_context: row.get(5)?,
-                    }),
-                    resource: Resource {
-                        id: row.get(6)?,
-                        resource_path: row.get(7)?,
-                        resource_type: row.get(8)?,
-                        created_at: row.get(9)?,
-                        updated_at: row.get(10)?,
-                        deleted: row.get(11)?,
-                    },
-                    text_content: None,
-                    resource_tags: None,
-                };
-                let sr_item = SearchResultItem {
-                    resource: cr,
-                    ref_resource_id: Some(resource_id.to_string()),
-                    card_ids: Vec::new(),
-                    engine: SearchEngine::Proximity,
-                };
-                Ok(sr_item)
-            },
+            Self::map_resource_and_metadata(Some(resource_id.to_string()), SearchEngine::Proximity),
         )?;
         for i in items {
             resources.push(i?);
@@ -929,34 +902,60 @@ impl Database {
         Ok(resources)
     }
 
-    // TODO: optimize this
-    pub fn search_resources(
+    pub fn embeddings_search(
         &self,
-        keyword: &str,
-        tags: Option<Vec<ResourceTagFilter>>,
-        proximity_distance_threshold: f32,
-        proximity_limit: i64,
-    ) -> BackendResult<SearchResult> {
+        embedding_vector: &Vec<f32>,
+        distance_threshold: f32,
+        limit: i64,
+        filtered_resource_ids: Vec<String>,
+    ) -> BackendResult<Vec<SearchResultItem>> {
         let mut results: Vec<SearchResultItem> = Vec::new();
 
-        let mut params_vector = vec![format!("%{}%", keyword).to_string()];
-        let mut query = "SELECT DISTINCT M.*, R.*
-            FROM resource_metadata M
-            LEFT JOIN resource_text_content T ON M.resource_id = T.resource_id
-            LEFT JOIN resources R ON M.resource_id = R.id
-            WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1 OR M.user_context LIKE ?1 OR T.content LIKE ?1)"
-            .to_owned();
-        if let Some(tags) = tags {
-            if !tags.is_empty() {
-                let (subquery, mut params) = Self::list_resource_ids_by_tags_query(&tags, 1);
-                params_vector.append(&mut params);
-                query.push_str(format!(" AND R.id IN ({})", subquery).as_str());
-            }
-        }
-        let params = rusqlite::params_from_iter(params_vector.iter());
-        let mut stmt = self.conn.prepare(query.as_str())?;
+        let e = Embedding::new(embedding_vector);
+        let params = rusqlite::params![e.embedding, limit, distance_threshold];
+        let mut query = "
+            WITH matches as (
+                SELECT rowid, distance FROM embeddings WHERE vss_search(embedding, ?1) LIMIT ?2
+            )
+            SELECT DISTINCT M.*, R.*, MA.distance
+                FROM resource_metadata M
+                LEFT JOIN resources R ON M.resource_id = R.id
+                LEFT JOIN embedding_resources E ON M.resource_id = E.resource_id
+                LEFT JOIN matches MA ON MA.rowid = E.rowid
+                WHERE MA.distance <= ?3
+            "
+        .to_owned();
 
-        let keyword_search_results = stmt.query_map(params, |row| {
+        let row_map_fn = Self::map_resource_and_metadata(None, SearchEngine::Embeddings);
+        if !filtered_resource_ids.is_empty() {
+            query.push_str(" AND R.id IN rarray(?4) ORDER BY MA.distance ASC");
+            let mut rids: Vec<rusqlite::types::Value> = Vec::new();
+            for rid in filtered_resource_ids {
+                rids.push(rusqlite::types::Value::from(rid));
+            }
+            let params = rusqlite::params![e.embedding, limit, distance_threshold, Rc::new(rids)];
+            let mut stmt = self.conn.prepare(query.as_str())?;
+            let items = stmt.query_map(params, row_map_fn)?;
+            for i in items {
+                results.push(i?);
+            }
+            return Ok(results);
+        }
+        query.push_str(" ORDER BY MA.distance ASC");
+        let mut stmt = self.conn.prepare(query.as_str())?;
+        let items = stmt.query_map(params, row_map_fn)?;
+        for i in items {
+            dbg!(&i);
+            results.push(i?);
+        }
+        Ok(results)
+    }
+
+    fn map_resource_and_metadata(
+        ref_resource_id: Option<String>,
+        engine: SearchEngine,
+    ) -> impl FnMut(&rusqlite::Row<'_>) -> Result<SearchResultItem, rusqlite::Error> {
+        move |row| {
             Ok(SearchResultItem {
                 resource: CompositeResource {
                     metadata: Some(ResourceMetadata {
@@ -979,17 +978,80 @@ impl Database {
                     // TODO: should we populate the resource tags?
                     resource_tags: None,
                 },
-                ref_resource_id: None,
+                distance: row.get(12).unwrap_or(None),
+                ref_resource_id: ref_resource_id.clone(),
                 card_ids: Vec::new(),
-                engine: SearchEngine::Keyword,
+                engine: engine.clone(),
             })
-        })?;
+        }
+    }
 
-        // as order is important
-        let mut keyword_resource_ids: Vec<String> = Vec::new();
+    // TODO: how can we use bm25 for this?
+    pub fn keyword_search(
+        &self,
+        keyword: &str,
+        filtered_resource_ids: Vec<String>,
+    ) -> BackendResult<Vec<SearchResultItem>> {
+        let mut results: Vec<SearchResultItem> = Vec::new();
+        let keyword = format!("%{}%", keyword).to_string();
+
+        let mut rids: Vec<rusqlite::types::Value> = Vec::new();
+        let params = rusqlite::params![keyword];
+        let mut query = "SELECT DISTINCT M.*, R.* FROM resource_metadata M
+            LEFT JOIN resource_text_content T ON M.resource_id = T.resource_id
+            LEFT JOIN resources R ON M.resource_id = R.id
+            WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1 OR M.user_context LIKE ?1 OR T.content LIKE ?1)"
+            .to_owned();
+        let row_map_fn = Self::map_resource_and_metadata(None, SearchEngine::Keyword);
+        if !filtered_resource_ids.is_empty() {
+            query.push_str(" AND R.id IN rarray(?2)");
+            for rid in filtered_resource_ids {
+                rids.push(rusqlite::types::Value::from(rid));
+            }
+            let params = rusqlite::params![keyword, Rc::new(rids)];
+            let mut stmt = self.conn.prepare(query.as_str())?;
+            let items = stmt.query_map(params, row_map_fn)?;
+            for i in items {
+                results.push(i?);
+            }
+            return Ok(results);
+        }
+        let mut stmt = self.conn.prepare(query.as_str())?;
+        let items = stmt.query_map(params, row_map_fn)?;
+        for i in items {
+            results.push(i?);
+        }
+        Ok(results)
+    }
+
+    // TODO: optimize this
+    // TODO: move this to worker?
+    // TODO: break this into smaller functions
+    pub fn search_resources(
+        &self,
+        keyword: &str,
+        keyword_embedding: Vec<f32>,
+        tags: Option<Vec<ResourceTagFilter>>,
+        proximity_distance_threshold: f32,
+        proximity_limit: i64,
+        embeddings_distance_threshold: f32,
+        embeddings_limit: i64,
+    ) -> BackendResult<SearchResult> {
+        let mut filtered_resource_ids: Vec<String> = Vec::new();
+        if let Some(mut tags) = tags {
+            if !tags.is_empty() {
+                filtered_resource_ids = self.list_resource_ids_by_tags(&mut tags)?;
+            }
+        }
+
+        let mut results: Vec<SearchResultItem> = Vec::new();
+        let mut seen_resource_ids: Vec<String> = Vec::new();
+
+        let keyword_search_results = self.keyword_search(keyword, filtered_resource_ids.clone())?;
+        // keyword resouce ids are guaranteed to be unique
+        // so not checking for duplicates
         for search_result in keyword_search_results {
-            let search_result = search_result?;
-            keyword_resource_ids.push(search_result.resource.resource.id.clone());
+            seen_resource_ids.push(search_result.resource.resource.id.clone());
             results.push(search_result);
         }
 
@@ -1003,10 +1065,24 @@ impl Database {
             });
         }
 
+        // embeddings search
+        let embeddings_search_results = self.embeddings_search(
+            &keyword_embedding,
+            embeddings_distance_threshold,
+            embeddings_limit,
+            filtered_resource_ids,
+        )?;
+        for search_result in embeddings_search_results {
+            if !seen_resource_ids.contains(&search_result.resource.resource.id) {
+                seen_resource_ids.push(search_result.resource.resource.id.clone());
+                results.push(search_result);
+            }
+        }
+
         // relooping through the keyword search results to perform proximity search
         // we did not combine the two loops so that keyword search results are pushed first
         // as they should be ranked higher
-        for resource_id in keyword_resource_ids {
+        for resource_id in seen_resource_ids {
             let mut proximity_search_results = self.proximity_search_with_resource_id(
                 &resource_id,
                 proximity_distance_threshold,
@@ -1121,6 +1197,17 @@ impl Database {
         }
 
         Ok(history_entries)
+    }
+
+    pub fn create_embedding_resource_tx(
+        tx: &mut rusqlite::Transaction,
+        embedding_resource: &EmbeddingResource,
+    ) -> BackendResult<i64> {
+        tx.execute(
+            "INSERT INTO embedding_resources (resource_id) VALUES (?1)",
+            rusqlite::params![embedding_resource.resource_id],
+        )?;
+        Ok(tx.last_insert_rowid())
     }
 
     pub fn create_embedding_tx(

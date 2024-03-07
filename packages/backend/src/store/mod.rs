@@ -258,6 +258,17 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             .map(|js_number| js_number.value(&mut cx) as i64)
     });
 
+    let embeddings_distance_threshold = cx.argument_opt(5).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as f32)
+    });
+    let embeddings_limit = cx.argument_opt(6).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as i64)
+    });
+
     let (deferred, promise) = cx.promise();
     tunnel.send(
         WorkerMessage::SearchResources {
@@ -265,6 +276,8 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             resource_tag_filters,
             proximity_distance_threshold,
             proximity_limit,
+            embeddings_distance_threshold,
+            embeddings_limit,
         },
         deferred,
     );
