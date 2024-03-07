@@ -17,7 +17,7 @@ impl Worker {
 pub fn handle_misc_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    oneshot: TunnelOneshot,
+    oneshot: Option<TunnelOneshot>,
     message: MiscMessage,
 ) {
     match message {

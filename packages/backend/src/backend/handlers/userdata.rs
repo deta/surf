@@ -36,7 +36,7 @@ impl Worker {
 pub fn handle_userdata_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    oneshot: TunnelOneshot,
+    oneshot: Option<TunnelOneshot>,
     message: UserdataMessage,
 ) {
     match message {

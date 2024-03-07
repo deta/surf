@@ -1,13 +1,13 @@
 use crate::{
     backend::{
-        message::{ResourceMessage, ResourceTagMessage, TunnelOneshot},
+        message::{ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     store::{
         db::{CompositeResource, Database, SearchResult},
         models::{
             current_time, random_uuid, InternalResourceTagNames, Resource, ResourceMetadata,
-            ResourceTag, ResourceTagFilter, ResourceTextContent,
+            ResourceTag, ResourceTagFilter,
         },
     },
     BackendError, BackendResult,
@@ -172,48 +172,51 @@ impl Worker {
 
     pub fn post_process_job(&mut self, resource_id: String) -> BackendResult<()> {
         let resource = self
-            .db
-            .get_resource(&resource_id)?
+            .read_resource(resource_id)?
             // mb this should be a `DatabaseError`?
             .ok_or(BackendError::GenericError(
                 "resource does not exist".to_owned(),
             ))?;
 
-        // TODO: make use of strum(?) for this
-        match resource.resource_type.as_str() {
-            "text/space-notes" => {
-                let html_data = std::fs::read_to_string(resource.resource_path)?;
-                let mut output = String::new();
-                let mut in_tag = false;
+        self.tqueue_tx
+            .send(ProcessorMessage::ProcessResource(resource))
+            .map_err(|e| BackendError::GenericError(e.to_string()))
 
-                for c in html_data.chars() {
-                    match (in_tag, c) {
-                        (true, '>') => in_tag = false,
-                        (false, '<') => {
-                            in_tag = true;
-                            output.push(' ');
-                        }
-                        (false, _) => output.push(c),
-                        _ => (),
-                    }
-                }
+        // // TODO: make use of strum(?) for this
+        // match resource.resource_type.as_str() {
+        //     "application/vnd.space.document.space-note" => {
+        //         let html_data = std::fs::read_to_string(resource.resource_path)?;
+        //         let mut output = String::new();
+        //         let mut in_tag = false;
 
-                let output = output
-                    .chars()
-                    .take(256 * 3)
-                    .collect::<String>()
-                    .split_whitespace()
-                    .collect::<Vec<_>>()
-                    .join(" ");
+        //         for c in html_data.chars() {
+        //             match (in_tag, c) {
+        //                 (true, '>') => in_tag = false,
+        //                 (false, '<') => {
+        //                     in_tag = true;
+        //                     output.push(' ');
+        //                 }
+        //                 (false, _) => output.push(c),
+        //                 _ => (),
+        //             }
+        //         }
 
-                self.db.create_resource_text_content(&ResourceTextContent {
-                    id: random_uuid(),
-                    resource_id,
-                    content: output,
-                })
-            }
-            _ => Ok(()),
-        }
+        //         let output = output
+        //             .chars()
+        //             .take(256 * 3)
+        //             .collect::<String>()
+        //             .split_whitespace()
+        //             .collect::<Vec<_>>()
+        //             .join(" ");
+
+        //         self.db.create_resource_text_content(&ResourceTextContent {
+        //             id: random_uuid(),
+        //             resource_id,
+        //             content: output,
+        //         })
+        //     }
+        //     _ => Ok(()),
+        // }
     }
 
     pub fn update_resource_metadata(&mut self, metadata: ResourceMetadata) -> BackendResult<()> {
@@ -233,12 +236,23 @@ impl Worker {
         tx.commit()?;
         Ok(())
     }
+
+    pub fn upsert_resource_text_content(
+        &mut self,
+        resource_id: String,
+        content: String,
+    ) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::upsert_resource_text_content(&mut tx, &resource_id, &content)?;
+        tx.commit()?;
+        Ok(())
+    }
 }
 
 pub fn handle_resource_tag_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    oneshot: TunnelOneshot,
+    oneshot: Option<TunnelOneshot>,
     message: ResourceTagMessage,
 ) {
     match message {
@@ -254,7 +268,7 @@ pub fn handle_resource_tag_message(
 pub fn handle_resource_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    oneshot: TunnelOneshot,
+    oneshot: Option<TunnelOneshot>,
     message: ResourceMessage,
 ) {
     match message {
@@ -297,5 +311,13 @@ pub fn handle_resource_message(
         ResourceMessage::PostProcessJob(id) => {
             send_worker_response(channel, oneshot, worker.post_process_job(id))
         }
+        ResourceMessage::UpsertResourceTextContent {
+            resource_id,
+            content,
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.upsert_resource_text_content(resource_id, content),
+        ),
     }
 }

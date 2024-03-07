@@ -34,7 +34,7 @@ impl Worker {
 pub fn handle_history_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    oneshot: TunnelOneshot,
+    oneshot: Option<TunnelOneshot>,
     message: HistoryMessage,
 ) {
     match message {

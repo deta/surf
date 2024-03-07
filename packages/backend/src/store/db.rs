@@ -435,6 +435,26 @@ impl Database {
         Ok(())
     }
 
+    pub fn upsert_resource_text_content(
+        tx: &mut rusqlite::Transaction,
+        resource_id: &str,
+        content: &str,
+    ) -> BackendResult<()> {
+        let updated = tx.execute(
+            "UPDATE resource_text_content SET content = ?1 WHERE resource_id = ?2",
+            rusqlite::params![content, resource_id],
+        )?;
+
+        if updated == 0 {
+            tx.execute(
+                "INSERT INTO resource_text_content (id, resource_id, content) VALUES (?1, ?2, ?3)",
+                rusqlite::params![random_uuid(), resource_id, content],
+            )?;
+        }
+
+        Ok(())
+    }
+
     pub fn create_card_position_tx(
         tx: &mut rusqlite::Transaction,
         card_position: &CardPosition,

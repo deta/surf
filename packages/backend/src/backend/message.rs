@@ -1,12 +1,18 @@
-use crate::{store::models::*, BackendResult};
+use crate::{
+    store::{db::CompositeResource, models::*},
+    BackendResult,
+};
 
 pub enum TunnelOneshot {
     Javascript(neon::types::Deferred),
     Rust(std::sync::mpsc::Sender<BackendResult<String>>),
 }
-pub struct TunnelMessage(pub WorkerMessage, pub TunnelOneshot);
+pub struct TunnelMessage(pub WorkerMessage, pub Option<TunnelOneshot>);
 
-pub enum ProcessorMessage {}
+#[derive(Debug)]
+pub enum ProcessorMessage {
+    ProcessResource(CompositeResource),
+}
 
 pub enum WorkerMessage {
     CardMessage(CardMessage),
@@ -60,6 +66,11 @@ pub enum ResourceMessage {
         proximity_limit: Option<i64>,
     },
     UpdateResourceMetadata(ResourceMetadata),
+    UpsertResourceTextContent {
+        resource_id: String,
+        content: String,
+    },
+    // ---
     PostProcessJob(String),
 }
 

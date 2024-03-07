@@ -54,7 +54,7 @@ impl Worker {
 pub fn handle_horizon_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    oneshot: TunnelOneshot,
+    oneshot: Option<TunnelOneshot>,
     message: HorizonMessage,
 ) {
     match message {

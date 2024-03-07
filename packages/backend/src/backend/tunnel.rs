@@ -49,13 +49,21 @@ impl WorkerTunnel {
 
     pub fn worker_send_js(&self, message: WorkerMessage, deferred: Deferred) {
         self.worker_tx
-            .send(TunnelMessage(message, TunnelOneshot::Javascript(deferred)))
+            .send(TunnelMessage(
+                message,
+                Some(TunnelOneshot::Javascript(deferred)),
+            ))
             .expect("unbound channel send failed")
     }
 
-    pub fn worker_send_rust(&self, message: WorkerMessage, oneshot: mpsc::Sender<BackendResult<String>>) {
+    pub fn worker_send_rust(
+        &self,
+        message: WorkerMessage,
+        oneshot: Option<mpsc::Sender<BackendResult<String>>>,
+    ) {
+        let oneshot = oneshot.map(|oneshot| TunnelOneshot::Rust(oneshot));
         self.worker_tx
-            .send(TunnelMessage(message, TunnelOneshot::Rust(oneshot)))
+            .send(TunnelMessage(message, oneshot))
             .expect("unbound channel send failed")
     }
 }

@@ -1,4 +1,4 @@
-use super::message::{TunnelMessage, TunnelOneshot, ProcessorMessage};
+use super::message::{ProcessorMessage, TunnelMessage, TunnelOneshot};
 use crate::{
     backend::{handlers::*, message::WorkerMessage},
     store::db::Database,
@@ -12,12 +12,14 @@ use std::{path::Path, sync::mpsc};
 
 pub struct Worker {
     pub db: Database,
+    pub tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     pub resources_path: String,
 }
 
 impl Worker {
-    fn new(backend_root_path: String) -> Self {
+    fn new(backend_root_path: String, tqueue_tx: crossbeam::Sender<ProcessorMessage>) -> Self {
         println!("data root path: {}", backend_root_path);
+
         let db_path = Path::new(&backend_root_path)
             .join("sffs.sqlite")
             .as_os_str()
@@ -28,8 +30,10 @@ impl Worker {
             .as_os_str()
             .to_string_lossy()
             .to_string();
+
         Self {
             db: Database::new(&db_path).unwrap(),
+            tqueue_tx,
             resources_path,
         }
     }
@@ -37,11 +41,11 @@ impl Worker {
 
 pub fn worker_thread_entry_point(
     worker_rx: mpsc::Receiver<TunnelMessage>,
-    _tqueue_tx: crossbeam::Sender<ProcessorMessage>,
+    tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     mut channel: Channel,
     backend_root_path: String,
 ) {
-    let mut worker = Worker::new(backend_root_path);
+    let mut worker = Worker::new(backend_root_path, tqueue_tx);
 
     while let Ok(TunnelMessage(message, oneshot)) = worker_rx.recv() {
         match message {
@@ -72,9 +76,14 @@ pub fn worker_thread_entry_point(
 
 pub fn send_worker_response<T: Serialize + Send + 'static>(
     channel: &mut Channel,
-    oneshot: TunnelOneshot,
+    oneshot: Option<TunnelOneshot>,
     result: BackendResult<T>,
 ) {
+    let oneshot = match oneshot {
+        Some(oneshot) => oneshot,
+        None => return,
+    };
+
     let serialized_response = match &result {
         Ok(value) => serde_json::to_string(value),
         Err(e) => serde_json::to_string(&e.to_string()),
