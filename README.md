@@ -26,7 +26,7 @@ yarn install
 Run the following command:
 
 ```sh
-brew install libomp
+brew install libomp tesseract leptonica pkg-config
 curl https://sh.rustup.rs -sSf | sh
 ```
 

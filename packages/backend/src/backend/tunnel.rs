@@ -37,7 +37,7 @@ impl WorkerTunnel {
         });
 
         // spawn N worker threads
-        (0..1).for_each(|_| {
+        (0..8).for_each(|_| {
             let tunnel_clone = tunnel.clone();
             std::thread::spawn(move || {
                 processor_thread_entry_point(tunnel_clone);

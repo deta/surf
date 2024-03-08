@@ -23,6 +23,8 @@ strum = { version = "0.25.0", features = ["derive"] }
 rand = "0.8.5"
 url = "2.5.0"
 crossbeam-channel = "0.5.12"
+lopdf = "0.32.0"
+leptess = "0.14.0"
 
 [dependencies.neon]
 version = "1.0.0-alpha.4"

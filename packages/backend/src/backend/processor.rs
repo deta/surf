@@ -1,5 +1,5 @@
 use super::{message::*, tunnel::WorkerTunnel};
-use crate::{store::db::CompositeResource, BackendResult};
+use crate::{store::db::CompositeResource, BackendError, BackendResult};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -23,18 +23,13 @@ fn handle_process_resource(
         return Ok(());
     }
 
-    let resource_data = std::fs::read_to_string(&resource.resource.resource_path).unwrap();
+    let resource_data = match resource.resource.resource_type.as_str() {
+        t if t.starts_with("image/") || t == "application/pdf" => "".to_owned(),
+        _ => std::fs::read_to_string(&resource.resource.resource_path)?,
+    };
     let output = process_resource_data(&resource, &resource_data);
 
     if let Some(output) = output {
-        let output = output
-            .chars()
-            .take(256 * 3)
-            .collect::<String>()
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ");
-
         tunnel.worker_send_rust(
             WorkerMessage::ResourceMessage(ResourceMessage::UpsertResourceTextContent {
                 resource_id: resource.resource.id,
@@ -49,6 +44,8 @@ fn handle_process_resource(
 
 fn needs_processing(resource_type: &str) -> bool {
     match resource_type {
+        "application/pdf" => true,
+        _ if resource_type.starts_with("image/") => true,
         _ if resource_type.starts_with("application/vnd.space.") => true,
         _ => false,
     }
@@ -58,6 +55,15 @@ fn process_resource_data(resource: &CompositeResource, resource_data: &str) -> O
     match resource.resource.resource_type.as_str() {
         // TODO: mb we should have this use the same format as the post resources?
         "application/vnd.space.document.space-note" => Some(normalize_html_data(resource_data)),
+
+        "application/pdf" => extract_text_from_pdf(&resource.resource.resource_path)
+            .map_err(|e| eprintln!("extracting text from pdf: {e:#?}"))
+            .ok(),
+        resource_type if resource_type.starts_with("image/") => {
+            extract_text_from_image(&resource.resource.resource_path)
+                .map_err(|e| eprintln!("extracting text from image: {e:#?}"))
+                .ok()
+        }
 
         resource_type if resource_type.starts_with("application/vnd.space.post") => {
             serde_json::from_str::<PostData>(resource_data)
@@ -165,6 +171,35 @@ fn normalize_html_data(data: &str) -> String {
     }
 
     output
+}
+
+fn extract_text_from_image(image_path: &str) -> BackendResult<String> {
+    let mut lt = leptess::LepTess::new(None, "eng")
+        .map_err(|e| BackendError::GenericError(e.to_string()))?;
+    lt.set_image(image_path)
+        .map_err(|e| BackendError::GenericError(e.to_string()))?;
+    let text = lt
+        .get_utf8_text()
+        .map_err(|e| BackendError::GenericError(e.to_string()))?;
+    Ok(text.trim().to_owned())
+}
+
+fn extract_text_from_pdf(pdf_path: &str) -> BackendResult<String> {
+    let doc =
+        lopdf::Document::load(pdf_path).map_err(|e| BackendError::GenericError(e.to_string()))?;
+    let mut text = String::new();
+
+    for (page_num, _object_id) in doc.get_pages() {
+        match doc.extract_text(&[page_num]) {
+            Ok(page_text) => {
+                text += &page_text;
+                text.push_str("\n")
+            }
+            Err(e) => eprintln!("error extracting text from page {page_num}: {e:#?}"),
+        }
+    }
+
+    Ok(text)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
