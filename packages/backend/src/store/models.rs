@@ -35,6 +35,7 @@ pub enum InternalResourceTagNames {
     Type,
     Deleted,
     Hostname,
+    HorizonId,
 }
 
 impl InternalResourceTagNames {
@@ -43,6 +44,7 @@ impl InternalResourceTagNames {
             InternalResourceTagNames::Type => "type",
             InternalResourceTagNames::Deleted => "deleted",
             InternalResourceTagNames::Hostname => "hostname",
+            InternalResourceTagNames::HorizonId => "horizonId",
         }
     }
 }
@@ -55,6 +57,7 @@ impl FromStr for InternalResourceTagNames {
             "type" => Ok(InternalResourceTagNames::Type),
             "deleted" => Ok(InternalResourceTagNames::Deleted),
             "hostname" => Ok(InternalResourceTagNames::Hostname),
+            "horizonId" => Ok(InternalResourceTagNames::HorizonId),
             _ => Err(()),
         }
     }
@@ -66,6 +69,7 @@ impl ToString for InternalResourceTagNames {
             InternalResourceTagNames::Type => "type".to_string(),
             InternalResourceTagNames::Deleted => "deleted".to_string(),
             InternalResourceTagNames::Hostname => "hostname".to_string(),
+            InternalResourceTagNames::HorizonId => "horizonId".to_string(),
         }
     }
 }
