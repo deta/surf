@@ -46,6 +46,14 @@ impl Worker {
 
             Database::create_resource_metadata_tx(&mut tx, &metadata)?;
 
+            metadata
+                .get_tags()
+                .iter()
+                .try_for_each(|tag| -> BackendResult<()> {
+                    Database::create_resource_tag_tx(&mut tx, tag)?;
+                    Ok(())
+                })?;
+
             // TODO: this needs to move to a different worker thread
             let vectors = self.embeddings_model.get_embeddings(metadata)?;
             vectors.iter().try_for_each(|v| -> BackendResult<()> {

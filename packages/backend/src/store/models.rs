@@ -1,7 +1,14 @@
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 use std::str::FromStr;
 use std::string::ToString;
+
+fn get_hostname_from_uri(uri: &str) -> Option<String> {
+    Url::parse(uri)
+        .ok()
+        .and_then(|url| url.host_str().map(|host| host.to_owned()))
+}
 
 pub fn current_time() -> chrono::DateTime<chrono::Utc> {
     chrono::Utc::now()
@@ -27,6 +34,7 @@ pub trait EmbeddableContent {
 pub enum InternalResourceTagNames {
     Type,
     Deleted,
+    Hostname,
 }
 
 impl InternalResourceTagNames {
@@ -34,6 +42,7 @@ impl InternalResourceTagNames {
         match self {
             InternalResourceTagNames::Type => "type",
             InternalResourceTagNames::Deleted => "deleted",
+            InternalResourceTagNames::Hostname => "hostname",
         }
     }
 }
@@ -45,6 +54,7 @@ impl FromStr for InternalResourceTagNames {
         match s {
             "type" => Ok(InternalResourceTagNames::Type),
             "deleted" => Ok(InternalResourceTagNames::Deleted),
+            "hostname" => Ok(InternalResourceTagNames::Hostname),
             _ => Err(()),
         }
     }
@@ -55,6 +65,7 @@ impl ToString for InternalResourceTagNames {
         match self {
             InternalResourceTagNames::Type => "type".to_string(),
             InternalResourceTagNames::Deleted => "deleted".to_string(),
+            InternalResourceTagNames::Hostname => "hostname".to_string(),
         }
     }
 }
@@ -168,6 +179,7 @@ pub enum ResourceTagFilterOp {
     Eq,
     Ne,
     Prefix,
+    Suffix,
 }
 
 impl Default for ResourceTagFilterOp {
@@ -199,6 +211,10 @@ impl ResourceTagFilter {
             ResourceTagFilterOp::Prefix => (
                 format!("tag_name = ?{} AND tag_value LIKE ?{}", i1, i2),
                 format!("{}%", self.tag_value),
+            ),
+            ResourceTagFilterOp::Suffix => (
+                format!("tag_name = ?{} AND tag_value LIKE ?{}", i1, i2),
+                format!("%{}", self.tag_value),
             ),
         }
     }
@@ -237,6 +253,23 @@ impl EmbeddableContent for ResourceMetadata {
             content.push(user_context.to_string());
         }
         content
+    }
+}
+
+impl ResourceMetadata {
+    pub fn get_tags(&self) -> Vec<ResourceTag> {
+        let mut tags: Vec<ResourceTag> = Vec::new();
+        if self.source_uri != "" {
+            if let Some(hostname) = get_hostname_from_uri(&self.source_uri) {
+                tags.push(ResourceTag {
+                    id: random_uuid(),
+                    resource_id: self.resource_id.clone(),
+                    tag_name: InternalResourceTagNames::Hostname.to_string(),
+                    tag_value: hostname,
+                });
+            }
+        }
+        tags
     }
 }
 
@@ -326,5 +359,48 @@ impl Embedding {
             rowid: Some(rowid),
             embedding: Self::format_embedding(&embedding),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_hostname_from_uri() {
+        let uri = "https://www.google.com";
+        let hostname = get_hostname_from_uri(uri);
+        assert_eq!(hostname, Some("www.google.com".to_string()));
+
+        let uri = "https://deta.space";
+        let hostname = get_hostname_from_uri(uri);
+        assert_eq!(hostname, Some("deta.space".to_string()));
+
+        let uri = "non valid uri";
+        let hostname = get_hostname_from_uri(uri);
+        assert_eq!(hostname, None);
+
+        let uri = "https://google.com/search?q=hello";
+        let hostname = get_hostname_from_uri(uri);
+        assert_eq!(hostname, Some("google.com".to_string()));
+    }
+
+    #[test]
+    fn test_get_tags_from_resource_metadata() {
+        let metadata = ResourceMetadata {
+            id: random_uuid(),
+            resource_id: random_uuid(),
+            name: "test".to_string(),
+            source_uri: "https://www.google.com".to_string(),
+            alt: "".to_string(),
+            user_context: "".to_string(),
+        };
+        let tags = metadata.get_tags();
+        assert_eq!(tags.len(), 1);
+        assert_eq!(
+            tags[0].tag_name,
+            InternalResourceTagNames::Hostname.to_string()
+        );
+        assert_eq!(tags[0].tag_value, "www.google.com".to_string());
     }
 }
