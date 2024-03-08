@@ -672,15 +672,16 @@ impl Database {
     pub fn list_all_horizons(&self) -> BackendResult<Vec<Horizon>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, horizon_name, icon_uri, view_offset_x, created_at, updated_at FROM horizons")?;
+            .prepare("SELECT id, horizon_name, icon_uri, tint, view_offset_x, created_at, updated_at FROM horizons")?;
         let horizons = stmt.query_map([], |row| {
             Ok(Horizon {
                 id: row.get(0)?,
                 horizon_name: row.get(1)?,
                 icon_uri: row.get(2)?,
-                view_offset_x: row.get(3)?,
-                created_at: row.get(4)?,
-                updated_at: row.get(5)?,
+                tint: row.get(3)?,
+                view_offset_x: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
             })
         })?;
         let mut result = Vec::new();
@@ -695,8 +696,8 @@ impl Database {
         horizon: &Horizon,
     ) -> BackendResult<()> {
         tx.execute(
-            "INSERT INTO horizons (id, horizon_name, icon_uri, view_offset_x, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, datetime('now'), datetime('now'))",
-            rusqlite::params![horizon.id, horizon.horizon_name, horizon.icon_uri, horizon.view_offset_x]
+            "INSERT INTO horizons (id, horizon_name, icon_uri, tint, view_offset_x, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, datetime('now'), datetime('now'))",
+            rusqlite::params![horizon.id, horizon.horizon_name, horizon.icon_uri, horizon.tint, horizon.view_offset_x]
         )?;
         Ok(())
     }

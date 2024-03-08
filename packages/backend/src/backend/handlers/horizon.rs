@@ -1,6 +1,12 @@
 use crate::{
-    backend::{message::HorizonMessage, worker::{Worker, send_worker_response}},
-    store::{db::Database, models::Horizon},
+    backend::{
+        message::HorizonMessage,
+        worker::{send_worker_response, Worker},
+    },
+    store::{
+        db::Database,
+        models::{default_horizon_tint, Horizon},
+    },
     BackendResult,
 };
 use chrono::Utc;
@@ -18,6 +24,7 @@ impl Worker {
             id: horizon_id,
             horizon_name: name.to_owned(),
             icon_uri: "".to_owned(),
+            tint: default_horizon_tint(),
             view_offset_x: 0,
             created_at: current_time.clone(),
             updated_at: current_time,

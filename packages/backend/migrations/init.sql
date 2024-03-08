@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS horizons (
     id TEXT PRIMARY KEY,
     horizon_name TEXT NOT NULL,
     icon_uri TEXT NOT NULL,
+    tint TEXT NOT NULL,
     view_offset_x INTEGER NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL

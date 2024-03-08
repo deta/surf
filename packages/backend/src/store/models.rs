@@ -4,10 +4,8 @@ use url::Url;
 use std::str::FromStr;
 use std::string::ToString;
 
-fn get_hostname_from_uri(uri: &str) -> Option<String> {
-    Url::parse(uri)
-        .ok()
-        .and_then(|url| url.host_str().map(|host| host.to_owned()))
+pub fn default_horizon_tint() -> String {
+    "hsl(275, 40%, 80%)".to_owned()
 }
 
 pub fn current_time() -> chrono::DateTime<chrono::Utc> {
@@ -24,6 +22,12 @@ pub fn parse_datetime_from_str(
     let format = "%Y-%m-%d %H:%M:%S";
     let ut = chrono::DateTime::parse_from_str(datetime, format)?;
     Ok(ut.with_timezone(&chrono::Utc))
+}
+
+fn get_hostname_from_uri(uri: &str) -> Option<String> {
+    Url::parse(uri)
+        .ok()
+        .and_then(|url| url.host_str().map(|host| host.to_owned()))
 }
 
 // TODO: use strum
@@ -80,6 +84,8 @@ pub struct Horizon {
     pub id: String,
     pub horizon_name: String,
     #[serde(default)]
+    pub tint: String,
+    #[serde(default = "default_horizon_tint")]
     pub icon_uri: String,
     #[serde(default)]
     pub view_offset_x: i64,
