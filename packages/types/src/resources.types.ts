@@ -9,14 +9,21 @@ export interface SFFSResourceTag {
   id?: string
   name: string
   value: string
+  op?: 'eq' | 'ne' | 'prefix' | 'suffix'
 }
 
 export enum ResourceTagsBuiltInKeys {
-  SAVED_WITH_ACTION = 'savedWithAction'
+  SAVED_WITH_ACTION = 'savedWithAction',
+  TYPE = 'type',
+  DELETED = 'deleted',
+  HOSTNAME = 'hostname'
 }
 
 export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.SAVED_WITH_ACTION]: 'download' | 'drag/browser' | 'drag/local' | 'paste'
+  [ResourceTagsBuiltInKeys.TYPE]: string
+  [ResourceTagsBuiltInKeys.DELETED]: boolean
+  [ResourceTagsBuiltInKeys.HOSTNAME]: string
 }
 
 export interface SFFSResource {
@@ -28,6 +35,14 @@ export interface SFFSResource {
   deleted: boolean
   metadata?: SFFSResourceMetadata
   tags?: SFFSResourceTag[]
+}
+
+export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic'
+
+export interface SFFSSearchResultItem {
+  resource: SFFSResource
+  card_ids: string[]
+  engine: SFFSSearchResultEngine
 }
 
 export enum ResourceTypes {

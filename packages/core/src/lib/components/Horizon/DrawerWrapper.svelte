@@ -23,10 +23,11 @@
   import { MEDIA_TYPES, processDrop } from '../../service/mediaImporter'
   import {
     ResourceTag,
-    type ResourceManager,
+    ResourceManager,
     type ResourceObject,
     ResourceJSON,
-    ResourceNote
+    ResourceNote,
+    type ResourceSearchResultItem
   } from '../../service/resources'
   import { onMount } from 'svelte'
   import { ResourceTypes, type ResourceData, type SFFSResourceTag } from '../../types'
@@ -68,7 +69,7 @@
 
   const searchQuery = writable<SearchQuery>({ value: '', tab: 'all' })
 
-  let resources: ResourceObject[] = []
+  let searchResult: ResourceSearchResultItem[] = []
   let detectedInput = false
   let parsedInput: {
     url: string
@@ -80,23 +81,40 @@
     log.debug('Searching for', query, 'in', tab)
 
     const tags = [
-      {
-        name: 'deleted',
-        value: 'false'
-      }
+      ResourceManager.SearchTagDeleted(false) // we have to explicitly search for non-deleted resources
     ] as SFFSResourceTag[]
 
-    if (tab === 'link') {
-      tags.push({
-        name: 'type',
-        value: ResourceTypes.LINK
-      })
+    // EXAMPLE: searching by resource type (exact match)
+    // tags.push(
+    //     ResourceManager.SearchTagResourceType(ResourceTypes.LINK)
+    // )
+
+    // EXAMPLE: searching by resource type prefix
+    // tags.push(
+    //     ResourceManager.SearchTagResourceType(ResourceTypes.POST, true)
+    // )
+
+    // EXAMPLE: search by hostname (using suffix)
+    // tags.push(
+    //     ResourceManager.SearchTagHostname('deta.space')
+    // )
+
+    if (tab === 'dropped') {
+      tags.push(
+        ResourceManager.SearchTagSavedWithAction('drag', true) // searches both 'drag/browser' and 'drag/local'
+      )
+    } else if (tab === 'downloaded') {
+      tags.push(ResourceManager.SearchTagSavedWithAction('download'))
+    } else if (tab === 'archived') {
+      tags.push(ResourceManager.SearchTagDeleted())
+    } else if (tab === 'horizon') {
+      tags.push(ResourceManager.SearchTagHorizon(horizon.id))
     }
 
     const result = (await resourceManager.searchResources(query, tags)).reverse()
 
     log.debug('Search result', result)
-    resources = result
+    searchResult = result
   }
 
   const handleSearch = (e: CustomEvent<SearchQuery>) => {
@@ -389,20 +407,20 @@
     </div>
   {/if}
   <DrawerContentWrapper on:drop={handleDrop}>
-    {#if resources.length === 0}
+    {#if searchResult.length === 0}
       <DrawerContenEmpty />
     {:else}
       <DrawerContentMasonry
-        items={resources}
+        items={searchResult}
         idKey="id"
         animate={false}
         maxColWidth={650}
         minColWidth={250}
         gap={15}
-        let:item={resource}
+        let:item
       >
-        <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, resource)}>
-          <ResourcePreview on:click={handleResourceClick} {resource} />
+        <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
+          <ResourcePreview on:click={handleResourceClick} resource={item.resource} />
         </DrawerContentItem>
       </DrawerContentMasonry>
     {/if}

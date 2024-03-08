@@ -11,7 +11,10 @@ import {
   type ResourceDataPost,
   type ResourceDataArticle,
   type ResourceDataChatMessage,
-  type ResourceDataChatThread
+  type ResourceDataChatThread,
+  type SFFSSearchResultEngine,
+  ResourceTagsBuiltInKeys,
+  type ResourceTagsBuiltIn
 } from '../types'
 
 /*
@@ -225,6 +228,13 @@ export type ResourceObject =
   | ResourceChatThread
   | ResourceNote
 
+export type ResourceSearchResultItem = {
+  id: string // resource id
+  resource: ResourceObject
+  cardIds: string[]
+  engine: SFFSSearchResultEngine
+}
+
 export class ResourceManager {
   resources: Writable<ResourceObject[]>
 
@@ -296,13 +306,21 @@ export class ResourceManager {
   }
 
   async searchResources(query: string, tags?: SFFSResourceTag[]) {
-    const resourceItems = await this.sffs.searchResources(query, tags)
-    const resources = resourceItems.map((item) => this.createResourceObject(item))
+    const rawResults = await this.sffs.searchResources(query, tags)
+    const results = rawResults.map(
+      (item) =>
+        ({
+          id: item.resource.id,
+          engine: item.engine,
+          cardIds: item.card_ids,
+          resource: this.createResourceObject(item.resource)
+        }) as ResourceSearchResultItem
+    )
 
     // we probably don't want to overwrite the existing resources
     // this.resources.set(resources)
 
-    return resources
+    return results
   }
 
   async getResource(id: string) {
@@ -396,5 +414,29 @@ export class ResourceManager {
     tags?: SFFSResourceTag[]
   ) {
     return this.createResource(blob.type, blob, metadata, tags)
+  }
+
+  static SearchTagResourceType(type: ResourceTypes, prefix = false): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.TYPE, value: type, op: prefix ? 'prefix' : 'eq' }
+  }
+
+  static SearchTagSavedWithAction(action: string, prefix = false): SFFSResourceTag {
+    return {
+      name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION,
+      value: action,
+      op: prefix ? 'prefix' : 'eq'
+    }
+  }
+
+  static SearchTagDeleted(value = true): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.DELETED, value: `${value}`, op: 'eq' }
+  }
+
+  static SearchTagHorizon(horizonId: string): SFFSResourceTag {
+    return { name: 'horizonId', value: horizonId, op: 'eq' }
+  }
+
+  static SearchTagHostname(hostname: string): SFFSResourceTag {
+    return { name: 'horizonId', value: hostname, op: 'suffix' }
   }
 }
