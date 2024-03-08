@@ -62,6 +62,7 @@ impl Worker {
                     &EmbeddingResource {
                         rowid: None,
                         resource_id: resource.id.clone(),
+                        embedding_type: "metadata".to_owned(),
                     },
                 )?;
                 let em = Embedding::new_with_rowid(rowid, v);
@@ -282,19 +283,20 @@ impl Worker {
         Database::upsert_resource_text_content(&mut tx, &resource_id, &content)?;
 
         // TODO: this needs to move to a different thread
-        // TOOD:  find a way to also upsert the text content embeddings only
-        // and not the metadata embeddings
         let embeddings = self.embeddings_model.get_embeddings(&ResourceTextContent {
             id: "".to_string(),
             resource_id: resource_id.clone(),
             content,
         })?;
+        Database::remove_embedding_resource_by_type_tx(&mut tx, &resource_id, "text_content")?;
+
         embeddings.iter().try_for_each(|v| -> BackendResult<()> {
             let rowid = Database::create_embedding_resource_tx(
                 &mut tx,
                 &EmbeddingResource {
                     rowid: None,
                     resource_id: resource_id.clone(),
+                    embedding_type: "text".to_owned(),
                 },
             )?;
             let em = Embedding::new_with_rowid(rowid, v);

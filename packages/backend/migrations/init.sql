@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS history_entries (
 );
 
 CREATE TABLE IF NOT EXISTS embedding_resources (
-    resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE
+    resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+    embedding_type TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS embedding_resources_resource_id_index ON embedding_resources(resource_id);

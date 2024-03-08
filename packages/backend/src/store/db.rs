@@ -1240,10 +1240,29 @@ impl Database {
         embedding_resource: &EmbeddingResource,
     ) -> BackendResult<i64> {
         tx.execute(
-            "INSERT INTO embedding_resources (resource_id) VALUES (?1)",
-            rusqlite::params![embedding_resource.resource_id],
+            "INSERT INTO embedding_resources (resource_id, embedding_type ) VALUES (?1, ?2)",
+            rusqlite::params![
+                embedding_resource.resource_id,
+                embedding_resource.embedding_type
+            ],
         )?;
         Ok(tx.last_insert_rowid())
+    }
+
+    pub fn remove_embedding_resource_by_type_tx(
+        tx: &mut rusqlite::Transaction,
+        resource_id: &str,
+        embedding_type: &str,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "DELETE FROM embeddings WHERE rowid IN (SELECT rowid FROM embedding_resources WHERE resource_id = ?1 AND embedding_type = ?2)",
+            rusqlite::params![resource_id, embedding_type],
+        )?;
+        tx.execute(
+            "DELETE FROM embedding_resources WHERE resource_id = ?1 AND embedding_type = ?2",
+            rusqlite::params![resource_id, embedding_type],
+        )?;
+        Ok(())
     }
 
     pub fn create_embedding_tx(

@@ -339,6 +339,7 @@ pub struct HistoryEntry {
 pub struct EmbeddingResource {
     pub rowid: Option<i64>, // the rowid will be the same as the embedding rowid
     pub resource_id: String,
+    pub embedding_type: String,
 }
 
 #[derive(Debug)]
