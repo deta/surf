@@ -98,11 +98,13 @@
         createBrowserCard(item.data, getNewCardHorizontalPosition(idx))
       } else if (item.type === 'file') {
         if (item.data.type.startsWith('image')) {
-          createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+          createImageCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
             ResourceTag.paste()
           ])
         } else {
-          log.warn('unhandled file type', item.data.type)
+          createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+            ResourceTag.paste()
+          ])
         }
       }
     })
@@ -131,9 +133,15 @@
       } else if (item.type === 'url') {
         createBrowserCard(item.data, getNewCardHorizontalPosition(idx))
       } else if (item.type === 'file') {
-        createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
-          ResourceTag.dragLocal()
-        ])
+        if (item.data.type.startsWith('image')) {
+          createImageCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+            ResourceTag.dragLocal()
+          ])
+        } else {
+          createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
+            ResourceTag.dragLocal()
+          ])
+        }
       } else if (item.type === 'resource') {
         handleResource(item.data, getNewCardHorizontalPosition(idx))
       } else {
@@ -153,9 +161,19 @@
 
     log.debug('resource', resource)
 
-    if (resource.type === ResourceTypes.LINK) {
+    if (
+      resource.type === ResourceTypes.LINK ||
+      resource.type === ResourceTypes.ARTICLE ||
+      resource.type.startsWith(ResourceTypes.POST) ||
+      resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)
+    ) {
       const bookmark = await (resource as ResourceLink).getParsedData()
-      createBrowserCard(new URL(bookmark.url), pos)
+      if (!bookmark || !bookmark.url) {
+        log.error('Bookmark not found', resourceId)
+        return
+      }
+
+      createBrowserCard(new URL(bookmark.url), pos, resource.id)
     } else {
       horizon.addCard({
         x: pos.x - DEFAULT_CARD_SIZE.width / 2,
@@ -186,24 +204,15 @@
       metadata,
       tags
     )
+    log.debug('created card', get(card))
   }
 
-  const processUriListData = async (basePos: any, data: string): Promise<boolean> => {
-    let dataHandled = false
-    const pos = getNewCardPosition(basePos)
-
-    const urls = data.split(/\r\n|\r|\n/)
-    urls.forEach((url) => {
-      if (checkIfUrl(url)) {
-        createBrowserCard(new URL(url), pos)
-        dataHandled = true
-      }
-    })
-
-    return dataHandled
-  }
-
-  const createImageCard = async (blob: Blob, pos: { x: number; y: number }) => {
+  const createImageCard = async (
+    blob: Blob,
+    pos: { x: number; y: number },
+    metadata: Partial<SFFSResourceMetadata>,
+    tags: SFFSResourceTag[]
+  ) => {
     // Find out size
     const src = URL.createObjectURL(blob)
     const [imgWidth, imgHeight] = await new Promise((resolve, reject) => {
@@ -215,15 +224,22 @@
 
     // TODO: Make this respect our default card size a bit better
     const aspect = clamp(imgWidth / imgHeight, 0, 4)
-    let targetWidth = DEFAULT_CARD_SIZE.width * aspect
-    let targetHeight = DEFAULT_CARD_SIZE.width
+    let targetWidth = Math.round(DEFAULT_CARD_SIZE.width * aspect)
+    let targetHeight = Math.round(DEFAULT_CARD_SIZE.width)
 
-    const card = await horizon.addCardFile(blob, {
-      x: pos.x - DEFAULT_CARD_SIZE.width / 2,
-      y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-      width: targetWidth,
-      height: targetHeight
-    })
+    const card = await horizon.addCardWithResource(
+      'file',
+      {
+        x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+        y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+        width: targetWidth,
+        height: targetHeight
+      },
+      blob,
+      metadata,
+      tags
+    )
+
     log.debug('created card', get(card))
   }
 
@@ -237,14 +253,25 @@
   //   log.debug('created card', get(card))
   // }
 
-  const createBrowserCard = async (url: URL, pos: { x: number; y: number }) => {
-    const card = await horizon.addCardBrowser(url.href, {
+  const createBrowserCard = async (
+    url: URL,
+    pos: { x: number; y: number },
+    resourceId?: string
+  ) => {
+    const position = {
       x: pos.x - DEFAULT_CARD_SIZE.width / 2,
       y: pos.y - DEFAULT_CARD_SIZE.height / 2,
       width: 800,
       height: 500
-    })
-    log.debug('created card', get(card))
+    }
+
+    if (resourceId) {
+      const card = await horizon.addCardBrowserWithResource(url.href, resourceId, position)
+      log.debug('created card', get(card))
+    } else {
+      const card = await horizon.addCardBrowser(url.href, position)
+      log.debug('created card', get(card))
+    }
   }
 
   const createTextCard = async (

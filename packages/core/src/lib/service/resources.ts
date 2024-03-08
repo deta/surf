@@ -161,14 +161,20 @@ export class Resource {
 export class ResourceNote extends Resource {
   // data: Writable<SFFSResourceDataNote | null>
 
+  parsedData: string | null
+
   constructor(sffs: SFFS, data: SFFSResource) {
     super(sffs, data)
     // this.data = writable(null)
+    this.parsedData = null
   }
 
   async getContent() {
     const data = await this.getData()
-    return data.text()
+    const text = await data.text()
+
+    this.parsedData = text
+    return text
   }
 
   async updateContent(content: string) {
@@ -180,15 +186,21 @@ export class ResourceNote extends Resource {
 export class ResourceJSON<T> extends Resource {
   // data: Writable<SFFSResourceDataBookmark | null>
 
+  parsedData: T | null
+
   constructor(sffs: SFFS, data: SFFSResource) {
     super(sffs, data)
+    this.parsedData = null
     // this.data = writable(null)
   }
 
   async getParsedData() {
     const data = await this.getData()
     const text = await data.text()
-    return JSON.parse(text) as T
+    const parsed = JSON.parse(text) as T
+
+    this.parsedData = parsed
+    return parsed
   }
 
   async updatePost(data: T) {
