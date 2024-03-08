@@ -12,13 +12,14 @@
   let link: ResourceDataLink | null = null
   let title = ''
   let subtitle = ''
+  let image = ''
   let error = ''
 
   onMount(async () => {
     try {
       link = await resource.getParsedData()
 
-      console.log('link', link)
+      console.log('linkdata', link)
 
       const url = new URL(link.url)
 
@@ -42,9 +43,19 @@
     {#if error}
       <div class="title">{error}</div>
       <div class="subtitle">{link?.url}</div>
-    {:else}
-      <div class="title">{title}</div>
-      <div class="subtitle">{subtitle}</div>
+    {:else if link?.image}
+      <img class="image" alt={`${link?.provider} image`} src={link?.image} />
+    {:else if !link?.image}
+      <div class="link-preview-no-image">
+        <img
+          class="favicon"
+          src={`https://www.google.com/s2/favicons?domain=${link?.url}&sz=256`}
+          alt={`${link?.provider} favicon`}
+        />
+        <div class="description">
+          {link?.description}
+        </div>
+      </div>
     {/if}
   </div>
 </a>
@@ -71,10 +82,20 @@
     flex-grow: 1;
   }
 
+  .image {
+    width: 100%;
+    height: 100%;
+  }
+
   .title {
     font-size: 1.25rem;
+    line-height: 1.775rem;
+    letter-spacing: 0.02rem;
+    color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
+    margin-top: 1rem;
+    max-width: 30ch;
   }
 
   .subtitle {
@@ -84,5 +105,31 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 225px;
+  }
+
+  .link-preview-no-image {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 2rem 2.5rem;
+    width: 100%;
+    background: #f6f5f2;
+    .favicon {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 5.1px;
+      box-shadow:
+        0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
+        0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
+    }
+    .description {
+      font-size: 1.25rem;
+      line-height: 1.775rem;
+      color: #281b53;
+      font-weight: 500;
+      flex-shrink: 0;
+      margin-top: 1rem;
+      max-width: 95%;
+    }
   }
 </style>

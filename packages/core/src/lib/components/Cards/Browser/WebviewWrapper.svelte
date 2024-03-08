@@ -356,7 +356,7 @@
   {src}
   {partition}
   preload={`file://${window.api.webviewPreloadPath}`}
-  webpreferences="autoplayPolicy=user-gesture-required"
+  webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=14"
   allowpopups
 />
 

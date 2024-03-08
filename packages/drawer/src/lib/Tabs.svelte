@@ -31,9 +31,9 @@
       class:selected={tab.key === selected}
     >
       {#if tab.icon}
-        <Icon name={tab.icon} size="22px" />
+        <Icon name={tab.icon} size="20px" color={tab.key === selected ? '#EA6FFE' : '#959599'} />
       {/if}
-      <span>{tab.label}</span>
+      <!-- <span>{tab.label}</span> -->
     </button>
   {/each}
 </div>
@@ -65,15 +65,15 @@
 
     &:hover {
       color: var(--color-text);
+      background-color: #e2dee4;
     }
 
     &.selected {
-      background-color: rgba(255, 255, 255);
       color: var(--color-text);
     }
 
     &.selected:hover {
-      background-color: rgba(255, 255, 255, 0.75);
+      background-color: transparent;
     }
   }
 </style>

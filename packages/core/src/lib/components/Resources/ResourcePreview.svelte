@@ -8,6 +8,7 @@
   import LinkPreview from '../Cards/Link/LinkPreview.svelte'
   import type {
     Resource,
+    ResourceArticle,
     ResourceChatMessage,
     ResourceLink,
     ResourceNote,
@@ -20,6 +21,8 @@
   import FileIcon from '../Cards/File/FileIcon.svelte'
   import PostPreview from '../Cards/Post/PostPreview.svelte'
   import ChatMessagePreview from '../Cards/ChatMessage/ChatMessagePreview.svelte'
+  import ArticlePreview from '../Cards/Article/ArticlePreview.svelte'
+  import ArticleProperties from '@horizon/drawer/src/lib/components/properties/ArticleProperties.svelte'
 
   export let resource: Resource
 
@@ -33,20 +36,28 @@
   $: textResource = resource as ResourceNote
   $: linkResource = resource as ResourceLink
   $: postResource = resource as ResourcePost
+  $: articleResource = resource as ResourceArticle
   $: chatMessageResource = resource as ResourceChatMessage
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div on:click={handleClick} class="resource-preview">
-  <div class="preview">
+  <div
+    class="preview"
+    class:reddit={resource.type === 'application/vnd.space.post.reddit'}
+    class:twitter={resource.type === 'application/vnd.space.post.twitter'}
+    class:slack={resource.type === 'application/vnd.space.chat-message.slack'}
+  >
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
       <TextPreview resource={textResource} />
     {:else if resource.type === ResourceTypes.LINK}
       <LinkPreview resource={linkResource} />
     {:else if resource.type.startsWith(ResourceTypes.POST)}
-      <PostPreview resource={postResource} />
+      <PostPreview resource={postResource} type={resource.type} />
+    {:else if resource.type.startsWith(ResourceTypes.ARTICLE)}
+      <ArticlePreview resource={articleResource} />
     {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
-      <ChatMessagePreview resource={chatMessageResource} />
+      <ChatMessagePreview resource={chatMessageResource} type={resource.type} />
     {:else}
       <FilePreview {resource} />
       <!-- {:else}
@@ -65,6 +76,8 @@
       {:else if resource.type.startsWith(ResourceTypes.POST)}
         <Icon name="link" size="20px" />
         <div class="">Post</div>
+      {:else if resource.type.startsWith(ResourceTypes.ARTICLE)}
+        <ArticleProperties resource={articleResource} />
       {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
         <Icon name="docs" size="20px" />
         <div class="">Message</div>
@@ -74,7 +87,7 @@
       {/if}
     </div>
 
-    <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div>
+    <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
   </div>
 
   <!-- {#if resource.image_url}
@@ -120,26 +133,42 @@
 <style lang="scss">
   .resource-preview {
     display: flex;
+    gap: 8px;
     flex-direction: column;
     border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
-    border: 1px solid rgba(228, 228, 228, 0.75);
   }
 
   .preview {
+    border-radius: 6px;
+    border: 1px solid rgba(228, 228, 228, 0.75);
+    box-shadow:
+      0px 1px 0px 0px rgba(65, 58, 86, 0.25),
+      0px 0px 1px 0px rgba(0, 0, 0, 0.25);
     background: rgba(255, 255, 255, 0.75);
+    &.twitter {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: radial-gradient(100% 100% at 50% 0%, #000 0%, #252525 100%) !important;
+    }
+    &.slack {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: radial-gradient(100% 100% at 50% 0%, #d5ffed 0%, #ecf9ff 100%);
+    }
+    &.reddit {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: radial-gradient(100% 100% at 50% 0%, #ff4500 0%, #ff7947 100%);
+    }
   }
 
   .details {
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 0.5rem;
+    padding: 0.25rem 0.5rem 0.75rem 0.5rem;
     gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.75);
     color: var(--color-text-muted);
-    border-top: 1px solid rgba(228, 228, 228, 0.75);
   }
 
   .type {
@@ -147,10 +176,12 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 1rem;
+    font-weight: 500;
+    color: #281b53;
   }
 
   .date {
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
   }
 </style>

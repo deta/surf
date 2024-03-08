@@ -44,7 +44,7 @@
   .drawer-content {
     flex: 1;
     padding: 1rem;
-    padding-top: 0;
+    padding-bottom: 12rem;
     overflow: auto;
     height: 100%;
     transition-property: opacity background-color;

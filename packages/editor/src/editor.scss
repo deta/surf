@@ -1,6 +1,7 @@
 .editor {
   --color-text: #000;
   --color-text-muted: #8a8a8a;
+  --color-text-secondary: #4D4B4D;
   --color-menu: #000000;
   --color-menu-muted: #868686;
   --color-link: rgb(4, 84, 255);
@@ -8,11 +9,14 @@
   --background: #fff;
   --background-menu: #f6f6f6;
   --background-menu-muted: #dedede;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 
   position: relative;
   width: 100%;
   height: 100%;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  text-rendering: optimizeLegibility;
   line-height: 1.5;
   font-weight: 400;
 

@@ -143,6 +143,7 @@
     margin: 0;
     font-size: 1.2rem;
     font-weight: 500;
+    letter-spacing: 0.02rem;
     color: var(--color-text);
     flex-grow: 1;
     overflow: hidden;

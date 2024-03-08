@@ -1,0 +1,49 @@
+# Query: letter-spacing: 0.02rem
+# ContextLines: 1
+
+9 Ergebnisse - 9-Dateien
+
+packages/core/src/lib/components/Cards/Browser/BrowserCard.svelte:
+  688      color: #212121;
+  689:     letter-spacing: 0.01rem;
+  690      outline-offset: -2px;
+
+packages/core/src/lib/components/Cards/ChatMessage/ChatMessagePreview.svelte:
+  120      line-height: 1.775rem;
+  121:     letter-spacing: 0.01rem;
+  122      color: #281b53;
+
+packages/core/src/lib/components/Cards/File/UnknownFileView.svelte:
+  145      font-weight: 500;
+  146:     letter-spacing: 0.01rem;
+  147      color: var(--color-text);
+
+packages/core/src/lib/components/Cards/Link/LinkCard.svelte:
+  93      font-weight: 500;
+  94:     letter-spacing: 0.01rem;
+  95    }
+
+packages/core/src/lib/components/Cards/Link/LinkPreview.svelte:
+  92      line-height: 1.775rem;
+  93:     letter-spacing: 0.01rem;
+  94      color: #281b53;
+
+packages/core/src/lib/components/Cards/Post/PostPreview.svelte:
+  121      line-height: 1.775rem;
+  122:     letter-spacing: 0.01rem;
+  123      color: #281b53;
+
+packages/core/src/lib/components/Horizon/DrawerWrapper.svelte:
+  378        font-weight: 600;
+  379:       letter-spacing: 0.01rem;
+  380      }
+
+packages/drawer/src/lib/components/ChatLinkPreview.svelte:
+  73            color: #281b53;
+  74:           letter-spacing: 0.01rem;
+  75            font-feature-settings:
+
+packages/drawer/src/lib/components/properties/ArticleProperties.svelte:
+  93      text-align: center;
+  94:     letter-spacing: 0.01rem;
+  95      line-height: 1.5rem;

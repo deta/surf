@@ -7,7 +7,10 @@
   fill="none"
   stroke-linecap="round"
   stroke-linejoin="round"
-  ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
-    d="M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4z"
-  /></svg
 >
+  <path
+    d="M9 4H15C16.1046 4 17 4.89543 17 6V20L12 17L7 20V6C7 4.89543 7.89543 4 9 4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

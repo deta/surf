@@ -4,8 +4,10 @@
   import { useLogScope } from '../../../utils/log'
   import type { ResourcePost } from '../../../service/resources'
   import type { ResourceDataPost } from '../../../types'
+  import Link from '../../Atoms/Link.svelte'
 
   export let resource: ResourcePost
+  export let type: string
 
   const log = useLogScope('PostPreview')
 
@@ -13,8 +15,10 @@
   let title = ''
   let subtitle = ''
   let error = ''
+  let isTwitter = false
+  let isReddit = false
 
-  const MAX_TITLE_LENGTH = 55
+  const MAX_TITLE_LENGTH = 300
   const MAX_SUBTITLE_LENGTH = 100
 
   const truncate = (text: string, length: number) => {
@@ -25,7 +29,7 @@
     try {
       post = await resource.getParsedData()
 
-      console.log('post', post)
+      console.log('postdata', post)
 
       const url = new URL(post.url)
 
@@ -34,10 +38,13 @@
         post.title || post.excerpt || hostname[0].toUpperCase() + hostname.slice(1),
         MAX_TITLE_LENGTH
       )
-      subtitle = truncate(
-        post.excerpt || post.content_plain || `${url.hostname}${url.pathname}`,
-        MAX_SUBTITLE_LENGTH
-      )
+      // subtitle = truncate(
+      //   post.excerpt || post.content_plain || `${url.hostname}${url.pathname}`,
+      //   MAX_SUBTITLE_LENGTH
+      // )
+
+      isTwitter = type === 'application/vnd.space.post.twitter'
+      isReddit = type === 'application/vnd.space.post.reddit'
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
@@ -50,13 +57,32 @@
 </script>
 
 <a href={post?.url} target="_blank" class="link-card">
-  <div class="details">
+  <div class="details" class:twitter={isTwitter} class:reddit={isReddit}>
     {#if error}
       <div class="title">{error}</div>
       <div class="subtitle">{post?.url}</div>
     {:else}
+      <!-- <img
+        class="favicon"
+        src={`https://www.google.com/s2/favicons?domain=${post?.site_icon}&sz=256`}
+        alt={`${post?.site_name} favicon`}
+      /> -->
+      <img
+        class="favicon"
+        src={`https://www.google.com/s2/favicons?domain=${post?.url}&sz=256`}
+        alt={`${post?.site_name} favicon`}
+      />
       <div class="title">{title}</div>
-      <div class="subtitle">{subtitle}</div>
+      <div class="post-metadata">
+        <Link
+          class="link"
+          url={post?.author_url}
+          label={`From ${post?.author}`}
+          color={isTwitter || isReddit ? 'white' : 'inherit'}
+        />
+        {#if isTwitter}<div class="from">Tweet</div>{/if}
+        {#if isReddit}<div class="from">Reddit Post</div>{/if}
+      </div>
     {/if}
   </div>
 </a>
@@ -68,7 +94,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem;
+    padding: 2rem;
     color: inherit;
     text-decoration: none;
     user-select: none;
@@ -82,18 +108,44 @@
     flex-grow: 1;
   }
 
-  .title {
-    font-size: 1.25rem;
-    font-weight: 500;
-    flex-shrink: 0;
+  .twitter,
+  .reddit {
+    .title,
+    .post-metadata > .from {
+      color: #ffffff;
+    }
   }
 
-  .subtitle {
-    font-size: 1rem;
-    font-weight: 300;
-    // overflow: hidden;
-    // text-overflow: ellipsis;
-    // white-space: nowrap;
-    // max-width: 225px;
+  .favicon {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 5.1px;
+    box-shadow:
+      0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
+      0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
+  }
+
+  .title {
+    font-size: 1.25rem;
+    line-height: 1.775rem;
+    letter-spacing: 0.02rem;
+    color: #281b53;
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-top: 1rem;
+    max-width: 95%;
+  }
+  .post-metadata {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0;
+    gap: 0.125rem;
+    .from {
+      font-size: 1rem;
+      font-weight: 500;
+      text-decoration: none;
+      color: #281b53;
+      opacity: 0.65;
+    }
   }
 </style>

@@ -1,12 +1,14 @@
 import AdblockOff from './Icons/AdblockOff.svelte'
 import AdblockOn from './Icons/AdblockOn.svelte'
 import Add from './Icons/Add.svelte'
+import Archive from './Icons/Archive.svelte'
 import Arrow from './Icons/Arrow.svelte'
 import ArrowBackUp from './Icons/ArrowBackUp.svelte'
 import ChevronLeft from './Icons/ChevronLeft.svelte'
 import ChevronRight from './Icons/ChevronRight.svelte'
 import Close from './Icons/Close.svelte'
 import Copy from './Icons/Copy.svelte'
+import Download from './Icons/Download.svelte'
 import Mute from './Icons/Muted.svelte'
 import Unmute from './Icons/Unmute.svelte'
 import Bold from './Icons/Bold.svelte'
@@ -30,19 +32,23 @@ import File from './Icons/File.svelte'
 import Docs from './Icons/Docs.svelte'
 import Bookmark from './Icons/Bookmark.svelte'
 import BookmarkFilled from './Icons/BookmarkFilled.svelte'
+import SquareRotated from './Icons/SquareRotated.svelte'
 import Home from './Icons/Home.svelte'
+import Rectangle from './Icons/Rectangle.svelte'
 import Spinner from './Icons/Spinner.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
   adblockon: AdblockOn,
   add: Add,
+  archive: Archive,
   arrow: Arrow,
   arrowbackup: ArrowBackUp,
   'chevron.left': ChevronLeft,
   'chevron.right': ChevronRight,
   close: Close,
   copy: Copy,
+  download: Download,
   mute: Mute,
   unmute: Unmute,
   bold: Bold,
@@ -68,6 +74,8 @@ export const icons = {
   bookmark: Bookmark,
   bookmarkFilled: BookmarkFilled,
   home: Home,
+  'square.rotated': SquareRotated,
+  rectangle: Rectangle,
   spinner: Spinner
 }
 

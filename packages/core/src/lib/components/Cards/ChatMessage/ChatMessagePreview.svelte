@@ -2,19 +2,22 @@
   import { onDestroy, onMount } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
-  import type { ResourceChatMessage } from '../../../service/resources'
-  import type { ResourceDataChatMessage } from '../../../types'
+  import type { ResourceMessage } from '../../../service/resources'
+  import type { ResourceDataMessage } from '../../../types'
+  import Link from '../../Atoms/Link.svelte'
 
-  export let resource: ResourceChatMessage
+  export let resource: ResourceMessage
+  export let type: string
 
-  const log = useLogScope('PostPreview')
+  const log = useLogScope('MessagePreview')
 
-  let message: ResourceDataChatMessage | null = null
-  let author = ''
-  let content = ''
+  let message: ResourceDataMessage | null = null
+  let chatMessage = ''
+  let subtitle = ''
   let error = ''
+  let isSlack = false
 
-  const MAX_TITLE_LENGTH = 55
+  const MAX_TITLE_LENGTH = 300
   const MAX_SUBTITLE_LENGTH = 100
 
   const truncate = (text: string, length: number) => {
@@ -25,12 +28,18 @@
     try {
       message = await resource.getParsedData()
 
-      console.log('message', message)
+      console.log('messagedata', message)
 
       const url = new URL(message.url)
 
-      author = message.author
-      content = message.content_plain
+      const hostname = url.hostname.split('.').slice(-2, -1).join('')
+      chatMessage = truncate(message.content_plain, MAX_TITLE_LENGTH)
+      // subtitle = truncate(
+      //   message.excerpt || message.content_plain || `${url.hostname}${url.pathname}`,
+      //   MAX_SUBTITLE_LENGTH
+      // )
+
+      isSlack = type === 'application/vnd.space.chat-message.slack'
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
@@ -43,16 +52,22 @@
 </script>
 
 <a href={message?.url} target="_blank" class="link-card">
-  <div>
-    <img src={message?.platform_icon} alt={message?.platform_name} width="25px" height="25px" />
-  </div>
-  <div class="details">
+  <div class="details" class:slack={isSlack}>
     {#if error}
       <div class="title">{error}</div>
       <div class="subtitle">{message?.url}</div>
     {:else}
-      <div class="content">{content}</div>
-      <div class="author">{author}</div>
+      <!-- <img
+        class="favicon"
+        src={`https://www.google.com/s2/favicons?domain=${message?.site_icon}&sz=256`}
+        alt={`${message?.site_name} favicon`}
+      /> -->
+      <img class="favicon" src={message?.platform_icon} alt={`${message?.platform_name} favicon`} />
+      <div class="title">{chatMessage}</div>
+      <div class="message-metadata">
+        <Link class="link" url={message?.author_url} label={`From ${message?.author}`} />
+        <div class="from">Slack Message</div>
+      </div>
     {/if}
   </div>
 </a>
@@ -64,7 +79,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem;
+    padding: 2rem;
     color: inherit;
     text-decoration: none;
     user-select: none;
@@ -78,27 +93,42 @@
     flex-grow: 1;
   }
 
+  .slack {
+    .favicon {
+      box-shadow: none;
+    }
+  }
+
+  .favicon {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 5.1px;
+    box-shadow:
+      0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
+      0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
+  }
+
   .title {
     font-size: 1.25rem;
+    line-height: 1.775rem;
+    letter-spacing: 0.02rem;
+    color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
+    margin-top: 1rem;
+    max-width: 95%;
   }
-
-  .subtitle {
-    font-size: 1rem;
-    font-weight: 300;
-    // overflow: hidden;
-    // text-overflow: ellipsis;
-    // white-space: nowrap;
-    // max-width: 225px;
-  }
-
-  .content {
-    font-size: 1rem;
-  }
-
-  .author {
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
+  .message-metadata {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0;
+    gap: 0.125rem;
+    .from {
+      font-size: 1rem;
+      font-weight: 500;
+      text-decoration: none;
+      color: #281b53;
+      opacity: 0.65;
+    }
   }
 </style>
