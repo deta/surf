@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { createEventDispatcher, getContext, onDestroy, onMount, tick } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
 
   import { Editor } from '@horizon/editor'
@@ -9,10 +9,13 @@
   import { useLogScope } from '../../../utils/log'
   import { useDebounce } from '../../../utils/debounce'
   import type { ResourceManager, ResourceNote } from '../../../service/resources'
+  import type { Horizon } from '../../../service/horizon'
 
   export let card: Writable<Card>
   export let resourceManager: ResourceManager
   export let active: boolean = false
+
+  const activeCardId = getContext<Horizon>('horizon').activeCardId
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('TextCard')
@@ -47,6 +50,18 @@
 
     // seems like tiptap handles text drag and drop already
   }
+
+  // FIX: This interfears with the waa we use the active state -> e.g. inside visor
+  // onDestroy(
+  //   activeCardId.subscribe((id) => {
+  //     if (id === $card.id) {
+  //       active = true
+  //       tick().then(focusEditor)
+  //     } else {
+  //       active = false
+  //     }
+  //   })
+  // )
 
   onMount(async () => {
     if (!$card.resourceId) {

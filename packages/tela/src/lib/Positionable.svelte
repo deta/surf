@@ -97,7 +97,7 @@
   class:hoisted={$positionable.hoisted}
   class:dragging
   bind:this={el}
-  on:mousedown
+  on:mousedown|capture
   on:mousemove
   on:mouseover
   on:mouseenter

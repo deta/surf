@@ -120,6 +120,7 @@
     }
 
     return {
+      settings,
       state,
       panTo,
       zoomTo
@@ -977,8 +978,8 @@
    * Use capture, to ensure select also works on top of draggable stuff.
    */
   function onMouseDown_idleCapture(e: MouseEvent | TouchEvent) {
-    // // TODO(@maxu): this is tmp only
-    // return
+    // TODO(@maxu): Well this is not touch friendly..
+    if (e.button !== 0) return
     if (!e.shiftKey || !$settings.CAN_SELECT) return
     const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     const { x: absX, y: absY } = posToAbsolute(
@@ -1003,6 +1004,7 @@
     mode.select()
   }
   function onMouseDown_idle(e: MouseEvent | TouchEvent) {
+    if (e.button !== 0) return
     if (!$settings.CAN_DRAW) return
     const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     if (

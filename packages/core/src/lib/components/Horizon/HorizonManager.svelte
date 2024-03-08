@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount, tick } from 'svelte'
+  import { onDestroy, onMount, setContext, tick } from 'svelte'
   import { get, writable } from 'svelte/store'
   import { fade } from 'svelte/transition'
 
@@ -53,6 +53,7 @@
     active: telemetryActive,
     trackHostnames: false
   })
+  setContext('horizonsManager', horizonManager)
 
   const lethargy = new Lethargy({
     // ORIGINAL MAXU:
@@ -683,7 +684,7 @@
 </svelte:head>
 
 <SplashScreen />
-<AppBar horizon={activeHorizon} />
+<AppBar horizon={activeHorizon} on:createHorizon={() => addHorizon()} />
 
 {#if $visorEnabled}
   <div id="visor">
@@ -761,6 +762,7 @@
               active={$activeHorizonId === horizon.id && !$showStackOverview}
               visorSearchTerm={visorSearchVal}
               inOverview={$showStackOverview}
+              {resourceManager}
               on:change={handleHorizonChange}
               on:cardChange={handleCardChange}
             />

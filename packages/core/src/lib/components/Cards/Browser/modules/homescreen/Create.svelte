@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { services } from './services.ts'
+  import { SERVICES } from '@horizon/web-parser'
   import paper from '../../../../../../../public/assets/paper.png'
+  import { getServiceIcon } from '../../../../../utils/services'
 
   export let service: string
 
@@ -8,19 +9,21 @@
   $: serviceTitle = resolveServiceTitle(service)
   $: serviceAction = resolveServiceAction(service)
 
+  const AVAILABLE_SERVICES = SERVICES.filter((e) => e.showBrowserAction === true)
+
   function resolveServiceIcon(serviceName: string): string {
-    const serviceItem = services.find((s) => s.service === serviceName)
-    return serviceItem ? serviceItem.icon : ''
+    const serviceItem = AVAILABLE_SERVICES.find((s) => s.id === serviceName)
+    return serviceItem ? getServiceIcon(serviceItem.id) : ''
   }
 
   function resolveServiceTitle(serviceName: string): string {
-    const serviceItem = services.find((s) => s.service === serviceName)
-    return serviceItem ? serviceItem.title : 'Unknown Service'
+    const serviceItem = AVAILABLE_SERVICES.find((s) => s.id === serviceName)
+    return serviceItem ? serviceItem.name : 'Unknown Service'
   }
 
   function resolveServiceAction(serviceName: string): string {
-    const serviceItem = services.find((s) => s.service === serviceName)
-    return serviceItem ? serviceItem.action : 'Unknown Action'
+    const serviceItem = AVAILABLE_SERVICES.find((s) => s.id === serviceName)
+    return serviceItem ? serviceItem.browserActionTitle! : 'Unknown Action'
   }
 </script>
 

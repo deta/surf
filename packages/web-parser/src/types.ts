@@ -1,10 +1,16 @@
 import { ResourceData } from '@horizon/types'
 
-export type WebApp = {
+export type WebService = {
   id: string
   name: string
   matchHostname: RegExp
+  url?: string
   supportedResources: string[]
+
+  // Browser card shortcuts
+  showBrowserAction?: boolean // true -> shows in browser card
+  browserActionUrl?: string
+  browserActionTitle?: string
 }
 
 export type DetectedWebApp = {

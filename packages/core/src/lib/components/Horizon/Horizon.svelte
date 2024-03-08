@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
+  import { createEventDispatcher, getContext, onDestroy, onMount, setContext, tick } from 'svelte'
   import { get, writable, type Unsubscriber, type Writable } from 'svelte/store'
 
   import {
@@ -10,15 +10,16 @@
     snapToGrid,
     hoistPositionable,
     hasClassOrParentWithClass,
+    applyBounds,
     Positionable
   } from '@horizon/tela'
   import type { IBoard, IPositionable, Vec4 } from '@horizon/tela'
 
   import CardWrapper from './CardWrapper.svelte'
-  import { Horizon } from '../../service/horizon'
+  import { Horizon, HorizonsManager } from '../../service/horizon'
   import { useLogScope } from '../../utils/log'
   import { requestNewPreviewImage, takePageScreenshot } from '../../utils/screenshot'
-  import type { Card } from '../../types/index'
+  import type { Card, CardBrowser } from '../../types/index'
   import { useDebounce } from '../../utils/debounce'
   import HorizonInfo from './HorizonInfo.svelte'
   import Grid from './Grid.svelte'
@@ -37,15 +38,30 @@
     applyFocusMode,
     focusModeEnabled,
     focusModeTargets,
+    enterFocusMode,
     resetFocusMode
   } from '../../utils/focusMode'
   import { visorEnabled, visorPinch } from '../../utils/visor'
+  import { buildDefaultList, buildMultiCardList } from '../FlyMenu/flyMenu'
+  import FlyMenu, {
+    closeFlyMenu,
+    flyMenuItems,
+    flyMenuOpen,
+    flyMenuType,
+    openFlyMenu
+  } from '../FlyMenu/FlyMenu.svelte'
+  import type { ResourceManager, ResourceNote } from '../../service/resources'
+  import { SERVICES } from '@horizon/web-parser'
 
   export let active: boolean = true
   export let horizon: Horizon
+  export let resourceManager: ResourceManager
   export let inOverview: boolean = false
   export let visorSearchTerm: Writable<string>
 
+  setContext<Horizon>('horizon', horizon)
+
+  const horizonsManager = getContext<HorizonsManager>('horizonsManager')
   const REQUEST_NEW_PREVIEW_INTERVAL = 3e3
   const cards = horizon.cards
   const data = horizon.data
@@ -91,6 +107,7 @@
   )
 
   const state = board.state
+  const selection = $state.selection
   const selectionRect = $state.selectionRect
   const selectionCss = $state.selectionCss
   const viewOffset = $state.viewOffset
@@ -157,7 +174,7 @@
     }
 
     // Right click
-    selectSecondaryAction = event.which === 3 || event.button === 2
+    //selectSecondaryAction = event.which === 3 || event.button === 2
   }
 
   const onModSelectEnd = (
@@ -268,6 +285,14 @@
     if (!hasClassOrParentWithClass(e.target as HTMLElement, 'card')) {
       $activeCardId = null
     }
+
+    console.log('open sele', $selection.size)
+    if (e.button === 2) {
+      console.warn('ipen fly', $selection.size)
+      openFlyMenu('cursor', $selection.size > 1 ? buildMultiCardList() : buildDefaultList())
+    } else {
+      closeFlyMenu()
+    }
   }
 
   const handleKeydown = (e: KeyboardEvent) => {
@@ -289,6 +314,7 @@
       }, 800)
     } else if (e.key === 'f' && e.metaKey) {
       visorEnabled.set(!get(visorEnabled))
+      if ($visorEnabled) closeFlyMenu()
     } else if ((e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey)) && $visorEnabled) {
       visorSelectPrev()
     } else if ((e.key === 'ArrowRight' || e.key === 'Tab') && $visorEnabled) {
@@ -306,8 +332,10 @@
       }
 
       if (!$focusModeEnabled && get($state.selection).size > 0) {
+        closeFlyMenu()
         enableFocusMode([...get($state.selection)])
       } else if (!$focusModeEnabled && $activeCardId !== null) {
+        closeFlyMenu()
         enableFocusMode([$activeCardId])
       } else {
         disableFocusMode()
@@ -319,7 +347,12 @@
     }
 
     // General keys
-    else if (e.key === 'Tab' && e.altKey) {
+    else if (e.key === 'k' && e.metaKey) {
+      if ($flyMenuOpen) closeFlyMenu()
+      else {
+        openFlyMenu('cmdk', buildDefaultList())
+      }
+    } else if (e.key === 'Tab' && e.altKey) {
       // Alternative alt + K / L ?
       //if (e.location !== 2) return
       if (e.shiftKey) {
@@ -327,7 +360,7 @@
       } else {
         tryFocusNextCard() // TODO: refac/rename
       }
-    } else if (e.key === 'a' && e.metaKey) {
+    } else if (e.key === 'a' && e.metaKey && e.target === document.querySelector('body')) {
       e.preventDefault()
       $state.selection.update((v) => {
         v.clear()
@@ -421,6 +454,15 @@
     applyFocusMode($viewOffset, $viewPort)
   }
   const disableFocusMode = () => {
+    const [cards, _] = $focusModeTargets
+
+    cards.forEach((c) => {
+      if (get(c).isTemporary) {
+        cards.splice(cards.indexOf(c), 1)
+        horizon.deleteCard(get(c).id)
+      }
+    })
+
     resetFocusMode() // TODO: Can this be auto subscription inside focusMode.ts ?
 
     $settings.CAN_DRAW = true
@@ -487,6 +529,77 @@
     horizon.setActiveCard(get(target).id)
   }
 
+  const handleFlyCommand = async (
+    e: CustomEvent<{ cmd: string; origin: 'cursor' | 'cmdk'; targetX: number; targetY: number }>
+  ) => {
+    let { cmd, origin, targetX, targetY } = e.detail
+    cmd = cmd.toLowerCase()
+
+    const CARD_W = 550
+    const CARD_H = 420
+    const position = {
+      x: origin === 'cursor' ? targetX - CARD_W / 2 : $viewOffset.x + $viewPort.w / 2 - CARD_W / 2,
+      y: origin === 'cursor' ? targetY - CARD_H / 2 : $viewOffset.y + $viewPort.h / 2 - CARD_H / 2,
+      width: CARD_W,
+      height: CARD_H
+    }
+    const bound = applyBounds(position, $settings)
+    position.x = bound.x
+    position.y = bound.y
+
+    // TODO: Support all cmds
+    // -- Global
+    if (cmd === 'new horizon') {
+      // TODO: impl
+    } else if (cmd === 'delete horizon') {
+      // TODO: impl
+    }
+
+    // -- APPS
+    // TODO: Make app path dynamic for apps (?concept)
+    console.log('[FlyMenu] cmd: ', cmd)
+    if (SERVICES.map((e) => e.id).includes(cmd)) {
+      const card = await horizon.addCardBrowser(
+        SERVICES.find((e) => e.id === cmd)!.url,
+        position,
+        true,
+        false
+      )
+      if (origin === 'cmdk') {
+        card.update((v) => {
+          v.isTemporary = true
+          return v
+        })
+      }
+      if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
+    }
+    if (cmd === 'text') {
+      const card = await horizon.addCardText(
+        '',
+        position,
+        { name: 'New Text Card' },
+        [],
+        true,
+        false
+      )
+      if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
+    } else if (cmd === 'browser') {
+      const card = await horizon.addCardBrowser('', position, true, false)
+      if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
+    }
+
+    // -- Card actions
+    else if (cmd === 'focus card' || cmd === 'focus cards') {
+      enableFocusMode([...$selection.values()])
+    } else if (cmd === 'unpin card') {
+      horizon.deleteCard([...$selection.values()][0])
+    } else if (cmd === 'unpin cards') {
+      for (let id of $selection.values()) {
+        horizon.deleteCard(id)
+      }
+    }
+  }
+
   /* VISOR */
 
   // How much +- x margin to animate in visor mode
@@ -538,7 +651,7 @@
     // if ($activeCardId !== undefined && visibleCards.find((c) => get(c).id === $activeCardId) !== undefined) {
     //   focusedCard = visibleCards.find((c) => get(c).id === $activeCardId)!
     // }
-    // TODO: Case? Do we ned this feat?
+    // TODO: Case? Do we need this feat?
     if (focusCard === undefined) {
       if (!autoFocus) {
         focusedCard = contents?.at(0) || undefined //|| $cards.find((c) => get(c).id === $activeCardId)
@@ -803,29 +916,34 @@
     applyVisorList()
   }
 
-  const handleSearchChange = (query: string = '') => {
+  const handleSearchChange = async (query: string = '') => {
     lastVisorSearchTerm = query
     horizon.setActiveCard(null)
-    const results =
-      query === ''
-        ? $cards
-        : $cards.filter((c) => {
-            const card = get(c)
-            if (card.type === 'text') {
-              return JSON.stringify((card as CardText).data.content)
-                .toLowerCase()
-                .includes(query.toLowerCase())
-            } else if (card.type === 'browser') {
-              const entry = horizon.historyEntriesManager.getEntry(
-                (card as CardBrowser).data.historyStackIds[
-                  (card as CardBrowser).data.currentHistoryIndex
-                ]
-              )
-              return `${entry?.title} ${entry?.url}`.toLowerCase().includes(query.toLowerCase())
-            } else if (card.type === 'file') {
-              return (card as CardFile).data.name?.toLowerCase().includes(query.toLowerCase())
-            }
-          })
+    const resources = await resourceManager.searchResources(query)
+    let results = $cards
+    if (query !== '') {
+      results = []
+      for (const _card of $cards) {
+        const card = get(_card)
+        if (card.type === 'browser') {
+          // TODO: if resourceId -> search ffs
+          const entry = horizon.historyEntriesManager.getEntry(
+            (card as CardBrowser).data.historyStackIds[
+              (card as CardBrowser).data.currentHistoryIndex
+            ]
+          )
+          if (`${entry?.title} ${entry?.url}`.toLowerCase().includes(query.toLowerCase()))
+            results.push(_card)
+        } else if (card.type === 'text') {
+          const resource = (await resourceManager.getResource(card.resourceId)) as ResourceNote
+          resource.parsedData.toLowerCase().includes(query.toLowerCase()) && results.push(_card)
+        }
+        if (card.resourceId) {
+          const k = resources.findIndex((e) => e.id === card.resourceId)
+          if (k !== -1) results.push(_card)
+        }
+      }
+    }
     computeVisorList(
       results,
       results.find((c) => get(c).id === $activeCardId) || undefined,
@@ -833,6 +951,7 @@
       true
     )
     applyVisorList()
+    console.warn(results.length)
   }
 
   // Try to cleanup
@@ -847,6 +966,8 @@
   let visorActiveCardSub: Unsubscriber
   let backupActiveCardID: string | null = null
   const handleVisorOpen = () => {
+    if ($focusModeEnabled) focusModeEnabled.set(false)
+
     backupActiveCardID = $activeCardId
     $settings.CAN_PAN = false
     $settings.CAN_DRAW = false
@@ -992,7 +1113,7 @@
               height="{$selectionRect.h / 18}px"
               patternUnits="userSpaceOnUse"
             >
-              <circle cx="0.5" cy="0.5" r="1" fill="black" fill-opacity="100%" />
+              <circle cx="0.5" cy="0.5" r="1" fill="rgba(0,0,0,0.25)" fill-opacity="100%" />
             </pattern>
 
             <!-- Left square with user space tiles -->
@@ -1022,6 +1143,8 @@
 
     <svelte:fragment slot="raw">
       <!-- <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={isDraggingCard ? 50 : 35} /> -->
+
+      <FlyMenu {viewOffset} {viewPort} on:command={handleFlyCommand} />
 
       {#if $focusModeEnabled}
         <div
@@ -1137,7 +1260,8 @@
   .abyss-indicator > small {
     position: absolute;
     top: 1.5rem;
-    left: 2rem;
+    left: 6rem;
+    width: 60ch;
     color: rgb(196, 196, 196);
     font-weight: 400;
     font-size: 0.8rem;

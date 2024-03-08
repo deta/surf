@@ -1,6 +1,7 @@
 import { get, type Writable } from 'svelte/store'
 import type { IPositionable } from './Positionable.svelte'
 import type { Vec4 } from './types/Utils.type.js'
+import type { IBoardSettings } from './index.js'
 
 export function getDevicePixelRatio() {
   return window?.devicePixelRatio || 1
@@ -241,4 +242,32 @@ export function hoistPositionable(key: string, el: HTMLElement) {
 }
 export function unHoistPositionable(key: string, el: HTMLElement) {
   el.dispatchEvent(new CustomEvent('tela_unhoist', { detail: key, bubbles: true }))
+}
+
+/**
+ * Bound x,y,width,height by boundaries from settings.
+ * // TODO: This should be named differently -> calcBoundOffset or sth calcBoundPos
+ * @param x
+ * @param y
+ * @param width
+ * @param height
+ */
+export function applyBounds(
+  o: { x: number; y: number; width: number; height: number },
+  settings: IBoardSettings
+) {
+  let outX = o.x
+  let outY = o.y
+  if (settings.BOUNDS?.minX !== null && o.x < settings.BOUNDS!.minX) {
+    outX = settings.BOUNDS!.minX
+  } else if (settings.BOUNDS?.maxX !== null && o.x + o.width > settings.BOUNDS!.maxX) {
+    outX = settings.BOUNDS!.maxX - o.width
+  }
+
+  if (settings.BOUNDS?.minY !== null && o.y < settings.BOUNDS!.minY) {
+    outY = settings.BOUNDS!.minY
+  } else if (settings.BOUNDS?.maxY !== null && o.y + o.height > settings.BOUNDS!.maxY) {
+    outY = settings.BOUNDS!.maxY - o.height
+  }
+  return { x: outX, y: outY }
 }

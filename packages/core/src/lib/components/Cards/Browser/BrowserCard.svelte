@@ -27,6 +27,8 @@
   import StackItem from '../../Stack/StackItem.svelte'
   import { wait } from '../../../utils/time'
   import type { DetectedResource, DetectedWebApp } from '@horizon/web-parser'
+  import { focusModeEnabled, exitFocusMode, enterFocusMode } from '../../../utils/focusMode'
+  import { getServiceRanking, updateServiceRanking } from '../../../utils/services'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -156,6 +158,14 @@
       } else {
         horizon.activeCardId.set(null)
       }
+    } else if (event.code === 'Space' && event.shiftKey) {
+      if ($focusModeEnabled) {
+        exitFocusMode(horizon.board)
+      } else {
+        // TODO: Make this work
+        enterFocusMode([$card.id], horizon.board, horizon.cards)
+      }
+      // TODO: Catch OPT + TAB / SHIFT TAB to toggle between cards
     } else if (isModKeyAndKeyPressed(event as KeyboardEvent, 'f')) {
       log.debug('mod+f pressed')
 
@@ -287,6 +297,14 @@
       log.debug('first app detection')
       app = detecteApp
       return
+    }
+
+    if (app.appId !== detecteApp.appId) {
+      if (detecteApp.appId) {
+        const currentRank = getServiceRanking(detecteApp.appId)
+        console.warn('curr rank', detecteApp.appId, currentRank)
+        updateServiceRanking(detecteApp.appId, currentRank + 1)
+      }
     }
 
     if (

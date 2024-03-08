@@ -1,4 +1,4 @@
-import { ResourceTypes } from '@horizon/types'
+export { SERVICES } from './services'
 
 import {
   RedditParser,
@@ -9,10 +9,11 @@ import {
   SlackParser,
   YoutubeParser
 } from './sites/index'
-import { DetectedResource, WebApp } from './types'
+import { DetectedResource } from './types'
 import { MetadataExtractor } from './extractors/metadata'
 import { WebViewExtractor } from './extractors/webview'
 import { WebAppExtractor } from './extractors/index'
+import { SERVICES } from './services'
 
 const ParserModules = {
   reddit: RedditParser,
@@ -22,45 +23,13 @@ const ParserModules = {
   youtube: YoutubeParser
 }
 
-export const SUPPORTED_APPS: WebApp[] = [
-  {
-    id: 'reddit',
-    name: 'Reddit',
-    matchHostname: /reddit.com/,
-    supportedResources: [ResourceTypes.POST_REDDIT]
-  },
-  {
-    id: 'twitter',
-    name: 'Twitter',
-    matchHostname: /twitter.com/,
-    supportedResources: [ResourceTypes.POST_TWITTER]
-  },
-  {
-    id: 'notion',
-    name: 'Notion',
-    matchHostname: /notion.so/,
-    supportedResources: [ResourceTypes.DOCUMENT_NOTION]
-  },
-  {
-    id: 'slack',
-    name: 'Slack',
-    matchHostname: /slack.com/,
-    supportedResources: [ResourceTypes.CHAT_MESSAGE_SLACK, ResourceTypes.CHAT_THREAD_SLACK]
-  },
-  {
-    id: 'youtube',
-    name: 'YouTube',
-    matchHostname: /^(?:www\.|m\.)?youtube\.com$|^youtu\.be$/i,
-    supportedResources: [ResourceTypes.POST_YOUTUBE]
-  }
-]
-
 const wait = (ms: number) => {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
 }
 
+const SUPPORTED_APPS = SERVICES
 export class WebParser {
   url: URL
 

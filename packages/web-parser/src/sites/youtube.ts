@@ -1,7 +1,7 @@
 import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
 
 import { WebAppExtractor } from '../extractors'
-import type { DetectedWebApp, WebApp } from '../types'
+import type { DetectedWebApp, WebService } from '../types'
 import { makeAbsoluteURL } from '../utils'
 import { DOMExtractor } from '../extractors/dom'
 
@@ -104,7 +104,7 @@ export class YouTubeDocumentParser extends DOMExtractor {
 }
 
 export class YoutubeParser extends WebAppExtractor {
-  constructor(app: WebApp, url: URL) {
+  constructor(app: WebService, url: URL) {
     super(app, url)
   }
 

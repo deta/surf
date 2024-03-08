@@ -1,10 +1,10 @@
-import type { DetectedResource, DetectedWebApp, WebApp } from '../types'
+import type { DetectedResource, DetectedWebApp, WebService } from '../types'
 
 export abstract class WebAppExtractor {
-  app: WebApp | null
+  app: WebService | null
   url: URL
 
-  constructor(app: WebApp | null, url: URL) {
+  constructor(app: WebService | null, url: URL) {
     this.app = app
     this.url = url
   }

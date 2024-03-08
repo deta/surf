@@ -1,7 +1,7 @@
 import { ResourceTypes, ResourceDataChatMessage, ResourceDataChatThread } from '@horizon/types'
 
 import { WebAppExtractor } from '../extractors'
-import type { DetectedResource, DetectedWebApp, WebApp } from '../types'
+import type { DetectedResource, DetectedWebApp, WebService } from '../types'
 import { DOMExtractor } from '../extractors/dom'
 
 export type SlackMessageData = {
@@ -268,7 +268,7 @@ export class SlackDocumentParser extends DOMExtractor {
 }
 
 export class SlackParser extends WebAppExtractor {
-  constructor(app: WebApp, url: URL) {
+  constructor(app: WebService, url: URL) {
     super(app, url)
   }
 

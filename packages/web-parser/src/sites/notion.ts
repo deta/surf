@@ -1,5 +1,5 @@
 import { ResourceTypes, type ResourceDataDocument } from '@horizon/types'
-import type { DetectedWebApp, WebApp } from '../types'
+import type { DetectedWebApp, WebService } from '../types'
 import { APIExtractor, WebAppExtractor } from '../extractors'
 
 export const NotionRegexPatterns = {
@@ -7,7 +7,7 @@ export const NotionRegexPatterns = {
 }
 
 export class NotionParser extends WebAppExtractor {
-  constructor(app: WebApp, url: URL) {
+  constructor(app: WebService, url: URL) {
     super(app, url)
   }
 
