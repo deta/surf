@@ -43,7 +43,7 @@
 <style lang="scss">
   .drawer-content {
     flex: 1;
-    padding: 1rem;
+    padding: 3.5rem 1rem 1rem 1rem;
     padding-bottom: 12rem;
     overflow: auto;
     height: 100%;

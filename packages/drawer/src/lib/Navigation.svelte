@@ -25,6 +25,9 @@
 
 <div class="drawer-top">
   <div class="drawer-controls">
+    <button on:click={() => drawer.close()}>
+      <Icon name="close" size="22px" />
+    </button>
     {#if $size === 'normal'}
       <button on:click={() => drawer.setSize('full')}>
         <Icon name="arrowHorizontal" size="22px" />
@@ -34,9 +37,6 @@
         <Icon name="arrowDiagonalMinimize" size="22px" />
       </button>
     {/if}
-    <button on:click={() => drawer.close()}>
-      <Icon name="close" size="22px" />
-    </button>
   </div>
 </div>
 <div class="drawer-bottom">
@@ -48,8 +48,12 @@
 <style lang="scss">
   .drawer-top {
     position: fixed;
-    top: 1rem;
-    right: 1rem;
+    width: 100%;
+    top: 0;
+    left: 0;
+    padding: 1rem 1.5rem;
+    z-index: 0;
+    background: rgba(255, 255, 255, 0.2);
   }
   .drawer-bottom {
     position: relative;
@@ -64,7 +68,7 @@
   .drawer-controls {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 1rem;
     padding-right: 0.5rem;
 
     button {
@@ -77,9 +81,11 @@
       justify-content: center;
       color: var(--color-text-muted);
       transition: color 0.2s ease;
+      border-radius: 3px;
 
       &:hover {
         color: var(--color-text);
+        background: rgba(0, 0, 0, 0.15);
       }
     }
   }

@@ -2,23 +2,33 @@
   import { createEventDispatcher, onMount, getContext } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { writable } from 'svelte/store'
+  import { processDrop } from '../../service/mediaImporter'
 
   import { parseMetadata } from '@horizon/core/src/lib/utils/parseMetadata'
   import { normalizeURL, stringToURLList } from '@horizon/core/src/lib/utils/url'
 
   import { useLogScope } from '@horizon/core/src/lib/utils/log'
   import ChatLinkPreview from '@horizon/drawer/src/lib/components/ChatLinkPreview.svelte'
+  import ChatFilePreview from '@horizon/drawer/src/lib/components/ChatFilePreview.svelte'
+
+  export let droppedInputElements: any
 
   let inputRef: HTMLDivElement
   let isFocused = false
   let lastKeyDeleted = false
   let position = { x: 0, y: 0 }
   let opacity = 0
+  let filesFromDialogue: FileList | null = null
 
   const viewState: any = getContext('drawer.viewState')
   const detectedInput = writable(false)
   const parsedURLs: Writable<ParsedMetadata[]> = writable([])
   const dispatch = createEventDispatcher()
+  const dispatchDrop = createEventDispatcher<{ drop: DragEvent }>()
+  const dispatchFileUpload = createEventDispatcher<{ fileUpload: FileList }>()
+
+  const dragOver = writable(false)
+
   const inputText = writable('')
 
   $: if ($viewState !== 'chatInput') {
@@ -117,10 +127,56 @@
       lastKeyDeleted = true
     }
   }
+
+  const handleDragEnter = (e: DragEvent) => {
+    viewState.set('chatInput')
+    e.preventDefault()
+    e.stopPropagation()
+    dragOver.set(true)
+  }
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault()
+    dragOver.set(false)
+  }
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragOver.set(false)
+    console.log('DROP', e)
+    dispatchDrop('drop', e)
+  }
+
+  function handleRemoveUploadItem(event: CustomEvent) {
+    const sourceURI = event.detail
+
+    droppedInputElements.update((items) =>
+      items.filter((item) => item.metadata.sourceURI !== sourceURI)
+    )
+  }
+
+  function handleFileSelection(event: Event) {
+    const inputElement = event.target as HTMLInputElement
+    if (inputElement.files) {
+      filesFromDialogue = inputElement.files
+
+      // If you need to trigger any reactive statements or actions based on this new value, do so here
+      console.log(filesFromDialogue)
+      dispatchFileUpload('fileUpload', filesFromDialogue)
+    }
+  }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
-<div class="chat-container" class:isFocussed={isFocused}>
+<div
+  class="chat-container"
+  class:isFocussed={isFocused}
+  on:dragenter={handleDragEnter}
+  on:dragleave={handleDragLeave}
+  on:drop={handleDrop}
+  class:dragover={$dragOver}
+>
   <div class="icon" class:hidden={$viewState === 'chatInput'}>
     <Icon name="add" color="#AAA7B1" size="28px" />
   </div>
@@ -150,8 +206,15 @@
       </div>
     {/if}
 
+    <div class="file-list" class:hidden={$viewState !== 'chatInput'}>
+      {#each $droppedInputElements as { metadata, data }}
+        <ChatFilePreview on:remove={handleRemoveUploadItem} {metadata} {data} />
+      {/each}
+    </div>
+
     <div class="toolbar-row">
       <div class="add-files" class:hidden={$viewState !== 'chatInput'}>
+        <input id="upload-files" multiple type="file" on:change={handleFileSelection} />
         <Icon name="add" color="#AAA7B1" size="28px" />
         <span>Add files</span>
       </div>
@@ -173,6 +236,10 @@
     font-size: 1.25rem;
     &.isFocussed {
       margin-top: 1rem;
+    }
+    &.dragOver {
+      display: none;
+      background: red;
     }
   }
   .input-field-container {
@@ -213,6 +280,12 @@
         view-transition-name: add-files-transition;
         &:hover {
           background: rgba(61, 56, 78, 0.1);
+        }
+        #upload-files {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          opacity: 0;
         }
         &.hidden {
           transform: translateY(10%);
@@ -312,9 +385,9 @@
     mask-image: radial-gradient(circle at var(--x) var(--y), transparent, #000 70%);
   }
 
-  .link-list {
+  .link-list,
+  .file-list {
     width: 100%;
-    view-transition-name: link-list-transition;
     &.hidden {
       transform: translateY(10%);
       opacity: 0;
@@ -323,5 +396,12 @@
       margin: 0;
       transition: all 240ms ease-out;
     }
+  }
+
+  .link-list {
+    view-transition-name: link-list-transition;
+  }
+  .file-list {
+    view-transition-name: file-list-transition;
   }
 </style>

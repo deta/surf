@@ -64,7 +64,9 @@
     <p>Loading…</p>
   {:else if resource && data}
     {#if fileKind === 'image'}
-      <ImageView blob={data} />
+      <div class="image">
+        <ImageView blob={data} />
+      </div>
     {:else if data.type === 'application/pdf'}
       <PdfView {resource} blob={data} />
     {:else if fileKind === 'video'}
@@ -87,5 +89,10 @@
     justify-content: center;
     margin: 0;
     padding: 0;
+  }
+
+  .image {
+    border-radius: 2px;
+    box-shadow: 0px 0px 1px 0px rgba(255, 255, 255, 0.09) inset;
   }
 </style>

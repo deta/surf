@@ -27,9 +27,14 @@
   export let resource: Resource
 
   const dispatch = createEventDispatcher<{ click: string }>()
+  const dispatchRemove = createEventDispatcher<{ remove: string }>()
 
   const handleClick = () => {
     dispatch('click', resource.id)
+  }
+
+  const handleRemove = () => {
+    dispatchRemove('remove', resource.id)
   }
 
   // TODO: figure out better way to do this
@@ -90,6 +95,10 @@
     <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
   </div>
 
+  <div class="remove" on:click={handleRemove}>
+    <Icon name="close" color="#AAA7B1" />
+  </div>
+
   <!-- {#if resource.image_url}
       <img src={resource.image_url} alt="preview" class="w-full rounded-lg overflow-hidden max-h-48 object-cover" />
   {:else if resource.app_type === 'text' && resource.subtitle}
@@ -132,12 +141,18 @@
 
 <style lang="scss">
   .resource-preview {
+    position: relative;
     display: flex;
     gap: 8px;
     flex-direction: column;
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible;
     cursor: pointer;
+    &:hover {
+      .remove {
+        opacity: 1;
+      }
+    }
   }
 
   .preview {
@@ -169,6 +184,25 @@
     padding: 0.25rem 0.5rem 0.75rem 0.5rem;
     gap: 0.5rem;
     color: var(--color-text-muted);
+  }
+
+  .remove {
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 2rem;
+    height: 2rem;
+    top: 0;
+    right: 0;
+    transform: translateX(40%) translateY(-40%);
+    opacity: 0;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+    background: white;
+    border-radius: 50%;
+    border: 0.5px solid rgba(0, 0, 0, 0.15);
+    cursor: pointer;
   }
 
   .type {
