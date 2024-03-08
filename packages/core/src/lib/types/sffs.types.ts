@@ -1,15 +1,15 @@
 import type { Optional } from '.'
 
-export type SFFSSearchResultEngine = 'Metadata' | 'content' | 'proximity'
+export type SFFSSearchResultEngineRaw = 'Keyword' | 'Proximity' | 'Semantic'
 
-export interface SFFSSearchResultItem {
+export interface SFFSSearchResultRawItem {
   resource: SFFSRawCompositeResource
   card_ids: string[]
-  engine: SFFSSearchResultEngine
+  engine: SFFSSearchResultEngineRaw
 }
 
 export interface SFFSSearchResult {
-  items: SFFSSearchResultItem[]
+  items: SFFSSearchResultRawItem[]
   total: number
   // limit: number
   // offset: number
@@ -42,6 +42,7 @@ export type SFFSRawResourceTag = {
   resource_id: string
   tag_name: string
   tag_value: string
+  op?: 'eq' | 'ne' | 'prefix' | 'suffix'
 }
 
 export type SFFSRawResourceTextContent = {

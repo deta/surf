@@ -1,15 +1,21 @@
+use crossbeam_channel as crossbeam;
 use neon::{
     prelude::Context,
     types::{Deferred, Finalize},
 };
 use std::sync::mpsc;
 
-use super::{message::WorkerMessage, worker::worker_entry_point};
+use super::{
+    message::{ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage},
+    processor::processor_thread_entry_point,
+    worker::worker_thread_entry_point,
+};
+use crate::BackendResult;
 
-pub struct TunnelMessage(pub WorkerMessage, pub Deferred);
-
+#[derive(Clone)]
 pub struct WorkerTunnel {
-    pub tx: mpsc::Sender<TunnelMessage>,
+    pub worker_tx: mpsc::Sender<TunnelMessage>,
+    pub tqueue_rx: crossbeam::Receiver<ProcessorMessage>,
 }
 
 impl WorkerTunnel {
@@ -17,15 +23,47 @@ impl WorkerTunnel {
     where
         C: Context<'a>,
     {
-        let (tx, rx) = mpsc::channel::<TunnelMessage>();
+        let (worker_tx, worker_rx) = mpsc::channel::<TunnelMessage>();
+        let (tqueue_tx, tqueue_rx) = crossbeam::unbounded();
         let libuv_ch = cx.channel();
-        std::thread::spawn(move || worker_entry_point(rx, libuv_ch, backend_root_path));
-        Self { tx }
+        let tunnel = Self {
+            worker_tx,
+            tqueue_rx,
+        };
+
+        // spawn the main SFFS thread
+        std::thread::spawn(move || {
+            worker_thread_entry_point(worker_rx, tqueue_tx, libuv_ch, backend_root_path)
+        });
+
+        // spawn N worker threads
+        (0..8).for_each(|_| {
+            let tunnel_clone = tunnel.clone();
+            std::thread::spawn(move || {
+                processor_thread_entry_point(tunnel_clone);
+            });
+        });
+
+        tunnel
     }
 
-    pub fn send(&self, message: WorkerMessage, deferred: Deferred) {
-        self.tx
-            .send(TunnelMessage(message, deferred))
+    pub fn worker_send_js(&self, message: WorkerMessage, deferred: Deferred) {
+        self.worker_tx
+            .send(TunnelMessage(
+                message,
+                Some(TunnelOneshot::Javascript(deferred)),
+            ))
+            .expect("unbound channel send failed")
+    }
+
+    pub fn worker_send_rust(
+        &self,
+        message: WorkerMessage,
+        oneshot: Option<mpsc::Sender<BackendResult<String>>>,
+    ) {
+        let oneshot = oneshot.map(|oneshot| TunnelOneshot::Rust(oneshot));
+        self.worker_tx
+            .send(TunnelMessage(message, oneshot))
             .expect("unbound channel send failed")
     }
 }

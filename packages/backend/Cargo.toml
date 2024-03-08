@@ -24,6 +24,9 @@ rust-bert = { git = "https://github.com/guillaume-be/rust-bert", rev = "29f9a7a0
 rand = "0.8.5"
 text-splitter = { version = "0.6.3" }
 url = "2.5.0"
+crossbeam-channel = "0.5.12"
+lopdf = "0.32.0"
+leptess = "0.14.0"
 
 [dependencies.neon]
 version = "1.0.0-alpha.4"

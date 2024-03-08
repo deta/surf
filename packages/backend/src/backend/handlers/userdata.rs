@@ -1,12 +1,12 @@
 use crate::{
     backend::{
-        message::UserdataMessage,
+        message::{UserdataMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     store::{db::Database, models::Userdata},
     BackendResult,
 };
-use neon::{prelude::Channel, types::Deferred};
+use neon::prelude::Channel;
 
 impl Worker {
     pub fn create_userdata(&mut self, user_id: &str) -> BackendResult<Userdata> {
@@ -36,18 +36,18 @@ impl Worker {
 pub fn handle_userdata_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    deferred: Deferred,
+    oneshot: Option<TunnelOneshot>,
     message: UserdataMessage,
 ) {
     match message {
         UserdataMessage::CreateUserdata(user_id) => {
-            send_worker_response(channel, deferred, worker.create_userdata(&user_id))
+            send_worker_response(channel, oneshot, worker.create_userdata(&user_id))
         }
         UserdataMessage::GetUserdataByUserId(user_id) => {
-            send_worker_response(channel, deferred, worker.get_userdata_by_user_id(&user_id))
+            send_worker_response(channel, oneshot, worker.get_userdata_by_user_id(&user_id))
         }
         UserdataMessage::RemoveUserdata(user_id) => {
-            send_worker_response(channel, deferred, worker.remove_userdata(&user_id))
+            send_worker_response(channel, oneshot, worker.remove_userdata(&user_id))
         }
     }
 }

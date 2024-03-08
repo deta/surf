@@ -19,7 +19,9 @@ import type {
   SFFSRawHistoryEntry,
   HistoryEntry,
   HistoryEntryType,
-  SFFSRawHistoryEntryType
+  SFFSRawHistoryEntryType,
+  SFFSSearchResultItem,
+  SFFSSearchResultEngine
 } from '../types'
 
 export type CardToCreate = Optional<Card, 'id' | 'stackingOrder' | 'createdAt' | 'updatedAt'>
@@ -268,7 +270,7 @@ export class SFFS {
     return items.map(this.convertCompositeResourceToResource)
   }
 
-  async searchResources(query: string, tags?: SFFSResourceTag[]): Promise<SFFSResource[]> {
+  async searchResources(query: string, tags?: SFFSResourceTag[]): Promise<SFFSSearchResultItem[]> {
     this.log.debug('searching resources with query', query, 'and tags', tags)
     const tagsData = JSON.stringify(
       (tags ?? []).map(
@@ -277,7 +279,8 @@ export class SFFS {
             id: '',
             resource_id: '',
             tag_name: tag.name ?? '',
-            tag_value: tag.value ?? ''
+            tag_value: tag.value ?? '',
+            op: tag.op ?? 'eq'
           }) as SFFSRawResourceTag
       )
     )
@@ -286,7 +289,11 @@ export class SFFS {
     const items = parsed?.items ?? []
 
     this.log.debug('search results', items)
-    return items.map((item) => this.convertCompositeResourceToResource(item.resource))
+    return items.map((item) => ({
+      ...item,
+      engine: item.engine.toLowerCase() as SFFSSearchResultEngine,
+      resource: this.convertCompositeResourceToResource(item.resource)
+    }))
   }
 
   async readDataFile(path: string, resourceId: string): Promise<Uint8Array> {

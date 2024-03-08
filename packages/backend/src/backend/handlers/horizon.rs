@@ -1,10 +1,17 @@
 use crate::{
-    backend::{message::HorizonMessage, worker::{Worker, send_worker_response}},
-    store::{db::Database, models::Horizon},
+    backend::{
+        message::{HorizonMessage, TunnelOneshot},
+        worker::{send_worker_response, Worker},
+    },
+    store::{
+        db::Database,
+        models::{default_horizon_tint, Horizon},
+    },
     BackendResult,
 };
+
 use chrono::Utc;
-use neon::{prelude::Channel, types::Deferred};
+use neon::prelude::Channel;
 
 impl Worker {
     pub fn list_horizons(&mut self) -> BackendResult<Vec<Horizon>> {
@@ -18,6 +25,7 @@ impl Worker {
             id: horizon_id,
             horizon_name: name.to_owned(),
             icon_uri: "".to_owned(),
+            tint: default_horizon_tint(),
             view_offset_x: 0,
             created_at: current_time.clone(),
             updated_at: current_time,
@@ -46,21 +54,21 @@ impl Worker {
 pub fn handle_horizon_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    deferred: Deferred,
+    oneshot: Option<TunnelOneshot>,
     message: HorizonMessage,
 ) {
     match message {
         HorizonMessage::CreateHorizon(name) => {
-            send_worker_response(channel, deferred, worker.create_horizon(&name))
+            send_worker_response(channel, oneshot, worker.create_horizon(&name))
         }
         HorizonMessage::ListHorizons => {
-            send_worker_response(channel, deferred, worker.list_horizons())
+            send_worker_response(channel, oneshot, worker.list_horizons())
         }
         HorizonMessage::UpdateHorizon(horizon) => {
-            send_worker_response(channel, deferred, worker.update_horizon(horizon))
+            send_worker_response(channel, oneshot, worker.update_horizon(horizon))
         }
         HorizonMessage::RemoveHorizon(id) => {
-            send_worker_response(channel, deferred, worker.remove_horizon(&id))
+            send_worker_response(channel, oneshot, worker.remove_horizon(&id))
         }
     }
 }

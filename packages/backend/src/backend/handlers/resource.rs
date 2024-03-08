@@ -1,6 +1,6 @@
 use crate::{
     backend::{
-        message::{ResourceMessage, ResourceTagMessage},
+        message::{ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     store::{
@@ -12,7 +12,7 @@ use crate::{
     },
     BackendError, BackendResult,
 };
-use neon::{prelude::Channel, types::Deferred};
+use neon::prelude::Channel;
 use std::{path::Path, str::FromStr};
 
 impl Worker {
@@ -54,7 +54,7 @@ impl Worker {
                     Ok(())
                 })?;
 
-            // TODO: this needs to move to a different worker thread
+            // TODO: this needs to move to a different thread
             let vectors = self.embeddings_model.get_embeddings(metadata)?;
             vectors.iter().try_for_each(|v| -> BackendResult<()> {
                 let rowid = Database::create_embedding_resource_tx(
@@ -208,65 +208,51 @@ impl Worker {
 
     pub fn post_process_job(&mut self, resource_id: String) -> BackendResult<()> {
         let resource = self
-            .db
-            .get_resource(&resource_id)?
+            .read_resource(resource_id)?
             // mb this should be a `DatabaseError`?
             .ok_or(BackendError::GenericError(
                 "resource does not exist".to_owned(),
             ))?;
 
-        // TODO: make use of strum(?) for this
-        match resource.resource_type.as_str() {
-            "application/vnd.space.document.space-note" => {
-                let html_data = std::fs::read_to_string(resource.resource_path)?;
-                let mut output = String::new();
-                let mut in_tag = false;
+        self.tqueue_tx
+            .send(ProcessorMessage::ProcessResource(resource))
+            .map_err(|e| BackendError::GenericError(e.to_string()))
 
-                for c in html_data.chars() {
-                    match (in_tag, c) {
-                        (true, '>') => in_tag = false,
-                        (false, '<') => {
-                            in_tag = true;
-                            output.push(' ');
-                        }
-                        (false, _) => output.push(c),
-                        _ => (),
-                    }
-                }
+        // // TODO: make use of strum(?) for this
+        // match resource.resource_type.as_str() {
+        //     "application/vnd.space.document.space-note" => {
+        //         let html_data = std::fs::read_to_string(resource.resource_path)?;
+        //         let mut output = String::new();
+        //         let mut in_tag = false;
 
-                let output = output
-                    .chars()
-                    .take(256 * 3)
-                    .collect::<String>()
-                    .split_whitespace()
-                    .collect::<Vec<_>>()
-                    .join(" ");
+        //         for c in html_data.chars() {
+        //             match (in_tag, c) {
+        //                 (true, '>') => in_tag = false,
+        //                 (false, '<') => {
+        //                     in_tag = true;
+        //                     output.push(' ');
+        //                 }
+        //                 (false, _) => output.push(c),
+        //                 _ => (),
+        //             }
+        //         }
 
-                let text_content = ResourceTextContent {
-                    id: random_uuid(),
-                    resource_id,
-                    content: output,
-                };
+        //         let output = output
+        //             .chars()
+        //             .take(256 * 3)
+        //             .collect::<String>()
+        //             .split_whitespace()
+        //             .collect::<Vec<_>>()
+        //             .join(" ");
 
-                let mut tx = self.db.begin()?;
-                Database::create_resource_text_content_tx(&mut tx, &text_content)?;
-                let embeddings = self.embeddings_model.get_embeddings(&text_content)?;
-                embeddings.iter().try_for_each(|v| -> BackendResult<()> {
-                    let rowid = Database::create_embedding_resource_tx(
-                        &mut tx,
-                        &EmbeddingResource {
-                            rowid: None,
-                            resource_id: text_content.resource_id.clone(),
-                        },
-                    )?;
-                    let em = Embedding::new_with_rowid(rowid, v);
-                    Database::create_embedding_tx(&mut tx, &em)?;
-                    Ok(())
-                })?;
-                Ok(tx.commit()?)
-            }
-            _ => Ok(()),
-        }
+        //         self.db.create_resource_text_content(&ResourceTextContent {
+        //             id: random_uuid(),
+        //             resource_id,
+        //             content: output,
+        //         })
+        //     }
+        //     _ => Ok(()),
+        // }
     }
 
     pub fn update_resource_metadata(&mut self, metadata: ResourceMetadata) -> BackendResult<()> {
@@ -286,20 +272,54 @@ impl Worker {
         tx.commit()?;
         Ok(())
     }
+
+    pub fn upsert_resource_text_content(
+        &mut self,
+        resource_id: String,
+        content: String,
+    ) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::upsert_resource_text_content(&mut tx, &resource_id, &content)?;
+
+        // TODO: this needs to move to a different thread
+        // TOOD:  find a way to also upsert the text content embeddings only
+        // and not the metadata embeddings
+        let embeddings = self.embeddings_model.get_embeddings(&ResourceTextContent {
+            id: "".to_string(),
+            resource_id: resource_id.clone(),
+            content,
+        })?;
+        embeddings.iter().try_for_each(|v| -> BackendResult<()> {
+            let rowid = Database::create_embedding_resource_tx(
+                &mut tx,
+                &EmbeddingResource {
+                    rowid: None,
+                    resource_id: resource_id.clone(),
+                },
+            )?;
+            let em = Embedding::new_with_rowid(rowid, v);
+            Database::create_embedding_tx(&mut tx, &em)?;
+            Ok(())
+        })?;
+        // TODO: ---------------- upto here -----
+
+        tx.commit()?;
+        Ok(())
+    }
 }
 
 pub fn handle_resource_tag_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    deferred: Deferred,
+    oneshot: Option<TunnelOneshot>,
     message: ResourceTagMessage,
 ) {
     match message {
         ResourceTagMessage::CreateResourceTag(tag) => {
-            send_worker_response(channel, deferred, worker.create_resource_tag(tag))
+            send_worker_response(channel, oneshot, worker.create_resource_tag(tag))
         }
         ResourceTagMessage::RemoveResourceTag(tag_id) => {
-            send_worker_response(channel, deferred, worker.delete_resource_tag_by_id(tag_id))
+            send_worker_response(channel, oneshot, worker.delete_resource_tag_by_id(tag_id))
         }
     }
 }
@@ -307,7 +327,7 @@ pub fn handle_resource_tag_message(
 pub fn handle_resource_message(
     worker: &mut Worker,
     channel: &mut Channel,
-    deferred: Deferred,
+    oneshot: Option<TunnelOneshot>,
     message: ResourceMessage,
 ) {
     match message {
@@ -317,17 +337,17 @@ pub fn handle_resource_message(
             resource_metadata,
         } => send_worker_response(
             channel,
-            deferred,
+            oneshot,
             worker.create_resource(resource_type, resource_tags, resource_metadata),
         ),
         ResourceMessage::GetResource(id) => {
-            send_worker_response(channel, deferred, worker.read_resource(id))
+            send_worker_response(channel, oneshot, worker.read_resource(id))
         }
         ResourceMessage::RemoveResource(id) => {
-            send_worker_response(channel, deferred, worker.remove_resource(id))
+            send_worker_response(channel, oneshot, worker.remove_resource(id))
         }
         ResourceMessage::RecoverResource(id) => {
-            send_worker_response(channel, deferred, worker.recover_resource(id))
+            send_worker_response(channel, oneshot, worker.recover_resource(id))
         }
         ResourceMessage::SearchResources {
             query,
@@ -338,7 +358,7 @@ pub fn handle_resource_message(
             embeddings_limit,
         } => send_worker_response(
             channel,
-            deferred,
+            oneshot,
             worker.search_resources(
                 query,
                 resource_tag_filters,
@@ -349,10 +369,18 @@ pub fn handle_resource_message(
             ),
         ),
         ResourceMessage::UpdateResourceMetadata(metadata) => {
-            send_worker_response(channel, deferred, worker.update_resource_metadata(metadata))
+            send_worker_response(channel, oneshot, worker.update_resource_metadata(metadata))
         }
         ResourceMessage::PostProcessJob(id) => {
-            send_worker_response(channel, deferred, worker.post_process_job(id))
+            send_worker_response(channel, oneshot, worker.post_process_job(id))
         }
+        ResourceMessage::UpsertResourceTextContent {
+            resource_id,
+            content,
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.upsert_resource_text_content(resource_id, content),
+        ),
     }
 }

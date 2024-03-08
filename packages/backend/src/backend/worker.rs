@@ -1,22 +1,27 @@
+use super::message::{ProcessorMessage, TunnelMessage, TunnelOneshot};
 use crate::{
-    backend::{handlers::*, message::WorkerMessage, tunnel::TunnelMessage},
+    backend::{handlers::*, message::WorkerMessage},
     embeddings::model::EmbeddingModel,
     store::db::Database,
-    BackendResult,
+    BackendError, BackendResult,
 };
-use neon::{prelude::*, types::Deferred};
+
+use crossbeam_channel as crossbeam;
+use neon::prelude::*;
 use serde::Serialize;
 use std::{path::Path, sync::mpsc};
 
 pub struct Worker {
     pub db: Database,
+    pub tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     pub resources_path: String,
     pub embeddings_model: EmbeddingModel,
 }
 
 impl Worker {
-    fn new(backend_root_path: String) -> Self {
+    fn new(backend_root_path: String, tqueue_tx: crossbeam::Sender<ProcessorMessage>) -> Self {
         println!("data root path: {}", backend_root_path);
+
         let db_path = Path::new(&backend_root_path)
             .join("sffs.sqlite")
             .as_os_str()
@@ -27,43 +32,46 @@ impl Worker {
             .as_os_str()
             .to_string_lossy()
             .to_string();
+
         Self {
             db: Database::new(&db_path).unwrap(),
             embeddings_model: EmbeddingModel::new_remote().unwrap(),
+            tqueue_tx,
             resources_path,
         }
     }
 }
 
-pub fn worker_entry_point(
-    rx: mpsc::Receiver<TunnelMessage>,
+pub fn worker_thread_entry_point(
+    worker_rx: mpsc::Receiver<TunnelMessage>,
+    tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     mut channel: Channel,
     backend_root_path: String,
 ) {
-    let mut worker = Worker::new(backend_root_path);
+    let mut worker = Worker::new(backend_root_path, tqueue_tx);
 
-    while let Ok(TunnelMessage(message, deferred)) = rx.recv() {
+    while let Ok(TunnelMessage(message, oneshot)) = worker_rx.recv() {
         match message {
             WorkerMessage::MiscMessage(message) => {
-                handle_misc_message(&mut worker, &mut channel, deferred, message)
+                handle_misc_message(&mut worker, &mut channel, oneshot, message)
             }
             WorkerMessage::CardMessage(message) => {
-                handle_card_message(&mut worker, &mut channel, deferred, message)
+                handle_card_message(&mut worker, &mut channel, oneshot, message)
             }
             WorkerMessage::HistoryMessage(message) => {
-                handle_history_message(&mut worker, &mut channel, deferred, message)
+                handle_history_message(&mut worker, &mut channel, oneshot, message)
             }
             WorkerMessage::HorizonMessage(message) => {
-                handle_horizon_message(&mut worker, &mut channel, deferred, message)
+                handle_horizon_message(&mut worker, &mut channel, oneshot, message)
             }
             WorkerMessage::ResourceMessage(message) => {
-                handle_resource_message(&mut worker, &mut channel, deferred, message)
+                handle_resource_message(&mut worker, &mut channel, oneshot, message)
             }
             WorkerMessage::ResourceTagMessage(message) => {
-                handle_resource_tag_message(&mut worker, &mut channel, deferred, message)
+                handle_resource_tag_message(&mut worker, &mut channel, oneshot, message)
             }
             WorkerMessage::UserdataMessage(message) => {
-                handle_userdata_message(&mut worker, &mut channel, deferred, message)
+                handle_userdata_message(&mut worker, &mut channel, oneshot, message)
             }
         }
     }
@@ -71,30 +79,46 @@ pub fn worker_entry_point(
 
 pub fn send_worker_response<T: Serialize + Send + 'static>(
     channel: &mut Channel,
-    deferred: Deferred,
+    oneshot: Option<TunnelOneshot>,
     result: BackendResult<T>,
 ) {
+    let oneshot = match oneshot {
+        Some(oneshot) => oneshot,
+        None => return,
+    };
+
     let serialized_response = match &result {
         Ok(value) => serde_json::to_string(value),
         Err(e) => serde_json::to_string(&e.to_string()),
     };
 
-    channel.send(move |mut cx| {
-        match serialized_response {
-            Ok(response) => {
-                let resp = cx.string(&response);
-                if result.is_ok() {
-                    deferred.resolve(&mut cx, resp);
-                } else {
-                    deferred.reject(&mut cx, resp);
-                }
-            }
-            Err(serialize_error) => {
-                let error_message =
-                    cx.string(format!("Failed to serialize response: {}", serialize_error));
-                deferred.reject(&mut cx, error_message);
-            }
+    match oneshot {
+        TunnelOneshot::Rust(tx) => {
+            let response =
+                serialized_response.map_err(|e| BackendError::GenericError(e.to_string()));
+            let _ = tx
+                .send(response)
+                .map_err(|e| eprintln!("oneshot receiver is dropped: {e}"));
         }
-        Ok(())
-    });
+        TunnelOneshot::Javascript(deferred) => {
+            channel.send(move |mut cx| {
+                match serialized_response {
+                    Ok(response) => {
+                        let resp = cx.string(&response);
+                        if result.is_ok() {
+                            deferred.resolve(&mut cx, resp);
+                        } else {
+                            deferred.reject(&mut cx, resp);
+                        }
+                    }
+                    Err(serialize_error) => {
+                        let error_message =
+                            cx.string(format!("Failed to serialize response: {}", serialize_error));
+                        deferred.reject(&mut cx, error_message);
+                    }
+                }
+                Ok(())
+            });
+        }
+    }
 }

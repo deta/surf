@@ -4,10 +4,8 @@ use url::Url;
 use std::str::FromStr;
 use std::string::ToString;
 
-fn get_hostname_from_uri(uri: &str) -> Option<String> {
-    Url::parse(uri)
-        .ok()
-        .and_then(|url| url.host_str().map(|host| host.to_owned()))
+pub fn default_horizon_tint() -> String {
+    "hsl(275, 40%, 80%)".to_owned()
 }
 
 pub fn current_time() -> chrono::DateTime<chrono::Utc> {
@@ -26,6 +24,12 @@ pub fn parse_datetime_from_str(
     Ok(ut.with_timezone(&chrono::Utc))
 }
 
+fn get_hostname_from_uri(uri: &str) -> Option<String> {
+    Url::parse(uri)
+        .ok()
+        .and_then(|url| url.host_str().map(|host| host.to_owned()))
+}
+
 pub trait EmbeddableContent {
     fn get_embeddable_content(&self) -> Vec<String>;
 }
@@ -35,6 +39,7 @@ pub enum InternalResourceTagNames {
     Type,
     Deleted,
     Hostname,
+    HorizonId,
 }
 
 impl InternalResourceTagNames {
@@ -43,6 +48,7 @@ impl InternalResourceTagNames {
             InternalResourceTagNames::Type => "type",
             InternalResourceTagNames::Deleted => "deleted",
             InternalResourceTagNames::Hostname => "hostname",
+            InternalResourceTagNames::HorizonId => "horizonId",
         }
     }
 }
@@ -55,6 +61,7 @@ impl FromStr for InternalResourceTagNames {
             "type" => Ok(InternalResourceTagNames::Type),
             "deleted" => Ok(InternalResourceTagNames::Deleted),
             "hostname" => Ok(InternalResourceTagNames::Hostname),
+            "horizonId" => Ok(InternalResourceTagNames::HorizonId),
             _ => Err(()),
         }
     }
@@ -66,6 +73,7 @@ impl ToString for InternalResourceTagNames {
             InternalResourceTagNames::Type => "type".to_string(),
             InternalResourceTagNames::Deleted => "deleted".to_string(),
             InternalResourceTagNames::Hostname => "hostname".to_string(),
+            InternalResourceTagNames::HorizonId => "horizonId".to_string(),
         }
     }
 }
@@ -84,6 +92,8 @@ pub struct Horizon {
     pub id: String,
     pub horizon_name: String,
     #[serde(default)]
+    pub tint: String,
+    #[serde(default = "default_horizon_tint")]
     pub icon_uri: String,
     #[serde(default)]
     pub view_offset_x: i64,
