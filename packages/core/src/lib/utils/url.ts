@@ -21,6 +21,26 @@ export const optimisticCheckIfUrl = (url: string) => {
   return pattern.test(url)
 }
 
+export const stringToURLList = (input: string) => {
+  const urlPattern =
+    /(\bhttps?:\/\/[\w-]+(\.[\w-]+)+\.?(:\d+)?(\/\S*)?)|\bwww\.[\w-]+(\.[\w-]+)+\.?(:\d+)?(\/\S*)?|\b[\w-]+(\.[\w-]+)+\.[a-z]{2,}(:\d+)?(\/\S*)?/gi
+
+  const matches = input.match(urlPattern)
+
+  let urls
+
+  if (matches) {
+    urls = matches.map((url) => {
+      if (!/^https?:\/\//i.test(url)) {
+        return `http://${url}`
+      }
+      return url
+    })
+  }
+
+  return urls
+}
+
 export const parseStringIntoUrl = (raw: string) => {
   try {
     const isValidURL = optimisticCheckIfUrl(raw)
@@ -133,4 +153,12 @@ export const parseStringIntoBrowserLocation = (raw: string) => {
   }
 
   return null
+}
+
+export const normalizeURL = (url: string): string => {
+  // Remove protocol (http, https), www, and trailing slash from the root domain for consistent comparison
+  // Keep path and query string intact
+  return url
+    .replace(/^(https?:\/\/)?(www\.)?/, '') // Remove protocol and www
+    .replace(/\/+$/, '') // Remove trailing slash(es) from the root domain, not affecting paths
 }

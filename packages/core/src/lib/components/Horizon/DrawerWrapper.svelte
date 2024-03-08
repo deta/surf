@@ -1,10 +1,13 @@
 <script lang="ts">
+  import { setContext } from 'svelte'
   import { derived, writable } from 'svelte/store'
   import { WebParser, type WebMetadata, type DetectedWebApp } from '@horizon/web-parser'
 
   import {
     DrawerProvider,
     DrawerSearch,
+    DrawerCancel,
+    DrawerChat,
     DrawerNavigation,
     DrawerContentWrapper,
     provideDrawer,
@@ -27,7 +30,11 @@
   } from '../../service/resources'
   import { onMount } from 'svelte'
   import { ResourceTypes, type ResourceData, type SFFSResourceTag } from '../../types'
-  import { parseStringIntoUrl } from '../../utils/url'
+
+  import { parseStringIntoUrl, stringToURLList } from '../../utils/url'
+
+  import ProgressiveBlur from '@horizon/drawer/src/lib/fx/ProgressiveBlur.svelte'
+  import { parse } from 'date-fns'
 
   export const drawer = provideDrawer()
 
@@ -40,11 +47,22 @@
   const log = useLogScope('DrawerWrapper')
 
   const tabs = [
-    { key: 'all', label: 'All' },
-    { key: 'link', label: 'Links' },
-    { key: 'text', label: 'Notes' },
-    { key: 'file', label: 'Files' }
+    { key: 'all', label: 'All', icon: 'square.rotated' },
+    { key: 'horizon', label: 'On this Horizon', icon: 'rectangle' },
+    { key: 'dropped', label: 'Dropped', icon: 'bookmark' },
+    { key: 'downloaded', label: 'Downloaded', icon: 'download' },
+    { key: 'archived', label: 'Archived', icon: 'archive' }
   ]
+
+  const VIEW_STATES = {
+    CHAT_INPUT: 'chatInput',
+    SEARCH: 'search',
+    DEFAULT: 'default'
+  }
+
+  const viewState = writable(VIEW_STATES.DEFAULT)
+  // Setting the context
+  setContext('drawer.viewState', viewState)
 
   drawer.selectedTab.set('all')
 
@@ -75,13 +93,14 @@
       })
     }
 
-    const result = await resourceManager.searchResources(query, tags)
+    const result = (await resourceManager.searchResources(query, tags)).reverse()
 
     log.debug('Search result', result)
     resources = result
   }
 
   const handleSearch = (e: CustomEvent<SearchQuery>) => {
+    console.log('search gets handled bastard')
     const query = e.detail
 
     const url = parseStringIntoUrl(query.value)
@@ -96,7 +115,7 @@
     searchQuery.set(query)
   }
 
-  const parseMetadata = async (url: string) => {
+  export const parseMetadata = async (url: string) => {
     const webParser = new WebParser(url)
 
     const appInfo = await webParser.getPageInfo()
@@ -110,6 +129,10 @@
       appInfo: appInfo,
       linkMetadata: metadata
     }
+  }
+
+  const abortSearch = () => {
+    runSearch('', drawer.selectedTab)
   }
 
   const handleEnter = async () => {
@@ -161,6 +184,48 @@
     }
 
     // TODO: Decide what to do on resource click, e.g. create card or open resource in modal or something else
+  }
+
+  const handleChat = async (payload: any) => {
+    log.debug(
+      `Creation of ${payload.detail.$parsedURLs.length} items triggered from chat input`,
+      payload.detail
+    )
+
+    const userGeneratedText = payload.detail.inputText
+
+    for (const item of payload.detail.$parsedURLs) {
+      const webParser = new WebParser(item.url)
+
+      // if (!parsedInput.appInfo || !parsedInput.appInfo.resourceType) {
+      //   log.warn('No appInfo found')
+      // }
+
+      // Extract a resource from the web page using a webview, this should happen only when saving the resource
+      const extractedResource = await webParser.extractResourceUsingWebview(document)
+      log.debug('extractedResource', extractedResource)
+
+      if (!extractedResource) {
+        log.error('No resource extracted')
+        return
+      }
+
+      const resource = await resourceManager.createResourceOther(
+        new Blob([JSON.stringify(extractedResource.data)], { type: extractedResource.type }),
+        {
+          name: item.linkMetadata.title,
+          alt: item.linkMetadata.description,
+          sourceURI: '',
+          userContext: ''
+        }
+      )
+
+      log.debug('Created resource', resource)
+    }
+
+    document.startViewTransition(async () => {
+      viewState.set('default')
+    })
   }
 
   const handleDrop = async (e: CustomEvent<DragEvent>) => {
@@ -305,8 +370,6 @@
 </script>
 
 <DrawerProvider {drawer} on:search={handleSearch}>
-  <DrawerNavigation {tabs} />
-  <DrawerSearch on:enter={handleEnter} />
   {#if detectedInput}
     <!-- TODO: move to component, this is more of an example -->
     <div class="link-info">
@@ -334,7 +397,7 @@
         idKey="id"
         animate={false}
         maxColWidth={650}
-        minColWidth={300}
+        minColWidth={250}
         gap={15}
         let:item={resource}
       >
@@ -366,6 +429,27 @@
       {/if}
     {/await} -->
   </DrawerContentWrapper>
+  <div class="drawer-bottom">
+    {#if $viewState == 'default'}
+      <div class="tabs-transition">
+        <DrawerNavigation {tabs} />
+      </div>
+    {/if}
+    <div class="drawer-chat-search">
+      {#if $viewState !== 'search'}
+        <DrawerChat on:chatSend={handleChat} />
+      {/if}
+
+      {#if $viewState !== 'chatInput'}
+        <DrawerSearch on:enter={handleEnter} />
+      {/if}
+    </div>
+
+    {#if $viewState != 'default'}
+      <DrawerCancel on:search-abort={abortSearch} />
+    {/if}
+    <!-- <ProgressiveBlur /> -->
+  </div>
 </DrawerProvider>
 
 <style lang="scss">
@@ -384,6 +468,7 @@
     .title {
       font-size: 1rem;
       font-weight: 600;
+      letter-spacing: 0.02rem;
     }
 
     .subtitle {
@@ -395,6 +480,40 @@
       font-size: 0.9rem;
       color: var(--color-text-muted);
       margin-left: auto;
+    }
+  }
+
+  .drawer-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    &:after {
+      background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 255) 60%
+      ) !important;
+      filter: opacity(1);
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drawer-chat-search {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      gap: 16px;
+      padding: 1rem;
+      transition: all 240ms ease-out;
+
+      .search-transition {
+        position: relative;
+      }
     }
   }
 </style>

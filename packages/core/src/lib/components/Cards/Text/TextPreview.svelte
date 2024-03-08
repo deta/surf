@@ -35,25 +35,39 @@
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="text-card">
+<div class="text-card-wrapper">
   <!-- <Editor
     bind:content={value}
     placeholder="Jot something down…"
     autofocus={false}
     readOnly
   /> -->
-  {#if loading}
-    <p>Loading…</p>
-  {:else}
-    <p>{summary}</p>
-  {/if}
+  <div class="text-card">
+    {#if loading}
+      <p>Loading…</p>
+    {:else}
+      <p>{summary}</p>
+    {/if}
+  </div>
 </div>
 
 <style lang="scss">
-  .text-card {
+  .text-card-wrapper {
     width: 100%;
     height: 100%;
     position: relative;
     padding: 1rem;
+    .text-card {
+      padding: 1rem;
+      background: #f6f5f2;
+      p {
+        font-family: monospace;
+        font-size: 1rem;
+        line-height: 1.5rem;
+        font-weight: 500;
+        flex-shrink: 0;
+        color: #353534;
+      }
+    }
   }
 </style>

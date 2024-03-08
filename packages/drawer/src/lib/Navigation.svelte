@@ -24,18 +24,11 @@
 </script>
 
 <div class="drawer-top">
-  <div>
-    <Tabs bind:selected={$selectedTab} {tabs} on:select={handleTabSelect} />
-  </div>
-
   <div class="drawer-controls">
     {#if $size === 'normal'}
       <button on:click={() => drawer.setSize('full')}>
         <Icon name="arrowHorizontal" size="22px" />
       </button>
-      <!-- <button on:click={() => changeSize('minimal')}>
-                <Icon name="arrowDiagonalMinimize" size="22px" />
-            </button> -->
     {:else}
       <button on:click={() => drawer.setSize('normal')} style="transform: rotate(-45deg);">
         <Icon name="arrowDiagonalMinimize" size="22px" />
@@ -46,15 +39,26 @@
     </button>
   </div>
 </div>
+<div class="drawer-bottom">
+  <div>
+    <Tabs bind:selected={$selectedTab} {tabs} on:select={handleTabSelect} />
+  </div>
+</div>
 
 <style lang="scss">
   .drawer-top {
-    padding: 0.5rem;
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+  }
+  .drawer-bottom {
+    position: relative;
+    padding: 1rem 0.5rem 0.5rem 0.5rem;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.33);
+    z-index: 10;
   }
 
   .drawer-controls {

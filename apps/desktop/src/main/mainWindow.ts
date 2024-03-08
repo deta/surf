@@ -72,7 +72,8 @@ export function createWindow() {
       additionalArguments: [`--userDataPath=${app.getPath('userData')}`],
       sandbox: false,
       session: session.fromPartition('persist:horizon-session-v0'),
-      webviewTag: true
+      webviewTag: true,
+      defaultFontSize: 14
     }
   })
 

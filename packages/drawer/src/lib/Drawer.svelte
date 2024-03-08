@@ -13,7 +13,7 @@
     dispatch('search', query)
   })
 
-  $: width = $size === 'minimal' ? '400px' : $size === 'normal' ? 'calc(max(33vw, 500px))' : '100vw'
+  $: width = $size === 'minimal' ? '200px' : $size === 'normal' ? 'calc(max(40vw, 500px))' : '100vw'
 </script>
 
 <div class="drawer-root">
@@ -47,15 +47,12 @@
     width: 100%;
     height: 100%;
     transition: width 0.2s ease-out;
-    background: linear-gradient(
-        0deg,
-        rgba(175, 80, 190, 0.18) 0%,
-        rgba(170, 65, 141, 0.18) 48.96%,
-        rgba(28, 0, 203, 0.18) 100%
-      ),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.6) 75.4%, rgba(255, 255, 255, 0) 99.85%);
+    border-radius: 12px;
     border: 1px solid rgba(0, 0, 0, 0.12);
+    background: url('../../public/test.png');
     backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(64px);
     border-radius: 12px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
