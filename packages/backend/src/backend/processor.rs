@@ -74,9 +74,9 @@ fn process_resource_data(resource: &CompositeResource, resource_data: &str) -> O
                         "{} {} {} {} {}",
                         post_data.title.unwrap_or_default(),
                         post_data.excerpt.unwrap_or_default(),
-                        post_data.content_plain,
+                        post_data.content_plain.unwrap_or_default(),
                         post_data.author.unwrap_or_default(),
-                        post_data.site_name
+                        post_data.site_name.unwrap_or_default()
                     )
                 })
         }
@@ -87,7 +87,9 @@ fn process_resource_data(resource: &CompositeResource, resource_data: &str) -> O
                 .map(|message_data| {
                     format!(
                         "{} {} {}",
-                        message_data.author, message_data.content_plain, message_data.platform_name
+                        message_data.author.unwrap_or_default(),
+                        message_data.content_plain.unwrap_or_default(),
+                        message_data.platform_name.unwrap_or_default()
                     )
                 })
         }
@@ -99,8 +101,8 @@ fn process_resource_data(resource: &CompositeResource, resource_data: &str) -> O
                     format!(
                         "{} {} {}",
                         document_data.author.unwrap_or_default(),
-                        document_data.content_plain,
-                        document_data.editor_name
+                        document_data.content_plain.unwrap_or_default(),
+                        document_data.editor_name.unwrap_or_default()
                     )
                 })
         }
@@ -111,11 +113,11 @@ fn process_resource_data(resource: &CompositeResource, resource_data: &str) -> O
                 .map(|article_data| {
                     format!(
                         "{} {} {} {} {}",
-                        article_data.title,
+                        article_data.title.unwrap_or_default(),
                         article_data.excerpt.unwrap_or_default(),
-                        article_data.content_plain,
+                        article_data.content_plain.unwrap_or_default(),
                         article_data.author.unwrap_or_default(),
-                        article_data.site_name
+                        article_data.site_name.unwrap_or_default()
                     )
                 })
         }
@@ -126,9 +128,9 @@ fn process_resource_data(resource: &CompositeResource, resource_data: &str) -> O
                 .map(|link_data| {
                     format!(
                         "{} {} {}",
-                        link_data.title,
+                        link_data.title.unwrap_or_default(),
                         link_data.description.unwrap_or_default(),
-                        link_data.url
+                        link_data.url.unwrap_or_default()
                     )
                 })
         }
@@ -139,8 +141,9 @@ fn process_resource_data(resource: &CompositeResource, resource_data: &str) -> O
                 .map(|thread_data| {
                     let messages_content = thread_data
                         .messages
+                        .unwrap_or_default()
                         .iter()
-                        .map(|msg| msg.content_plain.clone())
+                        .map(|msg| msg.content_plain.clone().unwrap_or_default())
                         .collect::<Vec<_>>()
                         .join(" ");
                     format!(
@@ -208,23 +211,23 @@ struct PostData {
     author_fullname: Option<String>,
     author_image: Option<String>,
     author_url: Option<String>,
-    content_html: String,
-    content_plain: String,
+    content_html: Option<String>,
+    content_plain: Option<String>,
     date_edited: Option<String>,
-    date_published: String,
+    date_published: Option<String>,
     edited: Option<bool>,
     excerpt: Option<String>,
-    images: Vec<String>,
+    images: Option<Vec<String>>,
     lang: Option<String>,
-    links: Vec<String>,
+    links: Option<Vec<String>>,
     parent_title: Option<String>,
     parent_url: Option<String>,
-    post_id: String,
-    site_icon: String,
-    site_name: String,
-    stats: PostStats,
+    post_id: Option<String>,
+    site_icon: Option<String>,
+    site_name: Option<String>,
+    stats: Option<PostStats>,
     title: Option<String>,
-    url: String,
+    url: Option<String>,
     video: Vec<String>,
 }
 
@@ -238,23 +241,23 @@ struct PostStats {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ChatMessageData {
-    author: String,
+    author: Option<String>,
     author_image: Option<String>,
     author_url: Option<String>,
-    content_html: String,
-    content_plain: String,
+    content_html: Option<String>,
+    content_plain: Option<String>,
     date_edited: Option<String>,
-    date_sent: String,
-    images: Vec<String>,
+    date_sent: Option<String>,
+    images: Option<Vec<String>>,
     in_reply_to: Option<String>,
     #[serde(rename = "messageId")]
-    message_id: String,
+    message_id: Option<String>,
     parent_title: Option<String>,
     parent_url: Option<String>,
-    platform_icon: String,
-    platform_name: String,
-    url: String,
-    video: Vec<String>,
+    platform_icon: Option<String>,
+    platform_name: Option<String>,
+    url: Option<String>,
+    video: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -263,13 +266,13 @@ struct DocumentData {
     author_fullname: Option<String>,
     author_image: Option<String>,
     author_url: Option<String>,
-    content_html: String,
-    content_plain: String,
-    date_created: String,
+    content_html: Option<String>,
+    content_plain: Option<String>,
+    date_created: Option<String>,
     date_edited: Option<String>,
-    editor_icon: String,
-    editor_name: String,
-    url: String,
+    editor_icon: Option<String>,
+    editor_name: Option<String>,
+    url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -279,20 +282,20 @@ struct ArticleData {
     author_url: Option<String>,
     category_name: Option<String>,
     category_url: Option<String>,
-    content_html: String,
-    content_plain: String,
+    content_html: Option<String>,
+    content_plain: Option<String>,
     date_published: Option<String>,
     date_updated: Option<String>,
     direction: Option<String>,
     excerpt: Option<String>,
     images: Vec<String>,
     lang: Option<String>,
-    site_icon: String,
-    site_name: String,
-    stats: HashMap<String, Option<i32>>,
-    title: String,
-    url: String,
-    word_count: i32,
+    site_icon: Option<String>,
+    site_name: Option<String>,
+    stats: Option<HashMap<String, Option<i32>>>,
+    title: Option<String>,
+    url: Option<String>,
+    word_count: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -303,22 +306,22 @@ struct LinkData {
     description: Option<String>,
     icon: Option<String>,
     image: Option<String>,
-    keywords: Vec<String>,
+    keywords: Option<Vec<String>>,
     language: Option<String>,
     provider: Option<String>,
-    title: String,
-    url: String,
+    title: Option<String>,
+    url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ChatThreadData {
-    content_plain: String,
-    creator: String,
+    content_plain: Option<String>,
+    creator: Option<String>,
     creator_image: Option<String>,
     creator_url: Option<String>,
-    messages: Vec<ChatMessageData>,
-    platform_icon: String,
-    platform_name: String,
+    messages: Option<Vec<ChatMessageData>>,
+    platform_icon: Option<String>,
+    platform_name: Option<String>,
     title: Option<String>,
-    url: String,
+    url: Option<String>,
 }
