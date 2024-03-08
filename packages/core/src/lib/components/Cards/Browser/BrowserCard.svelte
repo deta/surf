@@ -6,7 +6,13 @@
   import { fly } from 'svelte/transition'
 
   import WebviewWrapper, { type WebViewWrapperEvents } from './WebviewWrapper.svelte'
-  import type { HistoryEntry, CardBrowser, CardEvents } from '../../../types/index'
+  import {
+    type HistoryEntry,
+    type CardBrowser,
+    type CardEvents,
+    ResourceTypes,
+    type ResourceDataArticle
+  } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
   import {
     parseStringIntoUrl,
@@ -26,13 +32,15 @@
   import FindInPage from './FindInPage.svelte'
   import StackItem from '../../Stack/StackItem.svelte'
   import { wait } from '../../../utils/time'
-  import type { DetectedResource, DetectedWebApp } from '@horizon/web-parser'
+  import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
+  import type { MagicFieldParticipant } from '../../../service/magicField'
   import { focusModeEnabled, exitFocusMode, enterFocusMode } from '../../../utils/focusMode'
   import { getServiceRanking, updateServiceRanking } from '../../../utils/services'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
   export let active: boolean = false
+  export let magicFieldParticipant: MagicFieldParticipant | null = null
 
   const deactivateToolbar = writable(false)
   const bookmarkingInProgress = writable(false)
@@ -276,16 +284,42 @@
   }
 
   async function handleBookmark() {
-    if (value === '') return
+    try {
+      if (value === '') return
 
-    if (isBookmarked) {
-      removeResourceLinking()
-    } else {
+      if (isBookmarked) {
+        removeResourceLinking()
+        return
+      }
+
       log.debug('bookmarking', value)
-
       bookmarkingInProgress.set(true)
-      webview?.startResourceDetection()
-      // TODO: use timeout to prevent infinite loading
+
+      const detectedResource = await webview?.detectResource()
+      log.debug('extracted resource data', detectedResource)
+
+      if (!detectedResource) {
+        log.debug('no resource detected')
+        return
+      }
+
+      const resource = await horizon.resourceManager.createResourceOther(
+        new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
+        { name: $title ?? '', sourceURI: $url, alt: '' }
+      )
+
+      log.debug('created resource', resource)
+
+      card.update((card) => {
+        card.resourceId = resource.id
+        return card
+      })
+
+      dispatch('change', get(card))
+    } catch (e) {
+      log.error('error creating resource', e)
+    } finally {
+      bookmarkingInProgress.set(false)
     }
   }
 
@@ -323,35 +357,50 @@
     app = detecteApp
   }
 
-  async function handleDetectedResource(e: CustomEvent<DetectedResource | null>) {
-    try {
-      const detectedResource = e.detail
-      log.debug('extracted resource data', detectedResource)
+  onMount(() => {
+    magicFieldParticipant?.onFieldEnter((field) => {
+      if (!magicFieldParticipant) return
+      if (!get(magicFieldParticipant.fieldParticipation)) return
 
-      if (!detectedResource) {
-        log.debug('no resource detected')
-        return
+      const isSupported = field.supportedResource === 'text/plain'
+
+      magicFieldParticipant.fieldParticipation.update((p) => ({
+        ...p!,
+        supported: isSupported
+      }))
+    })
+
+    magicFieldParticipant?.onRequestData(async (type: string, callback) => {
+      log.debug('magic field requesting data', type)
+
+      if (type === 'text/plain') {
+        log.debug('detecting resource')
+        const detectedResource = await webview?.detectResource()
+        log.debug('bitch', detectedResource)
+        if (!detectedResource) {
+          log.debug('no resource detected')
+          callback(null)
+          return
+        }
+
+        log.debug('detectedResource', detectedResource)
+
+        const resourceContent = WebParser.getResourceContent(
+          detectedResource.type,
+          detectedResource.data
+        )
+        if (!resourceContent.html && !resourceContent.plain) {
+          log.debug('no content found in resource')
+          callback(null)
+          return
+        }
+
+        callback(resourceContent.html ?? resourceContent.plain)
+      } else {
+        callback(null)
       }
-
-      const resource = await horizon.resourceManager.createResourceOther(
-        new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-        { name: $title ?? '', sourceURI: $url, alt: '' }
-      )
-
-      log.debug('created resource', resource)
-
-      card.update((card) => {
-        card.resourceId = resource.id
-        return card
-      })
-
-      dispatch('change', get(card))
-    } catch (e) {
-      log.error('error creating resource', e)
-    } finally {
-      bookmarkingInProgress.set(false)
-    }
-  }
+    })
+  })
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -379,7 +428,6 @@
       on:keydownWebview={handleWebviewKeydown}
       on:didFinishLoad={handleFinishLoading}
       on:detectedApp={handleDetectedApp}
-      on:detectedResource={handleDetectedResource}
     />
   </div>
   <div

@@ -1,3 +1,12 @@
+import {
+  ResourceDataArticle,
+  ResourceDataChatMessage,
+  ResourceDataChatThread,
+  ResourceDataDocument,
+  ResourceDataLink,
+  ResourceDataPost,
+  ResourceTypes
+} from '@horizon/types'
 export { SERVICES } from './services'
 
 import {
@@ -9,7 +18,7 @@ import {
   SlackParser,
   YoutubeParser
 } from './sites/index'
-import { DetectedResource } from './types'
+import { DetectedResource, ResourceContent } from './types'
 import { MetadataExtractor } from './extractors/metadata'
 import { WebViewExtractor } from './extractors/webview'
 import { WebAppExtractor } from './extractors/index'
@@ -115,6 +124,54 @@ export class WebParser {
     if (!appParser) return null
 
     return appParser
+  }
+
+  static getResourceContent(
+    type: DetectedResource['type'],
+    resourceData: DetectedResource['data']
+  ): ResourceContent {
+    if (type === ResourceTypes.ARTICLE) {
+      const data = resourceData as ResourceDataArticle
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
+    } else if (type.startsWith(ResourceTypes.POST)) {
+      const data = resourceData as ResourceDataPost
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
+    } else if (type.startsWith(ResourceTypes.CHAT_MESSAGE)) {
+      const data = resourceData as ResourceDataChatMessage
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
+    } else if (type.startsWith(ResourceTypes.CHAT_THREAD)) {
+      const data = resourceData as ResourceDataChatThread
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
+    } else if (type.startsWith(ResourceTypes.DOCUMENT)) {
+      const data = resourceData as ResourceDataDocument
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
+    } else if (type === ResourceTypes.LINK) {
+      const data = resourceData as ResourceDataLink
+      return {
+        html: null,
+        plain: data.description || data.title
+      }
+    } else {
+      return {
+        html: null,
+        plain: null
+      }
+    }
   }
 }
 

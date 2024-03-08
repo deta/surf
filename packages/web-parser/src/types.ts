@@ -40,3 +40,8 @@ export type DetectedResource = {
   data: ResourceData
   type: string
 }
+
+export type ResourceContent = {
+  html: string | null
+  plain: string | null
+}

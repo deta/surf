@@ -10,6 +10,7 @@ import {
 } from 'fs'
 import path from 'path'
 import fetch from 'cross-fetch'
+import OpenAI from 'openai'
 
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
@@ -21,6 +22,16 @@ mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 const webviewNewWindowHandlers = {}
 const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
+
+const OPENAI_KEY = import.meta.env.P_VITE_OPEN_AI_API_KEY
+
+let openai: OpenAI | null = null
+if (OPENAI_KEY) {
+  openai = new OpenAI({
+    apiKey: OPENAI_KEY,
+    dangerouslyAllowBrowser: true
+  })
+}
 
 const api = {
   webviewDevToolsBtn: !import.meta.env.PROD || !!process.env.WEBVIEW_DEV_TOOLS_BTN,
@@ -82,6 +93,27 @@ const api = {
     } catch (error) {
       throw error
     }
+  },
+
+  createAIChatCompletion: async (userPrompt: string, systemPrompt?: string) => {
+    if (!openai) {
+      return null
+    }
+
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = []
+
+    if (systemPrompt) {
+      messages.push({ role: 'system', content: systemPrompt })
+    }
+
+    messages.push({ role: 'user', content: userPrompt })
+
+    const chatCompletion = await openai.chat.completions.create({
+      messages: messages,
+      model: 'gpt-3.5-turbo'
+    })
+
+    return chatCompletion.choices[0].message.content
   },
 
   onOpenURL: (callback) => {

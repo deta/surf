@@ -2,7 +2,7 @@
 
 <script lang="ts">
   import { SvelteComponent, createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { get, type Writable } from 'svelte/store'
+  import { derived, get, writable, type Writable } from 'svelte/store'
   import { tooltip } from '@svelte-plugins/tooltips'
 
   import {
@@ -30,6 +30,7 @@
     getCardOnPane
   } from '../../utils/focusMode'
   import { visorEnabled } from '../../utils/visor'
+  import type { RelativePositioning } from '../../service/magicField'
   import { flyMenuItems, flyMenuOpen, flyMenuType, openFlyMenu } from '../FlyMenu/FlyMenu.svelte'
   import { buildCardList, buildMultiCardList } from '../FlyMenu/flyMenu'
 
@@ -41,9 +42,61 @@
   $: selection = $state?.selection
   $: viewPort = $state?.viewPort
   $: viewOffset = $state?.viewOffset
+  $: mode = $state?.mode
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('CardWrapper')
+
+  const CONNECTION_THRESHOLD = 50
+
+  const magicFieldParticipant = horizon.magicFieldService.createParticipant($positionable.id, {
+    x: $positionable.x,
+    y: $positionable.y,
+    width: $positionable.width,
+    height: $positionable.height
+  })
+
+  const activeField = magicFieldParticipant.inField
+  const connectedField = magicFieldParticipant.connectedField
+  const fieldParticipation = magicFieldParticipant.fieldParticipation
+
+  $: selfIsField = $activeField?.id === magicFieldParticipant.id
+
+  let isConnecting = false
+
+  magicFieldParticipant.onFieldEnter((field) => {
+    log.debug('fieldEnter', field)
+  })
+
+  magicFieldParticipant.onFieldConnect((field) => {
+    log.debug('connected to field', field)
+  })
+
+  magicFieldParticipant.onFieldLeave((field) => {
+    log.debug('fieldLeave', field)
+    isConnecting = false
+  })
+
+  const handleMagicFieldConnect = () => {
+    log.debug('handleMagicFieldConnect', $card.id)
+    if (!$activeField) return
+
+    $activeField.connect(magicFieldParticipant.id)
+  }
+
+  fieldParticipation.subscribe((p) => {
+    if (
+      p &&
+      p.supported &&
+      p.distance < CONNECTION_THRESHOLD &&
+      !isConnecting &&
+      $mode !== 'dragging'
+    ) {
+      log.debug('initiating connect', p)
+      isConnecting = true
+      handleMagicFieldConnect()
+    }
+  })
 
   const minSize = { x: 100, y: 100 }
   const maxSize = { x: Infinity, y: Infinity }
@@ -207,9 +260,19 @@
   const onDragMove = (
     e: CustomEvent<{ key: string; x: number; y: number; offset: { x: number; y: number } }>
   ) => {
-    if (!$focusModeEnabled) return
     const { clientX, clientY, offset } = e.detail
     const abs = posToAbsolute(clientX, clientY, $viewOffset!.x, $viewOffset!.y, $viewPort!, 1)
+
+    // log.debug('drag move', abs)
+    // magicFieldParticipant.updatePosition({
+    //   x: abs.x,
+    //   y: abs.y,
+    //   width: $card.width,
+    //   height: $card.height
+    // })
+
+    if (!$focusModeEnabled) return
+
     card.update((v) => {
       v.xOverride = abs.x - $card.widthOverride / 2
       v.yOverride = abs.y
@@ -368,6 +431,20 @@
     el.addEventListener('resizable_end', updateCard)
     el.addEventListener('resizable_onMouseDown', handleResizeBegin)
     el.addEventListener('resizable_onMouseUp', handleResizeEnd)
+
+    const unsubscribe = card.subscribe((c) => {
+      magicFieldParticipant.updatePosition({
+        x: c.x,
+        y: c.y,
+        width: c.width,
+        height: c.height
+      })
+    })
+
+    return () => {
+      unsubscribe()
+      horizon.magicFieldService.removeParticipant(magicFieldParticipant.id)
+    }
   })
 
   onDestroy(() => {
@@ -396,8 +473,15 @@
 <Positionable
   {positionable}
   data-id={$positionable.id}
-  class="card {$positionable.id} {active && 'active'} {selected &&
-    'selected'} {$positionable.dashHighlight && 'dash-highlight'}"
+  class="card {$positionable.id} {$positionable.type} {$fieldParticipation?.supported
+    ? 'magic-field-active'
+    : ''} {!!$connectedField || (selfIsField && $activeField)
+    ? 'magic-field-connected'
+    : ''} {$fieldParticipation?.supported
+    ? `magic-field-${$fieldParticipation.relativePosition}`
+    : ''} {active && 'active'} {selected && 'selected'} {$positionable.dashHighlight &&
+    'dash-highlight'}"
+  style="--magic-field-distance: {($fieldParticipation?.distance ?? 0) / 200}"
   contained={false}
   on:mousedown={handleMouseDown}
   on:dragenter={handleDragEnter}
@@ -520,8 +604,12 @@
     </button>
   {/if}
 
+  <!-- {#if !!$activeField && $fieldParticipation?.supported}
+    <div on:click={handleMagicFieldConnect} class="connect-btn connect-edge-{$fieldParticipation.relativePosition}" style="--connect-distance: {$fieldParticipation.distance}px;">✨</div>
+  {/if} -->
+
   <div class="content tela-ignore" style={$visorEnabled || !active ? 'pointer-events: none;' : ''}>
-    <CardContent {positionable} {horizon} on:load on:change on:delete />
+    <CardContent {positionable} {horizon} {magicFieldParticipant} on:load on:change on:delete />
   </div>
 </Positionable>
 
@@ -761,6 +849,57 @@
         color: #7b7b7b;
       }
     }
+  }
+
+  .connect-btn {
+    position: absolute;
+    width: 5rem;
+    height: 5rem;
+    background: rgba(255, 127, 191);
+    border: 2px solid rgba(255, 127, 191);
+    border-radius: var(--theme-border-radius);
+    z-index: 10000;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+
+    --button-width: 3rem;
+    --button-height: 3rem;
+    --button-offset: calc(-1.5rem - (var(--connect-distance) / 2));
+  }
+
+  .connect-edge-left {
+    top: 50%;
+    left: var(--button-offset);
+    transform: translate(0%, -50%);
+    width: var(--button-width);
+    height: var(--button-height);
+  }
+
+  .connect-edge-right {
+    top: 50%;
+    right: var(--button-offset);
+    transform: translate(0%, -50%);
+    width: var(--button-width);
+    height: var(--button-height);
+  }
+
+  .connect-edge-top {
+    top: var(--button-offset);
+    left: 50%;
+    transform: translate(-50%, 0%);
+    width: var(--button-height);
+    height: var(--button-width);
+  }
+
+  .connect-edge-bottom {
+    bottom: var(--button-offset);
+    left: 50%;
+    transform: translate(-50%, 0%);
+    width: var(--button-height);
+    height: var(--button-width);
   }
 
   // .card-title {

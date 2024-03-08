@@ -199,6 +199,7 @@ export interface ResourceDataChatThread {
 
   messages: ResourceDataChatMessage[] // associated messages
 
+  content_html: string // html representation of the thread content
   content_plain: string // plain text version of the thread content
 }
 

@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { get, writable, type Unsubscriber, type Writable, derived } from 'svelte/store'
   import { createEventDispatcher, getContext, onDestroy, onMount, setContext, tick } from 'svelte'
-  import { get, writable, type Unsubscriber, type Writable } from 'svelte/store'
 
   import {
     Board,

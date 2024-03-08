@@ -11,7 +11,7 @@ export type CardEvents = {
   endResize: Card
 }
 
-export type CardType = 'browser' | 'text' | 'file' | 'link'
+export type CardType = 'browser' | 'text' | 'file' | 'link' | 'ai-text'
 
 export type CardPosition = Pick<IPositionable<'id'>, 'x' | 'y' | 'width' | 'height'>
 
