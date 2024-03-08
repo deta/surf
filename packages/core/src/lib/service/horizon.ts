@@ -383,6 +383,29 @@ export class Horizon {
     )
   }
 
+  addCardBrowserWithResource(
+    location: string,
+    resourceId: string,
+    position: CardPosition,
+    makeActive: boolean = false,
+    duplicated: boolean = false
+  ) {
+    return this.addCard(
+      {
+        ...position,
+        type: 'browser',
+        resourceId: resourceId,
+        data: {
+          initialLocation: location,
+          historyStackIds: [] as string[],
+          currentHistoryIndex: -1
+        }
+      },
+      makeActive,
+      duplicated
+    )
+  }
+
   async addCardText(
     content: string,
     position: CardPosition,

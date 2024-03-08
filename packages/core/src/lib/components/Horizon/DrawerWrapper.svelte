@@ -18,9 +18,15 @@
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { useLogScope } from '../../utils/log'
   import { MEDIA_TYPES, processDrop } from '../../service/mediaImporter'
-  import { ResourceTag, type ResourceManager, type ResourceObject } from '../../service/resources'
+  import {
+    ResourceTag,
+    type ResourceManager,
+    type ResourceObject,
+    ResourceJSON,
+    ResourceNote
+  } from '../../service/resources'
   import { onMount } from 'svelte'
-  import { ResourceTypes, type SFFSResourceTag } from '../../types'
+  import { ResourceTypes, type ResourceData, type SFFSResourceTag } from '../../types'
   import { parseStringIntoUrl } from '../../utils/url'
 
   export const drawer = provideDrawer()
@@ -161,6 +167,13 @@
     const event = e.detail
     log.debug('Dropped', event)
 
+    const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
+    if (isOwnDrop) {
+      log.debug('Own drop detected, ignoring...')
+      log.debug(event.dataTransfer?.files)
+      return
+    }
+
     const parsed = await processDrop(event)
     log.debug('Parsed', parsed)
 
@@ -192,8 +205,8 @@
     runSearch($searchQuery.value, $searchQuery.tab)
   }
 
-  const handleItemDragStart = async (e: DragEvent, resourceId: string) => {
-    log.debug('Item drag start', e, resourceId)
+  const handleItemDragStart = (e: DragEvent, resource: ResourceObject) => {
+    log.debug('Item drag start', e, resource.id)
 
     if (!e.dataTransfer) {
       log.error('No dataTransfer found')
@@ -201,7 +214,61 @@
     }
 
     // this will be used by the MediaImporter to import the resource and create a card
-    e.dataTransfer.setData(MEDIA_TYPES.RESOURCE, resourceId)
+    e.dataTransfer.setData(MEDIA_TYPES.RESOURCE, resource.id)
+
+    log.debug('Resource type', resource.type)
+    if (
+      resource.type.startsWith(ResourceTypes.LINK) ||
+      resource.type.startsWith(ResourceTypes.POST) ||
+      resource.type.startsWith(ResourceTypes.CHAT_MESSAGE) ||
+      resource.type.startsWith(ResourceTypes.ARTICLE)
+    ) {
+      const data = (resource as ResourceJSON<ResourceData>).parsedData
+      log.debug('parsed resource data')
+
+      // We cannot read the data here as the drag start event is synchronous
+      if (!data) {
+        log.warn('No parsed data found, cannot add primitive data to dataTransfer')
+        return
+      }
+
+      if ((data as any).url) {
+        e.dataTransfer.setData('text/uri-list', (data as any).url)
+      } else {
+        e.dataTransfer.setData('text/plain', JSON.stringify(data))
+      }
+    } else if (resource.type.startsWith(ResourceTypes.DOCUMENT)) {
+      const data = (resource as ResourceNote).parsedData
+      log.debug('parsed resource data')
+
+      // We cannot read the data here as the drag start event is synchronous
+      if (!data) {
+        log.warn('No parsed data found, cannot add primitive data to dataTransfer')
+        return
+      }
+
+      e.dataTransfer.setData('text/plain', data)
+    } else {
+      const blob = resource.rawData
+      if (!blob) {
+        log.error('No data found')
+        return
+      }
+
+      log.debug('Creating file out of resource', blob)
+
+      // convert to file
+      const file = new File([blob], resource?.metadata?.name ?? 'unknown', {
+        type: blob.type,
+        lastModified: new Date(resource.updatedAt).getTime()
+      })
+
+      log.debug('Created file', file)
+
+      // TODO: this is not usable by most other applications. Needs further investigation
+      const createdItem = e.dataTransfer.items.add(file)
+      log.debug('Added file to dataTransfer', createdItem)
+    }
   }
 
   onMount(() => {
@@ -271,7 +338,7 @@
         gap={15}
         let:item={resource}
       >
-        <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, resource.id)}>
+        <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, resource)}>
           <ResourcePreview on:click={handleResourceClick} {resource} />
         </DrawerContentItem>
       </DrawerContentMasonry>

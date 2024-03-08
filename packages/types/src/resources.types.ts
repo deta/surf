@@ -31,6 +31,8 @@ export interface SFFSResource {
 }
 
 export enum ResourceTypes {
+  SPACE = 'application/vnd.space',
+
   POST = 'application/vnd.space.post',
   POST_REDDIT = 'application/vnd.space.post.reddit',
   POST_TWITTER = 'application/vnd.space.post.twitter',
