@@ -45,6 +45,14 @@ impl Worker {
             metadata.resource_id = resource.id.clone();
 
             Database::create_resource_metadata_tx(&mut tx, &metadata)?;
+
+            metadata
+                .get_tags()
+                .iter()
+                .try_for_each(|tag| -> BackendResult<()> {
+                    Database::create_resource_tag_tx(&mut tx, tag)?;
+                    Ok(())
+                })?;
         }
 
         if let Some(tags) = &mut tags {
