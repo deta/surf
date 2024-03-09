@@ -1,0 +1,209 @@
+<script lang="ts">
+  import { onMount } from 'svelte'
+  import { get, writable, type Writable } from 'svelte/store'
+
+  import type { Card } from '../../../types/index'
+  import { useLogScope } from '../../../utils/log'
+  import type { Horizon } from '../../../service/horizon'
+  import type { MagicField, MagicFieldParticipant } from '../../../service/magicField'
+
+  export let card: Writable<Card>
+  export let horizon: Horizon
+
+  const magicFieldService = horizon.magicFieldService
+
+  const log = useLogScope('AITextCard')
+
+  let magicField: MagicField | null = null
+  let connectedParticipant: Writable<MagicFieldParticipant | null> = writable(null)
+
+  $: participants = magicField?.participants
+
+  let summarizedText: string | null = null
+  let error: string | null = null
+
+  let gettingData = false
+
+  const getDataFromParticipant = async (id: string) => {
+    if (!magicField) {
+      log.error('No magic field found')
+      return
+    }
+
+    log.debug('Getting data from participant', id)
+
+    const data = await magicField.requestDataFromParticipant(id, 'text/plain')
+    log.debug('received data:', data)
+
+    return data as string | null
+  }
+
+  const summarizeText = async (text: string) => {
+    log.debug('Summarizing data:', text)
+
+    // @ts-expect-error
+    const response = await window.api.createAIChatCompletion(
+      text,
+      'You are a summarizer, summarize the text given to you. Only respond with the summarization.'
+    )
+
+    log.debug('Summarization response:', response)
+    return response
+  }
+
+  const handleParticipantConnect = async (participant: MagicFieldParticipant) => {
+    log.debug('Participant connected:', participant)
+
+    connectedParticipant.set(participant)
+
+    gettingData = true
+
+    const data = await getDataFromParticipant(participant.id)
+    gettingData = false
+    if (!data) {
+      log.error('No data received from participant')
+      error = 'nothing found to summarize'
+      return
+    }
+
+    const summarized = await summarizeText(data)
+    if (!summarized) {
+      log.error('No summarized data received')
+      error = 'summarization failed'
+      return
+    }
+
+    error = null
+    summarizedText = summarized
+  }
+
+  const handleRefresh = () => {
+    if (!$connectedParticipant) {
+      log.error('No connected participant')
+      return
+    }
+
+    handleParticipantConnect($connectedParticipant)
+  }
+
+  onMount(() => {
+    const magicCardParticipant = magicFieldService.getParticipant($card.id)
+    if (!magicCardParticipant) {
+      log.debug('Participant self not found')
+      return
+    }
+
+    log.debug("Creating magic field with card's participant", magicCardParticipant)
+    magicField = magicFieldService.createField(
+      $card.id,
+      'text/plain',
+      magicCardParticipant.position
+    )
+
+    magicField.onParticipantLeave((p) => {
+      log.debug('participantEnter', p)
+    })
+
+    magicField.onParticipantConnect((p) => {
+      log.debug('participantConnect', p)
+      handleParticipantConnect(p)
+    })
+
+    magicField.onReceiveData(async (type, data) => {
+      log.debug('receivedData', type, data)
+      if (gettingData) return
+
+      const summarized = await summarizeText(data)
+      if (!summarized) {
+        log.error('No summarized data received')
+        error = 'summarization failed'
+        return
+      }
+
+      error = null
+      summarizedText = summarized
+    })
+
+    magicField.onParticipantLeave((p) => {
+      log.debug('participantLeave', p)
+      connectedParticipant.set(null)
+      summarizedText = null
+    })
+
+    return () => {
+      if (magicField) {
+        magicFieldService.removeField(magicField.id)
+      }
+    }
+  })
+</script>
+
+<div class="ai-text-card magic-card">
+  {#if $connectedParticipant}
+    <!-- <div class="subtitle">Connected to: {$connectedParticipant.id}</div> -->
+
+    {#if summarizedText}
+      <div class="summary">
+        <p>{summarizedText}</p>
+      </div>
+      <!-- <button on:click={handleRefresh}>Refresh</button> -->
+    {:else if error}
+      <div class="init">
+        <p>{error}</p>
+      </div>
+    {:else}
+      <div class="init">
+        <p>Loading...</p>
+      </div>
+    {/if}
+  {:else}
+    <div class="init">
+      <div class="title">✨ AI Summarizer ✨</div>
+      {#if $participants && $participants.length > 0}
+        <div class="subtitle">Click the magic button to summarize the connected card.</div>
+      {:else}
+        <div class="subtitle">Bring other cards close to this one to see magic happen</div>
+      {/if}
+    </div>
+  {/if}
+</div>
+
+<style lang="scss">
+  .ai-text-card {
+    width: 100%;
+    height: 100%;
+    padding: 1rem;
+    overflow: auto;
+  }
+
+  .init {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    height: 100%;
+    gap: 0.25rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
+    font-weight: bold;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    font-weight: 300;
+  }
+
+  .summary {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.33);
+    border-radius: 4px;
+    height: 100%;
+
+    p {
+      font-size: 1rem;
+      font-weight: 300;
+    }
+  }
+</style>

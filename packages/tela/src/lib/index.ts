@@ -28,7 +28,8 @@ export {
   isInsidePositionable,
   posToAbsolute,
   hoistPositionable,
-  unHoistPositionable
+  unHoistPositionable,
+  applyBounds
 } from './utils.js'
 export type { IBoard, IBoardSettings, IBoardState, TBoardMode } from './types/Board.type.js'
 export type { Vec2, DeepPartial, Vec4 } from './types/Utils.type.js'

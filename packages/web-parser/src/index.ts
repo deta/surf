@@ -1,4 +1,13 @@
-import { ResourceTypes } from '@horizon/types'
+import {
+  ResourceDataArticle,
+  ResourceDataChatMessage,
+  ResourceDataChatThread,
+  ResourceDataDocument,
+  ResourceDataLink,
+  ResourceDataPost,
+  ResourceTypes
+} from '@horizon/types'
+export { SERVICES } from './services'
 
 import {
   RedditParser,
@@ -9,10 +18,11 @@ import {
   SlackParser,
   YoutubeParser
 } from './sites/index'
-import { DetectedResource, WebApp } from './types'
+import { DetectedResource, ResourceContent } from './types'
 import { MetadataExtractor } from './extractors/metadata'
 import { WebViewExtractor } from './extractors/webview'
 import { WebAppExtractor } from './extractors/index'
+import { SERVICES } from './services'
 
 const ParserModules = {
   reddit: RedditParser,
@@ -22,45 +32,13 @@ const ParserModules = {
   youtube: YoutubeParser
 }
 
-export const SUPPORTED_APPS: WebApp[] = [
-  {
-    id: 'reddit',
-    name: 'Reddit',
-    matchHostname: /reddit.com/,
-    supportedResources: [ResourceTypes.POST_REDDIT]
-  },
-  {
-    id: 'twitter',
-    name: 'Twitter',
-    matchHostname: /twitter.com/,
-    supportedResources: [ResourceTypes.POST_TWITTER]
-  },
-  {
-    id: 'notion',
-    name: 'Notion',
-    matchHostname: /notion.so/,
-    supportedResources: [ResourceTypes.DOCUMENT_NOTION]
-  },
-  {
-    id: 'slack',
-    name: 'Slack',
-    matchHostname: /slack.com/,
-    supportedResources: [ResourceTypes.CHAT_MESSAGE_SLACK, ResourceTypes.CHAT_THREAD_SLACK]
-  },
-  {
-    id: 'youtube',
-    name: 'YouTube',
-    matchHostname: /^(?:www\.|m\.)?youtube\.com$|^youtu\.be$/i,
-    supportedResources: [ResourceTypes.POST_YOUTUBE]
-  }
-]
-
 const wait = (ms: number) => {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
 }
 
+const SUPPORTED_APPS = SERVICES
 export class WebParser {
   url: URL
 
@@ -146,6 +124,54 @@ export class WebParser {
     if (!appParser) return null
 
     return appParser
+  }
+
+  static getResourceContent(
+    type: DetectedResource['type'],
+    resourceData: DetectedResource['data']
+  ): ResourceContent {
+    if (type === ResourceTypes.ARTICLE) {
+      const data = resourceData as ResourceDataArticle
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
+    } else if (type.startsWith(ResourceTypes.POST)) {
+      const data = resourceData as ResourceDataPost
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
+    } else if (type.startsWith(ResourceTypes.CHAT_MESSAGE)) {
+      const data = resourceData as ResourceDataChatMessage
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
+    } else if (type.startsWith(ResourceTypes.CHAT_THREAD)) {
+      const data = resourceData as ResourceDataChatThread
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
+    } else if (type.startsWith(ResourceTypes.DOCUMENT)) {
+      const data = resourceData as ResourceDataDocument
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
+    } else if (type === ResourceTypes.LINK) {
+      const data = resourceData as ResourceDataLink
+      return {
+        html: null,
+        plain: data.description || data.title
+      }
+    } else {
+      return {
+        html: null,
+        plain: null
+      }
+    }
   }
 }
 

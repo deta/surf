@@ -18,6 +18,7 @@ import { quintOut, expoOut } from 'svelte/easing'
 import { HistoryEntriesManager } from './history'
 import type { ResourceManager } from './resources'
 import { SFFS } from './sffs'
+import { MagicFieldService } from './magicField'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 8
@@ -45,6 +46,7 @@ export class Horizon {
   telemetry: Telemetry
   historyEntriesManager: HistoryEntriesManager
   resourceManager: ResourceManager
+  magicFieldService: MagicFieldService
 
   constructor(
     id: string,
@@ -65,6 +67,7 @@ export class Horizon {
     this.telemetry = telemetry
     this.historyEntriesManager = historyEntriesManager
     this.resourceManager = resourceManager
+    this.magicFieldService = new MagicFieldService()
 
     this.state = 'cold'
     this.inStateSince = Date.now()
@@ -459,6 +462,21 @@ export class Horizon {
         ...position,
         type: 'file',
         resourceId: resource.id
+      },
+      makeActive,
+      duplicated
+    )
+  }
+
+  async addCardAIText(
+    position: CardPosition,
+    makeActive: boolean = false,
+    duplicated: boolean = false
+  ) {
+    return this.addCard(
+      {
+        ...position,
+        type: 'ai-text'
       },
       makeActive,
       duplicated

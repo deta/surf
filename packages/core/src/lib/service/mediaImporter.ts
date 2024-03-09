@@ -2,6 +2,7 @@ import { hasClassOrParentWithClass } from '@horizon/tela'
 import { useLogScope } from '../utils/log'
 import { checkIfUrl, parseStringIntoUrl } from '../utils/url'
 import type { SFFSResourceMetadata } from '../types'
+import { result } from 'lodash'
 
 const log = useLogScope('mediaImporter')
 
@@ -256,6 +257,51 @@ export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
   return results
 }
 
+export const processFile = async (file: File) => {
+  log.debug('file', file)
+
+  const fileType = parseFileType(file)
+  log.debug('parsed file type', fileType)
+
+  if (fileType === 'text') {
+    const text = await file.text()
+    return {
+      data: text,
+      type: 'text',
+      metadata: {
+        name: file.name,
+        alt: '',
+        sourceURI: file.path
+      }
+    } as MediaParserResult
+  } else {
+    return {
+      data: file,
+      type: 'file',
+      metadata: {
+        name: file.name,
+        alt: '',
+        sourceURI: file.path
+      }
+    } as MediaParserResult
+  }
+}
+
+export const processText = async (text: string): Promise<MediaParserResult[]> => {
+  // Immediately resolve with the structured result
+  return Promise.resolve([
+    {
+      data: text,
+      type: 'text',
+      metadata: {
+        name: '',
+        alt: '',
+        sourceURI: ''
+      }
+    }
+  ])
+}
+
 export const parseDataTransferFiles = async (dataTransfer: DataTransfer) => {
   const results: MediaParserResult[] = []
 
@@ -264,31 +310,8 @@ export const parseDataTransferFiles = async (dataTransfer: DataTransfer) => {
     files.map(async (file) => {
       log.debug('file', file)
 
-      const fileType = parseFileType(file)
-      log.debug('parsed file type', fileType)
-
-      if (fileType === 'text') {
-        const text = await file.text()
-        results.push({
-          data: text,
-          type: 'text',
-          metadata: {
-            name: file.name,
-            alt: '',
-            sourceURI: file.path
-          }
-        })
-      } else {
-        results.push({
-          data: file,
-          type: 'file',
-          metadata: {
-            name: file.name,
-            alt: '',
-            sourceURI: file.path
-          }
-        })
-      }
+      const processed = await processFile(file)
+      results.push(processed)
     })
   )
 

@@ -1,7 +1,7 @@
 import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
 
 import { WebAppExtractor } from '../extractors'
-import type { DetectedWebApp, WebApp } from '../types'
+import type { DetectedWebApp, WebService } from '../types'
 
 export const TwitterRegexPatterns = {
   // example: /@detahq/status/1441160730730736640
@@ -19,7 +19,7 @@ export type TweetData = {
 }
 
 export class TwitterParser extends WebAppExtractor {
-  constructor(app: WebApp, url: URL) {
+  constructor(app: WebService, url: URL) {
     super(app, url)
   }
 

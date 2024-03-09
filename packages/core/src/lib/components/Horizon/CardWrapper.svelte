@@ -2,7 +2,7 @@
 
 <script lang="ts">
   import { SvelteComponent, createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { get, type Writable } from 'svelte/store'
+  import { derived, get, writable, type Writable } from 'svelte/store'
   import { tooltip } from '@svelte-plugins/tooltips'
 
   import {
@@ -24,10 +24,15 @@
     applyFocusMode,
     focusModeEnabled,
     focusModeTargets,
+    get1x11PaneAt,
+    get1x1PaneAt,
     get2x2PaneAt,
     getCardOnPane
   } from '../../utils/focusMode'
   import { visorEnabled } from '../../utils/visor'
+  import type { RelativePositioning } from '../../service/magicField'
+  import { flyMenuItems, flyMenuOpen, flyMenuType, openFlyMenu } from '../FlyMenu/FlyMenu.svelte'
+  import { buildCardList, buildMultiCardList } from '../FlyMenu/flyMenu'
 
   export let positionable: Writable<IPositionable<any>>
   export let horizon: Horizon
@@ -37,9 +42,61 @@
   $: selection = $state?.selection
   $: viewPort = $state?.viewPort
   $: viewOffset = $state?.viewOffset
+  $: mode = $state?.mode
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('CardWrapper')
+
+  const CONNECTION_THRESHOLD = 50
+
+  const magicFieldParticipant = horizon.magicFieldService.createParticipant($positionable.id, {
+    x: $positionable.x,
+    y: $positionable.y,
+    width: $positionable.width,
+    height: $positionable.height
+  })
+
+  const activeField = magicFieldParticipant.inField
+  const connectedField = magicFieldParticipant.connectedField
+  const fieldParticipation = magicFieldParticipant.fieldParticipation
+
+  $: selfIsField = $activeField?.id === magicFieldParticipant.id
+
+  let isConnecting = false
+
+  magicFieldParticipant.onFieldEnter((field) => {
+    log.debug('fieldEnter', field)
+  })
+
+  magicFieldParticipant.onFieldConnect((field) => {
+    log.debug('connected to field', field)
+  })
+
+  magicFieldParticipant.onFieldLeave((field) => {
+    log.debug('fieldLeave', field)
+    isConnecting = false
+  })
+
+  const handleMagicFieldConnect = () => {
+    log.debug('handleMagicFieldConnect', $card.id)
+    if (!$activeField) return
+
+    $activeField.connect(magicFieldParticipant.id)
+  }
+
+  fieldParticipation.subscribe((p) => {
+    if (
+      p &&
+      p.supported &&
+      p.distance < CONNECTION_THRESHOLD &&
+      !isConnecting &&
+      $mode !== 'dragging'
+    ) {
+      log.debug('initiating connect', p)
+      isConnecting = true
+      handleMagicFieldConnect()
+    }
+  })
 
   const minSize = { x: 100, y: 100 }
   const maxSize = { x: Infinity, y: Infinity }
@@ -53,6 +110,7 @@
   let dragOverTimeout: ReturnType<typeof setTimeout> | null = null
 
   // Focus Mode
+  let isDragging = false
   let isFocusDragging = false
   let focusModeBackup: null | { x: number; y: number; width: number; height: number } = null
   let focusSwitchTarget: null | number = null
@@ -70,6 +128,13 @@
   }
 
   const handleMouseDown = (event: MouseEvent) => {
+    if (event.button === 2) {
+      selection.set(new Set([...$selection.values(), $card.id]))
+      openFlyMenu('cursor', $selection.size > 1 ? buildMultiCardList() : buildCardList())
+      event.stopPropagation()
+      return
+    }
+
     if (event.metaKey || event.ctrlKey) {
       if ($visorEnabled) {
         $visorEnabled = false
@@ -85,7 +150,15 @@
       // Dirty "hack" to still allow clicking the delete button
       if (hasClassOrParentWithClass(event.target, 'visor-delete')) return
 
-      horizon.setActiveCard($card.id)
+      // Multi select
+      if (event.shiftKey) {
+        selection.update((v) => {
+          v.add($card.id)
+          return v
+        })
+      } else {
+        horizon.setActiveCard($card.id)
+      }
       if ($visorEnabled) {
         $visorEnabled = false
         setTimeout(() => {
@@ -98,18 +171,29 @@
     if ($focusModeEnabled) {
       isFocusDragging = true
       focusModeBackup = { ...$positionable }
-      console.warn(focusModeBackup)
+    }
+
+    // Focus Mode
+    if ($focusModeEnabled) {
+      isFocusDragging = true
+      focusModeBackup = { ...$positionable }
     }
   }
 
   const handleDragEnd = (_: any) => {
+    isDragging = false
     isFocusDragging = false
     if ($focusModeEnabled && focusModeBackup !== null) {
       if (focusSwitchTarget !== null) {
         focusModeTargets.update((v) => {
           const order = v[1]
-          console.warn(`switching to ttagrt ${focusSwitchTarget}`)
-          order[focusSwitchTarget!] = $card.id
+          if (order.indexOf($card.id) !== -1) {
+            const srcIndex = order.indexOf($card.id)
+            order[srcIndex] = order[focusSwitchTarget!]
+            order[focusSwitchTarget!] = $card.id
+          } else {
+            order[focusSwitchTarget!] = $card.id
+          }
           return v
         })
         applyFocusMode($viewOffset!, $viewPort!, true)
@@ -125,16 +209,19 @@
         focusModeBackup = null
       }
     }
+
+    horizon.telaSettings?.update((v) => {
+      v.CAN_SELECT = true
+      return v
+    })
+
+    if ($focusModeEnabled) return
     dispatch('endDrag', $card)
     const board = horizon.board
     if (!board) console.error('No board found ond rag end')
     const state = get(board!.state)
     $card.stackingOrder = get(state.stackingOrder).indexOf($card.id)
     updateCard()
-    horizon.telaSettings?.update((v) => {
-      v.CAN_SELECT = true
-      return v
-    })
   }
 
   // const handleMouseMove = (_e: MouseEvent) => {
@@ -149,6 +236,7 @@
 
   const handleCardHeaderMouseDown = (_e: MouseEvent) => {
     dispatch('beginDrag', $card)
+    isDragging = true
     horizon.telaSettings?.update((v) => {
       v.CAN_SELECT = false
       return v
@@ -172,18 +260,35 @@
   const onDragMove = (
     e: CustomEvent<{ key: string; x: number; y: number; offset: { x: number; y: number } }>
   ) => {
-    if (!$focusModeEnabled) return
     const { clientX, clientY, offset } = e.detail
     const abs = posToAbsolute(clientX, clientY, $viewOffset!.x, $viewOffset!.y, $viewPort!, 1)
+
+    // log.debug('drag move', abs)
+    // magicFieldParticipant.updatePosition({
+    //   x: abs.x,
+    //   y: abs.y,
+    //   width: $card.width,
+    //   height: $card.height
+    // })
+
+    if (!$focusModeEnabled) return
+
     card.update((v) => {
-      v.xOverride = abs.x
+      v.xOverride = abs.x - $card.widthOverride / 2
       v.yOverride = abs.y
       return v
     })
 
     // Check if has to switch places
     // TODO: This is not very clean but works for now
-    const targetPane = get2x2PaneAt(clientX, clientY, $viewPort!)
+    const targetPane =
+      $focusModeTargets[0].length === 2
+        ? get1x1PaneAt(clientX, clientY, $viewPort!)
+        : $focusModeTargets[0].length === 3
+          ? get1x11PaneAt(clientX, clientY, $viewPort!)
+          : $focusModeTargets[0].length >= 4
+            ? get2x2PaneAt(clientX, clientY, $viewPort!)
+            : 0
     focusSwitchTarget = targetPane
     const targetCard = getCardOnPane(targetPane)
     $focusModeTargets[0].forEach((c) => {
@@ -269,6 +374,7 @@
     clearDragTimeout()
   }
 
+  // NOTE: These two are used for the focus mode stack
   const handleMouseEnter = (e: MouseEvent) => {
     if (!get(focusModeEnabled) || !$card.focusStack || isFocusDragging) return
     card.update((v) => {
@@ -286,6 +392,38 @@
     })
   }
 
+  let headerOpen = false
+  const onHeaderMouseLeave = (e: MouseEvent) => {
+    if (isDragging) return
+    headerOpen = false
+  }
+
+  let headerMouseOver = false
+  const handleHeaderListMouseEnter = () => {
+    headerMouseOver = true
+  }
+  const handleHeaderListMouseLeave = () => {
+    headerMouseOver = false
+  }
+
+  const handleMouseMove = (e: MouseEvent) => {
+    const { clientX, clientY } = e
+
+    if (isDragging) return
+    const cardHeaderPt = {
+      x: $card.x - $viewOffset.x + $card.width / 2,
+      y: $card.y - $viewOffset.y - $viewPort.y
+    }
+    const distance = Math.sqrt(
+      Math.pow(cardHeaderPt.x - clientX, 2) + Math.pow(cardHeaderPt.y - clientY, 2)
+    )
+    if (distance <= 52) {
+      if (!headerOpen) headerOpen = true
+    } else if (distance >= 75) {
+      if (headerOpen && !headerMouseOver) headerOpen = false
+    }
+  }
+
   onMount(() => {
     // el.addEventListener('draggable_start', onDragStart)
     el.addEventListener('draggable_move', onDragMove)
@@ -293,6 +431,20 @@
     el.addEventListener('resizable_end', updateCard)
     el.addEventListener('resizable_onMouseDown', handleResizeBegin)
     el.addEventListener('resizable_onMouseUp', handleResizeEnd)
+
+    const unsubscribe = card.subscribe((c) => {
+      magicFieldParticipant.updatePosition({
+        x: c.x,
+        y: c.y,
+        width: c.width,
+        height: c.height
+      })
+    })
+
+    return () => {
+      unsubscribe()
+      horizon.magicFieldService.removeParticipant(magicFieldParticipant.id)
+    }
   })
 
   onDestroy(() => {
@@ -321,8 +473,15 @@
 <Positionable
   {positionable}
   data-id={$positionable.id}
-  class="card {$positionable.id} {active && 'active'} {selected &&
-    'selected'} {$positionable.dashHighlight && 'dash-highlight'}"
+  class="card {$positionable.id} {$positionable.type} {$fieldParticipation?.supported
+    ? 'magic-field-active'
+    : ''} {!!$connectedField || (selfIsField && $activeField)
+    ? 'magic-field-connected'
+    : ''} {$fieldParticipation?.supported
+    ? `magic-field-${$fieldParticipation.relativePosition}`
+    : ''} {active && 'active'} {selected && 'selected'} {$positionable.dashHighlight &&
+    'dash-highlight'}"
+  style="--magic-field-distance: {($fieldParticipation?.distance ?? 0) / 200}"
   contained={false}
   on:mousedown={handleMouseDown}
   on:dragenter={handleDragEnter}
@@ -330,6 +489,8 @@
   on:dragleave={handleDragLeave}
   on:mouseenter={handleMouseEnter}
   on:mouseleave={handleMouseLeave}
+  on:mouseleave={onHeaderMouseLeave}
+  on:mousemove={handleMouseMove}
   bind:el
 >
   {#if !$visorEnabled}
@@ -342,13 +503,13 @@
       <Resizable {positionable} direction="bottom" {minSize} {maxSize} />
       <Resizable {positionable} direction="left" {minSize} {maxSize} />
       <Resizable {positionable} direction="right" {minSize} {maxSize} />
+    {/if}
+    <div class="draggable-bar">
+      <Draggable {positionable} />
+    </div>
 
-      <div class="draggable-bar">
-        <Draggable {positionable} />
-      </div>
-
-      <!-- svelte-ignore a11y-no-static-element-interactions -->
-      <div
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <!-- <div
         on:mousedown={handleCardHeaderMouseDown}
         class="card-header"
         data-position="top"
@@ -357,17 +518,17 @@
       >
         <Draggable {positionable} class="">
           <div class="card-header-content">
-            <!-- <div class="card-title">{cardTitle}</div> -->
+            <!-- <div class="card-title">{cardTitle}</div> --
             <div class="card-header-actions">
               <button on:click={handleDelete}>
                 <Icon name="close" />
               </button>
               <!-- <button on:click={handleCopy}>
                 <Icon name="copy" />
-              </button> -->
+              </button> --
             </div>
 
-            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <!-- svelte-ignore a11y-no-static-element-interactions --
             <div class="card-drag-indicator">
               <div></div>
               <div></div>
@@ -386,16 +547,69 @@
             </div>
           </div>
         </Draggable>
-      </div>
-    {/if}
+      </div>-->
+    <div
+      class="cardHeader"
+      data-double={!allowDuplicating}
+      class:closed={!headerOpen}
+      on:mousedown={handleCardHeaderMouseDown}
+    >
+      <ul on:mouseenter={handleHeaderListMouseEnter} on:mouseleave={handleHeaderListMouseLeave}>
+        <li>
+          <button on:click={handleDelete}>
+            <Icon name="close" color="currentColor" size="14px" />
+          </button>
+        </li>
+        <li class:active={isDragging}>
+          <Draggable {positionable}>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M4 8H20"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M4 16H20"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </Draggable>
+        </li>
+        {#if allowDuplicating}
+          <li>
+            <button
+              use:tooltip={{ content: 'Create similar', action: 'hover' }}
+              on:click={handleDuplicate}
+            >
+              <Icon name="add" color="currentColor" size="14px" />
+            </button>
+          </li>
+        {/if}
+      </ul>
+    </div>
   {:else}
     <button class="visor-delete" on:click|capture={handleDelete}>
       <Icon name="close" />
     </button>
   {/if}
 
+  <!-- {#if !!$activeField && $fieldParticipation?.supported}
+    <div on:click={handleMagicFieldConnect} class="connect-btn connect-edge-{$fieldParticipation.relativePosition}" style="--connect-distance: {$fieldParticipation.distance}px;">✨</div>
+  {/if} -->
+
   <div class="content tela-ignore" style={$visorEnabled || !active ? 'pointer-events: none;' : ''}>
-    <CardContent {positionable} {horizon} on:load on:change on:delete />
+    <CardContent {positionable} {horizon} {magicFieldParticipant} on:load on:change on:delete />
   </div>
 </Positionable>
 
@@ -405,7 +619,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 5px;
+    height: 10px;
     z-index: 299;
   }
 
@@ -635,6 +849,57 @@
         color: #7b7b7b;
       }
     }
+  }
+
+  .connect-btn {
+    position: absolute;
+    width: 5rem;
+    height: 5rem;
+    background: rgba(255, 127, 191);
+    border: 2px solid rgba(255, 127, 191);
+    border-radius: var(--theme-border-radius);
+    z-index: 10000;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+
+    --button-width: 3rem;
+    --button-height: 3rem;
+    --button-offset: calc(-1.5rem - (var(--connect-distance) / 2));
+  }
+
+  .connect-edge-left {
+    top: 50%;
+    left: var(--button-offset);
+    transform: translate(0%, -50%);
+    width: var(--button-width);
+    height: var(--button-height);
+  }
+
+  .connect-edge-right {
+    top: 50%;
+    right: var(--button-offset);
+    transform: translate(0%, -50%);
+    width: var(--button-width);
+    height: var(--button-height);
+  }
+
+  .connect-edge-top {
+    top: var(--button-offset);
+    left: 50%;
+    transform: translate(-50%, 0%);
+    width: var(--button-height);
+    height: var(--button-width);
+  }
+
+  .connect-edge-bottom {
+    bottom: var(--button-offset);
+    left: 50%;
+    transform: translate(-50%, 0%);
+    width: var(--button-height);
+    height: var(--button-width);
   }
 
   // .card-title {

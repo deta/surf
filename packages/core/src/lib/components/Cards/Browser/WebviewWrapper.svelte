@@ -141,9 +141,8 @@
     webview.addEventListener('ipc-message', (event) => {
       if (event.channel !== 'webview-page-event') return
 
-      const eventData = event.args[0]
-      const eventType = eventData.type as string
-      delete eventData.type
+      const eventType = event.args[0] as string
+      const eventData = event.args[1]
 
       switch (eventType) {
         case 'wheel':
@@ -161,9 +160,9 @@
         case 'detected-app':
           dispatch('detectedApp', eventData)
           break
-        case 'detected-resource':
-          dispatch('detectedResource', eventData?.resource)
-          break
+        // case 'detected-resource':
+        //   dispatch('detectedResource', eventData?.resource)
+        //   break
       }
     })
 
@@ -340,6 +339,39 @@
 
   export function startResourceDetection() {
     webview.send('webview-event', { type: 'get-resource' })
+  }
+
+  export function detectResource(timeoutNum = 10000) {
+    return new Promise<DetectedResource | null>((resolve) => {
+      let timeout: any
+
+      const handleEvent = (event: Electron.IpcMessageEvent) => {
+        if (event.channel !== 'webview-page-event') return
+
+        const eventType = event.args[0] as string
+        const eventData = event.args[1]
+
+        if (eventType === 'detected-resource') {
+          event.preventDefault()
+          event.stopPropagation()
+
+          if (timeout) {
+            clearTimeout(timeout)
+          }
+
+          webview.removeEventListener('ipc-message', handleEvent)
+          resolve(eventData?.resource)
+        }
+      }
+
+      timeout = setTimeout(() => {
+        webview.removeEventListener('ipc-message', handleEvent)
+        resolve(null)
+      }, timeoutNum)
+
+      webview.addEventListener('ipc-message', handleEvent)
+      webview.send('webview-event', { type: 'get-resource' })
+    })
   }
 
   export function startAppDetection() {

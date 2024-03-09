@@ -69,7 +69,7 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="input-container" class:isFocussed={isFocused}>
   <div class="input-field-container" class:isFocussed={isFocused} on:click={handleFocus}>
-    <div class="toolbar" class:active={isFocused}>
+    <!-- <div class="toolbar" class:active={isFocused}>
       <div class="toolbar-row">
         <div class="suggestion" class:hidden={$viewState !== 'search'}>
           <span>Notion</span>
@@ -81,7 +81,7 @@
           <span>Slack</span>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <div class="icon-input">
       <div class="icon">
@@ -123,6 +123,7 @@
     justify-content: center;
     flex-direction: column;
     position: relative;
+    padding: 0.5rem 0 0.25rem 0;
     border: 1px solid #e5e5e5;
     background-color: #fff;
     overflow: hidden;

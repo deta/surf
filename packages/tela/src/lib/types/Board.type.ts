@@ -79,6 +79,7 @@ export interface IBoardState<BaseSt extends BaseState, Actions> {
 
 export interface IBoard<BaseSt extends BaseState, Actions> {
   state: Writable<IBoardState<BaseSt, Actions>>
+  settings: Writable<IBoardSettings>
 
   panTo: (x: number, y: number, opts: { delay?: number; duration?: number; hard?: boolean }) => void
   zoomTo: (

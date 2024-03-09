@@ -46,6 +46,7 @@
     "electron-vite": "^1.0.27",
     "eslint": "^8.47.0",
     "eslint-plugin-svelte": "^2.32.4",
+    "openai": "^4.28.4",
     "prettier": "^3.0.2",
     "prettier-plugin-svelte": "^3.0.3",
     "svelte": "^4.2.0",

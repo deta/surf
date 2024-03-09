@@ -1,6 +1,7 @@
 import { get, writable, type Writable } from 'svelte/store'
 import type { Card } from '../types'
 import { APP_BAR_WIDTH } from '../constants/horizon'
+import type { IBoard } from '@horizon/tela'
 
 export const focusModeEnabled = writable(false)
 
@@ -9,6 +10,51 @@ export const focusModeEnabled = writable(false)
 export const focusModeTargets = writable([[], []] as [Writable<Card>[], string[]])
 
 const PANE_GAP = 10
+
+export function enterFocusMode(
+  cardIds: string[],
+  board: IBoard<any, any>,
+  cards: Writable<Writable<Card>[]>
+) {
+  const state = board.state
+  const selection = get(state).selection
+  const settings = board.settings
+  const viewOffset = get(state).viewOffset
+  const viewPort = get(state).viewPort
+
+  selection.set(new Set())
+  const focusCards = get(cards).filter((c) => cardIds.includes(get(c).id))
+
+  if (get(focusModeTargets)[0].length > 0) {
+    focusModeTargets.update((v) => {
+      v[0].push(...focusCards)
+      v[1].push(...focusCards.map((e) => get(e).id))
+      return v
+    })
+  } else {
+    focusModeTargets.set([focusCards, [...focusCards.slice(0, 4).map((e) => get(e).id)]]) // TODO: Get order somewhere? nono only for stacks?!
+  }
+
+  settings.update((v) => {
+    v.CAN_DRAW = false
+    v.CAN_PAN = false
+    v.CAN_SELECT = false
+
+    return v
+  })
+  applyFocusMode(get(viewOffset), get(viewPort), true)
+}
+export function exitFocusMode(board: IBoard<any, any>) {
+  const settings = board.settings
+  resetFocusMode() // TODO: Can this be auto subscription inside focusMode.ts ?
+  settings.update((v) => {
+    v.CAN_DRAW = true
+    v.CAN_PAN = true
+    v.CAN_SELECT = true
+
+    return v
+  })
+}
 
 /**
  * Applies focus mode layout to given cards
@@ -215,6 +261,40 @@ export function get2x2PaneAt(
   } else {
     if (y < halfHeight + offsetY) return 1
     else return 3
+  }
+  return null
+}
+
+export function get1x11PaneAt(
+  x: number,
+  y: number,
+  viewPort: { w: number; h: number; x: number; y: number }
+) {
+  const { w, h, x: offsetX, y: offsetY } = viewPort
+  const halfWidth = w / 2
+  const halfHeight = h / 2
+  if (x < halfWidth + offsetX) {
+    return 0
+  } else {
+    if (y < halfHeight + offsetY) return 1
+    else return 2
+  }
+  return null
+}
+
+// TODO: THis name is wrong, its 1x2 pane
+export function get1x1PaneAt(
+  x: number,
+  y: number,
+  viewPort: { w: number; h: number; x: number; y: number }
+) {
+  const { w, h, x: offsetX, y: offsetY } = viewPort
+  const halfWidth = w / 2
+  const halfHeight = h / 2
+  if (x < halfWidth + offsetX) {
+    return 0
+  } else {
+    return 1
   }
   return null
 }

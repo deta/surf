@@ -1,5 +1,5 @@
 import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
-import type { DetectedWebApp, WebApp } from '../types'
+import type { DetectedWebApp, WebService } from '../types'
 
 import { APIExtractor, WebAppExtractor } from '../extractors'
 
@@ -32,7 +32,7 @@ export type RedditPost = {
 }
 
 export class RedditParser extends WebAppExtractor {
-  constructor(app: WebApp, url: URL) {
+  constructor(app: WebService, url: URL) {
     super(app, url)
   }
 

@@ -1,0 +1,192 @@
+//@import 'compass/css3';
+
+$val: 320Hz 600Hz 1KHz 3KHz 6KHz 12KHz;
+
+$input-bw: 1.5em;
+$input-h: 2.25em;
+$input-bg-c: #ffffff00;
+$input-bg-ct: rgba($input-bg-c, 0);
+
+$ruler-line-w: .0625em;
+$ruler-line-h: .625em;
+$ruler-line-off: (
+	$input-bw - $ruler-line-h)/2;
+$ruler-line-c: #c5b9b9;
+$ruler-fs: .75;
+
+$track-u: 2em;
+$track-k: 6;
+$track-xtra: 1em;
+$track-w: $track-k*$track-u + $track-xtra;
+$track-h: .5em;
+
+$thumb-w: 4em;
+$thumb-h: 2em;
+$thumb-r: .75em;
+
+@mixin track() {
+	width: $track-w;
+	height: $track-h;
+	border-radius: .1875em;
+	background: mix(rgba(#898586, .65), #e9dbdb
+	);
+// background: mix(rgba(#8985ff, .65), #e9dbff
+// );
+}
+
+@mixin track-focus() {
+	background: #898586;
+}
+
+@mixin thumb() {
+	border: none;
+	width: $thumb-w;
+	height: $thumb-h;
+	border-radius: .5em;
+	box-shadow:
+		-.125em 0 .25em #928886,
+		inset -1px 0 1px #fff;
+	background: radial-gradient(#ebe1e0 10%, rgba(#ebe1e0, .2) 10%, rgba(#ebe1e0, 0) 72%) no-repeat 50% 50%,
+	radial-gradient(#{at 100% 50%}, #e9dfde, #eae1de 71%, transparent 71%) no-repeat ($thumb-w - 2*$thumb-r) 50%,
+	linear-gradient(90deg, #e9dfde, #d0c8c6) no-repeat 100% 50%,
+	radial-gradient(#{at 0 50%}, #d0c6c5, #c6baba 71%, transparent 71%) no-repeat $thumb-r 50%,
+	linear-gradient(90deg, #e3d9d8, #d0c6c5) no-repeat 0 50%,
+	linear-gradient(#cdc0c0, #fcf5ef, #fcf5ef, #cdc0c0);
+	background-size: 1.1*$thumb-r 100%;
+}
+
+input[type='range'].skeuo {
+
+	&,
+	&::-webkit-slider-runnable-track,
+	&::-webkit-slider-thumb {
+		-webkit-appearance: none;
+	}
+
+	align-self: center;
+	margin: -$input-bw/2 0;
+	border: solid $input-bw transparent;
+	padding: 0;
+	width: $track-w;
+	height: $input-h;
+	background: repeating-linear-gradient(90deg,
+		$ruler-line-c, $ruler-line-c $ruler-line-w,
+		transparent $ruler-line-w, transparent $track-u) no-repeat 50% $ruler-line-off border-box,
+	repeating-linear-gradient(90deg,
+		$ruler-line-c, $ruler-line-c $ruler-line-w,
+		transparent $ruler-line-w, transparent $track-u) no-repeat 50% $ruler-line-off +$input-h +$input-bw border-box,
+	linear-gradient(90deg, $input-bg-ct, $input-bg-c, $input-bg-ct) no-repeat 50% 50% border-box;
+	background-size: $track-k*$track-u +$ruler-line-w $ruler-line-h,
+	$track-k*$track-u +$ruler-line-w $ruler-line-h,
+	100% $input-h;
+	font-size: 1em;
+	cursor: pointer;
+
+	&::-webkit-slider-runnable-track {
+		position: relative;
+		@include track();
+	}
+
+	&::-moz-range-track {
+		@include track();
+	}
+
+	&::-ms-track {
+		border: none;
+		@include track();
+		color: transparent;
+	}
+
+	&::-ms-fill-lower {
+		display: none;
+	}
+
+	&::-webkit-slider-thumb {
+		margin-top: ($track-h - $thumb-h)/2;
+		@include thumb();
+	}
+
+	&::-moz-range-thumb {
+		@include thumb();
+	}
+
+	&::-ms-thumb {
+		@include thumb();
+	}
+
+	&::-webkit-slider-runnable-track,
+	#track {
+
+		&:before,
+		&:after {
+			position: absolute;
+			font: #{$ruler-fs*1em}/#{3*$track-u/$ruler-fs} trebuchet ms,
+			arial,
+			sans-serif;
+		}
+
+		&:before {
+			top: 50%;
+			right: 100%;
+			transform: translate(50%, -50%) rotate(90deg) translate(0, 32%);
+		}
+
+		&:after {
+			left: 50%;
+			width: 3em;
+			word-spacing: 1em;
+		}
+	}
+
+	@for $i from 1 through 6 {
+		&:nth-of-type(#{$i}) {
+
+			&::-webkit-slider-runnable-track,
+			#track {
+				&:before {
+					content: '#{nth($val, $i)}';
+				}
+
+				&:after {
+					@if $i ==1 {
+						bottom: 100%;
+						transform: translate(-50%, 50%) rotate(90deg) translate(-$input-bw - $input-h - $ruler-line-h);
+						text-align: right;
+					}
+
+					@if $i ==6 {
+						top: 100%;
+						transform: translate(-50%, -50%) rotate(90deg) translate($input-bw + $input-h + $ruler-line-h);
+					}
+				}
+			}
+		}
+	}
+
+	&:nth-of-type(1),
+	&:nth-of-type(6) {
+
+		&::-webkit-slider-runnable-track,
+		#track {
+			&:after {
+				content: '+18 0 -18';
+			}
+		}
+	}
+
+	&:focus {
+		outline: none;
+
+		&::-webkit-slider-runnable-track {
+			@include track-focus();
+		}
+
+		&::-moz-range-track {
+			@include track-focus();
+		}
+
+		&::-ms-track {
+			@include track-focus();
+		}
+	}
+}

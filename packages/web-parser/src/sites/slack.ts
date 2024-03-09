@@ -1,7 +1,7 @@
 import { ResourceTypes, ResourceDataChatMessage, ResourceDataChatThread } from '@horizon/types'
 
 import { WebAppExtractor } from '../extractors'
-import type { DetectedResource, DetectedWebApp, WebApp } from '../types'
+import type { DetectedResource, DetectedWebApp, WebService } from '../types'
 import { DOMExtractor } from '../extractors/dom'
 
 export type SlackMessageData = {
@@ -268,7 +268,7 @@ export class SlackDocumentParser extends DOMExtractor {
 }
 
 export class SlackParser extends WebAppExtractor {
-  constructor(app: WebApp, url: URL) {
+  constructor(app: WebService, url: URL) {
     super(app, url)
   }
 
@@ -299,11 +299,20 @@ export class SlackParser extends WebAppExtractor {
     }
   }
 
-  private flattenMessages(messages: SlackMessageData[]): string {
+  private flattenMessagesPlain(messages: SlackMessageData[]): string {
     // turn into single string formmatted like "author at date: message"
     return messages
       .map((message) => {
         return `${message.author} at ${message.date_published}: ${message.content}`
+      })
+      .join('\n')
+  }
+
+  private flattenMessagesHtml(messages: SlackMessageData[]): string {
+    // turn into single string of html formmatted in a way that looks like a chat thread
+    return messages
+      .map((message) => {
+        return `<a id="${message.messageId}" href="${message.url}"><p><span class="author">${message.author}</span> at <span class="date">${message.date_published}</span>:</p><div class="content">${message.contentHtml}</div></a>`
       })
       .join('\n')
   }
@@ -331,7 +340,8 @@ export class SlackParser extends WebAppExtractor {
       creator_image: initialMessage?.author_image ?? null,
       creator_url: initialMessage?.author_url ?? null,
       messages: normalizedMessages,
-      content_plain: this.flattenMessages(messages)
+      content_plain: this.flattenMessagesPlain(messages),
+      content_html: this.flattenMessagesHtml(messages)
     } as ResourceDataChatThread
   }
 

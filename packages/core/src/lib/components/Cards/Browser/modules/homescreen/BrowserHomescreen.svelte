@@ -1,7 +1,6 @@
 <script lang="ts">
   import { writable } from 'svelte/store'
   import { onMount } from 'svelte'
-  import { services } from './services.ts'
   import { fly } from 'svelte/transition'
   import emblaCarouselSvelte from 'embla-carousel-svelte'
   import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures'
@@ -9,6 +8,7 @@
   import { Icon } from '@horizon/icons'
 
   import Create from './Create.svelte'
+  import { SERVICES } from '@horizon/web-parser'
 
   export let webview: WebviewWrapper | undefined
   export let horizon: Horizon | undefined
@@ -28,6 +28,8 @@
       updateSites()
     }
   })
+
+  const AVAILABLE_SERVICES = SERVICES.filter((e) => e.showBrowserAction === true)
 
   async function updateSites() {
     const historyEntries = historyEntriesManager.searchEntries('')
@@ -113,9 +115,12 @@
           bind:this={embla}
         >
           <div class="embla__container">
-            {#each services as item, i (i)}
-              <div class="create-trigger" on:click|preventDefault={() => handleClick(item.url)}>
-                <Create service={item.service} index={i} />
+            {#each AVAILABLE_SERVICES as item, i (i)}
+              <div
+                class="create-trigger"
+                on:click|preventDefault={() => handleClick(item.browserActionUrl)}
+              >
+                <Create service={item.id} index={i} />
               </div>
             {/each}
           </div>

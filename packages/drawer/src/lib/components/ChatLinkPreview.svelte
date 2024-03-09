@@ -1,11 +1,20 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte'
   import { Icon } from '@horizon/icons'
 
   import { type WebMetadata } from '@horizon/web-parser'
   export let metadata: WebMetadata
+
+  const dispatch = createEventDispatcher()
+  let nodeRef: HTMLElement
+
+  const handleRemove = () => {
+    nodeRef.parentNode?.removeChild(nodeRef)
+  }
 </script>
 
-<div class="link-wrapper">
+<!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
+<div class="link-wrapper" bind:this={nodeRef}>
   <div class="link-metadata-wrapper">
     {#if metadata.image}
       <img
@@ -23,7 +32,7 @@
       {#if metadata.description}<div class="subtitle">{metadata.description}</div>{/if}
     </div>
   </div>
-  <div class="remove">
+  <div class="remove" on:click={handleRemove}>
     <Icon name="close" color="#AAA7B1" />
   </div>
 </div>

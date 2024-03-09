@@ -20,7 +20,14 @@
   import type { Horizon } from '../../service/horizon'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { useLogScope } from '../../utils/log'
-  import { MEDIA_TYPES, processDrop } from '../../service/mediaImporter'
+  import {
+    MEDIA_TYPES,
+    processDrop,
+    type MediaParserResult,
+    processFile,
+    processText
+  } from '../../service/mediaImporter'
+  import { onMount } from 'svelte'
   import {
     ResourceTag,
     ResourceManager,
@@ -29,13 +36,13 @@
     ResourceNote,
     type ResourceSearchResultItem
   } from '../../service/resources'
-  import { onMount } from 'svelte'
   import { ResourceTypes, type ResourceData, type SFFSResourceTag } from '../../types'
 
   import { parseStringIntoUrl, stringToURLList } from '../../utils/url'
 
   import ProgressiveBlur from '@horizon/drawer/src/lib/fx/ProgressiveBlur.svelte'
   import { parse } from 'date-fns'
+  import Link from '../Atoms/Link.svelte'
 
   export const drawer = provideDrawer()
 
@@ -68,6 +75,12 @@
   drawer.selectedTab.set('all')
 
   const searchQuery = writable<SearchQuery>({ value: '', tab: 'all' })
+
+  const droppedInputElements = writable<MediaParserResult[]>([])
+
+  $: if ($viewState === 'default') {
+    $droppedInputElements = []
+  }
 
   let searchResult: ResourceSearchResultItem[] = []
   let detectedInput = false
@@ -204,46 +217,66 @@
     // TODO: Decide what to do on resource click, e.g. create card or open resource in modal or something else
   }
 
+  const handleResourceRemove = async (e: CustomEvent<string>) => {
+    const resourceId = e.detail
+
+    const confirm = window.confirm(`Are you sure you want to delete this resource?`)
+    if (confirm) {
+      const resource = await resourceManager.deleteResource(resourceId)
+    }
+
+    return
+  }
+
   const handleChat = async (payload: any) => {
     log.debug(
       `Creation of ${payload.detail.$parsedURLs.length} items triggered from chat input`,
       payload.detail
     )
 
-    const userGeneratedText = payload.detail.inputText
+    const userGeneratedText = payload.detail.$inputText
 
-    for (const item of payload.detail.$parsedURLs) {
-      const webParser = new WebParser(item.url)
+    const links = payload.detail.$parsedURLs
+    const files = $droppedInputElements
 
-      // if (!parsedInput.appInfo || !parsedInput.appInfo.resourceType) {
-      //   log.warn('No appInfo found')
-      // }
-
-      // Extract a resource from the web page using a webview, this should happen only when saving the resource
-      const extractedResource = await webParser.extractResourceUsingWebview(document)
-      log.debug('extractedResource', extractedResource)
-
-      if (!extractedResource) {
-        log.error('No resource extracted')
-        return
+    if (links) {
+      for (const item of payload.detail.$parsedURLs) {
+        createWebResource(item, userGeneratedText)
       }
+    }
 
-      const resource = await resourceManager.createResourceOther(
-        new Blob([JSON.stringify(extractedResource.data)], { type: extractedResource.type }),
-        {
-          name: item.linkMetadata.title,
-          alt: item.linkMetadata.description,
-          sourceURI: '',
-          userContext: ''
-        }
-      )
-
-      log.debug('Created resource', resource)
+    if (files) {
+      createResource(files, userGeneratedText)
     }
 
     document.startViewTransition(async () => {
       viewState.set('default')
     })
+
+    if (links.length == 0 && files.length == 0) {
+      const item = await processText(userGeneratedText)
+      createResource(item, '')
+    }
+  }
+
+  const handleDropForwarded = async (e: any) => {
+    const event = e.detail
+    log.debug('Dropped', event)
+
+    const parsed = await processDrop(event)
+    log.debug('Parsed', parsed)
+
+    droppedInputElements.set(parsed)
+  }
+
+  const handleFileUpload = async (e: any) => {
+    const files = e.detail
+    let parsed = []
+    for (const file of files) {
+      parsed.push(await processFile(file))
+    }
+    $droppedInputElements = parsed
+    log.debug('UPLOADED FILES', parsed)
   }
 
   const handleDrop = async (e: CustomEvent<DragEvent>) => {
@@ -260,9 +293,15 @@
     const parsed = await processDrop(event)
     log.debug('Parsed', parsed)
 
+    createResource(parsed, '')
+  }
+
+  const createResource = async (parsed: MediaParserResult[], userGeneratedText: string) => {
     await Promise.all(
       parsed.map(async (item) => {
         log.debug('processed item', item)
+        log.debug('usercontext', userGeneratedText)
+        item.metadata.userContext = userGeneratedText
 
         let resource
         if (item.type === 'text') {
@@ -286,6 +325,35 @@
     )
 
     runSearch($searchQuery.value, $searchQuery.tab)
+  }
+
+  const createWebResource = async (item: any, userGeneratedText: string) => {
+    const webParser = new WebParser(item.url)
+
+    // if (!parsedInput.appInfo || !parsedInput.appInfo.resourceType) {
+    //   log.warn('No appInfo found')
+    // }
+
+    // Extract a resource from the web page using a webview, this should happen only when saving the resource
+    const extractedResource = await webParser.extractResourceUsingWebview(document)
+    log.debug('extractedResource', extractedResource)
+
+    if (!extractedResource) {
+      log.error('No resource extracted')
+      return
+    }
+
+    const resource = await resourceManager.createResourceOther(
+      new Blob([JSON.stringify(extractedResource.data)], { type: extractedResource.type }),
+      {
+        name: item.linkMetadata.title,
+        alt: item.linkMetadata.description,
+        sourceURI: '',
+        userContext: userGeneratedText
+      }
+    )
+
+    log.debug('Created resource', resource)
   }
 
   const handleItemDragStart = (e: DragEvent, resource: ResourceObject) => {
@@ -420,7 +488,11 @@
         let:item
       >
         <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
-          <ResourcePreview on:click={handleResourceClick} resource={item.resource} />
+          <ResourcePreview
+            on:click={handleResourceClick}
+            on:remove={handleResourceRemove}
+            resource={item.resource}
+          />
         </DrawerContentItem>
       </DrawerContentMasonry>
     {/if}
@@ -455,7 +527,12 @@
     {/if}
     <div class="drawer-chat-search">
       {#if $viewState !== 'search'}
-        <DrawerChat on:chatSend={handleChat} />
+        <DrawerChat
+          on:chatSend={handleChat}
+          on:dropForwarded={handleDropForwarded}
+          on:dropFileUpload={handleFileUpload}
+          {droppedInputElements}
+        />
       {/if}
 
       {#if $viewState !== 'chatInput'}

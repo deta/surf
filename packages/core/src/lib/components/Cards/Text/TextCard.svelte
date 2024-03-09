@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { writable, type Writable } from 'svelte/store'
+  import { writable, type Writable, get } from 'svelte/store'
+  import { createEventDispatcher, getContext, onDestroy, onMount, tick } from 'svelte'
 
   import { Editor } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
@@ -9,10 +9,14 @@
   import { useLogScope } from '../../../utils/log'
   import { useDebounce } from '../../../utils/debounce'
   import type { ResourceManager, ResourceNote } from '../../../service/resources'
+  import type { MagicField, MagicFieldParticipant } from '../../../service/magicField'
+  import type { Horizon } from '../../../service/horizon'
 
   export let card: Writable<Card>
   export let resourceManager: ResourceManager
-  export let active: boolean = false
+  export let magicFieldParticipant: MagicFieldParticipant | null = null
+
+  const activeCardId = getContext<Horizon>('horizon').activeCardId
 
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('TextCard')
@@ -22,6 +26,36 @@
   let initialLoad = true
   let resource: ResourceNote | null = null
   let focusEditor: () => void
+
+  magicFieldParticipant?.onFieldEnter((field) => {
+    if (!magicFieldParticipant) return
+    if (!get(magicFieldParticipant.fieldParticipation)) return
+
+    const isSupported = field.supportedResource === 'text/plain'
+
+    magicFieldParticipant.fieldParticipation.update((p) => ({
+      ...p!,
+      supported: isSupported
+    }))
+  })
+
+  magicFieldParticipant?.onFieldConnect((field) => {
+    log.debug('connected to field', field)
+  })
+
+  magicFieldParticipant?.onRequestData((type: string, callback) => {
+    log.debug('requestData', type)
+
+    if (type === 'text/plain') {
+      callback($content)
+    } else {
+      callback(null)
+    }
+  })
+
+  magicFieldParticipant?.onFieldLeave((field) => {
+    log.debug('fieldLeave', field)
+  })
 
   const debouncedSaveContent = useDebounce((value: string) => {
     log.debug('saving content', value)
@@ -47,6 +81,18 @@
 
     // seems like tiptap handles text drag and drop already
   }
+
+  // FIX: This interfears with the waa we use the active state -> e.g. inside visor
+  // onDestroy(
+  //   activeCardId.subscribe((id) => {
+  //     if (id === $card.id) {
+  //       active = true
+  //       tick().then(focusEditor)
+  //     } else {
+  //       active = false
+  //     }
+  //   })
+  // )
 
   onMount(async () => {
     if (!$card.resourceId) {

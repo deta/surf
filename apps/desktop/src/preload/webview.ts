@@ -240,7 +240,7 @@ window.addEventListener('focus', (_event: FocusEvent) => {
 })
 
 function sendPageEvent(eventType: string, data: any) {
-  ipcRenderer.sendToHost('webview-page-event', { type: eventType, ...data })
+  ipcRenderer.sendToHost('webview-page-event', eventType, data)
 }
 
 ipcRenderer.on('webview-event', (_event, data) => {

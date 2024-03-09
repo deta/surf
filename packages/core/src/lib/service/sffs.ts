@@ -134,10 +134,10 @@ export class SFFS {
       card_type: card.type,
       resource_id: card.resourceId ?? undefined,
       position_id: 0, // TODO: do we need to set this?
-      position_x: card.x,
-      position_y: card.y,
-      width: card.width,
-      height: card.height,
+      position_x: Math.round(card.x),
+      position_y: Math.round(card.y),
+      width: Math.round(card.width),
+      height: Math.round(card.height),
       stacking_order: card.stackingOrder ? new Date(card.stackingOrder).toISOString() : '',
       created_at: card.createdAt,
       updated_at: card.updatedAt,
@@ -160,7 +160,7 @@ export class SFFS {
     return {
       id: horizon.id,
       horizon_name: horizon.name,
-      view_offset_x: horizon.viewOffsetX,
+      view_offset_x: Math.round(horizon.viewOffsetX),
       created_at: horizon.createdAt,
       updated_at: horizon.updatedAt
     }

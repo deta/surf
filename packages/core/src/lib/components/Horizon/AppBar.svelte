@@ -1,7 +1,11 @@
 <script lang="ts">
+  import '../slider.scss'
   import { get, type Readable } from 'svelte/store'
-  import type { Horizon } from '../../service/horizon'
   import { visorEnabled } from '../../utils/visor'
+  import { HorizonsManager, Horizon } from '@horizon/core/src/lib/service/horizon'
+  import { createEventDispatcher } from 'svelte'
+
+  const dispatch = createEventDispatcher()
 
   export let horizon: Readable<Horizon> | null
 
@@ -10,6 +14,10 @@
   let tintVal = 275
   $: tint = `hsl(${tintVal}, 40%, 80%)`
   $: horizonTint && horizonTint.set(tint)
+
+  function onNewHorizon() {
+    dispatch('createHorizon')
+  }
 </script>
 
 <aside>
@@ -17,7 +25,7 @@
     <ul>
       <!-- New Horizon -->
       <li>
-        <button class="tactile_button">
+        <button class="tactile_button" on:click={onNewHorizon}>
           <div class="content">
             <div class="icon">
               <svg
@@ -106,8 +114,16 @@
     </ul>
   </div>
   <div>
-    {tintVal}
-    <div><input type="range" min="0" max="365" bind:value={tintVal} style="width:100%;" /></div>
+    <div style="height: 150px">
+      <input
+        type="range"
+        min="0"
+        max="365"
+        class="skeuo"
+        bind:value={tintVal}
+        style="rotate: 90deg;  transform-origin: top left;translate: 48px;width: 150px;"
+      />
+    </div>
 
     <ul>
       <!-- Theme -->
@@ -297,6 +313,13 @@
       box-shadow:
         1px 1px 3px 0px rgba(255, 255, 255, 0.35) inset,
         -2px -2px 2px 0px rgba(0, 0, 0, 0.05) inset;
+
+      & > ul {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        gap: 4px;
+      }
     }
   }
   ul,
