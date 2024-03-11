@@ -172,6 +172,7 @@ impl Worker {
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
         proximity_distance_threshold: Option<f32>,
         proximity_limit: Option<i64>,
+        semantic_search_enabled: Option<bool>,
         embeddings_distance_threshold: Option<f32>,
         embeddings_limit: Option<i64>,
     ) -> BackendResult<SearchResult> {
@@ -196,6 +197,11 @@ impl Worker {
             None => 10,
         };
 
+        let semantic_search_enabled = match semantic_search_enabled {
+            Some(enabled) => enabled,
+            None => false,
+        };
+
         let embeddings_distance_threshold = match embeddings_distance_threshold {
             Some(threshold) => threshold,
             None => 1.0,
@@ -206,7 +212,8 @@ impl Worker {
         };
 
         let mut query_embedding: Vec<f32> = Vec::new();
-        if query != "" {
+
+        if query != "" && semantic_search_enabled {
             // TODO: what if query is too big?
             // TODO: can we use one of the ai threads instead of the main thread
             query_embedding = self.embedding_model.encode_single(&query)?;
@@ -218,6 +225,7 @@ impl Worker {
             resource_tag_filters,
             proximity_distance_threshold,
             proximity_limit,
+            semantic_search_enabled,
             embeddings_distance_threshold,
             embeddings_limit,
         )
@@ -396,6 +404,7 @@ pub fn handle_resource_message(
             resource_tag_filters,
             proximity_distance_threshold,
             proximity_limit,
+            semantic_search_enabled,
             embeddings_distance_threshold,
             embeddings_limit,
         } => send_worker_response(
@@ -406,6 +415,7 @@ pub fn handle_resource_message(
                 resource_tag_filters,
                 proximity_distance_threshold,
                 proximity_limit,
+                semantic_search_enabled,
                 embeddings_distance_threshold,
                 embeddings_limit,
             ),

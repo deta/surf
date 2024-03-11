@@ -320,6 +320,12 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             .map(|js_number| js_number.value(&mut cx) as i64)
     });
 
+    let semantic_search_enabled = cx.argument_opt(5).and_then(|arg| {
+        arg.downcast::<JsBoolean, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_boolean| js_boolean.value(&mut cx) as bool)
+    });
+
     let embeddings_distance_threshold = cx.argument_opt(5).and_then(|arg| {
         arg.downcast::<JsNumber, FunctionContext>(&mut cx)
             .ok()
@@ -338,6 +344,7 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             resource_tag_filters,
             proximity_distance_threshold,
             proximity_limit,
+            semantic_search_enabled,
             embeddings_distance_threshold,
             embeddings_limit,
         }),

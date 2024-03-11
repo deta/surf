@@ -1104,6 +1104,7 @@ impl Database {
         tags: Option<Vec<ResourceTagFilter>>,
         proximity_distance_threshold: f32,
         proximity_limit: i64,
+        semantic_search_enabled: bool,
         embeddings_distance_threshold: f32,
         embeddings_limit: i64,
     ) -> BackendResult<SearchResult> {
@@ -1136,16 +1137,18 @@ impl Database {
         }
 
         // embeddings search
-        let embeddings_search_results = self.embeddings_search(
-            &keyword_embedding,
-            embeddings_distance_threshold,
-            embeddings_limit,
-            filtered_resource_ids,
-        )?;
-        for search_result in embeddings_search_results {
-            if !seen_resource_ids.contains(&search_result.resource.resource.id) {
-                seen_resource_ids.push(search_result.resource.resource.id.clone());
-                results.push(search_result);
+        if semantic_search_enabled {
+            let embeddings_search_results = self.embeddings_search(
+                &keyword_embedding,
+                embeddings_distance_threshold,
+                embeddings_limit,
+                filtered_resource_ids,
+            )?;
+            for search_result in embeddings_search_results {
+                if !seen_resource_ids.contains(&search_result.resource.resource.id) {
+                    seen_resource_ids.push(search_result.resource.resource.id.clone());
+                    results.push(search_result);
+                }
             }
         }
 
