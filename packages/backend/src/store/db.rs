@@ -963,6 +963,27 @@ impl Database {
         Ok(resources)
     }
 
+    pub fn proximity_search_resources(
+        &self,
+        resource_id: &str,
+        distance_threshold: f32,
+        limit: i64,
+    ) -> BackendResult<SearchResult> {
+        let mut results =
+            self.proximity_search_with_resource_id(resource_id, distance_threshold, limit)?;
+
+        results.iter_mut().try_for_each(|r| -> BackendResult<()> {
+            let card_ids = self.list_card_ids_by_resource_id(&r.resource.resource.id)?;
+            r.card_ids = card_ids;
+            Ok(())
+        })?;
+        let n = results.len() as i64;
+        Ok(SearchResult {
+            items: results,
+            total: n,
+        })
+    }
+
     // TODO: optimize this
     pub fn search_resources(
         &self,

@@ -59,6 +59,11 @@ pub enum ResourceMessage {
     GetResource(String),
     RemoveResource(String),
     RecoverResource(String),
+    ProximitySearchResources {
+        resource_id: String,
+        proximity_distance_threshold: Option<f32>,
+        proximity_limit: Option<i64>,
+    },
     SearchResources {
         query: String,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,

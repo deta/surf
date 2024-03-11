@@ -134,6 +134,30 @@ impl Worker {
         Ok(())
     }
 
+    pub fn proximity_search_resources(
+        &mut self,
+        resource_id: String,
+        proximity_distance_threshold: Option<f32>,
+        proximity_limit: Option<i64>,
+    ) -> BackendResult<SearchResult> {
+        // TODO: find sane defaults for these
+        let proximity_distance_threshold = match proximity_distance_threshold {
+            Some(threshold) => threshold,
+            None => 100000.0,
+        };
+
+        let proximity_limit = match proximity_limit {
+            Some(limit) => limit,
+            None => 10,
+        };
+
+        self.db.proximity_search_resources(
+            &resource_id,
+            proximity_distance_threshold,
+            proximity_limit,
+        )
+    }
+
     pub fn search_resources(
         &mut self,
         query: String,
@@ -290,6 +314,19 @@ pub fn handle_resource_message(
         ResourceMessage::RecoverResource(id) => {
             send_worker_response(channel, oneshot, worker.recover_resource(id))
         }
+        ResourceMessage::ProximitySearchResources {
+            resource_id,
+            proximity_distance_threshold,
+            proximity_limit,
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.proximity_search_resources(
+                resource_id,
+                proximity_distance_threshold,
+                proximity_limit,
+            ),
+        ),
         ResourceMessage::SearchResources {
             query,
             resource_tag_filters,

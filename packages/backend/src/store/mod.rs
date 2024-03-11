@@ -42,6 +42,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     // cx.export_function("js__store_update_resource", js_update_resource)?;
     cx.export_function("js__store_remove_resource", js_remove_resource)?;
     cx.export_function("js__store_recover_resource", js_recover_resource)?;
+    cx.export_function(
+        "js__store_proximity_search_resources",
+        js_proximity_search_resources,
+    )?;
     cx.export_function("js__store_search_resources", js_search_resources)?;
     cx.export_function("js__store_resource_post_process", js_resource_post_process)?;
     cx.export_function(
@@ -256,6 +260,34 @@ fn js_update_card_resource_id(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::CardMessage(CardMessage::UpdateCardResourceID(card_id, resource_id)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_proximity_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let proximity_distance_threshold = cx.argument_opt(2).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as f32)
+    });
+    let proximity_limit = cx.argument_opt(3).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as i64)
+    });
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceMessage(ResourceMessage::ProximitySearchResources {
+            resource_id,
+            proximity_distance_threshold,
+            proximity_limit,
+        }),
         deferred,
     );
 
