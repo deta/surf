@@ -344,6 +344,13 @@
           drawer.setSize('full')
         }
       }
+    } else if (event.key === 'u') {
+      $activeHorizon?.addCardAudioTranscriber({
+        x: 300,
+        y: 300,
+        width: 500,
+        height: 300
+      })
     } else if (event.key === 'i') {
       $activeHorizon?.addCardAIText({
         x: 300,

@@ -483,6 +483,21 @@ export class Horizon {
     )
   }
 
+  async addCardAudioTranscriber(
+    position: CardPosition,
+    makeActive: boolean = false,
+    duplicated: boolean = false
+  ) {
+    return this.addCard(
+      {
+        ...position,
+        type: 'audio-transcriber'
+      },
+      makeActive,
+      duplicated
+    )
+  }
+
   async duplicateCard(
     idOrCard: Card | string,
     position: CardPosition,

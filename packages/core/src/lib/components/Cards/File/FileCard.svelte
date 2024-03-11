@@ -12,9 +12,11 @@
   import { getFileKind } from '../../../utils/files'
   import VideoView from './VideoView.svelte'
   import AudioView from './AudioView.svelte'
+  import type { MagicFieldParticipant } from '../../../service/magicField'
 
   export let card: Writable<Card>
   export let horizon: Horizon
+  export let magicFieldParticipant: MagicFieldParticipant | null = null
 
   const log = useLogScope('FileCard')
 
@@ -72,7 +74,7 @@
     {:else if fileKind === 'video'}
       <VideoView {resource} blob={data} />
     {:else if fileKind === 'audio'}
-      <AudioView {resource} blob={data} />
+      <AudioView {magicFieldParticipant} {resource} blob={data} />
     {:else}
       <UnknownFileView {resource} blob={data} />
     {/if}

@@ -21,6 +21,8 @@
     import('../Cards/File/FileCard.svelte') as unknown as Promise<typeof SvelteComponent>
   const AITextCard = () =>
     import('../Cards/Smart/AITextCard.svelte') as unknown as Promise<typeof SvelteComponent>
+  const AudioTranscriber = () =>
+    import('../Cards/Smart/AudioTranscriber.svelte') as unknown as Promise<typeof SvelteComponent>
 
   export let positionable: Writable<IPositionable<any>>
   export let horizon: Horizon
@@ -60,11 +62,17 @@
 {:else if $card.type === 'file'}
   <LazyComponent this={FileCard}>
     <svelte:fragment slot="component" let:Component>
-      <Component {card} {horizon} {active} on:load on:change on:delete />
+      <Component {card} {horizon} {active} {magicFieldParticipant} on:load on:change on:delete />
     </svelte:fragment>
   </LazyComponent>
 {:else if $card.type === 'ai-text'}
   <LazyComponent this={AITextCard}>
+    <svelte:fragment slot="component" let:Component>
+      <Component {card} {horizon} {active} on:load on:change on:delete />
+    </svelte:fragment>
+  </LazyComponent>
+{:else if $card.type === 'audio-transcriber'}
+  <LazyComponent this={AudioTranscriber}>
     <svelte:fragment slot="component" let:Component>
       <Component {card} {horizon} {active} on:load on:change on:delete />
     </svelte:fragment>

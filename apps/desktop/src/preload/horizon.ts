@@ -163,7 +163,7 @@ const api = {
       model: 'whisper-1'
     })
 
-    return transcription
+    return transcription?.text
   }
 }
 
