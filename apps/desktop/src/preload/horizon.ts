@@ -10,7 +10,7 @@ import {
 } from 'fs'
 import path from 'path'
 import fetch from 'cross-fetch'
-import OpenAI from 'openai'
+import OpenAI, { toFile } from 'openai'
 
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
@@ -155,6 +155,15 @@ const api = {
   },
   onDownloadDone: (callback) => {
     ipcRenderer.on('download-done', (_event, completion) => callback(completion))
+  },
+
+  transcribeAudioFile: async (path: string) => {
+    const transcription = await openai?.audio.transcriptions.create({
+      file: await toFile(createReadStream(path), 'audio.mp3'),
+      model: 'whisper-1'
+    })
+
+    return transcription
   }
 }
 
