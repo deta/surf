@@ -43,6 +43,8 @@ const api = {
     ipcRenderer.invoke('set-adblocker-state', { partition, state }),
   requestNewPreviewImage: (horizonId: string) =>
     ipcRenderer.invoke('request-new-preview-image', { horizonId }),
+  quitApp: () => ipcRenderer.invoke('quit-app'),
+  toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
 
   onFullscreenChange: (callback: any) => {
     fullscreenHandlers.push(callback)

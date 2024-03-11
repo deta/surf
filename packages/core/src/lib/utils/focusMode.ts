@@ -16,6 +16,8 @@ export function enterFocusMode(
   board: IBoard<any, any>,
   cards: Writable<Writable<Card>[]>
 ) {
+  // NOTE: Removed for launch
+  return
   const state = board.state
   const selection = get(state).selection
   const settings = board.settings
@@ -65,6 +67,8 @@ export function applyFocusMode(
   viewPort: { w: number; h: number },
   force = false
 ) {
+  // NOTE: Disabled for launch demo
+  return
   if (get(focusModeEnabled) && !force) return
   focusModeEnabled.set(true)
 

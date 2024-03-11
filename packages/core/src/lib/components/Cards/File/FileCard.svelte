@@ -66,7 +66,7 @@
     <p>Loading…</p>
   {:else if resource && data}
     {#if fileKind === 'image'}
-      <div class="image">
+      <div class="image" style="height:100%;">
         <ImageView blob={data} />
       </div>
     {:else if data.type === 'application/pdf'}
@@ -85,16 +85,18 @@
   .file-card {
     width: 100%;
     height: 100%;
-    display: flex;
+    /*display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: stretch;*/
     margin: 0;
     padding: 0;
   }
 
-  .image {
+  /* NOTE: Not sure why it is here, lemme know if it breka sth. but disabled it for now, any unneeded box-shadows only consume performance
+            and I couldnt find a visual goal this servers */
+  /*.image {
     border-radius: 2px;
     box-shadow: 0px 0px 1px 0px rgba(255, 255, 255, 0.09) inset;
-  }
+  }*/
 </style>

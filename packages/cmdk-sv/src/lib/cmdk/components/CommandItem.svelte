@@ -92,7 +92,7 @@
 	{#if asChild}
 		<slot {action} {attrs} />
 	{:else}
-		<div {...attrs} use:action {...$$restProps}>
+		<div {...attrs} use:action {...$$restProps} on:click>
 			<slot {action} {attrs} />
 		</div>
 	{/if}

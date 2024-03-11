@@ -1,6 +1,6 @@
 <script context="module" lang="ts">
   export const flyMenuOpen = writable(false)
-  export const flyMenuType = writable<'cursor' | 'cmdk'>('cmdk')
+  export const flyMenuType = writable<'cursor' | 'cmdk'>('cursor')
   export const flyMenuItems: Writable<IFlyMenuItem[]> = writable([])
 
   export function openFlyMenu(type: 'cursor' | 'cmdk', items: IFlyMenuItem[]) {
@@ -17,7 +17,7 @@
 <script lang="ts">
   //import "./style.scss"
   import { Command, createState } from '@horizon/cmdk-sv'
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { cubicOut, quadInOut, quadOut } from 'svelte/easing'
   import type { Readable } from 'svelte/motion'
   import { writable, type Writable } from 'svelte/store'
@@ -29,6 +29,7 @@
 
   export let viewOffset: Readable<{ x: number; y: number }>
   export let viewPort: Readable<{ x: number; y: number; w: number; h: number }>
+  export let origin: Readable<{ x: number; y: number; width: number; height: number } | undefined>
 
   const dispatch = createEventDispatcher()
 
@@ -36,13 +37,19 @@
 
   let flyMenuEl: HTMLElement
   let inputEl: HTMLInputElement
-  let cursorPos = { x: 0, y: 0 }
+
+  let pos = { x: 0, y: 0 }
+
+  let cursorPos = {
+    x: $origin ? $origin.x + $origin.width - flyMenuWidth : 0,
+    y: $origin ? $origin.y + $origin.height - flyMenuHeight : 0
+  }
 
   let flyMenuWidth = 0
   let flyMenuHeight = 0
 
-  $: offsetCursorLeft = $viewOffset.x + cursorPos.x
-  $: offsetCursorTop = $viewOffset.y + cursorPos.y
+  $: offsetCursorLeft = $viewOffset.x + pos.x
+  $: offsetCursorTop = $viewOffset.y + pos.y
   $: flyRightEdgeDif = offsetCursorLeft - $viewOffset.x + flyMenuWidth - $viewPort.w
   $: flyTopEdgeDif = offsetCursorTop - flyMenuHeight
   $: flyBottomEdgeDif = offsetCursorTop - $viewPort.h + $viewPort.y
@@ -61,7 +68,7 @@
         ? offsetCursorLeft - flyRightEdgeDif
         : offsetCursorLeft
 
-  $: offsetFollowCursor = `left: ${left}px; top: ${top}px;`
+  $: offsetFollowCursor = `left: ${pos.x}px; top: ${pos.y}px;`
   $: offset = $flyMenuType === 'cursor' ? offsetFollowCursor : `left: ${$viewOffset.x}px;`
 
   $: if ($flyMenuOpen) {
@@ -75,24 +82,35 @@
       $flyMenuOpen = false
       state = createState()
     } else if (e.key === 'Enter' && $flyMenuOpen) {
-      const pos = posToAbsolute(
-        cursorPos.x,
-        cursorPos.y,
-        $viewOffset.x,
-        $viewOffset.y,
-        $viewPort,
-        1
-      )
-      dispatch('command', {
-        cmd: $state.value,
-        origin: $flyMenuType,
-        targetX: pos.x,
-        targetY: pos.y
-      })
-
-      $flyMenuOpen = false
-      state = createState()
+      submit()
+      // const pos = posToAbsolute(
+      //   cursorPos.x,
+      //   cursorPos.y,
+      //   $viewOffset.x,
+      //   $viewOffset.y,
+      //   $viewPort,
+      //   1
+      // )
+      // dispatch('command', {
+      //   cmd: $state.value,
+      //   origin: $flyMenuType,
+      //   targetX: pos.x,
+      //   targetY: pos.y
+      // })
+      //
+      // $flyMenuOpen = false
+      // state = createState()
     }
+  }
+  function submit() {
+    console.warn('was submit')
+    dispatch('command', {
+      cmd: $state.value,
+      origin: $flyMenuType,
+      targetRect: $origin
+    })
+    closeFlyMenu()
+    state = createState()
   }
 
   function onInputKeyDown(e: KeyboardEvent) {
@@ -107,46 +125,65 @@
     }
   }
 
+  function onClick(e: MouseEvent) {
+    submit()
+  }
+
   function onMouseMove(e: MouseEvent) {
     cursorPos = { x: e.clientX, y: e.clientY }
   }
+
+  onDestroy(
+    flyMenuOpen.subscribe((v) => {
+      console.warn(cursorPos)
+      pos = { x: $viewOffset.x + cursorPos.x - APP_BAR_WIDTH, y: cursorPos.y }
+    })
+  )
+  onDestroy(() => {
+    closeFlyMenu()
+  })
 </script>
 
 <svelte:window on:mousemove={onMouseMove} on:keydown={onKeyDown} />
 
-{#if $flyMenuOpen}
-  <div
-    class="flyMenuWrapper"
-    class:cursorMode={$flyMenuType === 'cursor'}
-    class:default={$flyMenuType === 'cmdk'}
-    style={offset}
-    bind:this={flyMenuEl}
-    bind:clientWidth={flyMenuWidth}
-    bind:clientHeight={flyMenuHeight}
-    transition:fly={{ duration: 100, y: 50, easing: quadOut }}
-  >
-    <Command.Root label="Fly Menu" class="flyMenu raycast" loop {state}>
-      <Command.List>
-        <Command.Empty>No results found.</Command.Empty>
+<!--     transition:scale={{ duration: 100, opacity: 0, easing: quadOut }}
+ -->
+<!--{#if $flyMenuOpen}-->
+<div
+  class="flyMenuWrapper"
+  class:open={$flyMenuOpen}
+  class:cursorMode={$flyMenuType === 'cursor'}
+  class:default={$flyMenuType === 'cmdk'}
+  bind:this={flyMenuEl}
+  style={offset}
+  bind:clientWidth={flyMenuWidth}
+  bind:clientHeight={flyMenuHeight}
+  on:mousedown={onClick}
+  transition:scale={{ duration: 100, opacity: 0, easing: quadOut }}
+>
+  <Command.Root label="Fly Menu" class="flyMenu raycast" loop {state}>
+    <Command.List>
+      <Command.Empty>No results found.</Command.Empty>
 
-        {#each $flyMenuItems as item (item.value)}
-          <Command.Item value={item.value} class="item-{item.type}">
-            <span class="icn">
-              {#if item.type === 'app'}
-                <!-- TODO: Serices is nice, but this should be not browser card specific! -->
-                <img src={getServiceIcon(item.value.toLowerCase())} />
-              {:else}
-                {item.icon}
-              {/if}
-            </span>
-            {item.value}</Command.Item
-          >
-        {/each}
-      </Command.List>
-      <Command.Input placeholder="Type a query" bind:el={inputEl} on:keydown={onInputKeyDown} />
-    </Command.Root>
-  </div>
-{/if}
+      {#each $flyMenuItems as item (item.value)}
+        <Command.Item value={item.value} class="item-{item.type}">
+          <span class="icn">
+            {#if item.type === 'app'}
+              <!-- TODO: Serices is nice, but this should be not browser card specific! -->
+              <img src={getServiceIcon(item.value.toLowerCase())} />
+            {:else}
+              {item.icon}
+            {/if}
+          </span>
+          {item.value}</Command.Item
+        >
+      {/each}
+    </Command.List>
+    <Command.Input placeholder="Type a query" bind:el={inputEl} on:keydown={onInputKeyDown} />
+  </Command.Root>
+</div>
+
+<!--{/if}-->
 
 <style lang="scss">
 </style>

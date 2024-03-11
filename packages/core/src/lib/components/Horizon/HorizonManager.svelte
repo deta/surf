@@ -351,13 +351,6 @@
         width: 500,
         height: 300
       })
-    } else if (event.key === 'i') {
-      $activeHorizon?.addCardAIText({
-        x: 300,
-        y: 300,
-        width: 500,
-        height: 300
-      })
     } else if (event.key === 'Escape') {
       event.preventDefault()
       window.location.reload()
@@ -698,7 +691,11 @@
 </svelte:head>
 
 <SplashScreen />
-<AppBar horizon={activeHorizon} on:createHorizon={() => addHorizon()} />
+<AppBar
+  horizon={activeHorizon}
+  on:createHorizon={() => addHorizon()}
+  on:toggleOasis={() => (drawer.isShown() ? drawer.close() : drawer.open())}
+/>
 
 {#if $visorEnabled}
   <div id="visor">

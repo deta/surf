@@ -52,6 +52,7 @@
   } from '../FlyMenu/FlyMenu.svelte'
   import type { ResourceManager, ResourceNote } from '../../service/resources'
   import { SERVICES } from '@horizon/web-parser'
+  import Minimap from './Minimap.svelte'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -71,7 +72,7 @@
 
   const settings = createSettings({
     CAN_PAN: true,
-    CAN_DRAW: true,
+    CAN_DRAW: false,
     CAN_ZOOM: false,
     CAN_SELECT: true,
     PAN_DIRECTION: 'x',
@@ -173,10 +174,28 @@
       y: event.clientY
     }
 
+    if (e.detail.event.metaKey) {
+      $modSelectConfigurator = { x: selectPos.x, y: selectPos.y, width: 0, height: 0 }
+    }
+
     // Right click
     //selectSecondaryAction = event.which === 3 || event.button === 2
   }
 
+  let modSelectConfigurator: Writable<
+    | {
+        x: number
+        y: number
+        width: number
+        height: number
+      }
+    | undefined
+  > = writable(undefined)
+  onDestroy(
+    modSelectConfigurator.subscribe((v) => {
+      if (v === undefined) closeFlyMenu()
+    })
+  )
   const onModSelectEnd = (
     e: CustomEvent<{
       event: MouseEvent
@@ -215,13 +234,24 @@
       height: size.y
     }
 
-    // Right click
-    if (event.which === 3 || event.button === 2) {
-      log.debug('creating new text card', position)
-      horizon.addCardText('', position, true)
+    // Meta
+    if (e.detail.event.metaKey) {
+      $modSelectConfigurator = { x: pos.x, y: pos.y, width: size.x, height: size.y }
+      openFlyMenu('cursor', [
+        { icon: '🃏', value: 'Browser', type: 'card' },
+        { icon: '🃏', value: 'Text', type: 'card' },
+        { icon: '🔮', value: 'Summarize', type: 'magic-card' },
+        { icon: '🔮', value: 'Transcribe', type: 'magic-card' }
+      ])
     } else {
-      log.debug('creating new browser card', position)
-      horizon.addCardBrowser('', position, true)
+      // Right click
+      if (event.which === 3 || event.button === 2) {
+        log.debug('creating new text card', position)
+        horizon.addCardText('', position, true)
+      } else {
+        log.debug('creating new browser card', position)
+        horizon.addCardBrowser('', position, true)
+      }
     }
   }
 
@@ -284,15 +314,15 @@
   const handleMouseDown = (e: MouseEvent) => {
     if (!hasClassOrParentWithClass(e.target as HTMLElement, 'card')) {
       $activeCardId = null
+      $modSelectConfigurator = undefined
     }
 
-    console.log('open sele', $selection.size)
-    if (e.button === 2) {
-      console.warn('ipen fly', $selection.size)
-      openFlyMenu('cursor', $selection.size > 1 ? buildMultiCardList() : buildDefaultList())
-    } else {
-      closeFlyMenu()
-    }
+    // if (e.button === 2) {
+    //   console.warn('ipen fly', $selection.size)
+    //   openFlyMenu('cursor', $selection.size > 1 ? buildMultiCardList() : buildDefaultList())
+    // } else {
+    //   closeFlyMenu()
+    // }
   }
 
   const handleKeydown = (e: KeyboardEvent) => {
@@ -322,7 +352,8 @@
     }
 
     // Focus Mode keys
-    else if (e.code === 'Space' && e.shiftKey) {
+    // NOTE: Removed for launch demo
+    /*else if (e.code === 'Space' && e.shiftKey) {
       // TODO: Need to handle forwared shift + space key frorm browserCard!
       e.preventDefault()
       e.stopPropagation()
@@ -344,15 +375,17 @@
       if ($focusModeEnabled) {
         disableFocusMode()
       }
-    }
+    }*/
 
     // General keys
-    else if (e.key === 'k' && e.metaKey) {
-      if ($flyMenuOpen) closeFlyMenu()
-      else {
-        openFlyMenu('cmdk', buildDefaultList())
-      }
-    } else if (e.key === 'Tab' && e.altKey) {
+    // NOTE: Disabled for demo launch
+    // else if (e.key === 'k' && e.metaKey) {
+    //   if ($flyMenuOpen) closeFlyMenu()
+    //   else {
+    //     openFlyMenu('cmdk', buildDefaultList())
+    //   }
+    // }
+    else if (e.key === 'Tab' && e.altKey) {
       // Alternative alt + K / L ?
       //if (e.location !== 2) return
       if (e.shiftKey) {
@@ -360,15 +393,104 @@
       } else {
         tryFocusNextCard() // TODO: refac/rename
       }
-    } else if (e.key === 'a' && e.metaKey && e.target === document.querySelector('body')) {
+    }
+    // NOTE: Disabled for demo launch
+    // else if (e.key === 'a' && e.metaKey && e.target === document.querySelector('body')) {
+    //   e.preventDefault()
+    //   $state.selection.update((v) => {
+    //     v.clear()
+    //     $cards.forEach((c) => {
+    //       v.add(get(c).id)
+    //     })
+    //     return v
+    //   })
+    // }
+
+    // NOTE: Temporary? Windowmanagement shortcuts for demo launch
+    else if (e.ctrlKey && $activeCardId !== null) {
       e.preventDefault()
-      $state.selection.update((v) => {
-        v.clear()
-        $cards.forEach((c) => {
-          v.add(get(c).id)
+      const card = $cards.find((e) => get(e).id === $activeCardId)
+      horizon.moveCardToStackingTop($activeCardId) // FIX: THIS
+      if (e.key === 'ArrowLeft') {
+        card.update((v) => {
+          v.x = $viewOffset.x
+          v.y = 0
+          v.width = $viewPort.w / 2 - 5
+          v.height = $viewPort.h
+          return v
         })
-        return v
-      })
+      } else if (e.key === 'ArrowRight') {
+        card.update((v) => {
+          v.x = $viewOffset.x + $viewPort.w / 2 + 5
+          v.y = 0
+          v.width = $viewPort.w / 2 - 5
+          v.height = $viewPort.h
+          return v
+        })
+      } else if (e.code === 'KeyU') {
+        card.update((v) => {
+          v.x = $viewOffset.x
+          v.y = 0
+          v.width = $viewPort.w / 2 - 5
+          v.height = $viewPort.h / 2 - 5
+          return v
+        })
+      } else if (e.code === 'KeyI') {
+        card.update((v) => {
+          v.x = $viewOffset.x + $viewPort.w / 2 + 5
+          v.y = 0
+          v.width = $viewPort.w / 2 - 5
+          v.height = $viewPort.h / 2 - 5
+          return v
+        })
+      } else if (e.code === 'KeyJ') {
+        card.update((v) => {
+          v.x = $viewOffset.x
+          v.y = $viewPort.h / 2 + 5
+          v.width = $viewPort.w / 2 - 5
+          v.height = $viewPort.h / 2 - 5
+          return v
+        })
+      } else if (e.code === 'KeyK') {
+        card.update((v) => {
+          v.x = $viewOffset.x + $viewPort.w / 2 + 5
+          v.y = $viewPort.h / 2 + 5
+          v.width = $viewPort.w / 2 - 5
+          v.height = $viewPort.h / 2 - 5
+          return v
+        })
+      } else if (e.key === 'Enter') {
+        card.update((v) => {
+          if (v.y === 0 && v.width === $viewPort.w && v.height === $viewPort.h) {
+            const w = $viewPort.w / 2
+            const h = $viewPort.h / 2
+            v.x = $viewOffset.x + w / 2
+            v.y = h / 2
+            v.width = w
+            v.height = h
+          } else {
+            v.x = $viewOffset.x
+            v.y = 0
+            v.width = $viewPort.w
+            v.height = $viewPort.h
+          }
+          return v
+        })
+      }
+    }
+
+    // Slice navigation
+    else if (e.ctrlKey && e.key === 'ArrowRight') {
+      const target = $viewOffset.x + $viewPort.w
+      const adjusted = target - (target % $viewPort.w)
+      $state.viewOffset.set({ x: adjusted, y: 0 })
+    } else if (e.ctrlKey && e.key === 'ArrowLeft') {
+      const startDif = $viewOffset.x % $viewPort.w
+      const target =
+        Math.abs(startDif) <= 35 ? $viewOffset.x - $viewPort.w : $viewOffset.x - startDif
+      $state.viewOffset.set({ x: clamp(target, 0, Infinity), y: 0 })
+    } else if (e.key === 'Escape') {
+      $modSelectConfigurator = undefined
     }
     // TODO: old, remove?
     // if (e.key === 'Control' && isDraggingCard) {
@@ -442,6 +564,7 @@
 
   /* FOCUS MODE*/
   const enableFocusMode = (cardIds?: string[]) => {
+    return
     if (cardIds === undefined) return
     $state.selection.set(new Set())
 
@@ -454,6 +577,7 @@
     applyFocusMode($viewOffset, $viewPort)
   }
   const disableFocusMode = () => {
+    return
     const [cards, _] = $focusModeTargets
 
     cards.forEach((c) => {
@@ -530,22 +654,25 @@
   }
 
   const handleFlyCommand = async (
-    e: CustomEvent<{ cmd: string; origin: 'cursor' | 'cmdk'; targetX: number; targetY: number }>
+    e: CustomEvent<{ cmd: string; origin: 'cursor' | 'cmdk'; targetRect: any }>
   ) => {
-    let { cmd, origin, targetX, targetY } = e.detail
+    let { cmd, origin, targetRect } = e.detail
     cmd = cmd.toLowerCase()
 
-    const CARD_W = 550
-    const CARD_H = 420
-    const position = {
-      x: origin === 'cursor' ? targetX - CARD_W / 2 : $viewOffset.x + $viewPort.w / 2 - CARD_W / 2,
-      y: origin === 'cursor' ? targetY - CARD_H / 2 : $viewOffset.y + $viewPort.h / 2 - CARD_H / 2,
-      width: CARD_W,
-      height: CARD_H
-    }
-    const bound = applyBounds(position, $settings)
-    position.x = bound.x
-    position.y = bound.y
+    // Close preview if open
+    if ($modSelectConfigurator !== undefined) $modSelectConfigurator = undefined
+
+    // const CARD_W = 550
+    // const CARD_H = 420
+    // const position = {
+    //   x: origin === 'cursor' ? targetX - CARD_W / 2 : $viewOffset.x + $viewPort.w / 2 - CARD_W / 2,
+    //   y: origin === 'cursor' ? targetY - CARD_H / 2 : $viewOffset.y + $viewPort.h / 2 - CARD_H / 2,
+    //   width: CARD_W,
+    //   height: CARD_H
+    // }
+    // const bound = applyBounds(position, $settings)
+    // position.x = bound.x
+    // position.y = bound.y
 
     // TODO: Support all cmds
     // -- Global
@@ -561,7 +688,7 @@
     if (SERVICES.map((e) => e.id).includes(cmd)) {
       const card = await horizon.addCardBrowser(
         SERVICES.find((e) => e.id === cmd)!.url,
-        position,
+        targetRect,
         true,
         false
       )
@@ -576,20 +703,22 @@
     if (cmd === 'text') {
       const card = await horizon.addCardText(
         '',
-        position,
+        targetRect,
         { name: 'New Text Card' },
         [],
         true,
         false
       )
-      if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
+      //if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
     } else if (cmd === 'browser') {
-      const card = await horizon.addCardBrowser('', position, true, false)
-      if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
+      const card = await horizon.addCardBrowser('', targetRect, true, false)
+      //if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
+    } else if (cmd === 'summarize') {
+      horizon.addCardAIText(targetRect)
     }
 
     // -- Card actions
-    else if (cmd === 'focus card' || cmd === 'focus cards') {
+    /*else if (cmd === 'focus card' || cmd === 'focus cards') {
       enableFocusMode([...$selection.values()])
     } else if (cmd === 'unpin card') {
       horizon.deleteCard([...$selection.values()][0])
@@ -597,7 +726,7 @@
       for (let id of $selection.values()) {
         horizon.deleteCard(id)
       }
-    }
+    }*/
   }
 
   /* VISOR */
@@ -934,9 +1063,9 @@
           )
           if (`${entry?.title} ${entry?.url}`.toLowerCase().includes(query.toLowerCase()))
             results.push(_card)
-        } else if (card.type === 'text') {
+        } else if (card.type === 'text' && card.resourceId !== null) {
           const resource = (await resourceManager.getResource(card.resourceId)) as ResourceNote
-          resource.parsedData.toLowerCase().includes(query.toLowerCase()) && results.push(_card)
+          resource.parsedData?.toLowerCase().includes(query.toLowerCase()) && results.push(_card)
         }
         if (card.resourceId) {
           const k = resources.findIndex((e) => e.id === card.resourceId)
@@ -951,7 +1080,6 @@
       true
     )
     applyVisorList()
-    console.warn(results.length)
   }
 
   // Try to cleanup
@@ -1036,6 +1164,14 @@
     clearInterval(requestNewPreviewIntervalId)
     window.api.unregisterPreviewImageHandler(horizon.id)
   })
+
+  // HACK: Sketchy way to fix the noise "issue"
+  let showNoise = false
+  onMount(() => {
+    setTimeout(() => {
+      showNoise = true
+    }, 100)
+  })
 </script>
 
 <svelte:window
@@ -1047,7 +1183,11 @@
 
 {#if showSelectTooltip}
   <div class="cursor-tooltip" style="--select-x: {selectPos.x}px; --select-y: {selectPos.y}px;">
-    {selectSecondaryAction ? 'New Text Card' : 'New Browser Card'}
+    {$modSelectConfigurator !== undefined
+      ? 'New'
+      : selectSecondaryAction
+        ? 'New Text Card'
+        : 'New Browser Card'}
   </div>
 {/if}
 
@@ -1060,6 +1200,7 @@
 >
   <svg
     class="noiseBg"
+    style="{showNoise ? 'opacity: 1;' : ''} {inOverview ? 'opacity: 0;' : ''}"
     viewBox="0 0 {$viewPort.w} {$viewPort.h + $viewPort.y}"
     xmlns="http://www.w3.org/2000/svg"
   >
@@ -1077,6 +1218,8 @@
 
 </filter></defs><rect width="100%" height="100%" fill="#ffffffff"></rect><rect width="700" height="700" fill="#6b00ff" filter="url(#nnnoise-filter)"></rect></svg> -->
   <div class="tintBg"></div>
+
+  <Minimap {cards} {viewOffset} {viewPort} />
 
   <Board
     {settings}
@@ -1144,7 +1287,20 @@
     <svelte:fragment slot="raw">
       <!-- <Grid dotColor="var(--color-text)" dotSize={1} dotOpacity={isDraggingCard ? 50 : 35} /> -->
 
-      <FlyMenu {viewOffset} {viewPort} on:command={handleFlyCommand} />
+      <!-- <FlyMenu {viewOffset} {viewPort} on:command={handleFlyCommand} /> -->
+      <FlyMenu
+        {viewOffset}
+        {viewPort}
+        origin={modSelectConfigurator}
+        on:command={handleFlyCommand}
+      />
+
+      {#if $modSelectConfigurator !== undefined}
+        <div
+          class="drawMenu"
+          style="top: {$modSelectConfigurator.y}px; left: {$modSelectConfigurator.x}px; width: {$modSelectConfigurator.width}px; height: {$modSelectConfigurator.height}px;"
+        ></div>
+      {/if}
 
       {#if $focusModeEnabled}
         <div
@@ -1270,7 +1426,9 @@
     position: absolute;
     inset: 0;
     z-index: 0;
+    opacity: 0;
     filter: contrast(340%) brightness(200%);
+    transition: opacity 600ms ease-out;
     /* mix-blend-mode: color-dodge; */
   }
   .tintBg {

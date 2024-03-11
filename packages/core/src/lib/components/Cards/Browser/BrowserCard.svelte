@@ -36,6 +36,7 @@
   import type { MagicFieldParticipant } from '../../../service/magicField'
   import { focusModeEnabled, exitFocusMode, enterFocusMode } from '../../../utils/focusMode'
   import { getServiceRanking, updateServiceRanking } from '../../../utils/services'
+  import { visorEnabled } from '../../../utils/visor'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -54,9 +55,6 @@
   let inputEl: HTMLInputElement
   let findInPage: FindInPage | undefined
   let currentCardHistory = writable()
-
-  // TODO: Move into visor.ts
-  $: visorEnabled = horizon.visorEnabled
 
   let initialSrc = $card.data.initialLocation
   $: if ($card.data.historyStackIds) {

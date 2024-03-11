@@ -961,9 +961,9 @@
       mode.idle()
     }
 
-    if (e.shiftKey) {
-      allowQuickSnap.set(true)
-    }
+    // if (e.shiftKey) {
+    //   allowQuickSnap.set(true)
+    // }
   }
   function onKeyUp(e: KeyboardEvent) {
     if (e.key === 'Shift') {
@@ -1004,7 +1004,7 @@
     mode.select()
   }
   function onMouseDown_idle(e: MouseEvent | TouchEvent) {
-    if (e.button !== 0) return
+    //if (e.button !== 0) return
     if (!$settings.CAN_DRAW) return
     const target = (e as TouchEvent).targetTouches?.item(0)?.target || (e as MouseEvent).target
     if (
@@ -1123,11 +1123,28 @@
       h = Math.abs(offsetY)
     }
 
+    // Grid increments
+    w = w + (90 - (w % 90))
+    h = h + (90 - (h % 90))
+
+    // Bound to viewport
+    if (x < 0) {
+      x = 0
+    } /*else if (x + w > 0) {
+      outX = settings.BOUNDS!.maxX - o.width
+    }*/
+
+    if (y < 0) {
+      y = 0
+    } else if (y + h > $viewPort.h) {
+      h = h - (y + h - $viewPort.h)
+    }
+
     $state.selectionRect.update((v) => {
       v!.x = x
       v!.y = y
-      v!.w = w + (90 - (w % 90))
-      v!.h = h + (90 - (h % 90))
+      v!.w = w
+      v!.h = h
       return v
     })
 
@@ -1311,74 +1328,74 @@
     dragState.offset.y = absY - dragState.init.y
     dragState.curr.y = absY
 
-    if ($allowQuickSnap) {
-      showQuickSnapGuides = true
-    }
+    // if ($allowQuickSnap) {
+    //   showQuickSnapGuides = true
+    // }
 
     // Handle classes
-    if (clientY < $settings.QUICK_SNAP_THRESHOLD && $allowQuickSnap) {
-      const domEl = document.querySelector(
-        `[data-id="${get(e.detail.positionable).id}"]`
-      ) as HTMLElement
-      domEl.classList.remove('no-animation')
-    } else {
-      const domEl = document.querySelector(
-        `[data-id="${get(e.detail.positionable).id}"]`
-      ) as HTMLElement
-      domEl.classList.add('no-animation')
-    }
+    // if (clientY < $settings.QUICK_SNAP_THRESHOLD && $allowQuickSnap) {
+    //   const domEl = document.querySelector(
+    //     `[data-id="${get(e.detail.positionable).id}"]`
+    //   ) as HTMLElement
+    //   domEl.classList.remove('no-animation')
+    // } else {
+    //   const domEl = document.querySelector(
+    //     `[data-id="${get(e.detail.positionable).id}"]`
+    //   ) as HTMLElement
+    //   domEl.classList.add('no-animation')
+    // }
 
     positionable.update((p) => {
       // Quick Snap
-      if (clientY <= $settings.QUICK_SNAP_THRESHOLD && $allowQuickSnap) {
-        if (quickPreviewBackup.id !== p.id && quickPreviewBackup.x === -1) {
-          quickPreviewBackup.x = p.x
-          quickPreviewBackup.y = p.y
-          quickPreviewBackup.w = p.width
-          quickPreviewBackup.h = p.height
-        }
-        let snapMode: 'third-left' | 'half-left' | 'third-center' | 'half-right' | 'third-right' =
-          'third-center'
-        const PADD = 10
-        if (clientX <= ($viewPort.w - 70) / 9 + 70) {
-          snapMode = 'third-left'
-        } else if (clientX <= (($viewPort.w - 70) / 9) * 3 + 70) {
-          snapMode = 'half-left'
-        } else if (clientX <= (($viewPort.w - 70) / 9) * 6 + 70) {
-          snapMode = 'third-center'
-        } else if (clientX <= (($viewPort.w - 70) / 9) * 8 + 70) {
-          snapMode = 'half-right'
-        } else {
-          snapMode = 'third-right'
-        }
-
-        if (snapMode === 'third-left') {
-          p.x = $viewOffset.x + 70
-          p.width = ($viewPort.w - 70) / 3 - PADD / 2
-        } else if (snapMode === 'half-left') {
-          p.x = $viewOffset.x + 70
-          p.width = ($viewPort.w - 70) / 2 - PADD / 2
-        } else if (snapMode === 'third-center') {
-          p.x = $viewOffset.x + 70 + ($viewPort.w - 70) / 3 + PADD / 2
-          p.width = ($viewPort.w - 70) / 3 - PADD / 2
-        } else if (snapMode === 'half-right') {
-          p.x = $viewOffset.x + 70 + ($viewPort.w - 70) / 2 + PADD / 2
-          p.width = ($viewPort.w - 70) / 2 - PADD / 2
-        } else if (snapMode === 'third-right') {
-          p.x = $viewOffset.x + 70 + (($viewPort.w - 70) / 3) * 2 + PADD
-          p.width = ($viewPort.w - 70) / 3 - PADD
-        }
-
-        p.y = 0
-        p.height = $viewPort.h
-        return p
-      } else {
-        if (quickPreviewBackup.x !== -1) {
-          p.width = quickPreviewBackup.w
-          p.height = quickPreviewBackup.h
-          quickPreviewBackup.x = -1
-        }
-      }
+      // if (clientY <= $settings.QUICK_SNAP_THRESHOLD && $allowQuickSnap) {
+      //   if (quickPreviewBackup.id !== p.id && quickPreviewBackup.x === -1) {
+      //     quickPreviewBackup.x = p.x
+      //     quickPreviewBackup.y = p.y
+      //     quickPreviewBackup.w = p.width
+      //     quickPreviewBackup.h = p.height
+      //   }
+      //   let snapMode: 'third-left' | 'half-left' | 'third-center' | 'half-right' | 'third-right' =
+      //     'third-center'
+      //   const PADD = 10
+      //   if (clientX <= ($viewPort.w - 70) / 9 + 70) {
+      //     snapMode = 'third-left'
+      //   } else if (clientX <= (($viewPort.w - 70) / 9) * 3 + 70) {
+      //     snapMode = 'half-left'
+      //   } else if (clientX <= (($viewPort.w - 70) / 9) * 6 + 70) {
+      //     snapMode = 'third-center'
+      //   } else if (clientX <= (($viewPort.w - 70) / 9) * 8 + 70) {
+      //     snapMode = 'half-right'
+      //   } else {
+      //     snapMode = 'third-right'
+      //   }
+      //
+      //   if (snapMode === 'third-left') {
+      //     p.x = $viewOffset.x + 70
+      //     p.width = ($viewPort.w - 70) / 3 - PADD / 2
+      //   } else if (snapMode === 'half-left') {
+      //     p.x = $viewOffset.x + 70
+      //     p.width = ($viewPort.w - 70) / 2 - PADD / 2
+      //   } else if (snapMode === 'third-center') {
+      //     p.x = $viewOffset.x + 70 + ($viewPort.w - 70) / 3 + PADD / 2
+      //     p.width = ($viewPort.w - 70) / 3 - PADD / 2
+      //   } else if (snapMode === 'half-right') {
+      //     p.x = $viewOffset.x + 70 + ($viewPort.w - 70) / 2 + PADD / 2
+      //     p.width = ($viewPort.w - 70) / 2 - PADD / 2
+      //   } else if (snapMode === 'third-right') {
+      //     p.x = $viewOffset.x + 70 + (($viewPort.w - 70) / 3) * 2 + PADD
+      //     p.width = ($viewPort.w - 70) / 3 - PADD
+      //   }
+      //
+      //   p.y = 0
+      //   p.height = $viewPort.h
+      //   return p
+      // } else {
+      //   if (quickPreviewBackup.x !== -1) {
+      //     p.width = quickPreviewBackup.w
+      //     p.height = quickPreviewBackup.h
+      //     quickPreviewBackup.x = -1
+      //   }
+      // }
 
       const { x: boundX, y: boundY } = applyBounds(
         absX - dragState.relativeOffset.x,
@@ -1393,13 +1410,14 @@
 
       p.y = boundY
 
-      snapToEdges(
-        p,
-        $onScreenPositionables,
-        POSITIONABLE_KEY,
-        $settings.GRID_SIZE,
-        $settings.EDGE_SNAP_FACTOR
-      )
+      // NOTE: Disabled for demo launch
+      // snapToEdges(
+      //   p,
+      //   $onScreenPositionables,
+      //   POSITIONABLE_KEY,
+      //   $settings.GRID_SIZE,
+      //   $settings.EDGE_SNAP_FACTOR
+      // )
 
       return p
     })
@@ -1463,13 +1481,14 @@
           p.x = boundX
           p.y = boundY
         }
-        snapToEdges(
-          p,
-          $onScreenPositionables,
-          POSITIONABLE_KEY,
-          $settings.GRID_SIZE,
-          $settings.EDGE_SNAP_FACTOR
-        )
+        // NOTE: Disabled for demo launch
+        // snapToEdges(
+        //   p,
+        //   $onScreenPositionables,
+        //   POSITIONABLE_KEY,
+        //   $settings.GRID_SIZE,
+        //   $settings.EDGE_SNAP_FACTOR
+        // )
 
         targetChunkX = Math.floor(p.x / CHUNK_WIDTH)
         targetChunkY = Math.floor(p.y / CHUNK_HEIGHT)
@@ -2069,6 +2088,7 @@
   .tela-board {
     position: absolute;
     backface-visibility: hidden;
+    /* transition: all 90ms ease-out; */
   }
   .tela-container > .dev {
     margin: 0;

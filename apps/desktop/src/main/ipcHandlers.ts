@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, app } from 'electron'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
 import { getUserConfig } from './config'
@@ -59,6 +59,15 @@ export function setupIpcHandlers() {
 
   ipcMain.handle('get-user-config', async (_) => {
     return getUserConfig()
+  })
+
+  ipcMain.handle('quit-app', () => {
+    app.quit()
+  })
+
+  ipcMain.handle('toggle-fullscreen', () => {
+    const window = getMainWindow()
+    window?.setFullScreen(!window.fullScreen)
   })
 }
 

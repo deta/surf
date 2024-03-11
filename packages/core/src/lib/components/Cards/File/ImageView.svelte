@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte'
+  import { getContext, onDestroy } from 'svelte'
 
   export let blob: Blob
+
+  const inOasis = getContext('horizon') === undefined
 
   const url = URL.createObjectURL(blob)
 
@@ -10,20 +12,23 @@
   })
 </script>
 
-<div class="wrapper">
+<div class="wrapper" class:inOasis>
   <img src={url} alt="" />
 </div>
 
-<style>
+<style lang="scss">
   .wrapper {
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px;
     overflow: visible;
     pointer-events: none;
+
+    &.inOasis {
+      padding: 12px;
+    }
   }
 
   img {
