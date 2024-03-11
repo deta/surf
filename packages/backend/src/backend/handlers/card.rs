@@ -130,11 +130,20 @@ impl Worker {
             }
         };
         let mut tx = self.db.begin()?;
-        Database::remove_resource_tag_by_tag_name_tx(
+
+        // if the resource is only referenced by this card, remove the horizon id tag
+        let refs_count = Database::count_resource_refs_in_cards_tx(
             &mut tx,
             &card.resource_id,
-            InternalResourceTagNames::HorizonId.as_str(),
+            &card.horizon_id,
         )?;
+        if refs_count == 1 {
+            Database::remove_resource_tag_by_tag_name_tx(
+                &mut tx,
+                &card.resource_id,
+                InternalResourceTagNames::HorizonId.as_str(),
+            )?;
+        }
         Database::remove_card_tx(&mut tx, card_id)?;
         tx.commit()?;
         Ok(())

@@ -286,12 +286,25 @@ impl Database {
         Ok(result)
     }
 
+    pub fn count_resource_refs_in_cards_tx(
+        tx: &mut rusqlite::Transaction,
+        resource_id: &str,
+        horizon_id: &str,
+    ) -> BackendResult<i64> {
+        let count: i64 = tx.query_row(
+            "SELECT COUNT(*) FROM cards WHERE resource_id = ?1 AND horizon_id = ?2",
+            rusqlite::params![resource_id, horizon_id],
+            |row| Ok(row.get(0)?),
+        )?;
+        Ok(count)
+    }
+
     pub fn create_resource_tag_tx(
         tx: &mut rusqlite::Transaction,
         resource_tag: &ResourceTag,
     ) -> BackendResult<()> {
         tx.execute(
-            "INSERT INTO resource_tags (id, resource_id, tag_name, tag_value) VALUES (?1, ?2, ?3, ?4)",
+            "INSERT INTO resource_tags (id, resource_id, tag_name, tag_value) VALUES (?1, ?2, ?3, ?4) ON CONFLICT(resource_id, tag_name, tag_value) DO NOTHING",
             rusqlite::params![resource_tag.id, resource_tag.resource_id, resource_tag.tag_name, resource_tag.tag_value]
         )?;
         Ok(())
@@ -936,6 +949,27 @@ impl Database {
             resources.push(i?);
         }
         Ok(resources)
+    }
+
+    pub fn proximity_search_resources(
+        &self,
+        resource_id: &str,
+        distance_threshold: f32,
+        limit: i64,
+    ) -> BackendResult<SearchResult> {
+        let mut results =
+            self.proximity_search_with_resource_id(resource_id, distance_threshold, limit)?;
+
+        results.iter_mut().try_for_each(|r| -> BackendResult<()> {
+            let card_ids = self.list_card_ids_by_resource_id(&r.resource.resource.id)?;
+            r.card_ids = card_ids;
+            Ok(())
+        })?;
+        let n = results.len() as i64;
+        Ok(SearchResult {
+            items: results,
+            total: n,
+        })
     }
 
     pub fn embeddings_search(
