@@ -32,7 +32,7 @@
 
     log.debug('Getting data from participant', id)
 
-    const data = await magicField.requestDataFromParticipant(id, 'text/resource-path')
+    const data = await magicField.requestDataFromParticipant(id, 'audio/mp3')
     log.debug('received data:', data)
 
     return data as string | null
@@ -91,11 +91,7 @@
     }
 
     log.debug("Creating magic field with card's participant", magicCardParticipant)
-    magicField = magicFieldService.createField(
-      $card.id,
-      'text/resource-path',
-      magicCardParticipant.position
-    )
+    magicField = magicFieldService.createField($card.id, 'audio/mp3', magicCardParticipant.position)
 
     magicField.onParticipantLeave((p) => {
       log.debug('participantEnter', p)

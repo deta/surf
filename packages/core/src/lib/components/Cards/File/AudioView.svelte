@@ -16,7 +16,7 @@
     if (!magicFieldParticipant) return
     if (!get(magicFieldParticipant.fieldParticipation)) return
 
-    const isSupported = field.supportedResource === 'text/resource-path'
+    const isSupported = field.supportedResource === 'audio/mp3'
 
     magicFieldParticipant.fieldParticipation.update((p) => ({
       ...p!,
@@ -31,7 +31,7 @@
   magicFieldParticipant?.onRequestData((type: string, callback) => {
     log.debug('requestData', type)
 
-    if (type === 'text/resource-path') {
+    if (type === 'audio/mp3') {
       callback(resource.path)
     } else {
       callback(null)
