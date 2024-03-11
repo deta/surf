@@ -8,6 +8,9 @@
 
   const dispatch = createEventDispatcher()
 
+  $: console.log('metadata', metadata)
+  $: console.log('data', data)
+
   // Function to generate a random rotation between -0.6 and 0.6 degrees
   const generateRandomRotation = () => -0.6 + Math.random() * (0.6 - -0.6)
 
@@ -37,7 +40,7 @@
     <div class="file-metadata-wrapper">
       <div class="details">
         <div class="title">
-          {metadata.name ? metadata.name : `Cannot Resolve filename ${metadata.type}`}
+          {metadata.name ? metadata.name : `Cannot resolve filename from type ${data.type}`}
         </div>
         {#if metadata.path}<div class="subtitle">{metadata.path}</div>{/if}
       </div>
@@ -159,7 +162,7 @@
       background: white;
       border-radius: 50%;
       border: 0.5px solid rgba(0, 0, 0, 0.15);
-      cursor: pointer;
+      cursor: default;
     }
   }
 </style>

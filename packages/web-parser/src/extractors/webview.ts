@@ -66,9 +66,8 @@ export class WebViewExtractor {
     this.webview.addEventListener('ipc-message', (event) => {
       if (event.channel !== 'webview-page-event') return
 
-      const eventData = event.args[0]
-      const eventType = eventData.type as string
-      delete eventData.type
+      const eventType = event.args[0]
+      const eventData = event.args[1]
 
       if (!eventType) return
 
@@ -105,8 +104,14 @@ export class WebViewExtractor {
     this.webview = null
   }
 
+  wait = (ms: number) => {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms)
+    })
+  }
+
   async detectResource(timeout: number = 10000) {
-    return new Promise<any | null>(async (resolve, reject) => {
+    return new Promise<any | null>(async (resolve) => {
       if (this.webview === null) {
         await this.initializeWebview()
       }
@@ -118,13 +123,15 @@ export class WebViewExtractor {
         resolve(resource?.resource ?? null)
       }
 
+      await this.wait(1000)
+
       this.webview?.send('webview-event', { type: 'get-resource' })
 
       setTimeout(() => {
         console.log('Resource detection timed out')
         this.resourceDetectionCallback = null
         this.destroyWebview()
-        reject(null)
+        resolve(null)
       }, timeout)
     })
   }

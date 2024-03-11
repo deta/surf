@@ -159,6 +159,10 @@ const api = {
     ipcRenderer.on('download-done', (_event, completion) => callback(completion))
   },
 
+  startDrag: (resourceId: string, filePath: string, type: string) => {
+    ipcRenderer.send('start-drag', resourceId, filePath, type)
+  },
+
   transcribeAudioFile: async (path: string) => {
     const transcription = await openai?.audio.transcriptions.create({
       file: await toFile(createReadStream(path), 'audio.mp3'),

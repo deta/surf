@@ -1,19 +1,20 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, getContext } from 'svelte'
   import { Icon } from '@horizon/icons'
-  import { writable } from 'svelte/store'
-  import { processDrop } from '../../service/mediaImporter'
+  import { derived, writable, type Writable } from 'svelte/store'
+  import { processDrop, type MediaParserResult } from '../../service/mediaImporter'
 
-  import { parseMetadata } from '@horizon/core/src/lib/utils/parseMetadata'
+  import { parseMetadata, type ParsedMetadata } from '@horizon/core/src/lib/utils/parseMetadata'
   import { normalizeURL, stringToURLList } from '@horizon/core/src/lib/utils/url'
 
   import { useLogScope } from '@horizon/core/src/lib/utils/log'
   import ChatLinkPreview from '@horizon/drawer/src/lib/components/ChatLinkPreview.svelte'
   import ChatFilePreview from '@horizon/drawer/src/lib/components/ChatFilePreview.svelte'
 
-  export let droppedInputElements: any
+  export let droppedInputElements: Writable<MediaParserResult[]>
 
   let inputRef: HTMLDivElement
+  let textareaRef: HTMLTextAreaElement
   let isFocused = false
   let lastKeyDeleted = false
   let position = { x: 0, y: 0 }
@@ -28,8 +29,15 @@
   const dispatchFileUpload = createEventDispatcher<{ fileUpload: FileList }>()
 
   const dragOver = writable(false)
-
   const inputText = writable('')
+
+  const droppedFiles = derived(droppedInputElements, (droppedInputElements) => {
+    return droppedInputElements.filter((item) => item.type === 'file')
+  })
+
+  const droppedLinks = derived(droppedInputElements, (droppedInputElements) => {
+    return droppedInputElements.filter((item) => item.type === 'url')
+  })
 
   $: if ($viewState !== 'chatInput') {
     opacity = 0
@@ -48,7 +56,34 @@
 
   onMount(() => {
     document.addEventListener('mousemove', handleMouseMove)
+
+    // TODO: This is a temporary solution to handle dropped links, we need to refactor the entire chat input component
+    const unsubscribe = droppedLinks.subscribe((items) => {
+      items.forEach(async (item) => {
+        const parsedMetadata = await parseMetadata((item.data as URL).href)
+        parsedURLs.update((urls) => {
+          if (
+            urls.some(
+              (parsedURL) => normalizeURL(parsedURL.url) === normalizeURL(parsedMetadata.url)
+            )
+          ) {
+            log.debug(`URL already parsed: ${parsedMetadata.url}`)
+            return urls
+          } else {
+            return [...urls, parsedMetadata]
+          }
+        })
+      })
+
+      if (items.length > 0) {
+        droppedInputElements.update((droppedItems) => {
+          return droppedItems.filter((item) => item.type !== 'url')
+        })
+      }
+    })
+
     return () => {
+      unsubscribe()
       document.removeEventListener('mousemove', handleMouseMove)
     }
   })
@@ -90,6 +125,7 @@
     let result = { $inputText, $parsedURLs }
     dispatch('chatSend', result)
 
+    textareaRef.blur()
     inputText.set('')
     parsedURLs.set([])
   }
@@ -122,9 +158,26 @@
   }
 
   function handleKeyDown(e: KeyboardEvent) {
+    e.stopPropagation()
+
     lastKeyDeleted = false
     if (e.key === 'Backspace' || e.key === 'Delete') {
       lastKeyDeleted = true
+    } else if (e.key === 'Escape') {
+      isFocused = false
+      textareaRef.blur()
+      document.startViewTransition(async () => {
+        viewState.set('default')
+      })
+    }
+
+    // Escape for line-break with shift enter
+    if (e.key === 'Enter' && e.shiftKey) {
+      return
+    }
+
+    if (e.key === 'Enter') {
+      handleSend()
     }
   }
 
@@ -186,6 +239,7 @@
       rows="1"
       placeholder="Save and drop everything..."
       class:active={$viewState == 'chatInput'}
+      bind:this={textareaRef}
       on:focus={handleFocus}
       bind:value={$inputText}
       on:mouseenter={handleMouseEnter}
@@ -198,7 +252,7 @@
       style={`opacity: ${opacity}; --x: ${position.x}px; --y: ${position.y}px;`}
     ></div>
 
-    {#if $detectedInput}
+    {#if $parsedURLs && $parsedURLs.length > 0}
       <div class="link-list" class:hidden={$viewState !== 'chatInput'}>
         {#each $parsedURLs as { url, linkMetadata, appInfo } (url)}
           <ChatLinkPreview metadata={linkMetadata} />
@@ -207,8 +261,12 @@
     {/if}
 
     <div class="file-list" class:hidden={$viewState !== 'chatInput'}>
-      {#each $droppedInputElements as { metadata, data }}
-        <ChatFilePreview on:remove={handleRemoveUploadItem} {metadata} {data} />
+      {#each $droppedFiles as file}
+        <ChatFilePreview
+          on:remove={handleRemoveUploadItem}
+          metadata={file.metadata}
+          data={file.data}
+        />
       {/each}
     </div>
 

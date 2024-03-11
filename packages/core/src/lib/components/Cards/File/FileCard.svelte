@@ -27,6 +27,13 @@
 
   $: fileKind = data ? getFileKind(data.type) : null
 
+  const handleDragStart = (event: DragEvent) => {
+    if (!resource) return
+
+    event.preventDefault()
+    window.api.startDrag(resource.id, resource.path, resource.type)
+  }
+
   onMount(async () => {
     try {
       loading = true
@@ -59,7 +66,7 @@
   })
 </script>
 
-<div class="file-card">
+<div class="file-card" on:dragstart={handleDragStart} draggable="true">
   {#if error}
     <p>{error}</p>
   {:else if loading}

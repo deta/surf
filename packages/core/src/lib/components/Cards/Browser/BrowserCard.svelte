@@ -355,6 +355,20 @@
     app = detecteApp
   }
 
+  function handleAddressDragStart(e: DragEvent) {
+    if (!e.dataTransfer) {
+      log.error('no data transfer')
+      return
+    }
+
+    log.debug('dragging url', $url)
+
+    const urlData = $url ?? ''
+
+    e.dataTransfer.setData('text/uri-list', urlData)
+    e.dataTransfer.setData('text/space-source', urlData)
+  }
+
   onMount(() => {
     magicFieldParticipant?.onFieldEnter((field) => {
       if (!magicFieldParticipant) return
@@ -487,7 +501,7 @@
             />
           </div>
         {/if}
-        <div class="navbar-wrapper">
+        <div class="navbar-wrapper" draggable="true" on:dragstart={handleAddressDragStart}>
           <input
             on:focus={() => (editing = true)}
             on:blur={() => {

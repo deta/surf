@@ -2,8 +2,8 @@
   import { onDestroy, onMount } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
-  import type { Resourcearticle } from '../../../service/resources'
-  import type { ResourceDataarticle } from '../../../types'
+  import type { ResourceArticle } from '../../../service/resources'
+  import type { ResourceDataArticle } from '../../../types'
 
   export let resource: Resourcearticle
 
@@ -50,7 +50,7 @@
   })
 </script>
 
-<a href={article?.url} target="_blank" class="link-card">
+<div href={article?.url} target="_blank" class="link-card">
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
@@ -72,7 +72,7 @@
       </div>
     {/if}
   </div>
-</a>
+</div>
 
 <style lang="scss">
   .link-card {

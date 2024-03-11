@@ -32,6 +32,8 @@ import File from './Icons/File.svelte'
 import Docs from './Icons/Docs.svelte'
 import Bookmark from './Icons/Bookmark.svelte'
 import BookmarkFilled from './Icons/BookmarkFilled.svelte'
+import SidebarLeft from './Icons/SidebarLeft.svelte'
+import SidebarRight from './Icons/SidebarRight.svelte'
 import SquareRotated from './Icons/SquareRotated.svelte'
 import Home from './Icons/Home.svelte'
 import Rectangle from './Icons/Rectangle.svelte'
@@ -76,7 +78,9 @@ export const icons = {
   home: Home,
   'square.rotated': SquareRotated,
   rectangle: Rectangle,
-  spinner: Spinner
+  spinner: Spinner,
+  'sidebar.left': SidebarLeft,
+  'sidebar.right': SidebarRight
 }
 
 export type Icons = keyof typeof icons
