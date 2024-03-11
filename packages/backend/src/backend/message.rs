@@ -14,6 +14,12 @@ pub enum ProcessorMessage {
     ProcessResource(CompositeResource),
 }
 
+pub enum AIMessage {
+    // TODO: use embeddable content trait
+    GenerateMetadataEmbeddings(ResourceMetadata),
+    GenerateTextContentEmbeddings(ResourceTextContent),
+}
+
 pub enum WorkerMessage {
     CardMessage(CardMessage),
     HistoryMessage(HistoryMessage),
@@ -71,6 +77,11 @@ pub enum ResourceMessage {
     UpsertResourceTextContent {
         resource_id: String,
         content: String,
+    },
+    UpsertEmbeddings {
+        resource_id: String,
+        embedding_type: String,
+        embeddings: Vec<Vec<f32>>,
     },
     // ---
     PostProcessJob(String),

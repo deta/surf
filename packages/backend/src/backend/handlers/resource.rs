@@ -1,6 +1,8 @@
 use crate::{
     backend::{
-        message::{ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot},
+        message::{
+            AIMessage, ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot,
+        },
         worker::{send_worker_response, Worker},
     },
     store::{
@@ -54,22 +56,11 @@ impl Worker {
                     Ok(())
                 })?;
 
-            // TODO: this needs to move to a different thread
-            let vectors = self.embeddings_model.get_embeddings(metadata)?;
-            vectors.iter().try_for_each(|v| -> BackendResult<()> {
-                let rowid = Database::create_embedding_resource_tx(
-                    &mut tx,
-                    &EmbeddingResource {
-                        rowid: None,
-                        resource_id: resource.id.clone(),
-                        embedding_type: "metadata".to_owned(),
-                    },
-                )?;
-                let em = Embedding::new_with_rowid(rowid, v);
-                Database::create_embedding_tx(&mut tx, &em)?;
-                Ok(())
-            })?;
-            // TODO: ---------------- upto here -----
+            // generate metadata embeddings in separate AI thread
+            self.aiqueue_tx
+                // TODO: not clone?
+                .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
+                .map_err(|e| BackendError::GenericError(e.to_string()))?;
         }
 
         if let Some(tags) = &mut tags {
@@ -193,7 +184,8 @@ impl Worker {
         let mut query_embedding: Vec<f32> = Vec::new();
         if query != "" {
             // TODO: what if query is too big?
-            query_embedding = self.embeddings_model.encode_single(&query)?;
+            // TODO: can we use one of the ai threads instead of the main thread
+            query_embedding = self.embedding_model.encode_single(&query)?;
         }
 
         self.db.search_resources(
@@ -281,30 +273,41 @@ impl Worker {
     ) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::upsert_resource_text_content(&mut tx, &resource_id, &content)?;
+        tx.commit()?;
 
-        // TODO: this needs to move to a different thread
-        let embeddings = self.embeddings_model.get_embeddings(&ResourceTextContent {
-            id: "".to_string(),
-            resource_id: resource_id.clone(),
-            content,
-        })?;
-        Database::remove_embedding_resource_by_type_tx(&mut tx, &resource_id, "text_content")?;
+        self.aiqueue_tx
+            .send(AIMessage::GenerateTextContentEmbeddings(
+                ResourceTextContent {
+                    id: "".to_string(), // TODO: don't like this empty string behavior
+                    resource_id,
+                    content,
+                },
+            ))
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+        Ok(())
+    }
 
+    pub fn upsert_embeddings(
+        &mut self,
+        resource_id: &String,
+        embedding_type: &String,
+        embeddings: &Vec<Vec<f32>>,
+    ) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::remove_embedding_resource_by_type_tx(&mut tx, resource_id, embedding_type)?;
         embeddings.iter().try_for_each(|v| -> BackendResult<()> {
             let rowid = Database::create_embedding_resource_tx(
                 &mut tx,
                 &EmbeddingResource {
                     rowid: None,
                     resource_id: resource_id.clone(),
-                    embedding_type: "text".to_owned(),
+                    embedding_type: embedding_type.clone(),
                 },
             )?;
             let em = Embedding::new_with_rowid(rowid, v);
             Database::create_embedding_tx(&mut tx, &em)?;
             Ok(())
         })?;
-        // TODO: ---------------- upto here -----
-
         tx.commit()?;
         Ok(())
     }
@@ -383,6 +386,15 @@ pub fn handle_resource_message(
             channel,
             oneshot,
             worker.upsert_resource_text_content(resource_id, content),
+        ),
+        ResourceMessage::UpsertEmbeddings {
+            resource_id,
+            embedding_type,
+            embeddings,
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.upsert_embeddings(&resource_id, &embedding_type, &embeddings),
         ),
     }
 }

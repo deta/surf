@@ -1,8 +1,9 @@
+pub mod ai;
+pub mod handlers;
 pub mod message;
+pub mod processor;
 pub mod tunnel;
 pub mod worker;
-pub mod handlers;
-pub mod processor;
 
 use neon::prelude::*;
 

@@ -31,7 +31,9 @@ fn get_hostname_from_uri(uri: &str) -> Option<String> {
 }
 
 pub trait EmbeddableContent {
+    fn get_resource_id(&self) -> String;
     fn get_embeddable_content(&self) -> Vec<String>;
+    fn get_embedding_type(&self) -> String;
 }
 
 // TODO: use strum
@@ -264,6 +266,15 @@ impl EmbeddableContent for ResourceMetadata {
         }
         content
     }
+
+    // TODO: use an enum for this
+    fn get_embedding_type(&self) -> String {
+        "metadata".to_string()
+    }
+
+    fn get_resource_id(&self) -> String {
+        self.resource_id.clone()
+    }
 }
 
 impl ResourceMetadata {
@@ -294,6 +305,15 @@ pub struct ResourceTextContent {
 impl EmbeddableContent for ResourceTextContent {
     fn get_embeddable_content(&self) -> Vec<String> {
         vec![self.content.clone()]
+    }
+
+    // TODO: use an enum for this
+    fn get_embedding_type(&self) -> String {
+        "text_content".to_string()
+    }
+
+    fn get_resource_id(&self) -> String {
+        self.resource_id.clone()
     }
 }
 
