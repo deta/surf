@@ -38,7 +38,7 @@
   })
 </script>
 
-<a href={link?.url} target="_blank" class="link-card">
+<div href={link?.url} target="_blank" class="link-card">
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
@@ -53,12 +53,12 @@
           alt={`${link?.provider} favicon`}
         />
         <div class="description">
-          {link?.description}
+          {link?.description || link?.provider}
         </div>
       </div>
     {/if}
   </div>
-</a>
+</div>
 
 <style lang="scss">
   .link-card {

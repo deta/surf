@@ -10,7 +10,7 @@ import {
 } from 'fs'
 import path from 'path'
 import fetch from 'cross-fetch'
-import OpenAI from 'openai'
+import OpenAI, { toFile } from 'openai'
 
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
@@ -43,6 +43,8 @@ const api = {
     ipcRenderer.invoke('set-adblocker-state', { partition, state }),
   requestNewPreviewImage: (horizonId: string) =>
     ipcRenderer.invoke('request-new-preview-image', { horizonId }),
+  quitApp: () => ipcRenderer.invoke('quit-app'),
+  toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
 
   onFullscreenChange: (callback: any) => {
     fullscreenHandlers.push(callback)
@@ -155,6 +157,19 @@ const api = {
   },
   onDownloadDone: (callback) => {
     ipcRenderer.on('download-done', (_event, completion) => callback(completion))
+  },
+
+  startDrag: (resourceId: string, filePath: string, type: string) => {
+    ipcRenderer.send('start-drag', resourceId, filePath, type)
+  },
+
+  transcribeAudioFile: async (path: string) => {
+    const transcription = await openai?.audio.transcriptions.create({
+      file: await toFile(createReadStream(path), 'audio.mp3'),
+      model: 'whisper-1'
+    })
+
+    return transcription?.text
   }
 }
 

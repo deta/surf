@@ -13,7 +13,8 @@
     dispatch('search', query)
   })
 
-  $: width = $size === 'minimal' ? '200px' : $size === 'normal' ? 'calc(max(40vw, 500px))' : '100vw'
+  // $: width = $size === 'minimal' ? '200px' : $size === 'normal' ? 'calc(max(40vw, 500px))' : '100vw'
+  $: width = 'calc(max(40vw, 500px))'
 </script>
 
 <div class="drawer-root">
@@ -49,13 +50,13 @@
     transition: width 0.2s ease-out;
     border-radius: 12px;
     border: 1px solid rgba(0, 0, 0, 0.12);
-    background: url('../../public/test.png');
     backdrop-filter: blur(16px);
     border: 1px solid rgba(0, 0, 0, 0.12);
     backdrop-filter: blur(64px);
     border-radius: 12px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    view-transition-name: drawer-main;
 
     display: flex;
     flex-direction: column;

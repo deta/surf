@@ -2,6 +2,12 @@ import { WebParser, type WebMetadata, type DetectedWebApp } from '@horizon/web-p
 
 // Optional: Include any other dependencies that `parseMetadata` needs
 
+export type ParsedMetadata = {
+  url: string
+  appInfo: DetectedWebApp
+  linkMetadata: WebMetadata
+}
+
 export const parseMetadata = async (url: string) => {
   const webParser = new WebParser(url)
 
@@ -15,5 +21,5 @@ export const parseMetadata = async (url: string) => {
     url: url,
     appInfo: appInfo,
     linkMetadata: metadata
-  }
+  } as ParsedMetadata
 }

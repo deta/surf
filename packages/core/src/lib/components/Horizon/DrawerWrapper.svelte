@@ -14,8 +14,13 @@
     DrawerContentItem,
     DrawerContentMasonry,
     DrawerContenEmpty,
+    DrawerDetailsWrapper,
+    DrawerDetailsProximity,
     type SearchQuery
   } from '@horizon/drawer'
+
+  import type { Resource } from '../../service/resources'
+  import { Icon } from '@horizon/icons'
 
   import type { Horizon } from '../../service/horizon'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
@@ -36,13 +41,20 @@
     ResourceNote,
     type ResourceSearchResultItem
   } from '../../service/resources'
-  import { ResourceTypes, type ResourceData, type SFFSResourceTag } from '../../types'
+  import {
+    ResourceTypes,
+    type ResourceData,
+    type SFFSResourceTag,
+    type SFFSResourceMetadata
+  } from '../../types'
 
   import { parseStringIntoUrl, stringToURLList } from '../../utils/url'
 
   import ProgressiveBlur from '@horizon/drawer/src/lib/fx/ProgressiveBlur.svelte'
   import { parse } from 'date-fns'
   import Link from '../Atoms/Link.svelte'
+  import type { ParsedMetadata } from '../../utils/parseMetadata'
+  import { each, result } from 'lodash'
 
   export const drawer = provideDrawer()
 
@@ -65,10 +77,14 @@
   const VIEW_STATES = {
     CHAT_INPUT: 'chatInput',
     SEARCH: 'search',
-    DEFAULT: 'default'
+    DEFAULT: 'default',
+    DETAILS: 'details'
   }
 
   const viewState = writable(VIEW_STATES.DEFAULT)
+
+  const selectedResource = writable<ResourceObject | undefined>(undefined)
+
   // Setting the context
   setContext('drawer.viewState', viewState)
 
@@ -166,44 +182,6 @@
     runSearch('', drawer.selectedTab)
   }
 
-  const handleEnter = async () => {
-    if (!detectedInput || !parsedInput) {
-      return
-    }
-
-    const webParser = new WebParser(parsedInput.url)
-
-    if (!parsedInput.appInfo || !parsedInput.appInfo.resourceType) {
-      log.warn('No appInfo found')
-    }
-
-    // Extract a resource from the web page using a webview, this should happen only when saving the resource
-    const extractedResource = await webParser.extractResourceUsingWebview(document)
-    log.debug('extractedResource', extractedResource)
-
-    if (!extractedResource) {
-      log.error('No resource extracted')
-      return
-    }
-
-    const resource = await resourceManager.createResourceOther(
-      new Blob([JSON.stringify(extractedResource.data)], { type: extractedResource.type }),
-      {
-        name: parsedInput.linkMetadata.title,
-        alt: parsedInput.linkMetadata.description,
-        sourceURI: '',
-        userContext: ''
-      }
-    )
-
-    log.debug('Created resource', resource)
-
-    detectedInput = false
-    parsedInput = null
-    drawer.searchValue.set('')
-    searchQuery.set({ value: '', tab: 'all' })
-  }
-
   const handleResourceClick = async (e: CustomEvent<string>) => {
     const resourceId = e.detail
 
@@ -214,7 +192,11 @@
       return
     }
 
-    // TODO: Decide what to do on resource click, e.g. create card or open resource in modal or something else
+    // Sets selected resource
+    document.startViewTransition(async () => {
+      $selectedResource = resource
+      viewState.set('details')
+    })
   }
 
   const handleResourceRemove = async (e: CustomEvent<string>) => {
@@ -236,26 +218,26 @@
 
     const userGeneratedText = payload.detail.$inputText
 
-    const links = payload.detail.$parsedURLs
-    const files = $droppedInputElements
+    const links = payload.detail.$parsedURLs as ParsedMetadata[]
+    const mediaItems = $droppedInputElements
 
     if (links) {
-      for (const item of payload.detail.$parsedURLs) {
-        createWebResource(item, userGeneratedText)
+      for (const link of links) {
+        createResourceFromParsedURL(link, userGeneratedText)
       }
     }
 
-    if (files) {
-      createResource(files, userGeneratedText)
+    if (mediaItems) {
+      createResourcesFromMediaItems(mediaItems, userGeneratedText)
     }
 
     document.startViewTransition(async () => {
       viewState.set('default')
     })
 
-    if (links.length == 0 && files.length == 0) {
+    if (links.length == 0 && mediaItems.length == 0) {
       const item = await processText(userGeneratedText)
-      createResource(item, '')
+      createResourcesFromMediaItems(item, '')
     }
   }
 
@@ -293,10 +275,13 @@
     const parsed = await processDrop(event)
     log.debug('Parsed', parsed)
 
-    createResource(parsed, '')
+    createResourcesFromMediaItems(parsed, '')
   }
 
-  const createResource = async (parsed: MediaParserResult[], userGeneratedText: string) => {
+  const createResourcesFromMediaItems = async (
+    parsed: MediaParserResult[],
+    userGeneratedText: string
+  ) => {
     await Promise.all(
       parsed.map(async (item) => {
         log.debug('processed item', item)
@@ -309,11 +294,9 @@
             ResourceTag.dragLocal()
           ])
         } else if (item.type === 'url') {
-          resource = await resourceManager.createResourceLink(
-            { url: item.data.href },
-            item.metadata,
-            [ResourceTag.dragLocal()]
-          )
+          resource = await extractAndCreateWebResource(item.data.href, item.metadata, [
+            ResourceTag.dragBrowser() // we assume URLs were dragged from the browser
+          ])
         } else if (item.type === 'file') {
           resource = await resourceManager.createResourceOther(item.data, item.metadata, [
             ResourceTag.dragLocal()
@@ -327,33 +310,43 @@
     runSearch($searchQuery.value, $searchQuery.tab)
   }
 
-  const createWebResource = async (item: any, userGeneratedText: string) => {
-    const webParser = new WebParser(item.url)
+  const createResourceFromParsedURL = async (item: ParsedMetadata, userGeneratedText: string) => {
+    const metadata = {
+      name: item.linkMetadata.title,
+      alt: item.linkMetadata.description,
+      sourceURI: '',
+      userContext: userGeneratedText
+    }
 
-    // if (!parsedInput.appInfo || !parsedInput.appInfo.resourceType) {
-    //   log.warn('No appInfo found')
-    // }
+    const resource = await extractAndCreateWebResource(item.url, metadata, [ResourceTag.paste()])
+
+    log.debug('Created resource', resource)
+  }
+
+  const extractAndCreateWebResource = async (
+    url: string,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) => {
+    log.debug('Extracting resource from', url)
+
+    const webParser = new WebParser(url)
 
     // Extract a resource from the web page using a webview, this should happen only when saving the resource
     const extractedResource = await webParser.extractResourceUsingWebview(document)
     log.debug('extractedResource', extractedResource)
 
     if (!extractedResource) {
-      log.error('No resource extracted')
-      return
+      log.debug('No resource extracted, saving as link')
+
+      return resourceManager.createResourceLink({ url: url }, metadata, tags)
     }
 
-    const resource = await resourceManager.createResourceOther(
+    return resourceManager.createResourceOther(
       new Blob([JSON.stringify(extractedResource.data)], { type: extractedResource.type }),
-      {
-        name: item.linkMetadata.title,
-        alt: item.linkMetadata.description,
-        sourceURI: '',
-        userContext: userGeneratedText
-      }
+      metadata,
+      tags
     )
-
-    log.debug('Created resource', resource)
   }
 
   const handleItemDragStart = (e: DragEvent, resource: ResourceObject) => {
@@ -399,6 +392,29 @@
       }
 
       e.dataTransfer.setData('text/plain', data)
+    } else if (resource.type.startsWith('image/')) {
+      const filePath = resource.path
+      log.debug('file path', filePath)
+
+      e.preventDefault()
+      window.api.startDrag(resource.id, filePath, resource.type)
+      // const blob = resource.rawData
+      // if (!blob) {
+      //   log.error('No data found')
+      //   return
+      // }
+
+      // log.debug('Creating URL out of resource', blob)
+
+      // const reader = new FileReader();
+      // reader.readAsDataURL(blob);
+      // reader.onloadend = () => {
+      //   const base64data = reader.result;
+      //   const base64 = base64data.split(',')[1]
+      //   const url = `data:${blob.type};base64,${base64}`
+      //   log.debug('Created URL', url)
+      //   e.dataTransfer.setData('text/uri-list', url)
+      // }
     } else {
       const blob = resource.rawData
       if (!blob) {
@@ -420,6 +436,14 @@
       const createdItem = e.dataTransfer.items.add(file)
       log.debug('Added file to dataTransfer', createdItem)
     }
+
+    e.dataTransfer.setData(MEDIA_TYPES.RESOURCE, resource.id)
+  }
+
+  const handleDetailsBack = () => {
+    document.startViewTransition(async () => {
+      viewState.set('default')
+    })
   }
 
   onMount(() => {
@@ -475,28 +499,48 @@
     </div>
   {/if}
   <DrawerContentWrapper on:drop={handleDrop}>
-    {#if searchResult.length === 0}
-      <DrawerContenEmpty />
-    {:else}
-      <DrawerContentMasonry
-        items={searchResult}
-        idKey="id"
-        animate={false}
-        maxColWidth={650}
-        minColWidth={250}
-        gap={15}
-        let:item
-      >
-        <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
+    {#if $selectedResource}
+      {#if $viewState === 'details'}
+        <DrawerDetailsWrapper
+          on:dragstart={(e) => handleItemDragStart(e, $selectedResource)}
+          resource={$selectedResource}
+          {resourceManager}
+        >
           <ResourcePreview
             on:click={handleResourceClick}
             on:remove={handleResourceRemove}
-            resource={item.resource}
+            resource={$selectedResource}
           />
-        </DrawerContentItem>
-      </DrawerContentMasonry>
-    {/if}
 
+          <div slot="proximity-view" let:result={nearbyResults}>
+            <DrawerDetailsProximity {nearbyResults} />
+          </div>
+        </DrawerDetailsWrapper>
+      {/if}
+    {/if}
+    {#if $viewState !== 'details'}
+      {#if searchResult.length === 0}
+        <DrawerContenEmpty />
+      {:else}
+        <DrawerContentMasonry
+          items={searchResult}
+          idKey="id"
+          animate={false}
+          maxColWidth={650}
+          minColWidth={250}
+          gap={15}
+          let:item
+        >
+          <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
+            <ResourcePreview
+              on:click={handleResourceClick}
+              on:remove={handleResourceRemove}
+              resource={item.resource}
+            />
+          </DrawerContentItem>
+        </DrawerContentMasonry>
+      {/if}
+    {/if}
     <!-- {#await $result}
       <p>Loading…</p>
     {:then resources}
@@ -519,31 +563,44 @@
       {/if}
     {/await} -->
   </DrawerContentWrapper>
-  <div class="drawer-bottom">
-    {#if $viewState == 'default'}
-      <div class="tabs-transition">
-        <DrawerNavigation {tabs} />
-      </div>
-    {/if}
-    <div class="drawer-chat-search">
-      {#if $viewState !== 'search'}
-        <DrawerChat
-          on:chatSend={handleChat}
-          on:dropForwarded={handleDropForwarded}
-          on:dropFileUpload={handleFileUpload}
-          {droppedInputElements}
-        />
-      {/if}
 
-      {#if $viewState !== 'chatInput'}
-        <DrawerSearch on:enter={handleEnter} />
+  <div class="drawer-top">
+    <div class="drawer-controls">
+      <button on:click={() => drawer.close()}>
+        <Icon name="sidebar.right" size="22px" />
+      </button>
+      {#if $viewState === 'details'}
+        <button on:click={handleDetailsBack}>
+          <Icon name="chevron.left" size="22px" />
+        </button>
       {/if}
     </div>
+  </div>
 
-    {#if $viewState != 'default'}
-      <DrawerCancel on:search-abort={abortSearch} />
+  <div class="drawer-bottom">
+    <div class="tabs-transition">
+      <DrawerNavigation {tabs} />
+    </div>
+    {#if $viewState !== 'details'}
+      <div class="drawer-chat-search">
+        {#if $viewState !== 'chatInput'}
+          <DrawerSearch />
+        {/if}
+        {#if $viewState !== 'search'}
+          <DrawerChat
+            on:chatSend={handleChat}
+            on:dropForwarded={handleDropForwarded}
+            on:dropFileUpload={handleFileUpload}
+            {droppedInputElements}
+          />
+        {/if}
+      </div>
+
+      {#if $viewState == 'search' || $viewState == 'chatInput'}
+        <DrawerCancel on:search-abort={abortSearch} />
+      {/if}
+      <!-- <ProgressiveBlur /> -->
     {/if}
-    <!-- <ProgressiveBlur /> -->
   </div>
 </DrawerProvider>
 
@@ -578,11 +635,48 @@
     }
   }
 
+  .drawer-top {
+    position: absolute;
+    top: 0;
+    padding: 1rem 1rem 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: start;
+    gap: 0.5rem;
+    z-index: 1000;
+  }
+
+  .drawer-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-right: 0.5rem;
+
+    button {
+      appearance: none;
+      background: none;
+      border: none;
+      cursor: cursor;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+      transition: color 0.2s ease;
+      border-radius: 3px;
+
+      &:hover {
+        color: var(--color-text);
+        background: rgba(0, 0, 0, 0.15);
+      }
+    }
+  }
+
   .drawer-bottom {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
+    backdrop-filter: blur(3px);
     &:after {
       background: linear-gradient(
         to bottom,
@@ -596,6 +690,7 @@
       left: 0;
       width: 100%;
       height: 100%;
+      z-index: -1;
     }
 
     .drawer-chat-search {

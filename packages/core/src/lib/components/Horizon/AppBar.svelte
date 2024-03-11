@@ -18,6 +18,10 @@
   function onNewHorizon() {
     dispatch('createHorizon')
   }
+
+  function onQuitApp() {
+    window.api.quitApp()
+  }
 </script>
 
 <aside>
@@ -107,12 +111,58 @@
                 </defs>
               </svg>
             </div>
-            <!--<p class="button__text">command</p>-->
+          </div>
+        </button>
+      </li>
+      <li>
+        <button class="tactile_button" on:click={() => dispatch('toggleOasis')}>
+          <div class="content">
+            <div class="icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 13L10 11"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M12 12L14 10"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M12 21V8"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M9.82412 15.9951C8.93843 15.9432 8.12112 15.502 7.59183 14.7899C7.06253 14.0779 6.87555 13.1681 7.08112 12.3051C6.34503 11.6932 5.94535 10.7666 6.00544 9.81135C6.06553 8.85605 6.57816 7.98687 7.38512 7.47207C6.66513 6.193 6.97635 4.58079 8.12069 3.6616C9.26502 2.74241 10.9064 2.78619 12.0001 3.76507C13.094 2.78777 14.7343 2.74485 15.8778 3.6636C17.0213 4.58234 17.3328 6.19329 16.6141 7.47207C17.4216 7.98641 17.9347 8.85558 17.995 9.81105C18.0553 10.7665 17.6555 11.6933 16.9191 12.3051C17.1318 13.1981 16.9239 14.1394 16.3548 14.8597C15.7857 15.5801 14.9181 16.0003 14.0001 16.0001H10.0001L9.82412 15.9951Z"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
           </div>
         </button>
       </li>
     </ul>
   </div>
+  <span class="name">{$horizon?.data.name}</span>
   <div>
     <div style="height: 150px">
       <input
@@ -126,8 +176,103 @@
     </div>
 
     <ul>
-      <!-- Theme -->
+      <!--<li>
+        <button class="tactile_button">
+          <div class="content">
+            <div class="icon">
+              <svg
+                width="5"
+                height="6"
+                viewBox="0 0 5 6"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M0.296746 3.00007C0.335318 2.25735 0.476746 1.28878 0.836746 0.576925C0.863776 0.523552 0.903593 0.477696 0.952648 0.443448C1.0017 0.409199 1.05847 0.387622 1.11789 0.38064C1.49785 0.338764 1.87992 0.319016 2.26217 0.321497C2.63889 0.321497 2.97103 0.349354 3.22817 0.383211C3.48746 0.417497 3.62332 0.687497 3.5196 0.927497L3.1116 1.87464C3.46903 1.8875 3.74803 1.91621 4.00732 1.96893C4.06192 1.97865 4.11335 2.00148 4.15719 2.03545C4.20103 2.06942 4.23597 2.11352 4.25903 2.16396C4.28208 2.21441 4.29255 2.26969 4.28954 2.32507C4.28653 2.38045 4.27013 2.43428 4.24175 2.48193C3.78746 3.26621 2.71603 4.55793 1.16632 5.67864C1.16632 4.84078 1.31332 4.26435 1.57132 3.42864H0.714175C0.658169 3.42951 0.602576 3.41893 0.550803 3.39755C0.49903 3.37617 0.452167 3.34445 0.413085 3.30433C0.374004 3.2642 0.343526 3.21652 0.323522 3.1642C0.303517 3.11188 0.294406 3.05603 0.296746 3.00007Z"
+                  stroke="#6D6D6C"
+                  stroke-width="0.57"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+        </button>
+      </li>-->
       <li>
+        <button class="tactile_button" on:click={() => window.api.toggleFullscreen()}>
+          <div class="content">
+            <div class="icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16 4H20V8"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M14 10L20 4"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M8 20H4V16"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M4 20L10 14"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M16 20H20V16"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M14 14L20 20"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M8 4H4V8"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M4 4L10 10"
+                  stroke="black"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+        </button>
+      </li>
+      <!-- Theme -->
+      <!--<li>
         <button class="tactile_button">
           <div class="content">
             <div class="icon">
@@ -158,12 +303,11 @@
                 />
               </svg>
             </div>
-            <!--<p class="button__text">command</p>-->
           </div>
         </button>
-      </li>
+      </li>-->
       <!-- Turbo Mode -->
-      <li>
+      <!--<li>
         <button class="tactile_button">
           <div class="content">
             <div class="icon">
@@ -183,13 +327,12 @@
                 />
               </svg>
             </div>
-            <!--<p class="button__text">command</p>-->
           </div>
         </button>
-      </li>
+      </li>-->
       <!-- Power Button -->
       <li>
-        <button class="tactile_button">
+        <button class="tactile_button" on:click={onQuitApp}>
           <div class="content">
             <div class="icon">
               <svg
@@ -292,7 +435,11 @@
     width: 70px;
     z-index: 500;
     padding-block: 10px;
-    padding-left: 10px;
+    padding-inline: 10px;
+    backdrop-filter: blur(9px);
+    background: #132411;
+    background: #586e84;
+    background-color: #f4f5f6;
 
     display: flex;
     flex-direction: column;
@@ -309,7 +456,7 @@
       padding: 5px;
 
       border: 0.5px solid rgba(90, 87, 57, 0.08);
-      background: #d3cfc6;
+      background: #d4d3ce;
       box-shadow:
         1px 1px 3px 0px rgba(255, 255, 255, 0.35) inset,
         -2px -2px 2px 0px rgba(0, 0, 0, 0.05) inset;
@@ -320,6 +467,15 @@
         gap: 0.5rem;
         gap: 4px;
       }
+    }
+
+    & .name {
+      font-size: 0.95em;
+      transform: rotate(-90deg);
+      text-align: center;
+      opacity: 70%;
+      text-wrap: nowrap;
+      user-select: none;
     }
   }
   ul,

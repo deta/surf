@@ -31,9 +31,9 @@
       class:selected={tab.key === selected}
     >
       {#if tab.icon}
-        <Icon name={tab.icon} size="20px" color={tab.key === selected ? '#EA6FFE' : '#959599'} />
+        <Icon name={tab.icon} size="20px" color={tab.key === selected ? '#FFFFFF' : '#959599'} />
       {/if}
-      <!-- <span>{tab.label}</span> -->
+      <span>{tab.label}</span>
     </button>
   {/each}
 </div>
@@ -42,6 +42,7 @@
   .drawer-tabs {
     display: flex;
     align-items: center;
+    padding: 0 0.5rem;
     gap: 0.5rem;
   }
 
@@ -58,7 +59,7 @@
     font-size: 1rem;
     padding: 0.5rem 1rem;
     border-radius: 8px;
-    cursor: pointer;
+    cursor: default;
     transition-property: background-color, color;
     transition-duration: 0.2s;
     transition-timing-function: ease;
@@ -69,11 +70,13 @@
     }
 
     &.selected {
-      color: var(--color-text);
+      color: white;
+      background: var(--color-brand);
     }
 
     &.selected:hover {
-      background-color: transparent;
+      color: white;
+      background: var(--color-brand);
     }
   }
 </style>

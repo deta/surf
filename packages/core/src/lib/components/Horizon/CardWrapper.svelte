@@ -1,8 +1,8 @@
 <!-- <svelte:options immutable={true} /> -->
 
 <script lang="ts">
-  import { SvelteComponent, createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { derived, get, writable, type Writable } from 'svelte/store'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { get, type Writable } from 'svelte/store'
   import { tooltip } from '@svelte-plugins/tooltips'
 
   import {
@@ -10,7 +10,6 @@
     Positionable,
     Resizable,
     type IPositionable,
-    LazyComponent,
     hasClassOrParentWithClass,
     posToAbsolute
   } from '@horizon/tela'
@@ -30,8 +29,7 @@
     getCardOnPane
   } from '../../utils/focusMode'
   import { visorEnabled } from '../../utils/visor'
-  import type { RelativePositioning } from '../../service/magicField'
-  import { flyMenuItems, flyMenuOpen, flyMenuType, openFlyMenu } from '../FlyMenu/FlyMenu.svelte'
+  import { openFlyMenu } from '../FlyMenu/FlyMenu.svelte'
   import { buildCardList, buildMultiCardList } from '../FlyMenu/flyMenu'
 
   export let positionable: Writable<IPositionable<any>>
@@ -128,12 +126,12 @@
   }
 
   const handleMouseDown = (event: MouseEvent) => {
-    if (event.button === 2) {
-      selection.set(new Set([...$selection.values(), $card.id]))
-      openFlyMenu('cursor', $selection.size > 1 ? buildMultiCardList() : buildCardList())
-      event.stopPropagation()
-      return
-    }
+    // if (event.button === 2) {
+    //   selection.set(new Set([...$selection.values(), $card.id]))
+    //   openFlyMenu('cursor', $selection.size > 1 ? buildMultiCardList() : buildCardList())
+    //   event.stopPropagation()
+    //   return
+    // }
 
     if (event.metaKey || event.ctrlKey) {
       if ($visorEnabled) {
@@ -210,10 +208,10 @@
       }
     }
 
-    horizon.telaSettings?.update((v) => {
-      v.CAN_SELECT = true
-      return v
-    })
+    // horizon.telaSettings?.update((v) => {
+    //   v.CAN_SELECT = true
+    //   return v
+    // })
 
     if ($focusModeEnabled) return
     dispatch('endDrag', $card)
@@ -247,7 +245,7 @@
       log.debug('double click')
 
       positionable.update((p) => {
-        p.height = ($viewPort?.h ?? window.innerHeight) - p.y - DRAGGING_MENU_PADDING
+        p.height = $viewPort.h - p.y
         return p
       })
     } else {
@@ -411,7 +409,7 @@
 
     if (isDragging) return
     const cardHeaderPt = {
-      x: $card.x - $viewOffset.x + $card.width / 2,
+      x: $card.x + 70 - $viewOffset.x + $card.width / 2,
       y: $card.y - $viewOffset.y - $viewPort.y
     }
     const distance = Math.sqrt(

@@ -50,7 +50,12 @@ export class WebParser {
     const hostname = this.url.hostname
     const app = SUPPORTED_APPS.find((app) => app.matchHostname.test(hostname))
 
-    return !!app
+    if (!app) return false
+
+    const Parser = ParserModules[app.id as keyof typeof ParserModules]
+    if (!Parser) return false
+
+    return true
   }
 
   detectApp() {

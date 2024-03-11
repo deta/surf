@@ -20,7 +20,7 @@ function runAppDetection() {
   }
 
   if (!appParser) {
-    console.warn('No app parser found for', window.location.href)
+    console.error('No app parser found for', window.location.href)
     return
   }
 
@@ -38,6 +38,7 @@ function runResourceDetection() {
   if (appParser) {
     appParser.extractResourceFromDocument(document).then((resource) => {
       console.log('Resource', resource)
+      console.log('Sending detected-resource event')
       sendPageEvent('detected-resource', { resource })
     })
   }

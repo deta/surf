@@ -55,7 +55,7 @@ export function buildDefaultList() {
     // { icon: '', value: 'Twitter', type: 'app' },
 
     { icon: '🔮', value: 'Summarize', type: 'magic-card' },
-    // { icon: '🔮', value: 'Transcribe', type: 'magic-card' },
+    { icon: '🔮', value: 'Transcribe', type: 'magic-card' },
 
     // { icon: '⚡️', value: 'Open Overview', type: 'action' },
     // { icon: '⚡️', value: 'Open Visor', type: 'action' },

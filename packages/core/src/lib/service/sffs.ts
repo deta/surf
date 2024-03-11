@@ -254,6 +254,25 @@ export class SFFS {
     return this.convertCompositeResourceToResource(composite)
   }
 
+  async updateResourceMetadata(id: string, metadata: SFFSResourceMetadata) {
+    const dataString = await this.backend.js__store_get_resource(id)
+    const composite = this.parseData<SFFSRawCompositeResource>(dataString)
+    if (!composite || !composite.metadata) {
+      throw new Error('failed to update resource, invalid resource data', dataString)
+    }
+
+    const stringified = JSON.stringify({
+      id: composite.metadata.id,
+      resource_id: composite.resource.id,
+      name: metadata.name,
+      source_uri: metadata.sourceURI,
+      alt: metadata.alt,
+      user_context: metadata.userContext
+    } as SFFSRawResourceMetadata)
+
+    return this.backend.js__store_update_resource_metadata(stringified)
+  }
+
   async deleteResource(id: string): Promise<void> {
     this.log.debug('deleting resource with id', id)
     await this.backend.js__store_remove_resource(id)
@@ -285,6 +304,23 @@ export class SFFS {
       )
     )
     const raw = await this.backend.js__store_search_resources(query, tagsData)
+    const parsed = this.parseData<SFFSSearchResult>(raw)
+    const items = parsed?.items ?? []
+
+    this.log.debug('search results', items)
+    return items.map((item) => ({
+      ...item,
+      engine: item.engine.toLowerCase() as SFFSSearchResultEngine,
+      resource: this.convertCompositeResourceToResource(item.resource)
+    }))
+  }
+
+  async searchForNearbyResources(resourceId: string, threshold?: number, limit?: number) {
+    const raw = await this.backend.js__store_proximity_search_resources(
+      resourceId,
+      threshold,
+      limit
+    )
     const parsed = this.parseData<SFFSSearchResult>(raw)
     const items = parsed?.items ?? []
 

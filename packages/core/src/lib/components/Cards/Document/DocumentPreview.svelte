@@ -2,21 +2,21 @@
   import { onDestroy, onMount } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
-  import type { ResourcePost } from '../../../service/resources'
-  import type { ResourceDataPost } from '../../../types'
+  import type { ResourceDocument } from '../../../service/resources'
+  import type { ResourceDataDocument, ResourceDataPost } from '../../../types'
   import Link from '../../Atoms/Link.svelte'
 
-  export let resource: ResourcePost
+  export let resource: ResourceDocument
   export let type: string
 
-  const log = useLogScope('PostPreview')
+  const log = useLogScope('DocumentPreview')
 
-  let post: ResourceDataPost | null = null
+  let document: ResourceDataDocument | null = null
   let title = ''
   let subtitle = ''
   let error = ''
-  let isTwitter = false
-  let isReddit = false
+  let isNotion = false
+  let isGoogleDocs = false
 
   const MAX_TITLE_LENGTH = 300
   const MAX_SUBTITLE_LENGTH = 100
@@ -28,24 +28,24 @@
   onMount(async () => {
     try {
       log.debug('MOUNT')
-      post = await resource.getParsedData()
+      document = await resource.getParsedData()
 
-      console.log('postdata', post)
+      console.log('documentdata', document)
 
-      const url = new URL(post.url)
+      const url = new URL(document?.url)
 
       const hostname = url.hostname.split('.').slice(-2, -1).join('')
       title = truncate(
-        post.title || post.excerpt || hostname[0].toUpperCase() + hostname.slice(1),
+        document.content_html || hostname[0].toUpperCase() + hostname.slice(1),
         MAX_TITLE_LENGTH
       )
       // subtitle = truncate(
-      //   post.excerpt || post.content_plain || `${url.hostname}${url.pathname}`,
+      //   document.excerpt || document.content_plain || `${url.hostname}${url.pathname}`,
       //   MAX_SUBTITLE_LENGTH
       // )
 
-      isTwitter = type === 'application/vnd.space.post.twitter'
-      isReddit = type === 'application/vnd.space.post.reddit'
+      isNotion = type === 'application/vnd.space.document.notion'
+      isGoogleDocs = type === 'application/vnd.space.document.googleDocs'
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
@@ -53,37 +53,31 @@
   })
 
   onDestroy(() => {
-    resource.releaseData()
+    // resource.releaseData()
   })
 </script>
 
 <div class="link-card">
-  <!-- <a href={post?.url} target="_blank" class="link-card"> -->
-  <div class="details" class:twitter={isTwitter} class:reddit={isReddit}>
+  <!-- <a href={document?.url} target="_blank" class="link-card"> -->
+  <div class="details" class:notion={isNotion} class:googleDocs={isGoogleDocs}>
     {#if error}
       <div class="title">{error}</div>
-      <div class="subtitle">{post?.url}</div>
+      <div class="subtitle">{document?.url}</div>
     {:else}
       <!-- <img
         class="favicon"
-        src={`https://www.google.com/s2/favicons?domain=${post?.site_icon}&sz=256`}
-        alt={`${post?.site_name} favicon`}
+        src={`https://www.google.com/s2/favicons?domain=${document?.site_icon}&sz=256`}
+        alt={`${document?.site_name} favicon`}
       /> -->
       <img
         class="favicon"
-        src={`https://www.google.com/s2/favicons?domain=${post?.url}&sz=256`}
-        alt={`${post?.site_name} favicon`}
+        src={`https://www.google.com/s2/favicons?domain=${document?.url}&sz=256`}
+        alt={`${document?.url} favicon`}
       />
-      <div class="title">{title}</div>
-      <div class="post-metadata">
-        <Link
-          class="link"
-          url={post?.author_url}
-          label={`From ${post?.author}`}
-          color={isTwitter || isReddit ? 'white' : 'inherit'}
-        />
-        {#if isTwitter}<div class="from">Tweet</div>{/if}
-        {#if isReddit}<div class="from">Reddit Post</div>{/if}
+      <div class="title">{document?.title}</div>
+      <div class="document-metadata">
+        {#if isNotion}<div class="from">Notion</div>{/if}
+        {#if isGoogleDocs}<div class="from">Google Docs</div>{/if}
       </div>
     {/if}
   </div>
@@ -110,10 +104,9 @@
     flex-grow: 1;
   }
 
-  .twitter,
-  .reddit {
+  .googleDocs {
     .title,
-    .post-metadata > .from {
+    .document-metadata > .from {
       color: #ffffff;
     }
   }
@@ -137,7 +130,7 @@
     margin-top: 1rem;
     max-width: 95%;
   }
-  .post-metadata {
+  .document-metadata {
     display: flex;
     flex-direction: column;
     padding: 0.5rem 0;

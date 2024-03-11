@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount, setContext, tick } from 'svelte'
   import { get, writable } from 'svelte/store'
-  import { fade } from 'svelte/transition'
+  import { draw, fade } from 'svelte/transition'
 
   import { Lethargy } from 'lethargy-ts'
   import { twoFingers, type Gesture } from '@horizon/core/src/lib/utils/two-fingers'
@@ -328,11 +328,7 @@
       }
     } else if (event.key === 'g') {
       if (drawer.isShown()) {
-        if (drawer.getSize() === 'full') {
-          drawer.setSize('normal')
-        } else {
-          drawer.setSize('full')
-        }
+        drawer.close()
       } else {
         drawer.open()
       }
@@ -344,8 +340,8 @@
           drawer.setSize('full')
         }
       }
-    } else if (event.key === 'i') {
-      $activeHorizon?.addCardAIText({
+    } else if (event.key === 'u') {
+      $activeHorizon?.addCardAudioTranscriber({
         x: 300,
         y: 300,
         width: 500,
@@ -691,7 +687,11 @@
 </svelte:head>
 
 <SplashScreen />
-<AppBar horizon={activeHorizon} on:createHorizon={() => addHorizon()} />
+<AppBar
+  horizon={activeHorizon}
+  on:createHorizon={() => addHorizon()}
+  on:toggleOasis={() => (drawer.isShown() ? drawer.close() : drawer.open())}
+/>
 
 {#if $visorEnabled}
   <div id="visor">

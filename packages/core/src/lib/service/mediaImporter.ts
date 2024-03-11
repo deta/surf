@@ -11,11 +11,11 @@ export enum MEDIA_TYPES {
 }
 
 export const DATA_TYPES = [
+  MEDIA_TYPES.RESOURCE,
   'text/html',
   'text/plain',
   'text/uri-list',
-  'text/tiptap',
-  MEDIA_TYPES.RESOURCE
+  'text/tiptap'
 ]
 export const SUPPORTED_MIMES = [
   'text/plain',
@@ -211,6 +211,9 @@ export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
     if (!data || data.trim() === '') continue
 
     switch (type) {
+      case MEDIA_TYPES.RESOURCE:
+        results.push({ data: data, type: 'resource', metadata: {} })
+        break
       case 'text/html':
         const files = await processHTMLData(data)
         results.push(
@@ -244,9 +247,6 @@ export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
         const richText = await processRichTextData(data)
         results.push({ data: richText, type: 'text', metadata: {} })
         break
-      case MEDIA_TYPES.RESOURCE:
-        results.push({ data: data, type: 'resource', metadata: {} })
-        break
     }
 
     // break out of the loop after handling at least one of the
@@ -262,6 +262,21 @@ export const processFile = async (file: File) => {
 
   const fileType = parseFileType(file)
   log.debug('parsed file type', fileType)
+
+  if (file.name.startsWith('space_resource_')) {
+    const id = file.name.split('_')[2]?.split('.')[0]
+    if (id) {
+      return {
+        data: id,
+        type: 'resource',
+        metadata: {
+          name: file.name,
+          alt: '',
+          sourceURI: ''
+        }
+      } as MediaParserResult
+    }
+  }
 
   if (fileType === 'text') {
     const text = await file.text()

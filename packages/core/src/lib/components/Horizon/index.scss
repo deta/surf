@@ -126,12 +126,14 @@
 
 }
 
+/* NOTE: We should unify this styling with the ones further below! */
 .card {
   cursor: initial;
   display: flex;
   flex-direction: column;
   // overflow: hidden;
   position: relative;
+  border-radius: var(--theme-border-radius);
 
   box-shadow: rgba(255, 255, 255, 0.4) 0px 0px 25px 10px;
 
@@ -160,19 +162,21 @@
 
   &.active>.content {
     outline-color: rgba(9, 9, 9, 0.71);
+    outline-color: #E173A8;
+    border-color: #E173A8;
   }
 
   &.ai-text {
-    &::after { 
-      content: ""; 
-      position: absolute; 
-      inset: -.625em; 
-      background: linear-gradient(to bottom right, 
-          rgba(255, 0, 162, 0.50),rgb(242, 0, 255, 0.50)); 
-      filter: blur(2.5em); 
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -.625em;
+      background: linear-gradient(to bottom right,
+          rgba(255, 0, 162, 0.50), rgb(242, 0, 255, 0.50));
+      filter: blur(2.5em);
       z-index: -1;
       opacity: 0.2;
-    } 
+    }
 
     &.dragging::after {
       opacity: 0.5;
@@ -184,16 +188,16 @@
     --shadow-opacity: calc(1 - var(--magic-field-distance));
     --shadow-edge-opacity: calc(var(--shadow-opacity) * 0.25);
 
-    &::after { 
-      content: ""; 
-      position: absolute; 
-      inset: -.625em; 
-      background: linear-gradient(to bottom right, 
-          rgba(255, 0, 162, 0.50),rgb(242, 0, 255, 0.50)); 
-      filter: blur(2.5em); 
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -.625em;
+      background: linear-gradient(to bottom right,
+          rgba(255, 0, 162, 0.50), rgb(242, 0, 255, 0.50));
+      filter: blur(2.5em);
       z-index: -1;
       opacity: var(--shadow-opacity);
-    } 
+    }
   }
 
   // &.magic-field-top {
@@ -222,6 +226,7 @@
 
 .tela-container {
   padding: 10px;
+  padding-left: 80px;
   z-index: 10;
 }
 
@@ -381,6 +386,23 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
     transition: all 160ms cubic-bezier(.34, 1.56, .64, 1);
   }
 
+  .drawMenu {
+    position: absolute;
+    z-index: 99999;
+    background: pink;
+    border: 2px solid hsla(var(--theme-selection-hue), 74%, 51%, 0.8);
+    border-color: hsla(var(--theme-selection-hue),
+        var(--theme-selection-saturation),
+        var(--theme-selection-lightness),
+        1);
+    background: hsla(var(--theme-selection-hue),
+        var(--theme-selection-saturation), calc(var(--theme-selection-lightness) + 10%), 0.3);
+    color: hsla(var(--theme-selection-hue),
+        var(--theme-selection-saturation), calc(var(--theme-selection-lightness) - 10%), 0.5);
+    border-radius: var(--theme-border-radius);
+
+  }
+
   .selectionRect.select {
     border-style: dashed;
     background: transparent !important;
@@ -471,7 +493,8 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
   border-radius: 150px;
   padding: 2px;
   pointer-events: inherit;
-
+  //mix-blend-mode: difference; // <- Make it invert on black white
+  border: 0.5px solid rgba(100, 100, 100, 0.5);
   transition: all 120ms ease-in-out;
   -webkit-mask: -webkit-linear-gradient(top, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 1) 50%);
 
@@ -485,6 +508,7 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
     border-radius: 0;
     // width: 20px;
     // height: 20px;
+    border-color: transparent;
     top: -7px;
 
     ul>li:nth-child(2) {
@@ -560,30 +584,17 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
   background: transparent !important;
   z-index: 100000;
 
-
-  &.default {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    //-webkit-mask-image: -webkit-linear-gradient(top, rgba(0, 0, 0, 0) 75%, rgba(0, 0, 0, 1) 87%);
-
-    .flyMenu {
-      margin: 0 auto;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: 4rem;
-    }
+  &:not(.open) {
+    display: none;
   }
 
   &.cursorMode {
     position: absolute;
     min-width: 200px;
-    min-height: 300px;
+    //min-height: 300px;
 
     .flyMenu {
-      transform: translateY(-98%);
+      //transform: translateY(-98%);
     }
 
     [data-cmdk-root] {

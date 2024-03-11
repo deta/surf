@@ -10,6 +10,8 @@
     Resource,
     ResourceArticle,
     ResourceChatMessage,
+    ResourceChatThread,
+    ResourceDocument,
     ResourceLink,
     ResourceNote,
     ResourcePost
@@ -22,7 +24,9 @@
   import PostPreview from '../Cards/Post/PostPreview.svelte'
   import ChatMessagePreview from '../Cards/ChatMessage/ChatMessagePreview.svelte'
   import ArticlePreview from '../Cards/Article/ArticlePreview.svelte'
+  import DocumentPreview from '../Cards/Document/DocumentPreview.svelte'
   import ArticleProperties from '@horizon/drawer/src/lib/components/properties/ArticleProperties.svelte'
+  import ChatThreadPreview from '../Cards/ChatThread/ChatThreadPreview.svelte'
 
   export let resource: Resource
 
@@ -33,7 +37,8 @@
     dispatch('click', resource.id)
   }
 
-  const handleRemove = () => {
+  const handleRemove = (e: MouseEvent) => {
+    e.stopImmediatePropagation()
     dispatchRemove('remove', resource.id)
   }
 
@@ -43,15 +48,18 @@
   $: postResource = resource as ResourcePost
   $: articleResource = resource as ResourceArticle
   $: chatMessageResource = resource as ResourceChatMessage
+  $: chatThreadResource = resource as ResourceChatThread
+  $: documentResource = resource as ResourceDocument
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div on:click={handleClick} class="resource-preview">
+<div on:click={handleClick} class="resource-preview" style="--id:{resource.id};">
   <div
     class="preview"
     class:reddit={resource.type === 'application/vnd.space.post.reddit'}
     class:twitter={resource.type === 'application/vnd.space.post.twitter'}
     class:slack={resource.type === 'application/vnd.space.chat-message.slack'}
+    class:notion={resource.type === 'application/vnd.space.document.notion'}
   >
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
       <TextPreview resource={textResource} />
@@ -63,6 +71,10 @@
       <ArticlePreview resource={articleResource} />
     {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
       <ChatMessagePreview resource={chatMessageResource} type={resource.type} />
+    {:else if resource.type.startsWith(ResourceTypes.CHAT_THREAD)}
+      <ChatThreadPreview resource={chatThreadResource} type={resource.type} />
+    {:else if resource.type.startsWith(ResourceTypes.DOCUMENT)}
+      <DocumentPreview resource={documentResource} type={resource.type} />
     {:else}
       <FilePreview {resource} />
       <!-- {:else}
@@ -86,6 +98,12 @@
       {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
         <Icon name="docs" size="20px" />
         <div class="">Message</div>
+      {:else if resource.type.startsWith(ResourceTypes.CHAT_THREAD)}
+        <Icon name="link" size="20px" />
+        <div class="">Thread</div>
+      {:else if resource.type.startsWith(ResourceTypes.DOCUMENT)}
+        <Icon name="docs" size="20px" />
+        <div class="">Document</div>
       {:else}
         <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
         <div class="">{getFileType(resource.type) ?? 'File'}</div>
@@ -147,7 +165,7 @@
     flex-direction: column;
     border-radius: 8px;
     overflow: visible;
-    cursor: pointer;
+    cursor: default;
     &:hover {
       .remove {
         opacity: 1;
@@ -173,6 +191,10 @@
     &.reddit {
       border: 1px solid rgba(255, 255, 255, 0.2);
       background: radial-gradient(100% 100% at 50% 0%, #ff4500 0%, #ff7947 100%);
+    }
+    &.notion {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: radial-gradient(100% 100% at 50% 0%, #fff 0%, #fafafa 100%);
     }
   }
 
@@ -202,7 +224,7 @@
     background: white;
     border-radius: 50%;
     border: 0.5px solid rgba(0, 0, 0, 0.15);
-    cursor: pointer;
+    cursor: default;
   }
 
   .type {

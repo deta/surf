@@ -12,9 +12,11 @@
   import { getFileKind } from '../../../utils/files'
   import VideoView from './VideoView.svelte'
   import AudioView from './AudioView.svelte'
+  import type { MagicFieldParticipant } from '../../../service/magicField'
 
   export let card: Writable<Card>
   export let horizon: Horizon
+  export let magicFieldParticipant: MagicFieldParticipant | null = null
 
   const log = useLogScope('FileCard')
 
@@ -24,6 +26,13 @@
   let data: Blob | null = null
 
   $: fileKind = data ? getFileKind(data.type) : null
+
+  const handleDragStart = (event: DragEvent) => {
+    if (!resource) return
+
+    event.preventDefault()
+    window.api.startDrag(resource.id, resource.path, resource.type)
+  }
 
   onMount(async () => {
     try {
@@ -57,14 +66,14 @@
   })
 </script>
 
-<div class="file-card">
+<div class="file-card" on:dragstart={handleDragStart} draggable="true">
   {#if error}
     <p>{error}</p>
   {:else if loading}
     <p>Loading…</p>
   {:else if resource && data}
     {#if fileKind === 'image'}
-      <div class="image">
+      <div class="image" style="height:100%;">
         <ImageView blob={data} />
       </div>
     {:else if data.type === 'application/pdf'}
@@ -72,7 +81,7 @@
     {:else if fileKind === 'video'}
       <VideoView {resource} blob={data} />
     {:else if fileKind === 'audio'}
-      <AudioView {resource} blob={data} />
+      <AudioView {magicFieldParticipant} {resource} blob={data} />
     {:else}
       <UnknownFileView {resource} blob={data} />
     {/if}
@@ -83,16 +92,18 @@
   .file-card {
     width: 100%;
     height: 100%;
-    display: flex;
+    /*display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: stretch;*/
     margin: 0;
     padding: 0;
   }
 
-  .image {
+  /* NOTE: Not sure why it is here, lemme know if it breka sth. but disabled it for now, any unneeded box-shadows only consume performance
+            and I couldnt find a visual goal this servers */
+  /*.image {
     border-radius: 2px;
     box-shadow: 0px 0px 1px 0px rgba(255, 255, 255, 0.09) inset;
-  }
+  }*/
 </style>

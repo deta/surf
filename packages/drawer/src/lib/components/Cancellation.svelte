@@ -28,5 +28,6 @@
     z-index: 10;
     padding: 0.5rem 0 1.5rem 0;
     color: #848484;
+    cursor: default;
   }
 </style>

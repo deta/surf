@@ -1,7 +1,8 @@
-import { ipcMain } from 'electron'
+import { ipcMain, app } from 'electron'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
 import { getUserConfig } from './config'
+import { handleDragStart } from './drag'
 
 export function setupIpcHandlers() {
   ipcMain.handle('set-adblocker-state', async (_, { partition, state }) => {
@@ -59,6 +60,25 @@ export function setupIpcHandlers() {
 
   ipcMain.handle('get-user-config', async (_) => {
     return getUserConfig()
+  })
+
+  ipcMain.on(
+    'start-drag',
+    async (event, resourceId: string, filePath: string, fileType: string) => {
+      console.log('Start drag', resourceId, filePath, fileType)
+      const sender = event.sender
+      await handleDragStart(sender, resourceId, filePath, fileType)
+      console.log('Drag started')
+    }
+  )
+
+  ipcMain.handle('quit-app', () => {
+    app.quit()
+  })
+
+  ipcMain.handle('toggle-fullscreen', () => {
+    const window = getMainWindow()
+    window?.setFullScreen(!window.fullScreen)
   })
 }
 

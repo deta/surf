@@ -36,6 +36,7 @@
   import type { MagicFieldParticipant } from '../../../service/magicField'
   import { focusModeEnabled, exitFocusMode, enterFocusMode } from '../../../utils/focusMode'
   import { getServiceRanking, updateServiceRanking } from '../../../utils/services'
+  import { visorEnabled } from '../../../utils/visor'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -54,9 +55,6 @@
   let inputEl: HTMLInputElement
   let findInPage: FindInPage | undefined
   let currentCardHistory = writable()
-
-  // TODO: Move into visor.ts
-  $: visorEnabled = horizon.visorEnabled
 
   let initialSrc = $card.data.initialLocation
   $: if ($card.data.historyStackIds) {
@@ -357,6 +355,20 @@
     app = detecteApp
   }
 
+  function handleAddressDragStart(e: DragEvent) {
+    if (!e.dataTransfer) {
+      log.error('no data transfer')
+      return
+    }
+
+    log.debug('dragging url', $url)
+
+    const urlData = $url ?? ''
+
+    e.dataTransfer.setData('text/uri-list', urlData)
+    e.dataTransfer.setData('text/space-source', urlData)
+  }
+
   onMount(() => {
     magicFieldParticipant?.onFieldEnter((field) => {
       if (!magicFieldParticipant) return
@@ -489,7 +501,7 @@
             />
           </div>
         {/if}
-        <div class="navbar-wrapper">
+        <div class="navbar-wrapper" draggable="true" on:dragstart={handleAddressDragStart}>
           <input
             on:focus={() => (editing = true)}
             on:blur={() => {

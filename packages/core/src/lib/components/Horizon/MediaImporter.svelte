@@ -173,6 +173,8 @@
         return
       }
 
+      log.debug('bookmark', bookmark)
+
       createBrowserCard(new URL(bookmark.url), pos, resource.id)
     } else {
       horizon.addCard({

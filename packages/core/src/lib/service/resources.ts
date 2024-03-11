@@ -14,7 +14,8 @@ import {
   type ResourceDataChatThread,
   type SFFSSearchResultEngine,
   ResourceTagsBuiltInKeys,
-  type ResourceTagsBuiltIn
+  type ResourceTagsBuiltIn,
+  type ResourceDataDocument
 } from '../types'
 
 /*
@@ -197,7 +198,11 @@ export class ResourceJSON<T> extends Resource {
     // this.data = writable(null)
   }
 
-  async getParsedData() {
+  async getParsedData(fresh = false) {
+    if (this.parsedData && !fresh) {
+      return this.parsedData
+    }
+
     const data = await this.getData()
     const text = await data.text()
     const parsed = JSON.parse(text) as T
@@ -218,6 +223,7 @@ export class ResourceArticle extends ResourceJSON<ResourceDataArticle> {}
 export class ResourceLink extends ResourceJSON<ResourceDataLink> {}
 export class ResourceChatMessage extends ResourceJSON<ResourceDataChatMessage> {}
 export class ResourceChatThread extends ResourceJSON<ResourceDataChatThread> {}
+export class ResourceDocument extends ResourceJSON<ResourceDataDocument> {}
 
 export type ResourceObject =
   | Resource
@@ -260,6 +266,8 @@ export class ResourceManager {
       return new ResourceChatMessage(this.sffs, data)
     } else if (data.type.startsWith(ResourceTypes.CHAT_THREAD)) {
       return new ResourceChatThread(this.sffs, data)
+    } else if (data.type.startsWith(ResourceTypes.DOCUMENT)) {
+      return new ResourceDocument(this.sffs, data)
     } else {
       return new Resource(this.sffs, data)
     }
@@ -319,6 +327,21 @@ export class ResourceManager {
 
     // we probably don't want to overwrite the existing resources
     // this.resources.set(resources)
+
+    return results
+  }
+
+  async searchForNearbyResources(resourceId: string) {
+    const rawResults = await this.sffs.searchForNearbyResources(resourceId)
+    const results = rawResults.map(
+      (item) =>
+        ({
+          id: item.resource.id,
+          engine: item.engine,
+          cardIds: item.card_ids,
+          resource: this.createResourceObject(item.resource)
+        }) as ResourceSearchResultItem
+    )
 
     return results
   }
@@ -387,6 +410,21 @@ export class ResourceManager {
     }
 
     return resource.updateData(data, write)
+  }
+
+  async updateResourceMetadata(id: string, updates: Partial<SFFSResourceMetadata>) {
+    const resource = await this.getResource(id)
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    const fullMetadata = Object.assign(resource.metadata ?? {}, updates) as SFFSResourceMetadata
+
+    this.log.debug('updating resource metadata', id, fullMetadata)
+
+    await this.sffs.updateResourceMetadata(id, fullMetadata)
+
+    resource.updateMetadata(updates)
   }
 
   async createResourceNote(
