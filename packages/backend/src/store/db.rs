@@ -284,12 +284,25 @@ impl Database {
         Ok(result)
     }
 
+    pub fn count_resource_refs_in_cards_tx(
+        tx: &mut rusqlite::Transaction,
+        resource_id: &str,
+        horizon_id: &str,
+    ) -> BackendResult<i64> {
+        let count: i64 = tx.query_row(
+            "SELECT COUNT(*) FROM cards WHERE resource_id = ?1 AND horizon_id = ?2",
+            rusqlite::params![resource_id, horizon_id],
+            |row| Ok(row.get(0)?),
+        )?;
+        Ok(count)
+    }
+
     pub fn create_resource_tag_tx(
         tx: &mut rusqlite::Transaction,
         resource_tag: &ResourceTag,
     ) -> BackendResult<()> {
         tx.execute(
-            "INSERT INTO resource_tags (id, resource_id, tag_name, tag_value) VALUES (?1, ?2, ?3, ?4)",
+            "INSERT INTO resource_tags (id, resource_id, tag_name, tag_value) VALUES (?1, ?2, ?3, ?4) ON CONFLICT(resource_id, tag_name, tag_value) DO NOTHING",
             rusqlite::params![resource_tag.id, resource_tag.resource_id, resource_tag.tag_name, resource_tag.tag_value]
         )?;
         Ok(())
