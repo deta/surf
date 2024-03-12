@@ -835,6 +835,35 @@ impl Database {
         Ok(result)
     }
 
+    pub fn list_cards_by_resource_id(&self, resource_id: &str) -> BackendResult<Vec<Card>> {
+        let mut result: Vec<Card> = Vec::new();
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM cards WHERE resource_id = ?1")?;
+
+        let cards = stmt.query_map(rusqlite::params![resource_id], |row| {
+            Ok(Card {
+                id: row.get(0)?,
+                horizon_id: row.get(1)?,
+                card_type: row.get(2)?,
+                resource_id: row.get(3)?,
+                position_x: row.get(4)?,
+                position_y: row.get(5)?,
+                width: row.get(6)?,
+                height: row.get(7)?,
+                stacking_order: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+                data: row.get(11)?,
+            })
+        })?;
+
+        for card in cards {
+            result.push(card?);
+        }
+        Ok(result)
+    }
+
     pub fn list_card_ids_by_resource_id(&self, resource_id: &str) -> BackendResult<Vec<String>> {
         let mut stmt = self
             .conn
