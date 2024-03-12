@@ -114,8 +114,13 @@ export function createWindow() {
     attachContextMenu(contents)
   })
 
+  mainWindow.webContents.on('will-navigate', (event) => {
+    getMainWindow()?.webContents.send('new-window-request', { url: event.url })
+    event.preventDefault()
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
-    shell.openExternal(details.url)
+    getMainWindow()?.webContents.send('new-window-request', details)
     return { action: 'deny' }
   })
 

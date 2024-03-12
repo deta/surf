@@ -14,12 +14,12 @@ import OpenAI, { toFile } from 'openai'
 
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
-
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
 const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
+let mainNewWindowHandler: any = null
 const webviewNewWindowHandlers = {}
 const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
@@ -49,6 +49,9 @@ const api = {
 
   onFullscreenChange: (callback: any) => {
     fullscreenHandlers.push(callback)
+  },
+  registerMainNewWindowHandler: (callback: any) => {
+    mainNewWindowHandler = callback
   },
   registerNewWindowHandler: (webContentsId: number, callback: any) => {
     webviewNewWindowHandlers[webContentsId] = callback
@@ -179,6 +182,11 @@ ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {
 })
 
 ipcRenderer.on('new-window-request', (_, { webContentsId, ...data }) => {
+  if (!webContentsId) {
+    if (mainNewWindowHandler) mainNewWindowHandler(data)
+    return
+  }
+
   const handler = webviewNewWindowHandlers[webContentsId]
   if (handler) {
     handler(data)
