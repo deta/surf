@@ -5,11 +5,16 @@ import type TypedEmitter from 'typed-emitter'
 import type { CardPosition } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 
+export type ParticipantData = {
+  type: string
+  data: any
+}
+
 export type ParticipantEvents = {
   created: (participant: MagicFieldParticipant) => void
   enterField: (field: MagicField) => void
   connectField: (field: MagicField) => void
-  requestData: (type: string, callback: (data: any) => void) => void
+  requestData: (types: string[], callback: (data: ParticipantData) => void) => void
   leaveField: (field: MagicField) => void
   destroyed: () => void
 }
@@ -93,7 +98,7 @@ export class MagicFieldParticipant {
     this.events.emit(event, ...args)
   }
 
-  onRequestData(handler: (type: string, callback: (data: any) => void) => void) {
+  onRequestData(handler: (types: string[], callback: (data: any) => void) => void) {
     this.events.on('requestData', handler)
   }
 
@@ -136,7 +141,7 @@ const DEFAULT_FIELD_STRENGTH = 200
 export class MagicField {
   id: string
   strength: number
-  supportedResource: string
+  supportedResources: string[]
   position: Writable<CardPosition | null>
 
   fieldParticipation: Writable<MagicFieldParticipation | null>
@@ -148,14 +153,14 @@ export class MagicField {
 
   constructor(
     id: string,
-    supportedResource: string,
+    supportedResources: string[],
     position?: Writable<CardPosition | null>,
     strength: number = DEFAULT_FIELD_STRENGTH
   ) {
     this.id = id
     this.position = position ?? writable(null)
     this.strength = strength
-    this.supportedResource = supportedResource
+    this.supportedResources = supportedResources
 
     this.fieldParticipation = writable(null)
 
@@ -190,9 +195,12 @@ export class MagicField {
     this.events.emit(event, ...args)
   }
 
-  requestDataFromParticipant(participantId: string, type: string) {
+  requestDataFromParticipant(
+    participantId: string,
+    types: string[]
+  ): Promise<ParticipantData | null> {
     return new Promise((resolve) => {
-      this.log.debug(`Requesting data of type ${type} from participant ${participantId}`)
+      this.log.debug(`Requesting data of type ${types} from participant ${participantId}`)
 
       const participant = this.getParticipant(participantId)
       if (!participant) {
@@ -200,12 +208,12 @@ export class MagicField {
       }
 
       const timeout = setTimeout(() => {
-        this.log.warn(`Request for data of type ${type} timed out`)
+        this.log.warn(`Request for data of type ${types} timed out`)
         resolve(null)
       }, EVENT_RESPONSE_TIMEOUT)
 
-      participant.events.emit('requestData', type, (data) => {
-        this.log.debug(`Received data of type ${type}`, data)
+      participant.events.emit('requestData', types, (data) => {
+        this.log.debug(`Received data of type ${data.type}`, data.data)
         clearTimeout(timeout)
         resolve(data)
       })
@@ -490,14 +498,14 @@ export class MagicFieldService {
     this.participants.update((participants) => participants.filter((p) => p.id !== id))
   }
 
-  createField(id: string, supportedResource: string, position?: Writable<CardPosition | null>) {
+  createField(id: string, supportedResources: string[], position?: Writable<CardPosition | null>) {
     const existingField = this.getField(id)
     if (existingField) {
       throw new Error(`Field with id ${id} already exists`)
     }
 
     this.log.debug(`Creating field with id ${id} and position`, position ? get(position) : null)
-    const field = new MagicField(id, supportedResource, position)
+    const field = new MagicField(id, supportedResources, position)
 
     // const unsubscribe = field.position.subscribe(() => {
     //     this.recalculateFieldParticipants()

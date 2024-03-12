@@ -32,10 +32,10 @@
 
     log.debug('Getting data from participant', id)
 
-    const data = await magicField.requestDataFromParticipant(id, 'text/plain')
+    const data = await magicField.requestDataFromParticipant(id, ['text/plain'])
     log.debug('received data:', data)
 
-    return data as string | null
+    return data?.data as string
   }
 
   const summarizeText = async (text: string) => {
@@ -96,7 +96,7 @@
     log.debug("Creating magic field with card's participant", magicCardParticipant)
     magicField = magicFieldService.createField(
       $card.id,
-      'text/plain',
+      ['text/plain'],
       magicCardParticipant.position
     )
 

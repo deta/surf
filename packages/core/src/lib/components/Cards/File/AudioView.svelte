@@ -1,8 +1,6 @@
 <script lang="ts">
   import type { Resource } from '../../../service/resources'
-  import type { ResourceManager, ResourceNote } from '../../../service/resources'
-  import type { MagicField, MagicFieldParticipant } from '../../../service/magicField'
-  import type { Horizon } from '../../../service/horizon'
+  import type { MagicFieldParticipant } from '../../../service/magicField'
   import { useLogScope } from '../../../utils/log'
   import { get } from 'svelte/store'
 
@@ -16,7 +14,7 @@
     if (!magicFieldParticipant) return
     if (!get(magicFieldParticipant.fieldParticipation)) return
 
-    const isSupported = field.supportedResource === 'audio/mp3'
+    const isSupported = field.supportedResources.includes(resource.type)
 
     magicFieldParticipant.fieldParticipation.update((p) => ({
       ...p!,
@@ -28,11 +26,11 @@
     log.debug('connected to field', field)
   })
 
-  magicFieldParticipant?.onRequestData((type: string, callback) => {
-    log.debug('requestData', type)
+  magicFieldParticipant?.onRequestData((types: string[], callback) => {
+    log.debug('requestData', types)
 
-    if (type === 'audio/mp3') {
-      callback(resource.path)
+    if (types.includes(resource.type)) {
+      callback({ type: resource.type, data: resource.path })
     } else {
       callback(null)
     }

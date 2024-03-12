@@ -31,7 +31,7 @@
     if (!magicFieldParticipant) return
     if (!get(magicFieldParticipant.fieldParticipation)) return
 
-    const isSupported = field.supportedResource === 'text/plain'
+    const isSupported = field.supportedResources.includes('text/plain')
 
     magicFieldParticipant.fieldParticipation.update((p) => ({
       ...p!,
@@ -43,11 +43,11 @@
     log.debug('connected to field', field)
   })
 
-  magicFieldParticipant?.onRequestData((type: string, callback) => {
-    log.debug('requestData', type)
+  magicFieldParticipant?.onRequestData((types: string[], callback) => {
+    log.debug('requestData', types)
 
-    if (type === 'text/plain') {
-      callback($content)
+    if (types.includes('text/plain')) {
+      callback({ type: 'text/plain', data: $content })
     } else {
       callback(null)
     }
