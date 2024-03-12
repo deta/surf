@@ -5,7 +5,14 @@
     focusWebview: any
     newWindowWebview: Electron.HandlerDetails
     keyupWebview: { key: string }
-    keydownWebview: { key: string; ctrlKey: boolean; shiftKey: boolean; metaKey: boolean }
+    keydownWebview: {
+      key: string
+      code: string
+      ctrlKey: boolean
+      shiftKey: boolean
+      metaKey: boolean
+      altKey: boolean
+    }
     foundInPage: Electron.FoundInPageEvent
     selectionWebview: { text: string }
     detectedApp: DetectedWebApp

@@ -20,12 +20,13 @@
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { cubicOut, quadInOut, quadOut } from 'svelte/easing'
   import type { Readable } from 'svelte/motion'
-  import { writable, type Writable } from 'svelte/store'
+  import { derived, writable, type Writable } from 'svelte/store'
   import { fly, scale } from 'svelte/transition'
   import { type IFlyMenuItem } from './flyMenu'
   import { posToAbsolute } from '@horizon/tela'
   import { APP_BAR_WIDTH } from '../../constants/horizon'
-  import { getServiceIcon } from '../../utils/services'
+  import { getServiceIcon, getServiceRanking } from '../../utils/services'
+  import { SERVICES } from '@horizon/web-parser'
 
   export let viewOffset: Readable<{ x: number; y: number }>
   export let viewPort: Readable<{ x: number; y: number; w: number; h: number }>
@@ -33,84 +34,66 @@
 
   const dispatch = createEventDispatcher()
 
-  let state = createState()
+  const state = createState()
+  const searchVal = writable('')
+  $: search = $state.search
+  $: console.warn($state.filtered)
 
   let flyMenuEl: HTMLElement
   let inputEl: HTMLInputElement
 
   let pos = { x: 0, y: 0 }
 
+  let flyMenuWidth = 0
+  let flyMenuHeight = 0
+
   let cursorPos = {
     x: $origin ? $origin.x + $origin.width - flyMenuWidth : 0,
     y: $origin ? $origin.y + $origin.height - flyMenuHeight : 0
   }
 
-  let flyMenuWidth = 0
-  let flyMenuHeight = 0
+  function calcPos(p: { x: number; y: number }, flyMenuWidth: number, flyMenuHeight: number) {
+    const screenX = p.x - $viewOffset.x
+    let x = p.x
+    let y = p.y
 
-  $: offsetCursorLeft = $viewOffset.x + pos.x
-  $: offsetCursorTop = $viewOffset.y + pos.y
-  $: flyRightEdgeDif = offsetCursorLeft - $viewOffset.x + flyMenuWidth - $viewPort.w
-  $: flyTopEdgeDif = offsetCursorTop - flyMenuHeight
-  $: flyBottomEdgeDif = offsetCursorTop - $viewPort.h + $viewPort.y
-  $: flyLeftEdgeDig = offsetCursorLeft - APP_BAR_WIDTH
-  $: top =
-    flyTopEdgeDif <= 0
-      ? offsetCursorTop - flyTopEdgeDif
-      : flyBottomEdgeDif >= 0
-        ? offsetCursorTop - flyBottomEdgeDif
-        : offsetCursorTop
+    if (screenX < 0) x = $viewOffset.x
+    if (screenX + flyMenuWidth > $viewPort.w) x = x - (screenX + flyMenuWidth - $viewPort.w)
+    if (y < 0) y = 0
+    if (y + flyMenuHeight > $viewPort.h) y = y - (y + flyMenuHeight - $viewPort.h)
 
-  $: left =
-    flyLeftEdgeDig <= 0
-      ? offsetCursorLeft - flyLeftEdgeDig
-      : flyRightEdgeDif >= 0
-        ? offsetCursorLeft - flyRightEdgeDif
-        : offsetCursorLeft
+    return { x, y }
+  }
 
-  $: offsetFollowCursor = `left: ${pos.x}px; top: ${pos.y}px;`
+  $: offsetFollowCursor = `left: ${calcPos(pos, flyMenuWidth, flyMenuHeight).x}px; top: ${calcPos(pos, flyMenuWidth, flyMenuHeight).y}px;`
   $: offset = $flyMenuType === 'cursor' ? offsetFollowCursor : `left: ${$viewOffset.x}px;`
 
   $: if ($flyMenuOpen) {
     setTimeout(() => {
       inputEl.focus()
     }, 80)
+  } else {
+    $state.search = ''
   }
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
-      $flyMenuOpen = false
-      state = createState()
+      closeFlyMenu()
+      $state.search = ''
+      console.warn($state)
     } else if (e.key === 'Enter' && $flyMenuOpen) {
       submit()
-      // const pos = posToAbsolute(
-      //   cursorPos.x,
-      //   cursorPos.y,
-      //   $viewOffset.x,
-      //   $viewOffset.y,
-      //   $viewPort,
-      //   1
-      // )
-      // dispatch('command', {
-      //   cmd: $state.value,
-      //   origin: $flyMenuType,
-      //   targetX: pos.x,
-      //   targetY: pos.y
-      // })
-      //
-      // $flyMenuOpen = false
-      // state = createState()
     }
   }
   function submit() {
-    console.warn('was submit')
     dispatch('command', {
       cmd: $state.value,
       origin: $flyMenuType,
       targetRect: $origin
     })
     closeFlyMenu()
-    state = createState()
+    //state = createState()
+    $state.search = ''
   }
 
   function onInputKeyDown(e: KeyboardEvent) {
@@ -133,9 +116,37 @@
     cursorPos = { x: e.clientX, y: e.clientY }
   }
 
+  const filteredItems = derived([flyMenuItems, searchVal], ([_items, _searchVal]) => {
+    if ($searchVal === '') return _items
+    const out = []
+    const query = $searchVal.toLowerCase()
+    for (let item of _items) {
+      if (item.value.toLowerCase().includes(query)) {
+        out.push(item)
+      }
+    }
+
+    // If no main items found add all services and filter those
+    if (out.length === 0) {
+      const services = SERVICES.map((s) => ({
+        name: s.name,
+        rank: getServiceRanking(s.id)
+      })).filter((e) => e.name.toLowerCase().includes(query))
+      for (let service of services) {
+        out.push({
+          type: 'app',
+          value: `${service.name}`,
+          icon: ''
+        })
+      }
+    }
+    console.warn('search', out)
+
+    return out
+  })
+
   onDestroy(
     flyMenuOpen.subscribe((v) => {
-      console.warn(cursorPos)
       pos = { x: $viewOffset.x + cursorPos.x - APP_BAR_WIDTH, y: cursorPos.y }
     })
   )
@@ -148,42 +159,47 @@
 
 <!--     transition:scale={{ duration: 100, opacity: 0, easing: quadOut }}
  -->
-<!--{#if $flyMenuOpen}-->
-<div
-  class="flyMenuWrapper"
-  class:open={$flyMenuOpen}
-  class:cursorMode={$flyMenuType === 'cursor'}
-  class:default={$flyMenuType === 'cmdk'}
-  bind:this={flyMenuEl}
-  style={offset}
-  bind:clientWidth={flyMenuWidth}
-  bind:clientHeight={flyMenuHeight}
-  on:mousedown={onClick}
-  transition:scale={{ duration: 100, opacity: 0, easing: quadOut }}
->
-  <Command.Root label="Fly Menu" class="flyMenu raycast" loop {state}>
-    <Command.List>
-      <Command.Empty>No results found.</Command.Empty>
+{#if $flyMenuOpen}
+  <div
+    class="flyMenuWrapper"
+    class:open={$flyMenuOpen}
+    class:cursorMode={$flyMenuType === 'cursor'}
+    class:default={$flyMenuType === 'cmdk'}
+    bind:this={flyMenuEl}
+    style={offset}
+    bind:clientWidth={flyMenuWidth}
+    bind:clientHeight={flyMenuHeight}
+    on:mousedown={onClick}
+    transition:scale={{ duration: 100, opacity: 0, easing: quadOut }}
+  >
+    <Command.Root label="Fly Menu" class="flyMenu raycast" {state} loop shouldFilter={true}>
+      <Command.List>
+        <Command.Empty>No results found.</Command.Empty>
 
-      {#each $flyMenuItems as item (item.value)}
-        <Command.Item value={item.value} class="item-{item.type}">
-          <span class="icn">
-            {#if item.type === 'app'}
-              <!-- TODO: Serices is nice, but this should be not browser card specific! -->
-              <img src={getServiceIcon(item.value.toLowerCase())} />
-            {:else}
-              {item.icon}
-            {/if}
-          </span>
-          {item.value}</Command.Item
-        >
-      {/each}
-    </Command.List>
-    <Command.Input placeholder="Type a query" bind:el={inputEl} on:keydown={onInputKeyDown} />
-  </Command.Root>
-</div>
-
-<!--{/if}-->
+        <!--         {#key $searchVal} -->
+        {#each $filteredItems as item (item.value)}
+          <Command.Item value={item.value} class="item-{item.type}">
+            <span class="icn">
+              {#if item.type === 'app'}
+                <img src={getServiceIcon(item.value.toLowerCase())} />
+              {:else}
+                {item.icon}
+              {/if}
+            </span>
+            {item.value}
+          </Command.Item>
+        {/each}
+        <!--         {/key} -->
+      </Command.List>
+      <Command.Input
+        placeholder="Type a query"
+        bind:el={inputEl}
+        bind:value={$searchVal}
+        on:keydown={onInputKeyDown}
+      />
+    </Command.Root>
+  </div>
+{/if}
 
 <style lang="scss">
 </style>

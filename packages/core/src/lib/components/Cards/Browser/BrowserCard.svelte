@@ -164,7 +164,82 @@
       } else {
         horizon.activeCardId.set(null)
       }
-    } else if (event.code === 'Space' && event.shiftKey) {
+    } else if (event.altKey) {
+      e.preventDefault()
+      // NOTE: For demo launch only?
+      let { viewOffset, viewPort } = get(horizon.board.state)
+      viewOffset = get(viewOffset)
+      viewPort = get(viewPort)
+      if (event.key === 'ArrowLeft') {
+        card.update((v) => {
+          v.x = viewOffset.x
+          v.y = 0
+          v.width = viewPort.w / 2 - 5
+          v.height = viewPort.h
+          return v
+        })
+      } else if (event.key === 'ArrowRight') {
+        card.update((v) => {
+          v.x = viewOffset.x + viewPort.w / 2 + 5
+          v.y = 0
+          v.width = viewPort.w / 2 - 5
+          v.height = viewPort.h
+          return v
+        })
+      } else if (event.code === 'KeyU') {
+        card.update((v) => {
+          v.x = viewOffset.x
+          v.y = 0
+          v.width = viewPort.w / 2 - 5
+          v.height = viewPort.h / 2 - 5
+          return v
+        })
+      } else if (event.code === 'KeyI') {
+        card.update((v) => {
+          v.x = viewOffset.x + viewPort.w / 2 + 5
+          v.y = 0
+          v.width = viewPort.w / 2 - 5
+          v.height = viewPort.h / 2 - 5
+          return v
+        })
+      } else if (event.code === 'KeyJ') {
+        card.update((v) => {
+          v.x = viewOffset.x
+          v.y = viewPort.h / 2 + 5
+          v.width = viewPort.w / 2 - 5
+          v.height = viewPort.h / 2 - 5
+          return v
+        })
+      } else if (event.code === 'KeyK') {
+        card.update((v) => {
+          v.x = viewOffset.x + viewPort.w / 2 + 5
+          v.y = viewPort.h / 2 + 5
+          v.width = viewPort.w / 2 - 5
+          v.height = viewPort.h / 2 - 5
+          return v
+        })
+      } else if (event.code === 'Enter') {
+        card.update((v) => {
+          if (v.isMaximized === true) {
+            v.x = v.maximizeBackup.x
+            v.y = v.maximizeBackup.y
+            v.width = v.maximizeBackup.width
+            v.height = v.maximizeBackup.height
+            v.isMaximized = undefined
+            v.maximizeBackup = undefined
+          } else {
+            v.isMaximized = true
+            v.maximizeBackup = { x: v.x, y: v.y, width: v.width, height: v.height }
+            v.x = viewOffset.x
+            v.y = 0
+            v.width = viewPort.w
+            v.height = viewPort.h
+          }
+          return v
+        })
+      }
+    } else if (isModKeyAndKeyPressed(event as KeyboardEvent, 'f')) {
+      /*else if (event.code === 'Space' && event.shiftKey) {
       if ($focusModeEnabled) {
         exitFocusMode(horizon.board)
       } else {
@@ -172,7 +247,7 @@
         enterFocusMode([$card.id], horizon.board, horizon.cards)
       }
       // TODO: Catch OPT + TAB / SHIFT TAB to toggle between cards
-    } else if (isModKeyAndKeyPressed(event as KeyboardEvent, 'f')) {
+    }*/
       log.debug('mod+f pressed')
 
       if (!findInPage || !webview) return

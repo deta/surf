@@ -1,4 +1,4 @@
-<!-- <svelte:options immutable={true} /> -->
+<svelte:options immutable={true} />
 
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
@@ -408,9 +408,13 @@
     const { clientX, clientY } = e
 
     if (isDragging) return
+    if (!$viewOffset || !$viewPort) {
+      headerOpen = false
+      return
+    }
     const cardHeaderPt = {
-      x: $card.x + 70 - $viewOffset.x + $card.width / 2,
-      y: $card.y - $viewOffset.y - $viewPort.y
+      x: $card.x + 70 - $viewOffset?.x + $card.width / 2,
+      y: $card.y - $viewOffset?.y - $viewPort?.y
     }
     const distance = Math.sqrt(
       Math.pow(cardHeaderPt.x - clientX, 2) + Math.pow(cardHeaderPt.y - clientY, 2)
