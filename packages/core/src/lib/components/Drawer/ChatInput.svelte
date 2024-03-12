@@ -5,17 +5,23 @@
   import { processDrop, type MediaParserResult } from '../../service/mediaImporter'
 
   import { parseMetadata, type ParsedMetadata } from '@horizon/core/src/lib/utils/parseMetadata'
-  import { normalizeURL, stringToURLList } from '@horizon/core/src/lib/utils/url'
+  import {
+    normalizeURL,
+    optimisticCheckIfUrl,
+    stringToURLList
+  } from '@horizon/core/src/lib/utils/url'
 
   import { useLogScope } from '@horizon/core/src/lib/utils/log'
   import ChatLinkPreview from '@horizon/drawer/src/lib/components/ChatLinkPreview.svelte'
   import ChatFilePreview from '@horizon/drawer/src/lib/components/ChatFilePreview.svelte'
+  import { Item } from '../../../../../cmdk-sv/dist/cmdk'
 
   export let droppedInputElements: Writable<MediaParserResult[]>
+  export let forceOpen: boolean
 
   let inputRef: HTMLDivElement
   let textareaRef: HTMLTextAreaElement
-  let isFocused = false
+  let isFocused = true
   let lastKeyDeleted = false
   let position = { x: 0, y: 0 }
   let opacity = 0
@@ -31,18 +37,9 @@
   const dragOver = writable(false)
   const inputText = writable('')
 
-  const droppedFiles = derived(droppedInputElements, (droppedInputElements) => {
-    return droppedInputElements.filter((item) => item.type === 'file')
-  })
-
   const droppedLinks = derived(droppedInputElements, (droppedInputElements) => {
     return droppedInputElements.filter((item) => item.type === 'url')
   })
-
-  $: if ($viewState !== 'chatInput') {
-    opacity = 0
-    isFocused = false
-  }
 
   $: if ($inputText) {
     const searchQuery = { value: $inputText, tab: 'all' }
@@ -197,15 +194,25 @@
     e.preventDefault()
     e.stopPropagation()
     dragOver.set(false)
-    console.log('DROP', e)
-    dispatchDrop('drop', e)
+    console.log('PROCESSEDDROP', e)
+
+    var textData = e.dataTransfer.getData('text')
+    if (textData && !optimisticCheckIfUrl(textData)) {
+      console.log('textdata detected:', textData)
+      var oldval = $inputText
+      var newval = oldval + textData
+      inputText.set(newval)
+    } else {
+      dispatchDrop('drop', e)
+    }
   }
 
   function handleRemoveUploadItem(event: CustomEvent) {
-    const sourceURI = event.detail
-
+    const id = Number(event.detail)
+    console.log('ITEM TO DELETE', id)
+    // Update the droppedInputElements store to remove the specified item
     droppedInputElements.update((items) =>
-      items.filter((item) => item.metadata.sourceURI !== sourceURI)
+      items.filter((item) => Number(item.data.lastModified) !== id)
     )
   }
 
@@ -238,7 +245,7 @@
       name="message"
       rows="1"
       placeholder="Save and drop everything..."
-      class:active={$viewState == 'chatInput'}
+      class:active={$viewState == 'chatInput' || forceOpen}
       bind:this={textareaRef}
       on:focus={handleFocus}
       bind:value={$inputText}
@@ -253,25 +260,26 @@
     ></div>
 
     {#if $parsedURLs && $parsedURLs.length > 0}
-      <div class="link-list" class:hidden={$viewState !== 'chatInput'}>
+      <div class="link-list" class:hidden={!forceOpen && $viewState !== 'chatInput'}>
         {#each $parsedURLs as { url, linkMetadata, appInfo } (url)}
           <ChatLinkPreview metadata={linkMetadata} />
         {/each}
       </div>
     {/if}
 
-    <div class="file-list" class:hidden={$viewState !== 'chatInput'}>
-      {#each $droppedFiles as file}
+    <div class="file-list" class:hidden={!forceOpen && $viewState !== 'chatInput'}>
+      {#each $droppedInputElements as file (file.data?.lastModified + file.data?.path)}
         <ChatFilePreview
           on:remove={handleRemoveUploadItem}
           metadata={file.metadata}
           data={file.data}
+          id={file.data?.lastModified}
         />
       {/each}
     </div>
 
     <div class="toolbar-row">
-      <div class="add-files" class:hidden={$viewState !== 'chatInput'}>
+      <div class="add-files" class:hidden={!forceOpen && $viewState !== 'chatInput'}>
         <input id="upload-files" multiple type="file" on:change={handleFileSelection} />
         <Icon name="add" color="#AAA7B1" size="28px" />
         <span>Add files</span>
@@ -279,7 +287,11 @@
     </div>
   </div>
 
-  <div class="send-button" class:hidden={$viewState !== 'chatInput'} on:click={handleSend}>
+  <div
+    class="send-button"
+    class:hidden={!forceOpen && $viewState !== 'chatInput'}
+    on:click={handleSend}
+  >
     <div class="arrow-wrapper">
       <Icon name="arrow" color="#353534" size="22px" />
     </div>
@@ -287,14 +299,24 @@
 </div>
 
 <style lang="scss">
+  :global(html)::view-transition-old(chat-field-container-transition),
+  :global(html)::view-transition-new(chat-field-container-transition) {
+    width: 100%;
+    height: 100%;
+  }
   .chat-container {
     position: relative;
     display: flex;
     align-items: center;
     font-size: 1.25rem;
-    &.isFocussed {
-      margin-top: 1rem;
-    }
+    cursor: default;
+    box-shadow:
+      0px 1px 0px 0px rgba(65, 58, 86, 0.25),
+      0px 0px 1px 0px rgba(0, 0, 0, 0.25);
+    border-radius: 0.65rem;
+    border: 1px solid #e5e5e5;
+    background-color: #fff;
+    view-transition-name: chat-field-container-transition;
     &.dragOver {
       display: none;
       background: red;
@@ -305,17 +327,14 @@
     flex-direction: column;
     flex: 1;
     position: relative;
-    border: 1px solid #e5e5e5;
-    background-color: #fff;
     overflow: hidden;
     transition:
       border-color 0.3s,
       box-shadow 0.3s;
-    box-shadow:
-      0px 1px 0px 0px rgba(65, 58, 86, 0.25),
-      0px 0px 1px 0px rgba(0, 0, 0, 0.25);
-    border-radius: 0.65rem;
+    z-index: 1000;
+    opacity: 0;
     &.isFocussed {
+      opacity: 1;
       // box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
     }
 
@@ -358,13 +377,14 @@
   }
   textarea {
     height: fit-content;
-    width: 93%;
+    width: 90%;
     height: 3.25rem;
     overflow: hidden;
     font-family:
       system-ui,
       -apple-system sans-serif;
     font-weight: 400;
+    z-index: 1000;
     cursor: text;
     resize: none;
     font-size: 1.125rem;
@@ -374,13 +394,15 @@
     color: #aeaeae;
     padding: 0.9rem 3rem 1rem 3rem;
     color: #353534;
-    opacity: 0.8;
+    opacity: 0;
     transition: all 240ms ease-out;
     view-transition-name: chat-input-transition;
+    cursor: default !important;
     &.active {
+      opacity: 0.8;
       padding-left: 1rem;
       height: 5.5rem;
-      width: 93%;
+      width: 90% !important;
     }
   }
   textarea:focus {
@@ -388,8 +410,8 @@
   }
   .icon {
     position: absolute;
-    top: 0.75rem;
-    left: 0.75rem;
+    top: 0.6rem;
+    left: 0.85rem;
     z-index: 5;
     transition: all 240ms ease-out;
     transform: translateX(0);
@@ -416,6 +438,7 @@
     border-radius: 4px;
     background: #c1efd9;
     padding-top: 2px;
+    z-index: 10000;
     view-transition-name: send-button-transition;
     &.hidden {
       transform: translateX(-100%);

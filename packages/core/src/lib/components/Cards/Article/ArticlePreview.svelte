@@ -4,6 +4,7 @@
   import { useLogScope } from '../../../utils/log'
   import type { ResourceArticle } from '../../../service/resources'
   import type { ResourceDataArticle } from '../../../types'
+  import LoadingBox from '../../Atoms/LoadingBox.svelte'
 
   export let resource: Resourcearticle
 
@@ -14,6 +15,7 @@
   let subtitle = ''
   let excerpt = ''
   let error = ''
+  let loading = true
 
   const MAX_TITLE_LENGTH = 300
   const MAX_SUBTITLE_LENGTH = 100
@@ -24,9 +26,8 @@
 
   onMount(async () => {
     try {
+      loading = true
       article = await resource.getParsedData()
-
-      console.log('articledata', article)
 
       const url = new URL(article.url)
 
@@ -42,6 +43,8 @@
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
+    } finally {
+      loading = false
     }
   })
 
@@ -50,11 +53,14 @@
   })
 </script>
 
-<div href={article?.url} target="_blank" class="link-card">
+<!-- <a href={article?.url} target="_blank" class="link-card"></a> -->
+<div class="link-card">
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
       <div class="subtitle">{article?.url}</div>
+    {:else if loading}
+      <LoadingBox />
     {:else if article?.image}
       <img class="image" alt={`${article?.provider} image`} src={article?.image} />
     {:else if article?.images[0]}
@@ -92,6 +98,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    width: 100%;
+    flex-shrink: 1;
     flex-grow: 1;
   }
 

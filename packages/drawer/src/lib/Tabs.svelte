@@ -30,10 +30,10 @@
       class="drawer-tab"
       class:selected={tab.key === selected}
     >
-      {#if tab.icon}
+      <!-- {#if tab.icon}
         <Icon name={tab.icon} size="20px" color={tab.key === selected ? '#FFFFFF' : '#959599'} />
-      {/if}
-      <span>{tab.label}</span>
+      {/if} -->
+      <span class="tab-label">{tab.label}</span>
     </button>
   {/each}
 </div>
@@ -42,7 +42,7 @@
   .drawer-tabs {
     display: flex;
     align-items: center;
-    padding: 0 0.5rem;
+    padding: 1rem;
     gap: 0.5rem;
   }
 
@@ -77,6 +77,14 @@
     &.selected:hover {
       color: white;
       background: var(--color-brand);
+    }
+
+    .tab-label {
+      font-size: 1.125rem;
+      letter-spacing: 0.01rem;
+      font-weight: 500;
+      text-wrap: nowrap;
+      user-select: none;
     }
   }
 </style>

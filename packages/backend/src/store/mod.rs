@@ -29,6 +29,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         js_update_card_stacking_order,
     )?;
     cx.export_function("js__store_remove_card", js_remove_card)?;
+    cx.export_function(
+        "js__store_list_cards_by_resource_id",
+        js_list_cards_by_resource_id,
+    )?;
 
     cx.export_function("js__store_create_userdata", js_create_userdata)?;
     cx.export_function(
@@ -197,6 +201,19 @@ fn js_list_cards_in_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::CardMessage(CardMessage::ListCardsInHorizon(horizon_id)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_list_cards_by_resource_id(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::CardMessage(CardMessage::ListCardsbyResourceID(resource_id)),
         deferred,
     );
 

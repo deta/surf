@@ -167,7 +167,8 @@
       resource.type.startsWith(ResourceTypes.POST) ||
       resource.type.startsWith(ResourceTypes.CHAT_MESSAGE) ||
       resource.type.startsWith(ResourceTypes.CHAT_THREAD) ||
-      resource.type.startsWith(ResourceTypes.DOCUMENT)
+      (resource.type.startsWith(ResourceTypes.DOCUMENT) &&
+        resource.type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
     ) {
       const bookmark = await (resource as ResourceLink).getParsedData()
       if (!bookmark || !bookmark.url) {

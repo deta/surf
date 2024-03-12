@@ -4,6 +4,7 @@
   import { useLogScope } from '../../../utils/log'
   import type { ResourcePost } from '../../../service/resources'
   import type { ResourceDataPost } from '../../../types'
+  import { Icon } from '@horizon/icons'
   import Link from '../../Atoms/Link.svelte'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
 
@@ -18,6 +19,7 @@
   let error = ''
   let isTwitter = false
   let isReddit = false
+  let youtubeThumbnailURL = ''
   let loading = true
 
   const MAX_TITLE_LENGTH = 300
@@ -27,28 +29,31 @@
     return text.length > length ? text.slice(0, length) + '...' : text
   }
 
+  const getYoutubeThumbnailURL = (url: URL) => {
+    const videoId = url.searchParams.get('v')
+    if (videoId) {
+      return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+    }
+    return ''
+  }
+
   onMount(async () => {
     try {
       loading = true
       post = await resource.getParsedData()
-
       const url = new URL(post.url)
-
       const hostname = url.hostname.split('.').slice(-2, -1).join('')
       title = truncate(
-        post.title || post.excerpt || hostname[0].toUpperCase() + hostname.slice(1),
+        post.title || post.excerpt || `${hostname[0].toUpperCase()}${hostname.slice(1)}`,
         MAX_TITLE_LENGTH
       )
-      // subtitle = truncate(
-      //   post.excerpt || post.content_plain || `${url.hostname}${url.pathname}`,
-      //   MAX_SUBTITLE_LENGTH
-      // )
 
-      isTwitter = type === 'application/vnd.space.post.twitter'
-      isReddit = type === 'application/vnd.space.post.reddit'
+      if (url.hostname.includes('youtube.com') || url.hostname.includes('youtu.be')) {
+        youtubeThumbnailURL = getYoutubeThumbnailURL(url)
+      }
     } catch (e) {
       log.error(e)
-      error = 'Invalid URL'
+      title = 'Invalid URL'
     } finally {
       loading = false
     }
@@ -59,36 +64,26 @@
   })
 </script>
 
-<div class="link-card" class:loading>
-  <!-- <a href={post?.url} target="_blank" class="link-card"> -->
-  <div class="details" class:twitter={isTwitter} class:reddit={isReddit}>
-    {#if error}
-      <div class="title">{error}</div>
-      <div class="subtitle">{post?.url}</div>
-    {:else if loading}
-      <LoadingBox height="150px" />
-    {:else}
-      <!-- <img
-        class="favicon"
-        src={`https://www.google.com/s2/favicons?domain=${post?.site_icon}&sz=256`}
-        alt={`${post?.site_name} favicon`}
-      /> -->
-      <img
-        class="favicon"
-        src={`https://www.google.com/s2/favicons?domain=${post?.url}&sz=256`}
-        alt={`${post?.site_name} favicon`}
-      />
+<div class="link-card">
+  <div class="details">
+    {#if loading}
+      <LoadingBox />
+    {:else if title === 'Invalid URL'}
       <div class="title">{title}</div>
-      <div class="post-metadata">
-        <Link
-          class="link"
-          url={post?.author_url}
-          label={`From ${post?.author}`}
-          color={isTwitter || isReddit ? 'white' : 'inherit'}
-        />
-        {#if isTwitter}<div class="from">Tweet</div>{/if}
-        {#if isReddit}<div class="from">Reddit Post</div>{/if}
-      </div>
+      <div class="subtitle">{post?.url}</div>
+    {:else}
+      {#if youtubeThumbnailURL}
+        <div class="thumbnail-wrapper">
+          <div class="play-icon">
+            <Icon name="play" size="32px" style="fill:white; stroke-width: 0;" />
+          </div>
+          <img class="youtube-thumbnail" src={youtubeThumbnailURL} alt="YouTube video thumbnail" />
+        </div>
+      {/if}
+      <!-- <div class="post-metadata">
+        <div class="title">{title}</div>
+        <Link class="link" url={post?.author_url} label={`From ${post?.author}`} />
+      </div> -->
     {/if}
   </div>
 </div>
@@ -100,21 +95,38 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 2rem;
     color: inherit;
     text-decoration: none;
     user-select: none;
     -webkit-user-drag: none;
+  }
 
-    &.loading {
-      padding: 0 !important;
-    }
+  .thumbnail-wrapper {
+    position: relative;
+    line-height: 0; /* Remove space below the image caused by line height */
+    display: block; /* Ensure the wrapper behaves as a block element */
+  }
+
+  .play-icon {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    z-index: 10;
+    opacity: 0.95;
+    backdrop-filter: blur(0.5px);
+  }
+
+  .youtube-thumbnail {
+    display: block; /* Make the image a block element to remove bottom space */
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    vertical-align: bottom; /* Align the image to the bottom to eliminate gap */
   }
 
   .details {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
     width: 100%;
     flex-shrink: 1;
     flex-grow: 1;
@@ -144,13 +156,12 @@
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
-    margin-top: 1rem;
     max-width: 95%;
   }
   .post-metadata {
     display: flex;
     flex-direction: column;
-    padding: 0.5rem 0;
+    padding: 1rem;
     gap: 0.125rem;
     .from {
       font-size: 1rem;

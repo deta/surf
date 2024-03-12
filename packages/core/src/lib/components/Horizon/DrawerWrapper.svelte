@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { derived, writable } from 'svelte/store'
-  import { setContext, tick } from 'svelte'
+  import { onDestroy, setContext, tick } from 'svelte'
+  import { derived, get, writable } from 'svelte/store'
   import { WebParser, type WebMetadata, type DetectedWebApp } from '@horizon/web-parser'
+  import { fly } from 'svelte/transition'
 
   import {
     DrawerProvider,
@@ -14,8 +15,8 @@
     DrawerContentItem,
     DrawerContentMasonry,
     DrawerContenEmpty,
-    DrawerDetailsWrapper,
     DrawerDetailsProximity,
+    ResourceOverlay,
     type SearchQuery
   } from '@horizon/drawer'
 
@@ -55,7 +56,14 @@
   import { parse } from 'date-fns'
   import Link from '../Atoms/Link.svelte'
   import type { ParsedMetadata } from '../../utils/parseMetadata'
+  import { hasClassOrParentWithClass } from '@horizon/tela'
+  import { each, result } from 'lodash'
+  import { useDebounce } from '../../utils/debounce'
+  import ResourceLoading from '../Resources/ResourceLoading.svelte'
+  import { generateID } from '../../utils/id'
+  import Saving from '../Drawer/Saving.svelte'
   import { getEditorContentText } from '@horizon/editor'
+  import DrawerDetailsWrapper from '../Drawer/DrawerDetailsWrapper.svelte'
 
   export const drawer = provideDrawer()
 
@@ -64,6 +72,8 @@
 
   const cards = horizon.cards
   const resourcesInMemory = resourceManager.resources
+
+  const isDrawerShown = drawer.show
 
   const log = useLogScope('DrawerWrapper')
 
@@ -84,6 +94,8 @@
 
   const viewState = writable(VIEW_STATES.DEFAULT)
 
+  let showDropZone = false
+
   const selectedResource = writable<ResourceObject | undefined>(undefined)
 
   // Setting the context
@@ -95,9 +107,19 @@
 
   const droppedInputElements = writable<MediaParserResult[]>([])
 
+  const isSaving = writable(false)
+
   $: if ($viewState === 'default') {
     $droppedInputElements = []
+    handleDropZoneClickOutside()
   }
+
+  $: if (!$isDrawerShown) {
+    viewState.set('default')
+    searchQuery.set({ value: '', tab: 'all' })
+  }
+
+  let refreshContentLayout: () => Promise<void>
 
   let searchResult: ResourceSearchResultItem[] = []
   let detectedInput = false
@@ -111,13 +133,15 @@
   const semanticDistanceThreshold = writable(2.0)
   const proximityDistanceThreshold = writable(100000)
   const semanticSearchEnabled = writable(true)
+  $: console.log(
+    'searchResult',
+    searchResult.find((r) => r.id === $selectedResource?.id)
+  )
 
   const runSearch = async (query: string, tab: string | null) => {
     log.debug('Searching for', query, 'in', tab)
 
-    const tags = [
-      ResourceManager.SearchTagDeleted(false) // we have to explicitly search for non-deleted resources
-    ] as SFFSResourceTag[]
+    const tags = [] as SFFSResourceTag[]
 
     // EXAMPLE: searching by resource type (exact match)
     // tags.push(
@@ -141,7 +165,7 @@
     } else if (tab === 'downloaded') {
       tags.push(ResourceManager.SearchTagSavedWithAction('download'))
     } else if (tab === 'archived') {
-      tags.push(ResourceManager.SearchTagDeleted())
+      tags.push(ResourceManager.SearchTagDeleted()) // TODO: implement recovering of deleted resources
     } else if (tab === 'horizon') {
       tags.push(ResourceManager.SearchTagHorizon(horizon.id))
     }
@@ -152,17 +176,39 @@
       proximityDistanceThreshold: $proximityDistanceThreshold
     } as SFFSSearchParameters
 
+    if (tab !== 'archived') {
+      // we have to explicitly search for non-deleted resources
+      tags.push(ResourceManager.SearchTagDeleted(false))
+    }
+
     const result = await resourceManager.searchResources(query, tags, parsedParameters)
     if (query === '') {
       result.reverse()
     }
 
     log.debug('Search result', result)
-    searchResult = result
+
+    // this is needed so local results needed for the processing state are not removed when new results are added
+    const previousLocalResults = searchResult.filter((r) => r.engine === 'local')
+    searchResult = [...previousLocalResults, ...result]
+
+    await tick()
+
+    if (refreshContentLayout) {
+      refreshContentLayout()
+    }
+
+    // HACK: sometimes the layout is not updated, so we force it
+    setTimeout(() => {
+      if (refreshContentLayout) {
+        refreshContentLayout()
+      }
+    }, 100)
   }
 
+  const runDebouncedSearch = useDebounce(runSearch, 500)
+
   const handleSearch = (e: CustomEvent<SearchQuery>) => {
-    console.log('search gets handled bastard')
     const query = e.detail
 
     const url = parseStringIntoUrl(query.value)
@@ -226,53 +272,80 @@
   }
 
   const handleChat = async (payload: any) => {
-    log.debug(
-      `Creation of ${payload.detail.$parsedURLs.length} items triggered from chat input`,
-      payload.detail
-    )
+    try {
+      log.debug(
+        `Creation of ${payload.detail.$parsedURLs.length} items triggered from chat input`,
+        payload.detail
+      )
 
-    const userGeneratedText = payload.detail.$inputText
+      const userGeneratedText = payload.detail.$inputText
 
-    const links = payload.detail.$parsedURLs as ParsedMetadata[]
-    const mediaItems = $droppedInputElements
+      const links = payload.detail.$parsedURLs as ParsedMetadata[]
+      const mediaItems = $droppedInputElements
 
-    if (links) {
-      for (const link of links) {
-        createResourceFromParsedURL(link, userGeneratedText)
+      isSaving.set(true)
+
+      // Create a text card if there is nothing but text
+      if (links.length === 0 && mediaItems.length === 0) {
+        await resourceManager.createResourceNote(userGeneratedText, {}, [
+          // TODO: Add another resource tag
+          ResourceTag.paste()
+        ])
       }
-    }
 
-    if (mediaItems) {
-      createResourcesFromMediaItems(mediaItems, userGeneratedText)
+      if (links) {
+        for (const link of links) {
+          createResourceFromParsedURL(link, userGeneratedText)
+        }
+      }
+
+      if (mediaItems) {
+        createResourcesFromMediaItems(mediaItems, userGeneratedText)
+      }
+    } catch (err) {
+      log.debug('Error creating resources from chat input', err)
+    } finally {
+      isSaving.set(false)
     }
 
     document.startViewTransition(async () => {
       viewState.set('default')
     })
 
-    if (links.length == 0 && mediaItems.length == 0) {
-      const item = await processText(userGeneratedText)
-      createResourcesFromMediaItems(item, '')
-    }
+    showDropZone = false
   }
 
+  let receivedDrop = false
   const handleDropForwarded = async (e: any) => {
     const event = e.detail
     log.debug('Dropped', event)
 
     const parsed = await processDrop(event)
-    log.debug('Parsed', parsed)
 
-    droppedInputElements.set(parsed)
+    receivedDrop = true
+    droppedInputElements.update((items) => {
+      parsed.forEach((parsedItem) => {
+        items.push(parsedItem)
+      })
+      return items
+    })
+
+    log.debug('DROPPED ITEM', $droppedInputElements)
   }
 
   const handleFileUpload = async (e: any) => {
     const files = e.detail
-    let parsed = []
+    let parsed: MediaParserResult[] = []
     for (const file of files) {
       parsed.push(await processFile(file))
     }
-    $droppedInputElements = parsed
+
+    droppedInputElements.update((items) => {
+      parsed.forEach((parsedItem) => {
+        items.push(parsedItem)
+      })
+      return items
+    })
     log.debug('UPLOADED FILES', parsed)
   }
 
@@ -327,13 +400,38 @@
 
   const createResourceFromParsedURL = async (item: ParsedMetadata, userGeneratedText: string) => {
     const metadata = {
-      name: item.linkMetadata.title,
+      name: item.linkMetadata.title || new URL(item.url).hostname,
       alt: item.linkMetadata.description,
       sourceURI: '',
       userContext: userGeneratedText
     }
 
+    const id = generateID()
+
+    // TODO: this is a hack to add the resource to the search result without waiting for the resource to be created, we should find a better way to do this
+    searchResult = [
+      {
+        id: id,
+        resource: {
+          id: item.url,
+          type: ResourceTypes.LINK,
+          metadata: metadata,
+          rawData: null,
+          path: item.url,
+          updatedAt: new Date().toISOString()
+        } as any,
+        engine: 'local',
+        cardIds: []
+      },
+      ...searchResult
+    ]
+
+    refreshContentLayout()
+
     const resource = await extractAndCreateWebResource(item.url, metadata, [ResourceTag.paste()])
+
+    // remove the resource from the search result as it has been created
+    searchResult = searchResult.filter((r) => r.id !== id)
 
     log.debug('Created resource', resource)
   }
@@ -472,6 +570,12 @@
   const handleDetailsBack = () => {
     document.startViewTransition(async () => {
       viewState.set('default')
+      searchQuery.set({ value: '', tab: 'all' })
+      // if($searchQuery.value !== '') {
+      //   viewState.set('search')
+      // } else {
+      //   viewState.set('default')
+      // }
     })
   }
 
@@ -483,19 +587,87 @@
     }
   }
 
+  let dragCount = 0
+  const handleWindowDragEnter = (e: DragEvent) => {
+    if ($viewState === 'details') {
+      return
+    }
+    log.debug('drag enter', e)
+
+    const target = e.target as HTMLElement
+    log.debug('drag enter target', target)
+
+    viewState.set('chatInput')
+
+    const isDropZone = hasClassOrParentWithClass(target, 'drawer-root')
+    log.debug('isDropZone', isDropZone)
+
+    if (isDropZone) {
+      return
+    }
+
+    dragCount++
+
+    if (dragCount > 0) {
+      showDropZone = true
+    }
+  }
+
+  const handleWindowDragEnd = (e: DragEvent) => {
+    log.debug('drag end', e)
+
+    if (!receivedDrop) {
+      showDropZone = false
+    }
+
+    dragCount = 0
+    receivedDrop = false
+  }
+
+  const handleDropZoneClickOutside = () => {
+    log.debug('click outside')
+    showDropZone = false
+    receivedDrop = false
+    viewState.set('default')
+    $droppedInputElements = []
+  }
+
+  const handleNearbyResultClick = (e: CustomEvent<ResourceSearchResultItem>) => {
+    log.debug('Nearby resource clicked', e.detail)
+    const result = e.detail
+    const resource = result.resource
+    if (!resource) {
+      log.error('No resource found', result)
+      return
+    }
+
+    log.debug('opening resource details', resource)
+    // viewState.set('default')
+
+    // TODO: fix
+    document.startViewTransition(async () => {
+      $selectedResource = resource
+      viewState.set('details')
+    })
+  }
+
+  let initialLoad = true
   onMount(() => {
     const unsubscribeQuery = searchQuery.subscribe(({ value, tab }) => {
+      if (initialLoad) return
       runSearch(value, tab)
     })
 
     const unsubscribeCards = cards.subscribe((cards) => {
+      if (initialLoad) return
       log.debug('Cards changed', cards)
-      runSearch($searchQuery.value, $searchQuery.tab)
+      runDebouncedSearch($searchQuery.value, $searchQuery.tab)
     })
 
     const unsubscribeResources = resourcesInMemory.subscribe((resources) => {
+      if (initialLoad) return
       log.debug('Resources changed', resources)
-      runSearch($searchQuery.value, $searchQuery.tab)
+      runDebouncedSearch($searchQuery.value, $searchQuery.tab)
     })
 
     const unsubscribeSemanticDistanceThreshold = semanticDistanceThreshold.subscribe((value) => {
@@ -511,6 +683,11 @@
     })
 
     runSearch('', null)
+
+    setTimeout(() => {
+      log.debug('Initial load done')
+      initialLoad = false
+    }, 3000)
 
     return () => {
       if (unsubscribeQuery) {
@@ -542,67 +719,97 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-<DrawerProvider {drawer} on:search={handleSearch}>
-  {#if detectedInput}
-    <!-- TODO: move to component, this is more of an example -->
-    <div class="link-info">
-      {#if parsedInput?.linkMetadata && parsedInput.linkMetadata.title}
-        <img src={parsedInput.linkMetadata.image} alt="" width="35px" height="35px" />
-        <div class="details">
-          <div class="title">{parsedInput.linkMetadata.title}</div>
-          <div class="subtitle">{parsedInput.linkMetadata.description}</div>
-        </div>
-        <div class="type">Link Detected</div>
-      {:else}
-        <div class="details">
-          <div class="title">Link Detected</div>
-          <div class="subtitle">{$searchQuery.value}</div>
-        </div>
-      {/if}
+<svelte:body
+  on:dragenter={handleWindowDragEnter}
+  on:dragend={handleWindowDragEnd}
+  on:drop={handleWindowDragEnd}
+/>
+
+{#if showDropZone}
+  <div class="drop-zone">
+    <DrawerChat
+      on:chatSend={handleChat}
+      on:dropForwarded={handleDropForwarded}
+      on:dropFileUpload={handleFileUpload}
+      forceOpen={true}
+      {droppedInputElements}
+    />
+
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="drop-zone-close" on:click={handleDropZoneClickOutside}>
+      <Icon name="close" size="15px" />
     </div>
-  {/if}
-  <DrawerContentWrapper on:drop={handleDrop}>
+  </div>
+{/if}
+
+<DrawerProvider {drawer} on:search={handleSearch}>
+  <DrawerContentWrapper on:drop={handleDrop} acceptDrop={$viewState !== 'details'}>
     {#if $selectedResource}
       {#if $viewState === 'details'}
-        <DrawerDetailsWrapper
-          on:dragstart={(e) => handleItemDragStart(e, $selectedResource)}
-          resource={$selectedResource}
-          {resourceManager}
+        <!-- The key block is needed so the details components get properly updated when the selected resource changes -->
+        <div
+          class="drawer-details-transition"
+          in:fly={{ x: 600, duration: 540 }}
+          out:fly={{ x: 600, duration: 320 }}
         >
-          <ResourcePreview
-            on:click={handleResourceClick}
-            on:remove={handleResourceRemove}
-            resource={$selectedResource}
-          />
+          {#key $selectedResource.id}
+            <DrawerDetailsWrapper
+              on:dragstart={(e) => handleItemDragStart(e, $selectedResource)}
+              resource={$selectedResource}
+              {horizon}
+            >
+              <ResourceOverlay>
+                <ResourcePreview
+                  slot="content"
+                  on:click={handleResourceClick}
+                  on:remove={handleResourceRemove}
+                  resource={$selectedResource}
+                />
+              </ResourceOverlay>
 
-          <div slot="proximity-view" let:result={nearbyResults}>
-            <DrawerDetailsProximity {nearbyResults} />
-          </div>
-        </DrawerDetailsWrapper>
+              <div class="proximity-view" slot="proximity-view" let:result={nearbyResults}>
+                {#if nearbyResults.length > 0}
+                  <DrawerDetailsProximity {nearbyResults} on:click={handleNearbyResultClick} />
+                {/if}
+              </div>
+            </DrawerDetailsWrapper>
+          {/key}
+        </div>
       {/if}
     {/if}
     {#if $viewState !== 'details'}
-      {#if searchResult.length === 0}
-        <DrawerContenEmpty />
-      {:else}
-        <DrawerContentMasonry
-          items={searchResult}
-          idKey="id"
-          animate={false}
-          maxColWidth={650}
-          minColWidth={250}
-          gap={15}
-          let:item
-        >
-          <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
-            <ResourcePreview
-              on:click={handleResourceClick}
-              on:remove={handleResourceRemove}
-              resource={item.resource}
-            />
-          </DrawerContentItem>
-        </DrawerContentMasonry>
-      {/if}
+      <div
+        class="drawer-content-transition"
+        in:fly={{ x: -600, duration: 540 }}
+        out:fly={{ x: -600, duration: 320 }}
+      >
+        {#if searchResult.length === 0}
+          <DrawerContenEmpty />
+        {:else}
+          <DrawerContentMasonry
+            items={searchResult}
+            gridGap="15px"
+            colWidth="minmax(Min(250px, 100%), 1fr)"
+            bind:refreshLayout={refreshContentLayout}
+          >
+            {#each searchResult as item (item.id)}
+              {#if item.engine === 'local'}
+                <div>
+                  <ResourceLoading title={item.resource.metadata?.name} />
+                </div>
+              {:else}
+                <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
+                  <ResourcePreview
+                    on:click={handleResourceClick}
+                    on:remove={handleResourceRemove}
+                    resource={item.resource}
+                  />
+                </DrawerContentItem>
+              {/if}
+            {/each}
+          </DrawerContentMasonry>
+        {/if}
+      </div>
     {/if}
     <!-- {#await $result}
       <p>Loading…</p>
@@ -644,6 +851,9 @@
     <div class="tabs-transition">
       <DrawerNavigation {tabs} />
     </div>
+    <!-- {#if $isSaving}
+      <Saving />
+    {/if} -->
     {#if $viewState !== 'details'}
       <div class="drawer-chat-search">
         {#if $viewState !== 'chatInput'}
@@ -654,6 +864,7 @@
             on:chatSend={handleChat}
             on:dropForwarded={handleDropForwarded}
             on:dropFileUpload={handleFileUpload}
+            forceOpen={false}
             {droppedInputElements}
           />
         {/if}
@@ -691,6 +902,17 @@
 </DrawerProvider>
 
 <style lang="scss">
+  .drawer-details-transition,
+  .drawer-content-transition {
+    padding: 4rem 0 16rem 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow-y: scroll;
+    overflow-x: hidden;
+  }
+
   .link-info {
     padding: 10px;
     background: rgba(255, 255, 255, 0.33);
@@ -763,6 +985,8 @@
     left: 0;
     right: 0;
     backdrop-filter: blur(3px);
+    z-index: 1000;
+    border-top: 0.5px solid rgba(0, 0, 0, 0.15);
     &:after {
       background: linear-gradient(
         to bottom,
@@ -784,7 +1008,7 @@
       align-items: center;
       width: 100%;
       gap: 16px;
-      padding: 1rem;
+      padding: 0 1rem 1rem 1rem;
       transition: all 240ms ease-out;
 
       .search-transition {
@@ -814,5 +1038,42 @@
       width: 75px;
       text-align: center;
     }
+  }
+
+  .drop-zone {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 1000;
+    width: 400px;
+
+    :global(.chat-container) {
+      margin-top: 0 !important;
+    }
+
+    &:hover {
+      .drop-zone-close {
+        display: flex;
+      }
+    }
+  }
+
+  .drop-zone-close {
+    position: absolute;
+    top: -0.75rem;
+    left: -0.75rem;
+    z-index: 1000;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+  }
+
+  .proximity-view {
+    width: 100%;
   }
 </style>

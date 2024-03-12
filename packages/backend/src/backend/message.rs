@@ -40,6 +40,7 @@ pub enum CardMessage {
     UpdateCardResourceID(String, String),
     UpdateCardStackingOrder(String),
     ListCardsInHorizon(String),
+    ListCardsbyResourceID(String),
 }
 
 pub enum HistoryMessage {

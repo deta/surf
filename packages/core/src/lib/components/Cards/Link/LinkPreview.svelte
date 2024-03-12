@@ -5,6 +5,10 @@
   import type { ResourceLink } from '../../../service/resources'
   import type { ResourceDataLink } from '@horizon/types'
 
+  import Link from '../../Atoms/Link.svelte'
+  import { generateRootDomain } from '../../../utils/url'
+  import LoadingBox from '../../Atoms/LoadingBox.svelte'
+
   export let resource: ResourceLink
 
   const log = useLogScope('LinkPreview')
@@ -14,12 +18,12 @@
   let subtitle = ''
   let image = ''
   let error = ''
+  let loading = true
 
   onMount(async () => {
     try {
+      loading = true
       link = await resource.getParsedData()
-
-      console.log('linkdata', link)
 
       const url = new URL(link.url)
 
@@ -30,6 +34,8 @@
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
+    } finally {
+      loading = false
     }
   })
 
@@ -38,11 +44,14 @@
   })
 </script>
 
-<div href={link?.url} target="_blank" class="link-card">
+<!-- <a href={link?.url} target="_blank" class="link-card"></a> -->
+<div class="link-card">
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
       <div class="subtitle">{link?.url}</div>
+    {:else if loading}
+      <LoadingBox />
     {:else if link?.image}
       <img class="image" alt={`${link?.provider} image`} src={link?.image} />
     {:else if !link?.image}
@@ -53,7 +62,15 @@
           alt={`${link?.provider} favicon`}
         />
         <div class="description">
-          {link?.description || link?.provider}
+          {#if link?.description || link?.provider || ''}
+            {link?.description || link?.provider || ''}
+          {:else}
+            <Link
+              url={link?.url || '#'}
+              label={generateRootDomain(link?.url || '#')}
+              style="font-size: {'1rem'}"
+            />
+          {/if}
         </div>
       </div>
     {/if}
@@ -79,6 +96,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+    width: 100%;
+    flex-shrink: 1;
     flex-grow: 1;
   }
 

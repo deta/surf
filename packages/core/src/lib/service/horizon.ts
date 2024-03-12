@@ -316,6 +316,10 @@ export class Horizon {
     return this.resourceManager.updateResourceData(resourceId, data, write)
   }
 
+  getCardsByResourceId(resourceId: string) {
+    return this.sffs.getCardsByResourceId(resourceId)
+  }
+
   async addCard(
     data: Optional<Card, 'id' | 'stackingOrder'>,
     makeActive: boolean = false,

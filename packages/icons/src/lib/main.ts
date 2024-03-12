@@ -38,6 +38,7 @@ import SquareRotated from './Icons/SquareRotated.svelte'
 import Home from './Icons/Home.svelte'
 import Rectangle from './Icons/Rectangle.svelte'
 import Spinner from './Icons/Spinner.svelte'
+import Play from './Icons/Play.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -80,7 +81,8 @@ export const icons = {
   rectangle: Rectangle,
   spinner: Spinner,
   'sidebar.left': SidebarLeft,
-  'sidebar.right': SidebarRight
+  'sidebar.right': SidebarRight,
+  play: Play
 }
 
 export type Icons = keyof typeof icons

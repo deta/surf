@@ -167,23 +167,31 @@ export class Resource {
 export class ResourceNote extends Resource {
   // data: Writable<SFFSResourceDataNote | null>
 
-  parsedData: string | null
+  parsedData: Writable<string | null>
 
   constructor(sffs: SFFS, data: SFFSResource) {
     super(sffs, data)
     // this.data = writable(null)
-    this.parsedData = null
+    this.parsedData = writable(null)
   }
 
-  async getContent() {
+  async getContent(fresh = false) {
+    const content = get(this.parsedData)
+    if (content && !fresh) {
+      return this.parsedData
+    }
+
     const data = await this.getData()
     const text = await data.text()
 
-    this.parsedData = text
-    return text
+    console.log('got text', text)
+
+    this.parsedData.set(text)
+    return this.parsedData
   }
 
   async updateContent(content: string) {
+    this.parsedData.set(content)
     const blob = new Blob([content], { type: this.type })
     return this.updateData(blob, true)
   }
@@ -275,6 +283,15 @@ export class ResourceManager {
     }
   }
 
+  private findOrCreateResourceObject(resource: SFFSResource) {
+    const existingResource = get(this.resources).find((r) => r.id === resource.id)
+    if (existingResource) {
+      return existingResource
+    }
+
+    return this.createResourceObject(resource)
+  }
+
   async createResource(
     type: string,
     data?: Blob,
@@ -327,7 +344,7 @@ export class ResourceManager {
           id: item.resource.id,
           engine: item.engine,
           cardIds: item.card_ids,
-          resource: this.createResourceObject(item.resource)
+          resource: this.findOrCreateResourceObject(item.resource)
         }) as ResourceSearchResultItem
     )
 
@@ -345,7 +362,7 @@ export class ResourceManager {
           id: item.resource.id,
           engine: item.engine,
           cardIds: item.card_ids,
-          resource: this.createResourceObject(item.resource)
+          resource: this.findOrCreateResourceObject(item.resource)
         }) as ResourceSearchResultItem
     )
 

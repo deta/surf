@@ -54,7 +54,8 @@
   })
 </script>
 
-<a href={bookmark?.url} target="_blank" class="link-card">
+<!-- <a href={bookmark?.url} target="_blank" class="link-card"></a> -->
+<div class="link-card">
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
@@ -64,7 +65,7 @@
       <div class="subtitle">{subtitle}</div>
     {/if}
   </div>
-</a>
+</div>
 
 <style lang="scss">
   .link-card {
@@ -85,6 +86,8 @@
     flex-direction: column;
     justify-content: center;
     gap: 0.5rem;
+    width: 100%;
+    flex-shrink: 1;
     flex-grow: 1;
   }
 

@@ -4,12 +4,16 @@
   import { getEditorContentText } from '@horizon/editor'
   import { onDestroy, onMount } from 'svelte'
   import type { ResourceNote } from '../../../service/resources'
+  import LoadingBox from '../../Atoms/LoadingBox.svelte'
 
   export let resource: ResourceNote
   export let limit: number = 200
 
+  const content = resource.parsedData
   let summary = ''
   let loading = false
+
+  $: summary = generateSummary($content ?? '')
 
   const generateSummary = (value: string) => {
     const text = getEditorContentText(value)
@@ -23,8 +27,8 @@
 
   onMount(async () => {
     loading = true
-    const content = await resource.getContent()
-    summary = generateSummary(content)
+
+    await resource.getContent()
 
     loading = false
   })
@@ -44,9 +48,9 @@
   /> -->
   <div class="text-card">
     {#if loading}
-      <p>Loading…</p>
+      <LoadingBox />
     {:else}
-      <p>{summary}</p>
+      <p>{summary || 'empty note'}</p>
     {/if}
   </div>
 </div>
@@ -61,7 +65,7 @@
       padding: 1rem;
       background: #f6f5f2;
       p {
-        font-family: monospace;
+        font-family: inherit;
         font-size: 1rem;
         line-height: 1.5rem;
         font-weight: 500;

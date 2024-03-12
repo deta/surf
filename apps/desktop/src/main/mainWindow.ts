@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, session, screen } from 'electron'
+import { app, BrowserWindow, session, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { attachContextMenu } from './contextMenu'

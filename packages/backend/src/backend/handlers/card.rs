@@ -16,6 +16,10 @@ impl Worker {
         Ok(self.db.list_all_cards(horizon_id)?)
     }
 
+    pub fn list_cards_by_resource_id(&mut self, resource_id: &str) -> BackendResult<Vec<Card>> {
+        Ok(self.db.list_cards_by_resource_id(resource_id)?)
+    }
+
     // pub fn list_cards(
     //     &mut self,
     //     horizon_id: &str,
@@ -190,6 +194,11 @@ pub fn handle_card_message(
             channel,
             oneshot,
             worker.list_all_cards_in_horizon(&horizon_id),
+        ),
+        CardMessage::ListCardsbyResourceID(resource_id) => send_worker_response(
+            channel,
+            oneshot,
+            worker.list_cards_by_resource_id(&resource_id),
         ),
     }
 }

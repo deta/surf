@@ -27,10 +27,7 @@
 
   onMount(async () => {
     try {
-      log.debug('MOUNT')
       document = await resource.getParsedData()
-
-      console.log('documentdata', document)
 
       const url = new URL(document?.url)
 
@@ -53,7 +50,7 @@
   })
 
   onDestroy(() => {
-    // resource.releaseData()
+    resource.releaseData()
   })
 </script>
 
@@ -101,6 +98,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    width: 100%;
+    flex-shrink: 1;
     flex-grow: 1;
   }
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte'
+  import { onDestroy, onMount, getContext } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
   import type { ResourceChatThread } from '../../../service/resources'
@@ -11,6 +11,7 @@
   export let type: string
 
   const log = useLogScope('MessagePreview')
+  const viewState: any = getContext('drawer.viewState')
 
   let thread: ResourceDataChatThread | null = null
   let chatMessage = ''
@@ -57,14 +58,19 @@
   })
 </script>
 
-<div href={thread?.url} target="_blank" class="link-card">
+<!-- <a href={thread?.url} target="_blank" class="link-card"></a> -->
+<div class="link-card">
   <div class="details" class:slack={isSlack}>
     {#if error}
       <div class="title">{error}</div>
       <div class="subtitle">{thread?.url}</div>
     {:else}
       <img class="favicon" src={thread?.platform_icon} alt={`${thread?.platform_name} favicon`} />
-      <div class={showFullMessages ? 'show-full-messages' : 'messages-preview'}>
+      <div class="thread-metadata">
+        <div class="from">Slack Thread</div>
+        <Link class="link" url={thread?.url} label={`Started from ${thread?.creator}`} />
+      </div>
+      <div class={$viewState === 'details' ? 'show-full-messages' : 'messages-preview'}>
         {#each thread?.messages.slice() || [] as message}
           <div class="message-author">
             {message.author} — {formatRelativeDate(message.date_sent)}
@@ -72,26 +78,21 @@
           <div class="message-text">{message.content_plain}</div>
         {/each}
       </div>
-      <div class="toggle-messages" on:click={() => (showFullMessages = !showFullMessages)}>
-        {showFullMessages ? 'Show Less' : 'Show More'}
-      </div>
-
-      <div class="thread-metadata">
-        <Link class="link" url={thread?.url} label={`Started from ${thread?.creator}`} />
-        <div class="from">Slack Thread</div>
-      </div>
     {/if}
   </div>
 </div>
 
 <style lang="scss">
   .messages-preview {
-    max-height: 500px; /* Adjust based on your font and line-height to match approximately 15 lines */
+    padding: 1rem 0;
+    max-height: 16rem;
     overflow: hidden;
     transition: max-height 0.5s ease;
+    -webkit-mask-image: linear-gradient(to bottom, #000 90%, transparent 100%);
   }
 
   .show-full-messages {
+    padding: 1rem 0;
     max-height: none;
   }
 
@@ -117,12 +118,21 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    width: 100%;
+    flex-shrink: 1;
     flex-grow: 1;
     .message-author {
       opacity: 0.6;
     }
 
     .message-text {
+      font-size: 1.25rem;
+      line-height: 1.775rem;
+      letter-spacing: 0.01rem;
+      color: #281b53;
+      font-weight: 500;
+      flex-shrink: 0;
+      margin-bottom: 1rem;
     }
   }
 
