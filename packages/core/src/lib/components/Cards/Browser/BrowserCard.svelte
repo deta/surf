@@ -449,7 +449,7 @@
       if (!magicFieldParticipant) return
       if (!get(magicFieldParticipant.fieldParticipation)) return
 
-      const isSupported = field.supportedResource === 'text/plain'
+      const isSupported = field.supportedResources.includes('text/plain')
 
       magicFieldParticipant.fieldParticipation.update((p) => ({
         ...p!,
@@ -457,10 +457,10 @@
       }))
     })
 
-    magicFieldParticipant?.onRequestData(async (type: string, callback) => {
-      log.debug('magic field requesting data', type)
+    magicFieldParticipant?.onRequestData(async (types: string[], callback) => {
+      log.debug('magic field requesting data', types)
 
-      if (type === 'text/plain') {
+      if (types.includes('text/plain')) {
         log.debug('detecting resource')
         const detectedResource = await webview?.detectResource()
         log.debug('bitch', detectedResource)
@@ -482,7 +482,7 @@
           return
         }
 
-        callback(resourceContent.html ?? resourceContent.plain)
+        callback({ type: 'text/plain', data: resourceContent.plain ?? resourceContent.html })
       } else {
         callback(null)
       }
