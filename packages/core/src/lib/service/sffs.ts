@@ -316,6 +316,14 @@ export class SFFS {
   }
 
   async searchForNearbyResources(resourceId: string, threshold?: number, limit?: number) {
+    this.log.debug(
+      'searching for nearby resources with id',
+      resourceId,
+      'threshold',
+      threshold,
+      'limit',
+      limit
+    )
     const raw = await this.backend.js__store_proximity_search_resources(
       resourceId,
       threshold,
@@ -510,5 +518,16 @@ export class SFFS {
   async deleteHistoryEntry(id: string): Promise<void> {
     this.log.debug('deleting history entry', id)
     await this.backend.js__store_remove_history_entry(id)
+  }
+
+  async getCardsByResourceId(resourceId: string) {
+    this.log.debug('getting cards by resource id', resourceId)
+    const rawCards = await this.backend.js__store_list_cards_by_resource_id(resourceId)
+    const cards = this.parseData<SFFSRawCard[]>(rawCards)
+    if (!cards) {
+      return []
+    }
+
+    return cards.map((c) => this.convertRawCardToCard(c))
   }
 }

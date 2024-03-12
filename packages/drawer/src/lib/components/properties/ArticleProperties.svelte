@@ -50,17 +50,18 @@
   })
 </script>
 
-<a href={article?.url} target="_blank" class="link-card">
+<!-- <a href={article?.url} target="_blank" class="link-card"></a> -->
+<div class="link-card">
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
       <div class="subtitle">{article?.url}</div>
     {:else}
       <div class="title">{title}</div>
-      <div class="subtitle">Article • {generateRootDomain(article?.url)}</div>
+      <div class="subtitle">{generateRootDomain(article?.url)}</div>
     {/if}
   </div>
-</a>
+</div>
 
 <style lang="scss">
   .link-card {

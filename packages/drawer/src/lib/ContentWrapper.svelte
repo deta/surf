@@ -1,12 +1,17 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
 
+  export let acceptDrop: boolean = true
+
   const dispatch = createEventDispatcher<{ drop: DragEvent }>()
 
   let dragOver = false
   let counter = 0
 
   const handleDragEnter = (e: DragEvent) => {
+    if (!acceptDrop) {
+      return
+    }
     e.preventDefault()
     dragOver = true
     counter++
@@ -43,7 +48,7 @@
 <style lang="scss">
   .drawer-content {
     flex: 1;
-    padding: 3.5rem 1rem 1rem 1rem;
+    padding: 3.5rem 0 1rem 0;
     padding-bottom: 12rem;
     overflow: auto;
     height: 100%;

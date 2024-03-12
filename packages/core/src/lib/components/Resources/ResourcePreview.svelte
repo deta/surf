@@ -1,7 +1,7 @@
 <!-- <svelte:options immutable={true} /> -->
 
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, getContext } from 'svelte'
   import { Icon } from '@horizon/icons'
 
   import TextPreview from '../Cards/Text/TextPreview.svelte'
@@ -27,8 +27,10 @@
   import DocumentPreview from '../Cards/Document/DocumentPreview.svelte'
   import ArticleProperties from '@horizon/drawer/src/lib/components/properties/ArticleProperties.svelte'
   import ChatThreadPreview from '../Cards/ChatThread/ChatThreadPreview.svelte'
+  import YoutubePreview from '../Cards/Post/YoutubePreview.svelte'
 
   export let resource: Resource
+  const viewState: any = getContext('drawer.viewState')
 
   const dispatch = createEventDispatcher<{ click: string }>()
   const dispatchRemove = createEventDispatcher<{ remove: string }>()
@@ -53,7 +55,12 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div on:click={handleClick} class="resource-preview" style="--id:{resource.id};">
+<div
+  on:click={handleClick}
+  class="resource-preview"
+  class:details={$viewState === 'details'}
+  style="--id:{resource.id};"
+>
   <div
     class="preview"
     class:reddit={resource.type === 'application/vnd.space.post.reddit'}
@@ -65,6 +72,8 @@
       <TextPreview resource={textResource} />
     {:else if resource.type === ResourceTypes.LINK}
       <LinkPreview resource={linkResource} />
+    {:else if resource.type.startsWith(ResourceTypes.POST_YOUTUBE)}
+      <YoutubePreview resource={postResource} type={resource.type} />
     {:else if resource.type.startsWith(ResourceTypes.POST)}
       <PostPreview resource={postResource} type={resource.type} />
     {:else if resource.type.startsWith(ResourceTypes.ARTICLE)}
@@ -90,6 +99,8 @@
       {:else if resource.type === ResourceTypes.LINK}
         <Icon name="link" size="20px" />
         <div class="">Bookmark</div>
+      {:else if resource.type.startsWith(ResourceTypes.POST_YOUTUBE)}
+        <ArticleProperties {resource} />
       {:else if resource.type.startsWith(ResourceTypes.POST)}
         <Icon name="link" size="20px" />
         <div class="">Post</div>
@@ -112,49 +123,11 @@
 
     <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
   </div>
-
-  <div class="remove" on:click={handleRemove}>
-    <Icon name="close" color="#AAA7B1" />
-  </div>
-
-  <!-- {#if resource.image_url}
-      <img src={resource.image_url} alt="preview" class="w-full rounded-lg overflow-hidden max-h-48 object-cover" />
-  {:else if resource.app_type === 'text' && resource.subtitle}
-      <div class="text-background">
-          {@html resource.subtitle.replace(resource.title, '')}
-      </div>
+  {#if $viewState !== 'details'}
+    <div class="remove" on:click={handleRemove}>
+      <Icon name="close" color="#AAA7B1" />
+    </div>
   {/if}
-
-  <div class="">
-      <div class="text-lg line-clamp-1 font-medium">{resource.title}</div>
-  
-
-      <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2 opacity-75">
-              <div class="w-5 h-5">
-                  <Avatar name={resource.app_name} icon={resource.app_icon_url} background={resource.app_placeholder_icon_config?.css_background} size="xs" />
-              </div>
-              <div class="text-base truncate">{resource.app_name}</div>
-          </div>
-
-          {#if resource.app_type === 'link' && resource.url}
-              <a href={resource.url} target="_blank" class="flex items-center gap-1 opacity-75">
-                  <Icon name="LINK" />
-                  <div class="text-base truncate">{formatURL(resource.url)}</div>
-              </a>
-          {:else if resource.app_type === 'text'}
-              <div class="flex items-center gap-1 opacity-75">
-                  <Icon name="DOCS" />
-                  <div class="text-base truncate">Note</div>
-              </div>
-          {:else if resource.app_type === 'file' && resource.subtitle}
-              <div class="flex items-center gap-1 opacity-75">
-                  <Icon name="FILE" />
-                  <div class="text-base truncate">{resource.subtitle}</div>
-              </div>
-          {/if}
-      </div>
-  </div> -->
 </div>
 
 <style lang="scss">
@@ -168,18 +141,31 @@
     cursor: default;
     &:hover {
       .remove {
-        opacity: 1;
+        animation: fade-in 120ms forwards;
+        animation-iteration-count: 1;
+        animation-delay: 860ms;
+      }
+    }
+
+    &.details {
+      .preview:hover {
+        outline: 0;
       }
     }
   }
 
   .preview {
+    width: 100%;
     border-radius: 6px;
     border: 1px solid rgba(228, 228, 228, 0.75);
     box-shadow:
       0px 1px 0px 0px rgba(65, 58, 86, 0.25),
       0px 0px 1px 0px rgba(0, 0, 0, 0.25);
     background: rgba(255, 255, 255, 0.75);
+    transition: 60ms ease-out;
+    &:hover {
+      outline: 3px solid rgba(0, 0, 0, 0.15);
+    }
     &.twitter {
       border: 1px solid rgba(255, 255, 255, 0.2);
       background: radial-gradient(100% 100% at 50% 0%, #000 0%, #252525 100%) !important;
@@ -206,6 +192,7 @@
     padding: 0.25rem 0.5rem 0.75rem 0.5rem;
     gap: 0.5rem;
     color: var(--color-text-muted);
+    width: 100%;
   }
 
   .remove {
@@ -225,6 +212,19 @@
     border-radius: 50%;
     border: 0.5px solid rgba(0, 0, 0, 0.15);
     cursor: default;
+    transition: 60ms ease-out;
+    &:hover {
+      outline: 3px solid rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
   }
 
   .type {

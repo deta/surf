@@ -37,7 +37,7 @@ export interface SFFSResource {
   tags?: SFFSResourceTag[]
 }
 
-export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic'
+export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'local'
 
 export interface SFFSSearchResultItem {
   resource: SFFSResource

@@ -119,6 +119,7 @@
     align-items: center;
     font-size: 1.25rem;
     height: 100%;
+    cursor: default;
     &.isFocussed {
       // margin-top: 1rem;
     }
@@ -210,12 +211,11 @@
     opacity: 0;
     width: 100%;
     view-transition-name: search-input-transition;
-    &.active {
-      position: absolute;
-      height: 50px;
-      padding-left: 3rem;
-      opacity: 1;
-    }
+    cursor: default !important;
+    position: absolute;
+    height: 50px;
+    padding-left: 3rem;
+    opacity: 1;
   }
   input:focus {
     outline: none;

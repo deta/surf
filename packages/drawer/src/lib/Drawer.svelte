@@ -52,11 +52,11 @@
     border: 1px solid rgba(0, 0, 0, 0.12);
     backdrop-filter: blur(16px);
     border: 1px solid rgba(0, 0, 0, 0.12);
-    backdrop-filter: blur(64px);
+    backdrop-filter: blur(16px);
+    background: rgba(245, 245, 245, 0.92);
     border-radius: 12px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    view-transition-name: drawer-main;
 
     display: flex;
     flex-direction: column;

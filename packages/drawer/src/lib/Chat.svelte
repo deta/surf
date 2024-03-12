@@ -1,10 +1,14 @@
 <script lang="ts">
   import ChatInput from '@horizon/core/src/lib/components/Drawer/ChatInput.svelte'
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, getContext } from 'svelte'
 
   export let droppedInputElements
 
+  const viewState: any = getContext('drawer.viewState')
+
   const dispatch = createEventDispatcher()
+
+  export let forceOpen: boolean
 
   function forward(payload: any) {
     dispatch('chatSend', payload.detail)
@@ -19,11 +23,12 @@
   }
 </script>
 
-<div class="chat-input-wrapper">
+<div class="chat-input-wrapper" class:active={$viewState == 'chatInput' || forceOpen}>
   <ChatInput
     on:chatSend={forward}
     on:drop={forwardDrop}
     on:fileUpload={forwardFileUpload}
+    {forceOpen}
     {droppedInputElements}
   />
 </div>
@@ -32,7 +37,11 @@
   .chat-input-wrapper {
     position: relative;
     z-index: 10;
-    width: 100%;
+    width: 4rem;
     view-transition-name: chat-transition;
+    &.active {
+      height: auto;
+      width: 100%;
+    }
   }
 </style>

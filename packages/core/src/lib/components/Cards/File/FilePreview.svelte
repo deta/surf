@@ -5,6 +5,7 @@
   import ImageView from './ImageView.svelte'
   import { Resource } from '../../../service/resources'
   import UnknownFileView from './UnknownFileView.svelte'
+  import LoadingBox from '../../Atoms/LoadingBox.svelte'
 
   export let resource: Resource
 
@@ -34,7 +35,7 @@
   {#if error}
     <p>{error}</p>
   {:else if loading}
-    <p>Loading…</p>
+    <LoadingBox />
   {:else if resource && data}
     {#if data.type.startsWith('image/')}
       <ImageView blob={data} />

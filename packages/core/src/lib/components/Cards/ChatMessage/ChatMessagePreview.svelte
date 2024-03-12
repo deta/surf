@@ -5,6 +5,7 @@
   import type { ResourceMessage } from '../../../service/resources'
   import type { ResourceDataMessage } from '../../../types'
   import Link from '../../Atoms/Link.svelte'
+  import LoadingBox from '../../Atoms/LoadingBox.svelte'
 
   export let resource: ResourceMessage
   export let type: string
@@ -16,6 +17,7 @@
   let subtitle = ''
   let error = ''
   let isSlack = false
+  let loading = true
 
   const MAX_TITLE_LENGTH = 300
   const MAX_SUBTITLE_LENGTH = 100
@@ -26,9 +28,8 @@
 
   onMount(async () => {
     try {
+      loading = true
       message = await resource.getParsedData()
-
-      console.log('messagedata', message)
 
       const url = new URL(message.url)
 
@@ -43,6 +44,8 @@
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
+    } finally {
+      loading = false
     }
   })
 
@@ -51,11 +54,14 @@
   })
 </script>
 
-<a href={message?.url} target="_blank" class="link-card">
+<!-- <a href={message?.url} target="_blank" class="link-card"></a> -->
+<div class="link-card">
   <div class="details" class:slack={isSlack}>
     {#if error}
       <div class="title">{error}</div>
       <div class="subtitle">{message?.url}</div>
+    {:else if loading}
+      <LoadingBox />
     {:else}
       <!-- <img
         class="favicon"
@@ -70,7 +76,7 @@
       </div>
     {/if}
   </div>
-</a>
+</div>
 
 <style lang="scss">
   .link-card {
@@ -90,6 +96,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    width: 100%;
+    flex-shrink: 1;
     flex-grow: 1;
   }
 

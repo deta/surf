@@ -16,7 +16,7 @@
   .search-input-wrapper {
     position: relative;
     z-index: 10;
-    width: 4rem;
+    width: 100%;
     height: 3.3rem;
     view-transition-name: search-transition;
     &.active {

@@ -1,6 +1,6 @@
 <svg
-  class="spinner"
   {...$$restProps}
+  class="spinner"
   xmlns="http://www.w3.org/2000/svg"
   fill="none"
   viewBox="0 0 24 24"

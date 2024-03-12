@@ -69,7 +69,7 @@
   const unsubscribeContent = content.subscribe((value) => {
     log.debug('content changed', value)
     if (initialLoad) return
-    debouncedSaveContent(value)
+    debouncedSaveContent(value ?? '')
   })
 
   // prevent default drag and drop behavior (i.e. the MediaImporter handling it)
@@ -94,6 +94,8 @@
   //   })
   // )
 
+  let unsubscribeValue: () => void
+
   onMount(async () => {
     if (!$card.resourceId) {
       log.error('No resource id found', $card)
@@ -106,8 +108,16 @@
       return
     }
 
-    const value = await resource.getContent()
-    content.set(value)
+    const value = resource.parsedData
+    unsubscribeValue = value.subscribe((value) => {
+      console.log('value changed', value)
+      if (value) {
+        content.set(value)
+      }
+    })
+
+    await resource.getContent()
+
     initialLoad = false
 
     // if (active) {
@@ -122,6 +132,10 @@
 
     if (unsubscribeContent) {
       unsubscribeContent()
+    }
+
+    if (unsubscribeValue) {
+      unsubscribeValue()
     }
   })
 </script>

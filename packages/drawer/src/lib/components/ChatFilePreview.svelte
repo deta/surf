@@ -5,6 +5,7 @@
   import { type WebMetadata } from '@horizon/web-parser'
   export let metadata: any
   export let data: any
+  export let id: any
 
   const dispatch = createEventDispatcher()
 
@@ -18,8 +19,7 @@
   $: randomRotation = generateRandomRotation()
 
   const handleRemove = () => {
-    console.log(metadata)
-    dispatch('remove', metadata.sourceURI)
+    dispatch('remove', id)
   }
 </script>
 
