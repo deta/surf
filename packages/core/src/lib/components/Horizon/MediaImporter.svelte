@@ -165,7 +165,9 @@
       resource.type === ResourceTypes.LINK ||
       resource.type === ResourceTypes.ARTICLE ||
       resource.type.startsWith(ResourceTypes.POST) ||
-      resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)
+      resource.type.startsWith(ResourceTypes.CHAT_MESSAGE) ||
+      resource.type.startsWith(ResourceTypes.CHAT_THREAD) ||
+      resource.type.startsWith(ResourceTypes.DOCUMENT)
     ) {
       const bookmark = await (resource as ResourceLink).getParsedData()
       if (!bookmark || !bookmark.url) {
