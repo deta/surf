@@ -130,7 +130,7 @@
   } | null = null
 
   const showSearchDebug = writable(false)
-  const semanticDistanceThreshold = writable(2.0)
+  const semanticDistanceThreshold = writable(1.0)
   const proximityDistanceThreshold = writable(100000)
   const semanticSearchEnabled = writable(true)
   $: console.log(
