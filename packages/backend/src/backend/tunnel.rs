@@ -21,7 +21,12 @@ pub struct WorkerTunnel {
 }
 
 impl WorkerTunnel {
-    pub fn new<'a, C>(cx: &mut C, backend_root_path: String) -> Self
+    pub fn new<'a, C>(
+        cx: &mut C,
+        backend_root_path: String,
+        vision_api_key: String,
+        vision_api_endpoint: String,
+    ) -> Self
     where
         C: Context<'a>,
     {
@@ -57,8 +62,10 @@ impl WorkerTunnel {
         // spawn AI threads
         (0..2).for_each(|_| {
             let tunnel_clone = tunnel.clone();
+            let vision_api_key = vision_api_key.clone();
+            let vision_api_endpoint = vision_api_endpoint.clone();
             std::thread::spawn(move || {
-                ai_thread_entry_point(tunnel_clone);
+                ai_thread_entry_point(tunnel_clone, vision_api_key, vision_api_endpoint);
             });
         });
 

@@ -1,6 +1,7 @@
 pub mod backend;
 pub mod embeddings;
 pub mod store;
+pub mod vision;
 
 use neon::{prelude::ModuleContext, result::NeonResult};
 

@@ -240,7 +240,11 @@ impl Worker {
             ))?;
 
         self.tqueue_tx
-            .send(ProcessorMessage::ProcessResource(resource))
+            .send(ProcessorMessage::ProcessResource(resource.clone()))
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+
+        self.aiqueue_tx
+            .send(AIMessage::DescribeImage(resource))
             .map_err(|e| BackendError::GenericError(e.to_string()))
 
         // // TODO: make use of strum(?) for this
@@ -298,6 +302,24 @@ impl Worker {
         Ok(())
     }
 
+    pub fn create_resource_text_content(
+        &mut self,
+        resource_id: String,
+        content: String,
+    ) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::create_resource_text_content_tx(
+            &mut tx,
+            &ResourceTextContent {
+                id: random_uuid(),
+                resource_id,
+                content,
+            },
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn upsert_resource_text_content(
         &mut self,
         resource_id: String,
@@ -316,6 +338,30 @@ impl Worker {
                 },
             ))
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
+        Ok(())
+    }
+
+    pub fn insert_embeddings(
+        &mut self,
+        resource_id: &String,
+        embedding_type: &String,
+        embeddings: &Vec<Vec<f32>>,
+    ) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        embeddings.iter().try_for_each(|v| -> BackendResult<()> {
+            let rowid = Database::create_embedding_resource_tx(
+                &mut tx,
+                &EmbeddingResource {
+                    rowid: None,
+                    resource_id: resource_id.clone(),
+                    embedding_type: embedding_type.clone(),
+                },
+            )?;
+            let em = Embedding::new_with_rowid(rowid, v);
+            Database::create_embedding_tx(&mut tx, &em)?;
+            Ok(())
+        })?;
+        tx.commit()?;
         Ok(())
     }
 
@@ -377,6 +423,14 @@ pub fn handle_resource_message(
             oneshot,
             worker.create_resource(resource_type, resource_tags, resource_metadata),
         ),
+        ResourceMessage::CreateResourceTextContent {
+            resource_id,
+            content,
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.create_resource_text_content(resource_id, content),
+        ),
         ResourceMessage::GetResource(id) => {
             send_worker_response(channel, oneshot, worker.read_resource(id))
         }
@@ -433,6 +487,15 @@ pub fn handle_resource_message(
             channel,
             oneshot,
             worker.upsert_resource_text_content(resource_id, content),
+        ),
+        ResourceMessage::InsertEmbeddings {
+            resource_id,
+            embedding_type,
+            embeddings,
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.insert_embeddings(&resource_id, &embedding_type, &embeddings),
         ),
         ResourceMessage::UpsertEmbeddings {
             resource_id,

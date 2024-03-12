@@ -18,6 +18,7 @@ pub enum AIMessage {
     // TODO: use embeddable content trait
     GenerateMetadataEmbeddings(ResourceMetadata),
     GenerateTextContentEmbeddings(ResourceTextContent),
+    DescribeImage(CompositeResource),
 }
 
 pub enum WorkerMessage {
@@ -62,6 +63,10 @@ pub enum ResourceMessage {
         resource_tags: Option<Vec<ResourceTag>>,
         resource_metadata: Option<ResourceMetadata>,
     },
+    CreateResourceTextContent {
+        resource_id: String,
+        content: String,
+    },
     GetResource(String),
     RemoveResource(String),
     RecoverResource(String),
@@ -83,6 +88,11 @@ pub enum ResourceMessage {
     UpsertResourceTextContent {
         resource_id: String,
         content: String,
+    },
+    InsertEmbeddings {
+        resource_id: String,
+        embedding_type: String,
+        embeddings: Vec<Vec<f32>>,
     },
     UpsertEmbeddings {
         resource_id: String,
