@@ -21,7 +21,9 @@ import type {
   HistoryEntryType,
   SFFSRawHistoryEntryType,
   SFFSSearchResultItem,
-  SFFSSearchResultEngine
+  SFFSSearchResultEngine,
+  SFFSSearchParameters,
+  SFFSSearchProximityParameters
 } from '../types'
 
 export type CardToCreate = Optional<Card, 'id' | 'stackingOrder' | 'createdAt' | 'updatedAt'>
@@ -289,8 +291,19 @@ export class SFFS {
     return items.map(this.convertCompositeResourceToResource)
   }
 
-  async searchResources(query: string, tags?: SFFSResourceTag[]): Promise<SFFSSearchResultItem[]> {
-    this.log.debug('searching resources with query', query, 'and tags', tags)
+  async searchResources(
+    query: string,
+    tags?: SFFSResourceTag[],
+    parameters?: SFFSSearchParameters
+  ): Promise<SFFSSearchResultItem[]> {
+    this.log.debug(
+      'searching resources with query',
+      query,
+      'and tags',
+      tags,
+      'and parameters',
+      parameters
+    )
     const tagsData = JSON.stringify(
       (tags ?? []).map(
         (tag) =>
@@ -303,7 +316,15 @@ export class SFFS {
           }) as SFFSRawResourceTag
       )
     )
-    const raw = await this.backend.js__store_search_resources(query, tagsData)
+    const raw = await this.backend.js__store_search_resources(
+      query,
+      tagsData,
+      parameters?.proximityDistanceThreshold,
+      parameters?.proximityLimit,
+      parameters?.semanticEnabled,
+      parameters?.semanticDistanceThreshold,
+      parameters?.semanticLimit
+    )
     const parsed = this.parseData<SFFSSearchResult>(raw)
     const items = parsed?.items ?? []
 
@@ -315,11 +336,11 @@ export class SFFS {
     }))
   }
 
-  async searchForNearbyResources(resourceId: string, threshold?: number, limit?: number) {
+  async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {
     const raw = await this.backend.js__store_proximity_search_resources(
       resourceId,
-      threshold,
-      limit
+      parameters?.proximityDistanceThreshold,
+      parameters?.proximityLimit
     )
     const parsed = this.parseData<SFFSSearchResult>(raw)
     const items = parsed?.items ?? []

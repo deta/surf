@@ -15,7 +15,9 @@ import {
   type SFFSSearchResultEngine,
   ResourceTagsBuiltInKeys,
   type ResourceTagsBuiltIn,
-  type ResourceDataDocument
+  type ResourceDataDocument,
+  type SFFSSearchParameters,
+  type SFFSSearchProximityParameters
 } from '../types'
 
 /*
@@ -313,8 +315,12 @@ export class ResourceManager {
     this.resources.set(resources)
   }
 
-  async searchResources(query: string, tags?: SFFSResourceTag[]) {
-    const rawResults = await this.sffs.searchResources(query, tags)
+  async searchResources(
+    query: string,
+    tags?: SFFSResourceTag[],
+    parameters?: SFFSSearchParameters
+  ) {
+    const rawResults = await this.sffs.searchResources(query, tags, parameters)
     const results = rawResults.map(
       (item) =>
         ({
@@ -331,8 +337,8 @@ export class ResourceManager {
     return results
   }
 
-  async searchForNearbyResources(resourceId: string) {
-    const rawResults = await this.sffs.searchForNearbyResources(resourceId)
+  async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {
+    const rawResults = await this.sffs.searchForNearbyResources(resourceId, parameters)
     const results = rawResults.map(
       (item) =>
         ({

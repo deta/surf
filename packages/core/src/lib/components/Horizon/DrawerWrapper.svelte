@@ -45,7 +45,8 @@
     ResourceTypes,
     type ResourceData,
     type SFFSResourceTag,
-    type SFFSResourceMetadata
+    type SFFSResourceMetadata,
+    type SFFSSearchParameters
   } from '../../types'
 
   import { parseStringIntoUrl, stringToURLList } from '../../utils/url'
@@ -106,6 +107,11 @@
     appInfo: DetectedWebApp | null
   } | null = null
 
+  const showSearchDebug = writable(false)
+  const semanticDistanceThreshold = writable(2.0)
+  const proximityDistanceThreshold = writable(100000)
+  const semanticSearchEnabled = writable(true)
+
   const runSearch = async (query: string, tab: string | null) => {
     log.debug('Searching for', query, 'in', tab)
 
@@ -140,7 +146,16 @@
       tags.push(ResourceManager.SearchTagHorizon(horizon.id))
     }
 
-    const result = (await resourceManager.searchResources(query, tags)).reverse()
+    const parsedParameters = {
+      semanticEnabled: $semanticSearchEnabled,
+      semanticDistanceThreshold: $semanticDistanceThreshold,
+      proximityDistanceThreshold: $proximityDistanceThreshold
+    } as SFFSSearchParameters
+
+    const result = await resourceManager.searchResources(query, tags, parsedParameters)
+    if (query === '') {
+      result.reverse()
+    }
 
     log.debug('Search result', result)
     searchResult = result
@@ -446,6 +461,14 @@
     })
   }
 
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'j') {
+      $showSearchDebug = !$showSearchDebug
+
+      viewState.set('search')
+    }
+  }
+
   onMount(() => {
     const unsubscribeQuery = searchQuery.subscribe(({ value, tab }) => {
       runSearch(value, tab)
@@ -458,6 +481,18 @@
 
     const unsubscribeResources = resourcesInMemory.subscribe((resources) => {
       log.debug('Resources changed', resources)
+      runSearch($searchQuery.value, $searchQuery.tab)
+    })
+
+    const unsubscribeSemanticDistanceThreshold = semanticDistanceThreshold.subscribe((value) => {
+      runSearch($searchQuery.value, $searchQuery.tab)
+    })
+
+    const unsubscribeProximityDistanceThreshold = proximityDistanceThreshold.subscribe((value) => {
+      runSearch($searchQuery.value, $searchQuery.tab)
+    })
+
+    const unsubscribeSemanticSearchEnabled = semanticSearchEnabled.subscribe((value) => {
       runSearch($searchQuery.value, $searchQuery.tab)
     })
 
@@ -475,9 +510,23 @@
       if (unsubscribeResources) {
         unsubscribeResources()
       }
+
+      if (unsubscribeSemanticDistanceThreshold) {
+        unsubscribeSemanticDistanceThreshold()
+      }
+
+      if (unsubscribeProximityDistanceThreshold) {
+        unsubscribeProximityDistanceThreshold()
+      }
+
+      if (unsubscribeSemanticSearchEnabled) {
+        unsubscribeSemanticSearchEnabled()
+      }
     }
   })
 </script>
+
+<svelte:window on:keydown={handleKeyDown} />
 
 <DrawerProvider {drawer} on:search={handleSearch}>
   {#if detectedInput}
@@ -598,6 +647,29 @@
 
       {#if $viewState == 'search' || $viewState == 'chatInput'}
         <DrawerCancel on:search-abort={abortSearch} />
+        {#if $showSearchDebug}
+          <div class="search-debug">
+            <label>
+              Semantic Enabled
+              <input bind:checked={$semanticSearchEnabled} type="checkbox" />
+            </label>
+
+            <label>
+              Semantic Threshold
+              <input bind:value={$semanticDistanceThreshold} type="number" step="0.15" />
+            </label>
+
+            <label>
+              Proximity Threshold
+              <input
+                bind:value={$proximityDistanceThreshold}
+                type="number"
+                step="10000"
+                style="width: 100px;"
+              />
+            </label>
+          </div>
+        {/if}
       {/if}
       <!-- <ProgressiveBlur /> -->
     {/if}
@@ -704,6 +776,29 @@
       .search-transition {
         position: relative;
       }
+    }
+  }
+
+  .search-debug {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    padding-bottom: 1.5rem;
+    padding-top: 0.25rem;
+    background: rgba(255, 255, 255, 0.33);
+
+    input {
+      background: none;
+      padding: 0.5rem;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: 0.02rem;
+      width: 75px;
+      text-align: center;
     }
   }
 </style>
