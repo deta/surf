@@ -79,7 +79,7 @@
     {:else if data.type === 'application/pdf'}
       <PdfView {resource} blob={data} />
     {:else if fileKind === 'video'}
-      <VideoView {resource} blob={data} />
+      <VideoView {magicFieldParticipant} {resource} blob={data} />
     {:else if fileKind === 'audio'}
       <AudioView {magicFieldParticipant} {resource} blob={data} />
     {:else}

@@ -14,6 +14,7 @@ import OpenAI, { toFile } from 'openai'
 
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
+
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
 const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
 
