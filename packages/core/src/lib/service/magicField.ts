@@ -461,11 +461,13 @@ export class MagicFieldService {
     this.log.debug(`Creating participant with id ${id}`)
     const participant = new MagicFieldParticipant(id, position)
 
-    const unsubscribe = participant.position.subscribe((pos) => {
-      this.recalculateFieldParticipants()
-    })
+    if (this.getFields().length > 0) {
+      const unsubscribe = participant.position.subscribe((pos) => {
+        this.recalculateFieldParticipants()
+      })
+      this.participantSubscribers.set(id, unsubscribe)
+    }
 
-    this.participantSubscribers.set(id, unsubscribe)
     this.participants.update((participants) => [...participants, participant])
 
     this.recalculateFieldParticipants()
@@ -514,6 +516,16 @@ export class MagicFieldService {
     // this.fieldSubscribers.set(id, unsubscribe)
     this.fields.update((fields) => [...fields, field])
 
+    const participants = this.getParticipants()
+    if (participants.length > 0) {
+      participants.forEach((p) => {
+        const unsubscribe = p.position.subscribe(() => {
+          this.recalculateFieldParticipants()
+        })
+        this.participantSubscribers.set(id, unsubscribe)
+      })
+    }
+
     this.recalculateFieldParticipants()
 
     field.emit('created', field)
@@ -542,5 +554,11 @@ export class MagicFieldService {
 
     field.emit('destroyed')
     this.fields.update((fields) => fields.filter((f) => f.id !== id))
+
+    if (this.getFields().length === 0) {
+      this.participantSubscribers.forEach((unsubscribe) => {
+        unsubscribe()
+      })
+    }
   }
 }
