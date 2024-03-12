@@ -285,6 +285,11 @@ impl Worker {
     }
 
     pub fn update_resource_metadata(&mut self, metadata: ResourceMetadata) -> BackendResult<()> {
+        self.aiqueue_tx
+            // TODO: not clone?
+            .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+
         self.db.update_resource_metadata(&metadata)
     }
 
