@@ -217,7 +217,8 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
     code: event.code,
     ctrlKey: event.ctrlKey,
     metaKey: event.metaKey,
-    shiftKey: event.shiftKey
+    shiftKey: event.shiftKey,
+    altKey: event.altKey
   })
 })
 

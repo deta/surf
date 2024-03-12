@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { setContext } from 'svelte'
   import { derived, writable } from 'svelte/store'
+  import { setContext, tick } from 'svelte'
   import { WebParser, type WebMetadata, type DetectedWebApp } from '@horizon/web-parser'
 
   import {
@@ -19,7 +19,7 @@
     type SearchQuery
   } from '@horizon/drawer'
 
-  import type { Resource } from '../../service/resources'
+  import type { Resource, ResourceDocument } from '../../service/resources'
   import { Icon } from '@horizon/icons'
 
   import type { Horizon } from '../../service/horizon'
@@ -55,7 +55,7 @@
   import { parse } from 'date-fns'
   import Link from '../Atoms/Link.svelte'
   import type { ParsedMetadata } from '../../utils/parseMetadata'
-  import { each, result } from 'lodash'
+  import { getEditorContentText } from '@horizon/editor'
 
   export const drawer = provideDrawer()
 
@@ -396,8 +396,8 @@
       } else {
         e.dataTransfer.setData('text/plain', JSON.stringify(data))
       }
-    } else if (resource.type.startsWith(ResourceTypes.DOCUMENT)) {
-      const data = (resource as ResourceNote).parsedData
+    } else if (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+      const data = get((resource as ResourceNote).parsedData)
       log.debug('parsed resource data')
 
       // We cannot read the data here as the drag start event is synchronous
@@ -406,7 +406,21 @@
         return
       }
 
-      e.dataTransfer.setData('text/plain', data)
+      const textContent = getEditorContentText(data)
+      e.dataTransfer.setData('text/plain', textContent)
+      e.dataTransfer.setData('text/html', data)
+    } else if (resource.type.startsWith(ResourceTypes.DOCUMENT)) {
+      const document = (resource as ResourceDocument).parsedData
+      log.debug('parsed resource data')
+
+      // We cannot read the data here as the drag start event is synchronous
+      if (!document) {
+        log.warn('No parsed data found, cannot add primitive data to dataTransfer')
+        return
+      }
+
+      e.dataTransfer.setData('text/plain', document.content_plain)
+      e.dataTransfer.setData('text/html', document.content_html)
     } else if (resource.type.startsWith('image/')) {
       const filePath = resource.path
       log.debug('file path', filePath)

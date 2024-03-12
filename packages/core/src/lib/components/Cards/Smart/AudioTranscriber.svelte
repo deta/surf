@@ -6,6 +6,7 @@
   import { useLogScope } from '../../../utils/log'
   import type { Horizon } from '../../../service/horizon'
   import type { MagicField, MagicFieldParticipant } from '../../../service/magicField'
+  import { TRANSCRIBER_MIME_TYPES } from '../../../constants/magicField'
 
   export let card: Writable<Card>
   export let horizon: Horizon
@@ -32,10 +33,10 @@
 
     log.debug('Getting data from participant', id)
 
-    const data = await magicField.requestDataFromParticipant(id, 'audio/mp3')
+    const data = await magicField.requestDataFromParticipant(id, TRANSCRIBER_MIME_TYPES)
     log.debug('received data:', data)
 
-    return data as string | null
+    return data?.data as string | null
   }
 
   const transcribeAudio = async (resourcePath: string) => {
@@ -91,7 +92,11 @@
     }
 
     log.debug("Creating magic field with card's participant", magicCardParticipant)
-    magicField = magicFieldService.createField($card.id, 'audio/mp3', magicCardParticipant.position)
+    magicField = magicFieldService.createField(
+      $card.id,
+      TRANSCRIBER_MIME_TYPES,
+      magicCardParticipant.position
+    )
 
     magicField.onParticipantLeave((p) => {
       log.debug('participantEnter', p)

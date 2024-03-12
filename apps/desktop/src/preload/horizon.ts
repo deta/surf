@@ -19,6 +19,7 @@ const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
+let mainNewWindowHandler: any = null
 const webviewNewWindowHandlers = {}
 const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
@@ -50,6 +51,9 @@ const api = {
 
   onFullscreenChange: (callback: any) => {
     fullscreenHandlers.push(callback)
+  },
+  registerMainNewWindowHandler: (callback: any) => {
+    mainNewWindowHandler = callback
   },
   registerNewWindowHandler: (webContentsId: number, callback: any) => {
     webviewNewWindowHandlers[webContentsId] = callback
@@ -180,6 +184,11 @@ ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {
 })
 
 ipcRenderer.on('new-window-request', (_, { webContentsId, ...data }) => {
+  if (!webContentsId) {
+    if (mainNewWindowHandler) mainNewWindowHandler(data)
+    return
+  }
+
   const handler = webviewNewWindowHandlers[webContentsId]
   if (handler) {
     handler(data)

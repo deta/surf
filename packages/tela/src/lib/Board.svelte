@@ -1185,6 +1185,11 @@
       $zoom
     )
 
+    const domEl = document.querySelector(
+      `[data-id="${get(e.detail.positionable).id}"]`
+    ) as HTMLElement
+    domEl.classList.add('no-animation')
+
     if ($allowQuickSnap) {
       showQuickSnapGuides = true
     }
@@ -1586,7 +1591,7 @@
 
     dragState.draggingPositionable = null
     // PERF: This is bit hacky, but works for now (Without it, the grid snapping is not as smooth).
-    setTimeout(() => domEl.classList.add('no-animation'), 300)
+    // TODO: Remove? why was this here? --> setTimeout(() => domEl.classList.add('no-animation'), 300)
 
     mode.idle()
     dispatch('draggableEnd', positionable)
@@ -1609,6 +1614,11 @@
       $viewPort,
       $zoom
     )
+
+    const domEl = document.querySelector(
+      `[data-id="${get(e.detail.positionable).id}"]`
+    ) as HTMLElement
+    domEl.classList.add('no-animation')
 
     mode.resizing()
     moveToStackingTop(stackingOrder, get(positionable)[POSITIONABLE_KEY])
@@ -1643,11 +1653,6 @@
       $viewPort,
       $zoom
     )
-
-    const domEl = document.querySelector(
-      `[data-id="${get(e.detail.positionable).id}"]`
-    ) as HTMLElement
-    domEl.classList.add('no-animation')
 
     const preserveAspectRatio = event.shiftKey
 
@@ -1896,8 +1901,6 @@
     }
 
     dragState.draggingPositionable = null
-    // PERF: This is bit hacky, but works for now (Without it, the grid snapping is not as smooth).
-    setTimeout(() => domEl.classList.add('no-animation'), 300)
 
     mode.idle()
     dispatch('resizableEnd', positionable)

@@ -52,7 +52,7 @@ export function exitFocusMode(board: IBoard<any, any>) {
   settings.update((v) => {
     v.CAN_DRAW = true
     v.CAN_PAN = true
-    v.CAN_SELECT = true
+    //v.CAN_SELECT = true
 
     return v
   })

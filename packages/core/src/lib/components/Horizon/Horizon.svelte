@@ -74,7 +74,7 @@
     CAN_PAN: true,
     CAN_DRAW: false,
     CAN_ZOOM: false,
-    CAN_SELECT: true,
+    CAN_SELECT: false,
     PAN_DIRECTION: 'x',
     SNAP_TO_GRID: true,
     GRID_SIZE: GRID_SIZE_COARSE,
@@ -237,12 +237,7 @@
     // Meta
     if (e.detail.event.metaKey) {
       $modSelectConfigurator = { x: pos.x, y: pos.y, width: size.x, height: size.y }
-      openFlyMenu('cursor', [
-        { icon: '🃏', value: 'Browser', type: 'card' },
-        { icon: '🃏', value: 'Text', type: 'card' },
-        { icon: '🔮', value: 'Summarize', type: 'magic-card' },
-        { icon: '🔮', value: 'Transcribe', type: 'magic-card' }
-      ])
+      openFlyMenu('cursor', buildDefaultList())
     } else {
       // Right click
       if (event.which === 3 || event.button === 2) {
@@ -407,9 +402,11 @@
     // }
 
     // NOTE: Temporary? Windowmanagement shortcuts for demo launch
-    else if (e.ctrlKey && $activeCardId !== null) {
+    else if (e.altKey && $activeCardId !== null) {
       e.preventDefault()
+      e.stopPropagation()
       const card = $cards.find((e) => get(e).id === $activeCardId)
+      if (!card) return
       horizon.moveCardToStackingTop($activeCardId) // FIX: THIS
       if (e.key === 'ArrowLeft') {
         card.update((v) => {
@@ -461,14 +458,16 @@
         })
       } else if (e.key === 'Enter') {
         card.update((v) => {
-          if (v.y === 0 && v.width === $viewPort.w && v.height === $viewPort.h) {
-            const w = $viewPort.w / 2
-            const h = $viewPort.h / 2
-            v.x = $viewOffset.x + w / 2
-            v.y = h / 2
-            v.width = w
-            v.height = h
+          if (v.isMaximized === true) {
+            v.x = v.maximizeBackup.x
+            v.y = v.maximizeBackup.y
+            v.width = v.maximizeBackup.width
+            v.height = v.maximizeBackup.height
+            v.isMaximized = undefined
+            v.maximizeBackup = undefined
           } else {
+            v.isMaximized = true
+            v.maximizeBackup = { x: v.x, y: v.y, width: v.width, height: v.height }
             v.x = $viewOffset.x
             v.y = 0
             v.width = $viewPort.w
@@ -480,15 +479,17 @@
     }
 
     // Slice navigation
-    else if (e.ctrlKey && e.key === 'ArrowRight') {
+    else if (e.metaKey && e.key === 'ArrowRight') {
       const target = $viewOffset.x + $viewPort.w
       const adjusted = target - (target % $viewPort.w)
-      $state.viewOffset.set({ x: adjusted, y: 0 })
-    } else if (e.ctrlKey && e.key === 'ArrowLeft') {
+      requestAnimationFrame(() => $state.viewOffset.set({ x: adjusted, y: 0 }, { duration: 50 }))
+    } else if (e.metaKey && e.key === 'ArrowLeft') {
       const startDif = $viewOffset.x % $viewPort.w
       const target =
         Math.abs(startDif) <= 35 ? $viewOffset.x - $viewPort.w : $viewOffset.x - startDif
-      $state.viewOffset.set({ x: clamp(target, 0, Infinity), y: 0 })
+      requestAnimationFrame(() =>
+        $state.viewOffset.set({ x: clamp(target, 0, Infinity), y: 0 }, { duration: 50 })
+      )
     } else if (e.key === 'Escape') {
       $modSelectConfigurator = undefined
     }
@@ -698,7 +699,7 @@
           return v
         })
       }
-      if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
+      //if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
     }
     if (cmd === 'text') {
       const card = await horizon.addCardText(
@@ -715,6 +716,8 @@
       //if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
     } else if (cmd === 'summarize') {
       horizon.addCardAIText(targetRect)
+    } else if (cmd === 'transcribe') {
+      horizon.addCardAudioTranscriber(targetRect)
     }
 
     // -- Card actions
@@ -1136,7 +1139,7 @@
     visorScroll = 0
     $settings.CAN_PAN = true
     $settings.CAN_DRAW = true
-    $settings.CAN_SELECT = true
+    //$settings.CAN_SELECT = true
   }
 
   onMount(() => {
