@@ -3,11 +3,13 @@
   import type { Horizon, HorizonsManager } from '../../service/horizon'
   import type { ResourceObject } from '../../service/resources'
   import { useLogScope } from '../../utils/log'
-  import { generateRootDomain } from '../../utils/url'
+  import { generateRootDomain, parseStringIntoUrl } from '../../utils/url'
   import { formatDistanceToNow, parseISO } from 'date-fns'
   import type { Card } from '../../types'
+  import autosize from 'svelte-autosize'
 
   import Link from '../Atoms/Link.svelte'
+  import { update } from 'lodash'
 
   const log = useLogScope('DrawerDetailsWrapper')
 
@@ -21,6 +23,8 @@
 
   let userContext = resource.metadata?.userContext
 
+  let textareaRef: HTMLTextAreaElement
+
   type CardHorizon = { id: string; horizon: Horizon }
 
   // TODO: Move this component to the core package and import the ResourceSearchResultItem type
@@ -28,9 +32,11 @@
   let cards: Card[] = []
   let cardHorizons: CardHorizon[] = []
 
-  const handleKeyDown = () => {
+  $: {
     resourceManager.updateResourceMetadata(resource.id, { userContext })
   }
+
+  $: sourceURL = parseStringIntoUrl(resource.metadata?.sourceURI ?? '')
 
   const handleNearbySearch = async () => {
     const results = await resourceManager.searchForNearbyResources(resource.id, {
@@ -101,11 +107,16 @@
     <slot />
   </div>
   <div class="textarea-wrapper">
+    {#if userContext !== ''}
+      <div class="header">
+        <div class="title">Notes</div>
+      </div>
+    {/if}
     <textarea
-      id="modernTextarea"
-      placeholder="Add Context..."
+      use:autosize
+      bind:this={textareaRef}
       bind:value={userContext}
-      on:keyup={handleKeyDown}
+      placeholder="Add Note..."
     ></textarea>
   </div>
 
@@ -129,9 +140,13 @@
 
   <div class="metadata-wrapper">
     <div class="metadata">
-      {#if resource.metadata?.sourceURI}
+      {#if sourceURL}
         <div class="source-button">
-          <Link url={resource.metadata?.sourceURI} label={'Go to Source'} locked={true} />
+          <Link
+            url={sourceURL.href}
+            label={`Go to Source — ${generateRootDomain(sourceURL.href)}`}
+            locked={true}
+          />
         </div>
       {/if}
 
@@ -196,6 +211,18 @@
     resize: none;
   }
 
+  .textarea-wrapper,
+  .references-wrapper {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    .header {
+      width: 100%;
+      max-width: 28rem;
+      padding: 0.75rem;
+    }
+  }
+
   .metadata-wrapper {
     padding: 2rem 0;
     .metadata {
@@ -252,8 +279,10 @@
   }
 
   .cards-wrapper {
-    padding: 2rem;
+    padding: 0.5rem 0.25rem 1.5rem 0.25rem;
     display: flex;
+    width: 100%;
+    max-width: 28rem;
     gap: 1rem;
     .card {
       padding: 1rem;

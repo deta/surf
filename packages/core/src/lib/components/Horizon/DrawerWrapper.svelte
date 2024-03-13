@@ -17,6 +17,7 @@
     DrawerContenEmpty,
     DrawerDetailsProximity,
     ResourceOverlay,
+    AlreadyDroppedTooltip,
     type SearchQuery
   } from '@horizon/drawer'
 
@@ -112,6 +113,7 @@
   const droppedInputElements = writable<MediaParserResult[]>([])
 
   const isSaving = writable(false)
+  const alreadyDropped = writable(false)
 
   $: if ($viewState === 'default') {
     $droppedInputElements = []
@@ -121,6 +123,7 @@
   $: if (!$isDrawerShown) {
     viewState.set('default')
     searchQuery.set({ value: '', tab: 'all' })
+    drawer.selectedTab.set('all')
   }
 
   let refreshContentLayout: () => Promise<void>
@@ -331,6 +334,10 @@
     log.debug('Dropped', event)
 
     const parsed = await processDrop(event)
+    console.log('RECIEVEPARSEDDATA', parsed)
+
+    const containsResource = parsed.some((item) => item.type === 'resource')
+    alreadyDropped.set(containsResource)
 
     // Filter out all items where the type is 'resource'
     const filteredParsed = parsed.filter((item) => item.type !== 'resource')
@@ -343,6 +350,9 @@
       return items
     })
 
+    setTimeout(() => {
+      alreadyDropped.set(false)
+    }, 4000)
     log.debug('DROPPED ITEM', $droppedInputElements)
   }
 
@@ -753,6 +763,15 @@
 
 {#if $showDropZone}
   <div class="drop-zone">
+    {#if $alreadyDropped && $viewState === 'chatInput'}
+      <div
+        class="already-dropped-wrapper"
+        in:fly={{ y: 30, duration: 120 }}
+        out:fly={{ y: 30, duration: 320 }}
+      >
+        <AlreadyDroppedTooltip />
+      </div>
+    {/if}
     <DrawerChat
       on:chatSend={handleChat}
       on:dropForwarded={handleDropForwarded}
@@ -893,6 +912,15 @@
           <DrawerSearch />
         {/if}
         {#if $viewState !== 'search'}
+          {#if $alreadyDropped && $viewState === 'chatInput'}
+            <div
+              class="already-dropped-wrapper"
+              in:fly={{ y: 30, duration: 120 }}
+              out:fly={{ y: 30, duration: 320 }}
+            >
+              <AlreadyDroppedTooltip />
+            </div>
+          {/if}
           <DrawerChat
             on:chatSend={handleChat}
             on:dropForwarded={handleDropForwarded}
@@ -1037,6 +1065,7 @@
     }
 
     .drawer-chat-search {
+      position: relative;
       display: flex;
       align-items: center;
       width: 100%;
@@ -1089,6 +1118,12 @@
         display: flex;
       }
     }
+  }
+
+  .already-dropped-wrapper {
+    position: absolute;
+    top: 0;
+    width: 100%;
   }
 
   .drop-zone-close {

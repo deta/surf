@@ -33,6 +33,7 @@
   const dispatch = createEventDispatcher()
   const dispatchDrop = createEventDispatcher<{ drop: DragEvent }>()
   const dispatchFileUpload = createEventDispatcher<{ fileUpload: FileList }>()
+  const sendDisabled = writable(true)
 
   const dragOver = writable(false)
   const inputText = writable('')
@@ -47,6 +48,15 @@
     if (!lastKeyDeleted) {
       handleChat(searchQuery)
     }
+  }
+
+  // The send button should be disabled if text, dropped items and links are empty
+  $: {
+    const isTextEmpty = $inputText === ''
+    const areNoDroppedElements = $droppedInputElements.length === 0
+    const areNoDroppedLinks = $parsedURLs.length === 0
+
+    sendDisabled.set(isTextEmpty && areNoDroppedElements && areNoDroppedLinks)
   }
 
   const log = useLogScope('DrawerWrapper')
@@ -174,7 +184,9 @@
     }
 
     if (e.key === 'Enter') {
-      handleSend()
+      if (!$sendDisabled) {
+        handleSend()
+      }
     }
   }
 
@@ -195,6 +207,7 @@
     e.stopPropagation()
     dragOver.set(false)
     console.log('PROCESSEDDROP', e)
+    dispatchDrop('drop', e)
 
     const parsed = await processDrop(e)
     const textItems = parsed.filter((item) => item.type === 'text')
@@ -208,7 +221,6 @@
       }
     }
 
-    dispatchDrop('drop', e)
     // var textData = e.dataTransfer.getData('text')
     // if (textData && !optimisticCheckIfUrl(textData)) {
     //   console.log('textdata detected:', textData)
@@ -303,6 +315,7 @@
   <div
     class="send-button"
     class:hidden={!forceOpen && $viewState !== 'chatInput'}
+    class:disabled={$sendDisabled}
     on:click={handleSend}
   >
     <div class="arrow-wrapper">
@@ -462,6 +475,9 @@
       opacity: 0;
       display: none;
       transition: all 240ms ease-out;
+    }
+    &.disabled {
+      display: none;
     }
     .arrow-wrapper {
       opacity: 0.45;

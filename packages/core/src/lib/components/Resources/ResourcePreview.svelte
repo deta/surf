@@ -133,6 +133,17 @@
 </div>
 
 <style lang="scss">
+  @keyframes fade-in-up {
+    0% {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .resource-preview {
     position: relative;
     display: flex;
@@ -141,6 +152,10 @@
     border-radius: 8px;
     overflow: visible;
     cursor: default;
+    animation: 280ms fade-in-up cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    animation-delay: 20ms;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
     &:hover {
       .remove-wrapper {
         animation: fade-in 120ms forwards;

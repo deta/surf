@@ -1,8 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, getContext } from 'svelte'
-
-  import { Icon } from '@horizon/icons'
-
+  import { createEventDispatcher, getContext, onMount } from 'svelte'
   import Tabs, { type Tab } from './Tabs.svelte'
   import { useDrawer } from './drawer'
 
@@ -14,6 +11,8 @@
   const dispatch = createEventDispatcher<{ select: string }>()
   const viewState: any = getContext('drawer.viewState')
 
+  let navigationRef: any
+
   const handleTabSelect = (event: CustomEvent<string>) => {
     const key = event.detail
 
@@ -22,11 +21,18 @@
     console.log('Tab changed, triggering search')
     drawer.search({ tab: key })
   }
+
+  // Function to handle the horizontal scrolling
+  function enableHorizontalScrolling(event: WheelEvent) {
+    if (event.deltaY == 0) return // If there's no vertical scrolling, exit
+    event.preventDefault() // Prevent the default vertical scrolling
+    navigationRef.scrollLeft += event.deltaY + event.deltaX // Apply horizontal scrolling
+  }
 </script>
 
 {#if $viewState !== 'details'}
   <div class="drawer-navigation">
-    <div class="navigation-wrapper">
+    <div class="navigation-wrapper" bind:this={navigationRef} on:wheel={enableHorizontalScrolling}>
       <Tabs bind:selected={$selectedTab} {tabs} on:select={handleTabSelect} />
     </div>
   </div>
@@ -53,6 +59,7 @@
     z-index: 1000;
   }
 
+  .drawer-navigation,
   .navigation-wrapper {
     overflow-x: auto;
     &::-webkit-scrollbar {

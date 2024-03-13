@@ -2976,6 +2976,11 @@ autoprefixer@^10.4.14, autoprefixer@^10.4.18:
     picocolors "^1.0.0"
     postcss-value-parser "^4.2.0"
 
+autosize@*:
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/autosize/-/autosize-6.0.1.tgz#64ee78dd7029be959eddd3afbbd33235b957e10f"
+  integrity sha512-f86EjiUKE6Xvczc4ioP1JBlWG7FKrE13qe/DxBCpe8GCipCq2nFw73aO8QEBKHfSbYGDN5eB9jXWKen7tspDqQ==
+
 available-typed-arrays@^1.0.6, available-typed-arrays@^1.0.7:
   version "1.0.7"
   resolved "https://registry.yarnpkg.com/available-typed-arrays/-/available-typed-arrays-1.0.7.tgz#a5cc375d6a03c2efc87a553f3e0b1522def14846"
@@ -8347,6 +8352,13 @@ supports-preserve-symlinks-flag@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/supports-preserve-symlinks-flag/-/supports-preserve-symlinks-flag-1.0.0.tgz#6eda4bd344a3c94aea376d4cc31bc77311039e09"
   integrity sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==
+
+svelte-autosize@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/svelte-autosize/-/svelte-autosize-1.1.0.tgz#60ccc1649e0f911f8af1d53c0cfed3cf365b834c"
+  integrity sha512-CPHq/K0ssrwuHBxFCCOtpWtXZwk4edjEIZ2mJT4KKzjSBq+CO9nOmstjpOh5TpoOf/4MtDcwAwnWmktqANjU6A==
+  dependencies:
+    autosize "*"
 
 svelte-check@^3.4.3, svelte-check@^3.5.0, svelte-check@^3.6.2:
   version "3.6.4"
