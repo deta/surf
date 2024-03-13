@@ -1,13 +1,15 @@
 use crate::{
     backend::{
-        message::{ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot},
+        message::{
+            AIMessage, ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot,
+        },
         worker::{send_worker_response, Worker},
     },
     store::{
         db::{CompositeResource, Database, SearchResult},
         models::{
-            current_time, random_uuid, InternalResourceTagNames, Resource, ResourceMetadata,
-            ResourceTag, ResourceTagFilter,
+            current_time, random_uuid, Embedding, EmbeddingResource, InternalResourceTagNames,
+            Resource, ResourceMetadata, ResourceTag, ResourceTagFilter, ResourceTextContent,
         },
     },
     BackendError, BackendResult,
@@ -53,6 +55,12 @@ impl Worker {
                     Database::create_resource_tag_tx(&mut tx, tag)?;
                     Ok(())
                 })?;
+
+            // generate metadata embeddings in separate AI thread
+            self.aiqueue_tx
+                // TODO: not clone?
+                .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
+                .map_err(|e| BackendError::GenericError(e.to_string()))?;
         }
 
         if let Some(tags) = &mut tags {
@@ -164,6 +172,9 @@ impl Worker {
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
         proximity_distance_threshold: Option<f32>,
         proximity_limit: Option<i64>,
+        semantic_search_enabled: Option<bool>,
+        embeddings_distance_threshold: Option<f32>,
+        embeddings_limit: Option<i64>,
     ) -> BackendResult<SearchResult> {
         if let Some(resource_tag_filters) = &resource_tag_filters {
             // we use an `INTERSECT` for each resouce tag filter
@@ -186,11 +197,37 @@ impl Worker {
             None => 10,
         };
 
+        let semantic_search_enabled = match semantic_search_enabled {
+            Some(enabled) => enabled,
+            None => false,
+        };
+
+        let embeddings_distance_threshold = match embeddings_distance_threshold {
+            Some(threshold) => threshold,
+            None => 1.0,
+        };
+        let embeddings_limit = match embeddings_limit {
+            Some(limit) => limit,
+            None => 100,
+        };
+
+        let mut query_embedding: Vec<f32> = Vec::new();
+
+        if query != "" && semantic_search_enabled {
+            // TODO: what if query is too big?
+            // TODO: can we use one of the ai threads instead of the main thread
+            query_embedding = self.embedding_model.encode_single(&query)?;
+        }
+
         self.db.search_resources(
             &query,
+            query_embedding,
             resource_tag_filters,
             proximity_distance_threshold,
             proximity_limit,
+            semantic_search_enabled,
+            embeddings_distance_threshold,
+            embeddings_limit,
         )
     }
 
@@ -203,7 +240,11 @@ impl Worker {
             ))?;
 
         self.tqueue_tx
-            .send(ProcessorMessage::ProcessResource(resource))
+            .send(ProcessorMessage::ProcessResource(resource.clone()))
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+
+        self.aiqueue_tx
+            .send(AIMessage::DescribeImage(resource))
             .map_err(|e| BackendError::GenericError(e.to_string()))
 
         // // TODO: make use of strum(?) for this
@@ -244,6 +285,11 @@ impl Worker {
     }
 
     pub fn update_resource_metadata(&mut self, metadata: ResourceMetadata) -> BackendResult<()> {
+        self.aiqueue_tx
+            // TODO: not clone?
+            .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+
         self.db.update_resource_metadata(&metadata)
     }
 
@@ -261,6 +307,24 @@ impl Worker {
         Ok(())
     }
 
+    pub fn create_resource_text_content(
+        &mut self,
+        resource_id: String,
+        content: String,
+    ) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::create_resource_text_content_tx(
+            &mut tx,
+            &ResourceTextContent {
+                id: random_uuid(),
+                resource_id,
+                content,
+            },
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn upsert_resource_text_content(
         &mut self,
         resource_id: String,
@@ -268,6 +332,65 @@ impl Worker {
     ) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::upsert_resource_text_content(&mut tx, &resource_id, &content)?;
+        tx.commit()?;
+
+        self.aiqueue_tx
+            .send(AIMessage::GenerateTextContentEmbeddings(
+                ResourceTextContent {
+                    id: "".to_string(), // TODO: don't like this empty string behavior
+                    resource_id,
+                    content,
+                },
+            ))
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+        Ok(())
+    }
+
+    pub fn insert_embeddings(
+        &mut self,
+        resource_id: &String,
+        embedding_type: &String,
+        embeddings: &Vec<Vec<f32>>,
+    ) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        embeddings.iter().try_for_each(|v| -> BackendResult<()> {
+            let rowid = Database::create_embedding_resource_tx(
+                &mut tx,
+                &EmbeddingResource {
+                    rowid: None,
+                    resource_id: resource_id.clone(),
+                    embedding_type: embedding_type.clone(),
+                },
+            )?;
+            let em = Embedding::new_with_rowid(rowid, v);
+            Database::create_embedding_tx(&mut tx, &em)?;
+            Ok(())
+        })?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn upsert_embeddings(
+        &mut self,
+        resource_id: &String,
+        embedding_type: &String,
+        embeddings: &Vec<Vec<f32>>,
+    ) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::remove_embedding_resource_by_type_tx(&mut tx, resource_id, embedding_type)?;
+        embeddings.iter().try_for_each(|v| -> BackendResult<()> {
+            let rowid = Database::create_embedding_resource_tx(
+                &mut tx,
+                &EmbeddingResource {
+                    rowid: None,
+                    resource_id: resource_id.clone(),
+                    embedding_type: embedding_type.clone(),
+                },
+            )?;
+            let em = Embedding::new_with_rowid(rowid, v);
+            Database::create_embedding_tx(&mut tx, &em)?;
+            Ok(())
+        })?;
         tx.commit()?;
         Ok(())
     }
@@ -305,6 +428,14 @@ pub fn handle_resource_message(
             oneshot,
             worker.create_resource(resource_type, resource_tags, resource_metadata),
         ),
+        ResourceMessage::CreateResourceTextContent {
+            resource_id,
+            content,
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.create_resource_text_content(resource_id, content),
+        ),
         ResourceMessage::GetResource(id) => {
             send_worker_response(channel, oneshot, worker.read_resource(id))
         }
@@ -332,6 +463,9 @@ pub fn handle_resource_message(
             resource_tag_filters,
             proximity_distance_threshold,
             proximity_limit,
+            semantic_search_enabled,
+            embeddings_distance_threshold,
+            embeddings_limit,
         } => send_worker_response(
             channel,
             oneshot,
@@ -340,6 +474,9 @@ pub fn handle_resource_message(
                 resource_tag_filters,
                 proximity_distance_threshold,
                 proximity_limit,
+                semantic_search_enabled,
+                embeddings_distance_threshold,
+                embeddings_limit,
             ),
         ),
         ResourceMessage::UpdateResourceMetadata(metadata) => {
@@ -355,6 +492,24 @@ pub fn handle_resource_message(
             channel,
             oneshot,
             worker.upsert_resource_text_content(resource_id, content),
+        ),
+        ResourceMessage::InsertEmbeddings {
+            resource_id,
+            embedding_type,
+            embeddings,
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.insert_embeddings(&resource_id, &embedding_type, &embeddings),
+        ),
+        ResourceMessage::UpsertEmbeddings {
+            resource_id,
+            embedding_type,
+            embeddings,
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.upsert_embeddings(&resource_id, &embedding_type, &embeddings),
         ),
     }
 }
