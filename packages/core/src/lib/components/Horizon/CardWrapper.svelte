@@ -89,7 +89,7 @@
   fieldParticipation.subscribe((p) => {
     let fieldPos: any | null = null
     if (get(activeField) !== null) {
-      fieldPos = get(activeField)!.position
+      fieldPos = get(get(activeField)!.position)
     }
     if (
       (p &&
