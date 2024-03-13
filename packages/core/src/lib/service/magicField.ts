@@ -4,6 +4,7 @@ import type TypedEmitter from 'typed-emitter'
 
 import type { CardPosition } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
+import { rectsIntersect } from '@horizon/tela'
 
 export type ParticipantData = {
   type: string
@@ -338,6 +339,24 @@ export class MagicFieldService {
 
       const participantPos = get(p.position)
       if (!participantPos) return false
+
+      if (
+        rectsIntersect(
+          {
+            x: participantPos.x,
+            y: participantPos.y,
+            w: participantPos.width,
+            h: participantPos.height
+          },
+          {
+            x: fieldPos.x,
+            y: fieldPos.y,
+            w: fieldPos.width,
+            h: fieldPos.height
+          }
+        )
+      )
+        return true
 
       const participantEdges = getBoxEdges(participantPos)
       // this.log.debug(`Checking participant ${p.id} with edges`, participantEdges)
