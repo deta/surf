@@ -418,8 +418,8 @@
 
     if (isDragging) return
     if (!$viewOffset || !$viewPort) {
-      console.warn('DRAGGG NO VIEWPORT OFFSET HEADER!!!!!')
-      window.location.reload() // HACK: <- We try to recover at least instead of bricking horizon
+      // TODO: look into this..
+      //console.warn('DRAGGG NO VIEWPORT OFFSET HEADER!!!!!')
       headerOpen = false
       return
     }
