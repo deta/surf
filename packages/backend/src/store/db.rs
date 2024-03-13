@@ -1171,7 +1171,7 @@ impl Database {
                 &keyword_embedding,
                 embeddings_distance_threshold,
                 embeddings_limit,
-                filtered_resource_ids,
+                filtered_resource_ids.clone(),
             )?;
             for search_result in embeddings_search_results {
                 if !seen_resource_ids.contains(&search_result.resource.resource.id) {
@@ -1185,12 +1185,16 @@ impl Database {
         // we did not combine the two loops so that keyword search results are pushed first
         // as they should be ranked higher
         for resource_id in seen_resource_ids {
-            let mut proximity_search_results = self.proximity_search_with_resource_id(
+            let proximity_search_results = self.proximity_search_with_resource_id(
                 &resource_id,
                 proximity_distance_threshold,
                 proximity_limit,
             )?;
-            results.append(&mut proximity_search_results);
+            for search_result in proximity_search_results {
+                if filtered_resource_ids.contains(&search_result.resource.resource.id) {
+                    results.push(search_result);
+                }
+            }
         }
 
         let mut results = remove_duplicate_search_results(&mut results);
