@@ -33,7 +33,7 @@
   }
 
   const handleNearbySearch = async () => {
-    const results = await resourceManager.searchForNearbyResources(resource.id, 2000000, 10)
+    const results = await resourceManager.searchForNearbyResources(resource.id, 2000000, 100)
     log.debug('Nearby search results:', results)
     nearbyResults = results
   }
@@ -83,7 +83,9 @@
 
   onMount(() => {
     const unsubscribe = horizon.cards.subscribe(() => {
-      fetchData(resource)
+      setTimeout(() => {
+        fetchData(resource)
+      }, 600)
     })
 
     return unsubscribe
