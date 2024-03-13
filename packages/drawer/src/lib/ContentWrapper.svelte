@@ -8,6 +8,7 @@
 
   const dragOver = writable(false)
   let counter = 0
+  let dragOverTimeout: ReturnType<typeof setTimeout> | null = null
 
   const handleDragEnter = (e: DragEvent) => {
     if (!acceptDrop) {
@@ -33,7 +34,17 @@
     if (!acceptDrop) {
       return
     }
+
+    console.log('OVER THIS')
+
     e.preventDefault() // This is necessary to allow the drop
+
+    // Reset the drag over effect after a short delay to simulate continuous drag over.
+    if (dragOverTimeout) clearTimeout(dragOverTimeout)
+    dragOver.set(true)
+    dragOverTimeout = setTimeout(() => {
+      dragOver.set(false)
+    }, 100) // Adjust delay as needed, 100ms is just an example
   }
 
   const handleDrop = (e: DragEvent) => {
@@ -45,6 +56,7 @@
     e.stopPropagation()
     counter = 0 // Reset counter to ensure dragover is removed
     dragOver.set(false)
+    clearTimeout(dragOverTimeout)
     dispatch('drop', e)
   }
 </script>
