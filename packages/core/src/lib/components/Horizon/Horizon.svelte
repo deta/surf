@@ -50,7 +50,7 @@
     flyMenuType,
     openFlyMenu
   } from '../FlyMenu/FlyMenu.svelte'
-  import type { ResourceManager, ResourceNote } from '../../service/resources'
+  import { ResourceManager, type ResourceNote } from '../../service/resources'
   import { SERVICES } from '@horizon/web-parser'
   import Minimap from './Minimap.svelte'
 
@@ -1072,7 +1072,9 @@
   const handleSearchChange = async (query: string = '') => {
     lastVisorSearchTerm = query
     horizon.setActiveCard(null)
-    const resources = await resourceManager.searchResources(query)
+    const resources = await resourceManager.searchResources(query, [
+      ResourceManager.SearchTagDeleted(false)
+    ])
     let results = $cards
     if (query !== '') {
       results = []
