@@ -256,11 +256,16 @@
   }
 
   const onDragMove = (
-    e: CustomEvent<{ key: string; x: number; y: number; offset: { x: number; y: number } }>
+    e: CustomEvent<{
+      key: string
+      clientX: number
+      clientY: number
+      offset: { x: number; y: number }
+    }>
   ) => {
     const { clientX, clientY, offset } = e.detail
-    const abs = posToAbsolute(clientX, clientY, $viewOffset!.x, $viewOffset!.y, $viewPort!, 1)
-
+    // NOTE: Commented a lot of code as its not needed for the demo and errors for reasons yet unknown
+    //const abs = posToAbsolute(clientX, clientY, $viewOffset!.x, $viewOffset!.y, $viewPort!, 1)
     // log.debug('drag move', abs)
     // magicFieldParticipant.updatePosition({
     //   x: abs.x,
@@ -269,13 +274,14 @@
     //   height: $card.height
     // })
 
-    if (!$focusModeEnabled) return
+    /*if (!$focusModeEnabled) return
 
     card.update((v) => {
       v.xOverride = abs.x - $card.widthOverride / 2
       v.yOverride = abs.y
       return v
-    })
+    }):w
+
 
     // Check if has to switch places
     // TODO: This is not very clean but works for now
@@ -298,7 +304,7 @@
     targetCard.update((v) => {
       v.dashHighlight = true
       return v
-    })
+    })*/
   }
 
   const handleResizeBegin = () => {
