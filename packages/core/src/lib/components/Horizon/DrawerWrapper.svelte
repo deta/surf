@@ -268,12 +268,14 @@
 
       const links = payload.detail.$parsedURLs as ParsedMetadata[]
       const mediaItems = $droppedInputElements
+      const textMediaItems = $droppedInputElements.filter((item) => item.type === 'text')
 
       isSaving.set(true)
 
       // Create a text card if there is nothing but text
-      if (links.length === 0 && mediaItems.length === 0) {
-        await resourceManager.createResourceNote(userGeneratedText, {}, [
+      if (links.length === 0 && (mediaItems.length === 0 || textMediaItems.length > 0)) {
+        const metadata = textMediaItems.length > 0 ? textMediaItems[0].metadata : {}
+        await resourceManager.createResourceNote(userGeneratedText, metadata, [
           // TODO: Add another resource tag
           ResourceTag.paste()
         ])

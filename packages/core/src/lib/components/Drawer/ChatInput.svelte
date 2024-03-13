@@ -190,21 +190,34 @@
     dragOver.set(false)
   }
 
-  const handleDrop = (e: DragEvent) => {
+  const handleDrop = async (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     dragOver.set(false)
     console.log('PROCESSEDDROP', e)
 
-    var textData = e.dataTransfer.getData('text')
-    if (textData && !optimisticCheckIfUrl(textData)) {
-      console.log('textdata detected:', textData)
-      var oldval = $inputText
-      var newval = oldval + textData
-      inputText.set(newval)
-    } else {
-      dispatchDrop('drop', e)
+    const parsed = await processDrop(e)
+    const textItems = parsed.filter((item) => item.type === 'text')
+
+    if (textItems.length > 0) {
+      const textData = textItems[0].data as string
+      if (textData && !optimisticCheckIfUrl(textData)) {
+        const oldval = $inputText
+        const newval = oldval + textData
+        inputText.set(newval)
+      }
     }
+
+    dispatchDrop('drop', e)
+    // var textData = e.dataTransfer.getData('text')
+    // if (textData && !optimisticCheckIfUrl(textData)) {
+    //   console.log('textdata detected:', textData)
+    //   var oldval = $inputText
+    //   var newval = oldval + textData
+    //   inputText.set(newval)
+    // } else {
+    //   dispatchDrop('drop', e)
+    // }
   }
 
   function handleRemoveUploadItem(event: CustomEvent) {
@@ -268,7 +281,7 @@
     {/if}
 
     <div class="file-list" class:hidden={!forceOpen && $viewState !== 'chatInput'}>
-      {#each $droppedInputElements as file (file.data?.lastModified + file.data?.path)}
+      {#each $droppedInputElements.filter((item) => item.type === 'file') as file (file.data?.lastModified + file.data?.path)}
         <ChatFilePreview
           on:remove={handleRemoveUploadItem}
           metadata={file.metadata}
