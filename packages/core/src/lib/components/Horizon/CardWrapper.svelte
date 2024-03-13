@@ -11,7 +11,8 @@
     Resizable,
     type IPositionable,
     hasClassOrParentWithClass,
-    posToAbsolute
+    posToAbsolute,
+    rectsIntersect
   } from '@horizon/tela'
 
   import type { Card, CardEvents } from '../../types/index'
@@ -59,6 +60,9 @@
   const fieldParticipation = magicFieldParticipant.fieldParticipation
 
   $: selfIsField = $activeField?.id === magicFieldParticipant.id
+  $: magicFieldColorIdx = selfIsField
+    ? get(horizon.magicFieldService.fields).findIndex((f) => f.id === get(activeField).id) % 4
+    : 0
 
   let isConnecting = false
 
@@ -83,12 +87,28 @@
   }
 
   fieldParticipation.subscribe((p) => {
+    let fieldPos: any | null = null
+    if (get(activeField) !== null) {
+      fieldPos = get(get(activeField)!.position)
+    }
     if (
-      p &&
-      p.supported &&
-      p.distance < CONNECTION_THRESHOLD &&
-      !isConnecting &&
-      $mode !== 'dragging'
+      (p &&
+        p.supported &&
+        fieldPos !== null &&
+        rectsIntersect(
+          { x: fieldPos.x, y: fieldPos.y, w: fieldPos.width, h: fieldPos.height },
+          {
+            x: $positionable.x,
+            y: $positionable.y,
+            w: $positionable.width,
+            h: $positionable.height
+          }
+        )) ||
+      (p &&
+        p.supported &&
+        p.distance < CONNECTION_THRESHOLD &&
+        !isConnecting &&
+        $mode !== 'dragging')
     ) {
       log.debug('initiating connect', p)
       isConnecting = true
@@ -118,7 +138,7 @@
   $: activeCardId = horizon.activeCardId
   $: active = $activeCardId === $card.id
   $: selected = $selection?.has($card.id) || false
-  $: allowDuplicating = ['text', 'browser'].includes($card.type)
+  $: allowDuplicating = ['text', 'browser', 'ai-text', 'audio-transcriber'].includes($card.type)
 
   const updateCard = () => {
     log.debug('updateCard', $card)
@@ -256,11 +276,16 @@
   }
 
   const onDragMove = (
-    e: CustomEvent<{ key: string; x: number; y: number; offset: { x: number; y: number } }>
+    e: CustomEvent<{
+      key: string
+      clientX: number
+      clientY: number
+      offset: { x: number; y: number }
+    }>
   ) => {
     const { clientX, clientY, offset } = e.detail
-    const abs = posToAbsolute(clientX, clientY, $viewOffset!.x, $viewOffset!.y, $viewPort!, 1)
-
+    // NOTE: Commented a lot of code as its not needed for the demo and errors for reasons yet unknown
+    //const abs = posToAbsolute(clientX, clientY, $viewOffset!.x, $viewOffset!.y, $viewPort!, 1)
     // log.debug('drag move', abs)
     // magicFieldParticipant.updatePosition({
     //   x: abs.x,
@@ -269,13 +294,14 @@
     //   height: $card.height
     // })
 
-    if (!$focusModeEnabled) return
+    /*if (!$focusModeEnabled) return
 
     card.update((v) => {
       v.xOverride = abs.x - $card.widthOverride / 2
       v.yOverride = abs.y
       return v
-    })
+    }):w
+
 
     // Check if has to switch places
     // TODO: This is not very clean but works for now
@@ -298,7 +324,7 @@
     targetCard.update((v) => {
       v.dashHighlight = true
       return v
-    })
+    })*/
   }
 
   const handleResizeBegin = () => {
@@ -409,6 +435,8 @@
 
     if (isDragging) return
     if (!$viewOffset || !$viewPort) {
+      // TODO: look into this..
+      //console.warn('DRAGGG NO VIEWPORT OFFSET HEADER!!!!!')
       headerOpen = false
       return
     }
@@ -469,20 +497,24 @@
   })
 </script>
 
+<svelte:window on:mousemove={handleMouseMove} />
+
 <!-- TODO: Obacht! Had the issue on old Horizon app, that ids can start
   with numbers -> Cannot use them in css selctors for example. Maybe add `id-` prefix -->
 <!-- style="{$visorEnabled ? 'scale: 0.5;' : ''}" -->
 <Positionable
   {positionable}
   data-id={$positionable.id}
-  class="card {$positionable.id} {$positionable.type} {$fieldParticipation?.supported
+  class="card magic-{magicFieldColorIdx} {$positionable.id} {$positionable.type} {$fieldParticipation?.supported
     ? 'magic-field-active'
     : ''} {!!$connectedField || (selfIsField && $activeField)
     ? 'magic-field-connected'
     : ''} {$fieldParticipation?.supported
     ? `magic-field-${$fieldParticipation.relativePosition}`
-    : ''} {active && 'active'} {selected && 'selected'} {$positionable.dashHighlight &&
-    'dash-highlight'}"
+    : ''} {active ? 'active' : ''} {selected ? 'selected' : ''} {$positionable.dashHighlight ===
+  true
+    ? 'dash-highlight'
+    : ''}"
   style="--magic-field-distance: {($fieldParticipation?.distance ?? 0) / 200}"
   contained={false}
   on:mousedown={handleMouseDown}
@@ -492,7 +524,6 @@
   on:mouseenter={handleMouseEnter}
   on:mouseleave={handleMouseLeave}
   on:mouseleave={onHeaderMouseLeave}
-  on:mousemove={handleMouseMove}
   bind:el
 >
   {#if !$visorEnabled}

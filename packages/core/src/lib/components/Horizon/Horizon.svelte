@@ -275,6 +275,27 @@
     const card = e.detail
     log.debug('duplicating card', card)
 
+    if (card.type === 'ai-text' || card.type === 'audio-transcriber') {
+      const newCard = await horizon.addCardText(card.summarizedText, {
+        width: card.width,
+        height: card.height,
+        x: card.x + card.width + 50,
+        y: card.y
+      })
+      // const newCardStore = await horizon.addTextCard(card.id, {
+      //   width: card.width,
+      //   height: card.height,
+      //   x: card.x + card.width + 50,
+      //   y: card.y
+      // })
+      //
+      // const newCard = get(newCardStore)
+      // horizon.scrollToCard(newCard)
+      // horizon.setActiveCard(newCard.id)
+
+      return
+    }
+
     const newCardStore = await horizon.duplicateCardWithoutData(card.id, {
       width: card.width,
       height: card.height,

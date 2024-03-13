@@ -21,6 +21,8 @@
   let connectedParticipant: Writable<MagicFieldParticipant | null> = writable(null)
 
   let transcribedText: string | null = null
+  // NOTE: Demo only!! We obsly shouldnt set random props on cards like this lol
+  $: $card.summarizedText = transcribedText
   let error: string | null = null
 
   let gettingData = false

@@ -37,7 +37,6 @@
   const state = createState()
   const searchVal = writable('')
   $: search = $state.search
-  $: console.warn($state.filtered)
 
   let flyMenuEl: HTMLElement
   let inputEl: HTMLInputElement
@@ -59,8 +58,9 @@
 
     if (screenX < 0) x = $viewOffset.x
     if (screenX + flyMenuWidth > $viewPort.w) x = x - (screenX + flyMenuWidth - $viewPort.w)
-    if (y < 0) y = 0
-    if (y + flyMenuHeight > $viewPort.h) y = y - (y + flyMenuHeight - $viewPort.h)
+    if (y - flyMenuHeight < 0) y = 0
+    if (y + flyMenuHeight + 30 > $viewPort.h) y = y - (y + flyMenuHeight + 30 - $viewPort.h)
+    //if (y + flyMenuHeight > $viewPort.h) y = y - (y + flyMenuHeight - $viewPort.h)
 
     return { x, y }
   }
@@ -69,18 +69,17 @@
   $: offset = $flyMenuType === 'cursor' ? offsetFollowCursor : `left: ${$viewOffset.x}px;`
 
   $: if ($flyMenuOpen) {
-    setTimeout(() => {
-      inputEl.focus()
-    }, 80)
+    // setTimeout(() => {
+    //   inputEl.focus({ preventScroll: true })
+    // }, 80)
   } else {
-    $state.search = ''
+    $searchVal = ''
   }
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       closeFlyMenu()
-      $state.search = ''
-      console.warn($state)
+      $searchVal = ''
     } else if (e.key === 'Enter' && $flyMenuOpen) {
       submit()
     }
@@ -140,7 +139,6 @@
         })
       }
     }
-    console.warn('search', out)
 
     return out
   })
@@ -191,12 +189,12 @@
         {/each}
         <!--         {/key} -->
       </Command.List>
-      <Command.Input
+      <!--<Command.Input
         placeholder="Type a query"
         bind:el={inputEl}
         bind:value={$searchVal}
         on:keydown={onInputKeyDown}
-      />
+      />-->
     </Command.Root>
   </div>
 {/if}
