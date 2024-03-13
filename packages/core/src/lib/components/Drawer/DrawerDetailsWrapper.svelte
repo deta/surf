@@ -139,12 +139,15 @@
   </div>
 
   <div class="metadata-wrapper">
+    <div class="header">
+      <div class="title">Go to Source</div>
+    </div>
     <div class="metadata">
       {#if sourceURL}
         <div class="source-button">
           <Link
             url={sourceURL.href}
-            label={`Go to Source — ${generateRootDomain(sourceURL.href)}`}
+            label={`${generateRootDomain(sourceURL.href)}`}
             locked={true}
           />
         </div>
@@ -212,7 +215,7 @@
   }
 
   .textarea-wrapper,
-  .references-wrapper {
+  .references-wrapper .metadata-wrapper {
     display: flex;
     align-items: center;
     flex-direction: column;
@@ -225,6 +228,14 @@
 
   .metadata-wrapper {
     padding: 2rem 0;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    .header {
+      width: 100%;
+      max-width: 28rem;
+      padding: 0.75rem;
+    }
     .metadata {
       display: flex;
       flex-direction: column;
