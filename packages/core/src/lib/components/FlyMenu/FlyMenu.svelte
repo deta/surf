@@ -59,8 +59,9 @@
 
     if (screenX < 0) x = $viewOffset.x
     if (screenX + flyMenuWidth > $viewPort.w) x = x - (screenX + flyMenuWidth - $viewPort.w)
-    if (y < 0) y = 0
-    if (y + flyMenuHeight > $viewPort.h) y = y - (y + flyMenuHeight - $viewPort.h)
+    if (y - flyMenuHeight < 0) y = 0
+    if (y + flyMenuHeight + 30 > $viewPort.h) y = y - (y + flyMenuHeight + ö0 - $viewPort.h)
+    //if (y + flyMenuHeight > $viewPort.h) y = y - (y + flyMenuHeight - $viewPort.h)
 
     return { x, y }
   }
@@ -70,7 +71,7 @@
 
   $: if ($flyMenuOpen) {
     setTimeout(() => {
-      inputEl.focus()
+      inputEl.focus({ preventScroll: true })
     }, 80)
   } else {
     $state.search = ''
@@ -80,7 +81,6 @@
     if (e.key === 'Escape') {
       closeFlyMenu()
       $state.search = ''
-      console.warn($state)
     } else if (e.key === 'Enter' && $flyMenuOpen) {
       submit()
     }

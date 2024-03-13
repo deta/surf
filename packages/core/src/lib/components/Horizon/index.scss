@@ -580,7 +580,7 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
 
 /* Fly Menu */
 .flyMenuWrapper {
-  position: absolute;
+  position: fixed;
   background: transparent !important;
   z-index: 100000;
 
@@ -589,7 +589,6 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
   }
 
   &.cursorMode {
-    position: absolute;
     min-width: 200px;
     //min-height: 300px;
 
@@ -630,11 +629,11 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
   }
 
   [data-cmdk-list-sizer] {
-    overflow: hidden;
+    //overflow: hidden;
     display: flex;
     flex-direction: column-reverse;
     gap: 3px;
-    //max-height: 400px;
+    max-height: 600px;
   }
 
   [data-cmdk-list] {
@@ -643,9 +642,9 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
 
     //min-height: 300px;
     //height: var(--cmdk-list-height);
-    height: min-content;
+    height: max-content;
     //height: 100%;
-    max-height: 130px;
+    //max-height: 130px;
     transition: height 100ms ease;
   }
 
