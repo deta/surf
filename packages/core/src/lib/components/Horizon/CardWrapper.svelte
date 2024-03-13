@@ -11,7 +11,8 @@
     Resizable,
     type IPositionable,
     hasClassOrParentWithClass,
-    posToAbsolute
+    posToAbsolute,
+    rectsIntersect
   } from '@horizon/tela'
 
   import type { Card, CardEvents } from '../../types/index'
@@ -86,12 +87,28 @@
   }
 
   fieldParticipation.subscribe((p) => {
+    let fieldPos: any | null = null
+    if (get(activeField) !== null) {
+      fieldPos = get(activeField)!.position
+    }
     if (
-      p &&
-      p.supported &&
-      p.distance < CONNECTION_THRESHOLD &&
-      !isConnecting &&
-      $mode !== 'dragging'
+      (p &&
+        p.supported &&
+        fieldPos !== null &&
+        rectsIntersect(
+          { x: fieldPos.x, y: fieldPos.y, w: fieldPos.width, h: fieldPos.height },
+          {
+            x: $positionable.x,
+            y: $positionable.y,
+            w: $positionable.width,
+            h: $positionable.height
+          }
+        )) ||
+      (p &&
+        p.supported &&
+        p.distance < CONNECTION_THRESHOLD &&
+        !isConnecting &&
+        $mode !== 'dragging')
     ) {
       log.debug('initiating connect', p)
       isConnecting = true
