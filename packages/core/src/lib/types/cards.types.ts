@@ -11,7 +11,8 @@ export type CardEvents = {
   endResize: Card
 }
 
-export type CardType = 'browser' | 'text' | 'file' | 'link' | 'ai-text'
+// NOTE: We should prob prefix all magic cards with magic- or sth. like that
+export type CardType = 'browser' | 'text' | 'file' | 'link' | 'ai-text' | 'audio-transcriber'
 
 export type CardPosition = Pick<IPositionable<'id'>, 'x' | 'y' | 'width' | 'height'>
 

@@ -121,7 +121,7 @@
   $: activeCardId = horizon.activeCardId
   $: active = $activeCardId === $card.id
   $: selected = $selection?.has($card.id) || false
-  $: allowDuplicating = ['text', 'browser'].includes($card.type)
+  $: allowDuplicating = ['text', 'browser', 'ai-text', 'audio-transcriber'].includes($card.type)
 
   const updateCard = () => {
     log.debug('updateCard', $card)
@@ -418,6 +418,7 @@
 
     if (isDragging) return
     if (!$viewOffset || !$viewPort) {
+      console.warn('DRAGGG NO VIEWPORT OFFSET HEADER!!!!!')
       headerOpen = false
       return
     }
@@ -478,6 +479,8 @@
   })
 </script>
 
+<svelte:window on:mousemove={handleMouseMove} />
+
 <!-- TODO: Obacht! Had the issue on old Horizon app, that ids can start
   with numbers -> Cannot use them in css selctors for example. Maybe add `id-` prefix -->
 <!-- style="{$visorEnabled ? 'scale: 0.5;' : ''}" -->
@@ -503,7 +506,6 @@
   on:mouseenter={handleMouseEnter}
   on:mouseleave={handleMouseLeave}
   on:mouseleave={onHeaderMouseLeave}
-  on:mousemove={handleMouseMove}
   bind:el
 >
   {#if !$visorEnabled}
