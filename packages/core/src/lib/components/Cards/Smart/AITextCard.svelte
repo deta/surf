@@ -15,11 +15,14 @@
   const log = useLogScope('AITextCard')
 
   let magicField: MagicField | null = null
+  //$: magicFieldColorIdx = get(magicFieldService.fields).findIndex((f) => f.id === magicField?.id)
   let connectedParticipant: Writable<MagicFieldParticipant | null> = writable(null)
 
   $: participants = magicField?.participants
 
   let summarizedText: string | null = null
+  // NOTE: Demo only!! We obsly shouldnt set random props on cards like this lol
+  $: $card.summarizedText = summarizedText
   let error: string | null = null
 
   let gettingData = false
@@ -77,7 +80,7 @@
     summarizedText = summarized
   }
 
-  const handleRefresh = () => {
+  const handleReload = () => {
     if (!$connectedParticipant) {
       log.error('No connected participant')
       return
@@ -130,6 +133,7 @@
       summarizedText = null
     })
 
+    console.warn('draggable stopped')
     return () => {
       if (magicField) {
         magicFieldService.removeField(magicField.id)
@@ -140,13 +144,18 @@
 
 <div class="ai-text-card magic-card">
   {#if $connectedParticipant}
-    <!-- <div class="subtitle">Connected to: {$connectedParticipant.id}</div> -->
+    <div class="subtitle">
+      <div style="display: flex;justify-content:space-between;">
+        <span>Connected to: {$connectedParticipant.id}</span><button on:click={handleReload}
+          >Reload</button
+        >
+      </div>
+    </div>
 
     {#if summarizedText}
       <div class="summary">
         <p>{summarizedText}</p>
       </div>
-      <!-- <button on:click={handleRefresh}>Refresh</button> -->
     {:else if error}
       <div class="init">
         <p>{error}</p>
@@ -160,7 +169,10 @@
     <div class="init">
       <div class="title">✨ AI Summarizer ✨</div>
       {#if $participants && $participants.length > 0}
-        <div class="subtitle">Click the magic button to summarize the connected card.</div>
+        <div class="subtitle">
+          <!--Click the magic button to summarize the connected card.-->
+          <button on:click={handleReload}>Reload</button>
+        </div>
       {:else}
         <div class="subtitle">Bring other cards close to this one to see magic happen</div>
       {/if}

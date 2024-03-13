@@ -137,7 +137,7 @@
 
   box-shadow: rgba(255, 255, 255, 0.4) 0px 0px 25px 10px;
 
-  &.magic-1 {
+  &.magic-2 {
     --magic-field-colors: #ff5770, #e4428d, #c42da8, #9e16c3, #6501de, #9e16c3, #c42da8, #e4428d, #ff5770;
   }
 
@@ -154,11 +154,11 @@
 
   }
 
-  &.magic-2 {
+  &.magic-3 {
     --magic-field-colors: red, yellow, lime, yellow, red;
   }
 
-  &.magic-3 {
+  &.magic-1 {
     --magic-field-colors: teal, cyan, blue, cyan, teal;
   }
 
@@ -794,6 +794,16 @@ html:has(.tela-board.mode-pan, .tela-board.mode-dragging,
           #fdc2f6,
           #9dd6ff,
           #fcffba);
+      // background: linear-gradient(to bottom left,
+      //     #30cfd0,
+      //     #330867,
+      //     #ff6978,
+      //     #fffcf9,
+      //     #330867,
+      //     #30cfd0,
+      //     #ff6978,
+      //     #fffcf9,
+      //     #330867);
     }
 
     &.item-app {

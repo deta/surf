@@ -69,9 +69,9 @@
   $: offset = $flyMenuType === 'cursor' ? offsetFollowCursor : `left: ${$viewOffset.x}px;`
 
   $: if ($flyMenuOpen) {
-    setTimeout(() => {
-      inputEl.focus({ preventScroll: true })
-    }, 80)
+    // setTimeout(() => {
+    //   inputEl.focus({ preventScroll: true })
+    // }, 80)
   } else {
     $searchVal = ''
   }
@@ -189,12 +189,12 @@
         {/each}
         <!--         {/key} -->
       </Command.List>
-      <Command.Input
+      <!--<Command.Input
         placeholder="Type a query"
         bind:el={inputEl}
         bind:value={$searchVal}
         on:keydown={onInputKeyDown}
-      />
+      />-->
     </Command.Root>
   </div>
 {/if}
