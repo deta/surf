@@ -3,18 +3,23 @@
 
   import ResourcePreview from '@horizon/core/src/lib/components/Resources/ResourcePreview.svelte'
   import ContentMasonry from '../ContentMasonry.svelte'
+  import ContentItem from '../ContentItem.svelte'
   import { createEventDispatcher } from 'svelte'
   import { Icon } from '@horizon/icons'
 
   export let nearbyResults: any[]
 
-  const dispatch = createEventDispatcher<{ click: any }>()
+  const dispatch = createEventDispatcher<{ click: any; dragstart: any }>()
 
   let showNearby = false
 
   const handleNearbyClick = (result: any) => {
     console.log('Nearby result clicked:', result)
     dispatch('click', result)
+  }
+
+  const handleNearbyDragStart = (e: DragEvent, resource: ResourceObject) => {
+    dispatch('dragstart', { event: e, resource })
   }
 </script>
 
@@ -35,10 +40,12 @@
     <div class="nearby-results">
       <ContentMasonry items={nearbyResults}>
         {#each nearbyResults as result}
-          <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-          <div class="nearby-item" on:click={() => handleNearbyClick(result)}>
-            <ResourcePreview resource={result.resource} />
-          </div>
+          <ContentItem on:dragstart={(e) => handleNearbyDragStart(e, result.resource)}>
+            <ResourcePreview
+              resource={result.resource}
+              on:click={() => handleNearbyClick(result)}
+            />
+          </ContentItem>
         {/each}
       </ContentMasonry>
     </div>

@@ -778,7 +778,11 @@
 
               <div class="proximity-view" slot="proximity-view" let:result={nearbyResults}>
                 {#if nearbyResults.length > 0}
-                  <DrawerDetailsProximity {nearbyResults} on:click={handleNearbyResultClick} />
+                  <DrawerDetailsProximity
+                    {nearbyResults}
+                    on:click={handleNearbyResultClick}
+                    on:dragstart={(e) => handleItemDragStart(e.detail.event, e.detail.resource)}
+                  />
                 {/if}
               </div>
             </DrawerDetailsWrapper>
