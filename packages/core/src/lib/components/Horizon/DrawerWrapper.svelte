@@ -80,8 +80,11 @@
   const tabs = [
     { key: 'all', label: 'All', icon: 'square.rotated' },
     { key: 'horizon', label: 'On this Horizon', icon: 'rectangle' },
-    { key: 'dropped', label: 'Dropped', icon: 'bookmark' },
-    { key: 'downloaded', label: 'Downloaded', icon: 'download' },
+    { key: 'images', label: 'Images', icon: 'image' },
+    { key: 'documents', label: 'Documents', icon: 'document' },
+    { key: 'posts', label: 'Posts', icon: 'link' },
+    { key: 'links', label: 'Links', icon: 'link' },
+    { key: 'articles', label: 'Articles', icon: 'link' },
     { key: 'archived', label: 'Archived', icon: 'archive' }
   ]
 
@@ -158,16 +161,20 @@
     //     ResourceManager.SearchTagHostname('deta.space')
     // )
 
-    if (tab === 'dropped') {
-      tags.push(
-        ResourceManager.SearchTagSavedWithAction('drag', true) // searches both 'drag/browser' and 'drag/local'
-      )
-    } else if (tab === 'downloaded') {
-      tags.push(ResourceManager.SearchTagSavedWithAction('download'))
-    } else if (tab === 'archived') {
+    if (tab === 'archived') {
       tags.push(ResourceManager.SearchTagDeleted()) // TODO: implement recovering of deleted resources
     } else if (tab === 'horizon') {
       tags.push(ResourceManager.SearchTagHorizon(horizon.id))
+    } else if (tab === 'images') {
+      tags.push(ResourceManager.SearchTagResourceType('image', true))
+    } else if (tab === 'documents') {
+      tags.push(ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT, true))
+    } else if (tab === 'posts') {
+      tags.push(ResourceManager.SearchTagResourceType(ResourceTypes.POST, true))
+    } else if (tab === 'links') {
+      tags.push(ResourceManager.SearchTagResourceType(ResourceTypes.LINK))
+    } else if (tab === 'articles') {
+      tags.push(ResourceManager.SearchTagResourceType(ResourceTypes.ARTICLE))
     }
 
     const parsedParameters = {
@@ -282,12 +289,14 @@
 
       const links = payload.detail.$parsedURLs as ParsedMetadata[]
       const mediaItems = $droppedInputElements
+      const textMediaItems = $droppedInputElements.filter((item) => item.type === 'text')
 
       isSaving.set(true)
 
       // Create a text card if there is nothing but text
-      if (links.length === 0 && mediaItems.length === 0) {
-        await resourceManager.createResourceNote(userGeneratedText, {}, [
+      if (links.length === 0 && (mediaItems.length === 0 || textMediaItems.length > 0)) {
+        const metadata = textMediaItems.length > 0 ? textMediaItems[0].metadata : {}
+        await resourceManager.createResourceNote(userGeneratedText, metadata, [
           // TODO: Add another resource tag
           ResourceTag.paste()
         ])

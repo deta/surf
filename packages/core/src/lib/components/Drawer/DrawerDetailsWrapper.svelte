@@ -34,8 +34,8 @@
 
   const handleNearbySearch = async () => {
     const results = await resourceManager.searchForNearbyResources(resource.id, {
-      proximityDistanceThreshold: 500000,
-      proximityLimit: 5
+      proximityDistanceThreshold: 2000000,
+      proximityLimit: 100
     })
     log.debug('Nearby search results:', results)
     nearbyResults = results
@@ -83,6 +83,16 @@
   }
 
   $: fetchData(resource)
+
+  onMount(() => {
+    const unsubscribe = horizon.cards.subscribe(() => {
+      setTimeout(() => {
+        fetchData(resource)
+      }, 600)
+    })
+
+    return unsubscribe
+  })
 </script>
 
 <!-- svelte-ignore missing-declaration a11y-no-static-element-interactions -->

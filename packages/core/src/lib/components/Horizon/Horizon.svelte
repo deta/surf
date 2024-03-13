@@ -1068,7 +1068,8 @@
             results.push(_card)
         } else if (card.type === 'text' && card.resourceId !== null) {
           const resource = (await resourceManager.getResource(card.resourceId)) as ResourceNote
-          resource.parsedData?.toLowerCase().includes(query.toLowerCase()) && results.push(_card)
+          get(resource.parsedData)?.toLowerCase().includes(query.toLowerCase()) &&
+            results.push(_card)
         }
         if (card.resourceId) {
           const k = resources.findIndex((e) => e.id === card.resourceId)
