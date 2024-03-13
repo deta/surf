@@ -124,8 +124,10 @@
     <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
   </div>
   {#if $viewState !== 'details'}
-    <div class="remove" on:click={handleRemove}>
-      <Icon name="close" color="#AAA7B1" />
+    <div class="remove-wrapper" on:click={handleRemove}>
+      <div class="remove">
+        <Icon name="close" color="#AAA7B1" />
+      </div>
     </div>
   {/if}
 </div>
@@ -140,10 +142,10 @@
     overflow: visible;
     cursor: default;
     &:hover {
-      .remove {
+      .remove-wrapper {
         animation: fade-in 120ms forwards;
         animation-iteration-count: 1;
-        animation-delay: 860ms;
+        animation-delay: 60ms;
       }
     }
 
@@ -151,6 +153,10 @@
       .preview:hover {
         outline: 0;
       }
+    }
+
+    .close:hover {
+      opacity: 1;
     }
   }
 
@@ -195,26 +201,31 @@
     width: 100%;
   }
 
-  .remove {
+  .remove-wrapper {
     position: absolute;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 2rem;
-    height: 2rem;
     top: 0;
+    padding: 1rem;
     right: 0;
-    transform: translateX(40%) translateY(-40%);
+    transform: translateX(45%) translateY(-45%);
     opacity: 0;
-    flex-shrink: 0;
     margin-left: 0.5rem;
-    background: white;
-    border-radius: 50%;
-    border: 0.5px solid rgba(0, 0, 0, 0.15);
     cursor: default;
-    transition: 60ms ease-out;
     &:hover {
-      outline: 3px solid rgba(0, 0, 0, 0.15);
+      .remove {
+        outline: 3px solid rgba(0, 0, 0, 0.15);
+      }
+    }
+    .remove {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 2rem;
+      height: 2rem;
+      flex-shrink: 0;
+      border-radius: 50%;
+      border: 0.5px solid rgba(0, 0, 0, 0.15);
+      transition: 60ms ease-out;
+      background: white;
     }
   }
 
