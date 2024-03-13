@@ -30,6 +30,12 @@ fn get_hostname_from_uri(uri: &str) -> Option<String> {
         .and_then(|url| url.host_str().map(|host| host.to_owned()))
 }
 
+pub trait EmbeddableContent {
+    fn get_resource_id(&self) -> String;
+    fn get_embeddable_content(&self) -> Vec<String>;
+    fn get_embedding_type(&self) -> String;
+}
+
 // TODO: use strum
 pub enum InternalResourceTagNames {
     Type,
@@ -157,6 +163,7 @@ pub struct ResourceTag {
     pub tag_value: String,
 }
 
+// TODO: also implement embeddable content for resouce tags?
 impl ResourceTag {
     pub fn new_deleted(resource_id: &str, deleted: bool) -> ResourceTag {
         ResourceTag {
@@ -242,6 +249,34 @@ pub struct ResourceMetadata {
     pub user_context: String,
 }
 
+// TODO: what is good for semantic search?
+impl EmbeddableContent for ResourceMetadata {
+    // for now we are just using the alt and user context
+    // as embeddable content
+    // source uri and name produce too much noise
+    fn get_embeddable_content(&self) -> Vec<String> {
+        let mut content = vec![];
+        let alt = self.alt.trim();
+        if alt != "" {
+            content.push(alt.to_string());
+        }
+        let user_context = self.user_context.trim();
+        if user_context != "" {
+            content.push(user_context.to_string());
+        }
+        content
+    }
+
+    // TODO: use an enum for this
+    fn get_embedding_type(&self) -> String {
+        "metadata".to_string()
+    }
+
+    fn get_resource_id(&self) -> String {
+        self.resource_id.clone()
+    }
+}
+
 impl ResourceMetadata {
     pub fn get_tags(&self) -> Vec<ResourceTag> {
         let mut tags: Vec<ResourceTag> = Vec::new();
@@ -265,6 +300,21 @@ pub struct ResourceTextContent {
     pub id: String,
     pub resource_id: String,
     pub content: String,
+}
+
+impl EmbeddableContent for ResourceTextContent {
+    fn get_embeddable_content(&self) -> Vec<String> {
+        vec![self.content.clone()]
+    }
+
+    // TODO: use an enum for this
+    fn get_embedding_type(&self) -> String {
+        "text_content".to_string()
+    }
+
+    fn get_resource_id(&self) -> String {
+        self.resource_id.clone()
+    }
 }
 
 #[derive(Debug)]
@@ -302,6 +352,45 @@ pub struct HistoryEntry {
     pub created_at: chrono::DateTime<chrono::Utc>,
     #[serde(default = "current_time")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+// this is needed because one resource can have multiple embeddings
+#[derive(Debug)]
+pub struct EmbeddingResource {
+    pub rowid: Option<i64>, // the rowid will be the same as the embedding rowid
+    pub resource_id: String,
+    pub embedding_type: String,
+}
+
+#[derive(Debug)]
+pub struct Embedding {
+    pub rowid: Option<i64>,
+    pub embedding: String,
+}
+
+impl Embedding {
+    fn format_embedding(embedding: &Vec<f32>) -> String {
+        let embedding_str = embedding
+            .iter()
+            .map(|x| format!("{}", x))
+            .collect::<Vec<String>>()
+            .join(", ");
+        format!("[{}]", embedding_str)
+    }
+
+    pub fn new(embedding: &Vec<f32>) -> Embedding {
+        Embedding {
+            rowid: None,
+            embedding: Self::format_embedding(&embedding),
+        }
+    }
+
+    pub fn new_with_rowid(rowid: i64, embedding: &Vec<f32>) -> Embedding {
+        Embedding {
+            rowid: Some(rowid),
+            embedding: Self::format_embedding(&embedding),
+        }
+    }
 }
 
 #[cfg(test)]

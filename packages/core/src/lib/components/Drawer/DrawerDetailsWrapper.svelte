@@ -33,7 +33,10 @@
   }
 
   const handleNearbySearch = async () => {
-    const results = await resourceManager.searchForNearbyResources(resource.id, 500000, 5)
+    const results = await resourceManager.searchForNearbyResources(resource.id, {
+      proximityDistanceThreshold: 500000,
+      proximityLimit: 5
+    })
     log.debug('Nearby search results:', results)
     nearbyResults = results
   }

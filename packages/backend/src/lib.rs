@@ -1,5 +1,7 @@
 pub mod backend;
+pub mod embeddings;
 pub mod store;
+pub mod vision;
 
 use neon::{prelude::ModuleContext, result::NeonResult};
 
@@ -11,6 +13,8 @@ pub enum BackendError {
     DatabaseError(#[from] rusqlite::Error),
     #[error("Chrono error: {0}")]
     ChronoError(#[from] chrono::ParseError),
+    #[error("RustBert error: {0}")]
+    RustBertError(#[from] rust_bert::RustBertError),
     #[error("Generic error: {0}")]
     GenericError(String),
 }
