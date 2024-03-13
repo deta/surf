@@ -139,9 +139,11 @@
   </div>
 
   <div class="metadata-wrapper">
-    <div class="header">
-      <div class="title">Go to Source</div>
-    </div>
+    {#if sourceURL}
+      <div class="header">
+        <div class="title">Go to Source</div>
+      </div>
+    {/if}
     <div class="metadata">
       {#if sourceURL}
         <div class="source-button">

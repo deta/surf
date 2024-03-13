@@ -5,6 +5,10 @@
   export let label: string
   export let color: string = '#281B53'
   export let locked: boolean = true
+
+  const handleDragStart = (e: DragEvent) => {
+    e.dataTransfer?.setData('text/html', url)
+  }
 </script>
 
 <div class="link">
@@ -13,6 +17,7 @@
     target="_blank"
     class="from"
     style="color: {color}; text-decoration: none;"
+    on:dragstart={handleDragStart}
     {...$$restProps}>{label}</a
   >
   <div class="arrow" class:locked>
