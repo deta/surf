@@ -442,6 +442,7 @@
     &.hidden {
       transform: translateX(-100%);
       opacity: 0;
+      display: none;
       transition: all 240ms ease-out;
     }
     .arrow-wrapper {
