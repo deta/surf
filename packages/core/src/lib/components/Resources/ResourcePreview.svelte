@@ -98,7 +98,7 @@
         <div class="">Note</div>
       {:else if resource.type === ResourceTypes.LINK}
         <Icon name="link" size="20px" />
-        <div class="">Bookmark</div>
+        <div class="">Link</div>
       {:else if resource.type.startsWith(ResourceTypes.POST_YOUTUBE)}
         <ArticleProperties {resource} />
       {:else if resource.type.startsWith(ResourceTypes.POST)}

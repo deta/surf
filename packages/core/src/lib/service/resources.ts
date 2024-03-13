@@ -477,7 +477,7 @@ export class ResourceManager {
     return this.createResource(blob.type, blob, metadata, tags)
   }
 
-  static SearchTagResourceType(type: ResourceTypes, prefix = false): SFFSResourceTag {
+  static SearchTagResourceType(type: ResourceTypes | string, prefix = false): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.TYPE, value: type, op: prefix ? 'prefix' : 'eq' }
   }
 
