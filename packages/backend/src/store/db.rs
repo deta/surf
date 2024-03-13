@@ -1137,14 +1137,21 @@ impl Database {
         embeddings_distance_threshold: f32,
         embeddings_limit: i64,
     ) -> BackendResult<SearchResult> {
+        let mut results: Vec<SearchResultItem> = Vec::new();
+
         let mut filtered_resource_ids: Vec<String> = Vec::new();
         if let Some(mut tags) = tags {
             if !tags.is_empty() {
                 filtered_resource_ids = self.list_resource_ids_by_tags(&mut tags)?;
             }
+            if filtered_resource_ids.is_empty() {
+                return Ok(SearchResult {
+                    items: results,
+                    total: 0,
+                });
+            }
         }
 
-        let mut results: Vec<SearchResultItem> = Vec::new();
         let mut seen_resource_ids: Vec<String> = Vec::new();
 
         let keyword_search_results = self.keyword_search(keyword, filtered_resource_ids.clone())?;
