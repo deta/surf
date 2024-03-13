@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, getContext } from 'svelte'
+  import { createEventDispatcher, onMount, getContext, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { derived, writable, type Writable } from 'svelte/store'
   import { processDrop, type MediaParserResult } from '../../service/mediaImporter'
+  import autosize from 'svelte-autosize'
 
   import { parseMetadata, type ParsedMetadata } from '@horizon/core/src/lib/utils/parseMetadata'
   import {
@@ -44,6 +45,7 @@
 
   $: if ($inputText) {
     const searchQuery = { value: $inputText, tab: 'all' }
+    autosize.update(textareaRef)
 
     if (!lastKeyDeleted) {
       handleChat(searchQuery)
@@ -63,6 +65,8 @@
 
   onMount(() => {
     document.addEventListener('mousemove', handleMouseMove)
+
+    autosize(textareaRef)
 
     // TODO: This is a temporary solution to handle dropped links, we need to refactor the entire chat input component
     const unsubscribe = droppedLinks.subscribe((items) => {
@@ -99,6 +103,8 @@
     const string = e.value
     const list = stringToURLList(string)
 
+    autosize.update(textareaRef)
+
     if (!list || list.length === 0) {
       log.debug('No URLs found in chat input')
       return
@@ -128,13 +134,15 @@
     }
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     let result = { $inputText, $parsedURLs }
-    dispatch('chatSend', result)
 
+    dispatch('chatSend', result)
     textareaRef.blur()
     inputText.set('')
     parsedURLs.set([])
+    await tick()
+    autosize.update(textareaRef)
   }
 
   function handleMouseMove(event: MouseEvent) {
@@ -149,6 +157,7 @@
   function handleFocus() {
     isFocused = true
     opacity = 1
+    autosize(textareaRef)
     document.startViewTransition(async () => {
       viewState.set('chatInput')
     })
@@ -221,6 +230,10 @@
       }
     }
 
+    await tick()
+    await autosize.update(textareaRef)
+    await autosize(textareaRef)
+
     // var textData = e.dataTransfer.getData('text')
     // if (textData && !optimisticCheckIfUrl(textData)) {
     //   console.log('textdata detected:', textData)
@@ -265,11 +278,16 @@
   <div class="icon" class:hidden={$viewState === 'chatInput'}>
     <Icon name="add" color="#AAA7B1" size="28px" />
   </div>
-  <div class="input-field-container" bind:this={inputRef} class:isFocussed={isFocused}>
+  <div
+    class="input-field-container"
+    bind:this={inputRef}
+    class:isFocussed={isFocused}
+    class:active={$viewState === 'chatInput' || forceOpen}
+  >
     <textarea
       name="message"
-      rows="1"
-      placeholder="Save and drop everything..."
+      use:autosize
+      placeholder={$viewState == 'chatInput' ? 'Save and drop everything...' : ''}
       class:active={$viewState == 'chatInput' || forceOpen}
       bind:this={textareaRef}
       on:focus={handleFocus}
@@ -358,6 +376,10 @@
       box-shadow 0.3s;
     z-index: 1000;
     opacity: 0;
+    height: 3.125rem;
+    &.active {
+      height: auto;
+    }
     &.isFocussed {
       opacity: 1;
       // box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
@@ -405,16 +427,13 @@
     }
   }
   textarea {
-    height: fit-content;
-    width: 90%;
-    height: 3.25rem;
-    overflow: hidden;
     font-family:
       system-ui,
       -apple-system sans-serif;
     font-weight: 400;
     z-index: 1000;
     cursor: text;
+    max-height: 32rem;
     resize: none;
     font-size: 1.125rem;
     font-weight: 500;
@@ -424,15 +443,18 @@
     padding: 0.9rem 3rem 1rem 3rem;
     color: #353534;
     opacity: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
     transition: all 240ms ease-out;
     view-transition-name: chat-input-transition;
     cursor: default !important;
     user-select: none;
+
     &.active {
+      padding-right: 5rem;
       opacity: 0.8;
       padding-left: 1rem;
-      height: 5.5rem;
-      width: 90% !important;
+      width: 100% !important;
     }
   }
   textarea:focus {
@@ -440,8 +462,8 @@
   }
   .icon {
     position: absolute;
-    top: 0.6rem;
-    left: 0.85rem;
+    top: 0.55rem;
+    left: 0.9rem;
     z-index: 5;
     transition: all 240ms ease-out;
     transform: translateX(0);
