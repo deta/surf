@@ -104,7 +104,7 @@
     )
 
     magicField.onParticipantLeave((p) => {
-      log.debug('participantEnter', p)
+      log.debug('participantLeave', p)
     })
 
     magicField.onParticipantConnect((p) => {
@@ -130,7 +130,7 @@
     magicField.onParticipantLeave((p) => {
       log.debug('participantLeave', p)
       connectedParticipant.set(null)
-      summarizedText = null
+      //summarizedText = null
     })
 
     console.warn('draggable stopped')
@@ -143,22 +143,24 @@
 </script>
 
 <div class="ai-text-card magic-card">
-  {#if $connectedParticipant}
+  {#if $connectedParticipant || summarizedText}
     <div class="subtitle">
       <div style="display: flex;justify-content:space-between;">
-        <span>Connected to: {$connectedParticipant.id}</span><button on:click={handleReload}
+        <!--<span>Connected to: {$connectedParticipant.id}</span
+        >--><!--<button on:click={handleReload}
           >Reload</button
-        >
+        >-->
       </div>
     </div>
 
     {#if summarizedText}
-      <div class="summary">
+      <div class="summary" style={!$connectedParticipant ? 'opacity: 0.43;' : ''}>
         <p>{summarizedText}</p>
       </div>
     {:else if error}
       <div class="init">
         <p>{error}</p>
+        <button on:click={handleReload}>Try Again</button>
       </div>
     {:else}
       <div class="init">
@@ -171,7 +173,7 @@
       {#if $participants && $participants.length > 0}
         <div class="subtitle">
           <!--Click the magic button to summarize the connected card.-->
-          <button on:click={handleReload}>Reload</button>
+          <!--<button on:click={handleReload}>Reload</button>-->
         </div>
       {:else}
         <div class="subtitle">Bring other cards close to this one to see magic happen</div>

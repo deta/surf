@@ -135,6 +135,13 @@ export class MagicFieldParticipant {
   allowConnectionToField(fieldId: string) {
     this.allowConnect.set(true)
   }
+
+  updateFieldSupported(fieldId: string, value: boolean) {
+    this?.fieldParticipation.update((p) => ({
+      ...p!,
+      supported: value
+    }))
+  }
 }
 
 const DEFAULT_FIELD_STRENGTH = 200
@@ -429,7 +436,7 @@ export class MagicFieldService {
 
     const newParticipants = participants.filter((p) => !existingParticipants.includes(p))
     newParticipants.forEach((p) => {
-      // this.log.debug(`Participant ${p.id} has entered field ${field.id}`)
+      // this.log.debug(`Participant ${p.id} has entered field ${field.id}, sending events`)
       // notify participant that they have entered the field
       p.emit('enterField', field)
 
@@ -489,9 +496,9 @@ export class MagicFieldService {
 
     this.participants.update((participants) => [...participants, participant])
 
+    participant.emit('created', participant)
     this.recalculateFieldParticipants()
 
-    participant.emit('created', participant)
     return participant
   }
 
@@ -513,6 +520,12 @@ export class MagicFieldService {
     const unsubscribe = this.participantSubscribers.get(id)
     if (unsubscribe) {
       unsubscribe()
+    }
+
+    const field = get(participant.inField)
+    if (field) {
+      participant.emit('leaveField', field)
+      field.emit('participantLeave', participant)
     }
 
     participant.emit('destroyed')

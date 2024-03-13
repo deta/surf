@@ -127,7 +127,7 @@
     magicField.onParticipantLeave((p) => {
       log.debug('participantLeave', p)
       connectedParticipant.set(null)
-      transcribedText = null
+      //transcribedText = null
     })
 
     return () => {
@@ -139,14 +139,15 @@
 </script>
 
 <div class="audio-transcriber magic-card">
-  {#if $connectedParticipant}
+  {#if $connectedParticipant || transcribedText}
     {#if transcribedText}
-      <div class="transcription-content">
+      <div class="transcription-content" style={!$connectedParticipant ? 'opacity: 0.43;' : ''}>
         <p>{transcribedText}</p>
       </div>
     {:else if error}
       <div class="error-message">
         <p>{error}</p>
+        <button on:click={handleRefresh}>Try Again</button>
       </div>
     {:else}
       <div class="loading-message">

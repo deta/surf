@@ -450,11 +450,7 @@
       if (!get(magicFieldParticipant.fieldParticipation)) return
 
       const isSupported = field.supportedResources.includes('text/plain')
-
-      magicFieldParticipant.fieldParticipation.update((p) => ({
-        ...p!,
-        supported: isSupported
-      }))
+      magicFieldParticipant?.updateFieldSupported(field.id, isSupported)
     })
 
     magicFieldParticipant?.onRequestData(async (types: string[], callback) => {
@@ -487,6 +483,14 @@
         callback(null)
       }
     })
+
+    // on mount we need to check if we are already in a field
+    const fieldStore = magicFieldParticipant?.inField
+    const field = fieldStore ? get(fieldStore) : null
+    if (field) {
+      const isSupported = field.supportedResources.includes('text/plain')
+      magicFieldParticipant?.updateFieldSupported(field.id, isSupported)
+    }
   })
 </script>
 

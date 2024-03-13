@@ -1,8 +1,8 @@
-<svelte:options immutable={true} />
+<!-- <svelte:options immutable={true} /> -->
 
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { get, type Writable } from 'svelte/store'
+  import { derived, get, type Writable } from 'svelte/store'
   import { tooltip } from '@svelte-plugins/tooltips'
 
   import {
@@ -60,9 +60,16 @@
   const fieldParticipation = magicFieldParticipant.fieldParticipation
 
   $: selfIsField = $activeField?.id === magicFieldParticipant.id
-  $: magicFieldColorIdx = selfIsField
-    ? get(horizon.magicFieldService.fields).findIndex((f) => f.id === get(activeField).id) % 4
-    : 0
+  const magicFieldColorIdx = derived(
+    [activeField, horizon.magicFieldService.fields],
+    ([_activeField, _fields]) => {
+      const fieldsIndex = _fields.findIndex((e) => e.id === magicFieldParticipant.id)
+      if (fieldsIndex !== -1) return fieldsIndex % 4
+      else if (_activeField !== null) {
+        return _fields.findIndex((f) => f.id === _activeField.id) % 4
+      } else return -1
+    }
+  )
 
   let isConnecting = false
 
@@ -473,7 +480,6 @@
 
     return () => {
       unsubscribe()
-      horizon.magicFieldService.removeParticipant(magicFieldParticipant.id)
     }
   })
 
@@ -494,6 +500,8 @@
       clearTimeout(dragOverTimeout)
       dragOverTimeout = null
     }
+
+    horizon.magicFieldService.removeParticipant(magicFieldParticipant.id)
   })
 </script>
 
@@ -505,7 +513,7 @@
 <Positionable
   {positionable}
   data-id={$positionable.id}
-  class="card magic-{magicFieldColorIdx} {$positionable.id} {$positionable.type} {$fieldParticipation?.supported
+  class="card magic-{$magicFieldColorIdx} {$positionable.id} {$positionable.type} {$fieldParticipation?.supported
     ? 'magic-field-active'
     : ''} {!!$connectedField || (selfIsField && $activeField)
     ? 'magic-field-connected'
