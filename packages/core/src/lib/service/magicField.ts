@@ -399,7 +399,7 @@ export class MagicFieldService {
           supported: null
         })
       } else {
-        p.fieldParticipation.set(null)
+        // p.fieldParticipation.set(null)
         field.fieldParticipation.set(null)
       }
 
