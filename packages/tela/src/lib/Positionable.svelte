@@ -14,6 +14,7 @@
     heightOverride?: number
     scaleOverride?: number
     zOverride?: number
+    disableAnimation?: boolean
 
     /// Not official yet, but used by Horizon
     /// TODO: See how we handle this
@@ -92,7 +93,9 @@
   data-key={$positionable[POSITIONABLE_KEY]}
   {...$$restProps}
   style="{transformCss} {$$restProps.style || ''}"
-  class="positionable {$$restProps.class || ''}"
+  class="positionable {$positionable.disableAnimation === true
+    ? 'no-animation'
+    : ''} {$$restProps.class || ''}"
   class:selected={$selection.has($positionable[POSITIONABLE_KEY])}
   class:hoisted={$positionable.hoisted}
   class:dragging

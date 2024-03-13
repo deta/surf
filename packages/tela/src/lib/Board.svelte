@@ -1185,10 +1185,10 @@
       $zoom
     )
 
-    const domEl = document.querySelector(
-      `[data-id="${get(e.detail.positionable).id}"]`
-    ) as HTMLElement
-    domEl.classList.add('no-animation')
+    positionable.update((v) => {
+      v.disableAnimation = true
+      return v
+    })
 
     if ($allowQuickSnap) {
       showQuickSnapGuides = true
@@ -1451,10 +1451,10 @@
       $zoom
     )
 
-    const domEl = document.querySelector(
-      `[data-id="${get(e.detail.positionable).id}"]`
-    ) as HTMLElement
-    domEl.classList.remove('no-animation')
+    positionable.update((v) => {
+      v.disableAnimation = false
+      return v
+    })
 
     if (clientY > $settings.QUICK_SNAP_THRESHOLD) {
       dragState.autoScroll = false
@@ -1615,10 +1615,10 @@
       $zoom
     )
 
-    const domEl = document.querySelector(
-      `[data-id="${get(e.detail.positionable).id}"]`
-    ) as HTMLElement
-    domEl.classList.add('no-animation')
+    positionable.update((v) => {
+      v.disableAnimation = true
+      return v
+    })
 
     mode.resizing()
     moveToStackingTop(stackingOrder, get(positionable)[POSITIONABLE_KEY])
@@ -1822,10 +1822,10 @@
     )
     // TODO: BOUNDS CHECKING& APPLY final pos
 
-    const domEl = document.querySelector(
-      `[data-id="${get(e.detail.positionable).id}"]`
-    ) as HTMLElement
-    domEl.classList.remove('no-animation')
+    positionable.update((v) => {
+      v.disableAnimation = false
+      return v
+    })
 
     const initChunkX = Math.floor(dragState.positionableInit.x / CHUNK_WIDTH)
     const initChunkY = Math.floor(dragState.positionableInit.y / CHUNK_WIDTH)

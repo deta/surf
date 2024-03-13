@@ -481,8 +481,10 @@
     ? 'magic-field-connected'
     : ''} {$fieldParticipation?.supported
     ? `magic-field-${$fieldParticipation.relativePosition}`
-    : ''} {active && 'active'} {selected && 'selected'} {$positionable.dashHighlight &&
-    'dash-highlight'}"
+    : ''} {active ? 'active' : ''} {selected ? 'selected' : ''} {$positionable.dashHighlight ===
+  true
+    ? 'dash-highlight'
+    : ''}"
   style="--magic-field-distance: {($fieldParticipation?.distance ?? 0) / 200}"
   contained={false}
   on:mousedown={handleMouseDown}
