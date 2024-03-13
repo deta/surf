@@ -422,41 +422,45 @@
   }
 
   const createResourceFromParsedURL = async (item: ParsedMetadata, userGeneratedText: string) => {
-    const metadata = {
-      name: item.linkMetadata.title || new URL(item.url).hostname,
-      alt: item.linkMetadata.description,
-      sourceURI: '',
-      userContext: userGeneratedText
-    }
-
     const id = generateID()
 
-    // TODO: this is a hack to add the resource to the search result without waiting for the resource to be created, we should find a better way to do this
-    searchResult = [
-      {
-        id: id,
-        resource: {
-          id: item.url,
-          type: ResourceTypes.LINK,
-          metadata: metadata,
-          rawData: null,
-          path: item.url,
-          updatedAt: new Date().toISOString()
-        } as any,
-        engine: 'local',
-        cardIds: []
-      },
-      ...searchResult
-    ]
+    try {
+      const metadata = {
+        name: item.linkMetadata.title || new URL(item.url).hostname,
+        alt: item.linkMetadata.description,
+        sourceURI: '',
+        userContext: userGeneratedText
+      }
 
-    refreshContentLayout()
+      // TODO: this is a hack to add the resource to the search result without waiting for the resource to be created, we should find a better way to do this
+      searchResult = [
+        {
+          id: id,
+          resource: {
+            id: item.url,
+            type: ResourceTypes.LINK,
+            metadata: metadata,
+            rawData: null,
+            path: item.url,
+            updatedAt: new Date().toISOString()
+          } as any,
+          engine: 'local',
+          cardIds: []
+        },
+        ...searchResult
+      ]
 
-    const resource = await extractAndCreateWebResource(item.url, metadata, [ResourceTag.paste()])
+      refreshContentLayout()
 
-    // remove the resource from the search result as it has been created
-    searchResult = searchResult.filter((r) => r.id !== id)
+      const resource = await extractAndCreateWebResource(item.url, metadata, [ResourceTag.paste()])
 
-    log.debug('Created resource', resource)
+      log.debug('Created resource', resource)
+    } catch (err) {
+      log.error('Error creating resource from parsed URL', err)
+    } finally {
+      // remove the resource from the search result as it has been created
+      searchResult = searchResult.filter((r) => r.id !== id)
+    }
   }
 
   const extractAndCreateWebResource = async (
@@ -603,6 +607,7 @@
     document.startViewTransition(async () => {
       viewState.set('default')
       searchQuery.set({ value: '', tab: 'all' })
+      drawer.selectedTab.set('all')
       // if($searchQuery.value !== '') {
       //   viewState.set('search')
       // } else {
