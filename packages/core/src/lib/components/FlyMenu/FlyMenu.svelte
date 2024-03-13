@@ -37,7 +37,6 @@
   const state = createState()
   const searchVal = writable('')
   $: search = $state.search
-  $: console.warn($state.filtered)
 
   let flyMenuEl: HTMLElement
   let inputEl: HTMLInputElement
@@ -140,7 +139,6 @@
         })
       }
     }
-    console.warn('search', out)
 
     return out
   })
