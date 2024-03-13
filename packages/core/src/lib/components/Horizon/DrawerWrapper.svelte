@@ -93,7 +93,7 @@
 
   const viewState = writable(VIEW_STATES.DEFAULT)
 
-  let showDropZone = false
+  const showDropZone = writable(false)
   const isDraggingDrawerItem = writable(false)
 
   const selectedResource = writable<ResourceObject | undefined>(undefined)
@@ -299,7 +299,7 @@
       viewState.set('default')
     })
 
-    showDropZone = false
+    showDropZone.set(false)
   }
 
   let receivedDrop = false
@@ -451,6 +451,7 @@
 
   const handleItemDragStart = (e: DragEvent, resource: ResourceObject) => {
     log.debug('Item drag start', e, resource.id)
+    isDraggingDrawerItem.set(false)
 
     if (
       e.target instanceof Element &&
@@ -576,7 +577,7 @@
 
   let dragCount = 0
   const handleWindowDragEnter = (e: DragEvent) => {
-    if ($viewState === 'details') {
+    if ($viewState === 'details' || $isDraggingDrawerItem) {
       return
     }
     log.debug('drag enter', e)
@@ -596,15 +597,17 @@
     dragCount++
 
     if (dragCount > 0) {
-      showDropZone = true
+      showDropZone.set(true)
     }
+
+    isDraggingDrawerItem.set(false)
   }
 
   const handleWindowDragEnd = (e: DragEvent) => {
     log.debug('drag end', e)
 
     if (!receivedDrop) {
-      showDropZone = false
+      showDropZone.set(false)
       isDraggingDrawerItem.set(false)
     }
 
@@ -615,7 +618,7 @@
 
   const handleDropZoneClickOutside = () => {
     log.debug('click outside')
-    showDropZone = false
+    showDropZone.set(false)
     receivedDrop = false
     viewState.set('default')
     $droppedInputElements = []
@@ -688,7 +691,7 @@
   on:drop={handleWindowDragEnd}
 />
 
-{#if showDropZone}
+{#if $showDropZone}
   <div class="drop-zone">
     <DrawerChat
       on:chatSend={handleChat}
