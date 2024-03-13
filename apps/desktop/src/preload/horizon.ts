@@ -25,6 +25,8 @@ const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
 
 const OPENAI_KEY = import.meta.env.P_VITE_OPEN_AI_API_KEY
+const VISION_API_KEY = import.meta.env.P_VITE_VISION_API_KEY || ''
+const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
 
 let openai: OpenAI | null = null
 if (OPENAI_KEY) {
@@ -326,9 +328,9 @@ const sffs = (() => {
     (...args: any) =>
       fn(handle, ...args)
 
-  function init(root_path: string) {
+  function init(root_path: string, vision_api_key: string, vision_api_endpoint: string) {
     let fn = {}
-    handle = sffs.js__backend_tunnel_init(root_path)
+    handle = sffs.js__backend_tunnel_init(root_path, vision_api_key, vision_api_endpoint)
 
     Object.keys(sffs).forEach((key) => {
       if (
@@ -343,7 +345,7 @@ const sffs = (() => {
     return fn
   }
 
-  return init(BACKEND_ROOT_PATH)
+  return init(BACKEND_ROOT_PATH, VISION_API_KEY, VISION_API_ENDPOINT)
 })()
 
 const resources = (() => {

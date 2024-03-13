@@ -39,6 +39,19 @@ export interface SFFSResource {
 
 export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'local'
 
+export interface SFFSSearchProximityParameters {
+  proximityDistanceThreshold?: number // default 100,000
+  proximityLimit?: number
+}
+
+export interface SFFSSearchSemanticParameters {
+  semanticEnabled?: boolean // false by default
+  semanticDistanceThreshold?: number // default 1.0, inc by .25 (0.0-2.0)
+  semanticLimit?: number
+}
+
+export type SFFSSearchParameters = SFFSSearchProximityParameters & SFFSSearchSemanticParameters
+
 export interface SFFSSearchResultItem {
   resource: SFFSResource
   card_ids: string[]

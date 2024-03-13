@@ -12,7 +12,7 @@
     "build-debug": "npm run build-cmd --",
     "build": "npm run build-cmd -- --release",
     "install": "npm run build",
-    "test": "cargo test"
+    "test": "cargo test -- --nocapture"
   },
   "author": "",
   "devDependencies": {

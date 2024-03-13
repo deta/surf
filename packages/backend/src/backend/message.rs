@@ -14,6 +14,13 @@ pub enum ProcessorMessage {
     ProcessResource(CompositeResource),
 }
 
+pub enum AIMessage {
+    // TODO: use embeddable content trait
+    GenerateMetadataEmbeddings(ResourceMetadata),
+    GenerateTextContentEmbeddings(ResourceTextContent),
+    DescribeImage(CompositeResource),
+}
+
 pub enum WorkerMessage {
     CardMessage(CardMessage),
     HistoryMessage(HistoryMessage),
@@ -57,6 +64,10 @@ pub enum ResourceMessage {
         resource_tags: Option<Vec<ResourceTag>>,
         resource_metadata: Option<ResourceMetadata>,
     },
+    CreateResourceTextContent {
+        resource_id: String,
+        content: String,
+    },
     GetResource(String),
     RemoveResource(String),
     RecoverResource(String),
@@ -70,11 +81,24 @@ pub enum ResourceMessage {
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
         proximity_distance_threshold: Option<f32>,
         proximity_limit: Option<i64>,
+        semantic_search_enabled: Option<bool>,
+        embeddings_distance_threshold: Option<f32>,
+        embeddings_limit: Option<i64>,
     },
     UpdateResourceMetadata(ResourceMetadata),
     UpsertResourceTextContent {
         resource_id: String,
         content: String,
+    },
+    InsertEmbeddings {
+        resource_id: String,
+        embedding_type: String,
+        embeddings: Vec<Vec<f32>>,
+    },
+    UpsertEmbeddings {
+        resource_id: String,
+        embedding_type: String,
+        embeddings: Vec<Vec<f32>>,
     },
     // ---
     PostProcessJob(String),
