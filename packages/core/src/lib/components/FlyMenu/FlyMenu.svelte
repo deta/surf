@@ -74,13 +74,13 @@
       inputEl.focus({ preventScroll: true })
     }, 80)
   } else {
-    $state.search = ''
+    $searchVal = ''
   }
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       closeFlyMenu()
-      $state.search = ''
+      $searchVal = ''
     } else if (e.key === 'Enter' && $flyMenuOpen) {
       submit()
     }
