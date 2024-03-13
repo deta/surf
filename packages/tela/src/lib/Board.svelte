@@ -1080,18 +1080,19 @@
       return v
     })
 
-    selection.update((_selection) => {
-      _selection.clear() // TODO: Allow select multiple, off screen also?
-      $visiblePositionables.forEach((_card) => {
-        const c = get(_card)
-        if (rectsIntersect({ x: c.x, y: c.y, w: c.width, h: c.height }, { x, y, w, h })) {
-          _selection.add(c[POSITIONABLE_KEY])
-        } else {
-          _selection.delete(c[POSITIONABLE_KEY])
-        }
-      })
-      return _selection
-    })
+    // NOTE: Removed for demo launch
+    // selection.update((_selection) => {
+    //   _selection.clear() // TODO: Allow select multiple, off screen also?
+    //   $visiblePositionables.forEach((_card) => {
+    //     const c = get(_card)
+    //     if (rectsIntersect({ x: c.x, y: c.y, w: c.width, h: c.height }, { x, y, w, h })) {
+    //       _selection.add(c[POSITIONABLE_KEY])
+    //     } else {
+    //       _selection.delete(c[POSITIONABLE_KEY])
+    //     }
+    //   })
+    //   return _selection
+    // })
     // deprecated: dispatch("selectChange", { rect: { x, y, w, h }, visibleCards });
   }
 
@@ -2021,6 +2022,12 @@
             <span>Offset:</span><span>{$viewOffset.x}, {$viewOffset.y}</span>
           </li>
           <li><span>Current Stretch:</span><span>{Math.floor($viewOffset.x / 1920) + 1}</span></li>
+          <li>
+            <span>N-Positionables:</span><span
+              >{$positionables.length}
+              <small> ({$hoistedPositionables.length} hoisted)</small></span
+            >
+          </li>
           <!-- NOTE: Major perf hit due to conditional slot. -->
           <!-- TODO: Look into optimizing dev overlay perf -->
           <!-- <slot name="dev" /> -->
@@ -2068,7 +2075,8 @@
       {/each}
     {/if}
 
-    {#each $visiblePositionables as positionable (get(positionable)[POSITIONABLE_KEY])}
+    <!-- NOTE: Removed for demo launch as we dont need chunking and it seems to slow thing down / breaking sometimes (see. suplicate key error) -->
+    {#each $positionables as positionable (get(positionable)[POSITIONABLE_KEY])}
       <slot {positionable} />
     {/each}
 
