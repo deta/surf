@@ -125,8 +125,8 @@
     const viewport = get(state.viewPort)
     const viewoffset = get(state.viewOffset)
 
-    const width = Math.max(viewport.w - SAFE_AREA_PADDING * 2, 800)
-    const height = Math.max(viewport.h - SAFE_AREA_PADDING * 2, 500)
+    const width = Math.max((viewport.w - SAFE_AREA_PADDING * 2) * 3/4, 800)
+    const height = Math.max((viewport.h - SAFE_AREA_PADDING * 2) * 3/4, 500)
 
     log.debug('Creating browser card with opened URL:', url)
     $activeHorizon.addCardBrowser(
