@@ -295,7 +295,7 @@
       <div class="add-files" class:hidden={!forceOpen && $viewState !== 'chatInput'}>
         <input id="upload-files" multiple type="file" on:change={handleFileSelection} />
         <Icon name="add" color="#AAA7B1" size="28px" />
-        <span>Add files</span>
+        <span class="label">Add files</span>
       </div>
     </div>
   </div>
@@ -332,7 +332,6 @@
     view-transition-name: chat-field-container-transition;
     &.dragOver {
       display: none;
-      background: red;
     }
   }
   .input-field-container {
@@ -376,6 +375,10 @@
           width: 100%;
           height: 100%;
           opacity: 0;
+          user-select: none;
+        }
+        .label {
+          user-select: none;
         }
         &.hidden {
           transform: translateY(10%);
@@ -411,6 +414,7 @@
     transition: all 240ms ease-out;
     view-transition-name: chat-input-transition;
     cursor: default !important;
+    user-select: none;
     &.active {
       opacity: 0.8;
       padding-left: 1rem;
@@ -456,6 +460,7 @@
     &.hidden {
       transform: translateX(-100%);
       opacity: 0;
+      display: none;
       transition: all 240ms ease-out;
     }
     .arrow-wrapper {

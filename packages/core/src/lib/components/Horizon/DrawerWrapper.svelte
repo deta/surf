@@ -97,7 +97,8 @@
 
   const viewState = writable(VIEW_STATES.DEFAULT)
 
-  let showDropZone = false
+  const showDropZone = writable(false)
+  const isDraggingDrawerItem = writable(false)
 
   const selectedResource = writable<ResourceObject | undefined>(undefined)
 
@@ -321,7 +322,7 @@
       viewState.set('default')
     })
 
-    showDropZone = false
+    showDropZone.set(false)
   }
 
   let receivedDrop = false
@@ -331,9 +332,12 @@
 
     const parsed = await processDrop(event)
 
+    // Filter out all items where the type is 'resource'
+    const filteredParsed = parsed.filter((item) => item.type !== 'resource')
+
     receivedDrop = true
     droppedInputElements.update((items) => {
-      parsed.forEach((parsedItem) => {
+      filteredParsed.forEach((parsedItem) => {
         items.push(parsedItem)
       })
       return items
@@ -473,6 +477,15 @@
 
   const handleItemDragStart = (e: DragEvent, resource: ResourceObject) => {
     log.debug('Item drag start', e, resource.id)
+    isDraggingDrawerItem.set(false)
+
+    if (
+      e.target instanceof Element &&
+      (e.target.classList.contains('drawer-item') || e.target.closest('.drawer-item'))
+    ) {
+      console.log('DRAGGING DRAWER ELEMENT')
+      isDraggingDrawerItem.set(true)
+    }
 
     if (!e.dataTransfer) {
       log.error('No dataTransfer found')
@@ -598,7 +611,7 @@
 
   let dragCount = 0
   const handleWindowDragEnter = (e: DragEvent) => {
-    if ($viewState === 'details') {
+    if ($viewState === 'details' || $isDraggingDrawerItem) {
       return
     }
     log.debug('drag enter', e)
@@ -618,24 +631,28 @@
     dragCount++
 
     if (dragCount > 0) {
-      showDropZone = true
+      showDropZone.set(true)
     }
+
+    isDraggingDrawerItem.set(false)
   }
 
   const handleWindowDragEnd = (e: DragEvent) => {
     log.debug('drag end', e)
 
     if (!receivedDrop) {
-      showDropZone = false
+      showDropZone.set(false)
+      isDraggingDrawerItem.set(false)
     }
 
     dragCount = 0
     receivedDrop = false
+    isDraggingDrawerItem.set(false)
   }
 
   const handleDropZoneClickOutside = () => {
     log.debug('click outside')
-    showDropZone = false
+    showDropZone.set(false)
     receivedDrop = false
     viewState.set('default')
     $droppedInputElements = []
@@ -734,7 +751,7 @@
   on:drop={handleWindowDragEnd}
 />
 
-{#if showDropZone}
+{#if $showDropZone}
   <div class="drop-zone">
     <DrawerChat
       on:chatSend={handleChat}
@@ -752,7 +769,10 @@
 {/if}
 
 <DrawerProvider {drawer} on:search={handleSearch}>
-  <DrawerContentWrapper on:drop={handleDrop} acceptDrop={$viewState !== 'details'}>
+  <DrawerContentWrapper
+    on:drop={handleDrop}
+    acceptDrop={$viewState !== 'details' && !$isDraggingDrawerItem}
+  >
     {#if $selectedResource}
       {#if $viewState === 'details'}
         <!-- The key block is needed so the details components get properly updated when the selected resource changes -->

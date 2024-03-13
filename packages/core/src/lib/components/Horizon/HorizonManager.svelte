@@ -332,7 +332,7 @@
       }
     }
 
-    if (drawer.isShown()) {
+    if (drawer?.isShown()) {
       if (event.key === 'Escape') {
         drawer.close()
         return

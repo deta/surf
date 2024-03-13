@@ -65,6 +65,11 @@
       })
       await tick()
       refreshLayout() /* initial load */
+      await tick()
+      setTimeout(() => {
+        refreshLayout()
+      }, 100)
+      await tick()
       setTimeout(() => {
         refreshLayout()
       }, 500)
@@ -138,8 +143,8 @@ $s: var(--grid-gap); // .5em;
     padding: var(--grid-gap);
   }
 
-  :global(.__grid--masonry > *) {
-    align-self: start;
+  :global(.__grid--masonry) {
+    transition: 250ms ease-out;
   }
 
   :global(.__grid--masonry.__stretch-first > *:first-child) {
