@@ -94,6 +94,7 @@
   const viewState = writable(VIEW_STATES.DEFAULT)
 
   let showDropZone = false
+  const isDraggingDrawerItem = writable(false)
 
   const selectedResource = writable<ResourceObject | undefined>(undefined)
 
@@ -451,6 +452,14 @@
   const handleItemDragStart = (e: DragEvent, resource: ResourceObject) => {
     log.debug('Item drag start', e, resource.id)
 
+    if (
+      e.target instanceof Element &&
+      (e.target.classList.contains('drawer-item') || e.target.closest('.drawer-item'))
+    ) {
+      console.log('DRAGGING DRAWER ELEMENT')
+      isDraggingDrawerItem.set(true)
+    }
+
     if (!e.dataTransfer) {
       log.error('No dataTransfer found')
       return
@@ -596,10 +605,12 @@
 
     if (!receivedDrop) {
       showDropZone = false
+      isDraggingDrawerItem.set(false)
     }
 
     dragCount = 0
     receivedDrop = false
+    isDraggingDrawerItem.set(false)
   }
 
   const handleDropZoneClickOutside = () => {
@@ -695,7 +706,10 @@
 {/if}
 
 <DrawerProvider {drawer} on:search={handleSearch}>
-  <DrawerContentWrapper on:drop={handleDrop} acceptDrop={$viewState !== 'details'}>
+  <DrawerContentWrapper
+    on:drop={handleDrop}
+    acceptDrop={$viewState !== 'details' && !$isDraggingDrawerItem}
+  >
     {#if $selectedResource}
       {#if $viewState === 'details'}
         <!-- The key block is needed so the details components get properly updated when the selected resource changes -->

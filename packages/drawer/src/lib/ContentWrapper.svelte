@@ -10,6 +10,7 @@
 
   const handleDragEnter = (e: DragEvent) => {
     if (!acceptDrop) {
+      console.log('Aborting DND')
       return
     }
     e.preventDefault()

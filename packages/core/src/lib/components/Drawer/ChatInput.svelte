@@ -319,7 +319,6 @@
     view-transition-name: chat-field-container-transition;
     &.dragOver {
       display: none;
-      background: red;
     }
   }
   .input-field-container {
