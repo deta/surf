@@ -96,16 +96,21 @@
     ></textarea>
   </div>
 
-  <div class="cards-wrapper">
+  <div class="references-wrapper">
     {#if cardHorizons.length > 0}
-      {#each cardHorizons as item (item.id)}
-        <!-- svelte-ignore a11y-click-events-have-key-events -->
-        <div class="card" on:click={() => handleCardClick(item)}>
-          {item.horizon.data.name}
-        </div>
-      {/each}
+      <div class="header">
+        <div class="title">This card is placed on</div>
+      </div>
+      <div class="cards-wrapper">
+        {#each cardHorizons as item (item.id)}
+          <!-- svelte-ignore a11y-click-events-have-key-events -->
+          <div class="card" on:click={() => handleCardClick(item)}>
+            {item.horizon.data.name}
+          </div>
+        {/each}
+      </div>
     {:else}
-      <div>Not found on any Horizon</div>
+      <div>Not placed on any Horizon</div>
     {/if}
   </div>
 
@@ -119,7 +124,7 @@
 
       <div class="metadata-text">
         <span>Updated {formatRelativeDate(resource.updatedAt)}</span>
-        <span> {formatRelativeDate(resource.createdAt)}</span>
+        <span>Created {formatRelativeDate(resource.createdAt)}</span>
       </div>
     </div>
   </div>
@@ -149,13 +154,13 @@
 
   .textarea-wrapper,
   .metadata-wrapper,
-  .cards-wrapper {
+  .references-wrapper {
     position: relative;
-    padding: 1rem 0;
-    left: -1rem;
-    right: -1rem;
+    padding: 1rem 4rem;
+    left: 0;
+    right: 0;
     display: flex;
-    width: calc(100% + 4rem);
+    width: 100%;
     justify-content: center;
     background: white;
     border-top: 0.5px solid rgba(0, 0, 0, 0.15);
@@ -218,8 +223,23 @@
     }
   }
 
+  .references-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    .header {
+      padding-top: 1rem;
+      .title {
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 400;
+        opacity: 0.6;
+      }
+    }
+  }
+
   .cards-wrapper {
-    padding: 2rem 0;
+    padding: 2rem;
     display: flex;
     gap: 1rem;
     .card {

@@ -309,9 +309,12 @@
 
     const parsed = await processDrop(event)
 
+    // Filter out all items where the type is 'resource'
+    const filteredParsed = parsed.filter((item) => item.type !== 'resource')
+
     receivedDrop = true
     droppedInputElements.update((items) => {
-      parsed.forEach((parsedItem) => {
+      filteredParsed.forEach((parsedItem) => {
         items.push(parsedItem)
       })
       return items

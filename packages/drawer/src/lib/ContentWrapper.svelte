@@ -1,14 +1,27 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, getContext } from 'svelte'
   import { writable } from 'svelte/store'
 
   export let acceptDrop: boolean = true
 
   const dispatch = createEventDispatcher<{ drop: DragEvent }>()
+  const viewState: any = getContext('drawer.viewState')
 
   const dragOver = writable(false)
   let counter = 0
   let dragOverTimeout: ReturnType<typeof setTimeout> | null = null
+
+  $: if ($dragOver) {
+    document.startViewTransition(async () => {
+      viewState.set('chatInput')
+    })
+  }
+
+  // $ : if(!$dragOver) {
+  //   document.startViewTransition(async () => {
+  //     viewState.set('default')
+  //   })
+  // }
 
   const handleDragEnter = (e: DragEvent) => {
     if (!acceptDrop) {
