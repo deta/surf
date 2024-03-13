@@ -52,6 +52,13 @@ CREATE TABLE IF NOT EXISTS history_entries (
     updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS embedding_resources (
+    resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+    embedding_type TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS embedding_resources_resource_id_index ON embedding_resources(resource_id);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS resource_metadata USING fts5(
     id UNINDEXED,
     resource_id UNINDEXED,
@@ -71,4 +78,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS resource_text_content USING fts5(
 
 CREATE VIRTUAL TABLE IF NOT EXISTS card_positions USING vss0(
     position(2)
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS embeddings USING vss0(
+    embedding(384)
 );

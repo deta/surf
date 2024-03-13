@@ -6,7 +6,8 @@ use neon::{
 use std::sync::mpsc;
 
 use super::{
-    message::{ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage},
+    ai::ai_thread_entry_point,
+    message::{AIMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage},
     processor::processor_thread_entry_point,
     worker::worker_thread_entry_point,
 };
@@ -16,24 +17,38 @@ use crate::BackendResult;
 pub struct WorkerTunnel {
     pub worker_tx: mpsc::Sender<TunnelMessage>,
     pub tqueue_rx: crossbeam::Receiver<ProcessorMessage>,
+    pub aiqueue_rx: crossbeam::Receiver<AIMessage>,
 }
 
 impl WorkerTunnel {
-    pub fn new<'a, C>(cx: &mut C, backend_root_path: String) -> Self
+    pub fn new<'a, C>(
+        cx: &mut C,
+        backend_root_path: String,
+        vision_api_key: String,
+        vision_api_endpoint: String,
+    ) -> Self
     where
         C: Context<'a>,
     {
         let (worker_tx, worker_rx) = mpsc::channel::<TunnelMessage>();
         let (tqueue_tx, tqueue_rx) = crossbeam::unbounded();
+        let (aiqueue_tx, aiqueue_rx) = crossbeam::unbounded();
         let libuv_ch = cx.channel();
         let tunnel = Self {
             worker_tx,
             tqueue_rx,
+            aiqueue_rx,
         };
 
         // spawn the main SFFS thread
         std::thread::spawn(move || {
-            worker_thread_entry_point(worker_rx, tqueue_tx, libuv_ch, backend_root_path)
+            worker_thread_entry_point(
+                worker_rx,
+                tqueue_tx,
+                aiqueue_tx,
+                libuv_ch,
+                backend_root_path,
+            )
         });
 
         // spawn N worker threads
@@ -41,6 +56,16 @@ impl WorkerTunnel {
             let tunnel_clone = tunnel.clone();
             std::thread::spawn(move || {
                 processor_thread_entry_point(tunnel_clone);
+            });
+        });
+
+        // spawn AI threads
+        (0..2).for_each(|_| {
+            let tunnel_clone = tunnel.clone();
+            let vision_api_key = vision_api_key.clone();
+            let vision_api_endpoint = vision_api_endpoint.clone();
+            std::thread::spawn(move || {
+                ai_thread_entry_point(tunnel_clone, vision_api_key, vision_api_endpoint);
             });
         });
 
