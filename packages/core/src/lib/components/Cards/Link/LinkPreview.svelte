@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
   import type { ResourceLink } from '../../../service/resources'
@@ -12,6 +12,7 @@
   export let resource: ResourceLink
 
   const log = useLogScope('LinkPreview')
+  const dispatch = createEventDispatcher<{ data: ResourceDataLink }>()
 
   let link: ResourceDataLink | null = null
   let title = ''
@@ -24,6 +25,7 @@
     try {
       loading = true
       link = await resource.getParsedData()
+      dispatch('data', link)
 
       const url = new URL(link.url)
 

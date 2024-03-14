@@ -100,6 +100,7 @@ export interface ResourceDataTypes {
   [ResourceTypes.LINK]: ResourceDataLink
   [ResourceTypes.LOCATION]: ResourceDataLocation
   [ResourceTypes.COLOR]: ResourceDataColor
+  [ResourceTypes.DOCUMENT_SPACE_NOTE]: string
   // todo data for drawing and flowchart-fun
 }
 
@@ -149,6 +150,7 @@ export interface ResourceDataPost {
 export interface ResourceDataDocument {
   // basic information
   url: string // URL of the document
+  title: string | null // the title of the document
   date_created: string // when the document was originally created
   date_edited: string | null // when the document was last edited
 

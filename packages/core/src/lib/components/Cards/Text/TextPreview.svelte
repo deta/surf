@@ -2,12 +2,15 @@
   import '@horizon/editor/src/editor.scss'
 
   import { getEditorContentText } from '@horizon/editor'
-  import { onDestroy, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import type { ResourceNote } from '../../../service/resources'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
+  import { get } from 'svelte/store'
 
   export let resource: ResourceNote
   export let limit: number = 200
+
+  const dispatch = createEventDispatcher<{ data: string }>()
 
   const content = resource.parsedData
   let summary = ''
@@ -28,7 +31,9 @@
   onMount(async () => {
     loading = true
 
-    await resource.getContent()
+    const parsedData = await resource.getContent()
+    const text = get(parsedData)
+    dispatch('data', text ?? '')
 
     loading = false
   })

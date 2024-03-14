@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
   import type { ResourcePost } from '../../../service/resources'
@@ -11,6 +11,7 @@
   export let type: string
 
   const log = useLogScope('PostPreview')
+  const dispatch = createEventDispatcher<{ data: ResourceDataPost }>()
 
   let post: ResourceDataPost | null = null
   let title = ''
@@ -31,6 +32,7 @@
     try {
       loading = true
       post = await resource.getParsedData()
+      dispatch('data', post)
 
       const url = new URL(post.url)
 
@@ -82,7 +84,7 @@
       <div class="post-metadata">
         <Link
           class="link"
-          url={post?.author_url}
+          url={post?.author_url ?? ''}
           label={`From ${post?.author}`}
           color={isTwitter || isReddit ? 'white' : 'inherit'}
         />

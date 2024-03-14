@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount, getContext } from 'svelte'
+  import { onDestroy, onMount, getContext, createEventDispatcher } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
   import type { ResourceChatThread } from '../../../service/resources'
@@ -11,6 +11,7 @@
   export let type: string
 
   const log = useLogScope('MessagePreview')
+  const dispatch = createEventDispatcher<{ data: ResourceDataChatThread }>()
   const viewState: any = getContext('drawer.viewState')
 
   let thread: ResourceDataChatThread | null = null
@@ -27,15 +28,14 @@
     return text.length > length ? text.slice(0, length) + '...' : text
   }
 
-  function formatRelativeDate(dateIsoString) {
+  function formatRelativeDate(dateIsoString: string) {
     return formatDistanceToNow(parseISO(dateIsoString), { addSuffix: true })
   }
 
   onMount(async () => {
     try {
       thread = await resource.getParsedData()
-
-      console.log('messagethreaddata', thread)
+      dispatch('data', thread)
 
       const url = new URL(thread.url)
 
@@ -68,7 +68,7 @@
       <img class="favicon" src={thread?.platform_icon} alt={`${thread?.platform_name} favicon`} />
       <div class="thread-metadata">
         <div class="from">Slack Thread</div>
-        <Link class="link" url={thread?.url} label={`Started from ${thread?.creator}`} />
+        <Link class="link" url={thread?.url ?? ''} label={`Started from ${thread?.creator}`} />
       </div>
       <div class={$viewState === 'details' ? 'show-full-messages' : 'messages-preview'}>
         {#each thread?.messages.slice() || [] as message}

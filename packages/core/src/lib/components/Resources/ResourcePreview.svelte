@@ -3,6 +3,7 @@
 <script lang="ts">
   import { createEventDispatcher, getContext } from 'svelte'
   import { Icon } from '@horizon/icons'
+  import { WebParser } from '@horizon/web-parser'
 
   import TextPreview from '../Cards/Text/TextPreview.svelte'
   import LinkPreview from '../Cards/Link/LinkPreview.svelte'
@@ -17,7 +18,7 @@
     ResourcePost
   } from '../../service/resources'
   import FilePreview from '../Cards/File/FilePreview.svelte'
-  import { ResourceTypes } from '../../types'
+  import { ResourceTypes, type ResourceData, type ResourceDataPost } from '../../types'
   import DateSinceNow from '../DateSinceNow.svelte'
   import { getFileKind, getFileType } from '../../utils/files'
   import FileIcon from '../Cards/File/FileIcon.svelte'
@@ -52,6 +53,28 @@
   $: chatMessageResource = resource as ResourceChatMessage
   $: chatThreadResource = resource as ResourceChatThread
   $: documentResource = resource as ResourceDocument
+
+  let data: ResourceData | null = null
+  const handleData = (e: CustomEvent<ResourceData>) => {
+    data = e.detail
+  }
+
+  const handleDragStart = (e: DragEvent) => {
+    if (data) {
+      if (resource.type.startsWith(ResourceTypes.POST)) {
+        e.dataTransfer?.setData('text/uri-list', (data as ResourceDataPost)?.url ?? '')
+      }
+
+      const content = WebParser.getResourceContent(resource.type, data)
+      if (content.plain) {
+        e.dataTransfer?.setData('text/plain', content.plain)
+      }
+
+      if (content.html) {
+        e.dataTransfer?.setData('text/html', content.html)
+      }
+    }
+  }
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -60,6 +83,8 @@
   class="resource-preview"
   class:details={$viewState === 'details'}
   style="--id:{resource.id};"
+  on:dragstart={handleDragStart}
+  draggable="true"
 >
   <div
     class="preview"
@@ -69,21 +94,25 @@
     class:notion={resource.type === 'application/vnd.space.document.notion'}
   >
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-      <TextPreview resource={textResource} />
+      <TextPreview resource={textResource} on:data={handleData} />
     {:else if resource.type === ResourceTypes.LINK}
-      <LinkPreview resource={linkResource} />
+      <LinkPreview resource={linkResource} on:data={handleData} />
     {:else if resource.type.startsWith(ResourceTypes.POST_YOUTUBE)}
-      <YoutubePreview resource={postResource} type={resource.type} />
+      <YoutubePreview resource={postResource} type={resource.type} on:data={handleData} />
     {:else if resource.type.startsWith(ResourceTypes.POST)}
-      <PostPreview resource={postResource} type={resource.type} />
+      <PostPreview resource={postResource} type={resource.type} on:data={handleData} />
     {:else if resource.type.startsWith(ResourceTypes.ARTICLE)}
-      <ArticlePreview resource={articleResource} />
+      <ArticlePreview resource={articleResource} on:data={handleData} />
     {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
-      <ChatMessagePreview resource={chatMessageResource} type={resource.type} />
+      <ChatMessagePreview
+        resource={chatMessageResource}
+        type={resource.type}
+        on:data={handleData}
+      />
     {:else if resource.type.startsWith(ResourceTypes.CHAT_THREAD)}
-      <ChatThreadPreview resource={chatThreadResource} type={resource.type} />
+      <ChatThreadPreview resource={chatThreadResource} type={resource.type} on:data={handleData} />
     {:else if resource.type.startsWith(ResourceTypes.DOCUMENT)}
-      <DocumentPreview resource={documentResource} type={resource.type} />
+      <DocumentPreview resource={documentResource} type={resource.type} on:data={handleData} />
     {:else}
       <FilePreview {resource} />
       <!-- {:else}

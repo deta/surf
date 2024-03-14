@@ -532,7 +532,7 @@
       }
     } else if (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
       const data = get((resource as ResourceNote).parsedData)
-      log.debug('parsed resource data')
+      log.debug('parsed resource data', data)
 
       // We cannot read the data here as the drag start event is synchronous
       if (!data) {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
   import type { ResourceDocument } from '../../../service/resources'
@@ -10,6 +10,7 @@
   export let type: string
 
   const log = useLogScope('DocumentPreview')
+  const dispatch = createEventDispatcher<{ data: ResourceDataDocument }>()
 
   let document: ResourceDataDocument | null = null
   let title = ''
@@ -27,7 +28,8 @@
 
   onMount(async () => {
     try {
-      document = await resource.getParsedData()
+      document = await resource.getParsedData(true)
+      dispatch('data', document)
 
       const url = new URL(document?.url)
 
@@ -50,7 +52,8 @@
   })
 
   onDestroy(() => {
-    resource.releaseData()
+    log.debug('Releasing data')
+    // resource.releaseData()
   })
 </script>
 

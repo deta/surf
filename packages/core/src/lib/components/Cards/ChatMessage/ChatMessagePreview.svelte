@@ -1,18 +1,19 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
-  import type { ResourceMessage } from '../../../service/resources'
-  import type { ResourceDataMessage } from '../../../types'
+  import type { ResourceChatMessage } from '../../../service/resources'
+  import type { ResourceDataChatMessage } from '../../../types'
   import Link from '../../Atoms/Link.svelte'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
 
-  export let resource: ResourceMessage
+  export let resource: ResourceChatMessage
   export let type: string
 
   const log = useLogScope('MessagePreview')
+  const dispatch = createEventDispatcher<{ data: ResourceDataChatMessage }>()
 
-  let message: ResourceDataMessage | null = null
+  let message: ResourceDataChatMessage | null = null
   let chatMessage = ''
   let subtitle = ''
   let error = ''
@@ -30,6 +31,7 @@
     try {
       loading = true
       message = await resource.getParsedData()
+      dispatch('data', message)
 
       const url = new URL(message.url)
 
@@ -71,7 +73,7 @@
       <img class="favicon" src={message?.platform_icon} alt={`${message?.platform_name} favicon`} />
       <div class="title">{chatMessage}</div>
       <div class="message-metadata">
-        <Link class="link" url={message?.author_url} label={`From ${message?.author}`} />
+        <Link class="link" url={message?.author_url ?? ''} label={`From ${message?.author}`} />
         <div class="from">Slack Message</div>
       </div>
     {/if}

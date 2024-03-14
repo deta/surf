@@ -1,16 +1,17 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
   import { useLogScope } from '../../../utils/log'
   import type { ResourceArticle } from '../../../service/resources'
   import type { ResourceDataArticle } from '../../../types'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
 
-  export let resource: Resourcearticle
+  export let resource: ResourceArticle
 
   const log = useLogScope('articlePreview')
+  const dispatch = createEventDispatcher<{ data: ResourceDataArticle }>()
 
-  let article: ResourceDataarticle | null = null
+  let article: ResourceDataArticle | null = null
   let title = ''
   let subtitle = ''
   let excerpt = ''
@@ -28,6 +29,7 @@
     try {
       loading = true
       article = await resource.getParsedData()
+      dispatch('data', article)
 
       const url = new URL(article.url)
 
@@ -62,15 +64,15 @@
     {:else if loading}
       <LoadingBox />
     {:else if article?.image}
-      <img class="image" alt={`${article?.provider} image`} src={article?.image} />
+      <img class="image" alt={`${article?.site_name} image`} src={article?.image} />
     {:else if article?.images[0]}
-      <img class="image" alt={`${article?.provider} image`} src={article?.images[0]} />
+      <img class="image" alt={`${article?.site_name} image`} src={article?.images[0]} />
     {:else if !article?.image && !article?.images[0]}
       <div class="article-preview-no-image">
         <img
           class="favicon"
           src={`https://www.google.com/s2/favicons?domain=${article?.url}&sz=256`}
-          alt={`${article?.provider} favicon`}
+          alt={`${article?.site_name} favicon`}
         />
         <div class="excerpt">
           {article?.excerpt}
@@ -107,6 +109,8 @@
     width: 100%;
     height: 100%;
     border-radius: 3px;
+    pointer-events: none;
+    user-select: none;
   }
 
   .title {

@@ -159,6 +159,15 @@ export class WebParser {
         html: data.content_html,
         plain: data.content_plain
       }
+    } else if (type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+      const data = resourceData as string
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(data, 'text/html')
+
+      return {
+        html: data,
+        plain: doc.body.textContent
+      }
     } else if (type.startsWith(ResourceTypes.DOCUMENT)) {
       const data = resourceData as ResourceDataDocument
       return {
