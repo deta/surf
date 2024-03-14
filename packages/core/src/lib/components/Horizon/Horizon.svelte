@@ -1075,9 +1075,11 @@
   const handleSearchChange = async (query: string = '') => {
     lastVisorSearchTerm = query
     horizon.setActiveCard(null)
-    const resources = await resourceManager.searchResources(query, [
-      ResourceManager.SearchTagDeleted(false)
-    ])
+    const resources = await resourceManager.searchResources(
+      query,
+      [ResourceManager.SearchTagDeleted(false)],
+      { semanticEnabled: true, semanticDistanceThreshold: 1.0 }
+    )
     let results = $cards
     if (query !== '') {
       results = []
