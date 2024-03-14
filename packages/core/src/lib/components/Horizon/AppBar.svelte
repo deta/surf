@@ -127,21 +127,21 @@
               >
                 <path
                   d="M12 13L10 11"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
                 <path
                   d="M12 12L14 10"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
                 <path
                   d="M12 21V8"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -150,7 +150,7 @@
                   fill-rule="evenodd"
                   clip-rule="evenodd"
                   d="M9.82412 15.9951C8.93843 15.9432 8.12112 15.502 7.59183 14.7899C7.06253 14.0779 6.87555 13.1681 7.08112 12.3051C6.34503 11.6932 5.94535 10.7666 6.00544 9.81135C6.06553 8.85605 6.57816 7.98687 7.38512 7.47207C6.66513 6.193 6.97635 4.58079 8.12069 3.6616C9.26502 2.74241 10.9064 2.78619 12.0001 3.76507C13.094 2.78777 14.7343 2.74485 15.8778 3.6636C17.0213 4.58234 17.3328 6.19329 16.6141 7.47207C17.4216 7.98641 17.9347 8.85558 17.995 9.81105C18.0553 10.7665 17.6555 11.6933 16.9191 12.3051C17.1318 13.1981 16.9239 14.1394 16.3548 14.8597C15.7857 15.5801 14.9181 16.0003 14.0001 16.0001H10.0001L9.82412 15.9951Z"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -171,7 +171,7 @@
         max="365"
         class="skeuo"
         bind:value={tintVal}
-        style="rotate: 90deg;  transform-origin: top left;translate: 48px;width: 150px;"
+        style="rotate: 90deg;  transform-origin: top left;translate: 41px;width: 150px;"
       />
     </div>
 
@@ -212,56 +212,56 @@
               >
                 <path
                   d="M16 4H20V8"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
                 <path
                   d="M14 10L20 4"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
                 <path
                   d="M8 20H4V16"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
                 <path
                   d="M4 20L10 14"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
                 <path
                   d="M16 20H20V16"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
                 <path
                   d="M14 14L20 20"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
                 <path
                   d="M8 4H4V8"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
                 <path
                   d="M4 4L10 10"
-                  stroke="black"
+                  stroke="#6D6D6C"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"

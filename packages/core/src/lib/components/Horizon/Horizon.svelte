@@ -841,6 +841,9 @@
     const tagetScreenCenter = $viewOffset.x + $viewPort.w / 2
     visorListTargets = contents
       .sort((a, b) => get(a).x - get(b).x)
+      .filter(
+        (c, i, a) => a.findIndex((e) => get(e).id === get(c).id) === i
+      ) /* Removes duplicates -> fix gap */
       .map((c, i) => {
         const _c = get(c)
         const relativeCardIdx = i - activeCardIdx // Offset from center target
