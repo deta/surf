@@ -7,6 +7,8 @@
   import type { Horizon } from '../../../service/horizon'
   import type { MagicField, MagicFieldParticipant } from '../../../service/magicField'
   import { TRANSCRIBER_MIME_TYPES } from '../../../constants/magicField'
+  import { Icon } from '@horizon/icons'
+  import { useClipboard } from '../../../utils/clipboard'
 
   export let card: Writable<Card>
   export let horizon: Horizon
@@ -16,6 +18,7 @@
   const magicFieldService = horizon.magicFieldService
 
   const log = useLogScope('AudioTranscriber')
+  const { copied, copy } = useClipboard()
 
   let magicField: MagicField | null = null
   let connectedParticipant: Writable<MagicFieldParticipant | null> = writable(null)
@@ -86,6 +89,25 @@
     handleParticipantConnect($connectedParticipant)
   }
 
+  const handleDragStart = (e: DragEvent) => {
+    if (!transcribedText) {
+      log.error('No summarized text found')
+      return
+    }
+
+    e.dataTransfer?.setData('text/plain', transcribedText)
+    e.dataTransfer?.setData('text/html', transcribedText)
+  }
+
+  const handleCopy = () => {
+    if (!transcribedText) {
+      log.error('No transcribed text found')
+      return
+    }
+
+    copy(transcribedText)
+  }
+
   onMount(() => {
     const magicCardParticipant = magicFieldService.getParticipant($card.id)
     if (!magicCardParticipant) {
@@ -141,8 +163,21 @@
 <div class="audio-transcriber magic-card">
   {#if $connectedParticipant || transcribedText}
     {#if transcribedText}
-      <div class="transcription-content" style={!$connectedParticipant ? 'opacity: 0.43;' : ''}>
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <div
+        on:dragstart={handleDragStart}
+        class="transcription-content"
+        style={!$connectedParticipant ? 'opacity: 0.43;' : ''}
+      >
         <p>{transcribedText}</p>
+
+        <button class="copy" on:click={handleCopy}>
+          {#if $copied}
+            <Icon name="check" />
+          {:else}
+            <Icon name="copy" />
+          {/if}
+        </button>
       </div>
     {:else if error}
       <div class="error-message">
@@ -196,10 +231,26 @@
     background: rgba(255, 255, 255, 0.33);
     border-radius: 4px;
     height: 100%;
+    position: relative;
 
     p {
       font-size: 1rem;
       font-weight: 300;
+    }
+  }
+
+  .copy {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    opacity: 0.35;
+
+    &:hover {
+      opacity: 1;
     }
   }
 </style>

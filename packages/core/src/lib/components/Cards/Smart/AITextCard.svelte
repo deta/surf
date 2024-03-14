@@ -6,6 +6,8 @@
   import { useLogScope } from '../../../utils/log'
   import type { Horizon } from '../../../service/horizon'
   import type { MagicField, MagicFieldParticipant } from '../../../service/magicField'
+  import { Icon } from '@horizon/icons'
+  import { useClipboard } from '../../../utils/clipboard'
 
   export let card: Writable<Card>
   export let horizon: Horizon
@@ -13,6 +15,7 @@
   const magicFieldService = horizon.magicFieldService
 
   const log = useLogScope('AITextCard')
+  const { copied, copy } = useClipboard()
 
   let magicField: MagicField | null = null
   //$: magicFieldColorIdx = get(magicFieldService.fields).findIndex((f) => f.id === magicField?.id)
@@ -89,6 +92,25 @@
     handleParticipantConnect($connectedParticipant)
   }
 
+  const handleDragStart = (e: DragEvent) => {
+    if (!summarizedText) {
+      log.error('No summarized text found')
+      return
+    }
+
+    e.dataTransfer?.setData('text/plain', summarizedText)
+    e.dataTransfer?.setData('text/html', summarizedText)
+  }
+
+  const handleCopy = () => {
+    if (!summarizedText) {
+      log.error('No summarized text found')
+      return
+    }
+
+    copy(summarizedText)
+  }
+
   onMount(() => {
     const magicCardParticipant = magicFieldService.getParticipant($card.id)
     if (!magicCardParticipant) {
@@ -154,8 +176,21 @@
     </div>
 
     {#if summarizedText}
-      <div class="summary" style={!$connectedParticipant ? 'opacity: 0.43;' : ''}>
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <div
+        on:dragstart={handleDragStart}
+        class="summary"
+        style={!$connectedParticipant ? 'opacity: 0.43;' : ''}
+      >
         <p>{summarizedText}</p>
+
+        <button class="copy" on:click={handleCopy}>
+          {#if $copied}
+            <Icon name="check" />
+          {:else}
+            <Icon name="copy" />
+          {/if}
+        </button>
       </div>
     {:else if error}
       <div class="init">
@@ -214,10 +249,26 @@
     background: rgba(255, 255, 255, 0.33);
     border-radius: 4px;
     height: 100%;
+    position: relative;
 
     p {
       font-size: 1rem;
       font-weight: 300;
+    }
+  }
+
+  .copy {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    opacity: 0.35;
+
+    &:hover {
+      opacity: 1;
     }
   }
 </style>
