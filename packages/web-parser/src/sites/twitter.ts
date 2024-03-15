@@ -16,6 +16,7 @@ export type TweetData = {
   username: string
   publishedAt: string
   likeNumber: number
+  tweetImageSources: string[]
 }
 
 export class TwitterParser extends WebAppExtractor {
@@ -128,6 +129,9 @@ export class TwitterParser extends WebAppExtractor {
           ?.textContent ?? '0'
       const likeNumber = parseInt(likes.replace(/,/g, ''))
 
+      const tweetImageElements = tweetElem.querySelectorAll('img')
+      const tweetImageSources = Array.from(tweetImageElements).map((img) => img.src)
+
       return {
         tweetId,
         content,
@@ -135,7 +139,8 @@ export class TwitterParser extends WebAppExtractor {
         author,
         username,
         publishedAt,
-        likeNumber
+        likeNumber,
+        tweetImageSources
       } as TweetData
     } catch (e) {
       console.error('Error getting post data', e)
@@ -144,6 +149,7 @@ export class TwitterParser extends WebAppExtractor {
   }
 
   private normalizePost(data: TweetData) {
+    const [authorImage, ...images] = data.tweetImageSources
     return {
       post_id: data.tweetId,
       title: data.content,
@@ -156,7 +162,7 @@ export class TwitterParser extends WebAppExtractor {
 
       author: data.username,
       author_fullname: data.author,
-      author_image: `https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png`,
+      author_image: authorImage,
       author_url: `https://www.twitter.com/${data.username}`,
 
       excerpt: data.content,
@@ -165,7 +171,7 @@ export class TwitterParser extends WebAppExtractor {
       lang: null,
 
       links: [],
-      images: [],
+      images: images,
       video: [],
 
       parent_url: `https://www.twitter.com/${data.username}`,
