@@ -1,0 +1,22 @@
+[package]
+name = "tesseract-sys"
+version = "0.5.15"
+authors = ["Kevin Kwok <antimatter15@gmail.com>", "Chris Couzens <ccouzens@gmail.com>"]
+description = "Rust Bindings for Tesseract OCR"
+license = "MIT"
+edition = '2018'
+repository = "https://github.com/ccouzens/tesseract-sys"
+keywords = ["OCR", "tesseract"]
+categories = ["external-ffi-bindings", "multimedia::images"]
+links = "tesseract"
+build = "build.rs"
+
+[dependencies]
+leptonica-sys = "~0.4"
+
+[build-dependencies]
+bindgen = "0.64"
+[target.'cfg(windows)'.build-dependencies]
+vcpkg = "0.2.8"
+[target.'cfg(any(target_os="macos", target_os="linux"))'.build-dependencies]
+pkg-config = "0.3.19"
