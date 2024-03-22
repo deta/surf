@@ -12,7 +12,7 @@ links = "tesseract"
 build = "build.rs"
 
 [dependencies]
-leptonica-sys = "~0.4"
+leptonica-sys = { path = "../leptonica-sys" }
 
 [build-dependencies]
 bindgen = "0.64"

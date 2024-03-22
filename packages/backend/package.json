@@ -7,8 +7,8 @@
   ],
   "main": "index.node",
   "scripts": {
-    "dev": "npm run build",
-    "build-cmd": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
+    "dev": "npm run build-debug",
+    "build-cmd": "LIBTORCH=$(pwd)/../../apps/desktop/external-deps/libtorch cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "build-debug": "npm run build-cmd --",
     "build": "npm run build-cmd -- --release",
     "install": "npm run build",

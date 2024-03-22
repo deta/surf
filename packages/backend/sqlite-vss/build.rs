@@ -97,21 +97,29 @@ fn main() {
     println!("cargo:rustc-link-lib=static=sqlite_vss0");
 
     if cfg!(target_os = "macos") {
-      // link statically with libomp
-      // this is hard-coded rn
-      println!("cargo:rustc-link-search=native=/opt/homebrew/opt/libomp/lib");
-      println!("cargo:rustc-link-lib=static=omp");
+        // link statically with libomp
+        let libomp_path = std::process::Command::new("brew")
+            .args(["--prefix", "libomp"])
+            .output()
+            .unwrap();
+        if !libomp_path.status.success() {
+            panic!("brew command failed for libomp");
+        }
+        let libomp_path = String::from_utf8_lossy(&libomp_path.stdout);
+        let libomp_path = format!("{}/lib", libomp_path.trim_end());
 
-      // ths is for other stuff ig?
-      println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
+        println!("cargo:rustc-link-search=native={}", libomp_path);
+        println!("cargo:rustc-link-lib=static=omp");
+
+        // ths is for other stuff ig?
+        println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
+    } else if cfg!(target_os = "linux") {
+        // TODO different builds of faiss/sqlite-vss may require other libs
+        println!("cargo:rustc-link-lib=dylib=gomp");
+        println!("cargo:rustc-link-lib=dylib=atlas");
+        println!("cargo:rustc-link-lib=dylib=blas");
+        println!("cargo:rustc-link-lib=dylib=lapack");
+        println!("cargo:rustc-link-lib=dylib=m");
+        println!("cargo:rustc-link-lib=dylib=stdc++");
     }
-    else if cfg!(target_os = "linux") {
-      // TODO different builds of faiss/sqlite-vss may require other libs
-      println!("cargo:rustc-link-lib=dylib=gomp");
-      println!("cargo:rustc-link-lib=dylib=atlas");
-      println!("cargo:rustc-link-lib=dylib=blas");
-      println!("cargo:rustc-link-lib=dylib=lapack");
-      println!("cargo:rustc-link-lib=dylib=m");
-      println!("cargo:rustc-link-lib=dylib=stdc++");
-  }
 }

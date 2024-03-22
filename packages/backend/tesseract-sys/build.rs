@@ -57,15 +57,32 @@ fn find_tesseract_system_lib() -> Vec<String> {
         .probe("tesseract")
         .unwrap();
 
-    // this is not okay lmao
-    // but the pkg-config file is broken ;(
-    println!("cargo:rustc-link-search=native=/opt/homebrew/Cellar/openjpeg/2.5.2/lib/");
-    println!("cargo:rustc-link-search=native=/opt/homebrew/Cellar/jpeg-turbo/3.0.2/lib");
-    println!("cargo:rustc-link-search=native=/opt/homebrew/Cellar/giflib/5.2.1/lib/");
+    let libs = vec!["openjpeg", "jpeg-turbo", "giflib"];
+    for lib in libs {
+        let lib_path = std::process::Command::new("brew")
+            .args(["--prefix", lib])
+            .output()
+            .unwrap();
+
+        if !lib_path.status.success() {
+            panic!("brew command failed for {}", lib);
+        }
+
+        let path_str = String::from_utf8_lossy(&lib_path.stdout);
+        let lib_path_trimmed = path_str.trim_end();
+        let full_lib_path = format!("{}/lib", lib_path_trimmed);
+        println!("cargo:rustc-link-search=native={}", full_lib_path);
+    }
 
     println!("cargo:rustc-link-lib=static=gif");
     println!("cargo:rustc-link-lib=static=jpeg");
     println!("cargo:rustc-link-lib=static=openjp2");
+
+    // this is not okay lmao
+    // but the pkg-config file is broken ;(
+    // println!("cargo:rustc-link-search=native=/opt/homebrew/Cellar/openjpeg/2.5.2/lib/");
+    // println!("cargo:rustc-link-search=native=/opt/homebrew/Cellar/jpeg-turbo/3.0.2/lib");
+    // println!("cargo:rustc-link-search=native=/opt/homebrew/Cellar/giflib/5.2.1/lib/");
 
     println!("cargo:rustc-link-search=native={:?}", pk.link_paths[0]);
     println!("cargo:rustc-link-lib=static=tesseract");
