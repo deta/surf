@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { writable } from 'svelte/store'
+  import { writable, type Unsubscriber } from 'svelte/store'
   import { onMount } from 'svelte'
   import { fly } from 'svelte/transition'
   import emblaCarouselSvelte from 'embla-carousel-svelte'
@@ -9,25 +9,18 @@
 
   import Create from './Create.svelte'
   import { SERVICES } from '@horizon/web-parser'
+  import type { Horizon } from '../../../../../service/horizon'
+  import WebviewWrapper from '../../WebviewWrapper.svelte'
+  import type { HistoryEntriesManager, SearchHistoryEntry } from '../../../../../service/history'
 
-  export let webview: WebviewWrapper | undefined
-  export let horizon: Horizon | undefined
+  export let webview: WebviewWrapper
+  export let horizon: Horizon
 
   const historyEntriesManager = horizon.historyEntriesManager as HistoryEntriesManager
 
-  let sites = writable([])
+  let sites = writable<SearchHistoryEntry[]>([])
 
   $: iterableSites = $sites || []
-
-  $: if (horizon && webview) {
-    updateSites()
-  }
-
-  onMount(() => {
-    if (horizon && webview) {
-      updateSites()
-    }
-  })
 
   const AVAILABLE_SERVICES = SERVICES.filter((e) => e.showBrowserAction === true)
 
@@ -46,32 +39,35 @@
 
     // Sort entries by latest first based on createdAt or updatedAt
     const sortedEntries = visitedToday.sort((a, b) => {
-      return new Date(b.entry.createdAt) - new Date(a.entry.createdAt)
+      return new Date(b.entry.createdAt).getTime() - new Date(a.entry.createdAt).getTime()
     })
 
     // Assuming you want to keep unique sites with the latest visit
-    const uniqueSitesWithLatestVisit = sortedEntries.reduce((acc, currentEntry) => {
-      if (!acc[currentEntry.site]) {
-        acc[currentEntry.site] = currentEntry
-      }
-      return acc
-    }, {})
+    const uniqueSitesWithLatestVisit = sortedEntries.reduce(
+      (acc, currentEntry) => {
+        if (!acc[currentEntry.site]) {
+          acc[currentEntry.site] = currentEntry
+        }
+        return acc
+      },
+      {} as Record<string, SearchHistoryEntry>
+    )
 
     sites.set(Object.values(uniqueSitesWithLatestVisit))
   }
 
   let embla: HTMLElement
 
-  let showBrowserHomescreen: bool = true
+  let showBrowserHomescreen: boolean = true
 
   let emblaCanScrollLeft = writable(false)
   let emblaCanScrollRight = writable(true)
 
-  let emblaApi
+  let emblaApi: any
   let options = { loop: false, dragFree: true }
   let plugins = [WheelGesturesPlugin({ forceWheelAxis: 'x' })]
 
-  function onInit(event) {
+  function onInit(event: any) {
     emblaApi = event.detail
     emblaApi.slideNodes()
     emblaApi.on('scroll', isScrolled)
@@ -94,6 +90,24 @@
   function handlePrevious() {
     emblaApi.scrollPrev()
   }
+
+  let unsubscribeHistoryEntries: Unsubscriber
+
+  onMount(() => {
+    updateSites()
+
+    // Delay the subscription to avoid unnecessary updates
+    const timeout = setTimeout(() => {
+      unsubscribeHistoryEntries = historyEntriesManager.entries.subscribe(() => {
+        updateSites()
+      })
+    }, 500)
+
+    return () => {
+      if (timeout) clearTimeout(timeout)
+      if (unsubscribeHistoryEntries) unsubscribeHistoryEntries()
+    }
+  })
 </script>
 
 {#if showBrowserHomescreen}
@@ -152,7 +166,7 @@
       {/if}
       <div class="popular-sites">
         {#each $sites.slice(0, 6) as site}
-          <div class="site" on:click|preventDefault={() => handleClick(site.entry.url)}>
+          <div class="site" on:click|preventDefault={() => handleClick(site.entry.url ?? '')}>
             <img
               class="site-favicon"
               src={`https://www.google.com/s2/favicons?domain=${site.entry.url}&sz=128`}

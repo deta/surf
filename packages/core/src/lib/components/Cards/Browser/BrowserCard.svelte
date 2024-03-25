@@ -292,8 +292,6 @@
     value = $url ?? ''
   }
 
-  $: console.log('value', value)
-
   function goToURL() {
     const isURL = checkIfUrl(value)
     if (isURL) {
@@ -497,7 +495,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="browser-card">
-  {#if $url == ''}
+  {#if $url === '' && webview}
     <BrowserHomescreen {webview} {horizon} />
   {/if}
   {#if !$didFinishLoad}

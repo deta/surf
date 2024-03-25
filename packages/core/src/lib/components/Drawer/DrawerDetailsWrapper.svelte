@@ -84,20 +84,27 @@
     )
   }
 
-  function formatRelativeDate(dateIsoString) {
+  function formatRelativeDate(dateIsoString: string) {
     return formatDistanceToNow(parseISO(dateIsoString), { addSuffix: true })
   }
 
   $: fetchData(resource)
 
   onMount(() => {
+    let timeout: ReturnType<typeof setTimeout>
     const unsubscribe = horizon.cards.subscribe(() => {
-      setTimeout(() => {
+      if (timeout) clearTimeout(timeout)
+
+      timeout = setTimeout(() => {
         fetchData(resource)
       }, 600)
     })
 
-    return unsubscribe
+    return () => {
+      if (timeout) clearTimeout(timeout)
+
+      unsubscribe()
+    }
   })
 </script>
 
@@ -294,8 +301,9 @@
   .cards-wrapper {
     padding: 0.5rem 0.25rem 1.5rem 0.25rem;
     display: flex;
+    justify-content: center;
     width: 100%;
-    max-width: 28rem;
+    max-width: 40rem;
     gap: 1rem;
     .card {
       padding: 1rem;

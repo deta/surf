@@ -6,11 +6,12 @@
   import type { ResourceNote } from '../../../service/resources'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
   import { get } from 'svelte/store'
+  import type { ResourcePreviewEvents } from '../../Resources/events'
 
   export let resource: ResourceNote
   export let limit: number = 200
 
-  const dispatch = createEventDispatcher<{ data: string }>()
+  const dispatch = createEventDispatcher<ResourcePreviewEvents<string>>()
 
   const content = resource.parsedData
   let summary = ''
@@ -34,6 +35,7 @@
     const parsedData = await resource.getContent()
     const text = get(parsedData)
     dispatch('data', text ?? '')
+    dispatch('load')
 
     loading = false
   })

@@ -63,12 +63,6 @@
     }
   }, 500)
 
-  const unsubscribeContent = content.subscribe((value) => {
-    log.debug('content changed', value)
-    if (initialLoad) return
-    debouncedSaveContent(value ?? '')
-  })
-
   // prevent default drag and drop behavior (i.e. the MediaImporter handling it)
   const handleDrop = (e: DragEvent) => {
     e.preventDefault()
@@ -92,6 +86,7 @@
   // )
 
   let unsubscribeValue: () => void
+  let unsubscribeContent: () => void
 
   onMount(async () => {
     if (!$card.resourceId) {
@@ -107,7 +102,6 @@
 
     const value = resource.parsedData
     unsubscribeValue = value.subscribe((value) => {
-      console.log('value changed', value)
       if (value) {
         content.set(value)
       }
@@ -124,6 +118,11 @@
       const isSupported = field.supportedResources.includes('text/plain')
       magicFieldParticipant?.updateFieldSupported(field.id, isSupported)
     }
+
+    unsubscribeContent = content.subscribe((value) => {
+      log.debug('content changed', value)
+      debouncedSaveContent(value ?? '')
+    })
 
     // if (active) {
     //   focusEditor()

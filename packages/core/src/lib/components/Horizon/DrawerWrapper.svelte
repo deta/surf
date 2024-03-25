@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onDestroy, setContext, tick } from 'svelte'
-  import { derived, get, writable } from 'svelte/store'
+  import { setContext, tick } from 'svelte'
+  import { get, writable } from 'svelte/store'
   import { WebParser, type WebMetadata, type DetectedWebApp } from '@horizon/web-parser'
   import { fly } from 'svelte/transition'
 
@@ -21,7 +21,7 @@
     type SearchQuery
   } from '@horizon/drawer'
 
-  import type { Resource, ResourceDocument } from '../../service/resources'
+  import type { ResourceDocument } from '../../service/resources'
   import { Icon } from '@horizon/icons'
 
   import type { Horizon } from '../../service/horizon'
@@ -31,8 +31,7 @@
     MEDIA_TYPES,
     processDrop,
     type MediaParserResult,
-    processFile,
-    processText
+    processFile
   } from '../../service/mediaImporter'
   import { onMount } from 'svelte'
   import {
@@ -51,20 +50,16 @@
     type SFFSSearchParameters
   } from '../../types'
 
-  import { parseStringIntoUrl, stringToURLList } from '../../utils/url'
+  import { parseStringIntoUrl } from '../../utils/url'
 
-  import ProgressiveBlur from '@horizon/drawer/src/lib/fx/ProgressiveBlur.svelte'
-  import { parse } from 'date-fns'
-  import Link from '../Atoms/Link.svelte'
   import type { ParsedMetadata } from '../../utils/parseMetadata'
   import { hasClassOrParentWithClass } from '@horizon/tela'
-  import { each, result } from 'lodash'
-  import { useDebounce } from '../../utils/debounce'
+  import { useAnimationFrameThrottle, useDebounce, useThrottle } from '../../utils/debounce'
   import ResourceLoading from '../Resources/ResourceLoading.svelte'
   import { generateID } from '../../utils/id'
-  import Saving from '../Drawer/Saving.svelte'
   import { getEditorContentText } from '@horizon/editor'
   import DrawerDetailsWrapper from '../Drawer/DrawerDetailsWrapper.svelte'
+  import type { Tab } from '@horizon/drawer/src/lib/Tabs.svelte'
 
   export const drawer = provideDrawer()
 
@@ -87,24 +82,14 @@
     { key: 'links', label: 'Links', icon: 'link' },
     { key: 'articles', label: 'Articles', icon: 'link' },
     { key: 'archived', label: 'Archived', icon: 'archive' }
-  ]
+  ] as Tab[]
 
-  const VIEW_STATES = {
-    CHAT_INPUT: 'chatInput',
-    SEARCH: 'search',
-    DEFAULT: 'default',
-    DETAILS: 'details'
-  }
-
-  const viewState = writable(VIEW_STATES.DEFAULT)
+  const viewState = drawer.viewState
 
   const showDropZone = writable(false)
   const isDraggingDrawerItem = writable(false)
 
   const selectedResource = writable<ResourceObject | undefined>(undefined)
-
-  // Setting the context
-  setContext('drawer.viewState', viewState)
 
   drawer.selectedTab.set('all')
 
@@ -140,10 +125,12 @@
   const semanticDistanceThreshold = writable(1.0)
   const proximityDistanceThreshold = writable(100000)
   const semanticSearchEnabled = writable(true)
-  $: console.log(
-    'searchResult',
-    searchResult.find((r) => r.id === $selectedResource?.id)
-  )
+
+  const debouncedRefreshContentLayout = useAnimationFrameThrottle(() => {
+    if (refreshContentLayout) {
+      return refreshContentLayout()
+    }
+  }, 250)
 
   const runSearch = async (query: string, tab: string | null) => {
     log.debug('Searching for', query, 'in', tab)
@@ -251,21 +238,11 @@
   }
 
   const abortSearch = () => {
-    runSearch('', drawer.selectedTab)
+    runSearch('', get(drawer.selectedTab))
   }
 
-  const handleResourceClick = async (e: CustomEvent<string>) => {
-    const resourceId = e.detail
-
-    log.debug('Resource clicked', resourceId)
-    const resource = await resourceManager.getResource(resourceId)
-    if (!resource) {
-      log.error('Resource not found', resourceId)
-      return
-    }
-
-    // Sets selected resource
-    document.startViewTransition(async () => {
+  const openResourceDetail = (resource: ResourceObject) => {
+    document.startViewTransition(() => {
       $selectedResource = resource
       viewState.set('details')
     })
@@ -277,6 +254,7 @@
     const confirm = window.confirm(`Are you sure you want to delete this resource?`)
     if (confirm) {
       const resource = await resourceManager.deleteResource(resourceId)
+      log.debug('Resource deleted', resource)
     }
 
     return
@@ -692,6 +670,10 @@
     })
   }
 
+  const handleResourceLoad = (e: CustomEvent<string>) => {
+    debouncedRefreshContentLayout()
+  }
+
   let initialLoad = true
   onMount(() => {
     const unsubscribeQuery = searchQuery.subscribe(({ value, tab }) => {
@@ -700,7 +682,7 @@
     })
 
     const unsubscribeCards = cards.subscribe((cards) => {
-      if (initialLoad) return
+      if (initialLoad || !$isDrawerShown) return
       log.debug('Cards changed', cards)
       runDebouncedSearch($searchQuery.value, $searchQuery.tab)
     })
@@ -814,8 +796,9 @@
               <ResourceOverlay>
                 <ResourcePreview
                   slot="content"
-                  on:click={handleResourceClick}
+                  on:click={() => openResourceDetail($selectedResource)}
                   on:remove={handleResourceRemove}
+                  on:load={handleResourceLoad}
                   resource={$selectedResource}
                 />
               </ResourceOverlay>
@@ -857,8 +840,9 @@
               {:else}
                 <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
                   <ResourcePreview
-                    on:click={handleResourceClick}
+                    on:click={() => openResourceDetail(item.resource)}
                     on:remove={handleResourceRemove}
+                    on:load={handleResourceLoad}
                     resource={item.resource}
                   />
                 </DrawerContentItem>
@@ -906,7 +890,9 @@
 
   <div class="drawer-bottom">
     <div class="tabs-transition">
-      <DrawerNavigation {tabs} />
+      {#if $viewState !== 'details'}
+        <DrawerNavigation {tabs} />
+      {/if}
     </div>
     <!-- {#if $isSaving}
       <Saving />

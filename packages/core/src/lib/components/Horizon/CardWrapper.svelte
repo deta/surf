@@ -93,7 +93,7 @@
     $activeField.connect(magicFieldParticipant.id)
   }
 
-  fieldParticipation.subscribe((p) => {
+  const unsubscribeFieldParticipation = fieldParticipation.subscribe((p) => {
     let fieldPos: any | null = null
     if (get(activeField) !== null) {
       fieldPos = get(get(activeField)!.position)
@@ -499,6 +499,10 @@
     if (dragOverTimeout) {
       clearTimeout(dragOverTimeout)
       dragOverTimeout = null
+    }
+
+    if (unsubscribeFieldParticipation) {
+      unsubscribeFieldParticipation()
     }
 
     horizon.magicFieldService.removeParticipant(magicFieldParticipant.id)

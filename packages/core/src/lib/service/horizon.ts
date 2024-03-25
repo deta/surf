@@ -82,6 +82,7 @@ export class Horizon {
     this.telaSettings = null
     this.tint = writable('#fefefe')
 
+    // TODO: figure out how to handle unsubscribing
     this.stackingOrder.subscribe((stack) => {
       const cards = get(this.cards)
       cards.forEach((c) => {
@@ -733,6 +734,7 @@ export class HorizonsManager {
       switchedTo = storedHorizonId
     }
 
+    // TODO: figure out how to handle unsubscribing
     this.activeHorizonId.subscribe((id) => this.activeHorizonStorage.setRaw(id ?? ''))
     this.adblockerState.subscribe((state) => {
       // @ts-ignore

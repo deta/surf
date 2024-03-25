@@ -1,10 +1,12 @@
 <script lang="ts">
   import ChatInput from '@horizon/core/src/lib/components/Drawer/ChatInput.svelte'
   import { createEventDispatcher, getContext } from 'svelte'
+  import { useDrawer } from './drawer'
 
-  export let droppedInputElements
+  export let droppedInputElements: any
 
-  const viewState: any = getContext('drawer.viewState')
+  const drawer = useDrawer()
+  const { viewState } = drawer
 
   const dispatch = createEventDispatcher()
 

@@ -1,7 +1,7 @@
 <!-- <svelte:options immutable={true} /> -->
 
 <script lang="ts">
-  import { createEventDispatcher, getContext } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { WebParser } from '@horizon/web-parser'
 
@@ -19,7 +19,6 @@
   } from '../../service/resources'
   import FilePreview from '../Cards/File/FilePreview.svelte'
   import { ResourceTypes, type ResourceData, type ResourceDataPost } from '../../types'
-  import DateSinceNow from '../DateSinceNow.svelte'
   import { getFileKind, getFileType } from '../../utils/files'
   import FileIcon from '../Cards/File/FileIcon.svelte'
   import PostPreview from '../Cards/Post/PostPreview.svelte'
@@ -29,12 +28,13 @@
   import ArticleProperties from '@horizon/drawer/src/lib/components/properties/ArticleProperties.svelte'
   import ChatThreadPreview from '../Cards/ChatThread/ChatThreadPreview.svelte'
   import YoutubePreview from '../Cards/Post/YoutubePreview.svelte'
+  import { useDrawer } from '@horizon/drawer'
 
   export let resource: Resource
-  const viewState: any = getContext('drawer.viewState')
 
-  const dispatch = createEventDispatcher<{ click: string }>()
-  const dispatchRemove = createEventDispatcher<{ remove: string }>()
+  const { viewState } = useDrawer()
+
+  const dispatch = createEventDispatcher<{ click: string; remove: string; load: string }>()
 
   const handleClick = () => {
     dispatch('click', resource.id)
@@ -42,7 +42,7 @@
 
   const handleRemove = (e: MouseEvent) => {
     e.stopImmediatePropagation()
-    dispatchRemove('remove', resource.id)
+    dispatch('remove', resource.id)
   }
 
   // TODO: figure out better way to do this
@@ -75,6 +75,10 @@
       }
     }
   }
+
+  const handleLoad = () => {
+    dispatch('load', resource.id)
+  }
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -94,27 +98,48 @@
     class:notion={resource.type === 'application/vnd.space.document.notion'}
   >
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-      <TextPreview resource={textResource} on:data={handleData} />
+      <TextPreview resource={textResource} on:data={handleData} on:load={handleLoad} />
     {:else if resource.type === ResourceTypes.LINK}
-      <LinkPreview resource={linkResource} on:data={handleData} />
+      <LinkPreview resource={linkResource} on:data={handleData} on:load={handleLoad} />
     {:else if resource.type.startsWith(ResourceTypes.POST_YOUTUBE)}
-      <YoutubePreview resource={postResource} type={resource.type} on:data={handleData} />
+      <YoutubePreview
+        resource={postResource}
+        type={resource.type}
+        on:data={handleData}
+        on:load={handleLoad}
+      />
     {:else if resource.type.startsWith(ResourceTypes.POST)}
-      <PostPreview resource={postResource} type={resource.type} on:data={handleData} />
+      <PostPreview
+        resource={postResource}
+        type={resource.type}
+        on:data={handleData}
+        on:load={handleLoad}
+      />
     {:else if resource.type.startsWith(ResourceTypes.ARTICLE)}
-      <ArticlePreview resource={articleResource} on:data={handleData} />
+      <ArticlePreview resource={articleResource} on:data={handleData} on:load={handleLoad} />
     {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
       <ChatMessagePreview
         resource={chatMessageResource}
         type={resource.type}
         on:data={handleData}
+        on:load={handleLoad}
       />
     {:else if resource.type.startsWith(ResourceTypes.CHAT_THREAD)}
-      <ChatThreadPreview resource={chatThreadResource} type={resource.type} on:data={handleData} />
+      <ChatThreadPreview
+        resource={chatThreadResource}
+        type={resource.type}
+        on:data={handleData}
+        on:load={handleLoad}
+      />
     {:else if resource.type.startsWith(ResourceTypes.DOCUMENT)}
-      <DocumentPreview resource={documentResource} type={resource.type} on:data={handleData} />
+      <DocumentPreview
+        resource={documentResource}
+        type={resource.type}
+        on:data={handleData}
+        on:load={handleLoad}
+      />
     {:else}
-      <FilePreview {resource} />
+      <FilePreview {resource} on:load={handleLoad} />
       <!-- {:else}
       <div class="text-base">Unknown</div> -->
     {/if}
@@ -197,10 +222,6 @@
       .preview:hover {
         outline: 0;
       }
-    }
-
-    .close:hover {
-      opacity: 1;
     }
   }
 
@@ -289,10 +310,5 @@
     font-size: 1rem;
     font-weight: 500;
     color: #281b53;
-  }
-
-  .date {
-    font-size: 0.9rem;
-    color: var(--color-text-secondary);
   }
 </style>

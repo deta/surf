@@ -1,11 +1,12 @@
 <script lang="ts">
   import { createEventDispatcher, getContext } from 'svelte'
   import { writable } from 'svelte/store'
+  import { useDrawer } from './drawer'
 
   export let acceptDrop: boolean = true
 
+  const drawer = useDrawer()
   const dispatch = createEventDispatcher<{ drop: DragEvent }>()
-  const viewState: any = getContext('drawer.viewState')
 
   const dragOver = writable(false)
   let counter = 0
@@ -13,7 +14,7 @@
 
   $: if ($dragOver) {
     document.startViewTransition(async () => {
-      viewState.set('chatInput')
+      drawer.viewState.set('chatInput')
     })
   }
 

@@ -5,11 +5,12 @@
   import type { ResourceArticle } from '../../../service/resources'
   import type { ResourceDataArticle } from '../../../types'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
+  import type { ResourcePreviewEvents } from '../../Resources/events'
 
   export let resource: ResourceArticle
 
   const log = useLogScope('articlePreview')
-  const dispatch = createEventDispatcher<{ data: ResourceDataArticle }>()
+  const dispatch = createEventDispatcher<ResourcePreviewEvents<ResourceDataArticle>>()
 
   let article: ResourceDataArticle | null = null
   let title = ''
@@ -23,6 +24,10 @@
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
+  }
+
+  const handleLoad = () => {
+    dispatch('load')
   }
 
   onMount(async () => {
@@ -42,6 +47,10 @@
       //   article.excerpt || article.content_plain || `${url.hostname}${url.pathname}`,
       //   MAX_SUBTITLE_LENGTH
       // )
+
+      if (!article.images || article.images.length === 0) {
+        dispatch('load')
+      }
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
@@ -63,11 +72,14 @@
       <div class="subtitle">{article?.url}</div>
     {:else if loading}
       <LoadingBox />
-    {:else if article?.image}
-      <img class="image" alt={`${article?.site_name} image`} src={article?.image} />
     {:else if article?.images[0]}
-      <img class="image" alt={`${article?.site_name} image`} src={article?.images[0]} />
-    {:else if !article?.image && !article?.images[0]}
+      <img
+        class="image"
+        alt={`${article?.site_name} image`}
+        src={article?.images[0]}
+        on:load={handleLoad}
+      />
+    {:else}
       <div class="article-preview-no-image">
         <img
           class="favicon"

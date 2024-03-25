@@ -3,10 +3,13 @@
   import type { Resource } from '../../../service/resources'
   import { getFileKind, getFileType, toHumanFileSize } from '../../../utils/files'
   import FileIcon from './FileIcon.svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
 
   export let resource: Resource
   export let blob: Blob
   export let hideType = false
+
+  const dispatch = createEventDispatcher<{ load: void }>()
 
   $: name = resource?.metadata?.name
   $: kind = getFileKind(blob.type)
@@ -15,6 +18,10 @@
   // const openFile = () => {
   //     window.open(`file://${resource.path}`, "_blank")
   // }
+
+  onMount(() => {
+    dispatch('load')
+  })
 </script>
 
 <div class="wrapper">

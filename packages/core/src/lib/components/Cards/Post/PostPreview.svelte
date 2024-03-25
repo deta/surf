@@ -6,23 +6,22 @@
   import type { ResourceDataPost } from '../../../types'
   import Link from '../../Atoms/Link.svelte'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
+  import type { ResourcePreviewEvents } from '../../Resources/events'
 
   export let resource: ResourcePost
   export let type: string
 
   const log = useLogScope('PostPreview')
-  const dispatch = createEventDispatcher<{ data: ResourceDataPost }>()
+  const dispatch = createEventDispatcher<ResourcePreviewEvents<ResourceDataPost>>()
 
   let post: ResourceDataPost | null = null
   let title = ''
-  let subtitle = ''
   let error = ''
   let isTwitter = false
   let isReddit = false
   let loading = true
 
   const MAX_TITLE_LENGTH = 300
-  const MAX_SUBTITLE_LENGTH = 100
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
@@ -41,13 +40,11 @@
         post.title || post.excerpt || hostname[0].toUpperCase() + hostname.slice(1),
         MAX_TITLE_LENGTH
       )
-      // subtitle = truncate(
-      //   post.excerpt || post.content_plain || `${url.hostname}${url.pathname}`,
-      //   MAX_SUBTITLE_LENGTH
-      // )
 
       isTwitter = type === 'application/vnd.space.post.twitter'
       isReddit = type === 'application/vnd.space.post.reddit'
+
+      dispatch('load')
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
@@ -70,11 +67,6 @@
     {:else if loading}
       <LoadingBox height="150px" />
     {:else}
-      <!-- <img
-        class="favicon"
-        src={`https://www.google.com/s2/favicons?domain=${post?.site_icon}&sz=256`}
-        alt={`${post?.site_name} favicon`}
-      /> -->
       <img
         class="favicon"
         src={`https://www.google.com/s2/favicons?domain=${post?.url}&sz=256`}

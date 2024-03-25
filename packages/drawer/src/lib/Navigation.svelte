@@ -6,10 +6,9 @@
   export let tabs: Tab[] = []
 
   const drawer = useDrawer()
-  const { selectedTab, size } = drawer
+  const { selectedTab } = drawer
 
   const dispatch = createEventDispatcher<{ select: string }>()
-  const viewState: any = getContext('drawer.viewState')
 
   let navigationRef: any
 
@@ -18,7 +17,6 @@
 
     dispatch('select', key)
 
-    console.log('Tab changed, triggering search')
     drawer.search({ tab: key })
   }
 
@@ -30,13 +28,11 @@
   }
 </script>
 
-{#if $viewState !== 'details'}
-  <div class="drawer-navigation">
-    <div class="navigation-wrapper" bind:this={navigationRef} on:wheel={enableHorizontalScrolling}>
-      <Tabs bind:selected={$selectedTab} {tabs} on:select={handleTabSelect} />
-    </div>
+<div class="drawer-navigation">
+  <div class="navigation-wrapper" bind:this={navigationRef} on:wheel={enableHorizontalScrolling}>
+    <Tabs bind:selected={$selectedTab} {tabs} on:select={handleTabSelect} />
   </div>
-{/if}
+</div>
 
 <style lang="scss">
   .drawer-top {
@@ -47,7 +43,7 @@
     padding: 1rem 1.5rem;
     z-index: 1000;
 
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.3);
   }
   .drawer-bottom {
     position: relative;

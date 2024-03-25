@@ -8,11 +8,12 @@
   import Link from '../../Atoms/Link.svelte'
   import { generateRootDomain } from '../../../utils/url'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
+  import type { ResourcePreviewEvents } from '../../Resources/events'
 
   export let resource: ResourceLink
 
   const log = useLogScope('LinkPreview')
-  const dispatch = createEventDispatcher<{ data: ResourceDataLink }>()
+  const dispatch = createEventDispatcher<ResourcePreviewEvents<ResourceDataLink>>()
 
   let link: ResourceDataLink | null = null
   let title = ''
@@ -20,6 +21,10 @@
   let image = ''
   let error = ''
   let loading = true
+
+  const handleLoad = () => {
+    dispatch('load')
+  }
 
   onMount(async () => {
     try {
@@ -33,6 +38,10 @@
       title =
         link.title ?? resource?.metadata?.name ?? hostname[0].toUpperCase() + hostname.slice(1)
       subtitle = link.description ?? `${url.hostname}${url.pathname}`
+
+      if (!link.image) {
+        dispatch('load')
+      }
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
@@ -55,7 +64,7 @@
     {:else if loading}
       <LoadingBox />
     {:else if link?.image}
-      <img class="image" alt={`${link?.provider} image`} src={link?.image} />
+      <img class="image" alt={`${link?.provider} image`} src={link?.image} on:load={handleLoad} />
     {:else if !link?.image}
       <div class="link-preview-no-image">
         <img

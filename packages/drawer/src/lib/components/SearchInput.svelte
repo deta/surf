@@ -7,11 +7,11 @@
   import { Icon } from '@horizon/icons'
 
   const drawer = useDrawer()
-  const { searchValue } = drawer
+  const { searchValue, viewState } = drawer
+
   const dispatch = createEventDispatcher<{ enter: void }>()
 
   const search = () => {
-    console.log('searchValue changed, triggering search')
     drawer.search({ value: $searchValue })
   }
 
@@ -21,8 +21,6 @@
   let isFocused = false
   let position = { x: 0, y: 0 }
   let opacity = 0
-
-  const viewState: any = getContext('drawer.viewState')
 
   $: if ($viewState !== 'search') {
     opacity = 0

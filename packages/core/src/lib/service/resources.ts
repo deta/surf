@@ -184,8 +184,6 @@ export class ResourceNote extends Resource {
     const data = await this.getData()
     const text = await data.text()
 
-    console.log('got text', text)
-
     this.parsedData.set(text)
     return this.parsedData
   }

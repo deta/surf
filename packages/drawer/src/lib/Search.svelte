@@ -1,11 +1,8 @@
 <script lang="ts">
-  import { getContext } from 'svelte'
-
-  import { Icon } from '@horizon/icons'
-
   import SearchInput from './components/SearchInput.svelte'
+  import { useDrawer } from './drawer'
 
-  const viewState: any = getContext('drawer.viewState')
+  const { viewState } = useDrawer()
 </script>
 
 <div class="search-input-wrapper" class:active={$viewState == 'search'}>

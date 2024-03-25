@@ -6,23 +6,22 @@
   import type { ResourceDataChatThread } from '../../../types'
   import Link from '../../Atoms/Link.svelte'
   import { formatDistanceToNow, parseISO } from 'date-fns'
+  import type { ResourcePreviewEvents } from '../../Resources/events'
 
   export let resource: ResourceChatThread
   export let type: string
 
   const log = useLogScope('MessagePreview')
-  const dispatch = createEventDispatcher<{ data: ResourceDataChatThread }>()
+  const dispatch = createEventDispatcher<ResourcePreviewEvents<ResourceDataChatThread>>()
   const viewState: any = getContext('drawer.viewState')
 
   let thread: ResourceDataChatThread | null = null
   let chatMessage = ''
-  let subtitle = ''
   let error = ''
   let isSlack = false
   let showFullMessages = false
 
   const MAX_TITLE_LENGTH = 300
-  const MAX_SUBTITLE_LENGTH = 100
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
@@ -37,16 +36,10 @@
       thread = await resource.getParsedData()
       dispatch('data', thread)
 
-      const url = new URL(thread.url)
-
-      const hostname = url.hostname.split('.').slice(-2, -1).join('')
       chatMessage = truncate(thread.content_plain, MAX_TITLE_LENGTH)
-      // subtitle = truncate(
-      //   thread.excerpt || thread.content_plain || `${url.hostname}${url.pathname}`,
-      //   MAX_SUBTITLE_LENGTH
-      // )
-
       isSlack = type === 'application/vnd.space.chat-thread.slack'
+
+      dispatch('load')
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'

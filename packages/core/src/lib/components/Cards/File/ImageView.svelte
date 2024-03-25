@@ -13,7 +13,7 @@
 </script>
 
 <div class="wrapper" class:inOasis>
-  <img src={url} alt="" />
+  <img src={url} alt="" on:load />
 </div>
 
 <style lang="scss">

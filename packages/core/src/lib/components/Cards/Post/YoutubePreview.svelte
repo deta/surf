@@ -7,12 +7,13 @@
   import { Icon } from '@horizon/icons'
   import Link from '../../Atoms/Link.svelte'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
+  import type { ResourcePreviewEvents } from '../../Resources/events'
 
   export let resource: ResourcePost
   export let type: string
 
   const log = useLogScope('PostPreview')
-  const dispatch = createEventDispatcher<{ data: ResourceDataPost }>()
+  const dispatch = createEventDispatcher<ResourcePreviewEvents<ResourceDataPost>>()
 
   let post: ResourceDataPost | null = null
   let title = ''
@@ -38,6 +39,10 @@
     return ''
   }
 
+  const handleLoad = () => {
+    dispatch('load')
+  }
+
   onMount(async () => {
     try {
       loading = true
@@ -53,6 +58,10 @@
 
       if (url.hostname.includes('youtube.com') || url.hostname.includes('youtu.be')) {
         youtubeThumbnailURL = getYoutubeThumbnailURL(url)
+      }
+
+      if (!youtubeThumbnailURL) {
+        dispatch('load')
       }
     } catch (e) {
       log.error(e)
@@ -80,7 +89,12 @@
           <div class="play-icon">
             <Icon name="play" size="32px" style="fill:white; stroke-width: 0;" />
           </div>
-          <img class="youtube-thumbnail" src={youtubeThumbnailURL} alt="YouTube video thumbnail" />
+          <img
+            class="youtube-thumbnail"
+            src={youtubeThumbnailURL}
+            alt="YouTube video thumbnail"
+            on:load={handleLoad}
+          />
         </div>
       {/if}
       <!-- <div class="post-metadata">

@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { getContext, createEventDispatcher } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
+  import { useDrawer } from '../drawer'
 
-  const viewState: any = getContext('drawer.viewState')
-  const dispatch = createEventDispatcher<CardEvents>()
+  const { viewState } = useDrawer()
+  const dispatch = createEventDispatcher<{ 'search-abort': void }>()
 
   const cancel = () => {
     document.startViewTransition(async () => {

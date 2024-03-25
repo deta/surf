@@ -26,8 +26,6 @@
     try {
       article = await resource.getParsedData()
 
-      console.log('articledata', article)
-
       const url = new URL(article.url)
 
       const hostname = url.hostname.split('.').slice(-2, -1).join('')

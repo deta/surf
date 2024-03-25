@@ -143,9 +143,16 @@
     if ($visorEnabled) applyVisorList()
   }
 
+  let unsubscribeViewOffset: Unsubscriber
+
   const loadHorizon = () => {
     $state.viewOffset.set({ x: data.viewOffsetX, y: 0 })
-    viewOffset.subscribe((e) => {
+
+    if (unsubscribeViewOffset) {
+      unsubscribeViewOffset()
+    }
+
+    unsubscribeViewOffset = viewOffset.subscribe((e) => {
       debouncedHorizonUpdate({ viewOffsetX: e.x })
     })
   }
@@ -1195,6 +1202,10 @@
     horizon.detachSettings()
     clearInterval(requestNewPreviewIntervalId)
     window.api.unregisterPreviewImageHandler(horizon.id)
+
+    if (unsubscribeViewOffset) {
+      unsubscribeViewOffset()
+    }
   })
 
   // HACK: Sketchy way to fix the noise "issue"

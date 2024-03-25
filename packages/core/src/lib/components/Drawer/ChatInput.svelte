@@ -16,6 +16,7 @@
   import ChatLinkPreview from '@horizon/drawer/src/lib/components/ChatLinkPreview.svelte'
   import ChatFilePreview from '@horizon/drawer/src/lib/components/ChatFilePreview.svelte'
   import { Item } from '../../../../../cmdk-sv/dist/cmdk'
+  import { useDrawer } from '@horizon/drawer'
 
   export let droppedInputElements: Writable<MediaParserResult[]>
   export let forceOpen: boolean
@@ -28,7 +29,9 @@
   let opacity = 0
   let filesFromDialogue: FileList | null = null
 
-  const viewState: any = getContext('drawer.viewState')
+  const drawer = useDrawer()
+  const { viewState } = drawer
+
   const detectedInput = writable(false)
   const parsedURLs: Writable<ParsedMetadata[]> = writable([])
   const dispatch = createEventDispatcher()

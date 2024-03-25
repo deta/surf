@@ -5,6 +5,15 @@ import { HorizonDatabase } from './storage'
 import Fuse, { type FuseResult } from 'fuse.js'
 import { SFFS } from './sffs'
 
+export type SearchHistoryEntry = {
+  site: string
+  hostname: string
+  visitCount: number
+  entry: HistoryEntry
+  score: number
+  fuzzy: boolean
+}
+
 export class HistoryEntriesManager {
   entries: Writable<Map<string, HistoryEntry>>
   db: HorizonDatabase
@@ -29,9 +38,8 @@ export class HistoryEntriesManager {
   }
 
   getEntry(id: string): HistoryEntry | undefined {
-    let entry
-    this.entries.subscribe((entries) => (entry = entries.get(id)))()
-    return entry
+    const entries = get(this.entries)
+    return entries.get(id)
   }
 
   async addEntry(entry: HistoryEntry): Promise<HistoryEntry> {
@@ -231,7 +239,7 @@ export class HistoryEntriesManager {
 
     console.log('final', sorted)
 
-    return sorted
+    return sorted as SearchHistoryEntry[]
   }
 
   searchEntriesFuse(entries: HistoryEntry[], query: string, threshold: number = 0.3) {

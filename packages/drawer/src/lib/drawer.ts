@@ -7,11 +7,21 @@ export type SearchQuery = {
   tab: string | null
 }
 
+export const VIEW_STATES = {
+  CHAT_INPUT: 'chatInput',
+  SEARCH: 'search',
+  DEFAULT: 'default',
+  DETAILS: 'details'
+}
+
+export type ViewState = (typeof VIEW_STATES)[keyof typeof VIEW_STATES]
+
 export class Drawer {
   size: Writable<Size>
   show: Writable<boolean>
   searchValue: Writable<string>
   selectedTab: Writable<string | null>
+  viewState: Writable<ViewState>
 
   searchHandler?: (query: SearchQuery) => void
 
@@ -20,6 +30,7 @@ export class Drawer {
     this.show = writable(false)
     this.searchValue = writable('')
     this.selectedTab = writable(null)
+    this.viewState = writable(VIEW_STATES.DEFAULT)
   }
 
   onSearch(callback: typeof Drawer.prototype.searchHandler) {

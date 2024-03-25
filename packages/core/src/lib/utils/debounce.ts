@@ -44,3 +44,53 @@ export const useCancelableDebounce = <F extends (...args: any[]) => any>(func: F
 
   return { execute, cancel }
 }
+
+/**
+ * Throttles a function to only be called once every `n` milliseconds
+ */
+export const useThrottle = <F extends (...args: any[]) => any>(func: F, value = 250) => {
+  let inThrottle: boolean
+  let debounceTimer: ReturnType<typeof setTimeout>
+  const throttle = (...args: Parameters<F>) => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+    }
+
+    if (!inThrottle) {
+      func(...args)
+      inThrottle = true
+      setTimeout(() => (inThrottle = false), value)
+    } else {
+      debounceTimer = setTimeout(async () => {
+        func(...args)
+      }, value)
+    }
+  }
+
+  return throttle
+}
+
+export const useAnimationFrameThrottle = <F extends (...args: any[]) => any>(
+  func: F,
+  timeout?: number
+) => {
+  let inThrottle: boolean
+  let debounceTimer: ReturnType<typeof setTimeout>
+  const throttle = (...args: Parameters<F>) => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+    }
+
+    if (!inThrottle) {
+      func(...args)
+      inThrottle = true
+      requestAnimationFrame(() => (inThrottle = false))
+    } else if (timeout) {
+      debounceTimer = setTimeout(async () => {
+        func(...args)
+      }, timeout)
+    }
+  }
+
+  return throttle
+}

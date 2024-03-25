@@ -3,24 +3,22 @@
 
   import { useLogScope } from '../../../utils/log'
   import type { ResourceDocument } from '../../../service/resources'
-  import type { ResourceDataDocument, ResourceDataPost } from '../../../types'
-  import Link from '../../Atoms/Link.svelte'
+  import type { ResourceDataDocument } from '../../../types'
+  import type { ResourcePreviewEvents } from '../../Resources/events'
 
   export let resource: ResourceDocument
   export let type: string
 
   const log = useLogScope('DocumentPreview')
-  const dispatch = createEventDispatcher<{ data: ResourceDataDocument }>()
+  const dispatch = createEventDispatcher<ResourcePreviewEvents<ResourceDataDocument>>()
 
   let document: ResourceDataDocument | null = null
   let title = ''
-  let subtitle = ''
   let error = ''
   let isNotion = false
   let isGoogleDocs = false
 
   const MAX_TITLE_LENGTH = 300
-  const MAX_SUBTITLE_LENGTH = 100
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
@@ -35,16 +33,14 @@
 
       const hostname = url.hostname.split('.').slice(-2, -1).join('')
       title = truncate(
-        document.content_html || hostname[0].toUpperCase() + hostname.slice(1),
+        document.title || hostname[0].toUpperCase() + hostname.slice(1),
         MAX_TITLE_LENGTH
       )
-      // subtitle = truncate(
-      //   document.excerpt || document.content_plain || `${url.hostname}${url.pathname}`,
-      //   MAX_SUBTITLE_LENGTH
-      // )
 
       isNotion = type === 'application/vnd.space.document.notion'
       isGoogleDocs = type === 'application/vnd.space.document.googleDocs'
+
+      dispatch('load')
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
@@ -74,7 +70,7 @@
         src={`https://www.google.com/s2/favicons?domain=${document?.url}&sz=256`}
         alt={`${document?.url} favicon`}
       />
-      <div class="title">{document?.title}</div>
+      <div class="title">{title}</div>
       <div class="document-metadata">
         {#if isNotion}<div class="from">Notion</div>{/if}
         {#if isGoogleDocs}<div class="from">Google Docs</div>{/if}

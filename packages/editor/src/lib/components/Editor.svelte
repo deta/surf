@@ -7,7 +7,7 @@
   import { createEditor, Editor, EditorContent } from 'svelte-tiptap'
 
   import { createEditorExtensions } from '../editor'
-  import BubbleMenu from './BubbleMenu.svelte'
+  // import BubbleMenu from './BubbleMenu.svelte'
 
   export let content: string
   export let readOnly: boolean = false
@@ -49,9 +49,9 @@
 </script>
 
 <div class="editor">
-  {#if editor && !readOnly}
+  <!-- {#if editor && !readOnly}
     <BubbleMenu {editor} />
-  {/if}
+  {/if} -->
 
   <div class="editor-wrapper">
     <EditorContent editor={$editor} />
