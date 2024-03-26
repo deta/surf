@@ -2,61 +2,13 @@ name: Dawn New Release
 
 on:
   workflow_dispatch:
+    inputs:
+      app_version:
+        description: 'App Version'
+        required: true
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v3
-
-      - name: Get latest dawn version
-        id: latest-dawn-version
-        run: |
-          git fetch --prune --unshallow --tags
-          echo "version=$(git tag -l | grep dawn | grep -v pre | sort -rV | head -n 1)" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18.x'
-
-      - run: npm install semver
-
-      - name: Set dawn version
-        id: next-dawn-version
-        uses: actions/github-script@v7
-        env:
-          LATEST_DAWN_VERSION: ${{ steps.latest-dawn-version.outputs.version }}
-        with:
-          script: |
-            const semver = require('semver');
-            const release = await github.rest.repos.getLatestRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-
-            const latestStableVersion = release.data.tag_name;
-            let nextDawnVersion = semver.inc(latestStableVersion, 'prerelease', 'dawn');
-
-            const latestDawnVersion = process.env.LATEST_DAWN_VERSION;
-            if (latestDawnVersion) {
-                const candidate = semver.inc(latestDawnVersion, 'prerelease', 'dawn');
-                nextDawnVersion = semver.gt(candidate, nextDawnVersion) ? candidate : nextDawnVersion;
-            }
-            core.setOutput('version', nextDawnVersion);
-
-      # TODO: correct this check and add a check for the latest commit hash
-      - name: Check if version is already released
-        id: skip-release-check
-        run: |
-          echo "skip_release=false" >> "$GITHUB_OUTPUT"
-
   build:
-    needs: prepare
     strategy:
       matrix:
         include:
@@ -123,12 +75,11 @@ jobs:
           P_VITE_API_BASE: ${{ secrets.API_BASE }}
           M_VITE_API_BASE: ${{ secrets.API_BASE }}
 
-          # from env
-          APP_VERSION: ${{ env.APP_VERSION }}
+          # from env/inuts
+          APP_VERSION: ${{ inputs.app_version }}
           M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
           R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
-          # composite
-          # from inputs
+          # preset
           RELEASE_CHANNEL: new-dawn
           PRODUCT_NAME: 'Horizon Dawn'
           M_VITE_PRODUCT_NAME: 'Horizon Dawn'
