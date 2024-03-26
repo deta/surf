@@ -137,7 +137,7 @@
           </ul>
         </div>
 
-        <div class="box">
+        <!-- <div class="box">
           <div class="icon-heading">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -162,15 +162,49 @@
             <li>The notes you write</li>
             <li>The images you save</li>
             <li>What websites you navigate to</li>
-            <li>Any other personal data</li>
           </ul>
+        </div> -->
+
+        <div class="box">
+          <div class="icon-heading">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
+                d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6z"
+              /></svg
+            >
+            <h2>AI Features</h2>
+          </div>
+
+          <p>
+            To enable Horizon's AI features we process images you save and text you summarize on our
+            servers. This data is not stored. Read our <a href={PRIVACY_URL} target="_blank"
+              >Privacy Policy</a
+            > for more info.
+          </p>
+
+          <!-- <ul>
+            <li>The notes you write</li>
+            <li>The images you save</li>
+            <li>What websites you navigate to</li>
+            <li>Any other personal data</li>
+          </ul> -->
         </div>
       </div>
 
       <div class="details">
         <p class="info">
-          <b>This data is never shared with third parties</b>. If you have any questions or
-          concerns, please contact us at <a href="mailto:team@deta.space">team@deta.space</a>.
+          If you have any questions or concerns, please contact us at <a
+            href="mailto:team@deta.space">team@deta.space</a
+          >.
         </p>
       </div>
 
