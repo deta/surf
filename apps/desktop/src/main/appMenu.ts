@@ -3,19 +3,34 @@ import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
 import { toggleAdblocker } from './adblocker'
 import { resolve } from 'path'
+import { isDefaultBrowser } from './utils'
+import { TelemetryEventTypes } from '@horizon/types'
 
 const isMac = process.platform === 'darwin'
 
 const useAsDefaultBrowserClickHandler = () => {
-  // Register the app to handle URLs (from: https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app)
-  if (process.defaultApp) {
-    if (process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient('http', process.execPath, [resolve(process.argv[1])])
-      app.setAsDefaultProtocolClient('https', process.execPath, [resolve(process.argv[1])])
+  try {
+    // Register the app to handle URLs (from: https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app)
+    if (process.defaultApp) {
+      if (process.argv.length >= 2) {
+        app.setAsDefaultProtocolClient('http', process.execPath, [resolve(process.argv[1])])
+        app.setAsDefaultProtocolClient('https', process.execPath, [resolve(process.argv[1])])
+      }
+    } else {
+      app.setAsDefaultProtocolClient('http')
+      app.setAsDefaultProtocolClient('https')
     }
-  } else {
-    app.setAsDefaultProtocolClient('http')
-    app.setAsDefaultProtocolClient('https')
+
+    // TODO: figure out a better way to do this. Problem: the setAsDefaultProtocolClient method doesn't actually tell us if the user set the app as the default browser through the system prompt or not.
+    const timeout = 1000 * 30 // 30 seconds
+    setTimeout(() => {
+      const isSet = isDefaultBrowser()
+      if (isSet) {
+        ipcSenders.trackEvent(TelemetryEventTypes.SetDefaultBrowser, { value: true })
+      }
+    }, timeout)
+  } catch (error) {
+    console.error('Error setting as default browser:', error)
   }
 }
 

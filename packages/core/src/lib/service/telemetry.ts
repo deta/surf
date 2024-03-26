@@ -1,17 +1,10 @@
 import isEqual from 'lodash/isequal'
-import type { Card, UserData } from '../types/index'
-import { HorizonDatabase } from './storage'
 import * as amplitude from '@amplitude/analytics-browser'
+import { type UserConfig, TelemetryEventTypes, type ElectronAppInfo } from '@horizon/types'
 
-export const EventTypes = {
-  CreateHorizon: 'Create Horizon',
-  DeleteHorizon: 'Delete Horizon',
-  ActivateHorizon: 'Activate Horizon',
-  AddCard: 'Add Card',
-  DeleteCard: 'Delete Card',
-  DuplicateCard: 'Duplicate Card',
-  UpdateCard: 'Update Card'
-}
+import { HorizonDatabase } from './storage'
+import type { Card, CardCreationMetadata } from '../types/index'
+import { useLogScope } from '../utils/log'
 
 export type TelemetryConfig = {
   apiKey: string
@@ -19,26 +12,43 @@ export type TelemetryConfig = {
   trackHostnames: boolean
 }
 
+export enum HorizonActivationSource {
+  Overview = 'overview',
+  Oasis = 'oasis'
+}
+
 // TODO: how much does telemetry hurt performance?
 export class Telemetry {
-  storage: HorizonDatabase
   apiKey: string
   active: boolean
   trackHostnames: boolean
-  constructor(storage: HorizonDatabase, config: TelemetryConfig) {
-    this.storage = storage
+  userConfig: UserConfig | null
+  appInfo: ElectronAppInfo | null
+
+  log: ReturnType<typeof useLogScope>
+
+  constructor(config: TelemetryConfig) {
     this.apiKey = config.apiKey
     this.active = config.active
     this.trackHostnames = config.trackHostnames
+
+    this.userConfig = null
+    this.appInfo = null
+
+    this.log = useLogScope('telemetry')
   }
   async init() {
-    const userConfig = (await window.api.getUserConfig()) as UserData
-    let userID = userConfig.user_id
+    // @ts-expect-error
+    this.userConfig = (await window.api.getUserConfig()) as UserConfig
+    const userID = this.userConfig.user_id
     if (!userID) {
       console.warn('No user ID found, disabling telemetry')
       this.active = false
       return
     }
+
+    // @ts-expect-error
+    this.appInfo = (await window.api.getAppInfo()) as ElectronAppInfo
 
     amplitude.init(this.apiKey, userID, {
       defaultTracking: {
@@ -47,9 +57,16 @@ export class Telemetry {
         sessions: true,
         formInteractions: false,
         fileDownloads: false
-      }
+      },
+      appVersion: this.appInfo.version
     })
     amplitude.setOptOut(!this.active)
+
+    // @ts-expect-error
+    window.api.onTrackEvent((eventName: TelemetryEventTypes, properties: Record<string, any>) => {
+      this.log.debug('Received track event from main process', eventName, properties)
+      this.trackEvent(eventName, properties)
+    })
   }
 
   setActive(active: boolean) {
@@ -58,7 +75,7 @@ export class Telemetry {
   }
 
   isActive() {
-    return this.apiKey && this.active && this.storage
+    return this.apiKey && this.active
   }
 
   setTrackHostnames(trackHostnames: boolean) {
@@ -83,7 +100,7 @@ export class Telemetry {
       height: card.height,
       // we don't want to store false values in amplitude
       duplicated: duplicated ? true : undefined
-    }
+    } as any
     switch (card.type) {
       case 'browser':
         if (!this.trackHostnames) {
@@ -107,17 +124,37 @@ export class Telemetry {
         }
         eventProperties = {
           ...eventProperties,
-          hostname: this.getHostnameFromURL(card?.data?.url)
+          hostname: this.getHostnameFromURL((card?.data as any)?.url)
         }
         break
       case 'file':
         eventProperties = {
           ...eventProperties,
-          mimeType: card?.data?.mimeType
+          mimeType: (card?.data as any)?.mimeType
         }
         break
     }
     return eventProperties
+  }
+
+  async trackEvent(
+    eventName: TelemetryEventTypes,
+    eventProperties: Record<string, any> | undefined
+  ) {
+    if (!this.isActive()) {
+      this.log.debug('Telemetry is not active, not tracking event', eventName, eventProperties)
+      return
+    }
+
+    await amplitude.track({
+      event_type: eventName,
+      event_properties: eventProperties,
+      platform: this.appInfo?.platform,
+      app_version: this.appInfo?.version,
+      user_properties: {
+        email: this.userConfig?.email
+      }
+    })
   }
 
   // currently the updatedCard is always sent as the full card, not just the updated fields
@@ -135,22 +172,32 @@ export class Telemetry {
     if (isEqual(existingCard, updatedCard)) {
       return
     }
-    await amplitude.track(EventTypes.UpdateCard, this.extractEventPropertiesFromCard(updatedCard))
-  }
-
-  async trackEvent(eventName: string, eventProperties: Record<string, any> | undefined) {
-    if (!this.isActive()) {
-      return
-    }
-    await amplitude.track(eventName, eventProperties)
+    await this.trackEvent(
+      TelemetryEventTypes.UpdateCard,
+      this.extractEventPropertiesFromCard(updatedCard)
+    )
   }
 
   // this is a separate function as market needs cards metadata when tracking this event
-  async trackActivateHorizonEvent(horizonID: string, cards: Array<Card>) {
-    if (!this.isActive()) {
-      return
-    }
+  async trackActivateHorizonEvent(
+    horizonID: string,
+    cards: Array<Card>,
+    source?: HorizonActivationSource
+  ) {
     const cardProperties = cards.map((card) => this.extractEventPropertiesFromCard(card))
-    await this.trackEvent(EventTypes.ActivateHorizon, { id: horizonID, cards: cardProperties })
+    await this.trackEvent(TelemetryEventTypes.ActivateHorizon, {
+      id: horizonID,
+      cards: cardProperties,
+      source: source
+    })
+  }
+
+  async trackCreateCardEvent(card: Card, metadata?: CardCreationMetadata) {
+    const duplicated = metadata?.trigger === 'duplicate'
+
+    await this.trackEvent(TelemetryEventTypes.AddCard, {
+      ...this.extractEventPropertiesFromCard(card, duplicated),
+      source: metadata?.trigger
+    })
   }
 }

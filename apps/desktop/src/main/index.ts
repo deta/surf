@@ -1,13 +1,18 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { join, dirname } from 'path'
+import { mkdirSync } from 'fs'
+import { TelemetryEventTypes } from '@horizon/types'
+
 import { createWindow, getMainWindow } from './mainWindow'
 import { setAppMenu } from './appMenu'
 import { registerShortcuts, unregisterShortcuts } from './shortcuts'
 import { setupAdblocker } from './adblocker'
-import { setupIpcHandlers } from './ipcHandlers'
-import { electronApp, is, optimizer } from '@electron-toolkit/utils'
-import { join, dirname } from 'path'
-import { mkdirSync } from 'fs'
-import { getUserConfig } from './config'
+import { ipcSenders, setupIpcHandlers } from './ipcHandlers'
+import { getUserConfig, updateUserConfig } from './config'
+import { createSetupWindow } from './setupWindow'
+import { checkIfAppIsActivated } from './activation'
+import { isDefaultBrowser } from './utils'
 
 let isAppLaunched = false
 let appOpenedWithURL: string | null = null
@@ -92,19 +97,44 @@ if (!gotTheLock) {
     isAppLaunched = true
     electronApp.setAppUserModelId('space.deta.horizon')
 
-    getUserConfig()
+    const userConfig = getUserConfig()
+
     setupIpcHandlers()
+
+    if (!is.dev) {
+      if (!userConfig.api_key) {
+        console.log('No api key found, prompting user to enter invite token')
+        createSetupWindow()
+        return
+      }
+
+      const isActivated = await checkIfAppIsActivated(userConfig.api_key)
+      if (!isActivated) {
+        console.log('App not activated, prompting user to enter invite token again')
+        createSetupWindow()
+        return
+      }
+    }
+
     await setupAdblocker()
 
     setAppMenu()
     createWindow()
 
-    if (appOpenedWithURL) {
-      // we need to wait for the app/horizon to be ready before we can send a message to the renderer to open the URL
-      ipcMain.once('app-ready', () => {
+    // we need to wait for the app/horizon to be ready before we can send any messages to the renderer
+    ipcMain.once('app-ready', () => {
+      const appIsDefaultBrowser = isDefaultBrowser()
+
+      // If the value stored in user config is different from the actual state, update the user config and track the event
+      if (userConfig.defaultBrowser !== appIsDefaultBrowser) {
+        ipcSenders.trackEvent(TelemetryEventTypes.SetDefaultBrowser, { value: appIsDefaultBrowser })
+        updateUserConfig({ defaultBrowser: appIsDefaultBrowser })
+      }
+
+      if (appOpenedWithURL) {
         handleOpenUrl(appOpenedWithURL!)
-      })
-    }
+      }
+    })
   })
 
   app.on('browser-window-created', (_, window) => {

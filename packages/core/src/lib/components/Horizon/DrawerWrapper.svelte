@@ -40,7 +40,8 @@
     type ResourceObject,
     ResourceJSON,
     ResourceNote,
-    type ResourceSearchResultItem
+    type ResourceSearchResultItem,
+    getPrimaryResourceType
   } from '../../service/resources'
   import {
     ResourceTypes,
@@ -59,6 +60,7 @@
   import { generateID } from '../../utils/id'
   import { getEditorContentText } from '@horizon/editor'
   import DrawerDetailsWrapper from '../Drawer/DrawerDetailsWrapper.svelte'
+  import { TelemetryEventTypes } from '@horizon/types'
   import type { Tab } from '@horizon/drawer/src/lib/Tabs.svelte'
 
   export const drawer = provideDrawer()
@@ -109,6 +111,30 @@
     viewState.set('default')
     searchQuery.set({ value: '', tab: 'all' })
     drawer.selectedTab.set('all')
+    blockOpenTracking = false
+    blockDetailsTracking = false
+  }
+
+  let blockOpenTracking = false
+  $: if ($isDrawerShown && !blockOpenTracking) {
+    blockOpenTracking = true
+    horizon.telemetry.trackEvent(TelemetryEventTypes.OasisOpen, {})
+  }
+
+  let blockDetailsTracking = false
+  $: if ($isDrawerShown && $viewState === 'details' && !blockDetailsTracking) {
+    blockDetailsTracking = true
+    horizon.telemetry.trackEvent(
+      TelemetryEventTypes.OasisOpenResourceDetails,
+      $selectedResource
+        ? {
+            kind: getPrimaryResourceType($selectedResource?.type),
+            type: $selectedResource?.type
+          }
+        : {}
+    )
+  } else if ($isDrawerShown && $viewState !== 'details') {
+    blockDetailsTracking = false
   }
 
   let refreshContentLayout: () => Promise<void>
@@ -202,6 +228,12 @@
         refreshContentLayout()
       }
     }, 100)
+
+    if (query !== '' || tab !== 'all') {
+      horizon.telemetry.trackEvent(TelemetryEventTypes.OasisSearch, {
+        tab: tab ?? 'all'
+      })
+    }
   }
 
   const runDebouncedSearch = useDebounce(runSearch, 500)
@@ -486,6 +518,11 @@
 
     // this will be used by the MediaImporter to import the resource and create a card
     e.dataTransfer.setData(MEDIA_TYPES.RESOURCE, resource.id)
+
+    horizon.telemetry.trackEvent(TelemetryEventTypes.OasisDrag, {
+      kind: getPrimaryResourceType(resource.type),
+      type: resource.type
+    })
 
     log.debug('Resource type', resource.type)
     if (

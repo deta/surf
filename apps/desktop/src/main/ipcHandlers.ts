@@ -1,8 +1,10 @@
 import { ipcMain, app } from 'electron'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
-import { getUserConfig } from './config'
+import { getUserConfig, updateUserConfig } from './config'
 import { handleDragStart } from './drag'
+import { ElectronAppInfo } from '@horizon/types'
+import { getPlatform } from './utils'
 
 export function setupIpcHandlers() {
   ipcMain.handle('set-adblocker-state', async (_, { partition, state }) => {
@@ -76,9 +78,25 @@ export function setupIpcHandlers() {
     app.quit()
   })
 
+  ipcMain.handle('restart-app', () => {
+    app.relaunch()
+    app.exit()
+  })
+
   ipcMain.handle('toggle-fullscreen', () => {
     const window = getMainWindow()
     window?.setFullScreen(!window.fullScreen)
+  })
+
+  ipcMain.on('store-api-key', (_event, key: string) => {
+    updateUserConfig({ api_key: key })
+  })
+
+  ipcMain.handle('get-app-info', () => {
+    return {
+      version: app.getVersion(),
+      platform: getPlatform()
+    } as ElectronAppInfo
   })
 }
 
@@ -101,5 +119,15 @@ export const ipcSenders = {
     }
 
     window.webContents.send('adblocker-state-changed', { partition, state })
+  },
+
+  trackEvent: (eventName: string, properties: Record<string, any>) => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('track-event', { eventName, properties })
   }
 }

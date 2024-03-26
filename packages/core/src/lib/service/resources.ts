@@ -19,6 +19,8 @@ import {
   type SFFSSearchParameters,
   type SFFSSearchProximityParameters
 } from '../types'
+import type { Telemetry } from './telemetry'
+import { TelemetryEventTypes } from '@horizon/types'
 
 /*
  TODO:
@@ -42,6 +44,30 @@ export class ResourceTag {
 
   static paste() {
     return { name: 'savedWithAction', value: 'paste' }
+  }
+}
+
+export const getPrimaryResourceType = (type: string) => {
+  if (type.startsWith(ResourceTypes.DOCUMENT)) {
+    return 'document'
+  } else if (type.startsWith(ResourceTypes.POST)) {
+    return 'post'
+  } else if (type.startsWith(ResourceTypes.CHAT_MESSAGE)) {
+    return 'chatMessage'
+  } else if (type.startsWith(ResourceTypes.CHAT_THREAD)) {
+    return 'chatThread'
+  } else if (type === ResourceTypes.LINK) {
+    return 'link'
+  } else if (type === ResourceTypes.ARTICLE) {
+    return 'article'
+  } else if (type.startsWith('image/')) {
+    return 'image'
+  } else if (type.startsWith('audio/')) {
+    return 'audio'
+  } else if (type.startsWith('video/')) {
+    return 'video'
+  } else {
+    return 'file'
   }
 }
 
@@ -254,11 +280,13 @@ export class ResourceManager {
 
   log: ScopedLogger
   sffs: SFFS
+  telemetry: Telemetry
 
-  constructor() {
+  constructor(telemetry: Telemetry) {
     this.log = useLogScope('SFFSResourceManager')
     this.resources = writable([])
     this.sffs = new SFFS()
+    this.telemetry = telemetry
   }
 
   private createResourceObject(data: SFFSResource): ResourceObject {
@@ -320,6 +348,13 @@ export class ResourceManager {
     this.log.debug('created resource', resource)
 
     this.resources.update((resources) => [...resources, resource])
+
+    this.telemetry.trackEvent(TelemetryEventTypes.CreateResource, {
+      kind: getPrimaryResourceType(type),
+      type: type,
+      savedWithAction: tags?.find((t) => t.name === ResourceTagsBuiltInKeys.SAVED_WITH_ACTION)
+        ?.value
+    })
 
     return resource
   }
@@ -398,9 +433,16 @@ export class ResourceManager {
   }
 
   async deleteResource(id: string) {
+    const resource = await this.getResource(id)
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
     // delete resource from sffs
     await this.sffs.deleteResource(id)
     this.resources.update((resources) => resources.filter((r) => r.id !== id))
+
+    this.telemetry.trackEvent(TelemetryEventTypes.DeleteResource, { type: resource.type })
   }
 
   async reloadResource(id: string) {

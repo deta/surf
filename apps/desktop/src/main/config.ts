@@ -2,6 +2,7 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import type { UserConfig } from '@horizon/types'
 
 export type Config = {
   [key: string]: any
@@ -46,10 +47,6 @@ export type BrowserConfig = {
   adblockerEnabled: boolean
 }
 
-export type UserConfig = {
-  user_id: string
-}
-
 const BROWSER_CONFIG_NAME = 'browser.json'
 const USER_CONFIG_NAME = 'user.json'
 
@@ -71,6 +68,7 @@ export const getUserConfig = () => {
   const storedConfig = getConfig<UserConfig>(app.getPath('userData'), USER_CONFIG_NAME)
   if (!storedConfig.user_id) {
     storedConfig.user_id = uuidv4()
+    storedConfig.defaultBrowser = false
     setUserConfig(storedConfig as UserConfig)
   }
 
@@ -80,5 +78,12 @@ export const getUserConfig = () => {
 }
 
 export const setUserConfig = (config: UserConfig) => {
+  userConfig = config
   setConfig(app.getPath('userData'), config, USER_CONFIG_NAME)
+}
+
+export const updateUserConfig = (config: Partial<UserConfig>) => {
+  const currentConfig = getUserConfig()
+  const newConfig = { ...currentConfig, ...config }
+  setUserConfig(newConfig)
 }

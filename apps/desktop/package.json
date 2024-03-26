@@ -34,6 +34,7 @@
     "@electron-toolkit/eslint-config-ts": "^1.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@electron/fuses": "^1.7.0",
+    "@horizon/api": "*",
     "@horizon/core": "*",
     "@horizon/types": "*",
     "@horizon/web-parser": "*",

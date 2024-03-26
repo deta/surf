@@ -1,2 +1,4 @@
 export * from './legacy/index'
 export * from './resources.types'
+export * from './config.types'
+export * from './events.types'

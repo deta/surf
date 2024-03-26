@@ -1,0 +1,17 @@
+{
+  "name": "@horizon/api",
+  "private": true,
+  "version": "0.0.0",
+  "svelte": "src/index.ts",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:types": "tsc --emitDeclarationOnly"
+  },
+  "devDependencies": {
+    "@horizon/eslint-config": "*",
+    "@horizon/types": "*",
+    "@horizon/typescript-config": "*",
+    "typescript": "4.6.3"
+  }
+}

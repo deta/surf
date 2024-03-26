@@ -12,6 +12,13 @@ import path from 'path'
 import fetch from 'cross-fetch'
 import OpenAI, { toFile } from 'openai'
 
+import { createAPI } from '@horizon/api'
+import { ElectronAppInfo } from '@horizon/types'
+
+import type { UserConfig } from '@horizon/types'
+
+import { getConfig } from '../main/config'
+
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
@@ -24,14 +31,16 @@ const webviewNewWindowHandlers = {}
 const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
 
-const OPENAI_KEY = import.meta.env.P_VITE_OPEN_AI_API_KEY
-const VISION_API_KEY = import.meta.env.P_VITE_VISION_API_KEY || ''
+const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT
 const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
 
+const userConfig = getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
+
 let openai: OpenAI | null = null
-if (OPENAI_KEY) {
+if (userConfig.api_key) {
   openai = new OpenAI({
-    apiKey: OPENAI_KEY,
+    baseURL: OPENAI_API_ENDPOINT,
+    apiKey: userConfig.api_key,
     dangerouslyAllowBrowser: true
   })
 }
@@ -47,6 +56,7 @@ const api = {
   requestNewPreviewImage: (horizonId: string) =>
     ipcRenderer.invoke('request-new-preview-image', { horizonId }),
   quitApp: () => ipcRenderer.invoke('quit-app'),
+  restartApp: () => ipcRenderer.invoke('restart-app'),
   toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
 
   onFullscreenChange: (callback: any) => {
@@ -118,7 +128,7 @@ const api = {
 
     const chatCompletion = await openai.chat.completions.create({
       messages: messages,
-      model: 'gpt-3.5-turbo'
+      model: 'gpt-4'
     })
 
     return chatCompletion.choices[0].message.content
@@ -144,6 +154,16 @@ const api = {
     ipcRenderer.on('adblocker-state-changed', (_, { partition, state }) => {
       callback(partition, state)
     })
+  },
+
+  onTrackEvent: (callback) => {
+    try {
+      ipcRenderer.on('track-event', (_, { eventName, properties }) =>
+        callback(eventName, properties)
+      )
+    } catch (error) {
+      // noop
+    }
   },
 
   appIsReady: () => {
@@ -176,7 +196,20 @@ const api = {
     })
 
     return transcription?.text
-  }
+  },
+
+  activateAppUsingKey: async (key: string, acceptedTerms: boolean) => {
+    const api = createAPI(import.meta.env.P_VITE_API_BASE)
+
+    const data = await api.activateAppUsingKey(key, acceptedTerms)
+    if (data !== null) {
+      ipcRenderer.send('store-api-key', data.api_key)
+    }
+
+    return data
+  },
+
+  getAppInfo: () => ipcRenderer.invoke('get-app-info') as Promise<ElectronAppInfo>
 }
 
 ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {
@@ -345,7 +378,7 @@ const sffs = (() => {
     return fn
   }
 
-  return init(BACKEND_ROOT_PATH, VISION_API_KEY, VISION_API_ENDPOINT)
+  return init(BACKEND_ROOT_PATH, userConfig.api_key || '', VISION_API_ENDPOINT)
 })()
 
 const resources = (() => {

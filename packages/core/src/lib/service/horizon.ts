@@ -1,5 +1,6 @@
 import { get, writable, type Readable, type Writable, derived } from 'svelte/store'
 import {
+  ResourceTagsBuiltInKeys,
   type Card,
   type CardPosition,
   type Optional,
@@ -7,11 +8,16 @@ import {
   type SFFSResourceTag
 } from '../types/index'
 import type { API } from './api'
-import type { LegacyResource, HorizonState, HorizonData } from '../types/index'
+import type {
+  LegacyResource,
+  HorizonState,
+  HorizonData,
+  CardCreationMetadata
+} from '../types/index'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { initDemoHorizon } from '../utils/demoHorizon'
 import { HorizonDatabase, LocalStorage } from './storage'
-import { Telemetry, EventTypes, type TelemetryConfig } from './telemetry'
+import { Telemetry, type TelemetryConfig, HorizonActivationSource } from './telemetry'
 import { moveToStackingTop, type IBoard, clamp, type IBoardSettings } from '@horizon/tela'
 import { quintOut, expoOut } from 'svelte/easing'
 
@@ -19,6 +25,7 @@ import { HistoryEntriesManager } from './history'
 import type { ResourceManager } from './resources'
 import { SFFS } from './sffs'
 import { MagicFieldService } from './magicField'
+import { TelemetryEventTypes } from '@horizon/types'
 
 // how many horizons to keep in the dom
 const HOT_HORIZONS_THRESHOLD = 8
@@ -269,7 +276,10 @@ export class Horizon {
 
     this.log.debug(`Deleted card ${card.id}`)
     this.signalChange(this)
-    await this.telemetry.trackEvent(EventTypes.DeleteCard, { horizonId: this.id, id: card.id })
+    await this.telemetry.trackEvent(TelemetryEventTypes.DeleteCard, {
+      horizonId: this.id,
+      id: card.id
+    })
   }
 
   async freeze() {
@@ -323,8 +333,7 @@ export class Horizon {
 
   async addCard(
     data: Optional<Card, 'id' | 'stackingOrder'>,
-    makeActive: boolean = false,
-    duplicated: boolean = false
+    creationMetadata: CardCreationMetadata = { trigger: 'system', foreground: false }
   ) {
     const newCard = await this.sffs.createCard({
       horizonId: this.data.id,
@@ -340,7 +349,7 @@ export class Horizon {
     const cardStore = writable(card)
     this.cards.update((c) => [...c, cardStore])
 
-    if (makeActive) {
+    if (creationMetadata.foreground) {
       this.log.debug(`Making card ${card.id} active`)
       this.setActiveCard(card.id)
     } else {
@@ -348,33 +357,38 @@ export class Horizon {
     }
 
     this.signalChange(this)
-    await this.telemetry.trackEvent(
-      EventTypes.AddCard,
-      this.telemetry.extractEventPropertiesFromCard(card, duplicated)
-    )
+    await this.telemetry.trackCreateCardEvent(card, creationMetadata)
     return cardStore
   }
 
   async addCardWithResource(
     type: Card['type'],
     position: CardPosition,
-    data: Blob,
-    metadata?: Partial<SFFSResourceMetadata>,
-    tags?: SFFSResourceTag[]
+    resourceData: Blob,
+    resourceMetadata?: Partial<SFFSResourceMetadata>,
+    resourceTags?: SFFSResourceTag[],
+    cardCreationMetadata: CardCreationMetadata = { trigger: 'system', foreground: false }
   ) {
-    const resource = await this.createResource(data.type, data, metadata, tags)
-    return this.addCard({
-      ...position,
-      type: type,
-      resourceId: resource.id
-    })
+    const resource = await this.createResource(
+      resourceData.type,
+      resourceData,
+      resourceMetadata,
+      resourceTags
+    )
+    return this.addCard(
+      {
+        ...position,
+        type: type,
+        resourceId: resource.id
+      },
+      cardCreationMetadata
+    )
   }
 
   addCardBrowser(
     location: string,
     position: CardPosition,
-    makeActive: boolean = false,
-    duplicated: boolean = false
+    cardCreationMetadata: CardCreationMetadata = { trigger: 'system', foreground: false }
   ) {
     return this.addCard(
       {
@@ -386,8 +400,7 @@ export class Horizon {
           currentHistoryIndex: -1
         }
       },
-      makeActive,
-      duplicated
+      cardCreationMetadata
     )
   }
 
@@ -395,8 +408,7 @@ export class Horizon {
     location: string,
     resourceId: string,
     position: CardPosition,
-    makeActive: boolean = false,
-    duplicated: boolean = false
+    cardCreationMetadata: CardCreationMetadata = { trigger: 'system', foreground: false }
   ) {
     return this.addCard(
       {
@@ -409,37 +421,37 @@ export class Horizon {
           currentHistoryIndex: -1
         }
       },
-      makeActive,
-      duplicated
+      cardCreationMetadata
     )
   }
 
   async addCardText(
     content: string,
     position: CardPosition,
-    metadata?: Partial<SFFSResourceMetadata>,
-    tags?: SFFSResourceTag[],
-    makeActive: boolean = false,
-    duplicated: boolean = false
+    resourceMetadata?: Partial<SFFSResourceMetadata>,
+    resourceTags?: SFFSResourceTag[],
+    cardCreationMetadata: CardCreationMetadata = { trigger: 'system', foreground: false }
   ) {
     // TODO: resource metadata and tags
-    const resource = await this.resourceManager.createResourceNote(content, metadata, tags)
+    const resource = await this.resourceManager.createResourceNote(
+      content,
+      resourceMetadata,
+      resourceTags
+    )
     return this.addCard(
       {
         ...position,
         type: 'text',
         resourceId: resource.id
       },
-      makeActive,
-      duplicated
+      cardCreationMetadata
     )
   }
 
   async addCardLink(
     url: string,
     position: CardPosition,
-    makeActive: boolean = false,
-    duplicated: boolean = false
+    cardCreationMetadata: CardCreationMetadata = { trigger: 'system', foreground: false }
   ) {
     // TODO: resource metadata and tags + fetch metadata from url
     const resource = await this.resourceManager.createResourceLink({ url })
@@ -449,16 +461,14 @@ export class Horizon {
         type: 'link',
         resourceId: resource.id
       },
-      makeActive,
-      duplicated
+      cardCreationMetadata
     )
   }
 
   async addCardFile(
     data: Blob,
     position: CardPosition,
-    makeActive: boolean = false,
-    duplicated: boolean = false
+    cardCreationMetadata: CardCreationMetadata = { trigger: 'system', foreground: false }
   ) {
     // TODO: resource metadata and tags
     const resource = await this.resourceManager.createResourceOther(data)
@@ -468,45 +478,40 @@ export class Horizon {
         type: 'file',
         resourceId: resource.id
       },
-      makeActive,
-      duplicated
+      cardCreationMetadata
     )
   }
 
   async addCardAIText(
     position: CardPosition,
-    makeActive: boolean = false,
-    duplicated: boolean = false
+    cardCreationMetadata: CardCreationMetadata = { trigger: 'system', foreground: false }
   ) {
     return this.addCard(
       {
         ...position,
         type: 'ai-text'
       },
-      makeActive,
-      duplicated
+      cardCreationMetadata
     )
   }
 
   async addCardAudioTranscriber(
     position: CardPosition,
-    makeActive: boolean = false,
-    duplicated: boolean = false
+    cardCreationMetadata: CardCreationMetadata = { trigger: 'system', foreground: false }
   ) {
     return this.addCard(
       {
         ...position,
         type: 'audio-transcriber'
       },
-      makeActive,
-      duplicated
+      cardCreationMetadata
     )
   }
 
   async duplicateCard(
     idOrCard: Card | string,
     position: CardPosition,
-    makeActive: boolean = false
+    foreground: boolean = false
   ) {
     const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
     if (!card) throw new Error(`Card ${idOrCard} not found`)
@@ -517,27 +522,34 @@ export class Horizon {
         type: card.type,
         data: card.data
       },
-      makeActive,
-      true
+      {
+        foreground: foreground,
+        trigger: 'duplicate'
+      }
     )
   }
 
   async duplicateCardWithoutData(
     idOrCard: Card | string,
     position: CardPosition,
-    makeActive: boolean = false
+    foreground: boolean = false
   ) {
     const card = typeof idOrCard !== 'string' ? idOrCard : await this.getCard(idOrCard)
     if (!card) throw new Error(`Card ${idOrCard} not found`)
 
+    const metadata = {
+      trigger: 'duplicate',
+      foreground: foreground
+    } as CardCreationMetadata
+
     if (card.type === 'text') {
-      return this.addCardText('', position, {}, [], makeActive, true)
+      return this.addCardText('', position, {}, [], metadata)
     } else if (card.type === 'browser') {
-      return this.addCardBrowser('', position, makeActive, true)
+      return this.addCardBrowser('', position, metadata)
     } else if (card.type === 'link') {
-      return this.addCardLink('', position, makeActive, true)
+      return this.addCardLink('', position, metadata)
     } else if (card.type === 'file') {
-      return this.addCardFile(new Blob(), position, makeActive, true)
+      return this.addCardFile(new Blob(), position, metadata)
     } else {
       throw new Error(`Unknown card type ${card.type}`)
     }
@@ -636,12 +648,12 @@ export class HorizonsManager {
   adblockerState: Writable<boolean>
   resourcesManager: ResourceManager
 
-  constructor(api: API, resourcesManager: ResourceManager, telemetryConfig: TelemetryConfig) {
+  constructor(api: API, resourcesManager: ResourceManager, telemetry: Telemetry) {
     this.api = api
     this.log = useLogScope(`HorizonService`)
     this.storage = new HorizonDatabase()
     this.sffs = new SFFS() // TODO: maybe share this with the resources manager
-    this.telemetry = new Telemetry(this.storage, telemetryConfig)
+    this.telemetry = telemetry
     this.adblockerState = writable(true)
 
     this.resourcesManager = resourcesManager
@@ -651,6 +663,7 @@ export class HorizonsManager {
     // that stores application state
     this.activeHorizonStorage = new LocalStorage<string>('active_horizon')
 
+    // @ts-expect-error
     window.api.getAdblockerState('persist:horizon').then((state: boolean) => {
       this.adblockerState.set(state)
     })
@@ -811,7 +824,10 @@ export class HorizonsManager {
     await horizon.coolDown()
   }
 
-  async switchHorizon(idOrHorizon: string | Horizon) {
+  async switchHorizon(
+    idOrHorizon: string | Horizon,
+    source: HorizonActivationSource = HorizonActivationSource.Overview
+  ) {
     const horizon = typeof idOrHorizon === 'string' ? this.getHorizon(idOrHorizon) : idOrHorizon
 
     const oldHorizonState = horizon.state ?? 'cold'
@@ -845,7 +861,7 @@ export class HorizonsManager {
 
     this.activeHorizonId.set(horizon.id)
     const cards = get(horizon.cards).map((c) => get(c)) || []
-    await this.telemetry.trackActivateHorizonEvent(horizon.id, cards)
+    await this.telemetry.trackActivateHorizonEvent(horizon.id, cards, source)
   }
 
   async createHorizon(name: string) {
@@ -864,7 +880,10 @@ export class HorizonsManager {
     )
     this.horizons.update((h) => [...h, horizon])
 
-    await this.telemetry.trackEvent(EventTypes.CreateHorizon, { name: name, id: horizon.id })
+    await this.telemetry.trackEvent(TelemetryEventTypes.CreateHorizon, {
+      name: name,
+      id: horizon.id
+    })
     return horizon
   }
 
@@ -877,6 +896,6 @@ export class HorizonsManager {
     await this.sffs.deleteHorizon(horizon.id)
 
     this.horizons.update((h) => h.filter((h) => h.id !== horizon.id))
-    await this.telemetry.trackEvent(EventTypes.DeleteHorizon, { id: horizon.id })
+    await this.telemetry.trackEvent(TelemetryEventTypes.DeleteHorizon, { id: horizon.id })
   }
 }

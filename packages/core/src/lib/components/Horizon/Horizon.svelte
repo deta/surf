@@ -53,6 +53,7 @@
   import { ResourceManager, type ResourceNote } from '../../service/resources'
   import { SERVICES } from '@horizon/web-parser'
   import Minimap from './Minimap.svelte'
+  import { TelemetryEventTypes } from '@horizon/types'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -249,10 +250,13 @@
       // Right click
       if (event.which === 3 || event.button === 2) {
         log.debug('creating new text card', position)
-        horizon.addCardText('', position, true)
+        horizon.addCardText('', position, undefined, undefined, {
+          trigger: 'draw',
+          foreground: true
+        })
       } else {
         log.debug('creating new browser card', position)
-        horizon.addCardBrowser('', position, true)
+        horizon.addCardBrowser('', position, { trigger: 'draw', foreground: true })
       }
     }
   }
@@ -283,12 +287,18 @@
     log.debug('duplicating card', card)
 
     if (card.type === 'ai-text' || card.type === 'audio-transcriber') {
-      const newCard = await horizon.addCardText(card.summarizedText, {
-        width: card.width,
-        height: card.height,
-        x: card.x + card.width + 50,
-        y: card.y
-      })
+      await horizon.addCardText(
+        card.summarizedText,
+        {
+          width: card.width,
+          height: card.height,
+          x: card.x + card.width + 50,
+          y: card.y
+        },
+        undefined,
+        undefined,
+        { trigger: 'duplicate' }
+      )
       // const newCardStore = await horizon.addTextCard(card.id, {
       //   width: card.width,
       //   height: card.height,
@@ -718,8 +728,10 @@
       const card = await horizon.addCardBrowser(
         SERVICES.find((e) => e.id === cmd)!.url,
         targetRect,
-        true,
-        false
+        {
+          foreground: true,
+          trigger: 'draw'
+        }
       )
       if (origin === 'cmdk') {
         card.update((v) => {
@@ -730,22 +742,21 @@
       //if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
     }
     if (cmd === 'text') {
-      const card = await horizon.addCardText(
-        '',
-        targetRect,
-        { name: 'New Text Card' },
-        [],
-        true,
-        false
-      )
+      await horizon.addCardText('', targetRect, { name: 'New Text Card' }, [], {
+        foreground: true,
+        trigger: 'draw'
+      })
       //if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
     } else if (cmd === 'browser') {
-      const card = await horizon.addCardBrowser('', targetRect, true, false)
+      await horizon.addCardBrowser('', targetRect, {
+        foreground: true,
+        trigger: 'draw'
+      })
       //if (origin === 'cmdk') enterFocusMode([get(card).id], horizon.board, horizon.cards)
     } else if (cmd === 'summarize') {
-      horizon.addCardAIText(targetRect)
+      horizon.addCardAIText(targetRect, { trigger: 'draw' })
     } else if (cmd === 'transcribe') {
-      horizon.addCardAudioTranscriber(targetRect)
+      horizon.addCardAudioTranscriber(targetRect, { trigger: 'draw' })
     }
 
     // -- Card actions
@@ -1070,6 +1081,7 @@
     handleVisorOpen()
   } else {
     handleVisorClose()
+    blockSearchTracking = false
   }
 
   $: $visorEnabled && $visorSearchTerm !== '' && handleSearchChange($visorSearchTerm)
@@ -1077,6 +1089,16 @@
   $: if ($visorEnabled && $visorSearchTerm === '' && $visorSearchTerm !== lastVisorSearchTerm) {
     computeVisorList($cards, undefined, true, true)
     applyVisorList()
+  }
+
+  let blockSearchTracking = false
+  $: if ($visorEnabled && $visorSearchTerm !== '' && !blockSearchTracking) {
+    blockSearchTracking = true
+    trackVisorSearch()
+  }
+
+  const trackVisorSearch = () => {
+    horizonsManager.telemetry.trackEvent(TelemetryEventTypes.VisorSearch, {})
   }
 
   const handleSearchChange = async (query: string = '') => {

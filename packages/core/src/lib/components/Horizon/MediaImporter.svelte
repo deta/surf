@@ -11,7 +11,8 @@
     type SFFSResourceMetadata,
     type SFFSResourceTag,
     type DownloadUpdatedMessage,
-    type DownloadDoneMessage
+    type DownloadDoneMessage,
+    type CardCreationMetadata
   } from '../../types'
   import { ResourceLink, ResourceTag } from '../../service/resources'
 
@@ -91,20 +92,32 @@
       log.debug('processed item', item)
 
       if (item.type === 'text') {
-        createTextCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
-          ResourceTag.paste()
-        ])
+        createTextCard(
+          item.data,
+          getNewCardHorizontalPosition(idx),
+          item.metadata,
+          [ResourceTag.paste()],
+          'paste'
+        )
       } else if (item.type === 'url') {
-        createBrowserCard(item.data, getNewCardHorizontalPosition(idx))
+        createBrowserCard(item.data, getNewCardHorizontalPosition(idx), 'paste')
       } else if (item.type === 'file') {
         if (item.data.type.startsWith('image')) {
-          createImageCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
-            ResourceTag.paste()
-          ])
+          createImageCard(
+            item.data,
+            getNewCardHorizontalPosition(idx),
+            item.metadata,
+            [ResourceTag.paste()],
+            'paste'
+          )
         } else {
-          createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
-            ResourceTag.paste()
-          ])
+          createFileCard(
+            item.data,
+            getNewCardHorizontalPosition(idx),
+            item.metadata,
+            [ResourceTag.paste()],
+            'paste'
+          )
         }
       }
     })
@@ -127,20 +140,32 @@
       log.debug('processed item', item)
 
       if (item.type === 'text') {
-        createTextCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
-          ResourceTag.dragLocal()
-        ])
+        createTextCard(
+          item.data,
+          getNewCardHorizontalPosition(idx),
+          item.metadata,
+          [ResourceTag.dragLocal()],
+          'dnd'
+        )
       } else if (item.type === 'url') {
-        createBrowserCard(item.data, getNewCardHorizontalPosition(idx))
+        createBrowserCard(item.data, getNewCardHorizontalPosition(idx), 'dnd')
       } else if (item.type === 'file') {
         if (item.data.type.startsWith('image')) {
-          createImageCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
-            ResourceTag.dragLocal()
-          ])
+          createImageCard(
+            item.data,
+            getNewCardHorizontalPosition(idx),
+            item.metadata,
+            [ResourceTag.dragLocal()],
+            'dnd'
+          )
         } else {
-          createFileCard(item.data, getNewCardHorizontalPosition(idx), item.metadata, [
-            ResourceTag.dragLocal()
-          ])
+          createFileCard(
+            item.data,
+            getNewCardHorizontalPosition(idx),
+            item.metadata,
+            [ResourceTag.dragLocal()],
+            'dnd'
+          )
         }
       } else if (item.type === 'resource') {
         handleResource(item.data, getNewCardHorizontalPosition(idx))
@@ -178,16 +203,21 @@
 
       log.debug('bookmark', bookmark)
 
-      createBrowserCard(new URL(bookmark.url), pos, resource.id)
+      createBrowserCard(new URL(bookmark.url), pos, 'dnd', resource.id)
     } else {
-      horizon.addCard({
-        x: pos.x - DEFAULT_CARD_SIZE.width / 2,
-        y: pos.y - DEFAULT_CARD_SIZE.height / 2,
-        width: DEFAULT_CARD_SIZE.width,
-        height: DEFAULT_CARD_SIZE.height,
-        type: resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE ? 'text' : 'file',
-        resourceId: resource.id
-      })
+      horizon.addCard(
+        {
+          x: pos.x - DEFAULT_CARD_SIZE.width / 2,
+          y: pos.y - DEFAULT_CARD_SIZE.height / 2,
+          width: DEFAULT_CARD_SIZE.width,
+          height: DEFAULT_CARD_SIZE.height,
+          type: resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE ? 'text' : 'file',
+          resourceId: resource.id
+        },
+        {
+          trigger: 'dnd'
+        }
+      )
     }
   }
 
@@ -195,7 +225,8 @@
     blob: Blob,
     pos: { x: number; y: number },
     metadata: Partial<SFFSResourceMetadata>,
-    tags: SFFSResourceTag[]
+    tags: SFFSResourceTag[],
+    trigger: CardCreationMetadata['trigger']
   ) => {
     const card = await horizon.addCardWithResource(
       'file',
@@ -207,7 +238,10 @@
       },
       blob,
       metadata,
-      tags
+      tags,
+      {
+        trigger
+      }
     )
     log.debug('created card', get(card))
   }
@@ -216,7 +250,8 @@
     blob: Blob,
     pos: { x: number; y: number },
     metadata: Partial<SFFSResourceMetadata>,
-    tags: SFFSResourceTag[]
+    tags: SFFSResourceTag[],
+    trigger: CardCreationMetadata['trigger']
   ) => {
     // Find out size
     const src = URL.createObjectURL(blob)
@@ -242,7 +277,10 @@
       },
       blob,
       metadata,
-      tags
+      tags,
+      {
+        trigger
+      }
     )
 
     log.debug('created card', get(card))
@@ -261,6 +299,7 @@
   const createBrowserCard = async (
     url: URL,
     pos: { x: number; y: number },
+    trigger: CardCreationMetadata['trigger'],
     resourceId?: string
   ) => {
     const position = {
@@ -271,10 +310,12 @@
     }
 
     if (resourceId) {
-      const card = await horizon.addCardBrowserWithResource(url.href, resourceId, position)
+      const card = await horizon.addCardBrowserWithResource(url.href, resourceId, position, {
+        trigger
+      })
       log.debug('created card', get(card))
     } else {
-      const card = await horizon.addCardBrowser(url.href, position)
+      const card = await horizon.addCardBrowser(url.href, position, { trigger })
       log.debug('created card', get(card))
     }
   }
@@ -283,7 +324,8 @@
     text: string,
     pos: { x: number; y: number },
     metadata: Partial<SFFSResourceMetadata>,
-    tags: SFFSResourceTag[]
+    tags: SFFSResourceTag[],
+    trigger: CardCreationMetadata['trigger']
   ) => {
     const card = await horizon.addCardText(
       text,
@@ -294,7 +336,10 @@
         height: DEFAULT_CARD_SIZE.height
       },
       metadata,
-      tags
+      tags,
+      {
+        trigger
+      }
     )
     log.debug('created card', get(card))
   }

@@ -32,6 +32,12 @@ export default defineConfig({
       })
     ],
     build: {
+      rollupOptions: {
+        input: {
+          main: resolve(__dirname, 'src/renderer/index.html'),
+          setup: resolve(__dirname, 'src/renderer/setup.html')
+        }
+      },
       sourcemap: true
     }
   }

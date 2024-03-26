@@ -35,6 +35,7 @@
   import AppBar from './AppBar.svelte'
   import SplashScreen from '../SplashScreen.svelte'
   import { visorEnabled, visorPinch } from '../../utils/visor'
+  import { Telemetry } from '../../service/telemetry'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -46,13 +47,15 @@
     telemetryActive = true
   }
 
-  const resourceManager = new ResourceManager()
-
-  const horizonManager = new HorizonsManager(api, resourceManager, {
+  const telemetry = new Telemetry({
     apiKey: telemetryAPIKey,
     active: telemetryActive,
     trackHostnames: false
   })
+
+  const resourceManager = new ResourceManager(telemetry)
+  const horizonManager = new HorizonsManager(api, resourceManager, telemetry)
+
   setContext('horizonsManager', horizonManager)
 
   const lethargy = new Lethargy({
@@ -125,8 +128,8 @@
     const viewport = get(state.viewPort)
     const viewoffset = get(state.viewOffset)
 
-    const width = Math.max((viewport.w - SAFE_AREA_PADDING * 2) * 3/4, 800)
-    const height = Math.max((viewport.h - SAFE_AREA_PADDING * 2) * 3/4, 500)
+    const width = Math.max(((viewport.w - SAFE_AREA_PADDING * 2) * 3) / 4, 800)
+    const height = Math.max(((viewport.h - SAFE_AREA_PADDING * 2) * 3) / 4, 500)
 
     log.debug('Creating browser card with opened URL:', url)
     $activeHorizon.addCardBrowser(
@@ -137,7 +140,10 @@
         width: width,
         height: height
       },
-      true
+      {
+        foreground: true,
+        trigger: 'protocol'
+      }
     )
   }
 

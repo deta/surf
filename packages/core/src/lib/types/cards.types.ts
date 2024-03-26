@@ -11,6 +11,23 @@ export type CardEvents = {
   endResize: Card
 }
 
+// TODO: we should make use of this for the resource tags as well
+export type CardCreationTrigger =
+  | 'draw' // User drew a card
+  | 'dnd' // User dragged something onto the horizon to create a card
+  | 'paste' // User pasted something onto the horizon to create a card
+  | 'duplicate' // User duplicated a card
+  | 'protocol' // User clicked a link that opened a card
+  | 'system' // System created a card
+
+export interface CardCreationMetadata {
+  /** What event triggered the creation */
+  trigger?: CardCreationTrigger
+
+  /** Wether the card was or should be put into the foreground */
+  foreground?: boolean
+}
+
 // NOTE: We should prob prefix all magic cards with magic- or sth. like that
 export type CardType = 'browser' | 'text' | 'file' | 'link' | 'ai-text' | 'audio-transcriber'
 

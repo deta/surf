@@ -7,7 +7,7 @@ export const createCheatSheetCard = (horizon: Horizon, position: CardPosition) =
   // Use environment variable for the cheatsheet URL
   const cheatsheetUrl = import.meta.env.R_VITE_CHEATSHEET_URL
   if (typeof cheatsheetUrl === 'string' && cheatsheetUrl.length > 0) {
-    horizon.addCardBrowser(cheatsheetUrl, position)
+    horizon.addCardBrowser(cheatsheetUrl, position, { trigger: 'system' })
   } else {
     console.error('R_VITE_CHEATSHEET_URL is not defined or invalid.')
   }
@@ -20,7 +20,13 @@ const onboardingNote = `<h3>Welcome to your new horizon! 🚀</h3>
 
 export const initDemoHorizon = async (horizon: Horizon) => {
   console.log('CREATING DEMO CARDS')
-  horizon.addCardText(onboardingNote, { x: 50, y: 50, width: 400, height: 300 })
+  horizon.addCardText(
+    onboardingNote,
+    { x: 50, y: 50, width: 400, height: 300 },
+    undefined,
+    undefined,
+    { trigger: 'system' }
+  )
 
   createCheatSheetCard(horizon, {
     x: 550,
