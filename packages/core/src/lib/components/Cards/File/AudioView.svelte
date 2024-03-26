@@ -45,7 +45,7 @@
     const fieldStore = magicFieldParticipant?.inField
     const field = fieldStore ? get(fieldStore) : null
     if (field) {
-      const isSupported = field.supportedResources.includes('text/plain')
+      const isSupported = field.supportedResources.includes(resource.type)
       magicFieldParticipant?.updateFieldSupported(field.id, isSupported)
     }
   })

@@ -152,6 +152,9 @@
       //transcribedText = null
     })
 
+    log.debug('Activating field')
+    magicFieldService.activateField(magicField)
+
     return () => {
       if (magicField) {
         magicFieldService.removeField(magicField.id)
