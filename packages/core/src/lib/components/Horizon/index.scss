@@ -239,7 +239,7 @@
   }
 
   &.magic-field-active {
-    --shadow-opacity: calc(1 - var(--magic-field-distance));
+    --shadow-opacity: var(--magic-field-distance);
     --shadow-edge-opacity: calc(var(--shadow-opacity) * 0.25);
 
     /*border-radius: 20px;
@@ -267,7 +267,6 @@
       height: 100%;
       width: 100%;
       opacity: var(--shadow-opacity);
-      transition: opacity 120ms ease-out;
       transform: scale(0.95) translateZ(0);
       filter: blur(25px);
       background: linear-gradient(to top right, var(--magic-field-colors,

@@ -1,6 +1,6 @@
 import { get, type Writable } from 'svelte/store'
 import type { IPositionable } from './Positionable.svelte'
-import type { Vec4 } from './types/Utils.type.js'
+import type { Rect, Vec4 } from './types/Utils.type.js'
 import type { IBoardSettings } from './index.js'
 
 export function getDevicePixelRatio() {
@@ -216,6 +216,31 @@ export function snapToEdges(
 
 export function rectsIntersect(a: Vec4, b: Vec4) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+}
+
+/**
+ * Calculates the shortest distance between the edges of the two rectangles using the Euclidean distance formula
+ */
+export function shortestDistanceBetweenRects(rect1: Rect, rect2: Rect) {
+  // Find the coordinates of the edges of each rectangle
+  const rect1Left = rect1.x
+  const rect1Right = rect1.x + rect1.width
+  const rect1Top = rect1.y
+  const rect1Bottom = rect1.y + rect1.height
+
+  const rect2Left = rect2.x
+  const rect2Right = rect2.x + rect2.width
+  const rect2Top = rect2.y
+  const rect2Bottom = rect2.y + rect2.height
+
+  // Calculate the horizontal and vertical distances
+  const horizontalDistance = Math.max(0, Math.max(rect1Left - rect2Right, rect2Left - rect1Right))
+  const verticalDistance = Math.max(0, Math.max(rect1Top - rect2Bottom, rect2Top - rect1Bottom))
+
+  // Calculate the shortest distance between the edges
+  const shortestDistance = Math.sqrt(horizontalDistance ** 2 + verticalDistance ** 2)
+
+  return shortestDistance
 }
 
 export function randomCssColor(alpha = 1) {

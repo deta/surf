@@ -5,6 +5,7 @@ import type TypedEmitter from 'typed-emitter'
 import type { CardPosition } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { rectsIntersect } from '@horizon/tela'
+import { shortestDistanceBetweenRects } from '../../../../tela/dist/utils'
 
 export type ParticipantData = {
   type: string
@@ -29,13 +30,13 @@ export type FieldEvents = {
   destroyed: () => void
 }
 
-export type RelativePositioning = 'left' | 'right' | 'top' | 'bottom'
+export type RelativePositioning = 'left' | 'right' | 'top' | 'bottom' | 'center'
 
 const EVENT_RESPONSE_TIMEOUT = 15000
 
 export type MagicFieldParticipation = {
   fieldId: string
-  relativePosition: RelativePositioning
+  // relativePosition: RelativePositioning
   distance: number
   supported: boolean | null
 }
@@ -144,7 +145,7 @@ export class MagicFieldParticipant {
   }
 }
 
-const DEFAULT_FIELD_STRENGTH = 200
+const DEFAULT_FIELD_STRENGTH = 250
 
 export class MagicField {
   id: string
@@ -319,6 +320,8 @@ export class MagicFieldService {
 
   log: ScopedLogger
 
+  defaultFieldStrength = DEFAULT_FIELD_STRENGTH
+
   constructor() {
     this.participants = writable([])
     this.fields = writable([])
@@ -347,71 +350,103 @@ export class MagicFieldService {
       const participantPos = get(p.position)
       if (!participantPos) return false
 
-      if (
-        rectsIntersect(
-          {
-            x: participantPos.x,
-            y: participantPos.y,
-            w: participantPos.width,
-            h: participantPos.height
-          },
-          {
-            x: fieldPos.x,
-            y: fieldPos.y,
-            w: fieldPos.width,
-            h: fieldPos.height
-          }
-        )
+      const isWithin = rectsIntersect(
+        {
+          x: participantPos.x,
+          y: participantPos.y,
+          w: participantPos.width,
+          h: participantPos.height
+        },
+        {
+          x: fieldPos.x,
+          y: fieldPos.y,
+          w: fieldPos.width,
+          h: fieldPos.height
+        }
       )
-        return true
 
-      const participantEdges = getBoxEdges(participantPos)
+      if (isWithin) {
+        this.log.debug(`Participant ${p.id} is within field ${field.id}`)
+        p.fieldParticipation.update((fp) => ({
+          fieldId: field.id,
+          // relativePosition: 'center',
+          distance: 0,
+          supported: fp?.supported ?? null
+        }))
+        field.fieldParticipation.set({
+          fieldId: field.id,
+          // relativePosition: 'center',
+          distance: 0,
+          supported: null
+        })
+
+        return true
+      }
+
+      // const participantEdges = getBoxEdges(participantPos)
       // this.log.debug(`Checking participant ${p.id} with edges`, participantEdges)
 
       // find which side of the field the participant is closest to and return that side
-      const topDistance = Math.abs(fieldEdges.top - participantEdges.bottom)
-      const rightDistance = Math.abs(fieldEdges.right - participantEdges.left)
-      const bottomDistance = Math.abs(fieldEdges.bottom - participantEdges.top)
-      const leftDistance = Math.abs(fieldEdges.left - participantEdges.right)
+      // const topDistance = Math.abs(fieldEdges.top - participantEdges.bottom)
+      // const rightDistance = Math.abs(fieldEdges.right - participantEdges.left)
+      // const bottomDistance = Math.abs(fieldEdges.bottom - participantEdges.top)
+      // const leftDistance = Math.abs(fieldEdges.left - participantEdges.right)
 
-      const distances = {
-        top: bottomDistance,
-        right: leftDistance,
-        bottom: topDistance,
-        left: rightDistance
-      } as Record<RelativePositioning, number>
+      // const distances = {
+      //   top: bottomDistance,
+      //   right: leftDistance,
+      //   bottom: topDistance,
+      //   left: rightDistance
+      // } as Record<RelativePositioning, number>
 
-      const closestSide = (Object.keys(distances) as RelativePositioning[]).reduce((a, b) =>
-        distances[a] < distances[b] ? a : b
-      ) as RelativePositioning
-      const distance = Math.min(topDistance, rightDistance, bottomDistance, leftDistance)
+      // const closestSide = (Object.keys(distances) as RelativePositioning[]).reduce((a, b) =>
+      //   distances[a] < distances[b] ? a : b
+      // ) as RelativePositioning
 
-      const closeEnough =
-        participantEdges.top <= fieldEdges.bottom + distanceThreshold &&
-        participantEdges.right + distanceThreshold >= fieldEdges.left &&
-        participantEdges.bottom + distanceThreshold >= fieldEdges.top &&
-        participantEdges.left <= fieldEdges.right + distanceThreshold
+      const distance = shortestDistanceBetweenRects(participantPos, fieldPos)
+      const closeEnough = distance <= distanceThreshold
+
+      const fieldParticipant = get(p.fieldParticipation)
+      const isSameField = fieldParticipant?.fieldId === field.id
+
+      // check if this field is closer than the one the participant is currently in (if any)
+      const isClosestField =
+        !fieldParticipant || isSameField || distance < fieldParticipant.distance
 
       if (closeEnough) {
+        // if we are not the closest field we do nothing
+        if (!isClosestField) {
+          return false
+        }
+
         p.fieldParticipation.update((fp) => ({
           fieldId: field.id,
-          relativePosition: closestSide,
+          // relativePosition: closestSide,
           distance: distance,
           supported: fp?.supported ?? null
         }))
         field.fieldParticipation.set({
           fieldId: field.id,
-          relativePosition: closestSide,
+          // relativePosition: closestSide,
           distance: distance,
           supported: null
         })
-      } else {
-        // p.fieldParticipation.set(null)
-        field.fieldParticipation.set(null)
+
+        return true
       }
 
-      // this.log.debug(`Participant ${p.id} is close enough: ${closeEnough}`)
-      return closeEnough
+      p.fieldParticipation.update((fp) => {
+        if (fp?.fieldId === field.id) {
+          return null
+        }
+
+        return fp
+      })
+
+      //p.fieldParticipation.set(null)
+      field.fieldParticipation.set(null)
+
+      return false
     })
   }
 
@@ -546,6 +581,16 @@ export class MagicFieldService {
     // })
 
     // this.fieldSubscribers.set(id, unsubscribe)
+
+    // this.recalculateFieldParticipants()
+
+    field.emit('created', field)
+    return field
+  }
+
+  activateField(field: MagicField) {
+    this.log.debug(`Activating field with id ${field.id}`)
+
     this.fields.update((fields) => [...fields, field])
 
     const participants = this.getParticipants()
@@ -554,14 +599,11 @@ export class MagicFieldService {
         const unsubscribe = p.position.subscribe(() => {
           this.recalculateFieldParticipants()
         })
-        this.participantSubscribers.set(id, unsubscribe)
+        this.participantSubscribers.set(field.id, unsubscribe)
       })
     }
 
     this.recalculateFieldParticipants()
-
-    field.emit('created', field)
-    return field
   }
 
   getField(id: string) {
@@ -583,6 +625,12 @@ export class MagicFieldService {
     if (unsubscribe) {
       unsubscribe()
     }
+
+    const participants = field.getParticipants()
+    participants.forEach((p) => {
+      p.emit('leaveField', field)
+      p.fieldParticipation.set(null)
+    })
 
     field.emit('destroyed')
     this.fields.update((fields) => fields.filter((f) => f.id !== id))

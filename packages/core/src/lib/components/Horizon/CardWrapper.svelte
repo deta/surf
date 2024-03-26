@@ -64,12 +64,39 @@
     [activeField, horizon.magicFieldService.fields],
     ([_activeField, _fields]) => {
       const fieldsIndex = _fields.findIndex((e) => e.id === magicFieldParticipant.id)
-      if (fieldsIndex !== -1) return fieldsIndex % 4
-      else if (_activeField !== null) {
+      if (fieldsIndex !== -1) {
+        return fieldsIndex % 4
+      } else if (_activeField !== null) {
         return _fields.findIndex((f) => f.id === _activeField.id) % 4
-      } else return -1
+      } else {
+        return -1
+      }
     }
   )
+
+  const magicFieldOpacity = derived(fieldParticipation, (fieldParticipation) => {
+    if (!fieldParticipation) return 0
+
+    // how far away from the field are we? 1 = at field, 0 = far away
+    const adjustedDistance =
+      1 -
+      Math.max(fieldParticipation.distance - CONNECTION_THRESHOLD, 0) /
+        (horizon.magicFieldService.defaultFieldStrength - CONNECTION_THRESHOLD)
+
+    // use distance to determine opacity (sqrt to make it more linear)
+    const opacity = Math.pow(adjustedDistance, 0.5)
+
+    log.debug(
+      'magicFieldOpacity, distance:',
+      fieldParticipation?.distance,
+      ', adjustedDistance:',
+      adjustedDistance,
+      ', opacity:',
+      opacity
+    )
+
+    return opacity
+  })
 
   let isConnecting = false
 
@@ -99,25 +126,13 @@
       fieldPos = get(get(activeField)!.position)
     }
     if (
-      (p &&
-        p.supported &&
-        fieldPos !== null &&
-        rectsIntersect(
-          { x: fieldPos.x, y: fieldPos.y, w: fieldPos.width, h: fieldPos.height },
-          {
-            x: $positionable.x,
-            y: $positionable.y,
-            w: $positionable.width,
-            h: $positionable.height
-          }
-        )) ||
-      (p &&
-        p.supported &&
-        p.distance < CONNECTION_THRESHOLD &&
-        !isConnecting &&
-        $mode !== 'dragging')
+      $mode !== 'dragging' &&
+      p &&
+      p.supported &&
+      p.distance < CONNECTION_THRESHOLD &&
+      !isConnecting
     ) {
-      log.debug('initiating connect', p)
+      log.debug('[MagicField] initiating connect', p)
       isConnecting = true
       handleMagicFieldConnect()
     }
@@ -521,13 +536,10 @@
     ? 'magic-field-active'
     : ''} {!!$connectedField || (selfIsField && $activeField)
     ? 'magic-field-connected'
-    : ''} {$fieldParticipation?.supported
-    ? `magic-field-${$fieldParticipation.relativePosition}`
-    : ''} {active ? 'active' : ''} {selected ? 'selected' : ''} {$positionable.dashHighlight ===
-  true
+    : ''} {active ? 'active' : ''} {selected ? 'selected' : ''} {$positionable.dashHighlight
     ? 'dash-highlight'
     : ''}"
-  style="--magic-field-distance: {($fieldParticipation?.distance ?? 0) / 200}"
+  style="--magic-field-distance: {$magicFieldOpacity}"
   contained={false}
   on:mousedown={handleMouseDown}
   on:dragenter={handleDragEnter}

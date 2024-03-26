@@ -125,6 +125,10 @@
       magicCardParticipant.position
     )
 
+    magicField.onParticipantEnter((p) => {
+      log.debug('participantEnter', p)
+    })
+
     magicField.onParticipantLeave((p) => {
       log.debug('participantLeave', p)
     })
@@ -154,6 +158,9 @@
       connectedParticipant.set(null)
       //summarizedText = null
     })
+
+    log.debug('Activating field')
+    magicFieldService.activateField(magicField)
 
     console.warn('draggable stopped')
     return () => {
