@@ -20,7 +20,7 @@ export function setupIpcHandlers() {
     const rect = window.getContentBounds()
     const image = await window.webContents.capturePage({
       ...rect,
-      x: 0,
+      x: 70,
       y: 0
     })
     const imageSize = image.getSize()
