@@ -241,7 +241,7 @@
 
     &.wide {
       max-width: 445px;
-      text-align: justify;
+      text-align: center;
     }
 
     a {
@@ -264,12 +264,6 @@
       flex-direction: column;
       gap: 0.75rem;
       width: 100%;
-    }
-
-    .info {
-      text-align: justify;
-      text-align-last: justify;
-      text-justify: inter-word;
     }
 
     form {
