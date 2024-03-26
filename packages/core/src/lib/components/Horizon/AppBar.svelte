@@ -4,6 +4,7 @@
   import { visorEnabled } from '../../utils/visor'
   import { HorizonsManager, Horizon } from '@horizon/core/src/lib/service/horizon'
   import { createEventDispatcher } from 'svelte'
+  import { tooltip } from '@svelte-plugins/tooltips'
 
   const dispatch = createEventDispatcher()
 
@@ -22,13 +23,23 @@
   function onQuitApp() {
     window.api.quitApp()
   }
+
+  const useTooltip = (text: string) => {
+    return {
+      content: text,
+      action: 'hover',
+      position: 'right',
+      animation: 'fade',
+      delay: 500
+    }
+  }
 </script>
 
 <aside>
   <div>
     <ul>
       <!-- New Horizon -->
-      <li>
+      <li use:tooltip={useTooltip('New Horizon (⌘ + N)')}>
         <button class="tactile_button" on:click={onNewHorizon}>
           <div class="content">
             <div class="icon">
@@ -54,7 +65,7 @@
         </button>
       </li>
       <!-- Visor -->
-      <li>
+      <li use:tooltip={useTooltip('Visor (⌘ + F)')}>
         <button class="tactile_button" on:click={() => visorEnabled.set(!get(visorEnabled))}>
           <div class="content">
             <div class="icon">
@@ -114,7 +125,7 @@
           </div>
         </button>
       </li>
-      <li>
+      <li use:tooltip={useTooltip('Oasis (⌘ + G)')}>
         <button class="tactile_button" on:click={() => dispatch('toggleOasis')}>
           <div class="content">
             <div class="icon">
@@ -199,7 +210,29 @@
           </div>
         </button>
       </li>-->
-      <li>
+      <li use:tooltip={useTooltip('Give Feedback')}>
+        <button class="tactile_button" on:click={() => dispatch('openFeedback')}>
+          <div class="content">
+            <div class="icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#6D6D6C"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
+                  d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z"
+                /><path d="M12 8v3" /><path d="M12 14v.01" /></svg
+              >
+            </div>
+          </div>
+        </button>
+      </li>
+      <li use:tooltip={useTooltip('Fullscreen')}>
         <button class="tactile_button" on:click={() => window.api.toggleFullscreen()}>
           <div class="content">
             <div class="icon">
@@ -331,7 +364,7 @@
         </button>
       </li>-->
       <!-- Power Button -->
-      <li>
+      <li use:tooltip={useTooltip('Shutdown Horizon')}>
         <button class="tactile_button" on:click={onQuitApp}>
           <div class="content">
             <div class="icon">

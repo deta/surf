@@ -111,6 +111,16 @@ export const ipcSenders = {
     window.webContents.send('open-cheat-sheet')
   },
 
+  openFeedbackPage: () => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('open-feedback-page')
+  },
+
   adBlockChanged: (partition: string, state: boolean) => {
     const window = getMainWindow()
     if (!window) {

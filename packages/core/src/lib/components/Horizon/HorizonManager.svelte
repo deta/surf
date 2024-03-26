@@ -35,6 +35,7 @@
   import AppBar from './AppBar.svelte'
   import SplashScreen from '../SplashScreen.svelte'
   import { visorEnabled, visorPinch } from '../../utils/visor'
+  import { FEEDBACK_PAGE_URL } from '../../constants/card'
   import { Telemetry } from '../../service/telemetry'
 
   const log = useLogScope('HorizonManager')
@@ -627,6 +628,10 @@
   // // TODO: (Performance) We shuld only kick it off once the spring is changed probably and stop it after it settled!
   // onMount(frame)
 
+  const openFeedbackCard = () => {
+    openUrlHandler(FEEDBACK_PAGE_URL)
+  }
+
   let unregisterTwoFingers: ReturnType<typeof twoFingers> | null = null
   onMount(async () => {
     unregisterTwoFingers = twoFingers(window as unknown as HTMLElement, {
@@ -668,6 +673,11 @@
       }
     })
 
+    window.api.onOpenFeedbackPage(() => {
+      log.debug('open feedback page')
+      openFeedbackCard()
+    })
+
     window.api.onAdBlockerStateChange((_partition: string, state: boolean) => {
       log.debug('adblocker state changed', state)
       if ($activeHorizon) {
@@ -695,6 +705,7 @@
   horizon={activeHorizon}
   on:createHorizon={() => addHorizon()}
   on:toggleOasis={() => (drawer.isShown() ? drawer.close() : drawer.open())}
+  on:openFeedback={() => openFeedbackCard()}
 />
 
 {#if $visorEnabled}

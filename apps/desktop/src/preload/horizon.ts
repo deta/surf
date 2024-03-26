@@ -150,6 +150,14 @@ const api = {
     }
   },
 
+  onOpenFeedbackPage: (callback) => {
+    try {
+      ipcRenderer.on('open-feedback-page', () => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
   onAdBlockerStateChange: (callback) => {
     ipcRenderer.on('adblocker-state-changed', (_, { partition, state }) => {
       callback(partition, state)

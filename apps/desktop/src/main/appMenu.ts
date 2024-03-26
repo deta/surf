@@ -126,7 +126,10 @@ const template = [
   },
   {
     label: 'Help',
-    submenu: [{ label: 'Open Cheat Sheet', click: () => ipcSenders.openCheatSheet() }]
+    submenu: [
+      { label: 'Open Cheat Sheet', click: () => ipcSenders.openCheatSheet() },
+      { label: 'Give Feedback', click: () => ipcSenders.openFeedbackPage() }
+    ]
   }
 ]
 
