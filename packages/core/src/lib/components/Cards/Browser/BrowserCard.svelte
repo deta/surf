@@ -33,10 +33,11 @@
   import StackItem from '../../Stack/StackItem.svelte'
   import { wait } from '../../../utils/time'
   import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
-  import type { MagicFieldParticipant } from '../../../service/magicField'
+  import type { MagicField, MagicFieldParticipant } from '../../../service/magicField'
   import { focusModeEnabled, exitFocusMode, enterFocusMode } from '../../../utils/focusMode'
   import { getServiceRanking, updateServiceRanking } from '../../../utils/services'
   import { visorEnabled } from '../../../utils/visor'
+  import { MAGICAL_WEB_APPS } from '../../../constants/magicField'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -55,6 +56,7 @@
   let inputEl: HTMLInputElement
   let findInPage: FindInPage | undefined
   let currentCardHistory = writable()
+  let magicField: MagicField | undefined
 
   let initialSrc = $card.data.initialLocation
   $: if ($card.data.historyStackIds) {
@@ -117,6 +119,10 @@
 
   onDestroy(() => {
     unsubTracker.forEach((u) => u())
+
+    if (magicField) {
+      disableMagicField()
+    }
   })
 
   const handleKeyUp = (e: KeyboardEvent) => {
@@ -278,6 +284,8 @@
   $: playback = webview?.playback
   $: isMuted = webview?.isMuted
   $: isBookmarked = !!$card.resourceId
+
+  $: canBeMagical = MAGICAL_WEB_APPS.includes(app?.appId ?? '')
 
   $: if (!editing && $url !== 'about:blank') {
     value = $url ?? ''
@@ -442,6 +450,68 @@
     e.dataTransfer.setData('text/space-source', urlData)
   }
 
+  function disableMagicField() {
+    if (magicField) {
+      log.debug('deactivating magic field')
+      horizon.magicFieldService.removeField(magicField.id)
+      magicField = undefined
+      return
+    }
+  }
+
+  async function handleMagicFieldParticipantConnect(participant: MagicFieldParticipant) {
+    if (!magicField) return
+
+    log.debug('Getting data from participant', participant.id)
+
+    const data = await magicField.requestDataFromParticipant(participant.id, ['text/plain'])
+    log.debug('received data:', data)
+
+    if (!data) return
+
+    const result = await webview?.runAction('update_page_content_in_notion', data.data)
+
+    log.debug('action result', result)
+  }
+
+  function enableMagicField() {
+    log.debug('creating magic field')
+    magicField = horizon.magicFieldService.createField(
+      magicFieldParticipant!.id,
+      ['text/plain'],
+      magicFieldParticipant?.position
+    )
+
+    magicField.onParticipantEnter((participant) => {
+      log.debug('participant entered', participant)
+    })
+
+    magicField.onParticipantLeave((participant) => {
+      log.debug('participant exited', participant)
+    })
+
+    magicField.onParticipantConnect((participant) => {
+      log.debug('participant connected', participant)
+      handleMagicFieldParticipantConnect(participant)
+    })
+
+    magicField.onReceiveData(async (type, data) => {
+      log.debug('receivedData', type, data)
+    })
+
+    log.debug('activating magic field')
+    horizon.magicFieldService.activateField(magicField)
+  }
+
+  function handleMagicFieldClick(e: MouseEvent) {
+    if (magicField) {
+      disableMagicField()
+      return
+    }
+
+    enableMagicField()
+  }
+
   onMount(() => {
     magicFieldParticipant?.onFieldEnter((field) => {
       if (!magicFieldParticipant) return
@@ -454,32 +524,74 @@
     magicFieldParticipant?.onRequestData(async (types: string[], callback) => {
       log.debug('magic field requesting data', types)
 
-      if (types.includes('text/plain')) {
-        log.debug('detecting resource')
-        const detectedResource = await webview?.detectResource()
-        log.debug('bitch', detectedResource)
-        if (!detectedResource) {
-          log.debug('no resource detected')
-          callback(null)
-          return
-        }
+      log.debug('app detected', app)
 
-        log.debug('detectedResource', detectedResource)
-
-        const resourceContent = WebParser.getResourceContent(
-          detectedResource.type,
-          detectedResource.data
-        )
-        if (!resourceContent.html && !resourceContent.plain) {
-          log.debug('no content found in resource')
-          callback(null)
-          return
-        }
-
-        callback({ type: 'text/plain', data: resourceContent.plain ?? resourceContent.html })
-      } else {
+      if (!app || !app.appId) {
+        log.debug('no app detected')
         callback(null)
+        return
       }
+
+      const webService = WebParser.getWebService(app.appId)
+      log.debug('web service', webService)
+
+      const defaultAction = webService?.actions?.find((action) => action.default)
+      if (!defaultAction) {
+        log.debug('no default action found')
+        callback(null)
+        return
+      }
+
+      log.debug('calling default action', defaultAction)
+
+      const detectedResource = await webview?.runAction(defaultAction.id)
+      log.debug('bitch', detectedResource)
+      if (!detectedResource) {
+        log.debug('no resource detected')
+        callback(null)
+        return
+      }
+
+      log.debug('detectedResource', detectedResource)
+
+      const resourceContent = WebParser.getResourceContent(
+        detectedResource.type,
+        detectedResource.data
+      )
+      if (!resourceContent.html && !resourceContent.plain) {
+        log.debug('no content found in resource')
+        callback(null)
+        return
+      }
+
+      callback({ type: 'text/plain', data: resourceContent.plain ?? resourceContent.html })
+
+      // if (types.includes('text/plain')) {
+      //   log.debug('detecting resource')
+      //   const detectedResource = await webview?.detectResource()
+      //   log.debug('bitch', detectedResource)
+      //   if (!detectedResource) {
+      //     log.debug('no resource detected')
+      //     callback(null)
+      //     return
+      //   }
+
+      //   log.debug('detectedResource', detectedResource)
+
+      //   const resourceContent = WebParser.getResourceContent(
+      //     detectedResource.type,
+      //     detectedResource.data
+      //   )
+      //   if (!resourceContent.html && !resourceContent.plain) {
+      //     log.debug('no content found in resource')
+      //     callback(null)
+      //     return
+      //   }
+
+      //   callback({ type: 'text/plain', data: resourceContent.plain ?? resourceContent.html })
+      // } else {
+      //   callback(null)
+      // }
     })
 
     // on mount we need to check if we are already in a field
@@ -627,6 +739,23 @@
           </div>
         {/if}
       </div>
+
+      {#if canBeMagical}
+        <div>
+          <button
+            class="nav-button icon-button"
+            on:click={handleMagicFieldClick}
+            in:fly={{ y: 10, duration: 160 }}
+            out:fly={{ y: 10, duration: 160 }}
+          >
+            {#if magicField}
+              <Icon name="sparkles" size="15px" color="red" />
+            {:else}
+              <Icon name="sparkles" size="15px" />
+            {/if}
+          </button>
+        </div>
+      {/if}
 
       <div>
         <button

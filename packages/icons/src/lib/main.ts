@@ -40,6 +40,7 @@ import Rectangle from './Icons/Rectangle.svelte'
 import Spinner from './Icons/Spinner.svelte'
 import Play from './Icons/Play.svelte'
 import Check from './Icons/Check.svelte'
+import Sparkles from './Icons/Sparkles.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -84,7 +85,8 @@ export const icons = {
   'sidebar.left': SidebarLeft,
   'sidebar.right': SidebarRight,
   play: Play,
-  check: Check
+  check: Check,
+  sparkles: Sparkles
 }
 
 export type Icons = keyof typeof icons
@@ -129,5 +131,6 @@ export {
   SquareRotated,
   Rectangle,
   Play,
-  Check
+  Check,
+  Sparkles
 }

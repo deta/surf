@@ -11,3 +11,5 @@ export const TRANSCRIBER_MIME_TYPES = [
   'video/webm',
   'audio/webm'
 ]
+
+export const MAGICAL_WEB_APPS = ['notion']

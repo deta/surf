@@ -1,11 +1,31 @@
 import { ResourceData } from '@horizon/types'
 
+export type WebServiceActionInput = {
+  type: string
+  description: string
+}
+
+export type WebServiceActionOutput = {
+  type: string
+  description: string
+}
+
+export type WebServiceAction = {
+  id: string
+  name: string
+  default: boolean // Wether this action is the default action for the service which gets called when saving it as a resource
+  input: WebServiceActionInput | null
+  output: WebServiceActionOutput | null
+}
+
 export type WebService = {
   id: string
   name: string
   matchHostname: RegExp
   url?: string
   supportedResources: string[]
+
+  actions?: WebServiceAction[]
 
   // Browser card shortcuts
   showBrowserAction?: boolean // true -> shows in browser card

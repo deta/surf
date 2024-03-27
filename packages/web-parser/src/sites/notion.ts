@@ -1,6 +1,10 @@
 import { ResourceTypes, type ResourceDataDocument } from '@horizon/types'
 import type { DetectedWebApp, WebService } from '../types'
 import { APIExtractor, WebAppExtractor } from '../extractors'
+import { SERVICES } from '../services'
+
+import { ipcRenderer } from 'electron'
+import { wait } from '../utils'
 
 export const NotionRegexPatterns = {
   page: /^\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/
@@ -46,6 +50,10 @@ export class NotionParser extends WebAppExtractor {
     }
   }
 
+  getActions() {
+    return SERVICES.find((service) => service.id === 'notion')?.actions ?? []
+  }
+
   async extractResourceFromDocument(document: Document) {
     const type = this.detectResourceType()
     if (type === ResourceTypes.DOCUMENT_NOTION) {
@@ -61,6 +69,56 @@ export class NotionParser extends WebAppExtractor {
     } else {
       console.log('Unknown resource type')
       return Promise.resolve(null)
+    }
+  }
+
+  async runAction(document: Document, id: string, input?: any) {
+    const action = this.getActions().find((action) => action.id === id)
+    if (!action) return null
+
+    console.log('Running action', action)
+
+    if (action.id === 'get_page_content_from_notion') {
+      const page = await this.getPage(document)
+      if (!page) return null
+
+      console.log('normalized page', page)
+
+      return {
+        data: page,
+        type: action.output?.type ?? null
+      }
+    } else if (action.id === 'update_page_content_in_notion') {
+      console.log('updating page with content', input)
+
+      const contentElem = document.querySelector('.notion-page-content')
+      if (!contentElem) {
+        console.error('No content element found')
+        return null
+      }
+
+      // @ts-ignore
+      contentElem.focus()
+
+      // TODO: position cursor at the end of the content
+
+      await wait(500)
+
+      // TODO: find better way to do this. This is coming from the webview.ts preload script
+      // @ts-expect-error
+      window.insertText(input)
+
+      // const page = await this.updatePage(document, input)
+      // if (!page) return null
+
+      // console.log('normalized page', page)
+
+      // return {
+      //   data: page,
+      //   type: action.output?.type ?? null
+      // }
+
+      return null
     }
   }
 
@@ -134,6 +192,18 @@ export class NotionParser extends WebAppExtractor {
     } catch (e) {
       console.error('Error getting post data', e)
       return null
+    }
+  }
+
+  private async updatePage(document: Document, newContent: string) {
+    const page = await this.getPage(document)
+    if (!page) return null
+
+    console.log('updating page with content', newContent, page)
+
+    return {
+      data: page,
+      type: ResourceTypes.DOCUMENT_NOTION
     }
   }
 }

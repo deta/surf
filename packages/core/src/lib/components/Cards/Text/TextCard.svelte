@@ -2,7 +2,7 @@
   import { writable, type Writable, get } from 'svelte/store'
   import { createEventDispatcher, getContext, onDestroy, onMount, tick } from 'svelte'
 
-  import { Editor } from '@horizon/editor'
+  import { Editor, getEditorContentText } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
 
   import type { CardEvents, Card } from '../../../types/index'
@@ -44,7 +44,7 @@
     log.debug('requestData', types)
 
     if (types.includes('text/plain')) {
-      callback({ type: 'text/plain', data: $content })
+      callback({ type: 'text/plain', data: getEditorContentText($content) })
     } else {
       callback(null)
     }

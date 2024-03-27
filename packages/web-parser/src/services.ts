@@ -24,7 +24,29 @@ export const SERVICES: WebService[] = [
     supportedResources: [ResourceTypes.DOCUMENT_NOTION],
     showBrowserAction: true,
     browserActionUrl: 'https://notion.new',
-    browserActionTitle: 'New Page'
+    browserActionTitle: 'New Page',
+    actions: [
+      {
+        id: 'get_page_content_from_notion',
+        name: 'Get Page',
+        default: true,
+        input: null,
+        output: {
+          type: ResourceTypes.DOCUMENT_NOTION,
+          description: 'the page content'
+        }
+      },
+      {
+        id: 'update_page_content_in_notion',
+        name: 'Update Page',
+        default: false,
+        input: {
+          type: 'text/plain',
+          description: 'the page content to insert into the page'
+        },
+        output: null
+      }
+    ]
   },
   {
     id: 'slack',
@@ -156,6 +178,40 @@ export const SERVICES: WebService[] = [
     showBrowserAction: true,
     browserActionUrl: 'https://powerpoint.new',
     browserActionTitle: 'New Slides'
+  },
+  {
+    id: 'typeform',
+    name: 'Typeform',
+    matchHostname: /typeform.com/,
+    supportedResources: [ResourceTypes.TABLE_TYPEFORM, ResourceTypes.TABLE_COLUMN_TYPEFORM],
+    showBrowserAction: false,
+    browserActionUrl: undefined,
+    browserActionTitle: undefined,
+    actions: [
+      {
+        id: 'get_table_from_typeform',
+        name: 'Get Table',
+        default: true,
+        input: null,
+        output: {
+          type: ResourceTypes.TABLE_TYPEFORM,
+          description: 'the table content as CSV'
+        }
+      },
+      {
+        id: 'get_table_column_from_typeform',
+        name: 'Get Table Column',
+        default: false,
+        input: {
+          type: 'text/plain',
+          description: 'the name of the column to extract from the table'
+        },
+        output: {
+          type: ResourceTypes.TABLE_COLUMN_TYPEFORM,
+          description: 'the table column'
+        }
+      }
+    ]
   },
 
   // Design

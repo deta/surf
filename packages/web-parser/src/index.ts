@@ -16,7 +16,8 @@ import {
   ArticleParser,
   LinkParser,
   SlackParser,
-  YoutubeParser
+  YoutubeParser,
+  TypeformParser
 } from './sites/index'
 import { DetectedResource, ResourceContent } from './types'
 import { MetadataExtractor } from './extractors/metadata'
@@ -29,7 +30,8 @@ const ParserModules = {
   twitter: TwitterParser,
   notion: NotionParser,
   slack: SlackParser,
-  youtube: YoutubeParser
+  youtube: YoutubeParser,
+  typeform: TypeformParser
 }
 
 const wait = (ms: number) => {
@@ -110,6 +112,10 @@ export class WebParser {
     return metadataParser.extractRemote()
   }
 
+  getWebService(id: string) {
+    return WebParser.getWebService(id)
+  }
+
   async extractResourceUsingWebview(document: Document) {
     const webviewExtractor = this.createWebviewExtractor(document)
 
@@ -129,6 +135,10 @@ export class WebParser {
     if (!appParser) return null
 
     return appParser
+  }
+
+  static getWebService(id: string) {
+    return SUPPORTED_APPS.find((app) => app.id === id) ?? null
   }
 
   static getResourceContent(

@@ -78,6 +78,14 @@ export enum ResourceTypes {
   DOCUMENT_NOTION = 'application/vnd.space.document.notion',
   DOCUMENT_GOOGLE_DOC = 'application/vnd.space.document.google-doc',
 
+  TABLE = 'application/vnd.space.table',
+  TABLE_GOOGLE_SHEET = 'application/vnd.space.table.google-sheet',
+  TABLE_TYPEFORM = 'application/vnd.space.table.typeform',
+
+  TABLE_COLUMN = 'application/vnd.space.table-column',
+  TABLE_COLUMN_GOOGLE_SHEET = 'application/vnd.space.table-column.google-sheet',
+  TABLE_COLUMN_TYPEFORM = 'application/vnd.space.table-column.typeform',
+
   ARTICLE = 'application/vnd.space.article',
   LINK = 'application/vnd.space.link',
 
@@ -101,7 +109,22 @@ export interface ResourceDataTypes {
   [ResourceTypes.LOCATION]: ResourceDataLocation
   [ResourceTypes.COLOR]: ResourceDataColor
   [ResourceTypes.DOCUMENT_SPACE_NOTE]: string
+  [ResourceTypes.TABLE]: ResourceDataTable
+  [ResourceTypes.TABLE_COLUMN]: ResourceDataTableColumn
   // todo data for drawing and flowchart-fun
+}
+
+export interface ResourceDataTableColumn {
+  table_id: string
+  name: string
+  rows: string[]
+}
+
+export interface ResourceDataTable {
+  table_id: string
+  name: string
+  columns: string[] // column names
+  rows: string[][] // rows of data
 }
 
 export interface ResourceDataPost {

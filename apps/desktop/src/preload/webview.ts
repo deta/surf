@@ -1,5 +1,10 @@
 import { ipcRenderer } from 'electron'
-import { WebParser, type WebAppExtractor, DetectedResource } from '@horizon/web-parser'
+import {
+  WebParser,
+  type WebAppExtractor,
+  DetectedResource,
+  WebAppExtractorActions
+} from '@horizon/web-parser'
 
 let mouseDownX = 0
 let previouslySelectedText: string | undefined = ''
@@ -60,6 +65,18 @@ function startResourcePicker() {
       console.warn('App does not need/support resource picking')
       sendPageEvent('detected-resource', { resource: null })
     }
+  }
+}
+
+function runServiceAction(id: string, input?: any) {
+  const appParser = runAppDetection() as WebAppExtractorActions | undefined
+  if (appParser) {
+    console.log('Running action', id, 'with input', input)
+    appParser.runAction(document, id, input).then((resource) => {
+      console.log('Resource', resource)
+      console.log('Sending action-output event')
+      sendPageEvent('action-output', { id, output: resource })
+    })
   }
 }
 
@@ -255,5 +272,12 @@ ipcRenderer.on('webview-event', (_event, data) => {
     runResourceDetection()
   } else if (data.type === 'get-app') {
     runAppDetection()
+  } else if (data.type === 'run-action') {
+    runServiceAction(data.id, data.input)
   }
 })
+
+// @ts-expect-error
+window.insertText = (text: string) => {
+  sendPageEvent('insert-text', text)
+}

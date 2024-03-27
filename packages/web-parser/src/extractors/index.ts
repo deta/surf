@@ -1,4 +1,4 @@
-import type { DetectedResource, DetectedWebApp, WebService } from '../types'
+import type { DetectedResource, DetectedWebApp, WebService, WebServiceAction } from '../types'
 
 export abstract class WebAppExtractor {
   app: WebService | null
@@ -14,6 +14,12 @@ export abstract class WebAppExtractor {
   abstract detectResourceType(): string | null
 
   abstract extractResourceFromDocument(document: Document): Promise<DetectedResource | null>
+}
+
+export abstract class WebAppExtractorActions extends WebAppExtractor {
+  abstract getActions(): WebServiceAction[]
+
+  abstract runAction(document: Document, id: string, input?: any): Promise<DetectedResource | null>
 }
 
 export * from './api'

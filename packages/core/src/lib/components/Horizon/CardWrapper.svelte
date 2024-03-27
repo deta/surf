@@ -58,6 +58,9 @@
   const activeField = magicFieldParticipant.inField
   const connectedField = magicFieldParticipant.connectedField
   const fieldParticipation = magicFieldParticipant.fieldParticipation
+  const fields = horizon.magicFieldService.fields
+
+  $: cardIsField = $fields.findIndex((f) => f.id === $positionable.id) !== -1
 
   $: selfIsField = $activeField?.id === magicFieldParticipant.id
   const magicFieldColorIdx = derived(
@@ -532,7 +535,9 @@
 <Positionable
   {positionable}
   data-id={$positionable.id}
-  class="card magic-{$magicFieldColorIdx} {$positionable.id} {$positionable.type} {$fieldParticipation?.supported
+  class="card {cardIsField
+    ? 'magic-card'
+    : ''} magic-{$magicFieldColorIdx} {$positionable.id} {$positionable.type} {$fieldParticipation?.supported
     ? 'magic-field-active'
     : ''} {!!$connectedField || (selfIsField && $activeField)
     ? 'magic-field-connected'

@@ -17,6 +17,7 @@
     selectionWebview: { text: string }
     detectedApp: DetectedWebApp
     detectedResource: DetectedResource
+    actionOutput: { id: string; output: DetectedResource }
   }
 </script>
 
@@ -166,6 +167,9 @@
           break
         case 'detected-app':
           dispatch('detectedApp', eventData)
+          break
+        case 'insert-text':
+          webview.insertText(eventData)
           break
         // case 'detected-resource':
         //   dispatch('detectedResource', eventData?.resource)
@@ -378,6 +382,40 @@
 
       webview.addEventListener('ipc-message', handleEvent)
       webview.send('webview-event', { type: 'get-resource' })
+    })
+  }
+
+  export function runAction(id: string, input?: any, timeoutNum = 10000) {
+    log.debug('Running action', id, input)
+    return new Promise<DetectedResource | null>((resolve) => {
+      let timeout: any
+
+      const handleEvent = (event: Electron.IpcMessageEvent) => {
+        if (event.channel !== 'webview-page-event') return
+
+        const eventType = event.args[0] as string
+        const eventData = event.args[1]
+
+        if (eventType === 'action-output' && eventData.id === id) {
+          event.preventDefault()
+          event.stopPropagation()
+
+          if (timeout) {
+            clearTimeout(timeout)
+          }
+
+          webview.removeEventListener('ipc-message', handleEvent)
+          resolve(eventData.output)
+        }
+      }
+
+      timeout = setTimeout(() => {
+        webview.removeEventListener('ipc-message', handleEvent)
+        resolve(null)
+      }, timeoutNum)
+
+      webview.addEventListener('ipc-message', handleEvent)
+      webview.send('webview-event', { type: 'run-action', id, input })
     })
   }
 
