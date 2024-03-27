@@ -45,8 +45,6 @@ jobs:
           yarn workspace @horizon/cmdk-sv build
           echo "installing rest of the project's deps"
           yarn install --frozen-lockfile
-      - name: Set version as env variable
-        run: echo "APP_VERSION=${{ needs.prepare.outputs.version }}" >> $GITHUB_ENV
 
       - name: Build for ${{ matrix.architecture }}
         run: |
@@ -69,7 +67,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           R_VITE_TELEMETRY_API_KEY: ${{ secrets.TELEMETRY_API_KEY_EA }}
-          R_VITE_FEEDBACK_PAGE_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
+          R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
           P_VITE_OPEN_AI_API_ENDPOINT: ${{ secrets.OPEN_AI_API_ENDPOINT }}
           P_VITE_VISION_API_ENDPOINT: ${{ secrets.VISION_API_ENDPOINT }}
           P_VITE_API_BASE: ${{ secrets.API_BASE }}
@@ -79,6 +77,7 @@ jobs:
           APP_VERSION: ${{ inputs.app_version }}
           M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
           R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          R_VITE_CHEATSHEET_URL: ${{ secrets.CHEATSHEET_URL_BASE }}/${{ inputs.APP_VERSION }}
           # preset
           RELEASE_CHANNEL: new-dawn
           PRODUCT_NAME: 'Horizon Dawn'
@@ -104,8 +103,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           draft: false
-          prerelease: ${{ inputs.pre_release }}
-          tag_name: v${{ env.APP_VERSION }}
+          prerelease: true
+          tag_name: ${{ inputs.APP_VERSION }}
           files: |
             build/**/*.dmg
             build/**/*.blockmap
