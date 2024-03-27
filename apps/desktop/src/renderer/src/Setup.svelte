@@ -184,10 +184,16 @@
             <h2>AI Features</h2>
           </div>
 
+          <p>To enable Horizon's AI features we process the following on our servers:</p>
+          <ul>
+            <li>Images you save</li>
+            <li>Text content you summarize</li>
+            <li>Audio/Video content you transcribe</li>
+          </ul>
           <p>
-            To enable Horizon's AI features we process images you save and text you summarize on our
-            servers. This data is not stored. Read our <a href={PRIVACY_URL} target="_blank"
-              >Privacy Policy</a
+            This data is only processed and not stored on our servers. Read our <a
+              href={PRIVACY_URL}
+              target="_blank">Privacy Policy</a
             > for more info.
           </p>
 
