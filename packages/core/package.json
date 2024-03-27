@@ -18,6 +18,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
+    "@horizon/cmdk-sv": "*",
     "@horizon/drawer": "*",
     "@horizon/editor": "*",
     "@horizon/eslint-config": "*",
@@ -26,7 +27,6 @@
     "@horizon/types": "*",
     "@horizon/typescript-config": "*",
     "@horizon/web-parser": "*",
-    "@horizon/cmdk-sv": "*",
     "@skilitics-public/two-fingers": "^2.1.0",
     "@svelte-plugins/tooltips": "^3.0.0",
     "@sveltejs/vite-plugin-svelte": "^3.0.1",
