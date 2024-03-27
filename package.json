@@ -9,6 +9,7 @@
     "build:horizon": "yarn workspace horizon build",
     "build:horizon:mwl": "yarn turbo run horizon#build:mwl",
     "build:horizon:mac": "yarn turbo run horizon#build:mac",
+    "build:horizon:mac:x64": "yarn turbo run horizon#build:mac:x64",
     "build:horizon:mac:arm": "yarn turbo run horizon#build:mac:arm",
     "build:horizon:win": "yarn turbo run horizon#build:win",
     "build:horizon:linux": "yarn turbo run horizon#build:linux",
