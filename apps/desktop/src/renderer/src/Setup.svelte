@@ -101,10 +101,9 @@
       <h1>One More Thing…</h1>
 
       <div class="details">
-        <p class="info">
+        <p class="info text-md">
           We're in the early stages of developing Horizon and to make the app better for you and
-          others and to understand how it is used, we need to keep track of some of your activities
-          within the app.
+          others we are keeping track of some of your activities within the app.
         </p>
       </div>
 
@@ -184,18 +183,17 @@
             <h2>AI Features</h2>
           </div>
 
-          <p>To enable Horizon's AI features we process the following on our servers:</p>
-          <ul>
-            <li>Images you save</li>
-            <li>Text content you summarize</li>
-            <li>Audio/Video content you transcribe</li>
-          </ul>
-          <p>
-            This data is only processed and not stored on our servers. Read our <a
-              href={PRIVACY_URL}
-              target="_blank">Privacy Policy</a
-            > for more info.
-          </p>
+          <div class="details text-md">
+            <p>We process the following data on our servers:</p>
+            <ul>
+              <li>Images you save</li>
+              <li>Text content you summarize</li>
+              <li>Audio/Video content you transcribe</li>
+            </ul>
+            <p>
+              Read our <a href={PRIVACY_URL} target="_blank">Privacy Policy</a> for more info.
+            </p>
+          </div>
 
           <!-- <ul>
             <li>The notes you write</li>
@@ -207,7 +205,7 @@
       </div>
 
       <div class="details">
-        <p class="info">
+        <p class="info text-md">
           If you have any questions or concerns, please contact us at <a
             href="mailto:team@deta.space">team@deta.space</a
           >.
