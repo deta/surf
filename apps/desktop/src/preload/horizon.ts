@@ -13,12 +13,14 @@ import fetch from 'cross-fetch'
 import OpenAI, { toFile } from 'openai'
 
 import { createAPI } from '@horizon/api'
+import { actionsToRunnableTools } from './actions'
 import { ElectronAppInfo } from '@horizon/types'
 
-import type { UserConfig } from '@horizon/types'
+import type { UserConfig, HorizonAction } from '@horizon/types'
 
 import { getConfig } from '../main/config'
 
+const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
@@ -31,16 +33,19 @@ const webviewNewWindowHandlers = {}
 const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
 
-const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT
+//const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT
+const OPENAI_API_KEY = import.meta.env.P_VITE_OPEN_AI_API_KEY || ''
 const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
 
 const userConfig = getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
 
 let openai: OpenAI | null = null
-if (userConfig.api_key) {
+//if (userConfig.api_key) {
+if (OPENAI_API_KEY) {
   openai = new OpenAI({
-    baseURL: OPENAI_API_ENDPOINT,
-    apiKey: userConfig.api_key,
+    //baseURL: OPENAI_API_ENDPOINT,
+    //apiKey: userConfig.api_key,
+    apiKey: OPENAI_API_KEY,
     dangerouslyAllowBrowser: true
   })
 }
@@ -132,6 +137,30 @@ const api = {
     })
 
     return chatCompletion.choices[0].message.content
+  },
+
+  aiFunctionCalls: async (userPrompt: string, actions: HorizonAction[]) => {
+    if (!openai) {
+      return null
+    }
+    const runner = openai.beta.chat.completions
+      .runTools({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt
+          }
+        ],
+        tools: actionsToRunnableTools(actions)
+      })
+      .on('message', (message) => {
+        console.log(message)
+      })
+
+    const finalMessage = await runner.finalContent()
+    console.log('Final message:', finalMessage)
+    return null
   },
 
   onOpenURL: (callback) => {
@@ -371,7 +400,7 @@ const sffs = (() => {
 
   function init(root_path: string, vision_api_key: string, vision_api_endpoint: string) {
     let fn = {}
-    handle = sffs.js__backend_tunnel_init(root_path, vision_api_key, vision_api_endpoint)
+    handle = sffs.js__backend_tunnel_init(root_path, APP_PATH, vision_api_key, vision_api_endpoint)
 
     Object.keys(sffs).forEach((key) => {
       if (

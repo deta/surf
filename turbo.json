@@ -6,11 +6,19 @@
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
     },
+    "@horizon/backend#dev": {
+      "dependsOn": [],
+      "outputs": [".dist/**", "index.node"]
+    },
     "horizon#build:mwl": {
       "dependsOn": ["^build"],
       "outputs": [".dist/**"]
     },
     "horizon#build:mac": {
+      "dependsOn": ["^build"],
+      "outputs": [".dist/**"]
+    },
+    "horizon#build:mac:x64": {
       "dependsOn": ["^build"],
       "outputs": [".dist/**"]
     },
@@ -42,10 +50,10 @@
       "dependsOn": ["^lint"]
     },
     "horizon#dev": {
-      "dependsOn": ["@horizon/tela#build", "@horizon/backend#build"]
+      "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev"]
     },
     "dev": {
-      "dependsOn": ["@horizon/tela#build", "@horizon/backend#build"],
+      "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev"],
       "cache": false,
       "persistent": true
     }
