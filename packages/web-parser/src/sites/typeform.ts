@@ -113,13 +113,35 @@ export class TypeformParser extends WebAppExtractorActions {
         return null
       }
 
-      const form = document.querySelector('form')
+      const responseTable = document.querySelector('#table-inner-wrapper table')
+      if (!responseTable) {
+        console.log('No table found')
+        return null
+      }
+
+      // We slice to -2 as the last row is tags, tags for me only includes nonsense -> test if we need this for demos
+      const tColNames = [...responseTable.querySelectorAll('thead th').values()]
+        .slice(1, -2)
+        .map((e) => e.textContent)
+      // We also slice start from 1 as first col is from html table checkbox component
+      const tRows = [...responseTable.querySelectorAll('tbody tr').values()].map((e) =>
+        [...e.querySelectorAll('td').values()].slice(1).map((e) => e.innerText)
+      )
+
+      // let csv = `${tColNames.map(JSON.stringify).join(", ")}
+      // ${tRows.map(e => e.map(r => JSON.stringify(r)).join(", ")).join("\n")}`
+      console.log('Table data', tColNames, tRows)
+
+      const formNameInput = document.querySelector('[data-qa="editable-form-title"]') as
+        | HTMLInputElement
+        | undefined
+      const formName = formNameInput?.value ?? 'Untitled Form'
 
       return {
         table_id: formId,
-        name: form?.getAttribute('name') ?? '',
-        columns: [],
-        rows: []
+        name: formName,
+        columns: tColNames,
+        rows: tRows
       } as ResourceDataTable
     } catch (e) {
       console.error('Error getting table data', e)
