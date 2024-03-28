@@ -44,7 +44,7 @@
   import { visorEnabled } from '../../../utils/visor'
   import { MAGICAL_WEB_APPS } from '../../../constants/magicField'
   import { useActionsService } from '../../../service/actions'
-  import type { HorizonAction } from '@horizon/types'
+  import type { HorizonAction, ResourceDataTable } from '@horizon/types'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -501,6 +501,10 @@
     log.debug('running action', action, args)
     const output = await webview?.runAction(action.id, args) // TODO parse args
     log.debug('action output', output)
+
+    if (output.type.startsWith(ResourceTypes.TABLE)) {
+      return JSON.stringify(output.data as ResourceDataTable)
+    }
 
     // TODO: parse output
     return output?.data
