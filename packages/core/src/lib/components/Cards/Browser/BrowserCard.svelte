@@ -499,15 +499,15 @@
 
   const runAction = async (action: WebServiceAction, args?: any): Promise<any> => {
     log.debug('running action', action, args)
-    const output = await webview?.runAction(action.id, args) // TODO parse args
-    log.debug('action output', output)
+    const detectedResource = await webview!.runAction(action.id, args) // TODO parse args
+    log.debug('action output', detectedResource)
 
-    if (output.type.startsWith(ResourceTypes.TABLE)) {
-      return JSON.stringify(output.data as ResourceDataTable)
-    }
+    if (!detectedResource) return 'nothing found'
 
-    // TODO: parse output
-    return output?.data
+    const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+    log.debug('content', content)
+
+    return content.plain
   }
 
   async function handleMagicFieldParticipantConnect(participant: MagicFieldParticipant) {
@@ -605,10 +605,8 @@
 
       log.debug('detectedResource', detectedResource)
 
-      const resourceContent = WebParser.getResourceContent(
-        detectedResource.type,
-        detectedResource.data
-      )
+      const resourceContent =
+        WebParser.getResourc ^ eContent(detectedResource.type, detectedResource.data)
       if (!resourceContent.html && !resourceContent.plain) {
         log.debug('no content found in resource')
         callback(null)

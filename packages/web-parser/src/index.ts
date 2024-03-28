@@ -5,6 +5,7 @@ import {
   ResourceDataDocument,
   ResourceDataLink,
   ResourceDataPost,
+  ResourceDataTable,
   ResourceTypes
 } from '@horizon/types'
 export { SERVICES } from './services'
@@ -183,6 +184,36 @@ export class WebParser {
       return {
         html: data.content_html,
         plain: data.content_plain
+      }
+    } else if (type.startsWith(ResourceTypes.TABLE)) {
+      const data = resourceData as ResourceDataTable
+
+      const html = `
+      <table>
+        <thead>
+          <tr>
+            ${data.columns.map((col) => `<th>${col}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${data.rows
+            .map(
+              (row) => `
+          <tr>
+            ${row.map((cell) => `<td>${cell}</td>`).join('')}
+          </tr>
+          `
+            )
+            .join('')}
+        </tbody>
+      </table>
+      `
+
+      const csv = `${data.columns.join(',')}\n${data.rows.map((row) => row.join(',')).join('\n')}`
+
+      return {
+        html: html,
+        plain: csv
       }
     } else if (type === ResourceTypes.LINK) {
       const data = resourceData as ResourceDataLink
