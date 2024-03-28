@@ -1,6 +1,6 @@
 import { ResourceTypes, ResourceDataTable, ResourceDataTableColumn } from '@horizon/types'
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
-import { APIExtractor, WebAppExtractor, WebAppExtractorActions } from '../extractors'
+import { WebAppExtractorActions } from '../extractors'
 import { SERVICES } from '../services'
 
 export const TypeformRegexPatterns = {

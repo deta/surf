@@ -3,7 +3,6 @@ import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../type
 import { APIExtractor, WebAppExtractor } from '../extractors'
 import { SERVICES } from '../services'
 
-import { ipcRenderer } from 'electron'
 import { wait } from '../utils'
 
 export const NotionRegexPatterns = {
@@ -123,6 +122,8 @@ export class NotionParser extends WebAppExtractor {
         data: 'Successfully updated the notion page',
         type: 'text/plain'
       }
+    } else {
+      return null
     }
   }
 
@@ -199,17 +200,17 @@ export class NotionParser extends WebAppExtractor {
     }
   }
 
-  private async updatePage(document: Document, newContent: string) {
-    const page = await this.getPage(document)
-    if (!page) return null
+  // private async updatePage(document: Document, newContent: string) {
+  //   const page = await this.getPage(document)
+  //   if (!page) return null
 
-    console.log('updating page with content', newContent, page)
+  //   console.log('updating page with content', newContent, page)
 
-    return {
-      data: page,
-      type: ResourceTypes.DOCUMENT_NOTION
-    }
-  }
+  //   return {
+  //     data: page,
+  //     type: ResourceTypes.DOCUMENT_NOTION
+  //   }
+  // }
 }
 
 export default NotionParser

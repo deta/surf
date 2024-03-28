@@ -1,6 +1,6 @@
-import { ResourceTypes, ResourceDataTable, ResourceDataTableColumn } from '@horizon/types'
+import { ResourceTypes, ResourceDataTable } from '@horizon/types'
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
-import { APIExtractor, WebAppExtractor, WebAppExtractorActions } from '../extractors'
+import { WebAppExtractorActions } from '../extractors'
 import { SERVICES } from '../services'
 
 export const GoogleSheetsRegexPatterns = {
@@ -36,15 +36,15 @@ export class GoogleSheetsParser extends WebAppExtractorActions {
     return match[1]
   }
 
-  private getGID() {
-    // FIX: Not matching gid!?? y??
-    const regex = /\/spreadsheets\/d\/[^\/]+\/edit#gid=([^\/\s]+)/
-    const pathname = this.url.pathname + this.url.hash
-    const match = pathname.match(regex)
-    if (!match) return null
+  // private getGID() {
+  //   // FIX: Not matching gid!?? y??
+  //   const regex = /\/spreadsheets\/d\/[^\/]+\/edit#gid=([^\/\s]+)/
+  //   const pathname = this.url.pathname + this.url.hash
+  //   const match = pathname.match(regex)
+  //   if (!match) return null
 
-    return match[1]
-  }
+  //   return match[1]
+  // }
 
   getInfo(): DetectedWebApp {
     const resourceType = this.detectResourceType()
@@ -114,13 +114,14 @@ export class GoogleSheetsParser extends WebAppExtractorActions {
       }
     } else if (action.id === 'set_table_in_googlesheet') {
       // TODO: IMPL
+      return null
     } else {
       console.log('Unknown action')
       return null
     }
   }
 
-  private async getTable(document: Document) {
+  private async getTable(_document: Document) {
     try {
       //window.sheetsApiLastReqID = window.sheetsApiLastReqID || 200; // Start big just in case
       const sheetId = this.getSheetID()
@@ -158,28 +159,28 @@ export class GoogleSheetsParser extends WebAppExtractorActions {
     }
   }
 
-  private async getTableColumn(document: Document, columnName: string) {
+  private async getTableColumn(_document: Document, _columnName: string) {
     return null
-    try {
-      const table = await this.getTable(document)
-      if (!table) {
-        console.log('No table found')
-        return null
-      }
+    //   try {
+    //     const table = await this.getTable(document)
+    //     if (!table) {
+    //       console.log('No table found')
+    //       return null
+    //     }
 
-      const colIdx = table.columns.indexOf(columnName)
-      const rows = table.rows.map((row) => row[colIdx])
+    //     const colIdx = table.columns.indexOf(columnName)
+    //     const rows = table.rows.map((row) => row[colIdx])
 
-      return {
-        table_id: table.table_id,
-        table_name: table.name,
-        name: columnName,
-        rows
-      } as ResourceDataTableColumn
-    } catch (e) {
-      console.error('Error getting table data', e)
-      return null
-    }
+    //     return {
+    //       table_id: table.table_id,
+    //       table_name: table.name,
+    //       name: columnName,
+    //       rows
+    //     } as ResourceDataTableColumn
+    //   } catch (e) {
+    //     console.error('Error getting table data', e)
+    //     return null
+    //   }
   }
 }
 
