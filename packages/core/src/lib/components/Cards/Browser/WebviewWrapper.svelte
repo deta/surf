@@ -173,6 +173,7 @@
           dispatch('detectedApp', eventData)
           break
         case 'insert-text':
+          log.debug('Inserting text into webview', eventData)
           webview.insertText(eventData)
           break
         // case 'detected-resource':

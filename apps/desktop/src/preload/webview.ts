@@ -280,5 +280,6 @@ ipcRenderer.on('webview-event', (_event, data) => {
 
 // @ts-expect-error
 window.insertText = (text: string) => {
+  console.log('Inserting text', text)
   sendPageEvent('insert-text', text)
 }

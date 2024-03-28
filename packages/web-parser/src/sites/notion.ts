@@ -105,8 +105,9 @@ export class NotionParser extends WebAppExtractor {
       await wait(500)
 
       // TODO: find better way to do this. This is coming from the webview.ts preload script
+      console.log('inserting text using window function', content)
       // @ts-expect-error
-      window.insertText(content)
+      window.insertText(content.replace(/(?:\r\n|\r|\n)/g, ' '))
 
       // const page = await this.updatePage(document, input)
       // if (!page) return null

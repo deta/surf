@@ -1275,6 +1275,37 @@
       }
     })
 
+    actionsService.registerAction({
+      handle: async (args) => {
+        await horizon.addCardText(
+          args.text,
+          { x: $viewOffset.x, y: 200, width: 500, height: 400 },
+          { name: 'New Text Card' },
+          [],
+          {
+            foreground: true,
+            trigger: 'draw'
+          }
+        )
+
+        return 'Text saved to new card!'
+      },
+      id: 'save_text',
+      name: 'Save Text',
+      description: 'Saves Text to a new card',
+      type: 'system',
+      inputs: {
+        text: {
+          type: 'string',
+          description: 'text to save'
+        }
+      },
+      output: {
+        type: 'string',
+        description: 'summarized text'
+      }
+    })
+
     requestNewPreviewIntervalId = setInterval(updatePreview, REQUEST_NEW_PREVIEW_INTERVAL)
   })
 
