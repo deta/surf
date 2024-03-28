@@ -6,6 +6,7 @@ import {
   ResourceDataLink,
   ResourceDataPost,
   ResourceDataTable,
+  ResourceDataTableColumn,
   ResourceTypes
 } from '@horizon/types'
 export { SERVICES } from './services'
@@ -187,6 +188,16 @@ export class WebParser {
         html: data.content_html,
         plain: data.content_plain
       }
+    } else if (type.startsWith(ResourceTypes.TABLE_COLUMN)) {
+      const data = resourceData as ResourceDataTableColumn
+
+      const html = data.rows.join('\n') // TODO: turn into html table
+      const csv = data.rows.join('\n')
+
+      return {
+        html: html,
+        plain: csv
+      }
     } else if (type.startsWith(ResourceTypes.TABLE)) {
       const data = resourceData as ResourceDataTable
 
@@ -222,6 +233,12 @@ export class WebParser {
       return {
         html: null,
         plain: data.description || data.title
+      }
+    } else if (type === 'text/plain') {
+      const data = resourceData as string
+      return {
+        html: null,
+        plain: data
       }
     } else {
       return {

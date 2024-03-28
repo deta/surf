@@ -159,7 +159,7 @@ const api = {
 
     const finalMessage = await runner.finalContent()
     console.log('Final message:', finalMessage)
-    return null
+    return finalMessage
   },
 
   onOpenURL: (callback) => {

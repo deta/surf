@@ -119,7 +119,10 @@ export class NotionParser extends WebAppExtractor {
       //   type: action.output?.type ?? null
       // }
 
-      return null
+      return {
+        data: 'Successfully updated the notion page',
+        type: 'text/plain'
+      }
     }
   }
 

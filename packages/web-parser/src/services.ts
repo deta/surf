@@ -239,18 +239,18 @@ export const SERVICES: WebService[] = [
       {
         id: 'get_table_from_typeform',
         name: 'Get Table',
-        description: 'Get the table content from typeform',
+        description: 'Get the table content as text from Typeform',
         default: true,
         inputs: {},
         output: {
           type: ResourceTypes.TABLE_TYPEFORM,
-          description: 'the table content as CSV'
+          description: 'the table content as CSV formatted text'
         }
       },
       {
         id: 'get_table_column_from_typeform',
         name: 'Get Table Column',
-        description: 'Get the column content from typeform',
+        description: 'Get the content of the column from typeform as text',
         default: false,
         inputs: {
           column: {
@@ -260,7 +260,7 @@ export const SERVICES: WebService[] = [
         },
         output: {
           type: ResourceTypes.TABLE_COLUMN_TYPEFORM,
-          description: 'the table column'
+          description: 'the table column content as text'
         }
       }
     ]

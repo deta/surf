@@ -56,6 +56,7 @@
   import { TelemetryEventTypes } from '@horizon/types'
   import { useActionsService } from '../../service/actions'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
+  import { Icon } from '@horizon/icons'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -125,6 +126,8 @@
   let isDraggingCard = false
   let showMagicInput = false
   let magicInputValue = ''
+  let loadingMagicInput = false
+  let magicInputResponse = ''
 
   $: horizonTint = horizon?.tint
 
@@ -141,16 +144,27 @@
   }, 500)
 
   const handleMagicInputRun = async () => {
-    if (!magicInputValue) return
+    try {
+      if (!magicInputValue) return
 
-    const actions = actionsService.getActions()
-    if (!actions) return
+      const actions = actionsService.getActions()
+      if (!actions) return
 
-    log.debug('Running magic input', magicInputValue, actions)
+      log.debug('Running magic input', magicInputValue, actions)
 
-    // @ts-expect-error
-    const response = await window.api.aiFunctionCalls(magicInputValue, actions)
-    log.debug('Magic input response', response)
+      loadingMagicInput = true
+      magicInputResponse = ''
+
+      // @ts-expect-error
+      const response = await window.api.aiFunctionCalls(magicInputValue, actions)
+      log.debug('Magic input response', response)
+      magicInputResponse = response
+    } catch (e) {
+      log.error('Error running magic input', e)
+      magicInputResponse = 'failed to do magic: ' + e
+    } finally {
+      loadingMagicInput = false
+    }
   }
 
   // Responsible for the scaling of the entire Horizon on bigger screens
@@ -402,7 +416,13 @@
     } else if ((e.key === 'ArrowRight' || e.key === 'Tab') && $visorEnabled) {
       visorSelectNext()
     } else if (isModKeyAndKeyPressed(e, 'p')) {
-      showMagicInput = !showMagicInput
+      if (showMagicInput) {
+        showMagicInput = false
+        magicInputResponse = ''
+        magicInputValue = ''
+      } else {
+        showMagicInput = true
+      }
     }
 
     // Focus Mode keys
@@ -1222,10 +1242,14 @@
   }
 
   const summarizeActionHandler = async (args) => {
-    await window.api.createAIChatCompletion(
+    const summary = await window.api.createAIChatCompletion(
       args.text,
       'You are a summarizer, summarize the text given to you. Only respond with the summarization.'
     )
+
+    log.debug('Summarized text:', summary)
+
+    return summary
   }
 
   onMount(() => {
@@ -1247,12 +1271,12 @@
       handle: summarizeActionHandler,
       id: 'summarize_text',
       name: 'Summarize Text',
-      description: 'Summarizes text',
+      description: 'Summarizes text or tables and returns the summary as text',
       type: 'system',
       inputs: {
         text: {
           type: 'string',
-          description: 'text to summarize'
+          description: 'text or table content to summarize'
         }
       },
       output: {
@@ -1275,6 +1299,8 @@
     if (unsubscribeViewOffset) {
       unsubscribeViewOffset()
     }
+
+    actionsService.unregisterAction('summarize_text')
   })
 
   // HACK: Sketchy way to fix the noise "issue"
@@ -1336,8 +1362,22 @@
   {#if showMagicInput}
     <div class="magic-input-wrapper magic-glow">
       <div class="magic-input">
-        <input bind:value={magicInputValue} placeholder="what do you want to do?" />
-        <button on:click={handleMagicInputRun}>Run</button>
+        {#if magicInputResponse}
+          <div class="output">
+            <p>{magicInputResponse}</p>
+          </div>
+        {/if}
+
+        <form on:submit|preventDefault={handleMagicInputRun}>
+          <input bind:value={magicInputValue} placeholder="what do you want to do?" />
+          <button type="submit" disabled={loadingMagicInput}>
+            {#if loadingMagicInput}
+              <Icon name="spinner" />
+            {:else}
+              <Icon name="sparkles" />
+            {/if}
+          </button>
+        </form>
       </div>
     </div>
   {/if}
@@ -1578,13 +1618,28 @@
   .magic-input {
     width: 100%;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.5rem;
     background: rgb(255, 255, 255);
     border-radius: 8px;
     padding: 0.5rem;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.1);
+
+    form {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .output {
+      padding: 0.5rem;
+      padding-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
 
     input {
       border: none;
@@ -1606,6 +1661,9 @@
       background: rgb(223, 39, 127);
       color: white;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
     }
   }
 </style>
