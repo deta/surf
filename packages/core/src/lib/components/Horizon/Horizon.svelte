@@ -57,6 +57,7 @@
   import { useActionsService } from '../../service/actions'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { Icon } from '@horizon/icons'
+  import { summarizeText } from '../../service/ai'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -1241,17 +1242,6 @@
     //$settings.CAN_SELECT = true
   }
 
-  const summarizeActionHandler = async (args) => {
-    const summary = await window.api.createAIChatCompletion(
-      args.text,
-      'You are a summarizer, summarize the text given to you. Only respond with the summarization.'
-    )
-
-    log.debug('Summarized text:', summary)
-
-    return summary
-  }
-
   onMount(() => {
     // const stack = [...$cards].sort((a, b) => { return get(a).stackingOrder - get(b).stackingOrder }).map((e) => get(e).id);
 
@@ -1268,7 +1258,7 @@
 
     // TODO: register summarize action
     actionsService.registerAction({
-      handle: summarizeActionHandler,
+      handle: (args) => summarizeText(args.text),
       id: 'summarize_text',
       name: 'Summarize Text',
       description: 'Summarizes text or tables and returns the summary as text',
@@ -1612,7 +1602,8 @@
     left: 50%;
     transform: translateX(-50%);
     z-index: 100000;
-    min-width: 500px;
+    width: 700px;
+    max-width: 80%;
   }
 
   .magic-input {

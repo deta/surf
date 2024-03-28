@@ -34,7 +34,7 @@ export function buildAppList() {
 
   return [
     ...sorted.slice(0, 4).map((e) => ({
-      icon: '',
+      icon: `${e.name}`,
       value: `${e.name}`,
       type: 'app'
     }))
@@ -84,4 +84,5 @@ export interface IFlyMenuItem {
   icon: string
   value: string
   type: 'app' | 'action' | 'card' | 'magic-card'
+  handler?: () => void
 }

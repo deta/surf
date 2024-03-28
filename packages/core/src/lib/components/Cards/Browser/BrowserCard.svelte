@@ -1,6 +1,6 @@
 <!-- <svelte:options immutable={true} /> -->
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { get, type Unsubscriber, type Writable } from 'svelte/store'
   import { writable } from 'svelte/store'
   import { fly } from 'svelte/transition'
@@ -45,6 +45,8 @@
   import { MAGICAL_WEB_APPS } from '../../../constants/magicField'
   import { useActionsService } from '../../../service/actions'
   import type { HorizonAction, ResourceDataTable } from '@horizon/types'
+  import { openFlyMenu } from '../../FlyMenu/FlyMenu.svelte'
+  import { summarizeText } from '../../../service/ai'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -510,19 +512,62 @@
     return content.plain
   }
 
-  async function handleMagicFieldParticipantConnect(participant: MagicFieldParticipant) {
+  async function getParticipantDataAndRunAction(
+    participantId: string,
+    actionName: string,
+    summarize = false
+  ) {
     if (!magicField) return
 
-    log.debug('Getting data from participant', participant.id)
-
-    const data = await magicField.requestDataFromParticipant(participant.id, ['text/plain'])
+    log.debug('requesting data from participant', participantId)
+    const data = await magicField.requestDataFromParticipant(participantId, ['text/plain'])
     log.debug('received data:', data)
 
     if (!data) return
 
-    const result = await webview?.runAction('update_page_content_in_notion', data.data)
+    let content = data.data
+    if (summarize) {
+      content = await summarizeText(content)
+    }
+
+    const result = await webview?.runAction(actionName, { content })
 
     log.debug('action result', result)
+  }
+
+  async function handleMagicFieldParticipantConnect(participant: MagicFieldParticipant) {
+    if (!magicField) return
+
+    log.debug('participant connected', participant.id)
+
+    await tick()
+
+    const participantApp = get(participant.app)
+
+    log.debug('participant connected with detected app', participantApp)
+    if (participantApp) {
+      openFlyMenu('cursor', [
+        {
+          icon: 'notion',
+          value: 'Open in Notion',
+          type: 'app',
+          handler() {
+            log.debug('opening in notion')
+            getParticipantDataAndRunAction(participant.id, 'update_page_content_in_notion')
+          }
+        },
+        {
+          icon: '🔮',
+          value: 'Summarize into Notion',
+          type: 'magic-card',
+          async handler() {
+            log.debug('summarizing and opening in notion')
+            getParticipantDataAndRunAction(participant.id, 'update_page_content_in_notion', true)
+          }
+        }
+      ])
+      return
+    }
   }
 
   function enableMagicField() {
@@ -568,35 +613,46 @@
       if (!magicFieldParticipant) return
       if (!get(magicFieldParticipant.fieldParticipation)) return
 
-      const isSupported = field.supportedResources.includes('text/plain')
+      const isSupported =
+        field.supportedResources.includes('text/plain') ||
+        field.supportedResources.includes('text/html')
+
+      if (isSupported && app) {
+        log.debug('updating participant with detected app', app)
+        magicFieldParticipant.updateApp(app)
+      }
+
       magicFieldParticipant?.updateFieldSupported(field.id, isSupported)
     })
 
     magicFieldParticipant?.onRequestData(async (types: string[], callback) => {
       log.debug('magic field requesting data', types)
 
+      const type = types[0]
+
       log.debug('app detected', app)
 
-      if (!app || !app.appId) {
+      let detectedResource: DetectedResource | null = null
+      if (!app || !app.appId || !['notion', 'typeform', 'google.sheets'].includes(app.appId)) {
         log.debug('no app detected')
-        callback(null)
-        return
+
+        detectedResource = await webview?.detectResource()
+      } else {
+        const webService = WebParser.getWebService(app.appId)
+        log.debug('web service', webService)
+
+        const defaultAction = webService?.actions?.find((action) => action.default)
+        if (!defaultAction) {
+          log.debug('no default action found')
+          callback(null)
+          return
+        }
+
+        log.debug('calling default action', defaultAction)
+
+        detectedResource = await webview?.runAction(defaultAction.id, {})
       }
 
-      const webService = WebParser.getWebService(app.appId)
-      log.debug('web service', webService)
-
-      const defaultAction = webService?.actions?.find((action) => action.default)
-      if (!defaultAction) {
-        log.debug('no default action found')
-        callback(null)
-        return
-      }
-
-      log.debug('calling default action', defaultAction)
-
-      const detectedResource = await webview?.runAction(defaultAction.id, {})
-      log.debug('bitch', detectedResource)
       if (!detectedResource) {
         log.debug('no resource detected')
         callback(null)
@@ -604,7 +660,6 @@
       }
 
       log.debug('detectedResource', detectedResource)
-
       const resourceContent = WebParser.getResourceContent(
         detectedResource.type,
         detectedResource.data
@@ -615,7 +670,13 @@
         return
       }
 
-      callback({ type: 'text/plain', data: resourceContent.plain ?? resourceContent.html })
+      if (type === 'text/plain') {
+        callback({ type: 'text/plain', data: resourceContent.plain ?? resourceContent.html })
+      } else if (type === 'text/html') {
+        callback({ type: 'text/html', data: resourceContent.html ?? resourceContent.plain })
+      } else {
+        callback(null)
+      }
 
       // if (types.includes('text/plain')) {
       //   log.debug('detecting resource')
@@ -800,7 +861,7 @@
             out:fly={{ y: 10, duration: 160 }}
           >
             {#if magicField}
-              <Icon name="sparkles" size="15px" color="red" />
+              <Icon name="sparkles" size="15px" color="rgb(223, 39, 127)" />
             {:else}
               <Icon name="sparkles" size="15px" />
             {/if}

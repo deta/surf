@@ -6,6 +6,7 @@ import type { CardPosition } from '../types'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { rectsIntersect } from '@horizon/tela'
 import { shortestDistanceBetweenRects } from '../../../../tela/dist/utils'
+import type { DetectedWebApp } from '@horizon/web-parser'
 
 export type ParticipantData = {
   type: string
@@ -49,6 +50,7 @@ export class MagicFieldParticipant {
   isInField: Readable<boolean>
   isConnectedToField: Readable<boolean>
   allowConnect: Writable<boolean>
+  app: Writable<DetectedWebApp | null>
 
   fieldParticipation: Writable<MagicFieldParticipation | null>
 
@@ -64,6 +66,7 @@ export class MagicFieldParticipant {
     this.inField = writable(null)
     this.connectedField = writable(null)
     this.allowConnect = writable(true)
+    this.app = writable(null)
 
     this.isInField = derived(this.inField, (inField) => !!inField)
     this.isConnectedToField = derived(this.connectedField, (connectedField) => !!connectedField)
@@ -91,6 +94,10 @@ export class MagicFieldParticipant {
 
   updatePosition(pos: CardPosition) {
     this.position.set(pos)
+  }
+
+  updateApp(app: DetectedWebApp) {
+    this.app.set(app)
   }
 
   emit(

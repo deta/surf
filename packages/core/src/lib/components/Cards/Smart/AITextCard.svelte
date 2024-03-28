@@ -8,6 +8,7 @@
   import type { MagicField, MagicFieldParticipant } from '../../../service/magicField'
   import { Icon } from '@horizon/icons'
   import { useClipboard } from '../../../utils/clipboard'
+  import { summarizeText } from '../../../service/ai'
 
   export let card: Writable<Card>
   export let horizon: Horizon
@@ -42,19 +43,6 @@
     log.debug('received data:', data)
 
     return data?.data as string
-  }
-
-  const summarizeText = async (text: string) => {
-    log.debug('Summarizing data:', text)
-
-    // @ts-expect-error
-    const response = await window.api.createAIChatCompletion(
-      text,
-      'You are a summarizer, summarize the text given to you. Only respond with the summarization.'
-    )
-
-    log.debug('Summarization response:', response)
-    return response
   }
 
   const handleParticipantConnect = async (participant: MagicFieldParticipant) => {

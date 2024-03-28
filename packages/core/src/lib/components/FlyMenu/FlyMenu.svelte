@@ -85,6 +85,13 @@
     }
   }
   function submit() {
+    const item = $filteredItems.find((i) => i.value === $state.value)
+    if (item.handler) {
+      item.handler()
+      closeFlyMenu()
+      return
+    }
+
     dispatch('command', {
       cmd: $state.value,
       origin: $flyMenuType,
@@ -179,7 +186,7 @@
           <Command.Item value={item.value} class="item-{item.type}">
             <span class="icn">
               {#if item.type === 'app'}
-                <img src={getServiceIcon(item.value.toLowerCase())} />
+                <img src={getServiceIcon(item.icon.toLowerCase())} />
               {:else}
                 {item.icon}
               {/if}
