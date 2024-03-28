@@ -605,8 +605,10 @@
 
       log.debug('detectedResource', detectedResource)
 
-      const resourceContent =
-        WebParser.getResourc ^ eContent(detectedResource.type, detectedResource.data)
+      const resourceContent = WebParser.getResourceContent(
+        detectedResource.type,
+        detectedResource.data
+      )
       if (!resourceContent.html && !resourceContent.plain) {
         log.debug('no content found in resource')
         callback(null)
