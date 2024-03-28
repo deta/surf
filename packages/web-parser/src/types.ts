@@ -25,6 +25,7 @@ export type WebService = {
   id: string
   name: string
   matchHostname: RegExp
+  matchPathname?: RegExp
   url?: string
   supportedResources: string[]
 

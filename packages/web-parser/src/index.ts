@@ -18,7 +18,8 @@ import {
   LinkParser,
   SlackParser,
   YoutubeParser,
-  TypeformParser
+  TypeformParser,
+  GoogleSheetsParser
 } from './sites/index'
 import { DetectedResource, ResourceContent } from './types'
 import { MetadataExtractor } from './extractors/metadata'
@@ -32,7 +33,8 @@ const ParserModules = {
   notion: NotionParser,
   slack: SlackParser,
   youtube: YoutubeParser,
-  typeform: TypeformParser
+  typeform: TypeformParser,
+  google_sheets: GoogleSheetsParser
 }
 
 const wait = (ms: number) => {
@@ -51,7 +53,21 @@ export class WebParser {
 
   isSupportedApp() {
     const hostname = this.url.hostname
-    const app = SUPPORTED_APPS.find((app) => app.matchHostname.test(hostname))
+    const pathname = this.url.pathname
+
+    let app
+    const appCandidates = SUPPORTED_APPS.filter((app) => app.matchHostname.test(hostname))
+    console.warn('App candidates', appCandidates)
+    if (appCandidates.length === 1) {
+      app = appCandidates[0]
+    } else if (appCandidates.length > 1) {
+      app = appCandidates.find((app) => {
+        console.warn('App', app.id, app.matchPathname, pathname, app.matchPathname?.test(pathname))
+        return app.matchPathname?.test(pathname)
+      })
+    }
+
+    //const app = SUPPORTED_APPS.find((app) => app.matchHostname.test(hostname))
 
     if (!app) return false
 
@@ -63,7 +79,19 @@ export class WebParser {
 
   detectApp() {
     const hostname = this.url.hostname
-    const app = SUPPORTED_APPS.find((app) => app.matchHostname.test(hostname))
+    const pathname = this.url.pathname
+
+    let app
+    const appCandidates = SUPPORTED_APPS.filter((app) => app.matchHostname.test(hostname))
+    console.warn('App candidates', appCandidates)
+    if (appCandidates.length === 1) {
+      app = appCandidates[0]
+    } else if (appCandidates.length > 1) {
+      app = appCandidates.find((app) => {
+        console.warn('App', app.id, app.matchPathname, pathname, app.matchPathname?.test(pathname))
+        return app.matchPathname?.test(pathname)
+      })
+    }
 
     return app ?? null
   }
@@ -74,7 +102,16 @@ export class WebParser {
 
   createAppParser() {
     const hostname = this.url.hostname
-    const app = SUPPORTED_APPS.find((app) => app.matchHostname.test(hostname))
+
+    let app
+    const appCandidates = SUPPORTED_APPS.filter((app) => app.matchHostname.test(hostname))
+    if (appCandidates.length === 1) {
+      app = appCandidates[0]
+    } else if (appCandidates.length > 1) {
+      app = appCandidates.find((app) => app.matchPathname?.test(this.url.pathname))
+    }
+
+    //const app = SUPPORTED_APPS.find((app) => app.matchHostname.test(hostname))
 
     if (!app) return null
 
@@ -250,7 +287,7 @@ export class WebParser {
         const data = resource.data
     }
 
-  In Oasis:
+     Oasis:
 
     const url = 'https://twitter.com/elonmusk/status/123'
 

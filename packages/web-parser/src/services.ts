@@ -89,7 +89,8 @@ export const SERVICES: WebService[] = [
   {
     id: 'google.docs',
     name: 'Google Docs',
-    matchHostname: /docs.google.com/, // TODO: Right one?
+    matchHostname: /docs.google.com/, // TODO : Right one?
+    matchPathname: /\/document\/([^\s]+)/,
     url: 'https://docs.new',
     supportedResources: [],
     showBrowserAction: true,
@@ -99,17 +100,60 @@ export const SERVICES: WebService[] = [
   {
     id: 'google.sheets',
     name: 'Google Sheets',
-    matchHostname: /sheets.google.com/, // TDOO: Right one?
+    matchHostname: /docs.google.com/, // TDOO: Right one?
+    matchPathname: /\/spreadsheets\/([^\s]+)/,
     url: 'https://sheets.new',
-    supportedResources: [],
+    supportedResources: [ResourceTypes.TABLE_GOOGLE_SHEET, ResourceTypes.TABLE_COLUMN_GOOGLE_SHEET],
     showBrowserAction: true,
     browserActionUrl: 'https://sheets.new',
-    browserActionTitle: 'New Sheet'
+    browserActionTitle: 'New Sheet',
+    actions: [
+      {
+        id: 'get_table_from_googlesheet',
+        name: 'Get Table',
+        description: 'Get the table content',
+        default: true,
+        inputs: {},
+        output: {
+          type: ResourceTypes.TABLE_GOOGLE_SHEET,
+          description: 'the table content as CSV'
+        }
+      },
+      {
+        id: 'get_table_column_from_googlesheet',
+        name: 'Get Table Column',
+        description: 'Get the column content',
+        default: false,
+        inputs: {
+          column: {
+            type: 'text/plain',
+            description: 'the name of the column to extract from the table'
+          }
+        },
+        output: {
+          type: ResourceTypes.TABLE_COLUMN_GOOGLE_SHEET,
+          description: 'the table column'
+        }
+      },
+      {
+        id: 'set_table_in_googlesheet',
+        name: 'Set Table',
+        description: 'Sets the table contents',
+        default: false,
+        inputs: {
+          table: {
+            type: 'string',
+            description: 'set the csv formatted table'
+          }
+        },
+        output: null
+      }
+    ]
   },
   {
     id: 'google.slides',
     name: 'Google Slides',
-    matchHostname: /slides.google.com/, // TODO: right one?
+    matchHostname: /docs.google.com/, // TODO: right one?
     url: 'https://slides.new',
     supportedResources: [],
     showBrowserAction: true,
