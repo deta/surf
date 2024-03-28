@@ -24,7 +24,6 @@ impl WorkerTunnel {
     pub fn new<'a, C>(
         cx: &mut C,
         backend_root_path: String,
-        app_path: String,
         vision_api_key: String,
         vision_api_endpoint: String,
     ) -> Self
@@ -55,9 +54,8 @@ impl WorkerTunnel {
         // spawn N worker threads
         (0..8).for_each(|_| {
             let tunnel_clone = tunnel.clone();
-            let app_path_clone = app_path.clone();
             std::thread::spawn(move || {
-                processor_thread_entry_point(tunnel_clone, app_path_clone);
+                processor_thread_entry_point(tunnel_clone);
             });
         });
 

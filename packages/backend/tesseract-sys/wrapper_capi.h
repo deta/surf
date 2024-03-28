@@ -1,1 +1,0 @@
-#include <tesseract/capi.h>

@@ -69,10 +69,7 @@ export function createWindow() {
     // ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
-      additionalArguments: [
-        `--userDataPath=${app.getPath('userData')}`,
-        `--appPath=${app.getAppPath()}.unpacked`
-      ],
+      additionalArguments: [`--userDataPath=${app.getPath('userData')}`],
       sandbox: false,
       session: session.fromPartition('persist:horizon-session-v0'),
       webviewTag: true,

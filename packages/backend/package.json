@@ -7,10 +7,10 @@
   ],
   "main": "index.node",
   "scripts": {
-    "dev": "npm run build-debug",
+    "dev": "npm run build",
     "build-cmd": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "build-debug": "npm run build-cmd --",
-    "build": "LIBTORCH=$(pwd)/../../apps/desktop/external-deps/libtorch npm run build-cmd -- --release",
+    "build": "npm run build-cmd -- --release",
     "install": "npm run build",
     "test": "cargo test -- --nocapture"
   },

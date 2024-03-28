@@ -39,19 +39,7 @@ export default function electronBuilderConfig() {
       '!{.env,.env.*,.npmrc,pnpm-lock.yaml}',
       '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
     ],
-    asarUnpack: ['resources/**', '**/*.node'],
-    extraFiles: [
-      {
-        from: 'external-deps/libtorch/lib',
-        to: 'Frameworks',
-        filter: ['**/*']
-      },
-      {
-        from: 'external-deps',
-        to: 'Frameworks',
-        filter: ['**/*', '!libtorch/**/*']
-      }
-    ],
+    asarUnpack: ['resources/**'],
     afterPack: 'build/afterpack.js',
     win: {
       executableName: params.buildName
