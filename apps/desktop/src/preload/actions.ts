@@ -15,6 +15,7 @@ export const actionsToRunnableTools: (actions: HorizonAction[]) => any[] = (acti
       type: 'function',
       function: {
         name: action.id,
+        parse: JSON.parse,
         function: action.handle,
         parameters: actionInputsToParameters(action.inputs)
       }

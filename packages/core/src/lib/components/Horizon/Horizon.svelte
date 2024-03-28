@@ -1221,6 +1221,13 @@
     //$settings.CAN_SELECT = true
   }
 
+  const summarizeActionHandler = async (args) => {
+    await window.api.createAIChatCompletion(
+      args.text,
+      'You are a summarizer, summarize the text given to you. Only respond with the summarization.'
+    )
+  }
+
   onMount(() => {
     // const stack = [...$cards].sort((a, b) => { return get(a).stackingOrder - get(b).stackingOrder }).map((e) => get(e).id);
 
@@ -1234,6 +1241,25 @@
 
     horizon.attachBoard(board)
     horizon.attachSettings(settings)
+
+    // TODO: register summarize action
+    actionsService.registerAction({
+      handle: summarizeActionHandler,
+      id: 'summarize_text',
+      name: 'Summarize Text',
+      description: 'Summarizes text',
+      type: 'system',
+      inputs: {
+        text: {
+          type: 'string',
+          description: 'text to summarize'
+        }
+      },
+      output: {
+        type: 'string',
+        description: 'summarized text'
+      }
+    })
 
     requestNewPreviewIntervalId = setInterval(updatePreview, REQUEST_NEW_PREVIEW_INTERVAL)
   })
