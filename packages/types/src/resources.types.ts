@@ -116,6 +116,7 @@ export interface ResourceDataTypes {
 
 export interface ResourceDataTableColumn {
   table_id: string
+  table_name: string
   name: string
   rows: string[]
 }

@@ -151,18 +151,20 @@ export class TypeformParser extends WebAppExtractorActions {
 
   private async getTableColumn(document: Document, columnName: string) {
     try {
-      const formId = this.getFormID()
-      if (!formId) {
-        console.log('No form id found')
+      const table = await this.getTable(document)
+      if (!table) {
+        console.log('No table found')
         return null
       }
 
-      const form = document.querySelector('form')
+      const colIdx = table.columns.indexOf(columnName)
+      const rows = table.rows.map((row) => row[colIdx])
 
       return {
-        table_id: formId,
-        name: form?.getAttribute('name') ?? '',
-        rows: []
+        table_id: table.table_id,
+        table_name: table.name,
+        name: columnName,
+        rows
       } as ResourceDataTableColumn
     } catch (e) {
       console.error('Error getting table data', e)
