@@ -1,5 +1,5 @@
 import { ResourceTypes, ResourceDataTable, ResourceDataTableColumn } from '@horizon/types'
-import type { DetectedWebApp, WebService } from '../types'
+import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
 import { APIExtractor, WebAppExtractor, WebAppExtractorActions } from '../extractors'
 import { SERVICES } from '../services'
 
@@ -71,7 +71,7 @@ export class TypeformParser extends WebAppExtractorActions {
     }
   }
 
-  async runAction(document: Document, id: string, input?: any) {
+  async runAction(document: Document, id: string, inputs: WebServiceActionInputs) {
     const action = this.getActions().find((action) => action.id === id)
     if (!action) return null
 
@@ -88,7 +88,9 @@ export class TypeformParser extends WebAppExtractorActions {
         type: action.output?.type ?? ResourceTypes.TABLE_TYPEFORM
       }
     } else if (action.id === 'get_table_column_from_typeform') {
-      const data = await this.getTableColumn(document, input)
+      const column = inputs.column
+      console.log('Getting column', column)
+      const data = await this.getTableColumn(document, column)
       if (!data) return null
 
       console.log('data', data)

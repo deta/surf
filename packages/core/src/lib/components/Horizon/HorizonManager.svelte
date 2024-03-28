@@ -37,6 +37,7 @@
   import { visorEnabled, visorPinch } from '../../utils/visor'
   import { FEEDBACK_PAGE_URL } from '../../constants/card'
   import { Telemetry } from '../../service/telemetry'
+  import { provideActionsService } from '../../service/actions'
 
   const log = useLogScope('HorizonManager')
   const api = new API()
@@ -56,6 +57,7 @@
 
   const resourceManager = new ResourceManager(telemetry)
   const horizonManager = new HorizonsManager(api, resourceManager, telemetry)
+  const actionsService = provideActionsService()
 
   setContext('horizonsManager', horizonManager)
 

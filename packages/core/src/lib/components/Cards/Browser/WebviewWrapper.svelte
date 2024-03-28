@@ -28,7 +28,11 @@
   import type { HistoryEntriesManager } from '../../../service/horizon'
   import type { HistoryEntry } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
-  import type { DetectedResource, DetectedWebApp } from '@horizon/web-parser'
+  import type {
+    DetectedResource,
+    DetectedWebApp,
+    WebServiceActionInputs
+  } from '@horizon/web-parser'
 
   const dispatch = createEventDispatcher<WebViewWrapperEvents>()
   const log = useLogScope('WebviewWrapper')
@@ -385,8 +389,8 @@
     })
   }
 
-  export function runAction(id: string, input?: any, timeoutNum = 10000) {
-    log.debug('Running action', id, input)
+  export function runAction(id: string, inputs: WebServiceActionInputs, timeoutNum = 10000) {
+    log.debug('Running action', id, inputs)
     return new Promise<DetectedResource | null>((resolve) => {
       let timeout: any
 
@@ -415,7 +419,7 @@
       }, timeoutNum)
 
       webview.addEventListener('ipc-message', handleEvent)
-      webview.send('webview-event', { type: 'run-action', id, input })
+      webview.send('webview-event', { type: 'run-action', id, inputs })
     })
   }
 

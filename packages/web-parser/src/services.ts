@@ -29,8 +29,9 @@ export const SERVICES: WebService[] = [
       {
         id: 'get_page_content_from_notion',
         name: 'Get Page',
+        description: 'Get the content of the page',
         default: true,
-        input: null,
+        inputs: {},
         output: {
           type: ResourceTypes.DOCUMENT_NOTION,
           description: 'the page content'
@@ -39,10 +40,13 @@ export const SERVICES: WebService[] = [
       {
         id: 'update_page_content_in_notion',
         name: 'Update Page',
+        description: 'Update the content of the page',
         default: false,
-        input: {
-          type: 'text/plain',
-          description: 'the page content to insert into the page'
+        inputs: {
+          content: {
+            type: 'text/plain',
+            description: 'the page content to insert into the page'
+          }
         },
         output: null
       }
@@ -191,8 +195,9 @@ export const SERVICES: WebService[] = [
       {
         id: 'get_table_from_typeform',
         name: 'Get Table',
+        description: 'Get the table content',
         default: true,
-        input: null,
+        inputs: {},
         output: {
           type: ResourceTypes.TABLE_TYPEFORM,
           description: 'the table content as CSV'
@@ -201,10 +206,13 @@ export const SERVICES: WebService[] = [
       {
         id: 'get_table_column_from_typeform',
         name: 'Get Table Column',
+        description: 'Get the column content',
         default: false,
-        input: {
-          type: 'text/plain',
-          description: 'the name of the column to extract from the table'
+        inputs: {
+          column: {
+            type: 'text/plain',
+            description: 'the name of the column to extract from the table'
+          }
         },
         output: {
           type: ResourceTypes.TABLE_COLUMN_TYPEFORM,

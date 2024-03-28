@@ -32,12 +32,19 @@
   import FindInPage from './FindInPage.svelte'
   import StackItem from '../../Stack/StackItem.svelte'
   import { wait } from '../../../utils/time'
-  import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
+  import {
+    WebParser,
+    type DetectedResource,
+    type DetectedWebApp,
+    type WebServiceAction
+  } from '@horizon/web-parser'
   import type { MagicField, MagicFieldParticipant } from '../../../service/magicField'
   import { focusModeEnabled, exitFocusMode, enterFocusMode } from '../../../utils/focusMode'
   import { getServiceRanking, updateServiceRanking } from '../../../utils/services'
   import { visorEnabled } from '../../../utils/visor'
   import { MAGICAL_WEB_APPS } from '../../../constants/magicField'
+  import { useActionsService } from '../../../service/actions'
+  import type { HorizonAction } from '@horizon/types'
 
   export let card: Writable<CardBrowser>
   export let horizon: Horizon
@@ -51,6 +58,7 @@
   const historyEntriesManager = horizon.historyEntriesManager
   const dispatch = createEventDispatcher<CardEvents>()
   const log = useLogScope('BrowserCard')
+  const actionsService = useActionsService()
 
   let webview: WebviewWrapper | undefined
   let inputEl: HTMLInputElement
@@ -122,6 +130,13 @@
 
     if (magicField) {
       disableMagicField()
+    }
+
+    if (registeredActions) {
+      log.debug('unregistering actions', registeredActions)
+      registeredActions.forEach((action) => {
+        actionsService.unregisterAction(action)
+      })
     }
   })
 
@@ -273,6 +288,7 @@
 
   let value = ''
   let editing = false
+  let registeredActions: string[] = []
 
   $: url = webview?.url
   $: title = webview?.title
@@ -298,6 +314,28 @@
   }
   $: if (editing) {
     value = $url ?? ''
+  }
+
+  $: if (app?.appId) {
+    const webService = WebParser.getWebService(app.appId)
+    log.debug('web service', webService)
+    if (webService && webService.actions) {
+      webService.actions.forEach((action) => {
+        if (!registeredActions.includes(action.id)) {
+          actionsService.registerAction({
+            id: action.id,
+            name: action.name,
+            app: app?.appId ?? undefined,
+            type: 'app',
+            description: action.description,
+            handle: (args: any) => runAction(action, args),
+            inputs: action.inputs,
+            output: action.output ?? { type: 'text/plain', description: 'no output' } // TODO: how to handle actions that don't have output?
+          })
+          registeredActions.push(action.id)
+        }
+      })
+    }
   }
 
   function goToURL() {
@@ -459,6 +497,15 @@
     }
   }
 
+  const runAction = async (action: WebServiceAction, args?: any): Promise<any> => {
+    log.debug('running action', action, args)
+    const output = await webview?.runAction(action.id, args) // TODO parse args
+    log.debug('action output', output)
+
+    // TODO: parse output
+    return output?.data
+  }
+
   async function handleMagicFieldParticipantConnect(participant: MagicFieldParticipant) {
     if (!magicField) return
 
@@ -544,7 +591,7 @@
 
       log.debug('calling default action', defaultAction)
 
-      const detectedResource = await webview?.runAction(defaultAction.id)
+      const detectedResource = await webview?.runAction(defaultAction.id, {})
       log.debug('bitch', detectedResource)
       if (!detectedResource) {
         log.debug('no resource detected')

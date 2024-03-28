@@ -10,11 +10,14 @@ export type WebServiceActionOutput = {
   description: string
 }
 
+export type WebServiceActionInputs = Record<string, any>
+
 export type WebServiceAction = {
   id: string
   name: string
+  description: string
   default: boolean // Wether this action is the default action for the service which gets called when saving it as a resource
-  input: WebServiceActionInput | null
+  inputs: Record<string, WebServiceActionInput>
   output: WebServiceActionOutput | null
 }
 

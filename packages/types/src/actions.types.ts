@@ -1,6 +1,5 @@
 export type HorizonActionInput = {
   type: string
-  name: string
   description: string
 }
 
@@ -9,12 +8,23 @@ export type HorizonActionOutput = {
   description: string
 }
 
-export type HorizonAction = {
-  function: Function
+export type HorizonActionType = 'app' | 'system'
+
+export type HorizonActionHandler<T> = (args: T) => Promise<any>
+
+export type HorizonAction<T = any> = {
+  handle: HorizonActionHandler<T>
+  /** action id should be unique and snake case */
+  id: string
+  /** human readable name of the action */
   name: string
+  /** description of what the action does */
   description: string
-  type: string
+  /** what type of action / where the action came from  */
+  type: HorizonActionType
+  /** app id if the action is from an app */
   app?: string
-  inputs: HorizonActionInput[]
+
+  inputs: Record<string, HorizonActionInput>
   output: HorizonActionOutput
 }

@@ -3,7 +3,8 @@ import {
   WebParser,
   type WebAppExtractor,
   DetectedResource,
-  WebAppExtractorActions
+  WebAppExtractorActions,
+  WebServiceActionInputs
 } from '@horizon/web-parser'
 
 let mouseDownX = 0
@@ -68,11 +69,11 @@ function startResourcePicker() {
   }
 }
 
-function runServiceAction(id: string, input?: any) {
+function runServiceAction(id: string, inputs: WebServiceActionInputs) {
   const appParser = runAppDetection() as WebAppExtractorActions | undefined
   if (appParser) {
-    console.log('Running action', id, 'with input', input)
-    appParser.runAction(document, id, input).then((resource) => {
+    console.log('Running action', id, 'with input', inputs)
+    appParser.runAction(document, id, inputs).then((resource) => {
       console.log('Resource', resource)
       console.log('Sending action-output event')
       sendPageEvent('action-output', { id, output: resource })
@@ -273,7 +274,7 @@ ipcRenderer.on('webview-event', (_event, data) => {
   } else if (data.type === 'get-app') {
     runAppDetection()
   } else if (data.type === 'run-action') {
-    runServiceAction(data.id, data.input)
+    runServiceAction(data.id, data.inputs)
   }
 })
 

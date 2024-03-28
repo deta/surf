@@ -54,6 +54,8 @@
   import { SERVICES } from '@horizon/web-parser'
   import Minimap from './Minimap.svelte'
   import { TelemetryEventTypes } from '@horizon/types'
+  import { useActionsService } from '../../service/actions'
+  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
 
   export let active: boolean = true
   export let horizon: Horizon
@@ -70,6 +72,8 @@
 
   const log = useLogScope('Horizon Component')
   const dispatch = createEventDispatcher<{ change: Horizon; cardChange: Card }>()
+
+  const actionsService = useActionsService()
 
   const settings = createSettings({
     CAN_PAN: true,
@@ -119,6 +123,8 @@
   let containerEl: HTMLElement
   let requestNewPreviewIntervalId: number | undefined
   let isDraggingCard = false
+  let showMagicInput = false
+  let magicInputValue = ''
 
   $: horizonTint = horizon?.tint
 
@@ -133,6 +139,19 @@
   const debouncedCardUpdate = useDebounce((...args: Parameters<typeof horizon.updateCard>) => {
     return horizon.updateCard(...args)
   }, 500)
+
+  const handleMagicInputRun = async () => {
+    if (!magicInputValue) return
+
+    const actions = actionsService.getActions()
+    if (!actions) return
+
+    log.debug('Running magic input', magicInputValue, actions)
+
+    // @ts-expect-error
+    const response = await window.api.aiFunctionCalls(magicInputValue, actions)
+    log.debug('Magic input response', response)
+  }
 
   // Responsible for the scaling of the entire Horizon on bigger screens
   const handleWindowResize = () => {
@@ -382,6 +401,8 @@
       visorSelectPrev()
     } else if ((e.key === 'ArrowRight' || e.key === 'Tab') && $visorEnabled) {
       visorSelectNext()
+    } else if (isModKeyAndKeyPressed(e, 'p')) {
+      showMagicInput = !showMagicInput
     }
 
     // Focus Mode keys
@@ -1360,6 +1381,13 @@
         on:command={handleFlyCommand}
       />
 
+      {#if showMagicInput}
+        <div class="magic-input">
+          <input bind:value={magicInputValue} placeholder="what do you want to do?" />
+          <button on:click={handleMagicInputRun}>Run</button>
+        </div>
+      {/if}
+
       {#if $modSelectConfigurator !== undefined}
         <div
           class="drawMenu"
@@ -1451,7 +1479,7 @@
   </Board>
 </div>
 
-<style>
+<style lang="scss">
   .cursor-tooltip {
     position: absolute;
     top: var(--select-y);
@@ -1508,5 +1536,41 @@
   }
   .horizon {
     /* background: linear-gradient(to top right, rgba(24, 68, 227, 0.657) 10%, transparent 50%); */
+  }
+
+  .magic-input {
+    position: absolute;
+    bottom: 3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgb(255, 255, 255);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+    input {
+      border: none;
+      outline: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-right: 0.5rem;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      outline: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      background: rgb(223, 39, 127);
+      color: white;
+      cursor: pointer;
+    }
   }
 </style>

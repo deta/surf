@@ -1,16 +1,9 @@
-import type { HorizonAction, HorizonActionInput } from '@horizon/types'
+import type { HorizonAction } from '@horizon/types'
 
-const actionInputsToParameters: (inputs: HorizonActionInput[]) => {} = (inputs) => {
-  let properties: { [key: string]: any } = {}
-  for (const input of inputs) {
-    properties[input.name] = {
-      type: input.type,
-      description: input.description
-    }
-  }
+const actionInputsToParameters: (inputs: HorizonAction['inputs']) => {} = (inputs) => {
   return {
     type: 'object',
-    properties
+    properties: inputs
   }
 }
 
@@ -21,8 +14,8 @@ export const actionsToRunnableTools: (actions: HorizonAction[]) => any[] = (acti
     runnableTools.push({
       type: 'function',
       function: {
-        name: action.name,
-        function: action.function,
+        name: action.id,
+        function: action.handle,
         parameters: actionInputsToParameters(action.inputs)
       }
     })

@@ -1,5 +1,5 @@
 import { ResourceTypes, type ResourceDataDocument } from '@horizon/types'
-import type { DetectedWebApp, WebService } from '../types'
+import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
 import { APIExtractor, WebAppExtractor } from '../extractors'
 import { SERVICES } from '../services'
 
@@ -72,7 +72,7 @@ export class NotionParser extends WebAppExtractor {
     }
   }
 
-  async runAction(document: Document, id: string, input?: any) {
+  async runAction(document: Document, id: string, inputs: WebServiceActionInputs) {
     const action = this.getActions().find((action) => action.id === id)
     if (!action) return null
 
@@ -89,7 +89,8 @@ export class NotionParser extends WebAppExtractor {
         type: action.output?.type ?? null
       }
     } else if (action.id === 'update_page_content_in_notion') {
-      console.log('updating page with content', input)
+      const content = inputs.content
+      console.log('updating page with content', content)
 
       const contentElem = document.querySelector('.notion-page-content')
       if (!contentElem) {
@@ -106,7 +107,7 @@ export class NotionParser extends WebAppExtractor {
 
       // TODO: find better way to do this. This is coming from the webview.ts preload script
       // @ts-expect-error
-      window.insertText(input)
+      window.insertText(content)
 
       // const page = await this.updatePage(document, input)
       // if (!page) return null
