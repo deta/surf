@@ -103,7 +103,7 @@ dependencies = [
  "leptess",
  "lopdf",
  "neon",
- "pkg-config",
+ "once_cell",
  "rand",
  "reqwest",
  "rusqlite",
@@ -982,6 +982,8 @@ dependencies = [
 [[package]]
 name = "leptonica-sys"
 version = "0.4.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "335aadd5fa8d493d62d5596a980ce6ee823a72da45e89bcc45be3841e6d74bff"
 dependencies = [
  "bindgen",
  "pkg-config",
@@ -1001,7 +1003,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.4",
 ]
 
 [[package]]
@@ -1937,6 +1939,8 @@ checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 [[package]]
 name = "sqlite-vss"
 version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b7af668435b787d5dbd62c217b613f077529cc7e1229b8c135a1a2d74e46d77"
 dependencies = [
  "anyhow",
  "flate2",
@@ -2087,6 +2091,8 @@ dependencies = [
 [[package]]
 name = "tesseract-sys"
 version = "0.5.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd33f6f216124cfaf0fa86c2c0cdf04da39b6257bd78c5e44fa4fa98c3a5857b"
 dependencies = [
  "bindgen",
  "leptonica-sys",

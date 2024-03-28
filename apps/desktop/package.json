@@ -5,7 +5,6 @@
   "main": "./out/main/index.js",
   "author": "Deta GmbH",
   "scripts": {
-    "preinstall": "./scripts/setup-external-deps.sh",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
@@ -16,8 +15,8 @@
     "build:mwl": "npm run build && electron-builder -mwl --config build/electron-builder-config.ts --arm64 --x64 --publish always",
     "build:win": "npm run build && electron-builder --win --config build/electron-builder-config.ts --arm64 --x64 --publish always",
     "build:mac": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --arm64 --x64 --publish always",
-    "build:mac:x64": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --x64 --publish always",
     "build:mac:arm": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --arm64 --publish always",
+    "build:mac:x64": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --x64 --publish always",
     "build:linux": "npm run build && electron-builder --linux --config build/electron-builder-config.ts --arm64 --x64 --publish always"
   },
   "dependencies": {

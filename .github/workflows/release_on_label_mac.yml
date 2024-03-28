@@ -9,115 +9,111 @@ on:
 
 jobs:
   prepare:
-    if: ${{ github.event.label.name == 'mac-build' }}
+    if: ${{ github.event.label.name == 'mac-build'}}
     runs-on: ubuntu-latest
+
     outputs:
       version: ${{ steps.version.outputs.version }}-mac
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
       - name: Get next version
-        id: version
         uses: reecetech/version-increment@2023.9.3
+        id: version
         with:
           scheme: semver
           increment: patch
 
-  build:
+  build-and-release:
     if: ${{ github.event.label.name == 'mac-build' }}
     needs: prepare
-    strategy:
-      matrix:
-        include:
-          - architecture: arm
-            os: macos-14
-          - architecture: x64
-            os: macos-latest # this is macos-12 rn
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    outputs:
+      release-id: ${{ steps.release.outputs.id }}
+      version: ${{ needs.prepare.outputs.version }}
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Node.js
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Set version as env variable
+        run: echo "APP_VERSION=${{ needs.prepare.outputs.version }}" >> $GITHUB_ENV
+
+      - name: Install Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
-      - name: Install Homebrew dependencies
+
+      - name: Install Dependencies
+        # using retries as there are recurring cases for unknown reasons where the yarn install gets stuck
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 3
+          max_attempts: 2
+          command: yarn install --frozen-lockfile
+
+      - name: Set Build Env Variables
         run: |
-          brew update
-          brew install python@3.12 || true # brew link fails, so ignore the error
-          brew link --overwrite python@3.12
-          brew install jq
-          brew install libomp
-          brew install tesseract
-          brew install leptonica
-          brew install pkg-config
-      - name: Install dependencies
+          echo "RELEASE_CHANNEL=${{ github.head_ref }}" | sed 's/\//-/g' >> $GITHUB_ENV
+          echo "BUILD_TAG=${{ github.head_ref }}" | sed 's/\//-/g' >> $GITHUB_ENV
+          echo "BUILD_RESOURCES_DIR=build/resources/dev" >> $GITHUB_ENV
+
+      - name: Build
         run: |
-          echo "installing horizon & external deps"
-          yarn workspace horizon install --frozen-lockfile
-          ls -la apps/desktop/external-deps/libtorch
-          ls -la apps/desktop/external-deps/libtorch/lib
-          ls -la apps/desktop/external-deps/libtorch/include
-          echo "installing tela"
-          yarn workspace @horizon/tela install
-          yarn workspace @horizon/tela build
-          echo "installing cmdk"
-          yarn workspace @horizon/cmdk-sv install
-          yarn workspace @horizon/cmdk-sv build
-          echo "installing rest of the project's deps"
-          yarn install --frozen-lockfile
-      - name: Build for ${{ matrix.architecture }}
-        run: |
-          if [ "${{ matrix.architecture }}" == "arm" ]; then
-            yarn build:horizon:mac:arm
-          else
-            yarn build:horizon:mac:x64
-          fi
+          yarn build:horizon:mac
         env:
-          APP_VERSION: ${{ needs.prepare.outputs.version }}
+          # from secrets
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          RELEASE_CHANNEL: ${{ github.head_ref }}
-          BUILD_TAG: ${{ github.head_ref }}
-          BUILD_RESOURCES_DIR: build/resources/dev
-          M_VITE_APP_VERSION: ${{ needs.prepare.outputs.version }}
-          R_VITE_APP_VERSION: ${{ needs.prepare.outputs.version }}
-          M_VITE_BUILD_TAG: ${{ github.head_ref }}
-          R_VITE_BUILD_TAG: ${{ github.head_ref }}
+          # from env
+          APP_VERSION: ${{ env.APP_VERSION }}
+          M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          BUILD_TAG: ${{ env.BUILD_TAG }}
+          BUILD_RESOURCES:DIR: ${{ env.BUILD_RESOURCES_DIR }}
+          M_VITE_BUILD_TAG: ${{ env.BUILD_TAG }}
+          R_VITE_BUILD_TAG: ${{ env.BUILD_TAG }}
+          RELEASE_CHANNEL: ${{ env.RELEASE_CHANNEL }}
+          # composite
+          R_VITE_CHEATSHEET_URL: ${{ secrets.CHEATSHEET_URL_BASE }}/${{ env.APP_VERSION }}
+          # default
           HUSKY: 0
           PRODUCT_NAME: Horizon
           SHOULD_NOTARIZE: false
           M_VITE_USE_TMP_DATA_DIR: true
-      - uses: actions/upload-artifact@v2
-        with:
-          name: build-${{ matrix.architecture }}
-          path: |
-            apps/desktop/dist/*.dmg
-            apps/desktop/dist/*.blockmap
 
-  create-release:
-    if: ${{ github.event.label.name == 'mac-build' }}
-    needs: [build]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          path: build/
-      - name: Create GitHub Release
+      - id: release
+        name: Create Github Release
         uses: softprops/action-gh-release@v1
         with:
           draft: false
           prerelease: true
-          tag_name: v${{ needs.prepare.outputs.version }}
+          tag_name: v${{ env.APP_VERSION }}
           files: |
-            build/**/*.dmg
-            build/**/*.blockmap
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.zip
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.AppImage
+            apps/desktop/dist/*.snap
+            apps/desktop/dist/*.deb
+            apps/desktop/dist/*.rpm
+            apps/desktop/dist/*.tar.gz
+            apps/desktop/dist/*.yml
+            apps/desktop/dist/*.blockmap
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Update Pull Request with Release URL
+
+      - name: Update Pull Request Status with the Release URL
         uses: actions/github-script@v4
+        env:
+          RELEASE_URL: ${{ steps.release.outputs.url }}
         with:
           script: |
-            github.issues.createComment({
+            await github.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `Release is available [here](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/v${{ needs.prepare.outputs.version }}).`
+              body: `Release is available at ${process.env.RELEASE_URL}`
             })
