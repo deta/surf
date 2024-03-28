@@ -98,6 +98,48 @@
   }
 }
 
+.magic-glow {
+  --magic-field-speed: 4s;
+  --magic-field-colors: #30cfd0,
+      #330867,
+      #ff6978,
+      #fffcf9,
+      #330867,
+      #30cfd0,
+      #ff6978,
+      #fffcf9,
+      #330867;
+
+  position: relative;
+
+  &::after {
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    height: 100%;
+    width: 100%;
+    opacity: 1;
+    transition: opacity 120ms ease-out;
+    transform: scale(0.95) translateZ(0);
+    filter: blur(25px);
+    background: linear-gradient(to top right, var(--magic-field-colors,
+          #ff5770,
+          #e4428d,
+          #c42da8,
+          #9e16c3,
+          #6501de,
+          #9e16c3,
+          #c42da8,
+          #e4428d,
+          #ff5770));
+    background-size: 200% 200%;
+    animation: animateGlow var(--magic-field-speed) linear infinite;
+  }
+}
+
 .horizon {
   position: fixed;
   top: 0;

@@ -1307,6 +1307,15 @@
 
   <Minimap {cards} {viewOffset} {viewPort} />
 
+  {#if showMagicInput}
+    <div class="magic-input-wrapper magic-glow">
+      <div class="magic-input">
+        <input bind:value={magicInputValue} placeholder="what do you want to do?" />
+        <button on:click={handleMagicInputRun}>Run</button>
+      </div>
+    </div>
+  {/if}
+
   <Board
     {settings}
     {board}
@@ -1380,13 +1389,6 @@
         origin={modSelectConfigurator}
         on:command={handleFlyCommand}
       />
-
-      {#if showMagicInput}
-        <div class="magic-input">
-          <input bind:value={magicInputValue} placeholder="what do you want to do?" />
-          <button on:click={handleMagicInputRun}>Run</button>
-        </div>
-      {/if}
 
       {#if $modSelectConfigurator !== undefined}
         <div
@@ -1538,27 +1540,34 @@
     /* background: linear-gradient(to top right, rgba(24, 68, 227, 0.657) 10%, transparent 50%); */
   }
 
-  .magic-input {
+  .magic-input-wrapper {
     position: absolute;
-    bottom: 3rem;
+    bottom: 1.5rem;
     left: 50%;
     transform: translateX(-50%);
     z-index: 100000;
+    min-width: 500px;
+  }
+
+  .magic-input {
+    width: 100%;
     display: flex;
-    justify-content: center;
     align-items: center;
+    gap: 0.5rem;
     background: rgb(255, 255, 255);
     border-radius: 8px;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
 
     input {
       border: none;
       outline: none;
-      padding: 0.5rem 1rem;
+      padding: 0.5rem;
       border-radius: 8px;
       font-size: 1rem;
-      margin-right: 0.5rem;
+      flex-grow: 1;
+      width: 100%;
     }
 
     button {
