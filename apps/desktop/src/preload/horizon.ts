@@ -25,6 +25,9 @@ const USER_DATA_PATH =
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
 const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
 
+console.log(APP_PATH, USER_DATA_PATH)
+process.env.PATH = `${APP_PATH};${process.env.PATH}`
+
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
 let mainNewWindowHandler: any = null

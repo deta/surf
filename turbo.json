@@ -26,7 +26,7 @@
       "dependsOn": ["^build"],
       "outputs": [".dist/**"]
     },
-    "horizon#build:win": {
+    "horizon#build:win:x64": {
       "dependsOn": ["^build"],
       "outputs": [".dist/**"]
     },

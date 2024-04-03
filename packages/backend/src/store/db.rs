@@ -7,7 +7,7 @@ use crate::{BackendError, BackendResult};
 use rusqlite::{ffi::sqlite3_auto_extension, Connection, OptionalExtension};
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
-use sqlite_vss::{sqlite3_vector_init, sqlite3_vss_init};
+// use sqlite_vss::{sqlite3_vector_init, sqlite3_vss_init};
 
 #[derive(RustEmbed)]
 #[folder = "migrations/"]
@@ -92,12 +92,12 @@ pub struct VectorSearchResult {
 
 impl Database {
     pub fn new(db_path: &str) -> BackendResult<Database> {
-        unsafe {
-            // the following only works with rusqlite < 0.29.0 as rusqlite updated the function signatures in later versions
-            // we might have to update the sqlite3_vector_init and sqlite3_vss_init bindings ourselves if we want to use a newer version of rusqlite
-            sqlite3_auto_extension(Some(sqlite3_vector_init));
-            sqlite3_auto_extension(Some(sqlite3_vss_init));
-        }
+        // unsafe {
+        //     // the following only works with rusqlite < 0.29.0 as rusqlite updated the function signatures in later versions
+        //     // we might have to update the sqlite3_vector_init and sqlite3_vss_init bindings ourselves if we want to use a newer version of rusqlite
+        //     sqlite3_auto_extension(Some(sqlite3_vector_init));
+        //     sqlite3_auto_extension(Some(sqlite3_vss_init));
+        // }
 
         let init_schema = Migrations::get("init.sql")
             .ok_or(BackendError::GenericError("init.sql not found".into()))?;
