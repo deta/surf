@@ -21,12 +21,11 @@ pub struct Worker {
 
 impl Worker {
     fn new(
+        app_path: String,
         backend_root_path: String,
         tqueue_tx: crossbeam::Sender<ProcessorMessage>,
         aiqueue_tx: crossbeam::Sender<AIMessage>,
     ) -> Self {
-        println!("data root path: {}", backend_root_path);
-
         let db_path = Path::new(&backend_root_path)
             .join("sffs.sqlite")
             .as_os_str()
@@ -38,8 +37,33 @@ impl Worker {
             .to_string_lossy()
             .to_string();
 
+        let usearch_path = std::env::var("HORIZON_LIBUSEARCH_SQLITE").unwrap_or_else(|_| {
+            if cfg!(target_os = "macos") {
+                Path::new(&app_path)
+                    .join("../../Frameworks/libusearch_sqlite.dylib")
+                    .as_os_str()
+                    .to_string_lossy()
+                    .to_string()
+            } else if cfg!(target_os = "windows") || cfg!(target_os = "linux") {
+                let extension = if cfg!(target_os = "linux") {
+                    ".so"
+                } else {
+                    ".dll"
+                };
+                Path::new(&app_path)
+                    .join("..")
+                    .join("..")
+                    .join(format!("libusearch_sqlite{}", extension))
+                    .as_os_str()
+                    .to_string_lossy()
+                    .to_string()
+            } else {
+                panic!("unsupported platform");
+            }
+        });
+
         Self {
-            db: Database::new(&db_path).unwrap(),
+            db: Database::new(&db_path, &usearch_path).unwrap(),
             embedding_model: EmbeddingModel::new_remote().unwrap(),
             tqueue_tx,
             aiqueue_tx,
@@ -53,9 +77,10 @@ pub fn worker_thread_entry_point(
     tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     aiqueue_tx: crossbeam::Sender<AIMessage>,
     mut channel: Channel,
+    app_path: String,
     backend_root_path: String,
 ) {
-    let mut worker = Worker::new(backend_root_path, tqueue_tx, aiqueue_tx);
+    let mut worker = Worker::new(app_path, backend_root_path, tqueue_tx, aiqueue_tx);
     while let Ok(TunnelMessage(message, oneshot)) = worker_rx.recv() {
         match message {
             WorkerMessage::MiscMessage(message) => {

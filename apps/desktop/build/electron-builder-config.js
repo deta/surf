@@ -33,8 +33,8 @@ function electronBuilderConfig() {
       '!{.env,.env.*,.npmrc,pnpm-lock.yaml}',
       '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
     ],
-    asar: false,
-    // asarUnpack: ['resources/**', '**/*.node'],
+    // asar: false,
+    asarUnpack: ['resources/**', '**/*.node', '**/libusearch_sqlite.dylib'],
     afterPack: 'build/afterpack.js',
     win: {
       executableName: params.buildName,
@@ -45,9 +45,9 @@ function electronBuilderConfig() {
           filter: ['**/*']
         },
         {
-          from: 'external-deps/sqlite-vss',
+          from: 'external-deps',
           to: '.',
-          filter: ['**/*']
+          filter: ['**/*', '!libtorch/**/*']
         }
       ]
     },

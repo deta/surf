@@ -76,10 +76,22 @@ CREATE VIRTUAL TABLE IF NOT EXISTS resource_text_content USING fts5(
     tokenize="trigram"
 );
 
-CREATE VIRTUAL TABLE IF NOT EXISTS card_positions USING vss0(
-    position(2)
+-- CREATE VIRTUAL TABLE IF NOT EXISTS card_positions USING vss0(
+--     position(2)
+-- );
+
+-- CREATE VIRTUAL TABLE IF NOT EXISTS embeddings USING vss0(
+--     embedding(384)
+-- );
+
+CREATE TABLE IF NOT EXISTS card_positions (
+    rowid INTEGER PRIMARY KEY,
+    -- [x, y]: 2d vector
+    position TEXT NOT NULL
 );
 
-CREATE VIRTUAL TABLE IF NOT EXISTS embeddings USING vss0(
-    embedding(384)
+CREATE TABLE IF NOT EXISTS embeddings (
+    rowid INTEGER PRIMARY KEY,
+    -- [i0, ..., i383]: 384d vector
+    embedding TEXT NOT NULL
 );

@@ -42,12 +42,14 @@ impl WorkerTunnel {
         };
 
         // spawn the main SFFS thread
+        let app_path_clone = app_path.clone();
         std::thread::spawn(move || {
             worker_thread_entry_point(
                 worker_rx,
                 tqueue_tx,
                 aiqueue_tx,
                 libuv_ch,
+                app_path_clone,
                 backend_root_path,
             )
         });

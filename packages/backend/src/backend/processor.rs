@@ -20,9 +20,12 @@ fn handle_process_resource(
     resource: CompositeResource,
     app_path: &str,
 ) -> BackendResult<()> {
-    let tessdata_folder = std::path::Path::new(app_path)
-        .join("resources")
-        .join("tessdata");
+    let mut tessdata_folder = Some(
+        std::path::Path::new(app_path)
+            .join("resources")
+            .join("tessdata"),
+    );
+    tessdata_folder = tessdata_folder.filter(|path| path.exists());
 
     if !needs_processing(&resource.resource.resource_type) {
         return Ok(());
@@ -59,7 +62,7 @@ fn needs_processing(resource_type: &str) -> bool {
 fn process_resource_data(
     resource: &CompositeResource,
     resource_data: &str,
-    tessdata_folder: &std::path::Path,
+    tessdata_folder: &Option<std::path::PathBuf>,
 ) -> Option<String> {
     match resource.resource.resource_type.as_str() {
         // TODO: mb we should have this use the same format as the post resources?
@@ -69,7 +72,7 @@ fn process_resource_data(
             .map_err(|e| eprintln!("extracting text from pdf: {e:#?}"))
             .ok(),
         resource_type if resource_type.starts_with("image/") => {
-            extract_text_from_image(&resource.resource.resource_path, &tessdata_folder)
+            extract_text_from_image(&resource.resource.resource_path, tessdata_folder)
                 .map_err(|e| eprintln!("extracting text from image: {e:#?}"))
                 .ok()
         }
@@ -187,10 +190,13 @@ fn normalize_html_data(data: &str) -> String {
 
 fn extract_text_from_image(
     image_path: &str,
-    tessdata_folder: &std::path::Path,
+    tessdata_folder: &Option<std::path::PathBuf>,
 ) -> BackendResult<String> {
-    let mut lt = leptess::LepTess::new(tessdata_folder.to_str(), "eng")
-        .map_err(|e| BackendError::GenericError(e.to_string()))?;
+    let mut lt = leptess::LepTess::new(
+        tessdata_folder.as_ref().map(|path| path.to_str()).flatten(),
+        "eng",
+    )
+    .map_err(|e| BackendError::GenericError(e.to_string()))?;
     lt.set_image(image_path)
         .map_err(|e| BackendError::GenericError(e.to_string()))?;
     let text = lt

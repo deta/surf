@@ -15,14 +15,18 @@ const external_deps_path = path.resolve(
   'desktop',
   'external-deps'
 )
-const sqlite_vss_path = path.resolve(external_deps_path, 'sqlite-vss')
 const libtorch_path = path.resolve(external_deps_path, 'libtorch')
 const libtorch_libs_path = path.join(libtorch_path, 'lib')
 
 if (process.platform === 'win32') {
   process.env.Path += `;${libtorch_libs_path}`
+  process.env.RUSTFLAGS = '-Ctarget-feature=+crt-static'
+} else if (process.platform === 'darwin') {
+  // process.env.DYLD_LIBRARY_PATH = `${libtorch_libs_path}:${process.env.DYLD_LIBRARY_PATH || ''}`
+  // process.env.LIBTORCH = '/opt/homebrew/Cellar/pytorch/2.2.0_2'
+  // process.env.LD_LIBRARY_PATH = `${process.env.LIBTORCH}/lib:${process.env.LD_LIBRARY_PATH || ''}`
+  process.env.LD_LIBRARY_PATH = `${libtorch_libs_path}:${process.env.LD_LIBRARY_PATH || ''}`
 } else {
-  // mb use DYLD_LIBRARY_PATH instead on macOS?
   process.env.LD_LIBRARY_PATH = `${libtorch_libs_path}:${process.env.LD_LIBRARY_PATH || ''}`
 }
 

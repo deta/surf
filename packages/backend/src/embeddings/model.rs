@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn test_sanity_embeddings_search() {
         let _cleanup = NeedsCleanup;
-        let mut store = db::Database::new(TEST_DB).unwrap();
+        let mut store = db::Database::new(TEST_DB, todo!("NOT YET IMPLEMENTED IN HERE")).unwrap();
         let model = EmbeddingModel::new_remote().unwrap();
 
         let sentences = vec![
