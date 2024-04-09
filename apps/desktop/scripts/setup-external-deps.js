@@ -39,8 +39,17 @@ async function download_file(url, destination, max_redirects = 3) {
   })
 }
 
+async function unpack(path, output) {
+  return new Promise((fulfilled, rejected) => {
+    _7z.unpack(path, output, (err) => {
+      if (err) rejected(err)
+      else fulfilled(null)
+    })
+  })
+}
+
 async function setup_macos() {
-  const base_dir = './external-deps'
+  const base_dir = path.join(process.cwd(), 'external-deps')
   const libtorch_dir = path.join(base_dir, 'libtorch')
   // resolve to the correct libtorch build (arm64:apple silicon, x64:intel)
   const libtorch_url = `https://download.pytorch.org/libtorch/cpu/libtorch-macos-${os.arch()}-2.2.0.zip`
@@ -52,11 +61,8 @@ async function setup_macos() {
     console.log('downloading libtorch...')
     await download_file(libtorch_url, temp_zip)
     console.log('extracting libtorch...')
-    _7z.unpack(temp_zip, base_dir, (err) => {
-      if (err) console.error('extraction error:', err)
-      else console.log('extraction complete')
-      fs.unlinkSync(temp_zip)
-    })
+    await unpack(temp_zip, base_dir)
+    fs.unlinkSync(temp_zip)
   }
 
   const libomp_dylib_source =
@@ -82,14 +88,11 @@ async function setup_windows() {
   await mkdir(base_dir, { recursive: true })
 
   if (!(await exists(libtorch_dir)) || fs.readdirSync(libtorch_dir).length === 0) {
-    console.log('downloading libtorch for Windows...')
+    console.log('downloading libtorch...')
     await download_file(libtorch_url, temp_zip)
     console.log('extracting libtorch...')
-    _7z.unpack(temp_zip, base_dir, (err) => {
-      if (err) console.error('extraction error:', err)
-      else console.log('extraction complete')
-      fs.unlinkSync(temp_zip)
-    })
+    await unpack(temp_zip, base_dir)
+    fs.unlinkSync(temp_zip)
   }
 
   await download_usearch_sqlite(base_dir)
