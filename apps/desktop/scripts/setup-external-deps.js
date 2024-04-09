@@ -126,6 +126,8 @@ async function download_usearch_sqlite(base_dir) {
     console.log(`downloading ${filename} from ${url}...`)
     await download_file(url, dest)
     console.log(`${filename} downloaded to ${dest}`)
+
+    if (os.platform() === 'darwin') execSync(`xattr -c "${dest}"`)
   }
 }
 
