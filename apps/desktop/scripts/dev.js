@@ -59,6 +59,7 @@ if (process.platform === 'darwin') {
 process.env.TESSDATA_PREFIX = path.resolve(__dirname, '..', 'resources', 'tessdata')
 process.env.LIBTORCH = libtorch_path
 process.env.HORIZON_LIBUSEARCH_SQLITE = usearch_path
+process.env.M_VITE_PRODUCT_NAME = 'Horizon-dev'
 
 const extraArgsIndex = process.argv.indexOf('--')
 const extraArgs = extraArgsIndex !== -1 ? process.argv.slice(extraArgsIndex + 1) : []

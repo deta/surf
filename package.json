@@ -2,7 +2,7 @@
   "name": "horizon",
   "private": true,
   "scripts": {
-    "dev": "cross-env M_VITE_PRODUCT_NAME=Horizon-dev turbo dev",
+    "dev": "turbo dev",
     "dev:horizon": "npm run dev -- --filter=horizon",
     "build": "turbo build",
     "build:packages": "turbo build --filter=!horizon",
@@ -24,7 +24,6 @@
   "devDependencies": {
     "@horizon/eslint-config": "*",
     "@horizon/typescript-config": "*",
-    "cross-env": "^7.0.3",
     "husky": "^9.0.10",
     "patch-package": "^8.0.0",
     "postinstall-postinstall": "^2.1.0",
