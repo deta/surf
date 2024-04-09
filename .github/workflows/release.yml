@@ -59,34 +59,44 @@ jobs:
           increment: ${{ github.event.inputs.increment_type }}
           release_branch: ${{ env.RELEASE_BRANCH }}
 
-  build-and-release:
+  build:
     needs: prepare
-    runs-on: macos-latest
-    timeout-minutes: 30
-    outputs:
-      release-id: ${{ steps.release.outputs.id }}
-      version: ${{ needs.prepare.outputs.version }}
-
+    strategy:
+      matrix:
+        include:
+          - architecture: arm
+            os: macos-14
+          - architecture: x64
+            os: macos-latest # this is `macos-12` rn
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v3
-
-      - name: Set version as env variable
-        run: echo "APP_VERSION=${{ needs.prepare.outputs.version }}" >> $GITHUB_ENV
-
-      - name: Install Node.js
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
-
-      - name: Install Dependencies
-        # using retries as there are recurring cases for unknown reasons where the yarn install gets stuck
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 3
-          max_attempts: 2
-          command: yarn install --frozen-lockfile
-
+      - name: Install Homebrew dependencies
+        run: |
+          brew update
+          brew install python@3.12 || true # brew link fails, so ignore the error
+          brew link --overwrite python@3.12
+          brew install jq
+          brew install libomp
+          brew install tesseract
+          brew install leptonica
+          brew install pkg-config
+      - name: Install dependencies
+        run: |
+          echo "installing horizon & external deps"
+          yarn workspace horizon install --frozen-lockfile
+          echo "installing tela"
+          yarn workspace @horizon/tela install
+          yarn workspace @horizon/tela build
+          echo "installing cmdk"
+          yarn workspace @horizon/cmdk-sv install
+          yarn workspace @horizon/cmdk-sv build
+          echo "installing rest of the project's deps"
+          yarn install --frozen-lockfile
       - name: Set Build Env Variables
         run: |
           if [ "${{ github.event.inputs.pre_release }}" == "true" ]; then
@@ -94,12 +104,13 @@ jobs:
               echo "BUILD_TAG=${{ inputs.custom_build_tag || github.ref_name }}" | sed 's/\//-/g' >> $GITHUB_ENV
               echo "BUILD_RESOURCES_DIR=build/resources/dev" >> $GITHUB_ENV
           fi
-
-      - name: Build
+      - name: Build for ${{ matrix.architecture }}
         run: |
-          yarn build:horizon:linux
-          yarn build:horizon:mac
-          yarn build:horizon:win
+          if [ "${{ matrix.architecture }}" == "arm" ]; then
+            yarn build:horizon:mac:arm
+          else
+            yarn build:horizon:mac:x64
+          fi
         env:
           HUSKY: 0
           # from secrets
@@ -129,24 +140,28 @@ jobs:
           PRODUCT_NAME: ${{ inputs.product_name }}
           SHOULD_NOTARIZE: ${{ inputs.should_notarize }}
           M_VITE_USE_TMP_DATA_DIR: ${{ inputs.pre_release }}
+      - uses: actions/upload-artifact@v2
+        with:
+          name: build-${{ matrix.architecture }}
+          path: |
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.blockmap
 
-      - id: release
-        name: Create Github Release
+  create-release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          path: build/
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           draft: false
           prerelease: ${{ inputs.pre_release }}
           tag_name: v${{ env.APP_VERSION }}
           files: |
-            apps/desktop/dist/*.exe
-            apps/desktop/dist/*.zip
-            apps/desktop/dist/*.dmg
-            apps/desktop/dist/*.AppImage
-            apps/desktop/dist/*.snap
-            apps/desktop/dist/*.deb
-            apps/desktop/dist/*.rpm
-            apps/desktop/dist/*.tar.gz
-            apps/desktop/dist/*.yml
-            apps/desktop/dist/*.blockmap
+            build/**/*.dmg
+            build/**/*.blockmap
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -4,11 +4,11 @@ use crate::{store::db::CompositeResource, BackendError, BackendResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub fn processor_thread_entry_point(tunnel: WorkerTunnel) {
+pub fn processor_thread_entry_point(tunnel: WorkerTunnel, app_path: String) {
     while let Ok(message) = tunnel.tqueue_rx.recv() {
         match message {
             ProcessorMessage::ProcessResource(resource) => {
-                let _ = handle_process_resource(&tunnel, resource)
+                let _ = handle_process_resource(&tunnel, resource, &app_path)
                     .map_err(|e| eprintln!("error while processing resource: {e:?}"));
             }
         }
@@ -18,7 +18,12 @@ pub fn processor_thread_entry_point(tunnel: WorkerTunnel) {
 fn handle_process_resource(
     tunnel: &WorkerTunnel,
     resource: CompositeResource,
+    app_path: &str,
 ) -> BackendResult<()> {
+    let tessdata_folder = std::path::Path::new(app_path)
+        .join("resources")
+        .join("tessdata");
+
     if !needs_processing(&resource.resource.resource_type) {
         return Ok(());
     }
@@ -27,7 +32,7 @@ fn handle_process_resource(
         t if t.starts_with("image/") || t == "application/pdf" => "".to_owned(),
         _ => std::fs::read_to_string(&resource.resource.resource_path)?,
     };
-    let output = process_resource_data(&resource, &resource_data);
+    let output = process_resource_data(&resource, &resource_data, &tessdata_folder);
 
     if let Some(output) = output {
         tunnel.worker_send_rust(
@@ -51,7 +56,11 @@ fn needs_processing(resource_type: &str) -> bool {
     }
 }
 
-fn process_resource_data(resource: &CompositeResource, resource_data: &str) -> Option<String> {
+fn process_resource_data(
+    resource: &CompositeResource,
+    resource_data: &str,
+    tessdata_folder: &std::path::Path,
+) -> Option<String> {
     match resource.resource.resource_type.as_str() {
         // TODO: mb we should have this use the same format as the post resources?
         "application/vnd.space.document.space-note" => Some(normalize_html_data(resource_data)),
@@ -60,7 +69,7 @@ fn process_resource_data(resource: &CompositeResource, resource_data: &str) -> O
             .map_err(|e| eprintln!("extracting text from pdf: {e:#?}"))
             .ok(),
         resource_type if resource_type.starts_with("image/") => {
-            extract_text_from_image(&resource.resource.resource_path)
+            extract_text_from_image(&resource.resource.resource_path, &tessdata_folder)
                 .map_err(|e| eprintln!("extracting text from image: {e:#?}"))
                 .ok()
         }
@@ -176,8 +185,11 @@ fn normalize_html_data(data: &str) -> String {
     output
 }
 
-fn extract_text_from_image(image_path: &str) -> BackendResult<String> {
-    let mut lt = leptess::LepTess::new(None, "eng")
+fn extract_text_from_image(
+    image_path: &str,
+    tessdata_folder: &std::path::Path,
+) -> BackendResult<String> {
+    let mut lt = leptess::LepTess::new(tessdata_folder.to_str(), "eng")
         .map_err(|e| BackendError::GenericError(e.to_string()))?;
     lt.set_image(image_path)
         .map_err(|e| BackendError::GenericError(e.to_string()))?;
