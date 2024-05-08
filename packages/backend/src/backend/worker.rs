@@ -13,7 +13,7 @@ use std::{path::Path, sync::mpsc};
 
 pub struct Worker {
     pub db: Database,
-    pub embedding_model: EmbeddingModel,
+    // pub embedding_model: EmbeddingModel,
     pub tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     pub aiqueue_tx: crossbeam::Sender<AIMessage>,
     pub resources_path: String,
@@ -40,7 +40,7 @@ impl Worker {
 
         Self {
             db: Database::new(&db_path).unwrap(),
-            embedding_model: EmbeddingModel::new_remote().unwrap(),
+            // embedding_model: EmbeddingModel::new_remote().unwrap(),
             tqueue_tx,
             aiqueue_tx,
             resources_path,

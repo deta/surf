@@ -65,7 +65,7 @@ export function createWindow() {
     show: false,
     autoHideMenuBar: true,
     frame: false, // TODO: Figure this out for windows but idc
-    // titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
+    titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
     // ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),

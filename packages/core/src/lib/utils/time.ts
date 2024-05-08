@@ -1,4 +1,5 @@
 import { format, formatDistanceToNow, isToday } from 'date-fns'
+import { writable } from 'svelte/store'
 
 export const diffToNow = (timestamp: number | string) => {
   const ms = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
@@ -84,3 +85,19 @@ export const isDateToday = (timestamp: number | string) => {
 }
 
 export const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+export const writableAutoReset = <T>(defaultValue: T, delay = 500) => {
+  const value = writable<T>(defaultValue)
+
+  const set = (newValue: T) => {
+    value.set(newValue)
+
+    if (newValue) {
+      setTimeout(() => {
+        value.set(defaultValue)
+      }, delay)
+    }
+  }
+
+  return { set, update: value.update, subscribe: value.subscribe } as typeof value
+}

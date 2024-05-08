@@ -1257,54 +1257,54 @@
     horizon.attachSettings(settings)
 
     // TODO: register summarize action
-    actionsService.registerAction({
-      handle: (args) => summarizeText(args.text),
-      id: 'summarize_text',
-      name: 'Summarize Text',
-      description: 'Summarizes text or tables and returns the summary as text',
-      type: 'system',
-      inputs: {
-        text: {
-          type: 'string',
-          description: 'text or table content to summarize'
-        }
-      },
-      output: {
-        type: 'string',
-        description: 'summarized text'
-      }
-    })
+    // actionsService.registerAction({
+    //   handle: (args) => summarizeText(args.text),
+    //   id: 'summarize_text',
+    //   name: 'Summarize Text',
+    //   description: 'Summarizes text or tables and returns the summary as text',
+    //   type: 'system',
+    //   inputs: {
+    //     text: {
+    //       type: 'string',
+    //       description: 'text or table content to summarize'
+    //     }
+    //   },
+    //   output: {
+    //     type: 'string',
+    //     description: 'summarized text'
+    //   }
+    // })
 
-    actionsService.registerAction({
-      handle: async (args) => {
-        await horizon.addCardText(
-          args.text,
-          { x: $viewOffset.x, y: 200, width: 500, height: 400 },
-          { name: 'New Text Card' },
-          [],
-          {
-            foreground: true,
-            trigger: 'draw'
-          }
-        )
+    // actionsService.registerAction({
+    //   handle: async (args) => {
+    //     await horizon.addCardText(
+    //       args.text,
+    //       { x: $viewOffset.x, y: 200, width: 500, height: 400 },
+    //       { name: 'New Text Card' },
+    //       [],
+    //       {
+    //         foreground: true,
+    //         trigger: 'draw'
+    //       }
+    //     )
 
-        return 'Text saved to new card!'
-      },
-      id: 'save_text',
-      name: 'Save Text',
-      description: 'Saves Text to a new card',
-      type: 'system',
-      inputs: {
-        text: {
-          type: 'string',
-          description: 'text to save'
-        }
-      },
-      output: {
-        type: 'string',
-        description: 'summarized text'
-      }
-    })
+    //     return 'Text saved to new card!'
+    //   },
+    //   id: 'save_text',
+    //   name: 'Save Text',
+    //   description: 'Saves Text to a new card',
+    //   type: 'system',
+    //   inputs: {
+    //     text: {
+    //       type: 'string',
+    //       description: 'text to save'
+    //     }
+    //   },
+    //   output: {
+    //     type: 'string',
+    //     description: 'summarized text'
+    //   }
+    // })
 
     requestNewPreviewIntervalId = setInterval(updatePreview, REQUEST_NEW_PREVIEW_INTERVAL)
   })
@@ -1321,7 +1321,7 @@
       unsubscribeViewOffset()
     }
 
-    actionsService.unregisterAction('summarize_text')
+    // actionsService.unregisterAction('summarize_text')
   })
 
   // HACK: Sketchy way to fix the noise "issue"

@@ -24,6 +24,7 @@ export class Drawer {
   viewState: Writable<ViewState>
 
   searchHandler?: (query: SearchQuery) => void
+  openItemHandler?: (item: any) => void
 
   constructor() {
     this.size = writable('normal')
@@ -35,6 +36,10 @@ export class Drawer {
 
   onSearch(callback: typeof Drawer.prototype.searchHandler) {
     this.searchHandler = callback
+  }
+
+  onOpenItem(callback: (item: any) => void) {
+    this.openItemHandler = callback
   }
 
   open() {
@@ -77,6 +82,17 @@ export class Drawer {
       })
     } else {
       console.warn('No search handler provided')
+    }
+  }
+
+  openItem(item: any) {
+    if (this.openItemHandler) {
+      if (!this.isShown()) {
+        this.open()
+      }
+      this.openItemHandler(item)
+    } else {
+      console.warn('No open item handler provided')
     }
   }
 

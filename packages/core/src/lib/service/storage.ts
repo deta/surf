@@ -2,6 +2,7 @@ import Dexie from 'dexie'
 
 import { generateID } from '../utils/id'
 import type { Optional, LegacyResource } from '../types'
+import type { Chat, ChatMessage, Tab } from '../components/Browser/types'
 
 export class LocalStorage<T> {
   key: string
@@ -139,6 +140,9 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
 
 export class HorizonDatabase extends Dexie {
   resources: HorizonStore<LegacyResource>
+  tabs: HorizonStore<Tab>
+  chats: HorizonStore<Chat>
+  chatMessages: HorizonStore<ChatMessage>
 
   constructor() {
     super('HorizonDatabase')
@@ -193,6 +197,22 @@ export class HorizonDatabase extends Dexie {
         }
       })
 
+    this.version(4).stores({
+      userData: 'id, user_id',
+      cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
+      horizons: 'id, name, stackingOrder, createdAt, updatedAt',
+      resources: 'id, createdAt, updatedAt',
+      sessions: 'id, userId, partition, createdAt, updatedAt',
+      historyEntries:
+        'id, *url, *title, *searchQuery, *inPageNavigation, sessionId, type, createdAt, updatedAt',
+      tabs: 'id, createdAt, updatedAt, archived, type, title, icon, section, initialLocation, historyStackIds, currentHistoryIndex, resourceBookmark, horizonId, query',
+      chats: 'id, createdAt, updatedAt, title, messageIds',
+      chatMessages: 'id, createdAt, updatedAt, role, content'
+    })
+
     this.resources = new HorizonStore<LegacyResource>(this.table('resources'))
+    this.tabs = new HorizonStore<Tab>(this.table('tabs'))
+    this.chats = new HorizonStore<Chat>(this.table('chats'))
+    this.chatMessages = new HorizonStore<ChatMessage>(this.table('chatMessages'))
   }
 }

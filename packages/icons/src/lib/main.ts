@@ -41,6 +41,12 @@ import Spinner from './Icons/Spinner.svelte'
 import Play from './Icons/Play.svelte'
 import Check from './Icons/Check.svelte'
 import Sparkles from './Icons/Sparkles.svelte'
+import World from './Icons/World.svelte'
+import Leave from './Icons/Leave.svelte'
+import LayoutGridAdd from './Icons/LayoutGridAdd.svelte'
+import ArrowLeft from './Icons/ArrowLeft.svelte'
+import ArrowRight from './Icons/ArrowRight.svelte'
+import Reload from './Icons/Reload.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -86,7 +92,13 @@ export const icons = {
   'sidebar.right': SidebarRight,
   play: Play,
   check: Check,
-  sparkles: Sparkles
+  sparkles: Sparkles,
+  world: World,
+  leave: Leave,
+  'layout-grid-add': LayoutGridAdd,
+  'arrow.left': ArrowLeft,
+  'arrow.right': ArrowRight,
+  reload: Reload
 }
 
 export type Icons = keyof typeof icons
@@ -132,5 +144,11 @@ export {
   Rectangle,
   Play,
   Check,
-  Sparkles
+  Sparkles,
+  World,
+  Leave,
+  LayoutGridAdd,
+  ArrowLeft,
+  ArrowRight,
+  Reload
 }

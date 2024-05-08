@@ -74,6 +74,21 @@
         <Icon name="arrow" color={active ? '#FFFFFF' : '#000000'} />
       </div>
     </div> -->
+  {:else if group == 'Chat'}
+    <div class="item-search">
+      <div class="title-wrapper">
+        <div class="title" class:scrolling={$isOverflowing} use:checkOverflow>
+          {searchQuery || inputValue}
+        </div>
+      </div>
+      <!-- <span class="input-value">{searchQuery || inputValue}</span> -->
+      <div class="right">
+        <span class="service">{name}</span>
+        <div class="icon-wrapper">
+          <Icon name="sparkles" color={active ? '#FFFFFF' : '#e173a8'} />
+        </div>
+      </div>
+    </div>
   {:else if group == 'History'}
     <div class="item-history">
       <div class="title-wrapper">

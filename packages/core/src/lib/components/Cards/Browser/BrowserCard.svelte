@@ -797,7 +797,7 @@
             <AddressToolbar
               bind:inputValue={value}
               cardHistory={$currentCardHistory}
-              {horizon}
+              historyEntriesManager={horizon.historyEntriesManager}
               on:call-url-from-toolbar={handleCallFromToolbar}
             />
           </div>

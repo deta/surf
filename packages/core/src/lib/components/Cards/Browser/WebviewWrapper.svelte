@@ -18,6 +18,7 @@
     detectedApp: DetectedWebApp
     detectedResource: DetectedResource
     actionOutput: { id: string; output: DetectedResource }
+    navigation: string
   }
 </script>
 
@@ -46,7 +47,7 @@
   export const canGoForward = writable(false)
   export const isLoading = writable(false)
   export const title = writable('')
-  export const faviconURL = writable<string[]>([])
+  export const faviconURL = writable<string>('')
   export const playback = writable(false)
   export const isMuted = writable(false)
   export const didFinishLoad = writable(false)
@@ -66,7 +67,7 @@
 
   const updateNavigationState = () => {
     canGoBack.set(get(currentHistoryIndex) > 0)
-    canGoForward.set(get(currentHistoryIndex) < get(historyStackIds).length - 1)
+    canGoForward.set(get(currentHistoryIndex) < (get(historyStackIds)?.length ?? 0) - 1)
   }
 
   const handleRedirectNav = (newUrl: string) => {
@@ -86,10 +87,11 @@
 
   const addHistoryEntry = async (url: string, pageTitle: string) => {
     log.debug('Adding history entry', url)
-    if (!initialLoadDone) {
-      initialLoadDone = true
-      return
-    }
+    // This check prevents the initial load from being added to history
+    // if (!initialLoadDone) {
+    //   initialLoadDone = true
+    //   return
+    // }
     if (programmaticNavigation) {
       log.debug('Programmatic navigation, skipping history entry')
       programmaticNavigation = false
@@ -114,6 +116,7 @@
 
       currentHistoryIndex.update((n) => n + 1)
       updateNavigationState()
+      dispatch('navigation', url)
     } catch (error) {}
 
     programmaticNavigation = false

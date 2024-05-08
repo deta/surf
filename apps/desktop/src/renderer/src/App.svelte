@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { HorizonManager } from '@horizon/core'
+  import { Browser } from '@horizon/core'
   import { onMount } from 'svelte'
 
   let showDragBar = true
@@ -16,13 +16,19 @@
     <div class="drag-bar left"></div>
     <div class="drag-bar right"></div>
   {/if}
-  <HorizonManager />
+  <Browser />
 </div>
 
 <style>
-  .main {
+  :global(html) {
     height: 100vh;
     width: 100vw;
+    overflow: hidden;
+  }
+
+  .main {
+    width: 100%;
+    height: 100%;
   }
 
   .drag-bar {

@@ -280,6 +280,16 @@
     })
   }
 
+  drawer.onOpenItem(async (resourceId: string) => {
+    const resource = await resourceManager.getResource(resourceId)
+    if (!resource) {
+      log.error('Resource not found', resourceId)
+      return
+    }
+
+    openResourceDetail(resource)
+  })
+
   const handleResourceRemove = async (e: CustomEvent<string>) => {
     const resourceId = e.detail
 
@@ -1132,10 +1142,10 @@
 
   .drop-zone {
     position: fixed;
-    bottom: 2rem;
-    right: 2rem;
+    bottom: 0.5rem;
+    left: 0.5rem;
     z-index: 1000;
-    width: 400px;
+    width: 305px;
 
     :global(.chat-container) {
       margin-top: 0 !important;
@@ -1157,7 +1167,7 @@
   .drop-zone-close {
     position: absolute;
     top: -0.75rem;
-    left: -0.75rem;
+    left: -0.5rem;
     z-index: 1000;
     background: white;
     border-radius: 50%;
@@ -1166,7 +1176,7 @@
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 0.25rem;
+    padding: 0.15rem;
   }
 
   .proximity-view {

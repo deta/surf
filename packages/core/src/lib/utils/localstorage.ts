@@ -54,3 +54,27 @@ export const useLocalStorageItem = <T extends Value>(
 
   return { value, revalidate, persist }
 }
+
+export const useLocalStorageStore = <T extends Value>(
+  key: string,
+  defaultValue: T,
+  parse = false
+) => {
+  const store = writable<T>(defaultValue)
+
+  const load = (key: string) => {
+    const stored = getValue<T>(key, parse)
+    if (stored !== null) {
+      store.set(stored)
+    }
+  }
+
+  const set = (value: T) => {
+    setValue(key, value)
+    store.set(value)
+  }
+
+  load(key)
+
+  return { set, update: store.update, subscribe: store.subscribe, load }
+}

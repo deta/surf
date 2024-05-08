@@ -1,3 +1,7 @@
+<script lang="ts" context="module">
+  export type ActionEvent = { type: 'navigation' | 'chat'; value: string }
+</script>
+
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { writable } from 'svelte/store'
@@ -14,17 +18,18 @@
   import ToolbarGroupHeader from './ToolbarGroupHeader.svelte'
   import Horizon from '../../../../Horizon/Horizon.svelte'
   import type { HistoryEntriesManager } from '../../../../../service/horizon'
+  import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../searchEngines'
+  import { isModKeyPressed } from '../../../../../utils/keyboard'
 
   export let inputValue: string
-  export let horizon: Horizon
+  export let historyEntriesManager: HistoryEntriesManager
   export let cardHistory: any
 
   let toolbar: HTMLElement
 
   let initialValue: string = ''
-  const historyEntriesManager = horizon.historyEntriesManager as HistoryEntriesManager
 
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<{ action: ActionEvent }>()
 
   let cardHistoryItems: any[] = cardHistory
     .map((item: any) => ({
@@ -107,107 +112,6 @@
     return missingRootResultsForSites
   }
 
-  const DEFAULT_SEARCH_ENGINE = 'google'
-  const searchEngines = [
-    {
-      key: 'google',
-      title: 'Search with Google',
-      shortcuts: ['gg', 'google'],
-      getUrl: (query: string) => `https://google.com/search?q=${query}`
-    },
-    {
-      key: 'perplexity',
-      title: 'Use Perplexity',
-      shortcuts: ['ppx', 'perplexity'],
-      getUrl: (query: string) => `https://www.perplexity.ai/?q=${query}`
-    },
-    {
-      key: 'bing',
-      title: 'Search with Bing',
-      shortcuts: ['bing'],
-      getUrl: (query: string) => `https://www.bing.com/search?q=${query}`
-    },
-    {
-      key: 'copilot',
-      title: 'Use Bing Copilot',
-      shortcuts: ['bing', 'copilot'],
-      getUrl: (query: string) =>
-        `https://www.bing.com/search?q=${query}&qs=SYC&showconv=1&sendquery=1&FORM=ASCHT2&sp=2&lq=0`
-    },
-    {
-      key: 'duckduckgo',
-      title: 'Search with Duckduckgo',
-      shortcuts: ['ddgo', 'duckduckgo'],
-      getUrl: (query: string) => `https://duckduckgo.com/?q=${query}`
-    },
-    {
-      key: 'ecosia',
-      title: 'Search with Ecosia',
-      shortcuts: ['ecosia'],
-      getUrl: (query: string) => `https://www.ecosia.org/search?method=index&q=${query}`
-    },
-    {
-      key: 'startpage',
-      title: 'Search with Startpage',
-      shortcuts: ['startpage'],
-      getUrl: (query: string) => `https://www.startpage.com/sp/search?query=${query}`
-    },
-    {
-      key: 'phind',
-      title: 'Search with Phind',
-      shortcuts: ['phind'],
-      getUrl: (query: string) => `https://www.phind.com/search?q=${query}&ignoreSearchResults=false`
-    },
-    {
-      key: 'wolframalpha',
-      title: 'Search WolframAlpha',
-      shortcuts: ['wolframalpha'],
-      getUrl: (query: string) => `https://www.wolframalpha.com/input?i=${query}`
-    },
-    {
-      key: 'lycos',
-      title: 'Search Lycos',
-      shortcuts: ['lycos'],
-      getUrl: (query: string) => `https://search.lycos.com/web/?q=${query}`
-    },
-    {
-      key: 'twitter',
-      title: 'Search X (Twitter)',
-      shortcuts: ['tw', 'x.com', 'twitter'],
-      getUrl: (query: string) => `https://twitter.com/search?q=${query}&src=typed_query`
-    },
-    {
-      key: 'reddit',
-      title: 'Search Reddit',
-      shortcuts: ['reddit'],
-      getUrl: (query: string) => `https://www.reddit.com/search/?q=${query}`
-    },
-    {
-      key: 'unsplash',
-      title: 'Search Unsplash',
-      shortcuts: ['unsplash'],
-      getUrl: (query: string) => `https://unsplash.com/s/photos/${query}`
-    },
-    {
-      key: 'pinterest',
-      title: 'Search Pinterest',
-      shortcuts: ['pinterest'],
-      getUrl: (query: string) => `https://www.pinterest.com/search/pins/?q=${query}&rs=typed`
-    },
-    {
-      key: 'youtube',
-      title: 'Search YouTube',
-      shortcuts: ['yt', 'youtube'],
-      getUrl: (query: string) => `https://www.youtube.com/results?search_query=${query}`
-    },
-    {
-      key: 'gmail',
-      title: 'Search Gmail',
-      shortcuts: ['gmail', 'googlemail', 'mail'],
-      getUrl: (query: string) => `https://mail.google.com/mail/u/0/#search/${query}`
-    }
-  ]
-
   // Reactive statement to selectively filter items and control visibility of the Search group
   $: {
     if (inputValue) {
@@ -217,9 +121,11 @@
       const searchResults = historyEntriesManager.searchEntries(lowerInputValue)
       const additionalSearchResults = addAddtionalSearchResults(searchResults, lowerInputValue)
 
-      let defaultSearchEngine = searchEngines.find((engine) => engine.key === DEFAULT_SEARCH_ENGINE)
+      let defaultSearchEngine = SEARCH_ENGINES.find(
+        (engine) => engine.key === DEFAULT_SEARCH_ENGINE
+      )
       if (!defaultSearchEngine) {
-        defaultSearchEngine = searchEngines[0]
+        defaultSearchEngine = SEARCH_ENGINES[0]
       }
 
       const defaultSearchEngineItem = {
@@ -235,10 +141,24 @@
         score: 0.77
       }
 
+      const oasisAISearch = {
+        entry: {
+          id: `ask:oasis`,
+          updatedAt: new Date().toISOString(),
+          type: 'chat',
+          title: 'Ask Oasis AI',
+          searchQuery: inputValue
+        } as HistoryEntry,
+        searchEngine: 'oasis',
+        group: 'Search',
+        score: Infinity
+      }
+
       const combined = [
         ...searchResults,
         ...additionalSearchResults,
-        defaultSearchEngineItem
+        defaultSearchEngineItem,
+        oasisAISearch
       ] as Optional<typeof defaultSearchEngineItem, 'searchEngine'>[]
 
       const highestScore = combined.reduce((acc, item) => (item.score > acc ? item.score : acc), 0)
@@ -246,7 +166,7 @@
       const queryParts = lowerInputValue.split(' ')
 
       let matchedPart = null
-      const matchingSearchEngine = searchEngines.find((engine) =>
+      const matchingSearchEngine = SEARCH_ENGINES.find((engine) =>
         queryParts.some((part) =>
           engine.shortcuts.some((s) => {
             if (part.length > 2) {
@@ -383,6 +303,12 @@
     }
 
     if (event.key === 'Enter') {
+      // Used to start a new AI chat from the new tab page
+      if (isModKeyPressed(event)) {
+        dispatch('action', { type: 'chat', value: inputValue })
+        return
+      }
+
       let currentElement = filteredItems[selectedIndex]
       performAction(currentElement)
     }
@@ -406,7 +332,7 @@
 
       // Perform actions for search engines
     } else if (currentElement.type == 'search') {
-      const matchingSearchEngine = searchEngines.find(
+      const matchingSearchEngine = SEARCH_ENGINES.find(
         (engine) => engine.key === currentElement.searchEngine
       )
       if (matchingSearchEngine) {
@@ -427,9 +353,12 @@
 
         inputValue = new URL(matchingSearchEngine.getUrl(searchQuery)).href
       }
+    } else if (currentElement.type == 'chat') {
+      dispatch('action', { type: 'chat', value: currentElement.searchQuery })
+      return
     }
 
-    dispatch('call-url-from-toolbar')
+    dispatch('action', { type: 'navigation', value: inputValue })
   }
 
   function handleClick(event: MouseEvent): void {
