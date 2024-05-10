@@ -70,6 +70,7 @@ mod tests {
     struct NeedsCleanup;
 
     const TEST_DB: &str = "_embeddings_search_test.db";
+    const USEARCH_PATH: &str = "/Users/sif/.usearch/binaries/usearch_sqlite.dylib";
 
     impl Drop for NeedsCleanup {
         fn drop(&mut self) {
@@ -110,7 +111,7 @@ mod tests {
     #[test]
     fn test_sanity_embeddings_search() {
         let _cleanup = NeedsCleanup;
-        let mut store = db::Database::new(TEST_DB).unwrap();
+        let mut store = db::Database::new(TEST_DB, USEARCH_PATH).unwrap();
         let model = EmbeddingModel::new_remote().unwrap();
 
         let sentences = vec![
@@ -130,7 +131,10 @@ mod tests {
         });
         tx.commit().unwrap();
 
-        let queries = vec!["fruit".to_string(), "animal".to_string()];
+        let queries = vec![
+            "is mango a fruit?".to_string(),
+            "is horse an animal?".to_string(),
+        ];
         let expected_results = vec![vec![0, 1], vec![2, 3]];
         let query_embeddings = model.encode(&queries).unwrap();
 

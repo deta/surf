@@ -38,8 +38,11 @@ impl Worker {
             .to_string_lossy()
             .to_string();
 
+        let usearch_path = std::env::var("HORIZON_LIBUSEARCH_PATH")
+            .unwrap_or_else(|_| "/Users/sif/.usearch/binaries/usearch_sqlite.dylib".to_string());
+
         Self {
-            db: Database::new(&db_path).unwrap(),
+            db: Database::new(&db_path, &usearch_path).unwrap(),
             embedding_model: EmbeddingModel::new_remote().unwrap(),
             tqueue_tx,
             aiqueue_tx,

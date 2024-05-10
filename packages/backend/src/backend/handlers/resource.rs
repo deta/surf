@@ -151,7 +151,7 @@ impl Worker {
         // TODO: find sane defaults for these
         let proximity_distance_threshold = match proximity_distance_threshold {
             Some(threshold) => threshold,
-            None => 100000.0,
+            None => 500.0,
         };
 
         let proximity_limit = match proximity_limit {
@@ -189,7 +189,7 @@ impl Worker {
         // TODO: find sane defaults for these
         let proximity_distance_threshold = match proximity_distance_threshold {
             Some(threshold) => threshold,
-            None => 100000.0,
+            None => 500.0,
         };
 
         let proximity_limit = match proximity_limit {
