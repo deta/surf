@@ -110,6 +110,13 @@ impl Database {
             }
         }
 
+        {
+            let _guard = unsafe { LoadExtensionGuard::new(&conn)? };
+            unsafe {
+                conn.load_extension(Path::new(usearch_path), None)?;
+            }
+        }
+
         let tx = conn.transaction()?;
         tx.execute_batch(init_schame)?;
         if let Some(schema) = migrations_schema {
@@ -1012,8 +1019,7 @@ impl Database {
 
         let e = Embedding::new(embedding_vector);
         let params = rusqlite::params![e.embedding, limit, distance_threshold.powf(2.0)];
-        let mut query = "
-            WITH distance_calculations AS (
+        let mut query = "WITH distance_calculations AS (
                 SELECT
                     E.rowid,
                     distance_sqeuclidean_f32(E.embedding, ?1) AS distance
@@ -1051,8 +1057,7 @@ impl Database {
             }
             return Ok(results);
         }
-        query.push_str(" ORDER BY D.distance ASC");
-        query.push_str(" LIMIT ?2");
+        query.push_str(" ORDER BY D.distance ASC LIMIT ?2");
         let mut stmt = self.conn.prepare(query.as_str())?;
         let items = stmt.query_map(params, row_map_fn)?;
         for i in items {
@@ -1418,18 +1423,20 @@ impl Database {
         let mut result = Vec::new();
         // the limit only applies to the vss_search filter and only after that the rowid and distance filters are applied
         let mut stmt = self.conn.prepare(
-            "SELECT
-                rowid,
-                distance_cosine_f32(embedding, ?1) AS distance
-            FROM
-                embeddings
-            WHERE
+            "SELECT rowid, distance_cosine_f32(embedding, ?1) AS distance
+             FROM 
+                embeddings 
+             WHERE 
                 distance <= ?2
-            LIMIT ?3",
+             ORDER BY distance ASC
+             LIMIT ?3",
         )?;
         let embeddings = stmt.query_map(
             rusqlite::params![embedding.embedding, distance_threshold.powf(2.0), limit],
             |row| {
+                let rowid: i64 = row.get(0)?;
+                let distance: f32 = row.get(1)?;
+                dbg!(rowid, distance);
                 Ok(VectorSearchResult {
                     rowid: row.get(0)?,
                     distance: row.get(1)?,
