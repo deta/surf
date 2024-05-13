@@ -315,5 +315,6 @@
     justify-content: end;
     width: 8rem;
     min-width: 8rem;
+    white-space: nowrap;
   }
 </style>

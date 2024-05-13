@@ -86,7 +86,7 @@
   --tooltip-font-weight: 400;
   --tooltip-line-height: 1.25rem;
   --tooltip-color: #fff;
-  --tooltip-offset-x: 10px;
+  --tooltip-offset-x: 5px;
   --tooltip-offset-y: 10px;
   --tooltip-padding: 5px 7px;
   --tooltip-white-space-hidden: nowrap;
@@ -95,6 +95,10 @@
 
   &.top {
     --tooltip-offset-y: 10px !important;
+  }
+
+  &.bottom {
+    --tooltip-offset-y: 30px !important;
   }
 }
 

@@ -132,6 +132,11 @@ export const checkIfIPAddress = (raw: string) => {
 }
 
 export const parseStringIntoBrowserLocation = (raw: string) => {
+  const isLocalhost = checkIfLocalhost(raw)
+  if (isLocalhost) {
+    return prependProtocol(raw, false)
+  }
+
   const isURL = checkIfUrl(raw)
   if (isURL) {
     return raw
@@ -140,11 +145,6 @@ export const parseStringIntoBrowserLocation = (raw: string) => {
   const url = parseStringIntoUrl(raw)
   if (url) {
     return url.href
-  }
-
-  const isLocalhost = checkIfLocalhost(raw)
-  if (isLocalhost) {
-    return prependProtocol(raw, false)
   }
 
   const isIPAddress = checkIfIPAddress(raw)

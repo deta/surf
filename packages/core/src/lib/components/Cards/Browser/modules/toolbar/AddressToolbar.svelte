@@ -20,6 +20,7 @@
   import type { HistoryEntriesManager } from '../../../../../service/horizon'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../searchEngines'
   import { isModKeyPressed } from '../../../../../utils/keyboard'
+  import log from '../../../../../utils/log'
 
   export let inputValue: string
   export let historyEntriesManager: HistoryEntriesManager
@@ -151,7 +152,7 @@
         } as HistoryEntry,
         searchEngine: 'oasis',
         group: 'Search',
-        score: Infinity
+        score: 1
       }
 
       const combined = [
@@ -358,6 +359,7 @@
       return
     }
 
+    log.debug('Performing action', currentElement)
     dispatch('action', { type: 'navigation', value: inputValue })
   }
 
@@ -443,6 +445,7 @@
     .history,
     .group,
     .search,
+    .chat,
     .action,
     .navigation {
       grid-column: 1 / span 2 !important;
