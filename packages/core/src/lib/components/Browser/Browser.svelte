@@ -668,6 +668,35 @@
   <div class="sidebar">
     <!-- <h1>Horizon Browser</h1> -->
 
+    <div class="tab-selector">
+      <button
+        on:click={() => ($sidebarTab = 'active')}
+        class:active={$sidebarTab === 'active'}
+        use:tooltip={{
+          content: 'Active Tabs (⌘ + G)',
+          action: 'hover',
+          position: 'bottom',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
+        <Icon name="list" />
+      </button>
+      <button
+        on:click={() => ($sidebarTab = 'archive')}
+        class:active={$sidebarTab === 'archive'}
+        use:tooltip={{
+          content: 'Archived Tabs (⌘ + Y)',
+          action: 'hover',
+          position: 'bottom',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
+        <Icon name="archive" />
+      </button>
+    </div>
+
     {#if $activeBrowserTab}
       <div class="actions nav-buttons">
         <button
@@ -677,7 +706,7 @@
           use:tooltip={{
             content: 'Go Back',
             action: 'hover',
-            position: 'bottom',
+            position: 'top',
             animation: 'fade',
             delay: 500
           }}
@@ -691,7 +720,7 @@
           use:tooltip={{
             content: 'Go Forward',
             action: 'hover',
-            position: 'bottom',
+            position: 'top',
             animation: 'fade',
             delay: 500
           }}
@@ -704,7 +733,7 @@
           use:tooltip={{
             content: 'Reload Page (⌘ + R)',
             action: 'hover',
-            position: 'bottom',
+            position: 'top',
             animation: 'fade',
             delay: 500
           }}
@@ -713,97 +742,6 @@
         </button>
       </div>
     {/if}
-
-    <div class="bar-wrapper">
-      <div class="search">
-        <input
-          bind:this={addressInputElem}
-          disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
-          bind:value={$addressValue}
-          on:blur={handleBlur}
-          on:focus={handleFocus}
-          type="text"
-          placeholder={$activeTab?.type === 'page'
-            ? 'Search or Enter URL'
-            : $activeTab?.type === 'chat'
-              ? 'Chat Title'
-              : 'Empty Tab'}
-        />
-      </div>
-
-      {#if $activeTab?.type === 'page'}
-        {#key $activeTab.resourceBookmark}
-          <button
-            on:click={handleBookmark}
-            use:tooltip={{
-              content: $activeTab?.resourceBookmark
-                ? 'Open bookmark (⌘ + D)'
-                : 'Bookmark this page (⌘ + D)',
-              action: 'hover',
-              position: 'right',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            {#if $bookmarkingInProgress}
-              <Icon name="spinner" />
-            {:else if $bookmarkingSuccess}
-              <Icon name="check" />
-            {:else if $activeTab?.resourceBookmark}
-              <Icon name="bookmarkFilled" />
-            {:else}
-              <Icon name="bookmark" />
-            {/if}
-          </button>
-        {/key}
-      {/if}
-    </div>
-
-    <div class="actions">
-      <!-- <button on:click|preventDefault={handleOrganize}>
-                {#if $loadingOrganize}
-                    <Icon name="spinner" />
-                {:else}
-                    <Icon name="sparkles" />
-                {/if}
-            </button> -->
-      <button
-        on:click|preventDefault={() => toggleOasis()}
-        use:tooltip={{
-          content: 'Oasis (⌘ + O)',
-          action: 'hover',
-          position: 'top',
-          animation: 'fade',
-          delay: 500
-        }}
-      >
-        <Icon name="leave" />
-      </button>
-      <button
-        on:click|preventDefault={handleNewHorizon}
-        use:tooltip={{
-          content: 'New Horizon (⌘ + N)',
-          action: 'hover',
-          position: 'top',
-          animation: 'fade',
-          delay: 500
-        }}
-      >
-        <Icon name="layout-grid-add" />
-      </button>
-      <button
-        on:click|preventDefault={() => createNewEmptyTab()}
-        use:tooltip={{
-          content: 'New Tab (⌘ + T)',
-          action: 'hover',
-          position: 'top',
-          animation: 'fade',
-          delay: 500
-        }}
-      >
-        <Icon name="add" />
-      </button>
-    </div>
 
     <div class="tabs">
       <!-- {#each $tabs as tab, idx (tab.id)}
@@ -880,33 +818,96 @@
       {/each}
     </div>
 
-    <div class="tab-selector">
+    <div class="actions">
+      <!-- <button on:click|preventDefault={handleOrganize}>
+                {#if $loadingOrganize}
+                    <Icon name="spinner" />
+                {:else}
+                    <Icon name="sparkles" />
+                {/if}
+            </button> -->
       <button
-        on:click={() => ($sidebarTab = 'active')}
-        class:active={$sidebarTab === 'active'}
+        on:click|preventDefault={() => toggleOasis()}
         use:tooltip={{
-          content: 'Active Tabs (⌘ + G)',
+          content: 'Oasis (⌘ + O)',
           action: 'hover',
           position: 'top',
           animation: 'fade',
           delay: 500
         }}
       >
-        <Icon name="list" />
+        <Icon name="leave" />
       </button>
       <button
-        on:click={() => ($sidebarTab = 'archive')}
-        class:active={$sidebarTab === 'archive'}
+        on:click|preventDefault={handleNewHorizon}
         use:tooltip={{
-          content: 'Archived Tabs (⌘ + Y)',
+          content: 'New Horizon (⌘ + N)',
           action: 'hover',
           position: 'top',
           animation: 'fade',
           delay: 500
         }}
       >
-        <Icon name="archive" />
+        <Icon name="layout-grid-add" />
       </button>
+      <button
+        on:click|preventDefault={() => createNewEmptyTab()}
+        use:tooltip={{
+          content: 'New Tab (⌘ + T)',
+          action: 'hover',
+          position: 'top',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
+        <Icon name="add" />
+      </button>
+    </div>
+
+    <div class="bar-wrapper">
+      <div class="search">
+        <input
+          bind:this={addressInputElem}
+          disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
+          bind:value={$addressValue}
+          on:blur={handleBlur}
+          on:focus={handleFocus}
+          type="text"
+          placeholder={$activeTab?.type === 'page'
+            ? 'Search or Enter URL'
+            : $activeTab?.type === 'chat'
+              ? 'Chat Title'
+              : 'Empty Tab'}
+        />
+      </div>
+
+      {#if $activeTab?.type === 'page'}
+        {#key $activeTab.resourceBookmark}
+          <button
+            on:click={handleBookmark}
+            style="z-index: 100000;"
+            use:tooltip={{
+              content: $activeTab?.resourceBookmark
+                ? 'Open bookmark (⌘ + D)'
+                : 'Bookmark this page (⌘ + D)',
+              action: 'hover',
+              position: 'right',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            {#if $bookmarkingInProgress}
+              <Icon name="spinner" />
+            {:else if $bookmarkingSuccess}
+              <Icon name="check" />
+            {:else if $activeTab?.resourceBookmark}
+              <Icon name="bookmarkFilled" />
+            {:else}
+              <Icon name="bookmark" />
+            {/if}
+          </button>
+        {/key}
+      {/if}
     </div>
 
     <!-- <div class="page-actions">
@@ -1016,13 +1017,13 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: #f5f5f5;
+    background-color: #fcfcfc;
   }
 
   .sidebar {
     width: 380px;
     height: 100vh;
-    padding: 0.75rem;
+    padding: 0.5rem 0.75rem 0.75rem 0.75rem;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -1056,7 +1057,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 30px;
+    margin-top: 0.75rem;
 
     button {
       appearance: none;
@@ -1085,7 +1086,7 @@
 
   input {
     width: 100%;
-    padding: 10px;
+    padding: 10px 100px 10px 10px;
     border: 1px solid transparent;
     border-radius: 5px;
     font-size: 1rem;
@@ -1107,8 +1108,11 @@
   .tabs {
     flex: 1;
     overflow: auto;
-    margin-top: 10px;
-    padding-bottom: 5rem;
+    margin-top: 2rem;
+    padding-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 
     h2 {
       font-size: 1.1rem;
@@ -1161,7 +1165,7 @@
     }
 
     &.selected {
-      background-color: #dfdfdf;
+      background-color: #ffd6ed;
     }
   }
 
@@ -1208,8 +1212,8 @@
   .nav-buttons {
     position: absolute;
     z-index: 10000;
-    top: -5px;
-    left: 215px;
+    bottom: 16px;
+    left: 162px;
   }
 
   .page-actions {
@@ -1236,9 +1240,9 @@
     width: calc(100% + 10px);
     display: flex;
     align-items: center;
-    margin-bottom: -10px;
+    margin-bottom: -22px;
     margin-left: -10px;
-    border-top: 1px solid #e4e4e4;
+    padding-left: 16rem;
 
     button {
       flex: 1;

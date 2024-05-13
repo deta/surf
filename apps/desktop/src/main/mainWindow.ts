@@ -65,6 +65,7 @@ export function createWindow() {
     show: false,
     autoHideMenuBar: true,
     frame: false, // TODO: Figure this out for windows but idc
+    trafficLightPosition: { x: 18, y: 18 },
     titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
     // ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {

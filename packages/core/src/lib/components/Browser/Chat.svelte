@@ -266,6 +266,7 @@
     font-family: 'Gambarino';
     color: #5b6882;
     font-size: 3rem;
+    line-height: 1.2;
     margin-bottom: 1.5rem;
     background: linear-gradient(0deg, #bb00bf -39%, #ef00f8 100%);
 
