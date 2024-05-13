@@ -1,3 +1,12 @@
+@import url('/packages/core/public/assets/fonts/Gambarino-Regular.ttf');
+
+@font-face {
+  font-family: 'Gambarino';
+  src: url('/packages/core/public/assets/fonts/Gambarino-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-weight: 400;
