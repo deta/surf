@@ -128,7 +128,6 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
   }
 
   async update(id: string, updatedItem: Partial<T>): Promise<number> {
-    delete updatedItem.createdAt
     updatedItem.updatedAt = new Date().toISOString()
     return await this.t.update(id, updatedItem)
   }

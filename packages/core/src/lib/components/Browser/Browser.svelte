@@ -7,7 +7,7 @@
   import { useLogScope } from '../../utils/log'
   import { Icon } from '@horizon/icons'
   import { generateID } from '../../utils/id'
-  import { parseStringIntoUrl } from '../../utils/url'
+  import { parseStringIntoBrowserLocation, parseStringIntoUrl } from '../../utils/url'
   import { isModKeyAndKeyPressed, isModKeyPressed } from '../../utils/keyboard'
   import { copyToClipboard } from '../../utils/clipboard'
   import { getChatData } from './examples'
@@ -29,6 +29,8 @@
   import { HorizonDatabase } from '../../service/storage'
   import type { Optional } from '../../types'
   import { useLocalStorageStore } from '../../utils/localstorage'
+  import Image from '../Atoms/Image.svelte'
+  import { tooltip } from '@svelte-plugins/tooltips'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -72,34 +74,26 @@
 
   const bookmarkingSuccess = writableAutoReset(false, 1000)
 
-  const tabsInView = derived([tabs, sidebarTab], ([$tabs, $sidebarTab]) => {
-    return $tabs.filter((tab) => ($sidebarTab === 'active' ? !tab.archived : tab.archived))
+  const activeTabs = derived([tabs], ([tabs]) => {
+    return tabs
+      .filter((tab) => !tab.archived)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   })
 
-  const organizedTabs = derived([tabs, activeTabId], ([tabs, activeTabId]) => {
-    const sections = tabs.reduce(
-      (acc, tab) => {
-        if (!tab.section) {
-          tab.section = '_all'
-        }
-
-        if (!acc[tab.section]) {
-          acc[tab.section] = []
-        }
-
-        acc[tab.section].push(tab)
-
-        return acc
-      },
-      {} as Record<string, Tab[]>
-    )
-
-    // to array
-    return Object.keys(sections).map((section) => ({ name: section, tabs: sections[section] }))
+  const tabsInView = derived([tabs, sidebarTab], ([tabs, sidebarTab]) => {
+    if (sidebarTab === 'active') {
+      return tabs
+        .filter((tab) => !tab.archived)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    } else {
+      return tabs
+        .filter((tab) => tab.archived)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    }
   })
 
-  const activeTab = derived([tabs, activeTabId], ([$tabs, $activeTabId]) => {
-    return $tabs.find((tab) => tab.id === $activeTabId)
+  const activeTab = derived([tabs, activeTabId], ([tabs, activeTabId]) => {
+    return tabs.find((tab) => tab.id === activeTabId)
   })
 
   const activeTabLocation = derived(activeTab, (activeTab) => {
@@ -123,6 +117,11 @@
     $activeTab?.type === 'page' &&
     $activeTab?.currentHistoryIndex < $activeTab.historyStackIds.length - 1
 
+  $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
+    log.debug('Active tab is not in view, resetting')
+    resetActiveTab()
+  }
+
   activeTab.subscribe((tab) => {
     if (!tab) return
 
@@ -137,7 +136,7 @@
       )
       addressValue.set(currentEntry?.url ?? tab.initialLocation)
     } else if (tab?.type === 'chat') {
-      addressValue.set(tab.query)
+      addressValue.set(tab.title)
     } else {
       addressValue.set('')
     }
@@ -152,25 +151,42 @@
       $sidebarTab === 'active' ? !tab.archived : tab.archived
     )
 
+    if (tabsInView.length === 0) {
+      log.debug('No tabs in view')
+      return
+    }
+
     if (tab === 'archive' && !$activeTab?.archived) {
-      activeTabId.set(tabsInView[tabsInView.length - 1].id)
+      activeTabId.set(tabsInView[0].id)
     } else if (tab === 'active' && $activeTab?.archived) {
-      activeTabId.set(tabsInView[tabsInView.length - 1].id)
+      activeTabId.set(tabsInView[0].id)
     }
   })
 
-  $: log.debug('Tabs', $tabs)
-  $: log.debug('Active Tab', $activeTab)
-  $: log.debug('Organized Tabs', $organizedTabs)
+  $: log.debug('Active Tab', $activeTab?.createdAt)
+  $: log.debug(
+    'Tabs',
+    $tabs.find((tab) => tab.id === $activeTabId)
+  )
 
   const resetActiveTab = () => {
-    activeTabId.set($tabsInView[$tabsInView.length - 1].id)
+    const tabsInView = $tabs.filter((tab) =>
+      $sidebarTab === 'active' ? !tab.archived : tab.archived
+    )
+    const newActiveTabId = tabsInView[0]?.id
+    if (!newActiveTabId) {
+      log.error('No active tab found')
+      return
+    }
+    log.debug('Resetting active tab', newActiveTabId)
+    activeTabId.set(newActiveTabId)
   }
 
   const createTab = async <T extends Tab>(
     tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived'>
   ) => {
     const newTab = await tabsDB.create({ archived: false, ...tab })
+    log.debug('Created tab', newTab)
     tabs.update((tabs) => [...tabs, newTab])
 
     return newTab
@@ -185,11 +201,32 @@
 
     updateTab(tabId, { archived: true })
 
-    tabs.update((tabs) => tabs.filter((tab) => tab.id !== tabId))
+    await tick()
 
     if ($activeTabId === tabId) {
       resetActiveTab()
     }
+  }
+
+  const unarchiveTab = async (tabId: string) => {
+    const tab = $tabs.find((tab) => tab.id === tabId)
+    if (!tab) {
+      log.error('Tab not found', tabId)
+      return
+    }
+
+    log.debug('Unarchiving tab', tabId)
+
+    // Mark tab as unarchived and update the creation date to now to make it appear at the bottom
+    updateTab(tabId, { archived: false })
+
+    sidebarTab.set('active')
+
+    await tick()
+
+    setTimeout(() => {
+      activeTabId.set(tabId)
+    }, 50)
   }
 
   const deleteTab = async (tabId: string) => {
@@ -236,17 +273,23 @@
       return
     }
 
-    if ($activeTab.type === 'page') {
-      const currentEntry = historyEntriesManager.getEntry(
-        $activeTab.historyStackIds[$activeTab.currentHistoryIndex]
-      )
-
-      if (currentEntry) {
-        archiveTab(currentEntry.id)
-      }
+    if ($activeTab.archived) {
+      await deleteTab($activeTab.id)
+    } else {
+      await archiveTab($activeTab.id)
     }
 
-    await deleteTab($activeTab.id)
+    // if ($activeTab.type === 'page') {
+    //   const currentEntry = historyEntriesManager.getEntry(
+    //     $activeTab.historyStackIds[$activeTab.currentHistoryIndex]
+    //   )
+
+    //   if (currentEntry) {
+    //     archiveTab(currentEntry.id)
+    //   }
+    // }
+
+    // await deleteTab($activeTab.id)
   }
 
   const updateActiveTab = (updates: Partial<Tab>) => {
@@ -267,7 +310,7 @@
   }
 
   const getNavigationURL = (value: string) => {
-    const url = parseStringIntoUrl(value)
+    const url = parseStringIntoBrowserLocation(value)
     if (!url) {
       log.debug('Invalid URL, using search engine')
 
@@ -310,7 +353,7 @@
       return searchURL
     }
 
-    return url.href
+    return url
   }
 
   const handleBlur = () => {
@@ -347,6 +390,9 @@
         historyStackIds: [],
         currentHistoryIndex: -1
       })
+    } else if ($activeTab?.type === 'chat') {
+      log.debug('Renaming chat tab', $addressValue)
+      updateActiveTab({ title: $addressValue })
     }
   }
 
@@ -369,6 +415,16 @@
       toggleOasis()
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       closeActiveTab()
+    } else if (isModKeyAndKeyPressed(e, 'd')) {
+      handleBookmark()
+    } else if (isModKeyAndKeyPressed(e, 'y')) {
+      sidebarTab.set('archive')
+    } else if (isModKeyAndKeyPressed(e, 'g')) {
+      sidebarTab.set('active')
+    } else if (isModKeyAndKeyPressed(e, 'n')) {
+      handleNewHorizon()
+    } else if (isModKeyAndKeyPressed(e, 'r')) {
+      $activeBrowserTab?.reload()
     }
   }
 
@@ -567,7 +623,7 @@
     // @ts-expect-error
     window.api.onOpenURL((url: string) => openUrlHandler(url))
 
-    const tabsList = (await tabsDB.all()).reverse()
+    const tabsList = await tabsDB.all()
     tabs.set(tabsList)
 
     log.debug('Tabs loaded', tabsList)
@@ -604,6 +660,8 @@
 
 {#if $masterHorizon}
   <DrawerWrapper bind:drawer horizon={$masterHorizon} {resourceManager} />
+{:else}
+  <div>Should not happen error: Failed to load main Horizon</div>
 {/if}
 
 <div class="app-wrapper">
@@ -612,13 +670,45 @@
 
     {#if $activeBrowserTab}
       <div class="actions nav-buttons">
-        <button class="nav-button" disabled={!canGoBack} on:click={$activeBrowserTab?.goBack}>
+        <button
+          class="nav-button"
+          disabled={!canGoBack}
+          on:click={$activeBrowserTab?.goBack}
+          use:tooltip={{
+            content: 'Go Back',
+            action: 'hover',
+            position: 'bottom',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
           <Icon name="arrow.left" />
         </button>
-        <button class="nav-button" disabled={!canGoForward} on:click={$activeBrowserTab?.goForward}>
+        <button
+          class="nav-button"
+          disabled={!canGoForward}
+          on:click={$activeBrowserTab?.goForward}
+          use:tooltip={{
+            content: 'Go Forward',
+            action: 'hover',
+            position: 'bottom',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
           <Icon name="arrow.right" />
         </button>
-        <button class="nav-button" on:click={$activeBrowserTab?.reload}>
+        <button
+          class="nav-button"
+          on:click={$activeBrowserTab?.reload}
+          use:tooltip={{
+            content: 'Reload Page (⌘ + R)',
+            action: 'hover',
+            position: 'bottom',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
           <Icon name="reload" />
         </button>
       </div>
@@ -628,27 +718,44 @@
       <div class="search">
         <input
           bind:this={addressInputElem}
-          disabled={$activeTab?.type !== 'page'}
+          disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
           bind:value={$addressValue}
           on:blur={handleBlur}
           on:focus={handleFocus}
           type="text"
-          placeholder="Search or enter URL"
+          placeholder={$activeTab?.type === 'page'
+            ? 'Search or Enter URL'
+            : $activeTab?.type === 'chat'
+              ? 'Chat Title'
+              : 'Empty Tab'}
         />
       </div>
 
       {#if $activeTab?.type === 'page'}
-        <button on:click={handleBookmark}>
-          {#if $bookmarkingInProgress}
-            <Icon name="spinner" />
-          {:else if $bookmarkingSuccess}
-            <Icon name="check" />
-          {:else if $activeTab?.resourceBookmark}
-            <Icon name="bookmarkFilled" />
-          {:else}
-            <Icon name="bookmark" />
-          {/if}
-        </button>
+        {#key $activeTab.resourceBookmark}
+          <button
+            on:click={handleBookmark}
+            use:tooltip={{
+              content: $activeTab?.resourceBookmark
+                ? 'Open bookmark (⌘ + D)'
+                : 'Bookmark this page (⌘ + D)',
+              action: 'hover',
+              position: 'right',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            {#if $bookmarkingInProgress}
+              <Icon name="spinner" />
+            {:else if $bookmarkingSuccess}
+              <Icon name="check" />
+            {:else if $activeTab?.resourceBookmark}
+              <Icon name="bookmarkFilled" />
+            {:else}
+              <Icon name="bookmark" />
+            {/if}
+          </button>
+        {/key}
       {/if}
     </div>
 
@@ -660,13 +767,40 @@
                     <Icon name="sparkles" />
                 {/if}
             </button> -->
-      <button on:click|preventDefault={() => toggleOasis()}>
+      <button
+        on:click|preventDefault={() => toggleOasis()}
+        use:tooltip={{
+          content: 'Oasis (⌘ + O)',
+          action: 'hover',
+          position: 'top',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
         <Icon name="leave" />
       </button>
-      <button on:click|preventDefault={handleNewHorizon}>
+      <button
+        on:click|preventDefault={handleNewHorizon}
+        use:tooltip={{
+          content: 'New Horizon (⌘ + N)',
+          action: 'hover',
+          position: 'top',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
         <Icon name="layout-grid-add" />
       </button>
-      <button on:click|preventDefault={() => createNewEmptyTab()}>
+      <button
+        on:click|preventDefault={() => createNewEmptyTab()}
+        use:tooltip={{
+          content: 'New Tab (⌘ + T)',
+          action: 'hover',
+          position: 'top',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
         <Icon name="add" />
       </button>
     </div>
@@ -684,7 +818,7 @@
                 </div>
             {/each} -->
 
-      {#each $tabs.filter((tab) => tab.archived === ($sidebarTab === 'archive')) as tab, idx (tab.id)}
+      {#each $tabsInView as tab (tab.id)}
         <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
         <div
           class="tab"
@@ -693,7 +827,7 @@
         >
           {#if tab.icon}
             <div class="icon-wrapper">
-              <img src={tab.icon} alt={tab.title} />
+              <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
             </div>
           {:else if tab.type === 'chat'}
             <div class="icon-wrapper">
@@ -709,23 +843,70 @@
             {tab.title}
           </div>
 
+          {#if tab.archived}
+            <button
+              on:click|stopPropagation={() => unarchiveTab(tab.id)}
+              class="close"
+              use:tooltip={{
+                content: 'Move back to active tabs',
+                action: 'hover',
+                position: 'left',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              <Icon name="arrowbackup" size="20px" />
+            </button>
+          {/if}
+
           <button
-            on:click={() => (tab.archived ? deleteTab(tab.id) : archiveTab(tab.id))}
+            on:click|stopPropagation={() => (tab.archived ? deleteTab(tab.id) : archiveTab(tab.id))}
             class="close"
+            use:tooltip={{
+              content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
+              action: 'hover',
+              position: 'left',
+              animation: 'fade',
+              delay: 500
+            }}
           >
-            <Icon name="close" size="20px" />
+            {#if tab.archived}
+              <Icon name="trash" size="20px" />
+            {:else}
+              <Icon name="close" size="20px" />
+            {/if}
           </button>
         </div>
       {/each}
     </div>
 
     <div class="tab-selector">
-      <button on:click={() => ($sidebarTab = 'active')} class:active={$sidebarTab === 'active'}
-        >Active</button
+      <button
+        on:click={() => ($sidebarTab = 'active')}
+        class:active={$sidebarTab === 'active'}
+        use:tooltip={{
+          content: 'Active Tabs (⌘ + G)',
+          action: 'hover',
+          position: 'top',
+          animation: 'fade',
+          delay: 500
+        }}
       >
-      <button on:click={() => ($sidebarTab = 'archive')} class:active={$sidebarTab === 'archive'}
-        >Archive</button
+        <Icon name="list" />
+      </button>
+      <button
+        on:click={() => ($sidebarTab = 'archive')}
+        class:active={$sidebarTab === 'archive'}
+        use:tooltip={{
+          content: 'Archived Tabs (⌘ + Y)',
+          action: 'hover',
+          position: 'top',
+          animation: 'fade',
+          delay: 500
+        }}
       >
+        <Icon name="archive" />
+      </button>
     </div>
 
     <!-- <div class="page-actions">
@@ -746,18 +927,18 @@
   </div>
 
   <div class="browser-window-wrapper">
-    {#each $tabs as tab (tab.id)}
+    {#each $activeTabs as tab (tab.id)}
       <div class="browser-window" style="--scaling: 1;" class:active={$activeTabId === tab.id}>
-        {#if $activeTab?.type === 'page'}
+        {#if tab.type === 'page'}
           <BrowserTab
             bind:this={$browserTabs[tab.id]}
-            bind:tab
+            bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
             active={$activeTabId === tab.id}
             {historyEntriesManager}
             on:newTab={handleNewTab}
             on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
           />
-        {:else if $activeTab?.type === 'horizon'}
+        {:else if tab.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
           {#if horizon}
             <Horizon
@@ -770,7 +951,7 @@
           {:else}
             <div>no horizon found</div>
           {/if}
-        {:else if $activeTab?.type === 'chat'}
+        {:else if tab.type === 'chat'}
           <Chat
             {tab}
             {resourceManager}
@@ -788,6 +969,43 @@
         {/if}
       </div>
     {/each}
+
+    {#if $activeTab && $activeTab?.archived}
+      <div class="browser-window active" style="--scaling: 1;">
+        {#if $activeTab?.type === 'page'}
+          <BrowserTab
+            bind:this={$browserTabs[$activeTabId]}
+            tab={$activeTab}
+            active
+            {historyEntriesManager}
+            on:newTab={handleNewTab}
+            on:navigation={(e) => handleWebviewTabNavigation(e, $activeTab)}
+          />
+        {:else if $activeTab?.type === 'horizon'}
+          {@const horizon = $horizons.find((horizon) => horizon.id === $activeTab?.horizonId)}
+          {#if horizon}
+            <Horizon {horizon} active {visorSearchTerm} inOverview={false} {resourceManager} />
+          {:else}
+            <div>no horizon found</div>
+          {/if}
+        {:else if $activeTab?.type === 'chat'}
+          <Chat
+            tab={$activeTab}
+            {resourceManager}
+            {drawer}
+            db={storage}
+            on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
+            on:updateTab={(e) => updateTab($activeTabId, e.detail)}
+          />
+        {:else}
+          <BrowserHomescreen
+            {historyEntriesManager}
+            on:navigate={handleTabNavigation}
+            on:chat={handleCreateChat}
+          />
+        {/if}
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -890,6 +1108,7 @@
     flex: 1;
     overflow: auto;
     margin-top: 10px;
+    padding-bottom: 5rem;
 
     h2 {
       font-size: 1.1rem;
@@ -913,11 +1132,6 @@
       width: 20px;
       height: 20px;
       display: block;
-
-      img {
-        width: 100%;
-        height: 100%;
-      }
     }
 
     .title {
@@ -1036,10 +1250,9 @@
       align-items: center;
       justify-content: center;
       gap: 5px;
-      border-radius: 5px;
       cursor: pointer;
       font-size: 1rem;
-      color: #5e5e5e;
+      color: #777777;
       padding: 10px;
 
       &.active {
@@ -1048,7 +1261,7 @@
       }
 
       &:hover {
-        background: rgb(220, 220, 220);
+        color: #000;
       }
     }
   }

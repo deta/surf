@@ -14,7 +14,13 @@
   import AddressToolbar, {
     type ActionEvent
   } from '../Cards/Browser/modules/toolbar/AddressToolbar.svelte'
-  import { checkIfUrl, parseStringIntoUrl, prependProtocol } from '../../utils/url'
+  import {
+    checkIfUrl,
+    parseStringIntoBrowserLocation,
+    parseStringIntoUrl,
+    prependProtocol
+  } from '../../utils/url'
+  import log from '../../utils/log'
 
   export let historyEntriesManager: HistoryEntriesManager
 
@@ -29,6 +35,13 @@
   let inputEl: HTMLInputElement
 
   $: iterableSites = $sites || []
+
+  $: if (inputEl) {
+    log.debug('inputEl', inputEl)
+    setTimeout(() => {
+      inputEl.focus()
+    }, 200)
+  }
 
   const AVAILABLE_SERVICES = SERVICES.filter((e) => e.showBrowserAction === true)
 
@@ -103,10 +116,10 @@
   const handleAddressToolbarAction = (e: CustomEvent<ActionEvent>) => {
     const { type, value } = e.detail
     if (type === 'navigation') {
-      const url = parseStringIntoUrl(value)
+      const url = parseStringIntoBrowserLocation(value)
       if (!url) return
 
-      dispatch('navigate', url.href)
+      dispatch('navigate', url)
       inputEl.blur()
     } else if (type === 'chat') {
       dispatch('chat', value)
@@ -130,19 +143,18 @@
 
   let unsubscribeHistoryEntries: Unsubscriber
 
-  $: if (showBrowserHomescreen && inputEl) {
-    console.log('focus')
-    editing = true
-    inputEl.focus()
-  }
+  // $: if (showBrowserHomescreen && inputEl) {
+  //   editing = true
+  //   inputEl.focus()
+  // }
 
   onMount(() => {
     updateSites()
 
-    setTimeout(() => {
-      editing = true
-      inputEl?.focus()
-    }, 2000)
+    // setTimeout(() => {
+    //   editing = true
+    //   inputEl?.focus()
+    // }, 2000)
 
     // Delay the subscription to avoid unnecessary updates
     const timeout = setTimeout(() => {

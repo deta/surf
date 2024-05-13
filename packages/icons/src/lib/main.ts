@@ -47,6 +47,7 @@ import LayoutGridAdd from './Icons/LayoutGridAdd.svelte'
 import ArrowLeft from './Icons/ArrowLeft.svelte'
 import ArrowRight from './Icons/ArrowRight.svelte'
 import Reload from './Icons/Reload.svelte'
+import Trash from './Icons/Trash.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -98,7 +99,8 @@ export const icons = {
   'layout-grid-add': LayoutGridAdd,
   'arrow.left': ArrowLeft,
   'arrow.right': ArrowRight,
-  reload: Reload
+  reload: Reload,
+  trash: Trash
 }
 
 export type Icons = keyof typeof icons
@@ -150,5 +152,6 @@ export {
   LayoutGridAdd,
   ArrowLeft,
   ArrowRight,
-  Reload
+  Reload,
+  Trash
 }

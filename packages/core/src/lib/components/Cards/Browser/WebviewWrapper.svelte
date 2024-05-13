@@ -152,7 +152,6 @@
   // }
 
   onMount(() => {
-    console.log(get(historyEntriesManager.entriesStore))
     webview.addEventListener('ipc-message', (event) => {
       if (event.channel !== 'webview-page-event') return
 
