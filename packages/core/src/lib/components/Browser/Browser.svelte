@@ -10,7 +10,7 @@
   import { parseStringIntoUrl } from '../../utils/url'
   import { isModKeyAndKeyPressed, isModKeyPressed } from '../../utils/keyboard'
   import { copyToClipboard } from '../../utils/clipboard'
-  import { EXAMPLE_TABS } from './examples'
+  import { getChatData } from './examples'
   import { writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
   import { ResourceManager, type ResourceObject } from '../../service/resources'
@@ -230,6 +230,25 @@
     })
   }
 
+  const closeActiveTab = async () => {
+    if (!$activeTab) {
+      log.error('No active tab')
+      return
+    }
+
+    if ($activeTab.type === 'page') {
+      const currentEntry = historyEntriesManager.getEntry(
+        $activeTab.historyStackIds[$activeTab.currentHistoryIndex]
+      )
+
+      if (currentEntry) {
+        archiveTab(currentEntry.id)
+      }
+    }
+
+    await deleteTab($activeTab.id)
+  }
+
   const updateActiveTab = (updates: Partial<Tab>) => {
     if (!$activeTab) {
       log.error('No active tab')
@@ -336,6 +355,7 @@
     addressInputElem.select()
   }
 
+  // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
     log.debug('key down', e.key)
     if (e.key === 'Enter' && addressBarFocus) {
@@ -347,6 +367,8 @@
       createNewEmptyTab()
     } else if (isModKeyAndKeyPressed(e, 'o')) {
       toggleOasis()
+    } else if (isModKeyAndKeyPressed(e, 'w')) {
+      closeActiveTab()
     }
   }
 
