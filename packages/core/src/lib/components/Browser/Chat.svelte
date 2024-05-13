@@ -237,7 +237,7 @@
     height: fit-content;
     width: 100%;
     padding: 16rem 4rem;
-    background: #f8fcff;
+    background: #fff8fe;
   }
 
   .chat {
@@ -263,10 +263,21 @@
   .chat-request,
   .message.user,
   .fixed-header > h1 {
+    font-family: 'Gambarino';
     color: #5b6882;
     font-size: 3rem;
+    line-height: 1.2;
     margin-bottom: 1.5rem;
-    background: linear-gradient(0deg, #004fca -39%, #1874f6 100%);
+    background: linear-gradient(0deg, #bb00bf -39%, #ef00f8 100%);
+
+    background: linear-gradient(
+      0deg,
+      color(display-p3 0.67 0.057 0.7233) -39%,
+      color(display-p3 0.8556 0.0351 0.9404) 100%
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     max-width: 640px;
@@ -278,7 +289,7 @@
   }
 
   .chat-memory {
-    color: #1f385f;
+    color: #912c74;
     font-size: 1.5rem;
     padding: 4rem 0;
     line-height: 150%;
@@ -288,7 +299,7 @@
 
   .chat-result {
     .message {
-      color: #5b6882;
+      color: rgba(70, 2, 51, 0.7);
       font-size: 1.5rem;
       letter-spacing: 0.01em;
       margin-bottom: 1.5rem;
@@ -327,6 +338,7 @@
       align-items: center;
       justify-content: center;
       transition: 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
+      background: #fff;
       box-shadow:
         0px 0px 0.467px 0px rgba(0, 0, 0, 0.18),
         0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1),
