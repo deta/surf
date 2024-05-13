@@ -119,6 +119,24 @@
 
     loadMessages()
   })
+
+  function handleMouseMove(event: MouseEvent) {
+    const target = event.currentTarget as HTMLElement
+    const rect = target.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+    const deltaX = (x - centerX) * 0.1
+    const deltaY = (y - centerY) * 0.1
+    target.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.02)`
+    console.log(target)
+  }
+
+  function handleMouseLeave(event: MouseEvent) {
+    const target = event.currentTarget as HTMLElement
+    target.style.transform = 'translate(0, 0) scale(1.00)'
+  }
 </script>
 
 <div class="scroll-container">
@@ -133,15 +151,14 @@
 
       <div class="chat-result">
         <h3 class="chat-memory">From your Memory</h3>
-
         {#each mockChatData?.messages ?? [] as message}
           {#if message.role === 'user'}
-            <div class="message user">
-              <h2>{message.content}</h2>
+            <div class="message user" bind:this={queryElement}>
+              <h2>{@html message.content}</h2>
             </div>
           {:else}
             <div class="message">
-              <p>{message.content}</p>
+              {@html message.content}
             </div>
           {/if}
 
@@ -153,25 +170,13 @@
                   on:click={() => openResource(resource.id)}
                   on:keydown={(event) => event.key === 'Enter' && openResource(resource.id)}
                   role="button"
+                  id={resource.id}
                   tabindex="0"
                   style="--resource-color: {resource.color}; {resource.image
                     ? `background-image: url(${resource.image});`
                     : ''}"
-                  on:mousemove={(event) => {
-                    const rect = event.currentTarget.getBoundingClientRect()
-                    const x = event.clientX - rect.left
-                    const y = event.clientY - rect.top
-                    const centerX = rect.width / 2
-                    const centerY = rect.height / 2
-                    const deltaX = (x - centerX) * 0.1
-                    const deltaY = (y - centerY) * 0.1
-                    event.currentTarget.style.transform = `translate(${deltaX}px, ${deltaY}px)`
-                    event.currentTarget.style.scale = '1.02'
-                  }}
-                  on:mouseleave={(event) => {
-                    event.currentTarget.style.scale = '1.00'
-                    event.currentTarget.style.transform = ''
-                  }}
+                  on:mousemove={handleMouseMove}
+                  on:mouseleave={handleMouseLeave}
                 >
                   {#if !resource.image}
                     <div class="resource-content">
@@ -304,6 +309,7 @@
       gap: 3rem;
       margin: 4rem 0;
       & > *:only-child {
+        max-height: 24rem;
         grid-column: 2 / span 2;
       }
     }
@@ -325,6 +331,22 @@
         0px 0px 0.467px 0px rgba(0, 0, 0, 0.18),
         0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1),
         0px 2.8px 7.467px 0px rgba(0, 0, 0, 0.1);
+      &:hover {
+        &::after {
+          content: 'Open';
+          position: absolute;
+          bottom: 1rem;
+          right: 1rem;
+          height: 2rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 1rem 0.05rem 1rem;
+          width: fit-content;
+          border-radius: 12px;
+          background: rgba(0, 0, 0, 0.1);
+        }
+      }
 
       .title,
       .author,
