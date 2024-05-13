@@ -48,6 +48,7 @@ import ArrowLeft from './Icons/ArrowLeft.svelte'
 import ArrowRight from './Icons/ArrowRight.svelte'
 import Reload from './Icons/Reload.svelte'
 import Trash from './Icons/Trash.svelte'
+import Grid from './Icons/Grid.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -100,7 +101,8 @@ export const icons = {
   'arrow.left': ArrowLeft,
   'arrow.right': ArrowRight,
   reload: Reload,
-  trash: Trash
+  trash: Trash,
+  grid: Grid
 }
 
 export type Icons = keyof typeof icons
@@ -153,5 +155,6 @@ export {
   ArrowLeft,
   ArrowRight,
   Reload,
-  Trash
+  Trash,
+  Grid
 }

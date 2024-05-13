@@ -126,9 +126,11 @@
     if (!tab) return
 
     if (tab?.type === 'horizon') {
-      const horizon = $horizons.find((horizon) => horizon.id === tab.id)
+      const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)
       if (horizon) {
         addressValue.set(horizon.data.name)
+      } else {
+        log.warn('Horizon not found', tab.horizonId)
       }
     } else if (tab?.type === 'page') {
       const currentEntry = historyEntriesManager.getEntry(
@@ -173,11 +175,12 @@
     const tabsInView = $tabs.filter((tab) =>
       $sidebarTab === 'active' ? !tab.archived : tab.archived
     )
-    const newActiveTabId = tabsInView[0]?.id
-    if (!newActiveTabId) {
-      log.error('No active tab found')
+    if (tabsInView.length === 0) {
+      log.debug('No tabs in view')
+      activeTabId.set('')
       return
     }
+    const newActiveTabId = tabsInView[0]?.id
     log.debug('Resetting active tab', newActiveTabId)
     activeTabId.set(newActiveTabId)
   }
@@ -443,7 +446,7 @@
     const newTab = await createTab<TabHorizon>({
       horizonId: newHorizon.id,
       title: newHorizon.data.name,
-      icon: 'https://deta.space/favicon.png',
+      icon: '',
       type: 'horizon'
     })
 
@@ -718,7 +721,7 @@
       <div class="search">
         <input
           bind:this={addressInputElem}
-          disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
+          disabled={$activeTab?.type === 'empty'}
           bind:value={$addressValue}
           on:blur={handleBlur}
           on:focus={handleFocus}
@@ -832,6 +835,10 @@
           {:else if tab.type === 'chat'}
             <div class="icon-wrapper">
               <Icon name="sparkles" size="20px" />
+            </div>
+          {:else if tab.type === 'horizon'}
+            <div class="icon-wrapper">
+              <Icon name="grid" size="20px" />
             </div>
           {:else}
             <div class="icon-wrapper">
@@ -1006,6 +1013,16 @@
         {/if}
       </div>
     {/if}
+
+    {#if !$activeTabs && !$activeTab}
+      <div class="browser-window active" style="--scaling: 1;">
+        <BrowserHomescreen
+          {historyEntriesManager}
+          on:navigate={handleTabNavigation}
+          on:chat={handleCreateChat}
+        />
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -1020,7 +1037,8 @@
   }
 
   .sidebar {
-    width: 380px;
+    flex-shrink: 0;
+    width: 320px;
     height: 100vh;
     padding: 0.75rem;
     overflow: hidden;
