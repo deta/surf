@@ -1070,11 +1070,11 @@
       border-radius: 5px;
       cursor: pointer;
 
-      background-color: #e4e4e4;
+      background-color: #fbe8f1;
       padding: 10px;
 
       &:hover {
-        background: rgb(220, 220, 220);
+        background: #fad0e3;
       }
     }
   }
@@ -1090,11 +1090,11 @@
     border: 1px solid transparent;
     border-radius: 5px;
     font-size: 1rem;
-    background-color: #e4e4e4;
+    background-color: #fbe8f1;
     color: #3f3f3f;
 
     &:hover {
-      background: rgb(220, 220, 220);
+      background: #fad0e3;
     }
 
     &:focus {
@@ -1165,7 +1165,7 @@
     }
 
     &.selected {
-      background-color: #ffd6ed;
+      background-color: #fbe8f1;
     }
   }
 
@@ -1189,7 +1189,7 @@
 
       &:not(.nav-button) {
         flex: 1;
-        background-color: #e4e4e4;
+        background-color: #fdf2f7;
         padding: 10px;
       }
 
@@ -1204,7 +1204,7 @@
       }
 
       &:hover {
-        background: rgb(220, 220, 220);
+        background: #fad0e3;
       }
     }
   }
@@ -1221,7 +1221,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 10px;
-    background-color: #e4e4e4;
+    background-color: #fdf2f7;
     border-radius: 5px;
   }
 
