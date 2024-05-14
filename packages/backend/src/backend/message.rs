@@ -118,4 +118,5 @@ pub enum UserdataMessage {
 
 pub enum MiscMessage {
     Print(String),
+    CreateAIChatMessage(String),
 }

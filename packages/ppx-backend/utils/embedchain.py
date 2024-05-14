@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import os
 from typing import AsyncIterable
@@ -10,9 +9,9 @@ from langchain.callbacks.streaming_aiter import AsyncIteratorCallbackHandler
 from langchain_community.chat_models.openai import ChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage
 
-# set access tokens
-os.environ["HUGGINGFACE_ACCESS_TOKEN"] = ""
-os.environ["OPENAI_API_KEY"] = ""
+from dotenv import load_dotenv
+
+load_dotenv()
 
 HUGGINGFACE_PROVIDER = "huggingface"
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "mixedbread-ai/mxbai-embed-large-v1")
@@ -60,35 +59,33 @@ async def prepare_contexts_for_llm_query(ec_app, query, config, citations):
     return contexts
 
 
-async def generate_messages(ec_app, query, contexts_data_for_llm_query, config):
+async def generate_messages(ec_app, query, contexts_data_for_llm_query, config, system_prompt):
     """Generate messages to be used in the LLM query."""
     messages = []
-    if config.system_prompt:
-        messages.append(SystemMessage(content=config.system_prompt))
+    sprompt = system_prompt or config.system_prompt
+    if sprompt:
+        messages.append(SystemMessage(content=system_prompt))
     prompt = ec_app.llm.generate_prompt(query, contexts_data_for_llm_query)
     print("Prompt: ", prompt)
     messages.append(HumanMessage(content=prompt))
     return messages
 
 
-async def send_message(query, session_id, number_documents, citations, stream, model) -> AsyncIterable[str]:
+async def send_message(query, session_id, number_documents, system_prompt, citations, stream, model) -> AsyncIterable[str]:
     ec_app = App.from_config(config=EC_APP_CONFIG)
     context = ec_app.search(query, num_documents=number_documents)
-    #sources_str = await generate_sources_str([c['metadata'] for c in context])
     sources_str = await generate_sources_str(context)
 
     ec_app.llm.update_history(app_id=ec_app.config.id, session_id=session_id)
     callback = AsyncIteratorCallbackHandler()
 
-    # TODO: why OPENAI_API_KEY?
     config = BaseLlmConfig(model=model, stream=stream, callbacks=[callback], api_key=os.environ["OPENAI_API_KEY"])
 
     contexts_data_for_llm_query = await prepare_contexts_for_llm_query(ec_app, query, config, citations)
-    messages = await generate_messages(ec_app, query, contexts_data_for_llm_query, config)
+    messages = await generate_messages(ec_app, query, contexts_data_for_llm_query, config, system_prompt)
 
     kwargs = {
-        #"model": model,
-        "model": "gpt-4",
+        "model": model,
         "temperature": config.temperature,
         "max_tokens": config.max_tokens,
         "model_kwargs": {"top_p": config.top_p} if config.top_p else {},
@@ -97,15 +94,6 @@ async def send_message(query, session_id, number_documents, citations, stream, m
         "api_key": config.api_key,
     }
 
-    '''
-    kwargs = {
-        "model": "llama3",
-        "streaming": True,
-        "callbacks": [callback],
-    }
-    '''
-
-    #llm_task = asyncio.create_task(ChatOllama(**kwargs).agenerate(messages=[messages]))
     llm_task = asyncio.create_task(ChatOpenAI(**kwargs).agenerate(messages=[messages]))
 
     generated_answer = ""

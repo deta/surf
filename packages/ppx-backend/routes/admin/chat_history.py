@@ -7,7 +7,6 @@ ec_app = App.from_config(config=EC_APP_CONFIG)
 
 router = APIRouter()
 
-
 @router.get("/api/v1/admin/chat_history")
 async def get_all_chat_history():
     chat_history = ec_app.llm.memory.get(

@@ -6,14 +6,24 @@ from utils.embedchain import get_embedding
 
 router = APIRouter()
 
+DEFAULT_MODEL = "gpt-4o"
+
 
 @router.get("/api/v1/chat")
-async def handle_chat(query: str, session_id: str = Query(None), number_documents: int = 5, citations: bool = True, stream: bool = True, model: str = "gpt-4o"):
+async def handle_chat(query: str, session_id: str = Query(None), number_documents: int = 5, system_prompt: str = Query(None)):
     """
     Handles a chat request to the Embedchain app.
     Accepts 'query' and 'session_id' as query parameters.
     """
-    generator = send_message(query, session_id, number_documents, citations, stream, model)
+    generator = send_message(
+        query, 
+        session_id, 
+        number_documents,
+        system_prompt, 
+        True,
+        True,
+        DEFAULT_MODEL,
+    )
     return StreamingResponse(generator)
 
 @router.post("/api/v1/embeddings")
