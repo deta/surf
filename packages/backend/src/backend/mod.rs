@@ -26,6 +26,7 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
         app_path,
         vision_api_key,
         vision_api_endpoint,
+        "http://localhost:8000/api/v1".to_string(),
     );
 
     Ok(cx.boxed(tunnel))

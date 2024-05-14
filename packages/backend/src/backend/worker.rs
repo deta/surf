@@ -1,5 +1,6 @@
 use super::message::{AIMessage, ProcessorMessage, TunnelMessage, TunnelOneshot};
 use crate::{
+    ai::ai::AI,
     backend::{handlers::*, message::WorkerMessage},
     embeddings::model::EmbeddingModel,
     store::db::Database,
@@ -14,6 +15,7 @@ use std::{path::Path, sync::mpsc};
 pub struct Worker {
     pub db: Database,
     pub embedding_model: EmbeddingModel,
+    pub ai: AI,
     pub tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     pub aiqueue_tx: crossbeam::Sender<AIMessage>,
     pub resources_path: String,
@@ -23,6 +25,7 @@ impl Worker {
     fn new(
         app_path: String,
         backend_root_path: String,
+        ai_backend_api_endpoint: String,
         tqueue_tx: crossbeam::Sender<ProcessorMessage>,
         aiqueue_tx: crossbeam::Sender<AIMessage>,
     ) -> Self {
@@ -65,6 +68,7 @@ impl Worker {
         Self {
             db: Database::new(&db_path, &usearch_path).unwrap(),
             embedding_model: EmbeddingModel::new_remote().unwrap(),
+            ai: AI::new(ai_backend_api_endpoint),
             tqueue_tx,
             aiqueue_tx,
             resources_path,
@@ -79,8 +83,15 @@ pub fn worker_thread_entry_point(
     mut channel: Channel,
     app_path: String,
     backend_root_path: String,
+    ai_backend_api_endpoint: String,
 ) {
-    let mut worker = Worker::new(app_path, backend_root_path, tqueue_tx, aiqueue_tx);
+    let mut worker = Worker::new(
+        app_path,
+        backend_root_path,
+        ai_backend_api_endpoint,
+        tqueue_tx,
+        aiqueue_tx,
+    );
     while let Ok(TunnelMessage(message, oneshot)) = worker_rx.recv() {
         match message {
             WorkerMessage::MiscMessage(message) => {

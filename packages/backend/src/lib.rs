@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod backend;
 pub mod embeddings;
 pub mod store;

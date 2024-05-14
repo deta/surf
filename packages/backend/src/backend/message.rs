@@ -15,10 +15,11 @@ pub enum ProcessorMessage {
 }
 
 pub enum AIMessage {
-    // TODO: use embeddable content trait
     GenerateMetadataEmbeddings(ResourceMetadata),
     GenerateTextContentEmbeddings(ResourceTextContent),
     DescribeImage(CompositeResource),
+    GenerateWebpageEmbeddings(ResourceMetadata),
+    GenerateYoutubeVideoEmbeddings(ResourceMetadata),
 }
 
 pub enum WorkerMessage {

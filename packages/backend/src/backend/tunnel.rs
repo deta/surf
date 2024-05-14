@@ -27,6 +27,7 @@ impl WorkerTunnel {
         app_path: String,
         vision_api_key: String,
         vision_api_endpoint: String,
+        ai_backend_api_endpoint: String,
     ) -> Self
     where
         C: Context<'a>,
@@ -43,6 +44,7 @@ impl WorkerTunnel {
 
         // spawn the main SFFS thread
         let app_path_clone = app_path.clone();
+        let ai_endpoint_clone = ai_backend_api_endpoint.clone();
         std::thread::spawn(move || {
             worker_thread_entry_point(
                 worker_rx,
@@ -51,6 +53,7 @@ impl WorkerTunnel {
                 libuv_ch,
                 app_path_clone,
                 backend_root_path,
+                ai_endpoint_clone,
             )
         });
 
@@ -68,8 +71,14 @@ impl WorkerTunnel {
             let tunnel_clone = tunnel.clone();
             let vision_api_key = vision_api_key.clone();
             let vision_api_endpoint = vision_api_endpoint.clone();
+            let ai_api_endpoint = ai_backend_api_endpoint.clone();
             std::thread::spawn(move || {
-                ai_thread_entry_point(tunnel_clone, vision_api_key, vision_api_endpoint);
+                ai_thread_entry_point(
+                    tunnel_clone,
+                    vision_api_key,
+                    vision_api_endpoint,
+                    ai_api_endpoint,
+                );
             });
         });
 
@@ -93,7 +102,7 @@ impl WorkerTunnel {
         let oneshot = oneshot.map(|oneshot| TunnelOneshot::Rust(oneshot));
         self.worker_tx
             .send(TunnelMessage(message, oneshot))
-            .expect("unbound channel send failed")
+            .expect("unbound channel send failed on worker queue")
     }
 }
 
