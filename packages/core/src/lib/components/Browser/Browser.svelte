@@ -126,9 +126,11 @@
     if (!tab) return
 
     if (tab?.type === 'horizon') {
-      const horizon = $horizons.find((horizon) => horizon.id === tab.id)
+      const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)
       if (horizon) {
         addressValue.set(horizon.data.name)
+      } else {
+        log.warn('Horizon not found', tab.horizonId)
       }
     } else if (tab?.type === 'page') {
       const currentEntry = historyEntriesManager.getEntry(
@@ -173,11 +175,12 @@
     const tabsInView = $tabs.filter((tab) =>
       $sidebarTab === 'active' ? !tab.archived : tab.archived
     )
-    const newActiveTabId = tabsInView[0]?.id
-    if (!newActiveTabId) {
-      log.error('No active tab found')
+    if (tabsInView.length === 0) {
+      log.debug('No tabs in view')
+      activeTabId.set('')
       return
     }
+    const newActiveTabId = tabsInView[0]?.id
     log.debug('Resetting active tab', newActiveTabId)
     activeTabId.set(newActiveTabId)
   }
@@ -443,7 +446,7 @@
     const newTab = await createTab<TabHorizon>({
       horizonId: newHorizon.id,
       title: newHorizon.data.name,
-      icon: 'https://deta.space/favicon.png',
+      icon: '',
       type: 'horizon'
     })
 
@@ -744,77 +747,106 @@
     {/if}
 
     <div class="tabs">
-      <!-- {#each $tabs as tab, idx (tab.id)}
-                svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events
-                <div
-                    class="tab"
-                    class:selected={tab.id === $activeTabId}
-                    on:click={() => ($activeTabId = tab.id)}
-                >
-                    <img src={tab.favicon} alt={tab.title} />
-                    {tab.title}
-                </div>
-            {/each} -->
-
       {#each $tabsInView as tab (tab.id)}
-        <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
-        <div
-          class="tab"
-          class:selected={tab.id === $activeTabId}
-          on:click={() => ($activeTabId = tab.id)}
-        >
-          {#if tab.icon}
-            <div class="icon-wrapper">
-              <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
-            </div>
-          {:else if tab.type === 'chat'}
+        {#if tab.type === 'chat'}
+          <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
+          <div
+            class="tab"
+            class:selected={tab.id === $activeTabId}
+            on:click={() => ($activeTabId = tab.id)}
+          >
             <div class="icon-wrapper">
               <Icon name="sparkles" size="20px" />
             </div>
-          {:else}
-            <div class="icon-wrapper">
-              <Icon name="world" size="20px" />
+            <div class="title">
+              {tab.title}
             </div>
-          {/if}
-
-          <div class="title">
-            {tab.title}
-          </div>
-
-          {#if tab.archived}
             <button
-              on:click|stopPropagation={() => unarchiveTab(tab.id)}
+              on:click|stopPropagation={() =>
+                tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)}
               class="close"
               use:tooltip={{
-                content: 'Move back to active tabs',
+                content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
                 action: 'hover',
                 position: 'left',
                 animation: 'fade',
                 delay: 500
               }}
             >
-              <Icon name="arrowbackup" size="20px" />
+              {#if tab.archived}
+                <Icon name="trash" size="20px" />
+              {:else}
+                <Icon name="close" size="20px" />
+              {/if}
             </button>
-          {/if}
+          </div>
+        {/if}
+      {/each}
 
-          <button
-            on:click|stopPropagation={() => (tab.archived ? deleteTab(tab.id) : archiveTab(tab.id))}
-            class="close"
-            use:tooltip={{
-              content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
-              action: 'hover',
-              position: 'left',
-              animation: 'fade',
-              delay: 500
-            }}
+      <div class="divider"></div>
+
+      {#each $tabsInView as tab (tab.id)}
+        {#if tab.type !== 'chat'}
+          <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
+          <div
+            class="tab"
+            class:selected={tab.id === $activeTabId}
+            on:click={() => ($activeTabId = tab.id)}
           >
-            {#if tab.archived}
-              <Icon name="trash" size="20px" />
+            {#if tab.icon}
+              <div class="icon-wrapper">
+                <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
+              </div>
+            {:else if tab.type === 'horizon'}
+              <div class="icon-wrapper">
+                <Icon name="grid" size="20px" />
+              </div>
             {:else}
-              <Icon name="close" size="20px" />
+              <div class="icon-wrapper">
+                <Icon name="world" size="20px" />
+              </div>
             {/if}
-          </button>
-        </div>
+
+            <div class="title">
+              {tab.title}
+            </div>
+
+            {#if tab.archived}
+              <button
+                on:click|stopPropagation={() => unarchiveTab(tab.id)}
+                class="close"
+                use:tooltip={{
+                  content: 'Move back to active tabs',
+                  action: 'hover',
+                  position: 'left',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                <Icon name="arrowbackup" size="20px" />
+              </button>
+            {/if}
+
+            <button
+              on:click|stopPropagation={() =>
+                tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)}
+              class="close"
+              use:tooltip={{
+                content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
+                action: 'hover',
+                position: 'left',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              {#if tab.archived}
+                <Icon name="trash" size="20px" />
+              {:else}
+                <Icon name="close" size="20px" />
+              {/if}
+            </button>
+          </div>
+        {/if}
       {/each}
     </div>
 
@@ -1007,6 +1039,16 @@
         {/if}
       </div>
     {/if}
+
+    {#if !$activeTabs && !$activeTab}
+      <div class="browser-window active" style="--scaling: 1;">
+        <BrowserHomescreen
+          {historyEntriesManager}
+          on:navigate={handleTabNavigation}
+          on:chat={handleCreateChat}
+        />
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -1021,7 +1063,8 @@
   }
 
   .sidebar {
-    width: 380px;
+    flex-shrink: 0;
+    width: 320px;
     height: 100vh;
     padding: 0.5rem 0.75rem 0.75rem 0.75rem;
     overflow: hidden;
@@ -1123,6 +1166,12 @@
     }
   }
 
+  .divider {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
   .tab {
     display: flex;
     align-items: center;
@@ -1189,7 +1238,7 @@
 
       &:not(.nav-button) {
         flex: 1;
-        background-color: #fdf2f7;
+        background-color: transparent;
         padding: 10px;
       }
 
