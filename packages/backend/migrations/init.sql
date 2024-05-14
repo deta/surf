@@ -83,3 +83,8 @@ CREATE TABLE IF NOT EXISTS card_positions(
 CREATE TABLE IF NOT EXISTS embeddings (
     embedding TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+    id TEXT NOT NULL,
+    system_prompt TEXT NOT NULL DEFAULT ''
+);

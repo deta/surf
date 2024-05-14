@@ -1406,6 +1406,17 @@ impl Database {
         }
         Ok(result)
     }
+
+    pub fn create_ai_chat_session_tx(
+        tx: &mut rusqlite::Transaction,
+        session: &AIChatSession,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "INSERT INTO ai_chat_sessions (id, system_prompt) VALUES (?1, ?2)",
+            rusqlite::params![session.id, session.system_prompt],
+        )?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
