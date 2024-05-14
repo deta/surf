@@ -1231,6 +1231,7 @@
     z-index: 10000;
     bottom: 16px;
     left: 162px;
+    width: min-content;
   }
 
   .page-actions {
