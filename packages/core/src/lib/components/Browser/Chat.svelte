@@ -84,20 +84,19 @@
     if (!chatId) {
       log.debug('No existing chat, creating new one', tab)
       createNewChat()
-      return
-    }
+    } else {
+      const storedChat = await chatsDB.read(chatId)
+      if (!storedChat) {
+        log.error('Chat not found', chatId)
+        return
+      }
 
-    const storedChat = await chatsDB.read(chatId)
-    if (!storedChat) {
-      log.error('Chat not found', chatId)
-      return
+      log.debug('Chat', storedChat)
+      chat = storedChat
     }
-
-    log.debug('Chat', storedChat)
-    chat = storedChat
 
     mockChatData = getChatData('1')
-    console.log(mockChatData)
+    log.debug('mockChatData', mockChatData)
 
     // Observer to check if the header should be visible
     const observer = new IntersectionObserver(

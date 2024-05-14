@@ -367,11 +367,11 @@
     }
 
     if ($activeTab?.type === 'horizon') {
-      const horizon = $horizons.find((horizon) => horizon.id === $activeTabId)
+      const horizon = $horizons.find((horizon) => horizon.id === $activeTab.horizonId)
       if (horizon) {
         horizon.updateData({ name: $addressValue })
 
-        updateTab(horizon.id, { title: $addressValue })
+        updateActiveTab({ title: $addressValue })
       }
     } else if ($activeTab?.type === 'page') {
       log.debug('Navigating to address', $addressValue)
