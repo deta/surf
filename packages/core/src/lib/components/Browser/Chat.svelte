@@ -13,6 +13,8 @@
   import type { Chat, ChatMessage, TabChat } from './types'
   import type { HorizonDatabase } from '../../service/storage'
   import { getChatData, getResourceByIDs } from './examples'
+  import { DUMMY_CHAT_RESPONSE, parseChatResponse } from '../../service/ai'
+  import { generateID } from '../../utils/id'
 
   export let tab: TabChat
   export let resourceManager: ResourceManager
@@ -53,6 +55,33 @@
    */
   function navigate(url: string, active = true) {
     dispatch('navigate', { url, active: active })
+  }
+
+  async function parseAIChatResponse() {
+    const response = DUMMY_CHAT_RESPONSE
+    log.debug('Response', response)
+
+    const parsed = parseChatResponse(response)
+    log.debug('Parsed', parsed)
+
+    if (!parsed.complete) {
+      log.debug('Incomplete response', parsed)
+      return
+    }
+
+    const message = {
+      id: generateID(),
+      role: 'assistant',
+      content: parsed.content,
+      contentItems: parsed.contentItems,
+      sources: parsed.sources,
+      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    } as ChatMessage
+
+    log.debug('New message', message)
+
+    messages = [...messages, message]
   }
 
   async function createNewChat() {
@@ -136,6 +165,13 @@
     const target = event.currentTarget as HTMLElement
     target.style.transform = 'translate(0, 0) scale(1.00)'
   }
+
+  async function handleCitationClick(e: MouseEvent, sourceId: string) {
+    log.debug('Citation clicked', sourceId)
+
+    const source = await getResource(sourceId)
+    log.debug('Source', source)
+  }
 </script>
 
 <div class="scroll-container">
@@ -199,10 +235,44 @@
       </div>
     </div>
 
-    <!-- TODO -->
-    <button on:click={() => navigate(`https://www.perplexity.ai/?q=${query}`)} class="action-btn">
-      Ask Perplexity
-    </button>
+    <div class="further-actions">
+      <button on:click={() => navigate(`https://www.perplexity.ai/?q=${query}`)} class="action-btn">
+        Ask Perplexity
+      </button>
+      <button class="action-btn" on:click={() => parseAIChatResponse()}>Parse Dummy</button>
+    </div>
+
+    <div class="chat">
+      {#if messages.length > 0}
+        <div class="chat-result">
+          <h3 class="chat-memory">Response</h3>
+
+          {#each messages as message (message.id)}
+            <div class="message">
+              {#if message.contentItems}
+                {@const citationItems = message.contentItems.filter((i) => i.type === 'citation')}
+                {#each message.contentItems as item}
+                  {#if item.type === 'text'}
+                    {item.content}
+                  {:else}
+                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                    <span
+                      on:click={(e) => handleCitationClick(e, item.content)}
+                      class="citation-item"
+                    >
+                      {citationItems.findIndex((i) => i.content === item.content) + 1}
+                    </span>
+                  {/if}
+                {/each}
+              {:else}
+                {message.content}
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
   </div>
 </div>
 
@@ -248,7 +318,6 @@
   }
 
   .action-btn {
-    margin-top: 20px;
     padding: 10px 20px;
     background-color: #3c3c3c;
     color: white;
@@ -328,6 +397,19 @@
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+    }
+
+    .citation-item {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.75rem;
+      height: 1.75rem;
+      font-size: 1rem;
+      background: rgb(255, 164, 164);
+      border-radius: 100%;
+      user-select: none;
+      cursor: pointer;
     }
 
     .resource-item {
@@ -410,5 +492,12 @@
       background-image: var(--backgroundImage);
       background-size: cover;
     }
+  }
+
+  .further-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 4rem;
   }
 </style>

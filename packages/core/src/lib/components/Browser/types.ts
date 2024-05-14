@@ -36,16 +36,31 @@ export type Tab = TabPage | TabChat | TabHorizon | TabEmpty
 
 export type Chat = {
   id: string
-  title: string
   createdAt: string
   updatedAt: string
-  messageIds: string[]
+  messages: ChatMessage[]
 }
 
 export type ChatMessage = {
   id: string
-  createdAt: string
+  role: 'user' | 'system' | 'assistant'
+  content: string
+  contentItems?: ChatMessageContentItem[]
+  sources?: ChatMessageSource[]
   updatedAt: string
-  role: string
+  createdAt: string
+}
+
+export type ChatMessageSource = {
+  id: string
+  resource_id: string
+  content: string
+  metadata?: {
+    timestamp?: number
+  }
+}
+
+export type ChatMessageContentItem = {
+  type: 'text' | 'citation'
   content: string
 }
