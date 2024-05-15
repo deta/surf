@@ -42,3 +42,4 @@ yarn-error.log*
 
 database.sqlite
 /apps/desktop/external-deps
+__pycache__
