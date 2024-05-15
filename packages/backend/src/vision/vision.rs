@@ -56,8 +56,9 @@ impl Vision {
             .header("Ocp-Apim-Subscription-Key", &self.api_key)
             .header("Content-Type", "application/octet-stream")
             .body(image)
-            .send()?
-            .json::<DescribeImageOutput>()?;
-        Ok(response)
+            .send()?;
+        dbg!(&response);
+        let res = response.json::<DescribeImageOutput>()?;
+        Ok(res)
     }
 }

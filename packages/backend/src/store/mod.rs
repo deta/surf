@@ -71,6 +71,9 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         js_get_all_history_entries,
     )?;
 
+    cx.export_function("js__store_create_ai_chat", js_create_ai_chat)?;
+    cx.export_function("js__store_get_ai_chat", js_get_ai_chat)?;
+
     Ok(())
 }
 
@@ -606,5 +609,38 @@ fn js_remove_resource_tag_by_id(mut cx: FunctionContext) -> JsResult<JsPromise> 
         deferred,
     );
 
+    Ok(promise)
+}
+
+fn js_create_ai_chat(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let system_prompt = cx.argument_opt(1).and_then(|arg| {
+        arg.downcast::<JsString, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_string| js_string.value(&mut cx))
+    });
+
+    let system_prompt = match system_prompt {
+        Some(prompt) => prompt,
+        None => "".to_string(),
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::CreateAIChatMessage(system_prompt)),
+        deferred,
+    );
+    Ok(promise)
+}
+
+fn js_get_ai_chat(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let session_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::GetAIChatMessage(session_id)),
+        deferred,
+    );
     Ok(promise)
 }

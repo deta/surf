@@ -2,6 +2,7 @@ use crate::{
     store::{db::CompositeResource, models::*},
     BackendResult,
 };
+use neon::prelude::{JsFunction, Root};
 
 pub enum TunnelOneshot {
     Javascript(neon::types::Deferred),
@@ -15,10 +16,11 @@ pub enum ProcessorMessage {
 }
 
 pub enum AIMessage {
-    // TODO: use embeddable content trait
     GenerateMetadataEmbeddings(ResourceMetadata),
     GenerateTextContentEmbeddings(ResourceTextContent),
     DescribeImage(CompositeResource),
+    GenerateWebpageEmbeddings(ResourceMetadata),
+    GenerateYoutubeVideoEmbeddings(ResourceMetadata),
 }
 
 pub enum WorkerMessage {
@@ -116,5 +118,14 @@ pub enum UserdataMessage {
 }
 
 pub enum MiscMessage {
+    ChatQuery {
+        callback: Root<JsFunction>,
+        model: String,
+        number_documents: i32,
+        query: String,
+        session_id: String,
+    },
     Print(String),
+    CreateAIChatMessage(String),
+    GetAIChatMessage(String),
 }

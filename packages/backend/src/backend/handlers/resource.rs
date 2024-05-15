@@ -35,7 +35,7 @@ impl Worker {
                 .as_os_str()
                 .to_string_lossy()
                 .to_string(),
-            resource_type,
+            resource_type: resource_type.clone(),
             created_at: ct.clone(),
             updated_at: ct,
             deleted: 0,
@@ -61,6 +61,20 @@ impl Worker {
                 // TODO: not clone?
                 .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
                 .map_err(|e| BackendError::GenericError(e.to_string()))?;
+
+            match resource_type.as_str() {
+                "application/vnd.space.article" => {
+                    self.aiqueue_tx
+                        .send(AIMessage::GenerateWebpageEmbeddings(metadata.clone()))
+                        .map_err(|e| BackendError::GenericError(e.to_string()))?;
+                }
+                "application/vnd.space.post.youtube" => {
+                    self.aiqueue_tx
+                        .send(AIMessage::GenerateYoutubeVideoEmbeddings(metadata.clone()))
+                        .map_err(|e| BackendError::GenericError(e.to_string()))?;
+                }
+                _ => (),
+            }
         }
 
         if let Some(tags) = &mut tags {
@@ -151,7 +165,7 @@ impl Worker {
         // TODO: find sane defaults for these
         let proximity_distance_threshold = match proximity_distance_threshold {
             Some(threshold) => threshold,
-            None => 100000.0,
+            None => 500.0,
         };
 
         let proximity_limit = match proximity_limit {
@@ -189,7 +203,7 @@ impl Worker {
         // TODO: find sane defaults for these
         let proximity_distance_threshold = match proximity_distance_threshold {
             Some(threshold) => threshold,
-            None => 100000.0,
+            None => 500.0,
         };
 
         let proximity_limit = match proximity_limit {

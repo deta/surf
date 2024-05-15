@@ -1,18 +1,27 @@
 use super::{message::*, tunnel::WorkerTunnel};
 use crate::{
-    embeddings::model::EmbeddingModel, store::db::CompositeResource, store::models,
-    vision::vision::Vision, BackendResult,
+    ai::ai::{DataSource, DataSourceMetadata, DataSourceType, AI as AIClient},
+    embeddings::model::EmbeddingModel,
+    store::{db::CompositeResource, models},
+    vision::vision::Vision,
+    BackendResult,
 };
 
 pub struct AI {
-    //pub embedding_model: EmbeddingModel,
+    pub embedding_model: EmbeddingModel,
+    pub ai_client: AIClient,
     pub vision: Vision,
 }
 
 impl AI {
-    pub fn new(vision_api_key: &str, vision_api_endpoint: &str) -> Self {
+    pub fn new(
+        vision_api_key: &str,
+        vision_api_endpoint: &str,
+        ai_backend_api_endpoint: &str,
+    ) -> Self {
         Self {
-            // embedding_model: EmbeddingModel::new_remote().unwrap(),
+            embedding_model: EmbeddingModel::new_remote().unwrap(),
+            ai_client: AIClient::new(ai_backend_api_endpoint.to_string()),
             vision: Vision::new(vision_api_key.to_string(), vision_api_endpoint.to_string()),
         }
     }
@@ -75,11 +84,29 @@ impl AI {
         //             });
         //     }
 
-        //     let embeddings = self
-        //         .embedding_model
-        //         .encode(&embeddable_sentences)
-        //         .map_err(|e| eprintln!("failed to generate embeddings: {e:#?}"))
-        //         .ok();
+            embeddable_sentences.iter().for_each(|sentence| {
+                let rag_metadata = DataSourceMetadata {
+                    resource_id: composite_resource.resource.id.to_string(),
+                    resource_type: "image_tags_captions".to_string(),
+                };
+
+                let ds = DataSource {
+                    data_type: DataSourceType::Text.to_string(),
+                    data_value: sentence.to_string(),
+                    metadata: serde_json::to_string(&rag_metadata).unwrap(),
+                    env_variables: "".to_string(),
+                };
+                let _ = self
+                    .ai_client
+                    .add_data_source(&ds)
+                    .map_err(|e| eprintln!("failed to add data source for rag: {e:#?}"));
+            });
+
+            let embeddings = self
+                .embedding_model
+                .encode(&embeddable_sentences)
+                .map_err(|e| eprintln!("failed to generate embeddings: {e:#?}"))
+                .ok();
 
         //     if let Some(embeddings) = embeddings {
         //         tunnel.worker_send_rust(
@@ -101,11 +128,28 @@ impl AI {
         tunnel: &WorkerTunnel,
         embeddable: impl models::EmbeddableContent,
     ) -> BackendResult<()> {
-        // let embeddigns = self
-        //     .embedding_model
-        //     .get_embeddings(&embeddable)
-        //     .map_err(|e| eprintln!("failed to generate embeddings: {e:#?}"))
-        //     .ok();
+        // TODO: image tags captions should be an enum
+        let rag_metadata = DataSourceMetadata {
+            resource_id: embeddable.get_resource_id(),
+            resource_type: embeddable.get_embedding_type(),
+        };
+
+        let ds = DataSource {
+            data_type: DataSourceType::Text.to_string(),
+            data_value: embeddable.get_embeddable_content().join(""),
+            metadata: serde_json::to_string(&rag_metadata).unwrap(),
+            env_variables: "".to_string(),
+        };
+        let _ = self
+            .ai_client
+            .add_data_source(&ds)
+            .map_err(|e| eprintln!("failed to add data source for rag: {e:#?}"));
+
+        let embeddigns = self
+            .embedding_model
+            .get_embeddings(&embeddable)
+            .map_err(|e| eprintln!("failed to generate embeddings: {e:#?}"))
+            .ok();
 
         // if let Some(embeddings) = embeddigns {
         //     tunnel.worker_send_rust(
@@ -119,14 +163,64 @@ impl AI {
         // }
         Ok(())
     }
+
+    fn process_embeddable_webpage_message(
+        &self,
+        resource_metadata: models::ResourceMetadata,
+    ) -> BackendResult<()> {
+        let rag_metadata = DataSourceMetadata {
+            resource_id: resource_metadata.resource_id,
+            resource_type: DataSourceType::Webpage.to_string(),
+        };
+
+        let ds = DataSource {
+            data_type: DataSourceType::Webpage.to_string(),
+            data_value: resource_metadata.source_uri,
+            metadata: serde_json::to_string(&rag_metadata).unwrap(),
+            env_variables: "".to_string(),
+        };
+        let _ = self
+            .ai_client
+            .add_data_source(&ds)
+            .map_err(|e| eprintln!("failed to add data source for rag: {e:#?}"));
+        Ok(())
+    }
+
+    fn process_embeddable_youtube_video_message(
+        &self,
+        resource_metadata: models::ResourceMetadata,
+    ) -> BackendResult<()> {
+        let rag_metadata = DataSourceMetadata {
+            resource_id: resource_metadata.resource_id,
+            resource_type: DataSourceType::YoutubeVideo.to_string(),
+        };
+
+        let ds = DataSource {
+            data_type: DataSourceType::YoutubeVideo.to_string(),
+            data_value: resource_metadata.source_uri,
+            // TODO: don't unwrap
+            metadata: serde_json::to_string(&rag_metadata).unwrap(),
+            env_variables: "".to_string(),
+        };
+        let _ = self
+            .ai_client
+            .add_data_source(&ds)
+            .map_err(|e| eprintln!("failed to add data source for rag: {e:#?}"));
+        Ok(())
+    }
 }
 
 pub fn ai_thread_entry_point(
     tunnel: WorkerTunnel,
     vision_api_key: String,
     vision_api_endpoint: String,
+    ai_backend_api_endpoint: String,
 ) {
-    let ai = AI::new(&vision_api_key, &vision_api_endpoint);
+    let ai = AI::new(
+        &vision_api_key,
+        &vision_api_endpoint,
+        &ai_backend_api_endpoint,
+    );
     while let Ok(message) = tunnel.aiqueue_rx.recv() {
         match message {
             // TODO: implement
@@ -138,6 +232,12 @@ pub fn ai_thread_entry_point(
             }
             AIMessage::DescribeImage(composite_resource) => {
                 let _ = ai.process_vision_message(&tunnel, &composite_resource);
+            }
+            AIMessage::GenerateWebpageEmbeddings(resource_metadata) => {
+                let _ = ai.process_embeddable_webpage_message(resource_metadata);
+            }
+            AIMessage::GenerateYoutubeVideoEmbeddings(resource_metadata) => {
+                let _ = ai.process_embeddable_youtube_video_message(resource_metadata);
             }
         }
     }

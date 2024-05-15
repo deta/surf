@@ -1,13 +1,13 @@
+use std::path::Path;
 use std::rc::Rc;
 use std::str::FromStr;
 
 use super::models::*;
 use crate::{BackendError, BackendResult};
 
-use rusqlite::{ffi::sqlite3_auto_extension, Connection, OptionalExtension};
+use rusqlite::{Connection, LoadExtensionGuard, OptionalExtension};
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
-use sqlite_vss::{sqlite3_vector_init, sqlite3_vss_init};
 
 #[derive(RustEmbed)]
 #[folder = "migrations/"]
@@ -91,14 +91,7 @@ pub struct VectorSearchResult {
 }
 
 impl Database {
-    pub fn new(db_path: &str) -> BackendResult<Database> {
-        unsafe {
-            // the following only works with rusqlite < 0.29.0 as rusqlite updated the function signatures in later versions
-            // we might have to update the sqlite3_vector_init and sqlite3_vss_init bindings ourselves if we want to use a newer version of rusqlite
-            sqlite3_auto_extension(Some(sqlite3_vector_init));
-            sqlite3_auto_extension(Some(sqlite3_vss_init));
-        }
-
+    pub fn new(db_path: &str, usearch_path: &str) -> BackendResult<Database> {
         let init_schema = Migrations::get("init.sql")
             .ok_or(BackendError::GenericError("init.sql not found".into()))?;
         let init_schame = std::str::from_utf8(init_schema.data.as_ref())
@@ -111,6 +104,13 @@ impl Database {
         // Connection::open already handles creating the file if it doesn't exist
         // let mut conn = Connection::open(db_path).map_err(BackendError::DatabaseError)?;
         let mut conn = Connection::open(db_path)?;
+
+        {
+            let _guard = unsafe { LoadExtensionGuard::new(&conn)? };
+            unsafe {
+                conn.load_extension(Path::new(usearch_path), None)?;
+            }
+        }
 
         let tx = conn.transaction()?;
         tx.execute_batch(init_schame)?;
@@ -901,21 +901,23 @@ impl Database {
         limit: i64,
     ) -> BackendResult<Vec<VectorSearchResult>> {
         let mut result = Vec::new();
-        // the limit only applies to the vss_search filter and only after that the rowid and distance filters are applied
-        let mut stmt = self.conn.prepare(
-            "SELECT rowid, distance FROM card_positions 
-                WHERE 
-                    vss_search(position, ?1) 
-            AND
-                rowid IN (SELECT rowid FROM cards WHERE horizon_id=?2)
-            AND
-                distance <= ?3
-            AND 
-                distance != 0
-            LIMIT ?4",
-        )?;
+
+        let query = format!(
+            "WITH filtered_distances AS (
+                SELECT rowid, distance_sqeuclidean_f32(position, ?1) AS distance
+                FROM card_positions
+                WHERE rowid IN (SELECT rowid FROM cards WHERE horizon_id = ?2)
+            )
+            SELECT rowid, distance
+            FROM filtered_distances
+            WHERE distance <= ?3 AND distance != 0
+            ORDER BY distance ASC
+            LIMIT ?4"
+        );
+
+        let mut stmt = self.conn.prepare(&query)?;
         let card_positions = stmt.query_map(
-            rusqlite::params![cp.position, horizon_id, distance_threshold, limit],
+            rusqlite::params![cp.position, horizon_id, distance_threshold.powf(2.0), limit],
             |row| {
                 Ok(VectorSearchResult {
                     rowid: row.get(0)?,
@@ -1011,28 +1013,39 @@ impl Database {
         let mut results: Vec<SearchResultItem> = Vec::new();
 
         let e = Embedding::new(embedding_vector);
-        let params = rusqlite::params![e.embedding, limit, distance_threshold];
-        let mut query = "
-            WITH matches as (
-                SELECT rowid, distance FROM embeddings WHERE vss_search(embedding, ?1) LIMIT ?2
+        let params = rusqlite::params![e.embedding, limit, distance_threshold.powf(2.0)];
+
+        let mut query = "WITH distance_calculations AS (
+                SELECT
+                    E.rowid,
+                    distance_sqeuclidean_f32(E.embedding, ?1) AS distance
+                FROM embeddings E
             )
-            SELECT DISTINCT M.*, R.*, MA.distance
-                FROM resource_metadata M
+            SELECT
+                M.*, R.*, D.distance
+            FROM
+                resource_metadata M
                 LEFT JOIN resources R ON M.resource_id = R.id
                 LEFT JOIN embedding_resources E ON M.resource_id = E.resource_id
-                LEFT JOIN matches MA ON MA.rowid = E.rowid
-                WHERE MA.distance <= ?3
-            "
-        .to_owned();
+                LEFT JOIN distance_calculations D ON D.rowid = E.rowid
+            WHERE
+                D.distance <= ?3"
+            .to_owned();
 
         let row_map_fn = Self::map_resource_and_metadata(None, SearchEngine::Embeddings);
         if !filtered_resource_ids.is_empty() {
-            query.push_str(" AND R.id IN rarray(?4) ORDER BY MA.distance ASC");
+            query.push_str(" AND R.id IN rarray(?4) ORDER BY D.distance ASC");
             let mut rids: Vec<rusqlite::types::Value> = Vec::new();
             for rid in filtered_resource_ids {
                 rids.push(rusqlite::types::Value::from(rid));
             }
-            let params = rusqlite::params![e.embedding, limit, distance_threshold, Rc::new(rids)];
+            query.push_str(" LIMIT ?2");
+            let params = rusqlite::params![
+                e.embedding,
+                limit,
+                distance_threshold.powf(2.0),
+                Rc::new(rids)
+            ];
             let mut stmt = self.conn.prepare(query.as_str())?;
             let items = stmt.query_map(params, row_map_fn)?;
             for i in items {
@@ -1040,7 +1053,7 @@ impl Database {
             }
             return Ok(results);
         }
-        query.push_str(" ORDER BY MA.distance ASC");
+        query.push_str(" ORDER BY D.distance ASC LIMIT ?2");
         let mut stmt = self.conn.prepare(query.as_str())?;
         let items = stmt.query_map(params, row_map_fn)?;
         for i in items {
@@ -1368,16 +1381,20 @@ impl Database {
         let mut result = Vec::new();
         // the limit only applies to the vss_search filter and only after that the rowid and distance filters are applied
         let mut stmt = self.conn.prepare(
-            "SELECT rowid, distance FROM embeddings 
-                WHERE 
-                    vss_search(embedding, ?1) 
-            AND
+            "SELECT rowid, distance_cosine_f32(embedding, ?1) AS distance
+             FROM 
+                embeddings 
+             WHERE 
                 distance <= ?2
-            LIMIT ?3",
+             ORDER BY distance ASC
+             LIMIT ?3",
         )?;
         let embeddings = stmt.query_map(
-            rusqlite::params![embedding.embedding, distance_threshold, limit],
+            rusqlite::params![embedding.embedding, distance_threshold.powf(2.0), limit],
             |row| {
+                let rowid: i64 = row.get(0)?;
+                let distance: f32 = row.get(1)?;
+                dbg!(rowid, distance);
                 Ok(VectorSearchResult {
                     rowid: row.get(0)?,
                     distance: row.get(1)?,
@@ -1388,6 +1405,17 @@ impl Database {
             result.push(embedding?);
         }
         Ok(result)
+    }
+
+    pub fn create_ai_chat_session_tx(
+        tx: &mut rusqlite::Transaction,
+        session: &AIChatSession,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "INSERT INTO ai_chat_sessions (id, system_prompt) VALUES (?1, ?2)",
+            rusqlite::params![session.id, session.system_prompt],
+        )?;
+        Ok(())
     }
 }
 

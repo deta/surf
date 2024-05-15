@@ -32,9 +32,10 @@ const webviewNewWindowHandlers = {}
 const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
 
-//const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT
-const OPENAI_API_KEY = import.meta.env.P_VITE_OPEN_AI_API_KEY || ''
+const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT
+const OPENAI_API_KEY = import.meta.env.P_VITE_OPEN_AI_API_KEY
 const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
+const VISION_API_KEY = import.meta.env.P_VITE_VISION_API_KEY || ''
 
 const userConfig = getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
 
@@ -42,9 +43,9 @@ let openai: OpenAI | null = null
 //if (userConfig.api_key) {
 if (OPENAI_API_KEY) {
   openai = new OpenAI({
-    //baseURL: OPENAI_API_ENDPOINT,
-    //apiKey: userConfig.api_key,
+    baseURL: OPENAI_API_ENDPOINT,
     apiKey: OPENAI_API_KEY,
+    //apiKey: userConfig.api_key,
     dangerouslyAllowBrowser: true
   })
 }
@@ -423,7 +424,7 @@ const sffs = (() => {
     return fn
   }
 
-  return init(BACKEND_ROOT_PATH, userConfig.api_key || '', VISION_API_ENDPOINT)
+  return init(BACKEND_ROOT_PATH, VISION_API_KEY || '', VISION_API_ENDPOINT)
 })()
 
 const resources = (() => {

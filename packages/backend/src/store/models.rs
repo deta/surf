@@ -393,6 +393,12 @@ impl Embedding {
     }
 }
 
+#[derive(Debug)]
+pub struct AIChatSession {
+    pub id: String,
+    pub system_prompt: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

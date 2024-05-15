@@ -117,3 +117,20 @@ To learn more about Neon, see the [Neon documentation](https://neon-bindings.com
 To learn more about Rust, see the [Rust documentation](https://www.rust-lang.org).
 
 To learn more about Node, see the [Node documentation](https://nodejs.org).
+
+## Notes
+
+For usearch:
+
+```shell
+pip install usearch
+```
+
+And in python:
+
+```python
+import usearch
+print(usearch.sqlite_path())
+```
+
+will download the sqlite3 binary and show the path.
