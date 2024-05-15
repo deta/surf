@@ -41,12 +41,22 @@ EC_APP_CONFIG = {
 
 async def generate_sources_str(contexts):
     """Generate a string of unique source URLs from the sources metadata."""
-    #seen_urls = set()
-    #unique_sources = [source for source in sources_metadata if source['url'] not in seen_urls and not seen_urls.add(source['url'])]
-    #sources_str = "<sources>\n" + "\n".join(json.dumps(source) for source in unique_sources) + "\n</sources>\n\n"
     sources_str = "<sources>\n"
     for idx, context in enumerate(contexts):
-        sources_str += f"\n<source>{idx+1}. {context.get('context')[:120] + '...' }</source>\n"
+        source_id = idx
+        metadata = context.get('metadata', {})
+        resource_id = metadata.get('resource_id', '')
+        content = context.get('context', '')
+
+        sources_str += (
+            f"\t<source>\n"
+            f"\t\t<id>{source_id}</id>\n"
+            f"\t\t<resource_id>{resource_id}</resource_id>\n"
+            f"\t\t<content>{content}</content>\n"
+            f"\t\t<metadata>\n"
+            f"\t\t</metadata>\n"
+            f"\t</source>\n"
+        )
     sources_str += "</sources>\n\n"
     return sources_str
 

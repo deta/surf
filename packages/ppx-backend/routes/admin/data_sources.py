@@ -1,3 +1,5 @@
+import json
+
 from embedchain import App
 from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
@@ -41,6 +43,8 @@ async def add_data_source(data_source: DataSourceModel, response: Response):
     if metadata and not validate_json(metadata):
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"message": "Invalid metadata. Enter a valid JSON object."}
+    else:
+        params["metadata"] = json.loads(metadata)
 
     if env_variables and not validate_json(env_variables):
         response.status_code = status.HTTP_400_BAD_REQUEST
