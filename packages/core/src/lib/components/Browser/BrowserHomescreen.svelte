@@ -10,7 +10,7 @@
   import Create from './Create.svelte'
   import { SERVICES } from '@horizon/web-parser'
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
-  import browserBackground from '../../../../public/assets/browser-background.png'
+  import browserBackground from '../../../../public/assets/sky.png'
   import AddressToolbar, {
     type ActionEvent
   } from '../Cards/Browser/modules/toolbar/AddressToolbar.svelte'

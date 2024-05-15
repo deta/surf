@@ -74,6 +74,8 @@
 
   const bookmarkingSuccess = writableAutoReset(false, 1000)
 
+  const showURLBar = writable(false)
+
   const activeTabs = derived([tabs], ([tabs]) => {
     return tabs
       .filter((tab) => !tab.archived)
@@ -654,7 +656,13 @@
 
     //     runTabs()
     // }, 4000)
+    //
   })
+
+  const handleToggleURLBar = () => {
+    console.log('test')
+    showURLBar.set(!showURLBar)
+  }
 </script>
 
 <SplashScreen />
@@ -700,63 +708,20 @@
       </button>
     </div>
 
-    {#if $activeBrowserTab}
-      <div class="actions nav-buttons">
-        <button
-          class="nav-button"
-          disabled={!canGoBack}
-          on:click={$activeBrowserTab?.goBack}
-          use:tooltip={{
-            content: 'Go Back',
-            action: 'hover',
-            position: 'top',
-            animation: 'fade',
-            delay: 500
-          }}
-        >
-          <Icon name="arrow.left" />
-        </button>
-        <button
-          class="nav-button"
-          disabled={!canGoForward}
-          on:click={$activeBrowserTab?.goForward}
-          use:tooltip={{
-            content: 'Go Forward',
-            action: 'hover',
-            position: 'top',
-            animation: 'fade',
-            delay: 500
-          }}
-        >
-          <Icon name="arrow.right" />
-        </button>
-        <button
-          class="nav-button"
-          on:click={$activeBrowserTab?.reload}
-          use:tooltip={{
-            content: 'Reload Page (⌘ + R)',
-            action: 'hover',
-            position: 'top',
-            animation: 'fade',
-            delay: 500
-          }}
-        >
-          <Icon name="reload" />
-        </button>
-      </div>
-    {/if}
-
     <div class="tabs">
       {#each $tabsInView as tab (tab.id)}
         {#if tab.type === 'chat'}
           <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
           <div
-            class="tab"
+            class="tab chat"
             class:selected={tab.id === $activeTabId}
             on:click={() => ($activeTabId = tab.id)}
           >
             <div class="icon-wrapper">
               <Icon name="sparkles" size="20px" />
+            </div>
+            <div class="description">
+              {'Chat'}
             </div>
             <div class="title">
               {tab.title}
@@ -851,13 +816,6 @@
     </div>
 
     <div class="actions">
-      <!-- <button on:click|preventDefault={handleOrganize}>
-                {#if $loadingOrganize}
-                    <Icon name="spinner" />
-                {:else}
-                    <Icon name="sparkles" />
-                {/if}
-            </button> -->
       <button
         on:click|preventDefault={() => toggleOasis()}
         use:tooltip={{
@@ -895,71 +853,123 @@
         <Icon name="add" />
       </button>
     </div>
-
-    <div class="bar-wrapper">
-      <div class="search">
-        <input
-          bind:this={addressInputElem}
-          disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
-          bind:value={$addressValue}
-          on:blur={handleBlur}
-          on:focus={handleFocus}
-          type="text"
-          placeholder={$activeTab?.type === 'page'
-            ? 'Search or Enter URL'
-            : $activeTab?.type === 'chat'
-              ? 'Chat Title'
-              : 'Empty Tab'}
-        />
-      </div>
-
-      {#if $activeTab?.type === 'page'}
-        {#key $activeTab.resourceBookmark}
-          <button
-            on:click={handleBookmark}
-            style="z-index: 100000;"
-            use:tooltip={{
-              content: $activeTab?.resourceBookmark
-                ? 'Open bookmark (⌘ + D)'
-                : 'Bookmark this page (⌘ + D)',
-              action: 'hover',
-              position: 'right',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            {#if $bookmarkingInProgress}
-              <Icon name="spinner" />
-            {:else if $bookmarkingSuccess}
-              <Icon name="check" />
-            {:else if $activeTab?.resourceBookmark}
-              <Icon name="bookmarkFilled" />
-            {:else}
-              <Icon name="bookmark" />
-            {/if}
-          </button>
-        {/key}
-      {/if}
-    </div>
-
-    <!-- <div class="page-actions">
-            <button
-              class="nav-button icon-button"
-              on:click={handleBookmark}
-            >
-                {#if $bookmarkingInProgress}
-                    <Icon name="spinner" size="15px" />
-                {:else if $bookmarkingSuccess}
-                    <Icon name="check" size="15px" />
-                    <p>Saved to Oasis!</p>
-                {:else}
-                    <Icon name="bookmark" size="15px" />
-                {/if}
-            </button>
-        </div> -->
   </div>
 
-  <div class="browser-window-wrapper">
+  <div class="browser-window-wrapper" class:hasNoTab={!$activeBrowserTab}>
+    {#if $activeBrowserTab}
+      <div
+        class="bar-wrapper"
+        class:hide={!$showURLBar}
+        aria-label="Collapse URL bar"
+        on:mouseleave={() => ($showURLBar = false)}
+        on:keydown={(e) => e.key === 'Enter' && showURLBar.set(!showURLBar)}
+        tabindex="0"
+        role="button"
+      >
+        <div class="test-wrapper">
+          <div class="search">
+            <input
+              bind:this={addressInputElem}
+              disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
+              bind:value={$addressValue}
+              on:blur={handleBlur}
+              on:focus={handleFocus}
+              type="text"
+              placeholder={$activeTab?.type === 'page'
+                ? 'Search or Enter URL'
+                : $activeTab?.type === 'chat'
+                  ? 'Chat Title'
+                  : 'Empty Tab'}
+            />
+
+            <div class="actions nav-buttons">
+              <button
+                class="nav-button"
+                disabled={!canGoBack}
+                on:click={$activeBrowserTab?.goBack}
+                use:tooltip={{
+                  content: 'Go Back',
+                  action: 'hover',
+                  position: 'bottom',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                <Icon name="arrow.left" />
+              </button>
+              <button
+                class="nav-button"
+                disabled={!canGoForward}
+                on:click={$activeBrowserTab?.goForward}
+                use:tooltip={{
+                  content: 'Go Forward',
+                  action: 'hover',
+                  position: 'bottom',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                <Icon name="arrow.right" />
+              </button>
+              <button
+                class="nav-button"
+                on:click={$activeBrowserTab?.reload}
+                use:tooltip={{
+                  content: 'Reload Page (⌘ + R)',
+                  action: 'hover',
+                  position: 'bottom',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                <Icon name="reload" />
+              </button>
+            </div>
+          </div>
+
+          {#if $activeTab?.type === 'page'}
+            {#key $activeTab.resourceBookmark}
+              <button
+                on:click={handleBookmark}
+                style="z-index: 100000;"
+                use:tooltip={{
+                  content: $activeTab?.resourceBookmark
+                    ? 'Open bookmark (⌘ + D)'
+                    : 'Bookmark this page (⌘ + D)',
+                  action: 'hover',
+                  position: 'right',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                {#if $bookmarkingInProgress}
+                  <Icon name="spinner" />
+                {:else if $bookmarkingSuccess}
+                  <Icon name="check" />
+                {:else if $activeTab?.resourceBookmark}
+                  <Icon name="bookmarkFilled" />
+                {:else}
+                  <Icon name="bookmark" />
+                {/if}
+              </button>
+            {/key}
+          {/if}
+        </div>
+      </div>
+
+      <div
+        class="hover-line"
+        class:hide={$showURLBar}
+        aria-label="Expand URL bar"
+        role="button"
+        tabindex="0"
+        on:mouseenter={() => ($showURLBar = true)}
+        on:keydown={(e) => e.key === 'Enter' && showURLBar.set(!showURLBar)}
+      >
+        <div class="line" class:hide={$showURLBar}></div>
+      </div>
+    {/if}
+
     {#each $activeTabs as tab (tab.id)}
       <div class="browser-window" style="--scaling: 1;" class:active={$activeTabId === tab.id}>
         {#if tab.type === 'page'}
@@ -1059,7 +1069,7 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: #fcfcfc;
+    background-color: #eeece0;
   }
 
   .sidebar {
@@ -1073,10 +1083,15 @@
   }
 
   .browser-window-wrapper {
-    padding: 0.5rem;
+    padding: 0 0.5rem 0.5rem 0.5rem;
     padding-left: 0;
-    height: 100vh;
+    height: calc(100vh - 1.25rem);
     width: 100%;
+
+    &.hasNoTab {
+      padding: 0.5rem;
+      height: calc(100vh - 0.25rem);
+    }
   }
 
   .browser-window {
@@ -1096,11 +1111,35 @@
     }
   }
 
-  .bar-wrapper {
+  .test-wrapper {
+    position: absolute;
+    left: calc(50% - 4rem);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 0.75rem;
+    width: 400px;
+    background: rgba(255, 255, 255, 0.9);
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 0.75rem;
+  }
+
+  .bar-wrapper {
+    position: absolute;
+    top: 0.5rem;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 20000;
+    .hitarea {
+      position: absolute;
+      z-index: 30000;
+      top: -1rem;
+      width: 100%;
+      height: 5rem;
+      background: red;
+    }
 
     button {
       appearance: none;
@@ -1113,7 +1152,7 @@
       border-radius: 5px;
       cursor: pointer;
 
-      background-color: #fbe8f1;
+      background-color: #fff;
       padding: 10px;
 
       &:hover {
@@ -1133,7 +1172,7 @@
     border: 1px solid transparent;
     border-radius: 5px;
     font-size: 1rem;
-    background-color: #fbe8f1;
+    background-color: #fff;
     color: #3f3f3f;
 
     &:hover {
@@ -1145,6 +1184,39 @@
       border-color: #f73b95;
       color: #000;
       background-color: #ffffff;
+    }
+  }
+
+  .hide {
+    display: none;
+  }
+
+  .hover-line {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 15px;
+    z-index: 10000;
+    width: 100%;
+    transition: height 0.2s ease-in-out;
+    &:after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 10px;
+      border-radius: 5px;
+      /* background-color: #f73b95; */
+      width: 30rem;
+    }
+
+    .line {
+      height: 5px;
+      border-radius: 5px;
+      background-color: #ccc;
+      width: 4rem;
     }
   }
 
@@ -1167,9 +1239,8 @@
   }
 
   .divider {
-    margin-top: 10px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid #f0f0f0;
+    margin: 10px 8px;
+    border-bottom: 1px solid #cacaca;
   }
 
   .tab {
@@ -1180,6 +1251,12 @@
     cursor: pointer;
     gap: 10px;
     position: relative;
+    color: #7d7448;
+    font-weight: 500;
+    letter-spacing: 0.0025em;
+    font-smooth: always;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 
     .icon-wrapper {
       width: 20px;
@@ -1214,7 +1291,8 @@
     }
 
     &.selected {
-      background-color: #fbe8f1;
+      color: #585130;
+      background-color: #fff;
     }
   }
 
@@ -1253,7 +1331,7 @@
       }
 
       &:hover {
-        background: #fad0e3;
+        background: #eeece0;
       }
     }
   }
@@ -1261,8 +1339,9 @@
   .nav-buttons {
     position: absolute;
     z-index: 10000;
-    bottom: 16px;
-    left: 162px;
+    bottom: 1.125rem;
+    width: 100%;
+    left: 17rem;
   }
 
   .page-actions {
