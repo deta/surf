@@ -117,6 +117,15 @@ const api = {
     }
   },
 
+  fetchJSON: async (input: string | URL | Request, init?: RequestInit | undefined) => {
+    try {
+      const response = await fetch(input, init)
+      return response.json()
+    } catch (error) {
+      throw error
+    }
+  },
+
   createAIChatCompletion: async (userPrompt: string, systemPrompt?: string) => {
     if (!openai) {
       return null

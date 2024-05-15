@@ -1,3 +1,4 @@
+import { ResourceTypes } from '@horizon/types'
 import { fromMime } from 'human-filetypes'
 
 export const humanFileTypes = {
@@ -53,13 +54,29 @@ export const humanFileTypes = {
   'application/vnd.oasis.opendocument.chart': 'OpenDocument Chart',
   'application/vnd.oasis.opendocument.formula': 'OpenDocument Formula',
   'application/vnd.oasis.opendocument.database': 'OpenDocument Database',
-  'application/vnd.oasis.opendocument.image': 'OpenDocument Image'
+  'application/vnd.oasis.opendocument.image': 'OpenDocument Image',
+  [ResourceTypes.LINK]: 'Link',
+  [ResourceTypes.ARTICLE]: 'Article',
+  [ResourceTypes.POST]: 'Post',
+  [ResourceTypes.CHAT_MESSAGE]: 'Comment',
+  [ResourceTypes.CHAT_THREAD]: 'Chat',
+  [ResourceTypes.DOCUMENT_SPACE_NOTE]: 'Document',
+  [ResourceTypes.DOCUMENT]: 'Document',
+  [ResourceTypes.TABLE_COLUMN]: 'Table Column',
+  [ResourceTypes.TABLE]: 'Table'
 }
 
 export const getFileType = (fileType: string) => {
   if (!fileType) return 'unknown'
-  const parsed = (humanFileTypes as any)[fileType] ?? 'unknown'
-  return parsed === 'unknown' ? fileType : parsed
+  const parsed = (humanFileTypes as any)[fileType]
+  if (!parsed) {
+    const match = Object.entries(humanFileTypes).find((x) => fileType.includes(x[0]))
+    if (match) {
+      return match[1]
+    }
+  }
+
+  return parsed || fileType
 }
 
 export const getFileKind = (fileType: string) => {

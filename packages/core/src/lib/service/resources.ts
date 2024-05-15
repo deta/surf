@@ -45,6 +45,10 @@ export class ResourceTag {
   static paste() {
     return { name: 'savedWithAction', value: 'paste' }
   }
+
+  static import() {
+    return { name: 'savedWithAction', value: 'import' }
+  }
 }
 
 export const getPrimaryResourceType = (type: string) => {

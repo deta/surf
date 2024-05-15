@@ -21,7 +21,7 @@
   import BrowserHomescreen from './BrowserHomescreen.svelte'
 
   import '../Horizon/index.scss'
-  import type { Tab, TabChat, TabEmpty, TabHorizon, TabPage } from './types'
+  import type { Tab, TabChat, TabEmpty, TabHorizon, TabImporter, TabPage } from './types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../Cards/Browser/searchEngines'
   import DrawerWrapper from '../Horizon/DrawerWrapper.svelte'
   import type { Drawer } from '@horizon/drawer'
@@ -31,6 +31,8 @@
   import { useLocalStorageStore } from '../../utils/localstorage'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
+  import { LinkImporter } from '@horizon/web-parser'
+  import Importer from './Importer.svelte'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -359,7 +361,17 @@
     return url
   }
 
+  let blockBlurHandler = false
   const handleBlur = () => {
+    if (blockBlurHandler) {
+      return
+    }
+
+    blockBlurHandler = true
+    setTimeout(() => {
+      blockBlurHandler = false
+    }, 100)
+
     addressBarFocus = false
 
     if (!$addressValue) {
@@ -374,7 +386,7 @@
         updateActiveTab({ title: $addressValue })
       }
     } else if ($activeTab?.type === 'page') {
-      log.debug('Navigating to address', $addressValue)
+      log.debug('Navigating to address from page', $addressValue)
       const url = getNavigationURL($addressValue)
       $activeBrowserTab.navigate(url)
 
@@ -384,7 +396,7 @@
       //     updateActiveTab({ initialLocation: url })
       // }
     } else if ($activeTab?.type === 'empty') {
-      log.debug('Navigating to address', $addressValue)
+      log.debug('Navigating to address from empty tab', $addressValue)
       const url = getNavigationURL($addressValue)
       log.debug('Converting empty tab to page', url)
       updateActiveTab({
@@ -428,6 +440,10 @@
       handleNewHorizon()
     } else if (isModKeyAndKeyPressed(e, 'r')) {
       $activeBrowserTab?.reload()
+    } else if (isModKeyAndKeyPressed(e, 'i')) {
+      createImporterTab()
+    } else if (isModKeyAndKeyPressed(e, 'b')) {
+      $activeBrowserTab?.openDevTools()
     }
   }
 
@@ -487,6 +503,17 @@
     if (active) {
       activeTabId.set(newTab.id)
     }
+  }
+
+  const createImporterTab = async () => {
+    log.debug('Creating new importer tab')
+    const newTab = await createTab<TabImporter>({
+      title: 'Importer',
+      icon: '',
+      type: 'importer'
+    })
+
+    activeTabId.set(newTab.id)
   }
 
   const handleNewTab = (e: CustomEvent<NewTabEvent>) => {
@@ -644,6 +671,8 @@
       activeTabId.set(activeTabs[activeTabs.length - 1].id)
     }
 
+    window.LinkImporter = LinkImporter
+
     // setTimeout(() => {
     //     async function runTabs() {
     //         for (const tab of $tabs) {
@@ -777,6 +806,10 @@
           {:else if tab.type === 'horizon'}
             <div class="icon-wrapper">
               <Icon name="grid" size="20px" />
+            </div>
+          {:else if tab.type === 'importer'}
+            <div class="icon-wrapper">
+              <Icon name="code" size="20px" />
             </div>
           {:else}
             <div class="icon-wrapper">
@@ -967,6 +1000,8 @@
             on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
             on:updateTab={(e) => updateTab(tab.id, e.detail)}
           />
+        {:else if tab.type === 'importer'}
+          <Importer {resourceManager} />
         {:else}
           <BrowserHomescreen
             {historyEntriesManager}

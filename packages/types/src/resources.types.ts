@@ -20,7 +20,12 @@ export enum ResourceTagsBuiltInKeys {
 }
 
 export interface ResourceTagsBuiltIn {
-  [ResourceTagsBuiltInKeys.SAVED_WITH_ACTION]: 'download' | 'drag/browser' | 'drag/local' | 'paste'
+  [ResourceTagsBuiltInKeys.SAVED_WITH_ACTION]:
+    | 'download'
+    | 'drag/browser'
+    | 'drag/local'
+    | 'paste'
+    | 'import'
   [ResourceTagsBuiltInKeys.TYPE]: string
   [ResourceTagsBuiltInKeys.DELETED]: boolean
   [ResourceTagsBuiltInKeys.HOSTNAME]: string
@@ -281,6 +286,7 @@ export interface ResourceDataArticle {
 }
 
 export interface ResourceDataLink {
+  source_id?: string // unique identifier for the link within the platform
   title: string
   description: string | null
   icon: string

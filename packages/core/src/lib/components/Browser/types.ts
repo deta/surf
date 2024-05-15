@@ -5,7 +5,7 @@ export interface BaseTab {
   section?: string
   title: string
   icon: string
-  type: 'page' | 'horizon' | 'chat' | 'empty'
+  type: 'page' | 'horizon' | 'chat' | 'empty' | 'importer'
   archived: boolean
 }
 
@@ -32,7 +32,11 @@ export interface TabEmpty extends BaseTab {
   type: 'empty'
 }
 
-export type Tab = TabPage | TabChat | TabHorizon | TabEmpty
+export interface TabImporter extends BaseTab {
+  type: 'importer'
+}
+
+export type Tab = TabPage | TabChat | TabHorizon | TabEmpty | TabImporter
 
 export type Chat = {
   id: string

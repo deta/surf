@@ -260,10 +260,15 @@
     }
   })
 
-  export function navigate(targetUrl: string): void {
-    log.debug('Navigating to', targetUrl)
-    if (webview) {
-      webview.src = targetUrl
+  export async function navigate(targetUrl: string): Promise<void> {
+    try {
+      log.debug('Navigating to', targetUrl)
+      if (webview) {
+        await webview.loadURL(targetUrl)
+        // webview.src = targetUrl
+      }
+    } catch (error) {
+      log.error('Error navigating', error)
     }
   }
 

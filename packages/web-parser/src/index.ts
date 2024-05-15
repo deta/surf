@@ -247,6 +247,88 @@ export class WebParser {
       }
     }
   }
+
+  static getResourcePreview(resource: DetectedResource): {
+    title: string
+    type: string
+    url: string | null
+  } {
+    if (resource.type === ResourceTypes.ARTICLE) {
+      const data = resource.data as ResourceDataArticle
+      return {
+        title: data.title ?? data.excerpt,
+        type: ResourceTypes.ARTICLE,
+        url: data.url
+      }
+    } else if (resource.type.startsWith(ResourceTypes.POST)) {
+      const data = resource.data as ResourceDataPost
+      return {
+        title: data.title ?? data.content_plain,
+        type: ResourceTypes.POST,
+        url: data.url
+      }
+    } else if (resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)) {
+      const data = resource.data as ResourceDataChatMessage
+      return {
+        title: data.content_plain ?? data.author,
+        type: ResourceTypes.CHAT_MESSAGE,
+        url: data.url
+      }
+    } else if (resource.type.startsWith(ResourceTypes.CHAT_THREAD)) {
+      const data = resource.data as ResourceDataChatThread
+      return {
+        title: data.content_plain ?? data.creator,
+        type: ResourceTypes.CHAT_THREAD,
+        url: data.url
+      }
+    } else if (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+      return {
+        title: 'Document',
+        type: ResourceTypes.DOCUMENT_SPACE_NOTE,
+        url: null
+      }
+    } else if (resource.type.startsWith(ResourceTypes.DOCUMENT)) {
+      const data = resource.data as ResourceDataDocument
+      return {
+        title: data.title ?? data.author ?? data.url,
+        type: ResourceTypes.DOCUMENT,
+        url: data.url
+      }
+    } else if (resource.type.startsWith(ResourceTypes.TABLE_COLUMN)) {
+      const data = resource.data as ResourceDataTableColumn
+      return {
+        title: data.name ?? data.rows.join('\n'),
+        type: ResourceTypes.TABLE_COLUMN,
+        url: null
+      }
+    } else if (resource.type.startsWith(ResourceTypes.TABLE)) {
+      const data = resource.data as ResourceDataTable
+      return {
+        title: data.name ?? data.columns.join(','),
+        type: ResourceTypes.TABLE,
+        url: null
+      }
+    } else if (resource.type === ResourceTypes.LINK) {
+      const data = resource.data as ResourceDataLink
+      return {
+        title: data.title ?? data.description ?? data.url,
+        type: ResourceTypes.LINK,
+        url: data.url
+      }
+    } else if (resource.type === 'text/plain') {
+      return {
+        title: 'Text',
+        type: 'text/plain',
+        url: null
+      }
+    } else {
+      return {
+        title: 'Unknown',
+        type: 'unknown',
+        url: null
+      }
+    }
+  }
 }
 
 /*
@@ -285,3 +367,4 @@ export class WebParser {
 
 export * from './types'
 export * from './extractors/index'
+export * from './importers/index'

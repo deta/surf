@@ -42,6 +42,12 @@
     }
   }
 
+  export const openDevTools = () => {
+    if (webview) {
+      webview.openDevTools()
+    }
+  }
+
   export const detectResource = (timeoutNum?: number) => {
     if (webview) {
       return webview.detectResource(timeoutNum)
