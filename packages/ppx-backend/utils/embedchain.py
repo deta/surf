@@ -46,7 +46,7 @@ async def generate_sources_str(contexts):
     #sources_str = "<sources>\n" + "\n".join(json.dumps(source) for source in unique_sources) + "\n</sources>\n\n"
     sources_str = "<sources>\n"
     for idx, context in enumerate(contexts):
-        sources_str += f"\n{idx+1}. {context.get('context')[:120] + '...' }\n"
+        sources_str += f"\n<source>{idx+1}. {context.get('context')[:120] + '...' }</source>\n"
     sources_str += "</sources>\n\n"
     return sources_str
 
@@ -96,7 +96,7 @@ async def send_message(query, session_id, number_documents, system_prompt, citat
 
     llm_task = asyncio.create_task(ChatOpenAI(**kwargs).agenerate(messages=[messages]))
 
-    generated_answer = ""
+    generated_answer = sources_str
     try:
         yield sources_str
         async for token in callback.aiter():
