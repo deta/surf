@@ -1,6 +1,7 @@
 use core::fmt;
 
-use reqwest::blocking::Client;
+use crate::{BackendError, BackendResult};
+use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,15 +39,16 @@ impl fmt::Display for DataSourceType {
 #[derive(Debug)]
 pub struct AI {
     api_endpoint: String,
-    client: Client,
+    client: reqwest::blocking::Client,
+    async_client: reqwest::Client,
 }
 
 impl AI {
     pub fn new(api_endpoint: String) -> Self {
-        let client = Client::new();
         Self {
             api_endpoint,
-            client,
+            client: reqwest::blocking::Client::new(),
+            async_client: reqwest::Client::new(),
         }
     }
 
@@ -68,31 +70,34 @@ impl AI {
         Ok(())
     }
 
-    // TODO: figure out real streaming
-    // right now response.text() is blocking
-    pub fn chat(
+    pub async fn chat(
         &self,
         query: String,
-        thread_id: String,
+        session_id: String,
         number_documents: i32,
         model: String,
-    ) -> impl Iterator<Item = Result<String, reqwest::Error>> {
+    ) -> BackendResult<impl Stream<Item = BackendResult<Option<String>>>> {
         let url = format!("{}/chat", &self.api_endpoint);
         let response = self
-            .client
+            .async_client
             .get(url)
             .query(&[
-                ("query", query),
-                ("thread_id", thread_id),
-                ("number_documents", number_documents.to_string()),
-                ("model", model),
+                ("query", &query),
+                ("session_id", &session_id),
+                ("number_documents", &number_documents.to_string()),
+                ("model", &model),
             ])
-            .send();
-        if let Ok(response) = response {
-            let res = response.text();
-            vec![res].into_iter()
-        } else {
-            vec![Err(response.unwrap_err())].into_iter()
-        }
+            .send()
+            .await?;
+
+        let stream = response.bytes_stream().map(|chunk| match chunk {
+            Ok(bytes) => match String::from_utf8(bytes.to_vec()) {
+                Ok(string) => Ok(Some(string)),
+                Err(e) => Err(BackendError::GenericError(e.to_string())),
+            },
+            Err(e) => Err(BackendError::from(e)),
+        });
+
+        Ok(stream)
     }
 }

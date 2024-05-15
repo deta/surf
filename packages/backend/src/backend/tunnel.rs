@@ -42,7 +42,7 @@ impl WorkerTunnel {
         };
 
         // spawn the main SFFS thread
-        let ai_endpoint_clone = ai_backend_api_endpoint.clone();
+        let ai_api_endpoint = ai_backend_api_endpoint.clone();
         std::thread::spawn(move || {
             worker_thread_entry_point(
                 worker_rx,
@@ -50,7 +50,7 @@ impl WorkerTunnel {
                 aiqueue_tx,
                 libuv_ch,
                 backend_root_path,
-                ai_endpoint_clone,
+                ai_api_endpoint,
             )
         });
 

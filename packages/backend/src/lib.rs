@@ -16,6 +16,8 @@ pub enum BackendError {
     ChronoError(#[from] chrono::ParseError),
     #[error("RustBert error: {0}")]
     RustBertError(#[from] rust_bert::RustBertError),
+    #[error("Reqwest error: {0}")]
+    ReqwestError(#[from] reqwest::Error),
     #[error("Generic error: {0}")]
     GenericError(String),
 }
@@ -26,5 +28,6 @@ type BackendResult<T> = Result<T, BackendError>;
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
     backend::register_exported_functions(&mut cx)?;
     store::register_exported_functions(&mut cx)?;
+    ai::register_exported_functions(&mut cx)?;
     Ok(())
 }

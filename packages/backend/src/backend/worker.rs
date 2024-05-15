@@ -14,8 +14,8 @@ use std::{path::Path, sync::mpsc};
 
 pub struct Worker {
     pub db: Database,
-    pub embedding_model: EmbeddingModel,
     pub ai: AI,
+    pub embedding_model: EmbeddingModel,
     pub tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     pub aiqueue_tx: crossbeam::Sender<AIMessage>,
     pub resources_path: String,
@@ -42,12 +42,12 @@ impl Worker {
             .to_string();
 
         let usearch_path = std::env::var("HORIZON_LIBUSEARCH_PATH")
-            .unwrap_or_else(|_| "/Users/sif/.usearch/binaries/usearch_sqlite.dylib".to_string());
+            .unwrap_or_else(|_| "/Users/null/libusearch_sqlite.dylib".to_string());
 
         Self {
             db: Database::new(&db_path, &usearch_path).unwrap(),
-            embedding_model: EmbeddingModel::new_remote().unwrap(),
             ai: AI::new(ai_backend_api_endpoint),
+            embedding_model: EmbeddingModel::new_remote().unwrap(),
             tqueue_tx,
             aiqueue_tx,
             resources_path,
@@ -69,6 +69,7 @@ pub fn worker_thread_entry_point(
         tqueue_tx,
         aiqueue_tx,
     );
+
     while let Ok(TunnelMessage(message, oneshot)) = worker_rx.recv() {
         match message {
             WorkerMessage::MiscMessage(message) => {
