@@ -1,11 +1,8 @@
 use crate::{
-    backend::{
+    ai::ai::ChatHistory, backend::{
         message::{MiscMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
-    },
-    store::db::Database,
-    store::models::{random_uuid, AIChatSession},
-    BackendError, BackendResult,
+    }, store::{db::Database, models::{random_uuid, AIChatSession}}, BackendError, BackendResult
 };
 use futures::StreamExt;
 use neon::prelude::*;
@@ -14,6 +11,10 @@ impl Worker {
     pub fn print(&mut self, content: String) -> BackendResult<String> {
         println!("print: {}", content);
         Ok("ok".to_owned())
+    }
+
+    pub fn get_ai_chat_message(&mut self, id: String) -> BackendResult<ChatHistory> {
+        Ok(self.ai.get_chat_history(id)?)
     }
 
     pub fn create_ai_chat_message(&mut self, system_prompt: String) -> BackendResult<String> {
@@ -79,6 +80,11 @@ pub fn handle_misc_message(
         MiscMessage::Print(content) => {
             send_worker_response(channel, oneshot, worker.print(content))
         }
+        MiscMessage::GetAIChatMessage(id) => send_worker_response(
+            channel,
+            oneshot,
+            worker.get_ai_chat_message(id),
+        ),
         MiscMessage::CreateAIChatMessage(system_prompot) => send_worker_response(
             channel,
             oneshot,

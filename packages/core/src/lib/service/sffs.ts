@@ -548,4 +548,9 @@ export class SFFS {
     this.log.debug('creating ai chat (custom system prompt:', system_prompt, ')')
     return await this.backend.js__store_create_ai_chat(system_prompt)
   }
+
+  async getAIChat(id: string) {
+    this.log.debug('getting ai chat with id', id)
+    return await this.backend.js__store_get_ai_chat(id)
+  }
 }

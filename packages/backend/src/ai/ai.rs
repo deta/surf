@@ -19,6 +19,32 @@ pub struct DataSourceMetadata {
     pub resource_type: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CitationSourceMetadata {
+    pub timestamp: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CitationSource {
+    pub id: String,
+    pub resource_id: String,
+    pub content: String,
+    pub metadata: Option<CitationSourceMetadata>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+    pub sources: Option<Vec<CitationSource>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChatHistory {
+    pub id: String,
+    pub messages: Vec<ChatMessage>,
+}
+
 #[derive(Debug)]
 pub enum DataSourceType {
     Text,
@@ -50,6 +76,13 @@ impl AI {
             client: reqwest::blocking::Client::new(),
             async_client: reqwest::Client::new(),
         }
+    }
+
+    pub fn get_chat_history(&self, session_id: String) -> Result<ChatHistory, reqwest::Error> {
+        let url = format!("{}/admin/chat_history/{}", &self.api_endpoint, session_id);
+        let response = self.client.get(url).send()?;
+        let chat_history = response.json::<ChatHistory>()?;
+        Ok(chat_history)
     }
 
     pub fn add_data_source(&self, data_source: &DataSource) -> Result<(), reqwest::Error> {
