@@ -373,6 +373,7 @@
     padding-top: 5rem;
     display: flex;
     justify-content: center;
+    background-color: white;
   }
 
   .content {
