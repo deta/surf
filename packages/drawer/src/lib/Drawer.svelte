@@ -14,13 +14,13 @@
   })
 
   // $: width = $size === 'minimal' ? '200px' : $size === 'normal' ? 'calc(max(40vw, 500px))' : '100vw'
-  $: width = 'calc(max(40vw, 500px))'
+  $: width = 'calc(max(30vw, 500px))'
 </script>
 
 <div class="drawer-root">
   {#if $show}
     <div
-      transition:fly={{ x: '100%', opacity: 1, duration: 200 }}
+      transition:fly={{ x: '-100%', opacity: 1, duration: 200 }}
       class="drawer-wrapper"
       style="--drawer-width: {width};"
     >
@@ -35,9 +35,9 @@
   .drawer-wrapper {
     position: fixed;
     z-index: 1000;
-    right: 0;
-    top: 0;
-    height: 100vh;
+    left: 0;
+    bottom: 0;
+    height: 80vh;
     padding: 1rem;
     padding-top: 25px;
     width: var(--drawer-width);
