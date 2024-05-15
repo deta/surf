@@ -1,5 +1,5 @@
 import type { WebviewTag } from 'electron'
-import { DetectedWebApp } from '../types'
+import { DetectedResource, DetectedWebApp, WebServiceActionInputs } from '../types'
 
 export class WebViewExtractor {
   url: URL
@@ -133,6 +133,47 @@ export class WebViewExtractor {
         this.destroyWebview()
         resolve(null)
       }, timeout)
+    })
+  }
+
+  async runAction(id: string, inputs?: WebServiceActionInputs, timeoutNum: number = 10000) {
+    console.log('Running action', id, inputs)
+    return new Promise<DetectedResource | null>(async (resolve) => {
+      if (this.webview === null) {
+        await this.initializeWebview()
+      }
+
+      let timeout: any
+
+      const handleEvent = (event: Electron.IpcMessageEvent) => {
+        if (event.channel !== 'webview-page-event') return
+
+        const eventType = event.args[0] as string
+        const eventData = event.args[1]
+
+        if (eventType === 'action-output' && eventData.id === id) {
+          event.preventDefault()
+          event.stopPropagation()
+
+          if (timeout) {
+            clearTimeout(timeout)
+          }
+
+          this.webview?.removeEventListener('ipc-message', handleEvent)
+          // this.destroyWebview()
+          resolve(eventData.output)
+        }
+      }
+
+      timeout = setTimeout(() => {
+        this.webview?.removeEventListener('ipc-message', handleEvent)
+        resolve(null)
+        //this.destroyWebview()
+      }, timeoutNum)
+
+      this.webview?.addEventListener('ipc-message', handleEvent)
+      this.webview?.openDevTools()
+      this.webview?.send('webview-event', { type: 'run-action', id, inputs })
     })
   }
 }

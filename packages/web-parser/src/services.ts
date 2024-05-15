@@ -14,7 +14,20 @@ export const SERVICES: WebService[] = [
     name: 'Twitter',
     matchHostname: /twitter.com/,
     url: 'https://twitter.com',
-    supportedResources: [ResourceTypes.POST_TWITTER]
+    supportedResources: [ResourceTypes.POST_TWITTER],
+    actions: [
+      {
+        id: 'get_bookmarks_from_twitter',
+        name: 'Get Bookmarks',
+        description: 'Get the bookmarks from Twitter',
+        default: false,
+        inputs: {},
+        output: {
+          type: ResourceTypes.POST_TWITTER,
+          description: 'the bookmarks as links'
+        }
+      }
+    ]
   },
   {
     id: 'notion',

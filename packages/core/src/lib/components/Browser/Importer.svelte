@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ResourceDataLink } from '@horizon/types'
+  import { ResourceTypes, type ResourceDataLink, type ResourceDataPost } from '@horizon/types'
   import {
     LinkImporter,
     WebCrateImporter,
@@ -19,6 +19,7 @@
 
   let webcrateDomain = (window as any).WEBCRATE_DOMAIN ?? import.meta.env.R_VITE_WEBCRATE_DOMAIN
   let webcrateApiKey = (window as any).WEBCRATE_API_KEY ?? import.meta.env.R_VITE_WEBCRATE_API_KEY
+
   const FETCH_BATCH_SIZE = 50
   const PROCESS_BATCH_SIZE = 10
   const LIMIT = 500
@@ -27,15 +28,16 @@
   const appImporter = new WebCrateImporter(webcrateDomain, webcrateApiKey)
   const batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
 
-  const queue = writable<ResourceDataLink[]>([])
-  const processing = writable<ResourceDataLink[]>([])
+  const queue = writable<DetectedResource[]>([])
+  const processing = writable<DetectedResource[]>([])
   const processed = writable<{ resource: DetectedResource; sourceId: string }[]>([])
-  const failed = writable<ResourceDataLink[]>([])
+  const failed = writable<DetectedResource[]>([])
 
   const running = writable(false)
   const fetchDone = writable(false)
   const dryRun = writable(true)
   const processBatchSize = writable(PROCESS_BATCH_SIZE)
+  const tab = writable<'webcrate' | 'twitter'>('webcrate')
 
   let showDebug = false
 
@@ -71,51 +73,99 @@
   //   }
   // }
 
+  const fetchTwitterBookmarks = async () => {
+    const webParser = new WebParser('https://twitter.com/i/bookmarks')
+
+    const extractedResource = await webParser.runActionUsingWebview(
+      document,
+      'get_bookmarks_from_twitter'
+    )
+    log.debug('Extracted resource', extractedResource)
+
+    const posts = extractedResource?.data as any as ResourceDataPost[]
+    return posts
+  }
+
   const fillQueue = async () => {
     if ($fetchDone) {
       log.warn('fill queue was called even though fetch is done')
       return
     }
 
-    const batch = await batchFetcher.fetchNextBatch()
-    log.debug('Filling queue', batch.length)
+    if ($tab === 'webcrate') {
+      const batch = await batchFetcher.fetchNextBatch()
+      log.debug('Filling queue', batch.length)
 
-    if (batch.length === 0) {
+      if (batch.length === 0) {
+        fetchDone.set(true)
+      }
+
+      if ($queue.length + $processing.length + $processed.length + batch.length >= LIMIT) {
+        fetchDone.set(true)
+      }
+
+      const resources = batch.map((item) => ({ type: ResourceTypes.LINK, data: item }))
+      queue.update((prev) => [...prev, ...resources])
+    } else if ($tab === 'twitter') {
+      // TODO: fetch next batch of twitter bookmarks
+      const posts = await fetchTwitterBookmarks()
+
       fetchDone.set(true)
-    }
 
-    if ($queue.length + $processing.length + $processed.length + batch.length >= LIMIT) {
-      fetchDone.set(true)
+      const resources = posts.map((item) => ({ type: ResourceTypes.POST_TWITTER, data: item }))
+      queue.update((prev) => [...prev, ...resources])
+    } else {
+      log.error('Unknown tab', $tab)
     }
-
-    queue.update((prev) => [...prev, ...batch])
 
     log.debug('Queue size', $queue.length)
   }
 
-  const processItem = async (item: ResourceDataLink) => {
+  const processItem = async (item: DetectedResource) => {
     try {
-      log.debug('Processing item', item.url)
+      if (item.type === ResourceTypes.LINK) {
+        const link = item.data as ResourceDataLink
 
-      processing.update((prev) => [...prev, item])
-      queue.update((prev) => prev.filter((i) => i !== item))
+        log.debug('Processing item', link.url)
 
-      const detectedResource = await linkImporter.processLink(item)
+        processing.update((prev) => [...prev, item])
+        queue.update((prev) => prev.filter((i) => i !== item))
 
-      if (!$dryRun) {
-        const resource = await resourceManager.createResourceOther(
-          new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-          { sourceURI: `https://${webcrateDomain}/link/${item.source_id}` },
-          [ResourceTag.import()]
-        )
+        const detectedResource = await linkImporter.processLink(link)
 
-        log.debug('Resource created', resource)
+        if (!$dryRun) {
+          const resource = await resourceManager.createResourceOther(
+            new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
+            { sourceURI: `https://${webcrateDomain}/link/${link.source_id}` },
+            [ResourceTag.import()]
+          )
+
+          log.debug('Resource created', resource)
+        }
+
+        processed.update((prev) => [
+          ...prev,
+          { resource: detectedResource, sourceId: link.source_id! }
+        ])
+      } else if (item.type === ResourceTypes.POST_TWITTER) {
+        const post = item.data as ResourceDataPost
+        log.debug('Processing item', post.url)
+
+        processing.update((prev) => [...prev, item])
+        queue.update((prev) => prev.filter((i) => i !== item))
+
+        if (!$dryRun) {
+          const resource = await resourceManager.createResourceOther(
+            new Blob([JSON.stringify(post)], { type: ResourceTypes.POST_TWITTER }),
+            { sourceURI: post.url },
+            [ResourceTag.import()]
+          )
+
+          log.debug('Resource created', resource)
+        }
+
+        processed.update((prev) => [...prev, { resource: item, sourceId: post.post_id! }])
       }
-
-      processed.update((prev) => [
-        ...prev,
-        { resource: detectedResource, sourceId: item.source_id! }
-      ])
     } catch (error) {
       log.error('Error processing link', item, error)
       failed.update((prev) => [...prev, item])
@@ -145,6 +195,7 @@
 
   const startImport = async () => {
     log.debug('Starting import')
+
     running.set(true)
 
     queue.subscribe(async (items) => {
@@ -181,23 +232,67 @@
 
 <div class="wrapper">
   <div class="content">
-    <h1>Link Importer</h1>
+    <div class="header">
+      <h1>Importer 5000™</h1>
 
-    <div class="service">
-      <h2>WebCrate Config</h2>
-
-      <div class="inputs">
-        <label>
-          Domain
-          <input type="text" bind:value={webcrateDomain} />
-        </label>
-
-        <label>
-          API Key
-          <input type="password" bind:value={webcrateApiKey} />
-        </label>
+      <div class="tabs">
+        <button on:click={() => tab.set('webcrate')} class="tab" class:active={$tab === 'webcrate'}
+          >WebCrate</button
+        >
+        <button on:click={() => tab.set('twitter')} class="tab" class:active={$tab === 'twitter'}
+          >Twitter</button
+        >
       </div>
     </div>
+
+    {#if $tab === 'webcrate'}
+      <div class="service">
+        <h2>WebCrate Setup</h2>
+
+        <div class="explainer">
+          <p>
+            To import links from WebCrate the app needs to connect to your WebCrate instance using
+            the WebCrate API.
+          </p>
+          <p>
+            You need to generate a API key from your <a
+              href="https://deta.space"
+              target="_blank"
+              class="link">Space dashboard.</a
+            >
+          </p>
+        </div>
+
+        <div class="inputs">
+          <label>
+            Domain
+            <input type="text" placeholder="WebCrate instance domain" bind:value={webcrateDomain} />
+          </label>
+
+          <label>
+            API Key
+            <input
+              type="password"
+              placeholder="WebCrate instance API key"
+              bind:value={webcrateApiKey}
+            />
+          </label>
+        </div>
+      </div>
+    {:else if $tab === 'twitter'}
+      <div class="service">
+        <h2>Twitter Setup</h2>
+
+        <div class="explainer">
+          <p>
+            To import your Twitter bookmarks you need to be logged in to Twitter.com in this app.
+            Your bookmarks will be extracted automatically without further setup.
+          </p>
+        </div>
+
+        <a href="https://twitter.com/login" target="_blank" class="link">Login to Twitter ↗</a>
+      </div>
+    {/if}
 
     <div class="section">
       <button class="btn" on:click={() => ($running ? stopImport() : startImport())}>
@@ -229,28 +324,30 @@
     </div>
 
     <div class="section full">
-      <div class="stats">
-        <div class="stat">
-          <div class="label">Queue</div>
-          <div class="value">{$queue.length}</div>
+      {#if $queue.length + $processing.length + $processed.length + $failed.length !== 0}
+        <div class="stats">
+          <div class="stat">
+            <div class="label">Queue</div>
+            <div class="value">{$queue.length}</div>
+          </div>
+          <div class="stat">
+            <div class="label">Processing</div>
+            <div class="value">{$processing.length}</div>
+          </div>
+          <div class="stat">
+            <div class="label">Processed</div>
+            <div class="value">{$processed.length}</div>
+          </div>
+          <div class="stat">
+            <div class="label">Failed</div>
+            <div class="value">{$failed.length}</div>
+          </div>
         </div>
-        <div class="stat">
-          <div class="label">Processing</div>
-          <div class="value">{$processing.length}</div>
-        </div>
-        <div class="stat">
-          <div class="label">Processed</div>
-          <div class="value">{$processed.length}</div>
-        </div>
-        <div class="stat">
-          <div class="label">Failed</div>
-          <div class="value">{$failed.length}</div>
-        </div>
-      </div>
+      {/if}
 
       <div class="list">
         {#each $failed as item}
-          <a href={item.url} target="_blank" class="item failed">{item.url}</a>
+          <a href={item.data.url} target="_blank" class="item failed">{item.data.url}</a>
         {/each}
         {#each $processed.reverse() as item}
           {@const preview = WebParser.getResourcePreview(item.resource)}
@@ -288,6 +385,35 @@
     width: 90%;
   }
 
+  .header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .tabs {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .tab {
+    padding: 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    appearance: none;
+    margin: none;
+    outline: none;
+    font-size: 1.2rem;
+
+    &.active {
+      border-bottom: 2px solid #ababab;
+    }
+  }
+
   .section {
     width: 100%;
     display: flex;
@@ -310,7 +436,7 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.25rem;
     background: #f0f0f0;
     padding: 1rem;
     border-radius: 8px;
@@ -319,6 +445,14 @@
     h2 {
       font-size: 1.2rem;
       font-weight: 500;
+    }
+
+    .explainer {
+      font-size: 1rem;
+      color: #666;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
     }
 
     .inputs {
@@ -330,6 +464,7 @@
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
+        font-weight: 500;
       }
 
       input {
@@ -404,7 +539,7 @@
 
   .btn {
     padding: 10px 20px;
-    background-color: #0d1014;
+    background-color: #f26daa;
     color: white;
     border: none;
     border-radius: 8px;
@@ -414,6 +549,17 @@
     outline: none;
     font-size: 1rem;
     width: 100%;
+  }
+
+  .link {
+    color: #1da1f2;
+    border: none;
+    cursor: pointer;
+    appearance: none;
+    margin: none;
+    outline: none;
+    font-size: 1rem;
+    text-decoration: none;
   }
 
   .list {

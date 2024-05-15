@@ -5,14 +5,15 @@ export class APIExtractor {
     this.baseURL = baseURL
   }
 
-  async getJSON(path: string) {
+  async getJSON(path: string, headers: any = {}) {
     console.log('Requesting', path)
 
     const url = new URL(path, this.baseURL)
     const res = await fetch(url, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...headers
       }
     })
 

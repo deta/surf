@@ -22,7 +22,7 @@ import {
   TypeformParser,
   GoogleSheetsParser
 } from './sites/index'
-import { DetectedResource, ResourceContent } from './types'
+import { DetectedResource, ResourceContent, WebServiceActionInputs } from './types'
 import { MetadataExtractor } from './extractors/metadata'
 import { WebViewExtractor } from './extractors/webview'
 import { WebAppExtractor } from './extractors/index'
@@ -129,6 +129,19 @@ export class WebParser {
     await wait(3000)
 
     const extracted = await webviewExtractor.detectResource()
+
+    return extracted as DetectedResource | null
+  }
+
+  async runActionUsingWebview(document: Document, id: string, inputs?: WebServiceActionInputs) {
+    const webviewExtractor = this.createWebviewExtractor(document)
+
+    await webviewExtractor.initializeWebview()
+
+    // TODO - wait for the page to have fully loaded
+    await wait(3000)
+
+    const extracted = await webviewExtractor.runAction(id, inputs)
 
     return extracted as DetectedResource | null
   }

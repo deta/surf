@@ -879,7 +879,7 @@
             colWidth="minmax(Min(250px, 100%), 1fr)"
             bind:refreshLayout={refreshContentLayout}
           >
-            {#each searchResult as item (item.id)}
+            {#each searchResult.slice(0, 50) as item (item.id)}
               {#if item.engine === 'local'}
                 <div>
                   <ResourceLoading title={item.resource.metadata?.name} />
