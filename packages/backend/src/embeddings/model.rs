@@ -70,7 +70,7 @@ mod tests {
     struct NeedsCleanup;
 
     const TEST_DB: &str = "_embeddings_search_test.db";
-    const USEARCH_PATH: &str = "/Users/sif/.usearch/binaries/usearch_sqlite.dylib";
+    const USEARCH_PATH: &str = "/Users/null/libusearch_sqlite.dylib";
 
     impl Drop for NeedsCleanup {
         fn drop(&mut self) {
