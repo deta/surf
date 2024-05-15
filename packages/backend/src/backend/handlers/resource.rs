@@ -63,12 +63,12 @@ impl Worker {
                 .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
             match resource_type.as_str() {
-                "application/space.vnd.space.article" => {
+                "application/vnd.space.article" => {
                     self.aiqueue_tx
                         .send(AIMessage::GenerateWebpageEmbeddings(metadata.clone()))
                         .map_err(|e| BackendError::GenericError(e.to_string()))?;
                 }
-                "application/space.vnd.post.youtube" => {
+                "application/vnd.space.post.youtube" => {
                     self.aiqueue_tx
                         .send(AIMessage::GenerateYoutubeVideoEmbeddings(metadata.clone()))
                         .map_err(|e| BackendError::GenericError(e.to_string()))?;
