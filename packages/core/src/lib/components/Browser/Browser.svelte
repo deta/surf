@@ -1131,6 +1131,7 @@
     left: 0;
     right: 0;
     width: 100%;
+    height: 5rem;
     z-index: 20000;
     .hitarea {
       position: absolute;
@@ -1156,7 +1157,7 @@
       padding: 10px;
 
       &:hover {
-        background: #fad0e3;
+        background: #eeece0;
       }
     }
   }
@@ -1176,7 +1177,7 @@
     color: #3f3f3f;
 
     &:hover {
-      background: #fad0e3;
+      background: #eeece0;
     }
 
     &:focus {
