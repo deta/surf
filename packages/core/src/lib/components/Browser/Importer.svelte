@@ -38,9 +38,10 @@
   const fetchDone = writable(false)
   const dryRun = writable(true)
   const processBatchSize = writable(PROCESS_BATCH_SIZE)
-  const tab = writable<'webcrate' | 'twitter'>('webcrate')
+  const tab = writable<'webcrate' | 'twitter' | 'csv'>('twitter')
 
   let showDebug = false
+  let csvData = ''
 
   $: log.debug('Queue changed', $queue)
   $: log.debug('Processing changed', $processing)
@@ -82,6 +83,7 @@
     let intercepted: any
 
     // we need to start intercepting requests before initializing the webview
+    // @ts-expect-error
     window.api
       .interceptRequestsHeaders(['https://twitter.com/i/api/*'], webviewExtractor.partition)
       .then((data: any) => {
@@ -139,10 +141,42 @@
 
       fetchDone.set(true)
 
-      const resources = posts.map((item) => ({ type: ResourceTypes.POST_TWITTER, data: item }))
+      const resources = (posts ?? []).map((item) => ({
+        type: ResourceTypes.POST_TWITTER,
+        data: item
+      }))
       queue.update((prev) => [...prev, ...resources])
 
       processNextItem()
+    } else if ($tab === 'csv') {
+      log.debug('Parsing CSV data')
+      const lines = csvData.split('\n')
+      const headersMatch = lines[0].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)
+      log.debug('Headers', headersMatch)
+      const headers = headersMatch?.map((header) => header.replace(/"/g, '')) ?? []
+      const data = lines.slice(1).map((line) => {
+        const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+        return headers.reduce((acc, key, index) => {
+          acc[key] = parts[index]
+          return acc
+        }, {} as any)
+      })
+
+      const resources = data.map((item) => ({
+        type: ResourceTypes.LINK,
+        data: {
+          url: item.url,
+          title: item.title ?? item.name,
+          description: item.description ?? item.excerpt,
+          tags: item.tags ? item.tags.split(',') : [],
+          date_published: item.published ?? item.created,
+          image: item.image ?? item.cover
+        } as any as ResourceDataLink
+      }))
+
+      fetchDone.set(true)
+
+      queue.update((prev) => [...prev, ...resources])
     } else {
       log.error('Unknown tab', $tab)
     }
@@ -265,11 +299,14 @@
       <h1>Importer 5000™</h1>
 
       <div class="tabs">
-        <button on:click={() => tab.set('webcrate')} class="tab" class:active={$tab === 'webcrate'}
-          >WebCrate</button
-        >
         <button on:click={() => tab.set('twitter')} class="tab" class:active={$tab === 'twitter'}
           >Twitter</button
+        >
+        <button on:click={() => tab.set('csv')} class="tab" class:active={$tab === 'csv'}
+          >CSV</button
+        >
+        <button on:click={() => tab.set('webcrate')} class="tab" class:active={$tab === 'webcrate'}
+          >WebCrate</button
         >
       </div>
     </div>
@@ -320,6 +357,25 @@
         </div>
 
         <a href="https://twitter.com/login" target="_blank" class="link">Login to Twitter ↗</a>
+      </div>
+    {:else if $tab === 'csv'}
+      <div class="service">
+        <h2>CSV / Raindrop</h2>
+
+        <div class="explainer">
+          <p>
+            To import your links from bookmarking services like Raindrop.io you need to export your
+            data as CSV and paste it below.
+          </p>
+
+          <p>
+            Checkout <a href="https://help.raindrop.io/export/" target="_blank" class="link"
+              >Raindrop's Docs</a
+            > on how to export your data.
+          </p>
+        </div>
+
+        <textarea placeholder="csv data" bind:value={csvData}></textarea>
       </div>
     {/if}
 
@@ -411,7 +467,7 @@
     flex-direction: column;
     align-items: center;
     gap: 2rem;
-    max-width: 500px;
+    max-width: 600px;
     width: 90%;
   }
 
@@ -506,6 +562,18 @@
         outline: none;
         font-size: 1rem;
       }
+    }
+
+    textarea {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      appearance: none;
+      margin: none;
+      outline: none;
+      font-size: 1rem;
+      height: 200px;
+      width: 100%;
     }
   }
 

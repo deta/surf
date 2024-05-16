@@ -91,7 +91,6 @@ export class WebViewExtractor {
     return new Promise<void>((resolve, reject) => {
       this.webview?.addEventListener('did-finish-load', () => {
         resolve()
-        this.webview?.openDevTools()
       })
 
       this.webview?.addEventListener('did-fail-load', () => {

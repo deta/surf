@@ -129,18 +129,24 @@
       (chunk: string) => {
         if (step === 'idle') {
           log.debug('sources chunk', chunk)
-          const sources = parseChatResponseSources(chunk).filter(
-            (source, index, self) =>
-              index === self.findIndex((s) => s.resource_id === source.resource_id)
-          )
 
-          log.debug('Sources', sources)
+          content += chunk
 
-          step = 'sources'
+          if (content.includes('</sources>')) {
+            const sources = parseChatResponseSources(chunk).filter(
+              (source, index, self) =>
+                index === self.findIndex((s) => s.resource_id === source.resource_id)
+            )
 
-          updateActiveMessage({
-            sources
-          })
+            log.debug('Sources', sources)
+
+            step = 'sources'
+            content = ''
+
+            updateActiveMessage({
+              sources
+            })
+          }
         } else {
           log.debug('content chunk', chunk)
           content += chunk
