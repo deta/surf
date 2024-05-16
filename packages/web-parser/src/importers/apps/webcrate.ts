@@ -17,9 +17,10 @@ SAMPLE LINK:
 }
 */
 
-import { ResourceDataLink } from '@horizon/types'
+import { ResourceDataLink, ResourceTypes } from '@horizon/types'
 import { BatchFetcher } from '../batcher'
 import { AppImporter } from './index'
+import { DetectedResource } from '../../types'
 
 export type WebCrateLink = {
   addedAt: string
@@ -97,11 +98,11 @@ export class WebCrateImporter extends AppImporter {
   }
 
   getBatchFetcher(size: number) {
-    const batcher = new BatchFetcher<ResourceDataLink>(size, async (limit, offset) => {
+    const batcher = new BatchFetcher<DetectedResource>(size, async (limit, offset) => {
       const json = await this.fetchLinks(limit, offset as string)
 
       return {
-        data: this.parseLinks(json.data),
+        data: this.parseLinks(json.data).map((item) => ({ type: ResourceTypes.LINK, data: item })),
         nextOffset: json.last
       }
     })

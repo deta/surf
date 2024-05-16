@@ -2,6 +2,7 @@
   import { ResourceTypes, type ResourceDataLink, type ResourceDataPost } from '@horizon/types'
   import {
     LinkImporter,
+    TwitterImporter,
     WebCrateImporter,
     WebParser,
     type DetectedResource
@@ -13,6 +14,7 @@
   import ResourceType from '../Resources/ResourceType.svelte'
   import { ResourceTag, type ResourceManager } from '../../service/resources'
   import { wait } from '../../utils/time'
+  import type { BatchFetcher } from '@horizon/web-parser/src/importers/batcher'
 
   export let resourceManager: ResourceManager
 
@@ -21,13 +23,11 @@
   let webcrateDomain = (window as any).WEBCRATE_DOMAIN ?? import.meta.env.R_VITE_WEBCRATE_DOMAIN
   let webcrateApiKey = (window as any).WEBCRATE_API_KEY ?? import.meta.env.R_VITE_WEBCRATE_API_KEY
 
-  const FETCH_BATCH_SIZE = 50
+  const FETCH_BATCH_SIZE = 100
   const PROCESS_BATCH_SIZE = 10
   const LIMIT = 500
 
   const linkImporter = new LinkImporter()
-  const appImporter = new WebCrateImporter(webcrateDomain, webcrateApiKey)
-  const batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
 
   const queue = writable<DetectedResource[]>([])
   const processing = writable<DetectedResource[]>([])
@@ -42,6 +42,7 @@
 
   let showDebug = false
   let csvData = ''
+  let batchFetcher: BatchFetcher<DetectedResource>
 
   $: log.debug('Queue changed', $queue)
   $: log.debug('Processing changed', $processing)
@@ -62,66 +63,13 @@
     processNextItem()
   }
 
-  // $: if ($running && $processing.length < PROCESS_BATCH_SIZE && $queue.length > 0) {
-  //   log.debug('Processing next item')
-
-  //   const link = $queue[0]
-  //   if (link) {
-  //     log.debug('Processing item', link)
-  //     processItem(link)
-  //   } else {
-  //     log.debug('Queue is empty')
-  //     running.set(false)
-  //   }
-  // }
-
-  const fetchTwitterBookmarks = async () => {
-    const webParser = new WebParser('https://twitter.com/i/bookmarks')
-
-    const webviewExtractor = webParser.createWebviewExtractor(document)
-
-    let intercepted: any
-
-    // we need to start intercepting requests before initializing the webview
-    // @ts-expect-error
-    window.api
-      .interceptRequestsHeaders(['https://twitter.com/i/api/*'], webviewExtractor.partition)
-      .then((data: any) => {
-        log.debug('Intercepted', data)
-        intercepted = data
-      })
-
-    await webviewExtractor.initializeWebview()
-
-    await wait(3000)
-
-    if (!intercepted) {
-      log.error('Intercepted request not found')
-      return
-    }
-
-    const inputs = {
-      uid: 'yzqS_xq0glDD7YZJ2YDaiA',
-      authorization: intercepted.headers.authorization,
-      clientTransactionId: intercepted.headers['x-client-transaction-id'],
-      csrfToken: intercepted.headers['x-csrf-token']
-    }
-
-    const extractedResource = await webviewExtractor.runAction('get_bookmarks_from_twitter', inputs)
-
-    log.debug('Extracted resource', extractedResource)
-
-    const posts = extractedResource?.data as any as ResourceDataPost[]
-    return posts
-  }
-
   const fillQueue = async () => {
     if ($fetchDone) {
       log.warn('fill queue was called even though fetch is done')
       return
     }
 
-    if ($tab === 'webcrate') {
+    if ($tab === 'webcrate' || $tab === 'twitter') {
       const batch = await batchFetcher.fetchNextBatch()
       log.debug('Filling queue', batch.length)
 
@@ -133,21 +81,7 @@
         fetchDone.set(true)
       }
 
-      const resources = batch.map((item) => ({ type: ResourceTypes.LINK, data: item }))
-      queue.update((prev) => [...prev, ...resources])
-    } else if ($tab === 'twitter') {
-      // TODO: fetch next batch of twitter bookmarks
-      const posts = await fetchTwitterBookmarks()
-
-      fetchDone.set(true)
-
-      const resources = (posts ?? []).map((item) => ({
-        type: ResourceTypes.POST_TWITTER,
-        data: item
-      }))
-      queue.update((prev) => [...prev, ...resources])
-
-      processNextItem()
+      queue.update((prev) => [...prev, ...batch])
     } else if ($tab === 'csv') {
       log.debug('Parsing CSV data')
       const lines = csvData.split('\n')
@@ -252,12 +186,22 @@
       processItem(link)
     } else {
       log.debug('Queue is empty')
-      running.set(false)
+      // running.set(false)
     }
   }
 
   const startImport = async () => {
     log.debug('Starting import')
+
+    if ($tab === 'webcrate') {
+      const appImporter = new WebCrateImporter(webcrateDomain, webcrateApiKey)
+      batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
+    } else if ($tab === 'twitter') {
+      const appImporter = new TwitterImporter()
+      batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
+
+      await appImporter.init()
+    }
 
     running.set(true)
 

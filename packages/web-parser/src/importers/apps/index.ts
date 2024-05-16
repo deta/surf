@@ -1,8 +1,8 @@
-import { ResourceDataLink } from '@horizon/types'
 import { BatchFetcher } from '../batcher'
+import { DetectedResource } from '../../types'
 
 export abstract class AppImporter {
-  abstract getBatchFetcher(size: number): BatchFetcher<ResourceDataLink>
+  abstract getBatchFetcher(size: number): BatchFetcher<DetectedResource>
 
   async fetchJSON(input: string | URL | Request, init?: RequestInit | undefined): Promise<any> {
     if (

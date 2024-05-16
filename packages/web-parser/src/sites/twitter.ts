@@ -198,20 +198,25 @@ export class TwitterParser extends WebAppExtractor {
     console.log('Running action', action.id)
 
     if (action.id === 'get_bookmarks_from_twitter') {
-      const { uid, authorization, clientTransactionId, csrfToken } = inputs
+      const { uid, authorization, clientTransactionId, csrfToken, limit, cursor } = inputs
 
-      const data = await this.getAllBookmarks(uid, {
-        authorization,
-        clientTransactionId,
-        csrfToken
-      })
+      const data = await this.getBookmarks(
+        uid,
+        {
+          authorization,
+          clientTransactionId,
+          csrfToken
+        },
+        limit,
+        cursor
+      )
       if (!data) return null
 
       console.log('data', data)
 
       return {
         data: data,
-        type: action.output?.type ?? ResourceTypes.POST_TWITTER
+        type: 'application/vnd.space.post.twitter.paginated'
       }
     } else {
       console.log('Unknown action')
