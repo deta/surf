@@ -24,7 +24,7 @@
 </script>
 
 {#if resource}
-  <ResourcePreviewClean {resource} />
+  <ResourcePreviewClean {resource} on:click />
 {/if}
 
 <style lang="scss">

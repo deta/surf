@@ -29,11 +29,14 @@
   import { SFFS } from '../../service/sffs'
   import ChatResponseSource from './ChatResponseSource.svelte'
   import { Icon } from '@horizon/icons'
+  import ChatMessage from './ChatMessage.svelte'
 
   export let tab: TabChat
   export let resourceManager: ResourceManager
   export let drawer: Drawer
   export let db: HorizonDatabase
+
+  const SEARCH_SOURCE_LIMIT = 5
 
   const log = useLogScope('Chat')
   const dispatch = createEventDispatcher<{ navigate: NavigateEvent; updateTab: UpdateTab }>()
@@ -48,6 +51,7 @@
   let chat: AIChat
   let loadingResponse = false
   let queryElement: HTMLElement
+  let followUpValue = ''
 
   $: query = tab.query
   $: log.debug('activeMessage', $activeMessage)
@@ -80,38 +84,12 @@
     dispatch('navigate', { url, active: active })
   }
 
-  async function parseAIChatResponse() {
-    const response = DUMMY_CHAT_RESPONSE
-    log.debug('Response', response)
-
-    const parsed = parseChatResponse(response)
-    log.debug('Parsed', parsed)
-
-    if (!parsed.complete) {
-      log.debug('Incomplete response', parsed)
-      return
-    }
-
-    const message = {
-      id: generateID(),
-      role: 'assistant',
-      content: parsed.content,
-      contentItems: parsed.contentItems,
-      sources: parsed.sources,
-      updatedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString()
-    }
-
-    // log.debug('New message', message)
-
-    // messages = [...messages, message]
-  }
-
   async function sendChatMessage(query: string) {
     const message = {
       id: generateID(),
       role: 'system',
       content: '',
+      query: query,
       contentItems: [],
       sources: []
     } as AIChatMessageParsed
@@ -161,16 +139,16 @@
           })
         }
       },
-      { limit: 10 }
+      { limit: SEARCH_SOURCE_LIMIT }
     )
 
     log.debug('response is done', response)
-    const parsed = parseChatResponseContent(content)
-    log.debug('parsed', parsed)
+    // const parsed = parseChatResponseContent(content)
+    // log.debug('parsed', parsed)
 
     updateActiveMessage({
-      content: parsed.content ?? content,
-      contentItems: parsed.contentItems
+      content: content.replace('<answer>', '').replace('</answer>', '')
+      // contentItems: parsed.contentItems
     })
 
     log.debug('message parsed', $activeMessage)
@@ -200,15 +178,21 @@
     log.debug('Chat', storedChat)
     chat = storedChat
 
+    const queries = chat.messages
+      .filter((message) => message.role === 'user')
+      .map((message) => message.content)
+
     $messages = chat.messages
       .filter((message) => message.role === 'system')
-      .map((message) => {
-        const parsed = parseChatResponseContent(message.content)
+      .map((message, idx) => {
+        log.debug('Message', message)
+        // const parsed = parseChatResponseContent(message.content)
         return {
           id: generateID(),
           role: message.role,
-          content: parsed.content ?? message.content,
-          contentItems: parsed.contentItems,
+          query: queries[idx],
+          content: message.content.replace('<answer>', '').replace('</answer>', ''),
+          // contentItems: parsed.contentItems,
           sources: (message.sources ?? []).filter(
             (source, index, self) =>
               index === self.findIndex((s) => s.resource_id === source.resource_id)
@@ -217,36 +201,25 @@
       })
   }
 
-  function handleMouseMove(event: MouseEvent) {
-    const target = event.currentTarget as HTMLElement
-    const rect = target.getBoundingClientRect()
-    const x = event.clientX - rect.left
-    const y = event.clientY - rect.top
-    const centerX = rect.width / 2
-    const centerY = rect.height / 2
-    const deltaX = (x - centerX) * 0.1
-    const deltaY = (y - centerY) * 0.1
-    target.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.02)`
-    console.log(target)
+  function handleResourceClick(e: CustomEvent<string>) {
+    openResource(e.detail)
   }
 
-  function handleMouseLeave(event: MouseEvent) {
-    const target = event.currentTarget as HTMLElement
-    target.style.transform = 'translate(0, 0) scale(1.00)'
-  }
-
-  async function handleCitationClick(
-    e: MouseEvent,
-    sourceId: string,
-    message: AIChatMessageParsed
-  ) {
-    log.debug('Citation clicked', sourceId)
+  async function handleCitationClick(sourceId: string, message: AIChatMessageParsed) {
+    log.debug('Citation clicked', sourceId, message)
 
     const source = (message.sources ?? []).find((s) => s.id === sourceId)
 
     if (source) {
       openResource(source.resource_id)
     }
+  }
+
+  const handleSendMessage = () => {
+    if (!followUpValue) return
+
+    sendChatMessage(followUpValue)
+    followUpValue = ''
   }
 
   onMount(() => {
@@ -256,6 +229,7 @@
       log.debug('No existing chat, creating new one', tab)
       createNewChat()
     } else {
+      log.debug('Loading existing chat', chatId)
       loadExistingChat(chatId)
     }
 
@@ -289,10 +263,41 @@
     <div class="chat">
       <h1 class="chat-request" bind:this={queryElement}>{query}</h1>
 
-      {#if $activeMessage}
-        <div class="chat-result">
-          <!-- <h3 class="chat-memory">From your Memory</h3> -->
+      <div class="messages">
+        {#each $messages as message, idx}
+          {#if idx !== 0}
+            <h2 class="chat-request chat-request-followup">{message.query}</h2>
+          {/if}
+          <div class="chat-result">
+            {#if message.sources}
+              <div class="resources">
+                {#each message.sources as source}
+                  <div class="resource-list-item">
+                    <ChatResponseSource {source} {resourceManager} on:click={handleResourceClick} />
+                  </div>
+                {/each}
+              </div>
+            {/if}
 
+            <div class="message message-content">
+              {#if message.content}
+                <ChatMessage
+                  {message}
+                  on:citationClick={(e) => handleCitationClick(e.detail, message)}
+                />
+              {:else}
+                <div class="chat-status">
+                  <Icon name="spinner" size="30px" />
+                  <h3 class="chat-memory">Asking Oasis AI…</h3>
+                </div>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+
+      <!-- {#if $activeMessage}
+        <div class="chat-result">
           {#if $activeMessage.sources}
             <div class="resources">
               {#each $activeMessage.sources as source}
@@ -304,25 +309,8 @@
           {/if}
 
           <div class="message message-content">
-            {#if $activeMessage.contentItems && $activeMessage.contentItems.length > 0}
-              {@const citationItems = $activeMessage.contentItems.filter(
-                (i) => i.type === 'citation'
-              )}
-              {#each $activeMessage.contentItems as item}
-                {#if item.type === 'text'}
-                  {@html item.content}
-                {:else}
-                  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                  <span
-                    on:click={(e) => handleCitationClick(e, item.content, $activeMessage)}
-                    class="citation-item"
-                  >
-                    {citationItems.findIndex((i) => i.content === item.content) + 1}
-                  </span>
-                {/if}
-              {/each}
-            {:else if $activeMessage.content}
-              {@html $activeMessage.content}
+            {#if $activeMessage.content}
+              <ChatMessage message={$activeMessage} on:citationClick={(e) => handleCitationClick(e.detail, $activeMessage)} />
             {:else}
               <div class="chat-status">
                 <Icon name="spinner" size="35px" />
@@ -340,100 +328,24 @@
         <div class="chat-status">
           <h3 class="chat-memory">No memory found</h3>
         </div>
-      {/if}
+      {/if} -->
     </div>
-
-    <!-- {#if $messages.length > 0}
-        <div class="chat-result">
-          <h3 class="chat-memory">From your Memory</h3>
-
-          {#each $messages as message (message.id)}
-            {#if message.sources}
-              <div class="resources">
-                {#each message.sources as source}
-                  <ChatResponseSource source={source} resourceManager={resourceManager} />
-                {/each}
-              </div>
-            {/if}
-
-            {#if message.role === 'user'}
-              <div class="message user" bind:this={queryElement}>
-                <h2>{@html message.content}</h2>
-              </div>
-            {:else}
-              <div class="message">
-                {#if message.contentItems}
-                  {@const citationItems = message.contentItems.filter((i) => i.type === 'citation')}
-                  {#each message.contentItems as item}
-                    {#if item.type === 'text'}
-                      {item.content}
-                    {:else}
-                      <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-static-element-interactions
-                      <span
-                        on:click={(e) => handleCitationClick(e, item.content, message)}
-                        class="citation-item"
-                      >
-                        {citationItems.findIndex((i) => i.content === item.content) + 1}
-                      </span>
-                    {/if}
-                  {/each}
-                {:else}
-                  {message.content ?? 'Waiting for AI response…'}
-                {/if}
-              </div>
-            {/if}
-          {/each}
-        </div>
-      {:else if loadingResponse}
-        <div class="chat-result">
-          <Icon name="spinner" />
-          <h3 class="chat-memory">Loading...</h3>
-        </div>
-      {:else}
-        <div class="chat-result">
-          <h3 class="chat-memory">No memory found</h3>
-        </div>
-      {/if}
-    </div> -->
-
-    <!-- <div class="further-actions">
-      <button on:click={() => navigate(`https://www.perplexity.ai/?q=${query}`)} class="action-btn">
-        Ask Perplexity
-      </button>
-      <button class="action-btn" on:click={() => parseAIChatResponse()}>Parse Dummy</button>
-    </div>
-
-    <div class="chat">
-      {#if messages.length > 0}
-        <div class="chat-result">
-          <h3 class="chat-memory">Response</h3>
-
-          {#each messages as message (message.id)}
-            <div class="message">
-              {#if message.contentItems}
-                {@const citationItems = message.contentItems.filter((i) => i.type === 'citation')}
-                {#each message.contentItems as item}
-                  {#if item.type === 'text'}
-                    {item.content}
-                  {:else}
-                    <span
-                      on:click={(e) => handleCitationClick(e, item.content)}
-                      class="citation-item"
-                    >
-                      {citationItems.findIndex((i) => i.content === item.content) + 1}
-                    </span>
-                  {/if}
-                {/each}
-              {:else}
-                {message.content}
-              {/if}
-            </div>
-          {/each}
-        </div>
-      {/if}
-    </div> -->
   </div>
+
+  {#if !($messages.length === 1 && loadingResponse)}
+    <div class="question-box-wrapper">
+      <form class="question-box" on:submit|preventDefault={handleSendMessage}>
+        <input type="text" placeholder="Ask follow-up question" bind:value={followUpValue} />
+        <button class="action-btn" type="submit" disabled={loadingResponse}>
+          {#if loadingResponse}
+            <Icon name="spinner" size="25px" />
+          {:else}
+            <Icon name="arrow.right" size="25px" />
+          {/if}
+        </button>
+      </form>
+    </div>
+  {/if}
 </div>
 
 <style lang="scss">
@@ -471,6 +383,49 @@
     gap: 4rem;
     margin: 0 auto;
     max-width: 1200px;
+  }
+
+  .question-box-wrapper {
+    position: absolute;
+    bottom: 1rem;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .question-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.25rem;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    max-width: 640px;
+    width: 100%;
+
+    input {
+      font-size: 1rem;
+      width: 100%;
+      background: none;
+      border: none;
+      outline: none;
+      padding: 0 1rem;
+    }
+
+    button {
+      background-color: rgb(253, 133, 181);
+      color: white;
+      appearance: none;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
+    }
   }
 
   .action-btn {
@@ -514,6 +469,11 @@
     -webkit-text-fill-color: transparent;
     max-width: 640px;
     margin: 0 auto;
+  }
+
+  .chat-request-followup {
+    font-size: 2.5rem;
+    margin-top: 4rem;
   }
 
   .fixed-header > h1 {
@@ -682,5 +642,18 @@
     margin-top: 1rem;
     margin-bottom: 1rem;
     display: block;
+  }
+
+  :global(citation) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 1rem;
+    background: rgb(255, 164, 164);
+    border-radius: 100%;
+    user-select: none;
+    cursor: pointer;
   }
 </style>

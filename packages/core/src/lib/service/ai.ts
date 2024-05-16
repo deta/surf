@@ -78,24 +78,10 @@ export const parseXMLChatResponseAnswer = (xml: Document) => {
   let currentText = ''
   let currentCitation = ''
 
-  const addTextItem = () => {
-    if (currentText) {
-      items.push({ type: 'text', content: currentText })
-      currentText = ''
-    }
-  }
-
-  const addCitationItem = () => {
-    if (currentCitation) {
-      items.push({ type: 'citation', content: currentCitation })
-      currentCitation = ''
-    }
-  }
-
   for (let i = 0; i < answer.childNodes.length; i++) {
     const node = answer.childNodes[i]
 
-    console.log('node', node.nodeName, node.textContent)
+    console.log('node', node.nodeName, node)
 
     if (node.nodeName === 'citation') {
       items.push({ type: 'citation', content: node.textContent ?? '' })

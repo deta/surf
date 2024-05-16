@@ -52,6 +52,7 @@ export type AIChatMessage = {
 export type AIChatMessageParsed = {
   id: string
   role: 'user' | 'system' | 'assistant'
+  query: string
   content: string
   contentItems?: ChatMessageContentItem[]
   sources?: AIChatMessageSource[]

@@ -1,7 +1,10 @@
 <script>
   import { onMount } from 'svelte'
+
+  export let caption = 'Drag me onto Horizon'
+
   let figure = null
-  let caption = null // Add a reference to the caption element to measure its width
+  let captionElem = null // Add a reference to the caption element to measure its width
   let captionStyle = { x: 0, y: 0, opacity: 0, transform: '' }
   let lastY = 0
   let lastTime = 0
@@ -24,7 +27,7 @@
     const offsetY = event.clientY - rect.top
 
     // Prevent the caption from overflowing the figure boundaries
-    const maxOffsetX = rect.width - caption.offsetWidth
+    const maxOffsetX = rect.width - captionElem.offsetWidth
     if (offsetX > maxOffsetX) offsetX = maxOffsetX
 
     captionStyle.x = offsetX
@@ -51,11 +54,11 @@
 <div class="figure" bind:this={figure}>
   <slot name="content" />
   <div
-    bind:this={caption}
+    bind:this={captionElem}
     class="caption"
     style={`left: ${captionStyle.x}px; top: ${captionStyle.y}px; opacity: ${captionStyle.opacity}; transform: ${captionStyle.transform};`}
   >
-    Drag me onto Horizon
+    {caption}
   </div>
 </div>
 

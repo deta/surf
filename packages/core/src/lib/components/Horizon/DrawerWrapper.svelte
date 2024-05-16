@@ -21,7 +21,7 @@
     type SearchQuery
   } from '@horizon/drawer'
 
-  import type { ResourceDocument } from '../../service/resources'
+  import type { ResourceDocument, ResourceLink } from '../../service/resources'
   import { Icon } from '@horizon/icons'
 
   import type { Horizon } from '../../service/horizon'
@@ -278,6 +278,20 @@
       $selectedResource = resource
       viewState.set('details')
     })
+  }
+
+  const handleResourceDetailClick = async (resource: ResourceObject) => {
+    if (
+      resource.type === ResourceTypes.LINK ||
+      resource.type === ResourceTypes.ARTICLE ||
+      resource.type.startsWith(ResourceTypes.POST)
+    ) {
+      const data = await (resource as ResourceLink).getParsedData()
+      window.open(data.url, '_blank')
+      drawer.close()
+    } else {
+      openResourceDetail(resource)
+    }
   }
 
   drawer.onOpenItem(async (resourceId: string) => {
@@ -840,10 +854,10 @@
               resource={$selectedResource}
               {horizon}
             >
-              <ResourceOverlay>
+              <ResourceOverlay caption="Click to open in new tab">
                 <ResourcePreview
                   slot="content"
-                  on:click={() => openResourceDetail($selectedResource)}
+                  on:click={() => handleResourceDetailClick($selectedResource)}
                   on:remove={handleResourceRemove}
                   on:load={handleResourceLoad}
                   resource={$selectedResource}
