@@ -10,6 +10,9 @@
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
     },
+    "@horizon/ppx-backend#dev": {
+      "dependsOn": []
+    },
     "horizon#build:mwl": {
       "dependsOn": ["^build"],
       "outputs": [".dist/**"]
