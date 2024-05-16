@@ -9,10 +9,6 @@ from langchain.callbacks.streaming_aiter import AsyncIteratorCallbackHandler
 from langchain_community.chat_models.openai import ChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 HUGGINGFACE_PROVIDER = "huggingface"
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "mixedbread-ai/mxbai-embed-large-v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "meta-llama/Meta-Llama-3-8B")
@@ -45,6 +41,7 @@ async def generate_sources_str(contexts):
     for idx, context in enumerate(contexts):
         source_id = idx
         metadata = context.get('metadata', {})
+        timestamp = metadata.get('timestamp', '')
         resource_id = metadata.get('resource_id', '')
         content = context.get('context', '')
 
@@ -54,6 +51,7 @@ async def generate_sources_str(contexts):
             f"\t\t<resource_id>{resource_id}</resource_id>\n"
             f"\t\t<content>{content}</content>\n"
             f"\t\t<metadata>\n"
+            f"\t\t\t<timestamp>{timestamp}</timestamp>\n"
             f"\t\t</metadata>\n"
             f"\t</source>\n"
         )
