@@ -5,16 +5,30 @@
 
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
-  import { writable } from 'svelte/store'
+  import { writable, derived } from 'svelte/store'
   import type { Drawer } from '@horizon/drawer'
 
   import type { ResourceManager } from '../../service/resources'
   import { useLogScope } from '../../utils/log'
-  import type { Chat, ChatMessage, TabChat } from './types'
+  import type {
+    AIChat,
+    AIChatMessage,
+    AIChatMessageParsed,
+    AIChatMessageSource,
+    TabChat
+  } from './types'
   import type { HorizonDatabase } from '../../service/storage'
   import { getChatData, getResourceByIDs } from './examples'
-  import { DUMMY_CHAT_RESPONSE, parseChatResponse } from '../../service/ai'
+  import {
+    DUMMY_CHAT_RESPONSE,
+    parseChatResponse,
+    parseChatResponseContent,
+    parseChatResponseSources
+  } from '../../service/ai'
   import { generateID } from '../../utils/id'
+  import { SFFS } from '../../service/sffs'
+  import ChatResponseSource from './ChatResponseSource.svelte'
+  import { Icon } from '@horizon/icons'
 
   export let tab: TabChat
   export let resourceManager: ResourceManager
@@ -24,17 +38,26 @@
   const log = useLogScope('Chat')
   const dispatch = createEventDispatcher<{ navigate: NavigateEvent; updateTab: UpdateTab }>()
 
-  const chatsDB = db.chats
-  const chatMessagesDB = db.chatMessages
+  const sffs = new SFFS()
 
-  let chat: Chat
-  let messages: ChatMessage[] = []
-  let mockChatData: ChatMessage[]
+  const messages = writable<AIChatMessageParsed[]>([])
+  const isHeaderVisible = writable(false)
+
+  const activeMessage = derived(messages, ($messages) => $messages[$messages.length - 1])
+
+  let chat: AIChat
+  let loadingResponse = false
+  let queryElement: HTMLElement
 
   $: query = tab.query
+  $: log.debug('activeMessage', $activeMessage)
 
-  let queryElement: HTMLElement
-  let isHeaderVisible = writable(false)
+  function updateActiveMessage(updates: Partial<AIChatMessageParsed>) {
+    messages.update((messages) => {
+      messages[messages.length - 1] = { ...messages[messages.length - 1], ...updates }
+      return messages
+    })
+  }
 
   async function getResource(id: string) {
     const resource = await resourceManager.getResource(id)
@@ -77,76 +100,116 @@
       sources: parsed.sources,
       updatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
-    } as ChatMessage
+    }
 
-    log.debug('New message', message)
+    // log.debug('New message', message)
 
-    messages = [...messages, message]
+    // messages = [...messages, message]
+  }
+
+  async function sendChatMessage(query: string) {
+    const message = {
+      id: generateID(),
+      role: 'system',
+      content: '',
+      contentItems: [],
+      sources: []
+    } as AIChatMessageParsed
+
+    messages.update((messages) => [...messages, message])
+
+    let step = 'idle'
+    let content = ''
+
+    loadingResponse = true
+
+    const response = await sffs.sendAIChatMessage(
+      chat.id,
+      query,
+      (chunk: string) => {
+        if (step === 'idle') {
+          log.debug('sources chunk', chunk)
+          const sources = parseChatResponseSources(chunk).filter(
+            (source, index, self) =>
+              index === self.findIndex((s) => s.resource_id === source.resource_id)
+          )
+
+          log.debug('Sources', sources)
+
+          step = 'sources'
+
+          updateActiveMessage({
+            sources
+          })
+        } else {
+          log.debug('content chunk', chunk)
+          content += chunk
+
+          updateActiveMessage({
+            content: content
+              .replace('<answer>', '')
+              .replace('</answer>', '')
+              .replace('<citation>', '')
+              .replace('</citation>', '')
+              .replace('<br>', '\n')
+          })
+        }
+      },
+      { limit: 10 }
+    )
+
+    log.debug('response is done', response)
+    const parsed = parseChatResponseContent(content)
+    log.debug('parsed', parsed)
+
+    updateActiveMessage({
+      content: parsed.content ?? content,
+      contentItems: parsed.contentItems
+    })
+
+    log.debug('message parsed', $activeMessage)
+    loadingResponse = false
   }
 
   async function createNewChat() {
-    const newChat = await chatsDB.create({
-      title: query,
-      messageIds: []
-    })
+    const chatId = await sffs.createAIChat('')
 
-    log.debug('Created new chat', newChat)
-    chat = newChat
+    log.debug('Created new chat', chatId)
 
-    tab.chatId = newChat.id
-    dispatch('updateTab', { chatId: newChat.id })
+    tab.chatId = chatId
+    dispatch('updateTab', { chatId })
 
-    // TODO: create new message with query
+    chat = { id: chatId, messages: [] }
+
+    sendChatMessage(query)
   }
 
-  async function loadMessages() {
-    const messageIds = chat.messageIds
-    const messageItems = await Promise.all(messageIds.map((id) => chatMessagesDB.read(id)))
+  async function loadExistingChat(chatId: string) {
+    const storedChat = await sffs.getAIChat(chatId)
+    if (!storedChat) {
+      log.error('Chat not found', chatId)
+      return
+    }
 
-    log.debug('Messages', messageItems)
-    messages = messageItems.filter((v) => v) as ChatMessage[]
+    log.debug('Chat', storedChat)
+    chat = storedChat
+
+    $messages = chat.messages
+      .filter((message) => message.role === 'system')
+      .map((message) => {
+        const parsed = parseChatResponseContent(message.content)
+        return {
+          id: generateID(),
+          role: message.role,
+          content: parsed.content ?? message.content,
+          contentItems: parsed.contentItems,
+          sources: (message.sources ?? []).filter(
+            (source, index, self) =>
+              index === self.findIndex((s) => s.resource_id === source.resource_id)
+          )
+        }
+      })
   }
-
-  onMount(async () => {
-    const chatId = tab.chatId
-
-    if (!chatId) {
-      log.debug('No existing chat, creating new one', tab)
-      createNewChat()
-    } else {
-      const storedChat = await chatsDB.read(chatId)
-      if (!storedChat) {
-        log.error('Chat not found', chatId)
-        return
-      }
-
-      log.debug('Chat', storedChat)
-      chat = storedChat
-    }
-
-    mockChatData = getChatData('1')
-    log.debug('mockChatData', mockChatData)
-
-    // Observer to check if the header should be visible
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        isHeaderVisible.set(!entry.isIntersecting)
-      },
-      {
-        threshold: 0.1
-      }
-    )
-
-    if (queryElement) {
-      observer.observe(queryElement)
-    }
-
-    onDestroy(() => {
-      observer.disconnect()
-    })
-
-    loadMessages()
-  })
 
   function handleMouseMove(event: MouseEvent) {
     const target = event.currentTarget as HTMLElement
@@ -166,12 +229,48 @@
     target.style.transform = 'translate(0, 0) scale(1.00)'
   }
 
-  async function handleCitationClick(e: MouseEvent, sourceId: string) {
+  async function handleCitationClick(
+    e: MouseEvent,
+    sourceId: string,
+    message: AIChatMessageParsed
+  ) {
     log.debug('Citation clicked', sourceId)
 
-    const source = await getResource(sourceId)
-    log.debug('Source', source)
+    const source = (message.sources ?? []).find((s) => s.id === sourceId)
+
+    if (source) {
+      openResource(source.resource_id)
+    }
   }
+
+  onMount(() => {
+    const chatId = tab.chatId
+
+    if (!chatId) {
+      log.debug('No existing chat, creating new one', tab)
+      createNewChat()
+    } else {
+      loadExistingChat(chatId)
+    }
+
+    // Observer to check if the header should be visible
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isHeaderVisible.set(!entry.isIntersecting)
+      },
+      {
+        threshold: 0.1
+      }
+    )
+
+    if (queryElement) {
+      observer.observe(queryElement)
+    }
+
+    return () => {
+      observer.disconnect()
+    }
+  })
 </script>
 
 <div class="scroll-container">
@@ -184,58 +283,115 @@
     <div class="chat">
       <h1 class="chat-request" bind:this={queryElement}>{query}</h1>
 
-      <div class="chat-result">
-        <h3 class="chat-memory">From your Memory</h3>
-        {#each mockChatData?.messages ?? [] as message}
-          {#if message.role === 'user'}
-            <div class="message user" bind:this={queryElement}>
-              <h2>{@html message.content}</h2>
-            </div>
-          {:else}
-            <div class="message">
-              {@html message.content}
-            </div>
-          {/if}
+      {#if $activeMessage}
+        <div class="chat-result">
+          <!-- <h3 class="chat-memory">From your Memory</h3> -->
 
-          {#if message.resourceIDs && message.resourceIDs.length > 0}
+          {#if $activeMessage.sources}
             <div class="resources">
-              {#each getResourceByIDs(message.resourceIDs) as resource}
-                <div
-                  class="resource-item {resource.type}"
-                  on:click={() => openResource(resource.id)}
-                  on:keydown={(event) => event.key === 'Enter' && openResource(resource.id)}
-                  role="button"
-                  id={resource.id}
-                  tabindex="0"
-                  style="--resource-color: {resource.color}; {resource.image
-                    ? `background-image: url(${resource.image});`
-                    : ''}"
-                  on:mousemove={handleMouseMove}
-                  on:mouseleave={handleMouseLeave}
-                >
-                  {#if !resource.image}
-                    <div class="resource-content">
-                      {#if resource.type === 'Note'}
-                        <p class="type">{resource.type}</p>
-                      {/if}
-                      {#if resource.author}
-                        <p class="author">{resource.author}</p>
-                      {/if}
-                      <p class="title">{resource.title}</p>
-                      {#if resource.excerpt}
-                        <p class="excerpt">{resource.excerpt}</p>
-                      {/if}
-                    </div>
-                  {/if}
+              {#each $activeMessage.sources as source}
+                <div class="resource-list-item">
+                  <ChatResponseSource {source} {resourceManager} />
                 </div>
               {/each}
             </div>
           {/if}
-        {/each}
-      </div>
+
+          <div class="message message-content">
+            {#if $activeMessage.contentItems && $activeMessage.contentItems.length > 0}
+              {@const citationItems = $activeMessage.contentItems.filter(
+                (i) => i.type === 'citation'
+              )}
+              {#each $activeMessage.contentItems as item}
+                {#if item.type === 'text'}
+                  {@html item.content}
+                {:else}
+                  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+                  <span
+                    on:click={(e) => handleCitationClick(e, item.content, $activeMessage)}
+                    class="citation-item"
+                  >
+                    {citationItems.findIndex((i) => i.content === item.content) + 1}
+                  </span>
+                {/if}
+              {/each}
+            {:else if $activeMessage.content}
+              {@html $activeMessage.content}
+            {:else}
+              <div class="chat-status">
+                <Icon name="spinner" size="35px" />
+                <h3 class="chat-memory">Asking Oasis AI…</h3>
+              </div>
+            {/if}
+          </div>
+        </div>
+      {:else if loadingResponse}
+        <div class="chat-status">
+          <Icon name="spinner" />
+          <h3 class="chat-memory">Loading...</h3>
+        </div>
+      {:else}
+        <div class="chat-status">
+          <h3 class="chat-memory">No memory found</h3>
+        </div>
+      {/if}
     </div>
 
-    <div class="further-actions">
+    <!-- {#if $messages.length > 0}
+        <div class="chat-result">
+          <h3 class="chat-memory">From your Memory</h3>
+
+          {#each $messages as message (message.id)}
+            {#if message.sources}
+              <div class="resources">
+                {#each message.sources as source}
+                  <ChatResponseSource source={source} resourceManager={resourceManager} />
+                {/each}
+              </div>
+            {/if}
+
+            {#if message.role === 'user'}
+              <div class="message user" bind:this={queryElement}>
+                <h2>{@html message.content}</h2>
+              </div>
+            {:else}
+              <div class="message">
+                {#if message.contentItems}
+                  {@const citationItems = message.contentItems.filter((i) => i.type === 'citation')}
+                  {#each message.contentItems as item}
+                    {#if item.type === 'text'}
+                      {item.content}
+                    {:else}
+                      <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions
+                      <span
+                        on:click={(e) => handleCitationClick(e, item.content, message)}
+                        class="citation-item"
+                      >
+                        {citationItems.findIndex((i) => i.content === item.content) + 1}
+                      </span>
+                    {/if}
+                  {/each}
+                {:else}
+                  {message.content ?? 'Waiting for AI response…'}
+                {/if}
+              </div>
+            {/if}
+          {/each}
+        </div>
+      {:else if loadingResponse}
+        <div class="chat-result">
+          <Icon name="spinner" />
+          <h3 class="chat-memory">Loading...</h3>
+        </div>
+      {:else}
+        <div class="chat-result">
+          <h3 class="chat-memory">No memory found</h3>
+        </div>
+      {/if}
+    </div> -->
+
+    <!-- <div class="further-actions">
       <button on:click={() => navigate(`https://www.perplexity.ai/?q=${query}`)} class="action-btn">
         Ask Perplexity
       </button>
@@ -255,8 +411,6 @@
                   {#if item.type === 'text'}
                     {item.content}
                   {:else}
-                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                    <!-- svelte-ignore a11y-no-static-element-interactions -->
                     <span
                       on:click={(e) => handleCitationClick(e, item.content)}
                       class="citation-item"
@@ -272,7 +426,7 @@
           {/each}
         </div>
       {/if}
-    </div>
+    </div> -->
   </div>
 </div>
 
@@ -299,11 +453,7 @@
   .chat-wrapper {
     position: relative;
     top: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: fit-content;
+    min-height: 100%;
     width: 100%;
     padding: 16rem 4rem;
     background: #fff8fe;
@@ -326,6 +476,14 @@
     border-radius: 5px;
     cursor: pointer;
     font-size: 1rem;
+  }
+
+  .chat-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1.5rem;
+    color: #912c74;
   }
 
   .chat-request,
@@ -359,10 +517,7 @@
   .chat-memory {
     color: #912c74;
     font-size: 1.5rem;
-    padding: 4rem 0;
     line-height: 150%;
-    max-width: 640px;
-    margin: 0 auto;
   }
 
   .chat-result {
@@ -382,14 +537,15 @@
     }
 
     .resources {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      grid-auto-rows: minmax(100%, auto);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
       gap: 3rem;
       margin: 4rem 0;
-      & > *:only-child {
-        max-height: 24rem;
-        grid-column: 2 / span 2;
+
+      .resource-list-item {
+        max-width: 350px;
       }
     }
 
@@ -499,5 +655,26 @@
     align-items: center;
     gap: 1rem;
     margin-top: 4rem;
+  }
+
+  :global(.message-content) {
+    font-size: 1.5rem;
+    line-height: 1.45;
+    font-family: inherit;
+    color: rgba(70, 2, 51, 0.7);
+    margin-bottom: 1.5rem;
+    max-width: 640px;
+    margin: 0 auto;
+
+    li {
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+  }
+
+  :global(.message-content li) {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    display: block;
   }
 </style>

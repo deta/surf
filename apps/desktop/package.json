@@ -10,7 +10,7 @@
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
     "typecheck": "npm run typecheck:node",
     "start": "electron-vite preview",
-    "dev": "M_VITE_PRODUCT_NAME=Horizon-dev electron-vite dev",
+    "dev": "M_VITE_PRODUCT_NAME=Horizon-dev HORIZON_LIBUSEARCH_PATH=/Users/betahuhn/dev/deta/horizon/packages/backend/vendor/usearch/usearch_sqlite.dylib electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
     "build:mwl": "npm run build && electron-builder -mwl --config build/electron-builder-config.ts --arm64 --x64 --publish always",
     "build:win": "npm run build && electron-builder --win --config build/electron-builder-config.ts --arm64 --x64 --publish always",

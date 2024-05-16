@@ -43,7 +43,8 @@ export const parseXML = (xml: string) => {
 
   const parseError = xmlDoc.getElementsByTagName('parsererror')
   if (parseError.length > 0) {
-    throw new Error('Error parsing chat response: ' + parseError[0]?.textContent ?? 'unknown error')
+    console.warn('Error parsing chat response: ' + parseError[0]?.textContent ?? 'unknown error')
+    return xmlDoc
   }
 
   return xmlDoc
@@ -70,7 +71,7 @@ export const parseXMLChatResponseSources = (xml: Document) => {
 }
 
 export const parseXMLChatResponseAnswer = (xml: Document) => {
-  const answer = xml.getElementsByTagName('answer')[0]
+  const answer = xml.getElementsByTagName('answer')[0] ?? xml
 
   // convert the answer html to an array of text items and citiation items following the order that they appear in in the string
   const items: ChatMessageContentItem[] = []
@@ -94,10 +95,14 @@ export const parseXMLChatResponseAnswer = (xml: Document) => {
   for (let i = 0; i < answer.childNodes.length; i++) {
     const node = answer.childNodes[i]
 
+    console.log('node', node.nodeName, node.textContent)
+
     if (node.nodeName === 'citation') {
       items.push({ type: 'citation', content: node.textContent ?? '' })
-    } else {
+    } else if (node.nodeName === '#text') {
       items.push({ type: 'text', content: node.textContent ?? '' })
+    } else {
+      items.push({ type: 'text', content: node.innerHTML ?? '' })
     }
   }
 
@@ -172,4 +177,14 @@ export const parseChatResponse = (response: string) => {
   }
 
   return result
+}
+
+export const parseChatResponseContent = (response: string) => {
+  const xml = parseXML(response)
+  return parseXMLChatResponseAnswer(xml)
+}
+
+export const parseChatResponseSources = (response: string) => {
+  const xml = parseXML(response)
+  return parseXMLChatResponseSources(xml)
 }

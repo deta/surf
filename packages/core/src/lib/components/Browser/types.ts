@@ -38,24 +38,26 @@ export interface TabImporter extends BaseTab {
 
 export type Tab = TabPage | TabChat | TabHorizon | TabEmpty | TabImporter
 
-export type Chat = {
+export type AIChat = {
   id: string
-  createdAt: string
-  updatedAt: string
-  messages: ChatMessage[]
+  messages: AIChatMessage[]
 }
 
-export type ChatMessage = {
+export type AIChatMessage = {
+  role: 'user' | 'system' | 'assistant'
+  content: string
+  sources?: AIChatMessageSource[]
+}
+
+export type AIChatMessageParsed = {
   id: string
   role: 'user' | 'system' | 'assistant'
   content: string
   contentItems?: ChatMessageContentItem[]
-  sources?: ChatMessageSource[]
-  updatedAt: string
-  createdAt: string
+  sources?: AIChatMessageSource[]
 }
 
-export type ChatMessageSource = {
+export type AIChatMessageSource = {
   id: string
   resource_id: string
   content: string

@@ -31,58 +31,58 @@ impl AI {
         tunnel: &WorkerTunnel,
         composite_resource: &CompositeResource,
     ) -> BackendResult<()> {
-        // if !composite_resource
-        //     .resource
-        //     .resource_type
-        //     .starts_with("image")
-        // {
-        //     return Ok(());
-        // }
+        if !composite_resource
+            .resource
+            .resource_type
+            .starts_with("image")
+        {
+            return Ok(());
+        }
 
-        // let resource_path = composite_resource.resource.resource_path.clone();
-        // let image = std::fs::read(resource_path)
-        //     .map_err(|e| eprintln!("failed to read image: {e:#?}"))
-        //     .ok();
+        let resource_path = composite_resource.resource.resource_path.clone();
+        let image = std::fs::read(resource_path)
+            .map_err(|e| eprintln!("failed to read image: {e:#?}"))
+            .ok();
 
-        // if let Some(image) = image {
-        //     let output = self
-        //         .vision
-        //         .describe_image(image)
-        //         .map_err(|e| eprintln!("failed to describe image: {e:#?}"))
-        //         .ok();
+        if let Some(image) = image {
+            let output = self
+                .vision
+                .describe_image(image)
+                .map_err(|e| eprintln!("failed to describe image: {e:#?}"))
+                .ok();
 
-        //     let mut embeddable_sentences: Vec<String> = vec![];
-        //     if let Some(output) = output {
-        //         output.tags_result.values.iter().for_each(|tag| {
-        //             tunnel.worker_send_rust(
-        //                 WorkerMessage::ResourceMessage(
-        //                     ResourceMessage::CreateResourceTextContent {
-        //                         resource_id: composite_resource.resource.id.to_string(),
-        //                         content: tag.name.to_string(),
-        //                     },
-        //                 ),
-        //                 None,
-        //             );
-        //             embeddable_sentences.push(tag.name.to_string());
-        //         });
+            let mut embeddable_sentences: Vec<String> = vec![];
+            if let Some(output) = output {
+                output.tags_result.values.iter().for_each(|tag| {
+                    tunnel.worker_send_rust(
+                        WorkerMessage::ResourceMessage(
+                            ResourceMessage::CreateResourceTextContent {
+                                resource_id: composite_resource.resource.id.to_string(),
+                                content: tag.name.to_string(),
+                            },
+                        ),
+                        None,
+                    );
+                    embeddable_sentences.push(tag.name.to_string());
+                });
 
-        //         output
-        //             .dense_captions_result
-        //             .values
-        //             .iter()
-        //             .for_each(|caption| {
-        //                 tunnel.worker_send_rust(
-        //                     WorkerMessage::ResourceMessage(
-        //                         ResourceMessage::CreateResourceTextContent {
-        //                             resource_id: composite_resource.resource.id.to_string(),
-        //                             content: caption.text.to_string(),
-        //                         },
-        //                     ),
-        //                     None,
-        //                 );
-        //                 embeddable_sentences.push(caption.text.to_string());
-        //             });
-        //     }
+                output
+                    .dense_captions_result
+                    .values
+                    .iter()
+                    .for_each(|caption| {
+                        tunnel.worker_send_rust(
+                            WorkerMessage::ResourceMessage(
+                                ResourceMessage::CreateResourceTextContent {
+                                    resource_id: composite_resource.resource.id.to_string(),
+                                    content: caption.text.to_string(),
+                                },
+                            ),
+                            None,
+                        );
+                        embeddable_sentences.push(caption.text.to_string());
+                    });
+            }
 
             embeddable_sentences.iter().for_each(|sentence| {
                 let rag_metadata = DataSourceMetadata {
@@ -108,17 +108,17 @@ impl AI {
                 .map_err(|e| eprintln!("failed to generate embeddings: {e:#?}"))
                 .ok();
 
-        //     if let Some(embeddings) = embeddings {
-        //         tunnel.worker_send_rust(
-        //             WorkerMessage::ResourceMessage(ResourceMessage::InsertEmbeddings {
-        //                 resource_id: composite_resource.resource.id.to_string(),
-        //                 embedding_type: "image_tags_captions".to_string(),
-        //                 embeddings,
-        //             }),
-        //             None,
-        //         );
-        //     }
-        // }
+            if let Some(embeddings) = embeddings {
+                tunnel.worker_send_rust(
+                    WorkerMessage::ResourceMessage(ResourceMessage::InsertEmbeddings {
+                        resource_id: composite_resource.resource.id.to_string(),
+                        embedding_type: "image_tags_captions".to_string(),
+                        embeddings,
+                    }),
+                    None,
+                );
+            }
+        }
 
         Ok(())
     }
@@ -151,16 +151,16 @@ impl AI {
             .map_err(|e| eprintln!("failed to generate embeddings: {e:#?}"))
             .ok();
 
-        // if let Some(embeddings) = embeddigns {
-        //     tunnel.worker_send_rust(
-        //         WorkerMessage::ResourceMessage(ResourceMessage::UpsertEmbeddings {
-        //             resource_id: embeddable.get_resource_id(),
-        //             embedding_type: embeddable.get_embedding_type(),
-        //             embeddings,
-        //         }),
-        //         None,
-        //     );
-        // }
+        if let Some(embeddings) = embeddigns {
+            tunnel.worker_send_rust(
+                WorkerMessage::ResourceMessage(ResourceMessage::UpsertEmbeddings {
+                    resource_id: embeddable.get_resource_id(),
+                    embedding_type: embeddable.get_embedding_type(),
+                    embeddings,
+                }),
+                None,
+            );
+        }
         Ok(())
     }
 

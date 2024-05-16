@@ -25,6 +25,7 @@ import type {
   SFFSSearchParameters,
   SFFSSearchProximityParameters
 } from '../types'
+import type { AIChat, Chat } from '../components/Browser/types'
 
 export type CardToCreate = Optional<Card, 'id' | 'stackingOrder' | 'createdAt' | 'updatedAt'>
 export type HorizonToCreate = Optional<
@@ -544,13 +545,40 @@ export class SFFS {
     return cards.map((c) => this.convertRawCardToCard(c))
   }
 
-  async createAIChat(system_prompt?: string) {
+  async createAIChat(system_prompt?: string): Promise<string> {
     this.log.debug('creating ai chat (custom system prompt:', system_prompt, ')')
     return await this.backend.js__store_create_ai_chat(system_prompt)
   }
 
-  async getAIChat(id: string) {
+  async getAIChat(id: string): Promise<AIChat | null> {
     this.log.debug('getting ai chat with id', id)
-    return await this.backend.js__store_get_ai_chat(id)
+    const raw = await this.backend.js__store_get_ai_chat(id)
+
+    return this.parseData<AIChat>(raw)
+  }
+
+  async sendAIChatMessage(
+    chatId: string,
+    query: string,
+    callback: (chunk: string) => void,
+    opts?: { limit?: number; systemPrompt?: string }
+  ): Promise<void> {
+    this.log.debug(
+      'sending ai chat message to chat with id',
+      chatId,
+      'query:',
+      query,
+      'limit:',
+      opts?.limit,
+      'system prompt:',
+      opts?.systemPrompt
+    )
+    return await this.backend.js__ai_send_chat_message(
+      query,
+      chatId,
+      opts?.limit ?? 20,
+      opts?.systemPrompt ?? '',
+      callback
+    )
   }
 }
