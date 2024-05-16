@@ -198,8 +198,13 @@ export class TwitterParser extends WebAppExtractor {
     console.log('Running action', action.id)
 
     if (action.id === 'get_bookmarks_from_twitter') {
-      const userId = 'yzqS_xq0glDD7YZJ2YDaiA'
-      const data = await this.getBookmarks(userId)
+      const { uid, authorization, clientTransactionId, csrfToken } = inputs
+
+      const data = await this.getAllBookmarks(uid, {
+        authorization,
+        clientTransactionId,
+        csrfToken
+      })
       if (!data) return null
 
       console.log('data', data)
@@ -214,11 +219,35 @@ export class TwitterParser extends WebAppExtractor {
     }
   }
 
-  async getBookmarks(userId: string, cursor?: string) {
-    const base = `https://twitter.com/i/api/graphql/${userId}/Bookmarks`
+  async getAllBookmarks(
+    uid: string,
+    headers: { authorization: string; clientTransactionId: string; csrfToken: string }
+  ) {
+    const limit = 100
+    let cursor: string | undefined
+    let posts: ResourceDataPost[] = []
+
+    do {
+      const data = await this.getBookmarks(uid, headers, limit, cursor)
+      if (!data || !data.posts || data.posts.length < 1) break
+
+      posts = [...posts, ...data.posts]
+      cursor = data.cursor
+    } while (posts.length < 1000 && cursor)
+
+    return posts
+  }
+
+  async getBookmarks(
+    uid: string,
+    headers: { authorization: string; clientTransactionId: string; csrfToken: string },
+    limit = 100,
+    cursor?: string
+  ) {
+    const base = `https://twitter.com/i/api/graphql/${uid}/Bookmarks`
     const queryParams = {
       variables: {
-        count: 100,
+        count: limit,
         cursor: cursor,
         includePromotedContent: true
       },
@@ -263,8 +292,7 @@ export class TwitterParser extends WebAppExtractor {
     const json = await api.getJSON(url.pathname + url.search, {
       accept: '*/*',
       'accept-language': 'en-US,en;q=0.9',
-      authorization:
-        'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
+      authorization: headers.authorization,
       'cache-control': 'no-cache',
       'content-type': 'application/json',
       pragma: 'no-cache',
@@ -275,10 +303,8 @@ export class TwitterParser extends WebAppExtractor {
       'sec-fetch-dest': 'empty',
       'sec-fetch-mode': 'cors',
       'sec-fetch-site': 'same-origin',
-      'x-client-transaction-id':
-        'Bp0Pl1HYeNHEEgLpm352hdpQnpOhMo1grBScLzYcj0N+tqXq8vQE0GZ/6JM61QE9hvtI8wc/i3NYlSSRvb0gC1PrHSUvBQ',
-      'x-csrf-token':
-        'c5062ed10debd4bebefcb9b62c94413a8dd68005c90f46662adaa6d8c75d7fd8ad245da1f68e6bd6c4a71d5ac5e890837d9ac8d6f013494120771e3c4d4ac0b52060fba213d693ed76c9d82ee5ed62dc',
+      'x-client-transaction-id': headers.clientTransactionId,
+      'x-csrf-token': headers.csrfToken,
       'x-twitter-active-user': 'yes',
       'x-twitter-auth-type': 'OAuth2Session',
       'x-twitter-client-language': 'en'
@@ -289,12 +315,20 @@ export class TwitterParser extends WebAppExtractor {
     const entries = json?.data?.bookmark_timeline_v2?.timeline?.instructions[0]?.entries
     const posts = entries?.map((entry: any) => this.parseTweet(entry)).filter((post: any) => post)
 
-    return posts
+    const newCursor =
+      json?.data?.bookmark_timeline_v2?.timeline?.instructions[0]?.entries?.pop()?.content?.value
+
+    return { posts, cursor: newCursor }
   }
 
   parseTweet(entry: any) {
     const data = entry?.content?.itemContent?.tweet_results?.result
     console.log('data', data)
+
+    if (!data) {
+      console.log('No data found')
+      return null
+    }
 
     const tweet = data?.legacy
     const author = data?.core?.user_results?.result?.legacy

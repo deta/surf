@@ -255,7 +255,14 @@ const api = {
     return data
   },
 
-  getAppInfo: () => ipcRenderer.invoke('get-app-info') as Promise<ElectronAppInfo>
+  getAppInfo: () => ipcRenderer.invoke('get-app-info') as Promise<ElectronAppInfo>,
+
+  interceptRequestsHeaders: async (
+    urls: string[],
+    partition: string
+  ): Promise<{ url: string; headers: Record<string, string> }> => {
+    return ipcRenderer.invoke('intercept-requests-headers', { urls, partition })
+  }
 }
 
 ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {

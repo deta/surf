@@ -5,14 +5,16 @@ export class WebViewExtractor {
   url: URL
   document: Document
   webview: WebviewTag | null
+  partition: string
 
   appDetectionCallback: ((app: DetectedWebApp) => void) | null
   resourceDetectionCallback: ((resource: any) => void) | null
 
-  constructor(url: URL, document: Document) {
+  constructor(url: URL, document: Document, partition?: string) {
     this.url = url
     this.document = document
     this.webview = null
+    this.partition = partition ?? 'persist:horizon'
 
     this.appDetectionCallback = null
     this.resourceDetectionCallback = null
@@ -33,7 +35,7 @@ export class WebViewExtractor {
 
     this.webview.setAttribute('data-webview-extractor', 'true')
     this.webview.src = this.url.href
-    this.webview.partition = 'persist:horizon'
+    this.webview.partition = this.partition
     // @ts-ignore
     this.webview.preload = `file://${window.api.webviewPreloadPath}`
     this.webview.webpreferences = 'autoplayPolicy=user-gesture-required'
@@ -89,6 +91,7 @@ export class WebViewExtractor {
     return new Promise<void>((resolve, reject) => {
       this.webview?.addEventListener('did-finish-load', () => {
         resolve()
+        this.webview?.openDevTools()
       })
 
       this.webview?.addEventListener('did-fail-load', () => {
@@ -172,7 +175,6 @@ export class WebViewExtractor {
       }, timeoutNum)
 
       this.webview?.addEventListener('ipc-message', handleEvent)
-      this.webview?.openDevTools()
       this.webview?.send('webview-event', { type: 'run-action', id, inputs })
     })
   }

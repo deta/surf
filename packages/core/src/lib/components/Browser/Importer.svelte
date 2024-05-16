@@ -12,6 +12,7 @@
   import { getFileType } from '../../utils/files'
   import ResourceType from '../Resources/ResourceType.svelte'
   import { ResourceTag, type ResourceManager } from '../../service/resources'
+  import { wait } from '../../utils/time'
 
   export let resourceManager: ResourceManager
 
@@ -76,10 +77,36 @@
   const fetchTwitterBookmarks = async () => {
     const webParser = new WebParser('https://twitter.com/i/bookmarks')
 
-    const extractedResource = await webParser.runActionUsingWebview(
-      document,
-      'get_bookmarks_from_twitter'
-    )
+    const webviewExtractor = webParser.createWebviewExtractor(document)
+
+    let intercepted: any
+
+    // we need to start intercepting requests before initializing the webview
+    window.api
+      .interceptRequestsHeaders(['https://twitter.com/i/api/*'], webviewExtractor.partition)
+      .then((data: any) => {
+        log.debug('Intercepted', data)
+        intercepted = data
+      })
+
+    await webviewExtractor.initializeWebview()
+
+    await wait(3000)
+
+    if (!intercepted) {
+      log.error('Intercepted request not found')
+      return
+    }
+
+    const inputs = {
+      uid: 'yzqS_xq0glDD7YZJ2YDaiA',
+      authorization: intercepted.headers.authorization,
+      clientTransactionId: intercepted.headers['x-client-transaction-id'],
+      csrfToken: intercepted.headers['x-csrf-token']
+    }
+
+    const extractedResource = await webviewExtractor.runAction('get_bookmarks_from_twitter', inputs)
+
     log.debug('Extracted resource', extractedResource)
 
     const posts = extractedResource?.data as any as ResourceDataPost[]
@@ -114,6 +141,8 @@
 
       const resources = posts.map((item) => ({ type: ResourceTypes.POST_TWITTER, data: item }))
       queue.update((prev) => [...prev, ...resources])
+
+      processNextItem()
     } else {
       log.error('Unknown tab', $tab)
     }

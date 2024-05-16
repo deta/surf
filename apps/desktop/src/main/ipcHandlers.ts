@@ -1,4 +1,4 @@
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, session } from 'electron'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
 import { getUserConfig, updateUserConfig } from './config'
@@ -97,6 +97,34 @@ export function setupIpcHandlers() {
       version: app.getVersion(),
       platform: getPlatform()
     } as ElectronAppInfo
+  })
+
+  ipcMain.handle('intercept-requests-headers', (_event, { urls, partition }) => {
+    const filter = {
+      urls: urls
+    }
+
+    const webRequest = session.fromPartition(partition).webRequest
+
+    const cleanup = () => webRequest.onBeforeSendHeaders(null)
+
+    return new Promise((resolve, reject) => {
+      let timeout
+
+      webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+        console.log('Request intercepted:', details)
+
+        callback({})
+        cleanup()
+        clearTimeout(timeout)
+        resolve({ url: details.url, headers: details.requestHeaders })
+      })
+
+      timeout = setTimeout(() => {
+        cleanup()
+        reject(new Error('Request interception timed out'))
+      }, 20000)
+    })
   })
 }
 
