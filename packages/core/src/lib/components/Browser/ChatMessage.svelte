@@ -4,7 +4,11 @@
 
   export let message: AIChatMessage
 
-  const dispatch = createEventDispatcher<{ citationClick: string; citationHover: string }>()
+  const dispatch = createEventDispatcher<{
+    citationClick: string
+    citationHoverStart: string
+    citationHoverEnd: string
+  }>()
 
   let elem: HTMLDivElement
 
@@ -36,9 +40,14 @@
         dispatch('citationClick', citation.textContent)
       })
 
-      citation.addEventListener('mouseover', () => {
+      citation.addEventListener('mouseenter', () => {
         if (!citation.textContent) return
-        dispatch('citationHover', citation.textContent)
+        dispatch('citationHoverStart', citation.textContent)
+      })
+
+      citation.addEventListener('mouseleave', () => {
+        if (!citation.textContent) return
+        dispatch('citationHoverEnd', citation.textContent)
       })
     })
 

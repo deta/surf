@@ -8,7 +8,7 @@
   import { writable, derived } from 'svelte/store'
   import type { Drawer } from '@horizon/drawer'
 
-  import type { ResourceManager } from '../../service/resources'
+  import type { ResourceLink, ResourceManager } from '../../service/resources'
   import { useLogScope } from '../../utils/log'
   import type {
     AIChat,
@@ -30,6 +30,7 @@
   import ChatResponseSource from './ChatResponseSource.svelte'
   import { Icon } from '@horizon/icons'
   import ChatMessage from './ChatMessage.svelte'
+  import { ResourceTypes, type ResourceDataPost } from '../../types'
 
   export let tab: TabChat
   export let resourceManager: ResourceManager
@@ -52,6 +53,8 @@
   let loadingResponse = false
   let queryElement: HTMLElement
   let followUpValue = ''
+
+  let hoveredSource: { sourceId: string; messageId: string } | null = null
 
   $: query = tab.query
   $: log.debug('activeMessage', $activeMessage)
@@ -111,11 +114,7 @@
           content += chunk
 
           if (content.includes('</sources>')) {
-            const sources = parseChatResponseSources(chunk).filter(
-              (source, index, self) =>
-                index === self.findIndex((s) => s.resource_id === source.resource_id)
-            )
-
+            const sources = parseChatResponseSources(chunk)
             log.debug('Sources', sources)
 
             step = 'sources'
@@ -193,10 +192,7 @@
           query: queries[idx],
           content: message.content.replace('<answer>', '').replace('</answer>', ''),
           // contentItems: parsed.contentItems,
-          sources: (message.sources ?? []).filter(
-            (source, index, self) =>
-              index === self.findIndex((s) => s.resource_id === source.resource_id)
-          )
+          sources: message.sources
         }
       })
   }
@@ -209,10 +205,49 @@
     log.debug('Citation clicked', sourceId, message)
 
     const source = (message.sources ?? []).find((s) => s.id === sourceId)
+    if (!source) return
 
-    if (source) {
+    const resource = await getResource(source.resource_id)
+    if (!resource) return
+
+    if (
+      resource.type === ResourceTypes.LINK ||
+      resource.type === ResourceTypes.ARTICLE ||
+      resource.type.startsWith(ResourceTypes.POST)
+    ) {
+      const data = await (resource as ResourceLink).getParsedData()
+
+      if (resource.type === ResourceTypes.POST_YOUTUBE && source.metadata?.timestamp) {
+        const timestamp = source.metadata.timestamp
+        const url = `https://www.youtube.com/watch?v=${(data as any as ResourceDataPost).post_id}&t=${timestamp}s`
+        navigate(url)
+      } else {
+        navigate(data.url)
+      }
+    } else {
       openResource(source.resource_id)
     }
+  }
+
+  function handleCitationHoverStart(sourceId: string, message: AIChatMessageParsed) {
+    log.debug('Citation hovered', sourceId, message)
+
+    const source = (message.sources ?? []).find((s) => s.id === sourceId)
+    if (source) {
+      hoveredSource = { sourceId, messageId: message.id }
+    }
+  }
+
+  function handleCitationHoverEnd(sourceId: string, message: AIChatMessageParsed) {
+    log.debug('Citation hover end', sourceId, message)
+
+    hoveredSource = null
+  }
+
+  function getUniqueSources(sources: AIChatMessageSource[]) {
+    return sources.filter(
+      (source, index, self) => index === self.findIndex((s) => s.resource_id === source.resource_id)
+    )
   }
 
   const handleSendMessage = () => {
@@ -271,8 +306,13 @@
           <div class="chat-result">
             {#if message.sources}
               <div class="resources">
-                {#each message.sources as source}
-                  <div class="resource-list-item">
+                {#each getUniqueSources(message.sources) as source}
+                  <div
+                    class="resource-list-item"
+                    class:active={hoveredSource &&
+                      hoveredSource.messageId &&
+                      hoveredSource.sourceId === source.id}
+                  >
                     <ChatResponseSource {source} {resourceManager} on:click={handleResourceClick} />
                   </div>
                 {/each}
@@ -284,6 +324,8 @@
                 <ChatMessage
                   {message}
                   on:citationClick={(e) => handleCitationClick(e.detail, message)}
+                  on:citationHoverStart={(e) => handleCitationHoverStart(e.detail, message)}
+                  on:citationHoverEnd={(e) => handleCitationHoverEnd(e.detail, message)}
                 />
               {:else}
                 <div class="chat-status">
@@ -512,6 +554,11 @@
 
       .resource-list-item {
         max-width: 350px;
+        transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+        &.active {
+          transform: scale(1.1);
+        }
       }
     }
 
