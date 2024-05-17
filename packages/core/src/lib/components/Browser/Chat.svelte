@@ -309,7 +309,7 @@
           <div class="chat-result">
             {#if message.sources}
               <div class="resources">
-                {#each getUniqueSources(message.sources) as source}
+                {#each getUniqueSources(message.sources) as source (source.id)}
                   <div
                     class="resource-list-item"
                     class:active={$hoveredSource &&
