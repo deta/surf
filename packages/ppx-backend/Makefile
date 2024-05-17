@@ -5,5 +5,6 @@ setup:
 	cp -R embedchain .venv/lib/python3.9/site-packages/
 
 run:
+	cp -R embedchain .venv/lib/python3.9/site-packages/
 	. .venv/bin/activate
 	uvicorn main:app --reload
