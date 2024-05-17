@@ -29,7 +29,7 @@ export class WebViewExtractor {
   }
 
   initializeWebview() {
-    console.log('Initializing webview')
+    console.log('Initializing webview with location', this.url.href)
     this.webview = document.createElement('webview')
     if (!this.webview) return
 

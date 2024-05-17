@@ -42,3 +42,4 @@ export class LinkImporter {
 
 export * from './apps/webcrate'
 export * from './apps/twitter'
+export * from './apps/youtube'

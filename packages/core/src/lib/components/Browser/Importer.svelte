@@ -5,6 +5,7 @@
     TwitterImporter,
     WebCrateImporter,
     WebParser,
+    YoutubePlaylistImporter,
     type DetectedResource
   } from '@horizon/web-parser'
   import { writable } from 'svelte/store'
@@ -38,10 +39,11 @@
   const fetchDone = writable(false)
   const dryRun = writable(true)
   const processBatchSize = writable(PROCESS_BATCH_SIZE)
-  const tab = writable<'webcrate' | 'twitter' | 'csv'>('twitter')
+  const tab = writable<'webcrate' | 'twitter' | 'csv' | 'youtube'>('twitter')
 
   let showDebug = false
   let csvData = ''
+  let youtubePlaylistUrl = ''
   let batchFetcher: BatchFetcher<DetectedResource>
 
   $: log.debug('Queue changed', $queue)
@@ -69,7 +71,7 @@
       return
     }
 
-    if ($tab === 'webcrate' || $tab === 'twitter') {
+    if ($tab === 'webcrate' || $tab === 'twitter' || $tab === 'youtube') {
       const batch = await batchFetcher.fetchNextBatch()
       log.debug('Filling queue', batch.length)
 
@@ -144,7 +146,7 @@
           ...prev,
           { resource: detectedResource, sourceId: link.source_id! }
         ])
-      } else if (item.type === ResourceTypes.POST_TWITTER) {
+      } else if (item.type.startsWith(ResourceTypes.POST)) {
         const post = item.data as ResourceDataPost
         log.debug('Processing item', post.url)
 
@@ -153,7 +155,7 @@
 
         if (!$dryRun) {
           const resource = await resourceManager.createResourceOther(
-            new Blob([JSON.stringify(post)], { type: ResourceTypes.POST_TWITTER }),
+            new Blob([JSON.stringify(post)], { type: item.type }),
             { sourceURI: post.url },
             [ResourceTag.import()]
           )
@@ -162,6 +164,8 @@
         }
 
         processed.update((prev) => [...prev, { resource: item, sourceId: post.post_id! }])
+      } else {
+        log.error('Unknown resource type', item)
       }
     } catch (error) {
       log.error('Error processing link', item, error)
@@ -198,6 +202,11 @@
       batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
     } else if ($tab === 'twitter') {
       const appImporter = new TwitterImporter()
+      batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
+
+      await appImporter.init()
+    } else if ($tab === 'youtube') {
+      const appImporter = new YoutubePlaylistImporter(youtubePlaylistUrl)
       batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
 
       await appImporter.init()
@@ -251,6 +260,9 @@
         >
         <button on:click={() => tab.set('webcrate')} class="tab" class:active={$tab === 'webcrate'}
           >WebCrate</button
+        >
+        <button on:click={() => tab.set('youtube')} class="tab" class:active={$tab === 'youtube'}
+          >YouTube</button
         >
       </div>
     </div>
@@ -320,6 +332,32 @@
         </div>
 
         <textarea placeholder="csv data" bind:value={csvData}></textarea>
+      </div>
+    {:else if $tab === 'youtube'}
+      <div class="service">
+        <h2>YouTube Playlist</h2>
+
+        <div class="explainer">
+          <p>
+            To import videos from a YouTube playlist you need to paste the playlist URL below. The
+            videos will be imported automatically without further setup.
+          </p>
+
+          <p>
+            If the playlist is private you need to be <a
+              href="https://youtube.com/login"
+              target="_blank"
+              class="link">logged in to youtube.com</a
+            > in this app.
+          </p>
+        </div>
+
+        <div class="inputs">
+          <input
+            placeholder="https://www.youtube.com/playlist?list=<id>"
+            bind:value={youtubePlaylistUrl}
+          />
+        </div>
       </div>
     {/if}
 

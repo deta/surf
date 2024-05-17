@@ -1,9 +1,10 @@
 import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
 
 import { WebAppExtractor } from '../extractors'
-import type { DetectedWebApp, WebService } from '../types'
+import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
 import { makeAbsoluteURL } from '../utils'
 import { DOMExtractor } from '../extractors/dom'
+import { SERVICES } from '../services'
 
 export const YoutubeRegexPatterns = {
   // example: /watch?v=I_wc3DfgQvs or /embed/I_wc3DfgQvs or /I_wc3DfgQvs /watch
@@ -167,6 +168,76 @@ export class YoutubeParser extends WebAppExtractor {
       console.log('Unknown resource type')
       return Promise.resolve(null)
     }
+  }
+
+  getActions() {
+    return SERVICES.find((service) => service.id === 'youtube')?.actions ?? []
+  }
+
+  async runAction(document: Document, id: string, inputs: WebServiceActionInputs) {
+    const action = this.getActions().find((action) => action.id === id)
+    if (!action) return null
+
+    console.log('Running action', action.id)
+
+    if (action.id === 'get_posts_from_youtube_playlist') {
+      const {} = inputs
+
+      const data = await this.getPlaylist(document)
+      if (!data) return null
+
+      console.log('data', data)
+
+      return {
+        data: data,
+        type: ResourceTypes.POST_YOUTUBE
+      }
+    } else {
+      console.log('Unknown action')
+      return null
+    }
+  }
+
+  async getPlaylist(document: Document) {
+    const list = document.querySelector('ytd-playlist-video-list-renderer')
+    if (!list) {
+      console.log('No playlist found')
+      return null
+    }
+
+    const videos = list.querySelectorAll('ytd-playlist-video-renderer')
+    if (!videos.length) {
+      console.log('No videos found')
+      return null
+    }
+
+    const videoData = Array.from(videos).map((video) => {
+      const url = video.querySelector('a')?.getAttribute('href')
+      if (!url) return null
+
+      const videoUrl = makeAbsoluteURL(url, this.url)
+      if (!videoUrl) return null
+
+      const cleanUrl = videoUrl.split('&')[0]
+
+      const title = video.querySelector('#video-title')?.textContent
+      const channelElem = video.querySelector('#channel-name a')
+      const channelName = channelElem?.textContent
+      const channelUrlRaw = channelElem?.getAttribute('href')
+      const channelUrl = channelUrlRaw ? makeAbsoluteURL(channelUrlRaw, this.url) : null
+      const thumbnailUrl = video.querySelector('yt-image img')?.getAttribute('src')
+
+      return {
+        url: cleanUrl,
+        post_id: cleanUrl.split('=')[1],
+        title: title,
+        author: channelName,
+        author_url: channelUrl,
+        images: [thumbnailUrl]
+      } as ResourceDataPost
+    })
+
+    return videoData.filter((video) => video !== null) as ResourceDataPost[]
   }
 
   private async getVideo(document: Document) {
