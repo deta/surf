@@ -5,19 +5,20 @@
   "main": "./out/main/index.js",
   "author": "Deta GmbH",
   "scripts": {
+    "postinstall": "node ./scripts/setup-external-deps.js",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
     "typecheck": "npm run typecheck:node",
     "start": "electron-vite preview",
-    "dev": "M_VITE_PRODUCT_NAME=Horizon-dev HORIZON_LIBUSEARCH_PATH=/Users/betahuhn/dev/deta/horizon/packages/backend/vendor/usearch/usearch_sqlite.dylib electron-vite dev",
+    "dev": "node scripts/dev.js",
     "build": "npm run typecheck && electron-vite build",
-    "build:mwl": "npm run build && electron-builder -mwl --config build/electron-builder-config.ts --arm64 --x64 --publish always",
-    "build:win": "npm run build && electron-builder --win --config build/electron-builder-config.ts --arm64 --x64 --publish always",
-    "build:mac": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --arm64 --x64 --publish always",
-    "build:mac:arm": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --arm64 --publish always",
-    "build:mac:x64": "npm run build && electron-builder --mac --config build/electron-builder-config.ts --x64 --publish always",
-    "build:linux": "npm run build && electron-builder --linux --config build/electron-builder-config.ts --arm64 --x64 --publish always"
+    "build:mwl": "npm run build && electron-builder -mwl --config build/electron-builder-config.js --arm64 --x64 --publish always",
+    "build:mac": "npm run build && electron-builder --mac --config build/electron-builder-config.js --arm64 --x64 --publish always",
+    "build:mac:x64": "npm run build && electron-builder --mac --config build/electron-builder-config.js --x64 --publish always",
+    "build:mac:arm": "npm run build && electron-builder --mac --config build/electron-builder-config.js --arm64 --publish always",
+    "build:win:x64": "npm run build && electron-builder --win --config build/electron-builder-config.js --x64 --publish always",
+    "build:lin:x64": "npm run build && electron-builder --linux --config build/electron-builder-config.js --x64 --publish always"
   },
   "dependencies": {
     "@cliqz/adblocker-electron": "^1.26.15",
@@ -30,6 +31,7 @@
     "mime-types": "^2.1.35"
   },
   "devDependencies": {
+    "7zip-min": "^1.4.4",
     "@electron-toolkit/eslint-config-prettier": "^1.0.1",
     "@electron-toolkit/eslint-config-ts": "^1.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
@@ -54,6 +56,7 @@
     "svelte-check": "^3.5.0",
     "tslib": "^2.6.2",
     "typescript": "^5.1.6",
+    "unzipper": "^0.10.14",
     "uuid": "^9.0.1",
     "vite": "^4.4.9"
   }

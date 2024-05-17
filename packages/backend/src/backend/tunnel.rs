@@ -24,6 +24,7 @@ impl WorkerTunnel {
     pub fn new<'a, C>(
         cx: &mut C,
         backend_root_path: String,
+        app_path: String,
         vision_api_key: String,
         vision_api_endpoint: String,
         ai_backend_api_endpoint: String,
@@ -42,23 +43,26 @@ impl WorkerTunnel {
         };
 
         // spawn the main SFFS thread
-        let ai_api_endpoint = ai_backend_api_endpoint.clone();
+        let app_path_clone = app_path.clone();
+        let ai_api_endpoint_clone = ai_backend_api_endpoint.clone();
         std::thread::spawn(move || {
             worker_thread_entry_point(
                 worker_rx,
                 tqueue_tx,
                 aiqueue_tx,
                 libuv_ch,
+                app_path_clone,
                 backend_root_path,
-                ai_api_endpoint,
+                ai_api_endpoint_clone,
             )
         });
 
         // spawn N worker threads
         (0..8).for_each(|_| {
             let tunnel_clone = tunnel.clone();
+            let app_path_clone = app_path.clone();
             std::thread::spawn(move || {
-                processor_thread_entry_point(tunnel_clone);
+                processor_thread_entry_point(tunnel_clone, app_path_clone);
             });
         });
 

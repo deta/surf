@@ -1,0 +1,21 @@
+[package]
+name = "leptonica-sys"
+version = "0.4.7"
+authors = ["Chris Couzens <ccouzens@gmail.com>"]
+edition = "2018"
+links = "lept"
+build = "build.rs"
+description = "FFI bindings for Leptonica"
+license = "MIT"
+repository = "https://github.com/ccouzens/leptonica-sys"
+keywords = ["leptonica"]
+categories = ["api-bindings", "multimedia::images"]
+
+[build-dependencies]
+bindgen = "0.69.4"
+
+[target.'cfg(windows)'.build-dependencies]
+vcpkg = "0.2.15"
+
+[target.'cfg(any(target_os="macos", target_os="linux", target_os="freebsd"))'.build-dependencies]
+pkg-config = "0.3.25"

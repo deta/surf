@@ -20,10 +20,16 @@ import type { UserConfig, HorizonAction } from '@horizon/types'
 
 import { getConfig } from '../main/config'
 
+const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
 const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
+
+// TODO: think this is useless?
+if (process.platform === 'win32') {
+  process.env.PATH += `;${APP_PATH}`
+}
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
@@ -416,7 +422,7 @@ const sffs = (() => {
 
   function init(root_path: string, vision_api_key: string, vision_api_endpoint: string) {
     let fn = {}
-    handle = sffs.js__backend_tunnel_init(root_path, vision_api_key, vision_api_endpoint)
+    handle = sffs.js__backend_tunnel_init(root_path, APP_PATH, vision_api_key, vision_api_endpoint)
 
     Object.keys(sffs).forEach((key) => {
       if (

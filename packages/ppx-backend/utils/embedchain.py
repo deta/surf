@@ -38,7 +38,7 @@ EC_APP_CONFIG = {
 async def generate_sources_str(contexts):
     """Generate a string of unique source URLs from the sources metadata."""
     sources_str = "<sources>\n"
-    for idx, context in enumerate(contexts):
+    for idx, context in enumerate(contexts, 1):
         source_id = idx
         metadata = context.get('metadata', {})
         timestamp = metadata.get('timestamp', '')

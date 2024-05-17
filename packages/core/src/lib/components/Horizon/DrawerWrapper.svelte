@@ -149,7 +149,7 @@
 
   const showSearchDebug = writable(false)
   const semanticDistanceThreshold = writable(1.0)
-  const proximityDistanceThreshold = writable(100000)
+  const proximityDistanceThreshold = writable(500)
   const semanticSearchEnabled = writable(true)
 
   const debouncedRefreshContentLayout = useAnimationFrameThrottle(() => {

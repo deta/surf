@@ -17,11 +17,13 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
 
 fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunnel>> {
     let backend_root_path = cx.argument::<JsString>(0)?.value(&mut cx);
-    let vision_api_key = cx.argument::<JsString>(1)?.value(&mut cx);
-    let vision_api_endpoint = cx.argument::<JsString>(2)?.value(&mut cx);
+    let app_path = cx.argument::<JsString>(1)?.value(&mut cx);
+    let vision_api_key = cx.argument::<JsString>(2)?.value(&mut cx);
+    let vision_api_endpoint = cx.argument::<JsString>(3)?.value(&mut cx);
     let tunnel = tunnel::WorkerTunnel::new(
         &mut cx,
         backend_root_path,
+        app_path,
         vision_api_key,
         vision_api_endpoint,
         "http://localhost:8000/api/v1".to_string(),

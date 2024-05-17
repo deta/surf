@@ -41,4 +41,5 @@ yarn-error.log*
 *.pem
 
 database.sqlite
+/apps/desktop/external-deps
 __pycache__
