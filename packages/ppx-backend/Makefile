@@ -11,5 +11,5 @@ setup:
 
 run:
 	cp -R embedchain .venv/lib/python*/site-packages/
-	. .venv/bin/activate
+	. .venv/bin/activate && \
 	uvicorn main:app --reload
