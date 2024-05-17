@@ -5,6 +5,23 @@ export class APIExtractor {
     this.baseURL = baseURL
   }
 
+  async get(path: string, headers: any = {}) {
+    console.log('Requesting', path)
+
+    const url = new URL(path, this.baseURL)
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers
+      }
+    })
+
+    console.log('Response', res)
+
+    return res
+  }
+
   async getJSON(path: string, headers: any = {}) {
     console.log('Requesting', path)
 
@@ -18,6 +35,10 @@ export class APIExtractor {
     })
 
     console.log('Response', res)
+
+    if (!res.ok) {
+      throw new Error('Failed to fetch data')
+    }
 
     return res.json()
   }

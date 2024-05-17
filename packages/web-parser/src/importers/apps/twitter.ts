@@ -40,7 +40,7 @@ export class TwitterImporter extends AppImporter {
   constructor() {
     super()
 
-    this.webParser = new WebParser('https://twitter.com/i/bookmarks')
+    this.webParser = new WebParser('https://x.com/i/bookmarks')
     this.webviewExtractor = this.webParser.createWebviewExtractor(document)
   }
 
@@ -48,7 +48,7 @@ export class TwitterImporter extends AppImporter {
     // we need to start intercepting requests before initializing the webview
     // @ts-expect-error
     window.api
-      .interceptRequestsHeaders(['https://twitter.com/i/api/*'], this.webviewExtractor.partition)
+      .interceptRequestsHeaders(['https://x.com/i/api/*'], this.webviewExtractor.partition)
       .then((data: any) => {
         console.log('Intercepted', data)
 

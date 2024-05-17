@@ -20,6 +20,8 @@ export type TweetData = {
   tweetImageSources: string[]
 }
 
+const MAX_RETRIES = 3
+
 export class TwitterParser extends WebAppExtractor {
   constructor(app: WebService, url: URL) {
     super(app, url)
@@ -224,106 +226,118 @@ export class TwitterParser extends WebAppExtractor {
     }
   }
 
-  async getAllBookmarks(
-    uid: string,
-    headers: { authorization: string; clientTransactionId: string; csrfToken: string }
-  ) {
-    const limit = 100
-    let cursor: string | undefined
-    let posts: ResourceDataPost[] = []
-
-    do {
-      const data = await this.getBookmarks(uid, headers, limit, cursor)
-      if (!data || !data.posts || data.posts.length < 1) break
-
-      posts = [...posts, ...data.posts]
-      cursor = data.cursor
-    } while (posts.length < 1000 && cursor)
-
-    return posts
-  }
-
   async getBookmarks(
     uid: string,
     headers: { authorization: string; clientTransactionId: string; csrfToken: string },
     limit = 100,
-    cursor?: string
-  ) {
-    const base = `https://twitter.com/i/api/graphql/${uid}/Bookmarks`
-    const queryParams = {
-      variables: {
-        count: limit,
-        cursor: cursor,
-        includePromotedContent: true
-      },
-      features: {
-        graphql_timeline_v2_bookmark_timeline: true,
-        rweb_tipjar_consumption_enabled: true,
-        responsive_web_graphql_exclude_directive_enabled: true,
-        verified_phone_label_enabled: false,
-        creator_subscriptions_tweet_preview_api_enabled: true,
-        responsive_web_graphql_timeline_navigation_enabled: true,
-        responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
-        communities_web_enable_tweet_community_results_fetch: true,
-        c9s_tweet_anatomy_moderator_badge_enabled: true,
-        articles_preview_enabled: true,
-        tweetypie_unmention_optimization_enabled: true,
-        responsive_web_edit_tweet_api_enabled: true,
-        graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
-        view_counts_everywhere_api_enabled: true,
-        longform_notetweets_consumption_enabled: true,
-        responsive_web_twitter_article_tweet_consumption_enabled: true,
-        tweet_awards_web_tipping_enabled: false,
-        creator_subscriptions_quote_tweet_preview_enabled: false,
-        freedom_of_speech_not_reach_fetch_enabled: true,
-        standardized_nudges_misinfo: true,
-        tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
-        tweet_with_visibility_results_prefer_gql_media_interstitial_enabled: true,
-        rweb_video_timestamps_enabled: true,
-        longform_notetweets_rich_text_read_enabled: true,
-        longform_notetweets_inline_media_enabled: true,
-        responsive_web_enhance_cards_enabled: false
+    cursor?: string,
+    retryCount = 0
+  ): Promise<null | { posts: ResourceDataPost[]; cursor: string }> {
+    try {
+      const base = `https://x.com/i/api/graphql/${uid}/Bookmarks`
+      const queryParams = {
+        variables: {
+          count: limit,
+          cursor: cursor,
+          includePromotedContent: true
+        },
+        features: {
+          graphql_timeline_v2_bookmark_timeline: true,
+          rweb_tipjar_consumption_enabled: true,
+          responsive_web_graphql_exclude_directive_enabled: true,
+          verified_phone_label_enabled: false,
+          creator_subscriptions_tweet_preview_api_enabled: true,
+          responsive_web_graphql_timeline_navigation_enabled: true,
+          responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+          communities_web_enable_tweet_community_results_fetch: true,
+          c9s_tweet_anatomy_moderator_badge_enabled: true,
+          articles_preview_enabled: true,
+          tweetypie_unmention_optimization_enabled: true,
+          responsive_web_edit_tweet_api_enabled: true,
+          graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+          view_counts_everywhere_api_enabled: true,
+          longform_notetweets_consumption_enabled: true,
+          responsive_web_twitter_article_tweet_consumption_enabled: true,
+          tweet_awards_web_tipping_enabled: false,
+          creator_subscriptions_quote_tweet_preview_enabled: false,
+          freedom_of_speech_not_reach_fetch_enabled: true,
+          standardized_nudges_misinfo: true,
+          tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+          tweet_with_visibility_results_prefer_gql_media_interstitial_enabled: true,
+          rweb_video_timestamps_enabled: true,
+          longform_notetweets_rich_text_read_enabled: true,
+          longform_notetweets_inline_media_enabled: true,
+          responsive_web_enhance_cards_enabled: false
+        }
       }
+
+      const url = new URL(base)
+      url.searchParams.append('variables', JSON.stringify(queryParams.variables))
+      url.searchParams.append('features', JSON.stringify(queryParams.features))
+
+      console.log('Fetching', url.href)
+
+      const api = new APIExtractor(base)
+
+      const res = await api.get(url.pathname + url.search, {
+        accept: '*/*',
+        'accept-language': 'en-US,en;q=0.9',
+        authorization: headers.authorization,
+        'cache-control': 'no-cache',
+        'content-type': 'application/json',
+        pragma: 'no-cache',
+        priority: 'u=1, i',
+        'sec-ch-ua': '"Not-A.Brand";v="99", "Chromium";v="124"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+        'x-client-transaction-id': headers.clientTransactionId,
+        'x-csrf-token': headers.csrfToken,
+        'x-twitter-active-user': 'yes',
+        'x-twitter-auth-type': 'OAuth2Session',
+        'x-twitter-client-language': 'en'
+      })
+
+      if (!res.ok) {
+        console.error('Failed to fetch bookmarks', res.status, res.statusText, res.url)
+        if (res.status === 429) {
+          console.log('Rate limited')
+
+          if (retryCount >= MAX_RETRIES) {
+            console.log('Max retries reached')
+            return null
+          }
+
+          const defaultRetry = 60
+          const retryAfter = res.headers.get('retry-after')
+          const retry = retryAfter ? parseInt(retryAfter) : defaultRetry
+
+          console.log('Retrying after', retry)
+          retryCount++
+          await new Promise((resolve) => setTimeout(resolve, retry * 1000))
+          return this.getBookmarks(uid, headers, limit, cursor, retryCount)
+        }
+
+        return null
+      }
+
+      const json = await res.json()
+
+      console.log('json', json)
+
+      const entries = json?.data?.bookmark_timeline_v2?.timeline?.instructions[0]?.entries
+      const posts = entries?.map((entry: any) => this.parseTweet(entry)).filter((post: any) => post)
+
+      const newCursor =
+        json?.data?.bookmark_timeline_v2?.timeline?.instructions[0]?.entries?.pop()?.content?.value
+
+      return { posts, cursor: newCursor }
+    } catch (e) {
+      console.error('Error getting bookmarks', e)
+      return null
     }
-
-    const url = new URL(base)
-    url.searchParams.append('variables', JSON.stringify(queryParams.variables))
-    url.searchParams.append('features', JSON.stringify(queryParams.features))
-
-    console.log('Fetching', url.href)
-
-    const api = new APIExtractor(base)
-
-    const json = await api.getJSON(url.pathname + url.search, {
-      accept: '*/*',
-      'accept-language': 'en-US,en;q=0.9',
-      authorization: headers.authorization,
-      'cache-control': 'no-cache',
-      'content-type': 'application/json',
-      pragma: 'no-cache',
-      priority: 'u=1, i',
-      'sec-ch-ua': '"Not-A.Brand";v="99", "Chromium";v="124"',
-      'sec-ch-ua-mobile': '?0',
-      'sec-ch-ua-platform': '"macOS"',
-      'sec-fetch-dest': 'empty',
-      'sec-fetch-mode': 'cors',
-      'sec-fetch-site': 'same-origin',
-      'x-client-transaction-id': headers.clientTransactionId,
-      'x-csrf-token': headers.csrfToken,
-      'x-twitter-active-user': 'yes',
-      'x-twitter-auth-type': 'OAuth2Session',
-      'x-twitter-client-language': 'en'
-    })
-
-    console.log('json', json)
-
-    const entries = json?.data?.bookmark_timeline_v2?.timeline?.instructions[0]?.entries
-    const posts = entries?.map((entry: any) => this.parseTweet(entry)).filter((post: any) => post)
-
-    const newCursor =
-      json?.data?.bookmark_timeline_v2?.timeline?.instructions[0]?.entries?.pop()?.content?.value
-
-    return { posts, cursor: newCursor }
   }
 
   parseTweet(entry: any) {

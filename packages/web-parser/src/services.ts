@@ -12,7 +12,7 @@ export const SERVICES: WebService[] = [
   {
     id: 'twitter',
     name: 'Twitter',
-    matchHostname: /twitter.com/,
+    matchHostname: /twitter.com|x.com/,
     url: 'https://twitter.com',
     supportedResources: [ResourceTypes.POST_TWITTER],
     actions: [
