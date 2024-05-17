@@ -7,11 +7,9 @@
   ],
   "main": "index.node",
   "scripts": {
-    "dev": "npm run build",
-    "build-cmd": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
-    "build-debug": "npm run build-cmd --",
-    "build": "npm run build-cmd -- --release",
-    "install": "npm run build",
+    "dev": "npm run build-debug",
+    "build-debug": "node ./scripts/build.js",
+    "build": "node ./scripts/build.js -- --release",
     "test": "cargo test -- --nocapture"
   },
   "author": "",

@@ -102,8 +102,20 @@ impl Database {
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
         // Connection::open already handles creating the file if it doesn't exist
-        // let mut conn = Connection::open(db_path).map_err(BackendError::DatabaseError)?;
         let mut conn = Connection::open(db_path)?;
+        {
+            let _guard = unsafe { LoadExtensionGuard::new(&conn)? };
+            unsafe {
+                conn.load_extension(Path::new(usearch_path), None)?;
+            }
+        }
+
+        {
+            let _guard = unsafe { LoadExtensionGuard::new(&conn)? };
+            unsafe {
+                conn.load_extension(Path::new(usearch_path), None)?;
+            }
+        }
 
         {
             let _guard = unsafe { LoadExtensionGuard::new(&conn)? };
@@ -901,7 +913,6 @@ impl Database {
         limit: i64,
     ) -> BackendResult<Vec<VectorSearchResult>> {
         let mut result = Vec::new();
-
         let query = format!(
             "WITH filtered_distances AS (
                 SELECT rowid, distance_sqeuclidean_f32(position, ?1) AS distance
@@ -925,6 +936,7 @@ impl Database {
                 })
             },
         )?;
+
         for card_position in card_positions {
             result.push(card_position?);
         }
@@ -1014,7 +1026,6 @@ impl Database {
 
         let e = Embedding::new(embedding_vector);
         let params = rusqlite::params![e.embedding, limit, distance_threshold.powf(2.0)];
-
         let mut query = "WITH distance_calculations AS (
                 SELECT
                     E.rowid,
@@ -1057,7 +1068,6 @@ impl Database {
         let mut stmt = self.conn.prepare(query.as_str())?;
         let items = stmt.query_map(params, row_map_fn)?;
         for i in items {
-            dbg!(&i);
             results.push(i?);
         }
         Ok(results)
@@ -1133,6 +1143,7 @@ impl Database {
         for i in items {
             results.push(i?);
         }
+        println!("did some keyword search for: {keyword}");
         Ok(results)
     }
 
@@ -1372,6 +1383,44 @@ impl Database {
         Ok(())
     }
 
+    // pub fn vector_search_embeddings(
+    //     &self,
+    //     embedding: &Embedding,
+    //     distance_threshold: f32,
+    //     limit: i64,
+    // ) -> BackendResult<Vec<VectorSearchResult>> {
+    //     let mut result = Vec::new();
+
+    //     // TODO: we might wanna use a diff distance function here?
+    //     let query = format!(
+    //         "WITH filtered_distances AS (
+    //             SELECT rowid, distance_sqeuclidean_f32(position, ?1) AS distance
+    //             FROM card_positions
+    //             rowid IN (SELECT rowid FROM cards WHERE horizon_id=?2)
+    //         )
+    //         SELECT rowid, distance
+    //         FROM filtered_distances
+    //         WHERE distance <= ?3 AND distance != 0
+    //         ORDER BY distance ASC
+    //         LIMIT ?4"
+    //     );
+
+    //     let mut stmt = self.conn.prepare(&query)?;
+    //     let embeddings = stmt.query_map(
+    //         rusqlite::params![embedding.embedding, distance_threshold, limit],
+    //         |row| {
+    //             Ok(VectorSearchResult {
+    //                 rowid: row.get(0)?,
+    //                 distance: row.get(1)?,
+    //             })
+    //         },
+    //     )?;
+
+    //     for embedding in embeddings {
+    //         result.push(embedding?);
+    //     }
+    //     Ok(result)
+    // }
     pub fn vector_search_embeddings(
         &self,
         embedding: &Embedding,

@@ -1,0 +1,240 @@
+const productName = process.env.PRODUCT_NAME || 'Horizon'
+const params = {
+  buildTag: process.env.BUILD_TAG,
+  shouldNotarize: process.env.SHOULD_NOTARIZE,
+  appleTeamId: process.env.APPLE_TEAM_ID,
+  buildName: process.env.BUILD_TAG ? `${productName}-${process.env.BUILD_TAG}` : productName,
+  signIgnore: process.env.SIGN_IGNORE,
+  buildResourcesDir: process.env.BUILD_RESOURCES_DIR,
+  appVersion: process.env.APP_VERSION || '0.0.1',
+  publishS3BucketName: process.env.S3_UPDATES_BUCKET_NAME,
+  publishS3BucketRegion: process.env.S3_UPDATES_BUCKET_REGION,
+  releaseChannel: process.env.RELEASE_CHANNEL || 'latest'
+}
+
+function electronBuilderConfig() {
+  return {
+    appId: 'space.deta.spaceos.ea',
+    productName: params.buildName,
+    directories: {
+      buildResources: params.buildResourcesDir || 'build/resources/prod'
+    },
+    extraMetadata: {
+      version: params.appVersion
+    },
+    files: [
+      '!**/backend/target*',
+      '!**/backend/src/*',
+      '!**/backend/migrations/*',
+      '!**/.vscode/*',
+      '!src/*',
+      '!electron.vite.config.{js,ts,mjs,cjs}',
+      '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}',
+      '!{.env,.env.*,.npmrc,pnpm-lock.yaml}',
+      '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+    ],
+    // asar: false,
+    asarUnpack: ['resources/**', '**/*.node', '**/libusearch_sqlite.dylib'],
+    afterPack: 'build/afterpack.js',
+    win: {
+      executableName: params.buildName,
+      extraFiles: [
+        {
+          from: 'external-deps/libtorch/lib',
+          to: '.',
+          filter: ['**/*']
+        },
+        {
+          from: 'external-deps',
+          to: '.',
+          filter: ['**/*', '!libtorch/**/*']
+        }
+      ]
+    },
+    nsis: {
+      artifactName: `${params.buildName}-setup.$\{ext\}`,
+      shortcutName: params.buildName,
+      uninstallDisplayName: params.buildName,
+      createDesktopShortcut: 'always'
+    },
+    mac: {
+      hardenedRuntime: true,
+      entitlementsInherit: `${params.buildResourcesDir || 'build/resources/prod'}/entitlements.mac.plist`,
+      extendInfo: [
+        "NSCameraUsageDescription: Application requests access to the device's camera.",
+        "NSMicrophoneUsageDescription: Application requests access to the device's microphone.",
+        "NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.",
+        "NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.",
+        'NSScreenCaptureUsageDescription: Application requests access to capture the screen.'
+      ],
+      // notarize: params.shouldNotarize === 'true' ? { teamId: params.appleTeamId } : false,
+      notarize: false,
+      extraFiles: [
+        {
+          from: 'external-deps/libtorch/lib',
+          to: 'Frameworks',
+          filter: ['**/*']
+        },
+        {
+          from: 'external-deps',
+          to: 'Frameworks',
+          filter: ['**/*', '!libtorch/**/*']
+        }
+      ]
+    },
+    dmg: {
+      artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
+    },
+    linux: {
+      target: ['AppImage'],
+      maintainer: 'deta.space'
+    },
+    appImage: {
+      category: 'WebBrowser',
+      artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
+    },
+    npmRebuild: false,
+    publish: params.publishS3BucketName
+      ? {
+          provider: 's3',
+          bucket: params.publishS3BucketName,
+          region: params.publishS3BucketRegion,
+          channel: params.releaseChannel
+        }
+      : [],
+    protocols: [
+      {
+        name: 'Hypertext Transfer Protocol',
+        schemes: ['http', 'https']
+      }
+    ],
+    fileAssociations: [
+      {
+        name: 'Hypertext Markup Language',
+        isPackage: true,
+        role: 'Editor',
+        rank: 'Default',
+        ext: 'html'
+      }
+    ]
+  }
+}
+
+module.exports = electronBuilderConfig
+
+// // Set CSC_IDENTITY_AUTO_DISCOVERY=false in the environment
+// // to prevent electron-builder from trying to use the Apple signing service in dev
+// // there is no way to disable this in the config file directly
+// // you can set `identity` to null but in production we can't set identity to null because we need to sign the app
+
+// const productName = process.env.PRODUCT_NAME || 'Horizon'
+// const params = {
+//   buildTag: process.env.BUILD_TAG,
+//   shouldNotarize: process.env.SHOULD_NOTARIZE,
+//   appleTeamId: process.env.APPLE_TEAM_ID,
+//   buildName: process.env.BUILD_TAG ? `${productName}-${process.env.BUILD_TAG}` : productName,
+//   signIgnore: process.env.SIGN_IGNORE,
+//   buildResourcesDir: process.env.BUILD_RESOURCES_DIR,
+//   appVersion: process.env.APP_VERSION || '0.0.1',
+//   publishS3BucketName: process.env.S3_UPDATES_BUCKET_NAME,
+//   publishS3BucketRegion: process.env.S3_UPDATES_BUCKET_REGION,
+//   releaseChannel: process.env.RELEASE_CHANNEL || 'latest'
+// }
+
+// export default function electronBuilderConfig() {
+//   return {
+//     appId: 'space.deta.spaceos.ea',
+//     productName: params.buildName,
+//     directories: {
+//       buildResources: params.buildResourcesDir || 'build/resources/prod'
+//     },
+//     extraMetadata: {
+//       version: params.appVersion
+//     },
+//     files: [
+//       '!**/backend/target*',
+//       '!**/backend/src/*',
+//       '!**/backend/migrations/*',
+//       // TODO: check if the curly braces `{` and `}` and the following file patterns are actually working
+//       '!**/.vscode/*',
+//       '!src/*',
+//       '!electron.vite.config.{js,ts,mjs,cjs}',
+//       '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}',
+//       '!{.env,.env.*,.npmrc,pnpm-lock.yaml}',
+//       '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+//     ],
+//     asarUnpack: ['resources/**', '**/*.node'],
+//     afterPack: 'build/afterpack.js',
+//     win: {
+//       executableName: params.buildName
+//     },
+//     nsis: {
+//       artifactName: `${params.buildName}-setup.$\{ext\}`,
+//       shortcutName: params.buildName,
+//       uninstallDisplayName: params.buildName,
+//       createDesktopShortcut: 'always'
+//     },
+//     // default targets for mac are 'dmg' and 'zip'
+//     // we need zip for supporting auto-updates
+//     mac: {
+//       hardenedRuntime: true,
+//       entitlementsInherit: `${params.buildResourcesDir || 'build/resources/prod'}/entitlements.mac.plist`,
+//       extendInfo: [
+//         "NSCameraUsageDescription: Application requests access to the device's camera.",
+//         "NSMicrophoneUsageDescription: Application requests access to the device's microphone.",
+//         "NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.",
+//         "NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.",
+//         'NSScreenCaptureUsageDescription: Application requests access to capture the screen.'
+//       ],
+//       notarize: params.shouldNotarize === 'true' ? { teamId: params.appleTeamId } : false,
+//       extraFiles: [
+//         {
+//           from: 'external-deps/libtorch/lib',
+//           to: 'Frameworks',
+//           filter: ['**/*']
+//         },
+//         {
+//           from: 'external-deps',
+//           to: 'Frameworks',
+//           filter: ['**/*', '!libtorch/**/*']
+//         }
+//       ]
+//     },
+//     dmg: {
+//       artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
+//     },
+//     linux: {
+//       target: ['AppImage'],
+//       maintainer: 'deta.space'
+//     },
+//     appImage: {
+//       // TODO: what category are we lol
+//       category: 'WebBrowser',
+//       artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
+//     },
+//     npmRebuild: false,
+//     publish: params.publishS3BucketName
+//       ? {
+//           provider: 's3',
+//           bucket: params.publishS3BucketName,
+//           region: params.publishS3BucketRegion,
+//           channel: params.releaseChannel
+//         }
+//       : [],
+//     protocols: [
+//       {
+//         name: 'Hypertext Transfer Protocol',
+//         schemes: ['http', 'https']
+//       }
+//     ],
+//     fileAssociations: [
+//       {
+//         name: 'Hypertext Markup Language',
+//         isPackage: true,
+//         role: 'Editor',
+//         rank: 'Default',
+//         ext: 'html'
+//       }
+//     ]
+//   }
+// }
