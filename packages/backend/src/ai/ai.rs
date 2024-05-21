@@ -21,7 +21,7 @@ pub struct DataSourceMetadata {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CitationSourceMetadata {
-    pub timestamp: String,
+    pub timestamp: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

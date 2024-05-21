@@ -114,7 +114,7 @@
           content += chunk
 
           if (content.includes('</sources>')) {
-            const sources = parseChatResponseSources(chunk)
+            const sources = parseChatResponseSources(content)
             log.debug('Sources', sources)
 
             step = 'sources'

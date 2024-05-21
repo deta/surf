@@ -77,7 +77,20 @@ export const SERVICES: WebService[] = [
     name: 'YouTube',
     url: 'https://www.youtube.com',
     matchHostname: /^(?:www\.|m\.)?youtube\.com$|^youtu\.be$/i,
-    supportedResources: [ResourceTypes.POST_YOUTUBE]
+    supportedResources: [ResourceTypes.POST_YOUTUBE],
+    actions: [
+      {
+        id: 'get_posts_from_youtube_playlist',
+        name: 'Get Posts from Playlist',
+        description: 'Get the posts from a YouTube playlist',
+        default: false,
+        inputs: {},
+        output: {
+          type: ResourceTypes.POST_YOUTUBE,
+          description: 'the posts from the playlist'
+        }
+      }
+    ]
   },
 
   {
