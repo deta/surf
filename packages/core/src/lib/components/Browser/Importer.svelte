@@ -24,7 +24,11 @@
   let webcrateDomain = (window as any).WEBCRATE_DOMAIN ?? import.meta.env.R_VITE_WEBCRATE_DOMAIN
   let webcrateApiKey = (window as any).WEBCRATE_API_KEY ?? import.meta.env.R_VITE_WEBCRATE_API_KEY
 
-  const FETCH_BATCH_SIZE = 100
+  const FETCH_BATCH_SIZES = {
+    webcrate: 300,
+    twitter: 100,
+    youtube: 50
+  }
   const PROCESS_BATCH_SIZE = 10
   const LIMIT = 500
 
@@ -199,10 +203,15 @@
 
     if ($tab === 'webcrate') {
       const appImporter = new WebCrateImporter(webcrateDomain, webcrateApiKey)
-      batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
+      batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZES.webcrate)
     } else if ($tab === 'twitter') {
       const appImporter = new TwitterImporter()
-      batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
+      batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZES.twitter)
+
+      await appImporter.init()
+    } else if ($tab === 'youtube') {
+      const appImporter = new YoutubePlaylistImporter(youtubePlaylistUrl)
+      batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZES.youtube)
 
       await appImporter.init()
     } else if ($tab === 'youtube') {

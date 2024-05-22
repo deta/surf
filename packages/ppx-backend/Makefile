@@ -7,7 +7,7 @@ setup:
 	. .venv/bin/activate; \
 	$(PYTHON) -m pip install -U pip; \
 	$(PYTHON) -m pip install -r requirements.txt; \
-	cp -R embedchain .venv/lib/python*/site-packages/
+  cp -R embedchain .venv/lib/python*/site-packages/
 
 run:
 	cp -R embedchain .venv/lib/python*/site-packages/

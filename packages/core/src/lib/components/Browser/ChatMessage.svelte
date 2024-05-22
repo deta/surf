@@ -13,14 +13,13 @@
   let elem: HTMLDivElement
 
   $: content = message.content
-  $: console.log('content', content)
 
   $: {
     renderContent(content)
   }
 
+  // TODO: come up with a better way to render these things as this is not very performant when the content gets streamed in
   const renderContent = (content: string) => {
-    console.log('render content', content)
     if (!elem || !content) return
 
     elem.innerHTML = ''

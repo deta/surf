@@ -46,6 +46,11 @@
 
   const messages = writable<AIChatMessageParsed[]>([])
   const isHeaderVisible = writable(false)
+  const hoveredSource = writable<{
+    sourceId: string
+    messageId: string
+    resourceId: string
+  } | null>(null)
 
   const activeMessage = derived(messages, ($messages) => $messages[$messages.length - 1])
 
@@ -53,8 +58,6 @@
   let loadingResponse = false
   let queryElement: HTMLElement
   let followUpValue = ''
-
-  let hoveredSource: { sourceId: string; messageId: string } | null = null
 
   $: query = tab.query
   $: log.debug('activeMessage', $activeMessage)
@@ -125,7 +128,6 @@
             })
           }
         } else {
-          log.debug('content chunk', chunk)
           content += chunk
 
           updateActiveMessage({
@@ -141,7 +143,7 @@
       { limit: SEARCH_SOURCE_LIMIT }
     )
 
-    log.debug('response is done', response)
+    log.debug('response is done', response, content)
     // const parsed = parseChatResponseContent(content)
     // log.debug('parsed', parsed)
 
@@ -233,15 +235,16 @@
     log.debug('Citation hovered', sourceId, message)
 
     const source = (message.sources ?? []).find((s) => s.id === sourceId)
+    log.debug('Source', source)
     if (source) {
-      hoveredSource = { sourceId, messageId: message.id }
+      $hoveredSource = { sourceId, messageId: message.id, resourceId: source.resource_id }
     }
   }
 
   function handleCitationHoverEnd(sourceId: string, message: AIChatMessageParsed) {
     log.debug('Citation hover end', sourceId, message)
 
-    hoveredSource = null
+    $hoveredSource = null
   }
 
   function getUniqueSources(sources: AIChatMessageSource[]) {
@@ -306,12 +309,12 @@
           <div class="chat-result">
             {#if message.sources}
               <div class="resources">
-                {#each getUniqueSources(message.sources) as source}
+                {#each getUniqueSources(message.sources) as source (source.id)}
                   <div
                     class="resource-list-item"
-                    class:active={hoveredSource &&
-                      hoveredSource.messageId &&
-                      hoveredSource.sourceId === source.id}
+                    class:active={$hoveredSource &&
+                      $hoveredSource.messageId === message.id &&
+                      $hoveredSource.resourceId === source.resource_id}
                   >
                     <ChatResponseSource {source} {resourceManager} on:click={handleResourceClick} />
                   </div>
