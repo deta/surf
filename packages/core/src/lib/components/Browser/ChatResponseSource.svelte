@@ -13,11 +13,14 @@
   let resource: Resource
 
   onMount(async () => {
+    log.debug('Fetching resource with id', source.resource_id)
     const fetchedResource = await resourceManager.getResource(source.resource_id)
     if (!fetchedResource) {
       log.error(`Resource with id ${source.resource_id} not found`)
       return
     }
+
+    log.debug('Fetched resource:', fetchedResource)
 
     resource = fetchedResource
   })
