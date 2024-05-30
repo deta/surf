@@ -49,6 +49,7 @@ import ArrowRight from './Icons/ArrowRight.svelte'
 import Reload from './Icons/Reload.svelte'
 import Trash from './Icons/Trash.svelte'
 import Grid from './Icons/Grid.svelte'
+import FileTextAi from './Icons/FileTextAI.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -102,7 +103,8 @@ export const icons = {
   'arrow.right': ArrowRight,
   reload: Reload,
   trash: Trash,
-  grid: Grid
+  grid: Grid,
+  'file-text-ai': FileTextAi
 }
 
 export type Icons = keyof typeof icons
@@ -156,5 +158,6 @@ export {
   ArrowRight,
   Reload,
   Trash,
-  Grid
+  Grid,
+  FileTextAi
 }

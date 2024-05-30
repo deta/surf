@@ -438,6 +438,10 @@
   export function openDevTools(): void {
     webview?.openDevTools()
   }
+
+  export function executeJavaScript(code: string, userGesture = false) {
+    return webview?.executeJavaScript(code, userGesture)
+  }
 </script>
 
 <webview
@@ -454,5 +458,6 @@
     user-select: none;
     width: 100%;
     height: 100%;
+    background: white;
   }
 </style>

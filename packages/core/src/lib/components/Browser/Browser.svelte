@@ -31,7 +31,7 @@
   import { useLocalStorageStore } from '../../utils/localstorage'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
-  import { LinkImporter } from '@horizon/web-parser'
+  import { LinkImporter, WebParser } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
 
   let addressInputElem: HTMLInputElement
@@ -73,6 +73,9 @@
   const sidebarTab = writable<'active' | 'archive'>('active')
   const browserTabs = writable<Record<string, BrowserTab>>({})
   const bookmarkingInProgress = writable(false)
+  const magicInProgress = writable(false)
+  const showMagicBar = writable(false)
+  const magicInputValue = writable('')
 
   const bookmarkingSuccess = writableAutoReset(false, 1000)
 
@@ -644,6 +647,157 @@
     updateActiveTab({ type: 'chat', query: e.detail, title: e.detail, icon: '' })
   }
 
+  type Highlight = {
+    type: 'important' | 'statistic' | 'pro' | 'contra' | 'quote'
+    text: string
+  }
+
+  const handleMagicButton = async () => {
+    try {
+      log.debug('Magic button clicked')
+
+      magicInProgress.set(true)
+
+      const highlightTextSnippet = (text: string, type: Highlight['type']) => `
+(function() {
+    const searchText = \`${text}\`;
+
+    function highlightSentence(sentence) {
+      // save the current scroll position
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+      // Save the current selection
+      const originalSelection = window.getSelection().rangeCount > 0 ? window.getSelection().getRangeAt(0) : null;
+
+      try {
+        // Create a range spanning the entire document
+        const range = document.createRange();
+        range.selectNodeContents(document.body);
+    
+        // Move the selection point to the start of the document
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        selection.collapseToStart();
+ 
+        // disable scrolling: if any scroll is attempted, set this to the previous value
+        window.onscroll = function () {
+            window.scrollTo(scrollLeft, scrollTop);
+        };
+    
+        // Use window.find to find the sentence in the page
+        if (window.find(sentence)) {
+            // Get the range of the found sentence
+            const range = selection.getRangeAt(0);
+    
+            // Create a new mark element
+            const mark = document.createElement('mark');
+            mark.classList.add('highlight');
+            mark.classList.add('highlight-${type}');
+
+            try {
+                // Wrap the found sentence in the mark element
+                range.surroundContents(mark);
+            } catch (err) {
+                console.warn(err)
+        
+                // Create a new text node with the contents of the range
+                const textNode = document.createTextNode(range.toString());
+        
+                // Replace the range's contents with the new text node
+                range.deleteContents();
+                range.insertNode(textNode);
+        
+                // Wrap the found sentence in the mark element
+                range.surroundContents(mark);
+            }
+    
+            // Restore the original selection
+            if (originalSelection) {
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(originalSelection);
+            } else {
+                window.getSelection().removeAllRanges()
+            }
+        } else {
+            console.log(\`Sentence "\${sentence}" not found in the page.\`);
+        }
+      } catch (e) {
+        console.error('Error highlighting sentence', e)
+      } finally {
+        // re-enable scrolling
+        window.onscroll = null;
+        window.scrollTo(scrollLeft, scrollTop);
+      }
+    }
+    
+    highlightSentence(searchText);
+})();
+      `
+
+      const detectedResource = await $activeBrowserTab.detectResource()
+      log.debug('extracted resource data', detectedResource)
+
+      if (!detectedResource) {
+        log.debug('no resource detected')
+        return
+      }
+
+      const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+      log.debug('content', content)
+
+      log.debug('calling the AI')
+
+      const systemPromptFormat =
+        'Avoid highlighting entire sentences if they are long and instead highlight individual parts but make sure they still make sense. Return the full sentences or smaller sections of a sentence without changing them and a corresponding type from the following options: "important", "statistic", "pro", "contra", "quote". Respond with a JSON array of parts to highlight in the following format `{ "type": "<type>", "text": "<text>" }`. Make sure to escape any special characters in the response.'
+      const generalSystemPrompt =
+        'Take the following text which has been extracted from a web page like a article or blog post and analyse it for key takeaways, important information, statistics pro and contra arguments and other highlights that the user should know about. Try to think of the meaning behind the entire text and what information needs to be highlighted to convey that. The goal is to highlight all these important parts so the user can see them at a glance.'
+      const userSystemPrompt = `Take the following text which has been extracted from a web page like a article or blog post and analyse it with the given user query. Think through the meaning of the entire text and what information needs to be highlighted to answer or match the user's query. The goal is to highlight all these important parts so the user can see them at a glance.`
+
+      // @ts-expect-error
+      const response = await window.api.createAIChatCompletion(
+        $magicInputValue
+          ? `User Query: ${$magicInputValue}\n\nContent: ${content.plain}`
+          : content.plain,
+        ($magicInputValue ? userSystemPrompt : generalSystemPrompt) + ' ' + systemPromptFormat
+      )
+
+      log.debug('Magic response', response)
+
+      const highlights = JSON.parse(response) as Highlight[]
+
+      log.debug('highlights', highlights)
+      if (highlights.length === 0 || !highlights[0].text || !highlights[0].type) {
+        log.debug('No highlights found or invalid format')
+        return
+      }
+
+      // add mark styles to the page
+      await $activeBrowserTab.executeJavaScript(`
+        (function() {
+          const style = document.createElement('style');
+          style.innerHTML = 'mark.highlight { background-color: #ffde3e38 !important; transition: background 0.2s ease; } mark.highlight:hover { background: #ffde3e7d !important; } mark.highlight-quote { background-color: #3ec8ff21 !important; } mark.highlight-quote:hover { background: #3ec8ff6b !important; } mark.highlight-pro { background-color: #3eff3e21 !important; } mark.highlight-pro:hover { background: #3eff3e6b !important; } mark.highlight-contra { background-color: #ff3e3e21 !important; } mark.highlight-contra:hover { background: #ff3e3e6b !important; } mark.highlight-statistic { background-color: #3e4bff21 !important; } mark.highlight-statistic:hover { background: #3e4bff52 !important;';
+          document.head.appendChild(style);
+        })();
+      `)
+
+      await Promise.all(
+        highlights.map(async (highlight) => {
+          const html = await $activeBrowserTab.executeJavaScript(
+            highlightTextSnippet(highlight.text, highlight.type)
+          )
+          log.debug('HTML', html)
+        })
+      )
+
+      log.debug('Magic done')
+    } catch (e) {
+      log.error('Error doing magic', e)
+    } finally {
+      magicInProgress.set(false)
+    }
+  }
+
   onMount(async () => {
     const horizonId = await horizonManager.init()
     log.debug('initialized', horizonId)
@@ -892,7 +1046,7 @@
     {#if $activeBrowserTab}
       <div
         class="bar-wrapper"
-        class:hide={!$showURLBar}
+        class:hide={!$showURLBar && !$showMagicBar && !$magicInProgress}
         aria-label="Collapse URL bar"
         on:mouseleave={() => ($showURLBar = false)}
         on:keydown={(e) => e.key === 'Enter' && showURLBar.set(!showURLBar)}
@@ -900,92 +1054,178 @@
         role="button"
       >
         <div class="test-wrapper">
-          <div class="search">
-            <input
-              bind:this={addressInputElem}
-              disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
-              bind:value={$addressValue}
-              on:blur={handleBlur}
-              on:focus={handleFocus}
-              type="text"
-              placeholder={$activeTab?.type === 'page'
-                ? 'Search or Enter URL'
-                : $activeTab?.type === 'chat'
-                  ? 'Chat Title'
-                  : 'Empty Tab'}
-            />
-
-            <div class="actions nav-buttons">
-              <button
-                class="nav-button"
-                disabled={!canGoBack}
-                on:click={$activeBrowserTab?.goBack}
-                use:tooltip={{
-                  content: 'Go Back',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <Icon name="arrow.left" />
-              </button>
-              <button
-                class="nav-button"
-                disabled={!canGoForward}
-                on:click={$activeBrowserTab?.goForward}
-                use:tooltip={{
-                  content: 'Go Forward',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <Icon name="arrow.right" />
-              </button>
-              <button
-                class="nav-button"
-                on:click={$activeBrowserTab?.reload}
-                use:tooltip={{
-                  content: 'Reload Page (⌘ + R)',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <Icon name="reload" />
-              </button>
+          {#if $showMagicBar}
+            <div class="search">
+              <input
+                bind:this={addressInputElem}
+                disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
+                bind:value={$magicInputValue}
+                on:blur={handleBlur}
+                on:focus={handleFocus}
+                type="text"
+                placeholder="What do you want to know?"
+              />
             </div>
-          </div>
 
-          {#if $activeTab?.type === 'page'}
-            {#key $activeTab.resourceBookmark}
+            {#if $magicInProgress}
               <button
-                on:click={handleBookmark}
                 style="z-index: 100000;"
                 use:tooltip={{
-                  content: $activeTab?.resourceBookmark
-                    ? 'Open bookmark (⌘ + D)'
-                    : 'Bookmark this page (⌘ + D)',
+                  content: 'Analysing Page…',
                   action: 'hover',
                   position: 'right',
                   animation: 'fade',
                   delay: 500
                 }}
               >
-                {#if $bookmarkingInProgress}
-                  <Icon name="spinner" />
-                {:else if $bookmarkingSuccess}
-                  <Icon name="check" />
-                {:else if $activeTab?.resourceBookmark}
-                  <Icon name="bookmarkFilled" />
-                {:else}
-                  <Icon name="bookmark" />
-                {/if}
+                <Icon name="spinner" />
               </button>
-            {/key}
+            {:else}
+              <button
+                on:click={handleMagicButton}
+                style="z-index: 100000;"
+                use:tooltip={{
+                  content: 'Analyse Page',
+                  action: 'hover',
+                  position: 'right',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                <Icon name="sparkles" />
+              </button>
+            {/if}
+          {:else}
+            <div class="search">
+              <input
+                bind:this={addressInputElem}
+                disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
+                bind:value={$addressValue}
+                on:blur={handleBlur}
+                on:focus={handleFocus}
+                type="text"
+                placeholder={$activeTab?.type === 'page'
+                  ? 'Search or Enter URL'
+                  : $activeTab?.type === 'chat'
+                    ? 'Chat Title'
+                    : 'Empty Tab'}
+              />
+
+              <div class="actions nav-buttons">
+                <button
+                  class="nav-button"
+                  disabled={!canGoBack}
+                  on:click={$activeBrowserTab?.goBack}
+                  use:tooltip={{
+                    content: 'Go Back',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  <Icon name="arrow.left" />
+                </button>
+                <button
+                  class="nav-button"
+                  disabled={!canGoForward}
+                  on:click={$activeBrowserTab?.goForward}
+                  use:tooltip={{
+                    content: 'Go Forward',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  <Icon name="arrow.right" />
+                </button>
+                <button
+                  class="nav-button"
+                  on:click={$activeBrowserTab?.reload}
+                  use:tooltip={{
+                    content: 'Reload Page (⌘ + R)',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  <Icon name="reload" />
+                </button>
+              </div>
+            </div>
+
+            {#if $activeTab?.type === 'page'}
+              {#key $activeTab.resourceBookmark}
+                <button
+                  on:click={handleBookmark}
+                  style="z-index: 100000;"
+                  use:tooltip={{
+                    content: $activeTab?.resourceBookmark
+                      ? 'Open bookmark (⌘ + D)'
+                      : 'Bookmark this page (⌘ + D)',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  {#if $bookmarkingInProgress}
+                    <Icon name="spinner" />
+                  {:else if $bookmarkingSuccess}
+                    <Icon name="check" />
+                  {:else if $activeTab?.resourceBookmark}
+                    <Icon name="bookmarkFilled" />
+                  {:else}
+                    <Icon name="bookmark" />
+                  {/if}
+                </button>
+              {/key}
+            {/if}
+
+            {#if $magicInProgress}
+              <button
+                style="z-index: 100000;"
+                use:tooltip={{
+                  content: 'Analysing Page…',
+                  action: 'hover',
+                  position: 'bottom',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                <Icon name="spinner" />
+              </button>
+            {:else}
+              <button
+                on:click={handleMagicButton}
+                style="z-index: 100000;"
+                use:tooltip={{
+                  content: 'Highlight Page',
+                  action: 'hover',
+                  position: 'bottom',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                <Icon name="file-text-ai" />
+              </button>
+            {/if}
+
+            <button
+              on:click={() => showMagicBar.set(true)}
+              style="z-index: 100000;"
+              use:tooltip={{
+                content: 'Ask Page',
+                action: 'hover',
+                position: 'bottom',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              <Icon name="sparkles" />
+            </button>
           {/if}
         </div>
       </div>
@@ -1004,7 +1244,12 @@
     {/if}
 
     {#each $activeTabs as tab (tab.id)}
-      <div class="browser-window" style="--scaling: 1;" class:active={$activeTabId === tab.id}>
+      <div
+        class="browser-window"
+        style="--scaling: 1;"
+        class:active={$activeTabId === tab.id}
+        class:magic-glow-big={$activeTabId === tab.id && $magicInProgress}
+      >
         {#if tab.type === 'page'}
           <BrowserTab
             bind:this={$browserTabs[tab.id]}
@@ -1133,7 +1378,6 @@
     height: 100%;
     width: 100%;
     border-radius: 0.5rem;
-    overflow: hidden;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     position: absolute;
     top: 0;
@@ -1144,6 +1388,13 @@
       position: relative;
       opacity: 100%;
     }
+
+    :global(webview) {
+      height: 100%;
+      width: 100%;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
   }
 
   .test-wrapper {
@@ -1153,7 +1404,7 @@
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
     padding: 0.75rem;
-    width: 400px;
+    width: 500px;
     background: rgba(255, 255, 255, 0.9);
     display: flex;
     align-items: center;
