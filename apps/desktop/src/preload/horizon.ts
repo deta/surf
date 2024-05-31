@@ -133,7 +133,11 @@ const api = {
     }
   },
 
-  createAIChatCompletion: async (userPrompt: string, systemPrompt?: string) => {
+  createAIChatCompletion: async (
+    userPrompt: string,
+    systemPrompt?: string,
+    opts: OpenAI.RequestOptions<unknown> = {}
+  ) => {
     if (!openai) {
       return null
     }
@@ -148,7 +152,8 @@ const api = {
 
     const chatCompletion = await openai.chat.completions.create({
       messages: messages,
-      model: 'gpt-4o'
+      model: 'gpt-4o',
+      ...opts
     })
 
     return chatCompletion.choices[0].message.content
