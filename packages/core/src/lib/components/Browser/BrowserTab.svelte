@@ -158,5 +158,5 @@
   on:newWindowWebview={handleWebviewNewWindow}
   on:navigation
   on:bookmark
-  on:summarize
+  on:transform
 />

@@ -694,13 +694,22 @@
     }
   }
 
-  async function handleWebviewSummarize(e: CustomEvent<WebViewWrapperEvents['summarize']>) {
-    const text = e.detail.text
-    log.debug('webview summarize', text)
+  async function handleWebviewTransform(e: CustomEvent<WebViewWrapperEvents['transform']>) {
+    const { text, query, type } = e.detail
+    log.debug('webview transformation', e.detail)
 
-    const summary = await summarizeText(text, 'Be as concise as possible.')
+    let transformation = ''
+    if (type === 'summarize') {
+      transformation = await summarizeText(text, 'Be as concise as possible.')
+    } else {
+      // @ts-expect-error
+      transformation = await window.api.createAIChatCompletion(
+        `User instruction: "${query}"\n\nOriginal text:\n${text}`,
+        `Take the following text which has been extracted from a web page like a article or blog post and transform it based on the given user instruction or answer the user's question if it is one. Stick to the instruction as close as possible and generally try to be concise but keep true to the meaning. Only respond with the transformed text or your answer and make sure to escape any special characters in the response.`
+      )
+    }
 
-    log.debug('summary', summary)
+    log.debug('transformation output', transformation)
 
     // add mark styles to the page
     await $activeBrowserTab.executeJavaScript(`
@@ -713,7 +722,7 @@
           }
         } catch (err) {}
         const style = document.createElement('style');
-        style.innerHTML = 'mark.highlight-summary { background-color: #ff47be24 !important; transition: background 0.2s ease; } mark.highlight-summary:hover { background: #ff47be80 !important; }';
+        style.innerHTML = 'mark.highlight-transformation { background-color: #ff47be24 !important; transition: background 0.2s ease; } mark.highlight-transformation:hover { background: #ff47be80 !important; }';
         document.head.appendChild(style);
       })();
     `)
@@ -721,7 +730,7 @@
     const code = `
 (function() {
     const searchText = \`${text}\`;
-    const summary = \`${summary}\`;
+    const transformation = \`${transformation}\`;
 
     function highlightSentence(sentence) {
       // save the current scroll position
@@ -741,10 +750,10 @@
 
         // Create a new mark element
         const mark = document.createElement('mark');
-        mark.classList.add('highlight-summary');
+        mark.classList.add('highlight-transformation');
 
         // Create a new text node with the contents of the range
-        const textNode = document.createTextNode(summary);
+        const textNode = document.createTextNode(transformation);
 
         // Replace the range's contents with the new text node
         range.deleteContents();
@@ -1447,7 +1456,7 @@
             on:newTab={handleNewTab}
             on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
             on:bookmark={handleWebviewBookmark}
-            on:summarize={handleWebviewSummarize}
+            on:transform={handleWebviewTransform}
           />
         {:else if tab.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
@@ -1494,7 +1503,7 @@
             on:newTab={handleNewTab}
             on:navigation={(e) => handleWebviewTabNavigation(e, $activeTab)}
             on:bookmark={handleWebviewBookmark}
-            on:summarize={handleWebviewSummarize}
+            on:transform={handleWebviewTransform}
           />
         {:else if $activeTab?.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === $activeTab?.horizonId)}
