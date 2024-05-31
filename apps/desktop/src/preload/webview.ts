@@ -146,6 +146,19 @@ window.addEventListener('DOMContentLoaded', async (_) => {
         sendPageEvent('summarize', { text })
       })
 
+      menu.$on('transform', (e) => {
+        const { query, type } = e.detail
+        console.log('transforming', type, query, text)
+
+        // re apply selection if it was removed accidentally
+        if (selection && selectionRange) {
+          selection.removeAllRanges()
+          selection.addRange(selectionRange)
+        }
+
+        sendPageEvent('transform', { text, query, type })
+      })
+
       document.body.appendChild(div)
 
       // Animate in on appear
@@ -206,8 +219,12 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
   // When a text is selected and the user starts typing again, disable the handle again
   window.addEventListener('keydown', (e: KeyboardEvent) => {
+    const div = document.getElementById('horizonTextDragHandle')
+
+    // Ignore typing in the drag handle
+    if (e.target === div || div?.contains(e.target as Node)) return
+
     if (e.key.length === 1) {
-      const div = document.getElementById('horizonTextDragHandle')
       div?.parentNode?.removeChild(div)
     }
   })

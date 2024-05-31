@@ -1,13 +1,14 @@
 .webview-menu-wrapper {
     display: flex;
     align-items: stretch;
-    gap: 0.5rem;
+    gap: 8px;
     background: #fff;
-    padding: 0.25rem;
+    padding: 4px;
     border-radius: 12px;
-    box-shadow: 0 0 1rem rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 16px rgba(0, 0, 0, 0.2);
     border: 1px solid #f0f0f0;
     user-select: none;
+    font-size: 15px;
 }
 
 .webview-menu-divider {
@@ -18,18 +19,18 @@
 .webview-menu-wrapper button {
     pointer-events: auto;
     appearance: none;
-    padding: 0.5rem;
+    padding: 8px;
     border: none;
-    border-radius: 0.5rem;
+    border-radius: 8px;
     cursor: pointer;
     background: none;
     color: #333;
-    font-size: 0.9rem;
+    font-size: 17px;
     font-weight: 500;
     transition: background-color 0.2s;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 8px;
 }
 
 .webview-menu-wrapper button:hover {
@@ -48,7 +49,29 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 0.5rem;
+    margin-right: 8px;
     cursor: grab;
     pointer-events: auto;
+}
+
+.webview-menu-wrapper form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.webview-menu-wrapper input {
+    padding: 8px;
+    border: 1px solid #f0f0f0;
+    background: #ebebeb;
+    border-radius: 8px;
+    font-size: 16px;
+    width: 100%;
+    pointer-events: auto;
+    min-width: 350px;
+}
+
+.webview-menu-wrapper input:focus {
+    outline: none;
+    border-color: #fd1bdf;
 }

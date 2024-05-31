@@ -20,7 +20,7 @@
     actionOutput: { id: string; output: DetectedResource }
     navigation: string
     bookmark: { text?: string; url: string }
-    summarize: { text: string }
+    transform: { text: string; query?: string; type: 'summarize' | 'custom' }
   }
 </script>
 
@@ -184,8 +184,8 @@
         case 'bookmark':
           dispatch('bookmark', eventData)
           break
-        case 'summarize':
-          dispatch('summarize', eventData)
+        case 'transform':
+          dispatch('transform', eventData)
           break
         // case 'detected-resource':
         //   dispatch('detectedResource', eventData?.resource)

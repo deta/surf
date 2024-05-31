@@ -1,17 +1,20 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import './menu.css'
 
   export let text = ''
 
   let elem: HTMLDivElement
+  let inputElem: HTMLInputElement
   let summarizing = false
   let showBookmarkingSuccess = false
+  let showInput = false
+  let inputValue = ''
 
   const dispatch = createEventDispatcher<{
     bookmark: void
-    summarize: void
+    transform: { query?: string; type: string }
     copy: void
     highlight: void
     comment: void
@@ -32,7 +35,7 @@
 
   const handleSummarize = () => {
     summarizing = true
-    dispatch('summarize')
+    dispatch('transform', { query: inputValue, type: 'custom' })
   }
 
   const handleBookmark = () => {
@@ -43,51 +46,69 @@
       showBookmarkingSuccess = false
     }, 2000)
   }
+
+  const handleAskAI = async () => {
+    showInput = true
+    await tick()
+    inputElem.focus()
+  }
 </script>
 
 <div bind:this={elem} class="webview-menu-wrapper">
-  <button
-    on:click|stopPropagation|preventDefault={handleSummarize}
-    class="webview-menu-btn-primary"
-  >
-    {#if summarizing}
-      <Icon name="spinner" /> Summarizing…
-    {:else}
-      <Icon name="sparkles" /> Summarize
-    {/if}
-  </button>
+  {#if showInput}
+    <form on:submit|stopPropagation|preventDefault={handleSummarize}>
+      <input
+        bind:this={inputElem}
+        bind:value={inputValue}
+        type="text"
+        placeholder="What do you want to do?"
+      />
 
-  <div class="webview-menu-divider"></div>
+      <button type="submit" disabled={summarizing} class="webview-menu-btn-primary">
+        {#if summarizing}
+          <Icon name="spinner" />
+        {:else}
+          <Icon name="sparkles" />
+        {/if}
+      </button>
+    </form>
+  {:else}
+    <button on:click|stopPropagation|preventDefault={handleAskAI} class="webview-menu-btn-primary">
+      <Icon name="sparkles" /> Ask AI
+    </button>
 
-  <button on:click|stopPropagation|preventDefault={handleBookmark}>
-    {#if showBookmarkingSuccess}
-      <Icon name="check" />
-    {:else}
-      <Icon name="quote" />
-    {/if}
-  </button>
+    <div class="webview-menu-divider"></div>
 
-  <button>
-    <Icon name="marker" />
-  </button>
+    <button on:click|stopPropagation|preventDefault={handleBookmark}>
+      {#if showBookmarkingSuccess}
+        <Icon name="check" />
+      {:else}
+        <Icon name="quote" />
+      {/if}
+    </button>
 
-  <button>
-    <Icon name="message" />
-  </button>
+    <button>
+      <Icon name="marker" />
+    </button>
 
-  <button>
-    <Icon name="link" />
-  </button>
+    <button>
+      <Icon name="message" />
+    </button>
 
-  <!-- <button on:click|stopPropagation|preventDefault={() => dispatch('copy')}>
-        <Icon name="copy" />
-    </button> -->
+    <button>
+      <Icon name="link" />
+    </button>
 
-  <div class="webview-menu-divider"></div>
+    <!-- <button on:click|stopPropagation|preventDefault={() => dispatch('copy')}>
+                <Icon name="copy" />
+            </button> -->
 
-  <!-- svelte-ignore a11y-unknown-role -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div draggable="true" on:dragstart={handleDragStart} class="webview-menu-drag">
-    <Icon name="grip.vertical" />
-  </div>
+    <div class="webview-menu-divider"></div>
+
+    <!-- svelte-ignore a11y-unknown-role -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div draggable="true" on:dragstart={handleDragStart} class="webview-menu-drag">
+      <Icon name="grip.vertical" />
+    </div>
+  {/if}
 </div>
