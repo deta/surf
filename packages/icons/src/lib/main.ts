@@ -50,6 +50,9 @@ import Reload from './Icons/Reload.svelte'
 import Trash from './Icons/Trash.svelte'
 import Grid from './Icons/Grid.svelte'
 import FileTextAi from './Icons/FileTextAI.svelte'
+import Message from './Icons/Message.svelte'
+import GripVertical from './Icons/GripVertical.svelte'
+import Marker from './Icons/Marker.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -104,7 +107,10 @@ export const icons = {
   reload: Reload,
   trash: Trash,
   grid: Grid,
-  'file-text-ai': FileTextAi
+  'file-text-ai': FileTextAi,
+  message: Message,
+  'grip.vertical': GripVertical,
+  marker: Marker
 }
 
 export type Icons = keyof typeof icons
@@ -159,5 +165,8 @@ export {
   Reload,
   Trash,
   Grid,
-  FileTextAi
+  FileTextAi,
+  Message,
+  GripVertical,
+  Marker
 }

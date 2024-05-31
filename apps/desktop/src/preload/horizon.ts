@@ -142,7 +142,7 @@ const api = {
 
     const chatCompletion = await openai.chat.completions.create({
       messages: messages,
-      model: 'gpt-4'
+      model: 'gpt-4o'
     })
 
     return chatCompletion.choices[0].message.content

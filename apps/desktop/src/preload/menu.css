@@ -1,0 +1,54 @@
+.webview-menu-wrapper {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+    background: #fff;
+    padding: 0.25rem;
+    border-radius: 12px;
+    box-shadow: 0 0 1rem rgba(0, 0, 0, 0.2);
+    border: 1px solid #f0f0f0;
+    user-select: none;
+}
+
+.webview-menu-divider {
+    width: 1px;
+    background: #f0f0f0;
+}
+
+.webview-menu-wrapper button {
+    pointer-events: auto;
+    appearance: none;
+    padding: 0.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    background: none;
+    color: #333;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.webview-menu-wrapper button:hover {
+    background: #f0f0f0;
+}
+
+.webview-menu-wrapper button:active {
+    background: #e0e0e0;
+}
+
+.webview-menu-btn-primary {
+    color: #fd1bdf !important;
+}
+
+.webview-menu-drag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.5rem;
+    cursor: grab;
+    pointer-events: auto;
+}

@@ -19,6 +19,8 @@
     detectedResource: DetectedResource
     actionOutput: { id: string; output: DetectedResource }
     navigation: string
+    bookmark: { text?: string; url: string }
+    summarize: { text: string }
   }
 </script>
 
@@ -34,6 +36,7 @@
     DetectedWebApp,
     WebServiceActionInputs
   } from '@horizon/web-parser'
+  import { summarizeText } from '../../../service/ai'
 
   const dispatch = createEventDispatcher<WebViewWrapperEvents>()
   const log = useLogScope('WebviewWrapper')
@@ -177,6 +180,12 @@
         case 'insert-text':
           log.debug('Inserting text into webview', eventData)
           webview.insertText(eventData)
+          break
+        case 'bookmark':
+          dispatch('bookmark', eventData)
+          break
+        case 'summarize':
+          dispatch('summarize', eventData)
           break
         // case 'detected-resource':
         //   dispatch('detectedResource', eventData?.resource)

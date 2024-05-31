@@ -2,7 +2,7 @@
   import { onMount, tick } from 'svelte'
   import SplashScreen from '../SplashScreen.svelte'
   import { writable, derived } from 'svelte/store'
-  import WebviewWrapper from '../Cards/Browser/WebviewWrapper.svelte'
+  import WebviewWrapper, { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
   import { HistoryEntriesManager } from '../../service/history'
   import { useLogScope } from '../../utils/log'
   import { Icon } from '@horizon/icons'
@@ -27,12 +27,13 @@
   import type { Drawer } from '@horizon/drawer'
   import Chat from './Chat.svelte'
   import { HorizonDatabase } from '../../service/storage'
-  import type { Optional } from '../../types'
+  import { ResourceTypes, type Optional } from '../../types'
   import { useLocalStorageStore } from '../../utils/localstorage'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
   import { LinkImporter, WebParser } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
+  import { summarizeText } from '../../service/ai'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -647,6 +648,116 @@
     updateActiveTab({ type: 'chat', query: e.detail, title: e.detail, icon: '' })
   }
 
+  async function handleWebviewBookmark(e: CustomEvent<WebViewWrapperEvents['bookmark']>) {
+    log.debug('webview bookmark', e.detail)
+
+    if ($activeTab?.type !== 'page') return
+
+    if (!$activeTab.resourceBookmark) {
+      const resource = await resourceManager.createResourceLink(
+        new Blob([JSON.stringify({ url: e.detail.url })], { type: ResourceTypes.LINK }),
+        { name: $activeTab?.title ?? '', sourceURI: e.detail.url, alt: '' }
+      )
+
+      log.debug('created resource', resource)
+
+      if ($activeTab?.type === 'page') {
+        updateActiveTab({ resourceBookmark: resource.id })
+      }
+    }
+
+    if (e.detail.text) {
+      log.debug('creating note for bookmark', e.detail.text)
+      const resource = await resourceManager.createResourceNote(e.detail.text, {
+        name: $activeTab?.title ?? '',
+        sourceURI: e.detail.url,
+        alt: ''
+      })
+      log.debug('created resource', resource)
+    }
+  }
+
+  async function handleWebviewSummarize(e: CustomEvent<WebViewWrapperEvents['summarize']>) {
+    const text = e.detail.text
+    log.debug('webview summarize', text)
+
+    const summary = await summarizeText(text, 'Be as concise as possible.')
+
+    log.debug('summary', summary)
+
+    // add mark styles to the page
+    await $activeBrowserTab.executeJavaScript(`
+      (function() {
+        try {
+          if (window.trustedTypes && window.trustedTypes.createPolicy) {
+            window.trustedTypes.createPolicy('default', {
+              createHTML: (string, sink) => string
+            });
+          }
+        } catch (err) {}
+        const style = document.createElement('style');
+        style.innerHTML = 'mark.highlight-summary { background-color: #ff47be24 !important; transition: background 0.2s ease; } mark.highlight-summary:hover { background: #ff47be80 !important; }';
+        document.head.appendChild(style);
+      })();
+    `)
+
+    const code = `
+(function() {
+    const searchText = \`${text}\`;
+    const summary = \`${summary}\`;
+
+    function highlightSentence(sentence) {
+      // save the current scroll position
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+      try {
+        // disable scrolling: if any scroll is attempted, set this to the previous value
+        window.onscroll = function () {
+            window.scrollTo(scrollLeft, scrollTop);
+        };
+    
+        // Use window.find to find the sentence in the page
+        const selection = window.getSelection();
+        // Get the range of the found sentence
+        const range = selection.getRangeAt(0);
+
+        // Create a new mark element
+        const mark = document.createElement('mark');
+        mark.classList.add('highlight-summary');
+
+        // Create a new text node with the contents of the range
+        const textNode = document.createTextNode(summary);
+
+        // Replace the range's contents with the new text node
+        range.deleteContents();
+        range.insertNode(textNode);
+
+        // Wrap the found sentence in the mark element
+        range.surroundContents(mark);
+
+        window.getSelection().removeAllRanges()
+        const div = document.getElementById('horizonTextDragHandle')
+        if (div) {
+          div.parentNode.removeChild(div)
+        }
+      } catch (e) {
+        console.error('Error highlighting sentence', e)
+      } finally {
+        // re-enable scrolling
+        window.onscroll = null;
+        window.scrollTo(scrollLeft, scrollTop);
+      }
+    }
+    
+    highlightSentence(searchText);
+})();
+      `
+
+    log.debug('executing code')
+    await $activeBrowserTab.executeJavaScript(code)
+  }
+
   type Highlight = {
     type: 'important' | 'statistic' | 'pro' | 'contra' | 'quote'
     text: string
@@ -1258,6 +1369,8 @@
             {historyEntriesManager}
             on:newTab={handleNewTab}
             on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
+            on:bookmark={handleWebviewBookmark}
+            on:summarize={handleWebviewSummarize}
           />
         {:else if tab.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
@@ -1303,6 +1416,8 @@
             {historyEntriesManager}
             on:newTab={handleNewTab}
             on:navigation={(e) => handleWebviewTabNavigation(e, $activeTab)}
+            on:bookmark={handleWebviewBookmark}
+            on:summarize={handleWebviewSummarize}
           />
         {:else if $activeTab?.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === $activeTab?.horizonId)}
