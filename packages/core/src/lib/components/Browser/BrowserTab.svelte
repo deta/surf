@@ -54,6 +54,12 @@
     }
   }
 
+  export const executeJavaScript = (code: string, userGesture?: boolean) => {
+    if (webview) {
+      return webview.executeJavaScript(code, userGesture)
+    }
+  }
+
   export const canGoBack = webview?.canGoBack
   export const canGoForward = webview?.canGoForward
 
@@ -151,4 +157,6 @@
   {historyEntriesManager}
   on:newWindowWebview={handleWebviewNewWindow}
   on:navigation
+  on:bookmark
+  on:summarize
 />

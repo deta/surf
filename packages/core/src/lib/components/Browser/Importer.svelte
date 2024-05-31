@@ -207,21 +207,10 @@
     } else if ($tab === 'twitter') {
       const appImporter = new TwitterImporter()
       batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZES.twitter)
-
       await appImporter.init()
     } else if ($tab === 'youtube') {
       const appImporter = new YoutubePlaylistImporter(youtubePlaylistUrl)
       batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZES.youtube)
-
-      await appImporter.init()
-    } else if ($tab === 'youtube') {
-      const appImporter = new YoutubePlaylistImporter(youtubePlaylistUrl)
-      batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
-
-      await appImporter.init()
-    } else if ($tab === 'youtube') {
-      const appImporter = new YoutubePlaylistImporter(youtubePlaylistUrl)
-      batchFetcher = appImporter.getBatchFetcher(FETCH_BATCH_SIZE)
 
       await appImporter.init()
     }

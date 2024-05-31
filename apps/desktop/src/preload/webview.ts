@@ -6,6 +6,7 @@ import {
   WebAppExtractorActions,
   WebServiceActionInputs
 } from '@horizon/web-parser'
+import Menu from './Menu.svelte'
 
 let mouseDownX = 0
 let previouslySelectedText: string | undefined = ''
@@ -85,54 +86,65 @@ window.addEventListener('DOMContentLoaded', async (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
     const selection = window.getSelection()
     const text = selection?.toString().trim()
-    const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor ?? 'white'
+    // const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor ?? 'white'
 
-    const mouseUpX = e.clientX
-    const direction = mouseUpX > mouseDownX ? 'left-to-right' : 'right-to-left'
-    const movement = Math.abs(mouseUpX - mouseDownX)
+    const selectionRange = selection?.getRangeAt(0)
+    const selectionRect = selectionRange?.getBoundingClientRect()
+    // const elementSelector = selectionRange?.commonAncestorContainer.parentElement
 
-    let offset
-    if (movement < 10) {
-      offset = 10
-    } else {
-      offset = direction === 'left-to-right' ? 10 : -35
-    }
-
-    // check if text is available and if the selection has changed
-    if (text && text != previouslySelectedText) {
+    if (selectionRect && text && text != previouslySelectedText) {
       const oldDiv = document.getElementById('horizonTextDragHandle')
       oldDiv?.parentNode?.removeChild(oldDiv)
 
       const div = document.createElement('div')
       div.id = 'horizonTextDragHandle'
-      div.style.display = 'flex'
-      div.style.alignItems = 'center'
-      div.style.justifyContent = 'center'
-      div.style.width = '30px'
-      div.style.height = '30px'
-      div.style.cursor = 'grab'
-      div.style.borderRadius = '50%'
-      div.style.padding = '2px 0 0 2px'
-      div.style.borderRadius = '3px'
-      div.style.background = 'color-mix(in srgb, #F73B95 95%, ' + bodyBackgroundColor + ')'
-      div.style.boxShadow =
-        '0px 1px 3px 0px rgba(0, 0, 0, 0.15), 0px 0px 0.5px 0px rgba(0, 0, 0, 0.30)'
+      // div.style.display = 'flex'
+      // div.style.alignItems = 'center'
+      // div.style.justifyContent = 'center'
+      // div.style.width = '30px'
+      // div.style.height = '30px'
+      // div.style.cursor = 'grab'
+      // div.style.borderRadius = '50%'
+      // div.style.padding = '2px 0 0 2px'
+      // div.style.borderRadius = '3px'
+      // div.style.background = 'color-mix(in srgb, #F73B95 95%, ' + bodyBackgroundColor + ')'
+      // div.style.boxShadow =
+      //   '0px 1px 3px 0px rgba(0, 0, 0, 0.15), 0px 0px 0.5px 0px rgba(0, 0, 0, 0.30)'
       div.style.position = 'absolute'
       div.style.zIndex = '100000'
-      div.style.left = `${e.clientX + window.scrollX + offset}px`
-      div.style.top = `${e.clientY + window.scrollY - 15}px`
+      div.style.left = `${selectionRect.left + window.scrollX}px`
+      div.style.top = `${selectionRect.top + window.scrollY}px`
+      div.style.transform = 'translateY(-60px)'
       div.style.opacity = '0' // Set initial opacity to 0
       div.style.transition = 'opacity 0.2s ease' // Add transition for opacity
-      div.draggable = true
+      div.style.pointerEvents = 'none'
+      // div.draggable = true
 
-      div.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 7 7" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none;">
-          <circle cx="3.125" cy="0.625" r="0.625" fill="white"/>
-          <circle cx="0.625" cy="3.125" r="0.625" fill="white"/>
-          <circle cx="3.125" cy="3.125" r="0.625" fill="white"/>
-          <circle cx="5.625" cy="3.125" r="0.625" fill="white"/>
-          <circle cx="3.125" cy="5.625" r="0.625" fill="white"/>
-        </svg>`
+      // div.innerHTML = `
+      //   <svg width="16" height="16" viewBox="0 0 7 7" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none;">
+      //     <circle cx="3.125" cy="0.625" r="0.625" fill="white"/>
+      //     <circle cx="0.625" cy="3.125" r="0.625" fill="white"/>
+      //     <circle cx="3.125" cy="3.125" r="0.625" fill="white"/>
+      //     <circle cx="5.625" cy="3.125" r="0.625" fill="white"/>
+      //     <circle cx="3.125" cy="5.625" r="0.625" fill="white"/>
+      //   </svg>`
+
+      const menu = new Menu({
+        target: div,
+        props: {
+          text: text
+        }
+      })
+
+      menu.$on('bookmark', () => {
+        console.log('Bookmarking', text)
+        sendPageEvent('bookmark', { text, url: window.location.href })
+      })
+
+      menu.$on('summarize', () => {
+        console.log('Summarizing', text)
+        sendPageEvent('summarize', { text })
+      })
 
       document.body.appendChild(div)
 
@@ -145,45 +157,45 @@ window.addEventListener('DOMContentLoaded', async (_) => {
       }, 120)
 
       // Create and style tooltip
-      const tooltip = document.createElement('div')
-      tooltip.innerText = 'Drag me out!' // Tooltip text
-      tooltip.style.position = 'absolute'
-      tooltip.style.padding = '5px'
-      tooltip.style.display = 'flex'
-      tooltip.style.alignItems = 'center'
-      tooltip.style.justifyContent = 'center'
-      tooltip.style.background = 'black'
-      tooltip.style.color = 'white'
-      tooltip.style.borderRadius = '4px'
-      tooltip.style.fontSize = '0.75rem'
-      tooltip.style.visibility = 'hidden' // Initially hidden
-      tooltip.style.whiteSpace = 'nowrap' // Keep text in one line
-      tooltip.id = 'horizonTextTooltip'
+      // const tooltip = document.createElement('div')
+      // tooltip.innerText = 'Drag me out!' // Tooltip text
+      // tooltip.style.position = 'absolute'
+      // tooltip.style.padding = '5px'
+      // tooltip.style.display = 'flex'
+      // tooltip.style.alignItems = 'center'
+      // tooltip.style.justifyContent = 'center'
+      // tooltip.style.background = 'black'
+      // tooltip.style.color = 'white'
+      // tooltip.style.borderRadius = '4px'
+      // tooltip.style.fontSize = '0.75rem'
+      // tooltip.style.visibility = 'hidden' // Initially hidden
+      // tooltip.style.whiteSpace = 'nowrap' // Keep text in one line
+      // tooltip.id = 'horizonTextTooltip'
 
-      div.appendChild(tooltip)
+      // div.appendChild(tooltip)
 
       // Show tooltip on hover and position it dynamically
-      div.addEventListener('mouseover', () => {
-        tooltip.style.visibility = 'visible'
+      // div.addEventListener('mouseover', () => {
+      //   tooltip.style.visibility = 'visible'
 
-        // Calculate width of the tooltip after it renders
-        const tooltipWidth = tooltip.offsetWidth
+      //   // Calculate width of the tooltip after it renders
+      //   const tooltipWidth = tooltip.offsetWidth
 
-        // Center tooltip below the drag handle
-        tooltip.style.left = `calc(50% - ${tooltipWidth / 2}px)`
-        tooltip.style.bottom = '-2rem'
-      })
+      //   // Center tooltip below the drag handle
+      //   tooltip.style.left = `calc(50% - ${tooltipWidth / 2}px)`
+      //   tooltip.style.bottom = '-2rem'
+      // })
 
       // Hide tooltip when not hovering
-      div.addEventListener('mouseout', () => {
-        tooltip.style.visibility = 'hidden'
-      })
+      // div.addEventListener('mouseout', () => {
+      //   tooltip.style.visibility = 'hidden'
+      // })
 
-      div.addEventListener('dragstart', (event: DragEvent) => {
-        event.stopPropagation()
-        event.dataTransfer?.setData('text/plain', text)
-        event.dataTransfer?.setData('text/space-source', window.location.href)
-      })
+      // div.addEventListener('dragstart', (event: DragEvent) => {
+      //   event.stopPropagation()
+      //   event.dataTransfer?.setData('text/plain', text)
+      //   event.dataTransfer?.setData('text/space-source', window.location.href)
+      // })
 
       // reset previously selected text after delay, so the user can actually select the same text again.
       previouslySelectedText = ''
@@ -193,9 +205,11 @@ window.addEventListener('DOMContentLoaded', async (_) => {
   })
 
   // When a text is selected and the user starts typing again, disable the handle again
-  window.addEventListener('keydown', () => {
-    const div = document.getElementById('horizonTextDragHandle')
-    div?.parentNode?.removeChild(div)
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key.length === 1) {
+      const div = document.getElementById('horizonTextDragHandle')
+      div?.parentNode?.removeChild(div)
+    }
   })
 
   window.addEventListener('mousedown', (e: MouseEvent) => {
@@ -203,7 +217,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
     // ...existing mousedown functionality
     const div = document.getElementById('horizonTextDragHandle')
-    if (div && e.target !== div) {
+    if (div && e.target !== div && !div.contains(e.target as Node)) {
       div.parentNode?.removeChild(div)
     }
   })
