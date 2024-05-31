@@ -34,6 +34,7 @@
   import { LinkImporter, WebParser } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
   import { summarizeText } from '../../service/ai'
+  import { clickOutside } from '../../utils/directives'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -77,6 +78,8 @@
   const magicInProgress = writable(false)
   const showMagicBar = writable(false)
   const magicInputValue = writable('')
+  const magicOutput = writable('')
+  const pageHighlighted = writable(false)
 
   const bookmarkingSuccess = writableAutoReset(false, 1000)
 
@@ -426,8 +429,12 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     log.debug('key down', e.key)
     if (e.key === 'Enter' && addressBarFocus) {
-      handleBlur()
-      addressInputElem.blur()
+      if ($showMagicBar) {
+        handleMagicButton()
+      } else {
+        handleBlur()
+        addressInputElem.blur()
+      }
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
       copyToClipboard($activeTabLocation ?? '')
     } else if (isModKeyPressed(e) && e.key === 't') {
@@ -450,6 +457,16 @@
       createImporterTab()
     } else if (isModKeyAndKeyPressed(e, 'b')) {
       $activeBrowserTab?.openDevTools()
+    }
+  }
+
+  const handleAddressBarKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if ($showMagicBar) {
+        handleMagicButton()
+      } else {
+        showURLBar.set(!showURLBar)
+      }
     }
   }
 
@@ -854,13 +871,30 @@
         return
       }
 
+      $magicOutput = ''
+
       const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
       log.debug('content', content)
 
       log.debug('calling the AI')
 
+      if ($magicInputValue) {
+        log.debug('User query', $magicInputValue)
+
+        // @ts-expect-error
+        const output = await window.api.createAIChatCompletion(
+          $magicInputValue
+            ? `User Query: ${$magicInputValue}\n\nContent: ${content.plain}`
+            : content.plain,
+          'Take the following text which has been extracted from a web page like a article or blog post and analyse it with the given user query. Provide a short response to the user that answers or matches the query. Only respond with the answer and make sure to escape any special characters in the response.'
+        )
+
+        log.debug('Magic response', output)
+        magicOutput.set(output)
+      }
+
       const systemPromptFormat =
-        'Avoid highlighting entire sentences if they are long and instead highlight individual parts but make sure they still make sense. Return the full sentences or smaller sections of a sentence without changing them and a corresponding type from the following options: "important", "statistic", "pro", "contra", "quote". Respond with a JSON array of parts to highlight in the following format `{ "type": "<type>", "text": "<text>" }`. Make sure to escape any special characters in the response.'
+        'Avoid highlighting entire sentences if they are long and instead highlight individual parts but make sure they still make sense. Return the full sentences or smaller sections of a sentence without changing them and a corresponding type from the following options: "important", "statistic", "pro", "contra", "quote". Respond only with a JSON object that contains a array of parts to highlight in the following format `{ "highlights": [{ "type": "<type>", "text": "<text>" }] }`. Make sure to escape any special characters in the response.'
       const generalSystemPrompt =
         'Take the following text which has been extracted from a web page like a article or blog post and analyse it for key takeaways, important information, statistics pro and contra arguments and other highlights that the user should know about. Try to think of the meaning behind the entire text and what information needs to be highlighted to convey that. The goal is to highlight all these important parts so the user can see them at a glance.'
       const userSystemPrompt = `Take the following text which has been extracted from a web page like a article or blog post and analyse it with the given user query. Think through the meaning of the entire text and what information needs to be highlighted to answer or match the user's query. The goal is to highlight all these important parts so the user can see them at a glance.`
@@ -870,18 +904,26 @@
         $magicInputValue
           ? `User Query: ${$magicInputValue}\n\nContent: ${content.plain}`
           : content.plain,
-        ($magicInputValue ? userSystemPrompt : generalSystemPrompt) + ' ' + systemPromptFormat
+        ($magicInputValue ? userSystemPrompt : generalSystemPrompt) + ' ' + systemPromptFormat,
+        { response_format: { type: 'json_object' } }
       )
 
       log.debug('Magic response', response)
 
-      const highlights = JSON.parse(response) as Highlight[]
+      const json = JSON.parse(response)
 
-      log.debug('highlights', highlights)
-      if (highlights.length === 0 || !highlights[0].text || !highlights[0].type) {
+      log.debug('json', json)
+      if (
+        !json.highlights ||
+        json.highlights.length === 0 ||
+        !json.highlights[0].text ||
+        !json.highlights[0].type
+      ) {
         log.debug('No highlights found or invalid format')
         return
       }
+
+      const highlights = json.highlights as Highlight[]
 
       // add mark styles to the page
       await $activeBrowserTab.executeJavaScript(`
@@ -902,11 +944,22 @@
       )
 
       log.debug('Magic done')
+      pageHighlighted.set(true)
     } catch (e) {
       log.error('Error doing magic', e)
+      pageHighlighted.set(false)
     } finally {
       magicInProgress.set(false)
     }
+  }
+
+  function handleClickOutside() {
+    $showMagicBar = false
+    $showURLBar = false
+    $magicInputValue = ''
+    $magicOutput = ''
+    $magicInProgress = false
+    $pageHighlighted = false
   }
 
   onMount(async () => {
@@ -1160,45 +1213,178 @@
         class:hide={!$showURLBar && !$showMagicBar && !$magicInProgress}
         aria-label="Collapse URL bar"
         on:mouseleave={() => ($showURLBar = false)}
-        on:keydown={(e) => e.key === 'Enter' && showURLBar.set(!showURLBar)}
+        on:keydown={(e) => handleAddressBarKeyDown}
         tabindex="0"
         role="button"
       >
-        <div class="test-wrapper">
-          {#if $showMagicBar}
-            <div class="search">
-              <input
-                bind:this={addressInputElem}
-                disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
-                bind:value={$magicInputValue}
-                on:blur={handleBlur}
-                on:focus={handleFocus}
-                type="text"
-                placeholder="What do you want to know?"
-              />
-            </div>
+        <div class="address-bar-wrapper" use:clickOutside={handleClickOutside}>
+          <div class="address-bar-content">
+            {#if $showMagicBar}
+              <div class="search">
+                <input
+                  bind:this={addressInputElem}
+                  disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
+                  bind:value={$magicInputValue}
+                  on:blur={handleBlur}
+                  on:focus={handleFocus}
+                  type="text"
+                  placeholder="What do you want to know?"
+                />
+              </div>
 
-            {#if $magicInProgress}
-              <button
-                style="z-index: 100000;"
-                use:tooltip={{
-                  content: 'Analysing Page…',
-                  action: 'hover',
-                  position: 'right',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <Icon name="spinner" />
-              </button>
+              {#if $magicInProgress}
+                <button
+                  style="z-index: 100000;"
+                  use:tooltip={{
+                    content: 'Analysing Page…',
+                    action: 'hover',
+                    position: 'right',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  <Icon name="spinner" />
+                </button>
+              {:else}
+                <button
+                  on:click={handleMagicButton}
+                  style="z-index: 100000;"
+                  use:tooltip={{
+                    content: 'Analyse Page',
+                    action: 'hover',
+                    position: 'right',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  <Icon name="sparkles" />
+                </button>
+              {/if}
             {:else}
+              <div class="search">
+                <input
+                  bind:this={addressInputElem}
+                  disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
+                  bind:value={$addressValue}
+                  on:blur={handleBlur}
+                  on:focus={handleFocus}
+                  type="text"
+                  placeholder={$activeTab?.type === 'page'
+                    ? 'Search or Enter URL'
+                    : $activeTab?.type === 'chat'
+                      ? 'Chat Title'
+                      : 'Empty Tab'}
+                />
+
+                <div class="actions nav-buttons">
+                  <button
+                    class="nav-button"
+                    disabled={!canGoBack}
+                    on:click={$activeBrowserTab?.goBack}
+                    use:tooltip={{
+                      content: 'Go Back',
+                      action: 'hover',
+                      position: 'bottom',
+                      animation: 'fade',
+                      delay: 500
+                    }}
+                  >
+                    <Icon name="arrow.left" />
+                  </button>
+                  <button
+                    class="nav-button"
+                    disabled={!canGoForward}
+                    on:click={$activeBrowserTab?.goForward}
+                    use:tooltip={{
+                      content: 'Go Forward',
+                      action: 'hover',
+                      position: 'bottom',
+                      animation: 'fade',
+                      delay: 500
+                    }}
+                  >
+                    <Icon name="arrow.right" />
+                  </button>
+                  <button
+                    class="nav-button"
+                    on:click={$activeBrowserTab?.reload}
+                    use:tooltip={{
+                      content: 'Reload Page (⌘ + R)',
+                      action: 'hover',
+                      position: 'bottom',
+                      animation: 'fade',
+                      delay: 500
+                    }}
+                  >
+                    <Icon name="reload" />
+                  </button>
+                </div>
+              </div>
+
+              {#if $activeTab?.type === 'page'}
+                {#key $activeTab.resourceBookmark}
+                  <button
+                    on:click={handleBookmark}
+                    style="z-index: 100000;"
+                    use:tooltip={{
+                      content: $activeTab?.resourceBookmark
+                        ? 'Open bookmark (⌘ + D)'
+                        : 'Bookmark this page (⌘ + D)',
+                      action: 'hover',
+                      position: 'bottom',
+                      animation: 'fade',
+                      delay: 500
+                    }}
+                  >
+                    {#if $bookmarkingInProgress}
+                      <Icon name="spinner" />
+                    {:else if $bookmarkingSuccess}
+                      <Icon name="check" />
+                    {:else if $activeTab?.resourceBookmark}
+                      <Icon name="bookmarkFilled" />
+                    {:else}
+                      <Icon name="bookmark" />
+                    {/if}
+                  </button>
+                {/key}
+              {/if}
+
+              {#if $magicInProgress}
+                <button
+                  style="z-index: 100000;"
+                  use:tooltip={{
+                    content: 'Analysing Page…',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  <Icon name="spinner" />
+                </button>
+              {:else}
+                <button
+                  on:click={handleMagicButton}
+                  style="z-index: 100000;"
+                  use:tooltip={{
+                    content: 'Highlight Page',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  <Icon name="file-text-ai" />
+                </button>
+              {/if}
+
               <button
-                on:click={handleMagicButton}
+                on:click={() => showMagicBar.set(true)}
                 style="z-index: 100000;"
                 use:tooltip={{
-                  content: 'Analyse Page',
+                  content: 'Ask Page',
                   action: 'hover',
-                  position: 'right',
+                  position: 'bottom',
                   animation: 'fade',
                   delay: 500
                 }}
@@ -1206,137 +1392,28 @@
                 <Icon name="sparkles" />
               </button>
             {/if}
-          {:else}
-            <div class="search">
-              <input
-                bind:this={addressInputElem}
-                disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
-                bind:value={$addressValue}
-                on:blur={handleBlur}
-                on:focus={handleFocus}
-                type="text"
-                placeholder={$activeTab?.type === 'page'
-                  ? 'Search or Enter URL'
-                  : $activeTab?.type === 'chat'
-                    ? 'Chat Title'
-                    : 'Empty Tab'}
-              />
+          </div>
 
-              <div class="actions nav-buttons">
-                <button
-                  class="nav-button"
-                  disabled={!canGoBack}
-                  on:click={$activeBrowserTab?.goBack}
-                  use:tooltip={{
-                    content: 'Go Back',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  <Icon name="arrow.left" />
-                </button>
-                <button
-                  class="nav-button"
-                  disabled={!canGoForward}
-                  on:click={$activeBrowserTab?.goForward}
-                  use:tooltip={{
-                    content: 'Go Forward',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  <Icon name="arrow.right" />
-                </button>
-                <button
-                  class="nav-button"
-                  on:click={$activeBrowserTab?.reload}
-                  use:tooltip={{
-                    content: 'Reload Page (⌘ + R)',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  <Icon name="reload" />
-                </button>
-              </div>
+          {#if $showMagicBar && $magicInProgress && !$magicOutput}
+            <div class="magic-output-status">
+              <Icon name="spinner" /> Generating Response…
+            </div>
+          {/if}
+
+          {#if $showMagicBar && $magicOutput}
+            <div class="magic-output">
+              {$magicOutput || 'No response from the AI.'}
             </div>
 
-            {#if $activeTab?.type === 'page'}
-              {#key $activeTab.resourceBookmark}
-                <button
-                  on:click={handleBookmark}
-                  style="z-index: 100000;"
-                  use:tooltip={{
-                    content: $activeTab?.resourceBookmark
-                      ? 'Open bookmark (⌘ + D)'
-                      : 'Bookmark this page (⌘ + D)',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  {#if $bookmarkingInProgress}
-                    <Icon name="spinner" />
-                  {:else if $bookmarkingSuccess}
-                    <Icon name="check" />
-                  {:else if $activeTab?.resourceBookmark}
-                    <Icon name="bookmarkFilled" />
-                  {:else}
-                    <Icon name="bookmark" />
-                  {/if}
-                </button>
-              {/key}
-            {/if}
-
-            {#if $magicInProgress}
-              <button
-                style="z-index: 100000;"
-                use:tooltip={{
-                  content: 'Analysing Page…',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <Icon name="spinner" />
-              </button>
-            {:else}
-              <button
-                on:click={handleMagicButton}
-                style="z-index: 100000;"
-                use:tooltip={{
-                  content: 'Highlight Page',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <Icon name="file-text-ai" />
-              </button>
-            {/if}
-
-            <button
-              on:click={() => showMagicBar.set(true)}
-              style="z-index: 100000;"
-              use:tooltip={{
-                content: 'Ask Page',
-                action: 'hover',
-                position: 'bottom',
-                animation: 'fade',
-                delay: 500
-              }}
-            >
-              <Icon name="sparkles" />
-            </button>
+            <div class="magic-output-status">
+              {#if $magicInProgress}
+                <Icon name="spinner" /> Highlighting Page…
+              {:else if $pageHighlighted}
+                <Icon name="check" /> Page Highlighted
+              {:else}
+                <Icon name="close" /> Failed to highlight page
+              {/if}
+            </div>
           {/if}
         </div>
       </div>
@@ -1512,18 +1589,26 @@
     }
   }
 
-  .test-wrapper {
+  .address-bar-wrapper {
     position: absolute;
-    left: calc(50% - 4rem);
+    left: calc(50% - 10rem);
     backdrop-filter: blur(10px);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
     padding: 0.75rem;
-    width: 500px;
+    width: 90%;
+    max-width: 600px;
     background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .address-bar-content {
     display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
   }
 
   .bar-wrapper {
@@ -1561,6 +1646,20 @@
         background: #eeece0;
       }
     }
+  }
+
+  .magic-output {
+    padding: 10px;
+    background: #f6f5ef;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    color: #3f3f3f;
+  }
+
+  .magic-output-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .search {
@@ -1743,7 +1842,7 @@
     z-index: 10000;
     bottom: 1.125rem;
     width: 100%;
-    left: 17rem;
+    left: 25rem;
   }
 
   .page-actions {
