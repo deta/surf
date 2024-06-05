@@ -19,6 +19,8 @@
   import BrowserTab, { type NewTabEvent } from './BrowserTab.svelte'
   import Horizon from '../Horizon/Horizon.svelte'
   import BrowserHomescreen from './BrowserHomescreen.svelte'
+  import OasisSidebar from './OasisSidebar.svelte'
+  import Tab from './Tab.svelte'
 
   import '../Horizon/index.scss'
   import type { Tab, TabChat, TabEmpty, TabHorizon, TabImporter, TabPage } from './types'
@@ -72,7 +74,7 @@
   const activeTabId = useLocalStorageStore<string>('activeTabId', '')
   const loadingOrganize = writable(false)
   const visorSearchTerm = writable('')
-  const sidebarTab = writable<'active' | 'archive'>('active')
+  const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
   const browserTabs = writable<Record<string, BrowserTab>>({})
   const bookmarkingInProgress = writable(false)
   const magicInProgress = writable(false)
@@ -614,6 +616,11 @@
     })
   }
 
+  const handleTabSelect = (event) => {
+    console.log('Active Tab ID:', event.detail)
+    activeTabId.set(event.detail)
+  }
+
   async function handleBookmark() {
     try {
       if (!$activeTabLocation || $activeTab?.type !== 'page') return
@@ -742,7 +749,7 @@
         window.onscroll = function () {
             window.scrollTo(scrollLeft, scrollTop);
         };
-    
+
         // Use window.find to find the sentence in the page
         const selection = window.getSelection();
         // Get the range of the found sentence
@@ -775,7 +782,7 @@
         window.scrollTo(scrollLeft, scrollTop);
       }
     }
-    
+
     highlightSentence(searchText);
 })();
       `
@@ -810,23 +817,23 @@
         // Create a range spanning the entire document
         const range = document.createRange();
         range.selectNodeContents(document.body);
-    
+
         // Move the selection point to the start of the document
         const selection = window.getSelection();
         selection.removeAllRanges();
         selection.addRange(range);
         selection.collapseToStart();
- 
+
         // disable scrolling: if any scroll is attempted, set this to the previous value
         window.onscroll = function () {
             window.scrollTo(scrollLeft, scrollTop);
         };
-    
+
         // Use window.find to find the sentence in the page
         if (window.find(sentence)) {
             // Get the range of the found sentence
             const range = selection.getRangeAt(0);
-    
+
             // Create a new mark element
             const mark = document.createElement('mark');
             mark.classList.add('highlight');
@@ -837,18 +844,18 @@
                 range.surroundContents(mark);
             } catch (err) {
                 console.warn(err)
-        
+
                 // Create a new text node with the contents of the range
                 const textNode = document.createTextNode(range.toString());
-        
+
                 // Replace the range's contents with the new text node
                 range.deleteContents();
                 range.insertNode(textNode);
-        
+
                 // Wrap the found sentence in the mark element
                 range.surroundContents(mark);
             }
-    
+
             // Restore the original selection
             if (originalSelection) {
                 window.getSelection().removeAllRanges();
@@ -867,7 +874,7 @@
         window.scrollTo(scrollLeft, scrollTop);
       }
     }
-    
+
     highlightSentence(searchText);
 })();
       `
@@ -1033,8 +1040,6 @@
 
 <div class="app-wrapper">
   <div class="sidebar">
-    <!-- <h1>Horizon Browser</h1> -->
-
     <div class="tab-selector">
       <button
         on:click={() => ($sidebarTab = 'active')}
@@ -1062,157 +1067,93 @@
       >
         <Icon name="archive" />
       </button>
-    </div>
-
-    <div class="tabs">
-      {#each $tabsInView as tab (tab.id)}
-        {#if tab.type === 'chat'}
-          <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
-          <div
-            class="tab chat"
-            class:selected={tab.id === $activeTabId}
-            on:click={() => ($activeTabId = tab.id)}
-          >
-            <div class="icon-wrapper">
-              <Icon name="sparkles" size="20px" />
-            </div>
-            <div class="description">
-              {'Chat'}
-            </div>
-            <div class="title">
-              {tab.title}
-            </div>
-            <button
-              on:click|stopPropagation={() =>
-                tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)}
-              class="close"
-              use:tooltip={{
-                content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
-                action: 'hover',
-                position: 'left',
-                animation: 'fade',
-                delay: 500
-              }}
-            >
-              {#if tab.archived}
-                <Icon name="trash" size="20px" />
-              {:else}
-                <Icon name="close" size="20px" />
-              {/if}
-            </button>
-          </div>
-        {/if}
-      {/each}
-
-      <div class="divider"></div>
-
-      {#each $tabsInView as tab (tab.id)}
-        {#if tab.type !== 'chat'}
-          <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
-          <div
-            class="tab"
-            class:selected={tab.id === $activeTabId}
-            on:click={() => ($activeTabId = tab.id)}
-          >
-            {#if tab.icon}
-              <div class="icon-wrapper">
-                <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
-              </div>
-            {:else if tab.type === 'horizon'}
-              <div class="icon-wrapper">
-                <Icon name="grid" size="20px" />
-              </div>
-            {:else if tab.type === 'importer'}
-              <div class="icon-wrapper">
-                <Icon name="code" size="20px" />
-              </div>
-            {:else}
-              <div class="icon-wrapper">
-                <Icon name="world" size="20px" />
-              </div>
-            {/if}
-
-            <div class="title">
-              {tab.title}
-            </div>
-
-            {#if tab.archived}
-              <button
-                on:click|stopPropagation={() => unarchiveTab(tab.id)}
-                class="close"
-                use:tooltip={{
-                  content: 'Move back to active tabs',
-                  action: 'hover',
-                  position: 'left',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <Icon name="arrowbackup" size="20px" />
-              </button>
-            {/if}
-
-            <button
-              on:click|stopPropagation={() =>
-                tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)}
-              class="close"
-              use:tooltip={{
-                content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
-                action: 'hover',
-                position: 'left',
-                animation: 'fade',
-                delay: 500
-              }}
-            >
-              {#if tab.archived}
-                <Icon name="trash" size="20px" />
-              {:else}
-                <Icon name="close" size="20px" />
-              {/if}
-            </button>
-          </div>
-        {/if}
-      {/each}
-    </div>
-
-    <div class="actions">
       <button
-        on:click|preventDefault={() => toggleOasis()}
+        on:click={() => ($sidebarTab = 'oasis')}
+        class:active={$sidebarTab === 'oasis'}
         use:tooltip={{
-          content: 'Oasis (⌘ + O)',
+          content: 'Open Oasis (⌘ + O)',
           action: 'hover',
-          position: 'top',
+          position: 'bottom',
           animation: 'fade',
           delay: 500
         }}
       >
         <Icon name="leave" />
       </button>
-      <button
-        on:click|preventDefault={handleNewHorizon}
-        use:tooltip={{
-          content: 'New Horizon (⌘ + N)',
-          action: 'hover',
-          position: 'top',
-          animation: 'fade',
-          delay: 500
-        }}
-      >
-        <Icon name="layout-grid-add" />
-      </button>
-      <button
-        on:click|preventDefault={() => createNewEmptyTab()}
-        use:tooltip={{
-          content: 'New Tab (⌘ + T)',
-          action: 'hover',
-          position: 'top',
-          animation: 'fade',
-          delay: 500
-        }}
-      >
-        <Icon name="add" />
-      </button>
     </div>
+
+    {#if $sidebarTab != 'oasis'}
+      <div class="tabs">
+        {#each $tabsInView as tab (tab.id)}
+          {#if tab.type === 'chat'}
+            <Tab
+              {tab}
+              {activeTabId}
+              {archiveTab}
+              {deleteTab}
+              {unarchiveTab}
+              on:select={handleTabSelect}
+            />
+          {/if}
+        {/each}
+
+        <div class="divider"></div>
+
+        {#each $tabsInView as tab (tab.id)}
+          {#if tab.type !== 'chat'}
+            <Tab
+              {tab}
+              {activeTabId}
+              {archiveTab}
+              {deleteTab}
+              {unarchiveTab}
+              on:select={handleTabSelect}
+            />
+          {/if}
+        {/each}
+      </div>
+
+      <div class="actions">
+        <button
+          on:click|preventDefault={() => toggleOasis()}
+          use:tooltip={{
+            content: 'Oasis (⌘ + O)',
+            action: 'hover',
+            position: 'top',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
+          <Icon name="leave" />
+        </button>
+        <button
+          on:click|preventDefault={handleNewHorizon}
+          use:tooltip={{
+            content: 'New Horizon (⌘ + N)',
+            action: 'hover',
+            position: 'top',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
+          <Icon name="layout-grid-add" />
+        </button>
+        <button
+          on:click|preventDefault={() => createNewEmptyTab()}
+          use:tooltip={{
+            content: 'New Tab (⌘ + T)',
+            action: 'hover',
+            position: 'top',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
+          <Icon name="add" />
+        </button>
+      </div>
+    {:else}
+      <OasisSidebar {resourceManager} {sidebarTab} />
+    {/if}
   </div>
 
   <div class="browser-window-wrapper" class:hasNoTab={!$activeBrowserTab}>
@@ -1880,7 +1821,8 @@
     align-items: center;
     margin-bottom: -22px;
     margin-left: -10px;
-    padding-left: 16rem;
+    padding-left: 14rem;
+    z-index: 10;
 
     button {
       flex: 1;
