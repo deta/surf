@@ -5,7 +5,6 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { derived, type Unsubscriber } from 'svelte/store'
-
   import WebviewWrapper from '../Cards/Browser/WebviewWrapper.svelte'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { TabPage } from './types'
@@ -68,11 +67,6 @@
   $: if (tab.historyStackIds) {
     let currentEntry = historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])
 
-    let allEntries = tab.historyStackIds.map((item: any) => {
-      return historyEntriesManager.getEntry(item)
-    })
-
-    // the historyStack will never have a history entry of type `search`
     if (currentEntry) {
       src = currentEntry.url as string
     } else {
@@ -97,7 +91,6 @@
     webview.historyStackIds.set(tab.historyStackIds)
     webview.currentHistoryIndex.set(tab.currentHistoryIndex)
 
-    // TODO: no need to invoke two changes in most cases
     unsubTracker.push(
       webview.historyStackIds.subscribe((stack) => {
         log.debug('history stack changed', stack)
@@ -132,17 +125,6 @@
         }
       })
     )
-
-    // unsubTracker.push(
-    //     webview.url.subscribe((url) => {
-    //         if (!url) return
-
-    //         // tab = {
-    //         //     ...tab,
-    //         //     location: url
-    //         // }
-    //     })
-    // )
   })
 
   onDestroy(() => {

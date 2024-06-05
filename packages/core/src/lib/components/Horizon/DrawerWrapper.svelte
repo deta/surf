@@ -24,8 +24,6 @@
   import type { ResourceDocument, ResourceLink } from '../../service/resources'
   import { Icon } from '@horizon/icons'
 
-  import BrowserTab from '@horizon/core/src/lib/components/Browser/BrowserTab.svelte'
-
   import type { Horizon } from '../../service/horizon'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { useLogScope } from '../../utils/log'
@@ -64,6 +62,7 @@
   import DrawerDetailsWrapper from '../Drawer/DrawerDetailsWrapper.svelte'
   import { TelemetryEventTypes } from '@horizon/types'
   import type { Tab } from '@horizon/drawer/src/lib/Tabs.svelte'
+  import MiniBrowser from '@horizon/core/src/lib/components/Browser/MiniBrowser.svelte'
 
   export const drawer = provideDrawer()
 
@@ -103,6 +102,7 @@
 
   const isSaving = writable(false)
   const alreadyDropped = writable(false)
+  const showMiniBrowser = writable(false)
 
   $: if ($viewState === 'default') {
     $droppedInputElements = []
@@ -298,10 +298,6 @@
 
   const handleResourceClick = async (resource: ResourceObject) => {
     $selectedResource = resource
-  }
-
-  const setSelectedResources = (resources: ResourceObject[]) => {
-    selectedResources.set(resources)
   }
 
   drawer.onOpenItem(async (resourceId: string) => {
@@ -671,6 +667,11 @@
 
       viewState.set('search')
     }
+
+    if (e.key === ' ') {
+      e.preventDefault()
+      $showMiniBrowser = !$showMiniBrowser
+    }
   }
 
   let dragCount = 0
@@ -819,7 +820,9 @@
   on:drop={handleWindowDragEnd}
 />
 
-<div class="mini-browser"></div>
+{#if $showMiniBrowser && $selectedResource}
+  <MiniBrowser resource={selectedResource} />
+{/if}
 
 {#if $showDropZone}
   <div class="drop-zone">
