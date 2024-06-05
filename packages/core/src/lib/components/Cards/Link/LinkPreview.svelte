@@ -95,7 +95,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem;
+    padding: 0.5rem;
     color: inherit;
     text-decoration: none;
     user-select: none;
@@ -115,12 +115,14 @@
   .image {
     width: 100%;
     height: 100%;
+    border-radius: 9px;
   }
 
   .title {
     font-size: 1.25rem;
     line-height: 1.775rem;
     letter-spacing: 0.02rem;
+    text-wrap: balance;
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
@@ -130,6 +132,8 @@
 
   .subtitle {
     font-size: 1rem;
+    line-height: 1.4;
+    letter-spacing: 0.02rem;
     font-weight: 300;
     overflow: hidden;
     text-overflow: ellipsis;

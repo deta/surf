@@ -1022,7 +1022,7 @@
     font-size: 1rem;
     cursor: pointer;
     transition: background-color 0.3s;
-    border-radius: 3px;
+    border-radius: 9px;
     background: none;
     color: #8a8a8a;
   }

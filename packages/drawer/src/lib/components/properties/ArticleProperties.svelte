@@ -95,15 +95,22 @@
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
+    text-wrap: balance;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .subtitle {
     font-size: 1rem;
-    font-weight: 300;
+    line-height: 1.4;
+    letter-spacing: 0.02rem;
+    font-weight: 400;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     text-align: center;
-    // overflow: hidden;
-    // text-overflow: ellipsis;
-    // white-space: nowrap;
-    // max-width: 225px;
+    font-smooth: always;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 </style>

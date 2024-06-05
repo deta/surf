@@ -31,6 +31,7 @@
   import { useDrawer } from '@horizon/drawer'
 
   export let resource: Resource
+  export let isSelected: boolean
 
   const { viewState } = useDrawer()
 
@@ -86,6 +87,7 @@
   on:click={handleClick}
   class="resource-preview"
   class:details={$viewState === 'details'}
+  class:isSelected
   style="--id:{resource.id};"
   on:dragstart={handleDragStart}
   draggable="true"
@@ -148,30 +150,28 @@
   <div class="details">
     <div class="type">
       {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-        <Icon name="docs" size="20px" />
-        <div class="">Note</div>
+        <!-- <Icon name="docs" size="20px" />
+        <div class="label">Note</div> -->
       {:else if resource.type === ResourceTypes.LINK}
-        <Icon name="link" size="20px" />
-        <div class="">Link</div>
+        <div class="label">{resource.metadata.name ?? 'Link'}</div>
       {:else if resource.type.startsWith(ResourceTypes.POST_YOUTUBE)}
-        <ArticleProperties {resource} />
-      {:else if resource.type.startsWith(ResourceTypes.POST)}
-        <Icon name="link" size="20px" />
-        <div class="">Post</div>
+        <!-- <Icon name="link" size="20px" />
+        <div class="label">Post</div> -->
+        <ArticleProperties resource={articleResource} />
       {:else if resource.type.startsWith(ResourceTypes.ARTICLE)}
         <ArticleProperties resource={articleResource} />
       {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
-        <Icon name="docs" size="20px" />
-        <div class="">Message</div>
+        <!-- <Icon name="docs" size="20px" />
+        <div class="label">Message</div> -->
       {:else if resource.type.startsWith(ResourceTypes.CHAT_THREAD)}
-        <Icon name="link" size="20px" />
-        <div class="">Thread</div>
+        <!-- <Icon name="link" size="20px" />
+        <div class="label">Thread</div> -->
       {:else if resource.type.startsWith(ResourceTypes.DOCUMENT)}
-        <Icon name="docs" size="20px" />
-        <div class="">Document</div>
+        <!-- <Icon name="docs" size="20px" />
+        <div class="label">Document</div> -->
       {:else}
-        <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
-        <div class="">{getFileType(resource.type) ?? 'File'}</div>
+        <!-- <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
+        <div class="label">{getFileType(resource.type) ?? 'File'}</div> -->
       {/if}
     </div>
 
@@ -203,7 +203,7 @@
     display: flex;
     gap: 8px;
     flex-direction: column;
-    border-radius: 8px;
+    border-radius: 16px;
     overflow: visible;
     cursor: default;
     animation: 280ms fade-in-up cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -218,6 +218,12 @@
       }
     }
 
+    &.isSelected {
+      .preview {
+        outline: 4px solid rgba(0, 123, 255, 0.75);
+      }
+    }
+
     &.details {
       .preview:hover {
         outline: 0;
@@ -227,7 +233,7 @@
 
   .preview {
     width: 100%;
-    border-radius: 6px;
+    border-radius: 16px;
     border: 1px solid rgba(228, 228, 228, 0.75);
     box-shadow:
       0px 1px 0px 0px rgba(65, 58, 86, 0.25),
@@ -305,10 +311,18 @@
 
   .type {
     display: flex;
-    align-items: center;
+    align-items: start;
     gap: 0.5rem;
     font-size: 1rem;
     font-weight: 500;
     color: #281b53;
+  }
+
+  .label {
+    font-size: 1.1rem;
+    line-height: 1.4;
+    padding: 0 0.25rem 0 0.25rem;
+    margin-bottom: 1.5rem;
+    text-wrap: balance;
   }
 </style>

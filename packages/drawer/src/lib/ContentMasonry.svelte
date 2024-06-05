@@ -2,7 +2,7 @@
   import { onMount, onDestroy, getContext, setContext, tick } from 'svelte'
   export let stretchFirst = false,
     gridGap = '0.5em',
-    colWidth = 'minmax(Min(20em, 100%), 1fr)',
+    colWidth = 'minmax(Min(40em, 100%), 1fr)',
     items = [] // pass in data if it's dynamically updated
   let grids = [],
     masonryElement
@@ -96,9 +96,9 @@
   }
 </script>
 
-<!-- 
+<!--
   An almost direct copy and paste of: https://css-tricks.com/a-lightweight-masonry-solution
-  
+
   Usage:
     - stretchFirst stretches the first item across the top
 
@@ -110,7 +110,7 @@
           <h3>{o.name}</h3>
         </header>
         <section>
-          <p>{o.text}</p> 
+          <p>{o.text}</p>
         </section>
       </div>
     {/each}
@@ -126,7 +126,7 @@
   <slot />
 </div>
 
-<!-- 
+<!--
 $w: var(--col-width); // minmax(Min(20em, 100%), 1fr);
 $s: var(--grid-gap); // .5em;
 -->

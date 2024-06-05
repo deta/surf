@@ -24,6 +24,8 @@
   import type { ResourceDocument, ResourceLink } from '../../service/resources'
   import { Icon } from '@horizon/icons'
 
+  import BrowserTab from '@horizon/core/src/lib/components/Browser/BrowserTab.svelte'
+
   import type { Horizon } from '../../service/horizon'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { useLogScope } from '../../utils/log'
@@ -292,6 +294,14 @@
     } else {
       openResourceDetail(resource)
     }
+  }
+
+  const handleResourceClick = async (resource: ResourceObject) => {
+    $selectedResource = resource
+  }
+
+  const setSelectedResources = (resources: ResourceObject[]) => {
+    selectedResources.set(resources)
   }
 
   drawer.onOpenItem(async (resourceId: string) => {
@@ -809,6 +819,8 @@
   on:drop={handleWindowDragEnd}
 />
 
+<div class="mini-browser"></div>
+
 {#if $showDropZone}
   <div class="drop-zone">
     {#if $alreadyDropped && $viewState === 'chatInput'}
@@ -889,8 +901,8 @@
         {:else}
           <DrawerContentMasonry
             items={searchResult}
-            gridGap="15px"
-            colWidth="minmax(Min(250px, 100%), 1fr)"
+            gridGap="1.5rem"
+            colWidth="minmax(Min(330px, 100%), 1fr)"
             bind:refreshLayout={refreshContentLayout}
           >
             {#each searchResult.slice(0, 50) as item (item.id)}
@@ -901,10 +913,13 @@
               {:else}
                 <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
                   <ResourcePreview
-                    on:click={() => openResourceDetail(item.resource)}
+                    on:click={() => {
+                      handleResourceClick(item.resource)
+                    }}
                     on:remove={handleResourceRemove}
                     on:load={handleResourceLoad}
                     resource={item.resource}
+                    isSelected={$selectedResource && $selectedResource.id === item.resource.id}
                   />
                 </DrawerContentItem>
               {/if}
@@ -938,9 +953,9 @@
 
   <div class="drawer-top">
     <div class="drawer-controls">
-      <button on:click={() => drawer.close()}>
+      <!-- <button on:click={() => drawer.close()}>
         <Icon name="sidebar.right" size="22px" />
-      </button>
+      </button> -->
       {#if $viewState === 'details'}
         <button on:click={handleDetailsBack}>
           <Icon name="chevron.left" size="22px" />
@@ -951,9 +966,9 @@
 
   <div class="drawer-bottom">
     <div class="tabs-transition">
-      {#if $viewState !== 'details'}
+      <!-- {#if $viewState !== 'details'}
         <DrawerNavigation {tabs} />
-      {/if}
+      {/if} -->
     </div>
     <!-- {#if $isSaving}
       <Saving />
@@ -1017,7 +1032,7 @@
 <style lang="scss">
   .drawer-details-transition,
   .drawer-content-transition {
-    padding: 4rem 0 16rem 0;
+    padding: 4rem 2rem 16rem 2rem;
     position: absolute;
     top: 0;
     width: 100%;
@@ -1083,7 +1098,7 @@
       justify-content: center;
       color: var(--color-text-muted);
       transition: color 0.2s ease;
-      border-radius: 3px;
+      border-radius: 9px;
 
       &:hover {
         color: var(--color-text);
@@ -1093,8 +1108,8 @@
   }
 
   .drawer-bottom {
-    position: absolute;
-    bottom: 0;
+    position: relative;
+    top: 0;
     left: 0;
     right: 0;
     backdrop-filter: blur(3px);
@@ -1118,11 +1133,12 @@
 
     .drawer-chat-search {
       position: relative;
+      top: 0;
       display: flex;
       align-items: center;
       width: 100%;
       gap: 16px;
-      padding: 0 1rem 1rem 1rem;
+      padding: 1rem 1rem 1rem 1rem;
       transition: all 240ms ease-out;
 
       .search-transition {

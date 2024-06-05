@@ -1032,12 +1032,6 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-{#if $masterHorizon}
-  <DrawerWrapper bind:drawer horizon={$masterHorizon} {resourceManager} />
-{:else}
-  <div>Should not happen error: Failed to load main Horizon</div>
-{/if}
-
 <div class="app-wrapper">
   <div class="sidebar">
     <div class="tab-selector">
@@ -1068,7 +1062,10 @@
         <Icon name="archive" />
       </button>
       <button
-        on:click={() => ($sidebarTab = 'oasis')}
+        on:click={() => {
+          $sidebarTab = 'oasis'
+          toggleOasis()
+        }}
         class:active={$sidebarTab === 'oasis'}
         use:tooltip={{
           content: 'Open Oasis (⌘ + O)',
@@ -1388,7 +1385,13 @@
         class:active={$activeTabId === tab.id}
         class:magic-glow-big={$activeTabId === tab.id && $magicInProgress}
       >
-        {#if tab.type === 'page'}
+        {#if $sidebarTab === 'oasis'}
+          {#if $masterHorizon}
+            <DrawerWrapper bind:drawer horizon={$masterHorizon} {resourceManager} />
+          {:else}
+            <div>Should not happen error: Failed to load main Horizon</div>
+          {/if}
+        {:else if tab.type === 'page'}
           <BrowserTab
             bind:this={$browserTabs[tab.id]}
             bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
@@ -1675,6 +1678,7 @@
     flex: 1;
     overflow: auto;
     margin-top: 2rem;
+    gap: 0.5rem;
     padding-bottom: 1rem;
     display: flex;
     flex-direction: column;

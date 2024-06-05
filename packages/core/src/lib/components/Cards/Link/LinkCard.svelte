@@ -74,7 +74,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem;
+    padding: 0.5rem;
     color: inherit;
     text-decoration: none;
     user-select: none;

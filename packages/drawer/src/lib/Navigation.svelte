@@ -79,7 +79,7 @@
       justify-content: center;
       color: var(--color-text-muted);
       transition: color 0.2s ease;
-      border-radius: 3px;
+      border-radius: 9px;
 
       &:hover {
         color: var(--color-text);

@@ -9,26 +9,26 @@
 
 <div class="type">
   {#if type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-    <Icon name="docs" size="20px" />
-    <div class="">Note</div>
+    <!-- <Icon name="docs" size="20px" />
+    <div class="label">Note</div> -->
   {:else if type === ResourceTypes.LINK}
     <Icon name="link" size="20px" />
-    <div class="">Link</div>
-  {:else if type.startsWith(ResourceTypes.POST)}
+    <div class="label">Link</div>
+    <!-- {:else if type.startsWith(ResourceTypes.POST)}
     <Icon name="link" size="20px" />
-    <div class="">Post</div>
+    <div class="label">Post</div> -->
   {:else if type.startsWith(ResourceTypes.ARTICLE)}
     <Icon name="link" size="20px" />
-    <div class="">Article</div>
+    <div class="label">Article</div>
   {:else if type.startsWith(ResourceTypes.CHAT_MESSAGE)}
     <Icon name="docs" size="20px" />
-    <div class="">Message</div>
+    <div class="label">Message</div>
   {:else if type.startsWith(ResourceTypes.CHAT_THREAD)}
     <Icon name="link" size="20px" />
-    <div class="">Thread</div>
+    <div class="label">Thread</div>
   {:else if type.startsWith(ResourceTypes.DOCUMENT)}
     <Icon name="docs" size="20px" />
-    <div class="">Document</div>
+    <div class="label">Document</div>
   {:else}
     <FileIcon kind={getFileKind(type)} width="20px" height="20px" />
     <div class="">{getFileType(type) ?? 'File'}</div>
@@ -43,5 +43,9 @@
     font-size: 1rem;
     font-weight: 500;
     color: inherit;
+  }
+
+  .label {
+    background: red;
   }
 </style>

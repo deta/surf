@@ -137,7 +137,7 @@
     display: block; /* Make the image a block element to remove bottom space */
     width: 100%;
     height: auto;
-    border-radius: 6px;
+    border-radius: 16px;
     vertical-align: bottom; /* Align the image to the bottom to eliminate gap */
   }
 
@@ -178,7 +178,7 @@
   .post-metadata {
     display: flex;
     flex-direction: column;
-    padding: 1rem;
+    padding: 0.5rem;
     gap: 0.125rem;
     .from {
       font-size: 1rem;

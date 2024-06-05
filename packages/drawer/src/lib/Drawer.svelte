@@ -19,11 +19,7 @@
 
 <div class="drawer-root">
   {#if $show}
-    <div
-      transition:fly={{ x: '-100%', opacity: 1, duration: 200 }}
-      class="drawer-wrapper"
-      style="--drawer-width: {width};"
-    >
+    <div transition:fly={{ x: '-100%', opacity: 1, duration: 200 }} class="drawer-wrapper">
       <div class="drawer-main">
         <slot />
       </div>
@@ -32,28 +28,28 @@
 </div>
 
 <style lang="scss">
+  .drawer-root {
+    width: 100%;
+    height: 100%;
+  }
+
   .drawer-wrapper {
-    position: fixed;
-    z-index: 1000;
+    position: relative;
+    top: 0;
     left: 0;
+    right: 0;
     bottom: 0;
-    height: 80vh;
-    padding: 1rem;
-    padding-top: 25px;
-    width: var(--drawer-width);
+    height: 100%;
+    width: 100%;
     transition: width 0.2s ease-out;
+    overflow: hidden;
   }
 
   .drawer-main {
     width: 100%;
     height: 100%;
     transition: width 0.2s ease-out;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    backdrop-filter: blur(16px);
-    background: rgba(245, 245, 245, 0.92);
+    background: #f8f7f2;
     border-radius: 12px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;

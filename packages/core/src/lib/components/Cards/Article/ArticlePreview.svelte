@@ -101,7 +101,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem;
+    padding: 0.5rem;
     color: inherit;
     text-decoration: none;
     user-select: none;
@@ -120,7 +120,7 @@
   .image {
     width: 100%;
     height: 100%;
-    border-radius: 3px;
+    border-radius: 9px;
     pointer-events: none;
     user-select: none;
   }
@@ -137,11 +137,13 @@
 
   .subtitle {
     font-size: 1rem;
+    line-height: 1.4;
+    letter-spacing: 0.02rem;
     font-weight: 300;
-    // overflow: hidden;
-    // text-overflow: ellipsis;
-    // white-space: nowrap;
-    // max-width: 225px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 225px;
   }
 
   .article-preview-no-image {

@@ -1,51 +1,51 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { writable, type Writable } from 'svelte/store'
+  import { writable } from 'svelte/store'
   import { useLogScope } from '../../utils/log' // Adjust the import path as needed
-  import { ResourceManager, type ResourceObject } from '../../service/resources' // Adjust the import path as needed
+  import Folder from './Folder.svelte' // Import the new Folder component
+  import { Icon } from '@horizon/icons'
 
   const log = useLogScope('Oasis Sidebar')
 
-  import { Icon } from '@horizon/icons'
+  const activeFolderId = writable('all')
+  const example_spaces = [
+    { id: 'all', label: 'Everything' },
+    { id: 'images', label: 'Screenshots' },
+    { id: 'articles', label: 'Read Later' },
+    { id: 'archived', label: 'Archived' }
+  ]
 
-  export let resourceManager: ResourceManager
-  export let sidebarTab: Writable<'active' | 'archive' | 'oasis'>
+  const folders = writable(example_spaces)
 
-  const resources = writable<ResourceObject[]>([])
-
-  const fetchResources = async () => {
-    try {
-      const searchResults = await resourceManager.searchResources('', [
-        ResourceManager.SearchTagDeleted(false)
-      ])
-      const result = searchResults.map((r) => r.resource)
-      result.reverse()
-      log.debug('Fetched resources', result)
-      resources.set(result)
-    } catch (error) {
-      log.error('Failed to fetch resources', error)
-    }
+  const handleFolderSelect = (event) => {
+    console.log('Active Folder ID:', event.detail)
+    activeFolderId.set(event.detail)
   }
 
-  onMount(() => {
-    fetchResources()
-  })
+  // The sidebarTab should be passed in as a prop to manage the tab view
+  export let sidebarTab
 </script>
 
-<div class="spaces-sidebar">
-  <button on:click={() => sidebarTab.set('active')}>
-    <!-- svelte-ignore missing-declaration -->
+<div class="folders-sidebar">
+  <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
     <Icon name="chevron.left" />
     <span>Back to Tabs</span>
   </button>
 
-  {#each $resources as resource}
-    <div>{resource.metadata.name ? resource.metadata.name : 'Unnamed Resource'}</div>
-  {/each}
+  <div class="folder-wrapper">
+    {#each $folders as folder (folder.id)}
+      <Folder {folder} {activeFolderId} on:select={handleFolderSelect} />
+    {/each}
+  </div>
+
+  <button class="action-new-space" on:click={() => {}}>
+    <Icon name="add" />
+    <span class="new-space-text">New Space</span>
+  </button>
 </div>
 
 <style lang="scss">
-  .spaces-sidebar {
+  .folders-sidebar {
     position: relative;
     top: 2rem;
     padding: 0 0.5rem;
@@ -70,6 +70,24 @@
 
     &:hover {
       color: #585234;
+    }
+  }
+
+  .folder-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .action-new-space {
+    .new-space-text {
+      font-size: 1.1rem;
+    }
+    letter-spacing: 0.01em;
+    padding: 0.75rem 1rem;
+    opacity: 0.6;
+    &:hover {
+      opcaity: 1;
     }
   }
 </style>

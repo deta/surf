@@ -88,8 +88,8 @@
   .tab {
     display: flex;
     align-items: center;
-    padding: 10px;
-    border-radius: 5px;
+    padding: 1rem 0.75rem 1rem 1rem;
+    border-radius: 8px;
     cursor: pointer;
     gap: 10px;
     position: relative;
@@ -99,6 +99,9 @@
     font-smooth: always;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    &:hover {
+      background-color: #e0e0d1;
+    }
   }
 
   .tab.active {

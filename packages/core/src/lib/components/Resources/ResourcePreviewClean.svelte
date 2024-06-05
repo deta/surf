@@ -144,8 +144,8 @@
   <div class="details">
     <div class="type">
       {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-        <Icon name="docs" size="20px" />
-        <div class="">Note</div>
+        <!-- <Icon name="docs" size="20px" />
+        <div class="">Note</div> -->
       {:else if resource.type === ResourceTypes.LINK}
         <Icon name="link" size="20px" />
         <div class="">Link</div>

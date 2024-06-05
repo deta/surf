@@ -28,7 +28,7 @@ export class Drawer {
 
   constructor() {
     this.size = writable('normal')
-    this.show = writable(false)
+    this.show = writable(true)
     this.searchValue = writable('')
     this.selectedTab = writable(null)
     this.viewState = writable(VIEW_STATES.DEFAULT)

@@ -6,6 +6,8 @@
   import type { ResourceDataDocument } from '../../../types'
   import type { ResourcePreviewEvents } from '../../Resources/events'
 
+  import RenderedDocument from './RenderedDocument.svelte'
+
   export let resource: ResourceDocument
   export let type: string
 
@@ -60,21 +62,24 @@
       <div class="title">{error}</div>
       <div class="subtitle">{document?.url}</div>
     {:else}
-      <!-- <img
-        class="favicon"
-        src={`https://www.google.com/s2/favicons?domain=${document?.site_icon}&sz=256`}
-        alt={`${document?.site_name} favicon`}
-      /> -->
-      <img
-        class="favicon"
-        src={`https://www.google.com/s2/favicons?domain=${document?.url}&sz=256`}
-        alt={`${document?.url} favicon`}
-      />
-      <div class="title">{title}</div>
-      <div class="document-metadata">
-        {#if isNotion}<div class="from">Notion</div>{/if}
-        {#if isGoogleDocs}<div class="from">Google Docs</div>{/if}
+      <div class="metadata-container">
+        <img
+          class="favicon"
+          src={`https://www.google.com/s2/favicons?domain=${document?.url}&sz=256`}
+          alt={`${document?.url} favicon`}
+        />
+
+        <div class="document-metadata">
+          {#if isNotion}<div class="from">Notion</div>{/if}
+          {#if isGoogleDocs}<div class="from">Google Docs</div>{/if}
+        </div>
       </div>
+
+      <div class="title">{title}</div>
+
+      {#if isNotion}
+        <RenderedDocument html={document.content_html} />
+      {/if}
     {/if}
   </div>
 </div>
@@ -102,6 +107,12 @@
     flex-grow: 1;
   }
 
+  .metadata-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
   .googleDocs {
     .title,
     .document-metadata > .from {
@@ -125,7 +136,7 @@
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
-    margin-top: 1rem;
+    margin-bottom: -2rem;
     max-width: 95%;
   }
   .document-metadata {
