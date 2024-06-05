@@ -1,8 +1,14 @@
 use crate::{
-    ai::ai::ChatHistory, backend::{
+    ai::ai::ChatHistory,
+    backend::{
         message::{MiscMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
-    }, store::{db::Database, models::{random_uuid, AIChatSession}}, BackendError, BackendResult
+    },
+    store::{
+        db::Database,
+        models::{random_uuid, AIChatSession},
+    },
+    BackendError, BackendResult,
 };
 use futures::StreamExt;
 use neon::prelude::*;
@@ -37,6 +43,7 @@ impl Worker {
         model: String,
         api_endpoint: Option<String>,
         mut callback: Root<JsFunction>,
+        resource_ids: Option<Vec<String>>,
     ) -> BackendResult<()> {
         // TODO: save this runtime somewhere and re-use when needed
         tokio::runtime::Runtime::new()
@@ -44,7 +51,7 @@ impl Worker {
             .block_on(async move {
                 let mut stream = self
                     .ai
-                    .chat(query, session_id, number_documents, model, api_endpoint)
+                    .chat(query, session_id, number_documents, model, api_endpoint,resource_ids)
                     .await?;
 
                 while let Some(chunk) = stream.next().await {
@@ -98,6 +105,7 @@ pub fn handle_misc_message(
             model,
             callback,
             api_endpoint,
+            resource_ids,
         } => {
             let result = worker.send_chat_query(
                 channel,
@@ -107,6 +115,7 @@ pub fn handle_misc_message(
                 model,
                 api_endpoint,
                 callback,
+                resource_ids,
             );
             send_worker_response(channel, oneshot, result)
         }

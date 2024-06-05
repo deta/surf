@@ -565,7 +565,7 @@ export class SFFS {
     chatId: string,
     query: string,
     callback: (chunk: string) => void,
-    opts?: { limit?: number; systemPrompt?: string; apiEndpoint?: string }
+    opts?: { limit?: number; systemPrompt?: string; apiEndpoint?: string; resourceIds?: string[]}
   ): Promise<void> {
     this.log.debug(
       'sending ai chat message to chat with id',
@@ -577,15 +577,18 @@ export class SFFS {
       'system prompt:',
       opts?.systemPrompt,
       'api endpoint:',
-      opts?.apiEndpoint
+      opts?.apiEndpoint,
+      'resource ids filter:',
+      opts?.resourceIds,
     )
     return await this.backend.js__ai_send_chat_message(
       query,
       chatId,
+      callback,
       opts?.limit ?? 20,
       opts?.systemPrompt ?? '',
-      callback,
       opts?.apiEndpoint ?? ''
+      opts?.resourceIds
     )
   }
 }

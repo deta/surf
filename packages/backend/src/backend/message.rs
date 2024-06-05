@@ -125,6 +125,7 @@ pub enum MiscMessage {
         query: String,
         session_id: String,
         api_endpoint: Option<String>,
+        resource_ids: Option<Vec<String>>,
     },
     Print(String),
     CreateAIChatMessage(String),

@@ -16,13 +16,30 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let query = cx.argument::<JsString>(1)?.value(&mut cx);
     let session_id = cx.argument::<JsString>(2)?.value(&mut cx);
-    let number_documents = cx.argument::<JsNumber>(3)?.value(&mut cx) as i32;
-    let model = cx.argument::<JsString>(4)?.value(&mut cx);
-    let callback = cx.argument::<JsFunction>(5)?.root(&mut cx);
+    let callback = cx.argument::<JsFunction>(3)?.root(&mut cx);
+    let number_documents = cx.argument::<JsNumber>(4)?.value(&mut cx) as i32;
+    let model = cx.argument::<JsString>(5)?.value(&mut cx);
     let api_endpoint = cx
         .argument_opt(6)
         .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
         .map(|api_endpoint| api_endpoint.value(&mut cx));
+    let resource_ids = match cx.argument_opt(7).filter(|arg| {
+        !(arg.is_a::<JsUndefined, FunctionContext>(&mut cx)
+            || arg.is_a::<JsNull, FunctionContext>(&mut cx))
+    }) {
+        Some(arg) => Some(
+            arg.downcast_or_throw::<JsArray, FunctionContext>(&mut cx)?
+                .to_vec(&mut cx)?
+                .iter()
+                .map(|value| {
+                    value
+                        .downcast_or_throw::<JsString, FunctionContext>(&mut cx)
+                        .map(|js_str| js_str.value(&mut cx))
+                })
+                .collect::<NeonResult<Vec<String>>>()?,
+        ),
+        None => None,
+    };
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
@@ -33,6 +50,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             model,
             callback,
             api_endpoint,
+            resource_ids,
         }),
         deferred,
     );

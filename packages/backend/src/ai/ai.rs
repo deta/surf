@@ -79,7 +79,11 @@ impl AI {
         }
     }
 
-    pub fn get_chat_history(&self, session_id: String, api_endpoint: Option<String>) -> Result<ChatHistory, reqwest::Error> {
+    pub fn get_chat_history(
+        &self,
+        session_id: String,
+        api_endpoint: Option<String>,
+    ) -> Result<ChatHistory, reqwest::Error> {
         let mut api_endpoint = api_endpoint.unwrap_or_else(|| self.api_endpoint.clone());
         if api_endpoint == "" {
             api_endpoint = self.api_endpoint.clone();
@@ -114,7 +118,8 @@ impl AI {
         session_id: String,
         number_documents: i32,
         model: String,
-        api_endpoint: Option<String>, 
+        api_endpoint: Option<String>,
+        resource_ids: Option<Vec<String>>,
     ) -> BackendResult<impl Stream<Item = BackendResult<Option<String>>>> {
         let mut api_endpoint = api_endpoint.unwrap_or_else(|| self.api_endpoint.clone());
         if api_endpoint == "" {
@@ -122,15 +127,20 @@ impl AI {
         }
 
         let url = format!("{}/chat", &api_endpoint);
+        let mut query_params = vec![
+            ("query", query),
+            ("session_id", session_id),
+            ("number_documents", number_documents.to_string()),
+            ("model", model),
+        ];
+        if let Some(resource_ids) = resource_ids {
+            query_params.push(("resource_ids", resource_ids.join(",")))
+        }
+
         let response = self
             .async_client
             .get(url)
-            .query(&[
-                ("query", &query),
-                ("session_id", &session_id),
-                ("number_documents", &number_documents.to_string()),
-                ("model", &model),
-            ])
+            .query(&query_params)
             .send()
             .await?;
 
