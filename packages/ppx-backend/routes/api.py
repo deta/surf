@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 
 from utils.embedchain import send_message
 from utils.embedchain import get_embedding
+from utils.sffs import get_resource
 
 router = APIRouter()
 
@@ -33,6 +34,13 @@ async def handle_embeddings(data: str):
     Accepts 'data' as a POST parameter.
     """
     return await get_embedding(data)
+
+@router.get("/api/v1/resources/{resource_id}")
+async def handle_get_resource(resource_id, db_path:str):
+    resource = get_resource(resource_id, db_path)
+    if not resource:
+        return responses.JSONResponse(status_code=404, content={"message": "Resource not found"})
+    return resource
 
 
 @router.get("/")
