@@ -11,6 +11,7 @@
   import type { TabPage } from './types'
   import { useLogScope } from '../../utils/log'
   import type { DetectedWebApp } from '@horizon/web-parser'
+  import type { WebViewReceiveEvents } from '@horizon/types'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<{ newTab: NewTabEvent; appDetection: DetectedWebApp }>()
@@ -50,6 +51,7 @@
   }
 
   export const detectResource = (timeoutNum?: number) => {
+    console.log('detectResource', webview)
     if (webview) {
       return webview.detectResource(timeoutNum)
     }
@@ -58,6 +60,15 @@
   export const executeJavaScript = (code: string, userGesture?: boolean) => {
     if (webview) {
       return webview.executeJavaScript(code, userGesture)
+    }
+  }
+
+  export const sendWebviewEvent = <T extends keyof WebViewReceiveEvents>(
+    name: T,
+    data?: WebViewReceiveEvents[T]
+  ): void => {
+    if (webview) {
+      webview.sendEvent(name, data)
     }
   }
 
@@ -185,4 +196,5 @@
   on:bookmark
   on:transform
   on:detectedApp={handleDetectedApp}
+  on:inlineTextReplace
 />

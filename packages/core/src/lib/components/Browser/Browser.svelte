@@ -44,6 +44,7 @@
   import Importer from './Importer.svelte'
   import { summarizeText } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
+  import { WebViewEventReceiveNames } from '@horizon/types'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -786,6 +787,24 @@
     let transformation = ''
     if (type === 'summarize') {
       transformation = await summarizeText(text, 'Be as concise as possible.')
+    } else if (type === 'explain') {
+      // @ts-expect-error
+      transformation = await window.api.createAIChatCompletion(
+        text,
+        `Take the following text which has been extracted from a web page like a article or blog post and explain it so it is easily understandable for anyone. Try to be concise. Only respond with the explanation and make sure to escape any special characters in the response.`
+      )
+    } else if (type === 'translate') {
+      // @ts-expect-error
+      transformation = await window.api.createAIChatCompletion(
+        text,
+        `Take the following text which has been extracted from a web page like a article or blog post and translate it into English. If it is english already translate it into German. Stay as close to the original meaning as possible. Only respond with the translation and make sure to escape any special characters in the response.`
+      )
+    } else if (type === 'grammar') {
+      // @ts-expect-error
+      transformation = await window.api.createAIChatCompletion(
+        text,
+        `Take the following text which has been extracted from a web page like a article or blog post or document and fix all grammar mistakes as well as improve the writing. Stay as close to the original meaning as possible but change things were necessary you deem it necessary. Only respond with the improved text and make sure to escape any special characters in the response.`
+      )
     } else {
       // @ts-expect-error
       transformation = await window.api.createAIChatCompletion(
@@ -795,6 +814,24 @@
     }
 
     log.debug('transformation output', transformation)
+
+    $activeBrowserTab.sendWebviewEvent(WebViewEventReceiveNames.TransformationOutput, {
+      text: transformation
+    })
+  }
+
+  const handleWebviewInlineTextReplace = async (
+    e: CustomEvent<WebViewWrapperEvents['inlineTextReplace']>,
+    tabId: string
+  ) => {
+    const browserTab = $browserTabs[tabId]
+    if (!browserTab) {
+      log.error('Browser tab not found', tabId)
+      return
+    }
+
+    const { target, content } = e.detail
+    log.debug('webview inline text replace', e.detail)
 
     // add mark styles to the page
     await $activeBrowserTab.executeJavaScript(`
@@ -814,8 +851,8 @@
 
     const code = `
 (function() {
-    const searchText = \`${text}\`;
-    const transformation = \`${transformation}\`;
+    const searchText = \`${target}\`;
+    const transformation = \`${content}\`;
 
     function highlightSentence(sentence) {
       // save the current scroll position
@@ -1596,6 +1633,7 @@
             on:bookmark={handleWebviewBookmark}
             on:transform={handleWebviewTransform}
             on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
+            on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, tab.id)}
           />
         {:else if tab.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
@@ -1644,6 +1682,7 @@
             on:bookmark={handleWebviewBookmark}
             on:transform={handleWebviewTransform}
             on:appDetection={(e) => handleWebviewAppDetection(e, $activeTab)}
+            on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, $activeTab.id)}
           />
         {:else if $activeTab?.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === $activeTab?.horizonId)}

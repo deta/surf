@@ -53,6 +53,7 @@ import FileTextAi from './Icons/FileTextAI.svelte'
 import Message from './Icons/Message.svelte'
 import GripVertical from './Icons/GripVertical.svelte'
 import Marker from './Icons/Marker.svelte'
+import TextInsert from './Icons/TextInsert.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -110,7 +111,8 @@ export const icons = {
   'file-text-ai': FileTextAi,
   message: Message,
   'grip.vertical': GripVertical,
-  marker: Marker
+  marker: Marker,
+  textInsert: TextInsert
 }
 
 export type Icons = keyof typeof icons
@@ -168,5 +170,6 @@ export {
   FileTextAi,
   Message,
   GripVertical,
-  Marker
+  Marker,
+  TextInsert
 }

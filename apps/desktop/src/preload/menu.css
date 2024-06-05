@@ -1,6 +1,6 @@
 .webview-menu-wrapper {
     display: flex;
-    align-items: stretch;
+    flex-direction: column;
     gap: 8px;
     background: #fff;
     padding: 4px;
@@ -9,6 +9,19 @@
     border: 1px solid #f0f0f0;
     user-select: none;
     font-size: 15px;
+    max-width: 650px;
+}
+
+.webview-menu-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.webview-menu-output-actions {
+    display: flex;
+    align-items: stretch;
+    gap: 3px;
 }
 
 .webview-menu-divider {
@@ -31,6 +44,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .webview-menu-wrapper button:hover {
@@ -43,6 +57,22 @@
 
 .webview-menu-btn-primary {
     color: #fd1bdf !important;
+}
+
+.webview-menu-transform-actions {
+    display: flex;
+    flex-direction: column;
+}
+
+.webview-menu-transform-actions button {
+    justify-content: space-between;
+    width: 100%;
+    opacity: 0.75;
+    font-size: 15px !important;
+}
+
+.webview-menu-transform-actions button:hover {
+    opacity: 1;
 }
 
 .webview-menu-drag {
@@ -75,3 +105,41 @@
     outline: none;
     border-color: #fd1bdf;
 }
+
+.webview-menu-output {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 16px;
+    color: #333;
+    background: #f0f0f0;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.tooltip {
+    --tooltip-arrow-size: 6px;
+    --tooltip-background-color: rgba(0, 0, 0, 0.9);
+    --tooltip-border-radius: 8px;
+    --tooltip-box-shadow: 0 1px 20px rgba(0, 0, 0, 0.25);
+    --tooltip-font-family: inherit;
+    --tooltip-font-size: 12px;
+    --tooltip-font-weight: 400;
+    --tooltip-line-height: 1.25rem;
+    --tooltip-color: #fff;
+    --tooltip-offset-x: 5px;
+    --tooltip-offset-y: 10px;
+    --tooltip-padding: 5px 7px;
+    --tooltip-white-space-hidden: nowrap;
+    --tooltip-white-space-shown: nowrap;
+    --tooltip-z-index: 100000;
+  }
+
+  .tooltip.top {
+    --tooltip-offset-y: 10px !important;
+  }
+
+  .tooltip.bottom {
+    --tooltip-offset-y: 45px !important;
+  }
