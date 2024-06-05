@@ -43,6 +43,9 @@ async def generate_sources_str(contexts):
         metadata = context.get('metadata', {})
         timestamp = metadata.get('timestamp', '')
         resource_id = metadata.get('resource_id', '')
+        url = metadata.get('url', '').removesuffix('/')
+        # TODO: why is this local?
+        if url == 'local': url = ''
         content = context.get('context', '')
 
         sources_str += (
@@ -52,6 +55,7 @@ async def generate_sources_str(contexts):
             f"\t\t<content>{content}</content>\n"
             f"\t\t<metadata>\n"
             f"\t\t\t<timestamp>{timestamp}</timestamp>\n"
+            f"\t\t\t<url>{url}</url>\n"
             f"\t\t</metadata>\n"
             f"\t</source>\n"
         )
