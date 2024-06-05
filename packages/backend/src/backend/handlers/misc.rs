@@ -1,8 +1,14 @@
 use crate::{
-    ai::ai::ChatHistory, backend::{
+    ai::ai::ChatHistory,
+    backend::{
         message::{MiscMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
-    }, store::{db::Database, models::{random_uuid, AIChatSession}}, BackendError, BackendResult
+    },
+    store::{
+        db::Database,
+        models::{random_uuid, AIChatSession},
+    },
+    BackendError, BackendResult,
 };
 use futures::StreamExt;
 use neon::prelude::*;
@@ -36,6 +42,7 @@ impl Worker {
         number_documents: i32,
         model: String,
         mut callback: Root<JsFunction>,
+        resource_ids: Option<Vec<String>>,
     ) -> BackendResult<()> {
         // TODO: save this runtime somewhere and re-use when needed
         tokio::runtime::Runtime::new()
@@ -43,7 +50,7 @@ impl Worker {
             .block_on(async move {
                 let mut stream = self
                     .ai
-                    .chat(query, session_id, number_documents, model)
+                    .chat(query, session_id, number_documents, model, resource_ids)
                     .await?;
 
                 while let Some(chunk) = stream.next().await {
@@ -80,11 +87,9 @@ pub fn handle_misc_message(
         MiscMessage::Print(content) => {
             send_worker_response(channel, oneshot, worker.print(content))
         }
-        MiscMessage::GetAIChatMessage(id) => send_worker_response(
-            channel,
-            oneshot,
-            worker.get_ai_chat_message(id),
-        ),
+        MiscMessage::GetAIChatMessage(id) => {
+            send_worker_response(channel, oneshot, worker.get_ai_chat_message(id))
+        }
         MiscMessage::CreateAIChatMessage(system_prompot) => send_worker_response(
             channel,
             oneshot,
@@ -96,6 +101,7 @@ pub fn handle_misc_message(
             number_documents,
             model,
             callback,
+            resource_ids,
         } => {
             let result = worker.send_chat_query(
                 channel,
@@ -104,6 +110,7 @@ pub fn handle_misc_message(
                 number_documents,
                 model,
                 callback,
+                resource_ids,
             );
             send_worker_response(channel, oneshot, result)
         }

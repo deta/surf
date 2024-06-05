@@ -1,3 +1,5 @@
+from typing import Union
+
 from fastapi import APIRouter, Query, responses
 from fastapi.responses import StreamingResponse
 
@@ -10,11 +12,18 @@ DEFAULT_MODEL = "gpt-4o"
 
 
 @router.get("/api/v1/chat")
-async def handle_chat(query: str, session_id: str = Query(None), number_documents: int = 5, system_prompt: str = Query(None)):
+async def handle_chat(
+    query: str,
+    session_id: str = Query(None),
+    number_documents: int = 5,
+    system_prompt: str = Query(None),
+    resource_ids: Union[str, None] = None
+):
     """
     Handles a chat request to the Embedchain app.
     Accepts 'query' and 'session_id' as query parameters.
     """
+    resource_ids = resource_ids.split(',') if resource_ids != None else None
     generator = send_message(
         query, 
         session_id, 
@@ -23,6 +32,7 @@ async def handle_chat(query: str, session_id: str = Query(None), number_document
         True,
         True,
         DEFAULT_MODEL,
+        resource_ids,
     )
     return StreamingResponse(generator)
 

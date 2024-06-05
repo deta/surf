@@ -109,17 +109,23 @@ impl AI {
         session_id: String,
         number_documents: i32,
         model: String,
+        resource_ids: Option<Vec<String>>,
     ) -> BackendResult<impl Stream<Item = BackendResult<Option<String>>>> {
         let url = format!("{}/chat", &self.api_endpoint);
+        let mut query_params = vec![
+            ("query", query),
+            ("session_id", session_id),
+            ("number_documents", number_documents.to_string()),
+            ("model", model),
+        ];
+        if let Some(resource_ids) = resource_ids {
+            query_params.push(("resource_ids", resource_ids.join(",")))
+        }
+
         let response = self
             .async_client
             .get(url)
-            .query(&[
-                ("query", &query),
-                ("session_id", &session_id),
-                ("number_documents", &number_documents.to_string()),
-                ("model", &model),
-            ])
+            .query(&query_params)
             .send()
             .await?;
 

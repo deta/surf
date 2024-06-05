@@ -124,6 +124,7 @@ pub enum MiscMessage {
         number_documents: i32,
         query: String,
         session_id: String,
+        resource_ids: Option<Vec<String>>,
     },
     Print(String),
     CreateAIChatMessage(String),
