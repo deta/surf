@@ -21,6 +21,7 @@ export interface TabChat extends BaseTab {
   type: 'chat'
   query: string
   chatId?: string
+  apiEndpoint?: string
 }
 
 export interface TabHorizon extends BaseTab {
@@ -64,6 +65,7 @@ export type AIChatMessageSource = {
   content: string
   metadata?: {
     timestamp?: number
+    url?: string
   }
 }
 

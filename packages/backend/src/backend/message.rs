@@ -124,8 +124,9 @@ pub enum MiscMessage {
         number_documents: i32,
         query: String,
         session_id: String,
+        api_endpoint: Option<String>,
     },
     Print(String),
     CreateAIChatMessage(String),
-    GetAIChatMessage(String),
+    GetAIChatMessage(String, Option<String>),
 }

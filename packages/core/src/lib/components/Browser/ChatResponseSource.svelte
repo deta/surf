@@ -28,6 +28,11 @@
 
 {#if resource}
   <ResourcePreviewClean {resource} on:click />
+{:else if source.metadata && source.metadata.url}
+  <div>
+    {source.id})
+    <a href={source.metadata.url}>{source.metadata.url}</a>
+  </div>
 {/if}
 
 <style lang="scss">
