@@ -1,27 +1,36 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
+  import { slide } from 'svelte/transition'
   import SplashScreen from '../SplashScreen.svelte'
   import { writable, derived } from 'svelte/store'
-  import WebviewWrapper, { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
-  import { HistoryEntriesManager } from '../../service/history'
+  import { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
   import { useLogScope } from '../../utils/log'
   import { Icon } from '@horizon/icons'
   import { generateID } from '../../utils/id'
-  import { parseStringIntoBrowserLocation, parseStringIntoUrl } from '../../utils/url'
+  import { parseStringIntoBrowserLocation } from '../../utils/url'
   import { isModKeyAndKeyPressed, isModKeyPressed } from '../../utils/keyboard'
   import { copyToClipboard } from '../../utils/clipboard'
-  import { getChatData } from './examples'
   import { writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
-  import { ResourceManager, type ResourceObject } from '../../service/resources'
-  import { type Horizon as HorizonClass, HorizonsManager } from '../../service/horizon'
+  import { ResourceManager } from '../../service/resources'
+  import { HorizonsManager } from '../../service/horizon'
   import { API } from '../../service/api'
   import BrowserTab, { type NewTabEvent } from './BrowserTab.svelte'
   import Horizon from '../Horizon/Horizon.svelte'
   import BrowserHomescreen from './BrowserHomescreen.svelte'
 
   import '../Horizon/index.scss'
-  import type { Tab, TabChat, TabEmpty, TabHorizon, TabImporter, TabPage } from './types'
+  import type {
+    PageHighlight,
+    PageMagic,
+    PageMagicResponse,
+    Tab,
+    TabChat,
+    TabEmpty,
+    TabHorizon,
+    TabImporter,
+    TabPage
+  } from './types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../Cards/Browser/searchEngines'
   import DrawerWrapper from '../Horizon/DrawerWrapper.svelte'
   import type { Drawer } from '@horizon/drawer'
@@ -31,10 +40,10 @@
   import { useLocalStorageStore } from '../../utils/localstorage'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
-  import { LinkImporter, WebParser } from '@horizon/web-parser'
+  import { WebParser, type DetectedWebApp } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
   import { summarizeText } from '../../service/ai'
-  import { clickOutside } from '../../utils/directives'
+  import MagicSidebar from './MagicSidebar.svelte'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -67,7 +76,6 @@
   const log = useLogScope('Browser')
 
   const tabs = writable<Tab[]>([])
-
   const addressValue = writable('')
   const activeTabId = useLocalStorageStore<string>('activeTabId', '')
   const loadingOrganize = writable(false)
@@ -75,14 +83,9 @@
   const sidebarTab = writable<'active' | 'archive'>('active')
   const browserTabs = writable<Record<string, BrowserTab>>({})
   const bookmarkingInProgress = writable(false)
-  const magicInProgress = writable(false)
-  const showMagicBar = writable(false)
   const magicInputValue = writable('')
-  const magicOutput = writable('')
-  const pageHighlighted = writable(false)
-
+  const magicPages = writable<PageMagic[]>([])
   const bookmarkingSuccess = writableAutoReset(false, 1000)
-
   const showURLBar = writable(false)
 
   const activeTabs = derived([tabs], ([tabs]) => {
@@ -121,6 +124,10 @@
 
   const activeBrowserTab = derived([browserTabs, activeTabId], ([browserTabs, activeTabId]) => {
     return browserTabs[activeTabId]
+  })
+
+  const activeTabMagic = derived([activeTab, magicPages], ([activeTab, magicPages]) => {
+    return magicPages.find((page) => page.tabId === activeTab?.id)
   })
 
   $: canGoBack = $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
@@ -429,12 +436,8 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     log.debug('key down', e.key)
     if (e.key === 'Enter' && addressBarFocus) {
-      if ($showMagicBar) {
-        handleMagicButton()
-      } else {
-        handleBlur()
-        addressInputElem.blur()
-      }
+      handleBlur()
+      addressInputElem.blur()
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
       copyToClipboard($activeTabLocation ?? '')
     } else if (isModKeyPressed(e) && e.key === 't') {
@@ -462,11 +465,7 @@
 
   const handleAddressBarKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
-      if ($showMagicBar) {
-        handleMagicButton()
-      } else {
-        showURLBar.set(!showURLBar)
-      }
+      showURLBar.set(!showURLBar)
     }
   }
 
@@ -549,54 +548,54 @@
     }
   }
 
-  const handleOrganize = async () => {
-    try {
-      loadingOrganize.set(true)
-      log.debug('Organizing tabs', $tabs)
+  // const handleOrganize = async () => {
+  //   try {
+  //     loadingOrganize.set(true)
+  //     log.debug('Organizing tabs', $tabs)
 
-      const prompt = `You organize tabs given to you into as few sections as possible. Come up with simple and short but clear section names and move the tabs into the right sections. Try to not change existing sections unless necessary and avoid putting a single tab into its own section. The tabs are given to you are formatted as JSON array with each item having the tab title, url and optional section if it is part of it already. Respond with the sections as JSON keys and the tabs in each section as a list of tab IDs as the value. Only respond with JSON.`
-      // @ts-ignore
-      const response = await window.api.createAIChatCompletion(
-        `Organize these tabs:\n${JSON.stringify(
-          $tabs.map((tab) => ({
-            id: tab.id,
-            title: tab.title,
-            url: tab.initialLocation,
-            ...(tab.section !== '_all' && tab.section !== 'Unorganised'
-              ? { section: tab.section }
-              : {})
-          })),
-          null,
-          2
-        )}`,
-        prompt
-      )
+  //     const prompt = `You organize tabs given to you into as few sections as possible. Come up with simple and short but clear section names and move the tabs into the right sections. Try to not change existing sections unless necessary and avoid putting a single tab into its own section. The tabs are given to you are formatted as JSON array with each item having the tab title, url and optional section if it is part of it already. Respond with the sections as JSON keys and the tabs in each section as a list of tab IDs as the value. Only respond with JSON.`
+  //     // @ts-ignore
+  //     const response = await window.api.createAIChatCompletion(
+  //       `Organize these tabs:\n${JSON.stringify(
+  //         $tabs.map((tab) => ({
+  //           id: tab.id,
+  //           title: tab.title,
+  //           url: tab.initialLocation,
+  //           ...(tab.section !== '_all' && tab.section !== 'Unorganised'
+  //             ? { section: tab.section }
+  //             : {})
+  //         })),
+  //         null,
+  //         2
+  //       )}`,
+  //       prompt
+  //     )
 
-      log.debug('Organize response', response)
+  //     log.debug('Organize response', response)
 
-      const json = JSON.parse(response)
-      log.debug('Organize response JSON', json)
+  //     const json = JSON.parse(response)
+  //     log.debug('Organize response JSON', json)
 
-      tabs.update((tabs) => {
-        const updatedTabs = tabs.map((tab) => {
-          const section = Object.keys(json).find((section) => json[section].includes(tab.id))
-          if (section) {
-            return {
-              ...tab,
-              section
-            }
-          }
-          return tab
-        })
+  //     tabs.update((tabs) => {
+  //       const updatedTabs = tabs.map((tab) => {
+  //         const section = Object.keys(json).find((section) => json[section].includes(tab.id))
+  //         if (section) {
+  //           return {
+  //             ...tab,
+  //             section
+  //           }
+  //         }
+  //         return tab
+  //       })
 
-        return updatedTabs
-      })
-    } catch (err) {
-      log.error('Error organizing tabs', err)
-    } finally {
-      loadingOrganize.set(false)
-    }
-  }
+  //       return updatedTabs
+  //     })
+  //   } catch (err) {
+  //     log.error('Error organizing tabs', err)
+  //   } finally {
+  //     loadingOrganize.set(false)
+  //   }
+  // }
 
   const openUrlHandler = (url: string) => {
     log.debug('open url', url)
@@ -694,6 +693,92 @@
     }
   }
 
+  function updateMagicPage(tabId: string, updates: Partial<PageMagic>) {
+    magicPages.update((pages) => {
+      const updatedPages = pages.map((page) => {
+        if (page.tabId === tabId) {
+          return {
+            ...page,
+            ...updates
+          }
+        }
+
+        return page
+      })
+
+      return updatedPages
+    })
+  }
+
+  function addPageMagicResponse(tabId: string, response: PageMagicResponse) {
+    magicPages.update((pages) => {
+      const updatedPages = pages.map((page) => {
+        if (page.tabId === tabId) {
+          return {
+            ...page,
+            responses: [...page.responses, response]
+          }
+        }
+
+        return page
+      })
+
+      return updatedPages
+    })
+  }
+
+  function updatePageMagicResponse(
+    tabId: string,
+    responseId: string,
+    updates: Partial<PageMagicResponse>
+  ) {
+    magicPages.update((pages) => {
+      const updatedPages = pages.map((page) => {
+        if (page.tabId === tabId) {
+          return {
+            ...page,
+            responses: page.responses.map((response) => {
+              if (response.id === responseId) {
+                return {
+                  ...response,
+                  ...updates
+                }
+              }
+
+              return response
+            })
+          }
+        }
+
+        return page
+      })
+
+      return updatedPages
+    })
+  }
+
+  async function handleWebviewAppDetection(e: CustomEvent<DetectedWebApp>, tab: Tab) {
+    log.debug('webview app detection', e.detail, tab)
+
+    if (tab.type !== 'page') return
+
+    let pageMagic = $magicPages.find((page) => page.tabId === tab.id)
+    if (!pageMagic) {
+      pageMagic = {
+        tabId: tab.id,
+        showSidebar: false,
+        running: false,
+        responses: []
+      } as PageMagic
+
+      magicPages.update((pages) => [...pages, pageMagic!])
+    }
+
+    // if ($activeTabId === tab.id) {
+    //   summarizePage(pageMagic)
+    // }
+  }
+
   async function handleWebviewTransform(e: CustomEvent<WebViewWrapperEvents['transform']>) {
     const { text, query, type } = e.detail
     log.debug('webview transformation', e.detail)
@@ -784,18 +869,8 @@
     await $activeBrowserTab.executeJavaScript(code)
   }
 
-  type Highlight = {
-    type: 'important' | 'statistic' | 'pro' | 'contra' | 'quote'
-    text: string
-  }
-
-  const handleMagicButton = async () => {
-    try {
-      log.debug('Magic button clicked')
-
-      magicInProgress.set(true)
-
-      const highlightTextSnippet = (text: string, type: Highlight['type']) => `
+  const highlightWebviewText = async (tabId: string, highlight: PageHighlight) => {
+    const highlightTextSnippet = (text: string, type: PageHighlight['type']) => `
 (function() {
     const searchText = \`${text}\`;
 
@@ -831,6 +906,7 @@
             const mark = document.createElement('mark');
             mark.classList.add('highlight');
             mark.classList.add('highlight-${type}');
+            mark.style.setProperty("background-color", "${highlight.color ?? ''}", "important")
 
             try {
                 // Wrap the found sentence in the mark element
@@ -872,7 +948,81 @@
 })();
       `
 
-      const detectedResource = await $activeBrowserTab.detectResource()
+    const browserTab = $browserTabs[tabId]
+    if (!browserTab) {
+      log.error('Browser tab not found', tabId)
+      return
+    }
+
+    const html = await browserTab.executeJavaScript(
+      highlightTextSnippet(highlight.text, highlight.type)
+    )
+
+    log.debug('HTML', html)
+  }
+
+  const scrollWebviewToText = async (tabId: string, text: string) => {
+    const scrollTextSnippet = (text: string) => `
+(function() {
+    const searchText = \`${text}\`;
+
+    function scrollTo(sentence) {
+      const originalSelection = window.getSelection().rangeCount > 0 ? window.getSelection().getRangeAt(0) : null;
+
+      try {
+        // Create a range spanning the entire document
+        const range = document.createRange();
+        range.selectNodeContents(document.body);
+    
+        // Move the selection point to the start of the document
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        selection.collapseToStart();
+
+        window.find(sentence)
+
+        if (originalSelection) {
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(originalSelection);
+        } else {
+            window.getSelection().removeAllRanges()
+        }
+      } catch (e) {
+        console.error('Error scrolling to text', e)
+      }
+    }
+    
+    scrollTo(searchText);
+})();
+      `
+
+    const browserTab = $browserTabs[tabId]
+    if (!browserTab) {
+      log.error('Browser tab not found', tabId)
+      return
+    }
+
+    const html = await browserTab.executeJavaScript(scrollTextSnippet(text))
+
+    log.debug('HTML', html)
+  }
+
+  const summarizePage = async (magicPage: PageMagic) => {
+    let response: PageMagicResponse | null = null
+
+    try {
+      log.debug('Magic button clicked')
+
+      const tab = $tabs.find((tab) => tab.id === magicPage.tabId)
+      if (!tab) {
+        log.error('Tab not found', magicPage.tabId)
+        return
+      }
+
+      const browserTab = $browserTabs[tab.id]
+
+      const detectedResource = await browserTab.detectResource()
       log.debug('extracted resource data', detectedResource)
 
       if (!detectedResource) {
@@ -880,62 +1030,55 @@
         return
       }
 
-      $magicOutput = ''
+      response = {
+        id: generateID(),
+        role: 'system',
+        query: 'Summary',
+        status: 'pending',
+        content: '',
+        citations: {}
+      } as PageMagicResponse
+
+      updateMagicPage(magicPage.tabId, { running: true })
+      addPageMagicResponse(magicPage.tabId, response)
 
       const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
       log.debug('content', content)
 
       log.debug('calling the AI')
 
-      if ($magicInputValue) {
-        log.debug('User query', $magicInputValue)
-
-        // @ts-expect-error
-        const output = await window.api.createAIChatCompletion(
-          $magicInputValue
-            ? `User Query: ${$magicInputValue}\n\nContent: ${content.plain}`
-            : content.plain,
-          'Take the following text which has been extracted from a web page like a article or blog post and analyse it with the given user query. Provide a short response to the user that answers or matches the query. Only respond with the answer and make sure to escape any special characters in the response.'
-        )
-
-        log.debug('Magic response', output)
-        magicOutput.set(output)
-      }
-
-      const systemPromptFormat =
-        'Avoid highlighting entire sentences if they are long and instead highlight individual parts but make sure they still make sense. Return the full sentences or smaller sections of a sentence without changing them and a corresponding type from the following options: "important", "statistic", "pro", "contra", "quote". Respond only with a JSON object that contains a array of parts to highlight in the following format `{ "highlights": [{ "type": "<type>", "text": "<text>" }] }`. Make sure to escape any special characters in the response.'
-      const generalSystemPrompt =
-        'Take the following text which has been extracted from a web page like a article or blog post and analyse it for key takeaways, important information, statistics pro and contra arguments and other highlights that the user should know about. Try to think of the meaning behind the entire text and what information needs to be highlighted to convey that. The goal is to highlight all these important parts so the user can see them at a glance.'
-      const userSystemPrompt = `Take the following text which has been extracted from a web page like a article or blog post and analyse it with the given user query. Think through the meaning of the entire text and what information needs to be highlighted to answer or match the user's query. The goal is to highlight all these important parts so the user can see them at a glance.`
+      // if ($magicInputValue) {
+      //   log.debug('user query', $magicInputValue)
+      //   return
+      // }
 
       // @ts-expect-error
-      const response = await window.api.createAIChatCompletion(
-        $magicInputValue
-          ? `User Query: ${$magicInputValue}\n\nContent: ${content.plain}`
-          : content.plain,
-        ($magicInputValue ? userSystemPrompt : generalSystemPrompt) + ' ' + systemPromptFormat,
+      const output = await window.api.createAIChatCompletion(
+        content.plain,
+        'Take the following text which has been extracted from a web page like a article or blog post and generate a short summary for it that mentions the key take aways and the most important information Be as concise as possible. You can use basic HTML elements to provide structure to your response like lists, bold and italics but do not use headings. Separate the response into different paragraphs. Make sure to include inline citations in the response text using the citation element like this <citation style="background: {color};">{id}</citation>. Respond with a JSON object in the following format: `{ "content": "<html text response>", "citations": { "<id>": { "text": "<exact source text>", "color": "<unqiue color>" } } }`. The source text of the citation needs to be an exact match to a part of the original text and the IDs need to match the citations in your response. Use incrementing numbers as the IDs. Give each citation a unique pastel color.',
         { response_format: { type: 'json_object' } }
       )
 
-      log.debug('Magic response', response)
-
-      const json = JSON.parse(response)
-
+      log.debug('Magic response', output)
+      const json = JSON.parse(output)
       log.debug('json', json)
-      if (
-        !json.highlights ||
-        json.highlights.length === 0 ||
-        !json.highlights[0].text ||
-        !json.highlights[0].type
-      ) {
-        log.debug('No highlights found or invalid format')
+
+      if (!json.content || !json.citations) {
+        log.debug('Invalid response')
         return
       }
 
-      const highlights = json.highlights as Highlight[]
+      response = {
+        ...response,
+        status: 'success',
+        content: json.content,
+        citations: json.citations
+      } as PageMagicResponse
+
+      updatePageMagicResponse(magicPage.tabId, response.id, response)
 
       // add mark styles to the page
-      await $activeBrowserTab.executeJavaScript(`
+      await browserTab.executeJavaScript(`
         (function() {
           const style = document.createElement('style');
           style.innerHTML = 'mark.highlight { background-color: #ffde3e38 !important; transition: background 0.2s ease; } mark.highlight:hover { background: #ffde3e7d !important; } mark.highlight-quote { background-color: #3ec8ff21 !important; } mark.highlight-quote:hover { background: #3ec8ff6b !important; } mark.highlight-pro { background-color: #3eff3e21 !important; } mark.highlight-pro:hover { background: #3eff3e6b !important; } mark.highlight-contra { background-color: #ff3e3e21 !important; } mark.highlight-contra:hover { background: #ff3e3e6b !important; } mark.highlight-statistic { background-color: #3e4bff21 !important; } mark.highlight-statistic:hover { background: #3e4bff52 !important;';
@@ -944,31 +1087,153 @@
       `)
 
       await Promise.all(
-        highlights.map(async (highlight) => {
-          const html = await $activeBrowserTab.executeJavaScript(
-            highlightTextSnippet(highlight.text, highlight.type)
-          )
-          log.debug('HTML', html)
+        Object.entries(json.citations).map(async ([id, citation]) => {
+          await highlightWebviewText(tab.id, {
+            type: 'important',
+            color: (citation as any).color as string,
+            text: (citation as any).text as string
+          })
         })
       )
 
       log.debug('Magic done')
-      pageHighlighted.set(true)
     } catch (e) {
       log.error('Error doing magic', e)
-      pageHighlighted.set(false)
+      if (response) {
+        updatePageMagicResponse(magicPage.tabId, response.id, {
+          status: 'error',
+          content: (e as any).message ?? 'Failed to generate response.'
+        })
+      }
     } finally {
-      magicInProgress.set(false)
+      updateMagicPage(magicPage.tabId, { running: false })
     }
   }
 
-  function handleClickOutside() {
-    $showMagicBar = false
-    $showURLBar = false
-    $magicInputValue = ''
-    $magicOutput = ''
-    $magicInProgress = false
-    $pageHighlighted = false
+  const handleChatSubmit = async (magicPage: PageMagic) => {
+    let response: PageMagicResponse | null = null
+    const savedInputValue = $magicInputValue
+
+    try {
+      log.debug('Magic button clicked')
+
+      if (!$magicInputValue) {
+        log.debug('No input value')
+        return
+      }
+
+      const tab = $tabs.find((tab) => tab.id === magicPage.tabId)
+      if (!tab) {
+        log.error('Tab not found', magicPage.tabId)
+        return
+      }
+
+      const browserTab = $browserTabs[tab.id]
+
+      const detectedResource = await browserTab.detectResource()
+      log.debug('extracted resource data', detectedResource)
+
+      if (!detectedResource) {
+        log.debug('no resource detected')
+        return
+      }
+
+      response = {
+        id: generateID(),
+        role: 'user',
+        query: savedInputValue,
+        status: 'pending',
+        content: '',
+        citations: {}
+      } as PageMagicResponse
+
+      updateMagicPage(magicPage.tabId, { running: true })
+      addPageMagicResponse(magicPage.tabId, response)
+
+      $magicInputValue = ''
+
+      const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+      log.debug('content', content)
+
+      log.debug('calling the AI')
+
+      // @ts-expect-error
+      const output = await window.api.createAIChatCompletion(
+        `User Query: ${savedInputValue}\n\nContent: ${content.plain}`,
+        'Take the following text which has been extracted from a web page like a article or blog post and answer the given user query with it. Be as concise as possible and really try to foucs your response on the users intent. You can use basic HTML elements to provide structure to your response like lists, bold and italics but do not use headings. Separate the response into different paragraphs. Make sure to include inline citations in the response text using the citation element like this <citation style="background: {color};">{id}</citation>. Respond with a JSON object in the following format: `{ "content": "<html text response>", "citations": { "<id>": { "text": "<exact source text>", "color": "<unqiue color>" } } }`. The source text of the citation needs to be an exact match to a part of the original text and the IDs need to match the citations in your response. Use incrementing numbers as the IDs. Give each citation a unique pastel color.',
+        { response_format: { type: 'json_object' } }
+      )
+
+      log.debug('Magic response', output)
+      const json = JSON.parse(output)
+      log.debug('json', json)
+
+      if (!json.content || !json.citations) {
+        log.debug('Invalid response')
+        return
+      }
+
+      response = {
+        ...response,
+        status: 'success',
+        content: json.content,
+        citations: json.citations
+      } as PageMagicResponse
+
+      updatePageMagicResponse(magicPage.tabId, response.id, response)
+
+      // add mark styles to the page
+      await browserTab.executeJavaScript(`
+        (function() {
+          const style = document.createElement('style');
+          style.innerHTML = 'mark.highlight { background-color: #ffde3e38 !important; transition: background 0.2s ease; } mark.highlight:hover { background: #ffde3e7d !important; } mark.highlight-quote { background-color: #3ec8ff21 !important; } mark.highlight-quote:hover { background: #3ec8ff6b !important; } mark.highlight-pro { background-color: #3eff3e21 !important; } mark.highlight-pro:hover { background: #3eff3e6b !important; } mark.highlight-contra { background-color: #ff3e3e21 !important; } mark.highlight-contra:hover { background: #ff3e3e6b !important; } mark.highlight-statistic { background-color: #3e4bff21 !important; } mark.highlight-statistic:hover { background: #3e4bff52 !important;';
+          document.head.appendChild(style);
+        })();
+      `)
+
+      await Promise.all(
+        Object.entries(json.citations).map(async ([id, citation]) => {
+          await highlightWebviewText(tab.id, {
+            type: 'important',
+            color: (citation as any).color as string,
+            text: (citation as any).text as string
+          })
+        })
+      )
+
+      log.debug('Magic done')
+    } catch (e) {
+      log.error('Error doing magic', e)
+      $magicInputValue = savedInputValue
+      if (response) {
+        updatePageMagicResponse(magicPage.tabId, response.id, {
+          status: 'error',
+          content: (e as any).message ?? 'Failed to generate response.'
+        })
+      }
+    } finally {
+      updateMagicPage(magicPage.tabId, { running: false })
+    }
+  }
+
+  const handleToggleMagicSidebar = () => {
+    if (!$activeTabMagic) return
+
+    updateMagicPage($activeTabId, { showSidebar: !$activeTabMagic.showSidebar })
+
+    if ($activeTabMagic.responses.length === 0 && !$activeTabMagic.running) {
+      summarizePage($activeTabMagic)
+    }
+  }
+
+  const saveTextFromPage = async (text: string) => {
+    const resource = await resourceManager.createResourceNote(text, {
+      name: 'Magic Response',
+      sourceURI: $activeTabLocation ?? '',
+      alt: ''
+    })
+
+    log.debug('created resource', resource)
   }
 
   onMount(async () => {
@@ -999,26 +1264,7 @@
     } else if (!$activeTabId) {
       activeTabId.set(activeTabs[activeTabs.length - 1].id)
     }
-
-    window.LinkImporter = LinkImporter
-
-    // setTimeout(() => {
-    //     async function runTabs() {
-    //         for (const tab of $tabs) {
-    //             activeTabId.set(tab.id)
-    //             await wait(1000)
-    //         }
-    //     }
-
-    //     runTabs()
-    // }, 4000)
-    //
   })
-
-  const handleToggleURLBar = () => {
-    console.log('test')
-    showURLBar.set(!showURLBar)
-  }
 </script>
 
 <SplashScreen />
@@ -1219,211 +1465,103 @@
     {#if $activeBrowserTab}
       <div
         class="bar-wrapper"
-        class:hide={!$showURLBar && !$showMagicBar && !$magicInProgress}
+        class:hide={!$showURLBar}
         aria-label="Collapse URL bar"
         on:mouseleave={() => ($showURLBar = false)}
         on:keydown={(e) => handleAddressBarKeyDown}
         tabindex="0"
         role="button"
       >
-        <div class="address-bar-wrapper" use:clickOutside={handleClickOutside}>
+        <div class="address-bar-wrapper">
           <div class="address-bar-content">
-            {#if $showMagicBar}
-              <div class="search">
-                <input
-                  bind:this={addressInputElem}
-                  disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
-                  bind:value={$magicInputValue}
-                  on:blur={handleBlur}
-                  on:focus={handleFocus}
-                  type="text"
-                  placeholder="What do you want to know?"
-                />
-              </div>
+            <div class="search">
+              <input
+                bind:this={addressInputElem}
+                disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
+                bind:value={$addressValue}
+                on:blur={handleBlur}
+                on:focus={handleFocus}
+                type="text"
+                placeholder={$activeTab?.type === 'page'
+                  ? 'Search or Enter URL'
+                  : $activeTab?.type === 'chat'
+                    ? 'Chat Title'
+                    : 'Empty Tab'}
+              />
 
-              {#if $magicInProgress}
+              <div class="actions nav-buttons">
                 <button
-                  style="z-index: 100000;"
+                  class="nav-button"
+                  disabled={!canGoBack}
+                  on:click={$activeBrowserTab?.goBack}
                   use:tooltip={{
-                    content: 'Analysing Page…',
-                    action: 'hover',
-                    position: 'right',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  <Icon name="spinner" />
-                </button>
-              {:else}
-                <button
-                  on:click={handleMagicButton}
-                  style="z-index: 100000;"
-                  use:tooltip={{
-                    content: 'Analyse Page',
-                    action: 'hover',
-                    position: 'right',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  <Icon name="sparkles" />
-                </button>
-              {/if}
-            {:else}
-              <div class="search">
-                <input
-                  bind:this={addressInputElem}
-                  disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
-                  bind:value={$addressValue}
-                  on:blur={handleBlur}
-                  on:focus={handleFocus}
-                  type="text"
-                  placeholder={$activeTab?.type === 'page'
-                    ? 'Search or Enter URL'
-                    : $activeTab?.type === 'chat'
-                      ? 'Chat Title'
-                      : 'Empty Tab'}
-                />
-
-                <div class="actions nav-buttons">
-                  <button
-                    class="nav-button"
-                    disabled={!canGoBack}
-                    on:click={$activeBrowserTab?.goBack}
-                    use:tooltip={{
-                      content: 'Go Back',
-                      action: 'hover',
-                      position: 'bottom',
-                      animation: 'fade',
-                      delay: 500
-                    }}
-                  >
-                    <Icon name="arrow.left" />
-                  </button>
-                  <button
-                    class="nav-button"
-                    disabled={!canGoForward}
-                    on:click={$activeBrowserTab?.goForward}
-                    use:tooltip={{
-                      content: 'Go Forward',
-                      action: 'hover',
-                      position: 'bottom',
-                      animation: 'fade',
-                      delay: 500
-                    }}
-                  >
-                    <Icon name="arrow.right" />
-                  </button>
-                  <button
-                    class="nav-button"
-                    on:click={$activeBrowserTab?.reload}
-                    use:tooltip={{
-                      content: 'Reload Page (⌘ + R)',
-                      action: 'hover',
-                      position: 'bottom',
-                      animation: 'fade',
-                      delay: 500
-                    }}
-                  >
-                    <Icon name="reload" />
-                  </button>
-                </div>
-              </div>
-
-              {#if $activeTab?.type === 'page'}
-                {#key $activeTab.resourceBookmark}
-                  <button
-                    on:click={handleBookmark}
-                    style="z-index: 100000;"
-                    use:tooltip={{
-                      content: $activeTab?.resourceBookmark
-                        ? 'Open bookmark (⌘ + D)'
-                        : 'Bookmark this page (⌘ + D)',
-                      action: 'hover',
-                      position: 'bottom',
-                      animation: 'fade',
-                      delay: 500
-                    }}
-                  >
-                    {#if $bookmarkingInProgress}
-                      <Icon name="spinner" />
-                    {:else if $bookmarkingSuccess}
-                      <Icon name="check" />
-                    {:else if $activeTab?.resourceBookmark}
-                      <Icon name="bookmarkFilled" />
-                    {:else}
-                      <Icon name="bookmark" />
-                    {/if}
-                  </button>
-                {/key}
-              {/if}
-
-              {#if $magicInProgress}
-                <button
-                  style="z-index: 100000;"
-                  use:tooltip={{
-                    content: 'Analysing Page…',
+                    content: 'Go Back',
                     action: 'hover',
                     position: 'bottom',
                     animation: 'fade',
                     delay: 500
                   }}
                 >
-                  <Icon name="spinner" />
+                  <Icon name="arrow.left" />
                 </button>
-              {:else}
                 <button
-                  on:click={handleMagicButton}
-                  style="z-index: 100000;"
+                  class="nav-button"
+                  disabled={!canGoForward}
+                  on:click={$activeBrowserTab?.goForward}
                   use:tooltip={{
-                    content: 'Highlight Page',
+                    content: 'Go Forward',
                     action: 'hover',
                     position: 'bottom',
                     animation: 'fade',
                     delay: 500
                   }}
                 >
-                  <Icon name="file-text-ai" />
+                  <Icon name="arrow.right" />
                 </button>
-              {/if}
+                <button
+                  class="nav-button"
+                  on:click={$activeBrowserTab?.reload}
+                  use:tooltip={{
+                    content: 'Reload Page (⌘ + R)',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  <Icon name="reload" />
+                </button>
+              </div>
+            </div>
 
-              <button
-                on:click={() => showMagicBar.set(true)}
-                style="z-index: 100000;"
-                use:tooltip={{
-                  content: 'Ask Page',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <Icon name="sparkles" />
-              </button>
+            {#if $activeTab?.type === 'page'}
+              {#key $activeTab.resourceBookmark}
+                <button
+                  on:click={handleBookmark}
+                  style="z-index: 100000;"
+                  use:tooltip={{
+                    content: $activeTab?.resourceBookmark
+                      ? 'Open bookmark (⌘ + D)'
+                      : 'Bookmark this page (⌘ + D)',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  {#if $bookmarkingInProgress}
+                    <Icon name="spinner" />
+                  {:else if $bookmarkingSuccess}
+                    <Icon name="check" />
+                  {:else if $activeTab?.resourceBookmark}
+                    <Icon name="bookmarkFilled" />
+                  {:else}
+                    <Icon name="bookmark" />
+                  {/if}
+                </button>
+              {/key}
             {/if}
           </div>
-
-          {#if $showMagicBar && $magicInProgress && !$magicOutput}
-            <div class="magic-output-status">
-              <Icon name="spinner" /> Generating Response…
-            </div>
-          {/if}
-
-          {#if $showMagicBar && $magicOutput}
-            <div class="magic-output">
-              {$magicOutput || 'No response from the AI.'}
-            </div>
-
-            <div class="magic-output-status">
-              {#if $magicInProgress}
-                <Icon name="spinner" /> Highlighting Page…
-              {:else if $pageHighlighted}
-                <Icon name="check" /> Page Highlighted
-              {:else}
-                <Icon name="close" /> Failed to highlight page
-              {/if}
-            </div>
-          {/if}
         </div>
       </div>
 
@@ -1445,7 +1583,7 @@
         class="browser-window"
         style="--scaling: 1;"
         class:active={$activeTabId === tab.id}
-        class:magic-glow-big={$activeTabId === tab.id && $magicInProgress}
+        class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
       >
         {#if tab.type === 'page'}
           <BrowserTab
@@ -1457,6 +1595,7 @@
             on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
             on:bookmark={handleWebviewBookmark}
             on:transform={handleWebviewTransform}
+            on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
           />
         {:else if tab.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
@@ -1504,6 +1643,7 @@
             on:navigation={(e) => handleWebviewTabNavigation(e, $activeTab)}
             on:bookmark={handleWebviewBookmark}
             on:transform={handleWebviewTransform}
+            on:appDetection={(e) => handleWebviewAppDetection(e, $activeTab)}
           />
         {:else if $activeTab?.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === $activeTab?.horizonId)}
@@ -1540,7 +1680,33 @@
         />
       </div>
     {/if}
+
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+
+    {#if $activeTabMagic}
+      <div class="sidebar-magic-toggle" on:click={handleToggleMagicSidebar}>
+        {#if $activeTabMagic.showSidebar}
+          <Icon name="close" />
+        {:else if $activeTabMagic.running}
+          <Icon name="spinner" />
+        {:else}
+          <Icon name="sparkles" />
+        {/if}
+      </div>
+    {/if}
   </div>
+
+  {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
+    <div transition:slide={{ axis: 'x' }} class="sidebar sidebar-magic">
+      <MagicSidebar
+        magicPage={$activeTabMagic}
+        bind:inputValue={$magicInputValue}
+        on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
+        on:saveText={(e) => saveTextFromPage(e.detail)}
+        on:chat={() => handleChatSubmit($activeTabMagic)}
+      />
+    </div>
+  {/if}
 </div>
 
 <style lang="scss">
@@ -1551,11 +1717,13 @@
     height: 100%;
     overflow: hidden;
     background-color: #eeece0;
+    --sidebar-width-left: 320px;
+    --sidebar-width-right: 450px;
   }
 
   .sidebar {
     flex-shrink: 0;
-    width: 320px;
+    width: var(--sidebar-width-left);
     height: 100vh;
     padding: 0.5rem 0.75rem 0.75rem 0.75rem;
     overflow: hidden;
@@ -1563,11 +1731,32 @@
     flex-direction: column;
   }
 
+  .sidebar-magic-toggle {
+    position: absolute;
+    top: 4rem;
+    right: 0.45rem;
+    z-index: 100000;
+    transform: translateY(-50%);
+    background: #eeece0;
+    border-radius: 8px 0 0 8px;
+    padding: 1rem;
+    cursor: pointer;
+    border-top: 1px solid #e4e2d4;
+    border-bottom: 1px solid #e4e2d4;
+    border-left: 1px solid #e4e2d4;
+  }
+
+  .sidebar-magic {
+    width: var(--sidebar-width-right);
+    z-index: 1;
+  }
+
   .browser-window-wrapper {
+    flex: 1;
     padding: 0 0.5rem 0.5rem 0.5rem;
     padding-left: 0;
     height: calc(100vh - 1.25rem);
-    width: 100%;
+    position: relative;
 
     &.hasNoTab {
       padding: 0.5rem;
@@ -1600,13 +1789,14 @@
 
   .address-bar-wrapper {
     position: absolute;
-    left: calc(50% - 10rem);
+    left: 50%;
+    transform: translateX(-50%);
     backdrop-filter: blur(10px);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
     padding: 0.75rem;
     width: 90%;
-    max-width: 600px;
+    max-width: 510px;
     background: rgba(255, 255, 255, 0.9);
     display: flex;
     flex-direction: column;
@@ -1623,9 +1813,10 @@
   .bar-wrapper {
     position: absolute;
     top: 0.5rem;
-    left: 0;
+    left: 50%;
+    transform: translateX(-50%);
     right: 0;
-    width: 100%;
+    width: calc(100% - (var(--sidebar-width-left) + var(--sidebar-width-right)));
     height: 5rem;
     z-index: 20000;
     .hitarea {
@@ -1655,20 +1846,6 @@
         background: #eeece0;
       }
     }
-  }
-
-  .magic-output {
-    padding: 10px;
-    background: #f6f5ef;
-    border-radius: 5px;
-    font-size: 1.1rem;
-    color: #3f3f3f;
-  }
-
-  .magic-output-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   .search {
@@ -1753,6 +1930,12 @@
     border-bottom: 1px solid #cacaca;
   }
 
+  .icon-wrapper {
+    width: 20px;
+    height: 20px;
+    display: block;
+  }
+
   .tab {
     display: flex;
     align-items: center;
@@ -1767,12 +1950,6 @@
     font-smooth: always;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-
-    .icon-wrapper {
-      width: 20px;
-      height: 20px;
-      display: block;
-    }
 
     .title {
       flex: 1;
@@ -1906,5 +2083,19 @@
         color: #000;
       }
     }
+  }
+
+  :global(citation) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 1rem;
+    background: rgb(255, 164, 164);
+    border-radius: 100%;
+    user-select: none;
+    cursor: pointer;
+    overflow: hidden;
   }
 </style>

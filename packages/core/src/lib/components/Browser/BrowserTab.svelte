@@ -10,9 +10,10 @@
   import type { HistoryEntriesManager } from '../../service/history'
   import type { TabPage } from './types'
   import { useLogScope } from '../../utils/log'
+  import type { DetectedWebApp } from '@horizon/web-parser'
 
   const log = useLogScope('BrowserTab')
-  const dispatch = createEventDispatcher<{ newTab: NewTabEvent }>()
+  const dispatch = createEventDispatcher<{ newTab: NewTabEvent; appDetection: DetectedWebApp }>()
 
   export let tab: TabPage
   export let webview: WebviewWrapper
@@ -90,6 +91,30 @@
     dispatch('newTab', { url: e.detail.url, active: disposition === 'foreground-tab' })
   }
 
+  let app: DetectedWebApp | null = null
+  function handleDetectedApp(e: CustomEvent<DetectedWebApp>) {
+    const detectedApp = e.detail
+    log.debug('detected app', detectedApp)
+    if (!app) {
+      log.debug('first app detection')
+      app = detectedApp
+      dispatch('appDetection', detectedApp)
+      return
+    }
+
+    if (
+      app.appId === detectedApp.appId &&
+      app.resourceType === detectedApp.resourceType &&
+      app.appResourceIdentifier === detectedApp.appResourceIdentifier
+    ) {
+      log.debug('no change in app or resource', detectedApp)
+      return
+    }
+
+    app = detectedApp
+    dispatch('appDetection', detectedApp)
+  }
+
   const unsubTracker: Unsubscriber[] = []
   onMount(() => {
     if (!webview) return
@@ -159,4 +184,5 @@
   on:navigation
   on:bookmark
   on:transform
+  on:detectedApp={handleDetectedApp}
 />

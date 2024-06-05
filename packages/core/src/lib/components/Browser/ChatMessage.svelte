@@ -1,8 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
-  import type { AIChatMessage } from './types'
 
-  export let message: AIChatMessage
+  export let content: string
 
   const dispatch = createEventDispatcher<{
     citationClick: string
@@ -11,8 +10,6 @@
   }>()
 
   let elem: HTMLDivElement
-
-  $: content = message.content
 
   $: {
     renderContent(content)
@@ -62,13 +59,17 @@
 
 <style lang="scss">
   .message {
-    color: rgba(70, 2, 51, 0.7);
-    font-size: 1.5rem;
     letter-spacing: 0.01em;
     margin-bottom: 1.5rem;
     line-height: 1.45;
     max-width: 640px;
     margin: 0 auto;
+  }
+
+  :global(.chat-message-content div) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   :global(.chat-message-content li) {

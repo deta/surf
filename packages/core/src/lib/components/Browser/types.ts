@@ -71,3 +71,25 @@ export type ChatMessageContentItem = {
   type: 'text' | 'citation'
   content: string
 }
+
+export type PageMagicResponse = {
+  id: string
+  role: 'system' | 'user'
+  query?: string
+  status: 'success' | 'pending' | 'error'
+  content: string
+  citations: Record<string, { color: string; text: string }>
+}
+
+export type PageMagic = {
+  tabId: string
+  showSidebar: boolean
+  running: boolean
+  responses: PageMagicResponse[]
+}
+
+export type PageHighlight = {
+  type: 'important' | 'statistic' | 'pro' | 'contra' | 'quote'
+  color?: string
+  text: string
+}
