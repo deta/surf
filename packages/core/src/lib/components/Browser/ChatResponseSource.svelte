@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { get } from 'svelte/store'
   import type { Resource, ResourceManager } from '../../service/resources'
   import type { AIChatMessageSource } from './types'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
-  import { oasisAPIEndpoint } from './BrowserHomescreen.svelte'
+  //import { get } from 'svelte/store'
+  //import { oasisAPIEndpoint } from './BrowserHomescreen.svelte'
   import { useLogScope } from '../../utils/log'
 
   export let source: AIChatMessageSource
@@ -21,8 +21,8 @@
 
     log.debug('Fetching resource with id', source.resource_id)
 
+    /*
     let remoteOasisEndpoint = get(oasisAPIEndpoint)
-
     let fetchedResource
     if (remoteOasisEndpoint) {
       log.debug('Fetching resource from remote oasis endpoint', remoteOasisEndpoint)
@@ -33,6 +33,9 @@
     } else {
       fetchedResource = await resourceManager.getResource(source.resource_id)
     }
+    */
+
+    const fetchedResource = await resourceManager.getResource(source.resource_id)
     if (!fetchedResource) {
       log.error(`Resource with id ${source.resource_id} not found`)
       return
