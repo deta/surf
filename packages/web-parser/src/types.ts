@@ -1,4 +1,4 @@
-import { ResourceData } from '@horizon/types'
+export type { DetectedWebApp, DetectedResource } from '@horizon/types'
 
 export type WebServiceActionInput = {
   type: string
@@ -37,15 +37,6 @@ export type WebService = {
   browserActionTitle?: string
 }
 
-export type DetectedWebApp = {
-  appId: string | null
-  appName: string | null
-  hostname: string
-  resourceType: string | null
-  appResourceIdentifier: string | null // e.g. tweet ID
-  resourceNeedsPicking: boolean
-}
-
 export type WebMetadata = {
   title: string
   description: string
@@ -58,11 +49,6 @@ export type WebMetadata = {
   date_published: string | null
   date_modified: string | null
   type: string | null
-}
-
-export type DetectedResource = {
-  data: ResourceData
-  type: string
 }
 
 export type ResourceContent = {

@@ -4,23 +4,17 @@
     didFinishLoad: void
     focusWebview: any
     newWindowWebview: Electron.HandlerDetails
-    keyupWebview: { key: string }
-    keydownWebview: {
-      key: string
-      code: string
-      ctrlKey: boolean
-      shiftKey: boolean
-      metaKey: boolean
-      altKey: boolean
-    }
+    keyupWebview: WebViewSendEvents[WebViewEventSendNames.KeyUp]
+    keydownWebview: WebViewSendEvents[WebViewEventSendNames.KeyDown]
     foundInPage: Electron.FoundInPageEvent
     selectionWebview: { text: string }
     detectedApp: DetectedWebApp
     detectedResource: DetectedResource
     actionOutput: { id: string; output: DetectedResource }
     navigation: string
-    bookmark: { text?: string; url: string }
-    transform: { text: string; query?: string; type: 'summarize' | 'custom' }
+    bookmark: WebViewSendEvents[WebViewEventSendNames.Bookmark]
+    transform: WebViewSendEvents[WebViewEventSendNames.Transform]
+    inlineTextReplace: WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]
   }
 </script>
 
@@ -28,7 +22,7 @@
   import { writable, get } from 'svelte/store'
   import type { WebviewTag } from 'electron'
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
-  import type { HistoryEntriesManager } from '../../../service/horizon'
+  import type { HistoryEntriesManager } from '../../../service/history'
   import type { HistoryEntry } from '../../../types/index'
   import { useLogScope } from '../../../utils/log'
   import type {
@@ -36,7 +30,12 @@
     DetectedWebApp,
     WebServiceActionInputs
   } from '@horizon/web-parser'
-  import { summarizeText } from '../../../service/ai'
+  import {
+    WebViewEventReceiveNames,
+    WebViewEventSendNames,
+    type WebViewReceiveEvents,
+    type WebViewSendEvents
+  } from '@horizon/types'
 
   const dispatch = createEventDispatcher<WebViewWrapperEvents>()
   const log = useLogScope('WebviewWrapper')
@@ -64,9 +63,6 @@
   let pendingUrlUpdate: { url: string; timestamp: number } | null = null
 
   let webview: WebviewTag
-  window.g = () => historyEntriesManager.entriesStore.subscribe((h) => console.log(h))
-  window.h = () => historyStackIds.subscribe((h) => console.log(h))
-  window.s = (q: string) => historyEntriesManager.searchEntries(q)
 
   const updateNavigationState = () => {
     canGoBack.set(get(currentHistoryIndex) > 0)
@@ -158,34 +154,40 @@
     webview.addEventListener('ipc-message', (event) => {
       if (event.channel !== 'webview-page-event') return
 
-      const eventType = event.args[0] as string
-      const eventData = event.args[1]
+      const eventType = event.args[0] as keyof WebViewSendEvents
+      const eventData = event.args[1] as WebViewSendEvents[keyof WebViewSendEvents] // TODO: improve this so conversion below is not needed
 
       switch (eventType) {
-        case 'wheel':
+        case WebViewEventSendNames.Wheel:
           dispatch('wheelWebview', eventData)
           break
-        case 'focus':
+        case WebViewEventSendNames.Focus:
           dispatch('focusWebview', eventData)
           break
-        case 'keyup':
-          dispatch('keyupWebview', eventData)
+        case WebViewEventSendNames.KeyUp:
+          dispatch('keyupWebview', eventData as WebViewSendEvents[WebViewEventSendNames.KeyUp])
           break
-        case 'keydown':
-          dispatch('keydownWebview', eventData)
+        case WebViewEventSendNames.KeyDown:
+          dispatch('keydownWebview', eventData as WebViewSendEvents[WebViewEventSendNames.KeyDown])
           break
-        case 'detected-app':
-          dispatch('detectedApp', eventData)
+        case WebViewEventSendNames.DetectedApp:
+          dispatch('detectedApp', eventData as WebViewSendEvents[WebViewEventSendNames.DetectedApp])
           break
-        case 'insert-text':
+        case WebViewEventSendNames.InsertText:
           log.debug('Inserting text into webview', eventData)
-          webview.insertText(eventData)
+          webview.insertText(eventData as WebViewSendEvents[WebViewEventSendNames.InsertText])
           break
-        case 'bookmark':
-          dispatch('bookmark', eventData)
+        case WebViewEventSendNames.Bookmark:
+          dispatch('bookmark', eventData as WebViewSendEvents[WebViewEventSendNames.Bookmark])
           break
-        case 'transform':
-          dispatch('transform', eventData)
+        case WebViewEventSendNames.Transform:
+          dispatch('transform', eventData as WebViewSendEvents[WebViewEventSendNames.Transform])
+          break
+        case WebViewEventSendNames.InlineTextReplace:
+          dispatch(
+            'inlineTextReplace',
+            eventData as WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]
+          )
           break
         // case 'detected-resource':
         //   dispatch('detectedResource', eventData?.resource)
@@ -197,6 +199,7 @@
       webviewWebContentsId = webview.getWebContentsId()
 
       if (!newWindowHandlerRegistered) {
+        // @ts-expect-error
         window.api.registerNewWindowHandler(
           webviewWebContentsId,
           (data: Electron.HandlerDetails) => {
@@ -265,6 +268,7 @@
 
   onDestroy(() => {
     if (newWindowHandlerRegistered && webviewWebContentsId !== null) {
+      // @ts-expect-error
       window.api.unregisterNewWindowHandler(webviewWebContentsId)
     }
   })
@@ -358,19 +362,37 @@
     }
   }
 
+  export function sendEvent<T extends keyof WebViewReceiveEvents>(
+    name: T,
+    data?: WebViewReceiveEvents[T]
+  ): void {
+    log.debug('Sending event', name, data)
+    webview?.send('webview-event', { type: name, data })
+  }
+
   export function getSelection() {
     return new Promise<string>((resolve) => {
       webview.addEventListener('ipc-message', (event) => {
-        if (event.channel !== 'selection') return
-        resolve(event.args[0])
+        if (event.channel !== 'webview-page-event') return
+
+        const eventType = event.args[0] as WebViewEventSendNames
+        const eventData = event.args[1] as WebViewSendEvents[WebViewEventSendNames]
+
+        if (eventType === WebViewEventSendNames.Selection) {
+          event.preventDefault()
+          event.stopPropagation()
+          resolve(eventData as WebViewSendEvents[WebViewEventSendNames.Selection])
+        }
       })
 
-      webview.send('webview-event', { type: 'get-selection' })
+      sendEvent(WebViewEventReceiveNames.GetSelection)
+      // webview.send('webview-event', { type: 'get-selection' })
     })
   }
 
   export function startResourceDetection() {
-    webview.send('webview-event', { type: 'get-resource' })
+    // webview.send('webview-event', { type: 'get-resource' })
+    sendEvent(WebViewEventReceiveNames.GetResource)
   }
 
   export function detectResource(timeoutNum = 10000) {
@@ -378,12 +400,13 @@
       let timeout: any
 
       const handleEvent = (event: Electron.IpcMessageEvent) => {
+        log.debug('Handling event while waiting for resource detection', event)
         if (event.channel !== 'webview-page-event') return
 
-        const eventType = event.args[0] as string
-        const eventData = event.args[1]
+        const eventType = event.args[0] as WebViewEventSendNames
+        const eventData = event.args[1] as WebViewSendEvents[WebViewEventSendNames]
 
-        if (eventType === 'detected-resource') {
+        if (eventType === WebViewEventSendNames.DetectedResource) {
           event.preventDefault()
           event.stopPropagation()
 
@@ -392,7 +415,7 @@
           }
 
           webview.removeEventListener('ipc-message', handleEvent)
-          resolve(eventData?.resource)
+          resolve(eventData as WebViewSendEvents[WebViewEventSendNames.DetectedResource])
         }
       }
 
@@ -402,7 +425,8 @@
       }, timeoutNum)
 
       webview.addEventListener('ipc-message', handleEvent)
-      webview.send('webview-event', { type: 'get-resource' })
+      // webview.send('webview-event', { type: 'get-resource' })
+      sendEvent(WebViewEventReceiveNames.GetResource)
     })
   }
 
@@ -417,7 +441,7 @@
         const eventType = event.args[0] as string
         const eventData = event.args[1]
 
-        if (eventType === 'action-output' && eventData.id === id) {
+        if (eventType === WebViewEventSendNames.ActionOutput && eventData.id === id) {
           event.preventDefault()
           event.stopPropagation()
 
@@ -436,12 +460,14 @@
       }, timeoutNum)
 
       webview.addEventListener('ipc-message', handleEvent)
-      webview.send('webview-event', { type: 'run-action', id, inputs })
+      //webview.send('webview-event', { type: 'run-action', id, inputs })
+      sendEvent(WebViewEventReceiveNames.RunAction, { id, inputs })
     })
   }
 
   export function startAppDetection() {
-    webview.send('webview-event', { type: 'get-app' })
+    // webview.send('webview-event', { type: 'get-app' })
+    sendEvent(WebViewEventReceiveNames.GetApp)
   }
 
   export function openDevTools(): void {
@@ -450,6 +476,11 @@
 
   export function executeJavaScript(code: string, userGesture = false) {
     return webview?.executeJavaScript(code, userGesture)
+  }
+
+  export function handleTransformationOutput(text: string) {
+    // webview.send('webview-event', { type: 'get-resource' })
+    sendEvent(WebViewEventReceiveNames.TransformationOutput, { text })
   }
 </script>
 

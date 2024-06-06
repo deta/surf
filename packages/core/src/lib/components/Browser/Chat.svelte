@@ -345,7 +345,7 @@
             <div class="message message-content">
               {#if message.content}
                 <ChatMessage
-                  {message}
+                  content={message.content}
                   on:citationClick={(e) => handleCitationClick(e.detail, message)}
                   on:citationHoverStart={(e) => handleCitationHoverStart(e.detail, message)}
                   on:citationHoverEnd={(e) => handleCitationHoverEnd(e.detail, message)}
@@ -712,18 +712,5 @@
     margin-top: 1rem;
     margin-bottom: 1rem;
     display: block;
-  }
-
-  :global(citation) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    font-size: 1rem;
-    background: rgb(255, 164, 164);
-    border-radius: 100%;
-    user-select: none;
-    cursor: pointer;
   }
 </style>
