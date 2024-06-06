@@ -407,8 +407,7 @@ export class ResourceManager {
   }
 
   async getRemoteResource(id: string, remoteURL: string) {
-    const dbPath = await this.sffs.getDBPath()
-    const res = await fetch(`${remoteURL}/resources/${id}?db_path=${dbPath}`)
+    const res = await fetch(`${remoteURL}/resources/${id}`)
     if (!res.ok) {
       if (res.status === 404) {
         return null

@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Query, responses
 from fastapi.responses import StreamingResponse
 
@@ -8,7 +9,7 @@ from utils.sffs import get_resource
 router = APIRouter()
 
 DEFAULT_MODEL = "gpt-4o"
-
+DB_PATH = os.getenv("DB_PATH")
 
 @router.get("/api/v1/chat")
 async def handle_chat(query: str, session_id: str = Query(None), number_documents: int = 5, system_prompt: str = Query(None)):
@@ -36,8 +37,8 @@ async def handle_embeddings(data: str):
     return await get_embedding(data)
 
 @router.get("/api/v1/resources/{resource_id}")
-async def handle_get_resource(resource_id, db_path:str):
-    resource = get_resource(resource_id, db_path)
+async def handle_get_resource(resource_id):
+    resource = get_resource(resource_id, DB_PATH)
     if not resource:
         return responses.JSONResponse(status_code=404, content={"message": "Resource not found"})
     return resource
