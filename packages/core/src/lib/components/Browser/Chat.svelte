@@ -276,7 +276,8 @@
   const handleSendMessage = () => {
     if (!followUpValue) return
 
-    sendChatMessage(followUpValue)
+    const apiEndpoint: string = get(oasisAPIEndpoint)
+    sendChatMessage(followUpValue, apiEndpoint)
     followUpValue = ''
   }
 

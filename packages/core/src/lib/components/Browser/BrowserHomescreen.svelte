@@ -1,4 +1,4 @@
-<script lang="ts" , context="module">
+<script lang="ts" context="module">
   export const oasisAPIEndpoint = writable('')
 </script>
 
