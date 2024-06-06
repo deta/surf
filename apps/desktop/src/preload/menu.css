@@ -10,6 +10,7 @@
     user-select: none;
     font-size: 15px;
     max-width: 650px;
+    pointer-events: auto;
 }
 
 .webview-menu-row {
@@ -116,6 +117,7 @@
     background: #f0f0f0;
     padding: 12px;
     border-radius: 8px;
+    user-select: text;
 }
 
 .tooltip {

@@ -1,5 +1,6 @@
 import type { WebviewTag } from 'electron'
 import { DetectedResource, DetectedWebApp, WebServiceActionInputs } from '../types'
+import { WebViewEventReceiveNames, WebViewEventSendNames } from '@horizon/types'
 
 export class WebViewExtractor {
   url: URL
@@ -68,17 +69,17 @@ export class WebViewExtractor {
     this.webview.addEventListener('ipc-message', (event) => {
       if (event.channel !== 'webview-page-event') return
 
-      const eventType = event.args[0]
+      const eventType = event.args[0] as WebViewEventSendNames
       const eventData = event.args[1]
 
       if (!eventType) return
 
-      if (eventType === 'detected-app') {
+      if (eventType === WebViewEventSendNames.DetectedApp) {
         console.log('Detected app', eventData)
         if (this.appDetectionCallback) {
           this.appDetectionCallback(eventData.appName)
         }
-      } else if (eventType === 'detected-resource') {
+      } else if (eventType === WebViewEventSendNames.DetectedResource) {
         console.log('Detected resource', eventData)
         if (this.resourceDetectionCallback) {
           this.resourceDetectionCallback(eventData)
@@ -127,7 +128,7 @@ export class WebViewExtractor {
 
       await this.wait(1000)
 
-      this.webview?.send('webview-event', { type: 'get-resource' })
+      this.webview?.send('webview-event', { type: WebViewEventReceiveNames.GetResource })
 
       setTimeout(() => {
         console.log('Resource detection timed out')
@@ -153,7 +154,7 @@ export class WebViewExtractor {
         const eventType = event.args[0] as string
         const eventData = event.args[1]
 
-        if (eventType === 'action-output' && eventData.id === id) {
+        if (eventType === WebViewEventSendNames.ActionOutput && eventData.id === id) {
           event.preventDefault()
           event.stopPropagation()
 
@@ -174,7 +175,10 @@ export class WebViewExtractor {
       }, timeoutNum)
 
       this.webview?.addEventListener('ipc-message', handleEvent)
-      this.webview?.send('webview-event', { type: 'run-action', id, inputs })
+      this.webview?.send('webview-event', {
+        type: WebViewEventReceiveNames.RunAction,
+        data: { id, inputs }
+      })
     })
   }
 }
