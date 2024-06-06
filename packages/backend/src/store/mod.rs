@@ -636,10 +636,15 @@ fn js_create_ai_chat(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_get_ai_chat(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
     let session_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let api_endpoint = cx.argument_opt(2).and_then(|arg| {
+        arg.downcast::<JsString, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_string| js_string.value(&mut cx))
+    });
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::MiscMessage(MiscMessage::GetAIChatMessage(session_id)),
+        WorkerMessage::MiscMessage(MiscMessage::GetAIChatMessage(session_id, api_endpoint)),
         deferred,
     );
     Ok(promise)

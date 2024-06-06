@@ -85,9 +85,15 @@ impl AI {
             }
 
             embeddable_sentences.iter().for_each(|sentence| {
+                let url = match &composite_resource.metadata {
+                    Some(metadata) => Some(metadata.source_uri.clone()),
+                    None => None,
+                };
+
                 let rag_metadata = DataSourceMetadata {
                     resource_id: composite_resource.resource.id.to_string(),
                     resource_type: "image_tags_captions".to_string(),
+                    url,
                 };
 
                 let ds = DataSource {
@@ -132,6 +138,7 @@ impl AI {
         let rag_metadata = DataSourceMetadata {
             resource_id: embeddable.get_resource_id(),
             resource_type: embeddable.get_embedding_type(),
+            url: None,
         };
 
         let ds = DataSource {
@@ -171,6 +178,7 @@ impl AI {
         let rag_metadata = DataSourceMetadata {
             resource_id: resource_metadata.resource_id,
             resource_type: DataSourceType::Webpage.to_string(),
+            url: Some(resource_metadata.source_uri.clone()),
         };
 
         let ds = DataSource {
@@ -193,6 +201,7 @@ impl AI {
         let rag_metadata = DataSourceMetadata {
             resource_id: resource_metadata.resource_id,
             resource_type: DataSourceType::YoutubeVideo.to_string(),
+            url: Some(resource_metadata.source_uri.clone()),
         };
 
         let ds = DataSource {

@@ -327,3 +327,17 @@ export interface ResourceDataColor {
 }
 
 export type ResourceData = ResourceDataTypes[keyof ResourceDataTypes]
+
+export type DetectedWebApp = {
+  appId: string | null
+  appName: string | null
+  hostname: string
+  resourceType: string | null
+  appResourceIdentifier: string | null // e.g. tweet ID
+  resourceNeedsPicking: boolean
+}
+
+export type DetectedResource = {
+  data: ResourceData
+  type: string
+}

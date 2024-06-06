@@ -406,6 +406,19 @@ export class ResourceManager {
     return results
   }
 
+  async getRemoteResource(id: string, remoteURL: string) {
+    const res = await fetch(`${remoteURL}/resources/${id}`)
+    if (!res.ok) {
+      if (res.status === 404) {
+        return null
+      }
+      throw new Error('failed to fetch resource')
+    }
+    const obj = await res.json()
+    console.log('resource object', obj)
+    return this.findOrCreateResourceObject(obj)
+  }
+
   async getResource(id: string) {
     // check if resource is already loaded
     const loadedResources = get(this.resources)

@@ -55,6 +55,10 @@ export class SFFS {
     }
   }
 
+  getDBPath() {
+    return this.fs.getDBPath()
+  }
+
   convertCompositeResourceToResource(composite: SFFSRawCompositeResource): SFFSResource {
     return {
       id: composite.resource.id,
@@ -550,9 +554,9 @@ export class SFFS {
     return await this.backend.js__store_create_ai_chat(system_prompt)
   }
 
-  async getAIChat(id: string): Promise<AIChat | null> {
+  async getAIChat(id: string, apiEndpoint?: string): Promise<AIChat | null> {
     this.log.debug('getting ai chat with id', id)
-    const raw = await this.backend.js__store_get_ai_chat(id)
+    const raw = await this.backend.js__store_get_ai_chat(id, apiEndpoint)
 
     return this.parseData<AIChat>(raw)
   }
@@ -561,7 +565,7 @@ export class SFFS {
     chatId: string,
     query: string,
     callback: (chunk: string) => void,
-    opts?: { limit?: number; systemPrompt?: string }
+    opts?: { limit?: number; systemPrompt?: string; apiEndpoint?: string }
   ): Promise<void> {
     this.log.debug(
       'sending ai chat message to chat with id',
@@ -571,14 +575,17 @@ export class SFFS {
       'limit:',
       opts?.limit,
       'system prompt:',
-      opts?.systemPrompt
+      opts?.systemPrompt,
+      'api endpoint:',
+      opts?.apiEndpoint
     )
     return await this.backend.js__ai_send_chat_message(
       query,
       chatId,
       opts?.limit ?? 20,
       opts?.systemPrompt ?? '',
-      callback
+      callback,
+      opts?.apiEndpoint ?? ''
     )
   }
 }

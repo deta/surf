@@ -5,7 +5,7 @@
 
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
-  import { writable, derived } from 'svelte/store'
+  import { writable, derived, get } from 'svelte/store'
   import type { Drawer } from '@horizon/drawer'
 
   import type { ResourceLink, ResourceManager } from '../../service/resources'
@@ -30,6 +30,7 @@
   import ChatResponseSource from './ChatResponseSource.svelte'
   import { Icon } from '@horizon/icons'
   import ChatMessage from './ChatMessage.svelte'
+  import { oasisAPIEndpoint } from './BrowserHomescreen.svelte'
   import { ResourceTypes, type ResourceDataPost } from '../../types'
 
   export let tab: TabChat
@@ -37,7 +38,7 @@
   export let drawer: Drawer
   export let db: HorizonDatabase
 
-  const SEARCH_SOURCE_LIMIT = 5
+  const SEARCH_SOURCE_LIMIT = 10
 
   const log = useLogScope('Chat')
   const dispatch = createEventDispatcher<{ navigate: NavigateEvent; updateTab: UpdateTab }>()
@@ -90,7 +91,7 @@
     dispatch('navigate', { url, active: active })
   }
 
-  async function sendChatMessage(query: string) {
+  async function sendChatMessage(query: string, apiEndpoint?: string) {
     const message = {
       id: generateID(),
       role: 'system',
@@ -140,7 +141,7 @@
           })
         }
       },
-      { limit: SEARCH_SOURCE_LIMIT }
+      { limit: SEARCH_SOURCE_LIMIT, apiEndpoint }
     )
 
     log.debug('response is done', response, content)
@@ -159,18 +160,21 @@
   async function createNewChat() {
     const chatId = await sffs.createAIChat('')
 
+    const apiEndpoint: string = get(oasisAPIEndpoint)
+
     log.debug('Created new chat', chatId)
+    log.debug('API endpoint', apiEndpoint)
 
     tab.chatId = chatId
-    dispatch('updateTab', { chatId })
+    dispatch('updateTab', { chatId, apiEndpoint })
 
     chat = { id: chatId, messages: [] }
 
-    sendChatMessage(query)
+    sendChatMessage(query, apiEndpoint)
   }
 
-  async function loadExistingChat(chatId: string) {
-    const storedChat = await sffs.getAIChat(chatId)
+  async function loadExistingChat(chatId: string, apiEndpoint?: string) {
+    const storedChat = await sffs.getAIChat(chatId, apiEndpoint)
     if (!storedChat) {
       log.error('Chat not found', chatId)
       return
@@ -248,9 +252,25 @@
   }
 
   function getUniqueSources(sources: AIChatMessageSource[]) {
-    return sources.filter(
+    let urls = {} as Record<string, string>
+    sources.forEach((source) => {
+      if (source.metadata && source.metadata.url) {
+        urls[source.resource_id] = source.metadata.url
+      }
+    })
+    let uniqueSources = sources.filter(
       (source, index, self) => index === self.findIndex((s) => s.resource_id === source.resource_id)
     )
+    uniqueSources.forEach((source) => {
+      if (source.resource_id in urls) {
+        if (source.metadata) {
+          source.metadata.url = urls[source.resource_id]
+        } else {
+          source.metadata = { url: urls[source.resource_id] }
+        }
+      }
+    })
+    return uniqueSources
   }
 
   const handleSendMessage = () => {
@@ -268,7 +288,7 @@
       createNewChat()
     } else {
       log.debug('Loading existing chat', chatId)
-      loadExistingChat(chatId)
+      loadExistingChat(chatId, tab.apiEndpoint)
     }
 
     // Observer to check if the header should be visible
@@ -325,7 +345,7 @@
             <div class="message message-content">
               {#if message.content}
                 <ChatMessage
-                  {message}
+                  content={message.content}
                   on:citationClick={(e) => handleCitationClick(e.detail, message)}
                   on:citationHoverStart={(e) => handleCitationHoverStart(e.detail, message)}
                   on:citationHoverEnd={(e) => handleCitationHoverEnd(e.detail, message)}
@@ -692,18 +712,5 @@
     margin-top: 1rem;
     margin-bottom: 1rem;
     display: block;
-  }
-
-  :global(citation) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    font-size: 1rem;
-    background: rgb(255, 164, 164);
-    border-radius: 100%;
-    user-select: none;
-    cursor: pointer;
   }
 </style>

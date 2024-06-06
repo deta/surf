@@ -59,14 +59,18 @@ export const parseXMLChatResponseSources = (xml: Document) => {
     const resource_id = source.getElementsByTagName('resource_id')[0]?.textContent
     const content = source.getElementsByTagName('content')[0]?.textContent
     const timestamp = source.getElementsByTagName('timestamp')[0]?.textContent
+    const url = source.getElementsByTagName('url')[0]?.textContent
 
-    console.log('source', id, resource_id, content, timestamp)
+    console.log('source', id, resource_id, content, timestamp, url)
 
     return {
       id,
       resource_id,
       content,
-      metadata: timestamp ? { timestamp: Number(timestamp) } : undefined
+      metadata: {
+        timestamp: timestamp ? Number(timestamp) : undefined,
+        url: url ? String(url) : undefined
+      }
     } as ChatMessageSource
   })
 

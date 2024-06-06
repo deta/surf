@@ -13,8 +13,8 @@ impl Worker {
         Ok("ok".to_owned())
     }
 
-    pub fn get_ai_chat_message(&mut self, id: String) -> BackendResult<ChatHistory> {
-        Ok(self.ai.get_chat_history(id)?)
+    pub fn get_ai_chat_message(&mut self, id: String, api_endpoint: Option<String>) -> BackendResult<ChatHistory> {
+        Ok(self.ai.get_chat_history(id, api_endpoint)?)
     }
 
     pub fn create_ai_chat_message(&mut self, system_prompt: String) -> BackendResult<String> {
@@ -35,6 +35,7 @@ impl Worker {
         session_id: String,
         number_documents: i32,
         model: String,
+        api_endpoint: Option<String>,
         mut callback: Root<JsFunction>,
     ) -> BackendResult<()> {
         // TODO: save this runtime somewhere and re-use when needed
@@ -43,7 +44,7 @@ impl Worker {
             .block_on(async move {
                 let mut stream = self
                     .ai
-                    .chat(query, session_id, number_documents, model)
+                    .chat(query, session_id, number_documents, model, api_endpoint)
                     .await?;
 
                 while let Some(chunk) = stream.next().await {
@@ -80,10 +81,10 @@ pub fn handle_misc_message(
         MiscMessage::Print(content) => {
             send_worker_response(channel, oneshot, worker.print(content))
         }
-        MiscMessage::GetAIChatMessage(id) => send_worker_response(
+        MiscMessage::GetAIChatMessage(id, api_endpoint) => send_worker_response(
             channel,
             oneshot,
-            worker.get_ai_chat_message(id),
+            worker.get_ai_chat_message(id, api_endpoint),
         ),
         MiscMessage::CreateAIChatMessage(system_prompot) => send_worker_response(
             channel,
@@ -96,6 +97,7 @@ pub fn handle_misc_message(
             number_documents,
             model,
             callback,
+            api_endpoint,
         } => {
             let result = worker.send_chat_query(
                 channel,
@@ -103,6 +105,7 @@ pub fn handle_misc_message(
                 session_id,
                 number_documents,
                 model,
+                api_endpoint,
                 callback,
             );
             send_worker_response(channel, oneshot, result)
