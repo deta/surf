@@ -20,7 +20,7 @@
     historyStackIds: [],
     currentHistoryIndex: 0,
     icon: '',
-    title: 'Example'
+    title: ''
   }
 </script>
 
