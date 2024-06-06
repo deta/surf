@@ -824,7 +824,7 @@
   <MiniBrowser resource={selectedResource} />
 {/if}
 
-{#if $showDropZone}
+{#if false}
   <div class="drop-zone">
     {#if $alreadyDropped && $viewState === 'chatInput'}
       <div

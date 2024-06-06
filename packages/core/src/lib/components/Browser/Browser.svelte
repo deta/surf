@@ -21,6 +21,7 @@
   import BrowserHomescreen from './BrowserHomescreen.svelte'
   import OasisSidebar from './OasisSidebar.svelte'
   import Tab from './Tab.svelte'
+  import DropZone from '../Horizon/DropZone.svelte'
 
   import '../Horizon/index.scss'
   import type { Tab, TabChat, TabEmpty, TabHorizon, TabImporter, TabPage } from './types'
@@ -1031,6 +1032,8 @@
 <SplashScreen />
 
 <svelte:window on:keydown={handleKeyDown} />
+
+<DropZone {$masterHorizon} {resourceManager} />
 
 <div class="app-wrapper">
   <div class="sidebar">
