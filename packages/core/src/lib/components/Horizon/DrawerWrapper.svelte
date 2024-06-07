@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { setContext, tick } from 'svelte'
+  import { setContext, getContext, tick } from 'svelte'
   import { get, writable } from 'svelte/store'
   import { WebParser, type WebMetadata, type DetectedWebApp } from '@horizon/web-parser'
   import { fly } from 'svelte/transition'
@@ -72,6 +72,7 @@
 
   export let horizon: Horizon
   export let resourceManager: ResourceManager
+  export let selectedFolder
 
   const cards = horizon.cards
   const resourcesInMemory = resourceManager.resources
@@ -103,6 +104,10 @@
   const searchQuery = writable<SearchQuery>({ value: '', tab: 'all' })
 
   const droppedInputElements = writable<MediaParserResult[]>([])
+
+  selectedFolder.subscribe((folderId) => {
+    console.log('joooooo', folderId)
+  })
 
   const isSaving = writable(false)
   const alreadyDropped = writable(false)
@@ -212,6 +217,7 @@
     }
 
     const result = await resourceManager.searchResources(query, tags, parsedParameters)
+
     if (query === '') {
       result.reverse()
     }

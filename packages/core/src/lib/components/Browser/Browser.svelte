@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte'
+  import { onMount, setContext, tick } from 'svelte'
   import { slide } from 'svelte/transition'
   import SplashScreen from '../SplashScreen.svelte'
   import { writable, derived } from 'svelte/store'
@@ -20,6 +20,8 @@
   import BrowserHomescreen from './BrowserHomescreen.svelte'
   import OasisSidebar from './OasisSidebar.svelte'
   import Tab from './Tab.svelte'
+
+  import { selectedFolder } from '../../stores/oasis'
 
   import '../Horizon/index.scss'
   import type {
@@ -90,6 +92,9 @@
   const magicPages = writable<PageMagic[]>([])
   const bookmarkingSuccess = writableAutoReset(false, 1000)
   const showURLBar = writable(false)
+
+  // Set global context
+  setContext('selectedFolder', 'all')
 
   const activeTabs = derived([tabs], ([tabs]) => {
     return tabs
@@ -1432,7 +1437,7 @@
         </button>
       </div>
     {:else}
-      <OasisSidebar {resourceManager} {sidebarTab} />
+      <OasisSidebar {resourceManager} {sidebarTab} {selectedFolder} />
     {/if}
   </div>
 
@@ -1562,7 +1567,12 @@
       >
         {#if $sidebarTab === 'oasis'}
           {#if $masterHorizon}
-            <DrawerWrapper bind:drawer horizon={$masterHorizon} {resourceManager} />
+            <DrawerWrapper
+              bind:drawer
+              horizon={$masterHorizon}
+              {resourceManager}
+              {selectedFolder}
+            />
           {:else}
             <div>Should not happen error: Failed to load main Horizon</div>
           {/if}

@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
-  import { onMount } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { folderManager } from '../../service/folderManager'
 
   export let folder
   export let activeFolderId
   export let reducedResources
+  export let selected // New prop to determine if this folder is selected
 
   const dispatch = createEventDispatcher()
   let folderName = folder.name
@@ -46,12 +46,7 @@
   })
 </script>
 
-<div
-  class="folder"
-  class:active={folder.id === $activeFolderId}
-  on:click={handleClick}
-  aria-hidden="true"
->
+<div class="folder {selected ? 'active' : ''}" on:click={handleClick} aria-hidden="true">
   <input
     id={`folder-input-${folder.id}`}
     type="text"

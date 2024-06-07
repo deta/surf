@@ -6,22 +6,17 @@
   import { folderManager } from '../../service/folderManager'
   import { Icon } from '@horizon/icons'
   import { ResourceManager, type ResourceObject } from '../../service/resources'
+  import { selectedFolder } from '../../stores/oasis'
 
   const log = useLogScope('Oasis Sidebar')
 
-  const activeFolderId = writable('all')
   const folders = writable([])
   const resources = writable([])
   const reducedResources = writable([])
 
   export let resourceManager: any
+  export let sidebarTab
 
-  const handleFolderSelect = (event) => {
-    console.log('Active Folder ID:', event.detail)
-    activeFolderId.set(event.detail)
-  }
-
-  // Load folders from folderManager on component mount
   onMount(async () => {
     try {
       const loadedFolders = await folderManager.listFolders()
@@ -44,15 +39,12 @@
     }
   })
 
-  // The sidebarTab should be passed in as a prop to manage the tab view
-  export let sidebarTab
-
   const createNewFolder = async () => {
     try {
       const newFolder = await folderManager.createFolder('New Folder', 'userContext')
       folders.update((currentFolders) => [...currentFolders, newFolder])
-      activeFolderId.set(newFolder.id)
-      await tick() // Wait for the DOM to update
+      selectedFolder.set(newFolder.id)
+      await tick()
 
       const inputElement = document.getElementById(`folder-input-${newFolder.id}`)
       if (inputElement) {
@@ -74,7 +66,6 @@
   }
 
   const deleteFolder = async (id) => {
-    console.log('deleteFolder called with id:', id.detail) // Debugging log
     try {
       await folderManager.deleteFolder(id)
       const updatedFolders = await folderManager.listFolders()
@@ -83,11 +74,15 @@
       log.error('Failed to delete folder:', error)
     }
   }
+
+  const handleFolderSelect = (event) => {
+    selectedFolder.set(event.detail)
+  }
 </script>
 
 <div class="folders-sidebar">
   <!-- {JSON.stringify($reducedResources, null, 2)} -->
-  {JSON.stringify($folders, null, 2)}
+  <!-- {JSON.stringify($folders, null, 2)} -->
 
   <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
     <Icon name="chevron.left" />
@@ -98,11 +93,12 @@
     {#each $folders as folder (folder.id)}
       <Folder
         {folder}
-        {activeFolderId}
+        {selectedFolder}
         {reducedResources}
         on:delete={deleteFolder}
         on:select={handleFolderSelect}
         on:rename={({ detail }) => renameFolder(detail.id, detail.name)}
+        selected={$selectedFolder === folder.id}
       />
     {/each}
   </div>
@@ -156,7 +152,7 @@
     padding: 0.75rem 1rem;
     opacity: 0.6;
     &:hover {
-      opcaity: 1;
+      opacity: 1;
     }
   }
 </style>
