@@ -105,13 +105,11 @@
 
   const droppedInputElements = writable<MediaParserResult[]>([])
 
-  selectedFolder.subscribe((folderId) => {
-    console.log('joooooo', folderId)
-  })
-
   const isSaving = writable(false)
   const alreadyDropped = writable(false)
   const showMiniBrowser = writable(false)
+
+  const folderContents = writable<(ResourceObject | undefined)[]>([])
 
   $: if ($viewState === 'default') {
     $droppedInputElements = []
@@ -148,6 +146,17 @@
     blockDetailsTracking = false
   }
 
+  selectedFolder.subscribe(async (folderId) => {
+    try {
+      const ids = await folderManager.getFolderContents(folderId)
+      const contents = await Promise.all(ids.map((id) => resourceManager.getResource(id)))
+      folderContents.set(contents.filter((item) => item !== undefined))
+      await tick()
+    } catch (error) {
+      console.error('Error fetching folder contents:', error)
+    }
+  })
+
   let refreshContentLayout: () => Promise<void>
 
   let searchResult: ResourceSearchResultItem[] = []
@@ -173,21 +182,6 @@
     log.debug('Searching for', query, 'in', tab)
 
     const tags = [] as SFFSResourceTag[]
-
-    // EXAMPLE: searching by resource type (exact match)
-    // tags.push(
-    //     ResourceManager.SearchTagResourceType(ResourceTypes.LINK)
-    // )
-
-    // EXAMPLE: searching by resource type prefix
-    // tags.push(
-    //     ResourceManager.SearchTagResourceType(ResourceTypes.POST, true)
-    // )
-
-    // EXAMPLE: search by hostname (using suffix)
-    // tags.push(
-    //     ResourceManager.SearchTagHostname('deta.space')
-    // )
 
     if (tab === 'archived') {
       tags.push(ResourceManager.SearchTagDeleted()) // TODO: implement recovering of deleted resources
