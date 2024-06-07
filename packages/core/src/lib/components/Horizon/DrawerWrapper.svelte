@@ -43,6 +43,9 @@
     type ResourceSearchResultItem,
     getPrimaryResourceType
   } from '../../service/resources'
+
+  import { folderManager } from '../../service/folderManager'
+
   import {
     ResourceTypes,
     type ResourceData,
@@ -904,7 +907,7 @@
         {:else}
           <DrawerContentMasonry
             items={searchResult}
-            gridGap="1.5rem"
+            gridGap="2rem"
             colWidth="minmax(Min(330px, 100%), 1fr)"
             bind:refreshLayout={refreshContentLayout}
           >

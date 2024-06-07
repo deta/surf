@@ -1,29 +1,70 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import { writable } from 'svelte/store'
-  import { useLogScope } from '../../utils/log' // Adjust the import path as needed
-  import Folder from './Folder.svelte' // Import the new Folder component
+  import { useLogScope } from '../../utils/log'
+  import Folder from './Folder.svelte'
+  import { folderManager } from '../../service/folderManager'
   import { Icon } from '@horizon/icons'
 
   const log = useLogScope('Oasis Sidebar')
 
   const activeFolderId = writable('all')
-  const example_spaces = [
-    { id: 'all', label: 'Everything' },
-    { id: 'images', label: 'Screenshots' },
-    { id: 'articles', label: 'Read Later' },
-    { id: 'archived', label: 'Archived' }
-  ]
-
-  const folders = writable(example_spaces)
+  const folders = writable([])
 
   const handleFolderSelect = (event) => {
     console.log('Active Folder ID:', event.detail)
     activeFolderId.set(event.detail)
   }
 
+  // Load folders from folderManager on component mount
+  onMount(async () => {
+    try {
+      const loadedFolders = await folderManager.listFolders()
+      folders.set(loadedFolders)
+    } catch (error) {
+      log.error('Failed to load folders:', error)
+    }
+  })
+
   // The sidebarTab should be passed in as a prop to manage the tab view
   export let sidebarTab
+
+  const createNewFolder = async () => {
+    try {
+      const newFolder = await folderManager.createFolder('New Folder', 'userContext')
+      folders.update((currentFolders) => [...currentFolders, newFolder])
+      activeFolderId.set(newFolder.id)
+      await tick() // Wait for the DOM to update
+
+      const inputElement = document.getElementById(`folder-input-${newFolder.id}`)
+      if (inputElement) {
+        inputElement.select()
+      }
+    } catch (error) {
+      log.error('Failed to create folder:', error)
+    }
+  }
+
+  const renameFolder = async (id, newName) => {
+    try {
+      await folderManager.updateFolder(id, { name: newName })
+      const updatedFolders = await folderManager.listFolders()
+      folders.set(updatedFolders)
+    } catch (error) {
+      log.error('Failed to rename folder:', error)
+    }
+  }
+
+  const deleteFolder = async (id) => {
+    console.log('deleteFolder called with id:', id.detail) // Debugging log
+    try {
+      await folderManager.deleteFolder(id)
+      const updatedFolders = await folderManager.listFolders()
+      folders.set(updatedFolders)
+    } catch (error) {
+      log.error('Failed to delete folder:', error)
+    }
+  }
 </script>
 
 <div class="folders-sidebar">
@@ -34,11 +75,17 @@
 
   <div class="folder-wrapper">
     {#each $folders as folder (folder.id)}
-      <Folder {folder} {activeFolderId} on:select={handleFolderSelect} />
+      <Folder
+        {folder}
+        {activeFolderId}
+        on:delete={deleteFolder}
+        on:select={handleFolderSelect}
+        on:rename={({ detail }) => renameFolder(detail.id, detail.name)}
+      />
     {/each}
   </div>
 
-  <button class="action-new-space" on:click={() => {}}>
+  <button class="action-new-space" on:click={createNewFolder}>
     <Icon name="add" />
     <span class="new-space-text">New Space</span>
   </button>

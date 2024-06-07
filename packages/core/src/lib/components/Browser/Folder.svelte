@@ -1,17 +1,35 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
+  import { onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
-  import { tooltip } from '@svelte-plugins/tooltips'
 
   export let folder
   export let activeFolderId
 
   const dispatch = createEventDispatcher()
+  let folderName = folder.name
 
   const handleClick = () => {
-    console.log('SET FOLDER ACTIVE: ', folder.id)
     dispatch('select', folder.id)
   }
+
+  const handleBlur = () => {
+    dispatch('rename', { id: folder.id, name: folderName })
+  }
+
+  const handleDelete = () => {
+    console.log('handleDelete called with id:', folder.id) // Debugging log
+    dispatch('delete', folder.id) // Ensure the folder ID is being passed as a string
+  }
+
+  onMount(() => {
+    if (folder.id === $activeFolderId) {
+      const inputElement = document.getElementById(`folder-input-${folder.id}`)
+      if (inputElement) {
+        inputElement.select()
+      }
+    }
+  })
 </script>
 
 <div
@@ -20,9 +38,24 @@
   on:click={handleClick}
   aria-hidden="true"
 >
-  <div class="title">
-    {folder.label}
-  </div>
+  <input
+    id={`folder-input-${folder.id}`}
+    type="text"
+    bind:value={folderName}
+    on:blur={handleBlur}
+    class="folder-input"
+    on:keydown={(e) => {
+      folderName = e.target?.value
+      if (e.code === 'Space') {
+        e.preventDefault()
+        folderName = e.target?.value + ' '
+      }
+    }}
+  />
+
+  <button on:click|stopPropagation={handleDelete} class="close">
+    <Icon name="trash" size="20px" />
+  </button>
 </div>
 
 <style>
@@ -50,17 +83,36 @@
     background-color: #fff;
   }
 
-  .icon-wrapper {
-    width: 20px;
-    height: 20px;
-    display: block;
+  .folder-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 1.1rem;
+    color: inherit;
+    font-weight: inherit;
+    outline: none;
   }
 
-  .title {
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 1.1rem;
+  .folder-input:focus {
+    background-color: transparent;
+  }
+
+  .close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    appearance: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    opacity: 0;
+    height: min-content;
+    background: none;
+    color: #a9a9a9;
+    cursor: pointer;
+  }
+
+  .folder:hover .close {
+    opacity: 1;
   }
 </style>

@@ -20,7 +20,6 @@
   import BrowserHomescreen from './BrowserHomescreen.svelte'
   import OasisSidebar from './OasisSidebar.svelte'
   import Tab from './Tab.svelte'
-  import DropZone from '../Horizon/DropZone.svelte'
 
   import '../Horizon/index.scss'
   import type {
@@ -1018,7 +1017,7 @@
         // Create a range spanning the entire document
         const range = document.createRange();
         range.selectNodeContents(document.body);
-    
+
         // Move the selection point to the start of the document
         const selection = window.getSelection();
         selection.removeAllRanges();
@@ -1037,7 +1036,7 @@
         console.error('Error scrolling to text', e)
       }
     }
-    
+
     scrollTo(searchText);
 })();
       `
@@ -1315,8 +1314,6 @@
 <SplashScreen />
 
 <svelte:window on:keydown={handleKeyDown} />
-
-<DropZone {$masterHorizon} {resourceManager} />
 
 <div class="app-wrapper">
   <div class="sidebar">
