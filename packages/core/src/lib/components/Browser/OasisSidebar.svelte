@@ -5,11 +5,16 @@
   import Folder from './Folder.svelte'
   import { folderManager } from '../../service/folderManager'
   import { Icon } from '@horizon/icons'
+  import { ResourceManager, type ResourceObject } from '../../service/resources'
 
   const log = useLogScope('Oasis Sidebar')
 
   const activeFolderId = writable('all')
   const folders = writable([])
+  const resources = writable([])
+  const reducedResources = writable([])
+
+  export let resourceManager: any
 
   const handleFolderSelect = (event) => {
     console.log('Active Folder ID:', event.detail)
@@ -21,6 +26,19 @@
     try {
       const loadedFolders = await folderManager.listFolders()
       folders.set(loadedFolders)
+
+      let loadedResources = await resourceManager.searchResources('', [
+        ResourceManager.SearchTagDeleted(false)
+      ])
+      resources.set(loadedResources)
+
+      const reduced = loadedResources.map((item: any) => ({
+        id: item.id,
+        name: item.resource.metadata.name,
+        sourceURI: item.resource.metadata.sourceURI
+      }))
+
+      reducedResources.set(reduced)
     } catch (error) {
       log.error('Failed to load folders:', error)
     }
@@ -68,6 +86,9 @@
 </script>
 
 <div class="folders-sidebar">
+  <!-- {JSON.stringify($reducedResources, null, 2)} -->
+  {JSON.stringify($folders, null, 2)}
+
   <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
     <Icon name="chevron.left" />
     <span>Back to Tabs</span>
@@ -78,6 +99,7 @@
       <Folder
         {folder}
         {activeFolderId}
+        {reducedResources}
         on:delete={deleteFolder}
         on:select={handleFolderSelect}
         on:rename={({ detail }) => renameFolder(detail.id, detail.name)}

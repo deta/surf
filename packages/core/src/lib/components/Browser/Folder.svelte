@@ -2,9 +2,11 @@
   import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
+  import { folderManager } from '../../service/folderManager'
 
   export let folder
   export let activeFolderId
+  export let reducedResources
 
   const dispatch = createEventDispatcher()
   let folderName = folder.name
@@ -20,6 +22,18 @@
   const handleDelete = () => {
     console.log('handleDelete called with id:', folder.id) // Debugging log
     dispatch('delete', folder.id) // Ensure the folder ID is being passed as a string
+  }
+
+  const createFolderWithOpenAI = async () => {
+    const userPrompt = JSON.stringify($reducedResources, null, 2)
+    const systemPrompt = `You are getting a list of resources that are in the users library as JSON. Create a JSON list of ids all the resources that are matching this folder name: ${folderName}. The format should look like this: ids: {[id1,id2,id3,...]}`
+
+    console.log(`Automatic Folder Generation request... ${userPrompt} ${systemPrompt}`)
+
+    let response = await window.api.createFolderBasedOnPrompt(userPrompt, systemPrompt, {})
+
+    console.log(`Folder ${folderName} imports these ids, ${response}`)
+    folderManager.addItemsFromAIResponse(folder.id, response)
   }
 
   onMount(() => {
@@ -44,11 +58,14 @@
     bind:value={folderName}
     on:blur={handleBlur}
     class="folder-input"
-    on:keydown={(e) => {
+    on:keydown={async (e) => {
       folderName = e.target?.value
-      if (e.code === 'Space') {
+      if (e.code === 'Space' && !e.shiftKey) {
         e.preventDefault()
         folderName = e.target?.value + ' '
+      } else if (e.code === 'Enter' && e.shiftKey) {
+        e.preventDefault()
+        createFolderWithOpenAI()
       }
     }}
   />

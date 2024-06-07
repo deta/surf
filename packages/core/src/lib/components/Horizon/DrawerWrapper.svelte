@@ -26,6 +26,7 @@
 
   import type { Horizon } from '../../service/horizon'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
+
   import { useLogScope } from '../../utils/log'
   import {
     MEDIA_TYPES,

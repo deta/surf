@@ -1,11 +1,13 @@
 import { generateID } from '../utils/id'
 import type { SFFSResource } from '../types'
 import { HorizonDatabase } from '../service/storage'
+import { ResourceManager } from '../service/resources'
+import { Telemetry } from '../service/telemetry'
 
 export type Folder = {
   id: string
   name: string
-  items: (SFFSResource | Folder)[]
+  items: (SFFSResource | Folder | string)[]
   createdAt: string
   updatedAt: string
 }
@@ -15,7 +17,13 @@ export type FolderMetadata = {
   userContext?: string
 }
 
+const telemetry = new Telemetry({
+  apiKey: '',
+  active: false,
+  trackHostnames: false
+})
 const db = new HorizonDatabase()
+const resourceManager = new ResourceManager(telemetry)
 
 export const folderManager = {
   async createFolder(name: string, userContext: string): Promise<Folder> {
@@ -64,8 +72,18 @@ export const folderManager = {
     const folder = await db.folders.read(folderId)
     if (!folder) return undefined
 
-    folder.items.push(item)
+    folder.items.push(item.id)
     folder.updatedAt = new Date().toISOString()
     return db.folders.update(folderId, folder)
+  },
+
+  async addItemsFromAIResponse(folderId: string, response: string) {
+    const { ids } = JSON.parse(response)
+    for (const id of ids) {
+      const item = await resourceManager.getResource(id)
+      if (item) {
+        await this.addItemToFolder(folderId, item)
+      }
+    }
   }
 }

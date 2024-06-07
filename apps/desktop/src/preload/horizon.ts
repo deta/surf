@@ -159,6 +159,33 @@ const api = {
     return chatCompletion.choices[0].message.content
   },
 
+  createFolderBasedOnPrompt: async (
+    userPrompt: string,
+    systemPrompt?: string,
+    opts: OpenAI.RequestOptions<unknown> = {}
+  ) => {
+    if (!openai) {
+      return null
+    }
+
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = []
+
+    if (systemPrompt) {
+      messages.push({ role: 'system', content: systemPrompt })
+    }
+
+    messages.push({ role: 'user', content: userPrompt })
+
+    const chatCompletion = await openai.chat.completions.create({
+      messages: messages,
+      model: 'gpt-4o',
+      response_format: { type: 'json_object' },
+      ...opts
+    })
+
+    return chatCompletion.choices[0].message.content
+  },
+
   aiFunctionCalls: async (userPrompt: string, actions: HorizonAction[]) => {
     if (!openai) {
       return null
