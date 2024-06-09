@@ -7,8 +7,22 @@ const _MODULE_PREFIX: &'static str = "ai";
 
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__ai_send_chat_message", js_send_chat_message)?;
+    cx.export_function("js__ai_generate_space_sql", js_generate_space_sql)?;
 
     Ok(())
+}
+
+fn js_generate_space_sql(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let prompt = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::GenerateSpaceQuerySql(prompt)),
+        deferred,
+    );
+
+    Ok(promise)
 }
 
 fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
