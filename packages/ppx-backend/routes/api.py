@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from utils.embedchain import send_message
 from utils.embedchain import get_embedding
 from utils.sffs import get_resource
+from utils.embedchain import get_resources
 
 router = APIRouter()
 
@@ -53,6 +54,10 @@ async def handle_get_resource(resource_id):
         return responses.JSONResponse(status_code=404, content={"message": "Resource not found"})
     return resource
 
+@router.get('/api/v1/resources')
+async def handle_get_resources(query: str, resource_ids: Union[str, None] = None):
+    resource_ids = resource_ids.split(',') if resource_ids != None else None
+    return set(await get_resources(query, resource_ids))
 
 @router.get("/")
 async def root():

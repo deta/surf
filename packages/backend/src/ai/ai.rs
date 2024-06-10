@@ -94,6 +94,25 @@ impl AI {
         Ok(chat_history)
     }
 
+    pub fn get_resources(
+        &self,
+        query: String,
+        resource_ids: Vec<String>,
+    ) -> BackendResult<Vec<String>> {
+        let url = format!("{}/resources", &self.api_endpoint);
+        let response = self
+            .client
+            .get(url)
+            .query(&vec![
+                ("query", query.as_str()),
+                ("resource_ids", resource_ids.join(",").as_str()),
+            ])
+            .send()?;
+
+        // dbg!(response.text()?);
+        Ok(response.json()?)
+    }
+
     pub fn add_data_source(&self, data_source: &DataSource) -> Result<(), reqwest::Error> {
         let url = format!("{}/admin/data_sources", &self.api_endpoint);
 
