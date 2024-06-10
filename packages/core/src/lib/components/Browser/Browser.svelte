@@ -294,12 +294,15 @@
       log.error('No active tab')
       return
     }
+    await deleteTab($activeTab.id)
 
+    /*
     if ($activeTab.archived) {
       await deleteTab($activeTab.id)
     } else {
       await archiveTab($activeTab.id)
     }
+    */
 
     // if ($activeTab.type === 'page') {
     //   const currentEntry = historyEntriesManager.getEntry(
@@ -1367,7 +1370,8 @@
             </div>
             <button
               on:click|stopPropagation={() =>
-                tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)}
+                //tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)
+                deleteTab(tab.id)}
               class="close"
               use:tooltip={{
                 content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
@@ -1437,7 +1441,8 @@
 
             <button
               on:click|stopPropagation={() =>
-                tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)}
+                //tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)
+                deleteTab(tab.id)}
               class="close"
               use:tooltip={{
                 content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
