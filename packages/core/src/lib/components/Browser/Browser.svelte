@@ -1321,6 +1321,7 @@
   <div class="sidebar">
     <!-- <h1>Horizon Browser</h1> -->
 
+    <!--
     <div class="tab-selector">
       <button
         on:click={() => ($sidebarTab = 'active')}
@@ -1349,6 +1350,7 @@
         <Icon name="archive" />
       </button>
     </div>
+    -->
 
     <div class="tabs">
       {#each $tabsInView as tab (tab.id)}
@@ -1374,7 +1376,8 @@
                 deleteTab(tab.id)}
               class="close"
               use:tooltip={{
-                content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
+                //content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
+                content: 'Delete this tab (⌘ + W)',
                 action: 'hover',
                 position: 'left',
                 animation: 'fade',
@@ -1954,7 +1957,7 @@
   .tabs {
     flex: 1;
     overflow: auto;
-    margin-top: 2rem;
+    margin-top: 3rem;
     padding-bottom: 1rem;
     display: flex;
     flex-direction: column;
