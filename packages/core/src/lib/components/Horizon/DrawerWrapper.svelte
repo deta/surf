@@ -907,6 +907,62 @@
 {/if}
 
 <DrawerProvider {drawer} on:search={handleSearch}>
+  <div class="drawer-bar">
+    <div class="tabs-transition"></div>
+    {#if $viewState !== 'details'}
+      <div class="drawer-chat-search">
+        {#if $viewState !== 'chatInput'}
+          <DrawerSearch />
+        {/if}
+        {#if $viewState !== 'search'}
+          {#if $alreadyDropped && $viewState === 'chatInput'}
+            <div
+              class="already-dropped-wrapper"
+              in:fly={{ y: 30, duration: 120 }}
+              out:fly={{ y: 30, duration: 320 }}
+            >
+              <AlreadyDroppedTooltip />
+            </div>
+          {/if}
+          <DrawerChat
+            on:chatSend={handleChat}
+            on:dropForwarded={handleDropForwarded}
+            on:dropFileUpload={handleFileUpload}
+            forceOpen={false}
+            {droppedInputElements}
+          />
+        {/if}
+      </div>
+
+      {#if $viewState == 'search' || $viewState == 'chatInput'}
+        <DrawerCancel on:search-abort={abortSearch} />
+        {#if $showSearchDebug}
+          <div class="search-debug">
+            <label>
+              Semantic Enabled
+              <input bind:checked={$semanticSearchEnabled} type="checkbox" />
+            </label>
+
+            <label>
+              Semantic Threshold
+              <input bind:value={$semanticDistanceThreshold} type="number" step="0.15" />
+            </label>
+
+            <label>
+              Proximity Threshold
+              <input
+                bind:value={$proximityDistanceThreshold}
+                type="number"
+                step="10000"
+                style="width: 100px;"
+              />
+            </label>
+          </div>
+        {/if}
+      {/if}
+      <!-- <ProgressiveBlur /> -->
+    {/if}
+  </div>
   <DrawerContentWrapper
     on:drop={handleDrop}
     acceptDrop={$viewState !== 'details' && !$isDraggingDrawerItem}
@@ -998,63 +1054,6 @@
       {/if}
     </div>
   </div>
-
-  <div class="drawer-bottom">
-    <div class="tabs-transition"></div>
-    {#if $viewState !== 'details'}
-      <div class="drawer-chat-search">
-        {#if $viewState !== 'chatInput'}
-          <DrawerSearch />
-        {/if}
-        {#if $viewState !== 'search'}
-          {#if $alreadyDropped && $viewState === 'chatInput'}
-            <div
-              class="already-dropped-wrapper"
-              in:fly={{ y: 30, duration: 120 }}
-              out:fly={{ y: 30, duration: 320 }}
-            >
-              <AlreadyDroppedTooltip />
-            </div>
-          {/if}
-          <DrawerChat
-            on:chatSend={handleChat}
-            on:dropForwarded={handleDropForwarded}
-            on:dropFileUpload={handleFileUpload}
-            forceOpen={false}
-            {droppedInputElements}
-          />
-        {/if}
-      </div>
-
-      {#if $viewState == 'search' || $viewState == 'chatInput'}
-        <DrawerCancel on:search-abort={abortSearch} />
-        {#if $showSearchDebug}
-          <div class="search-debug">
-            <label>
-              Semantic Enabled
-              <input bind:checked={$semanticSearchEnabled} type="checkbox" />
-            </label>
-
-            <label>
-              Semantic Threshold
-              <input bind:value={$semanticDistanceThreshold} type="number" step="0.15" />
-            </label>
-
-            <label>
-              Proximity Threshold
-              <input
-                bind:value={$proximityDistanceThreshold}
-                type="number"
-                step="10000"
-                style="width: 100px;"
-              />
-            </label>
-          </div>
-        {/if}
-      {/if}
-      <!-- <ProgressiveBlur /> -->
-    {/if}
-  </div>
 </DrawerProvider>
 
 <style lang="scss">
@@ -1135,7 +1134,7 @@
     }
   }
 
-  .drawer-bottom {
+  .drawer-bar {
     position: relative;
     top: 0;
     left: 0;
@@ -1144,11 +1143,6 @@
     z-index: 1000;
     border-top: 0.5px solid rgba(0, 0, 0, 0.15);
     &:after {
-      background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.5) 0%,
-        rgba(255, 255, 255, 255) 60%
-      ) !important;
       filter: opacity(1);
       content: '';
       position: absolute;
@@ -1164,6 +1158,7 @@
       top: 0;
       display: flex;
       align-items: center;
+      justify-content: center;
       width: 100%;
       gap: 16px;
       padding: 1rem 1rem 1rem 1rem;
