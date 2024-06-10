@@ -333,7 +333,7 @@ export class SFFS {
     const parsed = this.parseData<SFFSSearchResult>(raw)
     const items = parsed?.items ?? []
 
-    this.log.debug('search results', items)
+    // this.log.debug('search results', items)
     return items.map((item) => ({
       ...item,
       engine: item.engine.toLowerCase() as SFFSSearchResultEngine,

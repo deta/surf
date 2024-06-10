@@ -5,7 +5,7 @@
   import Folder from './Folder.svelte'
   import { folderManager } from '../../service/folderManager'
   import { Icon } from '@horizon/icons'
-  import { ResourceManager, type ResourceObject } from '../../service/resources'
+  import { ResourceManager } from '../../service/resources'
   import { selectedFolder } from '../../stores/oasis'
 
   const log = useLogScope('Oasis Sidebar')
@@ -20,7 +20,8 @@
   onMount(async () => {
     try {
       const loadedFolders = await folderManager.listFolders()
-      folders.set(loadedFolders)
+      // Include the static 'Everything' folder at the top
+      folders.set([{ id: 'all', name: 'Everything' }, ...loadedFolders])
 
       let loadedResources = await resourceManager.searchResources('', [
         ResourceManager.SearchTagDeleted(false)
@@ -32,7 +33,6 @@
         name: item.resource.metadata.name,
         sourceURI: item.resource.metadata.sourceURI
       }))
-
       reducedResources.set(reduced)
     } catch (error) {
       log.error('Failed to load folders:', error)
@@ -81,9 +81,6 @@
 </script>
 
 <div class="folders-sidebar">
-  <!-- {JSON.stringify($reducedResources, null, 2)} -->
-  <!-- {JSON.stringify($folders, null, 2)} -->
-
   <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
     <Icon name="chevron.left" />
     <span>Back to Tabs</span>
@@ -95,9 +92,11 @@
         {folder}
         {selectedFolder}
         {reducedResources}
-        on:delete={deleteFolder}
-        on:select={handleFolderSelect}
-        on:rename={({ detail }) => renameFolder(detail.id, detail.name)}
+        on:delete={folder.id !== 'all' ? deleteFolder : null}
+        on:select={folder.id === 'all' ? () => selectedFolder.set('all') : handleFolderSelect}
+        on:rename={folder.id !== 'all'
+          ? ({ detail }) => renameFolder(detail.id, detail.name)
+          : null}
         selected={$selectedFolder === folder.id}
       />
     {/each}

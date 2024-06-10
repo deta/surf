@@ -26,19 +26,34 @@
 
 <div class="mini-browser-wrapper">
   <div id="mini-browser" class="mini-browser">
+    <div class="resource-details">
+      <slot />
+    </div>
     <BrowserTab {tab} {historyEntriesManager} bind:webview />
+    <div class="resource-details">
+      <!-- placeholder for notes later -->
+    </div>
   </div>
 </div>
 
 <style lang="scss">
   .mini-browser {
     position: absolute;
-    width: 60vw;
+    display: flex;
+    gap: 2rem;
+    width: 80vw;
     height: 95vh;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 100000;
+  }
+
+  .resource-details {
+    position: relative;
+    width: 40rem;
+    border-radius: 12px;
+    background: white;
   }
 
   .mini-browser-wrapper {

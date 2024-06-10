@@ -146,20 +146,9 @@
     blockDetailsTracking = false
   }
 
-  selectedFolder.subscribe(async (folderId) => {
-    try {
-      const ids = await folderManager.getFolderContents(folderId)
-      const contents = await Promise.all(ids.map((id) => resourceManager.getResource(id)))
-      folderContents.set(contents.filter((item) => item !== undefined))
-      await tick()
-    } catch (error) {
-      console.error('Error fetching folder contents:', error)
-    }
-  })
-
   let refreshContentLayout: () => Promise<void>
 
-  let searchResult: ResourceSearchResultItem[] = []
+  let searchResult = writable<ResourceSearchResultItem[]>([])
   let detectedInput = false
   let parsedInput: {
     url: string
@@ -179,6 +168,10 @@
   }, 250)
 
   const runSearch = async (query: string, tab: string | null) => {
+    if ($selectedFolder != 'all') {
+      return
+    }
+
     log.debug('Searching for', query, 'in', tab)
 
     const tags = [] as SFFSResourceTag[]
@@ -219,8 +212,10 @@
     log.debug('Search result', result)
 
     // this is needed so local results needed for the processing state are not removed when new results are added
-    const previousLocalResults = searchResult.filter((r) => r.engine === 'local')
-    searchResult = [...previousLocalResults, ...result]
+    const previousLocalResults = get(searchResult).filter((r) => r.engine === 'local')
+
+    searchResult.set([...previousLocalResults, ...result])
+    console.log('free', $searchResult)
 
     await tick()
 
@@ -278,6 +273,37 @@
   const abortSearch = () => {
     runSearch('', get(drawer.selectedTab))
   }
+
+  selectedFolder.subscribe(async (folderId) => {
+    if (folderId === 'all') {
+      console.log('try to fetch everything', folderId)
+      await tick()
+      await runSearch('', null)
+      return
+    }
+
+    try {
+      const ids = await folderManager.getFolderContents(folderId)
+      const contents = await Promise.all(ids.map((id) => resourceManager.getResource(id)))
+      folderContents.set(contents)
+
+      await tick()
+
+      const searchResults = contents.map((content) => {
+        return {
+          id: content?.id,
+          resource: content,
+          cardIds: content?.tags.map((tag) => tag.id),
+          engine: 'NO ENGINE BRO'
+        } as unknown as ResourceSearchResultItem
+      })
+
+      searchResult.set(searchResults)
+      await tick()
+    } catch (error) {
+      console.error('Error fetching folder contents:', error)
+    }
+  })
 
   const openResourceDetail = (resource: ResourceObject) => {
     document.startViewTransition(() => {
@@ -477,7 +503,7 @@
       }
 
       // TODO: this is a hack to add the resource to the search result without waiting for the resource to be created, we should find a better way to do this
-      searchResult = [
+      searchResult.update((results) => [
         {
           id: id,
           resource: {
@@ -491,8 +517,8 @@
           engine: 'local',
           cardIds: []
         },
-        ...searchResult
-      ]
+        ...results
+      ])
 
       refreshContentLayout()
 
@@ -503,7 +529,7 @@
       log.error('Error creating resource from parsed URL', err)
     } finally {
       // remove the resource from the search result as it has been created
-      searchResult = searchResult.filter((r) => r.id !== id)
+      searchResult.update((results) => results.filter((r) => r.id !== id))
     }
   }
 
@@ -825,7 +851,33 @@
 />
 
 {#if $showMiniBrowser && $selectedResource}
-  <MiniBrowser resource={selectedResource} />
+  <MiniBrowser resource={selectedResource}>
+    <DrawerDetailsWrapper
+      on:dragstart={(e) => handleItemDragStart(e, $selectedResource)}
+      resource={$selectedResource}
+      {horizon}
+    >
+      <ResourceOverlay caption="Click to open in new tab">
+        <ResourcePreview
+          slot="content"
+          on:click={() => handleResourceDetailClick($selectedResource)}
+          on:remove={handleResourceRemove}
+          on:load={handleResourceLoad}
+          resource={$selectedResource}
+        />
+      </ResourceOverlay>
+
+      <div class="proximity-view" slot="proximity-view" let:result={nearbyResults}>
+        {#if nearbyResults.length > 0}
+          <DrawerDetailsProximity
+            {nearbyResults}
+            on:click={handleNearbyResultClick}
+            on:dragstart={(e) => handleItemDragStart(e.detail.event, e.detail.resource)}
+          />
+        {/if}
+      </div>
+    </DrawerDetailsWrapper>
+  </MiniBrowser>
 {/if}
 
 {#if false}
@@ -903,16 +955,16 @@
         in:fly={{ x: -600, duration: 540 }}
         out:fly={{ x: -600, duration: 320 }}
       >
-        {#if searchResult.length === 0}
+        {#if $searchResult.length === 0}
           <DrawerContenEmpty />
         {:else}
           <DrawerContentMasonry
-            items={searchResult}
+            items={$searchResult}
             gridGap="2rem"
             colWidth="minmax(Min(330px, 100%), 1fr)"
             bind:refreshLayout={refreshContentLayout}
           >
-            {#each searchResult.slice(0, 50) as item (item.id)}
+            {#each $searchResult.slice(0, 50) as item (item.id)}
               {#if item.engine === 'local'}
                 <div>
                   <ResourceLoading title={item.resource.metadata?.name} />
@@ -935,34 +987,10 @@
         {/if}
       </div>
     {/if}
-    <!-- {#await $result}
-      <p>Loading…</p>
-    {:then resources}
-      {#if resources.length === 0}
-        <DrawerContenEmpty />
-      {:else}
-        <DrawerContentMasonry
-          items={resources}
-          idKey="id"
-          animate={false}
-          maxColWidth={650}
-          minColWidth={300}
-          gap={15}
-          let:item={resource}
-        >
-          <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, resource.id)}>
-            <ResourcePreview on:click={handleResourceClick} {resource} />
-          </DrawerContentItem>
-        </DrawerContentMasonry>
-      {/if}
-    {/await} -->
   </DrawerContentWrapper>
 
   <div class="drawer-top">
     <div class="drawer-controls">
-      <!-- <button on:click={() => drawer.close()}>
-        <Icon name="sidebar.right" size="22px" />
-      </button> -->
       {#if $viewState === 'details'}
         <button on:click={handleDetailsBack}>
           <Icon name="chevron.left" size="22px" />
@@ -972,14 +1000,7 @@
   </div>
 
   <div class="drawer-bottom">
-    <div class="tabs-transition">
-      <!-- {#if $viewState !== 'details'}
-        <DrawerNavigation {tabs} />
-      {/if} -->
-    </div>
-    <!-- {#if $isSaving}
-      <Saving />
-    {/if} -->
+    <div class="tabs-transition"></div>
     {#if $viewState !== 'details'}
       <div class="drawer-chat-search">
         {#if $viewState !== 'chatInput'}

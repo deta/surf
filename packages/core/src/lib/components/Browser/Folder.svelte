@@ -10,6 +10,7 @@
 
   const dispatch = createEventDispatcher()
   let folderName = folder.name
+  let inputWidth = `${folderName.length}ch`
 
   const handleClick = () => {
     dispatch('select', folder.id)
@@ -44,6 +45,10 @@
       }
     }
   })
+
+  $: {
+    inputWidth = `${folderName.length}ch`
+  }
 </script>
 
 <div class="folder {selected ? 'active' : ''}" on:click={handleClick} aria-hidden="true">
@@ -53,6 +58,7 @@
     bind:value={folderName}
     on:blur={handleBlur}
     class="folder-input"
+    style={`width: ${inputWidth}`}
     on:keydown={async (e) => {
       folderName = e.target?.value
       if (e.code === 'Space' && !e.shiftKey) {
@@ -74,6 +80,7 @@
   .folder {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 1rem 1.5rem;
     border-radius: 8px;
     cursor: pointer;
@@ -96,13 +103,13 @@
   }
 
   .folder-input {
-    width: 100%;
     border: none;
     background: transparent;
     font-size: 1.1rem;
     color: inherit;
     font-weight: inherit;
     outline: none;
+    width: fit-content; /* This is optional, as the width is dynamically set via style */
   }
 
   .folder-input:focus {
