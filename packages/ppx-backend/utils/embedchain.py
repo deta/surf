@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import json
 import os
-from typing import AsyncIterable
+
+from typing import AsyncIterable, List, Union
 
 from embedchain import App
 from embedchain.config import BaseLlmConfig
@@ -126,3 +128,16 @@ async def send_message(query, session_id, number_documents, system_prompt, citat
 async def get_embedding(data: str) -> list[float]:
     ec_app = App.from_config(config=EC_APP_CONFIG)
     return ec_app.embedding_model.to_embeddings(data)
+
+async def get_resources(query: str, resource_ids: Union[List[str], None]) -> list[float]:
+    ec_app = App.from_config(config=EC_APP_CONFIG)
+
+    where = {'app_id': ec_app.config.id}
+    if resource_ids != None:
+        where = {'$and': [where, {"resource_id": {"$in": resource_ids}}]}
+
+    contexts = ec_app.search(query, where=where, num_documents=100)
+    resource_ids = [(context.get('metadata', {}).get('resource_id'), context.get('metadata', {}).get('score')) for context in contexts]
+    resource_ids = [rid for (rid, score) in resource_ids if rid is not None and score is not None and score < 300]
+
+    return resource_ids

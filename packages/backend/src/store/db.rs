@@ -15,7 +15,7 @@ struct Migrations;
 
 #[derive(Debug)]
 pub struct Database {
-    conn: rusqlite::Connection,
+    pub conn: rusqlite::Connection,
 }
 
 pub struct PaginatedResources {
