@@ -60,6 +60,22 @@
 
   const handleDragStart = (e: DragEvent) => {
     e.dataTransfer?.setData('application/json', JSON.stringify({ id: resource.id }))
+
+    const dragElement = e.target as HTMLElement
+    const clone = dragElement.cloneNode(true) as HTMLElement
+
+    clone.style.position = 'absolute'
+    clone.style.top = '-200px'
+    clone.style.left = '-200px'
+    clone.style.width = '200px'
+    clone.style.height = '200px'
+    clone.style.maxWidth = '200px'
+    clone.style.maxHeight = '200px'
+    clone.style.opacity = '0.7'
+    clone.style.pointerEvents = 'none'
+
+    document.body.appendChild(clone)
+    e.dataTransfer?.setDragImage(clone, clone.clientWidth / 2, clone.clientHeight / 2)
   }
 
   const handleLoad = () => {
