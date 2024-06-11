@@ -1,5 +1,3 @@
-<!-- <svelte:options immutable={true} /> -->
-
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { Icon } from '@horizon/icons'
@@ -61,20 +59,39 @@
   }
 
   const handleDragStart = (e: DragEvent) => {
-    if (data) {
-      if (resource.type.startsWith(ResourceTypes.POST)) {
-        e.dataTransfer?.setData('text/uri-list', (data as ResourceDataPost)?.url ?? '')
-      }
+    e.dataTransfer?.setData('application/json', JSON.stringify({ id: resource.id }))
 
-      const content = WebParser.getResourceContent(resource.type, data)
-      if (content.plain) {
-        e.dataTransfer?.setData('text/plain', content.plain)
-      }
+    const dragElement = e.target as HTMLElement
+    const clone = dragElement.cloneNode(true) as HTMLElement
 
-      if (content.html) {
-        e.dataTransfer?.setData('text/html', content.html)
-      }
+    // Apply initial styles
+    clone.style.position = 'absolute'
+    clone.style.top = '-200px'
+    clone.style.left = '-200px'
+    clone.style.width = '200px'
+    clone.style.height = '200px'
+    clone.style.maxWidth = '200px'
+    clone.style.maxHeight = '200px'
+    clone.style.opacity = '0.7'
+    clone.style.pointerEvents = 'none'
+    clone.style.transform = 'scale(0.8)'
+    clone.style.transition = 'transform 0.2s ease-out'
+
+    document.body.appendChild(clone)
+    e.dataTransfer?.setDragImage(clone, clone.clientWidth / 2, clone.clientHeight / 2)
+
+    // Trigger reflow
+    clone.offsetHeight // Reading this property will trigger a reflow
+
+    // Apply the final transformation
+    clone.style.transform = 'scale(1)'
+
+    const handleDragEnd = () => {
+      clone.remove()
+      dragElement.removeEventListener('dragend', handleDragEnd)
     }
+
+    clone.addEventListener('transitionend', handleDragEnd)
   }
 
   const handleLoad = () => {
@@ -142,8 +159,6 @@
       />
     {:else}
       <FilePreview {resource} on:load={handleLoad} />
-      <!-- {:else}
-      <div class="text-base">Unknown</div> -->
     {/if}
   </div>
 
@@ -174,8 +189,6 @@
         <div class="label">{getFileType(resource.type) ?? 'File'}</div> -->
       {/if}
     </div>
-
-    <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
   </div>
   {#if $viewState !== 'details'}
     <div class="remove-wrapper" on:click={handleRemove}>
@@ -324,5 +337,25 @@
     padding: 0 0.25rem 0 0.25rem;
     margin-bottom: 1.5rem;
     text-wrap: balance;
+  }
+
+  .dragging {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    max-width: 200px;
+    max-height: 200px;
+    opacity: 0.7;
+    pointer-events: none;
+    animation: initial-drag 0.2s ease-out;
+  }
+
+  @keyframes initial-drag {
+    from {
+      transform: scale(0.8);
+    }
+    to {
+      transform: scale(1);
+    }
   }
 </style>

@@ -94,6 +94,7 @@
             src={youtubeThumbnailURL}
             alt="YouTube video thumbnail"
             on:load={handleLoad}
+            loading="lazy"
           />
         </div>
       {/if}

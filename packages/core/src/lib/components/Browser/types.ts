@@ -21,6 +21,7 @@ export interface TabChat extends BaseTab {
   type: 'chat'
   query: string
   chatId?: string
+  apiEndpoint?: string
 }
 
 export interface TabHorizon extends BaseTab {
@@ -64,10 +65,33 @@ export type AIChatMessageSource = {
   content: string
   metadata?: {
     timestamp?: number
+    url?: string
   }
 }
 
 export type ChatMessageContentItem = {
   type: 'text' | 'citation'
   content: string
+}
+
+export type PageMagicResponse = {
+  id: string
+  role: 'system' | 'user'
+  query?: string
+  status: 'success' | 'pending' | 'error'
+  content: string
+  citations: Record<string, { color: string; text: string }>
+}
+
+export type PageMagic = {
+  tabId: string
+  showSidebar: boolean
+  running: boolean
+  responses: PageMagicResponse[]
+}
+
+export type PageHighlight = {
+  type: 'important' | 'statistic' | 'pro' | 'contra' | 'quote'
+  color?: string
+  text: string
 }

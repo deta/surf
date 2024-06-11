@@ -1,5 +1,9 @@
+<script lang="ts" context="module">
+  export const oasisAPIEndpoint = writable('')
+</script>
+
 <script lang="ts">
-  import { writable, type Unsubscriber } from 'svelte/store'
+  import { writable, get, type Unsubscriber } from 'svelte/store'
   import { createEventDispatcher, onMount } from 'svelte'
   import { fly } from 'svelte/transition'
   import emblaCarouselSvelte from 'embla-carousel-svelte'
@@ -31,6 +35,7 @@
   const deactivateToolbar = writable(false)
 
   let value: string = ''
+  let oasisURLValue: string = ''
   let editing = false
   let inputEl: HTMLInputElement
 
@@ -59,6 +64,7 @@
     // })
 
     // Sort entries by latest first based on createdAt or updatedAt
+
     const sortedEntries = historyEntries.sort((a, b) => {
       return new Date(b.entry.createdAt).getTime() - new Date(a.entry.createdAt).getTime()
     })
@@ -130,6 +136,19 @@
   const handleKeyUp = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
       goToURL()
+    }
+  }
+
+  const handleOasisURLKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      const url = parseStringIntoUrl(oasisURLValue)
+      if (!url) {
+        alert('Invalid URL')
+        return
+      }
+      let endpoint = `${url.href.replace(/\/$/, '')}/api/v1`
+      oasisAPIEndpoint.set(endpoint)
+      alert('Successfully set Oasis URL')
     }
   }
 
@@ -226,6 +245,19 @@
           <p>Hit <span>↩</span> to open a site or <span>⌘ + ↩</span> to ask Oasis AI</p>
         </div>
         <!-- <div class="page-title">{$title}</div> -->
+      </div>
+
+      <div class="section">
+        <h2 class="subheadline">Oasis URL</h2>
+        <div class="address-bar">
+          <input
+            type="text"
+            class="isActive"
+            placeholder={get(oasisAPIEndpoint) || 'Enter Oasis URL'}
+            bind:value={oasisURLValue}
+            on:keyup={handleOasisURLKeyUp}
+          />
+        </div>
       </div>
 
       <div class="section">

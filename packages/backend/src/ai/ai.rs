@@ -17,6 +17,7 @@ pub struct DataSource {
 pub struct DataSourceMetadata {
     pub resource_id: String,
     pub resource_type: String,
+    pub url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -78,8 +79,12 @@ impl AI {
         }
     }
 
-    pub fn get_chat_history(&self, session_id: String) -> Result<ChatHistory, reqwest::Error> {
-        let url = format!("{}/admin/chat_history/{}", &self.api_endpoint, session_id);
+    pub fn get_chat_history(&self, session_id: String, api_endpoint: Option<String>) -> Result<ChatHistory, reqwest::Error> {
+        let mut api_endpoint = api_endpoint.unwrap_or_else(|| self.api_endpoint.clone());
+        if api_endpoint == "" {
+            api_endpoint = self.api_endpoint.clone();
+        }
+        let url = format!("{}/admin/chat_history/{}", &api_endpoint, session_id);
         let response = self.client.get(url).send()?;
         let chat_history = response.json::<ChatHistory>()?;
         Ok(chat_history)
@@ -109,8 +114,14 @@ impl AI {
         session_id: String,
         number_documents: i32,
         model: String,
+        api_endpoint: Option<String>, 
     ) -> BackendResult<impl Stream<Item = BackendResult<Option<String>>>> {
-        let url = format!("{}/chat", &self.api_endpoint);
+        let mut api_endpoint = api_endpoint.unwrap_or_else(|| self.api_endpoint.clone());
+        if api_endpoint == "" {
+            api_endpoint = self.api_endpoint.clone();
+        }
+
+        let url = format!("{}/chat", &api_endpoint);
         let response = self
             .async_client
             .get(url)

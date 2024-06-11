@@ -24,7 +24,7 @@ import { TelemetryEventTypes } from '@horizon/types'
 
 /*
  TODO:
- - move over other card data to SFFSResource 
+ - move over other card data to SFFSResource
  - handle errors
  - use the relevant enum, and do not hard code the values
 */
@@ -404,6 +404,19 @@ export class ResourceManager {
     )
 
     return results
+  }
+
+  async getRemoteResource(id: string, remoteURL: string) {
+    const res = await fetch(`${remoteURL}/resources/${id}`)
+    if (!res.ok) {
+      if (res.status === 404) {
+        return null
+      }
+      throw new Error('failed to fetch resource')
+    }
+    const obj = await res.json()
+    console.log('resource object', obj)
+    return this.findOrCreateResourceObject(obj)
   }
 
   async getResource(id: string) {

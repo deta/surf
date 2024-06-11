@@ -1,44 +1,115 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import { writable } from 'svelte/store'
-  import { useLogScope } from '../../utils/log' // Adjust the import path as needed
-  import Folder from './Folder.svelte' // Import the new Folder component
+  import { useLogScope } from '../../utils/log'
+  import Folder from './Folder.svelte'
+  import { folderManager } from '../../service/folderManager'
   import { Icon } from '@horizon/icons'
+  import { ResourceManager } from '../../service/resources'
+  import { selectedFolder } from '../../stores/oasis'
 
   const log = useLogScope('Oasis Sidebar')
 
-  const activeFolderId = writable('all')
-  const example_spaces = [
-    { id: 'all', label: 'Everything' },
-    { id: 'images', label: 'Screenshots' },
-    { id: 'articles', label: 'Read Later' },
-    { id: 'archived', label: 'Archived' }
-  ]
+  const folders = writable([])
+  const resources = writable([])
+  const reducedResources = writable([])
 
-  const folders = writable(example_spaces)
+  export let resourceManager: any
+  export let sidebarTab
 
-  const handleFolderSelect = (event) => {
-    console.log('Active Folder ID:', event.detail)
-    activeFolderId.set(event.detail)
+  const ensureEverythingFolder = (folderList) => {
+    const everythingFolder = { id: 'all', name: 'Everything' }
+    if (!folderList.find((folder) => folder.id === 'all')) {
+      return [everythingFolder, ...folderList]
+    }
+    return folderList
   }
 
-  // The sidebarTab should be passed in as a prop to manage the tab view
-  export let sidebarTab
+  onMount(async () => {
+    try {
+      const loadedFolders = await folderManager.listFolders()
+      folders.set(ensureEverythingFolder(loadedFolders))
+
+      let loadedResources = await resourceManager.searchResources('', [
+        ResourceManager.SearchTagDeleted(false)
+      ])
+      resources.set(loadedResources)
+
+      const reduced = loadedResources.map((item: any) => ({
+        id: item.id,
+        name: item.resource.metadata.name,
+        sourceURI: item.resource.metadata.sourceURI
+      }))
+      reducedResources.set(reduced)
+    } catch (error) {
+      log.error('Failed to load folders:', error)
+    }
+  })
+
+  const createNewFolder = async () => {
+    try {
+      const newFolder = await folderManager.createFolder('New Folder', 'userContext')
+      folders.update((currentFolders) => ensureEverythingFolder([...currentFolders, newFolder]))
+      selectedFolder.set(newFolder.id)
+      await tick()
+
+      const inputElement = document.getElementById(`folder-input-${newFolder.id}`)
+      if (inputElement) {
+        inputElement.select()
+      }
+    } catch (error) {
+      log.error('Failed to create folder:', error)
+    }
+  }
+
+  const renameFolder = async (id, newName) => {
+    try {
+      await folderManager.updateFolder(id, { name: newName })
+      const updatedFolders = await folderManager.listFolders()
+      folders.set(ensureEverythingFolder(updatedFolders))
+    } catch (error) {
+      log.error('Failed to rename folder:', error)
+    }
+  }
+
+  const deleteFolder = async (id) => {
+    try {
+      await folderManager.deleteFolder(id)
+      const updatedFolders = await folderManager.listFolders()
+      folders.set(ensureEverythingFolder(updatedFolders))
+    } catch (error) {
+      log.error('Failed to delete folder:', error)
+    }
+  }
+
+  const handleFolderSelect = (event) => {
+    selectedFolder.set(event.detail)
+  }
 </script>
 
 <div class="folders-sidebar">
   <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
     <Icon name="chevron.left" />
-    <span>Back to Tabs</span>
+    <span class="label">Back to Tabs</span>
   </button>
 
   <div class="folder-wrapper">
     {#each $folders as folder (folder.id)}
-      <Folder {folder} {activeFolderId} on:select={handleFolderSelect} />
+      <Folder
+        {folder}
+        {selectedFolder}
+        {reducedResources}
+        on:delete={folder.id !== 'all' ? deleteFolder : null}
+        on:select={folder.id === 'all' ? () => selectedFolder.set('all') : handleFolderSelect}
+        on:rename={folder.id !== 'all'
+          ? ({ detail }) => renameFolder(detail.id, detail.name)
+          : null}
+        selected={$selectedFolder === folder.id}
+      />
     {/each}
   </div>
 
-  <button class="action-new-space" on:click={() => {}}>
+  <button class="action-new-space" on:click={createNewFolder}>
     <Icon name="add" />
     <span class="new-space-text">New Space</span>
   </button>
@@ -87,7 +158,13 @@
     padding: 0.75rem 1rem;
     opacity: 0.6;
     &:hover {
-      opcaity: 1;
+      opacity: 1;
+    }
+  }
+
+  .action-back-to-tabs {
+    .label {
+      letter-spacing: 0.04rem;
     }
   }
 </style>

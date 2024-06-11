@@ -15,6 +15,7 @@
     z-index: 10;
     width: 100%;
     height: 3.3rem;
+    max-width: 32rem;
     view-transition-name: search-transition;
     &.active {
       height: auto;

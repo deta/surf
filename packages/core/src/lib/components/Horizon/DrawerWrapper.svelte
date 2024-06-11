@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { setContext, tick } from 'svelte'
+  import { setContext, getContext, tick } from 'svelte'
   import { get, writable } from 'svelte/store'
   import { WebParser, type WebMetadata, type DetectedWebApp } from '@horizon/web-parser'
   import { fly } from 'svelte/transition'
@@ -26,6 +26,7 @@
 
   import type { Horizon } from '../../service/horizon'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
+
   import { useLogScope } from '../../utils/log'
   import {
     MEDIA_TYPES,
@@ -43,6 +44,9 @@
     type ResourceSearchResultItem,
     getPrimaryResourceType
   } from '../../service/resources'
+
+  import { folderManager } from '../../service/folderManager'
+
   import {
     ResourceTypes,
     type ResourceData,
@@ -68,6 +72,7 @@
 
   export let horizon: Horizon
   export let resourceManager: ResourceManager
+  export let selectedFolder
 
   const cards = horizon.cards
   const resourcesInMemory = resourceManager.resources
@@ -75,6 +80,8 @@
   const isDrawerShown = drawer.show
 
   const log = useLogScope('DrawerWrapper')
+
+  const resourceCache = new Map<string, ResourceObject>()
 
   const tabs = [
     { key: 'all', label: 'All', icon: 'square.rotated' },
@@ -103,6 +110,8 @@
   const isSaving = writable(false)
   const alreadyDropped = writable(false)
   const showMiniBrowser = writable(false)
+
+  const folderContents = writable<(ResourceObject | undefined)[]>([])
 
   $: if ($viewState === 'default') {
     $droppedInputElements = []
@@ -141,7 +150,8 @@
 
   let refreshContentLayout: () => Promise<void>
 
-  let searchResult: ResourceSearchResultItem[] = []
+  let searchResult = writable<ResourceSearchResultItem[]>([])
+  let folderResult = writable<ResourceSearchResultItem[]>([])
   let detectedInput = false
   let parsedInput: {
     url: string
@@ -158,27 +168,18 @@
     if (refreshContentLayout) {
       return refreshContentLayout()
     }
-  }, 250)
+  }, 1500)
 
   const runSearch = async (query: string, tab: string | null) => {
+    if ($selectedFolder != 'all') {
+      return
+    }
+
+    folderResult.set([])
+
     log.debug('Searching for', query, 'in', tab)
 
     const tags = [] as SFFSResourceTag[]
-
-    // EXAMPLE: searching by resource type (exact match)
-    // tags.push(
-    //     ResourceManager.SearchTagResourceType(ResourceTypes.LINK)
-    // )
-
-    // EXAMPLE: searching by resource type prefix
-    // tags.push(
-    //     ResourceManager.SearchTagResourceType(ResourceTypes.POST, true)
-    // )
-
-    // EXAMPLE: search by hostname (using suffix)
-    // tags.push(
-    //     ResourceManager.SearchTagHostname('deta.space')
-    // )
 
     if (tab === 'archived') {
       tags.push(ResourceManager.SearchTagDeleted()) // TODO: implement recovering of deleted resources
@@ -208,17 +209,15 @@
     }
 
     const result = await resourceManager.searchResources(query, tags, parsedParameters)
+
     if (query === '') {
       result.reverse()
     }
 
-    log.debug('Search result', result)
-
     // this is needed so local results needed for the processing state are not removed when new results are added
-    const previousLocalResults = searchResult.filter((r) => r.engine === 'local')
-    searchResult = [...previousLocalResults, ...result]
+    const previousLocalResults = get(searchResult).filter((r) => r.engine === 'local')
 
-    await tick()
+    searchResult.set([...previousLocalResults, ...result])
 
     if (refreshContentLayout) {
       refreshContentLayout()
@@ -238,7 +237,7 @@
     }
   }
 
-  const runDebouncedSearch = useDebounce(runSearch, 500)
+  const runDebouncedSearch = useDebounce(runSearch, 2000)
 
   const handleSearch = (e: CustomEvent<SearchQuery>) => {
     const query = e.detail
@@ -274,6 +273,37 @@
   const abortSearch = () => {
     runSearch('', get(drawer.selectedTab))
   }
+
+  selectedFolder.subscribe(async (folderId) => {
+    if (folderId === 'all') {
+      console.log('try to fetch everything', folderId)
+      await tick()
+      await runSearch('', null)
+      return
+    }
+
+    try {
+      const ids = await folderManager.getFolderContents(folderId)
+      const contents = await Promise.all(ids.map((id) => resourceManager.getResource(id)))
+      folderContents.set(contents)
+
+      await tick()
+
+      const searchResults = contents.map((content) => {
+        return {
+          id: content?.id,
+          resource: content,
+          cardIds: content?.tags.map((tag) => tag.id),
+          engine: 'NO ENGINE BRO'
+        } as unknown as ResourceSearchResultItem
+      })
+
+      folderResult.set(searchResults)
+      await tick()
+    } catch (error) {
+      console.error('Error fetching folder contents:', error)
+    }
+  })
 
   const openResourceDetail = (resource: ResourceObject) => {
     document.startViewTransition(() => {
@@ -374,7 +404,6 @@
     log.debug('Dropped', event)
 
     const parsed = await processDrop(event)
-    console.log('RECIEVEPARSEDDATA', parsed)
 
     const containsResource = parsed.some((item) => item.type === 'resource')
     alreadyDropped.set(containsResource)
@@ -473,7 +502,7 @@
       }
 
       // TODO: this is a hack to add the resource to the search result without waiting for the resource to be created, we should find a better way to do this
-      searchResult = [
+      searchResult.update((results) => [
         {
           id: id,
           resource: {
@@ -487,8 +516,8 @@
           engine: 'local',
           cardIds: []
         },
-        ...searchResult
-      ]
+        ...results
+      ])
 
       refreshContentLayout()
 
@@ -499,7 +528,7 @@
       log.error('Error creating resource from parsed URL', err)
     } finally {
       // remove the resource from the search result as it has been created
-      searchResult = searchResult.filter((r) => r.id !== id)
+      searchResult.update((results) => results.filter((r) => r.id !== id))
     }
   }
 
@@ -537,7 +566,6 @@
       e.target instanceof Element &&
       (e.target.classList.contains('drawer-item') || e.target.closest('.drawer-item'))
     ) {
-      console.log('DRAGGING DRAWER ELEMENT')
       isDraggingDrawerItem.set(true)
     }
 
@@ -606,23 +634,6 @@
 
       e.preventDefault()
       window.api.startDrag(resource.id, filePath, resource.type)
-      // const blob = resource.rawData
-      // if (!blob) {
-      //   log.error('No data found')
-      //   return
-      // }
-
-      // log.debug('Creating URL out of resource', blob)
-
-      // const reader = new FileReader();
-      // reader.readAsDataURL(blob);
-      // reader.onloadend = () => {
-      //   const base64data = reader.result;
-      //   const base64 = base64data.split(',')[1]
-      //   const url = `data:${blob.type};base64,${base64}`
-      //   log.debug('Created URL', url)
-      //   e.dataTransfer.setData('text/uri-list', url)
-      // }
     } else {
       const blob = resource.rawData
       if (!blob) {
@@ -646,19 +657,6 @@
     }
 
     e.dataTransfer.setData(MEDIA_TYPES.RESOURCE, resource.id)
-  }
-
-  const handleDetailsBack = () => {
-    document.startViewTransition(async () => {
-      viewState.set('default')
-      searchQuery.set({ value: '', tab: 'all' })
-      drawer.selectedTab.set('all')
-      // if($searchQuery.value !== '') {
-      //   viewState.set('search')
-      // } else {
-      //   viewState.set('default')
-      // }
-    })
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -747,10 +745,10 @@
   }
 
   let initialLoad = true
-  onMount(() => {
+  onMount(async () => {
     const unsubscribeQuery = searchQuery.subscribe(({ value, tab }) => {
       if (initialLoad) return
-      runSearch(value, tab)
+      runDebouncedSearch(value, tab)
     })
 
     const unsubscribeCards = cards.subscribe((cards) => {
@@ -766,23 +764,24 @@
     })
 
     const unsubscribeSemanticDistanceThreshold = semanticDistanceThreshold.subscribe((value) => {
+      if (initialLoad) return
       runSearch($searchQuery.value, $searchQuery.tab)
     })
 
     const unsubscribeProximityDistanceThreshold = proximityDistanceThreshold.subscribe((value) => {
+      if (initialLoad) return
       runSearch($searchQuery.value, $searchQuery.tab)
     })
 
     const unsubscribeSemanticSearchEnabled = semanticSearchEnabled.subscribe((value) => {
+      if (initialLoad) return
       runSearch($searchQuery.value, $searchQuery.tab)
     })
 
-    runSearch('', null)
+    await runSearch('', null)
 
-    setTimeout(() => {
-      log.debug('Initial load done')
-      initialLoad = false
-    }, 3000)
+    log.debug('Initial load done')
+    initialLoad = false
 
     return () => {
       if (unsubscribeQuery) {
@@ -821,7 +820,33 @@
 />
 
 {#if $showMiniBrowser && $selectedResource}
-  <MiniBrowser resource={selectedResource} />
+  <MiniBrowser resource={selectedResource}>
+    <DrawerDetailsWrapper
+      on:dragstart={(e) => handleItemDragStart(e, $selectedResource)}
+      resource={$selectedResource}
+      {horizon}
+    >
+      <ResourceOverlay caption="Click to open in new tab">
+        <ResourcePreview
+          slot="content"
+          on:click={() => handleResourceDetailClick($selectedResource)}
+          on:remove={handleResourceRemove}
+          on:load={handleResourceLoad}
+          resource={$selectedResource}
+        />
+      </ResourceOverlay>
+
+      <div class="proximity-view" slot="proximity-view" let:result={nearbyResults}>
+        {#if nearbyResults.length > 0}
+          <DrawerDetailsProximity
+            {nearbyResults}
+            on:click={handleNearbyResultClick}
+            on:dragstart={(e) => handleItemDragStart(e.detail.event, e.detail.resource)}
+          />
+        {/if}
+      </div>
+    </DrawerDetailsWrapper>
+  </MiniBrowser>
 {/if}
 
 {#if false}
@@ -851,131 +876,8 @@
 {/if}
 
 <DrawerProvider {drawer} on:search={handleSearch}>
-  <DrawerContentWrapper
-    on:drop={handleDrop}
-    acceptDrop={$viewState !== 'details' && !$isDraggingDrawerItem}
-  >
-    {#if $selectedResource}
-      {#if $viewState === 'details'}
-        <!-- The key block is needed so the details components get properly updated when the selected resource changes -->
-        <div
-          class="drawer-details-transition"
-          in:fly={{ x: 600, duration: 540 }}
-          out:fly={{ x: 600, duration: 320 }}
-        >
-          {#key $selectedResource.id}
-            <DrawerDetailsWrapper
-              on:dragstart={(e) => handleItemDragStart(e, $selectedResource)}
-              resource={$selectedResource}
-              {horizon}
-            >
-              <ResourceOverlay caption="Click to open in new tab">
-                <ResourcePreview
-                  slot="content"
-                  on:click={() => handleResourceDetailClick($selectedResource)}
-                  on:remove={handleResourceRemove}
-                  on:load={handleResourceLoad}
-                  resource={$selectedResource}
-                />
-              </ResourceOverlay>
-
-              <div class="proximity-view" slot="proximity-view" let:result={nearbyResults}>
-                {#if nearbyResults.length > 0}
-                  <DrawerDetailsProximity
-                    {nearbyResults}
-                    on:click={handleNearbyResultClick}
-                    on:dragstart={(e) => handleItemDragStart(e.detail.event, e.detail.resource)}
-                  />
-                {/if}
-              </div>
-            </DrawerDetailsWrapper>
-          {/key}
-        </div>
-      {/if}
-    {/if}
-    {#if $viewState !== 'details'}
-      <div
-        class="drawer-content-transition"
-        in:fly={{ x: -600, duration: 540 }}
-        out:fly={{ x: -600, duration: 320 }}
-      >
-        {#if searchResult.length === 0}
-          <DrawerContenEmpty />
-        {:else}
-          <DrawerContentMasonry
-            items={searchResult}
-            gridGap="1.5rem"
-            colWidth="minmax(Min(330px, 100%), 1fr)"
-            bind:refreshLayout={refreshContentLayout}
-          >
-            {#each searchResult.slice(0, 50) as item (item.id)}
-              {#if item.engine === 'local'}
-                <div>
-                  <ResourceLoading title={item.resource.metadata?.name} />
-                </div>
-              {:else}
-                <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
-                  <ResourcePreview
-                    on:click={() => {
-                      handleResourceClick(item.resource)
-                    }}
-                    on:remove={handleResourceRemove}
-                    on:load={handleResourceLoad}
-                    resource={item.resource}
-                    isSelected={$selectedResource && $selectedResource.id === item.resource.id}
-                  />
-                </DrawerContentItem>
-              {/if}
-            {/each}
-          </DrawerContentMasonry>
-        {/if}
-      </div>
-    {/if}
-    <!-- {#await $result}
-      <p>Loading…</p>
-    {:then resources}
-      {#if resources.length === 0}
-        <DrawerContenEmpty />
-      {:else}
-        <DrawerContentMasonry
-          items={resources}
-          idKey="id"
-          animate={false}
-          maxColWidth={650}
-          minColWidth={300}
-          gap={15}
-          let:item={resource}
-        >
-          <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, resource.id)}>
-            <ResourcePreview on:click={handleResourceClick} {resource} />
-          </DrawerContentItem>
-        </DrawerContentMasonry>
-      {/if}
-    {/await} -->
-  </DrawerContentWrapper>
-
-  <div class="drawer-top">
-    <div class="drawer-controls">
-      <!-- <button on:click={() => drawer.close()}>
-        <Icon name="sidebar.right" size="22px" />
-      </button> -->
-      {#if $viewState === 'details'}
-        <button on:click={handleDetailsBack}>
-          <Icon name="chevron.left" size="22px" />
-        </button>
-      {/if}
-    </div>
-  </div>
-
-  <div class="drawer-bottom">
-    <div class="tabs-transition">
-      <!-- {#if $viewState !== 'details'}
-        <DrawerNavigation {tabs} />
-      {/if} -->
-    </div>
-    <!-- {#if $isSaving}
-      <Saving />
-    {/if} -->
+  <div class="drawer-bar">
+    <div class="tabs-transition"></div>
     {#if $viewState !== 'details'}
       <div class="drawer-chat-search">
         {#if $viewState !== 'chatInput'}
@@ -1030,6 +932,47 @@
       <!-- <ProgressiveBlur /> -->
     {/if}
   </div>
+  <DrawerContentWrapper
+    on:drop={handleDrop}
+    acceptDrop={$viewState !== 'details' && !$isDraggingDrawerItem}
+  >
+    <div
+      class="drawer-content-transition"
+      in:fly={{ x: -600, duration: 540 }}
+      out:fly={{ x: -600, duration: 320 }}
+    >
+      {#if $searchResult.length === 0}
+        <DrawerContenEmpty />
+      {:else}
+        <DrawerContentMasonry
+          items={$searchResult}
+          gridGap="2rem"
+          colWidth="minmax(Min(330px, 100%), 1fr)"
+          bind:refreshLayout={refreshContentLayout}
+        >
+          {#each $selectedFolder === 'all' ? $searchResult.slice(0, 50) : $folderResult.slice(0, 50) as item (item.id)}
+            {#if item.engine === 'local'}
+              <div>
+                <ResourceLoading title={item.resource.metadata?.name} />
+              </div>
+            {:else}
+              <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
+                <ResourcePreview
+                  on:click={() => {
+                    handleResourceClick(item.resource)
+                  }}
+                  on:remove={handleResourceRemove}
+                  on:load={handleResourceLoad}
+                  resource={item.resource}
+                  isSelected={$selectedResource && $selectedResource.id === item.resource.id}
+                />
+              </DrawerContentItem>
+            {/if}
+          {/each}
+        </DrawerContentMasonry>
+      {/if}
+    </div>
+  </DrawerContentWrapper>
 </DrawerProvider>
 
 <style lang="scss">
@@ -1110,7 +1053,7 @@
     }
   }
 
-  .drawer-bottom {
+  .drawer-bar {
     position: relative;
     top: 0;
     left: 0;
@@ -1119,11 +1062,6 @@
     z-index: 1000;
     border-top: 0.5px solid rgba(0, 0, 0, 0.15);
     &:after {
-      background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.5) 0%,
-        rgba(255, 255, 255, 255) 60%
-      ) !important;
       filter: opacity(1);
       content: '';
       position: absolute;
@@ -1139,6 +1077,7 @@
       top: 0;
       display: flex;
       align-items: center;
+      justify-content: center;
       width: 100%;
       gap: 16px;
       padding: 1rem 1rem 1rem 1rem;

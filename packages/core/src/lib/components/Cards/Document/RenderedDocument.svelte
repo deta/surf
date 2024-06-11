@@ -20,8 +20,13 @@
   .spoiler-container {
     margin: 0;
     position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     bottom: -2rem;
     height: 20rem;
+    container-type: inline-size;
+    container-name: spoiler-container;
   }
 
   .spoiler-button span {
@@ -30,10 +35,13 @@
 
   .spoiler-content {
     position: absolute;
-    left: 0;
-    right: 0;
+    left: 50%;
+    right: 50%;
+    transform: translateX(-50%);
     overflow: hidden;
     max-height: 20rem;
+    max-width: 20rem;
+    width: 100%;
     transition:
       max-height 0.5s ease,
       padding 0.5s ease;
@@ -47,6 +55,13 @@
     line-height: 1.4;
     font-size: 0.9rem;
     -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0));
+  }
+
+  @container spoiler-container (max-width: 15rem) {
+    .spoiler-content {
+      background-image: none !important;
+      padding: 0 !important;
+    }
   }
 
   .spoiler-content-open {

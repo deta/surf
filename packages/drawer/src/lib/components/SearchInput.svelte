@@ -128,23 +128,18 @@
     flex-direction: column;
     position: relative;
     padding: 0.5rem 0 0.25rem 0;
-    border: 1px solid #e5e5e5;
-    background-color: #fff;
+    background-color: #eeece0;
     overflow: hidden;
     width: 100%;
     height: 100%;
-    transition:
-      border-color 0.3s,
-      box-shadow 0.3s;
-    box-shadow:
-      0px 1px 0px 0px rgba(65, 58, 86, 0.25),
-      0px 0px 1px 0px rgba(0, 0, 0, 0.25);
-    border-radius: 0.65rem;
+    border-radius: 1rem;
     view-transition-name: input-field-container-transition;
     &.isFocussed {
       width: 100%;
       height: 100%;
-      // box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    }
+    &:hover {
+      background: #e8e4d4;
     }
     .icon-input {
       display: flex;
@@ -169,7 +164,7 @@
           font-size: 1rem;
           font-weight: 400;
           gap: 0.25rem;
-          color: #353534;
+          color: #7d7448;
           padding: 0.5rem 0.75rem 0.5rem 0.5rem;
           opacity: 0.6;
           margin: 0.25rem;
@@ -201,8 +196,7 @@
     font-weight: 500;
     border: 0;
     border-radius: 0.65rem;
-    color: #aeaeae;
-    color: #353534;
+    color: #7d7448;
     opacity: 0.8;
     padding-left: 0;
     padding-bottom: 0.25rem;
@@ -214,6 +208,7 @@
     height: 50px;
     padding-left: 3rem;
     opacity: 1;
+    background: transparent;
   }
   input:focus {
     outline: none;

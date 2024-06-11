@@ -19,6 +19,10 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let number_documents = cx.argument::<JsNumber>(3)?.value(&mut cx) as i32;
     let model = cx.argument::<JsString>(4)?.value(&mut cx);
     let callback = cx.argument::<JsFunction>(5)?.root(&mut cx);
+    let api_endpoint = cx
+        .argument_opt(6)
+        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
+        .map(|api_endpoint| api_endpoint.value(&mut cx));
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
@@ -28,6 +32,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             number_documents,
             model,
             callback,
+            api_endpoint,
         }),
         deferred,
     );

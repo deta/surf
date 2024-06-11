@@ -7,10 +7,12 @@ import {
   WebServiceActionInputs
 } from '@horizon/web-parser'
 import Menu from './Menu.svelte'
+import { WebViewEventReceiveNames, WebViewEventSendNames, WebViewSendEvents } from '@horizon/types'
 
-let mouseDownX = 0
+// let mouseDownX = 0
 let previouslySelectedText: string | undefined = ''
 let appParser: WebAppExtractor | null = null
+let selectionMenu: Menu | null = null
 
 function runAppDetection() {
   // TODO: pass the URL to the detection function so we don't have to initialize a new WebParser
@@ -34,7 +36,7 @@ function runAppDetection() {
   const appInfo = appParser.getInfo()
 
   console.log('App detected:', appInfo)
-  sendPageEvent('detected-app', appInfo)
+  sendPageEvent(WebViewEventSendNames.DetectedApp, appInfo)
 
   return appParser
 }
@@ -46,8 +48,10 @@ function runResourceDetection() {
     appParser.extractResourceFromDocument(document).then((resource) => {
       console.log('Resource', resource)
       console.log('Sending detected-resource event')
-      sendPageEvent('detected-resource', { resource })
+      sendPageEvent(WebViewEventSendNames.DetectedResource, resource)
     })
+  } else {
+    console.error('No app parser found for', window.location.href)
   }
 }
 
@@ -61,11 +65,11 @@ function startResourcePicker() {
       appParser.startResourcePicker(document, (resource: DetectedResource) => {
         console.log('Picked resource', resource)
 
-        sendPageEvent('detected-resource', { resource })
+        sendPageEvent(WebViewEventSendNames.DetectedResource, resource)
       })
     } else {
       console.warn('App does not need/support resource picking')
-      sendPageEvent('detected-resource', { resource: null })
+      sendPageEvent(WebViewEventSendNames.DetectedResource, null)
     }
   }
 }
@@ -77,13 +81,25 @@ function runServiceAction(id: string, inputs: WebServiceActionInputs) {
     appParser.runAction(document, id, inputs).then((resource) => {
       console.log('Resource', resource)
       console.log('Sending action-output event')
-      sendPageEvent('action-output', { id, output: resource })
+      sendPageEvent(WebViewEventSendNames.ActionOutput, { id, output: resource })
     })
   }
 }
 
+function handleTransformOutput(text: string) {
+  if (!selectionMenu) return
+
+  selectionMenu.handleOutput(text)
+}
+
 window.addEventListener('DOMContentLoaded', async (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
+    const target = e.target as HTMLElement
+    console.log('mouseup', target, target.id)
+    if (target.id === 'horizonTextDragHandle') {
+      return
+    }
+
     const selection = window.getSelection()
     const text = selection?.toString().trim()
     // const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor ?? 'white'
@@ -94,6 +110,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
     if (selectionRect && text && text != previouslySelectedText) {
       const oldDiv = document.getElementById('horizonTextDragHandle')
+      console.log('old div', oldDiv)
       oldDiv?.parentNode?.removeChild(oldDiv)
 
       const div = document.createElement('div')
@@ -113,8 +130,8 @@ window.addEventListener('DOMContentLoaded', async (_) => {
       div.style.position = 'absolute'
       div.style.zIndex = '100000'
       div.style.left = `${selectionRect.left + window.scrollX}px`
-      div.style.top = `${selectionRect.top + window.scrollY}px`
-      div.style.transform = 'translateY(-60px)'
+      div.style.top = `${selectionRect.bottom + window.scrollY}px`
+      div.style.transform = 'translateY(15px)'
       div.style.opacity = '0' // Set initial opacity to 0
       div.style.transition = 'opacity 0.2s ease' // Add transition for opacity
       div.style.pointerEvents = 'none'
@@ -129,24 +146,39 @@ window.addEventListener('DOMContentLoaded', async (_) => {
       //     <circle cx="3.125" cy="5.625" r="0.625" fill="white"/>
       //   </svg>`
 
-      const menu = new Menu({
-        target: div,
+      document.body.appendChild(div)
+
+      const shadow = div.attachShadow({ mode: 'open' })
+
+      // const componentWrapper = document.createElement('div')
+      // shadow.appendChild(componentWrapper)
+
+      const webviewStyles = document.getElementById('webview-styles')
+      if (webviewStyles) {
+        shadow.appendChild(webviewStyles.cloneNode(true))
+      }
+
+      selectionMenu = new Menu({
+        target: shadow,
         props: {
           text: text
         }
       })
 
-      menu.$on('bookmark', () => {
+      selectionMenu.$on('bookmark', (e) => {
+        const text = e.detail
         console.log('Bookmarking', text)
-        sendPageEvent('bookmark', { text, url: window.location.href })
+
+        // re apply selection if it was removed accidentally
+        if (selection && selectionRange) {
+          selection.removeAllRanges()
+          selection.addRange(selectionRange)
+        }
+
+        sendPageEvent(WebViewEventSendNames.Bookmark, { text, url: window.location.href })
       })
 
-      menu.$on('summarize', () => {
-        console.log('Summarizing', text)
-        sendPageEvent('summarize', { text })
-      })
-
-      menu.$on('transform', (e) => {
+      selectionMenu.$on('transform', (e) => {
         const { query, type } = e.detail
         console.log('transforming', type, query, text)
 
@@ -156,10 +188,18 @@ window.addEventListener('DOMContentLoaded', async (_) => {
           selection.addRange(selectionRange)
         }
 
-        sendPageEvent('transform', { text, query, type })
+        sendPageEvent(WebViewEventSendNames.Transform, { text, query, type })
       })
 
-      document.body.appendChild(div)
+      selectionMenu.$on('insert', (e) => {
+        // re apply selection if it was removed accidentally
+        if (selection && selectionRange) {
+          selection.removeAllRanges()
+          selection.addRange(selectionRange)
+        }
+
+        sendPageEvent(WebViewEventSendNames.InlineTextReplace, { target: text, content: e.detail })
+      })
 
       // Animate in on appear
       setTimeout(() => {
@@ -230,11 +270,14 @@ window.addEventListener('DOMContentLoaded', async (_) => {
   })
 
   window.addEventListener('mousedown', (e: MouseEvent) => {
-    mouseDownX = e.clientX // Store the X-coordinate on mousedown
+    // mouseDownX = e.clientX // Store the X-coordinate on mousedown
+
+    const target = e.target as HTMLElement
+    console.log('mousedown', target, target.id)
 
     // ...existing mousedown functionality
     const div = document.getElementById('horizonTextDragHandle')
-    if (div && e.target !== div && !div.contains(e.target as Node)) {
+    if (div && target.id !== 'horizonTextDragHandle') {
       div.parentNode?.removeChild(div)
     }
   })
@@ -253,7 +296,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 })
 
 window.addEventListener('keyup', (event: KeyboardEvent) => {
-  sendPageEvent('keyup', { key: event.key })
+  sendPageEvent(WebViewEventSendNames.KeyUp, { key: event.key })
 })
 
 window.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -261,7 +304,7 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
     startResourcePicker()
   }
 
-  sendPageEvent('keydown', {
+  sendPageEvent(WebViewEventSendNames.KeyDown, {
     key: event.key,
     code: event.code,
     ctrlKey: event.ctrlKey,
@@ -272,7 +315,7 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
 })
 
 window.addEventListener('wheel', (event: WheelEvent) => {
-  sendPageEvent('wheel', {
+  sendPageEvent(WebViewEventSendNames.Wheel, {
     deltaX: event.deltaX,
     deltaY: event.deltaY,
     deltaZ: event.deltaZ,
@@ -287,30 +330,37 @@ window.addEventListener('wheel', (event: WheelEvent) => {
 })
 
 window.addEventListener('focus', (_event: FocusEvent) => {
-  sendPageEvent('focus', {})
+  sendPageEvent(WebViewEventSendNames.Focus)
 })
 
-function sendPageEvent(eventType: string, data: any) {
-  ipcRenderer.sendToHost('webview-page-event', eventType, data)
+function sendPageEvent<T extends keyof WebViewSendEvents>(
+  name: T,
+  data?: WebViewSendEvents[T]
+): void {
+  console.log('Sending page event', name, data)
+  ipcRenderer.sendToHost('webview-page-event', name, data)
 }
 
-ipcRenderer.on('webview-event', (_event, data) => {
-  if (data.type === 'get-selection') {
+ipcRenderer.on('webview-event', (_event, payload) => {
+  const { type, data } = payload
+  if (type === WebViewEventReceiveNames.GetSelection) {
     const selection = window.getSelection()
     const text = selection?.toString().trim()
 
-    ipcRenderer.sendToHost('selection', text)
-  } else if (data.type === 'get-resource') {
+    sendPageEvent(WebViewEventSendNames.Selection, text)
+  } else if (type === WebViewEventReceiveNames.GetResource) {
     runResourceDetection()
-  } else if (data.type === 'get-app') {
+  } else if (type === WebViewEventReceiveNames.GetApp) {
     runAppDetection()
-  } else if (data.type === 'run-action') {
+  } else if (type === WebViewEventReceiveNames.RunAction) {
     runServiceAction(data.id, data.inputs)
+  } else if (type === WebViewEventReceiveNames.TransformationOutput) {
+    handleTransformOutput(data.text)
   }
 })
 
 // @ts-expect-error
 window.insertText = (text: string) => {
   console.log('Inserting text', text)
-  sendPageEvent('insert-text', text)
+  sendPageEvent(WebViewEventSendNames.InsertText, text)
 }

@@ -9,9 +9,11 @@
   import type { HistoryEntriesManager } from '../../service/history'
   import type { TabPage } from './types'
   import { useLogScope } from '../../utils/log'
+  import type { DetectedWebApp } from '@horizon/web-parser'
+  import type { WebViewReceiveEvents } from '@horizon/types'
 
   const log = useLogScope('BrowserTab')
-  const dispatch = createEventDispatcher<{ newTab: NewTabEvent }>()
+  const dispatch = createEventDispatcher<{ newTab: NewTabEvent; appDetection: DetectedWebApp }>()
 
   export let tab: TabPage
   export let webview: WebviewWrapper
@@ -48,6 +50,7 @@
   }
 
   export const detectResource = (timeoutNum?: number) => {
+    console.log('detectResource', webview)
     if (webview) {
       return webview.detectResource(timeoutNum)
     }
@@ -56,6 +59,15 @@
   export const executeJavaScript = (code: string, userGesture?: boolean) => {
     if (webview) {
       return webview.executeJavaScript(code, userGesture)
+    }
+  }
+
+  export const sendWebviewEvent = <T extends keyof WebViewReceiveEvents>(
+    name: T,
+    data?: WebViewReceiveEvents[T]
+  ): void => {
+    if (webview) {
+      webview.sendEvent(name, data)
     }
   }
 
@@ -82,6 +94,30 @@
     if (disposition === 'new-window') return
 
     dispatch('newTab', { url: e.detail.url, active: disposition === 'foreground-tab' })
+  }
+
+  let app: DetectedWebApp | null = null
+  function handleDetectedApp(e: CustomEvent<DetectedWebApp>) {
+    const detectedApp = e.detail
+    log.debug('detected app', detectedApp)
+    if (!app) {
+      log.debug('first app detection')
+      app = detectedApp
+      dispatch('appDetection', detectedApp)
+      return
+    }
+
+    if (
+      app.appId === detectedApp.appId &&
+      app.resourceType === detectedApp.resourceType &&
+      app.appResourceIdentifier === detectedApp.appResourceIdentifier
+    ) {
+      log.debug('no change in app or resource', detectedApp)
+      return
+    }
+
+    app = detectedApp
+    dispatch('appDetection', detectedApp)
   }
 
   const unsubTracker: Unsubscriber[] = []
@@ -141,4 +177,6 @@
   on:navigation
   on:bookmark
   on:transform
+  on:detectedApp={handleDetectedApp}
+  on:inlineTextReplace
 />

@@ -159,6 +159,33 @@ const api = {
     return chatCompletion.choices[0].message.content
   },
 
+  createFolderBasedOnPrompt: async (
+    userPrompt: string,
+    systemPrompt?: string,
+    opts: OpenAI.RequestOptions<unknown> = {}
+  ) => {
+    if (!openai) {
+      return null
+    }
+
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = []
+
+    if (systemPrompt) {
+      messages.push({ role: 'system', content: systemPrompt })
+    }
+
+    messages.push({ role: 'user', content: userPrompt })
+
+    const chatCompletion = await openai.chat.completions.create({
+      messages: messages,
+      model: 'gpt-4o',
+      response_format: { type: 'json_object' },
+      ...opts
+    })
+
+    return chatCompletion.choices[0].message.content
+  },
+
   aiFunctionCalls: async (userPrompt: string, actions: HorizonAction[]) => {
     if (!openai) {
       return null
@@ -448,6 +475,10 @@ const sffs = (() => {
 const resources = (() => {
   const resourceHandles = new Map<string, ResourceHandle>()
 
+  function getDBPath() {
+    return `${BACKEND_ROOT_PATH}/sffs.sqlite`
+  }
+
   async function openResource(filePath: string, resourceId: string, flags: string) {
     const resourceHandle = await ResourceHandle.open(
       BACKEND_RESOURCES_PATH,
@@ -489,7 +520,7 @@ const resources = (() => {
     resourceHandles.delete(resourceId)
   }
 
-  return { openResource, readResource, writeResource, flushResource, closeResource }
+  return { openResource, readResource, writeResource, flushResource, closeResource, getDBPath }
 })()
 
 if (process.contextIsolated) {

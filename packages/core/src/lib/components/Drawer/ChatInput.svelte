@@ -357,12 +357,7 @@
     align-items: center;
     font-size: 1.25rem;
     cursor: default;
-    box-shadow:
-      0px 1px 0px 0px rgba(65, 58, 86, 0.25),
-      0px 0px 1px 0px rgba(0, 0, 0, 0.25);
-    border-radius: 0.65rem;
-    border: 1px solid #e5e5e5;
-    background-color: #fff;
+    background-color: transparent;
     view-transition-name: chat-field-container-transition;
     &.dragOver {
       display: none;
@@ -520,7 +515,6 @@
     cursor: default;
     border-radius: 0.65rem;
     transition: opacity 0.5s;
-    border: 1px solid rgba(255, 255, 255, 0.75);
     background-color: transparent;
     mask-image: radial-gradient(circle at var(--x) var(--y), transparent, #000 70%);
   }

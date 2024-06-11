@@ -127,24 +127,6 @@
     ></textarea>
   </div>
 
-  <div class="references-wrapper">
-    {#if cardHorizons.length > 0}
-      <div class="header">
-        <div class="title">This card is placed on</div>
-      </div>
-      <div class="cards-wrapper">
-        {#each cardHorizons as item (item.id)}
-          <!-- svelte-ignore a11y-click-events-have-key-events -->
-          <div class="card" on:click={() => handleCardClick(item)}>
-            {item.horizon.data.name}
-          </div>
-        {/each}
-      </div>
-    {:else}
-      <div>Not placed on any Horizon</div>
-    {/if}
-  </div>
-
   <div class="metadata-wrapper">
     {#if sourceURL}
       <div class="header">
