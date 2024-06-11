@@ -525,7 +525,7 @@ if (process.contextIsolated) {
           const query = queries[i]
           try {
             // @ts-ignore
-            let sql_generated = JSON.parse(await sffs.js__ai_generate_space_sql(query))
+            let sql_generated = JSON.parse(await sffs.js__ai_query_sffs_resources(query))
             // @ts-ignore
             results.push({ query, sql_generated })
           } catch (error) {
