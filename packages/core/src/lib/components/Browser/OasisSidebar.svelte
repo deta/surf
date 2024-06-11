@@ -90,7 +90,7 @@
 <div class="folders-sidebar">
   <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
     <Icon name="chevron.left" />
-    <span>Back to Tabs</span>
+    <span class="label">Back to Tabs</span>
   </button>
 
   <div class="folder-wrapper">
@@ -159,6 +159,12 @@
     opacity: 0.6;
     &:hover {
       opacity: 1;
+    }
+  }
+
+  .action-back-to-tabs {
+    .label {
+      letter-spacing: 0.04rem;
     }
   }
 </style>

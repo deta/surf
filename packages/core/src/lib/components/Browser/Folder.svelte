@@ -5,6 +5,7 @@
   import { folderManager } from '../../service/folderManager'
   import { ResourceManager } from '../../service/resources'
   import { Telemetry } from '../../service/telemetry'
+  import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
 
   export let folder
   export let activeFolderId
@@ -108,24 +109,27 @@
   aria-hidden="true"
 >
   <div class="folder {selected ? 'active' : ''}" on:click={handleClick} aria-hidden="true">
-    <input
-      id={`folder-input-${folder.id}`}
-      type="text"
-      bind:value={folderName}
-      on:blur={handleBlur}
-      class="folder-input"
-      style={`width: ${inputWidth}`}
-      on:keydown={async (e) => {
-        folderName = e.target?.value
-        if (e.code === 'Space' && !e.shiftKey) {
-          e.preventDefault()
-          folderName = e.target?.value + ' '
-        } else if (e.code === 'Enter' && e.shiftKey) {
-          e.preventDefault()
-          createFolderWithOpenAI()
-        }
-      }}
-    />
+    <div class="folder-leading">
+      <SpaceIcon />
+      <input
+        id={`folder-input-${folder.id}`}
+        type="text"
+        bind:value={folderName}
+        on:blur={handleBlur}
+        class="folder-input"
+        style={`width: ${inputWidth}`}
+        on:keydown={async (e) => {
+          folderName = e.target?.value
+          if (e.code === 'Space' && !e.shiftKey) {
+            e.preventDefault()
+            folderName = e.target?.value + ' '
+          } else if (e.code === 'Enter' && e.shiftKey) {
+            e.preventDefault()
+            createFolderWithOpenAI()
+          }
+        }}
+      />
+    </div>
 
     <button on:click|stopPropagation={handleDelete} class="close">
       <Icon name="trash" size="20px" />
@@ -165,14 +169,23 @@
     background-color: #fff;
   }
 
+  .folder-leading {
+    display: flex;
+    gap: 1rem;
+  }
+
   .folder-input {
     border: none;
     background: transparent;
+    color: #7d7448;
     font-size: 1.1rem;
-    color: inherit;
-    font-weight: inherit;
+    font-weight: 500;
+    letter-spacing: 0.025rem;
+    font-smooth: always;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     outline: none;
-    width: fit-content; /* This is optional, as the width is dynamically set via style */
+    width: fit-content;
   }
 
   .folder-input:focus {

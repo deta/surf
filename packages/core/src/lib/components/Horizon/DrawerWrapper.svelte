@@ -113,10 +113,6 @@
 
   const folderContents = writable<(ResourceObject | undefined)[]>([])
 
-  const searchResult = writable<ResourceSearchResultItem[]>([])
-  const searchCache = new Map<string, ResourceSearchResultItem[]>()
-  let currentFolder = 'all'
-
   $: if ($viewState === 'default') {
     $droppedInputElements = []
     handleDropZoneClickOutside()
@@ -154,6 +150,7 @@
 
   let refreshContentLayout: () => Promise<void>
 
+  let searchResult = writable<ResourceSearchResultItem[]>([])
   let detectedInput = false
   let parsedInput: {
     url: string
@@ -172,19 +169,12 @@
     }
   }, 250)
 
-  const generateCacheKey = (folderId: string, query: string, tab: string | null) => {
-    return `${folderId}-${query}-${tab}`
-  }
-
-  const runSearch = async (query: string, tab: string | null, folderId: string = 'all') => {
-    const cacheKey = generateCacheKey(folderId, query, tab)
-    if (searchCache.has(cacheKey)) {
-      searchResult.set(searchCache.get(cacheKey))
-      log.debug('Using cached results for', query, 'in', tab, 'for folder', folderId)
+  const runSearch = async (query: string, tab: string | null) => {
+    if ($selectedFolder != 'all') {
       return
     }
 
-    log.debug('Searching for', query, 'in', tab, 'for folder', folderId)
+    log.debug('Searching for', query, 'in', tab)
 
     const tags = [] as SFFSResourceTag[]
 
@@ -226,9 +216,7 @@
     // this is needed so local results needed for the processing state are not removed when new results are added
     const previousLocalResults = get(searchResult).filter((r) => r.engine === 'local')
 
-    const finalResult = [...previousLocalResults, ...result]
-    searchResult.set(finalResult)
-    searchCache.set(cacheKey, finalResult)
+    searchResult.set([...previousLocalResults, ...result])
     console.log('free', $searchResult)
 
     await tick()
@@ -292,8 +280,7 @@
     if (folderId === 'all') {
       console.log('try to fetch everything', folderId)
       await tick()
-      currentFolder = folderId
-      await runSearch('', null, folderId)
+      await runSearch('', null)
       return
     }
 
@@ -795,37 +782,37 @@
   onMount(async () => {
     const unsubscribeQuery = searchQuery.subscribe(({ value, tab }) => {
       if (initialLoad) return
-      runSearch(value, tab, currentFolder)
+      runSearch(value, tab)
     })
 
     const unsubscribeCards = cards.subscribe((cards) => {
       if (initialLoad || !$isDrawerShown) return
       log.debug('Cards changed', cards)
-      runDebouncedSearch($searchQuery.value, $searchQuery.tab, currentFolder)
+      runDebouncedSearch($searchQuery.value, $searchQuery.tab)
     })
 
     const unsubscribeResources = resourcesInMemory.subscribe((resources) => {
       if (initialLoad) return
       log.debug('Resources changed', resources)
-      runDebouncedSearch($searchQuery.value, $searchQuery.tab, currentFolder)
+      runDebouncedSearch($searchQuery.value, $searchQuery.tab)
     })
 
     const unsubscribeSemanticDistanceThreshold = semanticDistanceThreshold.subscribe((value) => {
       if (initialLoad) return
-      runSearch($searchQuery.value, $searchQuery.tab, currentFolder)
+      runSearch($searchQuery.value, $searchQuery.tab)
     })
 
     const unsubscribeProximityDistanceThreshold = proximityDistanceThreshold.subscribe((value) => {
       if (initialLoad) return
-      runSearch($searchQuery.value, $searchQuery.tab, currentFolder)
+      runSearch($searchQuery.value, $searchQuery.tab)
     })
 
     const unsubscribeSemanticSearchEnabled = semanticSearchEnabled.subscribe((value) => {
       if (initialLoad) return
-      runSearch($searchQuery.value, $searchQuery.tab, currentFolder)
+      runSearch($searchQuery.value, $searchQuery.tab)
     })
 
-    await runSearch('', null, currentFolder)
+    await runSearch('', null)
 
     log.debug('Initial load done')
     initialLoad = false
