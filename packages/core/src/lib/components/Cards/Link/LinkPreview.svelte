@@ -64,7 +64,13 @@
     {:else if loading}
       <LoadingBox />
     {:else if link?.image}
-      <img class="image" alt={`${link?.provider} image`} src={link?.image} on:load={handleLoad} />
+      <img
+        class="image"
+        alt={`${link?.provider} image`}
+        loading="lazy"
+        src={link?.image}
+        on:load={handleLoad}
+      />
     {:else if !link?.image}
       <div class="link-preview-no-image">
         <img

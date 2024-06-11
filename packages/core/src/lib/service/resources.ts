@@ -24,7 +24,7 @@ import { TelemetryEventTypes } from '@horizon/types'
 
 /*
  TODO:
- - move over other card data to SFFSResource 
+ - move over other card data to SFFSResource
  - handle errors
  - use the relevant enum, and do not hard code the values
 */

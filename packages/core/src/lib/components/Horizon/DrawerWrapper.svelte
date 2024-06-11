@@ -151,6 +151,7 @@
   let refreshContentLayout: () => Promise<void>
 
   let searchResult = writable<ResourceSearchResultItem[]>([])
+  let folderResult = writable<ResourceSearchResultItem[]>([])
   let detectedInput = false
   let parsedInput: {
     url: string
@@ -167,12 +168,14 @@
     if (refreshContentLayout) {
       return refreshContentLayout()
     }
-  }, 250)
+  }, 1500)
 
   const runSearch = async (query: string, tab: string | null) => {
     if ($selectedFolder != 'all') {
       return
     }
+
+    folderResult.set([])
 
     log.debug('Searching for', query, 'in', tab)
 
@@ -211,15 +214,10 @@
       result.reverse()
     }
 
-    log.debug('Search result', result)
-
     // this is needed so local results needed for the processing state are not removed when new results are added
     const previousLocalResults = get(searchResult).filter((r) => r.engine === 'local')
 
     searchResult.set([...previousLocalResults, ...result])
-    console.log('free', $searchResult)
-
-    await tick()
 
     if (refreshContentLayout) {
       refreshContentLayout()
@@ -239,7 +237,7 @@
     }
   }
 
-  const runDebouncedSearch = useDebounce(runSearch, 500)
+  const runDebouncedSearch = useDebounce(runSearch, 2000)
 
   const handleSearch = (e: CustomEvent<SearchQuery>) => {
     const query = e.detail
@@ -300,7 +298,7 @@
         } as unknown as ResourceSearchResultItem
       })
 
-      searchResult.set(searchResults)
+      folderResult.set(searchResults)
       await tick()
     } catch (error) {
       console.error('Error fetching folder contents:', error)
@@ -406,7 +404,6 @@
     log.debug('Dropped', event)
 
     const parsed = await processDrop(event)
-    console.log('RECIEVEPARSEDDATA', parsed)
 
     const containsResource = parsed.some((item) => item.type === 'resource')
     alreadyDropped.set(containsResource)
@@ -569,7 +566,6 @@
       e.target instanceof Element &&
       (e.target.classList.contains('drawer-item') || e.target.closest('.drawer-item'))
     ) {
-      console.log('DRAGGING DRAWER ELEMENT')
       isDraggingDrawerItem.set(true)
     }
 
@@ -638,23 +634,6 @@
 
       e.preventDefault()
       window.api.startDrag(resource.id, filePath, resource.type)
-      // const blob = resource.rawData
-      // if (!blob) {
-      //   log.error('No data found')
-      //   return
-      // }
-
-      // log.debug('Creating URL out of resource', blob)
-
-      // const reader = new FileReader();
-      // reader.readAsDataURL(blob);
-      // reader.onloadend = () => {
-      //   const base64data = reader.result;
-      //   const base64 = base64data.split(',')[1]
-      //   const url = `data:${blob.type};base64,${base64}`
-      //   log.debug('Created URL', url)
-      //   e.dataTransfer.setData('text/uri-list', url)
-      // }
     } else {
       const blob = resource.rawData
       if (!blob) {
@@ -678,19 +657,6 @@
     }
 
     e.dataTransfer.setData(MEDIA_TYPES.RESOURCE, resource.id)
-  }
-
-  const handleDetailsBack = () => {
-    document.startViewTransition(async () => {
-      viewState.set('default')
-      searchQuery.set({ value: '', tab: 'all' })
-      drawer.selectedTab.set('all')
-      // if($searchQuery.value !== '') {
-      //   viewState.set('search')
-      // } else {
-      //   viewState.set('default')
-      // }
-    })
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -782,7 +748,7 @@
   onMount(async () => {
     const unsubscribeQuery = searchQuery.subscribe(({ value, tab }) => {
       if (initialLoad) return
-      runSearch(value, tab)
+      runDebouncedSearch(value, tab)
     })
 
     const unsubscribeCards = cards.subscribe((cards) => {
@@ -970,93 +936,43 @@
     on:drop={handleDrop}
     acceptDrop={$viewState !== 'details' && !$isDraggingDrawerItem}
   >
-    {#if $selectedResource}
-      {#if $viewState === 'details'}
-        <!-- The key block is needed so the details components get properly updated when the selected resource changes -->
-        <div
-          class="drawer-details-transition"
-          in:fly={{ x: 600, duration: 540 }}
-          out:fly={{ x: 600, duration: 320 }}
+    <div
+      class="drawer-content-transition"
+      in:fly={{ x: -600, duration: 540 }}
+      out:fly={{ x: -600, duration: 320 }}
+    >
+      {#if $searchResult.length === 0}
+        <DrawerContenEmpty />
+      {:else}
+        <DrawerContentMasonry
+          items={$searchResult}
+          gridGap="2rem"
+          colWidth="minmax(Min(330px, 100%), 1fr)"
+          bind:refreshLayout={refreshContentLayout}
         >
-          {#key $selectedResource.id}
-            <DrawerDetailsWrapper
-              on:dragstart={(e) => handleItemDragStart(e, $selectedResource)}
-              resource={$selectedResource}
-              {horizon}
-            >
-              <ResourceOverlay caption="Click to open in new tab">
+          {#each $selectedFolder === 'all' ? $searchResult.slice(0, 50) : $folderResult.slice(0, 50) as item (item.id)}
+            {#if item.engine === 'local'}
+              <div>
+                <ResourceLoading title={item.resource.metadata?.name} />
+              </div>
+            {:else}
+              <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
                 <ResourcePreview
-                  slot="content"
-                  on:click={() => handleResourceDetailClick($selectedResource)}
+                  on:click={() => {
+                    handleResourceClick(item.resource)
+                  }}
                   on:remove={handleResourceRemove}
                   on:load={handleResourceLoad}
-                  resource={$selectedResource}
+                  resource={item.resource}
+                  isSelected={$selectedResource && $selectedResource.id === item.resource.id}
                 />
-              </ResourceOverlay>
-
-              <div class="proximity-view" slot="proximity-view" let:result={nearbyResults}>
-                {#if nearbyResults.length > 0}
-                  <DrawerDetailsProximity
-                    {nearbyResults}
-                    on:click={handleNearbyResultClick}
-                    on:dragstart={(e) => handleItemDragStart(e.detail.event, e.detail.resource)}
-                  />
-                {/if}
-              </div>
-            </DrawerDetailsWrapper>
-          {/key}
-        </div>
-      {/if}
-    {/if}
-    {#if $viewState !== 'details'}
-      <div
-        class="drawer-content-transition"
-        in:fly={{ x: -600, duration: 540 }}
-        out:fly={{ x: -600, duration: 320 }}
-      >
-        {#if $searchResult.length === 0}
-          <DrawerContenEmpty />
-        {:else}
-          <DrawerContentMasonry
-            items={$searchResult}
-            gridGap="2rem"
-            colWidth="minmax(Min(330px, 100%), 1fr)"
-            bind:refreshLayout={refreshContentLayout}
-          >
-            {#each $searchResult.slice(0, 50) as item (item.id)}
-              {#if item.engine === 'local'}
-                <div>
-                  <ResourceLoading title={item.resource.metadata?.name} />
-                </div>
-              {:else}
-                <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
-                  <ResourcePreview
-                    on:click={() => {
-                      handleResourceClick(item.resource)
-                    }}
-                    on:remove={handleResourceRemove}
-                    on:load={handleResourceLoad}
-                    resource={item.resource}
-                    isSelected={$selectedResource && $selectedResource.id === item.resource.id}
-                  />
-                </DrawerContentItem>
-              {/if}
-            {/each}
-          </DrawerContentMasonry>
-        {/if}
-      </div>
-    {/if}
-  </DrawerContentWrapper>
-
-  <div class="drawer-top">
-    <div class="drawer-controls">
-      {#if $viewState === 'details'}
-        <button on:click={handleDetailsBack}>
-          <Icon name="chevron.left" size="22px" />
-        </button>
+              </DrawerContentItem>
+            {/if}
+          {/each}
+        </DrawerContentMasonry>
       {/if}
     </div>
-  </div>
+  </DrawerContentWrapper>
 </DrawerProvider>
 
 <style lang="scss">
