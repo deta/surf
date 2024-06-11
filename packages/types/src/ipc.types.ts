@@ -1,11 +1,12 @@
-import type { DetectedResource, DetectedWebApp } from './resources.types'
+import type { AnnotationRangeData, DetectedResource, DetectedWebApp } from './resources.types'
 
 export enum WebViewEventReceiveNames {
   GetSelection = 'get_selection',
   GetResource = 'get_resource',
   GetApp = 'get_app',
   RunAction = 'run_action',
-  TransformationOutput = 'transformation_output'
+  TransformationOutput = 'transformation_output',
+  RestoreHighlight = 'restore_highlight'
 }
 
 export enum WebViewEventSendNames {
@@ -20,6 +21,7 @@ export enum WebViewEventSendNames {
   Bookmark = 'bookmark',
   Transform = 'transform',
   Selection = 'selection',
+  Highlight = 'highlight',
   InlineTextReplace = 'inline_text_replace'
 }
 
@@ -60,6 +62,8 @@ export type WebViewEventWheel = {
 
 export type WebViewEventBookmark = { text?: string; url: string }
 
+export type WebViewEventHighlight = { range: AnnotationRangeData; url: string }
+
 export type WebViewEventTransform = {
   text: string
   query?: string
@@ -82,6 +86,7 @@ export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.GetApp]: void
   [WebViewEventReceiveNames.RunAction]: WebViewEventRunAction
   [WebViewEventReceiveNames.TransformationOutput]: WebViewEventTransformationOutput
+  [WebViewEventReceiveNames.RestoreHighlight]: AnnotationRangeData
 }
 
 export type WebViewSendEvents = {
@@ -96,5 +101,6 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.Bookmark]: WebViewEventBookmark
   [WebViewEventSendNames.Transform]: WebViewEventTransform
   [WebViewEventSendNames.Selection]: string
+  [WebViewEventSendNames.Highlight]: WebViewEventHighlight
   [WebViewEventSendNames.InlineTextReplace]: WebViewEventInlineTextReplace
 }

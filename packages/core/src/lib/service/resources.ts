@@ -20,7 +20,7 @@ import {
   type SFFSSearchProximityParameters
 } from '../types'
 import type { Telemetry } from './telemetry'
-import { TelemetryEventTypes } from '@horizon/types'
+import { TelemetryEventTypes, type ResourceDataAnnotation } from '@horizon/types'
 
 /*
  TODO:
@@ -262,6 +262,7 @@ export class ResourceLink extends ResourceJSON<ResourceDataLink> {}
 export class ResourceChatMessage extends ResourceJSON<ResourceDataChatMessage> {}
 export class ResourceChatThread extends ResourceJSON<ResourceDataChatThread> {}
 export class ResourceDocument extends ResourceJSON<ResourceDataDocument> {}
+export class ResourceAnnotation extends ResourceJSON<ResourceDataAnnotation> {}
 
 export type ResourceObject =
   | Resource
@@ -271,6 +272,7 @@ export type ResourceObject =
   | ResourceChatMessage
   | ResourceChatThread
   | ResourceNote
+  | ResourceAnnotation
 
 export type ResourceSearchResultItem = {
   id: string // resource id
@@ -308,6 +310,8 @@ export class ResourceManager {
       return new ResourceChatThread(this.sffs, data)
     } else if (data.type.startsWith(ResourceTypes.DOCUMENT)) {
       return new ResourceDocument(this.sffs, data)
+    } else if (data.type.startsWith(ResourceTypes.ANNOTATION)) {
+      return new ResourceAnnotation(this.sffs, data)
     } else {
       return new Resource(this.sffs, data)
     }
@@ -382,7 +386,7 @@ export class ResourceManager {
           engine: item.engine,
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource)
-        }) as ResourceSearchResultItem
+        } as ResourceSearchResultItem)
     )
 
     // we probably don't want to overwrite the existing resources
@@ -400,10 +404,21 @@ export class ResourceManager {
           engine: item.engine,
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource)
-        }) as ResourceSearchResultItem
+        } as ResourceSearchResultItem)
     )
 
     return results
+  }
+
+  async getResourceAnnotations() {
+    const rawResults = await this.sffs.searchResources('', [
+      ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
+      ResourceManager.SearchTagDeleted(false)
+    ])
+
+    return rawResults.map((item) =>
+      this.findOrCreateResourceObject(item.resource)
+    ) as ResourceAnnotation[]
   }
 
   async getRemoteResource(id: string, remoteURL: string) {
@@ -524,6 +539,16 @@ export class ResourceManager {
     const blobData = JSON.stringify(data)
     const blob = new Blob([blobData], { type: ResourceTypes.LINK })
     return this.createResource(ResourceTypes.LINK, blob, metadata, tags)
+  }
+
+  async createResourceAnnotation(
+    data: ResourceDataAnnotation,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
+    const blobData = JSON.stringify(data)
+    const blob = new Blob([blobData], { type: ResourceTypes.ANNOTATION })
+    return this.createResource(ResourceTypes.ANNOTATION, blob, metadata, tags)
   }
 
   async createResourceOther(

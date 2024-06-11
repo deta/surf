@@ -44,7 +44,8 @@
   import Importer from './Importer.svelte'
   import { summarizeText } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
-  import { WebViewEventReceiveNames } from '@horizon/types'
+  import { WebViewEventReceiveNames, type AnnotationRangeData } from '@horizon/types'
+  import { inlineHighlightStylingCode, inlineHighlightTextCode, inlineTextReplaceCode, inlineTextReplaceStylingCode, scrollToTextCode } from './inline'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -775,6 +776,32 @@
       magicPages.update((pages) => [...pages, pageMagic!])
     }
 
+    const browserTab = $browserTabs[tab.id]
+    if (!browserTab) {
+      log.error('Browser tab not found', tab.id)
+      return
+    }
+
+    const annotationResources = await resourceManager.getResourceAnnotations()
+    log.debug('annotations', annotationResources)
+
+    const matchingAnnotationResources = annotationResources.filter(annotation => {
+      const url = annotation.metadata?.sourceURI
+      return $activeTabId === tab.id ? url === $activeTabLocation : url === tab.initialLocation
+    })
+
+    log.debug('matching annotations', matchingAnnotationResources)
+    matchingAnnotationResources.forEach(async matchingAnnotationResource => {
+      const annotation = await matchingAnnotationResource.getParsedData()
+      log.debug('annotation data', annotation)
+
+      if (annotation.type === 'highlight' && annotation.anchor.type === 'range') {
+        const anchorData = annotation.anchor.data as AnnotationRangeData
+        log.debug('highlight range', anchorData)
+        browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, anchorData)
+      }
+    })
+
     // if ($activeTabId === tab.id) {
     //   summarizePage(pageMagic)
     // }
@@ -834,157 +861,14 @@
     log.debug('webview inline text replace', e.detail)
 
     // add mark styles to the page
-    await $activeBrowserTab.executeJavaScript(`
-      (function() {
-        try {
-          if (window.trustedTypes && window.trustedTypes.createPolicy) {
-            window.trustedTypes.createPolicy('default', {
-              createHTML: (string, sink) => string
-            });
-          }
-        } catch (err) {}
-        const style = document.createElement('style');
-        style.innerHTML = 'mark.highlight-transformation { background-color: #ff47be24 !important; transition: background 0.2s ease; } mark.highlight-transformation:hover { background: #ff47be80 !important; }';
-        document.head.appendChild(style);
-      })();
-    `)
-
-    const code = `
-(function() {
-    const searchText = \`${target}\`;
-    const transformation = \`${content}\`;
-
-    function highlightSentence(sentence) {
-      // save the current scroll position
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-
-      try {
-        // disable scrolling: if any scroll is attempted, set this to the previous value
-        window.onscroll = function () {
-            window.scrollTo(scrollLeft, scrollTop);
-        };
-    
-        // Use window.find to find the sentence in the page
-        const selection = window.getSelection();
-        // Get the range of the found sentence
-        const range = selection.getRangeAt(0);
-
-        // Create a new mark element
-        const mark = document.createElement('mark');
-        mark.classList.add('highlight-transformation');
-
-        // Create a new text node with the contents of the range
-        const textNode = document.createTextNode(transformation);
-
-        // Replace the range's contents with the new text node
-        range.deleteContents();
-        range.insertNode(textNode);
-
-        // Wrap the found sentence in the mark element
-        range.surroundContents(mark);
-
-        window.getSelection().removeAllRanges()
-        const div = document.getElementById('horizonTextDragHandle')
-        if (div) {
-          div.parentNode.removeChild(div)
-        }
-      } catch (e) {
-        console.error('Error highlighting sentence', e)
-      } finally {
-        // re-enable scrolling
-        window.onscroll = null;
-        window.scrollTo(scrollLeft, scrollTop);
-      }
-    }
-    
-    highlightSentence(searchText);
-})();
-      `
+    await $activeBrowserTab.executeJavaScript(inlineTextReplaceStylingCode())
 
     log.debug('executing code')
+    const code = inlineTextReplaceCode(target, content)
     await $activeBrowserTab.executeJavaScript(code)
   }
 
   const highlightWebviewText = async (tabId: string, highlight: PageHighlight) => {
-    const highlightTextSnippet = (text: string, type: PageHighlight['type']) => `
-(function() {
-    const searchText = \`${text}\`;
-
-    function highlightSentence(sentence) {
-      // save the current scroll position
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-      // Save the current selection
-      const originalSelection = window.getSelection().rangeCount > 0 ? window.getSelection().getRangeAt(0) : null;
-
-      try {
-        // Create a range spanning the entire document
-        const range = document.createRange();
-        range.selectNodeContents(document.body);
-    
-        // Move the selection point to the start of the document
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        selection.collapseToStart();
- 
-        // disable scrolling: if any scroll is attempted, set this to the previous value
-        window.onscroll = function () {
-            window.scrollTo(scrollLeft, scrollTop);
-        };
-    
-        // Use window.find to find the sentence in the page
-        if (window.find(sentence)) {
-            // Get the range of the found sentence
-            const range = selection.getRangeAt(0);
-    
-            // Create a new mark element
-            const mark = document.createElement('mark');
-            mark.classList.add('highlight');
-            mark.classList.add('highlight-${type}');
-            mark.style.setProperty("background-color", "${highlight.color ?? ''}", "important")
-
-            try {
-                // Wrap the found sentence in the mark element
-                range.surroundContents(mark);
-            } catch (err) {
-                console.warn(err)
-        
-                // Create a new text node with the contents of the range
-                const textNode = document.createTextNode(range.toString());
-        
-                // Replace the range's contents with the new text node
-                range.deleteContents();
-                range.insertNode(textNode);
-        
-                // Wrap the found sentence in the mark element
-                range.surroundContents(mark);
-            }
-    
-            // Restore the original selection
-            if (originalSelection) {
-                window.getSelection().removeAllRanges();
-                window.getSelection().addRange(originalSelection);
-            } else {
-                window.getSelection().removeAllRanges()
-            }
-        } else {
-            console.log(\`Sentence "\${sentence}" not found in the page.\`);
-        }
-      } catch (e) {
-        console.error('Error highlighting sentence', e)
-      } finally {
-        // re-enable scrolling
-        window.onscroll = null;
-        window.scrollTo(scrollLeft, scrollTop);
-      }
-    }
-    
-    highlightSentence(searchText);
-})();
-      `
-
     const browserTab = $browserTabs[tabId]
     if (!browserTab) {
       log.error('Browser tab not found', tabId)
@@ -992,55 +876,20 @@
     }
 
     const html = await browserTab.executeJavaScript(
-      highlightTextSnippet(highlight.text, highlight.type)
+      inlineHighlightTextCode(highlight)
     )
 
     log.debug('HTML', html)
   }
 
   const scrollWebviewToText = async (tabId: string, text: string) => {
-    const scrollTextSnippet = (text: string) => `
-(function() {
-    const searchText = \`${text}\`;
-
-    function scrollTo(sentence) {
-      const originalSelection = window.getSelection().rangeCount > 0 ? window.getSelection().getRangeAt(0) : null;
-
-      try {
-        // Create a range spanning the entire document
-        const range = document.createRange();
-        range.selectNodeContents(document.body);
-    
-        // Move the selection point to the start of the document
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        selection.collapseToStart();
-
-        window.find(sentence)
-
-        if (originalSelection) {
-            window.getSelection().removeAllRanges();
-            window.getSelection().addRange(originalSelection);
-        } else {
-            window.getSelection().removeAllRanges()
-        }
-      } catch (e) {
-        console.error('Error scrolling to text', e)
-      }
-    }
-    
-    scrollTo(searchText);
-})();
-      `
-
     const browserTab = $browserTabs[tabId]
     if (!browserTab) {
       log.error('Browser tab not found', tabId)
       return
     }
 
-    const html = await browserTab.executeJavaScript(scrollTextSnippet(text))
+    const html = await browserTab.executeJavaScript(scrollToTextCode(text))
 
     log.debug('HTML', html)
   }
@@ -1115,13 +964,7 @@
       updatePageMagicResponse(magicPage.tabId, response.id, response)
 
       // add mark styles to the page
-      await browserTab.executeJavaScript(`
-        (function() {
-          const style = document.createElement('style');
-          style.innerHTML = 'mark.highlight { background-color: #ffde3e38 !important; transition: background 0.2s ease; } mark.highlight:hover { background: #ffde3e7d !important; } mark.highlight-quote { background-color: #3ec8ff21 !important; } mark.highlight-quote:hover { background: #3ec8ff6b !important; } mark.highlight-pro { background-color: #3eff3e21 !important; } mark.highlight-pro:hover { background: #3eff3e6b !important; } mark.highlight-contra { background-color: #ff3e3e21 !important; } mark.highlight-contra:hover { background: #ff3e3e6b !important; } mark.highlight-statistic { background-color: #3e4bff21 !important; } mark.highlight-statistic:hover { background: #3e4bff52 !important;';
-          document.head.appendChild(style);
-        })();
-      `)
+      await browserTab.executeJavaScript(inlineHighlightStylingCode())
 
       await Promise.all(
         Object.entries(json.citations).map(async ([id, citation]) => {
@@ -1220,13 +1063,7 @@
       updatePageMagicResponse(magicPage.tabId, response.id, response)
 
       // add mark styles to the page
-      await browserTab.executeJavaScript(`
-        (function() {
-          const style = document.createElement('style');
-          style.innerHTML = 'mark.highlight { background-color: #ffde3e38 !important; transition: background 0.2s ease; } mark.highlight:hover { background: #ffde3e7d !important; } mark.highlight-quote { background-color: #3ec8ff21 !important; } mark.highlight-quote:hover { background: #3ec8ff6b !important; } mark.highlight-pro { background-color: #3eff3e21 !important; } mark.highlight-pro:hover { background: #3eff3e6b !important; } mark.highlight-contra { background-color: #ff3e3e21 !important; } mark.highlight-contra:hover { background: #ff3e3e6b !important; } mark.highlight-statistic { background-color: #3e4bff21 !important; } mark.highlight-statistic:hover { background: #3e4bff52 !important;';
-          document.head.appendChild(style);
-        })();
-      `)
+      await browserTab.executeJavaScript(inlineHighlightStylingCode())
 
       await Promise.all(
         Object.entries(json.citations).map(async ([id, citation]) => {
@@ -1271,6 +1108,36 @@
     })
 
     log.debug('created resource', resource)
+  }
+
+  const handleWebviewHighlight = async (
+    e: CustomEvent<WebViewWrapperEvents['highlight']>,
+    tabId: string
+  ) => {
+    const browserTab = $browserTabs[tabId]
+    if (!browserTab) {
+      log.error('Browser tab not found', tabId)
+      return
+    }
+
+    const { range, url } = e.detail
+    log.debug('webview highlight', url, range)
+
+    log.debug('highlighting text in webview')
+    browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, range)
+
+    const annotationResource = await resourceManager.createResourceAnnotation({
+      type: 'highlight',
+      anchor: {
+        type: 'range',
+        data: range
+      },
+      data: {}
+    }, {
+      sourceURI: url,
+    })
+
+    log.debug('created annotation resource', annotationResource)
   }
 
   onMount(async () => {
@@ -1634,6 +1501,7 @@
             on:transform={handleWebviewTransform}
             on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
             on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, tab.id)}
+            on:highlight={(e) => handleWebviewHighlight(e, tab.id)}
           />
         {:else if tab.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
@@ -1683,6 +1551,7 @@
             on:transform={handleWebviewTransform}
             on:appDetection={(e) => handleWebviewAppDetection(e, $activeTab)}
             on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, $activeTab.id)}
+            on:highlight={(e) => handleWebviewHighlight(e, tab.id)}
           />
         {:else if $activeTab?.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === $activeTab?.horizonId)}

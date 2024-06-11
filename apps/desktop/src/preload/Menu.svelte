@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon, IconConfirmation } from '@horizon/icons'
   import type { WebViewEventTransform } from '@horizon/types'
   import './menu.css'
   import { useClipboard } from '@horizon/core/src/lib/utils/clipboard'
@@ -13,10 +13,11 @@
   let elem: HTMLDivElement
   let inputElem: HTMLInputElement
   let running = false
-  let showBookmarkingSuccess = false
   let showInput = false
   let inputValue = ''
   let insertingText = false
+  let markerIcon: IconConfirmation
+  let bookmarkingIcon: IconConfirmation
 
   const runningAction = writable<WebViewEventTransform['type'] | null>(null)
 
@@ -77,12 +78,8 @@
   }
 
   const handleBookmark = () => {
-    showBookmarkingSuccess = true
+    bookmarkingIcon.showConfirmation()
     dispatch('bookmark', output ? output : text)
-
-    setTimeout(() => {
-      showBookmarkingSuccess = false
-    }, 2000)
   }
 
   const showAIMenu = async () => {
@@ -95,7 +92,30 @@
     insertingText = true
     dispatch('insert', output)
   }
+
+  const handleMarker = () => {
+    markerIcon.showConfirmation()
+    dispatch('highlight')
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    const modKey = e.metaKey || e.ctrlKey
+    if (e.key === 'Escape') {
+      showInput = false
+      running = false
+      inputValue = ''
+      output = ''
+    } else if (modKey && e.key === 'h') {
+      handleMarker()
+    } else if (modKey && e.key === 'b') {
+      handleBookmark()
+    } else if (modKey && e.key === 'i') {
+      handleInsert()
+    }
+  }
 </script>
+
+<svelte:window on:keydown|preventDefault={handleKeyDown} />
 
 <div bind:this={elem} class="webview-menu-wrapper">
   {#if showInput}
@@ -173,11 +193,7 @@
             delay: 500
           }}
         >
-          {#if showBookmarkingSuccess}
-            <Icon name="check" />
-          {:else}
-            <Icon name="quote" />
-          {/if}
+          <IconConfirmation bind:this={bookmarkingIcon} name="quote" />
         </button>
 
         <button
@@ -191,11 +207,7 @@
             delay: 500
           }}
         >
-          {#if insertingText}
-            <Icon name="check" />
-          {:else}
-            <Icon name="textInsert" />
-          {/if}
+          <IconConfirmation show={insertingText} name="textInsert" />
         </button>
       </div>
     {/if}
@@ -210,16 +222,12 @@
 
       <div class="webview-menu-divider"></div>
 
-      <button on:click|stopPropagation|preventDefault={handleBookmark}>
-        {#if showBookmarkingSuccess}
-          <Icon name="check" />
-        {:else}
-          <Icon name="quote" />
-        {/if}
-      </button>
+      <!-- <button on:click|stopPropagation|preventDefault={handleBookmark}>
+        <IconConfirmation bind:this={bookmarkingIcon} name="quote" />
+      </button> -->
 
-      <button>
-        <Icon name="marker" />
+      <button on:click|stopPropagation|preventDefault={handleMarker}>
+        <IconConfirmation bind:this={markerIcon} name="marker" />
       </button>
 
       <button>

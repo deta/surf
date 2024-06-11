@@ -381,3 +381,4 @@ export class WebParser {
 export * from './types'
 export * from './extractors/index'
 export * from './importers/index'
+export * from './annotations/index'

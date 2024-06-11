@@ -4,10 +4,19 @@ import {
   type WebAppExtractor,
   DetectedResource,
   WebAppExtractorActions,
-  WebServiceActionInputs
+  WebServiceActionInputs,
+  getRangeData,
+  constructRange,
+  applyRangeHighlight
 } from '@horizon/web-parser'
 import Menu from './Menu.svelte'
-import { WebViewEventReceiveNames, WebViewEventSendNames, WebViewSendEvents } from '@horizon/types'
+import {
+  HighlightRangeData,
+  RangeData,
+  WebViewEventReceiveNames,
+  WebViewEventSendNames,
+  WebViewSendEvents
+} from '@horizon/types'
 
 // let mouseDownX = 0
 let previouslySelectedText: string | undefined = ''
@@ -90,6 +99,19 @@ function handleTransformOutput(text: string) {
   if (!selectionMenu) return
 
   selectionMenu.handleOutput(text)
+}
+
+function handleRestoreHighlight(data: RangeData) {
+  const selection = window.getSelection()
+  if (!selection) {
+    console.error('No selection found')
+    return
+  }
+
+  const range = constructRange(data)
+
+  console.log('Restoring highlight', range)
+  applyRangeHighlight(range)
 }
 
 window.addEventListener('DOMContentLoaded', async (_) => {
@@ -176,6 +198,32 @@ window.addEventListener('DOMContentLoaded', async (_) => {
         }
 
         sendPageEvent(WebViewEventSendNames.Bookmark, { text, url: window.location.href })
+      })
+
+      selectionMenu.$on('highlight', (e) => {
+        // const selection = window.getSelection()
+        // if (!selection) return
+        if (!selectionRange) {
+          console.error('No selection range found')
+          return
+        }
+
+        console.log('document', document)
+        console.log('selectionRange', selectionRange)
+
+        // const range = selection?.getRangeAt(0)
+        const rangeData = getRangeData(selectionRange)
+
+        console.log('Highlighting data', rangeData)
+
+        sendPageEvent(WebViewEventSendNames.Highlight, {
+          range: rangeData,
+          url: window.location.href
+        })
+
+        if (selection && selectionRange) {
+          selection.removeAllRanges()
+        }
       })
 
       selectionMenu.$on('transform', (e) => {
@@ -356,6 +404,8 @@ ipcRenderer.on('webview-event', (_event, payload) => {
     runServiceAction(data.id, data.inputs)
   } else if (type === WebViewEventReceiveNames.TransformationOutput) {
     handleTransformOutput(data.text)
+  } else if (type === WebViewEventReceiveNames.RestoreHighlight) {
+    handleRestoreHighlight(data)
   }
 })
 

@@ -1388,6 +1388,11 @@
     semver "^7.3.5"
     tar "^6.1.11"
 
+"@medv/finder@^3.2.0":
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/@medv/finder/-/finder-3.2.0.tgz#dffeb5b04d754ca4e575bbbee89b24935277908e"
+  integrity sha512-JmU7JIBwyL8RAzefvzALT4sP2M0biGk8i2invAgpQmma/QgfsaqoHIvJ7S0YC8n9hUVG8X3Leul2nGa06PvhbQ==
+
 "@melt-ui/svelte@0.61.2":
   version "0.61.2"
   resolved "https://registry.yarnpkg.com/@melt-ui/svelte/-/svelte-0.61.2.tgz#2948dd4ef47c4c5b5cf74d028c5143a5f986d239"
@@ -3599,6 +3604,11 @@ css-prefers-color-scheme@^9.0.1:
   version "9.0.1"
   resolved "https://registry.yarnpkg.com/css-prefers-color-scheme/-/css-prefers-color-scheme-9.0.1.tgz#30fcb94cc38b639b66fb99e1882ffd97f741feaa"
   integrity sha512-iFit06ochwCKPRiWagbTa1OAWCvWWVdEnIFd8BaRrgO8YrrNh4RAWUQTFcYX5tdFZgFl1DJ3iiULchZyEbnF4g==
+
+css-selector-generator@^3.6.8:
+  version "3.6.8"
+  resolved "https://registry.yarnpkg.com/css-selector-generator/-/css-selector-generator-3.6.8.tgz#827fd5819361bf4763c7fd3bd49fa5c52590853e"
+  integrity sha512-LFWoA20j0rcwGUa38OD6qFaQGKLpFG1xBUzx+wJr/0++34aJ71/YIw2jj6qOaVxiaCEQNrj3HOSepVwiShvyhg==
 
 css-tree@^2.3.1:
   version "2.3.1"
@@ -6269,7 +6279,7 @@ matcher@^3.0.0:
   dependencies:
     escape-string-regexp "^4.0.0"
 
-"matchers@link:../../../../../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers":
+"matchers@link:../../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers":
   version "0.0.0"
   uid ""
 

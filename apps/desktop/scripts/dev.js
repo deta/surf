@@ -65,7 +65,7 @@ const extraArgsIndex = process.argv.indexOf('--')
 const extraArgs = extraArgsIndex !== -1 ? process.argv.slice(extraArgsIndex + 1) : []
 
 const command = 'electron-vite'
-const args = ['dev', ...extraArgs]
+const args = ['dev', '-w', ...extraArgs]
 
 const child = spawn(command, args, {
   stdio: 'inherit',

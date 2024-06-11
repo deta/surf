@@ -118,6 +118,7 @@ export const icons = {
 export type Icons = keyof typeof icons
 
 export { default as Icon } from './Icon.svelte'
+export { default as IconConfirmation } from './IconConfirmation.svelte'
 
 export {
   AdblockOff,
