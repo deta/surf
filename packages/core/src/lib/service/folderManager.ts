@@ -72,9 +72,13 @@ export const folderManager = {
     const folder = await db.folders.read(folderId)
     if (!folder) return undefined
 
-    folder.items.push(item.id)
-    folder.updatedAt = new Date().toISOString()
-    return db.folders.update(folderId, folder)
+    if (!folder.items.some((existingItem) => existingItem === item.id)) {
+      folder.items.push(item.id)
+      folder.updatedAt = new Date().toISOString()
+      return db.folders.update(folderId, folder)
+    }
+
+    return folder
   },
 
   async addItemsFromAIResponse(folderId: string, response: string) {
