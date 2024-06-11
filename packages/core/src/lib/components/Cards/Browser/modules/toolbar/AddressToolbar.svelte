@@ -119,8 +119,11 @@
       let isInitial = inputValue === initialValue
       const lowerInputValue = inputValue.toLowerCase().trim()
 
-      const searchResults = historyEntriesManager.searchEntries(lowerInputValue)
-      const additionalSearchResults = addAddtionalSearchResults(searchResults, lowerInputValue)
+      //const searchResults = historyEntriesManager.searchEntries(lowerInputValue)
+      //const additionalSearchResults = addAddtionalSearchResults(searchResults, lowerInputValue)
+
+      const searchResults: any[] = []
+      const additionalSearchResults: any[] = []
 
       let defaultSearchEngine = SEARCH_ENGINES.find(
         (engine) => engine.key === DEFAULT_SEARCH_ENGINE
