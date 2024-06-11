@@ -1261,9 +1261,11 @@
 
     updateMagicPage($activeTabId, { showSidebar: !$activeTabMagic.showSidebar })
 
+    /*
     if ($activeTabMagic.responses.length === 0 && !$activeTabMagic.running) {
       summarizePage($activeTabMagic)
     }
+    */
   }
 
   const saveTextFromPage = async (text: string) => {

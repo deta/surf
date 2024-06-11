@@ -38,7 +38,7 @@
   export let drawer: Drawer
   export let db: HorizonDatabase
 
-  const SEARCH_SOURCE_LIMIT = 10
+  const SEARCH_SOURCE_LIMIT = 20
 
   const log = useLogScope('Chat')
   const dispatch = createEventDispatcher<{ navigate: NavigateEvent; updateTab: UpdateTab }>()
