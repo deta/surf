@@ -298,6 +298,8 @@
         } as unknown as ResourceSearchResultItem
       })
 
+      searchResults.reverse()
+
       folderResult.set(searchResults)
       await tick()
     } catch (error) {

@@ -116,6 +116,9 @@ pub fn worker_thread_entry_point(
             WorkerMessage::UserdataMessage(message) => {
                 handle_userdata_message(&mut worker, &mut channel, oneshot, message)
             }
+            WorkerMessage::SpaceMessage(message) => {
+                handle_space_message(&mut worker, &mut channel, oneshot, message)
+            }
         }
     }
 }

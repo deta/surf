@@ -527,7 +527,106 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
-    contextBridge.exposeInMainWorld('backend', { sffs, resources })
+    contextBridge.exposeInMainWorld('backend', {
+      sffs,
+      resources,
+      run_spaces_query_sql_test: async (n: number) => {
+        const queries = [
+          "All images uploaded in the last month that were tagged with 'project: alpha'.",
+          "Chat messages from Discord saved with the action 'import' in the last six months.",
+          'PDF documents tagged with the confidential tag set to true.',
+          "Youtube videos from 2023 tagged with 'type: tutorial' and 'author: 3B1B'.",
+          "Google Docs created before 2022 and tagged with 'department: product'.",
+          "Documents created in 2023 tagged with 'client: DARPA'.",
+          "Typeform tables imported in the last year with the tag 'survey: customer satisfaction'.",
+          'Articles downloaded in 2024.',
+          "Slack chat threads from 2023 tagged with 'team: marketing' and 'priority: high'.",
+          "Google Sheets created in the last week tagged with 'project: quarterly report'.",
+          "Slack chat messages from 2022 tagged with 'project: gamma' and 'status: completed'.",
+          "Articles tagged with 'type: blog' created after January 2023 and before July 2023.",
+          "Notion documents tagged with 'workspace: development' and 'status: in-progress'.",
+          "Articles created in 2024 tagged with 'industry: tech' and 'author: Jane Smith'.",
+          "Google Docs tagged with 'project: delta' and saved with the action 'paste' in 2023."
+        ]
+
+        const results = []
+        const total_queries = n > queries.length ? queries.length : n
+
+        for (let i = 0; i < total_queries; i++) {
+          const query = queries[i]
+          try {
+            // @ts-ignore
+            let sql_generated = JSON.parse(await sffs.js__ai_query_sffs_resources(query))
+            // @ts-ignore
+            results.push({ query, sql_generated })
+          } catch (error) {
+            // @ts-ignore
+            results.push({ query, error: error.message })
+          }
+
+          console.log(`progress: ${i + 1}/${total_queries}`)
+        }
+
+        let html_content = `
+          <html>
+          <head>
+            <style>
+              body {
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                background-color: #f9f9f9;
+                padding: 20px;
+              }
+              h1 {
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+              }
+              .query-result {
+                background: #fff;
+                border-radius: 5px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+                padding: 15px;
+              }
+              .query {
+                font-weight: bold;
+                color: #2c3e50;
+              }
+              .sql {
+                white-space: pre-wrap;
+                background-color: #ecf0f1;
+                padding: 10px;
+                border-radius: 5px;
+                border: 1px solid #bdc3c7;
+                margin-top: 10px;
+              }
+              .error {
+                color: red;
+                font-weight: bold;
+                margin-top: 10px;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>SQL Query Results</h1>
+        `
+
+        results.forEach((result: { query: string; error: string; sql_generated: string }) => {
+          html_content += `
+            <div class="query-result">
+              <div class="query">${result.query}</div>
+              ${result.error ? `<div class="error">Error: ${result.error}</div>` : `<div class="sql">${result.sql_generated}</div>`}
+            </div>
+          `
+        })
+
+        html_content += `
+          </body>
+          </html>
+        `
+
+        navigator.clipboard.writeText(html_content)
+      }
+    })
   } catch (error) {
     console.error(error)
   }

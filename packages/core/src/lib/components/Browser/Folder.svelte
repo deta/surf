@@ -137,7 +137,7 @@
   </div>
 </div>
 
-<style>
+<style lang="scss">
   .folder-wrapper {
     position: relative;
   }
@@ -180,6 +180,7 @@
     color: #7d7448;
     font-size: 1.1rem;
     font-weight: 500;
+    max-width: 15rem;
     letter-spacing: 0.025rem;
     font-smooth: always;
     -webkit-font-smoothing: antialiased;
@@ -207,8 +208,14 @@
     cursor: pointer;
   }
 
-  .folder:hover .close {
-    opacity: 1;
+  .folder:hover {
+    .close {
+      opacity: 1;
+    }
+
+    .folder-input {
+      max-width: 12rem;
+    }
   }
 
   .draggedOver {

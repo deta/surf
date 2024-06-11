@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import json
 import os
-from typing import AsyncIterable
+
+from typing import AsyncIterable, List, Union
 
 from embedchain import App
 from embedchain.config import BaseLlmConfig
@@ -63,9 +65,9 @@ async def generate_sources_str(contexts):
     return sources_str
 
 
-async def prepare_contexts_for_llm_query(ec_app, query, config, citations):
+async def prepare_contexts_for_llm_query(ec_app, query, config, citations, where):
     """Retrieve contexts from the database and prepare them for the LLM query."""
-    contexts = ec_app._retrieve_from_database(input_query=query, config=config, where={"app_id": ec_app.config.id}, citations=citations)
+    contexts = ec_app._retrieve_from_database(input_query=query, config=config, where=where, citations=citations)
     if citations and contexts and isinstance(contexts[0], tuple):
         return [context[0] for context in contexts]
     return contexts
@@ -83,9 +85,14 @@ async def generate_messages(ec_app, query, contexts_data_for_llm_query, config, 
     return messages
 
 
-async def send_message(query, session_id, number_documents, system_prompt, citations, stream, model) -> AsyncIterable[str]:
+async def send_message(query, session_id, number_documents, system_prompt, citations, stream, model, resource_ids) -> AsyncIterable[str]:
     ec_app = App.from_config(config=EC_APP_CONFIG)
-    context = ec_app.search(query, num_documents=number_documents)
+
+    where = {'app_id': ec_app.config.id}
+    if resource_ids != None:
+        where = {'$and': [where, {"resource_id": {"$in": resource_ids}}]}
+
+    context = ec_app.search(query, where=where, num_documents=number_documents)
     sources_str = await generate_sources_str(context)
 
     ec_app.llm.update_history(app_id=ec_app.config.id, session_id=session_id)
@@ -93,7 +100,7 @@ async def send_message(query, session_id, number_documents, system_prompt, citat
 
     config = BaseLlmConfig(model=model, stream=stream, callbacks=[callback], api_key=os.environ["OPENAI_API_KEY"])
 
-    contexts_data_for_llm_query = await prepare_contexts_for_llm_query(ec_app, query, config, citations)
+    contexts_data_for_llm_query = await prepare_contexts_for_llm_query(ec_app, query, config, citations, where=where)
     messages = await generate_messages(ec_app, query, contexts_data_for_llm_query, config, system_prompt)
 
     kwargs = {
@@ -125,3 +132,16 @@ async def send_message(query, session_id, number_documents, system_prompt, citat
 async def get_embedding(data: str) -> list[float]:
     ec_app = App.from_config(config=EC_APP_CONFIG)
     return ec_app.embedding_model.to_embeddings(data)
+
+async def get_resources(query: str, resource_ids: Union[List[str], None]) -> list[float]:
+    ec_app = App.from_config(config=EC_APP_CONFIG)
+
+    where = {'app_id': ec_app.config.id}
+    if resource_ids != None:
+        where = {'$and': [where, {"resource_id": {"$in": resource_ids}}]}
+
+    contexts = ec_app.search(query, where=where, num_documents=100)
+    resource_ids = [(context.get('metadata', {}).get('resource_id'), context.get('metadata', {}).get('score')) for context in contexts]
+    resource_ids = [rid for (rid, score) in resource_ids if rid is not None and score is not None and score < 300]
+
+    return resource_ids

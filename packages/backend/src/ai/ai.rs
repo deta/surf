@@ -79,12 +79,36 @@ impl AI {
         }
     }
 
+<<<<<<< HEAD
     pub fn get_chat_history(&self, session_id: String, api_endpoint: Option<String>) -> Result<ChatHistory, reqwest::Error> {
         let mut api_endpoint = api_endpoint.unwrap_or_else(|| self.api_endpoint.clone());
         if api_endpoint == "" {
             api_endpoint = self.api_endpoint.clone();
         }
         let url = format!("{}/admin/chat_history/{}", &api_endpoint, session_id);
+=======
+    pub fn get_resources(
+        &self,
+        query: String,
+        resource_ids: Vec<String>,
+    ) -> BackendResult<Vec<String>> {
+        let url = format!("{}/resources", &self.api_endpoint);
+        let response = self
+            .client
+            .get(url)
+            .query(&vec![
+                ("query", query.as_str()),
+                ("resource_ids", resource_ids.join(",").as_str()),
+            ])
+            .send()?;
+
+        // dbg!(response.text()?);
+        Ok(response.json()?)
+    }
+
+    pub fn get_chat_history(&self, session_id: String) -> Result<ChatHistory, reqwest::Error> {
+        let url = format!("{}/admin/chat_history/{}", &self.api_endpoint, session_id);
+>>>>>>> 753305fa8fd3c05b743ab839017bbd15f2dddaf4
         let response = self.client.get(url).send()?;
         let chat_history = response.json::<ChatHistory>()?;
         Ok(chat_history)
@@ -114,6 +138,7 @@ impl AI {
         session_id: String,
         number_documents: i32,
         model: String,
+<<<<<<< HEAD
         api_endpoint: Option<String>, 
     ) -> BackendResult<impl Stream<Item = BackendResult<Option<String>>>> {
         let mut api_endpoint = api_endpoint.unwrap_or_else(|| self.api_endpoint.clone());
@@ -122,15 +147,25 @@ impl AI {
         }
 
         let url = format!("{}/chat", &api_endpoint);
+=======
+        resource_ids: Option<Vec<String>>,
+    ) -> BackendResult<impl Stream<Item = BackendResult<Option<String>>>> {
+        let url = format!("{}/chat", &self.api_endpoint);
+        let mut query_params = vec![
+            ("query", query),
+            ("session_id", session_id),
+            ("number_documents", number_documents.to_string()),
+            ("model", model),
+        ];
+        if let Some(resource_ids) = resource_ids {
+            query_params.push(("resource_ids", resource_ids.join(",")))
+        }
+
+>>>>>>> 753305fa8fd3c05b743ab839017bbd15f2dddaf4
         let response = self
             .async_client
             .get(url)
-            .query(&[
-                ("query", &query),
-                ("session_id", &session_id),
-                ("number_documents", &number_documents.to_string()),
-                ("model", &model),
-            ])
+            .query(&query_params)
             .send()
             .await?;
 

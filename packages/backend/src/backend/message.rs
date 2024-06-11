@@ -27,10 +27,11 @@ pub enum WorkerMessage {
     CardMessage(CardMessage),
     HistoryMessage(HistoryMessage),
     HorizonMessage(HorizonMessage),
+    MiscMessage(MiscMessage),
     ResourceMessage(ResourceMessage),
     ResourceTagMessage(ResourceTagMessage),
+    SpaceMessage(SpaceMessage),
     UserdataMessage(UserdataMessage),
-    MiscMessage(MiscMessage),
 }
 
 pub enum CardMessage {
@@ -58,6 +59,33 @@ pub enum HorizonMessage {
     ListHorizons,
     UpdateHorizon(Horizon),
     RemoveHorizon(String),
+}
+
+pub struct CreateSpaceEntryInput {
+    pub resource_id: String,
+    pub manually_added: bool,
+}
+
+pub enum SpaceMessage {
+    CreateSpace {
+        name: String,
+    },
+    GetSpace(String),
+    ListSpaces,
+    UpdateSpace {
+        space_id: String,
+        name: String,
+    },
+    DeleteSpace(String),
+    // here the string is `resource_id`, bool is `manually_added`
+    CreateSpaceEntries {
+        space_id: String,
+        entries: Vec<CreateSpaceEntryInput>,
+    },
+    GetSpaceEntries {
+        space_id: String,
+    },
+    DeleteSpaceEntries(Vec<String>),
 }
 
 pub enum ResourceMessage {
@@ -125,8 +153,16 @@ pub enum MiscMessage {
         query: String,
         session_id: String,
         api_endpoint: Option<String>,
+        resource_ids: Option<Vec<String>>,
     },
     Print(String),
     CreateAIChatMessage(String),
     GetAIChatMessage(String, Option<String>),
+    QuerySFFSResources(String),
 }
+
+
+
+
+
+

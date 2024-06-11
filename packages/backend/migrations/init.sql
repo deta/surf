@@ -88,3 +88,19 @@ CREATE TABLE IF NOT EXISTS ai_chat_sessions (
     id TEXT NOT NULL,
     system_prompt TEXT NOT NULL DEFAULT ''
 );
+
+CREATE TABLE IF NOT EXISTS spaces (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS space_entries (
+    id TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    manually_added INTEGER NOT NULL
+);

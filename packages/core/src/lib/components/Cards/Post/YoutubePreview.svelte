@@ -107,6 +107,10 @@
 </div>
 
 <style lang="scss">
+  * {
+    user-select: none;
+    -webkit-user-drag: none;
+  }
   .link-card {
     width: 100%;
     height: 100%;

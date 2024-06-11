@@ -69,9 +69,9 @@
     clone.style.top = '-200px'
     clone.style.left = '-200px'
     clone.style.width = '200px'
-    clone.style.height = '200px'
+    clone.style.height = 'fit-content'
     clone.style.maxWidth = '200px'
-    clone.style.maxHeight = '200px'
+    clone.style.maxHeight = '300px'
     clone.style.opacity = '0.7'
     clone.style.pointerEvents = 'none'
     clone.style.transform = 'scale(0.8)'
@@ -241,6 +241,11 @@
       .preview:hover {
         outline: 0;
       }
+    }
+
+    & * {
+      user-select: none;
+      -webkit-user-drag: none;
     }
   }
 

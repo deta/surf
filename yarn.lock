@@ -6269,7 +6269,7 @@ matcher@^3.0.0:
   dependencies:
     escape-string-regexp "^4.0.0"
 
-"matchers@link:../../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers":
+"matchers@link:../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers":
   version "0.0.0"
   uid ""
 
@@ -6473,7 +6473,11 @@ mode-watcher@^0.0.2:
   resolved "https://registry.yarnpkg.com/mode-watcher/-/mode-watcher-0.0.2.tgz#4f821adf72ffae59f176cb61ce780bfc340a39f6"
   integrity sha512-sB9bHKyNfk2qftJC3zE7cVo9nrD7OgtaXeABuSs8/rozZFDnpvBQ/jcuECo/CmQ3N+el6oBS5hJNecuoboK8gA==
   dependencies:
+<<<<<<< HEAD
     matchers "link:../../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers"
+=======
+    matchers "link:../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers"
+>>>>>>> 753305fa8fd3c05b743ab839017bbd15f2dddaf4
     svelte-persisted-store "^0.7.0"
 
 modify-filename@^1.1.0:
