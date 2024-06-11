@@ -81,6 +81,8 @@
 
   const log = useLogScope('DrawerWrapper')
 
+  const resourceCache = new Map<string, ResourceObject>()
+
   const tabs = [
     { key: 'all', label: 'All', icon: 'square.rotated' },
     { key: 'horizon', label: 'On this Horizon', icon: 'rectangle' },

@@ -7,7 +7,7 @@ import { Telemetry } from '../service/telemetry'
 export type Folder = {
   id: string
   name: string
-  items: (SFFSResource | Folder | string)[]
+  items: SFFSResource[]
   createdAt: string
   updatedAt: string
 }

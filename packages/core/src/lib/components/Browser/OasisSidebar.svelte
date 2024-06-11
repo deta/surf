@@ -18,12 +18,25 @@
   export let sidebarTab
 
   onMount(async () => {
+    await loadFolders()
+    await loadResources()
+  })
+
+  const loadFolders = async () => {
     try {
       const loadedFolders = await folderManager.listFolders()
-      // Include the static 'Everything' folder at the top
+      // Sort folders by creation date
+      loadedFolders.sort((a, b) => new Date(a.createdDate) - new Date(b.createdDate))
+      // Ensure "Everything" folder is always first
       folders.set([{ id: 'all', name: 'Everything' }, ...loadedFolders])
+    } catch (error) {
+      log.error('Failed to load folders:', error)
+    }
+  }
 
-      let loadedResources = await resourceManager.searchResources('', [
+  const loadResources = async () => {
+    try {
+      const loadedResources = await resourceManager.searchResources('', [
         ResourceManager.SearchTagDeleted(false)
       ])
       resources.set(loadedResources)
@@ -35,14 +48,19 @@
       }))
       reducedResources.set(reduced)
     } catch (error) {
-      log.error('Failed to load folders:', error)
+      log.error('Failed to load resources:', error)
     }
-  })
+  }
 
   const createNewFolder = async () => {
     try {
       const newFolder = await folderManager.createFolder('New Folder', 'userContext')
-      folders.update((currentFolders) => [...currentFolders, newFolder])
+      folders.update((currentFolders) => {
+        const updatedFolders = [...currentFolders, newFolder]
+        // Sort folders by creation date
+        updatedFolders.sort((a, b) => new Date(a.createdDate) - new Date(b.createdDate))
+        return updatedFolders
+      })
       selectedFolder.set(newFolder.id)
       await tick()
 
@@ -58,8 +76,7 @@
   const renameFolder = async (id, newName) => {
     try {
       await folderManager.updateFolder(id, { name: newName })
-      const updatedFolders = await folderManager.listFolders()
-      folders.set(updatedFolders)
+      await loadFolders()
     } catch (error) {
       log.error('Failed to rename folder:', error)
     }
@@ -68,8 +85,7 @@
   const deleteFolder = async (id) => {
     try {
       await folderManager.deleteFolder(id)
-      const updatedFolders = await folderManager.listFolders()
-      folders.set(updatedFolders)
+      await loadFolders()
     } catch (error) {
       log.error('Failed to delete folder:', error)
     }
