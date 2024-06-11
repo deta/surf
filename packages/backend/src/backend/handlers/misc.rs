@@ -77,8 +77,8 @@ impl Worker {
             })
     }
 
-    pub fn generate_space_query_sql(&self, prompt: String) -> BackendResult<String> {
-        let prompt = GENERATE_SPACE_QUERY_SQL_PROMPT.replace("{{QUERY}}", &prompt);
+    pub fn query_sffs_resources(&self, prompt: String) -> BackendResult<String> {
+        let prompt = QUERY_SFFS_RESOURCES_PROMPT.replace("{{QUERY}}", &prompt);
         let session_id = random_uuid();
         let session_id_clone = session_id.clone();
 
@@ -88,7 +88,7 @@ impl Worker {
                 let mut result = String::new();
                 let mut stream = self
                     .ai
-                    .chat(prompt, session_id_clone, 1, "".to_owned(), Some(vec![]))
+                    .chat(prompt, session_id_clone, 1, "".to_owned(), None, Some(vec![]))
                     .await?;
 
                 while let Some(chunk) = stream.next().await {
@@ -191,13 +191,13 @@ pub fn handle_misc_message(
             );
             send_worker_response(channel, oneshot, result)
         }
-        MiscMessage::GenerateSpaceQuerySql(prompt) => {
-            send_worker_response(channel, oneshot, worker.generate_space_query_sql(prompt))
+        MiscMessage::QuerySFFSResources(prompt) => {
+            send_worker_response(channel, oneshot, worker.query_sffs_resources(prompt))
         }
     }
 }
 
-const GENERATE_SPACE_QUERY_SQL_PROMPT: &str = "
+const QUERY_SFFS_RESOURCES_PROMPT: &str = "
 You are an AI language model that generates SQL queries based on natural
 language input. Additionally, if applicable, you generate special instructions
 for an embedding model search to further narrow down the search space based on

@@ -158,5 +158,5 @@ pub enum MiscMessage {
     Print(String),
     CreateAIChatMessage(String),
     GetAIChatMessage(String, Option<String>),
-    GenerateSpaceQuerySql(String),
+    QuerySFFSResources(String),
 }
