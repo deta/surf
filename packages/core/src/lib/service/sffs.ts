@@ -587,7 +587,6 @@ export class SFFS {
       callback,
       opts?.limit ?? 20,
       opts?.systemPrompt ?? '',
-      callback,
       opts?.apiEndpoint ?? '',
       opts?.resourceIds
     )

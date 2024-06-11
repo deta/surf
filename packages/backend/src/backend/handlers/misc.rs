@@ -88,7 +88,7 @@ impl Worker {
                 let mut result = String::new();
                 let mut stream = self
                     .ai
-                    .chat(prompt, session_id_clone, 1, "".to_owned(), Some(vec![]))
+                    .chat(prompt, session_id_clone, 1, "".to_owned(), None, Some(vec![]))
                     .await?;
 
                 while let Some(chunk) = stream.next().await {
