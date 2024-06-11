@@ -251,17 +251,47 @@
     $hoveredSource = null
   }
 
-  function getUniqueSources(sources: AIChatMessageSource[]) {
+  function getUniqueSourcesByResourceID(sources: AIChatMessageSource[]) {
+    let uniqueSources = sources.filter(
+      (source, index, self) => index === self.findIndex((s) => s.resource_id === source.resource_id)
+    )
+    uniqueSources.forEach((source, index) => {
+      source.render_id = (index + 1).toString()
+    })
+    return uniqueSources
+  }
+
+  // TODO: unique sources should not lose the original source id information
+  function getUniqueSources(sources: AIChatMessageSource[] | undefined) {
+    if (!sources) return []
     let urls = {} as Record<string, string>
+    let chunk_ids = {} as Record<string, string[]>
     sources.forEach((source) => {
       if (source.metadata && source.metadata.url) {
         urls[source.resource_id] = source.metadata.url
       }
+      if (source.resource_id in chunk_ids) {
+        chunk_ids[source.resource_id].push(source.id)
+      } else {
+        chunk_ids[source.resource_id] = [source.id]
+      }
     })
     let uniqueSources = sources.filter(
-      (source, index, self) => index === self.findIndex((s) => s.resource_id === source.resource_id)
+      (source, index, self) =>
+        index ===
+        self.findIndex((s) => {
+          if (source.metadata && s.metadata) {
+            return (
+              source.resource_id === s.resource_id &&
+              source.metadata.timestamp === s.metadata.timestamp
+            )
+          }
+          s.resource_id === source.resource_id
+        })
     )
-    uniqueSources.forEach((source) => {
+    uniqueSources.forEach((source, index) => {
+      source.render_id = (index + 1).toString()
+      source.all_chunk_ids = chunk_ids[source.resource_id]
       if (source.resource_id in urls) {
         if (source.metadata) {
           source.metadata.url = urls[source.resource_id]
@@ -330,7 +360,7 @@
           <div class="chat-result">
             {#if message.sources}
               <div class="resources">
-                {#each getUniqueSources(message.sources) as source (source.id)}
+                {#each getUniqueSourcesByResourceID(message.sources) as source (source.id)}
                   <div
                     class="resource-list-item"
                     class:active={$hoveredSource &&
@@ -347,6 +377,7 @@
               {#if message.content}
                 <ChatMessage
                   content={message.content}
+                  sources={getUniqueSources(message.sources)}
                   on:citationClick={(e) => handleCitationClick(e.detail, message)}
                   on:citationHoverStart={(e) => handleCitationHoverStart(e.detail, message)}
                   on:citationHoverEnd={(e) => handleCitationHoverEnd(e.detail, message)}

@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from utils.embedchain import send_message
 from utils.embedchain import get_embedding
 from utils.sffs import get_resource
+from utils.mocks import mock_stream
 
 router = APIRouter()
 
@@ -12,11 +13,20 @@ DEFAULT_MODEL = "gpt-4o"
 DB_PATH = os.getenv("DB_PATH")
 
 @router.get("/api/v1/chat")
-async def handle_chat(query: str, session_id: str = Query(None), number_documents: int = 5, system_prompt: str = Query(None)):
+async def handle_chat(
+        query: str,
+        session_id: str = Query(None),
+        number_documents: int = 5,
+        system_prompt: str = Query(None),
+        mock: bool = False,
+):
     """
     Handles a chat request to the Embedchain app.
     Accepts 'query' and 'session_id' as query parameters.
     """
+    if mock:
+        return StreamingResponse(mock_stream())
+
     generator = send_message(
         query, 
         session_id, 

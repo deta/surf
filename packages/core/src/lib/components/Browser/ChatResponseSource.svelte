@@ -51,7 +51,7 @@
   <ResourcePreviewClean {resource} on:click />
 {:else if source.metadata && source.metadata.url}
   <div>
-    {source.id})
+    {source.render_id})
     <a href={source.metadata.url}>{source.metadata.url}</a>
   </div>
 {/if}
