@@ -45,7 +45,7 @@
   const processBatchSize = writable(PROCESS_BATCH_SIZE)
   const tab = writable<'webcrate' | 'twitter' | 'csv' | 'youtube'>('twitter')
 
-  let showDebug = false
+  let showDebug = true
   let csvData = ''
   let youtubePlaylistUrl = ''
   let batchFetcher: BatchFetcher<DetectedResource>
@@ -139,7 +139,7 @@
         if (!$dryRun) {
           const resource = await resourceManager.createResourceOther(
             new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-            { sourceURI: `https://${webcrateDomain}/link/${link.source_id}` },
+            { sourceURI: link.url },
             [ResourceTag.import()]
           )
 
