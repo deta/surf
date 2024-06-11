@@ -74,7 +74,149 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_create_ai_chat", js_create_ai_chat)?;
     cx.export_function("js__store_get_ai_chat", js_get_ai_chat)?;
 
+    cx.export_function("js__store_create_space", js_create_space)?;
+    cx.export_function("js__store_get_space", js_get_space)?;
+    cx.export_function("js__store_list_spaces", js_list_spaces)?;
+    cx.export_function("js__store_update_space", js_update_space)?;
+    cx.export_function("js__store_delete_space", js_delete_space)?;
+    cx.export_function("js__store_create_space_entries", js_create_space_entries)?;
+    cx.export_function("js__store_get_space_entries", js_get_space_entries)?;
+    cx.export_function("js__store_delete_space_entries", js_delete_space_entries)?;
+
     Ok(())
+}
+
+fn js_create_space(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let name = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::CreateSpace { name }),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_get_space(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let space_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::GetSpace(space_id)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_list_spaces(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::ListSpaces),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_update_space(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let space_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let name = cx.argument::<JsString>(2)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::UpdateSpace { space_id, name }),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_delete_space(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let space_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::DeleteSpace(space_id)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_create_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let space_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let entries = cx.argument::<JsArray>(2)?.to_vec(&mut cx)?;
+
+    let entries = entries
+        .iter()
+        .map(|entry| {
+            let obj = entry.downcast_or_throw::<JsObject, FunctionContext>(&mut cx)?;
+            let resource_id = obj
+                .get_value::<FunctionContext, &str>(&mut cx, "resource_id")?
+                .downcast_or_throw::<JsString, FunctionContext>(&mut cx)?
+                .value(&mut cx);
+            let manually_added = obj
+                .get_value::<FunctionContext, &str>(&mut cx, "manually_added")?
+                .downcast_or_throw::<JsBoolean, FunctionContext>(&mut cx)?
+                .value(&mut cx);
+            Ok(CreateSpaceEntryInput {
+                resource_id,
+                manually_added,
+            })
+        })
+        .collect::<NeonResult<Vec<CreateSpaceEntryInput>>>()?;
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::CreateSpaceEntries { space_id, entries }),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_get_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let space_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::GetSpaceEntries { space_id }),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_delete_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let entry_ids = cx.argument::<JsArray>(1)?.to_vec(&mut cx)?;
+
+    let entry_ids = entry_ids
+        .iter()
+        .map(|value| {
+            Ok(value
+                .downcast_or_throw::<JsString, FunctionContext>(&mut cx)?
+                .value(&mut cx))
+        })
+        .collect::<NeonResult<Vec<String>>>()?;
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::DeleteSpaceEntries(entry_ids)),
+        deferred,
+    );
+
+    Ok(promise)
 }
 
 fn js_create_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
