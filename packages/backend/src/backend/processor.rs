@@ -41,6 +41,7 @@ fn handle_process_resource(
         tunnel.worker_send_rust(
             WorkerMessage::ResourceMessage(ResourceMessage::UpsertResourceTextContent {
                 resource_id: resource.resource.id,
+                resource_type: resource.resource.resource_type,
                 content: output,
             }),
             None,

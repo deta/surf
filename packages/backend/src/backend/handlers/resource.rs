@@ -63,7 +63,7 @@ impl Worker {
                 .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
             match resource_type.as_str() {
-                "application/vnd.space.article" => {
+                "application/vnd.space.lrticle" | "application/vnd.space.link" => {
                     self.aiqueue_tx
                         .send(AIMessage::GenerateWebpageEmbeddings(metadata.clone()))
                         .map_err(|e| BackendError::GenericError(e.to_string()))?;
@@ -342,6 +342,7 @@ impl Worker {
     pub fn upsert_resource_text_content(
         &mut self,
         resource_id: String,
+        resource_type: String,
         content: String,
     ) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
@@ -355,6 +356,7 @@ impl Worker {
                     resource_id,
                     content,
                 },
+                resource_type,
             ))
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
         Ok(())
@@ -501,11 +503,12 @@ pub fn handle_resource_message(
         }
         ResourceMessage::UpsertResourceTextContent {
             resource_id,
+            resource_type,
             content,
         } => send_worker_response(
             channel,
             oneshot,
-            worker.upsert_resource_text_content(resource_id, content),
+            worker.upsert_resource_text_content(resource_id, resource_type, content),
         ),
         ResourceMessage::InsertEmbeddings {
             resource_id,

@@ -84,6 +84,7 @@ impl AI {
                     });
             }
 
+            /*
             embeddable_sentences.iter().for_each(|sentence| {
                 let url = match &composite_resource.metadata {
                     Some(metadata) => Some(metadata.source_uri.clone()),
@@ -107,6 +108,7 @@ impl AI {
                     .add_data_source(&ds)
                     .map_err(|e| eprintln!("failed to add data source for rag: {e:#?}"));
             });
+            */
 
             let embeddings = self
                 .embedding_model
@@ -129,28 +131,68 @@ impl AI {
         Ok(())
     }
 
+    fn should_add_general_data_source(
+        embeddable: &impl models::EmbeddableContent,
+        resource_type: Option<String>,
+    ) -> bool {
+        /*
+        dbg!(embeddable.get_resource_id());
+        dbg!(embeddable.get_embedding_type());
+        dbg!(embeddable.get_embeddable_content());
+        dbg!(resource_type.clone());
+        */
+        if embeddable.get_embedding_type() == "metadata" {
+            return false;
+        }
+        if embeddable.get_embeddable_content().is_empty() {
+            return false;
+        }
+        match resource_type {
+            Some(resource_type) => {
+                // TODO: use enums for resource types
+                // we already save articles as "web_page" data source
+                // and the text content of the article is also not complete if the article is long
+                // just let the embedchain backend handle the article embeddings
+                if resource_type.starts_with("application/vnd.space.article") {
+                    return false;
+                }
+                if resource_type.starts_with("application/vnd.space.link") {
+                    return false;
+                }
+                // we also already save youtube videos as different data source
+                if resource_type.starts_with("application/vnd.space.post.youtube") {
+                    return false;
+                }
+                true
+            }
+            None => false,
+        }
+    }
+
     fn process_embeddable_message(
         &self,
         tunnel: &WorkerTunnel,
         embeddable: impl models::EmbeddableContent,
+        resource_type: Option<String>,
     ) -> BackendResult<()> {
-        // TODO: image tags captions should be an enum
-        let rag_metadata = DataSourceMetadata {
-            resource_id: embeddable.get_resource_id(),
-            resource_type: embeddable.get_embedding_type(),
-            url: None,
-        };
+        if Self::should_add_general_data_source(&embeddable, resource_type) {
+            let rag_metadata = DataSourceMetadata {
+                resource_id: embeddable.get_resource_id(),
+                resource_type: embeddable.get_embedding_type(),
+                url: None,
+            };
 
-        let ds = DataSource {
-            data_type: DataSourceType::Text.to_string(),
-            data_value: embeddable.get_embeddable_content().join(""),
-            metadata: serde_json::to_string(&rag_metadata).unwrap(),
-            env_variables: "".to_string(),
-        };
-        let _ = self
-            .ai_client
-            .add_data_source(&ds)
-            .map_err(|e| eprintln!("failed to add data source for rag: {e:#?}"));
+            let ds = DataSource {
+                data_type: DataSourceType::Text.to_string(),
+                data_value: embeddable.get_embeddable_content().join(""),
+                metadata: serde_json::to_string(&rag_metadata).unwrap(),
+                env_variables: "".to_string(),
+            };
+            let _ = self
+                .ai_client
+                .add_data_source(&ds)
+                .map_err(|e| eprintln!("failed to add data source for rag: {e:#?}"));
+        }
 
         let embeddigns = self
             .embedding_model
@@ -234,10 +276,11 @@ pub fn ai_thread_entry_point(
         match message {
             // TODO: implement
             AIMessage::GenerateMetadataEmbeddings(resource_metadata) => {
-                let _ = ai.process_embeddable_message(&tunnel, resource_metadata);
+                let _ = ai.process_embeddable_message(&tunnel, resource_metadata, None);
             }
-            AIMessage::GenerateTextContentEmbeddings(resource_content) => {
-                let _ = ai.process_embeddable_message(&tunnel, resource_content);
+            AIMessage::GenerateTextContentEmbeddings(resource_content, resource_type) => {
+                let _ =
+                    ai.process_embeddable_message(&tunnel, resource_content, Some(resource_type));
             }
             AIMessage::DescribeImage(composite_resource) => {
                 let _ = ai.process_vision_message(&tunnel, &composite_resource);
