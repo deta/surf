@@ -1,5 +1,3 @@
-<!-- <svelte:options immutable={true} /> -->
-
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { Icon } from '@horizon/icons'
@@ -61,20 +59,7 @@
   }
 
   const handleDragStart = (e: DragEvent) => {
-    if (data) {
-      if (resource.type.startsWith(ResourceTypes.POST)) {
-        e.dataTransfer?.setData('text/uri-list', (data as ResourceDataPost)?.url ?? '')
-      }
-
-      const content = WebParser.getResourceContent(resource.type, data)
-      if (content.plain) {
-        e.dataTransfer?.setData('text/plain', content.plain)
-      }
-
-      if (content.html) {
-        e.dataTransfer?.setData('text/html', content.html)
-      }
-    }
+    e.dataTransfer?.setData('application/json', JSON.stringify({ id: resource.id }))
   }
 
   const handleLoad = () => {
@@ -142,8 +127,6 @@
       />
     {:else}
       <FilePreview {resource} on:load={handleLoad} />
-      <!-- {:else}
-      <div class="text-base">Unknown</div> -->
     {/if}
   </div>
 
@@ -174,8 +157,6 @@
         <div class="label">{getFileType(resource.type) ?? 'File'}</div> -->
       {/if}
     </div>
-
-    <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
   </div>
   {#if $viewState !== 'details'}
     <div class="remove-wrapper" on:click={handleRemove}>

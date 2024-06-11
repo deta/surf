@@ -2,6 +2,8 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { folderManager } from '../../service/folderManager'
+  import { ResourceManager } from '../../service/resources'
+  import { Telemetry } from '../../service/telemetry'
 
   export let folder
   export let activeFolderId
@@ -12,6 +14,22 @@
   let folderName = folder.name
   let inputWidth = `${folderName.length}ch`
   let processing = false // New state to track AI processing
+
+  let telemetryAPIKey = ''
+  let telemetryActive = false
+
+  if (import.meta.env.PROD) {
+    telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
+    telemetryActive = true
+  }
+
+  const telemetry = new Telemetry({
+    apiKey: telemetryAPIKey,
+    active: telemetryActive,
+    trackHostnames: false
+  })
+
+  const resourceManager = new ResourceManager(telemetry)
 
   const handleClick = () => {
     dispatch('select', folder.id)
@@ -40,6 +58,23 @@
     processing = false
   }
 
+  const handleDrop = async (event) => {
+    event.preventDefault()
+    const data = event.dataTransfer.getData('application/json')
+    const { id } = JSON.parse(data)
+
+    const resource = await resourceManager.getResource(id)
+
+    // Handle the dropped resource ID (e.g., add it to the folder)
+    await folderManager.addItemToFolder(folder.id, resource)
+    console.log(`Resource ${id} dropped into folder ${folder.name}`)
+  }
+
+  const handleDragOver = (event) => {
+    event.preventDefault()
+    // Optional: Add some visual feedback for dragging over
+  }
+
   onMount(() => {
     if (folder.id === $activeFolderId) {
       const inputElement = document.getElementById(`folder-input-${folder.id}`)
@@ -54,7 +89,12 @@
   }
 </script>
 
-<div class="folder-wrapper {processing && selected ? 'magic-in-progress' : ''}">
+<div
+  class="folder-wrapper {processing && selected ? 'magic-in-progress' : ''}"
+  on:dragover={handleDragOver}
+  on:drop={handleDrop}
+  aria-hidden="true"
+>
   <div class="folder {selected ? 'active' : ''}" on:click={handleClick} aria-hidden="true">
     <input
       id={`folder-input-${folder.id}`}
