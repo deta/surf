@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
+  import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
   import { folderManager } from '../../service/folderManager'
   import { ResourceManager } from '../../service/resources'
@@ -29,6 +30,7 @@
     trackHostnames: false
   })
 
+  const draggedOver = writable(false)
   const resourceManager = new ResourceManager(telemetry)
 
   const handleClick = () => {
@@ -68,11 +70,18 @@
     // Handle the dropped resource ID (e.g., add it to the folder)
     await folderManager.addItemToFolder(folder.id, resource)
     console.log(`Resource ${id} dropped into folder ${folder.name}`)
+
+    // Remove visual feedback class
+    draggedOver.set(false)
   }
 
   const handleDragOver = (event) => {
     event.preventDefault()
-    // Optional: Add some visual feedback for dragging over
+    draggedOver.set(true)
+  }
+
+  const handleDragLeave = (event) => {
+    draggedOver.set(false)
   }
 
   onMount(() => {
@@ -90,8 +99,11 @@
 </script>
 
 <div
-  class="folder-wrapper {processing && selected ? 'magic-in-progress' : ''}"
+  class="folder-wrapper {processing && selected ? 'magic-in-progress' : ''} {$draggedOver
+    ? 'draggedOver'
+    : ''}"
   on:dragover={handleDragOver}
+  on:dragleave={handleDragLeave}
   on:drop={handleDrop}
   aria-hidden="true"
 >
@@ -184,6 +196,11 @@
 
   .folder:hover .close {
     opacity: 1;
+  }
+
+  .draggedOver {
+    border-radius: 8px;
+    background-color: #a9a9a9 !important;
   }
 
   .magic-in-progress {

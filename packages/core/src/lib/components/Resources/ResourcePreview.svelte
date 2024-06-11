@@ -64,6 +64,7 @@
     const dragElement = e.target as HTMLElement
     const clone = dragElement.cloneNode(true) as HTMLElement
 
+    // Apply initial styles
     clone.style.position = 'absolute'
     clone.style.top = '-200px'
     clone.style.left = '-200px'
@@ -73,9 +74,24 @@
     clone.style.maxHeight = '200px'
     clone.style.opacity = '0.7'
     clone.style.pointerEvents = 'none'
+    clone.style.transform = 'scale(0.8)'
+    clone.style.transition = 'transform 0.2s ease-out'
 
     document.body.appendChild(clone)
     e.dataTransfer?.setDragImage(clone, clone.clientWidth / 2, clone.clientHeight / 2)
+
+    // Trigger reflow
+    clone.offsetHeight // Reading this property will trigger a reflow
+
+    // Apply the final transformation
+    clone.style.transform = 'scale(1)'
+
+    const handleDragEnd = () => {
+      clone.remove()
+      dragElement.removeEventListener('dragend', handleDragEnd)
+    }
+
+    clone.addEventListener('transitionend', handleDragEnd)
   }
 
   const handleLoad = () => {
@@ -321,5 +337,25 @@
     padding: 0 0.25rem 0 0.25rem;
     margin-bottom: 1.5rem;
     text-wrap: balance;
+  }
+
+  .dragging {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    max-width: 200px;
+    max-height: 200px;
+    opacity: 0.7;
+    pointer-events: none;
+    animation: initial-drag 0.2s ease-out;
+  }
+
+  @keyframes initial-drag {
+    from {
+      transform: scale(0.8);
+    }
+    to {
+      transform: scale(1);
+    }
   }
 </style>

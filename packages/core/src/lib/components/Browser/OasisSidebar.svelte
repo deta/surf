@@ -17,26 +17,20 @@
   export let resourceManager: any
   export let sidebarTab
 
-  onMount(async () => {
-    await loadFolders()
-    await loadResources()
-  })
-
-  const loadFolders = async () => {
-    try {
-      const loadedFolders = await folderManager.listFolders()
-      // Sort folders by creation date
-      loadedFolders.sort((a, b) => new Date(a.createdDate) - new Date(b.createdDate))
-      // Ensure "Everything" folder is always first
-      folders.set([{ id: 'all', name: 'Everything' }, ...loadedFolders])
-    } catch (error) {
-      log.error('Failed to load folders:', error)
+  const ensureEverythingFolder = (folderList) => {
+    const everythingFolder = { id: 'all', name: 'Everything' }
+    if (!folderList.find((folder) => folder.id === 'all')) {
+      return [everythingFolder, ...folderList]
     }
+    return folderList
   }
 
-  const loadResources = async () => {
+  onMount(async () => {
     try {
-      const loadedResources = await resourceManager.searchResources('', [
+      const loadedFolders = await folderManager.listFolders()
+      folders.set(ensureEverythingFolder(loadedFolders))
+
+      let loadedResources = await resourceManager.searchResources('', [
         ResourceManager.SearchTagDeleted(false)
       ])
       resources.set(loadedResources)
@@ -48,19 +42,14 @@
       }))
       reducedResources.set(reduced)
     } catch (error) {
-      log.error('Failed to load resources:', error)
+      log.error('Failed to load folders:', error)
     }
-  }
+  })
 
   const createNewFolder = async () => {
     try {
       const newFolder = await folderManager.createFolder('New Folder', 'userContext')
-      folders.update((currentFolders) => {
-        const updatedFolders = [...currentFolders, newFolder]
-        // Sort folders by creation date
-        updatedFolders.sort((a, b) => new Date(a.createdDate) - new Date(b.createdDate))
-        return updatedFolders
-      })
+      folders.update((currentFolders) => ensureEverythingFolder([...currentFolders, newFolder]))
       selectedFolder.set(newFolder.id)
       await tick()
 
@@ -76,7 +65,8 @@
   const renameFolder = async (id, newName) => {
     try {
       await folderManager.updateFolder(id, { name: newName })
-      await loadFolders()
+      const updatedFolders = await folderManager.listFolders()
+      folders.set(ensureEverythingFolder(updatedFolders))
     } catch (error) {
       log.error('Failed to rename folder:', error)
     }
@@ -85,7 +75,8 @@
   const deleteFolder = async (id) => {
     try {
       await folderManager.deleteFolder(id)
-      await loadFolders()
+      const updatedFolders = await folderManager.listFolders()
+      folders.set(ensureEverythingFolder(updatedFolders))
     } catch (error) {
       log.error('Failed to delete folder:', error)
     }
