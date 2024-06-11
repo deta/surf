@@ -399,6 +399,36 @@ pub struct AIChatSession {
     pub system_prompt: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Space {
+    #[serde(default = "random_uuid")]
+    pub id: String,
+    pub name: String,
+    #[serde(default = "current_time")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(default = "current_time")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SpaceEntry {
+    #[serde(default = "random_uuid")]
+    pub id: String,
+    pub space_id: String,
+    pub resource_id: String,
+    #[serde(default = "current_time")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(default = "current_time")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub manually_added: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CompositeSpace {
+    pub space: Space,
+    pub space_entries: Vec<SpaceEntry>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
