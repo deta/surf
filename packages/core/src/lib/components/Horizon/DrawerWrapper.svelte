@@ -113,6 +113,10 @@
 
   const folderContents = writable<(ResourceObject | undefined)[]>([])
 
+  const searchResult = writable<ResourceSearchResultItem[]>([])
+  const searchCache = new Map<string, ResourceSearchResultItem[]>()
+  let currentFolder = 'all'
+
   $: if ($viewState === 'default') {
     $droppedInputElements = []
     handleDropZoneClickOutside()
@@ -150,7 +154,6 @@
 
   let refreshContentLayout: () => Promise<void>
 
-  let searchResult = writable<ResourceSearchResultItem[]>([])
   let detectedInput = false
   let parsedInput: {
     url: string
@@ -169,12 +172,19 @@
     }
   }, 250)
 
-  const runSearch = async (query: string, tab: string | null) => {
-    if ($selectedFolder != 'all') {
+  const generateCacheKey = (folderId: string, query: string, tab: string | null) => {
+    return `${folderId}-${query}-${tab}`
+  }
+
+  const runSearch = async (query: string, tab: string | null, folderId: string = 'all') => {
+    const cacheKey = generateCacheKey(folderId, query, tab)
+    if (searchCache.has(cacheKey)) {
+      searchResult.set(searchCache.get(cacheKey))
+      log.debug('Using cached results for', query, 'in', tab, 'for folder', folderId)
       return
     }
 
-    log.debug('Searching for', query, 'in', tab)
+    log.debug('Searching for', query, 'in', tab, 'for folder', folderId)
 
     const tags = [] as SFFSResourceTag[]
 
@@ -216,7 +226,9 @@
     // this is needed so local results needed for the processing state are not removed when new results are added
     const previousLocalResults = get(searchResult).filter((r) => r.engine === 'local')
 
-    searchResult.set([...previousLocalResults, ...result])
+    const finalResult = [...previousLocalResults, ...result]
+    searchResult.set(finalResult)
+    searchCache.set(cacheKey, finalResult)
     console.log('free', $searchResult)
 
     await tick()
@@ -280,7 +292,8 @@
     if (folderId === 'all') {
       console.log('try to fetch everything', folderId)
       await tick()
-      await runSearch('', null)
+      currentFolder = folderId
+      await runSearch('', null, folderId)
       return
     }
 
@@ -779,42 +792,43 @@
   }
 
   let initialLoad = true
-  onMount(() => {
+  onMount(async () => {
     const unsubscribeQuery = searchQuery.subscribe(({ value, tab }) => {
       if (initialLoad) return
-      runSearch(value, tab)
+      runSearch(value, tab, currentFolder)
     })
 
     const unsubscribeCards = cards.subscribe((cards) => {
       if (initialLoad || !$isDrawerShown) return
       log.debug('Cards changed', cards)
-      runDebouncedSearch($searchQuery.value, $searchQuery.tab)
+      runDebouncedSearch($searchQuery.value, $searchQuery.tab, currentFolder)
     })
 
     const unsubscribeResources = resourcesInMemory.subscribe((resources) => {
       if (initialLoad) return
       log.debug('Resources changed', resources)
-      runDebouncedSearch($searchQuery.value, $searchQuery.tab)
+      runDebouncedSearch($searchQuery.value, $searchQuery.tab, currentFolder)
     })
 
     const unsubscribeSemanticDistanceThreshold = semanticDistanceThreshold.subscribe((value) => {
-      runSearch($searchQuery.value, $searchQuery.tab)
+      if (initialLoad) return
+      runSearch($searchQuery.value, $searchQuery.tab, currentFolder)
     })
 
     const unsubscribeProximityDistanceThreshold = proximityDistanceThreshold.subscribe((value) => {
-      runSearch($searchQuery.value, $searchQuery.tab)
+      if (initialLoad) return
+      runSearch($searchQuery.value, $searchQuery.tab, currentFolder)
     })
 
     const unsubscribeSemanticSearchEnabled = semanticSearchEnabled.subscribe((value) => {
-      runSearch($searchQuery.value, $searchQuery.tab)
+      if (initialLoad) return
+      runSearch($searchQuery.value, $searchQuery.tab, currentFolder)
     })
 
-    runSearch('', null)
+    await runSearch('', null, currentFolder)
 
-    setTimeout(() => {
-      log.debug('Initial load done')
-      initialLoad = false
-    }, 3000)
+    log.debug('Initial load done')
+    initialLoad = false
 
     return () => {
       if (unsubscribeQuery) {

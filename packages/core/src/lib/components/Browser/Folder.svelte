@@ -94,7 +94,7 @@
   })
 
   $: {
-    inputWidth = `${folderName.length}ch`
+    inputWidth = `${folderName.length + 3}ch`
   }
 </script>
 
