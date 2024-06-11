@@ -10,33 +10,33 @@
     height: 1.5rem;
     border-radius: 50%;
     background: radial-gradient(
-        97.58% 97.58% at 50% 10.89%,
+        95% 95% at 50% 10%,
         rgba(255, 255, 255, 0.5) 0%,
         rgba(0, 0, 0, 0.5) 100%
       ),
       linear-gradient(180deg, #76e0ff 0%, #4ec9fb 100%);
     background: radial-gradient(
-        97.58% 97.58% at 50% 10.89%,
+        97.6% 97.6% at 50% 10.9%,
         color(display-p3 1 1 1 / 0.5) 0%,
         color(display-p3 0 0 0 / 0.5) 100%
       ),
       linear-gradient(
         180deg,
-        color(display-p3 0.5667 0.87 1) 0%,
-        color(display-p3 0.4431 0.7765 0.9647) 100%
+        color(display-p3 0.567 0.87 1) 0%,
+        color(display-p3 0.443 0.777 0.965) 100%
       );
     background-blend-mode: soft-light, normal;
     box-shadow:
-      0px -0.312px 0.624px 0px rgba(0, 0, 0, 0.15),
-      0px -1.248px 1.872px 0px rgba(0, 0, 0, 0.75) inset,
-      0px 0.936px 0.624px 0px rgba(255, 255, 255, 0.3) inset,
-      0px -1.56px 12.48px 0px #000 inset,
-      0px -1.56px 24.96px 0px rgba(0, 0, 0, 0.25) inset;
+      0px -0.3px 0.6px 0px rgba(0, 0, 0, 0.15),
+      0px -1.25px 1.8px 0px rgba(0, 0, 0, 0.05) inset,
+      0px 0.9px 0.6px 0px rgba(255, 255, 255, 0.3) inset,
+      0px -1.5px 2px 0px rgba(255, 255, 255, 0.09) inset,
+      0px -1.5px 4px 0px rgba(0, 0, 0, 0.15) inset;
     box-shadow:
-      0px -0.312px 0.624px 0px color(display-p3 0 0 0 / 0.15),
-      0px -1.248px 1.872px 0px color(display-p3 0 0 0 / 0.75) inset,
-      0px 0.936px 0.624px 0px color(display-p3 1 1 1 / 0.3) inset,
-      0px -1.56px 12.48px 0px color(display-p3 0 0 0) inset,
-      0px -1.56px 24.96px 0px color(display-p3 0 0 0 / 0.25) inset;
+      0px -0.3px 0.6px 0px color(display-p3 0 0 0 / 0.15),
+      0px -1.25px 1.8px 0px color(display-p3 0 0 0 / 0.05) inset,
+      0px 0.9px 0.6px 0px color(display-p3 1 1 1 / 0.3) inset,
+      0px -1.5px 2px 0px color(display-p3 0 0 0/ 0.09) inset,
+      0px -1.5px 4px 0px color(display-p3 0 0 0 / 0.15) inset;
   }
 </style>

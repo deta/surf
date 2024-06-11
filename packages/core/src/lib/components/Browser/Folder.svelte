@@ -146,7 +146,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.5rem;
+    padding: 1rem 1.5rem 1rem 1rem;
     border-radius: 8px;
     cursor: pointer;
     gap: 10px;
