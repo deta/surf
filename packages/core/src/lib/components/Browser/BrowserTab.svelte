@@ -199,4 +199,5 @@
   on:detectedApp={handleDetectedApp}
   on:inlineTextReplace
   on:highlight
+  on:annotationClick
 />

@@ -31,23 +31,27 @@ import { TelemetryEventTypes, type ResourceDataAnnotation } from '@horizon/types
 
 export class ResourceTag {
   static download() {
-    return { name: 'savedWithAction', value: 'download' }
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'download' }
   }
 
   static dragBrowser() {
-    return { name: 'savedWithAction', value: 'drag/browser' }
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'drag/browser' }
   }
 
   static dragLocal() {
-    return { name: 'savedWithAction', value: 'drag/local' }
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'drag/local' }
   }
 
   static paste() {
-    return { name: 'savedWithAction', value: 'paste' }
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'paste' }
   }
 
   static import() {
-    return { name: 'savedWithAction', value: 'import' }
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'import' }
+  }
+
+  static canonicalURL(url: string) {
+    return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url }
   }
 }
 
@@ -421,6 +425,18 @@ export class ResourceManager {
     ) as ResourceAnnotation[]
   }
 
+  async getResourcesFromSourceURL(url: string) {
+    const rawResults = await this.sffs.searchResources(url, [
+      // ResourceManager.SearchTagCanonicalURL(canonicalURL),
+      // ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
+      ResourceManager.SearchTagDeleted(false)
+    ])
+
+    return rawResults.map((item) =>
+      this.findOrCreateResourceObject(item.resource)
+    ) as ResourceAnnotation[]
+  }
+
   async getRemoteResource(id: string, remoteURL: string) {
     const res = await fetch(`${remoteURL}/resources/${id}`)
     if (!res.ok) {
@@ -581,5 +597,9 @@ export class ResourceManager {
 
   static SearchTagHostname(hostname: string): SFFSResourceTag {
     return { name: 'horizonId', value: hostname, op: 'suffix' }
+  }
+
+  static SearchTagCanonicalURL(url: string): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url, op: 'eq' }
   }
 }

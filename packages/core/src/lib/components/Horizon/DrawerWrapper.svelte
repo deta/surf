@@ -289,6 +289,10 @@
       const data = await (resource as ResourceLink).getParsedData()
       window.open(data.url, '_blank')
       drawer.close()
+    } else if (resource.type === ResourceTypes.ANNOTATION) {
+      const url = resource.metadata?.sourceURI
+      window.open(url, '_blank')
+      drawer.close()
     } else {
       openResourceDetail(resource)
     }

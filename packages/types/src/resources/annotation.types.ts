@@ -1,8 +1,11 @@
+export type AnnotationType = 'highlight' | 'comment' | 'link'
+export type AnnotationAnchorType = 'range' | 'element' | 'area'
+
 export interface ResourceDataAnnotation {
-  type: 'highlight' | 'comment' | 'link'
+  type: AnnotationType
   data: AnnotationHighlightData | AnnotationCommentData | AnnotationLinkData
   anchor: {
-    type: 'range' | 'element' | 'area'
+    type: AnnotationAnchorType
     data: AnnotationRangeData | AnnotationElementData | AnnotationAreaData
   }
 }

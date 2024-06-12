@@ -15,7 +15,10 @@ import {
   RangeData,
   WebViewEventReceiveNames,
   WebViewEventSendNames,
-  WebViewSendEvents
+  WebViewReceiveEvents,
+  WebViewSendEvents,
+  WebviewAnnotationEventNames,
+  WebviewAnnotationEvents
 } from '@horizon/types'
 
 // let mouseDownX = 0
@@ -101,17 +104,19 @@ function handleTransformOutput(text: string) {
   selectionMenu.handleOutput(text)
 }
 
-function handleRestoreHighlight(data: RangeData) {
+function handleRestoreHighlight(
+  data: WebViewReceiveEvents[WebViewEventReceiveNames.RestoreHighlight]
+) {
   const selection = window.getSelection()
   if (!selection) {
     console.error('No selection found')
     return
   }
 
-  const range = constructRange(data)
+  const range = constructRange(data.range)
 
   console.log('Restoring highlight', range)
-  applyRangeHighlight(range)
+  applyRangeHighlight(data.id, range)
 }
 
 window.addEventListener('DOMContentLoaded', async (_) => {
@@ -329,6 +334,16 @@ window.addEventListener('DOMContentLoaded', async (_) => {
       div.parentNode?.removeChild(div)
     }
   })
+
+  window.addEventListener(
+    WebviewAnnotationEventNames.Click as any,
+    (e: CustomEvent<WebviewAnnotationEvents[WebviewAnnotationEventNames.Click]>) => {
+      const { id, type } = e.detail
+      console.log('Clicked on annotation', id, type)
+
+      sendPageEvent(WebViewEventSendNames.AnnotationClick, { id, type })
+    }
+  )
 
   document.addEventListener('dragend', () => {
     const div = document.getElementById('horizonTextDragHandle')

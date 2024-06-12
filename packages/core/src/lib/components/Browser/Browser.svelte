@@ -12,7 +12,7 @@
   import { copyToClipboard } from '../../utils/clipboard'
   import { writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
-  import { ResourceManager } from '../../service/resources'
+  import { ResourceManager, ResourceTag } from '../../service/resources'
   import { HorizonsManager } from '../../service/horizon'
   import { API } from '../../service/api'
   import BrowserTab, { type NewTabEvent } from './BrowserTab.svelte'
@@ -798,7 +798,7 @@
       if (annotation.type === 'highlight' && annotation.anchor.type === 'range') {
         const anchorData = annotation.anchor.data as AnnotationRangeData
         log.debug('highlight range', anchorData)
-        browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, anchorData)
+        browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, { id: matchingAnnotationResource.id, range: anchorData })
       }
     })
 
@@ -1123,9 +1123,6 @@
     const { range, url } = e.detail
     log.debug('webview highlight', url, range)
 
-    log.debug('highlighting text in webview')
-    browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, range)
-
     const annotationResource = await resourceManager.createResourceAnnotation({
       type: 'highlight',
       anchor: {
@@ -1133,11 +1130,25 @@
         data: range
       },
       data: {}
-    }, {
-      sourceURI: url,
-    })
+    }, { sourceURI: url }, [
+      ResourceTag.canonicalURL(url),
+    ])
 
     log.debug('created annotation resource', annotationResource)
+
+    log.debug('highlighting text in webview')
+    browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, { id: annotationResource.id, range: range })
+  }
+
+  const handleWebviewAnnotationClick = async (
+    e: CustomEvent<WebViewWrapperEvents['annotationClick']>,
+    tabId: string
+  ) => {
+    const annotationId = e.detail.id
+
+    log.debug('webview annotation click', annotationId)
+
+    drawer.openItem(annotationId)
   }
 
   onMount(async () => {
@@ -1502,6 +1513,7 @@
             on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
             on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, tab.id)}
             on:highlight={(e) => handleWebviewHighlight(e, tab.id)}
+            on:annotationClick={(e) => handleWebviewAnnotationClick(e, tab.id)}
           />
         {:else if tab.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
@@ -1551,7 +1563,8 @@
             on:transform={handleWebviewTransform}
             on:appDetection={(e) => handleWebviewAppDetection(e, $activeTab)}
             on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, $activeTab.id)}
-            on:highlight={(e) => handleWebviewHighlight(e, tab.id)}
+            on:highlight={(e) => handleWebviewHighlight(e, $activeTab.id)}
+            on:annotationClick={(e) => handleWebviewAnnotationClick(e, $activeTab.id)}
           />
         {:else if $activeTab?.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === $activeTab?.horizonId)}

@@ -1,4 +1,9 @@
-import { AnnotationRangeData } from '@horizon/types'
+import {
+  AnnotationRangeData,
+  AnnotationType,
+  WebviewAnnotationEventNames,
+  WebviewAnnotationEvents
+} from '@horizon/types'
 
 import { getXPath } from './xpath'
 
@@ -105,14 +110,42 @@ export function wrapRangeInNode(range: Range, wrapperNode: Node) {
     const newNode = (textNode as Text).splitText(startOffset)
     newNode.splitText(length)
     const highlightNode = wrapperNode.cloneNode()
+
+    highlightNode.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      const id = (highlightNode as Element).getAttribute('id')
+      const type = (highlightNode as Element).getAttribute('data-annotation-type') as AnnotationType
+      console.log('clicked on highlight', highlightNode)
+      window.dispatchEvent(
+        new CustomEvent(WebviewAnnotationEventNames.Click, {
+          detail: {
+            id: id,
+            type: type
+          } as WebviewAnnotationEvents[WebviewAnnotationEventNames.Click]
+        })
+      )
+    })
+
     textNode.parentNode?.insertBefore(highlightNode, newNode)
     highlightNode.appendChild(newNode)
   })
 }
 
 // applies a highlight to the range while making sure the dom structure is not broken
-export const applyRangeHighlight = (range: Range) => {
-  const elem = document.createElement('deta-highlight')
-  elem.style.backgroundColor = 'yellow'
+export const applyRangeHighlight = (id: string, range: Range) => {
+  const elem = document.createElement('deta-annotation')
+
+  // set attributes for the element so we can identify it later
+  elem.setAttribute('id', id)
+  elem.setAttribute('data-annotation-type', 'highlight')
+
+  // styling
+  elem.style.backgroundColor = '#feff90'
+  elem.style.cursor = 'pointer'
+  elem.classList.add('deta-annotation')
+  elem.classList.add('deta-annotation-highlight')
+
   wrapRangeInNode(range, elem)
 }
