@@ -1,5 +1,5 @@
 {
-  "name": "horizon",
+  "name": "desktop",
   "productName": "Horizon",
   "version": "0.0.1",
   "main": "./out/main/index.js",
@@ -25,6 +25,7 @@
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
     "@horizon/backend": "*",
+    "@horizon/ppx-backend": "*",
     "@sentry/svelte": "^7.99.0",
     "cross-fetch": "^4.0.0",
     "electron-updater": "^6.1.7",

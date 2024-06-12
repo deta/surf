@@ -70,7 +70,7 @@ jobs:
 
       - name: Build
         run: |
-          yarn build:horizon:mac:arm
+          yarn build:desktop:mac:arm
         env:
           # from secrets
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

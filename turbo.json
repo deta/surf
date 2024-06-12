@@ -1,7 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
-  "pipeline": {
+  "tasks": {
     "@horizon/backend#build": {
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
@@ -11,39 +11,44 @@
       "outputs": [".dist/**", "index.node"]
     },
     "@horizon/ppx-backend#dev": {
+      "cache": false,
       "dependsOn": []
     },
-    "horizon#build:mwl": {
+    "desktop#build:mwl": {
       "dependsOn": ["^build"],
-      "outputs": [".dist/**"]
+      "outputs": [".dist/**", ".out/**"]
     },
-    "horizon#build:mac": {
+    "desktop#build:mac": {
       "dependsOn": ["^build"],
-      "outputs": [".dist/**"]
+      "outputs": [".dist/**", ".out/**"]
     },
-    "horizon#build:mac:x64": {
+    "desktop#build:mac:x64": {
       "dependsOn": ["^build"],
-      "outputs": [".dist/**"]
+      "outputs": [".dist/**", ".out/**"]
     },
-    "horizon#build:mac:arm": {
+    "desktop#build:mac:arm": {
       "dependsOn": ["^build"],
-      "outputs": [".dist/**"]
+      "outputs": [".dist/**", ".out/**"]
     },
-    "horizon#build:win:x64": {
+    "desktop#build:win:x64": {
       "dependsOn": ["^build"],
-      "outputs": [".dist/**"]
+      "outputs": [".dist/**", ".out/**"]
     },
-    "horizon#build:linux": {
+    "desktop#build:linux": {
       "dependsOn": ["^build"],
-      "outputs": [".dist/**"]
+      "outputs": [".dist/**", ".out/**"]
     },
     "@horizon/tela#build": {
       "outputs": [".dist/**"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
+    },
+    "@horizon/cmdk-sv#build": {
+      "outputs": [".dist/**"],
+      "outputLogs": "new-only"
     },
     "@horizon/types#build": {
       "outputs": [".build/**"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "build": {
       "dependsOn": ["^build"],
@@ -52,11 +57,11 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
-    "horizon#dev": {
-      "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev"]
+    "desktop#dev": {
+      "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev", "@horizon/cmdk-sv#build"]
     },
     "dev": {
-      "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev"],
+      "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev", "@horizon/cmdk-sv#build"],
       "cache": false,
       "persistent": true
     }

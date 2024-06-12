@@ -56,7 +56,7 @@ jobs:
 
       - name: Build
         run: |
-          yarn build:horizon:linux
+          yarn build:desktop:linux
         env:
           # from secrets
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

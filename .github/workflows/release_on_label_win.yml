@@ -61,7 +61,7 @@ jobs:
 
       - name: Build
         run: |
-          yarn build:horizon:win
+          yarn build:desktop:win
         env:
           # from secrets
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

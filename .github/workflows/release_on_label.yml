@@ -63,9 +63,9 @@ jobs:
 
       - name: Build
         run: |
-          yarn build:horizon:linux
-          yarn build:horizon:mac
-          yarn build:horizon:win
+          yarn build:desktop:linux
+          yarn build:desktop:mac
+          yarn build:desktop:win
         env:
           # from secrets
           APPLE_ID: ${{ secrets.APPLE_ID }}

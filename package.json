@@ -2,17 +2,17 @@
   "name": "horizon",
   "private": true,
   "scripts": {
-    "dev": "turbo dev",
-    "dev:horizon": "npm run dev -- --filter=horizon",
+    "dev": "turbo run dev --filter=desktop --filter=@horizon/ppx-backend",
+    "dev:all": "turbo dev",
     "build": "turbo build",
-    "build:packages": "turbo build --filter=!horizon",
-    "build:horizon": "yarn workspace horizon build",
-    "build:horizon:mwl": "yarn turbo run horizon#build:mwl",
-    "build:horizon:mac": "yarn turbo run horizon#build:mac",
-    "build:horizon:mac:x64": "yarn turbo run horizon#build:mac:x64",
-    "build:horizon:mac:arm": "yarn turbo run horizon#build:mac:arm",
-    "build:horizon:win:x64": "yarn turbo run horizon#build:win:x64",
-    "build:horizon:linux": "yarn turbo run horizon#build:linux",
+    "build:packages": "turbo build --filter=!desktop",
+    "build:desktop": "yarn workspace desktop build",
+    "build:desktop:mwl": "yarn turbo run desktop#build:mwl",
+    "build:desktop:mac": "yarn turbo run desktop#build:mac",
+    "build:desktop:mac:x64": "yarn turbo run desktop#build:mac:x64",
+    "build:desktop:mac:arm": "yarn turbo run desktop#build:mac:arm",
+    "build:desktop:win:x64": "yarn turbo run desktop#build:win:x64",
+    "build:desktop:linux": "yarn turbo run desktop#build:linux",
     "build:backend": "yarn turbo run @horizon/backend#build",
     "build:tela": "yarn workspace @horizon/tela build",
     "build:cmdk": "yarn workspace @horizon/cmdk-sv",
@@ -29,12 +29,12 @@
     "postinstall-postinstall": "^2.1.0",
     "prettier": "^3.1.1",
     "prettier-plugin-svelte": "^3.1.2",
-    "turbo": "^1.0.0"
+    "turbo": "^2.0.3"
   },
   "engines": {
     "node": ">=18"
   },
-  "packageManager": "yarn@1.22.21",
+  "packageManager": "yarn@1.22.22",
   "workspaces": {
     "packages": [
       "apps/*",

@@ -88,7 +88,7 @@ jobs:
       - name: Install dependencies
         run: |
           echo "installing horizon & external deps"
-          yarn workspace horizon install --frozen-lockfile
+          yarn workspace desktop install --frozen-lockfile
           echo "installing tela"
           yarn workspace @horizon/tela install
           yarn workspace @horizon/tela build
@@ -107,9 +107,9 @@ jobs:
       - name: Build for ${{ matrix.architecture }}
         run: |
           if [ "${{ matrix.architecture }}" == "arm" ]; then
-            yarn build:horizon:mac:arm
+            yarn build:desktop:mac:arm
           else
-            yarn build:horizon:mac:x64
+            yarn build:desktop:mac:x64
           fi
         env:
           HUSKY: 0
