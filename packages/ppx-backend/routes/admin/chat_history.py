@@ -54,7 +54,6 @@ def split_source_data(ai_message):
     if len(parts) <= 1:
         return ai_message, None
     clean_sources = parts[0] + "</sources>"
-    print("clean_sources", clean_sources)
     sources_dict = xmltodict.parse(clean_sources)
     return parts[1], sources_dict.get("sources", None)
 

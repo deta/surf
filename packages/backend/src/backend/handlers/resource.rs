@@ -63,7 +63,7 @@ impl Worker {
                 .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
             match resource_type.as_str() {
-                "application/vnd.space.lrticle" | "application/vnd.space.link" => {
+                "application/vnd.space.article" | "application/vnd.space.link" => {
                     self.aiqueue_tx
                         .send(AIMessage::GenerateWebpageEmbeddings(metadata.clone()))
                         .map_err(|e| BackendError::GenericError(e.to_string()))?;
