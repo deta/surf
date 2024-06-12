@@ -113,6 +113,7 @@
       app.appResourceIdentifier === detectedApp.appResourceIdentifier
     ) {
       log.debug('no change in app or resource', detectedApp)
+      dispatch('appDetection', detectedApp) // TODO: differentiate between fresh detection and no change
       return
     }
 
@@ -179,4 +180,6 @@
   on:transform
   on:detectedApp={handleDetectedApp}
   on:inlineTextReplace
+  on:highlight
+  on:annotationClick
 />

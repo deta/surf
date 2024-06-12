@@ -15,6 +15,8 @@
     bookmark: WebViewSendEvents[WebViewEventSendNames.Bookmark]
     transform: WebViewSendEvents[WebViewEventSendNames.Transform]
     inlineTextReplace: WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]
+    highlight: WebViewSendEvents[WebViewEventSendNames.Highlight]
+    annotationClick: WebViewSendEvents[WebViewEventSendNames.AnnotationClick]
   }
 </script>
 
@@ -187,6 +189,15 @@
           dispatch(
             'inlineTextReplace',
             eventData as WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]
+          )
+          break
+        case WebViewEventSendNames.Highlight:
+          dispatch('highlight', eventData as WebViewSendEvents[WebViewEventSendNames.Highlight])
+          break
+        case WebViewEventSendNames.AnnotationClick:
+          dispatch(
+            'annotationClick',
+            eventData as WebViewSendEvents[WebViewEventSendNames.AnnotationClick]
           )
           break
         // case 'detected-resource':

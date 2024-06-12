@@ -1,11 +1,17 @@
-import type { DetectedResource, DetectedWebApp } from './resources.types'
+import type {
+  AnnotationRangeData,
+  AnnotationType,
+  DetectedResource,
+  DetectedWebApp
+} from './resources.types'
 
 export enum WebViewEventReceiveNames {
   GetSelection = 'get_selection',
   GetResource = 'get_resource',
   GetApp = 'get_app',
   RunAction = 'run_action',
-  TransformationOutput = 'transformation_output'
+  TransformationOutput = 'transformation_output',
+  RestoreHighlight = 'restore_highlight'
 }
 
 export enum WebViewEventSendNames {
@@ -20,7 +26,9 @@ export enum WebViewEventSendNames {
   Bookmark = 'bookmark',
   Transform = 'transform',
   Selection = 'selection',
-  InlineTextReplace = 'inline_text_replace'
+  Highlight = 'highlight',
+  InlineTextReplace = 'inline_text_replace',
+  AnnotationClick = 'annotation_click'
 }
 
 export type WebViewEventTransformationOutput = {
@@ -60,6 +68,10 @@ export type WebViewEventWheel = {
 
 export type WebViewEventBookmark = { text?: string; url: string }
 
+export type WebViewEventHighlight = { range: AnnotationRangeData; url: string }
+
+export type WebViewEventRestoreHighlight = { id: string; range: AnnotationRangeData }
+
 export type WebViewEventTransform = {
   text: string
   query?: string
@@ -76,12 +88,18 @@ export type WebViewEventInlineTextReplace = {
   content: string
 }
 
+export type WebViewEventAnnotationClick = {
+  id: string
+  type: AnnotationType
+}
+
 export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.GetSelection]: void
   [WebViewEventReceiveNames.GetResource]: void
   [WebViewEventReceiveNames.GetApp]: void
   [WebViewEventReceiveNames.RunAction]: WebViewEventRunAction
   [WebViewEventReceiveNames.TransformationOutput]: WebViewEventTransformationOutput
+  [WebViewEventReceiveNames.RestoreHighlight]: WebViewEventRestoreHighlight
 }
 
 export type WebViewSendEvents = {
@@ -96,5 +114,15 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.Bookmark]: WebViewEventBookmark
   [WebViewEventSendNames.Transform]: WebViewEventTransform
   [WebViewEventSendNames.Selection]: string
+  [WebViewEventSendNames.Highlight]: WebViewEventHighlight
   [WebViewEventSendNames.InlineTextReplace]: WebViewEventInlineTextReplace
+  [WebViewEventSendNames.AnnotationClick]: WebViewEventAnnotationClick
+}
+
+export enum WebviewAnnotationEventNames {
+  Click = 'deta_annotation_click'
+}
+
+export type WebviewAnnotationEvents = {
+  [WebviewAnnotationEventNames.Click]: WebViewEventAnnotationClick
 }

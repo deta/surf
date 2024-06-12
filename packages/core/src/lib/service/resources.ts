@@ -20,7 +20,7 @@ import {
   type SFFSSearchProximityParameters
 } from '../types'
 import type { Telemetry } from './telemetry'
-import { TelemetryEventTypes } from '@horizon/types'
+import { TelemetryEventTypes, type ResourceDataAnnotation } from '@horizon/types'
 
 /*
  TODO:
@@ -31,23 +31,27 @@ import { TelemetryEventTypes } from '@horizon/types'
 
 export class ResourceTag {
   static download() {
-    return { name: 'savedWithAction', value: 'download' }
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'download' }
   }
 
   static dragBrowser() {
-    return { name: 'savedWithAction', value: 'drag/browser' }
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'drag/browser' }
   }
 
   static dragLocal() {
-    return { name: 'savedWithAction', value: 'drag/local' }
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'drag/local' }
   }
 
   static paste() {
-    return { name: 'savedWithAction', value: 'paste' }
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'paste' }
   }
 
   static import() {
-    return { name: 'savedWithAction', value: 'import' }
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'import' }
+  }
+
+  static canonicalURL(url: string) {
+    return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url }
   }
 }
 
@@ -262,6 +266,7 @@ export class ResourceLink extends ResourceJSON<ResourceDataLink> {}
 export class ResourceChatMessage extends ResourceJSON<ResourceDataChatMessage> {}
 export class ResourceChatThread extends ResourceJSON<ResourceDataChatThread> {}
 export class ResourceDocument extends ResourceJSON<ResourceDataDocument> {}
+export class ResourceAnnotation extends ResourceJSON<ResourceDataAnnotation> {}
 
 export type ResourceObject =
   | Resource
@@ -271,6 +276,7 @@ export type ResourceObject =
   | ResourceChatMessage
   | ResourceChatThread
   | ResourceNote
+  | ResourceAnnotation
 
 export type ResourceSearchResultItem = {
   id: string // resource id
@@ -308,6 +314,8 @@ export class ResourceManager {
       return new ResourceChatThread(this.sffs, data)
     } else if (data.type.startsWith(ResourceTypes.DOCUMENT)) {
       return new ResourceDocument(this.sffs, data)
+    } else if (data.type.startsWith(ResourceTypes.ANNOTATION)) {
+      return new ResourceAnnotation(this.sffs, data)
     } else {
       return new Resource(this.sffs, data)
     }
@@ -404,6 +412,29 @@ export class ResourceManager {
     )
 
     return results
+  }
+
+  async getResourceAnnotations() {
+    const rawResults = await this.sffs.searchResources('', [
+      ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
+      ResourceManager.SearchTagDeleted(false)
+    ])
+
+    return rawResults.map((item) =>
+      this.findOrCreateResourceObject(item.resource)
+    ) as ResourceAnnotation[]
+  }
+
+  async getResourcesFromSourceURL(url: string) {
+    const rawResults = await this.sffs.searchResources(url, [
+      // ResourceManager.SearchTagCanonicalURL(canonicalURL),
+      // ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
+      ResourceManager.SearchTagDeleted(false)
+    ])
+
+    return rawResults.map((item) =>
+      this.findOrCreateResourceObject(item.resource)
+    ) as ResourceAnnotation[]
   }
 
   async getRemoteResource(id: string, remoteURL: string) {
@@ -526,6 +557,16 @@ export class ResourceManager {
     return this.createResource(ResourceTypes.LINK, blob, metadata, tags)
   }
 
+  async createResourceAnnotation(
+    data: ResourceDataAnnotation,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
+    const blobData = JSON.stringify(data)
+    const blob = new Blob([blobData], { type: ResourceTypes.ANNOTATION })
+    return this.createResource(ResourceTypes.ANNOTATION, blob, metadata, tags)
+  }
+
   async createResourceOther(
     blob: Blob,
     metadata?: Partial<SFFSResourceMetadata>,
@@ -556,5 +597,9 @@ export class ResourceManager {
 
   static SearchTagHostname(hostname: string): SFFSResourceTag {
     return { name: 'horizonId', value: hostname, op: 'suffix' }
+  }
+
+  static SearchTagCanonicalURL(url: string): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url, op: 'eq' }
   }
 }

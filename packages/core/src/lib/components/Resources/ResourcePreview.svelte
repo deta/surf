@@ -7,6 +7,7 @@
   import LinkPreview from '../Cards/Link/LinkPreview.svelte'
   import type {
     Resource,
+    ResourceAnnotation,
     ResourceArticle,
     ResourceChatMessage,
     ResourceChatThread,
@@ -27,6 +28,7 @@
   import ChatThreadPreview from '../Cards/ChatThread/ChatThreadPreview.svelte'
   import YoutubePreview from '../Cards/Post/YoutubePreview.svelte'
   import { useDrawer } from '@horizon/drawer'
+  import AnnotationPreview from '../Cards/Annotation/AnnotationPreview.svelte'
 
   export let resource: Resource
   export let isSelected: boolean
@@ -52,6 +54,7 @@
   $: chatMessageResource = resource as ResourceChatMessage
   $: chatThreadResource = resource as ResourceChatThread
   $: documentResource = resource as ResourceDocument
+  $: annotationResource = resource as ResourceAnnotation
 
   let data: ResourceData | null = null
   const handleData = (e: CustomEvent<ResourceData>) => {
@@ -157,6 +160,13 @@
         on:data={handleData}
         on:load={handleLoad}
       />
+    {:else if resource.type.startsWith(ResourceTypes.ANNOTATION)}
+      <AnnotationPreview
+        resource={annotationResource}
+        type={resource.type}
+        on:data={handleData}
+        on:load={handleLoad}
+      />
     {:else}
       <FilePreview {resource} on:load={handleLoad} />
     {/if}
@@ -182,8 +192,11 @@
         <!-- <Icon name="link" size="20px" />
         <div class="label">Thread</div> -->
       {:else if resource.type.startsWith(ResourceTypes.DOCUMENT)}
-        <!-- <Icon name="docs" size="20px" />
-        <div class="label">Document</div> -->
+        <Icon name="docs" size="20px" />
+        <div class="">Document</div>
+      {:else if resource.type.startsWith(ResourceTypes.ANNOTATION)}
+        <Icon name="marker" size="20px" />
+        <div class="">Annotation</div>
       {:else}
         <!-- <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
         <div class="label">{getFileType(resource.type) ?? 'File'}</div> -->
