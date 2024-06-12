@@ -19,7 +19,7 @@
   import Horizon from '../Horizon/Horizon.svelte'
   import BrowserHomescreen from './BrowserHomescreen.svelte'
   import OasisSidebar from './OasisSidebar.svelte'
-  import Tab from './Tab.svelte'
+  import TabItem from './Tab.svelte'
 
   import { selectedFolder } from '../../stores/oasis'
 
@@ -308,12 +308,15 @@
       log.error('No active tab')
       return
     }
+    await deleteTab($activeTab.id)
 
+    /*
     if ($activeTab.archived) {
       await deleteTab($activeTab.id)
     } else {
       await archiveTab($activeTab.id)
     }
+    */
 
     // if ($activeTab.type === 'page') {
     //   const currentEntry = historyEntriesManager.getEntry(
@@ -1114,9 +1117,11 @@
 
     updateMagicPage($activeTabId, { showSidebar: !$activeTabMagic.showSidebar })
 
+    /*
     if ($activeTabMagic.responses.length === 0 && !$activeTabMagic.running) {
       summarizePage($activeTabMagic)
     }
+    */
   }
 
   const saveTextFromPage = async (text: string) => {
@@ -1226,6 +1231,7 @@
       >
         <Icon name="list" />
       </button>
+      <!--
       <button
         on:click={() => ($sidebarTab = 'archive')}
         class:active={$sidebarTab === 'archive'}
@@ -1239,6 +1245,7 @@
       >
         <Icon name="archive" />
       </button>
+      -->
       <button
         on:click={() => {
           $sidebarTab = 'oasis'
@@ -1261,7 +1268,7 @@
       <div class="tabs">
         {#each $tabsInView as tab (tab.id)}
           {#if tab.type === 'chat'}
-            <Tab
+            <TabItem
               {tab}
               {activeTabId}
               {archiveTab}
@@ -1276,7 +1283,7 @@
 
         {#each $tabsInView as tab (tab.id)}
           {#if tab.type !== 'chat'}
-            <Tab
+            <TabItem
               {tab}
               {activeTabId}
               {archiveTab}

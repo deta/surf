@@ -23,13 +23,14 @@ pub struct DataSourceMetadata {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CitationSourceMetadata {
     pub timestamp: Option<String>,
+    pub url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CitationSource {
     pub id: String,
     pub resource_id: String,
-    pub content: String,
+    pub content: Option<String>,
     pub metadata: Option<CitationSourceMetadata>,
 }
 
@@ -115,6 +116,7 @@ impl AI {
     }
 
     pub fn add_data_source(&self, data_source: &DataSource) -> Result<(), reqwest::Error> {
+        dbg!(data_source);
         let url = format!("{}/admin/data_sources", &self.api_endpoint);
 
         let mut headers = reqwest::header::HeaderMap::new();

@@ -48,7 +48,11 @@ async def generate_sources_str(contexts):
         url = metadata.get('url', '').removesuffix('/')
         # TODO: why is this local?
         if url == 'local': url = ''
-        content = context.get('context', '')
+
+        # TODO: we don't use the content from the source at the moment
+        # later might be useful to add it to the sources
+        # content = context.get('context', '')
+        content = ""
 
         sources_str += (
             f"\t<source>\n"

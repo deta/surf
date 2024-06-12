@@ -8,11 +8,12 @@ from utils.embedchain import send_message
 from utils.embedchain import get_embedding
 from utils.sffs import get_resource
 from utils.embedchain import get_resources
+from utils.mocks import mock_stream
 
 router = APIRouter()
 
 DEFAULT_MODEL = "gpt-4o"
-DB_PATH = os.getenv("DB_PATH")
+DB_PATH = os.getenv("DB_PATH", "")
 
 @router.get("/api/v1/chat")
 async def handle_chat(
@@ -20,13 +21,17 @@ async def handle_chat(
     session_id: str = Query(None),
     number_documents: int = 5,
     system_prompt: str = Query(None),
+    mock: bool = False,
     resource_ids: Union[str, None] = None
 ):
     """
     Handles a chat request to the Embedchain app.
     Accepts 'query' and 'session_id' as query parameters.
     """
-    resource_ids = resource_ids.split(',') if resource_ids != None else None
+    if mock:
+        return StreamingResponse(mock_stream())
+    resource_ids_list = resource_ids.split(',') if resource_ids != None else None
+
     generator = send_message(
         query, 
         session_id, 
@@ -35,7 +40,7 @@ async def handle_chat(
         True,
         True,
         DEFAULT_MODEL,
-        resource_ids,
+        resource_ids_list,
     )
     return StreamingResponse(generator)
 
@@ -56,8 +61,8 @@ async def handle_get_resource(resource_id):
 
 @router.get('/api/v1/resources')
 async def handle_get_resources(query: str, resource_ids: Union[str, None] = None):
-    resource_ids = resource_ids.split(',') if resource_ids != None else None
-    return set(await get_resources(query, resource_ids))
+    resource_ids_list = resource_ids.split(',') if resource_ids != None else None
+    return set(await get_resources(query, resource_ids_list))
 
 @router.get("/")
 async def root():

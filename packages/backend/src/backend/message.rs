@@ -17,7 +17,7 @@ pub enum ProcessorMessage {
 
 pub enum AIMessage {
     GenerateMetadataEmbeddings(ResourceMetadata),
-    GenerateTextContentEmbeddings(ResourceTextContent),
+    GenerateTextContentEmbeddings(ResourceTextContent, String),
     DescribeImage(CompositeResource),
     GenerateWebpageEmbeddings(ResourceMetadata),
     GenerateYoutubeVideoEmbeddings(ResourceMetadata),
@@ -118,6 +118,7 @@ pub enum ResourceMessage {
     UpdateResourceMetadata(ResourceMetadata),
     UpsertResourceTextContent {
         resource_id: String,
+        resource_type: String,
         content: String,
     },
     InsertEmbeddings {

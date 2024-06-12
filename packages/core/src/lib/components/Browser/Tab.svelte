@@ -18,7 +18,8 @@
   }
 
   const handleArchive = () => {
-    tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)
+    deleteTab(tab.id)
+    //tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)
   }
 
   const handleUnarchive = () => {
@@ -69,7 +70,8 @@
     on:click|stopPropagation={handleArchive}
     class="close"
     use:tooltip={{
-      content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
+      //content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
+      content: 'Delete this tab (⌘ + W)',
       action: 'hover',
       position: 'left',
       animation: 'fade',

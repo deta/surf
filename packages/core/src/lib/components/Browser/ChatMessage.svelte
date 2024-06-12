@@ -1,7 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
+  import type { AIChatMessageSource } from './types'
 
   export let content: string
+  export let sources: AIChatMessageSource[] | undefined
 
   const dispatch = createEventDispatcher<{
     citationClick: string
@@ -12,11 +14,22 @@
   let elem: HTMLDivElement
 
   $: {
-    renderContent(content)
+    renderContent(content, sources)
+  }
+
+  const renderIDFromCitationID = (citationID: string | null, sources?: AIChatMessageSource[]) => {
+    if (!citationID || !sources) return ''
+
+    for (const source of sources) {
+      if (source.all_chunk_ids.includes(citationID)) {
+        return source.render_id
+      }
+    }
+    return ''
   }
 
   // TODO: come up with a better way to render these things as this is not very performant when the content gets streamed in
-  const renderContent = (content: string) => {
+  const renderContent = (content: string, sources?: AIChatMessageSource[]) => {
     if (!elem || !content) return
 
     elem.innerHTML = ''
@@ -30,20 +43,42 @@
     })
 
     const citations = tempDiv.querySelectorAll('citation')
+    let seen_citations = new Set<string>()
+
     citations.forEach((citation) => {
+      const citationID = citation.textContent || ''
+      const renderID = renderIDFromCitationID(citation.textContent, sources)
+      if (!renderID) {
+        citation.remove()
+        return
+      }
+
+      // remove consecutive citations with the same render id
+      let previousElementSibling = citation?.previousElementSibling
+      if (
+        previousElementSibling &&
+        previousElementSibling.tagName === 'CITATION' &&
+        previousElementSibling.textContent === renderID
+      ) {
+        citation.remove()
+        return
+      }
+
+      citation.textContent = renderID
+      seen_citations.add(renderID)
       citation.addEventListener('click', () => {
         if (!citation.textContent) return
-        dispatch('citationClick', citation.textContent)
+        dispatch('citationClick', citationID)
       })
 
       citation.addEventListener('mouseenter', () => {
         if (!citation.textContent) return
-        dispatch('citationHoverStart', citation.textContent)
+        dispatch('citationHoverStart', citationID)
       })
 
       citation.addEventListener('mouseleave', () => {
         if (!citation.textContent) return
-        dispatch('citationHoverEnd', citation.textContent)
+        dispatch('citationHoverEnd', citationID)
       })
     })
 

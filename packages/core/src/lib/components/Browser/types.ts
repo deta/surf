@@ -61,6 +61,8 @@ export type AIChatMessageParsed = {
 
 export type AIChatMessageSource = {
   id: string
+  all_chunk_ids: string[]
+  render_id: string
   resource_id: string
   content: string
   metadata?: {

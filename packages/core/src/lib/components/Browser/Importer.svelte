@@ -43,10 +43,11 @@
   const fetchDone = writable(false)
   const dryRun = writable(true)
   const processBatchSize = writable(PROCESS_BATCH_SIZE)
-  const tab = writable<'webcrate' | 'twitter' | 'csv' | 'youtube'>('twitter')
+  const tab = writable<'webcrate' | 'twitter' | 'csv' | 'browser' | 'youtube'>('twitter')
 
-  let showDebug = false
+  let showDebug = true
   let csvData = ''
+  let htmlBookmarksData = ''
   let youtubePlaylistUrl = ''
   let batchFetcher: BatchFetcher<DetectedResource>
 
@@ -117,6 +118,26 @@
       fetchDone.set(true)
 
       queue.update((prev) => [...prev, ...resources])
+    } else if ($tab === 'browser') {
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(htmlBookmarksData, 'text/html')
+      const links = Array.from(doc.querySelectorAll('a'))
+      const data = links.map((link) => ({
+        url: link.href,
+        title: link.innerText
+      }))
+
+      const resources = data.map((item) => ({
+        type: ResourceTypes.LINK,
+        data: {
+          url: item.url,
+          title: item.title
+        } as any as ResourceDataLink
+      }))
+
+      fetchDone.set(true)
+
+      queue.update((prev) => [...prev, ...resources])
     } else {
       log.error('Unknown tab', $tab)
     }
@@ -139,7 +160,7 @@
         if (!$dryRun) {
           const resource = await resourceManager.createResourceOther(
             new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-            { sourceURI: `https://${webcrateDomain}/link/${link.source_id}` },
+            { sourceURI: link.url },
             [ResourceTag.import()]
           )
 
@@ -267,6 +288,9 @@
         <button on:click={() => tab.set('youtube')} class="tab" class:active={$tab === 'youtube'}
           >YouTube</button
         >
+        <button on:click={() => tab.set('browser')} class="tab" class:active={$tab === 'browser'}
+          >Firefox/Chrome</button
+        >
       </div>
     </div>
 
@@ -335,6 +359,16 @@
         </div>
 
         <textarea placeholder="csv data" bind:value={csvData}></textarea>
+      </div>
+    {:else if $tab === 'browser'}
+      <div class="service">
+        <h2>Firefox / Chrome</h2>
+
+        <div class="explainer">
+          <p>Export your bookmarks from your browser and paste the HTML file exporterd below.</p>
+        </div>
+
+        <textarea placeholder="exported html file" bind:value={htmlBookmarksData}></textarea>
       </div>
     {:else if $tab === 'youtube'}
       <div class="service">
