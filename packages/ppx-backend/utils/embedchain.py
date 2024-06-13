@@ -104,7 +104,8 @@ async def send_message(query, session_id, number_documents, system_prompt, citat
 
     where = {'app_id': ec_app.config.id}
     if resource_ids is None:
-        where = {'$and': [where, {"resource_type": {"$nin": ".ignore"}}]}
+        # TODO: this doesn't really work
+        where = {'$and': [where, {"resource_type": {"$nin": [".ignore"]}}]}
     else:
         where = {'$and': [where, {"resource_id": {"$in": resource_ids}}]}
 
