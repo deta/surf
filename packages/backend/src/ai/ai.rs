@@ -15,6 +15,7 @@ pub struct DataSource {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DataSourceMetadata {
+    pub ignore: bool,
     pub resource_id: String,
     pub resource_type: String,
     pub url: Option<String>,

@@ -12,7 +12,7 @@
   import { copyToClipboard } from '../../utils/clipboard'
   import { wait, writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
-  import { ResourceManager, ResourceTag } from '../../service/resources'
+  import { Resource, ResourceManager, ResourceTag } from '../../service/resources'
   import { HorizonsManager } from '../../service/horizon'
   import { API } from '../../service/api'
   import BrowserTab, { type NewTabEvent } from './BrowserTab.svelte'
@@ -646,29 +646,34 @@
   }
 
   async function bookmarkPage(tab: TabPage) {
-    const currentEntry = historyEntriesManager.getEntry(
-      tab.historyStackIds[tab.currentHistoryIndex]
-    )
-    const url = currentEntry?.url ?? tab.initialLocation
+    let resource: Resource | null
+    if (tab.chatResourceBookmark) {
+      resource = await resourceManager.getResource(tab.chatResourceBookmark)
+    } else {
+      const currentEntry = historyEntriesManager.getEntry(
+        tab.historyStackIds[tab.currentHistoryIndex]
+      )
+      const url = currentEntry?.url ?? tab.initialLocation
 
-    log.debug('bookmarking', url)
+      log.debug('bookmarking', url)
 
-    const detectedResource = await $activeBrowserTab.detectResource()
-    log.debug('extracted resource data', detectedResource)
+      const detectedResource = await $activeBrowserTab.detectResource()
+      log.debug('extracted resource data', detectedResource)
 
-    if (!detectedResource) {
-      log.debug('no resource detected')
-      throw new Error('No resource detected')
+      if (!detectedResource) {
+        log.debug('no resource detected')
+        throw new Error('No resource detected')
+      }
+
+      resource = await resourceManager.createResourceOther(
+        new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
+        { name: $activeTab?.title ?? '', sourceURI: url, alt: '' },
+        [ResourceTag.canonicalURL(url)]
+      )
+      log.debug('created resource', resource)
     }
 
-    const resource = await resourceManager.createResourceOther(
-      new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-      { name: $activeTab?.title ?? '', sourceURI: url, alt: '' },
-      [ResourceTag.canonicalURL(url)]
-    )
-
-    log.debug('created resource', resource)
-    updateTab(tab.id, { resourceBookmark: resource.id })
+    if (resource) updateTab(tab.id, { resourceBookmark: resource.id })
 
     return resource
   }
@@ -1209,7 +1214,8 @@
         const resource = await resourceManager.createResourceOther(
           // :doom:
           new Blob([JSON.stringify(detectedResource.data)], {
-            type: `${detectedResource.type}.ignore`
+            //type: `${detectedResource.type}.ignore`
+            type: `${detectedResource.type}`
           }),
           { name: $activeTab?.title ?? '', sourceURI: $activeTabLocation ?? '', alt: '' }
         )

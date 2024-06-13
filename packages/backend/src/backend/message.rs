@@ -16,11 +16,11 @@ pub enum ProcessorMessage {
 }
 
 pub enum AIMessage {
-    GenerateMetadataEmbeddings(ResourceMetadata),
-    GenerateTextContentEmbeddings(ResourceTextContent, String),
+    GenerateMetadataEmbeddings(ResourceMetadata, bool),
+    GenerateTextContentEmbeddings(ResourceTextContent, String, bool),
     DescribeImage(CompositeResource),
-    GenerateWebpageEmbeddings(ResourceMetadata),
-    GenerateYoutubeVideoEmbeddings(ResourceMetadata),
+    GenerateWebpageEmbeddings(ResourceMetadata, bool),
+    GenerateYoutubeVideoEmbeddings(ResourceMetadata, bool),
 }
 
 pub enum WorkerMessage {
