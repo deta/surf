@@ -25,6 +25,8 @@
 
   import '../Horizon/index.scss'
   import type {
+    AIChatMessage,
+    AIChatMessageParsed,
     PageHighlight,
     PageMagic,
     PageMagicResponse,
@@ -46,7 +48,7 @@
   import { tooltip } from '@svelte-plugins/tooltips'
   import { WebParser, type DetectedWebApp } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
-  import { summarizeText } from '../../service/ai'
+  import { parseChatResponseSources, summarizeText } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
   import { WebViewEventReceiveNames, type AnnotationRangeData } from '@horizon/types'
   import {
@@ -56,6 +58,7 @@
     inlineTextReplaceStylingCode,
     scrollToTextCode
   } from './inline'
+  import { SFFS } from '../../service/sffs'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -78,6 +81,7 @@
   const resourceManager = new ResourceManager(telemetry)
   const horizonManager = new HorizonsManager(api, resourceManager, telemetry)
   const storage = new HorizonDatabase()
+  const sffs = new SFFS()
 
   const tabsDB = storage.tabs
   const horizons = horizonManager.horizons
@@ -763,7 +767,7 @@
     })
   }
 
-  function addPageMagicResponse(tabId: string, response: PageMagicResponse) {
+  function addPageMagicResponse(tabId: string, response: AIChatMessageParsed) {
     magicPages.update((pages) => {
       const updatedPages = pages.map((page) => {
         if (page.tabId === tabId) {
@@ -783,7 +787,7 @@
   function updatePageMagicResponse(
     tabId: string,
     responseId: string,
-    updates: Partial<PageMagicResponse>
+    updates: Partial<AIChatMessageParsed>
   ) {
     magicPages.update((pages) => {
       const updatedPages = pages.map((page) => {
@@ -810,22 +814,46 @@
     })
   }
 
-  async function handleWebviewAppDetection(e: CustomEvent<DetectedWebApp>, tab: Tab) {
+  async function handleWebviewAppDetection(e: CustomEvent<DetectedWebApp>, tab: TabPage) {
     log.debug('webview app detection', e.detail, tab)
 
     if (tab.type !== 'page') return
-
     let pageMagic = $magicPages.find((page) => page.tabId === tab.id)
+
     if (!pageMagic) {
+      let responses: AIChatMessageParsed[] = []
+      if (tab?.chatId) {
+        const chat = await sffs.getAIChat(tab.chatId)
+        if (chat) {
+          const userMessages = chat.messages.filter((message) => message.role === 'user')
+          const queries = userMessages.map((message) => message.content)
+          const systemMessages = chat.messages.filter((message) => message.role === 'system')
+
+          responses = systemMessages.map((message, idx) => {
+            return {
+              id: generateID(),
+              role: message.role,
+              query: queries[idx],
+              content: message.content.replace('<answer>', '').replace('</answer>', ''),
+              sources: message.sources,
+              status: 'success'
+            }
+          })
+        }
+      }
+
       pageMagic = {
         tabId: tab.id,
         showSidebar: false,
         running: false,
-        responses: []
+        responses: responses
       } as PageMagic
 
       magicPages.update((pages) => [...pages, pageMagic!])
     }
+
+    console.log('grep me', pageMagic)
+    console.log('grep me', $activeTab)
 
     const browserTab = $browserTabs[tab.id]
     if (!browserTab) {
@@ -1058,7 +1086,7 @@
   }
 
   const handleChatSubmit = async (magicPage: PageMagic) => {
-    let response: PageMagicResponse | null = null
+    let response: AIChatMessageParsed | null = null
     const savedInputValue = $magicInputValue
 
     try {
@@ -1069,21 +1097,15 @@
         return
       }
 
-      const tab = $tabs.find((tab) => tab.id === magicPage.tabId)
+      const tab = $tabs.find((tab) => tab.id === magicPage.tabId) as TabPage
       if (!tab) {
         log.error('Tab not found', magicPage.tabId)
         return
       }
+      if (!tab.chatId) return
+      if (!tab.chatResourceBookmark) return
 
       const browserTab = $browserTabs[tab.id]
-
-      const detectedResource = await browserTab.detectResource()
-      log.debug('extracted resource data', detectedResource)
-
-      if (!detectedResource) {
-        log.debug('no resource detected')
-        return
-      }
 
       response = {
         id: generateID(),
@@ -1092,64 +1114,62 @@
         status: 'pending',
         content: '',
         citations: {}
-      } as PageMagicResponse
+      } as AIChatMessageParsed
 
       updateMagicPage(magicPage.tabId, { running: true })
       addPageMagicResponse(magicPage.tabId, response)
 
-      $magicInputValue = ''
-
-      const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
-      log.debug('content', content)
-
       log.debug('calling the AI')
+      let step = 'idle'
+      let content = ''
 
-      // @ts-expect-error
-      const output = await window.api.createAIChatCompletion(
-        `User Query: ${savedInputValue}\n\nContent: ${content.plain}`,
-        'Take the following text which has been extracted from a web page like a article or blog post and answer the given user query with it. Be as concise as possible and really try to foucs your response on the users intent. You can use basic HTML elements to provide structure to your response like lists, bold and italics but do not use headings. Separate the response into different paragraphs. Make sure to include inline citations in the response text using the citation element like this <citation style="background: {color};">{id}</citation>. Respond with a JSON object in the following format: `{ "content": "<html text response>", "citations": { "<id>": { "text": "<exact source text>", "color": "<unqiue color>" } } }`. The source text of the citation needs to be an exact match to a part of the original text and the IDs need to match the citations in your response. Use incrementing numbers as the IDs. Give each citation a unique pastel color.',
-        { response_format: { type: 'json_object' } }
+      await sffs.sendAIChatMessage(
+        tab.chatId,
+        savedInputValue,
+        (chunk: string) => {
+          if (step === 'idle') {
+            log.debug('sources chunk', chunk)
+
+            content += chunk
+
+            if (content.includes('</sources>')) {
+              const sources = parseChatResponseSources(content)
+              log.debug('Sources', sources)
+
+              step = 'sources'
+              content = ''
+
+              updatePageMagicResponse(tab.id, response?.id ?? '', {
+                sources
+              })
+            }
+          } else {
+            content += chunk
+
+            updatePageMagicResponse(tab.id, response?.id!, {
+              content: content
+                .replace('<answer>', '')
+                .replace('</answer>', '')
+                .replace('<citation>', '')
+                .replace('</citation>', '')
+                .replace('<br>', '\n')
+            })
+          }
+        },
+        {
+          limit: 3,
+          resourceIds: [tab.chatResourceBookmark]
+        }
       )
 
-      log.debug('Magic response', output)
-      const json = JSON.parse(output)
-      log.debug('json', json)
-
-      if (!json.content || !json.citations) {
-        log.debug('Invalid response')
-        return
-      }
-
-      response = {
-        ...response,
-        status: 'success',
-        content: json.content,
-        citations: json.citations
-      } as PageMagicResponse
-
-      updatePageMagicResponse(magicPage.tabId, response.id, response)
-
-      // add mark styles to the page
-      await browserTab.executeJavaScript(inlineHighlightStylingCode())
-
-      await Promise.all(
-        Object.entries(json.citations).map(async ([id, citation]) => {
-          await highlightWebviewText(tab.id, {
-            type: 'important',
-            color: (citation as any).color as string,
-            text: (citation as any).text as string
-          })
-        })
-      )
-
-      log.debug('Magic done')
+      updatePageMagicResponse(magicPage.tabId, response.id, { status: 'success' })
     } catch (e) {
       log.error('Error doing magic', e)
       $magicInputValue = savedInputValue
       if (response) {
         updatePageMagicResponse(magicPage.tabId, response.id, {
-          status: 'error',
-          content: (e as any).message ?? 'Failed to generate response.'
+          content: (e as any).message ?? 'Failed to generate response.',
+          status: 'error'
         })
       }
     } finally {
@@ -1157,8 +1177,42 @@
     }
   }
 
-  const handleToggleMagicSidebar = () => {
+  const handleToggleMagicSidebar = async () => {
+    const tab = $activeTab as TabPage | null
+
     if (!$activeTabMagic) return
+    if (!tab) return
+
+    if (!$activeTabMagic.showSidebar) {
+      if (!tab?.chatId) {
+        tab.chatId = await sffs.createAIChat('')
+        // TODO: log this instead of silently failing
+        if (!tab.chatId) return
+        updateTab(tab.id, { chatId: tab.chatId })
+      }
+
+      if (!tab.chatResourceBookmark) {
+        const detectedResource = await $activeBrowserTab.detectResource()
+        log.debug('extracted resource data', detectedResource)
+
+        if (!detectedResource) {
+          log.debug('no resource detected')
+          return
+        }
+
+        const resource = await resourceManager.createResourceOther(
+          // :doom:
+          new Blob([JSON.stringify(detectedResource.data)], {
+            type: `${detectedResource.type}.ignore`
+          }),
+          { name: $activeTab?.title ?? '', sourceURI: $activeTabLocation ?? '', alt: '' }
+        )
+
+        log.debug('created resource', resource)
+
+        updateTab(tab.id, { chatResourceBookmark: resource.id })
+      }
+    }
 
     updateMagicPage($activeTabId, { showSidebar: !$activeTabMagic.showSidebar })
 

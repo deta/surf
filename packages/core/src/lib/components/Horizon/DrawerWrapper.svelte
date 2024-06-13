@@ -215,7 +215,9 @@
       tags.push(ResourceManager.SearchTagDeleted(false))
     }
 
-    const result = await resourceManager.searchResources(query, tags, parsedParameters)
+    const result = (await resourceManager.searchResources(query, tags, parsedParameters)).filter(
+      (resource) => !resource.resource.type.endsWith('.ignore')
+    )
 
     if (query === '') {
       result.reverse()

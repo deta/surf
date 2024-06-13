@@ -63,12 +63,14 @@ impl Worker {
                 .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
             match resource_type.as_str() {
-                "application/vnd.space.article" | "application/vnd.space.link" => {
+                t if t.starts_with("application/vnd.space.article")
+                    || t.starts_with("application.vnd.space.link") =>
+                {
                     self.aiqueue_tx
                         .send(AIMessage::GenerateWebpageEmbeddings(metadata.clone()))
                         .map_err(|e| BackendError::GenericError(e.to_string()))?;
                 }
-                "application/vnd.space.post.youtube" => {
+                t if t.starts_with("application/vnd.space.post.youtube") => {
                     self.aiqueue_tx
                         .send(AIMessage::GenerateYoutubeVideoEmbeddings(metadata.clone()))
                         .map_err(|e| BackendError::GenericError(e.to_string()))?;
@@ -233,16 +235,29 @@ impl Worker {
             query_embedding = self.embedding_model.encode_single(&query)?;
         }
 
-        self.db.search_resources(
-            &query,
-            query_embedding,
-            resource_tag_filters,
-            proximity_distance_threshold,
-            proximity_limit,
-            semantic_search_enabled,
-            embeddings_distance_threshold,
-            embeddings_limit,
-        )
+        self.db
+            .search_resources(
+                &query,
+                query_embedding,
+                resource_tag_filters,
+                proximity_distance_threshold,
+                proximity_limit,
+                semantic_search_enabled,
+                embeddings_distance_threshold,
+                embeddings_limit,
+            )
+            .map(|results| {
+                let SearchResult { items, .. } = results;
+                let items = items
+                    .into_iter()
+                    .filter(|item| !item.resource.resource.resource_type.ends_with(".ignore"))
+                    .collect::<Vec<_>>();
+
+                SearchResult {
+                    total: items.len() as i64,
+                    items,
+                }
+            })
     }
 
     pub fn post_process_job(&mut self, resource_id: String) -> BackendResult<()> {

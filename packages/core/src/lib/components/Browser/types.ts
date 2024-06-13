@@ -15,6 +15,8 @@ export interface TabPage extends BaseTab {
   historyStackIds: string[]
   currentHistoryIndex: number
   resourceBookmark?: string | null
+  chatResourceBookmark?: string | null
+  chatId?: string | null
 }
 
 export interface TabChat extends BaseTab {
@@ -47,6 +49,8 @@ export type AIChat = {
 
 export type AIChatMessage = {
   role: 'user' | 'system' | 'assistant'
+  status: 'success' | 'pending' | 'error'
+  query: string
   content: string
   sources?: AIChatMessageSource[]
 }
@@ -58,6 +62,7 @@ export type AIChatMessageParsed = {
   content: string
   contentItems?: ChatMessageContentItem[]
   sources?: AIChatMessageSource[]
+  status?: 'success' | 'pending' | 'error'
 }
 
 export type AIChatMessageSource = {
@@ -90,7 +95,7 @@ export type PageMagic = {
   tabId: string
   showSidebar: boolean
   running: boolean
-  responses: PageMagicResponse[]
+  responses: AIChatMessageParsed[]
 }
 
 export type PageHighlight = {

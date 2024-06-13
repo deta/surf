@@ -71,7 +71,7 @@
   </div>
 
   <div class="content">
-    {#each magicPage.responses as response, idx (response.id)}
+    {#each magicPage.responses as response, idx}
       {#if response.status === 'success'}
         <div class="output">
           <div class="output-header">
@@ -117,6 +117,10 @@
             <p>Generating Page Summary…</p>
           {/if}
         </div>
+        <ChatMessage
+          content={response.content}
+          on:citationClick={(e) => handleCitationClick(e.detail, idx)}
+        />
       {:else if response.status === 'error'}
         <div class="output">
           {response.content}

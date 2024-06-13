@@ -103,7 +103,9 @@ async def send_message(query, session_id, number_documents, system_prompt, citat
     ec_app = App.from_config(config=EC_APP_CONFIG)
 
     where = {'app_id': ec_app.config.id}
-    if resource_ids != None:
+    if resource_ids is None:
+        where = {'$and': [where, {"resource_type": {"$nin": ".ignore"}}]}
+    else:
         where = {'$and': [where, {"resource_id": {"$in": resource_ids}}]}
 
     contexts = ec_app.search(query, where=where, num_documents=number_documents)
