@@ -35,7 +35,12 @@
 
   const { viewState } = useDrawer()
 
-  const dispatch = createEventDispatcher<{ click: string; remove: string; load: string }>()
+  const dispatch = createEventDispatcher<{
+    click: string
+    remove: string
+    load: string
+    open: string
+  }>()
 
   const handleClick = () => {
     dispatch('click', resource.id)
@@ -44,6 +49,11 @@
   const handleRemove = (e: MouseEvent) => {
     e.stopImmediatePropagation()
     dispatch('remove', resource.id)
+  }
+
+  const handleMaximize = (e: MouseEvent) => {
+    e.stopImmediatePropagation()
+    dispatch('open', resource.id)
   }
 
   // TODO: figure out better way to do this
@@ -203,13 +213,15 @@
       {/if}
     </div>
   </div>
-  {#if $viewState !== 'details'}
-    <div class="remove-wrapper" on:click={handleRemove}>
-      <div class="remove">
-        <Icon name="close" color="#AAA7B1" />
-      </div>
+
+  <div class="remove-wrapper">
+    <div class="remove rotated" on:click={handleMaximize}>
+      <Icon name="arrow.right" color="#AAA7B1" />
     </div>
-  {/if}
+    <div class="remove" on:click={handleRemove}>
+      <Icon name="close" color="#AAA7B1" />
+    </div>
+  </div>
 </div>
 
 <style lang="scss">
@@ -305,18 +317,15 @@
 
   .remove-wrapper {
     position: absolute;
+    display: flex;
+    gap: 0.75rem;
     top: 0;
     padding: 1rem;
-    right: 0;
+    right: 1rem;
     transform: translateX(45%) translateY(-45%);
     opacity: 0;
     margin-left: 0.5rem;
     cursor: default;
-    &:hover {
-      .remove {
-        outline: 3px solid rgba(0, 0, 0, 0.15);
-      }
-    }
     .remove {
       display: flex;
       justify-content: center;
@@ -328,6 +337,12 @@
       border: 0.5px solid rgba(0, 0, 0, 0.15);
       transition: 60ms ease-out;
       background: white;
+      &.rotated {
+        transform: rotate(-45deg);
+      }
+      &:hover {
+        outline: 3px solid rgba(0, 0, 0, 0.15);
+      }
     }
   }
 

@@ -11,7 +11,7 @@
     detectedApp: DetectedWebApp
     detectedResource: DetectedResource
     actionOutput: { id: string; output: DetectedResource }
-    navigation: { url: string, oldUrl: string }
+    navigation: { url: string; oldUrl: string }
     bookmark: WebViewSendEvents[WebViewEventSendNames.Bookmark]
     transform: WebViewSendEvents[WebViewEventSendNames.Transform]
     inlineTextReplace: WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]

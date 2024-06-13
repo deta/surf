@@ -52,24 +52,22 @@
   })
 </script>
 
-<div class="link-card" bind:this={elem} class:active={active}>
+<div class="link-card" bind:this={elem} class:active>
   <!-- <a href={document?.url} target="_blank" class="link-card"> -->
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
     {:else if annotation}
       <div class="title">{content}</div>
-      
+
       <div class="footer">
         <div class="metadata">
           {#if annotation.type === 'highlight'}
             <Icon name="marker" />
-            <div class="from">
-              Highlight
-            </div>
+            <div class="from">Highlight</div>
           {/if}
         </div>
-        
+
         <button on:click={handleScrollTo}>View in Page</button>
       </div>
     {/if}

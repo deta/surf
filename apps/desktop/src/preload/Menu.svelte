@@ -130,7 +130,12 @@
         placeholder={running ? $runningText : 'What do you want to do?'}
       />
 
-      <button type="submit" disabled={running} class="webview-menu-btn-primary" data-tooltip={running ? 'Generating…' : 'Ask AI (↵)'}>
+      <button
+        type="submit"
+        disabled={running}
+        class="webview-menu-btn-primary"
+        data-tooltip={running ? 'Generating…' : 'Ask AI (↵)'}
+      >
         {#if running}
           <Icon name="spinner" />
         {:else}
@@ -211,7 +216,10 @@
         <IconConfirmation bind:this={bookmarkingIcon} name="quote" />
       </button> -->
 
-      <button on:click|stopPropagation|preventDefault={handleMarker} data-tooltip="Highlight and Save (⌘ + H)">
+      <button
+        on:click|stopPropagation|preventDefault={handleMarker}
+        data-tooltip="Highlight and Save (⌘ + H)"
+      >
         <IconConfirmation bind:this={markerIcon} name="marker" />
       </button>
 

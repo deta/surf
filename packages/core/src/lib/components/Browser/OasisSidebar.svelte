@@ -3,7 +3,6 @@
   import { writable } from 'svelte/store'
   import { useLogScope } from '../../utils/log'
   import Folder from './Folder.svelte'
-  import { folderManager } from '../../service/folderManager'
   import { Icon } from '@horizon/icons'
   import { ResourceManager } from '../../service/resources'
   import { selectedFolder } from '../../stores/oasis'
@@ -22,25 +21,19 @@
     if (!folderList.find((folder) => folder.id === 'all')) {
       return [everythingFolder, ...folderList]
     }
+
+    folderList.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+    console.log('RERENDER Folders', folderList)
     return folderList
   }
 
   onMount(async () => {
     try {
-      const loadedFolders = await folderManager.listFolders()
+      const result = await resourceManager.listSpaces()
+      const loadedFolders = JSON.parse(result)
+
       folders.set(ensureEverythingFolder(loadedFolders))
-
-      let loadedResources = await resourceManager.searchResources('', [
-        ResourceManager.SearchTagDeleted(false)
-      ])
-      resources.set(loadedResources)
-
-      const reduced = loadedResources.map((item: any) => ({
-        id: item.id,
-        name: item.resource.metadata.name,
-        sourceURI: item.resource.metadata.sourceURI
-      }))
-      reducedResources.set(reduced)
     } catch (error) {
       log.error('Failed to load folders:', error)
     }
@@ -48,7 +41,11 @@
 
   const createNewFolder = async () => {
     try {
-      const newFolder = await folderManager.createFolder('New Folder', 'userContext')
+      const result = await resourceManager.createSpace('New Folder')
+      const newFolder = JSON.parse(result)
+
+      console.log('New Folder:', newFolder)
+
       folders.update((currentFolders) => ensureEverythingFolder([...currentFolders, newFolder]))
       selectedFolder.set(newFolder.id)
       await tick()
@@ -62,27 +59,37 @@
     }
   }
 
-  const renameFolder = async (id, newName) => {
+  const renameFolder = async (id: string, newName: string) => {
     try {
-      await folderManager.updateFolder(id, { name: newName })
-      const updatedFolders = await folderManager.listFolders()
+      await resourceManager.updateSpace(id, newName)
+      const result = await resourceManager.listSpaces()
+
+      const updatedFolders = JSON.parse(result)
+      console.log('updatedFolders...', updatedFolders)
+      updatedFolders.sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )
+
       folders.set(ensureEverythingFolder(updatedFolders))
     } catch (error) {
       log.error('Failed to rename folder:', error)
     }
   }
 
-  const deleteFolder = async (id) => {
+  const deleteFolder = async (id: CustomEvent) => {
     try {
-      await folderManager.deleteFolder(id)
-      const updatedFolders = await folderManager.listFolders()
+      console.log('trying to delete folder...', id.detail)
+      await resourceManager.deleteSpace(id.detail)
+      const result = await resourceManager.listSpaces()
+      const updatedFolders = JSON.parse(result)
+
       folders.set(ensureEverythingFolder(updatedFolders))
     } catch (error) {
       log.error('Failed to delete folder:', error)
     }
   }
 
-  const handleFolderSelect = (event) => {
+  const handleFolderSelect = (event: CustomEvent) => {
     selectedFolder.set(event.detail)
   }
 </script>

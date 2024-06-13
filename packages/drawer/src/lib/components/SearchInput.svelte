@@ -9,7 +9,7 @@
   const drawer = useDrawer()
   const { searchValue, viewState } = drawer
 
-  const dispatch = createEventDispatcher<{ enter: void }>()
+  const dispatch = createEventDispatcher<{ enter: void; airequest: void }>()
 
   const search = () => {
     drawer.search({ value: $searchValue })
@@ -47,6 +47,11 @@
         viewState.set('default')
       })
     }
+
+    if (event.shiftKey && event.key === 'Enter') {
+      dispatch('airequest', $searchValue)
+      console.log('Shift + Enter pressed', $searchValue)
+    }
   }
 
   function handleMouseMove(event: MouseEvent) {
@@ -72,20 +77,6 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="input-container" class:isFocussed={isFocused}>
   <div class="input-field-container" class:isFocussed={isFocused} on:click={handleFocus}>
-    <!-- <div class="toolbar" class:active={isFocused}>
-      <div class="toolbar-row">
-        <div class="suggestion" class:hidden={$viewState !== 'search'}>
-          <span>Notion</span>
-        </div>
-        <div class="suggestion" class:hidden={$viewState !== 'search'}>
-          <span>Discord</span>
-        </div>
-        <div class="suggestion" class:hidden={$viewState !== 'search'}>
-          <span>Slack</span>
-        </div>
-      </div>
-    </div> -->
-
     <div class="icon-input">
       <div class="icon">
         <Icon name="search" color="#AAA7B1" size="28px" />
@@ -100,6 +91,7 @@
         on:keydown={handleKeyDown}
         on:focus={handleFocus}
       />
+      <span class="label-secondary">press Shift + Enter for AI</span>
     </div>
   </div>
 </div>
@@ -146,13 +138,20 @@
       justify-content: start;
       align-items: center;
       padding: 0.5rem 0;
+
+      .label-secondary {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 0.75rem;
+        font-size: 0.75rem;
+        color: #7d7448;
+        margin-left: 0.5rem;
+      }
     }
     .toolbar {
       width: 0;
       view-transition-name: toolbar-transition;
-      &.active {
-        width: 100%;
-      }
       .toolbar-row {
         display: flex;
         .suggestion {

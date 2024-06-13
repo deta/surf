@@ -1,12 +1,18 @@
 <script lang="ts">
   import SearchInput from './components/SearchInput.svelte'
   import { useDrawer } from './drawer'
+  import { createEventDispatcher } from 'svelte'
 
+  const dispatch = createEventDispatcher()
   const { viewState } = useDrawer()
+
+  const forwardRequest = (e: CustomEvent) => {
+    dispatch('aichat', e.detail)
+  }
 </script>
 
-<div class="search-input-wrapper" class:active={$viewState == 'search'}>
-  <SearchInput />
+<div class="search-input-wrapper">
+  <SearchInput on:airequest={forwardRequest} />
 </div>
 
 <style lang="scss">

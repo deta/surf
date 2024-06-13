@@ -37,6 +37,8 @@
   export let resourceManager: ResourceManager
   export let drawer: Drawer
   export let db: HorizonDatabase
+  export let resourceIds: string[]
+  export let selectedFolder: string
 
   const log = useLogScope('Chat')
   const dispatch = createEventDispatcher<{ navigate: NavigateEvent; updateTab: UpdateTab }>()
@@ -157,7 +159,7 @@
           })
         }
       },
-      { limit: confirmedSearchSourceLimit, apiEndpoint, ragOnly: tab.ragOnly }
+      { limit: confirmedSearchSourceLimit, apiEndpoint, resourceIds, ragOnly: tab.ragOnly }
     )
 
     log.debug('response is done', response, content)

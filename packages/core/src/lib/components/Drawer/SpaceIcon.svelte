@@ -1,5 +1,8 @@
 <script lang="ts">
   import { writable } from 'svelte/store'
+  import { createEventDispatcher } from 'svelte'
+
+  const dispatch = createEventDispatcher()
 
   const colorPairs: [string, string][] = [
     ['#76E0FF', '#4EC9FB'],
@@ -24,15 +27,19 @@
     ['#FFE076', '#FBC94E']
   ]
 
+  export let colors: [string, string]
+
   // Pick a random color pair
   function pickRandomColorPair(colorPairs: [string, string][]): [string, string] {
     return colorPairs[Math.floor(Math.random() * colorPairs.length)]
   }
 
-  const randomPair = writable(pickRandomColorPair(colorPairs))
+  const randomPair = writable(colors || pickRandomColorPair(colorPairs))
 
   const handlePickAnotherColor = () => {
-    randomPair.set(pickRandomColorPair(colorPairs))
+    const newPair = pickRandomColorPair(colorPairs)
+    randomPair.set(newPair)
+    dispatch('colorChange', newPair)
   }
 </script>
 

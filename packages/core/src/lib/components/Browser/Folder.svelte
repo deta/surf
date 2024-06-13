@@ -1,21 +1,23 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
   import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
-  import { folderManager } from '../../service/folderManager'
   import { ResourceManager } from '../../service/resources'
   import { Telemetry } from '../../service/telemetry'
   import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
+  import { selectedFolder } from '../../stores/oasis'
 
   export let folder
   export let activeFolderId
   export let reducedResources
-  export let selected // New prop to determine if this folder is selected
+  export let selected
 
   const dispatch = createEventDispatcher()
+
   let folderName = folder.name
+  let folderColors = folder.colors
   let inputWidth = `${folderName.length}ch`
-  let processing = false // New state to track AI processing
+  let processing = false
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -43,21 +45,30 @@
   }
 
   const handleDelete = () => {
-    console.log('handleDelete called with id:', folder.id) // Debugging log
-    dispatch('delete', folder.id) // Ensure the folder ID is being passed as a string
+    console.log('handleDelete called with id:', folder.id)
+    dispatch('delete', folder.id)
   }
 
-  const createFolderWithOpenAI = async () => {
+  const createFolderWithAI = async () => {
     processing = true
-    const userPrompt = JSON.stringify($reducedResources, null, 2)
-    const systemPrompt = `You are getting a list of resources that are in the users library as JSON. Create a JSON list of ids all the resources that are matching this folder name: ${folderName}. The format should look like this: ids: {[id1,id2,id3,...]}`
+    const userPrompt = JSON.stringify(folderName)
 
-    console.log(`Automatic Folder Generation request... ${userPrompt} ${systemPrompt}`)
+    let response = await resourceManager.getResourcesViaPrompt(userPrompt)
+    console.log(`Automatic Folder Generation request... ${userPrompt}`)
+    let parsed = JSON.parse(response)
 
-    let response = await window.api.createFolderBasedOnPrompt(userPrompt, systemPrompt, {})
+    let results = parsed.embedding_search_results || parsed.sql_query_results
 
-    console.log(`Folder ${folderName} imports these ids, ${response}`)
-    folderManager.addItemsFromAIResponse(folder.id, response)
+    console.log('Automatic Folder generated with', results)
+
+    await resourceManager.addItemsToSpace(folder.id, results)
+
+    selectedFolder.triggerRedraw()
+    await tick()
+    selectedFolder.set('all')
+    await tick()
+    selectedFolder.set(folder.id)
+
     processing = false
   }
 
@@ -68,12 +79,19 @@
 
     const resource = await resourceManager.getResource(id)
 
-    // Handle the dropped resource ID (e.g., add it to the folder)
-    await folderManager.addItemToFolder(folder.id, resource)
+    console.log('trying to drop resource', resource)
+
+    await resourceManager.addItemsToSpace(folder.id, [id])
     console.log(`Resource ${id} dropped into folder ${folder.name}`)
 
-    // Remove visual feedback class
     draggedOver.set(false)
+  }
+
+  const handleColorChange = async (event: CustomEvent) => {
+    //DISABLED DUE TO INCONSISTEND JSON PARSE
+    // const update = { name: folderName, colors: event.detail }
+    // console.log('Updating Color...', update)
+    // await resourceManager.updateSpace(folder.id, update)
   }
 
   const handleDragOver = (event) => {
@@ -110,7 +128,7 @@
 >
   <div class="folder {selected ? 'active' : ''}" on:click={handleClick} aria-hidden="true">
     <div class="folder-leading">
-      <SpaceIcon />
+      <SpaceIcon on:colorChange={handleColorChange} colors={folderColors} />
       <input
         id={`folder-input-${folder.id}`}
         type="text"
@@ -125,7 +143,7 @@
             folderName = e.target?.value + ' '
           } else if (e.code === 'Enter' && e.shiftKey) {
             e.preventDefault()
-            createFolderWithOpenAI()
+            createFolderWithAI()
           }
         }}
       />

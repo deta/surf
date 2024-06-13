@@ -27,6 +27,9 @@
   import type { Horizon } from '../../service/horizon'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
 
+  import Chat from '../Browser/Chat.svelte'
+  import { HorizonDatabase } from '../../service/storage'
+
   import { useLogScope } from '../../utils/log'
   import {
     MEDIA_TYPES,
@@ -44,8 +47,6 @@
     type ResourceSearchResultItem,
     getPrimaryResourceType
   } from '../../service/resources'
-
-  import { folderManager } from '../../service/folderManager'
 
   import {
     ResourceTypes,
@@ -80,6 +81,7 @@
   const isDrawerShown = drawer.show
 
   const log = useLogScope('DrawerWrapper')
+  const storage = new HorizonDatabase()
 
   const resourceCache = new Map<string, ResourceObject>()
 
@@ -110,6 +112,9 @@
   const isSaving = writable(false)
   const alreadyDropped = writable(false)
   const showMiniBrowser = writable(false)
+  const showChat = writable(false)
+  const resourceIds = writable<string[]>([])
+  const chatPrompt = writable('')
 
   const folderContents = writable<(ResourceObject | undefined)[]>([])
 
@@ -254,6 +259,7 @@
 
     log.debug('Searching for', query.value, 'in', query.tab)
     searchQuery.set(query)
+    // selectedFolder.set('all')
   }
 
   export const parseMetadata = async (url: string) => {
@@ -276,18 +282,15 @@
     runSearch('', get(drawer.selectedTab))
   }
 
-  selectedFolder.subscribe(async (folderId) => {
-    if (folderId === 'all') {
-      console.log('try to fetch everything', folderId)
-      await tick()
-      await runSearch('', null)
-      return
-    }
-
+  const loadFolderContents = async (folderId) => {
     try {
-      const ids = await folderManager.getFolderContents(folderId)
-      const resources = await Promise.all(ids.map((id) => resourceManager.getResource(id)))
-      const contents = resources.filter(r => r && r.type !== ResourceTypes.ANNOTATION)
+      const items = await resourceManager.getSpaceContents(folderId)
+      console.log('try to display folder items', items)
+      const resources = await Promise.all(
+        items.map((item) => resourceManager.getResource(item.resource_id))
+      )
+      const contents = resources.filter((r) => r && r.type !== ResourceTypes.ANNOTATION)
+      console.log('recieved resources for folder', contents)
       folderContents.set(contents)
 
       await tick()
@@ -308,7 +311,7 @@
     } catch (error) {
       console.error('Error fetching folder contents:', error)
     }
-  })
+  }
 
   const openResourceDetail = (resource: ResourceObject) => {
     document.startViewTransition(() => {
@@ -335,8 +338,9 @@
     }
   }
 
-  const handleResourceClick = async (resource: ResourceObject) => {
-    $selectedResource = resource
+  const handleResourceClick = async (e: CustomEvent) => {
+    const resource = await resourceManager.getResource(e.detail)
+    selectedResource.set(resource)
   }
 
   drawer.onOpenItem(async (resourceId: string) => {
@@ -362,6 +366,14 @@
     }
 
     return
+  }
+
+  const handleResourceMaximize = async (e: CustomEvent) => {
+    console.log(e)
+    const resource = await resourceManager.getResource(e.detail)
+    selectedResource.set(resource)
+
+    showMiniBrowser.set(true)
   }
 
   const handleChat = async (payload: any) => {
@@ -679,8 +691,8 @@
     }
 
     if (e.key === ' ') {
-      e.preventDefault()
-      $showMiniBrowser = !$showMiniBrowser
+      console.log('OPEN MINI BROWSER with ', $selectedResource)
+      showMiniBrowser.set(true)
     }
   }
 
@@ -756,7 +768,54 @@
     debouncedRefreshContentLayout()
   }
 
+  const handleMiniBrowserClose = () => {
+    showMiniBrowser.set(false)
+  }
+
+  const handleOasisChat = async (e: CustomEvent) => {
+    const result = e.detail
+    chatPrompt.set(result)
+
+    if ($selectedFolder != 'all') {
+      const result = await resourceManager.getSpaceContents($selectedFolder)
+      console.log('chatting with folder', result)
+
+      resourceIds.set(result.map((r) => r.resource_id))
+    } else {
+      resourceIds.set([])
+    }
+
+    showChat.set(true)
+
+    searchQuery.set({ value: '', tab: 'all' })
+  }
+
+  const handleCloseChat = () => {
+    showChat.set(false)
+    searchQuery.set({ value: '', tab: 'all' })
+    chatPrompt.set('')
+    resourceIds.set([])
+  }
+
   let initialLoad = true
+
+  selectedFolder.onRedraw(() => {
+    console.log('Folder updated!', $selectedFolder)
+
+    loadFolderContents($selectedFolder)
+  })
+
+  selectedFolder.subscribe(async (folderId) => {
+    if (folderId === 'all') {
+      console.log('try to fetch everything', folderId)
+      await tick()
+      await runSearch('', null)
+      return
+    }
+
+    loadFolderContents(folderId)
+  })
+
   onMount(async () => {
     const unsubscribeQuery = searchQuery.subscribe(({ value, tab }) => {
       if (initialLoad) return
@@ -771,7 +830,7 @@
 
     const unsubscribeResources = resourcesInMemory.subscribe((resources) => {
       if (initialLoad) return
-      log.debug('Resources changed', resources)
+      // log.debug('Resources changed', resources)
       runDebouncedSearch($searchQuery.value, $searchQuery.tab)
     })
 
@@ -832,7 +891,7 @@
 />
 
 {#if $showMiniBrowser && $selectedResource}
-  <MiniBrowser resource={selectedResource} resourceManager={resourceManager}>
+  <MiniBrowser resource={selectedResource} on:close={handleMiniBrowserClose} {resourceManager}>
     <DrawerDetailsWrapper
       on:dragstart={(e) => handleItemDragStart(e, $selectedResource)}
       resource={$selectedResource}
@@ -841,9 +900,10 @@
       <ResourceOverlay caption="Click to open in new tab">
         <ResourcePreview
           slot="content"
-          on:click={() => handleResourceDetailClick($selectedResource)}
+          on:click={handleResourceClick}
           on:remove={handleResourceRemove}
           on:load={handleResourceLoad}
+          on:open={handleResourceMaximize}
           resource={$selectedResource}
         />
       </ResourceOverlay>
@@ -887,62 +947,43 @@
   </div>
 {/if}
 
+<!-- <button on:click={() => showChat.set(!$showChat)}>Toggle Chat</button> -->
+
 <DrawerProvider {drawer} on:search={handleSearch}>
+  {#if $showChat}
+    <div class="chat-wrapper">
+      <button class="close-button" on:click={handleCloseChat}>
+        <Icon name="close" size="15px" />
+      </button>
+      <Chat
+        tab={{
+          type: 'chat',
+          query: $chatPrompt
+        }}
+        {resourceManager}
+        {drawer}
+        resourceIds={$selectedFolder != 'all' ? $resourceIds : []}
+        selectedFolder={$selectedFolder}
+        db={storage}
+        on:navigate={(e) => {}}
+        on:updateTab={(e) => {}}
+      />
+    </div>
+  {/if}
+
   <div class="drawer-bar">
-    <div class="tabs-transition"></div>
-    {#if $viewState !== 'details'}
-      <div class="drawer-chat-search">
-        {#if $viewState !== 'chatInput'}
-          <DrawerSearch />
-        {/if}
-        {#if $viewState !== 'search'}
-          {#if $alreadyDropped && $viewState === 'chatInput'}
-            <div
-              class="already-dropped-wrapper"
-              in:fly={{ y: 30, duration: 120 }}
-              out:fly={{ y: 30, duration: 320 }}
-            >
-              <AlreadyDroppedTooltip />
-            </div>
-          {/if}
-          <DrawerChat
-            on:chatSend={handleChat}
-            on:dropForwarded={handleDropForwarded}
-            on:dropFileUpload={handleFileUpload}
-            forceOpen={false}
-            {droppedInputElements}
-          />
-        {/if}
-      </div>
+    <div class="drawer-chat-search">
+      <DrawerSearch on:aichat={handleOasisChat} />
 
-      {#if $viewState == 'search' || $viewState == 'chatInput'}
-        <DrawerCancel on:search-abort={abortSearch} />
-        {#if $showSearchDebug}
-          <div class="search-debug">
-            <label>
-              Semantic Enabled
-              <input bind:checked={$semanticSearchEnabled} type="checkbox" />
-            </label>
-
-            <label>
-              Semantic Threshold
-              <input bind:value={$semanticDistanceThreshold} type="number" step="0.15" />
-            </label>
-
-            <label>
-              Proximity Threshold
-              <input
-                bind:value={$proximityDistanceThreshold}
-                type="number"
-                step="10000"
-                style="width: 100px;"
-              />
-            </label>
-          </div>
-        {/if}
-      {/if}
-      <!-- <ProgressiveBlur /> -->
-    {/if}
+      <DrawerChat
+        on:chatSend={handleChat}
+        on:dropForwarded={handleDropForwarded}
+        on:dropFileUpload={handleFileUpload}
+        forceOpen={false}
+        {droppedInputElements}
+      />
+    </div>
+    <!-- <ProgressiveBlur /> -->
   </div>
   <DrawerContentWrapper
     on:drop={handleDrop}
@@ -962,7 +1003,7 @@
           colWidth="minmax(Min(330px, 100%), 1fr)"
           bind:refreshLayout={refreshContentLayout}
         >
-          {#each $selectedFolder === 'all' ? $searchResult.slice(0, 50) : $folderResult.slice(0, 50) as item (item.id)}
+          {#each $selectedFolder === 'all' ? $searchResult : $folderResult as item (item.id)}
             {#if item.engine === 'local'}
               <div>
                 <ResourceLoading title={item.resource.metadata?.name} />
@@ -970,11 +1011,10 @@
             {:else}
               <DrawerContentItem on:dragstart={(e) => handleItemDragStart(e, item.resource)}>
                 <ResourcePreview
-                  on:click={() => {
-                    handleResourceClick(item.resource)
-                  }}
+                  on:click={handleResourceClick}
                   on:remove={handleResourceRemove}
                   on:load={handleResourceLoad}
+                  on:open={handleResourceMaximize}
                   resource={item.resource}
                   isSelected={$selectedResource && $selectedResource.id === item.resource.id}
                 />
@@ -1165,5 +1205,47 @@
 
   .proximity-view {
     width: 100%;
+  }
+
+  .chat-wrapper {
+    position: absolute;
+    top: 1rem;
+    left: 50%;
+    right: 50%;
+    z-index: 100000;
+    width: 100%;
+    height: 100%;
+    max-width: 50vw;
+    max-height: 70vh;
+    overflow-y: scroll;
+    border-radius: 16px;
+    transform: translateX(-50%);
+    background: white;
+    box-shadow:
+      0px 0px 0px 1px rgba(0, 0, 0, 0.2),
+      0px 16.479px 41.197px 0px rgba(0, 0, 0, 0.46);
+
+    .close-button {
+      position: fixed;
+      top: 0.5rem;
+      left: 0.5rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 2rem;
+      height: 2rem;
+      flex-shrink: 0;
+      border-radius: 50%;
+      border: 0.5px solid rgba(0, 0, 0, 0.15);
+      transition: 60ms ease-out;
+      background: white;
+      z-index: 10000;
+      &.rotated {
+        transform: rotate(-45deg);
+      }
+      &:hover {
+        outline: 3px solid rgba(0, 0, 0, 0.15);
+      }
+    }
   }
 </style>

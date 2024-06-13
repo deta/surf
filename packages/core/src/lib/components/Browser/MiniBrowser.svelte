@@ -1,11 +1,22 @@
 <script lang="ts">
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import BrowserTab from '@horizon/core/src/lib/components/Browser/BrowserTab.svelte'
   import type { HistoryEntriesManager } from '@horizon/core/src/lib/service/history'
   import WebviewWrapper, { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
   import { writable } from 'svelte/store'
-  import { ResourceAnnotation, ResourceManager, ResourceTag, type ResourceObject } from '../../service/resources'
+  import {
+    ResourceAnnotation,
+    ResourceManager,
+    ResourceTag,
+    type ResourceObject
+  } from '../../service/resources'
   import type { Writable } from 'svelte/store'
-  import { WebViewEventReceiveNames, type AnnotationRangeData, type DetectedWebApp, type ResourceDataAnnotation } from '@horizon/types'
+  import {
+    WebViewEventReceiveNames,
+    type AnnotationRangeData,
+    type DetectedWebApp,
+    type ResourceDataAnnotation
+  } from '@horizon/types'
   import { useLogScope } from '../../utils/log'
   import AnnotationItem from './AnnotationItem.svelte'
   import { Icon } from '@horizon/icons'
@@ -17,6 +28,7 @@
   let activeAnnotation = ''
 
   const initialUrl = writable('https://example.com')
+  const dispatch = createEventDispatcher()
 
   const log = useLogScope('MiniBrowser')
 
@@ -31,6 +43,24 @@
     icon: '',
     title: ''
   }
+
+  function close() {
+    dispatch('close')
+  }
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      close()
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener('keydown', handleKeydown)
+  })
+
+  onDestroy(() => {
+    window.removeEventListener('keydown', handleKeydown)
+  })
 
   let loadingAnnotations = true
   let annotations: ResourceAnnotation[] = []
@@ -108,7 +138,7 @@
 
   const handleAnnotationClick = (e: CustomEvent<WebViewWrapperEvents['annotationClick']>) => {
     log.debug('Annotation clicked', e.detail)
-    
+
     activeAnnotation = e.detail.id
 
     setTimeout(() => {
@@ -118,39 +148,84 @@
 </script>
 
 <div class="mini-browser-wrapper">
+  <div class="close-hitarea" on:click={close} aria-hidden="true">
+    <span class="label">Click or ESC to close</span>
+  </div>
   <div id="mini-browser" class="mini-browser">
     <div class="resource-details">
       <slot />
     </div>
 
-    <BrowserTab {tab} {historyEntriesManager} bind:this={webview} on:appDetection={handleAppDetection} on:highlight={handleWebViewHighlight} on:annotationClick={handleAnnotationClick} />
+    <BrowserTab
+      {tab}
+      {historyEntriesManager}
+      bind:this={webview}
+      on:appDetection={handleAppDetection}
+      on:highlight={handleWebViewHighlight}
+      on:annotationClick={handleAnnotationClick}
+    />
 
     <div class="annotations-view">
-        {#if annotations.length > 0}
-          <div class="annotations">
-            {#each annotations as annotation (annotation.id)}
-                <AnnotationItem resource={annotation} active={annotation.id === activeAnnotation}  on:scrollTo={handleAnnotationSelect} />
-            {/each}
+      {#if annotations.length > 0}
+        <div class="annotations">
+          {#each annotations as annotation (annotation.id)}
+            <AnnotationItem
+              resource={annotation}
+              active={annotation.id === activeAnnotation}
+              on:scrollTo={handleAnnotationSelect}
+            />
+          {/each}
+        </div>
+      {:else if loadingAnnotations}
+        <div class="loading">
+          <Icon name="spinner" />
+          <p>Loading annotations…</p>
+        </div>
+      {:else}
+        <div class="empty-annotations">
+          <div class="empty-title">
+            <Icon name="marker" />
+            <h1>Nothing Annotated</h1>
           </div>
-        {:else if loadingAnnotations}
-          <div class="loading">
-            <Icon name="spinner" />
-            <p>Loading annotations…</p>
-          </div>
-        {:else}
-          <div class="empty-annotations">
-            <div class="empty-title">
-              <Icon name="marker" />
-              <h1>Nothing Annotated</h1>
-            </div>
-            <p>Select any text on the page and click the marker icon to highlight it.</p>
-          </div>
-        {/if}
+          <p>Select any text on the page and click the marker icon to highlight it.</p>
+        </div>
+      {/if}
     </div>
   </div>
 </div>
 
 <style lang="scss">
+  .close-hitarea {
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 5rem;
+    background: linear-gradient(to bottom, #34393d, transparent);
+
+    .label {
+      transition: 240ms ease-out;
+      color: #b8c7d0;
+      user-select: none;
+      opacity: 0;
+    }
+
+    &:hover {
+      .label {
+        opacity: 1;
+      }
+    }
+
+    &:hover ~ .mini-browser {
+      transform: translate(-50%, -50%) translateY(2.75rem) scale(0.98);
+      backdrop-filter: blur(4px);
+      .label {
+        opacity: 1;
+      }
+    }
+  }
+
   .mini-browser {
     position: absolute;
     display: flex;
@@ -160,6 +235,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    transition: 240ms ease-out;
     z-index: 100000;
   }
 
@@ -221,7 +297,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    
+
     h1 {
       font-size: 1.25rem;
       font-weight: 500;

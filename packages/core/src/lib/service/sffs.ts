@@ -1,29 +1,33 @@
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import type {
-  SFFSResourceMetadata,
-  SFFSResourceTag,
-  SFFSResource,
-  SFFSRawCompositeResource,
-  SFFSRawResourceTag,
-  SFFSSearchResult,
-  SFFSRawResourceMetadata,
+  AiSFFSQueryResponse,
   Card,
-  SFFSRawCard,
-  CardType,
-  Optional,
-  SFFSRawCardToCreate,
-  SFFSRawHorizon,
-  HorizonData,
-  SFFSRawHorizonToCreate,
   CardPosition,
-  SFFSRawHistoryEntry,
+  CardType,
+  CreateSpaceEntryInput,
   HistoryEntry,
   HistoryEntryType,
+  HorizonData,
+  Optional,
+  SFFSRawCard,
+  SFFSRawCardToCreate,
+  SFFSRawCompositeResource,
+  SFFSRawHorizon,
+  SFFSRawHorizonToCreate,
+  SFFSRawHistoryEntry,
   SFFSRawHistoryEntryType,
-  SFFSSearchResultItem,
-  SFFSSearchResultEngine,
+  SFFSRawResourceMetadata,
+  SFFSRawResourceTag,
+  SFFSResource,
+  SFFSResourceMetadata,
+  SFFSResourceTag,
   SFFSSearchParameters,
-  SFFSSearchProximityParameters
+  SFFSSearchProximityParameters,
+  SFFSSearchResult,
+  SFFSSearchResultEngine,
+  SFFSSearchResultItem,
+  Space,
+  SpaceEntry
 } from '../types'
 import type { AIChat, Chat } from '../components/Browser/types'
 
@@ -339,6 +343,67 @@ export class SFFS {
       engine: item.engine.toLowerCase() as SFFSSearchResultEngine,
       resource: this.convertCompositeResourceToResource(item.resource)
     }))
+  }
+
+  async createSpace(name: string) {
+    this.log.debug('creating space with name:', name)
+    return await this.backend.js__store_create_space(name)
+  }
+
+  async getSpace(id: string) {
+    this.log.debug('getting space with id', id)
+    return this.backend.js__store_get_space(id)
+  }
+
+  async listSpaces() {
+    this.log.debug('listing all spaces')
+    return this.backend.js__store_list_spaces()
+  }
+
+  async updateSpace(spaceId: string, name: string) {
+    this.log.debug('updating space', spaceId, name)
+    await this.backend.js__store_update_space(spaceId, name)
+  }
+
+  async deleteSpace(space_id: string): Promise<void> {
+    this.log.debug('deleting space with id', space_id)
+    await this.backend.js__store_delete_space(space_id)
+  }
+
+  async addItemsToSpace(space_id: string, items: CreateSpaceEntryInput[]): Promise<void> {
+    const typedItems = items.map((item) => ({
+      resource_id: item,
+      manually_added: false
+    }))
+
+    this.log.debug('creating space entries for space', space_id, 'entries:', typedItems)
+    await this.backend.js__store_create_space_entries(space_id, typedItems)
+  }
+
+  async getSpaceContents(space_id: string): Promise<SpaceEntry[]> {
+    this.log.debug('getting space entries for space with id', space_id)
+    const rawEntries = await this.backend.js__store_get_space_entries(space_id)
+    const entries = this.parseData<SpaceEntry[]>(rawEntries)
+    if (!entries) {
+      return []
+    }
+    return entries
+  }
+
+  async deleteSpaceEntries(entryIds: string[]): Promise<void> {
+    this.log.debug('deleting space entries with ids', entryIds)
+    const stringEntryIds = this.stringifyData(entryIds)
+    await this.backend.js__store_delete_space_entries(stringEntryIds)
+  }
+
+  async getResourcesViaPrompt(query: string): Promise<AiSFFSQueryResponse> {
+    this.log.debug('querying SFFS resources with AI', query)
+    const rawResponse = await this.backend.js__ai_query_sffs_resources(query)
+    const response = this.parseData<AiSFFSQueryResponse>(rawResponse)
+    if (!response) {
+      throw new Error('failed to query SFFS resources, invalid response data', rawResponse)
+    }
+    return response
   }
 
   async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {

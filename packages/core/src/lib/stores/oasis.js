@@ -1,4 +1,20 @@
-// stores.js
 import { writable } from 'svelte/store'
 
-export const selectedFolder = writable('all')
+function createFolderStore() {
+  const { subscribe, set, update } = writable('all')
+  let redraw = () => {}
+
+  return {
+    subscribe,
+    set,
+    update,
+    onRedraw: (callback) => {
+      redraw = callback
+    },
+    triggerRedraw: () => {
+      redraw()
+    }
+  }
+}
+
+export const selectedFolder = createFolderStore()

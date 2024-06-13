@@ -661,7 +661,7 @@
 
     log.debug('created resource', resource)
     updateTab(tab.id, { resourceBookmark: resource.id })
-    
+
     return resource
   }
 
@@ -689,7 +689,10 @@
     }
   }
 
-  function handleWebviewTabNavigation(e: CustomEvent<WebViewWrapperEvents['navigation']>, tab: Tab) {
+  function handleWebviewTabNavigation(
+    e: CustomEvent<WebViewWrapperEvents['navigation']>,
+    tab: Tab
+  ) {
     const { url, oldUrl } = e.detail
     log.debug('webview navigation', { url, oldUrl }, tab)
 
@@ -1197,7 +1200,7 @@
 
     // if (!bookmarkedResource) {
     //   log.debug('no bookmarked resource')
-      
+
     //   const resource = await bookmarkPage(tab)
     //   bookmarkedResource = resource.id
     // }
@@ -1214,10 +1217,10 @@
       { sourceURI: url },
       [
         // link the annotation to the page using its canonical URL so we can later find it
-        ResourceTag.canonicalURL(url),
+        ResourceTag.canonicalURL(url)
 
         // link the annotation to the bookmarked resource
-       //  ResourceTag.annotates(bookmarkedResource)
+        //  ResourceTag.annotates(bookmarkedResource)
       ]
     )
 
@@ -1245,7 +1248,6 @@
     setTimeout(() => {
       drawer.openItem(annotationId)
     }, 500)
-
   }
 
   onMount(async () => {
@@ -1330,58 +1332,58 @@
       >
         <Icon name="leave" />
       </button> -->
-        {#if $sidebarTab !== 'oasis'}
-          <div class="tabs-list">
-            <button
-              class="nav-button"
-              disabled={!canGoBack}
-              on:click={$activeBrowserTab?.goBack}
-              use:tooltip={{
-                content: 'Go Back',
-                action: 'hover',
-                position: 'bottom',
-                animation: 'fade',
-                delay: 500
-              }}
-            >
-              <Icon name="arrow.left" />
-            </button>
-            <button
-              class="nav-button"
-              disabled={!canGoForward}
-              on:click={$activeBrowserTab?.goForward}
-              use:tooltip={{
-                content: 'Go Forward',
-                action: 'hover',
-                position: 'bottom',
-                animation: 'fade',
-                delay: 500
-              }}
-            >
-              <Icon name="arrow.right" />
-            </button>
-            <button
-              class="nav-button"
-              on:click={$activeBrowserTab?.reload}
-              use:tooltip={{
-                content: 'Reload Page (⌘ + R)',
-                action: 'hover',
-                position: 'bottom',
-                animation: 'fade',
-                delay: 500
-              }}
-            >
-              <Icon name="reload" />
-            </button>
-          </div>
-        {:else if $sidebarTab === 'oasis'}
-          <div>
-            <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
-              <Icon name="chevron.left" />
-              <span class="label">Back to Tabs</span>
-            </button>
-          </div>
-        {/if}
+      {#if $sidebarTab !== 'oasis'}
+        <div class="tabs-list">
+          <button
+            class="nav-button"
+            disabled={!canGoBack}
+            on:click={$activeBrowserTab?.goBack}
+            use:tooltip={{
+              content: 'Go Back',
+              action: 'hover',
+              position: 'bottom',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            <Icon name="arrow.left" />
+          </button>
+          <button
+            class="nav-button"
+            disabled={!canGoForward}
+            on:click={$activeBrowserTab?.goForward}
+            use:tooltip={{
+              content: 'Go Forward',
+              action: 'hover',
+              position: 'bottom',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            <Icon name="arrow.right" />
+          </button>
+          <button
+            class="nav-button"
+            on:click={$activeBrowserTab?.reload}
+            use:tooltip={{
+              content: 'Reload Page (⌘ + R)',
+              action: 'hover',
+              position: 'bottom',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            <Icon name="reload" />
+          </button>
+        </div>
+      {:else if $sidebarTab === 'oasis'}
+        <div>
+          <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
+            <Icon name="chevron.left" />
+            <span class="label">Back to Tabs</span>
+          </button>
+        </div>
+      {/if}
     </div>
 
     {#if $sidebarTab !== 'oasis'}
@@ -1479,13 +1481,14 @@
           use:tooltip={{
             content: 'Open Oasis (⌘ + O)',
             action: 'hover',
-            position: 'bottom',
+            position: 'top',
             animation: 'fade',
             delay: 500
           }}
         >
           <Icon name="leave" />
         </button>
+        <!--
         <button
           on:click|preventDefault={handleNewHorizon}
           use:tooltip={{
@@ -1498,6 +1501,7 @@
         >
           <Icon name="layout-grid-add" />
         </button>
+        -->
         <button
           on:click|preventDefault={() => createNewEmptyTab()}
           use:tooltip={{
@@ -1527,7 +1531,7 @@
         {#if $sidebarTab === 'oasis'}
           {#if $masterHorizon}
             <DrawerWrapper
-              bind:drawer={drawer}
+              bind:drawer
               horizon={$masterHorizon}
               {resourceManager}
               {selectedFolder}
@@ -1712,9 +1716,9 @@
 
   .browser-window-wrapper {
     flex: 1;
-    padding: 0 0.5rem 0.5rem 0.5rem;
+    padding: 0.5rem;
     padding-left: 0;
-    height: calc(100vh - 1.25rem);
+    height: 100vh;
     position: relative;
 
     &.hasNoTab {

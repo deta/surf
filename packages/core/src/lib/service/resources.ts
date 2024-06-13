@@ -3,6 +3,8 @@ import { get, writable, type Writable } from 'svelte/store'
 import { useLogScope, type ScopedLogger } from '../utils/log'
 import { SFFS } from './sffs'
 import {
+  type AiSFFSQueryResponse,
+  type CreateSpaceEntryInput,
   type SFFSResourceMetadata,
   type SFFSResourceTag,
   ResourceTypes,
@@ -394,7 +396,7 @@ export class ResourceManager {
           engine: item.engine,
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource)
-        } as ResourceSearchResultItem)
+        }) as ResourceSearchResultItem
     )
 
     // we probably don't want to overwrite the existing resources
@@ -412,7 +414,7 @@ export class ResourceManager {
           engine: item.engine,
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource)
-        } as ResourceSearchResultItem)
+        }) as ResourceSearchResultItem
     )
 
     return results
@@ -626,6 +628,46 @@ export class ResourceManager {
 
   static SearchTagHostname(hostname: string): SFFSResourceTag {
     return { name: 'horizonId', value: hostname, op: 'suffix' }
+  }
+
+  async createSpace(name: string) {
+    return await this.sffs.createSpace(name)
+  }
+
+  async getSpace(id: string) {
+    return await this.sffs.getSpace(id)
+  }
+
+  async listSpaces() {
+    return await this.sffs.listSpaces()
+  }
+
+  async updateSpace(spaceId: string, name: string) {
+    return await this.sffs.updateSpace(spaceId, name)
+  }
+
+  async deleteSpace(spaceId: string) {
+    return await this.sffs.deleteSpace(spaceId)
+  }
+
+  async addItemsToSpace(space_id: string, items: CreateSpaceEntryInput[]) {
+    const existingItems = await this.getSpaceContents(space_id)
+    const existingResourceIds = existingItems.map((item) => item.resource_id)
+    const newItems = items.filter((item) => !existingResourceIds.includes(item))
+
+    return await this.sffs.addItemsToSpace(space_id, newItems)
+  }
+
+  async getSpaceContents(space_id: string) {
+    return await this.sffs.getSpaceContents(space_id)
+  }
+
+  async deleteSpaceEntries(entry_ids: string[]) {
+    return await this.sffs.deleteSpaceEntries(entry_ids)
+  }
+
+  async getResourcesViaPrompt(query: string): Promise<AiSFFSQueryResponse> {
+    return await this.sffs.getResourcesViaPrompt(query)
   }
 
   static SearchTagCanonicalURL(url: string): SFFSResourceTag {
