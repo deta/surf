@@ -20,6 +20,7 @@
   import { useLogScope } from '../../utils/log'
   import AnnotationItem from './AnnotationItem.svelte'
   import { Icon } from '@horizon/icons'
+  import { wait } from '@horizon/web-parser/src/utils'
 
   export let resource: Writable<ResourceObject | undefined>
   export let resourceManager: ResourceManager
@@ -74,6 +75,8 @@
       loadingAnnotations = true
       annotations = await resourceManager.getAnnotationsForResource($resource.id)
       log.debug('Annotations', annotations)
+
+      await wait(500)
 
       annotations.forEach(async (annotation) => {
         log.debug('Restoring highlight', annotation)

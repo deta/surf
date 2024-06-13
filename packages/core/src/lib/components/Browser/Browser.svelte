@@ -10,7 +10,7 @@
   import { parseStringIntoBrowserLocation } from '../../utils/url'
   import { isModKeyAndKeyPressed, isModKeyPressed } from '../../utils/keyboard'
   import { copyToClipboard } from '../../utils/clipboard'
-  import { writableAutoReset } from '../../utils/time'
+  import { wait, writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
   import { ResourceManager, ResourceTag } from '../../service/resources'
   import { HorizonsManager } from '../../service/horizon'
@@ -50,7 +50,11 @@
   import Importer from './Importer.svelte'
   import { parseChatResponseSources, summarizeText } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
-  import { WebViewEventReceiveNames, type AnnotationRangeData } from '@horizon/types'
+  import {
+    ResourceTagsBuiltInKeys,
+    WebViewEventReceiveNames,
+    type AnnotationRangeData
+  } from '@horizon/types'
   import {
     inlineHighlightStylingCode,
     inlineHighlightTextCode,
@@ -675,7 +679,7 @@
 
       if ($activeTab.resourceBookmark) {
         log.debug('already bookmarked', $activeTab.resourceBookmark)
-        drawer.openItem($activeTab.resourceBookmark)
+        openResource($activeTab.resourceBookmark)
         return
       }
 
@@ -884,6 +888,8 @@
     const annotationResources = matchingResources.filter(
       (resource) => resource.type === ResourceTypes.ANNOTATION
     )
+
+    await wait(500)
 
     annotationResources.forEach(async (annotationResource) => {
       const annotation = await annotationResource.getParsedData()
@@ -1297,13 +1303,18 @@
 
     log.debug('webview annotation click', annotationId)
 
+    const tab = $tabs.find((tab) => tab.id === tabId) as TabPage | undefined
+    if (tab && tab.resourceBookmark) {
+      openResource(tab.resourceBookmark)
+    }
+  }
+
+  const openResource = async (id: string) => {
     $sidebarTab = 'oasis'
 
     await tick()
 
-    setTimeout(() => {
-      drawer.openItem(annotationId)
-    }, 1000)
+    drawer.openItem(id)
   }
 
   onMount(async () => {
@@ -1577,6 +1588,16 @@
   </div>
 
   <div class="browser-window-wrapper" class:hasNoTab={!$activeBrowserTab}>
+    {#if $sidebarTab === 'oasis'}
+      <div class="browser-window active" style="--scaling: 1;">
+        {#if $masterHorizon}
+          <DrawerWrapper bind:drawer horizon={$masterHorizon} {resourceManager} {selectedFolder} />
+        {:else}
+          <div>Should not happen error: Failed to load main Horizon</div>
+        {/if}
+      </div>
+    {/if}
+
     {#each $activeTabs as tab (tab.id)}
       <div
         class="browser-window"
@@ -1584,18 +1605,18 @@
         class:active={$activeTabId === tab.id}
         class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
       >
-        {#if $sidebarTab === 'oasis'}
+        <!-- {#if $sidebarTab === 'oasis'}
           {#if $masterHorizon}
             <DrawerWrapper
-              bind:drawer
+              bind:drawer={drawer}
               horizon={$masterHorizon}
               {resourceManager}
               {selectedFolder}
             />
           {:else}
             <div>Should not happen error: Failed to load main Horizon</div>
-          {/if}
-        {:else if tab.type === 'page'}
+          {/if} -->
+        {#if tab.type === 'page'}
           <BrowserTab
             bind:this={$browserTabs[tab.id]}
             bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
@@ -1631,6 +1652,7 @@
             db={storage}
             on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
             on:updateTab={(e) => updateTab(tab.id, e.detail)}
+            on:openResource={(e) => openResource(e.detail)}
           />
         {:else if tab.type === 'importer'}
           <Importer {resourceManager} />
@@ -1677,6 +1699,7 @@
             db={storage}
             on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
             on:updateTab={(e) => updateTab($activeTabId, e.detail)}
+            on:openResource={(e) => openResource(e.detail)}
           />
         {:else}
           <BrowserHomescreen

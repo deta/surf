@@ -41,7 +41,11 @@
   export let selectedFolder: string
 
   const log = useLogScope('Chat')
-  const dispatch = createEventDispatcher<{ navigate: NavigateEvent; updateTab: UpdateTab }>()
+  const dispatch = createEventDispatcher<{
+    navigate: NavigateEvent
+    updateTab: UpdateTab
+    openResource: string
+  }>()
 
   const sffs = new SFFS()
 
@@ -99,7 +103,7 @@
    * Open the resource with the given ID in the drawer / oasis
    */
   function openResource(id: string) {
-    drawer.openItem(id)
+    dispatch('openResource', id)
   }
 
   /**

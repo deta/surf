@@ -68,6 +68,7 @@
   import { TelemetryEventTypes } from '@horizon/types'
   import type { Tab } from '@horizon/drawer/src/lib/Tabs.svelte'
   import MiniBrowser from '@horizon/core/src/lib/components/Browser/MiniBrowser.svelte'
+  import { wait } from '@horizon/web-parser/src/utils'
 
   export const drawer = provideDrawer()
 
@@ -163,6 +164,10 @@
     linkMetadata: WebMetadata
     appInfo: DetectedWebApp | null
   } | null = null
+
+  $: log.debug('Show mini browser', $showMiniBrowser, $selectedResource)
+  $: log.debug('selected resource', $selectedResource)
+  $: log.debug('showMiniBrowser', $showMiniBrowser)
 
   const showSearchDebug = writable(false)
   const semanticDistanceThreshold = writable(1.0)
@@ -346,15 +351,15 @@
   }
 
   drawer.onOpenItem(async (resourceId: string) => {
+    log.debug('Opening resource', resourceId)
     const resource = await resourceManager.getResource(resourceId)
     if (!resource) {
       log.error('Resource not found', resourceId)
       return
     }
 
-    $selectedResource = resource
-    $showMiniBrowser = true
-
+    selectedResource.set(resource)
+    showMiniBrowser.set(true)
     // openResourceDetail(resource)
   })
 
@@ -771,6 +776,7 @@
   }
 
   const handleMiniBrowserClose = () => {
+    log.debug('Closing mini browser')
     showMiniBrowser.set(false)
   }
 
