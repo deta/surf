@@ -41,6 +41,7 @@ impl Worker {
         session_id: String,
         number_documents: i32,
         model: String,
+        rag_only: bool,
         api_endpoint: Option<String>,
         mut callback: Root<JsFunction>,
         resource_ids: Option<Vec<String>>,
@@ -51,7 +52,7 @@ impl Worker {
             .block_on(async move {
                 let mut stream = self
                     .ai
-                    .chat(query, session_id, number_documents, model, api_endpoint, resource_ids)
+                    .chat(query, session_id, number_documents, model, rag_only, api_endpoint, resource_ids)
                     .await?;
 
                 while let Some(chunk) = stream.next().await {
@@ -88,7 +89,7 @@ impl Worker {
                 let mut result = String::new();
                 let mut stream = self
                     .ai
-                    .chat(prompt, session_id_clone, 1, "".to_owned(), None, Some(vec![]))
+                    .chat(prompt, session_id_clone, 1, "".to_owned(), false, None, Some(vec![]))
                     .await?;
 
                 while let Some(chunk) = stream.next().await {
@@ -176,6 +177,7 @@ pub fn handle_misc_message(
             number_documents,
             model,
             callback,
+            rag_only,
             api_endpoint,
             resource_ids,
         } => {
@@ -185,6 +187,7 @@ pub fn handle_misc_message(
                 session_id,
                 number_documents,
                 model,
+                rag_only,
                 api_endpoint,
                 callback,
                 resource_ids,

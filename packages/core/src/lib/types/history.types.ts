@@ -1,4 +1,4 @@
-export type HistoryEntryType = 'navigation' | 'search' | 'chat'
+export type HistoryEntryType = 'navigation' | 'search' | 'chat' | 'rag'
 
 export interface HistoryEntry {
   id: string

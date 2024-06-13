@@ -153,6 +153,7 @@ pub enum MiscMessage {
         number_documents: i32,
         query: String,
         session_id: String,
+        rag_only: bool,
         api_endpoint: Option<String>,
         resource_ids: Option<Vec<String>>,
     },
@@ -161,9 +162,3 @@ pub enum MiscMessage {
     GetAIChatMessage(String, Option<String>),
     QuerySFFSResources(String),
 }
-
-
-
-
-
-

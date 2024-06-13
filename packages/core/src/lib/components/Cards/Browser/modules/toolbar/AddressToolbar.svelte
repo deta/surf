@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-  export type ActionEvent = { type: 'navigation' | 'chat'; value: string }
+  export type ActionEvent = { type: 'navigation' | 'chat' | 'rag'; value: string }
 </script>
 
 <script lang="ts">
@@ -145,6 +145,19 @@
         score: 0.77
       }
 
+      const ragSearch = {
+        entry: {
+          id: `search:rag`,
+          updatedAt: new Date().toISOString(),
+          type: 'rag',
+          title: 'Vector Search',
+          searchQuery: inputValue
+        } as HistoryEntry,
+        searchEngine: 'oasis',
+        group: 'Search',
+        score: 0.88
+      }
+
       const oasisAISearch = {
         entry: {
           id: `ask:oasis`,
@@ -162,6 +175,7 @@
         ...searchResults,
         ...additionalSearchResults,
         defaultSearchEngineItem,
+        ragSearch,
         oasisAISearch
       ] as Optional<typeof defaultSearchEngineItem, 'searchEngine'>[]
 
@@ -360,6 +374,9 @@
     } else if (currentElement.type == 'chat') {
       dispatch('action', { type: 'chat', value: currentElement.searchQuery })
       return
+    } else if (currentElement.type == 'rag') {
+      dispatch('action', { type: 'rag', value: currentElement.searchQuery })
+      return
     }
 
     log.debug('Performing action', currentElement)
@@ -450,6 +467,7 @@
     .search,
     .chat,
     .action,
+    .rag,
     .navigation {
       grid-column: 1 / span 2 !important;
     }

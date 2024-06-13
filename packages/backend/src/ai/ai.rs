@@ -140,6 +140,7 @@ impl AI {
         session_id: String,
         number_documents: i32,
         model: String,
+        rag_only: bool,
         api_endpoint: Option<String>,
         resource_ids: Option<Vec<String>>,
     ) -> BackendResult<impl Stream<Item = BackendResult<Option<String>>>> {
@@ -150,6 +151,7 @@ impl AI {
 
         let url = format!("{}/chat", &api_endpoint);
         let mut query_params = vec![
+            ("rag_only", rag_only.to_string()),
             ("query", query),
             ("session_id", session_id),
             ("number_documents", number_documents.to_string()),

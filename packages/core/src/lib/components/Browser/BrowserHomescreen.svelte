@@ -28,7 +28,7 @@
 
   export let historyEntriesManager: HistoryEntriesManager
 
-  const dispatch = createEventDispatcher<{ navigate: string; chat: string }>()
+  const dispatch = createEventDispatcher<{ navigate: string; chat: string; rag: string }>()
 
   const sites = writable<SearchHistoryEntry[]>([])
   const currentCardHistory = writable([])
@@ -128,6 +128,9 @@
       inputEl.blur()
     } else if (type === 'chat') {
       dispatch('chat', value)
+      inputEl.blur()
+    } else if (type === 'rag') {
+      dispatch('rag', value)
       inputEl.blur()
     }
   }

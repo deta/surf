@@ -22,6 +22,7 @@ export interface TabChat extends BaseTab {
   query: string
   chatId?: string
   apiEndpoint?: string
+  ragOnly?: boolean
 }
 
 export interface TabHorizon extends BaseTab {

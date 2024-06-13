@@ -68,6 +68,16 @@ async def generate_sources_str(contexts):
     sources_str += "</sources>\n\n"
     return sources_str
 
+def generate_contents_str(contexts):
+    contents_str = "<answer>\n <h2> Chunks: </h2>\n<ul>\n"
+    yield contents_str
+    for idx, context in enumerate(contexts, 1):
+        content = context.get('context', '')
+        contents_str = f"<li> <strong>{idx}.</strong> {content} <citation>{idx}</citation></li>\n"
+        yield contents_str
+    contents_str = "</ul>\n</answer>\n"
+    yield contents_str
+
 
 async def prepare_contexts_for_llm_query(ec_app, query, config, citations, where):
     """Retrieve contexts from the database and prepare them for the LLM query."""
@@ -89,15 +99,25 @@ async def generate_messages(ec_app, query, contexts_data_for_llm_query, config, 
     return messages
 
 
-async def send_message(query, session_id, number_documents, system_prompt, citations, stream, model, resource_ids) -> AsyncIterable[str]:
+async def send_message(query, session_id, number_documents, system_prompt, citations, stream, model, resource_ids, rag_only) -> AsyncIterable[str]:
     ec_app = App.from_config(config=EC_APP_CONFIG)
 
     where = {'app_id': ec_app.config.id}
     if resource_ids != None:
         where = {'$and': [where, {"resource_id": {"$in": resource_ids}}]}
 
-    context = ec_app.search(query, where=where, num_documents=number_documents)
-    sources_str = await generate_sources_str(context)
+    contexts = ec_app.search(query, where=where, num_documents=number_documents)
+    sources_str = await generate_sources_str(contexts)
+    
+    if rag_only:
+        generated_answer = sources_str
+        yield sources_str
+        for chunk in generate_contents_str(contexts):
+            yield chunk
+            generated_answer += chunk
+        ec_app.llm.add_history(ec_app.config.id, query, generated_answer, session_id=session_id)
+        return
+
 
     ec_app.llm.update_history(app_id=ec_app.config.id, session_id=session_id)
     callback = AsyncIteratorCallbackHandler()

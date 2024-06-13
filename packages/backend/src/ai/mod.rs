@@ -33,11 +33,12 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let callback = cx.argument::<JsFunction>(3)?.root(&mut cx);
     let number_documents = cx.argument::<JsNumber>(4)?.value(&mut cx) as i32;
     let model = cx.argument::<JsString>(5)?.value(&mut cx);
+    let rag_only = cx.argument::<JsBoolean>(6)?.value(&mut cx);
     let api_endpoint = cx
-        .argument_opt(6)
+        .argument_opt(7)
         .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
         .map(|api_endpoint| api_endpoint.value(&mut cx));
-    let resource_ids = match cx.argument_opt(7).filter(|arg| {
+    let resource_ids = match cx.argument_opt(8).filter(|arg| {
         !(arg.is_a::<JsUndefined, FunctionContext>(&mut cx)
             || arg.is_a::<JsNull, FunctionContext>(&mut cx))
     }) {
@@ -63,6 +64,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             number_documents,
             model,
             callback,
+            rag_only,
             api_endpoint,
             resource_ids,
         }),

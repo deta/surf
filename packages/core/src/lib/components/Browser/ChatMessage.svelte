@@ -48,6 +48,8 @@
     citations.forEach((citation) => {
       const citationID = citation.textContent || ''
       const renderID = renderIDFromCitationID(citation.textContent, sources)
+      console.log('YOLO: citationID: ', citationID)
+      console.log('YOLO: renderID: ', renderID)
       if (!renderID) {
         citation.remove()
         return
@@ -60,11 +62,13 @@
         previousElementSibling.tagName === 'CITATION' &&
         previousElementSibling.textContent === renderID
       ) {
+        console.log('YOLO: removed citation with same render id', renderID)
         citation.remove()
         return
       }
 
       citation.textContent = renderID
+      console.log('YOLO: updated ciation text content ', citation.textContent)
       seen_citations.add(renderID)
       citation.addEventListener('click', () => {
         if (!citation.textContent) return

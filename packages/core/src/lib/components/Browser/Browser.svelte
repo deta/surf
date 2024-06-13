@@ -707,6 +707,12 @@
     updateActiveTab({ type: 'chat', query: e.detail, title: e.detail, icon: '' })
   }
 
+  function handleRag(e: CustomEvent<string>) {
+    log.debug('rag search', e.detail)
+
+    updateActiveTab({ type: 'chat', query: e.detail, title: e.detail, icon: '', ragOnly: true })
+  }
+
   async function handleWebviewBookmark(e: CustomEvent<WebViewWrapperEvents['bookmark']>) {
     log.debug('webview bookmark', e.detail)
 
@@ -1573,6 +1579,7 @@
             {historyEntriesManager}
             on:navigate={handleTabNavigation}
             on:chat={handleCreateChat}
+            on:rag={handleRag}
           />
         {/if}
       </div>
@@ -1616,6 +1623,7 @@
             {historyEntriesManager}
             on:navigate={handleTabNavigation}
             on:chat={handleCreateChat}
+            on:rag={handleRag}
           />
         {/if}
       </div>
@@ -1627,6 +1635,7 @@
           {historyEntriesManager}
           on:navigate={handleTabNavigation}
           on:chat={handleCreateChat}
+          on:rag={handleRag}
         />
       </div>
     {/if}

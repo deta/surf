@@ -38,8 +38,6 @@
   export let drawer: Drawer
   export let db: HorizonDatabase
 
-  const SEARCH_SOURCE_LIMIT = 10
-
   const log = useLogScope('Chat')
   const dispatch = createEventDispatcher<{ navigate: NavigateEvent; updateTab: UpdateTab }>()
 
@@ -59,6 +57,11 @@
   let loadingResponse = false
   let queryElement: HTMLElement
   let followUpValue = ''
+  let searchSourceLimit = 10
+  let defaultSearchSourceSet = true
+  let confirmedSearchSourceLimit = 10
+
+  $: sliderChanged(), confirmedSearchSourceLimit
 
   $: query = tab.query
   $: log.debug('activeMessage', $activeMessage)
@@ -68,6 +71,19 @@
       messages[messages.length - 1] = { ...messages[messages.length - 1], ...updates }
       return messages
     })
+  }
+
+  function sliderChanged() {
+    if (defaultSearchSourceSet) {
+      return
+    }
+    messages.set([])
+    sendChatMessage(query)
+  }
+
+  function handleSliderConfirm() {
+    defaultSearchSourceSet = false
+    confirmedSearchSourceLimit = searchSourceLimit
   }
 
   async function getResource(id: string) {
@@ -141,7 +157,7 @@
           })
         }
       },
-      { limit: SEARCH_SOURCE_LIMIT, apiEndpoint }
+      { limit: confirmedSearchSourceLimit, apiEndpoint, ragOnly: tab.ragOnly }
     )
 
     log.debug('response is done', response, content)
@@ -262,6 +278,7 @@
   }
 
   // TODO: unique sources should not lose the original source id information
+  // TODO: why mix of camelCase and snake_case?
   function getUniqueSources(sources: AIChatMessageSource[] | undefined) {
     if (!sources) return []
     let urls = {} as Record<string, string>
@@ -289,8 +306,15 @@
           s.resource_id === source.resource_id
         })
     )
+    let render_id = 1
     uniqueSources.forEach((source, index) => {
-      source.render_id = (index + 1).toString()
+      if (index != 0) {
+        let prevSource = uniqueSources[index - 1]
+        if (prevSource.resource_id !== source.resource_id) {
+          render_id += 1
+        }
+      }
+      source.render_id = render_id.toString()
       source.all_chunk_ids = chunk_ids[source.resource_id]
       if (source.resource_id in urls) {
         if (source.metadata) {
@@ -351,7 +375,15 @@
   <div class="chat-wrapper">
     <div class="chat">
       <h1 class="chat-request" bind:this={queryElement}>{query}</h1>
-
+      <div class="slider-container">
+        <h2>Number of chunks:</h2>
+        <br />
+        <input type="range" min="5" max="100" bind:value={searchSourceLimit} class="slider" />
+        <br />
+        <span>{searchSourceLimit}</span>
+        <br />
+        <button on:click={handleSliderConfirm}>Search</button>
+      </div>
       <div class="messages">
         {#each $messages as message, idx}
           {#if idx !== 0}
@@ -385,7 +417,13 @@
               {:else}
                 <div class="chat-status">
                   <Icon name="spinner" size="30px" />
-                  <h3 class="chat-memory">Asking Oasis AI…</h3>
+                  <h3 class="chat-memory">
+                    {#if !tab.ragOnly}
+                      Asking Oasis AI…
+                    {:else}
+                      Searching…
+                    {/if}
+                  </h3>
                 </div>
               {/if}
             </div>
@@ -744,5 +782,26 @@
     margin-top: 1rem;
     margin-bottom: 1rem;
     display: block;
+  }
+
+  .slider {
+    width: 300px;
+  }
+
+  .slider-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+
+  .slider-container button {
+    padding: 0.5rem 1rem;
+    background: #f73b95;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
   }
 </style>

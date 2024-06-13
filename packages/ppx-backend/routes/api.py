@@ -22,6 +22,7 @@ async def handle_chat(
     number_documents: int = 5,
     system_prompt: str = Query(None),
     mock: bool = False,
+    rag_only: bool = False,
     resource_ids: Union[str, None] = None
 ):
     """
@@ -41,6 +42,7 @@ async def handle_chat(
         True,
         DEFAULT_MODEL,
         resource_ids_list,
+        rag_only
     )
     return StreamingResponse(generator)
 
