@@ -280,6 +280,11 @@ window.addEventListener('DOMContentLoaded', async (_) => {
         sendPageEvent(WebViewEventSendNames.InlineTextReplace, { target: text, content: e.detail })
       })
 
+      if (e.altKey) {
+        console.log('Alt key pressed, highlighting directly')
+        selectionMenu.handleMarker()
+      }
+
       // Animate in on appear
       setTimeout(() => {
         div.style.opacity = '1'

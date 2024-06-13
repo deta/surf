@@ -92,7 +92,7 @@
     dispatch('insert', output)
   }
 
-  const handleMarker = () => {
+  export const handleMarker = () => {
     markerIcon.showConfirmation()
     dispatch('highlight')
   }
