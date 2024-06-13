@@ -839,6 +839,8 @@
 
     const url = currentEntry?.url ?? tab.initialLocation
 
+    log.debug('getting resources from source url', url)
+
     const matchingResources = await resourceManager.getResourcesFromSourceURL(url)
     log.debug('matching resources', matchingResources)
 
@@ -1198,12 +1200,12 @@
 
     let bookmarkedResource = tab.resourceBookmark
 
-    // if (!bookmarkedResource) {
-    //   log.debug('no bookmarked resource')
+    if (!bookmarkedResource) {
+      log.debug('no bookmarked resource')
 
-    //   const resource = await bookmarkPage(tab)
-    //   bookmarkedResource = resource.id
-    // }
+      const resource = await bookmarkPage(tab)
+      bookmarkedResource = resource.id
+    }
 
     const annotationResource = await resourceManager.createResourceAnnotation(
       {
@@ -1217,10 +1219,10 @@
       { sourceURI: url },
       [
         // link the annotation to the page using its canonical URL so we can later find it
-        ResourceTag.canonicalURL(url)
+        ResourceTag.canonicalURL(url),
 
         // link the annotation to the bookmarked resource
-        //  ResourceTag.annotates(bookmarkedResource)
+        ResourceTag.annotates(bookmarkedResource)
       ]
     )
 
@@ -1247,7 +1249,7 @@
 
     setTimeout(() => {
       drawer.openItem(annotationId)
-    }, 500)
+    }, 1000)
   }
 
   onMount(async () => {
