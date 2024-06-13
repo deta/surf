@@ -11,7 +11,8 @@ export enum WebViewEventReceiveNames {
   GetApp = 'get_app',
   RunAction = 'run_action',
   TransformationOutput = 'transformation_output',
-  RestoreHighlight = 'restore_highlight'
+  RestoreHighlight = 'restore_highlight',
+  ScrollToAnnotation = 'scroll_to_annotation'
 }
 
 export enum WebViewEventSendNames {
@@ -100,6 +101,7 @@ export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.RunAction]: WebViewEventRunAction
   [WebViewEventReceiveNames.TransformationOutput]: WebViewEventTransformationOutput
   [WebViewEventReceiveNames.RestoreHighlight]: WebViewEventRestoreHighlight
+  [WebViewEventReceiveNames.ScrollToAnnotation]: string
 }
 
 export type WebViewSendEvents = {

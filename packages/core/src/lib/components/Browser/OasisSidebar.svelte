@@ -88,10 +88,10 @@
 </script>
 
 <div class="folders-sidebar">
-  <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
+  <!-- <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
     <Icon name="chevron.left" />
     <span class="label">Back to Tabs</span>
-  </button>
+  </button> -->
 
   <div class="folder-wrapper">
     {#each $folders as folder (folder.id)}

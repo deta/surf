@@ -139,11 +139,8 @@ export const applyRangeHighlight = (id: string, range: Range) => {
 
   // set attributes for the element so we can identify it later
   elem.setAttribute('id', id)
-  elem.setAttribute('data-annotation-type', 'highlight')
 
   // styling
-  elem.style.backgroundColor = '#feff90'
-  elem.style.cursor = 'pointer'
   elem.classList.add('deta-annotation')
   elem.classList.add('deta-annotation-highlight')
 

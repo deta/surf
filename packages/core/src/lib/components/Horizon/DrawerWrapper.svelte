@@ -179,18 +179,20 @@
 
     log.debug('Searching for', query, 'in', tab)
 
-    const tags = [] as SFFSResourceTag[]
+    const tags = [
+      ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+    ] as SFFSResourceTag[]
 
     if (tab === 'archived') {
       tags.push(ResourceManager.SearchTagDeleted()) // TODO: implement recovering of deleted resources
     } else if (tab === 'horizon') {
       tags.push(ResourceManager.SearchTagHorizon(horizon.id))
     } else if (tab === 'images') {
-      tags.push(ResourceManager.SearchTagResourceType('image', true))
+      tags.push(ResourceManager.SearchTagResourceType('image', 'prefix'))
     } else if (tab === 'documents') {
-      tags.push(ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT, true))
+      tags.push(ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT, 'prefix'))
     } else if (tab === 'posts') {
-      tags.push(ResourceManager.SearchTagResourceType(ResourceTypes.POST, true))
+      tags.push(ResourceManager.SearchTagResourceType(ResourceTypes.POST, 'prefix'))
     } else if (tab === 'links') {
       tags.push(ResourceManager.SearchTagResourceType(ResourceTypes.LINK))
     } else if (tab === 'articles') {
@@ -284,7 +286,8 @@
 
     try {
       const ids = await folderManager.getFolderContents(folderId)
-      const contents = await Promise.all(ids.map((id) => resourceManager.getResource(id)))
+      const resources = await Promise.all(ids.map((id) => resourceManager.getResource(id)))
+      const contents = resources.filter(r => r && r.type !== ResourceTypes.ANNOTATION)
       folderContents.set(contents)
 
       await tick()
@@ -343,7 +346,10 @@
       return
     }
 
-    openResourceDetail(resource)
+    $selectedResource = resource
+    $showMiniBrowser = true
+
+    // openResourceDetail(resource)
   })
 
   const handleResourceRemove = async (e: CustomEvent<string>) => {
@@ -826,7 +832,7 @@
 />
 
 {#if $showMiniBrowser && $selectedResource}
-  <MiniBrowser resource={selectedResource}>
+  <MiniBrowser resource={selectedResource} resourceManager={resourceManager}>
     <DrawerDetailsWrapper
       on:dragstart={(e) => handleItemDragStart(e, $selectedResource)}
       resource={$selectedResource}

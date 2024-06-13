@@ -25,8 +25,8 @@
   }
 
   afterUpdate(() => {
-    const titleElements = element.querySelectorAll('.title-wrapper .title')
-    titleElements.forEach((element) => checkOverflow(element as HTMLElement))
+    const titleElements = element?.querySelectorAll('.title-wrapper .title')
+    titleElements?.forEach((element) => checkOverflow(element as HTMLElement))
   })
 </script>
 

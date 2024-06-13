@@ -31,7 +31,8 @@ export enum ResourceTagsBuiltInKeys {
   TYPE = 'type',
   DELETED = 'deleted',
   HOSTNAME = 'hostname',
-  CANONICAL_URL = 'canonicalUrl'
+  CANONICAL_URL = 'canonicalUrl',
+  ANNOTATES = 'annotates'
 }
 
 export interface ResourceTagsBuiltIn {
@@ -45,6 +46,7 @@ export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.DELETED]: boolean
   [ResourceTagsBuiltInKeys.HOSTNAME]: string
   [ResourceTagsBuiltInKeys.CANONICAL_URL]: string
+  [ResourceTagsBuiltInKeys.ANNOTATES]: string
 }
 
 export interface SFFSResource {

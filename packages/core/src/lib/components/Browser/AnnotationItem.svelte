@@ -1,33 +1,45 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
-  import { useLogScope } from '../../../utils/log'
-  import type { ResourceAnnotation } from '../../../service/resources'
-  import type { AnnotationRangeData, ResourceDataAnnotation } from '../../../types'
-  import type { ResourcePreviewEvents } from '../../Resources/events'
+  import { useLogScope } from '../../utils/log'
+  import type { ResourceAnnotation } from '../../service/resources'
+  import type { AnnotationRangeData, ResourceDataAnnotation } from '../../types'
+  import type { ResourcePreviewEvents } from '../Resources/events'
+  import { Icon } from '@horizon/icons'
 
   export let resource: ResourceAnnotation
+  export let active = false
 
-  const log = useLogScope('AnnotationPreview')
-  const dispatch = createEventDispatcher<ResourcePreviewEvents<ResourceDataAnnotation>>()
+  const log = useLogScope('AnnotationItem')
+  const dispatch = createEventDispatcher<{ scrollTo: string }>()
 
   let annotation: ResourceDataAnnotation | null = null
   let content = ''
   let error = ''
   let url: URL
+  let elem: HTMLDivElement
+
+  $: if (active) {
+    elem.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    })
+  }
+
+  const handleScrollTo = () => {
+    if (!annotation) return
+    dispatch('scrollTo', resource.id)
+  }
 
   onMount(async () => {
     try {
       annotation = await resource.getParsedData()
-      dispatch('data', annotation)
 
       if (annotation.type === 'highlight') {
         content = (annotation.anchor.data as AnnotationRangeData).content_plain || ''
       }
 
       url = new URL(resource.metadata?.sourceURI || '')
-
-      dispatch('load')
     } catch (e) {
       log.error(e)
       error = 'Invalid URL'
@@ -40,27 +52,25 @@
   })
 </script>
 
-<div class="link-card">
+<div class="link-card" bind:this={elem} class:active={active}>
   <!-- <a href={document?.url} target="_blank" class="link-card"> -->
   <div class="details">
     {#if error}
       <div class="title">{error}</div>
     {:else if annotation}
-      <!-- <img
-          class="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${document?.site_icon}&sz=256`}
-          alt={`${document?.site_name} favicon`}
-        /> -->
-      {#if url}
-        <img
-          class="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${url.href}&sz=256`}
-          alt={`${url.href} favicon`}
-        />
-      {/if}
       <div class="title">{content}</div>
-      <div class="document-metadata">
-        <div class="from">{url.hostname}</div>
+      
+      <div class="footer">
+        <div class="metadata">
+          {#if annotation.type === 'highlight'}
+            <Icon name="marker" />
+            <div class="from">
+              Highlight
+            </div>
+          {/if}
+        </div>
+        
+        <button on:click={handleScrollTo}>View in Page</button>
       </div>
     {/if}
   </div>
@@ -69,15 +79,18 @@
 <style lang="scss">
   .link-card {
     width: 100%;
-    height: 100%;
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 2rem;
+    padding: 1rem;
     color: inherit;
     text-decoration: none;
-    user-select: none;
-    -webkit-user-drag: none;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.15);
+  }
+
+  .link-card.active {
+    background: #ffc5e7;
+    border-radius: 5px;
   }
 
   .details {
@@ -99,26 +112,42 @@
   }
 
   .title {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     line-height: 1.775rem;
-    letter-spacing: 0.02rem;
-    color: #281b53;
     font-weight: 500;
+    color: #443d5b;
     flex-shrink: 0;
     margin-top: 1rem;
     max-width: 95%;
   }
-  .document-metadata {
+
+  .footer {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
     padding: 0.5rem 0;
-    gap: 0.125rem;
+    color: #281b53;
+    opacity: 0.65;
+
+    button {
+      background: none;
+      border: none;
+      color: #281b53;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+  }
+
+  .metadata {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
     .from {
       font-size: 1rem;
       font-weight: 500;
       text-decoration: none;
-      color: #281b53;
-      opacity: 0.65;
     }
   }
 </style>

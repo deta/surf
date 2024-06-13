@@ -11,7 +11,7 @@
     detectedApp: DetectedWebApp
     detectedResource: DetectedResource
     actionOutput: { id: string; output: DetectedResource }
-    navigation: string
+    navigation: { url: string, oldUrl: string }
     bookmark: WebViewSendEvents[WebViewEventSendNames.Bookmark]
     transform: WebViewSendEvents[WebViewEventSendNames.Transform]
     inlineTextReplace: WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]
@@ -86,8 +86,8 @@
     url.set(newUrl)
   }
 
-  const addHistoryEntry = async (url: string, pageTitle: string) => {
-    log.debug('Adding history entry', url)
+  const addHistoryEntry = async (newUrl: string, pageTitle: string) => {
+    log.debug('Adding history entry', newUrl)
     // This check prevents the initial load from being added to history
     // if (!initialLoadDone) {
     //   initialLoadDone = true
@@ -100,9 +100,11 @@
     }
 
     try {
+      const oldEntry = historyEntriesManager.getEntry($historyStackIds[$currentHistoryIndex])
+
       const entry: HistoryEntry = await historyEntriesManager.addEntry({
         type: 'navigation',
-        url: url,
+        url: newUrl,
         title: pageTitle
       } as HistoryEntry)
 
@@ -117,7 +119,7 @@
 
       currentHistoryIndex.update((n) => n + 1)
       updateNavigationState()
-      dispatch('navigation', url)
+      dispatch('navigation', { url: newUrl, oldUrl: oldEntry?.url || src })
     } catch (error) {}
 
     programmaticNavigation = false

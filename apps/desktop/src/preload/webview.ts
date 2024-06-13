@@ -11,8 +11,6 @@ import {
 } from '@horizon/web-parser'
 import Menu from './Menu.svelte'
 import {
-  HighlightRangeData,
-  RangeData,
   WebViewEventReceiveNames,
   WebViewEventSendNames,
   WebViewReceiveEvents,
@@ -117,6 +115,34 @@ function handleRestoreHighlight(
 
   console.log('Restoring highlight', range)
   applyRangeHighlight(data.id, range)
+}
+
+function handleScrollToAnnotation(
+  data: WebViewReceiveEvents[WebViewEventReceiveNames.ScrollToAnnotation]
+) {
+  console.log('Scrolling to annotation', data)
+
+  const elements = document.querySelectorAll(`deta-annotation[id="${data}"]`)
+  if (!elements) {
+    console.error('Elements not found for scroll', data)
+    return
+  }
+
+  console.log('Scrolling to element', elements)
+  elements[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+
+  // make the element glow for a short time
+  const glowClass = 'deta-annotion-glow'
+
+  elements.forEach((element) => {
+    element.classList.add(glowClass)
+  })
+
+  setTimeout(() => {
+    elements.forEach((element) => {
+      element.classList.remove(glowClass)
+    })
+  }, 1000)
 }
 
 window.addEventListener('DOMContentLoaded', async (_) => {
@@ -421,6 +447,8 @@ ipcRenderer.on('webview-event', (_event, payload) => {
     handleTransformOutput(data.text)
   } else if (type === WebViewEventReceiveNames.RestoreHighlight) {
     handleRestoreHighlight(data)
+  } else if (type === WebViewEventReceiveNames.ScrollToAnnotation) {
+    handleScrollToAnnotation(data)
   }
 })
 

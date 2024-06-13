@@ -166,6 +166,20 @@ fn process_resource_data(
                     )
                 })
         }
+        resource_type if resource_type.starts_with("application/vnd.space.annotation") => {
+            serde_json::from_str::<AnnotationData>(resource_data)
+                .map_err(|e| eprintln!("deserializing annotation data: {e:#?}"))
+                .ok()
+                .map(|annotation_data| {
+                    format!(
+                        "{}",
+                        annotation_data.anchor
+                            .and_then(|anchor| anchor.data)
+                            .and_then(|data| data.content_plain)
+                            .unwrap_or_default()
+                    )
+                })
+        }
         _ => None,
     }
 }
@@ -343,4 +357,29 @@ struct ChatThreadData {
     platform_name: Option<String>,
     title: Option<String>,
     url: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct AnnotationData {
+    #[serde(rename = "type")]
+    type_: Option<String>,
+    data: Option<serde_json::Value>,
+    anchor: Option<AnnotationDataAnchor>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct AnnotationDataAnchor {
+    #[serde(rename = "type")]
+    type_: Option<String>,
+    data: Option<AnnotationDataAnchorRangeData>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct AnnotationDataAnchorRangeData {
+    content_plain: Option<String>,
+    content_html: Option<String>,
+    start_offset: Option<i32>,
+    end_offset: Option<i32>,
+    start_xpath: Option<String>,
+    end_xpath: Option<String>,
 }

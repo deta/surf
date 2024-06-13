@@ -53,6 +53,10 @@ export class ResourceTag {
   static canonicalURL(url: string) {
     return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url }
   }
+
+  static annotates(resourceID: string) {
+    return { name: ResourceTagsBuiltInKeys.ANNOTATES, value: resourceID }
+  }
 }
 
 export const getPrimaryResourceType = (type: string) => {
@@ -390,7 +394,7 @@ export class ResourceManager {
           engine: item.engine,
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource)
-        }) as ResourceSearchResultItem
+        } as ResourceSearchResultItem)
     )
 
     // we probably don't want to overwrite the existing resources
@@ -408,7 +412,7 @@ export class ResourceManager {
           engine: item.engine,
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource)
-        }) as ResourceSearchResultItem
+        } as ResourceSearchResultItem)
     )
 
     return results
@@ -426,9 +430,21 @@ export class ResourceManager {
   }
 
   async getResourcesFromSourceURL(url: string) {
-    const rawResults = await this.sffs.searchResources(url, [
-      // ResourceManager.SearchTagCanonicalURL(canonicalURL),
+    const rawResults = await this.sffs.searchResources('', [
       // ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
+      ResourceManager.SearchTagCanonicalURL(url),
+      ResourceManager.SearchTagDeleted(false)
+    ])
+
+    return rawResults.map((item) =>
+      this.findOrCreateResourceObject(item.resource)
+    ) as ResourceAnnotation[]
+  }
+
+  async getAnnotationsForResource(id: string) {
+    const rawResults = await this.sffs.searchResources('', [
+      ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
+      ResourceManager.SearchTagAnnotates(id),
       ResourceManager.SearchTagDeleted(false)
     ])
 
@@ -544,7 +560,12 @@ export class ResourceManager {
     tags?: SFFSResourceTag[]
   ) {
     const blob = new Blob([content], { type: ResourceTypes.DOCUMENT_SPACE_NOTE })
-    return this.createResource(ResourceTypes.DOCUMENT_SPACE_NOTE, blob, metadata, tags)
+    return this.createResource(
+      ResourceTypes.DOCUMENT_SPACE_NOTE,
+      blob,
+      metadata,
+      tags
+    ) as Promise<ResourceNote>
   }
 
   async createResourceLink(
@@ -554,7 +575,7 @@ export class ResourceManager {
   ) {
     const blobData = JSON.stringify(data)
     const blob = new Blob([blobData], { type: ResourceTypes.LINK })
-    return this.createResource(ResourceTypes.LINK, blob, metadata, tags)
+    return this.createResource(ResourceTypes.LINK, blob, metadata, tags) as Promise<ResourceLink>
   }
 
   async createResourceAnnotation(
@@ -564,7 +585,12 @@ export class ResourceManager {
   ) {
     const blobData = JSON.stringify(data)
     const blob = new Blob([blobData], { type: ResourceTypes.ANNOTATION })
-    return this.createResource(ResourceTypes.ANNOTATION, blob, metadata, tags)
+    return this.createResource(
+      ResourceTypes.ANNOTATION,
+      blob,
+      metadata,
+      tags
+    ) as Promise<ResourceAnnotation>
   }
 
   async createResourceOther(
@@ -575,8 +601,11 @@ export class ResourceManager {
     return this.createResource(blob.type, blob, metadata, tags)
   }
 
-  static SearchTagResourceType(type: ResourceTypes | string, prefix = false): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.TYPE, value: type, op: prefix ? 'prefix' : 'eq' }
+  static SearchTagResourceType(
+    type: ResourceTypes | string,
+    op: SFFSResourceTag['op'] = 'eq'
+  ): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.TYPE, value: type, op: op }
   }
 
   static SearchTagSavedWithAction(action: string, prefix = false): SFFSResourceTag {
@@ -601,5 +630,9 @@ export class ResourceManager {
 
   static SearchTagCanonicalURL(url: string): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url, op: 'eq' }
+  }
+
+  static SearchTagAnnotates(resourceId: string): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.ANNOTATES, value: resourceId, op: 'eq' }
   }
 }

@@ -198,11 +198,12 @@
     }
   })
 
-  $: log.debug('Active Tab', $activeTab?.createdAt)
   $: log.debug(
-    'Tabs',
+    'active tab',
     $tabs.find((tab) => tab.id === $activeTabId)
   )
+
+  $: log.debug('tabs', $tabs)
 
   const resetActiveTab = () => {
     const tabsInView = $tabs.filter((tab) =>
@@ -286,7 +287,6 @@
   }
 
   const updateTab = async (tabId: string, updates: Partial<Tab>) => {
-    await persistTabChanges(tabId, updates)
     tabs.update((tabs) => {
       const updatedTabs = tabs.map((tab) => {
         if (tab.id === tabId) {
@@ -301,6 +301,7 @@
 
       return updatedTabs
     })
+    await persistTabChanges(tabId, updates)
   }
 
   const closeActiveTab = async () => {
@@ -636,6 +637,34 @@
     activeTabId.set(event.detail)
   }
 
+  async function bookmarkPage(tab: TabPage) {
+    const currentEntry = historyEntriesManager.getEntry(
+      tab.historyStackIds[tab.currentHistoryIndex]
+    )
+    const url = currentEntry?.url ?? tab.initialLocation
+
+    log.debug('bookmarking', url)
+
+    const detectedResource = await $activeBrowserTab.detectResource()
+    log.debug('extracted resource data', detectedResource)
+
+    if (!detectedResource) {
+      log.debug('no resource detected')
+      throw new Error('No resource detected')
+    }
+
+    const resource = await resourceManager.createResourceOther(
+      new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
+      { name: $activeTab?.title ?? '', sourceURI: url, alt: '' },
+      [ResourceTag.canonicalURL(url)]
+    )
+
+    log.debug('created resource', resource)
+    updateTab(tab.id, { resourceBookmark: resource.id })
+    
+    return resource
+  }
+
   async function handleBookmark() {
     try {
       if (!$activeTabLocation || $activeTab?.type !== 'page') return
@@ -649,22 +678,7 @@
       log.debug('bookmarking', $activeTabLocation)
       bookmarkingInProgress.set(true)
 
-      const detectedResource = await $activeBrowserTab.detectResource()
-      log.debug('extracted resource data', detectedResource)
-
-      if (!detectedResource) {
-        log.debug('no resource detected')
-        return
-      }
-
-      const resource = await resourceManager.createResourceOther(
-        new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-        { name: $activeTab?.title ?? '', sourceURI: $activeTabLocation, alt: '' }
-      )
-
-      log.debug('created resource', resource)
-
-      if ($activeTab.type === 'page') updateActiveTab({ resourceBookmark: resource.id })
+      await bookmarkPage($activeTab)
 
       // automatically resets after some time
       bookmarkingSuccess.set(true)
@@ -675,10 +689,16 @@
     }
   }
 
-  function handleWebviewTabNavigation(e: CustomEvent<string>, tab: Tab) {
-    log.debug('webview navigation', e.detail, tab)
+  function handleWebviewTabNavigation(e: CustomEvent<WebViewWrapperEvents['navigation']>, tab: Tab) {
+    const { url, oldUrl } = e.detail
+    log.debug('webview navigation', { url, oldUrl }, tab)
 
-    updateTab(tab.id, { resourceBookmark: null })
+    if (tab.type !== 'page' || !tab.resourceBookmark) return
+
+    if (url !== oldUrl) {
+      log.debug('tab url changed, removing bookmark')
+      updateTab(tab.id, { resourceBookmark: null })
+    }
   }
 
   function handleCreateChat(e: CustomEvent<string>) {
@@ -695,7 +715,8 @@
     if (!$activeTab.resourceBookmark) {
       const resource = await resourceManager.createResourceLink(
         new Blob([JSON.stringify({ url: e.detail.url })], { type: ResourceTypes.LINK }),
-        { name: $activeTab?.title ?? '', sourceURI: e.detail.url, alt: '' }
+        { name: $activeTab?.title ?? '', sourceURI: e.detail.url, alt: '' },
+        [ResourceTag.canonicalURL(e.detail.url)]
       )
 
       log.debug('created resource', resource)
@@ -803,24 +824,37 @@
       return
     }
 
-    const annotationResources = await resourceManager.getResourceAnnotations()
-    log.debug('annotations', annotationResources)
+    const currentEntry = historyEntriesManager.getEntry(
+      tab.historyStackIds[tab.currentHistoryIndex]
+    )
 
-    const matchingAnnotationResources = annotationResources.filter((annotation) => {
-      const url = annotation.metadata?.sourceURI
-      return $activeTabId === tab.id ? url === $activeTabLocation : url === tab.initialLocation
-    })
+    const url = currentEntry?.url ?? tab.initialLocation
 
-    log.debug('matching annotations', matchingAnnotationResources)
-    matchingAnnotationResources.forEach(async (matchingAnnotationResource) => {
-      const annotation = await matchingAnnotationResource.getParsedData()
+    const matchingResources = await resourceManager.getResourcesFromSourceURL(url)
+    log.debug('matching resources', matchingResources)
+
+    const bookmarkedResource = matchingResources.find(
+      (resource) => resource.type !== ResourceTypes.ANNOTATION
+    )
+
+    log.debug('bookmarked resource', bookmarkedResource)
+    if (bookmarkedResource) {
+      updateTab(tab.id, { resourceBookmark: bookmarkedResource.id })
+    }
+
+    const annotationResources = matchingResources.filter(
+      (resource) => resource.type === ResourceTypes.ANNOTATION
+    )
+
+    annotationResources.forEach(async (annotationResource) => {
+      const annotation = await annotationResource.getParsedData()
       log.debug('annotation data', annotation)
 
       if (annotation.type === 'highlight' && annotation.anchor.type === 'range') {
         const anchorData = annotation.anchor.data as AnnotationRangeData
         log.debug('highlight range', anchorData)
         browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, {
-          id: matchingAnnotationResource.id,
+          id: annotationResource.id,
           range: anchorData
         })
       }
@@ -1138,6 +1172,12 @@
     e: CustomEvent<WebViewWrapperEvents['highlight']>,
     tabId: string
   ) => {
+    const tab = $tabs.find((tab) => tab.id === tabId)
+    if (!tab || tab.type !== 'page') {
+      log.debug('tab is not a page')
+      return
+    }
+
     const browserTab = $browserTabs[tabId]
     if (!browserTab) {
       log.error('Browser tab not found', tabId)
@@ -1146,6 +1186,15 @@
 
     const { range, url } = e.detail
     log.debug('webview highlight', url, range)
+
+    let bookmarkedResource = tab.resourceBookmark
+
+    // if (!bookmarkedResource) {
+    //   log.debug('no bookmarked resource')
+      
+    //   const resource = await bookmarkPage(tab)
+    //   bookmarkedResource = resource.id
+    // }
 
     const annotationResource = await resourceManager.createResourceAnnotation(
       {
@@ -1157,7 +1206,13 @@
         data: {}
       },
       { sourceURI: url },
-      [ResourceTag.canonicalURL(url)]
+      [
+        // link the annotation to the page using its canonical URL so we can later find it
+        ResourceTag.canonicalURL(url),
+
+        // link the annotation to the bookmarked resource
+       //  ResourceTag.annotates(bookmarkedResource)
+      ]
     )
 
     log.debug('created annotation resource', annotationResource)
@@ -1177,7 +1232,14 @@
 
     log.debug('webview annotation click', annotationId)
 
-    drawer.openItem(annotationId)
+    $sidebarTab = 'oasis'
+
+    await tick()
+
+    setTimeout(() => {
+      drawer.openItem(annotationId)
+    }, 500)
+
   }
 
   onMount(async () => {
@@ -1217,8 +1279,8 @@
 
 <div class="app-wrapper">
   <div class="sidebar">
-    <div class="tab-selector">
-      <button
+    <div class="tab-selector" class:actions={$sidebarTab !== 'oasis'}>
+      <!-- <button
         on:click={() => ($sidebarTab = 'active')}
         class:active={$sidebarTab === 'active'}
         use:tooltip={{
@@ -1230,7 +1292,7 @@
         }}
       >
         <Icon name="list" />
-      </button>
+      </button> -->
       <!--
       <button
         on:click={() => ($sidebarTab = 'archive')}
@@ -1246,7 +1308,7 @@
         <Icon name="archive" />
       </button>
       -->
-      <button
+      <!-- <button
         on:click={() => {
           $sidebarTab = 'oasis'
           toggleOasis()
@@ -1261,11 +1323,118 @@
         }}
       >
         <Icon name="leave" />
-      </button>
+      </button> -->
+        {#if $sidebarTab !== 'oasis'}
+          <div class="tabs-list">
+            <button
+              class="nav-button"
+              disabled={!canGoBack}
+              on:click={$activeBrowserTab?.goBack}
+              use:tooltip={{
+                content: 'Go Back',
+                action: 'hover',
+                position: 'bottom',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              <Icon name="arrow.left" />
+            </button>
+            <button
+              class="nav-button"
+              disabled={!canGoForward}
+              on:click={$activeBrowserTab?.goForward}
+              use:tooltip={{
+                content: 'Go Forward',
+                action: 'hover',
+                position: 'bottom',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              <Icon name="arrow.right" />
+            </button>
+            <button
+              class="nav-button"
+              on:click={$activeBrowserTab?.reload}
+              use:tooltip={{
+                content: 'Reload Page (⌘ + R)',
+                action: 'hover',
+                position: 'bottom',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              <Icon name="reload" />
+            </button>
+          </div>
+        {:else if $sidebarTab === 'oasis'}
+          <div>
+            <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
+              <Icon name="chevron.left" />
+              <span class="label">Back to Tabs</span>
+            </button>
+          </div>
+        {/if}
     </div>
 
-    {#if $sidebarTab != 'oasis'}
+    {#if $sidebarTab !== 'oasis'}
       <div class="tabs">
+        <div
+          class="bar-wrapper"
+          aria-label="Collapse URL bar"
+          on:keydown={(e) => handleAddressBarKeyDown}
+          tabindex="0"
+          role="button"
+        >
+          <div class="address-bar-wrapper">
+            <div class="address-bar-content">
+              <div class="search">
+                <input
+                  bind:this={addressInputElem}
+                  disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
+                  bind:value={$addressValue}
+                  on:blur={handleBlur}
+                  on:focus={handleFocus}
+                  type="text"
+                  placeholder={$activeTab?.type === 'page'
+                    ? 'Search or Enter URL'
+                    : $activeTab?.type === 'chat'
+                      ? 'Chat Title'
+                      : 'Empty Tab'}
+                />
+              </div>
+
+              {#if $activeTab?.type === 'page'}
+                {#key $activeTab.resourceBookmark}
+                  <button
+                    on:click={handleBookmark}
+                    use:tooltip={{
+                      content: $activeTab?.resourceBookmark
+                        ? 'Open bookmark (⌘ + D)'
+                        : 'Bookmark this page (⌘ + D)',
+                      action: 'hover',
+                      position: 'bottom',
+                      animation: 'fade',
+                      delay: 500
+                    }}
+                  >
+                    {#if $bookmarkingInProgress}
+                      <Icon name="spinner" />
+                    {:else if $bookmarkingSuccess}
+                      <Icon name="check" />
+                    {:else if $activeTab?.resourceBookmark}
+                      <Icon name="bookmarkFilled" />
+                    {:else}
+                      <Icon name="bookmark" />
+                    {/if}
+                  </button>
+                {/key}
+              {/if}
+            </div>
+          </div>
+        </div>
+
         {#each $tabsInView as tab (tab.id)}
           {#if tab.type === 'chat'}
             <TabItem
@@ -1297,11 +1466,14 @@
 
       <div class="actions">
         <button
-          on:click|preventDefault={() => toggleOasis()}
+          on:click={() => {
+            $sidebarTab = 'oasis'
+            toggleOasis()
+          }}
           use:tooltip={{
-            content: 'Oasis (⌘ + O)',
+            content: 'Open Oasis (⌘ + O)',
             action: 'hover',
-            position: 'top',
+            position: 'bottom',
             animation: 'fade',
             delay: 500
           }}
@@ -1339,122 +1511,6 @@
   </div>
 
   <div class="browser-window-wrapper" class:hasNoTab={!$activeBrowserTab}>
-    {#if $activeBrowserTab}
-      <div
-        class="bar-wrapper"
-        class:hide={!$showURLBar}
-        aria-label="Collapse URL bar"
-        on:mouseleave={() => ($showURLBar = false)}
-        on:keydown={(e) => handleAddressBarKeyDown}
-        tabindex="0"
-        role="button"
-      >
-        <div class="address-bar-wrapper">
-          <div class="address-bar-content">
-            <div class="search">
-              <input
-                bind:this={addressInputElem}
-                disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
-                bind:value={$addressValue}
-                on:blur={handleBlur}
-                on:focus={handleFocus}
-                type="text"
-                placeholder={$activeTab?.type === 'page'
-                  ? 'Search or Enter URL'
-                  : $activeTab?.type === 'chat'
-                    ? 'Chat Title'
-                    : 'Empty Tab'}
-              />
-
-              <div class="actions nav-buttons">
-                <button
-                  class="nav-button"
-                  disabled={!canGoBack}
-                  on:click={$activeBrowserTab?.goBack}
-                  use:tooltip={{
-                    content: 'Go Back',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  <Icon name="arrow.left" />
-                </button>
-                <button
-                  class="nav-button"
-                  disabled={!canGoForward}
-                  on:click={$activeBrowserTab?.goForward}
-                  use:tooltip={{
-                    content: 'Go Forward',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  <Icon name="arrow.right" />
-                </button>
-                <button
-                  class="nav-button"
-                  on:click={$activeBrowserTab?.reload}
-                  use:tooltip={{
-                    content: 'Reload Page (⌘ + R)',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  <Icon name="reload" />
-                </button>
-              </div>
-            </div>
-
-            {#if $activeTab?.type === 'page'}
-              {#key $activeTab.resourceBookmark}
-                <button
-                  on:click={handleBookmark}
-                  style="z-index: 100000;"
-                  use:tooltip={{
-                    content: $activeTab?.resourceBookmark
-                      ? 'Open bookmark (⌘ + D)'
-                      : 'Bookmark this page (⌘ + D)',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  {#if $bookmarkingInProgress}
-                    <Icon name="spinner" />
-                  {:else if $bookmarkingSuccess}
-                    <Icon name="check" />
-                  {:else if $activeTab?.resourceBookmark}
-                    <Icon name="bookmarkFilled" />
-                  {:else}
-                    <Icon name="bookmark" />
-                  {/if}
-                </button>
-              {/key}
-            {/if}
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="hover-line"
-        class:hide={$showURLBar}
-        aria-label="Expand URL bar"
-        role="button"
-        tabindex="0"
-        on:mouseenter={() => ($showURLBar = true)}
-        on:keydown={(e) => e.key === 'Enter' && showURLBar.set(!showURLBar)}
-      >
-        <div class="line" class:hide={$showURLBar}></div>
-      </div>
-    {/if}
-
     {#each $activeTabs as tab (tab.id)}
       <div
         class="browser-window"
@@ -1465,7 +1521,7 @@
         {#if $sidebarTab === 'oasis'}
           {#if $masterHorizon}
             <DrawerWrapper
-              bind:drawer
+              bind:drawer={drawer}
               horizon={$masterHorizon}
               {resourceManager}
               {selectedFolder}
@@ -1682,19 +1738,14 @@
   }
 
   .address-bar-wrapper {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
-    padding: 0.75rem;
-    width: 90%;
-    max-width: 510px;
+    padding: 0.5rem;
+    width: 100%;
     background: rgba(255, 255, 255, 0.9);
     display: flex;
     flex-direction: column;
     gap: 15px;
+    position: relative;
   }
 
   .address-bar-content {
@@ -1705,14 +1756,7 @@
   }
 
   .bar-wrapper {
-    position: absolute;
-    top: 0.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    right: 0;
-    width: calc(100% - (var(--sidebar-width-left) + var(--sidebar-width-right)));
-    height: 5rem;
-    z-index: 20000;
+    width: 100%;
     .hitarea {
       position: absolute;
       z-index: 30000;
@@ -1749,7 +1793,7 @@
 
   input {
     width: 100%;
-    padding: 10px 100px 10px 10px;
+    padding: 10px;
     border: 1px solid transparent;
     border-radius: 5px;
     font-size: 1rem;
@@ -1879,7 +1923,6 @@
   }
 
   .actions {
-    margin-top: 10px;
     display: flex;
     align-items: center;
     gap: 5px;
@@ -1921,9 +1964,11 @@
   .nav-buttons {
     position: absolute;
     z-index: 10000;
-    bottom: 1.125rem;
-    width: 100%;
-    left: 25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 3.5rem;
+    width: min-content;
+    margin: 0;
   }
 
   .page-actions {
@@ -1947,13 +1992,20 @@
   }
 
   .tab-selector {
-    width: calc(100% + 10px);
+    width: 100%;
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     margin-bottom: -22px;
-    margin-left: -10px;
-    padding-left: 14rem;
     z-index: 10;
+    padding-top: 5px;
+    padding-bottom: 5px;
+
+    .tabs-list {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
 
     button {
       flex: 1;
@@ -1978,6 +2030,16 @@
       &:hover {
         color: #000;
       }
+    }
+  }
+
+  .action-back-to-tabs {
+    flex: none !important;
+    flex-shrink: 0;
+    padding-right: 1rem !important;
+
+    .label {
+      letter-spacing: 0.04rem;
     }
   }
 

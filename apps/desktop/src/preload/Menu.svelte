@@ -5,7 +5,6 @@
   import './menu.css'
   import { useClipboard } from '@horizon/core/src/lib/utils/clipboard'
   import { derived, writable } from 'svelte/store'
-  import { tooltip } from '@svelte-plugins/tooltips'
 
   export let text = ''
 
@@ -101,21 +100,25 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     const modKey = e.metaKey || e.ctrlKey
     if (e.key === 'Escape') {
+      e.preventDefault()
       showInput = false
       running = false
       inputValue = ''
       output = ''
     } else if (modKey && e.key === 'h') {
+      e.preventDefault()
       handleMarker()
     } else if (modKey && e.key === 'b') {
+      e.preventDefault()
       handleBookmark()
     } else if (modKey && e.key === 'i') {
+      e.preventDefault()
       handleInsert()
     }
   }
 </script>
 
-<svelte:window on:keydown|preventDefault={handleKeyDown} />
+<svelte:window on:keydown={handleKeyDown} />
 
 <div bind:this={elem} class="webview-menu-wrapper">
   {#if showInput}
@@ -127,7 +130,7 @@
         placeholder={running ? $runningText : 'What do you want to do?'}
       />
 
-      <button type="submit" disabled={running} class="webview-menu-btn-primary">
+      <button type="submit" disabled={running} class="webview-menu-btn-primary" data-tooltip={running ? 'Generating…' : 'Ask AI (↵)'}>
         {#if running}
           <Icon name="spinner" />
         {:else}
@@ -165,15 +168,17 @@
 
       <div class="webview-menu-output-actions">
         <button
+          title="Save to Oasis"
+          on:click|stopPropagation|preventDefault={handleBookmark}
+          data-tooltip="Save to Oasis"
+        >
+          <IconConfirmation bind:this={bookmarkingIcon} name="leave" />
+        </button>
+
+        <button
           title="Copy to Clipboard"
           on:click|stopPropagation|preventDefault={() => copy(output)}
-          use:tooltip={{
-            content: 'Copy to Clipboard',
-            action: 'hover',
-            position: 'top',
-            animation: 'fade',
-            delay: 500
-          }}
+          data-tooltip="Copy to Clipboard"
         >
           {#if $copied}
             <Icon name="check" />
@@ -183,29 +188,9 @@
         </button>
 
         <button
-          title="Save to Oasis"
-          on:click|stopPropagation|preventDefault={handleBookmark}
-          use:tooltip={{
-            content: 'Save to Oasis',
-            action: 'hover',
-            position: 'top',
-            animation: 'fade',
-            delay: 500
-          }}
-        >
-          <IconConfirmation bind:this={bookmarkingIcon} name="quote" />
-        </button>
-
-        <button
           title="Replace Selection with Text"
           on:click|stopPropagation|preventDefault={handleInsert}
-          use:tooltip={{
-            content: 'Replace Selection with Text',
-            action: 'hover',
-            position: 'top',
-            animation: 'fade',
-            delay: 500
-          }}
+          data-tooltip="Replace Selection with Text"
         >
           <IconConfirmation show={insertingText} name="textInsert" />
         </button>
@@ -226,15 +211,15 @@
         <IconConfirmation bind:this={bookmarkingIcon} name="quote" />
       </button> -->
 
-      <button on:click|stopPropagation|preventDefault={handleMarker}>
+      <button on:click|stopPropagation|preventDefault={handleMarker} data-tooltip="Highlight and Save (⌘ + H)">
         <IconConfirmation bind:this={markerIcon} name="marker" />
       </button>
 
-      <button>
+      <button data-tooltip="Add Comment">
         <Icon name="message" />
       </button>
 
-      <button>
+      <button data-tooltip="Add Link">
         <Icon name="link" />
       </button>
 
