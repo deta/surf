@@ -120,10 +120,10 @@ export class WebViewExtractor {
       }
 
       this.resourceDetectionCallback = (resource) => {
-        console.log('Detected resource', resource?.resource)
+        console.log('Detected resource', resource)
         this.resourceDetectionCallback = null
         this.destroyWebview()
-        resolve(resource?.resource ?? null)
+        resolve(resource ?? null)
       }
 
       await this.wait(1000)

@@ -1134,6 +1134,8 @@
       let step = 'idle'
       let content = ''
 
+      $magicInputValue = ''
+
       await sffs.sendAIChatMessage(
         tab.chatId,
         savedInputValue,

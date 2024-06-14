@@ -157,6 +157,8 @@
 
         const detectedResource = await linkImporter.processLink(link)
 
+        log.debug('Detected resource for item', link.url, detectedResource)
+
         if (!$dryRun) {
           const resource = await resourceManager.createResourceOther(
             new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),

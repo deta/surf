@@ -109,18 +109,25 @@
           />
         </div>
       {:else if response.status === 'pending'}
-        <div class="status">
-          <Icon name="spinner" />
-          {#if response.role === 'user'}
-            <p>{response.query}</p>
-          {:else}
-            <p>Generating Page Summary…</p>
+        <div class="output">
+          <div class="output-header">
+            <div class="input">
+              <Icon name="spinner" />
+              {#if response.role === 'user'}
+                <p>{response.query}</p>
+              {:else}
+                <p>Generating Page Summary…</p>
+              {/if}
+            </div>
+          </div>
+
+          {#if response.content}
+            <ChatMessage
+              content={response.content}
+              on:citationClick={(e) => handleCitationClick(e.detail, idx)}
+            />
           {/if}
         </div>
-        <ChatMessage
-          content={response.content}
-          on:citationClick={(e) => handleCitationClick(e.detail, idx)}
-        />
       {:else if response.status === 'error'}
         <div class="output">
           {response.content}
@@ -303,5 +310,11 @@
       color: #000;
       background-color: #ffffff;
     }
+  }
+
+  :global(.chat-message-content h2) {
+    font-size: 1.4rem;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
   }
 </style>
