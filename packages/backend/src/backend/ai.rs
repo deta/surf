@@ -174,11 +174,9 @@ impl AI {
         tunnel: &WorkerTunnel,
         embeddable: impl models::EmbeddableContent,
         resource_type: Option<String>,
-        ignore: bool,
     ) -> BackendResult<()> {
         if Self::should_add_general_data_source(&embeddable, resource_type) {
             let rag_metadata = DataSourceMetadata {
-                ignore,
                 resource_id: embeddable.get_resource_id(),
                 resource_type: embeddable.get_embedding_type(),
                 url: None,
@@ -218,10 +216,8 @@ impl AI {
     fn process_embeddable_webpage_message(
         &self,
         resource_metadata: models::ResourceMetadata,
-        ignore: bool,
     ) -> BackendResult<()> {
         let rag_metadata = DataSourceMetadata {
-            ignore,
             resource_id: resource_metadata.resource_id,
             resource_type: DataSourceType::Webpage.to_string(),
             url: Some(resource_metadata.source_uri.clone()),
@@ -243,10 +239,8 @@ impl AI {
     fn process_embeddable_youtube_video_message(
         &self,
         resource_metadata: models::ResourceMetadata,
-        ignore: bool,
     ) -> BackendResult<()> {
         let rag_metadata = DataSourceMetadata {
-            ignore,
             resource_id: resource_metadata.resource_id,
             resource_type: DataSourceType::YoutubeVideo.to_string(),
             url: Some(resource_metadata.source_uri.clone()),
@@ -281,21 +275,21 @@ pub fn ai_thread_entry_point(
     while let Ok(message) = tunnel.aiqueue_rx.recv() {
         match message {
             // TODO: implement
-            AIMessage::GenerateMetadataEmbeddings(resource_metadata, ignore) => {
-                let _ = ai.process_embeddable_message(&tunnel, resource_metadata, None, ignore);
+            AIMessage::GenerateMetadataEmbeddings(resource_metadata) => {
+                let _ = ai.process_embeddable_message(&tunnel, resource_metadata, None);
             }
-            AIMessage::GenerateTextContentEmbeddings(resource_content, resource_type, ignore) => {
+            AIMessage::GenerateTextContentEmbeddings(resource_content, resource_type) => {
                 let _ =
-                    ai.process_embeddable_message(&tunnel, resource_content, Some(resource_type), ignore);
+                    ai.process_embeddable_message(&tunnel, resource_content, Some(resource_type));
             }
             AIMessage::DescribeImage(composite_resource) => {
                 let _ = ai.process_vision_message(&tunnel, &composite_resource);
             }
-            AIMessage::GenerateWebpageEmbeddings(resource_metadata, ignore) => {
-                let _ = ai.process_embeddable_webpage_message(resource_metadata, ignore);
+            AIMessage::GenerateWebpageEmbeddings(resource_metadata) => {
+                let _ = ai.process_embeddable_webpage_message(resource_metadata);
             }
-            AIMessage::GenerateYoutubeVideoEmbeddings(resource_metadata, ignore) => {
-                let _ = ai.process_embeddable_youtube_video_message(resource_metadata, ignore);
+            AIMessage::GenerateYoutubeVideoEmbeddings(resource_metadata) => {
+                let _ = ai.process_embeddable_youtube_video_message(resource_metadata);
             }
         }
     }

@@ -57,13 +57,9 @@ impl Worker {
                 })?;
 
             // generate metadata embeddings in separate AI thread
-            let ignore = resource_type.starts_with(".ignore");
             self.aiqueue_tx
                 // TODO: not clone?
-                .send(AIMessage::GenerateMetadataEmbeddings(
-                    metadata.clone(),
-                    ignore,
-                ))
+                .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
                 .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
             match resource_type.as_str() {
@@ -71,18 +67,12 @@ impl Worker {
                     || t.starts_with("application.vnd.space.link") =>
                 {
                     self.aiqueue_tx
-                        .send(AIMessage::GenerateWebpageEmbeddings(
-                            metadata.clone(),
-                            ignore,
-                        ))
+                        .send(AIMessage::GenerateWebpageEmbeddings(metadata.clone()))
                         .map_err(|e| BackendError::GenericError(e.to_string()))?;
                 }
                 t if t.starts_with("application/vnd.space.post.youtube") => {
                     self.aiqueue_tx
-                        .send(AIMessage::GenerateYoutubeVideoEmbeddings(
-                            metadata.clone(),
-                            ignore,
-                        ))
+                        .send(AIMessage::GenerateYoutubeVideoEmbeddings(metadata.clone()))
                         .map_err(|e| BackendError::GenericError(e.to_string()))?;
                 }
                 _ => (),
@@ -323,17 +313,10 @@ impl Worker {
         // }
     }
 
-    pub fn update_resource_metadata(
-        &mut self,
-        metadata: ResourceMetadata,
-        ignore: bool,
-    ) -> BackendResult<()> {
+    pub fn update_resource_metadata(&mut self, metadata: ResourceMetadata) -> BackendResult<()> {
         self.aiqueue_tx
             // TODO: not clone?
-            .send(AIMessage::GenerateMetadataEmbeddings(
-                metadata.clone(),
-                ignore,
-            ))
+            .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
         self.db.update_resource_metadata(&metadata)
@@ -376,7 +359,6 @@ impl Worker {
         resource_id: String,
         resource_type: String,
         content: String,
-        ignore: bool,
     ) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::upsert_resource_text_content(&mut tx, &resource_id, &content)?;
@@ -390,7 +372,6 @@ impl Worker {
                     content,
                 },
                 resource_type,
-                ignore,
             ))
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
         Ok(())
@@ -530,16 +511,7 @@ pub fn handle_resource_message(
             ),
         ),
         ResourceMessage::UpdateResourceMetadata(metadata) => {
-            if let Ok(Some(resource)) = worker.db.get_resource(&metadata.resource_id) {
-                send_worker_response(
-                    channel,
-                    oneshot,
-                    worker.update_resource_metadata(
-                        metadata,
-                        resource.resource_type.ends_with(".ignore"),
-                    ),
-                )
-            }
+            send_worker_response(channel, oneshot, worker.update_resource_metadata(metadata))
         }
         ResourceMessage::PostProcessJob(id) => {
             send_worker_response(channel, oneshot, worker.post_process_job(id))
@@ -548,14 +520,11 @@ pub fn handle_resource_message(
             resource_id,
             resource_type,
             content,
-        } => {
-            let ignore = resource_type.ends_with(".ignore");
-            send_worker_response(
-                channel,
-                oneshot,
-                worker.upsert_resource_text_content(resource_id, resource_type, content, ignore),
-            )
-        }
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.upsert_resource_text_content(resource_id, resource_type, content),
+        ),
         ResourceMessage::InsertEmbeddings {
             resource_id,
             embedding_type,

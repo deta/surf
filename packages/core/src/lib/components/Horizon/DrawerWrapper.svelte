@@ -220,10 +220,7 @@
       tags.push(ResourceManager.SearchTagDeleted(false))
     }
 
-    const result = (await resourceManager.searchResources(query, tags, parsedParameters)).filter(
-      (resource) => !resource.resource.type.endsWith('.ignore')
-    )
-
+    const result = await resourceManager.searchResources(query, tags, parsedParameters)
     if (query === '') {
       result.reverse()
     }

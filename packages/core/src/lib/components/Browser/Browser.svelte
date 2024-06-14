@@ -653,8 +653,20 @@
       const currentEntry = historyEntriesManager.getEntry(
         tab.historyStackIds[tab.currentHistoryIndex]
       )
-      const url = currentEntry?.url ?? tab.initialLocation
+      let url = currentEntry?.url ?? tab.initialLocation
 
+      // strip &t from url suffix
+      let youtubeHostnames = [
+        'youtube.com',
+        'youtu.be',
+        'youtube.de',
+        'www.youtube.com',
+        'www.youtu.be',
+        'www.youtube.de'
+      ]
+      if (youtubeHostnames.includes(new URL(url).host)) {
+        url = url.replace(/&t.*/g, '')
+      }
       log.debug('bookmarking', url)
 
       const detectedResource = await $activeBrowserTab.detectResource()
@@ -688,7 +700,6 @@
         return
       }
 
-      log.debug('bookmarking', $activeTabLocation)
       bookmarkingInProgress.set(true)
 
       await bookmarkPage($activeTab)
@@ -714,6 +725,7 @@
     if (url !== oldUrl) {
       log.debug('tab url changed, removing bookmark')
       updateTab(tab.id, { resourceBookmark: null })
+      updateTab(tab.id, { chatResourceBookmark: null })
     }
   }
 
@@ -1100,10 +1112,12 @@
     let response: AIChatMessageParsed | null = null
     const savedInputValue = $magicInputValue
 
+    $magicInputValue = ''
+
     try {
       log.debug('Magic button clicked')
 
-      if (!$magicInputValue) {
+      if (!savedInputValue) {
         log.debug('No input value')
         return
       }
@@ -1114,9 +1128,8 @@
         return
       }
       if (!tab.chatId) return
-      if (!tab.chatResourceBookmark) return
-
-      const browserTab = $browserTabs[tab.id]
+      if (!tab.chatResourceBookmark)
+        tab.chatResourceBookmark = await createChatResourceBookmark(tab)
 
       response = {
         id: generateID(),
@@ -1204,28 +1217,7 @@
         updateTab(tab.id, { chatId: tab.chatId })
       }
 
-      if (!tab.chatResourceBookmark) {
-        const detectedResource = await $activeBrowserTab.detectResource()
-        log.debug('extracted resource data', detectedResource)
-
-        if (!detectedResource) {
-          log.debug('no resource detected')
-          return
-        }
-
-        const resource = await resourceManager.createResourceOther(
-          // :doom:
-          new Blob([JSON.stringify(detectedResource.data)], {
-            //type: `${detectedResource.type}.ignore`
-            type: `${detectedResource.type}`
-          }),
-          { name: $activeTab?.title ?? '', sourceURI: $activeTabLocation ?? '', alt: '' }
-        )
-
-        log.debug('created resource', resource)
-
-        updateTab(tab.id, { chatResourceBookmark: resource.id })
-      }
+      if (!tab.chatResourceBookmark) await createChatResourceBookmark(tab)
     }
 
     updateMagicPage($activeTabId, { showSidebar: !$activeTabMagic.showSidebar })
@@ -1354,6 +1346,50 @@
       activeTabId.set(activeTabs[activeTabs.length - 1].id)
     }
   })
+
+  const createChatResourceBookmark = async (tab: TabPage) => {
+    let resource_id: string
+
+    if (tab.resourceBookmark) {
+      resource_id = tab.resourceBookmark
+    } else {
+      const detectedResource = await $activeBrowserTab.detectResource()
+      log.debug('extracted resource data', detectedResource)
+
+      if (!detectedResource) {
+        log.debug('no resource detected')
+        return
+      }
+
+      // strip &t from url suffix
+      let url = $activeTabLocation ?? ''
+      let youtubeHostnames = [
+        'youtube.com',
+        'youtu.be',
+        'youtube.de',
+        'www.youtube.com',
+        'www.youtu.be',
+        'www.youtube.de'
+      ]
+      if (youtubeHostnames.includes(new URL(url).host)) {
+        url = url.replace(/&t.*/g, '')
+      }
+
+      const resource = await resourceManager.createResourceOther(
+        new Blob([JSON.stringify(detectedResource.data)], {
+          type: `${detectedResource.type}`
+        }),
+        { name: $activeTab?.title ?? '', sourceURI: url, alt: '' },
+        [ResourceTag.canonicalURL(url)]
+      )
+      resource_id = resource.id
+
+      log.debug('created resource', resource)
+    }
+
+    updateTab(tab.id, { chatResourceBookmark: resource_id })
+    return resource_id
+  }
 </script>
 
 <SplashScreen />
