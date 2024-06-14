@@ -1,6 +1,5 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-
   import { useLogScope } from '../../../utils/log'
   import type { ResourceArticle } from '../../../service/resources'
   import type { ResourceDataArticle } from '../../../types'
@@ -14,13 +13,10 @@
 
   let article: ResourceDataArticle | null = null
   let title = ''
-  let subtitle = ''
-  let excerpt = ''
   let error = ''
   let loading = true
 
   const MAX_TITLE_LENGTH = 300
-  const MAX_SUBTITLE_LENGTH = 100
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
@@ -37,16 +33,11 @@
       dispatch('data', article)
 
       const url = new URL(article.url)
-
       const hostname = url.hostname.split('.').slice(-2, -1).join('')
       title = truncate(
         article.title || article.excerpt || hostname[0].toUpperCase() + hostname.slice(1),
         MAX_TITLE_LENGTH
       )
-      // subtitle = truncate(
-      //   article.excerpt || article.content_plain || `${url.hostname}${url.pathname}`,
-      //   MAX_SUBTITLE_LENGTH
-      // )
 
       if (!article.images || article.images.length === 0) {
         dispatch('load')
@@ -64,7 +55,6 @@
   })
 </script>
 
-<!-- <a href={article?.url} target="_blank" class="link-card"></a> -->
 <div class="link-card">
   <div class="details">
     {#if error}
@@ -108,8 +98,6 @@
     padding: 0.5rem;
     color: inherit;
     text-decoration: none;
-    user-select: none;
-    -webkit-user-drag: none;
   }
 
   .details {
@@ -126,7 +114,6 @@
     height: 100%;
     border-radius: 9px;
     pointer-events: none;
-    user-select: none;
   }
 
   .title {
@@ -156,6 +143,7 @@
     gap: 1rem;
     padding: 2rem 2.5rem;
     background: #f6f5f2;
+
     .favicon {
       width: 1.5rem;
       height: 1.5rem;
@@ -164,6 +152,7 @@
         0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
         0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
     }
+
     .excerpt {
       font-size: 1.25rem;
       line-height: 1.775rem;

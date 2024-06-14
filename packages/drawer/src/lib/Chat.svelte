@@ -42,8 +42,10 @@
     width: 4rem;
     view-transition-name: chat-transition;
     &.active {
+      position: fixed;
       background: white;
-      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
       padding: 0.5rem;
       border-radius: 14px;
       top: 1rem;

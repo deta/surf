@@ -137,6 +137,7 @@
         class="folder-input"
         style={`width: ${inputWidth}`}
         on:keydown={async (e) => {
+          e.stopPropagation()
           folderName = e.target?.value
           if (e.code === 'Space' && !e.shiftKey) {
             e.preventDefault()

@@ -392,8 +392,7 @@ export class SFFS {
 
   async deleteSpaceEntries(entryIds: string[]): Promise<void> {
     this.log.debug('deleting space entries with ids', entryIds)
-    const stringEntryIds = this.stringifyData(entryIds)
-    await this.backend.js__store_delete_space_entries(stringEntryIds)
+    await this.backend.js__store_delete_space_entries(entryIds)
   }
 
   async getResourcesViaPrompt(query: string): Promise<AiSFFSQueryResponse> {

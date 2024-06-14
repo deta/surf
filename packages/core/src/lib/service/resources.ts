@@ -663,7 +663,49 @@ export class ResourceManager {
   }
 
   async deleteSpaceEntries(entry_ids: string[]) {
+    console.log('about to delete entries', entry_ids)
     return await this.sffs.deleteSpaceEntries(entry_ids)
+  }
+
+  async getNumberOfReferencesInSpaces(resourceId: string): Promise<number> {
+    const result = await this.sffs.listSpaces()
+    const allFolders = JSON.parse(result)
+    console.log('allFolders', allFolders)
+
+    let count = 0
+    for (const folder of allFolders) {
+      const folderContents = await this.sffs.getSpaceContents(folder.id)
+      const references = folderContents.filter((content) => content.resource_id === resourceId)
+
+      count += references.length
+    }
+
+    return count
+  }
+
+  async getAllReferences(
+    resourceId: string,
+    preFetchedSpaces?: string[]
+  ): Promise<{ folderId: string; resourceId: string }[]> {
+    const result = preFetchedSpaces ?? (await this.sffs.listSpaces())
+    const allFolders = JSON.parse(result)
+
+    const references: { folderId: string; resourceId: string; entryId: string }[] = []
+
+    for (const folder of allFolders) {
+      const folderContents = await this.sffs.getSpaceContents(folder.id)
+      const folderReferences = folderContents
+        .filter((content) => content.resource_id === resourceId)
+        .map((content) => ({
+          folderId: folder.id,
+          resourceId: content.resource_id,
+          entryId: content.id
+        }))
+
+      references.push(...folderReferences)
+    }
+
+    return references
   }
 
   async getResourcesViaPrompt(query: string): Promise<AiSFFSQueryResponse> {

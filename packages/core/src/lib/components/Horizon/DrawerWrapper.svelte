@@ -103,6 +103,7 @@
   const isDraggingDrawerItem = writable(false)
 
   const selectedResource = writable<ResourceObject | undefined>(undefined)
+  const listSpaces = writable<string[]>([])
 
   drawer.selectedTab.set('all')
 
@@ -362,14 +363,62 @@
 
   const handleResourceRemove = async (e: CustomEvent<string>) => {
     const resourceId = e.detail
+    console.log('remove resource', resourceId)
+    const isInFolder = $selectedFolder !== 'all'
 
-    const confirm = window.confirm(`Are you sure you want to delete this resource?`)
-    if (confirm) {
-      const resource = await resourceManager.deleteResource(resourceId)
-      log.debug('Resource deleted', resource)
+    const references = await resourceManager.getAllReferences(resourceId, $listSpaces)
+
+    let numberOfReferences = 0
+    if (!isInFolder) {
+      numberOfReferences = references.length
     }
 
-    return
+    const confirm = window.confirm(
+      isInFolder
+        ? `Remove reference? The original will still be in Everything.`
+        : numberOfReferences > 0
+          ? `This resource will be deleted permanently including all of its ${numberOfReferences} references.`
+          : `This resource will be deleted permanently.`
+    )
+
+    if (!confirm) {
+      return
+    }
+
+    const folderContents = await resourceManager.getSpaceContents($selectedFolder)
+
+    // DELETING SINGLE ITEM IN FOLDER
+    if (isInFolder) {
+      const matchingResource = folderContents.find((r) => r.resource_id === resourceId)
+      try {
+        if (matchingResource) {
+          await resourceManager.deleteSpaceEntries([matchingResource.id])
+          await loadFolderContents($selectedFolder)
+        }
+        console.log('trying to remove reference...', matchingResource)
+      } catch (error) {
+        console.error('Error removing reference:', error)
+      }
+    }
+
+    // DELETING ALL ITEMS AND ITS REFERENCES
+    if (!isInFolder) {
+      for (const resource of references) {
+        console.log('xxx', references)
+        try {
+          await resourceManager.deleteSpaceEntries([resource.entryId])
+        } catch (error) {
+          console.error('Error removing reference:', error)
+        }
+      }
+
+      try {
+        const resource = await resourceManager.deleteResource(resourceId)
+        log.debug('Resource deleted', resource)
+      } catch (error) {
+        log.error('Error deleting resource:', error)
+      }
+    }
   }
 
   const handleResourceMaximize = async (e: CustomEvent) => {
@@ -796,6 +845,7 @@
   }
 
   const handleCloseChat = () => {
+    viewState.set('default')
     showChat.set(false)
     searchQuery.set({ value: '', tab: 'all' })
     chatPrompt.set('')
@@ -855,6 +905,8 @@
     })
 
     await runSearch('', null)
+
+    listSpaces.set(await resourceManager.listSpaces())
 
     log.debug('Initial load done')
     initialLoad = false
@@ -980,13 +1032,18 @@
     <div class="drawer-chat-search">
       <DrawerSearch on:aichat={handleOasisChat} />
 
-      <DrawerChat
-        on:chatSend={handleChat}
-        on:dropForwarded={handleDropForwarded}
-        on:dropFileUpload={handleFileUpload}
-        forceOpen={false}
-        {droppedInputElements}
-      />
+      <div class="drawer-chat {$viewState === 'chat' ? 'active' : ''}">
+        <button class="close-button" on:click={handleCloseChat}>
+          <Icon name="close" size="15px" />
+        </button>
+        <DrawerChat
+          on:chatSend={handleChat}
+          on:dropForwarded={handleDropForwarded}
+          on:dropFileUpload={handleFileUpload}
+          forceOpen={false}
+          {droppedInputElements}
+        />
+      </div>
     </div>
     <!-- <ProgressiveBlur /> -->
   </div>
@@ -1008,7 +1065,7 @@
           colWidth="minmax(Min(330px, 100%), 1fr)"
           bind:refreshLayout={refreshContentLayout}
         >
-          {#each $selectedFolder === 'all' ? $searchResult : $folderResult as item (item.id)}
+          {#each ($selectedFolder === 'all' ? $searchResult : $folderResult).slice(0, 50) as item (item.id)}
             {#if item.engine === 'local'}
               <div>
                 <ResourceLoading title={item.resource.metadata?.name} />
@@ -1131,7 +1188,6 @@
 
     .drawer-chat-search {
       position: relative;
-      top: 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1139,6 +1195,37 @@
       gap: 16px;
       padding: 1rem 1rem 1rem 1rem;
       transition: all 240ms ease-out;
+      .drawer-chat {
+        position: relative;
+        z-index: 10;
+        top: 0;
+
+        .chat-input-wrapper {
+          position: fixed;
+          top: 0;
+          left: 0;
+        }
+
+        .close-button {
+          position: relative;
+          display: none;
+          top: -1rem;
+          right: -3.5rem;
+          justify-content: center;
+          align-items: center;
+          width: 2rem;
+          height: 2rem;
+          flex-shrink: 0;
+          border-radius: 50%;
+          border: 0.5px solid rgba(0, 0, 0, 0.15);
+          transition: 60ms ease-out;
+          background: white;
+          z-index: 100;
+          &:hover {
+            outline: 3px solid rgba(0, 0, 0, 0.15);
+          }
+        }
+      }
 
       .search-transition {
         position: relative;

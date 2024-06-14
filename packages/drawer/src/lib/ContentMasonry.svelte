@@ -49,6 +49,7 @@
   }
 
   const calcGrid = async (_masonryArr) => {
+    console.log('Re-render masonry...')
     await tick()
     if (_masonryArr.length && getComputedStyle(_masonryArr[0]).gridTemplateRows !== 'masonry') {
       grids = _masonryArr.map((grid) => {
@@ -71,7 +72,7 @@
       await tick()
       setTimeout(() => {
         refreshLayout()
-      }, 500)
+      }, 5000)
     }
   }
 
