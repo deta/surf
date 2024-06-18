@@ -347,17 +347,35 @@ export class SFFS {
 
   async createSpace(name: string) {
     this.log.debug('creating space with name:', name)
-    return await this.backend.js__store_create_space(name)
+    const raw = await this.backend.js__store_create_space(name)
+    const space = this.parseData<Space>(raw)
+    if (!space) {
+      return null
+    }
+
+    return space
   }
 
   async getSpace(id: string) {
     this.log.debug('getting space with id', id)
-    return this.backend.js__store_get_space(id)
+    const raw = await this.backend.js__store_get_space(id)
+    const space = this.parseData<Space>(raw)
+    if (!space) {
+      return null
+    }
+
+    return space
   }
 
   async listSpaces() {
     this.log.debug('listing all spaces')
-    return this.backend.js__store_list_spaces()
+    const raw = await this.backend.js__store_list_spaces()
+    const spaces = this.parseData<Space[]>(raw)
+    if (!spaces) {
+      return []
+    }
+
+    return spaces
   }
 
   async updateSpace(spaceId: string, name: string) {
@@ -370,9 +388,9 @@ export class SFFS {
     await this.backend.js__store_delete_space(space_id)
   }
 
-  async addItemsToSpace(space_id: string, items: CreateSpaceEntryInput[]): Promise<void> {
-    const typedItems = items.map((item) => ({
-      resource_id: item,
+  async addItemsToSpace(space_id: string, resourceIds: string[]): Promise<void> {
+    const typedItems = resourceIds.map((id) => ({
+      resource_id: id,
       manually_added: false
     }))
 
@@ -398,6 +416,7 @@ export class SFFS {
   async getResourcesViaPrompt(query: string): Promise<AiSFFSQueryResponse> {
     this.log.debug('querying SFFS resources with AI', query)
     const rawResponse = await this.backend.js__ai_query_sffs_resources(query)
+    this.log.debug('raw response', rawResponse)
     const response = this.parseData<AiSFFSQueryResponse>(rawResponse)
     if (!response) {
       throw new Error('failed to query SFFS resources, invalid response data', rawResponse)

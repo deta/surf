@@ -1,50 +1,37 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
-  import BrowserTab from '@horizon/core/src/lib/components/Browser/BrowserTab.svelte'
-  import type { HistoryEntriesManager } from '@horizon/core/src/lib/service/history'
+  import { HistoryEntriesManager } from '@horizon/core/src/lib/service/history'
   import WebviewWrapper, { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
-  import { writable } from 'svelte/store'
   import {
     Resource,
     ResourceAnnotation,
-    ResourceManager,
     ResourceTag,
-    type ResourceObject
+    useResourceManager
   } from '../../service/resources'
-  import type { Writable } from 'svelte/store'
   import {
     WebViewEventReceiveNames,
     type AnnotationRangeData,
-    type DetectedWebApp,
-    type ResourceDataAnnotation
+    type DetectedWebApp
   } from '@horizon/types'
   import { useLogScope } from '../../utils/log'
-  import AnnotationItem from './AnnotationItem.svelte'
   import { Icon } from '@horizon/icons'
   import { wait } from '@horizon/web-parser/src/utils'
+  import OasisResourceDetails from './OasisResourceDetails.svelte'
+  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
+  import ResourceOverlay from '@horizon/drawer/src/lib/components/ResourceOverlay.svelte'
+  import AnnotationItem from '../Browser/AnnotationItem.svelte'
 
-  export let resource: Writable<Resource | undefined>
-  export let resourceManager: ResourceManager
+  export let resource: Resource
 
-  let webview: BrowserTab
+  let webview: WebviewWrapper
   let activeAnnotation = ''
 
-  const initialUrl = writable('https://example.com')
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<{ close: void }>()
+  const log = useLogScope('OasisResourceModal')
+  const resourceManager = useResourceManager()
+  const historyEntriesManager = new HistoryEntriesManager()
 
-  const log = useLogScope('MiniBrowser')
-
-  $: historyEntriesManager = {
-    getEntry: (id) => ({ id, url: $resource?.metadata?.sourceURI || 'https://example.com' })
-  }
-
-  $: tab = {
-    initialLocation: $resource?.metadata?.sourceURI || 'https://example.com',
-    historyStackIds: [],
-    currentHistoryIndex: 0,
-    icon: '',
-    title: ''
-  }
+  $: src = resource?.metadata?.sourceURI || 'https://example.com'
 
   function close() {
     dispatch('close')
@@ -71,10 +58,10 @@
     try {
       log.debug('App detected', e.detail)
 
-      if (!$resource) return
+      if (!resource) return
 
       loadingAnnotations = true
-      annotations = await resourceManager.getAnnotationsForResource($resource.id)
+      annotations = await resourceManager.getAnnotationsForResource(resource.id)
       log.debug('Annotations', annotations)
 
       await wait(500)
@@ -87,7 +74,7 @@
 
         if (data.type !== 'highlight') return
 
-        webview.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, {
+        webview.sendEvent(WebViewEventReceiveNames.RestoreHighlight, {
           id: annotation.id,
           range: data.anchor.data as AnnotationRangeData
         })
@@ -102,11 +89,11 @@
   const handleAnnotationSelect = (e: CustomEvent<string>) => {
     const annotationId = e.detail
     log.debug('Annotation selected', annotationId)
-    webview.sendWebviewEvent(WebViewEventReceiveNames.ScrollToAnnotation, annotationId)
+    webview.sendEvent(WebViewEventReceiveNames.ScrollToAnnotation, annotationId)
   }
 
   const handleWebViewHighlight = async (e: CustomEvent<WebViewWrapperEvents['highlight']>) => {
-    if (!$resource) return
+    if (!resource) return
 
     const { range, url } = e.detail
     log.debug('webview highlight', url, range)
@@ -126,7 +113,7 @@
         ResourceTag.canonicalURL(url),
 
         // link the annotation to the bookmarked resource
-        ResourceTag.annotates($resource.id)
+        ResourceTag.annotates(resource.id)
       ]
     )
 
@@ -134,7 +121,7 @@
     annotations = [...annotations, annotationResource]
 
     log.debug('highlighting text in webview')
-    webview.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, {
+    webview.sendEvent(WebViewEventReceiveNames.RestoreHighlight, {
       id: annotationResource.id,
       range: range
     })
@@ -157,14 +144,28 @@
   </div>
   <div id="mini-browser" class="mini-browser">
     <div class="resource-details">
-      <slot />
+      <OasisResourceDetails {resource}>
+        <ResourceOverlay caption="Click to open in new tab">
+          <ResourcePreviewClean slot="content" {resource} />
+        </ResourceOverlay>
+      </OasisResourceDetails>
     </div>
 
-    <BrowserTab
+    <!-- <BrowserTab
       {tab}
       {historyEntriesManager}
       bind:this={webview}
       on:appDetection={handleAppDetection}
+      on:highlight={handleWebViewHighlight}
+      on:annotationClick={handleAnnotationClick}
+    /> -->
+
+    <WebviewWrapper
+      bind:this={webview}
+      {src}
+      partition="persist:horizon"
+      {historyEntriesManager}
+      on:detectedApp={handleAppDetection}
       on:highlight={handleWebViewHighlight}
       on:annotationClick={handleAnnotationClick}
     />

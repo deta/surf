@@ -4,27 +4,13 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { writable, derived, get } from 'svelte/store'
-  import type { Drawer } from '@horizon/drawer'
 
   import type { ResourceLink, ResourceManager } from '../../service/resources'
   import { useLogScope } from '../../utils/log'
-  import type {
-    AIChat,
-    AIChatMessage,
-    AIChatMessageParsed,
-    AIChatMessageSource,
-    TabChat
-  } from './types'
-  import type { HorizonDatabase } from '../../service/storage'
-  import { getChatData, getResourceByIDs } from './examples'
-  import {
-    DUMMY_CHAT_RESPONSE,
-    parseChatResponse,
-    parseChatResponseContent,
-    parseChatResponseSources
-  } from '../../service/ai'
+  import type { AIChat, AIChatMessageParsed, AIChatMessageSource, TabChat } from './types'
+  import { parseChatResponseSources } from '../../service/ai'
   import { generateID } from '../../utils/id'
   import { SFFS } from '../../service/sffs'
   import ChatResponseSource from './ChatResponseSource.svelte'
@@ -35,10 +21,7 @@
 
   export let tab: TabChat
   export let resourceManager: ResourceManager
-  export let drawer: Drawer
-  export let db: HorizonDatabase
   export let resourceIds: string[]
-  export let selectedFolder: string
 
   const log = useLogScope('Chat')
   const dispatch = createEventDispatcher<{

@@ -3,12 +3,14 @@
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
+  import type { Tab } from './types'
+  import type { Writable } from 'svelte/store'
+  import SpaceIcon from '../Drawer/SpaceIcon.svelte'
 
-  export let tab
-  export let activeTabId
-  export let archiveTab
-  export let deleteTab
-  export let unarchiveTab
+  export let tab: Tab
+  export let activeTabId: Writable<string>
+  export let deleteTab: (tabId: string) => void
+  export let unarchiveTab: (tabId: string) => void
 
   const dispatch = createEventDispatcher()
 
@@ -39,6 +41,10 @@
   {:else if tab.type === 'importer'}
     <div class="icon-wrapper">
       <Icon name="code" size="20px" />
+    </div>
+  {:else if tab.type === 'space'}
+    <div class="icon-wrapper">
+      <SpaceIcon />
     </div>
   {:else}
     <div class="icon-wrapper">

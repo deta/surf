@@ -53,7 +53,8 @@
     type ResourceData,
     type SFFSResourceTag,
     type SFFSResourceMetadata,
-    type SFFSSearchParameters
+    type SFFSSearchParameters,
+    type Space
   } from '../../types'
 
   import { parseStringIntoUrl } from '../../utils/url'
@@ -103,7 +104,7 @@
   const isDraggingDrawerItem = writable(false)
 
   const selectedResource = writable<ResourceObject | undefined>(undefined)
-  const listSpaces = writable<string[]>([])
+  const listSpaces = writable<Space[]>([])
 
   drawer.selectedTab.set('all')
 

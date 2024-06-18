@@ -6,21 +6,26 @@
   import { Telemetry } from '../../service/telemetry'
   import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
+  import type { Space } from '../../types'
+  import { useLogScope } from '../../utils/log'
+  import { useOasis } from '../../service/oasis'
+  import { processDrop } from '../../service/mediaImporter'
 
-  export let folder
-  export let activeFolderId
-  export let reducedResources
-  export let selected
+  export let folder: Space
+  export let selected: boolean
 
+  const log = useLogScope('Folder')
   const dispatch = createEventDispatcher()
+  const oasis = useOasis()
 
   let folderName = folder.name
-  let folderColors = folder.colors
   let inputWidth = `${folderName.length}ch`
   let processing = false
 
   let telemetryAPIKey = ''
   let telemetryActive = false
+
+  let inputElement: HTMLInputElement
 
   if (import.meta.env.PROD) {
     telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
@@ -50,39 +55,54 @@
   }
 
   const createFolderWithAI = async () => {
-    processing = true
-    const userPrompt = JSON.stringify(folderName)
+    try {
+      processing = true
+      const userPrompt = JSON.stringify(folderName)
 
-    let response = await resourceManager.getResourcesViaPrompt(userPrompt)
-    console.log(`Automatic Folder Generation request... ${userPrompt}`)
-    let parsed = JSON.parse(response)
+      log.debug('Creating folder with AI', userPrompt)
+      inputElement.blur()
+      dispatch('rename', { id: folder.id, name: folderName })
 
-    let results = parsed.embedding_search_results || parsed.sql_query_results
+      let response = await resourceManager.getResourcesViaPrompt(userPrompt)
+      if (typeof response === 'string') {
+        response = JSON.parse(response)
+      }
 
-    console.log('Automatic Folder generated with', results)
+      log.debug(`Automatic Folder Generation request`, response)
 
-    await resourceManager.addItemsToSpace(folder.id, results)
+      const results = response.embedding_search_results || response.sql_query_results
+      log.debug('Automatic Folder generated with', results)
 
-    selectedFolder.triggerRedraw()
-    await tick()
-    selectedFolder.set('all')
-    await tick()
-    selectedFolder.set(folder.id)
+      if (!results) {
+        log.warn('No results found for', userPrompt, response)
+        processing = false
+        return
+      }
 
-    processing = false
+      await oasis.addResourcesToSpace(folder.id, results)
+      selectedFolder.set(folder.id)
+    } catch (err) {
+      log.error('Failed to create folder with AI', err)
+    } finally {
+      processing = false
+    }
   }
 
-  const handleDrop = async (event) => {
+  const handleDrop = async (event: DragEvent) => {
     event.preventDefault()
-    const data = event.dataTransfer.getData('application/json')
-    const { id } = JSON.parse(data)
 
-    const resource = await resourceManager.getResource(id)
+    const mediaResults = await processDrop(event)
 
-    console.log('trying to drop resource', resource)
-
-    await resourceManager.addItemsToSpace(folder.id, [id])
-    console.log(`Resource ${id} dropped into folder ${folder.name}`)
+    const resourceItems = mediaResults.filter((r) => r.type === 'resource')
+    if (resourceItems.length > 0) {
+      await resourceManager.addItemsToSpace(
+        folder.id,
+        resourceItems.map((r) => r.data as string)
+      )
+      log.debug(`Resources dropped into folder ${folder.name}`)
+    } else {
+      log.debug('No resources found in drop event')
+    }
 
     draggedOver.set(false)
   }
@@ -94,23 +114,23 @@
     // await resourceManager.updateSpace(folder.id, update)
   }
 
-  const handleDragOver = (event) => {
+  const handleDragOver = (event: DragEvent) => {
     event.preventDefault()
     draggedOver.set(true)
   }
 
-  const handleDragLeave = (event) => {
+  const handleDragLeave = (event: DragEvent) => {
     draggedOver.set(false)
   }
 
-  onMount(() => {
-    if (folder.id === $activeFolderId) {
-      const inputElement = document.getElementById(`folder-input-${folder.id}`)
-      if (inputElement) {
-        inputElement.select()
-      }
-    }
-  })
+  // onMount(() => {
+  //   if (folder.id === activeFolderId) {
+  //     const inputElement = document.getElementById(`folder-input-${folder.id}`) as HTMLInputElement
+  //     if (inputElement) {
+  //       inputElement.select()
+  //     }
+  //   }
+  // })
 
   $: {
     inputWidth = `${folderName.length + 3}ch`
@@ -128,8 +148,9 @@
 >
   <div class="folder {selected ? 'active' : ''}" on:click={handleClick} aria-hidden="true">
     <div class="folder-leading">
-      <SpaceIcon on:colorChange={handleColorChange} colors={folderColors} />
+      <SpaceIcon on:colorChange={handleColorChange} />
       <input
+        bind:this={inputElement}
         id={`folder-input-${folder.id}`}
         type="text"
         bind:value={folderName}

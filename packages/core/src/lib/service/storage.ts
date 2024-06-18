@@ -3,7 +3,6 @@ import Dexie from 'dexie'
 import { generateID } from '../utils/id'
 import type { Optional, LegacyResource } from '../types'
 import type { Chat, ChatMessage, Tab } from '../components/Browser/types'
-import type { Folder } from './folderManager'
 
 export class LocalStorage<T> {
   key: string
@@ -143,7 +142,6 @@ export class HorizonDatabase extends Dexie {
   tabs: HorizonStore<Tab>
   chats: HorizonStore<Chat>
   chatMessages: HorizonStore<ChatMessage>
-  folders: HorizonStore<Folder>
 
   constructor() {
     super('HorizonDatabase')
@@ -222,13 +220,12 @@ export class HorizonDatabase extends Dexie {
       tabs: 'id, createdAt, updatedAt, archived, type, title, icon, section, initialLocation, historyStackIds, currentHistoryIndex, resourceBookmark, horizonId, query',
       chats: 'id, createdAt, updatedAt, title, messageIds',
       chatMessages: 'id, createdAt, updatedAt, role, content',
-      folders: 'id, name, items, createdAt, updatedAt'
+      folders: 'id, name, items, createdAt, updatedAt' // TODO: remove with next version
     })
 
     this.resources = new HorizonStore<LegacyResource>(this.table('resources'))
     this.tabs = new HorizonStore<Tab>(this.table('tabs'))
     this.chats = new HorizonStore<Chat>(this.table('chats'))
     this.chatMessages = new HorizonStore<ChatMessage>(this.table('chatMessages'))
-    this.folders = new HorizonStore<Folder>(this.table('folders'))
   }
 }

@@ -9,6 +9,7 @@
   import LinkPreview from '../Cards/Link/LinkPreview.svelte'
   import type {
     Resource,
+    ResourceAnnotation,
     ResourceArticle,
     ResourceChatMessage,
     ResourceChatThread,
@@ -28,19 +29,17 @@
   import ArticleProperties from '@horizon/drawer/src/lib/components/properties/ArticleProperties.svelte'
   import ChatThreadPreview from '../Cards/ChatThread/ChatThreadPreview.svelte'
   import YoutubePreview from '../Cards/Post/YoutubePreview.svelte'
+  import AnnotationPreview from '../Cards/Annotation/AnnotationPreview.svelte'
 
   export let resource: Resource
+  export let selected: boolean
 
-  const dispatch = createEventDispatcher<{ click: string; remove: string; load: string }>()
-
-  const handleClick = () => {
-    dispatch('click', resource.id)
-  }
-
-  const handleRemove = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
-    dispatch('remove', resource.id)
-  }
+  const dispatch = createEventDispatcher<{
+    click: string
+    remove: string
+    load: string
+    open: string
+  }>()
 
   // TODO: figure out better way to do this
   $: textResource = resource as ResourceNote
@@ -50,6 +49,7 @@
   $: chatMessageResource = resource as ResourceChatMessage
   $: chatThreadResource = resource as ResourceChatThread
   $: documentResource = resource as ResourceDocument
+  $: annotationResource = resource as ResourceAnnotation
 
   let data: ResourceData | null = null
   const handleData = (e: CustomEvent<ResourceData>) => {
@@ -73,8 +73,22 @@
     }
   }
 
+  const handleClick = () => {
+    dispatch('click', resource.id)
+  }
+
   const handleLoad = () => {
     dispatch('load', resource.id)
+  }
+
+  const handleRemove = (e: MouseEvent) => {
+    e.stopImmediatePropagation()
+    dispatch('remove', resource.id)
+  }
+
+  const handleMaximize = (e: MouseEvent) => {
+    e.stopImmediatePropagation()
+    dispatch('open', resource.id)
   }
 </script>
 
@@ -82,6 +96,7 @@
 <div
   on:click={handleClick}
   class="resource-preview"
+  class:isSelected={selected}
   style="--id:{resource.id};"
   on:dragstart={handleDragStart}
   draggable="true"
@@ -134,6 +149,8 @@
         on:data={handleData}
         on:load={handleLoad}
       />
+    {:else if resource.type.startsWith(ResourceTypes.ANNOTATION)}
+      <AnnotationPreview resource={annotationResource} on:data={handleData} on:load={handleLoad} />
     {:else}
       <FilePreview {resource} on:load={handleLoad} />
       <!-- {:else}
@@ -165,10 +182,22 @@
       {:else if resource.type.startsWith(ResourceTypes.DOCUMENT)}
         <Icon name="docs" size="20px" />
         <div class="">Document</div>
+      {:else if resource.type.startsWith(ResourceTypes.ANNOTATION)}
+        <Icon name="marker" size="20px" />
+        <div class="">Annotation</div>
       {:else}
         <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
         <div class="">{getFileType(resource.type) ?? 'File'}</div>
       {/if}
+    </div>
+
+    <div class="remove-wrapper">
+      <div class="remove rotated" on:click={handleMaximize}>
+        <Icon name="arrow.right" color="#AAA7B1" />
+      </div>
+      <div class="remove" on:click={handleRemove}>
+        <Icon name="close" color="#AAA7B1" />
+      </div>
     </div>
 
     <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
@@ -192,7 +221,7 @@
     display: flex;
     gap: 8px;
     flex-direction: column;
-    border-radius: 8px;
+    border-radius: 16px;
     overflow: visible;
     cursor: default;
     animation: 280ms fade-in-up cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -207,16 +236,27 @@
       }
     }
 
+    &.isSelected {
+      .preview {
+        outline: 4px solid rgba(0, 123, 255, 0.75);
+      }
+    }
+
     &.details {
       .preview:hover {
         outline: 0;
       }
     }
+
+    & * {
+      user-select: none;
+      -webkit-user-drag: none;
+    }
   }
 
   .preview {
     width: 100%;
-    border-radius: 6px;
+    border-radius: 16px;
     border: 1px solid rgba(228, 228, 228, 0.75);
     box-shadow:
       0px 1px 0px 0px rgba(65, 58, 86, 0.25),
@@ -257,18 +297,15 @@
 
   .remove-wrapper {
     position: absolute;
+    display: flex;
+    gap: 0.75rem;
     top: 0;
     padding: 1rem;
-    right: 0;
+    right: 1rem;
     transform: translateX(45%) translateY(-45%);
     opacity: 0;
     margin-left: 0.5rem;
     cursor: default;
-    &:hover {
-      .remove {
-        outline: 3px solid rgba(0, 0, 0, 0.15);
-      }
-    }
     .remove {
       display: flex;
       justify-content: center;
@@ -280,6 +317,12 @@
       border: 0.5px solid rgba(0, 0, 0, 0.15);
       transition: 60ms ease-out;
       background: white;
+      &.rotated {
+        transform: rotate(-45deg);
+      }
+      &:hover {
+        outline: 3px solid rgba(0, 0, 0, 0.15);
+      }
     }
   }
 
@@ -294,10 +337,38 @@
 
   .type {
     display: flex;
-    align-items: center;
+    align-items: start;
     gap: 0.5rem;
     font-size: 1rem;
     font-weight: 500;
     color: #281b53;
+  }
+
+  .label {
+    font-size: 1.1rem;
+    line-height: 1.4;
+    padding: 0 0.25rem 0 0.25rem;
+    margin-bottom: 1.5rem;
+    text-wrap: balance;
+  }
+
+  .dragging {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    max-width: 200px;
+    max-height: 200px;
+    opacity: 0.7;
+    pointer-events: none;
+    animation: initial-drag 0.2s ease-out;
+  }
+
+  @keyframes initial-drag {
+    from {
+      transform: scale(0.8);
+    }
+    to {
+      transform: scale(1);
+    }
   }
 </style>

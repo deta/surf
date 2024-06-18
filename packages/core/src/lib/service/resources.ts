@@ -19,10 +19,14 @@ import {
   type ResourceTagsBuiltIn,
   type ResourceDataDocument,
   type SFFSSearchParameters,
-  type SFFSSearchProximityParameters
+  type SFFSSearchProximityParameters,
+  type SpaceEntry,
+  type Space
 } from '../types'
 import type { Telemetry } from './telemetry'
 import { TelemetryEventTypes, type ResourceDataAnnotation } from '@horizon/types'
+import { getContext, setContext } from 'svelte'
+import type { MediaParserResult } from './mediaImporter'
 
 /*
  TODO:
@@ -650,15 +654,31 @@ export class ResourceManager {
     return await this.sffs.deleteSpace(spaceId)
   }
 
-  async addItemsToSpace(space_id: string, items: CreateSpaceEntryInput[]) {
+  async addItemsToSpace(space_id: string, resourceIds: string[]) {
     const existingItems = await this.getSpaceContents(space_id)
     const existingResourceIds = existingItems.map((item) => item.resource_id)
-    const newItems = items.filter((item) => !existingResourceIds.includes(item))
+    const newItems = resourceIds.filter((id) => !existingResourceIds.includes(id))
 
     return await this.sffs.addItemsToSpace(space_id, newItems)
   }
 
-  async getSpaceContents(space_id: string) {
+  async getSpaceContents(space_id: string): Promise<SpaceEntry[]> {
+    if (space_id === 'all') {
+      const resources = await this.searchResources('', [
+        ResourceManager.SearchTagDeleted(false),
+        ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+      ])
+
+      return resources.reverse().map((item) => ({
+        id: item.id,
+        space_id: 'all',
+        resource_id: item.resource.id,
+        created_at: item.resource.createdAt,
+        updated_at: item.resource.updatedAt,
+        manually_added: 0
+      }))
+    }
+
     return await this.sffs.getSpaceContents(space_id)
   }
 
@@ -668,8 +688,7 @@ export class ResourceManager {
   }
 
   async getNumberOfReferencesInSpaces(resourceId: string): Promise<number> {
-    const result = await this.sffs.listSpaces()
-    const allFolders = JSON.parse(result)
+    const allFolders = await this.sffs.listSpaces()
     console.log('allFolders', allFolders)
 
     let count = 0
@@ -685,10 +704,9 @@ export class ResourceManager {
 
   async getAllReferences(
     resourceId: string,
-    preFetchedSpaces?: string[]
-  ): Promise<{ folderId: string; resourceId: string }[]> {
-    const result = preFetchedSpaces ?? (await this.sffs.listSpaces())
-    const allFolders = JSON.parse(result)
+    preFetchedSpaces?: Space[]
+  ): Promise<{ folderId: string; resourceId: string; entryId: string }[]> {
+    const allFolders = preFetchedSpaces ?? (await this.sffs.listSpaces())
 
     const references: { folderId: string; resourceId: string; entryId: string }[] = []
 
@@ -719,4 +737,19 @@ export class ResourceManager {
   static SearchTagAnnotates(resourceId: string): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.ANNOTATES, value: resourceId, op: 'eq' }
   }
+
+  static provide(telemetry: Telemetry) {
+    const resourceManager = new ResourceManager(telemetry)
+
+    setContext('resourceManager', resourceManager)
+
+    return resourceManager
+  }
+
+  static use() {
+    return getContext('resourceManager') as ResourceManager
+  }
 }
+
+export const createResourceManager = ResourceManager.provide
+export const useResourceManager = ResourceManager.use

@@ -5,7 +5,7 @@ export interface CreateSpaceEntryInput {
 
 export interface Space {
   id: string
-  name: object
+  name: string
   created_at: string
   updated_at: string
   deleted: number

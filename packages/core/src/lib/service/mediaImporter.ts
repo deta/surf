@@ -1,8 +1,10 @@
 import { hasClassOrParentWithClass } from '@horizon/tela'
 import { useLogScope } from '../utils/log'
 import { checkIfUrl, parseStringIntoUrl } from '../utils/url'
-import type { SFFSResourceMetadata } from '../types'
+import type { SFFSResourceMetadata, SFFSResourceTag } from '../types'
 import { result } from 'lodash'
+import { Resource, ResourceTag, type ResourceManager } from './resources'
+import { WebParser } from '@horizon/web-parser'
 
 const log = useLogScope('mediaImporter')
 
@@ -424,4 +426,76 @@ export const processPaste = async (e: ClipboardEvent) => {
   )
 
   return result
+}
+
+export const createResourcesFromMediaItems = async (
+  resourceManager: ResourceManager,
+  parsed: MediaParserResult[],
+  userGeneratedText: string
+) => {
+  const resources = await Promise.all(
+    parsed.map(async (item) => {
+      log.debug('processed item', item)
+      log.debug('usercontext', userGeneratedText)
+      item.metadata.userContext = userGeneratedText
+
+      let resource
+      if (item.type === 'text') {
+        resource = await resourceManager.createResourceNote(item.data, item.metadata, [
+          ResourceTag.dragLocal()
+        ])
+      } else if (item.type === 'url') {
+        resource = await extractAndCreateWebResource(
+          resourceManager,
+          item.data.href,
+          item.metadata,
+          [
+            ResourceTag.dragBrowser() // we assume URLs were dragged from the browser
+          ]
+        )
+      } else if (item.type === 'file') {
+        resource = await resourceManager.createResourceOther(item.data, item.metadata, [
+          ResourceTag.dragLocal()
+        ])
+      } else if (item.type === 'resource') {
+        resource = await resourceManager.getResource(item.data)
+      } else {
+        log.warn('unhandled item type', item.type)
+        return
+      }
+
+      log.debug('Created resource', resource)
+
+      return resource
+    })
+  )
+
+  return resources.filter((resource) => resource) as Resource[]
+}
+
+export const extractAndCreateWebResource = async (
+  resourceManager: ResourceManager,
+  url: string,
+  metadata?: Partial<SFFSResourceMetadata>,
+  tags?: SFFSResourceTag[]
+) => {
+  log.debug('Extracting resource from', url)
+
+  const webParser = new WebParser(url)
+
+  // Extract a resource from the web page using a webview, this should happen only when saving the resource
+  const extractedResource = await webParser.extractResourceUsingWebview(document)
+  log.debug('extractedResource', extractedResource)
+
+  if (!extractedResource) {
+    log.debug('No resource extracted, saving as link')
+
+    return resourceManager.createResourceLink({ url: url }, metadata, tags)
+  }
+
+  return resourceManager.createResourceOther(
+    new Blob([JSON.stringify(extractedResource.data)], { type: extractedResource.type }),
+    metadata,
+    tags
+  )
 }

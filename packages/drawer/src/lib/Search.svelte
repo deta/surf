@@ -4,7 +4,6 @@
   import { createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher()
-  const { viewState } = useDrawer()
 
   const forwardRequest = (e: CustomEvent) => {
     dispatch('aichat', e.detail)

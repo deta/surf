@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, setContext, tick } from 'svelte'
   import { slide } from 'svelte/transition'
+  import { tooltip } from '@svelte-plugins/tooltips'
   import SplashScreen from '../SplashScreen.svelte'
   import { writable, derived } from 'svelte/store'
   import { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
@@ -12,16 +13,19 @@
   import { copyToClipboard } from '../../utils/clipboard'
   import { wait, writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
-  import { Resource, ResourceManager, ResourceTag } from '../../service/resources'
+  import {
+    Resource,
+    ResourceManager,
+    ResourceTag,
+    createResourceManager
+  } from '../../service/resources'
   import { HorizonsManager } from '../../service/horizon'
   import { API } from '../../service/api'
   import BrowserTab, { type NewTabEvent } from './BrowserTab.svelte'
   import Horizon from '../Horizon/Horizon.svelte'
   import BrowserHomescreen from './BrowserHomescreen.svelte'
-  import OasisSidebar from './OasisSidebar.svelte'
+  import OasisSidebar from '../Oasis/OasisSidebar.svelte'
   import TabItem from './Tab.svelte'
-
-  import { selectedFolder } from '../../stores/oasis'
 
   import '../Horizon/index.scss'
   import type {
@@ -35,26 +39,20 @@
     TabEmpty,
     TabHorizon,
     TabImporter,
-    TabPage
+    TabPage,
+    TabSpace
   } from './types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../Cards/Browser/searchEngines'
-  import DrawerWrapper from '../Horizon/DrawerWrapper.svelte'
   import type { Drawer } from '@horizon/drawer'
   import Chat from './Chat.svelte'
   import { HorizonDatabase } from '../../service/storage'
   import { ResourceTypes, type Optional } from '../../types'
   import { useLocalStorageStore } from '../../utils/localstorage'
-  import Image from '../Atoms/Image.svelte'
-  import { tooltip } from '@svelte-plugins/tooltips'
   import { WebParser, type DetectedWebApp } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
   import { parseChatResponseSources, summarizeText } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
-  import {
-    ResourceTagsBuiltInKeys,
-    WebViewEventReceiveNames,
-    type AnnotationRangeData
-  } from '@horizon/types'
+  import { WebViewEventReceiveNames, type AnnotationRangeData } from '@horizon/types'
   import {
     inlineHighlightStylingCode,
     inlineHighlightTextCode,
@@ -63,6 +61,9 @@
     scrollToTextCode
   } from './inline'
   import { SFFS } from '../../service/sffs'
+  import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
+  import { provideOasis } from '../../service/oasis'
+  import OasisSpace from '../Oasis/OasisSpace.svelte'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -82,14 +83,17 @@
   })
 
   const api = new API()
-  const resourceManager = new ResourceManager(telemetry)
+  const resourceManager = createResourceManager(telemetry)
   const horizonManager = new HorizonsManager(api, resourceManager, telemetry)
   const storage = new HorizonDatabase()
   const sffs = new SFFS()
+  const oasis = provideOasis(resourceManager)
 
   const tabsDB = storage.tabs
   const horizons = horizonManager.horizons
   const historyEntriesManager = horizonManager.historyEntriesManager
+  const spaces = oasis.spaces
+  const selectedSpace = oasis.selectedSpace
 
   const masterHorizon = derived(horizons, (horizons) => horizons[0])
 
@@ -107,6 +111,8 @@
   const magicPages = writable<PageMagic[]>([])
   const bookmarkingSuccess = writableAutoReset(false, 1000)
   const showURLBar = writable(false)
+  const showResourceDetails = writable(false)
+  const resourceDetailsModalSelected = writable<string | null>(null)
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -212,6 +218,20 @@
   )
 
   $: log.debug('tabs', $tabs)
+
+  const openResourceDetailsModal = (resourceId: string) => {
+    resourceDetailsModalSelected.set(resourceId)
+    showResourceDetails.set(true)
+  }
+
+  const closeResourceDetailsModal = () => {
+    showResourceDetails.set(false)
+    resourceDetailsModalSelected.set(null)
+  }
+
+  const getSpace = (id: string) => {
+    return $spaces.find((space) => space.id === id)
+  }
 
   const resetActiveTab = () => {
     const tabsInView = $tabs.filter((tab) =>
@@ -1310,11 +1330,20 @@
   }
 
   const openResource = async (id: string) => {
-    $sidebarTab = 'oasis'
+    // $sidebarTab = 'oasis'
 
-    await tick()
+    // await tick()
 
-    drawer.openItem(id)
+    // drawer.openItem(id)
+    openResourceDetailsModal(id)
+  }
+
+  const handleSpaceItemClick = (e: CustomEvent<string>) => {
+    const resourceId = e.detail
+
+    log.debug('space item click', resourceId)
+
+    openResourceDetailsModal(resourceId)
   }
 
   onMount(async () => {
@@ -1330,8 +1359,22 @@
 
     const tabsList = await tabsDB.all()
     tabs.set(tabsList)
-
     log.debug('Tabs loaded', tabsList)
+
+    log.debug('Loading spaces')
+    const spacesList = await oasis.loadSpaces()
+
+    // add spaces to tabs if missing
+    // spacesList.forEach((space) => {
+    //   if (!tabsList.find((tab) => tab.type === 'space' && tab.spaceId === space.id)) {
+    //     createTab<TabSpace>({
+    //       type: 'space',
+    //       spaceId: space.id,
+    //       title: space.name,
+    //       icon: ''
+    //     })
+    //   }
+    // })
 
     // TODO: for safety we wait a bit before we tell the app that we are ready, we need a better way to do this
     setTimeout(() => {
@@ -1556,14 +1599,7 @@
 
         {#each $tabsInView as tab (tab.id)}
           {#if tab.type === 'chat'}
-            <TabItem
-              {tab}
-              {activeTabId}
-              {archiveTab}
-              {deleteTab}
-              {unarchiveTab}
-              on:select={handleTabSelect}
-            />
+            <TabItem {tab} {activeTabId} {deleteTab} {unarchiveTab} on:select={handleTabSelect} />
           {/if}
         {/each}
 
@@ -1571,14 +1607,7 @@
 
         {#each $tabsInView as tab (tab.id)}
           {#if tab.type !== 'chat'}
-            <TabItem
-              {tab}
-              {activeTabId}
-              {archiveTab}
-              {deleteTab}
-              {unarchiveTab}
-              on:select={handleTabSelect}
-            />
+            <TabItem {tab} {activeTabId} {deleteTab} {unarchiveTab} on:select={handleTabSelect} />
           {/if}
         {/each}
       </div>
@@ -1627,26 +1656,29 @@
         </button>
       </div>
     {:else}
-      <OasisSidebar {resourceManager} {sidebarTab} {selectedFolder} />
+      <OasisSidebar />
     {/if}
   </div>
 
   <div class="browser-window-wrapper" class:hasNoTab={!$activeBrowserTab}>
     {#if $sidebarTab === 'oasis'}
       <div class="browser-window active" style="--scaling: 1;">
-        {#if $masterHorizon}
-          <DrawerWrapper bind:drawer horizon={$masterHorizon} {resourceManager} {selectedFolder} />
-        {:else}
-          <div>Should not happen error: Failed to load main Horizon</div>
-        {/if}
+        <OasisSpace spaceId={$selectedSpace} on:open={handleSpaceItemClick} />
       </div>
+    {/if}
+
+    {#if $showResourceDetails && $resourceDetailsModalSelected}
+      <OasisResourceModalWrapper
+        resourceId={$resourceDetailsModalSelected}
+        on:close={() => closeResourceDetailsModal()}
+      />
     {/if}
 
     {#each $activeTabs as tab (tab.id)}
       <div
         class="browser-window"
         style="--scaling: 1;"
-        class:active={$activeTabId === tab.id}
+        class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
         class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
       >
         <!-- {#if $sidebarTab === 'oasis'}
@@ -1692,7 +1724,6 @@
           <Chat
             {tab}
             {resourceManager}
-            {drawer}
             db={storage}
             on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
             on:updateTab={(e) => updateTab(tab.id, e.detail)}
@@ -1700,6 +1731,8 @@
           />
         {:else if tab.type === 'importer'}
           <Importer {resourceManager} />
+        {:else if tab.type === 'space'}
+          <OasisSpace spaceId={tab.spaceId} on:open={handleSpaceItemClick} />
         {:else}
           <BrowserHomescreen
             {historyEntriesManager}
@@ -1710,51 +1743,6 @@
         {/if}
       </div>
     {/each}
-
-    {#if $activeTab && $activeTab?.archived}
-      <div class="browser-window active" style="--scaling: 1;">
-        {#if $activeTab?.type === 'page'}
-          <BrowserTab
-            bind:this={$browserTabs[$activeTabId]}
-            tab={$activeTab}
-            active
-            {historyEntriesManager}
-            on:newTab={handleNewTab}
-            on:navigation={(e) => handleWebviewTabNavigation(e, $activeTab)}
-            on:bookmark={handleWebviewBookmark}
-            on:transform={handleWebviewTransform}
-            on:appDetection={(e) => handleWebviewAppDetection(e, $activeTab)}
-            on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, $activeTab.id)}
-            on:highlight={(e) => handleWebviewHighlight(e, $activeTab.id)}
-            on:annotationClick={(e) => handleWebviewAnnotationClick(e, $activeTab.id)}
-          />
-        {:else if $activeTab?.type === 'horizon'}
-          {@const horizon = $horizons.find((horizon) => horizon.id === $activeTab?.horizonId)}
-          {#if horizon}
-            <Horizon {horizon} active {visorSearchTerm} inOverview={false} {resourceManager} />
-          {:else}
-            <div>no horizon found</div>
-          {/if}
-        {:else if $activeTab?.type === 'chat'}
-          <Chat
-            tab={$activeTab}
-            {resourceManager}
-            {drawer}
-            db={storage}
-            on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
-            on:updateTab={(e) => updateTab($activeTabId, e.detail)}
-            on:openResource={(e) => openResource(e.detail)}
-          />
-        {:else}
-          <BrowserHomescreen
-            {historyEntriesManager}
-            on:navigate={handleTabNavigation}
-            on:chat={handleCreateChat}
-            on:rag={handleRag}
-          />
-        {/if}
-      </div>
-    {/if}
 
     {#if !$activeTabs && !$activeTab}
       <div class="browser-window active" style="--scaling: 1;">
