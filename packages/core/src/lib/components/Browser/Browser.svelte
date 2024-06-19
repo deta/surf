@@ -15,6 +15,7 @@
   import { Telemetry } from '../../service/telemetry'
   import {
     Resource,
+    ResourceAnnotation,
     ResourceManager,
     ResourceTag,
     createResourceManager
@@ -1384,7 +1385,7 @@
   ) => {
     const annotationId = e.detail
 
-    log.debug('webview annotation click', annotationId)
+    log.debug('webview annotation remove', annotationId)
 
     await resourceManager.deleteResource(annotationId)
 
@@ -1396,6 +1397,45 @@
     if (browserTab) {
       browserTab.reload()
     }
+  }
+
+  const handleWebviewAnnotationUpdate = async (
+    e: CustomEvent<WebViewWrapperEvents['annotationUpdate']>,
+    tabId: string
+  ) => {
+    const { id, data } = e.detail
+
+    log.debug('webview annotation update', id)
+
+    const annotationResource = (await resourceManager.getResource(id)) as ResourceAnnotation
+    const annotationData = await annotationResource.getParsedData()
+
+    if (annotationData.type !== 'comment') {
+      return
+    }
+
+    const newData = {
+      ...annotationData,
+      data: {
+        ...annotationData.data,
+        ...data
+      }
+    } as ResourceDataAnnotation
+
+    log.debug('updating annotation data', newData)
+    await annotationResource.updateParsedData(newData)
+
+    await tick()
+
+    if (annotationsSidebar) {
+      log.debug('reloading annotations sidebar')
+      annotationsSidebar.reload()
+    }
+
+    // const browserTab = $browserTabs[tabId]
+    // if (browserTab) {
+    //   browserTab.reload()
+    // }
   }
 
   const openResource = async (id: string) => {
@@ -1790,6 +1830,7 @@
             on:annotate={(e) => handleWebviewAnnotation(e, tab.id)}
             on:annotationClick={(e) => handleWebviewAnnotationClick(e, tab.id)}
             on:annotationRemove={(e) => handleWebviewAnnotationRemove(e, tab.id)}
+            on:annotationUpdate={(e) => handleWebviewAnnotationUpdate(e, tab.id)}
           />
         {:else if tab.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}

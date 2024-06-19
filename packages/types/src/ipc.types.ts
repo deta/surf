@@ -31,7 +31,8 @@ export enum WebViewEventSendNames {
   Annotate = 'annotate',
   InlineTextReplace = 'inline_text_replace',
   AnnotationClick = 'annotation_click',
-  RemoveAnnotation = 'remove_annotation'
+  RemoveAnnotation = 'remove_annotation',
+  UpdateAnnotation = 'update_annotation'
 }
 
 export type WebViewEventTransformationOutput = {
@@ -94,6 +95,11 @@ export type WebViewEventAnnotationClick = {
   type: AnnotationType
 }
 
+export type WebViewEventUpdateAnnotation = {
+  id: string
+  data: Partial<ResourceDataAnnotation['data']>
+}
+
 export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.GetSelection]: void
   [WebViewEventReceiveNames.GetResource]: void
@@ -120,6 +126,7 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.InlineTextReplace]: WebViewEventInlineTextReplace
   [WebViewEventSendNames.AnnotationClick]: WebViewEventAnnotationClick
   [WebViewEventSendNames.RemoveAnnotation]: string
+  [WebViewEventSendNames.UpdateAnnotation]: WebViewEventUpdateAnnotation
 }
 
 export enum WebviewAnnotationEventNames {

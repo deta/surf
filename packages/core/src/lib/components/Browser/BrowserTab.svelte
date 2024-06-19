@@ -224,5 +224,6 @@
   on:annotate
   on:annotationClick
   on:annotationRemove
+  on:annotationUpdate
   on:keydownWebview={handleWebviewKeydown}
 />

@@ -12,6 +12,8 @@
   import AiOutput from './AIOutput.svelte'
   import Wrapper from './Wrapper.svelte'
   import Button from './Button.svelte'
+  import { Editor } from '@horizon/editor'
+  import '@horizon/editor/src/editor.scss'
 
   export let text = ''
 
@@ -106,7 +108,7 @@
   const showCommentMenu = async () => {
     $view = 'comment'
     await tick()
-    inputElem.focus()
+    // inputElem.focus()
   }
 
   const handleInsert = () => {
@@ -187,7 +189,7 @@
 
       <!-- svelte-ignore a11y-unknown-role -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
-      <div draggable="true" on:dragstart={handleDragStart} class="drag-handle">
+      <div draggable="true" on:dragstart={handleDragStart} class="menu-drag-handle">
         <Icon name="grip.vertical" />
       </div>
     </div>
@@ -222,7 +224,10 @@
     {/if}
   {:else if $view === 'comment'}
     <form on:submit|stopPropagation|preventDefault={handleComment}>
-      <textarea
+      <div class="editor-wrapper">
+        <Editor bind:content={inputValue} placeholder="Jot down your thoughts…" autofocus />
+      </div>
+      <!-- <textarea
         bind:this={inputElem}
         bind:value={inputValue}
         on:keydown={handleInputKeydown}
@@ -230,7 +235,7 @@
         rows={1}
         disabled={running}
         placeholder="Jot down your thoughts…"
-      />
+      /> -->
 
       <!-- {#if !expandedInput}
         <Button
@@ -269,7 +274,7 @@
     gap: 8px;
   }
 
-  .drag-handle {
+  .menu-drag-handle {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -301,6 +306,24 @@
   }
 
   textarea {
+    padding: 10px;
+    border: 1px solid #f0f0f0;
+    background: #ebebeb;
+    border-radius: 8px;
+    font-size: 16px;
+    width: 100%;
+    pointer-events: auto;
+    min-width: 350px;
+    resize: vertical;
+    font-family: inherit;
+
+    &:focus {
+      outline: none;
+      border-color: #fd1bdf;
+    }
+  }
+
+  .editor-wrapper {
     padding: 10px;
     border: 1px solid #f0f0f0;
     background: #ebebeb;

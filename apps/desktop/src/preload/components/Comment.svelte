@@ -7,6 +7,8 @@
   import Wrapper from './Wrapper.svelte'
   import Button from './Button.svelte'
   import CopyButton from './CopyButton.svelte'
+  import Editor from '@horizon/editor/src/lib/components/Editor.svelte'
+  import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
 
   export let text = ''
 
@@ -17,6 +19,7 @@
     close: void
     open: void
     remove: void
+    updateContent: string
   }>()
 
   const handleOpenOasis = () => {
@@ -46,13 +49,17 @@
   const handleClose = () => {
     dispatch('close')
   }
+
+  const handleUpdate = useDebounce((e: CustomEvent<string>) => {
+    dispatch('updateContent', e.detail)
+  }, 500)
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
 
 <Wrapper expanded>
   <div class="output">
-    <p>{@html text}</p>
+    <Editor bind:content={text} on:update={handleUpdate} />
   </div>
 
   <div class="footer">

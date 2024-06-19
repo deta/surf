@@ -10,6 +10,7 @@
   import type { ResourceDataAnnotation, WebViewEventAnnotation } from '@horizon/types'
   import { createEventDispatcher } from 'svelte'
   import autosize from 'svelte-autosize'
+  import { Editor } from '@horizon/editor'
 
   export let resourceId: string | null = null
   export let activeAnnotation: string | null = null
@@ -82,14 +83,16 @@
 
   <div class="content">
     {#if annotations.length > 0}
-      {#each annotations as annotation (annotation.id)}
-        <AnnotationItem
-          resource={annotation}
-          active={annotation.id === activeAnnotation}
-          on:scrollTo
-          on:delete={handleAnnotationDelete}
-        />
-      {/each}
+      {#key loadingAnnotations}
+        {#each annotations as annotation (annotation.id)}
+          <AnnotationItem
+            resource={annotation}
+            active={annotation.id === activeAnnotation}
+            on:scrollTo
+            on:delete={handleAnnotationDelete}
+          />
+        {/each}
+      {/key}
     {:else if loadingAnnotations}
       <div class="loading">
         <Icon name="spinner" />
@@ -107,13 +110,16 @@
   </div>
 
   <form on:submit|preventDefault={handleNotesSubmit} class="notes">
-    <textarea
+    <div class="editor-wrapper">
+      <Editor bind:content={inputValue} placeholder="Jot down your thoughts…" />
+    </div>
+    <!-- <textarea
       bind:value={inputValue}
       rows={1}
       use:autosize
       on:keydown={handleInputKeydown}
       placeholder="Jot down your thoughts…"
-    />
+    /> -->
 
     <button class="" type="submit" disabled={savingNotes}>
       {#if savingNotes}
@@ -129,7 +135,6 @@
   .wrapper {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
     overflow: hidden;
     padding-top: 2rem;
     height: 100%;
@@ -141,6 +146,8 @@
     gap: 1rem;
     flex: 1;
     overflow: auto;
+    margin-top: 1rem;
+    padding-bottom: 1rem;
   }
 
   .header {
@@ -225,7 +232,7 @@
 
     button {
       appearance: none;
-      padding: 0.5rem;
+      padding: 0.75rem;
       border: none;
       border-radius: 8px;
       cursor: pointer;
@@ -245,5 +252,16 @@
         background: #fd1bdf;
       }
     }
+  }
+
+  .editor-wrapper {
+    flex: 1;
+    background: #f8f8f8;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
   }
 </style>

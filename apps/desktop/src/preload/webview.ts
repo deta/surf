@@ -303,7 +303,21 @@ function renderComment(annotation: AnnotationCommentRange) {
   })
 
   comment.$on('remove', (e) => {
+    console.log('Removing annotation', annotation)
     sendPageEvent(WebViewEventSendNames.RemoveAnnotation, annotation.id)
+  })
+
+  comment.$on('updateContent', (e) => {
+    console.log('Updating annotation content', e.detail)
+
+    annotation.data.content = e.detail
+
+    sendPageEvent(WebViewEventSendNames.UpdateAnnotation, {
+      id: annotation.id,
+      data: {
+        content: e.detail
+      }
+    })
   })
 
   wrapper.show()

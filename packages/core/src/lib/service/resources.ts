@@ -263,9 +263,12 @@ export class ResourceJSON<T> extends Resource {
     return parsed
   }
 
-  async updatePost(data: T) {
+  async updateParsedData(data: T) {
     const blobData = JSON.stringify(data)
     const blob = new Blob([blobData], { type: this.type })
+
+    this.parsedData = data
+
     return this.updateData(blob, true)
   }
 }

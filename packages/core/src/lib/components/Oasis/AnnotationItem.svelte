@@ -16,6 +16,8 @@
   import { useClipboard } from '../../utils/clipboard'
   import { truncate } from '../../utils/text'
   import { addISOWeekYears } from 'date-fns'
+  import { Editor } from '@horizon/editor'
+  import '@horizon/editor/src/editor.scss'
 
   export let resource: ResourceAnnotation
   export let active = false
@@ -67,7 +69,7 @@
   onMount(async () => {
     try {
       loadingAnnotation = true
-      annotation = await resource.getParsedData()
+      annotation = await resource.getParsedData(true)
 
       if (annotation.anchor?.type === 'range') {
         anchorText = (annotation.anchor.data as AnnotationRangeData).content_plain || ''
@@ -110,7 +112,9 @@
       {/if}
 
       {#if content}
-        <div class="title">{content}</div>
+        <div class="content">
+          <Editor {content} readOnly />
+        </div>
       {/if}
 
       <div class="footer">
@@ -243,7 +247,8 @@
     padding: 1rem;
     color: inherit;
     text-decoration: none;
-    border-bottom: 0.5px solid rgba(0, 0, 0, 0.15);
+    background: #f8f7f2;
+    border-radius: 8px;
 
     &:hover .actions {
       opacity: 1;
@@ -258,7 +263,7 @@
   .details {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 1rem;
     width: 100%;
     flex-shrink: 1;
     flex-grow: 1;
@@ -273,13 +278,17 @@
       0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
   }
 
-  .title {
-    font-size: 1.1rem;
-    line-height: 1.775rem;
-    font-weight: 500;
-    color: #443d5b;
+  .content {
+    color: #000000;
     flex-shrink: 0;
     max-width: 95%;
+    width: 100%;
+    height: 100%;
+  }
+
+  :global(.tiptap p) {
+    font-size: 1.1rem !important;
+    color: #000000 !important;
   }
 
   .anchor-text {
@@ -292,7 +301,6 @@
     background: #ff9cca21;
     padding: 0.55rem;
     padding-left: 1rem;
-    margin-bottom: 1rem;
     cursor: pointer;
   }
 
@@ -300,7 +308,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 0;
     color: #110a2a9e;
 
     button {

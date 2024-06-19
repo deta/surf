@@ -18,6 +18,7 @@
     annotate: WebViewSendEvents[WebViewEventSendNames.Annotate]
     annotationClick: WebViewSendEvents[WebViewEventSendNames.AnnotationClick]
     annotationRemove: WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
+    annotationUpdate: WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
   }
 </script>
 
@@ -207,6 +208,12 @@
           dispatch(
             'annotationRemove',
             eventData as WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
+          )
+          break
+        case WebViewEventSendNames.UpdateAnnotation:
+          dispatch(
+            'annotationUpdate',
+            eventData as WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
           )
           break
         case WebViewEventSendNames.DetectedResource:

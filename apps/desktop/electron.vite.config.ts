@@ -2,6 +2,7 @@ import { sentryVitePlugin } from '@sentry/vite-plugin'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
+import replace from '@rollup/plugin-replace'
 import { resolve } from 'path'
 
 export default defineConfig({
@@ -15,10 +16,17 @@ export default defineConfig({
     plugins: [
       svelte(),
       externalizeDepsPlugin({ exclude: ['@horizon/backend'] }),
+
+      // Used to inject the styles from the preload script and svelte components into the webviews
       cssInjectedByJsPlugin({
         injectCode: (cssCode, options) => {
           return `window.addEventListener('DOMContentLoaded', () => { try{if(typeof document != 'undefined'){var elementStyle = document.createElement('style');elementStyle.id="webview-styles";elementStyle.appendChild(document.createTextNode(${cssCode}));document.head.appendChild(elementStyle);}}catch(e){console.error('vite-plugin-css-injected-by-js', e);} })`
         }
+      }),
+
+      // This is needed to get our tiptap editor working in the preload script as it tries to access the document before it is ready
+      replace({
+        'doc.documentElement.style': '{}'
       })
     ],
     build: {
