@@ -275,7 +275,7 @@ function renderComment(annotation: AnnotationCommentRange) {
   const comment = new CommentMenu({
     target: wrapper.root,
     props: {
-      text: annotation.data.content
+      text: annotation.data.content_html ?? annotation.data.content_plain
     }
   })
 
@@ -310,12 +310,14 @@ function renderComment(annotation: AnnotationCommentRange) {
   comment.$on('updateContent', (e) => {
     console.log('Updating annotation content', e.detail)
 
-    annotation.data.content = e.detail
+    annotation.data.content_plain = e.detail.plain
+    annotation.data.content_html = e.detail.html
 
     sendPageEvent(WebViewEventSendNames.UpdateAnnotation, {
       id: annotation.id,
       data: {
-        content: e.detail
+        content_plain: e.detail.plain,
+        content_html: e.detail.html
       }
     })
   })
@@ -502,7 +504,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
           },
           data: {
             url: window.location.href,
-            content: text,
+            content_plain: text,
             source: 'inline_ai'
           }
         })
@@ -540,8 +542,8 @@ window.addEventListener('DOMContentLoaded', async (_) => {
       })
 
       selectionMenu.$on('comment', (e) => {
-        const text = e.detail
-        console.log('Commenting', text)
+        const content = e.detail
+        console.log('Commenting', content)
 
         if (!selectionRange) {
           console.error('No selection range found')
@@ -560,7 +562,8 @@ window.addEventListener('DOMContentLoaded', async (_) => {
           },
           data: {
             url: window.location.href,
-            content: text,
+            content_plain: content.plain,
+            content_html: content.html,
             source: 'user'
           }
         })

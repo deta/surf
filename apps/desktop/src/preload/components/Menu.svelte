@@ -12,7 +12,7 @@
   import AiOutput from './AIOutput.svelte'
   import Wrapper from './Wrapper.svelte'
   import Button from './Button.svelte'
-  import { Editor } from '@horizon/editor'
+  import { Editor, getEditorContentText } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
 
   export let text = ''
@@ -33,7 +33,7 @@
     transform: { query?: string; type: WebViewEventTransform['type'] }
     copy: void
     highlight: void
-    comment: string
+    comment: { plain: string; html: string }
     link: void
     insert: string
   }>()
@@ -122,7 +122,10 @@
 
   const handleComment = () => {
     running = true
-    dispatch('comment', inputValue)
+
+    const html = inputValue
+    const text = getEditorContentText(html)
+    dispatch('comment', { plain: text, html })
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {

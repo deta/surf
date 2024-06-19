@@ -16,7 +16,7 @@
   import { useClipboard } from '../../utils/clipboard'
   import { truncate } from '../../utils/text'
   import { addISOWeekYears } from 'date-fns'
-  import { Editor } from '@horizon/editor'
+  import { Editor, getEditorContentText } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
 
   export let resource: ResourceAnnotation
@@ -76,7 +76,24 @@
       }
 
       if (annotation.type === 'comment') {
-        content = (annotation.data as AnnotationCommentData).content || ''
+        const data = annotation.data as AnnotationCommentData
+
+        if ((data as any).content) {
+          content = (data as any).content
+
+          await resource.updateParsedData({
+            ...annotation,
+            data: {
+              ...data,
+              content_html: content,
+              content_plain: getEditorContentText(content)
+            }
+          })
+
+          return
+        }
+
+        content = data.content_html ?? data.content_plain ?? ''
       }
 
       url = new URL(resource.metadata?.sourceURI || '')
