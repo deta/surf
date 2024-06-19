@@ -46,7 +46,7 @@
   } from './types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../Cards/Browser/searchEngines'
   import type { Drawer } from '@horizon/drawer'
-  import Chat from './Chat.svelte'
+  import Chat, { getUniqueSources } from './Chat.svelte'
   import { HorizonDatabase } from '../../service/storage'
   import { ResourceTypes, type Optional } from '../../types'
   import { useLocalStorageStore } from '../../utils/localstorage'
@@ -493,7 +493,6 @@
 
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
-    log.debug('key down', e.key)
     if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       addressInputElem.blur()
@@ -731,7 +730,8 @@
       log.debug('created resource', resource)
     }
 
-    updateTab(tab.id, { resourceBookmark: resource.id })
+    if (resource?.id)
+      updateTab(tab.id, { resourceBookmark: resource.id, chatResourceBookmark: resource.id })
 
     return resource
   }
@@ -770,8 +770,7 @@
 
     if (url !== oldUrl) {
       log.debug('tab url changed, removing bookmark')
-      updateTab(tab.id, { resourceBookmark: null })
-      updateTab(tab.id, { chatResourceBookmark: null })
+      updateTab(tab.id, { resourceBookmark: null, chatResourceBookmark: null })
     }
   }
 
@@ -897,6 +896,8 @@
           const systemMessages = chat.messages.filter((message) => message.role === 'system')
 
           responses = systemMessages.map((message, idx) => {
+            message.sources = getUniqueSources(message.sources)
+            log.debug('Message', message)
             return {
               id: generateID(),
               role: message.role,
@@ -919,9 +920,6 @@
       magicPages.update((pages) => [...pages, pageMagic!])
     }
 
-    console.log('grep me', pageMagic)
-    console.log('grep me', $activeTab)
-
     const browserTab = $browserTabs[tab.id]
     if (!browserTab) {
       log.error('Browser tab not found', tab.id)
@@ -933,11 +931,22 @@
     )
 
     const url = currentEntry?.url ?? tab.initialLocation
+    let normalized_url = url
+    let youtubeHostnames = [
+      'youtube.com',
+      'youtu.be',
+      'youtube.de',
+      'www.youtube.com',
+      'www.youtu.be',
+      'www.youtube.de'
+    ]
+    if (youtubeHostnames.includes(new URL(url).host)) {
+      normalized_url = normalized_url.replace(/&t.*/g, '')
+    }
 
-    log.debug('getting resources from source url', url)
-
-    const matchingResources = await resourceManager.getResourcesFromSourceURL(url)
-    log.debug('matching resources', matchingResources)
+    const matchingResources = await resourceManager.getResourcesFromSourceURL(normalized_url)
+    // log.debug('matching resources', matchingResources)
+    log.debug('getting resources from source url', url, normalized_url, matchingResources)
 
     const bookmarkedResource = matchingResources.find(
       (resource) => resource.type !== ResourceTypes.ANNOTATION
@@ -945,7 +954,10 @@
 
     log.debug('bookmarked resource', bookmarkedResource)
     if (bookmarkedResource) {
-      updateTab(tab.id, { resourceBookmark: bookmarkedResource.id })
+      updateTab(tab.id, {
+        resourceBookmark: bookmarkedResource.id,
+        chatResourceBookmark: bookmarkedResource.id
+      })
     }
 
     const annotationResources = matchingResources.filter(
@@ -1217,7 +1229,7 @@
             content += chunk
 
             if (content.includes('</sources>')) {
-              const sources = parseChatResponseSources(content)
+              const sources = getUniqueSources(parseChatResponseSources(content))
               log.debug('Sources', sources)
 
               step = 'sources'
@@ -1232,16 +1244,16 @@
 
             updatePageMagicResponse(tab.id, response?.id!, {
               content: content
-                .replace('<answer>', '')
-                .replace('</answer>', '')
-                .replace('<citation>', '')
-                .replace('</citation>', '')
+                // .replace('<answer>', '')
+                // .replace('</answer>', '')
+                // .replace('<citation>', '')
+                // .replace('</citation>', '')
                 .replace('<br>', '\n')
             })
           }
         },
         {
-          limit: 3,
+          limit: 5,
           resourceIds: [tab.chatResourceBookmark]
         }
       )
@@ -1928,6 +1940,9 @@
         magicPage={$activeTabMagic}
         bind:inputValue={$magicInputValue}
         on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
+        on:navigate={(e) => {
+          $browserTabs[$activeTabId].navigate(e.detail.url)
+        }}
         on:saveText={(e) => saveTextFromPage(e.detail, 'chat_ai')}
         on:chat={() => handleChatSubmit($activeTabMagic)}
       />

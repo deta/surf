@@ -1,12 +1,14 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import type { PageMagic, PageMagicResponse } from './types'
+  import type { AIChatMessageParsed, PageMagic, PageMagicResponse } from './types'
   import { useClipboard } from '../../utils/clipboard'
   import ChatMessage from './ChatMessage.svelte'
   import { useLogScope } from '../../utils/log'
   import { createEventDispatcher } from 'svelte'
   import { writable } from 'svelte/store'
   import { tooltip } from '@svelte-plugins/tooltips'
+  import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
+  import { ResourceManager, type ResourceLink } from '../../service/resources'
 
   export let inputValue = ''
   export let magicPage: PageMagic
@@ -15,6 +17,7 @@
 
   const dispatch = createEventDispatcher<{
     highlightText: { tabId: string; text: string }
+    navigate: { url: string }
     saveText: string
     chat: string
   }>()
@@ -35,15 +38,40 @@
     }, 2000)
   }
 
-  const handleCitationClick = (citationId: string, idx: number) => {
-    log.debug('Citation clicked', citationId)
-    const citation = magicPage.responses[idx]?.citations[citationId]
-    if (!citation) {
-      log.error('Citation not found', citationId)
-      return
-    }
+  const handleCitationClick = async (sourceId: string, message: AIChatMessageParsed) => {
+    log.debug('Citation clicked', sourceId, message)
+    const source = (message.sources ?? []).find((s) => s.id === sourceId)
+    if (!source) return
+    let resourceManager = new ResourceManager(null)
 
-    dispatch('highlightText', { tabId: magicPage.tabId, text: citation.text })
+    const resource = await resourceManager.getResource(source.resource_id)
+    if (!resource) return
+
+    if (
+      resource.type === ResourceTypes.LINK ||
+      resource.type === ResourceTypes.ARTICLE ||
+      resource.type.startsWith(ResourceTypes.POST)
+    ) {
+      const data = await (resource as ResourceLink).getParsedData()
+
+      let url: string
+      if (resource.type === ResourceTypes.POST_YOUTUBE && source.metadata?.timestamp) {
+        const timestamp = source.metadata.timestamp
+        url = `https://www.youtube.com/watch?v=${(data as any as ResourceDataPost).post_id}&t=${timestamp}s`
+      } else {
+        url = data.url
+      }
+
+      log.debug('url', url)
+      dispatch('navigate', { url: url })
+    } else {
+      log.debug('resource id', source.resource_id)
+    }
+    // const citation = magicPage.responses[idx]?.citations[citationId]
+    // if (!citation) {
+    //   log.error('Citation not found', citationId)
+    //   return
+    // }
   }
 
   const handleChatSubmit = async () => {
@@ -125,11 +153,6 @@
               </button>
             </div>
           </div>
-
-          <ChatMessage
-            content={response.content}
-            on:citationClick={(e) => handleCitationClick(e.detail, idx)}
-          />
         </div>
       {:else if response.status === 'pending'}
         <div class="output">
@@ -143,19 +166,17 @@
               {/if}
             </div>
           </div>
-
-          {#if response.content}
-            <ChatMessage
-              content={response.content}
-              on:citationClick={(e) => handleCitationClick(e.detail, idx)}
-            />
-          {/if}
         </div>
       {:else if response.status === 'error'}
         <div class="output">
           {response.content}
         </div>
       {/if}
+      <ChatMessage
+        content={response.content}
+        sources={response.sources}
+        on:citationClick={(e) => handleCitationClick(e.detail, response)}
+      />
     {/each}
   </div>
 

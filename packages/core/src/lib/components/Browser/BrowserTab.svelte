@@ -13,6 +13,7 @@
   import type { WebViewReceiveEvents } from '@horizon/types'
   import FindInPage from '../Cards/Browser/FindInPage.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
+  import { wait } from '@horizon/web-parser/src/utils'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<{ newTab: NewTabEvent; appDetection: DetectedWebApp }>()
@@ -164,6 +165,13 @@
 
     webview.historyStackIds.set(tab.historyStackIds)
     webview.currentHistoryIndex.set(tab.currentHistoryIndex)
+
+    unsubTracker.push(
+      webview.url.subscribe(async (_: string) => {
+        await wait(500)
+        webview.startAppDetection()
+      })
+    )
 
     unsubTracker.push(
       webview.historyStackIds.subscribe((stack) => {

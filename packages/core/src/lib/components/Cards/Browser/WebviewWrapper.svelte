@@ -66,7 +66,7 @@
   let initialLoadDone = src == ''
   let pendingUrlUpdate: { url: string; timestamp: number } | null = null
 
-  let webview: WebviewTag
+  export let webview: WebviewTag
 
   const updateNavigationState = () => {
     canGoBack.set(get(currentHistoryIndex) > 0)
@@ -520,7 +520,7 @@
   {partition}
   useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
   preload={`file://${window.api.webviewPreloadPath}`}
-  webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=14"
+  webpreferences="defaultFontSize=14"
   allowpopups
 />
 
