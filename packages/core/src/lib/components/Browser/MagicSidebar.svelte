@@ -6,6 +6,7 @@
   import { useLogScope } from '../../utils/log'
   import { createEventDispatcher } from 'svelte'
   import { writable } from 'svelte/store'
+  import { tooltip } from '@svelte-plugins/tooltips'
 
   export let inputValue = ''
   export let magicPage: PageMagic
@@ -22,7 +23,11 @@
   const savedResponse = writable(false)
 
   const saveResponseOutput = async (response: PageMagicResponse) => {
-    dispatch('saveText', response.content)
+    const div = document.createElement('div')
+    div.innerHTML = response.content
+    const text = div.textContent || div.innerText || ''
+
+    dispatch('saveText', text)
 
     savedResponse.set(true)
     setTimeout(() => {
@@ -85,7 +90,16 @@
             </div>
 
             <div class="output-actions">
-              <button on:click={() => copy(response.content)}>
+              <button
+                on:click={() => copy(response.content)}
+                use:tooltip={{
+                  content: 'Copy to Clipboard',
+                  action: 'hover',
+                  position: 'left',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
                 {#if $copied}
                   <Icon name="check" />
                 {:else}
@@ -93,11 +107,20 @@
                 {/if}
               </button>
 
-              <button on:click={() => saveResponseOutput(response)}>
+              <button
+                on:click={() => saveResponseOutput(response)}
+                use:tooltip={{
+                  content: 'Save to Oasis',
+                  action: 'hover',
+                  position: 'left',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
                 {#if $savedResponse}
                   <Icon name="check" />
                 {:else}
-                  <Icon name="quote" />
+                  <Icon name="leave" />
                 {/if}
               </button>
             </div>

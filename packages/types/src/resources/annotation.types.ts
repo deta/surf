@@ -7,7 +7,7 @@ export interface ResourceDataAnnotation {
   anchor: {
     type: AnnotationAnchorType
     data: AnnotationRangeData | AnnotationElementData | AnnotationAreaData
-  }
+  } | null
 }
 
 // used for annotations created from text selections
@@ -35,11 +35,15 @@ export type AnnotationAreaData = {
 }
 
 // data stored for highlights (nothing stored right now)
-export type AnnotationHighlightData = {}
+export type AnnotationHighlightData = {
+  url?: string
+}
 
 // data stored for comments
 export type AnnotationCommentData = {
+  url?: string
   content: string
+  source: 'user' | 'ai/inline' | 'ai/chat'
 }
 
 // data stored for links
@@ -47,4 +51,10 @@ export type AnnotationLinkData = {
   target_type: 'external' | 'resource'
   url: string | null
   resource_id: string | null
+}
+
+export type AnnotationCommentRange = {
+  id: string
+  range: Range
+  data: AnnotationCommentData
 }

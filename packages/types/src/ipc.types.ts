@@ -2,7 +2,8 @@ import type {
   AnnotationRangeData,
   AnnotationType,
   DetectedResource,
-  DetectedWebApp
+  DetectedWebApp,
+  ResourceDataAnnotation
 } from './resources.types'
 
 export enum WebViewEventReceiveNames {
@@ -11,7 +12,7 @@ export enum WebViewEventReceiveNames {
   GetApp = 'get_app',
   RunAction = 'run_action',
   TransformationOutput = 'transformation_output',
-  RestoreHighlight = 'restore_highlight',
+  RestoreAnnotation = 'restore_annotation',
   ScrollToAnnotation = 'scroll_to_annotation'
 }
 
@@ -27,9 +28,10 @@ export enum WebViewEventSendNames {
   Bookmark = 'bookmark',
   Transform = 'transform',
   Selection = 'selection',
-  Highlight = 'highlight',
+  Annotate = 'annotate',
   InlineTextReplace = 'inline_text_replace',
-  AnnotationClick = 'annotation_click'
+  AnnotationClick = 'annotation_click',
+  RemoveAnnotation = 'remove_annotation'
 }
 
 export type WebViewEventTransformationOutput = {
@@ -69,9 +71,7 @@ export type WebViewEventWheel = {
 
 export type WebViewEventBookmark = { text?: string; url: string }
 
-export type WebViewEventHighlight = { range: AnnotationRangeData; url: string }
-
-export type WebViewEventRestoreHighlight = { id: string; range: AnnotationRangeData }
+export type WebViewEventAnnotation = { id: string; data: ResourceDataAnnotation }
 
 export type WebViewEventTransform = {
   text: string
@@ -100,8 +100,8 @@ export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.GetApp]: void
   [WebViewEventReceiveNames.RunAction]: WebViewEventRunAction
   [WebViewEventReceiveNames.TransformationOutput]: WebViewEventTransformationOutput
-  [WebViewEventReceiveNames.RestoreHighlight]: WebViewEventRestoreHighlight
-  [WebViewEventReceiveNames.ScrollToAnnotation]: string
+  [WebViewEventReceiveNames.RestoreAnnotation]: WebViewEventAnnotation
+  [WebViewEventReceiveNames.ScrollToAnnotation]: WebViewEventAnnotation
 }
 
 export type WebViewSendEvents = {
@@ -116,9 +116,10 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.Bookmark]: WebViewEventBookmark
   [WebViewEventSendNames.Transform]: WebViewEventTransform
   [WebViewEventSendNames.Selection]: string
-  [WebViewEventSendNames.Highlight]: WebViewEventHighlight
+  [WebViewEventSendNames.Annotate]: ResourceDataAnnotation
   [WebViewEventSendNames.InlineTextReplace]: WebViewEventInlineTextReplace
   [WebViewEventSendNames.AnnotationClick]: WebViewEventAnnotationClick
+  [WebViewEventSendNames.RemoveAnnotation]: string
 }
 
 export enum WebviewAnnotationEventNames {

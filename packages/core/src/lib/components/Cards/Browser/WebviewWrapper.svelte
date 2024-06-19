@@ -9,14 +9,15 @@
     foundInPage: Electron.FoundInPageEvent
     selectionWebview: { text: string }
     detectedApp: DetectedWebApp
-    detectedResource: DetectedResource
+    detectedResource: WebViewSendEvents[WebViewEventSendNames.DetectedResource]
     actionOutput: { id: string; output: DetectedResource }
     navigation: { url: string; oldUrl: string }
     bookmark: WebViewSendEvents[WebViewEventSendNames.Bookmark]
     transform: WebViewSendEvents[WebViewEventSendNames.Transform]
     inlineTextReplace: WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]
-    highlight: WebViewSendEvents[WebViewEventSendNames.Highlight]
+    annotate: WebViewSendEvents[WebViewEventSendNames.Annotate]
     annotationClick: WebViewSendEvents[WebViewEventSendNames.AnnotationClick]
+    annotationRemove: WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
   }
 </script>
 
@@ -193,8 +194,8 @@
             eventData as WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]
           )
           break
-        case WebViewEventSendNames.Highlight:
-          dispatch('highlight', eventData as WebViewSendEvents[WebViewEventSendNames.Highlight])
+        case WebViewEventSendNames.Annotate:
+          dispatch('annotate', eventData as WebViewSendEvents[WebViewEventSendNames.Annotate])
           break
         case WebViewEventSendNames.AnnotationClick:
           dispatch(
@@ -202,9 +203,18 @@
             eventData as WebViewSendEvents[WebViewEventSendNames.AnnotationClick]
           )
           break
-        // case 'detected-resource':
-        //   dispatch('detectedResource', eventData?.resource)
-        //   break
+        case WebViewEventSendNames.RemoveAnnotation:
+          dispatch(
+            'annotationRemove',
+            eventData as WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
+          )
+          break
+        case WebViewEventSendNames.DetectedResource:
+          dispatch(
+            'detectedResource',
+            eventData as WebViewSendEvents[WebViewEventSendNames.DetectedResource]
+          )
+          break
       }
     })
 

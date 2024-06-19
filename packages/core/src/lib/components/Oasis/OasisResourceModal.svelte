@@ -11,7 +11,8 @@
   import {
     WebViewEventReceiveNames,
     type AnnotationRangeData,
-    type DetectedWebApp
+    type DetectedWebApp,
+    type WebViewEventAnnotation
   } from '@horizon/types'
   import { useLogScope } from '../../utils/log'
   import { Icon } from '@horizon/icons'
@@ -19,7 +20,7 @@
   import OasisResourceDetails from './OasisResourceDetails.svelte'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import ResourceOverlay from '@horizon/drawer/src/lib/components/ResourceOverlay.svelte'
-  import AnnotationItem from '../Browser/AnnotationItem.svelte'
+  import AnnotationItem from './AnnotationItem.svelte'
 
   export let resource: Resource
 
@@ -54,14 +55,12 @@
   let loadingAnnotations = true
   let annotations: ResourceAnnotation[] = []
 
-  const handleAppDetection = async (e: CustomEvent<DetectedWebApp>) => {
+  const loadAnnotations = async (resourceId: string) => {
     try {
-      log.debug('App detected', e.detail)
-
-      if (!resource) return
+      log.debug('Loading annotations', resourceId)
 
       loadingAnnotations = true
-      annotations = await resourceManager.getAnnotationsForResource(resource.id)
+      annotations = await resourceManager.getAnnotationsForResource(resourceId)
       log.debug('Annotations', annotations)
 
       await wait(500)
@@ -72,11 +71,9 @@
         const data = await annotation.getParsedData()
         log.debug('Annotation data', data)
 
-        if (data.type !== 'highlight') return
-
-        webview.sendEvent(WebViewEventReceiveNames.RestoreHighlight, {
+        webview.sendEvent(WebViewEventReceiveNames.RestoreAnnotation, {
           id: annotation.id,
-          range: data.anchor.data as AnnotationRangeData
+          data: data
         })
       })
     } catch (e) {
@@ -86,27 +83,45 @@
     }
   }
 
-  const handleAnnotationSelect = (e: CustomEvent<string>) => {
-    const annotationId = e.detail
-    log.debug('Annotation selected', annotationId)
-    webview.sendEvent(WebViewEventReceiveNames.ScrollToAnnotation, annotationId)
+  const handleAppDetection = async (e: CustomEvent<DetectedWebApp>) => {
+    try {
+      log.debug('App detected', e.detail)
+
+      if (!resource) return
+
+      loadAnnotations(resource.id)
+    } catch (e) {
+      log.error(e)
+    }
   }
 
-  const handleWebViewHighlight = async (e: CustomEvent<WebViewWrapperEvents['highlight']>) => {
+  const handleAnnotationSelect = (e: CustomEvent<WebViewEventAnnotation>) => {
+    log.debug('Annotation selected', e.detail)
+    webview.sendEvent(WebViewEventReceiveNames.ScrollToAnnotation, e.detail)
+  }
+
+  const handleAnnotationDelete = async (e: CustomEvent<WebViewEventAnnotation>) => {
+    log.debug('Annotation delete', e.detail)
+
+    const confirmed = window.confirm('Are you sure you want to delete the annotation?')
+    if (!confirmed) return
+
+    log.debug('Deleting annotation', e.detail.id)
+    await resourceManager.deleteResource(e.detail.id)
+
+    webview.reload()
+  }
+
+  const handleWebViewAnnotation = async (e: CustomEvent<WebViewWrapperEvents['annotate']>) => {
     if (!resource) return
 
-    const { range, url } = e.detail
-    log.debug('webview highlight', url, range)
+    const annotationData = e.detail
+    log.debug('webview highlight', annotationData)
+
+    const url = annotationData.data.url ?? src
 
     const annotationResource = await resourceManager.createResourceAnnotation(
-      {
-        type: 'highlight',
-        anchor: {
-          type: 'range',
-          data: range
-        },
-        data: {}
-      },
+      annotationData,
       { sourceURI: url },
       [
         // link the annotation to the page using its canonical URL so we can later find it
@@ -121,9 +136,9 @@
     annotations = [...annotations, annotationResource]
 
     log.debug('highlighting text in webview')
-    webview.sendEvent(WebViewEventReceiveNames.RestoreHighlight, {
+    webview.sendEvent(WebViewEventReceiveNames.RestoreAnnotation, {
       id: annotationResource.id,
-      range: range
+      data: annotationData
     })
   }
 
@@ -146,7 +161,7 @@
     <div class="resource-details">
       <OasisResourceDetails {resource}>
         <ResourceOverlay caption="Click to open in new tab">
-          <ResourcePreviewClean slot="content" {resource} />
+          <ResourcePreviewClean slot="content" showAnnotations={false} {resource} />
         </ResourceOverlay>
       </OasisResourceDetails>
     </div>
@@ -166,7 +181,7 @@
       partition="persist:horizon"
       {historyEntriesManager}
       on:detectedApp={handleAppDetection}
-      on:highlight={handleWebViewHighlight}
+      on:annotate={handleWebViewAnnotation}
       on:annotationClick={handleAnnotationClick}
     />
 
@@ -178,6 +193,7 @@
               resource={annotation}
               active={annotation.id === activeAnnotation}
               on:scrollTo={handleAnnotationSelect}
+              on:delete={handleAnnotationDelete}
             />
           {/each}
         </div>

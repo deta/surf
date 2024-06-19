@@ -1,22 +1,23 @@
 <!-- <svelte:options immutable={true} /> -->
 
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { WebParser } from '@horizon/web-parser'
 
   import TextPreview from '../Cards/Text/TextPreview.svelte'
   import LinkPreview from '../Cards/Link/LinkPreview.svelte'
-  import type {
-    Resource,
-    ResourceAnnotation,
-    ResourceArticle,
-    ResourceChatMessage,
-    ResourceChatThread,
-    ResourceDocument,
-    ResourceLink,
-    ResourceNote,
-    ResourcePost
+  import {
+    useResourceManager,
+    type Resource,
+    type ResourceAnnotation,
+    type ResourceArticle,
+    type ResourceChatMessage,
+    type ResourceChatThread,
+    type ResourceDocument,
+    type ResourceLink,
+    type ResourceNote,
+    type ResourcePost
   } from '../../service/resources'
   import FilePreview from '../Cards/File/FilePreview.svelte'
   import { ResourceTypes, type ResourceData, type ResourceDataPost } from '../../types'
@@ -30,9 +31,13 @@
   import ChatThreadPreview from '../Cards/ChatThread/ChatThreadPreview.svelte'
   import YoutubePreview from '../Cards/Post/YoutubePreview.svelte'
   import AnnotationPreview from '../Cards/Annotation/AnnotationPreview.svelte'
+  import log from '../../utils/log'
 
   export let resource: Resource
-  export let selected: boolean
+  export let selected: boolean = false
+  export let showAnnotations: boolean = true
+
+  const resourceManager = useResourceManager()
 
   const dispatch = createEventDispatcher<{
     click: string
@@ -50,6 +55,8 @@
   $: chatThreadResource = resource as ResourceChatThread
   $: documentResource = resource as ResourceDocument
   $: annotationResource = resource as ResourceAnnotation
+
+  let annotations: ResourceAnnotation[] = []
 
   let data: ResourceData | null = null
   const handleData = (e: CustomEvent<ResourceData>) => {
@@ -90,6 +97,17 @@
     e.stopImmediatePropagation()
     dispatch('open', resource.id)
   }
+
+  const loadAnnotations = async () => {
+    annotations = await resourceManager.getAnnotationsForResource(resource.id)
+    log.debug('Annotations', annotations)
+  }
+
+  onMount(() => {
+    if (showAnnotations) {
+      loadAnnotations()
+    }
+  })
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -190,6 +208,13 @@
         <div class="">{getFileType(resource.type) ?? 'File'}</div>
       {/if}
     </div>
+
+    {#if annotations.length > 0}
+      <div class="annotations">
+        <Icon name="marker" />
+        <div>{annotations.length} Annotation{annotations.length > 1 ? 's' : ''}</div>
+      </div>
+    {/if}
 
     <div class="remove-wrapper">
       <div class="remove rotated" on:click={handleMaximize}>
@@ -370,5 +395,13 @@
     to {
       transform: scale(1);
     }
+  }
+
+  .annotations {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
   }
 </style>

@@ -9,8 +9,9 @@ import {
   constructRange,
   applyRangeHighlight
 } from '@horizon/web-parser'
-import Menu from './Menu.svelte'
 import {
+  AnnotationCommentRange,
+  AnnotationRangeData,
   WebViewEventReceiveNames,
   WebViewEventSendNames,
   WebViewReceiveEvents,
@@ -19,10 +20,20 @@ import {
   WebviewAnnotationEvents
 } from '@horizon/types'
 
+import Menu from './components/Menu.svelte'
+import CommentMenu from './components/Comment.svelte'
+import CommentIndicator from './components/CommentIndicator.svelte'
+
+const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
+
 // let mouseDownX = 0
 let previouslySelectedText: string | undefined = ''
 let appParser: WebAppExtractor | null = null
 let selectionMenu: Menu | null = null
+
+let selectionMenuWrapper: ReturnType<typeof createComponentWrapper> | null = null
+
+// const clickOutsideHandlers = new Map<string, () => void>()
 
 function runAppDetection() {
   // TODO: pass the URL to the detection function so we don't have to initialize a new WebParser
@@ -102,27 +113,256 @@ function handleTransformOutput(text: string) {
   selectionMenu.handleOutput(text)
 }
 
-function handleRestoreHighlight(
-  data: WebViewReceiveEvents[WebViewEventReceiveNames.RestoreHighlight]
+function createComponentWrapper(
+  id: string,
+  position: { x: string; y: string; maxWidth?: string },
+  styles?: string,
+  className?: string,
+  closeHandler?: () => void
 ) {
-  const selection = window.getSelection()
-  if (!selection) {
-    console.error('No selection found')
-    return
+  const oldWrapper = document.getElementById(id)
+  console.log('old wrapper', oldWrapper)
+  oldWrapper?.parentNode?.removeChild(oldWrapper)
+
+  const div = document.createElement(COMPONENT_WRAPPER_TAG)
+  div.id = id
+  div.style.position = 'absolute'
+  div.style.zIndex = '100000'
+  div.style.left = position.x
+  div.style.top = position.x
+  div.style.opacity = '0' // Set initial opacity to 0
+  div.style.transition = 'opacity 0.2s ease' // Add transition for opacity
+  div.style.pointerEvents = 'none'
+
+  if (position.maxWidth) {
+    div.style.maxWidth = position.maxWidth
   }
 
-  const range = constructRange(data.range)
+  if (styles) {
+    div.style.cssText += styles
+  }
 
-  console.log('Restoring highlight', range)
-  applyRangeHighlight(data.id, range)
+  if (className) {
+    div.classList.add(className)
+  }
+
+  document.body.appendChild(div)
+
+  const shadow = div.attachShadow({ mode: 'open' })
+  const webviewStyles = document.getElementById('webview-styles')
+  if (webviewStyles) {
+    shadow.appendChild(webviewStyles.cloneNode(true))
+  }
+
+  const remove = () => {
+    if (closeHandler) {
+      closeHandler()
+    }
+    div.parentNode?.removeChild(div)
+  }
+
+  const show = () => {
+    div.style.opacity = '1'
+  }
+
+  return {
+    root: shadow,
+    content: div,
+    remove,
+    show
+  }
+}
+
+function renderCommentIndicator(annotation: AnnotationCommentRange) {
+  const calculatePosition = (elem: Element) => {
+    const rangePosition = annotation.range.getBoundingClientRect()
+    const xRaw = rangePosition.left - elem.clientWidth - 10 + window.scrollX
+    const yRaw = rangePosition.top + window.scrollY
+    const x = `${cssKeepInBounds(xRaw, elem.clientWidth)}px`
+    const y = `${yRaw}px`
+
+    return { x, y }
+  }
+
+  const pos = calculatePosition(document.body)
+
+  const wrapper = createComponentWrapper(
+    `deta-annotation-${annotation.id}`,
+    {
+      x: pos.x,
+      y: pos.y
+    },
+    'transform: translateY(-5px);',
+    'deta-annotation-comment-indicator'
+  )
+
+  const repositionWrapper = () => {
+    const pos = calculatePosition(wrapper.content)
+    wrapper.content.style.left = pos.x
+    wrapper.content.style.top = pos.y
+  }
+
+  const indicator = new CommentIndicator({
+    target: wrapper.root,
+    props: {}
+  })
+
+  // listen for resize events and update the position of the indicator
+  const resizeObserver = new ResizeObserver(repositionWrapper)
+  resizeObserver.observe(annotation.range.commonAncestorContainer as Element)
+
+  // listen for page resize events and update the position of the indicator
+  window.addEventListener('resize', repositionWrapper)
+
+  indicator.$on('click', () => {
+    console.log('clicked on comment', annotation.id)
+
+    wrapper.remove()
+
+    // remove the event listeners when the indicator is closed
+    window.removeEventListener('resize', repositionWrapper)
+    resizeObserver.disconnect()
+
+    renderComment(annotation)
+  })
+
+  // finally show the indicator
+  wrapper.show()
+}
+
+function cssKeepInBounds(raw: number, width: number, adjustment: number = 0) {
+  const BOUNDS = 10
+  const pos = raw - width * adjustment
+
+  const leftBound = Math.max(pos, BOUNDS)
+  const rightBound = Math.min(leftBound, window.innerWidth - width - BOUNDS * 2)
+
+  return rightBound
+}
+
+function renderComment(annotation: AnnotationCommentRange) {
+  const rangePosition = annotation.range.getBoundingClientRect()
+
+  const calculatePosition = (elem: Element) => {
+    const rangePosition = annotation.range.getBoundingClientRect()
+    const xRaw = rangePosition.left + rangePosition.width / 2 + window.scrollX
+    const yRaw = rangePosition.bottom + window.scrollY
+    const x = `${cssKeepInBounds(xRaw, elem.clientWidth, 0.5)}px`
+    const y = `${yRaw}px`
+
+    return { x, y }
+  }
+
+  const pos = calculatePosition(document.body)
+
+  const wrapper = createComponentWrapper(
+    `deta-annotation-comment-${annotation.id}`,
+    {
+      x: pos.x,
+      y: pos.y,
+      maxWidth: Math.min(Math.max(rangePosition.width, 550), 800) + 'px'
+    },
+    'transform: translateY(15px);',
+    'deta-annotation-comment'
+  )
+
+  const repositionWrapper = () => {
+    const pos = calculatePosition(wrapper.content)
+    wrapper.content.style.left = pos.x
+    wrapper.content.style.top = pos.y
+  }
+
+  const comment = new CommentMenu({
+    target: wrapper.root,
+    props: {
+      text: annotation.data.content
+    }
+  })
+
+  // listen for resize events and update the position of the indicator
+  const resizeObserver = new ResizeObserver(repositionWrapper)
+  resizeObserver.observe(annotation.range.commonAncestorContainer as Element)
+
+  // listen for page resize events and update the position of the indicator
+  window.addEventListener('resize', repositionWrapper)
+
+  const closeComment = () => {
+    console.log('Closing comment', annotation)
+
+    wrapper.remove()
+
+    // remove the event listeners when the indicator is closed
+    window.removeEventListener('resize', repositionWrapper)
+    resizeObserver.disconnect()
+
+    renderCommentIndicator(annotation)
+  }
+
+  comment.$on('close', (e) => {
+    closeComment()
+  })
+
+  comment.$on('remove', (e) => {
+    sendPageEvent(WebViewEventSendNames.RemoveAnnotation, annotation.id)
+  })
+
+  wrapper.show()
+}
+
+function openComment(annotation: AnnotationCommentRange) {
+  console.log('Opening comment', annotation)
+  const indicator = document.getElementById(`deta-annotation-${annotation.id}`)
+  if (indicator) {
+    indicator.remove()
+  }
+
+  renderComment(annotation)
+}
+
+function handleRestoreAnnotation(
+  annotationEvent: WebViewReceiveEvents[WebViewEventReceiveNames.RestoreAnnotation]
+) {
+  try {
+    const selection = window.getSelection()
+    if (!selection) {
+      console.error('No selection found')
+      return
+    }
+
+    const annotation = annotationEvent.data
+
+    if (annotation.anchor?.type !== 'range') {
+      console.error('Unsupported anchor type', annotation.anchor?.type)
+      return
+    }
+
+    const range = constructRange(annotation.anchor.data as AnnotationRangeData)
+
+    console.log('Restoring annotation', range)
+    applyRangeHighlight(range, annotationEvent.id, annotation.type)
+
+    if (annotation.type === 'comment') {
+      const commentAnnotation = {
+        id: annotationEvent.id,
+        range: range,
+        data: annotation.data
+      } as AnnotationCommentRange
+
+      console.log('Injecting comment', commentAnnotation)
+      renderCommentIndicator(commentAnnotation)
+    }
+  } catch (e) {
+    console.error('Failed to restore annotation', e)
+  }
 }
 
 function handleScrollToAnnotation(
   data: WebViewReceiveEvents[WebViewEventReceiveNames.ScrollToAnnotation]
 ) {
   console.log('Scrolling to annotation', data)
+  const annotation = data.data
 
-  const elements = document.querySelectorAll(`deta-annotation[id="${data}"]`)
+  const elements = document.querySelectorAll(`deta-annotation[id="${data.id}"]`)
   if (!elements) {
     console.error('Elements not found for scroll', data)
     return
@@ -143,6 +383,16 @@ function handleScrollToAnnotation(
       element.classList.remove(glowClass)
     })
   }, 1000)
+
+  if (annotation.type === 'comment') {
+    const commentAnnotation = {
+      id: data.id,
+      range: constructRange(annotation.anchor?.data as AnnotationRangeData),
+      data: annotation.data
+    } as AnnotationCommentRange
+
+    openComment(commentAnnotation)
+  }
 }
 
 window.addEventListener('DOMContentLoaded', async (_) => {
@@ -162,65 +412,58 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     // const elementSelector = selectionRange?.commonAncestorContainer.parentElement
 
     if (selectionRect && text && text != previouslySelectedText) {
-      const oldDiv = document.getElementById('horizonTextDragHandle')
-      console.log('old div', oldDiv)
-      oldDiv?.parentNode?.removeChild(oldDiv)
+      const calculatePosition = (elem: Element) => {
+        const rangePosition = selectionRange!.getBoundingClientRect()
+        const xRaw = rangePosition.left + window.scrollX
+        const yRaw = rangePosition.bottom + window.scrollY
+        const x = `${cssKeepInBounds(xRaw, elem.clientWidth)}px`
+        const y = `${yRaw}px`
 
-      const div = document.createElement('div')
-      div.id = 'horizonTextDragHandle'
-      // div.style.display = 'flex'
-      // div.style.alignItems = 'center'
-      // div.style.justifyContent = 'center'
-      // div.style.width = '30px'
-      // div.style.height = '30px'
-      // div.style.cursor = 'grab'
-      // div.style.borderRadius = '50%'
-      // div.style.padding = '2px 0 0 2px'
-      // div.style.borderRadius = '3px'
-      // div.style.background = 'color-mix(in srgb, #F73B95 95%, ' + bodyBackgroundColor + ')'
-      // div.style.boxShadow =
-      //   '0px 1px 3px 0px rgba(0, 0, 0, 0.15), 0px 0px 0.5px 0px rgba(0, 0, 0, 0.30)'
-      div.style.position = 'absolute'
-      div.style.zIndex = '100000'
-      div.style.left = `${selectionRect.left + window.scrollX}px`
-      div.style.top = `${selectionRect.bottom + window.scrollY}px`
-      div.style.transform = 'translateY(15px)'
-      div.style.opacity = '0' // Set initial opacity to 0
-      div.style.transition = 'opacity 0.2s ease' // Add transition for opacity
-      div.style.pointerEvents = 'none'
-      // div.draggable = true
-
-      // div.innerHTML = `
-      //   <svg width="16" height="16" viewBox="0 0 7 7" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none;">
-      //     <circle cx="3.125" cy="0.625" r="0.625" fill="white"/>
-      //     <circle cx="0.625" cy="3.125" r="0.625" fill="white"/>
-      //     <circle cx="3.125" cy="3.125" r="0.625" fill="white"/>
-      //     <circle cx="5.625" cy="3.125" r="0.625" fill="white"/>
-      //     <circle cx="3.125" cy="5.625" r="0.625" fill="white"/>
-      //   </svg>`
-
-      document.body.appendChild(div)
-
-      const shadow = div.attachShadow({ mode: 'open' })
-
-      // const componentWrapper = document.createElement('div')
-      // shadow.appendChild(componentWrapper)
-
-      const webviewStyles = document.getElementById('webview-styles')
-      if (webviewStyles) {
-        shadow.appendChild(webviewStyles.cloneNode(true))
+        return { x, y }
       }
 
+      const pos = calculatePosition(document.body)
+
+      selectionMenuWrapper = createComponentWrapper(
+        'horizonTextDragHandle',
+        {
+          x: pos.x,
+          y: pos.y,
+          maxWidth: Math.min(Math.max(selectionRect.width, 650), 800) + 'px'
+        },
+        'transform: translateY(15px);'
+      )
+
+      const respositionWrapper = () => {
+        const pos = calculatePosition(selectionMenuWrapper!.content)
+        selectionMenuWrapper!.content.style.left = pos.x
+        selectionMenuWrapper!.content.style.top = pos.y
+      }
+
+      if (selectionRange?.commonAncestorContainer) {
+        // listen for resize events and update the position of the indicator
+        const resizeObserver = new ResizeObserver(respositionWrapper)
+        const elem = selectionRange.commonAncestorContainer.parentElement
+        if (elem) {
+          resizeObserver.observe(elem)
+        }
+      }
+
+      // listen for page resize events and update the position of the indicator
+      window.addEventListener('resize', respositionWrapper)
+
+      // TODO: unregister the event listeners when the selection menu is removed
+
       selectionMenu = new Menu({
-        target: shadow,
+        target: selectionMenuWrapper.root,
         props: {
           text: text
         }
       })
 
-      selectionMenu.$on('bookmark', (e) => {
+      selectionMenu.$on('save', (e) => {
         const text = e.detail
-        console.log('Bookmarking', text)
+        console.log('Saving text', text)
 
         // re apply selection if it was removed accidentally
         if (selection && selectionRange) {
@@ -228,7 +471,29 @@ window.addEventListener('DOMContentLoaded', async (_) => {
           selection.addRange(selectionRange)
         }
 
-        sendPageEvent(WebViewEventSendNames.Bookmark, { text, url: window.location.href })
+        if (!selectionRange) {
+          console.error('No selection range found')
+          return
+        }
+
+        const rangeData = getRangeData(selectionRange)
+
+        console.log('Range data', rangeData)
+
+        sendPageEvent(WebViewEventSendNames.Annotate, {
+          type: 'comment',
+          anchor: {
+            type: 'range',
+            data: rangeData
+          },
+          data: {
+            url: window.location.href,
+            content: text,
+            source: 'ai/inline'
+          }
+        })
+
+        // sendPageEvent(WebViewEventSendNames.Bookmark, { text, url: window.location.href })
       })
 
       selectionMenu.$on('highlight', (e) => {
@@ -239,22 +504,58 @@ window.addEventListener('DOMContentLoaded', async (_) => {
           return
         }
 
-        console.log('document', document)
-        console.log('selectionRange', selectionRange)
-
         // const range = selection?.getRangeAt(0)
         const rangeData = getRangeData(selectionRange)
 
         console.log('Highlighting data', rangeData)
 
-        sendPageEvent(WebViewEventSendNames.Highlight, {
-          range: rangeData,
-          url: window.location.href
+        sendPageEvent(WebViewEventSendNames.Annotate, {
+          type: 'highlight',
+          anchor: {
+            type: 'range',
+            data: rangeData
+          },
+          data: {
+            url: window.location.href
+          }
         })
 
         if (selection && selectionRange) {
           selection.removeAllRanges()
         }
+      })
+
+      selectionMenu.$on('comment', (e) => {
+        const text = e.detail
+        console.log('Commenting', text)
+
+        if (!selectionRange) {
+          console.error('No selection range found')
+          return
+        }
+
+        const rangeData = getRangeData(selectionRange)
+
+        console.log('Highlighting data', rangeData)
+
+        sendPageEvent(WebViewEventSendNames.Annotate, {
+          type: 'comment',
+          anchor: {
+            type: 'range',
+            data: rangeData
+          },
+          data: {
+            url: window.location.href,
+            content: text,
+            source: 'user'
+          }
+        })
+
+        if (selection && selectionRange) {
+          selection.removeAllRanges()
+        }
+
+        selectionMenuWrapper?.remove()
       })
 
       selectionMenu.$on('transform', (e) => {
@@ -287,52 +588,11 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
       // Animate in on appear
       setTimeout(() => {
-        div.style.opacity = '1'
+        selectionMenuWrapper?.show()
         window.addEventListener('mousedown', () => {
           return
         })
       }, 120)
-
-      // Create and style tooltip
-      // const tooltip = document.createElement('div')
-      // tooltip.innerText = 'Drag me out!' // Tooltip text
-      // tooltip.style.position = 'absolute'
-      // tooltip.style.padding = '5px'
-      // tooltip.style.display = 'flex'
-      // tooltip.style.alignItems = 'center'
-      // tooltip.style.justifyContent = 'center'
-      // tooltip.style.background = 'black'
-      // tooltip.style.color = 'white'
-      // tooltip.style.borderRadius = '4px'
-      // tooltip.style.fontSize = '0.75rem'
-      // tooltip.style.visibility = 'hidden' // Initially hidden
-      // tooltip.style.whiteSpace = 'nowrap' // Keep text in one line
-      // tooltip.id = 'horizonTextTooltip'
-
-      // div.appendChild(tooltip)
-
-      // Show tooltip on hover and position it dynamically
-      // div.addEventListener('mouseover', () => {
-      //   tooltip.style.visibility = 'visible'
-
-      //   // Calculate width of the tooltip after it renders
-      //   const tooltipWidth = tooltip.offsetWidth
-
-      //   // Center tooltip below the drag handle
-      //   tooltip.style.left = `calc(50% - ${tooltipWidth / 2}px)`
-      //   tooltip.style.bottom = '-2rem'
-      // })
-
-      // Hide tooltip when not hovering
-      // div.addEventListener('mouseout', () => {
-      //   tooltip.style.visibility = 'hidden'
-      // })
-
-      // div.addEventListener('dragstart', (event: DragEvent) => {
-      //   event.stopPropagation()
-      //   event.dataTransfer?.setData('text/plain', text)
-      //   event.dataTransfer?.setData('text/space-source', window.location.href)
-      // })
 
       // reset previously selected text after delay, so the user can actually select the same text again.
       previouslySelectedText = ''
@@ -357,12 +617,13 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     // mouseDownX = e.clientX // Store the X-coordinate on mousedown
 
     const target = e.target as HTMLElement
-    console.log('mousedown', target, target.id)
+    console.log('mousedown', target, target.id, target.tagName)
 
-    // ...existing mousedown functionality
-    const div = document.getElementById('horizonTextDragHandle')
-    if (div && target.id !== 'horizonTextDragHandle') {
-      div.parentNode?.removeChild(div)
+    if (target.tagName !== COMPONENT_WRAPPER_TAG) {
+      if (selectionMenuWrapper) {
+        console.log('Removing selection menu')
+        selectionMenuWrapper.remove()
+      }
     }
   })
 
@@ -450,8 +711,8 @@ ipcRenderer.on('webview-event', (_event, payload) => {
     runServiceAction(data.id, data.inputs)
   } else if (type === WebViewEventReceiveNames.TransformationOutput) {
     handleTransformOutput(data.text)
-  } else if (type === WebViewEventReceiveNames.RestoreHighlight) {
-    handleRestoreHighlight(data)
+  } else if (type === WebViewEventReceiveNames.RestoreAnnotation) {
+    handleRestoreAnnotation(data)
   } else if (type === WebViewEventReceiveNames.ScrollToAnnotation) {
     handleScrollToAnnotation(data)
   }

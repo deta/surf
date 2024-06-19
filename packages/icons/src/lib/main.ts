@@ -54,6 +54,10 @@ import Message from './Icons/Message.svelte'
 import GripVertical from './Icons/GripVertical.svelte'
 import Marker from './Icons/Marker.svelte'
 import TextInsert from './Icons/TextInsert.svelte'
+import ArrowDiagonal from './Icons/ArrowDiagonal.svelte'
+import Eye from './Icons/Eye.svelte'
+import LineHeight from './Icons/LineHeight.svelte'
+import TextCollapse from './Icons/TextCollapse.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -112,7 +116,11 @@ export const icons = {
   message: Message,
   'grip.vertical': GripVertical,
   marker: Marker,
-  textInsert: TextInsert
+  textInsert: TextInsert,
+  'arrow.diagonal': ArrowDiagonal,
+  eye: Eye,
+  'line-height': LineHeight,
+  'text-collapse': TextCollapse
 }
 
 export type Icons = keyof typeof icons
@@ -172,5 +180,9 @@ export {
   Message,
   GripVertical,
   Marker,
-  TextInsert
+  TextInsert,
+  ArrowDiagonal,
+  Eye,
+  LineHeight,
+  TextCollapse
 }

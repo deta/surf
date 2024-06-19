@@ -5,12 +5,14 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { derived, type Unsubscriber } from 'svelte/store'
-  import WebviewWrapper from '../Cards/Browser/WebviewWrapper.svelte'
+  import WebviewWrapper, { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { TabPage } from './types'
   import { useLogScope } from '../../utils/log'
   import type { DetectedWebApp } from '@horizon/web-parser'
   import type { WebViewReceiveEvents } from '@horizon/types'
+  import FindInPage from '../Cards/Browser/FindInPage.svelte'
+  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<{ newTab: NewTabEvent; appDetection: DetectedWebApp }>()
@@ -18,6 +20,8 @@
   export let tab: TabPage
   export let webview: WebviewWrapper
   export let historyEntriesManager: HistoryEntriesManager
+
+  let findInPage: FindInPage | undefined
 
   export const goBack = () => {
     if (webview) {
@@ -88,6 +92,39 @@
   }
 
   console.log('new tab', tab)
+
+  const handleWebviewKeydown = async (e: CustomEvent<WebViewWrapperEvents['keydownWebview']>) => {
+    const event = e.detail
+    if (event.key === 'Escape') {
+      if (findInPage?.isOpen()) {
+        findInPage?.close()
+      }
+    } else if (isModKeyAndKeyPressed(event as KeyboardEvent, 'f')) {
+      /*else if (event.code === 'Space' && event.shiftKey) {
+      if ($focusModeEnabled) {
+        exitFocusMode(horizon.board)
+      } else {
+        // TODO: Make this work
+        enterFocusMode([$card.id], horizon.board, horizon.cards)
+      }
+      // TODO: Catch OPT + TAB / SHIFT TAB to toggle between cards
+    }*/
+      log.debug('mod+f pressed')
+
+      if (!findInPage || !webview) return
+
+      if (findInPage.isOpen()) {
+        const selection = await webview.getSelection()
+        if (selection) {
+          findInPage.find(selection)
+        } else {
+          findInPage.close()
+        }
+      } else {
+        findInPage.open()
+      }
+    }
+  }
 
   const handleWebviewNewWindow = async (e: CustomEvent<Electron.HandlerDetails>) => {
     const disposition = e.detail.disposition
@@ -169,6 +206,10 @@
   })
 </script>
 
+{#if webview}
+  <FindInPage bind:this={findInPage} {webview} />
+{/if}
+
 <WebviewWrapper
   bind:this={webview}
   {src}
@@ -180,6 +221,8 @@
   on:transform
   on:detectedApp={handleDetectedApp}
   on:inlineTextReplace
-  on:highlight
+  on:annotate
   on:annotationClick
+  on:annotationRemove
+  on:keydownWebview={handleWebviewKeydown}
 />

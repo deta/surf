@@ -16,10 +16,11 @@
     WebViewEventReceiveNames,
     type AnnotationRangeData,
     type DetectedWebApp,
-    type ResourceDataAnnotation
+    type ResourceDataAnnotation,
+    type WebViewEventAnnotation
   } from '@horizon/types'
   import { useLogScope } from '../../utils/log'
-  import AnnotationItem from './AnnotationItem.svelte'
+  import AnnotationItem from '../Oasis/AnnotationItem.svelte'
   import { Icon } from '@horizon/icons'
   import { wait } from '@horizon/web-parser/src/utils'
 
@@ -87,9 +88,9 @@
 
         if (data.type !== 'highlight') return
 
-        webview.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, {
+        webview.sendWebviewEvent(WebViewEventReceiveNames.RestoreAnnotation, {
           id: annotation.id,
-          range: data.anchor.data as AnnotationRangeData
+          data: data
         })
       })
     } catch (e) {
@@ -99,10 +100,9 @@
     }
   }
 
-  const handleAnnotationSelect = (e: CustomEvent<string>) => {
-    const annotationId = e.detail
-    log.debug('Annotation selected', annotationId)
-    webview.sendWebviewEvent(WebViewEventReceiveNames.ScrollToAnnotation, annotationId)
+  const handleAnnotationSelect = (e: CustomEvent<WebViewEventAnnotation>) => {
+    log.debug('Annotation selected', e.detail)
+    webview.sendWebviewEvent(WebViewEventReceiveNames.ScrollToAnnotation, e.detail)
   }
 
   const handleWebViewHighlight = async (e: CustomEvent<WebViewWrapperEvents['highlight']>) => {

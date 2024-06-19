@@ -52,7 +52,13 @@
   import Importer from './Importer.svelte'
   import { parseChatResponseSources, summarizeText } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
-  import { WebViewEventReceiveNames, type AnnotationRangeData } from '@horizon/types'
+  import {
+    WebViewEventReceiveNames,
+    type AnnotationCommentData,
+    type AnnotationRangeData,
+    type ResourceDataAnnotation,
+    type WebViewEventAnnotation
+  } from '@horizon/types'
   import {
     inlineHighlightStylingCode,
     inlineHighlightTextCode,
@@ -64,10 +70,12 @@
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { provideOasis } from '../../service/oasis'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
+  import AnnotationsSidebar from './AnnotationsSidebar.svelte'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
   let addressBarFocus = false
+  let annotationsSidebar: AnnotationsSidebar
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -113,6 +121,7 @@
   const showURLBar = writable(false)
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
+  const showAnnotationsSidebar = writable(false)
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -666,10 +675,12 @@
   }
 
   async function bookmarkPage(tab: TabPage) {
-    let resource: Resource | null
+    let resource: Resource | null = null
     if (tab.chatResourceBookmark) {
       resource = await resourceManager.getResource(tab.chatResourceBookmark)
-    } else {
+    }
+
+    if (!resource) {
       const currentEntry = historyEntriesManager.getEntry(
         tab.historyStackIds[tab.currentHistoryIndex]
       )
@@ -705,7 +716,7 @@
       log.debug('created resource', resource)
     }
 
-    if (resource) updateTab(tab.id, { resourceBookmark: resource.id })
+    updateTab(tab.id, { resourceBookmark: resource.id })
 
     return resource
   }
@@ -932,14 +943,11 @@
       const annotation = await annotationResource.getParsedData()
       log.debug('annotation data', annotation)
 
-      if (annotation.type === 'highlight' && annotation.anchor.type === 'range') {
-        const anchorData = annotation.anchor.data as AnnotationRangeData
-        log.debug('highlight range', anchorData)
-        browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, {
-          id: annotationResource.id,
-          range: anchorData
-        })
-      }
+      log.debug('sending annotation to webview', annotation)
+      browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreAnnotation, {
+        id: annotationResource.id,
+        data: annotation
+      })
     })
 
     // if ($activeTabId === tab.id) {
@@ -947,9 +955,24 @@
     // }
   }
 
-  async function handleWebviewTransform(e: CustomEvent<WebViewWrapperEvents['transform']>) {
+  async function handleWebviewTransform(
+    e: CustomEvent<WebViewWrapperEvents['transform']>,
+    tab: TabPage
+  ) {
     const { text, query, type } = e.detail
     log.debug('webview transformation', e.detail)
+
+    const browserTab = $browserTabs[tab.id]
+
+    const detectedResource = await browserTab.detectResource()
+    log.debug('extracted resource data', detectedResource)
+
+    const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+
+    const textContent =
+      `Text selection from the user: ${text}` + detectedResource
+        ? `\n\nFull page content to use only as reference:\n${content.plain}`
+        : ''
 
     let transformation = ''
     if (type === 'summarize') {
@@ -957,26 +980,26 @@
     } else if (type === 'explain') {
       // @ts-expect-error
       transformation = await window.api.createAIChatCompletion(
-        text,
-        `Take the following text which has been extracted from a web page like a article or blog post and explain it so it is easily understandable for anyone. Try to be concise. Only respond with the explanation and make sure to escape any special characters in the response.`
+        textContent,
+        `Explain the following text selection from a user so it is easily understandable for anyone. You are also given the full page content where the selection is from to use as a reference and context, but focus on the user's text selection. Take it into account and try to answer with information from the page. Be concise and try to keep the answer short. Only respond with the explanation itself and make sure to escape any special characters in the response.`
       )
     } else if (type === 'translate') {
       // @ts-expect-error
       transformation = await window.api.createAIChatCompletion(
-        text,
-        `Take the following text which has been extracted from a web page like a article or blog post and translate it into English. If it is english already translate it into German. Stay as close to the original meaning as possible. Only respond with the translation and make sure to escape any special characters in the response.`
+        textContent,
+        `Translate the following text selection from the user into English. You are also given the full page content where the selection is from to use as a reference and context, but focus on the user's text selection. Take it into account and try to answer with information from the page. If it is english already translate it into German. Stay as close to the original meaning as possible. Only respond with the translation itself and make sure to escape any special characters in the response.`
       )
     } else if (type === 'grammar') {
       // @ts-expect-error
       transformation = await window.api.createAIChatCompletion(
-        text,
-        `Take the following text which has been extracted from a web page like a article or blog post or document and fix all grammar mistakes as well as improve the writing. Stay as close to the original meaning as possible but change things were necessary you deem it necessary. Only respond with the improved text and make sure to escape any special characters in the response.`
+        textContent,
+        `Fix all grammar mistakes as well as improve the writing of the following text selection from the user. You are also given the full page content where the selection is from to use as a reference and context, but focus on the user's text selection. Take it into account and try to answer with information from the page. Stay as close to the original meaning as possible but change things were necessary you deem it necessary. Only respond with the improved text itself and make sure to escape any special characters in the response.`
       )
     } else {
       // @ts-expect-error
       transformation = await window.api.createAIChatCompletion(
-        `User instruction: "${query}"\n\nOriginal text:\n${text}`,
-        `Take the following text which has been extracted from a web page like a article or blog post and transform it based on the given user instruction or answer the user's question if it is one. Stick to the instruction as close as possible and generally try to be concise but keep true to the meaning. Only respond with the transformed text or your answer and make sure to escape any special characters in the response.`
+        `User instruction: "${query}"\n\n` + textContent,
+        `Transform the following text selection from the user based on the given user instruction or answer the user's question if it is one. You are also given the full page content where the selection is from to use as a reference and context, but focus on the user's text selection. Take it into account and try to answer with information from the page. Stick to the instruction as close as possible and generally try to be concise but keep true to the meaning. Only respond with the transformed text itself or your answer and make sure to escape any special characters in the response.`
       )
     }
 
@@ -1249,18 +1272,41 @@
     */
   }
 
-  const saveTextFromPage = async (text: string) => {
-    const resource = await resourceManager.createResourceNote(text, {
-      name: 'Magic Response',
-      sourceURI: $activeTabLocation ?? '',
-      alt: ''
-    })
+  const saveTextFromPage = async (text: string, source?: AnnotationCommentData['source']) => {
+    if ($activeTab?.type !== 'page') return
 
-    log.debug('created resource', resource)
+    const url = $activeTabLocation ?? $activeTab?.initialLocation
+
+    const data = {
+      type: 'comment',
+      anchor: null,
+      data: {
+        url: url,
+        content: text,
+        source: source
+      }
+    } as ResourceDataAnnotation
+
+    let bookmarkedResource = $activeTab.resourceBookmark
+
+    if (!bookmarkedResource) {
+      log.debug('no bookmarked resource')
+
+      const resource = await bookmarkPage($activeTab)
+      bookmarkedResource = resource.id
+    }
+
+    log.debug('creating annotation', data)
+    const annotation = await resourceManager.createResourceAnnotation(data, { sourceURI: url }, [
+      ResourceTag.canonicalURL(url),
+      ResourceTag.annotates(bookmarkedResource)
+    ])
+
+    return annotation
   }
 
-  const handleWebviewHighlight = async (
-    e: CustomEvent<WebViewWrapperEvents['highlight']>,
+  const handleWebviewAnnotation = async (
+    e: CustomEvent<WebViewWrapperEvents['annotate']>,
     tabId: string
   ) => {
     const tab = $tabs.find((tab) => tab.id === tabId)
@@ -1275,8 +1321,8 @@
       return
     }
 
-    const { range, url } = e.detail
-    log.debug('webview highlight', url, range)
+    const annotationData = e.detail
+    log.debug('webview annotation', annotationData)
 
     let bookmarkedResource = tab.resourceBookmark
 
@@ -1287,15 +1333,14 @@
       bookmarkedResource = resource.id
     }
 
+    const currentEntry = historyEntriesManager.getEntry(
+      tab.historyStackIds[tab.currentHistoryIndex]
+    )
+
+    const url = annotationData?.data?.url ?? currentEntry?.url ?? tab.initialLocation
+
     const annotationResource = await resourceManager.createResourceAnnotation(
-      {
-        type: 'highlight',
-        anchor: {
-          type: 'range',
-          data: range
-        },
-        data: {}
-      },
+      annotationData,
       { sourceURI: url },
       [
         // link the annotation to the page using its canonical URL so we can later find it
@@ -1309,10 +1354,14 @@
     log.debug('created annotation resource', annotationResource)
 
     log.debug('highlighting text in webview')
-    browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreHighlight, {
+    browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreAnnotation, {
       id: annotationResource.id,
-      range: range
+      data: annotationData
     })
+
+    if (annotationsSidebar) {
+      annotationsSidebar.reload()
+    }
   }
 
   const handleWebviewAnnotationClick = async (
@@ -1326,6 +1375,26 @@
     const tab = $tabs.find((tab) => tab.id === tabId) as TabPage | undefined
     if (tab && tab.resourceBookmark) {
       openResource(tab.resourceBookmark)
+    }
+  }
+
+  const handleWebviewAnnotationRemove = async (
+    e: CustomEvent<WebViewWrapperEvents['annotationRemove']>,
+    tabId: string
+  ) => {
+    const annotationId = e.detail
+
+    log.debug('webview annotation click', annotationId)
+
+    await resourceManager.deleteResource(annotationId)
+
+    if (annotationsSidebar) {
+      annotationsSidebar.reload()
+    }
+
+    const browserTab = $browserTabs[tabId]
+    if (browserTab) {
+      browserTab.reload()
     }
   }
 
@@ -1344,6 +1413,20 @@
     log.debug('space item click', resourceId)
 
     openResourceDetailsModal(resourceId)
+  }
+
+  const handleAnnotationScrollTo = (e: CustomEvent<WebViewEventAnnotation>) => {
+    log.debug('Annotation scroll to', e.detail)
+    $activeBrowserTab.sendWebviewEvent(WebViewEventReceiveNames.ScrollToAnnotation, e.detail)
+  }
+
+  const handleAnnotationSidebarCreate = async (e: CustomEvent<string>) => {
+    log.debug('Annotation sidebar create', e.detail)
+
+    const annotation = await saveTextFromPage(e.detail, 'user')
+
+    log.debug('created annotation', annotation)
+    annotationsSidebar.reload()
   }
 
   onMount(async () => {
@@ -1701,11 +1784,12 @@
             on:newTab={handleNewTab}
             on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
             on:bookmark={handleWebviewBookmark}
-            on:transform={handleWebviewTransform}
+            on:transform={(e) => handleWebviewTransform(e, tab)}
             on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
             on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, tab.id)}
-            on:highlight={(e) => handleWebviewHighlight(e, tab.id)}
+            on:annotate={(e) => handleWebviewAnnotation(e, tab.id)}
             on:annotationClick={(e) => handleWebviewAnnotationClick(e, tab.id)}
+            on:annotationRemove={(e) => handleWebviewAnnotationRemove(e, tab.id)}
           />
         {:else if tab.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
@@ -1755,9 +1839,8 @@
       </div>
     {/if}
 
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-
     {#if $activeTabMagic}
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
       <div class="sidebar-magic-toggle" on:click={handleToggleMagicSidebar}>
         {#if $activeTabMagic.showSidebar}
           <Icon name="close" />
@@ -1768,6 +1851,18 @@
         {/if}
       </div>
     {/if}
+
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div
+      class="sidebar-annotations-toggle"
+      on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
+    >
+      {#if $showAnnotationsSidebar}
+        <Icon name="close" />
+      {:else}
+        <Icon name="message" />
+      {/if}
+    </div>
   </div>
 
   {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
@@ -1776,8 +1871,17 @@
         magicPage={$activeTabMagic}
         bind:inputValue={$magicInputValue}
         on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
-        on:saveText={(e) => saveTextFromPage(e.detail)}
+        on:saveText={(e) => saveTextFromPage(e.detail, 'ai/chat')}
         on:chat={() => handleChatSubmit($activeTabMagic)}
+      />
+    </div>
+  {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
+    <div transition:slide={{ axis: 'x' }} class="sidebar sidebar-magic">
+      <AnnotationsSidebar
+        bind:this={annotationsSidebar}
+        resourceId={$activeTab.resourceBookmark}
+        on:scrollTo={handleAnnotationScrollTo}
+        on:create={handleAnnotationSidebarCreate}
       />
     </div>
   {/if}
@@ -1808,6 +1912,21 @@
   .sidebar-magic-toggle {
     position: absolute;
     top: 4rem;
+    right: 0.45rem;
+    z-index: 100000;
+    transform: translateY(-50%);
+    background: #eeece0;
+    border-radius: 8px 0 0 8px;
+    padding: 1rem;
+    cursor: pointer;
+    border-top: 1px solid #e4e2d4;
+    border-bottom: 1px solid #e4e2d4;
+    border-left: 1px solid #e4e2d4;
+  }
+
+  .sidebar-annotations-toggle {
+    position: absolute;
+    top: 8rem;
     right: 0.45rem;
     z-index: 100000;
     transform: translateY(-50%);

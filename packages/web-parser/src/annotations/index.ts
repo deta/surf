@@ -5,6 +5,8 @@ import {
   WebviewAnnotationEvents
 } from '@horizon/types'
 
+import { Icon } from '@horizon/icons'
+
 import { getXPath } from './xpath'
 
 export const getRangeData = (range: Range) => {
@@ -134,11 +136,12 @@ export function wrapRangeInNode(range: Range, wrapperNode: Node) {
 }
 
 // applies a highlight to the range while making sure the dom structure is not broken
-export const applyRangeHighlight = (id: string, range: Range) => {
+export const applyRangeHighlight = (range: Range, id: string, type: AnnotationType) => {
   const elem = document.createElement('deta-annotation')
 
   // set attributes for the element so we can identify it later
   elem.setAttribute('id', id)
+  elem.setAttribute('data-annotation-type', type)
 
   // styling
   elem.classList.add('deta-annotation')
