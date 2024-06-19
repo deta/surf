@@ -732,7 +732,7 @@
     }
 
     &.failed {
-      background-color: #f4cfcf;
+      back10ground-color: #f4cfcf;
     }
   }
 </style>

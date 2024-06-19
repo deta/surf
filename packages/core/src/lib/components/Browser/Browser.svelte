@@ -41,7 +41,8 @@
     TabHorizon,
     TabImporter,
     TabPage,
-    TabSpace
+    TabSpace,
+    TabOasisDiscovery
   } from './types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../Cards/Browser/searchEngines'
   import type { Drawer } from '@horizon/drawer'
@@ -51,6 +52,7 @@
   import { useLocalStorageStore } from '../../utils/localstorage'
   import { WebParser, type DetectedWebApp } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
+  import OasisDiscovery from './OasisDiscovery.svelte'
   import { parseChatResponseSources, summarizeText } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
   import {
@@ -505,8 +507,8 @@
       closeActiveTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark()
-    } else if (isModKeyAndKeyPressed(e, 'y')) {
-      sidebarTab.set('archive')
+      //} else if (isModKeyAndKeyPressed(e, 'y')) {
+      //  sidebarTab.set('archive')
     } else if (isModKeyAndKeyPressed(e, 'g')) {
       sidebarTab.set('active')
     } else if (isModKeyAndKeyPressed(e, 'n')) {
@@ -515,6 +517,8 @@
       $activeBrowserTab?.reload()
     } else if (isModKeyAndKeyPressed(e, 'i')) {
       createImporterTab()
+    } else if (isModKeyAndKeyPressed(e, 'y')) {
+      createOasisDiscoveryTab()
     } else if (isModKeyAndKeyPressed(e, 'b')) {
       $activeBrowserTab?.openDevTools()
     }
@@ -592,6 +596,16 @@
       type: 'importer'
     })
 
+    activeTabId.set(newTab.id)
+  }
+
+  const createOasisDiscoveryTab = async () => {
+    log.debug('Creating new oasis discovery tab')
+    const newTab = await createTab<TabOasisDiscovery>({
+      title: 'Oasis Discovery',
+      icon: '',
+      type: 'oasis-discovery'
+    })
     activeTabId.set(newTab.id)
   }
 
@@ -1856,6 +1870,8 @@
           />
         {:else if tab.type === 'importer'}
           <Importer {resourceManager} />
+        {:else if tab.type === 'oasis-discovery'}
+          <OasisDiscovery />
         {:else if tab.type === 'space'}
           <OasisSpace spaceId={tab.spaceId} on:open={handleSpaceItemClick} />
         {:else}

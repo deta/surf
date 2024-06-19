@@ -12,4 +12,5 @@ setup:
 run:
 	cp -R embedchain .venv/lib/python*/site-packages/
 	. .venv/bin/activate && \
+	$(PYTHON) -m pip install -r requirements.txt && \
 	uvicorn main:app --reload

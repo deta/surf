@@ -6,4 +6,9 @@ sentence-transformers
 xmltodict
 pytube
 youtube-transcript-api
-
+bertopic
+kaleido
+gensim
+nltk
+pyLDAvis
+scipy==1.12.0
