@@ -50,6 +50,9 @@ async def add_data_source(data_source: DataSourceModel, response: Response):
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {"message": "Invalid environment variables. Enter a valid JSON object."}
 
+    if data_type == 'text':
+        params['metadata']['url'] = 'local'
+
     try:
         set_env_variables(env_variables)
         ec_app.add(**params)

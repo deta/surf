@@ -43,7 +43,7 @@ export type AnnotationHighlightData = {
 export type AnnotationCommentData = {
   url?: string
   content: string
-  source: 'user' | 'ai/inline' | 'ai/chat'
+  source: 'user' | 'inline_ai' | 'chat_ai'
 }
 
 // data stored for links

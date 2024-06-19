@@ -130,9 +130,9 @@
           {:else if annotation.type === 'comment'}
             <Icon name="message" />
             <div class="from">
-              {#if source === 'ai/inline'}
+              {#if source === 'inline_ai'}
                 Inline Page AI
-              {:else if source === 'ai/chat'}
+              {:else if source === 'chat_ai'}
                 Page Chat AI
               {:else}
                 Comment

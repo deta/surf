@@ -1871,7 +1871,7 @@
         magicPage={$activeTabMagic}
         bind:inputValue={$magicInputValue}
         on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
-        on:saveText={(e) => saveTextFromPage(e.detail, 'ai/chat')}
+        on:saveText={(e) => saveTextFromPage(e.detail, 'chat_ai')}
         on:chat={() => handleChatSubmit($activeTabMagic)}
       />
     </div>

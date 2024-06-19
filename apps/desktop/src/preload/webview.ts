@@ -489,7 +489,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
           data: {
             url: window.location.href,
             content: text,
-            source: 'ai/inline'
+            source: 'inline_ai'
           }
         })
 

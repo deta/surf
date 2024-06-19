@@ -167,16 +167,27 @@ fn process_resource_data(
                 })
         }
         resource_type if resource_type.starts_with("application/vnd.space.annotation") => {
-            serde_json::from_str::<AnnotationData>(resource_data)
+            serde_json::from_str::<ResourceDataAnnotation>(resource_data)
                 .map_err(|e| eprintln!("deserializing annotation data: {e:#?}"))
                 .ok()
                 .map(|annotation_data| {
+                    let content = match &annotation_data.data {
+                        AnnotationData::Comment(comment_data) => Some(comment_data.content.clone()),
+                        _ => None,
+                    };
+
+                    let content_plain = match &annotation_data.anchor {
+                        Some(AnnotationAnchor {
+                            data: AnnotationAnchorData::Range(range_data),
+                            ..
+                        }) => range_data.content_plain.clone(),
+                        _ => None,
+                    };
+
                     format!(
-                        "{}",
-                        annotation_data.anchor
-                            .and_then(|anchor| anchor.data)
-                            .and_then(|data| data.content_plain)
-                            .unwrap_or_default()
+                        "{} {}",
+                        content_plain.unwrap_or_default(),
+                        content.unwrap_or_default()
                     )
                 })
         }
@@ -360,26 +371,113 @@ struct ChatThreadData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct AnnotationData {
+struct ResourceDataAnnotation {
     #[serde(rename = "type")]
-    type_: Option<String>,
-    data: Option<serde_json::Value>,
-    anchor: Option<AnnotationDataAnchor>,
+    type_: AnnotationType,
+    data: AnnotationData,
+    anchor: Option<AnnotationAnchor>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct AnnotationDataAnchor {
-    #[serde(rename = "type")]
-    type_: Option<String>,
-    data: Option<AnnotationDataAnchorRangeData>,
+#[serde(rename_all = "snake_case")]
+enum AnnotationType {
+    Highlight,
+    Comment,
+    Link,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct AnnotationDataAnchorRangeData {
+#[serde(rename_all = "snake_case")]
+enum AnnotationAnchorType {
+    Range,
+    Element,
+    Area,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+enum AnnotationData {
+    Highlight(AnnotationHighlightData),
+    Comment(AnnotationCommentData),
+    Link(AnnotationLinkData),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+struct AnnotationHighlightData {
+    url: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+struct AnnotationCommentData {
+    url: Option<String>,
+    content: String,
+    source: AnnotationCommentSource,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum AnnotationCommentSource {
+    User,
+    InlineAi,
+    ChatAi,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+struct AnnotationLinkData {
+    target_type: AnnotationLinkTargetType,
+    url: Option<String>,
+    resource_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum AnnotationLinkTargetType {
+    External,
+    Resource,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+enum AnnotationAnchorData {
+    Range(AnnotationRangeData),
+    Element(AnnotationElementData),
+    Area(AnnotationAreaData),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+struct AnnotationAnchor {
+    #[serde(rename = "type")]
+    type_: AnnotationAnchorType,
+    data: AnnotationAnchorData,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+struct AnnotationRangeData {
     content_plain: Option<String>,
     content_html: Option<String>,
-    start_offset: Option<i32>,
-    end_offset: Option<i32>,
-    start_xpath: Option<String>,
-    end_xpath: Option<String>,
+    start_offset: i32,
+    end_offset: i32,
+    start_xpath: String,
+    end_xpath: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+struct AnnotationElementData {
+    xpath: String,
+    query_selector: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+struct AnnotationAreaData {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
 }
