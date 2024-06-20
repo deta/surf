@@ -21,6 +21,7 @@
 
   export let resource: ResourceAnnotation
   export let active = false
+  export let background = true
 
   const log = useLogScope('AnnotationItem')
   const dispatch = createEventDispatcher<{
@@ -111,7 +112,7 @@
   })
 </script>
 
-<div class="link-card" bind:this={elem} class:active>
+<div class="link-card" bind:this={elem} class:active class:background>
   <!-- <a href={document?.url} target="_blank" class="link-card"> -->
 
   <div class="details">
@@ -264,11 +265,16 @@
     padding: 1rem;
     color: inherit;
     text-decoration: none;
-    background: #f8f7f2;
     border-radius: 8px;
+    border-bottom: 1px solid #f0f0f0;
 
     &:hover .actions {
       opacity: 1;
+    }
+
+    &.background {
+      background: #f8f7f2;
+      border-bottom: none;
     }
   }
 

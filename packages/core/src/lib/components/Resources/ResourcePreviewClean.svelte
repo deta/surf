@@ -20,7 +20,12 @@
     type ResourcePost
   } from '../../service/resources'
   import FilePreview from '../Cards/File/FilePreview.svelte'
-  import { ResourceTypes, type ResourceData, type ResourceDataPost } from '../../types'
+  import {
+    ResourceTagsBuiltInKeys,
+    ResourceTypes,
+    type ResourceData,
+    type ResourceDataPost
+  } from '../../types'
   import { getFileKind, getFileType } from '../../utils/files'
   import FileIcon from '../Cards/File/FileIcon.svelte'
   import PostPreview from '../Cards/Post/PostPreview.svelte'
@@ -80,7 +85,16 @@
     }
   }
 
-  const handleClick = () => {
+  const handleClick = async () => {
+    log.debug('Resource clicked', resource)
+    if (resource.type === ResourceTypes.ANNOTATION) {
+      const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
+      if (annotatesTag) {
+        dispatch('click', annotatesTag.value)
+        return
+      }
+    }
+
     dispatch('click', resource.id)
   }
 
@@ -95,6 +109,15 @@
 
   const handleMaximize = (e: MouseEvent) => {
     e.stopImmediatePropagation()
+
+    if (resource.type === ResourceTypes.ANNOTATION) {
+      const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
+      if (annotatesTag) {
+        dispatch('open', annotatesTag.value)
+        return
+      }
+    }
+
     dispatch('open', resource.id)
   }
 
