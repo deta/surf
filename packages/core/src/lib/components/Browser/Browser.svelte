@@ -525,10 +525,10 @@
       handleFocus()
     } else if (e.ctrlKey && e.key === 'Tab') {
       cycleActiveTab(e.shiftKey)
-    } else if (e.shiftKey && e.key === 'J') {
-      cycleActiveTab(false)
-    } else if (e.shiftKey && e.key === 'K') {
-      cycleActiveTab(true)
+      // } else if (e.shiftKey && e.key === 'J') {
+      //   cycleActiveTab(false)
+      // } else if (e.shiftKey && e.key === 'K') {
+      //   cycleActiveTab(true)
     }
   }
 
