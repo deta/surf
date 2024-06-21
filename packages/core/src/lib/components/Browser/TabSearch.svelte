@@ -140,6 +140,7 @@
     padding: 1rem;
     box-shadow: 3px 3px 10px 2px rgba(0, 0, 0, 0.3);
     background-color: #eeece0;
+    border-radius: 12px;
   }
 
   .content input[type='text'] {
