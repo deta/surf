@@ -74,6 +74,8 @@
   import { provideOasis } from '../../service/oasis'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
   import AnnotationsSidebar from './AnnotationsSidebar.svelte'
+  import ToastsProvider from '../Toast/ToastsProvider.svelte'
+  import { provideToasts, type Toasts } from '../../service/toast'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -99,6 +101,7 @@
   const storage = new HorizonDatabase()
   const sffs = new SFFS()
   const oasis = provideOasis(resourceManager)
+  const toasts = provideToasts()
 
   const tabsDB = storage.tabs
   const horizons = horizonManager.horizons
@@ -491,13 +494,21 @@
     addressInputElem.select()
   }
 
+  const handleCopyLocation = () => {
+    if ($activeTabLocation) {
+      log.debug('Copying location to clipboard', $activeTabLocation)
+      copyToClipboard($activeTabLocation)
+      toasts.success('Copied to Clipboard!')
+    }
+  }
+
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       addressInputElem.blur()
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
-      copyToClipboard($activeTabLocation ?? '')
+      handleCopyLocation()
     } else if (isModKeyPressed(e) && e.key === 't') {
       createNewEmptyTab()
     } else if (isModKeyAndKeyPressed(e, 'o')) {
@@ -784,6 +795,7 @@
       await bookmarkPage($activeTab)
 
       // automatically resets after some time
+      toasts.success('Bookmarked Page!')
       bookmarkingSuccess.set(true)
     } catch (e) {
       log.error('error creating resource', e)
@@ -1362,6 +1374,8 @@
       ResourceTag.annotates(bookmarkedResource)
     ])
 
+    toasts.success('Saved to Oasis!')
+
     return annotation
   }
 
@@ -1447,6 +1461,8 @@
     log.debug('webview annotation remove', annotationId)
 
     await resourceManager.deleteResource(annotationId)
+
+    toasts.success('Annotation deleted!')
 
     if (annotationsSidebar) {
       annotationsSidebar.reload()
@@ -1620,6 +1636,8 @@
 <SplashScreen />
 
 <svelte:window on:keydown={handleKeyDown} />
+
+<ToastsProvider service={toasts} />
 
 <div class="app-wrapper">
   <div class="sidebar">

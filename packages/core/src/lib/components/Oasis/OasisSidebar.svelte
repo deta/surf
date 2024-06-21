@@ -5,9 +5,11 @@
   import { Icon } from '@horizon/icons'
   import { useOasis } from '../../service/oasis'
   import { derived } from 'svelte/store'
+  import { useToasts } from '../../service/toast'
 
   const log = useLogScope('Oasis Sidebar')
   const oasis = useOasis()
+  const toast = useToasts()
 
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
@@ -51,6 +53,7 @@
     try {
       console.log('trying to delete folder...', id.detail)
       await oasis.deleteSpace(id.detail)
+      toast.success('Folder deleted!')
     } catch (error) {
       log.error('Failed to delete folder:', error)
     }

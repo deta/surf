@@ -18,6 +18,7 @@
   import { addISOWeekYears } from 'date-fns'
   import { Editor, getEditorContentText } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
+  import { useToasts } from '../../service/toast'
 
   export let resource: ResourceAnnotation
   export let active = false
@@ -28,6 +29,7 @@
     scrollTo: WebViewEventAnnotation
     delete: WebViewEventAnnotation
   }>()
+  const toast = useToasts()
 
   let annotation: ResourceDataAnnotation | null = null
   let content = ''
@@ -64,6 +66,7 @@
 
   const handleCopy = () => {
     if (!annotation) return
+    toast.success('Annotation copied to clipboard!')
     copy(content || anchorText || '')
   }
 

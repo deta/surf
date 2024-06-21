@@ -16,6 +16,7 @@
     createResourcesFromMediaItems,
     processDrop
   } from '../../service/mediaImporter'
+  import { useToasts } from '../../service/toast'
 
   export let spaceId: string
 
@@ -24,6 +25,7 @@
   const log = useLogScope('OasisTab')
   const oasis = useOasis()
   const dispatch = createEventDispatcher<{ open: string }>()
+  const toast = useToasts()
 
   const resourceManager = oasis.resourceManager
   const spaces = oasis.spaces
@@ -167,6 +169,7 @@
         await resourceManager.deleteResource(resourceId)
         await loadSpaceContents(spaceId)
         log.debug('Resource deleted')
+        toast.success('Resource deleted!')
       } catch (error) {
         log.error('Error deleting resource:', error)
       }
@@ -207,6 +210,8 @@
 
     const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
     log.debug('Resources', resources)
+
+    toast.success('Resources added!')
 
     await loadSpaceContents(spaceId)
   }

@@ -58,6 +58,7 @@ import ArrowDiagonal from './Icons/ArrowDiagonal.svelte'
 import Eye from './Icons/Eye.svelte'
 import LineHeight from './Icons/LineHeight.svelte'
 import TextCollapse from './Icons/TextCollapse.svelte'
+import AlertTriangle from './Icons/AlertTriangle.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -120,7 +121,8 @@ export const icons = {
   'arrow.diagonal': ArrowDiagonal,
   eye: Eye,
   'line-height': LineHeight,
-  'text-collapse': TextCollapse
+  'text-collapse': TextCollapse,
+  'alert-triangle': AlertTriangle
 }
 
 export type Icons = keyof typeof icons
@@ -184,5 +186,6 @@ export {
   ArrowDiagonal,
   Eye,
   LineHeight,
-  TextCollapse
+  TextCollapse,
+  AlertTriangle
 }

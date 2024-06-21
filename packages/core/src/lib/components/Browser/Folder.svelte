@@ -10,6 +10,7 @@
   import { useLogScope } from '../../utils/log'
   import { useOasis } from '../../service/oasis'
   import { processDrop } from '../../service/mediaImporter'
+  import { useToasts } from '../../service/toast'
 
   export let folder: Space
   export let selected: boolean
@@ -17,6 +18,7 @@
   const log = useLogScope('Folder')
   const dispatch = createEventDispatcher()
   const oasis = useOasis()
+  const toast = useToasts()
 
   let folderName = folder.name
   let inputWidth = `${folderName.length}ch`
@@ -81,6 +83,7 @@
 
       await oasis.addResourcesToSpace(folder.id, results)
       selectedFolder.set(folder.id)
+      toast.success('Folder created with AI!')
     } catch (err) {
       log.error('Failed to create folder with AI', err)
     } finally {
@@ -100,6 +103,7 @@
         resourceItems.map((r) => r.data as string)
       )
       log.debug(`Resources dropped into folder ${folder.name}`)
+      toast.success('Resources added to folder!')
     } else {
       log.debug('No resources found in drop event')
     }

@@ -21,6 +21,7 @@
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import ResourceOverlay from '@horizon/drawer/src/lib/components/ResourceOverlay.svelte'
   import AnnotationItem from './AnnotationItem.svelte'
+  import { useToasts } from '../../service/toast'
 
   export let resource: Resource
 
@@ -31,6 +32,7 @@
   const log = useLogScope('OasisResourceModal')
   const resourceManager = useResourceManager()
   const historyEntriesManager = new HistoryEntriesManager()
+  const toast = useToasts()
 
   $: src = resource?.metadata?.sourceURI || 'https://example.com'
 
@@ -108,6 +110,8 @@
 
     log.debug('Deleting annotation', e.detail.id)
     await resourceManager.deleteResource(e.detail.id)
+
+    toast.success('Annotation deleted!')
 
     webview.reload()
   }

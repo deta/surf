@@ -11,6 +11,7 @@
   import { createEventDispatcher } from 'svelte'
   import autosize from 'svelte-autosize'
   import { Editor } from '@horizon/editor'
+  import { useToasts } from '../../service/toast'
 
   export let resourceId: string | null = null
   export let activeAnnotation: string | null = null
@@ -18,6 +19,7 @@
   const log = useLogScope('AnnotationsSidebar')
   const resourceManager = useResourceManager()
   const dispatch = createEventDispatcher<{ create: string }>()
+  const toast = useToasts()
 
   let loadingAnnotations = false
   let annotations: ResourceAnnotation[] = []
@@ -55,6 +57,8 @@
 
     log.debug('Deleting annotation', e.detail.id)
     await resourceManager.deleteResource(e.detail.id)
+
+    toast.success('Annotation deleted!')
 
     await loadAnnotations(resourceId!)
   }
