@@ -9,6 +9,7 @@
   import CopyButton from './CopyButton.svelte'
   import Editor from '@horizon/editor/src/lib/components/Editor.svelte'
   import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
+  import { getEditorContentText } from '@horizon/editor'
 
   export let text = ''
 
@@ -19,7 +20,7 @@
     close: void
     open: void
     remove: void
-    updateContent: string
+    updateContent: { plain: string; html: string }
   }>()
 
   const handleOpenOasis = () => {
@@ -51,7 +52,9 @@
   }
 
   const handleUpdate = useDebounce((e: CustomEvent<string>) => {
-    dispatch('updateContent', e.detail)
+    const html = e.detail
+    const text = getEditorContentText(html)
+    dispatch('updateContent', { plain: text, html })
   }, 500)
 </script>
 

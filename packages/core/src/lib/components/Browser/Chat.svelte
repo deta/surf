@@ -1,6 +1,56 @@
 <script lang="ts" context="module">
   export type NavigateEvent = { url: string; active: boolean }
   export type UpdateTab = Partial<TabChat>
+
+  // TODO: unique sources should not lose the original source id information
+  // TODO: why mix of camelCase and snake_case?
+  export function getUniqueSources(sources: AIChatMessageSource[] | undefined) {
+    if (!sources) return []
+    let urls = {} as Record<string, string>
+    let chunk_ids = {} as Record<string, string[]>
+    sources.forEach((source) => {
+      if (source.metadata && source.metadata.url) {
+        urls[source.resource_id] = source.metadata.url
+      }
+      if (source.resource_id in chunk_ids) {
+        chunk_ids[source.resource_id].push(source.id)
+      } else {
+        chunk_ids[source.resource_id] = [source.id]
+      }
+    })
+    let uniqueSources = sources.filter(
+      (source, index, self) =>
+        index ===
+        self.findIndex((s) => {
+          if (source.metadata && s.metadata) {
+            return (
+              source.resource_id === s.resource_id &&
+              source.metadata.timestamp === s.metadata.timestamp
+            )
+          }
+          s.resource_id === source.resource_id
+        })
+    )
+    let render_id = 1
+    uniqueSources.forEach((source, index) => {
+      if (index != 0) {
+        let prevSource = uniqueSources[index - 1]
+        if (prevSource.resource_id !== source.resource_id) {
+          render_id += 1
+        }
+      }
+      source.render_id = render_id.toString()
+      source.all_chunk_ids = chunk_ids[source.resource_id]
+      if (source.resource_id in urls) {
+        if (source.metadata) {
+          source.metadata.url = urls[source.resource_id]
+        } else {
+          source.metadata = { url: urls[source.resource_id] }
+        }
+      }
+    })
+    return uniqueSources
+  }
 </script>
 
 <script lang="ts">
@@ -230,7 +280,7 @@
 
       if (resource.type === ResourceTypes.POST_YOUTUBE && source.metadata?.timestamp) {
         const timestamp = source.metadata.timestamp
-        const url = `https://www.youtube.com/watch?v=${(data as any as ResourceDataPost).post_id}&t=${timestamp}s`
+        const url = `https://www.youtube.com/watch?v=${(data as any as ResourceDataPost).post_id}&t=${timestamp}s&autoplay=1`
         navigate(url)
       } else {
         navigate(data.url)
@@ -262,56 +312,6 @@
     )
     uniqueSources.forEach((source, index) => {
       source.render_id = (index + 1).toString()
-    })
-    return uniqueSources
-  }
-
-  // TODO: unique sources should not lose the original source id information
-  // TODO: why mix of camelCase and snake_case?
-  function getUniqueSources(sources: AIChatMessageSource[] | undefined) {
-    if (!sources) return []
-    let urls = {} as Record<string, string>
-    let chunk_ids = {} as Record<string, string[]>
-    sources.forEach((source) => {
-      if (source.metadata && source.metadata.url) {
-        urls[source.resource_id] = source.metadata.url
-      }
-      if (source.resource_id in chunk_ids) {
-        chunk_ids[source.resource_id].push(source.id)
-      } else {
-        chunk_ids[source.resource_id] = [source.id]
-      }
-    })
-    let uniqueSources = sources.filter(
-      (source, index, self) =>
-        index ===
-        self.findIndex((s) => {
-          if (source.metadata && s.metadata) {
-            return (
-              source.resource_id === s.resource_id &&
-              source.metadata.timestamp === s.metadata.timestamp
-            )
-          }
-          s.resource_id === source.resource_id
-        })
-    )
-    let render_id = 1
-    uniqueSources.forEach((source, index) => {
-      if (index != 0) {
-        let prevSource = uniqueSources[index - 1]
-        if (prevSource.resource_id !== source.resource_id) {
-          render_id += 1
-        }
-      }
-      source.render_id = render_id.toString()
-      source.all_chunk_ids = chunk_ids[source.resource_id]
-      if (source.resource_id in urls) {
-        if (source.metadata) {
-          source.metadata.url = urls[source.resource_id]
-        } else {
-          source.metadata = { url: urls[source.resource_id] }
-        }
-      }
     })
     return uniqueSources
   }

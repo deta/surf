@@ -192,6 +192,7 @@
             <AnnotationItem
               resource={annotation}
               active={annotation.id === activeAnnotation}
+              background={false}
               on:scrollTo={handleAnnotationSelect}
               on:delete={handleAnnotationDelete}
             />

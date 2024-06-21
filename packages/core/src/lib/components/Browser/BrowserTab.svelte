@@ -4,7 +4,7 @@
 
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { derived, type Unsubscriber } from 'svelte/store'
+  import { type Unsubscriber } from 'svelte/store'
   import WebviewWrapper, { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { TabPage } from './types'
@@ -13,6 +13,7 @@
   import type { WebViewEventKeyDown, WebViewReceiveEvents } from '@horizon/types'
   import FindInPage from '../Cards/Browser/FindInPage.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
+  import { wait } from '@horizon/web-parser/src/utils'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<{
@@ -164,12 +165,23 @@
     dispatch('appDetection', detectedApp)
   }
 
+  const handleWebviewKeyDown = (e: CustomEvent<WebViewEventKeyDown>) => {
+    dispatch('webviewKeydown', e.detail)
+  }
+
   const unsubTracker: Unsubscriber[] = []
   onMount(() => {
     if (!webview) return
 
     webview.historyStackIds.set(tab.historyStackIds)
     webview.currentHistoryIndex.set(tab.currentHistoryIndex)
+
+    unsubTracker.push(
+      webview.url.subscribe(async (_: string) => {
+        await wait(500)
+        webview.startAppDetection()
+      })
+    )
 
     unsubTracker.push(
       webview.historyStackIds.subscribe((stack) => {
@@ -222,6 +234,7 @@
   partition="persist:horizon"
   {historyEntriesManager}
   on:newWindowWebview={handleWebviewNewWindow}
+  on:keydownWebview={handleWebviewKeyDown}
   on:navigation
   on:bookmark
   on:transform

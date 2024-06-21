@@ -172,7 +172,7 @@ fn process_resource_data(
                 .ok()
                 .map(|annotation_data| {
                     let content = match &annotation_data.data {
-                        AnnotationData::Comment(comment_data) => Some(comment_data.content.clone()),
+                        AnnotationData::Comment(comment_data) => Some(comment_data.content_plain.clone()),
                         _ => None,
                     };
 
@@ -412,7 +412,8 @@ struct AnnotationHighlightData {
 #[serde(rename_all = "snake_case")]
 struct AnnotationCommentData {
     url: Option<String>,
-    content: String,
+    content_plain: String,
+    content_html: Option<String>,
     source: AnnotationCommentSource,
 }
 

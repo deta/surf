@@ -16,11 +16,12 @@
   import { useClipboard } from '../../utils/clipboard'
   import { truncate } from '../../utils/text'
   import { addISOWeekYears } from 'date-fns'
-  import { Editor } from '@horizon/editor'
+  import { Editor, getEditorContentText } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
 
   export let resource: ResourceAnnotation
   export let active = false
+  export let background = true
 
   const log = useLogScope('AnnotationItem')
   const dispatch = createEventDispatcher<{
@@ -76,7 +77,24 @@
       }
 
       if (annotation.type === 'comment') {
-        content = (annotation.data as AnnotationCommentData).content || ''
+        const data = annotation.data as AnnotationCommentData
+
+        if ((data as any).content) {
+          content = (data as any).content
+
+          await resource.updateParsedData({
+            ...annotation,
+            data: {
+              ...data,
+              content_html: content,
+              content_plain: getEditorContentText(content)
+            }
+          })
+
+          return
+        }
+
+        content = data.content_html ?? data.content_plain ?? ''
       }
 
       url = new URL(resource.metadata?.sourceURI || '')
@@ -94,7 +112,7 @@
   })
 </script>
 
-<div class="link-card" bind:this={elem} class:active>
+<div class="link-card" bind:this={elem} class:active class:background>
   <!-- <a href={document?.url} target="_blank" class="link-card"> -->
 
   <div class="details">
@@ -247,11 +265,16 @@
     padding: 1rem;
     color: inherit;
     text-decoration: none;
-    background: #f8f7f2;
     border-radius: 8px;
+    border-bottom: 1px solid #f0f0f0;
 
     &:hover .actions {
       opacity: 1;
+    }
+
+    &.background {
+      background: #f8f7f2;
+      border-bottom: none;
     }
   }
 

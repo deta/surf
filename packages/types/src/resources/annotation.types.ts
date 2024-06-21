@@ -42,8 +42,9 @@ export type AnnotationHighlightData = {
 // data stored for comments
 export type AnnotationCommentData = {
   url?: string
-  content: string
   source: 'user' | 'inline_ai' | 'chat_ai'
+  content_html?: string
+  content_plain: string
 }
 
 // data stored for links

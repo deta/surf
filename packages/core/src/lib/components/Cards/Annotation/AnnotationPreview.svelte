@@ -3,7 +3,11 @@
 
   import { useLogScope } from '../../../utils/log'
   import type { ResourceAnnotation } from '../../../service/resources'
-  import type { AnnotationRangeData, ResourceDataAnnotation } from '../../../types'
+  import type {
+    AnnotationCommentData,
+    AnnotationRangeData,
+    ResourceDataAnnotation
+  } from '../../../types'
   import type { ResourcePreviewEvents } from '../../Resources/events'
 
   export let resource: ResourceAnnotation
@@ -22,7 +26,9 @@
       dispatch('data', annotation)
 
       if (annotation.type === 'highlight') {
-        content = (annotation.anchor.data as AnnotationRangeData).content_plain || ''
+        content = (annotation.anchor?.data as AnnotationRangeData).content_plain || ''
+      } else if (annotation.type === 'comment') {
+        content = (annotation.data as AnnotationCommentData).content_plain || ''
       }
 
       url = new URL(resource.metadata?.sourceURI || '')
@@ -60,7 +66,10 @@
       {/if}
       <div class="title">{content}</div>
       <div class="document-metadata">
-        <div class="from">{url.hostname}</div>
+        <div class="from">
+          {annotation.type === 'comment' ? 'Comment on' : 'Highlight on'}
+          {url.hostname}
+        </div>
       </div>
     {/if}
   </div>

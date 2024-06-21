@@ -28,7 +28,6 @@
     return ''
   }
 
-  // TODO: come up with a better way to render these things as this is not very performant when the content gets streamed in
   const renderContent = (content: string, sources?: AIChatMessageSource[]) => {
     if (!elem || !content) return
 
@@ -48,27 +47,22 @@
     citations.forEach((citation) => {
       const citationID = citation.textContent || ''
       const renderID = renderIDFromCitationID(citation.textContent, sources)
-      console.log('YOLO: citationID: ', citationID)
-      console.log('YOLO: renderID: ', renderID)
       if (!renderID) {
         citation.remove()
         return
       }
 
-      // remove consecutive citations with the same render id
       let previousElementSibling = citation?.previousElementSibling
       if (
         previousElementSibling &&
         previousElementSibling.tagName === 'CITATION' &&
         previousElementSibling.textContent === renderID
       ) {
-        console.log('YOLO: removed citation with same render id', renderID)
         citation.remove()
         return
       }
 
       citation.textContent = renderID
-      console.log('YOLO: updated ciation text content ', citation.textContent)
       seen_citations.add(renderID)
       citation.addEventListener('click', () => {
         if (!citation.textContent) return
@@ -90,11 +84,26 @@
   }
 
   onMount(() => {
-    renderContent(content)
+    renderContent(content, sources)
   })
 </script>
 
 <div bind:this={elem} class="message chat-message-content"></div>
+
+{#if sources && sources.length > 0}
+  <div class="citations-list">
+    {#each sources as source, idx}
+      <div
+        class="citation-item"
+        on:click={() => dispatch('citationClick', source.id)}
+        on:mouseenter={() => dispatch('citationHoverStart', source.id)}
+        on:mouseleave={() => dispatch('citationHoverEnd', source.id)}
+      >
+        {idx + 1}
+      </div>
+    {/each}
+  </div>
+{/if}
 
 <style lang="scss">
   .message {
@@ -148,5 +157,33 @@
     border-radius: 100%;
     user-select: none;
     cursor: pointer;
+  }
+
+  .citations-list {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #ddd;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .citation-item {
+    cursor: pointer;
+    color: #333;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    background: rgb(255, 164, 164);
+    border-radius: 100%;
+    font-size: 1rem;
+    width: 2rem;
+    height: 2rem;
+    text-align: center;
+  }
+
+  .citation-item:hover {
+    text-decoration: underline;
   }
 </style>
