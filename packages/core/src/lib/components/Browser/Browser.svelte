@@ -1691,7 +1691,9 @@
               <div class="search">
                 <input
                   bind:this={addressInputElem}
-                  disabled={$activeTab?.type !== 'page' && $activeTab?.type !== 'chat'}
+                  disabled={$activeTab?.type !== 'page' &&
+                    $activeTab?.type !== 'chat' &&
+                    $activeTab?.type !== 'empty'}
                   bind:value={$addressValue}
                   on:blur={handleBlur}
                   on:focus={handleFocus}
@@ -1700,7 +1702,7 @@
                     ? 'Search or Enter URL'
                     : $activeTab?.type === 'chat'
                       ? 'Chat Title'
-                      : 'Empty Tab'}
+                      : 'Search or Enter URL'}
                 />
               </div>
 
