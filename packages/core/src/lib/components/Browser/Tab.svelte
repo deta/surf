@@ -11,6 +11,7 @@
   export let activeTabId: Writable<string>
   export let deleteTab: (tabId: string) => void
   export let unarchiveTab: (tabId: string) => void
+  export let showButtons: boolean = true
 
   const dispatch = createEventDispatcher()
 
@@ -56,40 +57,42 @@
     {tab.title}
   </div>
 
-  {#if tab.archived}
+  {#if showButtons}
+    {#if tab.archived}
+      <button
+        on:click|stopPropagation={handleUnarchive}
+        class="close"
+        use:tooltip={{
+          content: 'Move back to active tabs',
+          action: 'hover',
+          position: 'left',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
+        <Icon name="arrowbackup" size="20px" />
+      </button>
+    {/if}
+
     <button
-      on:click|stopPropagation={handleUnarchive}
+      on:click|stopPropagation={handleArchive}
       class="close"
       use:tooltip={{
-        content: 'Move back to active tabs',
+        //content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
+        content: 'Delete this tab (⌘ + W)',
         action: 'hover',
         position: 'left',
         animation: 'fade',
         delay: 500
       }}
     >
-      <Icon name="arrowbackup" size="20px" />
+      {#if tab.archived}
+        <Icon name="trash" size="20px" />
+      {:else}
+        <Icon name="close" size="20px" />
+      {/if}
     </button>
   {/if}
-
-  <button
-    on:click|stopPropagation={handleArchive}
-    class="close"
-    use:tooltip={{
-      //content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
-      content: 'Delete this tab (⌘ + W)',
-      action: 'hover',
-      position: 'left',
-      animation: 'fade',
-      delay: 500
-    }}
-  >
-    {#if tab.archived}
-      <Icon name="trash" size="20px" />
-    {:else}
-      <Icon name="close" size="20px" />
-    {/if}
-  </button>
 </div>
 
 <style>

@@ -27,6 +27,7 @@
   import BrowserHomescreen from './BrowserHomescreen.svelte'
   import OasisSidebar from '../Oasis/OasisSidebar.svelte'
   import TabItem from './Tab.svelte'
+  import TabSearch from './TabSearch.svelte'
 
   import '../Horizon/index.scss'
   import type {
@@ -78,6 +79,7 @@
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
   let addressBarFocus = false
+  let showTabSearch = false
   let annotationsSidebar: AnnotationsSidebar
 
   let telemetryAPIKey = ''
@@ -523,6 +525,8 @@
     } else if (isModKeyAndKeyPressed(e, 'l')) {
       addressInputElem.focus()
       handleFocus()
+    } else if (isModKeyAndKeyPressed(e, 'j')) {
+      showTabSearch = true
     }
   }
 
@@ -1622,6 +1626,15 @@
 <svelte:window on:keydown={handleKeyDown} />
 
 <div class="app-wrapper">
+  {#if showTabSearch}
+    <TabSearch
+      onClose={() => {
+        showTabSearch = false
+      }}
+      activeTabs={$activeTabs}
+      on:activateTab={handleTabSelect}
+    />
+  {/if}
   <div class="sidebar">
     <div class="tab-bar-selector">
       <div class="tab-selector" class:actions={$sidebarTab !== 'oasis'}>
