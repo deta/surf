@@ -142,7 +142,7 @@
         } as HistoryEntry,
         searchEngine: defaultSearchEngine.key,
         group: 'Search',
-        score: 0.77
+        score: 1
       }
 
       const ragSearch = {
@@ -168,7 +168,7 @@
         } as HistoryEntry,
         searchEngine: 'oasis',
         group: 'Search',
-        score: 1
+        score: 0.77
       }
 
       const combined = [
@@ -270,7 +270,7 @@
         })
       }
 
-      results.reverse()
+      // results.reverse()
 
       let historyItemsFiltered = isInitial ? cardHistoryItems : results
 
@@ -299,7 +299,7 @@
     }
 
     // Update selectedIndex to point to the last item by default when filteredItems changes
-    selectedIndex = filteredItems.length - 1
+    // selectedIndex = filteredItems.length - 1
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -445,7 +445,7 @@
     padding: 0.25rem;
     position: relative;
     bottom: 0;
-    overflow-y: scroll;
+    overflow-y: auto;
     max-height: 100%;
     .toolbar-list {
       position: relative;

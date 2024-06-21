@@ -128,6 +128,8 @@
       } else {
         findInPage.open()
       }
+    } else {
+      dispatch('webviewKeydown', e.detail)
     }
   }
 
