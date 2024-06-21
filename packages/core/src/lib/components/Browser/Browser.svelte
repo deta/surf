@@ -3,7 +3,7 @@
   import { slide } from 'svelte/transition'
   import { tooltip } from '@svelte-plugins/tooltips'
   import SplashScreen from '../SplashScreen.svelte'
-  import { writable, derived } from 'svelte/store'
+  import { writable, derived, get } from 'svelte/store'
   import { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
   import { useLogScope } from '../../utils/log'
   import { Icon } from '@horizon/icons'
@@ -322,6 +322,36 @@
     await tabsDB.delete(tabId)
   }
 
+  const cycleActiveTab = (previous: boolean) => {
+    console.log('Cycling active tab, previous direction:', previous)
+    /*
+    const tabsInView = $tabs.filter((tab) =>
+      $sidebarTab === 'active' ? !tab.archived : tab.archived
+    )
+    */
+    const tabs = get(tabsInView)
+    if (tabs.length === 0) {
+      log.debug('No tabs in view')
+      return
+    }
+    const activeTabIndex = tabs.findIndex((tab) => tab.id === $activeTabId)
+    if (!previous) {
+      const nextTabIndex = activeTabIndex + 1
+      if (nextTabIndex >= tabs.length) {
+        activeTabId.set(tabs[0].id)
+      } else {
+        activeTabId.set(tabs[nextTabIndex].id)
+      }
+    } else {
+      const previousTabIndex = activeTabIndex - 1
+      if (previousTabIndex < 0) {
+        activeTabId.set(tabs[tabs.length - 1].id)
+      } else {
+        activeTabId.set(tabs[previousTabIndex].id)
+      }
+    }
+  }
+
   const persistTabChanges = async (tabId: string, updates: Partial<Tab>) => {
     await tabsDB.update(tabId, updates)
   }
@@ -521,6 +551,11 @@
       createOasisDiscoveryTab()
     } else if (isModKeyAndKeyPressed(e, 'b')) {
       $activeBrowserTab?.openDevTools()
+    } else if (e.ctrlKey && e.key === 'Tab') {
+      cycleActiveTab(e.shiftKey)
+    } else if (isModKeyAndKeyPressed(e, 'l')) {
+      addressInputElem.focus()
+      handleFocus()
     }
   }
 
@@ -1847,7 +1882,7 @@
             on:annotate={(e) => handleWebviewAnnotation(e, tab.id)}
             on:annotationClick={(e) => handleWebviewAnnotationClick(e, tab.id)}
             on:annotationRemove={(e) => handleWebviewAnnotationRemove(e, tab.id)}
-            on:annotationUpdate={(e) => handleWebviewAnnotationUpdate(e, tab.id)}
+            on:keyDown={(e) => handleKeyDown(e.detail)}
           />
         {:else if tab.type === 'horizon'}
           {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}

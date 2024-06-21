@@ -10,12 +10,16 @@
   import type { TabPage } from './types'
   import { useLogScope } from '../../utils/log'
   import type { DetectedWebApp } from '@horizon/web-parser'
-  import type { WebViewReceiveEvents } from '@horizon/types'
+  import type { WebViewEventKeyDown, WebViewReceiveEvents } from '@horizon/types'
   import FindInPage from '../Cards/Browser/FindInPage.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
 
   const log = useLogScope('BrowserTab')
-  const dispatch = createEventDispatcher<{ newTab: NewTabEvent; appDetection: DetectedWebApp }>()
+  const dispatch = createEventDispatcher<{
+    newTab: NewTabEvent
+    appDetection: DetectedWebApp
+    webviewKeydown: WebViewEventKeyDown
+  }>()
 
   export let tab: TabPage
   export let webview: WebviewWrapper
@@ -123,6 +127,8 @@
       } else {
         findInPage.open()
       }
+    } else {
+      dispatch('webviewKeydown', e.detail)
     }
   }
 
