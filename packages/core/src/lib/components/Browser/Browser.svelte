@@ -1578,8 +1578,9 @@
 
 <div class="app-wrapper">
   <div class="sidebar">
-    <div class="tab-selector" class:actions={$sidebarTab !== 'oasis'}>
-      <!-- <button
+    <div class="tab-bar-selector">
+      <div class="tab-selector" class:actions={$sidebarTab !== 'oasis'}>
+        <!-- <button
         on:click={() => ($sidebarTab = 'active')}
         class:active={$sidebarTab === 'active'}
         use:tooltip={{
@@ -1592,7 +1593,7 @@
       >
         <Icon name="list" />
       </button> -->
-      <!--
+        <!--
       <button
         on:click={() => ($sidebarTab = 'archive')}
         class:active={$sidebarTab === 'archive'}
@@ -1607,7 +1608,7 @@
         <Icon name="archive" />
       </button>
       -->
-      <!-- <button
+        <!-- <button
         on:click={() => {
           $sidebarTab = 'oasis'
           toggleOasis()
@@ -1623,119 +1624,119 @@
       >
         <Icon name="leave" />
       </button> -->
-      {#if $sidebarTab !== 'oasis'}
-        <div class="tabs-list">
-          <button
-            class="nav-button"
-            disabled={!canGoBack}
-            on:click={$activeBrowserTab?.goBack}
-            use:tooltip={{
-              content: 'Go Back',
-              action: 'hover',
-              position: 'bottom',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            <Icon name="arrow.left" />
-          </button>
-          <button
-            class="nav-button"
-            disabled={!canGoForward}
-            on:click={$activeBrowserTab?.goForward}
-            use:tooltip={{
-              content: 'Go Forward',
-              action: 'hover',
-              position: 'bottom',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            <Icon name="arrow.right" />
-          </button>
-          <button
-            class="nav-button"
-            on:click={$activeBrowserTab?.reload}
-            use:tooltip={{
-              content: 'Reload Page (⌘ + R)',
-              action: 'hover',
-              position: 'bottom',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            <Icon name="reload" />
-          </button>
+        {#if $sidebarTab !== 'oasis'}
+          <div class="tabs-list">
+            <button
+              class="nav-button"
+              disabled={!canGoBack}
+              on:click={$activeBrowserTab?.goBack}
+              use:tooltip={{
+                content: 'Go Back',
+                action: 'hover',
+                position: 'bottom',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              <Icon name="arrow.left" />
+            </button>
+            <button
+              class="nav-button"
+              disabled={!canGoForward}
+              on:click={$activeBrowserTab?.goForward}
+              use:tooltip={{
+                content: 'Go Forward',
+                action: 'hover',
+                position: 'bottom',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              <Icon name="arrow.right" />
+            </button>
+            <button
+              class="nav-button"
+              on:click={$activeBrowserTab?.reload}
+              use:tooltip={{
+                content: 'Reload Page (⌘ + R)',
+                action: 'hover',
+                position: 'bottom',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              <Icon name="reload" />
+            </button>
+          </div>
+        {:else if $sidebarTab === 'oasis'}
+          <div>
+            <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
+              <Icon name="chevron.left" />
+              <span class="label">Back to Tabs</span>
+            </button>
+          </div>
+        {/if}
+      </div>
+      <div
+        class="bar-wrapper"
+        aria-label="Collapse URL bar"
+        on:keydown={(e) => handleAddressBarKeyDown}
+        tabindex="0"
+        role="button"
+      >
+        <div class="address-bar-wrapper">
+          <div class="address-bar-content">
+            <div class="search">
+              <input
+                bind:this={addressInputElem}
+                disabled={$activeTab?.type !== 'page' &&
+                  $activeTab?.type !== 'chat' &&
+                  $activeTab?.type !== 'empty'}
+                bind:value={$addressValue}
+                on:blur={handleBlur}
+                on:focus={handleFocus}
+                type="text"
+                placeholder={$activeTab?.type === 'page'
+                  ? 'Search or Enter URL'
+                  : $activeTab?.type === 'chat'
+                    ? 'Chat Title'
+                    : 'Search or Enter URL'}
+              />
+            </div>
+
+            {#if $activeTab?.type === 'page'}
+              {#key $activeTab.resourceBookmark}
+                <button
+                  on:click={handleBookmark}
+                  use:tooltip={{
+                    content: $activeTab?.resourceBookmark
+                      ? 'Open bookmark (⌘ + D)'
+                      : 'Bookmark this page (⌘ + D)',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  {#if $bookmarkingInProgress}
+                    <Icon name="spinner" />
+                  {:else if $bookmarkingSuccess}
+                    <Icon name="check" />
+                  {:else if $activeTab?.resourceBookmark}
+                    <Icon name="bookmarkFilled" />
+                  {:else}
+                    <Icon name="bookmark" />
+                  {/if}
+                </button>
+              {/key}
+            {/if}
+          </div>
         </div>
-      {:else if $sidebarTab === 'oasis'}
-        <div>
-          <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
-            <Icon name="chevron.left" />
-            <span class="label">Back to Tabs</span>
-          </button>
-        </div>
-      {/if}
+      </div>
     </div>
 
     {#if $sidebarTab !== 'oasis'}
       <div class="tabs">
-        <div
-          class="bar-wrapper"
-          aria-label="Collapse URL bar"
-          on:keydown={(e) => handleAddressBarKeyDown}
-          tabindex="0"
-          role="button"
-        >
-          <div class="address-bar-wrapper">
-            <div class="address-bar-content">
-              <div class="search">
-                <input
-                  bind:this={addressInputElem}
-                  disabled={$activeTab?.type !== 'page' &&
-                    $activeTab?.type !== 'chat' &&
-                    $activeTab?.type !== 'empty'}
-                  bind:value={$addressValue}
-                  on:blur={handleBlur}
-                  on:focus={handleFocus}
-                  type="text"
-                  placeholder={$activeTab?.type === 'page'
-                    ? 'Search or Enter URL'
-                    : $activeTab?.type === 'chat'
-                      ? 'Chat Title'
-                      : 'Search or Enter URL'}
-                />
-              </div>
-
-              {#if $activeTab?.type === 'page'}
-                {#key $activeTab.resourceBookmark}
-                  <button
-                    on:click={handleBookmark}
-                    use:tooltip={{
-                      content: $activeTab?.resourceBookmark
-                        ? 'Open bookmark (⌘ + D)'
-                        : 'Bookmark this page (⌘ + D)',
-                      action: 'hover',
-                      position: 'bottom',
-                      animation: 'fade',
-                      delay: 500
-                    }}
-                  >
-                    {#if $bookmarkingInProgress}
-                      <Icon name="spinner" />
-                    {:else if $bookmarkingSuccess}
-                      <Icon name="check" />
-                    {:else if $activeTab?.resourceBookmark}
-                      <Icon name="bookmarkFilled" />
-                    {:else}
-                      <Icon name="bookmark" />
-                    {/if}
-                  </button>
-                {/key}
-              {/if}
-            </div>
-          </div>
-        </div>
-
         {#each $tabsInView as tab (tab.id)}
           {#if tab.type === 'chat'}
             <TabItem {tab} {activeTabId} {deleteTab} {unarchiveTab} on:select={handleTabSelect} />
@@ -2059,6 +2060,8 @@
 
   .bar-wrapper {
     width: 100%;
+    margin-top: 2rem;
+
     .hitarea {
       position: absolute;
       z-index: 30000;
@@ -2150,7 +2153,7 @@
   .tabs {
     flex: 1;
     overflow: auto;
-    margin-top: 2rem;
+    margin-top: 0.5rem;
     gap: 0.5rem;
     padding-bottom: 1rem;
     display: flex;
@@ -2357,5 +2360,10 @@
     user-select: none;
     cursor: pointer;
     overflow: hidden;
+  }
+
+  .tab-bar-selector {
+    display: flex;
+    flex-direction: column;
   }
 </style>
