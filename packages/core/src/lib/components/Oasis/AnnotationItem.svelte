@@ -18,7 +18,9 @@
   import { addISOWeekYears } from 'date-fns'
   import { Editor, getEditorContentText } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
+  import { useDebounce } from '../../utils/debounce'
   import { useToasts } from '../../service/toast'
+  import { slide } from 'svelte/transition'
 
   export let resource: ResourceAnnotation
   export let active = false
@@ -27,7 +29,8 @@
   const log = useLogScope('AnnotationItem')
   const dispatch = createEventDispatcher<{
     scrollTo: WebViewEventAnnotation
-    delete: WebViewEventAnnotation
+    delete: string
+    update: void
   }>()
   const toast = useToasts()
 
@@ -35,10 +38,11 @@
   let content = ''
   let anchorText = ''
   let error = ''
-  let url: URL
   let elem: HTMLDivElement
   let expandedAnchor = false
   let loadingAnnotation = false
+  let didSaveContent = false
+  let showCommentBox = false
 
   const { copy, copied } = useClipboard()
 
@@ -60,8 +64,7 @@
   }
 
   const handleDelete = () => {
-    if (!annotation) return
-    dispatch('delete', { id: resource.id, data: annotation })
+    dispatch('delete', resource.id)
   }
 
   const handleCopy = () => {
@@ -69,6 +72,31 @@
     toast.success('Annotation copied to clipboard!')
     copy(content || anchorText || '')
   }
+
+  const handleShowAddComment = () => {
+    showCommentBox = !showCommentBox
+  }
+
+  const handleContentUpdate = useDebounce(async (e: CustomEvent<string>) => {
+    const html = e.detail
+    const text = getEditorContentText(html)
+
+    await resource.updateParsedData({
+      ...annotation!,
+      data: {
+        ...annotation!.data,
+        content_html: html,
+        content_plain: text
+      }
+    })
+
+    dispatch('update')
+
+    didSaveContent = true
+    setTimeout(() => {
+      didSaveContent = false
+    }, 3000)
+  }, 500)
 
   onMount(async () => {
     try {
@@ -99,11 +127,13 @@
 
         content = data.content_html ?? data.content_plain ?? ''
       }
-
-      url = new URL(resource.metadata?.sourceURI || '')
     } catch (e) {
       log.error(e)
-      error = 'Invalid URL'
+      if (e instanceof Error) {
+        error = 'Failed to load annotation: ' + e.message
+      } else {
+        error = 'Failed to load annotation'
+      }
     } finally {
       loadingAnnotation = false
     }
@@ -116,11 +146,18 @@
 </script>
 
 <div class="link-card" bind:this={elem} class:active class:background>
-  <!-- <a href={document?.url} target="_blank" class="link-card"> -->
-
   <div class="details">
     {#if error}
-      <div class="title">{error}</div>
+      <div class="error">
+        <p>
+          {error}
+        </p>
+
+        <button on:click={handleDelete}>
+          <Icon name="trash" />
+          Delete Annotation
+        </button>
+      </div>
     {:else if annotation}
       {#if anchorText}
         <div class="anchor-text">
@@ -132,44 +169,57 @@
         </div>
       {/if}
 
-      {#if content}
+      {#if content || showCommentBox}
         <div class="content">
-          <Editor {content} readOnly />
+          <Editor
+            bind:content
+            on:update={handleContentUpdate}
+            autofocus={false}
+            placeholder="Jot down your thoughts…"
+          />
         </div>
       {/if}
 
       <div class="footer">
-        <div
-          class="metadata"
-          use:tooltip={{
-            content: 'Annotation Source',
-            action: 'hover',
-            position: 'top',
-            animation: 'fade',
-            delay: 500
-          }}
-        >
-          {#if annotation.type === 'highlight'}
-            <Icon name="marker" />
-            <div class="from">Page Highlight - {getHumanDistanceToNow(resource.updatedAt)}</div>
-          {:else if annotation.type === 'comment'}
-            <Icon name="message" />
-            <div class="from">
-              {#if source === 'inline_ai'}
-                Inline Page AI
-              {:else if source === 'chat_ai'}
-                Page Chat AI
+        {#if didSaveContent}
+          <div class="success">
+            <Icon name="check" />
+            <p>Saved!</p>
+          </div>
+        {:else}
+          <div class="metadata">
+            <div class="type">
+              {#if annotation.type === 'highlight' || !content}
+                <Icon name="marker" />
+                <div class="from">Highlighted</div>
+              {:else if annotation.type === 'comment'}
+                <Icon name="message" />
+                <div class="from">Commented</div>
               {:else}
-                Comment
+                <Icon name="link" />
+                <div class="from">Linked</div>
               {/if}
-
-              - {getHumanDistanceToNow(resource.updatedAt)}
             </div>
-          {:else}
-            <Icon name="link" />
-            <div class="from">Link</div>
-          {/if}
-        </div>
+
+            <div
+              class="from"
+              use:tooltip={{
+                content:
+                  source === 'inline_ai'
+                    ? `Inline AI at ${new Date().toLocaleString()}`
+                    : source === 'chat_ai'
+                      ? `Page AI at ${new Date().toLocaleString()}`
+                      : `At ${new Date().toLocaleString()}`,
+                action: 'hover',
+                position: 'top',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              {getHumanDistanceToNow(resource.updatedAt)}
+            </div>
+          </div>
+        {/if}
 
         <div class="actions">
           {#if annotation.anchor}
@@ -184,6 +234,22 @@
               }}
             >
               <Icon name="eye" />
+            </button>
+          {/if}
+
+          {#if annotation.type === 'comment' && (!content || content === '<p></p>')}
+            <button
+              transition:slide
+              on:click={handleShowAddComment}
+              use:tooltip={{
+                content: 'Add Comment',
+                action: 'hover',
+                position: 'left',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              <Icon name="message" />
             </button>
           {/if}
 
@@ -268,16 +334,20 @@
     padding: 1rem;
     color: inherit;
     text-decoration: none;
-    border-radius: 8px;
     border-bottom: 1px solid #f0f0f0;
 
-    &:hover .actions {
-      opacity: 1;
+    &:hover {
+      .actions {
+        opacity: 1;
+      }
+
+      .metadata {
+        opacity: 1;
+      }
     }
 
     &.background {
-      background: #f8f7f2;
-      border-bottom: none;
+      border-bottom: 1px solid #e3e3e3;
     }
   }
 
@@ -293,6 +363,25 @@
     width: 100%;
     flex-shrink: 1;
     flex-grow: 1;
+  }
+
+  .error {
+    p {
+      color: #ff3d3d;
+    }
+
+    button {
+      background: none;
+      border: none;
+      color: #3e3e46;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
   }
 
   .favicon {
@@ -349,12 +438,30 @@
   .metadata {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.25rem;
+    opacity: 0.75;
+    transition: opacity 0.2s ease-in-out;
+
+    .type {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
 
     .from {
       font-size: 1rem;
-      font-weight: 500;
       text-decoration: none;
+    }
+  }
+
+  .success {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #4caf50;
+
+    p {
+      margin: 0;
     }
   }
 

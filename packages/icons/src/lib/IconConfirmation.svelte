@@ -3,6 +3,7 @@
 
   export let size = '18px'
   export let name: Icons
+  export let confirmationIcon: Icons = 'check'
   export let className: string = ''
   export let color: string | undefined = undefined
 
@@ -62,7 +63,7 @@ As an alternative, you can set the `show` prop to `true` to show the confirmatio
 -->
 {#if show}
   <svelte:component
-    this={icons['check']}
+    this={icons[confirmationIcon]}
     {size}
     class={className}
     {style}

@@ -8,9 +8,9 @@ export const diffToNow = (timestamp: number | string) => {
 }
 
 const formatDistanceLocale = {
-  lessThanXSeconds: '{{count}}s',
-  xSeconds: '{{count}}s',
-  halfAMinute: '30s',
+  lessThanXSeconds: 'just now',
+  xSeconds: 'just now',
+  halfAMinute: 'just now',
   lessThanXMinutes: '{{count}}m',
   xMinutes: '{{count}}m',
   aboutXHours: '{{count}}h',
@@ -42,6 +42,8 @@ const formatDistance = (
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (options.comparison > 0) {
       return 'in ' + result
+    } else if (result === 'just now') {
+      return result
     } else {
       return result + ' ago'
     }

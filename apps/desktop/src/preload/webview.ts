@@ -295,7 +295,7 @@ function renderComment(annotation: AnnotationCommentRange) {
     window.removeEventListener('resize', repositionWrapper)
     resizeObserver.disconnect()
 
-    renderCommentIndicator(annotation)
+    // renderCommentIndicator(annotation)
   }
 
   comment.$on('close', (e) => {
@@ -327,9 +327,9 @@ function renderComment(annotation: AnnotationCommentRange) {
 
 function openComment(annotation: AnnotationCommentRange) {
   console.log('Opening comment', annotation)
-  const indicator = document.getElementById(`deta-annotation-${annotation.id}`)
-  if (indicator) {
-    indicator.remove()
+  const oldComment = document.getElementById(`deta-annotation-comment-${annotation.id}`)
+  if (oldComment) {
+    oldComment.remove()
   }
 
   renderComment(annotation)
@@ -357,16 +357,34 @@ function handleRestoreAnnotation(
     console.log('Restoring annotation', range)
     applyRangeHighlight(range, annotationEvent.id, annotation.type)
 
-    if (annotation.type === 'comment') {
-      const commentAnnotation = {
-        id: annotationEvent.id,
-        range: range,
-        data: annotation.data
-      } as AnnotationCommentRange
+    const commentAnnotation = {
+      id: annotationEvent.id,
+      range: range,
+      data:
+        annotation.type === 'comment' ? annotation.data : { content_plain: '', content_html: '' }
+    } as AnnotationCommentRange
 
-      console.log('Injecting comment', commentAnnotation)
-      renderCommentIndicator(commentAnnotation)
-    }
+    console.log('Injecting comment', commentAnnotation)
+    // renderCommentIndicator(commentAnnotation)
+    applyRangeHighlight(range, annotationEvent.id, annotation.type, () => {
+      renderComment(commentAnnotation)
+    })
+
+    // if (annotation.type === 'comment') {
+    //   const commentAnnotation = {
+    //     id: annotationEvent.id,
+    //     range: range,
+    //     data: annotation.data
+    //   } as AnnotationCommentRange
+
+    //   console.log('Injecting comment', commentAnnotation)
+    //   // renderCommentIndicator(commentAnnotation)
+    //   applyRangeHighlight(range, annotationEvent.id, annotation.type, () => {
+    //     renderComment(commentAnnotation)
+    //   })
+    // } else {
+    //   applyRangeHighlight(range, annotationEvent.id, annotation.type)
+    // }
   } catch (e) {
     console.error('Failed to restore annotation', e)
   }
@@ -526,13 +544,16 @@ window.addEventListener('DOMContentLoaded', async (_) => {
         console.log('Highlighting data', rangeData)
 
         sendPageEvent(WebViewEventSendNames.Annotate, {
-          type: 'highlight',
+          type: 'comment',
           anchor: {
             type: 'range',
             data: rangeData
           },
           data: {
-            url: window.location.href
+            url: window.location.href,
+            content_plain: '',
+            content_html: '',
+            source: 'user'
           }
         })
 
@@ -638,8 +659,12 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
     if (target.tagName !== COMPONENT_WRAPPER_TAG) {
       if (selectionMenuWrapper) {
-        console.log('Removing selection menu')
-        selectionMenuWrapper.remove()
+        if (selectionMenu?.canClose()) {
+          console.log('Removing selection menu')
+          selectionMenuWrapper.remove()
+        } else {
+          e.preventDefault()
+        }
       }
     }
   })
@@ -649,6 +674,10 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     (e: CustomEvent<WebviewAnnotationEvents[WebviewAnnotationEventNames.Click]>) => {
       const { id, type } = e.detail
       console.log('Clicked on annotation', id, type)
+
+      if (type === 'comment') {
+        renderComment()
+      }
 
       sendPageEvent(WebViewEventSendNames.AnnotationClick, { id, type })
     }

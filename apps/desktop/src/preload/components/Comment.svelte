@@ -2,7 +2,7 @@
   import './index.css'
 
   import { createEventDispatcher } from 'svelte'
-  import { IconConfirmation } from '@horizon/icons'
+  import { Icon, IconConfirmation } from '@horizon/icons'
 
   import Wrapper from './Wrapper.svelte'
   import Button from './Button.svelte'
@@ -10,11 +10,13 @@
   import Editor from '@horizon/editor/src/lib/components/Editor.svelte'
   import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
   import { getEditorContentText } from '@horizon/editor'
+  import { fade, slide } from 'svelte/transition'
 
   export let text = ''
 
   let openIcon: IconConfirmation
   let removeIcon: IconConfirmation
+  let didSave = false
 
   const dispatch = createEventDispatcher<{
     close: void
@@ -47,6 +49,13 @@
     }
   }
 
+  const handleInputKey = (e: KeyboardEvent) => {
+    // check if key is letter or other visible character and stop propagation to prevent site shortcuts from firing
+    if (e.key.length === 1 || e.key === ' ' || e.key === 'Backspace') {
+      e.stopImmediatePropagation()
+    }
+  }
+
   const handleClose = () => {
     dispatch('close')
   }
@@ -55,28 +64,48 @@
     const html = e.detail
     const text = getEditorContentText(html)
     dispatch('updateContent', { plain: text, html })
+    didSave = true
+    setTimeout(() => {
+      didSave = false
+    }, 3000)
   }, 500)
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
 
 <Wrapper expanded>
-  <div class="output">
-    <Editor bind:content={text} on:update={handleUpdate} />
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div
+    class="output"
+    on:keydown={handleInputKey}
+    on:keyup={handleInputKey}
+    on:keypress={handleInputKey}
+  >
+    <Editor
+      bind:content={text}
+      on:update={handleUpdate}
+      autofocus={false}
+      placeholder="Jot down your thoughts…"
+    />
   </div>
 
   <div class="footer">
-    <div class="actions">
-      <!-- <Button on:click={handleOpenOasis} tooltip="Open in Oasis">
-        <IconConfirmation bind:this={openIcon} name="leave" />
-      </Button> -->
+    {#if didSave}
+      <div data-tooltip="Saved!" class="success" transition:slide={{ axis: 'x' }}>
+        <Icon name="check" />
+        <!-- <p>Saved!</p> -->
+      </div>
+    {/if}
 
-      <CopyButton {text} />
+    <!-- <Button on:click={handleOpenOasis} tooltip="Open in Oasis">
+      <IconConfirmation bind:this={openIcon} name="leave" />
+    </Button> -->
 
-      <Button on:click={handleRemove} tooltip="Remove Comment">
-        <IconConfirmation bind:this={removeIcon} name="trash" />
-      </Button>
-    </div>
+    <CopyButton {text} />
+
+    <Button on:click={handleRemove} tooltip="Remove Comment">
+      <IconConfirmation bind:this={removeIcon} name="trash" confirmationIcon="spinner" />
+    </Button>
 
     <Button on:click={handleClose} tooltip="Close Comment" icon="close" />
   </div>
@@ -101,14 +130,40 @@
   }
 
   .footer {
+    position: absolute;
+    top: 0;
+    right: -2rem;
+    transform: translate(0, -50%);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 5px;
+    padding: 0.25rem;
+    background: white;
+    border: 1px solid #f0f0f0;
+    border-radius: calc(8px + 0.25rem);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  :global(.deta-component-wrapper:hover .footer) {
+    opacity: 1;
   }
 
   .actions {
     display: flex;
     align-items: stretch;
+  }
+
+  .success {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #4caf50;
+    padding: 0 8px;
+
+    p {
+      margin: 0;
+    }
   }
 </style>

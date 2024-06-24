@@ -64,6 +64,17 @@
     dispatch('highlight')
   }
 
+  export const canClose = () => {
+    if ($view === 'comment') {
+      console.log('canClose', inputValue)
+      return inputValue === '' || inputValue === '<p></p>'
+    } else if ($view === 'ai') {
+      return !running
+    }
+
+    return true
+  }
+
   const handleDragStart = (event: DragEvent) => {
     event.stopPropagation()
     if (!event.dataTransfer) return
@@ -153,18 +164,10 @@
     }
   }
 
-  const handleInputKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (e.shiftKey) {
-        // if (!expandedInput) {
-        //   expandedInput = true
-        // }
-
-        return
-      }
-
-      e.preventDefault()
-      handleComment()
+  const handleInputKey = (e: KeyboardEvent) => {
+    // check if key is letter or other visible character and stop propagation to prevent site shortcuts from firing
+    if (e.key.length === 1 || e.key === ' ' || e.key === 'Backspace') {
+      e.stopImmediatePropagation()
     }
   }
 </script>
@@ -201,6 +204,9 @@
       <input
         bind:this={inputElem}
         bind:value={inputValue}
+        on:keydown={handleInputKey}
+        on:keyup={handleInputKey}
+        on:keypress={handleInputKey}
         disabled={running}
         type="text"
         placeholder={running ? $runningText : 'What do you want to do?'}
@@ -226,9 +232,20 @@
       <AiOutput {output} on:save={handleSaveOutput} on:insert={handleInsert} />
     {/if}
   {:else if $view === 'comment'}
-    <form on:submit|stopPropagation|preventDefault={handleComment}>
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+    <form
+      on:submit|stopPropagation|preventDefault={handleComment}
+      on:keydown={handleInputKey}
+      on:keyup={handleInputKey}
+      on:keypress={handleInputKey}
+    >
       <div class="editor-wrapper">
-        <Editor bind:content={inputValue} placeholder="Jot down your thoughts…" autofocus />
+        <Editor
+          bind:content={inputValue}
+          on:submit={handleComment}
+          placeholder="Jot down your thoughts…"
+          autofocus
+        />
       </div>
       <!-- <textarea
         bind:this={inputElem}

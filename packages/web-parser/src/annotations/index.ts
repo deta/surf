@@ -76,7 +76,7 @@ export const constructRange = (rangeData: AnnotationRangeData, skipValidation = 
   return range
 }
 
-export function wrapRangeInNode(range: Range, wrapperNode: Node) {
+export function wrapRangeInNode(range: Range, wrapperNode: Node, onClick?: (id: string) => void) {
   const iterator = document.createNodeIterator(
     range.commonAncestorContainer,
     NodeFilter.SHOW_TEXT,
@@ -120,14 +120,19 @@ export function wrapRangeInNode(range: Range, wrapperNode: Node) {
       const id = (highlightNode as Element).getAttribute('id')
       const type = (highlightNode as Element).getAttribute('data-annotation-type') as AnnotationType
       console.log('clicked on highlight', highlightNode)
-      window.dispatchEvent(
-        new CustomEvent(WebviewAnnotationEventNames.Click, {
-          detail: {
-            id: id,
-            type: type
-          } as WebviewAnnotationEvents[WebviewAnnotationEventNames.Click]
-        })
-      )
+
+      if (onClick) {
+        onClick(id!)
+      }
+
+      // window.dispatchEvent(
+      //   new CustomEvent(WebviewAnnotationEventNames.Click, {
+      //     detail: {
+      //       id: id,
+      //       type: type
+      //     } as WebviewAnnotationEvents[WebviewAnnotationEventNames.Click]
+      //   })
+      // )
     })
 
     textNode.parentNode?.insertBefore(highlightNode, newNode)
@@ -136,7 +141,12 @@ export function wrapRangeInNode(range: Range, wrapperNode: Node) {
 }
 
 // applies a highlight to the range while making sure the dom structure is not broken
-export const applyRangeHighlight = (range: Range, id: string, type: AnnotationType) => {
+export const applyRangeHighlight = (
+  range: Range,
+  id: string,
+  type: AnnotationType,
+  onClick?: (id: string) => void
+) => {
   const elem = document.createElement('deta-annotation')
 
   // set attributes for the element so we can identify it later
@@ -147,5 +157,5 @@ export const applyRangeHighlight = (range: Range, id: string, type: AnnotationTy
   elem.classList.add('deta-annotation')
   elem.classList.add('deta-annotation-highlight')
 
-  wrapRangeInNode(range, elem)
+  wrapRangeInNode(range, elem, onClick)
 }

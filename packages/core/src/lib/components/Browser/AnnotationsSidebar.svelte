@@ -12,34 +12,41 @@
   import autosize from 'svelte-autosize'
   import { Editor } from '@horizon/editor'
   import { useToasts } from '../../service/toast'
+  import { slide } from 'svelte/transition'
 
   export let resourceId: string | null = null
   export let activeAnnotation: string | null = null
 
   const log = useLogScope('AnnotationsSidebar')
   const resourceManager = useResourceManager()
-  const dispatch = createEventDispatcher<{ create: string }>()
+  const dispatch = createEventDispatcher<{ create: string; reload: void }>()
   const toast = useToasts()
 
   let loadingAnnotations = false
   let annotations: ResourceAnnotation[] = []
   let inputValue = ''
   let savingNotes = false
+  let editorFocused = false
+  let editor: Editor
 
   $: if (resourceId) {
-    loadAnnotations(resourceId)
+    loadAnnotations(resourceId, true)
   }
 
-  export const reload = async () => {
+  export const reload = async (showLoading?: boolean) => {
     if (resourceId) {
-      await loadAnnotations(resourceId)
+      await loadAnnotations(resourceId, showLoading)
       savingNotes = false
     }
   }
 
-  const loadAnnotations = async (resourceId: string) => {
+  const loadAnnotations = async (resourceId: string, showLoading = false) => {
     try {
-      loadingAnnotations = true
+      // Show loading state if requested, only needed on initial load and when a resource got updated to force a re-render
+      if (showLoading) {
+        loadingAnnotations = true
+      }
+
       annotations = await resourceManager.getAnnotationsForResource(resourceId)
       log.debug('annotations', annotations)
     } catch (e) {
@@ -49,24 +56,32 @@
     }
   }
 
-  const handleAnnotationDelete = async (e: CustomEvent<WebViewEventAnnotation>) => {
-    log.debug('Annotation delete', e.detail)
+  const handleAnnotationDelete = async (e: CustomEvent<string>) => {
+    const id = e.detail
+    log.debug('Annotation delete', id)
 
     const confirmed = window.confirm('Are you sure you want to delete the annotation?')
     if (!confirmed) return
 
-    log.debug('Deleting annotation', e.detail.id)
-    await resourceManager.deleteResource(e.detail.id)
+    log.debug('Deleting annotation', id)
+    await resourceManager.deleteResource(id)
 
     toast.success('Annotation deleted!')
 
+    annotations = annotations.filter((annotation) => annotation.id !== id)
+
     await loadAnnotations(resourceId!)
+  }
+
+  const handleAnnotationUpdate = async () => {
+    dispatch('reload')
   }
 
   const handleNotesSubmit = () => {
     savingNotes = true
     dispatch('create', inputValue)
     inputValue = ''
+    editor.clear()
   }
 
   const handleInputKeydown = (e: KeyboardEvent) => {
@@ -87,6 +102,7 @@
 
   <div class="content">
     {#if annotations.length > 0}
+      <!-- The key block is needed to force a re-render when the annotation data changes as it is not reactive because of the data being stored as a file under the hood -->
       {#key loadingAnnotations}
         {#each annotations as annotation (annotation.id)}
           <AnnotationItem
@@ -94,6 +110,7 @@
             active={annotation.id === activeAnnotation}
             on:scrollTo
             on:delete={handleAnnotationDelete}
+            on:update={handleAnnotationUpdate}
           />
         {/each}
       {/key}
@@ -114,24 +131,33 @@
   </div>
 
   <form on:submit|preventDefault={handleNotesSubmit} class="notes">
-    <div class="editor-wrapper">
-      <Editor bind:content={inputValue} placeholder="Jot down your thoughts…" />
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div class="editor-wrapper" on:keydown={handleInputKeydown}>
+      <Editor
+        bind:this={editor}
+        bind:content={inputValue}
+        bind:focused={editorFocused}
+        autofocus={false}
+        placeholder="Jot down your thoughts…"
+      />
     </div>
-    <!-- <textarea
-      bind:value={inputValue}
-      rows={1}
-      use:autosize
-      on:keydown={handleInputKeydown}
-      placeholder="Jot down your thoughts…"
-    /> -->
 
-    <button class="" type="submit" disabled={savingNotes}>
-      {#if savingNotes}
-        <Icon size="24px" name="spinner" />
-      {:else}
-        <Icon size="24px" name="arrow.right" />
-      {/if}
-    </button>
+    {#if (inputValue && inputValue !== '<p></p>') || editorFocused}
+      <button
+        type="submit"
+        transition:slide={{ duration: 150 }}
+        disabled={savingNotes || inputValue === '<p></p>'}
+        class:filled={inputValue && inputValue !== '<p></p>'}
+      >
+        {#if savingNotes}
+          <div>Adding Note…</div>
+          <Icon name="spinner" />
+        {:else}
+          <div>Add Note</div>
+          <Icon name="arrow.right" />
+        {/if}
+      </button>
+    {/if}
   </form>
 </div>
 
@@ -216,7 +242,7 @@
 
   .notes {
     display: flex;
-    gap: 1rem;
+    flex-direction: column;
     padding: 1rem 0;
     border-top: 1px solid #e0e0e0;
     font-family: inherit;
@@ -241,12 +267,22 @@
       border-radius: 8px;
       cursor: pointer;
       transition: background-color 0.2s;
-      background: #ff4eed;
-      color: #fff;
       height: min-content;
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 0.5rem;
+      background: #fd1bdf40;
+      color: white;
+      margin-top: 1rem;
+
+      div {
+        font-size: 1rem;
+      }
+
+      &.filled {
+        background: #ff4eed;
+      }
 
       &:hover {
         background: #fd1bdf;
@@ -267,5 +303,6 @@
     font-size: 1rem;
     font-family: inherit;
     resize: vertical;
+    min-height: 80px;
   }
 </style>

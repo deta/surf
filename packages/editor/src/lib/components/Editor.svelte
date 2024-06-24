@@ -5,6 +5,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
 
   import { createEditor, Editor, EditorContent } from 'svelte-tiptap'
+  import { Extension } from '@tiptap/core'
 
   import { createEditorExtensions } from '../editor'
   // import BubbleMenu from './BubbleMenu.svelte'
@@ -13,8 +14,9 @@
   export let readOnly: boolean = false
   export let placeholder: string = `Write something or type '/' for options…`
   export let autofocus: boolean = true
+  export let focused = false
 
-  const dispatch = createEventDispatcher<{ update: string }>()
+  const dispatch = createEventDispatcher<{ update: string; submit: void }>()
 
   export const focus = () => {
     if ($editor) {
@@ -22,12 +24,51 @@
     }
   }
 
+  export const clear = () => {
+    if ($editor) {
+      $editor.commands.clearContent()
+    }
+  }
+
   let editor: Readable<Editor>
-  let focused = false
+
+  const onSubmit = () => {
+    if (focused) {
+      dispatch('submit')
+    }
+  }
+
+  const KeyboardHandler = Extension.create({
+    name: 'keyboardHandler'
+  })
+
+  const extension = KeyboardHandler.extend({
+    addKeyboardShortcuts() {
+      return {
+        Enter: () => {
+          onSubmit()
+          return true
+        },
+
+        'Shift-Enter': () => {
+          /**
+           * currently we do not have an option to show a soft line break in the posts, so we overwrite
+           * the behavior from tiptap with the default behavior on pressing enter
+           */
+          return this.editor.commands.first(({ commands }) => [
+            () => commands.newlineInCode(),
+            () => commands.createParagraphNear(),
+            () => commands.liftEmptyBlock(),
+            () => commands.splitBlock()
+          ])
+        }
+      }
+    }
+  })
 
   onMount(() => {
     editor = createEditor({
-      extensions: createEditorExtensions({ placeholder }),
+      extensions: [...createEditorExtensions({ placeholder }), extension],
       content: content,
       editable: !readOnly,
       autofocus: !autofocus || readOnly ? false : 'end',

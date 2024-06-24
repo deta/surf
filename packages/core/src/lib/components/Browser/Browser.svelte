@@ -1508,7 +1508,7 @@
 
     if (annotationsSidebar) {
       log.debug('reloading annotations sidebar')
-      annotationsSidebar.reload()
+      annotationsSidebar.reload(true)
     }
 
     // const browserTab = $browserTabs[tabId]
@@ -1546,6 +1546,13 @@
 
     log.debug('created annotation', annotation)
     annotationsSidebar.reload()
+  }
+
+  const handleAnnotationSidebarReload = () => {
+    log.debug('Annotation sidebar reload')
+    if ($activeBrowserTab) {
+      $activeBrowserTab.reload()
+    }
   }
 
   onMount(async () => {
@@ -2023,6 +2030,7 @@
         resourceId={$activeTab.resourceBookmark}
         on:scrollTo={handleAnnotationScrollTo}
         on:create={handleAnnotationSidebarCreate}
+        on:reload={handleAnnotationSidebarReload}
       />
     </div>
   {/if}
