@@ -20,7 +20,7 @@
 
   let fuseOptions = {
     keys: ['title'],
-    threshold: 0.3
+    threshold: 0.5
   }
 
   let fuse = new Fuse<Tab>(activeTabs, fuseOptions)
