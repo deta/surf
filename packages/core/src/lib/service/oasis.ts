@@ -1,7 +1,8 @@
 import { writable, type Writable } from 'svelte/store'
 import { useLogScope } from '../utils/log'
 import type { ResourceManager } from './resources'
-import type { Space } from '../types'
+
+import type { Space, SpaceName } from '../types'
 import { getContext, setContext } from 'svelte'
 
 export class OasisService {
@@ -17,8 +18,18 @@ export class OasisService {
 
     this.spaces = writable<Space[]>([])
     this.selectedSpace = writable<string>('all')
-    // this.spaceResources = writable<SpaceResource[]>([])
-    // this.spacesContents = writable(new Map())
+
+    this.initSpaces()
+  }
+
+  async initSpaces() {
+    try {
+      const spaces = await this.loadSpaces()
+      this.spaces.set(spaces)
+    } catch (error) {
+      this.log.error('Failed to load spaces:', error)
+    }
+
   }
 
   async loadSpaces() {
@@ -27,10 +38,11 @@ export class OasisService {
     const everything = [
       {
         id: 'all',
-        name: 'Everything',
+        name: { folderName: 'Everything', colors: ['#76E0FF', '#4EC9FB'] },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        deleted: 0
+        deleted: 0,
+        type: 'space'
       },
       ...result
     ]
@@ -40,7 +52,7 @@ export class OasisService {
     return everything
   }
 
-  async createSpace(name: string) {
+  async createSpace(name: SpaceName) {
     this.log.debug('creating space')
     const result = await this.resourceManager.createSpace(name)
     if (!result) {
@@ -66,7 +78,8 @@ export class OasisService {
     })
   }
 
-  async renameSpace(id: string, name: string) {
+
+  async renameSpace(id: string, name: SpaceName) {
     this.log.debug('renaming space', id, name)
     await this.resourceManager.updateSpace(id, name)
 

@@ -5,10 +5,14 @@ export interface CreateSpaceEntryInput {
 
 export interface Space {
   id: string
-  name: string
+  name: SpaceName
   created_at: string
   updated_at: string
   deleted: number
+}
+
+export interface SpaceName {
+  [key: string]: any
 }
 
 export interface SpaceEntry {

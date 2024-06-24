@@ -30,7 +30,8 @@
     "@sentry/svelte": "^7.99.0",
     "cross-fetch": "^4.0.0",
     "electron-updater": "^6.1.7",
-    "mime-types": "^2.1.35"
+    "mime-types": "^2.1.35",
+    "svelte-dnd-list": "^0.1.8"
   },
   "devDependencies": {
     "7zip-min": "^1.4.4",

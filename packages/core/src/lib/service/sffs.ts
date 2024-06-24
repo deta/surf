@@ -27,7 +27,8 @@ import type {
   SFFSSearchResultEngine,
   SFFSSearchResultItem,
   Space,
-  SpaceEntry
+  SpaceEntry,
+  SpaceName
 } from '../types'
 import type { AIChat, Chat } from '../components/Browser/types'
 
@@ -202,6 +203,29 @@ export class SFFS {
     }
   }
 
+  convertRawSpaceToSpace(raw: any): Space {
+    const parsedName = this.parseData<SpaceName>(raw.name)
+    const nameData = parsedName === null ? raw.name : parsedName
+
+    return {
+      id: raw.id,
+      name: nameData,
+      created_at: raw.created_at,
+      updated_at: raw.updated_at,
+      deleted: raw.deleted
+    }
+  }
+
+  convertSpaceToRawSpace(space: Space): any {
+    return {
+      id: space.id,
+      name: JSON.stringify(space.name),
+      created_at: space.created_at,
+      updated_at: space.updated_at,
+      deleted: space.deleted
+    }
+  }
+
   parseData<T>(raw: string): T | null {
     try {
       return JSON.parse(raw)
@@ -345,42 +369,49 @@ export class SFFS {
     }))
   }
 
-  async createSpace(name: string) {
+  async createSpace(name: SpaceName) {
     this.log.debug('creating space with name:', name)
-    const raw = await this.backend.js__store_create_space(name)
-    const space = this.parseData<Space>(raw)
+
+    const raw = await this.backend.js__store_create_space(JSON.stringify(name))
+    const space = this.parseData<any>(raw)
+
     if (!space) {
       return null
     }
 
-    return space
+    return this.convertRawSpaceToSpace(space)
   }
 
   async getSpace(id: string) {
     this.log.debug('getting space with id', id)
     const raw = await this.backend.js__store_get_space(id)
-    const space = this.parseData<Space>(raw)
+
+    const space = this.parseData<any>(raw)
+
     if (!space) {
       return null
     }
 
-    return space
+    return this.convertRawSpaceToSpace(space)
   }
 
   async listSpaces() {
     this.log.debug('listing all spaces')
     const raw = await this.backend.js__store_list_spaces()
-    const spaces = this.parseData<Space[]>(raw)
+
+    const spaces = this.parseData<any[]>(raw)
+
     if (!spaces) {
       return []
     }
 
-    return spaces
+    return spaces.map((space) => this.convertRawSpaceToSpace(space))
   }
 
-  async updateSpace(spaceId: string, name: string) {
+  async updateSpace(spaceId: string, name: SpaceName) {
     this.log.debug('updating space', spaceId, name)
-    await this.backend.js__store_update_space(spaceId, name)
+    const rawName = JSON.stringify(name)
+    await this.backend.js__store_update_space(spaceId, rawName)
   }
 
   async deleteSpace(space_id: string): Promise<void> {

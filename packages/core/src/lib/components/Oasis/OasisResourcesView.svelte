@@ -49,7 +49,7 @@
     <DrawerContentMasonry
       items={$renderContents}
       gridGap="2rem"
-      colWidth="minmax(Min(330px, 100%), 1fr)"
+      colWidth="minmax(250px, 330px)"
       bind:refreshLayout={refreshContentLayout}
     >
       {#each $renderContents as resourceId (resourceId)}

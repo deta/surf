@@ -21,7 +21,8 @@ import {
   type SFFSSearchParameters,
   type SFFSSearchProximityParameters,
   type SpaceEntry,
-  type Space
+  type Space,
+  type SpaceName
 } from '../types'
 import type { Telemetry } from './telemetry'
 import { TelemetryEventTypes, type ResourceDataAnnotation } from '@horizon/types'
@@ -637,7 +638,7 @@ export class ResourceManager {
     return { name: 'horizonId', value: hostname, op: 'suffix' }
   }
 
-  async createSpace(name: string) {
+  async createSpace(name: SpaceName) {
     return await this.sffs.createSpace(name)
   }
 
@@ -649,7 +650,7 @@ export class ResourceManager {
     return await this.sffs.listSpaces()
   }
 
-  async updateSpace(spaceId: string, name: string) {
+  async updateSpace(spaceId: string, name: SpaceName) {
     return await this.sffs.updateSpace(spaceId, name)
   }
 

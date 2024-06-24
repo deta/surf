@@ -1,3 +1,5 @@
+<svelte:options immutable={true} />
+
 <script lang="ts">
   import { onMount, setContext, tick } from 'svelte'
   import { slide } from 'svelte/transition'
@@ -13,6 +15,15 @@
   import { copyToClipboard } from '../../utils/clipboard'
   import { wait, writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
+
+  import DragDropList, {
+    VerticalDropZone,
+    HorizontalDropZone,
+    HorizontalCenterDropZone,
+    reorder,
+    type DropEvent
+  } from 'svelte-dnd-list'
+
   import {
     Resource,
     ResourceAnnotation,
@@ -20,6 +31,9 @@
     ResourceTag,
     createResourceManager
   } from '../../service/resources'
+
+  import { type HistoryEntry } from '../../types'
+
   import { HorizonsManager } from '../../service/horizon'
   import { API } from '../../service/api'
   import BrowserTab, { type NewTabEvent } from './BrowserTab.svelte'
@@ -74,6 +88,7 @@
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { provideOasis } from '../../service/oasis'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
+
   import AnnotationsSidebar from './AnnotationsSidebar.svelte'
   import ToastsProvider from '../Toast/ToastsProvider.svelte'
   import { provideToasts, type Toasts } from '../../service/toast'
@@ -116,6 +131,10 @@
   const log = useLogScope('Browser')
 
   const tabs = writable<Tab[]>([])
+  const tabsInView = writable<Tab[]>([])
+  const unpinnedTabs = writable<Tab[]>([])
+  const pinnedTabs = writable<Tab[]>([])
+  const noPinnedTabs = writable<boolean>(true)
   const addressValue = writable('')
   const activeTabId = useLocalStorageStore<string>('activeTabId', '')
   const loadingOrganize = writable(false)
@@ -140,17 +159,37 @@
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   })
 
-  const tabsInView = derived([tabs, sidebarTab], ([tabs, sidebarTab]) => {
-    if (sidebarTab === 'active') {
-      return tabs
-        .filter((tab) => !tab.archived)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    } else {
-      return tabs
-        .filter((tab) => tab.archived)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    }
+  tabsInView.subscribe(async (tabs) => {
+    unpinnedTabs.set([
+      ...new Set(tabs.filter((tab, index) => !tab.pinned).map((tab, index) => ({ ...tab, index })))
+    ])
+    pinnedTabs.set([
+      ...new Set(tabs.filter((tab, index) => tab.pinned).map((tab, index) => ({ ...tab, index })))
+    ])
   })
+
+  pinnedTabs.subscribe((pinnedTabsArray) => {
+    noPinnedTabs.set(pinnedTabsArray.length === 0)
+  })
+
+  const updateTabsInView = () => {
+    const currentTabs = get(tabs)
+    const currentSidebarTab = get(sidebarTab)
+
+    const filteredTabs =
+      currentSidebarTab === 'active'
+        ? currentTabs.filter((tab) => !tab.archived)
+        : currentTabs.filter((tab) => tab.archived)
+
+    const sortedTabs = filteredTabs.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+
+    tabsInView.set(sortedTabs)
+  }
+
+  tabs.subscribe(updateTabsInView)
+  sidebarTab.subscribe(updateTabsInView)
 
   const activeTab = derived([tabs, activeTabId], ([tabs, activeTabId]) => {
     return tabs.find((tab) => tab.id === activeTabId)
@@ -377,6 +416,15 @@
     // await deleteTab($activeTab.id)
   }
 
+  const setActiveTabAsPinnedTab = async () => {
+    if (!$activeTab) {
+      log.error('No active tab')
+      return
+    }
+
+    await updateTab($activeTab.id, { pinned: !$activeTab.pinned })
+  }
+
   const updateActiveTab = (updates: Partial<Tab>) => {
     if (!$activeTab) {
       log.error('No active tab')
@@ -384,6 +432,17 @@
     }
 
     updateTab($activeTab.id, updates)
+  }
+
+  const handeCreateResourceFromOasis = async (e: CustomEvent) => {
+    const newTab = await createPageTab(e.detail, true)
+
+    // Since we dont have the webview available right here, we need to wait a bit before we can handle the bookmark
+    await wait(10000)
+
+    if (newTab) {
+      await handleBookmark()
+    }
   }
 
   const toggleOasis = () => {
@@ -517,6 +576,8 @@
       toggleOasis()
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       closeActiveTab()
+    } else if (isModKeyAndKeyPressed(e, 'p')) {
+      setActiveTabAsPinnedTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark()
     } else if (isModKeyAndKeyPressed(e, 'g')) {
@@ -580,7 +641,7 @@
     addressValue.set('')
   }
 
-  const createPageTab = async (url: string, active = true) => {
+  const createPageTab = async (url: string, active = true): Promise<Tab> => {
     log.debug('Creating new page tab')
     const newTab = await createTab<TabPage>({
       title: url,
@@ -588,12 +649,16 @@
       type: 'page',
       initialLocation: url,
       historyStackIds: [],
-      currentHistoryIndex: -1
+      currentHistoryIndex: -1,
+      index: 0,
+      pinned: false
     })
 
     if (active) {
       activeTabId.set(newTab.id)
     }
+
+    return newTab
   }
 
   const createChatTab = async (query: string, active = true) => {
@@ -610,7 +675,9 @@
     const newTab = await createTab<TabImporter>({
       title: 'Importer',
       icon: '',
-      type: 'importer'
+      type: 'importer',
+      index: 0,
+      pinned: false
     })
 
     activeTabId.set(newTab.id)
@@ -1504,7 +1571,7 @@
     log.debug('updating annotation data', newData)
     await annotationResource.updateParsedData(newData)
 
-    await tick()
+    // await tick()
 
     if (annotationsSidebar) {
       log.debug('reloading annotations sidebar')
@@ -1567,6 +1634,7 @@
     window.api.onOpenURL((url: string) => openUrlHandler(url))
 
     const tabsList = await tabsDB.all()
+    tabs.update((currentTabs) => currentTabs.sort((a, b) => a.index - b.index))
     tabs.set(tabsList)
     log.debug('Tabs loaded', tabsList)
 
@@ -1592,11 +1660,20 @@
     }, 2000)
 
     const activeTabs = tabsList.filter((tab) => !tab.archived)
+
     if (activeTabs.length === 0) {
       createNewEmptyTab()
     } else if (!$activeTabId) {
       activeTabId.set(activeTabs[activeTabs.length - 1].id)
     }
+
+    activeTabs.forEach((tab, index) => {
+      updateTab(tab.id, { index: index })
+    })
+
+    tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
+
+    console.log('xxxx', $tabs)
   })
 
   const createChatResourceBookmark = async (tab: TabPage) => {
@@ -1641,6 +1718,98 @@
 
     updateTab(tab.id, { chatResourceBookmark: resource_id })
     return resource_id
+  }
+
+  const handleRemoveFromSidebar = async (e: CustomEvent) => {
+    const tabId = e.detail
+
+    // Find the tab with the given ID
+    const tab = get(tabs).find((t) => t.id === tabId)
+
+    if (!tab) {
+      log.error('Tab not found', tabId)
+      return
+    }
+
+    // Ensure the tab is of type 'space'
+    if (tab.type !== 'space') {
+      log.error('Tab is not of type space', tabId)
+      return
+    }
+
+    const spaceId = tab.spaceId
+    console.log('spaceid', spaceId)
+
+    try {
+      const spaces = await oasis.loadSpaces()
+      const space = spaces.find((space) => space.id === spaceId)
+      if (space) {
+        await oasis.renameSpace(space.id, {
+          folderName: space.name.folderName,
+          colors: space.name.colors,
+          showInSidebar: false
+        })
+
+        await archiveTab(tabId)
+
+        // Update the tabs to reflect the removal from the sidebar
+        tabs.update((currentTabs) => currentTabs.filter((t) => t.id !== tabId))
+      }
+    } catch (error) {
+      log.error('Failed to remove space from sidebar:', error)
+    }
+  }
+
+  const onDrop = async (event: CustomEvent, action: string) => {
+    const { from, to } = event.detail
+    if (!to || (from.dropZoneID === to.dropZoneID && from.index === to.index)) return
+
+    // Separate pinned and unpinned tabs
+    const unpinnedTabsArray = get(unpinnedTabs)
+    const pinnedTabsArray = get(pinnedTabs)
+
+    console.log('Before move:', { unpinnedTabsArray, pinnedTabsArray })
+
+    // Determine source and target lists
+    const fromTabs = from.dropZoneID === 'tabs' ? unpinnedTabsArray : pinnedTabsArray
+    const toTabs = to.dropZoneID === 'tabs' ? unpinnedTabsArray : pinnedTabsArray
+
+    // Remove the tab from the original location
+    const [movedTab] = fromTabs.splice(from.index, 1)
+
+    // Insert the tab into the new location
+    toTabs.splice(to.index, 0, movedTab)
+
+    // Update the pinned status if moving between sections
+    if (from.dropZoneID !== to.dropZoneID) {
+      movedTab.pinned = !movedTab.pinned
+    }
+
+    console.log('After move:', { unpinnedTabsArray, pinnedTabsArray })
+
+    // Update the stores
+    unpinnedTabs.set(unpinnedTabsArray)
+    pinnedTabs.set(pinnedTabsArray)
+
+    const updatedTabs = [...unpinnedTabsArray, ...pinnedTabsArray]
+
+    console.log('Updated tabs:', updatedTabs)
+
+    // Update the main tabsInView store
+    tabsInView.update(() => updatedTabs)
+
+    // Update the tabs with the new indices
+    for (const [index, tab] of unpinnedTabsArray.entries()) {
+      await persistTabChanges(tab.id, { index: index, pinned: false })
+    }
+
+    for (const [index, tab] of pinnedTabsArray.entries()) {
+      await persistTabChanges(tab.id, { index: index, pinned: true })
+    }
+
+    await tick()
+
+    console.log('State updated successfully')
   }
 </script>
 
@@ -1822,17 +1991,68 @@
       <div class="tabs">
         {#each $tabsInView as tab (tab.id)}
           {#if tab.type === 'chat'}
-            <TabItem {tab} {activeTabId} {deleteTab} {unarchiveTab} on:select={handleTabSelect} />
+            <TabItem
+              {tab}
+              {activeTabId}
+              {deleteTab}
+              {unarchiveTab}
+              pinned={tab.pinned}
+              on:select={handleTabSelect}
+              on:remove-from-sidebar={handleRemoveFromSidebar}
+            />
           {/if}
         {/each}
 
         <div class="divider"></div>
 
-        {#each $tabsInView as tab (tab.id)}
-          {#if tab.type !== 'chat'}
-            <TabItem {tab} {activeTabId} {deleteTab} {unarchiveTab} on:select={handleTabSelect} />
+        <div class="unpinned-tabs-wrapper">
+          <DragDropList
+            id="tabs"
+            type={VerticalDropZone}
+            itemSize={48}
+            itemCount={$unpinnedTabs.length}
+            on:drop={async (event) => {
+              onDrop(event, 'unpin')
+            }}
+            let:index
+          >
+            <TabItem
+              tab={$unpinnedTabs[index]}
+              {activeTabId}
+              {deleteTab}
+              {unarchiveTab}
+              pinned={false}
+              on:select={handleTabSelect}
+              on:remove-from-sidebar={handleRemoveFromSidebar}
+            />
+          </DragDropList>
+        </div>
+      </div>
+      <div class="pinned-tabs-wrapper">
+        <DragDropList
+          id="pinned-tabs"
+          type={HorizontalCenterDropZone}
+          itemSize={$noPinnedTabs ? 200 : 54}
+          itemCount={$noPinnedTabs ? 1 : $pinnedTabs.length}
+          on:drop={async (event) => {
+            onDrop(event, 'pin')
+          }}
+          let:index
+        >
+          {#if $noPinnedTabs}
+            <div class="description-text">Drop Tabs here to pin them.</div>
+          {:else}
+            <TabItem
+              tab={$pinnedTabs[index]}
+              {activeTabId}
+              {deleteTab}
+              {unarchiveTab}
+              pinned={true}
+              on:select={handleTabSelect}
+              on:remove-from-sidebar={handleRemoveFromSidebar}
+            />
           {/if}
-        {/each}
+        </DragDropList>
       </div>
 
       <div class="actions">
@@ -1879,14 +2099,18 @@
         </button>
       </div>
     {:else}
-      <OasisSidebar />
+      <OasisSidebar {tabs} />
     {/if}
   </div>
 
   <div class="browser-window-wrapper" class:hasNoTab={!$activeBrowserTab}>
     {#if $sidebarTab === 'oasis'}
       <div class="browser-window active" style="--scaling: 1;">
-        <OasisSpace spaceId={$selectedSpace} on:open={handleSpaceItemClick} />
+        <OasisSpace
+          spaceId={$selectedSpace}
+          on:open={handleSpaceItemClick}
+          on:create-resource-from-oasis={handeCreateResourceFromOasis}
+        />
       </div>
     {/if}
 
@@ -1961,7 +2185,11 @@
         {:else if tab.type === 'oasis-discovery'}
           <OasisDiscovery />
         {:else if tab.type === 'space'}
-          <OasisSpace spaceId={tab.spaceId} on:open={handleSpaceItemClick} />
+          <OasisSpace
+            spaceId={tab.spaceId}
+            on:open={handleSpaceItemClick}
+            on:create-resource-from-oasis={handeCreateResourceFromOasis}
+          />
         {:else}
           <BrowserHomescreen
             {historyEntriesManager}
@@ -2049,6 +2277,7 @@
   }
 
   .sidebar {
+    position: relative;
     flex-shrink: 0;
     width: var(--sidebar-width-left);
     height: 100vh;
@@ -2133,7 +2362,7 @@
     border-radius: 12px;
     padding: 0.5rem;
     width: 100%;
-    background: rgba(255, 255, 255, 0.9);
+    background: #f7f7f7;
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -2240,6 +2469,7 @@
   }
 
   .tabs {
+    position: relative;
     flex: 1;
     overflow: auto;
     margin-top: 0.5rem;
@@ -2255,6 +2485,35 @@
       margin-top: 15px;
       margin-bottom: 10px;
       color: #a9a9a9;
+    }
+
+    .unpinned-tabs-wrapper {
+      height: 100%;
+      max-height: calc(100vh - 20rem);
+    }
+  }
+
+  .pinned-tabs-wrapper {
+    position: relative;
+    padding: 0.5rem;
+    margin-top: 2rem;
+    bottom: 2rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    gap: 1rem;
+
+    background: #f7f7f7;
+    border-radius: 18px;
+    width: calc(100% - 1rem);
+    overflow-y: visible;
+    box-shadow:
+      0.849px 0.85px 7.85px 0px rgba(255, 255, 255, 0.2) inset,
+      0px 7.007px 7.935px 0px rgba(0, 0, 0, 0.03),
+      0px 16.84px 16.867px 0px rgba(0, 0, 0, 0.04),
+      0px 31.708px 27.854px 0px rgba(0, 0, 0, 0.05);
+
+    .description-text {
+      opacity: 0.4;
     }
   }
 
@@ -2451,6 +2710,17 @@
     overflow: hidden;
   }
 
+  :global(div[data-dnd-zone]) {
+    overflow: visible !important;
+    background: transparent !important;
+  }
+
+  .debug {
+    span {
+      word-break: break-all;
+      max-width: 10rem;
+    }
+  }
   .tab-bar-selector {
     display: flex;
     flex-direction: column;

@@ -6,10 +6,11 @@
   import { Telemetry } from '../../service/telemetry'
   import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
-  import type { Space } from '../../types'
+  import type { Space, SpaceName } from '../../types'
   import { useLogScope } from '../../utils/log'
   import { useOasis } from '../../service/oasis'
   import { processDrop } from '../../service/mediaImporter'
+  import Archive from '@horizon/icons/src/lib/Icons/Archive.svelte'
   import { useToasts } from '../../service/toast'
 
   export let folder: Space
@@ -18,10 +19,14 @@
   const log = useLogScope('Folder')
   const dispatch = createEventDispatcher()
   const oasis = useOasis()
+
+  let folderDetails = folder.name
+  let inputWidth = `${folderDetails.folderName.length}ch`
+
   const toast = useToasts()
 
   let folderName = folder.name
-  let inputWidth = `${folderName.length}ch`
+
   let processing = false
 
   let telemetryAPIKey = ''
@@ -48,7 +53,7 @@
   }
 
   const handleBlur = () => {
-    dispatch('rename', { id: folder.id, name: folderName })
+    dispatch('rename', { id: folder.id, name: folderDetails.folderName })
   }
 
   const handleDelete = () => {
@@ -56,14 +61,19 @@
     dispatch('delete', folder.id)
   }
 
+  const handleAddSpaceToTabs = () => {
+    dispatch('add-folder-to-tabs', folder.id)
+  }
+
   const createFolderWithAI = async () => {
     try {
       processing = true
-      const userPrompt = JSON.stringify(folderName)
+
+      const userPrompt = JSON.stringify(folderDetails.folderName)
 
       log.debug('Creating folder with AI', userPrompt)
       inputElement.blur()
-      dispatch('rename', { id: folder.id, name: folderName })
+      dispatch('rename', { id: folder.id, name: folderDetails.folderName })
 
       let response = await resourceManager.getResourcesViaPrompt(userPrompt)
       if (typeof response === 'string') {
@@ -83,6 +93,7 @@
 
       await oasis.addResourcesToSpace(folder.id, results)
       selectedFolder.set(folder.id)
+
       toast.success('Folder created with AI!')
     } catch (err) {
       log.error('Failed to create folder with AI', err)
@@ -103,6 +114,7 @@
         resourceItems.map((r) => r.data as string)
       )
       log.debug(`Resources dropped into folder ${folder.name}`)
+
       toast.success('Resources added to folder!')
     } else {
       log.debug('No resources found in drop event')
@@ -112,10 +124,13 @@
   }
 
   const handleColorChange = async (event: CustomEvent) => {
-    //DISABLED DUE TO INCONSISTEND JSON PARSE
-    // const update = { name: folderName, colors: event.detail }
-    // console.log('Updating Color...', update)
-    // await resourceManager.updateSpace(folder.id, update)
+    const update: SpaceName = {
+      folderName: folderDetails.folderName,
+      colors: event.detail,
+      showInSidebar: folderDetails.showInSidebar
+    }
+    console.log('Updating Color...', update)
+    await resourceManager.updateSpace(folder.id, update)
   }
 
   const handleDragOver = (event: DragEvent) => {
@@ -137,7 +152,7 @@
   // })
 
   $: {
-    inputWidth = `${folderName.length + 3}ch`
+    inputWidth = `${folderDetails.folderName.length + 3}ch`
   }
 </script>
 
@@ -152,21 +167,22 @@
 >
   <div class="folder {selected ? 'active' : ''}" on:click={handleClick} aria-hidden="true">
     <div class="folder-leading">
-      <SpaceIcon on:colorChange={handleColorChange} />
+      <SpaceIcon on:colorChange={handleColorChange} colors={folder.name.colors} {folder} />
+
       <input
         bind:this={inputElement}
         id={`folder-input-${folder.id}`}
         type="text"
-        bind:value={folderName}
+        bind:value={folderDetails.folderName}
         on:blur={handleBlur}
         class="folder-input"
         style={`width: ${inputWidth}`}
         on:keydown={async (e) => {
           e.stopPropagation()
-          folderName = e.target?.value
+          folderDetails.folderName = e.target?.value
           if (e.code === 'Space' && !e.shiftKey) {
             e.preventDefault()
-            folderName = e.target?.value + ' '
+            folderDetails.folderName = e.target?.value + ' '
           } else if (e.code === 'Enter' && e.shiftKey) {
             e.preventDefault()
             createFolderWithAI()
@@ -174,10 +190,15 @@
         }}
       />
     </div>
+    <div class="actions">
+      <button on:click|stopPropagation={handleDelete} class="close">
+        <Icon name="trash" size="20px" />
+      </button>
 
-    <button on:click|stopPropagation={handleDelete} class="close">
-      <Icon name="trash" size="20px" />
-    </button>
+      <button on:click|stopPropagation={handleAddSpaceToTabs} class="close">
+        <Icon name={!folder.name.showInSidebar ? 'add' : 'check'} size="20px" />
+      </button>
+    </div>
   </div>
 </div>
 
@@ -204,6 +225,11 @@
     z-index: 1000;
     &:hover {
       background-color: #e0e0d1;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
     }
   }
 

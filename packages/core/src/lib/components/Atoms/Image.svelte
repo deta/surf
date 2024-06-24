@@ -12,7 +12,7 @@
 </script>
 
 {#if !error}
-  <img {src} {alt} {...$$restProps} on:error={handleError} />
+  <img {src} {alt} {...$$restProps} on:error={handleError} draggable="false" />
 {:else}
   <div class="image-error">
     <Icon name={fallbackIcon} size="100%" />
@@ -23,5 +23,8 @@
   img {
     width: 100%;
     height: 100%;
+    display: block;
+    user-select: none;
+    border-radius: 4px;
   }
 </style>

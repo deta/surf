@@ -163,6 +163,8 @@
 
     loadingResponse = true
 
+    console.log('Starting chat with these resource ids', resourceIds)
+
     const response = await sffs.sendAIChatMessage(
       chat.id,
       query,
@@ -361,6 +363,7 @@
       <h1>{query}</h1>
     </div>
   {/if}
+  {resourceIds}
   <div class="chat-wrapper">
     <div class="chat">
       <h1 class="chat-request" bind:this={queryElement}>{query}</h1>

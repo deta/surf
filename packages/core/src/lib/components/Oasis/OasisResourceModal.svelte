@@ -20,8 +20,10 @@
   import OasisResourceDetails from './OasisResourceDetails.svelte'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import ResourceOverlay from '@horizon/drawer/src/lib/components/ResourceOverlay.svelte'
+
   import AnnotationItem from './AnnotationItem.svelte'
   import { useToasts } from '../../service/toast'
+
 
   export let resource: Resource
 
@@ -32,7 +34,9 @@
   const log = useLogScope('OasisResourceModal')
   const resourceManager = useResourceManager()
   const historyEntriesManager = new HistoryEntriesManager()
+
   const toast = useToasts()
+
 
   $: src = resource?.metadata?.sourceURI || 'https://example.com'
 
@@ -57,12 +61,14 @@
   let loadingAnnotations = true
   let annotations: ResourceAnnotation[] = []
 
+
   const loadAnnotations = async (resourceId: string) => {
     try {
       log.debug('Loading annotations', resourceId)
 
       loadingAnnotations = true
       annotations = await resourceManager.getAnnotationsForResource(resourceId)
+      
       log.debug('Annotations', annotations)
 
       await wait(500)
@@ -72,6 +78,7 @@
 
         const data = await annotation.getParsedData()
         log.debug('Annotation data', data)
+
 
         webview.sendEvent(WebViewEventReceiveNames.RestoreAnnotation, {
           id: annotation.id,
@@ -84,6 +91,7 @@
       loadingAnnotations = false
     }
   }
+
 
   const handleAppDetection = async (e: CustomEvent<DetectedWebApp>) => {
     try {
@@ -140,9 +148,11 @@
     annotations = [...annotations, annotationResource]
 
     log.debug('highlighting text in webview')
+
     webview.sendEvent(WebViewEventReceiveNames.RestoreAnnotation, {
       id: annotationResource.id,
       data: annotationData
+
     })
   }
 
@@ -165,7 +175,9 @@
     <div class="resource-details">
       <OasisResourceDetails {resource}>
         <ResourceOverlay caption="Click to open in new tab">
+
           <ResourcePreviewClean slot="content" showAnnotations={false} {resource} />
+
         </ResourceOverlay>
       </OasisResourceDetails>
     </div>
@@ -185,7 +197,9 @@
       partition="persist:horizon"
       {historyEntriesManager}
       on:detectedApp={handleAppDetection}
+
       on:annotate={handleWebViewAnnotation}
+
       on:annotationClick={handleAnnotationClick}
     />
 
@@ -196,9 +210,11 @@
             <AnnotationItem
               resource={annotation}
               active={annotation.id === activeAnnotation}
+
               background={false}
               on:scrollTo={handleAnnotationSelect}
               on:delete={handleAnnotationDelete}
+
             />
           {/each}
         </div>
@@ -244,7 +260,7 @@
     }
 
     &:hover ~ .mini-browser {
-      transform: translate(-50%, -50%) translateY(2.75rem) scale(0.98);
+      transform: translateY(2.75rem) scale(0.98);
       backdrop-filter: blur(4px);
       .label {
         opacity: 1;
@@ -253,15 +269,19 @@
   }
 
   .mini-browser {
-    position: absolute;
+    position: relative;
     display: flex;
     gap: 2rem;
     width: 80vw;
-    height: 95vh;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    height: 100vh;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     transition: 240ms ease-out;
+    padding: 0 2rem 2rem 2rem;
+    margin-top: 2rem;
+
     z-index: 100000;
   }
 

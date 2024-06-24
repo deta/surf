@@ -10,6 +10,8 @@
   export let tab: Tab
   export let activeTabId: Writable<string>
   export let deleteTab: (tabId: string) => void
+  export let pinned: boolean
+
   export let unarchiveTab: (tabId: string) => void
   export let showButtons: boolean = true
 
@@ -20,6 +22,10 @@
     dispatch('select', tab.id)
   }
 
+  const handleRemoveSpaceFromSidebar = (e: CustomEvent) => {
+    dispatch('remove-from-sidebar', tab.id)
+  }
+
   const handleArchive = () => {
     deleteTab(tab.id)
     //tab.archived ? deleteTab(tab.id) : archiveTab(tab.id)
@@ -28,9 +34,30 @@
   const handleUnarchive = () => {
     unarchiveTab(tab.id)
   }
+
+  $: sanitizedTitle = tab.title
+    .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
+    .replace(/[\/\\]/g, '–')
+    .replace(/\b[A-Z]+\b/g, (match) => match.charAt(0) + match.slice(1).toLowerCase())
+    .replace(/^\w/, (c) => c.toUpperCase())
 </script>
 
-<div class="tab" class:active={tab.id === $activeTabId} on:click={handleClick} aria-hidden="true">
+<div
+  class="tab"
+  class:active={tab.id === $activeTabId}
+  on:click={handleClick}
+  aria-hidden="true"
+  class:pinned
+  use:tooltip={pinned
+    ? {
+        content: sanitizedTitle,
+        action: 'hover',
+        position: 'top',
+        animation: 'fade',
+        delay: 500
+      }
+    : {}}
+>
   {#if tab.icon}
     <div class="icon-wrapper">
       <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
@@ -53,11 +80,17 @@
     </div>
   {/if}
 
-  <div class="title">
-    {tab.title}
-  </div>
 
-  {#if showButtons}
+  {#if !tab.pinned}
+    <div class="title">
+      {#if tab.type === 'space'}
+        {tab.title}
+      {:else}
+        {sanitizedTitle}
+      {/if}
+    </div>
+    <!-- {tab.index} -->
+
     {#if tab.archived}
       <button
         on:click|stopPropagation={handleUnarchive}
@@ -74,24 +107,42 @@
       </button>
     {/if}
 
-    <button
-      on:click|stopPropagation={handleArchive}
-      class="close"
-      use:tooltip={{
-        //content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
-        content: 'Delete this tab (⌘ + W)',
-        action: 'hover',
-        position: 'left',
-        animation: 'fade',
-        delay: 500
-      }}
-    >
-      {#if tab.archived}
+
+    {#if tab.type == 'space'}
+      <button
+        on:click|stopPropagation={handleRemoveSpaceFromSidebar}
+        class="close"
+        use:tooltip={{
+          content: 'Remove from Sidebar (⌘ + W)',
+          action: 'hover',
+          position: 'left',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
         <Icon name="trash" size="20px" />
-      {:else}
-        <Icon name="close" size="20px" />
-      {/if}
-    </button>
+      </button>
+    {:else}
+      <button
+        on:click|stopPropagation={handleArchive}
+        class="close"
+        use:tooltip={{
+          //content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
+          content: 'Delete this tab (⌘ + W)',
+          action: 'hover',
+          position: 'left',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
+        {#if tab.archived}
+          <Icon name="trash" size="20px" />
+        {:else}
+          <Icon name="close" size="20px" />
+        {/if}
+      </button>
+    {/if}
+
   {/if}
 </div>
 
@@ -99,8 +150,9 @@
   .tab {
     display: flex;
     align-items: center;
+    justify-content: center;
     padding: 1rem 0.75rem 1rem 1rem;
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
     gap: 10px;
     position: relative;
@@ -113,17 +165,32 @@
     &:hover {
       background-color: #e0e0d1;
     }
+
+    & * {
+      user-select: none;
+    }
+
+    &.pinned {
+      padding: 0.75rem;
+    }
   }
 
   .tab.active {
     color: #585130;
     background-color: #fff;
+    outline: 0.25px solid rgba(0, 0, 0, 0.05);
+    box-shadow:
+      -0.5px -0.5px 5px 0px rgba(255, 255, 255, 0.1) inset,
+      -0.5px 5px 5px 0px rgba(0, 0, 0, 0.02),
+      0px 12px 12px 0px rgba(0, 0, 0, 0.03),
+      0px 24px 20px 0px rgba(0, 0, 0, 0.04);
   }
 
   .icon-wrapper {
     width: 20px;
     height: 20px;
     display: block;
+    user-select: none;
   }
 
   .title {

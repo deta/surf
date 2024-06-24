@@ -7,6 +7,7 @@
 
   import TextPreview from '../Cards/Text/TextPreview.svelte'
   import LinkPreview from '../Cards/Link/LinkPreview.svelte'
+
   import {
     useResourceManager,
     type Resource,
@@ -36,6 +37,7 @@
   import ChatThreadPreview from '../Cards/ChatThread/ChatThreadPreview.svelte'
   import YoutubePreview from '../Cards/Post/YoutubePreview.svelte'
   import AnnotationPreview from '../Cards/Annotation/AnnotationPreview.svelte'
+
   import log from '../../utils/log'
 
   export let resource: Resource
@@ -61,6 +63,7 @@
   $: documentResource = resource as ResourceDocument
   $: annotationResource = resource as ResourceAnnotation
 
+
   let annotations: ResourceAnnotation[] = []
 
   let data: ResourceData | null = null
@@ -84,6 +87,7 @@
       }
     }
   }
+
 
   const handleClick = async () => {
     log.debug('Resource clicked', resource)
@@ -231,6 +235,7 @@
         <div class="">{getFileType(resource.type) ?? 'File'}</div>
       {/if}
     </div>
+
 
     {#if annotations.length > 0}
       <div class="annotations">
@@ -419,6 +424,7 @@
       transform: scale(1);
     }
   }
+
 
   .annotations {
     display: flex;

@@ -6,7 +6,9 @@ export interface BaseTab {
   title: string
   icon: string
   type: 'page' | 'horizon' | 'chat' | 'empty' | 'importer' | 'space' | 'oasis-discovery'
+
   archived: boolean
+  index: number
 }
 
 export interface TabPage extends BaseTab {
@@ -40,14 +42,17 @@ export interface TabImporter extends BaseTab {
   type: 'importer'
 }
 
+
 export interface TabOasisDiscovery extends BaseTab {
   type: 'oasis-discovery'
 }
+
 
 export interface TabSpace extends BaseTab {
   type: 'space'
   spaceId: string
 }
+
 
 export type Tab =
   | TabPage
@@ -57,6 +62,7 @@ export type Tab =
   | TabImporter
   | TabSpace
   | TabOasisDiscovery
+
 
 export type AIChat = {
   id: string

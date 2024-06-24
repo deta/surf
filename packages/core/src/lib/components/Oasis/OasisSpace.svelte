@@ -8,14 +8,18 @@
   import SearchInput from './SearchInput.svelte'
   import { createEventDispatcher, tick } from 'svelte'
   import { ResourceManager } from '../../service/resources'
+  import { wait } from '../../utils/time'
   import OasisResourcesView from './OasisResourcesView.svelte'
   import type { SpaceEntry } from '../../types'
   import DropWrapper from './DropWrapper.svelte'
+  import CreateNewResource from './CreateNewResource.svelte'
+
   import {
     MEDIA_TYPES,
     createResourcesFromMediaItems,
     processDrop
   } from '../../service/mediaImporter'
+
   import { useToasts } from '../../service/toast'
 
   export let spaceId: string
@@ -24,6 +28,7 @@
 
   const log = useLogScope('OasisTab')
   const oasis = useOasis()
+
   const dispatch = createEventDispatcher<{ open: string }>()
   const toast = useToasts()
 
@@ -36,6 +41,7 @@
   const chatPrompt = writable('')
   const searchResults = writable<string[]>([])
   const selectedItem = writable<string | null>(null)
+  const showNewResourceModal = writable(false)
 
   // const selectedSpace = derived([spaces, selectedSpaceId], ([$spaces, $selectedSpaceId]) => {
   //     return $spaces.find(space => space.id === $selectedSpaceId)
@@ -95,6 +101,10 @@
     searchValue.set('')
     chatPrompt.set('')
     resourceIds.set([])
+  }
+
+  const handleNewResourceModal = () => {
+    showNewResourceModal.set(true)
   }
 
   const handleSearch = async (e: CustomEvent<string>) => {
@@ -169,6 +179,7 @@
         await resourceManager.deleteResource(resourceId)
         await loadSpaceContents(spaceId)
         log.debug('Resource deleted')
+
         toast.success('Resource deleted!')
       } catch (error) {
         log.error('Error deleting resource:', error)
@@ -211,8 +222,15 @@
     const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
     log.debug('Resources', resources)
 
+    await loadSpaceContents(spaceId)
     toast.success('Resources added!')
+  }
 
+  const handleCreateResource = async (e: CustomEvent) => {
+    dispatch('create-resource-from-oasis', e.detail)
+    showNewResourceModal.set(false)
+
+    await wait(5000)
     await loadSpaceContents(spaceId)
   }
 </script>
@@ -225,6 +243,17 @@
       <div class="drawer-chat-search">
         <div class="search-input-wrapper">
           <SearchInput bind:value={$searchValue} on:chat={handleChat} on:search={handleSearch} />
+        </div>
+
+
+        <div class="create-wrapper">
+          <button class="create-new-resource" on:click={handleNewResourceModal}>
+            <Icon name="add" size="28px" />
+          </button>
+
+          {#if $showNewResourceModal}
+            <CreateNewResource on:open-and-create-resource={handleCreateResource} />
+          {/if}
         </div>
 
         <div class="drawer-chat active">
@@ -365,6 +394,21 @@
           }
         }
       }
+
+      .create-wrapper {
+        position: relative;
+        .create-new-resource {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          opacity: 0.4;
+          &:hover {
+            opacity: 0.6;
+            background: transparent;
+          }
+        }
+      }
+
 
       .search-transition {
         position: relative;

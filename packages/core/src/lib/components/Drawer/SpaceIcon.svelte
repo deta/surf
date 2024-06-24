@@ -1,6 +1,7 @@
 <script lang="ts">
   import { writable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
+  import type { Space } from '../../types'
 
   const dispatch = createEventDispatcher()
 
@@ -28,9 +29,12 @@
   ]
 
   export let colors: [string, string]
+  export let folder: Space
 
-  // Pick a random color pair
   function pickRandomColorPair(colorPairs: [string, string][]): [string, string] {
+    if (folder?.name?.folderName === 'Everything') {
+      return colorPairs[0]
+    }
     return colorPairs[Math.floor(Math.random() * colorPairs.length)]
   }
 
