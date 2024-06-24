@@ -275,6 +275,8 @@
 
   $: log.debug('tabs', $tabs)
 
+  $: if ($activeBrowserTab) $activeBrowserTab.focus()
+
   const openResourceDetailsModal = (resourceId: string) => {
     resourceDetailsModalSelected.set(resourceId)
     showResourceDetails.set(true)

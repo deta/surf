@@ -40,6 +40,12 @@
     }
   }
 
+  export const focus = () => {
+    if (webview) {
+      webview.focus()
+    }
+  }
+
   export const reload = () => {
     if (webview) {
       webview.reload()

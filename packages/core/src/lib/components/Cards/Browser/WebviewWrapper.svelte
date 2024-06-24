@@ -315,6 +315,10 @@
     }
   }
 
+  export function focus(): void {
+    webview?.focus()
+  }
+
   export function reload(): void {
     log.debug('Reloading')
     webview?.reload()
