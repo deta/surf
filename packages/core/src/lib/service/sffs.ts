@@ -205,8 +205,7 @@ export class SFFS {
 
   convertRawSpaceToSpace(raw: any): Space {
     const parsedName = this.parseData<SpaceName>(raw.name)
-    const nameData = parsedName === null ? raw.name : parsedName
-
+    const nameData = parsedName === null ? { folderName: raw.name } : parsedName
     return {
       id: raw.id,
       name: nameData,
