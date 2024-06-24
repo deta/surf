@@ -576,8 +576,8 @@
       toggleOasis()
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       closeActiveTab()
-    } else if (isModKeyAndKeyPressed(e, 'p')) {
-      setActiveTabAsPinnedTab()
+      // } else if (isModKeyAndKeyPressed(e, 'p')) {
+      // setActiveTabAsPinnedTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark()
     } else if (isModKeyAndKeyPressed(e, 'g')) {
