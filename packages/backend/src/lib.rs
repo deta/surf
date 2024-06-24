@@ -1,6 +1,6 @@
 pub mod ai;
 pub mod backend;
-pub mod embeddings;
+// pub mod embeddings;
 pub mod store;
 pub mod vision;
 
@@ -14,8 +14,8 @@ pub enum BackendError {
     DatabaseError(#[from] rusqlite::Error),
     #[error("Chrono error: {0}")]
     ChronoError(#[from] chrono::ParseError),
-    #[error("RustBert error: {0}")]
-    RustBertError(#[from] rust_bert::RustBertError),
+    // #[error("RustBert error: {0}")]
+    // RustBertError(#[from] rust_bert::RustBertError),
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
     #[error("Generic error: {0}")]

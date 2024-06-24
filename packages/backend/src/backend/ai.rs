@@ -1,14 +1,14 @@
 use super::{message::*, tunnel::WorkerTunnel};
 use crate::{
     ai::ai::{DataSource, DataSourceMetadata, DataSourceType, AI as AIClient},
-    embeddings::model::EmbeddingModel,
+    // embeddings::model::EmbeddingModel,
     store::{db::CompositeResource, models},
     vision::vision::Vision,
     BackendResult,
 };
 
 pub struct AI {
-    pub embedding_model: EmbeddingModel,
+    // pub embedding_model: EmbeddingModel,
     pub ai_client: AIClient,
     pub vision: Vision,
 }
@@ -20,7 +20,7 @@ impl AI {
         ai_backend_api_endpoint: &str,
     ) -> Self {
         Self {
-            embedding_model: EmbeddingModel::new_remote().unwrap(),
+            // embedding_model: EmbeddingModel::new_remote().unwrap(),
             ai_client: AIClient::new(ai_backend_api_endpoint.to_string()),
             vision: Vision::new(vision_api_key.to_string(), vision_api_endpoint.to_string()),
         }
@@ -110,22 +110,22 @@ impl AI {
             });
             */
 
-            let embeddings = self
-                .embedding_model
-                .encode(&embeddable_sentences)
-                .map_err(|e| eprintln!("failed to generate embeddings: {e:#?}"))
-                .ok();
+            // let embeddings = self
+            //     .embedding_model
+            //     .encode(&embeddable_sentences)
+            //     .map_err(|e| eprintln!("failed to generate embeddings: {e:#?}"))
+            //     .ok();
 
-            if let Some(embeddings) = embeddings {
-                tunnel.worker_send_rust(
-                    WorkerMessage::ResourceMessage(ResourceMessage::InsertEmbeddings {
-                        resource_id: composite_resource.resource.id.to_string(),
-                        embedding_type: "image_tags_captions".to_string(),
-                        embeddings,
-                    }),
-                    None,
-                );
-            }
+            // if let Some(embeddings) = embeddings {
+            //     tunnel.worker_send_rust(
+            //         WorkerMessage::ResourceMessage(ResourceMessage::InsertEmbeddings {
+            //             resource_id: composite_resource.resource.id.to_string(),
+            //             embedding_type: "image_tags_captions".to_string(),
+            //             embeddings,
+            //         }),
+            //         None,
+            //     );
+            // }
         }
 
         Ok(())
@@ -171,7 +171,7 @@ impl AI {
 
     fn process_embeddable_message(
         &self,
-        tunnel: &WorkerTunnel,
+        _tunnel: &WorkerTunnel,
         embeddable: impl models::EmbeddableContent,
         resource_type: Option<String>,
     ) -> BackendResult<()> {
@@ -194,22 +194,22 @@ impl AI {
                 .map_err(|e| eprintln!("failed to add data source for rag: {e:#?}"));
         }
 
-        let embeddigns = self
-            .embedding_model
-            .get_embeddings(&embeddable)
-            .map_err(|e| eprintln!("failed to generate embeddings: {e:#?}"))
-            .ok();
+        // let embeddigns = self
+        //     .embedding_model
+        //     .get_embeddings(&embeddable)
+        //     .map_err(|e| eprintln!("failed to generate embeddings: {e:#?}"))
+        //     .ok();
 
-        if let Some(embeddings) = embeddigns {
-            tunnel.worker_send_rust(
-                WorkerMessage::ResourceMessage(ResourceMessage::UpsertEmbeddings {
-                    resource_id: embeddable.get_resource_id(),
-                    embedding_type: embeddable.get_embedding_type(),
-                    embeddings,
-                }),
-                None,
-            );
-        }
+        // if let Some(embeddings) = embeddigns {
+        //     tunnel.worker_send_rust(
+        //         WorkerMessage::ResourceMessage(ResourceMessage::UpsertEmbeddings {
+        //             resource_id: embeddable.get_resource_id(),
+        //             embedding_type: embeddable.get_embedding_type(),
+        //             embeddings,
+        //         }),
+        //         None,
+        //     );
+        // }
         Ok(())
     }
 

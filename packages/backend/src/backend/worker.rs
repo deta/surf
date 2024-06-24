@@ -2,7 +2,7 @@ use super::message::{AIMessage, ProcessorMessage, TunnelMessage, TunnelOneshot};
 use crate::{
     ai::ai::AI,
     backend::{handlers::*, message::WorkerMessage},
-    embeddings::model::EmbeddingModel,
+    // embeddings::model::EmbeddingModel,
     store::db::Database,
     BackendError, BackendResult,
 };
@@ -15,7 +15,7 @@ use std::{path::Path, sync::mpsc};
 pub struct Worker {
     pub db: Database,
     pub ai: AI,
-    pub embedding_model: EmbeddingModel,
+    // pub embedding_model: EmbeddingModel,
     pub tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     pub aiqueue_tx: crossbeam::Sender<AIMessage>,
     pub resources_path: String,
@@ -68,7 +68,7 @@ impl Worker {
         Self {
             db: Database::new(&db_path, &usearch_path).unwrap(),
             ai: AI::new(ai_backend_api_endpoint),
-            embedding_model: EmbeddingModel::new_remote().unwrap(),
+            // embedding_model: EmbeddingModel::new_remote().unwrap(),
             tqueue_tx,
             aiqueue_tx,
             resources_path,

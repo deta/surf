@@ -227,18 +227,18 @@ impl Worker {
             None => 100,
         };
 
-        let mut query_embedding: Vec<f32> = Vec::new();
+        // let mut query_embedding: Vec<f32> = Vec::new();
 
-        if query != "" && semantic_search_enabled {
-            // TODO: what if query is too big?
-            // TODO: can we use one of the ai threads instead of the main thread
-            query_embedding = self.embedding_model.encode_single(&query)?;
-        }
+        // if query != "" && semantic_search_enabled {
+        //     // TODO: what if query is too big?
+        //     // TODO: can we use one of the ai threads instead of the main thread
+        //     query_embedding = self.embedding_model.encode_single(&query)?;
+        // }
 
         self.db
             .search_resources(
                 &query,
-                query_embedding,
+                vec![],
                 resource_tag_filters,
                 proximity_distance_threshold,
                 proximity_limit,
