@@ -111,7 +111,14 @@
       <div class="tabs-list">
         {#each filteredTabs as tab, index}
           <li bind:this={itemElements[index]}>
-            <TabItem {tab} {activeTabId} {deleteTab} {unarchiveTab} showButtons={false} />
+            <TabItem
+              {tab}
+              {activeTabId}
+              {deleteTab}
+              {unarchiveTab}
+              showButtons={false}
+              pinned={false}
+            />
           </li>
         {/each}
       </div>

@@ -80,8 +80,7 @@
     </div>
   {/if}
 
-
-  {#if !tab.pinned}
+  {#if !tab.pinned || !pinned}
     <div class="title">
       {#if tab.type === 'space'}
         {tab.title}
@@ -91,58 +90,58 @@
     </div>
     <!-- {tab.index} -->
 
-    {#if tab.archived}
-      <button
-        on:click|stopPropagation={handleUnarchive}
-        class="close"
-        use:tooltip={{
-          content: 'Move back to active tabs',
-          action: 'hover',
-          position: 'left',
-          animation: 'fade',
-          delay: 500
-        }}
-      >
-        <Icon name="arrowbackup" size="20px" />
-      </button>
-    {/if}
+    {#if showButtons}
+      {#if tab.archived}
+        <button
+          on:click|stopPropagation={handleUnarchive}
+          class="close"
+          use:tooltip={{
+            content: 'Move back to active tabs',
+            action: 'hover',
+            position: 'left',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
+          <Icon name="arrowbackup" size="20px" />
+        </button>
+      {/if}
 
-
-    {#if tab.type == 'space'}
-      <button
-        on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-        class="close"
-        use:tooltip={{
-          content: 'Remove from Sidebar (⌘ + W)',
-          action: 'hover',
-          position: 'left',
-          animation: 'fade',
-          delay: 500
-        }}
-      >
-        <Icon name="trash" size="20px" />
-      </button>
-    {:else}
-      <button
-        on:click|stopPropagation={handleArchive}
-        class="close"
-        use:tooltip={{
-          //content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
-          content: 'Delete this tab (⌘ + W)',
-          action: 'hover',
-          position: 'left',
-          animation: 'fade',
-          delay: 500
-        }}
-      >
-        {#if tab.archived}
+      {#if tab.type == 'space'}
+        <button
+          on:click|stopPropagation={handleRemoveSpaceFromSidebar}
+          class="close"
+          use:tooltip={{
+            content: 'Remove from Sidebar (⌘ + W)',
+            action: 'hover',
+            position: 'left',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
           <Icon name="trash" size="20px" />
-        {:else}
-          <Icon name="close" size="20px" />
-        {/if}
-      </button>
+        </button>
+      {:else}
+        <button
+          on:click|stopPropagation={handleArchive}
+          class="close"
+          use:tooltip={{
+            //content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
+            content: 'Delete this tab (⌘ + W)',
+            action: 'hover',
+            position: 'left',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
+          {#if tab.archived}
+            <Icon name="trash" size="20px" />
+          {:else}
+            <Icon name="close" size="20px" />
+          {/if}
+        </button>
+      {/if}
     {/if}
-
   {/if}
 </div>
 
