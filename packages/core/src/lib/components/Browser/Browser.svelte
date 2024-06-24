@@ -1977,7 +1977,7 @@
                   {:else if $activeTab?.resourceBookmark}
                     <Icon name="bookmarkFilled" />
                   {:else}
-                    <Icon name="bookmark" />
+                    <Icon name="leave" />
                   {/if}
                 </button>
               {/key}
