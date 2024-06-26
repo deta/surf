@@ -42,7 +42,7 @@
 
   export let resource: Resource
   export let selected: boolean = false
-  export let showAnnotations: boolean = true
+  export let annotations: ResourceAnnotation[] = []
 
   const resourceManager = useResourceManager()
 
@@ -62,9 +62,6 @@
   $: chatThreadResource = resource as ResourceChatThread
   $: documentResource = resource as ResourceDocument
   $: annotationResource = resource as ResourceAnnotation
-
-
-  let annotations: ResourceAnnotation[] = []
 
   let data: ResourceData | null = null
   const handleData = (e: CustomEvent<ResourceData>) => {
@@ -87,7 +84,6 @@
       }
     }
   }
-
 
   const handleClick = async () => {
     log.debug('Resource clicked', resource)
@@ -124,17 +120,6 @@
 
     dispatch('open', resource.id)
   }
-
-  const loadAnnotations = async () => {
-    annotations = await resourceManager.getAnnotationsForResource(resource.id)
-    log.debug('Annotations', annotations)
-  }
-
-  onMount(() => {
-    if (showAnnotations) {
-      loadAnnotations()
-    }
-  })
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -235,7 +220,6 @@
         <div class="">{getFileType(resource.type) ?? 'File'}</div>
       {/if}
     </div>
-
 
     {#if annotations.length > 0}
       <div class="annotations">
@@ -424,7 +408,6 @@
       transform: scale(1);
     }
   }
-
 
   .annotations {
     display: flex;

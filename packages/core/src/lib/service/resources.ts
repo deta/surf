@@ -295,6 +295,7 @@ export type ResourceObject =
 export type ResourceSearchResultItem = {
   id: string // resource id
   resource: ResourceObject
+  annotations?: ResourceAnnotation[]
   cardIds: string[]
   engine: SFFSSearchResultEngine
 }
@@ -403,7 +404,8 @@ export class ResourceManager {
           id: item.resource.id,
           engine: item.engine,
           cardIds: item.card_ids,
-          resource: this.findOrCreateResourceObject(item.resource)
+          resource: this.findOrCreateResourceObject(item.resource),
+          annotations: item.resource.annotations?.map((a) => this.findOrCreateResourceObject(a))
         }) as ResourceSearchResultItem
     )
 
@@ -474,6 +476,33 @@ export class ResourceManager {
     const obj = await res.json()
     console.log('resource object', obj)
     return this.findOrCreateResourceObject(obj)
+  }
+
+  async getResourceWithAnnotations(id: string) {
+    // read resource from sffs
+    const resourceItem = await this.sffs.readResource(id, { includeAnnotations: true })
+    if (!resourceItem) {
+      return null
+    }
+
+    const resource = this.findOrCreateResourceObject(resourceItem)
+
+    this.resources.update((resources) => {
+      const index = resources.findIndex((r) => r.id === id)
+      if (index > -1) {
+        resources[index] = resource
+      } else {
+        resources.push(resource)
+      }
+
+      return resources
+    })
+
+    const annotations = (resourceItem.annotations ?? []).map((a) =>
+      this.findOrCreateResourceObject(a)
+    ) as ResourceAnnotation[]
+
+    return { resource, annotations: annotations }
   }
 
   async getResource(id: string) {
@@ -667,22 +696,6 @@ export class ResourceManager {
   }
 
   async getSpaceContents(space_id: string): Promise<SpaceEntry[]> {
-    if (space_id === 'all') {
-      const resources = await this.searchResources('', [
-        ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
-      ])
-
-      return resources.reverse().map((item) => ({
-        id: item.id,
-        space_id: 'all',
-        resource_id: item.resource.id,
-        created_at: item.resource.createdAt,
-        updated_at: item.resource.updatedAt,
-        manually_added: 0
-      }))
-    }
-
     return await this.sffs.getSpaceContents(space_id)
   }
 

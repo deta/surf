@@ -98,7 +98,7 @@ pub enum ResourceMessage {
         resource_id: String,
         content: String,
     },
-    GetResource(String),
+    GetResource(String, bool),
     RemoveResource(String),
     RecoverResource(String),
     ProximitySearchResources {
@@ -114,6 +114,7 @@ pub enum ResourceMessage {
         semantic_search_enabled: Option<bool>,
         embeddings_distance_threshold: Option<f32>,
         embeddings_limit: Option<i64>,
+        include_annotations: Option<bool>,
     },
     UpdateResourceMetadata(ResourceMetadata),
     UpsertResourceTextContent {

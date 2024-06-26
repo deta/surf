@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Resource, useResourceManager } from '../../service/resources'
+  import { Resource, ResourceAnnotation, useResourceManager } from '../../service/resources'
   import { useLogScope } from '../../utils/log'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import DragResourceWrapper from './DragResourceWrapper.svelte'
@@ -12,13 +12,20 @@
 
   let loading = false
   let resource: Resource | null = null
+  let annotations: ResourceAnnotation[] = []
 
   const loadResource = async () => {
     try {
       log.debug('loadResource')
 
       loading = true
-      resource = await resourceManager.getResource(id)
+      const res = await resourceManager.getResourceWithAnnotations(id)
+      if (!res) {
+        return
+      }
+
+      resource = res.resource
+      annotations = res.annotations
 
       log.debug('Loaded resource:', resource)
     } catch (e) {
@@ -38,7 +45,15 @@
 <div class="wrapper">
   {#if resource}
     <DragResourceWrapper {resource}>
-      <ResourcePreviewClean {resource} {selected} on:load on:click on:open on:remove />
+      <ResourcePreviewClean
+        {resource}
+        {selected}
+        {annotations}
+        on:load
+        on:click
+        on:open
+        on:remove
+      />
     </DragResourceWrapper>
   {:else if loading}
     <div>Loading...</div>

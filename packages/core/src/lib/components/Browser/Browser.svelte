@@ -428,7 +428,7 @@
     updateTab($activeTab.id, updates)
   }
 
-  const handeCreateResourceFromOasis = async (e: CustomEvent) => {
+  const handeCreateResourceFromOasis = async (e: CustomEvent<string>) => {
     const newTab = await createPageTab(e.detail, true)
 
     // Since we dont have the webview available right here, we need to wait a bit before we can handle the bookmark

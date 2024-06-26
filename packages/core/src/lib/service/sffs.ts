@@ -82,7 +82,18 @@ export class SFFS {
         id: tag.id,
         name: tag.tag_name,
         value: tag.tag_value
-      }))
+      })),
+      annotations: (composite.resource_annotations || []).map((annotation) => {
+        return {
+          id: annotation.id,
+          type: annotation.resource_type,
+          path: annotation.resource_path,
+          // tags are missing as we are not getting back a composite resource for annotations
+          createdAt: annotation.created_at,
+          updatedAt: annotation.updated_at,
+          deleted: annotation.deleted === 1
+        }
+      })
     }
   }
 
@@ -277,9 +288,15 @@ export class SFFS {
     return this.convertCompositeResourceToResource(composite)
   }
 
-  async readResource(id: string): Promise<SFFSResource | null> {
+  async readResource(
+    id: string,
+    opts?: { includeAnnotations: boolean }
+  ): Promise<SFFSResource | null> {
     this.log.debug('reading resource with id', id)
-    const dataString = await this.backend.js__store_get_resource(id, { includeAnnotations: true })
+    const dataString = await this.backend.js__store_get_resource(
+      id,
+      opts?.includeAnnotations ?? false
+    )
     const composite = this.parseData<SFFSRawCompositeResource>(dataString)
     if (!composite) {
       return null
@@ -289,7 +306,7 @@ export class SFFS {
   }
 
   async updateResourceMetadata(id: string, metadata: SFFSResourceMetadata) {
-    const dataString = await this.backend.js__store_get_resource(id)
+    const dataString = await this.backend.js__store_get_resource(id, false)
     const composite = this.parseData<SFFSRawCompositeResource>(dataString)
     if (!composite || !composite.metadata) {
       throw new Error('failed to update resource, invalid resource data', dataString)
@@ -355,12 +372,12 @@ export class SFFS {
       parameters?.proximityLimit,
       parameters?.semanticEnabled,
       parameters?.semanticDistanceThreshold,
-      parameters?.semanticLimit
+      parameters?.semanticLimit,
+      parameters?.includeAnnotations
     )
     const parsed = this.parseData<SFFSSearchResult>(raw)
     const items = parsed?.items ?? []
 
-    // this.log.debug('search results', items)
     return items.map((item) => ({
       ...item,
       engine: item.engine.toLowerCase() as SFFSSearchResultEngine,

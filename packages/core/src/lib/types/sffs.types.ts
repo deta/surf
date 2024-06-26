@@ -56,6 +56,7 @@ export interface SFFSRawCompositeResource {
   metadata?: SFFSRawResourceMetadata
   text_content?: SFFSRawResourceTextContent
   resource_tags?: SFFSRawResourceTag[]
+  resource_annotations?: SFFSRawResource[]
 }
 
 export interface SFFSRawCard {

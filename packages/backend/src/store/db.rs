@@ -1,6 +1,6 @@
-use std::path::Path;
 use std::rc::Rc;
 use std::str::FromStr;
+use std::{collections::HashMap, path::Path};
 
 use super::models::*;
 use crate::{BackendError, BackendResult};
@@ -45,6 +45,7 @@ pub struct CompositeResource {
     pub metadata: Option<ResourceMetadata>,
     pub text_content: Option<ResourceTextContent>,
     pub resource_tags: Option<Vec<ResourceTag>>,
+    pub resource_annotations: Option<Vec<Resource>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -61,21 +62,6 @@ pub struct SearchResultItem {
     pub ref_resource_id: Option<String>,
     pub distance: Option<f32>,
     pub engine: SearchEngine,
-}
-
-// TODO: maybe there is a better way to do this
-fn remove_duplicate_search_results(results: &mut Vec<SearchResultItem>) -> Vec<SearchResultItem> {
-    let mut deduped: Vec<SearchResultItem> = Vec::new();
-    let mut seen: Vec<String> = Vec::new();
-    for r in results {
-        if !seen.contains(&r.resource.resource.id) {
-            seen.push(r.resource.resource.id.clone());
-            deduped.push(r.clone());
-        } else {
-            seen.push(r.resource.resource.id.clone());
-        }
-    }
-    deduped
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -141,7 +127,7 @@ impl Database {
     pub fn create_space(&mut self, space: &Space) -> BackendResult<()> {
         self.conn.execute(
             "INSERT INTO spaces (id, name, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
-            rusqlite::params![space.id, space.name, space.created_at, space.updated_at]
+            rusqlite::params![space.id, space.name, space.created_at, space.updated_at],
         )?;
         Ok(())
     }
@@ -163,9 +149,9 @@ impl Database {
     }
 
     pub fn get_space(&self, space_id: &str) -> BackendResult<Option<Space>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, name, created_at, updated_at FROM spaces WHERE id = ?1",
-        )?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, name, created_at, updated_at FROM spaces WHERE id = ?1")?;
         Ok(stmt
             .query_row(rusqlite::params![space_id], |row| {
                 Ok(Space {
@@ -335,6 +321,50 @@ impl Database {
                 })
             })
             .optional()?)
+    }
+
+    pub fn list_resource_annotations(
+        &self,
+        resource_ids: &[&str],
+    ) -> BackendResult<HashMap<String, Vec<Resource>>> {
+        if resource_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let placeholders = vec!["?"; resource_ids.len()].join(", ");
+        let query = format!("
+            SELECT r.id, r.resource_path, r.resource_type, r.created_at, r.updated_at, r.deleted, rt.tag_value
+            FROM resources r
+            JOIN resource_tags rt ON r.id = rt.resource_id
+            WHERE r.deleted = 0 AND rt.tag_name = 'annotates' AND rt.tag_value IN ({})",
+            placeholders
+        );
+
+        let mut stmt = self.conn.prepare(&query)?;
+        let rows = stmt.query_map(rusqlite::params_from_iter(resource_ids.iter()), |row| {
+            Ok((
+                row.get::<_, String>(6)?, // tag_value (resource_id being annotated)
+                Resource {
+                    id: row.get(0)?,
+                    resource_path: row.get(1)?,
+                    resource_type: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                    deleted: row.get(5)?,
+                },
+            ))
+        })?;
+
+        let mut result: HashMap<String, Vec<Resource>> = HashMap::new();
+        for row in rows {
+            let (tag_value, resource) = row.map_err(BackendError::DatabaseError)?;
+            result
+                .entry(tag_value)
+                .or_insert_with(Vec::new)
+                .push(resource);
+        }
+
+        Ok(result)
     }
 
     pub fn remove_resource_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
@@ -1224,6 +1254,7 @@ impl Database {
                     text_content: None,
                     // TODO: should we populate the resource tags?
                     resource_tags: None,
+                    resource_annotations: None,
                 },
                 distance: row.get(12).unwrap_or(None),
                 ref_resource_id: ref_resource_id.clone(),
@@ -1278,16 +1309,15 @@ impl Database {
     pub fn search_resources(
         &self,
         keyword: &str,
-        keyword_embedding: Vec<f32>,
+        _keyword_embedding: Vec<f32>,
         tags: Option<Vec<ResourceTagFilter>>,
-        proximity_distance_threshold: f32,
-        proximity_limit: i64,
-        semantic_search_enabled: bool,
-        embeddings_distance_threshold: f32,
-        embeddings_limit: i64,
+        _proximity_distance_threshold: f32,
+        _proximity_limit: i64,
+        _semantic_search_enabled: bool,
+        _embeddings_distance_threshold: f32,
+        _embeddings_limit: i64,
+        include_annotations: bool,
     ) -> BackendResult<SearchResult> {
-        let mut results: Vec<SearchResultItem> = Vec::new();
-
         let mut filtered_resource_ids: Vec<String> = Vec::new();
         if let Some(mut tags) = tags {
             if !tags.is_empty() {
@@ -1295,76 +1325,93 @@ impl Database {
             }
             if filtered_resource_ids.is_empty() {
                 return Ok(SearchResult {
-                    items: results,
+                    items: vec![],
                     total: 0,
                 });
             }
         }
 
-        let mut seen_resource_ids: Vec<String> = Vec::new();
-
-        let keyword_search_results = self.keyword_search(keyword, filtered_resource_ids.clone())?;
+        let mut results = self.keyword_search(keyword, filtered_resource_ids.clone())?;
+        if include_annotations {
+            let mut annotations = self.list_resource_annotations(
+                results
+                    .iter()
+                    .map(|item| item.resource.resource.id.as_str())
+                    .collect::<Vec<_>>()
+                    .as_ref(),
+            )?;
+            for item in results.iter_mut() {
+                item.resource.resource_annotations =
+                    annotations.remove(item.resource.resource.id.as_str())
+            }
+        }
+        Ok(SearchResult {
+            total: results.len() as i64,
+            items: results,
+        })
+        // let mut seen_resource_ids: Vec<String> = Vec::new();
         // keyword resouce ids are guaranteed to be unique
         // so not checking for duplicates
-        for search_result in keyword_search_results {
-            seen_resource_ids.push(search_result.resource.resource.id.clone());
-            results.push(search_result);
-        }
-
-        // TODO: frontend should use a list endpoint not search if keyword is empty
-        // early return as we don't want to perform proximity search
-        if keyword == "" {
-            let n = results.len() as i64;
-            return Ok(SearchResult {
-                items: results,
-                total: n,
-            });
-        }
-
-        // embeddings search
-        if semantic_search_enabled {
-            let embeddings_search_results = self.embeddings_search(
-                &keyword_embedding,
-                embeddings_distance_threshold,
-                embeddings_limit,
-                filtered_resource_ids.clone(),
-            )?;
-            for search_result in embeddings_search_results {
-                if !seen_resource_ids.contains(&search_result.resource.resource.id) {
-                    seen_resource_ids.push(search_result.resource.resource.id.clone());
-                    results.push(search_result);
-                }
-            }
-        }
-
-        // relooping through the keyword search results to perform proximity search
-        // we did not combine the two loops so that keyword search results are pushed first
-        // as they should be ranked higher
-        for resource_id in seen_resource_ids {
-            let proximity_search_results = self.proximity_search_with_resource_id(
-                &resource_id,
-                proximity_distance_threshold,
-                proximity_limit,
-            )?;
-            for search_result in proximity_search_results {
-                if filtered_resource_ids.contains(&search_result.resource.resource.id) {
-                    results.push(search_result);
-                }
-            }
-        }
-
-        let mut results = remove_duplicate_search_results(&mut results);
-        results.iter_mut().try_for_each(|r| -> BackendResult<()> {
-            let card_ids = self.list_card_ids_by_resource_id(&r.resource.resource.id)?;
-            r.card_ids = card_ids;
-            Ok(())
-        })?;
-        let n = results.len() as i64;
-        Ok(SearchResult {
-            items: results,
-            total: n,
-        })
+        // for search_result in keyword_search_results {
+        //     seen_resource_ids.push(search_result.resource.resource.id.clone());
+        //     results.push(search_result);
     }
+
+    // TODO: frontend should use a list endpoint not search if keyword is empty
+    // early return as we don't want to perform proximity search
+    // if keyword == "" {
+    //     let n = results.len() as i64;
+    //     return Ok(SearchResult {
+    //         items: results,
+    //         total: n,
+    //     });
+    // }
+
+    // embeddings search
+    // if semantic_search_enabled {
+    //     let embeddings_search_results = self.embeddings_search(
+    //         &keyword_embedding,
+    //         embeddings_distance_threshold,
+    //         embeddings_limit,
+    //         filtered_resource_ids.clone(),
+    //     )?;
+    //     for search_result in embeddings_search_results {
+    //         if !seen_resource_ids.contains(&search_result.resource.resource.id) {
+    //             seen_resource_ids.push(search_result.resource.resource.id.clone());
+    //             results.push(search_result);
+    //         }
+    //     }
+    // }
+
+    // relooping through the keyword search results to perform proximity search
+    // we did not combine the two loops so that keyword search results are pushed first
+    // as they should be ranked higher
+    // for resource_id in seen_resource_ids {
+    //     let proximity_search_results = self.proximity_search_with_resource_id(
+    //         &resource_id,
+    //         proximity_distance_threshold,
+    //         proximity_limit,
+    //     )?;
+    //     for search_result in proximity_search_results {
+    //         if filtered_resource_ids.contains(&search_result.resource.resource.id) {
+    //             results.push(search_result);
+    //         }
+    //     }
+    // }
+
+    // let mut results = remove_duplicate_search_results(&mut results);
+    // results.into_iter().filter()
+    // results.iter_mut().try_for_each(|r| -> BackendResult<()> {
+    //     let card_ids = self.list_card_ids_by_resource_id(&r.resource.resource.id)?;
+    //     r.card_ids = card_ids;
+    //     Ok(())
+    // })?;
+    // let n = results.len() as i64;
+    // Ok(SearchResult {
+    //     items: results,
+    //     total: n,
+    // })
+    // }
 
     pub fn create_history_entry(&self, entry: &HistoryEntry) -> BackendResult<()> {
         let query = "

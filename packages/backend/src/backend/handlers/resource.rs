@@ -122,10 +122,15 @@ impl Worker {
             metadata,
             text_content: None,
             resource_tags: tags,
+            resource_annotations: None,
         })
     }
 
-    pub fn read_resource(&mut self, id: String) -> BackendResult<Option<CompositeResource>> {
+    pub fn read_resource(
+        &mut self,
+        id: String,
+        include_annotations: bool,
+    ) -> BackendResult<Option<CompositeResource>> {
         let resource = match self.db.get_resource(&id)? {
             Some(data) => data,
             None => return Ok(None),
@@ -133,12 +138,20 @@ impl Worker {
         let metadata = self.db.get_resource_metadata_by_resource_id(&resource.id)?;
         let resource_tags = self.db.list_resource_tags(&resource.id)?;
         let resource_tags = (!resource_tags.is_empty()).then_some(resource_tags);
+        let mut resource_annotations = None;
+        if include_annotations {
+            let annotations = self.db.list_resource_annotations(&[id.as_str()])?;
+            if let Some((_, first_entry)) = annotations.into_iter().next() {
+                resource_annotations = Some(first_entry);
+            }
+        }
 
         Ok(Some(CompositeResource {
             resource,
             metadata,
             text_content: None,
             resource_tags,
+            resource_annotations,
         }))
     }
 
@@ -191,6 +204,7 @@ impl Worker {
         semantic_search_enabled: Option<bool>,
         embeddings_distance_threshold: Option<f32>,
         embeddings_limit: Option<i64>,
+        include_annotations: Option<bool>,
     ) -> BackendResult<SearchResult> {
         if let Some(resource_tag_filters) = &resource_tag_filters {
             // we use an `INTERSECT` for each resouce tag filter
@@ -202,6 +216,7 @@ impl Worker {
                 )));
             }
         }
+        let include_annotations = include_annotations.unwrap_or(false);
         // TODO: find sane defaults for these
         let proximity_distance_threshold = match proximity_distance_threshold {
             Some(threshold) => threshold,
@@ -245,6 +260,7 @@ impl Worker {
                 semantic_search_enabled,
                 embeddings_distance_threshold,
                 embeddings_limit,
+                include_annotations,
             )
             .map(|results| {
                 let SearchResult { items, .. } = results;
@@ -262,7 +278,7 @@ impl Worker {
 
     pub fn post_process_job(&mut self, resource_id: String) -> BackendResult<()> {
         let resource = self
-            .read_resource(resource_id)?
+            .read_resource(resource_id, false)?
             // mb this should be a `DatabaseError`?
             .ok_or(BackendError::GenericError(
                 "resource does not exist".to_owned(),
@@ -467,9 +483,11 @@ pub fn handle_resource_message(
             oneshot,
             worker.create_resource_text_content(resource_id, content),
         ),
-        ResourceMessage::GetResource(id) => {
-            send_worker_response(channel, oneshot, worker.read_resource(id))
-        }
+        ResourceMessage::GetResource(id, include_annotations) => send_worker_response(
+            channel,
+            oneshot,
+            worker.read_resource(id, include_annotations),
+        ),
         ResourceMessage::RemoveResource(id) => {
             send_worker_response(channel, oneshot, worker.remove_resource(id))
         }
@@ -497,6 +515,7 @@ pub fn handle_resource_message(
             semantic_search_enabled,
             embeddings_distance_threshold,
             embeddings_limit,
+            include_annotations,
         } => send_worker_response(
             channel,
             oneshot,
@@ -508,6 +527,7 @@ pub fn handle_resource_message(
                 semantic_search_enabled,
                 embeddings_distance_threshold,
                 embeddings_limit,
+                include_annotations,
             ),
         ),
         ResourceMessage::UpdateResourceMetadata(metadata) => {

@@ -7,10 +7,10 @@
   import Chat from '../Browser/Chat.svelte'
   import SearchInput from './SearchInput.svelte'
   import { createEventDispatcher, tick } from 'svelte'
-  import { ResourceManager } from '../../service/resources'
+  import { ResourceManager, type ResourceSearchResultItem } from '../../service/resources'
   import { wait } from '../../utils/time'
   import OasisResourcesView from './OasisResourcesView.svelte'
-  import type { SpaceEntry } from '../../types'
+  import { ResourceTypes, type SpaceEntry } from '../../types'
   import DropWrapper from './DropWrapper.svelte'
   import CreateNewResource from './CreateNewResource.svelte'
 
@@ -21,6 +21,7 @@
   } from '../../service/mediaImporter'
 
   import { useToasts } from '../../service/toast'
+  import OasisResourcesViewSearchResult from './OasisResourcesViewSearchResult.svelte'
 
   export let spaceId: string
 
@@ -29,7 +30,7 @@
   const log = useLogScope('OasisTab')
   const oasis = useOasis()
 
-  const dispatch = createEventDispatcher<{ open: string }>()
+  const dispatch = createEventDispatcher<{ open: string; 'create-resource-from-oasis': string }>()
   const toast = useToasts()
 
   const resourceManager = oasis.resourceManager
@@ -42,12 +43,14 @@
   const searchResults = writable<string[]>([])
   const selectedItem = writable<string | null>(null)
   const showNewResourceModal = writable(false)
+  const loadingContents = writable(false)
 
   // const selectedSpace = derived([spaces, selectedSpaceId], ([$spaces, $selectedSpaceId]) => {
   //     return $spaces.find(space => space.id === $selectedSpaceId)
   // })
 
   const spaceContents = writable<SpaceEntry[]>([])
+  const everythingContents = writable<ResourceSearchResultItem[]>([])
 
   const spaceResourceIds = derived(
     [searchValue, spaceContents, searchResults],
@@ -66,15 +69,52 @@
     }
   )
 
-  $: loadSpaceContents(spaceId)
+  $: if (spaceId === 'all') {
+    loadEverything()
+  } else {
+    loadSpaceContents(spaceId)
+  }
 
   const loadSpaceContents = async (id: string) => {
-    const items = await oasis.getSpaceContents(id)
-    log.debug('Loaded space contents:', items)
+    try {
+      loadingContents.set(true)
 
-    searchValue.set('')
-    searchResults.set([])
-    spaceContents.set(items)
+      const items = await oasis.getSpaceContents(id)
+      log.debug('Loaded space contents:', items)
+
+      searchValue.set('')
+      searchResults.set([])
+      spaceContents.set(items)
+    } catch (error) {
+      log.error('Error loading space contents:', error)
+    } finally {
+      loadingContents.set(false)
+    }
+  }
+
+  const loadEverything = async () => {
+    try {
+      loadingContents.set(true)
+
+      const items = await resourceManager.searchResources(
+        '',
+        [
+          ResourceManager.SearchTagDeleted(false),
+          ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+        ],
+        { includeAnnotations: true }
+      )
+
+      log.debug('Loaded everything:', items)
+
+      searchValue.set('')
+      searchResults.set([])
+      everythingContents.set(items)
+    } catch (error) {
+      log.error('Error loading everything:', error)
+    } finally {
+      loadingContents.set(false)
+    }
   }
 
   const handleChat = async (e: CustomEvent) => {
@@ -226,7 +266,7 @@
     toast.success('Resources added!')
   }
 
-  const handleCreateResource = async (e: CustomEvent) => {
+  const handleCreateResource = async (e: CustomEvent<string>) => {
     dispatch('create-resource-from-oasis', e.detail)
     showNewResourceModal.set(false)
 
@@ -244,7 +284,6 @@
         <div class="search-input-wrapper">
           <SearchInput bind:value={$searchValue} on:chat={handleChat} on:search={handleSearch} />
         </div>
-
 
         <div class="create-wrapper">
           <button class="create-new-resource" on:click={handleNewResourceModal}>
@@ -284,13 +323,30 @@
       </div>
     {/if}
 
-    <OasisResourcesView
-      resourceIds={spaceResourceIds}
-      selected={$selectedItem}
-      on:click={handleItemClick}
-      on:open
-      on:remove={handleResourceRemove}
-    />
+    {#if $spaceResourceIds.length > 0}
+      <OasisResourcesView
+        resourceIds={spaceResourceIds}
+        selected={$selectedItem}
+        on:click={handleItemClick}
+        on:open
+        on:remove={handleResourceRemove}
+      />
+    {:else if $everythingContents.length > 0}
+      <OasisResourcesViewSearchResult
+        resources={everythingContents}
+        selected={$selectedItem}
+        on:click={handleItemClick}
+        on:open
+        on:remove={handleResourceRemove}
+      />
+    {:else if $loadingContents}
+      <div class="loading-wrapper">
+        <div class="loading">
+          <Icon name="spinner" size="22px" />
+          <p>Loading…</p>
+        </div>
+      </div>
+    {/if}
   </div>
 </DropWrapper>
 
@@ -409,7 +465,6 @@
         }
       }
 
-
       .search-transition {
         position: relative;
       }
@@ -477,6 +532,26 @@
       }
       &:hover {
         outline: 3px solid rgba(0, 0, 0, 0.15);
+      }
+    }
+  }
+
+  .loading-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      opacity: 0.75;
+
+      p {
+        font-size: 1.2rem;
       }
     }
   }

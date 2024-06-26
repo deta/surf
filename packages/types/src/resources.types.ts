@@ -58,9 +58,14 @@ export interface SFFSResource {
   deleted: boolean
   metadata?: SFFSResourceMetadata
   tags?: SFFSResourceTag[]
+  annotations?: SFFSResource[]
 }
 
 export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'local'
+
+export interface SFFSSearchGeneralParameters {
+  includeAnnotations?: boolean
+}
 
 export interface SFFSSearchProximityParameters {
   proximityDistanceThreshold?: number // default 100,000
@@ -73,7 +78,9 @@ export interface SFFSSearchSemanticParameters {
   semanticLimit?: number
 }
 
-export type SFFSSearchParameters = SFFSSearchProximityParameters & SFFSSearchSemanticParameters
+export type SFFSSearchParameters = SFFSSearchGeneralParameters &
+  SFFSSearchProximityParameters &
+  SFFSSearchSemanticParameters
 
 export interface SFFSSearchResultItem {
   resource: SFFSResource

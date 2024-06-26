@@ -263,10 +263,14 @@ fn js_create_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_get_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
     let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let include_annotations = cx.argument::<JsBoolean>(2)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::GetResource(resource_id)),
+        WorkerMessage::ResourceMessage(ResourceMessage::GetResource(
+            resource_id,
+            include_annotations,
+        )),
         deferred,
     );
 
@@ -498,6 +502,11 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             .ok()
             .map(|js_number| js_number.value(&mut cx) as i64)
     });
+    let include_annotations = cx.argument_opt(8).and_then(|arg| {
+        arg.downcast::<JsBoolean, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_boolean| js_boolean.value(&mut cx))
+    });
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
@@ -509,6 +518,7 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             semantic_search_enabled,
             embeddings_distance_threshold,
             embeddings_limit,
+            include_annotations,
         }),
         deferred,
     );
