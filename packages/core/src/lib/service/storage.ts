@@ -135,6 +135,17 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
   async delete(id: string): Promise<void> {
     await this.t.delete(id)
   }
+
+  // TODO: Upgrade Dexie to use Table.bulkUpdate directly
+  async bulkUpdate(items: { id: string; updates: Partial<T> }[]): Promise<void> {
+    const datetime = new Date().toISOString()
+
+    await Promise.all(
+      items.map(async ({ id, updates }) => {
+        await this.t.update(id, { updatedAt: datetime, ...updates })
+      })
+    )
+  }
 }
 
 export class HorizonDatabase extends Dexie {

@@ -17,6 +17,8 @@
 
   const dispatch = createEventDispatcher()
 
+  $: console.log('TAB:', tab)
+
   const handleClick = () => {
     console.log('SET TAB ACTIVE: ', tab.id)
     dispatch('select', tab.id)
@@ -35,11 +37,14 @@
     unarchiveTab(tab.id)
   }
 
-  $: sanitizedTitle = tab.title
-    .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
-    .replace(/[\/\\]/g, '–')
-    .replace(/\b[A-Z]+\b/g, (match) => match.charAt(0) + match.slice(1).toLowerCase())
-    .replace(/^\w/, (c) => c.toUpperCase())
+  $: sanitizedTitle =
+    tab.type !== 'space'
+      ? tab.title
+          .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
+          .replace(/[\/\\]/g, '–')
+          .replace(/\b[A-Z]+\b/g, (match) => match.charAt(0) + match.slice(1).toLowerCase())
+          .replace(/^\w/, (c) => c.toUpperCase())
+      : tab.title
 </script>
 
 <div

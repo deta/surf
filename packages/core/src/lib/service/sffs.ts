@@ -229,7 +229,7 @@ export class SFFS {
     try {
       return JSON.parse(raw)
     } catch (e) {
-      this.log.error('failed to parse data', e)
+      // this.log.error('failed to parse data', e)
       return null
     }
   }
@@ -279,7 +279,7 @@ export class SFFS {
 
   async readResource(id: string): Promise<SFFSResource | null> {
     this.log.debug('reading resource with id', id)
-    const dataString = await this.backend.js__store_get_resource(id)
+    const dataString = await this.backend.js__store_get_resource(id, { includeAnnotations: true })
     const composite = this.parseData<SFFSRawCompositeResource>(dataString)
     if (!composite) {
       return null

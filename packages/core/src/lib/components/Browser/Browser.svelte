@@ -57,7 +57,8 @@
     TabImporter,
     TabPage,
     TabSpace,
-    TabOasisDiscovery
+    TabOasisDiscovery,
+    DroppedTab
   } from './types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../Cards/Browser/searchEngines'
   import type { Drawer } from '@horizon/drawer'
@@ -131,10 +132,6 @@
   const log = useLogScope('Browser')
 
   const tabs = writable<Tab[]>([])
-  const tabsInView = writable<Tab[]>([])
-  const unpinnedTabs = writable<Tab[]>([])
-  const pinnedTabs = writable<Tab[]>([])
-  const noPinnedTabs = writable<boolean>(true)
   const addressValue = writable('')
   const activeTabId = useLocalStorageStore<string>('activeTabId', '')
   const loadingOrganize = writable(false)
@@ -159,37 +156,13 @@
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   })
 
-  tabsInView.subscribe(async (tabs) => {
-    unpinnedTabs.set([
-      ...new Set(tabs.filter((tab, index) => !tab.pinned).map((tab, index) => ({ ...tab, index })))
-    ])
-    pinnedTabs.set([
-      ...new Set(tabs.filter((tab, index) => tab.pinned).map((tab, index) => ({ ...tab, index })))
-    ])
+  const pinnedTabs = derived([activeTabs], ([tabs]) => {
+    return tabs.filter((tab) => tab.pinned).sort((a, b) => a.index - b.index)
   })
 
-  pinnedTabs.subscribe((pinnedTabsArray) => {
-    noPinnedTabs.set(pinnedTabsArray.length === 0)
+  const unpinnedTabs = derived([activeTabs], ([tabs]) => {
+    return tabs.filter((tab) => !tab.pinned).sort((a, b) => a.index - b.index)
   })
-
-  const updateTabsInView = () => {
-    const currentTabs = get(tabs)
-    const currentSidebarTab = get(sidebarTab)
-
-    const filteredTabs =
-      currentSidebarTab === 'active'
-        ? currentTabs.filter((tab) => !tab.archived)
-        : currentTabs.filter((tab) => tab.archived)
-
-    const sortedTabs = filteredTabs.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-
-    tabsInView.set(sortedTabs)
-  }
-
-  tabs.subscribe(updateTabsInView)
-  sidebarTab.subscribe(updateTabsInView)
 
   const activeTab = derived([tabs, activeTabId], ([tabs, activeTabId]) => {
     return tabs.find((tab) => tab.id === activeTabId)
@@ -306,9 +279,14 @@
   }
 
   const createTab = async <T extends Tab>(
-    tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived'>
+    tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index'>
   ) => {
-    const newTab = await tabsDB.create({ archived: false, ...tab })
+    const newTab = await tabsDB.create({
+      archived: false,
+      pinned: false,
+      index: Date.now(),
+      ...tab
+    })
     log.debug('Created tab', newTab)
     tabs.update((tabs) => [...tabs, newTab])
 
@@ -372,7 +350,12 @@
     await tabsDB.update(tabId, updates)
   }
 
+  const bulkUpdateTabsStore = async (items: { id: string; updates: Partial<Tab> }[]) => {
+    await tabsDB.bulkUpdate(items)
+  }
+
   const updateTab = async (tabId: string, updates: Partial<Tab>) => {
+    log.debug('Updating tab', tabId, updates)
     tabs.update((tabs) => {
       const updatedTabs = tabs.map((tab) => {
         if (tab.id === tabId) {
@@ -761,25 +744,24 @@
       $sidebarTab === 'active' ? !tab.archived : tab.archived
     )
     */
-    const tabs = get(tabsInView)
-    if (tabs.length === 0) {
+    if ($tabs.length === 0) {
       log.debug('No tabs in view')
       return
     }
-    const activeTabIndex = tabs.findIndex((tab) => tab.id === $activeTabId)
+    const activeTabIndex = $tabs.findIndex((tab) => tab.id === $activeTabId)
     if (!previous) {
       const nextTabIndex = activeTabIndex + 1
-      if (nextTabIndex >= tabs.length) {
-        activeTabId.set(tabs[0].id)
+      if (nextTabIndex >= $tabs.length) {
+        activeTabId.set($tabs[0].id)
       } else {
-        activeTabId.set(tabs[nextTabIndex].id)
+        activeTabId.set($tabs[nextTabIndex].id)
       }
     } else {
       const previousTabIndex = activeTabIndex - 1
       if (previousTabIndex < 0) {
-        activeTabId.set(tabs[tabs.length - 1].id)
+        activeTabId.set($tabs[$tabs.length - 1].id)
       } else {
-        activeTabId.set(tabs[previousTabIndex].id)
+        activeTabId.set($tabs[previousTabIndex].id)
       }
     }
   }
@@ -1624,6 +1606,16 @@
     }
   }
 
+  const handleCreateTabFromOasisSidebar = async (e: CustomEvent<Tab>) => {
+    const tab = e.detail
+
+    log.debug('create tab from sidebar', tab)
+
+    await createTab(tab)
+
+    toasts.success('Space added to your Tabs!')
+  }
+
   onMount(async () => {
     const horizonId = await horizonManager.init()
     log.debug('initialized', horizonId)
@@ -1669,9 +1661,9 @@
       activeTabId.set(activeTabs[activeTabs.length - 1].id)
     }
 
-    activeTabs.forEach((tab, index) => {
-      updateTab(tab.id, { index: index })
-    })
+    // activeTabs.forEach((tab, index) => {
+    //   updateTab(tab.id, { index: index })
+    // })
 
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
@@ -1754,15 +1746,17 @@
 
         await archiveTab(tabId)
 
+        toasts.success('Space removed from sidebar!')
+
         // Update the tabs to reflect the removal from the sidebar
-        tabs.update((currentTabs) => currentTabs.filter((t) => t.id !== tabId))
+        // tabs.update((currentTabs) => currentTabs.filter((t) => t.id !== tabId))
       }
     } catch (error) {
       log.error('Failed to remove space from sidebar:', error)
     }
   }
 
-  const onDrop = async (event: CustomEvent, action: string) => {
+  const onDrop = async (event: CustomEvent<DroppedTab>, action: string) => {
     const { from, to } = event.detail
     if (!to || (from.dropZoneID === to.dropZoneID && from.index === to.index)) return
 
@@ -1770,48 +1764,61 @@
     const unpinnedTabsArray = get(unpinnedTabs)
     const pinnedTabsArray = get(pinnedTabs)
 
-    console.log('Before move:', { unpinnedTabsArray, pinnedTabsArray })
-
-    // Determine source and target lists
+    // Determine source list
     const fromTabs = from.dropZoneID === 'tabs' ? unpinnedTabsArray : pinnedTabsArray
-    const toTabs = to.dropZoneID === 'tabs' ? unpinnedTabsArray : pinnedTabsArray
 
-    // Remove the tab from the original location
-    const [movedTab] = fromTabs.splice(from.index, 1)
+    // Determine target and opposite target lists
+    let targetTabsArray = to.dropZoneID === 'tabs' ? unpinnedTabsArray : pinnedTabsArray
+    let oppositeTargetTabsArray = to.dropZoneID === 'tabs' ? pinnedTabsArray : unpinnedTabsArray
 
-    // Insert the tab into the new location
-    toTabs.splice(to.index, 0, movedTab)
+    const movedTab = fromTabs[from.index]
+    const shouldChangeSection = from.dropZoneID !== to.dropZoneID
 
-    // Update the pinned status if moving between sections
-    if (from.dropZoneID !== to.dropZoneID) {
-      movedTab.pinned = !movedTab.pinned
+    log.debug('Moving tab', movedTab, from, to)
+
+    // Update pinned state of the tab
+    if (shouldChangeSection) {
+      movedTab.pinned = to.dropZoneID === 'pinned-tabs'
+
+      // Remove the tab from its original position and location
+      oppositeTargetTabsArray.splice(from.index, 1)
+    } else {
+      // Remove the tab in its original posittion
+      targetTabsArray.splice(from.index, 1)
     }
 
-    console.log('After move:', { unpinnedTabsArray, pinnedTabsArray })
+    // Add the tab to the new location and position
+    targetTabsArray.splice(to.index, 0, movedTab)
 
-    // Update the stores
-    unpinnedTabs.set(unpinnedTabsArray)
-    pinnedTabs.set(pinnedTabsArray)
+    // Update the indices of the tabs in the target list
+    targetTabsArray = targetTabsArray.map((tab, index) => {
+      tab.index = index
+      return tab
+    })
 
-    const updatedTabs = [...unpinnedTabsArray, ...pinnedTabsArray]
+    // combine the two lists back together
+    const newTabs = [...targetTabsArray, ...oppositeTargetTabsArray]
+    log.debug('New tabs', newTabs)
 
-    console.log('Updated tabs:', updatedTabs)
+    // only update the tabs that were changed (archived stay uneffected)
+    tabs.update((x) => {
+      return x.map((tab) => {
+        const newTab = newTabs.find((t) => t.id === tab.id)
+        if (newTab) {
+          tab.index = newTab.index
+          tab.pinned = newTab.pinned
+        }
 
-    // Update the main tabsInView store
-    tabsInView.update(() => updatedTabs)
+        return tab
+      })
+    })
 
-    // Update the tabs with the new indices
-    for (const [index, tab] of unpinnedTabsArray.entries()) {
-      await persistTabChanges(tab.id, { index: index, pinned: false })
-    }
+    // Update the store with the changed tabs
+    await bulkUpdateTabsStore(
+      newTabs.map((tab) => ({ id: tab.id, updates: { pinned: tab.pinned, index: tab.index } }))
+    )
 
-    for (const [index, tab] of pinnedTabsArray.entries()) {
-      await persistTabChanges(tab.id, { index: index, pinned: true })
-    }
-
-    await tick()
-
-    console.log('State updated successfully')
+    log.debug('State updated successfully')
   }
 </script>
 
@@ -1991,7 +1998,7 @@
 
     {#if $sidebarTab !== 'oasis'}
       <div class="tabs">
-        {#each $tabsInView as tab (tab.id)}
+        <!-- {#each $unpinnedTabs as tab (tab.id)}
           {#if tab.type === 'chat'}
             <TabItem
               {tab}
@@ -2003,9 +2010,9 @@
               on:remove-from-sidebar={handleRemoveFromSidebar}
             />
           {/if}
-        {/each}
+        {/each} -->
 
-        <div class="divider"></div>
+        <!-- <div class="divider"></div> -->
 
         <div class="unpinned-tabs-wrapper">
           <DragDropList
@@ -2034,25 +2041,28 @@
         <DragDropList
           id="pinned-tabs"
           type={HorizontalCenterDropZone}
-          itemSize={$noPinnedTabs ? 200 : 54}
-          itemCount={$noPinnedTabs ? 1 : $pinnedTabs.length}
+          itemSize={$pinnedTabs.length === 0 ? 200 : 54}
+          itemCount={$pinnedTabs.length || 1}
           on:drop={async (event) => {
             onDrop(event, 'pin')
           }}
           let:index
         >
-          {#if $noPinnedTabs}
+          {#if $pinnedTabs.length === 0}
             <div class="description-text">Drop Tabs here to pin them.</div>
           {:else}
-            <TabItem
-              tab={$pinnedTabs[index]}
-              {activeTabId}
-              {deleteTab}
-              {unarchiveTab}
-              pinned={true}
-              on:select={handleTabSelect}
-              on:remove-from-sidebar={handleRemoveFromSidebar}
-            />
+            <!-- The key block is required for the tab item to properly re-render and prevent data missmatches -->
+            {#key $pinnedTabs[index]}
+              <TabItem
+                tab={$pinnedTabs[index]}
+                {activeTabId}
+                {deleteTab}
+                {unarchiveTab}
+                pinned={true}
+                on:select={handleTabSelect}
+                on:remove-from-sidebar={handleRemoveFromSidebar}
+              />
+            {/key}
           {/if}
         </DragDropList>
       </div>
@@ -2101,7 +2111,7 @@
         </button>
       </div>
     {:else}
-      <OasisSidebar {tabs} />
+      <OasisSidebar on:createTab={handleCreateTabFromOasisSidebar} />
     {/if}
   </div>
 

@@ -9,6 +9,7 @@ export interface BaseTab {
 
   archived: boolean
   index: number
+  pinned: boolean
 }
 
 export interface TabPage extends BaseTab {
@@ -42,17 +43,14 @@ export interface TabImporter extends BaseTab {
   type: 'importer'
 }
 
-
 export interface TabOasisDiscovery extends BaseTab {
   type: 'oasis-discovery'
 }
-
 
 export interface TabSpace extends BaseTab {
   type: 'space'
   spaceId: string
 }
-
 
 export type Tab =
   | TabPage
@@ -62,7 +60,6 @@ export type Tab =
   | TabImporter
   | TabSpace
   | TabOasisDiscovery
-
 
 export type AIChat = {
   id: string
@@ -125,3 +122,6 @@ export type PageHighlight = {
   color?: string
   text: string
 }
+
+export type DroppedTabLocation = { dropZoneID: 'pinned-tabs' | 'tabs'; index: number }
+export type DroppedTab = { from: DroppedTabLocation; to: DroppedTabLocation }
