@@ -5,6 +5,7 @@ import { toggleAdblocker } from './adblocker'
 import { resolve } from 'path'
 import { isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@horizon/types'
+import { createSettingsWindow } from './settingsWindow'
 
 const isMac = process.platform === 'darwin'
 
@@ -44,6 +45,13 @@ const template = [
               label: 'About Horizon',
               role: 'about'
             },
+            { type: 'separator' },
+            {
+              label: 'Preferences...',
+              accelerator: 'CmdOrCtrl+,',
+              click: () => createSettingsWindow()
+            },
+            { type: 'separator' },
             {
               label: 'Check for Updates...',
               click: checkUpdatesMenuClickHandler

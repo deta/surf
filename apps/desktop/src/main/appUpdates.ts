@@ -30,11 +30,15 @@ autoUpdater.on('error', async (error) => {
   await dialog.showErrorBox('Update Error', `'Error while updating the app: ${error.message}`)
 })
 
-// the click calls with (menuItem, browserWindow, event) but we don't need them right now
-export async function checkUpdatesMenuClickHandler(_1, _2, _3) {
+export async function checkForUpdates() {
   try {
     await autoUpdater.checkForUpdates()
   } catch (e) {
     console.error(e)
   }
+}
+
+// the click calls with (menuItem, browserWindow, event) but we don't need them right now
+export async function checkUpdatesMenuClickHandler(_1, _2, _3) {
+  await checkForUpdates()
 }

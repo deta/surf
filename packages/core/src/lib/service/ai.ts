@@ -1,12 +1,12 @@
 import type { ChatMessageContentItem, ChatMessageSource } from '../components/Browser/types'
+import { SIMPLE_SUMMARIZER_PROMPT } from '../constants/prompts'
 import log from '../utils/log'
 
 export const summarizeText = async (text: string, additionalSystemPrompt?: string) => {
   // @ts-expect-error
   const summary = await window.api.createAIChatCompletion(
     text,
-    'You are a summarizer, summarize the text given to you. Only respond with the summarization.' +
-      (additionalSystemPrompt ? ' ' + additionalSystemPrompt : '')
+    SIMPLE_SUMMARIZER_PROMPT + (additionalSystemPrompt ? ' ' + additionalSystemPrompt : '')
   )
 
   log.debug('Summarized text', summary)

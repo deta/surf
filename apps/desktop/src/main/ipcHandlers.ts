@@ -3,8 +3,12 @@ import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
 import { getUserConfig, updateUserConfig } from './config'
 import { handleDragStart } from './drag'
-import { ElectronAppInfo } from '@horizon/types'
+import { EditablePrompt, ElectronAppInfo } from '@horizon/types'
 import { getPlatform } from './utils'
+import { checkForUpdates } from './appUpdates'
+import { getSettingsWindow } from './settingsWindow'
+
+let prompts: EditablePrompt[] = []
 
 export function setupIpcHandlers() {
   ipcMain.handle('set-adblocker-state', async (_, { partition, state }) => {
@@ -94,7 +98,7 @@ export function setupIpcHandlers() {
 
   ipcMain.handle('get-app-info', () => {
     return {
-      version: app.getVersion(),
+      version: process.env.APP_VERSION ?? app.getVersion(),
       platform: getPlatform()
     } as ElectronAppInfo
   })
@@ -125,6 +129,32 @@ export function setupIpcHandlers() {
         reject(new Error('Request interception timed out'))
       }, 20000)
     })
+  })
+
+  ipcMain.on('check-for-updates', () => {
+    checkForUpdates()
+  })
+
+  ipcMain.on('set-prompts', (_event, prompts: EditablePrompt[]) => {
+    const window = getSettingsWindow()
+    if (!window) {
+      console.error('Settings window not found')
+      return
+    }
+
+    window.webContents.send('set-prompts', prompts)
+  })
+
+  ipcMain.on('get-prompts', (_event) => {
+    ipcSenders.getPrompts()
+  })
+
+  ipcMain.on('reset-prompt', (_event, id) => {
+    ipcSenders.resetPrompt(id)
+  })
+
+  ipcMain.on('update-prompt', (_event, { id, content }) => {
+    ipcSenders.updatePrompt(id, content)
   })
 }
 
@@ -167,5 +197,35 @@ export const ipcSenders = {
     }
 
     window.webContents.send('track-event', { eventName, properties })
+  },
+
+  getPrompts: () => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('get-prompts')
+  },
+
+  resetPrompt: (id: string) => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('reset-prompt', id)
+  },
+
+  updatePrompt: (id: string, content: string) => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('update-prompt', { id, content })
   }
 }

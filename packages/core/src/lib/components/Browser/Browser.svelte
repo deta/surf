@@ -58,6 +58,7 @@
     TabPage,
     TabSpace,
     TabOasisDiscovery,
+    AIChatMessageRole,
     DroppedTab
   } from './types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../Cards/Browser/searchEngines'
@@ -93,6 +94,14 @@
   import AnnotationsSidebar from './AnnotationsSidebar.svelte'
   import ToastsProvider from '../Toast/ToastsProvider.svelte'
   import { provideToasts, type Toasts } from '../../service/toast'
+  import { INLINE_PROMPTS, LEGACY_PAGE_CITATION_SUMMARY_PROMPT } from '../../constants/prompts'
+  import {
+    PromptIDs,
+    getPrompt,
+    getPrompts,
+    resetPrompt,
+    updatePrompt
+  } from '../../service/prompts'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -992,7 +1001,7 @@
         const chat = await sffs.getAIChat(tab.chatId)
         if (chat) {
           const userMessages = chat.messages.filter((message) => message.role === 'user')
-          const queries = userMessages.map((message) => message.content)
+          const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
           const systemMessages = chat.messages.filter((message) => message.role === 'system')
 
           responses = systemMessages.map((message, idx) => {
@@ -1086,47 +1095,51 @@
     e: CustomEvent<WebViewWrapperEvents['transform']>,
     tab: TabPage
   ) {
-    const { text, query, type } = e.detail
+    const { text, query, type, includePageContext } = e.detail
     log.debug('webview transformation', e.detail)
 
     const browserTab = $browserTabs[tab.id]
-
     const detectedResource = await browserTab.detectResource()
     log.debug('extracted resource data', detectedResource)
-
+    if (!detectedResource) {
+      log.debug('no resource detected')
+      return
+    }
     const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+    const pageContext = detectedResource
+      ? `\n\nFull page content to use only as reference:\n${content.plain}`
+      : ''
 
-    const textContent =
-      `Text selection from the user: ${text}` + detectedResource
-        ? `\n\nFull page content to use only as reference:\n${content.plain}`
-        : ''
+    const textContent = includePageContext
+      ? `Text selection from the user: ${text}\n\n Additional context from the page: ${pageContext}`
+      : text
 
     let transformation = ''
     if (type === 'summarize') {
-      transformation = await summarizeText(text, 'Be as concise as possible.')
+      const prompt = await getPrompt(PromptIDs.INLINE_SUMMARIZER)
+      // @ts-expect-error
+      transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
     } else if (type === 'explain') {
+      const prompt = await getPrompt(PromptIDs.INLINE_EXPLAINER)
       // @ts-expect-error
-      transformation = await window.api.createAIChatCompletion(
-        textContent,
-        `Explain the following text selection from a user so it is easily understandable for anyone. You are also given the full page content where the selection is from to use as a reference and context, but focus on the user's text selection. Take it into account and try to answer with information from the page. Be concise and try to keep the answer short. Only respond with the explanation itself and make sure to escape any special characters in the response.`
-      )
+      transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
     } else if (type === 'translate') {
+      const prompt = await getPrompt(PromptIDs.INLINE_TRANSLATE)
+      log.debug('translate prompt', prompt)
       // @ts-expect-error
-      transformation = await window.api.createAIChatCompletion(
-        textContent,
-        `Translate the following text selection from the user into English. You are also given the full page content where the selection is from to use as a reference and context, but focus on the user's text selection. Take it into account and try to answer with information from the page. If it is english already translate it into German. Stay as close to the original meaning as possible. Only respond with the translation itself and make sure to escape any special characters in the response.`
-      )
+      transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
     } else if (type === 'grammar') {
+      const prompt = await getPrompt(PromptIDs.INLINE_GRAMMAR)
       // @ts-expect-error
-      transformation = await window.api.createAIChatCompletion(
-        textContent,
-        `Fix all grammar mistakes as well as improve the writing of the following text selection from the user. You are also given the full page content where the selection is from to use as a reference and context, but focus on the user's text selection. Take it into account and try to answer with information from the page. Stay as close to the original meaning as possible but change things were necessary you deem it necessary. Only respond with the improved text itself and make sure to escape any special characters in the response.`
-      )
+      transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
     } else {
+      const prompt = await getPrompt(PromptIDs.INLINE_TRANSFORM_USER)
       // @ts-expect-error
       transformation = await window.api.createAIChatCompletion(
-        `User instruction: "${query}"\n\n` + textContent,
-        `Transform the following text selection from the user based on the given user instruction or answer the user's question if it is one. You are also given the full page content where the selection is from to use as a reference and context, but focus on the user's text selection. Take it into account and try to answer with information from the page. Stick to the instruction as close as possible and generally try to be concise but keep true to the meaning. Only respond with the transformed text itself or your answer and make sure to escape any special characters in the response.`
+        `User instruction: "${query}"\n\n` + includePageContext
+          ? textContent
+          : `Text selection from the user: ${text}`,
+        prompt.content
       )
     }
 
@@ -1182,129 +1195,127 @@
     log.debug('HTML', html)
   }
 
-  const summarizePage = async (magicPage: PageMagic) => {
-    let response: PageMagicResponse | null = null
+  // const summarizePage = async (magicPage: PageMagic) => {
+  //   let response: PageMagicResponse | null = null
 
-    try {
-      log.debug('Magic button clicked')
+  //   try {
+  //     log.debug('Magic button clicked')
 
-      const tab = $tabs.find((tab) => tab.id === magicPage.tabId)
-      if (!tab) {
-        log.error('Tab not found', magicPage.tabId)
-        return
-      }
+  //     const tab = $tabs.find((tab) => tab.id === magicPage.tabId)
+  //     if (!tab) {
+  //       log.error('Tab not found', magicPage.tabId)
+  //       return
+  //     }
 
-      const browserTab = $browserTabs[tab.id]
+  //     const browserTab = $browserTabs[tab.id]
 
-      const detectedResource = await browserTab.detectResource()
-      log.debug('extracted resource data', detectedResource)
+  //     const detectedResource = await browserTab.detectResource()
+  //     log.debug('extracted resource data', detectedResource)
 
-      if (!detectedResource) {
-        log.debug('no resource detected')
-        return
-      }
+  //     if (!detectedResource) {
+  //       log.debug('no resource detected')
+  //       return
+  //     }
 
-      response = {
-        id: generateID(),
-        role: 'system',
-        query: 'Summary',
-        status: 'pending',
-        content: '',
-        citations: {}
-      } as PageMagicResponse
+  //     response = {
+  //       id: generateID(),
+  //       role: 'system',
+  //       query: 'Summary',
+  //       status: 'pending',
+  //       content: '',
+  //       citations: {}
+  //     } as PageMagicResponse
 
-      updateMagicPage(magicPage.tabId, { running: true })
-      addPageMagicResponse(magicPage.tabId, response)
+  //     updateMagicPage(magicPage.tabId, { running: true })
+  //     addPageMagicResponse(magicPage.tabId, response)
 
-      const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
-      log.debug('content', content)
+  //     const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+  //     log.debug('content', content)
 
-      log.debug('calling the AI')
+  //     log.debug('calling the AI')
 
-      // if ($magicInputValue) {
-      //   log.debug('user query', $magicInputValue)
-      //   return
-      // }
+  //     // if ($magicInputValue) {
+  //     //   log.debug('user query', $magicInputValue)
+  //     //   return
+  //     // }
 
-      // @ts-expect-error
-      const output = await window.api.createAIChatCompletion(
-        content.plain,
-        'Take the following text which has been extracted from a web page like a article or blog post and generate a short summary for it that mentions the key take aways and the most important information Be as concise as possible. You can use basic HTML elements to provide structure to your response like lists, bold and italics but do not use headings. Separate the response into different paragraphs. Make sure to include inline citations in the response text using the citation element like this <citation style="background: {color};">{id}</citation>. Respond with a JSON object in the following format: `{ "content": "<html text response>", "citations": { "<id>": { "text": "<exact source text>", "color": "<unqiue color>" } } }`. The source text of the citation needs to be an exact match to a part of the original text and the IDs need to match the citations in your response. Use incrementing numbers as the IDs. Give each citation a unique pastel color.',
-        { response_format: { type: 'json_object' } }
-      )
+  //     // @ts-expect-error
+  //     const output = await window.api.createAIChatCompletion(
+  //       content.plain,
+  //       LEGACY_PAGE_CITATION_SUMMARY_PROMPT,
+  //       { response_format: { type: 'json_object' } }
+  //     )
 
-      log.debug('Magic response', output)
-      const json = JSON.parse(output)
-      log.debug('json', json)
+  //     log.debug('Magic response', output)
+  //     const json = JSON.parse(output)
+  //     log.debug('json', json)
 
-      if (!json.content || !json.citations) {
-        log.debug('Invalid response')
-        return
-      }
+  //     if (!json.content || !json.citations) {
+  //       log.debug('Invalid response')
+  //       return
+  //     }
 
-      response = {
-        ...response,
-        status: 'success',
-        content: json.content,
-        citations: json.citations
-      } as PageMagicResponse
+  //     response = {
+  //       ...response,
+  //       status: 'success',
+  //       content: json.content,
+  //       citations: json.citations
+  //     } as PageMagicResponse
 
-      updatePageMagicResponse(magicPage.tabId, response.id, response)
+  //     updatePageMagicResponse(magicPage.tabId, response.id, response)
 
-      // add mark styles to the page
-      await browserTab.executeJavaScript(inlineHighlightStylingCode())
+  //     // add mark styles to the page
+  //     await browserTab.executeJavaScript(inlineHighlightStylingCode())
 
-      await Promise.all(
-        Object.entries(json.citations).map(async ([id, citation]) => {
-          await highlightWebviewText(tab.id, {
-            type: 'important',
-            color: (citation as any).color as string,
-            text: (citation as any).text as string
-          })
-        })
-      )
+  //     await Promise.all(
+  //       Object.entries(json.citations).map(async ([id, citation]) => {
+  //         await highlightWebviewText(tab.id, {
+  //           type: 'important',
+  //           color: (citation as any).color as string,
+  //           text: (citation as any).text as string
+  //         })
+  //       })
+  //     )
 
-      log.debug('Magic done')
-    } catch (e) {
-      log.error('Error doing magic', e)
-      if (response) {
-        updatePageMagicResponse(magicPage.tabId, response.id, {
-          status: 'error',
-          content: (e as any).message ?? 'Failed to generate response.'
-        })
-      }
-    } finally {
-      updateMagicPage(magicPage.tabId, { running: false })
-    }
-  }
+  //     log.debug('Magic done')
+  //   } catch (e) {
+  //     log.error('Error doing magic', e)
+  //     if (response) {
+  //       updatePageMagicResponse(magicPage.tabId, response.id, {
+  //         status: 'error',
+  //         content: (e as any).message ?? 'Failed to generate response.'
+  //       })
+  //     }
+  //   } finally {
+  //     updateMagicPage(magicPage.tabId, { running: false })
+  //   }
+  // }
 
-  const handleChatSubmit = async (magicPage: PageMagic) => {
+  const sendSidebarChatMessage = async (
+    magicPage: PageMagic,
+    prompt: string,
+    role: AIChatMessageRole = 'user',
+    query?: string
+  ) => {
     let response: AIChatMessageParsed | null = null
-    const savedInputValue = $magicInputValue
-
-    $magicInputValue = ''
 
     try {
       log.debug('Magic button clicked')
-
-      if (!savedInputValue) {
-        log.debug('No input value')
-        return
-      }
 
       const tab = $tabs.find((tab) => tab.id === magicPage.tabId) as TabPage
       if (!tab) {
         log.error('Tab not found', magicPage.tabId)
         return
       }
+
       if (!tab.chatId) return
       if (!tab.chatResourceBookmark)
         tab.chatResourceBookmark = await createChatResourceBookmark(tab)
 
       response = {
         id: generateID(),
-        role: 'user',
-        query: savedInputValue,
+        role: role,
+        query: query ?? prompt,
         status: 'pending',
         content: '',
         citations: {}
@@ -1317,11 +1328,9 @@
       let step = 'idle'
       let content = ''
 
-      $magicInputValue = ''
-
       await sffs.sendAIChatMessage(
         tab.chatId,
-        savedInputValue,
+        prompt,
         (chunk: string) => {
           if (step === 'idle') {
             log.debug('sources chunk', chunk)
@@ -1354,22 +1363,60 @@
         },
         {
           limit: 5,
-          resourceIds: [tab.chatResourceBookmark]
+          resourceIds: [tab.chatResourceBookmark!]
         }
       )
 
       updatePageMagicResponse(magicPage.tabId, response.id, { status: 'success' })
     } catch (e) {
       log.error('Error doing magic', e)
-      $magicInputValue = savedInputValue
       if (response) {
         updatePageMagicResponse(magicPage.tabId, response.id, {
           content: (e as any).message ?? 'Failed to generate response.',
           status: 'error'
         })
       }
+
+      throw e
     } finally {
       updateMagicPage(magicPage.tabId, { running: false })
+    }
+  }
+
+  const handleMagicSidebarPromptSubmit = async (e: CustomEvent<PromptIDs>) => {
+    try {
+      const promptType = e.detail
+      log.debug('Magic button clicked')
+
+      const prompt = await getPrompt(promptType)
+
+      if (!$activeTabMagic) {
+        log.error('No active magic page')
+        return
+      }
+
+      await sendSidebarChatMessage($activeTabMagic, prompt.content, 'system', prompt.title)
+    } catch (e) {
+      log.error('Error doing magic', e)
+    }
+  }
+
+  const handleChatSubmit = async (magicPage: PageMagic) => {
+    const savedInputValue = $magicInputValue
+
+    try {
+      $magicInputValue = ''
+      log.debug('Magic button clicked')
+
+      if (!savedInputValue) {
+        log.debug('No input value')
+        return
+      }
+
+      await sendSidebarChatMessage(magicPage, savedInputValue)
+    } catch (e) {
+      log.error('Error doing magic', e)
+      $magicInputValue = savedInputValue
     }
   }
 
@@ -1626,6 +1673,21 @@
     )
     // @ts-expect-error
     window.api.onOpenURL((url: string) => openUrlHandler(url))
+
+    // @ts-expect-error
+    window.api.onGetPrompts(() => {
+      return getPrompts()
+    })
+
+    // @ts-expect-error
+    window.api.onUpdatePrompt((id: PromptIDs, content: string) => {
+      return updatePrompt(id, content)
+    })
+
+    // @ts-expect-error
+    window.api.onResetPrompt((id: PromptIDs) => {
+      return resetPrompt(id)
+    })
 
     const tabsList = await tabsDB.all()
     tabs.update((currentTabs) => currentTabs.sort((a, b) => a.index - b.index))
@@ -2261,6 +2323,7 @@
         }}
         on:saveText={(e) => saveTextFromPage(e.detail, 'chat_ai')}
         on:chat={() => handleChatSubmit($activeTabMagic)}
+        on:prompt={handleMagicSidebarPromptSubmit}
       />
     </div>
   {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}

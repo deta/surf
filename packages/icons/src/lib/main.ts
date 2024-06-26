@@ -59,6 +59,9 @@ import Eye from './Icons/Eye.svelte'
 import LineHeight from './Icons/LineHeight.svelte'
 import TextCollapse from './Icons/TextCollapse.svelte'
 import AlertTriangle from './Icons/AlertTriangle.svelte'
+import Settings from './Icons/Settings.svelte'
+import ChevronUp from './Icons/ChevronUp.svelte'
+import ChevronDown from './Icons/ChevronDown.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -122,7 +125,10 @@ export const icons = {
   eye: Eye,
   'line-height': LineHeight,
   'text-collapse': TextCollapse,
-  'alert-triangle': AlertTriangle
+  'alert-triangle': AlertTriangle,
+  settings: Settings,
+  'chevron.up': ChevronUp,
+  'chevron.down': ChevronDown
 }
 
 export type Icons = keyof typeof icons
@@ -187,5 +193,8 @@ export {
   Eye,
   LineHeight,
   TextCollapse,
-  AlertTriangle
+  AlertTriangle,
+  Settings,
+  ChevronUp,
+  ChevronDown
 }

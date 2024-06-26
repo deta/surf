@@ -4,6 +4,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import replace from '@rollup/plugin-replace'
 import { resolve } from 'path'
+import { plugin as Markdown, Mode } from 'vite-plugin-markdown'
 
 export default defineConfig({
   main: {
@@ -42,6 +43,7 @@ export default defineConfig({
   renderer: {
     envPrefix: 'R_VITE_',
     plugins: [
+      Markdown({ mode: [Mode.MARKDOWN] }),
       svelte(),
       sentryVitePlugin({
         org: 'deta',

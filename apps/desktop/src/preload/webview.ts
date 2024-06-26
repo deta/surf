@@ -597,7 +597,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
       })
 
       selectionMenu.$on('transform', (e) => {
-        const { query, type } = e.detail
+        const { query, type, includePageContext } = e.detail
         console.log('transforming', type, query, text)
 
         // re apply selection if it was removed accidentally
@@ -606,7 +606,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
           selection.addRange(selectionRange)
         }
 
-        sendPageEvent(WebViewEventSendNames.Transform, { text, query, type })
+        sendPageEvent(WebViewEventSendNames.Transform, { text, query, type, includePageContext })
       })
 
       selectionMenu.$on('insert', (e) => {

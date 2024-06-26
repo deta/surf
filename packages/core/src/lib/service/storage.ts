@@ -3,6 +3,7 @@ import Dexie from 'dexie'
 import { generateID } from '../utils/id'
 import type { Optional, LegacyResource } from '../types'
 import type { Chat, ChatMessage, Tab } from '../components/Browser/types'
+import type { EditablePrompt } from '@horizon/types'
 
 export class LocalStorage<T> {
   key: string
@@ -153,6 +154,7 @@ export class HorizonDatabase extends Dexie {
   tabs: HorizonStore<Tab>
   chats: HorizonStore<Chat>
   chatMessages: HorizonStore<ChatMessage>
+  prompts: HorizonStore<EditablePrompt>
 
   constructor() {
     super('HorizonDatabase')
@@ -231,12 +233,27 @@ export class HorizonDatabase extends Dexie {
       tabs: 'id, createdAt, updatedAt, archived, type, title, icon, section, initialLocation, historyStackIds, currentHistoryIndex, resourceBookmark, horizonId, query',
       chats: 'id, createdAt, updatedAt, title, messageIds',
       chatMessages: 'id, createdAt, updatedAt, role, content',
-      folders: 'id, name, items, createdAt, updatedAt' // TODO: remove with next version
+      folders: 'id, name, items, createdAt, updatedAt'
+    })
+
+    this.version(6).stores({
+      userData: 'id, user_id',
+      cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
+      horizons: 'id, name, stackingOrder, createdAt, updatedAt',
+      resources: 'id, createdAt, updatedAt',
+      sessions: 'id, userId, partition, createdAt, updatedAt',
+      historyEntries:
+        'id, *url, *title, *searchQuery, *inPageNavigation, sessionId, type, createdAt, updatedAt',
+      tabs: 'id, createdAt, updatedAt, archived, type, title, icon, section, initialLocation, historyStackIds, currentHistoryIndex, resourceBookmark, horizonId, query',
+      chats: 'id, createdAt, updatedAt, title, messageIds',
+      chatMessages: 'id, createdAt, updatedAt, role, content',
+      prompts: 'id, kind, title, description, content, createdAt, updatedAt'
     })
 
     this.resources = new HorizonStore<LegacyResource>(this.table('resources'))
     this.tabs = new HorizonStore<Tab>(this.table('tabs'))
     this.chats = new HorizonStore<Chat>(this.table('chats'))
     this.chatMessages = new HorizonStore<ChatMessage>(this.table('chatMessages'))
+    this.prompts = new HorizonStore<EditablePrompt>(this.table('prompts'))
   }
 }

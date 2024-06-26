@@ -66,8 +66,10 @@ export type AIChat = {
   messages: AIChatMessage[]
 }
 
+export type AIChatMessageRole = 'user' | 'system' | 'assistant'
+
 export type AIChatMessage = {
-  role: 'user' | 'system' | 'assistant'
+  role: AIChatMessageRole
   status: 'success' | 'pending' | 'error'
   query: string
   content: string
@@ -76,7 +78,7 @@ export type AIChatMessage = {
 
 export type AIChatMessageParsed = {
   id: string
-  role: 'user' | 'system' | 'assistant'
+  role: AIChatMessageRole
   query: string
   content: string
   contentItems?: ChatMessageContentItem[]

@@ -21,6 +21,7 @@
   let inputValue = ''
   let running = false
   let expandedInput = false
+  let includePageContext = false
   let elem: HTMLDivElement
   let inputElem: HTMLInputElement | HTMLTextAreaElement
   let markerIcon: IconConfirmation
@@ -30,7 +31,7 @@
 
   const dispatch = createEventDispatcher<{
     save: string
-    transform: { query?: string; type: WebViewEventTransform['type'] }
+    transform: { query?: string; type: WebViewEventTransform['type']; includePageContext: boolean }
     copy: void
     highlight: void
     comment: { plain: string; html: string }
@@ -97,13 +98,17 @@
 
   const handleAISubmit = () => {
     running = true
-    dispatch('transform', { query: inputValue, type: 'custom' })
+    dispatch('transform', {
+      query: inputValue,
+      type: 'custom',
+      includePageContext: includePageContext
+    })
   }
 
   const runAIAction = (type: WebViewEventTransform['type']) => {
     running = true
     $runningAction = type
-    dispatch('transform', { type: type })
+    dispatch('transform', { type: type, includePageContext: includePageContext })
   }
 
   const handleSaveOutput = () => {
@@ -227,7 +232,14 @@
     </form>
 
     {#if !running && !output}
-      <AiPrompts on:click={(e) => runAIAction(e.detail)} />
+      {#if !inputValue}
+        <AiPrompts on:click={(e) => runAIAction(e.detail)} />
+      {/if}
+
+      <label class="context-check">
+        <input type="checkbox" bind:checked={includePageContext} />
+        Include Page Context
+      </label>
     {:else if output}
       <AiOutput {output} on:save={handleSaveOutput} on:insert={handleInsert} />
     {/if}
@@ -307,21 +319,21 @@
     display: flex;
     align-items: center;
     gap: 8px;
-  }
 
-  input {
-    padding: 8px;
-    border: 1px solid #f0f0f0;
-    background: #ebebeb;
-    border-radius: 8px;
-    font-size: 16px;
-    width: 100%;
-    pointer-events: auto;
-    min-width: 350px;
+    input {
+      padding: 8px;
+      border: 1px solid #f0f0f0;
+      background: #ebebeb;
+      border-radius: 8px;
+      font-size: 16px;
+      width: 100%;
+      pointer-events: auto;
+      min-width: 350px;
 
-    &:focus {
-      outline: none;
-      border-color: #fd1bdf;
+      &:focus {
+        outline: none;
+        border-color: #fd1bdf;
+      }
     }
   }
 
@@ -341,6 +353,17 @@
       outline: none;
       border-color: #fd1bdf;
     }
+  }
+
+  .context-check {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+    color: #666;
+    border-top: 1px solid #eeeeee;
+    padding-top: 9px;
+    padding-bottom: 4px;
   }
 
   .editor-wrapper {

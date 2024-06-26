@@ -16,7 +16,7 @@ import { createAPI } from '@horizon/api'
 import { actionsToRunnableTools } from './actions'
 import { ElectronAppInfo } from '@horizon/types'
 
-import type { UserConfig, HorizonAction } from '@horizon/types'
+import type { UserConfig, HorizonAction, EditablePrompt } from '@horizon/types'
 
 import { getConfig } from '../main/config'
 
@@ -300,7 +300,38 @@ const api = {
     partition: string
   ): Promise<{ url: string; headers: Record<string, string> }> => {
     return ipcRenderer.invoke('intercept-requests-headers', { urls, partition })
-  }
+  },
+
+  checkForUpdates: () => ipcRenderer.send('check-for-updates'),
+
+  onGetPrompts: (callback: () => Promise<EditablePrompt[]>) => {
+    ipcRenderer.on('get-prompts', async (_) => {
+      const prompts = await callback()
+      ipcRenderer.send('set-prompts', prompts)
+    })
+  },
+
+  onUpdatePrompt: (callback: (id: string, content: string) => void) => {
+    ipcRenderer.on('update-prompt', (_, { id, content }) => callback(id, content))
+  },
+
+  onResetPrompt: (callback: (id: string) => void) => {
+    ipcRenderer.on('reset-prompt', (_, id) => callback(id))
+  },
+
+  // Used by the Settings page
+  onSetPrompts: (callback: (prompts: EditablePrompt[]) => void) => {
+    ipcRenderer.on('set-prompts', (_, prompts) => callback(prompts))
+  },
+
+  // Used by the Settings page
+  getPrompts: () => ipcRenderer.send('get-prompts'),
+
+  // Used by the Settings page
+  updatePrompt: (id: string, content: string) => ipcRenderer.send('update-prompt', { id, content }),
+
+  // Used by the Settings page
+  resetPrompt: (id: string) => ipcRenderer.send('reset-prompt', id)
 }
 
 ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {

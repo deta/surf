@@ -20,3 +20,13 @@ export interface ElectronAppInfo {
   version: string
   platform: string
 }
+
+export type EditablePrompt = {
+  id: string
+  kind: 'inline' | 'page'
+  title: string
+  description: string
+  content: string
+  createdAt: string
+  updatedAt: string
+}

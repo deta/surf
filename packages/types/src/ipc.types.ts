@@ -78,6 +78,7 @@ export type WebViewEventTransform = {
   text: string
   query?: string
   type: 'summarize' | 'explain' | 'translate' | 'grammar' | 'custom'
+  includePageContext: boolean
 }
 
 export type WebViewEventActionOutput = {

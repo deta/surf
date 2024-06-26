@@ -64,6 +64,7 @@
     "unzipper": "^0.10.14",
     "uuid": "^9.0.1",
     "vite": "^4.4.9",
-    "vite-plugin-css-injected-by-js": "^3.5.1"
+    "vite-plugin-css-injected-by-js": "^3.5.1",
+    "vite-plugin-markdown": "^2.2.0"
   }
 }

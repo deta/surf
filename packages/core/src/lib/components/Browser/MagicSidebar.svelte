@@ -1,14 +1,18 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
-  import type { AIChatMessageParsed, PageMagic, PageMagicResponse } from './types'
-  import { useClipboard } from '../../utils/clipboard'
-  import ChatMessage from './ChatMessage.svelte'
-  import { useLogScope } from '../../utils/log'
   import { createEventDispatcher } from 'svelte'
   import { writable } from 'svelte/store'
+  import { fly } from 'svelte/transition'
   import { tooltip } from '@svelte-plugins/tooltips'
+
+  import { Icon } from '@horizon/icons'
   import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
+
+  import type { AIChatMessageParsed, PageMagic, PageMagicResponse } from './types'
+  import ChatMessage from './ChatMessage.svelte'
+  import { useClipboard } from '../../utils/clipboard'
+  import { useLogScope } from '../../utils/log'
   import { ResourceManager, type ResourceLink } from '../../service/resources'
+  import { PromptIDs } from '../../service/prompts'
 
   export let inputValue = ''
   export let magicPage: PageMagic
@@ -20,6 +24,7 @@
     navigate: { url: string }
     saveText: string
     chat: string
+    prompt: PromptIDs
   }>()
   const { copy, copied } = useClipboard()
 
@@ -79,6 +84,26 @@
 
     dispatch('chat', inputValue)
   }
+
+  const handlePromptClick = async (promptType: PromptIDs) => {
+    log.debug('Prompt clicked', promptType)
+
+    dispatch('prompt', promptType)
+  }
+
+  // HACK: Right now the saved chat doesn't store the query we provide, it only stores the raw message content. For system messages we don't want to display our long prompts.
+  const sanitizeQuery = (raw: string) => {
+    const query = raw.toLowerCase()
+    if (query.includes('summary')) {
+      return 'Page Summary'
+    } else if (query.includes('table of content')) {
+      return 'Table of Contents'
+    } else if (query.includes('translate')) {
+      return 'Translate Page'
+    } else {
+      return raw
+    }
+  }
 </script>
 
 <div class="wrapper">
@@ -109,12 +134,20 @@
         <div class="output">
           <div class="output-header">
             <div class="input">
-              {#if response.role === 'user'}
-                <Icon name="message" />
-              {:else}
-                <Icon name="sparkles" />
-              {/if}
-              <p>{response.query}</p>
+              <div class="icon">
+                {#if response.role === 'user'}
+                  <Icon name="message" size="20px" />
+                {:else}
+                  <Icon name="sparkles" size="20px" />
+                {/if}
+              </div>
+              <p class="query">
+                {#if response.role === 'user'}
+                  {response.query}
+                {:else}
+                  {sanitizeQuery(response.query)}
+                {/if}
+              </p>
             </div>
 
             <div class="output-actions">
@@ -153,17 +186,24 @@
               </button>
             </div>
           </div>
+
+          <ChatMessage
+            content={response.content}
+            sources={response.sources}
+            on:citationClick={(e) => handleCitationClick(e.detail, response)}
+          />
         </div>
       {:else if response.status === 'pending'}
         <div class="output">
           <div class="output-header">
             <div class="input">
               <Icon name="spinner" />
-              {#if response.role === 'user'}
+              <p>{response.query}</p>
+              <!-- {#if response.role === 'user'}
                 <p>{response.query}</p>
               {:else}
                 <p>Generating Page Summary…</p>
-              {/if}
+              {/if} -->
             </div>
           </div>
         </div>
@@ -172,13 +212,20 @@
           {response.content}
         </div>
       {/if}
-      <ChatMessage
-        content={response.content}
-        sources={response.sources}
-        on:citationClick={(e) => handleCitationClick(e.detail, response)}
-      />
     {/each}
   </div>
+
+  {#if !magicPage.running}
+    <div class="prompts" transition:fly={{ y: 120 }}>
+      <button on:click={() => handlePromptClick(PromptIDs.PAGE_SUMMARIZER)}>
+        Summarize Page
+      </button>
+      <button on:click={() => handlePromptClick(PromptIDs.PAGE_TOC)}> Table of Contents </button>
+      <button on:click={() => handlePromptClick(PromptIDs.PAGE_TRANSLATOR)}>
+        Translate Page
+      </button>
+    </div>
+  {/if}
 
   <form on:submit|preventDefault={handleChatSubmit} class="chat">
     <input bind:value={inputValue} placeholder="Ask about the page…" />
@@ -209,6 +256,7 @@
     gap: 1rem;
     flex: 1;
     overflow: auto;
+    padding-bottom: 4rem;
   }
 
   .chat {
@@ -288,7 +336,24 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    overflow: hidden;
     opacity: 0.75;
+  }
+
+  .icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .query {
+    flex: 1;
+    // truncate with ellipses after two lines
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .output-actions {
@@ -353,6 +418,36 @@
       border-color: #f73b95;
       color: #000;
       background-color: #ffffff;
+    }
+  }
+
+  .prompts {
+    position: absolute;
+    bottom: 4.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 15px 0;
+    overflow-x: auto;
+    // linear gradient from bottom background color to transparent top
+    background: linear-gradient(180deg, transparent, #eeece0);
+
+    button {
+      flex-shrink: 0;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #fff;
+      color: #353535;
+      cursor: pointer;
+      font-size: 1rem;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      transition: background 0.2s;
+
+      &:hover {
+        background: #f6f5ef;
+      }
     }
   }
 
