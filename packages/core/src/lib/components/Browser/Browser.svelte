@@ -584,8 +584,6 @@
       createImporterTab()
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       createOasisDiscoveryTab()
-    } else if (isModKeyAndKeyPressed(e, 'b')) {
-      $activeBrowserTab?.openDevTools()
     } else if (e.ctrlKey && e.key === 'Tab') {
       cycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
