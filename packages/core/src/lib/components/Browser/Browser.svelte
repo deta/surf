@@ -2275,7 +2275,7 @@
         {:else if tab.type === 'importer'}
           <Importer {resourceManager} />
         {:else if tab.type === 'oasis-discovery'}
-          <OasisDiscovery />
+          <OasisDiscovery {resourceManager} />
         {:else if tab.type === 'space'}
           <OasisSpace
             spaceId={tab.spaceId}

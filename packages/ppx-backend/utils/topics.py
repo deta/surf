@@ -1,4 +1,5 @@
 from bertopic import BERTopic
+from bertopic.representation import MaximalMarginalRelevance
 from sklearn.feature_extraction.text import CountVectorizer#, ENGLISH_STOP_WORDS as STOP_WORDS
 
 from gensim.parsing.preprocessing import STOPWORDS as STOP_WORDS 
@@ -8,11 +9,21 @@ from gensim.corpora import Dictionary
 
 STOP_WORDS = STOP_WORDS.union({"uh", "like", "just", "yeah"})
 
-def bertopic_model(min_topic_size=1, top_n_words=10):
+def clean_bert_topic(topic):
+    topics = topic.split("_")
+    if len(topics) == 1:
+        return topics
+    return ', '.join(topics[1:])
+    
+
+def bertopic_model(min_topic_size=1, top_n_words=10, nr_topics=None):
     topic_model = BERTopic(
         min_topic_size=min_topic_size,
         top_n_words=top_n_words,
-        vectorizer_model=CountVectorizer(stop_words=list(STOP_WORDS))
+        vectorizer_model=CountVectorizer(stop_words=list(STOP_WORDS)),
+        embedding_model="all-MiniLM-L6-v2",
+        representation_model=MaximalMarginalRelevance(diversity=0.5),
+        nr_topics=nr_topics
     )
     return topic_model
 

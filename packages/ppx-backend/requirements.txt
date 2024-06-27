@@ -12,3 +12,4 @@ gensim
 nltk
 pyLDAvis
 scipy==1.12.0
+dash
