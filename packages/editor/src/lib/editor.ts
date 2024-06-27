@@ -8,7 +8,8 @@ import { Markdown } from 'tiptap-markdown'
 
 import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
 import Slash from './extensions/Slash/SlashExtension'
-import suggestion from './extensions/Slash/suggestion'
+import suggestion from './extensions/Hashtag/suggestion'
+import Hashtag from './extensions/Hashtag/index'
 
 export type ExtensionOptions = { placeholder?: string }
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
@@ -41,12 +42,15 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       }
     }
   }),
+  Hashtag.configure({
+    suggestion: suggestion
+  }),
   Placeholder.configure({
     placeholder: opts?.placeholder ?? "Write something or type '/' for options…"
   }),
   TaskItem,
-  TaskList,
-  Markdown
+  TaskList
+  // Markdown,
   // DragHandle,
   // Slash.configure({
   // 	suggestion

@@ -17,6 +17,7 @@
 
   let annotation: ResourceDataAnnotation | null = null
   let content = ''
+  let anchorText = ''
   let error = ''
   let url: URL
 
@@ -29,6 +30,7 @@
         content = (annotation.anchor?.data as AnnotationRangeData).content_plain || ''
       } else if (annotation.type === 'comment') {
         content = (annotation.data as AnnotationCommentData).content_plain || ''
+        anchorText = (annotation.anchor?.data as AnnotationRangeData).content_plain || ''
       }
 
       url = new URL(resource.metadata?.sourceURI || '')
@@ -63,6 +65,9 @@
           src={`https://www.google.com/s2/favicons?domain=${url.href}&sz=256`}
           alt={`${url.href} favicon`}
         />
+      {/if}
+      {#if anchorText}
+        <div class="anchor">{anchorText}</div>
       {/if}
       <div class="title">{content}</div>
       <div class="document-metadata">
@@ -129,5 +134,18 @@
       color: #281b53;
       opacity: 0.65;
     }
+  }
+
+  .anchor {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 1rem;
+    color: #281b53;
+    opacity: 0.65;
+    margin-top: 1rem;
+    border-left: 2px solid #8076a1;
+    padding-left: 0.75rem;
   }
 </style>

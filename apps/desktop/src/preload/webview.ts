@@ -585,7 +585,8 @@ window.addEventListener('DOMContentLoaded', async (_) => {
             url: window.location.href,
             content_plain: content.plain,
             content_html: content.html,
-            source: 'user'
+            source: 'user',
+            tags: content.tags
           }
         })
 

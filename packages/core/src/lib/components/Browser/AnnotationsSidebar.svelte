@@ -10,7 +10,7 @@
   import type { ResourceDataAnnotation, WebViewEventAnnotation } from '@horizon/types'
   import { createEventDispatcher } from 'svelte'
   import autosize from 'svelte-autosize'
-  import { Editor } from '@horizon/editor'
+  import { Editor, getEditorContentText } from '@horizon/editor'
   import { useToasts } from '../../service/toast'
   import { slide } from 'svelte/transition'
 
@@ -19,12 +19,16 @@
 
   const log = useLogScope('AnnotationsSidebar')
   const resourceManager = useResourceManager()
-  const dispatch = createEventDispatcher<{ create: string; reload: void }>()
+  const dispatch = createEventDispatcher<{
+    create: { text: string; html: string; tags: string[] }
+    reload: void
+  }>()
   const toast = useToasts()
 
   let loadingAnnotations = false
   let annotations: ResourceAnnotation[] = []
   let inputValue = ''
+  let tags: string[] = []
   let savingNotes = false
   let editorFocused = false
   let editor: Editor
@@ -79,7 +83,9 @@
 
   const handleNotesSubmit = () => {
     savingNotes = true
-    dispatch('create', inputValue)
+    const text = getEditorContentText(inputValue)
+
+    dispatch('create', { text, html: inputValue, tags })
     inputValue = ''
     editor.clear()
   }
@@ -89,6 +95,11 @@
       e.preventDefault()
       handleNotesSubmit()
     }
+  }
+
+  const handleHashtags = (e: CustomEvent<string[]>) => {
+    log.debug('tags', e.detail)
+    tags = e.detail
   }
 </script>
 
@@ -137,6 +148,7 @@
         bind:this={editor}
         bind:content={inputValue}
         bind:focused={editorFocused}
+        on:hashtags={handleHashtags}
         autofocus={false}
         placeholder="Jot down your thoughts…"
       />

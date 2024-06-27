@@ -45,6 +45,7 @@ export type AnnotationCommentData = {
   source: 'user' | 'inline_ai' | 'chat_ai'
   content_html?: string
   content_plain: string
+  tags?: string[]
 }
 
 // data stored for links

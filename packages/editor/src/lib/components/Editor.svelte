@@ -16,7 +16,7 @@
   export let autofocus: boolean = true
   export let focused = false
 
-  const dispatch = createEventDispatcher<{ update: string; submit: void }>()
+  const dispatch = createEventDispatcher<{ update: string; submit: void; hashtags: string[] }>()
 
   export const focus = () => {
     if ($editor) {
@@ -78,6 +78,29 @@
         // const oldContent = content
         content = html
         dispatch('update', content)
+
+        console.log(editor.getJSON())
+
+        // get all hashtag nodes
+        const hashtagNodes = editor.$node('hashtag')
+        console.log('hashtagNodes', hashtagNodes)
+
+        console.log('test', hashtagNodes?.node, hashtagNodes?.node.textContent)
+
+        const hashtags: string[] = []
+        editor.state.doc.descendants((node) => {
+          console.log('node', node)
+
+          if (node.type.name === 'hashtag') {
+            console.log('hashtag', node.attrs.id)
+            hashtags.push(node.attrs.id as string)
+          }
+        })
+
+        if (hashtags.length > 0) {
+          console.log('hashtags', hashtags)
+          dispatch('hashtags', hashtags)
+        }
       },
       onFocus: () => {
         focused = true

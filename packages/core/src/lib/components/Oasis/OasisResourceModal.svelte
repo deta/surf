@@ -10,8 +10,10 @@
   } from '../../service/resources'
   import {
     WebViewEventReceiveNames,
+    type AnnotationCommentData,
     type AnnotationRangeData,
     type DetectedWebApp,
+    type ResourceDataAnnotation,
     type WebViewEventAnnotation
   } from '@horizon/types'
   import { useLogScope } from '../../utils/log'
@@ -24,7 +26,6 @@
   import AnnotationItem from './AnnotationItem.svelte'
   import { useToasts } from '../../service/toast'
 
-
   export let resource: Resource
 
   let webview: WebviewWrapper
@@ -36,7 +37,6 @@
   const historyEntriesManager = new HistoryEntriesManager()
 
   const toast = useToasts()
-
 
   $: src = resource?.metadata?.sourceURI || 'https://example.com'
 
@@ -61,14 +61,13 @@
   let loadingAnnotations = true
   let annotations: ResourceAnnotation[] = []
 
-
   const loadAnnotations = async (resourceId: string) => {
     try {
       log.debug('Loading annotations', resourceId)
 
       loadingAnnotations = true
       annotations = await resourceManager.getAnnotationsForResource(resourceId)
-      
+
       log.debug('Annotations', annotations)
 
       await wait(500)
@@ -78,7 +77,6 @@
 
         const data = await annotation.getParsedData()
         log.debug('Annotation data', data)
-
 
         webview.sendEvent(WebViewEventReceiveNames.RestoreAnnotation, {
           id: annotation.id,
@@ -91,7 +89,6 @@
       loadingAnnotations = false
     }
   }
-
 
   const handleAppDetection = async (e: CustomEvent<DetectedWebApp>) => {
     try {
@@ -110,14 +107,14 @@
     webview.sendEvent(WebViewEventReceiveNames.ScrollToAnnotation, e.detail)
   }
 
-  const handleAnnotationDelete = async (e: CustomEvent<WebViewEventAnnotation>) => {
+  const handleAnnotationDelete = async (e: CustomEvent<string>) => {
     log.debug('Annotation delete', e.detail)
 
     const confirmed = window.confirm('Are you sure you want to delete the annotation?')
     if (!confirmed) return
 
-    log.debug('Deleting annotation', e.detail.id)
-    await resourceManager.deleteResource(e.detail.id)
+    log.debug('Deleting annotation', e.detail)
+    await resourceManager.deleteResource(e.detail)
 
     toast.success('Annotation deleted!')
 
@@ -132,6 +129,11 @@
 
     const url = annotationData.data.url ?? src
 
+    const hashtags = (annotationData.data as AnnotationCommentData)?.tags ?? []
+    if (hashtags.length > 0) {
+      log.debug('hashtags', hashtags)
+    }
+
     const annotationResource = await resourceManager.createResourceAnnotation(
       annotationData,
       { sourceURI: url },
@@ -140,7 +142,10 @@
         ResourceTag.canonicalURL(url),
 
         // link the annotation to the bookmarked resource
-        ResourceTag.annotates(resource.id)
+        ResourceTag.annotates(resource.id),
+
+        // link the annotation to the hashtags,
+        ...hashtags.map((tag) => ResourceTag.hashtag(tag))
       ]
     )
 
@@ -152,8 +157,59 @@
     webview.sendEvent(WebViewEventReceiveNames.RestoreAnnotation, {
       id: annotationResource.id,
       data: annotationData
-
     })
+  }
+
+  const handleAnnotationRemove = async (
+    e: CustomEvent<WebViewWrapperEvents['annotationRemove']>
+  ) => {
+    log.debug('Annotation removed', e.detail)
+
+    const annotationId = e.detail
+    annotations = annotations.filter((annotation) => annotation.id !== annotationId)
+
+    await resourceManager.deleteResource(annotationId)
+
+    toast.success('Annotation removed!')
+
+    webview.reload()
+  }
+
+  const handleAnnotationUpdate = async (
+    e: CustomEvent<WebViewWrapperEvents['annotationUpdate']>
+  ) => {
+    log.debug('Annotation updated', e.detail)
+
+    const annotationId = e.detail.id
+    const updates = e.detail.data
+
+    const annotationResource = annotations.find((annotation) => annotation.id === annotationId)
+    if (!annotationResource) {
+      log.error('Annotation not found', annotationId)
+      return
+    }
+
+    const annotationData = await annotationResource.getParsedData()
+
+    if (annotationData.type !== 'comment') {
+      return
+    }
+
+    const newData = {
+      ...annotationData,
+      data: {
+        ...annotationData.data,
+        ...updates
+      }
+    } as ResourceDataAnnotation
+
+    log.debug('Updating annotation', annotationId, newData)
+
+    await annotationResource.updateParsedData(newData)
+
+    // TODO update tags in backend!
+
+    toast.success('Annotation updated!')
   }
 
   const handleAnnotationClick = (e: CustomEvent<WebViewWrapperEvents['annotationClick']>) => {
@@ -175,9 +231,7 @@
     <div class="resource-details">
       <OasisResourceDetails {resource}>
         <ResourceOverlay caption="Click to open in new tab">
-
           <ResourcePreviewClean slot="content" showAnnotations={false} {resource} />
-
         </ResourceOverlay>
       </OasisResourceDetails>
     </div>
@@ -197,10 +251,10 @@
       partition="persist:horizon"
       {historyEntriesManager}
       on:detectedApp={handleAppDetection}
-
       on:annotate={handleWebViewAnnotation}
-
       on:annotationClick={handleAnnotationClick}
+      on:annotationRemove={handleAnnotationRemove}
+      on:annotationUpdate={handleAnnotationUpdate}
     />
 
     <div class="annotations-view">
@@ -210,11 +264,9 @@
             <AnnotationItem
               resource={annotation}
               active={annotation.id === activeAnnotation}
-
               background={false}
               on:scrollTo={handleAnnotationSelect}
               on:delete={handleAnnotationDelete}
-
             />
           {/each}
         </div>

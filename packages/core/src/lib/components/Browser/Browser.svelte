@@ -1446,7 +1446,12 @@
     */
   }
 
-  const saveTextFromPage = async (text: string, source?: AnnotationCommentData['source']) => {
+  const saveTextFromPage = async (
+    text: string,
+    html?: string,
+    tags?: string[],
+    source?: AnnotationCommentData['source']
+  ) => {
     if ($activeTab?.type !== 'page') return
 
     const url = $activeTabLocation ?? $activeTab?.initialLocation
@@ -1456,9 +1461,11 @@
       anchor: null,
       data: {
         url: url,
-        content: text,
+        content_plain: text,
+        content_html: html ?? text,
+        tags: tags ?? [],
         source: source
-      }
+      } as AnnotationCommentData
     } as ResourceDataAnnotation
 
     let bookmarkedResource = $activeTab.resourceBookmark
@@ -1473,7 +1480,8 @@
     log.debug('creating annotation', data)
     const annotation = await resourceManager.createResourceAnnotation(data, { sourceURI: url }, [
       ResourceTag.canonicalURL(url),
-      ResourceTag.annotates(bookmarkedResource)
+      ResourceTag.annotates(bookmarkedResource),
+      ...(tags?.map((tag) => ResourceTag.hashtag(tag)) ?? [])
     ])
 
     toasts.success('Saved to Oasis!')
@@ -1515,6 +1523,11 @@
 
     const url = annotationData?.data?.url ?? currentEntry?.url ?? tab.initialLocation
 
+    const hashtags = (annotationData.data as AnnotationCommentData)?.tags ?? []
+    if (hashtags.length > 0) {
+      log.debug('hashtags', hashtags)
+    }
+
     const annotationResource = await resourceManager.createResourceAnnotation(
       annotationData,
       { sourceURI: url },
@@ -1523,7 +1536,10 @@
         ResourceTag.canonicalURL(url),
 
         // link the annotation to the bookmarked resource
-        ResourceTag.annotates(bookmarkedResource)
+        ResourceTag.annotates(bookmarkedResource),
+
+        // add tags as hashtags
+        ...hashtags.map((tag) => ResourceTag.hashtag(tag))
       ]
     )
 
@@ -1637,10 +1653,12 @@
     $activeBrowserTab.sendWebviewEvent(WebViewEventReceiveNames.ScrollToAnnotation, e.detail)
   }
 
-  const handleAnnotationSidebarCreate = async (e: CustomEvent<string>) => {
+  const handleAnnotationSidebarCreate = async (
+    e: CustomEvent<{ text: string; html: string; tags: string[] }>
+  ) => {
     log.debug('Annotation sidebar create', e.detail)
 
-    const annotation = await saveTextFromPage(e.detail, 'user')
+    const annotation = await saveTextFromPage(e.detail.text, e.detail.html, e.detail.tags, 'user')
 
     log.debug('created annotation', annotation)
     annotationsSidebar.reload()
@@ -2036,7 +2054,7 @@
                       ? 'Open bookmark (⌘ + D)'
                       : 'Bookmark this page (⌘ + D)',
                     action: 'hover',
-                    position: 'bottom',
+                    position: 'left',
                     animation: 'fade',
                     delay: 500
                   }}
@@ -2321,7 +2339,7 @@
         on:navigate={(e) => {
           $browserTabs[$activeTabId].navigate(e.detail.url)
         }}
-        on:saveText={(e) => saveTextFromPage(e.detail, 'chat_ai')}
+        on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
         on:chat={() => handleChatSubmit($activeTabMagic)}
         on:prompt={handleMagicSidebarPromptSubmit}
       />

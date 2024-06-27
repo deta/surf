@@ -3,7 +3,6 @@
 
   import { createEventDispatcher, tick } from 'svelte'
   import { derived, writable } from 'svelte/store'
-  import autosize from 'svelte-autosize'
 
   import { Icon, IconConfirmation } from '@horizon/icons'
   import type { WebViewEventTransform } from '@horizon/types'
@@ -20,8 +19,8 @@
   let output = ''
   let inputValue = ''
   let running = false
-  let expandedInput = false
   let includePageContext = false
+  let tags: string[] = []
   let elem: HTMLDivElement
   let inputElem: HTMLInputElement | HTMLTextAreaElement
   let markerIcon: IconConfirmation
@@ -34,7 +33,7 @@
     transform: { query?: string; type: WebViewEventTransform['type']; includePageContext: boolean }
     copy: void
     highlight: void
-    comment: { plain: string; html: string }
+    comment: { plain: string; html: string; tags: string[] }
     link: void
     insert: string
   }>()
@@ -93,7 +92,6 @@
     running = false
     inputValue = ''
     output = ''
-    expandedInput = false
   }
 
   const handleAISubmit = () => {
@@ -141,7 +139,7 @@
 
     const html = inputValue
     const text = getEditorContentText(html)
-    dispatch('comment', { plain: text, html })
+    dispatch('comment', { plain: text, html, tags: tags })
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -174,6 +172,11 @@
     if (e.key.length === 1 || e.key === ' ' || e.key === 'Backspace') {
       e.stopImmediatePropagation()
     }
+  }
+
+  const handleHashtags = (e: CustomEvent<string[]>) => {
+    console.log('tags', e.detail)
+    tags = e.detail
   }
 </script>
 
@@ -255,6 +258,7 @@
         <Editor
           bind:content={inputValue}
           on:submit={handleComment}
+          on:hashtags={handleHashtags}
           placeholder="Jot down your thoughts…"
           autofocus
         />

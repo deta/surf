@@ -2250,7 +2250,7 @@
     "@tiptap/extension-strike" "^2.4.0"
     "@tiptap/extension-text" "^2.4.0"
 
-"@tiptap/suggestion@^2.1.13":
+"@tiptap/suggestion@^2.4.0":
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/@tiptap/suggestion/-/suggestion-2.4.0.tgz#1926cde5f197d116baf7794f55bd971245540e5c"
   integrity sha512-6dCkjbL8vIzcLWtS6RCBx0jlYPKf2Beuyq5nNLrDDZZuyJow5qJAY0eGu6Xomp9z0WDK/BYOxT4hHNoGMDkoAg==

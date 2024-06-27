@@ -64,6 +64,10 @@ export class ResourceTag {
   static annotates(resourceID: string) {
     return { name: ResourceTagsBuiltInKeys.ANNOTATES, value: resourceID }
   }
+
+  static hashtag(tag: string) {
+    return { name: ResourceTagsBuiltInKeys.HASHTAG, value: tag }
+  }
 }
 
 export const getPrimaryResourceType = (type: string) => {
@@ -665,6 +669,10 @@ export class ResourceManager {
 
   static SearchTagHostname(hostname: string): SFFSResourceTag {
     return { name: 'horizonId', value: hostname, op: 'suffix' }
+  }
+
+  static SearchTagHashtag(tag: string): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.HASHTAG, value: tag, op: 'eq' }
   }
 
   async createSpace(name: SpaceName) {

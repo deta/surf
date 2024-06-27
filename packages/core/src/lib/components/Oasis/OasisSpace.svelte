@@ -109,7 +109,7 @@
 
       searchValue.set('')
       searchResults.set([])
-      everythingContents.set(items)
+      everythingContents.set(items.reverse())
     } catch (error) {
       log.error('Error loading everything:', error)
     } finally {
@@ -148,15 +148,24 @@
   }
 
   const handleSearch = async (e: CustomEvent<string>) => {
-    const value = e.detail
+    let value = e.detail
 
     if (!value) {
       searchResults.set([])
       return
     }
 
+    const hashtagMatch = value.match(/#[a-zA-Z0-9]+/g)
+    const hashtags = hashtagMatch ? hashtagMatch.map((x) => x.slice(1)) : []
+
+    // if all words are hashtags, clear the search
+    if (hashtags.length === value.split(' ').length) {
+      value = ''
+    }
+
     const result = await resourceManager.searchResources(value, [
-      ResourceManager.SearchTagDeleted(false)
+      ResourceManager.SearchTagDeleted(false),
+      ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
     ])
 
     log.debug('searching all', result)

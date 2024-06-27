@@ -18,8 +18,8 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
-    "@horizon/icons": "*",
     "@horizon/eslint-config": "*",
+    "@horizon/icons": "*",
     "@horizon/typescript-config": "*",
     "@skilitics-public/two-fingers": "^2.1.0",
     "@sveltejs/vite-plugin-svelte": "^3.0.1",
@@ -32,7 +32,7 @@
     "@tiptap/extension-task-list": "^2.1.11",
     "@tiptap/pm": "^2.1.11",
     "@tiptap/starter-kit": "^2.1.12",
-    "@tiptap/suggestion": "^2.1.13",
+    "@tiptap/suggestion": "^2.4.0",
     "@tsconfig/svelte": "^5.0.2",
     "sass": "^1.70.0",
     "svelte": "^4.2.8",
