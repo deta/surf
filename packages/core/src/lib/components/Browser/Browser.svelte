@@ -15,6 +15,7 @@
   import { copyToClipboard } from '../../utils/clipboard'
   import { wait, writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
+  import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
 
   import DragDropList, {
     VerticalDropZone,
@@ -566,7 +567,7 @@
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
       handleCopyLocation()
     } else if (isModKeyPressed(e) && e.key === 't') {
-      createNewEmptyTab()
+      debouncedCreateNewEmptyTab()
     } else if (isModKeyAndKeyPressed(e, 'o')) {
       toggleOasis()
     } else if (isModKeyAndKeyPressed(e, 'w')) {
@@ -589,7 +590,7 @@
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       createOasisDiscoveryTab()
     } else if (e.ctrlKey && e.key === 'Tab') {
-      cycleActiveTab(e.shiftKey)
+      debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
       addressInputElem.focus()
       handleFocus()
@@ -636,6 +637,8 @@
     addressInputElem.focus()
     addressValue.set('')
   }
+
+  const debouncedCreateNewEmptyTab = useDebounce(createNewEmptyTab, 100)
 
   const createPageTab = async (url: string, active = true): Promise<Tab> => {
     log.debug('Creating new page tab')
@@ -749,33 +752,33 @@
   // }
 
   const cycleActiveTab = (previous: boolean) => {
-    console.log('Cycling active tab, previous direction:', previous)
-    /*
-    const tabsInView = $tabs.filter((tab) =>
-      $sidebarTab === 'active' ? !tab.archived : tab.archived
-    )
-    */
     if ($tabs.length === 0) {
       log.debug('No tabs in view')
       return
     }
-    const activeTabIndex = $tabs.findIndex((tab) => tab.id === $activeTabId)
+    let ordered = [
+      ...$unpinnedTabs.sort((a, b) => a.index - b.index),
+      ...$pinnedTabs.sort((a, b) => a.index - b.index)
+    ].filter((tab) => !tab.archived)
+
+    const activeTabIndex = ordered.findIndex((tab) => tab.id === $activeTabId)
     if (!previous) {
       const nextTabIndex = activeTabIndex + 1
-      if (nextTabIndex >= $tabs.length) {
-        activeTabId.set($tabs[0].id)
+      if (nextTabIndex >= ordered.length) {
+        activeTabId.set(ordered[0].id)
       } else {
-        activeTabId.set($tabs[nextTabIndex].id)
+        activeTabId.set(ordered[nextTabIndex].id)
       }
     } else {
       const previousTabIndex = activeTabIndex - 1
       if (previousTabIndex < 0) {
-        activeTabId.set($tabs[$tabs.length - 1].id)
+        activeTabId.set(ordered[ordered.length - 1].id)
       } else {
-        activeTabId.set($tabs[previousTabIndex].id)
+        activeTabId.set(ordered[previousTabIndex].id)
       }
     }
   }
+  const debouncedCycleActiveTab = useDebounce(cycleActiveTab, 100)
 
   const openUrlHandler = (url: string) => {
     log.debug('open url', url)
