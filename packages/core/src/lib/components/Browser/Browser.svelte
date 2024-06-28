@@ -579,6 +579,7 @@
       sidebarTab.set('active')
     } else if (isModKeyAndKeyPressed(e, 'h')) {
       showSidebar = !showSidebar
+      window.api.updateTrafficLightsVisibility(showSidebar)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       handleNewHorizon()
     } else if (isModKeyAndKeyPressed(e, 'r')) {
