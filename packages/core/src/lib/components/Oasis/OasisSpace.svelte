@@ -247,8 +247,8 @@
       e.preventDefault()
       handleCloseChat()
     } else if (e.key === ' ') {
-      e.preventDefault()
       if ($selectedItem) {
+        e.preventDefault()
         dispatch('open', $selectedItem)
       }
     }
