@@ -2202,7 +2202,11 @@
     </div>
   {/if}
 
-  <div class="browser-window-wrapper" class:hasNoTab={!$activeBrowserTab}>
+  <div
+    class="browser-window-wrapper"
+    class:hasNoTab={!$activeBrowserTab}
+    class:sidebarHidden={!showSidebar}
+  >
     {#if $sidebarTab === 'oasis'}
       <div class="browser-window active" style="--scaling: 1;">
         <OasisSpace
@@ -2449,6 +2453,10 @@
     &.hasNoTab {
       padding: 0.5rem;
       height: calc(100vh - 0.25rem);
+    }
+
+    &.sidebarHidden {
+      padding-left: 0.5rem;
     }
   }
 
