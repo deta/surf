@@ -5,6 +5,7 @@
   import * as d3 from 'd3'
   import { useLogScope } from '../../utils/log'
   import MiniBrowser from '@horizon/core/src/lib/components/Browser/MiniBrowser.svelte'
+  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
 
   export let resourceManager: ResourceManager
 
@@ -18,8 +19,6 @@
 
   const log = useLogScope('OasisDiscovery')
 
-  let tooltip: HTMLDivElement
-
   let ldaResults: HTMLIFrameElement
   let numTopics = 10
   let ldaLoading = false
@@ -31,8 +30,14 @@
   let bertLoading = false
   let topNWordsBert = 10
   let probThresholdBert = 0.3
+  let topicsHint = ''
   let bertData: any[] = []
   let bertDone = false
+
+  let hoverPreviewTop: number
+  let hoverPreviewLeft: number
+  let hoveredTopic: string
+  let hoveredResource = writable<Resource | undefined>(undefined)
   let clickedResource = writable<Resource | undefined>(undefined)
 
   const handleLdaSubmit = async (e: Event) => {
@@ -112,18 +117,22 @@
       .style('fill', (d: any) => stringToColor(d.name))
       .style('cursor', 'pointer')
 
-    const tooltip = d3.select('.tooltip')
     svg
       .selectAll('circle')
-      .on('mouseover', function (event: any, d: any) {
-        tooltip.transition().duration(200).style('opacity', 0.9)
-        tooltip
-          .html(`${d.name}`)
-          .style('left', event.pageX + 'px')
-          .style('top', event.pageY + 'px')
+      .on('mouseover', async function (event: any, d: any) {
+        hoverPreviewTop = event.pageY
+        hoverPreviewLeft = event.pageX + 20
+        hoveredTopic = d.name
+        const resource = await resourceManager.getResource(d.resource_id)
+        if (!resource) {
+          log.error('Resource with id ${d.resource_id} not found')
+          alert('Resource not found')
+          return
+        }
+        hoveredResource.set(resource)
       })
       .on('mouseout', function () {
-        tooltip.transition().duration(500).style('opacity', 0)
+        hoveredResource.set(undefined)
       })
       .on('click', async function (event: any, d: any) {
         const resource = await resourceManager.getResource(d.resource_id)
@@ -279,6 +288,9 @@
         exactTopicsBert = Math.floor(exactTopicsBert) + 1 // add 1 for outlier topic
         url += `&nr_topics=${exactTopicsBert}`
       }
+      if (topicsHint) {
+        url += `&topics_hint=${topicsHint}`
+      }
       const res = await fetch(url)
       bertData = await res.json()
       bertDone = true
@@ -303,9 +315,15 @@
       />
     </div>
   {/if}
+  {#if $hoveredResource}
+    <div class="overlay-hover" style="top: {hoverPreviewTop}px; left: {hoverPreviewLeft}px;">
+      <p>{hoveredTopic}</p>
+      <br />
+      <ResourcePreviewClean resource={$hoveredResource} />
+    </div>
+  {/if}
   <div class="content">
     <h1>Oasis Discovery</h1>
-    <div bind:this={tooltip} class="tooltip" style="opacity: 0"></div>
     <div class="backends">
       <div class="berttopic">
         <h2>BerTopic</h2>
@@ -340,8 +358,12 @@
             <span>{probThresholdBert}</span>
           </div>
           <div>
-            <label for="slider-bert-c">Exact Number of Topics:</label>
+            <label for="number-bert-a">Exact Number of Topics:</label>
             <input bind:value={exactTopicsBert} type="number" id="number-bert-a" min="2" />
+          </div>
+          <div style="display:flex;">
+            <label for="topics-bert">Topics Hint:</label>
+            <textarea bind:value={topicsHint} id="topics-bert" cols="100" />
           </div>
           <button type="submit">Run BertTopic</button>
         </form>
@@ -401,7 +423,7 @@
   .wrapper {
     width: 100%;
     height: 100%;
-    padding-top: 5rem;
+    padding-top: 1rem;
     display: flex;
     justify-content: center;
     background-color: white;
@@ -412,7 +434,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1rem;
     width: 90%;
     margin: 1rem;
     overflow: auto;
@@ -439,17 +461,6 @@
     width: 100px;
   }
 
-  .tooltip {
-    position: absolute;
-    text-align: center;
-    padding: 8px;
-    font: 12px sans-serif;
-    background: lightsteelblue;
-    border: 0;
-    border-radius: 4px;
-    pointer-events: none;
-  }
-
   iframe {
     width: 100%;
     height: 1350px;
@@ -469,5 +480,16 @@
     align-items: center;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 999;
+  }
+
+  .overlay-hover {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 998;
+    max-width: 500px;
+    max-height: 450px;
   }
 </style>
