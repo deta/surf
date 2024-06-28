@@ -109,7 +109,7 @@
 <div class="wrapper">
   <div class="header">
     <div class="title">
-      <Icon name="file-text-ai" size="28px" />
+      <Icon name="message" size="28px" />
       <h1>Page Chat</h1>
     </div>
 
@@ -136,7 +136,7 @@
             <div class="input">
               <div class="icon">
                 {#if response.role === 'user'}
-                  <Icon name="message" size="20px" />
+                  <Icon name="user" size="20px" />
                 {:else}
                   <Icon name="sparkles" size="20px" />
                 {/if}

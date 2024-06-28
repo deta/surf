@@ -2313,13 +2313,23 @@
 
     {#if $activeTabMagic}
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-      <div class="sidebar-magic-toggle" on:click={handleToggleMagicSidebar}>
+      <div
+        class="sidebar-magic-toggle"
+        on:click={handleToggleMagicSidebar}
+        use:tooltip={{
+          content: 'Toggle Page Chat',
+          action: 'hover',
+          position: 'left',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
         {#if $activeTabMagic.showSidebar}
           <Icon name="close" />
         {:else if $activeTabMagic.running}
           <Icon name="spinner" />
         {:else}
-          <Icon name="sparkles" />
+          <Icon name="message" />
         {/if}
       </div>
     {/if}
@@ -2328,11 +2338,18 @@
     <div
       class="sidebar-annotations-toggle"
       on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
+      use:tooltip={{
+        content: 'Toggle Annotations',
+        action: 'hover',
+        position: 'left',
+        animation: 'fade',
+        delay: 500
+      }}
     >
       {#if $showAnnotationsSidebar}
         <Icon name="close" />
       {:else}
-        <Icon name="message" />
+        <Icon name="marker" />
       {/if}
     </div>
   </div>

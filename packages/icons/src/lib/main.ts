@@ -62,6 +62,7 @@ import AlertTriangle from './Icons/AlertTriangle.svelte'
 import Settings from './Icons/Settings.svelte'
 import ChevronUp from './Icons/ChevronUp.svelte'
 import ChevronDown from './Icons/ChevronDown.svelte'
+import User from './Icons/User.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -128,7 +129,8 @@ export const icons = {
   'alert-triangle': AlertTriangle,
   settings: Settings,
   'chevron.up': ChevronUp,
-  'chevron.down': ChevronDown
+  'chevron.down': ChevronDown,
+  user: User
 }
 
 export type Icons = keyof typeof icons
@@ -196,5 +198,6 @@ export {
   AlertTriangle,
   Settings,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  User
 }
