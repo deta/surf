@@ -92,6 +92,11 @@ export function setupIpcHandlers() {
     window?.setFullScreen(!window.fullScreen)
   })
 
+  ipcMain.handle('update-traffic-lights', (_event, { visible }) => {
+    const window = getMainWindow()
+    window?.setWindowButtonVisibility(visible)
+  })
+
   ipcMain.on('store-api-key', (_event, key: string) => {
     updateUserConfig({ api_key: key })
   })

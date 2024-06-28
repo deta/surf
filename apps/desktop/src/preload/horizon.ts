@@ -69,6 +69,10 @@ const api = {
   quitApp: () => ipcRenderer.invoke('quit-app'),
   restartApp: () => ipcRenderer.invoke('restart-app'),
   toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
+  updateTrafficLightsVisibility: (visible: boolean) => {
+    console.log('updateTrafficLightsVisibility', visible)
+    ipcRenderer.invoke('update-traffic-lights', { visible })
+  },
 
   onFullscreenChange: (callback: any) => {
     fullscreenHandlers.push(callback)

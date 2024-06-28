@@ -15,6 +15,7 @@
   import { copyToClipboard } from '../../utils/clipboard'
   import { wait, writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
+  import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
 
   import DragDropList, {
     VerticalDropZone,
@@ -107,6 +108,7 @@
   let drawer: Drawer
   let addressBarFocus = false
   let showTabSearch = false
+  let showSidebar = true
   let annotationsSidebar: AnnotationsSidebar
 
   let telemetryAPIKey = ''
@@ -565,7 +567,7 @@
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
       handleCopyLocation()
     } else if (isModKeyPressed(e) && e.key === 't') {
-      createNewEmptyTab()
+      debouncedCreateNewEmptyTab()
     } else if (isModKeyAndKeyPressed(e, 'o')) {
       toggleOasis()
     } else if (isModKeyAndKeyPressed(e, 'w')) {
@@ -576,6 +578,9 @@
       handleBookmark()
     } else if (isModKeyAndKeyPressed(e, 'g')) {
       sidebarTab.set('active')
+    } else if (isModKeyAndKeyPressed(e, 'h')) {
+      showSidebar = !showSidebar
+      window.api.updateTrafficLightsVisibility(showSidebar)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       handleNewHorizon()
     } else if (isModKeyAndKeyPressed(e, 'r')) {
@@ -585,7 +590,7 @@
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       createOasisDiscoveryTab()
     } else if (e.ctrlKey && e.key === 'Tab') {
-      cycleActiveTab(e.shiftKey)
+      debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
       addressInputElem.focus()
       handleFocus()
@@ -632,6 +637,8 @@
     addressInputElem.focus()
     addressValue.set('')
   }
+
+  const debouncedCreateNewEmptyTab = useDebounce(createNewEmptyTab, 100)
 
   const createPageTab = async (url: string, active = true): Promise<Tab> => {
     log.debug('Creating new page tab')
@@ -745,33 +752,33 @@
   // }
 
   const cycleActiveTab = (previous: boolean) => {
-    console.log('Cycling active tab, previous direction:', previous)
-    /*
-    const tabsInView = $tabs.filter((tab) =>
-      $sidebarTab === 'active' ? !tab.archived : tab.archived
-    )
-    */
     if ($tabs.length === 0) {
       log.debug('No tabs in view')
       return
     }
-    const activeTabIndex = $tabs.findIndex((tab) => tab.id === $activeTabId)
+    let ordered = [
+      ...$unpinnedTabs.sort((a, b) => a.index - b.index),
+      ...$pinnedTabs.sort((a, b) => a.index - b.index)
+    ].filter((tab) => !tab.archived)
+
+    const activeTabIndex = ordered.findIndex((tab) => tab.id === $activeTabId)
     if (!previous) {
       const nextTabIndex = activeTabIndex + 1
-      if (nextTabIndex >= $tabs.length) {
-        activeTabId.set($tabs[0].id)
+      if (nextTabIndex >= ordered.length) {
+        activeTabId.set(ordered[0].id)
       } else {
-        activeTabId.set($tabs[nextTabIndex].id)
+        activeTabId.set(ordered[nextTabIndex].id)
       }
     } else {
       const previousTabIndex = activeTabIndex - 1
       if (previousTabIndex < 0) {
-        activeTabId.set($tabs[$tabs.length - 1].id)
+        activeTabId.set(ordered[ordered.length - 1].id)
       } else {
-        activeTabId.set($tabs[previousTabIndex].id)
+        activeTabId.set(ordered[previousTabIndex].id)
       }
     }
   }
+  const debouncedCycleActiveTab = useDebounce(cycleActiveTab, 100)
 
   const openUrlHandler = (url: string) => {
     log.debug('open url', url)
@@ -1916,10 +1923,11 @@
       on:activateTab={handleTabSelect}
     />
   {/if}
-  <div class="sidebar">
-    <div class="tab-bar-selector">
-      <div class="tab-selector" class:actions={$sidebarTab !== 'oasis'}>
-        <!-- <button
+  {#if showSidebar}
+    <div class="sidebar">
+      <div class="tab-bar-selector">
+        <div class="tab-selector" class:actions={$sidebarTab !== 'oasis'}>
+          <!-- <button
         on:click={() => ($sidebarTab = 'active')}
         class:active={$sidebarTab === 'active'}
         use:tooltip={{
@@ -1932,7 +1940,7 @@
       >
         <Icon name="list" />
       </button> -->
-        <!--
+          <!--
       <button
         on:click={() => ($sidebarTab = 'archive')}
         class:active={$sidebarTab === 'archive'}
@@ -1947,7 +1955,7 @@
         <Icon name="archive" />
       </button>
       -->
-        <!-- <button
+          <!-- <button
         on:click={() => {
           $sidebarTab = 'oasis'
           toggleOasis()
@@ -1963,120 +1971,120 @@
       >
         <Icon name="leave" />
       </button> -->
-        {#if $sidebarTab !== 'oasis'}
-          <div class="tabs-list">
-            <button
-              class="nav-button"
-              disabled={!canGoBack}
-              on:click={$activeBrowserTab?.goBack}
-              use:tooltip={{
-                content: 'Go Back',
-                action: 'hover',
-                position: 'bottom',
-                animation: 'fade',
-                delay: 500
-              }}
-            >
-              <Icon name="arrow.left" />
-            </button>
-            <button
-              class="nav-button"
-              disabled={!canGoForward}
-              on:click={$activeBrowserTab?.goForward}
-              use:tooltip={{
-                content: 'Go Forward',
-                action: 'hover',
-                position: 'bottom',
-                animation: 'fade',
-                delay: 500
-              }}
-            >
-              <Icon name="arrow.right" />
-            </button>
-            <button
-              class="nav-button"
-              on:click={$activeBrowserTab?.reload}
-              use:tooltip={{
-                content: 'Reload Page (⌘ + R)',
-                action: 'hover',
-                position: 'bottom',
-                animation: 'fade',
-                delay: 500
-              }}
-            >
-              <Icon name="reload" />
-            </button>
-          </div>
-        {:else if $sidebarTab === 'oasis'}
-          <div>
-            <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
-              <Icon name="chevron.left" />
-              <span class="label">Back to Tabs</span>
-            </button>
-          </div>
-        {/if}
-      </div>
-      <div
-        class="bar-wrapper"
-        aria-label="Collapse URL bar"
-        on:keydown={(e) => handleAddressBarKeyDown}
-        tabindex="0"
-        role="button"
-      >
-        <div class="address-bar-wrapper">
-          <div class="address-bar-content">
-            <div class="search">
-              <input
-                bind:this={addressInputElem}
-                disabled={$activeTab?.type !== 'page' &&
-                  $activeTab?.type !== 'chat' &&
-                  $activeTab?.type !== 'empty'}
-                bind:value={$addressValue}
-                on:blur={handleBlur}
-                on:focus={handleFocus}
-                type="text"
-                placeholder={$activeTab?.type === 'page'
-                  ? 'Search or Enter URL'
-                  : $activeTab?.type === 'chat'
-                    ? 'Chat Title'
-                    : 'Search or Enter URL'}
-              />
+          {#if $sidebarTab !== 'oasis'}
+            <div class="tabs-list">
+              <button
+                class="nav-button"
+                disabled={!canGoBack}
+                on:click={$activeBrowserTab?.goBack}
+                use:tooltip={{
+                  content: 'Go Back',
+                  action: 'hover',
+                  position: 'bottom',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                <Icon name="arrow.left" />
+              </button>
+              <button
+                class="nav-button"
+                disabled={!canGoForward}
+                on:click={$activeBrowserTab?.goForward}
+                use:tooltip={{
+                  content: 'Go Forward',
+                  action: 'hover',
+                  position: 'bottom',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                <Icon name="arrow.right" />
+              </button>
+              <button
+                class="nav-button"
+                on:click={$activeBrowserTab?.reload}
+                use:tooltip={{
+                  content: 'Reload Page (⌘ + R)',
+                  action: 'hover',
+                  position: 'bottom',
+                  animation: 'fade',
+                  delay: 500
+                }}
+              >
+                <Icon name="reload" />
+              </button>
             </div>
+          {:else if $sidebarTab === 'oasis'}
+            <div>
+              <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
+                <Icon name="chevron.left" />
+                <span class="label">Back to Tabs</span>
+              </button>
+            </div>
+          {/if}
+        </div>
+        <div
+          class="bar-wrapper"
+          aria-label="Collapse URL bar"
+          on:keydown={(e) => handleAddressBarKeyDown}
+          tabindex="0"
+          role="button"
+        >
+          <div class="address-bar-wrapper">
+            <div class="address-bar-content">
+              <div class="search">
+                <input
+                  bind:this={addressInputElem}
+                  disabled={$activeTab?.type !== 'page' &&
+                    $activeTab?.type !== 'chat' &&
+                    $activeTab?.type !== 'empty'}
+                  bind:value={$addressValue}
+                  on:blur={handleBlur}
+                  on:focus={handleFocus}
+                  type="text"
+                  placeholder={$activeTab?.type === 'page'
+                    ? 'Search or Enter URL'
+                    : $activeTab?.type === 'chat'
+                      ? 'Chat Title'
+                      : 'Search or Enter URL'}
+                />
+              </div>
 
-            {#if $activeTab?.type === 'page'}
-              {#key $activeTab.resourceBookmark}
-                <button
-                  on:click={handleBookmark}
-                  use:tooltip={{
-                    content: $activeTab?.resourceBookmark
-                      ? 'Open bookmark (⌘ + D)'
-                      : 'Bookmark this page (⌘ + D)',
-                    action: 'hover',
-                    position: 'left',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  {#if $bookmarkingInProgress}
-                    <Icon name="spinner" />
-                  {:else if $bookmarkingSuccess}
-                    <Icon name="check" />
-                  {:else if $activeTab?.resourceBookmark}
-                    <Icon name="bookmarkFilled" />
-                  {:else}
-                    <Icon name="leave" />
-                  {/if}
-                </button>
-              {/key}
-            {/if}
+              {#if $activeTab?.type === 'page'}
+                {#key $activeTab.resourceBookmark}
+                  <button
+                    on:click={handleBookmark}
+                    use:tooltip={{
+                      content: $activeTab?.resourceBookmark
+                        ? 'Open bookmark (⌘ + D)'
+                        : 'Bookmark this page (⌘ + D)',
+                      action: 'hover',
+                      position: 'left',
+                      animation: 'fade',
+                      delay: 500
+                    }}
+                  >
+                    {#if $bookmarkingInProgress}
+                      <Icon name="spinner" />
+                    {:else if $bookmarkingSuccess}
+                      <Icon name="check" />
+                    {:else if $activeTab?.resourceBookmark}
+                      <Icon name="bookmarkFilled" />
+                    {:else}
+                      <Icon name="leave" />
+                    {/if}
+                  </button>
+                {/key}
+              {/if}
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    {#if $sidebarTab !== 'oasis'}
-      <div class="tabs">
-        <!-- {#each $unpinnedTabs as tab (tab.id)}
+      {#if $sidebarTab !== 'oasis'}
+        <div class="tabs">
+          <!-- {#each $unpinnedTabs as tab (tab.id)}
           {#if tab.type === 'chat'}
             <TabItem
               {tab}
@@ -2090,78 +2098,78 @@
           {/if}
         {/each} -->
 
-        <!-- <div class="divider"></div> -->
+          <!-- <div class="divider"></div> -->
 
-        <div class="unpinned-tabs-wrapper">
-          <DragDropList
-            id="tabs"
-            type={VerticalDropZone}
-            itemSize={48}
-            itemCount={$unpinnedTabs.length}
-            on:drop={async (event) => {
-              onDrop(event, 'unpin')
-            }}
-            let:index
-          >
-            <TabItem
-              tab={$unpinnedTabs[index]}
-              {activeTabId}
-              {deleteTab}
-              {unarchiveTab}
-              pinned={false}
-              on:select={handleTabSelect}
-              on:remove-from-sidebar={handleRemoveFromSidebar}
-            />
-          </DragDropList>
-        </div>
-      </div>
-      <div class="pinned-tabs-wrapper">
-        <DragDropList
-          id="pinned-tabs"
-          type={HorizontalCenterDropZone}
-          itemSize={$pinnedTabs.length === 0 ? 200 : 54}
-          itemCount={$pinnedTabs.length || 1}
-          on:drop={async (event) => {
-            onDrop(event, 'pin')
-          }}
-          let:index
-        >
-          {#if $pinnedTabs.length === 0}
-            <div class="description-text">Drop Tabs here to pin them.</div>
-          {:else}
-            <!-- The key block is required for the tab item to properly re-render and prevent data missmatches -->
-            {#key $pinnedTabs[index]}
+          <div class="unpinned-tabs-wrapper">
+            <DragDropList
+              id="tabs"
+              type={VerticalDropZone}
+              itemSize={48}
+              itemCount={$unpinnedTabs.length}
+              on:drop={async (event) => {
+                onDrop(event, 'unpin')
+              }}
+              let:index
+            >
               <TabItem
-                tab={$pinnedTabs[index]}
+                tab={$unpinnedTabs[index]}
                 {activeTabId}
                 {deleteTab}
                 {unarchiveTab}
-                pinned={true}
+                pinned={false}
                 on:select={handleTabSelect}
                 on:remove-from-sidebar={handleRemoveFromSidebar}
               />
-            {/key}
-          {/if}
-        </DragDropList>
-      </div>
+            </DragDropList>
+          </div>
+        </div>
+        <div class="pinned-tabs-wrapper">
+          <DragDropList
+            id="pinned-tabs"
+            type={HorizontalCenterDropZone}
+            itemSize={$pinnedTabs.length === 0 ? 200 : 54}
+            itemCount={$pinnedTabs.length || 1}
+            on:drop={async (event) => {
+              onDrop(event, 'pin')
+            }}
+            let:index
+          >
+            {#if $pinnedTabs.length === 0}
+              <div class="description-text">Drop Tabs here to pin them.</div>
+            {:else}
+              <!-- The key block is required for the tab item to properly re-render and prevent data missmatches -->
+              {#key $pinnedTabs[index]}
+                <TabItem
+                  tab={$pinnedTabs[index]}
+                  {activeTabId}
+                  {deleteTab}
+                  {unarchiveTab}
+                  pinned={true}
+                  on:select={handleTabSelect}
+                  on:remove-from-sidebar={handleRemoveFromSidebar}
+                />
+              {/key}
+            {/if}
+          </DragDropList>
+        </div>
 
-      <div class="actions">
-        <button
-          on:click={() => {
-            $sidebarTab = 'oasis'
-            toggleOasis()
-          }}
-          use:tooltip={{
-            content: 'Open Oasis (⌘ + O)',
-            action: 'hover',
-            position: 'top',
-            animation: 'fade',
-            delay: 500
-          }}
-        >
-          <Icon name="leave" />
-        </button>
-        <!--
+        <div class="actions">
+          <button
+            on:click={() => {
+              $sidebarTab = 'oasis'
+              toggleOasis()
+            }}
+            use:tooltip={{
+              content: 'Open Oasis (⌘ + O)',
+              action: 'hover',
+              position: 'top',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            <Icon name="leave" />
+          </button>
+          <!--
         <button
           on:click|preventDefault={handleNewHorizon}
           use:tooltip={{
@@ -2175,25 +2183,30 @@
           <Icon name="layout-grid-add" />
         </button>
         -->
-        <button
-          on:click|preventDefault={() => createNewEmptyTab()}
-          use:tooltip={{
-            content: 'New Tab (⌘ + T)',
-            action: 'hover',
-            position: 'top',
-            animation: 'fade',
-            delay: 500
-          }}
-        >
-          <Icon name="add" />
-        </button>
-      </div>
-    {:else}
-      <OasisSidebar on:createTab={handleCreateTabFromOasisSidebar} />
-    {/if}
-  </div>
+          <button
+            on:click|preventDefault={() => createNewEmptyTab()}
+            use:tooltip={{
+              content: 'New Tab (⌘ + T)',
+              action: 'hover',
+              position: 'top',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            <Icon name="add" />
+          </button>
+        </div>
+      {:else}
+        <OasisSidebar on:createTab={handleCreateTabFromOasisSidebar} />
+      {/if}
+    </div>
+  {/if}
 
-  <div class="browser-window-wrapper" class:hasNoTab={!$activeBrowserTab}>
+  <div
+    class="browser-window-wrapper"
+    class:hasNoTab={!$activeBrowserTab}
+    class:sidebarHidden={!showSidebar}
+  >
     {#if $sidebarTab === 'oasis'}
       <div class="browser-window active" style="--scaling: 1;">
         <OasisSpace
@@ -2440,6 +2453,10 @@
     &.hasNoTab {
       padding: 0.5rem;
       height: calc(100vh - 0.25rem);
+    }
+
+    &.sidebarHidden {
+      padding-left: 0.5rem;
     }
   }
 
