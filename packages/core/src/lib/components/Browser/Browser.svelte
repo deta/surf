@@ -157,6 +157,7 @@
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
   const showAnnotationsSidebar = writable(false)
+  const activeTabsHistory = writable<string[]>([])
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -206,8 +207,10 @@
 
   $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
     log.debug('Active tab is not in view, resetting')
-    resetActiveTab()
+    makePreviousTabActive()
   }
+
+  $: log.debug('xx active tabs history', $activeTabsHistory)
 
   activeTab.subscribe((tab) => {
     if (!tab) return
@@ -246,9 +249,9 @@
     }
 
     if (tab === 'archive' && !$activeTab?.archived) {
-      activeTabId.set(tabsInView[0].id)
+      makeTabActive(tabsInView[0].id)
     } else if (tab === 'active' && $activeTab?.archived) {
-      activeTabId.set(tabsInView[0].id)
+      makeTabActive(tabsInView[0].id)
     }
   })
 
@@ -275,18 +278,34 @@
     return $spaces.find((space) => space.id === id)
   }
 
-  const resetActiveTab = () => {
-    const tabsInView = $tabs.filter((tab) =>
-      $sidebarTab === 'active' ? !tab.archived : tab.archived
-    )
-    if (tabsInView.length === 0) {
+  const makeTabActive = (tabId: string) => {
+    activeTabId.set(tabId)
+    addToActiveTabsHistory(tabId)
+  }
+
+  const makePreviousTabActive = (currentIndex?: number) => {
+    if ($activeTabs.length === 0) {
       log.debug('No tabs in view')
-      activeTabId.set('')
       return
     }
-    const newActiveTabId = tabsInView[tabsInView.length - 1]?.id
-    log.debug('Resetting active tab', newActiveTabId)
-    activeTabId.set(newActiveTabId)
+
+    const previousTab = $activeTabsHistory[$activeTabsHistory.length - 1]
+    const nextTabIndex = currentIndex
+      ? currentIndex + 1
+      : $activeTabs.findIndex((tab) => tab.id === $activeTabId)
+
+    log.debug('xx Previous tab', previousTab, 'Next tab index', nextTabIndex, $activeTabsHistory)
+
+    if (previousTab) {
+      makeTabActive(previousTab)
+    } else if (nextTabIndex >= $activeTabs.length && $activeTabs[0]) {
+      makeTabActive($activeTabs[0].id)
+    } else if ($activeTabs[nextTabIndex]) {
+      makeTabActive($activeTabs[nextTabIndex].id)
+    } else {
+      // go to last tab
+      makeTabActive($unpinnedTabs[$unpinnedTabs.length - 1].id)
+    }
   }
 
   const createTab = async <T extends Tab>(
@@ -311,12 +330,17 @@
       return
     }
 
+    const activeTabIndex = $activeTabs.findIndex((tab) => tab.id === tabId)
+
     updateTab(tabId, { archived: true })
+
+    // remove tab from active tabs history
+    activeTabsHistory.update((history) => history.filter((id) => id !== tabId))
 
     await tick()
 
     if ($activeTabId === tabId) {
-      resetActiveTab()
+      makePreviousTabActive(activeTabIndex)
     }
   }
 
@@ -337,7 +361,7 @@
     await tick()
 
     setTimeout(() => {
-      activeTabId.set(tabId)
+      makeTabActive(tabId)
     }, 50)
   }
 
@@ -348,10 +372,15 @@
       return
     }
 
+    const activeTabIndex = $activeTabs.findIndex((tab) => tab.id === tabId)
+
     tabs.update((tabs) => tabs.filter((tab) => tab.id !== tabId))
+    activeTabsHistory.update((history) => history.filter((id) => id !== tabId))
+
+    await tick()
 
     if ($activeTabId === tabId) {
-      resetActiveTab()
+      makePreviousTabActive(activeTabIndex)
     }
 
     await tabsDB.delete(tabId)
@@ -624,7 +653,7 @@
       type: 'horizon'
     })
 
-    activeTabId.set(newTab.id)
+    makeTabActive(newTab.id)
     addressValue.set(newHorizon.data.name)
   }
 
@@ -632,7 +661,7 @@
     log.debug('Creating new tab')
 
     const newTab = await createTab<TabEmpty>({ title: 'New Tab', icon: '', type: 'empty' })
-    activeTabId.set(newTab.id)
+    makeTabActive(newTab.id)
 
     addressInputElem.focus()
     addressValue.set('')
@@ -654,7 +683,7 @@
     })
 
     if (active) {
-      activeTabId.set(newTab.id)
+      makeTabActive(newTab.id)
     }
 
     return newTab
@@ -665,7 +694,7 @@
     const newTab = await createTab<TabChat>({ title: query, icon: '', type: 'chat', query: query })
 
     if (active) {
-      activeTabId.set(newTab.id)
+      makeTabActive(newTab.id)
     }
   }
 
@@ -679,7 +708,7 @@
       pinned: false
     })
 
-    activeTabId.set(newTab.id)
+    makeTabActive(newTab.id)
   }
 
   const createOasisDiscoveryTab = async () => {
@@ -689,7 +718,7 @@
       icon: '',
       type: 'oasis-discovery'
     })
-    activeTabId.set(newTab.id)
+    makeTabActive(newTab.id)
   }
 
   const handleNewTab = (e: CustomEvent<NewTabEvent>) => {
@@ -765,16 +794,16 @@
     if (!previous) {
       const nextTabIndex = activeTabIndex + 1
       if (nextTabIndex >= ordered.length) {
-        activeTabId.set(ordered[0].id)
+        makeTabActive(ordered[0].id)
       } else {
-        activeTabId.set(ordered[nextTabIndex].id)
+        makeTabActive(ordered[nextTabIndex].id)
       }
     } else {
       const previousTabIndex = activeTabIndex - 1
       if (previousTabIndex < 0) {
-        activeTabId.set(ordered[ordered.length - 1].id)
+        makeTabActive(ordered[ordered.length - 1].id)
       } else {
-        activeTabId.set(ordered[previousTabIndex].id)
+        makeTabActive(ordered[previousTabIndex].id)
       }
     }
   }
@@ -796,9 +825,22 @@
     })
   }
 
-  const handleTabSelect = (event) => {
-    console.log('Active Tab ID:', event.detail)
-    activeTabId.set(event.detail)
+  const addToActiveTabsHistory = (tabId: string) => {
+    activeTabsHistory.update((history) => {
+      if (history[history.length - 1] !== tabId) {
+        // remove tab from history if it already exists and add it to the end
+        return [...history.filter((id) => id !== tabId), tabId]
+      }
+
+      return history
+    })
+  }
+
+  const handleTabSelect = (event: CustomEvent<string>) => {
+    const newId = event.detail
+    log.debug('Active Tab ID:', newId)
+
+    makeTabActive(newId)
   }
 
   async function bookmarkPage(tab: TabPage) {
@@ -1743,7 +1785,7 @@
     if (activeTabs.length === 0) {
       createNewEmptyTab()
     } else if (!$activeTabId) {
-      activeTabId.set(activeTabs[activeTabs.length - 1].id)
+      makeTabActive(activeTabs[activeTabs.length - 1].id)
     }
 
     // activeTabs.forEach((tab, index) => {
@@ -2315,47 +2357,49 @@
       </div>
     {/if}
 
-    {#if $activeTabMagic}
+    {#if $sidebarTab === 'active' && $activeTab?.type === 'page'}
+      {#if $activeTabMagic}
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <div
+          class="sidebar-magic-toggle"
+          on:click={handleToggleMagicSidebar}
+          use:tooltip={{
+            content: 'Toggle Page Chat',
+            action: 'hover',
+            position: 'left',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
+          {#if $activeTabMagic.showSidebar}
+            <Icon name="close" />
+          {:else if $activeTabMagic.running}
+            <Icon name="spinner" />
+          {:else}
+            <Icon name="message" />
+          {/if}
+        </div>
+      {/if}
+
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
       <div
-        class="sidebar-magic-toggle"
-        on:click={handleToggleMagicSidebar}
+        class="sidebar-annotations-toggle"
+        on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
         use:tooltip={{
-          content: 'Toggle Page Chat',
+          content: 'Toggle Annotations',
           action: 'hover',
           position: 'left',
           animation: 'fade',
           delay: 500
         }}
       >
-        {#if $activeTabMagic.showSidebar}
+        {#if $showAnnotationsSidebar}
           <Icon name="close" />
-        {:else if $activeTabMagic.running}
-          <Icon name="spinner" />
         {:else}
-          <Icon name="message" />
+          <Icon name="marker" />
         {/if}
       </div>
     {/if}
-
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div
-      class="sidebar-annotations-toggle"
-      on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
-      use:tooltip={{
-        content: 'Toggle Annotations',
-        action: 'hover',
-        position: 'left',
-        animation: 'fade',
-        delay: 500
-      }}
-    >
-      {#if $showAnnotationsSidebar}
-        <Icon name="close" />
-      {:else}
-        <Icon name="marker" />
-      {/if}
-    </div>
   </div>
 
   {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
