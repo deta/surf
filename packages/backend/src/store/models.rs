@@ -192,6 +192,7 @@ pub enum ResourceTagFilterOp {
     Ne,
     Prefix,
     Suffix,
+    NotExists,
 }
 
 impl Default for ResourceTagFilterOp {
@@ -227,6 +228,12 @@ impl ResourceTagFilter {
             ResourceTagFilterOp::Suffix => (
                 format!("tag_name = ?{} AND tag_value LIKE ?{}", i1, i2),
                 format!("%{}", self.tag_value),
+            ),
+            ResourceTagFilterOp::NotExists => (
+                // TODO: better support for not exists
+                // currently doing this as indices are supposed to be incremented in pairs
+                format!("resource_id NOT IN (SELECT resource_id FROM resource_tags WHERE tag_name = ?{} AND tag_name = ?{})", i1, i2),
+                self.tag_name.clone(),
             ),
         }
     }

@@ -1676,6 +1676,11 @@ mod tests {
             },
             ResourceTagFilter {
                 tag_name: "tag4".to_string(),
+                tag_value: "".to_string(),
+                op: ResourceTagFilterOp::NotExists,
+            },
+            ResourceTagFilter {
+                tag_name: "tag5".to_string(),
                 tag_value: "value".to_string(),
                 op: ResourceTagFilterOp::Suffix,
             },
@@ -1683,21 +1688,27 @@ mod tests {
         let (query, params) = Database::list_resource_ids_by_tags_query(&tags, 0);
         assert_eq!(
             query,
-            "SELECT resource_id FROM resource_tags WHERE (tag_name = ?1 AND tag_value = ?2) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?3 AND tag_value != ?4) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?5 AND tag_value LIKE ?6) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?7 AND tag_value LIKE ?8)"
+            "SELECT resource_id FROM resource_tags WHERE (tag_name = ?1 AND tag_value = ?2) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?3 AND tag_value != ?4) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?5 AND tag_value LIKE ?6) INTERSECT SELECT resource_id FROM resource_tags WHERE (resource_id NOT IN (SELECT resource_id FROM resource_tags WHERE tag_name = ?7 AND tag_name = ?8)) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?9 AND tag_value LIKE ?10)"
         );
         assert_eq!(
             params,
-            vec!["tag1", "value1", "tag2", "value2", "tag3", "value%", "tag4", "%value"]
+            vec![
+                "tag1", "value1", "tag2", "value2", "tag3", "value%", "tag4", "tag4", "tag5",
+                "%value"
+            ]
         );
 
         let (query, params) = Database::list_resource_ids_by_tags_query(&tags, 2);
         assert_eq!(
             query,
-            "SELECT resource_id FROM resource_tags WHERE (tag_name = ?3 AND tag_value = ?4) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?5 AND tag_value != ?6) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?7 AND tag_value LIKE ?8) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?9 AND tag_value LIKE ?10)"
+            "SELECT resource_id FROM resource_tags WHERE (tag_name = ?3 AND tag_value = ?4) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?5 AND tag_value != ?6) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?7 AND tag_value LIKE ?8) INTERSECT SELECT resource_id FROM resource_tags WHERE (resource_id NOT IN (SELECT resource_id FROM resource_tags WHERE tag_name = ?9 AND tag_name = ?10)) INTERSECT SELECT resource_id FROM resource_tags WHERE (tag_name = ?11 AND tag_value LIKE ?12)"
         );
         assert_eq!(
             params,
-            vec!["tag1", "value1", "tag2", "value2", "tag3", "value%", "tag4", "%value"]
+            vec![
+                "tag1", "value1", "tag2", "value2", "tag3", "value%", "tag4", "tag4", "tag5",
+                "%value"
+            ]
         );
     }
 }
