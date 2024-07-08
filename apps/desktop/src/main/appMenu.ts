@@ -111,8 +111,8 @@ const template = [
   {
     label: 'View',
     submenu: [
-      { role: 'reload' },
-      { role: 'forceReload' },
+      { role: 'reload', accelerator: 'CmdOrCtrl+Alt+R' },
+      { role: 'forceReload', accelerator: 'CmdOrCtrl+Alt+Shift+R' },
       { role: 'toggleDevTools' },
       { type: 'separator' },
       { role: 'resetZoom' },
