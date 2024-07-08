@@ -9,6 +9,7 @@
   import OasisResourceModal from './OasisResourceModal.svelte'
 
   export let resourceId: string
+  export let active: boolean = true
 
   const log = useLogScope('OasisResourceModalWrapper')
   const resourceManager = useResourceManager()
@@ -35,6 +36,6 @@
 
 <div class="modal">
   {#if $resource}
-    <OasisResourceModal resource={$resource} on:close on:new-tab />
+    <OasisResourceModal resource={$resource} {active} on:close on:new-tab />
   {/if}
 </div>

@@ -1785,14 +1785,6 @@
     openResourceDetailsModal(id)
   }
 
-  const handleSpaceItemClick = (e: CustomEvent<string>) => {
-    const resourceId = e.detail
-
-    log.debug('space item click', resourceId)
-
-    openResourceDetailsModal(resourceId)
-  }
-
   const handleAnnotationScrollTo = (e: CustomEvent<WebViewEventAnnotation>) => {
     log.debug('Annotation scroll to', e.detail)
     $activeBrowserTab.sendWebviewEvent(WebViewEventReceiveNames.ScrollToAnnotation, e.detail)
@@ -2652,9 +2644,9 @@
         <OasisSpace
           spaceId={$selectedSpace}
           active
-          on:open={handleSpaceItemClick}
           on:create-resource-from-oasis={handeCreateResourceFromOasis}
           on:deleted={handleDeletedSpace}
+          on:new-tab={handleNewTab}
         />
       </div>
     {/if}
@@ -2735,9 +2727,9 @@
             spaceId={tab.spaceId}
             active={$activeTabId === tab.id}
             openedMiniBrowser={$showResourceDetails && !!$resourceDetailsModalSelected}
-            on:open={handleSpaceItemClick}
             on:create-resource-from-oasis={handeCreateResourceFromOasis}
             on:deleted={handleDeletedSpace}
+            on:new-tab={handleNewTab}
           />
         {:else}
           <BrowserHomescreen

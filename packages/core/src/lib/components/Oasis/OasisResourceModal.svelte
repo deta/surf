@@ -29,8 +29,10 @@
   import { WebParser } from '@horizon/web-parser'
   import { getPrompt, PromptIDs } from '../../service/prompts'
   import { handleInlineAI } from '../../service/ai'
+  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
 
   export let resource: Resource
+  export let active: boolean = true
 
   let webview: WebviewWrapper
   let activeAnnotation = ''
@@ -52,18 +54,16 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
+    if (!active) {
+      return
+    }
+
     if (event.key === 'Escape') {
       close()
+    } else if (isModKeyAndKeyPressed(event, 'Enter')) {
+      dispatch('new-tab', { url: src, active: event.shiftKey })
     }
   }
-
-  onMount(() => {
-    window.addEventListener('keydown', handleKeydown)
-  })
-
-  onDestroy(() => {
-    window.removeEventListener('keydown', handleKeydown)
-  })
 
   let loadingAnnotations = true
   let annotations: ResourceAnnotation[] = []
@@ -253,6 +253,13 @@
     dispatch('new-tab', e.detail)
   }
 
+  const handleWebviewNewWindow = async (e: CustomEvent<Electron.HandlerDetails>) => {
+    const disposition = e.detail.disposition
+    if (disposition === 'new-window') return
+
+    dispatch('new-tab', { url: e.detail.url, active: disposition === 'foreground-tab' })
+  }
+
   onMount(async () => {
     log.debug('Resource modal mounted', resource)
 
@@ -287,6 +294,8 @@
   })
 </script>
 
+<svelte:window on:keydown={handleKeydown} />
+
 <div class="mini-browser-wrapper">
   <div class="close-hitarea" on:click={close} aria-hidden="true">
     <span class="label">Click or ESC to close</span>
@@ -320,6 +329,7 @@
       on:annotationRemove={handleAnnotationRemove}
       on:annotationUpdate={handleAnnotationUpdate}
       on:transform={handleWebviewTransform}
+      on:newWindowWebview={handleWebviewNewWindow}
     />
 
     <div class="annotations-view">

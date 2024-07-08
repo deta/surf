@@ -44,6 +44,8 @@
   import { summarizeText } from '../../service/ai'
   import type { ResourceContent } from '@horizon/web-parser'
   import { checkIfYoutubeUrl } from '../../utils/url'
+  import OasisResourceModalWrapper from './OasisResourceModalWrapper.svelte'
+  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
 
   export let spaceId: string
   export let active: boolean = false
@@ -57,6 +59,10 @@
   const dispatch = createEventDispatcher<{
     open: string
     'create-resource-from-oasis': string
+    'new-tab': {
+      url: string
+      active: boolean
+    }
     deleted: string
   }>()
   const toasts = useToasts()
@@ -75,6 +81,8 @@
   const loadingContents = writable(false)
   const loadingSpaceSources = writable(false)
   const space = writable<Space | null>(null)
+  const showResourceDetails = writable(false)
+  const resourceDetailsModalSelected = writable<string | null>(null)
 
   const REFRESH_SPACE_SOURCES_AFTER = 15 * 60 * 1000 // 15 minutes
 
@@ -573,7 +581,7 @@
     selectedItem.set(e.detail)
   }
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = async (e: KeyboardEvent) => {
     if (!active) {
       return
     }
@@ -584,7 +592,19 @@
       handleCloseChat()
     } else if (e.key === ' ' && $selectedItem && !openedMiniBrowser) {
       e.preventDefault()
-      dispatch('open', $selectedItem)
+      openResourceDetailsModal($selectedItem)
+    } else if (isModKeyAndKeyPressed(e, 'Enter')) {
+      if ($selectedItem) {
+        e.preventDefault()
+
+        const resource = await resourceManager.getResource($selectedItem)
+        if (!resource) return
+
+        const url = resource.metadata?.sourceURI
+        if (!url) return
+
+        dispatch('new-tab', { url: url, active: e.shiftKey })
+      }
     }
   }
 
@@ -691,9 +711,32 @@
   const handleLoadSpace = () => {
     loadSpaceContents(spaceId)
   }
+
+  const openResourceDetailsModal = (resourceId: string) => {
+    resourceDetailsModalSelected.set(resourceId)
+    showResourceDetails.set(true)
+  }
+
+  const closeResourceDetailsModal = () => {
+    showResourceDetails.set(false)
+    resourceDetailsModalSelected.set(null)
+  }
+
+  const handleOpen = (e: CustomEvent<string>) => {
+    openResourceDetailsModal(e.detail)
+  }
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
+
+{#if $showResourceDetails && $resourceDetailsModalSelected}
+  <OasisResourceModalWrapper
+    resourceId={$resourceDetailsModalSelected}
+    {active}
+    on:close={() => closeResourceDetailsModal()}
+    on:new-tab
+  />
+{/if}
 
 <DropWrapper on:drop={handleDrop}>
   <div class="wrapper">
@@ -804,7 +847,7 @@
         resourceIds={spaceResourceIds}
         selected={$selectedItem}
         on:click={handleItemClick}
-        on:open
+        on:open={handleOpen}
         on:remove={handleResourceRemove}
         on:load={handleLoadResource}
       />
@@ -813,7 +856,7 @@
         resources={everythingContents}
         selected={$selectedItem}
         on:click={handleItemClick}
-        on:open
+        on:open={handleOpen}
         on:remove={handleResourceRemove}
       />
     {:else if $loadingContents}
