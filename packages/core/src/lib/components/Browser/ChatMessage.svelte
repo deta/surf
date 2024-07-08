@@ -1,12 +1,14 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import type { AIChatMessageSource } from './types'
+  import Search from '@horizon/drawer/src/lib/Search.svelte'
 
   export let content: string
   export let sources: AIChatMessageSource[] | undefined
+  export let showSourcesAtEnd: boolean = false
 
   const dispatch = createEventDispatcher<{
-    citationClick: string
+    citationClick: { citationID: string; text: string }
     citationHoverStart: string
     citationHoverEnd: string
   }>()
@@ -28,13 +30,45 @@
     return ''
   }
 
+  const mapCitationsToText = (content: HTMLDivElement) => {
+    let currentText = ''
+    let result = new Map<number, string>()
+    let lastCitationIndex = 0
+    let lastTextIndex = 0
+
+    const processNode = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        currentText += node.textContent || ''
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement
+        if (element.tagName === 'CITATION') {
+          const relevantText = currentText.slice(lastTextIndex).trim()
+          result.set(lastCitationIndex, relevantText)
+          lastTextIndex = currentText.length
+          lastCitationIndex += 1
+        } else {
+          // Process child nodes recursively
+          Array.from(element.childNodes).forEach(processNode)
+        }
+      }
+    }
+
+    Array.from(content.childNodes).forEach(processNode)
+
+    return result
+  }
+
   const renderContent = (content: string, sources?: AIChatMessageSource[]) => {
+    console.log('TMP: renderContent', content)
     if (!elem || !content) return
 
     elem.innerHTML = ''
 
     let tempDiv = document.createElement('div')
     tempDiv.innerHTML = content
+
+    const citationsToText = mapCitationsToText(tempDiv)
+    console.log('TMP: citationsToText', citationsToText)
 
     const links = tempDiv.querySelectorAll('a')
     links.forEach((link) => {
@@ -44,7 +78,7 @@
     const citations = tempDiv.querySelectorAll('citation')
     let seen_citations = new Set<string>()
 
-    citations.forEach((citation) => {
+    citations.forEach((citation, index) => {
       const citationID = citation.textContent || ''
       const renderID = renderIDFromCitationID(citation.textContent, sources)
       if (!renderID) {
@@ -66,7 +100,13 @@
       seen_citations.add(renderID)
       citation.addEventListener('click', () => {
         if (!citation.textContent) return
-        dispatch('citationClick', citationID)
+        const text = citationsToText.get(index)
+        if (!text) {
+          console.error('ChatMessage: No text found for citation', citationID)
+          alert('Error: No text found for citation')
+          return
+        }
+        dispatch('citationClick', { citationID, text })
       })
 
       citation.addEventListener('mouseenter', () => {
@@ -79,7 +119,6 @@
         dispatch('citationHoverEnd', citationID)
       })
     })
-
     elem.appendChild(tempDiv)
   }
 
@@ -90,7 +129,7 @@
 
 <div bind:this={elem} class="message chat-message-content"></div>
 
-{#if sources && sources.length > 0}
+{#if sources && sources.length > 0 && showSourcesAtEnd}
   <div class="citations-list">
     {#each sources as source, idx}
       <div

@@ -30,7 +30,13 @@ import type {
   SpaceEntry,
   SpaceData
 } from '../types'
-import type { AIChat, Chat, YoutubeTranscript } from '../components/Browser/types'
+
+import type {
+  AIChat,
+  AIChatMessageSource,
+  AIDocsSimilarity,
+  YoutubeTranscript
+} from '../components/Browser/types'
 
 export type CardToCreate = Optional<Card, 'id' | 'stackingOrder' | 'createdAt' | 'updatedAt'>
 export type HorizonToCreate = Optional<
@@ -741,11 +747,47 @@ export class SFFS {
     return this.parseData<string>(await this.backend.js__store_create_ai_chat(system_prompt))
   }
 
+  async deleteAIChat(id: string): Promise<void> {
+    this.log.debug('deleting ai chat with id', id)
+    await this.backend.js__store_remove_ai_chat(id)
+  }
+
   async getAIChat(id: string, apiEndpoint?: string): Promise<AIChat | null> {
     this.log.debug('getting ai chat with id', id)
     const raw = await this.backend.js__store_get_ai_chat(id, apiEndpoint)
 
     return this.parseData<AIChat>(raw)
+  }
+
+  async getAIDocsSimilarity(
+    query: string,
+    docs: string[],
+    threshold: number = 0.5
+  ): Promise<AIDocsSimilarity[] | null> {
+    this.log.debug('getting ai docs similarity with query', query, 'threshold', threshold)
+    const raw = await this.backend.js__ai_get_docs_similarity(query, docs, threshold)
+
+    return this.parseData<AIDocsSimilarity[]>(raw)
+  }
+
+  async getAIChatDataSource(hash: string): Promise<AIChatMessageSource | null> {
+    const raw = await this.backend.js__ai_get_chat_data_source(hash)
+    //
+    const dataChunkSource = JSON.parse(raw)
+    // TODO: fix the empty fields and also the data remodelling done
+    const source: AIChatMessageSource = {
+      id: '',
+      all_chunk_ids: [],
+      render_id: '',
+      content: dataChunkSource.content,
+      hash: dataChunkSource.metadata?.hash,
+      resource_id: dataChunkSource.metadata?.resource_id,
+      metadata: {
+        timestamp: dataChunkSource.metadata?.timestamp,
+        url: dataChunkSource.metadata?.url
+      }
+    }
+    return source
   }
 
   async getAIYoutubeTranscript(videoURL: string): Promise<YoutubeTranscript | null> {

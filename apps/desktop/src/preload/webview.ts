@@ -395,6 +395,57 @@ function handleRestoreAnnotation(
   }
 }
 
+function handleHighlightText(data: WebViewReceiveEvents[WebViewEventReceiveNames.HighlightText]) {
+  console.log('highlight webview text:', data)
+  const texts = data.texts
+
+  const style = document.createElement('style')
+  style.innerHTML = `
+            .citation-highlight{
+              background-color: yellow;
+            }
+        `
+  document.head.appendChild(style)
+
+  // reset highlights
+  const highlights = document.querySelectorAll('.citation-highlight')
+  console.log('Removing existing highlights', highlights)
+  highlights.forEach((highlight) => {
+    highlight.classList.remove('citation-highlight')
+  })
+
+  const paragraphs = document.querySelectorAll('p')
+  for (const text of texts) {
+    paragraphs.forEach((p) => {
+      const content = p.textContent?.trim() ?? ''
+      if (text === content) {
+        // highlight the paragraph
+        p.classList.add('citation-highlight')
+      }
+    })
+  }
+
+  const newHighlights = document.querySelectorAll('.citation-highlight')
+  if (newHighlights.length > 0) {
+    console.log('Scrolling to highlight', newHighlights)
+    newHighlights[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+  }
+}
+
+function handleSeekToTimestamp(
+  data: WebViewReceiveEvents[WebViewEventReceiveNames.SeekToTimestamp]
+) {
+  console.log('Seeking to timestamp', data)
+  const timestamp = data.timestamp
+  const video = document.querySelector('video')
+  if (!video) {
+    console.error('No video element found')
+    return
+  }
+  video.currentTime = timestamp
+  video.play()
+}
+
 function handleScrollToAnnotation(
   data: WebViewReceiveEvents[WebViewEventReceiveNames.ScrollToAnnotation]
 ) {
@@ -767,6 +818,10 @@ ipcRenderer.on('webview-event', (_event, payload) => {
     handleRestoreAnnotation(data)
   } else if (type === WebViewEventReceiveNames.ScrollToAnnotation) {
     handleScrollToAnnotation(data)
+  } else if (type === WebViewEventReceiveNames.HighlightText) {
+    handleHighlightText(data)
+  } else if (type == WebViewEventReceiveNames.SeekToTimestamp) {
+    handleSeekToTimestamp(data)
   }
 })
 

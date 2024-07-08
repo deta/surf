@@ -1,4 +1,5 @@
 use core::fmt;
+use std::time::Duration;
 
 use crate::{BackendError, BackendResult};
 use futures::{Stream, StreamExt};
@@ -11,6 +12,21 @@ pub struct DataSource {
     pub data_value: String,
     pub metadata: String,
     pub env_variables: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DataSourceChunkMetadata {
+    pub resource_id: String,
+    pub resource_type: String,
+    pub hash: Option<String>,
+    pub timestamp: Option<String>,
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DataSourceChunk {
+    pub content: String,
+    pub metadata: DataSourceChunkMetadata,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,6 +46,7 @@ pub struct CitationSourceMetadata {
 pub struct CitationSource {
     pub id: String,
     pub resource_id: String,
+    pub hash: Option<String>,
     pub content: Option<String>,
     pub metadata: Option<CitationSourceMetadata>,
 }
@@ -47,6 +64,18 @@ pub struct ChatHistory {
     pub messages: Vec<ChatMessage>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SimilarDocsRequest {
+    pub query: String,
+    pub docs: Vec<String>,
+    pub threshold: Option<f32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DocsSimilarity {
+    pub doc: String, 
+    pub similarity: f32 
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct YoutubeTranscriptPiece {
@@ -93,11 +122,42 @@ pub struct AI {
 
 impl AI {
     pub fn new(api_endpoint: String) -> Self {
+        let client = reqwest::blocking::Client::builder().timeout(Duration::from_secs(300)).build().unwrap();
         Self {
             api_endpoint,
-            client: reqwest::blocking::Client::new(),
+            client,
             async_client: reqwest::Client::new(),
         }
+    }
+
+    pub fn get_docs_similarity(
+        &self,
+        query: String, 
+        docs: Vec<String>,
+        threshold: Option<f32>,
+    ) -> Result<Vec<DocsSimilarity>, reqwest::Error> {
+        let url = format!("{}/docs_similarity", &self.api_endpoint);
+        let request = SimilarDocsRequest {
+            query,
+            docs,
+            threshold,
+        };
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            reqwest::header::HeaderValue::from_static("application/json"),
+        );
+        let response = self
+            .client
+            .post(url)
+            .headers(headers)
+            .json(&request)
+            .send()?;
+        match response.error_for_status_ref() {
+            Ok(_) => (),
+            Err(e) => return Err(e),
+        }
+        Ok(response.json::<Vec<DocsSimilarity>>()?)
     }
 
     pub fn get_chat_history(
@@ -115,6 +175,15 @@ impl AI {
         Ok(chat_history)
     }
 
+    pub fn delete_chat_history(&self, session_id: String) -> Result< (), reqwest::Error> {
+        let url = format!("{}/admin/chat_history/{}", &self.api_endpoint, &session_id);
+        let response = self.client.delete(url).send()?;
+        match response.error_for_status_ref() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e)
+        }
+    }
+
     pub fn get_resources(
         &self,
         query: String,
@@ -129,9 +198,14 @@ impl AI {
                 ("resource_ids", resource_ids.join(",").as_str()),
             ])
             .send()?;
-
-        // dbg!(response.text()?);
         Ok(response.json()?)
+    }
+
+    pub fn get_data_source(&self, source_hash: &str) -> Result<DataSourceChunk, reqwest::Error> {
+        let url = format!("{}/admin/data_sources/{}", &self.api_endpoint, source_hash);
+        let response = self.client.get(url).send()?;
+        let data_source = response.json::<DataSourceChunk>()?;
+        Ok(data_source)
     }
 
     pub fn get_youtube_transcript(&self, video_url: &str) -> Result<YoutubeTranscript, reqwest::Error> {
@@ -164,6 +238,15 @@ impl AI {
             .send()?;
         dbg!(&response.text());
         Ok(())
+    }
+
+    pub fn remove_data_source_by_resource_id(&self, resource_id: &str) -> Result<(), reqwest::Error> {
+        let url = format!("{}/admin/data_sources?resource_id={}", &self.api_endpoint, resource_id);
+        let response = self.client.delete(url).send()?;
+        match response.error_for_status() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn chat(
@@ -207,7 +290,6 @@ impl AI {
             },
             Err(e) => Err(BackendError::from(e)),
         });
-
         Ok(stream)
     }
 }

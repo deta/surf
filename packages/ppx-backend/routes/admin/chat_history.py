@@ -1,7 +1,7 @@
 import xmltodict
 
 from embedchain import App
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
 from utils.embedchain import EC_APP_CONFIG
 
@@ -32,6 +32,26 @@ async def get_chat_history(session_id: str):
         "id": session_id,
         "messages": formatted,
     }
+
+@router.delete("/api/v1/admin/chat_history/{session_id}")
+async def delete_chat_history(session_id: str, response: Response):
+    try:
+        ec_app.llm.memory.delete(
+            app_id=ec_app.config.id,
+            session_id=session_id,
+        )
+        return {
+            "id": session_id,
+            "message": "Chat history deleted",
+        }
+    except Exception as e:
+        print(f"Error deleting chat history for session id: {session_id}: {e}")
+        response.status_code = 500
+        return {
+            "id": session_id,
+            "message": f"Error deleting chat history: {e}",
+        }
+
             
 def format_chat_history(chat_history):
     messages = []

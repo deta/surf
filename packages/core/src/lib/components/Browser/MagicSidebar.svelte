@@ -7,7 +7,13 @@
   import { Icon } from '@horizon/icons'
   import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
 
-  import type { AIChatMessageParsed, PageMagic, PageMagicResponse } from './types'
+  import type {
+    AIChatMessageSource,
+    AIChatMessageParsed,
+    PageMagic,
+    PageMagicResponse,
+    PageHighlight
+  } from './types'
   import ChatMessage from './ChatMessage.svelte'
   import { useClipboard } from '../../utils/clipboard'
   import { useLogScope } from '../../utils/log'
@@ -21,6 +27,9 @@
 
   const dispatch = createEventDispatcher<{
     highlightText: { tabId: string; text: string }
+    highlightWebviewText: { resourceId: string; answerText: string }
+    seekToTimestamp: { resourceId: string; timestamp: number }
+    clearChat: {}
     navigate: { url: string }
     saveText: string
     chat: string
@@ -43,7 +52,20 @@
     }, 2000)
   }
 
-  const handleCitationClick = async (sourceId: string, message: AIChatMessageParsed) => {
+  const populateRenderAndChunkIds = (sources: AIChatMessageSource[] | undefined) => {
+    if (!sources) return
+    sources.forEach((source, idx) => {
+      source.render_id = (idx + 1).toString()
+      source.all_chunk_ids = [source.id]
+    })
+    return sources
+  }
+
+  const handleCitationClick = async (
+    sourceId: string,
+    answerText: string,
+    message: AIChatMessageParsed
+  ) => {
     log.debug('Citation clicked', sourceId, message)
     const source = (message.sources ?? []).find((s) => s.id === sourceId)
     if (!source) return
@@ -62,21 +84,17 @@
       let url: string
       if (resource.type === ResourceTypes.POST_YOUTUBE && source.metadata?.timestamp) {
         const timestamp = source.metadata.timestamp
-        url = `https://www.youtube.com/watch?v=${(data as any as ResourceDataPost).post_id}&t=${timestamp}s`
+        //url = `https://www.youtube.com/watch?v=${(data as any as ResourceDataPost).post_id}&t=${timestamp}s`
+        //log.debug('url', url)
+        //dispatch('navigate', { url: url })
+        dispatch('seekToTimestamp', { resourceId: resource.id, timestamp: timestamp })
       } else {
-        url = data.url
+        dispatch('highlightWebviewText', {
+          resourceId: resource.id,
+          answerText: answerText
+        })
       }
-
-      log.debug('url', url)
-      dispatch('navigate', { url: url })
-    } else {
-      log.debug('resource id', source.resource_id)
     }
-    // const citation = magicPage.responses[idx]?.citations[citationId]
-    // if (!citation) {
-    //   log.error('Citation not found', citationId)
-    //   return
-    // }
   }
 
   const handleChatSubmit = async () => {
@@ -110,22 +128,19 @@
   <div class="header">
     <div class="title">
       <Icon name="message" size="28px" />
-      <h1>Page Chat</h1>
+      <h1>Chat</h1>
     </div>
 
-    <!-- <button
-        class="sidebar-reload"
-        on:click={() => summarizePage($activeTabMagic)}
-        use:tooltip={{
-          content: 'Refresh Page Summary',
-          action: 'hover',
-          position: 'left',
-          animation: 'fade',
-          delay: 500
+    {#if !magicPage.running && magicPage.responses.length >= 1}
+      <button
+        on:click={() => {
+          magicPage.responses = []
+          dispatch('clearChat', {})
         }}
       >
-        <Icon name="reload" size="20px" />
-      </button> -->
+        Clear
+      </button>
+    {/if}
   </div>
 
   <div class="content">
@@ -189,8 +204,9 @@
 
           <ChatMessage
             content={response.content}
-            sources={response.sources}
-            on:citationClick={(e) => handleCitationClick(e.detail, response)}
+            sources={populateRenderAndChunkIds(response.sources)}
+            on:citationClick={(e) =>
+              handleCitationClick(e.detail.citationID, e.detail.text, response)}
           />
         </div>
       {:else if response.status === 'pending'}
@@ -215,6 +231,7 @@
     {/each}
   </div>
 
+  <!--
   {#if !magicPage.running}
     <div class="prompts" transition:fly={{ y: 120 }}>
       <button on:click={() => handlePromptClick(PromptIDs.PAGE_SUMMARIZER)}>
@@ -226,9 +243,10 @@
       </button>
     </div>
   {/if}
+  -->
 
   <form on:submit|preventDefault={handleChatSubmit} class="chat">
-    <input bind:value={inputValue} placeholder="Ask about the page…" />
+    <input bind:value={inputValue} placeholder="Ask your tabs…" />
 
     <button disabled={magicPage.responses.length > 1 && magicPage.running} class="" type="submit">
       {#if magicPage.responses.length > 1 && magicPage.running}
@@ -290,6 +308,23 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+
+    button {
+      flex-shrink: 0;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #fff;
+      color: #353535;
+      cursor: pointer;
+      font-size: 1rem;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      transition: background 0.2s;
+
+      &:hover {
+        background: #f6f5ef;
+      }
+    }
   }
 
   .title {
@@ -402,7 +437,7 @@
 
   input {
     width: 100%;
-    padding: 10px 100px 10px 10px;
+    padding: 10px;
     border: 1px solid transparent;
     border-radius: 5px;
     font-size: 1rem;

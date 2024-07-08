@@ -8,9 +8,55 @@ const _MODULE_PREFIX: &'static str = "ai";
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__ai_send_chat_message", js_send_chat_message)?;
     cx.export_function("js__ai_query_sffs_resources", js_query_sffs_resources)?;
+    cx.export_function("js__ai_get_chat_data_source", js_get_ai_chat_data_source)?;
+    cx.export_function("js__ai_get_docs_similarity", js_get_ai_docs_similarity)?;
     cx.export_function("js__ai_get_youtube_transcript", js_get_youtube_transcript)?;
-
     Ok(())
+}
+
+fn js_get_ai_chat_data_source(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let source_hash = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::GetAIChatDataSource(source_hash)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_get_ai_docs_similarity(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let query = cx.argument::<JsString>(1)?.value(&mut cx);
+    let docs = cx.argument::<JsArray>(2)?.to_vec(&mut cx)?;
+    let docs = docs
+        .iter()
+        .map(|value| {
+            Ok(value
+                .downcast_or_throw::<JsString, FunctionContext>(&mut cx)?
+                .value(&mut cx))
+        })
+        .collect::<NeonResult<Vec<String>>>()?;
+
+    let threshold = cx.argument_opt(3).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as f32)
+    });
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::GetAIDocsSimilarity {
+            query,
+            docs,
+            threshold,
+        }),
+        deferred,
+    );
+
+    Ok(promise)
 }
 
 fn js_query_sffs_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {

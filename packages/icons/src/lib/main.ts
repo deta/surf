@@ -1,6 +1,7 @@
 import AdblockOff from './Icons/AdblockOff.svelte'
 import AdblockOn from './Icons/AdblockOn.svelte'
 import Add from './Icons/Add.svelte'
+import AI from './Icons/AI.svelte'
 import Archive from './Icons/Archive.svelte'
 import Arrow from './Icons/Arrow.svelte'
 import ArrowBackUp from './Icons/ArrowBackUp.svelte'
@@ -71,6 +72,7 @@ export const icons = {
   adblockoff: AdblockOff,
   adblockon: AdblockOn,
   add: Add,
+  ai: AI,
   archive: Archive,
   arrow: Arrow,
   arrowbackup: ArrowBackUp,
@@ -148,6 +150,7 @@ export {
   AdblockOff,
   AdblockOn,
   Add,
+  AI,
   ChevronLeft,
   ChevronRight,
   Close,

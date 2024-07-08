@@ -12,6 +12,7 @@ export interface BaseTab {
   archived: boolean
   index: number
   pinned: boolean
+  magic: boolean
 }
 
 export interface TabPage extends BaseTab {
@@ -69,6 +70,11 @@ export type AIChat = {
   messages: AIChatMessage[]
 }
 
+export type AIDocsSimilarity = {
+  doc: string
+  similarity: number
+}
+
 export type AIChatMessageRole = 'user' | 'system' | 'assistant'
 
 export type AIChatMessage = {
@@ -95,6 +101,7 @@ export type AIChatMessageSource = {
   render_id: string
   resource_id: string
   content: string
+  hash?: string
   metadata?: {
     timestamp?: number
     url?: string
@@ -130,7 +137,6 @@ export type PageMagicResponse = {
 }
 
 export type PageMagic = {
-  tabId: string
   showSidebar: boolean
   running: boolean
   responses: AIChatMessageParsed[]

@@ -68,7 +68,7 @@
   } from './types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../Cards/Browser/searchEngines'
   import type { Drawer } from '@horizon/drawer'
-  import Chat, { getUniqueSources } from './Chat.svelte'
+  import Chat from './Chat.svelte'
   import { HorizonDatabase } from '../../service/storage'
   import { ResourceTypes, type Optional } from '../../types'
   import { useLocalStorageStore } from '../../utils/localstorage'
@@ -155,7 +155,7 @@
   const browserTabs = writable<Record<string, BrowserTab>>({})
   const bookmarkingInProgress = writable(false)
   const magicInputValue = writable('')
-  const magicPages = writable<PageMagic[]>([])
+  const activeTabMagic = writable<PageMagic>()
   const bookmarkingSuccess = writableAutoReset(false, 1000)
   const showURLBar = writable(false)
   const showResourceDetails = writable(false)
@@ -178,7 +178,11 @@
   })
 
   const unpinnedTabs = derived([activeTabs], ([tabs]) => {
-    return tabs.filter((tab) => !tab.pinned).sort((a, b) => a.index - b.index)
+    return tabs.filter((tab) => !tab.pinned && !tab.magic).sort((a, b) => a.index - b.index)
+  })
+
+  const magicTabs = derived([activeTabs], ([tabs]) => {
+    return tabs.filter((tab) => tab.magic).sort((a, b) => a.index - b.index)
   })
 
   const activeTab = derived([tabs, activeTabId], ([tabs, activeTabId]) => {
@@ -201,10 +205,6 @@
     return browserTabs[activeTabId]
   })
 
-  const activeTabMagic = derived([activeTab, magicPages], ([activeTab, magicPages]) => {
-    return magicPages.find((page) => page.tabId === activeTab?.id)
-  })
-
   $: canGoBack = $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
   $: canGoForward =
     $activeTab?.type === 'page' &&
@@ -213,6 +213,14 @@
   $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
     log.debug('Active tab is not in view, resetting')
     makePreviousTabActive()
+  }
+
+  $: if ($activeTabMagic) {
+    // Reset all tabs from the magic
+    if (!$activeTabMagic.showSidebar) {
+      resetTabsFromMagic()
+    }
+    log.debug('Active tab magic', $activeTabMagic)
   }
 
   $: log.debug('xx active tabs history', $activeTabsHistory)
@@ -711,7 +719,8 @@
       icon: '',
       type: 'importer',
       index: 0,
-      pinned: false
+      pinned: false,
+      magic: false
     })
 
     makeTabActive(newTab.id)
@@ -722,7 +731,8 @@
     const newTab = await createTab<TabOasisDiscovery>({
       title: 'Oasis Discovery',
       icon: '',
-      type: 'oasis-discovery'
+      type: 'oasis-discovery',
+      magic: false
     })
     makeTabActive(newTab.id)
   }
@@ -792,6 +802,7 @@
       return
     }
     let ordered = [
+      ...$magicTabs.sort((a, b) => a.index - b.index),
       ...$unpinnedTabs.sort((a, b) => a.index - b.index),
       ...$pinnedTabs.sort((a, b) => a.index - b.index)
     ].filter((tab) => !tab.archived)
@@ -875,7 +886,12 @@
       }
       log.debug('bookmarking', url)
 
-      const detectedResource = await $activeBrowserTab.detectResource()
+      const browserTab = $browserTabs[tab.id]
+      if (!browserTab) {
+        log.error('no browser tab found')
+        throw new Error('No browser tab found')
+      }
+      const detectedResource = await browserTab.detectResource()
       log.debug('extracted resource data', detectedResource)
 
       if (!detectedResource) {
@@ -885,7 +901,7 @@
 
       resource = await resourceManager.createResourceOther(
         new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-        { name: $activeTab?.title ?? '', sourceURI: url, alt: '' },
+        { name: tab.title ?? '', sourceURI: url, alt: '' },
         [ResourceTag.canonicalURL(url)]
       )
       log.debug('created resource', resource)
@@ -980,67 +996,39 @@
     }
   }
 
-  function updateMagicPage(tabId: string, updates: Partial<PageMagic>) {
-    magicPages.update((pages) => {
-      const updatedPages = pages.map((page) => {
-        if (page.tabId === tabId) {
-          return {
-            ...page,
-            ...updates
-          }
-        }
-
-        return page
-      })
-
-      return updatedPages
+  function updateActiveMagicPage(updates: Partial<PageMagic>) {
+    activeTabMagic.update((magic) => {
+      return {
+        ...magic,
+        ...updates
+      }
     })
   }
 
-  function addPageMagicResponse(tabId: string, response: AIChatMessageParsed) {
-    magicPages.update((pages) => {
-      const updatedPages = pages.map((page) => {
-        if (page.tabId === tabId) {
-          return {
-            ...page,
-            responses: [...page.responses, response]
-          }
-        }
-
-        return page
-      })
-
-      return updatedPages
+  function addPageMagicResponse(response: AIChatMessageParsed) {
+    activeTabMagic.update((magic) => {
+      return {
+        ...magic,
+        responses: [...magic.responses, response]
+      }
     })
   }
 
-  function updatePageMagicResponse(
-    tabId: string,
-    responseId: string,
-    updates: Partial<AIChatMessageParsed>
-  ) {
-    magicPages.update((pages) => {
-      const updatedPages = pages.map((page) => {
-        if (page.tabId === tabId) {
-          return {
-            ...page,
-            responses: page.responses.map((response) => {
-              if (response.id === responseId) {
-                return {
-                  ...response,
-                  ...updates
-                }
-              }
-
-              return response
-            })
+  function updatePageMagicResponse(responseId: string, updates: Partial<AIChatMessageParsed>) {
+    activeTabMagic.update((magic) => {
+      return {
+        ...magic,
+        responses: magic.responses.map((response) => {
+          if (response.id === responseId) {
+            return {
+              ...response,
+              ...updates
+            }
           }
-        }
 
-        return page
-      })
-
-      return updatedPages
+          return response
+        })
+      }
     })
   }
 
@@ -1048,13 +1036,10 @@
     log.debug('webview app detection', e.detail, tab)
 
     if (tab.type !== 'page') return
-
+    let pageMagic = $activeTabMagic
     await updateTab(tab.id, {
       currentDetectedApp: e.detail
     })
-
-    let pageMagic = $magicPages.find((page) => page.tabId === tab.id)
-
     if (!pageMagic) {
       let responses: AIChatMessageParsed[] = []
       if (tab?.chatId) {
@@ -1065,7 +1050,7 @@
           const systemMessages = chat.messages.filter((message) => message.role === 'system')
 
           responses = systemMessages.map((message, idx) => {
-            message.sources = getUniqueSources(message.sources)
+            message.sources = message.sources
             log.debug('Message', message)
             return {
               id: generateID(),
@@ -1078,15 +1063,12 @@
           })
         }
       }
-
       pageMagic = {
-        tabId: tab.id,
         showSidebar: false,
         running: false,
         responses: responses
       } as PageMagic
-
-      magicPages.update((pages) => [...pages, pageMagic!])
+      activeTabMagic.set(pageMagic)
     }
 
     const browserTab = $browserTabs[tab.id]
@@ -1199,16 +1181,92 @@
     await $activeBrowserTab.executeJavaScript(code)
   }
 
-  const highlightWebviewText = async (tabId: string, highlight: PageHighlight) => {
-    const browserTab = $browserTabs[tabId]
-    if (!browserTab) {
-      log.error('Browser tab not found', tabId)
-      return
+  const getTextElementsFromHtml = (html: string): string[] => {
+    let textElements: string[] = []
+    const body = new DOMParser().parseFromString(html, 'text/html').body
+    body.querySelectorAll('p').forEach((p) => {
+      textElements.push(p.textContent?.trim() ?? '')
+    })
+    return textElements
+  }
+
+  const getTabsInChatContext = () => {
+    let tabs = $magicTabs
+    if (tabs.length == 0) {
+      return $unpinnedTabs
     }
+    return tabs
+  }
 
-    const html = await browserTab.executeJavaScript(inlineHighlightTextCode(highlight))
+  const highlightWebviewText = async (resourceId: string, answerText: string) => {
+    for (const tab of getTabsInChatContext()) {
+      const t = tab as TabPage
+      if (t.resourceBookmark === resourceId) {
+        const browserTab = $browserTabs[t.id]
+        if (!browserTab) {
+          log.error('Browser tab not found', t.id)
+          return
+        }
+        makeTabActive(t.id)
+        const detectedResource = await browserTab.detectResource()
+        if (!detectedResource) {
+          log.error('no resource detected')
+          alert('Error: no resource detected')
+          return
+        }
+        const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+        if (!content || !content.html) {
+          log.debug('no content found from web parser')
+          alert('Error: no content found form web parser')
+          return
+        }
+        const textElements = getTextElementsFromHtml(content.html)
+        if (!textElements) {
+          log.debug('no text elements found')
+          alert('Error: could not find any relevant text in the page')
+          return
+        }
+        const docsSimilarity = await sffs.getAIDocsSimilarity(answerText, textElements, 0.6)
+        if (!docsSimilarity || docsSimilarity.length === 0) {
+          log.debug('no docs similarity found')
+          alert('Error: could not find any relevant text in the page')
+          return
+        }
+        const texts = []
+        for (const docSimilarity of docsSimilarity) {
+          if (docSimilarity.doc.includes(' ')) {
+            texts.push(docSimilarity.doc)
+          }
+        }
+        browserTab.sendWebviewEvent(WebViewEventReceiveNames.HighlightText, {
+          texts: texts
+        })
+        return
+      }
+    }
+    log.error('No tab in chat context found for resource', resourceId)
+    alert('Error: No tab in chat context found for resource')
+  }
 
-    log.debug('HTML', html)
+  const handleSeekToTimestamp = async (resourceId: string, timestamp: number) => {
+    for (const tab of getTabsInChatContext()) {
+      const t = tab as TabPage
+      if (t.resourceBookmark === resourceId) {
+        const browserTab = $browserTabs[t.id]
+        if (!browserTab) {
+          log.error('Browser tab not found', t.id)
+          alert('Error: Browser tab not found')
+          return
+        }
+        makeTabActive(t.id)
+        browserTab.sendWebviewEvent(WebViewEventReceiveNames.SeekToTimestamp, {
+          timestamp: timestamp
+        })
+        return
+      }
+    }
+    log.error('No tab in chat context found for resource', resourceId)
+    alert('Error: No tab in chat context found for resource')
   }
 
   const scrollWebviewToText = async (tabId: string, text: string) => {
@@ -1320,25 +1378,34 @@
   // }
 
   const sendSidebarChatMessage = async (
+    tabsInContext: Tab[],
     magicPage: PageMagic,
     prompt: string,
     role: AIChatMessageRole = 'user',
     query?: string
   ) => {
+    if (tabsInContext.length === 0) {
+      log.debug('No tabs in context')
+      return
+    }
+    const pageTabs = tabsInContext.filter((tab) => tab.type === 'page')
+    const chatId = (pageTabs[0] as TabPage).chatId
+
     let response: AIChatMessageParsed | null = null
 
     try {
       log.debug('Magic button clicked')
-
-      const tab = $tabs.find((tab) => tab.id === magicPage.tabId) as TabPage
-      if (!tab) {
-        log.error('Tab not found', magicPage.tabId)
+      const resourceIds: string[] = []
+      for (const tab of tabsInContext) {
+        const t = tab as TabPage
+        if (t.chatResourceBookmark) {
+          resourceIds.push(t.chatResourceBookmark)
+        }
+      }
+      if (resourceIds.length === 0) {
+        log.debug('No resource IDs found from tabs in context')
         return
       }
-
-      if (!tab.chatId) return
-      if (!tab.chatResourceBookmark)
-        tab.chatResourceBookmark = await createChatResourceBookmark(tab)
 
       response = {
         id: generateID(),
@@ -1349,15 +1416,15 @@
         citations: {}
       } as AIChatMessageParsed
 
-      updateMagicPage(magicPage.tabId, { running: true })
-      addPageMagicResponse(magicPage.tabId, response)
+      updateActiveMagicPage({ running: true })
+      addPageMagicResponse(response)
 
       log.debug('calling the AI')
       let step = 'idle'
       let content = ''
 
       await sffs.sendAIChatMessage(
-        tab.chatId,
+        chatId!,
         prompt,
         (chunk: string) => {
           if (step === 'idle') {
@@ -1366,20 +1433,19 @@
             content += chunk
 
             if (content.includes('</sources>')) {
-              const sources = getUniqueSources(parseChatResponseSources(content))
+              const sources = parseChatResponseSources(content)
               log.debug('Sources', sources)
 
               step = 'sources'
               content = ''
 
-              updatePageMagicResponse(tab.id, response?.id ?? '', {
+              updatePageMagicResponse(response?.id ?? '', {
                 sources
               })
             }
           } else {
             content += chunk
-
-            updatePageMagicResponse(tab.id, response?.id!, {
+            updatePageMagicResponse(response?.id!, {
               content: content
                 // .replace('<answer>', '')
                 // .replace('</answer>', '')
@@ -1390,16 +1456,16 @@
           }
         },
         {
-          limit: 5,
-          resourceIds: [tab.chatResourceBookmark!]
+          limit: 30,
+          resourceIds: resourceIds
         }
       )
 
-      updatePageMagicResponse(magicPage.tabId, response.id, { status: 'success' })
+      updatePageMagicResponse(response.id, { status: 'success' })
     } catch (e) {
       log.error('Error doing magic', e)
       if (response) {
-        updatePageMagicResponse(magicPage.tabId, response.id, {
+        updatePageMagicResponse(response.id, {
           content: (e as any).message ?? 'Failed to generate response.',
           status: 'error'
         })
@@ -1407,7 +1473,7 @@
 
       throw e
     } finally {
-      updateMagicPage(magicPage.tabId, { running: false })
+      updateActiveMagicPage({ running: false })
     }
   }
 
@@ -1423,7 +1489,13 @@
         return
       }
 
-      await sendSidebarChatMessage($activeTabMagic, prompt.content, 'system', prompt.title)
+      await sendSidebarChatMessage(
+        getTabsInChatContext(),
+        $activeTabMagic,
+        prompt.content,
+        'system',
+        prompt.title
+      )
     } catch (e) {
       log.error('Error doing magic', e)
     }
@@ -1440,11 +1512,57 @@
         log.debug('No input value')
         return
       }
-
-      await sendSidebarChatMessage(magicPage, savedInputValue)
+      await sendSidebarChatMessage(getTabsInChatContext(), magicPage, savedInputValue)
     } catch (e) {
       log.error('Error doing magic', e)
       $magicInputValue = savedInputValue
+    }
+  }
+
+  const deleteChatsForPageChat = async () => {
+    for (const tab of getTabsInChatContext()) {
+      if (tab.type === 'page' && tab.chatId) {
+        await sffs.deleteAIChat(tab.chatId)
+      }
+    }
+  }
+
+  const updateChatIdsForPageChat = (newChatId: string) => {
+    for (const tab of getTabsInChatContext()) {
+      if (tab.type === 'page') {
+        updateTab(tab.id, { chatId: newChatId })
+      }
+    }
+  }
+
+  const handleChatClear = async (createNewChat: boolean) => {
+    log.debug('clearing chat')
+    let pageMagic = $activeTabMagic
+    if (!pageMagic) return
+
+    try {
+      let chatId: string | null = null
+      await deleteChatsForPageChat()
+      if (createNewChat) {
+        chatId = await sffs.createAIChat('')
+        if (!chatId) {
+          log.error('Failed to create new chat aftering clearing the old one')
+          return
+        }
+      }
+      pageMagic.responses = []
+      updateChatIdsForPageChat(chatId!)
+    } catch (e) {
+      log.error('Error clearing chat:', e)
+    }
+  }
+
+  const bookmarkPageTabsInContext = async () => {
+    log.debug('Bookmarking all page tabs in context')
+    for (const tab of getTabsInChatContext()) {
+      if (tab.type === 'page' && !tab.resourceBookmark) {
+        await bookmarkPage(tab)
+      }
     }
   }
 
@@ -1456,22 +1574,21 @@
 
     if (!$activeTabMagic.showSidebar) {
       if (!tab?.chatId) {
-        tab.chatId = await sffs.createAIChat('')
-        // TODO: log this instead of silently failing
-        if (!tab.chatId) return
-        updateTab(tab.id, { chatId: tab.chatId })
+        const chatId = await sffs.createAIChat('')
+        if (!chatId) {
+          log.error('Failed to create chat')
+          return
+        }
+        updateChatIdsForPageChat(chatId)
       }
-
-      if (!tab.chatResourceBookmark) await createChatResourceBookmark(tab)
+      await bookmarkPageTabsInContext()
     }
-
-    updateMagicPage($activeTabId, { showSidebar: !$activeTabMagic.showSidebar })
-
-    /*
-    if ($activeTabMagic.responses.length === 0 && !$activeTabMagic.running) {
-      summarizePage($activeTabMagic)
-    }
-    */
+    activeTabMagic.update((magic) => {
+      return {
+        ...magic,
+        showSidebar: !magic.showSidebar
+      }
+    })
   }
 
   const saveTextFromPage = async (
@@ -2034,66 +2151,144 @@
     }
   }
 
-  const onDrop = async (event: CustomEvent<DroppedTab>, action: string) => {
-    const { from, to } = event.detail
-    if (!to || (from.dropZoneID === to.dropZoneID && from.index === to.index)) return
-
-    // Separate pinned and unpinned tabs
+  const resetTabsFromMagic = async () => {
+    const magicTabsArray = get(magicTabs)
     const unpinnedTabsArray = get(unpinnedTabs)
     const pinnedTabsArray = get(pinnedTabs)
 
-    // Determine source list
-    const fromTabs = from.dropZoneID === 'tabs' ? unpinnedTabsArray : pinnedTabsArray
+    // Revert each magic tab to its previous state
+    magicTabsArray.forEach((magicTab) => {
+      magicTab.magic = false
 
-    // Determine target and opposite target lists
-    let targetTabsArray = to.dropZoneID === 'tabs' ? unpinnedTabsArray : pinnedTabsArray
-    let oppositeTargetTabsArray = to.dropZoneID === 'tabs' ? pinnedTabsArray : unpinnedTabsArray
-
-    const movedTab = fromTabs[from.index]
-    const shouldChangeSection = from.dropZoneID !== to.dropZoneID
-
-    log.debug('Moving tab', movedTab, from, to)
-
-    // Update pinned state of the tab
-    if (shouldChangeSection) {
-      movedTab.pinned = to.dropZoneID === 'pinned-tabs'
-
-      // Remove the tab from its original position and location
-      oppositeTargetTabsArray.splice(from.index, 1)
-    } else {
-      // Remove the tab in its original posittion
-      targetTabsArray.splice(from.index, 1)
-    }
-
-    // Add the tab to the new location and position
-    targetTabsArray.splice(to.index, 0, movedTab)
-
-    // Update the indices of the tabs in the target list
-    targetTabsArray = targetTabsArray.map((tab, index) => {
-      tab.index = index
-      return tab
+      if (magicTab.pinned) {
+        pinnedTabsArray.push(magicTab)
+      } else {
+        unpinnedTabsArray.push(magicTab)
+      }
     })
 
-    // combine the two lists back together
-    const newTabs = [...targetTabsArray, ...oppositeTargetTabsArray]
-    log.debug('New tabs', newTabs)
+    // Reset magic tabs array
+    magicTabsArray.length = 0
 
-    // only update the tabs that were changed (archived stay uneffected)
+    // Update the indices of the tabs in all lists
+    const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+
+    const newUnpinnedTabsArray = updateIndices(unpinnedTabsArray)
+    const newPinnedTabsArray = updateIndices(pinnedTabsArray)
+    const newMagicTabsArray = updateIndices(magicTabsArray)
+
+    // Combine all lists back together
+    const newTabs = [...newUnpinnedTabsArray, ...newPinnedTabsArray, ...newMagicTabsArray]
+
+    log.debug('Reverted tabs', newTabs)
+
+    // Only update the tabs that were changed (archived stay unaffected)
     tabs.update((x) => {
       return x.map((tab) => {
         const newTab = newTabs.find((t) => t.id === tab.id)
         if (newTab) {
           tab.index = newTab.index
           tab.pinned = newTab.pinned
+          tab.magic = newTab.magic
         }
-
         return tab
       })
     })
 
     // Update the store with the changed tabs
     await bulkUpdateTabsStore(
-      newTabs.map((tab) => ({ id: tab.id, updates: { pinned: tab.pinned, index: tab.index } }))
+      newTabs.map((tab) => ({
+        id: tab.id,
+        updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+      }))
+    )
+
+    log.debug('Tabs reset successfully')
+  }
+
+  const onDrop = async (event: CustomEvent<DroppedTab>, action: string) => {
+    const { from, to } = event.detail
+    if (!to || (from.dropZoneID === to.dropZoneID && from.index === to.index)) return
+
+    // Get all the tab arrays
+    let unpinnedTabsArray = get(unpinnedTabs)
+    let pinnedTabsArray = get(pinnedTabs)
+    let magicTabsArray = get(magicTabs)
+
+    // Determine source and target lists
+    let fromTabs: Tab[]
+    let targetTabsArray: Tab[]
+
+    if (from.dropZoneID === 'tabs') {
+      fromTabs = unpinnedTabsArray
+    } else if (from.dropZoneID === 'pinned-tabs') {
+      fromTabs = pinnedTabsArray
+    } else {
+      fromTabs = magicTabsArray
+    }
+
+    if (to.dropZoneID === 'tabs') {
+      targetTabsArray = unpinnedTabsArray
+    } else if (to.dropZoneID === 'pinned-tabs') {
+      targetTabsArray = pinnedTabsArray
+    } else {
+      targetTabsArray = magicTabsArray
+    }
+
+    const movedTab = fromTabs[from.index]
+    const shouldChangeSection = from.dropZoneID !== to.dropZoneID
+
+    log.debug('Moving tab', movedTab, from, to)
+
+    // Remove the tab from its original position in the source list
+    fromTabs.splice(from.index, 1)
+
+    // Update pinned or magic state of the tab
+    if (to.dropZoneID === 'pinned-tabs') {
+      movedTab.pinned = true
+      movedTab.magic = false
+    } else if (to.dropZoneID === 'magic-tabs') {
+      movedTab.pinned = false
+      movedTab.magic = true
+    } else {
+      movedTab.pinned = false
+      movedTab.magic = false
+    }
+
+    // Add the tab to the new position
+    targetTabsArray.splice(to.index, 0, movedTab)
+
+    // Update the indices of the tabs in all lists
+    const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+
+    unpinnedTabsArray = updateIndices(unpinnedTabsArray)
+    pinnedTabsArray = updateIndices(pinnedTabsArray)
+    magicTabsArray = updateIndices(magicTabsArray)
+
+    // Combine all lists back together
+    const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+
+    log.debug('New tabs', newTabs)
+
+    // Only update the tabs that were changed (archived stay unaffected)
+    tabs.update((x) => {
+      return x.map((tab) => {
+        const newTab = newTabs.find((t) => t.id === tab.id)
+        if (newTab) {
+          tab.index = newTab.index
+          tab.pinned = newTab.pinned
+          tab.magic = newTab.magic
+        }
+        return tab
+      })
+    })
+
+    // Update the store with the changed tabs
+    await bulkUpdateTabsStore(
+      newTabs.map((tab) => ({
+        id: tab.id,
+        updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+      }))
     )
 
     log.debug('State updated successfully')
@@ -2117,7 +2312,7 @@
     />
   {/if}
   {#if showSidebar}
-    <div class="sidebar">
+    <div class="sidebar" class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}>
       <div class="tab-bar-selector">
         <div class="tab-selector" class:actions={$sidebarTab !== 'oasis'}>
           <!-- <button
@@ -2326,7 +2521,39 @@
           <!-- <div class="divider"></div> -->
           {#if $activeTabMagic}
             {#if $activeTabMagic.showSidebar}
-              to talk to a single tab — drop here
+              <div class="magic-tabs-wrapper" class:magic={$magicTabs.length > 0}>
+                <DragDropList
+                  id="magic-tabs"
+                  type={VerticalDropZone}
+                  itemSize={48}
+                  itemCount={$magicTabs.length || 1}
+                  on:drop={async (event) => {
+                    onDrop(event, 'unpin')
+                  }}
+                  let:index
+                >
+                  {#if $magicTabs.length === 0}
+                    <div class="debug">
+                      <div class="ai-wrapper">
+                        <Icon name="ai" size={32 * 0.75 + 'px'} />
+                      </div>
+                      <span class="label"
+                        >You are chatting with all tabs. Drop tabs here to filter.</span
+                      >
+                    </div>
+                  {:else}
+                    <TabItem
+                      tab={$magicTabs[index]}
+                      {activeTabId}
+                      {deleteTab}
+                      {unarchiveTab}
+                      pinned={false}
+                      on:select={handleTabSelect}
+                      on:remove-from-sidebar={handleRemoveFromSidebar}
+                    />
+                  {/if}
+                </DragDropList>
+              </div>
             {/if}
           {/if}
 
@@ -2583,11 +2810,15 @@
         magicPage={$activeTabMagic}
         bind:inputValue={$magicInputValue}
         on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
+        on:highlightWebviewText={(e) =>
+          highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
+        on:seekToTimestamp={(e) => handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
         on:navigate={(e) => {
           $browserTabs[$activeTabId].navigate(e.detail.url)
         }}
         on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
         on:chat={() => handleChatSubmit($activeTabMagic)}
+        on:clearChat={() => handleChatClear(true)}
         on:prompt={handleMagicSidebarPromptSubmit}
       />
     </div>
@@ -2624,6 +2855,37 @@
     padding: 0.5rem 0.75rem 0.75rem 0.75rem;
     display: flex;
     flex-direction: column;
+
+    &.magic {
+      background: linear-gradient(0deg, #ffeffd 0%, #ffe5fb 4.18%),
+        linear-gradient(180deg, #fef4fe 0%, #fff0fa 10.87%),
+        radial-gradient(41.69% 35.32% at 16.92% 87.63%, rgba(255, 208, 232, 0.85) 0%, #fee6f5 100%),
+        linear-gradient(129deg, #fef7fd 0.6%, #ffe8ef 44.83%, #ffe3f4 100%), #fff;
+      background: linear-gradient(
+          0deg,
+          color(display-p3 0.9922 0.9412 0.9879) 0%,
+          color(display-p3 0.9843 0.902 0.9775 / 0) 4.18%
+        ),
+        linear-gradient(
+          180deg,
+          color(display-p3 0.9892 0.9569 0.9922) 0%,
+          color(display-p3 0.9922 0.9451 0.9796 / 0) 10.87%
+        ),
+        radial-gradient(
+          41.69% 35.32% at 16.92% 87.63%,
+          color(display-p3 0.9735 0.8222 0.9054 / 0.85) 0%,
+          color(display-p3 0.9804 0.9059 0.958 / 0) 100%
+        ),
+        linear-gradient(
+          129deg,
+          color(display-p3 0.9922 0.9686 0.9906) 0.6%,
+          color(display-p3 0.9922 0.9137 0.9373) 44.83%,
+          color(display-p3 0.9882 0.8941 0.9522) 100%
+        ),
+        color(display-p3 1 1 1);
+      box-shadow: 0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1);
+      box-shadow: 0px 0.933px 2.8px 0px color(display-p3 0 0 0 / 0.1);
+    }
   }
 
   .sidebar-magic-toggle {
@@ -2833,6 +3095,48 @@
     .unpinned-tabs-wrapper {
       height: 100%;
       max-height: calc(100vh - 20rem);
+    }
+
+    .magic-tabs-wrapper {
+      border-radius: 12px;
+      padding: 0.5rem;
+      border: 1px dashed rgba(88, 81, 48, 0.4);
+      margin: 0.5rem 0 0.25rem 0;
+
+      &.magic {
+        background: linear-gradient(0deg, #ffeffd 0%, #ffe5fb 4.18%),
+          linear-gradient(180deg, #fef4fe 0%, #fff0fa 10.87%),
+          radial-gradient(
+            41.69% 35.32% at 16.92% 87.63%,
+            rgba(255, 208, 232, 0.85) 0%,
+            #fee6f5 100%
+          ),
+          linear-gradient(129deg, #fef7fd 0.6%, #ffe8ef 44.83%, #ffe3f4 100%), #fff;
+        background: linear-gradient(
+            0deg,
+            color(display-p3 0.9922 0.9412 0.9879) 0%,
+            color(display-p3 0.9843 0.902 0.9775 / 0) 4.18%
+          ),
+          linear-gradient(
+            180deg,
+            color(display-p3 0.9892 0.9569 0.9922) 0%,
+            color(display-p3 0.9922 0.9451 0.9796 / 0) 10.87%
+          ),
+          radial-gradient(
+            41.69% 35.32% at 16.92% 87.63%,
+            color(display-p3 0.9735 0.8222 0.9054 / 0.85) 0%,
+            color(display-p3 0.9804 0.9059 0.958 / 0) 100%
+          ),
+          linear-gradient(
+            129deg,
+            color(display-p3 0.9922 0.9686 0.9906) 0.6%,
+            color(display-p3 0.9922 0.9137 0.9373) 44.83%,
+            color(display-p3 0.9882 0.8941 0.9522) 100%
+          ),
+          color(display-p3 1 1 1);
+        box-shadow: 0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1);
+        box-shadow: 0px 0.933px 2.8px 0px color(display-p3 0 0 0 / 0.1);
+      }
     }
 
     .add-tab-button {
@@ -3085,15 +3389,71 @@
     background: transparent !important;
   }
 
-  .debug {
-    span {
-      word-break: break-all;
-      max-width: 10rem;
-    }
-  }
   .tab-bar-selector {
     display: flex;
     flex-direction: column;
+  }
+
+  :global(.magic-tabs-wrapper [data-dnd-zone]) {
+    min-height: 4rem !important;
+    height: fit-content !important;
+  }
+
+  .debug {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    span {
+      border: none;
+      background: transparent;
+      color: #7d7448;
+      font-size: 1rem;
+      font-weight: 500;
+      line-height: 1.3;
+      letter-spacing: 0.0025em;
+      max-width: 15rem;
+      opacity: 0.8;
+      font-smooth: always;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      outline: none;
+      width: fit-content;
+    }
+  }
+
+  .ai-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(72px * 0.75);
+    height: calc(72px * 0.75);
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 86%;
+    background-image: url('../../../../../core/public/assets/ai.png');
+    z-index: 10;
+    &:before {
+      content: '';
+      position: absolute;
+      width: 60%;
+      height: 60%;
+      z-index: -1;
+      border-radius: 50%;
+      mix-blend-mode: soft-light;
+      background: #ffffff;
+    }
+    &:after {
+      content: '';
+      position: absolute;
+      width: 60%;
+      height: 60%;
+      z-index: -1;
+      opacity: 0.8;
+      border-radius: 50%;
+      mix-blend-mode: soft-light;
+      background: #ffffff;
+    }
   }
 
   .create-space-btn {

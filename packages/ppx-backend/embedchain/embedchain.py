@@ -614,9 +614,6 @@ class EmbedChain(JSONSerializable):
         Returns:
             list[dict]: A list of dictionaries, each containing the 'context' and 'metadata' of a document.
         """
-        # Send anonymous telemetry
-        self.telemetry.capture(event_name="search", properties=self._telemetry_props)
-
         if raw_filter and where:
             raise ValueError("You can't use both `raw_filter` and `where` together.")
 

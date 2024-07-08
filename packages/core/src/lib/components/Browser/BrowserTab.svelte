@@ -72,6 +72,7 @@
   }
 
   export const executeJavaScript = (code: string, userGesture?: boolean) => {
+    console.log('executeJavaScript', code)
     if (webview) {
       return webview.executeJavaScript(code, userGesture)
     }

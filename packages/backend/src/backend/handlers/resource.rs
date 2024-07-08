@@ -159,6 +159,7 @@ impl Worker {
         let mut tx = self.db.begin()?;
         Database::update_resource_deleted_tx(&mut tx, &id, 1)?;
         Database::update_resource_tag_by_name_tx(&mut tx, &ResourceTag::new_deleted(&id, true))?;
+        self.ai.remove_data_source_by_resource_id(&id)?;
         tx.commit()?;
         Ok(())
     }

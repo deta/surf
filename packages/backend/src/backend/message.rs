@@ -167,6 +167,13 @@ pub enum MiscMessage {
     Print(String),
     CreateAIChatMessage(String),
     GetAIChatMessage(String, Option<String>),
+    DeleteAIChatMessage(String),
     QuerySFFSResources(String),
+    GetAIChatDataSource(String),
+    GetAIDocsSimilarity {
+        query: String,
+        docs: Vec<String>,
+        threshold: Option<f32>,
+    },
     GetYoutubeTranscript(String),
 }

@@ -1,5 +1,5 @@
 use crate::{
-    ai::ai::{ChatHistory, YoutubeTranscript},
+    ai::ai::{ChatHistory, DataSourceChunk, DocsSimilarity, YoutubeTranscript},
     backend::{
         message::{MiscMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
@@ -32,6 +32,18 @@ impl Worker {
         Database::create_ai_chat_session_tx(&mut tx, &new_chat)?;
         tx.commit()?;
         Ok(new_chat.id)
+    }
+
+    pub fn delete_ai_chat_message(&mut self, session_id: String) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::delete_ai_chat_session_tx(&mut tx, &session_id)?;
+        self.ai.delete_chat_history(session_id)?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn get_ai_docs_similarity(&mut self, query: String, docs: Vec<String>, threshold: Option<f32>) -> BackendResult<Vec<DocsSimilarity>> {
+        Ok(self.ai.get_docs_similarity(query, docs, threshold)?)
     }
 
     pub fn send_chat_query(
@@ -153,6 +165,10 @@ impl Worker {
         })
         .map_err(|e| BackendError::GenericError(e.to_string()))
     }
+
+    pub fn get_ai_chat_data_source(&self, source_hash: String) -> BackendResult<DataSourceChunk> {
+        Ok(self.ai.get_data_source(&source_hash.to_owned())?)
+    }
 }
 
 pub fn handle_misc_message(
@@ -200,6 +216,19 @@ pub fn handle_misc_message(
         }
         MiscMessage::QuerySFFSResources(prompt) => {
             send_worker_response(channel, oneshot, worker.query_sffs_resources(prompt))
+        }
+        MiscMessage::GetAIChatDataSource(source_hash) => {
+            send_worker_response(channel, oneshot, worker.get_ai_chat_data_source(source_hash))
+        }
+        MiscMessage::DeleteAIChatMessage(session_id) => {
+            send_worker_response(channel, oneshot, worker.delete_ai_chat_message(session_id))
+        }
+        MiscMessage::GetAIDocsSimilarity{
+            query,
+            docs,
+            threshold,
+        } => {
+            send_worker_response(channel, oneshot, worker.get_ai_docs_similarity(query, docs, threshold))
         }
         MiscMessage::GetYoutubeTranscript(video_url) => {
             send_worker_response(channel, oneshot, worker.get_youtube_transcript(video_url))

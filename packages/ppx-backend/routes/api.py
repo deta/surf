@@ -3,14 +3,14 @@ from typing import Union
 
 from fastapi import APIRouter, Query, responses, Response
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
+from utils.embedchain import send_message, send_general_message, get_embedding, get_resources
 from embedchain.loaders.youtube_video import YoutubeLoader
-
-from utils.embedchain import send_message
-from utils.embedchain import get_embedding
 from utils.sffs import get_resource
-from utils.embedchain import get_resources
 from utils.mocks import mock_stream
+from utils.query_classifier import is_query_a_question
+from utils.embeddings import get_similar_docs
 
 
 router = APIRouter()
@@ -36,6 +36,14 @@ async def handle_chat(
         return StreamingResponse(mock_stream())
     resource_ids_list = resource_ids.split(',') if resource_ids != None else None
 
+    if query.lower().startswith("general:"):
+        generator = send_general_message(query, session_id, True, DEFAULT_MODEL)
+        return StreamingResponse(generator)
+    
+    do_rag = is_query_a_question(query)
+    if do_rag and rag_only:
+        return responses.JSONResponse(status_code=400, content={"message": "RAG only works with non-questions"})
+
     generator = send_message(
         query, 
         session_id, 
@@ -45,7 +53,8 @@ async def handle_chat(
         True,
         DEFAULT_MODEL,
         resource_ids_list,
-        rag_only
+        rag_only,
+        do_rag
     )
     return StreamingResponse(generator)
 
@@ -69,6 +78,23 @@ async def handle_get_resources(query: str, resource_ids: Union[str, None] = None
     resource_ids_list = resource_ids.split(',') if resource_ids != None else None
     return set(await get_resources(query, resource_ids_list))
 
+class SimilarDocsRequest(BaseModel):
+    query: str
+    docs: list[str]
+    threshold: float = 0.5
+
+@router.post("/api/v1/docs_similarity")
+async def handle_get_similar_docs(request: SimilarDocsRequest):
+    try:
+        result = get_similar_docs(request.query, request.docs, request.threshold)
+        response = []
+        for doc, sim in result:
+            response.append({"doc": doc, "similarity": sim})
+        return response
+    except Exception as e:
+        print("Error in get_similar_docs:", e)
+        return responses.JSONResponse(status_code=500, content={"message": str(e)})
+
 @router.get("/api/v1/transcripts/youtube")
 async def handle_get_youtube_transcript(url: str, response: Response):
     try:
@@ -88,7 +114,6 @@ async def handle_get_youtube_transcript(url: str, response: Response):
             response.status_code = 500
             return {"detail": e}
     
-
 @router.get("/")
 async def root():
     return responses.RedirectResponse(url="/docs")

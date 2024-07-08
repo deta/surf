@@ -42,6 +42,7 @@ async def generate_sources_str(contexts):
     for idx, context in enumerate(contexts, 1):
         source_id = idx
         metadata = context.get('metadata', {})
+        hash = metadata.get('hash', '')
         timestamp = metadata.get('timestamp', '')
         resource_id = metadata.get('resource_id', '')
         url = metadata.get('url', '').removesuffix('/')
@@ -56,6 +57,7 @@ async def generate_sources_str(contexts):
         sources_str += (
             f"\t<source>\n"
             f"\t\t<id>{source_id}</id>\n"
+            f"\t\t<hash>{hash}</hash>\n"
             f"\t\t<resource_id>{resource_id}</resource_id>\n"
             f"\t\t<content>{content}</content>\n"
             f"\t\t<metadata>\n"
@@ -97,15 +99,58 @@ async def generate_messages(ec_app, query, contexts_data_for_llm_query, config, 
     messages.append(HumanMessage(content=prompt))
     return messages
 
+async def send_general_message(query, session_id, stream, model) -> AsyncIterable[str]:
+    ec_app = App.from_config(config=EC_APP_CONFIG)
+    
+    ec_app.llm.update_history(app_id=ec_app.config.id, session_id=session_id)
+    callback = AsyncIteratorCallbackHandler()
 
-async def send_message(query, session_id, number_documents, system_prompt, citations, stream, model, resource_ids, rag_only) -> AsyncIterable[str]:
+    config = BaseLlmConfig(model=model, stream=stream, callbacks=[callback], api_key=os.environ["OPENAI_API_KEY"])
+    messages = await generate_messages(ec_app, query, [], config, "You are a helpful assistant. Please help the user with their query.")
+
+    kwargs = {
+        "model": model,
+        "temperature": config.temperature,
+        "max_tokens": config.max_tokens,
+        "model_kwargs": {"top_p": config.top_p} if config.top_p else {},
+        "streaming": stream,
+        "callbacks": [callback],
+        "api_key": config.api_key,
+    }
+
+    llm_task = asyncio.create_task(ChatOpenAI(**kwargs).agenerate(messages=[messages]))
+    generated_answer = "<sources></sources>"
+    try:
+        yield generated_answer
+        async for token in callback.aiter():
+            yield token
+            generated_answer += token
+    except Exception as e:
+        logging.exception(f"Caught exception: {e}")
+    finally:
+        # add conversation in memory
+        ec_app.llm.add_history(ec_app.config.id, query, generated_answer, session_id=session_id)
+        callback.done.set()
+    await llm_task
+
+async def send_message(query, session_id, number_documents, system_prompt, citations, stream, model, resource_ids, rag_only, do_rag) -> AsyncIterable[str]:
     ec_app = App.from_config(config=EC_APP_CONFIG)
 
     where = {'app_id': ec_app.config.id}
     if resource_ids is not None:
         where = {'$and': [where, {"resource_id": {"$in": resource_ids}}]}
 
-    contexts = ec_app.search(query, where=where, num_documents=number_documents)
+    contexts = {}
+    if do_rag:
+        contexts = ec_app.search(query, where=where, num_documents=number_documents)
+    else:
+        # TODO: not have hardcoded collection name
+        data = ec_app.db.client.get_collection("embedchain_store").get(
+            include=["documents", "metadatas"], 
+            where=where,
+        )
+        contexts = [{"context": doc, "metadata": meta} for doc, meta in zip(data['documents'], data['metadatas'])]
+
     sources_str = await generate_sources_str(contexts)
     
     if rag_only:

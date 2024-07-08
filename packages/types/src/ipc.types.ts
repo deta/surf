@@ -13,7 +13,9 @@ export enum WebViewEventReceiveNames {
   RunAction = 'run_action',
   TransformationOutput = 'transformation_output',
   RestoreAnnotation = 'restore_annotation',
-  ScrollToAnnotation = 'scroll_to_annotation'
+  ScrollToAnnotation = 'scroll_to_annotation',
+  HighlightText = 'highlight_text',
+  SeekToTimestamp = 'seek_to_timestamp'
 }
 
 export enum WebViewEventSendNames {
@@ -74,6 +76,10 @@ export type WebViewEventBookmark = { text?: string; url: string }
 
 export type WebViewEventAnnotation = { id: string; data: ResourceDataAnnotation }
 
+export type WebViewEventHighlightText = { texts: string[] }
+
+export type WebViewEventSeekToTimestamp = { timestamp: number }
+
 export type WebViewEventTransform = {
   text: string
   query?: string
@@ -109,6 +115,8 @@ export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.TransformationOutput]: WebViewEventTransformationOutput
   [WebViewEventReceiveNames.RestoreAnnotation]: WebViewEventAnnotation
   [WebViewEventReceiveNames.ScrollToAnnotation]: WebViewEventAnnotation
+  [WebViewEventReceiveNames.HighlightText]: WebViewEventHighlightText
+  [WebViewEventReceiveNames.SeekToTimestamp]: WebViewEventSeekToTimestamp
 }
 
 export type WebViewSendEvents = {

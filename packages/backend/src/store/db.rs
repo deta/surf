@@ -1661,6 +1661,17 @@ impl Database {
         )?;
         Ok(())
     }
+
+    pub fn delete_ai_chat_session_tx(
+        tx: &mut rusqlite::Transaction,
+        id: &str,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "DELETE FROM ai_chat_sessions WHERE id = ?1",
+            rusqlite::params![id],
+        )?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

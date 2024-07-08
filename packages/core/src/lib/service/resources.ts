@@ -596,6 +596,10 @@ export class ResourceManager {
     return resource
   }
 
+  async getAIChatDataSource(hash: string) {
+    return this.sffs.getAIChatDataSource(hash)
+  }
+
   async deleteResource(id: string) {
     const resource = await this.getResource(id)
     if (!resource) {
