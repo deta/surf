@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { clipboard, contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import {
   mkdirSync,
@@ -338,7 +338,15 @@ const api = {
   updatePrompt: (id: string, content: string) => ipcRenderer.send('update-prompt', { id, content }),
 
   // Used by the Settings page
-  resetPrompt: (id: string) => ipcRenderer.send('reset-prompt', id)
+  resetPrompt: (id: string) => ipcRenderer.send('reset-prompt', id),
+
+  copyToClipboard: (content: any) => {
+    try {
+      clipboard.writeText(content)
+    } catch (err) {
+      console.error('Failed to copy: ', err)
+    }
+  }
 }
 
 ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {

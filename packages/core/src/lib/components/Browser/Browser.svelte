@@ -588,7 +588,8 @@
   const handleCopyLocation = useDebounce(() => {
     if ($activeTabLocation) {
       log.debug('Copying location to clipboard', $activeTabLocation)
-      copyToClipboard($activeTabLocation)
+      // @ts-ignore
+      window.api.copyToClipboard($activeTabLocation)
       toasts.success('Copied to Clipboard!')
     }
   }, 200)
