@@ -105,8 +105,12 @@
     <span class="label">Back to Tabs</span>
   </button> -->
 
+  <button class="action-new-space" on:click={createNewFolder}>
+    <Icon name="add" />
+    <span class="new-space-text">New Space</span>
+  </button>
   <div class="folder-wrapper">
-    {#each $spaces as folder (folder.id)}
+    {#each $spaces.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) as folder (folder.id)}
       <Folder
         {folder}
         on:delete={folder.id !== 'all' ? deleteFolder : null}
@@ -115,22 +119,16 @@
         on:rename={folder.id !== 'all'
           ? ({ detail }) => renameFolder(detail.id, detail.name)
           : null}
-        selected={$selectedSpace === folder.id}
       />
     {/each}
   </div>
-
-  <button class="action-new-space" on:click={createNewFolder}>
-    <Icon name="add" />
-    <span class="new-space-text">New Space</span>
-  </button>
 </div>
 
 <style lang="scss">
   .folders-sidebar {
     position: relative;
     top: 2rem;
-    padding: 0 0.5rem;
+    padding: 4rem;
   }
 
   button {
@@ -140,25 +138,26 @@
     padding: 1rem 0;
     gap: 0.5rem;
     background-color: transparent;
-    color: #7d7448;
     border: 0;
     border-radius: 8px;
     cursor: pointer;
+    border-radius: 16px;
+    background: var(--Black, #fff);
+    background: var(--Black, color(display-p3 1 1 1));
+    box-shadow: 0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1);
+    box-shadow: 0px 0.933px 2.8px 0px color(display-p3 0 0 0 / 0.1);
 
     span {
       font-size: 1rem;
       letter-spacing: 0.01em;
     }
-
-    &:hover {
-      color: #585234;
-    }
   }
 
   .folder-wrapper {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 1rem;
+    width: 100%;
   }
 
   .action-new-space {

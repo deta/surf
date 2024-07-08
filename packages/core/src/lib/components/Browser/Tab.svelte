@@ -6,6 +6,7 @@
   import type { Tab } from './types'
   import type { Writable } from 'svelte/store'
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
+  import { useLogScope } from '../../utils/log'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -17,7 +18,10 @@
 
   const dispatch = createEventDispatcher()
 
-  $: console.log('TAB:', tab)
+  const log = useLogScope('Tab')
+
+  $: acceptDrop = tab.type === 'space'
+  let dragOver = false
 
   const handleClick = () => {
     console.log('SET TAB ACTIVE: ', tab.id)

@@ -43,6 +43,7 @@
   export let resource: Resource
   export let selected: boolean = false
   export let annotations: ResourceAnnotation[] = []
+  export let showTitles: boolean = true
 
   const resourceManager = useResourceManager()
 
@@ -187,58 +188,59 @@
       <div class="text-base">Unknown</div> -->
     {/if}
   </div>
-
-  <div class="details">
-    <div class="type">
-      {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-        <!-- <Icon name="docs" size="20px" />
+  {#if showTitles}
+    <div class="details">
+      <div class="type">
+        {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+          <!-- <Icon name="docs" size="20px" />
         <div class="">Note</div> -->
-      {:else if resource.type === ResourceTypes.LINK}
-        <Icon name="link" size="20px" />
-        <div class="">Link</div>
-      {:else if resource.type.startsWith(ResourceTypes.POST_YOUTUBE)}
-        <ArticleProperties {resource} />
-      {:else if resource.type.startsWith(ResourceTypes.POST)}
-        <Icon name="link" size="20px" />
-        <div class="">Post</div>
-      {:else if resource.type.startsWith(ResourceTypes.ARTICLE)}
-        <ArticleProperties resource={articleResource} />
-      {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
-        <Icon name="docs" size="20px" />
-        <div class="">Message</div>
-      {:else if resource.type.startsWith(ResourceTypes.CHAT_THREAD)}
-        <Icon name="link" size="20px" />
-        <div class="">Thread</div>
-      {:else if resource.type.startsWith(ResourceTypes.DOCUMENT)}
-        <Icon name="docs" size="20px" />
-        <div class="">Document</div>
-      {:else if resource.type.startsWith(ResourceTypes.ANNOTATION)}
-        <Icon name="marker" size="20px" />
-        <div class="">Annotation</div>
-      {:else}
-        <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
-        <div class="">{getFileType(resource.type) ?? 'File'}</div>
+        {:else if resource.type === ResourceTypes.LINK}
+          <Icon name="link" size="20px" />
+          <div class="">Link</div>
+        {:else if resource.type.startsWith(ResourceTypes.POST_YOUTUBE)}
+          <ArticleProperties {resource} />
+        {:else if resource.type.startsWith(ResourceTypes.POST)}
+          <Icon name="link" size="20px" />
+          <div class="">Post</div>
+        {:else if resource.type.startsWith(ResourceTypes.ARTICLE)}
+          <ArticleProperties resource={articleResource} />
+        {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
+          <Icon name="docs" size="20px" />
+          <div class="">Message</div>
+        {:else if resource.type.startsWith(ResourceTypes.CHAT_THREAD)}
+          <Icon name="link" size="20px" />
+          <div class="">Thread</div>
+        {:else if resource.type.startsWith(ResourceTypes.DOCUMENT)}
+          <Icon name="docs" size="20px" />
+          <div class="">Document</div>
+        {:else if resource.type.startsWith(ResourceTypes.ANNOTATION)}
+          <Icon name="marker" size="20px" />
+          <div class="">Annotation</div>
+        {:else}
+          <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
+          <div class="">{getFileType(resource.type) ?? 'File'}</div>
+        {/if}
+      </div>
+
+      {#if annotations.length > 0}
+        <div class="annotations">
+          <Icon name="marker" />
+          <div>{annotations.length} Annotation{annotations.length > 1 ? 's' : ''}</div>
+        </div>
       {/if}
+
+      <div class="remove-wrapper">
+        <div class="remove rotated" on:click={handleMaximize}>
+          <Icon name="arrow.right" color="#AAA7B1" />
+        </div>
+        <div class="remove" on:click={handleRemove}>
+          <Icon name="close" color="#AAA7B1" />
+        </div>
+      </div>
+
+      <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
     </div>
-
-    {#if annotations.length > 0}
-      <div class="annotations">
-        <Icon name="marker" />
-        <div>{annotations.length} Annotation{annotations.length > 1 ? 's' : ''}</div>
-      </div>
-    {/if}
-
-    <div class="remove-wrapper">
-      <div class="remove rotated" on:click={handleMaximize}>
-        <Icon name="arrow.right" color="#AAA7B1" />
-      </div>
-      <div class="remove" on:click={handleRemove}>
-        <Icon name="close" color="#AAA7B1" />
-      </div>
-    </div>
-
-    <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
-  </div>
+  {/if}
 </div>
 
 <style lang="scss">

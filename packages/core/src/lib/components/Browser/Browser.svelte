@@ -4,6 +4,7 @@
   import { onMount, setContext, tick } from 'svelte'
   import { slide } from 'svelte/transition'
   import { tooltip } from '@svelte-plugins/tooltips'
+  import { popover } from '../Atoms/Popover/popover'
   import SplashScreen from '../SplashScreen.svelte'
   import { writable, derived, get } from 'svelte/store'
   import { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
@@ -16,6 +17,7 @@
   import { wait, writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
   import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
+  import { processDrop } from '../../service/mediaImporter'
 
   import DragDropList, {
     VerticalDropZone,
@@ -43,6 +45,8 @@
   import OasisSidebar from '../Oasis/OasisSidebar.svelte'
   import TabItem from './Tab.svelte'
   import TabSearch from './TabSearch.svelte'
+  import ShortcutMenu from '../Shortcut/ShortcutMenu.svelte'
+  import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
 
   import '../Horizon/index.scss'
   import type {
@@ -903,11 +907,13 @@
 
       bookmarkingInProgress.set(true)
 
-      await bookmarkPage($activeTab)
+      const resource = await bookmarkPage($activeTab)
 
       // automatically resets after some time
       toasts.success('Bookmarked Page!')
       bookmarkingSuccess.set(true)
+
+      return resource
     } catch (e) {
       log.error('error creating resource', e)
     } finally {
@@ -1718,7 +1724,7 @@
     }
   }
 
-  const handleCreateTabFromOasisSidebar = async (e: CustomEvent<Tab>) => {
+  const handleCreateTabFromSpace = async (e: CustomEvent<Tab>) => {
     const tab = e.detail
 
     log.debug('create tab from sidebar', tab)
@@ -1726,6 +1732,90 @@
     await createTab(tab)
 
     toasts.success('Space added to your Tabs!')
+  }
+
+  const handleCreateTabFromPopover = async (e: CustomEvent<Tab>) => {
+    const space = e.detail
+
+    log.debug('create tab from space', space)
+
+    try {
+      await oasis.renameSpace(space.id, {
+        folderName: space.name.folderName,
+        colors: space.name.colors,
+        showInSidebar: true
+      })
+
+      const tab = {
+        title: space.name.folderName,
+        icon: '',
+        spaceId: space.id,
+        type: 'space',
+        index: 0,
+        pinned: false,
+        archived: false
+      } as TabSpace
+
+      await createTab(tab)
+      await tick()
+    } catch (error) {
+      log.error('Failed to delete folder:', error)
+    }
+
+    toasts.success('Space added to your Tabs!')
+  }
+
+  const handleSaveResourceInSpace = async (e: CustomEvent) => {
+    console.log('hhh', e.detail)
+
+    try {
+      const resource = await handleBookmark(e.detail)
+      console.log('BOOKMARKED', resource)
+
+      if (resource) {
+        console.log('will add item', resource.id, 'to space', e.detail.id)
+        resourceManager.addItemsToSpace(e.detail.id, [resource.id])
+      }
+    } finally {
+      console.log('Bookmark handling completed')
+    }
+  }
+
+  const handleCreateNewSpace = async (e: CustomEvent) => {
+    try {
+      log.debug('Create new Space with Name', e.detail)
+
+      const newSpace = await oasis.createSpace({
+        folderName: e.detail,
+        colors: ['#FFBA76', '#FB8E4E'],
+        showInSidebar: false
+      })
+
+      log.debug('New Folder:', newSpace)
+
+      const userPrompt = JSON.stringify(e.detail)
+      let response = await resourceManager.getResourcesViaPrompt(userPrompt)
+      if (typeof response === 'string') {
+        response = JSON.parse(response)
+      }
+
+      log.debug(`Automatic Folder Generation request`, response)
+
+      const results = response.embedding_search_results || response.sql_query_results
+      log.debug('Automatic Folder generated with', results)
+
+      if (!results) {
+        log.warn('No results found for', userPrompt, response)
+        return
+      }
+
+      await oasis.addResourcesToSpace(newSpace.id, results)
+
+      toasts.success('Folder created with AI!')
+      await tick()
+    } catch (error) {
+      log.error('Failed to create new space:', error)
+    }
   }
 
   onMount(async () => {
@@ -1841,6 +1931,28 @@
     return resource_id
   }
 
+  const handleDrop = async (event: CustomEvent) => {
+    const tab = event.detail?.tab
+
+    event.preventDefault()
+
+    const mediaResults = await processDrop(event.detail.event)
+
+    const resourceItems = mediaResults.filter((r) => r.type === 'resource')
+
+    if (resourceItems.length > 0) {
+      await resourceManager.addItemsToSpace(
+        tab.spaceId,
+        resourceItems.map((r) => r.data as string)
+      )
+      log.debug(`Resources dropped into folder ${tab.title}`)
+
+      toasts.success('Resources added to folder!')
+    } else {
+      log.debug('No resources found in drop event')
+    }
+  }
+
   const handleRemoveFromSidebar = async (e: CustomEvent) => {
     const tabId = e.detail
 
@@ -1871,12 +1983,11 @@
           showInSidebar: false
         })
 
+        await tick()
+
         await archiveTab(tabId)
 
         toasts.success('Space removed from sidebar!')
-
-        // Update the tabs to reflect the removal from the sidebar
-        // tabs.update((currentTabs) => currentTabs.filter((t) => t.id !== tabId))
       }
     } catch (error) {
       log.error('Failed to remove space from sidebar:', error)
@@ -2106,6 +2217,20 @@
                       animation: 'fade',
                       delay: 500
                     }}
+                    on:save-resource-in-space={handleSaveResourceInSpace}
+                    use:popover={{
+                      content: {
+                        component: ShortcutSaveItem,
+                        props: { resourceManager, spaces }
+                      },
+                      action: 'hover',
+                      position: 'right-top',
+                      style: {
+                        backgroundColor: '#F8F7F1'
+                      },
+                      animation: 'fade',
+                      delay: 1200
+                    }}
                   >
                     {#if $bookmarkingInProgress}
                       <Icon name="spinner" />
@@ -2141,6 +2266,11 @@
         {/each} -->
 
           <!-- <div class="divider"></div> -->
+          {#if $activeTabMagic}
+            {#if $activeTabMagic.showSidebar}
+              to talk to a single tab — drop here
+            {/if}
+          {/if}
 
           <div class="unpinned-tabs-wrapper">
             <DragDropList
@@ -2161,10 +2291,37 @@
                 pinned={false}
                 on:select={handleTabSelect}
                 on:remove-from-sidebar={handleRemoveFromSidebar}
+                on:drop={handleDrop}
               />
+
+              {#if index === $unpinnedTabs.length - 1}
+                <button
+                  class="add-tab-button"
+                  on:click|preventDefault={() => createNewEmptyTab()}
+                  on:create-tab-from-space={handleCreateTabFromPopover}
+                  on:create-new-space={handleCreateNewSpace}
+                  use:popover={{
+                    content: {
+                      component: ShortcutMenu,
+                      props: { resourceManager, spaces }
+                    },
+                    action: 'hover',
+                    position: 'right-top',
+                    style: {
+                      backgroundColor: '#F8F7F1'
+                    },
+                    animation: 'fade',
+                    delay: 1200
+                  }}
+                >
+                  <Icon name="add" color="#7d7448" />
+                  <span class="label">New Tab</span>
+                </button>
+              {/if}
             </DragDropList>
           </div>
         </div>
+
         <div class="pinned-tabs-wrapper">
           <DragDropList
             id="pinned-tabs"
@@ -2194,52 +2351,8 @@
             {/if}
           </DragDropList>
         </div>
-
-        <div class="actions">
-          <button
-            on:click={() => {
-              $sidebarTab = 'oasis'
-              toggleOasis()
-            }}
-            use:tooltip={{
-              content: 'Open Oasis (⌘ + O)',
-              action: 'hover',
-              position: 'top',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            <Icon name="leave" />
-          </button>
-          <!--
-        <button
-          on:click|preventDefault={handleNewHorizon}
-          use:tooltip={{
-            content: 'New Horizon (⌘ + N)',
-            action: 'hover',
-            position: 'top',
-            animation: 'fade',
-            delay: 500
-          }}
-        >
-          <Icon name="layout-grid-add" />
-        </button>
-        -->
-          <button
-            on:click|preventDefault={() => createNewEmptyTab()}
-            use:tooltip={{
-              content: 'New Tab (⌘ + T)',
-              action: 'hover',
-              position: 'top',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            <Icon name="add" />
-          </button>
-        </div>
       {:else}
-        <OasisSidebar on:createTab={handleCreateTabFromOasisSidebar} />
+        <OasisSidebar on:createTab={handleCreateTabFromSpace} />
       {/if}
     </div>
   {/if}
@@ -2341,6 +2454,7 @@
             on:navigate={handleTabNavigation}
             on:chat={handleCreateChat}
             on:rag={handleRag}
+            on:create-tab-from-space={handleCreateTabFromSpace}
           />
         {/if}
       </div>
@@ -2447,7 +2561,6 @@
     width: var(--sidebar-width-left);
     height: 100vh;
     padding: 0.5rem 0.75rem 0.75rem 0.75rem;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
@@ -2659,6 +2772,34 @@
     .unpinned-tabs-wrapper {
       height: 100%;
       max-height: calc(100vh - 20rem);
+    }
+
+    .add-tab-button {
+      display: flex;
+      gap: 0.75rem;
+      padding: 1rem 1.125rem;
+      border: 0;
+      width: 100%;
+      background: transparent;
+      border-radius: 12px;
+
+      &:hover {
+        background-color: #e0e0d1;
+      }
+      .label {
+        flex: 1;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 1.1rem;
+        color: #7d7448;
+        font-weight: 500;
+        letter-spacing: 0.0025em;
+        font-smooth: always;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
     }
   }
 

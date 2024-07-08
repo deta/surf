@@ -6,12 +6,13 @@
   import { Telemetry } from '../../service/telemetry'
   import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
-  import type { Space, SpaceName } from '../../types'
   import { useLogScope } from '../../utils/log'
   import { useOasis } from '../../service/oasis'
   import { processDrop } from '../../service/mediaImporter'
   import Archive from '@horizon/icons/src/lib/Icons/Archive.svelte'
+  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import { useToasts } from '../../service/toast'
+  import { ResourceTypes, type SFFSResourceTag, type Space, type SpaceName } from '../../types'
 
   export let folder: Space
   export let selected: boolean
@@ -47,6 +48,29 @@
 
   const draggedOver = writable(false)
   const resourceManager = new ResourceManager(telemetry)
+
+  const getPreviewResources = async (numberOfLatestResourcesToFetch: number) => {
+    let result
+    if (folder.id == 'all') {
+      result = await resourceManager.searchResources('', [
+        ResourceManager.SearchTagDeleted(false),
+        ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+      ])
+
+      result.reverse()
+    } else {
+      result = await resourceManager.getSpaceContents(folder.id)
+    }
+    console.log('rrrr', result)
+    const resources = await Promise.all(
+      result
+        .map((item) => resourceManager.getResource(folder.id == 'all' ? item.id : item.resource_id))
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, numberOfLatestResourcesToFetch)
+    )
+
+    return resources
+  }
 
   const handleClick = () => {
     dispatch('select', folder.id)
@@ -142,14 +166,11 @@
     draggedOver.set(false)
   }
 
-  // onMount(() => {
-  //   if (folder.id === activeFolderId) {
-  //     const inputElement = document.getElementById(`folder-input-${folder.id}`) as HTMLInputElement
-  //     if (inputElement) {
-  //       inputElement.select()
-  //     }
-  //   }
-  // })
+  const getRandomRotation = () => {
+    const maxRotation = 1.5
+    const minRotation = -1.5
+    return `${Math.random() * (maxRotation - minRotation) + minRotation}deg`
+  }
 
   $: {
     inputWidth = `${folderDetails.folderName.length + 3}ch`
@@ -157,47 +178,56 @@
 </script>
 
 <div
-  class="folder-wrapper {processing && selected ? 'magic-in-progress' : ''} {$draggedOver
-    ? 'draggedOver'
-    : ''}"
+  class="folder-wrapper {processing ? 'magic-in-progress' : ''} {$draggedOver ? 'draggedOver' : ''}"
   on:dragover={handleDragOver}
   on:dragleave={handleDragLeave}
   on:drop={handleDrop}
   aria-hidden="true"
 >
   <div class="folder {selected ? 'active' : ''}" on:click={handleClick} aria-hidden="true">
-    <div class="folder-leading">
-      <SpaceIcon on:colorChange={handleColorChange} colors={folder.name.colors} {folder} />
-
-      <input
-        bind:this={inputElement}
-        id={`folder-input-${folder.id}`}
-        type="text"
-        bind:value={folderDetails.folderName}
-        on:blur={handleBlur}
-        class="folder-input"
-        style={`width: ${inputWidth}`}
-        on:keydown={async (e) => {
-          e.stopPropagation()
-          folderDetails.folderName = e.target?.value
-          if (e.code === 'Space' && !e.shiftKey) {
-            e.preventDefault()
-            folderDetails.folderName = e.target?.value + ' '
-          } else if (e.code === 'Enter' && e.shiftKey) {
-            e.preventDefault()
-            createFolderWithAI()
-          }
-        }}
-      />
+    <div class="previews">
+      {#await getPreviewResources(6) then resources}
+        {#each resources as resource}
+          <div class="folder-preview" style="transform: rotate({getRandomRotation()});">
+            <ResourcePreviewClean {resource} showTitles={false} />
+          </div>
+        {/each}
+      {/await}
     </div>
-    <div class="actions">
-      <button on:click|stopPropagation={handleDelete} class="close">
-        <Icon name="trash" size="20px" />
-      </button>
+    <div class="folder-label">
+      <div class="folder-leading">
+        <SpaceIcon on:colorChange={handleColorChange} colors={folder.name.colors} {folder} />
 
-      <button on:click|stopPropagation={handleAddSpaceToTabs} class="close">
-        <Icon name={!folder.name.showInSidebar ? 'add' : 'check'} size="20px" />
-      </button>
+        <input
+          bind:this={inputElement}
+          id={`folder-input-${folder.id}`}
+          type="text"
+          bind:value={folderDetails.folderName}
+          on:blur={handleBlur}
+          class="folder-input"
+          style={`width: ${inputWidth}`}
+          on:keydown={async (e) => {
+            e.stopPropagation()
+            folderDetails.folderName = e.target?.value
+            if (e.code === 'Space' && !e.shiftKey) {
+              e.preventDefault()
+              folderDetails.folderName = e.target?.value + ' '
+            } else if (e.code === 'Enter' && e.shiftKey) {
+              e.preventDefault()
+              createFolderWithAI()
+            }
+          }}
+        />
+      </div>
+      <div class="actions">
+        <button on:click|stopPropagation={handleDelete} class="close">
+          <Icon name="trash" size="20px" />
+        </button>
+
+        <button on:click|stopPropagation={handleAddSpaceToTabs} class="close">
+          <Icon name={!folder.name.showInSidebar ? 'add' : 'check'} size="20px" />
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -209,27 +239,126 @@
 
   .folder {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: end;
     justify-content: space-between;
-    padding: 1rem 1.5rem 1rem 1rem;
-    border-radius: 8px;
+    padding: 1.5rem;
+    border-radius: 12px;
     cursor: pointer;
     gap: 10px;
     position: relative;
-    color: #7d7448;
+    color: #244581;
+    height: 24rem;
     font-weight: 500;
     letter-spacing: 0.0025em;
     font-smooth: always;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     z-index: 1000;
-    &:hover {
-      background-color: #e0e0d1;
+    background: linear-gradient(0deg, #eef8fe 0%, #e3f4fc 4.18%),
+      linear-gradient(180deg, #f2fbfd 0%, #effafd 10.87%),
+      radial-gradient(41.69% 35.32% at 16.92% 87.63%, rgba(205, 231, 250, 0.85) 0%, #e4f2fb 100%),
+      linear-gradient(129deg, #f6fcfd 0.6%, #e6f8fe 44.83%, #e0f5fd 100%), var(--Black, #fff);
+
+    background: linear-gradient(
+        0deg,
+        color(display-p3 0.9412 0.9725 0.9922) 0%,
+        color(display-p3 0.902 0.9529 0.9843) 4.18%
+      ),
+      linear-gradient(
+        180deg,
+        color(display-p3 0.9569 0.9843 0.9922) 0%,
+        color(display-p3 0.9451 0.9804 0.9922 / 0) 10.87%
+      ),
+      radial-gradient(
+        41.69% 35.32% at 16.92% 87.63%,
+        color(display-p3 0.8222 0.9042 0.9735 / 0.85) 0%,
+        color(display-p3 0.9059 0.949 0.9804 / 0) 100%
+      ),
+      linear-gradient(
+        129deg,
+        color(display-p3 0.9686 0.9882 0.9922) 0.6%,
+        color(display-p3 0.9137 0.9686 0.9922) 44.83%,
+        color(display-p3 0.8941 0.9569 0.9882) 100%
+      ),
+      var(--Black, color(display-p3 1 1 1));
+
+    box-shadow: 0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1);
+    box-shadow: 0px 0.933px 2.8px 0px color(display-p3 0 0 0 / 0.1);
+
+    .previews {
+      position: relative;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      justify-content: center;
+      -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
     }
 
-    .actions {
+    .folder-preview {
+      width: 45%;
+      margin: 2%;
+      position: relative;
+      max-height: 16rem;
+      transition: transform 0.3s ease;
+    }
+
+    .folder-preview:hover {
+      transform: rotate(0deg) scale(1.025) translateY(0.025rem) !important;
+    }
+
+    .folder-label {
       display: flex;
-      gap: 0.75rem;
+      justify-content: space-between;
+      width: 100%;
+      .actions {
+        display: flex;
+        gap: 0.75rem;
+      }
+
+      .folder-leading {
+        display: flex;
+        gap: 1rem;
+        width: 100%;
+      }
+
+      .folder-input {
+        font-family: 'Inter', sans-serif;
+        border: none;
+        background: transparent;
+        color: #244581;
+        font-size: 1.15rem;
+        font-weight: 500;
+        letter-spacing: 0.0025em;
+        font-smooth: always;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        width: 100%;
+        outline: none;
+        width: fit-content;
+      }
+
+      .folder-input:focus {
+        background-color: transparent;
+      }
+
+      .close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        appearance: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        opacity: 0;
+        height: min-content;
+        background: none;
+        color: #a9a9a9;
+        cursor: pointer;
+      }
     }
   }
 
@@ -237,45 +366,6 @@
     color: #585130;
     z-index: 1000;
     background-color: #fff;
-  }
-
-  .folder-leading {
-    display: flex;
-    gap: 1rem;
-  }
-
-  .folder-input {
-    border: none;
-    background: transparent;
-    color: #7d7448;
-    font-size: 1.1rem;
-    font-weight: 500;
-    max-width: 15rem;
-    letter-spacing: 0.025rem;
-    font-smooth: always;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    outline: none;
-    width: fit-content;
-  }
-
-  .folder-input:focus {
-    background-color: transparent;
-  }
-
-  .close {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    appearance: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    opacity: 0;
-    height: min-content;
-    background: none;
-    color: #a9a9a9;
-    cursor: pointer;
   }
 
   .folder:hover {
