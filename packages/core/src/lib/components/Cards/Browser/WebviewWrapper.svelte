@@ -524,7 +524,7 @@
   {partition}
   useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
   preload={`file://${window.api.webviewPreloadPath}`}
-  webpreferences="defaultFontSize=14"
+  webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=14"
   allowpopups
 />
 
