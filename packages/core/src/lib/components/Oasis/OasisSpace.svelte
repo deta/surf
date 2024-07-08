@@ -49,7 +49,6 @@
 
   export let spaceId: string
   export let active: boolean = false
-  export let openedMiniBrowser: boolean = false
 
   $: isEverythingSpace = spaceId === 'all'
 
@@ -107,6 +106,13 @@
       }
 
       return ids
+    }
+  )
+
+  const isResourceDetailsModalOpen = derived(
+    [showResourceDetails, resourceDetailsModalSelected],
+    ([$showResourceDetails, $resourceDetailsModalSelected]) => {
+      return $showResourceDetails && !!$resourceDetailsModalSelected
     }
   )
 
@@ -590,21 +596,19 @@
     if (e.key === 'Escape') {
       e.preventDefault()
       handleCloseChat()
-    } else if (e.key === ' ' && $selectedItem && !openedMiniBrowser) {
+    } else if (e.key === ' ' && $selectedItem && !$isResourceDetailsModalOpen) {
       e.preventDefault()
       openResourceDetailsModal($selectedItem)
-    } else if (isModKeyAndKeyPressed(e, 'Enter')) {
-      if ($selectedItem) {
-        e.preventDefault()
+    } else if (isModKeyAndKeyPressed(e, 'Enter') && $selectedItem && !$isResourceDetailsModalOpen) {
+      e.preventDefault()
 
-        const resource = await resourceManager.getResource($selectedItem)
-        if (!resource) return
+      const resource = await resourceManager.getResource($selectedItem)
+      if (!resource) return
 
-        const url = resource.metadata?.sourceURI
-        if (!url) return
+      const url = resource.metadata?.sourceURI
+      if (!url) return
 
-        dispatch('new-tab', { url: url, active: e.shiftKey })
-      }
+      dispatch('new-tab', { url: url, active: e.shiftKey })
     }
   }
 
@@ -729,7 +733,7 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-{#if $showResourceDetails && $resourceDetailsModalSelected}
+{#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
   <OasisResourceModalWrapper
     resourceId={$resourceDetailsModalSelected}
     {active}

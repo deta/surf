@@ -116,10 +116,10 @@
 
   {#if sourceURL}
     <div class="source">
-      <div class="source-button">
+      <div class="source-button" use:tooltip={'Open Source in New Tab (⌘+Enter)'}>
         <Link
           url={sourceURL.href}
-          label="Open as new Tab"
+          label="Open as New Tab"
           locked={true}
           on:click={handleOpenSource}
         />

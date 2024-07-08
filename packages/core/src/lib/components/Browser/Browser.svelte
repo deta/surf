@@ -2726,7 +2726,6 @@
           <OasisSpace
             spaceId={tab.spaceId}
             active={$activeTabId === tab.id}
-            openedMiniBrowser={$showResourceDetails && !!$resourceDetailsModalSelected}
             on:create-resource-from-oasis={handeCreateResourceFromOasis}
             on:deleted={handleDeletedSpace}
             on:new-tab={handleNewTab}
