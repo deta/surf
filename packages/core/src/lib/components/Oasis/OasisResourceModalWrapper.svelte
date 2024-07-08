@@ -35,6 +35,6 @@
 
 <div class="modal">
   {#if $resource}
-    <OasisResourceModal resource={$resource} on:close />
+    <OasisResourceModal resource={$resource} on:close on:new-tab />
   {/if}
 </div>

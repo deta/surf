@@ -10,6 +10,7 @@
   import { Icon } from '@horizon/icons'
   import { tooltip } from '../../utils/directives'
   import { useToasts } from '../../service/toast'
+  import { createEventDispatcher } from 'svelte'
 
   const log = useLogScope('OasisResourceDetails')
 
@@ -18,6 +19,7 @@
 
   const resourceManager = useResourceManager()
   const toasts = useToasts()
+  const dispatch = createEventDispatcher<{ 'new-tab': { url: string; active: boolean } }>()
 
   let userContext = resource.metadata?.userContext
   let showAddTag = false
@@ -99,6 +101,11 @@
       await addNewTag()
     }
   }
+
+  const handleOpenSource = (e: MouseEvent) => {
+    e.preventDefault()
+    dispatch('new-tab', { url: sourceURL!.href, active: true })
+  }
 </script>
 
 <!-- svelte-ignore missing-declaration a11y-no-static-element-interactions -->
@@ -110,7 +117,12 @@
   {#if sourceURL}
     <div class="source">
       <div class="source-button">
-        <Link url={sourceURL.href} label="Open as new Tab" locked={true} />
+        <Link
+          url={sourceURL.href}
+          label="Open as new Tab"
+          locked={true}
+          on:click={handleOpenSource}
+        />
       </div>
     </div>
   {/if}

@@ -35,7 +35,10 @@
   let webview: WebviewWrapper
   let activeAnnotation = ''
 
-  const dispatch = createEventDispatcher<{ close: void }>()
+  const dispatch = createEventDispatcher<{
+    close: void
+    'new-tab': { url: string; active: boolean }
+  }>()
   const log = useLogScope('OasisResourceModal')
   const resourceManager = useResourceManager()
   const historyEntriesManager = new HistoryEntriesManager()
@@ -245,6 +248,11 @@
     })
   }
 
+  const handleNewTab = (e: CustomEvent<{ url: string; active: boolean }>) => {
+    dispatch('close')
+    dispatch('new-tab', e.detail)
+  }
+
   onMount(async () => {
     log.debug('Resource modal mounted', resource)
 
@@ -285,7 +293,7 @@
   </div>
   <div id="mini-browser" class="mini-browser">
     <div class="resource-details">
-      <OasisResourceDetails {resource}>
+      <OasisResourceDetails {resource} on:new-tab={handleNewTab}>
         <ResourceOverlay caption="Click to open in new tab">
           <ResourcePreviewClean slot="content" {resource} />
         </ResourceOverlay>

@@ -18,6 +18,7 @@
     class="from"
     style="color: {color}; text-decoration: none;"
     on:dragstart={handleDragStart}
+    on:click
     {...$$restProps}>{label}</a
   >
   <div class="arrow" class:locked>

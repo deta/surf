@@ -1728,7 +1728,10 @@
         archived: false
       } as TabSpace
 
-      await createTab(tab)
+      const newTab = await createTab(tab)
+
+      makeTabActive(newTab.id)
+
       await tick()
     } catch (error) {
       log.error('Failed to delete folder:', error)
@@ -2431,6 +2434,7 @@
       <OasisResourceModalWrapper
         resourceId={$resourceDetailsModalSelected}
         on:close={() => closeResourceDetailsModal()}
+        on:new-tab={handleNewTab}
       />
     {/if}
 

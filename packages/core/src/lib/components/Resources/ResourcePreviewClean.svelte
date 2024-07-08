@@ -247,38 +247,36 @@
         </div>
       </div>
 
-      <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
-    </div>
-  {/if}
-
-  {#if annotations.length > 0}
-    <div class="annotations">
-      <Icon name="marker" />
-      <div>{annotations.length} Annotation{annotations.length > 1 ? 's' : ''}</div>
-    </div>
-  {/if}
-
-  {#if isLiveSpaceResource}
-    {#if showSummary && resource.metadata?.userContext}
-      <div class="summary-wrapper">
-        <div class="summary">
-          {resource.metadata?.userContext}
+      {#if annotations.length > 0}
+        <div class="annotations">
+          <Icon name="marker" />
+          <div>{annotations.length} Annotation{annotations.length > 1 ? 's' : ''}</div>
         </div>
-      </div>
-    {/if}
-
-    <div class="annotations">
-      {#if resource.metadata?.sourceURI}
-        <img
-          class="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${resource.metadata?.sourceURI}&sz=256`}
-          alt={`favicon`}
-        />
       {/if}
 
-      <div>
-        {resource.metadata?.sourceURI ? getHostname(resource.metadata?.sourceURI) : 'Unknown'}
-      </div>
+      {#if isLiveSpaceResource}
+        {#if showSummary && resource.metadata?.userContext}
+          <div class="summary-wrapper">
+            <div class="summary">
+              {resource.metadata?.userContext}
+            </div>
+          </div>
+        {/if}
+
+        <div class="annotations">
+          {#if resource.metadata?.sourceURI}
+            <img
+              class="favicon"
+              src={`https://www.google.com/s2/favicons?domain=${resource.metadata?.sourceURI}&sz=256`}
+              alt={`favicon`}
+            />
+          {/if}
+
+          <div>
+            {resource.metadata?.sourceURI ? getHostname(resource.metadata?.sourceURI) : 'Unknown'}
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 
