@@ -46,6 +46,8 @@
   import { checkIfYoutubeUrl } from '../../utils/url'
 
   export let spaceId: string
+  export let active: boolean = false
+  export let openedMiniBrowser: boolean = false
 
   $: isEverythingSpace = spaceId === 'all'
 
@@ -572,15 +574,17 @@
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (!active) {
+      return
+    }
+
     log.debug('Key down:', e.key)
     if (e.key === 'Escape') {
       e.preventDefault()
       handleCloseChat()
-    } else if (e.key === ' ') {
-      if ($selectedItem) {
-        e.preventDefault()
-        dispatch('open', $selectedItem)
-      }
+    } else if (e.key === ' ' && $selectedItem && !openedMiniBrowser) {
+      e.preventDefault()
+      dispatch('open', $selectedItem)
     }
   }
 

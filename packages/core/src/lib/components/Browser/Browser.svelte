@@ -2651,6 +2651,7 @@
       <div class="browser-window active" style="--scaling: 1;">
         <OasisSpace
           spaceId={$selectedSpace}
+          active
           on:open={handleSpaceItemClick}
           on:create-resource-from-oasis={handeCreateResourceFromOasis}
           on:deleted={handleDeletedSpace}
@@ -2732,6 +2733,8 @@
         {:else if tab.type === 'space'}
           <OasisSpace
             spaceId={tab.spaceId}
+            active={$activeTabId === tab.id}
+            openedMiniBrowser={$showResourceDetails && !!$resourceDetailsModalSelected}
             on:open={handleSpaceItemClick}
             on:create-resource-from-oasis={handeCreateResourceFromOasis}
             on:deleted={handleDeletedSpace}
