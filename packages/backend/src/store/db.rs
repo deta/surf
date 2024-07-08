@@ -70,6 +70,12 @@ pub struct SearchResult {
     pub total: i64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchResultSimple {
+    pub items: Vec<String>,
+    pub total: i64,
+}
+
 #[derive(Debug)]
 pub struct VectorSearchResult {
     pub rowid: i64,
@@ -1303,6 +1309,23 @@ impl Database {
         Ok(results)
     }
 
+    // search for resources that match the given tags and only return the resource ids
+    pub fn list_resources_by_tags(&self, mut tags: Vec<ResourceTagFilter>) -> BackendResult<SearchResultSimple> {
+        let filtered_resource_ids = self.list_resource_ids_by_tags(&mut tags)?;
+
+        if filtered_resource_ids.is_empty() {
+            return Ok(SearchResultSimple {
+                items: vec![],
+                total: 0,
+            });
+        }
+
+        Ok(SearchResultSimple {
+            total: filtered_resource_ids.len() as i64,
+            items: filtered_resource_ids,
+        })
+    }
+
     // TODO: optimize this
     // TODO: move this to worker?
     // TODO: break this into smaller functions
@@ -1329,7 +1352,7 @@ impl Database {
                     total: 0,
                 });
             }
-        }
+        }        
 
         let mut results = self.keyword_search(keyword, filtered_resource_ids.clone())?;
         if include_annotations {

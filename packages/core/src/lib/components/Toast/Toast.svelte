@@ -18,6 +18,8 @@
       <Icon name="close" size="22px" stroke-width="2.5" />
     {:else if toast.type === 'warning'}
       <Icon name="alert-triangle" size="22px" stroke-width="2.5" />
+    {:else if toast.type === 'loading'}
+      <Icon name="spinner" size="18px" />
     {:else}
       <Icon name="info" size="22px" stroke-width="2.5" />
     {/if}

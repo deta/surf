@@ -6,32 +6,58 @@
   import { Icon } from '@horizon/icons'
   import Chat from '../Browser/Chat.svelte'
   import SearchInput from './SearchInput.svelte'
-  import { createEventDispatcher, tick } from 'svelte'
-  import { ResourceManager, type ResourceSearchResultItem } from '../../service/resources'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
+  import {
+    Resource,
+    ResourceManager,
+    ResourcePost,
+    ResourceTag,
+    type ResourceObject,
+    type ResourceSearchResultItem
+  } from '../../service/resources'
   import { wait } from '../../utils/time'
   import OasisResourcesView from './OasisResourcesView.svelte'
-  import { ResourceTypes, type SpaceEntry } from '../../types'
+  import {
+    ResourceTagsBuiltInKeys,
+    ResourceTypes,
+    type ResourceDataPost,
+    type Space,
+    type SpaceEntry,
+    type SpaceSource
+  } from '../../types'
   import DropWrapper from './DropWrapper.svelte'
   import CreateNewResource from './CreateNewResource.svelte'
 
   import {
     MEDIA_TYPES,
     createResourcesFromMediaItems,
+    extractAndCreateWebResource,
     processDrop
   } from '../../service/mediaImporter'
 
   import { useToasts } from '../../service/toast'
   import OasisResourcesViewSearchResult from './OasisResourcesViewSearchResult.svelte'
+  import { clickOutside, tooltip } from '../../utils/directives'
+  import { fly } from 'svelte/transition'
+  import OasisSpaceSettings from './OasisSpaceSettings.svelte'
+  import { RSSParser } from '@horizon/web-parser/src/rss/index'
+  import { summarizeText } from '../../service/ai'
+  import type { ResourceContent } from '@horizon/web-parser'
+  import { checkIfYoutubeUrl } from '../../utils/url'
 
   export let spaceId: string
 
   $: isEverythingSpace = spaceId === 'all'
 
-  const log = useLogScope('OasisTab')
+  const log = useLogScope('OasisSpace')
   const oasis = useOasis()
 
-  const dispatch = createEventDispatcher<{ open: string; 'create-resource-from-oasis': string }>()
-  const toast = useToasts()
+  const dispatch = createEventDispatcher<{
+    open: string
+    'create-resource-from-oasis': string
+    deleted: string
+  }>()
+  const toasts = useToasts()
 
   const resourceManager = oasis.resourceManager
   const spaces = oasis.spaces
@@ -43,7 +69,12 @@
   const searchResults = writable<string[]>([])
   const selectedItem = writable<string | null>(null)
   const showNewResourceModal = writable(false)
+  const showSettingsModal = writable(false)
   const loadingContents = writable(false)
+  const loadingSpaceSources = writable(false)
+  const space = writable<Space | null>(null)
+
+  const REFRESH_SPACE_SOURCES_AFTER = 15 * 60 * 1000 // 15 minutes
 
   // const selectedSpace = derived([spaces, selectedSpaceId], ([$spaces, $selectedSpaceId]) => {
   //     return $spaces.find(space => space.id === $selectedSpaceId)
@@ -75,16 +106,40 @@
     loadSpaceContents(spaceId)
   }
 
-  const loadSpaceContents = async (id: string) => {
+  const loadSpaceContents = async (id: string, skipSources = false) => {
     try {
       loadingContents.set(true)
+      everythingContents.set([])
+
+      const fetchedSpace = await oasis.getSpace(id)
+      if (!fetchedSpace) {
+        log.error('Space not found')
+        toasts.error('Space not found')
+        return
+      }
+
+      log.debug('Fetched space:', fetchedSpace)
+      space.set(fetchedSpace)
 
       const items = await oasis.getSpaceContents(id)
       log.debug('Loaded space contents:', items)
 
       searchValue.set('')
       searchResults.set([])
+
+      spaceContents.set([])
+
+      await tick()
+
       spaceContents.set(items)
+
+      if (
+        !skipSources &&
+        fetchedSpace.name.liveModeEnabled &&
+        (fetchedSpace.name.sources ?? []).length > 0
+      ) {
+        await loadSpaceSources(fetchedSpace.name.sources!)
+      }
     } catch (error) {
       log.error('Error loading space contents:', error)
     } finally {
@@ -95,15 +150,31 @@
   const loadEverything = async () => {
     try {
       loadingContents.set(true)
+      spaceContents.set([])
 
       const items = await resourceManager.searchResources(
         '',
         [
           ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+          ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SPACE_SOURCE)
         ],
-        { includeAnnotations: true }
+        { includeAnnotations: false }
       )
+
+      // const resources = await resourceManager.listResourcesByTags(
+      //   [
+      //     ResourceManager.SearchTagDeleted(false),
+      //     ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
+      //     ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SPACE_SOURCE)
+      //   ]
+      // )
+
+      // const items = resources.map((resource) => ({
+      //   id: resource.id,
+      //   resource: resource,
+      //   engine: 'local',
+      // } as ResourceSearchResultItem))
 
       log.debug('Loaded everything:', items)
 
@@ -115,6 +186,244 @@
     } finally {
       loadingContents.set(false)
     }
+  }
+
+  const loadSpaceSources = async (sources: SpaceSource[], forceFetch = false) => {
+    try {
+      loadingSpaceSources.set(true)
+
+      await Promise.all(
+        sources.map(async (source) => {
+          try {
+            if (
+              forceFetch ||
+              !source.last_fetched_at ||
+              new Date().getTime() - new Date(source.last_fetched_at).getTime() >
+                REFRESH_SPACE_SOURCES_AFTER
+            ) {
+              log.debug('Fetching source:', source)
+              return await loadSpaceSource(source)
+            } else {
+              log.debug('Source already fetched recently, skipping:', source)
+              return Promise.resolve()
+            }
+          } catch (error) {
+            log.error('Error loading source:', error)
+            toasts.error('Error loading source: ' + (error as Error).message)
+            return Promise.resolve()
+          }
+        })
+      )
+
+      await loadSpaceContents(spaceId, true)
+    } catch (error) {
+      log.error('Error loading space sources:', error)
+    } finally {
+      loadingSpaceSources.set(false)
+    }
+  }
+
+  const loadSpaceSource = async (source: SpaceSource) => {
+    source.last_fetched_at = new Date().toISOString()
+
+    space.update((s) => {
+      if (!s) {
+        return null
+      }
+
+      s.name.sources = (s.name.sources ?? []).map((x) => (x.id === source.id ? source : x))
+      return s
+    })
+
+    await oasis.updateSpaceData($space!.id, {
+      sources: ($space?.name.sources ?? []).map((x) => (x.id === source.id ? source : x))
+    })
+
+    const rssResult = await RSSParser.parse(source.url)
+
+    log.debug('RSS result:', rssResult)
+
+    const MAX_ITEMS = 25
+
+    if (rssResult.items) {
+      const parsed = await Promise.all(
+        rssResult.items.slice(0, MAX_ITEMS).map(async (item) => {
+          try {
+            log.debug('Processing RSS item:', item)
+
+            if (!item.link) {
+              log.debug('No link found in RSS item:', item)
+              return
+            }
+
+            const sourceURL = new URL(source.url)
+            const canonicalURL =
+              sourceURL.hostname === 'news.ycombinator.com' ? item.comments : item.link
+
+            const existingResourceIds = await resourceManager.listResourceIDsByTags([
+              ResourceManager.SearchTagDeleted(false),
+              ResourceManager.SearchTagCanonicalURL(canonicalURL),
+              ResourceManager.SearchTagSpaceSource('rss')
+            ])
+
+            log.debug('Existing resources:', existingResourceIds)
+
+            if (existingResourceIds.length > 0) {
+              const resourceId = existingResourceIds[0]
+              log.debug('Resource already exists', resourceId)
+
+              // check if resource is in space
+              const resourceInSpace = $spaceContents.find((x) => x.resource_id === resourceId)
+              if (resourceInSpace) {
+                log.debug('Resource already in space, skipping')
+                return
+              } else {
+                log.debug('Resource not in space, adding')
+                const resource = await resourceManager.getResource(resourceId)
+                if (resource) {
+                  spaceContents.update((contents) => {
+                    return [
+                      ...contents,
+                      {
+                        id: resource.id,
+                        resource_id: resource.id,
+                        space_id: $space!.id,
+                        manually_added: 0,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                      }
+                    ]
+                  })
+
+                  return resource
+                }
+              }
+            }
+
+            let parsed: {
+              resource: ResourceObject
+              content?: ResourceContent
+            } | null = null
+
+            if (checkIfYoutubeUrl(sourceURL)) {
+              log.debug('Youtube video, skipping webview parsing:', item)
+
+              const postData = RSSParser.parseYouTubeRSSItemToPost(item)
+              log.debug('Parsed youtube post data:', postData)
+
+              const resource = await resourceManager.createResource(
+                ResourceTypes.POST_YOUTUBE,
+                new Blob([JSON.stringify(postData)], { type: 'application/json' }),
+                {
+                  sourceURI: canonicalURL
+                },
+                [
+                  ResourceTag.canonicalURL(canonicalURL),
+                  ResourceTag.spaceSource('rss'),
+                  ResourceTag.viewedByUser(false)
+                ]
+              )
+
+              parsed = {
+                resource,
+                content: {
+                  plain: postData.content_plain,
+                  html: null
+                }
+              }
+            } else {
+              parsed = await extractAndCreateWebResource(
+                resourceManager,
+                item.link ?? item.comments,
+                {
+                  sourceURI: canonicalURL
+                },
+                [
+                  ResourceTag.canonicalURL(canonicalURL),
+                  ResourceTag.spaceSource('rss'),
+                  ResourceTag.viewedByUser(false)
+                ]
+              )
+            }
+
+            spaceContents.update((contents) => {
+              return [
+                ...contents,
+                {
+                  id: parsed.resource.id,
+                  resource_id: parsed.resource.id,
+                  space_id: $space!.id,
+                  manually_added: 0,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }
+              ]
+            })
+
+            try {
+              let contentToSummarize: string | null = null
+              if (parsed.resource.type === ResourceTypes.POST_YOUTUBE) {
+                const data = await (parsed.resource as ResourcePost).getParsedData()
+                log.debug('Getting transcript for youtube video:', data.url)
+                const transcriptData = await resourceManager.sffs.getAIYoutubeTranscript(data.url)
+                log.debug('transcript:', transcriptData)
+
+                if (transcriptData) {
+                  contentToSummarize = transcriptData.transcript
+                }
+              } else if (parsed.content && (parsed.content.plain || parsed.content.html)) {
+                contentToSummarize = parsed.content.plain || parsed.content.html
+              }
+
+              if (contentToSummarize) {
+                const summary = await summarizeText(
+                  contentToSummarize,
+                  'Summarize the given text into a single paragraph with 3-4 sentences'
+                )
+                log.debug('summary:', summary)
+
+                await resourceManager.updateResourceMetadata(parsed.resource.id, {
+                  userContext: summary
+                })
+              }
+            } catch (error) {
+              log.error('Error summarizing content:', error)
+            }
+
+            log.debug('Created RSS resource:', parsed.resource)
+            return parsed.resource
+          } catch (error) {
+            log.error('Error processing RSS item:', error)
+            return null
+          }
+        })
+      )
+
+      log.debug('Parsed resources:', parsed)
+
+      const resources = parsed.filter((x) => x) as Resource[]
+      if (resources.length > 0) {
+        await resourceManager.addItemsToSpace(
+          spaceId,
+          resources.map((r) => r.id)
+        )
+      }
+    }
+  }
+
+  const handleRefreshLiveSpace = async () => {
+    if (!$space) {
+      log.error('No space found')
+      return
+    }
+
+    const sources = $space.name.sources
+    if (!sources || sources.length === 0) {
+      log.debug('No sources found')
+      return
+    }
+
+    await loadSpaceSources(sources, true)
   }
 
   const handleChat = async (e: CustomEvent) => {
@@ -143,8 +452,20 @@
     resourceIds.set([])
   }
 
-  const handleNewResourceModal = () => {
+  const handleOpenNewResourceModal = () => {
     showNewResourceModal.set(true)
+  }
+
+  const handleCloseNewResourceModal = () => {
+    showNewResourceModal.set(false)
+  }
+
+  const handleOpenSettingsModal = () => {
+    showSettingsModal.set(true)
+  }
+
+  const handleCloseSettingsModal = () => {
+    showSettingsModal.set(false)
   }
 
   const handleSearch = async (e: CustomEvent<string>) => {
@@ -203,11 +524,20 @@
       const matchingResource = folderContents.find((r) => r.resource_id === resourceId)
       try {
         if (matchingResource) {
+          log.debug('trying to remove reference...', matchingResource)
           await resourceManager.deleteSpaceEntries([matchingResource.id])
-          await loadSpaceContents(spaceId)
-        }
 
-        log.debug('trying to remove reference...', matchingResource)
+          $spaceContents = $spaceContents.filter((x) => x.id !== matchingResource.id)
+
+          if (($space?.name.sources ?? []).length > 0) {
+            const fullResource = await resourceManager.getResource(resourceId)
+            if (fullResource?.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE)) {
+              await resourceManager.deleteResource(resourceId)
+            }
+          }
+
+          // await loadSpaceContents(spaceId)
+        }
       } catch (error) {
         log.error('Error removing reference:', error)
       }
@@ -229,7 +559,7 @@
         await loadSpaceContents(spaceId)
         log.debug('Resource deleted')
 
-        toast.success('Resource deleted!')
+        toasts.success('Resource deleted!')
       } catch (error) {
         log.error('Error deleting resource:', error)
       }
@@ -272,7 +602,7 @@
     log.debug('Resources', resources)
 
     await loadSpaceContents(spaceId)
-    toast.success('Resources added!')
+    toasts.success('Resources added!')
   }
 
   const handleCreateResource = async (e: CustomEvent<string>) => {
@@ -282,6 +612,81 @@
     await wait(5000)
     await loadSpaceContents(spaceId)
   }
+
+  const handleClearSpace = async () => {
+    if (!$space) {
+      log.error('No space found')
+      return
+    }
+
+    const confirmed = window.confirm(
+      'Are you sure you want to clear all resources from this space?'
+    )
+    if (!confirmed) {
+      return
+    }
+
+    const resources = await oasis.getSpaceContents($space.id)
+    await resourceManager.deleteSpaceEntries(resources.map((x) => x.id))
+
+    toasts.success('Space cleared!')
+
+    await loadSpaceContents($space.id)
+  }
+
+  const handleDeleteSpace = async (e: CustomEvent<boolean>) => {
+    const shouldDeleteAllResources = e.detail
+
+    const confirmed = window.confirm(
+      shouldDeleteAllResources
+        ? 'Are you sure you want to delete this space and all of its resources?'
+        : 'Are you sure you want to delete this space?'
+    )
+    if (!confirmed) {
+      return
+    }
+
+    const toast = toasts.loading('Deleting space…')
+
+    try {
+      if (shouldDeleteAllResources) {
+        log.debug('Deleting all resources in space', spaceId)
+        const resources = await oasis.getSpaceContents($space!.id)
+        await Promise.all(resources.map((x) => resourceManager.deleteResource(x.resource_id)))
+      }
+
+      log.debug('Deleting space', spaceId)
+      await oasis.deleteSpace(spaceId)
+
+      oasis.selectedSpace.set('all')
+      dispatch('deleted', spaceId)
+      toast.success('Space deleted!')
+    } catch (error) {
+      log.error('Error deleting space:', error)
+      toast.error('Error deleting space: ' + (error as Error).message)
+    }
+  }
+
+  const handleLoadResource = (e: CustomEvent<Resource>) => {
+    const resource = e.detail
+    log.debug('Load resource:', resource)
+
+    if ($space?.name.hideViewed) {
+      const viewedByUser =
+        resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.VIEWED_BY_USER)?.value ===
+        'true'
+
+      if (viewedByUser) {
+        log.debug('Resource already viewed by user')
+
+        $spaceContents = $spaceContents.filter((x) => x.resource_id !== resource.id)
+      }
+    }
+  }
+
+  const handleLoadSpace = () => {
+    loadSpaceContents(spaceId)
+  }
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -290,19 +695,77 @@
   <div class="wrapper">
     <div class="drawer-bar">
       <div class="drawer-chat-search">
-        <div class="search-input-wrapper">
-          <SearchInput bind:value={$searchValue} on:chat={handleChat} on:search={handleSearch} />
-        </div>
-
         <div class="create-wrapper">
-          <button class="create-new-resource" on:click={handleNewResourceModal}>
+          <button
+            class="create-new-resource"
+            on:click={handleOpenNewResourceModal}
+            use:tooltip={{
+              text: 'Create New Resource',
+              position: 'bottom'
+            }}
+          >
             <Icon name="add" size="28px" />
           </button>
 
           {#if $showNewResourceModal}
-            <CreateNewResource on:open-and-create-resource={handleCreateResource} />
+            <div
+              class="modal-wrapper"
+              transition:fly={{ y: 10, duration: 160 }}
+              use:clickOutside={handleCloseNewResourceModal}
+            >
+              <CreateNewResource on:open-and-create-resource={handleCreateResource} />
+            </div>
           {/if}
         </div>
+
+        <div class="search-input-wrapper">
+          <SearchInput bind:value={$searchValue} on:chat={handleChat} on:search={handleSearch} />
+        </div>
+
+        {#if spaceId !== 'all' && $space}
+          <div class="settings-wrapper">
+            <button
+              class="settings-toggle"
+              on:click={handleOpenSettingsModal}
+              use:tooltip={{ text: 'Open Settings', position: 'bottom' }}
+            >
+              <Icon name="settings" size="25px" />
+            </button>
+
+            {#if $showSettingsModal}
+              <div
+                class="modal-wrapper"
+                transition:fly={{ y: 10, duration: 160 }}
+                use:clickOutside={handleCloseSettingsModal}
+              >
+                <OasisSpaceSettings
+                  bind:space={$space}
+                  on:refresh={handleRefreshLiveSpace}
+                  on:clear={handleClearSpace}
+                  on:delete={handleDeleteSpace}
+                  on:load={handleLoadSpace}
+                />
+              </div>
+            {/if}
+          </div>
+
+          {#if $space.name.liveModeEnabled}
+            <button
+              class="live-mode"
+              disabled={$loadingSpaceSources}
+              on:click={handleRefreshLiveSpace}
+              use:tooltip={{ text: 'Click to refresh', position: 'bottom' }}
+            >
+              {#if $loadingSpaceSources}
+                <Icon name="spinner" />
+                Refreshing…
+              {:else}
+                <Icon name="news" />
+                Live Space
+              {/if}
+            </button>
+          {/if}
+        {/if}
 
         <div class="drawer-chat active">
           <button class="close-button" on:click={handleCloseChat}>
@@ -339,8 +802,9 @@
         on:click={handleItemClick}
         on:open
         on:remove={handleResourceRemove}
+        on:load={handleLoadResource}
       />
-    {:else if $everythingContents.length > 0}
+    {:else if isEverythingSpace && $everythingContents.length > 0}
       <OasisResourcesViewSearchResult
         resources={everythingContents}
         selected={$selectedItem}
@@ -349,10 +813,17 @@
         on:remove={handleResourceRemove}
       />
     {:else if $loadingContents}
-      <div class="loading-wrapper">
-        <div class="loading">
+      <div class="content-wrapper">
+        <div class="content">
           <Icon name="spinner" size="22px" />
           <p>Loading…</p>
+        </div>
+      </div>
+    {:else}
+      <div class="content-wrapper">
+        <div class="content">
+          <Icon name="leave" size="22px" />
+          <p>Oops! It seems like this Space is feeling a bit empty.</p>
         </div>
       </div>
     {/if}
@@ -398,6 +869,14 @@
       height: auto;
       width: 100%;
     }
+  }
+
+  .modal-wrapper {
+    position: absolute;
+    top: 4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
   }
 
   .drawer-bar {
@@ -462,13 +941,15 @@
 
       .create-wrapper {
         position: relative;
+
         .create-new-resource {
           display: flex;
           justify-content: center;
           align-items: center;
-          opacity: 0.4;
+          color: #7d7448;
+          opacity: 0.7;
           &:hover {
-            opacity: 0.6;
+            opacity: 1;
             background: transparent;
           }
         }
@@ -545,14 +1026,15 @@
     }
   }
 
-  .loading-wrapper {
+  .content-wrapper {
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: #7d7448;
 
-    .loading {
+    .content {
       display: flex;
       align-items: center;
       gap: 1rem;
@@ -562,6 +1044,41 @@
       p {
         font-size: 1.2rem;
       }
+    }
+  }
+
+  .settings-wrapper {
+    position: relative;
+
+    .settings-toggle {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #7d7448;
+      opacity: 0.7;
+      &:hover {
+        opacity: 1;
+        background: transparent;
+      }
+    }
+  }
+
+  .live-mode {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: #ff4eed;
+    border: none;
+    color: white;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.02rem;
+
+    &:hover {
+      background: #fb3ee9;
     }
   }
 </style>

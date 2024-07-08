@@ -9,6 +9,7 @@
     useResourceManager
   } from '../../service/resources'
   import {
+    ResourceTagsBuiltInKeys,
     WebViewEventReceiveNames,
     type AnnotationCommentData,
     type AnnotationRangeData,
@@ -25,6 +26,9 @@
 
   import AnnotationItem from './AnnotationItem.svelte'
   import { useToasts } from '../../service/toast'
+  import { WebParser } from '@horizon/web-parser'
+  import { getPrompt, PromptIDs } from '../../service/prompts'
+  import { handleInlineAI } from '../../service/ai'
 
   export let resource: Resource
 
@@ -221,6 +225,58 @@
       activeAnnotation = ''
     }, 1000)
   }
+
+  async function handleWebviewTransform(e: CustomEvent<WebViewWrapperEvents['transform']>) {
+    log.debug('webview transformation', e.detail)
+
+    const detectedResource = await webview.detectResource()
+    log.debug('extracted resource data', detectedResource)
+    if (!detectedResource) {
+      log.debug('no resource detected')
+      return
+    }
+
+    const transformation = await handleInlineAI(e.detail, detectedResource)
+
+    log.debug('transformation output', transformation)
+
+    webview.sendEvent(WebViewEventReceiveNames.TransformationOutput, {
+      text: transformation
+    })
+  }
+
+  onMount(async () => {
+    log.debug('Resource modal mounted', resource)
+
+    if (resource) {
+      const viewedByUserTag = (resource.tags ?? []).find(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.VIEWED_BY_USER
+      )
+      const viewedByUser = viewedByUserTag?.value === 'true'
+
+      if (!viewedByUser) {
+        log.debug('Marking resource as viewed', resource.id)
+
+        if (!viewedByUserTag) {
+          resource.tags = [
+            ...(resource.tags ?? []),
+            { name: ResourceTagsBuiltInKeys.VIEWED_BY_USER, value: 'true' }
+          ]
+          await resourceManager.createResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.VIEWED_BY_USER,
+            'true'
+          )
+        } else {
+          await resourceManager.updateResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.VIEWED_BY_USER,
+            'true'
+          )
+        }
+      }
+    }
+  })
 </script>
 
 <div class="mini-browser-wrapper">
@@ -231,7 +287,7 @@
     <div class="resource-details">
       <OasisResourceDetails {resource}>
         <ResourceOverlay caption="Click to open in new tab">
-          <ResourcePreviewClean slot="content" showAnnotations={false} {resource} />
+          <ResourcePreviewClean slot="content" {resource} />
         </ResourceOverlay>
       </OasisResourceDetails>
     </div>
@@ -255,6 +311,7 @@
       on:annotationClick={handleAnnotationClick}
       on:annotationRemove={handleAnnotationRemove}
       on:annotationUpdate={handleAnnotationUpdate}
+      on:transform={handleWebviewTransform}
     />
 
     <div class="annotations-view">
@@ -325,7 +382,7 @@
     display: flex;
     gap: 2rem;
     width: 80vw;
-    height: 100vh;
+    height: calc(100vh - 2rem);
     top: 0;
     left: 0;
     right: 0;
@@ -341,6 +398,7 @@
     position: relative;
     width: 40rem;
     border-radius: 12px;
+    overflow: hidden;
     background: white;
   }
 

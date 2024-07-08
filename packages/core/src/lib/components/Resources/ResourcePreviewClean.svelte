@@ -43,6 +43,7 @@
   export let resource: Resource
   export let selected: boolean = false
   export let annotations: ResourceAnnotation[] = []
+  export let showSummary: boolean = false
   export let showTitles: boolean = true
 
   const resourceManager = useResourceManager()
@@ -63,6 +64,10 @@
   $: chatThreadResource = resource as ResourceChatThread
   $: documentResource = resource as ResourceDocument
   $: annotationResource = resource as ResourceAnnotation
+
+  $: isLiveSpaceResource = !!resource.tags?.find(
+    (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
+  )
 
   let data: ResourceData | null = null
   const handleData = (e: CustomEvent<ResourceData>) => {
@@ -121,6 +126,16 @@
 
     dispatch('open', resource.id)
   }
+
+  const getHostname = (raw: string) => {
+    log.debug('Getting hostname from', raw)
+    try {
+      const url = new URL(raw)
+      return url.hostname
+    } catch (error) {
+      return raw
+    }
+  }
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -128,6 +143,7 @@
   on:click={handleClick}
   class="resource-preview"
   class:isSelected={selected}
+  class:background={isLiveSpaceResource && showSummary}
   style="--id:{resource.id};"
   on:dragstart={handleDragStart}
   draggable="true"
@@ -198,12 +214,12 @@
           <Icon name="link" size="20px" />
           <div class="">Link</div>
         {:else if resource.type.startsWith(ResourceTypes.POST_YOUTUBE)}
-          <ArticleProperties {resource} />
+          <ArticleProperties {resource} hideURL={isLiveSpaceResource} />
         {:else if resource.type.startsWith(ResourceTypes.POST)}
           <Icon name="link" size="20px" />
           <div class="">Post</div>
         {:else if resource.type.startsWith(ResourceTypes.ARTICLE)}
-          <ArticleProperties resource={articleResource} />
+          <ArticleProperties resource={articleResource} hideURL={isLiveSpaceResource} />
         {:else if resource.type.startsWith(ResourceTypes.CHAT_MESSAGE)}
           <Icon name="docs" size="20px" />
           <div class="">Message</div>
@@ -222,13 +238,6 @@
         {/if}
       </div>
 
-      {#if annotations.length > 0}
-        <div class="annotations">
-          <Icon name="marker" />
-          <div>{annotations.length} Annotation{annotations.length > 1 ? 's' : ''}</div>
-        </div>
-      {/if}
-
       <div class="remove-wrapper">
         <div class="remove rotated" on:click={handleMaximize}>
           <Icon name="arrow.right" color="#AAA7B1" />
@@ -241,6 +250,46 @@
       <!-- <div class="date">last changed <DateSinceNow date={resource.updatedAt} /></div> -->
     </div>
   {/if}
+
+  {#if annotations.length > 0}
+    <div class="annotations">
+      <Icon name="marker" />
+      <div>{annotations.length} Annotation{annotations.length > 1 ? 's' : ''}</div>
+    </div>
+  {/if}
+
+  {#if isLiveSpaceResource}
+    {#if showSummary && resource.metadata?.userContext}
+      <div class="summary-wrapper">
+        <div class="summary">
+          {resource.metadata?.userContext}
+        </div>
+      </div>
+    {/if}
+
+    <div class="annotations">
+      {#if resource.metadata?.sourceURI}
+        <img
+          class="favicon"
+          src={`https://www.google.com/s2/favicons?domain=${resource.metadata?.sourceURI}&sz=256`}
+          alt={`favicon`}
+        />
+      {/if}
+
+      <div>
+        {resource.metadata?.sourceURI ? getHostname(resource.metadata?.sourceURI) : 'Unknown'}
+      </div>
+    </div>
+  {/if}
+
+  <div class="remove-wrapper">
+    <div class="remove rotated" on:click={handleMaximize}>
+      <Icon name="arrow.right" color="#AAA7B1" />
+    </div>
+    <div class="remove" on:click={handleRemove}>
+      <Icon name="close" color="#AAA7B1" />
+    </div>
+  </div>
 </div>
 
 <style lang="scss">
@@ -278,6 +327,20 @@
     &.isSelected {
       .preview {
         outline: 4px solid rgba(0, 123, 255, 0.75);
+      }
+    }
+
+    &.background {
+      background: rgb(255, 255, 255);
+      border: 1px solid rgba(228, 228, 228, 0.75);
+      box-shadow:
+        0px 1px 0px 0px rgba(65, 58, 86, 0.25),
+        0px 0px 1px 0px rgba(0, 0, 0, 0.25);
+
+      .preview {
+        background: rgba(255, 255, 255, 0.75);
+        border: none;
+        box-shadow: none;
       }
     }
 
@@ -417,5 +480,28 @@
     gap: 0.5rem;
     font-size: 0.9rem;
     color: #666;
+  }
+
+  .favicon {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 5.1px;
+    box-shadow:
+      0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
+      0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
+  }
+
+  .summary-wrapper {
+    padding: 0.5rem 1rem;
+  }
+
+  .summary {
+    font-size: 0.9rem;
+    color: #666;
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.5;
   }
 </style>

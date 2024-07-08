@@ -63,6 +63,9 @@ import Settings from './Icons/Settings.svelte'
 import ChevronUp from './Icons/ChevronUp.svelte'
 import ChevronDown from './Icons/ChevronDown.svelte'
 import User from './Icons/User.svelte'
+import RSS from './Icons/RSS.svelte'
+import News from './Icons/News.svelte'
+import Hash from './Icons/Hash.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -130,7 +133,10 @@ export const icons = {
   settings: Settings,
   'chevron.up': ChevronUp,
   'chevron.down': ChevronDown,
-  user: User
+  user: User,
+  rss: RSS,
+  news: News,
+  hash: Hash
 }
 
 export type Icons = keyof typeof icons
@@ -199,5 +205,8 @@ export {
   Settings,
   ChevronUp,
   ChevronDown,
-  User
+  User,
+  RSS,
+  News,
+  Hash
 }

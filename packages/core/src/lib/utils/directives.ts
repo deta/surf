@@ -25,3 +25,27 @@ export function clickOutside(node: HTMLElement, onEventFunction: () => void) {
     }
   }
 }
+
+export type TooltipOptions = {
+  text: string
+  position?: 'top' | 'bottom' | 'left' | 'right'
+}
+
+export function tooltip(node: HTMLElement, opts: string | TooltipOptions) {
+  const defaultOptions = {
+    position: 'top'
+  }
+
+  const parsedOptions = typeof opts === 'string' ? { text: opts } : opts
+  const options = Object.assign({}, defaultOptions, parsedOptions)
+
+  node.setAttribute('data-tooltip', options.text)
+  node.setAttribute('data-tooltip-position', options.position)
+
+  return {
+    destroy() {
+      node.removeAttribute('data-tooltip')
+      node.removeAttribute('data-tooltip-position')
+    }
+  }
+}

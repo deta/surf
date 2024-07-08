@@ -7,6 +7,7 @@
   import type { ResourceDataarticle } from '@horizon/core/src/lib/types'
 
   export let resource: Resourcearticle
+  export let hideURL: boolean = false
 
   const log = useLogScope('articlePreview')
 
@@ -56,7 +57,9 @@
       <div class="subtitle">{article?.url}</div>
     {:else}
       <div class="title">{title}</div>
-      <div class="subtitle">{generateRootDomain(article?.url)}</div>
+      {#if !hideURL}
+        <div class="subtitle">{generateRootDomain(article?.url)}</div>
+      {/if}
     {/if}
   </div>
 </div>

@@ -1,3 +1,5 @@
+import type { DetectedWebApp } from '@horizon/types'
+
 export interface BaseTab {
   id: string
   createdAt: string
@@ -20,6 +22,7 @@ export interface TabPage extends BaseTab {
   resourceBookmark?: string | null
   chatResourceBookmark?: string | null
   chatId?: string | null
+  currentDetectedApp?: DetectedWebApp
 }
 
 export interface TabChat extends BaseTab {
@@ -101,6 +104,20 @@ export type AIChatMessageSource = {
 export type ChatMessageContentItem = {
   type: 'text' | 'citation'
   content: string
+}
+
+export type YoutubeTranscriptPiece = {
+  text: string
+  start: number
+  duration: number
+}
+
+export type YoutubeTranscript = {
+  transcript: string
+  metadata: {
+    source: string
+    transcript_pieces: YoutubeTranscriptPiece[]
+  }
 }
 
 export type PageMagicResponse = {

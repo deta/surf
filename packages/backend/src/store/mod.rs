@@ -51,6 +51,7 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         js_proximity_search_resources,
     )?;
     cx.export_function("js__store_search_resources", js_search_resources)?;
+    cx.export_function("js__store_list_resources_by_tags", js_list_resources_by_tags)?;
     cx.export_function("js__store_resource_post_process", js_resource_post_process)?;
     cx.export_function(
         "js__store_update_resource_metadata",
@@ -60,6 +61,14 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function(
         "js__store_remove_resource_tag_by_id",
         js_remove_resource_tag_by_id,
+    )?;
+    cx.export_function(
+        "js__store_remove_resource_tag_by_name",
+        js_remove_resource_tag_by_name,
+    )?;
+    cx.export_function(
+        "js__store_update_resource_tag_by_name",
+        js_update_resource_tag_by_name,
     )?;
 
     cx.export_function("js__store_create_history_entry", js_create_history_entry)?;
@@ -460,6 +469,31 @@ fn js_proximity_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise>
     Ok(promise)
 }
 
+fn js_list_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let resource_tags_json = cx
+        .argument_opt(1)
+        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
+        .map(|js_string| js_string.value(&mut cx));
+    let resource_tags: Option<Vec<models::ResourceTagFilter>> = match resource_tags_json
+        .map(|json_str| serde_json::from_str(&json_str))
+        .transpose()
+    {
+        Ok(Some(tags)) => Some(tags),
+        Ok(None) => return cx.throw_error("Resource tags must be provided"),
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTags(resource_tags.unwrap())),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
 fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
 
@@ -758,6 +792,41 @@ fn js_remove_resource_tag_by_id(mut cx: FunctionContext) -> JsResult<JsPromise> 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::ResourceTagMessage(ResourceTagMessage::RemoveResourceTag(tag_id)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_remove_resource_tag_by_name(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let tag_name = cx.argument::<JsString>(2)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceTagMessage(ResourceTagMessage::RemoveResourceTagByName {
+            resource_id,
+            tag_name,
+        }),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_update_resource_tag_by_name(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let tag_json = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let tag: models::ResourceTag = match serde_json::from_str(&tag_json) {
+        Ok(tag) => tag,
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceTagMessage(ResourceTagMessage::UpdateResourceTag(tag)),
         deferred,
     );
 

@@ -142,6 +142,7 @@
     flex-direction: column;
     gap: 1rem;
     padding: 2rem 2.5rem;
+    border-radius: 8px;
     background: #f6f5f2;
 
     .favicon {
@@ -160,6 +161,11 @@
       font-weight: 500;
       flex-shrink: 0;
       margin: 1rem 0;
+      // truncate to max 15 lines
+      display: -webkit-box;
+      -webkit-line-clamp: 15;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
   }
 </style>

@@ -5,14 +5,27 @@ export interface CreateSpaceEntryInput {
 
 export interface Space {
   id: string
-  name: SpaceName
+  name: SpaceData
   created_at: string
   updated_at: string
   deleted: number
 }
 
-export interface SpaceName {
-  [key: string]: any
+export interface SpaceData {
+  folderName: string
+  colors: [string, string]
+  showInSidebar: boolean
+  sources?: SpaceSource[]
+  liveModeEnabled: boolean
+  hideViewed: boolean
+}
+
+export interface SpaceSource {
+  id: string
+  name: string
+  type: 'rss'
+  url: string
+  last_fetched_at: string | null
 }
 
 export interface SpaceEntry {

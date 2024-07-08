@@ -36,6 +36,7 @@ let selectionMenuWrapper: ReturnType<typeof createComponentWrapper> | null = nul
 // const clickOutsideHandlers = new Map<string, () => void>()
 
 function runAppDetection() {
+  console.log('Running app detection on', window.location.href)
   // TODO: pass the URL to the detection function so we don't have to initialize a new WebParser
   const webParser = new WebParser(window.location.href)
 
@@ -55,6 +56,10 @@ function runAppDetection() {
   }
 
   const appInfo = appParser.getInfo()
+  const rssFeedUrl = appParser.getRSSFeedUrl(document)
+  if (rssFeedUrl) {
+    appInfo.rssFeedUrl = rssFeedUrl
+  }
 
   console.log('App detected:', appInfo)
   sendPageEvent(WebViewEventSendNames.DetectedApp, appInfo)

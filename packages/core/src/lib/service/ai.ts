@@ -1,6 +1,10 @@
+import type { DetectedResource } from '@horizon/types'
 import type { ChatMessageContentItem, ChatMessageSource } from '../components/Browser/types'
+import type { WebViewWrapperEvents } from '../components/Cards/Browser/WebviewWrapper.svelte'
 import { SIMPLE_SUMMARIZER_PROMPT } from '../constants/prompts'
 import log from '../utils/log'
+import { WebParser } from '@horizon/web-parser'
+import { PromptIDs, getPrompt } from './prompts'
 
 export const summarizeText = async (text: string, additionalSystemPrompt?: string) => {
   // @ts-expect-error
@@ -11,7 +15,7 @@ export const summarizeText = async (text: string, additionalSystemPrompt?: strin
 
   log.debug('Summarized text', summary)
 
-  return summary
+  return summary as string
 }
 
 export const DUMMY_CHAT_RESPONSE = `
@@ -180,4 +184,51 @@ export const parseChatResponseContent = (response: string) => {
 export const parseChatResponseSources = (response: string) => {
   const xml = parseXML(response)
   return parseXMLChatResponseSources(xml)
+}
+
+export const handleInlineAI = async (
+  data: WebViewWrapperEvents['transform'],
+  detectedResource: DetectedResource
+) => {
+  const { text, query, type, includePageContext } = data
+
+  const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+  const pageContext = detectedResource
+    ? `\n\nFull page content to use only as reference:\n${content.plain}`
+    : ''
+
+  const textContent = includePageContext
+    ? `Text selection from the user: ${text}\n\n Additional context from the page: ${pageContext}`
+    : text
+
+  let transformation = ''
+  if (type === 'summarize') {
+    const prompt = await getPrompt(PromptIDs.INLINE_SUMMARIZER)
+    // @ts-expect-error
+    transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
+  } else if (type === 'explain') {
+    const prompt = await getPrompt(PromptIDs.INLINE_EXPLAINER)
+    // @ts-expect-error
+    transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
+  } else if (type === 'translate') {
+    const prompt = await getPrompt(PromptIDs.INLINE_TRANSLATE)
+    log.debug('translate prompt', prompt)
+    // @ts-expect-error
+    transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
+  } else if (type === 'grammar') {
+    const prompt = await getPrompt(PromptIDs.INLINE_GRAMMAR)
+    // @ts-expect-error
+    transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
+  } else {
+    const prompt = await getPrompt(PromptIDs.INLINE_TRANSFORM_USER)
+    // @ts-expect-error
+    transformation = await window.api.createAIChatCompletion(
+      `User instruction: "${query}"\n\n` + includePageContext
+        ? textContent
+        : `Text selection from the user: ${text}`,
+      prompt.content
+    )
+  }
+
+  return transformation
 }

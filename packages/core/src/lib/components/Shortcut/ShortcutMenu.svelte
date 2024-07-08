@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { Space } from '@horizon/types'
   import { ResourceManager } from '../../service/resources'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { writable } from 'svelte/store'
+  import type { Space } from '../../types'
 
   export let resourceManager: ResourceManager
   export let spaces: Space[] = []
@@ -14,7 +14,10 @@
   let searchQuery = ''
   let filteredSpaces: Space[] = []
 
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<{
+    'create-tab-from-space': Space
+    'create-new-space': string
+  }>()
 
   const isCreatingNewSpace = writable(false)
   let newSpaceName = ''
@@ -26,11 +29,16 @@
 
       spaces.push({
         id: 'all',
-        name: { folderName: 'Everything', colors: ['#76E0FF', '#4EC9FB'] },
+        name: {
+          folderName: 'Everything',
+          colors: ['#76E0FF', '#4EC9FB'],
+          showInSidebar: false,
+          liveModeEnabled: false,
+          hideViewed: false
+        },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        deleted: 0,
-        type: 'space'
+        deleted: 0
       })
 
       console.log('Spaces:', spaces)

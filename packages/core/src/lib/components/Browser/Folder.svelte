@@ -6,27 +6,31 @@
   import { Telemetry } from '../../service/telemetry'
   import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
+  import type { Space, SpaceData, SFFSResourceTag, Space, SpaceName } from '../../types'
+  import { ResourceTypes } from '../../types'
   import { useLogScope } from '../../utils/log'
   import { useOasis } from '../../service/oasis'
   import { processDrop } from '../../service/mediaImporter'
   import Archive from '@horizon/icons/src/lib/Icons/Archive.svelte'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import { useToasts } from '../../service/toast'
-  import { ResourceTypes, type SFFSResourceTag, type Space, type SpaceName } from '../../types'
 
   export let folder: Space
   export let selected: boolean
 
   const log = useLogScope('Folder')
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<{
+    delete: void
+    select: void
+    'add-folder-to-tabs': void
+    'update-data': Partial<SpaceData>
+  }>()
   const oasis = useOasis()
 
   let folderDetails = folder.name
   let inputWidth = `${folderDetails.folderName.length}ch`
 
   const toast = useToasts()
-
-  let folderName = folder.name
 
   let processing = false
 
@@ -73,20 +77,19 @@
   }
 
   const handleClick = () => {
-    dispatch('select', folder.id)
+    dispatch('select')
   }
 
   const handleBlur = () => {
-    dispatch('rename', { id: folder.id, name: folderDetails.folderName })
+    dispatch('update-data', { folderName: folderDetails.folderName })
   }
 
   const handleDelete = () => {
-    console.log('handleDelete called with id:', folder.id)
-    dispatch('delete', folder.id)
+    dispatch('delete')
   }
 
   const handleAddSpaceToTabs = () => {
-    dispatch('add-folder-to-tabs', folder.id)
+    dispatch('add-folder-to-tabs')
   }
 
   const createFolderWithAI = async () => {
@@ -97,7 +100,8 @@
 
       log.debug('Creating folder with AI', userPrompt)
       inputElement.blur()
-      dispatch('rename', { id: folder.id, name: folderDetails.folderName })
+
+      dispatch('update-data', { folderName: folderDetails.folderName })
 
       let response = await resourceManager.getResourcesViaPrompt(userPrompt)
       if (typeof response === 'string') {
@@ -147,14 +151,8 @@
     draggedOver.set(false)
   }
 
-  const handleColorChange = async (event: CustomEvent) => {
-    const update: SpaceName = {
-      folderName: folderDetails.folderName,
-      colors: event.detail,
-      showInSidebar: folderDetails.showInSidebar
-    }
-    console.log('Updating Color...', update)
-    await resourceManager.updateSpace(folder.id, update)
+  const handleColorChange = async (event: CustomEvent<[string, string]>) => {
+    dispatch('update-data', { colors: event.detail })
   }
 
   const handleDragOver = (event: DragEvent) => {
@@ -166,6 +164,30 @@
     draggedOver.set(false)
   }
 
+  const handleKeyDown = async (e: KeyboardEvent) => {
+    e.stopPropagation()
+
+    const target = e.target as HTMLInputElement
+    const value = target.value
+
+    folderDetails.folderName = value
+    if (e.code === 'Space' && !e.shiftKey) {
+      e.preventDefault()
+      folderDetails.folderName = value + ' '
+    } else if (e.code === 'Enter' && e.shiftKey) {
+      e.preventDefault()
+      createFolderWithAI()
+    }
+  }
+
+  // onMount(() => {
+  //   if (folder.id === activeFolderId) {
+  //     const inputElement = document.getElementById(`folder-input-${folder.id}`) as HTMLInputElement
+  //     if (inputElement) {
+  //       inputElement.select()
+  //     }
+  //   }
+  // })
   const getRandomRotation = () => {
     const maxRotation = 1.5
     const minRotation = -1.5
@@ -196,7 +218,7 @@
     </div>
     <div class="folder-label">
       <div class="folder-leading">
-        <SpaceIcon on:colorChange={handleColorChange} colors={folder.name.colors} {folder} />
+        <SpaceIcon on:change={handleColorChange} {folder} />
 
         <input
           bind:this={inputElement}

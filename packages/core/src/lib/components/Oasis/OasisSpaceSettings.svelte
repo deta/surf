@@ -1,0 +1,625 @@
+<script lang="ts">
+  import { createEventDispatcher, onMount } from 'svelte'
+  import { Icon, IconConfirmation } from '@horizon/icons'
+
+  import type { Space, SpaceSource } from '../../types'
+  import { useLogScope } from '../../utils/log'
+  import SpaceIcon from '../Drawer/SpaceIcon.svelte'
+  import { useOasis } from '../../service/oasis'
+  import { tooltip } from '../../utils/directives'
+  import Switch from '../Atoms/Switch.svelte'
+  import { parseStringIntoUrl } from '../../utils/url'
+  import { useToasts } from '../../service/toast'
+  import { generateID } from '../../utils/id'
+  import { useDebounce } from '../../utils/debounce'
+  import { getHumanDistanceToNow } from '../../utils/time'
+  import { copyToClipboard } from '../../utils/clipboard'
+
+  export let space: Space
+
+  const dispatch = createEventDispatcher<{
+    refresh: void
+    clear: void
+    delete: boolean
+    load: void
+  }>()
+  const log = useLogScope('OasisSpaceSettings')
+  const oasis = useOasis()
+  const toasts = useToasts()
+
+  let isLiveModeOn = space.name.liveModeEnabled
+  let hideViewedResources = space.name.hideViewed
+  let sourceValue = ''
+  let loading = false
+  let showAddSource = false
+  let shoulDeleteAllResources = false
+  let expandedDangerZone = false
+  let copySourceIcon: IconConfirmation
+
+  const handleNameBlur = async () => {
+    if (!space) return
+
+    await oasis.updateSpaceData(space.id, space.name)
+  }
+
+  const handleAddSourceBlur = () => {
+    if (!sourceValue) {
+      showAddSource = false
+    }
+  }
+
+  const handleAddSource = async () => {
+    if (!space || !sourceValue) return
+
+    const url = parseStringIntoUrl(sourceValue)
+    if (!url) {
+      toasts.error('Invalid URL')
+      return
+    }
+
+    const source = {
+      id: generateID(),
+      name: url.hostname,
+      type: 'rss',
+      url: url.href,
+      last_fetched_at: null
+    } as SpaceSource
+
+    const newSources = [...(space.name.sources ?? []), source]
+    space.name.sources = newSources
+
+    showAddSource = false
+    sourceValue = ''
+
+    await oasis.updateSpaceData(space.id, { sources: newSources, liveModeEnabled: true })
+
+    // dispatch('refresh')
+  }
+
+  const getSourceName = (source: SpaceSource) => {
+    try {
+      if (source.name) return source.name
+      if (source.url) return new URL(source.url).hostname
+    } catch (e) {
+      return source.url
+    }
+  }
+
+  const removeSource = async (source: SpaceSource) => {
+    if (!space) return
+
+    const confirmed = window.confirm(
+      `Are you sure you want to remove the source "${getSourceName(source)}"?`
+    )
+    if (!confirmed) return
+
+    space.name.sources = space.name.sources?.filter((s) => s.id !== source.id)
+
+    await oasis.updateSpaceData(space.id, { sources: space.name.sources })
+
+    toasts.success('Source removed!')
+
+    dispatch('refresh')
+  }
+
+  const copySource = (source: SpaceSource) => {
+    copyToClipboard(source.url)
+    copySourceIcon.showConfirmation()
+  }
+
+  const handleClearSpace = async () => {
+    dispatch('clear')
+  }
+
+  const handleDeleteSpace = async () => {
+    dispatch('delete', shoulDeleteAllResources)
+  }
+
+  const handleLiveModeUpdate = useDebounce(async (e: CustomEvent<boolean>) => {
+    if (!space) return
+
+    space.name.liveModeEnabled = e.detail
+
+    await oasis.updateSpaceData(space.id, { liveModeEnabled: e.detail })
+  }, 500)
+
+  const handleHideViewedUpdate = useDebounce(async (e: CustomEvent<boolean>) => {
+    if (!space) return
+
+    space.name.hideViewed = e.detail
+
+    await oasis.updateSpaceData(space.id, { hideViewed: e.detail })
+
+    dispatch('load')
+  }, 500)
+</script>
+
+<article class="wrapper">
+  {#if space}
+    <div class="content">
+      <div class="header">
+        <!-- <SpaceIcon folder={space} /> -->
+        <div use:tooltip={{ text: 'Click to edit' }}>
+          <input
+            bind:value={space.name.folderName}
+            on:blur={handleNameBlur}
+            on:keydown|stopPropagation
+            class="folder-input"
+            spellcheck="false"
+          />
+        </div>
+
+        <Switch
+          label="Live"
+          color="#ff4eed"
+          bind:checked={isLiveModeOn}
+          on:update={handleLiveModeUpdate}
+        />
+      </div>
+
+      {#if isLiveModeOn && space.name.sources}
+        <div class="info">
+          <h2>Sources</h2>
+          <p>External sources to pull from for this space.</p>
+        </div>
+
+        <div class="sources">
+          {#each space.name.sources as source}
+            <div class="source">
+              <div class="title">
+                <img
+                  class="favicon"
+                  src={`https://www.google.com/s2/favicons?domain=${source.url}&sz=256`}
+                  alt={`favicon`}
+                />
+
+                <h3 use:tooltip={source.url}>{getSourceName(source)}</h3>
+              </div>
+              <div class="meta">
+                <p>
+                  Last fetched: {source.last_fetched_at
+                    ? getHumanDistanceToNow(source.last_fetched_at)
+                    : 'never'}
+                </p>
+
+                <div class="meta-actions">
+                  <button on:click={() => copySource(source)} use:tooltip={'Copy Source URL'}>
+                    <IconConfirmation bind:this={copySourceIcon} name="copy" />
+                  </button>
+
+                  <button on:click={() => removeSource(source)} use:tooltip={'Remove Source'}>
+                    <Icon name="trash" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          {/each}
+
+          {#if showAddSource}
+            <div class="add-source">
+              <input
+                placeholder="New source URL"
+                autofocus
+                spellcheck="false"
+                bind:value={sourceValue}
+                on:blur={handleAddSourceBlur}
+              />
+
+              <button on:click={handleAddSource} class="icon">
+                <Icon name="add" />
+              </button>
+            </div>
+          {:else}
+            <div class="add-source">
+              <button on:click={() => (showAddSource = true)} class="add-source">
+                <Icon name="add" />
+                Add Source
+              </button>
+            </div>
+          {/if}
+        </div>
+
+        <div class="settings">
+          <div class="setting">
+            <!-- <h3>Settings</h3> -->
+            <Switch
+              label="Hide already viewed items"
+              color="#ff4eed"
+              reverse
+              bind:checked={hideViewedResources}
+              on:update={handleHideViewedUpdate}
+            />
+          </div>
+        </div>
+
+        <div class="danger-zone">
+          <div class="danger-title">
+            <!-- svelte-ignore a11y-click-events-have-key-events a11y-interactive-supports-focus -->
+            <div
+              class="expand-toggle"
+              on:click={() => (expandedDangerZone = !expandedDangerZone)}
+              role="button"
+            >
+              {#if expandedDangerZone}
+                <Icon name="chevron.down" />
+              {:else}
+                <Icon name="chevron.right" />
+              {/if}
+              <h2>Danger Zone</h2>
+            </div>
+
+            {#if expandedDangerZone}
+              <p>These actions cannot be undone.</p>
+            {/if}
+          </div>
+
+          {#if expandedDangerZone}
+            <div class="actions">
+              <!-- <button
+                on:click={handleClearSpace}
+                use:tooltip={'Clear all resources from this Space.'}
+              >
+                <Icon name="close" />
+                Clear resources from Space
+              </button> -->
+
+              <div class="action">
+                <div class="action-row">
+                  <h3>Clear Space</h3>
+                  <p>Remove all resources from this Space.</p>
+                </div>
+
+                <button on:click={handleClearSpace}>
+                  <Icon name="close" />
+                  Clear Space
+                </button>
+              </div>
+
+              <div class="action">
+                <div class="action-row">
+                  <h3>Delete Space</h3>
+                  <!-- <p>Deletes the Space and optionally its resources.</p> -->
+
+                  <label>
+                    <input bind:checked={shoulDeleteAllResources} type="checkbox" />
+                    Permanently delete all resources as well
+                  </label>
+                </div>
+
+                <button on:click={handleDeleteSpace}>
+                  <Icon name="trash" />
+                  Delete Space
+                </button>
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/if}
+    </div>
+  {:else if loading}
+    <div class="loading-wrapper">
+      <div class="loading">
+        <Icon name="spinner" />
+        Loading…
+      </div>
+    </div>
+  {:else}
+    <div>Space not found</div>
+  {/if}
+</article>
+
+<style lang="scss">
+  .wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 2rem;
+    width: 40rem;
+    min-height: 20rem;
+    border: 0.5px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    box-shadow:
+      0px 0px 0px 1px rgba(0, 0, 0, 0.2),
+      0px 16.479px 41.197px 0px rgba(0, 0, 0, 0.46);
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .folder-input {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 1.4rem;
+    font-weight: 600;
+    opacity: 0.75;
+    font-family: inherit;
+    max-width: 15rem;
+    font-smooth: always;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    outline: none;
+    width: fit-content;
+
+    &:focus {
+      opacity: 1;
+    }
+  }
+
+  .info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 500;
+    }
+
+    p {
+      font-size: 1.1rem;
+      opacity: 0.75;
+    }
+  }
+
+  .sources {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .source {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      .favicon {
+        width: 1rem;
+        height: 1rem;
+        object-fit: cover;
+      }
+
+      h3 {
+        font-size: 1.1rem;
+        font-weight: 400;
+      }
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+
+      p {
+        font-size: 1rem;
+        opacity: 0.5;
+      }
+
+      button {
+        border: none;
+        background: none;
+        color: inherit;
+        opacity: 0.5;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        font-smooth: always;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    }
+
+    .meta-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+  }
+
+  .add-source {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    button {
+      border: none;
+      background: none;
+      color: inherit;
+      font-size: 1.1rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-smooth: always;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    button.icon {
+      background: #ff4eed;
+      color: #fff;
+      border-radius: 8px;
+      padding: 0.5rem;
+    }
+
+    input {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      padding: 0.5rem;
+      //grey
+      background: #f0f0f0;
+      color: inherit;
+      font-size: 1.1rem;
+      font-family: inherit;
+      font-smooth: always;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      outline: none;
+      width: 100%;
+
+      &::placeholder {
+        color: inherit;
+        opacity: 0.75;
+      }
+
+      &:active,
+      &:focus {
+        border: 1px solid #ff4eed;
+      }
+    }
+  }
+
+  .danger-zone {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 0, 0, 0.1);
+    padding: 1rem;
+    border-radius: 12px;
+
+    .expand-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+
+      h2 {
+        font-size: 1.2rem;
+        font-weight: 500;
+      }
+    }
+
+    .danger-title {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      h2 {
+        font-size: 1.2rem;
+        font-weight: 500;
+      }
+
+      p {
+        font-size: 1.1rem;
+        opacity: 0.75;
+      }
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .action {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+
+      .action-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+
+        h3 {
+          font-size: 1.1rem;
+          font-weight: 500;
+        }
+
+        p {
+          font-size: 1rem;
+          opacity: 0.75;
+        }
+      }
+
+      button {
+        flex-shrink: 0;
+        background: #ffffff80;
+        border: 1px solid #a89ca6;
+        color: inherit;
+        font-size: 1.1rem;
+        font-weight: 500;
+        cursor: pointer;
+        font-smooth: always;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 8px;
+      }
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        opacity: 0.75;
+
+        input {
+          cursor: pointer;
+        }
+      }
+    }
+  }
+
+  .settings {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1rem 0;
+
+    .setting {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+
+      h3 {
+        font-size: 1.2rem;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .loading-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    flex: 1;
+  }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+</style>

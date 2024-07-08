@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
 
   import { useLogScope } from '../../utils/log'
   import Folder from '../Browser/Folder.svelte'
@@ -8,14 +8,19 @@
 
   import { useToasts } from '../../service/toast'
   import type { TabSpace } from '@horizon/core/src/lib/components/Browser/types'
+  import type { SpaceData, SpaceSource } from '../../types'
+  import { parseStringIntoUrl } from '../../utils/url'
+  import { generateID } from '../../utils/id'
 
-  const log = useLogScope('Oasis Sidebar')
+  const log = useLogScope('OasisSidebar')
   const oasis = useOasis()
   const toast = useToasts()
   const dispatch = createEventDispatcher<{ createTab: TabSpace }>()
 
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
+
+  $: log.debug('Spaces:', $spaces)
 
   // const displaySpaces = derived(spaces, ($spaces) => {
   //   return [
@@ -24,12 +29,14 @@
   //   ]
   // })
 
-  const createNewFolder = async () => {
+  const handleCreateSpace = async (_e: MouseEvent) => {
     try {
       const newSpace = await oasis.createSpace({
-        folderName: 'New Folder',
+        folderName: 'New Space',
         colors: ['#FFBA76', '#FB8E4E'],
-        showInSidebar: false
+        showInSidebar: false,
+        sources: [],
+        liveModeEnabled: false
       })
 
       log.debug('New Folder:', newSpace)
@@ -49,29 +56,20 @@
     }
   }
 
-  const renameFolder = async (id: string, newName: string) => {
+  const addItemToTabs = async (id: string) => {
     try {
-      await oasis.renameSpace(id, { folderName: newName })
-    } catch (error) {
-      log.error('Failed to rename folder:', error)
-    }
-  }
-
-  const addItemToTabs = async (id: CustomEvent) => {
-    try {
+      log.debug('Adding folder to tabs:', id)
       const spaces = await oasis.loadSpaces()
-      const space = spaces.find((space) => space.id === id.detail)
+      const space = spaces.find((space) => space.id === id)
       if (space) {
-        await oasis.renameSpace(space.id, {
-          folderName: space.name.folderName,
-          colors: space.name.colors,
+        await oasis.updateSpaceData(id, {
           showInSidebar: true
         })
 
         dispatch('createTab', {
           title: space.name.folderName,
           icon: '',
-          spaceId: space.id,
+          spaceId: id,
           type: 'space',
           index: 0,
           pinned: false,
@@ -85,18 +83,38 @@
     }
   }
 
-  const deleteFolder = async (id: CustomEvent) => {
+  const deleteFolder = async (id: string) => {
     try {
-      await oasis.deleteSpace(id.detail)
-      toast.success('Folder deleted!')
+      await oasis.deleteSpace(id)
+      toast.success('Space deleted!')
     } catch (error) {
       log.error('Failed to delete folder:', error)
     }
   }
 
-  const handleFolderSelect = (event: CustomEvent) => {
-    selectedSpace.set(event.detail)
+  const handleSpaceUpdate = async (id: string, updates: Partial<SpaceData>) => {
+    try {
+      log.debug('Updating space:', id, updates)
+      if (id === 'everything') {
+        log.debug('Cannot update the Everything folder')
+        return
+      }
+
+      const space = $spaces.find((space) => space.id === id)
+      if (!space) {
+        log.error('Space not found:', id)
+        return
+      }
+
+      await oasis.updateSpaceData(id, updates)
+    } catch (error) {
+      log.error('Failed to update folder:', error)
+    }
   }
+
+  onMount(() => {
+    log.debug('Mounted OasisSidebar')
+  })
 </script>
 
 <div class="folders-sidebar">
@@ -105,21 +123,22 @@
     <span class="label">Back to Tabs</span>
   </button> -->
 
-  <button class="action-new-space" on:click={createNewFolder}>
+  <button class="action-new-space" on:click={handleCreateSpace}>
     <Icon name="add" />
     <span class="new-space-text">New Space</span>
   </button>
   <div class="folder-wrapper">
     {#each $spaces.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) as folder (folder.id)}
-      <Folder
-        {folder}
-        on:delete={folder.id !== 'all' ? deleteFolder : null}
-        on:add-folder-to-tabs={addItemToTabs}
-        on:select={folder.id === 'all' ? () => selectedSpace.set('all') : handleFolderSelect}
-        on:rename={folder.id !== 'all'
-          ? ({ detail }) => renameFolder(detail.id, detail.name)
-          : null}
-      />
+      {#key folder.name.colors}
+        <Folder
+          {folder}
+          on:delete={folder.id !== 'all' ? () => deleteFolder(folder.id) : null}
+          on:add-folder-to-tabs={() => addItemToTabs(folder.id)}
+          on:select={() => selectedSpace.set(folder.id)}
+          on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+          selected={$selectedSpace === folder.id}
+        />
+      {/key}
     {/each}
   </div>
 </div>
@@ -127,8 +146,10 @@
 <style lang="scss">
   .folders-sidebar {
     position: relative;
-    top: 2rem;
-    padding: 4rem;
+    padding: 2rem 0.5rem;
+    padding-top: 0;
+    flex: 1;
+    overflow-y: auto;
   }
 
   button {

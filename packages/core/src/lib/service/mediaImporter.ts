@@ -445,7 +445,7 @@ export const createResourcesFromMediaItems = async (
           ResourceTag.dragLocal()
         ])
       } else if (item.type === 'url') {
-        resource = await extractAndCreateWebResource(
+        const parsed = await extractAndCreateWebResource(
           resourceManager,
           item.data.href,
           item.metadata,
@@ -453,6 +453,7 @@ export const createResourcesFromMediaItems = async (
             ResourceTag.dragBrowser() // we assume URLs were dragged from the browser
           ]
         )
+        resource = parsed.resource
       } else if (item.type === 'file') {
         resource = await resourceManager.createResourceOther(item.data, item.metadata, [
           ResourceTag.dragLocal()
@@ -490,12 +491,24 @@ export const extractAndCreateWebResource = async (
   if (!extractedResource) {
     log.debug('No resource extracted, saving as link')
 
-    return resourceManager.createResourceLink({ url: url }, metadata, tags)
+    const resource = await resourceManager.createResourceLink({ url: url }, metadata, tags)
+
+    return {
+      resource,
+      content: undefined
+    }
   }
 
-  return resourceManager.createResourceOther(
+  const resource = await resourceManager.createResourceOther(
     new Blob([JSON.stringify(extractedResource.data)], { type: extractedResource.type }),
     metadata,
     tags
   )
+
+  const content = WebParser.getResourceContent(extractedResource.type, extractedResource.data)
+
+  return {
+    resource,
+    content
+  }
 }

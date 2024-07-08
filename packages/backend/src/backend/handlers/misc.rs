@@ -1,5 +1,5 @@
 use crate::{
-    ai::ai::ChatHistory,
+    ai::ai::{ChatHistory, YoutubeTranscript},
     backend::{
         message::{MiscMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
@@ -76,6 +76,10 @@ impl Worker {
 
                 Ok(())
             })
+    }
+
+    pub fn get_youtube_transcript(&self, video_url: String) -> BackendResult<YoutubeTranscript> {
+        Ok(self.ai.get_youtube_transcript(&video_url)?)
     }
 
     pub fn query_sffs_resources(&self, prompt: String) -> BackendResult<String> {
@@ -196,6 +200,9 @@ pub fn handle_misc_message(
         }
         MiscMessage::QuerySFFSResources(prompt) => {
             send_worker_response(channel, oneshot, worker.query_sffs_resources(prompt))
+        }
+        MiscMessage::GetYoutubeTranscript(video_url) => {
+            send_worker_response(channel, oneshot, worker.get_youtube_transcript(video_url))
         }
     }
 }

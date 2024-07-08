@@ -8,6 +8,7 @@ const _MODULE_PREFIX: &'static str = "ai";
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__ai_send_chat_message", js_send_chat_message)?;
     cx.export_function("js__ai_query_sffs_resources", js_query_sffs_resources)?;
+    cx.export_function("js__ai_get_youtube_transcript", js_get_youtube_transcript)?;
 
     Ok(())
 }
@@ -19,6 +20,19 @@ fn js_query_sffs_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::MiscMessage(MiscMessage::QuerySFFSResources(prompt)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_get_youtube_transcript(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let video_url = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::GetYoutubeTranscript(video_url)),
         deferred,
     );
 

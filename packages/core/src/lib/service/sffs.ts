@@ -28,9 +28,9 @@ import type {
   SFFSSearchResultItem,
   Space,
   SpaceEntry,
-  SpaceName
+  SpaceData
 } from '../types'
-import type { AIChat, Chat } from '../components/Browser/types'
+import type { AIChat, Chat, YoutubeTranscript } from '../components/Browser/types'
 
 export type CardToCreate = Optional<Card, 'id' | 'stackingOrder' | 'createdAt' | 'updatedAt'>
 export type HorizonToCreate = Optional<
@@ -215,8 +215,18 @@ export class SFFS {
   }
 
   convertRawSpaceToSpace(raw: any): Space {
-    const parsedName = this.parseData<SpaceName>(raw.name)
-    const nameData = parsedName === null ? { folderName: raw.name } : parsedName
+    const parsedName = this.parseData<SpaceData>(raw.name)
+    const nameData =
+      parsedName === null
+        ? ({
+            folderName: raw.name,
+            colors: ['', ''],
+            showInSidebar: false,
+            sources: [],
+            liveModeEnabled: false,
+            hideViewed: false
+          } as SpaceData)
+        : parsedName
     return {
       id: raw.id,
       name: nameData,
@@ -324,6 +334,35 @@ export class SFFS {
     return this.backend.js__store_update_resource_metadata(stringified)
   }
 
+  async createResourceTag(resourceId: string, tagName: string, tagValue: string) {
+    this.log.debug('creating resource tag', resourceId, tagName, tagValue)
+    const stringified = JSON.stringify({
+      id: '',
+      resource_id: resourceId,
+      tag_name: tagName,
+      tag_value: tagValue
+    } as SFFSRawResourceTag)
+
+    await this.backend.js__store_create_resource_tag(stringified)
+  }
+
+  async updateResourceTag(resourceId: string, tagName: string, tagValue: string) {
+    this.log.debug('updating resource tag', resourceId, tagName, tagValue)
+    const stringified = JSON.stringify({
+      id: '',
+      resource_id: resourceId,
+      tag_name: tagName,
+      tag_value: tagValue
+    } as SFFSRawResourceTag)
+
+    await this.backend.js__store_update_resource_tag_by_name(stringified)
+  }
+
+  async deleteResourceTag(resourceId: string, tagName: string) {
+    this.log.debug('deleting resource tag', resourceId, tagName)
+    await this.backend.js__store_remove_resource_tag_by_name(resourceId, tagName)
+  }
+
   async deleteResource(id: string): Promise<void> {
     this.log.debug('deleting resource with id', id)
     await this.backend.js__store_remove_resource(id)
@@ -338,6 +377,24 @@ export class SFFS {
     this.log.debug('reading all resources')
     const items = await this.backend.js__store_get_resources()
     return items.map(this.convertCompositeResourceToResource)
+  }
+
+  async listResourceIDsByTags(tags: SFFSResourceTag[]) {
+    this.log.debug('listing resources by tags', tags)
+    const tagsData = JSON.stringify(
+      tags.map(
+        (tag) =>
+          ({
+            id: '',
+            resource_id: '',
+            tag_name: tag.name,
+            tag_value: tag.value
+          }) as SFFSRawResourceTag
+      )
+    )
+    const raw = await this.backend.js__store_list_resources_by_tags(tagsData)
+    const parsed = this.parseData<{ items: string[]; total: number }>(raw)
+    return parsed?.items ?? []
   }
 
   async searchResources(
@@ -385,7 +442,7 @@ export class SFFS {
     }))
   }
 
-  async createSpace(name: SpaceName) {
+  async createSpace(name: SpaceData) {
     this.log.debug('creating space with name:', name)
 
     const raw = await this.backend.js__store_create_space(JSON.stringify(name))
@@ -424,7 +481,7 @@ export class SFFS {
     return spaces.map((space) => this.convertRawSpaceToSpace(space))
   }
 
-  async updateSpace(spaceId: string, name: SpaceName) {
+  async updateSpace(spaceId: string, name: SpaceData) {
     this.log.debug('updating space', spaceId, name)
     const rawName = JSON.stringify(name)
     await this.backend.js__store_update_space(spaceId, rawName)
@@ -689,6 +746,12 @@ export class SFFS {
     const raw = await this.backend.js__store_get_ai_chat(id, apiEndpoint)
 
     return this.parseData<AIChat>(raw)
+  }
+
+  async getAIYoutubeTranscript(videoURL: string): Promise<YoutubeTranscript | null> {
+    this.log.debug('getting youtube transcript with video url', videoURL)
+    const raw = await this.backend.js__ai_get_youtube_transcript(videoURL)
+    return this.parseData<YoutubeTranscript>(raw)
   }
 
   async sendAIChatMessage(

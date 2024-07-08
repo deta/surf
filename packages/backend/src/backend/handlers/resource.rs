@@ -6,7 +6,7 @@ use crate::{
         worker::{send_worker_response, Worker},
     },
     store::{
-        db::{CompositeResource, Database, SearchResult},
+        db::{CompositeResource, Database, SearchResult, SearchResultSimple},
         models::{
             current_time, random_uuid, Embedding, EmbeddingResource, InternalResourceTagNames,
             Resource, ResourceMetadata, ResourceTag, ResourceTagFilter, ResourceTextContent,
@@ -195,6 +195,14 @@ impl Worker {
         )
     }
 
+    // Only return resource ids
+    pub fn list_resources_by_tags(
+        &mut self,
+        tags: Vec<ResourceTagFilter>
+    ) -> BackendResult<SearchResultSimple> {
+        self.db.list_resources_by_tags(tags)
+    }
+
     pub fn search_resources(
         &mut self,
         query: String,
@@ -338,8 +346,9 @@ impl Worker {
         self.db.update_resource_metadata(&metadata)
     }
 
-    pub fn create_resource_tag(&mut self, tag: ResourceTag) -> BackendResult<()> {
+    pub fn create_resource_tag(&mut self, mut tag: ResourceTag) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
+        tag.id = random_uuid();
         Database::create_resource_tag_tx(&mut tx, &tag)?;
         tx.commit()?;
         Ok(())
@@ -348,6 +357,20 @@ impl Worker {
     pub fn delete_resource_tag_by_id(&mut self, tag_id: String) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::remove_resource_tag_tx(&mut tx, &tag_id)?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn delete_resource_tag_by_name(&mut self, resource_id: String, tag_name: String) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::remove_resource_tag_by_tag_name_tx(&mut tx, &resource_id, &tag_name)?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn update_resource_tag_by_name(&mut self, tag: ResourceTag) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::update_resource_tag_by_name_tx(&mut tx, &tag)?;
         tx.commit()?;
         Ok(())
     }
@@ -456,6 +479,12 @@ pub fn handle_resource_tag_message(
         ResourceTagMessage::RemoveResourceTag(tag_id) => {
             send_worker_response(channel, oneshot, worker.delete_resource_tag_by_id(tag_id))
         }
+        ResourceTagMessage::RemoveResourceTagByName { resource_id, tag_name } => {
+            send_worker_response(channel, oneshot, worker.delete_resource_tag_by_name(resource_id, tag_name))
+        }
+        ResourceTagMessage::UpdateResourceTag(tag) => {
+            send_worker_response(channel, oneshot, worker.update_resource_tag_by_name(tag))
+        }
     }
 }
 
@@ -507,6 +536,9 @@ pub fn handle_resource_message(
                 proximity_limit,
             ),
         ),
+        ResourceMessage::ListResourcesByTags(tags) => {
+            send_worker_response(channel, oneshot, worker.list_resources_by_tags(tags))
+        },
         ResourceMessage::SearchResources {
             query,
             resource_tag_filters,

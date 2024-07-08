@@ -1,8 +1,8 @@
-import { writable, type Writable } from 'svelte/store'
+import { get, writable, type Writable } from 'svelte/store'
 import { useLogScope } from '../utils/log'
 import type { ResourceManager } from './resources'
 
-import type { Space, SpaceName } from '../types'
+import type { Space, SpaceData } from '../types'
 import { getContext, setContext } from 'svelte'
 
 export class OasisService {
@@ -29,30 +29,18 @@ export class OasisService {
     } catch (error) {
       this.log.error('Failed to load spaces:', error)
     }
-
   }
 
   async loadSpaces() {
     this.log.debug('loading spaces')
     const result = await this.resourceManager.listSpaces()
-    const everything = [
-      {
-        id: 'all',
-        name: { folderName: 'Everything', colors: ['#76E0FF', '#4EC9FB'] },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        deleted: 0,
-        type: 'space'
-      },
-      ...result
-    ]
 
-    this.log.debug('loaded spaces:', everything)
-    this.spaces.set(everything)
-    return everything
+    this.log.debug('loaded spaces:', result)
+    this.spaces.set(result)
+    return result
   }
 
-  async createSpace(name: SpaceName) {
+  async createSpace(name: SpaceData) {
     this.log.debug('creating space')
     const result = await this.resourceManager.createSpace(name)
     if (!result) {
@@ -68,6 +56,15 @@ export class OasisService {
     return result
   }
 
+  getSpace(spaceId: string, fresh = false) {
+    const storedSpace = get(this.spaces).find((space) => space.id === spaceId)
+    if (storedSpace && !fresh) {
+      return storedSpace
+    }
+
+    return this.resourceManager.getSpace(spaceId)
+  }
+
   async deleteSpace(spaceId: string) {
     this.log.debug('deleting space', spaceId)
     await this.resourceManager.deleteSpace(spaceId)
@@ -78,15 +75,23 @@ export class OasisService {
     })
   }
 
+  async updateSpaceData(id: string, updates: Partial<SpaceData>) {
+    this.log.debug('updating space', id, updates)
 
-  async renameSpace(id: string, name: SpaceName) {
-    this.log.debug('renaming space', id, name)
-    await this.resourceManager.updateSpace(id, name)
+    const space = await this.getSpace(id)
+    if (!space) {
+      this.log.error('space not found:', id)
+      throw new Error('Space not found')
+    }
+
+    const data = { ...space.name, ...updates }
+
+    await this.resourceManager.updateSpace(id, data)
 
     this.spaces.update((spaces) => {
       return spaces.map((space) => {
         if (space.id === id) {
-          return { ...space, name }
+          return { ...space, name: data }
         }
         return space
       })

@@ -135,10 +135,119 @@ export class YoutubeParser extends WebAppExtractor {
     }
   }
 
+  private getChannelUrl(document: Document) {
+    // YouTube's canonical channel URLs look like /channel/AlphaNumericID
+    // It also supports named channels of the form /c/MyChannelName
+    // and handle links of the form /@MyChannelHandle.
+    // Match also on '%' to handle non-latin character codes
+    // Match on both of these to autodetect channel feeds on either URL
+    const url = this.url.href
+    const idPattern = /channel\/([a-zA-Z0-9%_-]+)/
+    const namePattern = /(?:c|user)\/[a-zA-Z0-9%_-]+/
+    const handlePattern = /@[a-zA-Z0-9%_-]+/
+    const urlPattern = new RegExp(
+      `${idPattern.source}|${namePattern.source}|${handlePattern.source}`
+    )
+
+    if (url.match(urlPattern)) {
+      const canonicalElem = document.querySelector("link[rel='canonical']")
+      if (!canonicalElem) {
+        return null
+      }
+
+      const canonicalUrl = (canonicalElem as HTMLLinkElement).href
+      const match = canonicalUrl.match(idPattern)
+      if (!match) {
+        return null
+      }
+
+      const channelId = match[1]
+      const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`
+
+      return url
+    }
+
+    return null
+  }
+
+  private getChannelIdentifier() {
+    // YouTube's canonical channel URLs look like /channel/AlphaNumericID
+    // It also supports named channels of the form /c/MyChannelName
+    // and handle links of the form /@MyChannelHandle.
+    // Match also on '%' to handle non-latin character codes
+    // Match on both of these to autodetect channel feeds on either URL
+    const url = this.url.href
+    const idPattern = /channel\/([a-zA-Z0-9%_-]+)/
+    const namePattern = /(?:c|user)\/[a-zA-Z0-9%_-]+/
+    const handlePattern = /@[a-zA-Z0-9%_-]+/
+
+    const idMatch = url.match(idPattern)
+    if (idMatch) {
+      return idMatch[1]
+    }
+
+    const nameMatch = url.match(namePattern)
+    if (nameMatch) {
+      return nameMatch[0]
+    }
+
+    const handleMatch = url.match(handlePattern)
+    if (handleMatch) {
+      return handleMatch[0].substring(1)
+    }
+
+    return null
+  }
+
+  private getPlayListId() {
+    const url = this.url.href
+    const regex = /[?&]list=([^&#]+)/
+    const match = url.match(regex)
+
+    if (match) {
+      return match[1]
+    } else {
+      return null
+    }
+  }
+
+  private getResourceIdentifier() {
+    if (this.url.pathname.includes('/playlist')) {
+      return this.getPlayListId()
+    } else if (this.url.pathname.includes('/watch')) {
+      return this.getVideoId()
+    } else {
+      return this.getChannelIdentifier()
+    }
+  }
+
+  getRSSFeedUrl(document: Document) {
+    if (this.url.pathname.includes('/playlist')) {
+      const playlistId = this.getPlayListId()
+      if (!playlistId) {
+        console.log('No playlist ID found')
+        return null
+      }
+
+      return `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`
+    }
+
+    if (this.url.pathname.includes('/watch')) {
+      return null
+    }
+
+    const channelUrl = this.getChannelUrl(document)
+    if (channelUrl) {
+      return channelUrl
+    }
+
+    console.log('No channel URL found')
+    return null
+  }
+
   getInfo(): DetectedWebApp {
     const resourceType = this.detectResourceType()
-    const appResourceIdentifier =
-      resourceType === ResourceTypes.POST_YOUTUBE ? this.getVideoId() : null
+    const appResourceIdentifier = this.getResourceIdentifier()
 
     return {
       appId: this.app?.id ?? null,
@@ -253,7 +362,6 @@ export class YoutubeParser extends WebAppExtractor {
       const title = document.querySelector('#title h1')?.textContent
       if (!title) {
         console.log('No title found')
-        return null
       }
 
       const videoObject = document.querySelector('div[itemtype="http://schema.org/VideoObject"]')

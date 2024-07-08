@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { writable } from 'svelte/store'
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import type { Space } from '../../types'
+  import { useLogScope } from '../../utils/log'
 
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<{ change: [string, string] }>()
+  const log = useLogScope('SpaceIcon')
 
   const colorPairs: [string, string][] = [
     ['#76E0FF', '#4EC9FB'],
@@ -28,29 +29,55 @@
     ['#FFE076', '#FBC94E']
   ]
 
-  export let colors: [string, string]
   export let folder: Space
 
-  function pickRandomColorPair(colorPairs: [string, string][]): [string, string] {
-    if (folder?.name?.folderName === 'Everything') {
+  $: parsedColors = getColors(folder.name.colors)
+
+  const pickRandomColorPair = (colorPairs: [string, string][]): [string, string] => {
+    if (folder?.id === 'all') {
       return colorPairs[0]
     }
     return colorPairs[Math.floor(Math.random() * colorPairs.length)]
   }
 
-  const randomPair = writable(colors || pickRandomColorPair(colorPairs))
+  const updateColor = (userAction = true) => {
+    const newColors = pickRandomColorPair(colorPairs)
 
-  const handlePickAnotherColor = () => {
-    const newPair = pickRandomColorPair(colorPairs)
-    randomPair.set(newPair)
-    dispatch('colorChange', newPair)
+    // if the action was not triggered by the user, wait 500ms before dispatching the change to make sure the event listeners are ready
+    if (userAction) {
+      dispatch('change', newColors)
+    } else {
+      setTimeout(() => {
+        dispatch('change', newColors)
+      }, 500)
+    }
+
+    return newColors
   }
+
+  const getColors = (colors: [string, string] | undefined): [string, string] => {
+    if (!colors || colors.filter((c) => c).length < 2) {
+      return updateColor(false)
+    }
+
+    return colors
+  }
+
+  onMount(() => {
+    const filtered = folder.name.colors?.filter((c) => c)
+    if (!filtered) {
+      log.debug('No colors provided, picking random color pair')
+      updateColor(false)
+    }
+  })
 </script>
 
 <div
   class="folder-icon"
-  on:click={handlePickAnotherColor}
-  style="--color1: {$randomPair[0]}; --color2: {$randomPair[1]}"
+  on:click={() => updateColor()}
+  style="--color1: {parsedColors ? parsedColors[0] : 'red'}; --color2: {parsedColors
+    ? parsedColors[1]
+    : 'blue'}"
   aria-hidden="true"
 ></div>
 

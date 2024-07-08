@@ -6,7 +6,8 @@
   import type { Tab } from './types'
   import type { Writable } from 'svelte/store'
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
-  import { useLogScope } from '../../utils/log'
+  import { useResourceManager } from '../../service/resources'
+  import type { Space } from '../../types'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -17,18 +18,18 @@
   export let showButtons: boolean = true
 
   const dispatch = createEventDispatcher()
+  const resourceManager = useResourceManager()
 
-  const log = useLogScope('Tab')
+  let space: Space | null = null
 
   $: acceptDrop = tab.type === 'space'
   let dragOver = false
 
   const handleClick = () => {
-    console.log('SET TAB ACTIVE: ', tab.id)
     dispatch('select', tab.id)
   }
 
-  const handleRemoveSpaceFromSidebar = (e: CustomEvent) => {
+  const handleRemoveSpaceFromSidebar = (_e: MouseEvent) => {
     dispatch('remove-from-sidebar', tab.id)
   }
 
@@ -41,12 +42,23 @@
     unarchiveTab(tab.id)
   }
 
+  const fetchSpace = async (id: string) => {
+    try {
+      space = await resourceManager.getSpace(id)
+    } catch (error) {
+      console.error('Failed to fetch space:', error)
+    }
+  }
+
+  $: if (tab.type === 'space') {
+    fetchSpace(tab.spaceId)
+  }
+
   $: sanitizedTitle =
     tab.type !== 'space'
       ? tab.title
           .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
           .replace(/[\/\\]/g, '–')
-          .replace(/\b[A-Z]+\b/g, (match) => match.charAt(0) + match.slice(1).toLowerCase())
           .replace(/^\w/, (c) => c.toUpperCase())
       : tab.title
 </script>
@@ -79,9 +91,9 @@
     <div class="icon-wrapper">
       <Icon name="code" size="20px" />
     </div>
-  {:else if tab.type === 'space'}
+  {:else if tab.type === 'space' && space}
     <div class="icon-wrapper">
-      <SpaceIcon />
+      <SpaceIcon folder={space} />
     </div>
   {:else}
     <div class="icon-wrapper">
@@ -128,7 +140,7 @@
             delay: 500
           }}
         >
-          <Icon name="trash" size="20px" />
+          <Icon name="close" size="20px" />
         </button>
       {:else}
         <button

@@ -35,7 +35,7 @@
     createResourceManager
   } from '../../service/resources'
 
-  import { type HistoryEntry } from '../../types'
+  import { type HistoryEntry, type Space, type SpaceSource } from '../../types'
 
   import { HorizonsManager } from '../../service/horizon'
   import { API } from '../../service/api'
@@ -75,7 +75,7 @@
   import { WebParser, type DetectedWebApp } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
   import OasisDiscovery from './OasisDiscovery.svelte'
-  import { parseChatResponseSources, summarizeText } from '../../service/ai'
+  import { handleInlineAI, parseChatResponseSources, summarizeText } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
   import {
     WebViewEventReceiveNames,
@@ -162,6 +162,7 @@
   const resourceDetailsModalSelected = writable<string | null>(null)
   const showAnnotationsSidebar = writable(false)
   const activeTabsHistory = writable<string[]>([])
+  const isCreatingLiveSpace = writable(false)
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -584,13 +585,13 @@
     addressInputElem.select()
   }
 
-  const handleCopyLocation = () => {
+  const handleCopyLocation = useDebounce(() => {
     if ($activeTabLocation) {
       log.debug('Copying location to clipboard', $activeTabLocation)
       copyToClipboard($activeTabLocation)
       toasts.success('Copied to Clipboard!')
     }
-  }
+  }, 200)
 
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -1046,6 +1047,11 @@
     log.debug('webview app detection', e.detail, tab)
 
     if (tab.type !== 'page') return
+
+    await updateTab(tab.id, {
+      currentDetectedApp: e.detail
+    })
+
     let pageMagic = $magicPages.find((page) => page.tabId === tab.id)
 
     if (!pageMagic) {
@@ -1106,9 +1112,13 @@
       normalized_url = normalized_url.replace(/&t.*/g, '')
     }
 
+    log.debug('getting resources from source url', url, normalized_url)
+    // measure time it takes to get resources
+    const start = performance.now()
     const matchingResources = await resourceManager.getResourcesFromSourceURL(normalized_url)
-    // log.debug('matching resources', matchingResources)
-    log.debug('getting resources from source url', url, normalized_url, matchingResources)
+    const end = performance.now()
+    log.debug('getting resources took', Math.round(end - start), 'ms')
+    log.debug('matching resources', matchingResources)
 
     const bookmarkedResource = matchingResources.find(
       (resource) => resource.type !== ResourceTypes.ANNOTATION
@@ -1116,7 +1126,7 @@
 
     log.debug('bookmarked resource', bookmarkedResource)
     if (bookmarkedResource) {
-      updateTab(tab.id, {
+      await updateTab(tab.id, {
         resourceBookmark: bookmarkedResource.id,
         chatResourceBookmark: bookmarkedResource.id
       })
@@ -1124,7 +1134,7 @@
 
     const annotationResources = matchingResources.filter(
       (resource) => resource.type === ResourceTypes.ANNOTATION
-    )
+    ) as ResourceAnnotation[]
 
     await wait(500)
 
@@ -1148,7 +1158,6 @@
     e: CustomEvent<WebViewWrapperEvents['transform']>,
     tab: TabPage
   ) {
-    const { text, query, type, includePageContext } = e.detail
     log.debug('webview transformation', e.detail)
 
     const browserTab = $browserTabs[tab.id]
@@ -1158,43 +1167,8 @@
       log.debug('no resource detected')
       return
     }
-    const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
-    const pageContext = detectedResource
-      ? `\n\nFull page content to use only as reference:\n${content.plain}`
-      : ''
 
-    const textContent = includePageContext
-      ? `Text selection from the user: ${text}\n\n Additional context from the page: ${pageContext}`
-      : text
-
-    let transformation = ''
-    if (type === 'summarize') {
-      const prompt = await getPrompt(PromptIDs.INLINE_SUMMARIZER)
-      // @ts-expect-error
-      transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
-    } else if (type === 'explain') {
-      const prompt = await getPrompt(PromptIDs.INLINE_EXPLAINER)
-      // @ts-expect-error
-      transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
-    } else if (type === 'translate') {
-      const prompt = await getPrompt(PromptIDs.INLINE_TRANSLATE)
-      log.debug('translate prompt', prompt)
-      // @ts-expect-error
-      transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
-    } else if (type === 'grammar') {
-      const prompt = await getPrompt(PromptIDs.INLINE_GRAMMAR)
-      // @ts-expect-error
-      transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
-    } else {
-      const prompt = await getPrompt(PromptIDs.INLINE_TRANSFORM_USER)
-      // @ts-expect-error
-      transformation = await window.api.createAIChatCompletion(
-        `User instruction: "${query}"\n\n` + includePageContext
-          ? textContent
-          : `Text selection from the user: ${text}`,
-        prompt.content
-      )
-    }
+    const transformation = await handleInlineAI(e.detail, detectedResource)
 
     log.debug('transformation output', transformation)
 
@@ -1734,15 +1708,13 @@
     toasts.success('Space added to your Tabs!')
   }
 
-  const handleCreateTabFromPopover = async (e: CustomEvent<Tab>) => {
+  const handleCreateTabFromPopover = async (e: CustomEvent<Space>) => {
     const space = e.detail
 
     log.debug('create tab from space', space)
 
     try {
-      await oasis.renameSpace(space.id, {
-        folderName: space.name.folderName,
-        colors: space.name.colors,
+      await oasis.updateSpaceData(space.id, {
         showInSidebar: true
       })
 
@@ -1788,7 +1760,9 @@
       const newSpace = await oasis.createSpace({
         folderName: e.detail,
         colors: ['#FFBA76', '#FB8E4E'],
-        showInSidebar: false
+        showInSidebar: false,
+        liveModeEnabled: false,
+        hideViewed: false
       })
 
       log.debug('New Folder:', newSpace)
@@ -1815,6 +1789,70 @@
       await tick()
     } catch (error) {
       log.error('Failed to create new space:', error)
+    }
+  }
+
+  const handleCreateLiveSpace = async (_e: MouseEvent) => {
+    try {
+      if ($activeTab?.type !== 'page' || !$activeTab.currentDetectedApp?.rssFeedUrl) {
+        log.debug('No RSS feed detected')
+        return
+      }
+
+      const app = $activeTab.currentDetectedApp
+
+      log.debug('create live space out of app', app)
+
+      isCreatingLiveSpace.set(true)
+      const toast = toasts.loading('Creating Live Space...')
+
+      const spaceSource = {
+        id: generateID(),
+        name: $activeTab.title ?? app.appName ?? 'Unknown',
+        type: 'rss',
+        url: app.rssFeedUrl,
+        last_fetched_at: null
+      } as SpaceSource
+
+      // create new space
+      const space = await oasis.createSpace({
+        folderName: $activeTab.title ?? app.appName ?? 'Live Space',
+        showInSidebar: true,
+        colors: ['#FFD700', '#FF8C00'],
+        sources: [spaceSource],
+        liveModeEnabled: true,
+        hideViewed: false
+      })
+
+      log.debug('created space', space)
+
+      const tab = await createTab({
+        title: space.name.folderName,
+        icon: '',
+        spaceId: space.id,
+        type: 'space',
+        index: 0,
+        pinned: false,
+        archived: false
+      } as TabSpace)
+
+      makeTabActive(tab.id)
+
+      toast.success('Live Space created!')
+    } catch (e) {
+      log.error('Error creating live space', e)
+    } finally {
+      isCreatingLiveSpace.set(false)
+    }
+  }
+
+  const handleDeletedSpace = (e: CustomEvent<string>) => {
+    const spaceId = e.detail
+    log.debug('Deleted space', spaceId)
+
+    const tab = $tabs.find((tab) => tab.type === 'space' && tab.spaceId === spaceId)
+    if (tab) {
+      deleteTab(tab.id)
     }
   }
 
@@ -1977,9 +2015,7 @@
       const spaces = await oasis.loadSpaces()
       const space = spaces.find((space) => space.id === spaceId)
       if (space) {
-        await oasis.renameSpace(space.id, {
-          folderName: space.name.folderName,
-          colors: space.name.colors,
+        await oasis.updateSpaceData(space.id, {
           showInSidebar: false
         })
 
@@ -2177,41 +2213,67 @@
             </div>
           {/if}
         </div>
-        <div
-          class="bar-wrapper"
-          aria-label="Collapse URL bar"
-          on:keydown={(e) => handleAddressBarKeyDown}
-          tabindex="0"
-          role="button"
-        >
-          <div class="address-bar-wrapper">
-            <div class="address-bar-content">
-              <div class="search">
-                <input
-                  bind:this={addressInputElem}
-                  disabled={$activeTab?.type !== 'page' &&
-                    $activeTab?.type !== 'chat' &&
-                    $activeTab?.type !== 'empty'}
-                  bind:value={$addressValue}
-                  on:blur={handleBlur}
-                  on:focus={handleFocus}
-                  type="text"
-                  placeholder={$activeTab?.type === 'page'
-                    ? 'Search or Enter URL'
-                    : $activeTab?.type === 'chat'
-                      ? 'Chat Title'
-                      : 'Search or Enter URL'}
-                />
-              </div>
 
-              {#if $activeTab?.type === 'page'}
-                {#key $activeTab.resourceBookmark}
+        {#if $sidebarTab !== 'oasis'}
+          <div
+            class="bar-wrapper"
+            aria-label="Collapse URL bar"
+            on:keydown={(e) => handleAddressBarKeyDown}
+            tabindex="0"
+            role="button"
+          >
+            <div class="address-bar-wrapper">
+              <div class="address-bar-content">
+                <div class="search">
+                  <input
+                    bind:this={addressInputElem}
+                    disabled={$activeTab?.type !== 'page' &&
+                      $activeTab?.type !== 'chat' &&
+                      $activeTab?.type !== 'empty'}
+                    bind:value={$addressValue}
+                    on:blur={handleBlur}
+                    on:focus={handleFocus}
+                    type="text"
+                    placeholder={$activeTab?.type === 'page'
+                      ? 'Search or Enter URL'
+                      : $activeTab?.type === 'chat'
+                        ? 'Chat Title'
+                        : 'Search or Enter URL'}
+                  />
+                </div>
+
+                {#if $activeTab?.type === 'page'}
+                  {#key $activeTab.resourceBookmark}
+                    <button
+                      on:click={handleBookmark}
+                      use:tooltip={{
+                        content: $activeTab?.resourceBookmark
+                          ? 'Open bookmark (⌘ + D)'
+                          : 'Bookmark this page (⌘ + D)',
+                        action: 'hover',
+                        position: 'left',
+                        animation: 'fade',
+                        delay: 500
+                      }}
+                    >
+                      {#if $bookmarkingInProgress}
+                        <Icon name="spinner" />
+                      {:else if $bookmarkingSuccess}
+                        <Icon name="check" />
+                      {:else if $activeTab?.resourceBookmark}
+                        <Icon name="bookmarkFilled" />
+                      {:else}
+                        <Icon name="leave" />
+                      {/if}
+                    </button>
+                  {/key}
+                {/if}
+
+                {#if $activeTab?.type === 'page' && $activeTab.currentDetectedApp?.rssFeedUrl}
                   <button
-                    on:click={handleBookmark}
+                    on:click={handleCreateLiveSpace}
                     use:tooltip={{
-                      content: $activeTab?.resourceBookmark
-                        ? 'Open bookmark (⌘ + D)'
-                        : 'Bookmark this page (⌘ + D)',
+                      content: `Create ${$activeTab.currentDetectedApp.appName} live Space`,
                       action: 'hover',
                       position: 'left',
                       animation: 'fade',
@@ -2232,21 +2294,13 @@
                       delay: 1200
                     }}
                   >
-                    {#if $bookmarkingInProgress}
-                      <Icon name="spinner" />
-                    {:else if $bookmarkingSuccess}
-                      <Icon name="check" />
-                    {:else if $activeTab?.resourceBookmark}
-                      <Icon name="bookmarkFilled" />
-                    {:else}
-                      <Icon name="leave" />
-                    {/if}
+                    <Icon name="news" />
                   </button>
-                {/key}
-              {/if}
+                {/if}
+              </div>
             </div>
           </div>
-        </div>
+        {/if}
       </div>
 
       {#if $sidebarTab !== 'oasis'}
@@ -2368,6 +2422,7 @@
           spaceId={$selectedSpace}
           on:open={handleSpaceItemClick}
           on:create-resource-from-oasis={handeCreateResourceFromOasis}
+          on:deleted={handleDeletedSpace}
         />
       </div>
     {/if}
@@ -2447,6 +2502,7 @@
             spaceId={tab.spaceId}
             on:open={handleSpaceItemClick}
             on:create-resource-from-oasis={handeCreateResourceFromOasis}
+            on:deleted={handleDeletedSpace}
           />
         {:else}
           <BrowserHomescreen
@@ -2660,7 +2716,7 @@
 
   .bar-wrapper {
     width: 100%;
-    margin-top: 2rem;
+    margin-top: 0.5rem;
 
     .hitarea {
       position: absolute;
@@ -2959,7 +3015,6 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    margin-bottom: -22px;
     z-index: 10;
     padding-top: 5px;
     padding-bottom: 5px;
@@ -3034,5 +3089,21 @@
   .tab-bar-selector {
     display: flex;
     flex-direction: column;
+  }
+
+  .create-space-btn {
+    background: #f73b95;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    margin-top: 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
   }
 </style>

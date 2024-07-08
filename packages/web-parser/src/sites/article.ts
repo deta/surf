@@ -3,7 +3,7 @@ import { Readability, isProbablyReaderable } from '@mozilla/readability'
 
 import { MetadataExtractor, WebAppExtractor } from '../extractors'
 import type { DetectedWebApp } from '../types'
-import { parseDateString } from '../utils'
+import { generateNameFromURL, parseDateString } from '../utils'
 
 export type RawArticleData = {
   title: string
@@ -42,7 +42,7 @@ export class ArticleParser extends WebAppExtractor {
   getInfo(): DetectedWebApp {
     return {
       appId: null,
-      appName: null,
+      appName: generateNameFromURL(this.url.href),
       hostname: this.url.hostname,
       resourceType: this.detectResourceType(),
       appResourceIdentifier: this.url.pathname,

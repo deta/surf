@@ -2,6 +2,7 @@ import { ResourceTypes, ResourceDataLink } from '@horizon/types'
 
 import { MetadataExtractor, WebAppExtractor } from '../extractors'
 import type { DetectedWebApp } from '../types'
+import { generateNameFromURL } from '../utils'
 
 export class LinkParser extends WebAppExtractor {
   metadataExtractor: MetadataExtractor
@@ -21,7 +22,7 @@ export class LinkParser extends WebAppExtractor {
   getInfo(): DetectedWebApp {
     return {
       appId: null,
-      appName: null,
+      appName: generateNameFromURL(this.url.href),
       hostname: this.url.hostname,
       resourceType: this.detectResourceType(),
       appResourceIdentifier: this.url.pathname,

@@ -60,6 +60,7 @@
           on:click
           on:open
           on:remove
+          on:load
         />
       {/each}
 

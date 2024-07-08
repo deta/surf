@@ -110,15 +110,18 @@ const api = {
     }
   },
 
-  fetchHTMLFromRemoteURL: async (url: string) => {
+  fetchHTMLFromRemoteURL: async (url: string, opts?: RequestInit) => {
     try {
+      console.log('fetching', url, opts)
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
-          'Content-Type': 'text/html'
-        }
+          'Content-Type': 'text/html',
+          ...(opts?.headers ?? {})
+        },
+        ...opts
       })
       const html = await response.text()
 

@@ -47,6 +47,26 @@ pub struct ChatHistory {
     pub messages: Vec<ChatMessage>,
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct YoutubeTranscriptPiece {
+    pub text: String,
+    pub start: f32,
+    pub duration: f32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct YoutubeTranscriptMetadata {
+    pub source: String,
+    pub transcript_pieces: Vec<YoutubeTranscriptPiece>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct YoutubeTranscript {
+    pub transcript: String,
+    pub metadata: YoutubeTranscriptMetadata
+}
+
 #[derive(Debug)]
 pub enum DataSourceType {
     Text,
@@ -80,7 +100,6 @@ impl AI {
         }
     }
 
-
     pub fn get_chat_history(
         &self,
         session_id: String,
@@ -113,6 +132,19 @@ impl AI {
 
         // dbg!(response.text()?);
         Ok(response.json()?)
+    }
+
+    pub fn get_youtube_transcript(&self, video_url: &str) -> Result<YoutubeTranscript, reqwest::Error> {
+        let url = format!("{}/transcripts/youtube?url={}", &self.api_endpoint, video_url);
+        let encoded = url::form_urlencoded::Serializer::new(url).finish();
+        
+        let response = self.client.get(encoded).send()?;
+        match response.error_for_status_ref() {
+            Ok(_) => {
+                Ok(response.json::<YoutubeTranscript>()?)
+            },
+            Err(e) => Err(e)
+        }
     }
 
     pub fn add_data_source(&self, data_source: &DataSource) -> Result<(), reqwest::Error> {

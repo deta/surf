@@ -57,6 +57,11 @@ export class RedditParser extends WebAppExtractor {
     return this.url.pathname.split('/')[4] ?? null
   }
 
+  private getSubreddit() {
+    // For "/r/programming/comments/1b690im/native_vs_hybrid_vs_crossplatform_development/"" extract "programming"
+    return this.url.pathname.split('/')[2] ?? null
+  }
+
   getInfo(): DetectedWebApp {
     const resourceType = this.detectResourceType()
     const appResourceIdentifier =
@@ -70,6 +75,13 @@ export class RedditParser extends WebAppExtractor {
       appResourceIdentifier: appResourceIdentifier,
       resourceNeedsPicking: false
     }
+  }
+
+  getRSSFeedUrl(document: Document) {
+    const subreddit = this.getSubreddit()
+    if (!subreddit) return null
+
+    return `https://www.reddit.com/r/${subreddit}.rss`
   }
 
   async extractResourceFromDocument(_document: Document) {

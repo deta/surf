@@ -12,7 +12,7 @@
     dispatch('search', value)
   }
 
-  const debouncedSearch = useDebounce(search, 300)
+  const debouncedSearch = useDebounce(search, 700)
 
   let inputRef: HTMLInputElement
   let isFocused = false

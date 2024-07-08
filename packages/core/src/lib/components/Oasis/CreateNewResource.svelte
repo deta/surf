@@ -17,11 +17,7 @@
 </script>
 
 {#if showBrowserHomescreen}
-  <div
-    class="browser-homescreen"
-    in:fly={{ y: 10, duration: 160 }}
-    out:fly={{ y: 10, duration: 160 }}
-  >
+  <div class="browser-homescreen">
     <div class="homescreen-content">
       <div class="section">
         <h2 class="subheadline">Create</h2>
@@ -43,11 +39,6 @@
 
 <style lang="scss">
   .browser-homescreen {
-    position: absolute;
-    top: 4rem;
-    left: 4rem;
-    right: 4rem;
-    z-index: 0;
     width: 40rem;
     max-width: 40rem;
     max-height: 30rem;
@@ -56,8 +47,6 @@
     background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(12px);
     border-radius: 12px;
-    z-index: 100;
-    transform: translateX(-50%);
     overflow-y: scroll;
     box-shadow:
       0px 0px 0px 1px rgba(0, 0, 0, 0.2),
@@ -75,7 +64,7 @@
       h2.subheadline {
         font-size: 1.25rem;
         font-weight: 500;
-        opacity: 0.6;
+        opacity: 0.75;
         padding: 0 0 0.75rem 0;
       }
 

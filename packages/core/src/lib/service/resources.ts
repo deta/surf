@@ -22,7 +22,8 @@ import {
   type SFFSSearchProximityParameters,
   type SpaceEntry,
   type Space,
-  type SpaceName
+  type SpaceData,
+  type SpaceSource
 } from '../types'
 import type { Telemetry } from './telemetry'
 import { TelemetryEventTypes, type ResourceDataAnnotation } from '@horizon/types'
@@ -35,6 +36,15 @@ import type { MediaParserResult } from './mediaImporter'
  - handle errors
  - use the relevant enum, and do not hard code the values
 */
+
+const everythingSpace = {
+  id: 'all',
+  name: { folderName: 'Everything', colors: ['#76E0FF', '#4EC9FB'], showInSidebar: false },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  deleted: 0,
+  type: 'space'
+} as Space
 
 export class ResourceTag {
   static download() {
@@ -67,6 +77,14 @@ export class ResourceTag {
 
   static hashtag(tag: string) {
     return { name: ResourceTagsBuiltInKeys.HASHTAG, value: tag }
+  }
+
+  static spaceSource(value: SpaceSource['type']) {
+    return { name: ResourceTagsBuiltInKeys.SPACE_SOURCE, value: value }
+  }
+
+  static viewedByUser(value: boolean) {
+    return { name: ResourceTagsBuiltInKeys.VIEWED_BY_USER, value: `${value}` }
   }
 }
 
@@ -189,6 +207,26 @@ export class Resource {
     this.log.debug('updating resource tags with', updates)
 
     this.tags = [...(this.tags ?? []), ...updates]
+    this.updatedAt = new Date().toISOString()
+  }
+
+  updateTag(name: string, value: string) {
+    this.log.debug('updating resource tag', name, value)
+
+    const existingTag = this.tags?.find((t) => t.name === name)
+    if (existingTag) {
+      existingTag.value = value
+    } else {
+      this.tags = [...(this.tags ?? []), { name, value }]
+    }
+
+    this.updatedAt = new Date().toISOString()
+  }
+
+  addTag(tag: SFFSResourceTag) {
+    this.log.debug('adding resource tag', tag)
+
+    this.tags = [...(this.tags ?? []), tag]
     this.updatedAt = new Date().toISOString()
   }
 
@@ -349,6 +387,15 @@ export class ResourceManager {
     return this.createResourceObject(resource)
   }
 
+  private findOrGetResourceObject(id: string) {
+    const existingResource = get(this.resources).find((r) => r.id === id)
+    if (existingResource) {
+      return Promise.resolve(existingResource)
+    }
+
+    return this.getResource(id)
+  }
+
   async createResource(
     type: string,
     data?: Blob,
@@ -394,6 +441,19 @@ export class ResourceManager {
     const resourceItems = await this.sffs.readResources()
     const resources = resourceItems.map((item) => new Resource(this.sffs, item))
     this.resources.set(resources)
+  }
+
+  async listResourceIDsByTags(tags: SFFSResourceTag[]) {
+    const results = await this.sffs.listResourceIDsByTags(tags)
+    return results
+  }
+
+  async listResourcesByTags(tags: SFFSResourceTag[]) {
+    const resourceIds = await this.sffs.listResourceIDsByTags(tags)
+    this.log.debug('found resource ids', resourceIds)
+    return (await Promise.all(
+      resourceIds.map((id) => this.findOrGetResourceObject(id))
+    )) as Resource[]
   }
 
   async searchResources(
@@ -446,15 +506,12 @@ export class ResourceManager {
   }
 
   async getResourcesFromSourceURL(url: string) {
-    const rawResults = await this.sffs.searchResources('', [
-      // ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
+    const resources = await this.listResourcesByTags([
       ResourceManager.SearchTagCanonicalURL(url),
       ResourceManager.SearchTagDeleted(false)
     ])
 
-    return rawResults.map((item) =>
-      this.findOrCreateResourceObject(item.resource)
-    ) as ResourceAnnotation[]
+    return resources
   }
 
   async getAnnotationsForResource(id: string) {
@@ -597,6 +654,32 @@ export class ResourceManager {
     resource.updateMetadata(updates)
   }
 
+  async updateResourceTag(resourceId: string, tagName: string, tagValue: string) {
+    const resource = await this.getResource(resourceId)
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    this.log.debug('updating resource tags', resourceId, tagName, tagValue)
+
+    await this.sffs.updateResourceTag(resourceId, tagName, tagValue)
+
+    resource.updateTag(tagName, tagValue)
+  }
+
+  async createResourceTag(resourceId: string, tagName: string, tagValue: string) {
+    const resource = await this.getResource(resourceId)
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    this.log.debug('creating resource tag', resourceId, tagName, tagValue)
+
+    await this.sffs.createResourceTag(resourceId, tagName, tagValue)
+
+    resource.addTag({ name: tagName, value: tagValue })
+  }
+
   async createResourceNote(
     content: string,
     metadata?: Partial<SFFSResourceMetadata>,
@@ -675,19 +758,25 @@ export class ResourceManager {
     return { name: ResourceTagsBuiltInKeys.HASHTAG, value: tag, op: 'eq' }
   }
 
-  async createSpace(name: SpaceName) {
+  async createSpace(name: SpaceData) {
     return await this.sffs.createSpace(name)
   }
 
   async getSpace(id: string) {
+    if (id === 'all') {
+      return everythingSpace
+    }
+
     return await this.sffs.getSpace(id)
   }
 
   async listSpaces() {
-    return await this.sffs.listSpaces()
+    const spaces = await this.sffs.listSpaces()
+
+    return [everythingSpace, ...spaces] as Space[]
   }
 
-  async updateSpace(spaceId: string, name: SpaceName) {
+  async updateSpace(spaceId: string, name: SpaceData) {
     return await this.sffs.updateSpace(spaceId, name)
   }
 
@@ -761,6 +850,21 @@ export class ResourceManager {
 
   static SearchTagAnnotates(resourceId: string): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.ANNOTATES, value: resourceId, op: 'eq' }
+  }
+
+  static SearchTagSpaceSource(
+    value: SpaceSource['type'],
+    op: SFFSResourceTag['op'] = 'eq'
+  ): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.SPACE_SOURCE, value: value, op: op }
+  }
+
+  static SearchTagNotExists(name: string): SFFSResourceTag {
+    return { name: name, value: '', op: 'notexists' }
+  }
+
+  static SearchTagViewedByUser(value: boolean): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.VIEWED_BY_USER, value: `${value}`, op: 'eq' }
   }
 
   static provide(telemetry: Telemetry) {

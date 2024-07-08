@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte'
   import { Resource, ResourceAnnotation, useResourceManager } from '../../service/resources'
   import { useLogScope } from '../../utils/log'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
@@ -9,6 +10,7 @@
 
   const log = useLogScope('OasisSpaceItem')
   const resourceManager = useResourceManager()
+  const dispatch = createEventDispatcher<{ load: Resource }>()
 
   let loading = false
   let resource: Resource | null = null
@@ -28,6 +30,7 @@
       annotations = res.annotations
 
       log.debug('Loaded resource:', resource)
+      dispatch('load', resource)
     } catch (e) {
       log.error(e)
     } finally {
@@ -49,6 +52,7 @@
         {resource}
         {selected}
         {annotations}
+        showSummary
         on:load
         on:click
         on:open

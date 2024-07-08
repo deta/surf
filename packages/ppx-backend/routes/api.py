@@ -1,14 +1,17 @@
 import os
 from typing import Union
 
-from fastapi import APIRouter, Query, responses
+from fastapi import APIRouter, Query, responses, Response
 from fastapi.responses import StreamingResponse
+
+from embedchain.loaders.youtube_video import YoutubeLoader
 
 from utils.embedchain import send_message
 from utils.embedchain import get_embedding
 from utils.sffs import get_resource
 from utils.embedchain import get_resources
 from utils.mocks import mock_stream
+
 
 router = APIRouter()
 
@@ -65,6 +68,26 @@ async def handle_get_resource(resource_id):
 async def handle_get_resources(query: str, resource_ids: Union[str, None] = None):
     resource_ids_list = resource_ids.split(',') if resource_ids != None else None
     return set(await get_resources(query, resource_ids_list))
+
+@router.get("/api/v1/transcripts/youtube")
+async def handle_get_youtube_transcript(url: str, response: Response):
+    try:
+        loader = YoutubeLoader.from_youtube_url(url)
+        result = loader.load()
+        if len(result) == 0:
+            print("failed to load youtube transcript from url: ", url, ", result len 0")
+            response.status_code = 404
+            return {"detail": "no transcript found"}
+        transcript = result[0]
+        return {
+            "transcript": transcript.page_content,
+            "metadata": transcript.metadata
+        }
+    except Exception as e:
+            print("failed to load youtube transcript from url: ", url, e)
+            response.status_code = 500
+            return {"detail": e}
+    
 
 @router.get("/")
 async def root():

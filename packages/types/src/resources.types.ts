@@ -23,7 +23,7 @@ export interface SFFSResourceTag {
   id?: string
   name: string
   value: string
-  op?: 'eq' | 'ne' | 'prefix' | 'suffix'
+  op?: 'eq' | 'ne' | 'prefix' | 'suffix' | 'notexists'
 }
 
 export enum ResourceTagsBuiltInKeys {
@@ -33,7 +33,9 @@ export enum ResourceTagsBuiltInKeys {
   HOSTNAME = 'hostname',
   CANONICAL_URL = 'canonicalUrl',
   ANNOTATES = 'annotates',
-  HASHTAG = 'hashtag'
+  HASHTAG = 'hashtag',
+  SPACE_SOURCE = 'spaceSource',
+  VIEWED_BY_USER = 'viewedByUser'
 }
 
 export interface ResourceTagsBuiltIn {
@@ -158,6 +160,7 @@ export type DetectedWebApp = {
   resourceType: string | null
   appResourceIdentifier: string | null // e.g. tweet ID
   resourceNeedsPicking: boolean
+  rssFeedUrl?: string
 }
 
 export type DetectedResource = {

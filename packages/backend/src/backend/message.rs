@@ -106,6 +106,7 @@ pub enum ResourceMessage {
         proximity_distance_threshold: Option<f32>,
         proximity_limit: Option<i64>,
     },
+    ListResourcesByTags(Vec<ResourceTagFilter>),
     SearchResources {
         query: String,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
@@ -139,6 +140,11 @@ pub enum ResourceMessage {
 pub enum ResourceTagMessage {
     CreateResourceTag(ResourceTag),
     RemoveResourceTag(String),
+    RemoveResourceTagByName {
+        resource_id: String,
+        tag_name: String,
+    },
+    UpdateResourceTag(ResourceTag),
 }
 
 pub enum UserdataMessage {
@@ -162,4 +168,5 @@ pub enum MiscMessage {
     CreateAIChatMessage(String),
     GetAIChatMessage(String, Option<String>),
     QuerySFFSResources(String),
+    GetYoutubeTranscript(String),
 }
