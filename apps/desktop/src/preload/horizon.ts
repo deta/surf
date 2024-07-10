@@ -141,7 +141,7 @@ const api = {
   },
 
   createAIChatCompletion: async (
-    userPrompt: string,
+    userPrompt: string | string[],
     systemPrompt?: string,
     opts: OpenAI.RequestOptions<unknown> = {}
   ) => {
@@ -155,7 +155,15 @@ const api = {
       messages.push({ role: 'system', content: systemPrompt })
     }
 
-    messages.push({ role: 'user', content: userPrompt })
+    if (typeof userPrompt === 'string') {
+      messages.push({ role: 'user', content: userPrompt })
+    } else {
+      userPrompt.forEach((prompt) => {
+        messages.push({ role: 'user', content: prompt })
+      })
+    }
+
+    console.log('calling AI with messages', messages)
 
     const chatCompletion = await openai.chat.completions.create({
       messages: messages,

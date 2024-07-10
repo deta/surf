@@ -193,41 +193,45 @@ export const handleInlineAI = async (
   detectedResource: DetectedResource
 ) => {
   const { text, query, type, includePageContext } = data
+  log.debug('Inline AI transformation', data)
 
   const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
   const pageContext = detectedResource
     ? `\n\nFull page content to use only as reference:\n${content.plain}`
     : ''
 
-  const textContent = includePageContext
-    ? `Text selection from the user: ${text}\n\n Additional context from the page: ${pageContext}`
-    : text
+  const userMessages = [
+    text,
+    ...(includePageContext ? [`Additional context from the page: "${pageContext}"`] : [])
+  ]
 
   let transformation = ''
   if (type === 'summarize') {
     const prompt = await getPrompt(PromptIDs.INLINE_SUMMARIZER)
     // @ts-expect-error
-    transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
+    transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
   } else if (type === 'explain') {
     const prompt = await getPrompt(PromptIDs.INLINE_EXPLAINER)
     // @ts-expect-error
-    transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
+    transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
   } else if (type === 'translate') {
     const prompt = await getPrompt(PromptIDs.INLINE_TRANSLATE)
     log.debug('translate prompt', prompt)
     // @ts-expect-error
-    transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
+    transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
   } else if (type === 'grammar') {
     const prompt = await getPrompt(PromptIDs.INLINE_GRAMMAR)
     // @ts-expect-error
-    transformation = await window.api.createAIChatCompletion(textContent, prompt.content)
+    transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
   } else {
     const prompt = await getPrompt(PromptIDs.INLINE_TRANSFORM_USER)
     // @ts-expect-error
     transformation = await window.api.createAIChatCompletion(
-      `User instruction: "${query}"\n\n` + includePageContext
-        ? textContent
-        : `Text selection from the user: ${text}`,
+      [
+        query,
+        text,
+        ...(includePageContext ? [`Additional context from the page: "${pageContext}"`] : [])
+      ],
       prompt.content
     )
   }
