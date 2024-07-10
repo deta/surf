@@ -149,12 +149,14 @@
 
       spaceContents.set(items)
 
-      if (
-        !skipSources &&
-        fetchedSpace.name.liveModeEnabled &&
-        (fetchedSpace.name.sources ?? []).length > 0
-      ) {
-        await loadSpaceSources(fetchedSpace.name.sources!)
+      const spaceData = fetchedSpace.name
+
+      if (!skipSources && spaceData.liveModeEnabled) {
+        if ((spaceData.sources ?? []).length > 0) {
+          await loadSpaceSources(spaceData.sources!)
+        } else if (spaceData.smartFilterQuery) {
+          await updateLiveSpaceContentsWithAI(spaceData.smartFilterQuery)
+        }
       }
     } catch (error) {
       log.error('Error loading space contents:', error)
@@ -201,6 +203,29 @@
       log.error('Error loading everything:', error)
     } finally {
       loadingContents.set(false)
+    }
+  }
+
+  const updateLiveSpaceContentsWithAI = async (query: string) => {
+    try {
+      loadingSpaceSources.set(true)
+
+      const stringifiedQuery = JSON.stringify(query)
+      log.debug('AI prompt:', stringifiedQuery)
+
+      const response = await resourceManager.getResourcesViaPrompt(stringifiedQuery)
+      log.debug('AI response:', response)
+
+      const results = response.embedding_search_results || response.sql_query_results
+      log.debug('Adding resources to space', results)
+
+      await oasis.addResourcesToSpace(spaceId, results)
+
+      await loadSpaceContents(spaceId, true)
+    } catch (error) {
+      log.error('Error updating live space contents with AI:', error)
+    } finally {
+      loadingSpaceSources.set(false)
     }
   }
 
@@ -433,6 +458,10 @@
       return
     }
 
+    if ($space.name.smartFilterQuery) {
+      await updateLiveSpaceContentsWithAI($space.name.smartFilterQuery)
+    }
+
     const sources = $space.name.sources
     if (!sources || sources.length === 0) {
       log.debug('No sources found')
@@ -596,7 +625,12 @@
     if (e.key === 'Escape') {
       e.preventDefault()
       handleCloseChat()
-    } else if (e.key === ' ' && $selectedItem && !$isResourceDetailsModalOpen) {
+    } else if (
+      e.key === ' ' &&
+      $selectedItem &&
+      !$isResourceDetailsModalOpen &&
+      !$showSettingsModal
+    ) {
       e.preventDefault()
       openResourceDetailsModal($selectedItem)
     } else if (isModKeyAndKeyPressed(e, 'Enter') && $selectedItem && !$isResourceDetailsModalOpen) {

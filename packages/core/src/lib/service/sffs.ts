@@ -230,7 +230,8 @@ export class SFFS {
             showInSidebar: false,
             sources: [],
             liveModeEnabled: false,
-            hideViewed: false
+            hideViewed: false,
+            smartFilterQuery: null
           } as SpaceData)
         : parsedName
     return {
@@ -527,10 +528,18 @@ export class SFFS {
     this.log.debug('querying SFFS resources with AI', query)
     const rawResponse = await this.backend.js__ai_query_sffs_resources(query)
     this.log.debug('raw response', rawResponse)
-    const response = this.parseData<AiSFFSQueryResponse>(rawResponse)
+    let response = this.parseData<AiSFFSQueryResponse>(rawResponse)
     if (!response) {
       throw new Error('failed to query SFFS resources, invalid response data', rawResponse)
     }
+
+    if (typeof response === 'string') {
+      response = this.parseData<AiSFFSQueryResponse>(response)
+      if (!response) {
+        throw new Error('failed to query SFFS resources, invalid response data', rawResponse)
+      }
+    }
+
     return response
   }
 

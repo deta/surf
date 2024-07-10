@@ -14,6 +14,7 @@
   import { useDebounce } from '../../utils/debounce'
   import { getHumanDistanceToNow } from '../../utils/time'
   import { copyToClipboard } from '../../utils/clipboard'
+  import type { ChangeEventHandler } from 'svelte/elements'
 
   export let space: Space
 
@@ -29,6 +30,7 @@
 
   let isLiveModeOn = space.name.liveModeEnabled
   let hideViewedResources = space.name.hideViewed
+  let smartFilterQuery = space.name.smartFilterQuery
   let sourceValue = ''
   let loading = false
   let showAddSource = false
@@ -132,38 +134,68 @@
 
     dispatch('load')
   }, 500)
+
+  const handleSmartQueryBlur = useDebounce(async () => {
+    if (!space) return
+
+    if (smartFilterQuery === '') {
+      smartFilterQuery = null
+    }
+
+    if (smartFilterQuery === space.name.smartFilterQuery) {
+      return
+    }
+
+    space.name.smartFilterQuery = smartFilterQuery
+
+    await oasis.updateSpaceData(space.id, { smartFilterQuery: smartFilterQuery })
+
+    dispatch('load')
+  }, 500)
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Space' && !e.shiftKey) {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      smartFilterQuery += ' '
+    }
+  }
 </script>
 
 <article class="wrapper">
   {#if space}
-    <div class="content">
-      <div class="header">
-        <!-- <SpaceIcon folder={space} /> -->
-        <div use:tooltip={{ text: 'Click to edit' }}>
-          <input
-            bind:value={space.name.folderName}
-            on:blur={handleNameBlur}
-            on:keydown|stopPropagation
-            class="folder-input"
-            spellcheck="false"
-          />
-        </div>
-
-        <Switch
-          label="Live"
-          color="#ff4eed"
-          bind:checked={isLiveModeOn}
-          on:update={handleLiveModeUpdate}
+    <div class="header">
+      <!-- <SpaceIcon folder={space} /> -->
+      <div use:tooltip={{ text: 'Click to edit' }}>
+        <input
+          bind:value={space.name.folderName}
+          on:blur={handleNameBlur}
+          on:keydown|stopPropagation
+          class="folder-input"
+          spellcheck="false"
         />
       </div>
 
-      {#if isLiveModeOn && space.name.sources}
+      <Switch
+        label="Live"
+        color="#ff4eed"
+        bind:checked={isLiveModeOn}
+        on:update={handleLiveModeUpdate}
+      />
+    </div>
+
+    <div class="content">
+      <div class="sources">
         <div class="info">
-          <h2>Sources</h2>
-          <p>External sources to pull from for this space.</p>
+          <div class="title">
+            <Icon name="news" />
+            <h2>Sources</h2>
+          </div>
+
+          <p>Add external feeds to pull in new content from.</p>
         </div>
 
-        <div class="sources">
+        {#if space.name.sources}
           {#each space.name.sources as source}
             <div class="source">
               <div class="title">
@@ -176,11 +208,15 @@
                 <h3 use:tooltip={source.url}>{getSourceName(source)}</h3>
               </div>
               <div class="meta">
-                <p>
-                  Last fetched: {source.last_fetched_at
-                    ? getHumanDistanceToNow(source.last_fetched_at)
-                    : 'never'}
-                </p>
+                {#if isLiveModeOn}
+                  <p>
+                    Last fetched: {source.last_fetched_at
+                      ? getHumanDistanceToNow(source.last_fetched_at)
+                      : 'never'}
+                  </p>
+                {:else}
+                  <p>Disabled because live mode is off.</p>
+                {/if}
 
                 <div class="meta-actions">
                   <button on:click={() => copySource(source)} use:tooltip={'Copy Source URL'}>
@@ -194,107 +230,133 @@
               </div>
             </div>
           {/each}
+        {/if}
 
-          {#if showAddSource}
-            <div class="add-source">
-              <input
-                placeholder="New source URL"
-                autofocus
-                spellcheck="false"
-                bind:value={sourceValue}
-                on:blur={handleAddSourceBlur}
-              />
+        {#if showAddSource}
+          <div class="add-source">
+            <input
+              placeholder="RSS feed URL"
+              autofocus
+              spellcheck="false"
+              bind:value={sourceValue}
+              on:blur={handleAddSourceBlur}
+            />
 
-              <button on:click={handleAddSource} class="icon">
-                <Icon name="add" />
-              </button>
-            </div>
-          {:else}
-            <div class="add-source">
-              <button on:click={() => (showAddSource = true)} class="add-source">
-                <Icon name="add" />
-                Add Source
-              </button>
-            </div>
+            <button on:click={handleAddSource} class="icon">
+              <Icon name="add" />
+            </button>
+          </div>
+        {:else}
+          <div class="add-source">
+            <button on:click={() => (showAddSource = true)} class="add-source">
+              <Icon name="add" />
+              Add Source
+            </button>
+          </div>
+        {/if}
+      </div>
+
+      <div class="setting">
+        <div class="smart-filter">
+          <div class="title">
+            <Icon name="sparkles" />
+            <h2>Smart Oasis Filter</h2>
+          </div>
+
+          <p>
+            Automatically add new items saved to Oasis to this space if they match the following
+            query.
+          </p>
+          <input
+            placeholder="e.g. articles about electric cars"
+            disabled={!isLiveModeOn}
+            bind:value={smartFilterQuery}
+            on:blur={handleSmartQueryBlur}
+            on:keydown={handleKeyDown}
+          />
+
+          {#if !isLiveModeOn}
+            <p><b>Note:</b> Disabled becuase Live Mode is turned off.</p>
           {/if}
         </div>
+      </div>
 
-        <div class="settings">
-          <div class="setting">
-            <!-- <h3>Settings</h3> -->
-            <Switch
-              label="Hide already viewed items"
-              color="#ff4eed"
-              reverse
-              bind:checked={hideViewedResources}
-              on:update={handleHideViewedUpdate}
-            />
-          </div>
+      <div class="setting">
+        <div class="title">
+          <Icon name="settings" />
+          <h3>Settings</h3>
         </div>
+        <Switch
+          label="Hide already viewed items"
+          color="#ff4eed"
+          reverse
+          bind:checked={hideViewedResources}
+          on:update={handleHideViewedUpdate}
+        />
+      </div>
 
-        <div class="danger-zone">
-          <div class="danger-title">
-            <!-- svelte-ignore a11y-click-events-have-key-events a11y-interactive-supports-focus -->
-            <div
-              class="expand-toggle"
-              on:click={() => (expandedDangerZone = !expandedDangerZone)}
-              role="button"
-            >
-              {#if expandedDangerZone}
-                <Icon name="chevron.down" />
-              {:else}
-                <Icon name="chevron.right" />
-              {/if}
-              <h2>Danger Zone</h2>
-            </div>
-
+      <div class="danger-zone">
+        <div class="danger-title">
+          <!-- svelte-ignore a11y-click-events-have-key-events a11y-interactive-supports-focus -->
+          <div
+            class="expand-toggle"
+            on:click={() => (expandedDangerZone = !expandedDangerZone)}
+            role="button"
+          >
             {#if expandedDangerZone}
-              <p>These actions cannot be undone.</p>
+              <Icon name="chevron.down" />
+            {:else}
+              <Icon name="chevron.right" />
             {/if}
+            <h2>Danger Zone</h2>
           </div>
 
           {#if expandedDangerZone}
-            <div class="actions">
-              <!-- <button
-                on:click={handleClearSpace}
-                use:tooltip={'Clear all resources from this Space.'}
-              >
-                <Icon name="close" />
-                Clear resources from Space
-              </button> -->
-
-              <div class="action">
-                <div class="action-row">
-                  <h3>Clear Space</h3>
-                  <p>Remove all resources from this Space.</p>
-                </div>
-
-                <button on:click={handleClearSpace}>
-                  <Icon name="close" />
-                  Clear Space
-                </button>
-              </div>
-
-              <div class="action">
-                <div class="action-row">
-                  <h3>Delete Space</h3>
-                  <!-- <p>Deletes the Space and optionally its resources.</p> -->
-
-                  <label>
-                    <input bind:checked={shoulDeleteAllResources} type="checkbox" />
-                    Permanently delete all resources as well
-                  </label>
-                </div>
-
-                <button on:click={handleDeleteSpace}>
-                  <Icon name="trash" />
-                  Delete Space
-                </button>
-              </div>
-            </div>
+            <p>These actions cannot be undone.</p>
           {/if}
         </div>
-      {/if}
+
+        {#if expandedDangerZone}
+          <div class="actions">
+            <!-- <button
+              on:click={handleClearSpace}
+              use:tooltip={'Clear all resources from this Space.'}
+            >
+              <Icon name="close" />
+              Clear resources from Space
+            </button> -->
+
+            <div class="action">
+              <div class="action-row">
+                <h3>Clear Space</h3>
+                <p>Remove all resources from this Space.</p>
+              </div>
+
+              <button on:click={handleClearSpace}>
+                <Icon name="close" />
+                Clear Space
+              </button>
+            </div>
+
+            <div class="action">
+              <div class="action-row">
+                <h3>Delete Space</h3>
+                <!-- <p>Deletes the Space and optionally its resources.</p> -->
+
+                <label>
+                  <input bind:checked={shoulDeleteAllResources} type="checkbox" />
+                  Permanently delete all resources as well
+                </label>
+              </div>
+
+              <button on:click={handleDeleteSpace}>
+                <Icon name="trash" />
+                Delete Space
+              </button>
+            </div>
+          </div>
+        {/if}
+      </div>
     </div>
   {:else if loading}
     <div class="loading-wrapper">
@@ -313,7 +375,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 2rem;
     padding: 2rem;
     width: 40rem;
     min-height: 20rem;
@@ -329,7 +391,7 @@
   .content {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 2.5rem;
     width: 100%;
   }
 
@@ -375,6 +437,12 @@
       font-size: 1.1rem;
       opacity: 0.75;
     }
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .sources {
@@ -484,7 +552,7 @@
 
       &::placeholder {
         color: inherit;
-        opacity: 0.75;
+        opacity: 0.5;
       }
 
       &:active,
@@ -591,21 +659,62 @@
     }
   }
 
-  .settings {
+  .smart-filter {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    padding: 1rem 0;
+    gap: 0.5rem;
 
-    .setting {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 500;
+    }
 
-      h3 {
-        font-size: 1.2rem;
-        font-weight: 500;
+    p {
+      font-size: 1.1rem;
+      opacity: 0.75;
+    }
+
+    input {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      padding: 0.5rem;
+      //grey
+      background: #f0f0f0;
+      color: inherit;
+      font-size: 1.1rem;
+      font-family: inherit;
+      font-smooth: always;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      outline: none;
+      width: 100%;
+
+      &::placeholder {
+        color: inherit;
+        opacity: 0.5;
       }
+
+      &:active,
+      &:focus {
+        border: 1px solid #ff4eed;
+      }
+
+      &:disabled {
+        background: #f0f0f0;
+        color: inherit;
+        opacity: 0.5;
+      }
+    }
+  }
+
+  .setting {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 500;
     }
   }
 

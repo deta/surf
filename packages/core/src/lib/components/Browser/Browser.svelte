@@ -1875,16 +1875,14 @@
         colors: ['#FFBA76', '#FB8E4E'],
         showInSidebar: false,
         liveModeEnabled: false,
-        hideViewed: false
+        hideViewed: false,
+        smartFilterQuery: e.detail
       })
 
       log.debug('New Folder:', newSpace)
 
       const userPrompt = JSON.stringify(e.detail)
-      let response = await resourceManager.getResourcesViaPrompt(userPrompt)
-      if (typeof response === 'string') {
-        response = JSON.parse(response)
-      }
+      const response = await resourceManager.getResourcesViaPrompt(userPrompt)
 
       log.debug(`Automatic Folder Generation request`, response)
 
@@ -1934,7 +1932,8 @@
         colors: ['#FFD700', '#FF8C00'],
         sources: [spaceSource],
         liveModeEnabled: true,
-        hideViewed: false
+        hideViewed: false,
+        smartFilterQuery: null
       })
 
       log.debug('created space', space)
@@ -2446,6 +2445,20 @@
                         animation: 'fade',
                         delay: 500
                       }}
+                      on:save-resource-in-space={handleSaveResourceInSpace}
+                      use:popover={{
+                        content: {
+                          component: ShortcutSaveItem,
+                          props: { resourceManager, spaces }
+                        },
+                        action: 'hover',
+                        position: 'right-top',
+                        style: {
+                          backgroundColor: '#F8F7F1'
+                        },
+                        animation: 'fade',
+                        delay: 1200
+                      }}
                     >
                       {#if $bookmarkingInProgress}
                         <Icon name="spinner" />
@@ -2469,20 +2482,6 @@
                       position: 'left',
                       animation: 'fade',
                       delay: 500
-                    }}
-                    on:save-resource-in-space={handleSaveResourceInSpace}
-                    use:popover={{
-                      content: {
-                        component: ShortcutSaveItem,
-                        props: { resourceManager, spaces }
-                      },
-                      action: 'hover',
-                      position: 'right-top',
-                      style: {
-                        backgroundColor: '#F8F7F1'
-                      },
-                      animation: 'fade',
-                      delay: 1200
                     }}
                   >
                     <Icon name="news" />

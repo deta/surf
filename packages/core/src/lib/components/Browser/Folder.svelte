@@ -6,7 +6,7 @@
   import { Telemetry } from '../../service/telemetry'
   import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
-  import type { Space, SpaceData, SFFSResourceTag, Space, SpaceName } from '../../types'
+  import type { Space, SpaceData, SFFSResourceTag } from '../../types'
   import { ResourceTypes } from '../../types'
   import { useLogScope } from '../../utils/log'
   import { useOasis } from '../../service/oasis'
@@ -92,21 +92,18 @@
     dispatch('add-folder-to-tabs')
   }
 
-  const createFolderWithAI = async () => {
+  const createFolderWithAI = async (query: string) => {
     try {
       processing = true
 
-      const userPrompt = JSON.stringify(folderDetails.folderName)
+      const userPrompt = JSON.stringify(query)
 
       log.debug('Creating folder with AI', userPrompt)
       inputElement.blur()
 
-      dispatch('update-data', { folderName: folderDetails.folderName })
+      dispatch('update-data', { smartFilterQuery: query })
 
-      let response = await resourceManager.getResourcesViaPrompt(userPrompt)
-      if (typeof response === 'string') {
-        response = JSON.parse(response)
-      }
+      const response = await resourceManager.getResourcesViaPrompt(userPrompt)
 
       log.debug(`Automatic Folder Generation request`, response)
 
@@ -170,13 +167,12 @@
     const target = e.target as HTMLInputElement
     const value = target.value
 
-    folderDetails.folderName = value
     if (e.code === 'Space' && !e.shiftKey) {
       e.preventDefault()
       folderDetails.folderName = value + ' '
     } else if (e.code === 'Enter' && e.shiftKey) {
       e.preventDefault()
-      createFolderWithAI()
+      createFolderWithAI(value)
     }
   }
 
@@ -228,17 +224,7 @@
           on:blur={handleBlur}
           class="folder-input"
           style={`width: ${inputWidth}`}
-          on:keydown={async (e) => {
-            e.stopPropagation()
-            folderDetails.folderName = e.target?.value
-            if (e.code === 'Space' && !e.shiftKey) {
-              e.preventDefault()
-              folderDetails.folderName = e.target?.value + ' '
-            } else if (e.code === 'Enter' && e.shiftKey) {
-              e.preventDefault()
-              createFolderWithAI()
-            }
-          }}
+          on:keydown={handleKeyDown}
         />
       </div>
       <div class="actions">
