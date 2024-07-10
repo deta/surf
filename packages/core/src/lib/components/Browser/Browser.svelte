@@ -12,7 +12,11 @@
   import { Icon } from '@horizon/icons'
   import { generateID } from '../../utils/id'
   import { parseStringIntoBrowserLocation } from '../../utils/url'
-  import { isModKeyAndKeyPressed, isModKeyPressed } from '../../utils/keyboard'
+  import {
+    isModKeyAndKeyPressed,
+    isModKeyAndKeysPressed,
+    isModKeyPressed
+  } from '../../utils/keyboard'
   import { copyToClipboard } from '../../utils/clipboard'
   import { wait, writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
@@ -602,6 +606,12 @@
     }
   }, 200)
 
+  let keyBuffer = ''
+  let index: number
+  let keyTimeout: any
+  const KEY_TIMEOUT = 120
+  const MAX_TABS = 99
+
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && addressBarFocus) {
@@ -639,6 +649,48 @@
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
       showTabSearch = true
+    } else if (isModKeyAndKeysPressed(e, ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])) {
+      keyBuffer = (keyBuffer || '') + e.key
+      clearTimeout(keyTimeout)
+
+      keyTimeout = setTimeout(() => {
+        index = parseInt(keyBuffer, 10)
+
+        if (index === 0) {
+          const tabs = [...$pinnedTabs, ...$unpinnedTabs]
+
+          if (tabs.length > 1) {
+            const currentIndex = tabs.findIndex((tab) => tab.id === $activeTabId)
+            const newIndex = currentIndex === 0 ? tabs.length - 1 : currentIndex - 1
+            makeTabActive(tabs[newIndex].id)
+          }
+
+          return
+        }
+
+        if (index > 99) {
+          index /= 10
+        }
+        keyBuffer = '' // Reset buffer
+
+        if (!isNaN(index) && index >= 0 && index <= MAX_TABS) {
+          const tabs = [...$pinnedTabs, ...$unpinnedTabs]
+          if (index > tabs.length) {
+            return
+          }
+          if (index <= tabs.length) {
+            makeTabActive(tabs[index - 1].id)
+          }
+        }
+      }, KEY_TIMEOUT)
+    } else if (e.key === 'ArrowLeft' && e.metaKey) {
+      if (canGoBack) {
+        $activeBrowserTab?.goBack()
+      }
+    } else if (e.key === 'ArrowRight' && e.metaKey) {
+      if (canGoForward) {
+        $activeBrowserTab?.goForward()
+      }
     }
   }
 
