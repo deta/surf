@@ -117,16 +117,16 @@
   }
 
   .digit.current.rolling.up {
-    animation: rollInUp 250ms cubic-bezier(0.21, 1.67, 0.52, 1) forwards;
+    animation: rollInUp 250ms cubic-bezier(0, 1.47, 0.52, 1) forwards;
   }
   .digit.previous.up {
-    animation: rollOutUp 250ms cubic-bezier(0.21, 1.67, 0.52, 1) forwards;
+    animation: rollOutUp 250ms cubic-bezier(0, 1.47, 0.52, 1) forwards;
   }
   .digit.current.rolling.down {
-    animation: rollInDown 250ms cubic-bezier(0.21, 1.67, 0.52, 1) forwards;
+    animation: rollInDown 250ms cubic-bezier(0, 1.47, 0.52, 1) forwards;
   }
   .digit.previous.down {
-    animation: rollOutDown 250ms cubic-bezier(0.21, 1.67, 0.52, 1) forwards;
+    animation: rollOutDown 250ms cubic-bezier(0, 1.47, 0.52, 1) forwards;
   }
   @keyframes rollInUp {
     from {
