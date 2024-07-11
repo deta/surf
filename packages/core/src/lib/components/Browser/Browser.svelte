@@ -182,7 +182,7 @@
   })
 
   const unpinnedTabs = derived([activeTabs], ([tabs]) => {
-    return tabs.filter((tab) => !tab.pinned && !tab.magic).sort((a, b) => b.index - a.index)
+    return tabs.filter((tab) => !tab.pinned && !tab.magic).sort((a, b) => a.index - b.index)
   })
 
   const magicTabs = derived([activeTabs], ([tabs]) => {
@@ -2057,7 +2057,7 @@
     })
 
     const tabsList = await tabsDB.all()
-    tabs.update((currentTabs) => currentTabs.sort((a, b) => b.index - a.index))
+    tabs.update((currentTabs) => currentTabs.sort((a, b) => a.index - b.index))
     tabs.set(tabsList)
     log.debug('Tabs loaded', tabsList)
 
@@ -2094,7 +2094,7 @@
     //   updateTab(tab.id, { index: index })
     // })
 
-    tabs.update((tabs) => tabs.sort((a, b) => b.index - a.index))
+    tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
     console.log('xxxx', $tabs)
   })
@@ -2346,6 +2346,9 @@
 
     log.debug('State updated successfully')
   }
+  $: maxWidth = window.innerWidth
+
+  $: tabSize  = (maxWidth) / $tabs.length
 </script>
 
 <SplashScreen />
@@ -2365,7 +2368,8 @@
     />
   {/if}
   {#if showSidebar}
-    <div class="sidebar" class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}>
+    <div transition:slide={{axis: 'y', duration: 200}}
+    class="sidebar" class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}>
       
 
       {#if $sidebarTab !== 'oasis'}
@@ -2501,7 +2505,9 @@
             <DragDropList
               id="tabs"
               type={HorizontalDropZone}
-              itemSize={128}
+              itemSize={
+                Math.min(256, Math.max(81, tabSize))
+              }
               itemCount={$unpinnedTabs.length}
               on:drop={async (event) => {
                 onDrop(event, 'unpin')
@@ -2754,13 +2760,13 @@
   .app-wrapper {
     display: flex;
     flex-direction: column;
-    // flex-direction: row-reverse;
     width: 100%;
     height: 100vh;
     overflow: hidden;
-    background-color: #eeece0;
+    background-color: paleturquoise;
+    // background-color: #eeece0;
+    
     --sidebar-width-left: 320px;
-    gap:0px;
     --sidebar-width-right: 450px;
   }
 
@@ -2768,7 +2774,7 @@
     position: relative;
     flex-shrink: 0;
     height: auto;
-    padding: 0.1rem;
+    padding: 0rem;
     display: flex;
     flex-direction: row;
 
@@ -2841,12 +2847,12 @@
 
   .browser-window-wrapper {
     flex: 1;
-    // padding: 0.5rem;
+    padding: 0 0.4rem 0.4rem 0.4rem;
     height: 100vh;
     position: relative;
 
     &.sidebarHidden {
-      padding: 0.5rem;
+      padding: 0.4rem;
     }
   }
 
@@ -2991,7 +2997,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    margin-left: 12rem;
+    margin-left: 8rem;
     width: 100%;
     h2 {
       font-size: 1.1rem;
@@ -3005,6 +3011,8 @@
       display: flex;
       flex-direction: row;
       align-items: center;
+      overflow-x: scroll;
+      // width: 100%;
     }
 
     .magic-tabs-wrapper {

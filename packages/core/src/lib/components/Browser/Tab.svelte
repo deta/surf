@@ -176,15 +176,17 @@
     cursor: pointer;
     gap: 10px;
     position: relative;
-    color: #7d7448;
+    color: #484f7d;
     font-weight: 500;
     letter-spacing: 0.0025em;
     font-smooth: always;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: 0.2s ease-in-out;
     &:hover {
-      background-color: #e0e0d1;
+      background-color: rgb(213, 255, 255);
     }
+    z-index: 100;
 
     & * {
       user-select: none;
@@ -197,7 +199,7 @@
 
   .tab.active {
     color: #585130;
-    background-color: #fff;
+    background-color: rgb(213, 255, 255);
     outline: 0.25px solid rgba(0, 0, 0, 0.05);
     box-shadow:
       -0.5px -0.5px 5px 0px rgba(255, 255, 255, 0.1) inset,

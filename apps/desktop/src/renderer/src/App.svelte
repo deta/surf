@@ -39,7 +39,8 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 10px;
+    height: 20px;
+    z-index: -1;
   }
   .drag-bar.bottom {
     bottom: 0;
