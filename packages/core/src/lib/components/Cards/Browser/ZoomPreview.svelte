@@ -1,20 +1,20 @@
-<script>
+<script lang="ts">
   import { writable, derived } from 'svelte/store'
 
-  export let zoomLevel
-  export let showZoomPreview
+  export let zoomLevel: Writable<number>
+  export let showZoomPreview: Writable<boolean>
 
   const formattedZoomLevel = derived(zoomLevel, ($zoomLevel) =>
     Math.max(0, Math.round(100 * $zoomLevel)).toString()
   )
 
-  let digits = []
+  let digits: Array<{ current: string; previous: string; rolling: boolean; direction: string }> = []
   let lastValue = ''
   let animationTrigger = writable(0)
 
   $: updateDigits($formattedZoomLevel)
 
-  function updateDigits(newZoomLevel) {
+  function updateDigits(newZoomLevel: string) {
     if (newZoomLevel === lastValue) return
 
     const newDigits = newZoomLevel.padStart(3, '0').split('')
@@ -41,9 +41,7 @@
   <main class="zoom-preview">
     <div class="counter">
       {#each digits as { current, previous, rolling, direction }, i (i + '-' + $animationTrigger)}
-        {#if i === 0 && current === '0' && digits.length > 1}
-          <!-- Skip leading zero -->
-        {:else}
+        {#if i === 0 && current === '0' && digits.length > 1}{:else}
           <div class="digit-container" class:rolling>
             <div class="digit-wheel">
               {#if rolling}
@@ -70,13 +68,13 @@
     padding: 0.5rem 1rem;
     border-radius: 0.25rem;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    font-size: 2em;
+    font-size: 1.5em;
     border-radius: 12px;
   }
   .counter {
     display: flex;
     align-items: center;
-    gap: 0.1em;
+    gap: 0.05em;
     perspective: 2000px;
   }
   .digit-container {
