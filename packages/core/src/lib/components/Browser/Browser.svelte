@@ -3223,7 +3223,7 @@
     position: relative;
     padding: 0.5rem;
     margin-top: 2rem;
-    bottom: 2rem;
+    bottom: 0.75rem;
     left: 0.5rem;
     right: 0.5rem;
     gap: 1rem;
