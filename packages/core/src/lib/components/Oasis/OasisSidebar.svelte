@@ -20,6 +20,7 @@
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
 
+  export let onBack = () => {}
   $: log.debug('Spaces:', $spaces)
 
   // const displaySpaces = derived(spaces, ($spaces) => {
@@ -125,10 +126,16 @@
     <span class="label">Back to Tabs</span>
   </button> -->
 
-  <button class="action-new-space" on:click={handleCreateSpace}>
-    <Icon name="add" />
-    <span class="new-space-text">New Space</span>
-  </button>
+  <div class="top-bar">
+    <button class="action-new-space" on:click={onBack}>
+      <Icon name="chevron.left" />
+      <span class="new-space-text">Back</span>
+    </button>
+    <button class="action-new-space" on:click={handleCreateSpace}>
+      <Icon name="add" />
+      <span class="new-space-text">New Space</span>
+    </button>
+  </div>
   <div class="folder-wrapper">
     {#each $spaces.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) as folder (folder.id)}
       {#key folder.name.colors}
@@ -146,6 +153,13 @@
 </div>
 
 <style lang="scss">
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    gap: 1rem;
+    width: fit-content;
+  }
   .folders-sidebar {
     position: relative;
     padding: 2rem 0.5rem;

@@ -731,11 +731,16 @@
   const createNewEmptyTab = async () => {
     log.debug('Creating new tab')
 
+    // check if there already exists an empty tab, if yes we just change to it
+    const emptyTab = $tabs.find((tab) => tab.type === 'empty')
+
+    if (emptyTab) {
+      makeTabActive(emptyTab.id)
+      return
+    }
+
     const newTab = await createTab<TabEmpty>({ title: 'New Tab', icon: '', type: 'empty' })
     makeTabActive(newTab.id)
-
-    // addressInputElem.focus()
-    // addressValue.set('')
   }
 
   const debouncedCreateNewEmptyTab = useDebounce(createNewEmptyTab, 100)
@@ -2052,7 +2057,7 @@
     })
 
     const tabsList = await tabsDB.all()
-    tabs.update((currentTabs) => currentTabs.sort((a, b) => a.index - b.index))
+    tabs.update((currentTabs) => currentTabs.sort((a, b) => b.index - a.index))
     tabs.set(tabsList)
     log.debug('Tabs loaded', tabsList)
 
@@ -2089,7 +2094,7 @@
     //   updateTab(tab.id, { index: index })
     // })
 
-    tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
+    tabs.update((tabs) => tabs.sort((a, b) => b.index - a.index))
 
     console.log('xxxx', $tabs)
   })
@@ -2622,7 +2627,7 @@
                   backgroundColor: '#F8F7F1'
                 },
                 animation: 'fade',
-                delay: 300
+                delay: 450
               }}
             >
               <Icon name="add" color="#7d7448" />

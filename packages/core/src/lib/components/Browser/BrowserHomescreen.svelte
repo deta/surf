@@ -133,16 +133,16 @@
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div
     class="browser-homescreen"
-    in:fly={{ y: 10, duration: 160 }}
-    out:fly={{ y: 10, duration: 160 }}
+    in:fly={{ y: 25, duration: 160 }}
+    out:fly={{ y: 25, duration: 160 }}
   >
-    <div class="top-bar">
-      <button class="show-all-spaces" on:click={showAllSpaces.set(!$showAllSpaces)}>
-        <Icon name="leave" color="#7d7448" />
-        <span class="label">All Spaces</span>
-      </button>
-    </div>
     {#if !$showAllSpaces}
+      <div class="top-bar">
+        <button class="show-all-spaces" on:click={showAllSpaces.set(!$showAllSpaces)}>
+          <Icon name="leave" color="#7d7448" />
+          <span class="label">All Spaces</span>
+        </button>
+      </div>
       <div class="homescreen-content">
         <img class="browser-background" src={browserBackground} alt="background" />
         <div
@@ -194,7 +194,10 @@
         </div>
       </div>
     {:else}
-      <OasisSidebar on:createTab={handleCreateTabFromOasisSidebar} />
+      <OasisSidebar
+        onBack={() => showAllSpaces.set(false)}
+        on:createTab={handleCreateTabFromOasisSidebar}
+      />
     {/if}
   </div>
 {/if}
