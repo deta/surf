@@ -328,6 +328,11 @@
     webview?.setAudioMuted(isMuted)
   }
 
+  export function setZoomLevel(n: number): void {
+    console.log('set zoom to level', n)
+    webview?.setZoomFactor(n)
+  }
+
   export function goBack(): void {
     log.debug('Going back')
     currentHistoryIndex.update((n) => {

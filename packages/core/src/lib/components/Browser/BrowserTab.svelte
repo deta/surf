@@ -4,6 +4,7 @@
 
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { writable } from 'svelte/store'
   import { type Unsubscriber } from 'svelte/store'
   import WebviewWrapper, { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
   import type { HistoryEntriesManager } from '../../service/history'
@@ -25,6 +26,8 @@
   export let tab: TabPage
   export let webview: WebviewWrapper
   export let historyEntriesManager: HistoryEntriesManager
+
+  const zoomLevel = writable<number>(1)
 
   let findInPage: FindInPage | undefined
 
@@ -75,6 +78,30 @@
     console.log('executeJavaScript', code)
     if (webview) {
       return webview.executeJavaScript(code, userGesture)
+    }
+  }
+
+  export const zoomIn = () => {
+    console.log('zoomIn')
+    if (webview) {
+      webview.setZoomLevel($zoomLevel + 0.1)
+      zoomLevel.set($zoomLevel + 0.1)
+    }
+  }
+
+  export const zoomOut = () => {
+    console.log('zoomOut')
+    if (webview) {
+      webview.setZoomLevel($zoomLevel - 0.1)
+      zoomLevel.set($zoomLevel - 0.1)
+    }
+  }
+
+  export const resetZoom = () => {
+    console.log('resetZoom')
+    if (webview) {
+      webview.setZoomLevel(1)
+      zoomLevel.set(1)
     }
   }
 

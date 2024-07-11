@@ -639,6 +639,12 @@
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
       showTabSearch = true
+    } else if (isModKeyAndKeyPressed(e, '+')) {
+      $activeBrowserTab?.zoomIn()
+    } else if (isModKeyAndKeyPressed(e, '-')) {
+      $activeBrowserTab?.zoomOut()
+    } else if (isModKeyAndKeyPressed(e, '0')) {
+      $activeBrowserTab?.resetZoom()
     }
   }
 
