@@ -2374,7 +2374,8 @@
     />
   {/if}
 
-  {#if showSidebar}
+  <div class="app-container">
+    {#if showSidebar}
     <div
       transition:slide={{ axis: 'y', duration: 200 }}
       class="sidebar"
@@ -2447,7 +2448,7 @@
                 <DragDropList
                   id="magic-tabs"
                   type={HorizontalDropZone}
-                  itemSize={48}
+                  itemSize={256}
                   itemCount={$magicTabs.length || 1}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
@@ -2538,7 +2539,7 @@
                     on:drop={handleDrop}
                   />
                <Popover.Root bind:open={popoverOpen}>
-                <Popover.Trigger/>
+                <Popover.Trigger class="hide-btn"/>
                 <Popover.Content>
                   <div class="address-bar-wrapper">
                     <div class="address-bar-content">
@@ -2837,6 +2838,7 @@
       </div>
     {/if}
   </div>
+  </div>
 
   {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
     <div transition:slide={{ axis: 'x' }} class="sidebar sidebar-magic">
@@ -2874,7 +2876,7 @@
 <style lang="scss">
   .app-wrapper {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     width: 100%;
     height: 100vh;
     overflow: hidden;
@@ -2883,6 +2885,10 @@
 
     --sidebar-width-left: 320px;
     --sidebar-width-right: 450px;
+  }
+
+  .hide-btn {
+    display: none !important;
   }
 
   .sidebar {
@@ -3149,7 +3155,6 @@
       border-radius: 12px;
       padding: 0.5rem;
       border: 1px dashed rgba(88, 81, 48, 0.4);
-      margin: 0.5rem 0 0.25rem 0;
 
       &.magic {
         background: linear-gradient(0deg, #ffeffd 0%, #ffe5fb 4.18%),
@@ -3544,5 +3549,12 @@
     align-items: center;
     justify-content: center;
     gap: 5px;
+  }
+  .app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    background: linear-gradient(to right  , paleturquoise, #d2e3e3);
   }
 </style>
