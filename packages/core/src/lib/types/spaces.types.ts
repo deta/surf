@@ -18,6 +18,7 @@ export interface SpaceData {
   sources?: SpaceSource[]
   liveModeEnabled: boolean
   hideViewed: boolean
+  smartFilterQuery: string | null
 }
 
 export interface SpaceSource {

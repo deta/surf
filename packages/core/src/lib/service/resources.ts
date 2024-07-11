@@ -39,7 +39,14 @@ import type { MediaParserResult } from './mediaImporter'
 
 const everythingSpace = {
   id: 'all',
-  name: { folderName: 'Everything', colors: ['#76E0FF', '#4EC9FB'], showInSidebar: false },
+  name: {
+    folderName: 'Everything',
+    colors: ['#76E0FF', '#4EC9FB'],
+    showInSidebar: false,
+    liveModeEnabled: false,
+    hideViewed: false,
+    smartFilterQuery: null
+  },
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   deleted: 0,

@@ -36,7 +36,9 @@
         colors: ['#FFBA76', '#FB8E4E'],
         showInSidebar: false,
         sources: [],
-        liveModeEnabled: false
+        liveModeEnabled: false,
+        hideViewed: false,
+        smartFilterQuery: null
       })
 
       log.debug('New Folder:', newSpace)
