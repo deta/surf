@@ -13,6 +13,7 @@
   import type { DetectedWebApp } from '@horizon/web-parser'
   import type { WebViewEventKeyDown, WebViewReceiveEvents } from '@horizon/types'
   import FindInPage from '../Cards/Browser/FindInPage.svelte'
+  import ZoomPreview from '../Cards/Browser/ZoomPreview.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { wait } from '@horizon/web-parser/src/utils'
 
@@ -28,6 +29,9 @@
   export let historyEntriesManager: HistoryEntriesManager
 
   const zoomLevel = writable<number>(1)
+  const showZoomPreview = writable<boolean>(false)
+  let zoomTimer: number
+  let hasMounted = false
 
   let findInPage: FindInPage | undefined
 
@@ -82,26 +86,29 @@
   }
 
   export const zoomIn = () => {
-    console.log('zoomIn')
     if (webview) {
-      webview.setZoomLevel($zoomLevel + 0.1)
-      zoomLevel.set($zoomLevel + 0.1)
+      zoomLevel.update((z) => {
+        const newZoomLevel = z + 0.05
+        webview.setZoomLevel(newZoomLevel)
+        return newZoomLevel
+      })
     }
   }
 
   export const zoomOut = () => {
-    console.log('zoomOut')
     if (webview) {
-      webview.setZoomLevel($zoomLevel - 0.1)
-      zoomLevel.set($zoomLevel - 0.1)
+      zoomLevel.update((z) => {
+        const newZoomLevel = z - 0.05
+        webview.setZoomLevel(newZoomLevel)
+        return newZoomLevel
+      })
     }
   }
 
   export const resetZoom = () => {
-    console.log('resetZoom')
     if (webview) {
-      webview.setZoomLevel(1)
       zoomLevel.set(1)
+      webview.setZoomLevel(1)
     }
   }
 
@@ -131,6 +138,22 @@
   }
 
   console.log('new tab', tab)
+
+  const resetZoomTimer = () => {
+    if (hasMounted) {
+      showZoomPreview.set(true)
+      if (zoomTimer) {
+        clearTimeout(zoomTimer)
+      }
+      zoomTimer = window.setTimeout(() => {
+        showZoomPreview.set(false)
+      }, 3000)
+    }
+  }
+
+  zoomLevel.subscribe(() => {
+    resetZoomTimer()
+  })
 
   const handleWebviewKeydown = async (e: CustomEvent<WebViewWrapperEvents['keydownWebview']>) => {
     const event = e.detail
@@ -206,6 +229,7 @@
   const unsubTracker: Unsubscriber[] = []
   onMount(() => {
     if (!webview) return
+    hasMounted = true
 
     webview.historyStackIds.set(tab.historyStackIds)
     webview.currentHistoryIndex.set(tab.currentHistoryIndex)
@@ -260,6 +284,10 @@
 
 {#if webview}
   <FindInPage bind:this={findInPage} {webview} />
+{/if}
+
+{#if webview}
+  <ZoomPreview {zoomLevel} {showZoomPreview} />
 {/if}
 
 <WebviewWrapper
