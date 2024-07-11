@@ -133,40 +133,48 @@
   @keyframes rollInUp {
     from {
       transform: rotateX(45deg) translateY(150%) translateZ(2em);
+      filter: blur(32px);
       opacity: 0;
     }
     to {
       transform: rotateX(0deg) translateY(0) translateZ(0);
+      filter: blur(0);
       opacity: 1;
     }
   }
   @keyframes rollOutUp {
     from {
       transform: rotateX(0deg) translateY(0) translateZ(0);
+      filter: blur(0);
       opacity: 1;
     }
     to {
       transform: rotateX(-45deg) translateY(-150%) translateZ(2em);
+      filter: blur(32px);
       opacity: 0;
     }
   }
   @keyframes rollInDown {
     from {
       transform: rotateX(-45deg) translateY(-150%) translateZ(2em);
+      filter: blur(32px);
       opacity: 0;
     }
     to {
       transform: rotateX(0deg) translateY(0) translateZ(0);
+      filter: blur(0);
       opacity: 1;
     }
   }
   @keyframes rollOutDown {
     from {
       transform: rotateX(0deg) translateY(0) translateZ(0);
+      filter: blur(0);
       opacity: 1;
     }
     to {
       transform: rotateX(45deg) translateY(150%) translateZ(2em);
+      filter: blur(32px);
       opacity: 0;
     }
   }
