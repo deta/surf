@@ -139,7 +139,7 @@
     justify-content: center;
     align-items: center;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
+    z-index: 50001;
   }
 
   .content {

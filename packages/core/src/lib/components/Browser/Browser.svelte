@@ -111,6 +111,7 @@
     resetPrompt,
     updatePrompt
   } from '../../service/prompts'
+  import { LinkPreview, Popover } from 'bits-ui'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -2348,7 +2349,9 @@
   }
   $: maxWidth = window.innerWidth
 
-  $: tabSize  = (maxWidth) / $tabs.length
+  $: tabSize = maxWidth / $tabs.length
+
+  let popoverOpen = false
 </script>
 
 <SplashScreen />
@@ -2367,11 +2370,14 @@
       on:activateTab={handleTabSelect}
     />
   {/if}
-  {#if showSidebar}
-    <div transition:slide={{axis: 'y', duration: 200}}
-    class="sidebar" class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}>
-      
 
+  {#if showSidebar}
+    <div
+      transition:slide={{ axis: 'y', duration: 200 }}
+      class="sidebar"
+      class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
+      style="z-index: 5000;"
+    >
       {#if $sidebarTab !== 'oasis'}
         <div class="tabs">
           <div class="tabs-list">
@@ -2500,35 +2506,41 @@
           </div>
 
           <div class="unpinned-tabs-wrapper">
-            
-
             <DragDropList
               id="tabs"
               type={HorizontalDropZone}
-              itemSize={
-                Math.min(256, Math.max(81, tabSize))
-              }
+              itemSize={Math.min(256, Math.max(81, tabSize))}
               itemCount={$unpinnedTabs.length}
               on:drop={async (event) => {
                 onDrop(event, 'unpin')
               }}
               let:index
             >
-              <TabItem
-                tab={$unpinnedTabs[index]}
-                {activeTabId}
-                {deleteTab}
-                {unarchiveTab}
-                pinned={false}
-                on:select={handleTabSelect}
-                on:remove-from-sidebar={handleRemoveFromSidebar}
-                on:drop={handleDrop}
-              />
+              <LinkPreview.Root>
+                <LinkPreview.Trigger>
+                  <TabItem
+                    tab={$unpinnedTabs[index]}
+                    {activeTabId}
+                    {deleteTab}
+                    {unarchiveTab}
+                    pinned={false}
+                    on:select={handleTabSelect}
+                    on:remove-from-sidebar={handleRemoveFromSidebar}
+                    on:drop={handleDrop}
+                  />
+                </LinkPreview.Trigger>
+                <LinkPreview.Content
+                  transitionConfig={{ duration: 150, y: -8 }}
+                >
+             
+                 <img src="https://via.placeholder.com/200x100" alt="placeholder" class="link-preview-content" />
+              </LinkPreview.Content>
+              </LinkPreview.Root>
             </DragDropList>
 
             <button
               class="add-tab-button"
-              on:click|preventDefault={() => createNewEmptyTab()}
+              on:click|preventDefault={() => (popoverOpen = !popoverOpen)}
               on:create-tab-from-space={handleCreateTabFromPopover}
               on:create-new-space={handleCreateNewSpace}
               use:popover={{
@@ -2550,11 +2562,6 @@
             </button>
           </div>
         </div>
-
-        
-
-
-        
       {:else}
         <OasisSidebar on:createTab={handleCreateTabFromSpace} />
       {/if}
@@ -2563,6 +2570,7 @@
 
   <div
     class="browser-window-wrapper"
+    style="z-index: 0;"
     class:hasNoTab={!$activeBrowserTab}
     class:sidebarHidden={!showSidebar}
   >
@@ -2765,7 +2773,7 @@
     overflow: hidden;
     background-color: paleturquoise;
     // background-color: #eeece0;
-    
+
     --sidebar-width-left: 320px;
     --sidebar-width-right: 450px;
   }
@@ -2878,6 +2886,14 @@
       overflow: hidden;
     }
   }
+  .link-preview-content {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    background-color: paleturquoise;
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
 
   .address-bar-wrapper {
     border-radius: 12px;
@@ -2888,6 +2904,7 @@
     flex-direction: column;
     gap: 15px;
     position: relative;
+    z-index: 50000;
   }
 
   .address-bar-content {
@@ -2895,6 +2912,12 @@
     align-items: center;
     gap: 10px;
     width: 100%;
+  }
+
+  .popover-content {
+    background-color: red;
+    width: 100vh;
+    height: 100vh;
   }
 
   .bar-wrapper {
@@ -3163,36 +3186,36 @@
   }
 
   button {
-      appearance: none;
-      border: none;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      border-radius: 5px;
-      cursor: pointer;
+    appearance: none;
+    border: none;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-radius: 5px;
+    cursor: pointer;
 
-      &:not(.nav-button) {
-        flex: 1;
-        background-color: transparent;
-        padding: 10px;
-      }
+    &:not(.nav-button) {
+      flex: 1;
+      background-color: transparent;
+      padding: 10px;
+    }
 
-      &.nav-button {
-        padding: 5px;
-        background: none;
-        color: #5e5e5e;
+    &.nav-button {
+      padding: 5px;
+      background: none;
+      color: #5e5e5e;
 
-        &:disabled {
-          color: #a9a9a9;
-        }
-      }
-
-      &:hover {
-        background: #eeece0;
+      &:disabled {
+        color: #a9a9a9;
       }
     }
+
+    &:hover {
+      background: #eeece0;
+    }
+  }
 
   .actions {
     display: flex;
@@ -3263,12 +3286,11 @@
     border: none;
   }
 
-
   .tabs-list {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
 
   .tab-selector {
     width: 100%;
@@ -3278,7 +3300,6 @@
     z-index: 10;
     padding-top: 5px;
     padding-bottom: 5px;
-
 
     button {
       flex: 1;
