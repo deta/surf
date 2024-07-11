@@ -182,7 +182,7 @@
   })
 
   const unpinnedTabs = derived([activeTabs], ([tabs]) => {
-    return tabs.filter((tab) => !tab.pinned && !tab.magic).sort((a, b) => a.index - b.index)
+    return tabs.filter((tab) => !tab.pinned && !tab.magic).sort((a, b) => b.index - a.index)
   })
 
   const magicTabs = derived([activeTabs], ([tabs]) => {
@@ -335,7 +335,7 @@
       ...tab
     })
     log.debug('Created tab', newTab)
-    tabs.update((tabs) => [...tabs, newTab])
+    tabs.update((tabs) => [newTab, ...tabs])
 
     return newTab
   }
@@ -614,6 +614,10 @@
 
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
+    const activeElement = document.activeElement
+    const isInputField =
+      activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')
+
     if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       addressInputElem.blur()
@@ -684,6 +688,7 @@
         }
       }, KEY_TIMEOUT)
     } else if (e.key === 'ArrowLeft' && e.metaKey) {
+      /// TODO FIX WHEN INPUT IS FOCUSED
       if (canGoBack) {
         $activeBrowserTab?.goBack()
       }
@@ -726,11 +731,16 @@
   const createNewEmptyTab = async () => {
     log.debug('Creating new tab')
 
+    // check if there already exists an empty tab, if yes we just change to it
+    const emptyTab = $tabs.find((tab) => tab.type === 'empty')
+
+    if (emptyTab) {
+      makeTabActive(emptyTab.id)
+      return
+    }
+
     const newTab = await createTab<TabEmpty>({ title: 'New Tab', icon: '', type: 'empty' })
     makeTabActive(newTab.id)
-
-    addressInputElem.focus()
-    addressValue.set('')
   }
 
   const debouncedCreateNewEmptyTab = useDebounce(createNewEmptyTab, 100)
@@ -2047,7 +2057,7 @@
     })
 
     const tabsList = await tabsDB.all()
-    tabs.update((currentTabs) => currentTabs.sort((a, b) => a.index - b.index))
+    tabs.update((currentTabs) => currentTabs.sort((a, b) => b.index - a.index))
     tabs.set(tabsList)
     log.debug('Tabs loaded', tabsList)
 
@@ -2084,7 +2094,7 @@
     //   updateTab(tab.id, { index: index })
     // })
 
-    tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
+    tabs.update((tabs) => tabs.sort((a, b) => b.index - a.index))
 
     console.log('xxxx', $tabs)
   })
@@ -2601,6 +2611,29 @@
           {/if}
 
           <div class="unpinned-tabs-wrapper">
+            <button
+              class="add-tab-button"
+              on:click|preventDefault={() => createNewEmptyTab()}
+              on:create-tab-from-space={handleCreateTabFromPopover}
+              on:create-new-space={handleCreateNewSpace}
+              use:popover={{
+                content: {
+                  component: ShortcutMenu,
+                  props: { resourceManager, spaces }
+                },
+                action: 'hover',
+                position: 'right-top',
+                style: {
+                  backgroundColor: '#F8F7F1'
+                },
+                animation: 'fade',
+                delay: 450
+              }}
+            >
+              <Icon name="add" color="#7d7448" />
+              <span class="label">New Tab</span>
+            </button>
+
             <DragDropList
               id="tabs"
               type={VerticalDropZone}
@@ -2621,31 +2654,6 @@
                 on:remove-from-sidebar={handleRemoveFromSidebar}
                 on:drop={handleDrop}
               />
-
-              {#if index === $unpinnedTabs.length - 1}
-                <button
-                  class="add-tab-button"
-                  on:click|preventDefault={() => createNewEmptyTab()}
-                  on:create-tab-from-space={handleCreateTabFromPopover}
-                  on:create-new-space={handleCreateNewSpace}
-                  use:popover={{
-                    content: {
-                      component: ShortcutMenu,
-                      props: { resourceManager, spaces }
-                    },
-                    action: 'hover',
-                    position: 'right-top',
-                    style: {
-                      backgroundColor: '#F8F7F1'
-                    },
-                    animation: 'fade',
-                    delay: 1200
-                  }}
-                >
-                  <Icon name="add" color="#7d7448" />
-                  <span class="label">New Tab</span>
-                </button>
-              {/if}
             </DragDropList>
           </div>
         </div>
@@ -3138,7 +3146,6 @@
     }
 
     .unpinned-tabs-wrapper {
-      height: 100%;
       max-height: calc(100vh - 20rem);
     }
 
