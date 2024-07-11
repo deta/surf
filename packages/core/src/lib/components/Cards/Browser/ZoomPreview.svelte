@@ -113,7 +113,9 @@
     backface-visibility: hidden;
   }
   .percent {
-    margin-left: 0.1em;
+    font-size: 1rem;
+    margin-left: 0.4rem;
+    opacity: 0.4;
   }
 
   .digit.current.rolling.up {
