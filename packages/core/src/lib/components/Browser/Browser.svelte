@@ -552,7 +552,7 @@
     blockBlurHandler = true
     setTimeout(() => {
       blockBlurHandler = false
-    }, 100)
+    }, 300)
 
     addressBarFocus = false
 
@@ -572,11 +572,13 @@
       const url = getNavigationURL($addressValue)
       $activeBrowserTab.navigate(url)
 
-      // if (url === $activeTabLocation) {
-      //     $activeBrowserTab.reload()
-      // } else {
-      //     updateActiveTab({ initialLocation: url })
-      // }
+      if (url === $activeTabLocation) {
+          $activeBrowserTab.reload()
+      } else {
+          updateActiveTab({ initialLocation: url })
+      }
+
+      popoverOpen = false
     } else if ($activeTab?.type === 'empty') {
       log.debug('Navigating to address from empty tab', $addressValue)
       const url = getNavigationURL($addressValue)
@@ -650,6 +652,7 @@
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
+      popoverOpen = true
       addressInputElem.focus()
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
@@ -2516,6 +2519,106 @@
               }}
               let:index
             >
+
+              <!-- check if this tab is active -->
+               {#if $activeTabId === $unpinnedTabs[index].id}
+               <TabItem
+                    tab={$unpinnedTabs[index]}
+                    {activeTabId}
+                    {deleteTab}
+                    {unarchiveTab}
+                    pinned={false}
+                    isAlreadyOpen={false}
+                    on:select={()=>{
+                      popoverOpen = true
+                      addressInputElem.focus()
+                      handleFocus()
+                    }}
+                    on:remove-from-sidebar={handleRemoveFromSidebar}
+                    on:drop={handleDrop}
+                  />
+               <Popover.Root bind:open={popoverOpen}>
+                <Popover.Trigger/>
+                <Popover.Content>
+                  <div class="address-bar-wrapper">
+                    <div class="address-bar-content">
+                      <div class="search">
+                        <input
+                          bind:this={addressInputElem}
+                          disabled={$activeTab?.type !== 'page' &&
+                            $activeTab?.type !== 'chat' &&
+                            $activeTab?.type !== 'empty'}
+                          bind:value={$addressValue}
+                          on:focus={handleFocus}
+                          type="text"
+                          placeholder={$activeTab?.type === 'page'
+                            ? 'Search or Enter URL'
+                            : $activeTab?.type === 'chat'
+                              ? 'Chat Title'
+                              : 'Search or Enter URL'}
+                        />
+                      </div>
+      
+                      {#if $activeTab?.type === 'page'}
+                        {#key $activeTab.resourceBookmark}
+                          <button
+                            on:click={handleBookmark}
+                            use:tooltip={{
+                              content: $activeTab?.resourceBookmark
+                                ? 'Open bookmark (⌘ + D)'
+                                : 'Bookmark this page (⌘ + D)',
+                              action: 'hover',
+                              position: 'left',
+                              animation: 'fade',
+                              delay: 500
+                            }}
+                            on:save-resource-in-space={handleSaveResourceInSpace}
+                            use:popover={{
+                              content: {
+                                component: ShortcutSaveItem,
+                                props: { resourceManager, spaces }
+                              },
+                              action: 'hover',
+                              position: 'right-top',
+                              style: {
+                                backgroundColor: '#F8F7F1'
+                              },
+                              animation: 'fade',
+                              delay: 1200
+                            }}
+                          >
+                            {#if $bookmarkingInProgress}
+                              <Icon name="spinner" />
+                            {:else if $bookmarkingSuccess}
+                              <Icon name="check" />
+                            {:else if $activeTab?.resourceBookmark}
+                              <Icon name="bookmarkFilled" />
+                            {:else}
+                              <Icon name="leave" />
+                            {/if}
+                          </button>
+                        {/key}
+                      {/if}
+      
+                      {#if $activeTab?.type === 'page' && $activeTab.currentDetectedApp?.rssFeedUrl}
+                        <button
+                          on:click={handleCreateLiveSpace}
+                          use:tooltip={{
+                            content: `Create ${$activeTab.currentDetectedApp.appName} live Space`,
+                            action: 'hover',
+                            position: 'left',
+                            animation: 'fade',
+                            delay: 500
+                          }}
+                        >
+                          <Icon name="news" />
+                        </button>
+                      {/if}
+                    </div>
+                  </div>
+                </Popover.Content>
+              </Popover.Root>
+              {:else}
               <LinkPreview.Root>
                 <LinkPreview.Trigger>
                   <TabItem
@@ -2533,9 +2636,11 @@
                   transitionConfig={{ duration: 150, y: -8 }}
                 >
              
-                 <img src="https://via.placeholder.com/200x100" alt="placeholder" class="link-preview-content" />
+                 <img src="https://via.placeholder.com/300x200" alt="placeholder" class="link-preview-content" />
               </LinkPreview.Content>
               </LinkPreview.Root>
+              {/if}
+              
             </DragDropList>
 
             <button
@@ -2762,6 +2867,8 @@
       />
     </div>
   {/if}
+
+  
 </div>
 
 <style lang="scss">
@@ -2771,7 +2878,7 @@
     width: 100%;
     height: 100vh;
     overflow: hidden;
-    background-color: paleturquoise;
+    background: linear-gradient(to right  , paleturquoise, #d2e3e3);
     // background-color: #eeece0;
 
     --sidebar-width-left: 320px;

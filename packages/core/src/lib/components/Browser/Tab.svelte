@@ -13,6 +13,7 @@
   export let activeTabId: Writable<string>
   export let deleteTab: (tabId: string) => void
   export let pinned: boolean
+  export let isAlreadyOpen: boolean = false
 
   export let unarchiveTab: (tabId: string) => void
   export let showButtons: boolean = true
@@ -26,6 +27,7 @@
   let dragOver = false
 
   const handleClick = () => {
+    if (isAlreadyOpen) { return}
     dispatch('select', tab.id)
   }
 
