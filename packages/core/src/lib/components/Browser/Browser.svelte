@@ -3229,14 +3229,24 @@
     gap: 1rem;
 
     background: #f7f7f7;
-    border-radius: 18px;
+    border-radius: 20px;
     width: calc(100% - 1rem);
     overflow-y: visible;
     box-shadow:
-      0.849px 0.85px 7.85px 0px rgba(255, 255, 255, 0.2) inset,
-      0px 7.007px 7.935px 0px rgba(0, 0, 0, 0.03),
-      0px 16.84px 16.867px 0px rgba(0, 0, 0, 0.04),
-      0px 31.708px 27.854px 0px rgba(0, 0, 0, 0.05);
+      0px 0px 32px -1px rgba(0, 0, 0, 0.05),
+      0px 14px 4px 0px #000,
+      0px 9px 3px 0px rgba(0, 0, 0, 0.01),
+      0px 5px 3px 0px rgba(0, 0, 0, 0.03),
+      0px 2px 2px 0px rgba(0, 0, 0, 0.06),
+      0px 1px 1px 0px rgba(0, 0, 0, 0.07);
+
+    box-shadow:
+      0px 0px 32px -1px color(display-p3 0 0 0 / 0.05),
+      0px 14px 4px 0px color(display-p3 0 0 0 / 0),
+      0px 9px 3px 0px color(display-p3 0 0 0 / 0.01),
+      0px 5px 3px 0px color(display-p3 0 0 0 / 0.03),
+      0px 2px 2px 0px color(display-p3 0 0 0 / 0.06),
+      0px 1px 1px 0px color(display-p3 0 0 0 / 0.07);
 
     .description-text {
       opacity: 0.4;
