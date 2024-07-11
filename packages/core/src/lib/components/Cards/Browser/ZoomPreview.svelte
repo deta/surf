@@ -67,7 +67,21 @@
     background-color: rgba(255, 255, 255, 0.9);
     padding: 0.5rem 1rem;
     border-radius: 0.25rem;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0px 0px 32px -1px rgba(0, 0, 0, 0.05),
+      0px 14px 4px 0px #000,
+      0px 9px 3px 0px rgba(0, 0, 0, 0.01),
+      0px 5px 3px 0px rgba(0, 0, 0, 0.03),
+      0px 2px 2px 0px rgba(0, 0, 0, 0.06),
+      0px 1px 1px 0px rgba(0, 0, 0, 0.07);
+
+    box-shadow:
+      0px 0px 32px -1px color(display-p3 0 0 0 / 0.05),
+      0px 14px 4px 0px color(display-p3 0 0 0 / 0),
+      0px 9px 3px 0px color(display-p3 0 0 0 / 0.01),
+      0px 5px 3px 0px color(display-p3 0 0 0 / 0.03),
+      0px 2px 2px 0px color(display-p3 0 0 0 / 0.06),
+      0px 1px 1px 0px color(display-p3 0 0 0 / 0.07);
     font-size: 1.5em;
     border-radius: 12px;
   }
