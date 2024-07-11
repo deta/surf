@@ -82,7 +82,7 @@
       0px 5px 3px 0px color(display-p3 0 0 0 / 0.03),
       0px 2px 2px 0px color(display-p3 0 0 0 / 0.06),
       0px 1px 1px 0px color(display-p3 0 0 0 / 0.07);
-    font-size: 1.5em;
+    font-size: 1.25rem;
     border-radius: 12px;
   }
   .counter {
@@ -113,7 +113,7 @@
     backface-visibility: hidden;
   }
   .percent {
-    font-size: 1rem;
+    font-size: 0.85rem;
     margin-left: 0.4rem;
     opacity: 0.4;
   }
