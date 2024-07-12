@@ -622,6 +622,17 @@
     }
   }, 200)
 
+  const createHistoryTab = useDebounce(async () => {
+    log.debug('Creating new history tab')
+    const newTab = await createTab<TabHistory>({
+      title: 'History',
+      icon: '',
+      type: 'history'
+    })
+
+    makeTabActive(newTab.id)
+  }, 200)
+
   let keyBuffer = ''
   let index: number
   let keyTimeout: any
@@ -812,17 +823,6 @@
 
     makeTabActive(newTab.id)
   }
-
-  const createHistoryTab = useDebounce(async () => {
-    log.debug('Creating new history tab')
-    const newTab = await createTab<TabHistory>({
-      title: 'History',
-      icon: '',
-      type: 'history'
-    })
-
-    makeTabActive(newTab.id)
-  }, 200)
 
   const createOasisDiscoveryTab = async () => {
     log.debug('Creating new oasis discovery tab')
@@ -2984,22 +2984,22 @@
 
     <div class="horizontal-flex">
       <div
-        class="browser-window-wrapper"
-        style="z-index: 0;"
-        class:hasNoTab={!$activeBrowserTab}
-        class:sidebarHidden={!showSidebar}
-      >
-        {#if $sidebarTab === 'oasis'}
-          <div class="browser-window active" style="--scaling: 1;">
-            <OasisSpace
-              spaceId={$selectedSpace}
-              active
-              on:create-resource-from-oasis={handeCreateResourceFromOasis}
-              on:deleted={handleDeletedSpace}
-              on:new-tab={handleNewTab}
-            />
-          </div>
-        {/if}
+      class="browser-window-wrapper"
+      style="z-index: 0;"
+      class:hasNoTab={!$activeBrowserTab}
+      class:sidebarHidden={!showSidebar}
+    >
+      {#if $sidebarTab === 'oasis'}
+        <div class="browser-window active" style="--scaling: 1;">
+          <OasisSpace
+            spaceId={$selectedSpace}
+            active
+            on:create-resource-from-oasis={handeCreateResourceFromOasis}
+            on:deleted={handleDeletedSpace}
+            on:new-tab={handleNewTab}
+          />
+        </div>
+      {/if}
 
         {#if $showResourceDetails && $resourceDetailsModalSelected}
           <OasisResourceModalWrapper
@@ -3027,97 +3027,88 @@
             {:else}
               <div>Should not happen error: Failed to load main Horizon</div>
             {/if} -->
-            {#if tab.type === 'page'}
-              <BrowserTab
-                bind:this={$browserTabs[tab.id]}
-                bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
+          {#if tab.type === 'page'}
+            <BrowserTab
+              bind:this={$browserTabs[tab.id]}
+              bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
+              active={$activeTabId === tab.id}
+              {historyEntriesManager}
+              on:newTab={handleNewTab}
+              on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
+              on:bookmark={handleWebviewBookmark}
+              on:transform={(e) => handleWebviewTransform(e, tab)}
+              on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
+              on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, tab.id)}
+              on:annotate={(e) => handleWebviewAnnotation(e, tab.id)}
+              on:annotationClick={(e) => handleWebviewAnnotationClick(e, tab.id)}
+              on:annotationRemove={(e) => handleWebviewAnnotationRemove(e, tab.id)}
+              on:annotationUpdate={(e) => handleWebviewAnnotationUpdate(e, tab.id)}
+              on:keyDown={(e) => handleKeyDown(e.detail)}
+              on:webviewKeydown={(e) => handleKeyDown(e.detail)}
+            />
+          {:else if tab.type === 'horizon'}
+            {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
+            {#if horizon}
+              <Horizon
+                {horizon}
                 active={$activeTabId === tab.id}
-                {historyEntriesManager}
-                on:newTab={handleNewTab}
-                on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
-                on:bookmark={handleWebviewBookmark}
-                on:transform={(e) => handleWebviewTransform(e, tab)}
-                on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
-                on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, tab.id)}
-                on:annotate={(e) => handleWebviewAnnotation(e, tab.id)}
-                on:annotationClick={(e) => handleWebviewAnnotationClick(e, tab.id)}
-                on:annotationRemove={(e) => handleWebviewAnnotationRemove(e, tab.id)}
-                on:annotationUpdate={(e) => handleWebviewAnnotationUpdate(e, tab.id)}
-                on:keyDown={(e) => handleKeyDown(e.detail)}
-                on:webviewKeydown={(e) => handleKeyDown(e.detail)}
-              />
-            {:else if tab.type === 'horizon'}
-              {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
-              {#if horizon}
-                <Horizon
-                  {horizon}
-                  active={$activeTabId === tab.id}
-                  {visorSearchTerm}
-                  inOverview={false}
-                  {resourceManager}
-                />
-              {:else}
-                <div>no horizon found</div>
-              {/if}
-            {:else if tab.type === 'chat'}
-              <Chat
-                {tab}
+                {visorSearchTerm}
+                inOverview={false}
                 {resourceManager}
-                db={storage}
-                on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
-                on:updateTab={(e) => updateTab(tab.id, e.detail)}
-                on:openResource={(e) => openResource(e.detail)}
-              />
-            {:else if tab.type === 'importer'}
-              <Importer {resourceManager} />
-            {:else if tab.type === 'oasis-discovery'}
-              <OasisDiscovery {resourceManager} />
-            {:else if tab.type === 'space'}
-              <OasisSpace
-                spaceId={tab.spaceId}
-                active={$activeTabId === tab.id}
-                on:create-resource-from-oasis={handeCreateResourceFromOasis}
-                on:deleted={handleDeletedSpace}
-                on:new-tab={handleNewTab}
               />
             {:else}
-              <BrowserHomescreen
-                {historyEntriesManager}
-                on:navigate={handleTabNavigation}
-                on:chat={handleCreateChat}
-                on:rag={handleRag}
-                on:create-tab-from-space={handleCreateTabFromSpace}
-              />
+              <div>no horizon found</div>
             {/if}
-          </div>
-        {/each}
-
-        {#if !$activeTabs && !$activeTab}
-          <div class="browser-window active" style="--scaling: 1;">
+          {:else if tab.type === 'chat'}
+            <Chat
+              {tab}
+              {resourceManager}
+              db={storage}
+              on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
+              on:updateTab={(e) => updateTab(tab.id, e.detail)}
+              on:openResource={(e) => openResource(e.detail)}
+            />
+          {:else if tab.type === 'importer'}
+            <Importer {resourceManager} />
+          {:else if tab.type === 'oasis-discovery'}
+            <OasisDiscovery {resourceManager} />
+          {:else if tab.type === 'space'}
+            <OasisSpace
+              spaceId={tab.spaceId}
+              active={$activeTabId === tab.id}
+              on:create-resource-from-oasis={handeCreateResourceFromOasis}
+              on:deleted={handleDeletedSpace}
+              on:new-tab={handleNewTab}
+            />
+          {:else if tab.type === 'history'}
+            <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
+          {:else}
             <BrowserHomescreen
               {historyEntriesManager}
               on:navigate={handleTabNavigation}
               on:chat={handleCreateChat}
               on:rag={handleRag}
+              on:create-tab-from-space={handleCreateTabFromSpace}
             />
-          </div>
-        {:else if tab.type === 'history'}
-          <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
-        {:else}
+          {/if}
+        </div>
+      {/each}
+
+      {#if !$activeTabs && !$activeTab}
+        <div class="browser-window active" style="--scaling: 1;">
           <BrowserHomescreen
             {historyEntriesManager}
             on:navigate={handleTabNavigation}
             on:chat={handleCreateChat}
             on:rag={handleRag}
-            on:create-tab-from-space={handleCreateTabFromSpace}
           />
-      </div>
+        </div>
+      {/if}
+    </div>
+  </div>
 
-      <!--  -->
-
-    
   {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
-  <div transition:slide={{ axis: 'x' }} class="sidebar sidebar-magic">
+  <div transition:slide={{ axis: 'x' }} class=" sidebar-magic">
     <MagicSidebar
       magicPage={$activeTabMagic}
       bind:inputValue={$magicInputValue}
@@ -3135,7 +3126,7 @@
     />
   </div>
 {:else if $showAppSidebar}
-  <div transition:slide={{ axis: 'x' }} class="sidebar sidebar-magic">
+  <div transition:slide={{ axis: 'x' }} class="sidebar-magic">
     <AppSidebar
       {sffs}
       appId={$activeAppId}
@@ -3145,7 +3136,7 @@
     />
   </div>
 {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
-  <div transition:slide={{ axis: 'x' }} class="sidebar sidebar-magic">
+  <div transition:slide={{ axis: 'x' }} class="sidebar-magic">
     <AnnotationsSidebar
       bind:this={annotationsSidebar}
       resourceId={$activeTab.resourceBookmark}
@@ -3155,6 +3146,7 @@
     />
   </div>
 {/if}
+    </div>
 </div>
 
 <style lang="scss">
@@ -3162,7 +3154,7 @@
     display: flex;
     flex-direction: row;
     width: 100%;
-    height: vh;
+    height: 100vh;
     overflow: hidden;
     background: linear-gradient(to right, paleturquoise, #d2e3e3);
     // background-color: #eeece0;
@@ -3228,7 +3220,7 @@
     display: flex;
     flex-direction: row;
     flex: 1;
-    height: 10vh;
+    height: 100vh;
   }
 
   .sidebar-magic-toggle {
@@ -3258,6 +3250,7 @@
     flex: 1;
     width: 300px;
     z-index: 1;
+    background-color: red;
   }
 
   .browser-window-wrapper {
@@ -3360,7 +3353,6 @@
       }
     }
   }
-
 
   input {
     flex: 1;
@@ -3525,23 +3517,15 @@
 
   .pinned-tabs-wrapper {
     position: relative;
-<<<<<<< HEAD
     gap: 1rem;
 
     background: #f7f7f7;
     border-radius: 18px;
-=======
-    padding: 0.5rem;
-    margin-top: 2rem;
-    bottom: 0.75rem;
-    left: 0.5rem;
-    right: 0.5rem;
+    padding: 0.2rem;
     gap: 1rem;
 
     background: #f7f7f7;
-    border-radius: 20px;
-    width: calc(100% - 1rem);
->>>>>>> grooves-base
+    border-radius: 12px;
     overflow-y: visible;
     box-shadow:
       0px 0px 32px -1px rgba(0, 0, 0, 0.05),
