@@ -9,6 +9,7 @@
   import LinkPreview from '../Cards/Link/LinkPreview.svelte'
 
   import {
+    ResourceHistoryEntry,
     useResourceManager,
     type Resource,
     type ResourceAnnotation,
@@ -39,6 +40,8 @@
   import AnnotationPreview from '../Cards/Annotation/AnnotationPreview.svelte'
 
   import log from '../../utils/log'
+  import HistoryEntryPreview from '../Cards/Link/HistoryEntryPreview.svelte'
+  import { getHumanDistanceToNow } from '../../utils/time'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -64,6 +67,7 @@
   $: chatThreadResource = resource as ResourceChatThread
   $: documentResource = resource as ResourceDocument
   $: annotationResource = resource as ResourceAnnotation
+  $: historyEntryResource = resource as ResourceHistoryEntry
 
   $: isLiveSpaceResource = !!resource.tags?.find(
     (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
@@ -159,6 +163,12 @@
       <TextPreview resource={textResource} on:data={handleData} on:load={handleLoad} />
     {:else if resource.type === ResourceTypes.LINK}
       <LinkPreview resource={linkResource} on:data={handleData} on:load={handleLoad} />
+    {:else if resource.type === ResourceTypes.HISTORY_ENTRY}
+      <HistoryEntryPreview
+        resource={historyEntryResource}
+        on:data={handleData}
+        on:load={handleLoad}
+      />
     {:else if resource.type.startsWith(ResourceTypes.POST_YOUTUBE)}
       <YoutubePreview
         resource={postResource}
@@ -232,6 +242,9 @@
         {:else if resource.type.startsWith(ResourceTypes.ANNOTATION)}
           <Icon name="marker" size="20px" />
           <div class="">Annotation</div>
+        {:else if resource.type.startsWith(ResourceTypes.HISTORY_ENTRY)}
+          <Icon name="history" size="20px" />
+          <div class="">{getHumanDistanceToNow(historyEntryResource.createdAt)}</div>
         {:else}
           <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
           <div class="">{getFileType(resource.type) ?? 'File'}</div>

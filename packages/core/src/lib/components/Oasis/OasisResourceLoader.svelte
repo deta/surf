@@ -29,6 +29,8 @@
       resource = res.resource
       annotations = res.annotations
 
+      log.debug('annotations', annotations)
+
       log.debug('Loaded resource:', resource)
       dispatch('load', resource)
     } catch (e) {

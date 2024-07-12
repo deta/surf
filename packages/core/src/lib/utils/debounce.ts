@@ -45,6 +45,31 @@ export const useCancelableDebounce = <F extends (...args: any[]) => any>(func: F
   return { execute, cancel }
 }
 
+// use a unique key to identify the debounce function and separate it from other debounces
+export const useScopedDebounce = <F extends (...args: any[]) => any>(func: F, value = 250) => {
+  let debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+  const call = (key: string, ...args: Parameters<F>) => {
+    return new Promise<Awaited<ReturnType<F>>>((resolve, reject) => {
+      clearTimeout(debounceTimers.get(key))
+      debounceTimers.set(
+        key,
+        setTimeout(async () => {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const result = await func(...args)
+            resolve(result)
+          } catch (err) {
+            reject(err)
+          }
+        }, value)
+      )
+    })
+  }
+
+  return call
+}
+
 /**
  * Throttles a function to only be called once every `n` milliseconds
  */

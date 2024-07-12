@@ -221,6 +221,23 @@ export class YoutubeParser extends WebAppExtractor {
     }
   }
 
+  private cleanedUpUrl() {
+    const youtubeHostnames = [
+      'youtube.com',
+      'youtu.be',
+      'youtube.de',
+      'www.youtube.com',
+      'www.youtu.be',
+      'www.youtube.de'
+    ]
+
+    if (youtubeHostnames.includes(this.url.host)) {
+      return this.url.href.replace(/&t.*/g, '')
+    }
+
+    return this.url.href
+  }
+
   getRSSFeedUrl(document: Document) {
     if (this.url.pathname.includes('/playlist')) {
       const playlistId = this.getPlayListId()
@@ -253,6 +270,7 @@ export class YoutubeParser extends WebAppExtractor {
       appId: this.app?.id ?? null,
       appName: this.app?.name ?? null,
       hostname: this.url.hostname,
+      canonicalUrl: this.cleanedUpUrl(),
       resourceType: resourceType,
       appResourceIdentifier: appResourceIdentifier,
       resourceNeedsPicking: false

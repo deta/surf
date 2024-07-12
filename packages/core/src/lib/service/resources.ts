@@ -26,7 +26,11 @@ import {
   type SpaceSource
 } from '../types'
 import type { Telemetry } from './telemetry'
-import { TelemetryEventTypes, type ResourceDataAnnotation } from '@horizon/types'
+import {
+  TelemetryEventTypes,
+  type ResourceDataAnnotation,
+  type ResourceDataHistoryEntry
+} from '@horizon/types'
 import { getContext, setContext } from 'svelte'
 import type { MediaParserResult } from './mediaImporter'
 
@@ -76,6 +80,10 @@ export class ResourceTag {
 
   static canonicalURL(url: string) {
     return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url }
+  }
+
+  static silent(value: boolean = true) {
+    return { name: ResourceTagsBuiltInKeys.SILENT, value: `${value}` }
   }
 
   static annotates(resourceID: string) {
@@ -330,6 +338,7 @@ export class ResourceChatMessage extends ResourceJSON<ResourceDataChatMessage> {
 export class ResourceChatThread extends ResourceJSON<ResourceDataChatThread> {}
 export class ResourceDocument extends ResourceJSON<ResourceDataDocument> {}
 export class ResourceAnnotation extends ResourceJSON<ResourceDataAnnotation> {}
+export class ResourceHistoryEntry extends ResourceJSON<ResourceDataHistoryEntry> {}
 
 export type ResourceObject =
   | Resource
@@ -340,6 +349,7 @@ export type ResourceObject =
   | ResourceChatThread
   | ResourceNote
   | ResourceAnnotation
+  | ResourceHistoryEntry
 
 export type ResourceSearchResultItem = {
   id: string // resource id
@@ -380,6 +390,8 @@ export class ResourceManager {
       return new ResourceDocument(this.sffs, data)
     } else if (data.type.startsWith(ResourceTypes.ANNOTATION)) {
       return new ResourceAnnotation(this.sffs, data)
+    } else if (data.type.startsWith(ResourceTypes.HISTORY_ENTRY)) {
+      return new ResourceHistoryEntry(this.sffs, data)
     } else {
       return new Resource(this.sffs, data)
     }
@@ -573,6 +585,15 @@ export class ResourceManager {
     return { resource, annotations: annotations }
   }
 
+  async getHistoryEntries() {
+    const resources = await this.listResourcesByTags([
+      ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY),
+      ResourceManager.SearchTagDeleted(false)
+    ])
+
+    return resources as ResourceHistoryEntry[]
+  }
+
   async getResource(id: string) {
     // check if resource is already loaded
     const loadedResources = get(this.resources)
@@ -691,6 +712,19 @@ export class ResourceManager {
     resource.addTag({ name: tagName, value: tagValue })
   }
 
+  async deleteResourceTag(resourceId: string, tagName: string) {
+    const resource = await this.getResource(resourceId)
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    this.log.debug('deleting resource tag', resourceId, tagName)
+
+    await this.sffs.deleteResourceTag(resourceId, tagName)
+
+    resource.tags = resource.tags?.filter((t) => t.name !== tagName)
+  }
+
   async createResourceNote(
     content: string,
     metadata?: Partial<SFFSResourceMetadata>,
@@ -728,6 +762,21 @@ export class ResourceManager {
       metadata,
       tags
     ) as Promise<ResourceAnnotation>
+  }
+
+  async createResourceHistoryEntry(
+    data: ResourceDataHistoryEntry,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
+    const blobData = JSON.stringify(data)
+    const blob = new Blob([blobData], { type: ResourceTypes.HISTORY_ENTRY })
+    return this.createResource(
+      ResourceTypes.HISTORY_ENTRY,
+      blob,
+      metadata,
+      tags
+    ) as Promise<ResourceHistoryEntry>
   }
 
   async createResourceOther(
@@ -876,6 +925,10 @@ export class ResourceManager {
 
   static SearchTagViewedByUser(value: boolean): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.VIEWED_BY_USER, value: `${value}`, op: 'eq' }
+  }
+
+  static SearchTagSilent(value: boolean = true): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.SILENT, value: `${value}`, op: 'eq' }
   }
 
   static provide(telemetry: Telemetry) {

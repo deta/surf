@@ -23,6 +23,7 @@ import {
 import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
 import CommentIndicator from './components/CommentIndicator.svelte'
+import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 
@@ -34,6 +35,8 @@ let selectionMenu: Menu | null = null
 let selectionMenuWrapper: ReturnType<typeof createComponentWrapper> | null = null
 
 // const clickOutsideHandlers = new Map<string, () => void>()
+
+const debouncedAppDetection = useDebounce(runAppDetection, 200)
 
 function runAppDetection() {
   console.log('Running app detection on', window.location.href)
@@ -809,7 +812,7 @@ ipcRenderer.on('webview-event', (_event, payload) => {
   } else if (type === WebViewEventReceiveNames.GetResource) {
     runResourceDetection()
   } else if (type === WebViewEventReceiveNames.GetApp) {
-    runAppDetection()
+    debouncedAppDetection()
   } else if (type === WebViewEventReceiveNames.RunAction) {
     runServiceAction(data.id, data.inputs)
   } else if (type === WebViewEventReceiveNames.TransformationOutput) {

@@ -44,6 +44,7 @@ export class ArticleParser extends WebAppExtractor {
       appId: null,
       appName: generateNameFromURL(this.url.href),
       hostname: this.url.hostname,
+      canonicalUrl: this.url.href,
       resourceType: this.detectResourceType(),
       appResourceIdentifier: this.url.pathname,
       resourceNeedsPicking: false

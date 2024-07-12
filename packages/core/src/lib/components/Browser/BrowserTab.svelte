@@ -16,6 +16,7 @@
   import ZoomPreview from '../Cards/Browser/ZoomPreview.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { wait } from '@horizon/web-parser/src/utils'
+  import { useDebounce } from '../../utils/debounce'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<{
@@ -214,7 +215,7 @@
       app.appResourceIdentifier === detectedApp.appResourceIdentifier
     ) {
       log.debug('no change in app or resource', detectedApp)
-      dispatch('appDetection', detectedApp) // TODO: differentiate between fresh detection and no change
+      // dispatch('appDetection', detectedApp) // TODO: differentiate between fresh detection and no change
       return
     }
 
@@ -225,6 +226,11 @@
   const handleWebviewKeyDown = (e: CustomEvent<WebViewEventKeyDown>) => {
     dispatch('webviewKeydown', e.detail)
   }
+
+  const debouncedAppDetection = useDebounce(() => {
+    log.debug('running app detection debounced')
+    webview.startAppDetection()
+  }, 200)
 
   const unsubTracker: Unsubscriber[] = []
   onMount(() => {
@@ -237,7 +243,8 @@
     unsubTracker.push(
       webview.url.subscribe(async (_: string) => {
         await wait(500)
-        webview.startAppDetection()
+        log.debug('running app detection')
+        debouncedAppDetection()
       })
     )
 

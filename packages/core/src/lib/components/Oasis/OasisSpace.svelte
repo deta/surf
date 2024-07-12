@@ -175,7 +175,9 @@
         [
           ResourceManager.SearchTagDeleted(false),
           ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SPACE_SOURCE)
+          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SPACE_SOURCE),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
         ],
         { includeAnnotations: false }
       )
@@ -216,7 +218,15 @@
       const response = await resourceManager.getResourcesViaPrompt(stringifiedQuery)
       log.debug('AI response:', response)
 
-      const results = response.embedding_search_results || response.sql_query_results
+      const results = response.embedding_search_query
+        ? response.embedding_search_results
+        : response.sql_query_results
+      if (!results) {
+        log.debug('No results found')
+        toasts.info('No results found')
+        return
+      }
+
       log.debug('Adding resources to space', results)
 
       await oasis.addResourcesToSpace(spaceId, results)
@@ -601,8 +611,9 @@
 
       try {
         await resourceManager.deleteResource(resourceId)
-        await loadSpaceContents(spaceId)
+
         log.debug('Resource deleted')
+        $everythingContents = $everythingContents.filter((x) => x.id !== resourceId)
 
         toasts.success('Resource deleted!')
       } catch (error) {
@@ -675,6 +686,32 @@
     await loadSpaceContents(spaceId)
   }
 
+  const handleDeleteAutoSaved = async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete all auto-saved resources from Oasis?'
+    )
+    if (!confirmed) {
+      return
+    }
+
+    showSettingsModal.set(false)
+
+    const toast = toasts.loading('Deleting auto-saved resources…')
+
+    const resources = await resourceManager.listResourceIDsByTags([
+      ResourceManager.SearchTagSilent(),
+      ResourceManager.SearchTagDeleted(false)
+    ])
+
+    log.debug('Deleting auto-saved resources:', resources)
+
+    await Promise.all(resources.map((x) => resourceManager.deleteResource(x)))
+
+    toast.success('Auto-saved resources deleted!')
+
+    await loadEverything()
+  }
+
   const handleClearSpace = async () => {
     if (!$space) {
       log.error('No space found')
@@ -687,6 +724,8 @@
     if (!confirmed) {
       return
     }
+
+    showSettingsModal.set(false)
 
     const resources = await oasis.getSpaceContents($space.id)
     await resourceManager.deleteSpaceEntries(resources.map((x) => x.id))
@@ -709,6 +748,8 @@
     }
 
     const toast = toasts.loading('Deleting space…')
+
+    showSettingsModal.set(false)
 
     try {
       if (shouldDeleteAllResources) {
@@ -807,49 +848,48 @@
           <SearchInput bind:value={$searchValue} on:chat={handleChat} on:search={handleSearch} />
         </div>
 
-        {#if spaceId !== 'all' && $space}
-          <div class="settings-wrapper">
-            <button
-              class="settings-toggle"
-              on:click={handleOpenSettingsModal}
-              use:tooltip={{ text: 'Open Settings', position: 'bottom' }}
-            >
-              <Icon name="settings" size="25px" />
-            </button>
+        <div class="settings-wrapper">
+          <button
+            class="settings-toggle"
+            on:click={handleOpenSettingsModal}
+            use:tooltip={{ text: 'Open Settings', position: 'bottom' }}
+          >
+            <Icon name="settings" size="25px" />
+          </button>
 
-            {#if $showSettingsModal}
-              <div
-                class="modal-wrapper"
-                transition:fly={{ y: 10, duration: 160 }}
-                use:clickOutside={handleCloseSettingsModal}
-              >
-                <OasisSpaceSettings
-                  bind:space={$space}
-                  on:refresh={handleRefreshLiveSpace}
-                  on:clear={handleClearSpace}
-                  on:delete={handleDeleteSpace}
-                  on:load={handleLoadSpace}
-                />
-              </div>
-            {/if}
-          </div>
-
-          {#if $space.name.liveModeEnabled}
-            <button
-              class="live-mode"
-              disabled={$loadingSpaceSources}
-              on:click={handleRefreshLiveSpace}
-              use:tooltip={{ text: 'Click to refresh', position: 'bottom' }}
+          {#if $showSettingsModal}
+            <div
+              class="modal-wrapper"
+              transition:fly={{ y: 10, duration: 160 }}
+              use:clickOutside={handleCloseSettingsModal}
             >
-              {#if $loadingSpaceSources}
-                <Icon name="spinner" />
-                Refreshing…
-              {:else}
-                <Icon name="news" />
-                Live Space
-              {/if}
-            </button>
+              <OasisSpaceSettings
+                bind:space={$space}
+                on:refresh={handleRefreshLiveSpace}
+                on:clear={handleClearSpace}
+                on:delete={handleDeleteSpace}
+                on:load={handleLoadSpace}
+                on:delete-auto-saved={handleDeleteAutoSaved}
+              />
+            </div>
           {/if}
+        </div>
+
+        {#if $space && $space.name.liveModeEnabled}
+          <button
+            class="live-mode"
+            disabled={$loadingSpaceSources}
+            on:click={handleRefreshLiveSpace}
+            use:tooltip={{ text: 'Click to refresh', position: 'bottom' }}
+          >
+            {#if $loadingSpaceSources}
+              <Icon name="spinner" />
+              Refreshing…
+            {:else}
+              <Icon name="news" />
+              Live Space
+            {/if}
+          </button>
         {/if}
 
         <div class="drawer-chat active">

@@ -34,6 +34,7 @@
   import {
     Resource,
     ResourceAnnotation,
+    ResourceHistoryEntry,
     ResourceManager,
     ResourceTag,
     createResourceManager
@@ -49,7 +50,7 @@
   import OasisSidebar from '../Oasis/OasisSidebar.svelte'
   import TabItem from './Tab.svelte'
   import TabSearch from './TabSearch.svelte'
-  import ShortcutMenu from '../Shortcut/ShortcutMenu.svelte'
+  import ShortcutMenu, { type ShortcutMenuEvents } from '../Shortcut/ShortcutMenu.svelte'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
 
   import '../Horizon/index.scss'
@@ -68,7 +69,8 @@
     TabSpace,
     TabOasisDiscovery,
     AIChatMessageRole,
-    DroppedTab
+    DroppedTab,
+    TabHistory
   } from './types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../Cards/Browser/searchEngines'
   import type { Drawer } from '@horizon/drawer'
@@ -82,6 +84,7 @@
   import { handleInlineAI, parseChatResponseSources, summarizeText } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
   import {
+    ResourceTagsBuiltInKeys,
     WebViewEventReceiveNames,
     type AnnotationCommentData,
     type AnnotationRangeData,
@@ -111,6 +114,7 @@
     resetPrompt,
     updatePrompt
   } from '../../service/prompts'
+  import BrowserHistory from './BrowserHistory.svelte'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -145,6 +149,7 @@
   const historyEntriesManager = horizonManager.historyEntriesManager
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
+  const autoSaveResources = oasis.autoSaveResources
 
   const masterHorizon = derived(horizons, (horizons) => horizons[0])
 
@@ -167,6 +172,7 @@
   const showAnnotationsSidebar = writable(false)
   const activeTabsHistory = writable<string[]>([])
   const isCreatingLiveSpace = writable(false)
+  let appDetectionRunningForURLs: string[] = []
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -326,11 +332,12 @@
   }
 
   const createTab = async <T extends Tab>(
-    tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index'>
+    tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'>
   ) => {
     const newTab = await tabsDB.create({
       archived: false,
       pinned: false,
+      magic: false,
       index: Date.now(),
       ...tab
     })
@@ -644,7 +651,7 @@
       $activeBrowserTab?.reload()
     } else if (isModKeyAndKeyPressed(e, 'i')) {
       createImporterTab()
-    } else if (isModKeyAndKeyPressed(e, 'y')) {
+    } else if (isModKeyAndKeyPressed(e, 'x')) {
       createOasisDiscoveryTab()
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
@@ -653,6 +660,8 @@
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
       showTabSearch = true
+    } else if (isModKeyAndKeyPressed(e, 'y')) {
+      createHistoryTab()
     } else if (isModKeyAndKeyPressed(e, '+')) {
       $activeBrowserTab?.zoomIn()
     } else if (isModKeyAndKeyPressed(e, '-')) {
@@ -794,6 +803,17 @@
     makeTabActive(newTab.id)
   }
 
+  const createHistoryTab = useDebounce(async () => {
+    log.debug('Creating new history tab')
+    const newTab = await createTab<TabHistory>({
+      title: 'History',
+      icon: '',
+      type: 'history'
+    })
+
+    makeTabActive(newTab.id)
+  }, 200)
+
   const createOasisDiscoveryTab = async () => {
     log.debug('Creating new oasis discovery tab')
     const newTab = await createTab<TabOasisDiscovery>({
@@ -928,7 +948,37 @@
     makeTabActive(newId)
   }
 
-  async function bookmarkPage(tab: TabPage) {
+  async function createBookmarkResource(url: string, tab: TabPage, silent: boolean = false) {
+    log.debug('bookmarking', url)
+
+    const browserTab = $browserTabs[tab.id]
+    if (!browserTab) {
+      log.error('no browser tab found')
+      throw new Error('No browser tab found')
+    }
+    const detectedResource = await browserTab.detectResource()
+    log.debug('extracted resource data', detectedResource)
+
+    if (!detectedResource) {
+      log.debug('no resource detected')
+      throw new Error('No resource detected')
+    }
+
+    const resource = await resourceManager.createResourceOther(
+      new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
+      { name: tab.title ?? '', sourceURI: url, alt: '' },
+      [
+        ResourceTag.canonicalURL(url),
+        ResourceTag.viewedByUser(true),
+        ...(silent ? [ResourceTag.silent()] : [])
+      ]
+    )
+    log.debug('created resource', resource)
+
+    return resource
+  }
+
+  async function bookmarkPage(tab: TabPage, silent = false) {
     let resource: Resource | null = null
     if (tab.chatResourceBookmark) {
       resource = await resourceManager.getResource(tab.chatResourceBookmark)
@@ -954,25 +1004,7 @@
       }
       log.debug('bookmarking', url)
 
-      const browserTab = $browserTabs[tab.id]
-      if (!browserTab) {
-        log.error('no browser tab found')
-        throw new Error('No browser tab found')
-      }
-      const detectedResource = await browserTab.detectResource()
-      log.debug('extracted resource data', detectedResource)
-
-      if (!detectedResource) {
-        log.debug('no resource detected')
-        throw new Error('No resource detected')
-      }
-
-      resource = await resourceManager.createResourceOther(
-        new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-        { name: tab.title ?? '', sourceURI: url, alt: '' },
-        [ResourceTag.canonicalURL(url)]
-      )
-      log.debug('created resource', resource)
+      resource = await createBookmarkResource(url, tab, silent)
     }
 
     if (resource?.id)
@@ -987,13 +1019,20 @@
 
       if ($activeTab.resourceBookmark) {
         log.debug('already bookmarked', $activeTab.resourceBookmark)
+
+        // mark resource as not silent since the user is explicitely bookmarking it
+        await resourceManager.deleteResourceTag(
+          $activeTab.resourceBookmark,
+          ResourceTagsBuiltInKeys.SILENT
+        )
+
         openResource($activeTab.resourceBookmark)
         return
       }
 
       bookmarkingInProgress.set(true)
 
-      const resource = await bookmarkPage($activeTab)
+      const resource = await bookmarkPage($activeTab, false)
 
       // automatically resets after some time
       toasts.success('Bookmarked Page!')
@@ -1007,16 +1046,21 @@
     }
   }
 
-  function handleWebviewTabNavigation(
+  async function handleWebviewTabNavigation(
     e: CustomEvent<WebViewWrapperEvents['navigation']>,
     tab: Tab
   ) {
     const { url, oldUrl } = e.detail
     log.debug('webview navigation', { url, oldUrl }, tab)
 
-    if (tab.type !== 'page' || !tab.resourceBookmark) return
+    if (tab.type !== 'page') return
 
-    if (url !== oldUrl) {
+    if (url === oldUrl) {
+      log.debug('webview navigation same url')
+      return
+    }
+
+    if (tab.resourceBookmark) {
       log.debug('tab url changed, removing bookmark')
       updateTab(tab.id, { resourceBookmark: null, chatResourceBookmark: null })
     }
@@ -1101,108 +1145,161 @@
   }
 
   async function handleWebviewAppDetection(e: CustomEvent<DetectedWebApp>, tab: TabPage) {
-    log.debug('webview app detection', e.detail, tab)
+    let url = ''
+    try {
+      log.debug('webview app detection', e.detail, tab)
+      if (tab.type !== 'page') return
 
-    if (tab.type !== 'page') return
-    let pageMagic = $activeTabMagic
-    await updateTab(tab.id, {
-      currentDetectedApp: e.detail
-    })
-    if (!pageMagic) {
-      let responses: AIChatMessageParsed[] = []
-      if (tab?.chatId) {
-        const chat = await sffs.getAIChat(tab.chatId)
-        if (chat) {
-          const userMessages = chat.messages.filter((message) => message.role === 'user')
-          const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
-          const systemMessages = chat.messages.filter((message) => message.role === 'system')
+      url = e.detail.canonicalUrl ?? tab.initialLocation
 
-          responses = systemMessages.map((message, idx) => {
-            message.sources = message.sources
-            log.debug('Message', message)
-            return {
-              id: generateID(),
-              role: message.role,
-              query: queries[idx],
-              content: message.content.replace('<answer>', '').replace('</answer>', ''),
-              sources: message.sources,
-              status: 'success'
-            }
-          })
+      const isRunningAlready = appDetectionRunningForURLs.includes(url)
+      if (isRunningAlready) {
+        log.debug('app detection already running for url', url)
+        return
+      } else {
+        log.debug('app detection not already running for url', url)
+        appDetectionRunningForURLs.push(url)
+      }
+
+      log.debug('app detection running for url', url)
+
+      await updateTab(tab.id, {
+        currentDetectedApp: e.detail
+      })
+
+      const browserTab = $browserTabs[tab.id]
+      if (!browserTab) {
+        log.error('Browser tab not found', tab.id)
+        return
+      }
+
+      log.debug('getting resources from source url', url)
+      const matchingResources = await resourceManager.getResourcesFromSourceURL(url)
+      log.debug('matching resources', matchingResources)
+
+      let bookmarkedResource = matchingResources.find(
+        (resource) =>
+          resource.type !== ResourceTypes.ANNOTATION &&
+          resource.type !== ResourceTypes.HISTORY_ENTRY
+      )
+
+      log.debug('bookmarked resource', bookmarkedResource)
+      if (!bookmarkedResource) {
+        const isRunningAlready2 = appDetectionRunningForURLs.includes(url)
+
+        log.debug('isRunningAlready2', isRunningAlready2)
+
+        // this is an edge case on notion.so where the app detection is running twice for some reason
+        // if (!isRunningAlready2) {
+        //   log.warn('edge case, app detection seems to be running twice for', url)
+        //   return
+        // }
+
+        if ($autoSaveResources) {
+          log.debug('creating new silent resource', url)
+          bookmarkedResource = await createBookmarkResource(url, tab, true)
+        } else {
+          log.debug('auto save resources disabled')
         }
       }
-      pageMagic = {
-        showSidebar: false,
-        running: false,
-        responses: responses
-      } as PageMagic
-      activeTabMagic.set(pageMagic)
-    }
 
-    const browserTab = $browserTabs[tab.id]
-    if (!browserTab) {
-      log.error('Browser tab not found', tab.id)
-      return
-    }
+      if (bookmarkedResource) {
+        await updateTab(tab.id, {
+          resourceBookmark: bookmarkedResource.id,
+          chatResourceBookmark: bookmarkedResource.id
+        })
+      }
 
-    const currentEntry = historyEntriesManager.getEntry(
-      tab.historyStackIds[tab.currentHistoryIndex]
-    )
+      const existingHistoryEntry = matchingResources.find(
+        (resource) => resource.type === ResourceTypes.HISTORY_ENTRY
+      ) as ResourceHistoryEntry | undefined
 
-    const url = currentEntry?.url ?? tab.initialLocation
-    let normalized_url = url
-    let youtubeHostnames = [
-      'youtube.com',
-      'youtu.be',
-      'youtube.de',
-      'www.youtube.com',
-      'www.youtu.be',
-      'www.youtube.de'
-    ]
-    if (youtubeHostnames.includes(new URL(url).host)) {
-      normalized_url = normalized_url.replace(/&t.*/g, '')
-    }
+      if (existingHistoryEntry) {
+        log.debug('updating history entry', existingHistoryEntry.id)
+        const data = await existingHistoryEntry.getParsedData()
+        await existingHistoryEntry.updateParsedData({
+          ...data,
+          last_loaded: new Date().toISOString()
+        })
+      } else {
+        log.debug('creating history entry', url)
+        const historyEntry = await resourceManager.createResourceHistoryEntry(
+          {
+            raw_url: url,
+            title: tab.title ?? '',
+            app_id: tab.currentDetectedApp?.appId ?? null,
+            app_resource_identifier: tab.currentDetectedApp?.appResourceIdentifier ?? null,
+            last_loaded: new Date().toISOString()
+          },
+          {
+            sourceURI: url
+          },
+          [
+            ResourceTag.canonicalURL(url),
+            ...(bookmarkedResource ? [ResourceTag.annotates(bookmarkedResource.id)] : [])
+          ]
+        )
 
-    log.debug('getting resources from source url', url, normalized_url)
-    // measure time it takes to get resources
-    const start = performance.now()
-    const matchingResources = await resourceManager.getResourcesFromSourceURL(normalized_url)
-    const end = performance.now()
-    log.debug('getting resources took', Math.round(end - start), 'ms')
-    log.debug('matching resources', matchingResources)
+        log.debug('created history entry', historyEntry)
+      }
 
-    const bookmarkedResource = matchingResources.find(
-      (resource) => resource.type !== ResourceTypes.ANNOTATION
-    )
+      const annotationResources = matchingResources.filter(
+        (resource) => resource.type === ResourceTypes.ANNOTATION
+      ) as ResourceAnnotation[]
 
-    log.debug('bookmarked resource', bookmarkedResource)
-    if (bookmarkedResource) {
-      await updateTab(tab.id, {
-        resourceBookmark: bookmarkedResource.id,
-        chatResourceBookmark: bookmarkedResource.id
+      await wait(500)
+
+      annotationResources.forEach(async (annotationResource) => {
+        const annotation = await annotationResource.getParsedData()
+        log.debug('annotation data', annotation)
+
+        log.debug('sending annotation to webview', annotation)
+        browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreAnnotation, {
+          id: annotationResource.id,
+          data: annotation
+        })
       })
+
+      // if ($activeTabId === tab.id) {
+      //   summarizePage(pageMagic)
+      // }
+
+      let pageMagic = $activeTabMagic
+      if (!pageMagic) {
+        let responses: AIChatMessageParsed[] = []
+        if (tab?.chatId) {
+          const chat = await sffs.getAIChat(tab.chatId)
+          if (chat) {
+            const userMessages = chat.messages.filter((message) => message.role === 'user')
+            const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
+            const systemMessages = chat.messages.filter((message) => message.role === 'system')
+
+            responses = systemMessages.map((message, idx) => {
+              message.sources = message.sources
+              log.debug('Message', message)
+              return {
+                id: generateID(),
+                role: message.role,
+                query: queries[idx],
+                content: message.content.replace('<answer>', '').replace('</answer>', ''),
+                sources: message.sources,
+                status: 'success'
+              }
+            })
+          }
+        }
+        pageMagic = {
+          showSidebar: false,
+          running: false,
+          responses: responses
+        } as PageMagic
+        activeTabMagic.set(pageMagic)
+      }
+    } catch (e) {
+      log.error('error handling webview app detection', e)
+    } finally {
+      appDetectionRunningForURLs = appDetectionRunningForURLs.filter((x) => x !== url)
     }
-
-    const annotationResources = matchingResources.filter(
-      (resource) => resource.type === ResourceTypes.ANNOTATION
-    ) as ResourceAnnotation[]
-
-    await wait(500)
-
-    annotationResources.forEach(async (annotationResource) => {
-      const annotation = await annotationResource.getParsedData()
-      log.debug('annotation data', annotation)
-
-      log.debug('sending annotation to webview', annotation)
-      browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreAnnotation, {
-        id: annotationResource.id,
-        data: annotation
-      })
-    })
-
-    // if ($activeTabId === tab.id) {
-    //   summarizePage(pageMagic)
-    // }
   }
 
   async function handleWebviewTransform(
@@ -1629,7 +1726,7 @@
     log.debug('Bookmarking all page tabs in context')
     for (const tab of getTabsInChatContext()) {
       if (tab.type === 'page' && !tab.resourceBookmark) {
-        await bookmarkPage(tab)
+        await bookmarkPage(tab, true)
       }
     }
   }
@@ -1686,7 +1783,7 @@
     if (!bookmarkedResource) {
       log.debug('no bookmarked resource')
 
-      const resource = await bookmarkPage($activeTab)
+      const resource = await bookmarkPage($activeTab, true)
       bookmarkedResource = resource.id
     }
 
@@ -1726,7 +1823,7 @@
     if (!bookmarkedResource) {
       log.debug('no bookmarked resource')
 
-      const resource = await bookmarkPage(tab)
+      const resource = await bookmarkPage(tab, true)
       bookmarkedResource = resource.id
     }
 
@@ -1934,38 +2031,60 @@
     }
   }
 
-  const handleCreateNewSpace = async (e: CustomEvent) => {
+  const handleCreateNewSpace = async (e: CustomEvent<ShortcutMenuEvents['create-new-space']>) => {
     try {
-      log.debug('Create new Space with Name', e.detail)
+      const { name, processNaturalLanguage } = e.detail
+      log.debug('Create new Space with Name', name, processNaturalLanguage)
 
       const newSpace = await oasis.createSpace({
-        folderName: e.detail,
+        folderName: name,
         colors: ['#FFBA76', '#FB8E4E'],
         showInSidebar: false,
         liveModeEnabled: false,
         hideViewed: false,
-        smartFilterQuery: e.detail
+        smartFilterQuery: processNaturalLanguage ? name : null
       })
 
       log.debug('New Folder:', newSpace)
 
-      const userPrompt = JSON.stringify(e.detail)
-      const response = await resourceManager.getResourcesViaPrompt(userPrompt)
+      if (processNaturalLanguage) {
+        const userPrompt = JSON.stringify(name)
 
-      log.debug(`Automatic Folder Generation request`, response)
+        const toast = toasts.loading('Creating Space with AI...')
 
-      const results = response.embedding_search_results || response.sql_query_results
-      log.debug('Automatic Folder generated with', results)
+        const response = await resourceManager.getResourcesViaPrompt(userPrompt)
 
-      if (!results) {
-        log.warn('No results found for', userPrompt, response)
-        return
+        log.debug(`Automatic Folder Generation request`, response)
+
+        const results = response.embedding_search_query
+          ? response.embedding_search_results
+          : response.sql_query_results
+        log.debug('Automatic Folder generated with', results)
+
+        if (!results) {
+          log.warn('No results found for', userPrompt, response)
+          return
+        }
+
+        await oasis.addResourcesToSpace(newSpace.id, results)
+        toast.success('Space created!')
+      } else {
+        toasts.success('Space created!')
       }
 
-      await oasis.addResourcesToSpace(newSpace.id, results)
+      if (newSpace) {
+        const tab = await createTab({
+          title: newSpace.name.folderName,
+          icon: '',
+          spaceId: newSpace.id,
+          type: 'space',
+          index: 0,
+          pinned: false,
+          archived: false
+        } as TabSpace)
 
-      toasts.success('Folder created with AI!')
-      await tick()
+        makeTabActive(tab.id)
+      }
     } catch (error) {
       log.error('Failed to create new space:', error)
     }
@@ -2032,6 +2151,7 @@
 
     const tab = $tabs.find((tab) => tab.type === 'space' && tab.spaceId === spaceId)
     if (tab) {
+      log.debug('Deleting tab', tab.id)
       deleteTab(tab.id)
     }
   }
@@ -2192,8 +2312,7 @@
     console.log('spaceid', spaceId)
 
     try {
-      const spaces = await oasis.loadSpaces()
-      const space = spaces.find((space) => space.id === spaceId)
+      const space = $spaces.find((space) => space.id === spaceId)
       if (space) {
         await oasis.updateSpaceData(space.id, {
           showInSidebar: false
@@ -2202,9 +2321,11 @@
         await tick()
 
         await archiveTab(tabId)
-
-        toasts.success('Space removed from sidebar!')
+      } else {
+        await archiveTab(tabId)
       }
+
+      toasts.success('Space removed from sidebar!')
     } catch (error) {
       log.error('Failed to remove space from sidebar:', error)
     }
@@ -2533,7 +2654,7 @@
                       {:else if $bookmarkingSuccess}
                         <Icon name="check" />
                       {:else if $activeTab?.resourceBookmark}
-                        <Icon name="bookmarkFilled" />
+                        <Icon name="leave" />
                       {:else}
                         <Icon name="leave" />
                       {/if}
@@ -2795,6 +2916,8 @@
             on:deleted={handleDeletedSpace}
             on:new-tab={handleNewTab}
           />
+        {:else if tab.type === 'history'}
+          <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
         {:else}
           <BrowserHomescreen
             {historyEntriesManager}

@@ -236,6 +236,7 @@
         on:create-tab-from-space={handleForwardCreateTabFromSpace}
         on:save-resource-in-space={handleForwardSaveResourceInSpace}
         on:create-new-space={handleForwardCreateNewSpace}
+        {closePopover}
       />
     {/if}
   {/if}

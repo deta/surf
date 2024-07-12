@@ -58,7 +58,8 @@
       "dependsOn": ["^lint"]
     },
     "desktop#dev": {
-      "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev", "@horizon/cmdk-sv#build"]
+      "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev", "@horizon/cmdk-sv#build"],
+      "outputs": [".dist/**", ".out/**"]
     },
     "dev": {
       "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev", "@horizon/cmdk-sv#build"],
