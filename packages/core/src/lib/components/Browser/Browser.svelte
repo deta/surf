@@ -2034,7 +2034,18 @@
     }
   }
 
+  let maxWidth = window.innerWidth;
+
+  $: tabSize = Math.min(500, Math.max(90, maxWidth / ($tabs.length- 10)));
+
+  const handleResize = () => {
+    maxWidth = window.innerWidth;
+    tabSize = Math.min(500, Math.max(90, maxWidth / $tabs.length));
+  };
+
   onMount(async () => {
+    window.addEventListener('resize', handleResize);
+
     const horizonId = await horizonManager.init()
     log.debug('initialized', horizonId)
 
@@ -2224,22 +2235,22 @@
       }
     })
 
-    // Reset magic tabs array
-    magicTabsArray.length = 0
+    // reset magic tabs array
+    magictabsarray.length = 0
 
-    // Update the indices of the tabs in all lists
-    const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+    // update the indices of the tabs in all lists
+    const updateindices = (tabs: tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
 
-    const newUnpinnedTabsArray = updateIndices(unpinnedTabsArray)
-    const newPinnedTabsArray = updateIndices(pinnedTabsArray)
-    const newMagicTabsArray = updateIndices(magicTabsArray)
+    const newunpinnedtabsarray = updateindices(unpinnedtabsarray)
+    const newpinnedtabsarray = updateindices(pinnedtabsarray)
+    const newmagictabsarray = updateindices(magictabsarray)
 
-    // Combine all lists back together
-    const newTabs = [...newUnpinnedTabsArray, ...newPinnedTabsArray, ...newMagicTabsArray]
+    // combine all lists back together
+    const newtabs = [...newunpinnedtabsarray, ...newpinnedtabsarray, ...newmagictabsarray]
 
-    log.debug('Reverted tabs', newTabs)
+    log.debug('reverted tabs', newtabs)
 
-    // Only update the tabs that were changed (archived stay unaffected)
+    // only update the tabs that were changed (archived stay unaffected)
     tabs.update((x) => {
       return x.map((tab) => {
         const newTab = newTabs.find((t) => t.id === tab.id)
@@ -2350,9 +2361,7 @@
 
     log.debug('State updated successfully')
   }
-  $: maxWidth = window.innerWidth
-
-  $: tabSize = maxWidth / $tabs.length
+ 
 
   let popoverOpen = false
 </script>
@@ -2539,7 +2548,7 @@
                     on:drop={handleDrop}
                   />
                <Popover.Root bind:open={popoverOpen}>
-                <Popover.Trigger class="hide-btn"/>
+                <Popover.Trigger style="position: absolute; opacity: 0; {!popoverOpen ? 'display: none;' : ''}"/>
                 <Popover.Content>
                   <div class="address-bar-wrapper">
                     <div class="address-bar-content">
@@ -2655,7 +2664,7 @@
                   props: { resourceManager, spaces }
                 },
                 action: 'hover',
-                position: 'right-top',
+                position: 'left-bottom',
                 style: {
                   backgroundColor: '#F8F7F1'
                 },
@@ -2889,6 +2898,7 @@
 
   .hide-btn {
     display: none !important;
+    background-color: transparent;
   }
 
   .sidebar {
@@ -3000,7 +3010,7 @@
     }
   }
   .link-preview-content {
-    padding: 1rem;
+    padding: 0.4rem;
     border-radius: 0.375rem;
     background-color: paleturquoise;
     box-shadow:
@@ -3011,10 +3021,12 @@
   .address-bar-wrapper {
     border-radius: 12px;
     padding: 0.5rem;
-    width: 100%;
-    background: #f7f7f7;
+    background: paleturquoise;
     display: flex;
     flex-direction: column;
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
     gap: 15px;
     position: relative;
     z-index: 50000;
@@ -3024,7 +3036,6 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    width: 100%;
   }
 
   .popover-content {
@@ -3067,17 +3078,16 @@
   }
 
   .search {
-    flex: 1;
-    width: 100%;
   }
 
   input {
-    width: 100%;
+    flex: 1;
+    width: 400px;
     padding: 10px;
     border: 1px solid transparent;
     border-radius: 5px;
     font-size: 1rem;
-    background-color: #fff;
+    background-color: rgb(218, 239, 239);
     color: #3f3f3f;
 
     &:hover {
@@ -3088,7 +3098,7 @@
       outline: none;
       border-color: #f73b95;
       color: #000;
-      background-color: #ffffff;
+      background-color: rgb(218, 239, 239);
     }
   }
 
@@ -3143,12 +3153,23 @@
       color: #a9a9a9;
     }
 
+    #tabs {
+      overflow-x: auto;
+    }
+
     .unpinned-tabs-wrapper {
       display: flex;
       flex-direction: row;
       align-items: center;
-      overflow-x: scroll;
-      // width: 100%;
+      overflow-y: hidden;
+      -ms-overflow-style: none;  
+      scrollbar-width: none; 
+      position: relative;
+      max-width: calc(100% - 120px);
+    }
+
+    .unpinned-tabs-wrapper::-webkit-scrollbar {
+      display: none;
     }
 
     .magic-tabs-wrapper {
@@ -3193,16 +3214,17 @@
     }
 
     .add-tab-button {
+      position: fixed;
+      right: 0;
       display: flex;
       gap: 0.75rem;
       padding: 1rem 1.125rem;
       border: 0;
-      width: 100%;
       background: transparent;
       border-radius: 12px;
 
       &:hover {
-        background-color: #e0e0d1;
+        background-color: #d1dae0;
       }
       .label {
         flex: 1;
