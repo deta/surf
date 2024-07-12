@@ -2435,7 +2435,6 @@
                 <Icon name="reload" />
               </button>
             </div>
-            
 
             <!-- <div class="divider"></div> -->
             {#if $activeTabMagic}
@@ -2640,8 +2639,6 @@
                   </LinkPreview.Root>
                 {/if}
               </DragDropList>
-
-
             </div>
 
             <div class="buttons">
@@ -2719,157 +2716,162 @@
       </div>
     {/if}
 
-    <div
-      class="browser-window-wrapper"
-      style="z-index: 0;"
-      class:hasNoTab={!$activeBrowserTab}
-      class:sidebarHidden={!showSidebar}
-    >
-      {#if $sidebarTab === 'oasis'}
-        <div class="browser-window active" style="--scaling: 1;">
-          <OasisSpace
-            spaceId={$selectedSpace}
-            active
-            on:create-resource-from-oasis={handeCreateResourceFromOasis}
-            on:deleted={handleDeletedSpace}
-            on:new-tab={handleNewTab}
-          />
-        </div>
-      {/if}
-
-      {#if $showResourceDetails && $resourceDetailsModalSelected}
-        <OasisResourceModalWrapper
-          resourceId={$resourceDetailsModalSelected}
-          on:close={() => closeResourceDetailsModal()}
-          on:new-tab={handleNewTab}
-        />
-      {/if}
-
-      {#each $activeTabs as tab (tab.id)}
-        <div
-          class="browser-window"
-          style="--scaling: 1;"
-          class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
-          class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
-        >
-          <!-- {#if $sidebarTab === 'oasis'}
-          {#if $masterHorizon}
-            <DrawerWrapper
-              bind:drawer={drawer}
-              horizon={$masterHorizon}
-              {resourceManager}
-              {selectedFolder}
-            />
-          {:else}
-            <div>Should not happen error: Failed to load main Horizon</div>
-          {/if} -->
-          {#if tab.type === 'page'}
-            <BrowserTab
-              bind:this={$browserTabs[tab.id]}
-              bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
-              active={$activeTabId === tab.id}
-              {historyEntriesManager}
-              on:newTab={handleNewTab}
-              on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
-              on:bookmark={handleWebviewBookmark}
-              on:transform={(e) => handleWebviewTransform(e, tab)}
-              on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
-              on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, tab.id)}
-              on:annotate={(e) => handleWebviewAnnotation(e, tab.id)}
-              on:annotationClick={(e) => handleWebviewAnnotationClick(e, tab.id)}
-              on:annotationRemove={(e) => handleWebviewAnnotationRemove(e, tab.id)}
-              on:annotationUpdate={(e) => handleWebviewAnnotationUpdate(e, tab.id)}
-              on:keyDown={(e) => handleKeyDown(e.detail)}
-              on:webviewKeydown={(e) => handleKeyDown(e.detail)}
-            />
-          {:else if tab.type === 'horizon'}
-            {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
-            {#if horizon}
-              <Horizon
-                {horizon}
-                active={$activeTabId === tab.id}
-                {visorSearchTerm}
-                inOverview={false}
-                {resourceManager}
-              />
-            {:else}
-              <div>no horizon found</div>
-            {/if}
-          {:else if tab.type === 'chat'}
-            <Chat
-              {tab}
-              {resourceManager}
-              db={storage}
-              on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
-              on:updateTab={(e) => updateTab(tab.id, e.detail)}
-              on:openResource={(e) => openResource(e.detail)}
-            />
-          {:else if tab.type === 'importer'}
-            <Importer {resourceManager} />
-          {:else if tab.type === 'oasis-discovery'}
-            <OasisDiscovery {resourceManager} />
-          {:else if tab.type === 'space'}
+    <div class="horizontal-flex">
+      <div
+        class="browser-window-wrapper"
+        style="z-index: 0;"
+        class:hasNoTab={!$activeBrowserTab}
+        class:sidebarHidden={!showSidebar}
+      >
+        {#if $sidebarTab === 'oasis'}
+          <div class="browser-window active" style="--scaling: 1;">
             <OasisSpace
-              spaceId={tab.spaceId}
-              active={$activeTabId === tab.id}
+              spaceId={$selectedSpace}
+              active
               on:create-resource-from-oasis={handeCreateResourceFromOasis}
               on:deleted={handleDeletedSpace}
               on:new-tab={handleNewTab}
             />
-          {:else}
+          </div>
+        {/if}
+
+        {#if $showResourceDetails && $resourceDetailsModalSelected}
+          <OasisResourceModalWrapper
+            resourceId={$resourceDetailsModalSelected}
+            on:close={() => closeResourceDetailsModal()}
+            on:new-tab={handleNewTab}
+          />
+        {/if}
+
+        {#each $activeTabs as tab (tab.id)}
+          <div
+            class="browser-window"
+            style="--scaling: 1;"
+            class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
+            class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
+          >
+            <!-- {#if $sidebarTab === 'oasis'}
+            {#if $masterHorizon}
+              <DrawerWrapper
+                bind:drawer={drawer}
+                horizon={$masterHorizon}
+                {resourceManager}
+                {selectedFolder}
+              />
+            {:else}
+              <div>Should not happen error: Failed to load main Horizon</div>
+            {/if} -->
+            {#if tab.type === 'page'}
+              <BrowserTab
+                bind:this={$browserTabs[tab.id]}
+                bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
+                active={$activeTabId === tab.id}
+                {historyEntriesManager}
+                on:newTab={handleNewTab}
+                on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
+                on:bookmark={handleWebviewBookmark}
+                on:transform={(e) => handleWebviewTransform(e, tab)}
+                on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
+                on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, tab.id)}
+                on:annotate={(e) => handleWebviewAnnotation(e, tab.id)}
+                on:annotationClick={(e) => handleWebviewAnnotationClick(e, tab.id)}
+                on:annotationRemove={(e) => handleWebviewAnnotationRemove(e, tab.id)}
+                on:annotationUpdate={(e) => handleWebviewAnnotationUpdate(e, tab.id)}
+                on:keyDown={(e) => handleKeyDown(e.detail)}
+                on:webviewKeydown={(e) => handleKeyDown(e.detail)}
+              />
+            {:else if tab.type === 'horizon'}
+              {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
+              {#if horizon}
+                <Horizon
+                  {horizon}
+                  active={$activeTabId === tab.id}
+                  {visorSearchTerm}
+                  inOverview={false}
+                  {resourceManager}
+                />
+              {:else}
+                <div>no horizon found</div>
+              {/if}
+            {:else if tab.type === 'chat'}
+              <Chat
+                {tab}
+                {resourceManager}
+                db={storage}
+                on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
+                on:updateTab={(e) => updateTab(tab.id, e.detail)}
+                on:openResource={(e) => openResource(e.detail)}
+              />
+            {:else if tab.type === 'importer'}
+              <Importer {resourceManager} />
+            {:else if tab.type === 'oasis-discovery'}
+              <OasisDiscovery {resourceManager} />
+            {:else if tab.type === 'space'}
+              <OasisSpace
+                spaceId={tab.spaceId}
+                active={$activeTabId === tab.id}
+                on:create-resource-from-oasis={handeCreateResourceFromOasis}
+                on:deleted={handleDeletedSpace}
+                on:new-tab={handleNewTab}
+              />
+            {:else}
+              <BrowserHomescreen
+                {historyEntriesManager}
+                on:navigate={handleTabNavigation}
+                on:chat={handleCreateChat}
+                on:rag={handleRag}
+                on:create-tab-from-space={handleCreateTabFromSpace}
+              />
+            {/if}
+          </div>
+        {/each}
+
+        {#if !$activeTabs && !$activeTab}
+          <div class="browser-window active" style="--scaling: 1;">
             <BrowserHomescreen
               {historyEntriesManager}
               on:navigate={handleTabNavigation}
               on:chat={handleCreateChat}
               on:rag={handleRag}
-              on:create-tab-from-space={handleCreateTabFromSpace}
             />
-          {/if}
-        </div>
-      {/each}
+          </div>
+        {/if}
+      </div>
 
-      {#if !$activeTabs && !$activeTab}
-        <div class="browser-window active" style="--scaling: 1;">
-          <BrowserHomescreen
-            {historyEntriesManager}
-            on:navigate={handleTabNavigation}
-            on:chat={handleCreateChat}
-            on:rag={handleRag}
+      <!--  -->
+
+      {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
+        <div transition:slide={{ axis: 'x' }} class="sidebar-magic">
+          <MagicSidebar
+            magicPage={$activeTabMagic}
+            bind:inputValue={$magicInputValue}
+            on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
+            on:highlightWebviewText={(e) =>
+              highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
+            on:seekToTimestamp={(e) =>
+              handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
+            on:navigate={(e) => {
+              $browserTabs[$activeTabId].navigate(e.detail.url)
+            }}
+            on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
+            on:chat={() => handleChatSubmit($activeTabMagic)}
+            on:clearChat={() => handleChatClear(true)}
+            on:prompt={handleMagicSidebarPromptSubmit}
+          />
+        </div>
+      {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
+        <div transition:slide={{ axis: 'x' }} class="sidebar-magic">
+          <AnnotationsSidebar
+            bind:this={annotationsSidebar}
+            resourceId={$activeTab.resourceBookmark}
+            on:scrollTo={handleAnnotationScrollTo}
+            on:create={handleAnnotationSidebarCreate}
+            on:reload={handleAnnotationSidebarReload}
           />
         </div>
       {/if}
     </div>
   </div>
-
-  {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
-    <div transition:slide={{ axis: 'x' }} class="sidebar-magic">
-      <MagicSidebar
-        magicPage={$activeTabMagic}
-        bind:inputValue={$magicInputValue}
-        on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
-        on:highlightWebviewText={(e) =>
-          highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
-        on:seekToTimestamp={(e) => handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
-        on:navigate={(e) => {
-          $browserTabs[$activeTabId].navigate(e.detail.url)
-        }}
-        on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
-        on:chat={() => handleChatSubmit($activeTabMagic)}
-        on:clearChat={() => handleChatClear(true)}
-        on:prompt={handleMagicSidebarPromptSubmit}
-      />
-    </div>
-  {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
-    <div transition:slide={{ axis: 'x' }} class="sidebar sidebar-magic">
-      <AnnotationsSidebar
-        bind:this={annotationsSidebar}
-        resourceId={$activeTab.resourceBookmark}
-        on:scrollTo={handleAnnotationScrollTo}
-        on:create={handleAnnotationSidebarCreate}
-        on:reload={handleAnnotationSidebarReload}
-      />
-    </div>
-  {/if}
 </div>
 
 <style lang="scss">
@@ -2877,7 +2879,7 @@
     display: flex;
     flex-direction: row;
     width: 100%;
-    height: 100vh;
+    height: vh;
     overflow: hidden;
     background: linear-gradient(to right, paleturquoise, #d2e3e3);
     // background-color: #eeece0;
@@ -2939,6 +2941,13 @@
     }
   }
 
+  .horizontal-flex {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    height: 10vh;
+  }
+
   .sidebar-magic-toggle {
     z-index: 100000;
     background: rgba(175, 238, 238, 0.292);
@@ -2964,13 +2973,13 @@
 
   .sidebar-magic {
     flex: 1;
-    width: 470px;
+    width: 300px;
     z-index: 1;
   }
 
   .browser-window-wrapper {
     flex: 1;
-    padding: 0 0.4rem 0.4rem 0.4rem;
+    padding: 0rem 0.4rem 0.4rem 0.4rem;
     height: 100vh;
     position: relative;
 
@@ -3069,8 +3078,6 @@
     }
   }
 
-  .search {
-  }
 
   input {
     flex: 1;

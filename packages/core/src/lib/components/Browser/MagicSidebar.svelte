@@ -265,7 +265,7 @@
     gap: 1rem;
     overflow: hidden;
     padding-top: 2rem;
-    height: 100%;
+    height: 95%;
   }
 
   .content {
