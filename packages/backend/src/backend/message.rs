@@ -164,6 +164,11 @@ pub enum MiscMessage {
         api_endpoint: Option<String>,
         resource_ids: Option<Vec<String>>,
     },
+    CreateApp {
+        prompt: String,
+        session_id: String,
+        contexts: Option<Vec<String>>,
+    },
     Print(String),
     CreateAIChatMessage(String),
     GetAIChatMessage(String, Option<String>),

@@ -83,6 +83,7 @@
   import OasisDiscovery from './OasisDiscovery.svelte'
   import { handleInlineAI, parseChatResponseSources, summarizeText } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
+  import AppSidebar from './AppSidebar.svelte'
   import {
     ResourceTagsBuiltInKeys,
     WebViewEventReceiveNames,
@@ -165,6 +166,7 @@
   const bookmarkingInProgress = writable(false)
   const magicInputValue = writable('')
   const activeTabMagic = writable<PageMagic>()
+  const activeAppSidebarContext = writable<string>('') // TODO: support multiple contexts in the future
   const bookmarkingSuccess = writableAutoReset(false, 1000)
   const showURLBar = writable(false)
   const showResourceDetails = writable(false)
@@ -172,6 +174,8 @@
   const showAnnotationsSidebar = writable(false)
   const activeTabsHistory = writable<string[]>([])
   const isCreatingLiveSpace = writable(false)
+  const activeAppId = writable<string>('')
+  const showAppSidebar = writable(false)
   let appDetectionRunningForURLs: string[] = []
 
   // Set global context
@@ -304,6 +308,8 @@
   const makeTabActive = (tabId: string) => {
     activeTabId.set(tabId)
     addToActiveTabsHistory(tabId)
+    activeAppId.set('')
+    showAppSidebar.set(false)
   }
 
   const makePreviousTabActive = (currentIndex?: number) => {
@@ -1692,10 +1698,26 @@
     }
   }
 
+  const deleteAppIdsForAppSidebar = async () => {
+    for (const tab of getTabsInChatContext()) {
+      if (tab.type === 'page' && tab.appId) {
+        await sffs.deleteAIChat(tab.appId)
+      }
+    }
+  }
+
   const updateChatIdsForPageChat = (newChatId: string) => {
     for (const tab of getTabsInChatContext()) {
       if (tab.type === 'page') {
         updateTab(tab.id, { chatId: newChatId })
+      }
+    }
+  }
+
+  const updateAppIdsForAppSidebar = (newAppId: string) => {
+    for (const tab of getTabsInChatContext()) {
+      if (tab.type === 'page') {
+        updateTab(tab.id, { appId: newAppId })
       }
     }
   }
@@ -1722,6 +1744,27 @@
     }
   }
 
+  const handleAppSidebarClear = async (createNewAppId: boolean) => {
+    log.debug('clearing app sidebar')
+    try {
+      let appId: string | null = null
+      await sffs.deleteAIChat($activeAppId)
+      //await deleteAppIdsForAppSidebar()
+      if (createNewAppId) {
+        appId = await sffs.createAIChat('')
+        if (!appId) {
+          log.error('Failed to create new app id aftering clearing the old one')
+          return
+        }
+      }
+      //updateAppIdsForAppSidebar(appId!)
+      activeAppId.set(appId!)
+      updateTab($activeTab.id, { appId: appId })
+    } catch (e) {
+      log.error('Error clearing app sidebar:', e)
+    }
+  }
+
   const bookmarkPageTabsInContext = async () => {
     log.debug('Bookmarking all page tabs in context')
     for (const tab of getTabsInChatContext()) {
@@ -1732,6 +1775,7 @@
   }
 
   const handleToggleMagicSidebar = async () => {
+    showAppSidebar.set(false)
     const tab = $activeTab as TabPage | null
 
     if (!$activeTabMagic) return
@@ -1754,6 +1798,83 @@
         showSidebar: !magic.showSidebar
       }
     })
+  }
+
+  const handleToggleAppSidebar = async () => {
+    const tab = $activeTab as TabPage | null
+    if (!tab) return
+
+    let appId = tab.appId
+    if (!$showAppSidebar && !appId) {
+      // TODO: a different way to create app id? not sure yet, single chat id should be fine
+      appId = await sffs.createAIChat('')
+      if (!appId) {
+        log.error('Failed to create an app id')
+        alert('Error: Failed to create an pp id')
+        return
+      }
+      updateTab(tab.id, { appId: appId })
+      // updateAppIdsForAppSidebar(appId)
+      // await bookmarkPageTabsInContext()
+    }
+    /*
+    const detectedResource = await $activeBrowserTab.detectResource()
+    if (!detectedResource) {
+      log.error('no resource detected')
+      alert('Create App not supported currently for this page')
+      return
+    }
+    const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+    if (!content || !content.html) {
+      log.debug('no content found from web parser')
+      alert('Error: no content found form web parser')
+      return
+    }
+    */
+    const content = await $activeBrowserTab.executeJavaScript('document.body.outerHTML.toString()')
+    if (!content) {
+      log.debug('no content found from javscript execution')
+      alert('Error: failed to parse content for create app context')
+      return
+    }
+    let cleaned = content
+      .replace(/style="[^"]*"/g, '') // remove inline styles
+      .replace(/script="[^"]*"/g, '') // remove inline scripts
+      .replace(/<style([\s\S]*?)<\/style>/gi, '') // remove style tags
+      .replace(/<script([\s\S]*?)<\/script>/gi, '') // remove script tags
+    cleaned = window.api.minifyHtml(cleaned, {
+      collapseBooleanAttributes: true,
+      collapseWhitespace: true,
+      collapseInlineTagWhitespace: true,
+      continueOnParseError: true,
+      decodeEntities: true,
+      minifyCSS: true,
+      minifyJS: true,
+      removeComments: true,
+      removeAttributeQuotes: true,
+      removeEmptyAttributes: true,
+      removeEmptyElements: true,
+      removeOptionalTags: true,
+      removeRedundantAttributes: true,
+      removeScriptTypeAttributes: true,
+      removeStyleLinkTypeAttributes: true
+    })
+    cleaned = activeAppSidebarContext.set(cleaned)
+    activeAppId.set(appId!)
+    showAppSidebar.set(!$showAppSidebar)
+  }
+
+  const handleExecuteAppSidebarCode = async (appId: string, code: string) => {
+    const t = $activeTab as TabPage
+    if (t.appId != appId) {
+      log.error('App ID does not match active tab')
+      return
+    }
+    if (!$activeBrowserTab) {
+      log.debug('No active browser tab')
+      return
+    }
+    await $activeBrowserTab.executeJavaScript(code)
   }
 
   const saveTextFromPage = async (
@@ -2968,7 +3089,10 @@
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
       <div
         class="sidebar-annotations-toggle"
-        on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
+        on:click={() => {
+          $showAnnotationsSidebar = !$showAnnotationsSidebar
+          showAppSidebar.set(false)
+        }}
         use:tooltip={{
           content: 'Toggle Annotations',
           action: 'hover',
@@ -2981,6 +3105,25 @@
           <Icon name="close" />
         {:else}
           <Icon name="marker" />
+        {/if}
+      </div>
+
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+      <div
+        class="sidebar-appsidebar-toggle"
+        on:click={handleToggleAppSidebar}
+        use:tooltip={{
+          content: 'Go wild',
+          action: 'hover',
+          position: 'left',
+          animation: 'fade',
+          delay: 500
+        }}
+      >
+        {#if $showAppSidebar}
+          <Icon name="close" />
+        {:else}
+          <Icon name="sparkles" />
         {/if}
       </div>
     {/if}
@@ -3002,6 +3145,16 @@
         on:chat={() => handleChatSubmit($activeTabMagic)}
         on:clearChat={() => handleChatClear(true)}
         on:prompt={handleMagicSidebarPromptSubmit}
+      />
+    </div>
+  {:else if $showAppSidebar}
+    <div transition:slide={{ axis: 'x' }} class="sidebar sidebar-magic">
+      <AppSidebar
+        {sffs}
+        appId={$activeAppId}
+        tabContext={$activeAppSidebarContext}
+        on:clearAppSidebar={() => handleAppSidebarClear(true)}
+        on:executeAppSidebarCode={(e) => handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
       />
     </div>
   {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
@@ -3072,7 +3225,7 @@
 
   .sidebar-magic-toggle {
     position: absolute;
-    top: 4rem;
+    bottom: 12rem;
     right: 0.45rem;
     z-index: 100000;
     transform: translateY(-50%);
@@ -3087,7 +3240,22 @@
 
   .sidebar-annotations-toggle {
     position: absolute;
-    top: 8rem;
+    bottom: 8rem;
+    right: 0.45rem;
+    z-index: 100000;
+    transform: translateY(-50%);
+    background: #eeece0;
+    border-radius: 8px 0 0 8px;
+    padding: 1rem;
+    cursor: pointer;
+    border-top: 1px solid #e4e2d4;
+    border-bottom: 1px solid #e4e2d4;
+    border-left: 1px solid #e4e2d4;
+  }
+
+  .sidebar-appsidebar-toggle {
+    position: absolute;
+    bottom: 4rem;
     right: 0.45rem;
     z-index: 100000;
     transform: translateY(-50%);

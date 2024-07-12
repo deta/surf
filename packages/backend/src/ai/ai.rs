@@ -96,6 +96,14 @@ pub struct YoutubeTranscript {
     pub metadata: YoutubeTranscriptMetadata
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateAppRequest {
+    pub prompt: String,
+    pub session_id: String,
+    pub contexts: Option<Vec<String>>,
+    pub system_prompt: Option<String>,
+}
+
 #[derive(Debug)]
 pub enum DataSourceType {
     Text,
@@ -291,5 +299,34 @@ impl AI {
             Err(e) => Err(BackendError::from(e)),
         });
         Ok(stream)
+    }
+    
+    // TODO: accept system prompt as param
+    pub fn create_app(&self, prompt: String, session_id: String, contexts: Option<Vec<String>>) -> Result<String, reqwest::Error> {
+        let url = format!("{}/app", &self.api_endpoint);
+        let request = CreateAppRequest {
+            prompt,
+            session_id,
+            contexts,
+            system_prompt: None,
+        };    
+
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            reqwest::header::HeaderValue::from_static("application/json"),
+        );
+
+        let response = self
+            .client
+            .post(url)
+            .headers(headers)
+            .json(&request)
+            .send()?;
+
+        match response.error_for_status_ref() {
+            Ok(_) => Ok(response.text()?),
+            Err(e) => Err(e)
+        }
     }
 }

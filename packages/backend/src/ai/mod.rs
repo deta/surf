@@ -7,6 +7,7 @@ const _MODULE_PREFIX: &'static str = "ai";
 
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__ai_send_chat_message", js_send_chat_message)?;
+    cx.export_function("js__ai_create_app", js_create_app)?;
     cx.export_function("js__ai_query_sffs_resources", js_query_sffs_resources)?;
     cx.export_function("js__ai_get_chat_data_source", js_get_ai_chat_data_source)?;
     cx.export_function("js__ai_get_docs_similarity", js_get_ai_docs_similarity)?;
@@ -82,6 +83,40 @@ fn js_get_youtube_transcript(mut cx: FunctionContext) -> JsResult<JsPromise> {
         deferred,
     );
 
+    Ok(promise)
+}
+
+fn js_create_app(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let prompt = cx.argument::<JsString>(1)?.value(&mut cx);
+    let session_id = cx.argument::<JsString>(2)?.value(&mut cx);
+    let contexts = match cx.argument_opt(3).filter(|arg| {
+        !(arg.is_a::<JsUndefined, FunctionContext>(&mut cx)
+            || arg.is_a::<JsNull, FunctionContext>(&mut cx))
+    }) {
+        Some(arg) => Some(
+            arg.downcast_or_throw::<JsArray, FunctionContext>(&mut cx)?
+                .to_vec(&mut cx)?
+                .iter()
+                .map(|value| {
+                    value
+                        .downcast_or_throw::<JsString, FunctionContext>(&mut cx)
+                        .map(|js_str| js_str.value(&mut cx))
+                })
+                .collect::<NeonResult<Vec<String>>>()?,
+        ),
+        None => None,
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::CreateApp {
+            prompt,
+            session_id,
+            contexts,
+        }),
+        deferred,
+    );
     Ok(promise)
 }
 

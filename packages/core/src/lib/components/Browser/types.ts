@@ -24,6 +24,7 @@ export interface TabPage extends BaseTab {
   resourceBookmark?: string | null
   chatResourceBookmark?: string | null
   chatId?: string | null
+  appId?: string | null
   currentDetectedApp?: DetectedWebApp
 }
 
@@ -146,6 +147,12 @@ export type PageMagic = {
   showSidebar: boolean
   running: boolean
   responses: AIChatMessageParsed[]
+}
+
+export type AppsSidebar = {
+  showSidebar: boolean
+  running: boolean
+  code: string
 }
 
 export type PageHighlight = {

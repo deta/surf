@@ -805,6 +805,18 @@ export class SFFS {
     return this.parseData<YoutubeTranscript>(raw)
   }
 
+  async createAIApp(
+    chatId: string,
+    prompt: string,
+    opts?: {
+      contexts?: string[]
+    }
+  ): Promise<string | null> {
+    this.log.debug('creating ai app with chat id', chatId, ' and prompt', prompt)
+    const raw = await this.backend.js__ai_create_app(prompt, chatId, opts?.contexts)
+    return String(raw)
+  }
+
   async sendAIChatMessage(
     chatId: string,
     query: string,
