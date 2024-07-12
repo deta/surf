@@ -67,6 +67,7 @@ import User from './Icons/User.svelte'
 import RSS from './Icons/RSS.svelte'
 import News from './Icons/News.svelte'
 import Hash from './Icons/Hash.svelte'
+import History from './Icons/History.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -138,7 +139,8 @@ export const icons = {
   user: User,
   rss: RSS,
   news: News,
-  hash: Hash
+  hash: Hash,
+  history: History
 }
 
 export type Icons = keyof typeof icons
@@ -211,5 +213,6 @@ export {
   User,
   RSS,
   News,
-  Hash
+  Hash,
+  History
 }

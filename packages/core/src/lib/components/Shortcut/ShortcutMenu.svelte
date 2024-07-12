@@ -1,3 +1,10 @@
+<script lang="ts" context="module">
+  export type ShortcutMenuEvents = {
+    'create-tab-from-space': Space
+    'create-new-space': { name: string; processNaturalLanguage: boolean }
+  }
+</script>
+
 <script lang="ts">
   import { ResourceManager } from '../../service/resources'
   import { createEventDispatcher, onMount, tick } from 'svelte'
@@ -7,6 +14,7 @@
 
   export let resourceManager: ResourceManager
   export let spaces: Space[] = []
+  export let closePopover: () => void
 
   let selectedSpaceIndex = 0
   let isLoading = true
@@ -14,10 +22,7 @@
   let searchQuery = ''
   let filteredSpaces: Space[] = []
 
-  const dispatch = createEventDispatcher<{
-    'create-tab-from-space': Space
-    'create-new-space': string
-  }>()
+  const dispatch = createEventDispatcher<ShortcutMenuEvents>()
 
   const isCreatingNewSpace = writable(false)
   let newSpaceName = ''
@@ -104,11 +109,12 @@
     newSpaceName = ''
   }
 
-  const confirmCreatingNewSpace = () => {
+  const confirmCreatingNewSpace = (processNaturalLanguage: boolean) => {
     console.log('Confirming creation of new space')
-    dispatch('create-new-space', newSpaceName)
+    dispatch('create-new-space', { name: newSpaceName, processNaturalLanguage })
     isCreatingNewSpace.set(false)
     newSpaceName = ''
+    closePopover()
   }
 
   onMount(() => {
@@ -146,7 +152,7 @@
         on:blur={cancelCreatingNewSpace}
         on:keydown={(event) => {
           if (event.key === 'Enter') {
-            confirmCreatingNewSpace()
+            confirmCreatingNewSpace(event.shiftKey)
           } else if (event.key === 'Escape') {
             cancelCreatingNewSpace()
           }

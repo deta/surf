@@ -293,6 +293,7 @@ export class SlackParser extends WebAppExtractor {
       appId: this.app?.id ?? null,
       appName: this.app?.name ?? null,
       hostname: this.url.hostname,
+      canonicalUrl: this.url.href,
       resourceType: this.detectResourceType(),
       appResourceIdentifier: this.getResourceIdentifier(),
       resourceNeedsPicking: true

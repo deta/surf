@@ -34,6 +34,10 @@ export class NotionParser extends WebAppExtractor {
     return `${rawPageId.substring(0, 8)}-${rawPageId.substring(8, 12)}-${rawPageId.substring(12, 16)}-${rawPageId.substring(16, 20)}-${rawPageId.substring(20)}`
   }
 
+  private cleanedUpURL() {
+    return this.url.href.split('?')[0]
+  }
+
   getInfo(): DetectedWebApp {
     const resourceType = this.detectResourceType()
     const appResourceIdentifier =
@@ -43,6 +47,7 @@ export class NotionParser extends WebAppExtractor {
       appId: this.app?.id ?? null,
       appName: this.app?.name ?? null,
       hostname: this.url.hostname,
+      canonicalUrl: this.cleanedUpURL(),
       resourceType: resourceType,
       appResourceIdentifier: appResourceIdentifier,
       resourceNeedsPicking: false

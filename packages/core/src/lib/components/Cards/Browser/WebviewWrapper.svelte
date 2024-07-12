@@ -40,6 +40,8 @@
     type WebViewReceiveEvents,
     type WebViewSendEvents
   } from '@horizon/types'
+  import { useDebounce, useScopedDebounce } from '../../../utils/debounce'
+  import { parseStringIntoUrl } from '../../../utils/url'
 
   const dispatch = createEventDispatcher<WebViewWrapperEvents>()
   const log = useLogScope('WebviewWrapper')
@@ -104,6 +106,11 @@
     try {
       const oldEntry = historyEntriesManager.getEntry($historyStackIds[$currentHistoryIndex])
 
+      if (oldEntry && oldEntry.url === newUrl) {
+        log.debug('Ignoring duplicate history entry')
+        return
+      }
+
       const entry: HistoryEntry = await historyEntriesManager.addEntry({
         type: 'navigation',
         url: newUrl,
@@ -126,6 +133,8 @@
 
     programmaticNavigation = false
   }
+
+  const debouncedAddHistoryEntry = useScopedDebounce(addHistoryEntry, 200)
 
   $: webview, updateNavigationState()
   // $: {
@@ -243,17 +252,26 @@
 
     webview.addEventListener('did-navigate', (e: any) => {
       log.debug('did navigate', e.url)
+
+      if ($url === e.url) {
+        log.debug('Ignoring did-navigate event for same URL')
+        return
+      }
+
       url.set(e.url)
       pendingUrlUpdate = { url: e.url, timestamp: Date.now() }
     })
 
-    webview.addEventListener('did-navigate-in-page', (e: any) => {
+    webview.addEventListener('did-navigate-in-page', (e: Electron.DidNavigateInPageEvent) => {
       log.debug('did navigate in page', e.url)
       if (e.isMainFrame) {
         url.set(e.url)
 
+        const newURL = parseStringIntoUrl(e.url)
+        if (!newURL) return
+
         // HOTFIX: Resolve later
-        if (e.url.hostname !== 'notion.so') {
+        if (!newURL.hostname.endsWith('notion.so')) {
           pendingUrlUpdate = { url: e.url, timestamp: Date.now() }
         }
       }
@@ -269,7 +287,11 @@
       log.debug('Page title updated', e.title)
       title.set(e.title)
       if (pendingUrlUpdate) {
-        addHistoryEntry(pendingUrlUpdate.url, e.title)
+        log.debug('Adding history entry for pending URL update', pendingUrlUpdate.url)
+
+        const debounceKey = `add-history-entry-${pendingUrlUpdate.url}`
+        debouncedAddHistoryEntry(debounceKey, pendingUrlUpdate.url, e.title)
+
         pendingUrlUpdate = null
       }
     })
@@ -326,6 +348,11 @@
 
   export function setMute(isMuted: boolean): void {
     webview?.setAudioMuted(isMuted)
+  }
+
+  export function setZoomLevel(n: number): void {
+    console.log('set zoom to level', n)
+    webview?.setZoomFactor(n)
   }
 
   export function goBack(): void {

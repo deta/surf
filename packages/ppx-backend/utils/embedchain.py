@@ -2,7 +2,9 @@ import asyncio
 import logging
 import os
 
+from string import Template
 from typing import AsyncIterable, List, Union
+
 
 from embedchain import App
 from embedchain.config import BaseLlmConfig
@@ -94,10 +96,36 @@ async def generate_messages(ec_app, query, contexts_data_for_llm_query, config, 
     sprompt = system_prompt or config.system_prompt
     if sprompt:
         messages.append(SystemMessage(content=system_prompt))
-    prompt = ec_app.llm.generate_prompt(query, contexts_data_for_llm_query)
+    prompt = ec_app.llm.generate_prompt(contexts_data_for_llm_query, query)
     print("Prompt: ", prompt)
     messages.append(HumanMessage(content=prompt))
     return messages
+
+async def create_app(query, session_id, system_prompt, model, contexts) -> str:
+    ec_app = App.from_config(config=EC_APP_CONFIG)
+
+    ec_app.llm.config.prompt = Template(system_prompt)
+    ec_app.llm.update_history(app_id=ec_app.config.id, session_id=session_id)
+    config = BaseLlmConfig(model=model, stream=False, api_key=os.environ["OPENAI_API_KEY"])
+    prompt = ec_app.llm.generate_prompt(contexts, input_query=None)
+    messages = [SystemMessage(content=prompt), HumanMessage(content=query.removeprefix("app:").removeprefix("App:"))]
+    kwargs = {
+        "model": model,
+        "temperature": config.temperature,
+        "max_tokens": config.max_tokens,
+        "model_kwargs": {"top_p": config.top_p} if config.top_p else {},
+        "api_key": config.api_key,
+    }
+    msg = ChatOpenAI(**kwargs).invoke(messages)
+    answer = msg.content
+    # TODO: why is this like this for god's sake
+    if isinstance(answer, list):
+        answer = answer[0]
+    if isinstance(answer, dict):
+        answer = answer.get("content", "")
+    ec_app.llm.add_history(ec_app.config.id, query, answer, session_id=session_id)
+    return answer
+
 
 async def send_general_message(query, session_id, stream, model) -> AsyncIterable[str]:
     ec_app = App.from_config(config=EC_APP_CONFIG)

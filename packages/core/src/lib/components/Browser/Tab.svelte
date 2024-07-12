@@ -93,6 +93,10 @@
     <div class="icon-wrapper">
       <Icon name="code" size="20px" />
     </div>
+  {:else if tab.type === 'history'}
+    <div class="icon-wrapper">
+      <Icon name="history" size="20px" />
+    </div>
   {:else if tab.type === 'space' && space}
     <div class="icon-wrapper">
       <SpaceIcon folder={space} />

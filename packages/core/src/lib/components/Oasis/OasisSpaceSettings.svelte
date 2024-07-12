@@ -16,21 +16,23 @@
   import { copyToClipboard } from '../../utils/clipboard'
   import type { ChangeEventHandler } from 'svelte/elements'
 
-  export let space: Space
+  export let space: Space | null
 
   const dispatch = createEventDispatcher<{
     refresh: void
     clear: void
     delete: boolean
     load: void
+    'delete-auto-saved': void
   }>()
   const log = useLogScope('OasisSpaceSettings')
   const oasis = useOasis()
   const toasts = useToasts()
+  const autoSaveResources = oasis.autoSaveResources
 
-  let isLiveModeOn = space.name.liveModeEnabled
-  let hideViewedResources = space.name.hideViewed
-  let smartFilterQuery = space.name.smartFilterQuery
+  let isLiveModeOn = space?.name.liveModeEnabled
+  let hideViewedResources = space?.name.hideViewed
+  let smartFilterQuery = space?.name.smartFilterQuery
   let sourceValue = ''
   let loading = false
   let showAddSource = false
@@ -41,6 +43,7 @@
   const handleNameBlur = async () => {
     if (!space) return
 
+    // TODO: rename tab as well
     await oasis.updateSpaceData(space.id, space.name)
   }
 
@@ -117,6 +120,10 @@
     dispatch('delete', shoulDeleteAllResources)
   }
 
+  const handleDeleteAutoSaved = async () => {
+    dispatch('delete-auto-saved')
+  }
+
   const handleLiveModeUpdate = useDebounce(async (e: CustomEvent<boolean>) => {
     if (!space) return
 
@@ -146,7 +153,7 @@
       return
     }
 
-    space.name.smartFilterQuery = smartFilterQuery
+    space.name.smartFilterQuery = smartFilterQuery ?? null
 
     await oasis.updateSpaceData(space.id, { smartFilterQuery: smartFilterQuery })
 
@@ -276,7 +283,7 @@
           />
 
           {#if !isLiveModeOn}
-            <p><b>Note:</b> Disabled becuase Live Mode is turned off.</p>
+            <p><b>Note:</b> Disabled because Live Mode is turned off.</p>
           {/if}
         </div>
       </div>
@@ -366,7 +373,68 @@
       </div>
     </div>
   {:else}
-    <div>Space not found</div>
+    <div class="header">
+      <!-- <SpaceIcon folder={space} /> -->
+      <h1>Oasis Settings</h1>
+    </div>
+
+    <div class="setting">
+      <Switch
+        label="Auto Save Resources"
+        color="#ff4eed"
+        reverse
+        bind:checked={$autoSaveResources}
+        on:update={handleLiveModeUpdate}
+      />
+
+      <p><b>Note:</b> If enabled every web page you visit gets automatically saved to Oasis.</p>
+    </div>
+
+    <div class="danger-zone">
+      <div class="danger-title">
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-interactive-supports-focus -->
+        <div
+          class="expand-toggle"
+          on:click={() => (expandedDangerZone = !expandedDangerZone)}
+          role="button"
+        >
+          {#if expandedDangerZone}
+            <Icon name="chevron.down" />
+          {:else}
+            <Icon name="chevron.right" />
+          {/if}
+          <h2>Danger Zone</h2>
+        </div>
+
+        {#if expandedDangerZone}
+          <p>These actions cannot be undone.</p>
+        {/if}
+      </div>
+
+      {#if expandedDangerZone}
+        <div class="actions">
+          <!-- <button
+            on:click={handleClearSpace}
+            use:tooltip={'Clear all resources from this Space.'}
+          >
+            <Icon name="close" />
+            Clear resources from Space
+          </button> -->
+
+          <div class="action">
+            <div class="action-row">
+              <h3>Delete Auto Saved Resources</h3>
+              <p>Remove all auto saved resources from Oasis.</p>
+            </div>
+
+            <button on:click={handleDeleteAutoSaved}>
+              <Icon name="close" />
+              Delete Auto Saved
+            </button>
+          </div>
+        </div>
+      {/if}
+    </div>
   {/if}
 </article>
 

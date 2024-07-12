@@ -5,6 +5,7 @@ import type {
   ResourceDataChatThread,
   ResourceDataColor,
   ResourceDataDocument,
+  ResourceDataHistoryEntry,
   ResourceDataLink,
   ResourceDataLocation,
   ResourceDataPost,
@@ -35,7 +36,8 @@ export enum ResourceTagsBuiltInKeys {
   ANNOTATES = 'annotates',
   HASHTAG = 'hashtag',
   SPACE_SOURCE = 'spaceSource',
-  VIEWED_BY_USER = 'viewedByUser'
+  VIEWED_BY_USER = 'viewedByUser',
+  SILENT = 'silent'
 }
 
 export interface ResourceTagsBuiltIn {
@@ -51,6 +53,7 @@ export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.CANONICAL_URL]: string
   [ResourceTagsBuiltInKeys.ANNOTATES]: string
   [ResourceTagsBuiltInKeys.HASHTAG]: string
+  [ResourceTagsBuiltInKeys.SILENT]: boolean
 }
 
 export interface SFFSResource {
@@ -132,7 +135,8 @@ export enum ResourceTypes {
 
   FLOWCHAT_FUN = 'application/vnd.space.custom.flowchart-fun',
 
-  ANNOTATION = 'application/vnd.space.annotation'
+  ANNOTATION = 'application/vnd.space.annotation',
+  HISTORY_ENTRY = 'application/vnd.space.history-entry'
 }
 
 export interface ResourceDataTypes {
@@ -148,6 +152,7 @@ export interface ResourceDataTypes {
   [ResourceTypes.TABLE]: ResourceDataTable
   [ResourceTypes.TABLE_COLUMN]: ResourceDataTableColumn
   [ResourceTypes.ANNOTATION]: ResourceDataAnnotation
+  [ResourceTypes.HISTORY_ENTRY]: ResourceDataHistoryEntry
   // todo data for drawing and flowchart-fun
 }
 
@@ -157,6 +162,7 @@ export type DetectedWebApp = {
   appId: string | null
   appName: string | null
   hostname: string
+  canonicalUrl: string
   resourceType: string | null
   appResourceIdentifier: string | null // e.g. tweet ID
   resourceNeedsPicking: boolean

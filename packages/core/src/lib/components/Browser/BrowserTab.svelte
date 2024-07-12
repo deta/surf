@@ -4,6 +4,7 @@
 
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { writable } from 'svelte/store'
   import { type Unsubscriber } from 'svelte/store'
   import WebviewWrapper, { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
   import type { HistoryEntriesManager } from '../../service/history'
@@ -12,8 +13,10 @@
   import type { DetectedWebApp } from '@horizon/web-parser'
   import type { WebViewEventKeyDown, WebViewReceiveEvents } from '@horizon/types'
   import FindInPage from '../Cards/Browser/FindInPage.svelte'
+  import ZoomPreview from '../Cards/Browser/ZoomPreview.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { wait } from '@horizon/web-parser/src/utils'
+  import { useDebounce } from '../../utils/debounce'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<{
@@ -25,6 +28,11 @@
   export let tab: TabPage
   export let webview: WebviewWrapper
   export let historyEntriesManager: HistoryEntriesManager
+
+  const zoomLevel = writable<number>(1)
+  const showZoomPreview = writable<boolean>(false)
+  let zoomTimer: number
+  let hasMounted = false
 
   let findInPage: FindInPage | undefined
 
@@ -78,6 +86,33 @@
     }
   }
 
+  export const zoomIn = () => {
+    if (webview) {
+      zoomLevel.update((z) => {
+        const newZoomLevel = z + 0.05
+        webview.setZoomLevel(newZoomLevel)
+        return newZoomLevel
+      })
+    }
+  }
+
+  export const zoomOut = () => {
+    if (webview) {
+      zoomLevel.update((z) => {
+        const newZoomLevel = z - 0.05
+        webview.setZoomLevel(newZoomLevel)
+        return newZoomLevel
+      })
+    }
+  }
+
+  export const resetZoom = () => {
+    if (webview) {
+      zoomLevel.set(1)
+      webview.setZoomLevel(1)
+    }
+  }
+
   export const sendWebviewEvent = <T extends keyof WebViewReceiveEvents>(
     name: T,
     data?: WebViewReceiveEvents[T]
@@ -104,6 +139,22 @@
   }
 
   console.log('new tab', tab)
+
+  const resetZoomTimer = () => {
+    if (hasMounted) {
+      showZoomPreview.set(true)
+      if (zoomTimer) {
+        clearTimeout(zoomTimer)
+      }
+      zoomTimer = window.setTimeout(() => {
+        showZoomPreview.set(false)
+      }, 3000)
+    }
+  }
+
+  zoomLevel.subscribe(() => {
+    resetZoomTimer()
+  })
 
   const handleWebviewKeydown = async (e: CustomEvent<WebViewWrapperEvents['keydownWebview']>) => {
     const event = e.detail
@@ -164,7 +215,7 @@
       app.appResourceIdentifier === detectedApp.appResourceIdentifier
     ) {
       log.debug('no change in app or resource', detectedApp)
-      dispatch('appDetection', detectedApp) // TODO: differentiate between fresh detection and no change
+      // dispatch('appDetection', detectedApp) // TODO: differentiate between fresh detection and no change
       return
     }
 
@@ -176,9 +227,15 @@
     dispatch('webviewKeydown', e.detail)
   }
 
+  const debouncedAppDetection = useDebounce(() => {
+    log.debug('running app detection debounced')
+    webview.startAppDetection()
+  }, 200)
+
   const unsubTracker: Unsubscriber[] = []
   onMount(() => {
     if (!webview) return
+    hasMounted = true
 
     webview.historyStackIds.set(tab.historyStackIds)
     webview.currentHistoryIndex.set(tab.currentHistoryIndex)
@@ -186,7 +243,8 @@
     unsubTracker.push(
       webview.url.subscribe(async (_: string) => {
         await wait(500)
-        webview.startAppDetection()
+        log.debug('running app detection')
+        debouncedAppDetection()
       })
     )
 
@@ -233,6 +291,10 @@
 
 {#if webview}
   <FindInPage bind:this={findInPage} {webview} />
+{/if}
+
+{#if webview}
+  <ZoomPreview {zoomLevel} {showZoomPreview} />
 {/if}
 
 <WebviewWrapper

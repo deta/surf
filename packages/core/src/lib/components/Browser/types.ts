@@ -1,4 +1,5 @@
 import type { DetectedWebApp } from '@horizon/types'
+import type { Resource, ResourceHistoryEntry } from '../../service/resources'
 
 export interface BaseTab {
   id: string
@@ -7,7 +8,7 @@ export interface BaseTab {
   section?: string
   title: string
   icon: string
-  type: 'page' | 'horizon' | 'chat' | 'empty' | 'importer' | 'space' | 'oasis-discovery'
+  type: 'page' | 'horizon' | 'chat' | 'empty' | 'importer' | 'space' | 'oasis-discovery' | 'history'
 
   archived: boolean
   index: number
@@ -23,6 +24,7 @@ export interface TabPage extends BaseTab {
   resourceBookmark?: string | null
   chatResourceBookmark?: string | null
   chatId?: string | null
+  appId?: string | null
   currentDetectedApp?: DetectedWebApp
 }
 
@@ -56,6 +58,10 @@ export interface TabSpace extends BaseTab {
   spaceId: string
 }
 
+export interface TabHistory extends BaseTab {
+  type: 'history'
+}
+
 export type Tab =
   | TabPage
   | TabChat
@@ -64,6 +70,7 @@ export type Tab =
   | TabImporter
   | TabSpace
   | TabOasisDiscovery
+  | TabHistory
 
 export type AIChat = {
   id: string
@@ -142,6 +149,12 @@ export type PageMagic = {
   responses: AIChatMessageParsed[]
 }
 
+export type AppsSidebar = {
+  showSidebar: boolean
+  running: boolean
+  code: string
+}
+
 export type PageHighlight = {
   type: 'important' | 'statistic' | 'pro' | 'contra' | 'quote'
   color?: string
@@ -150,3 +163,9 @@ export type PageHighlight = {
 
 export type DroppedTabLocation = { dropZoneID: 'pinned-tabs' | 'tabs'; index: number }
 export type DroppedTab = { from: DroppedTabLocation; to: DroppedTabLocation }
+
+export type ResourceHistoryEntryWithLinkedResource = {
+  id: string
+  entryResource: ResourceHistoryEntry
+  linkedResource: Resource | null
+}

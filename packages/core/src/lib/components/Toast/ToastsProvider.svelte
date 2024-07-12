@@ -33,9 +33,9 @@
     position: fixed;
     z-index: 1000000000;
     top: 2rem;
-    left: 1rem;
-    right: 0;
-    width: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
     display: flex;
     justify-content: center;
     align-items: center;

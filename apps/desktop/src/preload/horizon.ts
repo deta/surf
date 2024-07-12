@@ -11,6 +11,7 @@ import {
 import path from 'path'
 import fetch from 'cross-fetch'
 import OpenAI, { toFile } from 'openai'
+import { minify } from 'html-minifier'
 
 import { createAPI } from '@horizon/api'
 import { actionsToRunnableTools } from './actions'
@@ -354,7 +355,9 @@ const api = {
     } catch (err) {
       console.error('Failed to copy: ', err)
     }
-  }
+  },
+
+  minifyHtml: (html: string, options: any) => minify(html, options)
 }
 
 ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {

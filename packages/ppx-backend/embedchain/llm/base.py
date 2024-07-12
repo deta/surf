@@ -75,7 +75,7 @@ class BaseLlm(JSONSerializable):
         """
         return "\n".join(self.history)
 
-    def generate_prompt(self, input_query: str, contexts: list[str], **kwargs: dict[str, Any]) -> str:
+    def generate_prompt(self, contexts: list[str], input_query: Optional[str], **kwargs: dict[str, Any]) -> str:
         """
         Generates a prompt based on the given query and context, ready to be
         passed to an LLM
@@ -98,7 +98,7 @@ class BaseLlm(JSONSerializable):
 
         prompt_contains_history = self.config._validate_prompt_history(self.config.prompt)
         if prompt_contains_history:
-            prompt = self.config.prompt.substitute(
+            prompt = self.config.prompt.safe_substitute(
                 context=context_string, query=input_query, history=self._format_history() or "No history"
             )
         elif self.history and not prompt_contains_history:
@@ -109,7 +109,7 @@ class BaseLlm(JSONSerializable):
                 and self.config.prompt.template == DEFAULT_PROMPT
             ):
                 # swap in the template with history
-                prompt = DEFAULT_PROMPT_WITH_HISTORY_TEMPLATE.substitute(
+                prompt = DEFAULT_PROMPT_WITH_HISTORY_TEMPLATE.safe_substitute(
                     context=context_string, query=input_query, history=self._format_history()
                 )
             else:
@@ -117,10 +117,10 @@ class BaseLlm(JSONSerializable):
                 logger.warning(
                     "Your bot contains a history, but prompt does not include `$history` key. History is ignored."
                 )
-                prompt = self.config.prompt.substitute(context=context_string, query=input_query)
+                prompt = self.config.prompt.safe_substitute(context=context_string, query=input_query)
         else:
             # basic use case, no history.
-            prompt = self.config.prompt.substitute(context=context_string, query=input_query)
+            prompt = self.config.prompt.safe_substitute(context=context_string, query=input_query)
         return prompt
 
     @staticmethod

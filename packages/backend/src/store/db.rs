@@ -342,7 +342,7 @@ impl Database {
             SELECT r.id, r.resource_path, r.resource_type, r.created_at, r.updated_at, r.deleted, rt.tag_value
             FROM resources r
             JOIN resource_tags rt ON r.id = rt.resource_id
-            WHERE r.deleted = 0 AND rt.tag_name = 'annotates' AND rt.tag_value IN ({})",
+            WHERE r.deleted = 0 AND r.resource_type = 'application/vnd.space.annotation' AND rt.tag_name = 'annotates' AND rt.tag_value IN ({})",
             placeholders
         );
 

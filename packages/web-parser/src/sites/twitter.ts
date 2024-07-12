@@ -53,6 +53,7 @@ export class TwitterParser extends WebAppExtractor {
       appId: this.app?.id ?? null,
       appName: this.app?.name ?? null,
       hostname: this.url.hostname,
+      canonicalUrl: this.url.href,
       resourceType: resourceType,
       appResourceIdentifier: appResourceIdentifier,
       resourceNeedsPicking: false

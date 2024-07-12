@@ -46,6 +46,15 @@ impl Worker {
         Ok(self.ai.get_docs_similarity(query, docs, threshold)?)
     }
 
+    pub fn create_app(
+        &mut self,
+        prompt: String,
+        session_id: String,
+        contexts: Option<Vec<String>>,
+    ) -> BackendResult<String> {
+        Ok(self.ai.create_app(prompt, session_id, contexts)?)
+    }
+
     pub fn send_chat_query(
         &self,
         channel: &mut Channel,
@@ -213,6 +222,13 @@ pub fn handle_misc_message(
                 resource_ids,
             );
             send_worker_response(channel, oneshot, result)
+        }
+        MiscMessage::CreateApp {
+            prompt,
+            session_id,
+            contexts,
+        } => {
+            send_worker_response(channel, oneshot, worker.create_app(prompt, session_id, contexts))
         }
         MiscMessage::QuerySFFSResources(prompt) => {
             send_worker_response(channel, oneshot, worker.query_sffs_resources(prompt))

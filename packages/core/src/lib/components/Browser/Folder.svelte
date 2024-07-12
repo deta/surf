@@ -7,7 +7,7 @@
   import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
   import type { Space, SpaceData, SFFSResourceTag } from '../../types'
-  import { ResourceTypes } from '../../types'
+  import { ResourceTagsBuiltInKeys, ResourceTypes } from '../../types'
   import { useLogScope } from '../../utils/log'
   import { useOasis } from '../../service/oasis'
   import { processDrop } from '../../service/mediaImporter'
@@ -58,7 +58,9 @@
     if (folder.id == 'all') {
       result = await resourceManager.searchResources('', [
         ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+        ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
+        ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
       ])
 
       result.reverse()
@@ -107,7 +109,9 @@
 
       log.debug(`Automatic Folder Generation request`, response)
 
-      const results = response.embedding_search_results || response.sql_query_results
+      const results = response.embedding_search_query
+        ? response.embedding_search_results
+        : response.sql_query_results
       log.debug('Automatic Folder generated with', results)
 
       if (!results) {

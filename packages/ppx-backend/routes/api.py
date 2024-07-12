@@ -1,16 +1,18 @@
 import os
-from typing import Union
+from typing import Union, List, Optional
 
 from fastapi import APIRouter, Query, responses, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from utils.embedchain import send_message, send_general_message, get_embedding, get_resources
+
+from utils.embedchain import create_app, send_message, send_general_message, get_embedding, get_resources
 from embedchain.loaders.youtube_video import YoutubeLoader
 from utils.sffs import get_resource
 from utils.mocks import mock_stream
 from utils.query_classifier import is_query_a_question
 from utils.embeddings import get_similar_docs
+from utils.prompts import CREATE_APP_PROMPT, COMMAND_PROMPT
 
 
 router = APIRouter()
@@ -57,6 +59,28 @@ async def handle_chat(
         do_rag
     )
     return StreamingResponse(generator)
+
+
+class AppRequest(BaseModel):
+    prompt: str
+    contexts: List[str]
+    session_id: str
+    system_prompt: Optional[str] = None
+
+@router.post("/api/v1/app")
+async def handle_app(request: AppRequest):
+    try:
+        system_prompt = COMMAND_PROMPT
+        if request.prompt.lower().startswith("app:"):
+            system_prompt = CREATE_APP_PROMPT
+        if request.system_prompt:
+            system_prompt = request.system_prompt
+        app = await create_app(request.prompt, request.session_id, system_prompt, DEFAULT_MODEL, request.contexts)
+        return responses.PlainTextResponse(content=app)
+    except Exception as e:
+        print("Exception in creating app:", str(e))
+        return str(e)
+
 
 @router.post("/api/v1/embeddings")
 async def handle_embeddings(data: str):
