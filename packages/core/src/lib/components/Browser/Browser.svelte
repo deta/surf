@@ -3105,9 +3105,8 @@
         </div>
       {/if}
     </div>
-  </div>
 
-  {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
+    {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
   <div transition:slide={{ axis: 'x' }} class=" sidebar-magic">
     <MagicSidebar
       magicPage={$activeTabMagic}
@@ -3146,6 +3145,9 @@
     />
   </div>
 {/if}
+  </div>
+
+  
     </div>
 </div>
 
@@ -3250,7 +3252,7 @@
     flex: 1;
     width: 300px;
     z-index: 1;
-    background-color: red;
+    height: 96%;
   }
 
   .browser-window-wrapper {
