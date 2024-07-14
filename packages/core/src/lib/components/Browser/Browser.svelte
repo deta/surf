@@ -52,6 +52,7 @@
   import TabSearch from './TabSearch.svelte'
   import ShortcutMenu, { type ShortcutMenuEvents } from '../Shortcut/ShortcutMenu.svelte'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
+  import '../../../app.css'
 
   import '../Horizon/index.scss'
   import type {

@@ -47,7 +47,10 @@
     "typed-emitter": "^2.1.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
-    "vite-plugin-markdown": "^2.2.0"
+    "vite-plugin-markdown": "^2.2.0",
+    "tailwindcss": "^3.4.4",
+    "postcss": "^8.4.38",
+    "autoprefixer": "^10.4.19"
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.4.0",
