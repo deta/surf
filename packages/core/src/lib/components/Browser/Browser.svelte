@@ -2911,15 +2911,15 @@
               {#if $sidebarTab === 'active' && $activeTab?.type === 'page'}
                 {#if $activeTabMagic}
                   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                  <div
-                    class="sidebar-magic-toggle"
+                  <button
+                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 cursor-pointer"
                     on:click={handleToggleMagicSidebar}
                     use:tooltip={{
                       content: 'Toggle Page Chat',
                       action: 'hover',
-                      position: 'left',
+                      position: 'bottom',
                       animation: 'fade',
-                      delay: 500
+                      delay: 300
                     }}
                   >
                     {#if $activeTabMagic.showSidebar}
@@ -2929,19 +2929,19 @@
                     {:else}
                       <Icon name="message" />
                     {/if}
-                  </div>
+                  </button>
                 {/if}
 
                 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                <div
-                  class="sidebar-annotations-toggle"
+                <button
+                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 cursor-pointer"
                   on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
                   use:tooltip={{
                     content: 'Toggle Annotations',
                     action: 'hover',
-                    position: 'left',
+                    position: 'bottom',
                     animation: 'fade',
-                    delay: 500
+                    delay: 300
                   }}
                 >
                   {#if $showAnnotationsSidebar}
@@ -2949,17 +2949,17 @@
                   {:else}
                     <Icon name="marker" />
                   {/if}
-                </div>
+                </button>
 
-                <div
-                  class="sidebar-appsidebar-toggle"
+                <button
+                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 cursor-pointer"
                   on:click={handleToggleAppSidebar}
                   use:tooltip={{
                     content: 'Go wild',
                     action: 'hover',
-                    position: 'left',
+                    position: 'bottom',
                     animation: 'fade',
-                    delay: 500
+                    delay: 300
                   }}
                 >
                   {#if $showAppSidebar}
@@ -2967,7 +2967,7 @@
                   {:else}
                     <Icon name="sparkles" />
                   {/if}
-                </div>
+                </button>
               {/if}
 
               <button
