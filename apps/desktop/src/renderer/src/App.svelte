@@ -21,7 +21,6 @@
     <div class="drag-bar right"></div>
   {/if}
   <Browser />
-  <div class="bg-sky-500/50 backdrop-blur-lg  w-screen h-screen bg-gradient-to-br from-sky-300 to-cyan-200 via-blue-300"></div>
 </div>
 
 <style>
