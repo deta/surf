@@ -2770,7 +2770,7 @@
               </DragDropList>
             </div>
 
-            <div class="overflow-x-scroll no-scrollbar flex-grow">
+            <div class="overflow-x-scroll no-scrollbar relative flex">
               <DragDropList
                 id="tabs"
                 type={HorizontalDropZone}
@@ -2971,25 +2971,12 @@
               {/if}
 
               <button
-                class="add-tab-button"
+                class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 cursor-pointer"
                 on:click|preventDefault={() => (popoverOpen = !popoverOpen)}
                 on:create-tab-from-space={handleCreateTabFromPopover}
                 on:create-new-space={handleCreateNewSpace}
-                use:popover={{
-                  content: {
-                    component: ShortcutMenu,
-                    props: { resourceManager, spaces }
-                  },
-                  action: 'hover',
-                  position: 'left-bottom',
-                  style: {
-                    backgroundColor: '#F8F7F1'
-                  },
-                  animation: 'fade',
-                  delay: 450
-                }}
               >
-                <Icon name="add" color="#7d7448" />
+                <Icon name="add" />
               </button>
             </div>
           </div>
@@ -3126,7 +3113,8 @@
       {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
         <div
           transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs && 'mt-1.5'} flex-shrink-0"
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs &&
+            'mt-1.5'} flex-shrink-0"
         >
           <MagicSidebar
             magicPage={$activeTabMagic}
@@ -3146,10 +3134,11 @@
           />
         </div>
       {:else if $showAppSidebar}
-      <div
-      transition:slide={{ axis: 'x' }}
-      class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs && 'mt-1.5'} flex-shrink-0"
-    >
+        <div
+          transition:slide={{ axis: 'x' }}
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs &&
+            'mt-1.5'} flex-shrink-0"
+        >
           <AppSidebar
             {sffs}
             appId={$activeAppId}
@@ -3160,10 +3149,11 @@
           />
         </div>
       {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
-      <div
-      transition:slide={{ axis: 'x' }}
-      class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs && 'mt-1.5'} flex-shrink-0"
-    >
+        <div
+          transition:slide={{ axis: 'x' }}
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs &&
+            'mt-1.5'} flex-shrink-0"
+        >
           <AnnotationsSidebar
             bind:this={annotationsSidebar}
             resourceId={$activeTab.resourceBookmark}
