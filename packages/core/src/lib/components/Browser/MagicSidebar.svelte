@@ -124,7 +124,7 @@
   }
 </script>
 
-<div class="wrapper">
+<div class="flex flex-col gap-4 overflow-hidden p-4 h-full">
   <div class="header">
     <div class="title">
       <Icon name="message" size="28px" />
@@ -259,14 +259,7 @@
 </div>
 
 <style lang="scss">
-  .wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    overflow: hidden;
-    padding-top: 2rem;
-    height: 95%;
-  }
+ 
 
   .content {
     display: flex;

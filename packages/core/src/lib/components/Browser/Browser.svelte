@@ -2705,7 +2705,7 @@
 
             {#if $activeTabMagic}
               {#if $activeTabMagic.showSidebar}
-                <div class="magic-tabs-wrapper" class:magic={$magicTabs.length > 0}>
+                <div class="" class:magic={$magicTabs.length > 0}>
                   <DragDropList
                     id="magic-tabs"
                     type={HorizontalDropZone}
@@ -2717,11 +2717,11 @@
                     let:index
                   >
                     {#if $magicTabs.length === 0}
-                      <div class="debug">
+                      <div class="debug max-h-[50px]">
                         <div class="ai-wrapper">
-                          <Icon name="ai" size={24 * 0.75 + 'px'} />
+                          <Icon name="ai" size={12 * 0.75 + 'px'} />
                         </div>
-                        <span class="label"
+                        <span class="text-xs"
                           >You are chatting with all tabs. Drop tabs here to filter.</span
                         >
                       </div>
@@ -2999,9 +2999,9 @@
       </div>
     {/if}
 
-    <div class="h-screen">
+    <div class="h-screen flex space-x-4 relative flex-row px-1.5">
       <div
-        class="w-full h-full px-1.5 pb-1.5 {showTabs ? '' : 'pt-1.5'} overflow-hidden flex-grow"
+        class="w-full h-full pb-1.5 {showTabs ? '' : 'pt-1.5'} overflow-hidden flex-grow"
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showTabs}
@@ -3112,7 +3112,7 @@
         {/each}
 
         {#if !$activeTabs && !$activeTab}
-          <div class="browser-window active" style="--scaling: 1;">
+          <div class="" style="--scaling: 1;">
             <BrowserHomescreen
               {historyEntriesManager}
               on:navigate={handleTabNavigation}
@@ -3124,7 +3124,10 @@
       </div>
 
       {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
-        <div transition:slide={{ axis: 'x' }} class=" sidebar-magic">
+        <div
+          transition:slide={{ axis: 'x' }}
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs && 'mt-1.5'} flex-shrink-0"
+        >
           <MagicSidebar
             magicPage={$activeTabMagic}
             bind:inputValue={$magicInputValue}
@@ -3143,7 +3146,10 @@
           />
         </div>
       {:else if $showAppSidebar}
-        <div transition:slide={{ axis: 'x' }} class="sidebar-magic">
+      <div
+      transition:slide={{ axis: 'x' }}
+      class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs && 'mt-1.5'} flex-shrink-0"
+    >
           <AppSidebar
             {sffs}
             appId={$activeAppId}
@@ -3154,7 +3160,10 @@
           />
         </div>
       {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
-        <div transition:slide={{ axis: 'x' }} class="sidebar-magic">
+      <div
+      transition:slide={{ axis: 'x' }}
+      class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs && 'mt-1.5'} flex-shrink-0"
+    >
           <AnnotationsSidebar
             bind:this={annotationsSidebar}
             resourceId={$activeTab.resourceBookmark}
@@ -3172,14 +3181,6 @@
   .hide-btn {
     display: none !important;
     background-color: transparent;
-  }
-
-  .buttons {
-    display: flex;
-    align-items: center;
-    position: fixed;
-    right: 0;
-    gap: 8px;
   }
 
   .sidebar {
@@ -3213,13 +3214,6 @@
       box-shadow: 0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1);
       box-shadow: 0px 0.933px 2.8px 0px color(display-p3 0 0 0 / 0.1);
     }
-  }
-
-  .horizontal-flex {
-    display: flex;
-    flex-direction: row;
-    flex: 1;
-    height: 100vh;
   }
 
   .sidebar-magic-toggle {
