@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Browser } from '@horizon/core'
   import { onMount } from 'svelte'
+  import "../../app.css"
 
   let showDragBar = true
 
@@ -9,7 +10,8 @@
   })
 </script>
 
-<div class="main">
+
+<div class="main relative">
   {#if showDragBar}
     <div class="drag-bar top"></div>
     <div class="drag-bar bottom"></div>
@@ -17,6 +19,7 @@
     <div class="drag-bar right"></div>
   {/if}
   <Browser />
+  <div class="bg-sky-500/50 backdrop-blur-lg  w-screen h-screen"></div>
 </div>
 
 <style>
