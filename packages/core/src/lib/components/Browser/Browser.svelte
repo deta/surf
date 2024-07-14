@@ -2633,17 +2633,17 @@
     />
   {/if}
 
-  <div class="">
+  <div class="relative h-screen flex flex-col">
     {#if showTabs}
       <div
         transition:slide={{ axis: 'y', duration: 200 }}
-        class="sidebar"
+        class="flex-grow"
         class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
         style="z-index: 5000;"
       >
         {#if $sidebarTab !== 'oasis'}
-          <div class="tabs">
-            <div class="flex flex-row items-center">
+          <div class="flex relative ml-24 space-x-4 mr-4 items-center">
+            <div class="flex flex-row items-center flex-shrink-0">
               <button
                 class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 {!canGoBack
                   ? 'opacity-30 cursor-not-allowed'
@@ -2703,7 +2703,6 @@
               </button>
             </div>
 
-            <!-- <div class="divider"></div> -->
             {#if $activeTabMagic}
               {#if $activeTabMagic.showSidebar}
                 <div class="magic-tabs-wrapper" class:magic={$magicTabs.length > 0}>
@@ -2742,7 +2741,7 @@
               {/if}
             {/if}
 
-            <div class="pinned-tabs-wrapper">
+            <div class="bg-sky-50 rounded-xl shadow-md flex-shrink-0">
               <DragDropList
                 id="pinned-tabs"
                 type={HorizontalCenterDropZone}
@@ -2771,7 +2770,7 @@
               </DragDropList>
             </div>
 
-            <div class="unpinned-tabs-wrapper">
+            <div class="overflow-x-scroll no-scrollbar flex-grow">
               <DragDropList
                 id="tabs"
                 type={HorizontalDropZone}
@@ -2908,7 +2907,7 @@
               </DragDropList>
             </div>
 
-            <div class="buttons">
+            <div class="flex flex-row flex-shrink-0 items-center space-x-4">
               {#if $sidebarTab === 'active' && $activeTab?.type === 'page'}
                 {#if $activeTabMagic}
                   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -2991,7 +2990,6 @@
                 }}
               >
                 <Icon name="add" color="#7d7448" />
-                <span class="label">New Tab</span>
               </button>
             </div>
           </div>
@@ -3001,9 +2999,9 @@
       </div>
     {/if}
 
-    <div class="horizontal-flex">
+    <div class="h-screen">
       <div
-        class="browser-window-wrapper"
+        class="w-full h-full px-1.5 pb-1.5 {showTabs ? '' : 'pt-1.5'} overflow-hidden flex-grow"
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showTabs}
@@ -3606,38 +3604,6 @@
       background-color: #fff;
     }
   }
-
-  // button {
-  //   appearance: none;
-  //   border: none;
-  //   margin: 0;
-  //   display: flex;
-  //   align-items: center;
-  //   justify-content: center;
-  //   gap: 5px;
-  //   border-radius: 5px;
-  //   cursor: pointer;
-
-  //   &:not(.nav-button) {
-  //     flex: 1;
-  //     background-color: transparent;
-  //     padding: 10px;
-  //   }
-
-  //   &.nav-button {
-  //     padding: 5px;
-  //     background: none;
-  //     color: #5e5e5e;
-
-  //     &:disabled {
-  //       color: #a9a9a9;
-  //     }
-  //   }
-
-  //   &:hover {
-  //     background: #eeece0;
-  //   }
-  // }
 
   .actions {
     display: flex;
