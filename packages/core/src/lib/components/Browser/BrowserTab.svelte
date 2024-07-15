@@ -17,6 +17,7 @@
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { wait } from '@horizon/web-parser/src/utils'
   import { useDebounce } from '../../utils/debounce'
+  import HoverLinkPreview from '../Cards/Browser/HoverLinkPreview.svelte'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<{
@@ -35,6 +36,7 @@
   let hasMounted = false
 
   let findInPage: FindInPage | undefined
+  let hoverTargetUrl: string
 
   export const goBack = () => {
     if (webview) {
@@ -215,7 +217,7 @@
       app.appResourceIdentifier === detectedApp.appResourceIdentifier
     ) {
       log.debug('no change in app or resource', detectedApp)
-      // dispatch('appDetection', detectedApp) // TODO: differentiate between fresh detection and no change
+      dispatch('appDetection', detectedApp) // TODO: differentiate between fresh detection and no change
       return
     }
 
@@ -225,6 +227,10 @@
 
   const handleWebviewKeyDown = (e: CustomEvent<WebViewEventKeyDown>) => {
     dispatch('webviewKeydown', e.detail)
+  }
+
+  const handleUpdateTargetUrl = (e: CustomEvent<string>) => {
+    hoverTargetUrl = e.detail
   }
 
   const debouncedAppDetection = useDebounce(() => {
@@ -291,10 +297,8 @@
 
 {#if webview}
   <FindInPage bind:this={findInPage} {webview} />
-{/if}
-
-{#if webview}
   <ZoomPreview {zoomLevel} {showZoomPreview} />
+  <HoverLinkPreview show={!!hoverTargetUrl} url={hoverTargetUrl} />
 {/if}
 
 <WebviewWrapper
@@ -314,4 +318,5 @@
   on:annotationRemove
   on:annotationUpdate
   on:keydownWebview={handleWebviewKeydown}
+  on:updateTargetUrl={handleUpdateTargetUrl}
 />

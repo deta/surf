@@ -1,0 +1,100 @@
+<script lang="ts">
+  import { fly } from 'svelte/transition'
+
+  export let show: boolean
+  export let url: string
+
+  let timeout: ReturnType<typeof setTimeout>
+  let actualShow = false
+  let cachedUrl = ''
+
+  $: shortenedUrl = truncateURL(url || cachedUrl)
+
+  // truncate the URL path and query params so the beggining and end of the URL are always visible, max length is 50. Make sure the full hostname is always visible
+  const truncateURL = (url: string) => {
+    if (!url) return ''
+
+    const { hostname, pathname, search, protocol } = new URL(url)
+    const maxLength = 75
+
+    let fullPath = pathname + search
+
+    const decodedPath = decodeURIComponent(fullPath)
+    const internationalPath = new Intl.Segmenter().segment(decodedPath)
+    fullPath = Array.from(internationalPath, (segment) => segment.segment).join('')
+
+    if (fullPath.length <= maxLength) {
+      if (protocol === 'https:') {
+        return hostname + fullPath
+      } else {
+        return `http://${hostname}${fullPath}`
+      }
+    }
+
+    const start = fullPath.slice(0, maxLength / 2)
+    const end = fullPath.slice(-maxLength / 2)
+
+    // if the URL is https, we don't need to show the protocol
+    if (protocol === 'https:') {
+      return `${hostname}${start}...${end}`
+    } else {
+      return `http://${hostname}${start}...${end}`
+    }
+  }
+
+  const showAfterDelay = () => {
+    cachedUrl = url
+
+    if (timeout) clearTimeout(timeout)
+
+    timeout = setTimeout(() => {
+      actualShow = true
+    }, 700)
+  }
+
+  const hideAfterDelay = () => {
+    if (timeout) clearTimeout(timeout)
+
+    if (actualShow) {
+      timeout = setTimeout(() => {
+        actualShow = false
+        cachedUrl = ''
+      }, 300)
+    }
+  }
+
+  $: if (show) {
+    showAfterDelay()
+  } else {
+    hideAfterDelay()
+  }
+</script>
+
+{#if actualShow}
+  <main in:fly={{ y: 20, duration: 50 }} out:fly={{ y: 20, duration: 200 }} class="link-preview">
+    <div class="url">
+      {shortenedUrl}
+    </div>
+  </main>
+{/if}
+
+<style>
+  .link-preview {
+    position: absolute;
+    z-index: 1000;
+    bottom: 1rem;
+    left: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(16px);
+    border-radius: calc(8px + 0.25rem);
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .url {
+    font-size: 0.9rem;
+    color: #151515;
+  }
+</style>

@@ -148,6 +148,19 @@ export class WebParser {
     return extracted as DetectedResource | null
   }
 
+  static useFallbackParser(document: Document, url: URL) {
+    const articleParser = new ArticleParser(url)
+
+    const isArticle = articleParser.isArticle(document)
+    console.log('Is article', isArticle)
+
+    if (isArticle) {
+      return articleParser
+    } else {
+      return new LinkParser(url)
+    }
+  }
+
   static getAppParser(url: string) {
     const webParser = new WebParser(url)
     const appParser = webParser.createAppParser()

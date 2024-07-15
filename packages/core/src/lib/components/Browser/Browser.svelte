@@ -192,7 +192,7 @@
   })
 
   const unpinnedTabs = derived([activeTabs], ([tabs]) => {
-    return tabs.filter((tab) => !tab.pinned && !tab.magic).sort((a, b) => b.index - a.index)
+    return tabs.filter((tab) => !tab.pinned && !tab.magic).sort((a, b) => a.index - b.index)
   })
 
   const magicTabs = derived([activeTabs], ([tabs]) => {
@@ -340,11 +340,17 @@
   const createTab = async <T extends Tab>(
     tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'>
   ) => {
+    let minIndex = 0
+    tabs.update((currentTabs) => {
+      minIndex = Math.min(...currentTabs.map((t) => t.index), 0) - 1
+      return currentTabs
+    })
+
     const newTab = await tabsDB.create({
       archived: false,
       pinned: false,
       magic: false,
-      index: Date.now(),
+      index: minIndex,
       ...tab
     })
     log.debug('Created tab', newTab)
@@ -811,6 +817,16 @@
 
   const createHistoryTab = useDebounce(async () => {
     log.debug('Creating new history tab')
+
+    // check if there already exists a history tab, if yes we just change to it
+
+    const historyTab = $tabs.find((tab) => tab.type === 'history')
+
+    if (historyTab) {
+      makeTabActive(historyTab.id)
+      return
+    }
+
     const newTab = await createTab<TabHistory>({
       title: 'History',
       icon: '',
@@ -1019,7 +1035,7 @@
     return resource
   }
 
-  async function handleBookmark() {
+  async function handleBookmark(openAfter = true) {
     try {
       if (!$activeTabLocation || $activeTab?.type !== 'page') return
 
@@ -1032,8 +1048,11 @@
           ResourceTagsBuiltInKeys.SILENT
         )
 
-        openResource($activeTab.resourceBookmark)
-        return
+        if (openAfter) {
+          openResource($activeTab.resourceBookmark)
+        }
+
+        return $activeTab.resourceBookmark
       }
 
       bookmarkingInProgress.set(true)
@@ -1044,7 +1063,11 @@
       toasts.success('Bookmarked Page!')
       bookmarkingSuccess.set(true)
 
-      return resource
+      if (openAfter) {
+        openResource(resource.id)
+      }
+
+      return resource.id
     } catch (e) {
       log.error('error creating resource', e)
     } finally {
@@ -1158,6 +1181,10 @@
 
       url = e.detail.canonicalUrl ?? tab.initialLocation
 
+      await updateTab(tab.id, {
+        currentDetectedApp: e.detail
+      })
+
       const isRunningAlready = appDetectionRunningForURLs.includes(url)
       if (isRunningAlready) {
         log.debug('app detection already running for url', url)
@@ -1168,10 +1195,6 @@
       }
 
       log.debug('app detection running for url', url)
-
-      await updateTab(tab.id, {
-        currentDetectedApp: e.detail
-      })
 
       const browserTab = $browserTabs[tab.id]
       if (!browserTab) {
@@ -1369,7 +1392,12 @@
     return tabs
   }
 
-  const highlightWebviewText = async (resourceId: string, answerText: string) => {
+  const highlightWebviewText = async (
+    resourceId: string,
+    answerText: string,
+    sourceHash?: string
+  ) => {
+    log.info('highlighting text', resourceId, answerText, sourceHash)
     for (const tab of getTabsInChatContext()) {
       const t = tab as TabPage
       if (t.resourceBookmark === resourceId) {
@@ -1379,6 +1407,18 @@
           return
         }
         makeTabActive(t.id)
+        if (answerText === '') {
+          if (sourceHash) {
+            const source = await sffs.getAIChatDataSource(sourceHash)
+            if (source) {
+              answerText = source.content
+            } else {
+              return
+            }
+          } else {
+            return
+          }
+        }
         const detectedResource = await browserTab.detectResource()
         if (!detectedResource) {
           log.error('no resource detected')
@@ -2136,19 +2176,24 @@
     toasts.success('Space added to your Tabs!')
   }
 
-  const handleSaveResourceInSpace = async (e: CustomEvent) => {
-    console.log('hhh', e.detail)
+  const handleSaveResourceInSpace = async (e: CustomEvent<Space>) => {
+    log.debug('add resource to space', e.detail)
+
+    const toast = toasts.loading('Adding resource to space...')
 
     try {
-      const resource = await handleBookmark(e.detail)
-      console.log('BOOKMARKED', resource)
+      const resourceId = await handleBookmark(false)
+      log.debug('bookmarked resource', resourceId)
 
-      if (resource) {
-        console.log('will add item', resource.id, 'to space', e.detail.id)
-        resourceManager.addItemsToSpace(e.detail.id, [resource.id])
+      if (resourceId) {
+        log.debug('will add item', resourceId, 'to space', e.detail.id)
+        await resourceManager.addItemsToSpace(e.detail.id, [resourceId])
       }
-    } finally {
-      console.log('Bookmark handling completed')
+
+      toast.success('Resource added to space!')
+    } catch (e) {
+      log.error('Failed to add resource to space:', e)
+      toast.error('Failed to add resource to space')
     }
   }
 
@@ -2304,7 +2349,7 @@
     })
 
     const tabsList = await tabsDB.all()
-    tabs.update((currentTabs) => currentTabs.sort((a, b) => b.index - a.index))
+    tabs.update((currentTabs) => currentTabs.sort((a, b) => a.index - b.index))
     tabs.set(tabsList)
     log.debug('Tabs loaded', tabsList)
 
@@ -2341,7 +2386,7 @@
     //   updateTab(tab.id, { index: index })
     // })
 
-    tabs.update((tabs) => tabs.sort((a, b) => b.index - a.index))
+    tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
     console.log('xxxx', $tabs)
   })
@@ -2759,7 +2804,7 @@
                       use:popover={{
                         content: {
                           component: ShortcutSaveItem,
-                          props: { resourceManager, spaces }
+                          props: { spaces }
                         },
                         action: 'hover',
                         position: 'right-top',
@@ -2867,7 +2912,7 @@
               use:popover={{
                 content: {
                   component: ShortcutMenu,
-                  props: { resourceManager, spaces }
+                  props: { spaces }
                 },
                 action: 'hover',
                 position: 'right-top',
@@ -3136,7 +3181,7 @@
         bind:inputValue={$magicInputValue}
         on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
         on:highlightWebviewText={(e) =>
-          highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
+          highlightWebviewText(e.detail.resourceId, e.detail.answerText, e.detail.sourceHash)}
         on:seekToTimestamp={(e) => handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
         on:navigate={(e) => {
           $browserTabs[$activeTabId].navigate(e.detail.url)

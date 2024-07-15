@@ -285,6 +285,7 @@
               class="favicon"
               src={`https://www.google.com/s2/favicons?domain=${resource.metadata?.sourceURI}&sz=256`}
               alt={`favicon`}
+              loading="lazy"
             />
           {/if}
 
@@ -328,7 +329,7 @@
     border-radius: 16px;
     overflow: visible;
     cursor: default;
-    animation: 280ms fade-in-up cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    /* animation: 280ms fade-in-up cubic-bezier(0.25, 0.46, 0.45, 0.94); */
     animation-delay: 20ms;
     animation-fill-mode: forwards;
     animation-iteration-count: 1;
@@ -515,7 +516,7 @@
     font-size: 0.9rem;
     color: #666;
     display: -webkit-box;
-    -webkit-line-clamp: 6;
+    -webkit-line-clamp: 15;
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.5;
