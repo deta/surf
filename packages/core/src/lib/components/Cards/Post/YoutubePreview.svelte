@@ -32,9 +32,13 @@
   }
 
   const getYoutubeThumbnailURL = (url: URL) => {
-    const videoId = url.searchParams.get('v')
-    if (videoId) {
-      return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+    try {
+      const videoId = url.searchParams.get('v')
+      if (videoId) {
+        return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+      }
+    } catch (e) {
+      log.error('Failed to parse YouTube URL', e)
     }
     return ''
   }
@@ -77,33 +81,13 @@
 </script>
 
 <div class="link-card">
-  <div class="details">
-    {#if loading}
-      <LoadingBox />
-    {:else if title === 'Invalid URL'}
-      <div class="title">{title}</div>
-      <div class="subtitle">{post?.url}</div>
-    {:else}
-      {#if youtubeThumbnailURL}
-        <div class="thumbnail-wrapper">
-          <div class="play-icon">
-            <Icon name="play" size="32px" style="fill:white; stroke-width: 0;" />
-          </div>
-          <img
-            class="youtube-thumbnail"
-            src={youtubeThumbnailURL}
-            alt="YouTube video thumbnail"
-            on:load={handleLoad}
-            loading="lazy"
-          />
-        </div>
-      {/if}
-      <!-- <div class="post-metadata">
-        <div class="title">{title}</div>
-        <Link class="link" url={post?.author_url} label={`From ${post?.author}`} />
-      </div> -->
-    {/if}
-  </div>
+  <img
+    class="youtube-thumbnail"
+    src={youtubeThumbnailURL}
+    alt="YouTube video thumbnail"
+    on:load={handleLoad}
+    loading="lazy"
+  />
 </div>
 
 <style lang="scss">
