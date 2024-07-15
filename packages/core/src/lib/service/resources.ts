@@ -41,7 +41,7 @@ import type { MediaParserResult } from './mediaImporter'
  - use the relevant enum, and do not hard code the values
 */
 
-const everythingSpace = {
+export const everythingSpace = {
   id: 'all',
   name: {
     folderName: 'Everything',

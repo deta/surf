@@ -2792,7 +2792,7 @@
                       use:popover={{
                         content: {
                           component: ShortcutSaveItem,
-                          props: { resourceManager, spaces }
+                          props: { spaces }
                         },
                         action: 'hover',
                         position: 'right-top',
@@ -2900,7 +2900,7 @@
               use:popover={{
                 content: {
                   component: ShortcutMenu,
-                  props: { resourceManager, spaces }
+                  props: { spaces }
                 },
                 action: 'hover',
                 position: 'right-top',

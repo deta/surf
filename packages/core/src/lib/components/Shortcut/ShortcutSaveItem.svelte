@@ -1,33 +1,19 @@
 <script lang="ts">
-  import type { Space } from '@horizon/types'
-  import { ResourceManager } from '../../service/resources'
   import { createEventDispatcher, onMount } from 'svelte'
+  import { derived, type Writable } from 'svelte/store'
+  import type { Space } from '../../types'
 
-  export let resourceManager: ResourceManager
-  export let spaces: Space[] = []
+  export let spaces: Writable<Space[]>
+  export let closePopover: () => void
 
   let selectedSpaceIndex = 0
-  let isLoading = true
   let inputRef: HTMLInputElement
-  let searchQuery = ''
-  let filteredSpaces: Space[] = []
 
   const dispatch = createEventDispatcher()
 
-  const loadSpaces = async () => {
-    try {
-      const fetchedSpaces = await resourceManager.listSpaces()
-      spaces = fetchedSpaces
-      console.log('Spaces:', spaces)
-      filteredSpaces = spaces
-    } catch (error) {
-      console.error('Error loading spaces:', error)
-      spaces = []
-      filteredSpaces = []
-    } finally {
-      isLoading = false
-    }
-  }
+  const filteredSpaces = derived([spaces], ([spaces]) => {
+    return spaces.filter((space) => space.id !== 'all')
+  })
 
   const handleKeydown = (event: KeyboardEvent) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -35,21 +21,23 @@
       event.stopPropagation()
 
       if (event.key === 'ArrowDown') {
-        selectedSpaceIndex = (selectedSpaceIndex + 1) % filteredSpaces.length
+        selectedSpaceIndex = (selectedSpaceIndex + 1) % $filteredSpaces.length
       } else if (event.key === 'ArrowUp') {
         selectedSpaceIndex =
-          (selectedSpaceIndex - 1 + filteredSpaces.length) % filteredSpaces.length
+          (selectedSpaceIndex - 1 + $filteredSpaces.length) % $filteredSpaces.length
       }
     } else if (event.key === 'Enter') {
       console.log('Dispatching custom event from handleKeydown')
-      dispatch('save-resource-in-space', filteredSpaces[selectedSpaceIndex])
+      dispatch('save-resource-in-space', $filteredSpaces[selectedSpaceIndex])
+      closePopover()
     }
   }
 
   const handleClick = (index: number) => {
     selectedSpaceIndex = index
     console.log('Dispatching custom event from handleClick')
-    dispatch('save-resource-in-space', filteredSpaces[selectedSpaceIndex])
+    dispatch('save-resource-in-space', $filteredSpaces[selectedSpaceIndex])
+    closePopover()
   }
 
   const focusInput = () => {
@@ -58,14 +46,7 @@
     }
   }
 
-  const handleSearch = () => {
-    filteredSpaces = spaces.filter((space) =>
-      space.name.folderName.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  }
-
   onMount(() => {
-    loadSpaces()
     window.addEventListener('keydown', handleKeydown, true)
     focusInput()
     return () => {
@@ -75,10 +56,8 @@
 </script>
 
 <div class="shortcut-wrapper">
-  {#if isLoading}
-    <span>Loading...</span>
-  {:else if filteredSpaces && filteredSpaces.length > 0}
-    {#each filteredSpaces as space, index}
+  {#if $filteredSpaces && $filteredSpaces.length > 0}
+    {#each $filteredSpaces as space, index}
       <span
         class="label"
         class:active={index === selectedSpaceIndex}
@@ -94,6 +73,7 @@
 <style lang="scss">
   .shortcut-wrapper {
     display: flex;
+    overflow-y: auto;
     flex-direction: column;
     width: 18rem;
     max-height: 30rem;
