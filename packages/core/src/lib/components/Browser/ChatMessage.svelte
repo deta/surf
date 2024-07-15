@@ -1,14 +1,13 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import type { AIChatMessageSource } from './types'
-  import Search from '@horizon/drawer/src/lib/Search.svelte'
 
   export let content: string
   export let sources: AIChatMessageSource[] | undefined
   export let showSourcesAtEnd: boolean = false
 
   const dispatch = createEventDispatcher<{
-    citationClick: { citationID: string; text: string }
+    citationClick: { citationID: string; text: string; sourceHash?: string }
     citationHoverStart: string
     citationHoverEnd: string
   }>()
@@ -59,7 +58,6 @@
   }
 
   const renderContent = (content: string, sources?: AIChatMessageSource[]) => {
-    console.log('TMP: renderContent', content)
     if (!elem || !content) return
 
     elem.innerHTML = ''
@@ -68,7 +66,6 @@
     tempDiv.innerHTML = content
 
     const citationsToText = mapCitationsToText(tempDiv)
-    console.log('TMP: citationsToText', citationsToText)
 
     const links = tempDiv.querySelectorAll('a')
     links.forEach((link) => {
@@ -100,11 +97,19 @@
       seen_citations.add(renderID)
       citation.addEventListener('click', () => {
         if (!citation.textContent) return
-        const text = citationsToText.get(index)
+        let text = citationsToText.get(index)
         if (!text) {
-          console.error('ChatMessage: No text found for citation', citationID)
-          alert('Error: No text found for citation')
-          return
+          console.debug(
+            'ChatMessage: No text found for citation,',
+            citationID,
+            'trying to return previous index id'
+          )
+          text = citationsToText.get(index - 1)
+          if (!text) {
+            console.error('ChatMessage: No text found for citation, ', citationID)
+            alert('Error: failed to get answer for citation')
+            return
+          }
         }
         dispatch('citationClick', { citationID, text })
       })
@@ -132,14 +137,18 @@
 {#if sources && sources.length > 0 && showSourcesAtEnd}
   <div class="citations-list">
     {#each sources as source, idx}
-      <div
-        class="citation-item"
-        on:click={() => dispatch('citationClick', source.id)}
-        on:mouseenter={() => dispatch('citationHoverStart', source.id)}
-        on:mouseleave={() => dispatch('citationHoverEnd', source.id)}
-      >
-        {idx + 1}
-      </div>
+      {#if idx <= 9}
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <div
+          class="citation-item"
+          on:click={() =>
+            dispatch('citationClick', { citationID: source.id, text: '', sourceHash: source.hash })}
+          on:mouseenter={() => dispatch('citationHoverStart', source.id)}
+          on:mouseleave={() => dispatch('citationHoverEnd', source.id)}
+        >
+          {idx + 1}
+        </div>
+      {/if}
     {/each}
   </div>
 {/if}

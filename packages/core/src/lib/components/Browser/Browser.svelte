@@ -1385,7 +1385,12 @@
     return tabs
   }
 
-  const highlightWebviewText = async (resourceId: string, answerText: string) => {
+  const highlightWebviewText = async (
+    resourceId: string,
+    answerText: string,
+    sourceHash?: string
+  ) => {
+    log.info('highlighting text', resourceId, answerText, sourceHash)
     for (const tab of getTabsInChatContext()) {
       const t = tab as TabPage
       if (t.resourceBookmark === resourceId) {
@@ -1395,6 +1400,18 @@
           return
         }
         makeTabActive(t.id)
+        if (answerText === '') {
+          if (sourceHash) {
+            const source = await sffs.getAIChatDataSource(sourceHash)
+            if (source) {
+              answerText = source.content
+            } else {
+              return
+            }
+          } else {
+            return
+          }
+        }
         const detectedResource = await browserTab.detectResource()
         if (!detectedResource) {
           log.error('no resource detected')
@@ -3152,7 +3169,7 @@
         bind:inputValue={$magicInputValue}
         on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
         on:highlightWebviewText={(e) =>
-          highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
+          highlightWebviewText(e.detail.resourceId, e.detail.answerText, e.detail.sourceHash)}
         on:seekToTimestamp={(e) => handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
         on:navigate={(e) => {
           $browserTabs[$activeTabId].navigate(e.detail.url)
