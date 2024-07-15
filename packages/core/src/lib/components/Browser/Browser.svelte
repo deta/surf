@@ -2667,7 +2667,7 @@
         {#if $sidebarTab !== 'oasis'}
           <div
             class="flex {!horizontalTabs
-              ? 'flex-col w-[300px]  py-3 space-y-8 px-2 h-full'
+              ? 'flex-col w-[300px]  py-3 space-y-4 px-2 h-full'
               : 'flex-row items-center ml-24 space-x-4 mr-4'} relative"
           >
             <div
@@ -3114,7 +3114,7 @@
               {/if}
             </div>
 
-            <div class="flex flex-row flex-shrink-0 items-center space-x-4">
+            <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
               {#if $sidebarTab === 'active' && $activeTab?.type === 'page'}
                 {#if $activeTabMagic}
                   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
