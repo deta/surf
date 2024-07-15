@@ -47,7 +47,7 @@
   import BrowserTab, { type NewTabEvent } from './BrowserTab.svelte'
   import Horizon from '../Horizon/Horizon.svelte'
   import BrowserHomescreen from './BrowserHomescreen.svelte'
-  import OasisSidebar from '../Oasis/OasisSidebar.svelte'
+  import SpacesView from '../Oasis/SpacesView.svelte'
   import TabItem from './Tab.svelte'
   import TabSearch from './TabSearch.svelte'
   import ShortcutMenu, { type ShortcutMenuEvents } from '../Shortcut/ShortcutMenu.svelte'
@@ -2936,7 +2936,7 @@
           </DragDropList>
         </div>
       {:else}
-        <OasisSidebar on:createTab={handleCreateTabFromSpace} />
+        <SpacesView on:createTab={handleCreateTabFromSpace} />
       {/if}
     </div>
   {/if}

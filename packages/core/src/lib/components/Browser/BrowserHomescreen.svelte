@@ -8,7 +8,7 @@
   import { fly } from 'svelte/transition'
 
   import { Icon } from '@horizon/icons'
-  import OasisSidebar from '../Oasis/OasisSidebar.svelte'
+  import SpacesView from '../Oasis/SpacesView.svelte'
 
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
   import browserBackground from '../../../../public/assets/foggy-placeholder.png'
@@ -98,7 +98,7 @@
     }
   }
 
-  const handleCreateTabFromOasisSidebar = (e: CustomEvent) => {
+  const handleCreateTabFromSpacesView = (e: CustomEvent) => {
     dispatch('create-tab-from-space', e.detail)
   }
 
@@ -194,9 +194,9 @@
         </div>
       </div>
     {:else}
-      <OasisSidebar
+      <SpacesView
         onBack={() => showAllSpaces.set(false)}
-        on:createTab={handleCreateTabFromOasisSidebar}
+        on:createTab={handleCreateTabFromSpacesView}
       />
     {/if}
   </div>

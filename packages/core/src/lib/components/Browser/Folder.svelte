@@ -211,7 +211,7 @@
       {#await getPreviewResources(6) then resources}
         {#each resources as resource}
           <div class="folder-preview" style="transform: rotate({getRandomRotation()});">
-            <ResourcePreviewClean {resource} showTitles={false} />
+            <ResourcePreviewClean {resource} showTitles={false} interactive={false} />
           </div>
         {/each}
       {/await}
