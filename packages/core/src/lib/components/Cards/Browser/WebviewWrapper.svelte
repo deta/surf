@@ -7,6 +7,7 @@
     keyupWebview: WebViewSendEvents[WebViewEventSendNames.KeyUp]
     keydownWebview: WebViewSendEvents[WebViewEventSendNames.KeyDown]
     foundInPage: Electron.FoundInPageEvent
+    updateTargetUrl: string
     selectionWebview: { text: string }
     detectedApp: DetectedWebApp
     detectedResource: WebViewSendEvents[WebViewEventSendNames.DetectedResource]
@@ -315,6 +316,10 @@
 
     webview.addEventListener('found-in-page', (e: Electron.FoundInPageEvent) => {
       dispatch('foundInPage', e)
+    })
+
+    webview.addEventListener('update-target-url', (e: Electron.UpdateTargetUrlEvent) => {
+      dispatch('updateTargetUrl', e.url)
     })
   })
 
