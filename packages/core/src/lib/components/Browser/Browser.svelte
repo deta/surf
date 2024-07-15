@@ -2307,11 +2307,11 @@
 
   let maxWidth = window.innerWidth
 
-  $: tabSize = Math.min(500, Math.max(90, maxWidth / ($tabs.length - 10)))
+  $: tabSize = Math.min(500, Math.max(128, maxWidth / ($tabs.length - 14)))
 
   const handleResize = () => {
     maxWidth = window.innerWidth
-    tabSize = Math.min(500, Math.max(90, maxWidth / $tabs.length))
+    tabSize = Math.min(500, Math.max(128, maxWidth / $tabs.length))
   }
 
   onMount(async () => {
@@ -2644,7 +2644,7 @@
 <ToastsProvider service={toasts} />
 
 <div
-  class="antialiased w-screen h-screen bg-gradient-to-br will-change-auto transform-gpu from-cyan-100 to-indigo-200 via-blue-300"
+  class="antialiased w-screen h-screen will-change-auto transform-gpu bg-sky-100/50 backdrop-blur-lg"
 >
   {#if showTabSearch}
     <TabSearch
@@ -2841,7 +2841,7 @@
                 <DragDropList
                   id="tabs"
                   type={HorizontalDropZone}
-                  itemSize={Math.min(256, Math.max(81, tabSize))}
+                  itemSize={Math.min(500, Math.max(128, tabSize))}
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
