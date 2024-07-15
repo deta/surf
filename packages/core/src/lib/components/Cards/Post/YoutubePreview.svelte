@@ -8,6 +8,7 @@
   import Link from '../../Atoms/Link.svelte'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
   import type { ResourcePreviewEvents } from '../../Resources/events'
+  import fallback from '../../../../../public/assets/foggy-placeholder.png'
 
   export let resource: ResourcePost
   export let type: string
@@ -36,11 +37,16 @@
       const videoId = url.searchParams.get('v')
       if (videoId) {
         return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+      } else {
+        log.warn('Video ID not found in URL')
       }
     } catch (e) {
       log.error('Failed to parse YouTube URL', e)
     }
-    return ''
+
+    const fallbackURL = fallback
+    log.info('Returning fallback thumbnail URL')
+    return fallbackURL
   }
 
   const handleLoad = () => {
