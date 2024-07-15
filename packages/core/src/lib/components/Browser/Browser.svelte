@@ -667,7 +667,8 @@
     } else if (isModKeyAndKeyPressed(e, 'g')) {
       sidebarTab.set('active')
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
-      horizontalTabs = !horizontalTabs
+      // horizontalTabs = !horizontalTabs
+      debounceToggleHorizontalTabs()
       console.log('horizontalTabs', horizontalTabs)
     } else if (isModKeyAndKeyPressed(e, 'h')) {
       showTabs = !showTabs
@@ -734,6 +735,12 @@
       }
     }
   }
+
+  const handleToggleHorizontalTabs = () => {
+    horizontalTabs = !horizontalTabs
+  }
+
+  const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
 
   const handleAddressBarKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
