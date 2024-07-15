@@ -2651,9 +2651,12 @@
           <div
             class="flex {!horizontalTabs
               ? 'flex-col w-[300px]  py-3 space-y-8 px-2 h-full'
-              : 'flex-row items-center ml-24 space-x-4 mr-4'} relative "
+              : 'flex-row items-center ml-24 space-x-4 mr-4'} relative"
           >
-            <div class="flex flex-row items-center flex-shrink-0 {!horizontalTabs && 'w-full justify-end'}">
+            <div
+              class="flex flex-row items-center flex-shrink-0 {!horizontalTabs &&
+                'w-full justify-end'}"
+            >
               <button
                 class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
                   ? 'opacity-30 cursor-not-allowed'
@@ -2713,8 +2716,6 @@
               </button>
             </div>
 
-         
-
             <div class="bg-sky-50 rounded-xl shadow-md flex-shrink-0">
               <DragDropList
                 id="pinned-tabs"
@@ -2745,78 +2746,81 @@
             </div>
 
             {#if $activeTabMagic}
-            {#if $activeTabMagic.showSidebar}
-              <div class="" class:magic={$magicTabs.length > 0}>
-                {#if horizontalTabs}
-                <DragDropList
-                  id="magic-tabs"
-                  type={HorizontalDropZone}
-                  itemSize={256}
-                  itemCount={$magicTabs.length || 1}
-                  on:drop={async (event) => {
-                    onDrop(event, 'unpin')
-                  }}
-                  let:index
-                >
-                  {#if $magicTabs.length === 0}
-                    <div class="debug max-h-[50px]">
-                      <div class="ai-wrapper">
-                        <Icon name="ai" size={12 * 0.75 + 'px'} />
-                      </div>
-                      <span class="text-xs"
-                        >You are chatting with all tabs. Drop tabs here to filter.</span
-                      >
-                    </div>
+              {#if $activeTabMagic.showSidebar}
+                <div class="" class:magic={$magicTabs.length > 0}>
+                  {#if horizontalTabs}
+                    <DragDropList
+                      id="magic-tabs"
+                      type={HorizontalDropZone}
+                      itemSize={256}
+                      itemCount={$magicTabs.length || 1}
+                      on:drop={async (event) => {
+                        onDrop(event, 'unpin')
+                      }}
+                      let:index
+                    >
+                      {#if $magicTabs.length === 0}
+                        <div class="debug max-h-[50px]">
+                          <div class="ai-wrapper">
+                            <Icon name="ai" size={12 * 0.75 + 'px'} />
+                          </div>
+                          <span class="text-xs"
+                            >You are chatting with all tabs. Drop tabs here to filter.</span
+                          >
+                        </div>
+                      {:else}
+                        <TabItem
+                          tab={$magicTabs[index]}
+                          {activeTabId}
+                          {deleteTab}
+                          {unarchiveTab}
+                          pinned={false}
+                          on:select={handleTabSelect}
+                          on:remove-from-sidebar={handleRemoveFromSidebar}
+                        />
+                      {/if}
+                    </DragDropList>
                   {:else}
-                    <TabItem
-                      tab={$magicTabs[index]}
-                      {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
-                      pinned={false}
-                      on:select={handleTabSelect}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                    />
+                    <DragDropList
+                      id="magic-tabs"
+                      type={VerticalDropZone}
+                      itemSize={54}
+                      itemCount={$magicTabs.length || 1}
+                      on:drop={async (event) => {
+                        onDrop(event, 'unpin')
+                      }}
+                      let:index
+                    >
+                      {#if $magicTabs.length === 0}
+                        <div class="debug max-h-[50px]">
+                          <div class="ai-wrapper">
+                            <Icon name="ai" size={12 * 0.75 + 'px'} />
+                          </div>
+                          <span class="text-xs"
+                            >You are chatting with all tabs. Drop tabs here to filter.</span
+                          >
+                        </div>
+                      {:else}
+                        <TabItem
+                          tab={$magicTabs[index]}
+                          {activeTabId}
+                          {deleteTab}
+                          {unarchiveTab}
+                          pinned={false}
+                          on:select={handleTabSelect}
+                          on:remove-from-sidebar={handleRemoveFromSidebar}
+                        />
+                      {/if}
+                    </DragDropList>
                   {/if}
-                </DragDropList>
-                {:else}
-                <DragDropList
-                  id="magic-tabs"
-                  type={VerticalDropZone}
-                  itemSize={54}
-                  itemCount={$magicTabs.length || 1}
-                  on:drop={async (event) => {
-                    onDrop(event, 'unpin')
-                  }}
-                  let:index
-                >
-                  {#if $magicTabs.length === 0}
-                    <div class="debug max-h-[50px]">
-                      <div class="ai-wrapper">
-                        <Icon name="ai" size={12 * 0.75 + 'px'} />
-                      </div>
-                      <span class="text-xs"
-                        >You are chatting with all tabs. Drop tabs here to filter.</span
-                      >
-                    </div>
-                  {:else}
-                    <TabItem
-                      tab={$magicTabs[index]}
-                      {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
-                      pinned={false}
-                      on:select={handleTabSelect}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                    />
-                  {/if}
-                </DragDropList>
-                {/if}
-              </div>
-            {/if}
-          {/if}
+                </div>
 
-            <div class="overflow-x-scroll no-scrollbar relative flex-grow ">
+                <div class="w-full h-0.5 bg-sky-300/50"></div>
+              {/if}
+            {/if}
+
+
+            <div class="overflow-x-scroll no-scrollbar relative flex-grow">
               {#if horizontalTabs}
                 <DragDropList
                   id="tabs"
@@ -2958,7 +2962,7 @@
                 <DragDropList
                   id="tabs"
                   type={VerticalDropZone}
-                  itemSize={54} 
+                  itemSize={54}
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
@@ -3173,7 +3177,11 @@
       </div>
     {/if}
 
-    <div class="h-screen w-screen flex space-x-4 relative flex-row {horizontalTabs ? 'px-1.5' : 'py-1.5'}">
+    <div
+      class="h-screen w-screen flex space-x-4 relative flex-row {horizontalTabs
+        ? 'px-1.5'
+        : 'py-1.5'}"
+    >
       <!-- {horizontalTabs ? `pb-1.5 ${showTabs && 'pt-1.5'}` : `pr-1.5 ${showTabs && 'pl-1.5'}`}  -->
       <div
         class="w-full h-full overflow-hidden flex-grow"
