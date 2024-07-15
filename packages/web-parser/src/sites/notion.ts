@@ -41,7 +41,7 @@ export class NotionParser extends WebAppExtractor {
   getInfo(): DetectedWebApp {
     const resourceType = this.detectResourceType()
     const appResourceIdentifier =
-      resourceType === ResourceTypes.DOCUMENT_NOTION ? this.url.pathname : null
+      resourceType === ResourceTypes.DOCUMENT_NOTION ? this.getPageID() : this.url.pathname
 
     return {
       appId: this.app?.id ?? null,

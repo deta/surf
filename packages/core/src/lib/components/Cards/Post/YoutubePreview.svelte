@@ -8,6 +8,7 @@
   import Link from '../../Atoms/Link.svelte'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
   import type { ResourcePreviewEvents } from '../../Resources/events'
+  import fallback from '../../../../../public/assets/fallback.youtube.png'
 
   export let resource: ResourcePost
   export let type: string
@@ -32,11 +33,20 @@
   }
 
   const getYoutubeThumbnailURL = (url: URL) => {
-    const videoId = url.searchParams.get('v')
-    if (videoId) {
-      return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+    try {
+      const videoId = url.searchParams.get('v')
+      if (videoId) {
+        return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+      } else {
+        log.warn('Video ID not found in URL')
+      }
+    } catch (e) {
+      log.error('Failed to parse YouTube URL', e)
     }
-    return ''
+
+    const fallbackURL = fallback
+    log.info('Returning fallback thumbnail URL')
+    return fallbackURL
   }
 
   const handleLoad = () => {
@@ -77,33 +87,13 @@
 </script>
 
 <div class="link-card">
-  <div class="details">
-    {#if loading}
-      <LoadingBox />
-    {:else if title === 'Invalid URL'}
-      <div class="title">{title}</div>
-      <div class="subtitle">{post?.url}</div>
-    {:else}
-      {#if youtubeThumbnailURL}
-        <div class="thumbnail-wrapper">
-          <div class="play-icon">
-            <Icon name="play" size="32px" style="fill:white; stroke-width: 0;" />
-          </div>
-          <img
-            class="youtube-thumbnail"
-            src={youtubeThumbnailURL}
-            alt="YouTube video thumbnail"
-            on:load={handleLoad}
-            loading="lazy"
-          />
-        </div>
-      {/if}
-      <!-- <div class="post-metadata">
-        <div class="title">{title}</div>
-        <Link class="link" url={post?.author_url} label={`From ${post?.author}`} />
-      </div> -->
-    {/if}
-  </div>
+  <img
+    class="youtube-thumbnail"
+    src={youtubeThumbnailURL}
+    alt="YouTube video thumbnail"
+    on:load={handleLoad}
+    loading="lazy"
+  />
 </div>
 
 <style lang="scss">

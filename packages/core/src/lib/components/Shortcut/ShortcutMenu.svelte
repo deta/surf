@@ -6,56 +6,69 @@
 </script>
 
 <script lang="ts">
-  import { ResourceManager } from '../../service/resources'
+  import { everythingSpace, ResourceManager } from '../../service/resources'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
-  import { writable } from 'svelte/store'
+  import { writable, derived, type Writable } from 'svelte/store'
   import type { Space } from '../../types'
 
-  export let resourceManager: ResourceManager
-  export let spaces: Space[] = []
+  export let spaces: Writable<Space[]>
   export let closePopover: () => void
 
   let selectedSpaceIndex = 0
   let isLoading = true
   let inputRef: HTMLInputElement
-  let searchQuery = ''
-  let filteredSpaces: Space[] = []
+  const searchQuery = writable('')
 
   const dispatch = createEventDispatcher<ShortcutMenuEvents>()
 
   const isCreatingNewSpace = writable(false)
   let newSpaceName = ''
 
-  const loadSpaces = async () => {
-    try {
-      const fetchedSpaces = await resourceManager.listSpaces()
-      spaces = fetchedSpaces.filter((space) => !space.name.showInSidebar)
+  const filteredSpaces = derived([spaces, searchQuery], ([spaces, searchQuery]) => {
+    const hasEverythingSpace = spaces.some((space) => space.id === everythingSpace.id)
+    const everything = hasEverythingSpace ? spaces : [everythingSpace, ...spaces]
+    return everything.filter((space) => {
+      if (space.name.showInSidebar) {
+        return false
+      }
 
-      spaces.push({
-        id: 'all',
-        name: {
-          folderName: 'Everything',
-          colors: ['#76E0FF', '#4EC9FB'],
-          showInSidebar: false,
-          liveModeEnabled: false,
-          hideViewed: false
-        },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        deleted: 0
-      })
+      if (searchQuery) {
+        return space.name.folderName.toLowerCase().includes(searchQuery.toLowerCase())
+      }
 
-      console.log('Spaces:', spaces)
-      filteredSpaces = spaces
-    } catch (error) {
-      console.error('Error loading spaces:', error)
-      spaces = []
-      filteredSpaces = []
-    } finally {
-      isLoading = false
-    }
-  }
+      return true
+    })
+  })
+
+  // const loadSpaces = async () => {
+  //   try {
+  //     const notInSidebar = $spaces.filter((space) => !space.name.showInSidebar)
+
+  //     notInSidebar.push({
+  //       id: 'all',
+  //       name: {
+  //         folderName: 'Everything',
+  //         colors: ['#76E0FF', '#4EC9FB'],
+  //         showInSidebar: false,
+  //         liveModeEnabled: false,
+  //         hideViewed: false
+  //       },
+  //       created_at: new Date().toISOString(),
+  //       updated_at: new Date().toISOString(),
+  //       deleted: 0
+  //     })
+
+  //     console.log('Spaces:', spaces)
+  //     filteredSpaces = $spaces
+  //   } catch (error) {
+  //     console.error('Error loading spaces:', error)
+  //     spaces = []
+  //     filteredSpaces = []
+  //   } finally {
+  //     isLoading = false
+  //   }
+  // }
 
   const handleKeydown = (event: KeyboardEvent) => {
     if (inputRef && inputRef === document.activeElement) {
@@ -66,23 +79,23 @@
       event.preventDefault()
       event.stopPropagation()
       if (event.key === 'ArrowDown') {
-        selectedSpaceIndex = (selectedSpaceIndex + 1) % filteredSpaces.length
+        selectedSpaceIndex = (selectedSpaceIndex + 1) % $filteredSpaces.length
       } else if (event.key === 'ArrowUp') {
         selectedSpaceIndex =
-          (selectedSpaceIndex - 1 + filteredSpaces.length) % filteredSpaces.length
+          (selectedSpaceIndex - 1 + $filteredSpaces.length) % $filteredSpaces.length
       }
     } else if (event.key === 'Enter') {
       event.preventDefault()
       event.stopImmediatePropagation()
-      console.log('Dispatching custom event from handleKeydown')
-      dispatch('create-tab-from-space', filteredSpaces[selectedSpaceIndex])
+      closePopover()
+      dispatch('create-tab-from-space', $filteredSpaces[selectedSpaceIndex])
     }
   }
 
   const handleClick = (index: number) => {
     selectedSpaceIndex = index
-    console.log('Dispatching custom event from handleClick')
-    dispatch('create-tab-from-space', filteredSpaces[selectedSpaceIndex])
+    closePopover()
+    dispatch('create-tab-from-space', $filteredSpaces[selectedSpaceIndex])
   }
 
   const focusInput = () => {
@@ -91,11 +104,11 @@
     }
   }
 
-  const handleSearch = () => {
-    filteredSpaces = spaces.filter((space) =>
-      space.name.folderName.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  }
+  // const handleSearch = () => {
+  //   filteredSpaces = spaces.filter((space) =>
+  //     space.name.folderName.toLowerCase().includes(searchQuery.toLowerCase())
+  //   )
+  // }
 
   const startCreatingNewSpace = async () => {
     isCreatingNewSpace.set(true)
@@ -110,7 +123,6 @@
   }
 
   const confirmCreatingNewSpace = (processNaturalLanguage: boolean) => {
-    console.log('Confirming creation of new space')
     dispatch('create-new-space', { name: newSpaceName, processNaturalLanguage })
     isCreatingNewSpace.set(false)
     newSpaceName = ''
@@ -118,7 +130,7 @@
   }
 
   onMount(() => {
-    loadSpaces()
+    // loadSpaces()
     window.addEventListener('keydown', handleKeydown, true)
     focusInput()
     return () => {
@@ -128,10 +140,8 @@
 </script>
 
 <div class="shortcut-wrapper">
-  {#if isLoading}
-    <span>Loading...</span>
-  {:else if filteredSpaces && filteredSpaces.length > 0}
-    {#each filteredSpaces as space, index}
+  {#if $filteredSpaces.length > 0}
+    {#each $filteredSpaces as space, index}
       <span
         class="label"
         class:active={index === selectedSpaceIndex}

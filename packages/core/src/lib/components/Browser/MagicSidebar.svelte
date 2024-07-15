@@ -27,7 +27,7 @@
 
   const dispatch = createEventDispatcher<{
     highlightText: { tabId: string; text: string }
-    highlightWebviewText: { resourceId: string; answerText: string }
+    highlightWebviewText: { resourceId: string; answerText: string; sourceHash?: string }
     seekToTimestamp: { resourceId: string; timestamp: number }
     clearChat: {}
     navigate: { url: string }
@@ -64,7 +64,8 @@
   const handleCitationClick = async (
     sourceId: string,
     answerText: string,
-    message: AIChatMessageParsed
+    message: AIChatMessageParsed,
+    sourceHash?: string
   ) => {
     log.debug('Citation clicked', sourceId, message)
     const source = (message.sources ?? []).find((s) => s.id === sourceId)
@@ -79,19 +80,14 @@
       resource.type === ResourceTypes.ARTICLE ||
       resource.type.startsWith(ResourceTypes.POST)
     ) {
-      const data = await (resource as ResourceLink).getParsedData()
-
-      let url: string
       if (resource.type === ResourceTypes.POST_YOUTUBE && source.metadata?.timestamp) {
         const timestamp = source.metadata.timestamp
-        //url = `https://www.youtube.com/watch?v=${(data as any as ResourceDataPost).post_id}&t=${timestamp}s`
-        //log.debug('url', url)
-        //dispatch('navigate', { url: url })
         dispatch('seekToTimestamp', { resourceId: resource.id, timestamp: timestamp })
       } else {
         dispatch('highlightWebviewText', {
           resourceId: resource.id,
-          answerText: answerText
+          answerText: answerText,
+          sourceHash: sourceHash
         })
       }
     }
@@ -206,7 +202,13 @@
             content={response.content}
             sources={populateRenderAndChunkIds(response.sources)}
             on:citationClick={(e) =>
-              handleCitationClick(e.detail.citationID, e.detail.text, response)}
+              handleCitationClick(
+                e.detail.citationID,
+                e.detail.text,
+                response,
+                e.detail.sourceHash
+              )}
+            showSourcesAtEnd={true}
           />
         </div>
       {:else if response.status === 'pending'}

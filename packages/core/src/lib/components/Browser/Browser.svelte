@@ -999,9 +999,11 @@
       throw new Error('No resource detected')
     }
 
+    const title = detectedResource.data.title ?? tab.title ?? ''
+
     const resource = await resourceManager.createResourceOther(
       new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-      { name: tab.title ?? '', sourceURI: url, alt: '' },
+      { name: title, sourceURI: url, alt: '' },
       [
         ResourceTag.canonicalURL(url),
         ResourceTag.viewedByUser(true),
@@ -1014,36 +1016,44 @@
   }
 
   async function bookmarkPage(tab: TabPage, silent = false) {
-    let resource: Resource | null = null
+    const currentEntry = historyEntriesManager.getEntry(
+      tab.historyStackIds[tab.currentHistoryIndex]
+    )
+    let url = currentEntry?.url ?? tab.initialLocation
+
+    // strip &t from url suffix
+    let youtubeHostnames = [
+      'youtube.com',
+      'youtu.be',
+      'youtube.de',
+      'www.youtube.com',
+      'www.youtu.be',
+      'www.youtube.de'
+    ]
+    if (youtubeHostnames.includes(new URL(url).host)) {
+      url = url.replace(/&t.*/g, '')
+    }
+
     if (tab.chatResourceBookmark) {
-      resource = await resourceManager.getResource(tab.chatResourceBookmark)
-    }
+      const fetchedResource = await resourceManager.getResource(tab.chatResourceBookmark)
+      if (fetchedResource) {
+        const fetchedCanonical = (fetchedResource?.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+        )
 
-    if (!resource) {
-      const currentEntry = historyEntriesManager.getEntry(
-        tab.historyStackIds[tab.currentHistoryIndex]
-      )
-      let url = currentEntry?.url ?? tab.initialLocation
+        if (fetchedCanonical?.value === url) {
+          log.debug('already bookmarked', url, fetchedResource.id)
 
-      // strip &t from url suffix
-      let youtubeHostnames = [
-        'youtube.com',
-        'youtu.be',
-        'youtube.de',
-        'www.youtube.com',
-        'www.youtu.be',
-        'www.youtube.de'
-      ]
-      if (youtubeHostnames.includes(new URL(url).host)) {
-        url = url.replace(/&t.*/g, '')
+          updateTab(tab.id, { resourceBookmark: fetchedResource.id })
+          return fetchedResource
+        }
       }
-      log.debug('bookmarking', url)
-
-      resource = await createBookmarkResource(url, tab, silent)
     }
 
-    if (resource?.id)
-      updateTab(tab.id, { resourceBookmark: resource.id, chatResourceBookmark: resource.id })
+    log.debug('bookmarking', url)
+    const resource = await createBookmarkResource(url, tab, silent)
+
+    updateTab(tab.id, { resourceBookmark: resource.id, chatResourceBookmark: resource.id })
 
     return resource
   }
@@ -1052,20 +1062,42 @@
     try {
       if (!$activeTabLocation || $activeTab?.type !== 'page') return
 
-      if ($activeTab.resourceBookmark) {
-        log.debug('already bookmarked', $activeTab.resourceBookmark)
+      bookmarkingInProgress.set(true)
 
-        // mark resource as not silent since the user is explicitely bookmarking it
-        await resourceManager.deleteResourceTag(
-          $activeTab.resourceBookmark,
-          ResourceTagsBuiltInKeys.SILENT
+      if ($activeTab.resourceBookmark) {
+        log.debug(
+          'checking if existing bookmark still valid for url',
+          $activeTabLocation,
+          $activeTab.resourceBookmark
         )
 
-        openResource($activeTab.resourceBookmark)
-        return
-      }
+        const existingResource = await resourceManager.getResource($activeTab.resourceBookmark)
+        if (existingResource) {
+          const existingCanonical = (existingResource?.tags ?? []).find(
+            (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+          )
 
-      bookmarkingInProgress.set(true)
+          log.debug('existing canonical', existingCanonical)
+
+          if (existingCanonical?.value === $activeTabLocation) {
+            log.debug('already bookmarked, removing silent tag', $activeTab.resourceBookmark)
+
+            // mark resource as not silent since the user is explicitely bookmarking it
+            await resourceManager.deleteResourceTag(
+              $activeTab.resourceBookmark,
+              ResourceTagsBuiltInKeys.SILENT
+            )
+
+            bookmarkingSuccess.set(true)
+
+            // if (openAfter) {
+            //   openResource($activeTab.resourceBookmark)
+            // }
+
+            return $activeTab.resourceBookmark
+          }
+        }
+      }
 
       const resource = await bookmarkPage($activeTab, false)
 
@@ -1073,7 +1105,11 @@
       toasts.success('Bookmarked Page!')
       bookmarkingSuccess.set(true)
 
-      return resource
+      // if (openAfter) {
+      //   openResource(resource.id)
+      // }
+
+      return resource.id
     } catch (e) {
       log.error('error creating resource', e)
     } finally {
@@ -1187,6 +1223,10 @@
 
       url = e.detail.canonicalUrl ?? tab.initialLocation
 
+      await updateTab(tab.id, {
+        currentDetectedApp: e.detail
+      })
+
       const isRunningAlready = appDetectionRunningForURLs.includes(url)
       if (isRunningAlready) {
         log.debug('app detection already running for url', url)
@@ -1197,10 +1237,6 @@
       }
 
       log.debug('app detection running for url', url)
-
-      await updateTab(tab.id, {
-        currentDetectedApp: e.detail
-      })
 
       const browserTab = $browserTabs[tab.id]
       if (!browserTab) {
@@ -1398,7 +1434,12 @@
     return tabs
   }
 
-  const highlightWebviewText = async (resourceId: string, answerText: string) => {
+  const highlightWebviewText = async (
+    resourceId: string,
+    answerText: string,
+    sourceHash?: string
+  ) => {
+    log.info('highlighting text', resourceId, answerText, sourceHash)
     for (const tab of getTabsInChatContext()) {
       const t = tab as TabPage
       if (t.resourceBookmark === resourceId) {
@@ -1408,6 +1449,18 @@
           return
         }
         makeTabActive(t.id)
+        if (answerText === '') {
+          if (sourceHash) {
+            const source = await sffs.getAIChatDataSource(sourceHash)
+            if (source) {
+              answerText = source.content
+            } else {
+              return
+            }
+          } else {
+            return
+          }
+        }
         const detectedResource = await browserTab.detectResource()
         if (!detectedResource) {
           log.error('no resource detected')
@@ -2165,19 +2218,24 @@
     toasts.success('Space added to your Tabs!')
   }
 
-  const handleSaveResourceInSpace = async (e: CustomEvent) => {
-    console.log('hhh', e.detail)
+  const handleSaveResourceInSpace = async (e: CustomEvent<Space>) => {
+    log.debug('add resource to space', e.detail)
+
+    const toast = toasts.loading('Adding resource to space...')
 
     try {
-      const resource = await handleBookmark(e.detail)
-      console.log('BOOKMARKED', resource)
+      const resourceId = await handleBookmark(false)
+      log.debug('bookmarked resource', resourceId)
 
-      if (resource) {
-        console.log('will add item', resource.id, 'to space', e.detail.id)
-        resourceManager.addItemsToSpace(e.detail.id, [resource.id])
+      if (resourceId) {
+        log.debug('will add item', resourceId, 'to space', e.detail.id)
+        await resourceManager.addItemsToSpace(e.detail.id, [resourceId])
       }
-    } finally {
-      console.log('Bookmark handling completed')
+
+      toast.success('Resource added to space!')
+    } catch (e) {
+      log.error('Failed to add resource to space:', e)
+      toast.error('Failed to add resource to space')
     }
   }
 
@@ -3151,6 +3209,7 @@
                 </DragDropList>
               {/if}
             </div>
+
 
             <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
               {#if $sidebarTab === 'active' && $activeTab?.type === 'page'}

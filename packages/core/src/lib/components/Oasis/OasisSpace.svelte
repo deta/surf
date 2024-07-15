@@ -116,10 +116,18 @@
     }
   )
 
-  $: if (spaceId === 'all') {
-    loadEverything()
-  } else {
-    loadSpaceContents(spaceId)
+  // $: if (spaceId === 'all') {
+  //   loadEverything()
+  // } else {
+  //   loadSpaceContents(spaceId)
+  // }
+
+  $: if (active) {
+    if (spaceId === 'all') {
+      loadEverything()
+    } else {
+      loadSpaceContents(spaceId)
+    }
   }
 
   const loadSpaceContents = async (id: string, skipSources = false) => {
@@ -167,6 +175,11 @@
 
   const loadEverything = async () => {
     try {
+      if ($loadingContents) {
+        log.debug('Already loading everything')
+        return
+      }
+
       loadingContents.set(true)
       spaceContents.set([])
 
@@ -429,7 +442,7 @@
               if (contentToSummarize) {
                 const summary = await summarizeText(
                   contentToSummarize,
-                  'Summarize the given text into a single paragraph with 3-4 sentences'
+                  'Summarize the given text into a single paragraph with a maximum of 400 characters. Make sure you are still conveying the main idea of the text while keeping it concise. If possible try to be as close to 400 characters as possible. Do not go over 400 characters in any case.'
                 )
                 log.debug('summary:', summary)
 
@@ -553,7 +566,16 @@
     const resourceId = e.detail
     log.debug('removing resource', resourceId)
 
+    const resource = await resourceManager.getResource(resourceId)
+    if (!resource) {
+      log.error('Resource not found')
+      return
+    }
+
     const references = await resourceManager.getAllReferences(resourceId, $spaces)
+    const isFromLiveSpace = !!resource.tags?.find(
+      (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
+    )
 
     let numberOfReferences = 0
     if (isEverythingSpace) {
@@ -561,7 +583,7 @@
     }
 
     const confirm = window.confirm(
-      !isEverythingSpace
+      !isEverythingSpace && !isFromLiveSpace
         ? `Remove reference? The original will still be in Everything.`
         : numberOfReferences > 0
           ? `This resource will be deleted permanently including all of its ${numberOfReferences} references.`
@@ -572,54 +594,28 @@
       return
     }
 
-    const folderContents = await oasis.getSpaceContents(spaceId)
-
-    // DELETING SINGLE ITEM IN FOLDER
-    if (!isEverythingSpace) {
-      const matchingResource = folderContents.find((r) => r.resource_id === resourceId)
-      try {
-        if (matchingResource) {
-          log.debug('trying to remove reference...', matchingResource)
-          await resourceManager.deleteSpaceEntries([matchingResource.id])
-
-          $spaceContents = $spaceContents.filter((x) => x.id !== matchingResource.id)
-
-          if (($space?.name.sources ?? []).length > 0) {
-            const fullResource = await resourceManager.getResource(resourceId)
-            if (fullResource?.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE)) {
-              await resourceManager.deleteResource(resourceId)
-            }
-          }
-
-          // await loadSpaceContents(spaceId)
-        }
-      } catch (error) {
-        log.error('Error removing reference:', error)
-      }
-    }
-
-    // DELETING ALL ITEMS AND ITS REFERENCES
-    if (isEverythingSpace) {
-      for (const resource of references) {
-        log.debug('references', references)
-        try {
-          await resourceManager.deleteSpaceEntries([resource.entryId])
-        } catch (error) {
-          log.error('Error removing reference:', error)
+    try {
+      if (!isEverythingSpace) {
+        log.debug('removing from space...', resource)
+        await resourceManager.deleteSpaceEntries([resource.id])
+        $spaceContents = $spaceContents.filter((x) => x.id !== resource.id)
+      } else {
+        for (const reference of references) {
+          log.debug('references', reference)
+          await resourceManager.deleteSpaceEntries([reference.entryId])
         }
       }
-
-      try {
-        await resourceManager.deleteResource(resourceId)
-
-        log.debug('Resource deleted')
-        $everythingContents = $everythingContents.filter((x) => x.id !== resourceId)
-
-        toasts.success('Resource deleted!')
-      } catch (error) {
-        log.error('Error deleting resource:', error)
-      }
+    } catch (error) {
+      log.error('Error removing reference:', error)
     }
+
+    if (isEverythingSpace || isFromLiveSpace) {
+      await resourceManager.deleteResource(resourceId)
+      log.debug('Resource deleted')
+      $everythingContents = $everythingContents.filter((x) => x.id !== resourceId)
+    }
+
+    toasts.success('Resource deleted!')
   }
 
   const handleItemClick = (e: CustomEvent<string>) => {
@@ -929,6 +925,12 @@
         on:remove={handleResourceRemove}
         on:load={handleLoadResource}
       />
+
+      {#if $loadingContents}
+        <div class="floating-loading">
+          <Icon name="spinner" size="20px" />
+        </div>
+      {/if}
     {:else if isEverythingSpace && $everythingContents.length > 0}
       <OasisResourcesViewSearchResult
         resources={everythingContents}
@@ -937,6 +939,12 @@
         on:open={handleOpen}
         on:remove={handleResourceRemove}
       />
+
+      {#if $loadingContents}
+        <div class="floating-loading">
+          <Icon name="spinner" size="20px" />
+        </div>
+      {/if}
     {:else if $loadingContents}
       <div class="content-wrapper">
         <div class="content">
@@ -1007,19 +1015,8 @@
     top: 0;
     left: 0;
     right: 0;
-    backdrop-filter: blur(3px);
     z-index: 1000;
     border-top: 0.5px solid rgba(0, 0, 0, 0.15);
-    &:after {
-      filter: opacity(1);
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1;
-    }
 
     .drawer-chat-search {
       position: relative;
@@ -1203,5 +1200,17 @@
     &:hover {
       background: #fb3ee9;
     }
+  }
+
+  .floating-loading {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    opacity: 0.75;
   }
 </style>

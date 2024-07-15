@@ -37,7 +37,7 @@ export class TypeformParser extends WebAppExtractorActions {
   getInfo(): DetectedWebApp {
     const resourceType = this.detectResourceType()
     const appResourceIdentifier =
-      resourceType === ResourceTypes.TABLE_TYPEFORM ? this.getFormID() : null
+      resourceType === ResourceTypes.TABLE_TYPEFORM ? this.getFormID() : this.url.pathname
 
     return {
       appId: this.app?.id ?? null,
