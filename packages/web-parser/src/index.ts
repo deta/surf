@@ -125,6 +125,8 @@ export class WebParser {
 
     await webviewExtractor.initializeWebview()
 
+    console.log('xxxx')
+
     // TODO - wait for the page to have fully loaded
     await wait(3000)
 

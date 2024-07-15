@@ -73,7 +73,7 @@ export function popover(node: HTMLElement, options: PopoverOptions) {
   const handleMouseLeave = () => {
     if (timeout) clearTimeout(timeout)
     timeout = setTimeout(() => {
-      if (!popoverEl.matches(':hover') && !node.matches(':hover')) {
+      if (popoverEl && !popoverEl.matches(':hover') && !node.matches(':hover')) {
         closePopover()
       }
     }, delay)
