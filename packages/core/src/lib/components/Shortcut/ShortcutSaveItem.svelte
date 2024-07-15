@@ -9,7 +9,7 @@
   let selectedSpaceIndex = 0
   let inputRef: HTMLInputElement
 
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<{ 'save-resource-in-space': Space }>()
 
   const filteredSpaces = derived([spaces], ([spaces]) => {
     return spaces.filter((space) => space.id !== 'all')

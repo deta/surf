@@ -1035,7 +1035,7 @@
     return resource
   }
 
-  async function handleBookmark() {
+  async function handleBookmark(openAfter = true) {
     try {
       if (!$activeTabLocation || $activeTab?.type !== 'page') return
 
@@ -1048,8 +1048,11 @@
           ResourceTagsBuiltInKeys.SILENT
         )
 
-        openResource($activeTab.resourceBookmark)
-        return
+        if (openAfter) {
+          openResource($activeTab.resourceBookmark)
+        }
+
+        return $activeTab.resourceBookmark
       }
 
       bookmarkingInProgress.set(true)
@@ -1060,7 +1063,11 @@
       toasts.success('Bookmarked Page!')
       bookmarkingSuccess.set(true)
 
-      return resource
+      if (openAfter) {
+        openResource(resource.id)
+      }
+
+      return resource.id
     } catch (e) {
       log.error('error creating resource', e)
     } finally {
@@ -1174,6 +1181,10 @@
 
       url = e.detail.canonicalUrl ?? tab.initialLocation
 
+      await updateTab(tab.id, {
+        currentDetectedApp: e.detail
+      })
+
       const isRunningAlready = appDetectionRunningForURLs.includes(url)
       if (isRunningAlready) {
         log.debug('app detection already running for url', url)
@@ -1184,10 +1195,6 @@
       }
 
       log.debug('app detection running for url', url)
-
-      await updateTab(tab.id, {
-        currentDetectedApp: e.detail
-      })
 
       const browserTab = $browserTabs[tab.id]
       if (!browserTab) {
@@ -2169,19 +2176,24 @@
     toasts.success('Space added to your Tabs!')
   }
 
-  const handleSaveResourceInSpace = async (e: CustomEvent) => {
-    console.log('hhh', e.detail)
+  const handleSaveResourceInSpace = async (e: CustomEvent<Space>) => {
+    log.debug('add resource to space', e.detail)
+
+    const toast = toasts.loading('Adding resource to space...')
 
     try {
-      const resource = await handleBookmark(e.detail)
-      console.log('BOOKMARKED', resource)
+      const resourceId = await handleBookmark(false)
+      log.debug('bookmarked resource', resourceId)
 
-      if (resource) {
-        console.log('will add item', resource.id, 'to space', e.detail.id)
-        resourceManager.addItemsToSpace(e.detail.id, [resource.id])
+      if (resourceId) {
+        log.debug('will add item', resourceId, 'to space', e.detail.id)
+        await resourceManager.addItemsToSpace(e.detail.id, [resourceId])
       }
-    } finally {
-      console.log('Bookmark handling completed')
+
+      toast.success('Resource added to space!')
+    } catch (e) {
+      log.error('Failed to add resource to space:', e)
+      toast.error('Failed to add resource to space')
     }
   }
 

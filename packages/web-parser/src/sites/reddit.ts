@@ -65,7 +65,7 @@ export class RedditParser extends WebAppExtractor {
   getInfo(): DetectedWebApp {
     const resourceType = this.detectResourceType()
     const appResourceIdentifier =
-      resourceType === ResourceTypes.POST_REDDIT ? this.getPostId() : null
+      resourceType === ResourceTypes.POST_REDDIT ? this.getPostId() : this.url.pathname
 
     return {
       appId: this.app?.id ?? null,

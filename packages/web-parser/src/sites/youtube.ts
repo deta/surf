@@ -5,6 +5,7 @@ import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../type
 import { makeAbsoluteURL } from '../utils'
 import { DOMExtractor } from '../extractors/dom'
 import { SERVICES } from '../services'
+import { WebParser } from '..'
 
 export const YoutubeRegexPatterns = {
   // example: /watch?v=I_wc3DfgQvs or /embed/I_wc3DfgQvs or /I_wc3DfgQvs /watch
@@ -180,6 +181,7 @@ export class YoutubeParser extends WebAppExtractor {
     const idPattern = /channel\/([a-zA-Z0-9%_-]+)/
     const namePattern = /(?:c|user)\/[a-zA-Z0-9%_-]+/
     const handlePattern = /@[a-zA-Z0-9%_-]+/
+    const userPattern = /\/([a-zA-Z0-9%_-]+)/
 
     const idMatch = url.match(idPattern)
     if (idMatch) {
@@ -194,6 +196,11 @@ export class YoutubeParser extends WebAppExtractor {
     const handleMatch = url.match(handlePattern)
     if (handleMatch) {
       return handleMatch[0].substring(1)
+    }
+
+    const userMatch = url.match(userPattern)
+    if (userMatch) {
+      return userMatch[1]
     }
 
     return null
@@ -292,8 +299,9 @@ export class YoutubeParser extends WebAppExtractor {
         type: ResourceTypes.POST_YOUTUBE
       }
     } else {
-      console.log('Unknown resource type')
-      return Promise.resolve(null)
+      console.log('Unknown resource type, using fallback parser')
+      const fallbackParser = WebParser.useFallbackParser(document, this.url)
+      return fallbackParser?.extractResourceFromDocument(document)
     }
   }
 

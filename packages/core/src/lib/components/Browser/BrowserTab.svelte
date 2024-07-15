@@ -217,7 +217,7 @@
       app.appResourceIdentifier === detectedApp.appResourceIdentifier
     ) {
       log.debug('no change in app or resource', detectedApp)
-      // dispatch('appDetection', detectedApp) // TODO: differentiate between fresh detection and no change
+      dispatch('appDetection', detectedApp) // TODO: differentiate between fresh detection and no change
       return
     }
 

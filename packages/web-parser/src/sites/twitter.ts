@@ -3,6 +3,7 @@ import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
 import { APIExtractor, WebAppExtractor } from '../extractors'
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
 import { SERVICES } from '../services'
+import { WebParser } from '..'
 
 export const TwitterRegexPatterns = {
   // example: /@detahq/status/1441160730730736640
@@ -47,7 +48,7 @@ export class TwitterParser extends WebAppExtractor {
   getInfo(): DetectedWebApp {
     const resourceType = this.detectResourceType()
     const appResourceIdentifier =
-      resourceType === ResourceTypes.POST_TWITTER ? this.getTweetId() : null
+      resourceType === ResourceTypes.POST_TWITTER ? this.getTweetId() : this.url.pathname
 
     return {
       appId: this.app?.id ?? null,
@@ -75,8 +76,9 @@ export class TwitterParser extends WebAppExtractor {
         type: ResourceTypes.POST_TWITTER
       }
     } else {
-      console.log('Unknown resource type')
-      return Promise.resolve(null)
+      console.log('Unknown resource type, using fallback parser')
+      const fallbackParser = WebParser.useFallbackParser(document, this.url)
+      return fallbackParser.extractResourceFromDocument(document)
     }
   }
 

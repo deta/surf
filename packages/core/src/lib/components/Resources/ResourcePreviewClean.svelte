@@ -510,7 +510,7 @@
     font-size: 0.9rem;
     color: #666;
     display: -webkit-box;
-    -webkit-line-clamp: 6;
+    -webkit-line-clamp: 15;
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.5;
