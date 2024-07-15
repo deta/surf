@@ -116,10 +116,18 @@
     }
   )
 
-  $: if (spaceId === 'all') {
-    loadEverything()
-  } else {
-    loadSpaceContents(spaceId)
+  // $: if (spaceId === 'all') {
+  //   loadEverything()
+  // } else {
+  //   loadSpaceContents(spaceId)
+  // }
+
+  $: if (active) {
+    if (spaceId === 'all') {
+      loadEverything()
+    } else {
+      loadSpaceContents(spaceId)
+    }
   }
 
   const loadSpaceContents = async (id: string, skipSources = false) => {
@@ -167,6 +175,11 @@
 
   const loadEverything = async () => {
     try {
+      if ($loadingContents) {
+        log.debug('Already loading everything')
+        return
+      }
+
       loadingContents.set(true)
       spaceContents.set([])
 
@@ -912,6 +925,12 @@
         on:remove={handleResourceRemove}
         on:load={handleLoadResource}
       />
+
+      {#if $loadingContents}
+        <div class="floating-loading">
+          <Icon name="spinner" size="20px" />
+        </div>
+      {/if}
     {:else if isEverythingSpace && $everythingContents.length > 0}
       <OasisResourcesViewSearchResult
         resources={everythingContents}
@@ -920,6 +939,12 @@
         on:open={handleOpen}
         on:remove={handleResourceRemove}
       />
+
+      {#if $loadingContents}
+        <div class="floating-loading">
+          <Icon name="spinner" size="20px" />
+        </div>
+      {/if}
     {:else if $loadingContents}
       <div class="content-wrapper">
         <div class="content">
@@ -992,19 +1017,8 @@
     top: 0;
     left: 0;
     right: 0;
-    backdrop-filter: blur(3px);
     z-index: 1000;
     border-top: 0.5px solid rgba(0, 0, 0, 0.15);
-    &:after {
-      filter: opacity(1);
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1;
-    }
 
     .drawer-chat-search {
       position: relative;
@@ -1188,5 +1202,17 @@
     &:hover {
       background: #fb3ee9;
     }
+  }
+
+  .floating-loading {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    opacity: 0.75;
   }
 </style>
