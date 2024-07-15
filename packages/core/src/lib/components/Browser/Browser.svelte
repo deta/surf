@@ -117,9 +117,10 @@
     resetPrompt,
     updatePrompt
   } from '../../service/prompts'
-  import { LinkPreview, Popover, ContextMenu } from 'bits-ui'
+  import { LinkPreview, Popover, Tooltip } from 'bits-ui'
   import BrowserHistory from './BrowserHistory.svelte'
   import NewTabButton from './NewTabButton.svelte'
+  import { flyAndScale } from '../../utils'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -2674,63 +2675,100 @@
               class="flex flex-row items-center flex-shrink-0 {!horizontalTabs &&
                 'w-full justify-end'}"
             >
-              <button
-                class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
-                  ? 'opacity-30 cursor-not-allowed'
-                  : 'cursor-pointer'}"
-                disabled={!canGoBack}
-                on:click={$activeBrowserTab?.goBack}
-                use:tooltip={{
-                  content: 'Go Back',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <span
-                  class="inline-block translate-x-0 {canGoBack &&
-                    'group-hover:-translate-x-1'} transition-transform ease-in-out duration-200"
+              <Tooltip.Root openDelay={400} closeDelay={10}>
+                <Tooltip.Trigger>
+                  <button
+                    class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
+                      ? 'opacity-30 cursor-not-allowed'
+                      : 'cursor-pointer'}"
+                    disabled={!canGoBack}
+                    on:click={$activeBrowserTab?.goBack}
+                  >
+                    <span
+                      class="inline-block translate-x-0 {canGoBack &&
+                        'group-hover:-translate-x-1'} transition-transform ease-in-out duration-200"
+                    >
+                      <Icon name="arrow.left" />
+                    </span>
+                  </button>
+                </Tooltip.Trigger>
+                <Tooltip.Content
+                  transition={flyAndScale}
+                  transitionConfig={{ y: 8, duration: 150 }}
+                  sideOffset={8}
                 >
-                  <Icon name="arrow.left" />
-                </span>
-              </button>
-              <button
-                class="transform active:scale-95 appearance-none group border-0 margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoForward
-                  ? 'opacity-30 cursor-not-allowed'
-                  : 'cursor-pointer'}"
-                disabled={!canGoForward}
-                on:click={$activeBrowserTab?.goForward}
-                use:tooltip={{
-                  content: 'Go Forward',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <span
-                  class="inline-block translate-x-0 {canGoForward &&
-                    'group-hover:translate-x-1'} transition-transform ease-in-out duration-200"
+                  <div class="bg-neutral-100">
+                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                  </div>
+                  <div
+                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                  >
+                    Go back (⌘ + ←)
+                  </div>
+                </Tooltip.Content>
+              </Tooltip.Root>
+
+              <Tooltip.Root openDelay={400} closeDelay={10}>
+                <Tooltip.Trigger>
+                  <button
+                    class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoForward
+                      ? 'opacity-30 cursor-not-allowed'
+                      : 'cursor-pointer'}"
+                    disabled={!canGoForward}
+                    on:click={$activeBrowserTab?.goForward}
+                  >
+                    <span
+                      class="inline-block translate-x-0 {canGoForward &&
+                        'group-hover:translate-x-1'} transition-transform ease-in-out duration-200"
+                    >
+                      <Icon name="arrow.right" />
+                    </span>
+                  </button>
+                </Tooltip.Trigger>
+                <Tooltip.Content
+                  transition={flyAndScale}
+                  transitionConfig={{ y: 8, duration: 150 }}
+                  sideOffset={8}
                 >
-                  <Icon name="arrow.right" />
-                </span>
-              </button>
-              <button
-                class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                on:click={$activeBrowserTab?.reload}
-                use:tooltip={{
-                  content: 'Reload Page (⌘ + R)',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                <span class="group-hover:rotate-180 transition-transform ease-in-out duration-200">
-                  <Icon name="reload" />
-                </span>
-              </button>
+                  <div class="bg-neutral-100">
+                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                  </div>
+                  <div
+                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                  >
+                    Go forward (⌘ + →)
+                  </div>
+                </Tooltip.Content>
+              </Tooltip.Root>
+
+              <Tooltip.Root openDelay={400} closeDelay={10}>
+                <Tooltip.Trigger>
+                  <button
+                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    on:click={$activeBrowserTab?.reload}
+                  >
+                    <span
+                      class="group-hover:rotate-180 transition-transform ease-in-out duration-200"
+                    >
+                      <Icon name="reload" />
+                    </span>
+                  </button>
+                </Tooltip.Trigger>
+                <Tooltip.Content
+                  transition={flyAndScale}
+                  transitionConfig={{ y: 8, duration: 150 }}
+                  sideOffset={8}
+                >
+                  <div class="bg-neutral-100">
+                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                  </div>
+                  <div
+                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                  >
+                    Reload Page (⌘ + R)
+                  </div>
+                </Tooltip.Content>
+              </Tooltip.Root>
             </div>
 
             <div class="bg-sky-50 rounded-xl shadow-md flex-shrink-0">

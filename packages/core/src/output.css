@@ -872,12 +872,24 @@ video {
   border-radius: 0.75rem;
 }
 
+.rounded-\[2px\] {
+  border-radius: 2px;
+}
+
 .border {
   border-width: 1px;
 }
 
 .border-0 {
   border-width: 0px;
+}
+
+.border-l {
+  border-left-width: 1px;
+}
+
+.border-t {
+  border-top-width: 1px;
 }
 
 .bg-neutral-100 {
@@ -909,6 +921,10 @@ video {
 
 .p-4 {
   padding: 1rem;
+}
+
+.p-3 {
+  padding: 0.75rem;
 }
 
 .px-1 {
@@ -998,6 +1014,11 @@ video {
 .text-xs {
   font-size: 0.75rem;
   line-height: 1rem;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 }
 
 .font-medium {
