@@ -8,7 +8,7 @@
   import Link from '../../Atoms/Link.svelte'
   import LoadingBox from '../../Atoms/LoadingBox.svelte'
   import type { ResourcePreviewEvents } from '../../Resources/events'
-  import fallback from '../../../../../public/assets/foggy-placeholder.png'
+  import fallback from '../../../../../public/assets/fallback.youtube.png'
 
   export let resource: ResourcePost
   export let type: string
