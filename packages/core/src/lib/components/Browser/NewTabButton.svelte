@@ -94,6 +94,7 @@
   }
 
   const startCreatingNewSpace = async (e: any) => {
+    isOpen = true
     isCreatingNewSpace.set(true)
     await tick().then(() => {
       inputRef.focus()
@@ -118,7 +119,7 @@
   })
 </script>
 
-<ContextMenu.Root closeOnItemClick={false} open={isOpen} loop>
+<ContextMenu.Root open={isOpen} loop >
   <ContextMenu.Trigger class="select-none items-center justify-center ">
     <button
       class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
@@ -164,16 +165,15 @@
         {:else}
           <span>No spaces available</span>
         {/if}
-        <ContextMenu.Item
-          class="flex  select-none items-center  py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
-        >
+        <ContextMenu.Item asChild>
           {#if $isCreatingNewSpace}
-            <div class="create-input-wrapper">
+            <div
+              class="flex select-none items-center py-4 pl-3 pr-1.5 space-x-2 cursor-pointer font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
+            >
               <input
                 class="search-input"
                 bind:this={inputRef}
                 bind:value={newSpaceName}
-                on:blur={cancelCreatingNewSpace}
                 on:keydown={(event) => {
                   if (event.key === 'Enter') {
                     confirmCreatingNewSpace(event.shiftKey)
@@ -186,7 +186,11 @@
               />
             </div>
           {:else}
-            <span class="label" aria-hidden="true" on:click={startCreatingNewSpace} data-keep-open>
+            <span
+              class="flex select-none items-center py-4 pl-3 pr-1.5 space-x-2 cursor-pointer font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
+              aria-hidden="true"
+              on:click={startCreatingNewSpace}
+            >
               <Icon name="add" color="#7d7448" />
               Create new Space
             </span>
