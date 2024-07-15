@@ -4,6 +4,8 @@
   import "../../app.css"
   import "../../output.css"
   import '../../../../../packages/core/src/output.css'
+    import browserBackground from './assets/seatrain-upscaled-hightrain.webp'
+  
 
   let showDragBar = true
 
@@ -20,6 +22,7 @@
     <div class="drag-bar left"></div>
     <div class="drag-bar right"></div>
   {/if}
+  <img class="w-screen h-screen absolute object-fit opacity-50" src={browserBackground} alt="background" />
   <Browser />
 </div>
 

@@ -2621,7 +2621,7 @@
 <ToastsProvider service={toasts} />
 
 <div
-  class="antialiased w-screen h-screen bg-gradient-to-br from-cyan-100 to-indigo-200 via-blue-300"
+  class="antialiased w-screen h-screen bg-gradient-to-br will-change-auto transform-gpu  from-cyan-100 to-indigo-200 via-blue-300"
 >
   {#if showTabSearch}
     <TabSearch
@@ -2645,7 +2645,7 @@
           <div class="flex relative ml-24 space-x-4 mr-4 items-center">
             <div class="flex flex-row items-center flex-shrink-0">
               <button
-                class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 {!canGoBack
+                class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
                   ? 'opacity-30 cursor-not-allowed'
                   : 'cursor-pointer'}"
                 disabled={!canGoBack}
@@ -2666,7 +2666,7 @@
                 </span>
               </button>
               <button
-                class="transform active:scale-95 appearance-none group border-0 margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 {!canGoForward
+                class="transform active:scale-95 appearance-none group border-0 margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoForward
                   ? 'opacity-30 cursor-not-allowed'
                   : 'cursor-pointer'}"
                 disabled={!canGoForward}
@@ -2687,7 +2687,7 @@
                 </span>
               </button>
               <button
-                class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 cursor-pointer"
+                class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 on:click={$activeBrowserTab?.reload}
                 use:tooltip={{
                   content: 'Reload Page (⌘ + R)',
@@ -2770,11 +2770,13 @@
               </DragDropList>
             </div>
 
-            <div class="overflow-x-scroll no-scrollbar relative flex">
+            <div class="overflow-x-scroll no-scrollbar relative flex flex-grow">
               <DragDropList
                 id="tabs"
                 type={HorizontalDropZone}
-                itemSize={Math.min(256, Math.max(81, tabSize))}
+                itemSize={
+                
+                Math.min(256, Math.max(81, tabSize))}
                 itemCount={$unpinnedTabs.length}
                 on:drop={async (event) => {
                   onDrop(event, 'unpin')
@@ -2912,7 +2914,7 @@
                 {#if $activeTabMagic}
                   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
                   <button
-                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 cursor-pointer"
+                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                     on:click={handleToggleMagicSidebar}
                     use:tooltip={{
                       content: 'Toggle Page Chat',
@@ -2934,7 +2936,7 @@
 
                 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
                 <button
-                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                   on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
                   use:tooltip={{
                     content: 'Toggle Annotations',
@@ -2952,7 +2954,7 @@
                 </button>
 
                 <button
-                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                   on:click={handleToggleAppSidebar}
                   use:tooltip={{
                     content: 'Go wild',
@@ -2971,7 +2973,7 @@
               {/if}
 
               <button
-                class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-md text-sky-800 cursor-pointer"
+                class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 on:click|preventDefault={() => (popoverOpen = !popoverOpen)}
                 on:create-tab-from-space={handleCreateTabFromPopover}
                 on:create-new-space={handleCreateNewSpace}
@@ -3113,7 +3115,7 @@
       {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
         <div
           transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs &&
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
             'mt-1.5'} flex-shrink-0"
         >
           <MagicSidebar
@@ -3136,7 +3138,7 @@
       {:else if $showAppSidebar}
         <div
           transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs &&
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
             'mt-1.5'} flex-shrink-0"
         >
           <AppSidebar
@@ -3151,7 +3153,7 @@
       {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
         <div
           transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-md w-[440px] h-auto mb-1.5 {!showTabs &&
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
             'mt-1.5'} flex-shrink-0"
         >
           <AnnotationsSidebar
@@ -3168,6 +3170,9 @@
 </div>
 
 <style lang="scss">
+  .messi {
+    backdrop-filter: blur(10px);
+  }
   .hide-btn {
     display: none !important;
     background-color: transparent;
