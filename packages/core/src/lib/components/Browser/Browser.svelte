@@ -2928,7 +2928,7 @@
                   {/if}
                 </div>
 
-                <div class="w-full h-0.5 bg-neutral-200"></div>
+                <div class="{!horizontalTabs ? 'w-full h-0.5' : 'h-full w-0.5'} bg-neutral-200"></div>
               {/if}
             {/if}
 
