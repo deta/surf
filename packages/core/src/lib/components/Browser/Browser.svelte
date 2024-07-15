@@ -117,7 +117,7 @@
     resetPrompt,
     updatePrompt
   } from '../../service/prompts'
-  import { LinkPreview, Popover } from 'bits-ui'
+  import { LinkPreview, Popover, ContextMenu } from 'bits-ui'
   import BrowserHistory from './BrowserHistory.svelte'
 
   let addressInputElem: HTMLInputElement
@@ -2815,10 +2815,9 @@
                   {/if}
                 </div>
 
-                <div class="w-full h-0.5 bg-sky-300/50"></div>
+                <div class="w-full h-0.5 bg-neutral-200"></div>
               {/if}
             {/if}
-
 
             <div class="overflow-x-scroll no-scrollbar relative flex-grow">
               {#if horizontalTabs}
@@ -3161,14 +3160,89 @@
                 </button>
               {/if}
 
-              <button
-                class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                on:click|preventDefault={() => (popoverOpen = !popoverOpen)}
-                on:create-tab-from-space={handleCreateTabFromPopover}
-                on:create-new-space={handleCreateNewSpace}
-              >
-                <Icon name="add" />
-              </button>
+              <ContextMenu.Root>
+                <ContextMenu.Trigger
+                  class="select-none items-center justify-center "
+                >
+                  <button
+                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    on:click|preventDefault={() => (popoverOpen = !popoverOpen)}
+                    on:create-tab-from-space={handleCreateTabFromPopover}
+                    on:create-new-space={handleCreateNewSpace}
+                  >
+                    <Icon name="add" />
+                  </button>
+                </ContextMenu.Trigger>
+                <ContextMenu.Content
+                  class="z-50 w-full max-w-[250px] rounded-xl bg-neutral-100 px-1 py-1.5 shadow-popover outline-none"
+                >
+                  <ContextMenu.Item
+                    class="flex select-none items-center rounded-button py-4 pl-3 pr-1.5 cursor-pointer font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
+                  >
+                    <div class="flex items-center space-x-2">
+                      <Icon name="add" />
+                      <span>Create Space</span>
+                    </div>
+                  </ContextMenu.Item>
+                  <ContextMenu.Sub>
+                    <ContextMenu.SubTrigger
+                      class="flex  select-none items-center rounded-button py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
+                    >
+                      <div class="flex items-center space-x-2">
+                        <Icon name="add" />
+                        <span> Open Space </span>
+                      </div>
+                    </ContextMenu.SubTrigger>
+                    <ContextMenu.SubContent
+                      class="z-50 w-full max-w-[209px] select-none rounded-xl border border-muted bg-sky-100 px-1 py-1.5 shadow-popover outline-none"
+                    >
+                    <!-- <ShortcutMenu {resourceManager} {spaces} /> -->
+                      <ContextMenu.Item
+                        class="flex h-10 items-center rounded-button py-3 pl-3 pr-1.5 cursor-pointer  font-normal outline-none !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
+                      >
+                        Header
+                      </ContextMenu.Item>
+                      <ContextMenu.Item
+                        class="flex h-10 items-center rounded-button py-3 pl-3 pr-1.5 cursor-pointer  font-normal outline-none !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
+                      >
+                        Paragraph
+                      </ContextMenu.Item>
+                      <ContextMenu.Item
+                        class="flex h-10 items-center rounded-button py-3 pl-3 pr-1.5 cursor-pointer  font-normal outline-none !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
+                      >
+                        Codeblock
+                      </ContextMenu.Item>
+                      <ContextMenu.Item
+                        class="flex h-10 items-center rounded-button py-3 pl-3 pr-1.5 cursor-pointer  font-normal outline-none !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
+                      >
+                        List
+                      </ContextMenu.Item>
+                      <ContextMenu.Item
+                        class="flex h-10 items-center rounded-button py-3 pl-3 pr-1.5 cursor-pointer  font-normal outline-none !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
+                      >
+                        Task
+                      </ContextMenu.Item>
+                    </ContextMenu.SubContent>
+                  </ContextMenu.Sub>
+                  <ContextMenu.Separator class="my-1 block h-px bg-neutral-200" />
+                  <ContextMenu.Item
+                    class="flex  select-none items-center rounded-button py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
+                  >
+                    <div class="flex items-center space-x-2">
+                      <Icon name="add" />
+                      <span>New History Tab</span>
+                    </div>
+                  </ContextMenu.Item>
+                  <ContextMenu.Item
+                    class="flex  select-none items-center rounded-button py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
+                  >
+                    <div class="flex items-center space-x-2">
+                      <Icon name="add" />
+                      <span>New Tab</span>
+                    </div>
+                  </ContextMenu.Item>
+                </ContextMenu.Content>
+              </ContextMenu.Root>
             </div>
           </div>
         {:else}
