@@ -6,6 +6,7 @@
   import InfiniteScroll from '../InfiniteScroll.svelte'
   import { DrawerContentMasonry } from '@horizon/drawer'
   import { useDebounce } from '../../utils/debounce'
+  import Masonry from './Masonry.svelte'
 
   export let resourceIds: Readable<string[]>
   export let selected: string | null = null
@@ -46,30 +47,28 @@
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    <DrawerContentMasonry
-      items={$renderContents}
+    <Masonry
       gridGap="2rem"
       colWidth="minmax(250px, 330px)"
       bind:refreshLayout={refreshContentLayout}
     >
       {#each $renderContents as resourceId (resourceId)}
         <OasisResourceLoader
+          class="masonry-item"
           id={resourceId}
           selected={selected === resourceId}
           on:load={handleItemLoad}
           on:click
           on:open
           on:remove
-          on:load
         />
       {/each}
-
       <InfiniteScroll
         elementScroll={scrollElement}
         threshold={CHUNK_THRESHOLD}
         on:loadMore={handleLoadChunk}
       />
-    </DrawerContentMasonry>
+    </Masonry>
   </div>
 </div>
 

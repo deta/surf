@@ -3118,6 +3118,7 @@
             on:chat={handleCreateChat}
             on:rag={handleRag}
             on:create-tab-from-space={handleCreateTabFromSpace}
+            {spaces}
           />
         {/if}
       </div>
@@ -3130,6 +3131,7 @@
           on:navigate={handleTabNavigation}
           on:chat={handleCreateChat}
           on:rag={handleRag}
+          {spaces}
         />
       </div>
     {/if}

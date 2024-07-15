@@ -20,6 +20,7 @@
   import log from '../../utils/log'
 
   export let historyEntriesManager: HistoryEntriesManager
+  export let spaces: Writable<Space[]>
 
   const dispatch = createEventDispatcher<{
     navigate: string
@@ -197,6 +198,7 @@
       <SpacesView
         onBack={() => showAllSpaces.set(false)}
         on:createTab={handleCreateTabFromSpacesView}
+        {spaces}
       />
     {/if}
   </div>

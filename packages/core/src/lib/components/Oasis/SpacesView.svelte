@@ -17,7 +17,7 @@
   const toast = useToasts()
   const dispatch = createEventDispatcher<{ createTab: TabSpace }>()
 
-  const spaces = oasis.spaces
+  export let spaces: Writable<Space[]>
   const selectedSpace = oasis.selectedSpace
 
   export let onBack = () => {}

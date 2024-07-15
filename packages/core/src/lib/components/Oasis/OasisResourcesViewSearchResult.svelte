@@ -8,6 +8,7 @@
   import type { ResourceSearchResultItem } from '../../service/resources'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import DragResourceWrapper from './DragResourceWrapper.svelte'
+  import Masonry from './Masonry.svelte'
 
   export let resources: Readable<ResourceSearchResultItem[]>
   export let selected: string | null = null
@@ -48,14 +49,15 @@
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    <DrawerContentMasonry
-      items={$renderContents}
+    test
+
+    <Masonry
       gridGap="2rem"
       colWidth="minmax(250px, 330px)"
       bind:refreshLayout={refreshContentLayout}
     >
       {#each $renderContents as item (item.id)}
-        <DragResourceWrapper resource={item.resource}>
+        <DragResourceWrapper resource={item.resource} class="masonry-item">
           <ResourcePreviewClean
             resource={item.resource}
             annotations={item.annotations}
@@ -67,13 +69,12 @@
           />
         </DragResourceWrapper>
       {/each}
-
       <InfiniteScroll
         elementScroll={scrollElement}
         threshold={CHUNK_THRESHOLD}
         on:loadMore={handleLoadChunk}
       />
-    </DrawerContentMasonry>
+    </Masonry>
   </div>
 </div>
 
