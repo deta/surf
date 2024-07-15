@@ -344,11 +344,17 @@
   const createTab = async <T extends Tab>(
     tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'>
   ) => {
+    let minIndex = 0
+    tabs.update((currentTabs) => {
+      minIndex = Math.min(...currentTabs.map((t) => t.index), 0) - 1
+      return currentTabs
+    })
+
     const newTab = await tabsDB.create({
       archived: false,
       pinned: false,
       magic: false,
-      index: Date.now(),
+      index: minIndex,
       ...tab
     })
     log.debug('Created tab', newTab)
@@ -627,6 +633,16 @@
 
   const createHistoryTab = useDebounce(async () => {
     log.debug('Creating new history tab')
+
+    // check if there already exists a history tab, if yes we just change to it
+
+    const historyTab = $tabs.find((tab) => tab.type === 'history')
+
+    if (historyTab) {
+      makeTabActive(historyTab.id)
+      return
+    }
+
     const newTab = await createTab<TabHistory>({
       title: 'History',
       icon: '',

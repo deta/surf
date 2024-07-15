@@ -78,12 +78,11 @@
       if (!appCode) {
         throw new Error('no app code returned from backend call')
       }
-      if (appCode.toLowerCase().startsWith('error code: 400')) {
-        throw new Error('Page content is unfortunately too long')
-      }
-
       const clean = cleanSource(appCode)
       log.info('got source code:', clean)
+      if (clean.startsWith('"Error code: 4')) {
+        throw new Error('Page content is unfortunately too long')
+      }
       prompt = inputValue
       if (inputValue.toLowerCase().startsWith('app:')) {
         app.srcdoc = clean
