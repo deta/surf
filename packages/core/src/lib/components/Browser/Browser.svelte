@@ -353,7 +353,7 @@
       ...tab
     })
     log.debug('Created tab', newTab)
-    tabs.update((tabs) => [newTab, ...tabs])
+    tabs.update((tabs) => [...tabs, newTab])
 
     return newTab
   }
@@ -716,10 +716,6 @@
 
       keyTimeout = setTimeout(() => {
         index = parseInt(keyBuffer, 10)
-
-        if (index === 0) {
-          return
-        }
 
         if (index > 99) {
           index /= 10
@@ -2563,9 +2559,12 @@
 
         await tick()
 
-        await archiveTab(tabId)
+        // await archiveTab(tabId)
+
+        await deleteTab(tabId)
       } else {
-        await archiveTab(tabId)
+        // await archiveTab(tabId)
+        await deleteTab(tabId)
       }
 
       toasts.success('Space removed from sidebar!')
@@ -2726,7 +2725,7 @@
 
 <ToastsProvider service={toasts} />
 
-<div class="antialiased w-screen h-screen will-change-auto transform-gpu bg-sky-100">
+<div class="antialiased w-screen h-screen will-change-auto transform-gpu">
   {#if showTabSearch}
     <TabSearch
       onClose={() => {
@@ -2741,7 +2740,7 @@
     {#if showTabs}
       <div
         transition:slide={{ axis: !horizontalTabs ? 'x' : 'y', duration: 200 }}
-        class="flex-grow {horizontalTabs && 'h-[51px]'}"
+        class="flex-grow transform-gpu {horizontalTabs && 'h-[51px]'}"
         class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
         style="z-index: 5000;"
       >
@@ -2749,7 +2748,7 @@
           <div
             class="flex {!horizontalTabs
               ? 'flex-col w-[300px]  py-3 space-y-4 px-2 h-full'
-              : 'flex-row items-center  ml-24 space-x-4 mr-4'} relative"
+              : 'flex-row items-center h-[52px] ml-24 space-x-4 mr-4'} relative"
           >
             <div
               class="flex flex-row items-center flex-shrink-0 {!horizontalTabs &&
@@ -2851,7 +2850,9 @@
               </Tooltip.Root>
             </div>
 
-            <div class="bg-sky-50 rounded-xl shadow-md flex-shrink-0">
+            <div
+              class="bg-sky-50 my-auto rounded-xl shadow-md flex-shrink-0 max-w-[300px] overflow-x-scroll no-scrollbar"
+            >
               <DragDropList
                 id="pinned-tabs"
                 type={HorizontalCenterDropZone}
