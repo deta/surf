@@ -4,7 +4,8 @@
   import "../../app.css"
   import "../../output.css"
   import '../../../../../packages/core/src/output.css'
-    import browserBackground from './assets/seatrain-upscaled-hightrain.webp'
+    // import browserBackground from './assets/seatrain-upscaled-hightrain.webp'
+    import browserBackground from './assets/bg.webp'
   
 
   let showDragBar = true

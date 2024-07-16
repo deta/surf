@@ -345,17 +345,11 @@
   const createTab = async <T extends Tab>(
     tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'>
   ) => {
-    let minIndex = 0
-    tabs.update((currentTabs) => {
-      minIndex = Math.min(...currentTabs.map((t) => t.index), 0) - 1
-      return currentTabs
-    })
-
     const newTab = await tabsDB.create({
       archived: false,
       pinned: false,
       magic: false,
-      index: minIndex,
+      index: Date.now(), 
       ...tab
     })
     log.debug('Created tab', newTab)
@@ -2703,7 +2697,7 @@
 <ToastsProvider service={toasts} />
 
 <div
-  class="antialiased w-screen h-screen will-change-auto transform-gpu bg-sky-100/50 backdrop-blur-lg"
+  class="antialiased w-screen h-screen will-change-auto transform-gpu bg-sky-100"
 >
   {#if showTabSearch}
     <TabSearch
@@ -3047,7 +3041,9 @@
                       </Popover.Content>
                     </Popover.Root>
                   {:else}
-                    <LinkPreview.Root>
+                    <LinkPreview.Root
+                    openDelay={750}
+                    closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
                           tab={$unpinnedTabs[index]}
@@ -3184,7 +3180,9 @@
                       </Popover.Content>
                     </Popover.Root>
                   {:else}
-                    <LinkPreview.Root>
+                    <LinkPreview.Root
+                    openDelay={800}
+                    closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
                           tab={$unpinnedTabs[index]}
