@@ -970,9 +970,7 @@
     gap: 1rem;
     height: 100%;
     overflow: hidden;
-    background: #f8f7f2;
     border-radius: 12px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   }
 
   .tabs {
