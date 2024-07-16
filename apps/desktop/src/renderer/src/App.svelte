@@ -22,7 +22,7 @@
     <div class="drag-bar left"></div>
     <div class="drag-bar right"></div>
   {/if}
-  <img class="w-screen h-screen absolute object-fit opacity-50" src={browserBackground} alt="background" />
+  <img class="w-screen h-screen absolute object-cover opacity-60" src={browserBackground} alt="background" />
   <Browser />
 </div>
 
