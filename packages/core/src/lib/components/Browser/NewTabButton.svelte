@@ -8,21 +8,19 @@
 </script>
 
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
-  import { ContextMenu } from 'bits-ui'
-  import { ResourceManager } from '../../service/resources'
-  import { writable } from 'svelte/store'
-  import type { Space } from '../../types'
+  import { everythingSpace, ResourceManager } from '../../service/resources'
   import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { Icon } from '@horizon/icons'
+  import { writable, derived, type Writable } from 'svelte/store'
+  import type { Space } from '../../types'
+  import { ContextMenu } from 'bits-ui'
 
-  export let resourceManager: ResourceManager
-  export let spaces: Space[] = []
+  export let spaces: Writable<Space[]>
 
   let selectedSpaceIndex = 0
   let isLoading = true
   let inputRef: HTMLInputElement
-  let searchQuery = ''
-  let filteredSpaces: Space[] = []
+  const searchQuery = writable('')
   let isOpen = false
 
   const dispatch = createEventDispatcher<ShortcutMenuEvents>()
@@ -30,38 +28,21 @@
   const isCreatingNewSpace = writable(false)
   let newSpaceName = ''
 
-  const loadSpaces = async () => {
-    try {
-      const fetchedSpaces = await resourceManager.listSpaces()
-      console.log('Fetched spaces:', fetchedSpaces)
-      // spaces = fetchedSpaces.filter((space) => !space.name.showInSidebar)
-      spaces = fetchedSpaces
+  const filteredSpaces = derived([spaces, searchQuery], ([spaces, searchQuery]) => {
+    const hasEverythingSpace = spaces.some((space) => space.id === everythingSpace.id)
+    const everything = hasEverythingSpace ? spaces : [everythingSpace, ...spaces]
+    return everything.filter((space) => {
+      if (space.name.showInSidebar) {
+        return false
+      }
 
-      spaces.push({
-        id: 'all',
-        name: {
-          folderName: 'Everything',
-          colors: ['#76E0FF', '#4EC9FB'],
-          showInSidebar: false,
-          liveModeEnabled: false,
-          hideViewed: false
-        },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        deleted: 0
-      })
+      if (searchQuery) {
+        return space.name.folderName.toLowerCase().includes(searchQuery.toLowerCase())
+      }
 
-      console.log('Spaces:', spaces)
-      filteredSpaces = spaces
-    } catch (error) {
-      console.error('Error loading spaces:', error)
-      spaces = []
-      filteredSpaces = []
-    } finally {
-      isLoading = false
-    }
-  }
-
+      return true
+    })
+  })
   const handleCreateNewHistoryTab = () => {
     console.log('Dispatching custom event from handleCreateNewHistoryTab')
     dispatch('create-new-history-tab')
@@ -77,7 +58,7 @@
   const handleClick = (index: number) => {
     selectedSpaceIndex = index
     console.log('Dispatching custom event from handleClick')
-    dispatch('create-tab-from-space', filteredSpaces[selectedSpaceIndex])
+    dispatch('create-tab-from-space', $filteredSpaces[selectedSpaceIndex])
     isOpen = false
   }
 
@@ -85,12 +66,6 @@
     if (inputRef) {
       inputRef.focus()
     }
-  }
-
-  const handleSearch = () => {
-    filteredSpaces = spaces.filter((space) =>
-      space.name.folderName.toLowerCase().includes(searchQuery.toLowerCase())
-    )
   }
 
   const startCreatingNewSpace = async (e: any) => {
@@ -114,7 +89,6 @@
   }
 
   onMount(() => {
-    loadSpaces()
     focusInput()
   })
 </script>
@@ -151,20 +125,18 @@
       <ContextMenu.SubContent
         class="z-50 w-full max-w-[260px] max-h-[400px] overflow-y-scroll rounded-xl bg-neutral-100 px-1 py-1.5 shadow-md outline-none"
       >
-        {#if isLoading}
-          <span>Loading...</span>
-        {:else if filteredSpaces && filteredSpaces.length > 0}
-          {#each filteredSpaces as space, index}
-            <ContextMenu.Item
-              class="flex  select-none items-center  py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
-              on:click={() => handleClick(index)}
-            >
-              {space.name.folderName}
-            </ContextMenu.Item>
-          {/each}
-        {:else}
-          <span>No spaces available</span>
-        {/if}
+      {#if $filteredSpaces.length > 0}
+      {#each $filteredSpaces as space, index}
+      <ContextMenu.Item
+      class="flex  select-none items-center  py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
+      on:click={() => handleClick(index)}
+    >
+      {space.name.folderName}
+    </ContextMenu.Item>
+      {/each}
+    {:else}
+      <span>No spaces available</span>
+    {/if}
         <ContextMenu.Item asChild>
           {#if $isCreatingNewSpace}
             <div
