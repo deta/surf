@@ -2719,7 +2719,7 @@
     {#if showTabs}
       <div
         transition:slide={{ axis: !horizontalTabs ? 'x' : 'y', duration: 200 }}
-        class="flex-grow"
+        class="flex-grow {horizontalTabs && 'h-[51px]'}"
         class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
         style="z-index: 5000;"
       >
@@ -2727,7 +2727,7 @@
           <div
             class="flex {!horizontalTabs
               ? 'flex-col w-[300px]  py-3 space-y-4 px-2 h-full'
-              : 'flex-row items-center ml-24 space-x-4 mr-4'} relative"
+              : 'flex-row items-center  ml-24 space-x-4 mr-4'} relative"
           >
             <div
               class="flex flex-row items-center flex-shrink-0 {!horizontalTabs &&
@@ -2833,7 +2833,7 @@
               <DragDropList
                 id="pinned-tabs"
                 type={HorizontalCenterDropZone}
-                itemSize={$pinnedTabs.length === 0 ? 20 : 54}
+                itemSize={$pinnedTabs.length === 0 ? 256 : 54}
                 itemCount={$pinnedTabs.length || 1}
                 on:drop={async (event) => {
                   onDrop(event, 'pin')
@@ -2841,7 +2841,7 @@
                 let:index
               >
                 {#if $pinnedTabs.length === 0}
-                  <div class="description-text">Drop Tabs here to pin them.</div>
+                  <div class="h-12">Drop Tabs here to pin them.</div>
                 {:else}
                   {#key $pinnedTabs[index]}
                     <TabItem
