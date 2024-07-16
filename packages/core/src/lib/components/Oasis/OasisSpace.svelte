@@ -183,37 +183,40 @@
       loadingContents.set(true)
       spaceContents.set([])
 
-      const items = await resourceManager.searchResources(
-        '',
+      const resources = await resourceManager.listResourcesByTags(
         [
           ResourceManager.SearchTagDeleted(false),
           ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
           ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SPACE_SOURCE),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
           ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
         ],
-        { includeAnnotations: false }
+        { includeAnnotations: true }
       )
 
-      // const resources = await resourceManager.listResourcesByTags(
-      //   [
-      //     ResourceManager.SearchTagDeleted(false),
-      //     ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
-      //     ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SPACE_SOURCE)
-      //   ]
-      // )
+      const items = resources
+        .sort((a, b) => {
+          if (a.createdAt && b.createdAt) {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          }
 
-      // const items = resources.map((resource) => ({
-      //   id: resource.id,
-      //   resource: resource,
-      //   engine: 'local',
-      // } as ResourceSearchResultItem))
+          return 0
+        })
+        .map(
+          (resource) =>
+            ({
+              id: resource.id,
+              resource: resource,
+              annotations: resource.annotations,
+              engine: 'local'
+            }) as ResourceSearchResultItem
+        )
 
       log.debug('Loaded everything:', items)
 
       searchValue.set('')
       searchResults.set([])
-      everythingContents.set(items.reverse())
+      everythingContents.set(items)
     } catch (error) {
       log.error('Error loading everything:', error)
     } finally {
@@ -384,6 +387,7 @@
                 [
                   ResourceTag.canonicalURL(canonicalURL),
                   ResourceTag.spaceSource('rss'),
+                  ResourceTag.hideInEverything(),
                   ResourceTag.viewedByUser(false)
                 ]
               )
@@ -405,6 +409,7 @@
                 [
                   ResourceTag.canonicalURL(canonicalURL),
                   ResourceTag.spaceSource('rss'),
+                  ResourceTag.hideInEverything(),
                   ResourceTag.viewedByUser(false)
                 ]
               )
@@ -598,7 +603,9 @@
       if (!isEverythingSpace) {
         log.debug('removing from space...', resource)
         await resourceManager.deleteSpaceEntries([resource.id])
-        $spaceContents = $spaceContents.filter((x) => x.id !== resource.id)
+        spaceContents.update((contents) => {
+          return contents.filter((x) => x.resource_id !== resourceId)
+        })
       } else {
         for (const reference of references) {
           log.debug('references', reference)
@@ -612,7 +619,9 @@
     if (isEverythingSpace || isFromLiveSpace) {
       await resourceManager.deleteResource(resourceId)
       log.debug('Resource deleted')
-      $everythingContents = $everythingContents.filter((x) => x.id !== resourceId)
+      everythingContents.update((contents) => {
+        return contents.filter((x) => x.id !== resourceId)
+      })
     }
 
     toasts.success('Resource deleted!')

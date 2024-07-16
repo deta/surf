@@ -101,6 +101,10 @@ export class ResourceTag {
   static viewedByUser(value: boolean) {
     return { name: ResourceTagsBuiltInKeys.VIEWED_BY_USER, value: `${value}` }
   }
+
+  static hideInEverything(value: boolean = true) {
+    return { name: ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING, value: `${value}` }
+  }
 }
 
 export const getPrimaryResourceType = (type: string) => {
@@ -137,6 +141,7 @@ export class Resource {
 
   metadata?: SFFSResourceMetadata
   tags?: SFFSResourceTag[]
+  annotations?: ResourceAnnotation[]
 
   rawData: Blob | null
   readDataPromise: Promise<Blob> | null // used to avoid duplicate reads
@@ -157,6 +162,7 @@ export class Resource {
     this.deleted = data.deleted
     this.metadata = data.metadata
     this.tags = data.tags
+    this.annotations = data.annotations?.map((a) => new ResourceAnnotation(sffs, a))
 
     this.rawData = null
     this.readDataPromise = null
@@ -242,6 +248,13 @@ export class Resource {
     this.log.debug('adding resource tag', tag)
 
     this.tags = [...(this.tags ?? []), tag]
+    this.updatedAt = new Date().toISOString()
+  }
+
+  removeTag(name: string) {
+    this.log.debug('removing resource tag', name)
+
+    this.tags = this.tags?.filter((t) => t.name !== name)
     this.updatedAt = new Date().toISOString()
   }
 
@@ -406,13 +419,13 @@ export class ResourceManager {
     return this.createResourceObject(resource)
   }
 
-  private findOrGetResourceObject(id: string) {
+  private findOrGetResourceObject(id: string, opts?: { includeAnnotations: boolean }) {
     const existingResource = get(this.resources).find((r) => r.id === id)
     if (existingResource) {
       return Promise.resolve(existingResource)
     }
 
-    return this.getResource(id)
+    return this.getResource(id, opts)
   }
 
   async createResource(
@@ -467,11 +480,11 @@ export class ResourceManager {
     return results
   }
 
-  async listResourcesByTags(tags: SFFSResourceTag[]) {
+  async listResourcesByTags(tags: SFFSResourceTag[], opts?: { includeAnnotations: boolean }) {
     const resourceIds = await this.sffs.listResourceIDsByTags(tags)
     this.log.debug('found resource ids', resourceIds)
     return (await Promise.all(
-      resourceIds.map((id) => this.findOrGetResourceObject(id))
+      resourceIds.map((id) => this.findOrGetResourceObject(id, opts))
     )) as Resource[]
   }
 
@@ -514,14 +527,12 @@ export class ResourceManager {
   }
 
   async getResourceAnnotations() {
-    const rawResults = await this.sffs.searchResources('', [
+    const rawResults = await this.listResourcesByTags([
       ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
       ResourceManager.SearchTagDeleted(false)
     ])
 
-    return rawResults.map((item) =>
-      this.findOrCreateResourceObject(item.resource)
-    ) as ResourceAnnotation[]
+    return rawResults.map((item) => this.findOrCreateResourceObject(item)) as ResourceAnnotation[]
   }
 
   async getResourcesFromSourceURL(url: string) {
@@ -534,15 +545,13 @@ export class ResourceManager {
   }
 
   async getAnnotationsForResource(id: string) {
-    const rawResults = await this.sffs.searchResources('', [
+    const rawResults = await this.listResourcesByTags([
       ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
       ResourceManager.SearchTagAnnotates(id),
       ResourceManager.SearchTagDeleted(false)
     ])
 
-    return rawResults.map((item) =>
-      this.findOrCreateResourceObject(item.resource)
-    ) as ResourceAnnotation[]
+    return rawResults.map((item) => this.findOrCreateResourceObject(item)) as ResourceAnnotation[]
   }
 
   async getRemoteResource(id: string, remoteURL: string) {
@@ -578,11 +587,11 @@ export class ResourceManager {
       return resources
     })
 
-    const annotations = (resourceItem.annotations ?? []).map((a) =>
-      this.findOrCreateResourceObject(a)
-    ) as ResourceAnnotation[]
+    // const annotations = (resourceItem.annotations ?? []).map((a) =>
+    //   this.findOrCreateResourceObject(a)
+    // ) as ResourceAnnotation[]
 
-    return { resource, annotations: annotations }
+    return resource
   }
 
   async getHistoryEntries() {
@@ -594,7 +603,18 @@ export class ResourceManager {
     return resources as ResourceHistoryEntry[]
   }
 
-  async getResource(id: string) {
+  addAnnotationToLoadedResource(resourceId: string, annotation: ResourceAnnotation) {
+    const loadedResources = get(this.resources)
+    const loadedResource = loadedResources.find((r) => r.id === resourceId)
+    if (loadedResource) {
+      this.log.debug('adding annotation to loaded resource', resourceId, annotation)
+      loadedResource.annotations = [...(loadedResource.annotations ?? []), annotation]
+    } else {
+      this.log.debug('resource not loaded, skipping adding annotation', resourceId)
+    }
+  }
+
+  async getResource(id: string, opts?: { includeAnnotations: boolean }) {
     // check if resource is already loaded
     const loadedResources = get(this.resources)
     const loadedResource = loadedResources.find((r) => r.id === id)
@@ -603,7 +623,7 @@ export class ResourceManager {
     }
 
     // read resource from sffs
-    const resourceItem = await this.sffs.readResource(id)
+    const resourceItem = await this.sffs.readResource(id, opts)
     if (!resourceItem) {
       return null
     }
@@ -722,7 +742,7 @@ export class ResourceManager {
 
     await this.sffs.deleteResourceTag(resourceId, tagName)
 
-    resource.tags = resource.tags?.filter((t) => t.name !== tagName)
+    resource.removeTag(tagName)
   }
 
   async createResourceNote(
@@ -929,6 +949,10 @@ export class ResourceManager {
 
   static SearchTagSilent(value: boolean = true): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.SILENT, value: `${value}`, op: 'eq' }
+  }
+
+  static SearchTagHideInEverything(value: boolean = true): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING, value: `${value}`, op: 'eq' }
   }
 
   static provide(telemetry: Telemetry) {

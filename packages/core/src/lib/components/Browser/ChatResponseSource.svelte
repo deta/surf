@@ -13,7 +13,6 @@
   const log = useLogScope('ChatResponseSource')
 
   let resource: Resource
-  let annotations: ResourceAnnotation[] = []
 
   onMount(async () => {
     if (!source.resource_id) {
@@ -42,15 +41,14 @@
       return
     }
 
-    resource = res.resource
-    annotations = res.annotations
+    resource = res
 
     log.debug('Fetched resource:', resource)
   })
 </script>
 
 {#if resource}
-  <ResourcePreviewClean {resource} {annotations} on:click />
+  <ResourcePreviewClean {resource} on:click />
 {:else if source.metadata && source.metadata.url}
   <div>
     {source.render_id})

@@ -45,7 +45,7 @@
 
   export let resource: Resource
   export let selected: boolean = false
-  export let annotations: ResourceAnnotation[] = []
+  // export let annotations: ResourceAnnotation[] = []
   export let showSummary: boolean = false
   export let showTitles: boolean = true
 
@@ -68,6 +68,8 @@
   $: documentResource = resource as ResourceDocument
   $: annotationResource = resource as ResourceAnnotation
   $: historyEntryResource = resource as ResourceHistoryEntry
+
+  $: annotations = resource.annotations ?? []
 
   $: isLiveSpaceResource = !!resource.tags?.find(
     (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
