@@ -2015,13 +2015,16 @@
     const annotationData = e.detail
     log.debug('webview annotation', annotationData)
 
-    let bookmarkedResource = tab.resourceBookmark
+    const bookmarkedResourceId = tab.resourceBookmark
+    let bookmarkedResource = bookmarkedResourceId
+      ? await resourceManager.getResource(bookmarkedResourceId)
+      : null
 
     if (!bookmarkedResource) {
       log.debug('no bookmarked resource')
 
       const resource = await bookmarkPage(tab, true)
-      bookmarkedResource = resource.id
+      bookmarkedResource = resource
     }
 
     const currentEntry = historyEntriesManager.getEntry(
@@ -2043,7 +2046,7 @@
         ResourceTag.canonicalURL(url),
 
         // link the annotation to the bookmarked resource
-        ResourceTag.annotates(bookmarkedResource),
+        ResourceTag.annotates(bookmarkedResource.id),
 
         // add tags as hashtags
         ...hashtags.map((tag) => ResourceTag.hashtag(tag))
@@ -2051,6 +2054,27 @@
     )
 
     log.debug('created annotation resource', annotationResource)
+
+    // Update bookmarked resource if its loaded with annotation
+    resourceManager.addAnnotationToLoadedResource(bookmarkedResource.id, annotationResource)
+
+    // update bookmarked resource tags to make the resource visible in Everything
+    const isSilent = (bookmarkedResource.tags ?? []).find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+    )
+    if (isSilent) {
+      await resourceManager.deleteResourceTag(bookmarkedResource.id, ResourceTagsBuiltInKeys.SILENT)
+    }
+
+    const hideInEverything = (bookmarkedResource.tags ?? []).find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+    )
+    if (hideInEverything) {
+      await resourceManager.deleteResourceTag(
+        bookmarkedResource.id,
+        ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+      )
+    }
 
     log.debug('highlighting text in webview')
     browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreAnnotation, {

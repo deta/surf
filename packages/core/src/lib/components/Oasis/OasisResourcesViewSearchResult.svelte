@@ -58,7 +58,6 @@
         <DragResourceWrapper resource={item.resource}>
           <ResourcePreviewClean
             resource={item.resource}
-            annotations={item.annotations}
             selected={selected === item.id}
             on:load={handleItemLoad}
             on:click
