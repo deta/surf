@@ -349,7 +349,7 @@
       archived: false,
       pinned: false,
       magic: false,
-      index: Date.now(), 
+      index: Date.now(),
       ...tab
     })
     log.debug('Created tab', newTab)
@@ -692,7 +692,7 @@
       $activeBrowserTab?.reload()
     } else if (isModKeyAndKeyPressed(e, 'i')) {
       createImporterTab()
-    } else if (isModKeyAndKeyPressed(e, 'x')) {
+    } else if (isModKeyAndKeyPressed(e, ',')) {
       createOasisDiscoveryTab()
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
@@ -2702,9 +2702,7 @@
 
 <ToastsProvider service={toasts} />
 
-<div
-  class="antialiased w-screen h-screen will-change-auto transform-gpu bg-sky-100"
->
+<div class="antialiased w-screen h-screen will-change-auto transform-gpu bg-sky-100">
   {#if showTabSearch}
     <TabSearch
       onClose={() => {
@@ -2928,7 +2926,9 @@
                   {/if}
                 </div>
 
-                <div class="{!horizontalTabs ? 'w-full h-0.5' : 'h-full w-0.5'} bg-neutral-200"></div>
+                <div
+                  class="{!horizontalTabs ? 'w-full h-0.5' : 'h-full w-0.5'} bg-neutral-200"
+                ></div>
               {/if}
             {/if}
 
@@ -3047,9 +3047,7 @@
                       </Popover.Content>
                     </Popover.Root>
                   {:else}
-                    <LinkPreview.Root
-                    openDelay={750}
-                    closeDelay={10}>
+                    <LinkPreview.Root openDelay={750} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
                           tab={$unpinnedTabs[index]}
@@ -3186,9 +3184,7 @@
                       </Popover.Content>
                     </Popover.Root>
                   {:else}
-                    <LinkPreview.Root
-                    openDelay={800}
-                    closeDelay={10}>
+                    <LinkPreview.Root openDelay={800} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
                           tab={$unpinnedTabs[index]}
@@ -3213,7 +3209,6 @@
                 </DragDropList>
               {/if}
             </div>
-
 
             <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
               {#if $sidebarTab === 'active' && $activeTab?.type === 'page'}
