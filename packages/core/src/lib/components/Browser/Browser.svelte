@@ -692,7 +692,7 @@
       $activeBrowserTab?.reload()
     } else if (isModKeyAndKeyPressed(e, 'i')) {
       createImporterTab()
-    } else if (isModKeyAndKeyPressed(e, '/')) {
+    } else if (isModKeyAndKeyPressed(e, 'e')) {
       createOasisDiscoveryTab()
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
