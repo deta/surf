@@ -6,13 +6,13 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 
-from utils.embedchain import create_app, send_message, send_general_message, get_embedding, get_resources
+from utils.embedchain import create_app, send_message, send_general_message, get_embedding, get_resources, oneoff_chat
 from embedchain.loaders.youtube_video import YoutubeLoader
 from utils.sffs import get_resource
 from utils.mocks import mock_stream
 from utils.query_classifier import is_query_a_question
 from utils.embeddings import get_similar_docs
-from utils.prompts import CREATE_APP_PROMPT, COMMAND_PROMPT
+from utils.prompts import CREATE_APP_PROMPT, COMMAND_PROMPT, SQL_QUERY_GENERATOR_PROMPT
 
 
 router = APIRouter()
@@ -81,6 +81,16 @@ async def handle_app(request: AppRequest):
         print("Exception in creating app:", str(e))
         return str(e)
 
+@router.get("/api/v1/sql_query")
+async def handle_sql_query(query: str):
+    try:
+        system_prompt = SQL_QUERY_GENERATOR_PROMPT
+        answer = await oneoff_chat(query, system_prompt, DEFAULT_MODEL)
+        return responses.PlainTextResponse(content=answer)
+    except Exception as e:
+        print("Exception in generating sql query:", str(e))
+        return str(e)
+
 
 @router.post("/api/v1/embeddings")
 async def handle_embeddings(data: str):
@@ -97,10 +107,13 @@ async def handle_get_resource(resource_id):
         return responses.JSONResponse(status_code=404, content={"message": "Resource not found"})
     return resource
 
-@router.get('/api/v1/resources')
-async def handle_get_resources(query: str, resource_ids: Union[str, None] = None):
-    resource_ids_list = resource_ids.split(',') if resource_ids != None else None
-    return set(await get_resources(query, resource_ids_list))
+class ResourcesQueryRequest(BaseModel):
+    query: str
+    resource_ids: List[str]
+
+@router.post('/api/v1/resources/query')
+async def handle_get_resources(request: ResourcesQueryRequest):
+    return set(await get_resources(request.query, request.resource_ids))
 
 class SimilarDocsRequest(BaseModel):
     query: str

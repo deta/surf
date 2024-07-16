@@ -2227,8 +2227,12 @@
   }
 
   const handleCreateNewSpace = async (e: CustomEvent<ShortcutMenuEvents['create-new-space']>) => {
+    const { name, processNaturalLanguage } = e.detail
+    const toast = toasts.loading(
+      processNaturalLanguage ? 'Creating Space with AI...' : 'Creating Space...'
+    )
+
     try {
-      const { name, processNaturalLanguage } = e.detail
       log.debug('Create new Space with Name', name, processNaturalLanguage)
 
       const newSpace = await oasis.createSpace({
@@ -2245,8 +2249,6 @@
       if (processNaturalLanguage) {
         const userPrompt = JSON.stringify(name)
 
-        const toast = toasts.loading('Creating Space with AI...')
-
         const response = await resourceManager.getResourcesViaPrompt(userPrompt)
 
         log.debug(`Automatic Folder Generation request`, response)
@@ -2262,9 +2264,6 @@
         }
 
         await oasis.addResourcesToSpace(newSpace.id, results)
-        toast.success('Space created!')
-      } else {
-        toasts.success('Space created!')
       }
 
       if (newSpace) {
@@ -2280,8 +2279,15 @@
 
         makeTabActive(tab.id)
       }
+
+      toast.success('Space created!')
     } catch (error) {
       log.error('Failed to create new space:', error)
+      toast.error(
+        processNaturalLanguage
+          ? 'Failed to create new space with AI, try again with a different name'
+          : 'Failed to create new space'
+      )
     }
   }
 
