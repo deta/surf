@@ -1,6 +1,6 @@
 <script>
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
 
   export let renderContents
 
@@ -288,11 +288,48 @@
         this.columnNodes[columnIndex] = updatedNode
       }
 
-      return { ...item, style: itemStyle }
+      return { ...item, style: itemStyle, dom: null }
+    }
+
+    reinitializeGrid(items) {
+      // Reset the tree and column nodes
+      this.tree = new RedBlackTree()
+      this.columnNodes = []
+      for (let i = 0; i < this.columnCount; i++) {
+        this.columnNodes.push(this.tree.insert(i, 0))
+      }
+
+      // Sort items by their current top position to maintain relative order
+      items.sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top))
+
+      // Reposition items
+      items.forEach((item) => {
+        const height = parseInt(item.style.height)
+        const shortestColumn = this.tree.findMin()
+        const columnIndex = shortestColumn.column
+        const top = shortestColumn.height
+        const left = columnIndex * this.columnWidth
+
+        item.style = {
+          left: `${left}%`,
+          top: `${top}px`,
+          height: `${height}px`
+        }
+
+        const newHeight = top + height + 10 // 10px margin
+        const updatedNode = this.tree.updateHeight(shortestColumn, newHeight)
+        if (updatedNode) {
+          this.columnNodes[columnIndex] = updatedNode
+        }
+      })
+
+      return items
     }
 
     getRandomHeight() {
-      return Math.floor(Math.random() * (this.maxHeight - this.minHeight + 1)) + this.minHeight
+      return (
+        Math.floor(Math.random() * (this.maxHeight - this.minHeight + 1)) + this.minHeight + 200
+      )
     }
   }
 
@@ -303,8 +340,36 @@
   function transformIncomingData(data) {
     return {
       id: data.id,
-      content: `Item ${data.id}`, // You may want to customize this based on your needs
-      metadata: data // Store the original data for reference if needed
+      content: `Item ${data.id}`,
+      metadata: data
+    }
+  }
+
+  let resizeObserverDebounce
+  let resizedItems = new Set()
+
+  function observeItemHeightChange(item) {
+    const observer = new ResizeObserver(() => {
+      const resourcePreview = item.dom.querySelector('.resource-preview')
+      if (resourcePreview) {
+        const height = resourcePreview.offsetHeight
+        item.style.height = `${height}px`
+        resizedItems.add(item)
+
+        clearTimeout(resizeObserverDebounce)
+        resizeObserverDebounce = setTimeout(reinitializeGridAfterResize, 100)
+      }
+    })
+    observer.observe(item.dom.querySelector('.resource-preview'))
+  }
+
+  function reinitializeGridAfterResize() {
+    if (resizedItems.size > 0) {
+      const updatedItems = masonryGrid.reinitializeGrid(items)
+      items = updatedItems
+      gridItems = updatedItems
+      resizedItems.clear()
+      updateVisibleItems()
     }
   }
 
@@ -312,16 +377,27 @@
     const gridContainer = document.getElementById('grid')
     masonryGrid = new MasonryGrid(gridContainer, 5)
 
-    // Generate initial items from renderContents
     renderContents.forEach((item) => {
       addItem(item)
     })
 
-    // Set up scroll event listener
     gridContainer.addEventListener('scroll', updateVisibleItems)
 
-    // Initial update of visible items
     updateVisibleItems()
+
+    const observer = new MutationObserver(() => {
+      items.forEach((item) => {
+        const dom = document.getElementById(`item-${item.id}`)
+        if (dom) {
+          item.dom = dom
+          observeItemHeightChange(item)
+        }
+      })
+
+      observer.disconnect()
+    })
+
+    observer.observe(gridContainer, { childList: true, subtree: true })
   })
 
   function addItem(incomingItem = null) {
@@ -363,8 +439,6 @@
 <div id="grid" class="masonry-grid">
   <div class="debug">
     Total items: {items.length} | Visible items: {gridItems.filter((item) => item.visible).length}
-
-    <!-- Data coming in: {JSON.stringify(renderContents[0])} | Current Set: {JSON.stringify(items[0])} -->
     <button on:click={() => navigator.clipboard.writeText(JSON.stringify(renderContents[0]))}>
       Copy Data Coming In
     </button>
@@ -375,17 +449,15 @@
   {#each gridItems as item (item.id)}
     <div
       class="item"
+      id="item-{item.id}"
       class:visible={item.visible}
       style="left: {item.style.left}; top: {item.style.top}; height: {item.style.height};"
     >
-      <div class="item-details">
+      <div class="item-details" bind:this={item.dom}>
         <ResourcePreviewClean
           resource={item.metadata.resource}
           annotations={item.metadata.annotations}
         />
-        {#if item.metadata}
-          <p>Type: {item.metadata.resource.metadata.name}</p>
-        {/if}
       </div>
     </div>
   {/each}
@@ -410,8 +482,6 @@
   .item {
     position: absolute;
     width: calc(20% - 10px);
-    background-color: #a4c639;
-    border: 1px solid #8aa62f;
     box-sizing: border-box;
     padding: 10px;
     transition: opacity 0.12s ease;
@@ -426,6 +496,12 @@
   .item-details {
     font-size: 0.8em;
     margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding: 1rem;
+    justify-content: center;
   }
   .item.visible {
     opacity: 1;
