@@ -8,7 +8,7 @@
   import type { ResourceSearchResultItem } from '../../service/resources'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import DragResourceWrapper from './DragResourceWrapper.svelte'
-  import Masonry from './Masonry.svelte'
+  import Masonry from './MasonryTest.svelte'
 
   export let resources: Readable<ResourceSearchResultItem[]>
   export let selected: string | null = null
@@ -16,7 +16,7 @@
   const log = useLogScope('OasisResourcesView')
   // const dispatch = createEventDispatcher<{ click: string }>()
 
-  const CHUNK_SIZE = 40
+  const CHUNK_SIZE = 1000
   const CHUNK_THRESHOLD = 300
 
   let scrollElement: HTMLDivElement
@@ -49,9 +49,11 @@
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    test
+    {#if $renderContents.length > 0}
+      <Masonry renderContents={$renderContents} />
+    {/if}
 
-    <Masonry
+    <!-- <Masonry
       gridGap="2rem"
       colWidth="minmax(250px, 330px)"
       bind:refreshLayout={refreshContentLayout}
@@ -74,7 +76,7 @@
         threshold={CHUNK_THRESHOLD}
         on:loadMore={handleLoadChunk}
       />
-    </Masonry>
+    </Masonry>-->
   </div>
 </div>
 
