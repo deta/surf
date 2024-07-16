@@ -4,6 +4,9 @@
 
   export let renderContents
 
+  const UPPER_OVERSHOOT_BOUND = 800
+  const LOWER_OVERSHOOT_BOUND = 800
+
   class Node {
     constructor(column, height) {
       this.column = column
@@ -352,6 +355,7 @@
     const observer = new ResizeObserver(() => {
       const resourcePreview = item.dom.querySelector('.resource-preview')
       if (resourcePreview) {
+        console.log('')
         const height = resourcePreview.offsetHeight
         item.style.height = `${height}px`
         resizedItems.add(item)
@@ -375,7 +379,7 @@
 
   onMount(() => {
     const gridContainer = document.getElementById('grid')
-    masonryGrid = new MasonryGrid(gridContainer, 5)
+    masonryGrid = new MasonryGrid(gridContainer, 3)
 
     renderContents.forEach((item) => {
       addItem(item)
@@ -423,7 +427,9 @@
 
       return {
         ...item,
-        visible: itemBottom > scrollTop - 500 && itemTop < scrollTop + viewportHeight + 500
+        visible:
+          itemBottom > scrollTop - UPPER_OVERSHOOT_BOUND &&
+          itemTop < scrollTop + viewportHeight + LOWER_OVERSHOOT_BOUND
       }
     })
   }
