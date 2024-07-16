@@ -423,7 +423,7 @@
 
       return {
         ...item,
-        visible: itemBottom > scrollTop - 200 && itemTop < scrollTop + viewportHeight + 200
+        visible: itemBottom > scrollTop - 500 && itemTop < scrollTop + viewportHeight + 500
       }
     })
   }
