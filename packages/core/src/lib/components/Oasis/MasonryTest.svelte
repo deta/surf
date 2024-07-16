@@ -1,4 +1,5 @@
 <script>
+  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import { onMount } from 'svelte'
 
   export let renderContents
@@ -363,7 +364,7 @@
   <div class="debug">
     Total items: {items.length} | Visible items: {gridItems.filter((item) => item.visible).length}
 
-    Data coming in: {JSON.stringify(renderContents[0])} | Current Set: {JSON.stringify(items[0])}
+    <!-- Data coming in: {JSON.stringify(renderContents[0])} | Current Set: {JSON.stringify(items[0])} -->
     <button on:click={() => navigator.clipboard.writeText(JSON.stringify(renderContents[0]))}>
       Copy Data Coming In
     </button>
@@ -378,6 +379,10 @@
       style="left: {item.style.left}; top: {item.style.top}; height: {item.style.height};"
     >
       <div class="item-details">
+        <ResourcePreviewClean
+          resource={item.metadata.resource}
+          annotations={item.metadata.annotations}
+        />
         {#if item.metadata}
           <p>Type: {item.metadata.resource.metadata.name}</p>
         {/if}
@@ -409,7 +414,7 @@
     border: 1px solid #8aa62f;
     box-sizing: border-box;
     padding: 10px;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.12s ease;
     color: white;
     font-weight: bold;
     display: flex;
