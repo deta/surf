@@ -71,7 +71,6 @@
         class="favicon"
         src={`https://www.google.com/s2/favicons?domain=${post?.url}&sz=256`}
         alt={`${post?.site_name} favicon`}
-        loading="lazy"
       />
       <div class="title">{title}</div>
       <div class="post-metadata">

@@ -256,70 +256,64 @@
   }
 
   class MasonryGrid {
-    constructor(container, columnCount) {
+    constructor(container) {
       this.container = container
-      this.columnCount = columnCount
-      this.columnWidth = 100 / columnCount
+      this.columnCount = this.getColumnCount()
+      this.gapPercentage = 2 // 2% gap (1% on each side)
+      this.columnWidth = (100 - this.gapPercentage * (this.columnCount - 1)) / this.columnCount
       this.items = []
       this.minHeight = 50
-      this.maxHeight = 250
+      this.maxHeight = 450
       this.tree = new RedBlackTree()
       this.columnNodes = []
 
-      for (let i = 0; i < columnCount; i++) {
-        this.columnNodes.push(this.tree.insert(i, 0))
-      }
+      this.initializeColumns()
+
+      window.addEventListener('resize', this.handleResize.bind(this))
     }
 
-    addItem(item) {
-      const height = this.getRandomHeight()
-      const shortestColumn = this.tree.findMin()
-      if (!shortestColumn) return null // Handle case where tree is empty
-      const columnIndex = shortestColumn.column
-      const top = shortestColumn.height
-      const left = columnIndex * this.columnWidth
-
-      const itemStyle = {
-        left: `${left}%`,
-        top: `${top}px`,
-        height: `${height}px`
-      }
-
-      const newHeight = top + height + 10 // 10px margin
-      const updatedNode = this.tree.updateHeight(shortestColumn, newHeight)
-      if (updatedNode) {
-        this.columnNodes[columnIndex] = updatedNode
-      }
-
-      return { ...item, style: itemStyle, dom: null }
+    getColumnCount() {
+      const width = window.innerWidth
+      if (width < 600) return 1
+      if (width < 900) return 2
+      if (width < 1200) return 3
+      if (width < 1800) return 4
+      return 5
     }
 
-    reinitializeGrid(items) {
-      // Reset the tree and column nodes
+    initializeColumns() {
       this.tree = new RedBlackTree()
       this.columnNodes = []
       for (let i = 0; i < this.columnCount; i++) {
         this.columnNodes.push(this.tree.insert(i, 0))
       }
+    }
 
-      // Sort items by their current top position to maintain relative order
+    reinitializeGrid(items) {
+      this.initializeColumns()
+      console.log(`Reinitializing grid with ${this.columnCount} columns`)
+
       items.sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top))
 
-      // Reposition items
-      items.forEach((item) => {
+      items.forEach((item, index) => {
         const height = parseInt(item.style.height)
         const shortestColumn = this.tree.findMin()
         const columnIndex = shortestColumn.column
         const top = shortestColumn.height
-        const left = columnIndex * this.columnWidth
+        const left = columnIndex * (this.columnWidth + this.gapPercentage)
 
-        item.style = {
+        const itemStyle = {
           left: `${left}%`,
           top: `${top}px`,
-          height: `${height}px`
+          height: `${height}px`,
+          width: `${this.columnWidth}%`
         }
 
-        const newHeight = top + height + 10 // 10px margin
+        console.log(`Item ${index} styles:`, itemStyle)
+
+        item.style = itemStyle
+
+        const newHeight = top + height + 10 // 10px vertical gap
         const updatedNode = this.tree.updateHeight(shortestColumn, newHeight)
         if (updatedNode) {
           this.columnNodes[columnIndex] = updatedNode
@@ -329,6 +323,40 @@
       return items
     }
 
+    addItem(item) {
+      const height = this.getRandomHeight()
+      const shortestColumn = this.tree.findMin()
+      if (!shortestColumn) return null
+      const columnIndex = shortestColumn.column
+      const top = shortestColumn.height
+      const left = columnIndex * (this.columnWidth + this.gapPercentage)
+
+      const itemStyle = {
+        left: `${left}%`,
+        top: `${top}px`,
+        height: `${height}px`,
+        width: `${this.columnWidth}%`
+      }
+
+      const newHeight = top + height + 10 // 10px vertical gap
+      const updatedNode = this.tree.updateHeight(shortestColumn, newHeight)
+      if (updatedNode) {
+        this.columnNodes[columnIndex] = updatedNode
+      }
+
+      return { ...item, style: itemStyle, dom: null }
+    }
+
+    handleResize() {
+      const newColumnCount = this.getColumnCount()
+      console.log(`Window resized. New column count: ${newColumnCount}`)
+      if (newColumnCount !== this.columnCount) {
+        this.columnCount = newColumnCount
+        this.columnWidth = (100 - this.gapPercentage * (this.columnCount - 1)) / this.columnCount
+        this.initializeColumns()
+        this.reinitializeGrid(this.items)
+      }
+    }
     getRandomHeight() {
       return (
         Math.floor(Math.random() * (this.maxHeight - this.minHeight + 1)) + this.minHeight + 200
@@ -379,7 +407,7 @@
 
   onMount(() => {
     const gridContainer = document.getElementById('grid')
-    masonryGrid = new MasonryGrid(gridContainer, 3)
+    masonryGrid = new MasonryGrid(gridContainer)
 
     renderContents.forEach((item) => {
       addItem(item)
@@ -470,27 +498,25 @@
 </div>
 
 <style>
-  .debug {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    color: #fff;
-    background-color: #333;
-    padding: 0.5rem;
-    z-index: 100;
-  }
   .masonry-grid {
     position: relative;
     width: 100%;
     height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4rem;
+    box-sizing: border-box;
   }
   .item {
     position: absolute;
-    width: calc(20% - 10px);
     box-sizing: border-box;
     padding: 10px;
-    transition: opacity 0.12s ease;
+    transition:
+      opacity 0.12s ease,
+      left 0.12s ease,
+      top 0.12s ease,
+      width 0.12s ease;
+    will-change: opacity, left, top, width;
     color: white;
     font-weight: bold;
     display: flex;
@@ -499,17 +525,50 @@
     opacity: 0;
   }
 
+  .debug {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    background: black;
+    color: white;
+    padding: 10px;
+    z-index: 1000;
+  }
+
   .item-details {
     font-size: 0.8em;
     margin-top: 5px;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+    padding: 2rem 0;
     width: 100%;
-    padding: 1rem;
-    justify-content: center;
   }
   .item.visible {
     opacity: 1;
+  }
+
+  /* Responsive widths */
+  @media (max-width: 600px) {
+    .item {
+      width: 100%;
+    }
+  }
+  @media (min-width: 601px) and (max-width: 900px) {
+    .item {
+      width: 49%;
+    } /* (100% - 2% gap) / 2 */
+  }
+  @media (min-width: 901px) and (max-width: 1200px) {
+    .item {
+      width: 32%;
+    } /* (100% - 4% gap) / 3 */
+  }
+  @media (min-width: 1201px) and (max-width: 1800px) {
+    .item {
+      width: 23.5%;
+    } /* (100% - 6% gap) / 4 */
+  }
+  @media (min-width: 1801px) {
+    .item {
+      width: 18.4%;
+    } /* (100% - 8% gap) / 5 */
   }
 </style>
