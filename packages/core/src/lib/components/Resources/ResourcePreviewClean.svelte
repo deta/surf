@@ -135,7 +135,6 @@
   }
 
   const getHostname = (raw: string) => {
-    log.debug('Getting hostname from', raw)
     try {
       const url = new URL(raw)
       return url.hostname

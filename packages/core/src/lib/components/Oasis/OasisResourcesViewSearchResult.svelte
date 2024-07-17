@@ -16,7 +16,7 @@
   const log = useLogScope('OasisResourcesView')
   // const dispatch = createEventDispatcher<{ click: string }>()
 
-  const CHUNK_SIZE = 1000
+  const CHUNK_SIZE = 100
   const CHUNK_THRESHOLD = 300
 
   let scrollElement: HTMLDivElement
@@ -32,14 +32,18 @@
     refreshContentLayout()
   }, 500)
 
-  const handleLoadChunk = () => {
+  const handleLoadChunk = (e: CustomEvent) => {
+    console.log('yyyy', e.detail)
+
     log.debug('Load more chunk...')
     if ($resources.length <= $renderContents.length) {
       return
     }
 
-    renderLimit.update((limit) => limit + CHUNK_SIZE)
-    debouncedRefreshLayout()
+    renderLimit.update(
+      (limit) => limit + (e.detail > 10 ? CHUNK_SIZE * (e.detail / 10) : CHUNK_SIZE)
+    )
+    // debouncedRefreshLayout()
   }
 
   const handleItemLoad = () => {
@@ -50,7 +54,9 @@
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
     {#if $renderContents.length > 0}
-      <Masonry renderContents={$renderContents} />
+      <Masonry renderContents={$renderContents} on:load-more={handleLoadChunk}
+        >{$renderContents.length}</Masonry
+      >
     {/if}
 
     <!-- <Masonry

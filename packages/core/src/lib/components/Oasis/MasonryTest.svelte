@@ -1,11 +1,19 @@
 <script>
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
-  import { onMount, tick } from 'svelte'
+  import { onMount, tick, createEventDispatcher } from 'svelte'
 
   export let renderContents
 
   const UPPER_OVERSHOOT_BOUND = 1400
   const LOWER_OVERSHOOT_BOUND = 1400
+
+  const dispatch = createEventDispatcher()
+
+  $: if (renderContents) {
+    tick().then(() => {
+      updateGrid(renderContents)
+    })
+  }
 
   class Node {
     constructor(column, height) {
@@ -291,7 +299,6 @@
 
     reinitializeGrid(items) {
       this.initializeColumns()
-      console.log(`Reinitializing grid with ${this.columnCount} columns`)
 
       items.sort((a, b) => parseInt(a.style.top) - parseInt(b.style.top))
 
@@ -302,14 +309,14 @@
         const top = shortestColumn.height
         const left = columnIndex * (this.columnWidth + this.gapPercentage)
 
+        const PADDING_TOP = 120
+
         const itemStyle = {
           left: `${left}%`,
-          top: `${top}px`,
+          top: `${top + PADDING_TOP}px`,
           height: `${height}px`,
           width: `${this.columnWidth}%`
         }
-
-        console.log(`Item ${index} styles:`, itemStyle)
 
         item.style = itemStyle
 
@@ -367,6 +374,13 @@
   export let items = []
   let gridItems = []
   let masonryGrid
+  let resizeObserverDebounce
+  let resizedItems = new Set()
+  let scrollVelocity = {
+    scrollTop: 0,
+    timestamp: 0,
+    velocity: 0
+  }
 
   function transformIncomingData(data) {
     return {
@@ -376,14 +390,10 @@
     }
   }
 
-  let resizeObserverDebounce
-  let resizedItems = new Set()
-
   function observeItemHeightChange(item) {
     const observer = new ResizeObserver(() => {
       const resourcePreview = item.dom.querySelector('.resource-preview')
       if (resourcePreview) {
-        console.log('')
         const height = resourcePreview.offsetHeight
         item.style.height = `${height}px`
         resizedItems.add(item)
@@ -417,6 +427,10 @@
 
     updateVisibleItems()
 
+    observeItems(gridContainer)
+  })
+
+  function observeItems(gridContainer) {
     const observer = new MutationObserver(() => {
       items.forEach((item) => {
         const dom = document.getElementById(`item-${item.id}`)
@@ -430,7 +444,7 @@
     })
 
     observer.observe(gridContainer, { childList: true, subtree: true })
-  })
+  }
 
   function addItem(incomingItem = null) {
     const newItem = incomingItem
@@ -460,15 +474,61 @@
           itemTop < scrollTop + viewportHeight + LOWER_OVERSHOOT_BOUND
       }
     })
+
+    if (isBottomReached()) {
+      handleBottomReached()
+    }
+  }
+
+  function isBottomReached() {
+    const BUFFER = 2 * window.innerHeight
+    console.log('BUFFERSIZE', BUFFER * (scrollVelocity.velocity * 50))
+    const gridContainer = document.getElementById('grid')
+    return (
+      gridContainer.scrollHeight - gridContainer.scrollTop <= gridContainer.clientHeight + BUFFER
+    )
+  }
+
+  function handleBottomReached() {
+    console.log('Bottom of the list reached')
+    dispatch('load-more', scrollVelocity.velocity)
   }
 
   export function updateGrid(newData) {
-    newData.forEach((item) => {
+    const gridContainer = document.getElementById('grid')
+
+    const existingIds = new Set(items.map((item) => item.id))
+    const newItems = newData.filter((item) => !existingIds.has(item.id))
+    newItems.forEach((item) => {
       addItem(item)
     })
     updateVisibleItems()
+
+    observeItems(gridContainer)
   }
 </script>
+
+<svelte:window
+  on:wheel={(event) => {
+    const gridContainer = document.getElementById('grid')
+    const newScrollTop = gridContainer.scrollTop
+    const newTimestamp = event.timeStamp
+
+    if (scrollVelocity !== undefined) {
+      const deltaY = newScrollTop - scrollVelocity.scrollTop
+      const deltaT = newTimestamp - scrollVelocity.timestamp
+      scrollVelocity.velocity = deltaY / deltaT
+    }
+
+    scrollVelocity = {
+      scrollTop: newScrollTop,
+      timestamp: newTimestamp,
+      velocity: scrollVelocity ? scrollVelocity.velocity : 0
+    }
+
+    console.log(scrollVelocity.velocity, 'scrolly')
+  }}
+/>
 
 <div id="grid" class="masonry-grid">
   <div class="debug">
@@ -495,11 +555,13 @@
       </div>
     </div>
   {/each}
+  <slot />
 </div>
 
 <style>
   .masonry-grid {
-    position: relative;
+    position: absolute;
+    top: 0;
     width: 100%;
     height: 100%;
     overflow-y: auto;
