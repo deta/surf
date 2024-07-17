@@ -132,7 +132,7 @@
   })
 </script>
 
-<div class="wrapper">
+<div class="flex flex-col gap-4 overflow-hidden p-4 h-full">
   <div class="header">
     <div class="title">
       <Icon name="sparkles" size="28px" />

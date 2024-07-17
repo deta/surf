@@ -11,6 +11,7 @@
   import { Icon } from '@horizon/icons'
   import { writable, derived, type Writable } from 'svelte/store'
   import type { Space } from '../../types'
+  import { tooltip } from '../../utils/directives'
 
   export let spaces: Writable<Space[]>
   export let closePopover: () => void
@@ -170,6 +171,9 @@
         placeholder="Name your new space"
         data-keep-open
       />
+      <div class="hint" use:tooltip={{ text: 'Use shift + ↵ to use AI', position: 'left' }}>
+        <span class="cmd">↵</span>
+      </div>
       <!-- <button on:click|stopPropagation={confirmCreatingNewSpace} data-keep-open>
         <Icon name="check" color="#7d7448" />
       </button>
@@ -189,7 +193,7 @@
   .shortcut-wrapper {
     display: flex;
     flex-direction: column;
-    width: 18rem;
+    width: 20rem;
     max-height: 30rem;
     overflow-y: auto;
     .label {
@@ -254,6 +258,7 @@
 
   .create-input-wrapper {
     display: flex;
+    align-items: center;
     input {
       width: 100%;
     }
@@ -264,6 +269,22 @@
       border-radius: 8px;
       &:hover {
         background-color: #e0e0d1;
+      }
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: #7d7448;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+
+      .cmd {
+        font-weight: 500;
+        font-size: 1rem;
+        background: #eeece0;
+        padding: 0.2rem 0.35rem;
+        border-radius: 5px;
       }
     }
   }

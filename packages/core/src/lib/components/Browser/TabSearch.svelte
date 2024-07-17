@@ -98,7 +98,9 @@
   })
 </script>
 
-<div class="overlay">
+<div
+  class="fixed top-0 left-0 h-full w-full flex justify-center items-center bg-sky-900/5 backdrop-blur-sm backdrop-sepia overlay"
+>
   <div class="content">
     <input
       bind:this={searchInputRef}
@@ -128,25 +130,14 @@
 
 <style lang="scss">
   .overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 100%;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
+    z-index: 50001;
   }
 
   .content {
     width: 60rem;
     padding: 1rem;
     box-shadow: 3px 3px 10px 2px rgba(0, 0, 0, 0.3);
-    background-color: #eeece0;
+    background-color: paleturquoise;
     border-radius: 12px;
   }
 

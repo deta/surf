@@ -37,7 +37,8 @@ export enum ResourceTagsBuiltInKeys {
   HASHTAG = 'hashtag',
   SPACE_SOURCE = 'spaceSource',
   VIEWED_BY_USER = 'viewedByUser',
-  SILENT = 'silent'
+  SILENT = 'silent',
+  HIDE_IN_EVERYTHING = 'hideInEverything'
 }
 
 export interface ResourceTagsBuiltIn {
@@ -54,6 +55,7 @@ export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.ANNOTATES]: string
   [ResourceTagsBuiltInKeys.HASHTAG]: string
   [ResourceTagsBuiltInKeys.SILENT]: boolean
+  [ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING]: boolean
 }
 
 export interface SFFSResource {

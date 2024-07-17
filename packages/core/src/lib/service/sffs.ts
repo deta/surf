@@ -395,7 +395,8 @@ export class SFFS {
             id: '',
             resource_id: '',
             tag_name: tag.name,
-            tag_value: tag.value
+            tag_value: tag.value,
+            op: tag.op ?? 'eq'
           }) as SFFSRawResourceTag
       )
     )

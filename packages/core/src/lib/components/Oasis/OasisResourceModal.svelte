@@ -66,14 +66,15 @@
   }
 
   let loadingAnnotations = true
-  let annotations: ResourceAnnotation[] = []
+  let annotations: ResourceAnnotation[] = resource.annotations ?? []
 
   const loadAnnotations = async (resourceId: string) => {
     try {
       log.debug('Loading annotations', resourceId)
 
       loadingAnnotations = true
-      annotations = await resourceManager.getAnnotationsForResource(resourceId)
+      const fetchedAnnotations = await resourceManager.getAnnotationsForResource(resourceId)
+      annotations = [...annotations, ...fetchedAnnotations.filter((a) => !annotations.includes(a))]
 
       log.debug('Annotations', annotations)
 
@@ -158,6 +159,28 @@
 
     log.debug('created annotation resource', annotationResource)
     annotations = [...annotations, annotationResource]
+    resourceManager.addAnnotationToLoadedResource(resource.id, annotationResource)
+    resource.annotations = [...(resource.annotations ?? []), annotationResource]
+
+    // remove resource silent tag
+    const isSilent = (resource.tags ?? []).find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+    )
+    if (isSilent) {
+      log.debug('removing silent tag from resource', resource.id)
+      await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+    }
+
+    const hideInEverything = (resource.tags ?? []).find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+    )
+    if (hideInEverything) {
+      log.debug('removing hide in everything tag from resource', resource.id)
+      await resourceManager.deleteResourceTag(
+        resource.id,
+        ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+      )
+    }
 
     log.debug('highlighting text in webview')
 

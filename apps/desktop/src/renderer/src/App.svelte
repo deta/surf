@@ -1,6 +1,11 @@
 <script lang="ts">
   import { Browser } from '@horizon/core'
   import { onMount } from 'svelte'
+  import '../../app.css'
+  import '../../output.css'
+  import '../../../../../packages/core/src/output.css'
+  // import browserBackground from './assets/seatrain-upscaled-hightrain.webp'
+  import browserBackground from './assets/bg.webp'
 
   let showDragBar = true
 
@@ -9,13 +14,18 @@
   })
 </script>
 
-<div class="main">
+<div class="main relative">
   {#if showDragBar}
     <div class="drag-bar top"></div>
     <div class="drag-bar bottom"></div>
     <div class="drag-bar left"></div>
     <div class="drag-bar right"></div>
   {/if}
+  <img
+    class="w-screen h-screen absolute object-cover opacity-60"
+    src={browserBackground}
+    alt="background"
+  />
   <Browser />
 </div>
 
@@ -39,7 +49,8 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 10px;
+    height: 20px;
+    z-index: -1;
   }
   .drag-bar.bottom {
     bottom: 0;
