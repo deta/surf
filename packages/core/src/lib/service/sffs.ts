@@ -52,13 +52,17 @@ export class SFFS {
   constructor() {
     this.log = useLogScope('SFFS')
 
+    // @ts-ignore
     if (typeof window.backend === 'undefined') {
       throw new Error('SFFS backend not available')
     }
 
+    // @ts-ignore
     this.backend = window.backend.sffs
+    // @ts-ignore
     this.fs = window.backend.resources
 
+    // @ts-ignore
     window.sffs = this // TODO: remove this, just for debugging
 
     if (!this.backend) {
