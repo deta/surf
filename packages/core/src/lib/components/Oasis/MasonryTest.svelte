@@ -4,8 +4,8 @@
 
   export let renderContents
 
-  const UPPER_OVERSHOOT_BOUND = 800
-  const LOWER_OVERSHOOT_BOUND = 800
+  const UPPER_OVERSHOOT_BOUND = 1400
+  const LOWER_OVERSHOOT_BOUND = 1400
 
   class Node {
     constructor(column, height) {
@@ -274,10 +274,10 @@
 
     getColumnCount() {
       const width = window.innerWidth
-      if (width < 600) return 1
-      if (width < 900) return 2
-      if (width < 1200) return 3
-      if (width < 1800) return 4
+      if (width < 800) return 1
+      if (width < 1100) return 2
+      if (width < 1400) return 3
+      if (width < 2000) return 4
       return 5
     }
 
@@ -546,27 +546,27 @@
   }
 
   /* Responsive widths */
-  @media (max-width: 600px) {
+  @media (max-width: 800px) {
     .item {
       width: 100%;
     }
   }
-  @media (min-width: 601px) and (max-width: 900px) {
+  @media (min-width: 801px) and (max-width: 1100px) {
     .item {
       width: 49%;
     } /* (100% - 2% gap) / 2 */
   }
-  @media (min-width: 901px) and (max-width: 1200px) {
+  @media (min-width: 1101px) and (max-width: 1400px) {
     .item {
       width: 32%;
     } /* (100% - 4% gap) / 3 */
   }
-  @media (min-width: 1201px) and (max-width: 1800px) {
+  @media (min-width: 1401px) and (max-width: 2000px) {
     .item {
       width: 23.5%;
     } /* (100% - 6% gap) / 4 */
   }
-  @media (min-width: 1801px) {
+  @media (min-width: 2001px) {
     .item {
       width: 18.4%;
     } /* (100% - 8% gap) / 5 */
