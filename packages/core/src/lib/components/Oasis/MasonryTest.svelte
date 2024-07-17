@@ -481,8 +481,11 @@
   }
 
   function isBottomReached() {
-    const BUFFER = 2 * window.innerHeight
-    console.log('BUFFERSIZE', BUFFER * (scrollVelocity.velocity * 50))
+    const BUFFER =
+      scrollVelocity.velocity > 10
+        ? 2 * window.innerHeight * (scrollVelocity.velocity / 4)
+        : 2 * window.innerHeight
+
     const gridContainer = document.getElementById('grid')
     return (
       gridContainer.scrollHeight - gridContainer.scrollTop <= gridContainer.clientHeight + BUFFER
@@ -490,8 +493,20 @@
   }
 
   function handleBottomReached() {
-    console.log('Bottom of the list reached')
-    dispatch('load-more', scrollVelocity.velocity)
+    const itemsToLoad = calculateItemsToLoad(scrollVelocity.velocity)
+    dispatch('load-more', itemsToLoad)
+  }
+
+  function calculateItemsToLoad(velocity) {
+    const MIN_ITEMS = 20
+    const MAX_ITEMS = 400
+    const VELOCITY_FACTOR = 30
+
+    // Logarithmic function to create a curve
+    let items = Math.round(Math.log(velocity * VELOCITY_FACTOR + 1) * 10)
+
+    // Ensure the result is within our defined limits
+    return Math.max(MIN_ITEMS, Math.min(items, MAX_ITEMS))
   }
 
   export function updateGrid(newData) {
@@ -525,8 +540,6 @@
       timestamp: newTimestamp,
       velocity: scrollVelocity ? scrollVelocity.velocity : 0
     }
-
-    console.log(scrollVelocity.velocity, 'scrolly')
   }}
 />
 

@@ -562,7 +562,7 @@ export class SFFS {
   }
 
   async readDataFile(path: string, resourceId: string): Promise<Uint8Array> {
-    this.log.debug('reading data file', path)
+    // this.log.debug('reading data file', path)
 
     await this.fs.openResource(path, resourceId, 'r+')
 

@@ -33,17 +33,13 @@
   }, 500)
 
   const handleLoadChunk = (e: CustomEvent) => {
-    console.log('yyyy', e.detail)
+    const CHUNK_SIZE = e.detail
 
-    log.debug('Load more chunk...')
     if ($resources.length <= $renderContents.length) {
       return
     }
 
-    renderLimit.update(
-      (limit) => limit + (e.detail > 10 ? CHUNK_SIZE * (e.detail / 10) : CHUNK_SIZE)
-    )
-    // debouncedRefreshLayout()
+    renderLimit.update((limit) => limit + CHUNK_SIZE)
   }
 
   const handleItemLoad = () => {
