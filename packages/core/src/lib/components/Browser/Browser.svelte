@@ -121,6 +121,7 @@
   import BrowserHistory from './BrowserHistory.svelte'
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
+  import { VerticalDragZone, HorizontalDragZone, type DragculaDragEvent } from '@horizon/dragcula'
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
@@ -2716,6 +2717,97 @@
     log.debug('State updated successfully')
   }
 
+  const onDropDragcula = async (e: DragculaDragEvent) => {
+    console.warn('dragevnt', e)
+
+    if (e.isNative) {
+      // TODO: Handle otherwise
+      return
+    }
+
+    //if (drag.srcZone.id === drag.targetZone.id && drag.index === to.index) return
+
+    // Get all the tab arrays
+    let unpinnedTabsArray = get(unpinnedTabs)
+    let pinnedTabsArray = get(pinnedTabs)
+    let magicTabsArray = get(magicTabs)
+
+    // Determine source and target lists
+    let fromTabs: Tab[]
+    let targetTabsArray: Tab[]
+
+    if (e.from.id === 'sidebar-unpinned-tabs') {
+      fromTabs = unpinnedTabsArray
+    } else if (e.from.id === 'sidebar-pinned-tabs') {
+      fromTabs = pinnedTabsArray
+    } else {
+      fromTabs = magicTabsArray
+    }
+
+    if (e.to.id === 'sidebar-unpinned-tabs') {
+      targetTabsArray = unpinnedTabsArray
+    } else if (e.to.id === 'sidebar-pinned-tabs') {
+      targetTabsArray = pinnedTabsArray
+    } else {
+      targetTabsArray = magicTabsArray
+    }
+
+    /*const movedTab = fromTabs.find(e => e.id === drag.item.id)
+    //const shouldChangeSection = from.dropZoneID !== to.dropZoneID
+
+    log.debug('Moving tab', movedTab, drag.srcZone, drag.targetZone)
+
+    // Remove the tab from its original position in the source list
+    // NOTE: Handled outside of this handler due to dragcula implementaiton
+    fromTabs.splice(fromTabs.findIndex(e => e === movedTab), 1)*/
+
+    const tabData = e.dataTransfer['farc/tab']
+
+    // Update pinned or magic state of the tab
+    if (e.to.id === 'sidebar-pinned-tabs') {
+      tabData.pinned = true
+      tabData.magic = false
+    } else if (e.to.id === 'magic-tabs') {
+      tabData.pinned = false
+      tabData.magic = true
+    } else {
+      tabData.pinned = false
+      tabData.magic = false
+    }
+
+    // Add the tab to the new position
+    targetTabsArray.splice(e.index, 0, e.dataTransfer['farc/tab'])
+
+    // Update the indices of the tabs in all lists
+    const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+
+    unpinnedTabsArray = updateIndices(unpinnedTabsArray)
+    pinnedTabsArray = updateIndices(pinnedTabsArray)
+    magicTabsArray = updateIndices(magicTabsArray)
+
+    // Combine all lists back together
+    const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+
+    log.debug('New tabs', newTabs)
+
+    // Only update the tabs that were changed (archived stay unaffected)
+    tabs.update((x) => {
+      return newTabs.map((tab) => {
+        return tab
+      })
+    })
+
+    // Update the store with the changed tabs
+    await bulkUpdateTabsStore(
+      newTabs.map((tab) => ({
+        id: tab.id,
+        updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+      }))
+    )
+
+    log.debug('State updated successfully')
+  }
+
   let popoverOpen = false
 </script>
 
@@ -2853,7 +2945,38 @@
             <div
               class="bg-sky-50 my-auto rounded-xl shadow-md flex-shrink-0 max-w-[300px] overflow-x-scroll no-scrollbar"
             >
-              <DragDropList
+              <!--
+              on:Drop={e => {
+                    console.warn("tabdrop pinned", e)
+                    const insertIdx = e.detail.dropIndex;
+                    tabs.update((tabs) => {
+                      if (e.detail.data.hasOwnProperty("farc/tab")) {
+                        const dat = e.detail.data["farc/tab"];
+                        dat.index = insertIdx;
+                        dat.pinned = true;
+                        tabs.push(dat);
+                        //items.splice(insertIdx, 0, dat);
+                      }
+                      return tabs;
+                    });
+                  }}
+            -->
+              <div
+                use:HorizontalDragZone.action={{
+                  id: 'sidebar-pinned-tabs',
+                  removeItem: (item) => {
+                    tabs.update((tabs) => {
+                      const idx = tabs.findIndex((v) => v.id === item.id)
+                      if (idx > -1) {
+                        tabs.splice(idx, 1)
+                      }
+                      return tabs
+                    })
+                  }
+                }}
+                on:Drop={onDropDragcula}
+              >
+                <!-- <DragDropList
                 id="pinned-tabs"
                 type={HorizontalCenterDropZone}
                 itemSize={$pinnedTabs.length === 0 ? 256 : 54}
@@ -2862,23 +2985,26 @@
                   onDrop(event, 'pin')
                 }}
                 let:index
-              >
+              > -->
                 {#if $pinnedTabs.length === 0}
                   <div class="h-12">Drop Tabs here to pin them.</div>
                 {:else}
-                  {#key $pinnedTabs[index]}
-                    <TabItem
-                      tab={$pinnedTabs[index]}
-                      {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
-                      pinned={true}
-                      on:select={handleTabSelect}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                    />
-                  {/key}
+                  {#each $pinnedTabs as tab, index (tab.id)}
+                    {#key $pinnedTabs[index]}
+                      <TabItem
+                        tab={$pinnedTabs[index]}
+                        {activeTabId}
+                        {deleteTab}
+                        {unarchiveTab}
+                        pinned={true}
+                        on:select={handleTabSelect}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                      />
+                    {/key}
+                  {/each}
                 {/if}
-              </DragDropList>
+                <!-- </DragDropList> -->
+              </div>
             </div>
 
             {#if $activeTabMagic}
@@ -2959,34 +3085,43 @@
 
             <div class="overflow-x-scroll no-scrollbar relative flex-grow">
               {#if horizontalTabs}
-                <DragDropList
-                  id="tabs"
-                  type={HorizontalDropZone}
-                  itemSize={Math.min(500, Math.max(128, tabSize))}
-                  itemCount={$unpinnedTabs.length}
-                  on:drop={async (event) => {
-                    onDrop(event, 'unpin')
+                <div
+                  class="horizontal-tabs"
+                  use:HorizontalDragZone.action={{
+                    id: 'sidebar-unpinned-tabs',
+                    removeItem: (item) => {
+                      console.warn('dragcula remove item', item)
+                      tabs.update((tabs) => {
+                        const idx = tabs.findIndex((v) => v.id === item.id)
+                        console.warn('dragcula id', idx, tabs)
+                        if (idx > -1) {
+                          tabs.splice(idx, 1)
+                        }
+                        return tabs
+                      })
+                    }
                   }}
-                  let:index
+                  on:Drop={onDropDragcula}
                 >
-                  <!-- check if this tab is active -->
-                  {#if $activeTabId === $unpinnedTabs[index].id}
-                    <TabItem
-                      tab={$unpinnedTabs[index]}
-                      {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
-                      pinned={false}
-                      isAlreadyOpen={false}
-                      on:select={() => {
-                        popoverOpen = true
-                        addressInputElem.focus()
-                        handleFocus()
-                      }}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                      on:drop={handleDrop}
-                    />
-                    <Popover.Root bind:open={popoverOpen}>
+                  {#each $unpinnedTabs as tab, index (tab.id)}
+                    <!-- check if this tab is active -->
+                    {#if $activeTabId === $unpinnedTabs[index].id}
+                      <TabItem
+                        tab={$unpinnedTabs[index]}
+                        {activeTabId}
+                        {deleteTab}
+                        {unarchiveTab}
+                        pinned={false}
+                        isAlreadyOpen={false}
+                        on:select={() => {
+                          popoverOpen = true
+                          addressInputElem.focus()
+                          handleFocus()
+                        }}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                        on:drop={handleDrop}
+                      />
+                      <!--<Popover.Root bind:open={popoverOpen}>
                       <Popover.Trigger
                         style="position: absolute; opacity: 0; {!popoverOpen
                           ? 'display: none;'
@@ -3070,9 +3205,19 @@
                           </div>
                         </div>
                       </Popover.Content>
-                    </Popover.Root>
-                  {:else}
-                    <LinkPreview.Root openDelay={750} closeDelay={10}>
+                    </Popover.Root>-->
+                    {:else}
+                      <TabItem
+                        tab={$unpinnedTabs[index]}
+                        {activeTabId}
+                        {deleteTab}
+                        {unarchiveTab}
+                        pinned={false}
+                        on:select={handleTabSelect}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                        on:drop={handleDrop}
+                      />
+                      <!--<LinkPreview.Root openDelay={750} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
                           tab={$unpinnedTabs[index]}
@@ -3092,38 +3237,48 @@
                           class="link-preview-content"
                         />
                       </LinkPreview.Content>
-                    </LinkPreview.Root>
-                  {/if}
-                </DragDropList>
+                    </LinkPreview.Root>-->
+                    {/if}
+                  {/each}
+                </div>
               {:else}
-                <DragDropList
-                  id="tabs"
-                  type={VerticalDropZone}
-                  itemSize={54}
-                  itemCount={$unpinnedTabs.length}
-                  on:drop={async (event) => {
-                    onDrop(event, 'unpin')
+                <div
+                  class="vertical-tabs"
+                  use:VerticalDragZone.action={{
+                    id: 'sidebar-unpinned-tabs',
+                    removeItem: (item) => {
+                      console.warn('dragcula remove item', item)
+                      tabs.update((tabs) => {
+                        const idx = tabs.findIndex((v) => v.id === item.id)
+                        console.warn('dragcula id', idx, tabs)
+                        if (idx > -1) {
+                          tabs.splice(idx, 1)
+                        }
+                        return tabs
+                      })
+                    }
                   }}
-                  let:index
+                  on:Drop={onDropDragcula}
                 >
-                  <!-- check if this tab is active -->
-                  {#if $activeTabId === $unpinnedTabs[index].id}
-                    <TabItem
-                      tab={$unpinnedTabs[index]}
-                      {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
-                      pinned={false}
-                      isAlreadyOpen={false}
-                      on:select={() => {
-                        popoverOpen = true
-                        addressInputElem.focus()
-                        handleFocus()
-                      }}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                      on:drop={handleDrop}
-                    />
-                    <Popover.Root bind:open={popoverOpen}>
+                  {#each $unpinnedTabs as tab, index (tab.id)}
+                    <!-- check if this tab is active -->
+                    {#if $activeTabId === $unpinnedTabs[index].id}
+                      <!-- on:drop={handleDrop} -->
+                      <TabItem
+                        tab={$unpinnedTabs[index]}
+                        {activeTabId}
+                        {deleteTab}
+                        {unarchiveTab}
+                        pinned={false}
+                        isAlreadyOpen={false}
+                        on:select={() => {
+                          popoverOpen = true
+                          addressInputElem.focus()
+                          handleFocus()
+                        }}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                      />
+                      <!--<Popover.Root bind:open={popoverOpen}>
                       <Popover.Trigger
                         style="position: absolute; opacity: 0; {!popoverOpen
                           ? 'display: none;'
@@ -3207,9 +3362,19 @@
                           </div>
                         </div>
                       </Popover.Content>
-                    </Popover.Root>
-                  {:else}
-                    <LinkPreview.Root openDelay={800} closeDelay={10}>
+                    </Popover.Root>-->
+                    {:else}
+                      <TabItem
+                        tab={$unpinnedTabs[index]}
+                        {activeTabId}
+                        {deleteTab}
+                        {unarchiveTab}
+                        pinned={false}
+                        on:select={handleTabSelect}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                        on:drop={handleDrop}
+                      />
+                      <!--<LinkPreview.Root openDelay={800} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
                           tab={$unpinnedTabs[index]}
@@ -3229,9 +3394,10 @@
                           class="link-preview-content"
                         />
                       </LinkPreview.Content>
-                    </LinkPreview.Root>
-                  {/if}
-                </DragDropList>
+                    </LinkPreview.Root>-->
+                    {/if}
+                  {/each}
+                </div>
               {/if}
             </div>
 
@@ -3506,6 +3672,18 @@
 </div>
 
 <style lang="scss">
+  /// DRAGCULA STATES
+  :global(body[data-dragcula-dragging='true']) {
+    cursor: grabbing;
+    user-select: none;
+  }
+  :global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
+    pointer-events: none;
+  }
+  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone]) {
+    pointer-events: all;
+  }
+
   .messi {
     backdrop-filter: blur(10px);
   }
@@ -3871,6 +4049,24 @@
       opacity: 0.4;
     }
   }
+  :global([data-dragcula-zone='sidebar-pinned-tabs']) {
+    min-height: 4rem !important;
+    height: fit-content !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  :global([data-dragcula-zone='sidebar-unpinned-tabs'].vertical-tabs) {
+    height: 100%;
+  }
+  :global([data-dragcula-zone='sidebar-unpinned-tabs'].horizontal-tabs) {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+  }
+  :global(.tab[data-dragcula-dragging]) {
+    background: white;
+  }
 
   .divider {
     margin: 10px 8px;
@@ -4064,7 +4260,7 @@
     overflow: hidden;
   }
 
-  :global(div[data-dnd-zone]) {
+  :global(div[data-dragcula-zone]) {
     overflow: visible !important;
     background: transparent !important;
   }
@@ -4074,7 +4270,7 @@
     flex-direction: row;
   }
 
-  :global(.magic-tabs-wrapper [data-dnd-zone]) {
+  :global(.magic-tabs-wrapper [data-dragcula-zone]) {
     min-height: 4rem !important;
     height: fit-content !important;
   }

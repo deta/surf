@@ -46,6 +46,7 @@
   import { checkIfYoutubeUrl } from '../../utils/url'
   import OasisResourceModalWrapper from './OasisResourceModalWrapper.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
+  import { DragZone } from '@horizon/dragcula'
 
   export let spaceId: string
   export let active: boolean = false
@@ -822,7 +823,15 @@
   />
 {/if}
 
-<DropWrapper on:drop={handleDrop}>
+<!-- <DropWrapper on:drop={handleDrop}> -->
+<div
+  use:DragZone.action={{
+    id: `oasis-space-${spaceId}`,
+    removeItem: (item) => {
+      // TODO: impl
+    }
+  }}
+>
   <div class="wrapper">
     <div class="drawer-bar">
       <div class="drawer-chat-search">
@@ -970,7 +979,8 @@
       </div>
     {/if}
   </div>
-</DropWrapper>
+  <!-- </DropWrapper> -->
+</div>
 
 <style lang="scss">
   .wrapper {

@@ -42,6 +42,10 @@
       "outputs": [".dist/**"],
       "outputLogs": "new-only"
     },
+    "@horizon/dragcula#build": {
+      "outputs": [".dist/**"],
+      "outputLogs": "new-only"
+    },
     "@horizon/cmdk-sv#build": {
       "outputs": [".dist/**"],
       "outputLogs": "new-only"
@@ -58,11 +62,21 @@
       "dependsOn": ["^lint"]
     },
     "desktop#dev": {
-      "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev", "@horizon/cmdk-sv#build"],
+      "dependsOn": [
+        "@horizon/dragcula#build",
+        "@horizon/tela#build",
+        "@horizon/backend#dev",
+        "@horizon/cmdk-sv#build"
+      ],
       "outputs": [".dist/**", ".out/**"]
     },
     "dev": {
-      "dependsOn": ["@horizon/tela#build", "@horizon/backend#dev", "@horizon/cmdk-sv#build"],
+      "dependsOn": [
+        "@horizon/dragcula#build",
+        "@horizon/tela#build",
+        "@horizon/backend#dev",
+        "@horizon/cmdk-sv#build"
+      ],
       "cache": false,
       "persistent": true
     }

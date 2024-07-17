@@ -8,6 +8,7 @@
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
   import { useResourceManager } from '../../service/resources'
   import type { Space } from '../../types'
+  import { DragItem } from '@horizon/dragcula'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -27,7 +28,9 @@
   let dragOver = false
 
   const handleClick = () => {
-    if (isAlreadyOpen) { return}
+    if (isAlreadyOpen) {
+      return
+    }
     dispatch('select', tab.id)
   }
 
@@ -65,12 +68,19 @@
       : tab.title
 </script>
 
+<!-- style:view-transition-name="tab-{tab.id}" -->
 <div
   class="tab"
   class:active={tab.id === $activeTabId}
   on:click={handleClick}
   aria-hidden="true"
   class:pinned
+  draggable={true}
+  style:view-transition-name="tab-{tab.id}"
+  use:DragItem.action={{
+    id: tab.id,
+    data: { 'farc/tab': tab }
+  }}
   use:tooltip={pinned
     ? {
         content: sanitizedTitle,
@@ -188,7 +198,9 @@
     font-smooth: always;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: 0.2s ease-in-out;
+    transition:
+      0.2s ease-in-out,
+      transform 0ms;
     &:hover {
       background-color: rgb(213, 255, 255);
     }
