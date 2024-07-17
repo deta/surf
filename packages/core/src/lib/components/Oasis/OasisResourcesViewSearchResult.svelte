@@ -16,7 +16,7 @@
   const log = useLogScope('OasisResourcesView')
   // const dispatch = createEventDispatcher<{ click: string }>()
 
-  const CHUNK_SIZE = 100
+  const CHUNK_SIZE = 50
   const CHUNK_THRESHOLD = 300
 
   let scrollElement: HTMLDivElement
@@ -40,6 +40,8 @@
     }
 
     renderLimit.update((limit) => limit + CHUNK_SIZE)
+
+    // debouncedRefreshLayout()
   }
 
   const handleItemLoad = () => {

@@ -483,8 +483,8 @@
   function isBottomReached() {
     const BUFFER =
       scrollVelocity.velocity > 10
-        ? 2 * window.innerHeight * (scrollVelocity.velocity / 4)
-        : 2 * window.innerHeight
+        ? 3 * window.innerHeight * (scrollVelocity.velocity / 4)
+        : 3 * window.innerHeight
 
     const gridContainer = document.getElementById('grid')
     return (

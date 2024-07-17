@@ -179,7 +179,7 @@ export class Resource {
     // this.log.debug('reading resource data from', this.path)
 
     if (this.readDataPromise !== null) {
-      // this.log.debug('already reading data, piggybacking on existing promise')
+      this.log.debug('already reading data, piggybacking on existing promise')
       return this.readDataPromise
     }
 
