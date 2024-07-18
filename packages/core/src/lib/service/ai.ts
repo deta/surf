@@ -1,6 +1,5 @@
-import type { DetectedResource } from '@horizon/types'
-import type { ChatMessageContentItem, ChatMessageSource } from '../components/Browser/types'
-import type { WebViewWrapperEvents } from '../components/Cards/Browser/WebviewWrapper.svelte'
+import type { DetectedResource, WebViewEventSendNames, WebViewSendEvents } from '@horizon/types'
+import type { ChatMessageContentItem, AIChatMessageSource } from '../components/Browser/types'
 import { SIMPLE_SUMMARIZER_PROMPT } from '../constants/prompts'
 import log from '../utils/log'
 import { WebParser } from '@horizon/web-parser'
@@ -77,7 +76,7 @@ export const parseXMLChatResponseSources = (xml: Document) => {
         timestamp: timestamp ? Number(timestamp) : undefined,
         url: url ? String(url) : undefined
       }
-    } as ChatMessageSource
+    } as AIChatMessageSource
   })
 
   return sourceData
@@ -101,6 +100,7 @@ export const parseXMLChatResponseAnswer = (xml: Document) => {
     } else if (node.nodeName === '#text') {
       items.push({ type: 'text', content: node.textContent ?? '' })
     } else {
+      // @ts-ignore
       items.push({ type: 'text', content: node.innerHTML ?? '' })
     }
   }
@@ -154,7 +154,7 @@ export const parseChatResponse = (response: string) => {
     id: null as string | null,
     complete: isDone,
     stage: stage,
-    sources: [] as ChatMessageSource[],
+    sources: [] as AIChatMessageSource[],
     content: null as string | null,
     contentItems: null as ChatMessageContentItem[] | null
   }
@@ -189,7 +189,7 @@ export const parseChatResponseSources = (response: string) => {
 }
 
 export const handleInlineAI = async (
-  data: WebViewWrapperEvents['transform'],
+  data: WebViewSendEvents[WebViewEventSendNames.Transform],
   detectedResource: DetectedResource
 ) => {
   const { text, query, type, includePageContext } = data

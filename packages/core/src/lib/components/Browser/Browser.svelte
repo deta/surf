@@ -7,7 +7,7 @@
   import { popover } from '../Atoms/Popover/popover'
   import SplashScreen from '../SplashScreen.svelte'
   import { writable, derived, get } from 'svelte/store'
-  import { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
+  import { type WebviewWrapperEvents } from './WebviewWrapper.svelte'
   import { useLogScope } from '../../utils/log'
   import { Icon } from '@horizon/icons'
   import { generateID } from '../../utils/id'
@@ -18,7 +18,6 @@
     isModKeyAndShiftKeyAndKeyPressed,
     isModKeyPressed
   } from '../../utils/keyboard'
-  import { copyToClipboard } from '../../utils/clipboard'
   import { wait, writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
   import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
@@ -27,41 +26,29 @@
   import DragDropList, {
     VerticalDropZone,
     HorizontalDropZone,
-    HorizontalCenterDropZone,
-    reorder,
-    type DropEvent
+    HorizontalCenterDropZone
   } from 'svelte-dnd-list'
 
-  import {
-    Resource,
-    ResourceAnnotation,
-    ResourceHistoryEntry,
-    ResourceManager,
-    ResourceTag,
-    createResourceManager
-  } from '../../service/resources'
+  import { ResourceTag, createResourceManager } from '../../service/resources'
 
-  import { type HistoryEntry, type Space, type SpaceSource } from '../../types'
+  import { type Space, type SpaceSource } from '../../types'
 
   import { HorizonsManager } from '../../service/horizon'
   import { API } from '../../service/api'
-  import BrowserTab, { type NewTabEvent } from './BrowserTab.svelte'
+  import BrowserTab, { type BrowserTabNewTabEvent } from './BrowserTab.svelte'
   import Horizon from '../Horizon/Horizon.svelte'
   import BrowserHomescreen from './BrowserHomescreen.svelte'
   import OasisSidebar from '../Oasis/OasisSidebar.svelte'
   import TabItem from './Tab.svelte'
   import TabSearch from './TabSearch.svelte'
-  import ShortcutMenu, { type ShortcutMenuEvents } from '../Shortcut/ShortcutMenu.svelte'
+  import { type ShortcutMenuEvents } from '../Shortcut/ShortcutMenu.svelte'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import '../../../app.css'
 
   import '../Horizon/index.scss'
   import type {
-    AIChatMessage,
     AIChatMessageParsed,
-    PageHighlight,
     PageMagic,
-    PageMagicResponse,
     Tab,
     TabChat,
     TabEmpty,
@@ -78,29 +65,22 @@
   import type { Drawer } from '@horizon/drawer'
   import Chat from './Chat.svelte'
   import { HorizonDatabase } from '../../service/storage'
-  import { ResourceTypes, type Optional } from '../../types'
+  import type { Optional } from '../../types'
   import { useLocalStorageStore } from '../../utils/localstorage'
-  import { WebParser, type DetectedWebApp } from '@horizon/web-parser'
+  import { WebParser } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
   import OasisDiscovery from './OasisDiscovery.svelte'
-  import { handleInlineAI, parseChatResponseSources, summarizeText } from '../../service/ai'
+  import { parseChatResponseSources } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
   import AppSidebar from './AppSidebar.svelte'
   import {
     ResourceTagsBuiltInKeys,
     WebViewEventReceiveNames,
     type AnnotationCommentData,
-    type AnnotationRangeData,
     type ResourceDataAnnotation,
     type WebViewEventAnnotation
   } from '@horizon/types'
-  import {
-    inlineHighlightStylingCode,
-    inlineHighlightTextCode,
-    inlineTextReplaceCode,
-    inlineTextReplaceStylingCode,
-    scrollToTextCode
-  } from './inline'
+  import { scrollToTextCode } from './inline'
   import { SFFS } from '../../service/sffs'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { provideOasis } from '../../service/oasis'
@@ -108,8 +88,7 @@
 
   import AnnotationsSidebar from './AnnotationsSidebar.svelte'
   import ToastsProvider from '../Toast/ToastsProvider.svelte'
-  import { provideToasts, type Toasts } from '../../service/toast'
-  import { INLINE_PROMPTS, LEGACY_PAGE_CITATION_SUMMARY_PROMPT } from '../../constants/prompts'
+  import { provideToasts } from '../../service/toast'
   import {
     PromptIDs,
     getPrompt,
@@ -155,7 +134,6 @@
   const historyEntriesManager = horizonManager.historyEntriesManager
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
-  const autoSaveResources = oasis.autoSaveResources
 
   const masterHorizon = derived(horizons, (horizons) => horizons[0])
 
@@ -181,7 +159,6 @@
   const isCreatingLiveSpace = writable(false)
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
-  let appDetectionRunningForURLs: string[] = []
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -239,10 +216,7 @@
     if (!$activeTabMagic.showSidebar) {
       resetTabsFromMagic()
     }
-    log.debug('Active tab magic', $activeTabMagic)
   }
-
-  $: log.debug('xx active tabs history', $activeTabsHistory)
 
   activeTab.subscribe((tab) => {
     if (!tab) return
@@ -269,8 +243,6 @@
   })
 
   sidebarTab.subscribe((tab) => {
-    log.debug('Sidebar tab', tab)
-
     const tabsInView = $tabs.filter((tab) =>
       $sidebarTab === 'active' ? !tab.archived : tab.archived
     )
@@ -286,13 +258,6 @@
       makeTabActive(tabsInView[0].id)
     }
   })
-
-  $: log.debug(
-    'active tab',
-    $tabs.find((tab) => tab.id === $activeTabId)
-  )
-
-  $: log.debug('tabs', $tabs)
 
   $: if ($activeBrowserTab) $activeBrowserTab.focus()
 
@@ -681,10 +646,11 @@
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
       // horizontalTabs = !horizontalTabs
       debounceToggleHorizontalTabs()
-      console.log('horizontalTabs', horizontalTabs)
+      log.debug('horizontalTabs', horizontalTabs)
     } else if (isModKeyAndKeyPressed(e, 'h')) {
       showTabs = !showTabs
-      console.log('showTabs', showTabs)
+      log.debug('showTabs', showTabs)
+      // @ts-ignore
       window.api.updateTrafficLightsVisibility(showTabs)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       handleNewHorizon()
@@ -850,7 +816,7 @@
     makeTabActive(newTab.id)
   }
 
-  const handleNewTab = (e: CustomEvent<NewTabEvent>) => {
+  const handleNewTab = (e: CustomEvent<BrowserTabNewTabEvent>) => {
     const { url, active } = e.detail
 
     if (url) {
@@ -859,55 +825,6 @@
       createNewEmptyTab()
     }
   }
-
-  // const handleOrganize = async () => {
-  //   try {
-  //     loadingOrganize.set(true)
-  //     log.debug('Organizing tabs', $tabs)
-
-  //     const prompt = `You organize tabs given to you into as few sections as possible. Come up with simple and short but clear section names and move the tabs into the right sections. Try to not change existing sections unless necessary and avoid putting a single tab into its own section. The tabs are given to you are formatted as JSON array with each item having the tab title, url and optional section if it is part of it already. Respond with the sections as JSON keys and the tabs in each section as a list of tab IDs as the value. Only respond with JSON.`
-  //     // @ts-ignore
-  //     const response = await window.api.createAIChatCompletion(
-  //       `Organize these tabs:\n${JSON.stringify(
-  //         $tabs.map((tab) => ({
-  //           id: tab.id,
-  //           title: tab.title,
-  //           url: tab.initialLocation,
-  //           ...(tab.section !== '_all' && tab.section !== 'Unorganised'
-  //             ? { section: tab.section }
-  //             : {})
-  //         })),
-  //         null,
-  //         2
-  //       )}`,
-  //       prompt
-  //     )
-
-  //     log.debug('Organize response', response)
-
-  //     const json = JSON.parse(response)
-  //     log.debug('Organize response JSON', json)
-
-  //     tabs.update((tabs) => {
-  //       const updatedTabs = tabs.map((tab) => {
-  //         const section = Object.keys(json).find((section) => json[section].includes(tab.id))
-  //         if (section) {
-  //           return {
-  //             ...tab,
-  //             section
-  //           }
-  //         }
-  //         return tab
-  //       })
-
-  //       return updatedTabs
-  //     })
-  //   } catch (err) {
-  //     log.error('Error organizing tabs', err)
-  //   } finally {
-  //     loadingOrganize.set(false)
-  //   }
-  // }
 
   const cycleActiveTab = (previous: boolean) => {
     if ($tabs.length === 0) {
@@ -973,81 +890,6 @@
     makeTabActive(newId)
   }
 
-  async function createBookmarkResource(url: string, tab: TabPage, silent: boolean = false) {
-    log.debug('bookmarking', url)
-
-    const browserTab = $browserTabs[tab.id]
-    if (!browserTab) {
-      log.error('no browser tab found')
-      throw new Error('No browser tab found')
-    }
-    const detectedResource = await browserTab.detectResource()
-    log.debug('extracted resource data', detectedResource)
-
-    if (!detectedResource) {
-      log.debug('no resource detected')
-      throw new Error('No resource detected')
-    }
-
-    const title = detectedResource.data.title ?? tab.title ?? ''
-
-    const resource = await resourceManager.createResourceOther(
-      new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-      { name: title, sourceURI: url, alt: '' },
-      [
-        ResourceTag.canonicalURL(url),
-        ResourceTag.viewedByUser(true),
-        ...(silent ? [ResourceTag.silent()] : [])
-      ]
-    )
-    log.debug('created resource', resource)
-
-    return resource
-  }
-
-  async function bookmarkPage(tab: TabPage, silent = false) {
-    const currentEntry = historyEntriesManager.getEntry(
-      tab.historyStackIds[tab.currentHistoryIndex]
-    )
-    let url = currentEntry?.url ?? tab.initialLocation
-
-    // strip &t from url suffix
-    let youtubeHostnames = [
-      'youtube.com',
-      'youtu.be',
-      'youtube.de',
-      'www.youtube.com',
-      'www.youtu.be',
-      'www.youtube.de'
-    ]
-    if (youtubeHostnames.includes(new URL(url).host)) {
-      url = url.replace(/&t.*/g, '')
-    }
-
-    if (tab.chatResourceBookmark) {
-      const fetchedResource = await resourceManager.getResource(tab.chatResourceBookmark)
-      if (fetchedResource) {
-        const fetchedCanonical = (fetchedResource?.tags ?? []).find(
-          (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-        )
-
-        if (fetchedCanonical?.value === url) {
-          log.debug('already bookmarked', url, fetchedResource.id)
-
-          updateTab(tab.id, { resourceBookmark: fetchedResource.id })
-          return fetchedResource
-        }
-      }
-    }
-
-    log.debug('bookmarking', url)
-    const resource = await createBookmarkResource(url, tab, silent)
-
-    updateTab(tab.id, { resourceBookmark: resource.id, chatResourceBookmark: resource.id })
-
-    return resource
-  }
-
   async function handleBookmark() {
     try {
       if (!$activeTabLocation || $activeTab?.type !== 'page') return
@@ -1089,7 +931,7 @@
         }
       }
 
-      const resource = await bookmarkPage($activeTab, false)
+      const resource = await $activeBrowserTab.bookmarkPage(false)
 
       // automatically resets after some time
       toasts.success('Bookmarked Page!')
@@ -1108,7 +950,7 @@
   }
 
   async function handleWebviewTabNavigation(
-    e: CustomEvent<WebViewWrapperEvents['navigation']>,
+    e: CustomEvent<WebviewWrapperEvents['navigation']>,
     tab: Tab
   ) {
     const { url, oldUrl } = e.detail
@@ -1139,37 +981,8 @@
     updateActiveTab({ type: 'chat', query: e.detail, title: e.detail, icon: '', ragOnly: true })
   }
 
-  async function handleWebviewBookmark(e: CustomEvent<WebViewWrapperEvents['bookmark']>) {
-    log.debug('webview bookmark', e.detail)
-
-    if ($activeTab?.type !== 'page') return
-
-    if (!$activeTab.resourceBookmark) {
-      const resource = await resourceManager.createResourceLink(
-        new Blob([JSON.stringify({ url: e.detail.url })], { type: ResourceTypes.LINK }),
-        { name: $activeTab?.title ?? '', sourceURI: e.detail.url, alt: '' },
-        [ResourceTag.canonicalURL(e.detail.url)]
-      )
-
-      log.debug('created resource', resource)
-
-      if ($activeTab?.type === 'page') {
-        updateActiveTab({ resourceBookmark: resource.id })
-      }
-    }
-
-    if (e.detail.text) {
-      log.debug('creating note for bookmark', e.detail.text)
-      const resource = await resourceManager.createResourceNote(e.detail.text, {
-        name: $activeTab?.title ?? '',
-        sourceURI: e.detail.url,
-        alt: ''
-      })
-      log.debug('created resource', resource)
-    }
-  }
-
   function updateActiveMagicPage(updates: Partial<PageMagic>) {
+    log.debug('updating active magic page', updates)
     activeTabMagic.update((magic) => {
       return {
         ...magic,
@@ -1203,208 +1016,6 @@
         })
       }
     })
-  }
-
-  async function handleWebviewAppDetection(e: CustomEvent<DetectedWebApp>, tab: TabPage) {
-    let url = ''
-    try {
-      log.debug('webview app detection', e.detail, tab)
-      if (tab.type !== 'page') return
-
-      url = e.detail.canonicalUrl ?? tab.initialLocation
-
-      await updateTab(tab.id, {
-        currentDetectedApp: e.detail
-      })
-
-      const isRunningAlready = appDetectionRunningForURLs.includes(url)
-      if (isRunningAlready) {
-        log.debug('app detection already running for url', url)
-        return
-      } else {
-        log.debug('app detection not already running for url', url)
-        appDetectionRunningForURLs.push(url)
-      }
-
-      log.debug('app detection running for url', url)
-
-      const browserTab = $browserTabs[tab.id]
-      if (!browserTab) {
-        log.error('Browser tab not found', tab.id)
-        return
-      }
-
-      log.debug('getting resources from source url', url)
-      const matchingResources = await resourceManager.getResourcesFromSourceURL(url)
-      log.debug('matching resources', matchingResources)
-
-      let bookmarkedResource = matchingResources.find(
-        (resource) =>
-          resource.type !== ResourceTypes.ANNOTATION &&
-          resource.type !== ResourceTypes.HISTORY_ENTRY
-      )
-
-      log.debug('bookmarked resource', bookmarkedResource)
-      if (!bookmarkedResource) {
-        const isRunningAlready2 = appDetectionRunningForURLs.includes(url)
-
-        log.debug('isRunningAlready2', isRunningAlready2)
-
-        // this is an edge case on notion.so where the app detection is running twice for some reason
-        // if (!isRunningAlready2) {
-        //   log.warn('edge case, app detection seems to be running twice for', url)
-        //   return
-        // }
-
-        if ($autoSaveResources) {
-          log.debug('creating new silent resource', url)
-          bookmarkedResource = await createBookmarkResource(url, tab, true)
-        } else {
-          log.debug('auto save resources disabled')
-        }
-      }
-
-      if (bookmarkedResource) {
-        await updateTab(tab.id, {
-          resourceBookmark: bookmarkedResource.id,
-          chatResourceBookmark: bookmarkedResource.id
-        })
-      }
-
-      const existingHistoryEntry = matchingResources.find(
-        (resource) => resource.type === ResourceTypes.HISTORY_ENTRY
-      ) as ResourceHistoryEntry | undefined
-
-      if (existingHistoryEntry) {
-        log.debug('updating history entry', existingHistoryEntry.id)
-        const data = await existingHistoryEntry.getParsedData()
-        await existingHistoryEntry.updateParsedData({
-          ...data,
-          last_loaded: new Date().toISOString()
-        })
-      } else {
-        log.debug('creating history entry', url)
-        const historyEntry = await resourceManager.createResourceHistoryEntry(
-          {
-            raw_url: url,
-            title: tab.title ?? '',
-            app_id: tab.currentDetectedApp?.appId ?? null,
-            app_resource_identifier: tab.currentDetectedApp?.appResourceIdentifier ?? null,
-            last_loaded: new Date().toISOString()
-          },
-          {
-            sourceURI: url
-          },
-          [
-            ResourceTag.canonicalURL(url),
-            ...(bookmarkedResource ? [ResourceTag.annotates(bookmarkedResource.id)] : [])
-          ]
-        )
-
-        log.debug('created history entry', historyEntry)
-      }
-
-      const annotationResources = matchingResources.filter(
-        (resource) => resource.type === ResourceTypes.ANNOTATION
-      ) as ResourceAnnotation[]
-
-      await wait(500)
-
-      annotationResources.forEach(async (annotationResource) => {
-        const annotation = await annotationResource.getParsedData()
-        log.debug('annotation data', annotation)
-
-        log.debug('sending annotation to webview', annotation)
-        browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreAnnotation, {
-          id: annotationResource.id,
-          data: annotation
-        })
-      })
-
-      // if ($activeTabId === tab.id) {
-      //   summarizePage(pageMagic)
-      // }
-
-      let pageMagic = $activeTabMagic
-      if (!pageMagic) {
-        let responses: AIChatMessageParsed[] = []
-        if (tab?.chatId) {
-          const chat = await sffs.getAIChat(tab.chatId)
-          if (chat) {
-            const userMessages = chat.messages.filter((message) => message.role === 'user')
-            const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
-            const systemMessages = chat.messages.filter((message) => message.role === 'system')
-
-            responses = systemMessages.map((message, idx) => {
-              message.sources = message.sources
-              log.debug('Message', message)
-              return {
-                id: generateID(),
-                role: message.role,
-                query: queries[idx],
-                content: message.content.replace('<answer>', '').replace('</answer>', ''),
-                sources: message.sources,
-                status: 'success'
-              }
-            })
-          }
-        }
-        pageMagic = {
-          showSidebar: false,
-          running: false,
-          responses: responses
-        } as PageMagic
-        activeTabMagic.set(pageMagic)
-      }
-    } catch (e) {
-      log.error('error handling webview app detection', e)
-    } finally {
-      appDetectionRunningForURLs = appDetectionRunningForURLs.filter((x) => x !== url)
-    }
-  }
-
-  async function handleWebviewTransform(
-    e: CustomEvent<WebViewWrapperEvents['transform']>,
-    tab: TabPage
-  ) {
-    log.debug('webview transformation', e.detail)
-
-    const browserTab = $browserTabs[tab.id]
-    const detectedResource = await browserTab.detectResource()
-    log.debug('extracted resource data', detectedResource)
-    if (!detectedResource) {
-      log.debug('no resource detected')
-      return
-    }
-
-    const transformation = await handleInlineAI(e.detail, detectedResource)
-
-    log.debug('transformation output', transformation)
-
-    $activeBrowserTab.sendWebviewEvent(WebViewEventReceiveNames.TransformationOutput, {
-      text: transformation
-    })
-  }
-
-  const handleWebviewInlineTextReplace = async (
-    e: CustomEvent<WebViewWrapperEvents['inlineTextReplace']>,
-    tabId: string
-  ) => {
-    const browserTab = $browserTabs[tabId]
-    if (!browserTab) {
-      log.error('Browser tab not found', tabId)
-      return
-    }
-
-    const { target, content } = e.detail
-    log.debug('webview inline text replace', e.detail)
-
-    // add mark styles to the page
-    await $activeBrowserTab.executeJavaScript(inlineTextReplaceStylingCode())
-
-    log.debug('executing code')
-    const code = inlineTextReplaceCode(target, content)
-    await $activeBrowserTab.executeJavaScript(code)
   }
 
   const getTextElementsFromHtml = (html: string): string[] => {
@@ -1523,102 +1134,6 @@
 
     log.debug('HTML', html)
   }
-
-  // const summarizePage = async (magicPage: PageMagic) => {
-  //   let response: PageMagicResponse | null = null
-
-  //   try {
-  //     log.debug('Magic button clicked')
-
-  //     const tab = $tabs.find((tab) => tab.id === magicPage.tabId)
-  //     if (!tab) {
-  //       log.error('Tab not found', magicPage.tabId)
-  //       return
-  //     }
-
-  //     const browserTab = $browserTabs[tab.id]
-
-  //     const detectedResource = await browserTab.detectResource()
-  //     log.debug('extracted resource data', detectedResource)
-
-  //     if (!detectedResource) {
-  //       log.debug('no resource detected')
-  //       return
-  //     }
-
-  //     response = {
-  //       id: generateID(),
-  //       role: 'system',
-  //       query: 'Summary',
-  //       status: 'pending',
-  //       content: '',
-  //       citations: {}
-  //     } as PageMagicResponse
-
-  //     updateMagicPage(magicPage.tabId, { running: true })
-  //     addPageMagicResponse(magicPage.tabId, response)
-
-  //     const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
-  //     log.debug('content', content)
-
-  //     log.debug('calling the AI')
-
-  //     // if ($magicInputValue) {
-  //     //   log.debug('user query', $magicInputValue)
-  //     //   return
-  //     // }
-
-  //     // @ts-expect-error
-  //     const output = await window.api.createAIChatCompletion(
-  //       content.plain,
-  //       LEGACY_PAGE_CITATION_SUMMARY_PROMPT,
-  //       { response_format: { type: 'json_object' } }
-  //     )
-
-  //     log.debug('Magic response', output)
-  //     const json = JSON.parse(output)
-  //     log.debug('json', json)
-
-  //     if (!json.content || !json.citations) {
-  //       log.debug('Invalid response')
-  //       return
-  //     }
-
-  //     response = {
-  //       ...response,
-  //       status: 'success',
-  //       content: json.content,
-  //       citations: json.citations
-  //     } as PageMagicResponse
-
-  //     updatePageMagicResponse(magicPage.tabId, response.id, response)
-
-  //     // add mark styles to the page
-  //     await browserTab.executeJavaScript(inlineHighlightStylingCode())
-
-  //     await Promise.all(
-  //       Object.entries(json.citations).map(async ([id, citation]) => {
-  //         await highlightWebviewText(tab.id, {
-  //           type: 'important',
-  //           color: (citation as any).color as string,
-  //           text: (citation as any).text as string
-  //         })
-  //       })
-  //     )
-
-  //     log.debug('Magic done')
-  //   } catch (e) {
-  //     log.error('Error doing magic', e)
-  //     if (response) {
-  //       updatePageMagicResponse(magicPage.tabId, response.id, {
-  //         status: 'error',
-  //         content: (e as any).message ?? 'Failed to generate response.'
-  //       })
-  //     }
-  //   } finally {
-  //     updateMagicPage(magicPage.tabId, { running: false })
-  //   }
-  // }
 
   const sendSidebarChatMessage = async (
     tabsInContext: Tab[],
@@ -1831,7 +1346,7 @@
       }
       //updateAppIdsForAppSidebar(appId!)
       activeAppId.set(appId!)
-      updateTab($activeTab.id, { appId: appId })
+      updateTab($activeTabId, { appId: appId })
     } catch (e) {
       log.error('Error clearing app sidebar:', e)
     }
@@ -1841,7 +1356,12 @@
     log.debug('Bookmarking all page tabs in context')
     for (const tab of getTabsInChatContext()) {
       if (tab.type === 'page' && !tab.resourceBookmark) {
-        await bookmarkPage(tab, true)
+        try {
+          const browserTab = $browserTabs[tab.id]
+          await browserTab.bookmarkPage(true)
+        } catch (e) {
+          log.warn('Error bookmarking page tab', tab, e)
+        }
       }
     }
   }
@@ -1914,6 +1434,8 @@
       .replace(/script="[^"]*"/g, '') // remove inline scripts
       .replace(/<style([\s\S]*?)<\/style>/gi, '') // remove style tags
       .replace(/<script([\s\S]*?)<\/script>/gi, '') // remove script tags
+
+    // @ts-ignore
     cleaned = window.api.minifyHtml(cleaned, {
       collapseBooleanAttributes: true,
       collapseWhitespace: true,
@@ -1976,7 +1498,7 @@
     if (!bookmarkedResource) {
       log.debug('no bookmarked resource')
 
-      const resource = await bookmarkPage($activeTab, true)
+      const resource = await $activeBrowserTab.bookmarkPage(true)
       bookmarkedResource = resource.id
     }
 
@@ -1992,179 +1514,14 @@
     return annotation
   }
 
-  const handleWebviewAnnotation = async (
-    e: CustomEvent<WebViewWrapperEvents['annotate']>,
-    tabId: string
-  ) => {
-    const tab = $tabs.find((tab) => tab.id === tabId)
-    if (!tab || tab.type !== 'page') {
-      log.debug('tab is not a page')
-      return
-    }
-
-    const browserTab = $browserTabs[tabId]
-    if (!browserTab) {
-      log.error('Browser tab not found', tabId)
-      return
-    }
-
-    const annotationData = e.detail
-    log.debug('webview annotation', annotationData)
-
-    const bookmarkedResourceId = tab.resourceBookmark
-    let bookmarkedResource = bookmarkedResourceId
-      ? await resourceManager.getResource(bookmarkedResourceId)
-      : null
-
-    if (!bookmarkedResource) {
-      log.debug('no bookmarked resource')
-
-      const resource = await bookmarkPage(tab, true)
-      bookmarkedResource = resource
-    }
-
-    const currentEntry = historyEntriesManager.getEntry(
-      tab.historyStackIds[tab.currentHistoryIndex]
-    )
-
-    const url = annotationData?.data?.url ?? currentEntry?.url ?? tab.initialLocation
-
-    const hashtags = (annotationData.data as AnnotationCommentData)?.tags ?? []
-    if (hashtags.length > 0) {
-      log.debug('hashtags', hashtags)
-    }
-
-    const annotationResource = await resourceManager.createResourceAnnotation(
-      annotationData,
-      { sourceURI: url },
-      [
-        // link the annotation to the page using its canonical URL so we can later find it
-        ResourceTag.canonicalURL(url),
-
-        // link the annotation to the bookmarked resource
-        ResourceTag.annotates(bookmarkedResource.id),
-
-        // add tags as hashtags
-        ...hashtags.map((tag) => ResourceTag.hashtag(tag))
-      ]
-    )
-
-    log.debug('created annotation resource', annotationResource)
-
-    // Update bookmarked resource if its loaded with annotation
-    resourceManager.addAnnotationToLoadedResource(bookmarkedResource.id, annotationResource)
-
-    // update bookmarked resource tags to make the resource visible in Everything
-    const isSilent = (bookmarkedResource.tags ?? []).find(
-      (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
-    )
-    if (isSilent) {
-      await resourceManager.deleteResourceTag(bookmarkedResource.id, ResourceTagsBuiltInKeys.SILENT)
-    }
-
-    const hideInEverything = (bookmarkedResource.tags ?? []).find(
-      (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-    )
-    if (hideInEverything) {
-      await resourceManager.deleteResourceTag(
-        bookmarkedResource.id,
-        ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-      )
-    }
-
-    log.debug('highlighting text in webview')
-    browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreAnnotation, {
-      id: annotationResource.id,
-      data: annotationData
-    })
-
-    if (annotationsSidebar) {
-      annotationsSidebar.reload()
-    }
-  }
-
-  const handleWebviewAnnotationClick = async (
-    e: CustomEvent<WebViewWrapperEvents['annotationClick']>,
-    tabId: string
-  ) => {
-    const annotationId = e.detail.id
-
-    log.debug('webview annotation click', annotationId)
-
-    const tab = $tabs.find((tab) => tab.id === tabId) as TabPage | undefined
-    if (tab && tab.resourceBookmark) {
-      openResource(tab.resourceBookmark)
-    }
-  }
-
-  const handleWebviewAnnotationRemove = async (
-    e: CustomEvent<WebViewWrapperEvents['annotationRemove']>,
-    tabId: string
-  ) => {
-    const annotationId = e.detail
-
-    log.debug('webview annotation remove', annotationId)
-
-    await resourceManager.deleteResource(annotationId)
-
-    toasts.success('Annotation deleted!')
-
-    if (annotationsSidebar) {
-      annotationsSidebar.reload()
-    }
-
-    const browserTab = $browserTabs[tabId]
-    if (browserTab) {
-      browserTab.reload()
-    }
-  }
-
-  const handleWebviewAnnotationUpdate = async (
-    e: CustomEvent<WebViewWrapperEvents['annotationUpdate']>,
-    tabId: string
-  ) => {
-    const { id, data } = e.detail
-
-    log.debug('webview annotation update', id)
-
-    const annotationResource = (await resourceManager.getResource(id)) as ResourceAnnotation
-    const annotationData = await annotationResource.getParsedData()
-
-    if (annotationData.type !== 'comment') {
-      return
-    }
-
-    const newData = {
-      ...annotationData,
-      data: {
-        ...annotationData.data,
-        ...data
-      }
-    } as ResourceDataAnnotation
-
-    log.debug('updating annotation data', newData)
-    await annotationResource.updateParsedData(newData)
-
-    // await tick()
-
-    if (annotationsSidebar) {
-      log.debug('reloading annotations sidebar')
-      annotationsSidebar.reload(true)
-    }
-
-    // const browserTab = $browserTabs[tabId]
-    // if (browserTab) {
-    //   browserTab.reload()
-    // }
-  }
-
   const openResource = async (id: string) => {
-    // $sidebarTab = 'oasis'
-
-    // await tick()
-
-    // drawer.openItem(id)
     openResourceDetailsModal(id)
+  }
+
+  const reloadAnnotationsSidebar = (showLoading?: boolean) => {
+    if (annotationsSidebar) {
+      annotationsSidebar.reload(showLoading)
+    }
   }
 
   const handleAnnotationScrollTo = (e: CustomEvent<WebViewEventAnnotation>) => {
@@ -2238,7 +1595,7 @@
     const toast = toasts.loading('Adding resource to space...')
 
     try {
-      const resourceId = await handleBookmark(false)
+      const resourceId = await handleBookmark()
       log.debug('bookmarked resource', resourceId)
 
       if (resourceId) {
@@ -2461,7 +1818,7 @@
 
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
-    console.log('xxxx', $tabs)
+    log.debug('tabs', $tabs)
   })
 
   const createChatResourceBookmark = async (tab: TabPage) => {
@@ -2548,7 +1905,7 @@
     }
 
     const spaceId = tab.spaceId
-    console.log('spaceid', spaceId)
+    log.debug('spaceid', spaceId)
 
     try {
       const space = $spaces.find((space) => space.id === spaceId)
@@ -2590,14 +1947,14 @@
     })
 
     // reset magic tabs array
-    magictabsarray.length = 0
+    magicTabsArray.length = 0
 
     // update the indices of the tabs in all lists
-    const updateindices = (tabs: tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+    const updateindices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
 
-    const newunpinnedtabsarray = updateindices(unpinnedtabsarray)
-    const newpinnedtabsarray = updateindices(pinnedtabsarray)
-    const newmagictabsarray = updateindices(magictabsarray)
+    const newunpinnedtabsarray = updateindices(unpinnedTabsArray)
+    const newpinnedtabsarray = updateindices(pinnedTabsArray)
+    const newmagictabsarray = updateindices(magicTabsArray)
 
     // combine all lists back together
     const newtabs = [...newunpinnedtabsarray, ...newpinnedtabsarray, ...newmagictabsarray]
@@ -2607,7 +1964,7 @@
     // only update the tabs that were changed (archived stay unaffected)
     tabs.update((x) => {
       return x.map((tab) => {
-        const newTab = newTabs.find((t) => t.id === tab.id)
+        const newTab = newtabs.find((t) => t.id === tab.id)
         if (newTab) {
           tab.index = newTab.index
           tab.pinned = newTab.pinned
@@ -2619,7 +1976,7 @@
 
     // Update the store with the changed tabs
     await bulkUpdateTabsStore(
-      newTabs.map((tab) => ({
+      newtabs.map((tab) => ({
         id: tab.id,
         updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
       }))
@@ -3371,22 +2728,18 @@
             {/if} -->
             {#if tab.type === 'page'}
               <BrowserTab
-                bind:this={$browserTabs[tab.id]}
-                bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
                 active={$activeTabId === tab.id}
                 {historyEntriesManager}
-                on:newTab={handleNewTab}
+                pageMagic={$activeTabMagic}
+                bind:this={$browserTabs[tab.id]}
+                bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
+                on:new-tab={handleNewTab}
                 on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
-                on:bookmark={handleWebviewBookmark}
-                on:transform={(e) => handleWebviewTransform(e, tab)}
-                on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
-                on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, tab.id)}
-                on:annotate={(e) => handleWebviewAnnotation(e, tab.id)}
-                on:annotationClick={(e) => handleWebviewAnnotationClick(e, tab.id)}
-                on:annotationRemove={(e) => handleWebviewAnnotationRemove(e, tab.id)}
-                on:annotationUpdate={(e) => handleWebviewAnnotationUpdate(e, tab.id)}
-                on:keyDown={(e) => handleKeyDown(e.detail)}
-                on:webviewKeydown={(e) => handleKeyDown(e.detail)}
+                on:update-tab={(e) => persistTabChanges(tab.id, e.detail)}
+                on:open-resource={(e) => openResource(e.detail)}
+                on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
+                on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
+                on:keydown={(e) => handleKeyDown(e.detail)}
               />
             {:else if tab.type === 'horizon'}
               {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
@@ -4050,19 +3403,21 @@
     }
   }
 
-  :global(citation) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    font-size: 1rem;
-    background: rgb(255, 164, 164);
-    border-radius: 100%;
-    user-select: none;
-    cursor: pointer;
-    overflow: hidden;
-  }
+  // :global(citation) {
+  //   display: inline-flex;
+  //   align-items: center;
+  //   justify-content: center;
+  //   width: 1.75rem;
+  //   height: 1.75rem;
+  //   font-size: 0.9rem;
+  //   font-weight: 500;
+  //   background: rgb(226 240 255);
+  //   border: 1px solid rgb(183 198 218);
+  //   border-radius: 100%;
+  //   user-select: none;
+  //   cursor: pointer;
+  //   overflow: hidden;
+  // }
 
   :global(div[data-dnd-zone]) {
     overflow: visible !important;

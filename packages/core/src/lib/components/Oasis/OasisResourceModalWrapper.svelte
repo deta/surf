@@ -1,10 +1,6 @@
 <script lang="ts">
-  import { ResourceOverlay } from '@horizon/drawer'
-  import MiniBrowser from '../Browser/MiniBrowser.svelte'
-  import { writable, type Writable } from 'svelte/store'
+  import { writable } from 'svelte/store'
   import { useResourceManager, type Resource } from '../../service/resources'
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
-  import OasisResourceDetails from './OasisResourceDetails.svelte'
   import { useLogScope } from '../../utils/log'
   import OasisResourceModal from './OasisResourceModal.svelte'
 

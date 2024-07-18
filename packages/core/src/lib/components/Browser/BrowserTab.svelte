@@ -1,293 +1,637 @@
 <script lang="ts" context="module">
-  export type NewTabEvent = { url: string; active: boolean }
+  export type BrowserTabNewTabEvent = { url: string; active: boolean }
+
+  export type BrowserTabEvents = {
+    // components own events
+    'new-tab': BrowserTabNewTabEvent
+    navigation: WebviewNavigationEvent
+    keydown: WebViewEventKeyDown
+    'update-tab': Partial<TabPage>
+    'open-resource': string
+    'reload-annotations': boolean
+    'update-page-magic': PageMagic
+
+    // forwarded webview events
+    'app-detection': DetectedWebApp
+    bookmark: WebViewSendEvents[WebViewEventSendNames.Bookmark]
+    transform: WebViewSendEvents[WebViewEventSendNames.Transform]
+    'inline-text-replace': WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]
+    annotate: WebViewSendEvents[WebViewEventSendNames.Annotate]
+    'annotation-click': WebViewSendEvents[WebViewEventSendNames.AnnotationClick]
+    'annotation-remove': WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
+    'annotation-update': WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
+  }
 </script>
 
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { writable } from 'svelte/store'
-  import { type Unsubscriber } from 'svelte/store'
-  import WebviewWrapper, { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
+  import { writable, type Unsubscriber } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
-  import type { TabPage } from './types'
+  import type { AIChatMessageParsed, PageMagic, TabPage } from './types'
   import { useLogScope } from '../../utils/log'
   import type { DetectedWebApp } from '@horizon/web-parser'
-  import type { WebViewEventKeyDown, WebViewReceiveEvents } from '@horizon/types'
-  import FindInPage from '../Cards/Browser/FindInPage.svelte'
-  import ZoomPreview from '../Cards/Browser/ZoomPreview.svelte'
-  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
+  import {
+    ResourceTagsBuiltInKeys,
+    ResourceTypes,
+    WebViewEventReceiveNames,
+    WebViewEventSendNames,
+    type AnnotationCommentData,
+    type ResourceDataAnnotation,
+    type WebViewEventKeyDown,
+    type WebViewReceiveEvents,
+    type WebViewSendEvents
+  } from '@horizon/types'
   import { wait } from '@horizon/web-parser/src/utils'
   import { useDebounce } from '../../utils/debounce'
-  import HoverLinkPreview from '../Cards/Browser/HoverLinkPreview.svelte'
+  import WebviewWrapper, { type WebviewWrapperEvents } from './WebviewWrapper.svelte'
+  import type { WebviewNavigationEvent } from './Webview.svelte'
+  import {
+    ResourceAnnotation,
+    ResourceHistoryEntry,
+    ResourceTag,
+    useResourceManager
+  } from '../../service/resources'
+  import { useToasts } from '../../service/toast'
+  import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from './inline'
+  import { handleInlineAI } from '../../service/ai'
+  import { generateID } from '../../utils/id'
+  import { useOasis } from '../../service/oasis'
 
   const log = useLogScope('BrowserTab')
-  const dispatch = createEventDispatcher<{
-    newTab: NewTabEvent
-    appDetection: DetectedWebApp
-    webviewKeydown: WebViewEventKeyDown
-  }>()
+  const dispatch = createEventDispatcher<BrowserTabEvents>()
+  const resourceManager = useResourceManager()
+  const toasts = useToasts()
+  const oasis = useOasis()
+
+  const sffs = resourceManager.sffs
+  const autoSaveResources = oasis.autoSaveResources
 
   export let tab: TabPage
-  export let webview: WebviewWrapper
   export let historyEntriesManager: HistoryEntriesManager
+  export let webview: WebviewWrapper
+  export let pageMagic: PageMagic | undefined = undefined
 
-  const zoomLevel = writable<number>(1)
-  const showZoomPreview = writable<boolean>(false)
-  let zoomTimer: number
-  let hasMounted = false
-
-  let findInPage: FindInPage | undefined
-  let hoverTargetUrl: string
-
-  export const goBack = () => {
-    if (webview) {
-      webview.goBack()
-    }
-  }
-
-  export const goForward = () => {
-    if (webview) {
-      webview.goForward()
-    }
-  }
-
-  export const focus = () => {
-    if (webview) {
-      webview.focus()
-    }
-  }
-
-  export const reload = () => {
-    if (webview) {
-      webview.reload()
-    }
-  }
-
-  export const navigate = (url: string) => {
-    if (webview) {
-      webview.navigate(url)
-    }
-  }
-
-  export const openDevTools = () => {
-    if (webview) {
-      webview.openDevTools()
-    }
-  }
-
-  export const detectResource = (timeoutNum?: number) => {
-    console.log('detectResource', webview)
-    if (webview) {
-      return webview.detectResource(timeoutNum)
-    }
-  }
-
-  export const executeJavaScript = (code: string, userGesture?: boolean) => {
-    console.log('executeJavaScript', code)
-    if (webview) {
-      return webview.executeJavaScript(code, userGesture)
-    }
-  }
-
-  export const zoomIn = () => {
-    if (webview) {
-      zoomLevel.update((z) => {
-        const newZoomLevel = z + 0.05
-        webview.setZoomLevel(newZoomLevel)
-        return newZoomLevel
-      })
-    }
-  }
-
-  export const zoomOut = () => {
-    if (webview) {
-      zoomLevel.update((z) => {
-        const newZoomLevel = z - 0.05
-        webview.setZoomLevel(newZoomLevel)
-        return newZoomLevel
-      })
-    }
-  }
-
-  export const resetZoom = () => {
-    if (webview) {
-      zoomLevel.set(1)
-      webview.setZoomLevel(1)
-    }
-  }
-
+  export const goBack = () => webview.goBack()
+  export const goForward = () => webview.goForward()
+  export const focus = () => webview.focus()
+  export const reload = () => webview.reload()
+  export const navigate = (url: string) => webview.navigate(url)
+  export const openDevTools = () => webview.openDevTools()
+  export const detectResource = (timeoutNum?: number) => webview.detectResource(timeoutNum)
+  export const executeJavaScript = (code: string, userGesture?: boolean) =>
+    webview.executeJavaScript(code, userGesture)
+  export const zoomIn = () => webview.zoomIn()
+  export const zoomOut = () => webview.zoomOut()
+  export const resetZoom = () => webview.resetZoom()
   export const sendWebviewEvent = <T extends keyof WebViewReceiveEvents>(
     name: T,
     data?: WebViewReceiveEvents[T]
-  ): void => {
-    if (webview) {
-      webview.sendEvent(name, data)
-    }
-  }
-
+  ): void => webview.sendEvent(name, data)
   export const canGoBack = webview?.canGoBack
   export const canGoForward = webview?.canGoForward
 
-  let src = tab.initialLocation
-
-  $: if (tab.historyStackIds) {
-    let currentEntry = historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])
-
-    if (currentEntry) {
-      src = currentEntry.url as string
-    } else {
-      console.log('currentEntry not found', tab.historyStackIds, tab.currentHistoryIndex)
-      src = tab.initialLocation
-    }
-  }
-
-  console.log('new tab', tab)
-
-  const resetZoomTimer = () => {
-    if (hasMounted) {
-      showZoomPreview.set(true)
-      if (zoomTimer) {
-        clearTimeout(zoomTimer)
-      }
-      zoomTimer = window.setTimeout(() => {
-        showZoomPreview.set(false)
-      }, 3000)
-    }
-  }
-
-  zoomLevel.subscribe(() => {
-    resetZoomTimer()
-  })
-
-  const handleWebviewKeydown = async (e: CustomEvent<WebViewWrapperEvents['keydownWebview']>) => {
-    const event = e.detail
-    if (event.key === 'Escape') {
-      if (findInPage?.isOpen()) {
-        findInPage?.close()
-      }
-    } else if (isModKeyAndKeyPressed(event as KeyboardEvent, 'f')) {
-      /*else if (event.code === 'Space' && event.shiftKey) {
-      if ($focusModeEnabled) {
-        exitFocusMode(horizon.board)
-      } else {
-        // TODO: Make this work
-        enterFocusMode([$card.id], horizon.board, horizon.cards)
-      }
-      // TODO: Catch OPT + TAB / SHIFT TAB to toggle between cards
-    }*/
-      log.debug('mod+f pressed')
-
-      if (!findInPage || !webview) return
-
-      if (findInPage.isOpen()) {
-        const selection = await webview.getSelection()
-        if (selection) {
-          findInPage.find(selection)
-        } else {
-          findInPage.close()
-        }
-      } else {
-        findInPage.open()
-      }
-    } else {
-      dispatch('webviewKeydown', e.detail)
-    }
-  }
-
-  const handleWebviewNewWindow = async (e: CustomEvent<Electron.HandlerDetails>) => {
-    const disposition = e.detail.disposition
-    if (disposition === 'new-window') return
-
-    dispatch('newTab', { url: e.detail.url, active: disposition === 'foreground-tab' })
-  }
-
+  let currentEntry = historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])
+  let initialSrc = (currentEntry ? currentEntry.url : tab.initialLocation) ?? 'about:blank'
   let app: DetectedWebApp | null = null
-  function handleDetectedApp(e: CustomEvent<DetectedWebApp>) {
-    const detectedApp = e.detail
-    log.debug('detected app', detectedApp)
-    if (!app) {
-      log.debug('first app detection')
-      app = detectedApp
-      dispatch('appDetection', detectedApp)
-      return
-    }
 
-    if (
-      app.appId === detectedApp.appId &&
-      app.resourceType === detectedApp.resourceType &&
-      app.appResourceIdentifier === detectedApp.appResourceIdentifier
-    ) {
-      log.debug('no change in app or resource', detectedApp)
-      dispatch('appDetection', detectedApp) // TODO: differentiate between fresh detection and no change
-      return
-    }
+  const url = writable<string>(initialSrc)
+  const historyStackIds = writable<string[]>(tab.historyStackIds)
+  const currentHistoryIndex = writable(tab.currentHistoryIndex)
+  const appDetectionRunning = writable(false)
 
-    app = detectedApp
-    dispatch('appDetection', detectedApp)
-  }
+  $: log.debug('url changed', url)
 
-  const handleWebviewKeyDown = (e: CustomEvent<WebViewEventKeyDown>) => {
-    dispatch('webviewKeydown', e.detail)
-  }
+  // $: if (tab.historyStackIds) {
+  //   let currentEntry = historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])
 
-  const handleUpdateTargetUrl = (e: CustomEvent<string>) => {
-    hoverTargetUrl = e.detail
-  }
+  //   if (currentEntry) {
+  //     src = currentEntry.url as string
+  //   } else {
+  //     console.log('currentEntry not found', tab.historyStackIds, tab.currentHistoryIndex)
+  //     src = tab.initialLocation
+  //   }
+  // }
 
-  const debouncedAppDetection = useDebounce(() => {
+  const debouncedAppDetection = useDebounce(async () => {
+    await wait(500)
     log.debug('running app detection debounced')
     webview.startAppDetection()
-  }, 200)
+  }, 500)
+
+  const debouncedTabUpdate = useDebounce(() => {
+    // log.debug('running tab persist debounced', tab)
+    dispatch('update-tab', tab)
+  }, 500)
+
+  const handleUrlChange = async (e: CustomEvent<string>) => {
+    // await wait(500)
+    // log.debug('running app detection on', e.detail)
+    debouncedAppDetection()
+  }
+
+  const handleWebviewTitleChange = (e: CustomEvent<string>) => {
+    // log.debug('title changed for', $url, e.detail)
+    tab = {
+      ...tab,
+      title: e.detail
+    }
+
+    debouncedTabUpdate()
+    // dispatch('update-tab', { title: e.detail })
+  }
+
+  const handleWebviewFaviconChange = (e: CustomEvent<string>) => {
+    tab = {
+      ...tab,
+      icon: e.detail
+    }
+
+    debouncedTabUpdate()
+    // dispatch('update-tab', { icon: e.detail })
+  }
+
+  const handleHistoryChange = (e: CustomEvent<{ stack: string[]; index: number }>) => {
+    // log.debug('history changed for', $url, e.detail.index, e.detail.stack)
+
+    const changes = {
+      historyStackIds: e.detail.stack,
+      currentHistoryIndex: e.detail.index
+    }
+
+    tab = {
+      ...tab,
+      ...changes
+    }
+
+    debouncedTabUpdate()
+    // dispatch('update-tab', changes)
+  }
+
+  async function createBookmarkResource(url: string, tab: TabPage, silent: boolean = false) {
+    log.debug('bookmarking', url)
+
+    const detectedResource = await webview.detectResource()
+    log.debug('extracted resource data', detectedResource)
+
+    if (!detectedResource) {
+      log.debug('no resource detected')
+      throw new Error('No resource detected')
+    }
+
+    const title = (detectedResource.data as any)?.title ?? tab.title ?? ''
+
+    const resource = await resourceManager.createResourceOther(
+      new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
+      { name: title, sourceURI: url, alt: '' },
+      [
+        ResourceTag.canonicalURL(url),
+        ResourceTag.viewedByUser(true),
+        ...(silent ? [ResourceTag.silent()] : [])
+      ]
+    )
+
+    log.debug('created resource', resource)
+
+    return resource
+  }
+
+  export async function bookmarkPage(silent = false) {
+    const currentEntry = historyEntriesManager.getEntry(
+      tab.historyStackIds[tab.currentHistoryIndex]
+    )
+    let url = currentEntry?.url ?? tab.initialLocation
+
+    // strip &t from url suffix
+    let youtubeHostnames = [
+      'youtube.com',
+      'youtu.be',
+      'youtube.de',
+      'www.youtube.com',
+      'www.youtu.be',
+      'www.youtube.de'
+    ]
+    if (youtubeHostnames.includes(new URL(url).host)) {
+      url = url.replace(/&t.*/g, '')
+    }
+
+    if (tab.chatResourceBookmark) {
+      const fetchedResource = await resourceManager.getResource(tab.chatResourceBookmark)
+      if (fetchedResource) {
+        const fetchedCanonical = (fetchedResource?.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+        )
+
+        if (fetchedCanonical?.value === url) {
+          log.debug('already bookmarked', url, fetchedResource.id)
+
+          tab.resourceBookmark = fetchedResource.id
+          dispatch('update-tab', { resourceBookmark: fetchedResource.id })
+
+          return fetchedResource
+        }
+      }
+    }
+
+    log.debug('bookmarking', url)
+    const resource = await createBookmarkResource(url, tab, silent)
+
+    tab.resourceBookmark = resource.id
+    tab.chatResourceBookmark = resource.id
+    dispatch('update-tab', { resourceBookmark: resource.id, chatResourceBookmark: resource.id })
+
+    return resource
+  }
+
+  const handleWebviewAnnotationClick = async (
+    e: WebViewSendEvents[WebViewEventSendNames.AnnotationClick]
+  ) => {
+    const annotationId = e.id
+
+    log.debug('webview annotation click', annotationId)
+
+    if (tab && tab.resourceBookmark) {
+      dispatch('open-resource', tab.resourceBookmark)
+    }
+  }
+
+  const handleWebviewAnnotationRemove = async (
+    annotationId: WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
+  ) => {
+    log.debug('webview annotation remove', annotationId)
+
+    await resourceManager.deleteResource(annotationId)
+
+    toasts.success('Annotation deleted!')
+
+    dispatch('reload-annotations', false)
+    webview.reload()
+  }
+
+  const handleWebviewAnnotationUpdate = async (
+    e: WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
+  ) => {
+    const { id, data } = e
+
+    log.debug('webview annotation update', id)
+
+    const annotationResource = (await resourceManager.getResource(id)) as ResourceAnnotation
+    const annotationData = await annotationResource.getParsedData()
+
+    if (annotationData.type !== 'comment') {
+      return
+    }
+
+    const newData = {
+      ...annotationData,
+      data: {
+        ...annotationData.data,
+        ...data
+      }
+    } as ResourceDataAnnotation
+
+    log.debug('updating annotation data', newData)
+    await annotationResource.updateParsedData(newData)
+
+    dispatch('reload-annotations', true)
+  }
+
+  const handleWebviewInlineTextReplace = async (
+    e: WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]
+  ) => {
+    log.debug('webview inline text replace', e)
+    const { target, content } = e
+
+    // add mark styles to the page
+    await webview.executeJavaScript(inlineTextReplaceStylingCode())
+
+    log.debug('executing code')
+    const code = inlineTextReplaceCode(target, content)
+    await webview.executeJavaScript(code)
+  }
+
+  async function handleWebviewTransform(e: WebViewSendEvents[WebViewEventSendNames.Transform]) {
+    log.debug('webview transformation', e)
+
+    const detectedResource = await webview.detectResource()
+    log.debug('extracted resource data', detectedResource)
+    if (!detectedResource) {
+      log.debug('no resource detected')
+      return
+    }
+
+    const transformation = await handleInlineAI(e, detectedResource)
+    log.debug('transformation output', transformation)
+
+    webview.sendEvent(WebViewEventReceiveNames.TransformationOutput, {
+      text: transformation
+    })
+  }
+
+  async function handleWebviewBookmark(event: WebViewSendEvents[WebViewEventSendNames.Bookmark]) {
+    log.debug('webview bookmark', event)
+
+    if (!tab.resourceBookmark) {
+      const resource = await resourceManager.createResourceLink(
+        new Blob([JSON.stringify({ url: event.url })], { type: ResourceTypes.LINK }),
+        { name: tab?.title ?? '', sourceURI: event.url, alt: '' },
+        [ResourceTag.canonicalURL(event.url)]
+      )
+
+      log.debug('created resource', resource)
+
+      tab.resourceBookmark = resource.id
+
+      dispatch('update-tab', { resourceBookmark: resource.id })
+    }
+
+    if (event.text) {
+      log.debug('creating note for bookmark', event.text)
+      const resource = await resourceManager.createResourceNote(event.text, {
+        name: tab.title ?? '',
+        sourceURI: event.url,
+        alt: ''
+      })
+      log.debug('created resource', resource)
+    }
+  }
+
+  const handleWebviewAnnotation = async (
+    annotationData: WebViewSendEvents[WebViewEventSendNames.Annotate]
+  ) => {
+    log.debug('webview annotation', annotationData)
+
+    const bookmarkedResourceId = tab.resourceBookmark
+    let bookmarkedResource = bookmarkedResourceId
+      ? await resourceManager.getResource(bookmarkedResourceId)
+      : null
+
+    if (!bookmarkedResource) {
+      log.debug('no bookmarked resource')
+
+      const resource = await bookmarkPage(true)
+      bookmarkedResource = resource
+    }
+
+    const currentEntry = historyEntriesManager.getEntry(
+      tab.historyStackIds[tab.currentHistoryIndex]
+    )
+
+    const url = annotationData?.data?.url ?? currentEntry?.url ?? tab.initialLocation
+
+    const hashtags = (annotationData.data as AnnotationCommentData)?.tags ?? []
+    if (hashtags.length > 0) {
+      log.debug('hashtags', hashtags)
+    }
+
+    const annotationResource = await resourceManager.createResourceAnnotation(
+      annotationData,
+      { sourceURI: url },
+      [
+        // link the annotation to the page using its canonical URL so we can later find it
+        ResourceTag.canonicalURL(url),
+
+        // link the annotation to the bookmarked resource
+        ResourceTag.annotates(bookmarkedResource.id),
+
+        // add tags as hashtags
+        ...hashtags.map((tag) => ResourceTag.hashtag(tag))
+      ]
+    )
+
+    log.debug('created annotation resource', annotationResource)
+
+    // Update bookmarked resource if its loaded with annotation
+    resourceManager.addAnnotationToLoadedResource(bookmarkedResource.id, annotationResource)
+
+    // update bookmarked resource tags to make the resource visible in Everything
+    const isSilent = (bookmarkedResource.tags ?? []).find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+    )
+    if (isSilent) {
+      await resourceManager.deleteResourceTag(bookmarkedResource.id, ResourceTagsBuiltInKeys.SILENT)
+    }
+
+    const hideInEverything = (bookmarkedResource.tags ?? []).find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+    )
+    if (hideInEverything) {
+      await resourceManager.deleteResourceTag(
+        bookmarkedResource.id,
+        ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+      )
+    }
+
+    log.debug('highlighting text in webview')
+    webview.sendEvent(WebViewEventReceiveNames.RestoreAnnotation, {
+      id: annotationResource.id,
+      data: annotationData
+    })
+
+    dispatch('reload-annotations', false)
+  }
+
+  async function handleWebviewAppDetection(detectedApp: DetectedWebApp) {
+    let url = ''
+    try {
+      log.debug('webview app detection event received', detectedApp)
+      if (tab.type !== 'page') return
+
+      if (
+        app &&
+        app.appId === detectedApp.appId &&
+        app.resourceType === detectedApp.resourceType &&
+        app.appResourceIdentifier === detectedApp.appResourceIdentifier
+      ) {
+        log.debug('no change in app or resource', detectedApp)
+        return
+      }
+
+      if (!app) {
+        log.debug('first app detection')
+      }
+
+      app = detectedApp
+      url = detectedApp.canonicalUrl ?? tab.initialLocation
+
+      tab.currentDetectedApp = detectedApp
+      dispatch('update-tab', { currentDetectedApp: detectedApp })
+
+      if ($appDetectionRunning) {
+        log.debug('app detection already running')
+        return
+      } else {
+        appDetectionRunning.set(true)
+      }
+
+      log.info('detecting app for url', url)
+
+      const matchingResources = await resourceManager.getResourcesFromSourceURL(url)
+      let bookmarkedResource = matchingResources.find(
+        (resource) =>
+          resource.type !== ResourceTypes.ANNOTATION &&
+          resource.type !== ResourceTypes.HISTORY_ENTRY
+      )
+
+      log.debug('bookmarked resource found', bookmarkedResource)
+      if (!bookmarkedResource) {
+        if ($autoSaveResources) {
+          log.debug('creating new silent resource', url)
+          bookmarkedResource = await createBookmarkResource(url, tab, true)
+        } else {
+          log.debug('auto save resources disabled')
+        }
+      }
+
+      if (bookmarkedResource) {
+        tab.resourceBookmark = bookmarkedResource.id
+        tab.chatResourceBookmark = bookmarkedResource.id
+        dispatch('update-tab', {
+          resourceBookmark: bookmarkedResource.id,
+          chatResourceBookmark: bookmarkedResource.id
+        })
+
+        if (!pageMagic) {
+          pageMagic = {
+            showSidebar: false,
+            running: false,
+            responses: []
+          } as PageMagic
+
+          log.debug('updating page magic', pageMagic)
+          dispatch('update-page-magic', pageMagic)
+        }
+      }
+
+      const existingHistoryEntry = matchingResources.find(
+        (resource) => resource.type === ResourceTypes.HISTORY_ENTRY
+      ) as ResourceHistoryEntry | undefined
+
+      if (existingHistoryEntry) {
+        const data = await existingHistoryEntry.getParsedData()
+        await existingHistoryEntry.updateParsedData({
+          ...data,
+          last_loaded: new Date().toISOString()
+        })
+        log.debug('updated history entry', existingHistoryEntry)
+      } else {
+        const historyEntry = await resourceManager.createResourceHistoryEntry(
+          {
+            raw_url: url,
+            title: tab.title ?? '',
+            app_id: tab.currentDetectedApp?.appId ?? null,
+            app_resource_identifier: tab.currentDetectedApp?.appResourceIdentifier ?? null,
+            last_loaded: new Date().toISOString()
+          },
+          {
+            sourceURI: url
+          },
+          [
+            ResourceTag.canonicalURL(url),
+            ...(bookmarkedResource ? [ResourceTag.annotates(bookmarkedResource.id)] : [])
+          ]
+        )
+
+        log.debug('created history entry', historyEntry)
+      }
+
+      const annotationResources = matchingResources.filter(
+        (resource) => resource.type === ResourceTypes.ANNOTATION
+      ) as ResourceAnnotation[]
+
+      await wait(500)
+
+      annotationResources.forEach(async (annotationResource) => {
+        const annotation = await annotationResource.getParsedData()
+        webview.sendEvent(WebViewEventReceiveNames.RestoreAnnotation, {
+          id: annotationResource.id,
+          data: annotation
+        })
+      })
+
+      // if ($activeTabId === tab.id) {
+      //   summarizePage(pageMagic)
+      // }
+
+      log.debug('page magic', pageMagic)
+
+      if (!pageMagic) {
+        let responses: AIChatMessageParsed[] = []
+        if (tab?.chatId) {
+          const chat = await sffs.getAIChat(tab.chatId)
+          if (chat) {
+            const userMessages = chat.messages.filter((message) => message.role === 'user')
+            const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
+            const systemMessages = chat.messages.filter((message) => message.role === 'system')
+
+            responses = systemMessages.map((message, idx) => {
+              message.sources = message.sources
+              log.debug('Message', message)
+              return {
+                id: generateID(),
+                role: message.role,
+                query: queries[idx],
+                content: message.content.replace('<answer>', '').replace('</answer>', ''),
+                sources: message.sources,
+                status: 'success'
+              }
+            })
+          }
+        }
+
+        pageMagic = {
+          showSidebar: false,
+          running: false,
+          responses: responses
+        } as PageMagic
+
+        log.debug('updating page magic', pageMagic)
+        dispatch('update-page-magic', pageMagic)
+      }
+    } catch (e) {
+      log.error('error handling webview app detection', e)
+    } finally {
+      appDetectionRunning.set(false)
+    }
+  }
+
+  const handleWebviewPageEvent = (
+    event: CustomEvent<WebviewWrapperEvents['webview-page-event']>
+  ) => {
+    const { type, data } = event.detail
+
+    if (type === WebViewEventSendNames.KeyDown) {
+      dispatch('keydown', data as WebViewSendEvents[WebViewEventSendNames.KeyDown])
+    } else if (type === WebViewEventSendNames.DetectedApp) {
+      handleWebviewAppDetection(data as DetectedWebApp)
+    } else if (type === WebViewEventSendNames.Bookmark) {
+      handleWebviewBookmark(data as WebViewSendEvents[WebViewEventSendNames.Bookmark])
+    } else if (type === WebViewEventSendNames.Transform) {
+      handleWebviewTransform(data as WebViewSendEvents[WebViewEventSendNames.Transform])
+    } else if (type === WebViewEventSendNames.InlineTextReplace) {
+      handleWebviewInlineTextReplace(
+        data as WebViewSendEvents[WebViewEventSendNames.InlineTextReplace]
+      )
+    } else if (type === WebViewEventSendNames.Annotate) {
+      handleWebviewAnnotation(data as WebViewSendEvents[WebViewEventSendNames.Annotate])
+    } else if (type === WebViewEventSendNames.AnnotationClick) {
+      handleWebviewAnnotationClick(data as WebViewSendEvents[WebViewEventSendNames.AnnotationClick])
+    } else if (type === WebViewEventSendNames.RemoveAnnotation) {
+      handleWebviewAnnotationRemove(
+        data as WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
+      )
+    } else if (type === WebViewEventSendNames.UpdateAnnotation) {
+      handleWebviewAnnotationUpdate(
+        data as WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
+      )
+    }
+  }
 
   const unsubTracker: Unsubscriber[] = []
   onMount(() => {
     if (!webview) return
-    hasMounted = true
 
-    webview.historyStackIds.set(tab.historyStackIds)
-    webview.currentHistoryIndex.set(tab.currentHistoryIndex)
-
-    unsubTracker.push(
-      webview.url.subscribe(async (_: string) => {
-        await wait(500)
-        log.debug('running app detection')
-        debouncedAppDetection()
-      })
-    )
-
-    unsubTracker.push(
-      webview.historyStackIds.subscribe((stack) => {
-        log.debug('history stack changed', stack)
-        tab.historyStackIds = stack
-      })
-    )
-    unsubTracker.push(
-      webview.currentHistoryIndex.subscribe((index) => {
-        log.debug('current history index changed', index)
-        tab.currentHistoryIndex = index
-      })
-    )
-
-    unsubTracker.push(
-      webview.faviconURL.subscribe((faviconURL) => {
-        if (!faviconURL) return
-
-        tab = {
-          ...tab,
-          icon: faviconURL
-        }
-      })
-    )
-
-    unsubTracker.push(
-      webview.title.subscribe((title) => {
-        if (!title) return
-
-        tab = {
-          ...tab,
-          title
-        }
-      })
-    )
+    historyStackIds.set(tab.historyStackIds)
+    currentHistoryIndex.set(tab.currentHistoryIndex)
   })
 
   onDestroy(() => {
@@ -295,28 +639,19 @@
   })
 </script>
 
-{#if webview}
-  <FindInPage bind:this={findInPage} {webview} />
-  <ZoomPreview {zoomLevel} {showZoomPreview} />
-  <HoverLinkPreview show={!!hoverTargetUrl} url={hoverTargetUrl} />
-{/if}
-
 <WebviewWrapper
-  bind:this={webview}
-  {src}
+  src={initialSrc}
   partition="persist:horizon"
   {historyEntriesManager}
-  on:newWindowWebview={handleWebviewNewWindow}
-  on:keydownWebview={handleWebviewKeyDown}
+  {url}
+  {historyStackIds}
+  {currentHistoryIndex}
+  bind:this={webview}
+  on:webview-page-event={handleWebviewPageEvent}
+  on:url-change={handleUrlChange}
+  on:title-change={handleWebviewTitleChange}
+  on:favicon-change={handleWebviewFaviconChange}
+  on:history-change={handleHistoryChange}
+  on:new-tab
   on:navigation
-  on:bookmark
-  on:transform
-  on:detectedApp={handleDetectedApp}
-  on:inlineTextReplace
-  on:annotate
-  on:annotationClick
-  on:annotationRemove
-  on:annotationUpdate
-  on:keydownWebview={handleWebviewKeydown}
-  on:updateTargetUrl={handleUpdateTargetUrl}
 />

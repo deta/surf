@@ -1,14 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import type { WebviewTag } from 'electron'
 
-  import type WebviewWrapper from './WebviewWrapper.svelte'
-  import type { WebViewWrapperEvents } from './WebviewWrapper.svelte'
-  import { useLogScope } from '../../../utils/log'
-  import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
+  import { useLogScope } from '../../utils/log'
+  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
 
-  export let webview: WebviewWrapper
+  export let webview: WebviewTag
   export let value = ''
   export let show = false
+
+  export let getSelection: () => Promise<string>
 
   let matches = 0
   let activeMatchOrdinal = 0
@@ -22,7 +23,7 @@
 
     show = true
 
-    const selection = await webview.getSelection()
+    const selection = await getSelection()
     if (selection) {
       find(selection)
     }
@@ -81,7 +82,7 @@
 
   export const isOpen = () => show
 
-  const handleFindResult = (event: WebViewWrapperEvents['foundInPage']) => {
+  export const handleFindResult = (event: Electron.FoundInPageEvent) => {
     const result = event.result
     log.debug('result', result)
 
@@ -101,7 +102,7 @@
     } else if (isModKeyAndKeyPressed(event, 'f')) {
       event.preventDefault()
 
-      const selection = await webview.getSelection()
+      const selection = await getSelection()
       if (selection) {
         find(selection)
       } else {
@@ -123,10 +124,10 @@
   }
 
   onMount(() => {
-    const unsubscribe = webview.subscribeFindInPageResult(handleFindResult)
+    webview?.addEventListener('found-in-page', handleFindResult)
 
     return () => {
-      unsubscribe()
+      webview?.removeEventListener('found-in-page', handleFindResult)
       stopFind()
     }
   })
