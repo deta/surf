@@ -69,7 +69,7 @@
     {:else}
       <img
         class="favicon"
-        src={`https://www.google.com/s2/favicons?domain=${post?.url}&sz=256`}
+        src={`https://www.google.com/s2/favicons?domain=${post?.url}&sz=48`}
         alt={`${post?.site_name} favicon`}
         loading="lazy"
       />

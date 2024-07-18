@@ -65,7 +65,7 @@
       <div class="link-preview-no-image">
         <img
           class="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${link?.raw_url}&sz=256`}
+          src={`https://www.google.com/s2/favicons?domain=${link?.raw_url}&sz=48`}
           alt="favicon"
         />
         <div class="description">

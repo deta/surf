@@ -65,7 +65,7 @@
       <div class="metadata-container">
         <img
           class="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${document?.url}&sz=256`}
+          src={`https://www.google.com/s2/favicons?domain=${document?.url}&sz=48`}
           alt={`${document?.url} favicon`}
         />
 

@@ -282,7 +282,7 @@
           {#if resource.metadata?.sourceURI}
             <img
               class="favicon"
-              src={`https://www.google.com/s2/favicons?domain=${resource.metadata?.sourceURI}&sz=256`}
+              src={`https://www.google.com/s2/favicons?domain=${resource.metadata?.sourceURI}&sz=48`}
               alt={`favicon`}
               loading="lazy"
             />
