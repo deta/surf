@@ -6,7 +6,7 @@
   import InfiniteScroll from '../InfiniteScroll.svelte'
   import { DrawerContentMasonry } from '@horizon/drawer'
   import { useDebounce } from '../../utils/debounce'
-  import Masonry from './Masonry.svelte'
+  import Masonry from './MasonrySpace.svelte'
 
   export let resourceIds: Readable<string[]>
   export let selected: string | null = null
@@ -26,10 +26,6 @@
     return resourceIds.slice(0, renderLimit)
   })
 
-  const debouncedRefreshLayout = useDebounce(() => {
-    refreshContentLayout()
-  }, 500)
-
   const handleLoadChunk = () => {
     log.debug('Load more chunk...')
     if ($resourceIds.length <= $renderContents.length) {
@@ -37,38 +33,12 @@
     }
 
     renderLimit.update((limit) => limit + CHUNK_SIZE)
-    debouncedRefreshLayout()
-  }
-
-  const handleItemLoad = () => {
-    debouncedRefreshLayout()
   }
 </script>
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    <Masonry
-      gridGap="2rem"
-      colWidth="minmax(250px, 330px)"
-      bind:refreshLayout={refreshContentLayout}
-    >
-      {#each $renderContents as resourceId (resourceId)}
-        <OasisResourceLoader
-          class="masonry-item"
-          id={resourceId}
-          selected={selected === resourceId}
-          on:load={handleItemLoad}
-          on:click
-          on:open
-          on:remove
-        />
-      {/each}
-      <InfiniteScroll
-        elementScroll={scrollElement}
-        threshold={CHUNK_THRESHOLD}
-        on:loadMore={handleLoadChunk}
-      />
-    </Masonry>
+    <Masonry renderContents={$renderContents} on:load-more={handleLoadChunk} />
   </div>
 </div>
 

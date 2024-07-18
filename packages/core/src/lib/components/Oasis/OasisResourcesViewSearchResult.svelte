@@ -51,11 +51,9 @@
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    {#if $renderContents.length > 0}
-      <Masonry renderContents={$renderContents} on:load-more={handleLoadChunk}
-        >{$renderContents.length}</Masonry
-      >
-    {/if}
+    <Masonry renderContents={$renderContents} on:load-more={handleLoadChunk}
+      >{$renderContents.length}</Masonry
+    >
 
     <!-- <Masonry
       gridGap="2rem"
