@@ -28,6 +28,7 @@ async def handle_chat(
     system_prompt: str = Query(None),
     mock: bool = False,
     rag_only: bool = False,
+    general: bool = False,
     resource_ids: Union[str, None] = None
 ):
     """
@@ -38,7 +39,7 @@ async def handle_chat(
         return StreamingResponse(mock_stream())
     resource_ids_list = resource_ids.split(',') if resource_ids != None else None
 
-    if query.lower().startswith("general:"):
+    if general:
         generator = send_general_message(query, session_id, True, DEFAULT_MODEL)
         return StreamingResponse(generator)
     

@@ -142,6 +142,7 @@
   const tabs = writable<Tab[]>([])
   const addressValue = writable('')
   const activeTabId = useLocalStorageStore<string>('activeTabId', '')
+  const activeChatId = useLocalStorageStore<string>('activeChatId', '')
   const loadingOrganize = writable(false)
   const visorSearchTerm = writable('')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
@@ -209,13 +210,6 @@
   $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
     log.debug('Active tab is not in view, resetting')
     makePreviousTabActive()
-  }
-
-  $: if ($activeTabMagic) {
-    // Reset all tabs from the magic
-    if (!$activeTabMagic.showSidebar) {
-      resetTabsFromMagic()
-    }
   }
 
   activeTab.subscribe((tab) => {
@@ -363,6 +357,14 @@
     setTimeout(() => {
       makeTabActive(tabId)
     }, 50)
+  }
+
+  const handleUnarchiveTab = async (e: CustomEvent<string>) => {
+    await unarchiveTab(e.detail)
+  }
+
+  const handleDeleteTab = async (e: CustomEvent<string>) => {
+    await deleteTab(e.detail)
   }
 
   const deleteTab = async (tabId: string) => {
@@ -538,20 +540,23 @@
 
     addressBarFocus = false
 
-    if (!$addressValue) {
+    let addressVal = addressInputElem.value
+    log.debug('Address bar blur', addressVal)
+
+    if (!addressVal) {
       return
     }
 
     if ($activeTab?.type === 'horizon') {
       const horizon = $horizons.find((horizon) => horizon.id === $activeTab.horizonId)
       if (horizon) {
-        horizon.updateData({ name: $addressValue })
+        horizon.updateData({ name: addressVal })
 
-        updateActiveTab({ title: $addressValue })
+        updateActiveTab({ title: addressVal })
       }
     } else if ($activeTab?.type === 'page') {
-      log.debug('Navigating to address from page', $addressValue)
-      const url = getNavigationURL($addressValue)
+      log.debug('Navigating to address from page', addressVal)
+      const url = getNavigationURL(addressVal)
       $activeBrowserTab.navigate(url)
 
       if (url === $activeTabLocation) {
@@ -559,11 +564,9 @@
       } else {
         updateActiveTab({ initialLocation: url })
       }
-
-      popoverOpen = false
     } else if ($activeTab?.type === 'empty') {
-      log.debug('Navigating to address from empty tab', $addressValue)
-      const url = getNavigationURL($addressValue)
+      log.debug('Navigating to address from empty tab', addressVal)
+      const url = getNavigationURL(addressVal)
       log.debug('Converting empty tab to page', url)
       updateActiveTab({
         type: 'page',
@@ -572,8 +575,8 @@
         currentHistoryIndex: -1
       })
     } else if ($activeTab?.type === 'chat') {
-      log.debug('Renaming chat tab', $addressValue)
-      updateActiveTab({ title: $addressValue })
+      log.debug('Renaming chat tab', addressVal)
+      updateActiveTab({ title: addressVal })
     }
   }
 
@@ -663,7 +666,6 @@
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
-      popoverOpen = true
       addressInputElem.focus()
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
@@ -926,6 +928,8 @@
             //   openResource($activeTab.resourceBookmark)
             // }
 
+            updateTab($activeTabId, { resourceBookmarkedManually: true })
+
             return $activeTab.resourceBookmark
           }
         }
@@ -1027,12 +1031,9 @@
     return textElements
   }
 
+  // this is a separate function as it will be easier to easily change what it means for tabs to be in chat context
   const getTabsInChatContext = () => {
-    let tabs = $magicTabs
-    if (tabs.length == 0) {
-      return $unpinnedTabs
-    }
-    return tabs
+    return $magicTabs
   }
 
   const highlightWebviewText = async (
@@ -1143,11 +1144,13 @@
     query?: string
   ) => {
     if (tabsInContext.length === 0) {
-      log.debug('No tabs in context')
+      log.debug('No tabs in context, general chat:')
+    }
+    const chatId = $activeChatId
+    if (!chatId) {
+      alert('Error: Existing chat not found')
       return
     }
-    const pageTabs = tabsInContext.filter((tab) => tab.type === 'page')
-    const chatId = (pageTabs[0] as TabPage).chatId
 
     let response: AIChatMessageParsed | null = null
 
@@ -1160,11 +1163,6 @@
           resourceIds.push(t.chatResourceBookmark)
         }
       }
-      if (resourceIds.length === 0) {
-        log.debug('No resource IDs found from tabs in context')
-        return
-      }
-
       response = {
         id: generateID(),
         role: role,
@@ -1215,7 +1213,8 @@
         },
         {
           limit: 30,
-          resourceIds: resourceIds
+          resourceIds: resourceIds,
+          general: resourceIds.length === 0
         }
       )
 
@@ -1315,17 +1314,19 @@
     if (!pageMagic) return
 
     try {
-      let chatId: string | null = null
+      let chatId: string = ''
       await deleteChatsForPageChat()
       if (createNewChat) {
-        chatId = await sffs.createAIChat('')
-        if (!chatId) {
+        const newChatId = await sffs.createAIChat('')
+        if (!newChatId) {
           log.error('Failed to create new chat aftering clearing the old one')
           return
         }
+        chatId = newChatId
       }
       pageMagic.responses = []
-      updateChatIdsForPageChat(chatId!)
+      updateChatIdsForPageChat(chatId)
+      activeChatId.set(chatId)
     } catch (e) {
       log.error('Error clearing chat:', e)
     }
@@ -1357,6 +1358,7 @@
     for (const tab of getTabsInChatContext()) {
       if (tab.type === 'page' && !tab.resourceBookmark) {
         try {
+          log.debug('Bookmarking page tab', tab)
           const browserTab = $browserTabs[tab.id]
           await browserTab.bookmarkPage(true)
         } catch (e) {
@@ -1374,13 +1376,14 @@
     if (!tab) return
 
     if (!$activeTabMagic.showSidebar) {
-      if (!tab?.chatId) {
+      if (!$activeChatId) {
         const chatId = await sffs.createAIChat('')
         if (!chatId) {
           log.error('Failed to create chat')
           return
         }
         updateChatIdsForPageChat(chatId)
+        activeChatId.set(chatId)
       }
       await bookmarkPageTabsInContext()
     }
@@ -1390,6 +1393,7 @@
         showSidebar: !magic.showSidebar
       }
     })
+    toggleTabsMagic($activeTabMagic.showSidebar)
   }
 
   const handleToggleAppSidebar = async () => {
@@ -1675,7 +1679,7 @@
     }
   }
 
-  const handleCreateLiveSpace = async (_e: MouseEvent) => {
+  const handleCreateLiveSpace = async (_e?: MouseEvent) => {
     try {
       if ($activeTab?.type !== 'page' || !$activeTab.currentDetectedApp?.rssFeedUrl) {
         log.debug('No RSS feed detected')
@@ -1743,11 +1747,11 @@
 
   let maxWidth = window.innerWidth
 
-  $: tabSize = Math.min(500, Math.max(128, maxWidth / ($tabs.length - 14)))
+  $: tabSize = (maxWidth - 600) / $unpinnedTabs.length
 
   const handleResize = () => {
     maxWidth = window.innerWidth
-    tabSize = Math.min(500, Math.max(128, maxWidth / $tabs.length))
+    tabSize = (maxWidth - 600) / $unpinnedTabs.length
   }
 
   onMount(async () => {
@@ -1930,41 +1934,65 @@
     }
   }
 
-  const resetTabsFromMagic = async () => {
+  const handleExcludeOtherTabsFromMagic = (e: CustomEvent<string>) => {
+    const tabId = e.detail
+
+    // exclude all other tabs from magic
+    tabs.update((x) => {
+      return x.map((tab) => {
+        if (tab.id !== tabId) {
+          return {
+            ...tab,
+            magic: false
+          }
+        }
+        return tab
+      })
+    })
+  }
+
+  const toggleTabsMagic = async (on: boolean) => {
     const magicTabsArray = get(magicTabs)
     const unpinnedTabsArray = get(unpinnedTabs)
     const pinnedTabsArray = get(pinnedTabs)
 
-    // Revert each magic tab to its previous state
-    magicTabsArray.forEach((magicTab) => {
-      magicTab.magic = false
+    // Update the indices of the tabs in all lists
+    const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+    let newUnpinnedTabsArray: Tab[] = []
 
-      if (magicTab.pinned) {
-        pinnedTabsArray.push(magicTab)
-      } else {
-        unpinnedTabsArray.push(magicTab)
-      }
-    })
+    if (on) {
+      unpinnedTabsArray.forEach((tab) => {
+        tab.magic = true
+      })
+      newUnpinnedTabsArray = []
+    } else {
+      // Revert each magic tab to its previous state
+      magicTabsArray.forEach((magicTab) => {
+        magicTab.magic = false
 
-    // reset magic tabs array
-    magicTabsArray.length = 0
+        if (magicTab.pinned) {
+          pinnedTabsArray.push(magicTab)
+        } else {
+          unpinnedTabsArray.push(magicTab)
+        }
+      })
+      // Reset magic tabs array
+      magicTabsArray.length = 0
+      newUnpinnedTabsArray = updateIndices(unpinnedTabsArray)
+    }
 
-    // update the indices of the tabs in all lists
-    const updateindices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
-
-    const newunpinnedtabsarray = updateindices(unpinnedTabsArray)
-    const newpinnedtabsarray = updateindices(pinnedTabsArray)
-    const newmagictabsarray = updateindices(magicTabsArray)
+    const newPinnedTabsArray = updateIndices(pinnedTabsArray)
+    const newMagicTabsArray = updateIndices(magicTabsArray)
 
     // combine all lists back together
-    const newtabs = [...newunpinnedtabsarray, ...newpinnedtabsarray, ...newmagictabsarray]
+    const newTabs = [...newUnpinnedTabsArray, ...newPinnedTabsArray, ...newMagicTabsArray]
 
-    log.debug('reverted tabs', newtabs)
+    log.debug('Toggled tabs magic', newTabs)
 
     // only update the tabs that were changed (archived stay unaffected)
     tabs.update((x) => {
       return x.map((tab) => {
-        const newTab = newtabs.find((t) => t.id === tab.id)
+        const newTab = newTabs.find((t) => t.id === tab.id)
         if (newTab) {
           tab.index = newTab.index
           tab.pinned = newTab.pinned
@@ -1976,7 +2004,7 @@
 
     // Update the store with the changed tabs
     await bulkUpdateTabsStore(
-      newtabs.map((tab) => ({
+      newTabs.map((tab) => ({
         id: tab.id,
         updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
       }))
@@ -2104,7 +2132,7 @@
         {#if $sidebarTab !== 'oasis'}
           <div
             class="flex {!horizontalTabs
-              ? 'flex-col w-[300px]  py-3 space-y-4 px-2 h-full'
+              ? 'flex-col w-[256px]  py-3 space-y-4 px-2 h-full'
               : 'flex-row items-center h-[52px] ml-24 space-x-4 mr-4'} relative"
           >
             <div
@@ -2208,12 +2236,13 @@
             </div>
 
             <div
-              class="bg-sky-50 my-auto rounded-xl shadow-md flex-shrink-0 max-w-[300px] overflow-x-scroll no-scrollbar"
+              class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0 max-w-[300px] overflow-x-scroll no-scrollbar"
             >
               <DragDropList
                 id="pinned-tabs"
+                zoneClass="flex items-center space-x-2 w-full"
                 type={HorizontalCenterDropZone}
-                itemSize={$pinnedTabs.length === 0 ? 256 : 54}
+                itemSize={$pinnedTabs.length === 0 ? 256 : 30}
                 itemCount={$pinnedTabs.length || 1}
                 on:drop={async (event) => {
                   onDrop(event, 'pin')
@@ -2221,18 +2250,42 @@
                 let:index
               >
                 {#if $pinnedTabs.length === 0}
-                  <div class="h-12">Drop Tabs here to pin them.</div>
+                  <div class="">Drop Tabs here to pin them.</div>
                 {:else}
                   {#key $pinnedTabs[index]}
-                    <TabItem
-                      tab={$pinnedTabs[index]}
-                      {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
-                      pinned={true}
-                      on:select={handleTabSelect}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                    />
+                    {#if $activeTabId == $pinnedTabs[index].id}
+                      <TabItem
+                        tab={$pinnedTabs[index]}
+                        {activeTabId}
+                        {deleteTab}
+                        {unarchiveTab}
+                        pinned={true}
+                        isAlreadyOpen={false}
+                        on:select={() => {}}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                      />
+                    {:else}
+                      <LinkPreview.Root openDelay={7000} closeDelay={10}>
+                        <LinkPreview.Trigger>
+                          <TabItem
+                            tab={$pinnedTabs[index]}
+                            {activeTabId}
+                            {deleteTab}
+                            {unarchiveTab}
+                            pinned={true}
+                            on:select={handleTabSelect}
+                            on:remove-from-sidebar={handleRemoveFromSidebar}
+                          />
+                        </LinkPreview.Trigger>
+                        <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
+                          <img
+                            src="https://via.placeholder.com/300x200"
+                            alt="placeholder"
+                            class="link-preview-content"
+                          />
+                        </LinkPreview.Content>
+                      </LinkPreview.Root>
+                    {/if}
                   {/key}
                 {/if}
               </DragDropList>
@@ -2240,76 +2293,98 @@
 
             {#if $activeTabMagic}
               {#if $activeTabMagic.showSidebar}
-                <div class="" class:magic={$magicTabs.length > 0}>
-                  {#if horizontalTabs}
-                    <DragDropList
-                      id="magic-tabs"
-                      type={HorizontalDropZone}
-                      itemSize={256}
-                      itemCount={$magicTabs.length || 1}
-                      on:drop={async (event) => {
-                        onDrop(event, 'unpin')
-                      }}
-                      let:index
-                    >
-                      {#if $magicTabs.length === 0}
-                        <div class="debug max-h-[50px]">
-                          <div class="ai-wrapper">
-                            <Icon name="ai" size={12 * 0.75 + 'px'} />
-                          </div>
-                          <span class="text-xs"
-                            >You are chatting with all tabs. Drop tabs here to filter.</span
-                          >
-                        </div>
+                <div
+                  class="relative group {horizontalTabs
+                    ? 'max-w-[512px] no-scrollbar h-[47px]'
+                    : 'w-full'}"
+                >
+                  <div
+                    class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"
+                  ></div>
+                  <div
+                    class="relative px-1 bg-sky-100/50 rounded-lg overflow-auto no-scrollbar
+                    {horizontalTabs ? 'h-full' : 'w-full'}"
+                  >
+                    <div class="" class:magic={$magicTabs.length > 0}>
+                      {#if horizontalTabs}
+                        <DragDropList
+                          id="magic-tabs"
+                          type={HorizontalDropZone}
+                          itemSize={256}
+                          itemCount={$magicTabs.length || 1}
+                          on:drop={async (event) => {
+                            onDrop(event, 'unpin')
+                          }}
+                          let:index
+                        >
+                          {#if $magicTabs.length === 0}
+                            <div class="debug">
+                              <div class="ai-wrapper">
+                                <Icon name="ai" size={24 + 'px'} />
+                              </div>
+                              <span class="text-xs text-sky-800/50">
+                                General mode, drop tabs here!
+                              </span>
+                            </div>
+                          {:else}
+                            <TabItem
+                              tab={$magicTabs[index]}
+                              {activeTabId}
+                              {deleteTab}
+                              {unarchiveTab}
+                              pinned={false}
+                              showButtons={false}
+                              showExcludeOthersButton
+                              on:select={handleTabSelect}
+                              on:remove-from-sidebar={handleRemoveFromSidebar}
+                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                            />
+                          {/if}
+                        </DragDropList>
                       {:else}
-                        <TabItem
-                          tab={$magicTabs[index]}
-                          {activeTabId}
-                          {deleteTab}
-                          {unarchiveTab}
-                          pinned={false}
-                          on:select={handleTabSelect}
-                          on:remove-from-sidebar={handleRemoveFromSidebar}
-                        />
+                        <DragDropList
+                          id="magic-tabs"
+                          type={VerticalDropZone}
+                          itemSize={45}
+                          itemCount={$magicTabs.length || 1}
+                          on:drop={async (event) => {
+                            onDrop(event, 'unpin')
+                          }}
+                          let:index
+                        >
+                          {#if $magicTabs.length === 0}
+                            <div class="debug">
+                              <div class="ai-wrapper">
+                                <Icon name="ai" size={24 + 'px'} />
+                              </div>
+                              <span class="text-xs text-sky-800/50"
+                                >General mode, drop tabs here!</span
+                              >
+                            </div>
+                          {:else}
+                            <TabItem
+                              tab={$magicTabs[index]}
+                              {activeTabId}
+                              {deleteTab}
+                              {unarchiveTab}
+                              pinned={false}
+                              showButtons={false}
+                              showExcludeOthersButton
+                              on:select={handleTabSelect}
+                              on:remove-from-sidebar={handleRemoveFromSidebar}
+                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                            />
+                          {/if}
+                        </DragDropList>
                       {/if}
-                    </DragDropList>
-                  {:else}
-                    <DragDropList
-                      id="magic-tabs"
-                      type={VerticalDropZone}
-                      itemSize={54}
-                      itemCount={$magicTabs.length || 1}
-                      on:drop={async (event) => {
-                        onDrop(event, 'unpin')
-                      }}
-                      let:index
-                    >
-                      {#if $magicTabs.length === 0}
-                        <div class="debug max-h-[50px]">
-                          <div class="ai-wrapper">
-                            <Icon name="ai" size={12 * 0.75 + 'px'} />
-                          </div>
-                          <span class="text-xs"
-                            >You are chatting with all tabs. Drop tabs here to filter.</span
-                          >
-                        </div>
-                      {:else}
-                        <TabItem
-                          tab={$magicTabs[index]}
-                          {activeTabId}
-                          {deleteTab}
-                          {unarchiveTab}
-                          pinned={false}
-                          on:select={handleTabSelect}
-                          on:remove-from-sidebar={handleRemoveFromSidebar}
-                        />
-                      {/if}
-                    </DragDropList>
-                  {/if}
+                    </div>
+                  </div>
                 </div>
 
                 <div
-                  class="{!horizontalTabs ? 'w-full h-0.5' : 'h-full w-0.5'} bg-neutral-200"
+                  class="{!horizontalTabs
+                    ? 'w-1/2 mx-auto h-0.5'
+                    : 'h-4 w-0.5'} rounded-xl bg-sky-200"
                 ></div>
               {/if}
             {/if}
@@ -2319,127 +2394,46 @@
                 <DragDropList
                   id="tabs"
                   type={HorizontalDropZone}
-                  itemSize={Math.min(500, Math.max(128, tabSize))}
+                  itemSize={Math.min(400, Math.max(240, tabSize))}
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
                   }}
                   let:index
                 >
-                  <!-- check if this tab is active -->
                   {#if $activeTabId === $unpinnedTabs[index].id}
                     <TabItem
                       tab={$unpinnedTabs[index]}
                       {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
+                      bookmarkingInProgress={$bookmarkingInProgress}
+                      bookmarkingSuccess={$bookmarkingSuccess}
                       pinned={false}
-                      isAlreadyOpen={false}
-                      on:select={() => {
-                        popoverOpen = true
-                        addressInputElem.focus()
-                        handleFocus()
-                      }}
+                      {spaces}
+                      enableEditing
+                      bind:addressInputElem
+                      on:select={() => {}}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:drop={handleDrop}
+                      on:delete-tab={handleDeleteTab}
+                      on:input-enter={handleBlur}
+                      on:unarchive-tab={handleUnarchiveTab}
+                      on:bookmark={handleBookmark}
+                      on:create-live-space={handleCreateLiveSpace}
+                      on:save-resource-in-space={handleSaveResourceInSpace}
                     />
-                    <Popover.Root bind:open={popoverOpen}>
-                      <Popover.Trigger
-                        style="position: absolute; opacity: 0; {!popoverOpen
-                          ? 'display: none;'
-                          : ''}"
-                      />
-                      <Popover.Content>
-                        <div class="address-bar-wrapper">
-                          <div class="address-bar-content">
-                            <div class="search">
-                              <input
-                                bind:this={addressInputElem}
-                                disabled={$activeTab?.type !== 'page' &&
-                                  $activeTab?.type !== 'chat' &&
-                                  $activeTab?.type !== 'empty'}
-                                bind:value={$addressValue}
-                                on:focus={handleFocus}
-                                type="text"
-                                placeholder={$activeTab?.type === 'page'
-                                  ? 'Search or Enter URL'
-                                  : $activeTab?.type === 'chat'
-                                    ? 'Chat Title'
-                                    : 'Search or Enter URL'}
-                              />
-                            </div>
-
-                            {#if $activeTab?.type === 'page'}
-                              {#key $activeTab.resourceBookmark}
-                                <button
-                                  on:click={handleBookmark}
-                                  use:tooltip={{
-                                    content: $activeTab?.resourceBookmark
-                                      ? 'Open bookmark (⌘ + D)'
-                                      : 'Bookmark this page (⌘ + D)',
-                                    action: 'hover',
-                                    position: 'left',
-                                    animation: 'fade',
-                                    delay: 500
-                                  }}
-                                  on:save-resource-in-space={handleSaveResourceInSpace}
-                                  use:popover={{
-                                    content: {
-                                      component: ShortcutSaveItem,
-                                      props: { resourceManager, spaces }
-                                    },
-                                    action: 'hover',
-                                    position: 'right-top',
-                                    style: {
-                                      backgroundColor: '#F8F7F1'
-                                    },
-                                    animation: 'fade',
-                                    delay: 1200
-                                  }}
-                                >
-                                  {#if $bookmarkingInProgress}
-                                    <Icon name="spinner" />
-                                  {:else if $bookmarkingSuccess}
-                                    <Icon name="check" />
-                                  {:else if $activeTab?.resourceBookmark}
-                                    <Icon name="bookmarkFilled" />
-                                  {:else}
-                                    <Icon name="leave" />
-                                  {/if}
-                                </button>
-                              {/key}
-                            {/if}
-
-                            {#if $activeTab?.type === 'page' && $activeTab.currentDetectedApp?.rssFeedUrl}
-                              <button
-                                on:click={handleCreateLiveSpace}
-                                use:tooltip={{
-                                  content: `Create ${$activeTab.currentDetectedApp.appName} live Space`,
-                                  action: 'hover',
-                                  position: 'left',
-                                  animation: 'fade',
-                                  delay: 500
-                                }}
-                              >
-                                <Icon name="news" />
-                              </button>
-                            {/if}
-                          </div>
-                        </div>
-                      </Popover.Content>
-                    </Popover.Root>
                   {:else}
-                    <LinkPreview.Root openDelay={750} closeDelay={10}>
+                    <LinkPreview.Root openDelay={7000} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
                           tab={$unpinnedTabs[index]}
                           {activeTabId}
-                          {deleteTab}
-                          {unarchiveTab}
                           pinned={false}
                           on:select={handleTabSelect}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
                           on:drop={handleDrop}
+                          on:delete-tab={handleDeleteTab}
+                          on:input-enter={handleBlur}
+                          on:unarchive-tab={handleUnarchiveTab}
                         />
                       </LinkPreview.Trigger>
                       <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
@@ -2456,7 +2450,7 @@
                 <DragDropList
                   id="tabs"
                   type={VerticalDropZone}
-                  itemSize={54}
+                  itemSize={45}
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
@@ -2468,115 +2462,35 @@
                     <TabItem
                       tab={$unpinnedTabs[index]}
                       {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
+                      bookmarkingInProgress={$bookmarkingInProgress}
+                      bookmarkingSuccess={$bookmarkingSuccess}
                       pinned={false}
-                      isAlreadyOpen={false}
-                      on:select={() => {
-                        popoverOpen = true
-                        addressInputElem.focus()
-                        handleFocus()
-                      }}
+                      {spaces}
+                      enableEditing
+                      bind:addressInputElem
+                      on:select={() => {}}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:drop={handleDrop}
+                      on:delete-tab={handleDeleteTab}
+                      on:input-enter={handleBlur}
+                      on:unarchive-tab={handleUnarchiveTab}
+                      on:bookmark={handleBookmark}
+                      on:create-live-space={handleCreateLiveSpace}
+                      on:save-resource-in-space={handleSaveResourceInSpace}
                     />
-                    <Popover.Root bind:open={popoverOpen}>
-                      <Popover.Trigger
-                        style="position: absolute; opacity: 0; {!popoverOpen
-                          ? 'display: none;'
-                          : ''}"
-                      />
-                      <Popover.Content>
-                        <div class="address-bar-wrapper">
-                          <div class="address-bar-content">
-                            <div class="search">
-                              <input
-                                bind:this={addressInputElem}
-                                disabled={$activeTab?.type !== 'page' &&
-                                  $activeTab?.type !== 'chat' &&
-                                  $activeTab?.type !== 'empty'}
-                                bind:value={$addressValue}
-                                on:focus={handleFocus}
-                                type="text"
-                                placeholder={$activeTab?.type === 'page'
-                                  ? 'Search or Enter URL'
-                                  : $activeTab?.type === 'chat'
-                                    ? 'Chat Title'
-                                    : 'Search or Enter URL'}
-                              />
-                            </div>
-
-                            {#if $activeTab?.type === 'page'}
-                              {#key $activeTab.resourceBookmark}
-                                <button
-                                  on:click={handleBookmark}
-                                  use:tooltip={{
-                                    content: $activeTab?.resourceBookmark
-                                      ? 'Open bookmark (⌘ + D)'
-                                      : 'Bookmark this page (⌘ + D)',
-                                    action: 'hover',
-                                    position: 'left',
-                                    animation: 'fade',
-                                    delay: 500
-                                  }}
-                                  on:save-resource-in-space={handleSaveResourceInSpace}
-                                  use:popover={{
-                                    content: {
-                                      component: ShortcutSaveItem,
-                                      props: { resourceManager, spaces }
-                                    },
-                                    action: 'hover',
-                                    position: 'right-top',
-                                    style: {
-                                      backgroundColor: '#F8F7F1'
-                                    },
-                                    animation: 'fade',
-                                    delay: 1200
-                                  }}
-                                >
-                                  {#if $bookmarkingInProgress}
-                                    <Icon name="spinner" />
-                                  {:else if $bookmarkingSuccess}
-                                    <Icon name="check" />
-                                  {:else if $activeTab?.resourceBookmark}
-                                    <Icon name="bookmarkFilled" />
-                                  {:else}
-                                    <Icon name="leave" />
-                                  {/if}
-                                </button>
-                              {/key}
-                            {/if}
-
-                            {#if $activeTab?.type === 'page' && $activeTab.currentDetectedApp?.rssFeedUrl}
-                              <button
-                                on:click={handleCreateLiveSpace}
-                                use:tooltip={{
-                                  content: `Create ${$activeTab.currentDetectedApp.appName} live Space`,
-                                  action: 'hover',
-                                  position: 'left',
-                                  animation: 'fade',
-                                  delay: 500
-                                }}
-                              >
-                                <Icon name="news" />
-                              </button>
-                            {/if}
-                          </div>
-                        </div>
-                      </Popover.Content>
-                    </Popover.Root>
                   {:else}
-                    <LinkPreview.Root openDelay={800} closeDelay={10}>
+                    <LinkPreview.Root openDelay={4000} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
                           tab={$unpinnedTabs[index]}
                           {activeTabId}
-                          {deleteTab}
-                          {unarchiveTab}
                           pinned={false}
                           on:select={handleTabSelect}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
                           on:drop={handleDrop}
+                          on:delete-tab={handleDeleteTab}
+                          on:input-enter={handleBlur}
+                          on:unarchive-tab={handleUnarchiveTab}
                         />
                       </LinkPreview.Trigger>
                       <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
@@ -2735,7 +2649,7 @@
                 bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
                 on:new-tab={handleNewTab}
                 on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
-                on:update-tab={(e) => persistTabChanges(tab.id, e.detail)}
+                on:update-tab={(e) => updateTab(tab.id, e.detail)}
                 on:open-resource={(e) => openResource(e.detail)}
                 on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
                 on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
@@ -3437,20 +3351,9 @@
   .debug {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
     span {
-      border: none;
       background: transparent;
-      color: #7d7448;
-      font-size: 1rem;
       font-weight: 500;
-      line-height: 1.3;
-      letter-spacing: 0.0025em;
-      max-width: 15rem;
-      opacity: 0.8;
-      font-smooth: always;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
       outline: none;
       width: fit-content;
     }
@@ -3461,8 +3364,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: calc(72px * 0.75);
-    height: calc(72px * 0.75);
+    width: calc(48px);
+    height: calc(48px);
     background-repeat: no-repeat;
     background-position: center center;
     background-size: 86%;

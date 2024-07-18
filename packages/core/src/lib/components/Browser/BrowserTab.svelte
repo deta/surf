@@ -224,8 +224,19 @@
         if (fetchedCanonical?.value === url) {
           log.debug('already bookmarked', url, fetchedResource.id)
 
+          if (!silent) {
+            tab.resourceBookmarkedManually = true
+            await resourceManager.deleteResourceTag(
+              fetchedResource.id,
+              ResourceTagsBuiltInKeys.SILENT
+            )
+          }
+
           tab.resourceBookmark = fetchedResource.id
-          dispatch('update-tab', { resourceBookmark: fetchedResource.id })
+          dispatch('update-tab', {
+            resourceBookmark: fetchedResource.id,
+            resourceBookmarkedManually: tab.resourceBookmarkedManually
+          })
 
           return fetchedResource
         }
@@ -237,7 +248,16 @@
 
     tab.resourceBookmark = resource.id
     tab.chatResourceBookmark = resource.id
-    dispatch('update-tab', { resourceBookmark: resource.id, chatResourceBookmark: resource.id })
+
+    if (!silent) {
+      tab.resourceBookmarkedManually = true
+    }
+
+    dispatch('update-tab', {
+      resourceBookmark: resource.id,
+      chatResourceBookmark: resource.id,
+      resourceBookmarkedManually: tab.resourceBookmarkedManually
+    })
 
     return resource
   }
@@ -436,6 +456,9 @@
       log.debug('webview app detection event received', detectedApp)
       if (tab.type !== 'page') return
 
+      tab.currentDetectedApp = detectedApp
+      dispatch('update-tab', { currentDetectedApp: detectedApp })
+
       if (
         app &&
         app.appId === detectedApp.appId &&
@@ -452,9 +475,6 @@
 
       app = detectedApp
       url = detectedApp.canonicalUrl ?? tab.initialLocation
-
-      tab.currentDetectedApp = detectedApp
-      dispatch('update-tab', { currentDetectedApp: detectedApp })
 
       if ($appDetectionRunning) {
         log.debug('app detection already running')
@@ -483,11 +503,16 @@
       }
 
       if (bookmarkedResource) {
+        const isSilent = (bookmarkedResource.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+        )
+
         tab.resourceBookmark = bookmarkedResource.id
         tab.chatResourceBookmark = bookmarkedResource.id
         dispatch('update-tab', {
           resourceBookmark: bookmarkedResource.id,
-          chatResourceBookmark: bookmarkedResource.id
+          chatResourceBookmark: bookmarkedResource.id,
+          resourceBookmarkedManually: !isSilent
         })
 
         if (!pageMagic) {
@@ -652,6 +677,7 @@
   on:title-change={handleWebviewTitleChange}
   on:favicon-change={handleWebviewFaviconChange}
   on:history-change={handleHistoryChange}
+  on:did-finish-load={debouncedAppDetection}
   on:new-tab
   on:navigation
 />

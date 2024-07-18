@@ -93,7 +93,7 @@
   })
 </script>
 
-<ContextMenu.Root open={isOpen} loop >
+<ContextMenu.Root open={isOpen} loop>
   <ContextMenu.Trigger class="select-none items-center justify-center ">
     <button
       class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
@@ -125,18 +125,18 @@
       <ContextMenu.SubContent
         class="z-50 w-full max-w-[260px] max-h-[400px] overflow-y-scroll rounded-xl bg-neutral-100 px-1 py-1.5 shadow-md outline-none"
       >
-      {#if $filteredSpaces.length > 0}
-      {#each $filteredSpaces as space, index}
-      <ContextMenu.Item
-      class="flex  select-none items-center  py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
-      on:click={() => handleClick(index)}
-    >
-      {space.name.folderName}
-    </ContextMenu.Item>
-      {/each}
-    {:else}
-      <span>No spaces available</span>
-    {/if}
+        {#if $filteredSpaces.length > 0}
+          {#each $filteredSpaces as space, index}
+            <ContextMenu.Item
+              class="flex  select-none items-center  py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
+              on:click={() => handleClick(index)}
+            >
+              {space.name.folderName}
+            </ContextMenu.Item>
+          {/each}
+        {:else}
+          <span>No spaces available</span>
+        {/if}
         <ContextMenu.Item asChild>
           {#if $isCreatingNewSpace}
             <div

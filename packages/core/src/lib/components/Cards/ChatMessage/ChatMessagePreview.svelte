@@ -60,7 +60,7 @@
     {:else}
       <!-- <img
         class="favicon"
-        src={`https://www.google.com/s2/favicons?domain=${message?.site_icon}&sz=256`}
+        src={`https://www.google.com/s2/favicons?domain=${message?.site_icon}&sz=48`}
         alt={`${message?.site_name} favicon`}
       /> -->
       <img class="favicon" src={message?.platform_icon} alt={`${message?.platform_name} favicon`} />

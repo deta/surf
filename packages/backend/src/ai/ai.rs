@@ -280,6 +280,7 @@ impl AI {
         rag_only: bool,
         api_endpoint: Option<String>,
         resource_ids: Option<Vec<String>>,
+        general: bool,
     ) -> BackendResult<impl Stream<Item = BackendResult<Option<String>>>> {
         let mut api_endpoint = api_endpoint.unwrap_or_else(|| self.api_endpoint.clone());
         if api_endpoint == "" {
@@ -293,6 +294,7 @@ impl AI {
             ("session_id", session_id),
             ("number_documents", number_documents.to_string()),
             ("model", model),
+            ("general", general.to_string()),
         ];
         if let Some(resource_ids) = resource_ids {
             query_params.push(("resource_ids", resource_ids.join(",")))
