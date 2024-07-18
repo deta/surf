@@ -142,6 +142,7 @@
   const tabs = writable<Tab[]>([])
   const addressValue = writable('')
   const activeTabId = useLocalStorageStore<string>('activeTabId', '')
+  const activeChatId = useLocalStorageStore<string>('activeChatId', '')
   const loadingOrganize = writable(false)
   const visorSearchTerm = writable('')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
@@ -209,13 +210,6 @@
   $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
     log.debug('Active tab is not in view, resetting')
     makePreviousTabActive()
-  }
-
-  $: if ($activeTabMagic) {
-    // Reset all tabs from the magic
-    if (!$activeTabMagic.showSidebar) {
-      resetTabsFromMagic()
-    }
   }
 
   activeTab.subscribe((tab) => {
@@ -1037,12 +1031,9 @@
     return textElements
   }
 
+  // this is a separate function as it will be easier to easily change what it means for tabs to be in chat context
   const getTabsInChatContext = () => {
-    let tabs = $magicTabs
-    if (tabs.length == 0) {
-      return $unpinnedTabs
-    }
-    return tabs
+    return $magicTabs
   }
 
   const highlightWebviewText = async (
@@ -1153,11 +1144,13 @@
     query?: string
   ) => {
     if (tabsInContext.length === 0) {
-      log.debug('No tabs in context')
+      log.debug('No tabs in context, general chat:')
+    }
+    const chatId = $activeChatId
+    if (!chatId) {
+      alert('Error: Existing chat not found')
       return
     }
-    const pageTabs = tabsInContext.filter((tab) => tab.type === 'page')
-    const chatId = (pageTabs[0] as TabPage).chatId
 
     let response: AIChatMessageParsed | null = null
 
@@ -1170,11 +1163,6 @@
           resourceIds.push(t.chatResourceBookmark)
         }
       }
-      if (resourceIds.length === 0) {
-        log.debug('No resource IDs found from tabs in context')
-        return
-      }
-
       response = {
         id: generateID(),
         role: role,
@@ -1225,7 +1213,8 @@
         },
         {
           limit: 30,
-          resourceIds: resourceIds
+          resourceIds: resourceIds,
+          general: resourceIds.length === 0
         }
       )
 
@@ -1325,17 +1314,19 @@
     if (!pageMagic) return
 
     try {
-      let chatId: string | null = null
+      let chatId: string = ''
       await deleteChatsForPageChat()
       if (createNewChat) {
-        chatId = await sffs.createAIChat('')
-        if (!chatId) {
+        const newChatId = await sffs.createAIChat('')
+        if (!newChatId) {
           log.error('Failed to create new chat aftering clearing the old one')
           return
         }
+        chatId = newChatId
       }
       pageMagic.responses = []
-      updateChatIdsForPageChat(chatId!)
+      updateChatIdsForPageChat(chatId)
+      activeChatId.set(chatId)
     } catch (e) {
       log.error('Error clearing chat:', e)
     }
@@ -1385,13 +1376,14 @@
     if (!tab) return
 
     if (!$activeTabMagic.showSidebar) {
-      if (!tab?.chatId) {
+      if (!$activeChatId) {
         const chatId = await sffs.createAIChat('')
         if (!chatId) {
           log.error('Failed to create chat')
           return
         }
         updateChatIdsForPageChat(chatId)
+        activeChatId.set(chatId)
       }
       await bookmarkPageTabsInContext()
     }
@@ -1401,6 +1393,7 @@
         showSidebar: !magic.showSidebar
       }
     })
+    toggleTabsMagic($activeTabMagic.showSidebar)
   }
 
   const handleToggleAppSidebar = async () => {
@@ -1941,41 +1934,65 @@
     }
   }
 
-  const resetTabsFromMagic = async () => {
+  const handleExcludeOtherTabsFromMagic = (e: CustomEvent<string>) => {
+    const tabId = e.detail
+
+    // exclude all other tabs from magic
+    tabs.update((x) => {
+      return x.map((tab) => {
+        if (tab.id !== tabId) {
+          return {
+            ...tab,
+            magic: false
+          }
+        }
+        return tab
+      })
+    })
+  }
+
+  const toggleTabsMagic = async (on: boolean) => {
     const magicTabsArray = get(magicTabs)
     const unpinnedTabsArray = get(unpinnedTabs)
     const pinnedTabsArray = get(pinnedTabs)
 
-    // Revert each magic tab to its previous state
-    magicTabsArray.forEach((magicTab) => {
-      magicTab.magic = false
+    // Update the indices of the tabs in all lists
+    const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+    let newUnpinnedTabsArray: Tab[] = []
 
-      if (magicTab.pinned) {
-        pinnedTabsArray.push(magicTab)
-      } else {
-        unpinnedTabsArray.push(magicTab)
-      }
-    })
+    if (on) {
+      unpinnedTabsArray.forEach((tab) => {
+        tab.magic = true
+      })
+      newUnpinnedTabsArray = []
+    } else {
+      // Revert each magic tab to its previous state
+      magicTabsArray.forEach((magicTab) => {
+        magicTab.magic = false
 
-    // reset magic tabs array
-    magicTabsArray.length = 0
+        if (magicTab.pinned) {
+          pinnedTabsArray.push(magicTab)
+        } else {
+          unpinnedTabsArray.push(magicTab)
+        }
+      })
+      // Reset magic tabs array
+      magicTabsArray.length = 0
+      newUnpinnedTabsArray = updateIndices(unpinnedTabsArray)
+    }
 
-    // update the indices of the tabs in all lists
-    const updateindices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
-
-    const newunpinnedtabsarray = updateindices(unpinnedTabsArray)
-    const newpinnedtabsarray = updateindices(pinnedTabsArray)
-    const newmagictabsarray = updateindices(magicTabsArray)
+    const newPinnedTabsArray = updateIndices(pinnedTabsArray)
+    const newMagicTabsArray = updateIndices(magicTabsArray)
 
     // combine all lists back together
-    const newtabs = [...newunpinnedtabsarray, ...newpinnedtabsarray, ...newmagictabsarray]
+    const newTabs = [...newUnpinnedTabsArray, ...newPinnedTabsArray, ...newMagicTabsArray]
 
-    log.debug('reverted tabs', newtabs)
+    log.debug('Toggled tabs magic', newTabs)
 
     // only update the tabs that were changed (archived stay unaffected)
     tabs.update((x) => {
       return x.map((tab) => {
-        const newTab = newtabs.find((t) => t.id === tab.id)
+        const newTab = newTabs.find((t) => t.id === tab.id)
         if (newTab) {
           tab.index = newTab.index
           tab.pinned = newTab.pinned
@@ -1987,7 +2004,7 @@
 
     // Update the store with the changed tabs
     await bulkUpdateTabsStore(
-      newtabs.map((tab) => ({
+      newTabs.map((tab) => ({
         id: tab.id,
         updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
       }))
@@ -2285,9 +2302,8 @@
                     class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"
                   ></div>
                   <div
-                    class="relative px-1 bg-sky-100/50 rounded-lg overflow-auto {horizontalTabs
-                      ? 'h-full'
-                      : 'w-full'}"
+                    class="relative px-1 bg-sky-100/50 rounded-lg overflow-auto no-scrollbar
+                    {horizontalTabs ? 'h-full' : 'w-full'}"
                   >
                     <div class="" class:magic={$magicTabs.length > 0}>
                       {#if horizontalTabs}
@@ -2306,9 +2322,9 @@
                               <div class="ai-wrapper">
                                 <Icon name="ai" size={24 + 'px'} />
                               </div>
-                              <span class="text-xs text-sky-800/50"
-                                >You are chatting with all tabs. Drop tabs here to filter.</span
-                              >
+                              <span class="text-xs text-sky-800/50">
+                                General mode, drop tabs here!
+                              </span>
                             </div>
                           {:else}
                             <TabItem
@@ -2318,8 +2334,10 @@
                               {unarchiveTab}
                               pinned={false}
                               showButtons={false}
+                              showExcludeOthersButton
                               on:select={handleTabSelect}
                               on:remove-from-sidebar={handleRemoveFromSidebar}
+                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
                             />
                           {/if}
                         </DragDropList>
@@ -2340,7 +2358,7 @@
                                 <Icon name="ai" size={24 + 'px'} />
                               </div>
                               <span class="text-xs text-sky-800/50"
-                                >You are chatting with all tabs. Drop tabs here to filter.</span
+                                >General mode, drop tabs here!</span
                               >
                             </div>
                           {:else}
@@ -2351,8 +2369,10 @@
                               {unarchiveTab}
                               pinned={false}
                               showButtons={false}
+                              showExcludeOthersButton
                               on:select={handleTabSelect}
                               on:remove-from-sidebar={handleRemoveFromSidebar}
+                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
                             />
                           {/if}
                         </DragDropList>
@@ -2381,7 +2401,6 @@
                   }}
                   let:index
                 >
-                  <!-- check if this tab is active -->
                   {#if $activeTabId === $unpinnedTabs[index].id}
                     <TabItem
                       tab={$unpinnedTabs[index]}

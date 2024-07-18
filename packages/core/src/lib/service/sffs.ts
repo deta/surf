@@ -832,6 +832,7 @@ export class SFFS {
       apiEndpoint?: string
       ragOnly?: boolean
       resourceIds?: string[]
+      general?: boolean
     }
   ): Promise<void> {
     this.log.debug(
@@ -856,7 +857,8 @@ export class SFFS {
       opts?.systemPrompt ?? '',
       opts?.ragOnly ?? false,
       opts?.apiEndpoint ?? '',
-      opts?.resourceIds
+      opts?.resourceIds,
+      opts?.general ?? false
     )
   }
 }
