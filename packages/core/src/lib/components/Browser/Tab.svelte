@@ -6,8 +6,8 @@
   import type { Tab, TabPage } from './types'
   import type { Writable } from 'svelte/store'
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
-  import { useResourceManager } from '../../service/resources'
-  import type { Space } from '../../types'
+  import { Resource, useResourceManager } from '../../service/resources'
+  import { ResourceTagsBuiltInKeys, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
 
@@ -29,10 +29,9 @@
   let isEditing = false
   let inputUrl = ''
 
-  $: acceptDrop = tab.type === 'space'
-  let dragOver = false
-
+  // $: acceptDrop = tab.type === 'space'
   $: isActive = tab.id === $activeTabId
+  $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
 
   $: if (tab.type === 'page' && !isEditing) {
     if (tab.currentDetectedApp?.canonicalUrl) {
@@ -121,7 +120,9 @@
 
 <div
   class="{isActive ? 'text-sky-950 bg-sky-200 shadow-inner ring-[0.5px] ring-sky-500' : ''}
-  flex items-center {pinned ? 'p-2 rounded-lg' : 'px-4 py-3 rounded-2xl'} group transform active:scale-95  transition duration-100group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
+  flex items-center {pinned
+    ? 'p-2 rounded-lg'
+    : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 transition duration-100group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
   on:click={handleClick}
   aria-hidden="true"
   use:tooltip={pinned
@@ -221,13 +222,11 @@
           </button>
         {:else}
           {#if tab.type === 'page' && isActive}
-            {#key tab.resourceBookmark}
+            {#key isBookmarkedByUser}
               <button
                 on:click={handleBookmark}
                 use:tooltip={{
-                  content: tab.resourceBookmark
-                    ? 'Open bookmark (⌘ + D)'
-                    : 'Bookmark this page (⌘ + D)',
+                  content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
                   action: 'hover',
                   position: 'left',
                   animation: 'fade',
@@ -252,7 +251,7 @@
                   <Icon name="spinner" />
                 {:else if bookmarkingSuccess}
                   <Icon name="check" />
-                {:else if tab.resourceBookmark}
+                {:else if isBookmarkedByUser}
                   <Icon name="bookmarkFilled" />
                 {:else}
                   <Icon name="leave" />

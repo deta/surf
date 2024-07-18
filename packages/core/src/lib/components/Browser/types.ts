@@ -22,6 +22,7 @@ export interface TabPage extends BaseTab {
   historyStackIds: string[]
   currentHistoryIndex: number
   resourceBookmark?: string | null
+  resourceBookmarkedManually?: boolean
   chatResourceBookmark?: string | null
   chatId?: string | null
   appId?: string | null

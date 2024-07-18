@@ -934,6 +934,8 @@
             //   openResource($activeTab.resourceBookmark)
             // }
 
+            updateTab($activeTabId, { resourceBookmarkedManually: true })
+
             return $activeTab.resourceBookmark
           }
         }

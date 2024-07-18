@@ -224,8 +224,19 @@
         if (fetchedCanonical?.value === url) {
           log.debug('already bookmarked', url, fetchedResource.id)
 
+          if (!silent) {
+            tab.resourceBookmarkedManually = true
+            await resourceManager.deleteResourceTag(
+              fetchedResource.id,
+              ResourceTagsBuiltInKeys.SILENT
+            )
+          }
+
           tab.resourceBookmark = fetchedResource.id
-          dispatch('update-tab', { resourceBookmark: fetchedResource.id })
+          dispatch('update-tab', {
+            resourceBookmark: fetchedResource.id,
+            resourceBookmarkedManually: tab.resourceBookmarkedManually
+          })
 
           return fetchedResource
         }
@@ -237,7 +248,16 @@
 
     tab.resourceBookmark = resource.id
     tab.chatResourceBookmark = resource.id
-    dispatch('update-tab', { resourceBookmark: resource.id, chatResourceBookmark: resource.id })
+
+    if (!silent) {
+      tab.resourceBookmarkedManually = true
+    }
+
+    dispatch('update-tab', {
+      resourceBookmark: resource.id,
+      chatResourceBookmark: resource.id,
+      resourceBookmarkedManually: tab.resourceBookmarkedManually
+    })
 
     return resource
   }
@@ -483,11 +503,16 @@
       }
 
       if (bookmarkedResource) {
+        const isSilent = (bookmarkedResource.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+        )
+
         tab.resourceBookmark = bookmarkedResource.id
         tab.chatResourceBookmark = bookmarkedResource.id
         dispatch('update-tab', {
           resourceBookmark: bookmarkedResource.id,
-          chatResourceBookmark: bookmarkedResource.id
+          chatResourceBookmark: bookmarkedResource.id,
+          resourceBookmarkedManually: !isSilent
         })
 
         if (!pageMagic) {
