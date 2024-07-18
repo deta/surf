@@ -436,6 +436,9 @@
       log.debug('webview app detection event received', detectedApp)
       if (tab.type !== 'page') return
 
+      tab.currentDetectedApp = detectedApp
+      dispatch('update-tab', { currentDetectedApp: detectedApp })
+
       if (
         app &&
         app.appId === detectedApp.appId &&
@@ -452,9 +455,6 @@
 
       app = detectedApp
       url = detectedApp.canonicalUrl ?? tab.initialLocation
-
-      tab.currentDetectedApp = detectedApp
-      dispatch('update-tab', { currentDetectedApp: detectedApp })
 
       if ($appDetectionRunning) {
         log.debug('app detection already running')
