@@ -208,7 +208,7 @@
               <div class="title">
                 <img
                   class="favicon"
-                  src={`https://www.google.com/s2/favicons?domain=${source.url}&sz=256`}
+                  src={`https://www.google.com/s2/favicons?domain=${source.url}&sz=48`}
                   alt={`favicon`}
                 />
 

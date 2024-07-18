@@ -75,7 +75,7 @@
       <div class="link-preview-no-image">
         <img
           class="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${link?.url}&sz=256`}
+          src={`https://www.google.com/s2/favicons?domain=${link?.url}&sz=48`}
           alt={`${link?.provider} favicon`}
         />
         <div class="description">

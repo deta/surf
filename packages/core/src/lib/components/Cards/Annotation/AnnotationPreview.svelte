@@ -56,13 +56,13 @@
     {:else if annotation}
       <!-- <img
           class="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${document?.site_icon}&sz=256`}
+          src={`https://www.google.com/s2/favicons?domain=${document?.site_icon}&sz=48`}
           alt={`${document?.site_name} favicon`}
         /> -->
       {#if url}
         <img
           class="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${url.href}&sz=256`}
+          src={`https://www.google.com/s2/favicons?domain=${url.href}&sz=48`}
           alt={`${url.href} favicon`}
         />
       {/if}
