@@ -261,8 +261,6 @@
 </div>
 
 <style lang="scss">
- 
-
   .content {
     display: flex;
     flex-direction: column;
@@ -411,7 +409,7 @@
 
   .output {
     padding: 15px;
-    background: #f6f5ef;
+    background: rgb(255, 255, 255);
     border-radius: 8px;
     font-size: 1.1rem;
     color: #3f3f3f;

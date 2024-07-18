@@ -1365,6 +1365,7 @@
     for (const tab of getTabsInChatContext()) {
       if (tab.type === 'page' && !tab.resourceBookmark) {
         try {
+          log.debug('Bookmarking page tab', tab)
           const browserTab = $browserTabs[tab.id]
           await browserTab.bookmarkPage(true)
         } catch (e) {
