@@ -2368,6 +2368,7 @@
 
             <div
               class="overflow-x-scroll no-scrollbar relative flex-grow"
+              class:space-x-2={horizontalTabs}
               class:items-center={horizontalTabs}
             >
               {#if horizontalTabs}
@@ -2487,14 +2488,14 @@
               {/if}
               <div
                 style="position: absolute; top: {!horizontalTabs
-                  ? 54 * $unpinnedTabs.length
-                  : 0}px; left: {horizontalTabs ? 128 * $unpinnedTabs.length : 0}px; right: 0;"
-                class="w-fit"
+                  ? 45 * $unpinnedTabs.length
+                  : 0}px; left: {horizontalTabs ? Math.min(400, Math.max(240, tabSize)) * $unpinnedTabs.length : 0}px; right: 0;"
+                class:w-fit={horizontalTabs}
               >
                 <button
-                  class="transform active:scale-95 space-x-2 px-4 py-4 {horizontalTabs
-                    ? 'w-fit'
-                    : 'w-full'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 space-x-2 px-4 {horizontalTabs
+                    ? 'w-fit rounded-xl py-3.5'
+                    : 'w-full rounded-2xl py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
                   on:click|preventDefault={() => createNewEmptyTab()}
                 >
                   <Icon name="add" />
