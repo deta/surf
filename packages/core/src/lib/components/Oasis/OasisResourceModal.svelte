@@ -75,8 +75,10 @@
       loadingAnnotations = true
       const fetchedAnnotations = await resourceManager.getAnnotationsForResource(resourceId)
       annotations = [
-        ...annotations,
-        ...fetchedAnnotations.filter((a) => !annotations.find((b) => a.id === b.id))
+        ...new Set([
+          ...annotations,
+          ...fetchedAnnotations.filter((a) => !annotations.find((b) => a.id === b.id))
+        ])
       ]
 
       log.debug('Annotations', annotations)
@@ -397,7 +399,7 @@
     <div class="annotations-view">
       {#if annotations.length > 0}
         <div class="annotations">
-          {#each annotations as annotation (annotation.id)}
+          {#each annotations as annotation, idx (annotation.id + idx)}
             <AnnotationItem
               resource={annotation}
               active={annotation.id === activeAnnotation}
