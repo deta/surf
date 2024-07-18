@@ -103,7 +103,7 @@
       <div class="subtitle">
         <img
           class="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${data.raw_url}&sz=256`}
+          src={`https://www.google.com/s2/favicons?domain=${data.raw_url}&sz=48`}
           alt="favicon"
         />
 
