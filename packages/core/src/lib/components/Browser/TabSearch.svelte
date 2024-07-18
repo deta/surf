@@ -98,7 +98,9 @@
   })
 </script>
 
-<div class="fixed top-0 shadow-2xl left-0 h-full w-full flex justify-center items-center bg-sky-900/5 backdrop-blur-sm overlay">
+<div
+  class="fixed top-0 shadow-2xl left-0 h-full w-full flex justify-center items-center bg-sky-900/5 backdrop-blur-sm overlay"
+>
   <div class="content">
     <input
       bind:this={searchInputRef}

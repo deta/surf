@@ -150,6 +150,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
         ),
         None => None,
     };
+    let general = cx.argument::<JsBoolean>(6)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
@@ -162,6 +163,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             rag_only,
             api_endpoint,
             resource_ids,
+            general,
         }),
         deferred,
     );

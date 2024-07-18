@@ -6,8 +6,8 @@
   import type { Tab, TabPage } from './types'
   import type { Writable } from 'svelte/store'
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
-  import { useResourceManager } from '../../service/resources'
-  import type { Space } from '../../types'
+  import { Resource, useResourceManager } from '../../service/resources'
+  import { ResourceTagsBuiltInKeys, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
 
@@ -16,23 +16,34 @@
   export let pinned: boolean
   export let isAlreadyOpen: boolean = false
   export let showButtons: boolean = true
+  export let showExcludeOthersButton: boolean = false
   export let bookmarkingInProgress: boolean
   export let bookmarkingSuccess: boolean
   export let addressInputElem: HTMLInputElement
   export let enableEditing = false
   export let spaces
 
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<{
+    select: (id: string) => void
+    'remove-from-sidebar': (id: string) => void
+    'delete-tab': (id: string) => void
+    'unarchive-tab': (id: string) => void
+    'input-enter': (url: string) => void
+    bookmark: () => void
+    'save-resource-in-space': (spaceId: string) => void
+    'create-live-space': () => void
+    'exclude-other-tabs': (id: string) => void
+  }>()
   const resourceManager = useResourceManager()
 
   let space: Space | null = null
   let isEditing = false
   let inputUrl = ''
+  let hovered = false
 
-  $: acceptDrop = tab.type === 'space'
-  let dragOver = false
-
+  // $: acceptDrop = tab.type === 'space'
   $: isActive = tab.id === $activeTabId
+  $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
 
   $: if (tab.type === 'page' && !isEditing) {
     if (tab.currentDetectedApp?.canonicalUrl) {
@@ -117,12 +128,20 @@
   const handleSaveResourceInSpace = (event: CustomEvent<string>) => {
     dispatch('save-resource-in-space', event.detail)
   }
+
+  const handleExcludeOthers = () => {
+    dispatch('exclude-other-tabs', tab.id)
+  }
 </script>
 
 <div
   class="{isActive ? 'text-sky-950 bg-sky-200 shadow-inner ring-[0.5px] ring-sky-500' : ''}
-  flex items-center {pinned ? 'p-2 rounded-lg' : 'px-4 py-3 rounded-2xl'} group transform active:scale-95  transition duration-100group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
+  flex items-center {pinned
+    ? 'p-2 rounded-lg'
+    : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 transition duration-100group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
   on:click={handleClick}
+  on:mouseenter={() => (hovered = true)}
+  on:mouseleave={() => (hovered = false)}
   aria-hidden="true"
   use:tooltip={pinned
     ? {
@@ -187,8 +206,8 @@
       {/if}
     </div>
 
-    {#if showButtons && !isEditing}
-      <div class="items-center hidden group-hover:flex justify-end flex-row space-x-2 right-0">
+    {#if showButtons && !isEditing && hovered}
+      <div class="items-center flex justify-end flex-row space-x-2 right-0">
         {#if tab.archived}
           <button
             on:click|stopPropagation={handleUnarchive}
@@ -221,13 +240,11 @@
           </button>
         {:else}
           {#if tab.type === 'page' && isActive}
-            {#key tab.resourceBookmark}
+            {#key isBookmarkedByUser}
               <button
                 on:click={handleBookmark}
                 use:tooltip={{
-                  content: tab.resourceBookmark
-                    ? 'Open bookmark (⌘ + D)'
-                    : 'Bookmark this page (⌘ + D)',
+                  content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
                   action: 'hover',
                   position: 'left',
                   animation: 'fade',
@@ -252,7 +269,7 @@
                   <Icon name="spinner" />
                 {:else if bookmarkingSuccess}
                   <Icon name="check" />
-                {:else if tab.resourceBookmark}
+                {:else if isBookmarkedByUser}
                   <Icon name="bookmarkFilled" />
                 {:else}
                   <Icon name="leave" />
@@ -296,6 +313,22 @@
             {/if}
           </button>
         {/if}
+      </div>
+    {:else if showExcludeOthersButton && hovered}
+      <div class="items-center flex justify-end flex-row space-x-2 right-0">
+        <button
+          on:click|stopPropagation={handleExcludeOthers}
+          class="flex items-center justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+          use:tooltip={{
+            content: 'Only use this tab',
+            action: 'hover',
+            position: 'left',
+            animation: 'fade',
+            delay: 500
+          }}
+        >
+          <Icon name="filter" size="18px" />
+        </button>
       </div>
     {/if}
   {/if}
