@@ -2627,7 +2627,7 @@
                 bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
                 on:new-tab={handleNewTab}
                 on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
-                on:update-tab={(e) => persistTabChanges(tab.id, e.detail)}
+                on:update-tab={(e) => updateTab(tab.id, e.detail)}
                 on:open-resource={(e) => openResource(e.detail)}
                 on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
                 on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
