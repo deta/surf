@@ -327,7 +327,7 @@
             delay: 500
           }}
         >
-          <Icon name="filter" size="18px" />
+          <Icon name="arrow.autofit.up" size="18px" />
         </button>
       </div>
     {/if}

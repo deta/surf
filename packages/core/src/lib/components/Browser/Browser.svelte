@@ -2323,13 +2323,17 @@
                     : 'w-full'}"
                 >
                   <div
-                    class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"
+                    style="opacity: 0.2"
+                    class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opcaity-20 group-hover:opacity-10 transition duration-1000 group-hover:duration-200 animate-tilt"
                   ></div>
                   <div
-                    class="relative px-1 bg-sky-100/50 rounded-lg overflow-auto no-scrollbar
+                    class="relative bg-sky-100/50 rounded-2xl overflow-auto no-scrollbar
                     {horizontalTabs ? 'h-full' : 'w-full'}"
                   >
-                    <div class="" class:magic={$magicTabs.length > 0}>
+                    <div
+                      class={horizontalTabs ? 'p-1 pt-[2px]' : 'p-2'}
+                      class:magic={$magicTabs.length > 0}
+                    >
                       {#if horizontalTabs}
                         <DragDropList
                           id="magic-tabs"
@@ -2342,7 +2346,7 @@
                           let:index
                         >
                           {#if $magicTabs.length === 0}
-                            <div class="debug">
+                            <div class="flex flex-row items-center">
                               <div class="ai-wrapper">
                                 <Icon name="ai" size={24 + 'px'} />
                               </div>
@@ -2366,10 +2370,24 @@
                           {/if}
                         </DragDropList>
                       {:else}
+                        {#if $magicTabs.length > 0}
+                          <div
+                            class="flex flex-row gap-2 px-4 py-2 leading-5 items-center justify-center mb-1 mx-2"
+                          >
+                            <Icon name="sparkles" size="18" class="text-sky-800" />
+                            <span class="text-sm text-sky-800"
+                              >Chat with {$magicTabs.length === 1
+                                ? 'this tab'
+                                : $magicTabs.length === 2
+                                  ? 'two tabs'
+                                  : `${$magicTabs.length} tabs`}</span
+                            >
+                          </div>
+                        {/if}
                         <DragDropList
                           id="magic-tabs"
                           type={VerticalDropZone}
-                          itemSize={45}
+                          itemSize={$magicTabs.length === 0 ? 72 : 42}
                           itemCount={$magicTabs.length || 1}
                           on:drop={async (event) => {
                             onDrop(event, 'unpin')
@@ -2377,12 +2395,11 @@
                           let:index
                         >
                           {#if $magicTabs.length === 0}
-                            <div class="debug">
+                            <div class="flex flex-col items-center">
                               <div class="ai-wrapper">
                                 <Icon name="ai" size={24 + 'px'} />
                               </div>
-                              <span class="text-xs text-sky-800/50"
-                                >General mode, drop tabs here!</span
+                              <span class="text-xs text-sky-800">General mode, drop tabs here!</span
                               >
                             </div>
                           {:else}
