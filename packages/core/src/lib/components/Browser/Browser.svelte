@@ -2156,7 +2156,7 @@
         {#if $sidebarTab !== 'oasis'}
           <div
             class="flex {!horizontalTabs
-              ? 'flex-col w-[256px]  py-3 space-y-4 px-2 h-full'
+              ? 'flex-col w-[288px]  py-3 space-y-4 px-2 h-full'
               : 'flex-row items-center h-[52px] ml-24 space-x-4 mr-4'} relative"
           >
             <div
