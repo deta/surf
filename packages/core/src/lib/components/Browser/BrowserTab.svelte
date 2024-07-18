@@ -652,6 +652,7 @@
   on:title-change={handleWebviewTitleChange}
   on:favicon-change={handleWebviewFaviconChange}
   on:history-change={handleHistoryChange}
+  on:did-finish-load={debouncedAppDetection}
   on:new-tab
   on:navigation
 />
