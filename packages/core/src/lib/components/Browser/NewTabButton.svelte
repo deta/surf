@@ -13,7 +13,7 @@
   import { Icon } from '@horizon/icons'
   import { writable, derived, type Writable } from 'svelte/store'
   import type { Space } from '../../types'
-  import { ContextMenu } from 'bits-ui'
+  import { DropdownMenu } from 'bits-ui'
 
   export let spaces: Writable<Space[]>
 
@@ -68,6 +68,10 @@
     }
   }
 
+  const handleBlur = () => {
+    isCreatingNewSpace.set(false)
+  }
+
   const startCreatingNewSpace = async (e: any) => {
     isOpen = true
     isCreatingNewSpace.set(true)
@@ -93,125 +97,59 @@
   })
 </script>
 
-<ContextMenu.Root open={isOpen} loop >
-  <ContextMenu.Trigger class="select-none items-center justify-center ">
+<DropdownMenu.Root open={isOpen} loop typeahead={!isCreatingNewSpace}>
+  <DropdownMenu.Trigger class="select-none items-center justify-center ">
     <button
       class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-      on:click={handleCreateNewTab}
     >
-      <Icon name="add" />
+      <Icon name="docs" />
     </button>
-  </ContextMenu.Trigger>
-  <ContextMenu.Content
+  </DropdownMenu.Trigger>
+  <DropdownMenu.Content
     class="z-50 w-full max-w-[250px] rounded-xl bg-neutral-100 px-1 py-1.5 shadow-md outline-none"
   >
-    <!-- <ContextMenu.Item
-      class="flex select-none items-center  py-4 pl-3 pr-1.5 cursor-pointer font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
-    >
-      <div class="flex items-center space-x-2">
-        <Icon name="add" />
-        <span>Create Space</span>
-      </div>
-    </ContextMenu.Item> -->
-    <ContextMenu.Sub>
-      <ContextMenu.SubTrigger
-        class="flex  select-none items-center  py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
-      >
-        <div class="flex items-center space-x-2">
-          <Icon name="sparkles" />
-          <span> Open Space </span>
-        </div>
-      </ContextMenu.SubTrigger>
-      <ContextMenu.SubContent
-        class="z-50 w-full max-w-[260px] max-h-[400px] overflow-y-scroll rounded-xl bg-neutral-100 px-1 py-1.5 shadow-md outline-none"
-      >
+    <DropdownMenu.Group class="max-h-[300px] overflow-y-scroll">
       {#if $filteredSpaces.length > 0}
-      {#each $filteredSpaces as space, index}
-      <ContextMenu.Item
-      class="flex  select-none items-center  py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
-      on:click={() => handleClick(index)}
-    >
-      {space.name.folderName}
-    </ContextMenu.Item>
-      {/each}
-    {:else}
-      <span>No spaces available</span>
-    {/if}
-        <ContextMenu.Item asChild>
-          {#if $isCreatingNewSpace}
+        {#each $filteredSpaces as space, index}
+          <DropdownMenu.Item
+            class="flex  select-none items-center group  py-4 pl-3 pr-1.5 cursor-pointer space-x-4 justify-between  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
+            on:click={() => handleClick(index)}
+          >
+            <div class="truncate">{space.name.folderName}</div>
             <div
-              class="flex select-none items-center py-4 pl-3 pr-1.5 space-x-2 cursor-pointer font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
+              class="items-center gap-px text-[10px] hidden group-focus:flex opacity-50 ease-in-out flex-shrink-0"
             >
-              <input
-                class="search-input"
-                bind:this={inputRef}
-                bind:value={newSpaceName}
-                on:keydown={(event) => {
-                  if (event.key === 'Enter') {
-                    confirmCreatingNewSpace(event.shiftKey)
-                  } else if (event.key === 'Escape') {
-                    cancelCreatingNewSpace()
-                  }
-                }}
-                placeholder="Name your new space"
-                data-keep-open
-              />
+              Open Space
             </div>
-          {:else}
-            <span
-              class="flex select-none items-center py-4 pl-3 pr-1.5 space-x-2 cursor-pointer font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
-              aria-hidden="true"
-              on:click={startCreatingNewSpace}
-            >
-              <Icon name="add" color="#7d7448" />
-              Create new Space
-            </span>
-          {/if}
-        </ContextMenu.Item>
-      </ContextMenu.SubContent>
-    </ContextMenu.Sub>
-    <ContextMenu.Separator class="my-1 block h-px bg-neutral-200" />
-    <ContextMenu.Item
-      class="flex  select-none items-center  py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
-      on:click={handleCreateNewHistoryTab}
-    >
-      <div class="flex items-center space-x-2">
-        <Icon name="history" />
-        <span>New History Tab</span>
-      </div>
-      <div class="ml-auto flex items-center gap-px">
-        <kbd
-          class="inline-flex size-5 items-center justify-center border border-dark-10 bg-neutral-200 text-[13px] text-neutral-500 shadow-xs"
+          </DropdownMenu.Item>
+        {/each}
+      {:else}
+        <DropdownMenu.Item
+          class="flex  select-none items-center  py-4 pl-3 pr-1.5 cursor-not-allowed  font-medium outline-none rounded-xl !ring-0 !ring-transparent "
         >
-          ⌘
-        </kbd>
-        <kbd
-          class="inline-flex size-5 items-center justify-center border border-dark-10 bg-neutral-200 text-[11px] text-neutral-500 shadow-xs"
-        >
-          Y
-        </kbd>
-      </div>
-    </ContextMenu.Item>
-    <ContextMenu.Item
-      class="flex  select-none items-center  py-4 pl-3 pr-1.5 cursor-pointer  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200"
-      on:click={handleCreateNewTab}
-    >
-      <div class="flex items-center space-x-2">
-        <Icon name="add" />
-        <span>New Tab</span>
-      </div>
-      <div class="ml-auto flex items-center gap-px">
-        <kbd
-          class="inline-flex size-5 items-center justify-center border border-dark-10 bg-neutral-200 text-[13px] text-neutral-500 shadow-xs"
-        >
-          ⌘
-        </kbd>
-        <kbd
-          class="inline-flex size-5 items-center justify-center border border-dark-10 bg-neutral-200 text-[11px] text-neutral-500 shadow-xs"
-        >
-          T
-        </kbd>
-      </div>
-    </ContextMenu.Item>
-  </ContextMenu.Content>
-</ContextMenu.Root>
+          No spaces available
+        </DropdownMenu.Item>
+      {/if}
+    </DropdownMenu.Group>
+
+    <DropdownMenu.Separator class="my-1 block h-px bg-neutral-200" />
+    <DropdownMenu.Item asChild>
+      <input
+        class="w-full py-4 pl-3 pr-1.5 space-x-2 font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
+        bind:this={inputRef}
+        bind:value={newSpaceName}
+        on:blur={handleBlur}
+        on:keydown={(event) => {
+          if (event.key === 'Enter') {
+            confirmCreatingNewSpace(event.shiftKey)
+          } else if (event.key === 'Escape') {
+            cancelCreatingNewSpace()
+          }
+        }}
+        placeholder="Create a new Space"
+        data-keep-open
+        tabindex="0"
+      />
+    </DropdownMenu.Item>
+  </DropdownMenu.Content>
+</DropdownMenu.Root>

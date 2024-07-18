@@ -2453,10 +2453,12 @@
                   {/if}
                 </DragDropList>
               {:else}
+             
                 <DragDropList
                   id="tabs"
                   type={VerticalDropZone}
                   itemSize={54}
+                  zoneClass="max-h-[96%]"
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
@@ -2589,7 +2591,18 @@
                     </LinkPreview.Root>
                   {/if}
                 </DragDropList>
+
+                <button
+                class="transform active:scale-95 space-x-2 px-4 py-5 w-fit mx-auto appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  >
+                  <Icon name="add" />
+                  <span> New Tab</span>
+                </button>
+  
               {/if}
+
+             
+
             </div>
 
             <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
@@ -2655,7 +2668,6 @@
                 </button>
               {/if}
 
-              <!-- <NewTabButton /> -->
               <NewTabButton
                 {resourceManager}
                 {spaces}
