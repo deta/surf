@@ -14,7 +14,6 @@
 
   let loading = false
   let resource: Resource | null = null
-  let annotations: ResourceAnnotation[] = []
 
   const loadResource = async () => {
     try {
@@ -26,10 +25,7 @@
         return
       }
 
-      resource = res.resource
-      annotations = res.annotations
-
-      log.debug('annotations', annotations)
+      resource = res
 
       log.debug('Loaded resource:', resource)
       dispatch('load', resource)
@@ -50,16 +46,7 @@
 <div class="wrapper">
   {#if resource}
     <DragResourceWrapper {resource}>
-      <ResourcePreviewClean
-        {resource}
-        {selected}
-        {annotations}
-        showSummary
-        on:load
-        on:click
-        on:open
-        on:remove
-      />
+      <ResourcePreviewClean {resource} {selected} showSummary on:load on:click on:open on:remove />
     </DragResourceWrapper>
   {:else if loading}
     <div>Loading...</div>

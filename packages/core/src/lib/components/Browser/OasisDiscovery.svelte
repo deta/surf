@@ -4,8 +4,8 @@
   import type { Resource, ResourceManager } from '../../service/resources'
   import * as d3 from 'd3'
   import { useLogScope } from '../../utils/log'
-  import MiniBrowser from '@horizon/core/src/lib/components/Browser/MiniBrowser.svelte'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
+  import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
 
   export let resourceManager: ResourceManager
 
@@ -307,13 +307,19 @@
 
 <div class="wrapper">
   {#if $clickedResource}
-    <div class="overlay">
+    <OasisResourceModalWrapper
+      resourceId={$clickedResource.id}
+      active
+      on:close={() => clickedResource.set(undefined)}
+      on:new-tab
+    />
+    <!-- <div class="overlay">
       <MiniBrowser
         resource={clickedResource}
         on:close={() => clickedResource.set(undefined)}
         {resourceManager}
       />
-    </div>
+    </div> -->
   {/if}
   {#if $hoveredResource}
     <div class="overlay-hover" style="top: {hoverPreviewTop}px; left: {hoverPreviewLeft}px;">

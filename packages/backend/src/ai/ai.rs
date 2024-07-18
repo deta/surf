@@ -104,6 +104,13 @@ pub struct CreateAppRequest {
     pub system_prompt: Option<String>,
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResourcesQueryRequest {
+    pub query: String,
+    pub resource_ids: Vec<String>,
+}
+
 #[derive(Debug)]
 pub enum DataSourceType {
     Text,
@@ -197,14 +204,21 @@ impl AI {
         query: String,
         resource_ids: Vec<String>,
     ) -> BackendResult<Vec<String>> {
-        let url = format!("{}/resources", &self.api_endpoint);
+        let url = format!("{}/resources/query", &self.api_endpoint);
+        let req = ResourcesQueryRequest {
+            query,
+            resource_ids,
+        };
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            reqwest::header::HeaderValue::from_static("application/json"),
+        );
         let response = self
             .client
-            .get(url)
-            .query(&vec![
-                ("query", query.as_str()),
-                ("resource_ids", resource_ids.join(",").as_str()),
-            ])
+            .post(url)
+            .headers(headers)
+            .json(&req)
             .send()?;
         Ok(response.json()?)
     }
@@ -299,6 +313,16 @@ impl AI {
             Err(e) => Err(BackendError::from(e)),
         });
         Ok(stream)
+    }
+
+    pub fn get_sql_query(&self, prompt: String) -> Result<String, reqwest::Error> {
+        let url = format!("{}/sql_query", &self.api_endpoint);
+        let query_params = vec![("query", prompt)];
+        let response = self.client.get(url).query(&query_params).send()?;
+        match response.error_for_status_ref() {
+            Ok(_) => Ok(response.text()?),
+            Err(e) => Err(e),
+        }
     }
     
     // TODO: accept system prompt as param

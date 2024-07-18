@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import { HistoryEntriesManager } from '@horizon/core/src/lib/service/history'
-  import WebviewWrapper, { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
+  import WebviewWrapper, { type WebviewWrapperEvents } from '../Browser/WebviewWrapper.svelte'
   import {
     Resource,
     ResourceAnnotation,
@@ -11,11 +11,12 @@
   import {
     ResourceTagsBuiltInKeys,
     WebViewEventReceiveNames,
+    WebViewEventSendNames,
     type AnnotationCommentData,
-    type AnnotationRangeData,
     type DetectedWebApp,
     type ResourceDataAnnotation,
-    type WebViewEventAnnotation
+    type WebViewEventAnnotation,
+    type WebViewSendEvents
   } from '@horizon/types'
   import { useLogScope } from '../../utils/log'
   import { Icon } from '@horizon/icons'
@@ -26,10 +27,9 @@
 
   import AnnotationItem from './AnnotationItem.svelte'
   import { useToasts } from '../../service/toast'
-  import { WebParser } from '@horizon/web-parser'
-  import { getPrompt, PromptIDs } from '../../service/prompts'
   import { handleInlineAI } from '../../service/ai'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
+  import { useDebounce } from '../../utils/debounce'
 
   export let resource: Resource
   export let active: boolean = true
@@ -47,7 +47,7 @@
 
   const toast = useToasts()
 
-  $: src = resource?.metadata?.sourceURI || 'https://example.com'
+  const initialSrc = resource?.metadata?.sourceURI || 'https://example.com'
 
   function close() {
     dispatch('close')
@@ -61,19 +61,23 @@
     if (event.key === 'Escape') {
       close()
     } else if (isModKeyAndKeyPressed(event, 'Enter')) {
-      dispatch('new-tab', { url: src, active: event.shiftKey })
+      dispatch('new-tab', { url: initialSrc, active: event.shiftKey })
     }
   }
 
-  let loadingAnnotations = true
-  let annotations: ResourceAnnotation[] = []
+  let loadingAnnotations = false
+  let annotations: ResourceAnnotation[] = resource.annotations ?? []
 
   const loadAnnotations = async (resourceId: string) => {
     try {
       log.debug('Loading annotations', resourceId)
 
       loadingAnnotations = true
-      annotations = await resourceManager.getAnnotationsForResource(resourceId)
+      const fetchedAnnotations = await resourceManager.getAnnotationsForResource(resourceId)
+      annotations = [
+        ...annotations,
+        ...fetchedAnnotations.filter((a) => !annotations.find((b) => a.id === b.id))
+      ]
 
       log.debug('Annotations', annotations)
 
@@ -97,9 +101,15 @@
     }
   }
 
-  const handleAppDetection = async (e: CustomEvent<DetectedWebApp>) => {
+  const debouncedAppDetection = useDebounce(async () => {
+    await wait(500)
+    log.debug('running app detection debounced')
+    webview.startAppDetection()
+  }, 500)
+
+  const handleAppDetection = async (detectedApp: DetectedWebApp) => {
     try {
-      log.debug('App detected', e.detail)
+      log.debug('App detected', detectedApp)
 
       if (!resource) return
 
@@ -128,13 +138,14 @@
     webview.reload()
   }
 
-  const handleWebViewAnnotation = async (e: CustomEvent<WebViewWrapperEvents['annotate']>) => {
+  const handleWebviewAnnotation = async (
+    annotationData: WebViewSendEvents[WebViewEventSendNames.Annotate]
+  ) => {
     if (!resource) return
 
-    const annotationData = e.detail
-    log.debug('webview highlight', annotationData)
+    log.debug('webview annotation', annotationData)
 
-    const url = annotationData.data.url ?? src
+    const url = annotationData.data.url ?? initialSrc
 
     const hashtags = (annotationData.data as AnnotationCommentData)?.tags ?? []
     if (hashtags.length > 0) {
@@ -158,6 +169,28 @@
 
     log.debug('created annotation resource', annotationResource)
     annotations = [...annotations, annotationResource]
+    resourceManager.addAnnotationToLoadedResource(resource.id, annotationResource)
+    resource.annotations = [...(resource.annotations ?? []), annotationResource]
+
+    // remove resource silent tag
+    const isSilent = (resource.tags ?? []).find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+    )
+    if (isSilent) {
+      log.debug('removing silent tag from resource', resource.id)
+      await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+    }
+
+    const hideInEverything = (resource.tags ?? []).find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+    )
+    if (hideInEverything) {
+      log.debug('removing hide in everything tag from resource', resource.id)
+      await resourceManager.deleteResourceTag(
+        resource.id,
+        ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+      )
+    }
 
     log.debug('highlighting text in webview')
 
@@ -168,11 +201,10 @@
   }
 
   const handleAnnotationRemove = async (
-    e: CustomEvent<WebViewWrapperEvents['annotationRemove']>
+    annotationId: WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
   ) => {
-    log.debug('Annotation removed', e.detail)
+    log.debug('Annotation removed', annotationId)
 
-    const annotationId = e.detail
     annotations = annotations.filter((annotation) => annotation.id !== annotationId)
 
     await resourceManager.deleteResource(annotationId)
@@ -183,12 +215,12 @@
   }
 
   const handleAnnotationUpdate = async (
-    e: CustomEvent<WebViewWrapperEvents['annotationUpdate']>
+    event: WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
   ) => {
-    log.debug('Annotation updated', e.detail)
+    log.debug('Annotation updated', event)
 
-    const annotationId = e.detail.id
-    const updates = e.detail.data
+    const annotationId = event.id
+    const updates = event.data
 
     const annotationResource = annotations.find((annotation) => annotation.id === annotationId)
     if (!annotationResource) {
@@ -219,18 +251,20 @@
     toast.success('Annotation updated!')
   }
 
-  const handleAnnotationClick = (e: CustomEvent<WebViewWrapperEvents['annotationClick']>) => {
-    log.debug('Annotation clicked', e.detail)
+  const handleAnnotationClick = (
+    event: WebViewSendEvents[WebViewEventSendNames.AnnotationClick]
+  ) => {
+    log.debug('Annotation clicked', event)
 
-    activeAnnotation = e.detail.id
+    activeAnnotation = event.id
 
     setTimeout(() => {
       activeAnnotation = ''
     }, 1000)
   }
 
-  async function handleWebviewTransform(e: CustomEvent<WebViewWrapperEvents['transform']>) {
-    log.debug('webview transformation', e.detail)
+  async function handleWebviewTransform(event: WebViewSendEvents[WebViewEventSendNames.Transform]) {
+    log.debug('webview transformation', event)
 
     const detectedResource = await webview.detectResource()
     log.debug('extracted resource data', detectedResource)
@@ -239,7 +273,7 @@
       return
     }
 
-    const transformation = await handleInlineAI(e.detail, detectedResource)
+    const transformation = await handleInlineAI(event, detectedResource)
 
     log.debug('transformation output', transformation)
 
@@ -253,11 +287,27 @@
     dispatch('new-tab', e.detail)
   }
 
-  const handleWebviewNewWindow = async (e: CustomEvent<Electron.HandlerDetails>) => {
-    const disposition = e.detail.disposition
-    if (disposition === 'new-window') return
+  const handleWebviewPageEvent = (e: CustomEvent<WebviewWrapperEvents['webview-page-event']>) => {
+    const { type, data } = e.detail
 
-    dispatch('new-tab', { url: e.detail.url, active: disposition === 'foreground-tab' })
+    if (type === WebViewEventSendNames.DetectedApp) {
+      handleAppDetection(data as DetectedWebApp)
+    } else if (type === WebViewEventSendNames.Annotate) {
+      handleWebviewAnnotation(data as WebViewSendEvents[WebViewEventSendNames.Annotate])
+    } else if (type === WebViewEventSendNames.AnnotationClick) {
+      handleAnnotationClick(data as WebViewSendEvents[WebViewEventSendNames.AnnotationClick])
+    } else if (type === WebViewEventSendNames.RemoveAnnotation) {
+      handleAnnotationRemove(data as WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation])
+    } else if (type === WebViewEventSendNames.UpdateAnnotation) {
+      handleAnnotationUpdate(data as WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation])
+    } else if (type === WebViewEventSendNames.Transform) {
+      handleWebviewTransform(data as WebViewSendEvents[WebViewEventSendNames.Transform])
+    }
+  }
+
+  const handleUrlChange = (e: CustomEvent<WebviewWrapperEvents['url-change']>) => {
+    log.debug('url change', e.detail)
+    debouncedAppDetection()
   }
 
   onMount(async () => {
@@ -319,6 +369,18 @@
     /> -->
 
     <WebviewWrapper
+      src={initialSrc}
+      partition="persist:horizon"
+      {historyEntriesManager}
+      bind:this={webview}
+      on:webview-page-event={handleWebviewPageEvent}
+      on:url-change={handleUrlChange}
+      on:did-finish-load={debouncedAppDetection}
+      on:new-tab
+      on:navigation
+    />
+
+    <!-- <WebviewWrapper
       bind:this={webview}
       {src}
       partition="persist:horizon"
@@ -330,7 +392,7 @@
       on:annotationUpdate={handleAnnotationUpdate}
       on:transform={handleWebviewTransform}
       on:newWindowWebview={handleWebviewNewWindow}
-    />
+    /> -->
 
     <div class="annotations-view">
       {#if annotations.length > 0}

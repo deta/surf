@@ -2,58 +2,84 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 const isDev = import.meta.env.DEV
 
-export const log = (...data: any[]) => {
-  console.log(...data)
-}
+const levelMap = ['verbose', 'debug', 'info', 'warn', 'error']
+export type LogLevel = 'verbose' | 'debug' | 'info' | 'warn' | 'error'
 
-export const info = (...data: any[]) => {
-  if (isDev) {
-    console.log(...data)
+class Logger {
+  scope: string
+  level: number
+
+  constructor(scope: string) {
+    const level = import.meta.env.R_VITE_LOG_LEVEL
+
+    this.scope = scope
+
+    if (level) {
+      this.level = levelMap.indexOf(level) || levelMap.indexOf('info')
+    } else if (isDev) {
+      this.level = levelMap.indexOf('debug')
+    } else {
+      this.level = levelMap.indexOf('info')
+    }
   }
-}
 
-export const debug = (...data: any[]) => {
-  if (isDev) {
-    console.log(...data)
+  private getScope() {
+    return this.scope ? `[${this.scope}]` : ''
   }
-}
 
-export const error = (...data: any[]) => {
-  if (isDev) {
-    console.error(...data)
+  log = (...data: any[]) => {
+    if (this.level <= levelMap.indexOf('verbose')) {
+      console.log(this.getScope(), ...data)
+    }
   }
-}
 
-export const warn = (...data: any[]) => {
-  if (isDev) {
-    console.log(...data)
+  debug = (...data: any[]) => {
+    if (this.level <= levelMap.indexOf('debug')) {
+      console.log(this.getScope(), ...data)
+    }
   }
-}
 
-export const json = (data: any) => {
-  if (isDev) {
-    console.log(JSON.stringify(data))
+  info = (...data: any[]) => {
+    if (this.level <= levelMap.indexOf('info')) {
+      console.log(this.getScope(), ...data)
+    }
   }
-}
 
-export const useLogScope = (scope: string) => {
-  return {
-    log: (...data: any[]) => log(`[${scope}]`, ...data),
-    info: (...data: any[]) => info(`[${scope}]`, ...data),
-    debug: (...data: any[]) => debug(`[${scope}]`, ...data),
-    error: (...data: any[]) => error(`[${scope}]`, ...data),
-    warn: (...data: any[]) => warn(`[${scope}]`, ...data),
-    json: (data: any) => json(data)
+  warn = (...data: any[]) => {
+    if (this.level <= levelMap.indexOf('warn')) {
+      console.log(this.getScope(), ...data)
+    }
+  }
+
+  error = (...data: any[]) => {
+    if (this.level <= levelMap.indexOf('error')) {
+      console.error(this.getScope(), ...data)
+    }
+  }
+
+  json = (data: any) => {
+    if (this.level <= levelMap.indexOf('debug')) {
+      console.log(JSON.stringify(data, null, 2))
+    }
+  }
+
+  static useLog = (scope: string) => {
+    return new Logger(scope)
   }
 }
 
 export type ScopedLogger = ReturnType<typeof useLogScope>
 
+export const useLogScope = (scope: string) => Logger.useLog(scope)
+
+const defaultLogger = new Logger('')
+export const useLog = () => defaultLogger
+
 export default {
-  log,
-  info,
-  debug,
-  error,
-  warn,
-  json
+  log: defaultLogger.log,
+  debug: defaultLogger.debug,
+  info: defaultLogger.info,
+  warn: defaultLogger.warn,
+  error: defaultLogger.error,
+  json: defaultLogger.json
 }
