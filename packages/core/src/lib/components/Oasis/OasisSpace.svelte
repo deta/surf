@@ -270,7 +270,7 @@
             }
           } catch (error) {
             log.error('Error loading source:', error)
-            toasts.error('Error loading source: ' + (error as Error).message)
+            toasts.error(`Failed to load source: ${source.url}`)
             return Promise.resolve()
           }
         })
