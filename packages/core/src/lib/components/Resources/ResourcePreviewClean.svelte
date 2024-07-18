@@ -149,7 +149,7 @@
   on:click={handleClick}
   class="resource-preview"
   class:isSelected={selected}
-  class:background={isLiveSpaceResource && showSummary}
+  class:background={isLiveSpaceResource && showSummary && resource.metadata?.userContext}
   style="--id:{resource.id};"
   on:dragstart={handleDragStart}
   draggable="true"
@@ -351,7 +351,7 @@
         0px 1px 0px 0px rgba(65, 58, 86, 0.25),
         0px 0px 1px 0px rgba(0, 0, 0, 0.25);
 
-      .preview {
+      .preview:not(.slack):not(.reddit):not(.twitter):not(.notion) {
         background: rgba(255, 255, 255, 0.75);
         border: none;
         box-shadow: none;

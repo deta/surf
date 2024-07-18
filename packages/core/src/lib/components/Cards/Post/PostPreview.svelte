@@ -141,6 +141,7 @@
     flex-shrink: 0;
     margin-top: 1rem;
     max-width: 95%;
+    word-break: break-all;
   }
   .post-metadata {
     display: flex;

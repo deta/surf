@@ -195,13 +195,7 @@
       )
 
       const items = resources
-        .sort((a, b) => {
-          if (a.createdAt && b.createdAt) {
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          }
-
-          return 0
-        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .map(
           (resource) =>
             ({
