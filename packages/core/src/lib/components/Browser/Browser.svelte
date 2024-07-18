@@ -2314,11 +2314,15 @@
               {/if}
             {/if}
 
-            <div class="overflow-x-scroll no-scrollbar relative flex-grow">
+            <div
+              class="overflow-x-scroll no-scrollbar relative flex-grow"
+              class:items-center={horizontalTabs}
+            >
               {#if horizontalTabs}
                 <DragDropList
                   id="tabs"
                   type={HorizontalDropZone}
+                  zoneClass="max-w-[96%]"
                   itemSize={Math.min(500, Math.max(128, tabSize))}
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
@@ -2453,7 +2457,6 @@
                   {/if}
                 </DragDropList>
               {:else}
-             
                 <DragDropList
                   id="tabs"
                   type={VerticalDropZone}
@@ -2591,18 +2594,25 @@
                     </LinkPreview.Root>
                   {/if}
                 </DragDropList>
-
-                <button
-                class="transform active:scale-95 space-x-2 px-4 py-5 w-fit mx-auto appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                  >
-                  <Icon name="add" />
-                  <span> New Tab</span>
-                </button>
-  
               {/if}
-
-             
-
+              <div
+                style="position: absolute; top: {!horizontalTabs
+                  ? 54 * $unpinnedTabs.length
+                  : 0}px; left: {horizontalTabs ? 128 * $unpinnedTabs.length : 0}px; right: 0;"
+                class="w-fit"
+              >
+                <button
+                  class="transform active:scale-95 space-x-2 px-4 py-4 {horizontalTabs
+                    ? 'w-fit'
+                    : 'w-full'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  on:click|preventDefault={() => createNewEmptyTab()}
+                >
+                  <Icon name="add" />
+                  {#if !horizontalTabs}
+                    <span class="label">New Tab</span>
+                  {/if}
+                </button>
+              </div>
             </div>
 
             <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
