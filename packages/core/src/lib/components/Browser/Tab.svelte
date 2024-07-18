@@ -10,7 +10,7 @@
   import { ResourceTagsBuiltInKeys, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
-  import {tooltip as tooltip2} from '../../utils/directives'
+  import { tooltip as tooltip2 } from '../../utils/directives'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -156,38 +156,38 @@
     : {}}
 >
   {#if tab.icon}
-    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
+    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
       <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
     </div>
   {:else if tab.type === 'horizon'}
-    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
+    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
       <Icon name="grid" size="18px" />
     </div>
   {:else if tab.type === 'importer'}
-    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
+    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
       <Icon name="code" size="18px" />
     </div>
   {:else if tab.type === 'history'}
-    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
+    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
       <Icon name="history" size="18px" />
     </div>
   {:else if tab.type === 'space' && space}
-    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
+    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
       <SpaceIcon folder={space} />
     </div>
   {:else}
-    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
+    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
       <Icon name="world" size="18px" />
     </div>
   {/if}
 
-  {#if showClose}
+  {#if showClose && hovered}
     <button
       on:click|stopPropagation={handleArchive}
       class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
       use:tooltip2={{
         text: 'Delete this tab (⌘ + W)',
-        position: 'right',
+        position: 'right'
       }}
     >
       {#if tab.archived}
