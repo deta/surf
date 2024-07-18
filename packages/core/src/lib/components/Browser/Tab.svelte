@@ -191,7 +191,7 @@
           bind:this={addressInputElem}
           class="w-full bg-transparent focus:outline-none group-active:select-none
           {!isEditing
-            ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-600 bg-[length:250%_100%]'
+            ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 bg-[length:250%_100%]'
             : ''}
           "
         />

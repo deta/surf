@@ -103,10 +103,13 @@
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
+  let observer: IntersectionObserver
   let addressBarFocus = false
   let showTabSearch = false
   let showTabs = true
   let annotationsSidebar: AnnotationsSidebar
+  let isFirstButtonVisible = true
+  let newTabButton: Element
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -317,6 +320,22 @@
     return newTab
   }
 
+  function setupObserver() {
+    observer = new IntersectionObserver(
+      ([entry]) => {
+        isFirstButtonVisible = entry.isIntersecting
+      },
+      {
+        root: null,
+        threshold: 0.01 // 1% visibility threshold
+      }
+    )
+
+    if (newTabButton) {
+      observer.observe(newTabButton)
+    }
+  }
+
   const archiveTab = async (tabId: string) => {
     const tab = $tabs.find((tab) => tab.id === tabId)
     if (!tab) {
@@ -386,6 +405,9 @@
     }
 
     await tabsDB.delete(tabId)
+
+    observer.unobserve(newTabButton)
+    observer.observe(newTabButton)
   }
 
   const persistTabChanges = async (tabId: string, updates: Partial<Tab>) => {
@@ -1823,6 +1845,10 @@
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
     log.debug('tabs', $tabs)
+
+    setupObserver()
+
+    // ON DESTROY!!
   })
 
   const createChatResourceBookmark = async (tab: TabPage) => {
@@ -2100,8 +2126,6 @@
 
     log.debug('State updated successfully')
   }
-
-  let popoverOpen = false
 </script>
 
 <SplashScreen />
@@ -2132,7 +2156,7 @@
         {#if $sidebarTab !== 'oasis'}
           <div
             class="flex {!horizontalTabs
-              ? 'flex-col w-[256px]  py-3 space-y-4 px-2 h-full'
+              ? 'flex-col w-[288px]  py-3 space-y-4 px-2 h-full'
               : 'flex-row items-center h-[52px] ml-24 space-x-4 mr-4'} relative"
           >
             <div
@@ -2389,12 +2413,16 @@
               {/if}
             {/if}
 
-            <div class="overflow-x-scroll no-scrollbar relative flex-grow">
+            <div
+              class="overflow-x-scroll no-scrollbar relative flex-grow"
+              class:space-x-2={horizontalTabs}
+              class:items-center={horizontalTabs}
+            >
               {#if horizontalTabs}
                 <DragDropList
                   id="tabs"
                   type={HorizontalDropZone}
-                  itemSize={Math.min(400, Math.max(240, tabSize))}
+                  itemSize={Math.min(400, Math.max(200, tabSize))}
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
@@ -2504,37 +2532,85 @@
                   {/if}
                 </DragDropList>
               {/if}
+              <div
+                style="position: absolute; top: {!horizontalTabs
+                  ? 45 * $unpinnedTabs.length
+                  : 0}px; left: {horizontalTabs
+                  ? Math.min(400, Math.max(240, tabSize)) * $unpinnedTabs.length
+                  : 0}px; right: 0;"
+                class:w-fit={horizontalTabs}
+                class:h-full={horizontalTabs}
+                class="select-none flex items-center justify-center"
+                class:opacity-100={isFirstButtonVisible}
+                class:opacity-0={!isFirstButtonVisible}
+                class:pointer-events-auto={isFirstButtonVisible}
+                class:pointer-events-none={!isFirstButtonVisible}
+              >
+                <button
+                  bind:this={newTabButton}
+                  class="transform select-none active:scale-95 space-x-2 {horizontalTabs
+                    ? 'w-fit rounded-xl p-2'
+                    : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                  on:click|preventDefault={() => createNewEmptyTab()}
+                >
+                  <Icon name="add" />
+                  {#if !horizontalTabs}
+                    <span class="label">New Tab</span>
+                  {/if}
+                </button>
+              </div>
             </div>
 
-            <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
-              {#if $sidebarTab === 'active' && $activeTab?.type === 'page'}
+            <div class="flex {horizontalTabs ? 'flex-row items-center' : 'flex-col'} flex-shrink-0">
+              <button
+                class="transform select-none active:scale-95 space-x-2  {horizontalTabs
+                  ? 'w-fit rounded-xl p-2'
+                  : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                on:click|preventDefault={() => createNewEmptyTab()}
+                class:opacity-100={!isFirstButtonVisible}
+                class:opacity-0={isFirstButtonVisible}
+                class:pointer-events-auto={!isFirstButtonVisible}
+                class:pointer-events-none={isFirstButtonVisible}
+              >
+                <Icon name="add" />
+                {#if !horizontalTabs}
+                  <span class="label">New Tab</span>
+                {/if}
+              </button>
+              <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
+                <button
+                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  on:click={handleToggleMagicSidebar}
+                  disabled={$sidebarTab !== 'active' ||
+                    !$activeTabMagic ||
+                    $activeTab?.type !== 'page'}
+                  use:tooltip={{
+                    content: 'Toggle Page Chat',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 300
+                  }}
+                >
+                  {#if !$activeTabMagic}
+                    <Icon name="message" />
+                  {:else if $activeTabMagic.showSidebar}
+                    <Icon name="close" />
+                  {:else if $activeTabMagic.running}
+                    <Icon name="spinner" />
+                  {:else}
+                    <Icon name="message" />
+                  {/if}
+                </button>
                 {#if $activeTabMagic}
                   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                  <button
-                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                    on:click={handleToggleMagicSidebar}
-                    use:tooltip={{
-                      content: 'Toggle Page Chat',
-                      action: 'hover',
-                      position: 'bottom',
-                      animation: 'fade',
-                      delay: 300
-                    }}
-                  >
-                    {#if $activeTabMagic.showSidebar}
-                      <Icon name="close" />
-                    {:else if $activeTabMagic.running}
-                      <Icon name="spinner" />
-                    {:else}
-                      <Icon name="message" />
-                    {/if}
-                  </button>
                 {/if}
 
                 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
                 <button
-                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                   on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
+                  disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
                   use:tooltip={{
                     content: 'Toggle Annotations',
                     action: 'hover',
@@ -2551,7 +2627,8 @@
                 </button>
 
                 <button
-                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
                   on:click={handleToggleAppSidebar}
                   use:tooltip={{
                     content: 'Go wild',
@@ -2567,17 +2644,16 @@
                     <Icon name="sparkles" />
                   {/if}
                 </button>
-              {/if}
 
-              <!-- <NewTabButton /> -->
-              <NewTabButton
-                {resourceManager}
-                {spaces}
-                on:create-tab-from-space={handleCreateTabFromPopover}
-                on:create-new-space={handleCreateNewSpace}
-                on:create-new-history-tab={createHistoryTab}
-                on:create-new-tab={debouncedCreateNewEmptyTab}
-              />
+                <NewTabButton
+                  {resourceManager}
+                  {spaces}
+                  on:create-tab-from-space={handleCreateTabFromPopover}
+                  on:create-new-space={handleCreateNewSpace}
+                  on:create-new-history-tab={createHistoryTab}
+                  on:create-new-tab={debouncedCreateNewEmptyTab}
+                />
+              </div>
             </div>
           </div>
         {:else}
