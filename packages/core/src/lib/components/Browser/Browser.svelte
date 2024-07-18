@@ -2356,6 +2356,7 @@
                             </div>
                           {:else}
                             <TabItem
+                              showClose
                               tab={$magicTabs[index]}
                               {activeTabId}
                               {deleteTab}
@@ -2404,6 +2405,7 @@
                             </div>
                           {:else}
                             <TabItem
+                              showClose
                               tab={$magicTabs[index]}
                               {activeTabId}
                               {deleteTab}
@@ -2448,6 +2450,7 @@
                 >
                   {#if $activeTabId === $unpinnedTabs[index].id}
                     <TabItem
+                      showClose
                       tab={$unpinnedTabs[index]}
                       {activeTabId}
                       bookmarkingInProgress={$bookmarkingInProgress}
@@ -2470,6 +2473,7 @@
                     <LinkPreview.Root openDelay={7000} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
+                          showClose
                           tab={$unpinnedTabs[index]}
                           {activeTabId}
                           pinned={false}
@@ -2505,6 +2509,7 @@
                   <!-- check if this tab is active -->
                   {#if $activeTabId === $unpinnedTabs[index].id}
                     <TabItem
+                      showClose
                       tab={$unpinnedTabs[index]}
                       {activeTabId}
                       bookmarkingInProgress={$bookmarkingInProgress}
@@ -2527,6 +2532,7 @@
                     <LinkPreview.Root openDelay={4000} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
+                          showClose
                           tab={$unpinnedTabs[index]}
                           {activeTabId}
                           pinned={false}

@@ -10,6 +10,7 @@
   import { ResourceTagsBuiltInKeys, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
+  import {tooltip as tooltip2} from '../../utils/directives'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -21,6 +22,7 @@
   export let bookmarkingSuccess: boolean
   export let addressInputElem: HTMLInputElement
   export let enableEditing = false
+  export let showClose = false
   export let spaces
 
   const dispatch = createEventDispatcher<{
@@ -154,29 +156,46 @@
     : {}}
 >
   {#if tab.icon}
-    <div class="icon-wrapper">
+    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
       <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
     </div>
   {:else if tab.type === 'horizon'}
-    <div class="icon-wrapper">
+    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
       <Icon name="grid" size="18px" />
     </div>
   {:else if tab.type === 'importer'}
-    <div class="icon-wrapper">
+    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
       <Icon name="code" size="18px" />
     </div>
   {:else if tab.type === 'history'}
-    <div class="icon-wrapper">
+    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
       <Icon name="history" size="18px" />
     </div>
   {:else if tab.type === 'space' && space}
-    <div class="icon-wrapper">
+    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
       <SpaceIcon folder={space} />
     </div>
   {:else}
-    <div class="icon-wrapper">
+    <div class="icon-wrapper {showClose && !pinned ? 'group-hover:hidden' : ''}">
       <Icon name="world" size="18px" />
     </div>
+  {/if}
+
+  {#if showClose}
+    <button
+      on:click|stopPropagation={handleArchive}
+      class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+      use:tooltip2={{
+        text: 'Delete this tab (⌘ + W)',
+        position: 'right',
+      }}
+    >
+      {#if tab.archived}
+        <Icon name="trash" size="18px" />
+      {:else}
+        <Icon name="close" size="18px" />
+      {/if}
+    </button>
   {/if}
 
   {#if !tab.pinned || !pinned}
@@ -239,6 +258,22 @@
             <Icon name="close" size="18px" />
           </button>
         {:else}
+          {#if tab.type === 'page' && tab.currentDetectedApp?.rssFeedUrl && isActive}
+            <button
+              on:click={handleCreateLiveSpace}
+              class="flex items-center justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+              use:tooltip={{
+                content: `Create ${tab.currentDetectedApp.appName} live Space`,
+                action: 'hover',
+                position: 'left',
+                animation: 'fade',
+                delay: 500
+              }}
+            >
+              <Icon name="news" />
+            </button>
+          {/if}
+
           {#if tab.type === 'page' && isActive}
             {#key isBookmarkedByUser}
               <button
@@ -277,41 +312,6 @@
               </button>
             {/key}
           {/if}
-
-          {#if tab.type === 'page' && tab.currentDetectedApp?.rssFeedUrl && isActive}
-            <button
-              on:click={handleCreateLiveSpace}
-              class="flex items-center justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
-              use:tooltip={{
-                content: `Create ${tab.currentDetectedApp.appName} live Space`,
-                action: 'hover',
-                position: 'left',
-                animation: 'fade',
-                delay: 500
-              }}
-            >
-              <Icon name="news" />
-            </button>
-          {/if}
-
-          <button
-            on:click|stopPropagation={handleArchive}
-            class="flex items-center justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
-            use:tooltip={{
-              //content: tab.archived ? 'Delete this tab (⌘ + W)' : 'Archive this tab (⌘ + W)',
-              content: 'Delete this tab (⌘ + W)',
-              action: 'hover',
-              position: 'left',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            {#if tab.archived}
-              <Icon name="trash" size="18px" />
-            {:else}
-              <Icon name="close" size="18px" />
-            {/if}
-          </button>
         {/if}
       </div>
     {:else if showExcludeOthersButton && hovered}
