@@ -2804,10 +2804,12 @@
             {:else}
               <BrowserHomescreen
                 {historyEntriesManager}
+                active={$activeTabId === tab.id}
                 on:navigate={handleTabNavigation}
                 on:chat={handleCreateChat}
                 on:rag={handleRag}
                 on:create-tab-from-space={handleCreateTabFromSpace}
+                on:new-tab={handleNewTab}
               />
             {/if}
           </div>
@@ -2817,9 +2819,11 @@
           <div class="" style="--scaling: 1;">
             <BrowserHomescreen
               {historyEntriesManager}
+              active
               on:navigate={handleTabNavigation}
               on:chat={handleCreateChat}
               on:rag={handleRag}
+              on:new-tab={handleNewTab}
             />
           </div>
         {/if}

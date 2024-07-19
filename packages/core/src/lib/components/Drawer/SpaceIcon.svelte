@@ -83,6 +83,7 @@
 
 <style lang="scss">
   .folder-icon {
+    flex-shrink: 0;
     width: 1.25rem;
     height: 1.25rem;
     border-radius: 50%;
