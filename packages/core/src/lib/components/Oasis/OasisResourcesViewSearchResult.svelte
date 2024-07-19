@@ -45,8 +45,11 @@
     {#key scrollElement}
       <Masonry
         renderContents={$renderContents.map((item) => item.id)}
-        on:load-more={handleLoadChunk}>{$renderContents.length}</Masonry
-      >
+        on:load-more={handleLoadChunk}
+        on:open
+        on:remove
+        >{$renderContents.length}
+      </Masonry>
     {/key}
 
     <!-- <Masonry

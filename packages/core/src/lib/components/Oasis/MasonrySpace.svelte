@@ -1,20 +1,26 @@
 <script>
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import OasisResourceLoader from './OasisResourceLoader.svelte'
   import { onMount, onDestroy, tick, createEventDispatcher } from 'svelte'
-  import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
 
   export let renderContents
+  export let items = []
 
   let prevItemLength = 0
+  let gridItems = []
+  let masonryGrid
+  let resizeObserverDebounce
+  let resizedItems = new Set()
+  let scrollVelocity = {
+    scrollTop: 0,
+    timestamp: 0,
+    velocity: 0
+  }
 
   $: if (renderContents) {
     tick().then(() => {
       const gridContainer = document.getElementById('grid')
 
       gridContainer?.addEventListener('scroll', updateVisibleItems)
-
-      console.log('kkk-r', renderContents)
 
       updateGrid(renderContents.slice(prevItemLength))
 
@@ -387,17 +393,6 @@
     }
   }
 
-  export let items = []
-  let gridItems = []
-  let masonryGrid
-  let resizeObserverDebounce
-  let resizedItems = new Set()
-  let scrollVelocity = {
-    scrollTop: 0,
-    timestamp: 0,
-    velocity: 0
-  }
-
   function transformIncomingData(data) {
     return {
       id: data
@@ -436,8 +431,6 @@
     const gridContainer = document.getElementById('grid')
     masonryGrid = new MasonryGrid(gridContainer)
 
-    console.log('ggg-mount', gridContainer)
-
     renderContents.forEach((item) => {
       addItem(item)
     })
@@ -459,8 +452,6 @@
 
   function observeItems(gridContainer) {
     items.forEach((item) => {
-      console.log('ggg-initobserver')
-
       const dom = document.getElementById(`item-${item.id}`)
       if (dom) {
         item.dom = dom
@@ -520,7 +511,6 @@
 
   function handleBottomReached() {
     const itemsToLoad = calculateItemsToLoad(scrollVelocity.velocity)
-    console.log('vvvv')
     dispatch('load-more', itemsToLoad)
   }
 
@@ -553,7 +543,6 @@
 
 <svelte:window
   on:wheel={(event) => {
-    console.log('fff-scroll')
     const gridContainer = document.getElementById('grid')
     const newScrollTop = gridContainer.scrollTop
     const newTimestamp = event.timeStamp
