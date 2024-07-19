@@ -28,25 +28,15 @@
     return resources.slice(0, renderLimit)
   })
 
-  const debouncedRefreshLayout = useDebounce(() => {
-    refreshContentLayout()
-  }, 500)
-
   const handleLoadChunk = (e: CustomEvent) => {
     const CHUNK_SIZE = e.detail
 
-    console.log('bottom reached', $resources.length, $renderContents.length)
     if ($resources.length <= $renderContents.length) {
       return
     }
 
     renderLimit.update((limit) => limit + CHUNK_SIZE)
-
-    // debouncedRefreshLayout()
-  }
-
-  const handleItemLoad = () => {
-    debouncedRefreshLayout()
+    console.log('bottom reached', $resources.length, $renderContents.length)
   }
 </script>
 

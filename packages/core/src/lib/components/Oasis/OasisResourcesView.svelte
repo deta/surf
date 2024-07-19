@@ -23,6 +23,7 @@
   const renderLimit = writable(CHUNK_SIZE)
 
   const renderContents = derived([resourceIds, renderLimit], ([resourceIds, renderLimit]) => {
+    console.log('vvv-res ids', resourceIds)
     return resourceIds.slice(0, renderLimit)
   })
 
