@@ -1588,6 +1588,14 @@
         showInSidebar: true
       })
 
+      const existingTab = $unpinnedTabs.find(
+        (tab) => tab.type === 'space' && tab.spaceId === space.id
+      )
+      if (existingTab) {
+        makeTabActive(existingTab.id)
+        return
+      }
+
       const tab = {
         title: space.name.folderName,
         icon: '',

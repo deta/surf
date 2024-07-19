@@ -182,20 +182,33 @@
   {/if}
 
   {#if showClose && hovered}
-    <button
-      on:click|stopPropagation={handleArchive}
-      class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
-      use:tooltip2={{
-        text: 'Delete this tab (⌘ + W)',
-        position: 'right'
-      }}
-    >
-      {#if tab.archived}
-        <Icon name="trash" size="18px" />
-      {:else}
+    {#if tab.type == 'space'}
+      <button
+        on:click|stopPropagation={handleRemoveSpaceFromSidebar}
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+        use:tooltip2={{
+          text: 'Remove from Sidebar (⌘ + W)',
+          position: 'right'
+        }}
+      >
         <Icon name="close" size="18px" />
-      {/if}
-    </button>
+      </button>
+    {:else}
+      <button
+        on:click|stopPropagation={handleArchive}
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+        use:tooltip2={{
+          text: 'Delete this tab (⌘ + W)',
+          position: 'right'
+        }}
+      >
+        {#if tab.archived}
+          <Icon name="trash" size="18px" />
+        {:else}
+          <Icon name="close" size="18px" />
+        {/if}
+      </button>
+    {/if}
   {/if}
 
   {#if !tab.pinned || !pinned}
@@ -243,75 +256,59 @@
           </button>
         {/if}
 
-        {#if tab.type == 'space'}
+        {#if tab.type === 'page' && tab.currentDetectedApp?.rssFeedUrl && isActive}
           <button
-            on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-            class="close"
+            on:click={handleCreateLiveSpace}
+            class="flex items-center justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
             use:tooltip={{
-              content: 'Remove from Sidebar (⌘ + W)',
+              content: `Create ${tab.currentDetectedApp.appName} live Space`,
               action: 'hover',
               position: 'left',
               animation: 'fade',
               delay: 500
             }}
           >
-            <Icon name="close" size="18px" />
+            <Icon name="news" />
           </button>
-        {:else}
-          {#if tab.type === 'page' && tab.currentDetectedApp?.rssFeedUrl && isActive}
+        {/if}
+
+        {#if tab.type === 'page' && isActive}
+          {#key isBookmarkedByUser}
             <button
-              on:click={handleCreateLiveSpace}
-              class="flex items-center justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+              on:click={handleBookmark}
               use:tooltip={{
-                content: `Create ${tab.currentDetectedApp.appName} live Space`,
+                content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
                 action: 'hover',
                 position: 'left',
                 animation: 'fade',
                 delay: 500
               }}
+              on:save-resource-in-space={handleSaveResourceInSpace}
+              use:popover={{
+                content: {
+                  component: ShortcutSaveItem,
+                  props: { resourceManager, spaces }
+                },
+                action: 'hover',
+                position: 'right-top',
+                style: {
+                  backgroundColor: '#F8F7F1'
+                },
+                animation: 'fade',
+                delay: 1200
+              }}
             >
-              <Icon name="news" />
+              {#if bookmarkingInProgress}
+                <Icon name="spinner" />
+              {:else if bookmarkingSuccess}
+                <Icon name="check" />
+              {:else if isBookmarkedByUser}
+                <Icon name="bookmarkFilled" />
+              {:else}
+                <Icon name="leave" />
+              {/if}
             </button>
-          {/if}
-
-          {#if tab.type === 'page' && isActive}
-            {#key isBookmarkedByUser}
-              <button
-                on:click={handleBookmark}
-                use:tooltip={{
-                  content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
-                  action: 'hover',
-                  position: 'left',
-                  animation: 'fade',
-                  delay: 500
-                }}
-                on:save-resource-in-space={handleSaveResourceInSpace}
-                use:popover={{
-                  content: {
-                    component: ShortcutSaveItem,
-                    props: { resourceManager, spaces }
-                  },
-                  action: 'hover',
-                  position: 'right-top',
-                  style: {
-                    backgroundColor: '#F8F7F1'
-                  },
-                  animation: 'fade',
-                  delay: 1200
-                }}
-              >
-                {#if bookmarkingInProgress}
-                  <Icon name="spinner" />
-                {:else if bookmarkingSuccess}
-                  <Icon name="check" />
-                {:else if isBookmarkedByUser}
-                  <Icon name="bookmarkFilled" />
-                {:else}
-                  <Icon name="leave" />
-                {/if}
-              </button>
-            {/key}
-          {/if}
+          {/key}
         {/if}
       </div>
     {:else if showExcludeOthersButton && hovered}
