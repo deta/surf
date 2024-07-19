@@ -54,6 +54,7 @@
   let space: Space | null = null
   let isEditing = false
   let hovered = false
+  let popoverVisible = false
 
   // $: acceptDrop = tab.type === 'space'
   $: isActive = tab.id === $activeTabId
@@ -148,6 +149,16 @@
   const handleExcludeOthers = () => {
     dispatch('exclude-other-tabs', tab.id)
   }
+
+  const handlePopoverEnter = () => {
+    popoverVisible = true
+
+  }
+
+  const handlePopoverLeave = () => {
+    popoverVisible = false
+  }
+
 </script>
 
 <div
@@ -157,7 +168,9 @@
     : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 transition duration-100group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
   on:click={handleClick}
   on:mouseenter={() => (hovered = true)}
-  on:mouseleave={() => (hovered = false)}
+  on:mouseleave={() => {
+    if (!popoverVisible) hovered = false
+  }}
   aria-hidden="true"
   use:tooltip={pinned
     ? {
@@ -289,6 +302,7 @@
         {#if tab.type === 'page' && isActive}
           {#key isBookmarkedByUser}
             <button
+            on:mouseenter={handlePopoverEnter}
               on:click={handleBookmark}
               use:tooltip={{
                 content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
@@ -298,6 +312,7 @@
                 delay: 500
               }}
               on:save-resource-in-space={handleSaveResourceInSpace}
+              on:popover-close={handlePopoverLeave}
               use:popover={{
                 content: {
                   component: ShortcutSaveItem,
@@ -306,10 +321,10 @@
                 action: 'hover',
                 position: 'right-top',
                 style: {
-                  backgroundColor: '#F8F7F1'
+                  backgroundColor: '#f5f5f5'
                 },
                 animation: 'fade',
-                delay: 1200
+                delay: 950
               }}
             >
               {#if bookmarkingInProgress}

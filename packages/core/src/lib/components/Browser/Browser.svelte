@@ -2697,7 +2697,7 @@
     {/if}
 
     <div
-      class="h-screen w-screen flex space-x-4 relative flex-row {horizontalTabs
+      class="h-screen w-screen shadow-lg flex space-x-4 relative flex-row {horizontalTabs
         ? 'px-1.5'
         : 'py-1.5'}"
     >
