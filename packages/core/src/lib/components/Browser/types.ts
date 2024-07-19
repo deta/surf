@@ -19,6 +19,7 @@ export interface BaseTab {
 export interface TabPage extends BaseTab {
   type: 'page'
   initialLocation: string
+  currentLocation?: string
   historyStackIds: string[]
   currentHistoryIndex: number
   resourceBookmark?: string | null

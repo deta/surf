@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
   import type { Tab, TabPage } from './types'
-  import type { Writable } from 'svelte/store'
+  import { writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTagsBuiltInKeys, type Space } from '../../types'
@@ -20,37 +20,52 @@
   export let showExcludeOthersButton: boolean = false
   export let bookmarkingInProgress: boolean
   export let bookmarkingSuccess: boolean
-  export let addressInputElem: HTMLInputElement
   export let enableEditing = false
   export let showClose = false
   export let spaces
+  export const inputUrl = writable<string>('')
+
+  export const editAddress = async () => {
+    isEditing = true
+
+    await tick()
+
+    addressInputElem.focus()
+  }
+
+  export const blur = () => {
+    addressInputElem.blur()
+  }
 
   const dispatch = createEventDispatcher<{
-    select: (id: string) => void
-    'remove-from-sidebar': (id: string) => void
-    'delete-tab': (id: string) => void
-    'unarchive-tab': (id: string) => void
-    'input-enter': (url: string) => void
-    bookmark: () => void
-    'save-resource-in-space': (spaceId: string) => void
-    'create-live-space': () => void
-    'exclude-other-tabs': (id: string) => void
+    select: string
+    'remove-from-sidebar': string
+    'delete-tab': string
+    'unarchive-tab': string
+    'input-enter': string
+    bookmark: void
+    'save-resource-in-space': string
+    'create-live-space': void
+    'exclude-other-tabs': string
   }>()
   const resourceManager = useResourceManager()
 
+  let addressInputElem: HTMLInputElement
   let space: Space | null = null
   let isEditing = false
-  let inputUrl = ''
   let hovered = false
 
   // $: acceptDrop = tab.type === 'space'
   $: isActive = tab.id === $activeTabId
   $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
+  $: url =
+    (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null
 
   $: if (tab.type === 'page' && !isEditing) {
-    if (tab.currentDetectedApp?.canonicalUrl) {
-      const url = new URL(tab.currentDetectedApp?.canonicalUrl)
-      inputUrl = url.hostname
+    if (url) {
+      $inputUrl = new URL(url).hostname
+    } else {
+      $inputUrl = tab.title
     }
   }
 
@@ -74,9 +89,8 @@
   const handleInputFocus = () => {
     isEditing = true
 
-    if ((tab as TabPage).currentDetectedApp?.canonicalUrl) {
-      const url = new URL(tab.currentDetectedApp?.canonicalUrl)
-      inputUrl = isEditing ? tab.currentDetectedApp?.canonicalUrl : url.hostname
+    if (url) {
+      $inputUrl = isEditing ? url : new URL(url).hostname
     }
 
     // scroll to the end
@@ -93,7 +107,7 @@
 
   const handleInputKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Enter') {
-      dispatch('input-enter', inputUrl)
+      dispatch('input-enter', $inputUrl)
     } else if (event.key === 'Escape') {
       addressInputElem.blur()
     }
@@ -213,10 +227,10 @@
 
   {#if !tab.pinned || !pinned}
     <div class=" relative flex-grow truncate mr-1">
-      {#if tab.type === 'page' && isActive && enableEditing}
+      {#if tab.type === 'page' && isActive && enableEditing && (hovered || isEditing)}
         <input
           type="text"
-          bind:value={inputUrl}
+          bind:value={$inputUrl}
           on:focus={handleInputFocus}
           on:blur={handleInputBlur}
           on:keydown={handleInputKeydown}

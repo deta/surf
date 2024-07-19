@@ -101,7 +101,7 @@
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
 
-  let addressInputElem: HTMLInputElement
+  let activeTabComponent: TabItem | null = null
   let drawer: Drawer
   let observer: IntersectionObserver
   let addressBarFocus = false
@@ -191,6 +191,10 @@
 
   const activeTabLocation = derived(activeTab, (activeTab) => {
     if (activeTab?.type === 'page') {
+      if (activeTab.currentLocation) {
+        return activeTab.currentLocation
+      }
+
       const currentEntry = historyEntriesManager.getEntry(
         activeTab.historyStackIds[activeTab.currentHistoryIndex]
       )
@@ -226,10 +230,14 @@
         log.warn('Horizon not found', tab.horizonId)
       }
     } else if (tab?.type === 'page') {
-      const currentEntry = historyEntriesManager.getEntry(
-        tab.historyStackIds[tab.currentHistoryIndex]
-      )
-      addressValue.set(currentEntry?.url ?? tab.initialLocation)
+      if (tab.currentLocation) {
+        addressValue.set(tab.currentLocation)
+      } else {
+        const currentEntry = historyEntriesManager.getEntry(
+          tab.historyStackIds[tab.currentHistoryIndex]
+        )
+        addressValue.set(currentEntry?.url ?? tab.initialLocation)
+      }
     } else if (tab?.type === 'chat') {
       addressValue.set(tab.title)
     } else {
@@ -562,7 +570,7 @@
 
     addressBarFocus = false
 
-    let addressVal = addressInputElem.value
+    let addressVal = activeTabComponent && get(activeTabComponent?.inputUrl)
     log.debug('Address bar blur', addressVal)
 
     if (!addressVal) {
@@ -604,7 +612,7 @@
 
   const handleFocus = () => {
     addressBarFocus = true
-    addressInputElem.select()
+    activeTabComponent?.editAddress()
   }
 
   const handleCopyLocation = useDebounce(() => {
@@ -649,7 +657,7 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
-      addressInputElem.blur()
+      activeTabComponent?.blur()
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
       handleCopyLocation()
     } else if (isModKeyPressed(e) && e.key === 't') {
@@ -684,7 +692,7 @@
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
-      addressInputElem.focus()
+      activeTabComponent?.editAddress()
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
       showTabSearch = true
@@ -2284,10 +2292,10 @@
                       <TabItem
                         tab={$pinnedTabs[index]}
                         {activeTabId}
-                        {deleteTab}
-                        {unarchiveTab}
                         pinned={true}
                         isAlreadyOpen={false}
+                        on:unarchive-tab={handleUnarchiveTab}
+                        on:delete-tab={handleDeleteTab}
                         on:select={() => {}}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                       />
@@ -2297,9 +2305,9 @@
                           <TabItem
                             tab={$pinnedTabs[index]}
                             {activeTabId}
-                            {deleteTab}
-                            {unarchiveTab}
                             pinned={true}
+                            on:unarchive-tab={handleUnarchiveTab}
+                            on:delete-tab={handleDeleteTab}
                             on:select={handleTabSelect}
                             on:remove-from-sidebar={handleRemoveFromSidebar}
                           />
@@ -2362,11 +2370,11 @@
                               showClose
                               tab={$magicTabs[index]}
                               {activeTabId}
-                              {deleteTab}
-                              {unarchiveTab}
                               pinned={false}
                               showButtons={false}
                               showExcludeOthersButton
+                              on:delete-tab={handleDeleteTab}
+                              on:unarchive-tab={handleUnarchiveTab}
                               on:select={handleTabSelect}
                               on:remove-from-sidebar={handleRemoveFromSidebar}
                               on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
@@ -2411,11 +2419,11 @@
                               showClose
                               tab={$magicTabs[index]}
                               {activeTabId}
-                              {deleteTab}
-                              {unarchiveTab}
                               pinned={false}
                               showButtons={false}
                               showExcludeOthersButton
+                              on:unarchive-tab={handleUnarchiveTab}
+                              on:delete-tab={handleDeleteTab}
                               on:select={handleTabSelect}
                               on:remove-from-sidebar={handleRemoveFromSidebar}
                               on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
@@ -2461,7 +2469,7 @@
                       pinned={false}
                       {spaces}
                       enableEditing
-                      bind:addressInputElem
+                      bind:this={activeTabComponent}
                       on:select={() => {}}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:drop={handleDrop}
@@ -2515,12 +2523,12 @@
                       showClose
                       tab={$unpinnedTabs[index]}
                       {activeTabId}
+                      {spaces}
                       bookmarkingInProgress={$bookmarkingInProgress}
                       bookmarkingSuccess={$bookmarkingSuccess}
                       pinned={false}
-                      {spaces}
                       enableEditing
-                      bind:addressInputElem
+                      bind:this={activeTabComponent}
                       on:select={() => {}}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:drop={handleDrop}

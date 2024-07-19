@@ -90,8 +90,11 @@
   export const canGoBack = webview?.canGoBack
   export const canGoForward = webview?.canGoForward
 
-  let currentEntry = historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])
-  let initialSrc = (currentEntry ? currentEntry.url : tab.initialLocation) ?? 'about:blank'
+  let initialSrc =
+    tab.currentLocation ??
+    historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])?.url ??
+    tab.initialLocation ??
+    'about:blank'
   let app: DetectedWebApp | null = null
 
   const url = writable<string>(initialSrc)
@@ -126,6 +129,13 @@
   const handleUrlChange = async (e: CustomEvent<string>) => {
     // await wait(500)
     // log.debug('running app detection on', e.detail)
+
+    tab = {
+      ...tab,
+      currentLocation: e.detail
+    }
+
+    debouncedTabUpdate()
     debouncedAppDetection()
   }
 
@@ -196,10 +206,10 @@
   }
 
   export async function bookmarkPage(silent = false) {
-    const currentEntry = historyEntriesManager.getEntry(
-      tab.historyStackIds[tab.currentHistoryIndex]
-    )
-    let url = currentEntry?.url ?? tab.initialLocation
+    let url =
+      tab.currentLocation ??
+      historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])?.url ??
+      tab.initialLocation
 
     // strip &t from url suffix
     let youtubeHostnames = [
@@ -392,11 +402,11 @@
       bookmarkedResource = resource
     }
 
-    const currentEntry = historyEntriesManager.getEntry(
-      tab.historyStackIds[tab.currentHistoryIndex]
-    )
-
-    const url = annotationData?.data?.url ?? currentEntry?.url ?? tab.initialLocation
+    const url =
+      annotationData?.data?.url ??
+      tab.currentLocation ??
+      historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])?.url ??
+      tab.initialLocation
 
     const hashtags = (annotationData.data as AnnotationCommentData)?.tags ?? []
     if (hashtags.length > 0) {
