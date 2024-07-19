@@ -647,10 +647,6 @@
 
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
-    const activeElement = document.activeElement
-    const isInputField =
-      activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')
-
     if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       addressInputElem.blur()
@@ -723,7 +719,6 @@
         }
       }, KEY_TIMEOUT)
     } else if (e.key === 'ArrowLeft' && e.metaKey) {
-      /// TODO FIX WHEN INPUT IS FOCUSED
       if (canGoBack) {
         $activeBrowserTab?.goBack()
       }
@@ -2586,7 +2581,7 @@
 
             <div class="flex {horizontalTabs ? 'flex-row items-center' : 'flex-col'} flex-shrink-0">
               <button
-                class="transform select-none active:scale-95 space-x-2  {horizontalTabs
+                class="transform select-none active:scale-95 space-x-2 {horizontalTabs
                   ? 'w-fit rounded-xl p-2'
                   : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
                 on:click|preventDefault={() => createNewEmptyTab()}
