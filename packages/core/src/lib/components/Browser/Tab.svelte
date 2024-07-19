@@ -145,7 +145,6 @@
     popoverVisible = false
   }
 
-  $: console.log('popover', popoverVisible)
 </script>
 
 <div
