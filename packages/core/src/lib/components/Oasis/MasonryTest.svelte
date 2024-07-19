@@ -597,7 +597,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
+    opacity: 1;
   }
 
   .debug {

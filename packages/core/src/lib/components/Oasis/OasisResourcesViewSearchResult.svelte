@@ -8,7 +8,7 @@
   import type { ResourceSearchResultItem } from '../../service/resources'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import DragResourceWrapper from './DragResourceWrapper.svelte'
-  import Masonry from './MasonryTest.svelte'
+  import Masonry from './MasonrySpace.svelte'
 
   export let resources: Readable<ResourceSearchResultItem[]>
   export let selected: string | null = null
@@ -35,6 +35,7 @@
   const handleLoadChunk = (e: CustomEvent) => {
     const CHUNK_SIZE = e.detail
 
+    console.log('bottom reached', $resources.length, $renderContents.length)
     if ($resources.length <= $renderContents.length) {
       return
     }
@@ -51,9 +52,12 @@
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    <Masonry renderContents={$renderContents} on:load-more={handleLoadChunk}
-      >{$renderContents.length}</Masonry
-    >
+    {#key scrollElement}
+      <Masonry
+        renderContents={$renderContents.map((item) => item.id)}
+        on:load-more={handleLoadChunk}>{$renderContents.length}</Masonry
+      >
+    {/key}
 
     <!-- <Masonry
       gridGap="2rem"
