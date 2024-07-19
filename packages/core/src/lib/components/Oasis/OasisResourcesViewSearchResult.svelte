@@ -12,6 +12,7 @@
 
   export let resources: Readable<ResourceSearchResultItem[]>
   export let selected: string | null = null
+  export let searchResults: Readable<ResourceSearchResultItem[]>
 
   const log = useLogScope('OasisResourcesView')
   // const dispatch = createEventDispatcher<{ click: string }>()
@@ -42,7 +43,7 @@
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    {#key scrollElement}
+    {#key searchResults}
       <Masonry
         renderContents={$renderContents.map((item) => item.id)}
         on:load-more={handleLoadChunk}

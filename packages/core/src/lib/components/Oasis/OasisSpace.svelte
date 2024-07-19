@@ -938,6 +938,7 @@
       <OasisResourcesViewSearchResult
         resources={everythingContents}
         selected={$selectedItem}
+        searchResults={$searchResults}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:remove={handleResourceRemove}
