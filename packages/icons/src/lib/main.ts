@@ -5,6 +5,7 @@ import AI from './Icons/AI.svelte'
 import Archive from './Icons/Archive.svelte'
 import Arrow from './Icons/Arrow.svelte'
 import ArrowBackUp from './Icons/ArrowBackUp.svelte'
+import ArrowAutoFitUp from './Icons/ArrowAutoFitUp.svelte'
 import ChevronLeft from './Icons/ChevronLeft.svelte'
 import ChevronRight from './Icons/ChevronRight.svelte'
 import Close from './Icons/Close.svelte'
@@ -68,6 +69,7 @@ import RSS from './Icons/RSS.svelte'
 import News from './Icons/News.svelte'
 import Hash from './Icons/Hash.svelte'
 import History from './Icons/History.svelte'
+import Filter from './Icons/Filter.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -77,6 +79,7 @@ export const icons = {
   archive: Archive,
   arrow: Arrow,
   arrowbackup: ArrowBackUp,
+  'arrow.autofit.up': ArrowAutoFitUp,
   'chevron.left': ChevronLeft,
   'chevron.right': ChevronRight,
   close: Close,
@@ -140,7 +143,8 @@ export const icons = {
   rss: RSS,
   news: News,
   hash: Hash,
-  history: History
+  history: History,
+  filter: Filter
 }
 
 export type Icons = keyof typeof icons
@@ -153,6 +157,7 @@ export {
   AdblockOn,
   Add,
   AI,
+  ArrowAutoFitUp,
   ChevronLeft,
   ChevronRight,
   Close,
@@ -214,5 +219,6 @@ export {
   RSS,
   News,
   Hash,
-  History
+  History,
+  Filter
 }

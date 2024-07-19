@@ -753,7 +753,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     event.dataTransfer?.setData('text/space-source', window.location.href)
   })
 
-  runAppDetection()
+  // runAppDetection()
 })
 
 window.addEventListener('keyup', (event: KeyboardEvent) => {
@@ -763,6 +763,10 @@ window.addEventListener('keyup', (event: KeyboardEvent) => {
 window.addEventListener('keydown', (event: KeyboardEvent) => {
   if (event.key === 'd' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
     startResourcePicker()
+  }
+
+  if (event.key === '+' || (event.key === '-' && (event.ctrlKey || event.metaKey))) {
+    event.preventDefault()
   }
 
   sendPageEvent(WebViewEventSendNames.KeyDown, {
@@ -812,7 +816,7 @@ ipcRenderer.on('webview-event', (_event, payload) => {
   } else if (type === WebViewEventReceiveNames.GetResource) {
     runResourceDetection()
   } else if (type === WebViewEventReceiveNames.GetApp) {
-    debouncedAppDetection()
+    runAppDetection()
   } else if (type === WebViewEventReceiveNames.RunAction) {
     runServiceAction(data.id, data.inputs)
   } else if (type === WebViewEventReceiveNames.TransformationOutput) {

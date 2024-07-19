@@ -68,7 +68,7 @@
   import DrawerDetailsWrapper from '../Drawer/DrawerDetailsWrapper.svelte'
   import { TelemetryEventTypes } from '@horizon/types'
   import type { Tab } from '@horizon/drawer/src/lib/Tabs.svelte'
-  import MiniBrowser from '@horizon/core/src/lib/components/Browser/MiniBrowser.svelte'
+  // import MiniBrowser from '@horizon/core/src/lib/components/Browser/MiniBrowser.svelte'
   import { wait } from '@horizon/web-parser/src/utils'
 
   export const drawer = provideDrawer()
@@ -948,7 +948,7 @@
   on:drop={handleWindowDragEnd}
 />
 
-{#if $showMiniBrowser && $selectedResource}
+<!-- {#if $showMiniBrowser && $selectedResource}
   <MiniBrowser resource={selectedResource} on:close={handleMiniBrowserClose} {resourceManager}>
     <DrawerDetailsWrapper
       on:dragstart={(e) => handleItemDragStart(e, $selectedResource)}
@@ -977,7 +977,7 @@
       </div>
     </DrawerDetailsWrapper>
   </MiniBrowser>
-{/if}
+{/if} -->
 
 {#if false}
   <div class="drop-zone">

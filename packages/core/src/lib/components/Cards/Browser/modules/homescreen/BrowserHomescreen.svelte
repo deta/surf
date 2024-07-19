@@ -10,7 +10,7 @@
   import Create from './Create.svelte'
   import { SERVICES } from '@horizon/web-parser'
   import type { Horizon } from '../../../../../service/horizon'
-  import WebviewWrapper from '../../WebviewWrapper.svelte'
+  import WebviewWrapper from '../../../../Browser/WebviewWrapper.svelte'
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../../../../service/history'
 
   export let webview: WebviewWrapper

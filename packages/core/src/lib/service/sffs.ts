@@ -52,13 +52,17 @@ export class SFFS {
   constructor() {
     this.log = useLogScope('SFFS')
 
+    // @ts-ignore
     if (typeof window.backend === 'undefined') {
       throw new Error('SFFS backend not available')
     }
 
+    // @ts-ignore
     this.backend = window.backend.sffs
+    // @ts-ignore
     this.fs = window.backend.resources
 
+    // @ts-ignore
     window.sffs = this // TODO: remove this, just for debugging
 
     if (!this.backend) {
@@ -828,6 +832,7 @@ export class SFFS {
       apiEndpoint?: string
       ragOnly?: boolean
       resourceIds?: string[]
+      general?: boolean
     }
   ): Promise<void> {
     this.log.debug(
@@ -852,7 +857,8 @@ export class SFFS {
       opts?.systemPrompt ?? '',
       opts?.ragOnly ?? false,
       opts?.apiEndpoint ?? '',
-      opts?.resourceIds
+      opts?.resourceIds,
+      opts?.general ?? false
     )
   }
 }

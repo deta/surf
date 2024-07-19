@@ -7,7 +7,7 @@
   import { popover } from '../Atoms/Popover/popover'
   import SplashScreen from '../SplashScreen.svelte'
   import { writable, derived, get } from 'svelte/store'
-  import { type WebViewWrapperEvents } from '../Cards/Browser/WebviewWrapper.svelte'
+  import { type WebviewWrapperEvents } from './WebviewWrapper.svelte'
   import { useLogScope } from '../../utils/log'
   import { Icon } from '@horizon/icons'
   import { generateID } from '../../utils/id'
@@ -18,7 +18,6 @@
     isModKeyAndShiftKeyAndKeyPressed,
     isModKeyPressed
   } from '../../utils/keyboard'
-  import { copyToClipboard } from '../../utils/clipboard'
   import { wait, writableAutoReset } from '../../utils/time'
   import { Telemetry } from '../../service/telemetry'
   import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
@@ -27,41 +26,29 @@
   import DragDropList, {
     VerticalDropZone,
     HorizontalDropZone,
-    HorizontalCenterDropZone,
-    reorder,
-    type DropEvent
+    HorizontalCenterDropZone
   } from 'svelte-dnd-list'
 
-  import {
-    Resource,
-    ResourceAnnotation,
-    ResourceHistoryEntry,
-    ResourceManager,
-    ResourceTag,
-    createResourceManager
-  } from '../../service/resources'
+  import { ResourceTag, createResourceManager } from '../../service/resources'
 
-  import { type HistoryEntry, type Space, type SpaceSource } from '../../types'
+  import { type Space, type SpaceSource } from '../../types'
 
   import { HorizonsManager } from '../../service/horizon'
   import { API } from '../../service/api'
-  import BrowserTab, { type NewTabEvent } from './BrowserTab.svelte'
+  import BrowserTab, { type BrowserTabNewTabEvent } from './BrowserTab.svelte'
   import Horizon from '../Horizon/Horizon.svelte'
   import BrowserHomescreen from './BrowserHomescreen.svelte'
   import SpacesView from '../Oasis/SpacesView.svelte'
   import TabItem from './Tab.svelte'
   import TabSearch from './TabSearch.svelte'
-  import ShortcutMenu, { type ShortcutMenuEvents } from '../Shortcut/ShortcutMenu.svelte'
+  import { type ShortcutMenuEvents } from '../Shortcut/ShortcutMenu.svelte'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import '../../../app.css'
 
   import '../Horizon/index.scss'
   import type {
-    AIChatMessage,
     AIChatMessageParsed,
-    PageHighlight,
     PageMagic,
-    PageMagicResponse,
     Tab,
     TabChat,
     TabEmpty,
@@ -78,29 +65,22 @@
   import type { Drawer } from '@horizon/drawer'
   import Chat from './Chat.svelte'
   import { HorizonDatabase } from '../../service/storage'
-  import { ResourceTypes, type Optional } from '../../types'
+  import type { Optional } from '../../types'
   import { useLocalStorageStore } from '../../utils/localstorage'
-  import { WebParser, type DetectedWebApp } from '@horizon/web-parser'
+  import { WebParser } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
   import OasisDiscovery from './OasisDiscovery.svelte'
-  import { handleInlineAI, parseChatResponseSources, summarizeText } from '../../service/ai'
+  import { parseChatResponseSources } from '../../service/ai'
   import MagicSidebar from './MagicSidebar.svelte'
   import AppSidebar from './AppSidebar.svelte'
   import {
     ResourceTagsBuiltInKeys,
     WebViewEventReceiveNames,
     type AnnotationCommentData,
-    type AnnotationRangeData,
     type ResourceDataAnnotation,
     type WebViewEventAnnotation
   } from '@horizon/types'
-  import {
-    inlineHighlightStylingCode,
-    inlineHighlightTextCode,
-    inlineTextReplaceCode,
-    inlineTextReplaceStylingCode,
-    scrollToTextCode
-  } from './inline'
+  import { scrollToTextCode } from './inline'
   import { SFFS } from '../../service/sffs'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { provideOasis } from '../../service/oasis'
@@ -108,8 +88,7 @@
 
   import AnnotationsSidebar from './AnnotationsSidebar.svelte'
   import ToastsProvider from '../Toast/ToastsProvider.svelte'
-  import { provideToasts, type Toasts } from '../../service/toast'
-  import { INLINE_PROMPTS, LEGACY_PAGE_CITATION_SUMMARY_PROMPT } from '../../constants/prompts'
+  import { provideToasts } from '../../service/toast'
   import {
     PromptIDs,
     getPrompt,
@@ -124,10 +103,13 @@
 
   let addressInputElem: HTMLInputElement
   let drawer: Drawer
+  let observer: IntersectionObserver
   let addressBarFocus = false
   let showTabSearch = false
   let showTabs = true
   let annotationsSidebar: AnnotationsSidebar
+  let isFirstButtonVisible = true
+  let newTabButton: Element
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -155,7 +137,6 @@
   const historyEntriesManager = horizonManager.historyEntriesManager
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
-  const autoSaveResources = oasis.autoSaveResources
 
   const masterHorizon = derived(horizons, (horizons) => horizons[0])
 
@@ -164,6 +145,7 @@
   const tabs = writable<Tab[]>([])
   const addressValue = writable('')
   const activeTabId = useLocalStorageStore<string>('activeTabId', '')
+  const activeChatId = useLocalStorageStore<string>('activeChatId', '')
   const loadingOrganize = writable(false)
   const visorSearchTerm = writable('')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
@@ -181,7 +163,6 @@
   const isCreatingLiveSpace = writable(false)
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
-  let appDetectionRunningForURLs: string[] = []
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -234,16 +215,6 @@
     makePreviousTabActive()
   }
 
-  $: if ($activeTabMagic) {
-    // Reset all tabs from the magic
-    if (!$activeTabMagic.showSidebar) {
-      resetTabsFromMagic()
-    }
-    log.debug('Active tab magic', $activeTabMagic)
-  }
-
-  $: log.debug('xx active tabs history', $activeTabsHistory)
-
   activeTab.subscribe((tab) => {
     if (!tab) return
 
@@ -269,8 +240,6 @@
   })
 
   sidebarTab.subscribe((tab) => {
-    log.debug('Sidebar tab', tab)
-
     const tabsInView = $tabs.filter((tab) =>
       $sidebarTab === 'active' ? !tab.archived : tab.archived
     )
@@ -286,13 +255,6 @@
       makeTabActive(tabsInView[0].id)
     }
   })
-
-  $: log.debug(
-    'active tab',
-    $tabs.find((tab) => tab.id === $activeTabId)
-  )
-
-  $: log.debug('tabs', $tabs)
 
   $: if ($activeBrowserTab) $activeBrowserTab.focus()
 
@@ -358,6 +320,22 @@
     return newTab
   }
 
+  function setupObserver() {
+    observer = new IntersectionObserver(
+      ([entry]) => {
+        isFirstButtonVisible = entry.isIntersecting
+      },
+      {
+        root: null,
+        threshold: 0.01 // 1% visibility threshold
+      }
+    )
+
+    if (newTabButton) {
+      observer.observe(newTabButton)
+    }
+  }
+
   const archiveTab = async (tabId: string) => {
     const tab = $tabs.find((tab) => tab.id === tabId)
     if (!tab) {
@@ -400,6 +378,14 @@
     }, 50)
   }
 
+  const handleUnarchiveTab = async (e: CustomEvent<string>) => {
+    await unarchiveTab(e.detail)
+  }
+
+  const handleDeleteTab = async (e: CustomEvent<string>) => {
+    await deleteTab(e.detail)
+  }
+
   const deleteTab = async (tabId: string) => {
     const tab = $tabs.find((tab) => tab.id === tabId)
     if (!tab) {
@@ -419,6 +405,9 @@
     }
 
     await tabsDB.delete(tabId)
+
+    observer.unobserve(newTabButton)
+    observer.observe(newTabButton)
   }
 
   const persistTabChanges = async (tabId: string, updates: Partial<Tab>) => {
@@ -573,20 +562,23 @@
 
     addressBarFocus = false
 
-    if (!$addressValue) {
+    let addressVal = addressInputElem.value
+    log.debug('Address bar blur', addressVal)
+
+    if (!addressVal) {
       return
     }
 
     if ($activeTab?.type === 'horizon') {
       const horizon = $horizons.find((horizon) => horizon.id === $activeTab.horizonId)
       if (horizon) {
-        horizon.updateData({ name: $addressValue })
+        horizon.updateData({ name: addressVal })
 
-        updateActiveTab({ title: $addressValue })
+        updateActiveTab({ title: addressVal })
       }
     } else if ($activeTab?.type === 'page') {
-      log.debug('Navigating to address from page', $addressValue)
-      const url = getNavigationURL($addressValue)
+      log.debug('Navigating to address from page', addressVal)
+      const url = getNavigationURL(addressVal)
       $activeBrowserTab.navigate(url)
 
       if (url === $activeTabLocation) {
@@ -594,11 +586,9 @@
       } else {
         updateActiveTab({ initialLocation: url })
       }
-
-      popoverOpen = false
     } else if ($activeTab?.type === 'empty') {
-      log.debug('Navigating to address from empty tab', $addressValue)
-      const url = getNavigationURL($addressValue)
+      log.debug('Navigating to address from empty tab', addressVal)
+      const url = getNavigationURL(addressVal)
       log.debug('Converting empty tab to page', url)
       updateActiveTab({
         type: 'page',
@@ -607,8 +597,8 @@
         currentHistoryIndex: -1
       })
     } else if ($activeTab?.type === 'chat') {
-      log.debug('Renaming chat tab', $addressValue)
-      updateActiveTab({ title: $addressValue })
+      log.debug('Renaming chat tab', addressVal)
+      updateActiveTab({ title: addressVal })
     }
   }
 
@@ -681,10 +671,11 @@
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
       // horizontalTabs = !horizontalTabs
       debounceToggleHorizontalTabs()
-      console.log('horizontalTabs', horizontalTabs)
+      log.debug('horizontalTabs', horizontalTabs)
     } else if (isModKeyAndKeyPressed(e, 'h')) {
       showTabs = !showTabs
-      console.log('showTabs', showTabs)
+      log.debug('showTabs', showTabs)
+      // @ts-ignore
       window.api.updateTrafficLightsVisibility(showTabs)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       handleNewHorizon()
@@ -697,7 +688,6 @@
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
-      popoverOpen = true
       addressInputElem.focus()
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
@@ -850,7 +840,7 @@
     makeTabActive(newTab.id)
   }
 
-  const handleNewTab = (e: CustomEvent<NewTabEvent>) => {
+  const handleNewTab = (e: CustomEvent<BrowserTabNewTabEvent>) => {
     const { url, active } = e.detail
 
     if (url) {
@@ -859,55 +849,6 @@
       createNewEmptyTab()
     }
   }
-
-  // const handleOrganize = async () => {
-  //   try {
-  //     loadingOrganize.set(true)
-  //     log.debug('Organizing tabs', $tabs)
-
-  //     const prompt = `You organize tabs given to you into as few sections as possible. Come up with simple and short but clear section names and move the tabs into the right sections. Try to not change existing sections unless necessary and avoid putting a single tab into its own section. The tabs are given to you are formatted as JSON array with each item having the tab title, url and optional section if it is part of it already. Respond with the sections as JSON keys and the tabs in each section as a list of tab IDs as the value. Only respond with JSON.`
-  //     // @ts-ignore
-  //     const response = await window.api.createAIChatCompletion(
-  //       `Organize these tabs:\n${JSON.stringify(
-  //         $tabs.map((tab) => ({
-  //           id: tab.id,
-  //           title: tab.title,
-  //           url: tab.initialLocation,
-  //           ...(tab.section !== '_all' && tab.section !== 'Unorganised'
-  //             ? { section: tab.section }
-  //             : {})
-  //         })),
-  //         null,
-  //         2
-  //       )}`,
-  //       prompt
-  //     )
-
-  //     log.debug('Organize response', response)
-
-  //     const json = JSON.parse(response)
-  //     log.debug('Organize response JSON', json)
-
-  //     tabs.update((tabs) => {
-  //       const updatedTabs = tabs.map((tab) => {
-  //         const section = Object.keys(json).find((section) => json[section].includes(tab.id))
-  //         if (section) {
-  //           return {
-  //             ...tab,
-  //             section
-  //           }
-  //         }
-  //         return tab
-  //       })
-
-  //       return updatedTabs
-  //     })
-  //   } catch (err) {
-  //     log.error('Error organizing tabs', err)
-  //   } finally {
-  //     loadingOrganize.set(false)
-  //   }
-  // }
 
   const cycleActiveTab = (previous: boolean) => {
     if ($tabs.length === 0) {
@@ -973,81 +914,6 @@
     makeTabActive(newId)
   }
 
-  async function createBookmarkResource(url: string, tab: TabPage, silent: boolean = false) {
-    log.debug('bookmarking', url)
-
-    const browserTab = $browserTabs[tab.id]
-    if (!browserTab) {
-      log.error('no browser tab found')
-      throw new Error('No browser tab found')
-    }
-    const detectedResource = await browserTab.detectResource()
-    log.debug('extracted resource data', detectedResource)
-
-    if (!detectedResource) {
-      log.debug('no resource detected')
-      throw new Error('No resource detected')
-    }
-
-    const title = detectedResource.data.title ?? tab.title ?? ''
-
-    const resource = await resourceManager.createResourceOther(
-      new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
-      { name: title, sourceURI: url, alt: '' },
-      [
-        ResourceTag.canonicalURL(url),
-        ResourceTag.viewedByUser(true),
-        ...(silent ? [ResourceTag.silent()] : [])
-      ]
-    )
-    log.debug('created resource', resource)
-
-    return resource
-  }
-
-  async function bookmarkPage(tab: TabPage, silent = false) {
-    const currentEntry = historyEntriesManager.getEntry(
-      tab.historyStackIds[tab.currentHistoryIndex]
-    )
-    let url = currentEntry?.url ?? tab.initialLocation
-
-    // strip &t from url suffix
-    let youtubeHostnames = [
-      'youtube.com',
-      'youtu.be',
-      'youtube.de',
-      'www.youtube.com',
-      'www.youtu.be',
-      'www.youtube.de'
-    ]
-    if (youtubeHostnames.includes(new URL(url).host)) {
-      url = url.replace(/&t.*/g, '')
-    }
-
-    if (tab.chatResourceBookmark) {
-      const fetchedResource = await resourceManager.getResource(tab.chatResourceBookmark)
-      if (fetchedResource) {
-        const fetchedCanonical = (fetchedResource?.tags ?? []).find(
-          (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-        )
-
-        if (fetchedCanonical?.value === url) {
-          log.debug('already bookmarked', url, fetchedResource.id)
-
-          updateTab(tab.id, { resourceBookmark: fetchedResource.id })
-          return fetchedResource
-        }
-      }
-    }
-
-    log.debug('bookmarking', url)
-    const resource = await createBookmarkResource(url, tab, silent)
-
-    updateTab(tab.id, { resourceBookmark: resource.id, chatResourceBookmark: resource.id })
-
-    return resource
-  }
-
   async function handleBookmark() {
     try {
       if (!$activeTabLocation || $activeTab?.type !== 'page') return
@@ -1084,12 +950,14 @@
             //   openResource($activeTab.resourceBookmark)
             // }
 
+            updateTab($activeTabId, { resourceBookmarkedManually: true })
+
             return $activeTab.resourceBookmark
           }
         }
       }
 
-      const resource = await bookmarkPage($activeTab, false)
+      const resource = await $activeBrowserTab.bookmarkPage(false)
 
       // automatically resets after some time
       toasts.success('Bookmarked Page!')
@@ -1108,7 +976,7 @@
   }
 
   async function handleWebviewTabNavigation(
-    e: CustomEvent<WebViewWrapperEvents['navigation']>,
+    e: CustomEvent<WebviewWrapperEvents['navigation']>,
     tab: Tab
   ) {
     const { url, oldUrl } = e.detail
@@ -1139,37 +1007,8 @@
     updateActiveTab({ type: 'chat', query: e.detail, title: e.detail, icon: '', ragOnly: true })
   }
 
-  async function handleWebviewBookmark(e: CustomEvent<WebViewWrapperEvents['bookmark']>) {
-    log.debug('webview bookmark', e.detail)
-
-    if ($activeTab?.type !== 'page') return
-
-    if (!$activeTab.resourceBookmark) {
-      const resource = await resourceManager.createResourceLink(
-        new Blob([JSON.stringify({ url: e.detail.url })], { type: ResourceTypes.LINK }),
-        { name: $activeTab?.title ?? '', sourceURI: e.detail.url, alt: '' },
-        [ResourceTag.canonicalURL(e.detail.url)]
-      )
-
-      log.debug('created resource', resource)
-
-      if ($activeTab?.type === 'page') {
-        updateActiveTab({ resourceBookmark: resource.id })
-      }
-    }
-
-    if (e.detail.text) {
-      log.debug('creating note for bookmark', e.detail.text)
-      const resource = await resourceManager.createResourceNote(e.detail.text, {
-        name: $activeTab?.title ?? '',
-        sourceURI: e.detail.url,
-        alt: ''
-      })
-      log.debug('created resource', resource)
-    }
-  }
-
   function updateActiveMagicPage(updates: Partial<PageMagic>) {
+    log.debug('updating active magic page', updates)
     activeTabMagic.update((magic) => {
       return {
         ...magic,
@@ -1205,208 +1044,6 @@
     })
   }
 
-  async function handleWebviewAppDetection(e: CustomEvent<DetectedWebApp>, tab: TabPage) {
-    let url = ''
-    try {
-      log.debug('webview app detection', e.detail, tab)
-      if (tab.type !== 'page') return
-
-      url = e.detail.canonicalUrl ?? tab.initialLocation
-
-      await updateTab(tab.id, {
-        currentDetectedApp: e.detail
-      })
-
-      const isRunningAlready = appDetectionRunningForURLs.includes(url)
-      if (isRunningAlready) {
-        log.debug('app detection already running for url', url)
-        return
-      } else {
-        log.debug('app detection not already running for url', url)
-        appDetectionRunningForURLs.push(url)
-      }
-
-      log.debug('app detection running for url', url)
-
-      const browserTab = $browserTabs[tab.id]
-      if (!browserTab) {
-        log.error('Browser tab not found', tab.id)
-        return
-      }
-
-      log.debug('getting resources from source url', url)
-      const matchingResources = await resourceManager.getResourcesFromSourceURL(url)
-      log.debug('matching resources', matchingResources)
-
-      let bookmarkedResource = matchingResources.find(
-        (resource) =>
-          resource.type !== ResourceTypes.ANNOTATION &&
-          resource.type !== ResourceTypes.HISTORY_ENTRY
-      )
-
-      log.debug('bookmarked resource', bookmarkedResource)
-      if (!bookmarkedResource) {
-        const isRunningAlready2 = appDetectionRunningForURLs.includes(url)
-
-        log.debug('isRunningAlready2', isRunningAlready2)
-
-        // this is an edge case on notion.so where the app detection is running twice for some reason
-        // if (!isRunningAlready2) {
-        //   log.warn('edge case, app detection seems to be running twice for', url)
-        //   return
-        // }
-
-        if ($autoSaveResources) {
-          log.debug('creating new silent resource', url)
-          bookmarkedResource = await createBookmarkResource(url, tab, true)
-        } else {
-          log.debug('auto save resources disabled')
-        }
-      }
-
-      if (bookmarkedResource) {
-        await updateTab(tab.id, {
-          resourceBookmark: bookmarkedResource.id,
-          chatResourceBookmark: bookmarkedResource.id
-        })
-      }
-
-      const existingHistoryEntry = matchingResources.find(
-        (resource) => resource.type === ResourceTypes.HISTORY_ENTRY
-      ) as ResourceHistoryEntry | undefined
-
-      if (existingHistoryEntry) {
-        log.debug('updating history entry', existingHistoryEntry.id)
-        const data = await existingHistoryEntry.getParsedData()
-        await existingHistoryEntry.updateParsedData({
-          ...data,
-          last_loaded: new Date().toISOString()
-        })
-      } else {
-        log.debug('creating history entry', url)
-        const historyEntry = await resourceManager.createResourceHistoryEntry(
-          {
-            raw_url: url,
-            title: tab.title ?? '',
-            app_id: tab.currentDetectedApp?.appId ?? null,
-            app_resource_identifier: tab.currentDetectedApp?.appResourceIdentifier ?? null,
-            last_loaded: new Date().toISOString()
-          },
-          {
-            sourceURI: url
-          },
-          [
-            ResourceTag.canonicalURL(url),
-            ...(bookmarkedResource ? [ResourceTag.annotates(bookmarkedResource.id)] : [])
-          ]
-        )
-
-        log.debug('created history entry', historyEntry)
-      }
-
-      const annotationResources = matchingResources.filter(
-        (resource) => resource.type === ResourceTypes.ANNOTATION
-      ) as ResourceAnnotation[]
-
-      await wait(500)
-
-      annotationResources.forEach(async (annotationResource) => {
-        const annotation = await annotationResource.getParsedData()
-        log.debug('annotation data', annotation)
-
-        log.debug('sending annotation to webview', annotation)
-        browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreAnnotation, {
-          id: annotationResource.id,
-          data: annotation
-        })
-      })
-
-      // if ($activeTabId === tab.id) {
-      //   summarizePage(pageMagic)
-      // }
-
-      let pageMagic = $activeTabMagic
-      if (!pageMagic) {
-        let responses: AIChatMessageParsed[] = []
-        if (tab?.chatId) {
-          const chat = await sffs.getAIChat(tab.chatId)
-          if (chat) {
-            const userMessages = chat.messages.filter((message) => message.role === 'user')
-            const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
-            const systemMessages = chat.messages.filter((message) => message.role === 'system')
-
-            responses = systemMessages.map((message, idx) => {
-              message.sources = message.sources
-              log.debug('Message', message)
-              return {
-                id: generateID(),
-                role: message.role,
-                query: queries[idx],
-                content: message.content.replace('<answer>', '').replace('</answer>', ''),
-                sources: message.sources,
-                status: 'success'
-              }
-            })
-          }
-        }
-        pageMagic = {
-          showSidebar: false,
-          running: false,
-          responses: responses
-        } as PageMagic
-        activeTabMagic.set(pageMagic)
-      }
-    } catch (e) {
-      log.error('error handling webview app detection', e)
-    } finally {
-      appDetectionRunningForURLs = appDetectionRunningForURLs.filter((x) => x !== url)
-    }
-  }
-
-  async function handleWebviewTransform(
-    e: CustomEvent<WebViewWrapperEvents['transform']>,
-    tab: TabPage
-  ) {
-    log.debug('webview transformation', e.detail)
-
-    const browserTab = $browserTabs[tab.id]
-    const detectedResource = await browserTab.detectResource()
-    log.debug('extracted resource data', detectedResource)
-    if (!detectedResource) {
-      log.debug('no resource detected')
-      return
-    }
-
-    const transformation = await handleInlineAI(e.detail, detectedResource)
-
-    log.debug('transformation output', transformation)
-
-    $activeBrowserTab.sendWebviewEvent(WebViewEventReceiveNames.TransformationOutput, {
-      text: transformation
-    })
-  }
-
-  const handleWebviewInlineTextReplace = async (
-    e: CustomEvent<WebViewWrapperEvents['inlineTextReplace']>,
-    tabId: string
-  ) => {
-    const browserTab = $browserTabs[tabId]
-    if (!browserTab) {
-      log.error('Browser tab not found', tabId)
-      return
-    }
-
-    const { target, content } = e.detail
-    log.debug('webview inline text replace', e.detail)
-
-    // add mark styles to the page
-    await $activeBrowserTab.executeJavaScript(inlineTextReplaceStylingCode())
-
-    log.debug('executing code')
-    const code = inlineTextReplaceCode(target, content)
-    await $activeBrowserTab.executeJavaScript(code)
-  }
-
   const getTextElementsFromHtml = (html: string): string[] => {
     let textElements: string[] = []
     const body = new DOMParser().parseFromString(html, 'text/html').body
@@ -1416,12 +1053,9 @@
     return textElements
   }
 
+  // this is a separate function as it will be easier to easily change what it means for tabs to be in chat context
   const getTabsInChatContext = () => {
-    let tabs = $magicTabs
-    if (tabs.length == 0) {
-      return $unpinnedTabs
-    }
-    return tabs
+    return $magicTabs
   }
 
   const highlightWebviewText = async (
@@ -1524,102 +1158,6 @@
     log.debug('HTML', html)
   }
 
-  // const summarizePage = async (magicPage: PageMagic) => {
-  //   let response: PageMagicResponse | null = null
-
-  //   try {
-  //     log.debug('Magic button clicked')
-
-  //     const tab = $tabs.find((tab) => tab.id === magicPage.tabId)
-  //     if (!tab) {
-  //       log.error('Tab not found', magicPage.tabId)
-  //       return
-  //     }
-
-  //     const browserTab = $browserTabs[tab.id]
-
-  //     const detectedResource = await browserTab.detectResource()
-  //     log.debug('extracted resource data', detectedResource)
-
-  //     if (!detectedResource) {
-  //       log.debug('no resource detected')
-  //       return
-  //     }
-
-  //     response = {
-  //       id: generateID(),
-  //       role: 'system',
-  //       query: 'Summary',
-  //       status: 'pending',
-  //       content: '',
-  //       citations: {}
-  //     } as PageMagicResponse
-
-  //     updateMagicPage(magicPage.tabId, { running: true })
-  //     addPageMagicResponse(magicPage.tabId, response)
-
-  //     const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
-  //     log.debug('content', content)
-
-  //     log.debug('calling the AI')
-
-  //     // if ($magicInputValue) {
-  //     //   log.debug('user query', $magicInputValue)
-  //     //   return
-  //     // }
-
-  //     // @ts-expect-error
-  //     const output = await window.api.createAIChatCompletion(
-  //       content.plain,
-  //       LEGACY_PAGE_CITATION_SUMMARY_PROMPT,
-  //       { response_format: { type: 'json_object' } }
-  //     )
-
-  //     log.debug('Magic response', output)
-  //     const json = JSON.parse(output)
-  //     log.debug('json', json)
-
-  //     if (!json.content || !json.citations) {
-  //       log.debug('Invalid response')
-  //       return
-  //     }
-
-  //     response = {
-  //       ...response,
-  //       status: 'success',
-  //       content: json.content,
-  //       citations: json.citations
-  //     } as PageMagicResponse
-
-  //     updatePageMagicResponse(magicPage.tabId, response.id, response)
-
-  //     // add mark styles to the page
-  //     await browserTab.executeJavaScript(inlineHighlightStylingCode())
-
-  //     await Promise.all(
-  //       Object.entries(json.citations).map(async ([id, citation]) => {
-  //         await highlightWebviewText(tab.id, {
-  //           type: 'important',
-  //           color: (citation as any).color as string,
-  //           text: (citation as any).text as string
-  //         })
-  //       })
-  //     )
-
-  //     log.debug('Magic done')
-  //   } catch (e) {
-  //     log.error('Error doing magic', e)
-  //     if (response) {
-  //       updatePageMagicResponse(magicPage.tabId, response.id, {
-  //         status: 'error',
-  //         content: (e as any).message ?? 'Failed to generate response.'
-  //       })
-  //     }
-  //   } finally {
-  //     updateMagicPage(magicPage.tabId, { running: false })
-  //   }
-  // }
-
   const sendSidebarChatMessage = async (
     tabsInContext: Tab[],
     magicPage: PageMagic,
@@ -1628,11 +1166,13 @@
     query?: string
   ) => {
     if (tabsInContext.length === 0) {
-      log.debug('No tabs in context')
+      log.debug('No tabs in context, general chat:')
+    }
+    const chatId = $activeChatId
+    if (!chatId) {
+      alert('Error: Existing chat not found')
       return
     }
-    const pageTabs = tabsInContext.filter((tab) => tab.type === 'page')
-    const chatId = (pageTabs[0] as TabPage).chatId
 
     let response: AIChatMessageParsed | null = null
 
@@ -1645,11 +1185,6 @@
           resourceIds.push(t.chatResourceBookmark)
         }
       }
-      if (resourceIds.length === 0) {
-        log.debug('No resource IDs found from tabs in context')
-        return
-      }
-
       response = {
         id: generateID(),
         role: role,
@@ -1700,7 +1235,8 @@
         },
         {
           limit: 30,
-          resourceIds: resourceIds
+          resourceIds: resourceIds,
+          general: resourceIds.length === 0
         }
       )
 
@@ -1800,17 +1336,19 @@
     if (!pageMagic) return
 
     try {
-      let chatId: string | null = null
+      let chatId: string = ''
       await deleteChatsForPageChat()
       if (createNewChat) {
-        chatId = await sffs.createAIChat('')
-        if (!chatId) {
+        const newChatId = await sffs.createAIChat('')
+        if (!newChatId) {
           log.error('Failed to create new chat aftering clearing the old one')
           return
         }
+        chatId = newChatId
       }
       pageMagic.responses = []
-      updateChatIdsForPageChat(chatId!)
+      updateChatIdsForPageChat(chatId)
+      activeChatId.set(chatId)
     } catch (e) {
       log.error('Error clearing chat:', e)
     }
@@ -1831,7 +1369,7 @@
       }
       //updateAppIdsForAppSidebar(appId!)
       activeAppId.set(appId!)
-      updateTab($activeTab.id, { appId: appId })
+      updateTab($activeTabId, { appId: appId })
     } catch (e) {
       log.error('Error clearing app sidebar:', e)
     }
@@ -1841,7 +1379,13 @@
     log.debug('Bookmarking all page tabs in context')
     for (const tab of getTabsInChatContext()) {
       if (tab.type === 'page' && !tab.resourceBookmark) {
-        await bookmarkPage(tab, true)
+        try {
+          log.debug('Bookmarking page tab', tab)
+          const browserTab = $browserTabs[tab.id]
+          await browserTab.bookmarkPage(true)
+        } catch (e) {
+          log.warn('Error bookmarking page tab', tab, e)
+        }
       }
     }
   }
@@ -1854,13 +1398,14 @@
     if (!tab) return
 
     if (!$activeTabMagic.showSidebar) {
-      if (!tab?.chatId) {
+      if (!$activeChatId) {
         const chatId = await sffs.createAIChat('')
         if (!chatId) {
           log.error('Failed to create chat')
           return
         }
         updateChatIdsForPageChat(chatId)
+        activeChatId.set(chatId)
       }
       await bookmarkPageTabsInContext()
     }
@@ -1870,6 +1415,7 @@
         showSidebar: !magic.showSidebar
       }
     })
+    toggleTabsMagic($activeTabMagic.showSidebar)
   }
 
   const handleToggleAppSidebar = async () => {
@@ -1914,6 +1460,8 @@
       .replace(/script="[^"]*"/g, '') // remove inline scripts
       .replace(/<style([\s\S]*?)<\/style>/gi, '') // remove style tags
       .replace(/<script([\s\S]*?)<\/script>/gi, '') // remove script tags
+
+    // @ts-ignore
     cleaned = window.api.minifyHtml(cleaned, {
       collapseBooleanAttributes: true,
       collapseWhitespace: true,
@@ -1976,7 +1524,7 @@
     if (!bookmarkedResource) {
       log.debug('no bookmarked resource')
 
-      const resource = await bookmarkPage($activeTab, true)
+      const resource = await $activeBrowserTab.bookmarkPage(true)
       bookmarkedResource = resource.id
     }
 
@@ -1992,179 +1540,14 @@
     return annotation
   }
 
-  const handleWebviewAnnotation = async (
-    e: CustomEvent<WebViewWrapperEvents['annotate']>,
-    tabId: string
-  ) => {
-    const tab = $tabs.find((tab) => tab.id === tabId)
-    if (!tab || tab.type !== 'page') {
-      log.debug('tab is not a page')
-      return
-    }
-
-    const browserTab = $browserTabs[tabId]
-    if (!browserTab) {
-      log.error('Browser tab not found', tabId)
-      return
-    }
-
-    const annotationData = e.detail
-    log.debug('webview annotation', annotationData)
-
-    const bookmarkedResourceId = tab.resourceBookmark
-    let bookmarkedResource = bookmarkedResourceId
-      ? await resourceManager.getResource(bookmarkedResourceId)
-      : null
-
-    if (!bookmarkedResource) {
-      log.debug('no bookmarked resource')
-
-      const resource = await bookmarkPage(tab, true)
-      bookmarkedResource = resource
-    }
-
-    const currentEntry = historyEntriesManager.getEntry(
-      tab.historyStackIds[tab.currentHistoryIndex]
-    )
-
-    const url = annotationData?.data?.url ?? currentEntry?.url ?? tab.initialLocation
-
-    const hashtags = (annotationData.data as AnnotationCommentData)?.tags ?? []
-    if (hashtags.length > 0) {
-      log.debug('hashtags', hashtags)
-    }
-
-    const annotationResource = await resourceManager.createResourceAnnotation(
-      annotationData,
-      { sourceURI: url },
-      [
-        // link the annotation to the page using its canonical URL so we can later find it
-        ResourceTag.canonicalURL(url),
-
-        // link the annotation to the bookmarked resource
-        ResourceTag.annotates(bookmarkedResource.id),
-
-        // add tags as hashtags
-        ...hashtags.map((tag) => ResourceTag.hashtag(tag))
-      ]
-    )
-
-    log.debug('created annotation resource', annotationResource)
-
-    // Update bookmarked resource if its loaded with annotation
-    resourceManager.addAnnotationToLoadedResource(bookmarkedResource.id, annotationResource)
-
-    // update bookmarked resource tags to make the resource visible in Everything
-    const isSilent = (bookmarkedResource.tags ?? []).find(
-      (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
-    )
-    if (isSilent) {
-      await resourceManager.deleteResourceTag(bookmarkedResource.id, ResourceTagsBuiltInKeys.SILENT)
-    }
-
-    const hideInEverything = (bookmarkedResource.tags ?? []).find(
-      (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-    )
-    if (hideInEverything) {
-      await resourceManager.deleteResourceTag(
-        bookmarkedResource.id,
-        ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-      )
-    }
-
-    log.debug('highlighting text in webview')
-    browserTab.sendWebviewEvent(WebViewEventReceiveNames.RestoreAnnotation, {
-      id: annotationResource.id,
-      data: annotationData
-    })
-
-    if (annotationsSidebar) {
-      annotationsSidebar.reload()
-    }
-  }
-
-  const handleWebviewAnnotationClick = async (
-    e: CustomEvent<WebViewWrapperEvents['annotationClick']>,
-    tabId: string
-  ) => {
-    const annotationId = e.detail.id
-
-    log.debug('webview annotation click', annotationId)
-
-    const tab = $tabs.find((tab) => tab.id === tabId) as TabPage | undefined
-    if (tab && tab.resourceBookmark) {
-      openResource(tab.resourceBookmark)
-    }
-  }
-
-  const handleWebviewAnnotationRemove = async (
-    e: CustomEvent<WebViewWrapperEvents['annotationRemove']>,
-    tabId: string
-  ) => {
-    const annotationId = e.detail
-
-    log.debug('webview annotation remove', annotationId)
-
-    await resourceManager.deleteResource(annotationId)
-
-    toasts.success('Annotation deleted!')
-
-    if (annotationsSidebar) {
-      annotationsSidebar.reload()
-    }
-
-    const browserTab = $browserTabs[tabId]
-    if (browserTab) {
-      browserTab.reload()
-    }
-  }
-
-  const handleWebviewAnnotationUpdate = async (
-    e: CustomEvent<WebViewWrapperEvents['annotationUpdate']>,
-    tabId: string
-  ) => {
-    const { id, data } = e.detail
-
-    log.debug('webview annotation update', id)
-
-    const annotationResource = (await resourceManager.getResource(id)) as ResourceAnnotation
-    const annotationData = await annotationResource.getParsedData()
-
-    if (annotationData.type !== 'comment') {
-      return
-    }
-
-    const newData = {
-      ...annotationData,
-      data: {
-        ...annotationData.data,
-        ...data
-      }
-    } as ResourceDataAnnotation
-
-    log.debug('updating annotation data', newData)
-    await annotationResource.updateParsedData(newData)
-
-    // await tick()
-
-    if (annotationsSidebar) {
-      log.debug('reloading annotations sidebar')
-      annotationsSidebar.reload(true)
-    }
-
-    // const browserTab = $browserTabs[tabId]
-    // if (browserTab) {
-    //   browserTab.reload()
-    // }
-  }
-
   const openResource = async (id: string) => {
-    // $sidebarTab = 'oasis'
-
-    // await tick()
-
-    // drawer.openItem(id)
     openResourceDetailsModal(id)
+  }
+
+  const reloadAnnotationsSidebar = (showLoading?: boolean) => {
+    if (annotationsSidebar) {
+      annotationsSidebar.reload(showLoading)
+    }
   }
 
   const handleAnnotationScrollTo = (e: CustomEvent<WebViewEventAnnotation>) => {
@@ -2238,7 +1621,7 @@
     const toast = toasts.loading('Adding resource to space...')
 
     try {
-      const resourceId = await handleBookmark(false)
+      const resourceId = await handleBookmark()
       log.debug('bookmarked resource', resourceId)
 
       if (resourceId) {
@@ -2318,7 +1701,7 @@
     }
   }
 
-  const handleCreateLiveSpace = async (_e: MouseEvent) => {
+  const handleCreateLiveSpace = async (_e?: MouseEvent) => {
     try {
       if ($activeTab?.type !== 'page' || !$activeTab.currentDetectedApp?.rssFeedUrl) {
         log.debug('No RSS feed detected')
@@ -2386,11 +1769,11 @@
 
   let maxWidth = window.innerWidth
 
-  $: tabSize = Math.min(500, Math.max(128, maxWidth / ($tabs.length - 14)))
+  $: tabSize = (maxWidth - 600) / $unpinnedTabs.length
 
   const handleResize = () => {
     maxWidth = window.innerWidth
-    tabSize = Math.min(500, Math.max(128, maxWidth / $tabs.length))
+    tabSize = (maxWidth - 600) / $unpinnedTabs.length
   }
 
   onMount(async () => {
@@ -2461,7 +1844,11 @@
 
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
-    console.log('xxxx', $tabs)
+    log.debug('tabs', $tabs)
+
+    setupObserver()
+
+    // ON DESTROY!!
   })
 
   const createChatResourceBookmark = async (tab: TabPage) => {
@@ -2548,7 +1935,7 @@
     }
 
     const spaceId = tab.spaceId
-    console.log('spaceid', spaceId)
+    log.debug('spaceid', spaceId)
 
     try {
       const space = $spaces.find((space) => space.id === spaceId)
@@ -2573,36 +1960,60 @@
     }
   }
 
-  const resetTabsFromMagic = async () => {
+  const handleExcludeOtherTabsFromMagic = (e: CustomEvent<string>) => {
+    const tabId = e.detail
+
+    // exclude all other tabs from magic
+    tabs.update((x) => {
+      return x.map((tab) => {
+        if (tab.id !== tabId) {
+          return {
+            ...tab,
+            magic: false
+          }
+        }
+        return tab
+      })
+    })
+  }
+
+  const toggleTabsMagic = async (on: boolean) => {
     const magicTabsArray = get(magicTabs)
     const unpinnedTabsArray = get(unpinnedTabs)
     const pinnedTabsArray = get(pinnedTabs)
 
-    // Revert each magic tab to its previous state
-    magicTabsArray.forEach((magicTab) => {
-      magicTab.magic = false
+    // Update the indices of the tabs in all lists
+    const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+    let newUnpinnedTabsArray: Tab[] = []
 
-      if (magicTab.pinned) {
-        pinnedTabsArray.push(magicTab)
-      } else {
-        unpinnedTabsArray.push(magicTab)
-      }
-    })
+    if (on) {
+      unpinnedTabsArray.forEach((tab) => {
+        tab.magic = true
+      })
+      newUnpinnedTabsArray = []
+    } else {
+      // Revert each magic tab to its previous state
+      magicTabsArray.forEach((magicTab) => {
+        magicTab.magic = false
 
-    // reset magic tabs array
-    magictabsarray.length = 0
+        if (magicTab.pinned) {
+          pinnedTabsArray.push(magicTab)
+        } else {
+          unpinnedTabsArray.push(magicTab)
+        }
+      })
+      // Reset magic tabs array
+      magicTabsArray.length = 0
+      newUnpinnedTabsArray = updateIndices(unpinnedTabsArray)
+    }
 
-    // update the indices of the tabs in all lists
-    const updateindices = (tabs: tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
-
-    const newunpinnedtabsarray = updateindices(unpinnedtabsarray)
-    const newpinnedtabsarray = updateindices(pinnedtabsarray)
-    const newmagictabsarray = updateindices(magictabsarray)
+    const newPinnedTabsArray = updateIndices(pinnedTabsArray)
+    const newMagicTabsArray = updateIndices(magicTabsArray)
 
     // combine all lists back together
-    const newtabs = [...newunpinnedtabsarray, ...newpinnedtabsarray, ...newmagictabsarray]
+    const newTabs = [...newUnpinnedTabsArray, ...newPinnedTabsArray, ...newMagicTabsArray]
 
-    log.debug('reverted tabs', newtabs)
+    log.debug('Toggled tabs magic', newTabs)
 
     // only update the tabs that were changed (archived stay unaffected)
     tabs.update((x) => {
@@ -2715,8 +2126,6 @@
 
     log.debug('State updated successfully')
   }
-
-  let popoverOpen = false
 </script>
 
 <SplashScreen />
@@ -2747,7 +2156,7 @@
         {#if $sidebarTab !== 'oasis'}
           <div
             class="flex {!horizontalTabs
-              ? 'flex-col w-[300px]  py-3 space-y-4 px-2 h-full'
+              ? 'flex-col w-[288px]  py-3 space-y-4 px-2 h-full'
               : 'flex-row items-center h-[52px] ml-24 space-x-4 mr-4'} relative"
           >
             <div
@@ -2851,12 +2260,13 @@
             </div>
 
             <div
-              class="bg-sky-50 my-auto rounded-xl shadow-md flex-shrink-0 max-w-[300px] overflow-x-scroll no-scrollbar"
+              class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0 max-w-[300px] overflow-x-scroll no-scrollbar"
             >
               <DragDropList
                 id="pinned-tabs"
+                zoneClass="flex items-center space-x-2 w-full"
                 type={HorizontalCenterDropZone}
-                itemSize={$pinnedTabs.length === 0 ? 256 : 54}
+                itemSize={$pinnedTabs.length === 0 ? 256 : 30}
                 itemCount={$pinnedTabs.length || 1}
                 on:drop={async (event) => {
                   onDrop(event, 'pin')
@@ -2864,18 +2274,42 @@
                 let:index
               >
                 {#if $pinnedTabs.length === 0}
-                  <div class="h-12">Drop Tabs here to pin them.</div>
+                  <div class="">Drop Tabs here to pin them.</div>
                 {:else}
                   {#key $pinnedTabs[index]}
-                    <TabItem
-                      tab={$pinnedTabs[index]}
-                      {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
-                      pinned={true}
-                      on:select={handleTabSelect}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                    />
+                    {#if $activeTabId == $pinnedTabs[index].id}
+                      <TabItem
+                        tab={$pinnedTabs[index]}
+                        {activeTabId}
+                        {deleteTab}
+                        {unarchiveTab}
+                        pinned={true}
+                        isAlreadyOpen={false}
+                        on:select={() => {}}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                      />
+                    {:else}
+                      <LinkPreview.Root openDelay={7000} closeDelay={10}>
+                        <LinkPreview.Trigger>
+                          <TabItem
+                            tab={$pinnedTabs[index]}
+                            {activeTabId}
+                            {deleteTab}
+                            {unarchiveTab}
+                            pinned={true}
+                            on:select={handleTabSelect}
+                            on:remove-from-sidebar={handleRemoveFromSidebar}
+                          />
+                        </LinkPreview.Trigger>
+                        <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
+                          <img
+                            src="https://via.placeholder.com/300x200"
+                            alt="placeholder"
+                            class="link-preview-content"
+                          />
+                        </LinkPreview.Content>
+                      </LinkPreview.Root>
+                    {/if}
                   {/key}
                 {/if}
               </DragDropList>
@@ -2883,206 +2317,172 @@
 
             {#if $activeTabMagic}
               {#if $activeTabMagic.showSidebar}
-                <div class="" class:magic={$magicTabs.length > 0}>
-                  {#if horizontalTabs}
-                    <DragDropList
-                      id="magic-tabs"
-                      type={HorizontalDropZone}
-                      itemSize={256}
-                      itemCount={$magicTabs.length || 1}
-                      on:drop={async (event) => {
-                        onDrop(event, 'unpin')
-                      }}
-                      let:index
+                <div
+                  class="relative group {horizontalTabs
+                    ? 'max-w-[512px] no-scrollbar h-[47px]'
+                    : 'w-full'}"
+                >
+                  <div
+                    style="opacity: 0.2"
+                    class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opcaity-20 group-hover:opacity-10 transition duration-1000 group-hover:duration-200 animate-tilt"
+                  ></div>
+                  <div
+                    class="relative bg-sky-100/50 rounded-2xl overflow-auto no-scrollbar
+                    {horizontalTabs ? 'h-full' : 'w-full'}"
+                  >
+                    <div
+                      class={horizontalTabs ? 'p-1 pt-[2px]' : 'p-2'}
+                      class:magic={$magicTabs.length > 0}
                     >
-                      {#if $magicTabs.length === 0}
-                        <div class="debug max-h-[50px]">
-                          <div class="ai-wrapper">
-                            <Icon name="ai" size={12 * 0.75 + 'px'} />
-                          </div>
-                          <span class="text-xs"
-                            >You are chatting with all tabs. Drop tabs here to filter.</span
-                          >
-                        </div>
+                      {#if horizontalTabs}
+                        <DragDropList
+                          id="magic-tabs"
+                          type={HorizontalDropZone}
+                          itemSize={256}
+                          itemCount={$magicTabs.length || 1}
+                          on:drop={async (event) => {
+                            onDrop(event, 'unpin')
+                          }}
+                          let:index
+                        >
+                          {#if $magicTabs.length === 0}
+                            <div class="flex flex-row items-center">
+                              <div class="ai-wrapper">
+                                <Icon name="ai" size={24 + 'px'} />
+                              </div>
+                              <span class="text-xs text-sky-800/50">
+                                General mode, drop tabs here!
+                              </span>
+                            </div>
+                          {:else}
+                            <TabItem
+                              showClose
+                              tab={$magicTabs[index]}
+                              {activeTabId}
+                              {deleteTab}
+                              {unarchiveTab}
+                              pinned={false}
+                              showButtons={false}
+                              showExcludeOthersButton
+                              on:select={handleTabSelect}
+                              on:remove-from-sidebar={handleRemoveFromSidebar}
+                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                            />
+                          {/if}
+                        </DragDropList>
                       {:else}
-                        <TabItem
-                          tab={$magicTabs[index]}
-                          {activeTabId}
-                          {deleteTab}
-                          {unarchiveTab}
-                          pinned={false}
-                          on:select={handleTabSelect}
-                          on:remove-from-sidebar={handleRemoveFromSidebar}
-                        />
-                      {/if}
-                    </DragDropList>
-                  {:else}
-                    <DragDropList
-                      id="magic-tabs"
-                      type={VerticalDropZone}
-                      itemSize={54}
-                      itemCount={$magicTabs.length || 1}
-                      on:drop={async (event) => {
-                        onDrop(event, 'unpin')
-                      }}
-                      let:index
-                    >
-                      {#if $magicTabs.length === 0}
-                        <div class="debug max-h-[50px]">
-                          <div class="ai-wrapper">
-                            <Icon name="ai" size={12 * 0.75 + 'px'} />
-                          </div>
-                          <span class="text-xs"
-                            >You are chatting with all tabs. Drop tabs here to filter.</span
+                        {#if $magicTabs.length > 0}
+                          <div
+                            class="flex flex-row gap-2 px-4 py-2 leading-5 items-center justify-center mb-1 mx-2"
                           >
-                        </div>
-                      {:else}
-                        <TabItem
-                          tab={$magicTabs[index]}
-                          {activeTabId}
-                          {deleteTab}
-                          {unarchiveTab}
-                          pinned={false}
-                          on:select={handleTabSelect}
-                          on:remove-from-sidebar={handleRemoveFromSidebar}
-                        />
+                            <Icon name="sparkles" size="18" class="text-sky-800" />
+                            <span class="text-sm text-sky-800"
+                              >Chat with {$magicTabs.length === 1
+                                ? 'this tab'
+                                : $magicTabs.length === 2
+                                  ? 'two tabs'
+                                  : `${$magicTabs.length} tabs`}</span
+                            >
+                          </div>
+                        {/if}
+                        <DragDropList
+                          id="magic-tabs"
+                          type={VerticalDropZone}
+                          itemSize={$magicTabs.length === 0 ? 72 : 42}
+                          itemCount={$magicTabs.length || 1}
+                          on:drop={async (event) => {
+                            onDrop(event, 'unpin')
+                          }}
+                          let:index
+                        >
+                          {#if $magicTabs.length === 0}
+                            <div class="flex flex-col items-center">
+                              <div class="ai-wrapper">
+                                <Icon name="ai" size={24 + 'px'} />
+                              </div>
+                              <span class="text-xs text-sky-800">General mode, drop tabs here!</span
+                              >
+                            </div>
+                          {:else}
+                            <TabItem
+                              showClose
+                              tab={$magicTabs[index]}
+                              {activeTabId}
+                              {deleteTab}
+                              {unarchiveTab}
+                              pinned={false}
+                              showButtons={false}
+                              showExcludeOthersButton
+                              on:select={handleTabSelect}
+                              on:remove-from-sidebar={handleRemoveFromSidebar}
+                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                            />
+                          {/if}
+                        </DragDropList>
                       {/if}
-                    </DragDropList>
-                  {/if}
+                    </div>
+                  </div>
                 </div>
 
                 <div
-                  class="{!horizontalTabs ? 'w-full h-0.5' : 'h-full w-0.5'} bg-neutral-200"
+                  class="{!horizontalTabs
+                    ? 'w-1/2 mx-auto h-0.5'
+                    : 'h-4 w-0.5'} rounded-xl bg-sky-200"
                 ></div>
               {/if}
             {/if}
 
-            <div class="overflow-x-scroll no-scrollbar relative flex-grow">
+            <div
+              class="overflow-x-scroll no-scrollbar relative flex-grow"
+              class:space-x-2={horizontalTabs}
+              class:items-center={horizontalTabs}
+            >
               {#if horizontalTabs}
                 <DragDropList
                   id="tabs"
                   type={HorizontalDropZone}
-                  itemSize={Math.min(500, Math.max(128, tabSize))}
+                  itemSize={Math.min(400, Math.max(200, tabSize))}
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
                   }}
                   let:index
                 >
-                  <!-- check if this tab is active -->
                   {#if $activeTabId === $unpinnedTabs[index].id}
                     <TabItem
+                      showClose
                       tab={$unpinnedTabs[index]}
                       {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
+                      bookmarkingInProgress={$bookmarkingInProgress}
+                      bookmarkingSuccess={$bookmarkingSuccess}
                       pinned={false}
-                      isAlreadyOpen={false}
-                      on:select={() => {
-                        popoverOpen = true
-                        addressInputElem.focus()
-                        handleFocus()
-                      }}
+                      {spaces}
+                      enableEditing
+                      bind:addressInputElem
+                      on:select={() => {}}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:drop={handleDrop}
+                      on:delete-tab={handleDeleteTab}
+                      on:input-enter={handleBlur}
+                      on:unarchive-tab={handleUnarchiveTab}
+                      on:bookmark={handleBookmark}
+                      on:create-live-space={handleCreateLiveSpace}
+                      on:save-resource-in-space={handleSaveResourceInSpace}
                     />
-                    <Popover.Root bind:open={popoverOpen}>
-                      <Popover.Trigger
-                        style="position: absolute; opacity: 0; {!popoverOpen
-                          ? 'display: none;'
-                          : ''}"
-                      />
-                      <Popover.Content>
-                        <div class="address-bar-wrapper">
-                          <div class="address-bar-content">
-                            <div class="search">
-                              <input
-                                bind:this={addressInputElem}
-                                disabled={$activeTab?.type !== 'page' &&
-                                  $activeTab?.type !== 'chat' &&
-                                  $activeTab?.type !== 'empty'}
-                                bind:value={$addressValue}
-                                on:focus={handleFocus}
-                                type="text"
-                                placeholder={$activeTab?.type === 'page'
-                                  ? 'Search or Enter URL'
-                                  : $activeTab?.type === 'chat'
-                                    ? 'Chat Title'
-                                    : 'Search or Enter URL'}
-                              />
-                            </div>
-
-                            {#if $activeTab?.type === 'page'}
-                              {#key $activeTab.resourceBookmark}
-                                <button
-                                  on:click={handleBookmark}
-                                  use:tooltip={{
-                                    content: $activeTab?.resourceBookmark
-                                      ? 'Open bookmark (⌘ + D)'
-                                      : 'Bookmark this page (⌘ + D)',
-                                    action: 'hover',
-                                    position: 'left',
-                                    animation: 'fade',
-                                    delay: 500
-                                  }}
-                                  on:save-resource-in-space={handleSaveResourceInSpace}
-                                  use:popover={{
-                                    content: {
-                                      component: ShortcutSaveItem,
-                                      props: { resourceManager, spaces }
-                                    },
-                                    action: 'hover',
-                                    position: 'right-top',
-                                    style: {
-                                      backgroundColor: '#F8F7F1'
-                                    },
-                                    animation: 'fade',
-                                    delay: 1200
-                                  }}
-                                >
-                                  {#if $bookmarkingInProgress}
-                                    <Icon name="spinner" />
-                                  {:else if $bookmarkingSuccess}
-                                    <Icon name="check" />
-                                  {:else if $activeTab?.resourceBookmark}
-                                    <Icon name="bookmarkFilled" />
-                                  {:else}
-                                    <Icon name="leave" />
-                                  {/if}
-                                </button>
-                              {/key}
-                            {/if}
-
-                            {#if $activeTab?.type === 'page' && $activeTab.currentDetectedApp?.rssFeedUrl}
-                              <button
-                                on:click={handleCreateLiveSpace}
-                                use:tooltip={{
-                                  content: `Create ${$activeTab.currentDetectedApp.appName} live Space`,
-                                  action: 'hover',
-                                  position: 'left',
-                                  animation: 'fade',
-                                  delay: 500
-                                }}
-                              >
-                                <Icon name="news" />
-                              </button>
-                            {/if}
-                          </div>
-                        </div>
-                      </Popover.Content>
-                    </Popover.Root>
                   {:else}
-                    <LinkPreview.Root openDelay={750} closeDelay={10}>
+                    <LinkPreview.Root openDelay={7000} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
+                          showClose
                           tab={$unpinnedTabs[index]}
                           {activeTabId}
-                          {deleteTab}
-                          {unarchiveTab}
                           pinned={false}
                           on:select={handleTabSelect}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
                           on:drop={handleDrop}
+                          on:delete-tab={handleDeleteTab}
+                          on:input-enter={handleBlur}
+                          on:unarchive-tab={handleUnarchiveTab}
                         />
                       </LinkPreview.Trigger>
                       <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
@@ -3099,7 +2499,7 @@
                 <DragDropList
                   id="tabs"
                   type={VerticalDropZone}
-                  itemSize={54}
+                  itemSize={45}
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
@@ -3109,117 +2509,39 @@
                   <!-- check if this tab is active -->
                   {#if $activeTabId === $unpinnedTabs[index].id}
                     <TabItem
+                      showClose
                       tab={$unpinnedTabs[index]}
                       {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
+                      bookmarkingInProgress={$bookmarkingInProgress}
+                      bookmarkingSuccess={$bookmarkingSuccess}
                       pinned={false}
-                      isAlreadyOpen={false}
-                      on:select={() => {
-                        popoverOpen = true
-                        addressInputElem.focus()
-                        handleFocus()
-                      }}
+                      {spaces}
+                      enableEditing
+                      bind:addressInputElem
+                      on:select={() => {}}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:drop={handleDrop}
+                      on:delete-tab={handleDeleteTab}
+                      on:input-enter={handleBlur}
+                      on:unarchive-tab={handleUnarchiveTab}
+                      on:bookmark={handleBookmark}
+                      on:create-live-space={handleCreateLiveSpace}
+                      on:save-resource-in-space={handleSaveResourceInSpace}
                     />
-                    <Popover.Root bind:open={popoverOpen}>
-                      <Popover.Trigger
-                        style="position: absolute; opacity: 0; {!popoverOpen
-                          ? 'display: none;'
-                          : ''}"
-                      />
-                      <Popover.Content>
-                        <div class="address-bar-wrapper">
-                          <div class="address-bar-content">
-                            <div class="search">
-                              <input
-                                bind:this={addressInputElem}
-                                disabled={$activeTab?.type !== 'page' &&
-                                  $activeTab?.type !== 'chat' &&
-                                  $activeTab?.type !== 'empty'}
-                                bind:value={$addressValue}
-                                on:focus={handleFocus}
-                                type="text"
-                                placeholder={$activeTab?.type === 'page'
-                                  ? 'Search or Enter URL'
-                                  : $activeTab?.type === 'chat'
-                                    ? 'Chat Title'
-                                    : 'Search or Enter URL'}
-                              />
-                            </div>
-
-                            {#if $activeTab?.type === 'page'}
-                              {#key $activeTab.resourceBookmark}
-                                <button
-                                  on:click={handleBookmark}
-                                  use:tooltip={{
-                                    content: $activeTab?.resourceBookmark
-                                      ? 'Open bookmark (⌘ + D)'
-                                      : 'Bookmark this page (⌘ + D)',
-                                    action: 'hover',
-                                    position: 'left',
-                                    animation: 'fade',
-                                    delay: 500
-                                  }}
-                                  on:save-resource-in-space={handleSaveResourceInSpace}
-                                  use:popover={{
-                                    content: {
-                                      component: ShortcutSaveItem,
-                                      props: { resourceManager, spaces }
-                                    },
-                                    action: 'hover',
-                                    position: 'right-top',
-                                    style: {
-                                      backgroundColor: '#F8F7F1'
-                                    },
-                                    animation: 'fade',
-                                    delay: 1200
-                                  }}
-                                >
-                                  {#if $bookmarkingInProgress}
-                                    <Icon name="spinner" />
-                                  {:else if $bookmarkingSuccess}
-                                    <Icon name="check" />
-                                  {:else if $activeTab?.resourceBookmark}
-                                    <Icon name="bookmarkFilled" />
-                                  {:else}
-                                    <Icon name="leave" />
-                                  {/if}
-                                </button>
-                              {/key}
-                            {/if}
-
-                            {#if $activeTab?.type === 'page' && $activeTab.currentDetectedApp?.rssFeedUrl}
-                              <button
-                                on:click={handleCreateLiveSpace}
-                                use:tooltip={{
-                                  content: `Create ${$activeTab.currentDetectedApp.appName} live Space`,
-                                  action: 'hover',
-                                  position: 'left',
-                                  animation: 'fade',
-                                  delay: 500
-                                }}
-                              >
-                                <Icon name="news" />
-                              </button>
-                            {/if}
-                          </div>
-                        </div>
-                      </Popover.Content>
-                    </Popover.Root>
                   {:else}
-                    <LinkPreview.Root openDelay={800} closeDelay={10}>
+                    <LinkPreview.Root openDelay={4000} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
+                          showClose
                           tab={$unpinnedTabs[index]}
                           {activeTabId}
-                          {deleteTab}
-                          {unarchiveTab}
                           pinned={false}
                           on:select={handleTabSelect}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
                           on:drop={handleDrop}
+                          on:delete-tab={handleDeleteTab}
+                          on:input-enter={handleBlur}
+                          on:unarchive-tab={handleUnarchiveTab}
                         />
                       </LinkPreview.Trigger>
                       <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
@@ -3233,37 +2555,85 @@
                   {/if}
                 </DragDropList>
               {/if}
+              <div
+                style="position: absolute; top: {!horizontalTabs
+                  ? 45 * $unpinnedTabs.length
+                  : 0}px; left: {horizontalTabs
+                  ? Math.min(400, Math.max(240, tabSize)) * $unpinnedTabs.length
+                  : 0}px; right: 0;"
+                class:w-fit={horizontalTabs}
+                class:h-full={horizontalTabs}
+                class="select-none flex items-center justify-center"
+                class:opacity-100={isFirstButtonVisible}
+                class:opacity-0={!isFirstButtonVisible}
+                class:pointer-events-auto={isFirstButtonVisible}
+                class:pointer-events-none={!isFirstButtonVisible}
+              >
+                <button
+                  bind:this={newTabButton}
+                  class="transform select-none active:scale-95 space-x-2 {horizontalTabs
+                    ? 'w-fit rounded-xl p-2'
+                    : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                  on:click|preventDefault={() => createNewEmptyTab()}
+                >
+                  <Icon name="add" />
+                  {#if !horizontalTabs}
+                    <span class="label">New Tab</span>
+                  {/if}
+                </button>
+              </div>
             </div>
 
-            <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
-              {#if $sidebarTab === 'active' && $activeTab?.type === 'page'}
+            <div class="flex {horizontalTabs ? 'flex-row items-center' : 'flex-col'} flex-shrink-0">
+              <button
+                class="transform select-none active:scale-95 space-x-2 {horizontalTabs
+                  ? 'w-fit rounded-xl p-2'
+                  : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                on:click|preventDefault={() => createNewEmptyTab()}
+                class:opacity-100={!isFirstButtonVisible}
+                class:opacity-0={isFirstButtonVisible}
+                class:pointer-events-auto={!isFirstButtonVisible}
+                class:pointer-events-none={isFirstButtonVisible}
+              >
+                <Icon name="add" />
+                {#if !horizontalTabs}
+                  <span class="label">New Tab</span>
+                {/if}
+              </button>
+              <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
+                <button
+                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  on:click={handleToggleMagicSidebar}
+                  disabled={$sidebarTab !== 'active' ||
+                    !$activeTabMagic ||
+                    $activeTab?.type !== 'page'}
+                  use:tooltip={{
+                    content: 'Toggle Page Chat',
+                    action: 'hover',
+                    position: 'bottom',
+                    animation: 'fade',
+                    delay: 300
+                  }}
+                >
+                  {#if !$activeTabMagic}
+                    <Icon name="message" />
+                  {:else if $activeTabMagic.showSidebar}
+                    <Icon name="close" />
+                  {:else if $activeTabMagic.running}
+                    <Icon name="spinner" />
+                  {:else}
+                    <Icon name="message" />
+                  {/if}
+                </button>
                 {#if $activeTabMagic}
                   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                  <button
-                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                    on:click={handleToggleMagicSidebar}
-                    use:tooltip={{
-                      content: 'Toggle Page Chat',
-                      action: 'hover',
-                      position: 'bottom',
-                      animation: 'fade',
-                      delay: 300
-                    }}
-                  >
-                    {#if $activeTabMagic.showSidebar}
-                      <Icon name="close" />
-                    {:else if $activeTabMagic.running}
-                      <Icon name="spinner" />
-                    {:else}
-                      <Icon name="message" />
-                    {/if}
-                  </button>
                 {/if}
 
                 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
                 <button
-                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                   on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
+                  disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
                   use:tooltip={{
                     content: 'Toggle Annotations',
                     action: 'hover',
@@ -3280,7 +2650,8 @@
                 </button>
 
                 <button
-                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
                   on:click={handleToggleAppSidebar}
                   use:tooltip={{
                     content: 'Go wild',
@@ -3296,17 +2667,16 @@
                     <Icon name="sparkles" />
                   {/if}
                 </button>
-              {/if}
 
-              <!-- <NewTabButton /> -->
-              <NewTabButton
-                {resourceManager}
-                {spaces}
-                on:create-tab-from-space={handleCreateTabFromPopover}
-                on:create-new-space={handleCreateNewSpace}
-                on:create-new-history-tab={createHistoryTab}
-                on:create-new-tab={debouncedCreateNewEmptyTab}
-              />
+                <NewTabButton
+                  {resourceManager}
+                  {spaces}
+                  on:create-tab-from-space={handleCreateTabFromPopover}
+                  on:create-new-space={handleCreateNewSpace}
+                  on:create-new-history-tab={createHistoryTab}
+                  on:create-new-tab={debouncedCreateNewEmptyTab}
+                />
+              </div>
             </div>
           </div>
         {:else}
@@ -3371,22 +2741,18 @@
             {/if} -->
             {#if tab.type === 'page'}
               <BrowserTab
-                bind:this={$browserTabs[tab.id]}
-                bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
                 active={$activeTabId === tab.id}
                 {historyEntriesManager}
-                on:newTab={handleNewTab}
+                pageMagic={$activeTabMagic}
+                bind:this={$browserTabs[tab.id]}
+                bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
+                on:new-tab={handleNewTab}
                 on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
-                on:bookmark={handleWebviewBookmark}
-                on:transform={(e) => handleWebviewTransform(e, tab)}
-                on:appDetection={(e) => handleWebviewAppDetection(e, tab)}
-                on:inlineTextReplace={(e) => handleWebviewInlineTextReplace(e, tab.id)}
-                on:annotate={(e) => handleWebviewAnnotation(e, tab.id)}
-                on:annotationClick={(e) => handleWebviewAnnotationClick(e, tab.id)}
-                on:annotationRemove={(e) => handleWebviewAnnotationRemove(e, tab.id)}
-                on:annotationUpdate={(e) => handleWebviewAnnotationUpdate(e, tab.id)}
-                on:keyDown={(e) => handleKeyDown(e.detail)}
-                on:webviewKeydown={(e) => handleKeyDown(e.detail)}
+                on:update-tab={(e) => updateTab(tab.id, e.detail)}
+                on:open-resource={(e) => openResource(e.detail)}
+                on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
+                on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
+                on:keydown={(e) => handleKeyDown(e.detail)}
               />
             {:else if tab.type === 'horizon'}
               {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
@@ -4050,19 +3416,21 @@
     }
   }
 
-  :global(citation) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    font-size: 1rem;
-    background: rgb(255, 164, 164);
-    border-radius: 100%;
-    user-select: none;
-    cursor: pointer;
-    overflow: hidden;
-  }
+  // :global(citation) {
+  //   display: inline-flex;
+  //   align-items: center;
+  //   justify-content: center;
+  //   width: 1.75rem;
+  //   height: 1.75rem;
+  //   font-size: 0.9rem;
+  //   font-weight: 500;
+  //   background: rgb(226 240 255);
+  //   border: 1px solid rgb(183 198 218);
+  //   border-radius: 100%;
+  //   user-select: none;
+  //   cursor: pointer;
+  //   overflow: hidden;
+  // }
 
   :global(div[data-dnd-zone]) {
     overflow: visible !important;
@@ -4082,20 +3450,9 @@
   .debug {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
     span {
-      border: none;
       background: transparent;
-      color: #7d7448;
-      font-size: 1rem;
       font-weight: 500;
-      line-height: 1.3;
-      letter-spacing: 0.0025em;
-      max-width: 15rem;
-      opacity: 0.8;
-      font-smooth: always;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
       outline: none;
       width: fit-content;
     }
@@ -4106,8 +3463,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: calc(72px * 0.75);
-    height: calc(72px * 0.75);
+    width: calc(48px);
+    height: calc(48px);
     background-repeat: no-repeat;
     background-position: center center;
     background-size: 86%;

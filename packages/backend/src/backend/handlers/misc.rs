@@ -66,6 +66,7 @@ impl Worker {
         api_endpoint: Option<String>,
         mut callback: Root<JsFunction>,
         resource_ids: Option<Vec<String>>,
+        general: bool,
     ) -> BackendResult<()> {
         // TODO: save this runtime somewhere and re-use when needed
         tokio::runtime::Runtime::new()
@@ -73,7 +74,7 @@ impl Worker {
             .block_on(async move {
                 let mut stream = self
                     .ai
-                    .chat(query, session_id, number_documents, model, rag_only, api_endpoint, resource_ids)
+                    .chat(query, session_id, number_documents, model, rag_only, api_endpoint, resource_ids, general)
                     .await?;
 
                 while let Some(chunk) = stream.next().await {
@@ -105,7 +106,6 @@ impl Worker {
 
     pub fn query_sffs_resources(&self, prompt: String) -> BackendResult<String> {
         let result = self.ai.get_sql_query(prompt)?;
-
         #[derive(serde::Deserialize)]
         struct JsonResult {
             sql_query: String,
@@ -185,6 +185,7 @@ pub fn handle_misc_message(
             rag_only,
             api_endpoint,
             resource_ids,
+            general,
         } => {
             let result = worker.send_chat_query(
                 channel,
@@ -196,6 +197,7 @@ pub fn handle_misc_message(
                 api_endpoint,
                 callback,
                 resource_ids,
+                general,
             );
             send_worker_response(channel, oneshot, result)
         }

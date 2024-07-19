@@ -73,7 +73,7 @@
       <div class="article-preview-no-image">
         <img
           class="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${article?.url}&sz=256`}
+          src={`https://www.google.com/s2/favicons?domain=${article?.url}&sz=48`}
           alt={`${article?.site_name} favicon`}
         />
         <div class="excerpt">
