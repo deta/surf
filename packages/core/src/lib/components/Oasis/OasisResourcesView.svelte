@@ -40,7 +40,7 @@
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
     {#key scrollElement}
-      <Masonry renderContents={$renderContents} on:load-more={handleLoadChunk} />
+      <Masonry renderContents={$renderContents} on:load-more={handleLoadChunk} on:open on:remove />
     {/key}
   </div>
 </div>
