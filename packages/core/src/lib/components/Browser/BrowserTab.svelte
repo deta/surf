@@ -469,29 +469,27 @@
       tab.currentDetectedApp = detectedApp
       dispatch('update-tab', { currentDetectedApp: detectedApp })
 
-      if (
-        app &&
-        app.appId === detectedApp.appId &&
-        app.resourceType === detectedApp.resourceType &&
-        app.appResourceIdentifier === detectedApp.appResourceIdentifier
-      ) {
-        log.debug('no change in app or resource', detectedApp)
-        return
-      }
-
-      if (!app) {
-        log.debug('first app detection')
-      }
-
-      app = detectedApp
-      url = detectedApp.canonicalUrl ?? tab.initialLocation
-
       if ($appDetectionRunning) {
         log.debug('app detection already running')
         return
       } else {
         appDetectionRunning.set(true)
       }
+
+      const sameAppDetected =
+        app &&
+        app.appId === detectedApp.appId &&
+        app.resourceType === detectedApp.resourceType &&
+        app.appResourceIdentifier === detectedApp.appResourceIdentifier
+
+      if (!app) {
+        log.debug('first app detection')
+      } else if (sameAppDetected) {
+        log.debug('no change in app or resource', detectedApp)
+      }
+
+      app = detectedApp
+      url = detectedApp.canonicalUrl ?? tab.initialLocation
 
       log.info('detecting app for url', url)
 
@@ -501,6 +499,27 @@
           resource.type !== ResourceTypes.ANNOTATION &&
           resource.type !== ResourceTypes.HISTORY_ENTRY
       )
+
+      const annotationResources = matchingResources.filter(
+        (resource) => resource.type === ResourceTypes.ANNOTATION
+      ) as ResourceAnnotation[]
+
+      if (annotationResources.length > 0) {
+        await wait(500)
+        log.debug('applying annotations', annotationResources)
+        annotationResources.forEach(async (annotationResource) => {
+          const annotation = await annotationResource.getParsedData()
+          webview.sendEvent(WebViewEventReceiveNames.RestoreAnnotation, {
+            id: annotationResource.id,
+            data: annotation
+          })
+        })
+      }
+
+      if (sameAppDetected) {
+        log.debug('skipping rest of app detection as it has not changed')
+        return
+      }
 
       log.debug('bookmarked resource found', bookmarkedResource)
       if (!bookmarkedResource) {
@@ -568,20 +587,6 @@
 
         log.debug('created history entry', historyEntry)
       }
-
-      const annotationResources = matchingResources.filter(
-        (resource) => resource.type === ResourceTypes.ANNOTATION
-      ) as ResourceAnnotation[]
-
-      await wait(500)
-
-      annotationResources.forEach(async (annotationResource) => {
-        const annotation = await annotationResource.getParsedData()
-        webview.sendEvent(WebViewEventReceiveNames.RestoreAnnotation, {
-          id: annotationResource.id,
-          data: annotation
-        })
-      })
 
       // if ($activeTabId === tab.id) {
       //   summarizePage(pageMagic)
