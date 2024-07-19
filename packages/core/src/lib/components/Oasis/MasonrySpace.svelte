@@ -16,20 +16,56 @@
     velocity: 0
   }
 
+  let updateQueue = []
+  let isUpdating = false
+
+  const BATCH_SIZE = 10
+  const UPDATE_INTERVAL = 16
+
   $: if (renderContents) {
-    tick().then(() => {
+    queueUpdate(renderContents.slice(prevItemLength))
+    prevItemLength = renderContents.length
+  }
+
+  function queueUpdate(newData) {
+    updateQueue.push(...newData)
+    if (!isUpdating) {
+      isUpdating = true
+      requestAnimationFrame(processUpdateQueue)
+    }
+  }
+
+  async function processUpdateQueue() {
+    const startTime = performance.now()
+    const batch = updateQueue.splice(0, BATCH_SIZE)
+
+    if (batch.length > 0) {
+      await updateGridBatch(batch)
+    }
+
+    const endTime = performance.now()
+    const elapsedTime = endTime - startTime
+
+    if (updateQueue.length > 0) {
+      const delay = Math.max(0, UPDATE_INTERVAL - elapsedTime)
+      setTimeout(() => requestAnimationFrame(processUpdateQueue), delay)
+    } else {
+      isUpdating = false
       const gridContainer = document.getElementById('grid')
-
-      gridContainer?.addEventListener('scroll', updateVisibleItems)
-
-      updateGrid(renderContents.slice(prevItemLength))
-
       updateVisibleItems()
-
+      await tick()
       observeItems(gridContainer)
+    }
+  }
 
-      prevItemLength = renderContents.length
-    })
+  async function updateGridBatch(batch) {
+    const existingIds = new Set(items.map((item) => item.id))
+    const newItems = batch.filter((item) => !existingIds.has(item.id))
+
+    for (const item of newItems) {
+      addItem(item)
+      await tick() // Allow the DOM to update
+    }
   }
 
   const UPPER_OVERSHOOT_BOUND = 1400
@@ -427,18 +463,14 @@
     }
   }
 
-  onMount(() => {
+  onMount(async () => {
     const gridContainer = document.getElementById('grid')
     masonryGrid = new MasonryGrid(gridContainer)
-
-    renderContents.forEach((item) => {
-      addItem(item)
-    })
 
     gridContainer?.addEventListener('scroll', updateVisibleItems)
 
     updateVisibleItems()
-
+    await tick()
     observeItems(gridContainer)
   })
 

@@ -43,7 +43,7 @@
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    {#key searchResults}
+    {#key searchResults || scrollElement}
       <Masonry
         renderContents={$renderContents.map((item) => item.id)}
         on:load-more={handleLoadChunk}
