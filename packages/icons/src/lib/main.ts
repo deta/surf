@@ -5,6 +5,7 @@ import AI from './Icons/AI.svelte'
 import Archive from './Icons/Archive.svelte'
 import Arrow from './Icons/Arrow.svelte'
 import ArrowBackUp from './Icons/ArrowBackUp.svelte'
+import ArrowAutoFitUp from './Icons/ArrowAutoFitUp.svelte'
 import ChevronLeft from './Icons/ChevronLeft.svelte'
 import ChevronRight from './Icons/ChevronRight.svelte'
 import Close from './Icons/Close.svelte'
@@ -78,6 +79,7 @@ export const icons = {
   archive: Archive,
   arrow: Arrow,
   arrowbackup: ArrowBackUp,
+  'arrow.autofit.up': ArrowAutoFitUp,
   'chevron.left': ChevronLeft,
   'chevron.right': ChevronRight,
   close: Close,
@@ -155,6 +157,7 @@ export {
   AdblockOn,
   Add,
   AI,
+  ArrowAutoFitUp,
   ChevronLeft,
   ChevronRight,
   Close,
