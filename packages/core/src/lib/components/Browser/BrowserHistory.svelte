@@ -1,16 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, tick, afterUpdate } from 'svelte'
   import type { ResourceHistoryEntryWithLinkedResource, TabHistory } from './types'
   import { useLogScope } from '../../utils/log'
-  import {
-    Resource,
-    ResourceHistoryEntry,
-    useResourceManager,
-    type ResourceSearchResultItem
-  } from '../../service/resources'
+  import { useResourceManager, type ResourceSearchResultItem } from '../../service/resources'
   import { derived, writable } from 'svelte/store'
-  import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
-  import LoadingBox from '../Atoms/LoadingBox.svelte'
   import BrowserHistoryEntry from './BrowserHistoryEntry.svelte'
   import { ResourceTagsBuiltInKeys } from '@horizon/types'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
@@ -28,6 +21,19 @@
   const historyEntries = writable<ResourceHistoryEntryWithLinkedResource[]>([])
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
+
+  let containerHeight = 0
+  let scrollTop = 0
+  let itemHeight = 89.5
+  let itemMargin = 10 
+  let overscan = 5
+  let containerElement: HTMLElement
+
+  $: visibleItemCount = Math.ceil(containerHeight / (itemHeight + itemMargin)) + overscan * 2
+  $: startIndex = Math.max(0, Math.floor(scrollTop / (itemHeight + itemMargin)) - overscan)
+  $: endIndex = Math.min(startIndex + visibleItemCount, $historyEntries.length)
+  $: visibleItems = $historyEntries.slice(startIndex, endIndex)
+  $: totalHeight = $historyEntries.length * (itemHeight + itemMargin) - itemMargin 
 
   $: if (active) {
     fetchHistory()
@@ -91,7 +97,7 @@
       log.debug('Clearing history...')
       await Promise.all($historyEntries.map((entry) => resourceManager.deleteResource(entry.id)))
 
-      $historyEntries = []
+      historyEntries.set([])
       toast.success('History cleared!')
     } catch (error) {
       log.error('Failed to clear history:', error)
@@ -110,8 +116,27 @@
     }
   }
 
+  const handleScroll = () => {
+    if (containerElement) {
+      scrollTop = containerElement.scrollTop
+    }
+  }
+
+  const updateContainerHeight = () => {
+    if (containerElement) {
+      containerHeight = containerElement.clientHeight
+    }
+  }
+
   onMount(() => {
     fetchHistory()
+    updateContainerHeight()
+    window.addEventListener('resize', updateContainerHeight)
+    return () => window.removeEventListener('resize', updateContainerHeight)
+  })
+
+  afterUpdate(() => {
+    updateContainerHeight()
   })
 </script>
 
@@ -123,7 +148,6 @@
     on:new-tab
   />
 {/if}
-
 <div class="wrapper">
   <div class="content">
     <div class="header">
@@ -140,16 +164,23 @@
       <button on:click={handleClearHistory}>Clear</button>
     </div>
 
-    <div class="items">
+    <div class="overflow-y-scroll" bind:this={containerElement} on:scroll={handleScroll} >
       {#if $historyEntries.length > 0}
-        {#each $historyEntries as item (item.id)}
-          <BrowserHistoryEntry
-            entry={item}
-            on:open={() => openResourceDetailsModal(item.id)}
-            on:delete={() => deleteEntry(item.id)}
-            on:new-tab
-          />
-        {/each}
+        <div style="height: {totalHeight}px; position: relative" >
+          {#each visibleItems as item (item.id)}
+            <div
+              style="position: absolute; top: {(startIndex + visibleItems.indexOf(item)) *
+                (itemHeight + itemMargin)}px; left: 0; right: 0; margin-bottom: {itemMargin}px;"
+            >
+              <BrowserHistoryEntry
+                entry={item}
+                on:open={() => openResourceDetailsModal(item.id)}
+                on:delete={() => deleteEntry(item.id)}
+                on:new-tab
+              />
+            </div>
+          {/each}
+        </div>
       {:else if $loading}
         <div class="loading">Loading…</div>
       {:else}
@@ -160,6 +191,9 @@
 </div>
 
 <style lang="scss">
+  .items > div > div {
+    margin-bottom: 10px; /* Adds space between items */
+  }
   .wrapper {
     width: 100%;
     height: 100%;
@@ -196,16 +230,6 @@
     }
   }
 
-  .items {
-    flex: 1;
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding-bottom: 4rem;
-    padding: 1rem;
-    margin: -1rem;
-  }
 
   .title {
     display: flex;
