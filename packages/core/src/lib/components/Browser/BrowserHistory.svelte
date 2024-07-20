@@ -182,7 +182,11 @@
           {/each}
         </div>
       {:else if $loading}
-        <div class="loading">Loading…</div>
+        <div class="loading flex flex-col">
+          {#each new Array(10) as _, i}
+            <div class="animate-pulse" style="width: 100%; height: {itemHeight}px; background-color: #ecebe5c6; border-radius: 12px;" />
+          {/each}
+        </div>
       {:else}
         <div class="empty">No history entries</div>
       {/if}
