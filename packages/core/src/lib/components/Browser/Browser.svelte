@@ -1,7 +1,7 @@
 <svelte:options immutable={true} />
 
 <script lang="ts">
-  import { onMount, setContext, tick } from 'svelte'
+  import { afterUpdate, onMount, setContext, tick } from 'svelte'
   import { slide } from 'svelte/transition'
   import { tooltip } from '@svelte-plugins/tooltips'
   import { popover } from '../Atoms/Popover/popover'
@@ -110,6 +110,7 @@
   let annotationsSidebar: AnnotationsSidebar
   let isFirstButtonVisible = true
   let newTabButton: Element
+  let containerRef: Element
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -2137,6 +2138,22 @@
 
     log.debug('State updated successfully')
   }
+
+  function checkVisibility() {
+    if (newTabButton && containerRef) {
+      const containerRect = containerRef.getBoundingClientRect()
+      const buttonRect = newTabButton.getBoundingClientRect()
+      isFirstButtonVisible =
+        buttonRect.top >= containerRect.top &&
+        buttonRect.left >= containerRect.left &&
+        buttonRect.bottom <= containerRect.bottom &&
+        buttonRect.right <= containerRect.right
+    }
+  }
+
+  afterUpdate(() => {
+    checkVisibility()
+  })
 </script>
 
 <SplashScreen />
@@ -2159,7 +2176,7 @@
   <div class="relative h-screen flex {horizontalTabs ? 'flex-col' : 'flex-row'}">
     {#if showTabs}
       <div
-        transition:slide={{ axis: !horizontalTabs ? 'x' : 'y', duration: 200 }}
+        transition:slide={{ axis: !horizontalTabs ? 'x' : 'y', duration: 100 }}
         class="flex-grow transform-gpu {horizontalTabs && 'h-[51px]'}"
         class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
         style="z-index: 5000;"
@@ -2447,6 +2464,7 @@
               class="overflow-x-scroll no-scrollbar relative flex-grow"
               class:space-x-2={horizontalTabs}
               class:items-center={horizontalTabs}
+              bind:this={containerRef}
             >
               {#if horizontalTabs}
                 <DragDropList
