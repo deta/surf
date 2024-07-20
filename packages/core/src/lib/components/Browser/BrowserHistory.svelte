@@ -22,18 +22,44 @@
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
 
+  // New search-related state
+  const searchTerm = writable('')
+
+  // Derived store for filtered entries
+  const filteredEntries = derived(
+    [historyEntries, searchTerm],
+    ([$historyEntries, $searchTerm]) => {
+      if (!$searchTerm) return $historyEntries
+
+
+      console.log('searching for:', $searchTerm)
+      console.log('entries:', $historyEntries)
+
+      const lowercaseSearch = $searchTerm.toLowerCase()
+      return $historyEntries.filter((entry) => {
+        const { entryResource, linkedResource } = entry
+        const { title, raw_url, app_id } = entryResource.parsedData || {}
+
+        return (
+          title?.toLowerCase().includes(lowercaseSearch) ||
+          raw_url?.toLowerCase().includes(lowercaseSearch)
+        )
+      })
+    }
+  )
+
   let containerHeight = 0
   let scrollTop = 0
   let itemHeight = 89.5
-  let itemMargin = 10 
+  let itemMargin = 10
   let overscan = 5
   let containerElement: HTMLElement
 
   $: visibleItemCount = Math.ceil(containerHeight / (itemHeight + itemMargin)) + overscan * 2
   $: startIndex = Math.max(0, Math.floor(scrollTop / (itemHeight + itemMargin)) - overscan)
-  $: endIndex = Math.min(startIndex + visibleItemCount, $historyEntries.length)
-  $: visibleItems = $historyEntries.slice(startIndex, endIndex)
-  $: totalHeight = $historyEntries.length * (itemHeight + itemMargin) - itemMargin 
+  $: endIndex = Math.min(startIndex + visibleItemCount, $filteredEntries.length)
+  $: visibleItems = $filteredEntries.slice(startIndex, endIndex)
+  $: totalHeight = $filteredEntries.length * (itemHeight + itemMargin) - itemMargin
 
   $: if (active) {
     fetchHistory()
@@ -138,6 +164,14 @@
   afterUpdate(() => {
     updateContainerHeight()
   })
+
+  // Reset scroll position when search term changes
+  $: if ($searchTerm) {
+    scrollTop = 0
+    if (containerElement) {
+      containerElement.scrollTop = 0
+    }
+  }
 </script>
 
 {#if $showResourceDetails && $resourceDetailsModalSelected}
@@ -161,12 +195,19 @@
         <h1>History</h1>
       </div>
 
+      <input
+        type="text"
+        placeholder="Search history..."
+        bind:value={$searchTerm}
+        class="search-input"
+      />
+
       <button on:click={handleClearHistory}>Clear</button>
     </div>
 
-    <div class="overflow-y-scroll" bind:this={containerElement} on:scroll={handleScroll} >
-      {#if $historyEntries.length > 0}
-        <div style="height: {totalHeight}px; position: relative" >
+    <div class="overflow-y-scroll" bind:this={containerElement} on:scroll={handleScroll}>
+      {#if $filteredEntries.length > 0}
+        <div style="height: {totalHeight}px; position: relative">
           {#each visibleItems as item (item.id)}
             <div
               style="position: absolute; top: {(startIndex + visibleItems.indexOf(item)) *
@@ -184,11 +225,14 @@
       {:else if $loading}
         <div class="loading flex flex-col">
           {#each new Array(10) as _, i}
-            <div class="animate-pulse" style="width: 100%; height: {itemHeight}px; background-color: #ecebe5c6; border-radius: 12px;" />
+            <div
+              class="animate-pulse"
+              style="width: 100%; height: {itemHeight}px; background-color: #ecebe5c6; border-radius: 12px;"
+            />
           {/each}
         </div>
       {:else}
-        <div class="empty">No history entries</div>
+        <div class="empty">No history entries found</div>
       {/if}
     </div>
   </div>
@@ -233,7 +277,6 @@
       cursor: pointer;
     }
   }
-
 
   .title {
     display: flex;
