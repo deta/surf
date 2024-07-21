@@ -2185,7 +2185,7 @@
     <Pane
       collapsible
       minSize={horizontalTabs ? 5 : 10}
-      maxSize={horizontalTabs ? 8 : 20}
+      maxSize={horizontalTabs ? 5 : 20}
       defaultSize={horizontalTabs ? 5 : 15}
       bind:pane={leftPane}
       onCollapse={() => {
@@ -2198,7 +2198,6 @@
     }} 
     >
       <div
-        transition:slide={{ axis: !horizontalTabs ? 'x' : 'y', duration: 200 }}
         class="flex-grow transform-gpu {horizontalTabs ? 'w-full' : 'h-full'}"
         class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
         style="z-index: 5000;"
@@ -2213,6 +2212,38 @@
               class="flex flex-row items-center flex-shrink-0 {!horizontalTabs &&
                 'w-full justify-end'}"
             >
+            <Tooltip.Root openDelay={400} closeDelay={10}>
+              <Tooltip.Trigger>
+                <button
+                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
+                    ? 'opacity-30 cursor-not-allowed'
+                    : 'cursor-pointer'}"
+                  on:click={handleSidebarchange}
+                >
+                  <span
+                    class="inline-block {canGoBack &&
+                      'group-hover:skew-x-2'} transition-transform ease-in-out duration-200"
+                  >
+                    <Icon name="sidebar.left" />
+                  </span>
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                transition={flyAndScale}
+                transitionConfig={{ y: 8, duration: 150 }}
+                sideOffset={8}
+              >
+                <div class="bg-neutral-100">
+                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                </div>
+                <div
+                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                >
+                  Toggle Sidebar (⌘ + H)
+                </div>
+              </Tooltip.Content>
+            </Tooltip.Root>
+
               <Tooltip.Root openDelay={400} closeDelay={10}>
                 <Tooltip.Trigger>
                   <button
