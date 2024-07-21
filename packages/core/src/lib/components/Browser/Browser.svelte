@@ -28,7 +28,7 @@
     HorizontalDropZone,
     HorizontalCenterDropZone
   } from 'svelte-dnd-list'
-  import { PaneGroup, Pane, PaneResizer } from 'paneforge'
+  import { PaneGroup, Pane, PaneResizer, type PaneAPI } from 'paneforge'
 
   import { ResourceTag, createResourceManager } from '../../service/resources'
 
@@ -107,7 +107,9 @@
   let observer: IntersectionObserver
   let addressBarFocus = false
   let showTabSearch = false
-  let showTabs = true
+  let showLeftSidebar = true
+  let showRightSidebar = false
+  let leftPane: PaneAPI
   let annotationsSidebar: AnnotationsSidebar
   let isFirstButtonVisible = true
   let newTabButton: Element
@@ -654,6 +656,31 @@
 
   let horizontalTabs = false
 
+  const handleCollapse = () => {
+    leftPane.collapse()
+    // @ts-ignore
+    changeTraficLightsVisibility(false)
+  }
+
+  const handleExpand = () => {
+    leftPane.expand()
+    // @ts-ignore
+    changeTraficLightsVisibility(true)
+  }
+
+  const changeTraficLightsVisibility = (visible: boolean) => {
+    // @ts-ignore
+    window.api.updateTrafficLightsVisibility(visible)
+  }
+
+  const handleSidebarchange = () => {
+    if (showLeftSidebar) {
+      handleCollapse()
+    } else {
+      handleExpand()
+    }
+  }
+
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && addressBarFocus) {
@@ -678,10 +705,7 @@
       debounceToggleHorizontalTabs()
       log.debug('horizontalTabs', horizontalTabs)
     } else if (isModKeyAndKeyPressed(e, 'h')) {
-      showTabs = !showTabs
-      log.debug('showTabs', showTabs)
-      // @ts-ignore
-      window.api.updateTrafficLightsVisibility(showTabs)
+      handleSidebarchange()
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       handleNewHorizon()
     } else if (isModKeyAndKeyPressed(e, 'r')) {
@@ -2157,8 +2181,22 @@
     />
   {/if}
 
-  <PaneGroup direction={horizontalTabs ? 'vertical' : 'horizontal'} autoSaveId="surf-sidebar">
-    <Pane collapsible minSize={horizontalTabs ? 5 : 10} maxSize={horizontalTabs ? 8 : 20} defaultSize={horizontalTabs ? 5 : 15}>
+  <PaneGroup direction={horizontalTabs ? 'vertical' : 'horizontal'} autoSaveId="surf-sidebar" class="relative">
+    <Pane
+      collapsible
+      minSize={horizontalTabs ? 5 : 10}
+      maxSize={horizontalTabs ? 8 : 20}
+      defaultSize={horizontalTabs ? 5 : 15}
+      bind:pane={leftPane}
+      onCollapse={() => {
+        showLeftSidebar = false
+        changeTraficLightsVisibility(false)
+      }}
+     onExpand={() => {
+      showLeftSidebar = true 
+      changeTraficLightsVisibility(true)
+    }} 
+    >
       <div
         transition:slide={{ axis: !horizontalTabs ? 'x' : 'y', duration: 200 }}
         class="flex-grow transform-gpu {horizontalTabs ? 'w-full' : 'h-full'}"
@@ -2272,7 +2310,7 @@
             </div>
 
             <div
-              class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0  overflow-x-scroll no-scrollbar"
+              class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0 overflow-x-scroll no-scrollbar"
             >
               <DragDropList
                 id="pinned-tabs"
@@ -2697,7 +2735,7 @@
       </div>
     </Pane>
 
-    <PaneResizer class="bg-green-500">
+    <PaneResizer class="hover:bg-neutral-100 z-[50001]">
       <div
         class:h-full={!horizontalTabs}
         class:w-0.5={!horizontalTabs}
@@ -2716,12 +2754,12 @@
         <div
           class="w-full h-full overflow-hidden flex-grow"
           class:pb-1.5={horizontalTabs}
-          class:pt-1.5={horizontalTabs && !showTabs}
+          class:pt-1.5={horizontalTabs && !showLeftSidebar}
           class:pr-1.5={!horizontalTabs}
-          class:pl-1.5={!horizontalTabs && !showTabs}
+          class:pl-1.5={!horizontalTabs && !showLeftSidebar}
           style="z-index: 0;"
           class:hasNoTab={!$activeBrowserTab}
-          class:sidebarHidden={!showTabs}
+          class:sidebarHidden={!showLeftSidebar}
         >
           {#if $sidebarTab === 'oasis'}
             <div class="browser-window active" style="--scaling: 1;">
@@ -2843,7 +2881,7 @@
         {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
           <div
             transition:slide={{ axis: 'x' }}
-            class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
+            class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
               'mt-1.5'} flex-shrink-0"
           >
             <MagicSidebar
@@ -2866,7 +2904,7 @@
         {:else if $showAppSidebar}
           <div
             transition:slide={{ axis: 'x' }}
-            class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
+            class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
               'mt-1.5'} flex-shrink-0"
           >
             <AppSidebar
@@ -2881,7 +2919,7 @@
         {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
           <div
             transition:slide={{ axis: 'x' }}
-            class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
+            class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
               'mt-1.5'} flex-shrink-0"
           >
             <AnnotationsSidebar
