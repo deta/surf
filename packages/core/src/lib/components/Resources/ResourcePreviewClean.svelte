@@ -48,6 +48,7 @@
   // export let annotations: ResourceAnnotation[] = []
   export let showSummary: boolean = false
   export let showTitles: boolean = true
+  export let showActions: boolean = true
 
   const resourceManager = useResourceManager()
 
@@ -253,14 +254,16 @@
         {/if}
       </div>
 
-      <div class="remove-wrapper">
-        <div class="remove rotated" on:click={handleMaximize}>
-          <Icon name="arrow.right" color="#AAA7B1" />
+      {#if showActions}
+        <div class="remove-wrapper">
+          <div class="remove rotated" on:click={handleMaximize}>
+            <Icon name="arrow.right" color="#AAA7B1" />
+          </div>
+          <div class="remove" on:click={handleRemove}>
+            <Icon name="close" color="#AAA7B1" />
+          </div>
         </div>
-        <div class="remove" on:click={handleRemove}>
-          <Icon name="close" color="#AAA7B1" />
-        </div>
-      </div>
+      {/if}
 
       {#if annotations.length > 0}
         <div class="annotations">
@@ -296,14 +299,16 @@
     </div>
   {/if}
 
-  <div class="remove-wrapper">
-    <div class="remove rotated" on:click={handleMaximize}>
-      <Icon name="arrow.right" color="#AAA7B1" />
+  {#if showActions}
+    <div class="remove-wrapper">
+      <div class="remove rotated" on:click={handleMaximize}>
+        <Icon name="arrow.right" color="#AAA7B1" />
+      </div>
+      <div class="remove" on:click={handleRemove}>
+        <Icon name="close" color="#AAA7B1" />
+      </div>
     </div>
-    <div class="remove" on:click={handleRemove}>
-      <Icon name="close" color="#AAA7B1" />
-    </div>
-  </div>
+  {/if}
 </div>
 
 <style lang="scss">
