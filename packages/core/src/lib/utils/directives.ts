@@ -1,3 +1,5 @@
+import type { Writable } from 'svelte/store'
+
 /** Dispatch event on click outside of node */
 export function clickOutside(node: HTMLElement, onEventFunction: () => void) {
   const handleClick = (event: MouseEvent) => {
@@ -46,6 +48,27 @@ export function tooltip(node: HTMLElement, opts: string | TooltipOptions) {
     destroy() {
       node.removeAttribute('data-tooltip')
       node.removeAttribute('data-tooltip-position')
+    }
+  }
+}
+
+// take in a store and update it on hover
+export function hover(node: HTMLElement, store: Writable<boolean>) {
+  const handleMouseover = () => {
+    store.set(true)
+  }
+
+  const handleMouseout = () => {
+    store.set(false)
+  }
+
+  node.addEventListener('mouseenter', handleMouseover)
+  node.addEventListener('mouseleave', handleMouseout)
+
+  return {
+    destroy() {
+      node.removeEventListener('mouseenter', handleMouseover)
+      node.removeEventListener('mouseleave', handleMouseout)
     }
   }
 }

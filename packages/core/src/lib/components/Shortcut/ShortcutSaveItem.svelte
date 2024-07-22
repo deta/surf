@@ -55,7 +55,10 @@
   })
 </script>
 
-<div class="shortcut-wrapper">
+<div
+  class="shortcut-wrapper"
+  on:mouseleave={() => closePopover()}
+>
   {#if $filteredSpaces && $filteredSpaces.length > 0}
     {#each $filteredSpaces as space, index}
       <span

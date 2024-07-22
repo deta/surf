@@ -48,6 +48,7 @@
   // export let annotations: ResourceAnnotation[] = []
   export let showSummary: boolean = false
   export let showTitles: boolean = true
+  export let showActions: boolean = true
 
   const resourceManager = useResourceManager()
 
@@ -149,7 +150,7 @@
   on:click={handleClick}
   class="resource-preview"
   class:isSelected={selected}
-  class:background={isLiveSpaceResource && showSummary}
+  class:background={isLiveSpaceResource && showSummary && resource.metadata?.userContext}
   style="--id:{resource.id};"
   on:dragstart={handleDragStart}
   draggable="true"
@@ -253,14 +254,16 @@
         {/if}
       </div>
 
-      <div class="remove-wrapper">
-        <div class="remove rotated" on:click={handleMaximize}>
-          <Icon name="arrow.right" color="#AAA7B1" />
+      {#if showActions}
+        <div class="remove-wrapper">
+          <div class="remove rotated" on:click={handleMaximize}>
+            <Icon name="arrow.right" color="#AAA7B1" />
+          </div>
+          <div class="remove" on:click={handleRemove}>
+            <Icon name="close" color="#AAA7B1" />
+          </div>
         </div>
-        <div class="remove" on:click={handleRemove}>
-          <Icon name="close" color="#AAA7B1" />
-        </div>
-      </div>
+      {/if}
 
       {#if annotations.length > 0}
         <div class="annotations">
@@ -282,7 +285,7 @@
           {#if resource.metadata?.sourceURI}
             <img
               class="favicon"
-              src={`https://www.google.com/s2/favicons?domain=${resource.metadata?.sourceURI}&sz=256`}
+              src={`https://www.google.com/s2/favicons?domain=${resource.metadata?.sourceURI}&sz=48`}
               alt={`favicon`}
               loading="lazy"
             />
@@ -296,14 +299,16 @@
     </div>
   {/if}
 
-  <div class="remove-wrapper">
-    <div class="remove rotated" on:click={handleMaximize}>
-      <Icon name="arrow.right" color="#AAA7B1" />
+  {#if showActions}
+    <div class="remove-wrapper">
+      <div class="remove rotated" on:click={handleMaximize}>
+        <Icon name="arrow.right" color="#AAA7B1" />
+      </div>
+      <div class="remove" on:click={handleRemove}>
+        <Icon name="close" color="#AAA7B1" />
+      </div>
     </div>
-    <div class="remove" on:click={handleRemove}>
-      <Icon name="close" color="#AAA7B1" />
-    </div>
-  </div>
+  {/if}
 </div>
 
 <style lang="scss">
@@ -351,7 +356,7 @@
         0px 1px 0px 0px rgba(65, 58, 86, 0.25),
         0px 0px 1px 0px rgba(0, 0, 0, 0.25);
 
-      .preview {
+      .preview:not(.slack):not(.reddit):not(.twitter):not(.notion) {
         background: rgba(255, 255, 255, 0.75);
         border: none;
         box-shadow: none;

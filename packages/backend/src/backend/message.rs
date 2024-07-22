@@ -163,6 +163,7 @@ pub enum MiscMessage {
         rag_only: bool,
         api_endpoint: Option<String>,
         resource_ids: Option<Vec<String>>,
+        general: bool,
     },
     CreateApp {
         prompt: String,

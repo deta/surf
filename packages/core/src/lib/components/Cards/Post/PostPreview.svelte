@@ -69,7 +69,7 @@
     {:else}
       <img
         class="favicon"
-        src={`https://www.google.com/s2/favicons?domain=${post?.url}&sz=256`}
+        src={`https://www.google.com/s2/favicons?domain=${post?.url}&sz=48`}
         alt={`${post?.site_name} favicon`}
         loading="lazy"
       />
@@ -141,6 +141,7 @@
     flex-shrink: 0;
     margin-top: 1rem;
     max-width: 95%;
+    word-break: break-all;
   }
   .post-metadata {
     display: flex;

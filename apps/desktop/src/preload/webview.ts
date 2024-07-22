@@ -753,7 +753,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     event.dataTransfer?.setData('text/space-source', window.location.href)
   })
 
-  runAppDetection()
+  // runAppDetection()
 })
 
 window.addEventListener('keyup', (event: KeyboardEvent) => {
@@ -763,6 +763,23 @@ window.addEventListener('keyup', (event: KeyboardEvent) => {
 window.addEventListener('keydown', (event: KeyboardEvent) => {
   if (event.key === 'd' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
     startResourcePicker()
+  }
+
+  if ((event.key === '+' || event.key === '-') && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault()
+  }
+
+  if (
+    (event.ctrlKey || event.metaKey) &&
+    (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+  ) {
+    const inputFocused =
+      document.activeElement?.tagName === 'INPUT' ||
+      document.activeElement?.tagName === 'TEXTAREA' ||
+      (document.activeElement as HTMLElement)?.isContentEditable
+    if (inputFocused) {
+      return
+    }
   }
 
   sendPageEvent(WebViewEventSendNames.KeyDown, {
@@ -812,7 +829,7 @@ ipcRenderer.on('webview-event', (_event, payload) => {
   } else if (type === WebViewEventReceiveNames.GetResource) {
     runResourceDetection()
   } else if (type === WebViewEventReceiveNames.GetApp) {
-    debouncedAppDetection()
+    runAppDetection()
   } else if (type === WebViewEventReceiveNames.RunAction) {
     runServiceAction(data.id, data.inputs)
   } else if (type === WebViewEventReceiveNames.TransformationOutput) {

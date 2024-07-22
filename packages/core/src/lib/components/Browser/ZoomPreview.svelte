@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { writable, derived } from 'svelte/store'
+  import { writable, derived, type Writable } from 'svelte/store'
 
   export let zoomLevel: Writable<number>
   export let showZoomPreview: Writable<boolean>
@@ -41,7 +41,7 @@
   <main class="zoom-preview">
     <div class="counter">
       {#each digits as { current, previous, rolling, direction }, i (i + '-' + $animationTrigger)}
-        {#if i === 0 && current === '0' && digits.length > 1}{:else}
+        {#if !(i === 0 && current === '0' && digits.length > 1)}
           <div class="digit-container" class:rolling>
             <div class="digit-wheel">
               {#if rolling}

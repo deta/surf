@@ -11,6 +11,7 @@
   import type { SpaceData, SpaceSource } from '../../types'
   import { parseStringIntoUrl } from '../../utils/url'
   import { generateID } from '../../utils/id'
+  import { getTime } from 'date-fns'
 
   const log = useLogScope('OasisSidebar')
   const oasis = useOasis()
@@ -62,9 +63,10 @@
   const addItemToTabs = async (id: string) => {
     try {
       log.debug('Adding folder to tabs:', id)
-      const spaces = await oasis.loadSpaces()
-      const space = spaces.find((space) => space.id === id)
+      const space = $spaces.find((space) => space.id === id)
       if (space) {
+        space.name.showInSidebar = true
+
         await oasis.updateSpaceData(id, {
           showInSidebar: true
         })
@@ -137,7 +139,7 @@
     </button>
   </div>
   <div class="folder-wrapper">
-    {#each $spaces.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) as folder (folder.id)}
+    {#each $spaces.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as folder (folder.id)}
       {#key folder.name.colors}
         <Folder
           {folder}
@@ -145,6 +147,7 @@
           on:add-folder-to-tabs={() => addItemToTabs(folder.id)}
           on:select={() => selectedSpace.set(folder.id)}
           on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+          on:open-resource
           selected={$selectedSpace === folder.id}
         />
       {/key}

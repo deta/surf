@@ -98,7 +98,9 @@
   })
 </script>
 
-<div class="fixed top-0 left-0 h-full w-full flex justify-center items-center bg-sky-900/5 backdrop-blur-sm backdrop-sepia overlay">
+<div
+  class="fixed top-0 shadow-2xl left-0 h-full w-full flex justify-center items-center bg-sky-900/5 backdrop-blur-sm overlay"
+>
   <div class="content">
     <input
       bind:this={searchInputRef}
@@ -134,7 +136,6 @@
   .content {
     width: 60rem;
     padding: 1rem;
-    box-shadow: 3px 3px 10px 2px rgba(0, 0, 0, 0.3);
     background-color: paleturquoise;
     border-radius: 12px;
   }

@@ -83,8 +83,9 @@
 
 <style lang="scss">
   .folder-icon {
-    width: 1.5rem;
-    height: 1.5rem;
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
     border-radius: 50%;
     background: radial-gradient(
         95% 95% at 50% 10%,

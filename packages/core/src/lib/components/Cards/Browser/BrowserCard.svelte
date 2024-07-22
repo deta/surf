@@ -5,7 +5,7 @@
   import { writable } from 'svelte/store'
   import { fly } from 'svelte/transition'
 
-  import WebviewWrapper, { type WebViewWrapperEvents } from './WebviewWrapper.svelte'
+  import WebviewWrapper, { type WebViewWrapperEvents } from './WebviewWrapperOld.svelte'
   import {
     type HistoryEntry,
     type CardBrowser,
@@ -29,7 +29,7 @@
   import { Icon } from '@horizon/icons'
 
   import { isModKeyAndKeyPressed } from '../../../utils/keyboard'
-  import FindInPage from './FindInPage.svelte'
+  import FindInPage from '../../Browser/FindInPage.svelte'
   import StackItem from '../../Stack/StackItem.svelte'
   import { wait } from '../../../utils/time'
   import {
