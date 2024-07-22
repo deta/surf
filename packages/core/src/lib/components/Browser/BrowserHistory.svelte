@@ -195,17 +195,17 @@
         <h1>History</h1>
       </div>
 
-      <input
+      <!-- <input
         type="text"
         placeholder="Search history..."
         bind:value={$searchTerm}
         class="search-input"
-      />
+      /> -->
 
       <button on:click={handleClearHistory}>Clear</button>
     </div>
 
-    <div class="overflow-y-scroll" bind:this={containerElement} on:scroll={handleScroll}>
+    <div class="overflow-y-scroll p-4" bind:this={containerElement} on:scroll={handleScroll}>
       {#if $filteredEntries.length > 0}
         <div style="height: {totalHeight}px; position: relative">
           {#each visibleItems as item (item.id)}
