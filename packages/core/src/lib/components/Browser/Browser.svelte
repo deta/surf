@@ -1854,6 +1854,9 @@
     //   updateTab(tab.id, { index: index })
     // })
 
+    // if we have some magicTabs, make them unpinned
+    turnMagicTabsIntoUnpinned()
+
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
     log.debug('tabs', $tabs)
@@ -1862,6 +1865,51 @@
 
     // ON DESTROY!!
   })
+
+  const turnMagicTabsIntoUnpinned = async () => {
+  const magicTabsArray = get(magicTabs)
+  const unpinnedTabsArray = get(unpinnedTabs)
+
+  if (magicTabsArray.length === 0) {
+    // No magic tabs to process
+    return
+  }
+
+  // Turn magic tabs into unpinned tabs
+  magicTabsArray.forEach((magicTab) => {
+    magicTab.magic = false
+    unpinnedTabsArray.push(magicTab)
+  })
+
+  // Clear the magic tabs array
+  magicTabsArray.length = 0
+
+  // Update indices of unpinned tabs
+  const updatedUnpinnedTabs = unpinnedTabsArray.map((tab, index) => ({ ...tab, index }))
+
+  // Update the tabs store
+  tabs.update((x) => {
+    return x.map((tab) => {
+      const updatedTab = updatedUnpinnedTabs.find((t) => t.id === tab.id)
+      if (updatedTab) {
+        tab.index = updatedTab.index
+        tab.magic = false
+        tab.pinned = false
+      }
+      return tab
+    })
+  })
+
+  // Update the store with the changed tabs
+  await bulkUpdateTabsStore(
+    updatedUnpinnedTabs.map((tab) => ({
+      id: tab.id,
+      updates: { pinned: false, magic: false, index: tab.index }
+    }))
+  )
+
+  log.debug('Magic tabs turned into unpinned tabs successfully')
+}
 
   const createChatResourceBookmark = async (tab: TabPage) => {
     let resource_id: string
