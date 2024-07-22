@@ -85,7 +85,7 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div
-  class="entry"
+  class="entry max-h-[90px]"
   on:click={handleClick}
   on:mouseenter={handleMouseEnter}
   on:mouseleave={handleMouseLeave}
@@ -96,7 +96,7 @@
         {error}
       </div>
     {:else if data}
-      <div class="title">
+      <div class="title truncate">
         {title}
       </div>
 
