@@ -98,7 +98,7 @@
     resetPrompt,
     updatePrompt
   } from '../../service/prompts'
-  import { LinkPreview, Popover, Tooltip } from 'bits-ui'
+  import { LinkPreview, Tabs, Tooltip } from 'bits-ui'
   import BrowserHistory from './BrowserHistory.svelte'
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
@@ -2195,8 +2195,7 @@
     }}
   >
     <div
-    slot="sidebar"
-
+      slot="sidebar"
       class="flex-grow {horizontalTabs ? 'w-full h-full' : 'h-full'}"
       class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
       style="z-index: 5000;"
@@ -2680,7 +2679,7 @@
               {/if}
             </button>
             <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
-              <button
+              <!-- <button
                 class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 on:click={handleToggleMagicSidebar}
                 disabled={$sidebarTab !== 'active' ||
@@ -2704,11 +2703,7 @@
                   <Icon name="message" />
                 {/if}
               </button>
-              {#if $activeTabMagic}
-                <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-              {/if}
 
-              <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
               <button
                 class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
@@ -2745,7 +2740,7 @@
                 {:else}
                   <Icon name="sparkles" />
                 {/if}
-              </button>
+              </button> -->
 
               <NewTabButton
                 {resourceManager}
@@ -2896,64 +2891,145 @@
           </div>
         {/if}
       </div>
-     
     </div>
 
-    <div slot="right-sidebar">
-      {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
-      <div
-        transition:slide={{ axis: 'x' }}
-        class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
-          'mt-1.5'} flex-shrink-0"
-      >
-        <MagicSidebar
-          magicPage={$activeTabMagic}
-          bind:inputValue={$magicInputValue}
-          on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
-          on:highlightWebviewText={(e) =>
-            highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
-          on:seekToTimestamp={(e) =>
-            handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
-          on:navigate={(e) => {
-            $browserTabs[$activeTabId].navigate(e.detail.url)
-          }}
-          on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
-          on:chat={() => handleChatSubmit($activeTabMagic)}
-          on:clearChat={() => handleChatClear(true)}
-          on:prompt={handleMagicSidebarPromptSubmit}
-        />
-      </div>
-    {:else if $showAppSidebar}
-      <div
-        transition:slide={{ axis: 'x' }}
-        class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
-          'mt-1.5'} flex-shrink-0"
-      >
-        <AppSidebar
-          {sffs}
-          appId={$activeAppId}
-          tabContext={$activeAppSidebarContext}
-          on:clearAppSidebar={() => handleAppSidebarClear(true)}
-          on:executeAppSidebarCode={(e) =>
-            handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
-        />
-      </div>
-    {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
-      <div
-        transition:slide={{ axis: 'x' }}
-        class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
-          'mt-1.5'} flex-shrink-0"
-      >
-        <AnnotationsSidebar
-          bind:this={annotationsSidebar}
-          resourceId={$activeTab.resourceBookmark}
-          on:scrollTo={handleAnnotationScrollTo}
-          on:create={handleAnnotationSidebarCreate}
-          on:reload={handleAnnotationSidebarReload}
-        />
-      </div>
-    {/if}
-    </div>
+      <Tabs.Root value="annotations" class="h-full flex flex-col relative" slot="right-sidebar">
+        <Tabs.List
+          class="grid w-full grid-cols-3 gap-1 rounded-9px bg-dark-10 p-1 text-sm font-semibold leading-[0.01em]"
+        >
+          <Tabs.Trigger
+            value="magicTabs"
+            class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+            disabled={$sidebarTab !== 'active' || !$activeTabMagic || $activeTab?.type !== 'page'}
+            >{#if !$activeTabMagic}
+              <Icon name="message" />
+            {:else if $activeTabMagic.showSidebar}
+              <Icon name="close" />
+            {:else if $activeTabMagic.running}
+              <Icon name="spinner" />
+            {:else}
+              <Icon name="message" />
+            {/if}</Tabs.Trigger
+          >
+          <Tabs.Trigger
+            value="annotations"
+            class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+            disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
+          >
+            <Icon name="marker" /></Tabs.Trigger
+          >
+
+          <Tabs.Trigger
+            value="go-wild"
+            class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+            disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
+          >
+            <Icon name="sparkles" /></Tabs.Trigger
+          >
+        </Tabs.List>
+        <Tabs.Content value="magicTabs" class="pt-3 h-full">
+          {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
+            <MagicSidebar
+              magicPage={$activeTabMagic}
+              bind:inputValue={$magicInputValue}
+              on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
+              on:highlightWebviewText={(e) =>
+                highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
+              on:seekToTimestamp={(e) =>
+                handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
+              on:navigate={(e) => {
+                $browserTabs[$activeTabId].navigate(e.detail.url)
+              }}
+              on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
+              on:chat={() => handleChatSubmit($activeTabMagic)}
+              on:clearChat={() => handleChatClear(true)}
+              on:prompt={handleMagicSidebarPromptSubmit}
+            />
+          {:else}
+            <span>Magic chat not available</span>
+          {/if}
+        </Tabs.Content>
+        <Tabs.Content value="annotations" class="pt-3 h-full">
+          {#if $activeTab && $activeTab.type === 'page'}
+            <AnnotationsSidebar
+              bind:this={annotationsSidebar}
+              resourceId={$activeTab.resourceBookmark}
+              on:scrollTo={handleAnnotationScrollTo}
+              on:create={handleAnnotationSidebarCreate}
+              on:reload={handleAnnotationSidebarReload}
+            />
+          {:else}
+            <span>No page info available.</span>
+          {/if}
+        </Tabs.Content>
+        <Tabs.Content value="go-wild" class="pt-3 h-full">
+          {#if $activeTab && $activeTab.type === 'page'}
+            <AppSidebar
+              {sffs}
+              appId={$activeAppId}
+              tabContext={$activeAppSidebarContext}
+              on:clearAppSidebar={() => handleAppSidebarClear(true)}
+              on:executeAppSidebarCode={(e) =>
+                handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
+            />
+          {:else}
+            <span>Go wild not available.</span>
+          {/if}
+        </Tabs.Content>
+      </Tabs.Root>
+      <!-- {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
+        <div
+          transition:slide={{ axis: 'x' }}
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
+            'mt-1.5'} flex-shrink-0"
+        >
+          <MagicSidebar
+            magicPage={$activeTabMagic}
+            bind:inputValue={$magicInputValue}
+            on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
+            on:highlightWebviewText={(e) =>
+              highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
+            on:seekToTimestamp={(e) =>
+              handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
+            on:navigate={(e) => {
+              $browserTabs[$activeTabId].navigate(e.detail.url)
+            }}
+            on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
+            on:chat={() => handleChatSubmit($activeTabMagic)}
+            on:clearChat={() => handleChatClear(true)}
+            on:prompt={handleMagicSidebarPromptSubmit}
+          />
+        </div>
+      {:else if $showAppSidebar}
+        <div
+          transition:slide={{ axis: 'x' }}
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
+            'mt-1.5'} flex-shrink-0"
+        >
+          <AppSidebar
+            {sffs}
+            appId={$activeAppId}
+            tabContext={$activeAppSidebarContext}
+            on:clearAppSidebar={() => handleAppSidebarClear(true)}
+            on:executeAppSidebarCode={(e) =>
+              handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
+          />
+        </div>
+      {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
+        <div
+          transition:slide={{ axis: 'x' }}
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
+            'mt-1.5'} flex-shrink-0"
+        >
+          <AnnotationsSidebar
+            bind:this={annotationsSidebar}
+            resourceId={$activeTab.resourceBookmark}
+            on:scrollTo={handleAnnotationScrollTo}
+            on:create={handleAnnotationSidebarCreate}
+            on:reload={handleAnnotationSidebarReload}
+          />
+        </div>
+      {/if} -->
   </SidebarPane>
 </div>
 

@@ -55,13 +55,10 @@
       </Pane>
       <PaneResizer class="hover:bg-neutral-100 z-[50001]">
         <div
-          class:h-full={!horizontalTabs}
-          class:w-0.5={!horizontalTabs}
-          class:w-full={horizontalTabs}
-          class:h-0.5={horizontalTabs}
+            class="h-full w-2"
         />
       </PaneResizer>
-      <Pane defaultSize={1} collapsedSize={1} collapsible={true} minSize={1} maxSize={20} class="bg-red-500">
+      <Pane defaultSize={10} collapsedSize={1} collapsible={true} minSize={1} maxSize={20} class="bg-sky-50 mb-1.5 rounded-xl mr-1.5 {horizontalTabs ? '' : 'mt-1.5'}">
         <slot name="right-sidebar" />
         </Pane>
     </PaneGroup>
