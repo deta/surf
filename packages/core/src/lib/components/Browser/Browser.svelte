@@ -2464,12 +2464,14 @@
               class="overflow-x-scroll no-scrollbar relative flex-grow"
               class:space-x-2={horizontalTabs}
               class:items-center={horizontalTabs}
+              class:h-full={horizontalTabs}
               bind:this={containerRef}
             >
               {#if horizontalTabs}
                 <DragDropList
                   id="tabs"
                   type={HorizontalDropZone}
+                  zoneClass="h-full"
                   itemSize={Math.min(400, Math.max(200, tabSize))}
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
@@ -2482,10 +2484,10 @@
                       showClose
                       tab={$unpinnedTabs[index]}
                       {activeTabId}
+                      {spaces}
                       bookmarkingInProgress={$bookmarkingInProgress}
                       bookmarkingSuccess={$bookmarkingSuccess}
                       pinned={false}
-                      {spaces}
                       enableEditing
                       bind:this={activeTabComponent}
                       on:select={() => {}}
@@ -2499,7 +2501,7 @@
                       on:save-resource-in-space={handleSaveResourceInSpace}
                     />
                   {:else}
-                    <LinkPreview.Root openDelay={7000} closeDelay={10}>
+                    <LinkPreview.Root openDelay={4000} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
                           showClose
