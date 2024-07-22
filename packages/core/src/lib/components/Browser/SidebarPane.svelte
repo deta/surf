@@ -61,7 +61,9 @@
           class:h-0.5={horizontalTabs}
         />
       </PaneResizer>
-      <Pane defaultSize={20} />
+      <Pane defaultSize={1} collapsedSize={1} collapsible={true} minSize={1} maxSize={20} class="bg-red-500">
+        <slot name="right-sidebar" />
+        </Pane>
     </PaneGroup>
   </Pane>
 </PaneGroup>
