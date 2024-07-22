@@ -154,7 +154,6 @@
 
   const handlePopoverEnter = () => {
     popoverVisible = true
-
   }
 
   const handlePopoverLeave = () => {
@@ -162,7 +161,6 @@
   }
 
   $: console.log('classnaem', tabSize)
-
 </script>
 
 <!-- style:view-transition-name="tab-{tab.id}" -->
@@ -195,31 +193,24 @@
       }
     : {}}
 >
-  {#if tab.icon}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+  <div
+    class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}"
+    style:view-transition-name="tab-icon-{tab.id}"
+  >
+    {#if tab.icon}
       <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
-    </div>
-  {:else if tab.type === 'horizon'}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+    {:else if tab.type === 'horizon'}
       <Icon name="grid" size="18px" />
-    </div>
-  {:else if tab.type === 'importer'}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+    {:else if tab.type === 'importer'}
       <Icon name="code" size="18px" />
-    </div>
-  {:else if tab.type === 'history'}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+    {:else if tab.type === 'history'}
       <Icon name="history" size="18px" />
-    </div>
-  {:else if tab.type === 'space' && space}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+    {:else if tab.type === 'space' && space}
       <SpaceIcon folder={space} />
-    </div>
-  {:else}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+    {:else}
       <Icon name="world" size="18px" />
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   {#if showClose && hovered}
     {#if tab.type == 'space'}
@@ -315,7 +306,7 @@
         {#if tab.type === 'page' && isActive}
           {#key isBookmarkedByUser}
             <button
-            on:mouseenter={handlePopoverEnter}
+              on:mouseenter={handlePopoverEnter}
               on:click={handleBookmark}
               use:tooltip={{
                 content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
@@ -374,6 +365,11 @@
 </div>
 
 <style>
+  .tab {
+    transition:
+      0.2s ease-in-out,
+      transform 0s;
+  }
   .icon-wrapper {
     width: 18px;
     height: 18px;
