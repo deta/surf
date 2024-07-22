@@ -2184,9 +2184,9 @@
   <PaneGroup direction={horizontalTabs ? 'vertical' : 'horizontal'} autoSaveId="surf-sidebar" class="relative">
     <Pane
       collapsible
-      minSize={horizontalTabs ? 5 : 10}
+      minSize={horizontalTabs ? 5 : 2}
       maxSize={horizontalTabs ? 5 : 20}
-      defaultSize={horizontalTabs ? 5 : 15}
+      defaultSize={horizontalTabs ? 5 : 10}
       bind:pane={leftPane}
       onCollapse={() => {
         showLeftSidebar = false
