@@ -3414,51 +3414,9 @@
   }
 
   .tab {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    gap: 10px;
-    position: relative;
-    color: #7d7448;
-    font-weight: 500;
-    letter-spacing: 0.0025em;
-    font-smooth: always;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-
-    .title {
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-size: 1.1rem;
-    }
-
-    .close {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      appearance: none;
-      border: none;
-      padding: 0;
-      margin: 0;
-      height: min-content;
-      background: none;
-      color: #a9a9a9;
-      cursor: pointer;
-    }
-
-    &:hover .close {
-      display: flex;
-    }
-
-    &.selected {
-      color: #585130;
-      background-color: #fff;
-    }
+    transition: .2s ease-out, transform 0ms;
   }
+
 
   .actions {
     display: flex;
