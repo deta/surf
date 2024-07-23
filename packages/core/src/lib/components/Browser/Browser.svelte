@@ -304,7 +304,9 @@
       makeTabActive($activeTabs[nextTabIndex].id)
     } else {
       // go to last tab
-      makeTabActive($unpinnedTabs[$unpinnedTabs.length - 1].id)
+      if ($unpinnedTabs.length > 0) {
+        makeTabActive($unpinnedTabs[$unpinnedTabs.length - 1].id)
+      }
     }
   }
 
@@ -2149,6 +2151,19 @@
 
     //if (drag.srcZone.id === drag.targetZone.id && drag.index === to.index) return
 
+    if (e.dataTransfer['farc/resource'] !== undefined) {
+      // TODO: Rename to oasis/resource
+      const resource = e.dataTransfer['farc/resource']
+
+      if (
+        resource.type === 'application/vnd.space.link' ||
+        resource.type === 'application/vnd.space.article'
+      ) {
+        createPageTab(resource.parsedData.url, true)
+      }
+      return
+    }
+
     // Get all the tab arrays
     let unpinnedTabsArray = get(unpinnedTabs)
     let pinnedTabsArray = get(pinnedTabs)
@@ -2215,22 +2230,22 @@
     // Only update the tabs that were changed (archived stay unaffected)
     tabs.update((x) => {
       // NOTE: This seemes to break magic tabs?
-      /*newTabs.forEach((tab) => {
-        const newTab = x.find((t) => t.id === tab.id)
-        if (newTab) {
-          newTab.index = tab.index
-          newTab.pinned = tab.pinned
-          newTab.magic = tab.magic
+      for (const t of newTabs) {
+        const existing = x.find((tab) => tab.id === t.id)
+        if (existing) {
+          existing.index = t.index
+          existing.pinned = t.pinned
+          existing.magic = t.magic
         } else {
-          x.push(tab)
+          x.splice(t.index, 0, t)
         }
-      })
-      return x*/
+      }
       // Old way, maybe we need a combination at some point...
       return newTabs.map((tab) => {
         return tab
       })
     })
+    await tick()
 
     // Update the store with the changed tabs
     await bulkUpdateTabsStore(
@@ -2407,6 +2422,7 @@
               <div
                 style:view-transition-name="pinned-tabs-wrapper"
                 axis="horizontal"
+                dropDeadZone="3"
                 use:AxisDragZone.action={{
                   id: 'sidebar-pinned-tabs'
                 }}
@@ -2560,6 +2576,7 @@
                 <div
                   class="horizontal-tabs"
                   axis="horizontal"
+                  dropDeadZone="5"
                   use:AxisDragZone.action={{
                     id: 'sidebar-unpinned-tabs'
                   }}
@@ -2610,6 +2627,7 @@
                 <div
                   class="vertical-tabs"
                   axis="vertical"
+                  dropDeadZone="5"
                   use:AxisDragZone.action={{
                     id: 'sidebar-unpinned-tabs'
                   }}
