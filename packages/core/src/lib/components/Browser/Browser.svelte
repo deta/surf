@@ -111,6 +111,7 @@
   let showLeftSidebar = true
   let showRightSidebar = false
   let leftPane: PaneAPI | undefined = undefined
+  let rightPane: PaneAPI | undefined = undefined
   let annotationsSidebar: AnnotationsSidebar
   let isFirstButtonVisible = true
   let newTabButton: Element
@@ -657,6 +658,32 @@
 
   let horizontalTabs = false
 
+  const handleCollapseRight = () => {
+    if (rightPane) {
+      rightPane.collapse()
+    }
+  }
+
+  const handleExpandRight = () => {
+    if (rightPane) {
+      rightPane.expand()
+    }
+  }
+
+  const handleRightPaneUpdate = (event: CustomEvent<PaneAPI>) => {
+    rightPane = event.detail
+  }
+
+  const handleRightSidebarChange = () => {
+    if (showRightSidebar) {
+      handleCollapseRight()
+      showRightSidebar = false
+    } else {
+      handleExpandRight()
+      showRightSidebar = true
+    }
+  }
+
   const handleCollapse = () => {
     if (leftPane) {
       leftPane.collapse()
@@ -665,13 +692,9 @@
   }
 
   const handleExpand = () => {
-    console.log('handleExpand is being called')
     if (leftPane) {
-      console.log('leftPane is not null')
       leftPane.expand()
-      console.log('leftPane is expanded')
       changeTraficLightsVisibility(true)
-      console.log('traffic lights are visible')
     }
   }
 
@@ -681,8 +704,6 @@
   }
 
   const handleSidebarchange = () => {
-    console.log('handleSidebarchange is being called')
-    console.log('showLeftSidebar', showLeftSidebar)
     if (showLeftSidebar) {
       handleCollapse()
       showLeftSidebar = false
@@ -2208,6 +2229,14 @@
       changeTraficLightsVisibility(true)
     }}
     on:pane-update={handlePaneUpdate}
+    on:collapsed-right-sidebar={() => {
+      handleCollapseRight()
+    }}
+    on:expanded-right-sidebar={() => {
+      handleExpandRight()
+    }}
+    bind:rightPaneItem={rightPane}
+    on:pane-update-right={handleRightPaneUpdate}
   >
     <div
       slot="sidebar"
@@ -2692,6 +2721,16 @@
               {/if}
             </button>
             <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
+              <button
+              class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+              on:click={() => handleRightSidebarChange()}
+            >
+              {#if showRightSidebar}
+                <Icon name="close" />
+              {:else}
+                <Icon name="sidebar.right" />
+              {/if}
+            </button>
               <!-- <button
                 class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 on:click={handleToggleMagicSidebar}
