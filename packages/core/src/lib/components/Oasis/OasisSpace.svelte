@@ -817,15 +817,15 @@
   />
 {/if}
 
-<!-- <DropWrapper on:drop={handleDrop}> -->
-<div
-  use:DragZone.action={{
-    id: `oasis-space-${spaceId}`,
-    removeItem: (item) => {
-      // TODO: impl
-    }
-  }}
->
+<DropWrapper on:drop={handleDrop}>
+  <!-- <div -->
+  <!--   use:DragZone.action={{ -->
+  <!--     id: `oasis-space-${spaceId}`, -->
+  <!--     removeItem: (item) => { -->
+  <!--       // TODO: impl -->
+  <!--     } -->
+  <!--   }} -->
+  <!-- > -->
   <div class="wrapper">
     <div class="drawer-bar">
       <div class="drawer-chat-search">
@@ -973,8 +973,10 @@
       </div>
     {/if}
   </div>
-  <!-- </DropWrapper> -->
-</div>
+  -
+</DropWrapper>
+
+<!-- </div> -->
 
 <style lang="scss">
   .wrapper {
