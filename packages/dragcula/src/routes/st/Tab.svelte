@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DragItem } from "$lib/controllers.ts";
+  import { DragZone } from "$lib/controllers.ts";
   import { createEventDispatcher } from "svelte";
 
   export let tab: {
@@ -13,37 +14,21 @@
   }>();
 
   let draggable = true;
-
-  let controller;
-  let showPreview: string | null = null;
 </script>
 
 <div
   class="tab"
-  {draggable}
+  draggable="true"
   dragpreview="hoist"
   simulatedragstart="true"
+  style:view-transition-name="tab-{tab.id}"
   use:DragItem.action={{
     id: tab.id,
     data: { "test/tab": tab }
-    /*onInit: (controller) => {
-      controller.on("dragenter", (drag) => {
-        showPreview = drag.targetZone.id;
-
-        console.warn("size", drag.targetZone?.itemDomSize);
-        if (drag.targetZone?.itemDomSize !== undefined) {
-          //const transition = this.startViewTransition(async () => {
-          drag.item.node.style.width = `${drag.targetZone?.itemDomSize.w}px`;
-          drag.item.node.style.height = `${drag.targetZone?.itemDomSize.h}px`;
-          //});
-        }
-      });
-      controller.on("dragleave", (e) => {
-        showPreview = null;
-      });
-    }*/
   }}
-  style:view-transition-name="tab-{tab.id}"
+  on:Drop={(e) => {
+    console.warn("tab drop", e);
+  }}
 >
   <img src={tab.icon} alt="" />
   <span>{tab.title}</span>

@@ -17,6 +17,8 @@ import { DragculaDragEvent } from "./events.js";
 // TODO: DragStart -> Store data transferred.
 // TODO: ref stylePlaceholder / styleDragged prop function
 // TODO: Abstract indexed zone? / events / actions
+//
+// TODO: remove -> on:Lift
 
 const SUPPORTS_VIEW_TRANSITIONS = document.startViewTransition !== undefined; // TODO: test & check in startVT method
 
@@ -35,7 +37,7 @@ if (!GLOBAL_mouseMoveListener) {
 }
 
 export class DragZone {
-  readonly id = crypto.randomUUID();
+  readonly id: string = crypto.randomUUID();
   readonly node?: HTMLElement;
 
   /// === STATE
@@ -54,20 +56,23 @@ export class DragZone {
   }
 
   /// Cbk Refs
-
-  removeItem?: (item: DragItem, controller: DragZone) => void;
   //getItemId?: (item: DragItem) => string;
 
   /// === CUSTOM EVENT HANDLERS
   protected eventHandlers: {
+    /// Additional event, called when an item is lifted (removed) from this zone.
+    //'lift': ((drag: DragOperation) => void)[]
     dragenter: ((drag: DragOperation, e: MouseEvent) => void)[];
     dragover: ((drag: DragOperation, e: MouseEvent) => void)[];
     dragleave: ((drag: DragOperation, e: MouseEvent) => void)[];
+    dragend: ((drag: DragOperation, e: MouseEvent) => void)[];
     drop: ((drag: DragOperation, e: MouseEvent) => void)[];
   } = {
+    //'lift': [],
     dragenter: [],
     dragover: [],
     dragleave: [],
+    dragend: [],
     drop: []
   };
 
@@ -178,11 +183,20 @@ export class DragZone {
     // TODO: Actually, not.. need to fix this sometime!
     if (get(ACTIVE_DRAG) === null) return;
     e.preventDefault();
+    e.stopPropagation();
     this.onDrop(get(ACTIVE_DRAG)!, e);
   }
 
   /// === EVENTS
 
+  /**
+   * Called when an item is lifted from this zone
+   * (when item is dropped [move] onto other zone).
+   * Use it to remove the item from the zone!
+   */
+  /*onLift(drag: DragOperation) {
+		this.dispatch("lift", drag);
+	}*/
   onDragEnter(drag: DragOperation, e: DragEvent) {
     if (!this.acceptDrag(drag)) return;
     console.debug(`[Dragcula::Z-${this.id}] DragEnter`, drag);
@@ -202,6 +216,18 @@ export class DragZone {
     this.dispatch("dragleave", drag, e);
     drag.item.onDragLeave(drag); // TODO: EVENT CALL
   }
+
+  /**
+   * Mirrors the drag item dragend event.
+   * Use this to remove the item of the DragOperation from this zone.
+   */
+  onDragEnd(drag: DragOperation, e: MouseEvent) {
+    console.debug(`[Dragcula::Z-${this.id}] DragEnd`, drag);
+    this.dispatch("dragend", drag, e);
+
+    this.node!.dispatchEvent(new DragculaDragEvent("DragEnd", e, drag, drag.data));
+  }
+
   onDrop(drag: DragOperation, e: DragEvent) {
     console.debug(`[Dragcula::Z-${this.id}] DragDrop`, drag);
     this.isTarget.set(false);
@@ -237,6 +263,7 @@ export class DragZone {
     });
 
     if (props.removeItem) controller.removeItem = props.removeItem;
+    //node.style.setProperty("view-transition-name", `dragZone-${controller.id}`);
 
     return {
       update(props: any) {
@@ -624,11 +651,10 @@ export class DragItem {
         }
       } else if (drag.to !== null) {
         // TODO: If items linked auto remove, else this else error
-        if (drag.from.removeItem !== undefined) drag.from.removeItem(this, drag.from);
+        if (drag.from !== null) drag.from.onDragEnd(drag, e);
         await tick(); // TODO: Check if needed to ensure item is removed?
 
         this.node!.remove();
-        //drag.to.handleDrop(new DragEvent("drop", { dataTransfer: this.dataTransfer }));
         drag.to.node!.dispatchEvent(
           new DragEvent("drop", {
             dataTransfer: this.dataTransfer
@@ -723,6 +749,11 @@ export class DragItem {
       // to enable automagical view transitions from the dragged one to
       // the newly created one.
       if (drag.item.id === controller.id) {
+        if (node.style.getPropertyValue("view-transition-name") !== undefined)
+          node.setAttribute(
+            "view-transition-name-backup",
+            node.style.getPropertyValue("view-transition-name")
+          );
         node.style.setProperty("view-transition-name", `dragItem-${drag.id}`);
       }
     }

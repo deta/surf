@@ -66,7 +66,7 @@ export class DragculaDragEvent
     drag: DragOperation,
     data: DataTransfer | IDragData
   ) {
-    super(type); //, { detail: drag });
+    super(type, { bubbles: true }); //, { detail: drag });
     this.id = drag.id;
     this.dataTransfer = data;
     this.isNative = data instanceof DataTransfer;

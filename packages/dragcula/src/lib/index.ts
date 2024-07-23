@@ -5,5 +5,4 @@ export * from "./events.js";
 export * from "./controllers.js";
 
 // Vendor extensions
-export * from "./VerticalZone.js";
-export * from "./HorizontalZone.js";
+export * from "./extensions/AxisZone.js";

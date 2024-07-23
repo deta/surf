@@ -71,17 +71,17 @@ export interface DragZoneActionProps {
   id: string;
   controller?: DragZone;
 
-  // Callback used to remove an item from the item collection.
-  // This is needed to support the "move" effect.
-  removeItem: (item: DragItem) => void;
-  //copyItem: (item: DragItem, index: number) => void;
+  //items: Writable<unknown[]> | unknown[];
+  //getItem: (id: string) => unknown
 }
 export interface DragZoneActionAttributes {
   droppable?: "true" | "false";
 
   // TODO: Events
+  //'on:Lift': (e: DragculaDragEvent) => void,
   "on:DragEnter": (e: DragculaDragEvent) => void;
   "on:DragOver": (e: DragculaDragEvent) => void;
   "on:DragLeave": (e: DragculaDragEvent) => void;
+  "on:DragEnd": (e: DragculaDragEvent) => void;
   "on:Drop": (e: DragculaDragEvent) => void;
 }
