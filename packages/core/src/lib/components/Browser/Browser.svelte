@@ -94,7 +94,7 @@
   import BrowserHistory from './BrowserHistory.svelte'
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
-  import { AxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import { AxisDragZone, DragItem, type DragculaDragEvent } from '@horizon/dragcula'
 
   let activeTabComponent: TabItem | null = null
   let drawer: Drawer
@@ -2222,6 +2222,7 @@
         }
       })
       return x
+      // Old way, maybe we need a combination at some point...
       /*return newTabs.map((tab) => {
         return tab
       })*/
@@ -2236,6 +2237,16 @@
     )
 
     log.debug('State updated successfully')
+  }
+
+  const onDragculaRemoveTab = (item: DragItem) => {
+    tabs.update((tabs) => {
+      const idx = tabs.findIndex((v) => v.id === item.id)
+      if (idx > -1) {
+        tabs.splice(idx, 1)
+      }
+      return tabs
+    })
   }
 
   function checkVisibility() {
@@ -2407,31 +2418,13 @@
             -->
               <div
                 style:view-transition-name="pinned-tabs-wrapper"
-                use:HorizontalDragZone.action={{
-                  id: 'sidebar-pinned-tabs',
-                  removeItem: (item) => {
-                    tabs.update((tabs) => {
-                      const idx = tabs.findIndex((v) => v.id === item.id)
-                      if (idx > -1) {
-                        tabs.splice(idx, 1)
-                      }
-                      return tabs
-                    })
-                  }
+                axis="horizontal"
+                use:AxisDragZone.action={{
+                  id: 'sidebar-pinned-tabs'
                 }}
+                on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
                 on:Drop={onDropDragcula}
               >
-                <!-- <DragDropList
-                id="pinned-tabs"
-                zoneClass="flex items-center space-x-2 w-full"
-                type={HorizontalCenterDropZone}
-                itemSize={$pinnedTabs.length === 0 ? 256 : 30}
-                itemCount={$pinnedTabs.length || 1}
-                on:drop={async (event) => {
-                  onDrop(event, 'pin')
-                }}
-                let:index
-              > -->
                 {#if $pinnedTabs.length === 0}
                   <div class="">Drop Tabs here to pin them.</div>
                 {:else}
@@ -2449,7 +2442,6 @@
                     {/key}
                   {/each}
                 {/if}
-                <!-- </DragDropList> -->
               </div>
             </div>
 
@@ -2579,20 +2571,11 @@
               {#if horizontalTabs}
                 <div
                   class="horizontal-tabs"
-                  use:HorizontalDragZone.action={{
-                    id: 'sidebar-unpinned-tabs',
-                    removeItem: (item) => {
-                      console.warn('dragcula remove item', item)
-                      tabs.update((tabs) => {
-                        const idx = tabs.findIndex((v) => v.id === item.id)
-                        console.warn('dragcula id', idx, tabs)
-                        if (idx > -1) {
-                          tabs.splice(idx, 1)
-                        }
-                        return tabs
-                      })
-                    }
+                  axis="horizontal"
+                  use:AxisDragZone.action={{
+                    id: 'sidebar-unpinned-tabs'
                   }}
+                  on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
                   on:Drop={onDropDragcula}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}
@@ -2638,20 +2621,11 @@
               {:else}
                 <div
                   class="vertical-tabs"
-                  use:VerticalDragZone.action={{
-                    id: 'sidebar-unpinned-tabs',
-                    removeItem: (item) => {
-                      console.warn('dragcula remove item', item)
-                      tabs.update((tabs) => {
-                        const idx = tabs.findIndex((v) => v.id === item.id)
-                        console.warn('dragcula id', idx, tabs)
-                        if (idx > -1) {
-                          tabs.splice(idx, 1)
-                        }
-                        return tabs
-                      })
-                    }
+                  axis="vertical"
+                  use:AxisDragZone.action={{
+                    id: 'sidebar-unpinned-tabs'
                   }}
+                  on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
                   on:Drop={onDropDragcula}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}
@@ -2831,7 +2805,7 @@
     >
       <!-- {horizontalTabs ? `pb-1.5 ${showTabs && 'pt-1.5'}` : `pr-1.5 ${showTabs && 'pl-1.5'}`}  -->
       <div
-        style:view-transition-name="browser-wrapper"
+        style:view-transition-name="active-content-wrapper"
         class="w-full h-full overflow-hidden flex-grow"
         class:pb-1.5={horizontalTabs}
         class:pt-1.5={horizontalTabs && !showTabs}
