@@ -13,8 +13,7 @@ export type Axis = "vertical" | "horizontal";
 export interface AxisDragZoneActionProps extends DragZoneActionProps {}
 export interface AxisDragZoneActionAttributes extends DragZoneActionAttributes {
   axis?: Axis;
-
-  //dropMargin?: number;
+  dropDeadZone?: number;
 
   /// DOM Events
   "on:DragEnter"?: (e: IndexedDragculaDragEvent) => void;
@@ -27,8 +26,8 @@ export interface AxisDragZoneActionAttributes extends DragZoneActionAttributes {
 export class AxisDragZone extends DragZone {
   protected styleCache = createStyleCache();
 
-  axis: Axis = "vertical";
-  dropDeadZone: number = 5;
+  public axis: Axis = "vertical";
+  public dropDeadZone: number = 0;
   lastIndex: number | undefined = undefined;
 
   get childsLength() {
@@ -183,7 +182,7 @@ export class AxisDragZone extends DragZone {
     node: HTMLElement,
     props: AxisDragZoneActionProps
   ): ActionReturn<AxisDragZoneActionProps, AxisDragZoneActionAttributes> {
-    const controller = props.controller || new this(props.id);
+    const controller: AxisDragZone = props.controller || new this(props.id);
     controller.attach(node);
 
     // TODO: Even better typing or something
@@ -201,11 +200,11 @@ export class AxisDragZone extends DragZone {
       node.dispatchEvent(new IndexedDragculaDragEvent("DragLeave", e, drag, drag.data, drag.index));
     });
 
-    if (props.removeItem) controller.removeItem = props.removeItem;
-
     return {
       update(props: any) {
         console.log("updated axis zone", props, node.attributes);
+        controller.axis = (node.getAttribute("axis") as Axis) || "vertical";
+        controller.dropDeadZone = Number(node.getAttribute("dropDeadZone") || 0);
       },
 
       destroy() {

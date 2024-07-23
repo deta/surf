@@ -262,7 +262,6 @@ export class DragZone {
       node.dispatchEvent(new DragculaDragEvent("DragLeave", e, drag, drag.data));
     });
 
-    if (props.removeItem) controller.removeItem = props.removeItem;
     //node.style.setProperty("view-transition-name", `dragZone-${controller.id}`);
 
     return {
