@@ -165,7 +165,7 @@
 
 <!-- style:view-transition-name="tab-{tab.id}" -->
 <div
-  class="tab {isActive ? 'text-sky-950 bg-sky-200 shadow-inner ring-[0.5px] ring-sky-500' : ''} 
+  class="tab {isActive ? 'text-sky-950 bg-sky-200 shadow-inner ring-[0.5px] ring-sky-500' : ''}
   flex items-center {pinned
     ? 'p-2 rounded-lg'
     : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 transition duration-100 group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
@@ -379,9 +379,5 @@
     display: block;
     user-select: none;
     flex-shrink: 0;
-  }
-
-  .tab {
-    transition: .2s ease-out, transform 0ms;
   }
 </style>
