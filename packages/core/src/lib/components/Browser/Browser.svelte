@@ -23,12 +23,6 @@
   import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
   import { processDrop } from '../../service/mediaImporter'
 
-  import DragDropList, {
-    VerticalDropZone,
-    HorizontalDropZone,
-    HorizontalCenterDropZone
-  } from 'svelte-dnd-list'
-
   import { ResourceTag, createResourceManager } from '../../service/resources'
 
   import { type Space, type SpaceSource } from '../../types'
@@ -100,7 +94,7 @@
   import BrowserHistory from './BrowserHistory.svelte'
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
-  import { VerticalDragZone, HorizontalDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import { AxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
 
   let activeTabComponent: TabItem | null = null
   let drawer: Drawer
@@ -740,7 +734,9 @@
   }
 
   const handleToggleHorizontalTabs = () => {
-    horizontalTabs = !horizontalTabs
+    const t = document.startViewTransition(() => {
+      horizontalTabs = !horizontalTabs
+    })
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
@@ -2215,9 +2211,20 @@
 
     // Only update the tabs that were changed (archived stay unaffected)
     tabs.update((x) => {
-      return newTabs.map((tab) => {
-        return tab
+      newTabs.forEach((tab) => {
+        const newTab = x.find((t) => t.id === tab.id)
+        if (newTab) {
+          newTab.index = tab.index
+          newTab.pinned = tab.pinned
+          newTab.magic = tab.magic
+        } else {
+          x.push(tab)
+        }
       })
+      return x
+      /*return newTabs.map((tab) => {
+        return tab
+      })*/
     })
 
     // Update the store with the changed tabs
@@ -2399,6 +2406,7 @@
                   }}
             -->
               <div
+                style:view-transition-name="pinned-tabs-wrapper"
                 use:HorizontalDragZone.action={{
                   id: 'sidebar-pinned-tabs',
                   removeItem: (item) => {
@@ -2613,7 +2621,7 @@
                       />
                     {:else}
                       <TabItem
-                      showClose
+                        showClose
                         tab={$unpinnedTabs[index]}
                         tabSize={Math.min(400, Math.max(240, tabSize))}
                         {activeTabId}
@@ -2672,7 +2680,7 @@
                       />
                     {:else}
                       <TabItem
-                      showClose
+                        showClose
                         tab={$unpinnedTabs[index]}
                         {activeTabId}
                         {deleteTab}
@@ -2823,6 +2831,7 @@
     >
       <!-- {horizontalTabs ? `pb-1.5 ${showTabs && 'pt-1.5'}` : `pr-1.5 ${showTabs && 'pl-1.5'}`}  -->
       <div
+        style:view-transition-name="browser-wrapper"
         class="w-full h-full overflow-hidden flex-grow"
         class:pb-1.5={horizontalTabs}
         class:pt-1.5={horizontalTabs && !showTabs}
@@ -3017,6 +3026,18 @@
   }
   :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone]) {
     pointer-events: all;
+  }
+  :global([data-dragcula-zone][axis='vertical']) {
+    // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
+    padding-top: 1px;
+    margin-top: -1px;
+  }
+  :global([data-dragcula-zone='sidebar-pinned-tabs']) {
+    min-height: 32px;
+  }
+  :global(.magic-tabs-wrapper [data-dragcula-zone]) {
+    min-height: 4rem !important;
+    height: fit-content !important;
   }
 
   .messi {

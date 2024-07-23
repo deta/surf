@@ -370,6 +370,9 @@
       0.2s ease-in-out,
       transform 0s;
   }
+  :global(.tab[data-dragcula-dragging]) {
+    background: white;
+  }
   .icon-wrapper {
     width: 18px;
     height: 18px;
