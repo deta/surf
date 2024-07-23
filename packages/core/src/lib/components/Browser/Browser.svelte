@@ -1392,31 +1392,34 @@
   }
 
   const handleToggleMagicSidebar = async () => {
-    showAppSidebar.set(false)
-    const tab = $activeTab as TabPage | null
+    document.startViewTransition(async () => {
+      showAppSidebar.set(false)
+      const tab = $activeTab as TabPage | null
 
-    if (!$activeTabMagic) return
-    if (!tab) return
+      if (!$activeTabMagic) return
+      if (!tab) return
 
-    if (!$activeTabMagic.showSidebar) {
-      if (!$activeChatId) {
-        const chatId = await sffs.createAIChat('')
-        if (!chatId) {
-          log.error('Failed to create chat')
-          return
+      if (!$activeTabMagic.showSidebar) {
+        if (!$activeChatId) {
+          const chatId = await sffs.createAIChat('')
+          if (!chatId) {
+            log.error('Failed to create chat')
+            return
+          }
+          updateChatIdsForPageChat(chatId)
+          activeChatId.set(chatId)
         }
-        updateChatIdsForPageChat(chatId)
-        activeChatId.set(chatId)
+        await bookmarkPageTabsInContext()
       }
-      await bookmarkPageTabsInContext()
-    }
-    activeTabMagic.update((magic) => {
-      return {
-        ...magic,
-        showSidebar: !magic.showSidebar
-      }
+      activeTabMagic.update((magic) => {
+        return {
+          ...magic,
+          showSidebar: !magic.showSidebar
+        }
+      })
+      toggleTabsMagic($activeTabMagic.showSidebar)
+      await tick()
     })
-    toggleTabsMagic($activeTabMagic.showSidebar)
   }
 
   const handleToggleAppSidebar = async () => {
@@ -2159,7 +2162,7 @@
       fromTabs = unpinnedTabsArray
     } else if (e.from.id === 'sidebar-pinned-tabs') {
       fromTabs = pinnedTabsArray
-    } else {
+    } else if (e.from.id === 'sidebar-magic-tabs') {
       fromTabs = magicTabsArray
     }
 
@@ -2167,7 +2170,7 @@
       targetTabsArray = unpinnedTabsArray
     } else if (e.to.id === 'sidebar-pinned-tabs') {
       targetTabsArray = pinnedTabsArray
-    } else {
+    } else if (e.to.id === 'sidebar-magic-tabs') {
       targetTabsArray = magicTabsArray
     }
 
@@ -2186,7 +2189,7 @@
     if (e.to.id === 'sidebar-pinned-tabs') {
       tabData.pinned = true
       tabData.magic = false
-    } else if (e.to.id === 'magic-tabs') {
+    } else if (e.to.id === 'sidebar-magic-tabs') {
       tabData.pinned = false
       tabData.magic = true
     } else {
@@ -2211,7 +2214,8 @@
 
     // Only update the tabs that were changed (archived stay unaffected)
     tabs.update((x) => {
-      newTabs.forEach((tab) => {
+      // NOTE: This seemes to break magic tabs?
+      /*newTabs.forEach((tab) => {
         const newTab = x.find((t) => t.id === tab.id)
         if (newTab) {
           newTab.index = tab.index
@@ -2221,11 +2225,11 @@
           x.push(tab)
         }
       })
-      return x
+      return x*/
       // Old way, maybe we need a combination at some point...
-      /*return newTabs.map((tab) => {
+      return newTabs.map((tab) => {
         return tab
-      })*/
+      })
     })
 
     // Update the store with the changed tabs
@@ -2400,22 +2404,6 @@
             <div
               class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0 max-w-[300px] overflow-x-scroll no-scrollbar"
             >
-              <!--
-              on:Drop={e => {
-                    console.warn("tabdrop pinned", e)
-                    const insertIdx = e.detail.dropIndex;
-                    tabs.update((tabs) => {
-                      if (e.detail.data.hasOwnProperty("farc/tab")) {
-                        const dat = e.detail.data["farc/tab"];
-                        dat.index = insertIdx;
-                        dat.pinned = true;
-                        tabs.push(dat);
-                        //items.splice(insertIdx, 0, dat);
-                      }
-                      return tabs;
-                    });
-                  }}
-            -->
               <div
                 style:view-transition-name="pinned-tabs-wrapper"
                 axis="horizontal"
@@ -2465,15 +2453,13 @@
                       class:magic={$magicTabs.length > 0}
                     >
                       {#if horizontalTabs}
-                        <DragDropList
-                          id="magic-tabs"
-                          type={HorizontalDropZone}
-                          itemSize={256}
-                          itemCount={$magicTabs.length || 1}
-                          on:drop={async (event) => {
-                            onDrop(event, 'unpin')
+                        <div
+                          axis="vertical"
+                          use:AxisDragZone.action={{
+                            id: 'sidebar-magic-tabs'
                           }}
-                          let:index
+                          on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
+                          on:Drop={onDropDragcula}
                         >
                           {#if $magicTabs.length === 0}
                             <div class="flex flex-row items-center">
@@ -2485,21 +2471,23 @@
                               </span>
                             </div>
                           {:else}
-                            <TabItem
-                              showClose
-                              tab={$magicTabs[index]}
-                              {activeTabId}
-                              pinned={false}
-                              showButtons={false}
-                              showExcludeOthersButton
-                              on:delete-tab={handleDeleteTab}
-                              on:unarchive-tab={handleUnarchiveTab}
-                              on:select={handleTabSelect}
-                              on:remove-from-sidebar={handleRemoveFromSidebar}
-                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                            />
+                            {#each $magicTabs as tab, index (tab.id)}
+                              <TabItem
+                                showClose
+                                tab={$magicTabs[index]}
+                                {activeTabId}
+                                pinned={false}
+                                showButtons={false}
+                                showExcludeOthersButton
+                                on:delete-tab={handleDeleteTab}
+                                on:unarchive-tab={handleUnarchiveTab}
+                                on:select={handleTabSelect}
+                                on:remove-from-sidebar={handleRemoveFromSidebar}
+                                on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                              />
+                            {/each}
                           {/if}
-                        </DragDropList>
+                        </div>
                       {:else}
                         {#if $magicTabs.length > 0}
                           <div
@@ -2515,15 +2503,13 @@
                             >
                           </div>
                         {/if}
-                        <DragDropList
-                          id="magic-tabs"
-                          type={VerticalDropZone}
-                          itemSize={$magicTabs.length === 0 ? 72 : 42}
-                          itemCount={$magicTabs.length || 1}
-                          on:drop={async (event) => {
-                            onDrop(event, 'unpin')
+                        <div
+                          axis="vertical"
+                          use:AxisDragZone.action={{
+                            id: 'sidebar-magic-tabs'
                           }}
-                          let:index
+                          on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
+                          on:Drop={onDropDragcula}
                         >
                           {#if $magicTabs.length === 0}
                             <div class="flex flex-col items-center">
@@ -2534,21 +2520,23 @@
                               >
                             </div>
                           {:else}
-                            <TabItem
-                              showClose
-                              tab={$magicTabs[index]}
-                              {activeTabId}
-                              pinned={false}
-                              showButtons={false}
-                              showExcludeOthersButton
-                              on:unarchive-tab={handleUnarchiveTab}
-                              on:delete-tab={handleDeleteTab}
-                              on:select={handleTabSelect}
-                              on:remove-from-sidebar={handleRemoveFromSidebar}
-                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                            />
+                            {#each $magicTabs as tab, index (tab.id)}
+                              <TabItem
+                                showClose
+                                tab={$magicTabs[index]}
+                                {activeTabId}
+                                pinned={false}
+                                showButtons={false}
+                                showExcludeOthersButton
+                                on:unarchive-tab={handleUnarchiveTab}
+                                on:delete-tab={handleDeleteTab}
+                                on:select={handleTabSelect}
+                                on:remove-from-sidebar={handleRemoveFromSidebar}
+                                on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                              />
+                            {/each}
                           {/if}
-                        </DragDropList>
+                        </div>
                       {/if}
                     </div>
                   </div>
