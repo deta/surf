@@ -64,6 +64,8 @@
       $rightPaneStore.collapse()
     }
   })
+
+  $: console.log('paneItem', $paneStore?.isExpanded())
 </script>
 
 <PaneGroup direction={horizontalTabs ? 'vertical' : 'horizontal'}>
@@ -74,20 +76,20 @@
       minSize={2}
       maxSize={20}
       bind:pane={$paneStore}
-      on:collapse={handleCollapse}
-      on:expand={handleExpand}
+      onCollapse={handleCollapse}
+      onExpand={handleExpand}
     >
       <slot name="sidebar" />
     </Pane>
   {:else}
     <Pane
-      defaultSize={10}
-      collapsible
-      maxSize={20}
-      minSize={2}
+      defaultSize={15}
+      collapsible={true}
+      maxSize={50}
+      minSize={10}
       bind:pane={$paneStore}
-      on:collapse={handleCollapse}
-      on:expand={handleExpand}
+      onCollapse={handleCollapse}
+      onExpand={handleExpand}
     >
       <slot name="sidebar" />
     </Pane>
@@ -105,17 +107,19 @@
       <Pane>
         <slot name="content" />
       </Pane>
-      <!-- <PaneResizer class="hover:bg-neutral-100 z-[50001]">
-        <div class="h-full w-2" />
-      </PaneResizer> -->
+      <PaneResizer class="hover:bg-neutral-100 z-[50001]"
+      >
+        <div class="h-full w-2"
+        />
+      </PaneResizer>
       <Pane
         defaultSize={10}
         collapsible={true}
         minSize={1}
         maxSize={20}
         class="bg-sky-50 mb-1.5 rounded-xl mr-1.5 {horizontalTabs ? '' : 'mt-1.5'}"
-        on:collapse={handleRightCollapse}
-        on:expand={handleRightExpand}
+        onCollapse={handleRightCollapse}
+        onExpand={handleRightExpand}
         bind:pane={$rightPaneStore}
       >
         <slot name="right-sidebar" />

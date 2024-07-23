@@ -2221,6 +2221,7 @@
     {horizontalTabs}
     bind:paneItem={leftPane}
     on:collapsed-left-sidebar={() => {
+      console.log('seeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeijqwoiejqwioejqwoiejioqwejioqweoiqwjeoqwoieqwjoiejqwoi')
       showLeftSidebar = false
       changeTraficLightsVisibility(false)
     }}
@@ -2230,10 +2231,11 @@
     }}
     on:pane-update={handlePaneUpdate}
     on:collapsed-right-sidebar={() => {
-      handleCollapseRight()
+      console.log('seeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeijqwoiejqwioejqwoiejqwoiejioqwejioqweoiqwjeoqwoieqwjoiejqwoi')
+      showRightSidebar = false
     }}
     on:expanded-right-sidebar={() => {
-      handleExpandRight()
+      showRightSidebar = true
     }}
     bind:rightPaneItem={rightPane}
     on:pane-update-right={handleRightPaneUpdate}
