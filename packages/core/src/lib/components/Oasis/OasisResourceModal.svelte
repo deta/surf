@@ -352,7 +352,7 @@
   <div class="close-hitarea" on:click={close} aria-hidden="true">
     <span class="label">Click or ESC to close</span>
   </div>
-  <div id="mini-browser" class="mini-browser">
+  <div id="mini-browser" class="mini-browser w-[90vw] mx-auto">
     <div class="resource-details">
       <OasisResourceDetails {resource} on:new-tab={handleNewTab}>
         <ResourceOverlay caption="Click to open in new tab">
@@ -463,7 +463,6 @@
     position: relative;
     display: flex;
     gap: 2rem;
-    width: 80vw;
     height: calc(100vh - 2rem);
     top: 0;
     left: 0;
