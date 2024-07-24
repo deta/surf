@@ -288,8 +288,13 @@
   const makeTabActive = (tabId: string) => {
     activeTabId.set(tabId)
     addToActiveTabsHistory(tabId)
-    activeAppId.set('')
-    showAppSidebar.set(false)
+    if ($showAppSidebar) {
+      showAppSidebar.set(false)
+      handleToggleAppSidebar()
+    } else {
+      activeAppId.set('')
+      showAppSidebar.set(false)
+    }
   }
 
   const makePreviousTabActive = (currentIndex?: number) => {
@@ -656,11 +661,19 @@
   const KEY_TIMEOUT = 120
   const MAX_TABS = 99
 
-  let horizontalTabs = localStorage.getItem('horizontalTabs') === 'true' || false;
+  let horizontalTabs = localStorage.getItem('horizontalTabs') === 'true' || false
 
   const handleCollapseRight = () => {
     if (rightPane) {
       rightPane.collapse()
+    }
+
+    if (showRightSidebar) {
+      showRightSidebar = false
+    }
+
+    if ($activeTabMagic.showSidebar) {
+      handleToggleMagicSidebar()
     }
   }
 
@@ -719,6 +732,9 @@
 
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && rightPane?.isExpanded()) {
+      handleCollapseRight()
+    }
     if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       activeTabComponent?.blur()
@@ -2723,78 +2739,15 @@
             </button>
             <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
               <button
-              class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-              on:click={() => handleRightSidebarChange()}
-            >
-              {#if showRightSidebar}
-                <Icon name="close" />
-              {:else}
-                <Icon name="sidebar.right" />
-              {/if}
-            </button>
-              <!-- <button
                 class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                on:click={handleToggleMagicSidebar}
-                disabled={$sidebarTab !== 'active' ||
-                  !$activeTabMagic ||
-                  $activeTab?.type !== 'page'}
-                use:tooltip={{
-                  content: 'Toggle Page Chat',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 300
-                }}
+                on:click={() => handleRightSidebarChange()}
               >
-                {#if !$activeTabMagic}
-                  <Icon name="message" />
-                {:else if $activeTabMagic.showSidebar}
+                {#if showRightSidebar}
                   <Icon name="close" />
-                {:else if $activeTabMagic.running}
-                  <Icon name="spinner" />
                 {:else}
-                  <Icon name="message" />
+                  <Icon name="sidebar.right" />
                 {/if}
               </button>
-
-              <button
-                class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
-                disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
-                use:tooltip={{
-                  content: 'Toggle Annotations',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 300
-                }}
-              >
-                {#if $showAnnotationsSidebar}
-                  <Icon name="close" />
-                {:else}
-                  <Icon name="marker" />
-                {/if}
-              </button>
-
-              <button
-                class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
-                on:click={handleToggleAppSidebar}
-                use:tooltip={{
-                  content: 'Go wild',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 300
-                }}
-              >
-                {#if $showAppSidebar}
-                  <Icon name="close" />
-                {:else}
-                  <Icon name="sparkles" />
-                {/if}
-              </button> -->
-
               <NewTabButton
                 {resourceManager}
                 {spaces}
@@ -2946,18 +2899,38 @@
       </div>
     </div>
 
-    <Tabs.Root value="annotations" class="h-full flex flex-col relative" slot="right-sidebar">
+    <Tabs.Root
+      onValueChange={(e) => {
+        if (e === 'magicTabs') {
+          handleToggleMagicSidebar()
+          return
+        }
+        if ($activeTabMagic.showSidebar) {
+          handleToggleMagicSidebar()
+        }
+
+        if (e === 'go-wild') {
+          handleToggleAppSidebar()
+          return
+        }
+
+        if ($showAppSidebar) {
+          handleToggleAppSidebar()
+        }
+      }}
+      value="annotations"
+      class="h-full flex flex-col relative"
+      slot="right-sidebar"
+    >
       <Tabs.List
-        class="grid w-full grid-cols-3 gap-1 rounded-9px bg-dark-10 p-1 text-sm font-semibold leading-[0.01em]"
+        class="grid w-full grid-cols-3 gap-1 rounded-9px bg-dark-10 px-3 py-4 text-sm font-semibold leading-[0.01em] border-b-2 border-sky-100"
       >
         <Tabs.Trigger
           value="magicTabs"
           class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-          disabled={$sidebarTab !== 'active' || !$activeTabMagic || $activeTab?.type !== 'page'}
+          disabled={!$activeTabMagic}
           >{#if !$activeTabMagic}
             <Icon name="message" />
-          {:else if $activeTabMagic.showSidebar}
-            <Icon name="close" />
           {:else if $activeTabMagic.running}
             <Icon name="spinner" />
           {:else}
@@ -2967,7 +2940,7 @@
         <Tabs.Trigger
           value="annotations"
           class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-          disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
+          disabled={$activeTab?.type !== 'page'}
         >
           <Icon name="marker" /></Tabs.Trigger
         >
@@ -2975,13 +2948,13 @@
         <Tabs.Trigger
           value="go-wild"
           class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-          disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
+          disabled={$activeTab?.type !== 'page'}
         >
           <Icon name="sparkles" /></Tabs.Trigger
         >
       </Tabs.List>
       <Tabs.Content value="magicTabs" class="pt-3 h-full">
-        {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
+        {#if $activeTab && $activeTabMagic}
           <MagicSidebar
             magicPage={$activeTabMagic}
             bind:inputValue={$magicInputValue}
@@ -2999,7 +2972,10 @@
             on:prompt={handleMagicSidebarPromptSubmit}
           />
         {:else}
-          <span>Magic chat not available</span>
+          <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+            <Icon name="info" />
+            <span>Magic chat not available</span>
+          </div>
         {/if}
       </Tabs.Content>
       <Tabs.Content value="annotations" class="pt-3 h-full">
@@ -3012,21 +2988,27 @@
             on:reload={handleAnnotationSidebarReload}
           />
         {:else}
-          <span>No page info available.</span>
+          <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+            <Icon name="info" />
+            <span>No page info available.</span>
+          </div>
         {/if}
       </Tabs.Content>
       <Tabs.Content value="go-wild" class="pt-3 h-full">
-        {#if $activeTab && $activeTab.type === 'page'}
-          <!-- <AppSidebar
-              {sffs}
-              appId={$activeAppId}
-              tabContext={$activeAppSidebarContext}
-              on:clearAppSidebar={() => handleAppSidebarClear(true)}
-              on:executeAppSidebarCode={(e) =>
-                handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
-            /> -->
+        {#if $activeTab && $activeTab.type === 'page' && $showAppSidebar}
+          <AppSidebar
+            {sffs}
+            appId={$activeAppId}
+            tabContext={$activeAppSidebarContext}
+            on:clearAppSidebar={() => handleAppSidebarClear(true)}
+            on:executeAppSidebarCode={(e) =>
+              handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
+          />
         {:else}
-          <span>Go wild not available.</span>
+          <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+            <Icon name="info" />
+            <span>Go wild not available.</span>
+          </div>
         {/if}
       </Tabs.Content>
     </Tabs.Root>
