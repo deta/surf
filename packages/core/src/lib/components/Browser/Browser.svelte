@@ -95,6 +95,7 @@
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
   import { AxisDragZone, DragItem, type DragculaDragEvent } from '@horizon/dragcula'
+  //import '@horizon/dragcula/dist/styles.scss'
 
   let activeTabComponent: TabItem | null = null
   let drawer: Drawer
@@ -2422,9 +2423,12 @@
               <div
                 style:view-transition-name="pinned-tabs-wrapper"
                 axis="horizontal"
-                dropDeadZone="3"
+                dragdeadzone="3"
                 use:AxisDragZone.action={{
-                  id: 'sidebar-pinned-tabs'
+                  id: 'sidebar-pinned-tabs',
+                  acceptDrag: (drag) => {
+                    return true
+                  }
                 }}
                 on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
                 on:Drop={onDropDragcula}
@@ -2522,7 +2526,10 @@
                         <div
                           axis="vertical"
                           use:AxisDragZone.action={{
-                            id: 'sidebar-magic-tabs'
+                            id: 'sidebar-magic-tabs',
+                            acceptDrag: (drag) => {
+                              return true
+                            }
                           }}
                           on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
                           on:Drop={onDropDragcula}
@@ -2576,9 +2583,12 @@
                 <div
                   class="horizontal-tabs"
                   axis="horizontal"
-                  dropDeadZone="5"
+                  dragdeadzone="5"
                   use:AxisDragZone.action={{
-                    id: 'sidebar-unpinned-tabs'
+                    id: 'sidebar-unpinned-tabs',
+                    acceptDrag: (drag) => {
+                      return true
+                    }
                   }}
                   on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
                   on:Drop={onDropDragcula}
@@ -2627,9 +2637,12 @@
                 <div
                   class="vertical-tabs"
                   axis="vertical"
-                  dropDeadZone="5"
+                  dragdeadzone="5"
                   use:AxisDragZone.action={{
-                    id: 'sidebar-unpinned-tabs'
+                    id: 'sidebar-unpinned-tabs',
+                    acceptDrag: (drag) => {
+                      return true
+                    }
                   }}
                   on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
                   on:Drop={onDropDragcula}
@@ -2996,17 +3009,39 @@
 </div>
 
 <style lang="scss">
-  /// DRAGCULA STATES
-  :global(body[data-dragcula-dragging='true']) {
+  /// DRAGCULA STATES NOTE: these should be @horizon/dragcula/dist/styles.css import, but this doesnt work currently!
+  // Disables pointer events on all body elements if a drag operation is active
+  // except, other drag zones.
+  :global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
+    pointer-events: none;
+  }
+
+  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone]) {
+    pointer-events: all;
+  }
+
+  // Disables pointer events on all elements inside a drop target
+  // except, nested drag zones.
+  // This is also useful when supporting native dnd, as there won't
+  // be a body class!
+  :global(*[data-dragcula-drop-target] *:not([data-dragcula-zone])) {
+    pointer-events: none;
+  }
+
+  :global(*[data-dragcula-drop-target] *[data-dragcula-zone]) {
+    pointer-events: all;
+  }
+
+  /*:global(body[data-dragcula-dragging='true']) {
     cursor: grabbing;
     user-select: none;
-  }
-  :global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
+  }*/
+  /*:global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
     pointer-events: none;
   }
   :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone]) {
     pointer-events: all;
-  }
+  }*/
   :global([data-dragcula-zone][axis='vertical']) {
     // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
     padding-top: 1px;
@@ -3415,9 +3450,10 @@
   }
 
   .tab {
-    transition: .2s ease-out, transform 0ms;
+    transition:
+      0.2s ease-out,
+      transform 0ms;
   }
-
 
   .actions {
     display: flex;

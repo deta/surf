@@ -371,7 +371,8 @@
       transform 0s;
   }
   :global(.tab[data-dragcula-dragging]) {
-    background: white;
+    background: rgba(255, 255, 255, 0.8);
+    opacity: 80%;
   }
   .icon-wrapper {
     width: 18px;

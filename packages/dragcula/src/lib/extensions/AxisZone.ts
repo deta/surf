@@ -1,46 +1,45 @@
-/*import { type ActionReturn } from "svelte/action";
-import { DragZone, IndexedDragculaDragEvent, createStyleCache } from "../index.js";
-import { DragOperation, DragZoneActionAttributes, DragZoneActionProps, IndexedDragOperation } from "../types.js";*/
-
-import { DragZone } from "../controllers.js";
-import { createStyleCache } from "../utils.js";
-import type { DragOperation, DragZoneActionAttributes, DragZoneActionProps } from "../types.js";
+import {
+  createStyleCache,
+  DRAG_ZONES,
+  DragZone,
+  IndexedDragculaCustomDragEvent,
+  IndexedDragculaNativeDragEvent,
+  type DragOperation,
+  type DragZoneActionAttributes,
+  type DragZoneActionProps,
+  type IndexedDragculaDragEvent
+} from "$lib/index.js";
 import type { ActionReturn } from "svelte/action";
-import { IndexedDragculaDragEvent, type IndexedDragOperation } from "../index.js";
 
-export type Axis = "vertical" | "horizontal";
+// TODO: dragDeadzone should be percentage -> cal for each element -> if element sizes differe, 0 = only otuside element, inside element is strict, 100% no deadzone inside element
+
+export type Axis = "horizontal" | "vertical";
 
 export interface AxisDragZoneActionProps extends DragZoneActionProps {}
-export interface AxisDragZoneActionAttributes extends DragZoneActionAttributes {
-  axis?: Axis;
-  dropDeadZone?: number;
 
-  /// DOM Events
+export interface AxisDragZoneActionAttributes
+  extends DragZoneActionAttributes<IndexedDragculaDragEvent> {
+  axis?: Axis;
+  dragdeadzone?: number;
+
   "on:DragEnter"?: (e: IndexedDragculaDragEvent) => void;
   "on:DragOver"?: (e: IndexedDragculaDragEvent) => void;
   "on:DragLeave"?: (e: IndexedDragculaDragEvent) => void;
+  "on:DragEnd"?: (e: IndexedDragculaDragEvent) => void;
   "on:Drop"?: (e: IndexedDragculaDragEvent) => void;
 }
 
-// TODO: Dont fully override existing child margins if any.
 export class AxisDragZone extends DragZone {
+  protected axis: Axis = "vertical";
+  protected dragDeadzone: number = 0;
+
+  /// === STATE
+
   protected styleCache = createStyleCache();
 
-  public axis: Axis = "vertical";
-  public dropDeadZone: number = 0;
-  lastIndex: number | undefined = undefined;
+  protected lastIndex: number | undefined = undefined;
 
-  get childsLength() {
-    return this.node!.children.length;
-  }
-  get childSize(): number | undefined {
-    switch (this.axis) {
-      case "vertical":
-        return this.node!.children[0]?.clientHeight || undefined;
-      case "horizontal":
-        return this.node!.children[0]?.clientWidth || undefined;
-    }
-  }
+  /// === CONSTRUCTOR
 
   constructor(id?: string) {
     super(id);
@@ -49,6 +48,12 @@ export class AxisDragZone extends DragZone {
   override attach(node: HTMLElement) {
     super.attach(node);
 
+    this.applyNodeAttributes();
+  }
+
+  override applyNodeAttributes() {
+    super.applyNodeAttributes();
+
     switch (this.node!.getAttribute("axis")) {
       case "horizontal":
         this.axis = "horizontal";
@@ -56,15 +61,17 @@ export class AxisDragZone extends DragZone {
       case "vertical":
         this.axis = "vertical";
         break;
+      default:
+        this.axis = "vertical";
+        break;
     }
-    console.warn("axis", this.axis);
+
+    this.dragDeadzone = Number(this.node!.getAttribute("dragdeadzone") || 0);
   }
 
   /// === UTILS
 
-  /// Returns the index of a imaginary child element at the given point.
-  /// NOTE: Returns undefined if no index (e.g. over other element with margin set TODO: Explain)
-  getIndexAtPoint(x: number, y: number): number | undefined {
+  protected getIndexAtPoint(x: number, y: number): number | undefined {
     if (this.node!.children.length <= 0) return 0;
 
     const childs: {
@@ -110,14 +117,14 @@ export class AxisDragZone extends DragZone {
       closestChild.el
     );
     const closestAdjusted = closestChild.distance > 0 ? closestChildIndex : closestChildIndex + 1;
-    if (Math.abs(closestChild.distance) < this.dropDeadZone) return undefined;
+    if (Math.abs(closestChild.distance) < this.dragDeadzone) return undefined;
 
     return closestAdjusted;
   }
 
-  /// === EVENTS
+  /// === EVENT HANDLERS
 
-  override onDragEnter(drag: DragOperation, e: DragEvent) {
+  protected override onDragEnter(drag: DragOperation, e: DragEvent) {
     for (const child of Array.from(this.node!.children) as Array<HTMLElement>) {
       this.styleCache.cacheMany(child, {
         transition: child.style.transition,
@@ -126,26 +133,24 @@ export class AxisDragZone extends DragZone {
       });
     }
     super.onDragEnter(drag, e);
-    // TODO: Check & set index
   }
 
-  override async onDragLeave(drag: DragOperation, e: DragEvent) {
+  protected override onDragLeave(drag: DragOperation, e: DragEvent) {
+    //document.startViewTransition(() => {
     for (const child of Array.from(this.node!.children) as Array<HTMLElement>) {
       this.styleCache.applyAll(child);
     }
+    //	});
     super.onDragLeave(drag, e);
-    // TODO: Check & set index
   }
 
-  override onDragOver(drag: IndexedDragOperation, e: DragEvent) {
-    super.onDragOver(drag, e);
-
+  protected override onDragOver(drag: DragOperation, e: DragEvent) {
     const index = this.getIndexAtPoint(e.clientX, e.clientY);
     //if (this.lastIndex === index) return;
     drag.index = index;
     this.lastIndex = index;
 
-    const ITEM_SIZE = this.axis === "vertical" ? this.itemDomSize?.h : this.itemDomSize?.w;
+    const ITEM_SIZE = this.axis === "vertical" ? this.childDomSize?.h : this.childDomSize?.w;
     if (ITEM_SIZE === undefined) return;
     const AXIS_DIR_PREV = this.axis === "vertical" ? "bottom" : "right";
     const AXIS_DIR_NEXT = this.axis === "vertical" ? "top" : "left";
@@ -163,9 +168,11 @@ export class AxisDragZone extends DragZone {
         (child as HTMLElement).style.setProperty(`margin-${AXIS_DIR_NEXT}`, `${ITEM_SIZE}px`);
       }
     }
+
+    super.onDragOver(drag, e);
   }
 
-  override onDrop(drag: IndexedDragOperation, e: DragEvent) {
+  protected override onDrop(drag: DragOperation, e: DragEvent) {
     for (const child of Array.from(this.node!.children) as Array<HTMLElement>) {
       this.styleCache.applyAll(child);
     }
@@ -173,41 +180,34 @@ export class AxisDragZone extends DragZone {
     //drag.index = index;
     drag.index = this.lastIndex;
     //this.lastIndex = 0;
-    super.onDrop(drag, e);
+    //super.onDrop(drag, e);
+
+    this.isDropTarget = false;
+
+    const event =
+      drag.data instanceof DataTransfer
+        ? new IndexedDragculaNativeDragEvent("Drop", e, drag, drag.index)
+        : new IndexedDragculaCustomDragEvent("Drop", e, drag, drag.index);
+    this.node!.dispatchEvent(event);
   }
 
   /// === ACTION
 
-  static override action(
+  static override action<P extends AxisDragZoneActionProps, A extends AxisDragZoneActionAttributes>(
     node: HTMLElement,
-    props: AxisDragZoneActionProps
-  ): ActionReturn<AxisDragZoneActionProps, AxisDragZoneActionAttributes> {
-    const controller: AxisDragZone = props.controller || new this(props.id);
+    props: P
+  ): ActionReturn<P, A> {
+    const controller = DRAG_ZONES.get(props.id) || props.controller || new this(props.id);
     controller.attach(node);
-
-    // TODO: Even better typing or something
-
-    controller.on("drop", (drag: IndexedDragOperation, e: MouseEvent) => {
-      node.dispatchEvent(new IndexedDragculaDragEvent("Drop", e, drag, drag.data, drag.index));
-    });
-    controller.on("dragenter", (drag: IndexedDragOperation, e: MouseEvent) => {
-      node.dispatchEvent(new IndexedDragculaDragEvent("DragEnter", e, drag, drag.data, drag.index));
-    });
-    controller.on("dragover", (drag: IndexedDragOperation, e: MouseEvent) => {
-      node.dispatchEvent(new IndexedDragculaDragEvent("DragOver", e, drag, drag.data, drag.index));
-    });
-    controller.on("dragleave", (drag: IndexedDragOperation, e: MouseEvent) => {
-      node.dispatchEvent(new IndexedDragculaDragEvent("DragLeave", e, drag, drag.data, drag.index));
-    });
+    props.acceptDrag && (controller.acceptDrag = props.acceptDrag);
 
     return {
-      update(props: any) {
-        console.log("updated axis zone", props, node.attributes);
-        controller.axis = (node.getAttribute("axis") as Axis) || "vertical";
-        controller.dropDeadZone = Number(node.getAttribute("dropDeadZone") || 0);
+      update: (props: P) => {
+        console.trace(`[Dragcula::Z-${controller.id}] Updated props`, props);
+        props.acceptDrag && (controller.acceptDrag = props.acceptDrag);
+        controller.applyNodeAttributes();
       },
-
-      destroy() {
+      destroy: () => {
         controller.detach();
       }
     };

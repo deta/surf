@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DragItem } from "$lib/controllers.ts";
+  import { DragItem } from "$lib/index.ts";
 
   export let tab: {
     id: string;

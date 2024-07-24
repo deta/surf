@@ -3,6 +3,8 @@
   import TabList from "./TabList.svelte";
   import Desktop from "./Desktop.svelte";
 
+  import "$lib/styles.scss";
+
   const tabs = writable([
     {
       id: crypto.randomUUID(),
@@ -96,7 +98,7 @@
     <TabList {tabs} />
   </aside>
 
-  <Desktop />
+  <!--<Desktop />-->
 </main>
 
 <style lang="scss">

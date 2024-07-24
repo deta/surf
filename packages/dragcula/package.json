@@ -24,6 +24,9 @@
     "!dist/**/*.test.*",
     "!dist/**/*.spec.*"
   ],
+  "sideEffects": [
+    "**/*.scss"
+  ],
   "peerDependencies": {
     "svelte": "^4.0.0"
   },
@@ -44,5 +47,8 @@
   },
   "svelte": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@types/dom-view-transitions": "^1.0.5"
+  }
 }

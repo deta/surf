@@ -1,8 +1,8 @@
 <script lang="ts">
   import Tab from "./Tab.svelte";
   import PinnedTab from "./PinnedTab.svelte";
-  import { writable } from "svelte/store";
-  import { AxisDragZone } from "$lib/extensions/AxisZone.js";
+  import { writable, type Writable } from "svelte/store";
+  import { DragZone, AxisDragZone } from "$lib/index.js";
 
   export let tabs: Writable<{ id: string; title: string; icon: string }[]> = writable([]);
   let pinned: Writable<{ id: string; title: string; icon: string }[]> = writable([]);
@@ -13,7 +13,10 @@
   class="magical"
   axis="vertical"
   use:AxisDragZone.action={{
-    id: "tabs-magic"
+    id: "tabs-magic",
+    acceptDrag: (drag) => {
+      return true;
+    }
   }}
   on:DragEnd={(e) => {
     const item = e.item;
@@ -44,9 +47,14 @@
   class="unpinned"
   axis="vertical"
   use:AxisDragZone.action={{
-    id: "tabs-unpinned"
+    id: "tabs-unpinned",
+    acceptDrag: (drag) => {
+      return true;
+    }
   }}
   on:DragEnd={(e) => {
+    console.warn("dragend unpinned", e);
+
     const item = e.item;
     tabs.update((items) => {
       const idx = items.findIndex((v) => v.id === item.id);
@@ -56,18 +64,32 @@
       return items;
     });
   }}
-  on:Drop={(e) => {
-    console.warn("unpin drop", e);
+  on:Drop={(drag) => {
+    console.warn("unpin drop", drag);
+
     tabs.update((items) => {
-      if (e.dataTransfer.hasOwnProperty("test/card")) {
-        const dat = e.dataTransfer["test/card"];
-        items.splice(e.index, 0, {
+      if (drag.isNative) {
+        // Get files
+        const files = drag.dataTransfer.files;
+        // Create tabs from files with name as title
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const imgDataUdl = URL.createObjectURL(file);
+          items.push({
+            id: Math.random().toString(36).substr(2, 9),
+            title: file.name,
+            icon: imgDataUdl
+          });
+        }
+      } else if (drag.dataTransfer.hasOwnProperty("test/card")) {
+        const dat = drag.dataTransfer["test/card"];
+        items.splice(drag.index, 0, {
           ...dat,
           icon: dat.banner
         });
-      } else if (e.dataTransfer.hasOwnProperty("test/tab")) {
-        const dat = e.dataTransfer["test/tab"];
-        items.splice(e.index, 0, dat);
+      } else if (drag.dataTransfer.hasOwnProperty("test/tab")) {
+        const dat = drag.dataTransfer["test/tab"];
+        items.splice(drag.index, 0, dat);
       }
       return items;
     });
@@ -90,7 +112,10 @@
   class="pinned"
   axis="horizontal"
   use:AxisDragZone.action={{
-    id: "pinned"
+    id: "pinned",
+    acceptDrag: (drag) => {
+      return true;
+    }
   }}
   on:DragEnd={(e) => {
     const item = e.item;
@@ -134,13 +159,10 @@
     cursor: grabbing;
     user-select: none;
   }
-  :global(body[data-dragcula-dragging="true"] *:not([data-dragcula-zone])) {
-    pointer-events: none;
-  }
-  :global(body[data-dragcula-dragging="true"] *[data-dragcula-zone]) {
-    pointer-events: all;
-  }
 
+  :global([data-dragcula-zone][data-dragcula-drop-target]) {
+    border: 1px dashed rgba(40, 40, 40, 0.8) !important;
+  }
   // Style cursor when over valid target zone
   :global(body:has([data-dragcula-can-drop="true"])) {
     //cursor: copy;
@@ -158,9 +180,6 @@
     border: 1px solid transparent;
     border-radius: 5px;
     margin-block: 10px;
-  }
-  :global(*[data-dragcula-target="true"]) {
-    border: 1px dashed rgba(40, 40, 40, 0.4) !important;
   }
 
   .pinned {

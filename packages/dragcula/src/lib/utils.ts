@@ -1,59 +1,39 @@
 import { get } from "svelte/store";
-import { DragElement, DRAGGABLES, type DragZone } from "./dragcula.js";
-import { DRAG_ZONES } from "./controllers.js";
+import { DRAG_ZONES, DragZone } from "./index.js";
+import type { IDragData } from "./types.js";
 
-const ZONE_ID_ATTR = "dragculaZone";
+export const SUPPORTS_VIEW_TRANSITIONS = document.startViewTransition !== undefined; // TODO: test & check in startVT method
+//
+/// GLOBAL MOUSE LISTENER
+export let mousePos = { x: 0, y: 0 };
+let GLOBAL_mouseMoveListener: ((e: MouseEvent) => void) | null = null;
+if (!GLOBAL_mouseMoveListener) {
+  GLOBAL_mouseMoveListener = (e: MouseEvent) => {
+    mousePos = { x: e.clientX, y: e.clientY };
+  };
+  window.addEventListener("mousemove", GLOBAL_mouseMoveListener, { capture: true });
+}
 
-export function findClosestDragZone(pageX: number, pageY: number): DragZone | null {
-  const posX = pageX - window.scrollX;
-  const posY = pageY - window.scrollY;
-  const target = document.elementFromPoint(posX, posY);
-  let el = target;
-  while (el) {
-    if (el.dataset[ZONE_ID_ATTR] !== undefined) {
-      const id = el.dataset[ZONE_ID_ATTR];
-      return get(DRAG_ZONES).get(id);
+export function createDragData(data: Omit<IDragData, "getDataTransfer">): IDragData {
+  const d = {
+    ...data,
+    getDataTransfer: () => {
+      console.log(this);
+      const dt = new DataTransfer();
+      // TODO: Fails on objects, we need some serialization / warning here!
+      for (const [key, value] of Object.entries(this)) {
+        if (key === "getDataTransfer") continue;
+        dt.setData(key, value);
+      }
+      return dt;
     }
-    el = el.parentElement;
-  }
-  return null;
-}
-export function findClosestDragZoneFromEl(target: HTMLElement): DragZone | null {
-  let el = target;
-  while (el) {
-    if (el.dataset[ZONE_ID_ATTR] !== undefined) {
-      const id = el.dataset[ZONE_ID_ATTR];
-      return get(DRAG_ZONES).get(id);
-    }
-    el = el.parentElement;
-  }
-  return null;
+  };
+  return d;
 }
 
-export function parseDataTransfer(dataTransfer: DataTransfer): DragElement | null {
-  const id = dataTransfer.getData("dragcula/draggable");
-  if (id === "") {
-    return null;
-  }
-  return get(DRAGGABLES).get(id);
-}
-
-/*type EventHandlerDefinitions = {
-	[key: string]: (...args: any[]) => any;
-};
-type EventHandlers<T extends EventHandlerDefinitions> = {
-	[K in keyof T]: T[K][];
-};
-export function createHandlers<T extends EventHandlerDefinitions>(events: T): FunctionArrayMap<T> {
-	/*const result: Record<T, number[]> = {} as Record<T, number[]>;
-
-	strings.forEach(str => {
-		result[str] = [];
-	});
-
-return result;
-}*/
-
+/**
+ * Creates a style cache which can be used to cache and re-apply styles for specific elements.
+ */
 export function createStyleCache() {
   const items = new Map<HTMLElement, Record<string, string>>();
 
@@ -72,20 +52,33 @@ export function createStyleCache() {
     const cache = items.get(node);
     if (!cache) return;
     if (cache[prop] !== undefined) {
-      node.style.setProperty(prop, cache[prop]);
+      if (cache[prop] === "") node.style.removeProperty(prop);
+      else node.style.setProperty(prop, cache[prop]);
       delete cache[prop];
     }
     if (Object.entries(cache).length <= 0) {
       items.delete(node);
     }
   }
-  function applyAll(node: HTMLElement) {
+  function applyAll(node: HTMLElement, omit?: string[]) {
     const cache = items.get(node);
     if (!cache) return;
     for (const key in cache) {
+      if (omit && omit.includes(key)) continue;
       apply(node, key);
     }
-    items.delete(node);
+    if (Object.entries(cache).length <= 0) {
+      items.delete(node);
+    }
+  }
+  function dump(label = "") {
+    return; // debug
+    console.trace("Dumping style cache", label, items.size);
+    for (const [node, cache] of items.entries()) {
+      console.group(`[StyleCache] ${label} :: Node`, node);
+      console.table(cache);
+      console.groupEnd();
+    }
   }
 
   return {
@@ -93,6 +86,33 @@ export function createStyleCache() {
     cache,
     cacheMany,
     apply,
-    applyAll
+    applyAll,
+    dump
   };
+}
+
+export function findClosestDragZoneFromPoint(pageX: number, pageY: number): DragZone | null {
+  const posX = pageX - window.scrollX;
+  const posY = pageY - window.scrollY;
+  const target = document.elementFromPoint(posX, posY);
+  let el: HTMLElement | null = target as HTMLElement;
+  while (el) {
+    if (el.getAttribute("data-dragcula-zone") !== null) {
+      const id = el.getAttribute("data-dragcula-zone")!;
+      return DRAG_ZONES.get(id) || null;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+export function findClosestDragZoneFromEl(target: HTMLElement): DragZone | null {
+  let el: HTMLElement | null = target;
+  while (el !== null) {
+    if (el.getAttribute("data-dragcula-zone") !== null) {
+      const id = el.getAttribute("data-dragcula-zone")!;
+      return DRAG_ZONES.get(id) || null;
+    }
+    el = el.parentElement;
+  }
+  return null;
 }

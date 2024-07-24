@@ -1,4 +1,10 @@
-import type { DragItem, DragZone, DragculaDragEvent } from "./index.js";
+import type { DragItem, DragZone } from "./index.js";
+
+export interface ViewTransition {
+  finished: Promise<void>;
+  updateCallbackDone: Promise<void>;
+  ready: Promise<void>;
+}
 
 /**
  * ghost: Shows a picture of the element like the native drag and drop.
@@ -9,8 +15,8 @@ import type { DragItem, DragZone, DragculaDragEvent } from "./index.js";
  * so it might be better for (perceived) performance or when the element
  * needs to retain more complex state & logic during the drag.
  */
-export type PreviewMode = "clone" | "hoist";
-export type DragEffect = "copy" | "move" | "link" | "none";
+export type ItemPreviewMode = "clone" | "hoist";
+export type DragEffect = "move" | "copy" | "link" | "none";
 
 /**
  * Object passed to the drag event listeners through the DragOperation.
@@ -19,69 +25,33 @@ export type DragEffect = "copy" | "move" | "link" | "none";
  * object references for easy internal page transfers.
  */
 export interface IDragData {
-  [key: string]: any;
+  [key: string]: unknown;
+
+  getDataTransfer: () => DataTransfer;
 }
+export type RawDragData = Omit<IDragData, "getDataTransfer">;
 
 export interface DragOperation {
-  // A random id, used e.g. to match source & target view transition
-  // elements.
+  // A random id, used e.g. to match source & target view transition elements.
   readonly id: string;
 
   // Origin zone.
   // null -> if native drag onto a zone.
   from: DragZone | null;
 
-  // Target zone (Over -> on DragOver, Dropped -> on Drop).
-  // null -> if over / drop over no valid zone.
+  // Target zone.
+  // null -> if not over / drop over no valid zone.
   to: DragZone | null;
 
   // null -> if native drag.
-  item: DragItem | null;
+  item: null | DragItem;
 
-  data: IDragData;
-  effect: "move"; //DragEffect; // fixed for now
+  data: DataTransfer | IDragData;
+
+  effect: DragEffect;
 }
 
 export interface IndexedDragOperation extends DragOperation {
-  // The index at which the element should be placed
+  /// The index at which the item should be inserted.
   index: number;
-}
-
-export interface DragItemActionProps {
-  id: string;
-  data: IDragData;
-  simulateDragStart?: boolean;
-  controller?: DragItem;
-}
-export interface DragItemActionAttributes {
-  // Whether the item can be dragged.
-  //dragging: "true" | "false";
-
-  dragpreview?: "clone" | "hoist";
-  simulatedragstart?: "true" | "false"; // Use so we can have a min-move before start
-
-  "on:Drag"?: (e: DragculaDragEvent) => void;
-  "on:DragStart"?: (e: DragculaDragEvent) => void;
-  "on:DragEnter"?: (e: DragculaDragEvent) => void;
-  "on:DragLeave"?: (e: DragculaDragEvent) => void;
-  "on:DragEnd"?: (e: DragculaDragEvent) => void;
-}
-
-export interface DragZoneActionProps {
-  id: string;
-  controller?: DragZone;
-
-  //items: Writable<unknown[]> | unknown[];
-  //getItem: (id: string) => unknown
-}
-export interface DragZoneActionAttributes {
-  droppable?: "true" | "false";
-
-  // TODO: Events
-  //'on:Lift': (e: DragculaDragEvent) => void,
-  "on:DragEnter": (e: DragculaDragEvent) => void;
-  "on:DragOver": (e: DragculaDragEvent) => void;
-  "on:DragLeave": (e: DragculaDragEvent) => void;
-  "on:DragEnd": (e: DragculaDragEvent) => void;
-  "on:Drop": (e: DragculaDragEvent) => void;
 }

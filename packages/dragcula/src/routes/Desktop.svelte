@@ -1,7 +1,7 @@
 <script lang="ts">
   import Card from "./Card.svelte";
   import { writable } from "svelte/store";
-  import { DragZone } from "$lib/controllers.js";
+  import { DragZone } from "$lib/index.js";
 
   export let cards: Writable<{ id: string; title: string; icon: string }[]> = writable([]);
 </script>

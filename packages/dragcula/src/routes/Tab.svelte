@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { DragItem } from "$lib/controllers.ts";
-  import { DragZone } from "$lib/controllers.ts";
+  import { DragItem } from "$lib/index.ts";
   import { createEventDispatcher } from "svelte";
 
   export let tab: {
@@ -16,11 +15,14 @@
   let draggable = true;
 </script>
 
+<!--
+  style:view-transition-name="tab-{tab.id}"
+-->
+
 <div
   class="tab"
   draggable="true"
   dragpreview="hoist"
-  simulatedragstart="true"
   style:view-transition-name="tab-{tab.id}"
   use:DragItem.action={{
     id: tab.id,
@@ -37,6 +39,11 @@
 
 <!-- style="view-transition-name: img-{tab.id};"   style="view-transition-name: title-{tab.id};"  -->
 <style lang="scss">
+  :global(.tab[data-dragcula-dragging="true"]) {
+    background: white !important;
+    opacity: 80% !important;
+    box-shadow: 0 0 18px 0 rgba(40, 40, 40, 0.18);
+  }
   .tab {
     width: auto;
     background: transparent;

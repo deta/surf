@@ -1,0 +1,22 @@
+// Disables pointer events on all body elements if a drag operation is active
+// except, other drag zones.
+body[data-dragcula-dragging="true"] *:not([data-dragcula-zone]) {
+  pointer-events: none;
+}
+
+body[data-dragcula-dragging="true"] *[data-dragcula-zone] {
+  pointer-events: all;
+}
+
+
+// Disables pointer events on all elements inside a drop target
+// except, nested drag zones.
+// This is also useful when supporting native dnd, as there won't
+// be a body class!
+*[data-dragcula-drop-target] *:not([data-dragcula-zone]) {
+  pointer-events: none;
+}
+
+*[data-dragcula-drop-target] *[data-dragcula-zone] {
+  pointer-events: all;
+}

@@ -1,6 +1,6 @@
-import type { DragItem, DragOperation, DragZone, IDragData } from "./index.js";
+import type { DragItem, DragZone, DragEffect, IDragData, DragOperation } from "./index.js";
 
-export class DragculaDragEvent
+abstract class DragculaBaseDragEvent
   extends Event
   implements
     Omit<
@@ -19,26 +19,21 @@ export class DragculaDragEvent
   // A random unique id, used e.g. to match source & target view transition elements.
   readonly id: string;
 
-  // Whether the drop event contains just the native DataTransfer or
-  // it is custom dragcula stuff.
-  readonly isNative: boolean;
-
-  readonly dataTransfer: DataTransfer | IDragData;
+  abstract readonly isNative: boolean;
+  abstract readonly dataTransfer: DataTransfer | IDragData;
 
   // Origin zone.
   // null -> if native drag onto a zone.
   readonly from: DragZone | null;
 
-  // Target zone (Over -> on DragOver, Dropped -> on Drop).
+  // Target zone .
   // null -> if over / drop over no valid zone.
   readonly to: DragZone | null;
 
   // null -> if native drag.
   readonly item: DragItem | null;
 
-  readonly effect = "move"; //DragEffect; // fixed effect for now
-
-  //readonly drag: DragOperation;
+  readonly effect: DragEffect;
 
   /// Properties from DragEvent which are good to have:
   readonly altKey: boolean;
@@ -63,18 +58,14 @@ export class DragculaDragEvent
   constructor(
     type: "Drop" | "DragStart" | "DragEnter" | "DragOver" | "DragLeave" | "DragEnd",
     mouseEvent: MouseEvent,
-    drag: DragOperation,
-    data: DataTransfer | IDragData
+    drag: DragOperation
   ) {
-    super(type, { bubbles: true }); //, { detail: drag });
+    super(type, { bubbles: true, cancelable: true });
     this.id = drag.id;
-    this.dataTransfer = data;
-    this.isNative = data instanceof DataTransfer;
     this.from = drag.from;
     this.to = drag.to;
     this.item = drag.item;
-
-    //this.drag = drag;
+    this.effect = drag.effect;
 
     this.altKey = mouseEvent.altKey;
     this.button = mouseEvent.button;
@@ -97,17 +88,63 @@ export class DragculaDragEvent
   }
 }
 
-export class IndexedDragculaDragEvent extends DragculaDragEvent {
-  readonly index: number;
+export class DragculaNativeDragEvent extends DragculaBaseDragEvent {
+  readonly isNative = true;
+  readonly dataTransfer: DataTransfer;
+
+  constructor(
+    type: "Drop" | "DragStart" | "DragEnter" | "DragOver" | "DragLeave" | "DragEnd",
+    mouseEvent: MouseEvent,
+    drag: DragOperation
+  ) {
+    super(type, mouseEvent, drag);
+    this.dataTransfer = drag.data as DataTransfer;
+  }
+}
+export class DragculaCustomDragEvent extends DragculaBaseDragEvent {
+  readonly isNative = false;
+  readonly dataTransfer: IDragData;
+
+  constructor(
+    type: "Drop" | "DragStart" | "DragEnter" | "DragOver" | "DragLeave" | "DragEnd",
+    mouseEvent: MouseEvent,
+    drag: DragOperation
+  ) {
+    super(type, mouseEvent, drag);
+    this.dataTransfer = drag.data as IDragData;
+  }
+}
+
+export type DragculaDragEvent = DragculaNativeDragEvent | DragculaCustomDragEvent;
+
+export class IndexedDragculaNativeDragEvent extends DragculaNativeDragEvent {
+  index: number;
 
   constructor(
     type: "Drop" | "DragStart" | "DragEnter" | "DragOver" | "DragLeave" | "DragEnd",
     mouseEvent: MouseEvent,
     drag: DragOperation,
-    data: DataTransfer | IDragData,
     index: number
   ) {
-    super(type, mouseEvent, drag, data);
+    super(type, mouseEvent, drag);
     this.index = index;
   }
 }
+
+export class IndexedDragculaCustomDragEvent extends DragculaCustomDragEvent {
+  index: number;
+
+  constructor(
+    type: "Drop" | "DragStart" | "DragEnter" | "DragOver" | "DragLeave" | "DragEnd",
+    mouseEvent: MouseEvent,
+    drag: DragOperation,
+    index: number
+  ) {
+    super(type, mouseEvent, drag);
+    this.index = index;
+  }
+}
+
+export type IndexedDragculaDragEvent =
+  | IndexedDragculaNativeDragEvent
+  | IndexedDragculaCustomDragEvent;
