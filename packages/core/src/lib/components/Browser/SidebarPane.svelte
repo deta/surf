@@ -60,7 +60,6 @@
   }
 
   const handleResizePane = (paneName: string, size: number) => {
-    console.warn('resize', paneName, size)
     if (size === 0) return
     if (paneName === 'right-sidebar') {
       localStorage.setItem(`panelSize-${paneName}`, `${(size / 100) * window.innerHeight}`)
@@ -87,37 +86,21 @@
 
     if (newPercentageSidebar !== 0) $paneStore?.resize(newPercentageSidebar)
     if (!rightSidebarHidden) $rightPaneStore?.resize(newPercentageRightSidebar)
-
-    console.error('resize', newPercentageSidebar, newPercentageRightSidebar)
   }
 
-  const pxToPercentage = (px: number) => {
-    return (px / window.innerWidth) * 100
+  const pxToPercentage = (px: number, widthOrHeight: 'width' | 'height' = 'width') => {
+    return (px / (widthOrHeight === 'width' ? window.innerWidth : window.innerHeight)) * 100
   }
-  const percentageToPx = (percentage: number) => {
-    return (percentage / 100) * window.innerWidth
+  const percentageToPx = (percentage: number, widthOrHeight: 'width' | 'height' = 'width') => {
+    return (percentage / 100) * (widthOrHeight === 'width' ? window.innerWidth : window.innerHeight)
   }
 
   onMount(() => {
     if (rightSidebarHidden && $rightPaneStore) {
       $rightPaneStore.collapse()
     }
-
-    /*const targetSidebar = Number(
-      localStorage.getItem(`panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`)
-    )
-    const targetRightSidebar = Number(localStorage.getItem('panelSize-right-sidebar'))
-    const newPercentageSidebar = (targetSidebar / window.innerHeight) * 100
-    const newPercentageRightSidebar = targetRightSidebar
-      ? (targetRightSidebar / window.innerHeight) * 100
-      : 0
-
-    if (newPercentageSidebar !== 0) $paneStore?.resize(newPercentageSidebar)
-    if (!rightSidebarHidden) $rightPaneStore?.resize(newPercentageRightSidebar)*/
-    console.warn('local', localStorage.getItem('panelSize-vertical-sidebar'))
   })
 
-  $: console.log('paneItem', $paneStore?.isExpanded())
 </script>
 
 <svelte:window on:resize={handleResize} />
@@ -125,13 +108,14 @@
 <PaneGroup direction={horizontalTabs ? 'vertical' : 'horizontal'}>
   {#if horizontalTabs}
     <Pane
-      defaultSize={3}
+      defaultSize={localStorage.getItem('panelSize-horizontal-sidebar') === null
+        ? 3
+        : pxToPercentage(Number(localStorage.getItem('panelSize-horizontal-sidebar')), 'height')}
       collapsible={true}
-      minSize={2}
-      maxSize={20}
       bind:pane={$paneStore}
       onCollapse={handleCollapse}
       onExpand={handleExpand}
+      onResize={(size) => handleResizePane('sidebar', size)}
     >
       <slot name="sidebar" />
     </Pane>
@@ -141,8 +125,6 @@
         ? 15
         : pxToPercentage(Number(localStorage.getItem('panelSize-vertical-sidebar')))}
       collapsible={true}
-      maxSize={50}
-      minSize={10}
       bind:pane={$paneStore}
       onCollapse={handleCollapse}
       onExpand={handleExpand}
@@ -159,7 +141,7 @@
       class:h-0.5={horizontalTabs}
     />
   </PaneResizer>
-  <Pane maxSize={100}>
+  <Pane>
     <PaneGroup direction="horizontal">
       <Pane>
         <slot name="content" />
@@ -168,10 +150,10 @@
         <div class="h-full w-2" />
       </PaneResizer>
       <Pane
-        defaultSize={10}
+        defaultSize={localStorage.getItem('panelSize-right-sidebar') === null
+          ? 15
+          : pxToPercentage(Number(localStorage.getItem('panelSize-right-sidebar')))}
         collapsible={true}
-        minSize={1}
-        maxSize={20}
         class="bg-sky-50 mb-1.5 rounded-xl mr-1.5 {horizontalTabs ? '' : 'mt-1.5'}"
         onCollapse={handleRightCollapse}
         onExpand={handleRightExpand}
