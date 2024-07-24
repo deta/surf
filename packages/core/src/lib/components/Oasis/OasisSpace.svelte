@@ -32,7 +32,10 @@
     MEDIA_TYPES,
     createResourcesFromMediaItems,
     extractAndCreateWebResource,
-    processDrop
+    processDrop,
+    type MediaParserResult,
+    type MediaParserResultURL,
+    type MediaParserResultUnknown
   } from '../../service/mediaImporter'
 
   import { useToasts } from '../../service/toast'
@@ -46,7 +49,12 @@
   import { checkIfYoutubeUrl } from '../../utils/url'
   import OasisResourceModalWrapper from './OasisResourceModalWrapper.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
-  import { DragZone } from '@horizon/dragcula'
+  import {
+    DragculaCustomDragEvent,
+    DragculaNativeDragEvent,
+    type DragculaDragEvent
+  } from '@horizon/dragcula'
+  import type { Tab } from '../Browser/types'
 
   export let spaceId: string
   export let active: boolean = false
@@ -658,6 +666,58 @@
   }
 
   const handleDrop = async (e: CustomEvent<DragEvent>) => {
+    const drag = e.detail
+    if (drag instanceof DragculaCustomDragEvent || drag instanceof DragculaNativeDragEvent) {
+      if (drag.isNative) {
+        const event = new DragEvent('drop', { dataTransfer: drag.dataTransfer })
+        log.debug('Dropped', event)
+
+        const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
+        if (isOwnDrop) {
+          log.debug('Own drop detected, ignoring...')
+          log.debug(event.dataTransfer?.files)
+          return
+        }
+
+        const parsed = await processDrop(event)
+        log.debug('Parsed', parsed)
+
+        const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+        log.debug('Resources', resources)
+
+        await loadSpaceContents(spaceId)
+        toasts.success('Resources added!')
+
+        return
+      } else {
+        log.debug('Dropped', drag.dataTransfer)
+
+        const parsed: MediaParserResult[] = []
+
+        if (drag.dataTransfer['farc/tab'] !== undefined) {
+          parsed.push({
+            type: 'url',
+            data: {
+              href: (drag.dataTransfer['farc/tab'] as Tab).currentLocation
+            },
+            metadata: {}
+          } satisfies MediaParserResultURL)
+        }
+
+        const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+        log.debug('Resources', resources)
+
+        await tick()
+        await loadSpaceContents(spaceId)
+        toasts.success('Resources added!')
+
+        return
+      }
+
+      return
+    }
+    // NOTE: I left the default handler for now if we need it / as fallback
+
     const event = e.detail
     log.debug('Dropped', event)
 
@@ -817,7 +877,7 @@
   />
 {/if}
 
-<DropWrapper on:drop={handleDrop}>
+<DropWrapper on:drop={handleDrop} {spaceId}>
   <!-- <div -->
   <!--   use:DragZone.action={{ -->
   <!--     id: `oasis-space-${spaceId}`, -->

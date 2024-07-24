@@ -2164,7 +2164,16 @@
         resource.type === 'application/vnd.space.link' ||
         resource.type === 'application/vnd.space.article'
       ) {
-        createPageTab(resource.parsedData.url, true)
+        const tab = await createPageTab(resource.parsedData.url, true)
+        tab.index = e.index
+        await bulkUpdateTabsStore(
+          get(tabs).map((tab) => ({
+            id: tab.id,
+            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+          }))
+        )
+
+        log.debug('State updated successfully')
       }
       return
     }
@@ -2190,9 +2199,16 @@
         fromTabs = magicTabsArray
       }
 
-      const idx = fromTabs.findIndex((v) => v.id === dragData.id)
-      if (idx > -1) {
-        fromTabs.splice(idx, 1)
+      if (
+        !['sidebar-unpinned-tabs', 'sidebar-pinned-tabs', 'sidebar-magic-tabs'].includes(
+          drag.to?.id
+        )
+      ) {
+        // NOTE: We only want to remove the tab if its dragged out of the sidebar
+        const idx = fromTabs.findIndex((v) => v.id === dragData.id)
+        if (idx > -1) {
+          fromTabs.splice(idx, 1)
+        }
       }
       {
         // Update the indices of the tabs in all lists
@@ -2258,116 +2274,6 @@
 
       log.debug('State updated successfully')
     }
-
-    return
-    // Get all the tab arrays
-    let unpinnedTabsArray = get(unpinnedTabs)
-    let pinnedTabsArray = get(pinnedTabs)
-    let magicTabsArray = get(magicTabs)
-
-    // Determine source and target lists
-    let fromTabs: Tab[]
-    let targetTabsArray: Tab[]
-
-    if (e.from.id === 'sidebar-unpinned-tabs') {
-      fromTabs = unpinnedTabsArray
-    } else if (e.from.id === 'sidebar-pinned-tabs') {
-      fromTabs = pinnedTabsArray
-    } else if (e.from.id === 'sidebar-magic-tabs') {
-      fromTabs = magicTabsArray
-    }
-
-    if (e.to.id === 'sidebar-unpinned-tabs') {
-      targetTabsArray = unpinnedTabsArray
-    } else if (e.to.id === 'sidebar-pinned-tabs') {
-      targetTabsArray = pinnedTabsArray
-    } else if (e.to.id === 'sidebar-magic-tabs') {
-      targetTabsArray = magicTabsArray
-    }
-
-    /*const movedTab = fromTabs.find(e => e.id === drag.item.id)
-    //const shouldChangeSection = from.dropZoneID !== to.dropZoneID
-
-    log.debug('Moving tab', movedTab, drag.srcZone, drag.targetZone)
-
-    // Remove the tab from its original position in the source list
-    // NOTE: Handled outside of this handler due to dragcula implementaiton
-    fromTabs.splice(fromTabs.findIndex(e => e === movedTab), 1)*/
-
-    const tabData = e.dataTransfer['farc/tab']
-
-    if (e.from?.id !== e.to?.id) {
-      // Remove the tab from its original position in the source list
-      const idx = fromTabs.findIndex((v) => v.id === tabData.id)
-      if (idx > -1) {
-        fromTabs.splice(idx, 1)
-      }
-    } else {
-      const existing = fromTabs.find((v) => v.id === tabData.id)
-      existing.index = e.index
-    }
-
-    // Update pinned or magic state of the tab
-    if (e.to.id === 'sidebar-pinned-tabs') {
-      tabData.pinned = true
-      tabData.magic = false
-    } else if (e.to.id === 'sidebar-magic-tabs') {
-      tabData.pinned = false
-      tabData.magic = true
-    } else {
-      tabData.pinned = false
-      tabData.magic = false
-    }
-
-    if (e.from?.id !== e.to?.id) {
-      // Add the tab to the new position
-      targetTabsArray.splice(e.index, 0, tabData)
-    } else {
-      const existing = targetTabsArray.find((v) => v.id === tabData.id)
-      existing.index = e.index
-    }
-
-    // Update the indices of the tabs in all lists
-    const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
-
-    unpinnedTabsArray = updateIndices(unpinnedTabsArray)
-    pinnedTabsArray = updateIndices(pinnedTabsArray)
-    magicTabsArray = updateIndices(magicTabsArray)
-
-    // Combine all lists back together
-    const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
-
-    log.debug('New tabs', newTabs)
-
-    // Only update the tabs that were changed (archived stay unaffected)
-    tabs.update((x) => {
-      // NOTE: This seemes to break magic tabs?
-      for (const t of newTabs) {
-        const existing = x.find((tab) => tab.id === t.id)
-        if (existing) {
-          existing.index = t.index
-          existing.pinned = t.pinned
-          existing.magic = t.magic
-        } else {
-          x.splice(t.index, 0, t)
-        }
-      }
-      // Old way, maybe we need a combination at some point...
-      return newTabs.map((tab) => {
-        return tab
-      })
-    })
-    await tick()
-
-    // Update the store with the changed tabs
-    await bulkUpdateTabsStore(
-      newTabs.map((tab) => ({
-        id: tab.id,
-        updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
-      }))
-    )
-
-    log.debug('State updated successfully')
   }
 
   const onDragculaRemoveTab = (drag: DragOperation) => {

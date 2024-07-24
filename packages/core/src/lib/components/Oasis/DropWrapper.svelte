@@ -1,9 +1,11 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { useLogScope } from '../../utils/log'
+  import { DragZone, type DragculaDragEvent } from '@horizon/dragcula'
 
   export let acceptDrop: boolean = true
   export let dragOver: boolean = false
+  export let spaceId: string = crypto.randomUUID()
 
   const log = useLogScope('DropWrapper')
   const dispatch = createEventDispatcher<{
@@ -59,14 +61,14 @@
     }, 100) // Adjust delay as needed, 100ms is just an example
   }
 
-  const handleDrop = (e: DragEvent) => {
+  const handleDrop = (e: DragculaDragEvent) => {
     if (!acceptDrop) {
       log.debug('Drop not accepted')
       return
     }
 
-    e.preventDefault()
-    e.stopPropagation()
+    //e.preventDefault()
+    //e.stopPropagation()
 
     counter = 0 // Reset counter to ensure dragover is removed
     dragOver = false
@@ -84,9 +86,13 @@
   on:dragenter={handleDragEnter}
   on:dragleave={handleDragLeave}
   on:dragover={handleDragOver}
-  on:drop={handleDrop}
   class="drop-wrapper"
   class:dragover={dragOver}
+  use:DragZone.action={{
+    id: `oasis-space-${spaceId}`,
+    acceptDrag: () => true
+  }}
+  on:Drop={handleDrop}
 >
   <slot />
 </div>
