@@ -118,7 +118,7 @@
   const debouncedAppDetection = useDebounce(async () => {
     await wait(500)
     log.debug('running app detection debounced')
-    webview.startAppDetection()
+    webview?.startAppDetection()
   }, 500)
 
   const debouncedTabUpdate = useDebounce(() => {

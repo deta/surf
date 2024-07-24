@@ -94,7 +94,13 @@
   import BrowserHistory from './BrowserHistory.svelte'
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
-  import { AxisDragZone, DragItem, type DragculaDragEvent } from '@horizon/dragcula'
+  import {
+    AxisDragZone,
+    DragItem,
+    type DragOperation,
+    type DragculaDragEvent,
+    type IndexedDragculaDragEvent
+  } from '@horizon/dragcula'
   //import '@horizon/dragcula/dist/styles.scss'
 
   let activeTabComponent: TabItem | null = null
@@ -2142,15 +2148,13 @@
     log.debug('State updated successfully')
   }
 
-  const onDropDragcula = async (e: DragculaDragEvent) => {
-    console.warn('dragevnt', e)
+  const onDropDragcula = async (e: IndexedDragculaDragEvent) => {
+    console.debug('DROP DRAGCULA', e)
 
     if (e.isNative) {
       // TODO: Handle otherwise
       return
     }
-
-    //if (drag.srcZone.id === drag.targetZone.id && drag.index === to.index) return
 
     if (e.dataTransfer['farc/resource'] !== undefined) {
       // TODO: Rename to oasis/resource
@@ -2165,6 +2169,97 @@
       return
     }
 
+    // Handle tab dnd
+    if (e.dataTransfer['farc/tab'] !== undefined) {
+      const dragData = e.dataTransfer['farc/tab'] as Tab
+
+      // Get all the tab arrays
+      let unpinnedTabsArray = get(unpinnedTabs)
+      let pinnedTabsArray = get(pinnedTabs)
+      let magicTabsArray = get(magicTabs)
+
+      // Determine source and target lists
+      let fromTabs: Tab[]
+      let toTabs: Tab[]
+
+      if (e.from.id === 'sidebar-unpinned-tabs') {
+        fromTabs = unpinnedTabsArray
+      } else if (e.from.id === 'sidebar-pinned-tabs') {
+        fromTabs = pinnedTabsArray
+      } else if (e.from.id === 'sidebar-magic-tabs') {
+        fromTabs = magicTabsArray
+      }
+
+      const idx = fromTabs.findIndex((v) => v.id === dragData.id)
+      if (idx > -1) {
+        fromTabs.splice(idx, 1)
+      }
+      {
+        // Update the indices of the tabs in all lists
+        const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+
+        unpinnedTabsArray = updateIndices(unpinnedTabsArray)
+        pinnedTabsArray = updateIndices(pinnedTabsArray)
+        magicTabsArray = updateIndices(magicTabsArray)
+
+        // Combine all lists back together
+        const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+
+        log.debug('Removed New tabs', newTabs)
+
+        tabs.set(newTabs)
+      }
+      // NOTE: This is important, as the old item needs to be removed before the new one can be added
+      await tick()
+
+      if (e.to.id === 'sidebar-unpinned-tabs') {
+        toTabs = unpinnedTabsArray
+      } else if (e.to.id === 'sidebar-pinned-tabs') {
+        toTabs = pinnedTabsArray
+      } else if (e.to.id === 'sidebar-magic-tabs') {
+        toTabs = magicTabsArray
+      }
+
+      // Update pinned or magic state of the tab
+      if (e.to.id === 'sidebar-pinned-tabs') {
+        dragData.pinned = true
+        dragData.magic = false
+      } else if (e.to.id === 'sidebar-magic-tabs') {
+        dragData.pinned = false
+        dragData.magic = true
+      } else {
+        dragData.pinned = false
+        dragData.magic = false
+      }
+
+      toTabs.splice(e.index, 0, dragData)
+
+      // Update the indices of the tabs in all lists
+      const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+
+      unpinnedTabsArray = updateIndices(unpinnedTabsArray)
+      pinnedTabsArray = updateIndices(pinnedTabsArray)
+      magicTabsArray = updateIndices(magicTabsArray)
+
+      // Combine all lists back together
+      const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+
+      log.debug('New tabs', newTabs)
+
+      tabs.set(newTabs)
+
+      // Update the store with the changed tabs
+      await bulkUpdateTabsStore(
+        newTabs.map((tab) => ({
+          id: tab.id,
+          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+        }))
+      )
+
+      log.debug('State updated successfully')
+    }
+
+    return
     // Get all the tab arrays
     let unpinnedTabsArray = get(unpinnedTabs)
     let pinnedTabsArray = get(pinnedTabs)
@@ -2201,6 +2296,17 @@
 
     const tabData = e.dataTransfer['farc/tab']
 
+    if (e.from?.id !== e.to?.id) {
+      // Remove the tab from its original position in the source list
+      const idx = fromTabs.findIndex((v) => v.id === tabData.id)
+      if (idx > -1) {
+        fromTabs.splice(idx, 1)
+      }
+    } else {
+      const existing = fromTabs.find((v) => v.id === tabData.id)
+      existing.index = e.index
+    }
+
     // Update pinned or magic state of the tab
     if (e.to.id === 'sidebar-pinned-tabs') {
       tabData.pinned = true
@@ -2213,8 +2319,13 @@
       tabData.magic = false
     }
 
-    // Add the tab to the new position
-    targetTabsArray.splice(e.index, 0, e.dataTransfer['farc/tab'])
+    if (e.from?.id !== e.to?.id) {
+      // Add the tab to the new position
+      targetTabsArray.splice(e.index, 0, tabData)
+    } else {
+      const existing = targetTabsArray.find((v) => v.id === tabData.id)
+      existing.index = e.index
+    }
 
     // Update the indices of the tabs in all lists
     const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
@@ -2259,9 +2370,11 @@
     log.debug('State updated successfully')
   }
 
-  const onDragculaRemoveTab = (item: DragItem) => {
+  const onDragculaRemoveTab = (drag: DragOperation) => {
+    return
+    //if (drag.from?.id === drag.to?.id || drag.item === null) return
     tabs.update((tabs) => {
-      const idx = tabs.findIndex((v) => v.id === item.id)
+      const idx = tabs.findIndex((v) => v.id === drag.item?.id)
       if (idx > -1) {
         tabs.splice(idx, 1)
       }
@@ -2430,7 +2543,7 @@
                     return true
                   }
                 }}
-                on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
+                on:DragEnd={(drag) => onDragculaRemoveTab(drag)}
                 on:Drop={onDropDragcula}
               >
                 {#if $pinnedTabs.length === 0}
@@ -2478,7 +2591,7 @@
                           use:AxisDragZone.action={{
                             id: 'sidebar-magic-tabs'
                           }}
-                          on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
+                          on:DragEnd={(drag) => onDragculaRemoveTab(drag)}
                           on:Drop={onDropDragcula}
                         >
                           {#if $magicTabs.length === 0}
@@ -2531,7 +2644,7 @@
                               return true
                             }
                           }}
-                          on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
+                          on:DragEnd={(drag) => onDragculaRemoveTab(drag)}
                           on:Drop={onDropDragcula}
                         >
                           {#if $magicTabs.length === 0}
@@ -2590,7 +2703,7 @@
                       return true
                     }
                   }}
-                  on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
+                  on:DragEnd={(drag) => onDragculaRemoveTab(drag)}
                   on:Drop={onDropDragcula}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}
@@ -2644,7 +2757,7 @@
                       return true
                     }
                   }}
-                  on:DragEnd={(e) => onDragculaRemoveTab(e.item)}
+                  on:DragEnd={(drag) => onDragculaRemoveTab(drag)}
                   on:Drop={onDropDragcula}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}

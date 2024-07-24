@@ -3,6 +3,7 @@ import {
   ACTIVE_DRAG,
   createDragData,
   createStyleCache,
+  DEBUG,
   DRAG_ZONES,
   DragculaCustomDragEvent,
   DragculaNativeDragEvent,
@@ -124,7 +125,8 @@ export class DragItem {
   }
 
   detach() {
-    if (get(ACTIVE_DRAG) === null) DRAG_ITEMS.delete(this.id);
+    if (get(ACTIVE_DRAG) === null || get(ACTIVE_DRAG)!.item?.id !== this.id)
+      DRAG_ITEMS.delete(this.id);
     else
       console.debug(
         `[Dragcula::I-${this.id}] Detaching controller, but active drag is still present!`,
@@ -213,8 +215,8 @@ export class DragItem {
 
   public async startViewTransition(cbk: () => void) {
     if (this.inTransition) {
-      this._activeTransition?.skipTransition(); // TODO: Might be practical?
-      //await this._activeTransition!.finished;
+      //this._activeTransition?.skipTransition(); // TODO: Might be practical?
+      await this._activeTransition!.finished;
     }
     this._activeTransition = document.startViewTransition(cbk);
 
@@ -272,8 +274,7 @@ export class DragItem {
           if (this.nodeNext !== null) this.nodeParent!.insertBefore(this.node!, this.nodeNext!);
           else this.nodeParent!.appendChild(this.node!);
 
-          // TODO: Moved below for now, look into this!
-          //this.node?.dispatchEvent(new DragEvent("dragend", {}));
+          this.node?.dispatchEvent(new DragEvent("dragend", {}));
           // NOTE: We dont reset the v.t.name here, as this has to be done
           // after the transition finished!
         }
@@ -282,23 +283,26 @@ export class DragItem {
         // remove the element / do copy updates etc.
         // This will call the detache() method, but as there is an active drag op
         // this controller will remain
-        if (drag.from !== null) drag.from.onDragEnd(drag, e);
-        await tick(); // TODO: Is necessary to require item correctly removoved?
+        //if (drag.from !== null) drag.from.onDragEnd(drag, e);
+        //await tick(); // TODO: Is necessary to require item correctly removoved?
 
-        this.node!.remove();
         this.styleCache.applyAll(this.node!);
+        this.node!.remove();
         drag.to.node!.dispatchEvent(
           new DragEvent("drop", {
             dataTransfer: new DataTransfer()
           })
         );
-        await tick();
+
+        DRAG_ITEMS.get(this.id)!.node!.dispatchEvent(new DragEvent("dragend", {}));
+        //this.node!.dispatchEvent(new DragEvent("dragend", {}));
+        //await tick();
         // NOTE: After this one, the new element should be created in the dom
         // and as this controller reamined, it is re-attached to the new DOM node!
       }
 
       // NOTE: This will target the new dom node.
-      this.node?.dispatchEvent(new DragEvent("dragend", {}));
+      //this.node!.dispatchEvent(new DragEvent("dragend", {}));
       await tick();
     });
     transition.finished.then(async () => {
@@ -332,6 +336,7 @@ export class DragItem {
       effect: "move" // TODO: HANDLE OPS
     });
     //await tick();
+    this.node!.dispatchEvent(new DragculaCustomDragEvent("DragStart", e, get(ACTIVE_DRAG)!));
 
     if (this.inTransition) {
       this._activeTransition!.skipTransition();
@@ -448,8 +453,9 @@ export class DragItem {
 
     return {
       update(props: P) {
-        console.trace(`[Dragcula::I-${controller.id}] Updated props`, props);
+        if (DEBUG) console.debug(`[Dragcula::I-${controller.id}] Updated props`, props);
         controller.draggable = node.getAttribute("draggable") === "true";
+        controller.data = props.data;
       },
       destroy() {
         controller.detach();

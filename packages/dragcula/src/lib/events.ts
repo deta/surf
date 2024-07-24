@@ -1,4 +1,11 @@
-import type { DragItem, DragZone, DragEffect, IDragData, DragOperation } from "./index.js";
+import {
+  type DragItem,
+  type DragZone,
+  type DragEffect,
+  type IDragData,
+  type DragOperation,
+  ACTIVE_DRAG
+} from "./index.js";
 
 abstract class DragculaBaseDragEvent
   extends Event
@@ -34,6 +41,8 @@ abstract class DragculaBaseDragEvent
   readonly item: DragItem | null;
 
   readonly effect: DragEffect;
+
+  abstract setDataTransfer(data: IDragData): void;
 
   /// Properties from DragEvent which are good to have:
   readonly altKey: boolean;
@@ -112,6 +121,14 @@ export class DragculaCustomDragEvent extends DragculaBaseDragEvent {
   ) {
     super(type, mouseEvent, drag);
     this.dataTransfer = drag.data as IDragData;
+  }
+
+  override setDataTransfer(data: IDragData) {
+    (this.dataTransfer as IDragData) = data;
+    ACTIVE_DRAG.update((v) => {
+      v!.data = data;
+      return v;
+    });
   }
 }
 

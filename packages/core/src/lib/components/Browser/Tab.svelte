@@ -183,6 +183,15 @@
     id: tab.id,
     data: { 'farc/tab': tab }
   }}
+  on:DragStart={(e) => {
+    e.setDataTransfer({
+      'farc/tab': {
+        ...tab,
+        pinned
+      },
+      'custom/test': 'hello'
+    })
+  }}
   use:tooltip={pinned
     ? {
         content: sanitizedTitle,

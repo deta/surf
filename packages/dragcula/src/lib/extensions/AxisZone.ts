@@ -1,5 +1,6 @@
 import {
   createStyleCache,
+  DEBUG,
   DRAG_ZONES,
   DragZone,
   IndexedDragculaCustomDragEvent,
@@ -203,7 +204,7 @@ export class AxisDragZone extends DragZone {
 
     return {
       update: (props: P) => {
-        console.trace(`[Dragcula::Z-${controller.id}] Updated props`, props);
+        if (DEBUG) console.debug(`[Dragcula::Z-${controller.id}] Updated props`, props);
         props.acceptDrag && (controller.acceptDrag = props.acceptDrag);
         controller.applyNodeAttributes();
       },

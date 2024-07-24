@@ -28,6 +28,9 @@
     id: tab.id,
     data: { "test/tab": tab }
   }}
+  on:DragStart={(e) => {
+    e.setDataTransfer({ "test/tab": tab, "custom/test": "hello" });
+  }}
   on:Drop={(e) => {
     console.warn("tab drop", e);
   }}

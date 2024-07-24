@@ -2,6 +2,7 @@ import { get } from "svelte/store";
 import { DRAG_ZONES, DragZone } from "./index.js";
 import type { IDragData } from "./types.js";
 
+export const DEBUG = false;
 export const SUPPORTS_VIEW_TRANSITIONS = document.startViewTransition !== undefined; // TODO: test & check in startVT method
 //
 /// GLOBAL MOUSE LISTENER

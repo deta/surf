@@ -1,5 +1,6 @@
 import type { ActionReturn } from "svelte/action";
 import {
+  DEBUG,
   DragculaCustomDragEvent,
   DragculaNativeDragEvent,
   type DragculaDragEvent,
@@ -272,7 +273,7 @@ export class DragZone {
 
     return {
       update(props: P) {
-        console.trace(`[Dragcula::Z-${controller.id}] Updated props`, props);
+        if (DEBUG) console.debug(`[Dragcula::Z-${controller.id}] Updated props`, props);
         props.acceptDrag && (controller.acceptDrag = props.acceptDrag);
       },
       destroy() {
