@@ -656,7 +656,7 @@
   const KEY_TIMEOUT = 120
   const MAX_TABS = 99
 
-  let horizontalTabs = false
+  let horizontalTabs = localStorage.getItem('horizontalTabs') === 'true' || false;
 
   const handleCollapseRight = () => {
     if (rightPane) {
@@ -800,6 +800,7 @@
 
   const handleToggleHorizontalTabs = () => {
     horizontalTabs = !horizontalTabs
+    localStorage.setItem('horizontalTabs', horizontalTabs.toString())
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
@@ -2221,7 +2222,6 @@
     {horizontalTabs}
     bind:paneItem={leftPane}
     on:collapsed-left-sidebar={() => {
-      console.log('seeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeijqwoiejqwioejqwoiejioqwejioqweoiqwjeoqwoieqwjoiejqwoi')
       showLeftSidebar = false
       changeTraficLightsVisibility(false)
     }}
@@ -2231,7 +2231,6 @@
     }}
     on:pane-update={handlePaneUpdate}
     on:collapsed-right-sidebar={() => {
-      console.log('seeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeijqwoiejqwioejqwoiejqwoiejioqwejioqweoiqwjeoqwoieqwjoiejqwoi')
       showRightSidebar = false
     }}
     on:expanded-right-sidebar={() => {
