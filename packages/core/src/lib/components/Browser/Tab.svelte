@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
   import type { Tab, TabPage } from './types'
   import { writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
-  import { DragItem } from '@horizon/dragcula'
+  import { DragItem, HTMLDragItem } from '@horizon/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTagsBuiltInKeys, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
@@ -160,11 +160,150 @@
     popoverVisible = false
   }
 
+  function attachCallbackToAllEvents(n, c) {
+    // Comprehensive list of events
+    const events = [
+      // Mouse events
+      'click',
+      'dblclick',
+      'mousedown',
+      'mouseup',
+      'mouseover',
+      'mouseout',
+      'mousemove',
+      'mouseenter',
+      'mouseleave',
+      'contextmenu',
+      'wheel',
+
+      // Keyboard events
+      'keydown',
+      'keyup',
+      'keypress',
+
+      // Form events
+      'focus',
+      'blur',
+      'change',
+      'input',
+      'submit',
+      'reset',
+
+      // Touch events
+      'touchstart',
+      'touchend',
+      'touchmove',
+      'touchcancel',
+
+      // UI events
+      'resize',
+      'scroll',
+
+      // Clipboard events
+      'cut',
+      'copy',
+      'paste',
+
+      // Drag and drop events
+      'drag',
+      'dragend',
+      'dragenter',
+      'dragexit',
+      'dragleave',
+      'dragover',
+      'dragstart',
+      'drop',
+
+      // Media events
+      'abort',
+      'canplay',
+      'canplaythrough',
+      'durationchange',
+      'emptied',
+      'ended',
+      'error',
+      'loadeddata',
+      'loadedmetadata',
+      'loadstart',
+      'pause',
+      'play',
+      'playing',
+      'progress',
+      'ratechange',
+      'seeked',
+      'seeking',
+      'stalled',
+      'suspend',
+      'timeupdate',
+      'volumechange',
+      'waiting',
+
+      // Misc events
+      'animationstart',
+      'animationend',
+      'animationiteration',
+      'transitionstart',
+      'transitionend',
+      'transitionrun',
+      'transitioncancel',
+
+      // Pointer events
+      'pointerdown',
+      'pointerup',
+      'pointercancel',
+      'pointerover',
+      'pointerout',
+      'pointermove',
+      'pointerenter',
+      'pointerleave',
+      'gotpointercapture',
+      'lostpointercapture',
+
+      // Print events
+      'beforeprint',
+      'afterprint',
+
+      // Page load events
+      'beforeunload',
+      'hashchange',
+      'load',
+      'unload',
+
+      // Others
+      'fullscreenchange',
+      'fullscreenerror',
+      'popstate',
+      'show',
+      'storage',
+      'toggle',
+      'wheel'
+    ]
+
+    // Attach the callback to each event type
+    events.forEach((event) => {
+      n.addEventListener(event, c)
+    })
+  }
+
+  let tabElementttt
+  onMount(() => {
+    // NOTE @cristi: here i was trying to figure out if some events fire "during the drag" which cause it to get cancelled or sth.
+    /*attachCallbackToAllEvents(tabElementttt, (e) => {
+      console.error('event ' + e.type)
+    })
+    tabElementttt.addEventListener('mouseup', () =>
+      setTimeout(() => {
+        console.error('######################')
+      })
+    )*/
+  })
+
   $: console.log('classnaem', tabSize)
 </script>
 
 <!-- style:view-transition-name="tab-{tab.id}" -->
 <div
+  bind:this={tabElementttt}
   class="tab {isActive ? 'text-sky-950 bg-sky-200 shadow-inner ring-[0.5px] ring-sky-500' : ''}
   flex items-center {pinned
     ? 'p-2 rounded-lg'
@@ -179,18 +318,18 @@
   class:pinned
   draggable={true}
   style:view-transition-name="tab-{tab.id}"
-  use:DragItem.action={{
+  use:HTMLDragItem.action={{
     id: tab.id,
     data: { 'farc/tab': tab }
   }}
   on:DragStart={(e) => {
-    e.setDataTransfer({
+    e.item.data = {
       'farc/tab': {
         ...tab,
         pinned
       },
       'custom/test': 'hello'
-    })
+    }
   }}
   use:tooltip={pinned
     ? {

@@ -49,11 +49,7 @@
   import { checkIfYoutubeUrl } from '../../utils/url'
   import OasisResourceModalWrapper from './OasisResourceModalWrapper.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
-  import {
-    DragculaCustomDragEvent,
-    DragculaNativeDragEvent,
-    type DragculaDragEvent
-  } from '@horizon/dragcula'
+  import { type DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab } from '../Browser/types'
 
   export let spaceId: string
@@ -667,6 +663,7 @@
 
   const handleDrop = async (e: CustomEvent<DragEvent>) => {
     const drag = e.detail
+    return
     if (drag instanceof DragculaCustomDragEvent || drag instanceof DragculaNativeDragEvent) {
       if (drag.isNative) {
         const event = new DragEvent('drop', { dataTransfer: drag.dataTransfer })

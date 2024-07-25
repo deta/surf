@@ -6,4 +6,4 @@ export * from "./DragItem.js";
 export * from "./DragZone.js";
 
 // Vendor extensions
-export * from "./extensions/AxisZone.js";
+//export * from "./extensions/AxisZone.js";

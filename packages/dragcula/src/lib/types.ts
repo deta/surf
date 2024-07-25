@@ -16,39 +16,27 @@ export interface ViewTransition {
  * needs to retain more complex state & logic during the drag.
  */
 export type ItemPreviewMode = "clone" | "hoist";
-export type DragEffect = "move" | "copy" | "link" | "none";
+export type DragEffect = "none" | "move" | "copy" | "link";
 
-/**
- * Object passed to the drag event listeners through the DragOperation.
- * It is similar to the DataTransfer object, but we use a simple object
- * as it is a bit more flexible / easy for most use-cases as it can contain
- * object references for easy internal page transfers.
- */
-export interface IDragData {
-  [key: string]: unknown;
-
-  getDataTransfer: () => DataTransfer;
-}
-export type RawDragData = Omit<IDragData, "getDataTransfer">;
+export type DragData = Record<string, unknown>;
 
 export interface DragOperation {
   // A random id, used e.g. to match source & target view transition elements.
   readonly id: string;
 
+  // Can be used e.g. by dragEnd to handle completed / aborted differently.
+  readonly status: "active" | "aborted" | "completed";
+
   // Origin zone.
   // null -> if native drag onto a zone.
   from: DragZone | null;
 
-  // Target zone.
+  // Last target zone.
   // null -> if not over / drop over no valid zone.
   to: DragZone | null;
 
   // null -> if native drag.
-  item: null | DragItem;
-
-  data: DataTransfer | IDragData;
-
-  effect: DragEffect;
+  item: DragItem | DataTransfer;
 }
 
 export interface IndexedDragOperation extends DragOperation {

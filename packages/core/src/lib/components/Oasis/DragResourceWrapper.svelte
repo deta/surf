@@ -10,7 +10,7 @@
   import { ResourceTypes, type ResourceData } from '@horizon/types'
   import { get } from 'svelte/store'
   import { MEDIA_TYPES } from '../../service/mediaImporter'
-  import { DragItem } from '@horizon/dragcula'
+  import { HTMLDragItem } from '@horizon/dragcula'
 
   export let draggable = true
   export let resource: Resource
@@ -124,7 +124,7 @@
 <div
   {draggable}
   on:dragstart={handleDragStart}
-  use:DragItem.action={{
+  use:HTMLDragItem.action={{
     id: resource.id,
     data: {
       'farc/resource': resource

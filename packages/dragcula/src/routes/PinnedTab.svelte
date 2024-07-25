@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DragItem } from "$lib/index.ts";
+  import { DragItem, HTMLDragItem } from "$lib/index.ts";
 
   export let tab: {
     id: string;
@@ -15,7 +15,7 @@
   {draggable}
   dragpreview="hoist"
   simulatedragstart="true"
-  use:DragItem.action={{ id: tab.id, data: { "test/tab": tab } }}
+  use:HTMLDragItem.action={{ id: tab.id, data: { "test/tab": tab } }}
   style:view-transition-name="tab-{tab.id}"
 >
   <img src={tab.icon} alt="" />

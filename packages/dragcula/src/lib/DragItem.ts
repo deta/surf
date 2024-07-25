@@ -1,465 +1,435 @@
-import type { ActionReturn } from "svelte/action";
-import {
-  ACTIVE_DRAG,
-  createDragData,
-  createStyleCache,
-  DEBUG,
-  DRAG_ZONES,
-  DragculaCustomDragEvent,
-  DragculaNativeDragEvent,
-  DragZone,
-  findClosestDragZoneFromEl,
-  findClosestDragZoneFromPoint,
-  mousePos,
-  type DragOperation,
-  type ItemPreviewMode,
-  type RawDragData
-} from "./index.js";
+/*import type { ActionReturn } from "svelte/action";
+import { ACTIVE_DRAG, createDragData, createStyleCache, DEBUG, DRAG_ZONES, DragculaCustomDragEvent, DragculaNativeDragEvent, DragZone, findClosestDragZoneFromEl, findClosestDragZoneFromPoint, mousePos, type DragOperation, type ItemPreviewMode, type RawDragData } from "./index.js";
 import { get } from "svelte/store";
 import { tick } from "svelte";
 
 export interface DragItemActionProps {
-  id: string;
-  controller?: DragItem;
+	id: string;
+	controller?: DragItem;
 
-  data: RawDragData;
+	data: RawDragData;
 }
 export interface DragItemActionAttributes {
-  // Whether the item can be dragged.
-  draggable?: boolean;
+	// Whether the item can be dragged.
+	draggable?: boolean;
 
-  dragpreview?: "clone" | "hoist";
-  //simulatedragstart?: "true" | "false"; // Use so we can have a min-move before start
+	dragpreview?: "clone" | "hoist";
+	//simulatedragstart?: "true" | "false"; // Use so we can have a min-move before start
 
-  "on:DragStart"?: (e: DragculaDragEvent) => void;
-  "on:Drag"?: (e: DragculaDragEvent) => void;
-  "on:DragEnter"?: (e: DragculaDragEvent) => void;
-  "on:DragLeave"?: (e: DragculaDragEvent) => void;
-  "on:DragEnd"?: (e: DragculaDragEvent) => void;
-}
+	'on:DragStart'?: (e: DragculaDragEvent) => void,
+	'on:Drag'?: (e: DragculaDragEvent) => void,
+	'on:DragEnter'?: (e: DragculaDragEvent) => void,
+	'on:DragLeave'?: (e: DragculaDragEvent) => void,
+	'on:DragEnd'?: (e: DragculaDragEvent) => void,
+}*/
 
-export const DRAG_ITEMS = new Map<string, DragItem>();
+import type { ActionReturn } from "svelte/action";
+import {
+  createStyleCache,
+  DragculaDragEvent,
+  DragZone,
+  findClosestDragZoneFromEl,
+  findClosestDragZoneFromPoint,
+  type DragData,
+  type DragEffect,
+  type DragOperation,
+  type ItemPreviewMode
+} from "./index.js";
+import { ACTIVE_DRAG_OPERATION } from "./internal.js";
+import { get } from "svelte/store";
+import { tick } from "svelte";
 
+/** An abstract Item, holding some data, a dragEffect
+ * and exposing handler function called during a drag operation.
+ */
 export class DragItem {
   readonly id: string;
-  readonly node?: HTMLElement;
-
-  /// Element after self, used for .insertBefore when resetting during hoisting.
-  readonly nodeNext?: HTMLElement;
-  readonly nodeParent?: HTMLElement;
-
-  /// Cloned node if using preview mode "clone".
-  protected nodeClone?: HTMLElement;
-
-  protected previewMode: ItemPreviewMode = "hoist";
 
   /// === STATE
-  // isDragging = writable(false);
-  // isOverZone = writable(false);
-  protected draggable = false;
 
-  private _isDragging = false;
+  protected _isDragging = false;
+  get isDragging(): boolean {
+    return this._isDragging;
+  }
   set isDragging(v: boolean) {
     this._isDragging = v;
-    if (v) {
-      this.node && (this.node.dataset.dragculaDragging = "true");
-    } else {
-      this.node && delete this.node.dataset.dragculaDragging;
-    }
+  }
+
+  protected _isOverZone = false;
+  get isOverZone(): boolean {
+    return this._isOverZone;
   }
   set isOverZone(v: boolean) {
-    if (v) {
-      this.node && (this.node.dataset.dragculaOverZone = "true");
-    } else {
-      this.node && delete this.node.dataset.dragculaOverZone;
-    }
+    this._isOverZone = v;
   }
 
-  /// Default drag data passed to DragOperation, if not overriden.
-  data: RawDragData;
-
-  protected _activeTransition: ViewTransition | null = null;
-  set activeTransition(v: ViewTransition | null) {
-    // TODO: SKIP TARGET ZONE EHCEK
-    this._activeTransition = v;
-    if (v === null) {
-      if (/*this.raf !== null ||*/ get(ACTIVE_DRAG) !== null) this.doTargetZoneCheck();
-    }
-  }
-  get inTransition() {
-    return this._activeTransition || false;
-  }
-
-  protected raf: number | null = null;
-  protected styleCache = createStyleCache();
+  data: DragData;
+  dragEffect: DragEffect = "none";
+  previewEffect: ItemPreviewMode = "hoist";
 
   /// === CONSTRUCTOR
 
-  constructor(data: RawDragData, id?: string) {
-    this.id = id || crypto.randomUUID();
-    this.data = data;
+  constructor(props: { id?: string; data?: DragData }) {
+    this.id = props.id || crypto.randomUUID();
+    this.data = props.data || {};
   }
 
-  attach(node: HTMLElement, reAttach = false) {
-    (this.node as HTMLElement) = node;
-    (this.nodeParent as HTMLElement) = node.parentElement!;
-
-    this.node!.setAttribute("data-dragcula-item", this.id);
-
-    if (reAttach) {
-      console.debug(`[Dragcula::I-${this.id}] Re-attaching controller to node`, this, node);
-      this.styleCache.cache(this.node!, "view-transition-name", `dragItem-${this.id}`);
-      //this.styleCache.dump("In Reattache");
-    }
-
-    // Attribute cfg
-    this.draggable = node.getAttribute("draggable") === "true";
-    this.previewMode = (node.getAttribute("dragpreview") as ItemPreviewMode) || "hoist";
-
-    // Event listeners
-    this.node!.addEventListener("dragstart", this.boundHandleDragStart);
-    this.node!.addEventListener("drag", this.boundHandleDrag);
-    this.node!.addEventListener("dragend", this.boundHandleDragEnd);
-
-    DRAG_ITEMS.set(this.id, this);
-  }
-
-  detach() {
-    if (get(ACTIVE_DRAG) === null || get(ACTIVE_DRAG)!.item?.id !== this.id)
-      DRAG_ITEMS.delete(this.id);
-    else
-      console.debug(
-        `[Dragcula::I-${this.id}] Detaching controller, but active drag is still present!`,
-        get(ACTIVE_DRAG)
-      );
-
-    this.node!.removeAttribute("data-dragcula-item");
-    this.node!.removeEventListener("dragstart", this.boundHandleDragStart);
-    this.node!.removeEventListener("drag", this.boundHandleDrag);
-    this.node!.removeEventListener("dragend", this.boundHandleDragEnd);
-  }
+  /// Lifecycle cleanup.
+  destroy() {}
 
   /// === UTILS
 
-  protected async doTargetZoneCheck(overZone?: DragZone) {
-    //console.trace("DoTarget check", get(ACTIVE_DRAG))
-    if (get(ACTIVE_DRAG) === null) return;
-    if (overZone === undefined)
-      overZone = findClosestDragZoneFromPoint(mousePos.x, mousePos.y) || undefined;
+  /// === EVENTS
 
-    // Check if target accepts
-    if (overZone) {
-      const event =
-        get(ACTIVE_DRAG)!.data instanceof DataTransfer
-          ? new DragculaNativeDragEvent("DragOver", {}, get(ACTIVE_DRAG)!)
-          : new DragculaCustomDragEvent("DragOver", {}, get(ACTIVE_DRAG)!);
-      if (!overZone.acceptDrag(event)) overZone = undefined;
+  /** Prepare the drag operation.
+   * e.g. handling document changes.
+   *
+   * @param drag Reference the active drag operation, or undfined if no active one (e.g. called from HTMLDragItem on dragstart)
+   */
+  onDragStart(drag?: DragOperation) {
+    // Bootstrap drag operation if not already active
+    if (!drag) {
+      ACTIVE_DRAG_OPERATION.set({
+        id: crypto.randomUUID(),
+        status: "active",
+        from: null,
+        to: null,
+        item: this
+      });
     }
 
+    // Set effect depending on the keys pressed
+    // TODO: Impl handle keys
+    if (true) {
+      this.dragEffect = "move";
+    }
+  }
+
+  /** Update the drag state.
+   * e.g. update visual position, document styles etc.
+   */
+  onDrag(drag: DragOperation) {
+    // NOTE: Defaults to no-op,
+  }
+
+  /** Finalize the drag operation.
+   * e.g. clean up document changes depending on whether the drag was
+   *			completed or aborted.
+   */
+  onDragEnd(drag: DragOperation) {}
+
+  /** Called once, when cursor enters a zone different from the active target zone.
+   * e.g. use to update visual feedback depnding on the target.
+   */
+  onDragEnter(drag: DragOperation) {}
+
+  /** Called once, when cursor leaves the active target zone.
+   * e.g. use to update visual feedback depending on the target.
+   */
+  onDragLeave(drag: DragOperation) {}
+}
+
+/** A DragItem that is bound to a HTMLElement.
+ *  Note, that it can re-attach to a different node during a drag operation,
+ *  e.g. if a move operation is performed.
+ */
+export class HTMLDragItem extends DragItem {
+  /// Map of active HTMLDragItems used to find re-attach items e.g. during move.
+  static ITEMS = new Map<string, HTMLDragItem>();
+
+  protected static _activeTransition: ViewTransition | false = false;
+  static get activeTransition(): ViewTransition | false {
+    return this._activeTransition;
+  }
+  static setActiveTransition(transition: ViewTransition, skipActive = true) {
+    console.error("DONT USE THIS!!!");
+    return;
+    if (HTMLDragItem.activeTransition) {
+      if (skipActive) HTMLDragItem.activeTransition.skipTransition();
+      HTMLDragItem._activeTransition = transition;
+    }
+  }
+  static async startTransition(cbk: () => void, skipActive = true): Promise<ViewTransition> {
+    if (HTMLDragItem.activeTransition) {
+      if (skipActive) HTMLDragItem.activeTransition.skipTransition();
+      await HTMLDragItem.activeTransition.finished;
+    }
+    HTMLDragItem._activeTransition = document.startViewTransition(cbk);
+    HTMLDragItem._activeTransition.finished.then(() =>
+      setTimeout(() => {
+        HTMLDragItem._activeTransition = false;
+      })
+    );
+    return HTMLDragItem._activeTransition;
+  }
+
+  /// === CONFIG
+
+  readonly node: HTMLElement;
+
+  readonly nodeNext?: HTMLElement;
+  readonly nodeParent?: HTMLElement;
+
+  /// === STATE
+
+  override set isDragging(v: boolean) {
+    super.isDragging = v;
+    // TODO: update dom
+  }
+  override set isOverZone(v: boolean) {
+    super.isOverZone = v;
+    // TODO: update dom
+  }
+
+  protected styles = createStyleCache();
+
+  protected raf: number | null = null;
+  protected previewX: number = 0;
+  protected previewY: number = 0;
+  protected previewSize: { w: number; h: number } = { w: 0, h: 0 };
+  get previewTransform(): string {
+    return `translate(${this.previewX - this.previewSize.w / 2}px, ${this.previewY - this.previewSize.h / 2}px)`;
+  }
+
+  /// === CONSTRUCTOR
+
+  constructor(node: HTMLElement, props: { id?: string; data?: DragData }) {
+    super(props);
+    this.node = node;
+    this.node.setAttribute("data-dragcula-item", this.id);
+
+    this.nodeParent = node.parentElement || undefined;
+
+    if (HTMLDragItem.ITEMS.has(this.id)) {
+      console.debug(
+        `[HTMLDragItem::${this.id}] Re-attaching new node to existing item.`,
+        this.node,
+        this
+      );
+      // TODO: styles.cache, set auto vt-name
+    } else {
+      HTMLDragItem.ITEMS.set(this.id, this);
+    }
+
+    this.node.addEventListener("dragend", this.handleDragEnd);
+    this.node.addEventListener("drag", this.handleDrag, { capture: true });
+    this.node.addEventListener("dragstart", this.handleDragStart, { capture: true });
+  }
+
+  static action(node: HTMLElement, props: { id?: string }): ActionReturn {
+    const controller = new this(node, props);
+
+    return {
+      destroy() {
+        controller.destroy();
+      },
+      update(props: any) {}
+    };
+  }
+
+  override destroy() {
+    this.node.removeEventListener("dragstart", this.handleDragStart);
+    this.node.removeEventListener("drag", this.handleDrag, { capture: true });
+    this.node.removeEventListener("dragend", this.handleDragEnd, { capture: true });
+
+    if (
+      get(ACTIVE_DRAG_OPERATION) !== null &&
+      (get(ACTIVE_DRAG_OPERATION)!.item as DragItem)?.id !== this.id
+    ) {
+      HTMLDragItem.ITEMS.delete(this.id);
+    }
+
+    super.destroy();
+  }
+
+  protected async rafCbk(_: number) {
+    this.node.style.transform = this.previewTransform;
+
+    this.raf = null;
+  }
+  protected boundRafCbk = this.rafCbk.bind(this);
+
+  /// === DOM HANDLERS
+
+  /** Sadly we need this workaround, as native drag event
+   *  is only fired about every 300ms so it lags like shit.
+   */
+  protected _handleMouseMove(e: MouseEvent) {
+    this.node.dispatchEvent(
+      new DragEvent("drag", {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        bubbles: false
+      })
+    );
+  }
+  protected handleMouseMove = this._handleMouseMove.bind(this);
+
+  /** Safly we need this workaround, as no drop event is automatically fired
+   * as we needed to prevent native dragstart event.
+   */
+  protected async _handleMouseUp(e: MouseEvent) {
+    document.body.removeAttribute("data-dragcula-dragging");
+
+    // start vt
+    e.target?.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true
+      })
+    );
+
+    await tick();
+
+    //if (drag.item instanceof HTMLDragItem) {
+    this.node.dispatchEvent(new DragEvent("dragend"));
+    //}
+  }
+  protected handleMouseUp = this._handleMouseUp.bind(this);
+
+  protected _handleDragStart(e: DragEvent) {
+    document.body.setAttribute("data-dragcula-dragging", "true");
+
+    // NOTE: THIS IS THE ISSUE WHY EVERYTHING COULD BE SOOOO SIMPLE
+    // BUT ISN'T!
+    e.preventDefault();
+    e.stopPropagation();
+    console.log(`[HTMLDragItem::${this.id}] DragStart`, e);
+
+    this.previewX = e.clientX;
+    this.previewY = e.clientY;
+
+    // super call
+    this.onDragStart();
+  }
+  protected handleDragStart = this._handleDragStart.bind(this);
+
+  protected _handleDrag(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log(`[HTMLDragItem::${this.id}] Drag`, e);
+
+    this.previewX = e.clientX;
+    this.previewY = e.clientY;
+
+    this.onDrag(get(ACTIVE_DRAG_OPERATION)!);
+  }
+  protected handleDrag = this._handleDrag.bind(this);
+
+  protected _handleDragEnd(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log(`[HTMLDragItem::${this.id}] DragEnd`, e);
+
+    if (get(ACTIVE_DRAG_OPERATION) !== null) this.onDragEnd(get(ACTIVE_DRAG_OPERATION)!);
+  }
+  protected handleDragEnd = this._handleDragEnd.bind(this);
+
+  /// === EVENTS
+
+  override onDragStart(drag?: DragOperation) {
+    super.onDragStart(drag);
+
+    const srcZone = findClosestDragZoneFromEl(this.node);
+    if (srcZone) {
+      ACTIVE_DRAG_OPERATION.update((v) => {
+        v!.from = srcZone;
+        return v;
+      });
+    }
+
+    drag = get(ACTIVE_DRAG_OPERATION)!;
+
+    this.previewSize = { w: this.node.offsetWidth, h: this.node.offsetHeight };
+
+    window.addEventListener("mousemove", this.handleMouseMove, { capture: true });
+    window.addEventListener("mouseup", this.handleMouseUp, { capture: true, once: true });
+
+    // #dispatch DragStart so client can set data e.item.data = ...
+    // ERR: this could throw.. handle that succer
+    const completed = this.node.dispatchEvent(
+      new DragculaDragEvent("DragStart", {
+        id: drag.id,
+        item: drag.item,
+        from: drag.from || undefined,
+        to: drag.to || undefined
+      })
+    );
+
+    if (!completed) {
+      // TODO: Abort all & start reset
+    }
+
+    // TODO: Lift element
+    this.node.remove();
+    this.styles.cacheMany(this.node, {
+      "pointer-events": "none",
+      position: "fixed",
+      top: "0",
+      left: "0",
+      "z-index": "2147483647",
+      transform: this.previewTransform
+    });
+    document.body.appendChild(this.node);
+  }
+
+  override onDrag(drag: DragOperation) {
+    // do target check
+    const overZone = findClosestDragZoneFromPoint(this.previewX, this.previewY);
+    console.warn("overZone", overZone);
+
     const newTargetId = overZone ? overZone.id : null;
-    const oldTargetId = get(ACTIVE_DRAG)!.to ? get(ACTIVE_DRAG)!.to?.id : null;
+    const oldTargetId = get(ACTIVE_DRAG_OPERATION)!.to ? get(ACTIVE_DRAG_OPERATION)!.to?.id : null;
 
     if (newTargetId !== oldTargetId) {
       if (oldTargetId) {
-        DRAG_ZONES.get(oldTargetId)?.node?.dispatchEvent(
-          new DragEvent("dragleave", {
-            clientX: mousePos.x,
-            clientY: mousePos.y
-          })
-        );
+        /*DragZone.ZONES.get(oldTargetId)?.node?.dispatchEvent(new DragEvent("dragleave", {
+					clientX: mousePos.x,
+					clientY: mousePos.y,
+				}));*/
         //await tick() // TODO: REMOVE?
       }
 
-      ACTIVE_DRAG.update((v) => {
+      ACTIVE_DRAG_OPERATION.update((v) => {
         v!.to = overZone || null;
         return v;
       });
 
       if (newTargetId) {
-        overZone?.node?.dispatchEvent(
-          new DragEvent("dragenter", {
-            clientX: mousePos.x,
-            clientY: mousePos.y
-          })
-        );
+        /*overZone?.node?.dispatchEvent(new DragEvent("dragenter", {
+					clientX: mousePos.x,
+					clientY: mousePos.y,
+				}));*/
         //await tick() // TODO: REMOVE?
       }
     }
 
     if (overZone) {
-      overZone.node?.dispatchEvent(
-        new DragEvent("dragover", {
-          clientX: mousePos.x,
-          clientY: mousePos.y
-        })
-      );
+      /*overZone.node?.dispatchEvent(new DragEvent("dragover", {
+				clientX: mousePos.x,
+				clientY: mousePos.y,
+			}));*/
       this.isOverZone = true;
     } else {
       this.isOverZone = false;
     }
+
+    // update visual position
+    if (!this.raf) this.raf = requestAnimationFrame(this.boundRafCbk);
   }
 
-  protected async rafCbk(_: number) {
-    const elWidth = this.node!.offsetWidth;
-    const elHeight = this.node!.offsetHeight;
-    const overZone = findClosestDragZoneFromPoint(mousePos.x, mousePos.y);
+  override onDragEnd(drag: DragOperation) {
+    super.onDragEnd(drag);
+    console.warn("onDragEnd", drag.status);
 
-    this.node!.style.transform = `translate(${mousePos.x - elWidth / 2}px, ${mousePos.y - elHeight / 2}px)`;
+    window.removeEventListener("mousemove", this.handleMouseMove, { capture: true });
 
-    if (!this.inTransition) {
-      await this.doTargetZoneCheck(overZone || undefined);
-    }
-    this.raf = null;
-  }
-  protected boundRafCbk = this.rafCbk.bind(this);
-
-  public async startViewTransition(cbk: () => void) {
-    if (this.inTransition) {
-      //this._activeTransition?.skipTransition(); // TODO: Might be practical?
-      await this._activeTransition!.finished;
-    }
-    this._activeTransition = document.startViewTransition(cbk);
-
-    this._activeTransition!.finished.then(() =>
-      setTimeout(() => {
-        this._activeTransition = null;
-      })
-    );
-
-    return this._activeTransition;
-  }
-
-  /// === DOM EVENTS
-
-  protected handleMouseMove(e: MouseEvent) {
-    if (this.raf === null) this.raf = requestAnimationFrame(this.boundRafCbk);
-    this.node?.dispatchEvent(
-      new DragEvent("drag", {
-        clientX: e.clientX,
-        clientY: e.clientY,
-        screenX: e.screenX,
-        screenY: e.screenY
-      })
-    );
-  }
-  protected boundHandleMouseMove = this.handleMouseMove.bind(this);
-
-  protected async handleMouseUp(e: MouseEvent) {
-    if (get(ACTIVE_DRAG) === null) return;
-    window.removeEventListener("mousemove", this.boundHandleMouseMove, { capture: true });
-    if (this.raf !== null) cancelAnimationFrame(this.raf);
-
-    if (this.inTransition) {
-      this._activeTransition!.skipTransition();
-      await this._activeTransition!.finished;
+    // Reset item
+    if (drag.status === "aborted") {
+      // TODO: Check dragEffect & status
+      this.styles.applyAll(this.node, ["view-transition-name"]);
+      this.nodeParent?.appendChild(this.node);
     }
 
-    this.styleCache.cache(this.node!, "view-transition-name", `dragItem-${this.id}`);
-
-    const drag = get(ACTIVE_DRAG)!;
-
-    const transition = await this.startViewTransition(async () => {
-      this.styleCache.applyAll(this.node!, ["view-transition-name"]);
-
-      if (this.previewMode === "clone") {
-        this.nodeClone!.remove();
-        this.nodeClone = undefined;
-      }
-
-      if (drag.to === null) {
-        // We "abort" the drag and reset the elements
-        if (this.previewMode === "hoist") {
-          this.node!.remove();
-          // TODO: Handle missing parent?
-          if (this.nodeNext !== null) this.nodeParent!.insertBefore(this.node!, this.nodeNext!);
-          else this.nodeParent!.appendChild(this.node!);
-
-          this.node?.dispatchEvent(new DragEvent("dragend", {}));
-          // NOTE: We dont reset the v.t.name here, as this has to be done
-          // after the transition finished!
-        }
-      } else if (drag.to !== null) {
-        // NOTE: Inside this event handler, the zone can
-        // remove the element / do copy updates etc.
-        // This will call the detache() method, but as there is an active drag op
-        // this controller will remain
-        //if (drag.from !== null) drag.from.onDragEnd(drag, e);
-        //await tick(); // TODO: Is necessary to require item correctly removoved?
-
-        this.styleCache.applyAll(this.node!);
-        this.node!.remove();
-        drag.to.node!.dispatchEvent(
-          new DragEvent("drop", {
-            dataTransfer: new DataTransfer()
-          })
-        );
-
-        DRAG_ITEMS.get(this.id)!.node!.dispatchEvent(new DragEvent("dragend", {}));
-        //this.node!.dispatchEvent(new DragEvent("dragend", {}));
-        //await tick();
-        // NOTE: After this one, the new element should be created in the dom
-        // and as this controller reamined, it is re-attached to the new DOM node!
-      }
-
-      // NOTE: This will target the new dom node.
-      //this.node!.dispatchEvent(new DragEvent("dragend", {}));
-      await tick();
-    });
-    transition.finished.then(async () => {
-      // NOTE: This will target the new dom node.
-      this.styleCache.apply(this.node!, "view-transition-name");
-      await tick();
-      ACTIVE_DRAG.set(null);
-    });
-    await transition.finished;
-  }
-  protected boundHandleMouseUp = this.handleMouseUp.bind(this);
-
-  protected async handleDragStart(e: DragEvent) {
-    if (!this.draggable) return;
-    e.preventDefault();
-
-    console.debug(`[Dragcula::I-${this.id}] DragStart`, e);
-
-    window.addEventListener("mouseup", this.boundHandleMouseUp, { once: true });
-
-    const srcZone = findClosestDragZoneFromEl(this.node!);
-
-    (this.nodeNext as HTMLElement) = this.node!.nextElementSibling as HTMLElement;
-
-    ACTIVE_DRAG.set({
-      id: crypto.randomUUID(),
-      from: srcZone || null,
-      to: null, // TODO: srcZone also?
-      item: this,
-      data: createDragData(this.data),
-      effect: "move" // TODO: HANDLE OPS
-    });
-    //await tick();
-    this.node!.dispatchEvent(new DragculaCustomDragEvent("DragStart", e, get(ACTIVE_DRAG)!));
-
-    if (this.inTransition) {
-      this._activeTransition!.skipTransition();
-      await this._activeTransition!.finished;
-    }
-
-    this.isDragging = true;
-
-    const elWidth = this.node!.offsetWidth;
-    const elHeight = this.node!.offsetHeight;
-
-    /*	this.styleCache.cacheMany(this.node!, {
-				"position": "fixed",
-				"top": "0",
-				"left": "0",
-			});*/
-    this.styleCache.cache(this.node!, "position", "relative");
-    //	this.styleCache.cache(this.node!, 'top', '0');
-    //		this.styleCache.cache(this.node!, 'left', '0');
-    this.styleCache.cache(this.node!, "z-index", "2147483647");
-    this.styleCache.cache(this.node!, "view-transition-name", `dragItem-${this.id}`);
-
-    const transition = await this.startViewTransition(async () => {
-      if (this.previewMode === "hoist") {
-        this.node!.remove();
-        document.body.appendChild(this.node!);
-      } else if (this.previewMode === "clone") {
-        alert("NO IMPL clone");
-        return;
-        /*this.nodeClone! = this.node!.cloneNode(true);
-				this.nodeClone!.style.setProperty("view-transition-name", `drag-clone-${this.id}`)
-				this.applyPlaceholderStyle(this.nodeClone as HTMLElement);
-				this.node!.replaceWith(this.nodeClone!);
-				document.body.appendChild(this.node!);*/
-      }
-
-      this.styleCache.cacheMany(this.node!, {
-        position: "fixed",
-        top: "0",
-        left: "0",
-        "pointer-events": "none",
-        width: `${elWidth}px`,
-        height: `${elHeight}px`,
-        transform: `translate(${mousePos.x - elWidth / 2}px, ${mousePos.y - elHeight / 2}px)`
-        //['transition', 'all 0.21s cubic-bezier(0.77,0,0.175,1), transform 0s'],
-      });
-
-      //this.applyDragStyle(this.node!);
-
-      document.body.setAttribute("data-dragcula-dragging", "true");
-      await tick();
-    });
-
-    transition.finished.then(() => {
-      this.styleCache.dump("after dragstarttransition");
-      this.styleCache.apply(this.node!, "view-transition-name");
-    });
-
-    await transition.updateCallbackDone;
-
-    window.addEventListener("mousemove", this.boundHandleMouseMove, { capture: true });
-    this.raf = requestAnimationFrame(this.boundRafCbk);
-    //this.doTargetZoneCheck(srcZone || undefined)
-
-    this.onDragStart(get(ACTIVE_DRAG)!);
-  }
-  protected boundHandleDragStart = this.handleDragStart.bind(this);
-
-  protected handleDrag(e: DragEvent) {}
-  protected boundHandleDrag = this.handleDrag.bind(this);
-
-  protected handleDragEnd(e: DragEvent) {
-    console.debug(`[Dragcula::I-${this.id}] DragEnd`, e);
-    this.isOverZone = false;
-    this.isDragging = false;
-    document.body.removeAttribute("data-dragcula-dragging");
-    this.onDragEnd(get(ACTIVE_DRAG)!);
-  }
-  protected boundHandleDragEnd = this.handleDragEnd.bind(this);
-
-  /// === EVENT HANDLERS
-
-  protected onDragStart(drag: DragOperation) {}
-
-  protected onDrag(drag: DragOperation) {}
-
-  onDragEnter(drag: DragOperation) {
-    this.isOverZone = true;
-  }
-
-  onDragLeave(drag: DragOperation) {
-    this.isOverZone = false;
-  }
-
-  protected onDragEnd(drag: DragOperation) {}
-
-  /// === ACTION
-
-  static action<P extends DragItemActionProps, A extends DragItemActionProps>(
-    node: HTMLElement,
-    props: P
-  ): ActionReturn<P, A> {
-    let controller: DragItem;
-
-    if (get(ACTIVE_DRAG) !== null && get(ACTIVE_DRAG)!.item?.id === props.id) {
-      controller = DRAG_ITEMS.get(props.id)!;
-      controller.attach(node, true); // NOTE: We re-attach!
-    } else {
-      controller = props.controller || new this(props.data, props.id);
-      controller.attach(node);
-    }
-    controller.draggable = node.getAttribute("draggable") === "true";
-    console.debug(`[Dragcula::I-${controller.id}] Attached controller to node`, controller, node);
-
-    return {
-      update(props: P) {
-        if (DEBUG) console.debug(`[Dragcula::I-${controller.id}] Updated props`, props);
-        controller.draggable = node.getAttribute("draggable") === "true";
-        controller.data = props.data;
-      },
-      destroy() {
-        controller.detach();
-      }
-    };
+    // if vt running, after finish, apply vt-backup
   }
 }

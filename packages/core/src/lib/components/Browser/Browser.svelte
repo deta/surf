@@ -95,7 +95,7 @@
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
   import {
-    AxisDragZone,
+    HTMLDragZone,
     DragItem,
     type DragOperation,
     type DragculaDragEvent,
@@ -2148,7 +2148,7 @@
     log.debug('State updated successfully')
   }
 
-  const onDropDragcula = async (e: IndexedDragculaDragEvent) => {
+  const onDropDragcula = async (e: DragculaDragEvent) => {
     console.debug('DROP DRAGCULA', e)
 
     if (e.isNative) {
@@ -2156,9 +2156,9 @@
       return
     }
 
-    if (e.dataTransfer['farc/resource'] !== undefined) {
+    if (e.data['farc/resource'] !== undefined) {
       // TODO: Rename to oasis/resource
-      const resource = e.dataTransfer['farc/resource']
+      const resource = e.data['farc/resource']
 
       if (
         resource.type === 'application/vnd.space.link' ||
@@ -2179,8 +2179,8 @@
     }
 
     // Handle tab dnd
-    if (e.dataTransfer['farc/tab'] !== undefined) {
-      const dragData = e.dataTransfer['farc/tab'] as Tab
+    if (e.data['farc/tab'] !== undefined) {
+      const dragData = e.data['farc/tab'] as Tab
 
       // Get all the tab arrays
       let unpinnedTabsArray = get(unpinnedTabs)
@@ -2200,12 +2200,12 @@
       }
 
       if (
-        !['sidebar-unpinned-tabs', 'sidebar-pinned-tabs', 'sidebar-magic-tabs'].includes(
-          drag.to?.id
-        )
+        true ||
+        !['sidebar-unpinned-tabs', 'sidebar-pinned-tabs', 'sidebar-magic-tabs'].includes(e.to?.id)
       ) {
         // NOTE: We only want to remove the tab if its dragged out of the sidebar
         const idx = fromTabs.findIndex((v) => v.id === dragData.id)
+        console.error('rem frim', [fromTabs], idx)
         if (idx > -1) {
           fromTabs.splice(idx, 1)
         }
@@ -2221,7 +2221,7 @@
         // Combine all lists back together
         const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
 
-        log.debug('Removed New tabs', newTabs)
+        log.debug('Removed old tab drag item', newTabs)
 
         tabs.set(newTabs)
       }
@@ -2263,6 +2263,7 @@
       log.debug('New tabs', newTabs)
 
       tabs.set(newTabs)
+      await tick()
 
       // Update the store with the changed tabs
       await bulkUpdateTabsStore(
@@ -2443,13 +2444,12 @@
                 style:view-transition-name="pinned-tabs-wrapper"
                 axis="horizontal"
                 dragdeadzone="3"
-                use:AxisDragZone.action={{
+                use:HTMLDragZone.action={{
                   id: 'sidebar-pinned-tabs',
                   acceptDrag: (drag) => {
                     return true
                   }
                 }}
-                on:DragEnd={(drag) => onDragculaRemoveTab(drag)}
                 on:Drop={onDropDragcula}
               >
                 {#if $pinnedTabs.length === 0}
@@ -2494,10 +2494,9 @@
                       {#if horizontalTabs}
                         <div
                           axis="vertical"
-                          use:AxisDragZone.action={{
+                          use:HTMLDragZone.action={{
                             id: 'sidebar-magic-tabs'
                           }}
-                          on:DragEnd={(drag) => onDragculaRemoveTab(drag)}
                           on:Drop={onDropDragcula}
                         >
                           {#if $magicTabs.length === 0}
@@ -2544,13 +2543,12 @@
                         {/if}
                         <div
                           axis="vertical"
-                          use:AxisDragZone.action={{
+                          use:HTMLDragZone.action={{
                             id: 'sidebar-magic-tabs',
                             acceptDrag: (drag) => {
                               return true
                             }
                           }}
-                          on:DragEnd={(drag) => onDragculaRemoveTab(drag)}
                           on:Drop={onDropDragcula}
                         >
                           {#if $magicTabs.length === 0}
@@ -2603,13 +2601,12 @@
                   class="horizontal-tabs"
                   axis="horizontal"
                   dragdeadzone="5"
-                  use:AxisDragZone.action={{
+                  use:HTMLDragZone.action={{
                     id: 'sidebar-unpinned-tabs',
                     acceptDrag: (drag) => {
                       return true
                     }
                   }}
-                  on:DragEnd={(drag) => onDragculaRemoveTab(drag)}
                   on:Drop={onDropDragcula}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}
@@ -2657,13 +2654,12 @@
                   class="vertical-tabs"
                   axis="vertical"
                   dragdeadzone="5"
-                  use:AxisDragZone.action={{
+                  use:HTMLDragZone.action={{
                     id: 'sidebar-unpinned-tabs',
                     acceptDrag: (drag) => {
                       return true
                     }
                   }}
-                  on:DragEnd={(drag) => onDragculaRemoveTab(drag)}
                   on:Drop={onDropDragcula}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}

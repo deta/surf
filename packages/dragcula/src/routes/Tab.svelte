@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DragItem } from "$lib/index.ts";
+  import { HTMLDragItem } from "$lib/index.js";
   import { createEventDispatcher } from "svelte";
 
   export let tab: {
@@ -19,20 +19,27 @@
   style:view-transition-name="tab-{tab.id}"
 -->
 
+<!--
+on:DragStart={(e) => {
+    e.setDataTransfer({ "test/tab": tab, "custom/test": "hello" });
+  }}
+  on:Drop={(e) => {
+    console.warn("tab drop", e);
+  }}
+-->
+
 <div
   class="tab"
   draggable="true"
   dragpreview="hoist"
   style:view-transition-name="tab-{tab.id}"
-  use:DragItem.action={{
-    id: tab.id,
-    data: { "test/tab": tab }
+  use:HTMLDragItem.action={{
+    id: tab.id
+    // data: { "test/tab": tab }
   }}
   on:DragStart={(e) => {
-    e.setDataTransfer({ "test/tab": tab, "custom/test": "hello" });
-  }}
-  on:Drop={(e) => {
-    console.warn("tab drop", e);
+    console.log("tab drag", e);
+    e.item.data = { "test/tab": tab };
   }}
 >
   <img src={tab.icon} alt="" />

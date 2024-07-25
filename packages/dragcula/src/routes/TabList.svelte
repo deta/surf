@@ -2,8 +2,9 @@
   import Tab from "./Tab.svelte";
   import PinnedTab from "./PinnedTab.svelte";
   import { writable, type Writable } from "svelte/store";
-  import { DragZone, AxisDragZone, type DragculaDragEvent } from "$lib/index.js";
+  import { HTMLDragZone, type DragculaDragEvent } from "$lib/index.js";
   import { tick } from "svelte";
+  import { get } from "svelte/store";
 
   export let tabs: Writable<{ id: string; title: string; icon: string }[]> = writable([]);
   let pinned: Writable<{ id: string; title: string; icon: string }[]> = writable([]);
@@ -73,35 +74,82 @@
       return ttabs;
     });
   }
+
+  async function onDropPinned(drag: DragculaDragEvent) {
+    console.warn("onDropPinned", drag);
+    if (drag.data["test/tab"] !== undefined) {
+      if (drag.effect === "move") {
+        let src;
+        if (drag.from.id === "tabs-unpinned") {
+          src = tabs;
+        } else {
+          src = pinned;
+        }
+        const idx = get(src).findIndex((v) => v.id === drag.data["test/tab"].id);
+        if (idx !== -1)
+          src.update((v) => {
+            v.splice(idx, 1);
+            return v;
+          });
+      }
+
+      $pinned.push(drag.data["test/tab"]);
+    }
+    $pinned = $pinned;
+  }
+
+  async function onDropUnpinned(drag: DragculaDragEvent) {
+    console.warn("onDropUnpinned", drag);
+
+    if (drag.isNative) {
+      // Get files
+      const files = drag.data.files;
+      // Create tabs from files with name as title
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const imgDataUdl = URL.createObjectURL(file);
+        $tabs.push({
+          id: Math.random().toString(36).substr(2, 9),
+          title: file.name,
+          icon: imgDataUdl
+        });
+      }
+    } else if (drag.data["test/tab"] !== undefined) {
+      if (drag.effect === "move") {
+        let src;
+        if (drag.from.id === "tabs-pinned") {
+          src = pinned;
+        } else {
+          src = tabs;
+        }
+        const idx = get(src).findIndex((v) => v.id === drag.data["test/tab"].id);
+        if (idx !== -1)
+          src.update((v) => {
+            v.splice(idx, 1);
+            return v;
+          });
+      }
+
+      $tabs.push(drag.data["test/tab"]);
+    }
+    $tabs = $tabs;
+  }
 </script>
 
 <div
   class="pinned"
   axis="horizontal"
-  use:AxisDragZone.action={{
-    id: "tabs-pinned",
-    acceptDrag: (drag) => {
-      return true;
-    }
+  use:HTMLDragZone.action={{
+    id: "tabs-pinned"
   }}
-  on:DragEnd={(e) => {
-    const item = e.item;
-    pinned.update((items) => {
-      const idx = items.findIndex((v) => v.id === item.id);
-      if (idx > -1) {
-        items.splice(idx, 1);
-      }
-      return items;
-    });
-  }}
-  on:Drop={handleDrop}
+  on:Drop={onDropPinned}
 >
   {#each $pinned as tab (tab.id)}
     <PinnedTab {tab} />
   {/each}
 </div>
 
-<div
+<!--<div
   class="magical"
   axis="vertical"
   use:AxisDragZone.action={{
@@ -125,29 +173,15 @@
   {#each $magical as tab (tab.id)}
     <Tab {tab} />
   {/each}
-</div>
+</div>-->
+
 <div
   class="unpinned"
   axis="vertical"
-  use:AxisDragZone.action={{
-    id: "tabs-unpinned",
-    acceptDrag: (drag) => {
-      return true;
-    }
+  use:HTMLDragZone.action={{
+    id: "tabs-unpinned"
   }}
-  on:DragEnd={(e) => {
-    console.warn("dragend unpinned", e);
-
-    const item = e.item;
-    tabs.update((items) => {
-      const idx = items.findIndex((v) => v.id === item.id);
-      if (idx > -1) {
-        items.splice(idx, 1);
-      }
-      return items;
-    });
-  }}
-  on:Drop={handleDrop}
+  on:Drop={onDropUnpinned}
 >
   {#each $tabs as tab (tab.id)}
     <Tab

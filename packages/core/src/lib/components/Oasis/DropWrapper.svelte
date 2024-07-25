@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { useLogScope } from '../../utils/log'
-  import { DragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
 
   export let acceptDrop: boolean = true
   export let dragOver: boolean = false
@@ -88,7 +88,7 @@
   on:dragover={handleDragOver}
   class="drop-wrapper"
   class:dragover={dragOver}
-  use:DragZone.action={{
+  use:HTMLDragZone.action={{
     id: `oasis-space-${spaceId}`,
     acceptDrag: () => true
   }}

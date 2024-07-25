@@ -1,19 +1,8 @@
 import { get } from "svelte/store";
-import { DRAG_ZONES, DragZone } from "./index.js";
-import type { IDragData } from "./types.js";
+import { DragZone } from "./index.js";
 
 export const DEBUG = false;
 export const SUPPORTS_VIEW_TRANSITIONS = document.startViewTransition !== undefined; // TODO: test & check in startVT method
-//
-/// GLOBAL MOUSE LISTENER
-export let mousePos = { x: 0, y: 0 };
-let GLOBAL_mouseMoveListener: ((e: MouseEvent) => void) | null = null;
-if (!GLOBAL_mouseMoveListener) {
-  GLOBAL_mouseMoveListener = (e: MouseEvent) => {
-    mousePos = { x: e.clientX, y: e.clientY };
-  };
-  window.addEventListener("mousemove", GLOBAL_mouseMoveListener, { capture: true });
-}
 
 export function createDragData(data: Omit<IDragData, "getDataTransfer">): IDragData {
   const d = {
@@ -100,7 +89,7 @@ export function findClosestDragZoneFromPoint(pageX: number, pageY: number): Drag
   while (el) {
     if (el.getAttribute("data-dragcula-zone") !== null) {
       const id = el.getAttribute("data-dragcula-zone")!;
-      return DRAG_ZONES.get(id) || null;
+      return DragZone.ZONES.get(id) || null;
     }
     el = el.parentElement;
   }
@@ -111,7 +100,7 @@ export function findClosestDragZoneFromEl(target: HTMLElement): DragZone | null 
   while (el !== null) {
     if (el.getAttribute("data-dragcula-zone") !== null) {
       const id = el.getAttribute("data-dragcula-zone")!;
-      return DRAG_ZONES.get(id) || null;
+      return DragZone.ZONES.get(id) || null;
     }
     el = el.parentElement;
   }
