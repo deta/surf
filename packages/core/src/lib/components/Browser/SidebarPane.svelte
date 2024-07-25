@@ -100,12 +100,11 @@
       $rightPaneStore.collapse()
     }
   })
-
 </script>
 
 <svelte:window on:resize={handleResize} />
 
-<PaneGroup direction={horizontalTabs ? 'vertical' : 'horizontal'}>
+<PaneGroup direction={horizontalTabs ? 'vertical' : 'horizontal'} class="px-0.5">
   {#if horizontalTabs}
     <Pane
       defaultSize={localStorage.getItem('panelSize-horizontal-sidebar') === null
@@ -133,10 +132,10 @@
       <slot name="sidebar" />
     </Pane>
   {/if}
-  <PaneResizer class="hover:bg-neutral-100 z-[50001]">
+  <PaneResizer class="hover:bg-neutral-100 z-[50001] my-1.5 rounded-full">
     <div
       class:h-full={!horizontalTabs}
-      class:w-0.5={!horizontalTabs}
+      class:w-1.5={!horizontalTabs}
       class:w-full={horizontalTabs}
       class:h-0.5={horizontalTabs}
     />
@@ -146,15 +145,15 @@
       <Pane>
         <slot name="content" />
       </Pane>
-      <PaneResizer class="hover:bg-neutral-100 z-[50001]">
-        <div class="h-full w-2" />
+      <PaneResizer class="hover:bg-neutral-100 z-[50001] my-1.5 rounded-full">
+        <div class="h-full w-1.5" />
       </PaneResizer>
       <Pane
         defaultSize={localStorage.getItem('panelSize-right-sidebar') === null
           ? 15
           : pxToPercentage(Number(localStorage.getItem('panelSize-right-sidebar')))}
         collapsible={true}
-        class="bg-sky-50 mb-1.5 rounded-xl mr-1.5 {horizontalTabs ? '' : 'mt-1.5'}"
+        class="bg-sky-50 mb-1.5 rounded-xl {horizontalTabs ? '' : 'mt-1.5'}"
         onCollapse={handleRightCollapse}
         onExpand={handleRightExpand}
         bind:pane={$rightPaneStore}
