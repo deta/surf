@@ -238,7 +238,7 @@
 
   {#if !tab.pinned || !pinned}
     <div class=" relative flex-grow truncate mr-1">
-      {#if tab.type === 'page' && isActive && enableEditing && (hovered || isEditing)}
+      {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && (hovered || isEditing)}
         <input
           type="text"
           bind:value={$inputUrl}
