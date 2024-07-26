@@ -152,13 +152,11 @@
 
   const handlePopoverEnter = () => {
     popoverVisible = true
-
   }
 
   const handlePopoverLeave = () => {
     popoverVisible = false
   }
-
 </script>
 
 <div
@@ -240,7 +238,7 @@
 
   {#if !tab.pinned || !pinned}
     <div class=" relative flex-grow truncate mr-1">
-      {#if tab.type === 'page' && isActive && enableEditing && (hovered || isEditing)}
+      {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && (hovered || isEditing)}
         <input
           type="text"
           bind:value={$inputUrl}
@@ -302,7 +300,7 @@
         {#if tab.type === 'page' && isActive}
           {#key isBookmarkedByUser}
             <button
-            on:mouseenter={handlePopoverEnter}
+              on:mouseenter={handlePopoverEnter}
               on:click={handleBookmark}
               use:tooltip={{
                 content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',

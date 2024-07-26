@@ -197,8 +197,6 @@
 
       <Button on:click={() => showCommentMenu()} icon="message" tooltip="Add Comment (⌘+Shift+M)" />
 
-      <Button icon="link" tooltip="Add Link (⌘+Shift+K)" />
-
       <div class="divider"></div>
 
       <!-- svelte-ignore a11y-unknown-role -->

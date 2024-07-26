@@ -282,6 +282,19 @@
   }
 
   const makeTabActive = (tabId: string) => {
+    const browserTab = $browserTabs[tabId]
+
+    const activeElement = document.activeElement
+    if (activeElement && typeof activeElement.blur === 'function') {
+      activeElement.blur()
+    }
+
+    if (browserTab) {
+      if (typeof browserTab.focus === 'function') {
+        browserTab.focus()
+      }
+    }
+
     activeTabId.set(tabId)
     addToActiveTabsHistory(tabId)
     activeAppId.set('')
@@ -663,33 +676,25 @@
       handleCopyLocation()
     } else if (isModKeyPressed(e) && e.key === 't') {
       debouncedCreateNewEmptyTab()
-    } else if (isModKeyAndKeyPressed(e, 'o')) {
-      toggleOasis()
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       closeActiveTab()
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark()
-    } else if (isModKeyAndKeyPressed(e, 'g')) {
-      sidebarTab.set('active')
-    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
+    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'b')) {
       // horizontalTabs = !horizontalTabs
       debounceToggleHorizontalTabs()
       log.debug('horizontalTabs', horizontalTabs)
-    } else if (isModKeyAndKeyPressed(e, 'h')) {
+    } else if (isModKeyAndKeyPressed(e, 'b')) {
       showTabs = !showTabs
       log.debug('showTabs', showTabs)
       // @ts-ignore
       window.api.updateTrafficLightsVisibility(showTabs)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
-      handleNewHorizon()
+      // this creates a new electron window
     } else if (isModKeyAndKeyPressed(e, 'r')) {
       $activeBrowserTab?.reload()
-    } else if (isModKeyAndKeyPressed(e, 'i')) {
-      createImporterTab()
-    } else if (isModKeyAndKeyPressed(e, 'e')) {
-      createOasisDiscoveryTab()
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
@@ -1867,49 +1872,49 @@
   })
 
   const turnMagicTabsIntoUnpinned = async () => {
-  const magicTabsArray = get(magicTabs)
-  const unpinnedTabsArray = get(unpinnedTabs)
+    const magicTabsArray = get(magicTabs)
+    const unpinnedTabsArray = get(unpinnedTabs)
 
-  if (magicTabsArray.length === 0) {
-    // No magic tabs to process
-    return
-  }
+    if (magicTabsArray.length === 0) {
+      // No magic tabs to process
+      return
+    }
 
-  // Turn magic tabs into unpinned tabs
-  magicTabsArray.forEach((magicTab) => {
-    magicTab.magic = false
-    unpinnedTabsArray.push(magicTab)
-  })
-
-  // Clear the magic tabs array
-  magicTabsArray.length = 0
-
-  // Update indices of unpinned tabs
-  const updatedUnpinnedTabs = unpinnedTabsArray.map((tab, index) => ({ ...tab, index }))
-
-  // Update the tabs store
-  tabs.update((x) => {
-    return x.map((tab) => {
-      const updatedTab = updatedUnpinnedTabs.find((t) => t.id === tab.id)
-      if (updatedTab) {
-        tab.index = updatedTab.index
-        tab.magic = false
-        tab.pinned = false
-      }
-      return tab
+    // Turn magic tabs into unpinned tabs
+    magicTabsArray.forEach((magicTab) => {
+      magicTab.magic = false
+      unpinnedTabsArray.push(magicTab)
     })
-  })
 
-  // Update the store with the changed tabs
-  await bulkUpdateTabsStore(
-    updatedUnpinnedTabs.map((tab) => ({
-      id: tab.id,
-      updates: { pinned: false, magic: false, index: tab.index }
-    }))
-  )
+    // Clear the magic tabs array
+    magicTabsArray.length = 0
 
-  log.debug('Magic tabs turned into unpinned tabs successfully')
-}
+    // Update indices of unpinned tabs
+    const updatedUnpinnedTabs = unpinnedTabsArray.map((tab, index) => ({ ...tab, index }))
+
+    // Update the tabs store
+    tabs.update((x) => {
+      return x.map((tab) => {
+        const updatedTab = updatedUnpinnedTabs.find((t) => t.id === tab.id)
+        if (updatedTab) {
+          tab.index = updatedTab.index
+          tab.magic = false
+          tab.pinned = false
+        }
+        return tab
+      })
+    })
+
+    // Update the store with the changed tabs
+    await bulkUpdateTabsStore(
+      updatedUnpinnedTabs.map((tab) => ({
+        id: tab.id,
+        updates: { pinned: false, magic: false, index: tab.index }
+      }))
+    )
+
+    log.debug('Magic tabs turned into unpinned tabs successfully')
+  }
 
   const createChatResourceBookmark = async (tab: TabPage) => {
     let resource_id: string
@@ -2519,8 +2524,8 @@
                 <DragDropList
                   id="tabs"
                   type={HorizontalDropZone}
-                  zoneClass="h-full"
                   itemSize={Math.min(400, Math.max(200, tabSize))}
+                  itemClass="h-fit mx-0.5 my-auto"
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
