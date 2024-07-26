@@ -152,13 +152,11 @@
 
   const handlePopoverEnter = () => {
     popoverVisible = true
-
   }
 
   const handlePopoverLeave = () => {
     popoverVisible = false
   }
-
 </script>
 
 <div
@@ -302,7 +300,7 @@
         {#if tab.type === 'page' && isActive}
           {#key isBookmarkedByUser}
             <button
-            on:mouseenter={handlePopoverEnter}
+              on:mouseenter={handlePopoverEnter}
               on:click={handleBookmark}
               use:tooltip={{
                 content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
