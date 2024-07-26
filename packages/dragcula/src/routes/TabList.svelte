@@ -1,15 +1,128 @@
 <script lang="ts">
-  import Tab from "./Tab.svelte";
+  import Tab, { type ITab } from "./Tab.svelte";
   import PinnedTab from "./PinnedTab.svelte";
-  import { writable, type Writable } from "svelte/store";
+  import { derived, writable, type Writable } from "svelte/store";
   import { HTMLDragZone, type DragculaDragEvent } from "$lib/index.js";
   import { tick } from "svelte";
   import { get } from "svelte/store";
 
-  export let tabs: Writable<{ id: string; title: string; icon: string }[]> = writable([]);
-  let pinned: Writable<{ id: string; title: string; icon: string }[]> = writable([]);
-  let magical: Writable<{ id: string; title: string; icon: string }[]> = writable([]);
+  export let tabs: Writable<ITab[]> = writable([]);
 
+  const pinnedTabs = derived(tabs, ($tabs) => {
+    return $tabs.filter((v) => v.pinned).sort((a, b) => a.index - b.index);
+  });
+  const unpinnedTabs = derived(tabs, ($tabs) => {
+    return $tabs.filter((v) => !v.pinned && !v.magic).sort((a, b) => a.index - b.index);
+  });
+  const magicTabs = derived(tabs, ($tabs) => {
+    return $tabs.filter((v) => v.magic).sort((a, b) => a.index - b.index);
+  });
+
+  async function handleCoDrop(e: DragculaDragEvent) {
+    console.warn("handleCoDrop", e);
+
+    if (e.isNative) {
+      // TODO: Handle otherwise
+      return;
+    }
+
+    // Handle tab dnd
+    if (e.data["test/tab"] !== undefined) {
+      const dragData = e.data["test/tab"] as ITab;
+
+      // Get all the tab arrays
+      let unpinnedTabsArray = get(unpinnedTabs);
+      let pinnedTabsArray = get(pinnedTabs);
+      let magicTabsArray = get(magicTabs);
+
+      // Determine source and target lists
+      let fromTabs: ITab[];
+      let toTabs: ITab[];
+
+      if (e.from.id === "tabs-unpinned") {
+        fromTabs = unpinnedTabsArray;
+      } else if (e.from.id === "tabs-pinned") {
+        fromTabs = pinnedTabsArray;
+      } else if (e.from.id === "tabs-magic") {
+        fromTabs = magicTabsArray;
+      }
+
+      if (true || !["tabs-unpinned", "tabs-pinned", "tabs-magic"].includes(e.to?.id)) {
+        // NOTE: We only want to remove the tab if its dragged out of the sidebar
+        const idx = fromTabs.findIndex((v) => v.id === dragData.id);
+        console.error("rem frim", [...fromTabs], idx);
+        if (idx > -1) {
+          fromTabs.splice(idx, 1);
+        }
+      } // FIX: MOVE UPDATE BLOW INTO THIS SCOPE
+      {
+        // Update the indices of the tabs in all lists
+        const updateIndices = (tabs: ITab[]) => tabs.map((tab, index) => ({ ...tab, index }));
+
+        unpinnedTabsArray = updateIndices(unpinnedTabsArray);
+        pinnedTabsArray = updateIndices(pinnedTabsArray);
+        magicTabsArray = updateIndices(magicTabsArray);
+
+        // Combine all lists back together
+        const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray];
+
+        console.debug("Removed old tab drag item", newTabs);
+
+        tabs.set(newTabs);
+      }
+      // NOTE: This is important, as the old item needs to be removed before the new one can be added
+      //await tick();
+
+      if (e.to.id === "tabs-unpinned") {
+        toTabs = unpinnedTabsArray;
+      } else if (e.to.id === "tabs-pinned") {
+        toTabs = pinnedTabsArray;
+      } else if (e.to.id === "tabs-magic") {
+        toTabs = magicTabsArray;
+      }
+
+      // Update pinned or magic state of the tab
+      if (e.to.id === "tabs-pinned") {
+        dragData.pinned = true;
+        dragData.magic = false;
+      } else if (e.to.id === "tabs-magic") {
+        dragData.pinned = false;
+        dragData.magic = true;
+      } else {
+        dragData.pinned = false;
+        dragData.magic = false;
+      }
+
+      toTabs.splice(e.index || 0, 0, dragData);
+
+      // Update the indices of the tabs in all lists
+      const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }));
+
+      unpinnedTabsArray = updateIndices(unpinnedTabsArray);
+      pinnedTabsArray = updateIndices(pinnedTabsArray);
+      magicTabsArray = updateIndices(magicTabsArray);
+
+      // Combine all lists back together
+      const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray];
+
+      console.debug("New tabs", newTabs);
+
+      tabs.set(newTabs);
+      await tick();
+
+      // Update the store with the changed tabs
+      /*await bulkUpdateTabsStore(
+        newTabs.map((tab) => ({
+          id: tab.id,
+          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+        }))
+      );*/
+
+      console.debug("State updated successfully");
+    }
+  }
+
+  /*
   async function handleDrop(drag: DragculaDragEvent) {
     /*
  if (drag.isNative) {
@@ -26,7 +139,7 @@
           });
         }
 
-      */
+      // end
 
     const tabData = drag.dataTransfer["test/tab"];
 
@@ -134,6 +247,7 @@
     }
     $tabs = $tabs;
   }
+  */
 </script>
 
 <div
@@ -142,38 +256,25 @@
   use:HTMLDragZone.action={{
     id: "tabs-pinned"
   }}
-  on:Drop={onDropPinned}
+  on:Drop={handleCoDrop}
 >
-  {#each $pinned as tab (tab.id)}
+  {#each $pinnedTabs as tab, index (tab.id)}
     <PinnedTab {tab} />
   {/each}
 </div>
 
-<!--<div
+<div
   class="magical"
   axis="vertical"
-  use:AxisDragZone.action={{
-    id: "tabs-magic",
-    acceptDrag: (drag) => {
-      return true;
-    }
+  use:HTMLDragZone.action={{
+    id: "tabs-magic"
   }}
-  on:DragEnd={(e) => {
-    const item = e.item;
-    magical.update((items) => {
-      const idx = items.findIndex((v) => v.id === item.id);
-      if (idx > -1) {
-        items.splice(idx, 1);
-      }
-      return items;
-    });
-  }}
-  on:Drop={handleDrop}
+  on:Drop={handleCoDrop}
 >
-  {#each $magical as tab (tab.id)}
+  {#each $magicTabs as tab, index (tab.id)}
     <Tab {tab} />
   {/each}
-</div>-->
+</div>
 
 <div
   class="unpinned"
@@ -181,15 +282,15 @@
   use:HTMLDragZone.action={{
     id: "tabs-unpinned"
   }}
-  on:Drop={onDropUnpinned}
+  on:Drop={handleCoDrop}
 >
-  {#each $tabs as tab (tab.id)}
+  {#each $unpinnedTabs as tab, index (tab.id)}
     <Tab
       {tab}
       on:close={(e) => {
         const id = e.detail;
         document.startViewTransition(() => {
-          tabs.update((items) => items.filter((v) => v.id !== id));
+          tabs.update((items) => items.filter((v) => v.id !== tab.id));
         });
       }}
     />

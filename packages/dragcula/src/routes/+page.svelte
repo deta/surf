@@ -1,15 +1,20 @@
 <script lang="ts">
-  import { writable } from "svelte/store";
+  import { get, writable } from "svelte/store";
   import TabList from "./TabList.svelte";
   import Desktop from "./Desktop.svelte";
 
   import "$lib/styles.scss";
+  import type { ITab } from "./Tab.svelte";
 
-  const tabs = writable([
+  const tabs = writable<ITab[]>([
     {
       id: crypto.randomUUID(),
+      index: 0,
       title: "YouTube – How to make a nor...",
-      icon: "https://www.youtube.com/s/desktop/86d8f362/img/favicon_96x96.png"
+      icon: "https://www.youtube.com/s/desktop/86d8f362/img/favicon_96x96.png",
+
+      pinned: false,
+      magic: false
     }
   ]);
   const cards = writable([]);
@@ -83,8 +88,15 @@
       }
     ];
     const randomTab = exampleTabs[Math.floor(Math.random() * exampleTabs.length)];
-    randomTab.id = crypto.randomUUID();
-    tabs.update((t) => [...t, randomTab]);
+    tabs.update((t) => [
+      ...t,
+      {
+        ...randomTab,
+        index: get(tabs).length,
+        pinned: false,
+        magic: false
+      }
+    ]);
   }
 </script>
 

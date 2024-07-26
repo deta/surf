@@ -2226,7 +2226,7 @@
         tabs.set(newTabs)
       }
       // NOTE: This is important, as the old item needs to be removed before the new one can be added
-      await tick()
+      //await tick()
 
       if (e.to.id === 'sidebar-unpinned-tabs') {
         toTabs = unpinnedTabsArray

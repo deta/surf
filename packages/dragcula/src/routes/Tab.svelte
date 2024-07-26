@@ -1,12 +1,20 @@
+<script lang="ts" context="module">
+  export interface ITab {
+    id: string;
+    title: string;
+    icon: string;
+    index: number;
+
+    pinned: boolean;
+    magic: boolean;
+  }
+</script>
+
 <script lang="ts">
   import { HTMLDragItem } from "$lib/index.js";
   import { createEventDispatcher } from "svelte";
 
-  export let tab: {
-    id: string;
-    title: string;
-    icon: string;
-  };
+  export let tab: ITab;
 
   const dispatch = createEventDispatcher<{
     close: { id: string };

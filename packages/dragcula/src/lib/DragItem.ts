@@ -232,12 +232,9 @@ export class HTMLDragItem extends DragItem {
     this.node.removeEventListener("drag", this.handleDrag, { capture: true });
     this.node.removeEventListener("dragend", this.handleDragEnd, { capture: true });
 
-    if (
-      get(ACTIVE_DRAG_OPERATION) !== null &&
-      (get(ACTIVE_DRAG_OPERATION)!.item as DragItem)?.id !== this.id
-    ) {
-      HTMLDragItem.ITEMS.delete(this.id);
-    }
+    //if (get(ACTIVE_DRAG_OPERATION) !== null && (get(ACTIVE_DRAG_OPERATION)!.item as DragItem)?.id !== this.id) {
+    HTMLDragItem.ITEMS.delete(this.id);
+    //}
 
     super.destroy();
   }
@@ -271,12 +268,21 @@ export class HTMLDragItem extends DragItem {
   protected async _handleMouseUp(e: MouseEvent) {
     document.body.removeAttribute("data-dragcula-dragging");
 
+    const drag = get(ACTIVE_DRAG_OPERATION)!;
+
     // start vt
-    e.target?.dispatchEvent(
-      new DragEvent("drop", {
-        bubbles: true
-      })
-    );
+    if (drag.to !== null) {
+      e.target?.dispatchEvent(
+        new DragEvent("drop", {
+          bubbles: true
+        })
+      );
+    } else {
+      ACTIVE_DRAG_OPERATION.update((v) => {
+        (v!.status as "completed" | "aborted") = "aborted";
+        return v;
+      });
+    }
 
     await tick();
 

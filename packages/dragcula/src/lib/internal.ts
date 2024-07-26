@@ -1,4 +1,5 @@
 import { writable } from "svelte/store";
+import type { DragOperation } from "./types.js";
 
 /// GLOBAL MOUSE LISTENER
 export let mousePos = { x: 0, y: 0 };
@@ -10,4 +11,4 @@ if (!GLOBAL_mouseMoveListener) {
   window.addEventListener("mousemove", GLOBAL_mouseMoveListener, { capture: true });
 }
 
-export const ACTIVE_DRAG_OPERATION = writable<{} | null>(null);
+export const ACTIVE_DRAG_OPERATION = writable<DragOperation | null>(null);
