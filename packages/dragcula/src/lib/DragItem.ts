@@ -312,7 +312,7 @@ export class HTMLDragItem extends DragItem {
   protected _handleDrag(e: DragEvent) {
     e.preventDefault();
     e.stopPropagation();
-    console.log(`[HTMLDragItem::${this.id}] Drag`, e);
+    //console.log(`[HTMLDragItem::${this.id}] Drag`, e);
 
     this.previewX = e.clientX;
     this.previewY = e.clientY;
@@ -381,7 +381,7 @@ export class HTMLDragItem extends DragItem {
   override onDrag(drag: DragOperation) {
     // do target check
     const overZone = findClosestDragZoneFromPoint(this.previewX, this.previewY);
-    console.warn("overZone", overZone);
+    //console.warn("overZone", overZone)
 
     const newTargetId = overZone ? overZone.id : null;
     const oldTargetId = get(ACTIVE_DRAG_OPERATION)!.to ? get(ACTIVE_DRAG_OPERATION)!.to?.id : null;
@@ -425,15 +425,18 @@ export class HTMLDragItem extends DragItem {
 
   override onDragEnd(drag: DragOperation) {
     super.onDragEnd(drag);
-    console.warn("onDragEnd", drag.status);
+    console.warn("onDragEnd", drag.status, drag);
 
     window.removeEventListener("mousemove", this.handleMouseMove, { capture: true });
 
     // Reset item
+    // TODO: Check dragEffect & status
     if (drag.status === "aborted") {
-      // TODO: Check dragEffect & status
+      this.node.remove();
       this.styles.applyAll(this.node, ["view-transition-name"]);
       this.nodeParent?.appendChild(this.node);
+    } else {
+      this.styles.applyAll(this.node);
     }
 
     // if vt running, after finish, apply vt-backup

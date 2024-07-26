@@ -2219,11 +2219,11 @@
         magicTabsArray = updateIndices(magicTabsArray)
 
         // Combine all lists back together
-        const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+        //const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
 
-        log.debug('Removed old tab drag item', newTabs)
+        //console.error('Removed old tab drag item', newTabs)
 
-        tabs.set(newTabs)
+        //tabs.set(newTabs)
       }
       // NOTE: This is important, as the old item needs to be removed before the new one can be added
       //await tick()
@@ -2260,7 +2260,7 @@
       // Combine all lists back together
       const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
 
-      log.debug('New tabs', newTabs)
+      console.error('New tabs', [...newTabs])
 
       tabs.set(newTabs)
       await tick()
@@ -2662,44 +2662,46 @@
                   }}
                   on:Drop={onDropDragcula}
                 >
-                  {#each $unpinnedTabs as tab, index (tab.id)}
-                    <!-- check if this tab is active -->
-                    {#if $activeTabId === $unpinnedTabs[index].id}
-                      <!-- on:drop={handleDrop} -->
-                      <TabItem
-                        showClose
-                        tab={$unpinnedTabs[index]}
-                        {activeTabId}
-                        bookmarkingInProgress={$bookmarkingInProgress}
-                        bookmarkingSuccess={$bookmarkingSuccess}
-                        pinned={false}
-                        {spaces}
-                        enableEditing
-                        bind:this={activeTabComponent}
-                        on:select={() => {}}
-                        on:remove-from-sidebar={handleRemoveFromSidebar}
-                        on:drop={handleDrop}
-                        on:delete-tab={handleDeleteTab}
-                        on:input-enter={handleBlur}
-                        on:unarchive-tab={handleUnarchiveTab}
-                        on:bookmark={handleBookmark}
-                        on:create-live-space={handleCreateLiveSpace}
-                        on:save-resource-in-space={handleSaveResourceInSpace}
-                      />
-                    {:else}
-                      <TabItem
-                        showClose
-                        tab={$unpinnedTabs[index]}
-                        {activeTabId}
-                        {deleteTab}
-                        {unarchiveTab}
-                        pinned={false}
-                        on:select={handleTabSelect}
-                        on:remove-from-sidebar={handleRemoveFromSidebar}
-                        on:drop={handleDrop}
-                      />
-                    {/if}
-                  {/each}
+                  {#key $tabs}
+                    {#each $unpinnedTabs as tab, index (tab.id)}
+                      <!-- check if this tab is active -->
+                      {#if $activeTabId === $unpinnedTabs[index].id}
+                        <!-- on:drop={handleDrop} -->
+                        <TabItem
+                          showClose
+                          tab={$unpinnedTabs[index]}
+                          {activeTabId}
+                          bookmarkingInProgress={$bookmarkingInProgress}
+                          bookmarkingSuccess={$bookmarkingSuccess}
+                          pinned={false}
+                          {spaces}
+                          enableEditing
+                          bind:this={activeTabComponent}
+                          on:select={() => {}}
+                          on:remove-from-sidebar={handleRemoveFromSidebar}
+                          on:drop={handleDrop}
+                          on:delete-tab={handleDeleteTab}
+                          on:input-enter={handleBlur}
+                          on:unarchive-tab={handleUnarchiveTab}
+                          on:bookmark={handleBookmark}
+                          on:create-live-space={handleCreateLiveSpace}
+                          on:save-resource-in-space={handleSaveResourceInSpace}
+                        />
+                      {:else}
+                        <TabItem
+                          showClose
+                          tab={$unpinnedTabs[index]}
+                          {activeTabId}
+                          {deleteTab}
+                          {unarchiveTab}
+                          pinned={false}
+                          on:select={handleTabSelect}
+                          on:remove-from-sidebar={handleRemoveFromSidebar}
+                          on:drop={handleDrop}
+                        />
+                      {/if}
+                    {/each}
+                  {/key}
                 </div>
               {/if}
               <div

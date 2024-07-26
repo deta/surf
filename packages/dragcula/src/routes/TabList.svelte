@@ -47,32 +47,6 @@
         fromTabs = magicTabsArray;
       }
 
-      if (true || !["tabs-unpinned", "tabs-pinned", "tabs-magic"].includes(e.to?.id)) {
-        // NOTE: We only want to remove the tab if its dragged out of the sidebar
-        const idx = fromTabs.findIndex((v) => v.id === dragData.id);
-        console.error("rem frim", [...fromTabs], idx);
-        if (idx > -1) {
-          fromTabs.splice(idx, 1);
-        }
-      } // FIX: MOVE UPDATE BLOW INTO THIS SCOPE
-      {
-        // Update the indices of the tabs in all lists
-        const updateIndices = (tabs: ITab[]) => tabs.map((tab, index) => ({ ...tab, index }));
-
-        unpinnedTabsArray = updateIndices(unpinnedTabsArray);
-        pinnedTabsArray = updateIndices(pinnedTabsArray);
-        magicTabsArray = updateIndices(magicTabsArray);
-
-        // Combine all lists back together
-        const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray];
-
-        console.debug("Removed old tab drag item", newTabs);
-
-        tabs.set(newTabs);
-      }
-      // NOTE: This is important, as the old item needs to be removed before the new one can be added
-      //await tick();
-
       if (e.to.id === "tabs-unpinned") {
         toTabs = unpinnedTabsArray;
       } else if (e.to.id === "tabs-pinned") {
@@ -81,22 +55,57 @@
         toTabs = magicTabsArray;
       }
 
-      // Update pinned or magic state of the tab
-      if (e.to.id === "tabs-pinned") {
-        dragData.pinned = true;
-        dragData.magic = false;
-      } else if (e.to.id === "tabs-magic") {
-        dragData.pinned = false;
-        dragData.magic = true;
-      } else {
-        dragData.pinned = false;
-        dragData.magic = false;
+      // CASE: Same to same
+      if (e.from.id === e.to.id) {
+        const existing = fromTabs.find((v) => v.id === dragData.id);
+        if (existing) {
+          existing.index = e.index || 0;
+        }
       }
 
-      toTabs.splice(e.index || 0, 0, dragData);
+      // CASE: Other to other
+      else if (["tabs-unpinned", "tabs-pinned", "tabs-magic"].includes(e.to?.id)) {
+        // NOTE: We only want to remove the tab if its dragged out of the sidebar
+        /*const idx = fromTabs.findIndex((v) => v.id === dragData.id);
+        console.error("rem frim", [...fromTabs], idx);
+        if (idx > -1) {
+          fromTabs.splice(idx, 1);
+        }*/
+        //} // FIX: MOVE UPDATE BLOW INTO THIS SCOPE
+
+        // Update the indices of the tabs in all lists
+        const updateIndices = (tabs: ITab[]) => tabs.map((tab, index) => ({ ...tab, index }));
+
+        unpinnedTabsArray = updateIndices(unpinnedTabsArray);
+        pinnedTabsArray = updateIndices(pinnedTabsArray);
+        magicTabsArray = updateIndices(magicTabsArray);
+
+        // Combine all lists back together
+        //const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray];
+
+        //console.debug("Removed old tab drag item", newTabs);
+
+        //tabs.set(newTabs);
+
+        // Update pinned or magic state of the tab
+        if (e.to.id === "tabs-pinned") {
+          dragData.pinned = true;
+          dragData.magic = false;
+        } else if (e.to.id === "tabs-magic") {
+          dragData.pinned = false;
+          dragData.magic = true;
+        } else {
+          dragData.pinned = false;
+          dragData.magic = false;
+        }
+
+        toTabs.splice(e.index || 0, 0, dragData);
+      }
+      // NOTE: This is important, as the old item needs to be removed before the new one can be added
+      //await tick();
 
       // Update the indices of the tabs in all lists
-      const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }));
+      const updateIndices = (tabs: ITab[]) => tabs.map((tab, index) => ({ ...tab, index }));
 
       unpinnedTabsArray = updateIndices(unpinnedTabsArray);
       pinnedTabsArray = updateIndices(pinnedTabsArray);
@@ -107,7 +116,9 @@
 
       console.debug("New tabs", newTabs);
 
+      //await tick();
       tabs.set(newTabs);
+      console.warn("drop update before tick");
       await tick();
 
       // Update the store with the changed tabs
@@ -118,7 +129,7 @@
         }))
       );*/
 
-      console.debug("State updated successfully");
+      console.warn("State updated successfully");
     }
   }
 
