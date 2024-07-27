@@ -112,12 +112,15 @@ export class HTMLDragZone extends DragZone {
 
   static action(node: HTMLElement, props: { id?: string }) {
     const controller = new this(node, props);
+    controller.applyNodeAttributes();
 
     return {
       destroy() {
         controller.destroy();
       },
-      updated(props: any) {}
+      updated(props: any) {
+        controller.applyNodeAttributes();
+      }
     };
   }
 
@@ -126,16 +129,19 @@ export class HTMLDragZone extends DragZone {
     super.destroy();
   }
 
+  applyNodeAttributes() {}
+
   /// === DOM HANDLERS
 
   protected _handleDragEnter(e: DragEvent) {
-    e.preventDefault();
     e.stopPropagation();
     console.debug(`[HTMLDragZone::${this.id}] DragEnter`, e);
 
     const drag = get(ACTIVE_DRAG_OPERATION);
     // TODO: What if null?
-    this.onDragEnter(drag!);
+    console.warn("enter accep", this.onDragEnter(drag!));
+    if (this.onDragEnter(drag!)) e.preventDefault();
+    console.warn("Zone acceptDRAG", e.defaultPrevented);
   }
   protected handleDragEnter = this._handleDragEnter.bind(this);
 
@@ -160,7 +166,7 @@ export class HTMLDragZone extends DragZone {
   protected handleDragLeave = this._handleDragLeave.bind(this);
 
   protected async _handleDrop(e: DragEvent) {
-    e.preventDefault();
+    //e.preventDefault();
     e.stopPropagation();
     console.debug(`[HTMLDragZone::${this.id}] Drop`, e);
 
@@ -178,7 +184,9 @@ export class HTMLDragZone extends DragZone {
     // Setup vt & start
 
     // TODO: Possibly wrap in try catch & set completed based on that?
-    const completed = this.node.dispatchEvent(
+    // NOTE: negated as by default should abort to reset item, only on succesful drop
+    // should it be completed!
+    const completed = !this.node.dispatchEvent(
       new DragculaDragEvent("Drop", {
         id: drag.id,
         item: drag.item,
@@ -214,6 +222,19 @@ export class HTMLDragZone extends DragZone {
   protected handleDrop = this._handleDrop.bind(this);
 
   /// === EVENTS
+
+  override onDragEnter(drag: DragOperation): boolean {
+    const acceptDrag = !this.node.dispatchEvent(
+      new DragculaDragEvent("DragEnter", {
+        id: drag.id,
+        item: drag.item,
+        from: drag.from || undefined,
+        to: this
+      })
+    );
+
+    return acceptDrag;
+  }
 
   override onDrop(drag: DragOperation) {}
 }

@@ -20,3 +20,8 @@ body[data-dragcula-dragging="true"] *[data-dragcula-zone] {
 *[data-dragcula-drop-target] *[data-dragcula-zone] {
   pointer-events: all;
 }
+
+// Default cursor when over target
+body[data-dragcula-overZone] {
+  cursor: copy;
+}

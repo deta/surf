@@ -2149,6 +2149,7 @@
 
   const onDropDragcula = async (e: DragculaDragEvent) => {
     console.debug('DROP DRAGCULA', e)
+    e.preventDefault()
 
     if (e.isNative) {
       // TODO: Handle otherwise
@@ -2276,16 +2277,8 @@
     }
   }
 
-  const onDragculaRemoveTab = (drag: DragOperation) => {
-    return
-    //if (drag.from?.id === drag.to?.id || drag.item === null) return
-    tabs.update((tabs) => {
-      const idx = tabs.findIndex((v) => v.id === drag.item?.id)
-      if (idx > -1) {
-        tabs.splice(idx, 1)
-      }
-      return tabs
-    })
+  const onDragculaTabsDragEnter = (e: DragculaDragEvent) => {
+    e.preventDefault()
   }
 
   function checkVisibility() {
@@ -2443,13 +2436,11 @@
                 style:view-transition-name="pinned-tabs-wrapper"
                 axis="horizontal"
                 dragdeadzone="3"
-                use:HTMLDragZone.action={{
-                  id: 'sidebar-pinned-tabs',
-                  acceptDrag: (drag) => {
-                    return true
-                  }
+                use:HTMLAxisDragZone.action={{
+                  id: 'sidebar-pinned-tabs'
                 }}
                 on:Drop={onDropDragcula}
+                on:DragEnter={onDragculaTabsDragEnter}
               >
                 {#if $pinnedTabs.length === 0}
                   <div class="">Drop Tabs here to pin them.</div>
@@ -2499,6 +2490,7 @@
                             id: 'sidebar-magic-tabs'
                           }}
                           on:Drop={onDropDragcula}
+                          on:DragEnter={onDragculaTabsDragEnter}
                         >
                           {#if $magicTabs.length === 0}
                             <div class="flex flex-row items-center">
@@ -2511,19 +2503,21 @@
                             </div>
                           {:else}
                             {#each $magicTabs as tab, index (tab.id)}
-                              <TabItem
-                                showClose
-                                tab={$magicTabs[index]}
-                                {activeTabId}
-                                pinned={false}
-                                showButtons={false}
-                                showExcludeOthersButton
-                                on:delete-tab={handleDeleteTab}
-                                on:unarchive-tab={handleUnarchiveTab}
-                                on:select={handleTabSelect}
-                                on:remove-from-sidebar={handleRemoveFromSidebar}
-                                on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                              />
+                              {#key $magicTabs[index]}
+                                <TabItem
+                                  showClose
+                                  tab={$magicTabs[index]}
+                                  {activeTabId}
+                                  pinned={false}
+                                  showButtons={false}
+                                  showExcludeOthersButton
+                                  on:delete-tab={handleDeleteTab}
+                                  on:unarchive-tab={handleUnarchiveTab}
+                                  on:select={handleTabSelect}
+                                  on:remove-from-sidebar={handleRemoveFromSidebar}
+                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                />
+                              {/key}
                             {/each}
                           {/if}
                         </div>
@@ -2551,6 +2545,7 @@
                             }
                           }}
                           on:Drop={onDropDragcula}
+                          on:DragEnter={onDragculaTabsDragEnter}
                         >
                           {#if $magicTabs.length === 0}
                             <div class="flex flex-col items-center">
@@ -2562,19 +2557,21 @@
                             </div>
                           {:else}
                             {#each $magicTabs as tab, index (tab.id)}
-                              <TabItem
-                                showClose
-                                tab={$magicTabs[index]}
-                                {activeTabId}
-                                pinned={false}
-                                showButtons={false}
-                                showExcludeOthersButton
-                                on:unarchive-tab={handleUnarchiveTab}
-                                on:delete-tab={handleDeleteTab}
-                                on:select={handleTabSelect}
-                                on:remove-from-sidebar={handleRemoveFromSidebar}
-                                on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                              />
+                              {#key $magicTabs[index]}
+                                <TabItem
+                                  showClose
+                                  tab={$magicTabs[index]}
+                                  {activeTabId}
+                                  pinned={false}
+                                  showButtons={false}
+                                  showExcludeOthersButton
+                                  on:unarchive-tab={handleUnarchiveTab}
+                                  on:delete-tab={handleDeleteTab}
+                                  on:select={handleTabSelect}
+                                  on:remove-from-sidebar={handleRemoveFromSidebar}
+                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                />
+                              {/key}
                             {/each}
                           {/if}
                         </div>
@@ -2603,12 +2600,10 @@
                   axis="horizontal"
                   dragdeadzone="5"
                   use:HTMLDragZone.action={{
-                    id: 'sidebar-unpinned-tabs',
-                    acceptDrag: (drag) => {
-                      return true
-                    }
+                    id: 'sidebar-unpinned-tabs'
                   }}
                   on:Drop={onDropDragcula}
+                  on:DragEnter={onDragculaTabsDragEnter}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}
                     <!--{#key tab}-->
@@ -2659,12 +2654,10 @@
                   axis="vertical"
                   dragdeadzone="5"
                   use:HTMLAxisDragZone.action={{
-                    id: 'sidebar-unpinned-tabs',
-                    acceptDrag: (drag) => {
-                      return true
-                    }
+                    id: 'sidebar-unpinned-tabs'
                   }}
                   on:Drop={onDropDragcula}
+                  on:DragEnter={onDragculaTabsDragEnter}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}
                     <!--{#key tab}-->

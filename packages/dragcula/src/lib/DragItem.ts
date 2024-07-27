@@ -395,27 +395,31 @@ export class HTMLDragItem extends DragItem {
             clientY: mousePos.y
           })
         );
+        ACTIVE_DRAG_OPERATION.update((v) => {
+          v.to = null;
+          return v;
+        });
         //await tick() // TODO: REMOVE?
       }
 
-      ACTIVE_DRAG_OPERATION.update((v) => {
-        v!.to = overZone || null;
-        return v;
-      });
-
       if (newTargetId) {
-        overZone?.node?.dispatchEvent(
+        const accepted = !overZone?.node?.dispatchEvent(
           new DragEvent("dragenter", {
             clientX: mousePos.x,
-            clientY: mousePos.y
+            clientY: mousePos.y,
+            cancelable: true
           })
         );
+        ACTIVE_DRAG_OPERATION.update((v) => {
+          v!.to = accepted ? overZone || null : null;
+          return v;
+        });
         //await tick() // TODO: REMOVE?
       }
     }
 
-    if (overZone) {
-      overZone.node!.dispatchEvent(
+    if (get(ACTIVE_DRAG_OPERATION)!.to !== null) {
+      get(ACTIVE_DRAG_OPERATION)!.to.node!.dispatchEvent(
         new DragEvent("dragover", {
           clientX: mousePos.x,
           clientY: mousePos.y
@@ -426,6 +430,13 @@ export class HTMLDragItem extends DragItem {
       this.isOverZone = false;
     }
 
+    drag = get(ACTIVE_DRAG_OPERATION)!;
+    if (drag.to === null) {
+      document.body.removeAttribute("data-dragcula-overZone");
+    } else {
+      document.body.setAttribute("data-dragcula-overZone", drag.to.id);
+    }
+
     // update visual position
     if (!this.raf) this.raf = requestAnimationFrame(this.boundRafCbk);
   }
@@ -433,6 +444,7 @@ export class HTMLDragItem extends DragItem {
   override onDragEnd(drag: DragOperation) {
     super.onDragEnd(drag);
     console.warn("onDragEnd", drag.status, drag);
+    document.body.removeAttribute("data-dragcula-overZone");
 
     window.removeEventListener("mousemove", this.handleMouseMove, { capture: true });
 

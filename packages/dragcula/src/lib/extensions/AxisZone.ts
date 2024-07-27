@@ -46,34 +46,35 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     super(node, props);
   }
 
-  static override action(node: HTMLElement, props: { id?: string }) {
-    const controller = new this(node, props);
+  /*static override action(node: HTMLElement, props: { id?: string }) {
+		const controller = new this(node, props);
 
-    return {
-      destroy() {
-        controller.destroy();
-      },
-      updated(props: any) {}
-    };
-  }
-
-  /*override applyNodeAttributes() {
-		super.applyNodeAttributes();
-
-		switch (this.node!.getAttribute("axis")) {
-			case "horizontal":
-				this.axis = "horizontal";
-				break;
-			case "vertical":
-				this.axis = "vertical";
-				break;
-			default:
-				this.axis = "vertical";
-				break;
+		return {
+			destroy() {
+				controller.destroy();
+			},
+			updated(props: any) {
+			}
 		}
-
-		this.dragDeadzone = Number(this.node!.getAttribute("dragdeadzone") || 0);
 	}*/
+
+  override applyNodeAttributes() {
+    super.applyNodeAttributes();
+
+    switch (this.node!.getAttribute("axis")) {
+      case "horizontal":
+        this.axis = "horizontal";
+        break;
+      case "vertical":
+        this.axis = "vertical";
+        break;
+      default:
+        this.axis = "vertical";
+        break;
+    }
+
+    this.dragDeadzone = Number(this.node!.getAttribute("dragdeadzone") || 0);
+  }
 
   /// === UTILS
 
@@ -130,8 +131,10 @@ export class HTMLAxisDragZone extends HTMLDragZone {
 
   /// === EVENT HANDLERS
 
-  override onDragEnter(drag: DragOperation) {
-    console.error("ENTER");
+  override onDragEnter(drag: DragOperation): boolean {
+    const acceptDrag = super.onDragEnter(drag);
+    if (!acceptDrag) return acceptDrag;
+
     for (const child of Array.from(this.node!.children) as Array<HTMLElement>) {
       this.styles.cacheMany(child, {
         transition: child.style.transition,
@@ -139,7 +142,8 @@ export class HTMLAxisDragZone extends HTMLDragZone {
         margin: child.style.margin
       });
     }
-    return super.onDragEnter(drag);
+
+    return acceptDrag;
   }
 
   override onDragLeave(drag: DragOperation) {
@@ -207,7 +211,8 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     }
 
     // TODO: Possibly wrap in try catch & set completed based on that?
-    const completed = this.node.dispatchEvent(
+    // NOTE: negated as by default should abort to reset item, only on succesful drop
+    const completed = !this.node.dispatchEvent(
       new DragculaDragEvent("Drop", {
         id: drag.id,
         item: drag.item,
