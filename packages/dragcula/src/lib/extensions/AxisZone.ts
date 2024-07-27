@@ -33,6 +33,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
 
   protected axis: Axis = "vertical";
   protected dragDeadzone: number = 0;
+  protected placeholderSize: number | undefined;
 
   /// === STATE
 
@@ -74,9 +75,19 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     }
 
     this.dragDeadzone = Number(this.node!.getAttribute("dragdeadzone") || 0);
+
+    if (this.node.hasAttribute("placeholder-size")) {
+      this.placeholderSize = Number(this.node.getAttribute("placeholder-size"));
+    }
   }
 
   /// === UTILS
+
+  get childDomSize(): { w: number; h: number } | undefined {
+    if (this.node!.children.length <= 0) return undefined;
+    const bounds = (this.node!.children[0] as HTMLElement).getBoundingClientRect();
+    return { w: bounds.width, h: bounds.height };
+  }
 
   protected getIndexAtPoint(x: number, y: number): number | undefined {
     if (this.node!.children.length <= 0) return 0;
@@ -168,7 +179,12 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     const drag = get(ACTIVE_DRAG_OPERATION);
 
     // TODO: ENABLE const ITEM_SIZE = this.axis === "vertical" ? this.childDomSize?.h : this.childDomSize?.w;
-    const ITEM_SIZE = 20;
+    const ITEM_SIZE =
+      this.placeholderSize !== undefined
+        ? this.placeholderSize
+        : this.axis === "vertical"
+          ? this.childDomSize?.h
+          : this.childDomSize?.w;
     if (ITEM_SIZE === undefined) return;
     const AXIS_DIR_PREV = this.axis === "vertical" ? "bottom" : "right";
     const AXIS_DIR_NEXT = this.axis === "vertical" ? "top" : "left";
