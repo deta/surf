@@ -96,10 +96,9 @@
   import { flyAndScale } from '../../utils'
   import {
     HTMLDragZone,
-    DragItem,
+    HTMLAxisDragZone,
     type DragOperation,
-    type DragculaDragEvent,
-    type IndexedDragculaDragEvent
+    type DragculaDragEvent
   } from '@horizon/dragcula'
   //import '@horizon/dragcula/dist/styles.scss'
 
@@ -2456,6 +2455,7 @@
                   <div class="">Drop Tabs here to pin them.</div>
                 {:else}
                   {#each $pinnedTabs as tab, index (tab.id)}
+                    <!--{#key tab}-->
                     {#key $pinnedTabs[index]}
                       <TabItem
                         tab={$pinnedTabs[index]}
@@ -2467,6 +2467,7 @@
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                       />
                     {/key}
+                    <!--  {/key}-->
                   {/each}
                 {/if}
               </div>
@@ -2610,43 +2611,46 @@
                   on:Drop={onDropDragcula}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}
-                    <!-- check if this tab is active -->
-                    {#if $activeTabId === $unpinnedTabs[index].id}
-                      <TabItem
-                        showClose
-                        tabSize={Math.min(400, Math.max(240, tabSize))}
-                        tab={$unpinnedTabs[index]}
-                        {activeTabId}
-                        bookmarkingInProgress={$bookmarkingInProgress}
-                        bookmarkingSuccess={$bookmarkingSuccess}
-                        pinned={false}
-                        {spaces}
-                        enableEditing
-                        bind:this={activeTabComponent}
-                        on:select={() => {}}
-                        on:remove-from-sidebar={handleRemoveFromSidebar}
-                        on:drop={handleDrop}
-                        on:delete-tab={handleDeleteTab}
-                        on:input-enter={handleBlur}
-                        on:unarchive-tab={handleUnarchiveTab}
-                        on:bookmark={handleBookmark}
-                        on:create-live-space={handleCreateLiveSpace}
-                        on:save-resource-in-space={handleSaveResourceInSpace}
-                      />
-                    {:else}
-                      <TabItem
-                        showClose
-                        tab={$unpinnedTabs[index]}
-                        tabSize={Math.min(400, Math.max(240, tabSize))}
-                        {activeTabId}
-                        {deleteTab}
-                        {unarchiveTab}
-                        pinned={false}
-                        on:select={handleTabSelect}
-                        on:remove-from-sidebar={handleRemoveFromSidebar}
-                        on:drop={handleDrop}
-                      />
-                    {/if}
+                    <!--{#key tab}-->
+                    {#key $unpinnedTabs[index]}
+                      <!-- check if this tab is active -->
+                      {#if $activeTabId === $unpinnedTabs[index].id}
+                        <TabItem
+                          showClose
+                          tabSize={Math.min(400, Math.max(240, tabSize))}
+                          tab={$unpinnedTabs[index]}
+                          {activeTabId}
+                          bookmarkingInProgress={$bookmarkingInProgress}
+                          bookmarkingSuccess={$bookmarkingSuccess}
+                          pinned={false}
+                          {spaces}
+                          enableEditing
+                          bind:this={activeTabComponent}
+                          on:select={() => {}}
+                          on:remove-from-sidebar={handleRemoveFromSidebar}
+                          on:drop={handleDrop}
+                          on:delete-tab={handleDeleteTab}
+                          on:input-enter={handleBlur}
+                          on:unarchive-tab={handleUnarchiveTab}
+                          on:bookmark={handleBookmark}
+                          on:create-live-space={handleCreateLiveSpace}
+                          on:save-resource-in-space={handleSaveResourceInSpace}
+                        />
+                      {:else}
+                        <TabItem
+                          showClose
+                          tab={$unpinnedTabs[index]}
+                          tabSize={Math.min(400, Math.max(240, tabSize))}
+                          {activeTabId}
+                          {deleteTab}
+                          {unarchiveTab}
+                          pinned={false}
+                          on:select={handleTabSelect}
+                          on:remove-from-sidebar={handleRemoveFromSidebar}
+                          on:drop={handleDrop}
+                        />
+                      {/if}
+                    {/key}
                   {/each}
                 </div>
               {:else}
@@ -2654,7 +2658,7 @@
                   class="vertical-tabs"
                   axis="vertical"
                   dragdeadzone="5"
-                  use:HTMLDragZone.action={{
+                  use:HTMLAxisDragZone.action={{
                     id: 'sidebar-unpinned-tabs',
                     acceptDrag: (drag) => {
                       return true
@@ -2662,8 +2666,9 @@
                   }}
                   on:Drop={onDropDragcula}
                 >
-                  {#key $tabs}
-                    {#each $unpinnedTabs as tab, index (tab.id)}
+                  {#each $unpinnedTabs as tab, index (tab.id)}
+                    <!--{#key tab}-->
+                    {#key $unpinnedTabs[index]}
                       <!-- check if this tab is active -->
                       {#if $activeTabId === $unpinnedTabs[index].id}
                         <!-- on:drop={handleDrop} -->
@@ -2700,8 +2705,8 @@
                           on:drop={handleDrop}
                         />
                       {/if}
-                    {/each}
-                  {/key}
+                    {/key}
+                  {/each}
                 </div>
               {/if}
               <div

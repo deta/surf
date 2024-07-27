@@ -141,6 +141,8 @@ export class DragculaDragEvent extends Event {
   // TODO: Test if this if reference or copy
   item: DragItem | null;
 
+  index?: number;
+
   get isNative() {
     return this.item === null;
   }
@@ -173,12 +175,14 @@ export class DragculaDragEvent extends Event {
       item: DragItem | DataTransfer;
       from?: DragZone;
       to?: DragZone;
+      index?: number;
     }
   ) {
     super(type, { bubbles: true, cancelable: true });
     this.id = props.id;
     this.from = props.from || null;
     this.to = props.to || null;
+    this.index = props.index;
     if (props.item instanceof DataTransfer) {
       this.item = null;
       this.#dataTransfer = props.item;

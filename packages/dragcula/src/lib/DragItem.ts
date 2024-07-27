@@ -35,7 +35,7 @@ import {
   type DragOperation,
   type ItemPreviewMode
 } from "./index.js";
-import { ACTIVE_DRAG_OPERATION } from "./internal.js";
+import { ACTIVE_DRAG_OPERATION, mousePos } from "./internal.js";
 import { get } from "svelte/store";
 import { tick } from "svelte";
 
@@ -301,6 +301,7 @@ export class HTMLDragItem extends DragItem {
     e.stopPropagation();
     console.log(`[HTMLDragItem::${this.id}] DragStart`, e);
 
+    (this.nodeNext as HTMLElement) = this.node.nextElementSibling as HTMLElement;
     this.previewX = e.clientX;
     this.previewY = e.clientY;
 
@@ -388,10 +389,12 @@ export class HTMLDragItem extends DragItem {
 
     if (newTargetId !== oldTargetId) {
       if (oldTargetId) {
-        /*DragZone.ZONES.get(oldTargetId)?.node?.dispatchEvent(new DragEvent("dragleave", {
-					clientX: mousePos.x,
-					clientY: mousePos.y,
-				}));*/
+        DragZone.ZONES.get(oldTargetId)?.node?.dispatchEvent(
+          new DragEvent("dragleave", {
+            clientX: mousePos.x,
+            clientY: mousePos.y
+          })
+        );
         //await tick() // TODO: REMOVE?
       }
 
@@ -401,19 +404,23 @@ export class HTMLDragItem extends DragItem {
       });
 
       if (newTargetId) {
-        /*overZone?.node?.dispatchEvent(new DragEvent("dragenter", {
-					clientX: mousePos.x,
-					clientY: mousePos.y,
-				}));*/
+        overZone?.node?.dispatchEvent(
+          new DragEvent("dragenter", {
+            clientX: mousePos.x,
+            clientY: mousePos.y
+          })
+        );
         //await tick() // TODO: REMOVE?
       }
     }
 
     if (overZone) {
-      /*overZone.node?.dispatchEvent(new DragEvent("dragover", {
-				clientX: mousePos.x,
-				clientY: mousePos.y,
-			}));*/
+      overZone.node!.dispatchEvent(
+        new DragEvent("dragover", {
+          clientX: mousePos.x,
+          clientY: mousePos.y
+        })
+      );
       this.isOverZone = true;
     } else {
       this.isOverZone = false;
@@ -434,8 +441,13 @@ export class HTMLDragItem extends DragItem {
     if (drag.status === "aborted") {
       this.node.remove();
       this.styles.applyAll(this.node, ["view-transition-name"]);
-      this.nodeParent?.appendChild(this.node);
+      if (this.previewEffect === "hoist") {
+        this.nodeParent?.insertBefore(this.node, this.nodeNext || null);
+      } else {
+        this.nodeParent?.appendChild(this.node);
+      }
     } else {
+      //this.node.remove();
       this.styles.applyAll(this.node);
     }
 

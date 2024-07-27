@@ -70,9 +70,13 @@ export class DragZone {
 
   /// === EVENTS
 
-  onDragEnter(drag: DragOperation): boolean {}
+  onDragEnter(drag: DragOperation): boolean {
+    return true;
+  }
 
-  onDragOver(drag: DragOperation): boolean {}
+  onDragOver(drag: DragOperation): boolean {
+    return true;
+  }
 
   onDragLeave(drag: DragOperation) {}
 
@@ -111,13 +115,14 @@ export class HTMLDragZone extends DragZone {
 
     return {
       destroy() {
-        controller.destory();
+        controller.destroy();
       },
       updated(props: any) {}
     };
   }
 
   override destroy() {
+    // TODO: Remove as unuseful?
     super.destroy();
   }
 
@@ -127,6 +132,10 @@ export class HTMLDragZone extends DragZone {
     e.preventDefault();
     e.stopPropagation();
     console.debug(`[HTMLDragZone::${this.id}] DragEnter`, e);
+
+    const drag = get(ACTIVE_DRAG_OPERATION);
+    // TODO: What if null?
+    this.onDragEnter(drag!);
   }
   protected handleDragEnter = this._handleDragEnter.bind(this);
 
@@ -134,6 +143,9 @@ export class HTMLDragZone extends DragZone {
     e.preventDefault();
     e.stopPropagation();
     console.debug(`[HTMLDragZone::${this.id}] DragOver`, e);
+    const drag = get(ACTIVE_DRAG_OPERATION);
+    // TODO: What if null?
+    this.onDragOver(drag!);
   }
   protected handleDragOver = this._handleDragOver.bind(this);
 
@@ -141,6 +153,9 @@ export class HTMLDragZone extends DragZone {
     e.preventDefault();
     e.stopPropagation();
     console.debug(`[HTMLDragZone::${this.id}] DragLeave`, e);
+    const drag = get(ACTIVE_DRAG_OPERATION);
+    // TODO: What if null?
+    this.onDragLeave(drag!);
   }
   protected handleDragLeave = this._handleDragLeave.bind(this);
 
