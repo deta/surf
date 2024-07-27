@@ -77,7 +77,10 @@
       clearTimeout(dragOverTimeout)
     }
 
-    dispatch('drop', e)
+    const cancelled = dispatch('drop', e, { cancelable: true })
+    if (cancelled) {
+      e.preventDefault()
+    }
   }
 </script>
 
@@ -89,10 +92,10 @@
   class="drop-wrapper"
   class:dragover={dragOver}
   use:HTMLDragZone.action={{
-    id: `oasis-space-${spaceId}`,
-    acceptDrag: () => true
+    id: `oasis-space-${spaceId}`
   }}
   on:Drop={handleDrop}
+  on:DragEnter={handleDragEnter}
 >
   <slot />
 </div>

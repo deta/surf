@@ -134,6 +134,7 @@ type DragculaDragEventType =
 
 export class DragculaDragEvent extends Event {
   readonly id: string;
+  readonly status: "active" | "aborted" | "completed";
 
   from: DragZone | null;
   to: DragZone | null;
@@ -172,6 +173,7 @@ export class DragculaDragEvent extends Event {
     type: DragculaDragEventType,
     props: {
       id: string;
+      status: "active" | "aborted" | "completed";
       item: DragItem | DataTransfer;
       from?: DragZone;
       to?: DragZone;
@@ -180,6 +182,7 @@ export class DragculaDragEvent extends Event {
   ) {
     super(type, { bubbles: true, cancelable: true });
     this.id = props.id;
+    this.status = props.status;
     this.from = props.from || null;
     this.to = props.to || null;
     this.index = props.index;

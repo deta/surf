@@ -192,6 +192,9 @@
       'custom/test': 'hello'
     }
   }}
+  on:DragEnd={(e) => {
+    dispatch('DragEnd', e)
+  }}
   use:tooltip={pinned
     ? {
         content: sanitizedTitle,

@@ -271,24 +271,26 @@ export class HTMLDragItem extends DragItem {
     const drag = get(ACTIVE_DRAG_OPERATION)!;
 
     // start vt
-    if (drag.to !== null) {
-      e.target?.dispatchEvent(
-        new DragEvent("drop", {
-          bubbles: true
-        })
-      );
-    } else {
-      ACTIVE_DRAG_OPERATION.update((v) => {
-        (v!.status as "completed" | "aborted") = "aborted";
-        return v;
-      });
-    }
+    HTMLDragItem.startTransition(async () => {
+      if (drag.to !== null) {
+        e.target?.dispatchEvent(
+          new DragEvent("drop", {
+            bubbles: true
+          })
+        );
+      } else {
+        ACTIVE_DRAG_OPERATION.update((v) => {
+          (v!.status as "completed" | "aborted") = "aborted";
+          return v;
+        });
+      }
 
-    await tick();
+      await tick();
 
-    //if (drag.item instanceof HTMLDragItem) {
-    this.node.dispatchEvent(new DragEvent("dragend"));
-    //}
+      //if (drag.item instanceof HTMLDragItem) {
+      this.node.dispatchEvent(new DragEvent("dragend"));
+      //}
+    }, true);
   }
   protected handleMouseUp = this._handleMouseUp.bind(this);
 
@@ -353,9 +355,10 @@ export class HTMLDragItem extends DragItem {
 
     // #dispatch DragStart so client can set data e.item.data = ...
     // ERR: this could throw.. handle that succer
-    const completed = this.node.dispatchEvent(
+    const completed = !this.node.dispatchEvent(
       new DragculaDragEvent("DragStart", {
         id: drag.id,
+        status: drag.status,
         item: drag.item,
         from: drag.from || undefined,
         to: drag.to || undefined
@@ -364,78 +367,79 @@ export class HTMLDragItem extends DragItem {
 
     if (!completed) {
       // TODO: Abort all & start reset
+      console.warn("Drag item onDragStart event cancelled!");
     }
 
     // TODO: Lift element
-    this.node.remove();
-    this.styles.cacheMany(this.node, {
-      "pointer-events": "none",
-      position: "fixed",
-      top: "0",
-      left: "0",
-      "z-index": "2147483647",
-      transform: this.previewTransform
+    HTMLDragItem.startTransition(() => {
+      this.node.remove();
+      this.styles.cacheMany(this.node, {
+        "pointer-events": "none",
+        position: "fixed",
+        top: "0",
+        left: "0",
+        "z-index": "2147483647",
+        transform: this.previewTransform
+      });
+      document.body.appendChild(this.node);
     });
-    document.body.appendChild(this.node);
   }
 
   override onDrag(drag: DragOperation) {
-    // do target check
     const overZone = findClosestDragZoneFromPoint(this.previewX, this.previewY);
-    //console.warn("overZone", overZone)
 
     const newTargetId = overZone ? overZone.id : null;
-    const oldTargetId = get(ACTIVE_DRAG_OPERATION)!.to ? get(ACTIVE_DRAG_OPERATION)!.to?.id : null;
 
-    if (newTargetId !== oldTargetId) {
-      if (oldTargetId) {
-        DragZone.ZONES.get(oldTargetId)?.node?.dispatchEvent(
-          new DragEvent("dragleave", {
+    ACTIVE_DRAG_OPERATION.update((activeDrag) => {
+      const oldTargetId = activeDrag!.to ? activeDrag!.to?.id : null;
+
+      if (newTargetId !== oldTargetId) {
+        if (oldTargetId) {
+          DragZone.ZONES.get(oldTargetId)?.node?.dispatchEvent(
+            new DragEvent("dragleave", {
+              clientX: mousePos.x,
+              clientY: mousePos.y
+            })
+          );
+
+          activeDrag!.to = null;
+          //await tick() // TODO: REMOVE?
+        }
+
+        if (newTargetId) {
+          const accepted = !overZone?.node?.dispatchEvent(
+            new DragEvent("dragenter", {
+              clientX: mousePos.x,
+              clientY: mousePos.y,
+              cancelable: true
+            })
+          );
+
+          activeDrag!.to = accepted ? overZone : null;
+          //await tick() // TODO: REMOVE?
+        }
+      }
+
+      if (activeDrag!.to !== null) {
+        activeDrag!.to.node!.dispatchEvent(
+          new DragEvent("dragover", {
             clientX: mousePos.x,
             clientY: mousePos.y
           })
         );
-        ACTIVE_DRAG_OPERATION.update((v) => {
-          v.to = null;
-          return v;
-        });
-        //await tick() // TODO: REMOVE?
+        this.isOverZone = true;
+      } else {
+        this.isOverZone = false;
       }
 
-      if (newTargetId) {
-        const accepted = !overZone?.node?.dispatchEvent(
-          new DragEvent("dragenter", {
-            clientX: mousePos.x,
-            clientY: mousePos.y,
-            cancelable: true
-          })
-        );
-        ACTIVE_DRAG_OPERATION.update((v) => {
-          v!.to = accepted ? overZone || null : null;
-          return v;
-        });
-        //await tick() // TODO: REMOVE?
+      if (activeDrag!.to === null) {
+        document.body.removeAttribute("data-dragcula-overZone");
+      } else {
+        document.body.setAttribute("data-dragcula-overZone", activeDrag!.to.id);
       }
-    }
 
-    if (get(ACTIVE_DRAG_OPERATION)!.to !== null) {
-      get(ACTIVE_DRAG_OPERATION)!.to.node!.dispatchEvent(
-        new DragEvent("dragover", {
-          clientX: mousePos.x,
-          clientY: mousePos.y
-        })
-      );
-      this.isOverZone = true;
-    } else {
-      this.isOverZone = false;
-    }
-
-    drag = get(ACTIVE_DRAG_OPERATION)!;
-    if (drag.to === null) {
-      document.body.removeAttribute("data-dragcula-overZone");
-    } else {
-      document.body.setAttribute("data-dragcula-overZone", drag.to.id);
-    }
+      return activeDrag;
+    });
 
     // update visual position
     if (!this.raf) this.raf = requestAnimationFrame(this.boundRafCbk);
@@ -447,6 +451,16 @@ export class HTMLDragItem extends DragItem {
     document.body.removeAttribute("data-dragcula-overZone");
 
     window.removeEventListener("mousemove", this.handleMouseMove, { capture: true });
+
+    this.node.dispatchEvent(
+      new DragculaDragEvent("DragEnd", {
+        id: drag.id,
+        status: drag.status,
+        item: drag.item,
+        from: drag.from || undefined,
+        to: drag.to || undefined
+      })
+    );
 
     // Reset item
     // TODO: Check dragEffect & status

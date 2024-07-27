@@ -39,15 +39,17 @@ on:DragStart={(e) => {
 <div
   class="tab"
   draggable="true"
-  dragpreview="hoist"
+  drag-preview="hoist"
   style:view-transition-name="tab-{tab.id}"
   use:HTMLDragItem.action={{
     id: tab.id
-    // data: { "test/tab": tab }
   }}
   on:DragStart={(e) => {
-    console.log("tab drag", e);
+    console.warn("tab drag", e);
     e.item.data = { "test/tab": tab };
+  }}
+  on:DragEnd={(e) => {
+    console.warn("tab drag end", e);
   }}
 >
   <img src={tab.icon} alt="" />

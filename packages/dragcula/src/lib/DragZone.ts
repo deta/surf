@@ -148,7 +148,7 @@ export class HTMLDragZone extends DragZone {
   protected _handleDragOver(e: DragEvent) {
     e.preventDefault();
     e.stopPropagation();
-    console.debug(`[HTMLDragZone::${this.id}] DragOver`, e);
+    //console.debug(`[HTMLDragZone::${this.id}] DragOver`, e);
     const drag = get(ACTIVE_DRAG_OPERATION);
     // TODO: What if null?
     this.onDragOver(drag!);
@@ -189,6 +189,7 @@ export class HTMLDragZone extends DragZone {
     const completed = !this.node.dispatchEvent(
       new DragculaDragEvent("Drop", {
         id: drag.id,
+        status: drag.status,
         item: drag.item,
         from: drag.from || undefined,
         to: drag.to || undefined
@@ -227,6 +228,7 @@ export class HTMLDragZone extends DragZone {
     const acceptDrag = !this.node.dispatchEvent(
       new DragculaDragEvent("DragEnter", {
         id: drag.id,
+        status: drag.status,
         item: drag.item,
         from: drag.from || undefined,
         to: this

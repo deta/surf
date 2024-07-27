@@ -231,6 +231,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     const completed = !this.node.dispatchEvent(
       new DragculaDragEvent("Drop", {
         id: drag.id,
+        status: drag.status,
         item: drag.item,
         from: drag.from || undefined,
         to: drag.to || undefined,

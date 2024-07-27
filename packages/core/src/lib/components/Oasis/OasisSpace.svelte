@@ -49,7 +49,7 @@
   import { checkIfYoutubeUrl } from '../../utils/url'
   import OasisResourceModalWrapper from './OasisResourceModalWrapper.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
-  import { type DragculaDragEvent } from '@horizon/dragcula'
+  import { DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab } from '../Browser/types'
 
   export let spaceId: string
@@ -661,8 +661,64 @@
     }
   }
 
-  const handleDrop = async (e: CustomEvent<DragEvent>) => {
+  const handleDrop = async (e: CustomEvent<DragculaDragEvent>) => {
     const drag = e.detail
+
+    if (drag instanceof DragculaDragEvent) {
+      e.preventDefault()
+      if (drag.isNative) {
+        const event = new DragEvent('drop', { dataTransfer: drag.dataTransfer })
+        log.debug('Dropped', event)
+
+        const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
+        if (isOwnDrop) {
+          log.debug('Own drop detected, ignoring...')
+          log.debug(event.dataTransfer?.files)
+          return
+        }
+
+        const parsed = await processDrop(event)
+        log.debug('Parsed', parsed)
+
+        const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+        log.debug('Resources', resources)
+
+        await loadSpaceContents(spaceId)
+        toasts.success('Resources added!')
+
+        return
+      } else {
+        log.debug('Dropped', drag.data)
+
+        const parsed: MediaParserResult[] = []
+
+        if (drag.data['farc/tab'] !== undefined) {
+          parsed.push({
+            type: 'url',
+            data: {
+              href: (drag.data['farc/tab'] as Tab).currentLocation
+            },
+            metadata: {}
+          } satisfies MediaParserResultURL)
+        }
+
+        const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+        log.debug('Resources', resources)
+
+        await oasis.addResourcesToSpace(
+          spaceId,
+          resources.map((x) => x.id)
+        )
+
+        await tick()
+        await loadSpaceContents(spaceId)
+        toasts.success('Resources added!')
+
+        e.preventDefault()
+        return
+      }
+    }
+
     return
     if (drag instanceof DragculaCustomDragEvent || drag instanceof DragculaNativeDragEvent) {
       if (drag.isNative) {
@@ -874,7 +930,13 @@
   />
 {/if}
 
-<DropWrapper on:drop={handleDrop} {spaceId}>
+<DropWrapper
+  {spaceId}
+  on:Drop={handleDrop}
+  on:DragEnter={(e) => {
+    e.preventDefault()
+  }}
+>
   <!-- <div -->
   <!--   use:DragZone.action={{ -->
   <!--     id: `oasis-space-${spaceId}`, -->

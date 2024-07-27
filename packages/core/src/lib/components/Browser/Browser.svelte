@@ -2277,6 +2277,48 @@
     }
   }
 
+  const onDragculaTabDragEnd = async (e: CustomEvent<DragculaDragEvent>) => {
+    e = e.detail
+    console.error('TAB DRAG END', e)
+
+    if (
+      e.status === 'completed' &&
+      e.effect === 'move' &&
+      !['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(e.to?.id)
+    ) {
+      console.error('tab mvoe outside, will del')
+
+      tabs.update((x) => {
+        return x.filter((tab) => tab.id !== e.data['farc/tab'].id)
+      })
+
+      // Update the indices of the tabs in all lists
+      const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+
+      let unpinnedTabsArray = updateIndices($unpinnedTabs)
+      let pinnedTabsArray = updateIndices($pinnedTabs)
+      let magicTabsArray = updateIndices($magicTabs)
+
+      // Combine all lists back together
+      const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+
+      console.error('New tabs', [...newTabs])
+
+      tabs.set(newTabs)
+      await tick()
+
+      // Update the store with the changed tabs
+      await bulkUpdateTabsStore(
+        newTabs.map((tab) => ({
+          id: tab.id,
+          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+        }))
+      )
+
+      log.debug('State updated successfully')
+    }
+  }
+
   const onDragculaTabsDragEnter = (e: DragculaDragEvent) => {
     e.preventDefault()
   }
@@ -2454,6 +2496,7 @@
                         {deleteTab}
                         {unarchiveTab}
                         pinned={true}
+                        on:DragEnd={onDragculaTabDragEnd}
                         on:select={handleTabSelect}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                       />
@@ -2511,6 +2554,7 @@
                                   pinned={false}
                                   showButtons={false}
                                   showExcludeOthersButton
+                                  on:DragEnd={onDragculaTabDragEnd}
                                   on:delete-tab={handleDeleteTab}
                                   on:unarchive-tab={handleUnarchiveTab}
                                   on:select={handleTabSelect}
@@ -2565,6 +2609,7 @@
                                   pinned={false}
                                   showButtons={false}
                                   showExcludeOthersButton
+                                  on:DragEnd={onDragculaTabDragEnd}
                                   on:unarchive-tab={handleUnarchiveTab}
                                   on:delete-tab={handleDeleteTab}
                                   on:select={handleTabSelect}
@@ -2621,6 +2666,7 @@
                           {spaces}
                           enableEditing
                           bind:this={activeTabComponent}
+                          on:DragEnd={onDragculaTabDragEnd}
                           on:select={() => {}}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
                           on:drop={handleDrop}
@@ -2640,6 +2686,7 @@
                           {deleteTab}
                           {unarchiveTab}
                           pinned={false}
+                          on:DragEnd={onDragculaTabDragEnd}
                           on:select={handleTabSelect}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
                           on:drop={handleDrop}
@@ -2675,6 +2722,7 @@
                           {spaces}
                           enableEditing
                           bind:this={activeTabComponent}
+                          on:DragEnd={onDragculaTabDragEnd}
                           on:select={() => {}}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
                           on:drop={handleDrop}
@@ -2693,6 +2741,7 @@
                           {deleteTab}
                           {unarchiveTab}
                           pinned={false}
+                          on:DragEnd={onDragculaTabDragEnd}
                           on:select={handleTabSelect}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
                           on:drop={handleDrop}
@@ -3045,6 +3094,10 @@
 
   :global(*[data-dragcula-drop-target] *[data-dragcula-zone]) {
     pointer-events: all;
+  }
+
+  :global(body[data-dragcula-overzone]:not([data-dragcula-overzone^='sidebar'])) {
+    cursor: copy;
   }
 
   /*:global(body[data-dragcula-dragging='true']) {
