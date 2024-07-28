@@ -5,9 +5,10 @@
   import type { Tab } from './types'
   import TabItem from './Tab.svelte'
   import Fuse from 'fuse.js'
+  import * as Command from '../command'
 
-  export let onClose = () => {}
   export let activeTabs: Tab[] = []
+  export let showTabSearch = false
 
   const dispatch = createEventDispatcher()
   const log = useLogScope('TabSearch')
@@ -33,11 +34,11 @@
   const handleKeydown = (event: any) => {
     if (event.key === 'Escape') {
       event.preventDefault()
-      onClose()
+      showTabSearch = false
     } else if (event.key === 'Enter') {
       event.preventDefault()
       if (filteredTabs.length > 0) {
-        onClose()
+        showTabSearch = false
         dispatch('activateTab', get(activeTabId))
       }
     } else if (event.key === 'ArrowDown') {
@@ -98,6 +99,37 @@
   })
 </script>
 
+<Command.Dialog open={showTabSearch}>
+  <Command.Input placeholder="Type a command or search..." />
+  <Command.List>
+    <Command.Empty>No results found.</Command.Empty>
+    <Command.Group>
+      <Command.Item>
+        <span>Calendar</span>
+      </Command.Item>
+      <Command.Item>
+        <span>Search Emoji</span>
+      </Command.Item>
+      <Command.Item>
+        <span>Calculator</span>
+      </Command.Item>
+    </Command.Group>
+    <Command.Separator />
+    <Command.Group>
+      <Command.Item>
+        <span>Profile</span>
+      </Command.Item>
+      <Command.Item>
+        <span>Billing</span>
+      </Command.Item>
+      <Command.Item>
+        <span>Settings</span>
+      </Command.Item>
+    </Command.Group>
+  </Command.List>
+</Command.Dialog>
+
+<!--
 <div
   class="fixed top-0 shadow-2xl left-0 h-full w-full flex justify-center items-center bg-sky-900/5 backdrop-blur-sm overlay"
 >
@@ -126,7 +158,7 @@
       </div>
     {/if}
   </div>
-</div>
+</div> -->
 
 <style lang="scss">
   .overlay {

@@ -701,7 +701,7 @@
       activeTabComponent?.editAddress()
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
-      showTabSearch = true
+      showTabSearch = !showTabSearch
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       createHistoryTab()
     } else if (isModKeyAndKeyPressed(e, '+')) {
@@ -2216,15 +2216,7 @@
 <ToastsProvider service={toasts} />
 
 <div class="antialiased w-screen h-screen will-change-auto transform-gpu">
-  {#if showTabSearch}
-    <TabSearch
-      onClose={() => {
-        showTabSearch = false
-      }}
-      activeTabs={$activeTabs}
-      on:activateTab={handleTabSelect}
-    />
-  {/if}
+  <TabSearch bind:showTabSearch activeTabs={$activeTabs} on:activateTab={handleTabSelect} />
 
   <div class="relative h-screen flex {horizontalTabs ? 'flex-col' : 'flex-row'}">
     {#if showTabs}
