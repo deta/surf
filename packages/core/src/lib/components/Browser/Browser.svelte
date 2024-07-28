@@ -2216,7 +2216,26 @@
 <ToastsProvider service={toasts} />
 
 <div class="antialiased w-screen h-screen will-change-auto transform-gpu">
-  <TabSearch bind:showTabSearch activeTabs={$activeTabs} on:activateTab={handleTabSelect} />
+  <TabSearch
+    {historyEntriesManager}
+    bind:showTabSearch
+    activeTabs={$activeTabs}
+    on:activateTab={handleTabSelect}
+    on:close-active-tab={closeActiveTab}
+    on:bookmark={handleBookmark}
+    on:toggle-sidebar={() => (showTabs = !showTabs)}
+    on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
+    on:reload-window={() => $activeBrowserTab?.reload()}
+    on:zoom={() => {
+      $activeBrowserTab?.zoomIn()
+    }}
+    on:zoom-out={() => {
+      $activeBrowserTab?.zoomOut()
+    }}
+    on:reset-zoom={() => {
+      $activeBrowserTab?.resetZoom()
+    }}
+  />
 
   <div class="relative h-screen flex {horizontalTabs ? 'flex-col' : 'flex-row'}">
     {#if showTabs}

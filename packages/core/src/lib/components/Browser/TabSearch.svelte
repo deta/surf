@@ -1,194 +1,137 @@
+<script lang="ts" context="module">
+  export type TabSearchEvents = {
+    'copy-active-url': void
+    'close-active-tab': void
+    bookmark: void
+    'toggle-horizontal': void
+    'toggle-sidebar': void
+    'reload-window': void
+    'create-history-tab': void
+    zoom: void
+    'zoom-out': void
+    'reset-zoom': void
+  }
+</script>
+
 <script lang="ts">
-  import { writable, get } from 'svelte/store'
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte'
-  import { useLogScope } from '../../utils/log'
-  import type { Tab } from './types'
-  import TabItem from './Tab.svelte'
-  import Fuse from 'fuse.js'
+  import { createEventDispatcher, onMount } from 'svelte'
+  import { writable } from 'svelte/store'
   import * as Command from '../command'
+  import Fuse from 'fuse.js'
+  import { useLogScope } from '../../utils/log'
+  import { debounce } from 'lodash'
+  import type { Tab } from './types'
 
   export let activeTabs: Tab[] = []
+  export let historyEntriesManager: any
   export let showTabSearch = false
 
   const dispatch = createEventDispatcher()
-  const log = useLogScope('TabSearch')
+  const log = useLogScope('CMDTMenu')
 
-  let searchInputRef: HTMLInputElement
-  let filteredTabs: Tab[] = activeTabs
   let searchQuery = ''
-  let activeTabId = writable<string>('')
-  let itemElements: HTMLElement[] = []
+  let filteredItems: any[] = []
+  let historyEntries: any[] = []
 
-  let fuseOptions = {
-    keys: ['title'],
-    threshold: 0.5
+  const fuseOptions = {
+    keys: ['title', 'url'],
+    threshold: 0.4
   }
 
-  let fuse = new Fuse<Tab>(activeTabs, fuseOptions)
+  let fuse: Fuse<any>
 
   $: {
-    filteredTabs = activeTabs
-    fuse = new Fuse<Tab>(activeTabs, fuseOptions)
+    fuse = new Fuse([...activeTabs, ...historyEntries, ...browserCommands], fuseOptions)
+    updateFilteredItems()
   }
 
-  const handleKeydown = (event: any) => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      showTabSearch = false
-    } else if (event.key === 'Enter') {
-      event.preventDefault()
-      if (filteredTabs.length > 0) {
-        showTabSearch = false
-        dispatch('activateTab', get(activeTabId))
-      }
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      const currentIndex = filteredTabs.findIndex((tab) => tab.id === get(activeTabId))
-      if (currentIndex < filteredTabs.length - 1) {
-        activeTabId.set(filteredTabs[currentIndex + 1].id)
-      }
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      const currentIndex = filteredTabs.findIndex((tab) => tab.id === get(activeTabId))
-      if (currentIndex > 0) {
-        activeTabId.set(filteredTabs[currentIndex - 1].id)
-      }
-    }
-    setTimeout(() => {
-      scrollItemIntoView(filteredTabs.findIndex((tab) => tab.id === get(activeTabId)))
-    }, 20)
-  }
-
-  const scrollItemIntoView = (index: number) => {
-    const targetElement = itemElements[index]
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: 'auto', block: 'nearest' })
-    }
-  }
-
-  const handleSearch = (event: any) => {
-    searchQuery = event.target.value
-    log.debug('searchQuery', searchQuery)
+  function updateFilteredItems() {
     if (searchQuery) {
-      const result = fuse.search(searchQuery)
-      filteredTabs = result.map((r) => r.item)
-      activeTabId.set(filteredTabs[0].id)
+      filteredItems = fuse.search(searchQuery).map((result) => result.item)
     } else {
-      filteredTabs = activeTabs
-      activeTabId.set(activeTabs[0].id)
+      filteredItems = [...activeTabs, ...historyEntries, ...browserCommands]
     }
   }
 
-  // TODO: not have these empty props for tabItem
-  const deleteTab = (tabId: string) => {
-    return
-  }
-  const unarchiveTab = (tabId: string) => {
-    return
+  const updateSites = debounce(async () => {
+    const entries = await historyEntriesManager.searchEntries(searchQuery)
+    const sortedEntries = entries.sort(
+      (a, b) => new Date(b.entry.createdAt).getTime() - new Date(a.entry.createdAt).getTime()
+    )
+    const uniqueSites = Object.values(
+      sortedEntries.reduce((acc, entry) => {
+        if (
+          !acc[entry.site] ||
+          new Date(entry.entry.createdAt) > new Date(acc[entry.site].entry.createdAt)
+        ) {
+          acc[entry.site] = { ...entry, type: 'history' }
+        }
+        return acc
+      }, {})
+    )
+    historyEntries = uniqueSites
+    updateFilteredItems()
+  }, 300)
+
+  $: {
+    updateSites()
   }
 
-  onMount(() => {
-    document.addEventListener('keydown', handleKeydown)
-    if (searchInputRef) {
-      searchInputRef.focus()
+  function handleSearch(event: CustomEvent) {
+    searchQuery = event.detail
+    updateFilteredItems()
+    dispatch('search', { query: searchQuery })
+  }
+
+  function handleSelect(item: any) {
+    if (item.type === 'page') {
+      dispatch('activateTab', item.id)
+    } else if (item.type === 'history') {
+      dispatch('openUrl', { url: item.url })
+    } else if (item.type === 'command') {
+      dispatch(item.id)
     }
-  })
+    showTabSearch = false
+  }
 
-  onDestroy(() => {
-    document.removeEventListener('keydown', handleKeydown)
-  })
+  const browserCommands = [
+    { id: 'close-active-tab', label: 'Close Tab', shortcut: '⌘W', type: 'command' },
+    { id: 'bookmark', label: 'Toggle Bookmark', shortcut: '⌘D', type: 'command' },
+    { id: 'toggle-sidebar', label: 'Toggle Tabs', shortcut: '⌘B', type: 'command' },
+    { id: 'reload-window', label: 'Reload', shortcut: '⌘R', type: 'command' },
+    // { id: 'focusAddressBar', label: 'Focus Address Bar', shortcut: '⌘L', type: 'command' },
+    { id: 'create-history-tab', label: 'Show History', shortcut: '⌘Y', type: 'command' },
+    { id: 'zoom', label: 'Zoom In', shortcut: '⌘+', type: 'command' },
+    { id: 'zoom-out', label: 'Zoom Out', shortcut: '⌘-', type: 'command' },
+    { id: 'reset-zoom', label: 'Reset Zoom', shortcut: '⌘0', type: 'command' }
+  ]
 </script>
 
-<Command.Dialog open={showTabSearch}>
-  <Command.Input placeholder="Type a command or search..." />
+<Command.Dialog bind:open={showTabSearch} loop>
+  <Command.Input placeholder="Type a command or search..." on:input={handleSearch} />
   <Command.List>
     <Command.Empty>No results found.</Command.Empty>
+
     <Command.Group>
-      <Command.Item>
-        <span>Calendar</span>
-      </Command.Item>
-      <Command.Item>
-        <span>Search Emoji</span>
-      </Command.Item>
-      <Command.Item>
-        <span>Calculator</span>
-      </Command.Item>
+      {#each activeTabs as tab}
+        <Command.Item value={tab.id} onSelect={() => handleSelect(tab)}>
+          <div class="flex items-center justify-between">
+            <span class="truncate max-w-prose">{tab.title}</span>
+          </div>
+        </Command.Item>
+      {/each}
     </Command.Group>
-    <Command.Separator />
+
     <Command.Group>
-      <Command.Item>
-        <span>Profile</span>
-      </Command.Item>
-      <Command.Item>
-        <span>Billing</span>
-      </Command.Item>
-      <Command.Item>
-        <span>Settings</span>
-      </Command.Item>
+      {#each browserCommands as item}
+        <Command.Item value={item.id} onSelect={() => handleSelect(item)}>
+          <div class="flex items-center justify-between">
+            <span>{item.label}</span>
+            <span class="text-sm text-gray-500"></span>
+            <Command.Shortcut>{item.shortcut}</Command.Shortcut>
+          </div>
+        </Command.Item>
+      {/each}
     </Command.Group>
   </Command.List>
 </Command.Dialog>
-
-<!--
-<div
-  class="fixed top-0 shadow-2xl left-0 h-full w-full flex justify-center items-center bg-sky-900/5 backdrop-blur-sm overlay"
->
-  <div class="content">
-    <input
-      bind:this={searchInputRef}
-      type="text"
-      placeholder="Jump to tab..."
-      on:input={handleSearch}
-      bind:value={searchQuery}
-    />
-    {#if filteredTabs.length > 0}
-      <div class="tabs-list">
-        {#each filteredTabs as tab, index}
-          <li bind:this={itemElements[index]}>
-            <TabItem
-              {tab}
-              {activeTabId}
-              {deleteTab}
-              {unarchiveTab}
-              showButtons={false}
-              pinned={false}
-            />
-          </li>
-        {/each}
-      </div>
-    {/if}
-  </div>
-</div> -->
-
-<style lang="scss">
-  .overlay {
-    z-index: 50001;
-  }
-
-  .content {
-    width: 60rem;
-    padding: 1rem;
-    background-color: paleturquoise;
-    border-radius: 12px;
-  }
-
-  .content input[type='text'] {
-    width: 100%;
-    padding: 1rem;
-    margin-right: 2rem;
-    border: none;
-    border-radius: 8px;
-    border-bottom: 1px solid #e0e0e0;
-    font-size: 16px;
-    box-sizing: border-box;
-    outline: none;
-  }
-
-  .tabs-list {
-    list-style: none;
-    margin-top: 1rem;
-    padding: 0;
-    max-height: 300px;
-    overflow-y: auto;
-  }
-</style>
