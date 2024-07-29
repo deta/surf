@@ -746,8 +746,7 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' && rightPane?.isExpanded()) {
       handleCollapseRight()
-    }
-    if (e.key === 'Enter' && addressBarFocus) {
+    } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       activeTabComponent?.blur()
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
@@ -776,7 +775,7 @@
       activeTabComponent?.editAddress()
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
-      showTabSearch = true
+      showTabSearch = !showTabSearch
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       createHistoryTab()
     } else if (isModKeyAndKeyPressed(e, '+')) {
@@ -2291,16 +2290,30 @@
 
 <ToastsProvider service={toasts} />
 
-<div class="antialiased w-screen h-screen will-change-auto transform-gpu">
-  {#if showTabSearch}
-    <TabSearch
-      onClose={() => {
-        showTabSearch = false
-      }}
-      activeTabs={$activeTabs}
-      on:activateTab={handleTabSelect}
-    />
-  {/if}
+<div class="antialiased w-screen h-screen will-change-auto transform-gpu relative">
+  <TabSearch
+    {historyEntriesManager}
+    bind:showTabSearch
+    activeTabs={$activeTabs}
+    on:activate-tab={handleTabSelect}
+    on:close-active-tab={closeActiveTab}
+    on:bookmark={handleBookmark}
+    on:toggle-sidebar={() => handleSidebarchange()}
+    on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
+    on:reload-window={() => $activeBrowserTab?.reload()}
+    on:zoom={() => {
+      $activeBrowserTab?.zoomIn()
+    }}
+    on:zoom-out={() => {
+      $activeBrowserTab?.zoomOut()
+    }}
+    on:reset-zoom={() => {
+      $activeBrowserTab?.resetZoom()
+    }}
+    on:open-url={(e) => {
+      createPageTab(e.detail, true)
+    }}
+  />
 
   <SidebarPane
     {horizontalTabs}
