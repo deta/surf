@@ -444,7 +444,6 @@
       if (resourcePreview) {
         const height = resourcePreview.offsetHeight
         item.style.height = `${height}px`
-        item.style.opacity = 1
         resizedItems.add(item)
 
         clearTimeout(resizeObserverDebounce)
@@ -624,7 +623,7 @@
       style="left: {item.style.left}; top: {item.style.top}; height: {item.style.height};"
     >
       <div class="item-details" bind:this={item.dom}>
-        <OasisResourceLoader id={item.id} on:click on:open on:remove />
+        <OasisResourceLoader id={item.id} on:click on:open on:remove on:load />
       </div>
     </div>
   {/each}
@@ -646,7 +645,7 @@
     box-sizing: border-box;
     padding: 10px;
     transition:
-      opacity 0.12s ease,
+      opacity 0s ease,
       left 0.12s ease,
       top 0.12s ease,
       width 0.12s ease;

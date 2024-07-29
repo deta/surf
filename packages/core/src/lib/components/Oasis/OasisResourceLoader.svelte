@@ -4,6 +4,7 @@
   import { useLogScope } from '../../utils/log'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import DragResourceWrapper from './DragResourceWrapper.svelte'
+  import Skelleton from './OasisSkelleton.svelte'
 
   export let id: string
   export let selected: boolean = false
@@ -49,7 +50,7 @@
       <ResourcePreviewClean {resource} {selected} showSummary on:load on:click on:open on:remove />
     </DragResourceWrapper>
   {:else if loading}
-    <div>Loading...</div>
+    <Skelleton />
   {:else}
     <div>Resource not found</div>
   {/if}

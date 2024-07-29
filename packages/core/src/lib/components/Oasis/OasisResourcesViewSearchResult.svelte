@@ -52,6 +52,7 @@
         on:load-more={handleLoadChunk}
         on:open
         on:remove
+        on:load
         id={new Date()}
       ></Masonry>
     {/key}
