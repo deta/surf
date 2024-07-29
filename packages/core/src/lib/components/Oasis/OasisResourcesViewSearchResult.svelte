@@ -30,15 +30,15 @@
   })
 
   const handleLoadChunk = (e: CustomEvent) => {
-    console.log('bottom reached', $resources.length, $renderContents.length)
     if ($renderContents.length === 0) {
       renderLimit.set($resources.length)
+      return
     }
-    const CHUNK_SIZE = e.detail
 
     if ($resources.length <= $renderContents.length) {
       return
     }
+    const CHUNK_SIZE = e.detail
 
     renderLimit.update((limit) => limit + CHUNK_SIZE)
   }

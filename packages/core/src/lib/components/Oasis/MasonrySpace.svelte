@@ -555,14 +555,13 @@
 
   function handleBottomReached() {
     const itemsToLoad = calculateItemsToLoad(scrollVelocity.velocity)
-    console.log('vvv- Bottom Reached -vvv')
     dispatch('load-more', itemsToLoad)
   }
 
   function calculateItemsToLoad(velocity) {
     const MIN_ITEMS = 1
-    const MAX_ITEMS = 2
-    const VELOCITY_FACTOR = 5
+    const MAX_ITEMS = 20
+    const VELOCITY_FACTOR = 2
 
     // Logarithmic function to create a curve
     let items = Math.round(Math.log(velocity * VELOCITY_FACTOR + 1) * 10)
@@ -657,7 +656,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 1;
+    opacity: 0;
   }
 
   .debug {
