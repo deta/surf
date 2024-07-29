@@ -287,6 +287,19 @@
   }
 
   const makeTabActive = (tabId: string) => {
+    const browserTab = $browserTabs[tabId]
+
+    const activeElement = document.activeElement
+    if (activeElement && typeof activeElement.blur === 'function') {
+      activeElement.blur()
+    }
+
+    if (browserTab) {
+      if (typeof browserTab.focus === 'function') {
+        browserTab.focus()
+      }
+    }
+
     activeTabId.set(tabId)
     addToActiveTabsHistory(tabId)
     if ($showAppSidebar) {
@@ -743,30 +756,22 @@
       handleCopyLocation()
     } else if (isModKeyPressed(e) && e.key === 't') {
       debouncedCreateNewEmptyTab()
-    } else if (isModKeyAndKeyPressed(e, 'o')) {
-      toggleOasis()
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       closeActiveTab()
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark()
-    } else if (isModKeyAndKeyPressed(e, 'g')) {
-      sidebarTab.set('active')
-    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
+    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'b')) {
       // horizontalTabs = !horizontalTabs
       debounceToggleHorizontalTabs()
       log.debug('horizontalTabs', horizontalTabs)
-    } else if (isModKeyAndKeyPressed(e, 'h')) {
+    } else if (isModKeyAndKeyPressed(e, 'b')) {
       handleSidebarchange()
     } else if (isModKeyAndKeyPressed(e, 'n')) {
-      handleNewHorizon()
+      // this creates a new electron window
     } else if (isModKeyAndKeyPressed(e, 'r')) {
       $activeBrowserTab?.reload()
-    } else if (isModKeyAndKeyPressed(e, 'i')) {
-      createImporterTab()
-    } else if (isModKeyAndKeyPressed(e, 'e')) {
-      createOasisDiscoveryTab()
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {

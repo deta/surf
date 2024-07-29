@@ -46,8 +46,12 @@
   $: if (inputEl) {
     log.debug('inputEl', inputEl)
     setTimeout(() => {
-      inputEl.focus()
+      focusInput()
     }, 200)
+  }
+
+  const focusInput = () => {
+    inputEl.focus()
   }
 
   const isResourceDetailsModalOpen = derived(
@@ -147,6 +151,14 @@
       if (unsubscribeHistoryEntries) unsubscribeHistoryEntries()
     }
   })
+
+  $: {
+    if (inputEl) {
+      if (active === true) {
+        inputEl.focus()
+      } else inputEl.blur()
+    }
+  }
 </script>
 
 {#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
