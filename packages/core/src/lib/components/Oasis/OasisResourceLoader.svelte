@@ -26,8 +26,8 @@
       }
 
       resource = res
-
-      log.debug('Loaded resource:', resource)
+      // disabled, since this is blocking the renderer
+      // log.debug('Loaded resource:', resource)
       dispatch('load', resource)
     } catch (e) {
       log.error(e)

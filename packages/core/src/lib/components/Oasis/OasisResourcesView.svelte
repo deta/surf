@@ -45,7 +45,7 @@
         on:open
         on:remove
         id={new Date()}
-      />
+      ></Masonry>
     {/key}
   </div>
 </div>

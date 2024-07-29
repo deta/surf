@@ -17,7 +17,7 @@
   const log = useLogScope('OasisResourcesView')
   // const dispatch = createEventDispatcher<{ click: string }>()
 
-  const CHUNK_SIZE = 50
+  const CHUNK_SIZE = 40
   const CHUNK_THRESHOLD = 300
 
   let scrollElement: HTMLDivElement
@@ -31,6 +31,9 @@
 
   const handleLoadChunk = (e: CustomEvent) => {
     console.log('bottom reached', $resources.length, $renderContents.length)
+    if ($renderContents.length === 0) {
+      renderLimit.set($resources.length)
+    }
     const CHUNK_SIZE = e.detail
 
     if ($resources.length <= $renderContents.length) {
@@ -50,33 +53,8 @@
         on:open
         on:remove
         id={new Date()}
-        >{$renderContents.length}
-      </Masonry>
+      ></Masonry>
     {/key}
-
-    <!-- <Masonry
-      gridGap="2rem"
-      colWidth="minmax(250px, 330px)"
-      bind:refreshLayout={refreshContentLayout}
-    >
-      {#each $renderContents as item (item.id)}
-        <DragResourceWrapper resource={item.resource} class="masonry-item">
-          <ResourcePreviewClean
-            resource={item.resource}
-            selected={selected === item.id}
-            on:load={handleItemLoad}
-            on:click
-            on:open
-            on:remove
-          />
-        </DragResourceWrapper>
-      {/each}
-      <InfiniteScroll
-        elementScroll={scrollElement}
-        threshold={CHUNK_THRESHOLD}
-        on:loadMore={handleLoadChunk}
-      />
-    </Masonry>-->
   </div>
 </div>
 

@@ -19,9 +19,11 @@
 
   let updateQueue = []
   let isUpdating = false
+  let created
 
   const BATCH_SIZE = 10
   const UPDATE_INTERVAL = 16
+  const TIME_TILL_ACTIVATION = 2000
 
   $: if (renderContents) {
     queueUpdate(renderContents.slice(prevItemLength))
@@ -442,6 +444,7 @@
       if (resourcePreview) {
         const height = resourcePreview.offsetHeight
         item.style.height = `${height}px`
+        item.style.opacity = 1
         resizedItems.add(item)
 
         clearTimeout(resizeObserverDebounce)
@@ -465,6 +468,7 @@
   }
 
   onMount(async () => {
+    created = new Date()
     const gridContainer = document.getElementById(id)
     masonryGrid = new MasonryGrid(gridContainer)
 
@@ -523,10 +527,10 @@
     })
 
     const now = new Date().getTime()
-    const lastUpdateTime = new Date(id).getTime()
+    const lastUpdateTime = new Date(created).getTime()
     const timeDifference = now - lastUpdateTime
 
-    if (timeDifference > 2000 && isBottomReached()) {
+    if (timeDifference > TIME_TILL_ACTIVATION && isBottomReached()) {
       // this is where it breaks (isBottomReached() is always false after reinit)
       handleBottomReached()
     }
@@ -539,7 +543,6 @@
         : 3 * window.innerHeight
 
     const gridContainer = document.getElementById(id)
-    console.log('bbb- Update Visible Items -bbb', gridContainer.scrollHeight)
 
     if (!gridContainer) {
       throw new Error('[MasonrySpace:isBottomReached()] Grid Container not found')
@@ -613,8 +616,6 @@
       Copy Current Set
     </button>
   </div>
-
-  {renderContents.length}
 
   {#each gridItems as item}
     <div
