@@ -39,7 +39,7 @@
   let historyCache: { data: any[]; timestamp: number } | null = null
 
   const fuseOptions = {
-    keys: ['title', 'url', 'label'],
+    keys: ['title', 'url', 'label', 'site', 'hostname', 'value'],
     threshold: 0.4,
     includeScore: true
   }
@@ -57,10 +57,19 @@
       const fuseResults = fuse.search(searchQuery)
       results = fuseResults.map((result) => ({ ...result.item, score: result.score }))
     } else {
-      results = [...activeTabs, ...historyEntries, ...browserCommands]
+      results = [
+        ...activeTabs.map((tab) => ({ ...tab, score: 0 })),
+        ...historyEntries.map((entry) => ({ ...entry, score: 0.1 })),
+        ...browserCommands.map((cmd) => ({ ...cmd, score: 0.2 })),
+        ...googleSuggestions.map((suggestion) => ({
+          value: suggestion,
+          type: 'suggestion',
+          score: 0.3
+        }))
+      ]
     }
 
-    // Mix results and limit to top 15
+    // Sort results based on score and limit to top 15
     filteredItems = results.sort((a, b) => (a.score || 0) - (b.score || 0)).slice(0, 15)
   }
 
@@ -87,13 +96,12 @@
     updateFilteredItems()
   }, 300)
 
-  const fetchGoogleSuggestions = debounce(async (searchGuery) => {
-    if (searchQuery.length > 2) {
+  const fetchGoogleSuggestions = debounce(async (query: string) => {
+    if (query.length > 2) {
       try {
         const response = await fetch(
-          `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(searchQuery)}`
+          `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`
         )
-        console.error('response', response)
         const data = await response.json()
         googleSuggestions = data[1].slice(0, 5)
         updateFilteredItems()
@@ -107,9 +115,6 @@
 
   $: {
     updateSites()
-  }
-
-  $: {
     fetchGoogleSuggestions(searchQuery)
   }
 
@@ -117,14 +122,17 @@
     if (item.type === 'page') {
       dispatch('activateTab', item.id)
     } else if (item.type === 'history') {
-      dispatch('openUrl', { url: item.url })
+      dispatch('open-url', item.url)
     } else if (item.type === 'command') {
       dispatch(item.id)
     } else if (item.type === 'suggestion') {
-      dispatch('open-url', {
-        url: `https://www.google.com/search?q=${encodeURIComponent(item.value)}`
-      })
+      dispatch('open-url', `https://www.google.com/search?q=${encodeURIComponent(item.value)}`)
     }
+    resetSearch()
+  }
+
+  function resetSearch() {
+    searchQuery = ''
     showTabSearch = false
   }
 
@@ -140,40 +148,30 @@
   ]
 </script>
 
-<Command.Dialog bind:open={showTabSearch} loop>
+<Command.Dialog
+  bind:open={showTabSearch}
+  loop
+  shouldFilter={false}
+  onOpenChange={(open) => !open && resetSearch()}
+>
   <Command.Input placeholder="Type a command or search..." bind:value={searchQuery} />
   <Command.List>
     <Command.Empty>No results found.</Command.Empty>
 
     {#each filteredItems as item}
       <Command.Item
-        value={item.title || item.label || item.url}
+        value={item.title || item.label || item.url || item.value}
         onSelect={() => handleSelect(item)}
       >
         <div class="flex items-center justify-between">
-          <span class="truncate max-w-prose"
-            >{item.title || item.label || item.site || item.url}</span
-          >
+          <span class="truncate max-w-prose">
+            {item.title || item.label || item.site || item.url || item.value}
+          </span>
           {#if item.shortcut}
             <Command.Shortcut>{item.shortcut}</Command.Shortcut>
           {/if}
         </div>
       </Command.Item>
     {/each}
-
-    {#if googleSuggestions.length > 0}
-      <Command.Group heading="Search Suggestions">
-        {#each googleSuggestions as suggestion}
-          <Command.Item
-            value={suggestion}
-            onSelect={() => handleSelect({ type: 'suggestion', value: suggestion })}
-          >
-            <div class="flex items-center">
-              <span>{suggestion}</span>
-            </div>
-          </Command.Item>
-        {/each}
-      </Command.Group>
-    {/if}
   </Command.List>
 </Command.Dialog>
