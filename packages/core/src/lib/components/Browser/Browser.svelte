@@ -1,7 +1,7 @@
 <svelte:options immutable={true} />
 
 <script lang="ts">
-  import { onMount, setContext, tick } from 'svelte'
+  import { afterUpdate, onMount, setContext, tick } from 'svelte'
   import { slide } from 'svelte/transition'
   import { tooltip } from '@svelte-plugins/tooltips'
   import { popover } from '../Atoms/Popover/popover'
@@ -101,7 +101,7 @@
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
 
-  let addressInputElem: HTMLInputElement
+  let activeTabComponent: TabItem | null = null
   let drawer: Drawer
   let observer: IntersectionObserver
   let addressBarFocus = false
@@ -110,6 +110,7 @@
   let annotationsSidebar: AnnotationsSidebar
   let isFirstButtonVisible = true
   let newTabButton: Element
+  let containerRef: Element
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -191,6 +192,10 @@
 
   const activeTabLocation = derived(activeTab, (activeTab) => {
     if (activeTab?.type === 'page') {
+      if (activeTab.currentLocation) {
+        return activeTab.currentLocation
+      }
+
       const currentEntry = historyEntriesManager.getEntry(
         activeTab.historyStackIds[activeTab.currentHistoryIndex]
       )
@@ -226,10 +231,14 @@
         log.warn('Horizon not found', tab.horizonId)
       }
     } else if (tab?.type === 'page') {
-      const currentEntry = historyEntriesManager.getEntry(
-        tab.historyStackIds[tab.currentHistoryIndex]
-      )
-      addressValue.set(currentEntry?.url ?? tab.initialLocation)
+      if (tab.currentLocation) {
+        addressValue.set(tab.currentLocation)
+      } else {
+        const currentEntry = historyEntriesManager.getEntry(
+          tab.historyStackIds[tab.currentHistoryIndex]
+        )
+        addressValue.set(currentEntry?.url ?? tab.initialLocation)
+      }
     } else if (tab?.type === 'chat') {
       addressValue.set(tab.title)
     } else {
@@ -273,6 +282,19 @@
   }
 
   const makeTabActive = (tabId: string) => {
+    const browserTab = $browserTabs[tabId]
+
+    const activeElement = document.activeElement
+    if (activeElement && typeof activeElement.blur === 'function') {
+      activeElement.blur()
+    }
+
+    if (browserTab) {
+      if (typeof browserTab.focus === 'function') {
+        browserTab.focus()
+      }
+    }
+
     activeTabId.set(tabId)
     addToActiveTabsHistory(tabId)
     activeAppId.set('')
@@ -562,7 +584,7 @@
 
     addressBarFocus = false
 
-    let addressVal = addressInputElem.value
+    let addressVal = activeTabComponent && get(activeTabComponent?.inputUrl)
     log.debug('Address bar blur', addressVal)
 
     if (!addressVal) {
@@ -604,7 +626,7 @@
 
   const handleFocus = () => {
     addressBarFocus = true
-    addressInputElem.select()
+    activeTabComponent?.editAddress()
   }
 
   const handleCopyLocation = useDebounce(() => {
@@ -647,48 +669,36 @@
 
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
-    const activeElement = document.activeElement
-    const isInputField =
-      activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')
-
     if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
-      addressInputElem.blur()
+      activeTabComponent?.blur()
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
       handleCopyLocation()
     } else if (isModKeyPressed(e) && e.key === 't') {
       debouncedCreateNewEmptyTab()
-    } else if (isModKeyAndKeyPressed(e, 'o')) {
-      toggleOasis()
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       closeActiveTab()
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark()
-    } else if (isModKeyAndKeyPressed(e, 'g')) {
-      sidebarTab.set('active')
-    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
+    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'b')) {
       // horizontalTabs = !horizontalTabs
       debounceToggleHorizontalTabs()
       log.debug('horizontalTabs', horizontalTabs)
-    } else if (isModKeyAndKeyPressed(e, 'h')) {
+    } else if (isModKeyAndKeyPressed(e, 'b')) {
       showTabs = !showTabs
       log.debug('showTabs', showTabs)
       // @ts-ignore
       window.api.updateTrafficLightsVisibility(showTabs)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
-      handleNewHorizon()
+      // this creates a new electron window
     } else if (isModKeyAndKeyPressed(e, 'r')) {
       $activeBrowserTab?.reload()
-    } else if (isModKeyAndKeyPressed(e, 'i')) {
-      createImporterTab()
-    } else if (isModKeyAndKeyPressed(e, 'e')) {
-      createOasisDiscoveryTab()
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
-      addressInputElem.focus()
+      activeTabComponent?.editAddress()
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
       showTabSearch = true
@@ -723,7 +733,6 @@
         }
       }, KEY_TIMEOUT)
     } else if (e.key === 'ArrowLeft' && e.metaKey) {
-      /// TODO FIX WHEN INPUT IS FOCUSED
       if (canGoBack) {
         $activeBrowserTab?.goBack()
       }
@@ -1593,6 +1602,14 @@
         showInSidebar: true
       })
 
+      const existingTab = $unpinnedTabs.find(
+        (tab) => tab.type === 'space' && tab.spaceId === space.id
+      )
+      if (existingTab) {
+        makeTabActive(existingTab.id)
+        return
+      }
+
       const tab = {
         title: space.name.folderName,
         icon: '',
@@ -1842,6 +1859,9 @@
     //   updateTab(tab.id, { index: index })
     // })
 
+    // if we have some magicTabs, make them unpinned
+    turnMagicTabsIntoUnpinned()
+
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
     log.debug('tabs', $tabs)
@@ -1850,6 +1870,51 @@
 
     // ON DESTROY!!
   })
+
+  const turnMagicTabsIntoUnpinned = async () => {
+    const magicTabsArray = get(magicTabs)
+    const unpinnedTabsArray = get(unpinnedTabs)
+
+    if (magicTabsArray.length === 0) {
+      // No magic tabs to process
+      return
+    }
+
+    // Turn magic tabs into unpinned tabs
+    magicTabsArray.forEach((magicTab) => {
+      magicTab.magic = false
+      unpinnedTabsArray.push(magicTab)
+    })
+
+    // Clear the magic tabs array
+    magicTabsArray.length = 0
+
+    // Update indices of unpinned tabs
+    const updatedUnpinnedTabs = unpinnedTabsArray.map((tab, index) => ({ ...tab, index }))
+
+    // Update the tabs store
+    tabs.update((x) => {
+      return x.map((tab) => {
+        const updatedTab = updatedUnpinnedTabs.find((t) => t.id === tab.id)
+        if (updatedTab) {
+          tab.index = updatedTab.index
+          tab.magic = false
+          tab.pinned = false
+        }
+        return tab
+      })
+    })
+
+    // Update the store with the changed tabs
+    await bulkUpdateTabsStore(
+      updatedUnpinnedTabs.map((tab) => ({
+        id: tab.id,
+        updates: { pinned: false, magic: false, index: tab.index }
+      }))
+    )
+
+    log.debug('Magic tabs turned into unpinned tabs successfully')
+  }
 
   const createChatResourceBookmark = async (tab: TabPage) => {
     let resource_id: string
@@ -2126,6 +2191,22 @@
 
     log.debug('State updated successfully')
   }
+
+  function checkVisibility() {
+    if (newTabButton && containerRef) {
+      const containerRect = containerRef.getBoundingClientRect()
+      const buttonRect = newTabButton.getBoundingClientRect()
+      isFirstButtonVisible =
+        buttonRect.top >= containerRect.top &&
+        buttonRect.left >= containerRect.left &&
+        buttonRect.bottom <= containerRect.bottom &&
+        buttonRect.right <= containerRect.right
+    }
+  }
+
+  afterUpdate(() => {
+    checkVisibility()
+  })
 </script>
 
 <SplashScreen />
@@ -2148,7 +2229,7 @@
   <div class="relative h-screen flex {horizontalTabs ? 'flex-col' : 'flex-row'}">
     {#if showTabs}
       <div
-        transition:slide={{ axis: !horizontalTabs ? 'x' : 'y', duration: 200 }}
+        transition:slide={{ axis: !horizontalTabs ? 'x' : 'y', duration: 100 }}
         class="flex-grow transform-gpu {horizontalTabs && 'h-[51px]'}"
         class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
         style="z-index: 5000;"
@@ -2281,10 +2362,10 @@
                       <TabItem
                         tab={$pinnedTabs[index]}
                         {activeTabId}
-                        {deleteTab}
-                        {unarchiveTab}
                         pinned={true}
                         isAlreadyOpen={false}
+                        on:unarchive-tab={handleUnarchiveTab}
+                        on:delete-tab={handleDeleteTab}
                         on:select={() => {}}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                       />
@@ -2294,9 +2375,9 @@
                           <TabItem
                             tab={$pinnedTabs[index]}
                             {activeTabId}
-                            {deleteTab}
-                            {unarchiveTab}
                             pinned={true}
+                            on:unarchive-tab={handleUnarchiveTab}
+                            on:delete-tab={handleDeleteTab}
                             on:select={handleTabSelect}
                             on:remove-from-sidebar={handleRemoveFromSidebar}
                           />
@@ -2359,11 +2440,11 @@
                               showClose
                               tab={$magicTabs[index]}
                               {activeTabId}
-                              {deleteTab}
-                              {unarchiveTab}
                               pinned={false}
                               showButtons={false}
                               showExcludeOthersButton
+                              on:delete-tab={handleDeleteTab}
+                              on:unarchive-tab={handleUnarchiveTab}
                               on:select={handleTabSelect}
                               on:remove-from-sidebar={handleRemoveFromSidebar}
                               on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
@@ -2408,11 +2489,11 @@
                               showClose
                               tab={$magicTabs[index]}
                               {activeTabId}
-                              {deleteTab}
-                              {unarchiveTab}
                               pinned={false}
                               showButtons={false}
                               showExcludeOthersButton
+                              on:unarchive-tab={handleUnarchiveTab}
+                              on:delete-tab={handleDeleteTab}
                               on:select={handleTabSelect}
                               on:remove-from-sidebar={handleRemoveFromSidebar}
                               on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
@@ -2436,12 +2517,15 @@
               class="overflow-x-scroll no-scrollbar relative flex-grow"
               class:space-x-2={horizontalTabs}
               class:items-center={horizontalTabs}
+              class:h-full={horizontalTabs}
+              bind:this={containerRef}
             >
               {#if horizontalTabs}
                 <DragDropList
                   id="tabs"
                   type={HorizontalDropZone}
                   itemSize={Math.min(400, Math.max(200, tabSize))}
+                  itemClass="h-fit mx-0.5 my-auto"
                   itemCount={$unpinnedTabs.length}
                   on:drop={async (event) => {
                     onDrop(event, 'unpin')
@@ -2453,12 +2537,12 @@
                       showClose
                       tab={$unpinnedTabs[index]}
                       {activeTabId}
+                      {spaces}
                       bookmarkingInProgress={$bookmarkingInProgress}
                       bookmarkingSuccess={$bookmarkingSuccess}
                       pinned={false}
-                      {spaces}
                       enableEditing
-                      bind:addressInputElem
+                      bind:this={activeTabComponent}
                       on:select={() => {}}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:drop={handleDrop}
@@ -2470,7 +2554,7 @@
                       on:save-resource-in-space={handleSaveResourceInSpace}
                     />
                   {:else}
-                    <LinkPreview.Root openDelay={7000} closeDelay={10}>
+                    <LinkPreview.Root openDelay={4000} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
                           showClose
@@ -2512,12 +2596,12 @@
                       showClose
                       tab={$unpinnedTabs[index]}
                       {activeTabId}
+                      {spaces}
                       bookmarkingInProgress={$bookmarkingInProgress}
                       bookmarkingSuccess={$bookmarkingSuccess}
                       pinned={false}
-                      {spaces}
                       enableEditing
-                      bind:addressInputElem
+                      bind:this={activeTabComponent}
                       on:select={() => {}}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:drop={handleDrop}
@@ -2686,7 +2770,7 @@
     {/if}
 
     <div
-      class="h-screen w-screen flex space-x-4 relative flex-row {horizontalTabs
+      class="h-screen w-screen shadow-lg flex space-x-4 relative flex-row {horizontalTabs
         ? 'px-1.5'
         : 'py-1.5'}"
     >
@@ -2793,10 +2877,12 @@
             {:else}
               <BrowserHomescreen
                 {historyEntriesManager}
+                active={$activeTabId === tab.id}
                 on:navigate={handleTabNavigation}
                 on:chat={handleCreateChat}
                 on:rag={handleRag}
                 on:create-tab-from-space={handleCreateTabFromSpace}
+                on:new-tab={handleNewTab}
               />
             {/if}
           </div>
@@ -2806,9 +2892,11 @@
           <div class="" style="--scaling: 1;">
             <BrowserHomescreen
               {historyEntriesManager}
+              active
               on:navigate={handleTabNavigation}
               on:chat={handleCreateChat}
               on:rag={handleRag}
+              on:new-tab={handleNewTab}
             />
           </div>
         {/if}

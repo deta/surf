@@ -1,16 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, tick, afterUpdate } from 'svelte'
   import type { ResourceHistoryEntryWithLinkedResource, TabHistory } from './types'
   import { useLogScope } from '../../utils/log'
-  import {
-    Resource,
-    ResourceHistoryEntry,
-    useResourceManager,
-    type ResourceSearchResultItem
-  } from '../../service/resources'
+  import { useResourceManager, type ResourceSearchResultItem } from '../../service/resources'
   import { derived, writable } from 'svelte/store'
-  import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
-  import LoadingBox from '../Atoms/LoadingBox.svelte'
   import BrowserHistoryEntry from './BrowserHistoryEntry.svelte'
   import { ResourceTagsBuiltInKeys } from '@horizon/types'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
@@ -28,6 +21,44 @@
   const historyEntries = writable<ResourceHistoryEntryWithLinkedResource[]>([])
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
+
+  // New search-related state
+  const searchTerm = writable('')
+
+  // Derived store for filtered entries
+  const filteredEntries = derived(
+    [historyEntries, searchTerm],
+    ([$historyEntries, $searchTerm]) => {
+      if (!$searchTerm) return $historyEntries
+
+      console.log('searching for:', $searchTerm)
+      console.log('entries:', $historyEntries)
+
+      const lowercaseSearch = $searchTerm.toLowerCase()
+      return $historyEntries.filter((entry) => {
+        const { entryResource, linkedResource } = entry
+        const { title, raw_url, app_id } = entryResource.parsedData || {}
+
+        return (
+          title?.toLowerCase().includes(lowercaseSearch) ||
+          raw_url?.toLowerCase().includes(lowercaseSearch)
+        )
+      })
+    }
+  )
+
+  let containerHeight = 0
+  let scrollTop = 0
+  let itemHeight = 89.5
+  let itemMargin = 10
+  let overscan = 5
+  let containerElement: HTMLElement
+
+  $: visibleItemCount = Math.ceil(containerHeight / (itemHeight + itemMargin)) + overscan * 2
+  $: startIndex = Math.max(0, Math.floor(scrollTop / (itemHeight + itemMargin)) - overscan)
+  $: endIndex = Math.min(startIndex + visibleItemCount, $filteredEntries.length)
+  $: visibleItems = $filteredEntries.slice(startIndex, endIndex)
+  $: totalHeight = $filteredEntries.length * (itemHeight + itemMargin) - itemMargin
 
   $: if (active) {
     fetchHistory()
@@ -91,7 +122,7 @@
       log.debug('Clearing history...')
       await Promise.all($historyEntries.map((entry) => resourceManager.deleteResource(entry.id)))
 
-      $historyEntries = []
+      historyEntries.set([])
       toast.success('History cleared!')
     } catch (error) {
       log.error('Failed to clear history:', error)
@@ -110,9 +141,36 @@
     }
   }
 
+  const handleScroll = () => {
+    if (containerElement) {
+      scrollTop = containerElement.scrollTop
+    }
+  }
+
+  const updateContainerHeight = () => {
+    if (containerElement) {
+      containerHeight = containerElement.clientHeight
+    }
+  }
+
   onMount(() => {
     fetchHistory()
+    updateContainerHeight()
+    window.addEventListener('resize', updateContainerHeight)
+    return () => window.removeEventListener('resize', updateContainerHeight)
   })
+
+  afterUpdate(() => {
+    updateContainerHeight()
+  })
+
+  // Reset scroll position when search term changes
+  $: if ($searchTerm) {
+    scrollTop = 0
+    if (containerElement) {
+      containerElement.scrollTop = 0
+    }
+  }
 </script>
 
 {#if $showResourceDetails && $resourceDetailsModalSelected}
@@ -123,7 +181,6 @@
     on:new-tab
   />
 {/if}
-
 <div class="wrapper">
   <div class="content">
     <div class="header">
@@ -137,29 +194,53 @@
         <h1>History</h1>
       </div>
 
+      <!-- <input
+        type="text"
+        placeholder="Search history..."
+        bind:value={$searchTerm}
+        class="search-input"
+      /> -->
+
       <button on:click={handleClearHistory}>Clear</button>
     </div>
 
-    <div class="items">
-      {#if $historyEntries.length > 0}
-        {#each $historyEntries as item (item.id)}
-          <BrowserHistoryEntry
-            entry={item}
-            on:open={() => openResourceDetailsModal(item.id)}
-            on:delete={() => deleteEntry(item.id)}
-            on:new-tab
-          />
-        {/each}
+    <div class="overflow-y-scroll p-4" bind:this={containerElement} on:scroll={handleScroll}>
+      {#if $filteredEntries.length > 0}
+        <div style="height: {totalHeight}px; position: relative">
+          {#each visibleItems as item (item.id)}
+            <div
+              style="position: absolute; top: {(startIndex + visibleItems.indexOf(item)) *
+                (itemHeight + itemMargin)}px; left: 0; right: 0; margin-bottom: {itemMargin}px;"
+            >
+              <BrowserHistoryEntry
+                entry={item}
+                on:open={() => openResourceDetailsModal(item.id)}
+                on:delete={() => deleteEntry(item.id)}
+                on:new-tab
+              />
+            </div>
+          {/each}
+        </div>
       {:else if $loading}
-        <div class="loading">Loading…</div>
+        <div class="loading flex flex-col">
+          {#each new Array(10) as _, i}
+            <div
+              class="animate-pulse"
+              style="width: 100%; height: {itemHeight}px; background-color: #ecebe5c6; border-radius: 12px;"
+            />
+          {/each}
+        </div>
       {:else}
-        <div class="empty">No history entries</div>
+        <div class="empty">No history entries found</div>
       {/if}
     </div>
   </div>
 </div>
 
 <style lang="scss">
+  .items > div > div {
+    margin-bottom: 10px; /* Adds space between items */
+  }
   .wrapper {
     width: 100%;
     height: 100%;
@@ -194,17 +275,6 @@
       color: #7d7448;
       cursor: pointer;
     }
-  }
-
-  .items {
-    flex: 1;
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding-bottom: 4rem;
-    padding: 1rem;
-    margin: -1rem;
   }
 
   .title {

@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { writable, get, type Unsubscriber } from 'svelte/store'
+  import { writable, get, type Unsubscriber, derived } from 'svelte/store'
   import { createEventDispatcher, onMount } from 'svelte'
   import { fly } from 'svelte/transition'
 
@@ -18,9 +18,11 @@
   import type { Tab } from './types'
   import { parseStringIntoBrowserLocation, parseStringIntoUrl } from '../../utils/url'
   import log from '../../utils/log'
+  import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
 
   export let historyEntriesManager: HistoryEntriesManager
   export let spaces: Writable<Space[]>
+  export let active = true
 
   const dispatch = createEventDispatcher<{
     navigate: string
@@ -33,6 +35,8 @@
   const currentCardHistory = writable([])
   const deactivateToolbar = writable(false)
   const showAllSpaces = writable(false)
+  const showResourceDetails = writable(false)
+  const resourceDetailsModalSelected = writable<string | null>(null)
 
   let value: string = ''
   let editing = false
@@ -43,8 +47,29 @@
   $: if (inputEl) {
     log.debug('inputEl', inputEl)
     setTimeout(() => {
-      inputEl.focus()
+      focusInput()
     }, 200)
+  }
+
+  const focusInput = () => {
+    inputEl.focus()
+  }
+
+  const isResourceDetailsModalOpen = derived(
+    [showResourceDetails, resourceDetailsModalSelected],
+    ([$showResourceDetails, $resourceDetailsModalSelected]) => {
+      return $showResourceDetails && !!$resourceDetailsModalSelected
+    }
+  )
+
+  const openResourceDetailsModal = (resourceId: string) => {
+    resourceDetailsModalSelected.set(resourceId)
+    showResourceDetails.set(true)
+  }
+
+  const closeResourceDetailsModal = () => {
+    showResourceDetails.set(false)
+    resourceDetailsModalSelected.set(null)
   }
 
   async function updateSites() {
@@ -127,7 +152,24 @@
       if (unsubscribeHistoryEntries) unsubscribeHistoryEntries()
     }
   })
+
+  $: {
+    if (inputEl) {
+      if (active === true) {
+        inputEl.focus()
+      } else inputEl.blur()
+    }
+  }
 </script>
+
+{#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
+  <OasisResourceModalWrapper
+    resourceId={$resourceDetailsModalSelected}
+    {active}
+    on:close={() => closeResourceDetailsModal()}
+    on:new-tab
+  />
+{/if}
 
 {#if showBrowserHomescreen}
   <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -139,7 +181,7 @@
   >
     {#if !$showAllSpaces}
       <div class="top-bar">
-        <button class="show-all-spaces" on:click={showAllSpaces.set(!$showAllSpaces)}>
+        <button class="show-all-spaces" on:click={() => showAllSpaces.set(!$showAllSpaces)}>
           <Icon name="leave" color="#7d7448" />
           <span class="label">All Spaces</span>
         </button>
@@ -197,8 +239,8 @@
     {:else}
       <SpacesView
         onBack={() => showAllSpaces.set(false)}
-        on:createTab={handleCreateTabFromSpacesView}
-        {spaces}
+        on:createTab={handleCreateTabFromOasisSidebar}
+        on:open-resource={(e) => openResourceDetailsModal(e.detail)}
       />
     {/if}
   </div>
@@ -221,6 +263,7 @@
     z-index: 10;
     .show-all-spaces {
       display: flex;
+      align-items: center;
       gap: 0.75rem;
       padding: 1rem 1.125rem;
       border: 0;

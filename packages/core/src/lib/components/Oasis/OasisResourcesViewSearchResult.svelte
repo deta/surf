@@ -30,6 +30,7 @@
   })
 
   const handleLoadChunk = (e: CustomEvent) => {
+    console.log('bottom reached', $resources.length, $renderContents.length)
     const CHUNK_SIZE = e.detail
 
     if ($resources.length <= $renderContents.length) {
@@ -37,18 +38,18 @@
     }
 
     renderLimit.update((limit) => limit + CHUNK_SIZE)
-    console.log('bottom reached', $resources.length, $renderContents.length)
   }
 </script>
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    {#key searchResults || scrollElement}
+    {#key scrollElement}
       <Masonry
         renderContents={$renderContents.map((item) => item.id)}
         on:load-more={handleLoadChunk}
         on:open
         on:remove
+        id={new Date()}
         >{$renderContents.length}
       </Masonry>
     {/key}

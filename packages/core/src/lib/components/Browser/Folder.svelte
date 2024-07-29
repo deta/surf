@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
   import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
-  import { ResourceManager } from '../../service/resources'
-  import { Telemetry } from '../../service/telemetry'
+  import { Resource, ResourceManager, useResourceManager } from '../../service/resources'
   import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
-  import type { Space, SpaceData, SFFSResourceTag } from '../../types'
+  import type { Space, SpaceData } from '../../types'
   import { ResourceTagsBuiltInKeys, ResourceTypes } from '../../types'
   import { useLogScope } from '../../utils/log'
   import { useOasis } from '../../service/oasis'
   import { processDrop } from '../../service/mediaImporter'
-  import Archive from '@horizon/icons/src/lib/Icons/Archive.svelte'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import { useToasts } from '../../service/toast'
+  import { hover, tooltip } from '../../utils/directives'
+  import { fade } from 'svelte/transition'
 
   export let folder: Space
   export let selected: boolean
@@ -24,58 +24,46 @@
     select: void
     'add-folder-to-tabs': void
     'update-data': Partial<SpaceData>
+    'open-resource': string
   }>()
   const oasis = useOasis()
+  const toast = useToasts()
+  const resourceManager = useResourceManager()
+
+  const hovered = writable(false)
+  const draggedOver = writable(false)
 
   let folderDetails = folder.name
   let inputWidth = `${folderDetails.folderName.length}ch`
-
-  const toast = useToasts()
-
   let processing = false
-
-  let telemetryAPIKey = ''
-  let telemetryActive = false
-
   let inputElement: HTMLInputElement
 
-  if (import.meta.env.PROD) {
-    telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
-    telemetryActive = true
-  }
-
-  const telemetry = new Telemetry({
-    apiKey: telemetryAPIKey,
-    active: telemetryActive,
-    trackHostnames: false
-  })
-
-  const draggedOver = writable(false)
-  const resourceManager = new ResourceManager(telemetry)
-
   const getPreviewResources = async (numberOfLatestResourcesToFetch: number) => {
-    let result
+    let result: Resource[]
     if (folder.id == 'all') {
-      result = await resourceManager.searchResources('', [
+      result = await resourceManager.listResourcesByTags([
         ResourceManager.SearchTagDeleted(false),
         ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
         ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
         ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
       ])
-
-      result.reverse()
     } else {
-      result = await resourceManager.getSpaceContents(folder.id)
-    }
-    console.log('rrrr', result)
-    const resources = await Promise.all(
-      result
-        .map((item) => resourceManager.getResource(folder.id == 'all' ? item.id : item.resource_id))
-        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-        .slice(0, numberOfLatestResourcesToFetch)
-    )
+      const contents = await resourceManager.getSpaceContents(folder.id)
+      const resources = await Promise.all(
+        contents
+          .slice(0, numberOfLatestResourcesToFetch)
+          .map((item) => resourceManager.getResource(item.resource_id))
+      )
 
-    return resources
+      result = resources.filter((x) => x != null)
+    }
+
+    log.debug('Resources:', result)
+
+    return result
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, numberOfLatestResourcesToFetch)
   }
 
   const handleClick = () => {
@@ -180,6 +168,12 @@
     }
   }
 
+  const openResource = (id: string) => {
+    log.debug('Resource clicked', id)
+
+    dispatch('open-resource', id)
+  }
+
   // onMount(() => {
   //   if (folder.id === activeFolderId) {
   //     const inputElement = document.getElementById(`folder-input-${folder.id}`) as HTMLInputElement
@@ -206,14 +200,40 @@
   on:drop={handleDrop}
   aria-hidden="true"
 >
-  <div class="folder {selected ? 'active' : ''}" on:click={handleClick} aria-hidden="true">
+  <div
+    class="folder {selected ? 'active' : ''}"
+    on:click={handleClick}
+    aria-hidden="true"
+    use:hover={hovered}
+  >
     <div class="previews">
-      {#await getPreviewResources(6) then resources}
-        {#each resources as resource}
-          <div class="folder-preview" style="transform: rotate({getRandomRotation()});">
-            <ResourcePreviewClean {resource} showTitles={false} interactive={false} />
+      {#await getPreviewResources(6)}
+        <div class="folder-empty-wrapper">
+          <div class="folder-empty">
+            <Icon name="spinner" />
+            <!-- <div>Empty Space, add it with life!</div> -->
           </div>
-        {/each}
+        </div>
+      {:then resources}
+        {#if resources.length > 0}
+          {#each resources as resource}
+            <div class="folder-preview" style="transform: rotate({getRandomRotation()});">
+              <ResourcePreviewClean
+                {resource}
+                showTitles={false}
+                showActions={false}
+                on:click={() => openResource(resource.id)}
+              />
+            </div>
+          {/each}
+        {:else}
+          <div class="folder-empty-wrapper">
+            <div class="folder-empty">
+              <Icon name="leave" />
+              <!-- <div>Empty Space, add it with life!</div> -->
+            </div>
+          </div>
+        {/if}
       {/await}
     </div>
     <div class="folder-label">
@@ -231,15 +251,27 @@
           on:keydown={handleKeyDown}
         />
       </div>
-      <div class="actions">
-        <button on:click|stopPropagation={handleDelete} class="close">
-          <Icon name="trash" size="20px" />
-        </button>
 
-        <button on:click|stopPropagation={handleAddSpaceToTabs} class="close">
-          <Icon name={!folder.name.showInSidebar ? 'add' : 'check'} size="20px" />
-        </button>
-      </div>
+      {#if $hovered}
+        <div class="actions" in:fade={{ duration: 50 }} out:fade={{ duration: 100 }}>
+          <button
+            on:click|stopPropagation={handleAddSpaceToTabs}
+            disabled={folder.name.showInSidebar}
+            class="close"
+            use:tooltip={folder.name.showInSidebar ? 'Already open as Tab' : 'Open as Tab'}
+          >
+            <Icon name={folder.name.showInSidebar ? 'check' : 'list-add'} size="20px" />
+          </button>
+
+          <button
+            on:click|stopPropagation={handleDelete}
+            class="close"
+            use:tooltip={'Delete Space'}
+          >
+            <Icon name="trash" size="20px" />
+          </button>
+        </div>
+      {/if}
     </div>
   </div>
 </div>
@@ -322,19 +354,47 @@
       transform: rotate(0deg) scale(1.025) translateY(0.025rem) !important;
     }
 
+    .folder-empty-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+
+      .folder-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        color: rgb(125, 147, 187);
+        font-size: 1rem;
+        font-weight: 500;
+        letter-spacing: 0.0025em;
+        font-smooth: always;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    }
+
     .folder-label {
       display: flex;
+      align-items: center;
       justify-content: space-between;
+      gap: 0.5rem;
       width: 100%;
+
       .actions {
         display: flex;
         gap: 0.75rem;
+        flex-shrink: 0;
       }
 
       .folder-leading {
         display: flex;
+        align-items: center;
         gap: 1rem;
-        width: 100%;
+        flex: 1;
+        overflow: hidden;
       }
 
       .folder-input {
@@ -351,6 +411,11 @@
         width: 100%;
         outline: none;
         width: fit-content;
+
+        // truncate text
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .folder-input:focus {
@@ -365,11 +430,19 @@
         border: none;
         padding: 0;
         margin: 0;
-        opacity: 0;
         height: min-content;
         background: none;
-        color: #a9a9a9;
+        color: #5c77a8;
         cursor: pointer;
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: #244581;
+        }
+
+        &:disabled {
+          color: #7d96c5;
+        }
       }
     }
   }
@@ -378,16 +451,6 @@
     color: #585130;
     z-index: 1000;
     background-color: #fff;
-  }
-
-  .folder:hover {
-    .close {
-      opacity: 1;
-    }
-
-    .folder-input {
-      max-width: 12rem;
-    }
   }
 
   .draggedOver {

@@ -765,8 +765,21 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
     startResourcePicker()
   }
 
-  if (event.key === '+' || (event.key === '-' && (event.ctrlKey || event.metaKey))) {
+  if ((event.key === '+' || event.key === '-') && (event.ctrlKey || event.metaKey)) {
     event.preventDefault()
+  }
+
+  if (
+    (event.ctrlKey || event.metaKey) &&
+    (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+  ) {
+    const inputFocused =
+      document.activeElement?.tagName === 'INPUT' ||
+      document.activeElement?.tagName === 'TEXTAREA' ||
+      (document.activeElement as HTMLElement)?.isContentEditable
+    if (inputFocused) {
+      return
+    }
   }
 
   sendPageEvent(WebViewEventSendNames.KeyDown, {

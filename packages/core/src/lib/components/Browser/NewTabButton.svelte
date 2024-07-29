@@ -32,9 +32,9 @@
     const hasEverythingSpace = spaces.some((space) => space.id === everythingSpace.id)
     const everything = hasEverythingSpace ? spaces : [everythingSpace, ...spaces]
     return everything.filter((space) => {
-      if (space.name.showInSidebar) {
-        return false
-      }
+      // if (space.name.showInSidebar) {
+      //   return false
+      // }
 
       if (searchQuery) {
         return space.name.folderName.toLowerCase().includes(searchQuery.toLowerCase())

@@ -23,12 +23,11 @@
   const renderLimit = writable(CHUNK_SIZE)
 
   const renderContents = derived([resourceIds, renderLimit], ([resourceIds, renderLimit]) => {
-    console.log('vvv-res ids', resourceIds)
     return resourceIds.slice(0, renderLimit)
   })
 
   const handleLoadChunk = () => {
-    log.debug('Load more chunk...')
+    log.debug('Load more chunk...', $renderLimit, $resourceIds.length)
     if ($resourceIds.length <= $renderContents.length) {
       return
     }
@@ -40,7 +39,13 @@
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
     {#key scrollElement}
-      <Masonry renderContents={$renderContents} on:load-more={handleLoadChunk} on:open on:remove />
+      <Masonry
+        renderContents={$renderContents}
+        on:load-more={handleLoadChunk}
+        on:open
+        on:remove
+        id={new Date()}
+      />
     {/key}
   </div>
 </div>

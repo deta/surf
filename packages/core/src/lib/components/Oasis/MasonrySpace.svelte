@@ -3,6 +3,7 @@
   import { onMount, onDestroy, tick, createEventDispatcher } from 'svelte'
 
   export let renderContents
+  export let id
   export let items = []
 
   let prevItemLength = 0
@@ -51,7 +52,7 @@
       setTimeout(() => requestAnimationFrame(processUpdateQueue), delay)
     } else {
       isUpdating = false
-      const gridContainer = document.getElementById('grid')
+      const gridContainer = document.getElementById(id)
       updateVisibleItems()
       await tick()
       observeItems(gridContainer)
@@ -464,7 +465,7 @@
   }
 
   onMount(async () => {
-    const gridContainer = document.getElementById('grid')
+    const gridContainer = document.getElementById(id)
     masonryGrid = new MasonryGrid(gridContainer)
 
     gridContainer?.addEventListener('scroll', updateVisibleItems)
@@ -475,7 +476,7 @@
   })
 
   onDestroy(() => {
-    const gridContainer = document.getElementById('grid')
+    const gridContainer = document.getElementById(id)
     if (gridContainer) {
       gridContainer.removeEventListener('scroll', updateVisibleItems)
     }
@@ -504,7 +505,7 @@
   }
 
   function updateVisibleItems() {
-    const gridContainer = document.getElementById('grid')
+    const gridContainer = document.getElementById(id)
     const scrollTop = gridContainer.scrollTop
     const viewportHeight = gridContainer.clientHeight
 
@@ -521,7 +522,12 @@
       }
     })
 
-    if (isBottomReached()) {
+    const now = new Date().getTime()
+    const lastUpdateTime = new Date(id).getTime()
+    const timeDifference = now - lastUpdateTime
+
+    if (timeDifference > 2000 && isBottomReached()) {
+      // this is where it breaks (isBottomReached() is always false after reinit)
       handleBottomReached()
     }
   }
@@ -532,10 +538,13 @@
         ? 3 * window.innerHeight * (scrollVelocity.velocity / 4)
         : 3 * window.innerHeight
 
-    const gridContainer = document.getElementById('grid')
+    const gridContainer = document.getElementById(id)
+    console.log('bbb- Update Visible Items -bbb', gridContainer.scrollHeight)
+
     if (!gridContainer) {
       throw new Error('[MasonrySpace:isBottomReached()] Grid Container not found')
     }
+
     return (
       gridContainer.scrollHeight - gridContainer.scrollTop <= gridContainer.clientHeight + BUFFER
     )
@@ -543,6 +552,7 @@
 
   function handleBottomReached() {
     const itemsToLoad = calculateItemsToLoad(scrollVelocity.velocity)
+    console.log('vvv- Bottom Reached -vvv')
     dispatch('load-more', itemsToLoad)
   }
 
@@ -559,7 +569,7 @@
   }
 
   export function updateGrid(newData) {
-    const gridContainer = document.getElementById('grid')
+    const gridContainer = document.getElementById(id)
 
     const existingIds = new Set(items.map((item) => item.id))
 
@@ -575,7 +585,7 @@
 
 <svelte:window
   on:wheel={(event) => {
-    const gridContainer = document.getElementById('grid')
+    const gridContainer = document.getElementById(id)
     const newScrollTop = gridContainer.scrollTop
     const newTimestamp = event.timeStamp
 
@@ -593,7 +603,7 @@
   }}
 />
 
-<div id="grid" class="masonry-grid">
+<div {id} class="masonry-grid">
   <div class="debug">
     Total items: {items.length} | Visible items: {gridItems.filter((item) => item.visible).length}
     <button on:click={() => navigator.clipboard.writeText(JSON.stringify(renderContents[0]))}>
