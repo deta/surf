@@ -24,6 +24,7 @@
   export let paneItem: PaneAPI | undefined = undefined
   export let rightPaneItem: PaneAPI | undefined = undefined
   export let rightSidebarHidden: boolean = true
+  export let leftSidebarHidden: boolean = false
 
   export const expandLeft = () => {
     if (!$paneStore) return
@@ -149,8 +150,9 @@
     const newPercentageSidebar = pxToPercentage(targetSidebar, horizontalTabs ? 'height' : 'width')
     const newPercentageRightSidebar = pxToPercentage(targetRightSidebar, 'width')
 
-    if (newPercentageSidebar !== 0) $paneStore?.resize(newPercentageSidebar)
-    if (newPercentageRightSidebar !== 0) $rightPaneStore?.resize(newPercentageRightSidebar)
+    if (newPercentageSidebar !== 0 && !leftSidebarHidden) $paneStore?.resize(newPercentageSidebar)
+    if (newPercentageRightSidebar !== 0 && !rightSidebarHidden)
+      $rightPaneStore?.resize(newPercentageRightSidebar)
   }
 
   onMount(() => {
