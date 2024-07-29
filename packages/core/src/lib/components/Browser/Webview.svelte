@@ -79,9 +79,9 @@
   const addHistoryEntry = async (newUrl: string) => {
     try {
       log.debug('Adding history entry', newUrl)
-      const oldUrl = $currentHistoryEntry?.url || src
+      const oldUrl = $currentHistoryEntry?.url
 
-      if (oldUrl === newUrl) {
+      if (oldUrl && oldUrl === newUrl) {
         log.debug('Skipping history entry for same URL')
         return
       }
@@ -104,7 +104,7 @@
       })
 
       currentHistoryIndex.update((n) => n + 1)
-      dispatch('navigation', { url: newUrl, oldUrl: oldUrl })
+      dispatch('navigation', { url: newUrl, oldUrl: oldUrl || src })
     } catch (error) {
       log.error('Failed to add history entry', error)
     } finally {
@@ -269,6 +269,7 @@
     webview.addEventListener('did-finish-load', () => {
       dispatch('did-finish-load')
       didFinishLoad.set(true)
+      handleNavigation(webview.getURL())
     })
 
     /*
