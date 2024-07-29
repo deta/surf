@@ -110,8 +110,8 @@
   let showTabSearch = false
   let showLeftSidebar = true
   let showRightSidebar = false
-  let leftPane: PaneAPI | undefined = undefined
   let rightPane: PaneAPI | undefined = undefined
+  let sidebarComponent: SidebarPane | null = null
   let annotationsSidebar: AnnotationsSidebar
   let isFirstButtonVisible = true
   let newTabButton: Element
@@ -678,8 +678,8 @@
   let horizontalTabs = localStorage.getItem('horizontalTabs') === 'true' || false
 
   const handleCollapseRight = () => {
-    if (rightPane) {
-      rightPane.collapse()
+    if (sidebarComponent) {
+      sidebarComponent.collapseRight()
     }
 
     if (showRightSidebar) {
@@ -692,8 +692,8 @@
   }
 
   const handleExpandRight = () => {
-    if (rightPane) {
-      rightPane.expand()
+    if (sidebarComponent) {
+      sidebarComponent.expandRight()
     }
   }
 
@@ -712,15 +712,17 @@
   }
 
   const handleCollapse = () => {
-    if (leftPane) {
-      leftPane.collapse()
+    log.debug('Collapsing sidebar')
+    if (sidebarComponent) {
+      sidebarComponent.collapseLeft()
       changeTraficLightsVisibility(false)
     }
   }
 
   const handleExpand = () => {
-    if (leftPane) {
-      leftPane.expand()
+    log.debug('Expanding sidebar')
+    if (sidebarComponent) {
+      sidebarComponent.expandLeft()
       changeTraficLightsVisibility(true)
     }
   }
@@ -738,10 +740,6 @@
       handleExpand()
       showLeftSidebar = true
     }
-  }
-
-  const handlePaneUpdate = (event: CustomEvent<PaneAPI>) => {
-    leftPane = event.detail
   }
 
   // fix the syntax error
@@ -2306,8 +2304,9 @@
 
   <SidebarPane
     {horizontalTabs}
-    bind:paneItem={leftPane}
+    bind:this={sidebarComponent}
     on:collapsed-left-sidebar={() => {
+      log.debug('collapsed left sidebar')
       showLeftSidebar = false
       changeTraficLightsVisibility(false)
     }}
@@ -2315,7 +2314,6 @@
       showLeftSidebar = true
       changeTraficLightsVisibility(true)
     }}
-    on:pane-update={handlePaneUpdate}
     on:collapsed-right-sidebar={() => {
       showRightSidebar = false
     }}
@@ -2324,10 +2322,11 @@
     }}
     bind:rightPaneItem={rightPane}
     on:pane-update-right={handleRightPaneUpdate}
+    rightSidebarHidden={!showRightSidebar}
   >
     <div
       slot="sidebar"
-      class="flex-grow {horizontalTabs ? 'w-full h-full' : 'h-full'}"
+      class="flex-grow {horizontalTabs ? 'w-full h-full py-1' : 'h-full'}"
       class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
       style="z-index: 5000;"
     >
@@ -2366,7 +2365,7 @@
                 <div
                   class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
                 >
-                  Toggle Sidebar (⌘ + H)
+                  Toggle Sidebar (⌘ + B)
                 </div>
               </Tooltip.Content>
             </Tooltip.Root>
