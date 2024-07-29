@@ -1,4 +1,4 @@
-<!-- <svelte:options immutable={true} /> -->
+<svelte:options immutable />
 
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'

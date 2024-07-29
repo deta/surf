@@ -559,8 +559,8 @@
 
   function calculateItemsToLoad(velocity) {
     const MIN_ITEMS = 1
-    const MAX_ITEMS = 20
-    const VELOCITY_FACTOR = 2
+    const MAX_ITEMS = 40
+    const VELOCITY_FACTOR = 4
 
     // Logarithmic function to create a curve
     let items = Math.round(Math.log(velocity * VELOCITY_FACTOR + 1) * 10)
