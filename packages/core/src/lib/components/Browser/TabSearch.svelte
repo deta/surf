@@ -174,10 +174,11 @@
   const fetchGoogleSuggestions = debounce(async (query: string) => {
     if (query.length > 2) {
       try {
-        const response = await fetch(
+        // @ts-ignore
+        const data = await window.api.fetchJSON(
           `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`
         )
-        const data = await response.json()
+        log.debug('Google suggestions:', data)
         googleSuggestions = data[1].slice(0, 5)
         updateFilteredItems()
       } catch (error) {
