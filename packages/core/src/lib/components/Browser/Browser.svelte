@@ -2323,6 +2323,7 @@
     bind:rightPaneItem={rightPane}
     on:pane-update-right={handleRightPaneUpdate}
     rightSidebarHidden={!showRightSidebar}
+    leftSidebarHidden={!showLeftSidebar}
   >
     <div
       slot="sidebar"
