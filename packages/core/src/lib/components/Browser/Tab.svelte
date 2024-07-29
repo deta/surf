@@ -126,13 +126,14 @@
     fetchSpace(tab.spaceId)
   }
 
-  $: sanitizedTitle =
-    tab.type !== 'space'
+  $: sanitizedTitle = tab.title
+    ? tab.type !== 'space'
       ? tab.title
           .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
           .replace(/[\/\\]/g, '–')
           .replace(/^\w/, (c) => c.toUpperCase())
       : tab.title
+    : ''
 
   const handleBookmark = () => {
     dispatch('bookmark')

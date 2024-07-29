@@ -17,9 +17,9 @@
 <div class="main relative">
   {#if showDragBar}
     <div class="drag-bar top"></div>
-    <div class="drag-bar bottom"></div>
-    <div class="drag-bar left"></div>
-    <div class="drag-bar right"></div>
+    <!-- <div class="drag-bar bottom"></div> -->
+    <!-- <div class="drag-bar left"></div>
+    <div class="drag-bar right"></div> -->
   {/if}
   <img
     class="w-screen h-screen absolute object-cover opacity-60"

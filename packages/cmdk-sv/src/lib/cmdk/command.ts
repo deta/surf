@@ -444,9 +444,9 @@ export function createCommand(props: CommandProps) {
 		if (e.metaKey) {
 			last();
 		} else if (e.altKey) {
-			updateSelectedToGroup(-1);
+			updateSelectedToGroup(1);
 		} else {
-			updateSelectedByChange(-1);
+			updateSelectedByChange(1);
 		}
 	}
 
@@ -456,9 +456,9 @@ export function createCommand(props: CommandProps) {
 		if (e.metaKey) {
 			updateSelectedToIndex(0);
 		} else if (e.altKey) {
-			updateSelectedToGroup(1);
+			updateSelectedToGroup(-1);
 		} else {
-			updateSelectedByChange(1);
+			updateSelectedByChange(-1);
 		}
 	}
 

@@ -4,6 +4,7 @@
 node_modules
 .pnp
 .pnp.js
+packages/core/src/output.css
 
 # Local env files
 .env

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fly } from 'svelte/transition'
+  import { truncateURL } from '../../utils/url'
 
   export let show: boolean
   export let url: string
@@ -9,38 +10,6 @@
   let cachedUrl = ''
 
   $: shortenedUrl = truncateURL(url || cachedUrl)
-
-  // truncate the URL path and query params so the beggining and end of the URL are always visible, max length is 50. Make sure the full hostname is always visible
-  const truncateURL = (url: string) => {
-    if (!url) return ''
-
-    const { hostname, pathname, search, protocol } = new URL(url)
-    const maxLength = 75
-
-    let fullPath = pathname + search
-
-    const decodedPath = decodeURIComponent(fullPath)
-    const internationalPath = new Intl.Segmenter().segment(decodedPath)
-    fullPath = Array.from(internationalPath, (segment) => segment.segment).join('')
-
-    if (fullPath.length <= maxLength) {
-      if (protocol === 'https:') {
-        return hostname + fullPath
-      } else {
-        return `http://${hostname}${fullPath}`
-      }
-    }
-
-    const start = fullPath.slice(0, maxLength / 2)
-    const end = fullPath.slice(-maxLength / 2)
-
-    // if the URL is https, we don't need to show the protocol
-    if (protocol === 'https:') {
-      return `${hostname}${start}...${end}`
-    } else {
-      return `http://${hostname}${start}...${end}`
-    }
-  }
 
   const showAfterDelay = () => {
     cachedUrl = url
