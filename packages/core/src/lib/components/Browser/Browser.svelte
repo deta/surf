@@ -2220,7 +2220,7 @@
     {historyEntriesManager}
     bind:showTabSearch
     activeTabs={$activeTabs}
-    on:activateTab={handleTabSelect}
+    on:activate-tab={handleTabSelect}
     on:close-active-tab={closeActiveTab}
     on:bookmark={handleBookmark}
     on:toggle-sidebar={() => (showTabs = !showTabs)}
@@ -2236,7 +2236,7 @@
       $activeBrowserTab?.resetZoom()
     }}
     on:open-url={(e) => {
-      createPageTab(e.detail.url, true)
+      createPageTab(e.detail, true)
     }}
   />
 
