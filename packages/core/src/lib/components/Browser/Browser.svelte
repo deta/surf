@@ -2235,6 +2235,9 @@
     on:reset-zoom={() => {
       $activeBrowserTab?.resetZoom()
     }}
+    on:open-url={(e) => {
+      createPageTab(e.detail.url, true)
+    }}
   />
 
   <div class="relative h-screen flex {horizontalTabs ? 'flex-col' : 'flex-row'}">

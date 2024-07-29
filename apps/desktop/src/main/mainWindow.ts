@@ -105,6 +105,19 @@ export function createWindow() {
     getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: false })
   })
 
+  mainWindow.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+    callback({ requestHeaders: { Origin: '*', ...details.requestHeaders } })
+  })
+
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        'Access-Control-Allow-Origin': ['*'],
+        ...details.responseHeaders
+      }
+    })
+  })
+
   mainWindow.webContents.on('did-attach-webview', (_, contents) => {
     contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
       mainWindow?.webContents.send('new-window-request', {
