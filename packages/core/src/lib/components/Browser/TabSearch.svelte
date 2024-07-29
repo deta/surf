@@ -43,7 +43,8 @@
   const fuseOptions = {
     keys: [
       { name: 'label', weight: 0.3 },
-      { name: 'value', weight: 0.4 }
+      { name: 'value', weight: 0.4 },
+      { name: 'type', weight: 0.1 }
     ],
     threshold: 0.4,
     includeScore: true
@@ -225,10 +226,10 @@
     { id: 'bookmark', label: 'Toggle Bookmark', shortcut: '⌘D', type: 'command', icon: 'bookmark' },
     {
       id: 'toggle-sidebar',
-      label: 'Toggle Tabs',
+      label: 'Toggle Sidebar',
       shortcut: '⌘B',
       type: 'command',
-      icon: 'sidebar'
+      icon: 'sidebar.left'
     },
     { id: 'reload-window', label: 'Reload', shortcut: '⌘R', type: 'command', icon: 'reload' },
     {

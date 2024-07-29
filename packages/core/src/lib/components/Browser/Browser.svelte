@@ -744,11 +744,9 @@
 
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
-    log.debug('Keydown', e.key, e.metaKey, e.ctrlKey, e.shiftKey)
     if (e.key === 'Escape' && rightPane?.isExpanded()) {
       handleCollapseRight()
-    }
-    if (e.key === 'Enter' && addressBarFocus) {
+    } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       activeTabComponent?.blur()
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
@@ -2292,7 +2290,7 @@
 
 <ToastsProvider service={toasts} />
 
-<div class="antialiased w-screen h-screen will-change-auto transform-gpu">
+<div class="antialiased w-screen h-screen will-change-auto transform-gpu relative">
   <TabSearch
     {historyEntriesManager}
     bind:showTabSearch
@@ -2300,7 +2298,7 @@
     on:activate-tab={handleTabSelect}
     on:close-active-tab={closeActiveTab}
     on:bookmark={handleBookmark}
-    on:toggle-sidebar={() => (showTabs = !showTabs)}
+    on:toggle-sidebar={() => handleSidebarchange()}
     on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
     on:reload-window={() => $activeBrowserTab?.reload()}
     on:zoom={() => {
