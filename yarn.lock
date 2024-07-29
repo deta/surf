@@ -7622,6 +7622,13 @@ p-try@^2.0.0:
   resolved "https://registry.yarnpkg.com/p-try/-/p-try-2.2.0.tgz#cb2868540e313d61de58fafbe35ce9004d5540e6"
   integrity sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==
 
+paneforge@^0.0.5:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/paneforge/-/paneforge-0.0.5.tgz#e25fa90f29b687b643f522e9fe34e0e63fc9a83c"
+  integrity sha512-98QHobaN/KeQhqqglbvjUmNCTRC4h4iqDxpSV8jCGhRLttgGlRXZNzWNr4Firni5rwasAZjOza0k/JdwppB/AQ==
+  dependencies:
+    nanoid "^5.0.4"
+
 param-case@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/param-case/-/param-case-2.1.1.tgz#df94fd8cf6531ecf75e6bef9a0858fbc72be2247"
