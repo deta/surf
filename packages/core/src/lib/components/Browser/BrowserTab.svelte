@@ -102,8 +102,6 @@
   const currentHistoryIndex = writable(tab.currentHistoryIndex)
   const appDetectionRunning = writable(false)
 
-  $: log.debug('url changed', url)
-
   // $: if (tab.historyStackIds) {
   //   let currentEntry = historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])
 
@@ -666,16 +664,11 @@
     }
   }
 
-  const unsubTracker: Unsubscriber[] = []
   onMount(() => {
     if (!webview) return
 
     historyStackIds.set(tab.historyStackIds)
     currentHistoryIndex.set(tab.currentHistoryIndex)
-  })
-
-  onDestroy(() => {
-    unsubTracker.forEach((u) => u())
   })
 </script>
 

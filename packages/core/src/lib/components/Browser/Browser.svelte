@@ -22,7 +22,9 @@
   import { Telemetry } from '../../service/telemetry'
   import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
   import { processDrop } from '../../service/mediaImporter'
+  import SidebarPane from './SidebarPane.svelte'
 
+  import { PaneGroup, Pane, PaneResizer, type PaneAPI } from 'paneforge'
   import { ResourceTag, createResourceManager } from '../../service/resources'
 
   import { type Space, type SpaceSource } from '../../types'
@@ -90,7 +92,7 @@
     resetPrompt,
     updatePrompt
   } from '../../service/prompts'
-  import { LinkPreview, Popover, Tooltip } from 'bits-ui'
+  import { LinkPreview, Tabs, Tooltip } from 'bits-ui'
   import BrowserHistory from './BrowserHistory.svelte'
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
@@ -107,7 +109,10 @@
   let observer: IntersectionObserver
   let addressBarFocus = false
   let showTabSearch = false
-  let showTabs = true
+  let showLeftSidebar = true
+  let showRightSidebar = false
+  let rightPane: PaneAPI | undefined = undefined
+  let sidebarComponent: SidebarPane | null = null
   let annotationsSidebar: AnnotationsSidebar
   let isFirstButtonVisible = true
   let newTabButton: Element
@@ -283,10 +288,28 @@
   }
 
   const makeTabActive = (tabId: string) => {
+    const browserTab = $browserTabs[tabId]
+
+    const activeElement = document.activeElement
+    if (activeElement && typeof activeElement.blur === 'function') {
+      activeElement.blur()
+    }
+
+    if (browserTab) {
+      if (typeof browserTab.focus === 'function') {
+        browserTab.focus()
+      }
+    }
+
     activeTabId.set(tabId)
     addToActiveTabsHistory(tabId)
-    activeAppId.set('')
-    showAppSidebar.set(false)
+    if ($showAppSidebar) {
+      showAppSidebar.set(false)
+      handleToggleAppSidebar()
+    } else {
+      activeAppId.set('')
+      showAppSidebar.set(false)
+    }
   }
 
   const makePreviousTabActive = (currentIndex?: number) => {
@@ -656,51 +679,107 @@
   const KEY_TIMEOUT = 120
   const MAX_TABS = 99
 
-  let horizontalTabs = false
+  let horizontalTabs = localStorage.getItem('horizontalTabs') === 'true' || false
+
+  const handleCollapseRight = () => {
+    if (sidebarComponent) {
+      sidebarComponent.collapseRight()
+    }
+
+    if (showRightSidebar) {
+      showRightSidebar = false
+    }
+
+    if ($activeTabMagic.showSidebar) {
+      handleToggleMagicSidebar()
+    }
+  }
+
+  const handleExpandRight = () => {
+    if (sidebarComponent) {
+      sidebarComponent.expandRight()
+    }
+  }
+
+  const handleRightPaneUpdate = (event: CustomEvent<PaneAPI>) => {
+    rightPane = event.detail
+  }
+
+  const handleRightSidebarChange = () => {
+    if (showRightSidebar) {
+      handleCollapseRight()
+      showRightSidebar = false
+    } else {
+      handleExpandRight()
+      showRightSidebar = true
+    }
+  }
+
+  const handleCollapse = () => {
+    log.debug('Collapsing sidebar')
+    if (sidebarComponent) {
+      sidebarComponent.collapseLeft()
+      changeTraficLightsVisibility(false)
+    }
+  }
+
+  const handleExpand = () => {
+    log.debug('Expanding sidebar')
+    if (sidebarComponent) {
+      sidebarComponent.expandLeft()
+      changeTraficLightsVisibility(true)
+    }
+  }
+
+  const changeTraficLightsVisibility = (visible: boolean) => {
+    // @ts-ignore
+    window.api.updateTrafficLightsVisibility(visible)
+  }
+
+  const handleSidebarchange = () => {
+    if (showLeftSidebar) {
+      handleCollapse()
+      showLeftSidebar = false
+    } else {
+      handleExpand()
+      showLeftSidebar = true
+    }
+  }
 
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' && addressBarFocus) {
+    if (e.key === 'Escape' && rightPane?.isExpanded()) {
+      handleCollapseRight()
+    } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       activeTabComponent?.blur()
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
       handleCopyLocation()
     } else if (isModKeyPressed(e) && e.key === 't') {
       debouncedCreateNewEmptyTab()
-    } else if (isModKeyAndKeyPressed(e, 'o')) {
-      toggleOasis()
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       closeActiveTab()
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark()
-    } else if (isModKeyAndKeyPressed(e, 'g')) {
-      sidebarTab.set('active')
-    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
+    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'b')) {
       // horizontalTabs = !horizontalTabs
       debounceToggleHorizontalTabs()
       log.debug('horizontalTabs', horizontalTabs)
-    } else if (isModKeyAndKeyPressed(e, 'h')) {
-      showTabs = !showTabs
-      log.debug('showTabs', showTabs)
-      // @ts-ignore
-      window.api.updateTrafficLightsVisibility(showTabs)
+    } else if (isModKeyAndKeyPressed(e, 'b')) {
+      handleSidebarchange()
     } else if (isModKeyAndKeyPressed(e, 'n')) {
-      handleNewHorizon()
+      // this creates a new electron window
     } else if (isModKeyAndKeyPressed(e, 'r')) {
       $activeBrowserTab?.reload()
-    } else if (isModKeyAndKeyPressed(e, 'i')) {
-      createImporterTab()
-    } else if (isModKeyAndKeyPressed(e, 'e')) {
-      createOasisDiscoveryTab()
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
       activeTabComponent?.editAddress()
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
-      showTabSearch = true
+      showTabSearch = !showTabSearch
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       createHistoryTab()
     } else if (isModKeyAndKeyPressed(e, '+')) {
@@ -745,6 +824,7 @@
   const handleToggleHorizontalTabs = () => {
     const t = document.startViewTransition(() => {
       horizontalTabs = !horizontalTabs
+          localStorage.setItem('horizontalTabs', horizontalTabs.toString())
     })
   }
 
@@ -1619,6 +1699,7 @@
         icon: '',
         spaceId: space.id,
         type: 'space',
+        colors: space.name.colors,
         index: 0,
         pinned: false,
         archived: false
@@ -1703,6 +1784,7 @@
           icon: '',
           spaceId: newSpace.id,
           type: 'space',
+          colors: newSpace.name.colors,
           index: 0,
           pinned: false,
           archived: false
@@ -1762,6 +1844,7 @@
         icon: '',
         spaceId: space.id,
         type: 'space',
+        colors: space.name.colors,
         index: 0,
         pinned: false,
         archived: false
@@ -1863,6 +1946,9 @@
     //   updateTab(tab.id, { index: index })
     // })
 
+    // if we have some magicTabs, make them unpinned
+    turnMagicTabsIntoUnpinned()
+
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
     log.debug('tabs', $tabs)
@@ -1871,6 +1957,51 @@
 
     // ON DESTROY!!
   })
+
+  const turnMagicTabsIntoUnpinned = async () => {
+    const magicTabsArray = get(magicTabs)
+    const unpinnedTabsArray = get(unpinnedTabs)
+
+    if (magicTabsArray.length === 0) {
+      // No magic tabs to process
+      return
+    }
+
+    // Turn magic tabs into unpinned tabs
+    magicTabsArray.forEach((magicTab) => {
+      magicTab.magic = false
+      unpinnedTabsArray.push(magicTab)
+    })
+
+    // Clear the magic tabs array
+    magicTabsArray.length = 0
+
+    // Update indices of unpinned tabs
+    const updatedUnpinnedTabs = unpinnedTabsArray.map((tab, index) => ({ ...tab, index }))
+
+    // Update the tabs store
+    tabs.update((x) => {
+      return x.map((tab) => {
+        const updatedTab = updatedUnpinnedTabs.find((t) => t.id === tab.id)
+        if (updatedTab) {
+          tab.index = updatedTab.index
+          tab.magic = false
+          tab.pinned = false
+        }
+        return tab
+      })
+    })
+
+    // Update the store with the changed tabs
+    await bulkUpdateTabsStore(
+      updatedUnpinnedTabs.map((tab) => ({
+        id: tab.id,
+        updates: { pinned: false, magic: false, index: tab.index }
+      }))
+    )
+
+    log.debug('Magic tabs turned into unpinned tabs successfully')
+  }
 
   const createChatResourceBookmark = async (tab: TabPage) => {
     let resource_id: string
@@ -2437,27 +2568,65 @@
 
 <ToastsProvider service={toasts} />
 
-<div class="antialiased w-screen h-screen will-change-auto transform-gpu">
-  {#if showTabSearch}
-    <TabSearch
-      onClose={() => {
-        showTabSearch = false
-      }}
-      activeTabs={$activeTabs}
-      on:activateTab={handleTabSelect}
-    />
-  {/if}
+<div class="antialiased w-screen h-screen will-change-auto transform-gpu relative">
+  <TabSearch
+    {historyEntriesManager}
+    bind:showTabSearch
+    activeTabs={$activeTabs}
+    on:activate-tab={handleTabSelect}
+    on:close-active-tab={closeActiveTab}
+    on:bookmark={handleBookmark}
+    on:toggle-sidebar={() => handleSidebarchange()}
+    on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
+    on:reload-window={() => $activeBrowserTab?.reload()}
+    on:zoom={() => {
+      $activeBrowserTab?.zoomIn()
+    }}
+    on:zoom-out={() => {
+      $activeBrowserTab?.zoomOut()
+    }}
+    on:reset-zoom={() => {
+      $activeBrowserTab?.resetZoom()
+    }}
+    on:open-url={(e) => {
+      createPageTab(e.detail, true)
+    }}
+    on:open-resource={(e) => {
+      openResource(e.detail)
+    }}
+  />
 
-  <div class="relative h-screen flex {horizontalTabs ? 'flex-col' : 'flex-row'}">
-    {#if showTabs}
-      <div
-        transition:slide={{ axis: !horizontalTabs ? 'x' : 'y', duration: 100 }}
-        class="flex-grow transform-gpu {horizontalTabs && 'h-[51px]'}"
-        class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
-        style="z-index: 5000;"
-      >
-        {#if $sidebarTab !== 'oasis'}
-          <div
+  <SidebarPane
+    {horizontalTabs}
+    bind:this={sidebarComponent}
+    on:collapsed-left-sidebar={() => {
+      log.debug('collapsed left sidebar')
+      showLeftSidebar = false
+      changeTraficLightsVisibility(false)
+    }}
+    on:expanded-left-sidebar={() => {
+      showLeftSidebar = true
+      changeTraficLightsVisibility(true)
+    }}
+    on:collapsed-right-sidebar={() => {
+      showRightSidebar = false
+    }}
+    on:expanded-right-sidebar={() => {
+      showRightSidebar = true
+    }}
+    bind:rightPaneItem={rightPane}
+    on:pane-update-right={handleRightPaneUpdate}
+    rightSidebarHidden={!showRightSidebar}
+    leftSidebarHidden={!showLeftSidebar}
+  >
+    <div
+      slot="sidebar"
+      class="flex-grow {horizontalTabs ? 'w-full h-full py-1' : 'h-full'}"
+      class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
+      style="z-index: 5000;"
+    >
+      {#if $sidebarTab !== 'oasis'}
+        <div
             class="flex {!horizontalTabs
               ? 'flex-col w-[288px]  py-3 space-y-4 px-2 h-full'
               : 'flex-row items-center h-[52px] ml-24 space-x-4 mr-4'} relative"
@@ -2986,14 +3155,14 @@
               </div>
             </div>
           </div>
-        {:else}
-          <OasisSidebar on:createTab={handleCreateTabFromSpace} />
-        {/if}
-      </div>
-    {/if}
+      {:else}
+        <OasisSidebar on:createTab={handleCreateTabFromSpace} />
+      {/if}
+    </div>
 
     <div
-      class="h-screen w-screen shadow-lg flex space-x-4 relative flex-row {horizontalTabs
+      slot="content"
+      class="h-full shadow-lg flex space-x-4 relative flex-row {horizontalTabs
         ? 'px-1.5'
         : 'py-1.5'}"
     >
@@ -3002,12 +3171,10 @@
         style:view-transition-name="active-content-wrapper"
         class="w-full h-full overflow-hidden flex-grow"
         class:pb-1.5={horizontalTabs}
-        class:pt-1.5={horizontalTabs && !showTabs}
-        class:pr-1.5={!horizontalTabs}
-        class:pl-1.5={!horizontalTabs && !showTabs}
+        class:pt-1.5={horizontalTabs && !showLeftSidebar}
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
-        class:sidebarHidden={!showTabs}
+        class:sidebarHidden={!showLeftSidebar}
       >
         {#if $sidebarTab === 'oasis'}
           <div class="browser-window active" style="--scaling: 1;">
@@ -3037,16 +3204,16 @@
             class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
           >
             <!-- {#if $sidebarTab === 'oasis'}
-            {#if $masterHorizon}
-              <DrawerWrapper
-                bind:drawer={drawer}
-                horizon={$masterHorizon}
-                {resourceManager}
-                {selectedFolder}
-              />
-            {:else}
-              <div>Should not happen error: Failed to load main Horizon</div>
-            {/if} -->
+              {#if $masterHorizon}
+                <DrawerWrapper
+                  bind:drawer={drawer}
+                  horizon={$masterHorizon}
+                  {resourceManager}
+                  {selectedFolder}
+                />
+              {:else}
+                <div>Should not happen error: Failed to load main Horizon</div>
+              {/if} -->
             {#if tab.type === 'page'}
               <BrowserTab
                 active={$activeTabId === tab.id}
@@ -3125,11 +3292,125 @@
           </div>
         {/if}
       </div>
+    </div>
 
-      {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
+    <Tabs.Root
+      onValueChange={(e) => {
+        if (e === 'magicTabs') {
+          handleToggleMagicSidebar()
+          return
+        }
+        if ($activeTabMagic.showSidebar) {
+          handleToggleMagicSidebar()
+        }
+
+        if (e === 'go-wild') {
+          handleToggleAppSidebar()
+          return
+        }
+
+        if ($showAppSidebar) {
+          handleToggleAppSidebar()
+        }
+      }}
+      value="annotations"
+      class="h-full flex flex-col relative"
+      slot="right-sidebar"
+    >
+      <Tabs.List
+        class="grid w-full grid-cols-3 gap-1 rounded-9px bg-dark-10 px-3 py-4 text-sm font-semibold leading-[0.01em] border-b-2 border-sky-100"
+      >
+        <Tabs.Trigger
+          value="magicTabs"
+          class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+          disabled={!$activeTabMagic}
+          >{#if !$activeTabMagic}
+            <Icon name="message" />
+          {:else if $activeTabMagic.running}
+            <Icon name="spinner" />
+          {:else}
+            <Icon name="message" />
+          {/if}</Tabs.Trigger
+        >
+        <Tabs.Trigger
+          value="annotations"
+          class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+          disabled={$activeTab?.type !== 'page'}
+        >
+          <Icon name="marker" /></Tabs.Trigger
+        >
+
+        <Tabs.Trigger
+          value="go-wild"
+          class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+          disabled={$activeTab?.type !== 'page'}
+        >
+          <Icon name="sparkles" /></Tabs.Trigger
+        >
+      </Tabs.List>
+      <Tabs.Content value="magicTabs" class="pt-3 h-full">
+        {#if $activeTab && $activeTabMagic}
+          <MagicSidebar
+            magicPage={$activeTabMagic}
+            bind:inputValue={$magicInputValue}
+            on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
+            on:highlightWebviewText={(e) =>
+              highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
+            on:seekToTimestamp={(e) =>
+              handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
+            on:navigate={(e) => {
+              $browserTabs[$activeTabId].navigate(e.detail.url)
+            }}
+            on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
+            on:chat={() => handleChatSubmit($activeTabMagic)}
+            on:clearChat={() => handleChatClear(true)}
+            on:prompt={handleMagicSidebarPromptSubmit}
+          />
+        {:else}
+          <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+            <Icon name="info" />
+            <span>Magic chat not available</span>
+          </div>
+        {/if}
+      </Tabs.Content>
+      <Tabs.Content value="annotations" class="pt-3 h-full">
+        {#if $activeTab && $activeTab.type === 'page'}
+          <AnnotationsSidebar
+            bind:this={annotationsSidebar}
+            resourceId={$activeTab.resourceBookmark}
+            on:scrollTo={handleAnnotationScrollTo}
+            on:create={handleAnnotationSidebarCreate}
+            on:reload={handleAnnotationSidebarReload}
+          />
+        {:else}
+          <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+            <Icon name="info" />
+            <span>No page info available.</span>
+          </div>
+        {/if}
+      </Tabs.Content>
+      <Tabs.Content value="go-wild" class="pt-3 h-full">
+        {#if $activeTab && $activeTab.type === 'page' && $showAppSidebar}
+          <AppSidebar
+            {sffs}
+            appId={$activeAppId}
+            tabContext={$activeAppSidebarContext}
+            on:clearAppSidebar={() => handleAppSidebarClear(true)}
+            on:executeAppSidebarCode={(e) =>
+              handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
+          />
+        {:else}
+          <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+            <Icon name="info" />
+            <span>Go wild not available.</span>
+          </div>
+        {/if}
+      </Tabs.Content>
+    </Tabs.Root>
+    <!-- {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
         <div
           transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
             'mt-1.5'} flex-shrink-0"
         >
           <MagicSidebar
@@ -3152,7 +3433,7 @@
       {:else if $showAppSidebar}
         <div
           transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
             'mt-1.5'} flex-shrink-0"
         >
           <AppSidebar
@@ -3167,7 +3448,7 @@
       {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
         <div
           transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
             'mt-1.5'} flex-shrink-0"
         >
           <AnnotationsSidebar
@@ -3178,9 +3459,8 @@
             on:reload={handleAnnotationSidebarReload}
           />
         </div>
-      {/if}
-    </div>
-  </div>
+      {/if} -->
+  </SidebarPane>
 </div>
 
 <style lang="scss">

@@ -1277,18 +1277,30 @@ impl Database {
         filtered_resource_ids: Vec<String>,
     ) -> BackendResult<Vec<SearchResultItem>> {
         let mut results: Vec<SearchResultItem> = Vec::new();
-        let keyword = format!("%{}%", keyword).to_string();
+        //let keyword = format!("%{}%", keyword).to_string();
 
         let mut rids: Vec<rusqlite::types::Value> = Vec::new();
         let params = rusqlite::params![keyword];
         let mut query = "SELECT DISTINCT M.*, R.* FROM resource_metadata M
-            LEFT JOIN resource_text_content T ON M.resource_id = T.resource_id
             LEFT JOIN resources R ON M.resource_id = R.id
-            WHERE (M.name LIKE ?1 OR M.source_uri LIKE ?1 OR M.alt LIKE ?1 OR M.user_context LIKE ?1 OR T.content LIKE ?1)"
-            .to_owned();
+            WHERE (
+                R.id IN (SELECT T.resource_id FROM resource_text_content T WHERE T.content MATCH ?1)
+            OR
+                R.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH ?1)
+            )"
+        .to_owned();
         let row_map_fn = Self::map_resource_and_metadata(None, SearchEngine::Keyword);
+
         if !filtered_resource_ids.is_empty() {
-            query.push_str(" AND R.id IN rarray(?2)");
+            // TODO: can this be optimized?
+            query = "SELECT DISTINCT M.*, R.* FROM resource_metadata M
+            LEFT JOIN resources R ON M.resource_id = R.id
+            WHERE (
+                R.id IN (SELECT T.resource_id FROM resource_text_content T WHERE T.content MATCH ?1 AND T.resource_id IN rarray(?2))
+            OR
+                R.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH ?1 AND M.resource_id IN rarray(?2))
+            )"
+            .to_owned();
             for rid in filtered_resource_ids {
                 rids.push(rusqlite::types::Value::from(rid));
             }
@@ -1310,7 +1322,10 @@ impl Database {
     }
 
     // search for resources that match the given tags and only return the resource ids
-    pub fn list_resources_by_tags(&self, mut tags: Vec<ResourceTagFilter>) -> BackendResult<SearchResultSimple> {
+    pub fn list_resources_by_tags(
+        &self,
+        mut tags: Vec<ResourceTagFilter>,
+    ) -> BackendResult<SearchResultSimple> {
         let filtered_resource_ids = self.list_resource_ids_by_tags(&mut tags)?;
 
         if filtered_resource_ids.is_empty() {
@@ -1352,7 +1367,7 @@ impl Database {
                     total: 0,
                 });
             }
-        }        
+        }
 
         let mut results = self.keyword_search(keyword, filtered_resource_ids.clone())?;
         if include_annotations {

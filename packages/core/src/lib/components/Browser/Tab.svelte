@@ -128,13 +128,14 @@
     fetchSpace(tab.spaceId)
   }
 
-  $: sanitizedTitle =
-    tab.type !== 'space'
+  $: sanitizedTitle = tab.title
+    ? tab.type !== 'space'
       ? tab.title
           .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
           .replace(/[\/\\]/g, '–')
           .replace(/^\w/, (c) => c.toUpperCase())
       : tab.title
+    : ''
 
   const handleBookmark = () => {
     dispatch('bookmark')
@@ -160,7 +161,6 @@
     popoverVisible = false
   }
 
-  $: console.log('classnaem', tabSize)
   let isDragging = false
 </script>
 
@@ -259,7 +259,7 @@
 
   {#if !tab.pinned || !pinned}
     <div class=" relative flex-grow truncate mr-1">
-      {#if tab.type === 'page' && isActive && enableEditing && (hovered || isEditing)}
+      {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && (hovered || isEditing)}
         <input
           type="text"
           bind:value={$inputUrl}
