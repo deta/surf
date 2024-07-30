@@ -2,10 +2,6 @@
   import { derived, writable, type Readable } from 'svelte/store'
 
   import { useLogScope } from '../../utils/log'
-  import OasisResourceLoader from './OasisResourceLoader.svelte'
-  import InfiniteScroll from '../InfiniteScroll.svelte'
-  import { DrawerContentMasonry } from '@horizon/drawer'
-  import { useDebounce } from '../../utils/debounce'
   import Masonry from './MasonrySpace.svelte'
 
   export let resourceIds: Readable<string[]>
