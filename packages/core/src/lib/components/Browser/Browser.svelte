@@ -2620,7 +2620,8 @@
                       {#if horizontalTabs}
                         <div
                           axis="vertical"
-                          use:HTMLDragZone.action={{
+                          dragdeadzone="5"
+                          use:HTMLAxisDragZone.action={{
                             id: 'sidebar-magic-tabs'
                           }}
                           on:Drop={onDropDragcula}
@@ -2673,7 +2674,8 @@
                         {/if}
                         <div
                           axis="vertical"
-                          use:HTMLDragZone.action={{
+                          dragdeadzone="5"
+                          use:HTMLAxisDragZone.action={{
                             id: 'sidebar-magic-tabs',
                             acceptDrag: (drag) => {
                               return true
