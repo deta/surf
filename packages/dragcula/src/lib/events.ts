@@ -178,9 +178,10 @@ export class DragculaDragEvent extends Event {
       from?: DragZone;
       to?: DragZone;
       index?: number;
+      bubbles?: boolean;
     }
   ) {
-    super(type, { bubbles: true, cancelable: true });
+    super(type, { bubbles: props.bubbles || true, cancelable: true });
     this.id = props.id;
     this.status = props.status;
     this.from = props.from || null;

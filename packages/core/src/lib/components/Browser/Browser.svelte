@@ -399,6 +399,7 @@
   }
 
   const deleteTab = async (tabId: string) => {
+    console.warn('Deleting tab', tabId)
     const tab = $tabs.find((tab) => tab.id === tabId)
     if (!tab) {
       log.error('Tab not found', tabId)
@@ -2567,7 +2568,7 @@
               <div
                 style:view-transition-name="pinned-tabs-wrapper"
                 axis="horizontal"
-                dragdeadzone="3"
+                dragdeadzone="5"
                 use:HTMLAxisDragZone.action={{
                   id: 'sidebar-pinned-tabs'
                 }}
@@ -2780,6 +2781,7 @@
                           on:DragEnd={onDragculaTabDragEnd}
                           on:select={handleTabSelect}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
+                          on:delete-tab={handleDeleteTab}
                           on:drop={handleDrop}
                         />
                       {/if}
@@ -2823,6 +2825,21 @@
                           on:bookmark={handleBookmark}
                           on:create-live-space={handleCreateLiveSpace}
                           on:save-resource-in-space={handleSaveResourceInSpace}
+                          on:DragEnter={(e) => {
+                            e.stopPropagation()
+                            const drag = e.detail
+                            if (
+                              drag.data['farc/tab'] !== undefined &&
+                              e.detail.data['farc/tab'].type !== 'space'
+                            ) {
+                              e.preventDefault()
+                            }
+                          }}
+                          on:Drop={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            console.error('DROP ON TAB', e.detail)
+                          }}
                         />
                       {:else}
                         <TabItem
@@ -2835,6 +2852,7 @@
                           on:DragEnd={onDragculaTabDragEnd}
                           on:select={handleTabSelect}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
+                          on:delete-tab={handleDeleteTab}
                           on:drop={handleDrop}
                         />
                       {/if}
@@ -3183,6 +3201,14 @@
     pointer-events: none;
   }
 
+  // Disable the zone of the drag item itself
+  :global(body *[data-dragcula-dragging]) {
+    pointer-events: none !important;
+  }
+  :global(body *[data-dragcula-dragging] *) {
+    pointer-events: none !important;
+  }
+
   :global(*[data-dragcula-drop-target] *[data-dragcula-zone]) {
     pointer-events: all;
   }
@@ -3213,6 +3239,10 @@
     min-height: 4rem !important;
     height: fit-content !important;
   }
+  /*:global(div[data-dragcula-zone]) {
+    overflow: visible !important;
+    background: transparent !important;
+  }*/
 
   .messi {
     backdrop-filter: blur(10px);
@@ -3749,11 +3779,6 @@
   //   cursor: pointer;
   //   overflow: hidden;
   // }
-
-  :global(div[data-dragcula-zone]) {
-    overflow: visible !important;
-    background: transparent !important;
-  }
 
   .tab-bar-selector {
     display: flex;

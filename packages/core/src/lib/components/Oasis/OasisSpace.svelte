@@ -667,8 +667,9 @@
     if (drag instanceof DragculaDragEvent) {
       e.preventDefault()
       if (drag.isNative) {
-        const event = new DragEvent('drop', { dataTransfer: drag.dataTransfer })
+        const event = new DragEvent('drop', { dataTransfer: drag.data })
         log.debug('Dropped', event)
+        console.warn('DROP', event.dataTransfer?.files.length)
 
         const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
         if (isOwnDrop) {
@@ -936,9 +937,8 @@
   on:Drop={handleDrop}
   on:DragEnter={(e) => {
     if (
-      active &&
-      e.detail.data['farc/tab'] !== undefined &&
-      e.detail.data['farc/tab'].type !== 'space'
+      (active && e.detail.isNative) ||
+      (e.detail.data['farc/tab'] !== undefined && e.detail.data['farc/tab'].type !== 'space')
     ) {
       e.preventDefault()
     }

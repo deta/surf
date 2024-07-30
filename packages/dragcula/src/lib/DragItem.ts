@@ -267,6 +267,9 @@ export class HTMLDragItem extends DragItem {
       new DragEvent("drag", {
         clientX: e.clientX,
         clientY: e.clientY,
+        altKey: e.altKey,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
         bubbles: false
       })
     );
@@ -286,7 +289,7 @@ export class HTMLDragItem extends DragItem {
       if (drag.to !== null) {
         e.target?.dispatchEvent(
           new DragEvent("drop", {
-            bubbles: true
+            bubbles: false
           })
         );
       } else {
@@ -330,6 +333,12 @@ export class HTMLDragItem extends DragItem {
 
     this.previewX = e.clientX;
     this.previewY = e.clientY;
+
+    if (e.altKey) {
+      this.dragEffect = "copy";
+    } else {
+      this.dragEffect = "move";
+    }
 
     this.onDrag(get(ACTIVE_DRAG_OPERATION)!);
   }
@@ -496,8 +505,15 @@ export class HTMLDragItem extends DragItem {
         this.nodeParent?.appendChild(this.node);
       }
     } else {
-      //this.node.remove();
+      this.node.remove();
       this.styles.applyAll(this.node);
+      if (this.dragEffect === "copy") {
+        if (this.previewEffect === "hoist") {
+          this.nodeParent?.insertBefore(this.node, this.nodeNext || null);
+        } else {
+          this.nodeParent?.appendChild(this.node);
+        }
+      }
     }
 
     // if vt running, after finish, apply vt-backup

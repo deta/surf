@@ -6,7 +6,7 @@
   import type { Tab, TabPage } from './types'
   import { writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
-  import { DragItem, HTMLDragItem } from '@horizon/dragcula'
+  import { HTMLDragZone, HTMLDragItem } from '@horizon/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTagsBuiltInKeys, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
@@ -73,15 +73,18 @@
   }
 
   const handleClick = () => {
+    console.warn('tab click')
     if (isAlreadyOpen) return
     dispatch('select', tab.id)
   }
 
   const handleRemoveSpaceFromSidebar = (_e: MouseEvent) => {
+    console.warn('remove space from sidebar')
     dispatch('remove-from-sidebar', tab.id)
   }
 
   const handleArchive = () => {
+    console.warn('archive tab')
     dispatch('delete-tab', tab.id)
   }
 
@@ -161,6 +164,7 @@
   }
 
   $: console.log('classnaem', tabSize)
+  let isDragging = false
 </script>
 
 <!-- style:view-transition-name="tab-{tab.id}" -->
@@ -184,6 +188,7 @@
     data: { 'farc/tab': tab }
   }}
   on:DragStart={(e) => {
+    isDragging = true
     e.item.data = {
       'farc/tab': {
         ...tab,
@@ -193,6 +198,7 @@
     }
   }}
   on:DragEnd={(e) => {
+    isDragging = false
     dispatch('DragEnd', e)
   }}
   use:tooltip={pinned

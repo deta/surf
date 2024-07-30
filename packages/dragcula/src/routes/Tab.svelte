@@ -1,9 +1,9 @@
 <script lang="ts" context="module">
   export interface ITab {
     id: string;
+    index: number;
     title: string;
     icon: string;
-    index: number;
 
     pinned: boolean;
     magic: boolean;
@@ -11,7 +11,7 @@
 </script>
 
 <script lang="ts">
-  import { HTMLDragItem } from "$lib/index.js";
+  import { HTMLDragItem, HTMLDragZone } from "$lib/index.js";
   import { createEventDispatcher } from "svelte";
 
   export let tab: ITab;
@@ -48,6 +48,16 @@ on:DragStart={(e) => {
   on:DragStart={(e) => {
     console.log("tab drag", e);
     e.item.data = { "test/tab": tab };
+  }}
+  use:HTMLDragZone.action={{
+    id: `tabZone.${tab.id}`
+  }}
+  on:DragEnter={(e) => {
+    console.warn("tab drag enter", e);
+    //e.preventDefault();
+  }}
+  on:Drop={(e) => {
+    console.warn("tab drop", e);
   }}
 >
   <img src={tab.icon} alt="" />

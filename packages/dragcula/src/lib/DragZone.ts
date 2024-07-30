@@ -137,10 +137,20 @@ export class HTMLDragZone extends DragZone {
     e.stopPropagation();
     console.debug(`[HTMLDragZone::${this.id}] DragEnter`, e);
 
-    const drag = get(ACTIVE_DRAG_OPERATION);
+    if (get(ACTIVE_DRAG_OPERATION) === null) {
+      ACTIVE_DRAG_OPERATION.set({
+        id: crypto.randomUUID(),
+        status: "active",
+        item: e.dataTransfer || new DataTransfer(),
+        from: null,
+        to: this
+      });
+    }
+
+    const drag = get(ACTIVE_DRAG_OPERATION)!;
     // TODO: What if null?
     console.warn("enter accep", this.onDragEnter(drag!));
-    if (this.onDragEnter(drag!)) e.preventDefault();
+    if (this.onDragEnter(drag)) e.preventDefault();
     console.warn("Zone acceptDRAG", e.defaultPrevented);
   }
   protected handleDragEnter = this._handleDragEnter.bind(this);
@@ -166,7 +176,7 @@ export class HTMLDragZone extends DragZone {
   protected handleDragLeave = this._handleDragLeave.bind(this);
 
   protected async _handleDrop(e: DragEvent) {
-    //e.preventDefault();
+    e.preventDefault();
     e.stopPropagation();
     console.debug(`[HTMLDragZone::${this.id}] Drop`, e);
 
@@ -179,6 +189,10 @@ export class HTMLDragZone extends DragZone {
         to: this
       });
     }
+    ACTIVE_DRAG_OPERATION.update((v) => {
+      v!.item = e.dataTransfer || new DataTransfer();
+      return v;
+    });
     const drag = get(ACTIVE_DRAG_OPERATION)!;
 
     // Setup vt & start
@@ -192,7 +206,8 @@ export class HTMLDragZone extends DragZone {
         status: drag.status,
         item: drag.item,
         from: drag.from || undefined,
-        to: drag.to || undefined
+        to: drag.to || undefined,
+        bubbles: false
       })
     );
 
