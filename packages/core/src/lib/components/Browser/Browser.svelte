@@ -2309,8 +2309,6 @@
       return
     }
 
-    
-
     if (e.data['farc/tab'] !== undefined) {
       const dragData = e.data['farc/tab'] as Tab
       tabs.update((_tabs) => {
@@ -2832,14 +2830,14 @@
           {/if}
 
           <div
-            class="overflow-x-scroll no-scrollbar relative flex-grow"
+            class="overflow-x-scroll no-scrollbar relative h-full flex-grow"
             class:space-x-2={horizontalTabs}
             class:items-center={horizontalTabs}
             bind:this={containerRef}
           >
             {#if horizontalTabs}
               <div
-                class="horizontal-tabs"
+                class="horizontal-tabs h-full"
                 axis="horizontal"
                 dragdeadzone="5"
                 placeholder-size="60"
