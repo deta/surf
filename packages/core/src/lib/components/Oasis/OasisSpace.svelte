@@ -935,19 +935,15 @@
   {spaceId}
   on:Drop={handleDrop}
   on:DragEnter={(e) => {
-    if (e.detail.data['farc/tab'] !== undefined && e.detail.data['farc/tab'].type !== 'space') {
+    if (
+      active &&
+      e.detail.data['farc/tab'] !== undefined &&
+      e.detail.data['farc/tab'].type !== 'space'
+    ) {
       e.preventDefault()
     }
   }}
 >
-  <!-- <div -->
-  <!--   use:DragZone.action={{ -->
-  <!--     id: `oasis-space-${spaceId}`, -->
-  <!--     removeItem: (item) => { -->
-  <!--       // TODO: impl -->
-  <!--     } -->
-  <!--   }} -->
-  <!-- > -->
   <div class="wrapper">
     <div class="drawer-bar">
       <div class="drawer-chat-search">
