@@ -935,7 +935,7 @@
   {spaceId}
   on:Drop={handleDrop}
   on:DragEnter={(e) => {
-    if (e.detail.data['farc/tab'] !== undefined) {
+    if (e.detail.data['farc/tab'] !== undefined && e.detail.data['farc/tab'].type !== 'space') {
       e.preventDefault()
     }
   }}
