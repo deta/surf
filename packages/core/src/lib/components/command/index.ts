@@ -9,6 +9,7 @@ import Input from './command-input.svelte'
 import List from './command-list.svelte'
 import Separator from './command-separator.svelte'
 import Shortcut from './command-shortcut.svelte'
+import Description from './command-description.svelte'
 
 const Loading = CommandPrimitive.Loading
 
@@ -23,6 +24,7 @@ export {
   Separator,
   Shortcut,
   Loading,
+  Description,
   //
   Root as Command,
   Dialog as CommandDialog,
@@ -33,5 +35,6 @@ export {
   List as CommandList,
   Separator as CommandSeparator,
   Shortcut as CommandShortcut,
-  Loading as CommandLoading
+  Loading as CommandLoading,
+  Description as CommandDescription
 }

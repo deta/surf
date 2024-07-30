@@ -877,7 +877,6 @@ export class ResourceManager {
   }
 
   async deleteSpaceEntries(entry_ids: string[]) {
-    console.log('about to delete entries', entry_ids)
     return await this.sffs.deleteSpaceEntries(entry_ids)
   }
 
