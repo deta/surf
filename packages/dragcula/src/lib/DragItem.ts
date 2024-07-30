@@ -150,6 +150,17 @@ export class HTMLDragItem extends DragItem {
     }
   }
   static async startTransition(cbk: () => void, skipActive = true): Promise<ViewTransition> {
+    if (true) {
+      // TODO: TEST USE_TRANSITIONS
+      cbk();
+      return {
+        ready: Promise.resolve(),
+        updateCallbackDone: Promise.resolve(),
+        finished: Promise.resolve(),
+        skipTransition: () => {}
+      } satisfies ViewTransition;
+    }
+
     if (HTMLDragItem.activeTransition) {
       if (skipActive) HTMLDragItem.activeTransition.skipTransition();
       await HTMLDragItem.activeTransition.finished;
@@ -328,6 +339,8 @@ export class HTMLDragItem extends DragItem {
     e.preventDefault();
     e.stopPropagation();
     console.log(`[HTMLDragItem::${this.id}] DragEnd`, e);
+    document.body.removeAttribute("data-dragcula-dragging");
+    document.body.removeAttribute("data-dragcula-overZone");
 
     if (get(ACTIVE_DRAG_OPERATION) !== null) this.onDragEnd(get(ACTIVE_DRAG_OPERATION)!);
   }
@@ -335,7 +348,7 @@ export class HTMLDragItem extends DragItem {
 
   /// === EVENTS
 
-  override onDragStart(drag?: DragOperation) {
+  override async onDragStart(drag?: DragOperation) {
     super.onDragStart(drag);
 
     const srcZone = findClosestDragZoneFromEl(this.node);
@@ -355,7 +368,7 @@ export class HTMLDragItem extends DragItem {
 
     // #dispatch DragStart so client can set data e.item.data = ...
     // ERR: this could throw.. handle that succer
-    const completed = !this.node.dispatchEvent(
+    const completed = this.node.dispatchEvent(
       new DragculaDragEvent("DragStart", {
         id: drag.id,
         status: drag.status,
@@ -371,17 +384,26 @@ export class HTMLDragItem extends DragItem {
     }
 
     // TODO: Lift element
-    HTMLDragItem.startTransition(() => {
+    //this.styleCache.cache(this.node!, 'position', 'relative');
+    this.styles.cache(this.node!, "z-index", "2147483647");
+    this.styles.cache(this.node!, "view-transition-name", `dragItem-${this.id}`);
+    const transition = await HTMLDragItem.startTransition(() => {
       this.node.remove();
       this.styles.cacheMany(this.node, {
         "pointer-events": "none",
         position: "fixed",
         top: "0",
         left: "0",
-        "z-index": "2147483647",
+        width: `${this.previewSize.w}px`,
+        height: `${this.previewSize.h}px`,
+        //"z-index": "2147483647",
         transform: this.previewTransform
       });
+      this.node.setAttribute("data-dragcula-dragging", "true");
       document.body.appendChild(this.node);
+    });
+    transition.finished.then(() => {
+      this.styles.apply(this.node, "view-transition-name");
     });
   }
 
@@ -448,9 +470,10 @@ export class HTMLDragItem extends DragItem {
   override onDragEnd(drag: DragOperation) {
     super.onDragEnd(drag);
     console.warn("onDragEnd", drag.status, drag);
-    document.body.removeAttribute("data-dragcula-overZone");
 
     window.removeEventListener("mousemove", this.handleMouseMove, { capture: true });
+
+    this.node.removeAttribute("data-dragcula-dragging");
 
     this.node.dispatchEvent(
       new DragculaDragEvent("DragEnd", {

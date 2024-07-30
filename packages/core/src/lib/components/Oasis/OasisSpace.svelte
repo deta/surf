@@ -689,6 +689,7 @@
         return
       } else {
         log.debug('Dropped', drag.data)
+        toasts.info('Adding tab...')
 
         const parsed: MediaParserResult[] = []
 
@@ -934,7 +935,9 @@
   {spaceId}
   on:Drop={handleDrop}
   on:DragEnter={(e) => {
-    e.preventDefault()
+    if (e.detail.data['farc/tab'] !== undefined) {
+      e.preventDefault()
+    }
   }}
 >
   <!-- <div -->

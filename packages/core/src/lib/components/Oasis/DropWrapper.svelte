@@ -17,19 +17,25 @@
   let counter = 0
   let dragOverTimeout: ReturnType<typeof setTimeout> | null = null
 
-  const handleDragEnter = (e: DragEvent) => {
+  const handleDragEnter = (e: DragculaDragEvent) => {
     if (!acceptDrop) {
       log.debug('Aborting DND')
       return
     }
 
+    const cancelled = !dispatch('DragEnter', e, { cancelable: true })
+    if (cancelled) {
+      e.preventDefault()
+    }
+
+    /*
     e.preventDefault()
 
     counter++
     if (counter === 1) {
       dragOver = true
       dispatch('dragenter', e)
-    }
+    }*/
   }
 
   const handleDragLeave = (e: DragEvent) => {
@@ -77,7 +83,7 @@
       clearTimeout(dragOverTimeout)
     }
 
-    const cancelled = dispatch('drop', e, { cancelable: true })
+    const cancelled = !dispatch('Drop', e, { cancelable: true })
     if (cancelled) {
       e.preventDefault()
     }
@@ -86,7 +92,6 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-  on:dragenter={handleDragEnter}
   on:dragleave={handleDragLeave}
   on:dragover={handleDragOver}
   class="drop-wrapper"

@@ -2179,7 +2179,7 @@
     }
 
     // Handle tab dnd
-    if (e.data['farc/tab'] !== undefined) {
+    if (false && e.data['farc/tab'] !== undefined) {
       const dragData = e.data['farc/tab'] as Tab
 
       // Get all the tab arrays
@@ -2274,6 +2274,96 @@
       )
 
       log.debug('State updated successfully')
+    }
+
+    if (e.data['farc/tab'] !== undefined) {
+      const dragData = e.data['farc/tab'] as Tab
+      tabs.update((_tabs) => {
+        let unpinnedTabsArray = get(unpinnedTabs)
+        let pinnedTabsArray = get(pinnedTabs)
+        let magicTabsArray = get(magicTabs)
+
+        let fromTabs: ITab[]
+        let toTabs: ITab[]
+
+        if (e.from.id === 'sidebar-unpinned-tabs') {
+          fromTabs = unpinnedTabsArray
+        } else if (e.from.id === 'sidebar-pinned-tabs') {
+          fromTabs = pinnedTabsArray
+        } else if (e.from.id === 'sidebar-magic-tabs') {
+          fromTabs = magicTabsArray
+        }
+        if (e.to.id === 'sidebar-unpinned-tabs') {
+          toTabs = unpinnedTabsArray
+        } else if (e.to.id === 'sidebar-pinned-tabs') {
+          toTabs = pinnedTabsArray
+        } else if (e.to.id === 'sidebar-magic-tabs') {
+          toTabs = magicTabsArray
+        }
+
+        // CASE: to already includes tab
+        if (toTabs.find((v) => v.id === dragData.id)) {
+          console.warn('ONLY Update existin tab')
+          const existing = fromTabs.find((v) => v.id === dragData.id)
+          if (existing) {
+            existing.index = e.index
+          }
+          e.item.node.remove()
+          fromTabs.splice(
+            fromTabs.findIndex((v) => v.id === dragData.id),
+            1
+          )
+          fromTabs.splice(e.index || 0, 0, existing)
+        } else {
+          console.warn('ADDING NEW ONE')
+          // Remove old
+          const idx = fromTabs.findIndex((v) => v.id === dragData.id)
+          if (idx > -1) {
+            fromTabs.splice(idx, 1)
+          }
+
+          if (e.to.id === 'sidebar-pinned-tabs') {
+            dragData.pinned = true
+            dragData.magic = false
+          } else if (e.to.id === 'sidebar-magic-tabs') {
+            dragData.pinned = false
+            dragData.magic = true
+          } else {
+            dragData.pinned = false
+            dragData.magic = false
+          }
+
+          toTabs.splice(e.index || 0, 0, dragData)
+        }
+
+        console.log(...pinnedTabsArray, ...unpinnedTabsArray, ...magicTabsArray)
+
+        // Update the indices of the tabs in all lists
+        const updateIndices = (tabs: ITab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+
+        unpinnedTabsArray = updateIndices(unpinnedTabsArray)
+        pinnedTabsArray = updateIndices(pinnedTabsArray)
+        magicTabsArray = updateIndices(magicTabsArray)
+
+        // Combine all lists back together
+        const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+
+        console.warn('New tabs', [...newTabs])
+
+        // Update the store with the changed tabs
+        bulkUpdateTabsStore(
+          newTabs.map((tab) => ({
+            id: tab.id,
+            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+          }))
+        )
+
+        return newTabs
+      })
+
+      log.debug('State updated successfully')
+      // Mark the drop completed
+      e.preventDefault()
     }
   }
 
