@@ -5,10 +5,12 @@
 <script lang="ts">
   import { writable, get, type Unsubscriber, derived } from 'svelte/store'
   import { createEventDispatcher, onMount } from 'svelte'
+  import type { Writable } from 'svelte/store'
   import { fly } from 'svelte/transition'
 
   import { Icon } from '@horizon/icons'
   import SpacesView from '../Oasis/SpacesView.svelte'
+  import type { Space } from '@horizon/core/src/lib/types'
 
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
   import browserBackground from '../../../../public/assets/foggy-placeholder.png'
@@ -124,7 +126,7 @@
     }
   }
 
-  const handleCreateTabFromSpacesView = (e: CustomEvent) => {
+  const handleCreateTabFromOasisSidebar = (e: CustomEvent) => {
     dispatch('create-tab-from-space', e.detail)
   }
 
@@ -241,6 +243,7 @@
         onBack={() => showAllSpaces.set(false)}
         on:createTab={handleCreateTabFromOasisSidebar}
         on:open-resource={(e) => openResourceDetailsModal(e.detail)}
+        {spaces}
       />
     {/if}
   </div>
