@@ -67,7 +67,13 @@
   import type { Drawer } from '@horizon/drawer'
   import Chat from './Chat.svelte'
   import { HorizonDatabase } from '../../service/storage'
-  import type { Optional } from '../../types'
+  import type {
+    Download,
+    DownloadDoneMessage,
+    DownloadRequestMessage,
+    DownloadUpdatedMessage,
+    Optional
+  } from '../../types'
   import { useLocalStorageStore } from '../../utils/localstorage'
   import { WebParser } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
@@ -90,7 +96,7 @@
 
   import AnnotationsSidebar from './AnnotationsSidebar.svelte'
   import ToastsProvider from '../Toast/ToastsProvider.svelte'
-  import { provideToasts } from '../../service/toast'
+  import { provideToasts, type Toast, type ToastItem } from '../../service/toast'
   import {
     PromptIDs,
     getPrompt,
@@ -170,6 +176,8 @@
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
   const activatedTabs = writable<Set<string>>(new Set()) // for lazy loading
+  const downloadResourceMap = new Map<string, Download>()
+  const downloadToastsMap = new Map<string, ToastItem>()
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -1902,6 +1910,122 @@
     // @ts-expect-error
     window.api.onResetPrompt((id: PromptIDs) => {
       return resetPrompt(id)
+    })
+
+    // truncate filename if it's too long but make sure the extension is preserved
+    const shortenFilename = (raw: string, max = 30) => {
+      const extension = raw.slice(raw.lastIndexOf('.'))
+      const name = raw.slice(0, raw.lastIndexOf('.'))
+
+      return name.length > max ? `${name.slice(0, max)}[...]${extension}` : raw
+    }
+
+    // @ts-ignore
+    window.api.onRequestDownloadPath(async (data: DownloadRequestMessage) => {
+      await tick()
+
+      const existingDownload = downloadResourceMap.get(data.id)
+      if (existingDownload) {
+        log.debug('download already in progress', data)
+        return existingDownload.savePath
+      }
+
+      const downloadData: Download = {
+        id: data.id,
+        url: data.url,
+        filename: shortenFilename(data.filename),
+        mimeType: data.mimeType,
+        startTime: data.startTime,
+        totalBytes: data.totalBytes,
+        contentDisposition: data.contentDisposition,
+        savePath: '',
+        resourceId: ''
+      }
+
+      downloadResourceMap.set(data.id, downloadData)
+
+      log.debug('new download request', downloadData)
+
+      const toast = toasts.loading(`Downloading "${downloadData.filename}"...`)
+
+      downloadToastsMap.set(data.id, toast)
+
+      // TODO: add metadata/tags here
+      const resource = await resourceManager.createResource(
+        data.mimeType,
+        undefined,
+        {
+          name: data.filename,
+          sourceURI: data.url
+        },
+        [ResourceTag.download()]
+      )
+
+      log.debug('resource for download created', downloadData, resource)
+
+      downloadData.resourceId = resource.id
+      downloadData.savePath = resource.path
+      downloadResourceMap.set(data.id, downloadData)
+
+      return downloadData.savePath
+    })
+
+    // @ts-ignore
+    window.api.onDownloadUpdated((data: DownloadUpdatedMessage) => {
+      log.debug('download updated', data)
+
+      const downloadData = downloadResourceMap.get(data.id)
+      if (!downloadData) {
+        log.error('download data not found', data)
+        return
+      }
+
+      const toast = downloadToastsMap.get(data.id)
+      if (!toast) {
+        log.error('toast not found', data)
+        return
+      }
+
+      if (data.state === 'progressing') {
+        const progress = data.receivedBytes / data.totalBytes
+        toast.update(`Downloading "${downloadData.filename}" (${Math.round(progress * 100)}%)...`)
+      } else if (data.state === 'interrupted') {
+        toast.error(`Download of "${downloadData.filename}" interrupted`)
+      } else if (data.isPaused) {
+        toast.info(`Download of "${downloadData.filename}" paused`)
+      }
+    })
+
+    // @ts-ignore
+    window.api.onDownloadDone((data: DownloadDoneMessage) => {
+      // TODO: trigger the post-processing call here
+      log.debug('download done', data)
+
+      const downloadData = downloadResourceMap.get(data.id)
+      if (!downloadData) {
+        log.error('download data not found', data)
+        return
+      }
+
+      // if (data.state === 'completed') {
+      //   resourceManager.reloadResource(downloadData.resourceId)
+      // }
+
+      const toast = downloadToastsMap.get(data.id)
+      if (!toast) {
+        log.error('toast not found', data)
+        return
+      }
+
+      if (data.state === 'completed') {
+        toast.success(`"${downloadData.filename}" saved to Oasis!`)
+      } else if (data.state === 'interrupted') {
+        toast.error(`Download of "${downloadData.filename}" interrupted`)
+      } else if (data.state === 'cancelled') {
+        toast.error(`Download of "${downloadData.filename}" cancelled`)
+      }
+
+      downloadResourceMap.delete(data.id)
     })
 
     const tabsList = await tabsDB.all()
