@@ -89,7 +89,7 @@
     dispatch('unarchive-tab', tab.id)
   }
 
-  const handleInputFocus = () => {
+  const handleInputFocus = async () => {
     isEditing = true
 
     if (url) {
@@ -100,6 +100,8 @@
     setTimeout(() => {
       addressInputElem.scrollLeft = addressInputElem.scrollWidth
     }, 0)
+
+    await tick()
 
     addressInputElem.select()
   }
@@ -170,7 +172,7 @@
   flex items-center {pinned
     ? 'p-2 rounded-lg'
     : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 transition duration-100 group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
-  style="width: {tabSize}px;"
+  style="width: {tabSize}px; min-width: {tabSize}px; max-width: {tabSize}px;"
   on:click={handleClick}
   on:mouseenter={() => (hovered = true)}
   on:mouseleave={() => {
@@ -267,7 +269,7 @@
           on:blur={handleInputBlur}
           on:keydown={handleInputKeydown}
           bind:this={addressInputElem}
-          class="w-full bg-transparent focus:outline-none group-active:select-none
+          class="w-full h-full bg-transparent focus:outline-none group-active:select-none
           {!isEditing
             ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 bg-[length:250%_100%]'
             : ''}
