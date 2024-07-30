@@ -2316,6 +2316,9 @@
     on:open-url={(e) => {
       createPageTab(e.detail, true)
     }}
+    on:open-resource={(e) => {
+      openResource(e.detail)
+    }}
   />
 
   <SidebarPane

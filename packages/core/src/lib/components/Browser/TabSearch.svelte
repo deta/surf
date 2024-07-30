@@ -12,6 +12,7 @@
     'reset-zoom': void
     'open-url': string
     'activate-tab': string
+    'open-resource': string
   }
 </script>
 
@@ -129,7 +130,7 @@
       ? 'Search for a tab...'
       : page === 'oasis'
         ? 'Search for a resource...'
-        : 'Search for a tab or the web...'
+        : 'Search your tabs, oasis or the web...'
   $: breadcrumb = page === 'tabs' ? 'Active Tabs' : page === 'oasis' ? 'Oasis' : undefined
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -362,6 +363,8 @@
       }
     } else if (item.type === 'suggestion' || item.type === 'google-search') {
       dispatch('open-url', `https://www.google.com/search?q=${encodeURIComponent(item.value!)}`)
+    } else if (item.type === 'resource') {
+      dispatch('open-resource', item.id!)
     }
     resetSearch()
   }
