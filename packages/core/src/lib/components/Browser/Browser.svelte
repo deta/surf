@@ -3197,23 +3197,23 @@
   // except, nested drag zones.
   // This is also useful when supporting native dnd, as there won't
   // be a body class!
-  :global(*[data-dragcula-drop-target] *:not([data-dragcula-zone])) {
+  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone] *:not([data-dragcula-zone])) {
     pointer-events: none;
   }
-
-  // Disable the zone of the drag item itself
-  :global(body *[data-dragcula-dragging]) {
-    pointer-events: none !important;
-  }
-  :global(body *[data-dragcula-dragging] *) {
-    pointer-events: none !important;
-  }
-
-  :global(*[data-dragcula-drop-target] *[data-dragcula-zone]) {
+  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone] *[data-dragcula-zone]) {
     pointer-events: all;
   }
 
-  :global(body[data-dragcula-overzone]:not([data-dragcula-overzone^='sidebar'])) {
+  // Disable the zone of the drag item itself
+  :global(body *[data-dragcula-dragging-item]) {
+    pointer-events: none !important;
+  }
+
+  :global(
+      body[data-dragcula-target]:not(
+          [data-dragcula-target^='sidebar']
+        )[data-dragcula-drag-effect='copy']
+    ) {
     cursor: copy;
   }
 

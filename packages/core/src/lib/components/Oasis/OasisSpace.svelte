@@ -690,7 +690,7 @@
         return
       } else {
         log.debug('Dropped', drag.data)
-        toasts.info('Adding tab...')
+        const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
 
         const parsed: MediaParserResult[] = []
 
@@ -698,7 +698,9 @@
           parsed.push({
             type: 'url',
             data: {
-              href: (drag.data['farc/tab'] as Tab).currentLocation
+              href:
+                (drag.data['farc/tab'] as Tab).currentLocation ||
+                (drag.data['farc/tab'] as Tab).initialLocation
             },
             metadata: {}
           } satisfies MediaParserResultURL)
@@ -712,9 +714,8 @@
           resources.map((x) => x.id)
         )
 
-        await tick()
         await loadSpaceContents(spaceId)
-        toasts.success('Resources added!')
+        toast.success('Resources added!')
 
         e.preventDefault()
         return

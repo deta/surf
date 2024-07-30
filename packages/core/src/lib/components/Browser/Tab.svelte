@@ -73,18 +73,15 @@
   }
 
   const handleClick = () => {
-    console.warn('tab click')
     if (isAlreadyOpen) return
     dispatch('select', tab.id)
   }
 
   const handleRemoveSpaceFromSidebar = (_e: MouseEvent) => {
-    console.warn('remove space from sidebar')
     dispatch('remove-from-sidebar', tab.id)
   }
 
   const handleArchive = () => {
-    console.warn('archive tab')
     dispatch('delete-tab', tab.id)
   }
 
@@ -388,8 +385,8 @@
       0.2s ease-in-out,
       transform 0s;
   }
-  :global(.tab[data-dragcula-dragging]) {
-    background: rgba(255, 255, 255, 0.8);
+  :global(.tab[data-dragcula-dragging-item]) {
+    background: rgba(255, 255, 255, 0.6);
     opacity: 80%;
   }
   .icon-wrapper {

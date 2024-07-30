@@ -92,7 +92,13 @@ export class HTMLDragZone extends DragZone {
 
   override set isTarget(v: boolean) {
     super.isTarget = v;
-    // TODO: dom style change
+    if (v) {
+      document.body.setAttribute("data-dragcula-target", this.id.toString());
+      this.node.setAttribute("data-dragcula-targeting", "true");
+    } else {
+      document.body.removeAttribute("data-dragcula-target");
+      this.node.removeAttribute("data-dragcula-targeting");
+    }
   }
 
   /// === CONSTRUCTOR
@@ -138,6 +144,9 @@ export class HTMLDragZone extends DragZone {
     console.debug(`[HTMLDragZone::${this.id}] DragEnter`, e);
 
     if (get(ACTIVE_DRAG_OPERATION) === null) {
+      console.debug(
+        `[HTMLDragZone::${this.id}] dragenter: No active drag operation, creating new with native DataTransfer.`
+      );
       ACTIVE_DRAG_OPERATION.set({
         id: crypto.randomUUID(),
         status: "active",
@@ -149,9 +158,8 @@ export class HTMLDragZone extends DragZone {
 
     const drag = get(ACTIVE_DRAG_OPERATION)!;
     // TODO: What if null?
-    console.warn("enter accep", this.onDragEnter(drag!));
     if (this.onDragEnter(drag)) e.preventDefault();
-    console.warn("Zone acceptDRAG", e.defaultPrevented);
+    this.isTarget = e.defaultPrevented;
   }
   protected handleDragEnter = this._handleDragEnter.bind(this);
 
@@ -160,6 +168,12 @@ export class HTMLDragZone extends DragZone {
     e.stopPropagation();
     //console.debug(`[HTMLDragZone::${this.id}] DragOver`, e);
     const drag = get(ACTIVE_DRAG_OPERATION);
+    if (!drag) {
+      console.assert(
+        false,
+        "No active drag operation found, but dragover event was triggered. THere should have been a drag operation started inside dragenter already!"
+      );
+    }
     // TODO: What if null?
     this.onDragOver(drag!);
   }
@@ -172,6 +186,7 @@ export class HTMLDragZone extends DragZone {
     const drag = get(ACTIVE_DRAG_OPERATION);
     // TODO: What if null?
     this.onDragLeave(drag!);
+    this.isTarget = false;
   }
   protected handleDragLeave = this._handleDragLeave.bind(this);
 
@@ -181,6 +196,10 @@ export class HTMLDragZone extends DragZone {
     console.debug(`[HTMLDragZone::${this.id}] Drop`, e);
 
     if (get(ACTIVE_DRAG_OPERATION) === null) {
+      console.debug(
+        `[HTMLDragZone::${this.id}] drop: No active drag operation, creating new with native DataTransfer.`
+      );
+
       ACTIVE_DRAG_OPERATION.set({
         id: crypto.randomUUID(),
         status: "active",
@@ -190,9 +209,11 @@ export class HTMLDragZone extends DragZone {
       });
     }
     ACTIVE_DRAG_OPERATION.update((v) => {
-      v!.item = e.dataTransfer || new DataTransfer();
+      if (v.item instanceof DragItem) return v;
+      else v!.item = e.dataTransfer || new DataTransfer();
       return v;
     });
+
     const drag = get(ACTIVE_DRAG_OPERATION)!;
 
     // Setup vt & start
@@ -234,6 +255,7 @@ export class HTMLDragZone extends DragZone {
     });
 
     // await tran sfinished
+    this.isTarget = false;
   }
   protected handleDrop = this._handleDrop.bind(this);
 

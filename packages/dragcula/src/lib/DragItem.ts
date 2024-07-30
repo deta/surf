@@ -185,11 +185,19 @@ export class HTMLDragItem extends DragItem {
 
   override set isDragging(v: boolean) {
     super.isDragging = v;
-    // TODO: update dom
+    if (v) {
+      this.node.setAttribute("data-dragcula-dragging-item", "true");
+    } else {
+      this.node.removeAttribute("data-dragcula-dragging-item");
+    }
   }
   override set isOverZone(v: boolean) {
     super.isOverZone = v;
-    // TODO: update dom
+    if (v) {
+      this.node.setAttribute("data-dragcula-over-zone", "true");
+    } else {
+      this.node.removeAttribute("data-dragcula-over-zone");
+    }
   }
 
   protected styles = createStyleCache();
@@ -339,6 +347,7 @@ export class HTMLDragItem extends DragItem {
     } else {
       this.dragEffect = "move";
     }
+    document.body.setAttribute("data-dragcula-drag-effect", this.dragEffect);
 
     this.onDrag(get(ACTIVE_DRAG_OPERATION)!);
   }
@@ -350,6 +359,8 @@ export class HTMLDragItem extends DragItem {
     console.log(`[HTMLDragItem::${this.id}] DragEnd`, e);
     document.body.removeAttribute("data-dragcula-dragging");
     document.body.removeAttribute("data-dragcula-overZone");
+    document.body.removeAttribute("data-dragcula-drag-effect");
+    document.body.removeAttribute("data-dragcula-target");
 
     if (get(ACTIVE_DRAG_OPERATION) !== null) this.onDragEnd(get(ACTIVE_DRAG_OPERATION)!);
   }
@@ -408,8 +419,8 @@ export class HTMLDragItem extends DragItem {
         //"z-index": "2147483647",
         transform: this.previewTransform
       });
-      this.node.setAttribute("data-dragcula-dragging", "true");
       document.body.appendChild(this.node);
+      this.isDragging = true;
     });
     transition.finished.then(() => {
       this.styles.apply(this.node, "view-transition-name");
@@ -464,9 +475,11 @@ export class HTMLDragItem extends DragItem {
       }
 
       if (activeDrag!.to === null) {
-        document.body.removeAttribute("data-dragcula-overZone");
+        this.isoOverZone = false;
+        //document.body.removeAttribute("data-dragcula-overZone");
       } else {
-        document.body.setAttribute("data-dragcula-overZone", activeDrag!.to.id);
+        this.isOverZone = true;
+        //	document.body.setAttribute("data-dragcula-overZone", activeDrag!.to.id);
       }
 
       return activeDrag;
@@ -478,11 +491,12 @@ export class HTMLDragItem extends DragItem {
 
   override onDragEnd(drag: DragOperation) {
     super.onDragEnd(drag);
+    this.isDragging = false;
     console.warn("onDragEnd", drag.status, drag);
 
     window.removeEventListener("mousemove", this.handleMouseMove, { capture: true });
 
-    this.node.removeAttribute("data-dragcula-dragging");
+    this.node.removeAttribute("data-dragcula-drag-item");
 
     this.node.dispatchEvent(
       new DragculaDragEvent("DragEnd", {
@@ -517,5 +531,6 @@ export class HTMLDragItem extends DragItem {
     }
 
     // if vt running, after finish, apply vt-backup
+    ACTIVE_DRAG_OPERATION.set(null);
   }
 }

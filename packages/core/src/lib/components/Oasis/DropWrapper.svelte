@@ -91,9 +91,12 @@
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div
-  on:dragleave={handleDragLeave}
+<!--
+on:dragleave={handleDragLeave}
   on:dragover={handleDragOver}
+-->
+
+<div
   class="drop-wrapper"
   class:dragover={dragOver}
   use:HTMLDragZone.action={{
