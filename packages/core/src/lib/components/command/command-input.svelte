@@ -5,19 +5,23 @@
 
   type $$Props = CommandPrimitive.InputProps & {
     breadcrumb?: string
+    loading?: boolean
   }
 
   let className: string | undefined | null = undefined
   export { className as class }
   export let value: string = ''
   export let breadcrumb: string | undefined = undefined
+  export let loading = false
 </script>
 
 <div class="flex items-center border-b px-4 gap-2" data-cmdk-input-wrapper="">
   {#if breadcrumb}
-    <div class="bg-neutral-200 py-1 px-2 rounded-md flex-shrink-0">
-      <span class="text-neutral-900 text-sm">{breadcrumb}</span>
+    <div class="bg-neutral-200 py-1 px-2 rounded-lg flex-shrink-0">
+      <span class="text-neutral-900 text-md">{breadcrumb}</span>
     </div>
+  {:else if loading}
+    <Icon name="spinner" class="shrink-0 opacity-50" />
   {:else}
     <Icon name="search" class="shrink-0 opacity-50" />
   {/if}

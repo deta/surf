@@ -49,12 +49,12 @@
   const log = useLogScope('TabSearch')
 
   let searchQuery = ''
+  let loading = false
+  let page: 'tabs' | 'oasis' | 'history' | null = null
   let filteredItems: CMDMenuItem[] = []
   let historyEntries: HistoryEntry[] = []
   let googleSuggestions: string[] = []
   let oasisResources: Resource[] = []
-
-  let page: 'tabs' | 'oasis' | null = null
 
   const CACHE_EXPIRY = 1000 * 30 // 30 seconds
   let historyCache: { data: any[]; timestamp: number } | null = null
@@ -83,6 +83,12 @@
     setTimeout(() => {
       searchQuery = ''
     }, 1)
+  } else if (searchQuery.startsWith('@history ')) {
+    page = 'history'
+
+    setTimeout(() => {
+      searchQuery = ''
+    }, 1)
   }
 
   $: {
@@ -97,6 +103,12 @@
       updateFilteredItems()
     } else if (page === 'tabs') {
       const items: CMDMenuItem[] = activeTabs.map((tab) => tabToItem(tab, { weight: 1.5 }))
+      fuse = new Fuse(items, fuseOptions)
+      updateFilteredItems()
+    } else if (page === 'history') {
+      const items: CMDMenuItem[] = historyEntries.map((entry) =>
+        historyEntryToItem(entry, { weight: 1 })
+      )
       fuse = new Fuse(items, fuseOptions)
       updateFilteredItems()
     } else if (page === 'oasis') {
@@ -130,8 +142,17 @@
       ? 'Search for a tab...'
       : page === 'oasis'
         ? 'Search for a resource...'
-        : 'Search your tabs, oasis or the web...'
-  $: breadcrumb = page === 'tabs' ? 'Active Tabs' : page === 'oasis' ? 'Oasis' : undefined
+        : page === 'history'
+          ? 'Search for a page...'
+          : 'Search your tabs, oasis or the web...'
+  $: breadcrumb =
+    page === 'tabs'
+      ? 'Active Tabs'
+      : page === 'oasis'
+        ? 'Oasis'
+        : page === 'history'
+          ? 'History'
+          : undefined
 
   function handleKeyDown(e: KeyboardEvent) {
     log.debug('handleKeyDown', e.key, searchQuery)
@@ -283,8 +304,9 @@
   }, 30)
 
   const fetchOasisResults = debounce(async (query: string) => {
-    if (query.length > 2) {
-      try {
+    try {
+      loading = true
+      if (query.length > 2) {
         // const data = await resourceManager.listResourcesByTags([
         const data = await resourceManager.searchResources(
           query,
@@ -309,36 +331,37 @@
             }
           })
         )
-
-        updateFilteredItems()
-      } catch (error) {
-        log.error('Error fetching Oasis search results:', error)
+      } else {
         oasisResources = []
       }
-    } else {
+
+      updateFilteredItems()
+    } catch (error) {
+      log.error('Error fetching Oasis search results:', error)
       oasisResources = []
+    } finally {
+      loading = false
     }
-    updateFilteredItems()
   }, 500)
 
   const fetchGoogleSuggestions = debounce(async (query: string) => {
-    if (query.length > 2) {
-      try {
+    try {
+      if (query.length > 2) {
         // @ts-ignore
         const data = await window.api.fetchJSON(
           `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`
         )
         log.debug('Google suggestions:', data)
         googleSuggestions = data[1].slice(0, 5)
-        updateFilteredItems()
-      } catch (error) {
-        log.error('Error fetching Google suggestions:', error)
+      } else {
         googleSuggestions = []
       }
-    } else {
+
+      updateFilteredItems()
+    } catch (error) {
+      log.error('Error fetching Google suggestions:', error)
       googleSuggestions = []
     }
-    updateFilteredItems()
   }, 100)
 
   $: {
@@ -407,7 +430,7 @@
   onOpenChange={(open) => !open && resetSearch()}
   onKeydown={handleKeyDown}
 >
-  <Command.Input {placeholder} {breadcrumb} bind:value={searchQuery} />
+  <Command.Input {placeholder} {breadcrumb} {loading} bind:value={searchQuery} />
 
   <Command.List>
     {#if !page}
@@ -460,6 +483,10 @@
       {/each}
     {:else if page === 'oasis'}
       {#each resources as item}
+        <TabSearchItem {item} on:select={handleSelect} />
+      {/each}
+    {:else if page === 'history'}
+      {#each history as item}
         <TabSearchItem {item} on:select={handleSelect} />
       {/each}
     {/if}
