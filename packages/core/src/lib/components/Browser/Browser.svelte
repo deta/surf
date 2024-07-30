@@ -2734,7 +2734,8 @@
                   class="horizontal-tabs"
                   axis="horizontal"
                   dragdeadzone="5"
-                  use:HTMLDragZone.action={{
+                  placeholder-size="60"
+                  use:HTMLAxisDragZone.action={{
                     id: 'sidebar-unpinned-tabs'
                   }}
                   on:Drop={onDropDragcula}
