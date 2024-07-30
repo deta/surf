@@ -1,4 +1,4 @@
-interface Item {
+export interface Item {
   id: number | string
   content?: string
   style?: {
@@ -11,7 +11,7 @@ interface Item {
   visible?: boolean
 }
 
-interface ScrollVelocity {
+export interface ScrollVelocity {
   scrollTop: number
   timestamp: number
   velocity: number
