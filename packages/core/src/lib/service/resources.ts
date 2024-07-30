@@ -666,7 +666,7 @@ export class ResourceManager {
     if (!resourceItem) {
       return null
     }
-    const resource = this.findOrCreateResourceObject(resourceItem)
+    const resource = this.createResourceObject(resourceItem)
 
     this.resources.update((resources) => {
       const index = resources.findIndex((r) => r.id === id)

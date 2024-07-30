@@ -11,7 +11,7 @@ export interface DownloadRequestMessage {
 
 export interface DownloadUpdatedMessage {
   id: string
-  state: string
+  state: 'progressing' | 'interrupted'
   receivedBytes: number
   totalBytes: number
   isPaused: boolean
@@ -20,7 +20,7 @@ export interface DownloadUpdatedMessage {
 
 export interface DownloadDoneMessage {
   id: string
-  state: string
+  state: 'interrupted' | 'completed' | 'cancelled'
   filename: string
   mimeType: string
   totalBytes: number
@@ -30,5 +30,20 @@ export interface DownloadDoneMessage {
   urlChain: string[]
   lastModifiedTime: string
   eTag: string
+  savePath: string
+}
+
+export interface Download {
+  id: string
+  resourceId: string
+  url: string
+  filename: string
+  mimeType: string
+  totalBytes: number
+  contentDisposition: string
+  startTime: number
+  endTime?: number
+  lastModifiedTime?: string
+  eTag?: string
   savePath: string
 }

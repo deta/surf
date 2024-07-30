@@ -27,6 +27,8 @@ export function initDownloadManager(partition: string) {
     downloadItem.setSavePath(tempDownloadPath)
     downloadItem.resume()
 
+    console.log('will-download', downloadItem.getURL(), downloadItem.getFilename())
+
     getMainWindow()?.webContents.send('download-request', {
       id: downloadId,
       url: downloadItem.getURL(),
@@ -45,6 +47,8 @@ export function initDownloadManager(partition: string) {
         finalPath = path
       }
 
+      console.log(`download-path-response-${downloadId}`, path)
+
       if (downloadItem.getState() === 'completed') {
         fs.rename(tempDownloadPath, finalPath, (err) => {
           if (err) {
@@ -56,6 +60,12 @@ export function initDownloadManager(partition: string) {
     })
 
     downloadItem.on('updated', (_event, state) => {
+      console.log(
+        'download-updated',
+        state,
+        downloadItem.getReceivedBytes(),
+        downloadItem.getTotalBytes()
+      )
       getMainWindow()?.webContents.send('download-updated', {
         id: downloadId,
         state: state,
@@ -68,6 +78,8 @@ export function initDownloadManager(partition: string) {
 
     downloadItem.once('done', (_event, state) => {
       let path: string
+
+      console.log('download-done', state, downloadItem.getFilename())
 
       if (state === 'completed' && finalPath) {
         path = finalPath
