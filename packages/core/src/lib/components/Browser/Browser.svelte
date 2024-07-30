@@ -422,7 +422,6 @@
   }
 
   const deleteTab = async (tabId: string) => {
-    console.warn('Deleting tab', tabId)
     const tab = $tabs.find((tab) => tab.id === tabId)
     if (!tab) {
       log.error('Tab not found', tabId)
@@ -2310,103 +2309,7 @@
       return
     }
 
-    // Handle tab dnd
-    if (false && e.data['farc/tab'] !== undefined) {
-      const dragData = e.data['farc/tab'] as Tab
-
-      // Get all the tab arrays
-      let unpinnedTabsArray = get(unpinnedTabs)
-      let pinnedTabsArray = get(pinnedTabs)
-      let magicTabsArray = get(magicTabs)
-
-      // Determine source and target lists
-      let fromTabs: Tab[]
-      let toTabs: Tab[]
-
-      if (e.from.id === 'sidebar-unpinned-tabs') {
-        fromTabs = unpinnedTabsArray
-      } else if (e.from.id === 'sidebar-pinned-tabs') {
-        fromTabs = pinnedTabsArray
-      } else if (e.from.id === 'sidebar-magic-tabs') {
-        fromTabs = magicTabsArray
-      }
-
-      if (
-        true ||
-        !['sidebar-unpinned-tabs', 'sidebar-pinned-tabs', 'sidebar-magic-tabs'].includes(e.to?.id)
-      ) {
-        // NOTE: We only want to remove the tab if its dragged out of the sidebar
-        const idx = fromTabs.findIndex((v) => v.id === dragData.id)
-        console.error('rem frim', [fromTabs], idx)
-        if (idx > -1) {
-          fromTabs.splice(idx, 1)
-        }
-      }
-      {
-        // Update the indices of the tabs in all lists
-        const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
-
-        unpinnedTabsArray = updateIndices(unpinnedTabsArray)
-        pinnedTabsArray = updateIndices(pinnedTabsArray)
-        magicTabsArray = updateIndices(magicTabsArray)
-
-        // Combine all lists back together
-        //const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
-
-        //console.error('Removed old tab drag item', newTabs)
-
-        //tabs.set(newTabs)
-      }
-      // NOTE: This is important, as the old item needs to be removed before the new one can be added
-      //await tick()
-
-      if (e.to.id === 'sidebar-unpinned-tabs') {
-        toTabs = unpinnedTabsArray
-      } else if (e.to.id === 'sidebar-pinned-tabs') {
-        toTabs = pinnedTabsArray
-      } else if (e.to.id === 'sidebar-magic-tabs') {
-        toTabs = magicTabsArray
-      }
-
-      // Update pinned or magic state of the tab
-      if (e.to.id === 'sidebar-pinned-tabs') {
-        dragData.pinned = true
-        dragData.magic = false
-      } else if (e.to.id === 'sidebar-magic-tabs') {
-        dragData.pinned = false
-        dragData.magic = true
-      } else {
-        dragData.pinned = false
-        dragData.magic = false
-      }
-
-      toTabs.splice(e.index, 0, dragData)
-
-      // Update the indices of the tabs in all lists
-      const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
-
-      unpinnedTabsArray = updateIndices(unpinnedTabsArray)
-      pinnedTabsArray = updateIndices(pinnedTabsArray)
-      magicTabsArray = updateIndices(magicTabsArray)
-
-      // Combine all lists back together
-      const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
-
-      console.error('New tabs', [...newTabs])
-
-      tabs.set(newTabs)
-      await tick()
-
-      // Update the store with the changed tabs
-      await bulkUpdateTabsStore(
-        newTabs.map((tab) => ({
-          id: tab.id,
-          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
-        }))
-      )
-
-      log.debug('State updated successfully')
-    }
+    
 
     if (e.data['farc/tab'] !== undefined) {
       const dragData = e.data['farc/tab'] as Tab
@@ -2628,13 +2531,43 @@
       {#if $sidebarTab !== 'oasis'}
         <div
           class="flex {!horizontalTabs
-            ? 'flex-col w-[288px]  py-3 space-y-4 px-2 h-full'
-            : 'flex-row items-center h-[52px] ml-24 space-x-4 mr-4'} relative"
+            ? 'flex-col w-full py-3 space-y-4 px-2 h-full'
+            : 'flex-row items-center h-full ml-24 space-x-4 mr-4'} relative"
         >
           <div
             class="flex flex-row items-center flex-shrink-0 {!horizontalTabs &&
               'w-full justify-end'}"
           >
+            <Tooltip.Root openDelay={400} closeDelay={10}>
+              <Tooltip.Trigger>
+                <button
+                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  on:click={handleSidebarchange}
+                >
+                  <span
+                    class="inline-block {canGoBack &&
+                      'group-hover:skew-x-2'} transition-transform ease-in-out duration-200"
+                  >
+                    <Icon name="sidebar.left" />
+                  </span>
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                transition={flyAndScale}
+                transitionConfig={{ y: 8, duration: 150 }}
+                sideOffset={8}
+              >
+                <div class="bg-neutral-100">
+                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                </div>
+                <div
+                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                >
+                  Toggle Sidebar (⌘ + B)
+                </div>
+              </Tooltip.Content>
+            </Tooltip.Root>
+
             <Tooltip.Root openDelay={400} closeDelay={10}>
               <Tooltip.Trigger>
                 <button
@@ -2732,7 +2665,7 @@
           </div>
 
           <div
-            class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0 max-w-[300px] overflow-x-scroll no-scrollbar"
+            class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0 overflow-x-scroll no-scrollbar"
           >
             <div
               style:view-transition-name="pinned-tabs-wrapper"
@@ -2759,6 +2692,8 @@
                       on:DragEnd={onDragculaTabDragEnd}
                       on:select={handleTabSelect}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
+                      on:unarchive-tab={handleUnarchiveTab}
+                      on:delete-tab={handleDeleteTab}
                     />
                   {/key}
                   <!--  {/key}-->
@@ -2947,14 +2882,14 @@
                         tab={$unpinnedTabs[index]}
                         tabSize={Math.min(400, Math.max(240, tabSize))}
                         {activeTabId}
-                        {deleteTab}
-                        {unarchiveTab}
                         pinned={false}
                         on:DragEnd={onDragculaTabDragEnd}
                         on:select={handleTabSelect}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
-                        on:delete-tab={handleDeleteTab}
                         on:drop={handleDrop}
+                        on:delete-tab={handleDeleteTab}
+                        on:input-enter={handleBlur}
+                        on:unarchive-tab={handleUnarchiveTab}
                       />
                     {/if}
                   {/key}
@@ -3018,14 +2953,14 @@
                         showClose
                         tab={$unpinnedTabs[index]}
                         {activeTabId}
-                        {deleteTab}
-                        {unarchiveTab}
                         pinned={false}
                         on:DragEnd={onDragculaTabDragEnd}
                         on:select={handleTabSelect}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
-                        on:delete-tab={handleDeleteTab}
                         on:drop={handleDrop}
+                        on:delete-tab={handleDeleteTab}
+                        on:input-enter={handleBlur}
+                        on:unarchive-tab={handleUnarchiveTab}
                       />
                     {/if}
                   {/key}
@@ -3080,71 +3015,14 @@
             <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
               <button
                 class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                on:click={handleToggleMagicSidebar}
-                disabled={$sidebarTab !== 'active' ||
-                  !$activeTabMagic ||
-                  $activeTab?.type !== 'page'}
-                use:tooltip={{
-                  content: 'Toggle Page Chat',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 300
-                }}
+                on:click={() => handleRightSidebarChange()}
               >
-                {#if !$activeTabMagic}
-                  <Icon name="message" />
-                {:else if $activeTabMagic.showSidebar}
-                  <Icon name="close" />
-                {:else if $activeTabMagic.running}
-                  <Icon name="spinner" />
-                {:else}
-                  <Icon name="message" />
-                {/if}
-              </button>
-              {#if $activeTabMagic}
-                <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-              {/if}
-
-              <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-              <button
-                class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
-                disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
-                use:tooltip={{
-                  content: 'Toggle Annotations',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 300
-                }}
-              >
-                {#if $showAnnotationsSidebar}
+                {#if showRightSidebar}
                   <Icon name="close" />
                 {:else}
-                  <Icon name="marker" />
+                  <Icon name="sidebar.right" />
                 {/if}
               </button>
-
-              <button
-                class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
-                on:click={handleToggleAppSidebar}
-                use:tooltip={{
-                  content: 'Go wild',
-                  action: 'hover',
-                  position: 'bottom',
-                  animation: 'fade',
-                  delay: 300
-                }}
-              >
-                {#if $showAppSidebar}
-                  <Icon name="close" />
-                {:else}
-                  <Icon name="sparkles" />
-                {/if}
-              </button>
-
               <NewTabButton
                 {resourceManager}
                 {spaces}
