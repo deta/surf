@@ -1690,6 +1690,7 @@
         icon: '',
         spaceId: space.id,
         type: 'space',
+        colors: space.name.colors,
         index: 0,
         pinned: false,
         archived: false
@@ -1774,6 +1775,7 @@
           icon: '',
           spaceId: newSpace.id,
           type: 'space',
+          colors: newSpace.name.colors,
           index: 0,
           pinned: false,
           archived: false
@@ -1833,6 +1835,7 @@
         icon: '',
         spaceId: space.id,
         type: 'space',
+        colors: space.name.colors,
         index: 0,
         pinned: false,
         archived: false

@@ -58,6 +58,7 @@ export interface TabOasisDiscovery extends BaseTab {
 export interface TabSpace extends BaseTab {
   type: 'space'
   spaceId: string
+  colors: [string, string]
 }
 
 export interface TabHistory extends BaseTab {

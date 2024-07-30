@@ -20,24 +20,42 @@
   import * as Command from '../command'
   import Fuse from 'fuse.js'
   import { useLogScope } from '../../utils/log'
-  import { debounce } from 'lodash'
+  import { debounce, result } from 'lodash'
   import type { Tab } from './types'
   import TabSearchItem, { type CMDMenuItem } from './TabSearchItem.svelte'
   import { parseStringIntoUrl, truncateURL } from '../../utils/url'
+  import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
+  import {
+    ResourceTagsBuiltInKeys,
+    ResourceTypes,
+    type HistoryEntry,
+    type ResourceData
+  } from '../../types'
+  import {
+    Resource,
+    ResourceJSON,
+    ResourceManager,
+    useResourceManager
+  } from '../../service/resources'
+  import { getFileType } from '../../utils/files'
 
   export let activeTabs: Tab[] = []
-  export let historyEntriesManager: any
+  export let historyEntriesManager: HistoryEntriesManager
   export let showTabSearch = false
 
+  const resourceManager = useResourceManager()
   const dispatch = createEventDispatcher<TabSearchEvents>()
-  const log = useLogScope('CMDTMenu')
+  const log = useLogScope('TabSearch')
 
   let searchQuery = ''
   let filteredItems: CMDMenuItem[] = []
-  let historyEntries: any[] = []
+  let historyEntries: HistoryEntry[] = []
   let googleSuggestions: string[] = []
+  let oasisResources: Resource[] = []
 
-  const CACHE_EXPIRY = 5 * 60 * 1000 // 5 minutes
+  let page: 'tabs' | 'oasis' | null = null
+
+  const CACHE_EXPIRY = 1000 * 30 // 30 seconds
   let historyCache: { data: any[]; timestamp: number } | null = null
 
   const fuseOptions = {
@@ -52,14 +70,37 @@
 
   let fuse: Fuse<any>
 
+  $: if (searchQuery.startsWith('@tabs ')) {
+    page = 'tabs'
+
+    setTimeout(() => {
+      searchQuery = ''
+    }, 1)
+  } else if (searchQuery.startsWith('@oasis ')) {
+    page = 'oasis'
+
+    setTimeout(() => {
+      searchQuery = ''
+    }, 1)
+  }
+
   $: {
-    const items: CMDMenuItem[] = [
-      ...activeTabs.map((tab) => tabToItem(tab, { weight: 1.5 })),
-      // ...historyEntries,
-      ...browserCommands
-    ]
-    fuse = new Fuse(items, fuseOptions)
-    updateFilteredItems()
+    if (page === null) {
+      const items: CMDMenuItem[] = [
+        ...activeTabs.map((tab) => tabToItem(tab, { weight: 1.5 })),
+        ...historyEntries.map((entry) => historyEntryToItem(entry, { weight: 1 })),
+        // ...oasisResources.map((resource) => resourceToItem(resource, { weight: 1 })),
+        ...browserCommands
+      ]
+      fuse = new Fuse(items, fuseOptions)
+      updateFilteredItems()
+    } else if (page === 'tabs') {
+      const items: CMDMenuItem[] = activeTabs.map((tab) => tabToItem(tab, { weight: 1.5 }))
+      fuse = new Fuse(items, fuseOptions)
+      updateFilteredItems()
+    } else if (page === 'oasis') {
+      updateFilteredItems()
+    }
   }
 
   $: if (showTabSearch) {
@@ -68,6 +109,8 @@
 
   $: commands = filteredItems.filter((item) => item.type === 'command')
   $: tabs = filteredItems.filter((item) => item.type === 'tab')
+  $: history = filteredItems.filter((item) => item.type === 'history')
+  $: resources = filteredItems.filter((item) => item.type === 'resource')
   $: suggestions = filteredItems.filter(
     (item) => item.type === 'suggestion' || item.type === 'google-search'
   )
@@ -76,23 +119,77 @@
       item.type !== 'command' &&
       item.type !== 'tab' &&
       item.type !== 'suggestion' &&
-      item.type !== 'google-search'
+      item.type !== 'google-search' &&
+      item.type !== 'history' &&
+      item.type !== 'resource'
   )
+
+  $: placeholder =
+    page === 'tabs'
+      ? 'Search for a tab...'
+      : page === 'oasis'
+        ? 'Search for a resource...'
+        : 'Search for a tab or the web...'
+  $: breadcrumb = page === 'tabs' ? 'Active Tabs' : page === 'oasis' ? 'Oasis' : undefined
+
+  function handleKeyDown(e: KeyboardEvent) {
+    log.debug('handleKeyDown', e.key, searchQuery)
+    if (e.key === 'Backspace' && page && searchQuery === '') {
+      page = null
+    }
+  }
 
   function tabToItem(tab: Tab, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
     return {
       id: tab.id,
       label: tab.title,
       value: tab.type === 'page' ? tab.currentLocation ?? tab.initialLocation : '',
-      icon: tab.icon,
+      ...(tab.type === 'page'
+        ? { iconUrl: tab.icon }
+        : tab.type === 'space'
+          ? { iconColors: tab.colors }
+          : {}),
       type: 'tab',
+      ...params
+    } as CMDMenuItem
+  }
+
+  function historyEntryToItem(entry: HistoryEntry, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
+    return {
+      id: entry.id,
+      label: entry.title,
+      value: entry.url,
+      iconUrl: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(entry.url!)}`,
+      type: 'history',
+      ...params
+    } as CMDMenuItem
+  }
+
+  function resourceToItem(resource: Resource, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
+    const url =
+      resource.metadata?.sourceURI ??
+      resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value
+    const data = (resource as any).parsedData
+    log.debug('data', data)
+    return {
+      id: resource.id,
+      label: data.title || resource.metadata?.name || `${resource.id} - ${resource.type}`,
+      value: url,
+      type: 'resource',
+      description: getFileType(resource.type),
+      ...(url
+        ? { iconUrl: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(url)}` }
+        : { icon: 'file' }),
       ...params
     } as CMDMenuItem
   }
 
   async function updateFilteredItems() {
     let results = []
-    if (searchQuery) {
+
+    if (page === 'oasis') {
+      results = oasisResources.map((resource) => resourceToItem(resource, { score: 0.4 }))
+    } else if (searchQuery) {
       const fuseResults = fuse.search(searchQuery)
       results = fuseResults.map((result) => ({ ...result.item, score: result.score }))
 
@@ -103,6 +200,7 @@
           type: 'google-search',
           label: `Search Google for ${searchQuery}`,
           value: searchQuery,
+          icon: 'search',
           score: 0
         })
       }
@@ -112,6 +210,7 @@
           type: 'suggestion',
           label: suggestion,
           value: suggestion,
+          icon: 'search',
           score: 0.5
         }))
       )
@@ -127,10 +226,16 @@
           score: 1
         })
       }
+
+      results = [
+        ...results,
+        ...oasisResources.map((resource) => resourceToItem(resource, { score: 0.4 }))
+      ]
     } else {
       results = [
         ...activeTabs.map((tab) => tabToItem(tab, { score: 0 })),
-        // ...historyEntries.map((entry) => ({ ...entry, score: 0.1 })),
+        ...historyEntries.map((entry) => historyEntryToItem(entry, { score: 0.1 })),
+        ...oasisResources.map((resource) => resourceToItem(resource, { score: 0.1 })),
         ...browserCommands.map((cmd) => ({ ...cmd, score: 0.2 }))
       ]
     }
@@ -148,28 +253,72 @@
     filteredItems = results.slice(0, 15)
   }
 
-  // const updateSites = debounce(async () => {
-  //   if (!historyCache || Date.now() - historyCache.timestamp > CACHE_EXPIRY) {
-  //     const entries = await historyEntriesManager.searchEntries(searchQuery)
-  //     const sortedEntries = entries.sort(
-  //       (a, b) => new Date(b.entry.createdAt).getTime() - new Date(a.entry.createdAt).getTime()
-  //     )
-  //     const uniqueSites = Object.values(
-  //       sortedEntries.reduce((acc, entry) => {
-  //         if (
-  //           !acc[entry.site] ||
-  //           new Date(entry.entry.createdAt) > new Date(acc[entry.site].entry.createdAt)
-  //         ) {
-  //           acc[entry.site] = { ...entry, type: 'history' }
-  //         }
-  //         return acc
-  //       }, {})
-  //     )
-  //     historyCache = { data: uniqueSites, timestamp: Date.now() }
-  //   }
-  //   historyEntries = historyCache.data
-  //   updateFilteredItems()
-  // }, 30)
+  const updateHistory = debounce(async (searchQuery: string) => {
+    if (!historyCache || Date.now() - historyCache.timestamp > CACHE_EXPIRY) {
+      log.debug('Fetching history entries...')
+      const entries = await historyEntriesManager.searchEntries(searchQuery)
+      log.debug('History entries:', entries)
+      const sortedEntries = entries.sort(
+        (a, b) => new Date(b.entry.createdAt).getTime() - new Date(a.entry.createdAt).getTime()
+      )
+      const uniqueSites = Object.values(
+        sortedEntries.reduce(
+          (acc, entry) => {
+            if (
+              !acc[entry.site] ||
+              new Date(entry.entry.createdAt) > new Date(acc[entry.site].createdAt)
+            ) {
+              acc[entry.site] = entry.entry
+            }
+            return acc
+          },
+          {} as Record<string, HistoryEntry>
+        )
+      )
+      historyCache = { data: uniqueSites, timestamp: Date.now() }
+    }
+    historyEntries = historyCache.data
+    updateFilteredItems()
+  }, 30)
+
+  const fetchOasisResults = debounce(async (query: string) => {
+    if (query.length > 2) {
+      try {
+        // const data = await resourceManager.listResourcesByTags([
+        const data = await resourceManager.searchResources(
+          query,
+          [
+            ResourceManager.SearchTagDeleted(false),
+            ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
+            ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne')
+            // ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+            // ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
+          ],
+          { includeAnnotations: false }
+        )
+
+        log.debug('Oasis search results:', data)
+
+        oasisResources = data.map((x) => x.resource).slice(0, 5)
+
+        await Promise.all(
+          oasisResources.map((resource) => {
+            if (typeof (resource as any).getParsedData === 'function') {
+              return (resource as ResourceJSON<any>).getParsedData()
+            }
+          })
+        )
+
+        updateFilteredItems()
+      } catch (error) {
+        log.error('Error fetching Oasis search results:', error)
+        oasisResources = []
+      }
+    } else {
+      oasisResources = []
+    }
+    updateFilteredItems()
+  }, 500)
 
   const fetchGoogleSuggestions = debounce(async (query: string) => {
     if (query.length > 2) {
@@ -182,7 +331,7 @@
         googleSuggestions = data[1].slice(0, 5)
         updateFilteredItems()
       } catch (error) {
-        console.error('Error fetching Google suggestions:', error)
+        log.error('Error fetching Google suggestions:', error)
         googleSuggestions = []
       }
     } else {
@@ -193,6 +342,8 @@
 
   $: {
     fetchGoogleSuggestions(searchQuery)
+    updateHistory(searchQuery)
+    fetchOasisResults(searchQuery)
   }
 
   function handleSelect(e: CustomEvent<CMDMenuItem>) {
@@ -251,35 +402,63 @@
   loop
   shouldFilter={false}
   onOpenChange={(open) => !open && resetSearch()}
+  onKeydown={handleKeyDown}
 >
-  <Command.Input placeholder="Search for a tab or the web..." bind:value={searchQuery} />
+  <Command.Input {placeholder} {breadcrumb} bind:value={searchQuery} />
+
   <Command.List>
-    {#if tabs.length > 0}
-      <Command.Group heading="Active Tabs">
-        {#each tabs as item}
-          <TabSearchItem {item} on:select={handleSelect} />
-        {/each}
-      </Command.Group>
-    {/if}
+    {#if !page}
+      {#if tabs.length > 0}
+        <Command.Group heading="Active Tabs">
+          {#each tabs as item}
+            <TabSearchItem {item} on:select={handleSelect} />
+          {/each}
+        </Command.Group>
+      {/if}
 
-    {#if commands.length > 0}
-      <Command.Group heading="Actions">
-        {#each commands as item}
-          <TabSearchItem {item} on:select={handleSelect} />
-        {/each}
-      </Command.Group>
-    {/if}
+      {#if history.length > 0}
+        <Command.Group heading="History">
+          {#each history as item}
+            <TabSearchItem {item} on:select={handleSelect} />
+          {/each}
+        </Command.Group>
+      {/if}
 
-    {#if suggestions.length > 0}
-      <Command.Group heading="Suggestions">
-        {#each suggestions as item}
-          <TabSearchItem {item} on:select={handleSelect} />
-        {/each}
-      </Command.Group>
-    {/if}
+      {#if resources.length > 0}
+        <Command.Group heading="Oasis">
+          {#each resources as item}
+            <TabSearchItem {item} on:select={handleSelect} />
+          {/each}
+        </Command.Group>
+      {/if}
 
-    {#each other as item}
-      <TabSearchItem {item} on:select={handleSelect} />
-    {/each}
+      {#if commands.length > 0}
+        <Command.Group heading="Actions">
+          {#each commands as item}
+            <TabSearchItem {item} on:select={handleSelect} />
+          {/each}
+        </Command.Group>
+      {/if}
+
+      {#if suggestions.length > 0}
+        <Command.Group heading="Suggestions">
+          {#each suggestions as item}
+            <TabSearchItem {item} on:select={handleSelect} />
+          {/each}
+        </Command.Group>
+      {/if}
+
+      {#each other as item}
+        <TabSearchItem {item} on:select={handleSelect} />
+      {/each}
+    {:else if page === 'tabs'}
+      {#each tabs as item}
+        <TabSearchItem {item} on:select={handleSelect} />
+      {/each}
+    {:else if page === 'oasis'}
+      {#each resources as item}
+        <TabSearchItem {item} on:select={handleSelect} />
+      {/each}
+    {/if}
   </Command.List>
 </Command.Dialog>
