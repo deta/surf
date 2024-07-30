@@ -17,14 +17,14 @@ export type Axis = "horizontal" | "vertical";
 /*export interface AxisDragZoneActionProps extends DragZoneActionProps { }
 
 export interface AxisDragZoneActionAttributes extends DragZoneActionAttributes<IndexedDragculaDragEvent> {
-	axis?: Axis;
-	dragdeadzone?: number;
+  axis?: Axis;
+  dragdeadzone?: number;
 
-	'on:DragEnter'?: (e: IndexedDragculaDragEvent) => void,
-	'on:DragOver'?: (e: IndexedDragculaDragEvent) => void,
-	'on:DragLeave'?: (e: IndexedDragculaDragEvent) => void,
-	'on:DragEnd'?: (e: IndexedDragculaDragEvent) => void,
-	'on:Drop'?: (e: IndexedDragculaDragEvent) => void
+  'on:DragEnter'?: (e: IndexedDragculaDragEvent) => void,
+  'on:DragOver'?: (e: IndexedDragculaDragEvent) => void,
+  'on:DragLeave'?: (e: IndexedDragculaDragEvent) => void,
+  'on:DragEnd'?: (e: IndexedDragculaDragEvent) => void,
+  'on:Drop'?: (e: IndexedDragculaDragEvent) => void
 
 }*/
 
@@ -48,16 +48,16 @@ export class HTMLAxisDragZone extends HTMLDragZone {
   }
 
   /*static override action(node: HTMLElement, props: { id?: string }) {
-		const controller = new this(node, props);
+    const controller = new this(node, props);
 
-		return {
-			destroy() {
-				controller.destroy();
-			},
-			updated(props: any) {
-			}
-		}
-	}*/
+    return {
+      destroy() {
+        controller.destroy();
+      },
+      updated(props: any) {
+      }
+    }
+  }*/
 
   override applyNodeAttributes() {
     super.applyNodeAttributes();
@@ -158,7 +158,6 @@ export class HTMLAxisDragZone extends HTMLDragZone {
   }
 
   override onDragLeave(drag: DragOperation) {
-    console.error("LEAVE");
     //document.startViewTransition(() => {
     for (const child of Array.from(this.node!.children) as Array<HTMLElement>) {
       this.styles.applyAll(child);
