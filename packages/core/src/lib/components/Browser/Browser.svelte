@@ -1689,7 +1689,7 @@
     toasts.success('Space added to your Tabs!')
   }
 
-  const handleCreateTabFromPopover = async (e: CustomEvent<Space>) => {
+  const handleCreateTabForSpace = async (e: CustomEvent<Space>) => {
     const space = e.detail
 
     log.debug('create tab from space', space)
@@ -2444,6 +2444,7 @@
     on:toggle-sidebar={() => handleSidebarchange()}
     on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
     on:reload-window={() => $activeBrowserTab?.reload()}
+    on:open-space={handleCreateTabForSpace}
     on:zoom={() => {
       $activeBrowserTab?.zoomIn()
     }}
@@ -2981,7 +2982,7 @@
               <NewTabButton
                 {resourceManager}
                 {spaces}
-                on:create-tab-from-space={handleCreateTabFromPopover}
+                on:create-tab-from-space={handleCreateTabForSpace}
                 on:create-new-space={handleCreateNewSpace}
                 on:create-new-history-tab={createHistoryTab}
                 on:create-new-tab={debouncedCreateNewEmptyTab}

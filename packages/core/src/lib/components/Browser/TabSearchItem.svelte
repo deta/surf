@@ -4,7 +4,7 @@
     label: string
     shortcut?: string
     description?: string
-    type: 'command' | 'tab' | 'suggestion' | 'google-search' | 'history' | 'resource'
+    type: 'command' | 'tab' | 'suggestion' | 'google-search' | 'history' | 'resource' | 'space'
     icon?: Icons
     iconUrl?: string
     iconColors?: [string, string]
