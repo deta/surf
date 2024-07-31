@@ -669,7 +669,9 @@
       return
     }
 
-    e.preventDefault()
+    const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+
+    let resourceIds: string[] = []
     if (drag.isNative) {
       const event = new DragEvent('drop', { dataTransfer: drag.data })
       log.debug('Dropped native', event)
@@ -684,50 +686,42 @@
       const parsed = await processDrop(event)
       log.debug('Parsed', parsed)
 
-      const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-      log.debug('Resources', resources)
+      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+      log.debug('Resources', newResources)
 
-      await oasis.addResourcesToSpace(
-        spaceId,
-        resources.map((x) => x.id)
-      )
-
-      await loadSpaceContents(spaceId)
-      toasts.success('Resources added!')
-
-      return
+      newResources.forEach((r) => resourceIds.push(r.id))
     } else {
       log.debug('Dropped dragcula', drag.data)
-      const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
 
       const parsed: MediaParserResult[] = []
 
       if (drag.data['farc/tab'] !== undefined) {
-        parsed.push({
-          type: 'url',
-          data: {
-            href:
-              (drag.data['farc/tab'] as Tab).currentLocation ||
-              (drag.data['farc/tab'] as Tab).initialLocation
-          },
-          metadata: {}
-        } satisfies MediaParserResultURL)
+        if (drag.data['horizon/resource/id'] !== undefined) {
+          resourceIds.push(drag.data['horizon/resource/id'])
+        } else {
+          parsed.push({
+            type: 'url',
+            data: {
+              href:
+                (drag.data['farc/tab'] as Tab).currentLocation ||
+                (drag.data['farc/tab'] as Tab).initialLocation
+            },
+            metadata: {}
+          } satisfies MediaParserResultURL)
+
+          const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+          log.debug('Resources', newResources)
+          newResources.forEach((r) => resourceIds.push(r.id))
+        }
       }
-
-      const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-      log.debug('Resources', resources)
-
-      await oasis.addResourcesToSpace(
-        spaceId,
-        resources.map((x) => x.id)
-      )
-
-      await loadSpaceContents(spaceId)
-      toast.success('Resources added!')
-
-      e.preventDefault()
-      return
     }
+
+    await oasis.addResourcesToSpace(spaceId, resourceIds)
+    e.preventDefault()
+
+    await loadSpaceContents(spaceId)
+    toast.success('Resources added!')
+    return
 
     const event = e.detail
     log.debug('Dropped', event)

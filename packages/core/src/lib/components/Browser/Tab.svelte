@@ -192,8 +192,10 @@
       'farc/tab': {
         ...tab,
         pinned
-      },
-      'custom/test': 'hello'
+      }
+    }
+    if (tab.resourceBookmark !== undefined) {
+      e.item.data['horizon/resource/id'] = tab.resourceBookmark
     }
   }}
   on:DragEnd={(e) => {
