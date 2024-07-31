@@ -2679,7 +2679,6 @@
                 <div class="">Drop Tabs here to pin them.</div>
               {:else}
                 {#each $pinnedTabs as tab, index (tab.id)}
-                  <!--{#key tab}-->
                   {#key $pinnedTabs[index]}
                     <TabItem
                       tab={$pinnedTabs[index]}
@@ -2694,7 +2693,6 @@
                       on:delete-tab={handleDeleteTab}
                     />
                   {/key}
-                  <!--  {/key}-->
                 {/each}
               {/if}
             </div>
@@ -2780,10 +2778,7 @@
                         axis="vertical"
                         dragdeadzone="5"
                         use:HTMLAxisDragZone.action={{
-                          id: 'sidebar-magic-tabs',
-                          acceptDrag: (drag) => {
-                            return true
-                          }
+                          id: 'sidebar-magic-tabs'
                         }}
                         on:Drop={onDropDragcula}
                         on:DragEnter={onDragculaTabsDragEnter}
@@ -2848,7 +2843,6 @@
                 on:DragEnter={onDragculaTabsDragEnter}
               >
                 {#each $unpinnedTabs as tab, index (tab.id)}
-                  <!--{#key tab}-->
                   {#key $unpinnedTabs[index]}
                     <!-- check if this tab is active -->
                     {#if $activeTabId === $unpinnedTabs[index].id}
@@ -2905,11 +2899,9 @@
                 on:DragEnter={onDragculaTabsDragEnter}
               >
                 {#each $unpinnedTabs as tab, index (tab.id)}
-                  <!--{#key tab}-->
                   {#key $unpinnedTabs[index]}
                     <!-- check if this tab is active -->
                     {#if $activeTabId === $unpinnedTabs[index].id}
-                      <!-- on:drop={handleDrop} -->
                       <TabItem
                         showClose
                         tab={$unpinnedTabs[index]}

@@ -10,8 +10,6 @@
   const log = useLogScope('DropWrapper')
   const dispatch = createEventDispatcher<{
     drop: DragEvent
-    //dragenter: DragEvent
-    //dragleave: DragEvent
     DragEnter: DragculaDragEvent
     DragLeave: DragEvent
     Drop: DragculaDragEvent

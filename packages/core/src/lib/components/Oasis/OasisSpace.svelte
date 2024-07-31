@@ -664,116 +664,70 @@
   const handleDrop = async (e: CustomEvent<DragculaDragEvent>) => {
     const drag = e.detail
 
-    if (drag instanceof DragculaDragEvent) {
-      e.preventDefault()
-      if (drag.isNative) {
-        const event = new DragEvent('drop', { dataTransfer: drag.data })
-        log.debug('Dropped', event)
-
-        const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
-        if (isOwnDrop) {
-          log.debug('Own drop detected, ignoring...')
-          log.debug(event.dataTransfer?.files)
-          return
-        }
-
-        const parsed = await processDrop(event)
-        log.debug('Parsed', parsed)
-
-        const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-        log.debug('Resources', resources)
-
-        await loadSpaceContents(spaceId)
-        toasts.success('Resources added!')
-
-        return
-      } else {
-        log.debug('Dropped', drag.data)
-        const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
-
-        const parsed: MediaParserResult[] = []
-
-        if (drag.data['farc/tab'] !== undefined) {
-          parsed.push({
-            type: 'url',
-            data: {
-              href:
-                (drag.data['farc/tab'] as Tab).currentLocation ||
-                (drag.data['farc/tab'] as Tab).initialLocation
-            },
-            metadata: {}
-          } satisfies MediaParserResultURL)
-        }
-
-        const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-        log.debug('Resources', resources)
-
-        await oasis.addResourcesToSpace(
-          spaceId,
-          resources.map((x) => x.id)
-        )
-
-        await loadSpaceContents(spaceId)
-        toast.success('Resources added!')
-
-        e.preventDefault()
-        return
-      }
-    } else {
+    if (!(drag instanceof DragculaDragEvent)) {
       log.warn('Detected non-dragcula drag event!', e)
-    }
-
-    return
-    if (drag instanceof DragculaCustomDragEvent || drag instanceof DragculaNativeDragEvent) {
-      if (drag.isNative) {
-        const event = new DragEvent('drop', { dataTransfer: drag.dataTransfer })
-        log.debug('Dropped', event)
-
-        const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
-        if (isOwnDrop) {
-          log.debug('Own drop detected, ignoring...')
-          log.debug(event.dataTransfer?.files)
-          return
-        }
-
-        const parsed = await processDrop(event)
-        log.debug('Parsed', parsed)
-
-        const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-        log.debug('Resources', resources)
-
-        await loadSpaceContents(spaceId)
-        toasts.success('Resources added!')
-
-        return
-      } else {
-        log.debug('Dropped', drag.dataTransfer)
-
-        const parsed: MediaParserResult[] = []
-
-        if (drag.dataTransfer['farc/tab'] !== undefined) {
-          parsed.push({
-            type: 'url',
-            data: {
-              href: (drag.dataTransfer['farc/tab'] as Tab).currentLocation
-            },
-            metadata: {}
-          } satisfies MediaParserResultURL)
-        }
-
-        const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-        log.debug('Resources', resources)
-
-        await tick()
-        await loadSpaceContents(spaceId)
-        toasts.success('Resources added!')
-
-        return
-      }
-
       return
     }
-    // NOTE: I left the default handler for now if we need it / as fallback
+
+    e.preventDefault()
+    if (drag.isNative) {
+      const event = new DragEvent('drop', { dataTransfer: drag.data })
+      log.debug('Dropped native', event)
+
+      const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
+      if (isOwnDrop) {
+        log.debug('Own drop detected, ignoring...')
+        log.debug(event.dataTransfer?.files)
+        return
+      }
+
+      const parsed = await processDrop(event)
+      log.debug('Parsed', parsed)
+
+      const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+      log.debug('Resources', resources)
+
+      await oasis.addResourcesToSpace(
+        spaceId,
+        resources.map((x) => x.id)
+      )
+
+      await loadSpaceContents(spaceId)
+      toasts.success('Resources added!')
+
+      return
+    } else {
+      log.debug('Dropped dragcula', drag.data)
+      const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+
+      const parsed: MediaParserResult[] = []
+
+      if (drag.data['farc/tab'] !== undefined) {
+        parsed.push({
+          type: 'url',
+          data: {
+            href:
+              (drag.data['farc/tab'] as Tab).currentLocation ||
+              (drag.data['farc/tab'] as Tab).initialLocation
+          },
+          metadata: {}
+        } satisfies MediaParserResultURL)
+      }
+
+      const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+      log.debug('Resources', resources)
+
+      await oasis.addResourcesToSpace(
+        spaceId,
+        resources.map((x) => x.id)
+      )
+
+      await loadSpaceContents(spaceId)
+      toast.success('Resources added!')
+
+      e.preventDefault()
+      return
+    }
 
     const event = e.detail
     log.debug('Dropped', event)
