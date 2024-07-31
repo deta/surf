@@ -16,23 +16,55 @@ export function initDownloadManager(partition: string) {
   targetSession.on('will-download', (_event, downloadItem) => {
     let finalPath = ''
     const downloadId = randomUUID()
-    const tempDownloadPath = path.join(
-      app.getPath('temp'),
-      `${downloadId}-${downloadItem.getFilename()}`
-    )
+    const filename = downloadItem.getFilename()
+    const tempDownloadPath = path.join(app.getPath('temp'), `${downloadId}-${filename}`)
 
-    const fileExtension = path.extname(downloadItem.getFilename()).toLowerCase()
+    const fileExtension = path.extname(filename).toLowerCase()
     const mimeType = mime.lookup(fileExtension) || downloadItem.getMimeType()
 
     downloadItem.setSavePath(tempDownloadPath)
     downloadItem.resume()
 
-    console.log('will-download', downloadItem.getURL(), downloadItem.getFilename())
+    console.log('will-download', downloadItem.getURL(), filename)
+
+    const moveTempFile = (finalPath: string) => {
+      // copy to downloads folder
+      const downloadsPath = app.getPath('downloads')
+
+      let downloadFileName = filename
+      let downloadFilePath = path.join(downloadsPath, downloadFileName)
+      if (fs.existsSync(downloadFilePath)) {
+        const ext = path.extname(downloadFileName)
+        const base = path.basename(downloadFileName, ext)
+        let i = 1
+        while (fs.existsSync(downloadFilePath)) {
+          downloadFileName = `${base} (${i})${ext}`
+          downloadFilePath = path.join(downloadsPath, downloadFileName)
+          i++
+        }
+      }
+
+      console.log('saving download to system downloads', downloadFilePath)
+      fs.copyFile(tempDownloadPath, downloadFilePath, (err) => {
+        if (err) {
+          console.error(`error copying file to downloads: ${err}`)
+          return
+        }
+      })
+
+      console.log('moving download to oasis directory', finalPath)
+      fs.rename(tempDownloadPath, finalPath, (err) => {
+        if (err) {
+          console.error(`error moving file: ${err}`)
+          return
+        }
+      })
+    }
 
     getMainWindow()?.webContents.send('download-request', {
       id: downloadId,
       url: downloadItem.getURL(),
-      filename: downloadItem.getFilename(),
+      filename: filename,
       mimeType: mimeType,
       totalBytes: downloadItem.getTotalBytes(),
       contentDisposition: downloadItem.getContentDisposition(),
@@ -50,12 +82,7 @@ export function initDownloadManager(partition: string) {
       console.log(`download-path-response-${downloadId}`, path)
 
       if (downloadItem.getState() === 'completed') {
-        fs.rename(tempDownloadPath, finalPath, (err) => {
-          if (err) {
-            console.error(`error moving file: ${err}`)
-            return
-          }
-        })
+        moveTempFile(finalPath)
       }
     })
 
@@ -83,12 +110,7 @@ export function initDownloadManager(partition: string) {
 
       if (state === 'completed' && finalPath) {
         path = finalPath
-        fs.rename(tempDownloadPath, finalPath, (err) => {
-          if (err) {
-            console.error(`error moving file: ${err}`)
-            return
-          }
-        })
+        moveTempFile(finalPath)
       } else {
         path = tempDownloadPath
       }
