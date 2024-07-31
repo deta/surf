@@ -1,4 +1,4 @@
-<!-- <svelte:options immutable={true} /> -->
+<svelte:options immutable />
 
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
@@ -42,13 +42,14 @@
   import log from '../../utils/log'
   import HistoryEntryPreview from '../Cards/Link/HistoryEntryPreview.svelte'
   import { getHumanDistanceToNow } from '../../utils/time'
+  import { isModKeyPressed } from '../../utils/keyboard'
 
   export let resource: Resource
   export let selected: boolean = false
   // export let annotations: ResourceAnnotation[] = []
   export let showSummary: boolean = false
   export let showTitles: boolean = true
-  export let showActions: boolean = true
+  export let interactive: boolean = true
 
   const resourceManager = useResourceManager()
 
@@ -57,6 +58,7 @@
     remove: string
     load: string
     open: string
+    'new-tab': { url: string; active: boolean }
   }>()
 
   // TODO: figure out better way to do this
@@ -98,31 +100,13 @@
     }
   }
 
-  const handleClick = async () => {
-    log.debug('Resource clicked', resource)
-    if (resource.type === ResourceTypes.ANNOTATION) {
-      const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
-      if (annotatesTag) {
-        dispatch('click', annotatesTag.value)
-        return
-      }
+  const handleClick = async (e: MouseEvent) => {
+    if (isModKeyPressed(e)) {
+      dispatch('new-tab', { url: resource.metadata?.sourceURI!, active: e.shiftKey })
+      return
     }
 
-    dispatch('click', resource.id)
-  }
-
-  const handleLoad = () => {
-    dispatch('load', resource.id)
-  }
-
-  const handleRemove = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
-    dispatch('remove', resource.id)
-  }
-
-  const handleMaximize = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
-
+    log.debug('Resource clicked', resource)
     if (resource.type === ResourceTypes.ANNOTATION) {
       const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
       if (annotatesTag) {
@@ -134,8 +118,24 @@
     dispatch('open', resource.id)
   }
 
+  const handleLoad = () => {
+    dispatch('load', resource.id)
+  }
+
+  const handleRemove = (e: MouseEvent) => {
+    e.stopImmediatePropagation()
+    dispatch('remove', resource.id)
+  }
+
+  const handleOpenAsNewTab = (e: MouseEvent) => {
+    e.stopImmediatePropagation()
+    const payload = { url: resource?.metadata?.sourceURI!, active: true }
+    log.debug('Opening resource in new tab', payload)
+
+    dispatch('new-tab', payload)
+  }
+
   const getHostname = (raw: string) => {
-    log.debug('Getting hostname from', raw)
     try {
       const url = new URL(raw)
       return url.hostname
@@ -254,11 +254,13 @@
         {/if}
       </div>
 
-      {#if showActions}
+      {#if interactive}
         <div class="remove-wrapper">
-          <div class="remove rotated" on:click={handleMaximize}>
-            <Icon name="arrow.right" color="#AAA7B1" />
-          </div>
+          {#if resource?.metadata?.sourceURI}
+            <div class="remove rotated" on:click={handleOpenAsNewTab}>
+              <Icon name="arrow.right" color="#AAA7B1" />
+            </div>
+          {/if}
           <div class="remove" on:click={handleRemove}>
             <Icon name="close" color="#AAA7B1" />
           </div>
@@ -299,11 +301,13 @@
     </div>
   {/if}
 
-  {#if showActions}
+  {#if interactive}
     <div class="remove-wrapper">
-      <div class="remove rotated" on:click={handleMaximize}>
-        <Icon name="arrow.right" color="#AAA7B1" />
-      </div>
+      {#if resource?.metadata?.sourceURI}
+        <div class="remove rotated" on:click={handleOpenAsNewTab}>
+          <Icon name="arrow.right" color="#AAA7B1" />
+        </div>
+      {/if}
       <div class="remove" on:click={handleRemove}>
         <Icon name="close" color="#AAA7B1" />
       </div>
@@ -422,7 +426,7 @@
     gap: 0.75rem;
     top: 0;
     padding: 1rem;
-    right: 1rem;
+    right: 0;
     transform: translateX(45%) translateY(-45%);
     opacity: 0;
     margin-left: 0.5rem;
@@ -515,12 +519,18 @@
   }
 
   .summary {
-    font-size: 0.9rem;
-    color: #666;
+    font-size: 1rem;
+    color: rgb(12 74 110/0.9);
+    letter-spacing: 0.0175rem;
+    font-weight: 500;
+    text-wrap: pretty;
     display: -webkit-box;
-    -webkit-line-clamp: 15;
-    -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.5;
+    word-break: break-word;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-line-clamp: 15;
+    -webkit-box-orient: vertical;
   }
 </style>

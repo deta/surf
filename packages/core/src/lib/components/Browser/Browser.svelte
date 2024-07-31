@@ -40,7 +40,7 @@
   import BrowserTab, { type BrowserTabNewTabEvent } from './BrowserTab.svelte'
   import Horizon from '../Horizon/Horizon.svelte'
   import BrowserHomescreen from './BrowserHomescreen.svelte'
-  import OasisSidebar from '../Oasis/OasisSidebar.svelte'
+  import SpacesView from '../Oasis/SpacesView.svelte'
   import TabItem from './Tab.svelte'
   import TabSearch from './TabSearch.svelte'
   import { type ShortcutMenuEvents } from '../Shortcut/ShortcutMenu.svelte'
@@ -3123,6 +3123,7 @@
               on:chat={handleCreateChat}
               on:rag={handleRag}
               on:new-tab={handleNewTab}
+              {spaces}
             />
           </div>
         {/if}

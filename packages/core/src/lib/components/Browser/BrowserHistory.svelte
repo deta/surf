@@ -31,7 +31,6 @@
     ([$historyEntries, $searchTerm]) => {
       if (!$searchTerm) return $historyEntries
 
-
       console.log('searching for:', $searchTerm)
       console.log('entries:', $historyEntries)
 

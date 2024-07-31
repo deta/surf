@@ -9,27 +9,19 @@
   import { useToasts } from '../../service/toast'
   import type { TabSpace } from '@horizon/core/src/lib/components/Browser/types'
   import type { SpaceData, SpaceSource } from '../../types'
-  import { parseStringIntoUrl } from '../../utils/url'
-  import { generateID } from '../../utils/id'
-  import { getTime } from 'date-fns'
+  import type { Writable } from 'svelte/store'
+  import type { Space } from '@horizon/core/src/lib/types'
 
-  const log = useLogScope('OasisSidebar')
+  const log = useLogScope('SpacesView')
   const oasis = useOasis()
   const toast = useToasts()
   const dispatch = createEventDispatcher<{ createTab: TabSpace }>()
 
-  const spaces = oasis.spaces
+  export let spaces: Writable<Space[]>
   const selectedSpace = oasis.selectedSpace
 
   export let onBack = () => {}
   $: log.debug('Spaces:', $spaces)
-
-  // const displaySpaces = derived(spaces, ($spaces) => {
-  //   return [
-  //     // { id: 'all', name: 'Everything', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), deleted: 0 },
-  //     ...$spaces
-  //   ]
-  // })
 
   const handleCreateSpace = async (_e: MouseEvent) => {
     try {
@@ -118,16 +110,11 @@
   }
 
   onMount(() => {
-    log.debug('Mounted OasisSidebar')
+    log.debug('Mounted SpacesView')
   })
 </script>
 
 <div class="folders-sidebar">
-  <!-- <button class="action-back-to-tabs" on:click={() => sidebarTab.set('active')}>
-    <Icon name="chevron.left" />
-    <span class="label">Back to Tabs</span>
-  </button> -->
-
   <div class="top-bar">
     <button class="action-new-space" on:click={onBack}>
       <Icon name="chevron.left" />
