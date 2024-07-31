@@ -669,7 +669,6 @@
       if (drag.isNative) {
         const event = new DragEvent('drop', { dataTransfer: drag.data })
         log.debug('Dropped', event)
-        console.warn('DROP', event.dataTransfer?.files.length)
 
         const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
         if (isOwnDrop) {
