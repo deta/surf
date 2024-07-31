@@ -87,13 +87,18 @@
 </script>
 
 <div class="link-card">
-  <img
-    class="youtube-thumbnail"
-    src={youtubeThumbnailURL}
-    alt="YouTube video thumbnail"
-    on:load={handleLoad}
-    loading="lazy"
-  />
+  {#if loading}
+    <LoadingBox>
+      <img src={fallback} alt="Loading fallback image" />
+    </LoadingBox>
+  {:else}
+    <img
+      class="youtube-thumbnail"
+      src={youtubeThumbnailURL}
+      alt="YouTube video thumbnail"
+      on:load={handleLoad}
+    />
+  {/if}
 </div>
 
 <style lang="scss">

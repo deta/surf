@@ -22,8 +22,8 @@
 
       const resourceData = await resourceManager.getResource(id)
       resource.set(resourceData)
-
-      log.debug('Loaded resource:', resourceData)
+      // disabled, since this is blocking the renderer
+      // log.debug('Loaded resource:', resourceData)
     } catch (e) {
       log.error(e)
     }

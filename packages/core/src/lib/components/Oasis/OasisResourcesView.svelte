@@ -2,10 +2,7 @@
   import { derived, writable, type Readable } from 'svelte/store'
 
   import { useLogScope } from '../../utils/log'
-  import OasisResourceLoader from './OasisResourceLoader.svelte'
-  import InfiniteScroll from '../InfiniteScroll.svelte'
-  import { DrawerContentMasonry } from '@horizon/drawer'
-  import { useDebounce } from '../../utils/debounce'
+  import Masonry from './MasonrySpace.svelte'
 
   export let resourceIds: Readable<string[]>
   export let selected: string | null = null
@@ -25,51 +22,28 @@
     return resourceIds.slice(0, renderLimit)
   })
 
-  const debouncedRefreshLayout = useDebounce(() => {
-    refreshContentLayout()
-  }, 500)
-
   const handleLoadChunk = () => {
-    log.debug('Load more chunk...')
+    log.debug('Load more chunk...', $renderLimit, $resourceIds.length)
     if ($resourceIds.length <= $renderContents.length) {
       return
     }
 
     renderLimit.update((limit) => limit + CHUNK_SIZE)
-    debouncedRefreshLayout()
-  }
-
-  const handleItemLoad = () => {
-    debouncedRefreshLayout()
   }
 </script>
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    <DrawerContentMasonry
-      items={$renderContents}
-      gridGap="2rem"
-      colWidth="minmax(250px, 330px)"
-      bind:refreshLayout={refreshContentLayout}
-    >
-      {#each $renderContents as resourceId (resourceId)}
-        <OasisResourceLoader
-          id={resourceId}
-          selected={selected === resourceId}
-          on:load={handleItemLoad}
-          on:click
-          on:open
-          on:remove
-          on:load
-        />
-      {/each}
-
-      <InfiniteScroll
-        elementScroll={scrollElement}
-        threshold={CHUNK_THRESHOLD}
-        on:loadMore={handleLoadChunk}
-      />
-    </DrawerContentMasonry>
+    {#key scrollElement}
+      <Masonry
+        renderContents={$renderContents}
+        on:load-more={handleLoadChunk}
+        on:open
+        on:remove
+        on:new-tab
+        id={new Date()}
+      ></Masonry>
+    {/key}
   </div>
 </div>
 

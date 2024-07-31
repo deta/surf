@@ -1,9 +1,12 @@
+<svelte:options immutable />
+
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { Resource, ResourceAnnotation, useResourceManager } from '../../service/resources'
   import { useLogScope } from '../../utils/log'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import DragResourceWrapper from './DragResourceWrapper.svelte'
+  import Skelleton from './OasisSkelleton.svelte'
 
   export let id: string
   export let selected: boolean = false
@@ -26,8 +29,8 @@
       }
 
       resource = res
-
-      log.debug('Loaded resource:', resource)
+      // disabled, since this is blocking the renderer
+      // log.debug('Loaded resource:', resource)
       dispatch('load', resource)
     } catch (e) {
       log.error(e)
@@ -46,10 +49,19 @@
 <div class="wrapper">
   {#if resource}
     <DragResourceWrapper {resource}>
-      <ResourcePreviewClean {resource} {selected} showSummary on:load on:click on:open on:remove />
+      <ResourcePreviewClean
+        {resource}
+        {selected}
+        showSummary
+        on:load
+        on:click
+        on:open
+        on:remove
+        on:new-tab
+      />
     </DragResourceWrapper>
   {:else if loading}
-    <div>Loading...</div>
+    <Skelleton />
   {:else}
     <div>Resource not found</div>
   {/if}

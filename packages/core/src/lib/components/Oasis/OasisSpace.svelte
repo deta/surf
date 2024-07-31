@@ -599,30 +599,42 @@
     }
 
     try {
-      if (!isEverythingSpace) {
-        log.debug('removing from space...', resource)
-        await resourceManager.deleteSpaceEntries([resource.id])
+      if (isEverythingSpace) {
+        log.debug('removing resource references', references)
+        for (const reference of references) {
+          log.debug('deleting reference', reference)
+          await resourceManager.deleteSpaceEntries([reference.entryId])
+        }
+      } else {
+        log.debug('removing resource entry from space...', resource)
+
+        const reference = references.find(
+          (x) => x.folderId === spaceId && x.resourceId === resource.id
+        )
+        if (!reference) {
+          log.error('Reference not found')
+          toasts.error('Reference not found')
+          return
+        }
+
+        await resourceManager.deleteSpaceEntries([reference.entryId])
         spaceContents.update((contents) => {
           return contents.filter((x) => x.resource_id !== resourceId)
         })
-      } else {
-        for (const reference of references) {
-          log.debug('references', reference)
-          await resourceManager.deleteSpaceEntries([reference.entryId])
-        }
       }
     } catch (error) {
-      log.error('Error removing reference:', error)
+      log.error('Error removing references:', error)
     }
 
     if (isEverythingSpace || isFromLiveSpace) {
+      log.debug('deleting resource from oasis', resourceId)
       await resourceManager.deleteResource(resourceId)
-      log.debug('Resource deleted')
       everythingContents.update((contents) => {
         return contents.filter((x) => x.id !== resourceId)
       })
     }
 
+    log.debug('Resource removed:', resourceId)
     toasts.success('Resource deleted!')
   }
 
@@ -1026,6 +1038,7 @@
         on:open={handleOpen}
         on:remove={handleResourceRemove}
         on:load={handleLoadResource}
+        on:new-tab
       />
 
       {#if $loadingContents}
@@ -1037,9 +1050,11 @@
       <OasisResourcesViewSearchResult
         resources={everythingContents}
         selected={$selectedItem}
+        searchResults={$searchResults}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:remove={handleResourceRemove}
+        on:new-tab
       />
 
       {#if $loadingContents}
