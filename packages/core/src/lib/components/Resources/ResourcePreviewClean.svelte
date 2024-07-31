@@ -120,20 +120,6 @@
     dispatch('remove', resource.id)
   }
 
-  const handleMaximize = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
-
-    if (resource.type === ResourceTypes.ANNOTATION) {
-      const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
-      if (annotatesTag) {
-        dispatch('open', annotatesTag.value)
-        return
-      }
-    }
-
-    dispatch('open', resource.id)
-  }
-
   const getHostname = (raw: string) => {
     try {
       const url = new URL(raw)
@@ -255,9 +241,6 @@
 
       {#if interactive}
         <div class="remove-wrapper">
-          <div class="remove rotated" on:click={handleMaximize}>
-            <Icon name="arrow.right" color="#AAA7B1" />
-          </div>
           <div class="remove" on:click={handleRemove}>
             <Icon name="close" color="#AAA7B1" />
           </div>
@@ -300,9 +283,6 @@
 
   {#if interactive}
     <div class="remove-wrapper">
-      <div class="remove rotated" on:click={handleMaximize}>
-        <Icon name="arrow.right" color="#AAA7B1" />
-      </div>
       <div class="remove" on:click={handleRemove}>
         <Icon name="close" color="#AAA7B1" />
       </div>
@@ -421,7 +401,7 @@
     gap: 0.75rem;
     top: 0;
     padding: 1rem;
-    right: 1rem;
+    right: 0;
     transform: translateX(45%) translateY(-45%);
     opacity: 0;
     margin-left: 0.5rem;
