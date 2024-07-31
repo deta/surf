@@ -2959,7 +2959,7 @@
             {/if}
             <div
               style="position: absolute; top: {!horizontalTabs
-                ? 45 * $unpinnedTabs.length
+                ? 42 * $unpinnedTabs.length
                 : 0}px; left: {horizontalTabs
                 ? Math.min(400, Math.max(240, tabSize)) * $unpinnedTabs.length
                 : 0}px; right: 0;"
