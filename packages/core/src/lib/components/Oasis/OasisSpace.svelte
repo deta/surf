@@ -50,7 +50,7 @@
   import OasisResourceModalWrapper from './OasisResourceModalWrapper.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { DragculaDragEvent } from '@horizon/dragcula'
-  import type { Tab } from '../Browser/types'
+  import type { Tab, TabPage } from '../Browser/types'
 
   export let spaceId: string
   export let active: boolean = false
@@ -694,32 +694,71 @@
     } else {
       log.debug('Dropped dragcula', drag.data)
 
-      const parsed: MediaParserResult[] = []
+      const existingResources: string[] = []
 
-      if (drag.data['farc/tab'] !== undefined) {
-        if (drag.data['horizon/resource/id'] !== undefined) {
-          resourceIds.push(drag.data['horizon/resource/id'])
-        } else {
-          parsed.push({
-            type: 'url',
-            data: {
-              href:
-                (drag.data['farc/tab'] as Tab).currentLocation ||
-                (drag.data['farc/tab'] as Tab).initialLocation
-            },
-            metadata: {}
-          } satisfies MediaParserResultURL)
+      const dragData = drag.data as { 'farc/tab': Tab; 'horizon/resource/id': string }
+      if (dragData['farc/tab'] !== undefined) {
+        if (dragData['horizon/resource/id'] !== undefined) {
+          const resourceId = dragData['horizon/resource/id']
+          resourceIds.push(resourceId)
+          existingResources.push(resourceId)
+        } else if (dragData['farc/tab'].type === 'page') {
+          const tab = dragData['farc/tab'] as TabPage
 
-          const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-          log.debug('Resources', newResources)
-          newResources.forEach((r) => resourceIds.push(r.id))
+          if (tab.resourceBookmark) {
+            log.debug('Detected resource from dragged tab', tab.resourceBookmark)
+            resourceIds.push(tab.resourceBookmark)
+            existingResources.push(tab.resourceBookmark)
+          } else {
+            log.debug('Detected page from dragged tab', tab)
+            const newResources = await createResourcesFromMediaItems(
+              resourceManager,
+              [
+                {
+                  type: 'url',
+                  data: new URL(tab.currentLocation || tab.initialLocation),
+                  metadata: {}
+                }
+              ],
+              ''
+            )
+            log.debug('Resources', newResources)
+            newResources.forEach((r) => resourceIds.push(r.id))
+          }
         }
+      }
+
+      if (existingResources.length > 0) {
+        await Promise.all(
+          existingResources.map(async (resourceId) => {
+            const resource = await resourceManager.getResource(resourceId)
+            if (!resource) {
+              log.error('Resource not found')
+              return
+            }
+
+            log.debug('Detected resource from dragged tab', resource)
+
+            const isSilent =
+              resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT) !==
+              undefined
+            if (isSilent) {
+              // remove silent tag if it exists sicne the user is explicitly adding it
+              log.debug('Removing silent tag from resource', resourceId)
+              await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+            }
+          })
+        )
       }
     }
 
-    await oasis.addResourcesToSpace(spaceId, resourceIds)
+    if (spaceId !== 'all') {
+      await oasis.addResourcesToSpace(spaceId, resourceIds)
+      await loadSpaceContents(spaceId)
+    } else {
+      await loadEverything()
+    }
 
-    await loadSpaceContents(spaceId)
     toast.success(
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
     )
@@ -727,9 +766,11 @@
 
   const handleDragEnter = (e: CustomEvent<DragculaDragEvent>) => {
     const drag = e.detail
+
+    const dragData = drag.data as { 'farc/tab': Tab }
     if (
       (active && e.detail.isNative) ||
-      (active && drag.data['farc/tab'] !== undefined && e.detail.data['farc/tab'].type !== 'space')
+      (active && dragData['farc/tab'] !== undefined && dragData['farc/tab'].type !== 'space')
     ) {
       e.preventDefault() // Allow the drag
     }
