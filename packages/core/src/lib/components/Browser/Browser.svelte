@@ -3108,6 +3108,7 @@
                   on:rag={handleRag}
                   on:create-tab-from-space={handleCreateTabFromSpace}
                   on:new-tab={handleNewTab}
+                  {spaces}
                 />
               {/if}
             </div>
