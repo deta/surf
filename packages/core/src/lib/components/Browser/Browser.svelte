@@ -175,6 +175,7 @@
   const isCreatingLiveSpace = writable(false)
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
+  const activatedTabs = writable<Set<string>>(new Set()) // for lazy loading
   const downloadResourceMap = new Map<string, Download>()
   const downloadToastsMap = new Map<string, ToastItem>()
 
@@ -220,6 +221,10 @@
   })
 
   const activeBrowserTab = derived([browserTabs, activeTabId], ([browserTabs, activeTabId]) => {
+    activatedTabs.update((tabs) => {
+      tabs.add(activeTabId)
+      return tabs
+    })
     return browserTabs[activeTabId]
   })
 
@@ -3006,7 +3011,7 @@
         {#each $activeTabs as tab (tab.id)}
           <div
             class="browser-window will-change-contents transform-gpu"
-            style="--scaling: 1;"
+            style="--scaling: 1; {$activatedTabs.has(tab.id) ? '' : 'display: none;'}"
             class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
             class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
           >
