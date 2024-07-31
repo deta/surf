@@ -103,12 +103,12 @@
     if (resource.type === ResourceTypes.ANNOTATION) {
       const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
       if (annotatesTag) {
-        dispatch('click', annotatesTag.value)
+        dispatch('open', annotatesTag.value)
         return
       }
     }
 
-    dispatch('click', resource.id)
+    dispatch('open', resource.id)
   }
 
   const handleLoad = () => {
