@@ -1,7 +1,7 @@
 <svelte:options immutable={true} />
 
 <script lang="ts">
-  import { onMount, setContext, tick } from 'svelte'
+  import { afterUpdate, onMount, setContext, tick } from 'svelte'
   import { slide } from 'svelte/transition'
   import { tooltip } from '@svelte-plugins/tooltips'
   import { popover } from '../Atoms/Popover/popover'
@@ -22,12 +22,14 @@
   import { Telemetry } from '../../service/telemetry'
   import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
   import { processDrop } from '../../service/mediaImporter'
+  import SidebarPane from './SidebarPane.svelte'
 
   import DragDropList, {
     VerticalDropZone,
     HorizontalDropZone,
     HorizontalCenterDropZone
   } from 'svelte-dnd-list'
+  import { PaneGroup, Pane, PaneResizer, type PaneAPI } from 'paneforge'
 
   import { ResourceTag, createResourceManager } from '../../service/resources'
 
@@ -65,7 +67,13 @@
   import type { Drawer } from '@horizon/drawer'
   import Chat from './Chat.svelte'
   import { HorizonDatabase } from '../../service/storage'
-  import type { Optional } from '../../types'
+  import type {
+    Download,
+    DownloadDoneMessage,
+    DownloadRequestMessage,
+    DownloadUpdatedMessage,
+    Optional
+  } from '../../types'
   import { useLocalStorageStore } from '../../utils/localstorage'
   import { WebParser } from '@horizon/web-parser'
   import Importer from './Importer.svelte'
@@ -88,7 +96,7 @@
 
   import AnnotationsSidebar from './AnnotationsSidebar.svelte'
   import ToastsProvider from '../Toast/ToastsProvider.svelte'
-  import { provideToasts } from '../../service/toast'
+  import { provideToasts, type Toast, type ToastItem } from '../../service/toast'
   import {
     PromptIDs,
     getPrompt,
@@ -96,20 +104,24 @@
     resetPrompt,
     updatePrompt
   } from '../../service/prompts'
-  import { LinkPreview, Popover, Tooltip } from 'bits-ui'
+  import { LinkPreview, Tabs, Tooltip } from 'bits-ui'
   import BrowserHistory from './BrowserHistory.svelte'
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
 
-  let addressInputElem: HTMLInputElement
+  let activeTabComponent: TabItem | null = null
   let drawer: Drawer
   let observer: IntersectionObserver
   let addressBarFocus = false
   let showTabSearch = false
-  let showTabs = true
+  let showLeftSidebar = true
+  let showRightSidebar = false
+  let rightPane: PaneAPI | undefined = undefined
+  let sidebarComponent: SidebarPane | null = null
   let annotationsSidebar: AnnotationsSidebar
   let isFirstButtonVisible = true
   let newTabButton: Element
+  let containerRef: Element
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -163,6 +175,9 @@
   const isCreatingLiveSpace = writable(false)
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
+  const activatedTabs = writable<string[]>([]) // for lazy loading
+  const downloadResourceMap = new Map<string, Download>()
+  const downloadToastsMap = new Map<string, ToastItem>()
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -191,6 +206,10 @@
 
   const activeTabLocation = derived(activeTab, (activeTab) => {
     if (activeTab?.type === 'page') {
+      if (activeTab.currentLocation) {
+        return activeTab.currentLocation
+      }
+
       const currentEntry = historyEntriesManager.getEntry(
         activeTab.historyStackIds[activeTab.currentHistoryIndex]
       )
@@ -226,10 +245,14 @@
         log.warn('Horizon not found', tab.horizonId)
       }
     } else if (tab?.type === 'page') {
-      const currentEntry = historyEntriesManager.getEntry(
-        tab.historyStackIds[tab.currentHistoryIndex]
-      )
-      addressValue.set(currentEntry?.url ?? tab.initialLocation)
+      if (tab.currentLocation) {
+        addressValue.set(tab.currentLocation)
+      } else {
+        const currentEntry = historyEntriesManager.getEntry(
+          tab.historyStackIds[tab.currentHistoryIndex]
+        )
+        addressValue.set(currentEntry?.url ?? tab.initialLocation)
+      }
     } else if (tab?.type === 'chat') {
       addressValue.set(tab.title)
     } else {
@@ -273,10 +296,37 @@
   }
 
   const makeTabActive = (tabId: string) => {
+    log.debug('Making tab active', tabId)
+    const browserTab = $browserTabs[tabId]
+
+    const activeElement = document.activeElement
+    if (activeElement && typeof (activeElement as any).blur === 'function') {
+      ;(activeElement as any).blur()
+    }
+
+    if (browserTab) {
+      if (typeof browserTab.focus === 'function') {
+        browserTab.focus()
+      }
+    }
+
+    activatedTabs.update((tabs) => {
+      if (tabs.includes(tabId)) {
+        return tabs
+      }
+
+      return [...tabs, tabId]
+    })
+
     activeTabId.set(tabId)
     addToActiveTabsHistory(tabId)
-    activeAppId.set('')
-    showAppSidebar.set(false)
+    if ($showAppSidebar) {
+      showAppSidebar.set(false)
+      handleToggleAppSidebar()
+    } else {
+      activeAppId.set('')
+      showAppSidebar.set(false)
+    }
   }
 
   const makePreviousTabActive = (currentIndex?: number) => {
@@ -397,6 +447,7 @@
 
     tabs.update((tabs) => tabs.filter((tab) => tab.id !== tabId))
     activeTabsHistory.update((history) => history.filter((id) => id !== tabId))
+    activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
 
     await tick()
 
@@ -442,7 +493,20 @@
       log.error('No active tab')
       return
     }
-    await deleteTab($activeTab.id)
+
+    if ($activeTab.pinned) {
+      log.debug('Active tab is pinned, deactivating it')
+      $activatedTabs = $activatedTabs.filter((id) => id !== $activeTab.id)
+
+      const nextTabIndex = $unpinnedTabs.findIndex((tab) => tab.id === $activeTab.id) + 1
+      if ($unpinnedTabs[nextTabIndex]) {
+        makeTabActive($unpinnedTabs[nextTabIndex].id)
+      } else {
+        makeTabActive($unpinnedTabs[$unpinnedTabs.length - 1].id)
+      }
+    } else {
+      await deleteTab($activeTab.id)
+    }
 
     /*
     if ($activeTab.archived) {
@@ -562,7 +626,7 @@
 
     addressBarFocus = false
 
-    let addressVal = addressInputElem.value
+    let addressVal = activeTabComponent && get(activeTabComponent?.inputUrl)
     log.debug('Address bar blur', addressVal)
 
     if (!addressVal) {
@@ -604,7 +668,7 @@
 
   const handleFocus = () => {
     addressBarFocus = true
-    addressInputElem.select()
+    activeTabComponent?.editAddress()
   }
 
   const handleCopyLocation = useDebounce(() => {
@@ -643,55 +707,107 @@
   const KEY_TIMEOUT = 120
   const MAX_TABS = 99
 
-  let horizontalTabs = false
+  let horizontalTabs = localStorage.getItem('horizontalTabs') === 'true' || false
+
+  const handleCollapseRight = () => {
+    if (sidebarComponent) {
+      sidebarComponent.collapseRight()
+    }
+
+    if (showRightSidebar) {
+      showRightSidebar = false
+    }
+
+    if ($activeTabMagic.showSidebar) {
+      handleToggleMagicSidebar()
+    }
+  }
+
+  const handleExpandRight = () => {
+    if (sidebarComponent) {
+      sidebarComponent.expandRight()
+    }
+  }
+
+  const handleRightPaneUpdate = (event: CustomEvent<PaneAPI>) => {
+    rightPane = event.detail
+  }
+
+  const handleRightSidebarChange = () => {
+    if (showRightSidebar) {
+      handleCollapseRight()
+      showRightSidebar = false
+    } else {
+      handleExpandRight()
+      showRightSidebar = true
+    }
+  }
+
+  const handleCollapse = () => {
+    log.debug('Collapsing sidebar')
+    if (sidebarComponent) {
+      sidebarComponent.collapseLeft()
+      changeTraficLightsVisibility(false)
+    }
+  }
+
+  const handleExpand = () => {
+    log.debug('Expanding sidebar')
+    if (sidebarComponent) {
+      sidebarComponent.expandLeft()
+      changeTraficLightsVisibility(true)
+    }
+  }
+
+  const changeTraficLightsVisibility = (visible: boolean) => {
+    // @ts-ignore
+    window.api.updateTrafficLightsVisibility(visible)
+  }
+
+  const handleSidebarchange = () => {
+    if (showLeftSidebar) {
+      handleCollapse()
+      showLeftSidebar = false
+    } else {
+      handleExpand()
+      showLeftSidebar = true
+    }
+  }
 
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
-    const activeElement = document.activeElement
-    const isInputField =
-      activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')
-
-    if (e.key === 'Enter' && addressBarFocus) {
+    if (e.key === 'Escape' && rightPane?.isExpanded()) {
+      handleCollapseRight()
+    } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
-      addressInputElem.blur()
+      activeTabComponent?.blur()
     } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
       handleCopyLocation()
     } else if (isModKeyPressed(e) && e.key === 't') {
       debouncedCreateNewEmptyTab()
-    } else if (isModKeyAndKeyPressed(e, 'o')) {
-      toggleOasis()
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       closeActiveTab()
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark()
-    } else if (isModKeyAndKeyPressed(e, 'g')) {
-      sidebarTab.set('active')
-    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
+    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'b')) {
       // horizontalTabs = !horizontalTabs
       debounceToggleHorizontalTabs()
       log.debug('horizontalTabs', horizontalTabs)
-    } else if (isModKeyAndKeyPressed(e, 'h')) {
-      showTabs = !showTabs
-      log.debug('showTabs', showTabs)
-      // @ts-ignore
-      window.api.updateTrafficLightsVisibility(showTabs)
+    } else if (isModKeyAndKeyPressed(e, 'b')) {
+      handleSidebarchange()
     } else if (isModKeyAndKeyPressed(e, 'n')) {
-      handleNewHorizon()
+      // this creates a new electron window
     } else if (isModKeyAndKeyPressed(e, 'r')) {
       $activeBrowserTab?.reload()
-    } else if (isModKeyAndKeyPressed(e, 'i')) {
-      createImporterTab()
-    } else if (isModKeyAndKeyPressed(e, 'e')) {
-      createOasisDiscoveryTab()
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
-      addressInputElem.focus()
+      activeTabComponent?.editAddress()
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
-      showTabSearch = true
+      showTabSearch = !showTabSearch
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       createHistoryTab()
     } else if (isModKeyAndKeyPressed(e, '+')) {
@@ -700,30 +816,19 @@
       $activeBrowserTab?.zoomOut()
     } else if (isModKeyAndKeyPressed(e, '0')) {
       $activeBrowserTab?.resetZoom()
-    } else if (isModKeyAndKeysPressed(e, ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])) {
-      keyBuffer = (keyBuffer || '') + e.key
-      clearTimeout(keyTimeout)
+    } else if (isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])) {
+      const index = parseInt(e.key, 10) - 1
+      const tabs = [...$pinnedTabs, ...$magicTabs, ...$unpinnedTabs]
 
-      keyTimeout = setTimeout(() => {
-        index = parseInt(keyBuffer, 10)
-
-        if (index > 99) {
-          index /= 10
+      if (index < 8) {
+        if (index < tabs.length) {
+          makeTabActive(tabs[index].id)
         }
-        keyBuffer = '' // Reset buffer
-
-        if (!isNaN(index) && index >= 0 && index <= MAX_TABS) {
-          const tabs = [...$pinnedTabs, ...$unpinnedTabs]
-          if (index > tabs.length) {
-            return
-          }
-          if (index <= tabs.length) {
-            makeTabActive(tabs[index - 1].id)
-          }
-        }
-      }, KEY_TIMEOUT)
+      } else {
+        // if 9 is pressed, go to the last tab
+        makeTabActive(tabs[tabs.length - 1].id)
+      }
     } else if (e.key === 'ArrowLeft' && e.metaKey) {
-      /// TODO FIX WHEN INPUT IS FOCUSED
       if (canGoBack) {
         $activeBrowserTab?.goBack()
       }
@@ -736,6 +841,7 @@
 
   const handleToggleHorizontalTabs = () => {
     horizontalTabs = !horizontalTabs
+    localStorage.setItem('horizontalTabs', horizontalTabs.toString())
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
@@ -1593,11 +1699,20 @@
         showInSidebar: true
       })
 
+      const existingTab = $unpinnedTabs.find(
+        (tab) => tab.type === 'space' && tab.spaceId === space.id
+      )
+      if (existingTab) {
+        makeTabActive(existingTab.id)
+        return
+      }
+
       const tab = {
         title: space.name.folderName,
         icon: '',
         spaceId: space.id,
         type: 'space',
+        colors: space.name.colors,
         index: 0,
         pinned: false,
         archived: false
@@ -1682,6 +1797,7 @@
           icon: '',
           spaceId: newSpace.id,
           type: 'space',
+          colors: newSpace.name.colors,
           index: 0,
           pinned: false,
           archived: false
@@ -1741,6 +1857,7 @@
         icon: '',
         spaceId: space.id,
         type: 'space',
+        colors: space.name.colors,
         index: 0,
         pinned: false,
         archived: false
@@ -1804,6 +1921,122 @@
       return resetPrompt(id)
     })
 
+    // truncate filename if it's too long but make sure the extension is preserved
+    const shortenFilename = (raw: string, max = 30) => {
+      const extension = raw.slice(raw.lastIndexOf('.'))
+      const name = raw.slice(0, raw.lastIndexOf('.'))
+
+      return name.length > max ? `${name.slice(0, max)}[...]${extension}` : raw
+    }
+
+    // @ts-ignore
+    window.api.onRequestDownloadPath(async (data: DownloadRequestMessage) => {
+      await tick()
+
+      const existingDownload = downloadResourceMap.get(data.id)
+      if (existingDownload) {
+        log.debug('download already in progress', data)
+        return existingDownload.savePath
+      }
+
+      const downloadData: Download = {
+        id: data.id,
+        url: data.url,
+        filename: shortenFilename(data.filename),
+        mimeType: data.mimeType,
+        startTime: data.startTime,
+        totalBytes: data.totalBytes,
+        contentDisposition: data.contentDisposition,
+        savePath: '',
+        resourceId: ''
+      }
+
+      downloadResourceMap.set(data.id, downloadData)
+
+      log.debug('new download request', downloadData)
+
+      const toast = toasts.loading(`Downloading "${downloadData.filename}"...`)
+
+      downloadToastsMap.set(data.id, toast)
+
+      // TODO: add metadata/tags here
+      const resource = await resourceManager.createResource(
+        data.mimeType,
+        undefined,
+        {
+          name: data.filename,
+          sourceURI: data.url
+        },
+        [ResourceTag.download()]
+      )
+
+      log.debug('resource for download created', downloadData, resource)
+
+      downloadData.resourceId = resource.id
+      downloadData.savePath = resource.path
+      downloadResourceMap.set(data.id, downloadData)
+
+      return downloadData.savePath
+    })
+
+    // @ts-ignore
+    window.api.onDownloadUpdated((data: DownloadUpdatedMessage) => {
+      log.debug('download updated', data)
+
+      const downloadData = downloadResourceMap.get(data.id)
+      if (!downloadData) {
+        log.error('download data not found', data)
+        return
+      }
+
+      const toast = downloadToastsMap.get(data.id)
+      if (!toast) {
+        log.error('toast not found', data)
+        return
+      }
+
+      if (data.state === 'progressing') {
+        const progress = data.receivedBytes / data.totalBytes
+        toast.update(`Downloading "${downloadData.filename}" (${Math.round(progress * 100)}%)...`)
+      } else if (data.state === 'interrupted') {
+        toast.error(`Download of "${downloadData.filename}" interrupted`)
+      } else if (data.isPaused) {
+        toast.info(`Download of "${downloadData.filename}" paused`)
+      }
+    })
+
+    // @ts-ignore
+    window.api.onDownloadDone((data: DownloadDoneMessage) => {
+      // TODO: trigger the post-processing call here
+      log.debug('download done', data)
+
+      const downloadData = downloadResourceMap.get(data.id)
+      if (!downloadData) {
+        log.error('download data not found', data)
+        return
+      }
+
+      // if (data.state === 'completed') {
+      //   resourceManager.reloadResource(downloadData.resourceId)
+      // }
+
+      const toast = downloadToastsMap.get(data.id)
+      if (!toast) {
+        log.error('toast not found', data)
+        return
+      }
+
+      if (data.state === 'completed') {
+        toast.success(`"${downloadData.filename}" saved to Oasis!`)
+      } else if (data.state === 'interrupted') {
+        toast.error(`Download of "${downloadData.filename}" interrupted`)
+      } else if (data.state === 'cancelled') {
+        toast.error(`Download of "${downloadData.filename}" cancelled`)
+      }
+
+      downloadResourceMap.delete(data.id)
+    })
+
     const tabsList = await tabsDB.all()
     tabs.update((currentTabs) => currentTabs.sort((a, b) => a.index - b.index))
     tabs.set(tabsList)
@@ -1834,13 +2067,18 @@
 
     if (activeTabs.length === 0) {
       createNewEmptyTab()
-    } else if (!$activeTabId) {
+    } else if ($activeTabId) {
+      makeTabActive($activeTabId)
+    } else {
       makeTabActive(activeTabs[activeTabs.length - 1].id)
     }
 
     // activeTabs.forEach((tab, index) => {
     //   updateTab(tab.id, { index: index })
     // })
+
+    // if we have some magicTabs, make them unpinned
+    turnMagicTabsIntoUnpinned()
 
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
@@ -1850,6 +2088,51 @@
 
     // ON DESTROY!!
   })
+
+  const turnMagicTabsIntoUnpinned = async () => {
+    const magicTabsArray = get(magicTabs)
+    const unpinnedTabsArray = get(unpinnedTabs)
+
+    if (magicTabsArray.length === 0) {
+      // No magic tabs to process
+      return
+    }
+
+    // Turn magic tabs into unpinned tabs
+    magicTabsArray.forEach((magicTab) => {
+      magicTab.magic = false
+      unpinnedTabsArray.push(magicTab)
+    })
+
+    // Clear the magic tabs array
+    magicTabsArray.length = 0
+
+    // Update indices of unpinned tabs
+    const updatedUnpinnedTabs = unpinnedTabsArray.map((tab, index) => ({ ...tab, index }))
+
+    // Update the tabs store
+    tabs.update((x) => {
+      return x.map((tab) => {
+        const updatedTab = updatedUnpinnedTabs.find((t) => t.id === tab.id)
+        if (updatedTab) {
+          tab.index = updatedTab.index
+          tab.magic = false
+          tab.pinned = false
+        }
+        return tab
+      })
+    })
+
+    // Update the store with the changed tabs
+    await bulkUpdateTabsStore(
+      updatedUnpinnedTabs.map((tab) => ({
+        id: tab.id,
+        updates: { pinned: false, magic: false, index: tab.index }
+      }))
+    )
+
+    log.debug('Magic tabs turned into unpinned tabs successfully')
+  }
 
   const createChatResourceBookmark = async (tab: TabPage) => {
     let resource_id: string
@@ -2126,6 +2409,22 @@
 
     log.debug('State updated successfully')
   }
+
+  function checkVisibility() {
+    if (newTabButton && containerRef) {
+      const containerRect = containerRef.getBoundingClientRect()
+      const buttonRect = newTabButton.getBoundingClientRect()
+      isFirstButtonVisible =
+        buttonRect.top >= containerRect.top &&
+        buttonRect.left >= containerRect.left &&
+        buttonRect.bottom <= containerRect.bottom &&
+        buttonRect.right <= containerRect.right
+    }
+  }
+
+  afterUpdate(() => {
+    checkVisibility()
+  })
 </script>
 
 <SplashScreen />
@@ -2134,414 +2433,239 @@
 
 <ToastsProvider service={toasts} />
 
-<div class="antialiased w-screen h-screen will-change-auto transform-gpu">
-  {#if showTabSearch}
-    <TabSearch
-      onClose={() => {
-        showTabSearch = false
-      }}
-      activeTabs={$activeTabs}
-      on:activateTab={handleTabSelect}
-    />
-  {/if}
+<div class="antialiased w-screen h-screen will-change-auto transform-gpu relative">
+  <TabSearch
+    {historyEntriesManager}
+    bind:showTabSearch
+    activeTabs={$activeTabs}
+    on:activate-tab={handleTabSelect}
+    on:close-active-tab={closeActiveTab}
+    on:bookmark={handleBookmark}
+    on:toggle-sidebar={() => handleSidebarchange()}
+    on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
+    on:reload-window={() => $activeBrowserTab?.reload()}
+    on:zoom={() => {
+      $activeBrowserTab?.zoomIn()
+    }}
+    on:zoom-out={() => {
+      $activeBrowserTab?.zoomOut()
+    }}
+    on:reset-zoom={() => {
+      $activeBrowserTab?.resetZoom()
+    }}
+    on:open-url={(e) => {
+      createPageTab(e.detail, true)
+    }}
+    on:open-resource={(e) => {
+      openResource(e.detail)
+    }}
+  />
 
-  <div class="relative h-screen flex {horizontalTabs ? 'flex-col' : 'flex-row'}">
-    {#if showTabs}
-      <div
-        transition:slide={{ axis: !horizontalTabs ? 'x' : 'y', duration: 200 }}
-        class="flex-grow transform-gpu {horizontalTabs && 'h-[51px]'}"
-        class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
-        style="z-index: 5000;"
-      >
-        {#if $sidebarTab !== 'oasis'}
+  <SidebarPane
+    {horizontalTabs}
+    bind:this={sidebarComponent}
+    on:collapsed-left-sidebar={() => {
+      log.debug('collapsed left sidebar')
+      showLeftSidebar = false
+      changeTraficLightsVisibility(false)
+    }}
+    on:expanded-left-sidebar={() => {
+      showLeftSidebar = true
+      changeTraficLightsVisibility(true)
+    }}
+    on:collapsed-right-sidebar={() => {
+      showRightSidebar = false
+    }}
+    on:expanded-right-sidebar={() => {
+      showRightSidebar = true
+    }}
+    bind:rightPaneItem={rightPane}
+    on:pane-update-right={handleRightPaneUpdate}
+    rightSidebarHidden={!showRightSidebar}
+    leftSidebarHidden={!showLeftSidebar}
+  >
+    <div
+      slot="sidebar"
+      class="flex-grow {horizontalTabs ? 'w-full h-full py-1' : 'h-full'}"
+      class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
+      style="z-index: 5000;"
+    >
+      {#if $sidebarTab !== 'oasis'}
+        <div
+          class="flex {!horizontalTabs
+            ? 'flex-col w-full py-3 space-y-4 px-2 h-full'
+            : 'flex-row items-center h-full ml-24 space-x-4 mr-4'} relative"
+        >
           <div
-            class="flex {!horizontalTabs
-              ? 'flex-col w-[288px]  py-3 space-y-4 px-2 h-full'
-              : 'flex-row items-center h-[52px] ml-24 space-x-4 mr-4'} relative"
+            class="flex flex-row items-center flex-shrink-0 {!horizontalTabs &&
+              'w-full justify-end'}"
           >
-            <div
-              class="flex flex-row items-center flex-shrink-0 {!horizontalTabs &&
-                'w-full justify-end'}"
-            >
-              <Tooltip.Root openDelay={400} closeDelay={10}>
-                <Tooltip.Trigger>
-                  <button
-                    class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
-                      ? 'opacity-30 cursor-not-allowed'
-                      : 'cursor-pointer'}"
-                    disabled={!canGoBack}
-                    on:click={$activeBrowserTab?.goBack}
-                  >
-                    <span
-                      class="inline-block translate-x-0 {canGoBack &&
-                        'group-hover:-translate-x-1'} transition-transform ease-in-out duration-200"
-                    >
-                      <Icon name="arrow.left" />
-                    </span>
-                  </button>
-                </Tooltip.Trigger>
-                <Tooltip.Content
-                  transition={flyAndScale}
-                  transitionConfig={{ y: 8, duration: 150 }}
-                  sideOffset={8}
+            <Tooltip.Root openDelay={400} closeDelay={10}>
+              <Tooltip.Trigger>
+                <button
+                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  on:click={handleSidebarchange}
                 >
-                  <div class="bg-neutral-100">
-                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                  </div>
-                  <div
-                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                  <span
+                    class="inline-block {canGoBack &&
+                      'group-hover:skew-x-2'} transition-transform ease-in-out duration-200"
                   >
-                    Go back (⌘ + ←)
-                  </div>
-                </Tooltip.Content>
-              </Tooltip.Root>
-
-              <Tooltip.Root openDelay={400} closeDelay={10}>
-                <Tooltip.Trigger>
-                  <button
-                    class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoForward
-                      ? 'opacity-30 cursor-not-allowed'
-                      : 'cursor-pointer'}"
-                    disabled={!canGoForward}
-                    on:click={$activeBrowserTab?.goForward}
-                  >
-                    <span
-                      class="inline-block translate-x-0 {canGoForward &&
-                        'group-hover:translate-x-1'} transition-transform ease-in-out duration-200"
-                    >
-                      <Icon name="arrow.right" />
-                    </span>
-                  </button>
-                </Tooltip.Trigger>
-                <Tooltip.Content
-                  transition={flyAndScale}
-                  transitionConfig={{ y: 8, duration: 150 }}
-                  sideOffset={8}
-                >
-                  <div class="bg-neutral-100">
-                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                  </div>
-                  <div
-                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-                  >
-                    Go forward (⌘ + →)
-                  </div>
-                </Tooltip.Content>
-              </Tooltip.Root>
-
-              <Tooltip.Root openDelay={400} closeDelay={10}>
-                <Tooltip.Trigger>
-                  <button
-                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                    on:click={$activeBrowserTab?.reload}
-                  >
-                    <span
-                      class="group-hover:rotate-180 transition-transform ease-in-out duration-200"
-                    >
-                      <Icon name="reload" />
-                    </span>
-                  </button>
-                </Tooltip.Trigger>
-                <Tooltip.Content
-                  transition={flyAndScale}
-                  transitionConfig={{ y: 8, duration: 150 }}
-                  sideOffset={8}
-                >
-                  <div class="bg-neutral-100">
-                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                  </div>
-                  <div
-                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-                  >
-                    Reload Page (⌘ + R)
-                  </div>
-                </Tooltip.Content>
-              </Tooltip.Root>
-            </div>
-
-            <div
-              class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0 max-w-[300px] overflow-x-scroll no-scrollbar"
-            >
-              <DragDropList
-                id="pinned-tabs"
-                zoneClass="flex items-center space-x-2 w-full"
-                type={HorizontalCenterDropZone}
-                itemSize={$pinnedTabs.length === 0 ? 256 : 30}
-                itemCount={$pinnedTabs.length || 1}
-                on:drop={async (event) => {
-                  onDrop(event, 'pin')
-                }}
-                let:index
+                    <Icon name="sidebar.left" />
+                  </span>
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                transition={flyAndScale}
+                transitionConfig={{ y: 8, duration: 150 }}
+                sideOffset={8}
               >
-                {#if $pinnedTabs.length === 0}
-                  <div class="">Drop Tabs here to pin them.</div>
-                {:else}
-                  {#key $pinnedTabs[index]}
-                    {#if $activeTabId == $pinnedTabs[index].id}
-                      <TabItem
-                        tab={$pinnedTabs[index]}
-                        {activeTabId}
-                        {deleteTab}
-                        {unarchiveTab}
-                        pinned={true}
-                        isAlreadyOpen={false}
-                        on:select={() => {}}
-                        on:remove-from-sidebar={handleRemoveFromSidebar}
-                      />
-                    {:else}
-                      <LinkPreview.Root openDelay={7000} closeDelay={10}>
-                        <LinkPreview.Trigger>
-                          <TabItem
-                            tab={$pinnedTabs[index]}
-                            {activeTabId}
-                            {deleteTab}
-                            {unarchiveTab}
-                            pinned={true}
-                            on:select={handleTabSelect}
-                            on:remove-from-sidebar={handleRemoveFromSidebar}
-                          />
-                        </LinkPreview.Trigger>
-                        <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
-                          <img
-                            src="https://via.placeholder.com/300x200"
-                            alt="placeholder"
-                            class="link-preview-content"
-                          />
-                        </LinkPreview.Content>
-                      </LinkPreview.Root>
-                    {/if}
-                  {/key}
-                {/if}
-              </DragDropList>
-            </div>
-
-            {#if $activeTabMagic}
-              {#if $activeTabMagic.showSidebar}
-                <div
-                  class="relative group {horizontalTabs
-                    ? 'max-w-[512px] no-scrollbar h-[47px]'
-                    : 'w-full'}"
-                >
-                  <div
-                    style="opacity: 0.2"
-                    class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opcaity-20 group-hover:opacity-10 transition duration-1000 group-hover:duration-200 animate-tilt"
-                  ></div>
-                  <div
-                    class="relative bg-sky-100/50 rounded-2xl overflow-auto no-scrollbar
-                    {horizontalTabs ? 'h-full' : 'w-full'}"
-                  >
-                    <div
-                      class={horizontalTabs ? 'p-1 pt-[2px]' : 'p-2'}
-                      class:magic={$magicTabs.length > 0}
-                    >
-                      {#if horizontalTabs}
-                        <DragDropList
-                          id="magic-tabs"
-                          type={HorizontalDropZone}
-                          itemSize={256}
-                          itemCount={$magicTabs.length || 1}
-                          on:drop={async (event) => {
-                            onDrop(event, 'unpin')
-                          }}
-                          let:index
-                        >
-                          {#if $magicTabs.length === 0}
-                            <div class="flex flex-row items-center">
-                              <div class="ai-wrapper">
-                                <Icon name="ai" size={24 + 'px'} />
-                              </div>
-                              <span class="text-xs text-sky-800/50">
-                                General mode, drop tabs here!
-                              </span>
-                            </div>
-                          {:else}
-                            <TabItem
-                              showClose
-                              tab={$magicTabs[index]}
-                              {activeTabId}
-                              {deleteTab}
-                              {unarchiveTab}
-                              pinned={false}
-                              showButtons={false}
-                              showExcludeOthersButton
-                              on:select={handleTabSelect}
-                              on:remove-from-sidebar={handleRemoveFromSidebar}
-                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                            />
-                          {/if}
-                        </DragDropList>
-                      {:else}
-                        {#if $magicTabs.length > 0}
-                          <div
-                            class="flex flex-row gap-2 px-4 py-2 leading-5 items-center justify-center mb-1 mx-2"
-                          >
-                            <Icon name="sparkles" size="18" class="text-sky-800" />
-                            <span class="text-sm text-sky-800"
-                              >Chat with {$magicTabs.length === 1
-                                ? 'this tab'
-                                : $magicTabs.length === 2
-                                  ? 'two tabs'
-                                  : `${$magicTabs.length} tabs`}</span
-                            >
-                          </div>
-                        {/if}
-                        <DragDropList
-                          id="magic-tabs"
-                          type={VerticalDropZone}
-                          itemSize={$magicTabs.length === 0 ? 72 : 42}
-                          itemCount={$magicTabs.length || 1}
-                          on:drop={async (event) => {
-                            onDrop(event, 'unpin')
-                          }}
-                          let:index
-                        >
-                          {#if $magicTabs.length === 0}
-                            <div class="flex flex-col items-center">
-                              <div class="ai-wrapper">
-                                <Icon name="ai" size={24 + 'px'} />
-                              </div>
-                              <span class="text-xs text-sky-800">General mode, drop tabs here!</span
-                              >
-                            </div>
-                          {:else}
-                            <TabItem
-                              showClose
-                              tab={$magicTabs[index]}
-                              {activeTabId}
-                              {deleteTab}
-                              {unarchiveTab}
-                              pinned={false}
-                              showButtons={false}
-                              showExcludeOthersButton
-                              on:select={handleTabSelect}
-                              on:remove-from-sidebar={handleRemoveFromSidebar}
-                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                            />
-                          {/if}
-                        </DragDropList>
-                      {/if}
-                    </div>
-                  </div>
+                <div class="bg-neutral-100">
+                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
                 </div>
-
                 <div
-                  class="{!horizontalTabs
-                    ? 'w-1/2 mx-auto h-0.5'
-                    : 'h-4 w-0.5'} rounded-xl bg-sky-200"
-                ></div>
-              {/if}
-            {/if}
+                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                >
+                  Toggle Sidebar (⌘ + B)
+                </div>
+              </Tooltip.Content>
+            </Tooltip.Root>
 
-            <div
-              class="overflow-x-scroll no-scrollbar relative flex-grow"
-              class:space-x-2={horizontalTabs}
-              class:items-center={horizontalTabs}
+            <Tooltip.Root openDelay={400} closeDelay={10}>
+              <Tooltip.Trigger>
+                <button
+                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
+                    ? 'opacity-30 cursor-not-allowed'
+                    : 'cursor-pointer'}"
+                  disabled={!canGoBack}
+                  on:click={$activeBrowserTab?.goBack}
+                >
+                  <span
+                    class="inline-block translate-x-0 {canGoBack &&
+                      'group-hover:-translate-x-1'} transition-transform ease-in-out duration-200"
+                  >
+                    <Icon name="arrow.left" />
+                  </span>
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                transition={flyAndScale}
+                transitionConfig={{ y: 8, duration: 150 }}
+                sideOffset={8}
+              >
+                <div class="bg-neutral-100">
+                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                </div>
+                <div
+                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                >
+                  Go back (⌘ + ←)
+                </div>
+              </Tooltip.Content>
+            </Tooltip.Root>
+
+            <Tooltip.Root openDelay={400} closeDelay={10}>
+              <Tooltip.Trigger>
+                <button
+                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoForward
+                    ? 'opacity-30 cursor-not-allowed'
+                    : 'cursor-pointer'}"
+                  disabled={!canGoForward}
+                  on:click={$activeBrowserTab?.goForward}
+                >
+                  <span
+                    class="inline-block translate-x-0 {canGoForward &&
+                      'group-hover:translate-x-1'} transition-transform ease-in-out duration-200"
+                  >
+                    <Icon name="arrow.right" />
+                  </span>
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                transition={flyAndScale}
+                transitionConfig={{ y: 8, duration: 150 }}
+                sideOffset={8}
+              >
+                <div class="bg-neutral-100">
+                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                </div>
+                <div
+                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                >
+                  Go forward (⌘ + →)
+                </div>
+              </Tooltip.Content>
+            </Tooltip.Root>
+
+            <Tooltip.Root openDelay={400} closeDelay={10}>
+              <Tooltip.Trigger>
+                <button
+                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  on:click={$activeBrowserTab?.reload}
+                >
+                  <span
+                    class="group-hover:rotate-180 transition-transform ease-in-out duration-200"
+                  >
+                    <Icon name="reload" />
+                  </span>
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                transition={flyAndScale}
+                transitionConfig={{ y: 8, duration: 150 }}
+                sideOffset={8}
+              >
+                <div class="bg-neutral-100">
+                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                </div>
+                <div
+                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                >
+                  Reload Page (⌘ + R)
+                </div>
+              </Tooltip.Content>
+            </Tooltip.Root>
+          </div>
+
+          <div
+            class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0 overflow-x-scroll no-scrollbar"
+          >
+            <DragDropList
+              id="pinned-tabs"
+              zoneClass="flex items-center space-x-2 w-full"
+              type={HorizontalCenterDropZone}
+              itemSize={$pinnedTabs.length === 0 ? 256 : 30}
+              itemCount={$pinnedTabs.length || 1}
+              on:drop={async (event) => {
+                onDrop(event, 'pin')
+              }}
+              let:index
             >
-              {#if horizontalTabs}
-                <DragDropList
-                  id="tabs"
-                  type={HorizontalDropZone}
-                  itemSize={Math.min(400, Math.max(200, tabSize))}
-                  itemCount={$unpinnedTabs.length}
-                  on:drop={async (event) => {
-                    onDrop(event, 'unpin')
-                  }}
-                  let:index
-                >
-                  {#if $activeTabId === $unpinnedTabs[index].id}
-                    <TabItem
-                      showClose
-                      tab={$unpinnedTabs[index]}
-                      {activeTabId}
-                      bookmarkingInProgress={$bookmarkingInProgress}
-                      bookmarkingSuccess={$bookmarkingSuccess}
-                      pinned={false}
-                      {spaces}
-                      enableEditing
-                      bind:addressInputElem
-                      on:select={() => {}}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                      on:drop={handleDrop}
-                      on:delete-tab={handleDeleteTab}
-                      on:input-enter={handleBlur}
-                      on:unarchive-tab={handleUnarchiveTab}
-                      on:bookmark={handleBookmark}
-                      on:create-live-space={handleCreateLiveSpace}
-                      on:save-resource-in-space={handleSaveResourceInSpace}
-                    />
-                  {:else}
-                    <LinkPreview.Root openDelay={7000} closeDelay={10}>
-                      <LinkPreview.Trigger>
-                        <TabItem
-                          showClose
-                          tab={$unpinnedTabs[index]}
-                          {activeTabId}
-                          pinned={false}
-                          on:select={handleTabSelect}
-                          on:remove-from-sidebar={handleRemoveFromSidebar}
-                          on:drop={handleDrop}
-                          on:delete-tab={handleDeleteTab}
-                          on:input-enter={handleBlur}
-                          on:unarchive-tab={handleUnarchiveTab}
-                        />
-                      </LinkPreview.Trigger>
-                      <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
-                        <img
-                          src="https://via.placeholder.com/300x200"
-                          alt="placeholder"
-                          class="link-preview-content"
-                        />
-                      </LinkPreview.Content>
-                    </LinkPreview.Root>
-                  {/if}
-                </DragDropList>
+              {#if $pinnedTabs.length === 0}
+                <div class="">Drop Tabs here to pin them.</div>
               {:else}
-                <DragDropList
-                  id="tabs"
-                  type={VerticalDropZone}
-                  itemSize={45}
-                  itemCount={$unpinnedTabs.length}
-                  on:drop={async (event) => {
-                    onDrop(event, 'unpin')
-                  }}
-                  let:index
-                >
-                  <!-- check if this tab is active -->
-                  {#if $activeTabId === $unpinnedTabs[index].id}
+                {#key $pinnedTabs[index]}
+                  {#if $activeTabId == $pinnedTabs[index].id}
                     <TabItem
-                      showClose
-                      tab={$unpinnedTabs[index]}
+                      tab={$pinnedTabs[index]}
                       {activeTabId}
-                      bookmarkingInProgress={$bookmarkingInProgress}
-                      bookmarkingSuccess={$bookmarkingSuccess}
-                      pinned={false}
-                      {spaces}
-                      enableEditing
-                      bind:addressInputElem
+                      pinned={true}
+                      isAlreadyOpen={false}
+                      on:unarchive-tab={handleUnarchiveTab}
+                      on:delete-tab={handleDeleteTab}
                       on:select={() => {}}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
-                      on:drop={handleDrop}
-                      on:delete-tab={handleDeleteTab}
-                      on:input-enter={handleBlur}
-                      on:unarchive-tab={handleUnarchiveTab}
-                      on:bookmark={handleBookmark}
-                      on:create-live-space={handleCreateLiveSpace}
-                      on:save-resource-in-space={handleSaveResourceInSpace}
                     />
                   {:else}
                     <LinkPreview.Root openDelay={4000} closeDelay={10}>
                       <LinkPreview.Trigger>
                         <TabItem
-                          showClose
-                          tab={$unpinnedTabs[index]}
+                          tab={$pinnedTabs[index]}
                           {activeTabId}
-                          pinned={false}
+                          pinned={true}
+                          on:unarchive-tab={handleUnarchiveTab}
+                          on:delete-tab={handleDeleteTab}
                           on:select={handleTabSelect}
                           on:remove-from-sidebar={handleRemoveFromSidebar}
-                          on:drop={handleDrop}
-                          on:delete-tab={handleDeleteTab}
-                          on:input-enter={handleBlur}
-                          on:unarchive-tab={handleUnarchiveTab}
                         />
                       </LinkPreview.Trigger>
                       <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
@@ -2553,140 +2677,326 @@
                       </LinkPreview.Content>
                     </LinkPreview.Root>
                   {/if}
-                </DragDropList>
+                {/key}
               {/if}
-              <div
-                style="position: absolute; top: {!horizontalTabs
-                  ? 45 * $unpinnedTabs.length
-                  : 0}px; left: {horizontalTabs
-                  ? Math.min(400, Math.max(240, tabSize)) * $unpinnedTabs.length
-                  : 0}px; right: 0;"
-                class:w-fit={horizontalTabs}
-                class:h-full={horizontalTabs}
-                class="select-none flex items-center justify-center"
-                class:opacity-100={isFirstButtonVisible}
-                class:opacity-0={!isFirstButtonVisible}
-                class:pointer-events-auto={isFirstButtonVisible}
-                class:pointer-events-none={!isFirstButtonVisible}
-              >
-                <button
-                  bind:this={newTabButton}
-                  class="transform select-none active:scale-95 space-x-2 {horizontalTabs
-                    ? 'w-fit rounded-xl p-2'
-                    : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
-                  on:click|preventDefault={() => createNewEmptyTab()}
-                >
-                  <Icon name="add" />
-                  {#if !horizontalTabs}
-                    <span class="label">New Tab</span>
-                  {/if}
-                </button>
-              </div>
-            </div>
+            </DragDropList>
+          </div>
 
-            <div class="flex {horizontalTabs ? 'flex-row items-center' : 'flex-col'} flex-shrink-0">
+          {#if $activeTabMagic}
+            {#if $activeTabMagic.showSidebar}
+              <div
+                class="relative group {horizontalTabs
+                  ? 'max-w-[512px] no-scrollbar h-[47px]'
+                  : 'w-full'}"
+              >
+                <div
+                  style="opacity: 0.2"
+                  class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opcaity-20 group-hover:opacity-10 transition duration-1000 group-hover:duration-200 animate-tilt"
+                ></div>
+                <div
+                  class="relative bg-sky-100/50 rounded-2xl overflow-auto no-scrollbar
+              {horizontalTabs ? 'h-full' : 'w-full'}"
+                >
+                  <div
+                    class={horizontalTabs ? 'p-1 pt-[2px]' : 'p-2'}
+                    class:magic={$magicTabs.length > 0}
+                  >
+                    {#if horizontalTabs}
+                      <DragDropList
+                        id="magic-tabs"
+                        type={HorizontalDropZone}
+                        itemSize={256}
+                        itemCount={$magicTabs.length || 1}
+                        on:drop={async (event) => {
+                          onDrop(event, 'unpin')
+                        }}
+                        let:index
+                      >
+                        {#if $magicTabs.length === 0}
+                          <div class="flex flex-row items-center">
+                            <div class="ai-wrapper">
+                              <Icon name="ai" size={24 + 'px'} />
+                            </div>
+                            <span class="text-xs text-sky-800/50">
+                              General mode, drop tabs here!
+                            </span>
+                          </div>
+                        {:else}
+                          <TabItem
+                            showClose
+                            tab={$magicTabs[index]}
+                            {activeTabId}
+                            pinned={false}
+                            showButtons={false}
+                            showExcludeOthersButton
+                            on:delete-tab={handleDeleteTab}
+                            on:unarchive-tab={handleUnarchiveTab}
+                            on:select={handleTabSelect}
+                            on:remove-from-sidebar={handleRemoveFromSidebar}
+                            on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                          />
+                        {/if}
+                      </DragDropList>
+                    {:else}
+                      {#if $magicTabs.length > 0}
+                        <div
+                          class="flex flex-row gap-2 px-4 py-2 leading-5 items-center justify-center mb-1 mx-2"
+                        >
+                          <Icon name="sparkles" size="18" class="text-sky-800" />
+                          <span class="text-sm text-sky-800"
+                            >Chat with {$magicTabs.length === 1
+                              ? 'this tab'
+                              : $magicTabs.length === 2
+                                ? 'two tabs'
+                                : `${$magicTabs.length} tabs`}</span
+                          >
+                        </div>
+                      {/if}
+                      <DragDropList
+                        id="magic-tabs"
+                        type={VerticalDropZone}
+                        itemSize={$magicTabs.length === 0 ? 72 : 42}
+                        itemCount={$magicTabs.length || 1}
+                        on:drop={async (event) => {
+                          onDrop(event, 'unpin')
+                        }}
+                        let:index
+                      >
+                        {#if $magicTabs.length === 0}
+                          <div class="flex flex-col items-center">
+                            <div class="ai-wrapper">
+                              <Icon name="ai" size={24 + 'px'} />
+                            </div>
+                            <span class="text-xs text-sky-800">General mode, drop tabs here!</span>
+                          </div>
+                        {:else}
+                          <TabItem
+                            showClose
+                            tab={$magicTabs[index]}
+                            {activeTabId}
+                            pinned={false}
+                            showButtons={false}
+                            showExcludeOthersButton
+                            on:unarchive-tab={handleUnarchiveTab}
+                            on:delete-tab={handleDeleteTab}
+                            on:select={handleTabSelect}
+                            on:remove-from-sidebar={handleRemoveFromSidebar}
+                            on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                          />
+                        {/if}
+                      </DragDropList>
+                    {/if}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                class="{!horizontalTabs
+                  ? 'w-1/2 mx-auto h-0.5'
+                  : 'h-4 w-0.5'} rounded-xl bg-sky-200"
+              ></div>
+            {/if}
+          {/if}
+
+          <div
+            class="overflow-x-scroll no-scrollbar relative flex-grow"
+            class:space-x-2={horizontalTabs}
+            class:items-center={horizontalTabs}
+            bind:this={containerRef}
+          >
+            {#if horizontalTabs}
+              <DragDropList
+                id="tabs"
+                type={HorizontalDropZone}
+                itemSize={Math.min(400, Math.max(200, tabSize))}
+                itemCount={$unpinnedTabs.length}
+                on:drop={async (event) => {
+                  onDrop(event, 'unpin')
+                }}
+                let:index
+              >
+                {#if $activeTabId === $unpinnedTabs[index].id}
+                  <TabItem
+                    showClose
+                    tab={$unpinnedTabs[index]}
+                    {activeTabId}
+                    bookmarkingInProgress={$bookmarkingInProgress}
+                    bookmarkingSuccess={$bookmarkingSuccess}
+                    pinned={false}
+                    {spaces}
+                    enableEditing
+                    bind:this={activeTabComponent}
+                    on:select={() => {}}
+                    on:remove-from-sidebar={handleRemoveFromSidebar}
+                    on:drop={handleDrop}
+                    on:delete-tab={handleDeleteTab}
+                    on:input-enter={handleBlur}
+                    on:unarchive-tab={handleUnarchiveTab}
+                    on:bookmark={handleBookmark}
+                    on:create-live-space={handleCreateLiveSpace}
+                    on:save-resource-in-space={handleSaveResourceInSpace}
+                  />
+                {:else}
+                  <LinkPreview.Root openDelay={7000} closeDelay={10}>
+                    <LinkPreview.Trigger>
+                      <TabItem
+                        showClose
+                        tab={$unpinnedTabs[index]}
+                        {activeTabId}
+                        pinned={false}
+                        on:select={handleTabSelect}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                        on:drop={handleDrop}
+                        on:delete-tab={handleDeleteTab}
+                        on:input-enter={handleBlur}
+                        on:unarchive-tab={handleUnarchiveTab}
+                      />
+                    </LinkPreview.Trigger>
+                    <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
+                      <img
+                        src="https://via.placeholder.com/300x200"
+                        alt="placeholder"
+                        class="link-preview-content"
+                      />
+                    </LinkPreview.Content>
+                  </LinkPreview.Root>
+                {/if}
+              </DragDropList>
+            {:else}
+              <DragDropList
+                id="tabs"
+                type={VerticalDropZone}
+                itemSize={45}
+                itemCount={$unpinnedTabs.length}
+                on:drop={async (event) => {
+                  onDrop(event, 'unpin')
+                }}
+                let:index
+              >
+                <!-- check if this tab is active -->
+                {#if $activeTabId === $unpinnedTabs[index].id}
+                  <TabItem
+                    showClose
+                    tab={$unpinnedTabs[index]}
+                    {activeTabId}
+                    {spaces}
+                    bookmarkingInProgress={$bookmarkingInProgress}
+                    bookmarkingSuccess={$bookmarkingSuccess}
+                    pinned={false}
+                    enableEditing
+                    bind:this={activeTabComponent}
+                    on:select={() => {}}
+                    on:remove-from-sidebar={handleRemoveFromSidebar}
+                    on:drop={handleDrop}
+                    on:delete-tab={handleDeleteTab}
+                    on:input-enter={handleBlur}
+                    on:unarchive-tab={handleUnarchiveTab}
+                    on:bookmark={handleBookmark}
+                    on:create-live-space={handleCreateLiveSpace}
+                    on:save-resource-in-space={handleSaveResourceInSpace}
+                  />
+                {:else}
+                  <LinkPreview.Root openDelay={4000} closeDelay={10}>
+                    <LinkPreview.Trigger>
+                      <TabItem
+                        showClose
+                        tab={$unpinnedTabs[index]}
+                        {activeTabId}
+                        pinned={false}
+                        on:select={handleTabSelect}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                        on:drop={handleDrop}
+                        on:delete-tab={handleDeleteTab}
+                        on:input-enter={handleBlur}
+                        on:unarchive-tab={handleUnarchiveTab}
+                      />
+                    </LinkPreview.Trigger>
+                    <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
+                      <img
+                        src="https://via.placeholder.com/300x200"
+                        alt="placeholder"
+                        class="link-preview-content"
+                      />
+                    </LinkPreview.Content>
+                  </LinkPreview.Root>
+                {/if}
+              </DragDropList>
+            {/if}
+            <div
+              style="position: absolute; top: {!horizontalTabs
+                ? 45 * $unpinnedTabs.length
+                : 0}px; left: {horizontalTabs
+                ? Math.min(400, Math.max(240, tabSize)) * $unpinnedTabs.length
+                : 0}px; right: 0;"
+              class:w-fit={horizontalTabs}
+              class:h-full={horizontalTabs}
+              class="select-none flex items-center justify-center"
+              class:opacity-100={isFirstButtonVisible}
+              class:opacity-0={!isFirstButtonVisible}
+              class:pointer-events-auto={isFirstButtonVisible}
+              class:pointer-events-none={!isFirstButtonVisible}
+            >
               <button
-                class="transform select-none active:scale-95 space-x-2  {horizontalTabs
+                bind:this={newTabButton}
+                class="transform select-none active:scale-95 space-x-2 {horizontalTabs
                   ? 'w-fit rounded-xl p-2'
                   : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
                 on:click|preventDefault={() => createNewEmptyTab()}
-                class:opacity-100={!isFirstButtonVisible}
-                class:opacity-0={isFirstButtonVisible}
-                class:pointer-events-auto={!isFirstButtonVisible}
-                class:pointer-events-none={isFirstButtonVisible}
               >
                 <Icon name="add" />
                 {#if !horizontalTabs}
                   <span class="label">New Tab</span>
                 {/if}
               </button>
-              <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
-                <button
-                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                  on:click={handleToggleMagicSidebar}
-                  disabled={$sidebarTab !== 'active' ||
-                    !$activeTabMagic ||
-                    $activeTab?.type !== 'page'}
-                  use:tooltip={{
-                    content: 'Toggle Page Chat',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 300
-                  }}
-                >
-                  {#if !$activeTabMagic}
-                    <Icon name="message" />
-                  {:else if $activeTabMagic.showSidebar}
-                    <Icon name="close" />
-                  {:else if $activeTabMagic.running}
-                    <Icon name="spinner" />
-                  {:else}
-                    <Icon name="message" />
-                  {/if}
-                </button>
-                {#if $activeTabMagic}
-                  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                {/if}
-
-                <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                <button
-                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                  on:click={() => ($showAnnotationsSidebar = !$showAnnotationsSidebar)}
-                  disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
-                  use:tooltip={{
-                    content: 'Toggle Annotations',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 300
-                  }}
-                >
-                  {#if $showAnnotationsSidebar}
-                    <Icon name="close" />
-                  {:else}
-                    <Icon name="marker" />
-                  {/if}
-                </button>
-
-                <button
-                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                  disabled={$sidebarTab !== 'active' || $activeTab?.type !== 'page'}
-                  on:click={handleToggleAppSidebar}
-                  use:tooltip={{
-                    content: 'Go wild',
-                    action: 'hover',
-                    position: 'bottom',
-                    animation: 'fade',
-                    delay: 300
-                  }}
-                >
-                  {#if $showAppSidebar}
-                    <Icon name="close" />
-                  {:else}
-                    <Icon name="sparkles" />
-                  {/if}
-                </button>
-
-                <NewTabButton
-                  {resourceManager}
-                  {spaces}
-                  on:create-tab-from-space={handleCreateTabFromPopover}
-                  on:create-new-space={handleCreateNewSpace}
-                  on:create-new-history-tab={createHistoryTab}
-                  on:create-new-tab={debouncedCreateNewEmptyTab}
-                />
-              </div>
             </div>
           </div>
-        {:else}
-          <OasisSidebar on:createTab={handleCreateTabFromSpace} />
-        {/if}
-      </div>
-    {/if}
+
+          <div class="flex {horizontalTabs ? 'flex-row items-center' : 'flex-col'} flex-shrink-0">
+            <button
+              class="transform select-none active:scale-95 space-x-2 {horizontalTabs
+                ? 'w-fit rounded-xl p-2'
+                : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+              on:click|preventDefault={() => createNewEmptyTab()}
+              class:opacity-100={!isFirstButtonVisible}
+              class:opacity-0={isFirstButtonVisible}
+              class:pointer-events-auto={!isFirstButtonVisible}
+              class:pointer-events-none={isFirstButtonVisible}
+            >
+              <Icon name="add" />
+              {#if !horizontalTabs}
+                <span class="label">New Tab</span>
+              {/if}
+            </button>
+            <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
+              <button
+                class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                on:click={() => handleRightSidebarChange()}
+              >
+                {#if showRightSidebar}
+                  <Icon name="close" />
+                {:else}
+                  <Icon name="sidebar.right" />
+                {/if}
+              </button>
+              <NewTabButton
+                {resourceManager}
+                {spaces}
+                on:create-tab-from-space={handleCreateTabFromPopover}
+                on:create-new-space={handleCreateNewSpace}
+                on:create-new-history-tab={createHistoryTab}
+                on:create-new-tab={debouncedCreateNewEmptyTab}
+              />
+            </div>
+          </div>
+        </div>
+      {:else}
+        <OasisSidebar on:createTab={handleCreateTabFromSpace} />
+      {/if}
+    </div>
 
     <div
-      class="h-screen w-screen flex space-x-4 relative flex-row {horizontalTabs
+      slot="content"
+      class="h-full shadow-lg flex space-x-4 relative flex-row {horizontalTabs
         ? 'px-1.5'
         : 'py-1.5'}"
     >
@@ -2694,12 +3004,10 @@
       <div
         class="w-full h-full overflow-hidden flex-grow"
         class:pb-1.5={horizontalTabs}
-        class:pt-1.5={horizontalTabs && !showTabs}
-        class:pr-1.5={!horizontalTabs}
-        class:pl-1.5={!horizontalTabs && !showTabs}
+        class:pt-1.5={horizontalTabs && !showLeftSidebar}
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
-        class:sidebarHidden={!showTabs}
+        class:sidebarHidden={!showLeftSidebar}
       >
         {#if $sidebarTab === 'oasis'}
           <div class="browser-window active" style="--scaling: 1;">
@@ -2722,102 +3030,222 @@
         {/if}
 
         {#each $activeTabs as tab (tab.id)}
-          <div
-            class="browser-window will-change-contents transform-gpu"
-            style="--scaling: 1;"
-            class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
-            class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
-          >
-            <!-- {#if $sidebarTab === 'oasis'}
-            {#if $masterHorizon}
-              <DrawerWrapper
-                bind:drawer={drawer}
-                horizon={$masterHorizon}
-                {resourceManager}
-                {selectedFolder}
-              />
-            {:else}
-              <div>Should not happen error: Failed to load main Horizon</div>
-            {/if} -->
-            {#if tab.type === 'page'}
-              <BrowserTab
-                active={$activeTabId === tab.id}
-                {historyEntriesManager}
-                pageMagic={$activeTabMagic}
-                bind:this={$browserTabs[tab.id]}
-                bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
-                on:new-tab={handleNewTab}
-                on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
-                on:update-tab={(e) => updateTab(tab.id, e.detail)}
-                on:open-resource={(e) => openResource(e.detail)}
-                on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
-                on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
-                on:keydown={(e) => handleKeyDown(e.detail)}
-              />
-            {:else if tab.type === 'horizon'}
-              {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
-              {#if horizon}
-                <Horizon
-                  {horizon}
+          {#if $activatedTabs.includes(tab.id)}
+            <div
+              class="browser-window will-change-contents transform-gpu"
+              style="--scaling: 1;"
+              class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
+              class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
+            >
+              <!-- {#if $sidebarTab === 'oasis'}
+                {#if $masterHorizon}
+                  <DrawerWrapper
+                    bind:drawer={drawer}
+                    horizon={$masterHorizon}
+                    {resourceManager}
+                    {selectedFolder}
+                  />
+                {:else}
+                  <div>Should not happen error: Failed to load main Horizon</div>
+                {/if} -->
+              {#if tab.type === 'page'}
+                <BrowserTab
                   active={$activeTabId === tab.id}
-                  {visorSearchTerm}
-                  inOverview={false}
-                  {resourceManager}
+                  {historyEntriesManager}
+                  pageMagic={$activeTabMagic}
+                  bind:this={$browserTabs[tab.id]}
+                  bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
+                  on:new-tab={handleNewTab}
+                  on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
+                  on:update-tab={(e) => updateTab(tab.id, e.detail)}
+                  on:open-resource={(e) => openResource(e.detail)}
+                  on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
+                  on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
+                  on:keydown={(e) => handleKeyDown(e.detail)}
                 />
+              {:else if tab.type === 'horizon'}
+                {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
+                {#if horizon}
+                  <Horizon
+                    {horizon}
+                    active={$activeTabId === tab.id}
+                    {visorSearchTerm}
+                    inOverview={false}
+                    {resourceManager}
+                  />
+                {:else}
+                  <div>no horizon found</div>
+                {/if}
+              {:else if tab.type === 'chat'}
+                <Chat
+                  {tab}
+                  {resourceManager}
+                  db={storage}
+                  on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
+                  on:updateTab={(e) => updateTab(tab.id, e.detail)}
+                  on:openResource={(e) => openResource(e.detail)}
+                />
+              {:else if tab.type === 'importer'}
+                <Importer {resourceManager} />
+              {:else if tab.type === 'oasis-discovery'}
+                <OasisDiscovery {resourceManager} />
+              {:else if tab.type === 'space'}
+                <OasisSpace
+                  spaceId={tab.spaceId}
+                  active={$activeTabId === tab.id}
+                  on:create-resource-from-oasis={handeCreateResourceFromOasis}
+                  on:deleted={handleDeletedSpace}
+                  on:new-tab={handleNewTab}
+                />
+              {:else if tab.type === 'history'}
+                <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
               {:else}
-                <div>no horizon found</div>
+                <BrowserHomescreen
+                  {historyEntriesManager}
+                  active={$activeTabId === tab.id}
+                  on:navigate={handleTabNavigation}
+                  on:chat={handleCreateChat}
+                  on:rag={handleRag}
+                  on:create-tab-from-space={handleCreateTabFromSpace}
+                  on:new-tab={handleNewTab}
+                />
               {/if}
-            {:else if tab.type === 'chat'}
-              <Chat
-                {tab}
-                {resourceManager}
-                db={storage}
-                on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
-                on:updateTab={(e) => updateTab(tab.id, e.detail)}
-                on:openResource={(e) => openResource(e.detail)}
-              />
-            {:else if tab.type === 'importer'}
-              <Importer {resourceManager} />
-            {:else if tab.type === 'oasis-discovery'}
-              <OasisDiscovery {resourceManager} />
-            {:else if tab.type === 'space'}
-              <OasisSpace
-                spaceId={tab.spaceId}
-                active={$activeTabId === tab.id}
-                on:create-resource-from-oasis={handeCreateResourceFromOasis}
-                on:deleted={handleDeletedSpace}
-                on:new-tab={handleNewTab}
-              />
-            {:else if tab.type === 'history'}
-              <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
-            {:else}
-              <BrowserHomescreen
-                {historyEntriesManager}
-                on:navigate={handleTabNavigation}
-                on:chat={handleCreateChat}
-                on:rag={handleRag}
-                on:create-tab-from-space={handleCreateTabFromSpace}
-              />
-            {/if}
-          </div>
+            </div>
+          {/if}
         {/each}
 
         {#if !$activeTabs && !$activeTab}
           <div class="" style="--scaling: 1;">
             <BrowserHomescreen
               {historyEntriesManager}
+              active
               on:navigate={handleTabNavigation}
               on:chat={handleCreateChat}
               on:rag={handleRag}
+              on:new-tab={handleNewTab}
             />
           </div>
         {/if}
       </div>
+    </div>
 
-      {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
+    <Tabs.Root
+      onValueChange={(e) => {
+        if (e === 'magicTabs') {
+          handleToggleMagicSidebar()
+          return
+        }
+        if ($activeTabMagic.showSidebar) {
+          handleToggleMagicSidebar()
+        }
+
+        if (e === 'go-wild') {
+          handleToggleAppSidebar()
+          return
+        }
+
+        if ($showAppSidebar) {
+          handleToggleAppSidebar()
+        }
+      }}
+      value="annotations"
+      class="h-full flex flex-col relative"
+      slot="right-sidebar"
+    >
+      <Tabs.List
+        class="grid w-full grid-cols-3 gap-1 rounded-9px bg-dark-10 px-3 py-4 text-sm font-semibold leading-[0.01em] border-b-2 border-sky-100"
+      >
+        <Tabs.Trigger
+          value="magicTabs"
+          class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+          disabled={!$activeTabMagic}
+          >{#if !$activeTabMagic}
+            <Icon name="message" />
+          {:else if $activeTabMagic.running}
+            <Icon name="spinner" />
+          {:else}
+            <Icon name="message" />
+          {/if}</Tabs.Trigger
+        >
+        <Tabs.Trigger
+          value="annotations"
+          class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+          disabled={$activeTab?.type !== 'page'}
+        >
+          <Icon name="marker" /></Tabs.Trigger
+        >
+
+        <Tabs.Trigger
+          value="go-wild"
+          class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+          disabled={$activeTab?.type !== 'page'}
+        >
+          <Icon name="sparkles" /></Tabs.Trigger
+        >
+      </Tabs.List>
+      <Tabs.Content value="magicTabs" class="pt-3 h-full">
+        {#if $activeTab && $activeTabMagic}
+          <MagicSidebar
+            magicPage={$activeTabMagic}
+            bind:inputValue={$magicInputValue}
+            on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
+            on:highlightWebviewText={(e) =>
+              highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
+            on:seekToTimestamp={(e) =>
+              handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
+            on:navigate={(e) => {
+              $browserTabs[$activeTabId].navigate(e.detail.url)
+            }}
+            on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
+            on:chat={() => handleChatSubmit($activeTabMagic)}
+            on:clearChat={() => handleChatClear(true)}
+            on:prompt={handleMagicSidebarPromptSubmit}
+          />
+        {:else}
+          <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+            <Icon name="info" />
+            <span>Magic chat not available</span>
+          </div>
+        {/if}
+      </Tabs.Content>
+      <Tabs.Content value="annotations" class="pt-3 h-full">
+        {#if $activeTab && $activeTab.type === 'page'}
+          <AnnotationsSidebar
+            bind:this={annotationsSidebar}
+            resourceId={$activeTab.resourceBookmark}
+            on:scrollTo={handleAnnotationScrollTo}
+            on:create={handleAnnotationSidebarCreate}
+            on:reload={handleAnnotationSidebarReload}
+          />
+        {:else}
+          <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+            <Icon name="info" />
+            <span>No page info available.</span>
+          </div>
+        {/if}
+      </Tabs.Content>
+      <Tabs.Content value="go-wild" class="pt-3 h-full">
+        {#if $activeTab && $activeTab.type === 'page' && $showAppSidebar}
+          <AppSidebar
+            {sffs}
+            appId={$activeAppId}
+            tabContext={$activeAppSidebarContext}
+            on:clearAppSidebar={() => handleAppSidebarClear(true)}
+            on:executeAppSidebarCode={(e) =>
+              handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
+          />
+        {:else}
+          <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+            <Icon name="info" />
+            <span>Go wild not available.</span>
+          </div>
+        {/if}
+      </Tabs.Content>
+    </Tabs.Root>
+    <!-- {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
         <div
           transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
             'mt-1.5'} flex-shrink-0"
         >
           <MagicSidebar
@@ -2840,7 +3268,7 @@
       {:else if $showAppSidebar}
         <div
           transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
             'mt-1.5'} flex-shrink-0"
         >
           <AppSidebar
@@ -2855,7 +3283,7 @@
       {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
         <div
           transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showTabs &&
+          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
             'mt-1.5'} flex-shrink-0"
         >
           <AnnotationsSidebar
@@ -2866,9 +3294,8 @@
             on:reload={handleAnnotationSidebarReload}
           />
         </div>
-      {/if}
-    </div>
-  </div>
+      {/if} -->
+  </SidebarPane>
 </div>
 
 <style lang="scss">

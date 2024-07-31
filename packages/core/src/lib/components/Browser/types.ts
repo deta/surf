@@ -19,6 +19,7 @@ export interface BaseTab {
 export interface TabPage extends BaseTab {
   type: 'page'
   initialLocation: string
+  currentLocation?: string
   historyStackIds: string[]
   currentHistoryIndex: number
   resourceBookmark?: string | null
@@ -57,6 +58,7 @@ export interface TabOasisDiscovery extends BaseTab {
 export interface TabSpace extends BaseTab {
   type: 'space'
   spaceId: string
+  colors: [string, string]
 }
 
 export interface TabHistory extends BaseTab {

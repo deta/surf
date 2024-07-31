@@ -2,6 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import type { Space } from '../../types'
   import { useLogScope } from '../../utils/log'
+  import ColorIcon from './ColorIcon.svelte'
 
   const dispatch = createEventDispatcher<{ change: [string, string] }>()
   const log = useLogScope('SpaceIcon')
@@ -72,44 +73,4 @@
   })
 </script>
 
-<div
-  class="folder-icon"
-  on:click={() => updateColor()}
-  style="--color1: {parsedColors ? parsedColors[0] : 'red'}; --color2: {parsedColors
-    ? parsedColors[1]
-    : 'blue'}"
-  aria-hidden="true"
-></div>
-
-<style lang="scss">
-  .folder-icon {
-    width: 1.25rem;
-    height: 1.25rem;
-    border-radius: 50%;
-    background: radial-gradient(
-        95% 95% at 50% 10%,
-        rgba(255, 255, 255, 0.5) 0%,
-        rgba(0, 0, 0, 0.5) 100%
-      ),
-      linear-gradient(180deg, var(--color1) 0%, var(--color2) 100%);
-    background: radial-gradient(
-        97.6% 97.6% at 50% 10.9%,
-        color(display-p3 1 1 1 / 0.5) 0%,
-        color(display-p3 0 0 0 / 0.5) 100%
-      ),
-      linear-gradient(180deg, var(--color1) 0%, var(--color2) 100%);
-    background-blend-mode: soft-light, normal;
-    box-shadow:
-      0px -0.3px 0.6px 0px rgba(0, 0, 0, 0.15),
-      0px -1.25px 1.8px 0px rgba(0, 0, 0, 0.05) inset,
-      0px 0.9px 0.6px 0px rgba(255, 255, 255, 0.3) inset,
-      0px -1.5px 2px 0px rgba(255, 255, 255, 0.09) inset,
-      0px -1.5px 4px 0px rgba(0, 0, 0, 0.15) inset;
-    box-shadow:
-      0px -0.3px 0.6px 0px color(display-p3 0 0 0 / 0.15),
-      0px -1.25px 1.8px 0px color(display-p3 0 0 0 / 0.05) inset,
-      0px 0.9px 0.6px 0px color(display-p3 1 1 1 / 0.3) inset,
-      0px -1.5px 2px 0px color(display-p3 0 0 0/ 0.09) inset,
-      0px -1.5px 4px 0px color(display-p3 0 0 0 / 0.15) inset;
-  }
-</style>
+<ColorIcon colors={parsedColors} on:click={() => updateColor()} />

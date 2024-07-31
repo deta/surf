@@ -666,7 +666,7 @@ export class ResourceManager {
     if (!resourceItem) {
       return null
     }
-    const resource = this.findOrCreateResourceObject(resourceItem)
+    const resource = this.createResourceObject(resourceItem)
 
     this.resources.update((resources) => {
       const index = resources.findIndex((r) => r.id === id)
@@ -877,7 +877,6 @@ export class ResourceManager {
   }
 
   async deleteSpaceEntries(entry_ids: string[]) {
-    console.log('about to delete entries', entry_ids)
     return await this.sffs.deleteSpaceEntries(entry_ids)
   }
 

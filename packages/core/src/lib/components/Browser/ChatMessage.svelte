@@ -184,7 +184,7 @@
   })
 </script>
 
-<div bind:this={elem} class="message chat-message-content"></div>
+<div bind:this={elem} class="message max-w-screen-2xl chat-message-content"></div>
 
 {#if sources && sources.length > 0 && showSourcesAtEnd}
   <div class="citations-list">
@@ -225,8 +225,6 @@
     letter-spacing: 0.01em;
     margin-bottom: 1.5rem;
     line-height: 1.45;
-    max-width: 640px;
-    margin: 0 auto;
   }
 
   :global(.chat-message-content div) {

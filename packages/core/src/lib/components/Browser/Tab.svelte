@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
   import type { Tab, TabPage } from './types'
-  import type { Writable } from 'svelte/store'
+  import { writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTagsBuiltInKeys, type Space } from '../../types'
@@ -20,37 +20,53 @@
   export let showExcludeOthersButton: boolean = false
   export let bookmarkingInProgress: boolean
   export let bookmarkingSuccess: boolean
-  export let addressInputElem: HTMLInputElement
   export let enableEditing = false
   export let showClose = false
   export let spaces
+  export const inputUrl = writable<string>('')
+
+  export const editAddress = async () => {
+    isEditing = true
+
+    await tick()
+
+    addressInputElem.focus()
+  }
+
+  export const blur = () => {
+    addressInputElem.blur()
+  }
 
   const dispatch = createEventDispatcher<{
-    select: (id: string) => void
-    'remove-from-sidebar': (id: string) => void
-    'delete-tab': (id: string) => void
-    'unarchive-tab': (id: string) => void
-    'input-enter': (url: string) => void
-    bookmark: () => void
-    'save-resource-in-space': (spaceId: string) => void
-    'create-live-space': () => void
-    'exclude-other-tabs': (id: string) => void
+    select: string
+    'remove-from-sidebar': string
+    'delete-tab': string
+    'unarchive-tab': string
+    'input-enter': string
+    bookmark: void
+    'save-resource-in-space': string
+    'create-live-space': void
+    'exclude-other-tabs': string
   }>()
   const resourceManager = useResourceManager()
 
+  let addressInputElem: HTMLInputElement
   let space: Space | null = null
   let isEditing = false
-  let inputUrl = ''
   let hovered = false
+  let popoverVisible = false
 
   // $: acceptDrop = tab.type === 'space'
   $: isActive = tab.id === $activeTabId
   $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
+  $: url =
+    (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null
 
   $: if (tab.type === 'page' && !isEditing) {
-    if (tab.currentDetectedApp?.canonicalUrl) {
-      const url = new URL(tab.currentDetectedApp?.canonicalUrl)
-      inputUrl = url.hostname
+    if (url) {
+      $inputUrl = new URL(url).hostname
+    } else {
+      $inputUrl = tab.title
     }
   }
 
@@ -74,9 +90,8 @@
   const handleInputFocus = () => {
     isEditing = true
 
-    if ((tab as TabPage).currentDetectedApp?.canonicalUrl) {
-      const url = new URL(tab.currentDetectedApp?.canonicalUrl)
-      inputUrl = isEditing ? tab.currentDetectedApp?.canonicalUrl : url.hostname
+    if (url) {
+      $inputUrl = isEditing ? url : new URL(url).hostname
     }
 
     // scroll to the end
@@ -93,7 +108,7 @@
 
   const handleInputKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Enter') {
-      dispatch('input-enter', inputUrl)
+      dispatch('input-enter', $inputUrl)
     } else if (event.key === 'Escape') {
       addressInputElem.blur()
     }
@@ -111,13 +126,14 @@
     fetchSpace(tab.spaceId)
   }
 
-  $: sanitizedTitle =
-    tab.type !== 'space'
+  $: sanitizedTitle = tab.title
+    ? tab.type !== 'space'
       ? tab.title
           .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
           .replace(/[\/\\]/g, '–')
           .replace(/^\w/, (c) => c.toUpperCase())
       : tab.title
+    : ''
 
   const handleBookmark = () => {
     dispatch('bookmark')
@@ -134,6 +150,14 @@
   const handleExcludeOthers = () => {
     dispatch('exclude-other-tabs', tab.id)
   }
+
+  const handlePopoverEnter = () => {
+    popoverVisible = true
+  }
+
+  const handlePopoverLeave = () => {
+    popoverVisible = false
+  }
 </script>
 
 <div
@@ -143,7 +167,9 @@
     : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 transition duration-100group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
   on:click={handleClick}
   on:mouseenter={() => (hovered = true)}
-  on:mouseleave={() => (hovered = false)}
+  on:mouseleave={() => {
+    if (!popoverVisible) hovered = false
+  }}
   aria-hidden="true"
   use:tooltip={pinned
     ? {
@@ -182,28 +208,41 @@
   {/if}
 
   {#if showClose && hovered}
-    <button
-      on:click|stopPropagation={handleArchive}
-      class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
-      use:tooltip2={{
-        text: 'Delete this tab (⌘ + W)',
-        position: 'right'
-      }}
-    >
-      {#if tab.archived}
-        <Icon name="trash" size="18px" />
-      {:else}
+    {#if tab.type == 'space'}
+      <button
+        on:click|stopPropagation={handleRemoveSpaceFromSidebar}
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+        use:tooltip2={{
+          text: 'Remove from Sidebar (⌘ + W)',
+          position: 'right'
+        }}
+      >
         <Icon name="close" size="18px" />
-      {/if}
-    </button>
+      </button>
+    {:else}
+      <button
+        on:click|stopPropagation={handleArchive}
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+        use:tooltip2={{
+          text: 'Delete this tab (⌘ + W)',
+          position: 'right'
+        }}
+      >
+        {#if tab.archived}
+          <Icon name="trash" size="18px" />
+        {:else}
+          <Icon name="close" size="18px" />
+        {/if}
+      </button>
+    {/if}
   {/if}
 
   {#if !tab.pinned || !pinned}
     <div class=" relative flex-grow truncate mr-1">
-      {#if tab.type === 'page' && isActive && enableEditing}
+      {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && (hovered || isEditing)}
         <input
           type="text"
-          bind:value={inputUrl}
+          bind:value={$inputUrl}
           on:focus={handleInputFocus}
           on:blur={handleInputBlur}
           on:keydown={handleInputKeydown}
@@ -243,75 +282,61 @@
           </button>
         {/if}
 
-        {#if tab.type == 'space'}
+        {#if tab.type === 'page' && tab.currentDetectedApp?.rssFeedUrl && isActive}
           <button
-            on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-            class="close"
+            on:click={handleCreateLiveSpace}
+            class="flex items-center justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
             use:tooltip={{
-              content: 'Remove from Sidebar (⌘ + W)',
+              content: `Create ${tab.currentDetectedApp.appName} live Space`,
               action: 'hover',
               position: 'left',
               animation: 'fade',
               delay: 500
             }}
           >
-            <Icon name="close" size="18px" />
+            <Icon name="news" />
           </button>
-        {:else}
-          {#if tab.type === 'page' && tab.currentDetectedApp?.rssFeedUrl && isActive}
+        {/if}
+
+        {#if tab.type === 'page' && isActive}
+          {#key isBookmarkedByUser}
             <button
-              on:click={handleCreateLiveSpace}
-              class="flex items-center justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+              on:mouseenter={handlePopoverEnter}
+              on:click={handleBookmark}
               use:tooltip={{
-                content: `Create ${tab.currentDetectedApp.appName} live Space`,
+                content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
                 action: 'hover',
                 position: 'left',
                 animation: 'fade',
                 delay: 500
               }}
+              on:save-resource-in-space={handleSaveResourceInSpace}
+              on:popover-close={handlePopoverLeave}
+              use:popover={{
+                content: {
+                  component: ShortcutSaveItem,
+                  props: { resourceManager, spaces }
+                },
+                action: 'hover',
+                position: 'right-top',
+                style: {
+                  backgroundColor: '#f5f5f5'
+                },
+                animation: 'fade',
+                delay: 950
+              }}
             >
-              <Icon name="news" />
+              {#if bookmarkingInProgress}
+                <Icon name="spinner" />
+              {:else if bookmarkingSuccess}
+                <Icon name="check" />
+              {:else if isBookmarkedByUser}
+                <Icon name="bookmarkFilled" />
+              {:else}
+                <Icon name="leave" />
+              {/if}
             </button>
-          {/if}
-
-          {#if tab.type === 'page' && isActive}
-            {#key isBookmarkedByUser}
-              <button
-                on:click={handleBookmark}
-                use:tooltip={{
-                  content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
-                  action: 'hover',
-                  position: 'left',
-                  animation: 'fade',
-                  delay: 500
-                }}
-                on:save-resource-in-space={handleSaveResourceInSpace}
-                use:popover={{
-                  content: {
-                    component: ShortcutSaveItem,
-                    props: { resourceManager, spaces }
-                  },
-                  action: 'hover',
-                  position: 'right-top',
-                  style: {
-                    backgroundColor: '#F8F7F1'
-                  },
-                  animation: 'fade',
-                  delay: 1200
-                }}
-              >
-                {#if bookmarkingInProgress}
-                  <Icon name="spinner" />
-                {:else if bookmarkingSuccess}
-                  <Icon name="check" />
-                {:else if isBookmarkedByUser}
-                  <Icon name="bookmarkFilled" />
-                {:else}
-                  <Icon name="leave" />
-                {/if}
-              </button>
-            {/key}
-          {/if}
+          {/key}
         {/if}
       </div>
     {:else if showExcludeOthersButton && hovered}

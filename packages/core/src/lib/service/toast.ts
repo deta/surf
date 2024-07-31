@@ -12,6 +12,17 @@ export type Toast = {
   timeout: number
 }
 
+// use the return type of the loading method
+export type ToastItem = {
+  id: string
+  dismiss: () => void
+  update: (message: string, type?: Toast['type'], timeout?: number) => void
+  success: (message: string, timeout?: number) => void
+  info: (message: string, timeout?: number) => void
+  warning: (message: string, timeout?: number) => void
+  error: (message: string, timeout?: number) => void
+}
+
 const DEFAULT_TIMEOUT = 3000
 
 export class Toasts {
@@ -82,6 +93,7 @@ export class Toasts {
     }
 
     return {
+      id,
       dismiss: () => this.dismiss(id),
       update: updateToast,
       success: (message: string, timeout?: number) =>
@@ -92,7 +104,7 @@ export class Toasts {
         updateToast(message, 'warning', timeout ?? DEFAULT_TIMEOUT),
       error: (message: string, timeout?: number) =>
         updateToast(message, 'error', timeout ?? DEFAULT_TIMEOUT)
-    }
+    } as ToastItem
   }
 
   dismiss(id: string) {
