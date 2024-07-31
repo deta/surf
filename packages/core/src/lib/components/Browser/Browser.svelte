@@ -2402,15 +2402,13 @@
 
   const onDragculaTabDragEnd = async (e: CustomEvent<DragculaDragEvent>) => {
     e = e.detail
-    console.error('TAB DRAG END', e)
+    console.debug('TAB DRAG END', e)
 
     if (
       e.status === 'completed' &&
       e.effect === 'move' &&
       !['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(e.to?.id)
     ) {
-      console.error('tab mvoe outside, will del')
-
       tabs.update((x) => {
         return x.filter((tab) => tab.id !== e.data['farc/tab'].id)
       })
@@ -2424,8 +2422,6 @@
 
       // Combine all lists back together
       const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
-
-      console.error('New tabs', [...newTabs])
 
       tabs.set(newTabs)
       await tick()
@@ -2935,7 +2931,7 @@
                         on:Drop={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          console.error('DROP ON TAB', e.detail)
+                          console.debug('DROP ON TAB', e.detail)
                         }}
                       />
                     {:else}
