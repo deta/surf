@@ -175,7 +175,7 @@
   const isCreatingLiveSpace = writable(false)
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
-  const activatedTabs = writable<Set<string>>(new Set()) // for lazy loading
+  const activatedTabs = writable<string[]>([]) // for lazy loading
   const downloadResourceMap = new Map<string, Download>()
   const downloadToastsMap = new Map<string, ToastItem>()
 
@@ -221,10 +221,6 @@
   })
 
   const activeBrowserTab = derived([browserTabs, activeTabId], ([browserTabs, activeTabId]) => {
-    activatedTabs.update((tabs) => {
-      tabs.add(activeTabId)
-      return tabs
-    })
     return browserTabs[activeTabId]
   })
 
@@ -300,11 +296,12 @@
   }
 
   const makeTabActive = (tabId: string) => {
+    log.debug('Making tab active', tabId)
     const browserTab = $browserTabs[tabId]
 
     const activeElement = document.activeElement
-    if (activeElement && typeof activeElement.blur === 'function') {
-      activeElement.blur()
+    if (activeElement && typeof (activeElement as any).blur === 'function') {
+      ;(activeElement as any).blur()
     }
 
     if (browserTab) {
@@ -312,6 +309,14 @@
         browserTab.focus()
       }
     }
+
+    activatedTabs.update((tabs) => {
+      if (tabs.includes(tabId)) {
+        return tabs
+      }
+
+      return [...tabs, tabId]
+    })
 
     activeTabId.set(tabId)
     addToActiveTabsHistory(tabId)
@@ -442,6 +447,7 @@
 
     tabs.update((tabs) => tabs.filter((tab) => tab.id !== tabId))
     activeTabsHistory.update((history) => history.filter((id) => id !== tabId))
+    activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
 
     await tick()
 
@@ -487,7 +493,20 @@
       log.error('No active tab')
       return
     }
-    await deleteTab($activeTab.id)
+
+    if ($activeTab.pinned) {
+      log.debug('Active tab is pinned, deactivating it')
+      $activatedTabs = $activatedTabs.filter((id) => id !== $activeTab.id)
+
+      const nextTabIndex = $unpinnedTabs.findIndex((tab) => tab.id === $activeTab.id) + 1
+      if ($unpinnedTabs[nextTabIndex]) {
+        makeTabActive($unpinnedTabs[nextTabIndex].id)
+      } else {
+        makeTabActive($unpinnedTabs[$unpinnedTabs.length - 1].id)
+      }
+    } else {
+      await deleteTab($activeTab.id)
+    }
 
     /*
     if ($activeTab.archived) {
@@ -2048,7 +2067,9 @@
 
     if (activeTabs.length === 0) {
       createNewEmptyTab()
-    } else if (!$activeTabId) {
+    } else if ($activeTabId) {
+      makeTabActive($activeTabId)
+    } else {
       makeTabActive(activeTabs[activeTabs.length - 1].id)
     }
 
@@ -3009,86 +3030,88 @@
         {/if}
 
         {#each $activeTabs as tab (tab.id)}
-          <div
-            class="browser-window will-change-contents transform-gpu"
-            style="--scaling: 1; {$activatedTabs.has(tab.id) ? '' : 'display: none;'}"
-            class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
-            class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
-          >
-            <!-- {#if $sidebarTab === 'oasis'}
-              {#if $masterHorizon}
-                <DrawerWrapper
-                  bind:drawer={drawer}
-                  horizon={$masterHorizon}
-                  {resourceManager}
-                  {selectedFolder}
-                />
-              {:else}
-                <div>Should not happen error: Failed to load main Horizon</div>
-              {/if} -->
-            {#if tab.type === 'page'}
-              <BrowserTab
-                active={$activeTabId === tab.id}
-                {historyEntriesManager}
-                pageMagic={$activeTabMagic}
-                bind:this={$browserTabs[tab.id]}
-                bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
-                on:new-tab={handleNewTab}
-                on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
-                on:update-tab={(e) => updateTab(tab.id, e.detail)}
-                on:open-resource={(e) => openResource(e.detail)}
-                on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
-                on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
-                on:keydown={(e) => handleKeyDown(e.detail)}
-              />
-            {:else if tab.type === 'horizon'}
-              {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
-              {#if horizon}
-                <Horizon
-                  {horizon}
+          {#if $activatedTabs.includes(tab.id)}
+            <div
+              class="browser-window will-change-contents transform-gpu"
+              style="--scaling: 1;"
+              class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
+              class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
+            >
+              <!-- {#if $sidebarTab === 'oasis'}
+                {#if $masterHorizon}
+                  <DrawerWrapper
+                    bind:drawer={drawer}
+                    horizon={$masterHorizon}
+                    {resourceManager}
+                    {selectedFolder}
+                  />
+                {:else}
+                  <div>Should not happen error: Failed to load main Horizon</div>
+                {/if} -->
+              {#if tab.type === 'page'}
+                <BrowserTab
                   active={$activeTabId === tab.id}
-                  {visorSearchTerm}
-                  inOverview={false}
-                  {resourceManager}
+                  {historyEntriesManager}
+                  pageMagic={$activeTabMagic}
+                  bind:this={$browserTabs[tab.id]}
+                  bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
+                  on:new-tab={handleNewTab}
+                  on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
+                  on:update-tab={(e) => updateTab(tab.id, e.detail)}
+                  on:open-resource={(e) => openResource(e.detail)}
+                  on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
+                  on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
+                  on:keydown={(e) => handleKeyDown(e.detail)}
                 />
+              {:else if tab.type === 'horizon'}
+                {@const horizon = $horizons.find((horizon) => horizon.id === tab.horizonId)}
+                {#if horizon}
+                  <Horizon
+                    {horizon}
+                    active={$activeTabId === tab.id}
+                    {visorSearchTerm}
+                    inOverview={false}
+                    {resourceManager}
+                  />
+                {:else}
+                  <div>no horizon found</div>
+                {/if}
+              {:else if tab.type === 'chat'}
+                <Chat
+                  {tab}
+                  {resourceManager}
+                  db={storage}
+                  on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
+                  on:updateTab={(e) => updateTab(tab.id, e.detail)}
+                  on:openResource={(e) => openResource(e.detail)}
+                />
+              {:else if tab.type === 'importer'}
+                <Importer {resourceManager} />
+              {:else if tab.type === 'oasis-discovery'}
+                <OasisDiscovery {resourceManager} />
+              {:else if tab.type === 'space'}
+                <OasisSpace
+                  spaceId={tab.spaceId}
+                  active={$activeTabId === tab.id}
+                  on:create-resource-from-oasis={handeCreateResourceFromOasis}
+                  on:deleted={handleDeletedSpace}
+                  on:new-tab={handleNewTab}
+                />
+              {:else if tab.type === 'history'}
+                <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
               {:else}
-                <div>no horizon found</div>
+                <BrowserHomescreen
+                  {historyEntriesManager}
+                  active={$activeTabId === tab.id}
+                  on:navigate={handleTabNavigation}
+                  on:chat={handleCreateChat}
+                  on:rag={handleRag}
+                  on:create-tab-from-space={handleCreateTabFromSpace}
+                  on:new-tab={handleNewTab}
+                />
               {/if}
-            {:else if tab.type === 'chat'}
-              <Chat
-                {tab}
-                {resourceManager}
-                db={storage}
-                on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
-                on:updateTab={(e) => updateTab(tab.id, e.detail)}
-                on:openResource={(e) => openResource(e.detail)}
-              />
-            {:else if tab.type === 'importer'}
-              <Importer {resourceManager} />
-            {:else if tab.type === 'oasis-discovery'}
-              <OasisDiscovery {resourceManager} />
-            {:else if tab.type === 'space'}
-              <OasisSpace
-                spaceId={tab.spaceId}
-                active={$activeTabId === tab.id}
-                on:create-resource-from-oasis={handeCreateResourceFromOasis}
-                on:deleted={handleDeletedSpace}
-                on:new-tab={handleNewTab}
-              />
-            {:else if tab.type === 'history'}
-              <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
-            {:else}
-              <BrowserHomescreen
-                {historyEntriesManager}
-                active={$activeTabId === tab.id}
-                on:navigate={handleTabNavigation}
-                on:chat={handleCreateChat}
-                on:rag={handleRag}
-                on:create-tab-from-space={handleCreateTabFromSpace}
-                on:new-tab={handleNewTab}
-              />
-            {/if}
-          </div>
+            </div>
+          {/if}
         {/each}
 
         {#if !$activeTabs && !$activeTab}
