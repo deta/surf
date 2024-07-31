@@ -4,8 +4,8 @@
   import { RedBlackTree } from './masonry/index'
   import type { Item, ScrollVelocity } from './masonry/types'
 
-  export let renderContents: Item[] = []
-  export let id: string
+  export let renderContents: Item[] | string[] = []
+  export let id: Date
   export let items: Item[] = []
 
   let prevItemLength = 0
@@ -323,7 +323,7 @@
 
   function calculateItemsToLoad(velocity: number): number {
     const MIN_ITEMS = 1
-    const MAX_ITEMS = 40
+    const MAX_ITEMS = 25
     const VELOCITY_FACTOR = 2
 
     let items = Math.round(Math.log(velocity * VELOCITY_FACTOR + 1) * 10)

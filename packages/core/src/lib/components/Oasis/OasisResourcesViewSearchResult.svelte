@@ -2,12 +2,7 @@
   import { derived, writable, type Readable } from 'svelte/store'
 
   import { useLogScope } from '../../utils/log'
-  import InfiniteScroll from '../InfiniteScroll.svelte'
-  import { DrawerContentMasonry } from '@horizon/drawer'
-  import { useDebounce } from '../../utils/debounce'
   import type { ResourceSearchResultItem } from '../../service/resources'
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
-  import DragResourceWrapper from './DragResourceWrapper.svelte'
   import Masonry from './MasonrySpace.svelte'
 
   export let resources: Readable<ResourceSearchResultItem[]>
@@ -18,6 +13,7 @@
   // const dispatch = createEventDispatcher<{ click: string }>()
 
   const CHUNK_SIZE = 40
+  const MAXIMUM_CHUNK_SIZE = 20
   const CHUNK_THRESHOLD = 300
 
   let scrollElement: HTMLDivElement
