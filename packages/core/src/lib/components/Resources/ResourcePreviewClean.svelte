@@ -494,12 +494,18 @@
   }
 
   .summary {
-    font-size: 0.9rem;
-    color: #666;
+    font-size: 1rem;
+    color: rgb(12 74 110/0.9);
+    font-weight: 500;
+    text-wrap: pretty;
+    letter-spacing: 0.0175rem;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     display: -webkit-box;
     -webkit-line-clamp: 15;
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.5;
+    word-break: break-word;
   }
 </style>
