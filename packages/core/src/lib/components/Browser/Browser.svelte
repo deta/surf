@@ -794,9 +794,15 @@
       $activeBrowserTab?.resetZoom()
     } else if (isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])) {
       const index = parseInt(e.key, 10) - 1
-      const tabs = [...$pinnedTabs, ...$unpinnedTabs]
-      if (index < tabs.length) {
-        makeTabActive(tabs[index].id)
+      const tabs = [...$pinnedTabs, ...$magicTabs, ...$unpinnedTabs]
+
+      if (index < 8) {
+        if (index < tabs.length) {
+          makeTabActive(tabs[index].id)
+        }
+      } else {
+        // if 9 is pressed, go to the last tab
+        makeTabActive(tabs[tabs.length - 1].id)
       }
     } else if (e.key === 'ArrowLeft' && e.metaKey) {
       if (canGoBack) {
