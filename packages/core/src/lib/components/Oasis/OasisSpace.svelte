@@ -670,6 +670,7 @@
     }
 
     const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+    e.preventDefault()
 
     let resourceIds: string[] = []
     if (drag.isNative) {
@@ -717,7 +718,7 @@
     }
 
     await oasis.addResourcesToSpace(spaceId, resourceIds)
-    e.preventDefault()
+    //e.preventDefault()
 
     await loadSpaceContents(spaceId)
     toast.success('Resources added!')
