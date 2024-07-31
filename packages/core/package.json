@@ -18,6 +18,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
+    "@horizon/dragcula": "*",
     "@horizon/cmdk-sv": "*",
     "@horizon/drawer": "*",
     "@horizon/editor": "*",

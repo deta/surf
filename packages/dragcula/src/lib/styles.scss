@@ -1,0 +1,40 @@
+/*
+body [data-dragulca-dragging="true"]       -> On body while drag active
+body[data-dragcula-target="<zoneID>"]
+body[data-dragcula-drag-effect="<none/move/copy/link>"]
+
+DragItem[data-dragcula-dragging-item="true"]   -> Item beeing dragged
+DragItem[data-dragcula-over-zone="<zoneID>"]   -> Item over a accepting drop zone
+
+DragZone[data-dragcula-targeting="true"]      -> Zone accepts item over it
+
+*/
+
+
+// Disables pointer events on all body elements if a drag operation is active
+// except, other drag zones.
+body[data-dragcula-dragging="true"] *:not([data-dragcula-zone]) {
+  pointer-events: none;
+}
+
+body[data-dragcula-dragging="true"] *[data-dragcula-zone] {
+  pointer-events: all;
+}
+
+
+// Disables pointer events on all elements inside a drop target
+// except, nested drag zones.
+// This is also useful when supporting native dnd, as there won't
+// be a body class!
+*[data-dragcula-target] *:not([data-dragcula-zone]) {
+  pointer-events: none;
+}
+
+*[data-dragcula-target] *[data-dragcula-zone] {
+  pointer-events: all;
+}
+
+// Default cursor when over target
+[data-dragcula-dragging-item][data-dragcula-over-zone] {
+  cursor: copy;
+}

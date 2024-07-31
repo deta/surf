@@ -1,32 +1,37 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { useLogScope } from '../../utils/log'
+  import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
 
   export let acceptDrop: boolean = true
   export let dragOver: boolean = false
+  export let spaceId: string = crypto.randomUUID()
 
   const log = useLogScope('DropWrapper')
   const dispatch = createEventDispatcher<{
     drop: DragEvent
-    dragenter: DragEvent
-    dragleave: DragEvent
+    DragEnter: DragculaDragEvent
+    DragLeave: DragEvent
+    Drop: DragculaDragEvent
   }>()
 
   let counter = 0
   let dragOverTimeout: ReturnType<typeof setTimeout> | null = null
 
-  const handleDragEnter = (e: DragEvent) => {
+  const handleDragEnter = (e: DragculaDragEvent) => {
     if (!acceptDrop) {
       log.debug('Aborting DND')
       return
     }
 
+    const accepted = !dispatch('DragEnter', e, { cancelable: true })
+    if (!accepted) return
     e.preventDefault()
 
     counter++
     if (counter === 1) {
       dragOver = true
-      dispatch('dragenter', e)
+      dispatch('DragEnter', e)
     }
   }
 
@@ -36,7 +41,7 @@
     counter--
     if (counter === 0) {
       dragOver = false
-      dispatch('dragleave', e)
+      dispatch('DragLeave', e)
     }
   }
 
@@ -59,14 +64,16 @@
     }, 100) // Adjust delay as needed, 100ms is just an example
   }
 
-  const handleDrop = (e: DragEvent) => {
+  const handleDrop = (e: DragculaDragEvent) => {
     if (!acceptDrop) {
       log.debug('Drop not accepted')
       return
     }
 
-    e.preventDefault()
-    e.stopPropagation()
+    const accepted = !dispatch('Drop', e, { cancelable: true })
+    if (accepted) {
+      e.preventDefault()
+    }
 
     counter = 0 // Reset counter to ensure dragover is removed
     dragOver = false
@@ -74,19 +81,19 @@
     if (dragOverTimeout) {
       clearTimeout(dragOverTimeout)
     }
-
-    dispatch('drop', e)
   }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-  on:dragenter={handleDragEnter}
-  on:dragleave={handleDragLeave}
-  on:dragover={handleDragOver}
-  on:drop={handleDrop}
   class="drop-wrapper"
   class:dragover={dragOver}
+  use:HTMLDragZone.action={{
+    id: `oasis-space-${spaceId}`
+  }}
+  on:Drop={handleDrop}
+  on:DragEnter={handleDragEnter}
+  on:DragLeave={handleDragLeave}
 >
   <slot />
 </div>

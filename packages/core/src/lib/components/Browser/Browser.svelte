@@ -24,13 +24,7 @@
   import { processDrop } from '../../service/mediaImporter'
   import SidebarPane from './SidebarPane.svelte'
 
-  import DragDropList, {
-    VerticalDropZone,
-    HorizontalDropZone,
-    HorizontalCenterDropZone
-  } from 'svelte-dnd-list'
   import { PaneGroup, Pane, PaneResizer, type PaneAPI } from 'paneforge'
-
   import { ResourceTag, createResourceManager } from '../../service/resources'
 
   import { type Space, type SpaceSource } from '../../types'
@@ -108,6 +102,13 @@
   import BrowserHistory from './BrowserHistory.svelte'
   import NewTabButton from './NewTabButton.svelte'
   import { flyAndScale } from '../../utils'
+  import {
+    HTMLDragZone,
+    HTMLAxisDragZone,
+    type DragOperation,
+    type DragculaDragEvent
+  } from '@horizon/dragcula'
+  //import '@horizon/dragcula/dist/styles.scss'
 
   let activeTabComponent: TabItem | null = null
   let drawer: Drawer
@@ -350,7 +351,9 @@
       makeTabActive($activeTabs[nextTabIndex].id)
     } else {
       // go to last tab
-      makeTabActive($unpinnedTabs[$unpinnedTabs.length - 1].id)
+      if ($unpinnedTabs.length > 0) {
+        makeTabActive($unpinnedTabs[$unpinnedTabs.length - 1].id)
+      }
     }
   }
 
@@ -840,8 +843,10 @@
   }
 
   const handleToggleHorizontalTabs = () => {
-    horizontalTabs = !horizontalTabs
-    localStorage.setItem('horizontalTabs', horizontalTabs.toString())
+    const t = document.startViewTransition(() => {
+      horizontalTabs = !horizontalTabs
+      localStorage.setItem('horizontalTabs', horizontalTabs.toString())
+    })
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
@@ -1497,31 +1502,34 @@
   }
 
   const handleToggleMagicSidebar = async () => {
-    showAppSidebar.set(false)
-    const tab = $activeTab as TabPage | null
+    document.startViewTransition(async () => {
+      showAppSidebar.set(false)
+      const tab = $activeTab as TabPage | null
 
-    if (!$activeTabMagic) return
-    if (!tab) return
+      if (!$activeTabMagic) return
+      if (!tab) return
 
-    if (!$activeTabMagic.showSidebar) {
-      if (!$activeChatId) {
-        const chatId = await sffs.createAIChat('')
-        if (!chatId) {
-          log.error('Failed to create chat')
-          return
+      if (!$activeTabMagic.showSidebar) {
+        if (!$activeChatId) {
+          const chatId = await sffs.createAIChat('')
+          if (!chatId) {
+            log.error('Failed to create chat')
+            return
+          }
+          updateChatIdsForPageChat(chatId)
+          activeChatId.set(chatId)
         }
-        updateChatIdsForPageChat(chatId)
-        activeChatId.set(chatId)
+        await bookmarkPageTabsInContext()
       }
-      await bookmarkPageTabsInContext()
-    }
-    activeTabMagic.update((magic) => {
-      return {
-        ...magic,
-        showSidebar: !magic.showSidebar
-      }
+      activeTabMagic.update((magic) => {
+        return {
+          ...magic,
+          showSidebar: !magic.showSidebar
+        }
+      })
+      toggleTabsMagic($activeTabMagic.showSidebar)
+      await tick()
     })
-    toggleTabsMagic($activeTabMagic.showSidebar)
   }
 
   const handleToggleAppSidebar = async () => {
@@ -2410,6 +2418,170 @@
     log.debug('State updated successfully')
   }
 
+  const onDropDragcula = async (e: DragculaDragEvent) => {
+    console.debug('DROP DRAGCULA', e)
+    e.preventDefault()
+
+    if (e.isNative) {
+      // TODO: Handle otherwise
+      return
+    }
+
+    if (e.data['farc/resource'] !== undefined) {
+      // TODO: Rename to oasis/resource
+      const resource = e.data['farc/resource']
+
+      if (
+        resource.type === 'application/vnd.space.link' ||
+        resource.type === 'application/vnd.space.article'
+      ) {
+        const tab = await createPageTab(resource.parsedData.url, true)
+        tab.index = e.index
+        await bulkUpdateTabsStore(
+          get(tabs).map((tab) => ({
+            id: tab.id,
+            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+          }))
+        )
+
+        log.debug('State updated successfully')
+      }
+      return
+    }
+
+    if (e.data['farc/tab'] !== undefined) {
+      const dragData = e.data['farc/tab'] as Tab
+      tabs.update((_tabs) => {
+        let unpinnedTabsArray = get(unpinnedTabs)
+        let pinnedTabsArray = get(pinnedTabs)
+        let magicTabsArray = get(magicTabs)
+
+        let fromTabs: ITab[]
+        let toTabs: ITab[]
+
+        if (e.from.id === 'sidebar-unpinned-tabs') {
+          fromTabs = unpinnedTabsArray
+        } else if (e.from.id === 'sidebar-pinned-tabs') {
+          fromTabs = pinnedTabsArray
+        } else if (e.from.id === 'sidebar-magic-tabs') {
+          fromTabs = magicTabsArray
+        }
+        if (e.to.id === 'sidebar-unpinned-tabs') {
+          toTabs = unpinnedTabsArray
+        } else if (e.to.id === 'sidebar-pinned-tabs') {
+          toTabs = pinnedTabsArray
+        } else if (e.to.id === 'sidebar-magic-tabs') {
+          toTabs = magicTabsArray
+        }
+
+        // CASE: to already includes tab
+        if (toTabs.find((v) => v.id === dragData.id)) {
+          console.warn('ONLY Update existin tab')
+          const existing = fromTabs.find((v) => v.id === dragData.id)
+          if (existing) {
+            existing.index = e.index
+          }
+          e.item.node.remove()
+          fromTabs.splice(
+            fromTabs.findIndex((v) => v.id === dragData.id),
+            1
+          )
+          fromTabs.splice(e.index || 0, 0, existing)
+        } else {
+          console.warn('ADDING NEW ONE')
+          // Remove old
+          const idx = fromTabs.findIndex((v) => v.id === dragData.id)
+          if (idx > -1) {
+            fromTabs.splice(idx, 1)
+          }
+
+          if (e.to.id === 'sidebar-pinned-tabs') {
+            dragData.pinned = true
+            dragData.magic = false
+          } else if (e.to.id === 'sidebar-magic-tabs') {
+            dragData.pinned = false
+            dragData.magic = true
+          } else {
+            dragData.pinned = false
+            dragData.magic = false
+          }
+
+          toTabs.splice(e.index || 0, 0, dragData)
+        }
+
+        console.log(...pinnedTabsArray, ...unpinnedTabsArray, ...magicTabsArray)
+
+        // Update the indices of the tabs in all lists
+        const updateIndices = (tabs: ITab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+
+        unpinnedTabsArray = updateIndices(unpinnedTabsArray)
+        pinnedTabsArray = updateIndices(pinnedTabsArray)
+        magicTabsArray = updateIndices(magicTabsArray)
+
+        // Combine all lists back together
+        const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+
+        console.warn('New tabs', [...newTabs])
+
+        // Update the store with the changed tabs
+        bulkUpdateTabsStore(
+          newTabs.map((tab) => ({
+            id: tab.id,
+            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+          }))
+        )
+
+        return newTabs
+      })
+
+      log.debug('State updated successfully')
+      // Mark the drop completed
+      e.preventDefault()
+    }
+  }
+
+  const onDragculaTabDragEnd = async (e: CustomEvent<DragculaDragEvent>) => {
+    e = e.detail
+    console.debug('TAB DRAG END', e)
+
+    if (
+      e.status === 'completed' &&
+      e.effect === 'move' &&
+      !['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(e.to?.id)
+    ) {
+      tabs.update((x) => {
+        return x.filter((tab) => tab.id !== e.data['farc/tab'].id)
+      })
+
+      // Update the indices of the tabs in all lists
+      const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+
+      let unpinnedTabsArray = updateIndices($unpinnedTabs)
+      let pinnedTabsArray = updateIndices($pinnedTabs)
+      let magicTabsArray = updateIndices($magicTabs)
+
+      // Combine all lists back together
+      const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+
+      tabs.set(newTabs)
+      await tick()
+
+      // Update the store with the changed tabs
+      await bulkUpdateTabsStore(
+        newTabs.map((tab) => ({
+          id: tab.id,
+          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+        }))
+      )
+
+      log.debug('State updated successfully')
+    }
+  }
+
+  const onDragculaTabsDragEnter = (e: DragculaDragEvent) => {
+    e.preventDefault()
+  }
+
   function checkVisibility() {
     if (newTabButton && containerRef) {
       const containerRect = containerRef.getBoundingClientRect()
@@ -2630,57 +2802,37 @@
           <div
             class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0 overflow-x-scroll no-scrollbar"
           >
-            <DragDropList
-              id="pinned-tabs"
-              zoneClass="flex items-center space-x-2 w-full"
-              type={HorizontalCenterDropZone}
-              itemSize={$pinnedTabs.length === 0 ? 256 : 30}
-              itemCount={$pinnedTabs.length || 1}
-              on:drop={async (event) => {
-                onDrop(event, 'pin')
+            <div
+              style:view-transition-name="pinned-tabs-wrapper"
+              axis="horizontal"
+              dragdeadzone="5"
+              use:HTMLAxisDragZone.action={{
+                id: 'sidebar-pinned-tabs'
               }}
-              let:index
+              on:Drop={onDropDragcula}
+              on:DragEnter={onDragculaTabsDragEnter}
             >
               {#if $pinnedTabs.length === 0}
                 <div class="">Drop Tabs here to pin them.</div>
               {:else}
-                {#key $pinnedTabs[index]}
-                  {#if $activeTabId == $pinnedTabs[index].id}
+                {#each $pinnedTabs as tab, index (tab.id)}
+                  {#key $pinnedTabs[index]}
                     <TabItem
                       tab={$pinnedTabs[index]}
                       {activeTabId}
+                      {deleteTab}
+                      {unarchiveTab}
                       pinned={true}
-                      isAlreadyOpen={false}
+                      on:DragEnd={onDragculaTabDragEnd}
+                      on:select={handleTabSelect}
+                      on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:unarchive-tab={handleUnarchiveTab}
                       on:delete-tab={handleDeleteTab}
-                      on:select={() => {}}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
                     />
-                  {:else}
-                    <LinkPreview.Root openDelay={4000} closeDelay={10}>
-                      <LinkPreview.Trigger>
-                        <TabItem
-                          tab={$pinnedTabs[index]}
-                          {activeTabId}
-                          pinned={true}
-                          on:unarchive-tab={handleUnarchiveTab}
-                          on:delete-tab={handleDeleteTab}
-                          on:select={handleTabSelect}
-                          on:remove-from-sidebar={handleRemoveFromSidebar}
-                        />
-                      </LinkPreview.Trigger>
-                      <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
-                        <img
-                          src="https://via.placeholder.com/300x200"
-                          alt="placeholder"
-                          class="link-preview-content"
-                        />
-                      </LinkPreview.Content>
-                    </LinkPreview.Root>
-                  {/if}
-                {/key}
+                  {/key}
+                {/each}
               {/if}
-            </DragDropList>
+            </div>
           </div>
 
           {#if $activeTabMagic}
@@ -2696,22 +2848,23 @@
                 ></div>
                 <div
                   class="relative bg-sky-100/50 rounded-2xl overflow-auto no-scrollbar
-              {horizontalTabs ? 'h-full' : 'w-full'}"
+                    {horizontalTabs ? 'h-full' : 'w-full'}"
                 >
                   <div
                     class={horizontalTabs ? 'p-1 pt-[2px]' : 'p-2'}
                     class:magic={$magicTabs.length > 0}
                   >
                     {#if horizontalTabs}
-                      <DragDropList
-                        id="magic-tabs"
-                        type={HorizontalDropZone}
-                        itemSize={256}
-                        itemCount={$magicTabs.length || 1}
-                        on:drop={async (event) => {
-                          onDrop(event, 'unpin')
+                      <div
+                        axis="horizontal"
+                        class="magic-horizontal"
+                        style="display: flex;"
+                        dragdeadzone="5"
+                        use:HTMLAxisDragZone.action={{
+                          id: 'sidebar-magic-tabs'
                         }}
-                        let:index
+                        on:Drop={onDropDragcula}
+                        on:DragEnter={onDragculaTabsDragEnter}
                       >
                         {#if $magicTabs.length === 0}
                           <div class="flex flex-row items-center">
@@ -2723,21 +2876,26 @@
                             </span>
                           </div>
                         {:else}
-                          <TabItem
-                            showClose
-                            tab={$magicTabs[index]}
-                            {activeTabId}
-                            pinned={false}
-                            showButtons={false}
-                            showExcludeOthersButton
-                            on:delete-tab={handleDeleteTab}
-                            on:unarchive-tab={handleUnarchiveTab}
-                            on:select={handleTabSelect}
-                            on:remove-from-sidebar={handleRemoveFromSidebar}
-                            on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                          />
+                          {#each $magicTabs as tab, index (tab.id)}
+                            {#key $magicTabs[index]}
+                              <TabItem
+                                showClose
+                                tab={$magicTabs[index]}
+                                {activeTabId}
+                                pinned={false}
+                                showButtons={false}
+                                showExcludeOthersButton
+                                on:DragEnd={onDragculaTabDragEnd}
+                                on:delete-tab={handleDeleteTab}
+                                on:unarchive-tab={handleUnarchiveTab}
+                                on:select={handleTabSelect}
+                                on:remove-from-sidebar={handleRemoveFromSidebar}
+                                on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                              />
+                            {/key}
+                          {/each}
                         {/if}
-                      </DragDropList>
+                      </div>
                     {:else}
                       {#if $magicTabs.length > 0}
                         <div
@@ -2753,15 +2911,14 @@
                           >
                         </div>
                       {/if}
-                      <DragDropList
-                        id="magic-tabs"
-                        type={VerticalDropZone}
-                        itemSize={$magicTabs.length === 0 ? 72 : 42}
-                        itemCount={$magicTabs.length || 1}
-                        on:drop={async (event) => {
-                          onDrop(event, 'unpin')
+                      <div
+                        axis="vertical"
+                        dragdeadzone="5"
+                        use:HTMLAxisDragZone.action={{
+                          id: 'sidebar-magic-tabs'
                         }}
-                        let:index
+                        on:Drop={onDropDragcula}
+                        on:DragEnter={onDragculaTabsDragEnter}
                       >
                         {#if $magicTabs.length === 0}
                           <div class="flex flex-col items-center">
@@ -2771,21 +2928,26 @@
                             <span class="text-xs text-sky-800">General mode, drop tabs here!</span>
                           </div>
                         {:else}
-                          <TabItem
-                            showClose
-                            tab={$magicTabs[index]}
-                            {activeTabId}
-                            pinned={false}
-                            showButtons={false}
-                            showExcludeOthersButton
-                            on:unarchive-tab={handleUnarchiveTab}
-                            on:delete-tab={handleDeleteTab}
-                            on:select={handleTabSelect}
-                            on:remove-from-sidebar={handleRemoveFromSidebar}
-                            on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                          />
+                          {#each $magicTabs as tab, index (tab.id)}
+                            {#key $magicTabs[index]}
+                              <TabItem
+                                showClose
+                                tab={$magicTabs[index]}
+                                {activeTabId}
+                                pinned={false}
+                                showButtons={false}
+                                showExcludeOthersButton
+                                on:DragEnd={onDragculaTabDragEnd}
+                                on:unarchive-tab={handleUnarchiveTab}
+                                on:delete-tab={handleDeleteTab}
+                                on:select={handleTabSelect}
+                                on:remove-from-sidebar={handleRemoveFromSidebar}
+                                on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                              />
+                            {/key}
+                          {/each}
                         {/if}
-                      </DragDropList>
+                      </div>
                     {/if}
                   </div>
                 </div>
@@ -2800,51 +2962,57 @@
           {/if}
 
           <div
-            class="overflow-x-scroll no-scrollbar relative flex-grow"
+            class="overflow-x-scroll no-scrollbar relative h-full flex-grow"
             class:space-x-2={horizontalTabs}
             class:items-center={horizontalTabs}
             bind:this={containerRef}
           >
             {#if horizontalTabs}
-              <DragDropList
-                id="tabs"
-                type={HorizontalDropZone}
-                itemSize={Math.min(400, Math.max(200, tabSize))}
-                itemCount={$unpinnedTabs.length}
-                on:drop={async (event) => {
-                  onDrop(event, 'unpin')
+              <div
+                class="horizontal-tabs h-full"
+                axis="horizontal"
+                dragdeadzone="5"
+                placeholder-size="60"
+                use:HTMLAxisDragZone.action={{
+                  id: 'sidebar-unpinned-tabs'
                 }}
-                let:index
+                on:Drop={onDropDragcula}
+                on:DragEnter={onDragculaTabsDragEnter}
               >
-                {#if $activeTabId === $unpinnedTabs[index].id}
-                  <TabItem
-                    showClose
-                    tab={$unpinnedTabs[index]}
-                    {activeTabId}
-                    bookmarkingInProgress={$bookmarkingInProgress}
-                    bookmarkingSuccess={$bookmarkingSuccess}
-                    pinned={false}
-                    {spaces}
-                    enableEditing
-                    bind:this={activeTabComponent}
-                    on:select={() => {}}
-                    on:remove-from-sidebar={handleRemoveFromSidebar}
-                    on:drop={handleDrop}
-                    on:delete-tab={handleDeleteTab}
-                    on:input-enter={handleBlur}
-                    on:unarchive-tab={handleUnarchiveTab}
-                    on:bookmark={handleBookmark}
-                    on:create-live-space={handleCreateLiveSpace}
-                    on:save-resource-in-space={handleSaveResourceInSpace}
-                  />
-                {:else}
-                  <LinkPreview.Root openDelay={7000} closeDelay={10}>
-                    <LinkPreview.Trigger>
+                {#each $unpinnedTabs as tab, index (tab.id)}
+                  {#key $unpinnedTabs[index]}
+                    <!-- check if this tab is active -->
+                    {#if $activeTabId === $unpinnedTabs[index].id}
+                      <TabItem
+                        showClose
+                        tabSize={Math.min(400, Math.max(240, tabSize))}
+                        tab={$unpinnedTabs[index]}
+                        {activeTabId}
+                        bookmarkingInProgress={$bookmarkingInProgress}
+                        bookmarkingSuccess={$bookmarkingSuccess}
+                        pinned={false}
+                        {spaces}
+                        enableEditing
+                        bind:this={activeTabComponent}
+                        on:DragEnd={onDragculaTabDragEnd}
+                        on:select={() => {}}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                        on:drop={handleDrop}
+                        on:delete-tab={handleDeleteTab}
+                        on:input-enter={handleBlur}
+                        on:unarchive-tab={handleUnarchiveTab}
+                        on:bookmark={handleBookmark}
+                        on:create-live-space={handleCreateLiveSpace}
+                        on:save-resource-in-space={handleSaveResourceInSpace}
+                      />
+                    {:else}
                       <TabItem
                         showClose
                         tab={$unpinnedTabs[index]}
+                        tabSize={Math.min(400, Math.max(240, tabSize))}
                         {activeTabId}
                         pinned={false}
+                        on:DragEnd={onDragculaTabDragEnd}
                         on:select={handleTabSelect}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:drop={handleDrop}
@@ -2852,58 +3020,68 @@
                         on:input-enter={handleBlur}
                         on:unarchive-tab={handleUnarchiveTab}
                       />
-                    </LinkPreview.Trigger>
-                    <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
-                      <img
-                        src="https://via.placeholder.com/300x200"
-                        alt="placeholder"
-                        class="link-preview-content"
-                      />
-                    </LinkPreview.Content>
-                  </LinkPreview.Root>
-                {/if}
-              </DragDropList>
+                    {/if}
+                  {/key}
+                {/each}
+              </div>
             {:else}
-              <DragDropList
-                id="tabs"
-                type={VerticalDropZone}
-                itemSize={45}
-                itemCount={$unpinnedTabs.length}
-                on:drop={async (event) => {
-                  onDrop(event, 'unpin')
+              <div
+                class="vertical-tabs"
+                axis="vertical"
+                dragdeadzone="5"
+                use:HTMLAxisDragZone.action={{
+                  id: 'sidebar-unpinned-tabs'
                 }}
-                let:index
+                on:Drop={onDropDragcula}
+                on:DragEnter={onDragculaTabsDragEnter}
               >
-                <!-- check if this tab is active -->
-                {#if $activeTabId === $unpinnedTabs[index].id}
-                  <TabItem
-                    showClose
-                    tab={$unpinnedTabs[index]}
-                    {activeTabId}
-                    {spaces}
-                    bookmarkingInProgress={$bookmarkingInProgress}
-                    bookmarkingSuccess={$bookmarkingSuccess}
-                    pinned={false}
-                    enableEditing
-                    bind:this={activeTabComponent}
-                    on:select={() => {}}
-                    on:remove-from-sidebar={handleRemoveFromSidebar}
-                    on:drop={handleDrop}
-                    on:delete-tab={handleDeleteTab}
-                    on:input-enter={handleBlur}
-                    on:unarchive-tab={handleUnarchiveTab}
-                    on:bookmark={handleBookmark}
-                    on:create-live-space={handleCreateLiveSpace}
-                    on:save-resource-in-space={handleSaveResourceInSpace}
-                  />
-                {:else}
-                  <LinkPreview.Root openDelay={4000} closeDelay={10}>
-                    <LinkPreview.Trigger>
+                {#each $unpinnedTabs as tab, index (tab.id)}
+                  {#key $unpinnedTabs[index]}
+                    <!-- check if this tab is active -->
+                    {#if $activeTabId === $unpinnedTabs[index].id}
+                      <TabItem
+                        showClose
+                        tab={$unpinnedTabs[index]}
+                        {activeTabId}
+                        bookmarkingInProgress={$bookmarkingInProgress}
+                        bookmarkingSuccess={$bookmarkingSuccess}
+                        pinned={false}
+                        {spaces}
+                        enableEditing
+                        bind:this={activeTabComponent}
+                        on:DragEnd={onDragculaTabDragEnd}
+                        on:select={() => {}}
+                        on:remove-from-sidebar={handleRemoveFromSidebar}
+                        on:drop={handleDrop}
+                        on:delete-tab={handleDeleteTab}
+                        on:input-enter={handleBlur}
+                        on:unarchive-tab={handleUnarchiveTab}
+                        on:bookmark={handleBookmark}
+                        on:create-live-space={handleCreateLiveSpace}
+                        on:save-resource-in-space={handleSaveResourceInSpace}
+                        on:DragEnter={(e) => {
+                          e.stopPropagation()
+                          const drag = e.detail
+                          if (
+                            drag.data['farc/tab'] !== undefined &&
+                            e.detail.data['farc/tab'].type !== 'space'
+                          ) {
+                            e.preventDefault()
+                          }
+                        }}
+                        on:Drop={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          console.debug('DROP ON TAB', e.detail)
+                        }}
+                      />
+                    {:else}
                       <TabItem
                         showClose
                         tab={$unpinnedTabs[index]}
                         {activeTabId}
                         pinned={false}
+                        on:DragEnd={onDragculaTabDragEnd}
                         on:select={handleTabSelect}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:drop={handleDrop}
@@ -2911,21 +3089,14 @@
                         on:input-enter={handleBlur}
                         on:unarchive-tab={handleUnarchiveTab}
                       />
-                    </LinkPreview.Trigger>
-                    <LinkPreview.Content transitionConfig={{ duration: 150, y: -8 }}>
-                      <img
-                        src="https://via.placeholder.com/300x200"
-                        alt="placeholder"
-                        class="link-preview-content"
-                      />
-                    </LinkPreview.Content>
-                  </LinkPreview.Root>
-                {/if}
-              </DragDropList>
+                    {/if}
+                  {/key}
+                {/each}
+              </div>
             {/if}
             <div
               style="position: absolute; top: {!horizontalTabs
-                ? 45 * $unpinnedTabs.length
+                ? 42 * $unpinnedTabs.length
                 : 0}px; left: {horizontalTabs
                 ? Math.min(400, Math.max(240, tabSize)) * $unpinnedTabs.length
                 : 0}px; right: 0;"
@@ -3003,6 +3174,7 @@
     >
       <!-- {horizontalTabs ? `pb-1.5 ${showTabs && 'pt-1.5'}` : `pr-1.5 ${showTabs && 'pl-1.5'}`}  -->
       <div
+        style:view-transition-name="active-content-wrapper"
         class="w-full h-full overflow-hidden flex-grow"
         class:pb-1.5={horizontalTabs}
         class:pt-1.5={horizontalTabs && !showLeftSidebar}
@@ -3302,6 +3474,68 @@
 </div>
 
 <style lang="scss">
+  /// DRAGCULA STATES NOTE: these should be @horizon/dragcula/dist/styles.css import, but this doesnt work currently!
+  // Disables pointer events on all body elements if a drag operation is active
+  // except, other drag zones.
+  :global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
+    pointer-events: none;
+  }
+
+  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone]) {
+    pointer-events: all;
+  }
+
+  // Disables pointer events on all elements inside a drop target
+  // except, nested drag zones.
+  // This is also useful when supporting native dnd, as there won't
+  // be a body class!
+  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone] *:not([data-dragcula-zone])) {
+    pointer-events: none;
+  }
+  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone] *[data-dragcula-zone]) {
+    pointer-events: all;
+  }
+
+  // Disable the zone of the drag item itself
+  :global(body *[data-dragcula-dragging-item]) {
+    pointer-events: none !important;
+  }
+
+  :global(
+      body[data-dragcula-target]:not(
+          [data-dragcula-target^='sidebar']
+        )[data-dragcula-drag-effect='copy']
+    ) {
+    cursor: copy;
+  }
+
+  /*:global(body[data-dragcula-dragging='true']) {
+    cursor: grabbing;
+    user-select: none;
+  }*/
+  /*:global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
+    pointer-events: none;
+  }
+  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone]) {
+    pointer-events: all;
+  }*/
+  :global([data-dragcula-zone][axis='vertical']) {
+    // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
+    padding-top: 1px;
+    margin-top: -1px;
+  }
+  :global([data-dragcula-zone='sidebar-pinned-tabs']) {
+    min-height: 32px;
+  }
+  :global(.magic-tabs-wrapper [data-dragcula-zone]) {
+    min-height: 4rem !important;
+    height: fit-content !important;
+  }
+  /*:global(div[data-dragcula-zone]) {
+    overflow: visible !important;
+    background: transparent !important;
+  }*/
+
   .messi {
     backdrop-filter: blur(10px);
   }
@@ -3371,6 +3605,10 @@
     width: 300px;
     z-index: 1;
     height: 96%;
+  }
+  :global(.magic-horizontal .tab) {
+    flex: 1 1 0px;
+    min-width: 120px;
   }
 
   .browser-window-wrapper {
@@ -3667,6 +3905,23 @@
       opacity: 0.4;
     }
   }
+  :global([data-dragcula-zone='sidebar-pinned-tabs']) {
+    height: fit-content !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  :global([data-dragcula-zone='sidebar-unpinned-tabs'].vertical-tabs) {
+    height: 100%;
+  }
+  :global([data-dragcula-zone='sidebar-unpinned-tabs'].horizontal-tabs) {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+  }
+  :global(.tab[data-dragcula-dragging]) {
+    background: white;
+  }
 
   .divider {
     margin: 10px 8px;
@@ -3680,50 +3935,9 @@
   }
 
   .tab {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    gap: 10px;
-    position: relative;
-    color: #7d7448;
-    font-weight: 500;
-    letter-spacing: 0.0025em;
-    font-smooth: always;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-
-    .title {
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-size: 1.1rem;
-    }
-
-    .close {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      appearance: none;
-      border: none;
-      padding: 0;
-      margin: 0;
-      height: min-content;
-      background: none;
-      color: #a9a9a9;
-      cursor: pointer;
-    }
-
-    &:hover .close {
-      display: flex;
-    }
-
-    &.selected {
-      color: #585130;
-      background-color: #fff;
-    }
+    transition:
+      0.2s ease-out,
+      transform 0ms;
   }
 
   .actions {
@@ -3862,17 +4076,12 @@
   //   overflow: hidden;
   // }
 
-  :global(div[data-dnd-zone]) {
-    overflow: visible !important;
-    background: transparent !important;
-  }
-
   .tab-bar-selector {
     display: flex;
     flex-direction: row;
   }
 
-  :global(.magic-tabs-wrapper [data-dnd-zone]) {
+  :global(.magic-tabs-wrapper [data-dragcula-zone]) {
     min-height: 4rem !important;
     height: fit-content !important;
   }

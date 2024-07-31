@@ -10,6 +10,7 @@
   import { ResourceTypes, type ResourceData } from '@horizon/types'
   import { get } from 'svelte/store'
   import { MEDIA_TYPES } from '../../service/mediaImporter'
+  import { HTMLDragItem } from '@horizon/dragcula'
 
   export let draggable = true
   export let resource: Resource
@@ -120,7 +121,18 @@
 </script>
 
 <!-- svelte-ignore missing-declaration a11y-no-static-element-interactions -->
-<div {draggable} on:dragstart={handleDragStart} class="drag-item">
+<div
+  {draggable}
+  on:dragstart={handleDragStart}
+  use:HTMLDragItem.action={{
+    id: resource.id,
+    data: {
+      'farc/resource': resource
+    }
+  }}
+  class="drag-item"
+  style:view-transition-name="oasis-resource-{resource.id}"
+>
   <slot />
 </div>
 

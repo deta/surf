@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
   import type { Tab, TabPage } from './types'
   import { writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
+  import { HTMLDragZone, HTMLDragItem } from '@horizon/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTagsBuiltInKeys, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
@@ -24,6 +25,7 @@
   export let showClose = false
   export let spaces
   export const inputUrl = writable<string>('')
+  export let tabSize: number
 
   export const editAddress = async () => {
     isEditing = true
@@ -87,7 +89,7 @@
     dispatch('unarchive-tab', tab.id)
   }
 
-  const handleInputFocus = () => {
+  const handleInputFocus = async () => {
     isEditing = true
 
     if (url) {
@@ -98,6 +100,8 @@
     setTimeout(() => {
       addressInputElem.scrollLeft = addressInputElem.scrollWidth
     }, 0)
+
+    await tick()
 
     addressInputElem.select()
   }
@@ -158,19 +162,46 @@
   const handlePopoverLeave = () => {
     popoverVisible = false
   }
+
+  let isDragging = false
 </script>
 
+<!-- style:view-transition-name="tab-{tab.id}" -->
 <div
-  class="{isActive ? 'text-sky-950 bg-sky-200 shadow-inner ring-[0.5px] ring-sky-500' : ''}
+  class="tab {isActive ? 'text-sky-950 bg-sky-200 shadow-inner ring-[0.5px] ring-sky-500' : ''}
   flex items-center {pinned
     ? 'p-2 rounded-lg'
-    : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 transition duration-100group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
+    : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 transition duration-100 group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
+  style="width: {tabSize}px; min-width: {tabSize}px; max-width: {tabSize}px;"
   on:click={handleClick}
   on:mouseenter={() => (hovered = true)}
   on:mouseleave={() => {
     if (!popoverVisible) hovered = false
   }}
   aria-hidden="true"
+  class:pinned
+  draggable={true}
+  style:view-transition-name="tab-{tab.id}"
+  use:HTMLDragItem.action={{
+    id: tab.id,
+    data: { 'farc/tab': tab }
+  }}
+  on:DragStart={(e) => {
+    isDragging = true
+    e.item.data = {
+      'farc/tab': {
+        ...tab,
+        pinned
+      }
+    }
+    if (tab.resourceBookmark !== undefined) {
+      e.item.data['horizon/resource/id'] = tab.resourceBookmark
+    }
+  }}
+  on:DragEnd={(e) => {
+    isDragging = false
+    dispatch('DragEnd', e)
+  }}
   use:tooltip={pinned
     ? {
         content: sanitizedTitle,
@@ -181,31 +212,24 @@
       }
     : {}}
 >
-  {#if tab.icon}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+  <div
+    class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}"
+    style:view-transition-name="tab-icon-{tab.id}"
+  >
+    {#if tab.icon}
       <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
-    </div>
-  {:else if tab.type === 'horizon'}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+    {:else if tab.type === 'horizon'}
       <Icon name="grid" size="18px" />
-    </div>
-  {:else if tab.type === 'importer'}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+    {:else if tab.type === 'importer'}
       <Icon name="code" size="18px" />
-    </div>
-  {:else if tab.type === 'history'}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+    {:else if tab.type === 'history'}
       <Icon name="history" size="18px" />
-    </div>
-  {:else if tab.type === 'space' && space}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+    {:else if tab.type === 'space' && space}
       <SpaceIcon folder={space} />
-    </div>
-  {:else}
-    <div class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}">
+    {:else}
       <Icon name="world" size="18px" />
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   {#if showClose && hovered}
     {#if tab.type == 'space'}
@@ -247,7 +271,7 @@
           on:blur={handleInputBlur}
           on:keydown={handleInputKeydown}
           bind:this={addressInputElem}
-          class="w-full bg-transparent focus:outline-none group-active:select-none
+          class="w-full h-full bg-transparent focus:outline-none group-active:select-none
           {!isEditing
             ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 bg-[length:250%_100%]'
             : ''}
@@ -360,6 +384,15 @@
 </div>
 
 <style>
+  .tab {
+    transition:
+      0.2s ease-in-out,
+      transform 0s;
+  }
+  :global(.tab[data-dragcula-dragging-item]) {
+    background: rgba(255, 255, 255, 0.6);
+    opacity: 80%;
+  }
   .icon-wrapper {
     width: 18px;
     height: 18px;
