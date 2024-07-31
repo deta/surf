@@ -13,6 +13,7 @@
     'open-url': string
     'activate-tab': string
     'open-resource': string
+    'open-space': Space
   }
 </script>
 
@@ -30,7 +31,8 @@
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     type HistoryEntry,
-    type ResourceData
+    type ResourceData,
+    type Space
   } from '../../types'
   import {
     Resource,
@@ -39,18 +41,22 @@
     useResourceManager
   } from '../../service/resources'
   import { getFileType } from '../../utils/files'
+  import { useOasis } from '../../service/oasis'
 
   export let activeTabs: Tab[] = []
   export let historyEntriesManager: HistoryEntriesManager
   export let showTabSearch = false
 
   const resourceManager = useResourceManager()
+  const oasis = useOasis()
   const dispatch = createEventDispatcher<TabSearchEvents>()
   const log = useLogScope('TabSearch')
 
+  const spaces = oasis.spaces
+
   let searchQuery = ''
   let loading = false
-  let page: 'tabs' | 'oasis' | 'history' | null = null
+  let page: 'tabs' | 'oasis' | 'history' | 'spaces' | null = null
   let filteredItems: CMDMenuItem[] = []
   let historyEntries: HistoryEntry[] = []
   let googleSuggestions: string[] = []
@@ -89,6 +95,12 @@
     setTimeout(() => {
       searchQuery = ''
     }, 1)
+  } else if (searchQuery.startsWith('@spaces ')) {
+    page = 'spaces'
+
+    setTimeout(() => {
+      searchQuery = ''
+    }, 1)
   }
 
   $: {
@@ -96,6 +108,7 @@
       const items: CMDMenuItem[] = [
         ...activeTabs.map((tab) => tabToItem(tab, { weight: 1.5 })),
         ...historyEntries.map((entry) => historyEntryToItem(entry, { weight: 1 })),
+        ...$spaces.map((space) => spaceToItem(space, { weight: 1 })),
         // ...oasisResources.map((resource) => resourceToItem(resource, { weight: 1 })),
         ...browserCommands
       ]
@@ -124,6 +137,7 @@
   $: tabs = filteredItems.filter((item) => item.type === 'tab')
   $: history = filteredItems.filter((item) => item.type === 'history')
   $: resources = filteredItems.filter((item) => item.type === 'resource')
+  $: spacesItems = filteredItems.filter((item) => item.type === 'space')
   $: suggestions = filteredItems.filter(
     (item) => item.type === 'suggestion' || item.type === 'google-search'
   )
@@ -134,7 +148,8 @@
       item.type !== 'suggestion' &&
       item.type !== 'google-search' &&
       item.type !== 'history' &&
-      item.type !== 'resource'
+      item.type !== 'resource' &&
+      item.type !== 'space'
   )
 
   $: placeholder =
@@ -144,7 +159,9 @@
         ? 'Search for a resource...'
         : page === 'history'
           ? 'Search for a page...'
-          : 'Search your tabs, oasis or the web...'
+          : page === 'spaces'
+            ? 'Search for a space...'
+            : 'Search your tabs, oasis or the web...'
   $: breadcrumb =
     page === 'tabs'
       ? 'Active Tabs'
@@ -152,7 +169,9 @@
         ? 'Oasis'
         : page === 'history'
           ? 'History'
-          : undefined
+          : page === 'spaces'
+            ? 'Spaces'
+            : undefined
 
   function handleKeyDown(e: KeyboardEvent) {
     log.debug('handleKeyDown', e.key, searchQuery)
@@ -195,13 +214,23 @@
     log.debug('data', data)
     return {
       id: resource.id,
-      label: data.title || resource.metadata?.name || `${resource.id} - ${resource.type}`,
+      label: data?.title || resource.metadata?.name || `${resource.id} - ${resource.type}`,
       value: url,
       type: 'resource',
       description: getFileType(resource.type),
       ...(url
         ? { iconUrl: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(url)}` }
         : { icon: 'file' }),
+      ...params
+    } as CMDMenuItem
+  }
+
+  function spaceToItem(space: Space, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
+    return {
+      id: space.id,
+      label: space.name.folderName,
+      type: 'space',
+      iconColors: space.name.colors,
       ...params
     } as CMDMenuItem
   }
@@ -253,10 +282,17 @@
         ...results,
         ...oasisResources.map((resource) => resourceToItem(resource, { score: 0.4 }))
       ]
+    } else if (page === 'spaces') {
+      results = $spaces.map((space) => spaceToItem(space, { score: 0.1 }))
+    } else if (page === 'tabs') {
+      results = activeTabs.map((tab) => tabToItem(tab, { score: 0 }))
+    } else if (page === 'history') {
+      results = historyEntries.map((entry) => historyEntryToItem(entry, { score: 0.1 }))
     } else {
       results = [
         ...activeTabs.map((tab) => tabToItem(tab, { score: 0 })),
         ...historyEntries.map((entry) => historyEntryToItem(entry, { score: 0.1 })),
+        ...$spaces.map((space) => spaceToItem(space, { score: 0.1 })),
         ...oasisResources.map((resource) => resourceToItem(resource, { score: 0.1 })),
         ...browserCommands.map((cmd) => ({ ...cmd, score: 0.2 }))
       ]
@@ -388,6 +424,14 @@
       dispatch('open-url', `https://www.google.com/search?q=${encodeURIComponent(item.value!)}`)
     } else if (item.type === 'resource') {
       dispatch('open-resource', item.id!)
+    } else if (item.type === 'space') {
+      const space = $spaces.find((x) => x.id === item.id)
+      if (!space) {
+        log.error('Space not found:', item.id)
+        return
+      }
+
+      dispatch('open-space', space)
     }
     resetSearch()
   }
@@ -450,6 +494,14 @@
         </Command.Group>
       {/if}
 
+      {#if spacesItems.length > 0}
+        <Command.Group heading="Spaces">
+          {#each spacesItems as item}
+            <TabSearchItem {item} on:select={handleSelect} />
+          {/each}
+        </Command.Group>
+      {/if}
+
       {#if resources.length > 0}
         <Command.Group heading="Oasis">
           {#each resources as item}
@@ -487,6 +539,10 @@
       {/each}
     {:else if page === 'history'}
       {#each history as item}
+        <TabSearchItem {item} on:select={handleSelect} />
+      {/each}
+    {:else if page === 'spaces'}
+      {#each spacesItems as item}
         <TabSearchItem {item} on:select={handleSelect} />
       {/each}
     {/if}
