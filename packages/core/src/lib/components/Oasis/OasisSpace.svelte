@@ -939,6 +939,7 @@
         on:open={handleOpen}
         on:remove={handleResourceRemove}
         on:load={handleLoadResource}
+        on:new-tab
       />
 
       {#if $loadingContents}
@@ -950,9 +951,11 @@
       <OasisResourcesViewSearchResult
         resources={everythingContents}
         selected={$selectedItem}
+        searchResults={$searchResults}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:remove={handleResourceRemove}
+        on:new-tab
       />
 
       {#if $loadingContents}

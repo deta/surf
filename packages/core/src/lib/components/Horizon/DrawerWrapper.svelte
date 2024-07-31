@@ -422,13 +422,13 @@
     }
   }
 
-  const handleResourceMaximize = async (e: CustomEvent) => {
-    console.log(e)
-    const resource = await resourceManager.getResource(e.detail)
-    selectedResource.set(resource)
+  // const handleResourceMaximize = async (e: CustomEvent) => {
+  //   console.log(e)
+  //   const resource = await resourceManager.getResource(e.detail)
+  //   selectedResource.set(resource)
 
-    showMiniBrowser.set(true)
-  }
+  //   showMiniBrowser.set(true)
+  // }
 
   const handleChat = async (payload: any) => {
     try {

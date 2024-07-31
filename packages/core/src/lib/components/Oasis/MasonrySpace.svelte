@@ -1,0 +1,463 @@
+<script lang="ts">
+  import OasisResourceLoader from './OasisResourceLoader.svelte'
+  import { onMount, onDestroy, tick, createEventDispatcher } from 'svelte'
+  import { RedBlackTree } from './masonry/index'
+  import type { Item, ScrollVelocity } from './masonry/types'
+
+  export let renderContents: Item[] | string[] = []
+  export let id: Date
+  export let items: Item[] = []
+
+  let prevItemLength = 0
+  let gridItems: Item[] = []
+  let masonryGrid: MasonryGrid
+  let resizeObserverDebounce: NodeJS.Timeout
+  let resizedItems = new Set<Item>()
+  let scrollVelocity: ScrollVelocity = {
+    scrollTop: 0,
+    timestamp: 0,
+    velocity: 0
+  }
+
+  let updateQueue: Item[] = []
+  let isUpdating = false
+  let created: Date
+
+  const BATCH_SIZE = 10
+  const UPDATE_INTERVAL = 16
+  const TIME_TILL_ACTIVATION = 2000
+
+  $: if (renderContents) {
+    queueUpdate(renderContents.slice(prevItemLength))
+    prevItemLength = renderContents.length
+  }
+
+  function queueUpdate(newData: Item[]) {
+    updateQueue.push(...newData)
+    if (!isUpdating) {
+      isUpdating = true
+      requestAnimationFrame(processUpdateQueue)
+    }
+  }
+
+  async function processUpdateQueue() {
+    const startTime = performance.now()
+    const batch = updateQueue.splice(0, BATCH_SIZE)
+
+    if (batch.length > 0) {
+      await updateGridBatch(batch)
+    }
+
+    const endTime = performance.now()
+    const elapsedTime = endTime - startTime
+
+    if (updateQueue.length > 0) {
+      const delay = Math.max(0, UPDATE_INTERVAL - elapsedTime)
+      setTimeout(() => requestAnimationFrame(processUpdateQueue), delay)
+    } else {
+      isUpdating = false
+      const gridContainer = document.getElementById(id)
+      updateVisibleItems()
+      await tick()
+      observeItems(gridContainer)
+    }
+  }
+
+  async function updateGridBatch(batch: Item[]) {
+    const existingIds = new Set(items.map((item) => item.id))
+    const newItems = batch.filter((item) => !existingIds.has(item.id))
+
+    for (const item of newItems) {
+      addItem(item)
+      await tick() // Allow the DOM to update
+    }
+  }
+
+  const UPPER_OVERSHOOT_BOUND = 1400
+  const LOWER_OVERSHOOT_BOUND = 1400
+
+  const dispatch = createEventDispatcher()
+
+  class MasonryGrid {
+    container: HTMLElement
+    columnCount: number
+    gapPercentage: number
+    columnWidth: number
+    items: Item[]
+    minHeight: number
+    maxHeight: number
+    tree: RedBlackTree
+    columnNodes: any[]
+
+    constructor(container: HTMLElement) {
+      this.container = container
+      this.columnCount = this.getColumnCount()
+      this.gapPercentage = 2 // 2% gap (1% on each side)
+      this.columnWidth = (100 - this.gapPercentage * (this.columnCount - 1)) / this.columnCount
+      this.items = []
+      this.minHeight = 50
+      this.maxHeight = 450
+      this.tree = new RedBlackTree()
+      this.columnNodes = []
+
+      this.initializeColumns()
+
+      window.addEventListener('resize', this.handleResize.bind(this))
+    }
+
+    getColumnCount(): number {
+      const width = window.innerWidth
+      if (width < 800) return 1
+      if (width < 1100) return 2
+      if (width < 1400) return 3
+      if (width < 2000) return 4
+      return 5
+    }
+
+    initializeColumns() {
+      this.tree = new RedBlackTree()
+      this.columnNodes = []
+      for (let i = 0; i < this.columnCount; i++) {
+        this.columnNodes.push(this.tree.insert(i, 0))
+      }
+    }
+
+    reinitializeGrid(items: Item[]): Item[] {
+      this.initializeColumns()
+
+      items.sort((a, b) => parseInt(a.style?.top || '0') - parseInt(b.style?.top || '0'))
+
+      items.forEach((item) => {
+        const height = parseInt(item.style?.height || '0')
+        const shortestColumn = this.tree.findMin()
+        const columnIndex = shortestColumn.column
+        const top = shortestColumn.height
+        const left = columnIndex * (this.columnWidth + this.gapPercentage)
+
+        const PADDING_TOP = 120
+
+        const itemStyle = {
+          left: `${left}%`,
+          top: `${top + PADDING_TOP}px`,
+          height: `${height}px`,
+          width: `${this.columnWidth}%`
+        }
+
+        item.style = itemStyle
+
+        const newHeight = top + height + 10 // 10px vertical gap
+        const updatedNode = this.tree.updateHeight(shortestColumn, newHeight)
+        if (updatedNode) {
+          this.columnNodes[columnIndex] = updatedNode
+        }
+      })
+
+      return items
+    }
+
+    addItem(item: Item): Item | null {
+      const height = this.getRandomHeight()
+      const shortestColumn = this.tree.findMin()
+      if (!shortestColumn) return null
+      const columnIndex = shortestColumn.column
+      const top = shortestColumn.height
+      const left = columnIndex * (this.columnWidth + this.gapPercentage)
+
+      const itemStyle = {
+        left: `${left}%`,
+        top: `${top}px`,
+        height: `${height}px`,
+        width: `${this.columnWidth}%`
+      }
+
+      const newHeight = top + height + 10 // 10px vertical gap
+      const updatedNode = this.tree.updateHeight(shortestColumn, newHeight)
+      if (updatedNode) {
+        this.columnNodes[columnIndex] = updatedNode
+      }
+
+      return { ...item, style: itemStyle, dom: null }
+    }
+
+    handleResize() {
+      const newColumnCount = this.getColumnCount()
+      console.log(`Window resized. New column count: ${newColumnCount}`)
+      if (newColumnCount !== this.columnCount) {
+        this.columnCount = newColumnCount
+        this.columnWidth = (100 - this.gapPercentage * (this.columnCount - 1)) / this.columnCount
+        this.initializeColumns()
+        this.reinitializeGrid(this.items)
+      }
+    }
+
+    getRandomHeight(): number {
+      return (
+        Math.floor(Math.random() * (this.maxHeight - this.minHeight + 1)) + this.minHeight + 200
+      )
+    }
+  }
+
+  function transformIncomingData(data: any): Item {
+    return {
+      id: data
+    }
+  }
+
+  function observeItemHeightChange(item: Item) {
+    const observer = new ResizeObserver(() => {
+      const resourcePreview = item.dom?.querySelector('.resource-preview')
+      if (resourcePreview) {
+        const height = resourcePreview.offsetHeight
+        item.style!.height = `${height}px`
+        resizedItems.add(item)
+
+        clearTimeout(resizeObserverDebounce)
+        resizeObserverDebounce = setTimeout(reinitializeGridAfterResize, 100)
+      }
+    })
+    const element = item.dom?.querySelector('.wrapper')
+    if (element) {
+      observer.observe(element)
+    }
+  }
+
+  function reinitializeGridAfterResize() {
+    if (resizedItems.size > 0) {
+      const updatedItems = masonryGrid.reinitializeGrid(items)
+      items = updatedItems
+      gridItems = updatedItems
+      resizedItems.clear()
+      updateVisibleItems()
+    }
+  }
+
+  onMount(async () => {
+    created = new Date()
+    const gridContainer = document.getElementById(id) as HTMLElement
+    masonryGrid = new MasonryGrid(gridContainer)
+
+    gridContainer?.addEventListener('scroll', updateVisibleItems)
+
+    updateVisibleItems()
+    await tick()
+    observeItems(gridContainer)
+  })
+
+  onDestroy(() => {
+    const gridContainer = document.getElementById(id) as HTMLElement
+    if (gridContainer) {
+      gridContainer.removeEventListener('scroll', updateVisibleItems)
+    }
+    window.removeEventListener('resize', masonryGrid.handleResize.bind(masonryGrid))
+  })
+
+  function observeItems(gridContainer: HTMLElement | null) {
+    items.forEach((item) => {
+      const dom = document.getElementById(`item-${item.id}`)
+      if (dom) {
+        item.dom = dom
+        observeItemHeightChange(item)
+      }
+    })
+  }
+
+  function addItem(incomingItem: Item | null = null) {
+    const newItem = incomingItem
+      ? transformIncomingData(incomingItem)
+      : { id: items.length + 1, content: `Item ${items.length + 1}` }
+    const placedItem = masonryGrid.addItem(newItem)
+    if (placedItem) {
+      items = [...items, placedItem]
+      gridItems = [...gridItems, placedItem]
+    }
+  }
+
+  function updateVisibleItems() {
+    const gridContainer = document.getElementById(id) as HTMLElement
+    const scrollTop = gridContainer.scrollTop
+    const viewportHeight = gridContainer.clientHeight
+
+    gridItems = items.map((item) => {
+      const itemTop = parseInt(item.style?.top || '0')
+      const itemHeight = parseInt(item.style?.height || '0')
+      const itemBottom = itemTop + itemHeight
+
+      return {
+        ...item,
+        visible:
+          itemBottom > scrollTop - UPPER_OVERSHOOT_BOUND &&
+          itemTop < scrollTop + viewportHeight + LOWER_OVERSHOOT_BOUND
+      }
+    })
+
+    const now = new Date().getTime()
+    const lastUpdateTime = new Date(created).getTime()
+    const timeDifference = now - lastUpdateTime
+
+    if (timeDifference > TIME_TILL_ACTIVATION && isBottomReached()) {
+      handleBottomReached()
+    }
+  }
+
+  function isBottomReached(): boolean {
+    const BUFFER =
+      scrollVelocity.velocity > 10
+        ? 3 * window.innerHeight * (scrollVelocity.velocity / 4)
+        : 3 * window.innerHeight
+
+    const gridContainer = document.getElementById(id) as HTMLElement
+
+    if (!gridContainer) {
+      throw new Error('[MasonrySpace:isBottomReached()] Grid Container not found')
+    }
+
+    return (
+      gridContainer.scrollHeight - gridContainer.scrollTop <= gridContainer.clientHeight + BUFFER
+    )
+  }
+
+  function handleBottomReached() {
+    const itemsToLoad = calculateItemsToLoad(scrollVelocity.velocity)
+    dispatch('load-more', itemsToLoad)
+  }
+
+  function calculateItemsToLoad(velocity: number): number {
+    const MIN_ITEMS = 1
+    const MAX_ITEMS = 25
+    const VELOCITY_FACTOR = 2
+
+    let items = Math.round(Math.log(velocity * VELOCITY_FACTOR + 1) * 10)
+
+    return Math.max(MIN_ITEMS, Math.min(items, MAX_ITEMS))
+  }
+
+  export function updateGrid(newData: Item[]) {
+    const gridContainer = document.getElementById(id) as HTMLElement
+
+    const existingIds = new Set(items.map((item) => item.id))
+
+    const newItems = newData.filter((item) => !existingIds.has(item.id))
+    newItems.forEach((item) => {
+      addItem(item)
+    })
+    updateVisibleItems()
+
+    observeItems(gridContainer)
+  }
+</script>
+
+<svelte:window
+  on:wheel={(event) => {
+    const gridContainer = document.getElementById(id)
+    const newScrollTop = gridContainer?.scrollTop
+    const newTimestamp = event.timeStamp
+
+    if (scrollVelocity !== undefined && newScrollTop) {
+      const deltaY = newScrollTop - scrollVelocity.scrollTop
+      const deltaT = newTimestamp - scrollVelocity.timestamp
+      scrollVelocity.velocity = deltaY / deltaT
+    }
+
+    scrollVelocity = {
+      scrollTop: newScrollTop,
+      timestamp: newTimestamp,
+      velocity: scrollVelocity ? scrollVelocity.velocity : 0
+    }
+  }}
+/>
+
+<div {id} class="masonry-grid">
+  <div class="debug">
+    Total items: {items.length} | Visible items: {gridItems.filter((item) => item.visible).length}
+  </div>
+
+  {#each gridItems as item}
+    <div
+      class="item"
+      id="item-{item.id}"
+      class:visible={item.visible}
+      style="left: {item.style.left}; top: {item.style.top}; height: {item.style.height};"
+    >
+      <div class="item-details" bind:this={item.dom}>
+        <OasisResourceLoader id={item.id} on:click on:open on:remove on:load on:new-tab />
+      </div>
+    </div>
+  {/each}
+</div>
+
+<style>
+  .masonry-grid {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4rem;
+    box-sizing: border-box;
+  }
+  .item {
+    position: absolute;
+    box-sizing: border-box;
+    padding: 10px;
+    transition:
+      opacity 0s ease,
+      left 0.12s ease,
+      top 0.12s ease,
+      width 0.12s ease;
+    will-change: opacity, left, top, width;
+    color: white;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+  }
+
+  .debug {
+    position: fixed;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    border-radius: 4px;
+    background: black;
+    color: white;
+    padding: 10px;
+    z-index: 1000;
+  }
+
+  .item-details {
+    font-size: 0.8em;
+    margin-top: 5px;
+    padding: 2rem 0;
+    width: 100%;
+  }
+  .item.visible {
+    opacity: 1;
+  }
+
+  @media (max-width: 800px) {
+    .item {
+      width: 100%;
+    }
+  }
+  @media (min-width: 801px) and (max-width: 1100px) {
+    .item {
+      width: 49%;
+    }
+  }
+  @media (min-width: 1101px) and (max-width: 1400px) {
+    .item {
+      width: 32%;
+    }
+  }
+  @media (min-width: 1401px) and (max-width: 2000px) {
+    .item {
+      width: 23.5%;
+    }
+  }
+  @media (min-width: 2001px) {
+    .item {
+      width: 18.4%;
+    }
+  }
+</style>

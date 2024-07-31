@@ -2,20 +2,18 @@
   import { derived, writable, type Readable } from 'svelte/store'
 
   import { useLogScope } from '../../utils/log'
-  import InfiniteScroll from '../InfiniteScroll.svelte'
-  import { DrawerContentMasonry } from '@horizon/drawer'
-  import { useDebounce } from '../../utils/debounce'
   import type { ResourceSearchResultItem } from '../../service/resources'
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
-  import DragResourceWrapper from './DragResourceWrapper.svelte'
+  import Masonry from './MasonrySpace.svelte'
 
   export let resources: Readable<ResourceSearchResultItem[]>
   export let selected: string | null = null
+  export let searchResults: Readable<ResourceSearchResultItem[]>
 
   const log = useLogScope('OasisResourcesView')
   // const dispatch = createEventDispatcher<{ click: string }>()
 
   const CHUNK_SIZE = 40
+  const MAXIMUM_CHUNK_SIZE = 20
   const CHUNK_THRESHOLD = 300
 
   let scrollElement: HTMLDivElement
@@ -27,52 +25,34 @@
     return resources.slice(0, renderLimit)
   })
 
-  const debouncedRefreshLayout = useDebounce(() => {
-    refreshContentLayout()
-  }, 500)
-
-  const handleLoadChunk = () => {
-    log.debug('Load more chunk...')
-    if ($resources.length <= $renderContents.length) {
+  const handleLoadChunk = (e: CustomEvent) => {
+    if ($renderContents.length === 0) {
+      renderLimit.set($resources.length)
       return
     }
 
-    renderLimit.update((limit) => limit + CHUNK_SIZE)
-    debouncedRefreshLayout()
-  }
+    if ($resources.length <= $renderContents.length) {
+      return
+    }
+    const CHUNK_SIZE = e.detail
 
-  const handleItemLoad = () => {
-    debouncedRefreshLayout()
+    renderLimit.update((limit) => limit + CHUNK_SIZE)
   }
 </script>
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    <DrawerContentMasonry
-      items={$renderContents}
-      gridGap="2rem"
-      colWidth="minmax(250px, 330px)"
-      bind:refreshLayout={refreshContentLayout}
-    >
-      {#each $renderContents as item (item.id)}
-        <DragResourceWrapper resource={item.resource}>
-          <ResourcePreviewClean
-            resource={item.resource}
-            selected={selected === item.id}
-            on:load={handleItemLoad}
-            on:click
-            on:open
-            on:remove
-          />
-        </DragResourceWrapper>
-      {/each}
-
-      <InfiniteScroll
-        elementScroll={scrollElement}
-        threshold={CHUNK_THRESHOLD}
-        on:loadMore={handleLoadChunk}
-      />
-    </DrawerContentMasonry>
+    {#key scrollElement}
+      <Masonry
+        renderContents={$renderContents.map((item) => item.id)}
+        on:load-more={handleLoadChunk}
+        on:open
+        on:remove
+        on:load
+        on:new-tab
+        id={new Date()}
+      ></Masonry>
+    {/key}
   </div>
 </div>
 
