@@ -49,7 +49,16 @@
 <div class="wrapper">
   {#if resource}
     <DragResourceWrapper {resource}>
-      <ResourcePreviewClean {resource} {selected} showSummary on:load on:click on:open on:remove />
+      <ResourcePreviewClean
+        {resource}
+        {selected}
+        showSummary
+        on:load
+        on:click
+        on:open
+        on:remove
+        on:new-tab
+      />
     </DragResourceWrapper>
   {:else if loading}
     <Skelleton />

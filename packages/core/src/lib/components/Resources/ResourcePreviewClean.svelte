@@ -42,6 +42,7 @@
   import log from '../../utils/log'
   import HistoryEntryPreview from '../Cards/Link/HistoryEntryPreview.svelte'
   import { getHumanDistanceToNow } from '../../utils/time'
+  import { isModKeyPressed } from '../../utils/keyboard'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -57,6 +58,7 @@
     remove: string
     load: string
     open: string
+    'new-tab': { url: string; active: boolean }
   }>()
 
   // TODO: figure out better way to do this
@@ -98,7 +100,12 @@
     }
   }
 
-  const handleClick = async () => {
+  const handleClick = async (e: MouseEvent) => {
+    if (isModKeyPressed(e)) {
+      dispatch('new-tab', { url: resource.metadata?.sourceURI!, active: e.shiftKey })
+      return
+    }
+
     log.debug('Resource clicked', resource)
     if (resource.type === ResourceTypes.ANNOTATION) {
       const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
@@ -118,6 +125,14 @@
   const handleRemove = (e: MouseEvent) => {
     e.stopImmediatePropagation()
     dispatch('remove', resource.id)
+  }
+
+  const handleOpenAsNewTab = (e: MouseEvent) => {
+    e.stopImmediatePropagation()
+    const payload = { url: resource?.metadata?.sourceURI!, active: true }
+    log.debug('Opening resource in new tab', payload)
+
+    dispatch('new-tab', payload)
   }
 
   const getHostname = (raw: string) => {
@@ -241,6 +256,11 @@
 
       {#if interactive}
         <div class="remove-wrapper">
+          {#if resource?.metadata?.sourceURI}
+            <div class="remove rotated" on:click={handleOpenAsNewTab}>
+              <Icon name="arrow.right" color="#AAA7B1" />
+            </div>
+          {/if}
           <div class="remove" on:click={handleRemove}>
             <Icon name="close" color="#AAA7B1" />
           </div>
@@ -283,6 +303,11 @@
 
   {#if interactive}
     <div class="remove-wrapper">
+      {#if resource?.metadata?.sourceURI}
+        <div class="remove rotated" on:click={handleOpenAsNewTab}>
+          <Icon name="arrow.right" color="#AAA7B1" />
+        </div>
+      {/if}
       <div class="remove" on:click={handleRemove}>
         <Icon name="close" color="#AAA7B1" />
       </div>
@@ -496,16 +521,16 @@
   .summary {
     font-size: 1rem;
     color: rgb(12 74 110/0.9);
+    letter-spacing: 0.0175rem;
     font-weight: 500;
     text-wrap: pretty;
-    letter-spacing: 0.0175rem;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
     display: -webkit-box;
-    -webkit-line-clamp: 15;
-    -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.5;
     word-break: break-word;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-line-clamp: 15;
+    -webkit-box-orient: vertical;
   }
 </style>

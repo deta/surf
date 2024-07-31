@@ -49,6 +49,7 @@
         on:open
         on:remove
         on:load
+        on:new-tab
         id={new Date()}
       ></Masonry>
     {/key}

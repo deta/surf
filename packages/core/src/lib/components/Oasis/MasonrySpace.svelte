@@ -379,7 +379,7 @@
       style="left: {item.style.left}; top: {item.style.top}; height: {item.style.height};"
     >
       <div class="item-details" bind:this={item.dom}>
-        <OasisResourceLoader id={item.id} on:click on:open on:remove on:load />
+        <OasisResourceLoader id={item.id} on:click on:open on:remove on:load on:new-tab />
       </div>
     </div>
   {/each}

@@ -40,6 +40,7 @@
         on:load-more={handleLoadChunk}
         on:open
         on:remove
+        on:new-tab
         id={new Date()}
       ></Masonry>
     {/key}

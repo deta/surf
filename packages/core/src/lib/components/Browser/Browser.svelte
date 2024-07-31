@@ -3110,7 +3110,6 @@
                   on:new-tab={handleNewTab}
                 />
               {/if}
-
             </div>
           {/if}
         {/each}
