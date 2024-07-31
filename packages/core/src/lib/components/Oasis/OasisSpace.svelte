@@ -718,30 +718,11 @@
     }
 
     await oasis.addResourcesToSpace(spaceId, resourceIds)
-    //e.preventDefault()
 
     await loadSpaceContents(spaceId)
-    toast.success('Resources added!')
-    return
-
-    const event = e.detail
-    log.debug('Dropped', event)
-
-    const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
-    if (isOwnDrop) {
-      log.debug('Own drop detected, ignoring...')
-      log.debug(event.dataTransfer?.files)
-      return
-    }
-
-    const parsed = await processDrop(event)
-    log.debug('Parsed', parsed)
-
-    const resources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-    log.debug('Resources', resources)
-
-    await loadSpaceContents(spaceId)
-    toasts.success('Resources added!')
+    toast.success(
+      `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
+    )
   }
 
   const handleDragEnter = (e: CustomEvent<DragculaDragEvent>) => {
