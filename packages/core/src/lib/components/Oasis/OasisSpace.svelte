@@ -719,6 +719,8 @@
         e.preventDefault()
         return
       }
+    } else {
+      log.warn('Detected non-dragcula drag event!', e)
     }
 
     return
@@ -791,6 +793,16 @@
 
     await loadSpaceContents(spaceId)
     toasts.success('Resources added!')
+  }
+
+  const handleDragEnter = (e: CustomEvent<DragculaDragEvent>) => {
+    const drag = e.detail
+    if (
+      (active && e.detail.isNative) ||
+      (active && drag.data['farc/tab'] !== undefined && e.detail.data['farc/tab'].type !== 'space')
+    ) {
+      e.preventDefault() // Allow the drag
+    }
   }
 
   const handleCreateResource = async (e: CustomEvent<string>) => {
@@ -932,18 +944,7 @@
   />
 {/if}
 
-<DropWrapper
-  {spaceId}
-  on:Drop={handleDrop}
-  on:DragEnter={(e) => {
-    if (
-      (active && e.detail.isNative) ||
-      (e.detail.data['farc/tab'] !== undefined && e.detail.data['farc/tab'].type !== 'space')
-    ) {
-      e.preventDefault()
-    }
-  }}
->
+<DropWrapper {spaceId} on:Drop={handleDrop} on:DragEnter={handleDragEnter}>
   <div class="wrapper">
     <div class="drawer-bar">
       <div class="drawer-chat-search">

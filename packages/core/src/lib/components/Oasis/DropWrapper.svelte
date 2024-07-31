@@ -10,8 +10,11 @@
   const log = useLogScope('DropWrapper')
   const dispatch = createEventDispatcher<{
     drop: DragEvent
-    dragenter: DragEvent
-    dragleave: DragEvent
+    //dragenter: DragEvent
+    //dragleave: DragEvent
+    DragEnter: DragculaDragEvent
+    DragLeave: DragEvent
+    Drop: DragculaDragEvent
   }>()
 
   let counter = 0
@@ -23,19 +26,15 @@
       return
     }
 
-    const cancelled = !dispatch('DragEnter', e, { cancelable: true })
-    if (cancelled) {
-      e.preventDefault()
-    }
-
-    /*
+    const accepted = !dispatch('DragEnter', e, { cancelable: true })
+    if (!accepted) return
     e.preventDefault()
 
     counter++
     if (counter === 1) {
       dragOver = true
-      dispatch('dragenter', e)
-    }*/
+      dispatch('DragEnter', e)
+    }
   }
 
   const handleDragLeave = (e: DragEvent) => {
@@ -44,7 +43,7 @@
     counter--
     if (counter === 0) {
       dragOver = false
-      dispatch('dragleave', e)
+      dispatch('DragLeave', e)
     }
   }
 
@@ -73,8 +72,10 @@
       return
     }
 
-    //e.preventDefault()
-    //e.stopPropagation()
+    const accepted = !dispatch('Drop', e, { cancelable: true })
+    if (accepted) {
+      e.preventDefault()
+    }
 
     counter = 0 // Reset counter to ensure dragover is removed
     dragOver = false
@@ -82,20 +83,10 @@
     if (dragOverTimeout) {
       clearTimeout(dragOverTimeout)
     }
-
-    const cancelled = !dispatch('Drop', e, { cancelable: true })
-    if (cancelled) {
-      e.preventDefault()
-    }
   }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<!--
-on:dragleave={handleDragLeave}
-  on:dragover={handleDragOver}
--->
-
 <div
   class="drop-wrapper"
   class:dragover={dragOver}
@@ -104,6 +95,7 @@ on:dragleave={handleDragLeave}
   }}
   on:Drop={handleDrop}
   on:DragEnter={handleDragEnter}
+  on:DragLeave={handleDragLeave}
 >
   <slot />
 </div>
