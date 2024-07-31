@@ -792,28 +792,18 @@
       $activeBrowserTab?.zoomOut()
     } else if (isModKeyAndKeyPressed(e, '0')) {
       $activeBrowserTab?.resetZoom()
-    } else if (isModKeyAndKeysPressed(e, ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])) {
-      keyBuffer = (keyBuffer || '') + e.key
-      clearTimeout(keyTimeout)
+    } else if (isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])) {
+      const index = parseInt(e.key, 10) - 1
+      const tabs = [...$pinnedTabs, ...$magicTabs, ...$unpinnedTabs]
 
-      keyTimeout = setTimeout(() => {
-        index = parseInt(keyBuffer, 10)
-
-        if (index > 99) {
-          index /= 10
+      if (index < 8) {
+        if (index < tabs.length) {
+          makeTabActive(tabs[index].id)
         }
-        keyBuffer = '' // Reset buffer
-
-        if (!isNaN(index) && index >= 0 && index <= MAX_TABS) {
-          const tabs = [...$pinnedTabs, ...$unpinnedTabs]
-          if (index > tabs.length) {
-            return
-          }
-          if (index <= tabs.length) {
-            makeTabActive(tabs[index - 1].id)
-          }
-        }
-      }, KEY_TIMEOUT)
+      } else {
+        // if 9 is pressed, go to the last tab
+        makeTabActive(tabs[tabs.length - 1].id)
+      }
     } else if (e.key === 'ArrowLeft' && e.metaKey) {
       if (canGoBack) {
         $activeBrowserTab?.goBack()
