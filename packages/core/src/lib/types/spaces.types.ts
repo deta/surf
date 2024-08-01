@@ -19,6 +19,7 @@ export interface SpaceData {
   liveModeEnabled: boolean
   hideViewed: boolean
   smartFilterQuery: string | null
+  sortBy: 'created_at' | 'source_published_at'
 }
 
 export interface SpaceSource {

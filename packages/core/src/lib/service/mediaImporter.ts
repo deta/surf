@@ -499,11 +499,7 @@ export const extractAndCreateWebResource = async (
     }
   }
 
-  const resource = await resourceManager.createResourceOther(
-    new Blob([JSON.stringify(extractedResource.data)], { type: extractedResource.type }),
-    metadata,
-    tags
-  )
+  const resource = await resourceManager.createDetectedResource(extractedResource, metadata, tags)
 
   const content = WebParser.getResourceContent(extractedResource.type, extractedResource.data)
 

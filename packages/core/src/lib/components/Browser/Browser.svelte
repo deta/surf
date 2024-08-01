@@ -1771,9 +1771,6 @@
       const newSpace = await oasis.createSpace({
         folderName: name,
         colors: ['#FFBA76', '#FB8E4E'],
-        showInSidebar: false,
-        liveModeEnabled: false,
-        hideViewed: false,
         smartFilterQuery: processNaturalLanguage ? name : null
       })
 
@@ -1853,9 +1850,7 @@
         showInSidebar: true,
         colors: ['#FFD700', '#FF8C00'],
         sources: [spaceSource],
-        liveModeEnabled: true,
-        hideViewed: false,
-        smartFilterQuery: null
+        liveModeEnabled: true
       })
 
       log.debug('created space', space)
@@ -2140,50 +2135,6 @@
     )
 
     log.debug('Magic tabs turned into unpinned tabs successfully')
-  }
-
-  const createChatResourceBookmark = async (tab: TabPage) => {
-    let resource_id: string
-
-    if (tab.resourceBookmark) {
-      resource_id = tab.resourceBookmark
-    } else {
-      const detectedResource = await $activeBrowserTab.detectResource()
-      log.debug('extracted resource data', detectedResource)
-
-      if (!detectedResource) {
-        log.debug('no resource detected')
-        return
-      }
-
-      // strip &t from url suffix
-      let url = $activeTabLocation ?? ''
-      let youtubeHostnames = [
-        'youtube.com',
-        'youtu.be',
-        'youtube.de',
-        'www.youtube.com',
-        'www.youtu.be',
-        'www.youtube.de'
-      ]
-      if (youtubeHostnames.includes(new URL(url).host)) {
-        url = url.replace(/&t.*/g, '')
-      }
-
-      const resource = await resourceManager.createResourceOther(
-        new Blob([JSON.stringify(detectedResource.data)], {
-          type: `${detectedResource.type}`
-        }),
-        { name: $activeTab?.title ?? '', sourceURI: url, alt: '' },
-        [ResourceTag.canonicalURL(url)]
-      )
-      resource_id = resource.id
-
-      log.debug('created resource', resource)
-    }
-
-    updateTab(tab.id, { chatResourceBookmark: resource_id })
-    return resource_id
   }
 
   const handleDrop = async (event: CustomEvent) => {

@@ -2,7 +2,7 @@ import { get, writable, type Writable } from 'svelte/store'
 import { useLogScope } from '../utils/log'
 import type { ResourceManager } from './resources'
 
-import type { Space, SpaceData } from '../types'
+import type { Optional, Space, SpaceData } from '../types'
 import { getContext, setContext } from 'svelte'
 import { useLocalStorageStore } from '../utils/localstorage'
 
@@ -43,9 +43,26 @@ export class OasisService {
     return result
   }
 
-  async createSpace(name: SpaceData) {
+  async createSpace(
+    data: Optional<
+      SpaceData,
+      'showInSidebar' | 'liveModeEnabled' | 'hideViewed' | 'smartFilterQuery' | 'sortBy' | 'sources'
+    >
+  ) {
     this.log.debug('creating space')
-    const result = await this.resourceManager.createSpace(name)
+
+    const defaults = {
+      showInSidebar: false,
+      liveModeEnabled: false,
+      hideViewed: false,
+      smartFilterQuery: null,
+      sortBy: 'created_at',
+      sources: []
+    }
+
+    const fullData = Object.assign({}, defaults, data)
+
+    const result = await this.resourceManager.createSpace(fullData)
     if (!result) {
       this.log.error('failed to create space')
       throw new Error('Failed to create space')

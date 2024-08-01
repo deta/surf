@@ -28,6 +28,7 @@ import {
 import type { Telemetry } from './telemetry'
 import {
   TelemetryEventTypes,
+  type DetectedResource,
   type ResourceDataAnnotation,
   type ResourceDataHistoryEntry
 } from '@horizon/types'
@@ -104,6 +105,10 @@ export class ResourceTag {
 
   static hideInEverything(value: boolean = true) {
     return { name: ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING, value: `${value}` }
+  }
+
+  static sourcePublishedAt(value: string) {
+    return { name: ResourceTagsBuiltInKeys.SOURCE_PUBLISHED_AT, value: value }
   }
 }
 
@@ -766,7 +771,14 @@ export class ResourceManager {
   ) {
     const blobData = JSON.stringify(data)
     const blob = new Blob([blobData], { type: ResourceTypes.LINK })
-    return this.createResource(ResourceTypes.LINK, blob, metadata, tags) as Promise<ResourceLink>
+
+    const sourcePublishedAt = data.date_published
+    const additionalTags = sourcePublishedAt
+      ? [ResourceTag.sourcePublishedAt(sourcePublishedAt)]
+      : []
+    const allTags = [...(tags ?? []), ...additionalTags]
+
+    return this.createResource(ResourceTypes.LINK, blob, metadata, allTags) as Promise<ResourceLink>
   }
 
   async createResourceAnnotation(
@@ -797,6 +809,25 @@ export class ResourceManager {
       metadata,
       tags
     ) as Promise<ResourceHistoryEntry>
+  }
+
+  async createDetectedResource<T>(
+    detectedResource: DetectedResource<T>,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
+    const { data, type } = detectedResource
+
+    const blobData = typeof data === 'string' ? data : JSON.stringify(data)
+    const blob = new Blob([blobData], { type: type })
+
+    const sourcePublishedAt = (data as any).date_published as string | undefined
+    const additionalTags = sourcePublishedAt
+      ? [ResourceTag.sourcePublishedAt(sourcePublishedAt)]
+      : []
+    const allTags = [...(tags ?? []), ...additionalTags]
+
+    return this.createResource(type, blob, metadata, allTags) as Promise<ResourceJSON<T>>
   }
 
   async createResourceOther(

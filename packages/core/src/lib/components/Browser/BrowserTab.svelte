@@ -188,8 +188,8 @@
 
     const title = (detectedResource.data as any)?.title ?? tab.title ?? ''
 
-    const resource = await resourceManager.createResourceOther(
-      new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
+    const resource = await resourceManager.createDetectedResource(
+      detectedResource,
       { name: title, sourceURI: url, alt: '' },
       [
         ResourceTag.canonicalURL(url),

@@ -38,7 +38,8 @@ export enum ResourceTagsBuiltInKeys {
   SPACE_SOURCE = 'spaceSource',
   VIEWED_BY_USER = 'viewedByUser',
   SILENT = 'silent',
-  HIDE_IN_EVERYTHING = 'hideInEverything'
+  HIDE_IN_EVERYTHING = 'hideInEverything',
+  SOURCE_PUBLISHED_AT = 'sourcePublishedAt'
 }
 
 export interface ResourceTagsBuiltIn {
@@ -56,6 +57,7 @@ export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.HASHTAG]: string
   [ResourceTagsBuiltInKeys.SILENT]: boolean
   [ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING]: boolean
+  [ResourceTagsBuiltInKeys.SOURCE_PUBLISHED_AT]: string
 }
 
 export interface SFFSResource {
@@ -171,8 +173,8 @@ export type DetectedWebApp = {
   rssFeedUrl?: string
 }
 
-export type DetectedResource = {
-  data: ResourceData
+export type DetectedResource<T = ResourceData> = {
+  data: T
   type: string
 }
 

@@ -27,12 +27,7 @@
     try {
       const newSpace = await oasis.createSpace({
         folderName: 'New Space',
-        colors: ['#FFBA76', '#FB8E4E'],
-        showInSidebar: false,
-        sources: [],
-        liveModeEnabled: false,
-        hideViewed: false,
-        smartFilterQuery: null
+        colors: ['#FFBA76', '#FB8E4E']
       })
 
       log.debug('New Folder:', newSpace)

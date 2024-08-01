@@ -160,8 +160,8 @@
         log.debug('Detected resource for item', link.url, detectedResource)
 
         if (!$dryRun) {
-          const resource = await resourceManager.createResourceOther(
-            new Blob([JSON.stringify(detectedResource.data)], { type: detectedResource.type }),
+          const resource = await resourceManager.createDetectedResource(
+            detectedResource,
             { sourceURI: link.url },
             [ResourceTag.import()]
           )
@@ -181,8 +181,9 @@
         queue.update((prev) => prev.filter((i) => i !== item))
 
         if (!$dryRun) {
-          const resource = await resourceManager.createResourceOther(
-            new Blob([JSON.stringify(post)], { type: item.type }),
+          const detectedResource = { type: ResourceTypes.LINK, data: post }
+          const resource = await resourceManager.createDetectedResource(
+            detectedResource,
             { sourceURI: post.url },
             [ResourceTag.import()]
           )

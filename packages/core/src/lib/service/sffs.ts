@@ -235,7 +235,8 @@ export class SFFS {
             sources: [],
             liveModeEnabled: false,
             hideViewed: false,
-            smartFilterQuery: null
+            smartFilterQuery: null,
+            sortBy: 'created_at'
           } as SpaceData)
         : parsedName
     return {

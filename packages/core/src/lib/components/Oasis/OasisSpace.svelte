@@ -150,7 +150,7 @@
       log.debug('Fetched space:', fetchedSpace)
       space.set(fetchedSpace)
 
-      const items = await oasis.getSpaceContents(id)
+      let items = await oasis.getSpaceContents(id)
       log.debug('Loaded space contents:', items)
 
       searchValue.set('')
@@ -159,6 +159,36 @@
       spaceContents.set([])
 
       await tick()
+
+      if ($space?.name.sortBy === 'source_published_at') {
+        log.debug('Sorting by source_published_at, fetching resource data')
+        const fullResources = (
+          await Promise.all(items.map((x) => resourceManager.getResource(x.resource_id)))
+        ).filter((x) => x !== null)
+
+        log.debug('Sorting full resources:', fullResources)
+        // Use the source_published_at tag for sorting
+        const sorted = fullResources
+          .map((resource) => {
+            const publishedAt = resource.tags?.find(
+              (x) => x.name === ResourceTagsBuiltInKeys.SOURCE_PUBLISHED_AT
+            )?.value
+            return {
+              id: resource.id,
+              publishedAt: publishedAt ? new Date(publishedAt) : new Date(resource.createdAt)
+            }
+          })
+          .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
+
+        log.debug('Sorted resources:', sorted)
+
+        // sort the space entries based on the sorted resources
+        items = sorted
+          .map((x) => items.find((y) => y.resource_id === x.id))
+          .filter((x) => x !== undefined) as SpaceEntry[]
+      } else {
+        log.debug('Skipping sorting, sorted by created_at')
+      }
 
       spaceContents.set(items)
 

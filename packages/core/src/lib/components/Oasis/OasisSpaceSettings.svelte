@@ -4,7 +4,6 @@
 
   import type { Space, SpaceSource } from '../../types'
   import { useLogScope } from '../../utils/log'
-  import SpaceIcon from '../Drawer/SpaceIcon.svelte'
   import { useOasis } from '../../service/oasis'
   import { tooltip } from '../../utils/directives'
   import Switch from '../Atoms/Switch.svelte'
@@ -14,7 +13,6 @@
   import { useDebounce } from '../../utils/debounce'
   import { getHumanDistanceToNow } from '../../utils/time'
   import { copyToClipboard } from '../../utils/clipboard'
-  import type { ChangeEventHandler } from 'svelte/elements'
 
   export let space: Space | null
 
@@ -34,6 +32,7 @@
   let hideViewedResources = space?.name.hideViewed
   let smartFilterQuery = space?.name.smartFilterQuery
   let sourceValue = ''
+  let sortBy = space?.name.sortBy ?? 'created_at'
   let loading = false
   let showAddSource = false
   let shoulDeleteAllResources = false
@@ -132,6 +131,16 @@
     await oasis.updateSpaceData(space.id, { liveModeEnabled: e.detail })
   }, 500)
 
+  const handleSortingUpdate = useDebounce(async () => {
+    if (!space) return
+
+    space.name.sortBy = sortBy
+
+    await oasis.updateSpaceData(space.id, { sortBy: sortBy })
+
+    dispatch('load')
+  }, 500)
+
   const handleHideViewedUpdate = useDebounce(async (e: CustomEvent<boolean>) => {
     if (!space) return
 
@@ -195,7 +204,7 @@
       <div class="sources">
         <div class="info">
           <div class="title">
-            <Icon name="news" />
+            <Icon name="news" size="20px" />
             <h2>Sources</h2>
           </div>
 
@@ -266,7 +275,7 @@
       <div class="setting">
         <div class="smart-filter">
           <div class="title">
-            <Icon name="sparkles" />
+            <Icon name="sparkles" size="20px" />
             <h2>Smart Oasis Filter</h2>
           </div>
 
@@ -290,16 +299,25 @@
 
       <div class="setting">
         <div class="title">
-          <Icon name="settings" />
+          <Icon name="settings" size="20px" />
           <h3>Settings</h3>
         </div>
+
         <Switch
           label="Hide already viewed items"
           color="#ff4eed"
-          reverse
           bind:checked={hideViewedResources}
           on:update={handleHideViewedUpdate}
         />
+
+        <div class="sorting">
+          <p>Sort resources by when they were</p>
+
+          <select bind:value={sortBy} on:change={handleSortingUpdate}>
+            <option value="created_at">added to the space</option>
+            <option value="source_published_at">originally published</option>
+          </select>
+        </div>
       </div>
 
       <div class="danger-zone">
@@ -627,6 +645,32 @@
       &:focus {
         border: 1px solid #ff4eed;
       }
+    }
+  }
+
+  .sorting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    p {
+      font-size: 16px;
+    }
+
+    select {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      padding: 0.5rem;
+      //grey
+      background: #f0f0f0;
+      color: inherit;
+      font-size: 1.1rem;
+      font-family: inherit;
+      font-smooth: always;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      outline: none;
     }
   }
 
