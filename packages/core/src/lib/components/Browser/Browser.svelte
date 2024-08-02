@@ -367,6 +367,7 @@
       index: Date.now(),
       ...tab
     })
+    activatedTabs.update((tabs) => [...tabs, newTab.id])
     log.debug('Created tab', newTab)
     tabs.update((tabs) => [...tabs, newTab])
 
