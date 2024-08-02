@@ -169,13 +169,15 @@
 
 <!-- style:view-transition-name="tab-{tab.id}" -->
 <div
-  class="tab {isActive ? 'text-sky-950 bg-sky-200 shadow-inner ring-[0.5px] ring-sky-500' : ''}
+  class="tab {isActive
+    ? 'text-sky-950 bg-sky-200 sticky   shadow-inner ring-[0.5px] ring-sky-500'
+    : ''}
   flex items-center {pinned
     ? 'p-2 rounded-lg'
     : horizontalTabs
       ? isActive
         ? 'py-2 px-2.5 rounded-xl'
-        : 'py-2 px-1 rounded-xl'
+        : 'py-2 rounded-xl'
       : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
   style="width: {tabSize}px; min-width: {isActive && !pinned
     ? 260

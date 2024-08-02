@@ -2783,9 +2783,7 @@
           {#if $activeTabMagic}
             {#if $activeTabMagic.showSidebar}
               <div
-                class="relative group {horizontalTabs
-                  ? 'max-w-[512px] no-scrollbar h-[47px]'
-                  : 'w-full'}"
+                class="relative group {horizontalTabs ? 'max-w-[512px] no-scrollbar' : 'w-full'}"
               >
                 <div
                   style="opacity: 0.2"
@@ -2795,10 +2793,7 @@
                   class="relative bg-sky-100/50 rounded-2xl overflow-auto no-scrollbar
                     {horizontalTabs ? 'h-full' : 'w-full'}"
                 >
-                  <div
-                    class={horizontalTabs ? 'p-1 pt-[2px]' : 'p-2'}
-                    class:magic={$magicTabs.length > 0}
-                  >
+                  <div class={horizontalTabs ? 'px-1' : 'p-2'} class:magic={$magicTabs.length > 0}>
                     {#if horizontalTabs}
                       <div
                         axis="horizontal"
@@ -2913,6 +2908,7 @@
             class:items-center={horizontalTabs}
             class:overflow-y-scroll={!horizontalTabs}
             class:h-full={!horizontalTabs}
+            class:overflow-x-scroll={horizontalTabs && tabSize < 48}
             bind:this={containerRef}
           >
             {#if horizontalTabs}
