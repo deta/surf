@@ -85,7 +85,7 @@
         }
         break
       case 'bottom':
-        top = targetRect.bottom
+        top = targetRect.bottom + 20
         if (subPosition === 'center') {
           left = targetRect.left + targetRect.width / 2 - popoverRect.width / 2
         } else if (subPosition === 'left') {
@@ -105,7 +105,7 @@
         }
         break
       case 'right':
-        left = targetRect.right
+        left = targetRect.right + 20
         if (subPosition === 'center') {
           top = targetRect.top + targetRect.height / 2 - popoverRect.height / 2
         } else if (subPosition === 'top') {
@@ -113,6 +113,7 @@
         } else if (subPosition === 'bottom') {
           top = targetRect.bottom - popoverRect.height
         }
+        top -= 15
         break
       default:
         top = targetRect.bottom

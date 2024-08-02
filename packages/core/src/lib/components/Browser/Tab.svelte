@@ -26,6 +26,7 @@
   export let spaces
   export const inputUrl = writable<string>('')
   export let tabSize: number
+  export let horizontalTabs = true
 
   export const editAddress = async () => {
     isEditing = true
@@ -171,8 +172,14 @@
   class="tab {isActive ? 'text-sky-950 bg-sky-200 shadow-inner ring-[0.5px] ring-sky-500' : ''}
   flex items-center {pinned
     ? 'p-2 rounded-lg'
-    : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 transition duration-100 group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
-  style="width: {tabSize}px; min-width: {tabSize}px; max-width: {tabSize}px;"
+    : horizontalTabs
+      ? isActive
+        ? 'py-2 px-2.5 rounded-xl'
+        : 'py-2 px-1 rounded-xl'
+      : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
+  style="width: {tabSize}px; min-width: {isActive && !pinned
+    ? 260
+    : tabSize}px; max-width: {tabSize}px;"
   on:click={handleClick}
   on:mouseenter={() => (hovered = true)}
   on:mouseleave={() => {
@@ -213,7 +220,14 @@
     : {}}
 >
   <div
-    class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}"
+    class:icon-wrapper={true}
+    class:flex-shrink-0={true}
+    class:group-hover:hidden={(!isActive &&
+      showClose &&
+      ((tabSize > 64 && horizontalTabs) || !horizontalTabs) &&
+      !pinned &&
+      hovered) ||
+      (isActive && showClose && !pinned && hovered)}
     style:view-transition-name="tab-icon-{tab.id}"
   >
     {#if tab.icon}
@@ -231,7 +245,7 @@
     {/if}
   </div>
 
-  {#if showClose && hovered}
+  {#if (showClose && ((tabSize > 64 && horizontalTabs) || !horizontalTabs) && hovered) || (isActive && !pinned)}
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
@@ -260,8 +274,7 @@
       </button>
     {/if}
   {/if}
-
-  {#if !tab.pinned || !pinned}
+  {#if (!tab.pinned || !pinned) && ((horizontalTabs && isActive) || !(horizontalTabs && tabSize < 48))}
     <div class=" relative flex-grow truncate mr-1">
       {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && (hovered || isEditing)}
         <input
@@ -269,6 +282,7 @@
           bind:value={$inputUrl}
           on:focus={handleInputFocus}
           on:blur={handleInputBlur}
+          placeholder="Enter URL or search query"
           on:keydown={handleInputKeydown}
           bind:this={addressInputElem}
           class="w-full h-full bg-transparent focus:outline-none group-active:select-none
@@ -288,7 +302,7 @@
       {/if}
     </div>
 
-    {#if showButtons && !isEditing && hovered}
+    {#if showButtons && !isEditing && hovered && (tabSize > 64 || isActive)}
       <div class="items-center flex justify-end flex-row space-x-2 right-0">
         {#if tab.archived}
           <button
@@ -326,6 +340,7 @@
           {#key isBookmarkedByUser}
             <button
               on:mouseenter={handlePopoverEnter}
+              on:mouseleave={() => setTimeout(() => handlePopoverLeave(), 100)}
               on:click={handleBookmark}
               use:tooltip={{
                 content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
@@ -342,12 +357,12 @@
                   props: { resourceManager, spaces }
                 },
                 action: 'hover',
-                position: 'right-top',
+                position: horizontalTabs ? 'bottom-center' : 'right-top',
                 style: {
                   backgroundColor: '#f5f5f5'
                 },
                 animation: 'fade',
-                delay: 950
+                delay: 700
               }}
             >
               {#if bookmarkingInProgress}
