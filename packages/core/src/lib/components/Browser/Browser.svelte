@@ -887,10 +887,10 @@
     // check if there already exists an empty tab, if yes we just change to it
     const emptyTab = $tabs.find((tab) => tab.type === 'empty')
 
-    // if (emptyTab) {
-    //   makeTabActive(emptyTab.id)
-    //   return
-    // }
+    if (emptyTab) {
+      makeTabActive(emptyTab.id)
+      return
+    }
 
     const newTab = await createTab<TabEmpty>({ title: 'New Tab', icon: '', type: 'empty' })
     makeTabActive(newTab.id)
@@ -1893,7 +1893,7 @@
   let tabSize = 0
 
   $: {
-    const reservedSpace = 200 + 40 * $pinnedTabs.length + 50
+    const reservedSpace = 200 + 40 * $pinnedTabs.length + 200
     const availableSpace = maxWidth - reservedSpace
     tabSize = availableSpace / $unpinnedTabs.length
   }
@@ -2908,7 +2908,7 @@
             class:items-center={horizontalTabs}
             class:overflow-y-scroll={!horizontalTabs}
             class:h-full={!horizontalTabs}
-            class:overflow-x-scroll={horizontalTabs && tabSize < 48}
+            class:overflow-x-scroll={horizontalTabs}
             bind:this={containerRef}
           >
             {#if horizontalTabs}

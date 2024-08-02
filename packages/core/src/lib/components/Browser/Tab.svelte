@@ -177,7 +177,7 @@
     : horizontalTabs
       ? isActive
         ? 'py-2 px-2.5 rounded-xl'
-        : 'py-2 rounded-xl'
+        : 'py-2 px-1.5 rounded-xl'
       : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
   style="width: {tabSize}px; min-width: {isActive && !pinned
     ? 260
