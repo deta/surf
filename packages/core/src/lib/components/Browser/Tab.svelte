@@ -173,11 +173,11 @@
     ? 'text-sky-950 bg-sky-200 sticky   shadow-inner ring-[0.5px] ring-sky-500'
     : ''}
   flex items-center {pinned
-    ? 'p-2 rounded-lg'
+    ? 'p-1 rounded-lg'
     : horizontalTabs
       ? isActive
-        ? 'py-2 px-2.5 rounded-xl'
-        : 'py-2 px-1.5 rounded-xl'
+        ? 'py-1.5 px-2.5 rounded-xl'
+        : 'py-1.5 px-1.5 rounded-xl'
       : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
   style="width: {tabSize}px; min-width: {isActive && !pinned
     ? 260
@@ -235,15 +235,15 @@
     {#if tab.icon}
       <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
     {:else if tab.type === 'horizon'}
-      <Icon name="grid" size="18px" />
+      <Icon name="grid" size="16px" />
     {:else if tab.type === 'importer'}
-      <Icon name="code" size="18px" />
+      <Icon name="code" size="16px" />
     {:else if tab.type === 'history'}
-      <Icon name="history" size="18px" />
+      <Icon name="history" size="16px" />
     {:else if tab.type === 'space' && space}
       <SpaceIcon folder={space} />
     {:else}
-      <Icon name="world" size="18px" />
+      <Icon name="world" size="16px" />
     {/if}
   </div>
 
@@ -257,7 +257,7 @@
           position: 'right'
         }}
       >
-        <Icon name="close" size="18px" />
+        <Icon name="close" size="16px" />
       </button>
     {:else}
       <button
@@ -269,9 +269,9 @@
         }}
       >
         {#if tab.archived}
-          <Icon name="trash" size="18px" />
+          <Icon name="trash" size="16px" />
         {:else}
-          <Icon name="close" size="18px" />
+          <Icon name="close" size="16px" />
         {/if}
       </button>
     {/if}
@@ -318,7 +318,7 @@
               delay: 500
             }}
           >
-            <Icon name="arrowbackup" size="18px" />
+            <Icon name="arrowbackup" size="16px" />
           </button>
         {/if}
 
@@ -393,7 +393,7 @@
             delay: 500
           }}
         >
-          <Icon name="arrow.autofit.up" size="18px" />
+          <Icon name="arrow.autofit.up" size="16px" />
         </button>
       </div>
     {/if}
@@ -411,8 +411,8 @@
     opacity: 80%;
   }
   .icon-wrapper {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     display: block;
     user-select: none;
     flex-shrink: 0;

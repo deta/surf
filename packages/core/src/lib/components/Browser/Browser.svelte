@@ -2749,6 +2749,7 @@
           >
             <div
               style:view-transition-name="pinned-tabs-wrapper"
+              class="flex items-center space-x-2 h-fit px-2 py-1"
               axis="horizontal"
               dragdeadzone="5"
               use:HTMLAxisDragZone.action={{
@@ -2764,6 +2765,7 @@
                   {#key $pinnedTabs[index]}
                     <TabItem
                       tab={$pinnedTabs[index]}
+                      horizontalTabs={true}
                       {activeTabId}
                       {deleteTab}
                       {unarchiveTab}
@@ -2783,14 +2785,16 @@
           {#if $activeTabMagic}
             {#if $activeTabMagic.showSidebar}
               <div
-                class="relative group {horizontalTabs ? 'max-w-[512px] no-scrollbar' : 'w-full'}"
+                class="no-scrollbar relatie overflow-y-scroll max-h-[500px] flex-grow w-full group {horizontalTabs
+                  ? 'max-w-[512px] no-scrollbar'
+                  : 'w-full'}"
               >
-                <div
+                <!-- <div
                   style="opacity: 0.2"
                   class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opcaity-20 group-hover:opacity-10 transition duration-1000 group-hover:duration-200 animate-tilt"
-                ></div>
+                ></div> -->
                 <div
-                  class="relative bg-sky-100/50 rounded-2xl overflow-auto no-scrollbar
+                  class="relative bg-sky-100/50 rounded-2xl no-scrollbar
                     {horizontalTabs ? 'h-full' : 'w-full'}"
                 >
                   <div class={horizontalTabs ? 'px-1' : 'p-2'} class:magic={$magicTabs.length > 0}>
@@ -2903,7 +2907,7 @@
           {/if}
 
           <div
-            class="no-scrollbar relative h-full flex-grow"
+            class="no-scrollbar relative h-full flex-grow w-full"
             class:space-x-2={horizontalTabs}
             class:items-center={horizontalTabs}
             class:overflow-y-scroll={!horizontalTabs}
@@ -3471,7 +3475,7 @@
     margin-top: -1px;
   }
   :global([data-dragcula-zone='sidebar-pinned-tabs']) {
-    min-height: 32px;
+    min-height: 24px;
   }
   :global(.magic-tabs-wrapper [data-dragcula-zone]) {
     min-height: 4rem !important;
@@ -3825,8 +3829,6 @@
 
     background: #f7f7f7;
     border-radius: 18px;
-    padding: 0.2rem;
-    gap: 1rem;
 
     background: #f7f7f7;
     border-radius: 12px;
