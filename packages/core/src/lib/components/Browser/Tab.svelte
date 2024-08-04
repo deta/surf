@@ -26,6 +26,7 @@
   export let spaces
   export const inputUrl = writable<string>('')
   export let tabSize: number
+  export let hibernated = false
 
   export const editAddress = async () => {
     isEditing = true
@@ -174,6 +175,7 @@
     : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 transition duration-100 group cursor-pointer gap-3 relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
   style="width: {tabSize}px; min-width: {tabSize}px; max-width: {tabSize}px;"
   on:click={handleClick}
+  class:opacity-50={hibernated}
   on:mouseenter={() => (hovered = true)}
   on:mouseleave={() => {
     if (!popoverVisible) hovered = false
@@ -213,7 +215,7 @@
     : {}}
 >
   <div
-    class="icon-wrapper {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}"
+    class="icon-wrapper relative {showClose && !pinned && hovered ? 'group-hover:hidden' : ''}"
     style:view-transition-name="tab-icon-{tab.id}"
   >
     {#if tab.icon}
@@ -228,6 +230,10 @@
       <SpaceIcon folder={space} />
     {:else}
       <Icon name="world" size="18px" />
+    {/if}
+
+    {#if hibernated}
+      <Icon name="moon" size="8px" className="absolute -right-1 top-3.5 z-[500]" />
     {/if}
   </div>
 
