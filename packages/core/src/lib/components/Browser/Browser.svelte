@@ -1890,11 +1890,15 @@
 
   let maxWidth = window.innerWidth
 
-  $: tabSize = (maxWidth - 600) / $unpinnedTabs.length
+  let tabSize = 0
 
+  $: {
+    const reservedSpace = 200 + 40 * $pinnedTabs.length + 200
+    const availableSpace = maxWidth - reservedSpace
+    tabSize = availableSpace / $unpinnedTabs.length
+  }
   const handleResize = () => {
     maxWidth = window.innerWidth
-    tabSize = (maxWidth - 600) / $unpinnedTabs.length
   }
 
   onMount(async () => {
@@ -2618,27 +2622,14 @@
       {#if $sidebarTab !== 'oasis'}
         <div
           class="flex {!horizontalTabs
-            ? 'flex-col w-full py-3 space-y-4 px-2 h-full'
-            : 'flex-row items-center h-full ml-24 space-x-4 mr-4'} relative"
+            ? 'flex-col w-full py-1.5 space-y-4 px-2 h-full'
+            : 'flex-row items-center h-full ml-20 space-x-4 mr-4'} relative"
         >
           <div
             class="flex flex-row items-center flex-shrink-0 {!horizontalTabs &&
               'w-full justify-end'}"
           >
             <Tooltip.Root openDelay={400} closeDelay={10}>
-              <Tooltip.Trigger>
-                <button
-                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                  on:click={handleSidebarchange}
-                >
-                  <span
-                    class="inline-block {canGoBack &&
-                      'group-hover:skew-x-2'} transition-transform ease-in-out duration-200"
-                  >
-                    <Icon name="sidebar.left" />
-                  </span>
-                </button>
-              </Tooltip.Trigger>
               <Tooltip.Content
                 transition={flyAndScale}
                 transitionConfig={{ y: 8, duration: 150 }}
@@ -2752,10 +2743,13 @@
           </div>
 
           <div
-            class="bg-sky-50 my-auto p-2 rounded-xl shadow-md flex-shrink-0 overflow-x-scroll no-scrollbar"
+            class="bg-sky-50 my-auto rounded-xl shadow-md flex-shrink-0 overflow-x-scroll no-scrollbar"
+            class:p-2={!horizontalTabs}
+            class:p-0.5={horizontalTabs}
           >
             <div
               style:view-transition-name="pinned-tabs-wrapper"
+              class="flex items-center space-x-2 h-fit px-2 py-1"
               axis="horizontal"
               dragdeadzone="5"
               use:HTMLAxisDragZone.action={{
@@ -2771,6 +2765,7 @@
                   {#key $pinnedTabs[index]}
                     <TabItem
                       tab={$pinnedTabs[index]}
+                      horizontalTabs={true}
                       {activeTabId}
                       {deleteTab}
                       {unarchiveTab}
@@ -2790,22 +2785,19 @@
           {#if $activeTabMagic}
             {#if $activeTabMagic.showSidebar}
               <div
-                class="relative group {horizontalTabs
-                  ? 'max-w-[512px] no-scrollbar h-[47px]'
+                class="no-scrollbar relatie overflow-y-scroll max-h-[500px] flex-grow w-full group {horizontalTabs
+                  ? 'max-w-[512px] no-scrollbar'
                   : 'w-full'}"
               >
-                <div
+                <!-- <div
                   style="opacity: 0.2"
                   class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opcaity-20 group-hover:opacity-10 transition duration-1000 group-hover:duration-200 animate-tilt"
-                ></div>
+                ></div> -->
                 <div
-                  class="relative bg-sky-100/50 rounded-2xl overflow-auto no-scrollbar
+                  class="relative bg-sky-100/50 rounded-2xl no-scrollbar
                     {horizontalTabs ? 'h-full' : 'w-full'}"
                 >
-                  <div
-                    class={horizontalTabs ? 'p-1 pt-[2px]' : 'p-2'}
-                    class:magic={$magicTabs.length > 0}
-                  >
+                  <div class={horizontalTabs ? 'px-1' : 'p-2'} class:magic={$magicTabs.length > 0}>
                     {#if horizontalTabs}
                       <div
                         axis="horizontal"
@@ -2884,6 +2876,7 @@
                             {#key $magicTabs[index]}
                               <TabItem
                                 showClose
+                                horizontalTabs={false}
                                 tab={$magicTabs[index]}
                                 {activeTabId}
                                 pinned={false}
@@ -2914,14 +2907,17 @@
           {/if}
 
           <div
-            class="overflow-x-scroll no-scrollbar relative h-full flex-grow"
+            class="no-scrollbar relative h-full flex-grow w-full"
             class:space-x-2={horizontalTabs}
             class:items-center={horizontalTabs}
+            class:overflow-y-scroll={!horizontalTabs}
+            class:h-full={!horizontalTabs}
+            class:overflow-x-scroll={horizontalTabs}
             bind:this={containerRef}
           >
             {#if horizontalTabs}
               <div
-                class="horizontal-tabs h-full"
+                class="horizontal-tabs space-x-1"
                 axis="horizontal"
                 dragdeadzone="5"
                 placeholder-size="60"
@@ -2937,7 +2933,7 @@
                     {#if $activeTabId === $unpinnedTabs[index].id}
                       <TabItem
                         showClose
-                        tabSize={Math.min(400, Math.max(240, tabSize))}
+                        tabSize={Math.min(300, Math.max(24, tabSize))}
                         tab={$unpinnedTabs[index]}
                         {activeTabId}
                         bookmarkingInProgress={$bookmarkingInProgress}
@@ -2961,7 +2957,7 @@
                       <TabItem
                         showClose
                         tab={$unpinnedTabs[index]}
-                        tabSize={Math.min(400, Math.max(240, tabSize))}
+                        tabSize={Math.min(300, Math.max(24, tabSize))}
                         {activeTabId}
                         pinned={false}
                         on:DragEnd={onDragculaTabDragEnd}
@@ -2993,6 +2989,7 @@
                     {#if $activeTabId === $unpinnedTabs[index].id}
                       <TabItem
                         showClose
+                        horizontalTabs={false}
                         tab={$unpinnedTabs[index]}
                         {activeTabId}
                         bookmarkingInProgress={$bookmarkingInProgress}
@@ -3031,6 +3028,7 @@
                       <TabItem
                         showClose
                         tab={$unpinnedTabs[index]}
+                        horizontalTabs={false}
                         {activeTabId}
                         pinned={false}
                         on:DragEnd={onDragculaTabDragEnd}
@@ -3050,7 +3048,7 @@
               style="position: absolute; top: {!horizontalTabs
                 ? 42 * $unpinnedTabs.length
                 : 0}px; left: {horizontalTabs
-                ? Math.min(400, Math.max(240, tabSize)) * $unpinnedTabs.length
+                ? (Math.min(300, Math.max(24, tabSize)) + 2) * $unpinnedTabs.length
                 : 0}px; right: 0;"
               class:w-fit={horizontalTabs}
               class:h-full={horizontalTabs}
@@ -3477,7 +3475,7 @@
     margin-top: -1px;
   }
   :global([data-dragcula-zone='sidebar-pinned-tabs']) {
-    min-height: 32px;
+    min-height: 24px;
   }
   :global(.magic-tabs-wrapper [data-dragcula-zone]) {
     min-height: 4rem !important;
@@ -3831,8 +3829,6 @@
 
     background: #f7f7f7;
     border-radius: 18px;
-    padding: 0.2rem;
-    gap: 1rem;
 
     background: #f7f7f7;
     border-radius: 12px;
