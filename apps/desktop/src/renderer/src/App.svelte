@@ -51,6 +51,7 @@
     right: 0;
     height: 20px;
     z-index: -1;
+    width: 20%;
   }
   .drag-bar.bottom {
     bottom: 0;
