@@ -2764,6 +2764,7 @@
                 {#each $pinnedTabs as tab, index (tab.id)}
                   {#key $pinnedTabs[index]}
                     <TabItem
+                      hibernated={!$activatedTabs.includes($pinnedTabs[index].id)}
                       tab={$pinnedTabs[index]}
                       horizontalTabs={true}
                       {activeTabId}
@@ -2823,6 +2824,7 @@
                           {#each $magicTabs as tab, index (tab.id)}
                             {#key $magicTabs[index]}
                               <TabItem
+                                hibernated={!$activatedTabs.includes($magicTabs[index].id)}
                                 showClose
                                 tab={$magicTabs[index]}
                                 {activeTabId}
@@ -2875,6 +2877,7 @@
                           {#each $magicTabs as tab, index (tab.id)}
                             {#key $magicTabs[index]}
                               <TabItem
+                                hibernated={!$activatedTabs.includes($magicTabs[index].id)}
                                 showClose
                                 horizontalTabs={false}
                                 tab={$magicTabs[index]}
@@ -2932,6 +2935,7 @@
                     <!-- check if this tab is active -->
                     {#if $activeTabId === $unpinnedTabs[index].id}
                       <TabItem
+                        hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
                         showClose
                         tabSize={Math.min(300, Math.max(24, tabSize))}
                         tab={$unpinnedTabs[index]}
@@ -2956,6 +2960,7 @@
                     {:else}
                       <TabItem
                         showClose
+                        hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
                         tab={$unpinnedTabs[index]}
                         tabSize={Math.min(300, Math.max(24, tabSize))}
                         {activeTabId}
@@ -2988,6 +2993,7 @@
                     <!-- check if this tab is active -->
                     {#if $activeTabId === $unpinnedTabs[index].id}
                       <TabItem
+                        hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
                         showClose
                         horizontalTabs={false}
                         tab={$unpinnedTabs[index]}
@@ -3026,6 +3032,7 @@
                       />
                     {:else}
                       <TabItem
+                        hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
                         showClose
                         tab={$unpinnedTabs[index]}
                         horizontalTabs={false}

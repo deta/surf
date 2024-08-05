@@ -26,6 +26,7 @@
   export let spaces
   export const inputUrl = writable<string>('')
   export let tabSize: number
+  export let hibernated = false
   export let horizontalTabs = true
 
   export const editAddress = async () => {
@@ -183,6 +184,7 @@
     ? 260
     : tabSize}px; max-width: {tabSize}px;"
   on:click={handleClick}
+  class:opacity-75={hibernated}
   on:mouseenter={() => (hovered = true)}
   on:mouseleave={() => {
     if (!popoverVisible) hovered = false

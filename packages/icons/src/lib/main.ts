@@ -71,6 +71,7 @@ import Hash from './Icons/Hash.svelte'
 import History from './Icons/History.svelte'
 import Filter from './Icons/Filter.svelte'
 import ListAdd from './Icons/ListAdd.svelte'
+import Moon from './Icons/Moon.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -146,7 +147,8 @@ export const icons = {
   hash: Hash,
   history: History,
   filter: Filter,
-  'list-add': ListAdd
+  'list-add': ListAdd,
+  moon: Moon
 }
 
 export type Icons = keyof typeof icons
@@ -223,5 +225,6 @@ export {
   Hash,
   History,
   Filter,
-  ListAdd
+  ListAdd,
+  Moon
 }
