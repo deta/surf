@@ -358,17 +358,32 @@
   }
 
   const createTab = async <T extends Tab>(
-    tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'>
+    tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'>,
+    placeAtEnd = true
   ) => {
+    const activeTabIndex =
+      $unpinnedTabs.find((tab) => tab.id === $activeTabId)?.index ?? $unpinnedTabs.length - 1
+    const nextTabIndex = $unpinnedTabs[activeTabIndex + 1]?.index ?? -1
+
+    // generate index in between active and next tab so that the new tab is placed in between
+    const TAB_INDEX_OFFSET = 0.1
+    const nextIndex =
+      nextTabIndex > 0 ? nextTabIndex - TAB_INDEX_OFFSET : activeTabIndex + TAB_INDEX_OFFSET
+
+    const newIndex = placeAtEnd ? Date.now() : nextIndex
+
+    log.debug('Creating tab', tab, 'at index', newIndex, $unpinnedTabs)
+
     const newTab = await tabsDB.create({
       archived: false,
       pinned: false,
       magic: false,
-      index: Date.now(),
+      index: newIndex,
       ...tab
     })
-    activatedTabs.update((tabs) => [...tabs, newTab.id])
+
     log.debug('Created tab', newTab)
+    activatedTabs.update((tabs) => [...tabs, newTab.id])
     tabs.update((tabs) => [...tabs, newTab])
 
     return newTab
@@ -891,17 +906,35 @@
 
   const debouncedCreateNewEmptyTab = useDebounce(createNewEmptyTab, 100)
 
-  const createPageTab = async (url: string, active = true): Promise<Tab> => {
+  const createPageTab = async (url: string, active = true, placeAtEnd = true): Promise<Tab> => {
     log.debug('Creating new page tab')
-    const newTab = await createTab<TabPage>({
-      title: url,
+    const newTab = await createTab<TabPage>(
+      {
+        title: url,
+        icon: '',
+        type: 'page',
+        initialLocation: url,
+        historyStackIds: [],
+        currentHistoryIndex: -1
+      },
+      placeAtEnd
+    )
+
+    if (active) {
+      makeTabActive(newTab.id)
+    }
+
+    return newTab
+  }
+
+  const createSpaceTab = async (space: Space, active = true) => {
+    log.debug('Creating new space tab')
+    const newTab = await createTab<TabSpace>({
+      title: space.name.folderName,
       icon: '',
-      type: 'page',
-      initialLocation: url,
-      historyStackIds: [],
-      currentHistoryIndex: -1,
-      index: 0,
-      pinned: false
+      spaceId: space.id,
+      type: 'space',
+      colors: space.name.colors
     })
 
     if (active) {
@@ -949,7 +982,7 @@
     const { url, active } = e.detail
 
     if (url) {
-      createPageTab(url, active)
+      createPageTab(url, active, false)
     } else {
       createNewEmptyTab()
     }
@@ -1709,20 +1742,7 @@
         return
       }
 
-      const tab = {
-        title: space.name.folderName,
-        icon: '',
-        spaceId: space.id,
-        type: 'space',
-        colors: space.name.colors,
-        index: 0,
-        pinned: false,
-        archived: false
-      } as TabSpace
-
-      const newTab = await createTab(tab)
-
-      makeTabActive(newTab.id)
+      await createSpaceTab(space, true)
 
       await tick()
     } catch (error) {
@@ -1791,18 +1811,7 @@
       }
 
       if (newSpace) {
-        const tab = await createTab({
-          title: newSpace.name.folderName,
-          icon: '',
-          spaceId: newSpace.id,
-          type: 'space',
-          colors: newSpace.name.colors,
-          index: 0,
-          pinned: false,
-          archived: false
-        } as TabSpace)
-
-        makeTabActive(tab.id)
+        await createSpaceTab(newSpace, true)
       }
 
       toast.success('Space created!')
@@ -1849,18 +1858,7 @@
 
       log.debug('created space', space)
 
-      const tab = await createTab({
-        title: space.name.folderName,
-        icon: '',
-        spaceId: space.id,
-        type: 'space',
-        colors: space.name.colors,
-        index: 0,
-        pinned: false,
-        archived: false
-      } as TabSpace)
-
-      makeTabActive(tab.id)
+      await createSpaceTab(space, true)
 
       toast.success('Live Space created!')
     } catch (e) {
