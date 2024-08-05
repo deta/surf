@@ -16,7 +16,6 @@
   export let tab: Tab
   export let activeTabId: Writable<string>
   export let pinned: boolean
-  export let isAlreadyOpen: boolean = false
   export let showButtons: boolean = true
   export let showExcludeOthersButton: boolean = false
   export let bookmarkingInProgress: boolean
@@ -25,8 +24,8 @@
   export let showClose = false
   export let spaces
   export const inputUrl = writable<string>('')
-  export let tabSize: number
   export let hibernated = false
+  export let tabSize: number | undefined = undefined
   export let horizontalTabs = true
 
   export const editAddress = async () => {
@@ -74,8 +73,10 @@
     }
   }
 
-  const handleClick = () => {
-    if (isAlreadyOpen) return
+  const handleClick = (e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
     dispatch('select', tab.id)
   }
 
@@ -179,10 +180,12 @@
       ? isActive
         ? 'py-1.5 px-2.5 rounded-xl'
         : 'py-1.5 px-1.5 rounded-xl'
-      : 'px-4 py-3 rounded-2xl'} group transform active:scale-95 group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
-  style="width: {tabSize}px; min-width: {isActive && !pinned
-    ? 260
-    : tabSize}px; max-width: {tabSize}px;"
+      : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
+  style={tabSize
+    ? `width: ${tabSize}px; min-width: ${
+        isActive && !pinned ? 260 : tabSize
+      }px; max-width: ${tabSize}px;`
+    : ''}
   on:click={handleClick}
   class:opacity-75={hibernated}
   on:mouseenter={() => (hovered = true)}
@@ -228,7 +231,7 @@
     class:flex-shrink-0={true}
     class:group-hover:hidden={(!isActive &&
       showClose &&
-      ((tabSize > 64 && horizontalTabs) || !horizontalTabs) &&
+      ((tabSize && tabSize > 64 && horizontalTabs) || !horizontalTabs) &&
       !pinned &&
       hovered) ||
       (isActive && showClose && !pinned && hovered)}
@@ -249,11 +252,11 @@
     {/if}
   </div>
 
-  {#if (showClose && ((tabSize > 64 && horizontalTabs) || !horizontalTabs) && hovered) || (isActive && !pinned)}
+  {#if showClose && ((tabSize && tabSize > 64 && horizontalTabs) || !horizontalTabs) && hovered}
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0.5 -m-0.5 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
         use:tooltip2={{
           text: 'Remove from Sidebar (⌘ + W)',
           position: 'right'
@@ -264,11 +267,7 @@
     {:else}
       <button
         on:click|stopPropagation={handleArchive}
-        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
-        use:tooltip2={{
-          text: 'Delete this tab (⌘ + W)',
-          position: 'right'
-        }}
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0.5 -m-0.5 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
       >
         {#if tab.archived}
           <Icon name="trash" size="16px" />
@@ -278,7 +277,7 @@
       </button>
     {/if}
   {/if}
-  {#if (!tab.pinned || !pinned) && ((horizontalTabs && isActive) || !(horizontalTabs && tabSize < 48))}
+  {#if (!tab.pinned || !pinned) && ((horizontalTabs && isActive) || !(horizontalTabs && tabSize && tabSize < 48))}
     <div class=" relative flex-grow truncate mr-1">
       {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && (hovered || isEditing)}
         <input
@@ -306,7 +305,7 @@
       {/if}
     </div>
 
-    {#if showButtons && !isEditing && hovered && (tabSize > 64 || isActive)}
+    {#if showButtons && !isEditing && hovered && ((tabSize && tabSize > 64) || isActive)}
       <div class="items-center flex justify-end flex-row space-x-2 right-0">
         {#if tab.archived}
           <button
@@ -346,12 +345,9 @@
               on:mouseenter={handlePopoverEnter}
               on:mouseleave={() => setTimeout(() => handlePopoverLeave(), 100)}
               on:click={handleBookmark}
-              use:tooltip={{
-                content: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
-                action: 'hover',
-                position: 'left',
-                animation: 'fade',
-                delay: 500
+              use:tooltip2={{
+                text: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
+                position: 'left'
               }}
               on:save-resource-in-space={handleSaveResourceInSpace}
               on:popover-close={handlePopoverLeave}

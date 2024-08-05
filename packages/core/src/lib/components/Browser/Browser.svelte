@@ -2786,23 +2786,19 @@
               {#if $pinnedTabs.length === 0}
                 <div class="">Drop Tabs here to pin them.</div>
               {:else}
-                {#each $pinnedTabs as tab, index (tab.id)}
-                  {#key $pinnedTabs[index]}
-                    <TabItem
-                      hibernated={!$activatedTabs.includes($pinnedTabs[index].id)}
-                      tab={$pinnedTabs[index]}
-                      horizontalTabs={true}
-                      {activeTabId}
-                      {deleteTab}
-                      {unarchiveTab}
-                      pinned={true}
-                      on:DragEnd={onDragculaTabDragEnd}
-                      on:select={handleTabSelect}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                      on:unarchive-tab={handleUnarchiveTab}
-                      on:delete-tab={handleDeleteTab}
-                    />
-                  {/key}
+                {#each $pinnedTabs as tab, index (tab.id + index)}
+                  <TabItem
+                    hibernated={!$activatedTabs.includes(tab.id)}
+                    {tab}
+                    horizontalTabs={true}
+                    {activeTabId}
+                    pinned={true}
+                    on:DragEnd={onDragculaTabDragEnd}
+                    on:select={handleTabSelect}
+                    on:remove-from-sidebar={handleRemoveFromSidebar}
+                    on:unarchive-tab={handleUnarchiveTab}
+                    on:delete-tab={handleDeleteTab}
+                  />
                 {/each}
               {/if}
             </div>
@@ -2811,7 +2807,7 @@
           {#if $activeTabMagic}
             {#if $activeTabMagic.showSidebar}
               <div
-                class="no-scrollbar relatie overflow-y-scroll max-h-[500px] flex-grow w-full group {horizontalTabs
+                class="no-scrollbar relatie overflow-y-scroll max-h-[700px] flex-grow flex-shrink-0 w-full group {horizontalTabs
                   ? 'max-w-[512px] no-scrollbar'
                   : 'w-full'}"
               >
@@ -2846,24 +2842,22 @@
                             </span>
                           </div>
                         {:else}
-                          {#each $magicTabs as tab, index (tab.id)}
-                            {#key $magicTabs[index]}
-                              <TabItem
-                                hibernated={!$activatedTabs.includes($magicTabs[index].id)}
-                                showClose
-                                tab={$magicTabs[index]}
-                                {activeTabId}
-                                pinned={false}
-                                showButtons={false}
-                                showExcludeOthersButton
-                                on:DragEnd={onDragculaTabDragEnd}
-                                on:delete-tab={handleDeleteTab}
-                                on:unarchive-tab={handleUnarchiveTab}
-                                on:select={handleTabSelect}
-                                on:remove-from-sidebar={handleRemoveFromSidebar}
-                                on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                              />
-                            {/key}
+                          {#each $magicTabs as tab, index (tab.id + index)}
+                            <TabItem
+                              hibernated={!$activatedTabs.includes(tab.id)}
+                              showClose
+                              {tab}
+                              {activeTabId}
+                              pinned={false}
+                              showButtons={false}
+                              showExcludeOthersButton
+                              on:DragEnd={onDragculaTabDragEnd}
+                              on:delete-tab={handleDeleteTab}
+                              on:unarchive-tab={handleUnarchiveTab}
+                              on:select={handleTabSelect}
+                              on:remove-from-sidebar={handleRemoveFromSidebar}
+                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                            />
                           {/each}
                         {/if}
                       </div>
@@ -2899,25 +2893,23 @@
                             <span class="text-xs text-sky-800">General mode, drop tabs here!</span>
                           </div>
                         {:else}
-                          {#each $magicTabs as tab, index (tab.id)}
-                            {#key $magicTabs[index]}
-                              <TabItem
-                                hibernated={!$activatedTabs.includes($magicTabs[index].id)}
-                                showClose
-                                horizontalTabs={false}
-                                tab={$magicTabs[index]}
-                                {activeTabId}
-                                pinned={false}
-                                showButtons={false}
-                                showExcludeOthersButton
-                                on:DragEnd={onDragculaTabDragEnd}
-                                on:unarchive-tab={handleUnarchiveTab}
-                                on:delete-tab={handleDeleteTab}
-                                on:select={handleTabSelect}
-                                on:remove-from-sidebar={handleRemoveFromSidebar}
-                                on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                              />
-                            {/key}
+                          {#each $magicTabs as tab, index (tab.id + index)}
+                            <TabItem
+                              hibernated={!$activatedTabs.includes(tab.id)}
+                              showClose
+                              horizontalTabs={false}
+                              {tab}
+                              {activeTabId}
+                              pinned={false}
+                              showButtons={false}
+                              showExcludeOthersButton
+                              on:DragEnd={onDragculaTabDragEnd}
+                              on:unarchive-tab={handleUnarchiveTab}
+                              on:delete-tab={handleDeleteTab}
+                              on:select={handleTabSelect}
+                              on:remove-from-sidebar={handleRemoveFromSidebar}
+                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                            />
                           {/each}
                         {/if}
                       </div>
@@ -2955,51 +2947,49 @@
                 on:Drop={onDropDragcula}
                 on:DragEnter={onDragculaTabsDragEnter}
               >
-                {#each $unpinnedTabs as tab, index (tab.id)}
-                  {#key $unpinnedTabs[index]}
-                    <!-- check if this tab is active -->
-                    {#if $activeTabId === $unpinnedTabs[index].id}
-                      <TabItem
-                        hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
-                        showClose
-                        tabSize={Math.min(300, Math.max(24, tabSize))}
-                        tab={$unpinnedTabs[index]}
-                        {activeTabId}
-                        bookmarkingInProgress={$bookmarkingInProgress}
-                        bookmarkingSuccess={$bookmarkingSuccess}
-                        pinned={false}
-                        {spaces}
-                        enableEditing
-                        bind:this={activeTabComponent}
-                        on:DragEnd={onDragculaTabDragEnd}
-                        on:select={() => {}}
-                        on:remove-from-sidebar={handleRemoveFromSidebar}
-                        on:drop={handleDrop}
-                        on:delete-tab={handleDeleteTab}
-                        on:input-enter={handleBlur}
-                        on:unarchive-tab={handleUnarchiveTab}
-                        on:bookmark={handleBookmark}
-                        on:create-live-space={handleCreateLiveSpace}
-                        on:save-resource-in-space={handleSaveResourceInSpace}
-                      />
-                    {:else}
-                      <TabItem
-                        showClose
-                        hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
-                        tab={$unpinnedTabs[index]}
-                        tabSize={Math.min(300, Math.max(24, tabSize))}
-                        {activeTabId}
-                        pinned={false}
-                        on:DragEnd={onDragculaTabDragEnd}
-                        on:select={handleTabSelect}
-                        on:remove-from-sidebar={handleRemoveFromSidebar}
-                        on:drop={handleDrop}
-                        on:delete-tab={handleDeleteTab}
-                        on:input-enter={handleBlur}
-                        on:unarchive-tab={handleUnarchiveTab}
-                      />
-                    {/if}
-                  {/key}
+                {#each $unpinnedTabs as tab, index (tab.id + index)}
+                  <!-- check if this tab is active -->
+                  {#if $activeTabId === tab.id}
+                    <TabItem
+                      hibernated={!$activatedTabs.includes(tab.id)}
+                      showClose
+                      tabSize={Math.min(300, Math.max(24, tabSize))}
+                      {tab}
+                      {activeTabId}
+                      bookmarkingInProgress={$bookmarkingInProgress}
+                      bookmarkingSuccess={$bookmarkingSuccess}
+                      pinned={false}
+                      {spaces}
+                      enableEditing
+                      bind:this={activeTabComponent}
+                      on:DragEnd={onDragculaTabDragEnd}
+                      on:select={() => {}}
+                      on:remove-from-sidebar={handleRemoveFromSidebar}
+                      on:drop={handleDrop}
+                      on:delete-tab={handleDeleteTab}
+                      on:input-enter={handleBlur}
+                      on:unarchive-tab={handleUnarchiveTab}
+                      on:bookmark={handleBookmark}
+                      on:create-live-space={handleCreateLiveSpace}
+                      on:save-resource-in-space={handleSaveResourceInSpace}
+                    />
+                  {:else}
+                    <TabItem
+                      showClose
+                      hibernated={!$activatedTabs.includes(tab.id)}
+                      {tab}
+                      tabSize={Math.min(300, Math.max(24, tabSize))}
+                      {activeTabId}
+                      pinned={false}
+                      on:DragEnd={onDragculaTabDragEnd}
+                      on:select={handleTabSelect}
+                      on:remove-from-sidebar={handleRemoveFromSidebar}
+                      on:drop={handleDrop}
+                      on:delete-tab={handleDeleteTab}
+                      on:input-enter={handleBlur}
+                      on:unarchive-tab={handleUnarchiveTab}
+                    />
+                  {/if}
                 {/each}
               </div>
             {:else}
@@ -3013,66 +3003,64 @@
                 on:Drop={onDropDragcula}
                 on:DragEnter={onDragculaTabsDragEnter}
               >
-                {#each $unpinnedTabs as tab, index (tab.id)}
-                  {#key $unpinnedTabs[index]}
-                    <!-- check if this tab is active -->
-                    {#if $activeTabId === $unpinnedTabs[index].id}
-                      <TabItem
-                        hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
-                        showClose
-                        horizontalTabs={false}
-                        tab={$unpinnedTabs[index]}
-                        {activeTabId}
-                        bookmarkingInProgress={$bookmarkingInProgress}
-                        bookmarkingSuccess={$bookmarkingSuccess}
-                        pinned={false}
-                        {spaces}
-                        enableEditing
-                        bind:this={activeTabComponent}
-                        on:DragEnd={onDragculaTabDragEnd}
-                        on:select={() => {}}
-                        on:remove-from-sidebar={handleRemoveFromSidebar}
-                        on:drop={handleDrop}
-                        on:delete-tab={handleDeleteTab}
-                        on:input-enter={handleBlur}
-                        on:unarchive-tab={handleUnarchiveTab}
-                        on:bookmark={handleBookmark}
-                        on:create-live-space={handleCreateLiveSpace}
-                        on:save-resource-in-space={handleSaveResourceInSpace}
-                        on:DragEnter={(e) => {
-                          e.stopPropagation()
-                          const drag = e.detail
-                          if (
-                            drag.data['farc/tab'] !== undefined &&
-                            e.detail.data['farc/tab'].type !== 'space'
-                          ) {
-                            e.preventDefault()
-                          }
-                        }}
-                        on:Drop={(e) => {
+                {#each $unpinnedTabs as tab, index (tab.id + index)}
+                  <!-- check if this tab is active -->
+                  {#if $activeTabId === tab.id}
+                    <TabItem
+                      hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
+                      showClose
+                      horizontalTabs={false}
+                      {tab}
+                      {activeTabId}
+                      bookmarkingInProgress={$bookmarkingInProgress}
+                      bookmarkingSuccess={$bookmarkingSuccess}
+                      pinned={false}
+                      {spaces}
+                      enableEditing
+                      bind:this={activeTabComponent}
+                      on:DragEnd={onDragculaTabDragEnd}
+                      on:select={() => {}}
+                      on:remove-from-sidebar={handleRemoveFromSidebar}
+                      on:drop={handleDrop}
+                      on:delete-tab={handleDeleteTab}
+                      on:input-enter={handleBlur}
+                      on:unarchive-tab={handleUnarchiveTab}
+                      on:bookmark={handleBookmark}
+                      on:create-live-space={handleCreateLiveSpace}
+                      on:save-resource-in-space={handleSaveResourceInSpace}
+                      on:DragEnter={(e) => {
+                        e.stopPropagation()
+                        const drag = e.detail
+                        if (
+                          drag.data['farc/tab'] !== undefined &&
+                          e.detail.data['farc/tab'].type !== 'space'
+                        ) {
                           e.preventDefault()
-                          e.stopPropagation()
-                          console.debug('DROP ON TAB', e.detail)
-                        }}
-                      />
-                    {:else}
-                      <TabItem
-                        hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
-                        showClose
-                        tab={$unpinnedTabs[index]}
-                        horizontalTabs={false}
-                        {activeTabId}
-                        pinned={false}
-                        on:DragEnd={onDragculaTabDragEnd}
-                        on:select={handleTabSelect}
-                        on:remove-from-sidebar={handleRemoveFromSidebar}
-                        on:drop={handleDrop}
-                        on:delete-tab={handleDeleteTab}
-                        on:input-enter={handleBlur}
-                        on:unarchive-tab={handleUnarchiveTab}
-                      />
-                    {/if}
-                  {/key}
+                        }
+                      }}
+                      on:Drop={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        console.debug('DROP ON TAB', e.detail)
+                      }}
+                    />
+                  {:else}
+                    <TabItem
+                      hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
+                      showClose
+                      {tab}
+                      horizontalTabs={false}
+                      {activeTabId}
+                      pinned={false}
+                      on:DragEnd={onDragculaTabDragEnd}
+                      on:select={handleTabSelect}
+                      on:remove-from-sidebar={handleRemoveFromSidebar}
+                      on:drop={handleDrop}
+                      on:delete-tab={handleDeleteTab}
+                      on:input-enter={handleBlur}
+                      on:unarchive-tab={handleUnarchiveTab}
+                    />
+                  {/if}
                 {/each}
               </div>
             {/if}
