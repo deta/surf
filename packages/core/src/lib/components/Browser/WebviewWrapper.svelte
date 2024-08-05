@@ -120,6 +120,7 @@
   */
   export const focus = () => webview?.focus()
   export const reload = () => webview?.reload()
+  export const forceReload = () => webview?.reloadIgnoringCache()
   export const setMute = (isMuted: boolean) => webview?.setAudioMuted(isMuted)
   export const setZoomLevel = (n: number) => webview?.setZoomFactor(n)
   export const openDevTools = () => webview?.openDevTools()

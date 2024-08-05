@@ -75,6 +75,7 @@
   export const goForward = () => webview.goForward()
   export const focus = () => webview.focus()
   export const reload = () => webview.reload()
+  export const forceReload = () => webview.forceReload()
   export const navigate = (url: string) => webview.navigate(url)
   export const openDevTools = () => webview.openDevTools()
   export const detectResource = (timeoutNum?: number) => webview.detectResource(timeoutNum)

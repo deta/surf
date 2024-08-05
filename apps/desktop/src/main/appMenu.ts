@@ -79,7 +79,7 @@ const template = [
     label: 'File',
     submenu: [
       ...(isMac
-        ? [{ role: 'close' }]
+        ? [{ role: 'close', accelerator: 'CmdOrCtrl+Shift+W' }]
         : [
             { label: 'Check for Updates...', click: checkUpdatesMenuClickHandler },
             {
@@ -94,7 +94,21 @@ const template = [
             },
             { type: 'separator' },
             { role: 'quit' }
-          ])
+          ]),
+      { type: 'separator' },
+      {
+        label: 'New Tab',
+        accelerator: 'CmdOrCtrl+T',
+        click: () => ipcSenders.createNewTab()
+      },
+      {
+        label: 'Close Tab',
+        accelerator: 'CmdOrCtrl+W',
+        click: () => {
+          console.log('Close Tab')
+          ipcSenders.closeActiveTab()
+        }
+      }
     ]
   },
   {
@@ -104,16 +118,43 @@ const template = [
       { role: 'copy' },
       { role: 'paste' },
       { role: 'delete' },
+      { role: 'selectAll' },
       { type: 'separator' },
-      { role: 'selectAll' }
+      {
+        label: 'Copy URL',
+        accelerator: 'CmdOrCtrl+Shift+C',
+        click: () => ipcSenders.copyActiveTabURL()
+      }
     ]
   },
   {
     label: 'View',
     submenu: [
-      { role: 'reload', accelerator: 'CmdOrCtrl+Alt+R' },
-      { role: 'forceReload', accelerator: 'CmdOrCtrl+Alt+Shift+R' },
+      { label: 'Reload App', role: 'reload', accelerator: 'CmdOrCtrl+Alt+R' },
+      { label: 'Force Reload App', role: 'forceReload', accelerator: 'CmdOrCtrl+Alt+Shift+R' },
       { role: 'toggleDevTools' },
+      { type: 'separator' },
+      {
+        label: 'Reload Tab',
+        accelerator: 'CmdOrCtrl+R',
+        click: () => ipcSenders.reloadActiveTab()
+      },
+      {
+        label: 'Force Reload Tab',
+        accelerator: 'CmdOrCtrl+Shift+R',
+        click: () => ipcSenders.reloadActiveTab(true)
+      },
+      { type: 'separator' },
+      {
+        label: 'Toggle Sidebar',
+        accelerator: 'CmdOrCtrl+Shift+B',
+        click: () => ipcSenders.toggleSidebar()
+      },
+      {
+        label: 'Toggle Tabs Orientation',
+        accelerator: 'CmdOrCtrl+Shift+Alt+B',
+        click: () => ipcSenders.toggleTabsPosition()
+      },
       { type: 'separator' },
       { role: 'resetZoom' },
       { role: 'zoomIn' },

@@ -232,5 +232,65 @@ export const ipcSenders = {
     }
 
     window.webContents.send('update-prompt', { id, content })
+  },
+
+  toggleSidebar: (visible?: boolean) => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('toggle-sidebar', visible)
+  },
+
+  toggleTabsPosition: (visible?: boolean) => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('toggle-tabs-position', visible)
+  },
+
+  copyActiveTabURL: () => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('copy-active-tab-url')
+  },
+
+  createNewTab: () => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('create-new-tab')
+  },
+
+  closeActiveTab: () => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('close-active-tab')
+  },
+
+  reloadActiveTab: (force = false) => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('reload-active-tab', force)
   }
 }

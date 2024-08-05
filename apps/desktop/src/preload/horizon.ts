@@ -357,7 +357,31 @@ const api = {
     }
   },
 
-  minifyHtml: (html: string, options: any) => minify(html, options)
+  minifyHtml: (html: string, options: any) => minify(html, options),
+
+  onToggleSidebar: (callback: (visible?: boolean) => void) => {
+    ipcRenderer.on('toggle-sidebar', (_, visible) => callback(visible))
+  },
+
+  onToggleTabsPosition: (callback: () => void) => {
+    ipcRenderer.on('toggle-tabs-position', (_) => callback())
+  },
+
+  onCopyActiveTabURL: (callback: () => void) => {
+    ipcRenderer.on('copy-active-tab-url', (_) => callback())
+  },
+
+  onCreateNewTab: (callback: () => void) => {
+    ipcRenderer.on('create-new-tab', (_) => callback())
+  },
+
+  onCloseActiveTab: (callback: () => void) => {
+    ipcRenderer.on('close-active-tab', (_) => callback())
+  },
+
+  onReloadActiveTab: (callback: (force: boolean) => void) => {
+    ipcRenderer.on('reload-active-tab', (_, force) => callback(force))
+  }
 }
 
 ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {

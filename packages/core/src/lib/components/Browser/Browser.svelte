@@ -768,13 +768,17 @@
     window.api.updateTrafficLightsVisibility(visible)
   }
 
-  const handleSidebarchange = () => {
-    if (showLeftSidebar) {
-      handleCollapse()
-      showLeftSidebar = false
+  const handleSidebarchange = (value?: boolean) => {
+    if (value !== undefined) {
+      showLeftSidebar = value
     } else {
+      showLeftSidebar = !showLeftSidebar
+    }
+
+    if (showLeftSidebar) {
       handleExpand()
-      showLeftSidebar = true
+    } else {
+      handleCollapse()
     }
   }
 
@@ -785,26 +789,15 @@
     } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       activeTabComponent?.blur()
-    } else if (isModKeyPressed(e) && e.shiftKey && e.key === 'c') {
-      handleCopyLocation()
-    } else if (isModKeyPressed(e) && e.key === 't') {
-      debouncedCreateNewEmptyTab()
+      // Note: even though the electron menu handles the shortcut this is still needed here
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       closeActiveTab()
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark()
-    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'b')) {
-      // horizontalTabs = !horizontalTabs
-      debounceToggleHorizontalTabs()
-      log.debug('horizontalTabs', horizontalTabs)
-    } else if (isModKeyAndKeyPressed(e, 'b')) {
-      handleSidebarchange()
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       // this creates a new electron window
-    } else if (isModKeyAndKeyPressed(e, 'r')) {
-      $activeBrowserTab?.reload()
     } else if (e.ctrlKey && e.key === 'Tab') {
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
@@ -1927,6 +1920,40 @@
     // @ts-expect-error
     window.api.onResetPrompt((id: PromptIDs) => {
       return resetPrompt(id)
+    })
+
+    // @ts-expect-error
+    window.api.onToggleSidebar((visible?: boolean) => {
+      handleSidebarchange(visible)
+    })
+
+    // @ts-expect-error
+    window.api.onToggleTabsPosition(() => {
+      handleToggleHorizontalTabs()
+    })
+
+    // @ts-expect-error
+    window.api.onCopyActiveTabURL(() => {
+      handleCopyLocation()
+    })
+
+    // @ts-expect-error
+    window.api.onCreateNewTab(() => {
+      createNewEmptyTab()
+    })
+
+    // @ts-expect-error
+    window.api.onCloseActiveTab(() => {
+      closeActiveTab()
+    })
+
+    // @ts-expect-error
+    window.api.onReloadActiveTab((force: boolean) => {
+      if (force) {
+        $activeBrowserTab?.forceReload()
+      } else {
+        $activeBrowserTab?.reload()
+      }
     })
 
     // truncate filename if it's too long but make sure the extension is preserved
