@@ -10,6 +10,7 @@
 
   export let id: string
   export let selected: boolean = false
+  export let showSource: boolean = false
 
   const log = useLogScope('OasisSpaceItem')
   const resourceManager = useResourceManager()
@@ -52,6 +53,7 @@
       <ResourcePreviewClean
         {resource}
         {selected}
+        {showSource}
         showSummary
         on:load
         on:click

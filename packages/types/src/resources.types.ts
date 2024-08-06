@@ -35,11 +35,11 @@ export enum ResourceTagsBuiltInKeys {
   CANONICAL_URL = 'canonicalUrl',
   ANNOTATES = 'annotates',
   HASHTAG = 'hashtag',
-  SPACE_SOURCE = 'spaceSource',
-  VIEWED_BY_USER = 'viewedByUser',
-  SILENT = 'silent',
-  HIDE_IN_EVERYTHING = 'hideInEverything',
-  SOURCE_PUBLISHED_AT = 'sourcePublishedAt'
+  SPACE_SOURCE = 'spaceSource', // resource was added to the space from a external source like RSS
+  VIEWED_BY_USER = 'viewedByUser', // resource was viewed by the user
+  SILENT = 'silent', // resource was saved silently in the background and not by the user
+  HIDE_IN_EVERYTHING = 'hideInEverything', // resource should not be shown in the Oasis Everything view
+  SOURCE_PUBLISHED_AT = 'sourcePublishedAt' // timestamp of when the resource was published by the source (e.g. tweet timestamp)
 }
 
 export interface ResourceTagsBuiltIn {

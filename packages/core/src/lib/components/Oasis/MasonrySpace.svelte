@@ -7,6 +7,7 @@
   export let renderContents: Item[] | string[] = []
   export let id: Date
   export let items: Item[] = []
+  export let showResourceSource: boolean = false
 
   let prevItemLength = 0
   let gridItems: Item[] = []
@@ -379,7 +380,15 @@
       style="left: {item.style.left}; top: {item.style.top}; height: {item.style.height};"
     >
       <div class="item-details" bind:this={item.dom}>
-        <OasisResourceLoader id={item.id} on:click on:open on:remove on:load on:new-tab />
+        <OasisResourceLoader
+          id={item.id}
+          showSource={showResourceSource}
+          on:click
+          on:open
+          on:remove
+          on:load
+          on:new-tab
+        />
       </div>
     </div>
   {/each}

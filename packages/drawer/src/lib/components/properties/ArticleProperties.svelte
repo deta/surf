@@ -58,7 +58,15 @@
     {:else}
       <div class="title">{title}</div>
       {#if !hideURL}
-        <div class="subtitle">{generateRootDomain(article?.url)}</div>
+        <div class="source">
+          <img
+            class="favicon"
+            src={`https://www.google.com/s2/favicons?domain=${article?.url}&sz=48`}
+            alt={`favicon`}
+            loading="lazy"
+          />
+          <div class="subtitle">{generateRootDomain(article?.url)}</div>
+        </div>
       {/if}
     {/if}
   </div>
@@ -81,7 +89,7 @@
   .details {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.5rem;
     flex-grow: 1;
   }
 
@@ -103,11 +111,27 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  .source {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .favicon {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 5.1px;
+    box-shadow:
+      0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
+      0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
+  }
+
   .subtitle {
     font-size: 1rem;
     line-height: 1.4;
     letter-spacing: 0.02rem;
-    font-weight: 400;
+    font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

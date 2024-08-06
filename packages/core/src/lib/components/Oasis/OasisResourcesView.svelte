@@ -6,6 +6,7 @@
 
   export let resourceIds: Readable<string[]>
   export let selected: string | null = null
+  export let showResourceSource: boolean = false
 
   const log = useLogScope('OasisResourcesView')
   // const dispatch = createEventDispatcher<{ click: string }>()
@@ -37,6 +38,7 @@
     {#key scrollElement}
       <Masonry
         renderContents={$renderContents}
+        {showResourceSource}
         on:load-more={handleLoadChunk}
         on:open
         on:remove

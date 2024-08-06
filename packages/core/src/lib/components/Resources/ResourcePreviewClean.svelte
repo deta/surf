@@ -43,6 +43,9 @@
   import HistoryEntryPreview from '../Cards/Link/HistoryEntryPreview.svelte'
   import { getHumanDistanceToNow } from '../../utils/time'
   import { isModKeyPressed } from '../../utils/keyboard'
+  import { hover } from '../../utils/directives'
+  import { writable } from 'svelte/store'
+  import { slide } from 'svelte/transition'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -50,6 +53,7 @@
   export let showSummary: boolean = false
   export let showTitles: boolean = true
   export let interactive: boolean = true
+  export let showSource: boolean = false
 
   const resourceManager = useResourceManager()
 
@@ -60,6 +64,8 @@
     open: string
     'new-tab': { url: string; active: boolean }
   }>()
+
+  const isHovered = writable(false)
 
   // TODO: figure out better way to do this
   $: textResource = resource as ResourceNote
@@ -77,6 +83,8 @@
   $: isLiveSpaceResource = !!resource.tags?.find(
     (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
   )
+
+  $: isSilent = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.SILENT)
 
   let data: ResourceData | null = null
   const handleData = (e: CustomEvent<ResourceData>) => {
@@ -150,7 +158,8 @@
   on:click={handleClick}
   class="resource-preview"
   class:isSelected={selected}
-  class:background={isLiveSpaceResource && showSummary && resource.metadata?.userContext}
+  class:background={(isLiveSpaceResource && showSummary && resource.metadata?.userContext) ||
+    showSource}
   style="--id:{resource.id};"
   on:dragstart={handleDragStart}
   draggable="true"
@@ -215,6 +224,33 @@
       <FilePreview {resource} on:load={handleLoad} />
       <!-- {:else}
       <div class="text-base">Unknown</div> -->
+    {/if}
+
+    {#if showSource}
+      <div class="resource-source" use:hover={isHovered}>
+        {#if isSilent}
+          <Icon name="history" size="16px" />
+          {#if $isHovered}
+            <div class="whitespace-nowrap ml-2 leading-4" transition:slide={{ axis: 'x' }}>
+              Auto Saved
+            </div>
+          {/if}
+        {:else if isLiveSpaceResource}
+          <Icon name="rss" size="16px" />
+          {#if $isHovered}
+            <div class="whitespace-nowrap ml-2 leading-4" transition:slide={{ axis: 'x' }}>
+              Live Space
+            </div>
+          {/if}
+        {:else}
+          <Icon name="leave" size="16px" />
+          {#if $isHovered}
+            <div class="whitespace-nowrap ml-2 leading-4" transition:slide={{ axis: 'x' }}>
+              Saved by You
+            </div>
+          {/if}
+        {/if}
+      </div>
     {/if}
   </div>
   {#if showTitles}
@@ -388,6 +424,7 @@
       0px 0px 1px 0px rgba(0, 0, 0, 0.25);
     background: rgba(255, 255, 255, 0.75);
     transition: 60ms ease-out;
+    position: relative;
     &:hover {
       outline: 3px solid rgba(0, 0, 0, 0.15);
     }
@@ -502,7 +539,28 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.9rem;
-    color: #666;
+    color: rgb(12 74 110/0.9);
+  }
+
+  .resource-source {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
+    box-shadow: 0px 0.425px 0px 0px rgba(65, 58, 86, 0.25);
+    padding: 0.4rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgb(12 74 110/0.9);
+
+    &.hover {
+      background: rgba(255, 255, 255);
+      color: rgb(12 74 110);
+    }
   }
 
   .favicon {

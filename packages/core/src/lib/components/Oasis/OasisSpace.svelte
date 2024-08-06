@@ -135,6 +135,8 @@
     }
   }
 
+  $: isSearching = $searchValue !== ''
+
   const loadSpaceContents = async (id: string, skipSources = false) => {
     try {
       loadingContents.set(true)
@@ -588,6 +590,7 @@
 
     const result = await resourceManager.searchResources(value, [
       ResourceManager.SearchTagDeleted(false),
+      ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
       ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
     ])
 
@@ -1064,6 +1067,7 @@
       <OasisResourcesView
         resourceIds={spaceResourceIds}
         selected={$selectedItem}
+        showResourceSource={isSearching}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:remove={handleResourceRemove}
