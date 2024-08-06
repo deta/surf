@@ -35,7 +35,7 @@ export function setupContextMenu(options: contextMenu.Options = {}) {
       },
       defaultActions.separator(),
       {
-        label: 'Open in New Card',
+        label: 'Open in New Tab',
         visible: parameters.linkURL.length > 0 && parameters.mediaType === 'none',
         click: () => {
           const mainWindow = getMainWindow()
