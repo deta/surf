@@ -89,17 +89,20 @@ impl EmbeddingsStore {
         Ok(())
     }
 
-    pub fn filtered_search<F>(
+    pub fn filtered_search(
         &self,
         embedding: &[f32],
         num_docs: usize,
-        filter: F,
-    ) -> BackendResult<Vec<u64>>
-    where
-        F: Fn(u64) -> bool,
-    {
-        let results = self.index.filtered_search(embedding, num_docs, filter)?;
-        Ok(results.keys)
+        filter_keys: &Vec<u64>,
+    ) -> BackendResult<Vec<u64>> {
+        let unfiltered_results = self.index.search(embedding, num_docs)?;
+        let mut result_keys = vec![];
+        for key in unfiltered_results.keys.iter() {
+            if filter_keys.contains(key) {
+                result_keys.push(*key);
+            }
+        }
+        Ok(result_keys)
     }
 
     pub fn search(&self, embedding: &[f32], num_docs: usize) -> BackendResult<Vec<u64>> {

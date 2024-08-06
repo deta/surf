@@ -101,8 +101,7 @@ impl LocalAIServer {
                 Message::FilteredSearch(sender, query, num_docs, filter_ids) => {
                     Self::try_send(
                         sender,
-                        embeddings_store
-                            .filtered_search(&query, num_docs, |key| filter_ids.contains(&key)),
+                        embeddings_store.filtered_search(&query, num_docs, &filter_ids),
                     );
                 }
                 Message::GetDocsSimilarity(sender, query, docs, threshold, num_docs) => {

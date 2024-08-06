@@ -99,6 +99,8 @@ pub fn handle_filtered_search(
     client_message: &str,
 ) -> BackendResult<()> {
     let request = serde_json::from_str::<FilteredSearchRequest>(&client_message)?;
+    dbg!(&request.query);
+    dbg!(&request.num_docs);
     let query_embedding = embedding_model.encode_single(&request.query)?;
     let (response_tx, response_rx) = std::sync::mpsc::channel();
 
@@ -118,7 +120,6 @@ pub fn handle_filtered_search(
         Err(e) => return Err(e),
     };
     let search_results: Vec<i64> = search_results.iter().map(|id| *id as i64).collect();
-    dbg!(&search_results);
     let search_results = serde_json::to_vec(&search_results)?;
     try_stream_write_all_bytes(&mut stream, &search_results);
     send_done(stream);
