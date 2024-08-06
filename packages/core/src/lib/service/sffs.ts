@@ -767,9 +767,9 @@ export class SFFS {
     await this.backend.js__store_remove_ai_chat(id)
   }
 
-  async getAIChat(id: string, apiEndpoint?: string): Promise<AIChat | null> {
+  async getAIChat(id: string): Promise<AIChat | null> {
     this.log.debug('getting ai chat with id', id)
-    const raw = await this.backend.js__store_get_ai_chat(id, apiEndpoint)
+    const raw = await this.backend.js__store_get_ai_chat(id)
 
     return this.parseData<AIChat>(raw)
   }
@@ -794,12 +794,12 @@ export class SFFS {
       id: '',
       all_chunk_ids: [],
       render_id: '',
+      uid: dataChunkSource.id,
       content: dataChunkSource.content,
-      hash: dataChunkSource.metadata?.hash,
-      resource_id: dataChunkSource.metadata?.resource_id,
+      resource_id: dataChunkSource.resource_id,
       metadata: {
-        timestamp: dataChunkSource.metadata?.timestamp,
-        url: dataChunkSource.metadata?.url
+        timestamp: dataChunkSource.metadata.timestamp,
+        url: dataChunkSource.metadata.url
       }
     }
     return source
@@ -829,8 +829,6 @@ export class SFFS {
     callback: (chunk: string) => void,
     opts?: {
       limit?: number
-      systemPrompt?: string
-      apiEndpoint?: string
       ragOnly?: boolean
       resourceIds?: string[]
       general?: boolean
@@ -843,10 +841,6 @@ export class SFFS {
       query,
       'limit:',
       opts?.limit,
-      'system prompt:',
-      opts?.systemPrompt,
-      'api endpoint:',
-      opts?.apiEndpoint,
       'resource ids filter:',
       opts?.resourceIds
     )
@@ -855,9 +849,7 @@ export class SFFS {
       chatId,
       callback,
       opts?.limit ?? 20,
-      opts?.systemPrompt ?? '',
       opts?.ragOnly ?? false,
-      opts?.apiEndpoint ?? '',
       opts?.resourceIds,
       opts?.general ?? false
     )

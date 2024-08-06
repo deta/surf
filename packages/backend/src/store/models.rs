@@ -1,8 +1,13 @@
+use rusqlite::types::FromSql;
+use rusqlite::ToSql;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use std::str::FromStr;
 use std::string::ToString;
+use strum_macros::EnumString;
+
+use super::db::CompositeResource;
 
 pub fn default_horizon_tint() -> String {
     "hsl(275, 40%, 80%)".to_owned()
@@ -33,7 +38,139 @@ fn get_hostname_from_uri(uri: &str) -> Option<String> {
 pub trait EmbeddableContent {
     fn get_resource_id(&self) -> String;
     fn get_embeddable_content(&self) -> Vec<String>;
-    fn get_embedding_type(&self) -> String;
+    fn get_embedding_type(&self) -> EmbeddingType;
+}
+
+#[derive(Debug, PartialEq, EnumString, Clone)]
+#[strum(serialize_all = "snake_case")]
+pub enum EmbeddingType {
+    Metadata,
+    TextContent,
+}
+
+impl ToString for EmbeddingType {
+    fn to_string(&self) -> String {
+        match self {
+            EmbeddingType::Metadata => "metadata".to_string(),
+            EmbeddingType::TextContent => "text_content".to_string(),
+        }
+    }
+}
+
+impl ToSql for EmbeddingType {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput> {
+        Ok(rusqlite::types::ToSqlOutput::from(self.to_string()))
+    }
+}
+
+impl FromSql for EmbeddingType {
+    fn column_result(value: rusqlite::types::ValueRef) -> rusqlite::types::FromSqlResult<Self> {
+        let s = String::column_result(value)?;
+        EmbeddingType::from_str(&s).map_err(|_| rusqlite::types::FromSqlError::InvalidType)
+    }
+}
+
+#[derive(strum_macros::Display, Debug, PartialEq, EnumString, Serialize, Deserialize, Clone)]
+pub enum ResourceTextContentType {
+    #[strum(serialize = "note")]
+    Note,
+    #[strum(serialize = "pdf")]
+    PDF,
+    #[strum(serialize = "post")]
+    Post,
+    #[strum(serialize = "chat_message")]
+    ChatMessage,
+    #[strum(serialize = "document")]
+    Document,
+    #[strum(serialize = "article")]
+    Article,
+    #[strum(serialize = "link")]
+    Link,
+    #[strum(serialize = "chat_thread")]
+    ChatThread,
+    #[strum(serialize = "annotation")]
+    Annotation,
+    #[strum(serialize = "image")]
+    Image,
+    #[strum(serialize = "image_tags")]
+    ImageTags,
+    #[strum(serialize = "image_captions")]
+    ImageCaptions,
+    #[strum(serialize = "youtube_transcript")]
+    YoutubeTranscript,
+}
+
+impl ResourceTextContentType {
+    pub fn from_resource_type(resource_type: &str) -> Option<ResourceTextContentType> {
+        let content_type = resource_type.to_lowercase();
+        match content_type {
+            content_type
+                if content_type.starts_with("application/vnd.space.document.space-note") =>
+            {
+                Some(ResourceTextContentType::Note)
+            }
+            content_type if content_type.starts_with("application/pdf") => {
+                Some(ResourceTextContentType::PDF)
+            }
+            content_type if content_type.starts_with("image/") => {
+                Some(ResourceTextContentType::Image)
+            }
+            content_type if content_type.starts_with("application/vnd.space.post") => {
+                Some(ResourceTextContentType::Post)
+            }
+            content_type if content_type.starts_with("application/vnd.space.chat-message") => {
+                Some(ResourceTextContentType::ChatMessage)
+            }
+            content_type if content_type.starts_with("application/vnd.space.document") => {
+                Some(ResourceTextContentType::Document)
+            }
+            content_type if content_type.starts_with("application/vnd.space.article") => {
+                Some(ResourceTextContentType::Article)
+            }
+            content_type if content_type.starts_with("application/vnd.space.link") => {
+                Some(ResourceTextContentType::Link)
+            }
+            content_type if content_type.starts_with("application/vnd.space.chat-thread") => {
+                Some(ResourceTextContentType::ChatThread)
+            }
+            content_type if content_type.starts_with("application/vnd.space.annotation") => {
+                Some(ResourceTextContentType::Annotation)
+            }
+            _ => None,
+        }
+    }
+
+    pub fn should_store_embeddings(&self) -> bool {
+        match self {
+            ResourceTextContentType::Note => true,
+            ResourceTextContentType::PDF => true,
+            ResourceTextContentType::Post => true,
+            ResourceTextContentType::ChatMessage => true,
+            ResourceTextContentType::Document => true,
+            ResourceTextContentType::Article => true,
+            ResourceTextContentType::Link => false,
+            ResourceTextContentType::ChatThread => true,
+            ResourceTextContentType::Annotation => true,
+            ResourceTextContentType::Image => true,
+            ResourceTextContentType::ImageTags => true,
+            ResourceTextContentType::ImageCaptions => true,
+            ResourceTextContentType::YoutubeTranscript => true,
+        }
+    }
+}
+
+impl ToSql for ResourceTextContentType {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput> {
+        Ok(rusqlite::types::ToSqlOutput::from(self.to_string()))
+    }
+}
+
+impl FromSql for ResourceTextContentType {
+    fn column_result(value: rusqlite::types::ValueRef) -> rusqlite::types::FromSqlResult<Self> {
+        let s = String::column_result(value)?;
+        ResourceTextContentType::from_str(&s)
+            .map_err(|_| rusqlite::types::FromSqlError::InvalidType)
+    }
 }
 
 // TODO: use strum
@@ -275,8 +412,8 @@ impl EmbeddableContent for ResourceMetadata {
     }
 
     // TODO: use an enum for this
-    fn get_embedding_type(&self) -> String {
-        "metadata".to_string()
+    fn get_embedding_type(&self) -> EmbeddingType {
+        EmbeddingType::Metadata
     }
 
     fn get_resource_id(&self) -> String {
@@ -302,11 +439,41 @@ impl ResourceMetadata {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ResourceTextContentMetadata {
+    pub timestamp: Option<f32>,
+    pub url: Option<String>,
+}
+
+impl ToSql for ResourceTextContentMetadata {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput> {
+        let json = serde_json::to_string(self).unwrap();
+        Ok(rusqlite::types::ToSqlOutput::from(json))
+    }
+}
+
+impl FromSql for ResourceTextContentMetadata {
+    fn column_result(value: rusqlite::types::ValueRef) -> rusqlite::types::FromSqlResult<Self> {
+        let json = String::column_result(value)?;
+        serde_json::from_str(&json).map_err(|_| rusqlite::types::FromSqlError::InvalidType)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LegacyResourceTextContent {
+    #[serde(default = "random_uuid")]
+    pub id: String,
+    pub resource_id: String,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceTextContent {
     #[serde(default = "random_uuid")]
     pub id: String,
     pub resource_id: String,
     pub content: String,
+    pub content_type: ResourceTextContentType,
+    pub metadata: ResourceTextContentMetadata,
 }
 
 impl EmbeddableContent for ResourceTextContent {
@@ -314,9 +481,8 @@ impl EmbeddableContent for ResourceTextContent {
         vec![self.content.clone()]
     }
 
-    // TODO: use an enum for this
-    fn get_embedding_type(&self) -> String {
-        "text_content".to_string()
+    fn get_embedding_type(&self) -> EmbeddingType {
+        EmbeddingType::TextContent
     }
 
     fn get_resource_id(&self) -> String {
@@ -365,8 +531,9 @@ pub struct HistoryEntry {
 #[derive(Debug)]
 pub struct EmbeddingResource {
     pub rowid: Option<i64>, // the rowid will be the same as the embedding rowid
+    pub content_id: i64,
     pub resource_id: String,
-    pub embedding_type: String,
+    pub embedding_type: EmbeddingType,
 }
 
 #[derive(Debug)]
@@ -404,6 +571,92 @@ impl Embedding {
 pub struct AIChatSession {
     pub id: String,
     pub system_prompt: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AIChatSessionMessageSourceMetadata {
+    pub timestamp: Option<f32>,
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AIChatSessionMessageSource {
+    pub id: String,
+    pub uid: String,
+    pub resource_id: String,
+    pub metadata: Option<AIChatSessionMessageSourceMetadata>,
+}
+
+impl AIChatSessionMessageSource {
+    pub fn from_resource_index(
+        resource: &CompositeResource,
+        index: usize,
+    ) -> Option<AIChatSessionMessageSource> {
+        if resource.text_content.is_none() || resource.metadata.is_none() {
+            return None;
+        }
+        let metadata = resource.metadata.as_ref().unwrap();
+        let text_content = resource.text_content.as_ref().unwrap();
+        let timestamp = match text_content.metadata.timestamp {
+            Some(ts) => Some(ts),
+            None => None,
+        };
+
+        Some(AIChatSessionMessageSource {
+            id: index.to_string(),
+            uid: text_content.id.clone(),
+            resource_id: resource.resource.id.clone(),
+            metadata: Some(AIChatSessionMessageSourceMetadata {
+                timestamp,
+                url: Some(metadata.source_uri.clone()),
+            }),
+        })
+    }
+
+    pub fn to_xml(&self) -> String {
+        let mut timestamp = String::new();
+        let mut url = String::new();
+        match &self.metadata {
+            Some(metadata) => {
+                if let Some(ts) = metadata.timestamp {
+                    timestamp = ts.to_string();
+                }
+                if let Some(u) = &metadata.url {
+                    url = u.to_string();
+                }
+            }
+            None => {}
+        }
+        format!(
+            "
+<source>
+    <id>{}</id>
+    <uid>{}</uid>
+    <resource_id>{}</resource_id>
+    <metadata>
+        <timestamp>{}</timestamp>
+        <url>{}</url>
+    </metadata>
+</source>\n",
+            self.id, self.uid, self.resource_id, timestamp, url
+        )
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AIChatSessionMessage {
+    pub ai_session_id: String,
+    pub role: String,
+    pub content: String,
+    pub sources: Option<Vec<AIChatSessionMessageSource>>,
+    #[serde(default = "current_time")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AIChatHistory {
+    pub id: String,
+    pub messages: Vec<AIChatSessionMessage>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

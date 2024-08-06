@@ -27,7 +27,7 @@
 
   const dispatch = createEventDispatcher<{
     highlightText: { tabId: string; text: string }
-    highlightWebviewText: { resourceId: string; answerText: string; sourceHash?: string }
+    highlightWebviewText: { resourceId: string; answerText: string; sourceUid?: string }
     seekToTimestamp: { resourceId: string; timestamp: number }
     clearChat: {}
     navigate: { url: string }
@@ -65,7 +65,7 @@
     sourceId: string,
     answerText: string,
     message: AIChatMessageParsed,
-    sourceHash?: string
+    sourceUid?: string
   ) => {
     log.debug('Citation clicked', sourceId, message)
     const source = (message.sources ?? []).find((s) => s.id === sourceId)
@@ -87,7 +87,7 @@
         dispatch('highlightWebviewText', {
           resourceId: resource.id,
           answerText: answerText,
-          sourceHash: sourceHash
+          sourceUid: sourceUid
         })
       }
     }
@@ -202,12 +202,7 @@
             content={response.content}
             sources={populateRenderAndChunkIds(response.sources)}
             on:citationClick={(e) =>
-              handleCitationClick(
-                e.detail.citationID,
-                e.detail.text,
-                response,
-                e.detail.sourceHash
-              )}
+              handleCitationClick(e.detail.citationID, e.detail.text, response, e.detail.sourceUid)}
             showSourcesAtEnd={true}
           />
         </div>

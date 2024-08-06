@@ -146,7 +146,7 @@
     dispatch('navigate', { url, active: active })
   }
 
-  async function sendChatMessage(query: string, apiEndpoint?: string) {
+  async function sendChatMessage(query: string) {
     const message = {
       id: generateID(),
       role: 'system',
@@ -198,7 +198,7 @@
           })
         }
       },
-      { limit: confirmedSearchSourceLimit, apiEndpoint, resourceIds, ragOnly: tab.ragOnly }
+      { limit: confirmedSearchSourceLimit, resourceIds, ragOnly: tab.ragOnly }
     )
 
     log.debug('response is done', response, content)
@@ -227,11 +227,11 @@
 
     chat = { id: chatId, messages: [] }
 
-    sendChatMessage(query, apiEndpoint)
+    sendChatMessage(query)
   }
 
-  async function loadExistingChat(chatId: string, apiEndpoint?: string) {
-    const storedChat = await sffs.getAIChat(chatId, apiEndpoint)
+  async function loadExistingChat(chatId: string) {
+    const storedChat = await sffs.getAIChat(chatId)
     if (!storedChat) {
       log.error('Chat not found', chatId)
       return
@@ -245,7 +245,7 @@
       .map((message) => message.content)
 
     $messages = chat.messages
-      .filter((message) => message.role === 'system')
+      .filter((message) => message.role === 'assistant')
       .map((message, idx) => {
         log.debug('Message', message)
         // const parsed = parseChatResponseContent(message.content)
@@ -320,9 +320,7 @@
 
   const handleSendMessage = () => {
     if (!followUpValue) return
-
-    const apiEndpoint: string = get(oasisAPIEndpoint)
-    sendChatMessage(followUpValue, apiEndpoint)
+    sendChatMessage(followUpValue)
     followUpValue = ''
   }
 
@@ -334,7 +332,7 @@
       createNewChat()
     } else {
       log.debug('Loading existing chat', chatId)
-      loadExistingChat(chatId, tab.apiEndpoint)
+      loadExistingChat(chatId)
     }
 
     // Observer to check if the header should be visible

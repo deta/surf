@@ -1199,9 +1199,9 @@
   const highlightWebviewText = async (
     resourceId: string,
     answerText: string,
-    sourceHash?: string
+    sourceUid?: string
   ) => {
-    log.info('highlighting text', resourceId, answerText, sourceHash)
+    log.info('highlighting text', resourceId, answerText, sourceUid)
     for (const tab of getTabsInChatContext()) {
       const t = tab as TabPage
       if (t.resourceBookmark === resourceId) {
@@ -1212,8 +1212,8 @@
         }
         makeTabActive(t.id)
         if (answerText === '') {
-          if (sourceHash) {
-            const source = await sffs.getAIChatDataSource(sourceHash)
+          if (sourceUid) {
+            const source = await sffs.getAIChatDataSource(sourceUid)
             if (source) {
               answerText = source.content
             } else {
@@ -1249,8 +1249,9 @@
         }
         const texts = []
         for (const docSimilarity of docsSimilarity) {
-          if (docSimilarity.doc.includes(' ')) {
-            texts.push(docSimilarity.doc)
+          const doc = textElements[docSimilarity.index]
+          if (doc && doc.includes(' ')) {
+            texts.push(doc)
           }
         }
         browserTab.sendWebviewEvent(WebViewEventReceiveNames.HighlightText, {
@@ -1372,7 +1373,6 @@
           }
         },
         {
-          limit: 30,
           resourceIds: resourceIds,
           general: resourceIds.length === 0
         }
@@ -1420,7 +1420,7 @@
 
   const handleChatSubmit = async (magicPage: PageMagic) => {
     const savedInputValue = $magicInputValue
-
+    console.log('chat id', $activeChatId)
     try {
       $magicInputValue = ''
       log.debug('Magic button clicked')
@@ -1478,6 +1478,7 @@
       await deleteChatsForPageChat()
       if (createNewChat) {
         const newChatId = await sffs.createAIChat('')
+        console.log('new chat id', newChatId)
         if (!newChatId) {
           log.error('Failed to create new chat aftering clearing the old one')
           return
@@ -2118,8 +2119,6 @@
     log.debug('tabs', $tabs)
 
     setupObserver()
-
-    // ON DESTROY!!
   })
 
   const turnMagicTabsIntoUnpinned = async () => {

@@ -10,9 +10,11 @@
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
     },
-    "@horizon/ppx-backend#dev": {
-      "cache": false,
-      "dependsOn": []
+    "@horizon/backend-server#build": {
+      "outputs": ["backend-server"]
+    },
+    "@horizon/backend-server#dev": {
+      "outputs": ["backend-server"]
     },
     "desktop#build:mwl": {
       "dependsOn": ["^build"],
@@ -55,7 +57,13 @@
       "outputLogs": "new-only"
     },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build",
+        "@horizon/tela#build",
+        "@horizon/backend#build",
+        "@horizon/backend-server#build",
+        "@horizon/cmdk-sv#build"
+      ],
       "outputs": [".dist/**"]
     },
     "lint": {
@@ -66,6 +74,7 @@
         "@horizon/dragcula#build",
         "@horizon/tela#build",
         "@horizon/backend#dev",
+        "@horizon/backend-server#build",
         "@horizon/cmdk-sv#build"
       ],
       "outputs": [".dist/**", ".out/**"]
@@ -75,6 +84,7 @@
         "@horizon/dragcula#build",
         "@horizon/tela#build",
         "@horizon/backend#dev",
+        "@horizon/backend-server#build",
         "@horizon/cmdk-sv#build"
       ],
       "cache": false,

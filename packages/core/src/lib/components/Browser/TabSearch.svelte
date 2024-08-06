@@ -184,7 +184,7 @@
     return {
       id: tab.id,
       label: tab.title,
-      value: tab.type === 'page' ? tab.currentLocation ?? tab.initialLocation : '',
+      value: tab.type === 'page' ? (tab.currentLocation ?? tab.initialLocation) : '',
       ...(tab.type === 'page'
         ? { iconUrl: tab.icon }
         : tab.type === 'space'

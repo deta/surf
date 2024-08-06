@@ -1,48 +1,92 @@
-use super::{message::*, tunnel::WorkerTunnel};
-use crate::{store::db::CompositeResource, BackendError, BackendResult};
+// TODO: new functions, handle errors properly
 
+use super::{message::*, tunnel::WorkerTunnel};
+use crate::{
+    embeddings::chunking::ContentChunker,
+    store::{
+        db::CompositeResource,
+        models::{ResourceTextContentMetadata, ResourceTextContentType},
+    },
+    BackendError, BackendResult,
+};
+
+use ocrs::{ImageSource, OcrEngine, OcrEngineParams};
+use rten::Model;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 pub fn processor_thread_entry_point(tunnel: WorkerTunnel, app_path: String) {
+    let ocr_engine = create_ocr_engine(&app_path).expect("failed to create the OCR engine");
+
     while let Ok(message) = tunnel.tqueue_rx.recv() {
         match message {
             ProcessorMessage::ProcessResource(resource) => {
-                let _ = handle_process_resource(&tunnel, resource, &app_path)
+                let _ = handle_process_resource(&tunnel, resource, &ocr_engine)
                     .map_err(|e| eprintln!("error while processing resource: {e:?}"));
             }
         }
     }
 }
 
+fn create_ocr_engine(app_path: &str) -> Result<OcrEngine, Box<dyn std::error::Error>> {
+    let ocrs_folder = std::env::var("SURF_OCRS_FOLDER").unwrap_or(
+        std::path::Path::new(app_path)
+            .join("resources")
+            .join("ocrs")
+            .as_os_str()
+            .to_string_lossy()
+            .to_string(),
+    );
+    let ocrs_folder = std::path::PathBuf::from(ocrs_folder);
+
+    let det_model_path = ocrs_folder.join("text-detection.rten");
+    let detection_model = Model::load_file(det_model_path)?;
+
+    let rec_model_path = ocrs_folder.join("text-recognition.rten");
+    let recognition_model = Model::load_file(rec_model_path)?;
+
+    OcrEngine::new(OcrEngineParams {
+        recognition_model: Some(recognition_model),
+        detection_model: Some(detection_model),
+        ..Default::default()
+    })
+    .map_err(|e| e.into())
+}
+
 fn handle_process_resource(
     tunnel: &WorkerTunnel,
     resource: CompositeResource,
-    app_path: &str,
+    ocr_engine: &OcrEngine,
 ) -> BackendResult<()> {
-    let mut tessdata_folder = Some(
-        std::path::Path::new(app_path)
-            .join("resources")
-            .join("tessdata"),
-    );
-    tessdata_folder = tessdata_folder.filter(|path| path.exists());
-
     if !needs_processing(&resource.resource.resource_type) {
         return Ok(());
     }
 
     let resource_data = match resource.resource.resource_type.as_str() {
         t if t.starts_with("image/") || t == "application/pdf" => "".to_owned(),
+        "application/vnd.space.post.youtube" => {
+            return process_youtube_video_data(&tunnel, &resource);
+        }
         _ => std::fs::read_to_string(&resource.resource.resource_path)?,
     };
-    let output = process_resource_data(&resource, &resource_data, &tessdata_folder);
+    let output = process_resource_data(&resource, &resource_data, ocr_engine);
 
-    if let Some(output) = output {
+    let metadata = match &resource.metadata {
+        Some(metadata) => ResourceTextContentMetadata {
+            timestamp: None,
+            url: Some(metadata.source_uri.clone()),
+        },
+        None => ResourceTextContentMetadata {
+            timestamp: None,
+            url: None,
+        },
+    };
+    if let Some((content_type, content)) = output {
         tunnel.worker_send_rust(
             WorkerMessage::ResourceMessage(ResourceMessage::UpsertResourceTextContent {
                 resource_id: resource.resource.id,
-                resource_type: resource.resource.resource_type,
-                content: output,
+                content,
+                content_type,
+                metadata,
             }),
             None,
         );
@@ -60,26 +104,91 @@ fn needs_processing(resource_type: &str) -> bool {
     }
 }
 
+pub fn get_youtube_contents_metadatas(
+    source_uri: &str,
+) -> BackendResult<(Vec<String>, Vec<ResourceTextContentMetadata>)> {
+    let runtime = tokio::runtime::Runtime::new()?;
+    let transcripts = runtime
+        .block_on(ytranscript::YoutubeTranscript::fetch_transcript(
+            source_uri, None,
+        ))
+        .map_err(|e| BackendError::GenericError(e.to_string()))?;
+    let mut contents: Vec<String> = vec![];
+    let mut metadatas: Vec<ResourceTextContentMetadata> = vec![];
+    let mut prev_offset = 0.0;
+    let mut transcript_chunk = String::new();
+    // min 20 second chunks
+    for (i, transcript) in transcripts.iter().enumerate() {
+        transcript_chunk.push_str(&format!(" {}", transcript.text));
+        if transcript.offset - prev_offset > 20.0 || i == transcripts.len() - 1 {
+            contents.push(ContentChunker::normalize(&transcript_chunk));
+            metadatas.push(ResourceTextContentMetadata {
+                timestamp: Some(prev_offset.clone() as f32),
+                url: Some(source_uri.to_string()),
+            });
+            prev_offset = transcript.offset;
+            transcript_chunk = String::new();
+        }
+    }
+    Ok((contents, metadatas))
+}
+
+// TODO: how to get semantically meaningful chunks of text from youtube videos?
+fn process_youtube_video_data(
+    tunnel: &WorkerTunnel,
+    resource: &CompositeResource,
+) -> BackendResult<()> {
+    if let Some(metadata) = &resource.metadata {
+        let (contents, metadatas) = get_youtube_contents_metadatas(&metadata.source_uri)?;
+        tunnel.worker_send_rust(
+            WorkerMessage::ResourceMessage(ResourceMessage::BatchUpsertResourceTextContent {
+                resource_id: resource.resource.id.clone(),
+                content_type: ResourceTextContentType::YoutubeTranscript,
+                content: contents,
+                metadata: metadatas,
+            }),
+            None,
+        );
+    }
+    Ok(())
+}
+
 fn process_resource_data(
     resource: &CompositeResource,
     resource_data: &str,
-    tessdata_folder: &Option<std::path::PathBuf>,
-) -> Option<String> {
-    match resource.resource.resource_type.as_str() {
-        // TODO: mb we should have this use the same format as the post resources?
-        "application/vnd.space.document.space-note" => Some(normalize_html_data(resource_data)),
+    ocr_engine: &OcrEngine,
+) -> Option<(ResourceTextContentType, String)> {
+    let resource_text_content_type =
+        ResourceTextContentType::from_resource_type(&resource.resource.resource_type)?;
 
-        "application/pdf" => extract_text_from_pdf(&resource.resource.resource_path)
-            .map_err(|e| eprintln!("extracting text from pdf: {e:#?}"))
-            .ok(),
-        resource_type if resource_type.starts_with("image/") => {
-            extract_text_from_image(&resource.resource.resource_path, tessdata_folder)
-                .map_err(|e| eprintln!("extracting text from image: {e:#?}"))
-                .ok()
+    match resource_text_content_type {
+        // TODO: mb we should have this use the same format as the post resources?
+        ResourceTextContentType::Note => Some((
+            resource_text_content_type,
+            normalize_html_data(resource_data),
+        )),
+
+        ResourceTextContentType::PDF => {
+            match extract_text_from_pdf(&resource.resource.resource_path) {
+                Ok(text) => Some((resource_text_content_type, text)),
+                Err(e) => {
+                    eprintln!("extracting text from pdf: {e:#?}");
+                    None
+                }
+            }
+        }
+        ResourceTextContentType::Image => {
+            match extract_text_from_image(&resource.resource.resource_path, ocr_engine) {
+                Ok(text) => Some((resource_text_content_type, text)),
+                Err(e) => {
+                    eprintln!("extracting text from image: {e:#?}");
+                    None
+                }
+            }
         }
 
-        resource_type if resource_type.starts_with("application/vnd.space.post") => {
-            serde_json::from_str::<PostData>(resource_data)
+        ResourceTextContentType::Post => {
+            match serde_json::from_str::<PostData>(resource_data)
                 .map_err(|e| eprintln!("deserializing post data: {e:#?}"))
                 .ok()
                 .map(|post_data| {
@@ -91,10 +200,13 @@ fn process_resource_data(
                         post_data.author.unwrap_or_default(),
                         post_data.site_name.unwrap_or_default()
                     )
-                })
+                }) {
+                Some(text) => Some((resource_text_content_type, text)),
+                None => None,
+            }
         }
-        resource_type if resource_type.starts_with("application/vnd.space.chat-message") => {
-            serde_json::from_str::<ChatMessageData>(resource_data)
+        ResourceTextContentType::ChatMessage => {
+            match serde_json::from_str::<ChatMessageData>(resource_data)
                 .map_err(|e| eprintln!("deserializing chat message data: {e:#?}"))
                 .ok()
                 .map(|message_data| {
@@ -104,10 +216,13 @@ fn process_resource_data(
                         message_data.content_plain.unwrap_or_default(),
                         message_data.platform_name.unwrap_or_default()
                     )
-                })
+                }) {
+                Some(text) => Some((resource_text_content_type, text)),
+                None => None,
+            }
         }
-        resource_type if resource_type.starts_with("application/vnd.space.document") => {
-            serde_json::from_str::<DocumentData>(resource_data)
+        ResourceTextContentType::Document => {
+            match serde_json::from_str::<DocumentData>(resource_data)
                 .map_err(|e| eprintln!("deserializing document data: {e:#?}"))
                 .ok()
                 .map(|document_data| {
@@ -117,25 +232,29 @@ fn process_resource_data(
                         document_data.content_plain.unwrap_or_default(),
                         document_data.editor_name.unwrap_or_default()
                     )
-                })
+                }) {
+                Some(text) => Some((resource_text_content_type, text)),
+                None => None,
+            }
         }
-        resource_type if resource_type.starts_with("application/vnd.space.article") => {
-            serde_json::from_str::<ArticleData>(resource_data)
-                .map_err(|e| eprintln!("deserializing article data: {e:#?}"))
+        ResourceTextContentType::Article => {
+            match serde_json::from_str::<ArticleData>(resource_data)
+                .map_err(|e| eprintln!("deserializing article data: {e:#?}, {resource_data}"))
                 .ok()
                 .map(|article_data| {
                     format!(
-                        "{} {} {} {} {}",
+                        "{} {} {}",
                         article_data.title.unwrap_or_default(),
                         article_data.excerpt.unwrap_or_default(),
                         article_data.content_plain.unwrap_or_default(),
-                        article_data.author.unwrap_or_default(),
-                        article_data.site_name.unwrap_or_default()
                     )
-                })
+                }) {
+                Some(text) => Some((resource_text_content_type, text)),
+                None => None,
+            }
         }
-        resource_type if resource_type.starts_with("application/vnd.space.link") => {
-            serde_json::from_str::<LinkData>(resource_data)
+        ResourceTextContentType::Link => {
+            match serde_json::from_str::<LinkData>(resource_data)
                 .map_err(|e| eprintln!("deserializing link data: {e:#?}"))
                 .ok()
                 .map(|link_data| {
@@ -145,10 +264,13 @@ fn process_resource_data(
                         link_data.description.unwrap_or_default(),
                         link_data.url.unwrap_or_default()
                     )
-                })
+                }) {
+                Some(text) => Some((resource_text_content_type, text)),
+                None => None,
+            }
         }
-        resource_type if resource_type.starts_with("application/vnd.space.chat-thread") => {
-            serde_json::from_str::<ChatThreadData>(resource_data)
+        ResourceTextContentType::ChatThread => {
+            match serde_json::from_str::<ChatThreadData>(resource_data)
                 .map_err(|e| eprintln!("deserializing chat thread data: {e:#?}"))
                 .ok()
                 .map(|thread_data| {
@@ -164,15 +286,20 @@ fn process_resource_data(
                         thread_data.title.unwrap_or_default(),
                         messages_content
                     )
-                })
+                }) {
+                Some(text) => Some((resource_text_content_type, text)),
+                None => None,
+            }
         }
-        resource_type if resource_type.starts_with("application/vnd.space.annotation") => {
-            serde_json::from_str::<ResourceDataAnnotation>(resource_data)
+        ResourceTextContentType::Annotation => {
+            match serde_json::from_str::<ResourceDataAnnotation>(resource_data)
                 .map_err(|e| eprintln!("deserializing annotation data: {e:#?}"))
                 .ok()
                 .map(|annotation_data| {
                     let content = match &annotation_data.data {
-                        AnnotationData::Comment(comment_data) => Some(comment_data.content_plain.clone()),
+                        AnnotationData::Comment(comment_data) => {
+                            Some(comment_data.content_plain.clone())
+                        }
                         _ => None,
                     };
 
@@ -189,7 +316,10 @@ fn process_resource_data(
                         content_plain.unwrap_or_default(),
                         content.unwrap_or_default()
                     )
-                })
+                }) {
+                Some(text) => Some((resource_text_content_type, text)),
+                None => None,
+            }
         }
         _ => None,
     }
@@ -216,19 +346,18 @@ fn normalize_html_data(data: &str) -> String {
 
 fn extract_text_from_image(
     image_path: &str,
-    tessdata_folder: &Option<std::path::PathBuf>,
-) -> BackendResult<String> {
-    let mut lt = leptess::LepTess::new(
-        tessdata_folder.as_ref().map(|path| path.to_str()).flatten(),
-        "eng",
-    )
-    .map_err(|e| BackendError::GenericError(e.to_string()))?;
-    lt.set_image(image_path)
-        .map_err(|e| BackendError::GenericError(e.to_string()))?;
-    let text = lt
-        .get_utf8_text()
-        .map_err(|e| BackendError::GenericError(e.to_string()))?;
-    Ok(text.trim().to_owned())
+    engine: &OcrEngine,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let img = image::ImageReader::open(image_path)?
+        .with_guessed_format()?
+        .decode()
+        .map(|image| image.into_rgb8())?;
+    let img_source = ImageSource::from_bytes(img.as_raw(), img.dimensions())?;
+
+    let ocr_input = engine.prepare_input(img_source)?;
+    let ocr_text = engine.get_text(&ocr_input)?;
+
+    Ok(ocr_text.trim().to_owned())
 }
 
 fn extract_text_from_pdf(pdf_path: &str) -> BackendResult<String> {
@@ -332,11 +461,11 @@ struct ArticleData {
     date_updated: Option<String>,
     direction: Option<String>,
     excerpt: Option<String>,
-    images: Vec<String>,
+    //images: Vec<String>,
     lang: Option<String>,
     site_icon: Option<String>,
     site_name: Option<String>,
-    stats: Option<HashMap<String, Option<i32>>>,
+    //stats: Option<HashMap<String, Option<i32>>>,
     title: Option<String>,
     url: Option<String>,
     word_count: Option<i32>,

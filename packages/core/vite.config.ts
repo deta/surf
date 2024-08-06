@@ -1,11 +1,11 @@
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
-import { plugin as Markdown } from 'vite-plugin-markdown'
+import { plugin as Markdown, Mode } from 'vite-plugin-markdown'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [Markdown(), svelte()],
+  plugins: [Markdown({ mode: [Mode.MARKDOWN] }), svelte()],
   build: {
     lib: {
       // Could also be a dictionary or array of multiple entry points

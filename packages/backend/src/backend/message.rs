@@ -16,11 +16,7 @@ pub enum ProcessorMessage {
 }
 
 pub enum AIMessage {
-    GenerateMetadataEmbeddings(ResourceMetadata),
-    GenerateTextContentEmbeddings(ResourceTextContent, String),
     DescribeImage(CompositeResource),
-    GenerateWebpageEmbeddings(ResourceMetadata),
-    GenerateYoutubeVideoEmbeddings(ResourceMetadata),
 }
 
 pub enum WorkerMessage {
@@ -94,10 +90,6 @@ pub enum ResourceMessage {
         resource_tags: Option<Vec<ResourceTag>>,
         resource_metadata: Option<ResourceMetadata>,
     },
-    CreateResourceTextContent {
-        resource_id: String,
-        content: String,
-    },
     GetResource(String, bool),
     RemoveResource(String),
     RecoverResource(String),
@@ -120,18 +112,15 @@ pub enum ResourceMessage {
     UpdateResourceMetadata(ResourceMetadata),
     UpsertResourceTextContent {
         resource_id: String,
-        resource_type: String,
         content: String,
+        content_type: ResourceTextContentType,
+        metadata: ResourceTextContentMetadata,
     },
-    InsertEmbeddings {
+    BatchUpsertResourceTextContent {
         resource_id: String,
-        embedding_type: String,
-        embeddings: Vec<Vec<f32>>,
-    },
-    UpsertEmbeddings {
-        resource_id: String,
-        embedding_type: String,
-        embeddings: Vec<Vec<f32>>,
+        content_type: ResourceTextContentType,
+        content: Vec<String>,
+        metadata: Vec<ResourceTextContentMetadata>,
     },
     // ---
     PostProcessJob(String),
@@ -156,12 +145,10 @@ pub enum UserdataMessage {
 pub enum MiscMessage {
     ChatQuery {
         callback: Root<JsFunction>,
-        model: String,
         number_documents: i32,
         query: String,
         session_id: String,
         rag_only: bool,
-        api_endpoint: Option<String>,
         resource_ids: Option<Vec<String>>,
         general: bool,
     },
@@ -172,7 +159,7 @@ pub enum MiscMessage {
     },
     Print(String),
     CreateAIChatMessage(String),
-    GetAIChatMessage(String, Option<String>),
+    GetAIChatMessage(String),
     DeleteAIChatMessage(String),
     QuerySFFSResources(String),
     GetAIChatDataSource(String),
@@ -182,4 +169,5 @@ pub enum MiscMessage {
         threshold: Option<f32>,
     },
     GetYoutubeTranscript(String),
+    RunMigration,
 }

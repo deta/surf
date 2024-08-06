@@ -8,8 +8,9 @@ use crate::{
     store::{
         db::{CompositeResource, Database, SearchResult, SearchResultSimple},
         models::{
-            current_time, random_uuid, Embedding, EmbeddingResource, InternalResourceTagNames,
-            Resource, ResourceMetadata, ResourceTag, ResourceTagFilter, ResourceTextContent,
+            current_time, random_uuid, EmbeddingResource, EmbeddingType, InternalResourceTagNames,
+            Resource, ResourceMetadata, ResourceTag, ResourceTagFilter,
+            ResourceTextContentMetadata, ResourceTextContentType,
         },
     },
     BackendError, BackendResult,
@@ -57,6 +58,9 @@ impl Worker {
                 })?;
 
             // generate metadata embeddings in separate AI thread
+            // TODO: how to separate metadata embeddings from text content rag relevant embeddings
+
+            /*
             self.aiqueue_tx
                 // TODO: not clone?
                 .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
@@ -77,6 +81,7 @@ impl Worker {
                 }
                 _ => (),
             }
+            */
         }
 
         if let Some(tags) = &mut tags {
@@ -155,11 +160,11 @@ impl Worker {
         }))
     }
 
+    // TODO: how to handle filtering embedding resources on deletion
     pub fn remove_resource(&mut self, id: String) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::update_resource_deleted_tx(&mut tx, &id, 1)?;
         Database::update_resource_tag_by_name_tx(&mut tx, &ResourceTag::new_deleted(&id, true))?;
-        self.ai.remove_data_source_by_resource_id(&id)?;
         tx.commit()?;
         Ok(())
     }
@@ -199,7 +204,7 @@ impl Worker {
     // Only return resource ids
     pub fn list_resources_by_tags(
         &mut self,
-        tags: Vec<ResourceTagFilter>
+        tags: Vec<ResourceTagFilter>,
     ) -> BackendResult<SearchResultSimple> {
         self.db.list_resources_by_tags(tags)
     }
@@ -339,11 +344,12 @@ impl Worker {
     }
 
     pub fn update_resource_metadata(&mut self, metadata: ResourceMetadata) -> BackendResult<()> {
+        /*
         self.aiqueue_tx
             // TODO: not clone?
             .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
-
+        */
         self.db.update_resource_metadata(&metadata)
     }
 
@@ -362,7 +368,11 @@ impl Worker {
         Ok(())
     }
 
-    pub fn delete_resource_tag_by_name(&mut self, resource_id: String, tag_name: String) -> BackendResult<()> {
+    pub fn delete_resource_tag_by_name(
+        &mut self,
+        resource_id: String,
+        tag_name: String,
+    ) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::remove_resource_tag_by_tag_name_tx(&mut tx, &resource_id, &tag_name)?;
         tx.commit()?;
@@ -376,93 +386,141 @@ impl Worker {
         Ok(())
     }
 
-    pub fn create_resource_text_content(
-        &mut self,
-        resource_id: String,
-        content: String,
-    ) -> BackendResult<()> {
-        let mut tx = self.db.begin()?;
-        Database::create_resource_text_content_tx(
-            &mut tx,
-            &ResourceTextContent {
-                id: random_uuid(),
-                resource_id,
-                content,
-            },
-        )?;
-        tx.commit()?;
-        Ok(())
-    }
-
     pub fn upsert_resource_text_content(
         &mut self,
         resource_id: String,
-        resource_type: String,
         content: String,
+        content_type: ResourceTextContentType,
+        metadata: ResourceTextContentMetadata,
     ) -> BackendResult<()> {
+        let chunks = self.ai.chunker.chunk(&content);
+        let old_keys = self
+            .db
+            .list_embedding_ids_by_type_resource_id(EmbeddingType::TextContent, &resource_id)?;
+
         let mut tx = self.db.begin()?;
-        Database::upsert_resource_text_content(&mut tx, &resource_id, &content)?;
+
+        let metadatas = std::iter::repeat(metadata.clone())
+            .take(chunks.len())
+            .collect::<Vec<_>>();
+
+        let content_ids = Database::upsert_resource_text_content(
+            &mut tx,
+            &resource_id,
+            &content_type,
+            &chunks,
+            &metadatas,
+        )?;
         tx.commit()?;
 
-        self.aiqueue_tx
-            .send(AIMessage::GenerateTextContentEmbeddings(
-                ResourceTextContent {
-                    id: "".to_string(), // TODO: don't like this empty string behavior
-                    resource_id,
-                    content,
-                },
-                resource_type,
-            ))
-            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+        if content_type.should_store_embeddings() {
+            self.upsert_embeddings(
+                resource_id,
+                EmbeddingType::TextContent,
+                old_keys,
+                content_ids,
+                chunks,
+            )?;
+        }
         Ok(())
     }
 
-    pub fn insert_embeddings(
+    pub fn batch_upsert_resource_text_content(
         &mut self,
-        resource_id: &String,
-        embedding_type: &String,
-        embeddings: &Vec<Vec<f32>>,
+        resource_id: String,
+        content_type: ResourceTextContentType,
+        content: Vec<String>,
+        metadata: Vec<ResourceTextContentMetadata>,
     ) -> BackendResult<()> {
+        if content.len() != metadata.len() {
+            return Err(BackendError::GenericError(
+                "content and metadata must have the same length".to_owned(),
+            ));
+        }
+        let mut chunks: Vec<String> = vec![];
+        let mut metadatas: Vec<ResourceTextContentMetadata> = vec![];
+
+        for (c, m) in content.iter().zip(metadata.iter()) {
+            let embedding_chunks = self.ai.chunker.chunk(&c);
+            // same metadata for each chunk
+            metadatas.extend(std::iter::repeat(m.clone()).take(embedding_chunks.len()));
+            chunks.extend(embedding_chunks);
+        }
+        let old_keys = self
+            .db
+            .list_embedding_ids_by_type_resource_id(EmbeddingType::TextContent, &resource_id)?;
+
         let mut tx = self.db.begin()?;
-        embeddings.iter().try_for_each(|v| -> BackendResult<()> {
-            let rowid = Database::create_embedding_resource_tx(
-                &mut tx,
-                &EmbeddingResource {
-                    rowid: None,
-                    resource_id: resource_id.clone(),
-                    embedding_type: embedding_type.clone(),
-                },
-            )?;
-            let em = Embedding::new_with_rowid(rowid, v);
-            Database::create_embedding_tx(&mut tx, &em)?;
-            Ok(())
-        })?;
+        let content_ids = Database::upsert_resource_text_content(
+            &mut tx,
+            &resource_id,
+            &content_type,
+            &chunks,
+            &metadatas,
+        )?;
         tx.commit()?;
-        Ok(())
+
+        // TODO: no embeddings for image tags and captions for now
+        match content_type {
+            ResourceTextContentType::ImageTags | ResourceTextContentType::ImageCaptions => {
+                return Ok(());
+            }
+            _ => (),
+        }
+
+        Ok(self.upsert_embeddings(
+            resource_id,
+            EmbeddingType::TextContent,
+            old_keys,
+            content_ids,
+            chunks,
+        )?)
     }
 
     pub fn upsert_embeddings(
         &mut self,
-        resource_id: &String,
-        embedding_type: &String,
-        embeddings: &Vec<Vec<f32>>,
+        resource_id: String,
+        embedding_type: EmbeddingType,
+        old_keys: Vec<i64>,
+        content_ids: Vec<i64>,
+        chunks: Vec<String>,
     ) -> BackendResult<()> {
+        if content_ids.len() != chunks.len() {
+            return Err(BackendError::GenericError(
+                "content_ids and chunks must have the same length".to_owned(),
+            ));
+        }
+        println!("upserting embedding");
+
         let mut tx = self.db.begin()?;
-        Database::remove_embedding_resource_by_type_tx(&mut tx, resource_id, embedding_type)?;
-        embeddings.iter().try_for_each(|v| -> BackendResult<()> {
+
+        for key in old_keys.iter() {
+            Database::remove_embedding_resource_by_row_id_tx(&mut tx, key)?;
+        }
+        let mut new_row_ids = vec![];
+
+        for (_, content_id) in content_ids.iter().enumerate() {
             let rowid = Database::create_embedding_resource_tx(
                 &mut tx,
                 &EmbeddingResource {
                     rowid: None,
                     resource_id: resource_id.clone(),
+                    content_id: *content_id,
                     embedding_type: embedding_type.clone(),
                 },
             )?;
-            let em = Embedding::new_with_rowid(rowid, v);
-            Database::create_embedding_tx(&mut tx, &em)?;
-            Ok(())
-        })?;
+            new_row_ids.push(rowid);
+        }
+        match self.ai.upsert_embeddings(old_keys, new_row_ids, chunks) {
+            Ok(_) => {}
+            Err(e) => {
+                tx.rollback()?;
+                eprintln!("failed to upsert embeddings: {:#?}", e);
+                return Err(e);
+            }
+        }
         tx.commit()?;
+        println!("added embeddings");
         Ok(())
     }
 }
@@ -480,9 +538,14 @@ pub fn handle_resource_tag_message(
         ResourceTagMessage::RemoveResourceTag(tag_id) => {
             send_worker_response(channel, oneshot, worker.delete_resource_tag_by_id(tag_id))
         }
-        ResourceTagMessage::RemoveResourceTagByName { resource_id, tag_name } => {
-            send_worker_response(channel, oneshot, worker.delete_resource_tag_by_name(resource_id, tag_name))
-        }
+        ResourceTagMessage::RemoveResourceTagByName {
+            resource_id,
+            tag_name,
+        } => send_worker_response(
+            channel,
+            oneshot,
+            worker.delete_resource_tag_by_name(resource_id, tag_name),
+        ),
         ResourceTagMessage::UpdateResourceTag(tag) => {
             send_worker_response(channel, oneshot, worker.update_resource_tag_by_name(tag))
         }
@@ -504,14 +567,6 @@ pub fn handle_resource_message(
             channel,
             oneshot,
             worker.create_resource(resource_type, resource_tags, resource_metadata),
-        ),
-        ResourceMessage::CreateResourceTextContent {
-            resource_id,
-            content,
-        } => send_worker_response(
-            channel,
-            oneshot,
-            worker.create_resource_text_content(resource_id, content),
         ),
         ResourceMessage::GetResource(id, include_annotations) => send_worker_response(
             channel,
@@ -539,7 +594,7 @@ pub fn handle_resource_message(
         ),
         ResourceMessage::ListResourcesByTags(tags) => {
             send_worker_response(channel, oneshot, worker.list_resources_by_tags(tags))
-        },
+        }
         ResourceMessage::SearchResources {
             query,
             resource_tag_filters,
@@ -571,30 +626,23 @@ pub fn handle_resource_message(
         }
         ResourceMessage::UpsertResourceTextContent {
             resource_id,
-            resource_type,
             content,
+            content_type,
+            metadata,
         } => send_worker_response(
             channel,
             oneshot,
-            worker.upsert_resource_text_content(resource_id, resource_type, content),
+            worker.upsert_resource_text_content(resource_id, content, content_type, metadata),
         ),
-        ResourceMessage::InsertEmbeddings {
+        ResourceMessage::BatchUpsertResourceTextContent {
             resource_id,
-            embedding_type,
-            embeddings,
+            content_type,
+            content,
+            metadata,
         } => send_worker_response(
             channel,
             oneshot,
-            worker.insert_embeddings(&resource_id, &embedding_type, &embeddings),
-        ),
-        ResourceMessage::UpsertEmbeddings {
-            resource_id,
-            embedding_type,
-            embeddings,
-        } => send_worker_response(
-            channel,
-            oneshot,
-            worker.upsert_embeddings(&resource_id, &embedding_type, &embeddings),
+            worker.batch_upsert_resource_text_content(resource_id, content_type, content, metadata),
         ),
     }
 }

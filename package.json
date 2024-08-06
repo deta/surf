@@ -2,7 +2,7 @@
   "name": "horizon",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev --filter=desktop --filter=@horizon/ppx-backend",
+    "dev": "turbo run dev --filter=desktop",
     "dev:all": "turbo dev",
     "build": "turbo build",
     "build:packages": "turbo build --filter=!desktop",
@@ -30,7 +30,7 @@
     "postinstall-postinstall": "^2.1.0",
     "prettier": "^3.1.1",
     "prettier-plugin-svelte": "^3.1.2",
-    "turbo": "^2.0.3"
+    "turbo": "2.0.3"
   },
   "engines": {
     "node": ">=18"

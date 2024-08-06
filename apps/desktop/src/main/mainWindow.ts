@@ -6,6 +6,8 @@ import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
 
+const isDev = import.meta.env.DEV
+
 let mainWindow: BrowserWindow | undefined
 
 export function createWindow() {
@@ -72,7 +74,7 @@ export function createWindow() {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [
         `--userDataPath=${app.getPath('userData')}`,
-        `--appPath=${app.getAppPath()}.unpacked`
+        `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`
       ],
       sandbox: false,
       session: session.fromPartition('persist:horizon-session-v0'),

@@ -1,9 +1,20 @@
 use core::fmt;
-use std::time::Duration;
 
+use crate::ai::client::FilteredSearchRequest;
+use crate::embeddings::chunking::ContentChunker;
+use crate::store::db::{CompositeResource, Database};
+use crate::store::models::{AIChatSessionMessage, AIChatSessionMessageSource};
+use crate::{llm, llm::openai::openai};
 use crate::{BackendError, BackendResult};
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
+
+use super::client::{DocsSimilarityRequest, LocalAIClient, UpsertEmbeddingsRequest};
+use super::prompts::{
+    chat_prompt, command_prompt, create_app_prompt, general_chat_prompt, sql_query_generator_prompt, should_narrow_search_prompt 
+};
+
+use std::pin::Pin;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -59,12 +70,6 @@ pub struct ChatMessage {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ChatHistory {
-    pub id: String,
-    pub messages: Vec<ChatMessage>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct SimilarDocsRequest {
     pub query: String,
     pub docs: Vec<String>,
@@ -73,7 +78,7 @@ pub struct SimilarDocsRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DocsSimilarity {
-    pub doc: String, 
+    pub index: u64, 
     pub similarity: f32 
 }
 
@@ -128,21 +133,45 @@ impl fmt::Display for DataSourceType {
     }
 }
 
-#[derive(Debug)]
+// TODO: move embeddings store and embedding model to backend server process
 pub struct AI {
-    api_endpoint: String,
-    client: reqwest::blocking::Client,
-    async_client: reqwest::Client,
+    pub llm: openai::OpenAI, // TODO: use a trait
+    pub chunker: ContentChunker, 
+    local_mode: bool,
+    local_ai_client: LocalAIClient,
+    async_runtime: tokio::runtime::Runtime,
 }
 
 impl AI {
-    pub fn new(api_endpoint: String) -> Self {
-        let client = reqwest::blocking::Client::builder().timeout(Duration::from_secs(300)).build().unwrap();
-        Self {
-            api_endpoint,
-            client,
-            async_client: reqwest::Client::new(),
+    pub fn new(
+        api_key: String, 
+        local_mode: bool,
+        local_ai_socket_path: String
+    ) -> BackendResult<Self> {
+        let local_ai_client = LocalAIClient::new(local_ai_socket_path);
+        Ok(Self {
+            // TODO: not hardcode model
+            llm: openai::OpenAI::new("gpt-4o".to_string(), api_key, None)?,
+            chunker: ContentChunker::new(2000, 1),
+            local_mode,
+            local_ai_client,
+            async_runtime: tokio::runtime::Runtime::new()?,
+        })
+    }
+
+    pub fn toggle_local_mode(&mut self) {
+        self.local_mode = !self.local_mode;
+    }
+
+    pub fn format_chat_history(&self, history: Vec<AIChatSessionMessage>) -> Option<String> {
+        if history.is_empty() {
+            return None;
         }
+        let mut formatted = String::new();
+        for message in history {
+            formatted.push_str(format!("{}: {}\n", message.role, message.content).as_str());
+        }
+        Some(formatted)
     }
 
     pub fn get_docs_similarity(
@@ -150,209 +179,277 @@ impl AI {
         query: String, 
         docs: Vec<String>,
         threshold: Option<f32>,
-    ) -> Result<Vec<DocsSimilarity>, reqwest::Error> {
-        let url = format!("{}/docs_similarity", &self.api_endpoint);
-        let request = SimilarDocsRequest {
+    ) -> BackendResult<Vec<DocsSimilarity>> {
+        let threshold = threshold.unwrap_or(0.5);
+        self.local_ai_client.get_docs_similarity(DocsSimilarityRequest{
             query,
             docs,
             threshold,
-        };
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert(
-            reqwest::header::CONTENT_TYPE,
-            reqwest::header::HeaderValue::from_static("application/json"),
-        );
-        let response = self
-            .client
-            .post(url)
-            .headers(headers)
-            .json(&request)
-            .send()?;
-        match response.error_for_status_ref() {
-            Ok(_) => (),
-            Err(e) => return Err(e),
-        }
-        Ok(response.json::<Vec<DocsSimilarity>>()?)
+            num_docs: 5,
+        })
     }
 
-    pub fn get_chat_history(
-        &self,
-        session_id: String,
-        api_endpoint: Option<String>,
-    ) -> Result<ChatHistory, reqwest::Error> {
-        let mut api_endpoint = api_endpoint.unwrap_or_else(|| self.api_endpoint.clone());
-        if api_endpoint == "" {
-            api_endpoint = self.api_endpoint.clone();
-        }
-        let url = format!("{}/admin/chat_history/{}", &api_endpoint, session_id);
-        let response = self.client.get(url).send()?;
-        let chat_history = response.json::<ChatHistory>()?;
-        Ok(chat_history)
-    }
-
-    pub fn delete_chat_history(&self, session_id: String) -> Result< (), reqwest::Error> {
-        let url = format!("{}/admin/chat_history/{}", &self.api_endpoint, &session_id);
-        let response = self.client.delete(url).send()?;
-        match response.error_for_status_ref() {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e)
-        }
-    }
-
-    pub fn get_resources(
-        &self,
-        query: String,
-        resource_ids: Vec<String>,
-    ) -> BackendResult<Vec<String>> {
-        let url = format!("{}/resources/query", &self.api_endpoint);
-        let req = ResourcesQueryRequest {
-            query,
-            resource_ids,
-        };
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert(
-            reqwest::header::CONTENT_TYPE,
-            reqwest::header::HeaderValue::from_static("application/json"),
-        );
-        let response = self
-            .client
-            .post(url)
-            .headers(headers)
-            .json(&req)
-            .send()?;
-        Ok(response.json()?)
-    }
-
-    pub fn get_data_source(&self, source_hash: &str) -> Result<DataSourceChunk, reqwest::Error> {
-        let url = format!("{}/admin/data_sources/{}", &self.api_endpoint, source_hash);
-        let response = self.client.get(url).send()?;
-        let data_source = response.json::<DataSourceChunk>()?;
-        Ok(data_source)
-    }
-
-    pub fn get_youtube_transcript(&self, video_url: &str) -> Result<YoutubeTranscript, reqwest::Error> {
-        let url = format!("{}/transcripts/youtube?url={}", &self.api_endpoint, video_url);
-        let encoded = url::form_urlencoded::Serializer::new(url).finish();
-        
-        let response = self.client.get(encoded).send()?;
-        match response.error_for_status_ref() {
-            Ok(_) => {
-                Ok(response.json::<YoutubeTranscript>()?)
+    pub fn should_cluster(&self, query: &str) -> BackendResult<bool>{
+        let prompt = should_narrow_search_prompt();
+        let messages = vec![
+            llm::models::Message {
+                role: "system".to_string(),
+                content: prompt,
             },
-            Err(e) => Err(e)
-        }
-    }
-
-    pub fn add_data_source(&self, data_source: &DataSource) -> Result<(), reqwest::Error> {
-        dbg!(data_source);
-        let url = format!("{}/admin/data_sources", &self.api_endpoint);
-
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert(
-            reqwest::header::CONTENT_TYPE,
-            reqwest::header::HeaderValue::from_static("application/json"),
-        );
-        let response = self
-            .client
-            .post(url)
-            .headers(headers)
-            .json(data_source)
-            .send()?;
-        dbg!(&response.text());
-        Ok(())
-    }
-
-    pub fn remove_data_source_by_resource_id(&self, resource_id: &str) -> Result<(), reqwest::Error> {
-        let url = format!("{}/admin/data_sources?resource_id={}", &self.api_endpoint, resource_id);
-        let response = self.client.delete(url).send()?;
-        match response.error_for_status() {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e),
-        }
-    }
-
-    pub async fn chat(
-        &self,
-        query: String,
-        session_id: String,
-        number_documents: i32,
-        model: String,
-        rag_only: bool,
-        api_endpoint: Option<String>,
-        resource_ids: Option<Vec<String>>,
-        general: bool,
-    ) -> BackendResult<impl Stream<Item = BackendResult<Option<String>>>> {
-        let mut api_endpoint = api_endpoint.unwrap_or_else(|| self.api_endpoint.clone());
-        if api_endpoint == "" {
-            api_endpoint = self.api_endpoint.clone();
-        }
-
-        let url = format!("{}/chat", &api_endpoint);
-        let mut query_params = vec![
-            ("rag_only", rag_only.to_string()),
-            ("query", query),
-            ("session_id", session_id),
-            ("number_documents", number_documents.to_string()),
-            ("model", model),
-            ("general", general.to_string()),
+            llm::models::Message {
+                role: "user".to_string(),
+                content: query.to_string(),
+            },
         ];
-        if let Some(resource_ids) = resource_ids {
-            query_params.push(("resource_ids", resource_ids.join(",")))
-        }
-
-        let response = self
-            .async_client
-            .get(url)
-            .query(&query_params)
-            .send()
-            .await?;
-
-        let stream = response.bytes_stream().map(|chunk| match chunk {
-            Ok(bytes) => match String::from_utf8(bytes.to_vec()) {
-                Ok(string) => Ok(Some(string)),
-                Err(e) => Err(BackendError::GenericError(e.to_string())),
-            },
-            Err(e) => Err(BackendError::from(e)),
-        });
-        Ok(stream)
+        // TODO: use local mode
+        Ok(self.llm.create_chat_completion_blocking(messages)?
+            .to_lowercase()
+            .contains("true")
+        )
     }
 
-    pub fn get_sql_query(&self, prompt: String) -> Result<String, reqwest::Error> {
-        let url = format!("{}/sql_query", &self.api_endpoint);
-        let query_params = vec![("query", prompt)];
-        let response = self.client.get(url).query(&query_params).send()?;
-        match response.error_for_status_ref() {
-            Ok(_) => Ok(response.text()?),
-            Err(e) => Err(e),
-        }
+    pub fn upsert_embeddings(
+        &mut self,
+        old_keys: Vec<i64>,
+        new_keys: Vec<i64>,
+        chunks: Vec<String>
+    ) -> BackendResult<()> {
+        self.local_ai_client.upsert_embeddings(UpsertEmbeddingsRequest{
+            old_keys,
+            new_keys,
+            chunks,
+        }) 
     }
     
-    // TODO: accept system prompt as param
-    pub fn create_app(&self, prompt: String, session_id: String, contexts: Option<Vec<String>>) -> Result<String, reqwest::Error> {
-        let url = format!("{}/app", &self.api_endpoint);
-        let request = CreateAppRequest {
-            prompt,
-            session_id,
-            contexts,
-            system_prompt: None,
-        };    
+    // TODO: what behavior if no num_docs and no resource_ids?
+    pub fn vector_search(&self, 
+        contents_store: &Database, 
+        query: String, 
+        // matches all embeddings if None
+        num_docs: usize,
+        resource_ids: Option<Vec<String>>,
+        unique_resources_only: bool,
+    ) -> BackendResult<Vec<CompositeResource>>{
+        dbg!(&query);
+        dbg!(&num_docs);
+        dbg!(&resource_ids);
 
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert(
-            reqwest::header::CONTENT_TYPE,
-            reqwest::header::HeaderValue::from_static("application/json"),
-        );
+        let keys: Vec<i64> = match resource_ids {
+            Some(resource_ids) => contents_store.list_embedding_ids_by_resource_ids(resource_ids)?,
+            None => contents_store.list_non_deleted_embedding_ids()?
+        };
+        let keys: Vec<u64> = keys.iter().map(|id| *id as u64).collect();
+        dbg!(&keys);
 
-        let response = self
-            .client
-            .post(url)
-            .headers(headers)
-            .json(&request)
-            .send()?;
+        let search_results = self.local_ai_client.filtered_search(FilteredSearchRequest{
+            query: query.clone(),
+            num_docs,
+            keys,
+        })?;
+        dbg!(&search_results);
+        let resources = match unique_resources_only{
+            false => contents_store.list_resources_by_embedding_row_ids(search_results)?,
+            true => contents_store.list_unique_resources_only_by_embedding_row_ids(search_results)?,
+        };
+        Ok(resources)
+    }
 
-        match response.error_for_status_ref() {
-            Ok(_) => Ok(response.text()?),
-            Err(e) => Err(e)
+    pub fn get_sources_contexts(&self, resources: Vec<CompositeResource>) -> (Vec<AIChatSessionMessageSource>, String, String) {
+        let mut sources = Vec::new();
+        let mut sources_xml = "<sources>\n".to_string();
+        let mut contexts = String::new();
+        let mut index = 1;
+        for resource in resources {
+            if resource.text_content.is_none() {
+                continue;
+            }
+            let source = AIChatSessionMessageSource::from_resource_index(&resource, index);
+            if source.is_none() {
+                continue;
+            }
+            let content = resource.text_content.unwrap().content;
+            let source = source.unwrap();
+            sources_xml.push_str(&source.to_xml());
+            sources.push(source);
+            contexts.push_str(format!("{}. {}\n", index, content).as_str());
+            index += 1;
         }
+        sources_xml.push_str("</sources>");
+        (sources, sources_xml, contexts)
+    }
+
+    async fn general_chat(&self, query: String, history: Option<String>) -> BackendResult<(String, Pin<Box<dyn Stream<Item = BackendResult<String>>>>)> {
+        let messages = vec![
+            llm::models::Message {
+                role: "system".to_string(),
+                content: general_chat_prompt(history),
+            },
+            llm::models::Message {
+                role: "user".to_string(),
+                content: query,
+            },
+        ];
+        let preamble = "<sources></sources>".to_string();
+        let stream = match self.local_mode {
+            true => self.local_ai_client.create_chat_completion(messages).await?,
+            false => self.llm.create_chat_completion(messages).await?,
+        };
+        Ok((preamble, stream))
+    }
+
+    pub fn encode_sentences(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>>{ 
+        self.local_ai_client.encode_sentences(&sentences)
+    }
+
+    // TODO: history and return sources separately 
+    pub async fn chat(
+        &self,
+        contents_store: &Database,
+        query: String,
+        number_documents: i32,
+        resource_ids: Option<Vec<String>>,
+        general: bool,
+        should_cluster: bool,
+        history: Option<String>,
+    ) -> BackendResult<(Vec<AIChatSessionMessageSource>, String, Pin<Box<dyn Stream<Item = BackendResult<String>>>>)> {
+        if general {
+            let (preamble, stream) = self.general_chat(query, history).await?;     
+            return Ok((Vec::new(), preamble, stream));
+        }
+        
+        if !should_cluster && resource_ids.is_none() {
+            return Err(BackendError::GenericError("Resource IDs must be provided if not clustering".to_string()));
+        }
+        let resource_ids = resource_ids.unwrap_or(Vec::new());
+
+        dbg!(&query);
+        dbg!(should_cluster);
+
+        let rag_results = match should_cluster {
+            true => self.vector_search(
+                contents_store,
+                query.clone(),
+                number_documents as usize,
+                Some(resource_ids),
+                false,
+            )?, 
+            false => contents_store.list_resources_by_ids(resource_ids)?,
+        };
+        dbg!(&rag_results.len());
+        let (sources, sources_xml, contexts) = self.get_sources_contexts(rag_results);
+        dbg!(&sources.len());
+        let messages = vec![
+            llm::models::Message {
+                role: "system".to_string(),
+                content: chat_prompt(contexts, history),
+            },
+            llm::models::Message {
+                role: "user".to_string(),
+                content: query,
+            },
+        ]; 
+        let stream = match self.local_mode {
+            true => self.local_ai_client.create_chat_completion(messages).await?,
+            false => self.llm.create_chat_completion(messages).await?,
+        };
+        Ok((sources, sources_xml, stream))
+    }
+
+    // TODO: migrate
+    pub fn get_sql_query(&self, prompt: String) -> BackendResult<String> {
+        let messages = vec![
+            llm::models::Message {
+                role: "system".to_string(),
+                content: sql_query_generator_prompt()
+            },
+            llm::models::Message {
+                role: "user".to_string(),
+                content: prompt
+            }
+        ];
+        match self.local_mode {
+            true => {
+                let mut result = String::new();
+                self.async_runtime.block_on(async {
+                    let mut stream = self.local_ai_client.create_chat_completion(messages).await?;
+                    while let Some(chunk) = stream.next().await {
+                        match chunk {
+                            Ok(chunk) => {
+                                result.push_str(&chunk);
+                            },
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    Ok(())
+                })?;
+                Ok(result)            
+            },
+            false => {
+                let mut result = String::new();
+                self.async_runtime.block_on(async {
+                    let mut stream = self.llm.create_chat_completion(messages).await?;
+                    while let Some(chunk) = stream.next().await {
+                        match chunk {
+                            Ok(chunk) => {
+                                result.push_str(&chunk);
+                            },
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    Ok(())
+                })?;
+                Ok(result)
+            }
+        }
+    }
+
+    pub fn create_app(&self, prompt: String, _session_id: String, contexts: Option<Vec<String>>) -> BackendResult<String> {
+        // TODO: support multiple contexts 
+        let mut ctx = String::new();
+        if let Some(contexts) = contexts {
+            if contexts.len() > 1 {
+                return Err(BackendError::GenericError("Only one context is supported".to_string()));
+            }
+            ctx = contexts[0].clone();
+        }
+
+        let system_message = match prompt.to_lowercase().starts_with("app:") {
+            true => create_app_prompt(&ctx),
+            false => command_prompt(&ctx),
+        };
+
+        let messages = vec![
+            llm::models::Message {
+                role: "system".to_string(),
+                content: system_message,
+            },
+            llm::models::Message {
+                role: "user".to_string(),
+                content: prompt,
+            },
+        ];
+
+        // TODO: is this the best way to use tokio async runtime?
+        let runtime = tokio::runtime::Runtime::new().map_err(|e| BackendError::GenericError(e.to_string()))?;
+        let mut result = String::new();
+        
+        if self.local_mode {
+            runtime.block_on(async {
+                let mut stream = self.local_ai_client.create_chat_completion(messages).await?;
+                while let Some(chunk) = stream.next().await {
+                    match chunk {
+                        Ok(chunk) => {
+                            result.push_str(&chunk);
+                        },
+                        Err(e) => return Err(e),
+                    }
+                }
+                Ok(())
+            })?;
+        } else {
+            result = self.llm.create_chat_completion_blocking(messages)?;
+        }
+        dbg!(&result);
+        Ok(result)
     }
 }

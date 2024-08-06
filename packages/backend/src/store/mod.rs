@@ -51,7 +51,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         js_proximity_search_resources,
     )?;
     cx.export_function("js__store_search_resources", js_search_resources)?;
-    cx.export_function("js__store_list_resources_by_tags", js_list_resources_by_tags)?;
+    cx.export_function(
+        "js__store_list_resources_by_tags",
+        js_list_resources_by_tags,
+    )?;
     cx.export_function("js__store_resource_post_process", js_resource_post_process)?;
     cx.export_function(
         "js__store_update_resource_metadata",
@@ -488,7 +491,9 @@ fn js_list_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTags(resource_tags.unwrap())),
+        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTags(
+            resource_tags.unwrap(),
+        )),
         deferred,
     );
 
@@ -870,15 +875,10 @@ fn js_remove_ai_chat(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_get_ai_chat(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
     let session_id = cx.argument::<JsString>(1)?.value(&mut cx);
-    let api_endpoint = cx.argument_opt(2).and_then(|arg| {
-        arg.downcast::<JsString, FunctionContext>(&mut cx)
-            .ok()
-            .map(|js_string| js_string.value(&mut cx))
-    });
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::MiscMessage(MiscMessage::GetAIChatMessage(session_id, api_endpoint)),
+        WorkerMessage::MiscMessage(MiscMessage::GetAIChatMessage(session_id)),
         deferred,
     );
     Ok(promise)

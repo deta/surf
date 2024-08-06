@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
+import { spawn, type ChildProcess } from 'child_process'
 import { TelemetryEventTypes } from '@horizon/types'
 
 import { createWindow, getMainWindow } from './mainWindow'
@@ -14,6 +15,9 @@ import { getUserConfig, updateUserConfig } from './config'
 // import { checkIfAppIsActivated } from './activation'
 import { isDefaultBrowser } from './utils'
 
+const isDev = import.meta.env.DEV
+
+let child: ChildProcess
 let isAppLaunched = false
 let appOpenedWithURL: string | null = null
 
@@ -135,6 +139,21 @@ if (!gotTheLock) {
         handleOpenUrl(appOpenedWithURL!)
       }
     })
+
+    const appPath = `${app.getAppPath()}${isDev ? '' : '.unpacked'}`
+    const backendRootPath = join(userDataPath, 'sffs_backend')
+    const backendServerPath = join(appPath, 'resources', 'bin', 'surf-backend')
+    child = spawn(backendServerPath, [backendRootPath, 'false'])
+
+    child.on('exit', (code) => {
+      console.log(`Child process exited with code ${code}`)
+    })
+    child.stdout?.on('data', (data) => {
+      console.log(`surf-backend: ${data}`)
+    })
+    child.stderr?.on('data', (data) => {
+      console.error(`surf-backend: ${data}`)
+    })
   })
 
   app.on('browser-window-created', (_, window) => {
@@ -149,6 +168,10 @@ if (!gotTheLock) {
     if (process.platform !== 'darwin') {
       app.quit()
     }
+  })
+
+  app.on('will-quit', () => {
+    child.kill()
   })
 
   app.on('browser-window-focus', registerShortcuts)

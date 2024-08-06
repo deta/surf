@@ -44,3 +44,4 @@ yarn-error.log*
 database.sqlite
 /apps/desktop/external-deps
 __pycache__
+.fastembed_cache

@@ -33,7 +33,7 @@
     "@sveltejs/vite-plugin-svelte": "^3.0.1",
     "@tsconfig/svelte": "^5.0.2",
     "@types/d3": "^7.4.3",
-    "@types/lodash": "^4.14.202",
+    "@types/lodash": "4.14.202",
     "autoprefixer": "^10.4.19",
     "date-fns": "^3.2.0",
     "embla-carousel-svelte": "^8.0.0",
@@ -50,7 +50,7 @@
     "tslib": "^2.6.2",
     "typed-emitter": "^2.1.0",
     "typescript": "^5.2.2",
-    "vite": "^5.0.8",
+    "vite": "^5.3.5",
     "vite-plugin-markdown": "^2.2.0"
   },
   "dependencies": {

@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod backend;
-// pub mod embeddings;
+pub mod embeddings;
+pub mod llm;
 pub mod store;
 pub mod vision;
 
@@ -18,6 +19,8 @@ pub enum BackendError {
     // RustBertError(#[from] rust_bert::RustBertError),
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
+    #[error("Error: {0}")]
+    OpenAIError(String),
     #[error("Generic error: {0}")]
     GenericError(String),
 }

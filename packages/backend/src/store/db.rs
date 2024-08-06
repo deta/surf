@@ -1,11 +1,11 @@
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::str::FromStr;
-use std::{collections::HashMap, path::Path};
 
 use super::models::*;
 use crate::{BackendError, BackendResult};
 
-use rusqlite::{Connection, LoadExtensionGuard, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension};
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
 #[folder = "migrations/"]
 struct Migrations;
 
-#[derive(Debug)]
 pub struct Database {
     pub conn: rusqlite::Connection,
 }
@@ -83,46 +82,30 @@ pub struct VectorSearchResult {
 }
 
 impl Database {
-    pub fn new(db_path: &str, usearch_path: &str) -> BackendResult<Database> {
-        let init_schema = Migrations::get("init.sql")
-            .ok_or(BackendError::GenericError("init.sql not found".into()))?;
-        let init_schame = std::str::from_utf8(init_schema.data.as_ref())
-            .map_err(|e| BackendError::GenericError(e.to_string()))?;
-        let migrations_schema = Migrations::get("migrations.sql")
-            .map(|f| std::str::from_utf8(f.data.as_ref()).map(|s| s.to_owned()))
-            .transpose()
-            .map_err(|e| BackendError::GenericError(e.to_string()))?;
-
+    pub fn new(db_path: &str, run_migrations: bool) -> BackendResult<Database> {
         // Connection::open already handles creating the file if it doesn't exist
         let mut conn = Connection::open(db_path)?;
-        {
-            let _guard = unsafe { LoadExtensionGuard::new(&conn)? };
-            unsafe {
-                conn.load_extension(Path::new(usearch_path), None)?;
-            }
-        }
 
-        {
-            let _guard = unsafe { LoadExtensionGuard::new(&conn)? };
-            unsafe {
-                conn.load_extension(Path::new(usearch_path), None)?;
-            }
-        }
+        if run_migrations {
+            let init_schema = Migrations::get("init.sql")
+                .ok_or(BackendError::GenericError("init.sql not found".into()))?;
+            let init_schema = std::str::from_utf8(init_schema.data.as_ref())
+                .map_err(|e| BackendError::GenericError(e.to_string()))?;
+            let migrations_schema = Migrations::get("migrations.sql")
+                .map(|f| std::str::from_utf8(f.data.as_ref()).map(|s| s.to_owned()))
+                .transpose()
+                .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
-        {
-            let _guard = unsafe { LoadExtensionGuard::new(&conn)? };
-            unsafe {
-                conn.load_extension(Path::new(usearch_path), None)?;
+            let tx = conn.transaction()?;
+            tx.execute_batch(init_schema)?;
+            if let Some(schema) = migrations_schema {
+                tx.execute_batch(&schema)?;
             }
+            tx.commit()?;
         }
-
-        let tx = conn.transaction()?;
-        tx.execute_batch(init_schame)?;
-        if let Some(schema) = migrations_schema {
-            tx.execute_batch(&schema)?;
-        }
-        tx.commit()?;
+        // TODO: do we need this?
         rusqlite::vtab::array::load_module(&conn)?;
+
         Ok(Database { conn })
     }
 
@@ -132,6 +115,14 @@ impl Database {
 
     pub fn create_space(&mut self, space: &Space) -> BackendResult<()> {
         self.conn.execute(
+            "INSERT INTO spaces (id, name, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![space.id, space.name, space.created_at, space.updated_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn create_space_tx(tx: &mut rusqlite::Transaction, space: &Space) -> BackendResult<()> {
+        tx.execute(
             "INSERT INTO spaces (id, name, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
             rusqlite::params![space.id, space.name, space.created_at, space.updated_at],
         )?;
@@ -587,14 +578,52 @@ impl Database {
         resource_text_content: &ResourceTextContent,
     ) -> BackendResult<()> {
         self.conn.execute(
-            "INSERT INTO resource_text_content (id, resource_id, content) VALUES (?1, ?2, ?3)",
+            "INSERT INTO resource_text_content (id, resource_id, content, content_type, metadata) VALUES (?1, ?2, ?3, ?4, ?5)",
             rusqlite::params![
                 resource_text_content.id,
                 resource_text_content.resource_id,
-                resource_text_content.content
+                resource_text_content.content,
+                resource_text_content.content_type,
+                resource_text_content.metadata,
             ],
         )?;
         Ok(())
+    }
+
+    pub fn legacy_get_resource_text_content_by_resource_id(
+        &self,
+        resource_id: &str,
+    ) -> BackendResult<Option<LegacyResourceTextContent>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, resource_id, content FROM resource_text_content WHERE resource_id = ?1",
+        )?;
+        stmt.query_row(rusqlite::params![resource_id], |row| {
+            Ok(LegacyResourceTextContent {
+                id: row.get(0)?,
+                resource_id: row.get(1)?,
+                content: row.get(2)?,
+            })
+        })
+        .optional()
+        .map_err(|e| e.into())
+    }
+
+    pub fn get_resource_text_content(
+        &self,
+        id: &str,
+    ) -> BackendResult<Option<ResourceTextContent>> {
+        let mut stmt = self.conn.prepare("SELECT id, resource_id, content, content_type, metadata FROM resource_text_content WHERE id = ?1")?;
+        stmt.query_row(rusqlite::params![id], |row| {
+            Ok(ResourceTextContent {
+                id: row.get(0)?,
+                resource_id: row.get(1)?,
+                content: row.get(2)?,
+                content_type: row.get(3)?,
+                metadata: row.get(4)?,
+            })
+        })
+        .optional()
+        .map_err(|e| e.into())
     }
 
     pub fn create_resource_text_content_tx(
@@ -602,11 +631,13 @@ impl Database {
         resource_text_content: &ResourceTextContent,
     ) -> BackendResult<()> {
         tx.execute(
-            "INSERT INTO resource_text_content (id, resource_id, content) VALUES (?1, ?2, ?3)",
+            "INSERT INTO resource_text_content (id, resource_id, content, content_type, metadata) VALUES (?1, ?2, ?3, ?4, ?5)",
             rusqlite::params![
                 resource_text_content.id,
                 resource_text_content.resource_id,
-                resource_text_content.content
+                resource_text_content.content,
+                resource_text_content.content_type,
+                resource_text_content.metadata,
             ],
         )?;
         Ok(())
@@ -641,21 +672,23 @@ impl Database {
     pub fn upsert_resource_text_content(
         tx: &mut rusqlite::Transaction,
         resource_id: &str,
-        content: &str,
-    ) -> BackendResult<()> {
-        let updated = tx.execute(
-            "UPDATE resource_text_content SET content = ?1 WHERE resource_id = ?2",
-            rusqlite::params![content, resource_id],
+        content_type: &ResourceTextContentType,
+        contents: &Vec<String>,
+        metadatas: &Vec<ResourceTextContentMetadata>,
+    ) -> BackendResult<Vec<i64>> {
+        tx.execute(
+            "DELETE FROM resource_text_content WHERE resource_id = ?1 AND content_type = ?2",
+            rusqlite::params![resource_id, content_type],
         )?;
-
-        if updated == 0 {
+        let mut rowids = Vec::new();
+        for (content, metadata) in contents.iter().zip(metadatas.iter()) {
             tx.execute(
-                "INSERT INTO resource_text_content (id, resource_id, content) VALUES (?1, ?2, ?3)",
-                rusqlite::params![random_uuid(), resource_id, content],
+                "INSERT INTO resource_text_content (id, resource_id, content, content_type, metadata) VALUES (?1, ?2, ?3, ?4, ?5)",
+                rusqlite::params![random_uuid(), resource_id, content, content_type, metadata],
             )?;
+            rowids.push(tx.last_insert_rowid());
         }
-
-        Ok(())
+        Ok(rowids)
     }
 
     pub fn create_card_position_tx(
@@ -1281,6 +1314,7 @@ impl Database {
 
         let mut rids: Vec<rusqlite::types::Value> = Vec::new();
         let params = rusqlite::params![keyword];
+
         let mut query = "SELECT DISTINCT M.*, R.* FROM resource_metadata M
             LEFT JOIN resources R ON M.resource_id = R.id
             WHERE (
@@ -1343,7 +1377,6 @@ impl Database {
 
     // TODO: optimize this
     // TODO: move this to worker?
-    // TODO: break this into smaller functions
     pub fn search_resources(
         &self,
         keyword: &str,
@@ -1551,13 +1584,278 @@ impl Database {
         embedding_resource: &EmbeddingResource,
     ) -> BackendResult<i64> {
         tx.execute(
-            "INSERT INTO embedding_resources (resource_id, embedding_type ) VALUES (?1, ?2)",
+            "INSERT INTO embedding_resources (resource_id, content_id, embedding_type ) VALUES (?1, ?2, ?3)",
             rusqlite::params![
                 embedding_resource.resource_id,
+                embedding_resource.content_id,
                 embedding_resource.embedding_type
             ],
         )?;
         Ok(tx.last_insert_rowid())
+    }
+
+    pub fn get_embedding_resource_ids_by_type(
+        &self,
+        resource_id: &str,
+        embedding_type: &str,
+    ) -> BackendResult<Vec<i64>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT rowid FROM embedding_resources WHERE resource_id = ?1 AND embedding_type = ?2",
+        )?;
+        let mut results = vec![];
+        let results_iter =
+            stmt.query_map(rusqlite::params![resource_id, embedding_type], |row| {
+                let rowid: i64 = row.get(0)?;
+                Ok(rowid)
+            })?;
+        for result in results_iter {
+            results.push(result?);
+        }
+        Ok(results)
+    }
+
+    pub fn list_embedding_ids_by_resource_ids(
+        &self,
+        resource_ids: Vec<String>,
+    ) -> BackendResult<Vec<i64>> {
+        let placeholders = vec!["?"; resource_ids.len()].join(",");
+        let query = format!(
+            "SELECT rowid FROM embedding_resources WHERE resource_id IN ({})",
+            placeholders
+        );
+        let mut stmt = self.conn.prepare(&query)?;
+        let mut results = vec![];
+        let results_iter =
+            stmt.query_map(rusqlite::params_from_iter(resource_ids.iter()), |row| {
+                let content_id: i64 = row.get(0)?;
+                Ok(content_id)
+            })?;
+        for result in results_iter {
+            results.push(result?);
+        }
+        Ok(results)
+    }
+
+    pub fn list_non_deleted_embedding_ids(&self) -> BackendResult<Vec<i64>> {
+        let query = "SELECT E.rowid FROM embedding_resources E LEFT JOIN resources R ON E.resource_id = R.id WHERE R.deleted = 0";
+        let mut stmt = self.conn.prepare(&query)?;
+        let mut results = vec![];
+        let results_iter = stmt.query_map([], |row| {
+            let content_id: i64 = row.get(0)?;
+            Ok(content_id)
+        })?;
+        for result in results_iter {
+            results.push(result?);
+        }
+        Ok(results)
+    }
+
+    pub fn list_embedding_ids_by_type_resource_id(
+        &self,
+        embedding_type: EmbeddingType,
+        resource_id: &str,
+    ) -> BackendResult<Vec<i64>> {
+        let query =
+            "SELECT rowid FROM embedding_resources WHERE embedding_type = ?1 AND resource_id = ?2";
+        let mut stmt = self.conn.prepare(query)?;
+        let mut results = vec![];
+        let results_iter =
+            stmt.query_map(rusqlite::params![embedding_type, resource_id], |row| {
+                let content_id: i64 = row.get(0)?;
+                Ok(content_id)
+            })?;
+        for result in results_iter {
+            results.push(result?);
+        }
+        Ok(results)
+    }
+
+    pub fn list_embedding_ids_by_type_resource_ids(
+        &self,
+        embedding_type: EmbeddingType,
+        resource_ids: Vec<String>,
+    ) -> BackendResult<Vec<i64>> {
+        let placeholders = vec!["?"; resource_ids.len()].join(",");
+        let query = match embedding_type {
+            EmbeddingType::TextContent =>
+                format!(
+                    "SELECT rowid FROM embedding_resources WHERE embedding_type = 'text_content' AND resource_id IN ({})",
+                    placeholders
+                ),
+            EmbeddingType::Metadata =>
+                format!(
+                    "SELECT rowid FROM embedding_resources WHERE embedding_type = 'metadata' AND resource_id IN ({})",
+                    placeholders
+                ),
+            };
+        let mut stmt = self.conn.prepare(&query)?;
+        let mut results = vec![];
+        let results_iter =
+            stmt.query_map(rusqlite::params_from_iter(resource_ids.iter()), |row| {
+                let content_id: i64 = row.get(0)?;
+                Ok(content_id)
+            })?;
+        for result in results_iter {
+            results.push(result?);
+        }
+        Ok(results)
+    }
+
+    pub fn list_unique_resources_only_by_embedding_row_ids(
+        &self,
+        row_ids: Vec<i64>,
+    ) -> BackendResult<Vec<CompositeResource>> {
+        let placeholders = vec!["?"; row_ids.len()].join(",");
+        let query = format!(
+            "SELECT DISTINCT M.*, R.* FROM resource_metadata M
+            LEFT JOIN resources R ON M.resource_id = R.id
+            LEFT JOIN embedding_resources E ON M.resource_id = E.resource_id
+            WHERE E.rowid IN ({}) GROUP BY R.id",
+            placeholders
+        );
+        let mut stmt = self.conn.prepare(&query)?;
+        let mut results = vec![];
+        let results_iter = stmt.query_map(rusqlite::params_from_iter(row_ids.iter()), |row| {
+            Ok(CompositeResource {
+                metadata: Some(ResourceMetadata {
+                    id: row.get(0)?,
+                    resource_id: row.get(1)?,
+                    name: row.get(2)?,
+                    source_uri: row.get(3)?,
+                    alt: row.get(4)?,
+                    user_context: row.get(5)?,
+                }),
+                resource: Resource {
+                    id: row.get(6)?,
+                    resource_path: row.get(7)?,
+                    resource_type: row.get(8)?,
+                    created_at: row.get(9)?,
+                    updated_at: row.get(10)?,
+                    deleted: row.get(11)?,
+                },
+                text_content: None,
+                resource_tags: None,
+                resource_annotations: None,
+            })
+        })?;
+
+        for result in results_iter {
+            results.push(result?);
+        }
+        Ok(results)
+    }
+
+    pub fn list_resources_by_ids(
+        &self,
+        resource_ids: Vec<String>,
+    ) -> BackendResult<Vec<CompositeResource>> {
+        let placeholders = vec!["?"; resource_ids.len()].join(",");
+        let query = format!(
+            "SELECT DISTINCT M.*, R.*, C.* FROM resource_metadata M
+            LEFT JOIN resources R ON M.resource_id = R.id
+            LEFT JOIN resource_text_content C ON M.resource_id = C.resource_id 
+            WHERE R.id IN ({}) GROUP BY C.content",
+            placeholders
+        );
+        let mut stmt = self.conn.prepare(&query)?;
+        let mut results = vec![];
+        let results_iter =
+            stmt.query_map(rusqlite::params_from_iter(resource_ids.iter()), |row| {
+                Ok(CompositeResource {
+                    metadata: Some(ResourceMetadata {
+                        id: row.get(0)?,
+                        resource_id: row.get(1)?,
+                        name: row.get(2)?,
+                        source_uri: row.get(3)?,
+                        alt: row.get(4)?,
+                        user_context: row.get(5)?,
+                    }),
+                    resource: Resource {
+                        id: row.get(6)?,
+                        resource_path: row.get(7)?,
+                        resource_type: row.get(8)?,
+                        created_at: row.get(9)?,
+                        updated_at: row.get(10)?,
+                        deleted: row.get(11)?,
+                    },
+                    text_content: Some(ResourceTextContent {
+                        id: row.get(12)?,
+                        resource_id: row.get(13)?,
+                        content: row.get(14)?,
+                        content_type: row.get(15)?,
+                        metadata: row.get(16)?,
+                    }),
+                    resource_tags: None,
+                    resource_annotations: None,
+                })
+            })?;
+
+        for result in results_iter {
+            results.push(result?);
+        }
+        Ok(results)
+    }
+
+    pub fn list_resources_by_embedding_row_ids(
+        &self,
+        row_ids: Vec<i64>,
+    ) -> BackendResult<Vec<CompositeResource>> {
+        let placeholders = vec!["?"; row_ids.len()].join(",");
+        let query = format!(
+            "SELECT DISTINCT M.*, R.*, C.* FROM resource_metadata M
+            LEFT JOIN resources R ON M.resource_id = R.id
+            LEFT JOIN resource_text_content C ON M.resource_id = C.resource_id 
+            LEFT JOIN embedding_resources E ON M.resource_id = E.resource_id
+            WHERE E.rowid IN ({}) GROUP BY C.content",
+            placeholders
+        );
+        let mut stmt = self.conn.prepare(&query)?;
+        let mut results = vec![];
+        let results_iter = stmt.query_map(rusqlite::params_from_iter(row_ids.iter()), |row| {
+            Ok(CompositeResource {
+                metadata: Some(ResourceMetadata {
+                    id: row.get(0)?,
+                    resource_id: row.get(1)?,
+                    name: row.get(2)?,
+                    source_uri: row.get(3)?,
+                    alt: row.get(4)?,
+                    user_context: row.get(5)?,
+                }),
+                resource: Resource {
+                    id: row.get(6)?,
+                    resource_path: row.get(7)?,
+                    resource_type: row.get(8)?,
+                    created_at: row.get(9)?,
+                    updated_at: row.get(10)?,
+                    deleted: row.get(11)?,
+                },
+                text_content: Some(ResourceTextContent {
+                    id: row.get(12)?,
+                    resource_id: row.get(13)?,
+                    content: row.get(14)?,
+                    content_type: row.get(15)?,
+                    metadata: row.get(16)?,
+                }),
+                resource_tags: None,
+                resource_annotations: None,
+            })
+        })?;
+
+        for result in results_iter {
+            results.push(result?);
+        }
+        Ok(results)
+    }
+
+    pub fn remove_embedding_resource_by_row_id_tx(
+        tx: &mut rusqlite::Transaction,
+        row_id: &i64,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "DELETE FROM embedding_resources WHERE rowid = ?1",
+            rusqlite::params![row_id],
+        )?;
+        Ok(())
     }
 
     pub fn remove_embedding_resource_by_type_tx(
@@ -1593,44 +1891,6 @@ impl Database {
         Ok(())
     }
 
-    // pub fn vector_search_embeddings(
-    //     &self,
-    //     embedding: &Embedding,
-    //     distance_threshold: f32,
-    //     limit: i64,
-    // ) -> BackendResult<Vec<VectorSearchResult>> {
-    //     let mut result = Vec::new();
-
-    //     // TODO: we might wanna use a diff distance function here?
-    //     let query = format!(
-    //         "WITH filtered_distances AS (
-    //             SELECT rowid, distance_sqeuclidean_f32(position, ?1) AS distance
-    //             FROM card_positions
-    //             rowid IN (SELECT rowid FROM cards WHERE horizon_id=?2)
-    //         )
-    //         SELECT rowid, distance
-    //         FROM filtered_distances
-    //         WHERE distance <= ?3 AND distance != 0
-    //         ORDER BY distance ASC
-    //         LIMIT ?4"
-    //     );
-
-    //     let mut stmt = self.conn.prepare(&query)?;
-    //     let embeddings = stmt.query_map(
-    //         rusqlite::params![embedding.embedding, distance_threshold, limit],
-    //         |row| {
-    //             Ok(VectorSearchResult {
-    //                 rowid: row.get(0)?,
-    //                 distance: row.get(1)?,
-    //             })
-    //         },
-    //     )?;
-
-    //     for embedding in embeddings {
-    //         result.push(embedding?);
-    //     }
-    //     Ok(result)
-    // }
     pub fn vector_search_embeddings(
         &self,
         embedding: &Embedding,
@@ -1651,9 +1911,8 @@ impl Database {
         let embeddings = stmt.query_map(
             rusqlite::params![embedding.embedding, distance_threshold.powf(2.0), limit],
             |row| {
-                let rowid: i64 = row.get(0)?;
-                let distance: f32 = row.get(1)?;
-                dbg!(rowid, distance);
+                let _rowid: i64 = row.get(0)?;
+                let _distance: f32 = row.get(1)?;
                 Ok(VectorSearchResult {
                     rowid: row.get(0)?,
                     distance: row.get(1)?,
@@ -1666,26 +1925,75 @@ impl Database {
         Ok(result)
     }
 
-    pub fn create_ai_chat_session_tx(
+    pub fn create_ai_session_tx(
         tx: &mut rusqlite::Transaction,
         session: &AIChatSession,
     ) -> BackendResult<()> {
         tx.execute(
-            "INSERT INTO ai_chat_sessions (id, system_prompt) VALUES (?1, ?2)",
+            "INSERT INTO ai_sessions (id, system_prompt) VALUES (?1, ?2)",
             rusqlite::params![session.id, session.system_prompt],
         )?;
         Ok(())
     }
 
-    pub fn delete_ai_chat_session_tx(
-        tx: &mut rusqlite::Transaction,
-        id: &str,
-    ) -> BackendResult<()> {
+    pub fn delete_ai_session_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
         tx.execute(
-            "DELETE FROM ai_chat_sessions WHERE id = ?1",
+            "DELETE FROM ai_sessions WHERE id = ?1",
             rusqlite::params![id],
         )?;
         Ok(())
+    }
+
+    pub fn create_ai_session_message_tx(
+        tx: &mut rusqlite::Transaction,
+        msg: &AIChatSessionMessage,
+    ) -> BackendResult<()> {
+        // TODO: impl FromSql and ToSql for sources
+        let sources_string = match &msg.sources {
+            Some(sources) => match serde_json::to_string(sources) {
+                Ok(s) => s,
+                Err(_) => "".to_string(),
+            },
+            None => "".to_string(),
+        };
+        tx.execute(
+            "INSERT INTO ai_session_messages (ai_session_id, role, content, sources, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![msg.ai_session_id, msg.role, msg.content, sources_string, msg.created_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_ai_session_messages(
+        &self,
+        session_id: &str,
+    ) -> BackendResult<Vec<AIChatSessionMessage>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT ai_session_id, role, content, sources, created_at
+            FROM ai_session_messages
+            WHERE ai_session_id = ?1
+            ORDER BY created_at ASC",
+        )?;
+        let messages = stmt.query_map(rusqlite::params![session_id], |row| {
+            let sources_raw: String = row.get(3)?;
+            let parsed_sources: Option<Vec<AIChatSessionMessageSource>> =
+                match serde_json::from_str(&sources_raw) {
+                    Ok(sources) => Some(sources),
+                    Err(_) => None,
+                };
+
+            Ok(AIChatSessionMessage {
+                ai_session_id: row.get(0)?,
+                role: row.get(1)?,
+                content: row.get(2)?,
+                sources: parsed_sources,
+                created_at: row.get(4)?,
+            })
+        })?;
+        let mut result = Vec::new();
+        for message in messages {
+            result.push(message?);
+        }
+        Ok(result)
     }
 }
 

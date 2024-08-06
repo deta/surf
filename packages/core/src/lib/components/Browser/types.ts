@@ -81,7 +81,7 @@ export type AIChat = {
 }
 
 export type AIDocsSimilarity = {
-  doc: string
+  index: number
   similarity: number
 }
 
@@ -111,7 +111,7 @@ export type AIChatMessageSource = {
   render_id: string
   resource_id: string
   content: string
-  hash?: string
+  uid?: string
   metadata?: {
     timestamp?: number
     url?: string

@@ -9,7 +9,7 @@
 
   const log = useLogScope('ChatMessage')
   const dispatch = createEventDispatcher<{
-    citationClick: { citationID: string; text: string; sourceHash?: string }
+    citationClick: { citationID: string; text: string; sourceUid?: string }
     citationHoverStart: string
     citationHoverEnd: string
   }>()
@@ -195,7 +195,7 @@
           class="citation-item"
           class:wide={source.metadata?.timestamp || source.metadata?.url}
           on:click={() =>
-            dispatch('citationClick', { citationID: source.id, text: '', sourceHash: source.hash })}
+            dispatch('citationClick', { citationID: source.id, text: '', sourceUid: source.uid })}
           on:mouseenter={() => dispatch('citationHoverStart', source.id)}
           on:mouseleave={() => dispatch('citationHoverEnd', source.id)}
         >

@@ -600,7 +600,7 @@
           if (chat) {
             const userMessages = chat.messages.filter((message) => message.role === 'user')
             const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
-            const systemMessages = chat.messages.filter((message) => message.role === 'system')
+            const systemMessages = chat.messages.filter((message) => message.role === 'assistant')
 
             responses = systemMessages.map((message, idx) => {
               message.sources = message.sources

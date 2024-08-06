@@ -57,7 +57,6 @@ impl Vision {
             .header("Content-Type", "application/octet-stream")
             .body(image)
             .send()?;
-        dbg!(&response);
         let res = response.json::<DescribeImageOutput>()?;
         Ok(res)
     }

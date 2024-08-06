@@ -1,17 +1,18 @@
 use crate::{
-    ai::ai::{ChatHistory, DataSourceChunk, DocsSimilarity, YoutubeTranscript},
+    ai::ai::{DocsSimilarity, YoutubeTranscript, YoutubeTranscriptMetadata, YoutubeTranscriptPiece},
     backend::{
         message::{MiscMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     store::{
         db::Database,
-        models::{random_uuid, AIChatSession},
+        models::{random_uuid, AIChatHistory, AIChatSession, AIChatSessionMessage, AIChatSessionMessageSource, ResourceTextContent},
     },
     BackendError, BackendResult,
 };
 use futures::StreamExt;
 use neon::prelude::*;
+use std::collections::HashSet;
 
 impl Worker {
     pub fn print(&mut self, content: String) -> BackendResult<String> {
@@ -19,8 +20,11 @@ impl Worker {
         Ok("ok".to_owned())
     }
 
-    pub fn get_ai_chat_message(&mut self, id: String, api_endpoint: Option<String>) -> BackendResult<ChatHistory> {
-        Ok(self.ai.get_chat_history(id, api_endpoint)?)
+    pub fn get_ai_chat_message(&mut self, id: String) -> BackendResult<AIChatHistory> {
+        Ok(AIChatHistory{
+            id: id.clone(),
+            messages: self.db.list_ai_session_messages(&id)?
+        })
     }
 
     pub fn create_ai_chat_message(&mut self, system_prompt: String) -> BackendResult<String> {
@@ -29,15 +33,14 @@ impl Worker {
             system_prompt,
         };
         let mut tx = self.db.begin()?;
-        Database::create_ai_chat_session_tx(&mut tx, &new_chat)?;
+        Database::create_ai_session_tx(&mut tx, &new_chat)?;
         tx.commit()?;
         Ok(new_chat.id)
     }
 
     pub fn delete_ai_chat_message(&mut self, session_id: String) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
-        Database::delete_ai_chat_session_tx(&mut tx, &session_id)?;
-        self.ai.delete_chat_history(session_id)?;
+        Database::delete_ai_session_tx(&mut tx, &session_id)?;
         tx.commit()?;
         Ok(())
     }
@@ -52,36 +55,121 @@ impl Worker {
         session_id: String,
         contexts: Option<Vec<String>>,
     ) -> BackendResult<String> {
-        Ok(self.ai.create_app(prompt, session_id, contexts)?)
+        let user_message = AIChatSessionMessage {
+            ai_session_id: session_id.clone(),
+            role: "user".to_owned(),
+            content: prompt.clone(),
+            sources: None,
+            created_at: chrono::Utc::now(),
+        };
+        let result = self.ai.create_app(prompt, session_id.clone(), contexts)?;
+        let mut tx = self.db.begin()?;
+        Database::create_ai_session_message_tx(&mut tx, &user_message)?;
+        Database::create_ai_session_message_tx(&mut tx, &AIChatSessionMessage {
+            ai_session_id: session_id.clone(),
+            role: "assistant".to_owned(),
+            content: result.clone(),
+            sources: None,
+            created_at: chrono::Utc::now(),
+        })?;
+        tx.commit()?;
+        Ok(result)
     }
 
+    // TODO: save messages to db
     pub fn send_chat_query(
-        &self,
+        &mut self,
         channel: &mut Channel,
         query: String,
         session_id: String,
         number_documents: i32,
-        model: String,
         rag_only: bool,
-        api_endpoint: Option<String>,
         mut callback: Root<JsFunction>,
         resource_ids: Option<Vec<String>>,
         general: bool,
     ) -> BackendResult<()> {
-        // TODO: save this runtime somewhere and re-use when needed
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async move {
-                let mut stream = self
+        let user_message = AIChatSessionMessage {
+            ai_session_id: session_id.clone(),
+            role: "user".to_owned(),
+            content: query.clone(),
+            sources: None,
+            created_at: chrono::Utc::now(),
+        };
+        if rag_only {
+            let results = self.ai.vector_search(&self.db, query, number_documents as usize, resource_ids, false)?;
+            let mut sources_str = "<sources>".to_string();
+            let mut sources = vec![];
+            for (i, result) in results.iter().enumerate() {
+                let source = match AIChatSessionMessageSource::from_resource_index(&result, i) {
+                    Some(source) => source,
+                    None => {
+                        eprintln!("Failed to get ai chat session message source from composite resource");
+                        return Err(BackendError::GenericError("Failed to get ai chat session message source from composite resource".to_string()))
+                    }
+                };
+                sources_str.push_str(&source.to_xml());
+                sources.push(source);
+            }
+            sources_str.push_str("</sources>\n<answer> </answer>");
+
+            channel
+            .send(|mut cx| {
+                    let f = callback.into_inner(&mut cx);
+                    let this = cx.undefined();
+                    let args = vec![cx.string(sources_str).upcast::<JsValue>()];
+                    f.call(&mut cx, this, args).unwrap();
+                    Ok(f.root(&mut cx))
+                })
+                .join()
+                .map_err(|err| BackendError::GenericError(err.to_string()))?;
+            let mut tx = self.db.begin()?;
+            Database::create_ai_session_message_tx(&mut tx, &user_message)?;
+            Database::create_ai_session_message_tx(&mut tx, &AIChatSessionMessage {
+                ai_session_id: session_id.clone(),
+                role: "assistant".to_owned(),
+                content: "".to_string(),
+                sources: Some(sources),
+                created_at: chrono::Utc::now(),
+            })?;
+            tx.commit()?;
+            return Ok(());
+        }
+        
+        let history = self.ai.format_chat_history(self.db.list_ai_session_messages(&session_id)?);
+        let should_cluster = self.ai.should_cluster(&query)?;
+        let mut assistant_message = String::new();
+        let mut sources: Vec<AIChatSessionMessageSource> = Vec::new();
+        self.async_runtime
+            .block_on(async {
+                let (srcs, preamble, mut stream) = self
                     .ai
-                    .chat(query, session_id, number_documents, model, rag_only, api_endpoint, resource_ids, general)
+                    // TODO: history
+                    .chat(&self.db, 
+                        query, 
+                        number_documents,
+                        resource_ids,
+                        general,
+                        should_cluster,
+                        history,
+                    )
                     .await?;
+                sources = srcs;
+                callback = channel
+                    .send(|mut cx| {
+                        let f = callback.into_inner(&mut cx);
+                        let this = cx.undefined();
+                        let args = vec![cx.string(preamble).upcast::<JsValue>()];
+                        f.call(&mut cx, this, args).unwrap();
+                        Ok(f.root(&mut cx))
+                    })
+                    .join()
+                    .map_err(|err| BackendError::GenericError(err.to_string()))?;
 
                 while let Some(chunk) = stream.next().await {
                     match chunk {
                         Err(err) => return Err(err),
-                        Ok(None) => break,
-                        Ok(Some(data)) => {
+                        Ok(data) => {
+                            assistant_message.push_str(&data);
                             callback = channel
                                 .send(|mut cx| {
                                     let f = callback.into_inner(&mut cx);
@@ -97,26 +185,55 @@ impl Worker {
                 }
 
                 Ok(())
-            })
+            })?;
+            let mut tx = self.db.begin()?;
+            Database::create_ai_session_message_tx(&mut tx, &user_message)?;
+            Database::create_ai_session_message_tx(&mut tx, &AIChatSessionMessage {
+                ai_session_id: session_id.clone(),
+                role: "assistant".to_owned(),
+                content: assistant_message,
+                sources: Some(sources.clone()),
+                created_at: chrono::Utc::now(),
+            })?;
+            Ok(tx.commit()?)
     }
 
     pub fn get_youtube_transcript(&self, video_url: String) -> BackendResult<YoutubeTranscript> {
-        Ok(self.ai.get_youtube_transcript(&video_url)?)
+        let transcripts = self.async_runtime
+            .block_on(ytranscript::YoutubeTranscript::fetch_transcript(&video_url, None))
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+        let mut all = String::new();
+        let mut transcript_pieces: Vec<YoutubeTranscriptPiece> = vec![];
+        for transcript in transcripts {
+            all.push_str(transcript.text.as_str());
+            transcript_pieces.push(YoutubeTranscriptPiece {
+                text: transcript.text,
+                start: transcript.offset as f32,
+                duration: transcript.duration as f32,
+            });
+        }
+        Ok(YoutubeTranscript {
+            transcript: all,
+            metadata: YoutubeTranscriptMetadata {
+                source: video_url,
+                transcript_pieces,
+            }
+        })
     }
 
     pub fn query_sffs_resources(&self, prompt: String) -> BackendResult<String> {
         let result = self.ai.get_sql_query(prompt)?;
-        #[derive(serde::Deserialize)]
+        #[derive(serde::Deserialize, Debug)]
         struct JsonResult {
             sql_query: String,
             embedding_search_query: Option<String>,
         }
-        #[derive(serde::Serialize)]
+        #[derive(serde::Serialize, Debug)]
         struct FunctionResult {
             sql_query: String,
             embedding_search_query: Option<String>,
-            sql_query_results: Vec<String>,
-            embedding_search_results: Option<Vec<String>>,
+            sql_query_results: HashSet<String>,
+            embedding_search_results: Option<HashSet<String>>,
         }
 
         let result = serde_json::from_str::<JsonResult>(
@@ -125,21 +242,24 @@ impl Worker {
                 .replace("```", "")
                 .as_str()
             ).map_err(|e| BackendError::GenericError(e.to_string()))?;
-
-        let mut resource_ids_first = Vec::new();
+        let mut resource_ids_first: HashSet<String> = HashSet::new();
         let mut resource_ids_stmt = self.db.conn.prepare(result.sql_query.as_str())?;
         let mut resource_ids_rows = resource_ids_stmt.query([])?;
         let mut resource_ids_second = None;
 
         while let Some(row) = resource_ids_rows.next()? {
-            resource_ids_first.push(row.get(0)?);
+            resource_ids_first.insert(row.get(0)?);
         }
 
         if let Some(ref query) = result.embedding_search_query {
-            resource_ids_second = Some(
-                self.ai
-                    .get_resources(query.clone(), resource_ids_first.clone())?,
-            );
+            let filter: Vec<String> = resource_ids_first.iter().map(|id| id.to_string()).collect();
+            // TODO: why 100?
+            let resources = self.ai.vector_search(&self.db, query.clone(), 100, Some(filter), true)?;
+            let mut resource_ids: HashSet<String> = HashSet::new();
+            for resource in resources {
+                resource_ids.insert(resource.resource.id);
+            }
+            resource_ids_second = Some(resource_ids.into_iter().collect());
         }
 
         serde_json::to_string(&FunctionResult {
@@ -151,8 +271,8 @@ impl Worker {
         .map_err(|e| BackendError::GenericError(e.to_string()))
     }
 
-    pub fn get_ai_chat_data_source(&self, source_hash: String) -> BackendResult<DataSourceChunk> {
-        Ok(self.ai.get_data_source(&source_hash.to_owned())?)
+    pub fn get_ai_chat_data_source(&self, source_id: String) -> BackendResult<Option<ResourceTextContent>> {
+        Ok(self.db.get_resource_text_content(&source_id)?)
     }
 }
 
@@ -166,10 +286,10 @@ pub fn handle_misc_message(
         MiscMessage::Print(content) => {
             send_worker_response(channel, oneshot, worker.print(content))
         }
-        MiscMessage::GetAIChatMessage(id, api_endpoint) => send_worker_response(
+        MiscMessage::GetAIChatMessage(id) => send_worker_response(
             channel,
             oneshot,
-            worker.get_ai_chat_message(id, api_endpoint),
+            worker.get_ai_chat_message(id),
         ),
         MiscMessage::CreateAIChatMessage(system_prompot) => send_worker_response(
             channel,
@@ -180,10 +300,8 @@ pub fn handle_misc_message(
             query,
             session_id,
             number_documents,
-            model,
             callback,
             rag_only,
-            api_endpoint,
             resource_ids,
             general,
         } => {
@@ -192,9 +310,7 @@ pub fn handle_misc_message(
                 query,
                 session_id,
                 number_documents,
-                model,
                 rag_only,
-                api_endpoint,
                 callback,
                 resource_ids,
                 general,
@@ -226,6 +342,13 @@ pub fn handle_misc_message(
         }
         MiscMessage::GetYoutubeTranscript(video_url) => {
             send_worker_response(channel, oneshot, worker.get_youtube_transcript(video_url))
+        },
+        MiscMessage::RunMigration => {
+            let result = worker.migrate_data("sffs.sqlite");
+            if result.is_err() {
+                eprintln!("Failed to run migration: {:?}", result);
+            }
+            send_worker_response(channel, oneshot, result)
         }
     }
 }

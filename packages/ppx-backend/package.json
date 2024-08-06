@@ -1,8 +1,0 @@
-{
-  "name": "@horizon/ppx-backend",
-  "version": "0.1.0",
-  "scripts": {
-    "install": "make setup",
-    "dev": "make run"
-  }
-}

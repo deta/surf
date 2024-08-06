@@ -54,10 +54,12 @@ CREATE TABLE IF NOT EXISTS history_entries (
 
 CREATE TABLE IF NOT EXISTS embedding_resources (
     resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
-    embedding_type TEXT NOT NULL
+    embedding_type TEXT NOT NULL,
+    content_id INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS embedding_resources_resource_id_index ON embedding_resources(resource_id);
+CREATE INDEX IF NOT EXISTS embedding_resources_content_id_index ON embedding_resources(content_id);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS resource_metadata USING fts5(
     id UNINDEXED,
@@ -73,6 +75,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS resource_text_content USING fts5(
     id UNINDEXED,
     resource_id UNINDEXED,
     content,
+    content_type,
+    metadata,
     tokenize="trigram"
 );
 
@@ -80,13 +84,17 @@ CREATE TABLE IF NOT EXISTS card_positions(
     position TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS embeddings (
-    embedding TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS ai_sessions (
+    id TEXT PRIMARY KEY,
+    system_prompt TEXT NOT NULL DEFAULT ''
 );
 
-CREATE TABLE IF NOT EXISTS ai_chat_sessions (
-    id TEXT NOT NULL,
-    system_prompt TEXT NOT NULL DEFAULT ''
+CREATE TABLE IF NOT EXISTS ai_session_messages (
+    ai_session_id TEXT NOT NULL REFERENCES ai_sessions(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    sources BLOB NOT NULL,
+    created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS spaces (

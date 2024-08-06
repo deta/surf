@@ -9,9 +9,15 @@ import { plugin as Markdown, Mode } from 'vite-plugin-markdown'
 export default defineConfig({
   main: {
     envPrefix: 'M_VITE_',
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/main/index.ts')
+        }
+      }
+    }
   },
-
   preload: {
     envPrefix: 'P_VITE_',
     plugins: [

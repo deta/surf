@@ -1,5 +1,8 @@
 pub mod ai;
 
+mod client;
+mod prompts;
+
 use crate::backend::{message::*, tunnel::WorkerTunnel};
 use neon::prelude::*;
 
@@ -17,11 +20,11 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
 
 fn js_get_ai_chat_data_source(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let source_hash = cx.argument::<JsString>(1)?.value(&mut cx);
+    let source_uid = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::MiscMessage(MiscMessage::GetAIChatDataSource(source_hash)),
+        WorkerMessage::MiscMessage(MiscMessage::GetAIChatDataSource(source_uid)),
         deferred,
     );
 
@@ -127,13 +130,8 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let session_id = cx.argument::<JsString>(2)?.value(&mut cx);
     let callback = cx.argument::<JsFunction>(3)?.root(&mut cx);
     let number_documents = cx.argument::<JsNumber>(4)?.value(&mut cx) as i32;
-    let model = cx.argument::<JsString>(5)?.value(&mut cx);
-    let rag_only = cx.argument::<JsBoolean>(6)?.value(&mut cx);
-    let api_endpoint = cx
-        .argument_opt(7)
-        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
-        .map(|api_endpoint| api_endpoint.value(&mut cx));
-    let resource_ids = match cx.argument_opt(8).filter(|arg| {
+    let rag_only = cx.argument::<JsBoolean>(5)?.value(&mut cx);
+    let resource_ids = match cx.argument_opt(6).filter(|arg| {
         !(arg.is_a::<JsUndefined, FunctionContext>(&mut cx)
             || arg.is_a::<JsNull, FunctionContext>(&mut cx))
     }) {
@@ -150,7 +148,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
         ),
         None => None,
     };
-    let general = cx.argument::<JsBoolean>(6)?.value(&mut cx);
+    let general = cx.argument::<JsBoolean>(7)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
@@ -158,10 +156,8 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             query,
             session_id,
             number_documents,
-            model,
             callback,
             rag_only,
-            api_endpoint,
             resource_ids,
             general,
         }),

@@ -59,7 +59,7 @@ export const parseXMLChatResponseSources = (xml: Document) => {
 
   const sourceData = Array.from(sources).map((source) => {
     const id = source.getElementsByTagName('id')[0].textContent
-    const hash = source.getElementsByTagName('hash')[0]?.textContent
+    const uid = source.getElementsByTagName('uid')[0]?.textContent
     const resource_id = source.getElementsByTagName('resource_id')[0]?.textContent
     const content = source.getElementsByTagName('content')[0]?.textContent
     const timestamp = source.getElementsByTagName('timestamp')[0]?.textContent
@@ -69,7 +69,7 @@ export const parseXMLChatResponseSources = (xml: Document) => {
 
     return {
       id,
-      hash,
+      uid,
       resource_id,
       content,
       metadata: {

@@ -22,6 +22,8 @@
   const activeTab = writable<'general' | 'prompts'>('general')
 
   let prompts: EditablePrompt[] = []
+  let migrationOutput: HTMLParagraphElement
+  let migrating = false
 
   $: console.log('prompts', prompts)
 
@@ -43,6 +45,19 @@
   const checkForUpdates = async () => {
     // @ts-ignore
     await window.api.checkForUpdates()
+  }
+
+  const handleMigration = async () => {
+    migrating = true
+    try {
+      // @ts-ignore
+      await window.backend.sffs.js__backend_run_migration()
+      migrationOutput.innerText = 'Migration complete!'
+    } catch (error) {
+      console.error(error)
+      migrationOutput.innerText = error
+    }
+    migrating = false
   }
 
   // const handleStart = () => {
@@ -94,9 +109,17 @@
     {#if $activeTab === 'general'}
       <article class="general">
         <img src={appIcon} alt="App Icon" />
-        <h1>Farc v{version}</h1>
+        <h1>Surf v{version}</h1>
 
         <button on:click={checkForUpdates}>Check for Updates</button>
+        <h2>Migration</h2>
+        <button on:click={handleMigration} disabled={migrating}>Run Migration</button>
+        {#if migrating}
+          <Icon name="spinner" size="22px" />
+        {/if}
+        <div class="migration-output">
+          <p bind:this={migrationOutput}></p>
+        </div>
       </article>
     {:else if $activeTab === 'prompts'}
       <article class="prompts">
@@ -285,6 +308,10 @@
 
       &:hover {
         color: var(--color-link-dark);
+      }
+      &:disabled {
+        cursor: not-allowed;
+        color: var(--color-text-muted);
       }
     }
   }

@@ -5,8 +5,6 @@ import {
   WebviewAnnotationEvents
 } from '@horizon/types'
 
-import { Icon } from '@horizon/icons'
-
 import { getXPath } from './xpath'
 
 export const getRangeData = (range: Range) => {
