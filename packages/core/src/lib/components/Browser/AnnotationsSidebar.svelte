@@ -103,13 +103,13 @@
   }
 </script>
 
-<div class="flex flex-col gap-4 overflow-hidden p-4 h-full">
-  <div class="header">
+<div class="flex flex-col gap-4 overflow-hidden p-4 pt-0 h-full">
+  <!-- <div class="header">
     <div class="title">
-      <Icon name="message" size="28px" />
+      <Icon name="marker" size="28px" />
       <h1>Annotations</h1>
     </div>
-  </div>
+  </div> -->
 
   <div class="content">
     {#if annotations.length > 0}

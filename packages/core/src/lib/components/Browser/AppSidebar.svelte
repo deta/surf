@@ -73,8 +73,10 @@
   const handlePromptSubmit = async () => {
     fetching = true
     if (!inputValue) return
+    let savedInputValue = inputValue
     try {
-      const appCode = await sffs.createAIApp(appId, inputValue, { contexts: [tabContext] })
+      inputValue = ''
+      const appCode = await sffs.createAIApp(appId, savedInputValue, { contexts: [tabContext] })
       if (!appCode) {
         throw new Error('no app code returned from backend call')
       }
@@ -83,8 +85,8 @@
       if (clean.startsWith('"Error code: 4')) {
         throw new Error('Page content is unfortunately too long')
       }
-      prompt = inputValue
-      if (inputValue.toLowerCase().startsWith('app:')) {
+      prompt = savedInputValue
+      if (savedInputValue.toLowerCase().startsWith('app:')) {
         app.srcdoc = clean
         return
       }
@@ -92,6 +94,7 @@
       dispatch('executeAppSidebarCode', { appId: appId, code: clean })
     } catch (error) {
       log.error('Failed to create app:', error)
+      inputValue = savedInputValue
       alert(error)
     } finally {
       fetching = false
@@ -133,36 +136,48 @@
 </script>
 
 <div class="flex flex-col gap-4 overflow-hidden p-4 h-full">
-  <div class="header">
+  <!-- <div class="header">
     <div class="title">
       <Icon name="sparkles" size="28px" />
       <h1>Go wild</h1>
     </div>
+  </div> -->
 
-    {#if !fetching}
-      <button
-        on:click={() => {
-          prompt = ''
-          app.srcdoc = ''
-          dispatch('clearAppSidebar', {})
-        }}
-      >
-        Clear
-      </button>
-    {/if}
-  </div>
+  {#if !fetching && prompt}
+    <button
+      on:click={() => {
+        prompt = ''
+        app.srcdoc = ''
+        dispatch('clearAppSidebar', {})
+      }}
+      class="clear-btn"
+    >
+      Clear
+    </button>
+  {/if}
 
   <div class="content">
     {#if prompt}
       <div class="app-prompt">
-        <p>{prompt}</p>
+        <div class="message">
+          <Icon name="message" />
+          <p>{prompt}</p>
+        </div>
         {#if directCode !== ''}
           <button title="Run again" class="rerun-btn" on:click={handleCodeRerun}>
             <Icon name="reload" />
           </button>
         {/if}
       </div>
+    {:else if fetching}
+      <div class="app-prompt">
+        <div class="message">
+          <Icon name="spinner" />
+          <p>Generating...</p>
+        </div>
+      </div>
     {/if}
+
     <iframe title="App" id={appId} frameborder="0" bind:this={app}></iframe>
   </div>
 
@@ -210,7 +225,7 @@
 
   .app-prompt {
     padding: 15px;
-    background: #f6f5ef;
+    background: rgb(255, 255, 255);
     border-radius: 8px;
     font-size: 1.1rem;
     color: #3f3f3f;
@@ -219,8 +234,15 @@
     gap: 10px;
   }
 
-  .rerun-btn {
-    margin-left: auto;
+  .message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+
+    p {
+      margin: 0;
+    }
   }
 
   .app-prompt button {
@@ -235,6 +257,19 @@
     font-size: 1rem;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     transition: background 0.2s;
+
+    &.rerun-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      background: none;
+      box-shadow: none;
+
+      &:hover {
+        background: #f6f5ef;
+      }
+    }
 
     &:hover {
       background: #f6f5ef;
@@ -311,6 +346,22 @@
       border-color: #f73b95;
       color: #000;
       background-color: #ffffff;
+    }
+  }
+
+  .clear-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: auto;
+    border: none;
+    background: none;
+    color: #616179;
+    cursor: pointer;
+    font-size: 1rem;
+
+    &:hover {
+      color: #2b2b3d;
     }
   }
 

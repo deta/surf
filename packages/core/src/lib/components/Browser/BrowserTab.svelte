@@ -543,16 +543,16 @@
           resourceBookmarkedManually: !isSilent
         })
 
-        if (!pageMagic) {
-          pageMagic = {
-            showSidebar: false,
-            running: false,
-            responses: []
-          } as PageMagic
+        // if (!pageMagic) {
+        //   pageMagic = {
+        //     showSidebar: false,
+        //     running: false,
+        //     responses: []
+        //   } as PageMagic
 
-          log.debug('updating page magic', pageMagic)
-          dispatch('update-page-magic', pageMagic)
-        }
+        //   log.debug('updating page magic', pageMagic)
+        //   dispatch('update-page-magic', pageMagic)
+        // }
       }
 
       const existingHistoryEntry = matchingResources.find(
@@ -593,39 +593,39 @@
 
       log.debug('page magic', pageMagic)
 
-      if (!pageMagic) {
-        let responses: AIChatMessageParsed[] = []
-        if (tab?.chatId) {
-          const chat = await sffs.getAIChat(tab.chatId)
-          if (chat) {
-            const userMessages = chat.messages.filter((message) => message.role === 'user')
-            const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
-            const systemMessages = chat.messages.filter((message) => message.role === 'assistant')
+      // if (!pageMagic) {
+      //   let responses: AIChatMessageParsed[] = []
+      //   if (tab?.chatId) {
+      //     const chat = await sffs.getAIChat(tab.chatId)
+      //     if (chat) {
+      //       const userMessages = chat.messages.filter((message) => message.role === 'user')
+      //       const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
+      //       const systemMessages = chat.messages.filter((message) => message.role === 'system')
 
-            responses = systemMessages.map((message, idx) => {
-              message.sources = message.sources
-              log.debug('Message', message)
-              return {
-                id: generateID(),
-                role: message.role,
-                query: queries[idx],
-                content: message.content.replace('<answer>', '').replace('</answer>', ''),
-                sources: message.sources,
-                status: 'success'
-              }
-            })
-          }
-        }
+      //       responses = systemMessages.map((message, idx) => {
+      //         message.sources = message.sources
+      //         log.debug('Message', message)
+      //         return {
+      //           id: generateID(),
+      //           role: message.role,
+      //           query: queries[idx],
+      //           content: message.content.replace('<answer>', '').replace('</answer>', ''),
+      //           sources: message.sources,
+      //           status: 'success'
+      //         }
+      //       })
+      //     }
+      //   }
 
-        pageMagic = {
-          showSidebar: false,
-          running: false,
-          responses: responses
-        } as PageMagic
+      //   pageMagic = {
+      //     showSidebar: false,
+      //     running: false,
+      //     responses: responses
+      //   } as PageMagic
 
-        log.debug('updating page magic', pageMagic)
-        dispatch('update-page-magic', pageMagic)
-      }
+      //   log.debug('updating page magic', pageMagic)
+      //   dispatch('update-page-magic', pageMagic)
+      // }
     } catch (e) {
       log.error('error handling webview app detection', e)
     } finally {

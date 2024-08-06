@@ -2,6 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import type { AIChatMessageSource } from './types'
   import { useLogScope } from '../../utils/log'
+  import { useDebounce } from '../../utils/debounce'
 
   export let content: string
   export let sources: AIChatMessageSource[] | undefined
@@ -18,7 +19,7 @@
   let showCitationSource = false
 
   $: {
-    renderContent(content, sources)
+    debouncedRenderContent(content, sources)
   }
 
   const renderIDFromCitationID = (citationID: string | null, sources?: AIChatMessageSource[]) => {
@@ -179,6 +180,8 @@
     elem.appendChild(tempDiv)
   }
 
+  const debouncedRenderContent = useDebounce(renderContent, 10)
+
   onMount(() => {
     renderContent(content, sources)
   })
@@ -294,7 +297,7 @@
     border-radius: 10px;
     user-select: none;
     cursor: pointer;
-    width: auto;
+    width: fit-content;
     height: auto;
   }
 

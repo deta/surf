@@ -147,8 +147,10 @@ export type PageMagicResponse = {
 }
 
 export type PageMagic = {
+  chatId?: string
   showSidebar: boolean
   running: boolean
+  initializing: boolean
   responses: AIChatMessageParsed[]
 }
 

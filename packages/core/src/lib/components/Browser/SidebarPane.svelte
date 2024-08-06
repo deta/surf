@@ -16,6 +16,7 @@
 
   const MIN_LEFT_SIDEBAR = 200
   const MIN_RIGHT_SIDEBAR = 300
+  const RIGHT_SIDEBAR_MINIMAL_THRESHOLD = 450
 
   const DEFAULT_LEFT_SIDEBAR_WIDTH = 300
   const DEFAULT_RIGHT_SIDEBAR_WIDTH = 500
@@ -25,6 +26,8 @@
   export let rightPaneItem: PaneAPI | undefined = undefined
   export let rightSidebarHidden: boolean = true
   export let leftSidebarHidden: boolean = false
+
+  let rightSidebarMinimal = false
 
   export const expandLeft = () => {
     if (!$paneStore) return
@@ -131,6 +134,7 @@
     }
 
     if (paneName === 'right-sidebar') {
+      rightSidebarMinimal = width < RIGHT_SIDEBAR_MINIMAL_THRESHOLD
       localStorage.setItem(`panelSize-${paneName}`, percentageToPx(size, 'width').toString())
       return
     } else {
@@ -224,7 +228,7 @@
         bind:pane={$rightPaneStore}
         onResize={(size) => handleResizePane('right-sidebar', size)}
       >
-        <slot name="right-sidebar" />
+        <slot name="right-sidebar" minimal={rightSidebarMinimal} />
       </Pane>
     </PaneGroup>
   </Pane>

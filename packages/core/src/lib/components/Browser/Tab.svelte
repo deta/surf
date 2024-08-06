@@ -18,6 +18,7 @@
   export let pinned: boolean
   export let showButtons: boolean = true
   export let showExcludeOthersButton: boolean = false
+  export let showIncludeButton: boolean = false
   export let bookmarkingInProgress: boolean
   export let bookmarkingSuccess: boolean
   export let enableEditing = false
@@ -50,6 +51,8 @@
     'save-resource-in-space': string
     'create-live-space': void
     'exclude-other-tabs': string
+    'exclude-tab': string
+    'include-tab': string
   }>()
   const resourceManager = useResourceManager()
 
@@ -158,6 +161,14 @@
     dispatch('exclude-other-tabs', tab.id)
   }
 
+  const handleExcludeTab = () => {
+    dispatch('exclude-tab', tab.id)
+  }
+
+  const handleIncludeTab = () => {
+    dispatch('include-tab', tab.id)
+  }
+
   const handlePopoverEnter = () => {
     popoverVisible = true
   }
@@ -256,7 +267,7 @@
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0.5 -m-0.5 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
         use:tooltip2={{
           text: 'Remove from Sidebar (⌘ + W)',
           position: 'right'
@@ -264,10 +275,24 @@
       >
         <Icon name="close" size="16px" />
       </button>
+      <!-- {:else if showExcludeOthersButton}
+      <button
+        on:click|stopPropagation={handleExcludeTab}
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+      >
+        <Icon name="minus" size="16px" />
+      </button>
+    {:else if showIncludeButton}
+      <button
+        on:click|stopPropagation={handleIncludeTab}
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+      >
+        <Icon name="add" size="16px" />
+      </button> -->
     {:else}
       <button
         on:click|stopPropagation={handleArchive}
-        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-0.5 -m-0.5 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
       >
         {#if tab.archived}
           <Icon name="trash" size="16px" />
@@ -326,7 +351,7 @@
         {#if tab.type === 'page' && tab.currentDetectedApp?.rssFeedUrl && isActive}
           <button
             on:click={handleCreateLiveSpace}
-            class="flex items-center justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
             use:tooltip={{
               content: `Create ${tab.currentDetectedApp.appName} live Space`,
               action: 'hover',
@@ -364,35 +389,99 @@
                 animation: 'fade',
                 delay: 700
               }}
+              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
             >
               {#if bookmarkingInProgress}
-                <Icon name="spinner" />
+                <Icon name="spinner" size="16px" />
               {:else if bookmarkingSuccess}
-                <Icon name="check" />
+                <Icon name="check" size="16px" />
               {:else if isBookmarkedByUser}
-                <Icon name="bookmarkFilled" />
+                <Icon name="bookmarkFilled" size="16px" />
               {:else}
-                <Icon name="leave" />
+                <Icon name="leave" size="16px" />
               {/if}
             </button>
           {/key}
         {/if}
+
+        {#if showIncludeButton}
+          <button
+            on:click|stopPropagation={handleIncludeTab}
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+            use:tooltip={{
+              content: 'Add Tab to Context',
+              action: 'hover',
+              position: 'left',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            <Icon name="add" size="16px" />
+          </button>
+        {/if}
       </div>
-    {:else if showExcludeOthersButton && hovered}
+    {:else if (showExcludeOthersButton || showIncludeButton) && hovered}
       <div class="items-center flex justify-end flex-row space-x-2 right-0">
-        <button
-          on:click|stopPropagation={handleExcludeOthers}
-          class="flex items-center justify-center appearance-none border-none p-0 m-0 h-min-content bg-none text-sky-900 cursor-pointer"
-          use:tooltip={{
-            content: 'Only use this tab',
-            action: 'hover',
-            position: 'left',
-            animation: 'fade',
-            delay: 500
-          }}
-        >
-          <Icon name="arrow.autofit.up" size="16px" />
-        </button>
+        {#if showExcludeOthersButton}
+          <button
+            on:click|stopPropagation={handleExcludeOthers}
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none text-sky-900 transition-colors hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+            use:tooltip={{
+              content: 'Only use this tab',
+              action: 'hover',
+              position: 'left',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            <!-- <Icon name="arrow.autofit.up" size="16px" /> -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-focus-centered"
+              ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
+                d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"
+              /><path d="M4 8v-2a2 2 0 0 1 2 -2h2" /><path d="M4 16v2a2 2 0 0 0 2 2h2" /><path
+                d="M16 4h2a2 2 0 0 1 2 2v2"
+              /><path d="M16 20h2a2 2 0 0 0 2 -2v-2" /></svg
+            >
+          </button>
+          <button
+            on:click|stopPropagation={handleExcludeTab}
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+            use:tooltip={{
+              content: 'Remove Tab from Context',
+              action: 'hover',
+              position: 'left',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            <Icon name="minus" size="16px" />
+            <!-- <svg  xmlns="http://www.w3.org/2000/svg"  width="16"  height="16"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-focus-centered"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M4 8v-2a2 2 0 0 1 2 -2h2" /><path d="M4 16v2a2 2 0 0 0 2 2h2" /><path d="M16 4h2a2 2 0 0 1 2 2v2" /><path d="M16 20h2a2 2 0 0 0 2 -2v-2" /></svg> -->
+          </button>
+        {:else if showIncludeButton}
+          <button
+            on:click|stopPropagation={handleIncludeTab}
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+            use:tooltip={{
+              content: 'Add Tab to Context',
+              action: 'hover',
+              position: 'left',
+              animation: 'fade',
+              delay: 500
+            }}
+          >
+            <Icon name="add" size="16px" />
+          </button>
+        {/if}
       </div>
     {/if}
   {/if}

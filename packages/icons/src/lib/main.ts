@@ -72,6 +72,8 @@ import History from './Icons/History.svelte'
 import Filter from './Icons/Filter.svelte'
 import ListAdd from './Icons/ListAdd.svelte'
 import Moon from './Icons/Moon.svelte'
+import Minus from './Icons/Minus.svelte'
+import TriangleSquareCircle from './Icons/TriangleSquareCircle.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -148,7 +150,9 @@ export const icons = {
   history: History,
   filter: Filter,
   'list-add': ListAdd,
-  moon: Moon
+  moon: Moon,
+  minus: Minus,
+  'triangle-square-circle': TriangleSquareCircle
 }
 
 export type Icons = keyof typeof icons
@@ -226,5 +230,7 @@ export {
   History,
   Filter,
   ListAdd,
-  Moon
+  Moon,
+  Minus,
+  TriangleSquareCircle
 }

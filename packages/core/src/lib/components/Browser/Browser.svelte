@@ -108,6 +108,7 @@
     type DragOperation,
     type DragculaDragEvent
   } from '@horizon/dragcula'
+  import CustomPopover from './CustomPopover.svelte'
   //import '@horizon/dragcula/dist/styles.scss'
 
   let activeTabComponent: TabItem | null = null
@@ -165,7 +166,12 @@
   const browserTabs = writable<Record<string, BrowserTab>>({})
   const bookmarkingInProgress = writable(false)
   const magicInputValue = writable('')
-  const activeTabMagic = writable<PageMagic>()
+  const activeTabMagic = writable<PageMagic>({
+    running: false,
+    showSidebar: false,
+    responses: [],
+    initializing: false
+  })
   const activeAppSidebarContext = writable<string>('') // TODO: support multiple contexts in the future
   const bookmarkingSuccess = writableAutoReset(false, 1000)
   const showURLBar = writable(false)
@@ -177,8 +183,12 @@
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
   const activatedTabs = writable<string[]>([]) // for lazy loading
+  const rightSidebarTab = writable<'annotations' | 'chat' | 'go-wild'>('chat')
+  const cachedMagicTabs = new Set<string>()
   const downloadResourceMap = new Map<string, Download>()
   const downloadToastsMap = new Map<string, ToastItem>()
+
+  $: log.debug('right sidebar tab', $rightSidebarTab)
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -198,7 +208,7 @@
   })
 
   const magicTabs = derived([activeTabs], ([tabs]) => {
-    return tabs.filter((tab) => tab.magic).sort((a, b) => a.index - b.index)
+    return tabs.filter((tab) => tab.magic).sort((a, b) => a.index - b.index) as TabPage[]
   })
 
   const activeTab = derived([tabs, activeTabId], ([tabs, activeTabId]) => {
@@ -224,6 +234,52 @@
   const activeBrowserTab = derived([browserTabs, activeTabId], ([browserTabs, activeTabId]) => {
     return browserTabs[activeTabId]
   })
+
+  const sidebarTools = derived(
+    [activeTabMagic, activeTab, showAppSidebar],
+    ([$activeTabMagic, $activeTab, $showAppSidebar]) => [
+      {
+        id: 'chat',
+        name: 'Chat',
+        type: 'tool',
+        icon: $activeTabMagic ? ($activeTabMagic.running ? 'spinner' : 'message') : 'message',
+        disabled: !$activeTabMagic,
+        showCondition: $activeTab && $activeTabMagic,
+        fallbackContent: {
+          icon: 'info',
+          message: 'Magic chat not available'
+        }
+      },
+      {
+        id: 'annotations',
+        name: 'Annotate',
+        type: 'tool',
+        icon: 'marker',
+        disabled: $activeTab?.type !== 'page',
+        showCondition: $activeTab && $activeTab.type === 'page',
+        fallbackContent: {
+          icon: 'info',
+          message: 'No page info available.'
+        }
+      },
+      {
+        id: 'go-wild',
+        name: 'Program',
+        type: 'tool',
+        icon: 'sparkles',
+        disabled: $activeTab?.type !== 'page',
+        showCondition: $activeTab && $activeTab.type === 'page' && $showAppSidebar,
+        fallbackContent: {
+          icon: 'info',
+          message: 'Go wild not available.'
+        }
+      }
+    ]
+  )
+
+  $: {
+    handleRightSidebarTabsChange($rightSidebarTab)
+  }
 
   $: canGoBack = $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
   $: canGoForward =
@@ -738,7 +794,7 @@
     }
 
     if ($activeTabMagic.showSidebar) {
-      handleToggleMagicSidebar()
+      setPageChatState(false)
     }
   }
 
@@ -746,19 +802,21 @@
     if (sidebarComponent) {
       sidebarComponent.expandRight()
     }
+
+    showRightSidebar = true
   }
 
   const handleRightPaneUpdate = (event: CustomEvent<PaneAPI>) => {
     rightPane = event.detail
   }
 
-  const handleRightSidebarChange = () => {
+  const toggleRightSidebar = () => {
     if (showRightSidebar) {
       handleCollapseRight()
-      showRightSidebar = false
+      cachedMagicTabs.clear()
     } else {
       handleExpandRight()
-      showRightSidebar = true
+      setPageChatState(true)
     }
   }
 
@@ -775,6 +833,41 @@
     if (sidebarComponent) {
       sidebarComponent.expandLeft()
       changeTraficLightsVisibility(true)
+    }
+  }
+
+  const handleRightSidebarTabsChange = (e: string) => {
+    log.debug('Tabs value change', e)
+    if (e === 'chat') {
+      setPageChatState(true)
+      return
+    } else if ($activeTabMagic.showSidebar) {
+      setPageChatState(false)
+    }
+
+    // if ($activeTabMagic.showSidebar) {
+    //   handleToggleMagicSidebar()
+    // }
+
+    if (e === 'go-wild') {
+      handleToggleAppSidebar()
+      return
+    }
+
+    if ($showAppSidebar) {
+      handleToggleAppSidebar()
+    }
+  }
+
+  const openRightSidebarTab = (id: typeof $rightSidebarTab) => {
+    rightSidebarTab.set(id)
+
+    if (!showRightSidebar) {
+      handleExpandRight()
+
+      if (id === 'chat') {
+        setPageChatState(true)
+      }
     }
   }
 
@@ -1147,37 +1240,15 @@
 
   function updateActiveMagicPage(updates: Partial<PageMagic>) {
     log.debug('updating active magic page', updates)
+
+    if (updates.chatId) {
+      activeChatId.set(updates.chatId)
+    }
+
     activeTabMagic.update((magic) => {
       return {
         ...magic,
         ...updates
-      }
-    })
-  }
-
-  function addPageMagicResponse(response: AIChatMessageParsed) {
-    activeTabMagic.update((magic) => {
-      return {
-        ...magic,
-        responses: [...magic.responses, response]
-      }
-    })
-  }
-
-  function updatePageMagicResponse(responseId: string, updates: Partial<AIChatMessageParsed>) {
-    activeTabMagic.update((magic) => {
-      return {
-        ...magic,
-        responses: magic.responses.map((response) => {
-          if (response.id === responseId) {
-            return {
-              ...response,
-              ...updates
-            }
-          }
-
-          return response
-        })
       }
     })
   }
@@ -1297,202 +1368,6 @@
     log.debug('HTML', html)
   }
 
-  const sendSidebarChatMessage = async (
-    tabsInContext: Tab[],
-    magicPage: PageMagic,
-    prompt: string,
-    role: AIChatMessageRole = 'user',
-    query?: string
-  ) => {
-    if (tabsInContext.length === 0) {
-      log.debug('No tabs in context, general chat:')
-    }
-    const chatId = $activeChatId
-    if (!chatId) {
-      alert('Error: Existing chat not found')
-      return
-    }
-
-    let response: AIChatMessageParsed | null = null
-
-    try {
-      log.debug('Magic button clicked')
-      const resourceIds: string[] = []
-      for (const tab of tabsInContext) {
-        const t = tab as TabPage
-        if (t.chatResourceBookmark) {
-          resourceIds.push(t.chatResourceBookmark)
-        }
-      }
-      response = {
-        id: generateID(),
-        role: role,
-        query: query ?? prompt,
-        status: 'pending',
-        content: '',
-        citations: {}
-      } as AIChatMessageParsed
-
-      updateActiveMagicPage({ running: true })
-      addPageMagicResponse(response)
-
-      log.debug('calling the AI')
-      let step = 'idle'
-      let content = ''
-
-      await sffs.sendAIChatMessage(
-        chatId!,
-        prompt,
-        (chunk: string) => {
-          if (step === 'idle') {
-            log.debug('sources chunk', chunk)
-
-            content += chunk
-
-            if (content.includes('</sources>')) {
-              const sources = parseChatResponseSources(content)
-              log.debug('Sources', sources)
-
-              step = 'sources'
-              content = ''
-
-              updatePageMagicResponse(response?.id ?? '', {
-                sources
-              })
-            }
-          } else {
-            content += chunk
-            updatePageMagicResponse(response?.id!, {
-              content: content
-                // .replace('<answer>', '')
-                // .replace('</answer>', '')
-                // .replace('<citation>', '')
-                // .replace('</citation>', '')
-                .replace('<br>', '\n')
-            })
-          }
-        },
-        {
-          resourceIds: resourceIds,
-          general: resourceIds.length === 0
-        }
-      )
-
-      updatePageMagicResponse(response.id, { status: 'success' })
-    } catch (e) {
-      log.error('Error doing magic', e)
-      if (response) {
-        updatePageMagicResponse(response.id, {
-          content: (e as any).message ?? 'Failed to generate response.',
-          status: 'error'
-        })
-      }
-
-      throw e
-    } finally {
-      updateActiveMagicPage({ running: false })
-    }
-  }
-
-  const handleMagicSidebarPromptSubmit = async (e: CustomEvent<PromptIDs>) => {
-    try {
-      const promptType = e.detail
-      log.debug('Magic button clicked')
-
-      const prompt = await getPrompt(promptType)
-
-      if (!$activeTabMagic) {
-        log.error('No active magic page')
-        return
-      }
-
-      await sendSidebarChatMessage(
-        getTabsInChatContext(),
-        $activeTabMagic,
-        prompt.content,
-        'system',
-        prompt.title
-      )
-    } catch (e) {
-      log.error('Error doing magic', e)
-    }
-  }
-
-  const handleChatSubmit = async (magicPage: PageMagic) => {
-    const savedInputValue = $magicInputValue
-    console.log('chat id', $activeChatId)
-    try {
-      $magicInputValue = ''
-      log.debug('Magic button clicked')
-
-      if (!savedInputValue) {
-        log.debug('No input value')
-        return
-      }
-      await sendSidebarChatMessage(getTabsInChatContext(), magicPage, savedInputValue)
-    } catch (e) {
-      log.error('Error doing magic', e)
-      $magicInputValue = savedInputValue
-    }
-  }
-
-  const deleteChatsForPageChat = async () => {
-    for (const tab of getTabsInChatContext()) {
-      if (tab.type === 'page' && tab.chatId) {
-        await sffs.deleteAIChat(tab.chatId)
-      }
-    }
-  }
-
-  const deleteAppIdsForAppSidebar = async () => {
-    for (const tab of getTabsInChatContext()) {
-      if (tab.type === 'page' && tab.appId) {
-        await sffs.deleteAIChat(tab.appId)
-      }
-    }
-  }
-
-  const updateChatIdsForPageChat = (newChatId: string) => {
-    for (const tab of getTabsInChatContext()) {
-      if (tab.type === 'page') {
-        updateTab(tab.id, { chatId: newChatId })
-      }
-    }
-  }
-
-  const updateAppIdsForAppSidebar = (newAppId: string) => {
-    for (const tab of getTabsInChatContext()) {
-      if (tab.type === 'page') {
-        updateTab(tab.id, { appId: newAppId })
-      }
-    }
-  }
-
-  const handleChatClear = async (createNewChat: boolean) => {
-    log.debug('clearing chat')
-    let pageMagic = $activeTabMagic
-    if (!pageMagic) return
-
-    try {
-      let chatId: string = ''
-      await deleteChatsForPageChat()
-      if (createNewChat) {
-        const newChatId = await sffs.createAIChat('')
-        console.log('new chat id', newChatId)
-        if (!newChatId) {
-          log.error('Failed to create new chat aftering clearing the old one')
-          return
-        }
-        chatId = newChatId
-      }
-      pageMagic.responses = []
-      updateChatIdsForPageChat(chatId)
-      activeChatId.set(chatId)
-    } catch (e) {
-      log.error('Error clearing chat:', e)
-    }
-  }
-
   const handleAppSidebarClear = async (createNewAppId: boolean) => {
     log.debug('clearing app sidebar')
     try {
@@ -1514,22 +1389,51 @@
     }
   }
 
-  const bookmarkPageTabsInContext = async () => {
-    log.debug('Bookmarking all page tabs in context')
-    for (const tab of getTabsInChatContext()) {
-      if (tab.type === 'page' && !tab.resourceBookmark) {
-        try {
-          log.debug('Bookmarking page tab', tab)
-          const browserTab = $browserTabs[tab.id]
-          await browserTab.bookmarkPage(true)
-        } catch (e) {
-          log.warn('Error bookmarking page tab', tab, e)
-        }
+  const prepareTabForChatContext = async (tab: TabPage) => {
+    const isActivated = $activatedTabs.includes(tab.id)
+    if (!isActivated) {
+      log.debug('Tab not activated, activating first', tab)
+      activatedTabs.update((tabs) => {
+        return [...tabs, tab.id]
+      })
+
+      // give the tab some time to load
+      await wait(200)
+    }
+
+    if (tab.type === 'page' && !tab.resourceBookmark) {
+      try {
+        log.debug('Bookmarking page tab', tab)
+        const browserTab = $browserTabs[tab.id]
+        await browserTab.bookmarkPage(true)
+      } catch (e) {
+        log.warn('Error bookmarking page tab', tab, e)
       }
     }
   }
 
-  const handleToggleMagicSidebar = async () => {
+  const preparePageTabsForChatContext = async () => {
+    try {
+      updateActiveMagicPage({ initializing: true })
+
+      const tabs = getTabsInChatContext()
+      log.debug('Making sure resources for all page tabs in context are extracted', tabs)
+
+      await Promise.all(
+        tabs.map(async (tab) => {
+          await prepareTabForChatContext(tab)
+        })
+      )
+    } catch (e) {
+      log.error('Error preparing page tabs for chat context', e)
+    } finally {
+      log.debug('Done preparing page tabs for chat context')
+      updateActiveMagicPage({ initializing: false })
+    }
+  }
+
+  const setPageChatState = async (enabled: boolean) => {
+    log.debug('Toggling magic sidebar')
     document.startViewTransition(async () => {
       showAppSidebar.set(false)
       const tab = $activeTab as TabPage | null
@@ -1537,26 +1441,25 @@
       if (!$activeTabMagic) return
       if (!tab) return
 
-      if (!$activeTabMagic.showSidebar) {
-        if (!$activeChatId) {
-          const chatId = await sffs.createAIChat('')
-          if (!chatId) {
-            log.error('Failed to create chat')
-            return
-          }
-          updateChatIdsForPageChat(chatId)
-          activeChatId.set(chatId)
-        }
-        await bookmarkPageTabsInContext()
-      }
       activeTabMagic.update((magic) => {
         return {
           ...magic,
+          initializing: enabled,
+          chatId: $activeChatId,
           showSidebar: !magic.showSidebar
         }
       })
-      toggleTabsMagic($activeTabMagic.showSidebar)
+
+      await toggleTabsMagic(enabled)
+
       await tick()
+
+      if (enabled) {
+        // Delay to let the sidebar open first
+        requestAnimationFrame(async () => {
+          await preparePageTabsForChatContext()
+        })
+      }
     })
   }
 
@@ -1575,7 +1478,7 @@
       }
       updateTab(tab.id, { appId: appId })
       // updateAppIdsForAppSidebar(appId)
-      // await bookmarkPageTabsInContext()
+      // await preparePageTabsForChatContext()
     }
     /*
     const detectedResource = await $activeBrowserTab.detectResource()
@@ -2238,9 +2141,49 @@
     tabs.update((x) => {
       return x.map((tab) => {
         if (tab.id !== tabId) {
+          cachedMagicTabs.delete(tab.id)
+
           return {
             ...tab,
             magic: false
+          }
+        }
+        return tab
+      })
+    })
+  }
+
+  const handleExcludeTabFromMagic = (e: CustomEvent<string>) => {
+    const tabId = e.detail
+
+    // exclude the tab from magic
+    tabs.update((x) => {
+      return x.map((tab) => {
+        if (tab.id === tabId) {
+          cachedMagicTabs.delete(tab.id)
+
+          return {
+            ...tab,
+            magic: false
+          }
+        }
+        return tab
+      })
+    })
+  }
+
+  const handleIncludeTabInMagic = (e: CustomEvent<string>) => {
+    const tabId = e.detail
+
+    // include the tab in magic
+    tabs.update((x) => {
+      return x.map((tab) => {
+        if (tab.id === tabId) {
+          cachedMagicTabs.add(tab.id)
+
+          return {
+            ...tab,
+            magic: true
           }
         }
         return tab
@@ -2258,11 +2201,31 @@
     let newUnpinnedTabsArray: Tab[] = []
 
     if (on) {
-      unpinnedTabsArray.forEach((tab) => {
-        tab.magic = true
-      })
+      log.debug('Toggling tabs magic on', cachedMagicTabs.values())
+
+      if (cachedMagicTabs.size > 0) {
+        log.debug('Using cached magic tabs')
+        const cachedTabs = Array.from(cachedMagicTabs.values())
+        cachedTabs.forEach((id) => {
+          const tab = unpinnedTabsArray.find((t) => t.id === id)
+          if (tab) {
+            tab.magic = true
+          }
+        })
+      } else {
+        log.debug('Creating new magic tabs')
+        // Move all unpinned tabs to magic tabs
+        unpinnedTabsArray.forEach((tab) => {
+          if (tab.type === 'page') {
+            tab.magic = true
+            cachedMagicTabs.add(tab.id)
+          }
+        })
+      }
+
       newUnpinnedTabsArray = []
     } else {
+      log.debug('Toggling tabs magic off')
       // Revert each magic tab to its previous state
       magicTabsArray.forEach((magicTab) => {
         magicTab.magic = false
@@ -2399,7 +2362,7 @@
   }
 
   const onDropDragcula = async (e: DragculaDragEvent) => {
-    console.debug('DROP DRAGCULA', e)
+    log.debug('DROP DRAGCULA', e)
     e.preventDefault()
 
     if (e.isNative) {
@@ -2456,7 +2419,7 @@
 
         // CASE: to already includes tab
         if (toTabs.find((v) => v.id === dragData.id)) {
-          console.warn('ONLY Update existin tab')
+          log.warn('ONLY Update existin tab')
           const existing = fromTabs.find((v) => v.id === dragData.id)
           if (existing) {
             existing.index = e.index
@@ -2468,7 +2431,7 @@
           )
           fromTabs.splice(e.index || 0, 0, existing)
         } else {
-          console.warn('ADDING NEW ONE')
+          log.warn('ADDING NEW ONE')
           // Remove old
           const idx = fromTabs.findIndex((v) => v.id === dragData.id)
           if (idx > -1) {
@@ -2478,18 +2441,28 @@
           if (e.to.id === 'sidebar-pinned-tabs') {
             dragData.pinned = true
             dragData.magic = false
+
+            cachedMagicTabs.delete(dragData.id)
           } else if (e.to.id === 'sidebar-magic-tabs') {
             dragData.pinned = false
             dragData.magic = true
+
+            cachedMagicTabs.add(dragData.id)
+
+            if (dragData.type === 'page' && $activeTabMagic?.showSidebar) {
+              log.debug('prepare tab for chat context after moving to magic')
+              prepareTabForChatContext(dragData)
+            }
           } else {
             dragData.pinned = false
             dragData.magic = false
+            cachedMagicTabs.delete(dragData.id)
           }
 
           toTabs.splice(e.index || 0, 0, dragData)
         }
 
-        console.log(...pinnedTabsArray, ...unpinnedTabsArray, ...magicTabsArray)
+        // log.log(...pinnedTabsArray, ...unpinnedTabsArray, ...magicTabsArray)
 
         // Update the indices of the tabs in all lists
         const updateIndices = (tabs: ITab[]) => tabs.map((tab, index) => ({ ...tab, index }))
@@ -2501,7 +2474,7 @@
         // Combine all lists back together
         const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
 
-        console.warn('New tabs', [...newTabs])
+        log.warn('New tabs', [...newTabs])
 
         // Update the store with the changed tabs
         bulkUpdateTabsStore(
@@ -2522,7 +2495,7 @@
 
   const onDragculaTabDragEnd = async (e: CustomEvent<DragculaDragEvent>) => {
     e = e.detail
-    console.debug('TAB DRAG END', e)
+    log.debug('TAB DRAG END', e)
 
     if (
       e.status === 'completed' &&
@@ -2650,120 +2623,137 @@
             : 'flex-row items-center h-full ml-20 space-x-4 mr-4'} relative"
         >
           <div
-            class="flex flex-row items-center flex-shrink-0 {!horizontalTabs &&
-              'w-full justify-end'}"
+            class="flex flex-row items-center flex-shrink-0 {horizontalTabs
+              ? 'pl-3'
+              : 'w-full justify-between pl-[4.4rem]'}"
           >
-            <Tooltip.Root openDelay={400} closeDelay={10}>
-              <Tooltip.Content
-                transition={flyAndScale}
-                transitionConfig={{ y: 8, duration: 150 }}
-                sideOffset={8}
-              >
-                <div class="bg-neutral-100">
-                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                </div>
-                <div
-                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-                >
-                  Toggle Sidebar (⌘ + B)
-                </div>
-              </Tooltip.Content>
-            </Tooltip.Root>
-
-            <Tooltip.Root openDelay={400} closeDelay={10}>
-              <Tooltip.Trigger>
-                <button
-                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
-                    ? 'opacity-30 cursor-not-allowed'
-                    : 'cursor-pointer'}"
-                  disabled={!canGoBack}
-                  on:click={$activeBrowserTab?.goBack}
-                >
-                  <span
-                    class="inline-block translate-x-0 {canGoBack &&
-                      'group-hover:-translate-x-1'} transition-transform ease-in-out duration-200"
+            {#if !horizontalTabs}
+              <Tooltip.Root openDelay={400} closeDelay={10}>
+                <Tooltip.Trigger>
+                  <button
+                    class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    on:click={handleCollapse}
                   >
-                    <Icon name="arrow.left" />
-                  </span>
-                </button>
-              </Tooltip.Trigger>
-              <Tooltip.Content
-                transition={flyAndScale}
-                transitionConfig={{ y: 8, duration: 150 }}
-                sideOffset={8}
-              >
-                <div class="bg-neutral-100">
-                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                </div>
-                <div
-                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                    <span
+                      class="inline-block translate-x-0 transition-transform ease-in-out duration-200"
+                    >
+                      <Icon name="sidebar.left" />
+                    </span>
+                  </button>
+                </Tooltip.Trigger>
+                <Tooltip.Content
+                  transition={flyAndScale}
+                  transitionConfig={{ y: 8, duration: 150 }}
+                  sideOffset={8}
                 >
-                  Go back (⌘ + ←)
-                </div>
-              </Tooltip.Content>
-            </Tooltip.Root>
-
-            <Tooltip.Root openDelay={400} closeDelay={10}>
-              <Tooltip.Trigger>
-                <button
-                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoForward
-                    ? 'opacity-30 cursor-not-allowed'
-                    : 'cursor-pointer'}"
-                  disabled={!canGoForward}
-                  on:click={$activeBrowserTab?.goForward}
-                >
-                  <span
-                    class="inline-block translate-x-0 {canGoForward &&
-                      'group-hover:translate-x-1'} transition-transform ease-in-out duration-200"
+                  <div class="bg-neutral-100">
+                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                  </div>
+                  <div
+                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
                   >
-                    <Icon name="arrow.right" />
-                  </span>
-                </button>
-              </Tooltip.Trigger>
-              <Tooltip.Content
-                transition={flyAndScale}
-                transitionConfig={{ y: 8, duration: 150 }}
-                sideOffset={8}
-              >
-                <div class="bg-neutral-100">
-                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                </div>
-                <div
-                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-                >
-                  Go forward (⌘ + →)
-                </div>
-              </Tooltip.Content>
-            </Tooltip.Root>
+                    Toggle Sidebar (⌘ + B)
+                  </div>
+                </Tooltip.Content>
+              </Tooltip.Root>
+            {/if}
 
-            <Tooltip.Root openDelay={400} closeDelay={10}>
-              <Tooltip.Trigger>
-                <button
-                  class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                  on:click={$activeBrowserTab?.reload}
-                >
-                  <span
-                    class="group-hover:rotate-180 transition-transform ease-in-out duration-200"
+            <div class="flex flex-row items-center">
+              <Tooltip.Root openDelay={400} closeDelay={10}>
+                <Tooltip.Trigger>
+                  <button
+                    class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
+                      ? 'opacity-30 cursor-not-allowed'
+                      : 'cursor-pointer'}"
+                    disabled={!canGoBack}
+                    on:click={$activeBrowserTab?.goBack}
                   >
-                    <Icon name="reload" />
-                  </span>
-                </button>
-              </Tooltip.Trigger>
-              <Tooltip.Content
-                transition={flyAndScale}
-                transitionConfig={{ y: 8, duration: 150 }}
-                sideOffset={8}
-              >
-                <div class="bg-neutral-100">
-                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                </div>
-                <div
-                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                    <span
+                      class="inline-block translate-x-0 {canGoBack &&
+                        'group-hover:-translate-x-1'} transition-transform ease-in-out duration-200"
+                    >
+                      <Icon name="arrow.left" />
+                    </span>
+                  </button>
+                </Tooltip.Trigger>
+                <Tooltip.Content
+                  transition={flyAndScale}
+                  transitionConfig={{ y: 8, duration: 150 }}
+                  sideOffset={8}
                 >
-                  Reload Page (⌘ + R)
-                </div>
-              </Tooltip.Content>
-            </Tooltip.Root>
+                  <div class="bg-neutral-100">
+                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                  </div>
+                  <div
+                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                  >
+                    Go back (⌘ + ←)
+                  </div>
+                </Tooltip.Content>
+              </Tooltip.Root>
+
+              <Tooltip.Root openDelay={400} closeDelay={10}>
+                <Tooltip.Trigger>
+                  <button
+                    class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoForward
+                      ? 'opacity-30 cursor-not-allowed'
+                      : 'cursor-pointer'}"
+                    disabled={!canGoForward}
+                    on:click={$activeBrowserTab?.goForward}
+                  >
+                    <span
+                      class="inline-block translate-x-0 {canGoForward &&
+                        'group-hover:translate-x-1'} transition-transform ease-in-out duration-200"
+                    >
+                      <Icon name="arrow.right" />
+                    </span>
+                  </button>
+                </Tooltip.Trigger>
+                <Tooltip.Content
+                  transition={flyAndScale}
+                  transitionConfig={{ y: 8, duration: 150 }}
+                  sideOffset={8}
+                >
+                  <div class="bg-neutral-100">
+                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                  </div>
+                  <div
+                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                  >
+                    Go forward (⌘ + →)
+                  </div>
+                </Tooltip.Content>
+              </Tooltip.Root>
+
+              <Tooltip.Root openDelay={400} closeDelay={10}>
+                <Tooltip.Trigger>
+                  <button
+                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    on:click={$activeBrowserTab?.reload}
+                  >
+                    <span
+                      class="group-hover:rotate-180 transition-transform ease-in-out duration-200"
+                    >
+                      <Icon name="reload" />
+                    </span>
+                  </button>
+                </Tooltip.Trigger>
+                <Tooltip.Content
+                  transition={flyAndScale}
+                  transitionConfig={{ y: 8, duration: 150 }}
+                  sideOffset={8}
+                >
+                  <div class="bg-neutral-100">
+                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                  </div>
+                  <div
+                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                  >
+                    Reload Page (⌘ + R)
+                  </div>
+                </Tooltip.Content>
+              </Tooltip.Root>
+            </div>
           </div>
 
           <div
@@ -2856,6 +2846,7 @@
                               on:select={handleTabSelect}
                               on:remove-from-sidebar={handleRemoveFromSidebar}
                               on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                              on:exclude-tab={handleExcludeTabFromMagic}
                             />
                           {/each}
                         {/if}
@@ -2908,6 +2899,7 @@
                               on:select={handleTabSelect}
                               on:remove-from-sidebar={handleRemoveFromSidebar}
                               on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                              on:exclude-tab={handleExcludeTabFromMagic}
                             />
                           {/each}
                         {/if}
@@ -2960,6 +2952,7 @@
                       pinned={false}
                       {spaces}
                       enableEditing
+                      showIncludeButton={$activeTabMagic?.showSidebar && tab.type === 'page'}
                       bind:this={activeTabComponent}
                       on:DragEnd={onDragculaTabDragEnd}
                       on:select={() => {}}
@@ -2971,6 +2964,7 @@
                       on:bookmark={handleBookmark}
                       on:create-live-space={handleCreateLiveSpace}
                       on:save-resource-in-space={handleSaveResourceInSpace}
+                      on:include-tab={handleIncludeTabInMagic}
                     />
                   {:else}
                     <TabItem
@@ -2980,6 +2974,7 @@
                       tabSize={Math.min(300, Math.max(24, tabSize))}
                       {activeTabId}
                       pinned={false}
+                      showIncludeButton={$activeTabMagic?.showSidebar && tab.type === 'page'}
                       on:DragEnd={onDragculaTabDragEnd}
                       on:select={handleTabSelect}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
@@ -2987,6 +2982,7 @@
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
                       on:unarchive-tab={handleUnarchiveTab}
+                      on:include-tab={handleIncludeTabInMagic}
                     />
                   {/if}
                 {/each}
@@ -3016,6 +3012,7 @@
                       pinned={false}
                       {spaces}
                       enableEditing
+                      showIncludeButton={$activeTabMagic?.showSidebar && tab.type === 'page'}
                       bind:this={activeTabComponent}
                       on:DragEnd={onDragculaTabDragEnd}
                       on:select={() => {}}
@@ -3027,6 +3024,7 @@
                       on:bookmark={handleBookmark}
                       on:create-live-space={handleCreateLiveSpace}
                       on:save-resource-in-space={handleSaveResourceInSpace}
+                      on:include-tab={handleIncludeTabInMagic}
                       on:DragEnter={(e) => {
                         e.stopPropagation()
                         const drag = e.detail
@@ -3040,7 +3038,7 @@
                       on:Drop={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        console.debug('DROP ON TAB', e.detail)
+                        log.debug('DROP ON TAB', e.detail)
                       }}
                     />
                   {:else}
@@ -3051,6 +3049,7 @@
                       horizontalTabs={false}
                       {activeTabId}
                       pinned={false}
+                      showIncludeButton={$activeTabMagic?.showSidebar && tab.type === 'page'}
                       on:DragEnd={onDragculaTabDragEnd}
                       on:select={handleTabSelect}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
@@ -3058,6 +3057,7 @@
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
                       on:unarchive-tab={handleUnarchiveTab}
+                      on:include-tab={handleIncludeTabInMagic}
                     />
                   {/if}
                 {/each}
@@ -3108,17 +3108,53 @@
                 <span class="label">New Tab</span>
               {/if}
             </button>
-            <div class="flex flex-row flex-shrink-0 items-center space-x-4 mx-auto">
-              <button
+            <div
+              class="flex flex-row flex-shrink-0 items-center mx-auto"
+              class:space-x-4={!horizontalTabs}
+            >
+              <!-- <button
                 class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                on:click={() => handleRightSidebarChange()}
+                on:click={() => toggleRightSidebar()}
               >
                 {#if showRightSidebar}
                   <Icon name="close" />
                 {:else}
                   <Icon name="sidebar.right" />
                 {/if}
-              </button>
+              </button> -->
+
+              {#if !horizontalTabs || (horizontalTabs && !showRightSidebar)}
+                <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
+                  <button
+                    slot="trigger"
+                    class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    on:click={() => toggleRightSidebar()}
+                  >
+                    <Icon name="triangle-square-circle" />
+                  </button>
+
+                  <div
+                    slot="content"
+                    class="flex flex-row items-center justify-center space-x-4 px-3 py-3"
+                  >
+                    {#each $sidebarTools as tool}
+                      <button
+                        class="flex flex-col items-center space-y-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                        on:click={() => {
+                          openRightSidebarTab(tool.id)
+                        }}
+                        disabled={tool.disabled}
+                      >
+                        <div class="p-4 rounded-xl bg-neutral-200/50 hover:bg-neutral-200">
+                          <Icon name={tool.icon} class="text-xl text-neutral-800" />
+                        </div>
+                        <span class="text-xs">{tool.name}</span>
+                      </button>
+                    {/each}
+                  </div>
+                </CustomPopover>
+              {/if}
+
               <NewTabButton
                 {resourceManager}
                 {spaces}
@@ -3177,7 +3213,9 @@
               class="browser-window will-change-contents transform-gpu"
               style="--scaling: 1;"
               class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
-              class:magic-glow-big={$activeTabId === tab.id && $activeTabMagic?.running}
+              class:magic-glow-big={$activeTabId === tab.id &&
+                tab.type === 'page' &&
+                $activeTabMagic?.running}
             >
               <!-- {#if $sidebarTab === 'oasis'}
                 {#if $masterHorizon}
@@ -3274,63 +3312,56 @@
     </div>
 
     <Tabs.Root
-      onValueChange={(e) => {
-        if (e === 'magicTabs') {
-          handleToggleMagicSidebar()
-          return
-        }
-        if ($activeTabMagic.showSidebar) {
-          handleToggleMagicSidebar()
-        }
-
-        if (e === 'go-wild') {
-          handleToggleAppSidebar()
-          return
-        }
-
-        if ($showAppSidebar) {
-          handleToggleAppSidebar()
-        }
-      }}
-      value="annotations"
+      bind:value={$rightSidebarTab}
       class="h-full flex flex-col relative"
       slot="right-sidebar"
+      let:minimal
     >
-      <Tabs.List
-        class="grid w-full grid-cols-3 gap-1 rounded-9px bg-dark-10 px-3 py-4 text-sm font-semibold leading-[0.01em] border-b-2 border-sky-100"
-      >
-        <Tabs.Trigger
-          value="magicTabs"
-          class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-          disabled={!$activeTabMagic}
-          >{#if !$activeTabMagic}
-            <Icon name="message" />
-          {:else if $activeTabMagic.running}
-            <Icon name="spinner" />
-          {:else}
-            <Icon name="message" />
-          {/if}</Tabs.Trigger
-        >
-        <Tabs.Trigger
-          value="annotations"
-          class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-          disabled={$activeTab?.type !== 'page'}
-        >
-          <Icon name="marker" /></Tabs.Trigger
-        >
+      <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100">
+        <div class="flex items-center justify-start">
+          <!-- svelte-ignore a11y-click-events-have-key-events -->
+          <!-- svelte-ignore a11y-no-static-element-interactions -->
+          <div
+            role="button"
+            tabindex="0"
+            on:click={() => toggleRightSidebar()}
+            class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group cursor-pointer"
+          >
+            <Icon name="sidebar.right" class="group-hover:hidden" size="20px" />
+            <Icon name="close" class="hidden group-hover:block" size="20px" />
+          </div>
+        </div>
 
-        <Tabs.Trigger
-          value="go-wild"
-          class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-          disabled={$activeTab?.type !== 'page'}
+        <Tabs.List
+          class="grid w-full grid-cols-3 gap-1 rounded-9px bg-dark-10 text-sm font-semibold leading-[0.01em]"
         >
-          <Icon name="sparkles" /></Tabs.Trigger
-        >
-      </Tabs.List>
-      <Tabs.Content value="magicTabs" class="pt-3 h-full">
-        {#if $activeTab && $activeTabMagic}
+          {#each $sidebarTools as tool}
+            <Tabs.Trigger
+              value={tool.id}
+              class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center gap-2 px-2 py-3 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer opacity-75 data-[state='active']:opacity-100 data-[state='active']:bg-sky-200 hover:bg-sky-100 data-[state='active']:hover:bg-sky-200/50"
+              disabled={tool.disabled}
+            >
+              {#if tool.icon}
+                <Icon name={tool.icon} />
+              {/if}
+
+              {#if !minimal}
+                <span> {tool.name}</span>
+              {/if}
+            </Tabs.Trigger>
+          {/each}
+        </Tabs.List>
+
+        <div class="p-1">
+          <div style="width: 20px; height: 20px;"></div>
+        </div>
+      </div>
+
+      <Tabs.Content value="chat" class="flex-grow overflow-hidden">
+        {#if $activeTab && $activeTabMagic && $activeTabMagic?.showSidebar}
           <MagicSidebar
-            magicPage={$activeTabMagic}
+            magicPage={activeTabMagic}
+            tabsInContext={$magicTabs}
             bind:inputValue={$magicInputValue}
             on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
             on:highlightWebviewText={(e) =>
@@ -3341,9 +3372,7 @@
               $browserTabs[$activeTabId].navigate(e.detail.url)
             }}
             on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
-            on:chat={() => handleChatSubmit($activeTabMagic)}
-            on:clearChat={() => handleChatClear(true)}
-            on:prompt={handleMagicSidebarPromptSubmit}
+            on:updateMagicPage={(e) => updateActiveMagicPage(e.detail)}
           />
         {:else}
           <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
@@ -3352,7 +3381,7 @@
           </div>
         {/if}
       </Tabs.Content>
-      <Tabs.Content value="annotations" class="pt-3 h-full">
+      <Tabs.Content value="annotations" class="flex-grow overflow-hidden">
         {#if $activeTab && $activeTab.type === 'page'}
           <AnnotationsSidebar
             bind:this={annotationsSidebar}
@@ -3368,7 +3397,7 @@
           </div>
         {/if}
       </Tabs.Content>
-      <Tabs.Content value="go-wild" class="pt-3 h-full">
+      <Tabs.Content value="go-wild" class="flex-grow overflow-hidden">
         {#if $activeTab && $activeTab.type === 'page' && $showAppSidebar}
           <AppSidebar
             {sffs}

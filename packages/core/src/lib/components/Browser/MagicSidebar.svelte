@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
-  import { writable } from 'svelte/store'
+  import { createEventDispatcher, onMount } from 'svelte'
+  import { writable, type Writable } from 'svelte/store'
   import { fly } from 'svelte/transition'
   import { tooltip } from '@svelte-plugins/tooltips'
 
@@ -12,34 +12,85 @@
     AIChatMessageParsed,
     PageMagic,
     PageMagicResponse,
-    PageHighlight
+    PageHighlight,
+    TabPage,
+    AIChatMessageRole
   } from './types'
   import ChatMessage from './ChatMessage.svelte'
   import { useClipboard } from '../../utils/clipboard'
   import { useLogScope } from '../../utils/log'
-  import { ResourceManager, type ResourceLink } from '../../service/resources'
-  import { PromptIDs } from '../../service/prompts'
+  import { ResourceManager, useResourceManager, type ResourceLink } from '../../service/resources'
+  import { getPrompt, PromptIDs } from '../../service/prompts'
+  import { generateID } from '../../utils/id'
+  import { parseChatResponseSources } from '../../service/ai'
+  import { useToasts } from '../../service/toast'
+  import { useDebounce } from '../../utils/debounce'
 
   export let inputValue = ''
-  export let magicPage: PageMagic
-
-  const log = useLogScope('MagicSidebar')
+  export let magicPage: Writable<PageMagic>
+  export let tabsInContext: TabPage[] = []
 
   const dispatch = createEventDispatcher<{
     highlightText: { tabId: string; text: string }
     highlightWebviewText: { resourceId: string; answerText: string; sourceUid?: string }
     seekToTimestamp: { resourceId: string; timestamp: number }
-    clearChat: {}
     navigate: { url: string }
     saveText: string
-    chat: string
-    prompt: PromptIDs
+    updateMagicPage: Partial<PageMagic>
   }>()
+  const log = useLogScope('MagicSidebar')
   const { copy, copied } = useClipboard()
+  const resourceManager = useResourceManager()
+  const toasts = useToasts()
 
   const savedResponse = writable(false)
 
-  const saveResponseOutput = async (response: PageMagicResponse) => {
+  let listElem: HTMLDivElement
+
+  $: log.debug('Magic Page', $magicPage)
+  $: log.debug('Magic Page Responses', $magicPage.responses)
+
+  // const persistPageMagicChange = useDebounce(() => {
+  //   log.debug('Persisting page magic change', $magicPage)
+  //   dispatch('updateMagicPage', $magicPage)
+  // }, 500)
+
+  const updateMagicPage = (data: Partial<PageMagic>) => {
+    magicPage.update((page) => {
+      return {
+        ...page,
+        ...data
+      }
+    })
+  }
+
+  const addPageMagicResponse = (response: AIChatMessageParsed) => {
+    magicPage.update((page) => {
+      return {
+        ...page,
+        responses: [...page.responses, response]
+      }
+    })
+  }
+
+  const updatePageMagicResponse = (responseId: string, updates: Partial<AIChatMessageParsed>) => {
+    magicPage.update((page) => {
+      return {
+        ...page,
+        responses: page.responses.map((response) => {
+          if (response.id === responseId) {
+            return {
+              ...response,
+              ...updates
+            }
+          }
+          return response
+        })
+      }
+    })
+  }
+
+  const saveResponseOutput = async (response: AIChatMessageParsed) => {
     const div = document.createElement('div')
     div.innerHTML = response.content
     const text = div.textContent || div.innerText || ''
@@ -70,7 +121,6 @@
     log.debug('Citation clicked', sourceId, message)
     const source = (message.sources ?? []).find((s) => s.id === sourceId)
     if (!source) return
-    let resourceManager = new ResourceManager(null)
 
     const resource = await resourceManager.getResource(source.resource_id)
     if (!resource) return
@@ -94,15 +144,45 @@
   }
 
   const handleChatSubmit = async () => {
-    if (!inputValue) return
+    if (!inputValue) {
+      log.debug('No input value')
+      return
+    }
 
-    dispatch('chat', inputValue)
+    const savedInputValue = inputValue
+
+    try {
+      log.debug('Handling chat submit', inputValue)
+      inputValue = ''
+
+      await sendChatMessage(savedInputValue)
+    } catch (e) {
+      log.error('Error doing magic', e)
+      inputValue = savedInputValue
+    }
   }
 
-  const handlePromptClick = async (promptType: PromptIDs) => {
-    log.debug('Prompt clicked', promptType)
+  const runPrompt = async (promptType: PromptIDs) => {
+    try {
+      log.debug('Handling prompt submit', promptType)
 
-    dispatch('prompt', promptType)
+      const prompt = await getPrompt(promptType)
+
+      await sendChatMessage(prompt.content, 'system', prompt.title)
+    } catch (e) {
+      log.error('Error doing magic', e)
+    }
+  }
+
+  const handleClearChat = async () => {
+    log.debug('Clearing chat')
+
+    if (!$magicPage.chatId) {
+      log.error('No chat found to clear')
+      return
+    }
+
+    await clearChat($magicPage.chatId)
   }
 
   // HACK: Right now the saved chat doesn't store the query we provide, it only stores the raw message content. For system messages we don't want to display our long prompts.
@@ -118,135 +198,357 @@
       return raw
     }
   }
+
+  const sendChatMessage = async (
+    prompt: string,
+    role: AIChatMessageRole = 'user',
+    query?: string
+  ) => {
+    const chatId = $magicPage.chatId
+    if (!chatId) {
+      log.error('Error: Existing chat not found')
+      return
+    }
+
+    if (tabsInContext.length === 0) {
+      log.debug('No tabs in context, general chat:')
+    } else {
+      log.debug('Tabs in context:', tabsInContext)
+    }
+
+    let response: AIChatMessageParsed | null = null
+
+    try {
+      const resourceIds: string[] = []
+      for (const tab of tabsInContext) {
+        const t = tab as TabPage
+        if (t.chatResourceBookmark) {
+          resourceIds.push(t.chatResourceBookmark)
+        }
+      }
+
+      response = {
+        id: generateID(),
+        role: role,
+        query: query ?? prompt,
+        status: 'pending',
+        content: '',
+        citations: {}
+      } as AIChatMessageParsed
+
+      updateMagicPage({ running: true })
+      addPageMagicResponse(response)
+
+      log.debug('calling the AI')
+      let step = 'idle'
+      let content = ''
+
+      await resourceManager.sffs.sendAIChatMessage(
+        chatId!,
+        prompt,
+        (chunk: string) => {
+          if (step === 'idle') {
+            log.debug('sources chunk', chunk)
+
+            content += chunk
+
+            if (content.includes('</sources>')) {
+              const sources = parseChatResponseSources(content)
+              log.debug('Sources', sources)
+
+              step = 'sources'
+              content = ''
+
+              updatePageMagicResponse(response?.id ?? '', {
+                sources
+              })
+            }
+          } else {
+            content += chunk
+            updatePageMagicResponse(response?.id!, {
+              content: content
+                // .replace('<answer>', '')
+                // .replace('</answer>', '')
+                // .replace('<citation>', '')
+                // .replace('</citation>', '')
+                .replace('<br>', '\n')
+            })
+          }
+        },
+        {
+          limit: 30,
+          resourceIds: resourceIds,
+          general: resourceIds.length === 0
+        }
+      )
+
+      updatePageMagicResponse(response.id, { status: 'success', content: content })
+    } catch (e) {
+      log.error('Error doing magic', e)
+      if (response) {
+        updatePageMagicResponse(response.id, {
+          content: (e as any).message ?? 'Failed to generate response.',
+          status: 'error'
+        })
+      }
+
+      throw e
+    } finally {
+      updateMagicPage({ running: false })
+    }
+  }
+
+  const clearChat = async (id: string) => {
+    const toast = toasts.loading('Clearing chat...')
+
+    try {
+      log.debug('Clearing chat', id)
+
+      $magicPage.responses = []
+
+      await resourceManager.sffs.deleteAIChat(id)
+
+      log.debug('Old chat deleted, creating new chat...')
+      const newChatId = await resourceManager.sffs.createAIChat('')
+      if (!newChatId) {
+        log.error('Failed to create new chat aftering clearing the old one')
+        return
+      }
+
+      updateMagicPage({
+        chatId: newChatId,
+        responses: []
+      })
+
+      toast.success('Chat cleared!')
+    } catch (e) {
+      log.error('Error clearing chat:', e)
+      toast.error('Failed to clear chat')
+    }
+  }
+
+  const fetchExistingChat = async (id: string) => {
+    const chat = await resourceManager.sffs.getAIChat(id)
+    if (chat) {
+      const userMessages = chat.messages.filter((message) => message.role === 'user')
+      const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
+      const systemMessages = chat.messages.filter((message) => message.role === 'system')
+
+      const responses = systemMessages.map((message, idx) => {
+        message.sources = message.sources
+        log.debug('Message', message)
+        return {
+          id: generateID(),
+          role: message.role,
+          query: queries[idx],
+          content: message.content.replace('<answer>', '').replace('</answer>', ''),
+          sources: message.sources,
+          status: 'success'
+        } as AIChatMessageParsed
+      })
+
+      updateMagicPage({ responses })
+    }
+  }
+
+  const createNewChat = async () => {
+    const chatId = await resourceManager.sffs.createAIChat('')
+    if (!chatId) {
+      log.error('Failed to create chat')
+      return
+    }
+
+    log.debug('Chat created', chatId)
+
+    updateMagicPage({ chatId })
+  }
+
+  onMount(async () => {
+    log.debug('Magic Sidebar mounted')
+
+    if ($magicPage.chatId) {
+      log.debug('Existing chat found', $magicPage.chatId)
+      await fetchExistingChat($magicPage.chatId)
+    } else {
+      log.debug('No existing chat found, creating new chat')
+      await createNewChat()
+    }
+  })
 </script>
 
 <div class="flex flex-col gap-4 overflow-hidden p-4 h-full">
-  <div class="header">
+  <!-- <div class="header">
     <div class="title">
       <Icon name="message" size="28px" />
       <h1>Chat</h1>
     </div>
+  </div> -->
 
-    {#if !magicPage.running && magicPage.responses.length >= 1}
-      <button
-        on:click={() => {
-          magicPage.responses = []
-          dispatch('clearChat', {})
-        }}
-      >
-        Clear
-      </button>
-    {/if}
-  </div>
+  {#if !$magicPage.running && $magicPage.responses.length >= 1}
+    <button on:click={handleClearChat} class="clear-btn">
+      <Icon name="add" />
+      New Chat
+    </button>
+  {/if}
 
-  <div class="content">
-    {#each magicPage.responses as response, idx}
-      {#if response.status === 'success'}
-        <div class="output">
-          <div class="output-header">
-            <div class="input">
-              <div class="icon">
-                {#if response.role === 'user'}
-                  <Icon name="user" size="20px" />
-                {:else}
-                  <Icon name="sparkles" size="20px" />
-                {/if}
+  <div class="content" bind:this={listElem}>
+    {#if $magicPage.responses.length > 0}
+      {#each $magicPage.responses as response, idx (response.id)}
+        {#if response.status === 'success'}
+          <div class="output">
+            <div class="output-header">
+              <div class="input">
+                <div class="icon">
+                  {#if response.role === 'user'}
+                    <Icon name="user" size="20px" />
+                  {:else}
+                    <Icon name="sparkles" size="20px" />
+                  {/if}
+                </div>
+                <p class="query">
+                  {#if response.role === 'user'}
+                    {response.query}
+                  {:else}
+                    {sanitizeQuery(response.query)}
+                  {/if}
+                </p>
               </div>
-              <p class="query">
-                {#if response.role === 'user'}
-                  {response.query}
-                {:else}
-                  {sanitizeQuery(response.query)}
-                {/if}
-              </p>
+
+              <div class="output-actions">
+                <button
+                  on:click={() => copy(response.content)}
+                  use:tooltip={{
+                    content: 'Copy to Clipboard',
+                    action: 'hover',
+                    position: 'left',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  {#if $copied}
+                    <Icon name="check" />
+                  {:else}
+                    <Icon name="copy" />
+                  {/if}
+                </button>
+
+                <button
+                  on:click={() => saveResponseOutput(response)}
+                  use:tooltip={{
+                    content: 'Save to Oasis',
+                    action: 'hover',
+                    position: 'left',
+                    animation: 'fade',
+                    delay: 500
+                  }}
+                >
+                  {#if $savedResponse}
+                    <Icon name="check" />
+                  {:else}
+                    <Icon name="leave" />
+                  {/if}
+                </button>
+              </div>
             </div>
 
-            <div class="output-actions">
-              <button
-                on:click={() => copy(response.content)}
-                use:tooltip={{
-                  content: 'Copy to Clipboard',
-                  action: 'hover',
-                  position: 'left',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                {#if $copied}
-                  <Icon name="check" />
-                {:else}
-                  <Icon name="copy" />
-                {/if}
-              </button>
-
-              <button
-                on:click={() => saveResponseOutput(response)}
-                use:tooltip={{
-                  content: 'Save to Oasis',
-                  action: 'hover',
-                  position: 'left',
-                  animation: 'fade',
-                  delay: 500
-                }}
-              >
-                {#if $savedResponse}
-                  <Icon name="check" />
-                {:else}
-                  <Icon name="leave" />
-                {/if}
-              </button>
-            </div>
+            <ChatMessage
+              content={response.content}
+              sources={populateRenderAndChunkIds(response.sources)}
+              on:citationClick={(e) =>
+                handleCitationClick(
+                  e.detail.citationID,
+                  e.detail.text,
+                  response,
+                  e.detail.sourceHash
+                )}
+              showSourcesAtEnd={true}
+            />
           </div>
-
-          <ChatMessage
-            content={response.content}
-            sources={populateRenderAndChunkIds(response.sources)}
-            on:citationClick={(e) =>
-              handleCitationClick(e.detail.citationID, e.detail.text, response, e.detail.sourceUid)}
-            showSourcesAtEnd={true}
-          />
-        </div>
-      {:else if response.status === 'pending'}
-        <div class="output">
-          <div class="output-header">
-            <div class="input">
-              <Icon name="spinner" />
-              <p>{response.query}</p>
-              <!-- {#if response.role === 'user'}
+        {:else if response.status === 'pending'}
+          <div class="output">
+            <div class="output-header">
+              <div class="input">
+                <div class="icon">
+                  <Icon name="spinner" />
+                </div>
                 <p>{response.query}</p>
-              {:else}
-                <p>Generating Page Summary…</p>
-              {/if} -->
+                <!-- {#if response.role === 'user'}
+                  <p>{response.query}</p>
+                {:else}
+                  <p>Generating Page Summary…</p>
+                {/if} -->
+              </div>
             </div>
+
+            <!-- {@html response.content} -->
+
+            {#if response.content}
+              <ChatMessage
+                content={response.content}
+                sources={populateRenderAndChunkIds(response.sources)}
+                on:citationClick={(e) =>
+                  handleCitationClick(
+                    e.detail.citationID,
+                    e.detail.text,
+                    response,
+                    e.detail.sourceUid
+                  )}
+                showSourcesAtEnd={true}
+              />
+            {/if}
           </div>
+        {:else if response.status === 'error'}
+          <div class="output">
+            {response.content}
+          </div>
+        {/if}
+      {/each}
+    {:else}
+      <div class="empty">
+        <div class="empty-title">
+          <Icon name="message" />
+          <h1>New Chat</h1>
         </div>
-      {:else if response.status === 'error'}
-        <div class="output">
-          {response.content}
-        </div>
-      {/if}
-    {/each}
+        <p>
+          Chat with your tabs to ask questions and more. <br />Drag tabs in and out of the context
+          in the left sidebar.
+        </p>
+      </div>
+    {/if}
   </div>
 
   <!--
   {#if !magicPage.running}
     <div class="prompts" transition:fly={{ y: 120 }}>
-      <button on:click={() => handlePromptClick(PromptIDs.PAGE_SUMMARIZER)}>
+      <button on:click={() => runPrompt(PromptIDs.PAGE_SUMMARIZER)}>
         Summarize Page
       </button>
-      <button on:click={() => handlePromptClick(PromptIDs.PAGE_TOC)}> Table of Contents </button>
-      <button on:click={() => handlePromptClick(PromptIDs.PAGE_TRANSLATOR)}>
+      <button on:click={() => runPrompt(PromptIDs.PAGE_TOC)}> Table of Contents </button>
+      <button on:click={() => runPrompt(PromptIDs.PAGE_TRANSLATOR)}>
         Translate Page
       </button>
     </div>
   {/if}
   -->
 
+  {#if $magicPage.initializing}
+    <div class="info-box">
+      <Icon name="spinner" />
+      <p>Preparing tabs for the chat…</p>
+    </div>
+  {/if}
+
   <form on:submit|preventDefault={handleChatSubmit} class="chat">
     <input bind:value={inputValue} placeholder="Ask your tabs…" />
 
-    <button disabled={magicPage.responses.length > 1 && magicPage.running} class="" type="submit">
-      {#if magicPage.responses.length > 1 && magicPage.running}
+    <!-- {#if !magicPage.running && magicPage.responses.length >= 1}
+      <button on:click={handleClearChat} class="secondary">
+        <Icon name="trash" />
+      </button>
+    {/if} -->
+
+    <button disabled={$magicPage.responses.length > 1 && $magicPage.running} class="" type="submit">
+      {#if $magicPage.responses.length > 1 && $magicPage.running}
         <Icon name="spinner" />
       {:else}
         <Icon name="arrow.right" />
@@ -290,29 +592,18 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
+
+    // secondary styles
+    &.secondary {
+      background: #fff;
+      color: #f73b95;
+    }
   }
 
   .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-
-    button {
-      flex-shrink: 0;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      background: #fff;
-      color: #353535;
-      cursor: pointer;
-      font-size: 1rem;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      transition: background 0.2s;
-
-      &:hover {
-        background: #f6f5ef;
-      }
-    }
   }
 
   .title {
@@ -472,6 +763,63 @@
         background: #f6f5ef;
       }
     }
+  }
+
+  .clear-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: auto;
+    border: none;
+    background: none;
+    color: #616179;
+    cursor: pointer;
+    font-size: 1rem;
+
+    &:hover {
+      color: #2b2b3d;
+    }
+  }
+
+  .empty {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    opacity: 0.75;
+    transition: opacity 0.2s ease;
+
+    .empty-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 500;
+      }
+    }
+
+    p {
+      font-size: 1rem;
+      color: #666;
+      text-align: center;
+    }
+  }
+
+  .info-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #3f3f3f;
+    font-size: 1rem;
+    opacity: 0.75;
   }
 
   :global(.chat-message-content h2) {
