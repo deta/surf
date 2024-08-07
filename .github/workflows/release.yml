@@ -47,10 +47,17 @@ jobs:
       - name: Build for ${{ matrix.os }}-${{ matrix.architecture }}
         run: ${{ matrix.build_command }}
         env:
+          # APP_VERSION: ${{ inputs.app_version }}
+          # M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          # R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+
           HUSKY: 0
-          PRODUCT_NAME: ${{ inputs.product_name }}
-          SHOULD_NOTARIZE: ${{ inputs.should_notarize }}
           NODE_OPTIONS: --max_old_space_size=8192
+          SHOULD_NOTARIZE: ${{ inputs.should_notarize }}
+
+          PRODUCT_NAME: ${{ inputs.product_name }}
+          M_VITE_PRODUCT_NAME: 'Surf'
+          BUILD_RESOURCES_DIR: build/resources/prod
 
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -58,12 +65,19 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
 
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          S3_UPDATES_BUCKET_NAME: ${{ secrets.S3_UPDATES_BUCKET_NAME }}
-          S3_UPDATES_BUCKET_REGION: ${{ secrets.S3_UPDATES_BUCKET_REGION }}
+          # R_VITE_CHEATSHEET_URL: ${{ secrets.CHEATSHEET_URL_BASE }}/${{ inputs.APP_VERSION }}
+          R_VITE_TELEMETRY_API_KEY: ${{ secrets.TELEMETRY_API_KEY_EA }}
+          R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
+          P_VITE_OPEN_AI_API_ENDPOINT: ${{ secrets.OPEN_AI_API_ENDPOINT }}
+          P_VITE_VISION_API_ENDPOINT: ${{ secrets.VISION_API_ENDPOINT }}
+          P_VITE_API_BASE: ${{ secrets.API_BASE }}
+          M_VITE_API_BASE: ${{ secrets.API_BASE }}
+
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          R_VITE_TELEMETRY_API_KEY: ${{ secrets.TELEMETRY_API_KEY }}
+          S3_UPDATES_BUCKET_NAME: ${{ secrets.S3_UPDATES_BUCKET_NAME }}
+          S3_UPDATES_BUCKET_REGION: ${{ secrets.S3_UPDATES_BUCKET_REGION }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       - uses: actions/upload-artifact@v2
         with:
           name: build-${{ matrix.os }}-${{ matrix.architecture }}
