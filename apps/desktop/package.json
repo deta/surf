@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "productName": "Horizon",
+  "productName": "Surf",
   "version": "0.0.1",
   "main": "./out/main/index.js",
   "author": "Deta GmbH",
@@ -17,9 +17,9 @@
     "build:mac": "npm run build && electron-builder --mac --config build/electron-builder-config.js --arm64 --x64 --publish always",
     "build:mac:x64": "npm run build && electron-builder --mac --config build/electron-builder-config.js --x64 --publish always",
     "build:mac:arm": "npm run build && electron-builder --mac --config build/electron-builder-config.js --arm64 --publish always",
-    "build:win:x64": "npm run build && electron-builder --win --config build/electron-builder-config.js --x64 --publish always",
     "build:lin:x64": "npm run build && electron-builder --linux --config build/electron-builder-config.js --x64 --publish always",
-    "build:lin:arm": "npm run build && electron-builder --linux --config build/electron-builder-config.js --arm64 --publish always"
+    "build:lin:arm": "npm run build && electron-builder --linux --config build/electron-builder-config.js --arm64 --publish always",
+    "build:win:x64": "npm run build && electron-builder --win --config build/electron-builder-config.js --x64 --publish always"
   },
   "dependencies": {
     "@cliqz/adblocker-electron": "^1.26.15",

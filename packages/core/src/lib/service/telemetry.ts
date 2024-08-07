@@ -1,4 +1,4 @@
-import isEqual from 'lodash/isequal'
+import isEqual from 'lodash'
 import * as amplitude from '@amplitude/analytics-browser'
 import { type UserConfig, TelemetryEventTypes, type ElectronAppInfo } from '@horizon/types'
 

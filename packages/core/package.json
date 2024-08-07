@@ -18,8 +18,8 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
-    "@horizon/dragcula": "*",
     "@horizon/cmdk-sv": "*",
+    "@horizon/dragcula": "*",
     "@horizon/drawer": "*",
     "@horizon/editor": "*",
     "@horizon/eslint-config": "*",
@@ -33,7 +33,7 @@
     "@sveltejs/vite-plugin-svelte": "^3.0.1",
     "@tsconfig/svelte": "^5.0.2",
     "@types/d3": "^7.4.3",
-    "@types/lodash": "4.14.202",
+    "@types/lodash": "^4.17.7",
     "autoprefixer": "^10.4.19",
     "date-fns": "^3.2.0",
     "embla-carousel-svelte": "^8.0.0",

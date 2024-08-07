@@ -66,10 +66,10 @@ export function createWindow() {
     fullscreenable: true,
     show: false,
     autoHideMenuBar: true,
-    frame: false, // TODO: Figure this out for windows but idc
-    trafficLightPosition: { x: 12.5, y: 12.5 },
+    frame: !(process.platform === 'darwin'),
     titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
     // ...(process.platform === 'linux' ? { icon } : {}),
+    trafficLightPosition: { x: 12.5, y: 12.5 },
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [

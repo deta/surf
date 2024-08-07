@@ -9,7 +9,7 @@
     "build:types": "tsc --emitDeclarationOnly"
   },
   "devDependencies": {
-    "typescript": "4.6.3",
+    "typescript": "^5.2.2",
     "@horizon/eslint-config": "*",
     "@horizon/typescript-config": "*"
   }

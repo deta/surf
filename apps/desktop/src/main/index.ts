@@ -22,7 +22,7 @@ let isAppLaunched = false
 let appOpenedWithURL: string | null = null
 
 const config = {
-  appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Horizon',
+  appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Surf',
   appVersion: import.meta.env.M_VITE_APP_VERSION,
   useTmpDataDir: import.meta.env.M_VITE_USE_TMP_DATA_DIR === 'true',
   disableAutoUpdate: import.meta.env.M_VITE_DISABLE_AUTO_UPDATE === 'true'
@@ -144,15 +144,12 @@ if (!gotTheLock) {
     const backendRootPath = join(userDataPath, 'sffs_backend')
     const backendServerPath = join(appPath, 'resources', 'bin', 'surf-backend')
     child = spawn(backendServerPath, [backendRootPath, 'false'])
+    child = spawn(backendServerPath, [backendRootPath, 'false'], {
+      stdio: 'inherit'
+    })
 
     child.on('exit', (code) => {
       console.log(`Child process exited with code ${code}`)
-    })
-    child.stdout?.on('data', (data) => {
-      console.log(`surf-backend: ${data}`)
-    })
-    child.stderr?.on('data', (data) => {
-      console.error(`surf-backend: ${data}`)
     })
   })
 

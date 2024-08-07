@@ -1,6 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
+  "globalEnv": [
+    "WAYLAND_DISPLAY",
+    "XDG_RUNTIME_DIR",
+    "XDG_SESSION_TYPE",
+    "ELECTRON_OZONE_PLATFORM_HINT"
+  ],
   "tasks": {
     "@horizon/backend#build": {
       "dependsOn": [],
@@ -29,6 +35,14 @@
       "outputs": [".dist/**", ".out/**"]
     },
     "desktop#build:mac:arm": {
+      "dependsOn": ["^build"],
+      "outputs": [".dist/**", ".out/**"]
+    },
+    "desktop#build:lin:x64": {
+      "dependsOn": ["^build"],
+      "outputs": [".dist/**", ".out/**"]
+    },
+    "desktop#build:lin:arm": {
       "dependsOn": ["^build"],
       "outputs": [".dist/**", ".out/**"]
     },

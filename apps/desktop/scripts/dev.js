@@ -22,6 +22,9 @@ if (process.platform === 'darwin') {
   }
 }
 
+if (process.platform === 'linux') {
+  process.env.ELECTRON_OZONE_PLATFORM_HINT = 'auto'
+}
 process.env.TESSDATA_PREFIX = path.resolve(__dirname, '..', 'resources', 'tessdata')
 // TODO: change this
 process.env.M_VITE_PRODUCT_NAME = 'Horizon-dev'

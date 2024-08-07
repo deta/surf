@@ -12,6 +12,6 @@
     "@horizon/eslint-config": "*",
     "@horizon/types": "*",
     "@horizon/typescript-config": "*",
-    "typescript": "4.6.3"
+    "typescript": "^5.2.2"
   }
 }

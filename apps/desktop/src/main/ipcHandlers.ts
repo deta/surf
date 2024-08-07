@@ -93,8 +93,10 @@ export function setupIpcHandlers() {
   })
 
   ipcMain.handle('update-traffic-lights', (_event, { visible }) => {
-    const window = getMainWindow()
-    window?.setWindowButtonVisibility(visible)
+    if (process.platform == 'darwin') {
+      const window = getMainWindow()
+      window?.setWindowButtonVisibility(visible)
+    }
   })
 
   ipcMain.on('store-api-key', (_event, key: string) => {

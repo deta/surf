@@ -42,7 +42,7 @@ const template = [
           label: app.name,
           submenu: [
             {
-              label: 'About Horizon',
+              label: 'About Surf',
               role: 'about'
             },
             { type: 'separator' },
@@ -68,7 +68,7 @@ const template = [
             },
             { type: 'separator' },
             {
-              label: 'Quit Horizon',
+              label: 'Quit Surf',
               role: 'quit'
             }
           ]

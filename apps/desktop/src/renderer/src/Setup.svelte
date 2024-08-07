@@ -50,13 +50,13 @@
 <main>
   <div class="wrapper" class:wide={view === 'disclaimer'}>
     {#if view === 'invite'}
-      <img src={icon} alt="Horizon icon" />
+      <img src={icon} alt="Surf icon" />
 
-      <h1>Welcome to Horizon!</h1>
+      <h1>Welcome to Surf!</h1>
 
       <form on:submit|preventDefault={handleSubmit}>
         <p class="info text-md">
-          Horizon is still under active development and you need to be part of our early adopter
+          Surf is still under active development and you need to be part of our early adopter
           program to use the app.
         </p>
 
@@ -96,14 +96,14 @@
         </div>
       </form>
     {:else if view === 'disclaimer'}
-      <img src={icon} alt="Horizon icon" />
+      <img src={icon} alt="Surf icon" />
 
       <h1>One More Thing…</h1>
 
       <div class="details">
         <p class="info text-md">
-          We're in the early stages of developing Horizon and to make the app better for you and
-          others we are keeping track of some of your activities within the app.
+          We're in the early stages of developing Surf and to make the app better for you and others
+          we are keeping track of some of your activities within the app.
         </p>
       </div>
 
@@ -217,11 +217,11 @@
         <!-- <button on:click={handleClose} class="close">Close App Instead</button> -->
       </div>
     {:else if view === 'done'}
-      <img src={icon} alt="Horizon icon" />
+      <img src={icon} alt="Surf icon" />
 
       <h1>Thank you!</h1>
 
-      <p class="text-lg">You're all set to start using Horizon 🎉</p>
+      <p class="text-lg">You're all set to start using Surf 🎉</p>
 
       <div class="box contact">
         <p>
@@ -233,7 +233,7 @@
         </p>
       </div>
 
-      <button on:click={handleStart}>Start Horizon</button>
+      <button on:click={handleStart}>Start Surf</button>
     {/if}
   </div>
 </main>

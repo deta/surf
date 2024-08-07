@@ -25,6 +25,8 @@ function electronBuilderConfig() {
     files: [
       '!**/backend/target*',
       '!**/backend/src/*',
+      '!**/backend-server/target*',
+      '!**/backend-server/src/*',
       '!**/backend/migrations/*',
       '!**/.vscode/*',
       '!src/*',
@@ -61,12 +63,10 @@ function electronBuilderConfig() {
       artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
     },
     linux: {
-      target: ['AppImage'],
-      maintainer: 'deta.surf'
-    },
-    appImage: {
-      category: 'WebBrowser',
-      artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
+      target: ['AppImage', 'tar.gz'],
+      maintainer: 'deta.surf',
+      artifactName: `${params.buildName}.\${arch}.\${ext}`,
+      category: 'WebBrowser'
     },
     npmRebuild: false,
     publish: params.publishS3BucketName

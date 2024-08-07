@@ -12,7 +12,7 @@
     "@horizon/eslint-config": "*",
     "@horizon/types": "*",
     "@horizon/typescript-config": "*",
-    "typescript": "4.6.3"
+    "typescript": "^5.2.2"
   },
   "dependencies": {
     "@medv/finder": "^3.2.0",

@@ -14,6 +14,7 @@ module.exports = async function afterPack(context) {
     // for linux builds, for some unknown reason, the executable built is always lowercased
     // and DOES NOT respect the productName from the electron builder config file
     // so we have to manually correct the binary path to match the path that exists in the filesystem
+    executableName = 'desktop'
     if (process.env.BUILD_TAG) {
       // the build tag is appended to the executable name, so we have to remove it
       const buildTagSuffix = `-${process.env.BUILD_TAG}`
