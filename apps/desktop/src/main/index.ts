@@ -11,8 +11,8 @@ import { registerShortcuts, unregisterShortcuts } from './shortcuts'
 import { setupAdblocker } from './adblocker'
 import { ipcSenders, setupIpcHandlers } from './ipcHandlers'
 import { getUserConfig, updateUserConfig } from './config'
-// import { createSetupWindow } from './setupWindow'
-// import { checkIfAppIsActivated } from './activation'
+import { createSetupWindow } from './setupWindow'
+import { checkIfAppIsActivated } from './activation'
 import { isDefaultBrowser } from './utils'
 
 const isDev = import.meta.env.DEV
@@ -105,20 +105,20 @@ if (!gotTheLock) {
 
     setupIpcHandlers()
 
-    // if (!is.dev) {
-    //   if (!userConfig.api_key) {
-    //     console.log('No api key found, prompting user to enter invite token')
-    //     createSetupWindow()
-    //     return
-    //   }
+    if (!is.dev) {
+      if (!userConfig.api_key) {
+        console.log('No api key found, prompting user to enter invite token')
+        createSetupWindow()
+        return
+      }
 
-    //   const isActivated = await checkIfAppIsActivated(userConfig.api_key)
-    //   if (!isActivated) {
-    //     console.log('App not activated, prompting user to enter invite token again')
-    //     createSetupWindow()
-    //     return
-    //   }
-    // }
+      const isActivated = await checkIfAppIsActivated(userConfig.api_key)
+      if (!isActivated) {
+        console.log('App not activated, prompting user to enter invite token again')
+        createSetupWindow()
+        return
+      }
+    }
 
     await setupAdblocker()
 

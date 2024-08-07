@@ -146,12 +146,13 @@ impl AI {
     pub fn new(
         api_key: String, 
         local_mode: bool,
-        local_ai_socket_path: String
+        local_ai_socket_path: String,
+        openai_api_endpoint: Option<String>,
     ) -> BackendResult<Self> {
         let local_ai_client = LocalAIClient::new(local_ai_socket_path);
         Ok(Self {
             // TODO: not hardcode model
-            llm: openai::OpenAI::new("gpt-4o".to_string(), api_key, None)?,
+            llm: openai::OpenAI::new("gpt-4o".to_string(), api_key, openai_api_endpoint)?,
             chunker: ContentChunker::new(2000, 1),
             local_mode,
             local_ai_client,

@@ -27,6 +27,7 @@ impl Worker {
         app_path: String,
         backend_root_path: String,
         openai_api_key: String,
+        openai_api_endpoint: String,
         local_ai_mode: bool,
         tqueue_tx: crossbeam::Sender<ProcessorMessage>,
         aiqueue_tx: crossbeam::Sender<AIMessage>,
@@ -49,7 +50,13 @@ impl Worker {
 
         Self {
             db: Database::new(&db_path, true).unwrap(),
-            ai: AI::new(openai_api_key, local_ai_mode, local_ai_socket_path).unwrap(),
+            ai: AI::new(
+                openai_api_key,
+                local_ai_mode,
+                local_ai_socket_path,
+                Some(openai_api_endpoint),
+            )
+            .unwrap(),
             tqueue_tx,
             aiqueue_tx,
             app_path,
@@ -68,12 +75,14 @@ pub fn worker_thread_entry_point(
     app_path: String,
     backend_root_path: String,
     openai_api_key: String,
+    openai_api_endpoint: String,
     local_ai_mode: bool,
 ) {
     let mut worker = Worker::new(
         app_path,
         backend_root_path,
         openai_api_key,
+        openai_api_endpoint,
         local_ai_mode,
         tqueue_tx,
         aiqueue_tx,

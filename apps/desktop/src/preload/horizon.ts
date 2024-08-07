@@ -39,20 +39,22 @@ const webviewNewWindowHandlers = {}
 const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
 
-const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT
-const OPENAI_API_KEY = import.meta.env.P_VITE_OPEN_AI_API_KEY
-const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
-const VISION_API_KEY = import.meta.env.P_VITE_VISION_API_KEY || ''
-
 const userConfig = getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
+//
+// TODO: do we need to handle the case where api_key is undefined?
+const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT || ''
+//const OPENAI_API_KEY = import.meta.env.P_VITE_OPEN_AI_API_KEY
+const OPENAI_API_KEY = userConfig.api_key
+
+const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
+//const VISION_API_KEY = import.meta.env.P_VITE_VISION_API_KEY || ''
+const VISION_API_KEY = userConfig.api_key
 
 let openai: OpenAI | null = null
-//if (userConfig.api_key) {
 if (OPENAI_API_KEY) {
   openai = new OpenAI({
     baseURL: OPENAI_API_ENDPOINT,
     apiKey: OPENAI_API_KEY,
-    //apiKey: userConfig.api_key,
     dangerouslyAllowBrowser: true
   })
 }
@@ -538,6 +540,7 @@ const sffs = (() => {
     vision_api_key: string,
     vision_api_endpoint: string,
     openai_api_key: string,
+    openai_api_endpoint: string,
     local_ai_mode: boolean = false
   ) {
     let fn = {}
@@ -547,6 +550,7 @@ const sffs = (() => {
       vision_api_key,
       vision_api_endpoint,
       openai_api_key,
+      openai_api_endpoint,
       local_ai_mode
     )
 
@@ -569,6 +573,7 @@ const sffs = (() => {
     VISION_API_KEY || '',
     VISION_API_ENDPOINT,
     OPENAI_API_KEY || '',
+    OPENAI_API_ENDPOINT,
     false
   )
 })()

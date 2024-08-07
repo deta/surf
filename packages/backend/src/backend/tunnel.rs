@@ -28,6 +28,7 @@ impl WorkerTunnel {
         vision_api_key: String,
         vision_api_endpoint: String,
         openai_api_key: String,
+        openai_api_endpoint: String,
         local_ai_mode: bool,
     ) -> Self
     where
@@ -55,6 +56,7 @@ impl WorkerTunnel {
                 app_path_clone,
                 backend_root_path,
                 openai_api_key_clone,
+                openai_api_endpoint,
                 local_ai_mode,
             )
         });
