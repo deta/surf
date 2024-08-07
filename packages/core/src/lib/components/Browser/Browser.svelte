@@ -837,7 +837,14 @@
   }
 
   const handleRightSidebarTabsChange = (e: string) => {
-    log.debug('Tabs value change', e)
+    // check if sidebar is even open
+    if (!showRightSidebar) {
+      log.warn('Right sidebar is not open, ignoring tab change')
+      return
+    }
+
+    log.debug('Right sidebar tab change', e)
+
     if (e === 'chat') {
       setPageChatState(true)
       return
