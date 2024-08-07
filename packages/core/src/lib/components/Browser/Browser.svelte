@@ -3372,7 +3372,7 @@
               $browserTabs[$activeTabId].navigate(e.detail.url)
             }}
             on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
-            on:updateMagicPage={(e) => updateActiveMagicPage(e.detail)}
+            on:updateActiveChatId={(e) => activeChatId.set(e.detail)}
           />
         {:else}
           <div class="w-full h-full flex items-center justify-center flex-col opacity-50">

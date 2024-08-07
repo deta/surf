@@ -36,7 +36,7 @@
     seekToTimestamp: { resourceId: string; timestamp: number }
     navigate: { url: string }
     saveText: string
-    updateMagicPage: Partial<PageMagic>
+    updateActiveChatId: string
   }>()
   const log = useLogScope('MagicSidebar')
   const { copy, copied } = useClipboard()
@@ -56,6 +56,10 @@
   // }, 500)
 
   const updateMagicPage = (data: Partial<PageMagic>) => {
+    if (data.chatId) {
+      dispatch('updateActiveChatId', data.chatId)
+    }
+
     magicPage.update((page) => {
       return {
         ...page,
