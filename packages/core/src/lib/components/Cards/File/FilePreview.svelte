@@ -46,6 +46,9 @@
   {:else if resource && data}
     {#if data.type.startsWith('image/')}
       <ImageView blob={data} on:load={handleLoad} />
+    {:else if data.type === 'application/pdf'}
+      <iframe src={URL.createObjectURL(data)} width="100%" height="100%" style="overflow: hidden;"
+      ></iframe>
     {:else}
       <UnknownFileView {resource} blob={data} hideType on:load={handleLoad} />
     {/if}
@@ -61,5 +64,6 @@
     justify-content: center;
     margin: 0;
     padding: 0;
+    overflow: hidden;
   }
 </style>

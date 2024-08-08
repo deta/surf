@@ -8,4 +8,5 @@ export type UserConfig = {
 
 export type UserSettings = {
   embedding_model: 'english_small' | 'english_large' | 'multilingual_small' | 'multilingual_large'
+  tabs_orientation: 'vertical' | 'horizontal'
 }

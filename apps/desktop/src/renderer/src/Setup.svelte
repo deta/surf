@@ -1,5 +1,7 @@
 <script lang="ts">
-  import icon from './assets/icon.png'
+  import icon from './assets/icon_512.png'
+  import prefsVerticalVideo from './assets/vertical.tabs.mp4'
+  import prefsHorizontalVideo from './assets/horizontal.tabs.mp4'
 
   import type { AppActivationResponse } from '@horizon/api'
 
@@ -7,13 +9,19 @@
   const TERMS_URL = 'https://deta.space/terms'
   const PRIVACY_URL = 'https://deta.space/privacy'
 
-  let view: 'invite' | 'disclaimer' | 'settings' | 'done' = 'invite'
+  let view: 'invite' | 'disclaimer' | 'prefs' | 'settings' | 'done' = 'invite'
 
   let inviteCode = ''
   let embeddingModel = 'english_small'
+  let tabsOrientation = 'vertical'
   let acceptedTerms = false
   let loading = false
   let error = ''
+
+  let videoRefs = {
+    vertical: null,
+    horizontal: null
+  }
 
   const handleSubmit = async () => {
     try {
@@ -38,19 +46,39 @@
     }
   }
 
-  const handleSettingsSubmit = async () => {
+  const handleAcceptPrefs = async () => {
     try {
       // @ts-ignore
-      await window.api.saveSettings({ embedding_model: embeddingModel })
+      await window.api.saveSettings({
+        embedding_model: embeddingModel,
+        tabs_orientation: tabsOrientation
+      })
       view = 'done'
     } catch (e) {
       console.error(e)
-      error = 'Sorry: failed to save settings. Please try again or contact us if problem persists.'
+      error =
+        'Sorry: failed to save your preference. Please try again or contact us if problem persists.'
+    }
+    view = 'settings'
+  }
+
+  const handleSettingsSubmit = async () => {
+    try {
+      // @ts-ignore
+      await window.api.saveSettings({
+        embedding_model: embeddingModel,
+        tabs_orientation: tabsOrientation
+      })
+      view = 'done'
+    } catch (e) {
+      console.error(e)
+      error =
+        'Sorry: failed to save your preference. Please try again or contact us if problem persists.'
     }
   }
 
   const handleAcceptDisclaimer = () => {
-    view = 'settings'
+    view = 'prefs'
   }
 
   const handleStart = () => {
@@ -82,10 +110,10 @@
         <div class="submit">
           <label class="check">
             <input bind:checked={acceptedTerms} type="checkbox" required />
-            <p>
+            <span>
               I agree to the <a href={TERMS_URL} target="_blank">Terms and Conditions</a> and
               <a href={PRIVACY_URL} target="_blank">Privacy Policy</a>
-            </p>
+            </span>
           </label>
         </div>
 
@@ -226,11 +254,74 @@
 
       <div class="actions">
         <button on:click={handleAcceptDisclaimer}>I Understand</button>
+
         <!-- <button on:click={handleClose} class="close">Close App Instead</button> -->
       </div>
+    {:else if view === 'prefs'}
+      <img src={icon} alt="Surf icon" />
+      <h3>Choose your style</h3>
+
+      <div class="radio-container">
+        <div class="radio-item">
+          <input
+            type="radio"
+            id="vertical"
+            name="radio-group"
+            value="vertical"
+            checked
+            bind:group={tabsOrientation}
+          />
+          <label for="vertical">
+            <video
+              src={prefsVerticalVideo}
+              loop
+              muted
+              preload="auto"
+              on:mouseover={() => videoRefs.vertical?.play()}
+              on:mouseout={() => {
+                videoRefs.vertical?.pause()
+                videoRefs.vertical.currentTime = 0
+              }}
+              bind:this={videoRefs.vertical}
+            ></video>
+
+            <span>Vertical Tabs</span>
+          </label>
+        </div>
+        <div class="radio-item">
+          <input
+            type="radio"
+            id="horizontal"
+            name="radio-group"
+            value="horizontal"
+            bind:group={tabsOrientation}
+          />
+          <label for="horizontal">
+            <video
+              src={prefsHorizontalVideo}
+              loop
+              muted
+              preload="auto"
+              on:mouseover={() => videoRefs.horizontal?.play()}
+              on:mouseout={() => {
+                videoRefs.horizontal?.pause()
+                videoRefs.horizontal.currentTime = 0
+              }}
+              bind:this={videoRefs.horizontal}
+            ></video>
+
+            <span>Horizontal Tabs</span>
+          </label>
+        </div>
+      </div>
+      <p>
+        You can easily change this behavior later at <br /> <span class="pill">View</span> →
+        <span class="pill">Toggle Tabs Orientation</span>
+      </p>
+      <button on:click={handleAcceptPrefs}>Apply Preferences</button>
     {:else if view === 'settings'}
       <img src={icon} alt="Surf icon" />
-      <h1>Settings</h1>
+      <h1>Model Settings</h1>
       <div class="settings-option">
         <h3>Your Local AI Model</h3>
         <br />
@@ -329,8 +420,38 @@
     --color-brand-dark: #006cdf;
     --color-link: #1d8aff;
     --color-link-dark: #006cdf;
-    --color-background: #fff;
-    --color-background-dark: #f8f9fa;
+    --color-background: #f6faff;
+    --color-background-dark: #e2eeff;
+  }
+
+  p,
+  span {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+    letter-spacing: 0.01em;
+  }
+
+  p {
+    margin-bottom: 0.75rem;
+  }
+
+  span {
+    display: inline-block;
+  }
+
+  p {
+    span.pill {
+      background: #eff5ff;
+      padding: 0 0.25rem;
+      border-radius: 4px;
+      box-shadow: 0px 1px 0 var(--color-background-dark);
+    }
   }
 
   main {
@@ -341,6 +462,8 @@
     align-items: center;
     color: var(--color-text);
     background: var(--color-background);
+    background-position: center 0;
+    background-size: cover;
   }
 
   .wrapper {
@@ -409,6 +532,7 @@
 
     .check {
       display: flex;
+      justify-content: center;
       align-items: center;
       gap: 0.5rem;
     }
@@ -514,12 +638,54 @@
       color: #dc3545;
     }
 
-    .settings-ai-models {
+    .radio-container {
+      display: flex;
+      gap: 20px;
+      padding: 1rem 0.5rem;
+    }
+    .radio-item {
+      .media-container {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+      }
+
+      label {
+        cursor: pointer;
+      }
+    }
+
+    .radio-item input[type='radio'] {
+      display: none;
+    }
+    .radio-item label {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-      font-size: 1.1rem;
+      align-items: center;
+      padding: 10px;
+      gap: 1rem;
+      border: 0.5px solid #ccc;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .radio-item label:hover {
+      background-color: #eff5ff;
+    }
+    .radio-item input[type='radio']:checked + label {
+      border-color: #3a83ea;
+      background-color: #e2eeff;
+    }
+    .radio-item span {
+      color: #333;
+    }
+    .settings-ai-models {
       text-align: left;
+    }
+    video {
+      width: 240px;
+      height: 100%;
+      border-radius: 8px;
     }
   }
 </style>

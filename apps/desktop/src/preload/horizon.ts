@@ -98,7 +98,7 @@ const api = {
       delete previewImageHandlers[horizonId]
     }
   },
-
+  getUserConfigSettings: () => userConfig.settings,
   fetchAsDataURL: async (url: string) => {
     try {
       const response = await fetch(url)

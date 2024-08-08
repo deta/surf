@@ -832,7 +832,13 @@
   const KEY_TIMEOUT = 120
   const MAX_TABS = 99
 
-  let horizontalTabs = localStorage.getItem('horizontalTabs') === 'true' || false
+  // @ts-ignore
+  let savedTabsOrientation = window.api.getUserConfigSettings()?.tabs_orientation
+  let localstorageTabsOrientation = localStorage.getItem('horizontalTabs')
+  let horizontalTabs =
+    localstorageTabsOrientation == null
+      ? savedTabsOrientation === 'horizontal'
+      : localstorageTabsOrientation === 'true'
 
   const handleCollapseRight = () => {
     if (sidebarComponent) {
