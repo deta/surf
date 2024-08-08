@@ -3,8 +3,10 @@ pub mod handlers;
 pub mod llm;
 pub mod server;
 
+use crate::embeddings::model::EmbeddingModelMode;
 use crate::server::server::LocalAIServer;
 use std::path::Path;
+use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {
@@ -33,8 +35,11 @@ pub type BackendResult<T> = Result<T, BackendError>;
 // TODO: handle kill signal gracefully
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    if args.len() != 3 {
-        eprintln!("Usage: {} <root_path> <local_llm_mode>", args[0]);
+    if args.len() != 4 {
+        eprintln!(
+            "Usage: {} <root_path> <local_llm_mode> <embedding_model_mode>",
+            args[0]
+        );
         std::process::exit(1);
     }
     let root_path = Path::new(&args[1]);
@@ -52,11 +57,25 @@ fn main() {
             std::process::exit(1);
         }
     };
+    let embedding_model_mode: EmbeddingModelMode = match EmbeddingModelMode::from_str(&args[3]) {
+        Ok(mode) => mode,
+        Err(e) => {
+            eprintln!("Bad embedding_model_mode: {:#?}, error: {:#?}", args[3], e);
+            std::process::exit(1);
+        }
+    };
+
     println!(
         "[LocalAIServer]: started with socket_path: {:#?}, local_llm_mode: {:#?}",
         socket_path, local_llm_mode
     );
-    let server =
-        LocalAIServer::new(&socket_path, &index_path, &model_cache_dir, local_llm_mode).unwrap();
+    let server = LocalAIServer::new(
+        &socket_path,
+        &index_path,
+        &model_cache_dir,
+        local_llm_mode,
+        embedding_model_mode,
+    )
+    .unwrap();
     server.listen();
 }

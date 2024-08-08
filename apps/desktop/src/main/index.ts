@@ -25,7 +25,8 @@ const config = {
   appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Surf',
   appVersion: import.meta.env.M_VITE_APP_VERSION,
   useTmpDataDir: import.meta.env.M_VITE_USE_TMP_DATA_DIR === 'true',
-  disableAutoUpdate: import.meta.env.M_VITE_DISABLE_AUTO_UPDATE === 'true'
+  disableAutoUpdate: import.meta.env.M_VITE_DISABLE_AUTO_UPDATE === 'true',
+  embeddingModelMode: import.meta.env.M_VITE_EMBEDDING_MODEL_MODE || 'default'
 }
 
 let userDataPath = join(dirname(app.getPath('userData')), config.appName)
@@ -143,8 +144,10 @@ if (!gotTheLock) {
     const appPath = `${app.getAppPath()}${isDev ? '' : '.unpacked'}`
     const backendRootPath = join(userDataPath, 'sffs_backend')
     const backendServerPath = join(appPath, 'resources', 'bin', 'surf-backend')
-    child = spawn(backendServerPath, [backendRootPath, 'false'])
-    child = spawn(backendServerPath, [backendRootPath, 'false'])
+    const embeddingModelMode = isDev
+      ? config.embeddingModelMode
+      : userConfig.settings.embedding_model
+    child = spawn(backendServerPath, [backendRootPath, 'false', embeddingModelMode])
 
     child.stdout?.on('data', (data) => {
       console.log(`surfer-backend: ${data}`)

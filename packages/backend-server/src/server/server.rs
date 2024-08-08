@@ -2,7 +2,7 @@ use std::fs;
 use std::os::unix::net::UnixListener;
 use std::path::PathBuf;
 
-use crate::embeddings::model::EmbeddingModel;
+use crate::embeddings::model::{EmbeddingModel, EmbeddingModelMode};
 use crate::embeddings::store::EmbeddingsStore;
 use crate::handlers::handle_client;
 use crate::llm::llama::llama::Llama;
@@ -26,6 +26,7 @@ impl LocalAIServer {
         index_path: &PathBuf,
         model_cache_dir: &PathBuf,
         local_llm: bool,
+        embedding_model_mode: EmbeddingModelMode,
     ) -> BackendResult<Self> {
         if socket_path.exists() {
             fs::remove_file(&socket_path)?;
@@ -44,7 +45,10 @@ impl LocalAIServer {
             }
             false => Arc::new(None),
         };
-        let embedding_model = Arc::new(EmbeddingModel::new_remote(model_cache_dir)?);
+        let embedding_model = Arc::new(EmbeddingModel::new_remote(
+            model_cache_dir,
+            embedding_model_mode,
+        )?);
 
         Ok(Self {
             socket_path: socket_path.to_string_lossy().to_string(),

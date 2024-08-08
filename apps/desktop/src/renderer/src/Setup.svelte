@@ -7,9 +7,10 @@
   const TERMS_URL = 'https://deta.space/terms'
   const PRIVACY_URL = 'https://deta.space/privacy'
 
-  let view: 'invite' | 'disclaimer' | 'done' = 'invite'
+  let view: 'invite' | 'disclaimer' | 'settings' | 'done' = 'invite'
 
   let inviteCode = ''
+  let embeddingModel = 'english_small'
   let acceptedTerms = false
   let loading = false
   let error = ''
@@ -37,8 +38,19 @@
     }
   }
 
+  const handleSettingsSubmit = async () => {
+    try {
+      // @ts-ignore
+      await window.api.saveSettings({ embedding_model: embeddingModel })
+      view = 'done'
+    } catch (e) {
+      console.error(e)
+      error = 'Sorry: failed to save settings. Please try again or contact us if problem persists.'
+    }
+  }
+
   const handleAcceptDisclaimer = () => {
-    view = 'done'
+    view = 'settings'
   }
 
   const handleStart = () => {
@@ -215,6 +227,71 @@
       <div class="actions">
         <button on:click={handleAcceptDisclaimer}>I Understand</button>
         <!-- <button on:click={handleClose} class="close">Close App Instead</button> -->
+      </div>
+    {:else if view === 'settings'}
+      <img src={icon} alt="Surf icon" />
+      <h1>Settings</h1>
+      <div class="settings-option">
+        <h3>Your Local AI Model</h3>
+        <br />
+        <form on:submit|preventDefault={handleSettingsSubmit}>
+          <div class="details">
+            <p class="info text-md">
+              Select an AI model that will be used to process your data.
+              <strong>You will not be able to change this later.</strong>
+            </p>
+            <p class="info text-sm">
+              <strong><i>Large</i></strong> models are better but will use more storage and resources.
+            </p>
+          </div>
+
+          <div class="settings-ai-models">
+            <div>
+              <input
+                type="radio"
+                id="english_small"
+                value="english_small"
+                checked
+                bind:group={embeddingModel}
+              />
+              <label for="english_small"> <i>English</i></label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="english_large"
+                value="english_large"
+                bind:group={embeddingModel}
+              />
+              <label for="english_large">
+                <i> English Large</i>
+              </label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="multilingual_small"
+                value="multilingual_small"
+                bind:group={embeddingModel}
+              />
+              <label for="multilingual_small"><i>Multilingual</i></label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="multilingual_large"
+                value="multilingual_large"
+                bind:group={embeddingModel}
+              />
+              <label for="multilingual_large">
+                <i> Multilingual Large</i>
+              </label>
+            </div>
+          </div>
+          <div class="Submit">
+            <button type="submit">Save</button>
+          </div>
+        </form>
       </div>
     {:else if view === 'done'}
       <img src={icon} alt="Surf icon" />
@@ -421,6 +498,10 @@
       width: 100%;
     }
 
+    .text-sm {
+      font-size: 0.9rem;
+    }
+
     .text-md {
       font-size: 1.075rem;
     }
@@ -431,6 +512,14 @@
 
     .error {
       color: #dc3545;
+    }
+
+    .settings-ai-models {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 1.1rem;
+      text-align: left;
     }
   }
 </style>

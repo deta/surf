@@ -6,6 +6,31 @@ use crate::{BackendError, BackendResult};
 
 use std::path::PathBuf;
 
+use std::string::ToString;
+use strum_macros::{Display, EnumString};
+
+#[derive(Display, Debug, EnumString)]
+#[strum(serialize_all = "snake_case")]
+pub enum EmbeddingModelMode {
+    Default,
+    EnglishSmall,
+    EnglishLarge,
+    MultilingualSmall,
+    MultilingualLarge,
+}
+
+impl From<EmbeddingModelMode> for fastembed::EmbeddingModel {
+    fn from(mode: EmbeddingModelMode) -> Self {
+        match mode {
+            EmbeddingModelMode::Default => fastembed::EmbeddingModel::BGESmallENV15Q,
+            EmbeddingModelMode::EnglishSmall => fastembed::EmbeddingModel::BGESmallENV15Q,
+            EmbeddingModelMode::EnglishLarge => fastembed::EmbeddingModel::MxbaiEmbedLargeV1Q,
+            EmbeddingModelMode::MultilingualSmall => fastembed::EmbeddingModel::MultilingualE5Small,
+            EmbeddingModelMode::MultilingualLarge => fastembed::EmbeddingModel::MultilingualE5Large,
+        }
+    }
+}
+
 // TODO: find a better chunking strategy
 pub struct EmbeddingModel {
     model_name: fastembed::EmbeddingModel,
@@ -29,8 +54,8 @@ fn new_fastembed_model(
 }
 
 impl EmbeddingModel {
-    pub fn new_remote(cache_dir: &PathBuf) -> BackendResult<Self> {
-        let model_name = fastembed::EmbeddingModel::BGESmallENV15Q;
+    pub fn new_remote(cache_dir: &PathBuf, mode: EmbeddingModelMode) -> BackendResult<Self> {
+        let model_name: fastembed::EmbeddingModel = mode.into();
         let model = new_fastembed_model(cache_dir, model_name.clone(), false)?;
         let chunker = ContentChunker::new(2000, 1);
         Ok(Self {

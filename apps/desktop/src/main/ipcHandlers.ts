@@ -103,6 +103,10 @@ export function setupIpcHandlers() {
     updateUserConfig({ api_key: key })
   })
 
+  ipcMain.on('store-settings', (_event, settings) => {
+    updateUserConfig({ settings: settings })
+  })
+
   ipcMain.handle('get-app-info', () => {
     return {
       version: process.env.APP_VERSION ?? app.getVersion(),

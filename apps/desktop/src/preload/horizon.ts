@@ -17,7 +17,7 @@ import { createAPI } from '@horizon/api'
 import { actionsToRunnableTools } from './actions'
 import { ElectronAppInfo } from '@horizon/types'
 
-import type { UserConfig, HorizonAction, EditablePrompt } from '@horizon/types'
+import type { UserConfig, HorizonAction, EditablePrompt, UserSettings } from '@horizon/types'
 
 import { getConfig } from '../main/config'
 
@@ -309,6 +309,10 @@ const api = {
     }
 
     return data
+  },
+
+  saveSettings: async (settings: UserSettings) => {
+    ipcRenderer.send('store-settings', settings)
   },
 
   getAppInfo: () => ipcRenderer.invoke('get-app-info') as Promise<ElectronAppInfo>,
