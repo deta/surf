@@ -62,6 +62,14 @@
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab, TabPage } from '../Browser/types'
+  import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
+  import {
+    AddResourceToSpaceEventTrigger,
+    CreateTabEventTrigger,
+    DeleteSpaceEventTrigger,
+    OpenResourceEventFrom,
+    RefreshSpaceEventTrigger
+  } from '@horizon/types'
   import { truncate } from '../../utils/text'
   import PQueue from 'p-queue'
 
@@ -76,16 +84,14 @@
   const dispatch = createEventDispatcher<{
     open: string
     'create-resource-from-oasis': string
-    'new-tab': {
-      url: string
-      active: boolean
-    }
+    'new-tab': BrowserTabNewTabEvent
     deleted: string
   }>()
   const toasts = useToasts()
 
   const resourceManager = oasis.resourceManager
   const spaces = oasis.spaces
+  const telemetry = resourceManager.telemetry
 
   const searchValue = writable('')
   const showChat = writable(false)
@@ -141,8 +147,10 @@
   // }
 
   $: if (active) {
+    log.debug('Active, loading space contents...')
     if (spaceId === 'all') {
       loadEverything()
+      telemetry.trackOpenOasis()
     } else {
       loadSpaceContents(spaceId)
     }
@@ -209,14 +217,34 @@
 
       const spaceData = fetchedSpace.name
 
+      let addedResources = 0
+      let fetchedSources = false
+      let usedSmartQuery = false
       if (!skipSources && spaceData.liveModeEnabled) {
         if ((spaceData.sources ?? []).length > 0) {
-          await loadSpaceSources(spaceData.sources!)
+          fetchedSources = true
+          const fetchedResources = await loadSpaceSources(spaceData.sources!)
+          if (fetchedResources) {
+            addedResources = fetchedResources.length
+          }
         }
 
         if (spaceData.smartFilterQuery) {
-          await updateLiveSpaceContentsWithAI(spaceData.smartFilterQuery)
+          usedSmartQuery = true
+          const fetchedResources = await updateLiveSpaceContentsWithAI(spaceData.smartFilterQuery)
+          if (fetchedResources) {
+            addedResources += fetchedResources.length
+          }
         }
+      }
+
+      // only track a refresh when one of the smart features is used
+      if (fetchedSources || usedSmartQuery) {
+        await telemetry.trackRefreshSpaceContent(RefreshSpaceEventTrigger.LiveSpaceAutoRefreshed, {
+          usedSmartQuery: usedSmartQuery,
+          fetchedSources: fetchedSources,
+          addedResources: addedResources > 0
+        })
       }
     } catch (error) {
       log.error('Error loading space contents:', error)
@@ -294,6 +322,8 @@
       await oasis.addResourcesToSpace(spaceId, results)
 
       await loadSpaceContents(spaceId, true)
+
+      return results
     } catch (error) {
       log.error('Error updating live space contents with AI:', error)
     } finally {
@@ -370,6 +400,8 @@
       }
 
       await loadSpaceContents(spaceId, true)
+
+      return resources
     } catch (error) {
       log.error('Error loading space sources:', error)
     } finally {
@@ -613,17 +645,29 @@
       return
     }
 
+    let addedResources = 0
     if ($space.name.smartFilterQuery) {
-      await updateLiveSpaceContentsWithAI($space.name.smartFilterQuery)
+      const fetchedResources = await updateLiveSpaceContentsWithAI($space.name.smartFilterQuery)
+      if (fetchedResources) {
+        addedResources = fetchedResources.length
+      }
     }
 
     const sources = $space.name.sources
-    if (!sources || sources.length === 0) {
+    if (sources && sources.length > 0) {
+      const fetchedResources = await loadSpaceSources(sources, true)
+      if (fetchedResources) {
+        addedResources += fetchedResources.length
+      }
+    } else {
       log.debug('No sources found')
-      return
     }
 
-    await loadSpaceSources(sources, true)
+    await telemetry.trackRefreshSpaceContent(RefreshSpaceEventTrigger.LiveSpaceManuallyRefreshed, {
+      usedSmartQuery: !!$space.name.smartFilterQuery,
+      fetchedSources: !!sources,
+      addedResources: addedResources > 0
+    })
   }
 
   const handleChat = async (e: CustomEvent) => {
@@ -643,6 +687,8 @@
 
     showChat.set(true)
     searchValue.set('')
+
+    await telemetry.trackChatWithSpace()
   }
 
   const handleCloseChat = () => {
@@ -683,6 +729,8 @@
     if (hashtags.length === value.split(' ').length) {
       value = ''
     }
+
+    await telemetry.trackSearchOasis(!isEverythingSpace)
 
     const result = await resourceManager.searchResources(value, [
       ResourceManager.SearchTagDeleted(false),
@@ -765,6 +813,8 @@
 
     log.debug('Resource removed:', resourceId)
     toasts.success('Resource deleted!')
+
+    await telemetry.trackDeleteResource(resource.type, !isEverythingSpace)
   }
 
   const handleItemClick = (e: CustomEvent<string>) => {
@@ -798,7 +848,11 @@
       const url = resource.metadata?.sourceURI
       if (!url) return
 
-      dispatch('new-tab', { url: url, active: e.shiftKey })
+      dispatch('new-tab', {
+        url: url,
+        active: e.shiftKey,
+        trigger: CreateTabEventTrigger.OasisItem
+      })
     }
   }
 
@@ -896,6 +950,14 @@
     if (spaceId !== 'all') {
       await oasis.addResourcesToSpace(spaceId, resourceIds)
       await loadSpaceContents(spaceId)
+
+      resourceIds.forEach((id) => {
+        resourceManager.getResource(id).then((resource) => {
+          if (resource) {
+            telemetry.trackAddResourceToSpace(resource.type, AddResourceToSpaceEventTrigger.Drop)
+          }
+        })
+      })
     } else {
       await loadEverything()
     }
@@ -1003,6 +1065,8 @@
       oasis.selectedSpace.set('all')
       dispatch('deleted', spaceId)
       toast.success('Space deleted!')
+
+      await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
     } catch (error) {
       log.error('Error deleting space:', error)
       toast.error('Error deleting space: ' + (error as Error).message)
@@ -1033,6 +1097,19 @@
   const openResourceDetailsModal = (resourceId: string) => {
     resourceDetailsModalSelected.set(resourceId)
     showResourceDetails.set(true)
+
+    resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
+      if (resource) {
+        telemetry.trackOpenResource(
+          resource.type,
+          isEverythingSpace
+            ? OpenResourceEventFrom.Oasis
+            : $space?.name.liveModeEnabled
+              ? OpenResourceEventFrom.SpaceLive
+              : OpenResourceEventFrom.Space
+        )
+      }
+    })
   }
 
   const closeResourceDetailsModal = () => {

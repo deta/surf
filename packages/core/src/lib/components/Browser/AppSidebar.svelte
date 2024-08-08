@@ -1,9 +1,10 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
+  import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
   import { useLogScope } from '../../utils/log'
   import { SFFS } from '../../service/sffs'
-  import { writable } from 'svelte/store'
+  import { useTelemetry } from '../../service/telemetry'
 
   export let tabContext: string
   export let sffs: SFFS
@@ -17,6 +18,7 @@
   let inputElem: HTMLInputElement
 
   const log = useLogScope('AppsSidebar')
+  const telemetry = useTelemetry()
 
   const activeToolTab = writable<'app' | 'page'>('page')
 
@@ -112,11 +114,15 @@
 
       if (createApp) {
         app.srcdoc = clean
+
+        await telemetry.trackGoWildCreateApp()
         return
       }
 
       directCode = clean
       dispatch('executeAppSidebarCode', { appId: appId, code: clean })
+
+      await telemetry.trackGoWildModifyPage()
     } catch (error) {
       log.error('Failed to create app:', error)
       inputValue = savedInputValue
@@ -128,6 +134,16 @@
 
   const handleCodeRerun = async () => {
     dispatch('executeAppSidebarCode', { appId: appId, code: directCode })
+
+    await telemetry.trackGoWildRerun()
+  }
+
+  const handleClear = async () => {
+    prompt = ''
+    app.srcdoc = ''
+    dispatch('clearAppSidebar', {})
+
+    await telemetry.trackGoWildClear()
   }
 
   onMount(async () => {
@@ -171,16 +187,7 @@
   </div> -->
 
   {#if !fetching && prompt}
-    <button
-      on:click={() => {
-        prompt = ''
-        app.srcdoc = ''
-        dispatch('clearAppSidebar', {})
-      }}
-      class="clear-btn"
-    >
-      Clear
-    </button>
+    <button on:click={handleClear} class="clear-btn"> Clear </button>
   {/if}
 
   <div class="content">

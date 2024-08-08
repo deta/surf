@@ -9,6 +9,8 @@
     useResourceManager
   } from '../../service/resources'
   import {
+    CreateAnnotationEventTrigger,
+    CreateTabEventTrigger,
     ResourceTagsBuiltInKeys,
     WebViewEventReceiveNames,
     WebViewEventSendNames,
@@ -30,6 +32,7 @@
   import { handleInlineAI } from '../../service/ai'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { useDebounce } from '../../utils/debounce'
+  import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
 
   export let resource: Resource
   export let active: boolean = true
@@ -39,7 +42,7 @@
 
   const dispatch = createEventDispatcher<{
     close: void
-    'new-tab': { url: string; active: boolean }
+    'new-tab': BrowserTabNewTabEvent
   }>()
   const log = useLogScope('OasisResourceModal')
   const resourceManager = useResourceManager()
@@ -61,7 +64,11 @@
     if (event.key === 'Escape') {
       close()
     } else if (isModKeyAndKeyPressed(event, 'Enter')) {
-      dispatch('new-tab', { url: initialSrc, active: event.shiftKey })
+      dispatch('new-tab', {
+        url: initialSrc,
+        active: event.shiftKey,
+        trigger: CreateTabEventTrigger.OasisItem
+      })
     }
   }
 
@@ -200,6 +207,20 @@
       id: annotationResource.id,
       data: annotationData
     })
+
+    const simplifiedAnnotationType =
+      (annotationData.data as AnnotationCommentData)?.content_html ||
+      (annotationData.data as AnnotationCommentData)?.content_plain
+        ? 'comment'
+        : 'highlight'
+    const annotationTrigger =
+      (annotationData.data as AnnotationCommentData)?.source === 'inline_ai'
+        ? CreateAnnotationEventTrigger.InlinePageAI
+        : CreateAnnotationEventTrigger.PageInline
+    await resourceManager.telemetry.trackCreateAnnotation(
+      simplifiedAnnotationType,
+      annotationTrigger
+    )
   }
 
   const handleAnnotationRemove = async (
@@ -284,7 +305,7 @@
     })
   }
 
-  const handleNewTab = (e: CustomEvent<{ url: string; active: boolean }>) => {
+  const handleNewTab = (e: CustomEvent<BrowserTabNewTabEvent>) => {
     dispatch('close')
     dispatch('new-tab', e.detail)
   }

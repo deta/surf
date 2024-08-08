@@ -6,11 +6,16 @@
   import autosize from 'svelte-autosize'
 
   import Link from '../Atoms/Link.svelte'
-  import { ResourceTagsBuiltInKeys, type SFFSResourceTag } from '@horizon/types'
+  import {
+    CreateTabEventTrigger,
+    ResourceTagsBuiltInKeys,
+    type SFFSResourceTag
+  } from '@horizon/types'
   import { Icon } from '@horizon/icons'
   import { tooltip } from '../../utils/directives'
   import { useToasts } from '../../service/toast'
   import { createEventDispatcher } from 'svelte'
+  import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
 
   const log = useLogScope('OasisResourceDetails')
 
@@ -19,7 +24,7 @@
 
   const resourceManager = useResourceManager()
   const toasts = useToasts()
-  const dispatch = createEventDispatcher<{ 'new-tab': { url: string; active: boolean } }>()
+  const dispatch = createEventDispatcher<{ 'new-tab': BrowserTabNewTabEvent }>()
 
   let userContext = resource.metadata?.userContext
   let showAddTag = false
@@ -104,7 +109,11 @@
 
   const handleOpenSource = (e: MouseEvent) => {
     e.preventDefault()
-    dispatch('new-tab', { url: sourceURL!.href, active: true })
+    dispatch('new-tab', {
+      url: sourceURL!.href,
+      active: true,
+      trigger: CreateTabEventTrigger.OasisItem
+    })
   }
 </script>
 

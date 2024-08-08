@@ -4,7 +4,7 @@
       type: WebViewEventSendNames
       data: WebViewSendEvents[keyof WebViewSendEvents]
     }
-    'new-tab': { url: string; active: boolean }
+    'new-tab': BrowserTabNewTabEvent
     'did-finish-load': void
     navigation: { url: string; oldUrl: string }
     'url-change': string
@@ -17,6 +17,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
 
   import {
+    CreateTabEventTrigger,
     WebViewEventReceiveNames,
     WebViewEventSendNames,
     type WebViewReceiveEvents,
@@ -31,6 +32,7 @@
   import HoverLinkPreview from './HoverLinkPreview.svelte'
   import ZoomPreview from './ZoomPreview.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
+  import type { BrowserTabNewTabEvent } from './BrowserTab.svelte'
 
   export let src: string
   export let partition: string
@@ -108,7 +110,11 @@
     const disposition = e.detail.disposition
     if (disposition === 'new-window') return
 
-    dispatch('new-tab', { url: e.detail.url, active: disposition === 'foreground-tab' })
+    dispatch('new-tab', {
+      url: e.detail.url,
+      active: disposition === 'foreground-tab',
+      trigger: CreateTabEventTrigger.Page
+    })
   }
 
   const handleWebviewFoundInPage = (event: CustomEvent<Electron.FoundInPageEvent>) => {

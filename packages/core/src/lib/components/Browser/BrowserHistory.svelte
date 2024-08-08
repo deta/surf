@@ -5,7 +5,7 @@
   import { useResourceManager, type ResourceSearchResultItem } from '../../service/resources'
   import { derived, writable } from 'svelte/store'
   import BrowserHistoryEntry from './BrowserHistoryEntry.svelte'
-  import { ResourceTagsBuiltInKeys } from '@horizon/types'
+  import { OpenResourceEventFrom, ResourceTagsBuiltInKeys } from '@horizon/types'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { Icon } from '@horizon/icons'
   import { useToasts } from '../../service/toast'
@@ -103,6 +103,12 @@
   const openResourceDetailsModal = (resourceId: string) => {
     resourceDetailsModalSelected.set(resourceId)
     showResourceDetails.set(true)
+
+    resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
+      if (resource) {
+        resourceManager.telemetry.trackOpenResource(resource.type, OpenResourceEventFrom.History)
+      }
+    })
   }
 
   const closeResourceDetailsModal = () => {

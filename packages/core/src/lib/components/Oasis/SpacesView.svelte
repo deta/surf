@@ -11,11 +11,18 @@
   import type { SpaceData, SpaceSource } from '../../types'
   import type { Writable } from 'svelte/store'
   import type { Space } from '@horizon/core/src/lib/types'
+  import { useTelemetry } from '../../service/telemetry'
+  import {
+    CreateSpaceEventFrom,
+    DeleteSpaceEventTrigger,
+    OpenSpaceEventTrigger
+  } from '@horizon/types'
 
   const log = useLogScope('SpacesView')
   const oasis = useOasis()
   const toast = useToasts()
   const dispatch = createEventDispatcher<{ createTab: TabSpace }>()
+  const telemetry = useTelemetry()
 
   export let spaces: Writable<Space[]>
   const selectedSpace = oasis.selectedSpace
@@ -42,6 +49,8 @@
       if (inputElement) {
         inputElement.select()
       }
+
+      await telemetry.trackCreateSpace(CreateSpaceEventFrom.OasisSpacesView)
     } catch (error) {
       log.error('Failed to create folder:', error)
     }
@@ -69,6 +78,8 @@
         } as TabSpace)
 
         await tick()
+
+        await telemetry.trackOpenSpace(OpenSpaceEventTrigger.SpacesView)
       }
     } catch (error) {
       log.error('Failed to delete folder:', error)
@@ -79,6 +90,8 @@
     try {
       await oasis.deleteSpace(id)
       toast.success('Space deleted!')
+
+      await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpacesView)
     } catch (error) {
       log.error('Failed to delete folder:', error)
     }

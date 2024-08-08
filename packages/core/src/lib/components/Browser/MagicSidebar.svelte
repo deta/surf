@@ -42,6 +42,7 @@
   const { copy, copied } = useClipboard()
   const resourceManager = useResourceManager()
   const toasts = useToasts()
+  const telemetry = resourceManager.telemetry
 
   const savedResponse = writable(false)
 
@@ -137,12 +138,16 @@
       if (resource.type === ResourceTypes.POST_YOUTUBE && source.metadata?.timestamp) {
         const timestamp = source.metadata.timestamp
         dispatch('seekToTimestamp', { resourceId: resource.id, timestamp: timestamp })
+
+        await telemetry.trackPageChatCitationClick('timestamp')
       } else {
         dispatch('highlightWebviewText', {
           resourceId: resource.id,
           answerText: answerText,
           sourceUid: sourceUid
         })
+
+        await telemetry.trackPageChatCitationClick('text')
       }
     }
   }
@@ -287,6 +292,10 @@
       )
 
       updatePageMagicResponse(response.id, { status: 'success', content: content })
+
+      const previousMessages = $magicPage.responses.filter((message) => message.id !== response!.id)
+
+      await telemetry.trackPageChatMessageSent(resourceIds.length, previousMessages.length)
     } catch (e) {
       log.error('Error doing magic', e)
       if (response) {
@@ -308,6 +317,8 @@
     try {
       log.debug('Clearing chat', id)
 
+      const messagesLength = $magicPage.responses.length
+
       $magicPage.responses = []
 
       await resourceManager.sffs.deleteAIChat(id)
@@ -325,6 +336,8 @@
       })
 
       toast.success('Chat cleared!')
+
+      await telemetry.trackPageChatClear(messagesLength)
     } catch (e) {
       log.error('Error clearing chat:', e)
       toast.error('Failed to clear chat')

@@ -19,13 +19,13 @@
     isModKeyPressed
   } from '../../utils/keyboard'
   import { wait, writableAutoReset } from '../../utils/time'
-  import { Telemetry } from '../../service/telemetry'
+  import { createTelemetry, Telemetry } from '../../service/telemetry'
   import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
   import { processDrop } from '../../service/mediaImporter'
   import SidebarPane from './SidebarPane.svelte'
 
   import { PaneGroup, Pane, PaneResizer, type PaneAPI } from 'paneforge'
-  import { ResourceTag, createResourceManager } from '../../service/resources'
+  import { Resource, ResourceTag, createResourceManager } from '../../service/resources'
 
   import { type Space, type SpaceSource } from '../../types'
 
@@ -55,7 +55,9 @@
     TabOasisDiscovery,
     AIChatMessageRole,
     DroppedTab,
-    TabHistory
+    TabHistory,
+    CreateTabOptions,
+    RightSidebarTab
   } from './types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../Cards/Browser/searchEngines'
   import type { Drawer } from '@horizon/drawer'
@@ -76,7 +78,18 @@
   import MagicSidebar from './MagicSidebar.svelte'
   import AppSidebar from './AppSidebar.svelte'
   import {
+    ActivateTabEventTrigger,
+    AddResourceToSpaceEventTrigger,
+    CreateAnnotationEventTrigger,
+    CreateSpaceEventFrom,
+    CreateTabEventTrigger,
+    DeleteTabEventTrigger,
+    MoveTabEventAction,
+    OpenResourceEventFrom,
+    OpenSpaceEventTrigger,
+    PageChatUpdateContextEventAction,
     ResourceTagsBuiltInKeys,
+    SaveToOasisEventTrigger,
     WebViewEventReceiveNames,
     type AnnotationCommentData,
     type ResourceDataAnnotation,
@@ -128,12 +141,12 @@
 
   let telemetryAPIKey = ''
   let telemetryActive = false
-  if (import.meta.env.PROD) {
+  if (import.meta.env.PROD || import.meta.env.R_VITE_TELEMETRY_ENABLED) {
     telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
     telemetryActive = true
   }
 
-  const telemetry = new Telemetry({
+  const telemetry = createTelemetry({
     apiKey: telemetryAPIKey,
     active: telemetryActive,
     trackHostnames: false
@@ -184,7 +197,7 @@
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
   const activatedTabs = writable<string[]>([]) // for lazy loading
-  const rightSidebarTab = writable<'annotations' | 'chat' | 'go-wild'>('chat')
+  const rightSidebarTab = writable<RightSidebarTab>('chat')
   const cachedMagicTabs = new Set<string>()
   const downloadResourceMap = new Map<string, Download>()
   const downloadToastsMap = new Map<string, ToastItem>()
@@ -339,9 +352,15 @@
 
   $: if ($activeBrowserTab) $activeBrowserTab.focus()
 
-  const openResourceDetailsModal = (resourceId: string) => {
+  const openResourceDetailsModal = (resourceId: string, from?: OpenResourceEventFrom) => {
     resourceDetailsModalSelected.set(resourceId)
     showResourceDetails.set(true)
+
+    resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
+      if (resource) {
+        resourceManager.telemetry.trackOpenResource(resource.type, from)
+      }
+    })
   }
 
   const closeResourceDetailsModal = () => {
@@ -353,8 +372,14 @@
     return $spaces.find((space) => space.id === id)
   }
 
-  const makeTabActive = (tabId: string) => {
+  const makeTabActive = (tabId: string, trigger?: ActivateTabEventTrigger) => {
     log.debug('Making tab active', tabId)
+    const tab = $tabs.find((tab) => tab.id === tabId)
+    if (!tab) {
+      log.error('Tab not found', tabId)
+      return
+    }
+
     const browserTab = $browserTabs[tabId]
 
     const activeElement = document.activeElement
@@ -382,6 +407,10 @@
       setAppSidebarState(true)
     } else {
       setAppSidebarState(false)
+    }
+
+    if (trigger) {
+      telemetry.trackActivateTab(trigger, tab.type)
     }
   }
 
@@ -414,8 +443,15 @@
 
   const createTab = async <T extends Tab>(
     tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'>,
-    placeAtEnd = true
+    opts?: CreateTabOptions
   ) => {
+    const defaultOpts = {
+      placeAtEnd: true,
+      active: false
+    }
+
+    const { placeAtEnd, active } = Object.assign(defaultOpts, opts)
+
     const activeTabIndex =
       $unpinnedTabs.find((tab) => tab.id === $activeTabId)?.index ?? $unpinnedTabs.length - 1
     const nextTabIndex = $unpinnedTabs[activeTabIndex + 1]?.index ?? -1
@@ -440,6 +476,10 @@
     log.debug('Created tab', newTab)
     activatedTabs.update((tabs) => [...tabs, newTab.id])
     tabs.update((tabs) => [...tabs, newTab])
+
+    if (active) {
+      makeTabActive(newTab.id)
+    }
 
     return newTab
   }
@@ -507,10 +547,10 @@
   }
 
   const handleDeleteTab = async (e: CustomEvent<string>) => {
-    await deleteTab(e.detail)
+    await deleteTab(e.detail, DeleteTabEventTrigger.Click)
   }
 
-  const deleteTab = async (tabId: string) => {
+  const deleteTab = async (tabId: string, trigger?: DeleteTabEventTrigger) => {
     const tab = $tabs.find((tab) => tab.id === tabId)
     if (!tab) {
       log.error('Tab not found', tabId)
@@ -533,6 +573,10 @@
 
     observer.unobserve(newTabButton)
     observer.observe(newTabButton)
+
+    if (tab.type === 'page' && trigger) {
+      await telemetry.trackDeletePageTab(trigger)
+    }
   }
 
   const persistTabChanges = async (tabId: string, updates: Partial<Tab>) => {
@@ -562,7 +606,7 @@
     await persistTabChanges(tabId, updates)
   }
 
-  const closeActiveTab = async () => {
+  const closeActiveTab = async (trigger?: DeleteTabEventTrigger) => {
     if (!$activeTab) {
       log.error('No active tab')
       return
@@ -579,7 +623,7 @@
         makeTabActive($unpinnedTabs[$unpinnedTabs.length - 1].id)
       }
     } else {
-      await deleteTab($activeTab.id)
+      await deleteTab($activeTab.id, trigger)
     }
 
     /*
@@ -622,13 +666,16 @@
   }
 
   const handeCreateResourceFromOasis = async (e: CustomEvent<string>) => {
-    const newTab = await createPageTab(e.detail, true)
+    const newTab = await createPageTab(e.detail, {
+      active: true,
+      trigger: CreateTabEventTrigger.OasisCreate
+    })
 
     // Since we dont have the webview available right here, we need to wait a bit before we can handle the bookmark
     await wait(10000)
 
     if (newTab) {
-      await handleBookmark()
+      await handleBookmark(false, SaveToOasisEventTrigger.CreateMenu)
     }
   }
 
@@ -754,7 +801,7 @@
     }
   }, 200)
 
-  const createHistoryTab = useDebounce(async () => {
+  const createHistoryTab = useDebounce(async (opts?: CreateTabOptions) => {
     log.debug('Creating new history tab')
 
     // check if there already exists a history tab, if yes we just change to it
@@ -766,13 +813,14 @@
       return
     }
 
-    const newTab = await createTab<TabHistory>({
-      title: 'History',
-      icon: '',
-      type: 'history'
-    })
-
-    makeTabActive(newTab.id)
+    await createTab<TabHistory>(
+      {
+        title: 'History',
+        icon: '',
+        type: 'history'
+      },
+      { active: true }
+    )
   }, 200)
 
   let keyBuffer = ''
@@ -816,6 +864,7 @@
     } else {
       handleExpandRight()
       setPageChatState(true)
+      telemetry.trackOpenRightSidebar($rightSidebarTab)
     }
   }
 
@@ -835,30 +884,39 @@
     }
   }
 
-  const handleRightSidebarTabsChange = (e: string) => {
+  const handleRightSidebarTabsChange = (tab: RightSidebarTab) => {
     // check if sidebar is even open
     if (!showRightSidebar) {
       log.warn('Right sidebar is not open, ignoring tab change')
       return
     }
 
-    log.debug('Right sidebar tab change', e)
+    log.debug('Right sidebar tab change', tab)
 
-    if (e === 'chat') {
+    // delay the tracking to make sure the sidebar can update first
+    setTimeout(() => {
+      telemetry.trackOpenRightSidebar(tab)
+    }, 50)
+
+    if (tab === 'chat') {
       setPageChatState(true)
     } else if ($activeTabMagic.showSidebar) {
       setPageChatState(false)
     }
 
-    if (e === 'go-wild') {
+    if (tab === 'go-wild') {
       setAppSidebarState(true)
     } else if ($showAppSidebar) {
       setAppSidebarState(false)
     }
   }
 
-  const openRightSidebarTab = (id: typeof $rightSidebarTab) => {
-    rightSidebarTab.set(id)
+  const openRightSidebarTab = (id: RightSidebarTab) => {
+    if ($rightSidebarTab === id) {
+      telemetry.trackOpenRightSidebar(id)
+    } else {
+      rightSidebarTab.set(id)
+    }
 
     if (!showRightSidebar) {
       handleExpandRight()
@@ -874,14 +932,21 @@
     window.api.updateTrafficLightsVisibility(visible)
   }
 
-  const handleSidebarchange = (value?: boolean) => {
-    if (value !== undefined) {
-      showLeftSidebar = value
-    } else {
-      showLeftSidebar = !showLeftSidebar
+  const handleLeftSidebarChange = useDebounce((value: boolean) => {
+    if (showLeftSidebar === value) {
+      return
     }
 
-    if (showLeftSidebar) {
+    showLeftSidebar = value
+    changeTraficLightsVisibility(value)
+
+    telemetry.trackToggleSidebar(showLeftSidebar)
+  }, 200)
+
+  const changeLeftSidebarState = (value?: boolean) => {
+    const newState = value ?? !showLeftSidebar
+
+    if (newState) {
       handleExpand()
     } else {
       handleCollapse()
@@ -897,11 +962,11 @@
       activeTabComponent?.blur()
       // Note: even though the electron menu handles the shortcut this is still needed here
     } else if (isModKeyAndKeyPressed(e, 'w')) {
-      closeActiveTab()
+      closeActiveTab(DeleteTabEventTrigger.Shortcut)
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
-      handleBookmark()
+      handleBookmark(false, SaveToOasisEventTrigger.Shortcut)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       // this creates a new electron window
     } else if (e.ctrlKey && e.key === 'Tab') {
@@ -925,11 +990,11 @@
 
       if (index < 8) {
         if (index < tabs.length) {
-          makeTabActive(tabs[index].id)
+          makeTabActive(tabs[index].id, ActivateTabEventTrigger.Shortcut)
         }
       } else {
         // if 9 is pressed, go to the last tab
-        makeTabActive(tabs[tabs.length - 1].id)
+        makeTabActive(tabs[tabs.length - 1].id, ActivateTabEventTrigger.Shortcut)
       }
     } else if (e.key === 'ArrowLeft' && e.metaKey) {
       if (canGoBack) {
@@ -946,6 +1011,7 @@
     const t = document.startViewTransition(() => {
       horizontalTabs = !horizontalTabs
       localStorage.setItem('horizontalTabs', horizontalTabs.toString())
+      telemetry.trackToggleTabsOrientation(horizontalTabs ? 'horizontal' : 'vertical')
     })
   }
 
@@ -969,14 +1035,16 @@
 
     await tick()
 
-    const newTab = await createTab<TabHorizon>({
-      horizonId: newHorizon.id,
-      title: newHorizon.data.name,
-      icon: '',
-      type: 'horizon'
-    })
+    await createTab<TabHorizon>(
+      {
+        horizonId: newHorizon.id,
+        title: newHorizon.data.name,
+        icon: '',
+        type: 'horizon'
+      },
+      { active: true }
+    )
 
-    makeTabActive(newTab.id)
     addressValue.set(newHorizon.data.name)
   }
 
@@ -991,14 +1059,21 @@
       return
     }
 
-    const newTab = await createTab<TabEmpty>({ title: 'New Tab', icon: '', type: 'empty' })
-    makeTabActive(newTab.id)
+    await createTab<TabEmpty>({ title: 'New Tab', icon: '', type: 'empty' }, { active: true })
   }
 
   const debouncedCreateNewEmptyTab = useDebounce(createNewEmptyTab, 100)
 
-  const createPageTab = async (url: string, active = true, placeAtEnd = true): Promise<Tab> => {
+  const createPageTab = async (url: string, opts?: CreateTabOptions): Promise<Tab> => {
     log.debug('Creating new page tab')
+
+    const options = {
+      active: true,
+      placeAtEnd: true,
+      trigger: CreateTabEventTrigger.Other,
+      ...opts
+    }
+
     const newTab = await createTab<TabPage>(
       {
         title: url,
@@ -1008,72 +1083,68 @@
         historyStackIds: [],
         currentHistoryIndex: -1
       },
-      placeAtEnd
+      options
     )
 
-    if (active) {
-      makeTabActive(newTab.id)
-    }
+    await telemetry.trackCreatePageTab(options.trigger, options.active)
 
     return newTab
   }
 
   const createSpaceTab = async (space: Space, active = true) => {
     log.debug('Creating new space tab')
-    const newTab = await createTab<TabSpace>({
-      title: space.name.folderName,
-      icon: '',
-      spaceId: space.id,
-      type: 'space',
-      colors: space.name.colors
-    })
-
-    if (active) {
-      makeTabActive(newTab.id)
-    }
+    const newTab = await createTab<TabSpace>(
+      {
+        title: space.name.folderName,
+        icon: '',
+        spaceId: space.id,
+        type: 'space',
+        colors: space.name.colors
+      },
+      { active }
+    )
 
     return newTab
   }
 
   const createChatTab = async (query: string, active = true) => {
     log.debug('Creating new chat tab')
-    const newTab = await createTab<TabChat>({ title: query, icon: '', type: 'chat', query: query })
-
-    if (active) {
-      makeTabActive(newTab.id)
-    }
+    await createTab<TabChat>({ title: query, icon: '', type: 'chat', query: query }, { active })
   }
 
   const createImporterTab = async () => {
     log.debug('Creating new importer tab')
-    const newTab = await createTab<TabImporter>({
-      title: 'Importer',
-      icon: '',
-      type: 'importer',
-      index: 0,
-      pinned: false,
-      magic: false
-    })
-
-    makeTabActive(newTab.id)
+    await createTab<TabImporter>(
+      {
+        title: 'Importer',
+        icon: '',
+        type: 'importer',
+        index: 0,
+        pinned: false,
+        magic: false
+      },
+      { active: true }
+    )
   }
 
   const createOasisDiscoveryTab = async () => {
     log.debug('Creating new oasis discovery tab')
-    const newTab = await createTab<TabOasisDiscovery>({
-      title: 'Oasis Discovery',
-      icon: '',
-      type: 'oasis-discovery',
-      magic: false
-    })
-    makeTabActive(newTab.id)
+    await createTab<TabOasisDiscovery>(
+      {
+        title: 'Oasis Discovery',
+        icon: '',
+        type: 'oasis-discovery',
+        magic: false
+      },
+      { active: true }
+    )
   }
 
   const handleNewTab = (e: CustomEvent<BrowserTabNewTabEvent>) => {
-    const { url, active } = e.detail
+    const { url, active, trigger } = e.detail
 
     if (url) {
-      createPageTab(url, active, false)
+      createPageTab(url, { active, trigger, placeAtEnd: false })
     } else {
       createNewEmptyTab()
     }
@@ -1094,16 +1165,16 @@
     if (!previous) {
       const nextTabIndex = activeTabIndex + 1
       if (nextTabIndex >= ordered.length) {
-        makeTabActive(ordered[0].id)
+        makeTabActive(ordered[0].id, ActivateTabEventTrigger.Shortcut)
       } else {
-        makeTabActive(ordered[nextTabIndex].id)
+        makeTabActive(ordered[nextTabIndex].id, ActivateTabEventTrigger.Shortcut)
       }
     } else {
       const previousTabIndex = activeTabIndex - 1
       if (previousTabIndex < 0) {
-        makeTabActive(ordered[ordered.length - 1].id)
+        makeTabActive(ordered[ordered.length - 1].id, ActivateTabEventTrigger.Shortcut)
       } else {
-        makeTabActive(ordered[previousTabIndex].id)
+        makeTabActive(ordered[previousTabIndex].id, ActivateTabEventTrigger.Shortcut)
       }
     }
   }
@@ -1112,17 +1183,20 @@
   const openUrlHandler = (url: string) => {
     log.debug('open url', url)
 
-    createPageTab(url, true)
+    createPageTab(url, { active: true, trigger: CreateTabEventTrigger.System })
   }
 
   const handleTabNavigation = (e: CustomEvent<string>) => {
     log.debug('Navigating to', e.detail)
+
     updateActiveTab({
       type: 'page',
       initialLocation: e.detail,
       historyStackIds: [],
       currentHistoryIndex: -1
     })
+
+    telemetry.trackCreatePageTab(CreateTabEventTrigger.AddressBar, true)
   }
 
   const addToActiveTabsHistory = (tabId: string) => {
@@ -1140,12 +1214,16 @@
     const newId = event.detail
     log.debug('Active Tab ID:', newId)
 
-    makeTabActive(newId)
+    makeTabActive(newId, ActivateTabEventTrigger.Click)
   }
 
-  async function handleBookmark() {
+  async function handleBookmark(
+    savedToSpace = false,
+    trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click
+  ): Promise<{ resource: Resource | null; isNew: boolean }> {
     try {
-      if (!$activeTabLocation || $activeTab?.type !== 'page') return
+      if (!$activeTabLocation || $activeTab?.type !== 'page')
+        return { resource: null, isNew: false }
 
       bookmarkingInProgress.set(true)
 
@@ -1167,21 +1245,32 @@
           if (existingCanonical?.value === $activeTabLocation) {
             log.debug('already bookmarked, removing silent tag', $activeTab.resourceBookmark)
 
-            // mark resource as not silent since the user is explicitely bookmarking it
-            await resourceManager.deleteResourceTag(
-              $activeTab.resourceBookmark,
-              ResourceTagsBuiltInKeys.SILENT
+            const isSilent = (existingResource.tags ?? []).some(
+              (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
             )
+
+            if (isSilent) {
+              // mark resource as not silent since the user is explicitely bookmarking it
+              await resourceManager.deleteResourceTag(
+                $activeTab.resourceBookmark,
+                ResourceTagsBuiltInKeys.SILENT
+              )
+            }
 
             bookmarkingSuccess.set(true)
 
             // if (openAfter) {
-            //   openResource($activeTab.resourceBookmark)
+            //   openResourceDetailsModal($activeTab.resourceBookmark)
             // }
 
             updateTab($activeTabId, { resourceBookmarkedManually: true })
 
-            return $activeTab.resourceBookmark
+            // If the resource hasn't been saved before we track the event
+            if (isSilent) {
+              await telemetry.trackSaveToOasis(existingResource.type, trigger, savedToSpace)
+            }
+
+            return { resource: existingResource, isNew: false }
           }
         }
       }
@@ -1192,13 +1281,16 @@
       toasts.success('Bookmarked Page!')
       bookmarkingSuccess.set(true)
 
+      await telemetry.trackSaveToOasis(resource.type, trigger, savedToSpace)
+
       // if (openAfter) {
-      //   openResource(resource.id)
+      //   openResourceDetailsModal(resource.id)
       // }
 
-      return resource.id
+      return { resource, isNew: true }
     } catch (e) {
       log.error('error creating resource', e)
+      return { resource: null, isNew: false }
     } finally {
       bookmarkingInProgress.set(false)
     }
@@ -1279,7 +1371,7 @@
           log.error('Browser tab not found', t.id)
           return
         }
-        makeTabActive(t.id)
+        makeTabActive(t.id, ActivateTabEventTrigger.ChatCitation)
         if (answerText === '') {
           if (sourceUid) {
             const source = await sffs.getAIChatDataSource(sourceUid)
@@ -1343,7 +1435,7 @@
           alert('Error: Browser tab not found')
           return
         }
-        makeTabActive(t.id)
+        makeTabActive(t.id, ActivateTabEventTrigger.ChatCitation)
         browserTab.sendWebviewEvent(WebViewEventReceiveNames.SeekToTimestamp, {
           timestamp: timestamp
         })
@@ -1599,11 +1691,13 @@
 
     toasts.success('Saved to Oasis!')
 
-    return annotation
-  }
+    const trigger =
+      source === 'user'
+        ? CreateAnnotationEventTrigger.PageSidebar
+        : CreateAnnotationEventTrigger.PageChatMessage
+    await telemetry.trackCreateAnnotation('comment', trigger)
 
-  const openResource = async (id: string) => {
-    openResourceDetailsModal(id)
+    return annotation
   }
 
   const reloadAnnotationsSidebar = (showLoading?: boolean) => {
@@ -1635,7 +1729,7 @@
     }
   }
 
-  const handleCreateTabFromSpace = async (e: CustomEvent<Tab>) => {
+  const handleCreateTabFromSpace = async (e: CustomEvent<TabSpace>) => {
     const tab = e.detail
 
     log.debug('create tab from sidebar', tab)
@@ -1666,6 +1760,8 @@
       await createSpaceTab(space, true)
 
       await tick()
+
+      await telemetry.trackOpenSpace(OpenSpaceEventTrigger.SidebarMenu)
     } catch (error) {
       log.error('Failed to delete folder:', error)
     }
@@ -1679,12 +1775,18 @@
     const toast = toasts.loading('Adding resource to space...')
 
     try {
-      const resourceId = await handleBookmark()
-      log.debug('bookmarked resource', resourceId)
+      const { resource } = await handleBookmark(true, SaveToOasisEventTrigger.Click)
+      log.debug('bookmarked resource', resource)
 
-      if (resourceId) {
-        log.debug('will add item', resourceId, 'to space', e.detail.id)
-        await resourceManager.addItemsToSpace(e.detail.id, [resourceId])
+      if (resource) {
+        log.debug('will add item', resource.id, 'to space', e.detail.id)
+        await resourceManager.addItemsToSpace(e.detail.id, [resource.id])
+
+        // new resources are already tracked in the bookmarking function
+        await telemetry.trackAddResourceToSpace(
+          resource.type,
+          AddResourceToSpaceEventTrigger.TabMenu
+        )
       }
 
       toast.success('Resource added to space!')
@@ -1735,6 +1837,10 @@
         await createSpaceTab(newSpace, true)
       }
 
+      await telemetry.trackCreateSpace(CreateSpaceEventFrom.SpaceHoverMenu, {
+        createdUsingAI: processNaturalLanguage
+      })
+
       toast.success('Space created!')
     } catch (error) {
       log.error('Failed to create new space:', error)
@@ -1781,6 +1887,10 @@
       log.debug('created space', space)
 
       await createSpaceTab(space, true)
+
+      await telemetry.trackCreateSpace(CreateSpaceEventFrom.TabLiveSpaceButton, {
+        isLiveSpace: true
+      })
 
       toast.success('Live Space created!')
     } catch (e) {
@@ -1834,17 +1944,19 @@
 
     // @ts-expect-error
     window.api.onUpdatePrompt((id: PromptIDs, content: string) => {
+      telemetry.trackUpdatePrompt(id)
       return updatePrompt(id, content)
     })
 
     // @ts-expect-error
     window.api.onResetPrompt((id: PromptIDs) => {
+      telemetry.trackResetPrompt(id)
       return resetPrompt(id)
     })
 
     // @ts-expect-error
     window.api.onToggleSidebar((visible?: boolean) => {
-      handleSidebarchange(visible)
+      changeLeftSidebarState(visible)
     })
 
     // @ts-expect-error
@@ -1864,7 +1976,7 @@
 
     // @ts-expect-error
     window.api.onCloseActiveTab(() => {
-      closeActiveTab()
+      closeActiveTab(DeleteTabEventTrigger.Shortcut)
     })
 
     // @ts-expect-error
@@ -1961,7 +2073,7 @@
     })
 
     // @ts-ignore
-    window.api.onDownloadDone((data: DownloadDoneMessage) => {
+    window.api.onDownloadDone(async (data: DownloadDoneMessage) => {
       // TODO: trigger the post-processing call here
       log.debug('download done', data)
 
@@ -1990,6 +2102,8 @@
       }
 
       downloadResourceMap.delete(data.id)
+
+      await telemetry.trackFileDownload()
     })
 
     const tabsList = await tabsDB.all()
@@ -2169,6 +2283,13 @@
         return tab
       })
     })
+
+    tick().then(() => {
+      telemetry.trackPageChatContextUpdate(
+        PageChatUpdateContextEventAction.ExcludeOthers,
+        $magicTabs.length
+      )
+    })
   }
 
   const handleExcludeTabFromMagic = (e: CustomEvent<string>) => {
@@ -2188,6 +2309,13 @@
         return tab
       })
     })
+
+    tick().then(() => {
+      telemetry.trackPageChatContextUpdate(
+        PageChatUpdateContextEventAction.Remove,
+        $magicTabs.length
+      )
+    })
   }
 
   const handleIncludeTabInMagic = (e: CustomEvent<string>) => {
@@ -2206,6 +2334,10 @@
         }
         return tab
       })
+    })
+
+    tick().then(() => {
+      telemetry.trackPageChatContextUpdate(PageChatUpdateContextEventAction.Add, $magicTabs.length)
     })
   }
 
@@ -2396,7 +2528,10 @@
         resource.type === 'application/vnd.space.link' ||
         resource.type === 'application/vnd.space.article'
       ) {
-        const tab = await createPageTab(resource.parsedData.url, true)
+        const tab = await createPageTab(resource.parsedData.url, {
+          active: true,
+          trigger: CreateTabEventTrigger.Drop
+        })
         tab.index = e.index
         await bulkUpdateTabsStore(
           get(tabs).map((tab) => ({
@@ -2461,6 +2596,8 @@
             dragData.magic = false
 
             cachedMagicTabs.delete(dragData.id)
+
+            telemetry.trackMoveTab(MoveTabEventAction.Pin)
           } else if (e.to.id === 'sidebar-magic-tabs') {
             dragData.pinned = false
             dragData.magic = true
@@ -2471,7 +2608,23 @@
               log.debug('prepare tab for chat context after moving to magic')
               prepareTabForChatContext(dragData)
             }
+
+            telemetry.trackMoveTab(MoveTabEventAction.AddMagic)
+            telemetry.trackPageChatContextUpdate(
+              PageChatUpdateContextEventAction.Add,
+              magicTabsArray.length + 1
+            )
           } else {
+            if (dragData.magic) {
+              telemetry.trackMoveTab(MoveTabEventAction.RemoveMagic)
+              telemetry.trackPageChatContextUpdate(
+                PageChatUpdateContextEventAction.Remove,
+                magicTabsArray.length - 1
+              )
+            } else {
+              telemetry.trackMoveTab(MoveTabEventAction.Unpin)
+            }
+
             dragData.pinned = false
             dragData.magic = false
             cachedMagicTabs.delete(dragData.id)
@@ -2581,10 +2734,10 @@
     {historyEntriesManager}
     bind:showTabSearch
     activeTabs={$activeTabs}
-    on:activate-tab={handleTabSelect}
-    on:close-active-tab={closeActiveTab}
-    on:bookmark={handleBookmark}
-    on:toggle-sidebar={() => handleSidebarchange()}
+    on:activate-tab={(e) => makeTabActive(e.detail, ActivateTabEventTrigger.Search)}
+    on:close-active-tab={() => closeActiveTab(DeleteTabEventTrigger.CommandMenu)}
+    on:bookmark={() => handleBookmark(false, SaveToOasisEventTrigger.CommandMenu)}
+    on:toggle-sidebar={() => changeLeftSidebarState()}
     on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
     on:reload-window={() => $activeBrowserTab?.reload()}
     on:open-space={handleCreateTabForSpace}
@@ -2598,25 +2751,18 @@
       $activeBrowserTab?.resetZoom()
     }}
     on:open-url={(e) => {
-      createPageTab(e.detail, true)
+      createPageTab(e.detail, { active: true, trigger: CreateTabEventTrigger.Search })
     }}
     on:open-resource={(e) => {
-      openResource(e.detail)
+      openResourceDetailsModal(e.detail, OpenResourceEventFrom.CommandMenu)
     }}
   />
 
   <SidebarPane
     {horizontalTabs}
     bind:this={sidebarComponent}
-    on:collapsed-left-sidebar={() => {
-      log.debug('collapsed left sidebar')
-      showLeftSidebar = false
-      changeTraficLightsVisibility(false)
-    }}
-    on:expanded-left-sidebar={() => {
-      showLeftSidebar = true
-      changeTraficLightsVisibility(true)
-    }}
+    on:collapsed-left-sidebar={() => handleLeftSidebarChange(false)}
+    on:expanded-left-sidebar={() => handleLeftSidebarChange(true)}
     on:collapsed-right-sidebar={() => {
       showRightSidebar = false
     }}
@@ -2979,7 +3125,7 @@
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
                       on:unarchive-tab={handleUnarchiveTab}
-                      on:bookmark={handleBookmark}
+                      on:bookmark={() => handleBookmark()}
                       on:create-live-space={handleCreateLiveSpace}
                       on:save-resource-in-space={handleSaveResourceInSpace}
                       on:include-tab={handleIncludeTabInMagic}
@@ -3039,7 +3185,7 @@
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
                       on:unarchive-tab={handleUnarchiveTab}
-                      on:bookmark={handleBookmark}
+                      on:bookmark={() => handleBookmark()}
                       on:create-live-space={handleCreateLiveSpace}
                       on:save-resource-in-space={handleSaveResourceInSpace}
                       on:include-tab={handleIncludeTabInMagic}
@@ -3256,7 +3402,8 @@
                   on:new-tab={handleNewTab}
                   on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
                   on:update-tab={(e) => updateTab(tab.id, e.detail)}
-                  on:open-resource={(e) => openResource(e.detail)}
+                  on:open-resource={(e) =>
+                    openResourceDetailsModal(e.detail, OpenResourceEventFrom.Page)}
                   on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
                   on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
                   on:keydown={(e) => handleKeyDown(e.detail)}
@@ -3279,9 +3426,14 @@
                   {tab}
                   {resourceManager}
                   db={storage}
-                  on:navigate={(e) => createPageTab(e.detail.url, e.detail.active)}
+                  on:navigate={(e) =>
+                    createPageTab(e.detail.url, {
+                      active: e.detail.active,
+                      trigger: CreateTabEventTrigger.OasisChat
+                    })}
                   on:updateTab={(e) => updateTab(tab.id, e.detail)}
-                  on:openResource={(e) => openResource(e.detail)}
+                  on:openResource={(e) =>
+                    openResourceDetailsModal(e.detail, OpenResourceEventFrom.OasisChat)}
                 />
               {:else if tab.type === 'importer'}
                 <Importer {resourceManager} />

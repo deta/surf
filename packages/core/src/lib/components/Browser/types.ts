@@ -1,4 +1,4 @@
-import type { DetectedWebApp } from '@horizon/types'
+import type { CreateTabEventTrigger, DetectedWebApp } from '@horizon/types'
 import type { Resource, ResourceHistoryEntry } from '../../service/resources'
 
 export interface BaseTab {
@@ -174,3 +174,11 @@ export type ResourceHistoryEntryWithLinkedResource = {
   entryResource: ResourceHistoryEntry
   linkedResource: Resource | null
 }
+
+export type CreateTabOptions = {
+  active?: boolean
+  placeAtEnd?: boolean
+  trigger?: CreateTabEventTrigger
+}
+
+export type RightSidebarTab = 'chat' | 'annotations' | 'go-wild'

@@ -17,10 +17,12 @@
   import AddressToolbar, {
     type ActionEvent
   } from '../Cards/Browser/modules/toolbar/AddressToolbar.svelte'
-  import type { Tab } from './types'
+  import type { Tab, TabSpace } from './types'
   import { parseStringIntoBrowserLocation, parseStringIntoUrl } from '../../utils/url'
   import log from '../../utils/log'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
+  import { useResourceManager } from '../../service/resources'
+  import { OpenResourceEventFrom } from '@horizon/types'
 
   export let historyEntriesManager: HistoryEntriesManager
   export let spaces: Writable<Space[]>
@@ -30,8 +32,9 @@
     navigate: string
     chat: string
     rag: string
-    'create-tab-from-space': Tab
+    'create-tab-from-space': TabSpace
   }>()
+  const resourceManager = useResourceManager()
 
   const sites = writable<SearchHistoryEntry[]>([])
   const currentCardHistory = writable([])
@@ -67,6 +70,12 @@
   const openResourceDetailsModal = (resourceId: string) => {
     resourceDetailsModalSelected.set(resourceId)
     showResourceDetails.set(true)
+
+    resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
+      if (resource) {
+        resourceManager.telemetry.trackOpenResource(resource.type, OpenResourceEventFrom.NewTab)
+      }
+    })
   }
 
   const closeResourceDetailsModal = () => {
@@ -126,7 +135,7 @@
     }
   }
 
-  const handleCreateTabFromOasisSidebar = (e: CustomEvent) => {
+  const handleCreateTabFromOasisSidebar = (e: CustomEvent<TabSpace>) => {
     dispatch('create-tab-from-space', e.detail)
   }
 

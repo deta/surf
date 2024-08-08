@@ -1,5 +1,9 @@
 <script lang="ts" context="module">
-  export type BrowserTabNewTabEvent = { url: string; active: boolean }
+  export type BrowserTabNewTabEvent = {
+    url: string
+    active: boolean
+    trigger?: CreateTabEventTrigger
+  }
 
   export type BrowserTabEvents = {
     // components own events
@@ -31,6 +35,8 @@
   import { useLogScope } from '../../utils/log'
   import type { DetectedWebApp } from '@horizon/web-parser'
   import {
+    CreateAnnotationEventTrigger,
+    CreateTabEventTrigger,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     WebViewEventReceiveNames,
@@ -354,6 +360,8 @@
     webview.sendEvent(WebViewEventReceiveNames.TransformationOutput, {
       text: transformation
     })
+
+    await resourceManager.telemetry.trackUseInlineAI(e.type, e.includePageContext)
   }
 
   async function handleWebviewBookmark(event: WebViewSendEvents[WebViewEventSendNames.Bookmark]) {
@@ -457,6 +465,20 @@
     })
 
     dispatch('reload-annotations', false)
+
+    const simplifiedAnnotationType =
+      (annotationData.data as AnnotationCommentData)?.content_html ||
+      (annotationData.data as AnnotationCommentData)?.content_plain
+        ? 'comment'
+        : 'highlight'
+    const annotationTrigger =
+      (annotationData.data as AnnotationCommentData)?.source === 'inline_ai'
+        ? CreateAnnotationEventTrigger.InlinePageAI
+        : CreateAnnotationEventTrigger.PageInline
+    await resourceManager.telemetry.trackCreateAnnotation(
+      simplifiedAnnotationType,
+      annotationTrigger
+    )
   }
 
   async function handleWebviewAppDetection(detectedApp: DetectedWebApp) {

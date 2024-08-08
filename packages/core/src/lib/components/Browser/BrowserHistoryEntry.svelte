@@ -3,10 +3,11 @@
   import type { ResourceHistoryEntry } from '../../service/resources'
   import { useLogScope } from '../../utils/log'
   import type { ResourcePreviewEvents } from '../Resources/events'
-  import type { ResourceDataHistoryEntry } from '@horizon/types'
+  import { CreateTabEventTrigger, type ResourceDataHistoryEntry } from '@horizon/types'
   import { isModKeyPressed } from '../../utils/keyboard'
   import { Icon } from '@horizon/icons'
   import type { ResourceHistoryEntryWithLinkedResource } from './types'
+  import type { BrowserTabNewTabEvent } from './BrowserTab.svelte'
 
   export let entry: ResourceHistoryEntryWithLinkedResource
 
@@ -16,7 +17,7 @@
     load: void
     open: void
     delete: void
-    'new-tab': { url: string; active: boolean }
+    'new-tab': BrowserTabNewTabEvent
   }>()
 
   let data: ResourceDataHistoryEntry | null = null
@@ -35,7 +36,11 @@
     e.preventDefault()
 
     if (isModKeyPressed(e)) {
-      dispatch('new-tab', { url: data?.raw_url ?? '', active: e.shiftKey })
+      dispatch('new-tab', {
+        url: data?.raw_url ?? '',
+        active: e.shiftKey,
+        trigger: CreateTabEventTrigger.History
+      })
     } else {
       dispatch('open')
     }

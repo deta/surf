@@ -26,6 +26,7 @@
   const log = useLogScope('OasisSpaceSettings')
   const oasis = useOasis()
   const toasts = useToasts()
+  const telemetry = oasis.resourceManager.telemetry
   const autoSaveResources = oasis.autoSaveResources
 
   let isLiveModeOn = space?.name.liveModeEnabled
@@ -44,6 +45,11 @@
 
     // TODO: rename tab as well
     await oasis.updateSpaceData(space.id, space.name)
+
+    await telemetry.trackUpdateSpaceSettings({
+      setting: 'name',
+      change: null
+    })
   }
 
   const handleAddSourceBlur = () => {
@@ -77,6 +83,11 @@
 
     await oasis.updateSpaceData(space.id, { sources: newSources, liveModeEnabled: true })
 
+    await telemetry.trackUpdateSpaceSettings({
+      setting: 'source',
+      change: 'added'
+    })
+
     // dispatch('refresh')
   }
 
@@ -102,6 +113,11 @@
     await oasis.updateSpaceData(space.id, { sources: space.name.sources })
 
     toasts.success('Source removed!')
+
+    await telemetry.trackUpdateSpaceSettings({
+      setting: 'source',
+      change: 'removed'
+    })
 
     dispatch('refresh')
   }
@@ -129,6 +145,11 @@
     space.name.liveModeEnabled = e.detail
 
     await oasis.updateSpaceData(space.id, { liveModeEnabled: e.detail })
+
+    await telemetry.trackUpdateSpaceSettings({
+      setting: 'live_mode',
+      change: e.detail
+    })
   }, 500)
 
   const handleSortingUpdate = useDebounce(async () => {
@@ -137,6 +158,11 @@
     space.name.sortBy = sortBy
 
     await oasis.updateSpaceData(space.id, { sortBy: sortBy })
+
+    await telemetry.trackUpdateSpaceSettings({
+      setting: 'sort_by',
+      change: sortBy
+    })
 
     dispatch('load')
   }, 500)
@@ -147,6 +173,11 @@
     space.name.hideViewed = e.detail
 
     await oasis.updateSpaceData(space.id, { hideViewed: e.detail })
+
+    await telemetry.trackUpdateSpaceSettings({
+      setting: 'hide_viewed',
+      change: e.detail
+    })
 
     dispatch('load')
   }, 500)
@@ -165,6 +196,11 @@
     space.name.smartFilterQuery = smartFilterQuery ?? null
 
     await oasis.updateSpaceData(space.id, { smartFilterQuery: smartFilterQuery })
+
+    await telemetry.trackUpdateSpaceSettings({
+      setting: 'smart_filter',
+      change: null
+    })
 
     dispatch('load')
   }, 500)

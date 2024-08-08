@@ -524,12 +524,18 @@ export class ResourceManager {
 
     this.resources.update((resources) => [...resources, resource])
 
-    this.telemetry.trackEvent(TelemetryEventTypes.CreateResource, {
-      kind: getPrimaryResourceType(type),
-      type: type,
-      savedWithAction: tags?.find((t) => t.name === ResourceTagsBuiltInKeys.SAVED_WITH_ACTION)
-        ?.value
-    })
+    const isSilent = tags?.find((t) => t.name === ResourceTagsBuiltInKeys.SILENT)?.value === 'true'
+    const isFromSpace = !!tags?.find((t) => t.name === ResourceTagsBuiltInKeys.SPACE_SOURCE)?.value
+
+    // TODO: should we also track auto saved resources?
+    // if (!isSilent && !isFromSpace) {
+    //   this.telemetry.trackEvent(TelemetryEventTypes.CreateResource, {
+    //     kind: getPrimaryResourceType(type),
+    //     type: type,
+    //     savedWithAction: tags?.find((t) => t.name === ResourceTagsBuiltInKeys.SAVED_WITH_ACTION)
+    //       ?.value
+    //   })
+    // }
 
     return resource
   }
@@ -728,7 +734,8 @@ export class ResourceManager {
     if (!resource.dummy) {
       // delete resource from sffs
       await this.sffs.deleteResource(id)
-      this.telemetry.trackEvent(TelemetryEventTypes.DeleteResource, { type: resource.type })
+      // better to handle in user land
+      // this.telemetry.trackEvent(TelemetryEventTypes.DeleteResource, { type: resource.type })
     }
 
     this.resources.update((resources) => resources.filter((r) => r.id !== id))

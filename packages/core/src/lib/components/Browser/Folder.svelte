@@ -14,6 +14,7 @@
   import { useToasts } from '../../service/toast'
   import { hover, tooltip } from '../../utils/directives'
   import { fade } from 'svelte/transition'
+  import { RefreshSpaceEventTrigger, UpdateSpaceSettingsEventTrigger } from '@horizon/types'
 
   export let folder: Space
   export let selected: boolean
@@ -72,6 +73,14 @@
 
   const handleBlur = () => {
     dispatch('update-data', { folderName: folderDetails.folderName })
+
+    resourceManager.telemetry.trackUpdateSpaceSettings(
+      {
+        setting: 'name',
+        change: null
+      },
+      UpdateSpaceSettingsEventTrigger.SpacePreview
+    )
   }
 
   const handleDelete = () => {
@@ -110,6 +119,14 @@
 
       await oasis.addResourcesToSpace(folder.id, results)
       selectedFolder.set(folder.id)
+
+      await resourceManager.telemetry.trackRefreshSpaceContent(
+        RefreshSpaceEventTrigger.RenameSpaceWithAI,
+        {
+          usedSmartQuery: true,
+          addedResources: results.length > 0
+        }
+      )
 
       toast.success('Folder created with AI!')
     } catch (err) {

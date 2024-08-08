@@ -46,6 +46,8 @@
   import { hover } from '../../utils/directives'
   import { writable } from 'svelte/store'
   import { slide } from 'svelte/transition'
+  import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
+  import { CreateTabEventTrigger } from '@horizon/types'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -62,7 +64,7 @@
     remove: string
     load: string
     open: string
-    'new-tab': { url: string; active: boolean }
+    'new-tab': BrowserTabNewTabEvent
   }>()
 
   const isHovered = writable(false)
@@ -110,7 +112,11 @@
 
   const handleClick = async (e: MouseEvent) => {
     if (isModKeyPressed(e)) {
-      dispatch('new-tab', { url: resource.metadata?.sourceURI!, active: e.shiftKey })
+      dispatch('new-tab', {
+        url: resource.metadata?.sourceURI!,
+        active: e.shiftKey,
+        trigger: CreateTabEventTrigger.OasisItem
+      })
       return
     }
 
@@ -137,7 +143,11 @@
 
   const handleOpenAsNewTab = (e: MouseEvent) => {
     e.stopImmediatePropagation()
-    const payload = { url: resource?.metadata?.sourceURI!, active: true }
+    const payload = {
+      url: resource?.metadata?.sourceURI!,
+      active: true,
+      trigger: CreateTabEventTrigger.OasisItem
+    }
     log.debug('Opening resource in new tab', payload)
 
     dispatch('new-tab', payload)
