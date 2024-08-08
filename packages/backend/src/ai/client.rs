@@ -29,6 +29,7 @@ pub struct FilteredSearchRequest {
     pub query: String,
     pub num_docs: usize,
     pub keys: Vec<u64>,
+    pub threshold: Option<f32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

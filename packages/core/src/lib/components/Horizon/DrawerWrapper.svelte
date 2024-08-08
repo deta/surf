@@ -172,7 +172,7 @@
   $: log.debug('showMiniBrowser', $showMiniBrowser)
 
   const showSearchDebug = writable(false)
-  const semanticDistanceThreshold = writable(1.0)
+  const semanticDistanceThreshold = writable(0.4)
   const proximityDistanceThreshold = writable(500)
   const semanticSearchEnabled = writable(true)
 

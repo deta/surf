@@ -1149,7 +1149,7 @@
     const resources = await resourceManager.searchResources(
       query,
       [ResourceManager.SearchTagDeleted(false)],
-      { semanticEnabled: true, semanticDistanceThreshold: 1.0 }
+      { semanticEnabled: true, semanticDistanceThreshold: 0.3 }
     )
     let results = $cards
     if (query !== '') {

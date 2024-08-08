@@ -22,6 +22,7 @@ pub struct FilteredSearchRequest {
     query: String,
     num_docs: usize,
     keys: Vec<u64>,
+    threshold: Option<f32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -111,6 +112,7 @@ pub fn handle_filtered_search(
             query_embedding,
             request.num_docs,
             request.keys.iter().map(|&x| x as u64).collect(),
+            request.threshold,
         ),
         &mut stream,
     )?;

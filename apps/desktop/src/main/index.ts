@@ -144,8 +144,14 @@ if (!gotTheLock) {
     const backendRootPath = join(userDataPath, 'sffs_backend')
     const backendServerPath = join(appPath, 'resources', 'bin', 'surf-backend')
     child = spawn(backendServerPath, [backendRootPath, 'false'])
-    child = spawn(backendServerPath, [backendRootPath, 'false'], {
-      stdio: 'inherit'
+    child = spawn(backendServerPath, [backendRootPath, 'false'])
+
+    child.stdout?.on('data', (data) => {
+      console.log(`surfer-backend: ${data}`)
+    })
+
+    child.stderr?.on('data', (data) => {
+      console.error(`surfer-backend: ${data}`)
     })
 
     child.on('exit', (code) => {

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     backend::{
         message::{
@@ -6,7 +8,10 @@ use crate::{
         worker::{send_worker_response, Worker},
     },
     store::{
-        db::{CompositeResource, Database, SearchResult, SearchResultSimple},
+        db::{
+            CompositeResource, Database, SearchEngine, SearchResult, SearchResultItem,
+            SearchResultSimple,
+        },
         models::{
             current_time, random_uuid, EmbeddingResource, EmbeddingType, InternalResourceTagNames,
             Resource, ResourceMetadata, ResourceTag, ResourceTagFilter,
@@ -249,7 +254,7 @@ impl Worker {
 
         let embeddings_distance_threshold = match embeddings_distance_threshold {
             Some(threshold) => threshold,
-            None => 1.0,
+            None => 0.4,
         };
         let embeddings_limit = match embeddings_limit {
             Some(limit) => limit,
@@ -264,30 +269,58 @@ impl Worker {
         //     query_embedding = self.embedding_model.encode_single(&query)?;
         // }
 
-        self.db
-            .search_resources(
-                &query,
-                vec![],
-                resource_tag_filters,
-                proximity_distance_threshold,
-                proximity_limit,
-                semantic_search_enabled,
-                embeddings_distance_threshold,
-                embeddings_limit,
-                include_annotations,
-            )
-            .map(|results| {
-                let SearchResult { items, .. } = results;
-                let items = items
-                    .into_iter()
-                    .filter(|item| !item.resource.resource.resource_type.ends_with(".ignore"))
-                    .collect::<Vec<_>>();
+        let mut results_hashmap: HashMap<String, SearchResultItem> = HashMap::new();
 
-                SearchResult {
-                    total: items.len() as i64,
-                    items,
-                }
-            })
+        let db_results = self.db.search_resources(
+            &query,
+            vec![],
+            resource_tag_filters,
+            proximity_distance_threshold,
+            proximity_limit,
+            semantic_search_enabled,
+            embeddings_distance_threshold,
+            embeddings_limit,
+            include_annotations,
+        )?;
+
+        for result in db_results.items {
+            if result.resource.resource.resource_type.ends_with(".ignore") {
+                continue;
+            }
+            results_hashmap.insert(result.resource.resource.id.clone(), result);
+        }
+
+        let vector_search_results = self.ai.vector_search(
+            &self.db,
+            query,
+            embeddings_limit as usize,
+            None,
+            true,
+            Some(embeddings_distance_threshold),
+        )?;
+        for result in vector_search_results {
+            if result.resource.resource_type.ends_with(".ignore") {
+                continue;
+            }
+            results_hashmap.insert(
+                result.resource.id.clone(),
+                SearchResultItem {
+                    resource: result,
+                    engine: SearchEngine::Embeddings,
+                    card_ids: vec![],
+                    distance: None,
+                    ref_resource_id: None,
+                },
+            );
+        }
+        let results = results_hashmap
+            .into_iter()
+            .map(|(_, v)| v)
+            .collect::<Vec<_>>();
+        Ok(SearchResult {
+            total: results.len() as i64,
+            items: results,
+        })
     }
 
     pub fn post_process_job(&mut self, resource_id: String) -> BackendResult<()> {

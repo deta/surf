@@ -85,7 +85,7 @@ export interface SFFSSearchProximityParameters {
 
 export interface SFFSSearchSemanticParameters {
   semanticEnabled?: boolean // false by default
-  semanticDistanceThreshold?: number // default 1.0, inc by .25 (0.0-2.0)
+  semanticDistanceThreshold?: number // default 0.4, inc by .25 (0.0-2.0)
   semanticLimit?: number
 }
 

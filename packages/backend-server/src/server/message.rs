@@ -6,7 +6,13 @@ pub enum Message {
     RemoveEmbedding(Sender<BackendResult<()>>, u64),
     BatchAddEmbeddings(Sender<BackendResult<()>>, Vec<u64>, Vec<Vec<f32>>, usize),
     BatchRemoveEmbeddings(Sender<BackendResult<()>>, Vec<u64>),
-    FilteredSearch(Sender<BackendResult<Vec<u64>>>, Vec<f32>, usize, Vec<u64>),
+    FilteredSearch(
+        Sender<BackendResult<Vec<u64>>>,
+        Vec<f32>,
+        usize,
+        Vec<u64>,
+        Option<f32>,
+    ),
     GetDocsSimilarity(
         Sender<BackendResult<Vec<DocsSimilarity>>>,
         Vec<f32>,

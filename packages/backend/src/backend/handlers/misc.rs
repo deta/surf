@@ -76,7 +76,6 @@ impl Worker {
         Ok(result)
     }
 
-    // TODO: save messages to db
     pub fn send_chat_query(
         &mut self,
         channel: &mut Channel,
@@ -96,7 +95,7 @@ impl Worker {
             created_at: chrono::Utc::now(),
         };
         if rag_only {
-            let results = self.ai.vector_search(&self.db, query, number_documents as usize, resource_ids, false)?;
+            let results = self.ai.vector_search(&self.db, query, number_documents as usize, resource_ids, false, None)?;
             let mut sources_str = "<sources>".to_string();
             let mut sources = vec![];
             for (i, result) in results.iter().enumerate() {
@@ -254,7 +253,7 @@ impl Worker {
         if let Some(ref query) = result.embedding_search_query {
             let filter: Vec<String> = resource_ids_first.iter().map(|id| id.to_string()).collect();
             // TODO: why 100?
-            let resources = self.ai.vector_search(&self.db, query.clone(), 100, Some(filter), true)?;
+            let resources = self.ai.vector_search(&self.db, query.clone(), 100, Some(filter), true, None)?;
             let mut resource_ids: HashSet<String> = HashSet::new();
             for resource in resources {
                 resource_ids.insert(resource.resource.id);

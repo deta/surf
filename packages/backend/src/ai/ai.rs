@@ -230,6 +230,7 @@ impl AI {
         num_docs: usize,
         resource_ids: Option<Vec<String>>,
         unique_resources_only: bool,
+        distance_threshold: Option<f32>,
     ) -> BackendResult<Vec<CompositeResource>>{
         dbg!(&query);
         dbg!(&num_docs);
@@ -240,12 +241,12 @@ impl AI {
             None => contents_store.list_non_deleted_embedding_ids()?
         };
         let keys: Vec<u64> = keys.iter().map(|id| *id as u64).collect();
-        dbg!(&keys);
 
         let search_results = self.local_ai_client.filtered_search(FilteredSearchRequest{
             query: query.clone(),
             num_docs,
             keys,
+            threshold: distance_threshold,
         })?;
         dbg!(&search_results);
         let resources = match unique_resources_only{
@@ -333,6 +334,7 @@ impl AI {
                 number_documents as usize,
                 Some(resource_ids),
                 false,
+                None,
             )?, 
             false => contents_store.list_resources_by_ids(resource_ids)?,
         };

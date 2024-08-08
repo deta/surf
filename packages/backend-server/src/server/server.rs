@@ -98,10 +98,10 @@ impl LocalAIServer {
                 Message::BatchRemoveEmbeddings(sender, ids) => {
                     Self::try_send(sender, embeddings_store.batch_remove(ids));
                 }
-                Message::FilteredSearch(sender, query, num_docs, filter_ids) => {
+                Message::FilteredSearch(sender, query, num_docs, filter_ids, threshold) => {
                     Self::try_send(
                         sender,
-                        embeddings_store.filtered_search(&query, num_docs, &filter_ids),
+                        embeddings_store.filtered_search(&query, num_docs, &filter_ids, &threshold),
                     );
                 }
                 Message::GetDocsSimilarity(sender, query, docs, threshold, num_docs) => {
