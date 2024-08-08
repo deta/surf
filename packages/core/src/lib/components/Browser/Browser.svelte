@@ -265,7 +265,7 @@
       },
       {
         id: 'go-wild',
-        name: 'Program',
+        name: 'Go Wild',
         type: 'tool',
         icon: 'sparkles',
         disabled: $activeTab?.type !== 'page',
@@ -379,11 +379,9 @@
     activeTabId.set(tabId)
     addToActiveTabsHistory(tabId)
     if ($showAppSidebar) {
-      showAppSidebar.set(false)
-      handleToggleAppSidebar()
+      setAppSidebarState(true)
     } else {
-      activeAppId.set('')
-      showAppSidebar.set(false)
+      setAppSidebarState(false)
     }
   }
 
@@ -848,22 +846,14 @@
 
     if (e === 'chat') {
       setPageChatState(true)
-      return
     } else if ($activeTabMagic.showSidebar) {
       setPageChatState(false)
     }
 
-    // if ($activeTabMagic.showSidebar) {
-    //   handleToggleMagicSidebar()
-    // }
-
     if (e === 'go-wild') {
-      handleToggleAppSidebar()
-      return
-    }
-
-    if ($showAppSidebar) {
-      handleToggleAppSidebar()
+      setAppSidebarState(true)
+    } else if ($showAppSidebar) {
+      setAppSidebarState(false)
     }
   }
 
@@ -1443,7 +1433,6 @@
   const setPageChatState = async (enabled: boolean) => {
     log.debug('Toggling magic sidebar')
     document.startViewTransition(async () => {
-      showAppSidebar.set(false)
       const tab = $activeTab as TabPage | null
 
       if (!$activeTabMagic) return
@@ -1454,7 +1443,7 @@
           ...magic,
           initializing: enabled,
           chatId: $activeChatId,
-          showSidebar: !magic.showSidebar
+          showSidebar: enabled
         }
       })
 
@@ -1471,19 +1460,32 @@
     })
   }
 
-  const handleToggleAppSidebar = async () => {
+  const setAppSidebarState = async (enabled: boolean) => {
+    log.debug('Changing app sidebar state', enabled)
+
     const tab = $activeTab as TabPage | null
-    if (!tab) return
+    if (!tab) {
+      log.error('No active tab')
+      toasts.error('Error: No active tab')
+      return
+    }
+
+    if (!enabled) {
+      activeAppId.set('')
+      showAppSidebar.set(false)
+      return
+    }
 
     let appId = tab.appId
-    if (!$showAppSidebar && !appId) {
+    if (!appId) {
       // TODO: a different way to create app id? not sure yet, single chat id should be fine
       appId = await sffs.createAIChat('')
       if (!appId) {
         log.error('Failed to create an app id')
-        alert('Error: Failed to create an pp id')
+        toasts.error('Error: Failed to create an pp id')
         return
       }
+
       updateTab(tab.id, { appId: appId })
       // updateAppIdsForAppSidebar(appId)
       // await preparePageTabsForChatContext()
@@ -1505,7 +1507,7 @@
     const content = await $activeBrowserTab.executeJavaScript('document.body.outerHTML.toString()')
     if (!content) {
       log.debug('no content found from javscript execution')
-      alert('Error: failed to parse content for create app context')
+      toasts.error('Error: failed to parse content for create app context')
       return
     }
     let cleaned = content
@@ -1532,22 +1534,29 @@
       removeScriptTypeAttributes: true,
       removeStyleLinkTypeAttributes: true
     })
+
     cleaned = activeAppSidebarContext.set(cleaned)
+
     activeAppId.set(appId!)
-    showAppSidebar.set(!$showAppSidebar)
+    showAppSidebar.set(enabled)
   }
 
   const handleExecuteAppSidebarCode = async (appId: string, code: string) => {
-    const t = $activeTab as TabPage
-    if (t.appId != appId) {
-      log.error('App ID does not match active tab')
-      return
+    try {
+      const t = $activeTab as TabPage
+      if (t.appId != appId) {
+        log.error('App ID does not match active tab')
+        return
+      }
+      if (!$activeBrowserTab) {
+        log.debug('No active browser tab')
+        return
+      }
+      await $activeBrowserTab.executeJavaScript(code)
+    } catch (e) {
+      log.error('Error executing app sidebar code:', e)
+      toasts.error('Failed to run go wild in page')
     }
-    if (!$activeBrowserTab) {
-      log.debug('No active browser tab')
-      return
-    }
-    await $activeBrowserTab.executeJavaScript(code)
   }
 
   const saveTextFromPage = async (

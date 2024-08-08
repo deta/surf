@@ -3,6 +3,7 @@
   import { Icon } from '@horizon/icons'
   import { useLogScope } from '../../utils/log'
   import { SFFS } from '../../service/sffs'
+  import { writable } from 'svelte/store'
 
   export let tabContext: string
   export let sffs: SFFS
@@ -13,8 +14,20 @@
   let directCode = ''
   let inputValue = ''
   let app: HTMLIFrameElement
+  let inputElem: HTMLInputElement
 
   const log = useLogScope('AppsSidebar')
+
+  const activeToolTab = writable<'app' | 'page'>('page')
+
+  $: if (inputValue.startsWith('app:')) {
+    activeToolTab.set('app')
+  }
+
+  const changeToolTab = (tab: 'app' | 'page') => {
+    activeToolTab.set(tab)
+    inputElem.focus()
+  }
 
   const cleanSource = (source: string) => {
     const escapeSequencePattern = /\\[\\ntbrvf0']/g
@@ -76,20 +89,32 @@
     let savedInputValue = inputValue
     try {
       inputValue = ''
+
+      const createApp = savedInputValue.toLowerCase().startsWith('app:') || $activeToolTab === 'app'
+      log.debug(
+        createApp ? 'Creating app with input:' : 'Modifying page with input',
+        savedInputValue,
+        appId
+      )
+
       const appCode = await sffs.createAIApp(appId, savedInputValue, { contexts: [tabContext] })
       if (!appCode) {
         throw new Error('no app code returned from backend call')
       }
+
       const clean = cleanSource(appCode)
       log.info('got source code:', clean)
       if (clean.startsWith('"Error code: 4')) {
         throw new Error('Page content is unfortunately too long')
       }
+
       prompt = savedInputValue
-      if (savedInputValue.toLowerCase().startsWith('app:')) {
+
+      if (createApp) {
         app.srcdoc = clean
         return
       }
+
       directCode = clean
       dispatch('executeAppSidebarCode', { appId: appId, code: clean })
     } catch (error) {
@@ -128,6 +153,8 @@
     } else {
       directCode = code
     }
+
+    inputElem.focus()
   })
 
   onDestroy(async () => {
@@ -181,8 +208,34 @@
     <iframe title="App" id={appId} frameborder="0" bind:this={app}></iframe>
   </div>
 
+  {#if !fetching}
+    <div class="tool-tabs">
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+      <div
+        on:click={() => changeToolTab('page')}
+        class="tab"
+        class:active={$activeToolTab === 'page'}
+      >
+        Modify Page
+      </div>
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+      <div
+        on:click={() => changeToolTab('app')}
+        class="tab"
+        class:active={$activeToolTab === 'app'}
+      >
+        Create App
+      </div>
+    </div>
+  {/if}
+
   <form on:submit|preventDefault={handlePromptSubmit} class="prompt">
-    <input bind:value={inputValue} placeholder="Tell me what you want.." />
+    <input
+      bind:this={inputElem}
+      bind:value={inputValue}
+      autofocus
+      placeholder="Tell me what you want.."
+    />
 
     <button disabled={fetching} class="" type="submit">
       {#if fetching}
@@ -210,6 +263,33 @@
     gap: 1rem;
     flex: 1;
     overflow: auto;
+  }
+
+  .tool-tabs {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .tab {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      background: #fff;
+      color: #3f3f3f;
+      border: 1px solid transparent;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      font-size: 0.9rem;
+
+      &.active {
+        background: #f73b95;
+        color: #fff;
+      }
+
+      &:hover {
+        opacity: 0.85;
+      }
+    }
   }
 
   .prompt {
