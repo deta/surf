@@ -2366,7 +2366,7 @@
         log.debug('Creating new magic tabs')
         // Move all unpinned tabs to magic tabs
         unpinnedTabsArray.forEach((tab) => {
-          if (tab.type === 'page') {
+          if (tab.type === 'page' || tab.type === 'space') {
             tab.magic = true
             cachedMagicTabs.add(tab.id)
           }

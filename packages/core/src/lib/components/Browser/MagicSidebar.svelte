@@ -14,7 +14,8 @@
     PageMagicResponse,
     PageHighlight,
     TabPage,
-    AIChatMessageRole
+    AIChatMessageRole,
+    Tab
   } from './types'
   import ChatMessage from './ChatMessage.svelte'
   import { useClipboard } from '../../utils/clipboard'
@@ -28,7 +29,7 @@
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
-  export let tabsInContext: TabPage[] = []
+  export let tabsInContext: Tab[] = []
 
   const dispatch = createEventDispatcher<{
     highlightText: { tabId: string; text: string }
@@ -230,9 +231,13 @@
     try {
       const resourceIds: string[] = []
       for (const tab of tabsInContext) {
-        const t = tab as TabPage
-        if (t.chatResourceBookmark) {
-          resourceIds.push(t.chatResourceBookmark)
+        if (tab.type === 'page' && tab.chatResourceBookmark) {
+          resourceIds.push(tab.chatResourceBookmark)
+        } else if (tab.type === 'space') {
+          const spaceContents = await resourceManager.getSpaceContents(tab.spaceId)
+          if (spaceContents) {
+            resourceIds.push(...spaceContents.map((content) => content.resource_id))
+          }
         }
       }
 
@@ -248,7 +253,7 @@
       updateMagicPage({ running: true })
       addPageMagicResponse(response)
 
-      log.debug('calling the AI')
+      log.debug('calling the AI', prompt, resourceIds)
       let step = 'idle'
       let content = ''
 
