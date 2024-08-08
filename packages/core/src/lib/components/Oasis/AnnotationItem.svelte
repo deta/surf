@@ -174,6 +174,7 @@
           <Editor
             bind:content
             on:update={handleContentUpdate}
+            parseHashtags
             autofocus={false}
             placeholder="Jot down your thoughts…"
           />

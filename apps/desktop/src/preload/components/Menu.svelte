@@ -257,6 +257,7 @@
           bind:content={inputValue}
           on:submit={handleComment}
           on:hashtags={handleHashtags}
+          parseHashtags
           placeholder="Jot down your thoughts…"
           autofocus
         />

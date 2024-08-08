@@ -14,7 +14,8 @@
   export let readOnly: boolean = false
   export let placeholder: string = `Write something or type '/' for options…`
   export let autofocus: boolean = true
-  export let focused = false
+  export let focused: boolean = false
+  export let parseHashtags: boolean = false
 
   const dispatch = createEventDispatcher<{ update: string; submit: void; hashtags: string[] }>()
 
@@ -24,9 +25,21 @@
     }
   }
 
+  export const blur = () => {
+    if ($editor) {
+      $editor.commands.blur()
+    }
+  }
+
   export const clear = () => {
     if ($editor) {
       $editor.commands.clearContent()
+    }
+  }
+
+  export const setContent = (content: string) => {
+    if ($editor) {
+      $editor.commands.setContent(content)
     }
   }
 
@@ -68,7 +81,10 @@
 
   onMount(() => {
     editor = createEditor({
-      extensions: [...createEditorExtensions({ placeholder }), extension],
+      extensions: [
+        ...createEditorExtensions({ placeholder, disableHashtag: !parseHashtags }),
+        extension
+      ],
       content: content,
       editable: !readOnly,
       autofocus: !autofocus || readOnly ? false : 'end',
@@ -79,27 +95,20 @@
         content = html
         dispatch('update', content)
 
-        console.log(editor.getJSON())
+        if (parseHashtags) {
+          // get all hashtag nodes
+          const hashtagNodes = editor.$node('hashtag')
 
-        // get all hashtag nodes
-        const hashtagNodes = editor.$node('hashtag')
-        console.log('hashtagNodes', hashtagNodes)
+          const hashtags: string[] = []
+          editor.state.doc.descendants((node) => {
+            if (node.type.name === 'hashtag') {
+              hashtags.push(node.attrs.id as string)
+            }
+          })
 
-        console.log('test', hashtagNodes?.node, hashtagNodes?.node.textContent)
-
-        const hashtags: string[] = []
-        editor.state.doc.descendants((node) => {
-          console.log('node', node)
-
-          if (node.type.name === 'hashtag') {
-            console.log('hashtag', node.attrs.id)
-            hashtags.push(node.attrs.id as string)
+          if (hashtags.length > 0) {
+            dispatch('hashtags', hashtags)
           }
-        })
-
-        if (hashtags.length > 0) {
-          console.log('hashtags', hashtags)
-          dispatch('hashtags', hashtags)
         }
       },
       onFocus: () => {

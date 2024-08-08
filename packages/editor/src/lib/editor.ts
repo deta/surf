@@ -11,7 +11,7 @@ import Slash from './extensions/Slash/SlashExtension'
 import suggestion from './extensions/Hashtag/suggestion'
 import Hashtag from './extensions/Hashtag/index'
 
-export type ExtensionOptions = { placeholder?: string }
+export type ExtensionOptions = { placeholder?: string; disableHashtag?: boolean }
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
   StarterKit.configure({
     heading: {
@@ -42,9 +42,13 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       }
     }
   }),
-  Hashtag.configure({
-    suggestion: suggestion
-  }),
+  ...(opts?.disableHashtag
+    ? []
+    : [
+        Hashtag.configure({
+          suggestion: suggestion
+        })
+      ]),
   Placeholder.configure({
     placeholder: opts?.placeholder ?? "Write something or type '/' for options…"
   }),

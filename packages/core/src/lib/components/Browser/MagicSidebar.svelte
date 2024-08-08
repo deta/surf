@@ -1,11 +1,12 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
-  import { fly } from 'svelte/transition'
+  import { fly, slide } from 'svelte/transition'
   import { tooltip } from '@svelte-plugins/tooltips'
 
   import { Icon } from '@horizon/icons'
   import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
+  import { Editor, getEditorContentText } from '@horizon/editor'
 
   import type {
     AIChatMessageSource,
@@ -48,6 +49,8 @@
   const savedResponse = writable(false)
 
   let listElem: HTMLDivElement
+  let editorFocused = false
+  let editor: Editor
 
   $: log.debug('Magic Page', $magicPage)
   $: log.debug('Magic Page Responses', $magicPage.responses)
@@ -159,16 +162,20 @@
       return
     }
 
+    // const text = getEditorContentText(inputValue)
     const savedInputValue = inputValue
 
     try {
-      log.debug('Handling chat submit', inputValue)
+      log.debug('Handling chat submit', savedInputValue)
       inputValue = ''
+      editor.clear()
+      editor.blur()
 
       await sendChatMessage(savedInputValue)
     } catch (e) {
       log.error('Error doing magic', e)
       inputValue = savedInputValue
+      editor.setContent(savedInputValue)
     }
   }
 
@@ -178,7 +185,7 @@
 
       const prompt = await getPrompt(promptType)
 
-      await sendChatMessage(prompt.content, 'system', prompt.title)
+      await sendChatMessage(prompt.content, 'assistant', prompt.title)
     } catch (e) {
       log.error('Error doing magic', e)
     }
@@ -193,6 +200,13 @@
     }
 
     await clearChat($magicPage.chatId)
+  }
+
+  const handleInputKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleChatSubmit()
+    }
   }
 
   // HACK: Right now the saved chat doesn't store the query we provide, it only stores the raw message content. For system messages we don't want to display our long prompts.
@@ -352,16 +366,20 @@
   const fetchExistingChat = async (id: string) => {
     const chat = await resourceManager.sffs.getAIChat(id)
     if (chat) {
+      log.debug('Chat fetched', chat)
       const userMessages = chat.messages.filter((message) => message.role === 'user')
       const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
-      const systemMessages = chat.messages.filter((message) => message.role === 'system')
+      const systemMessages = chat.messages.filter((message) => message.role === 'assistant')
+
+      log.debug('User messages', userMessages)
+      log.debug('System messages', systemMessages)
 
       const responses = systemMessages.map((message, idx) => {
         message.sources = message.sources
         log.debug('Message', message)
         return {
           id: generateID(),
-          role: message.role,
+          role: 'user',
           query: queries[idx],
           content: message.content.replace('<answer>', '').replace('</answer>', ''),
           sources: message.sources,
@@ -369,7 +387,11 @@
         } as AIChatMessageParsed
       })
 
-      updateMagicPage({ responses })
+      updateMagicPage({
+        responses
+      })
+    } else {
+      log.error('Failed to fetch chat', id)
     }
   }
 
@@ -386,7 +408,7 @@
   }
 
   onMount(async () => {
-    log.debug('Magic Sidebar mounted')
+    log.debug('Magic Sidebar mounted', $magicPage.chatId)
 
     if ($magicPage.chatId) {
       log.debug('Existing chat found', $magicPage.chatId)
@@ -427,13 +449,13 @@
                     <Icon name="sparkles" size="20px" />
                   {/if}
                 </div>
-                <p class="query">
+                <div class="query tiptap">
                   {#if response.role === 'user'}
-                    {response.query}
+                    {@html response.query}
                   {:else}
                     {sanitizeQuery(response.query)}
                   {/if}
-                </p>
+                </div>
               </div>
 
               <div class="output-actions">
@@ -493,7 +515,7 @@
                 <div class="icon">
                   <Icon name="spinner" />
                 </div>
-                <p>{response.query}</p>
+                <div class="tiptap query">{@html response.query}</div>
                 <!-- {#if response.role === 'user'}
                   <p>{response.query}</p>
                 {:else}
@@ -561,7 +583,17 @@
   {/if}
 
   <form on:submit|preventDefault={handleChatSubmit} class="chat">
-    <input bind:value={inputValue} placeholder="Ask your tabs…" />
+    <!-- <input bind:value={inputValue} placeholder="Ask your tabs…" /> -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div class="editor-wrapper" on:keydown={handleInputKeydown}>
+      <Editor
+        bind:this={editor}
+        bind:content={inputValue}
+        bind:focused={editorFocused}
+        autofocus={false}
+        placeholder="Chat with your tabs…"
+      />
+    </div>
 
     <!-- {#if !magicPage.running && magicPage.responses.length >= 1}
       <button on:click={handleClearChat} class="secondary">
@@ -569,13 +601,31 @@
       </button>
     {/if} -->
 
-    <button disabled={$magicPage.responses.length > 1 && $magicPage.running} class="" type="submit">
+    <!-- <button disabled={$magicPage.responses.length > 1 && $magicPage.running} class="" type="submit">
       {#if $magicPage.responses.length > 1 && $magicPage.running}
         <Icon name="spinner" />
       {:else}
         <Icon name="arrow.right" />
       {/if}
-    </button>
+    </button> -->
+
+    {#if (inputValue && inputValue !== '<p></p>') || editorFocused}
+      <button
+        type="submit"
+        transition:slide={{ duration: 150 }}
+        disabled={($magicPage.responses.length > 1 && $magicPage.running) ||
+          inputValue === '<p></p>'}
+        class:filled={inputValue && inputValue !== '<p></p>'}
+      >
+        {#if $magicPage.responses.length > 1 && $magicPage.running}
+          <div>Generating…</div>
+          <Icon name="spinner" />
+        {:else}
+          <div>Ask Tabs</div>
+          <Icon name="arrow.right" />
+        {/if}
+      </button>
+    {/if}
   </form>
 </div>
 
@@ -591,36 +641,84 @@
 
   .chat {
     padding: 0.5rem;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
+    border-top: 1px solid #e0e0e0;
     display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+    flex-direction: column;
+    padding: 1rem 0;
+    font-family: inherit;
 
-  .chat button {
-    appearance: none;
-    border: none;
-    background: #f73b95;
-    color: #fff;
-    border-radius: 8px;
-    padding: 0;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-
-    // secondary styles
-    &.secondary {
+    .editor-wrapper {
+      flex: 1;
       background: #fff;
-      color: #f73b95;
+      border: 1px solid #eeece0;
+      border-radius: 12px;
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    button {
+      appearance: none;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      height: min-content;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: #fd1bdf40;
+      color: white;
+      margin-top: 1rem;
+
+      div {
+        font-size: 1rem;
+      }
+
+      &:hover {
+        background: #fd1bdf69;
+      }
+
+      &.filled {
+        background: #f73b95;
+
+        &:hover {
+          background: #f92d90;
+        }
+      }
+
+      &:active {
+        background: #f73b95;
+      }
     }
   }
+
+  // .chat button {
+  //   appearance: none;
+  //   border: none;
+  //   background: #f73b95;
+  //   color: #fff;
+  //   border-radius: 8px;
+  //   padding: 0;
+  //   width: 40px;
+  //   height: 40px;
+  //   display: flex;
+  //   align-items: center;
+  //   justify-content: center;
+  //   cursor: pointer;
+  //   flex-shrink: 0;
+
+  //   // secondary styles
+  //   &.secondary {
+  //     background: #fff;
+  //     color: #f73b95;
+  //   }
+  // }
 
   .header {
     display: flex;

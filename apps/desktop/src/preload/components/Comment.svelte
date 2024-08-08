@@ -84,6 +84,7 @@
     <Editor
       bind:content={text}
       on:update={handleUpdate}
+      parseHashtags
       autofocus={false}
       placeholder="Jot down your thoughts…"
     />

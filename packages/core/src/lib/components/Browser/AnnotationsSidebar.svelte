@@ -149,6 +149,7 @@
         bind:content={inputValue}
         bind:focused={editorFocused}
         on:hashtags={handleHashtags}
+        parseHashtags
         autofocus={false}
         placeholder="Jot down your thoughts…"
       />
@@ -292,25 +293,29 @@
         font-size: 1rem;
       }
 
-      &.filled {
-        background: #ff4eed;
+      &:hover {
+        background: #fd1bdf69;
       }
 
-      &:hover {
-        background: #fd1bdf;
+      &.filled {
+        background: #f73b95;
+
+        &:hover {
+          background: #f92d90;
+        }
       }
 
       &:active {
-        background: #fd1bdf;
+        background: #f73b95;
       }
     }
   }
 
   .editor-wrapper {
     flex: 1;
-    background: #f8f8f8;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #eeece0;
+    border-radius: 12px;
     padding: 0.75rem;
     font-size: 1rem;
     font-family: inherit;

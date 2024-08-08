@@ -222,7 +222,10 @@
   })
 
   const magicTabs = derived([activeTabs], ([tabs]) => {
-    return tabs.filter((tab) => tab.magic).sort((a, b) => a.index - b.index) as TabPage[]
+    return tabs.filter((tab) => tab.magic).sort((a, b) => a.index - b.index) as (
+      | TabPage
+      | TabSpace
+    )[]
   })
 
   const activeTab = derived([tabs, activeTabId], ([tabs, activeTabId]) => {
@@ -1064,7 +1067,7 @@
 
   const debouncedCreateNewEmptyTab = useDebounce(createNewEmptyTab, 100)
 
-  const createPageTab = async (url: string, opts?: CreateTabOptions): Promise<Tab> => {
+  const createPageTab = async (url: string, opts?: CreateTabOptions): Promise<TabPage> => {
     log.debug('Creating new page tab')
 
     const options = {
@@ -1088,7 +1091,7 @@
 
     await telemetry.trackCreatePageTab(options.trigger, options.active)
 
-    return newTab
+    return newTab as TabPage
   }
 
   const createSpaceTab = async (space: Space, active = true) => {
@@ -1363,87 +1366,141 @@
     sourceUid?: string
   ) => {
     log.info('highlighting text', resourceId, answerText, sourceUid)
-    for (const tab of getTabsInChatContext()) {
-      const t = tab as TabPage
-      if (t.resourceBookmark === resourceId) {
-        const browserTab = $browserTabs[t.id]
-        if (!browserTab) {
-          log.error('Browser tab not found', t.id)
-          return
-        }
-        makeTabActive(t.id, ActivateTabEventTrigger.ChatCitation)
-        if (answerText === '') {
-          if (sourceUid) {
-            const source = await sffs.getAIChatDataSource(sourceUid)
-            if (source) {
-              answerText = source.content
-            } else {
-              return
-            }
+
+    const tabs = [...getTabsInChatContext(), ...$unpinnedTabs]
+    let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId)
+
+    if (!tab) {
+      const resource = await resourceManager.getResource(resourceId)
+      const url = resource?.tags?.find(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+      )?.value
+
+      if (!url) {
+        log.error('no url found for resource', resourceId)
+        toasts.error('Failed to open citation')
+        return
+      }
+
+      tab = await createPageTab(url, {
+        active: false,
+        trigger: CreateTabEventTrigger.OasisChat
+      })
+
+      // give the new tab some time to load
+      await wait(1000)
+    }
+
+    if (tab) {
+      const browserTab = $browserTabs[tab.id]
+      if (!browserTab) {
+        log.error('Browser tab not found', tab.id)
+        return
+      }
+
+      makeTabActive(tab.id, ActivateTabEventTrigger.ChatCitation)
+
+      if (answerText === '') {
+        if (sourceUid) {
+          const source = await sffs.getAIChatDataSource(sourceUid)
+          if (source) {
+            answerText = source.content
           } else {
             return
           }
-        }
-        const detectedResource = await browserTab.detectResource()
-        if (!detectedResource) {
-          log.error('no resource detected')
-          alert('Error: no resource detected')
+        } else {
           return
         }
-        const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
-        if (!content || !content.html) {
-          log.debug('no content found from web parser')
-          alert('Error: no content found form web parser')
-          return
-        }
-        const textElements = getTextElementsFromHtml(content.html)
-        if (!textElements) {
-          log.debug('no text elements found')
-          alert('Error: could not find any relevant text in the page')
-          return
-        }
-        const docsSimilarity = await sffs.getAIDocsSimilarity(answerText, textElements, 0.6)
-        if (!docsSimilarity || docsSimilarity.length === 0) {
-          log.debug('no docs similarity found')
-          alert('Error: could not find any relevant text in the page')
-          return
-        }
-        const texts = []
-        for (const docSimilarity of docsSimilarity) {
-          const doc = textElements[docSimilarity.index]
-          if (doc && doc.includes(' ')) {
-            texts.push(doc)
-          }
-        }
-        browserTab.sendWebviewEvent(WebViewEventReceiveNames.HighlightText, {
-          texts: texts
-        })
+      }
+
+      const detectedResource = await browserTab.detectResource()
+      if (!detectedResource) {
+        log.error('no resource detected')
+        alert('Error: no resource detected')
         return
       }
+
+      const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+      if (!content || !content.html) {
+        log.debug('no content found from web parser')
+        alert('Error: no content found form web parser')
+        return
+      }
+
+      const textElements = getTextElementsFromHtml(content.html)
+      if (!textElements) {
+        log.debug('no text elements found')
+        alert('Error: could not find any relevant text in the page')
+        return
+      }
+
+      const docsSimilarity = await sffs.getAIDocsSimilarity(answerText, textElements, 0.6)
+      if (!docsSimilarity || docsSimilarity.length === 0) {
+        log.debug('no docs similarity found')
+        alert('Error: could not find any relevant text in the page')
+        return
+      }
+
+      const texts = []
+      for (const docSimilarity of docsSimilarity) {
+        const doc = textElements[docSimilarity.index]
+        if (doc && doc.includes(' ')) {
+          texts.push(doc)
+        }
+      }
+
+      browserTab.sendWebviewEvent(WebViewEventReceiveNames.HighlightText, {
+        texts: texts
+      })
+    } else {
+      log.error('No tab in chat context found for resource', resourceId)
+      toasts.error('Failed to open citation')
     }
-    log.error('No tab in chat context found for resource', resourceId)
-    alert('Error: No tab in chat context found for resource')
   }
 
   const handleSeekToTimestamp = async (resourceId: string, timestamp: number) => {
-    for (const tab of getTabsInChatContext()) {
-      const t = tab as TabPage
-      if (t.resourceBookmark === resourceId) {
-        const browserTab = $browserTabs[t.id]
-        if (!browserTab) {
-          log.error('Browser tab not found', t.id)
-          alert('Error: Browser tab not found')
-          return
-        }
-        makeTabActive(t.id, ActivateTabEventTrigger.ChatCitation)
-        browserTab.sendWebviewEvent(WebViewEventReceiveNames.SeekToTimestamp, {
-          timestamp: timestamp
-        })
+    log.info('seeking to timestamp', resourceId, timestamp)
+
+    const tabs = [...getTabsInChatContext(), ...$unpinnedTabs]
+    let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId)
+
+    if (!tab) {
+      const resource = await resourceManager.getResource(resourceId)
+      const url = resource?.tags?.find(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+      )?.value
+
+      if (!url) {
+        log.error('no url found for resource', resourceId)
+        toasts.error('Failed to open citation')
         return
       }
+
+      tab = await createPageTab(url, {
+        active: false,
+        trigger: CreateTabEventTrigger.OasisChat
+      })
+
+      // give the new tab some time to load
+      await wait(1000)
     }
-    log.error('No tab in chat context found for resource', resourceId)
-    alert('Error: No tab in chat context found for resource')
+
+    if (tab) {
+      const browserTab = $browserTabs[tab.id]
+      if (!browserTab) {
+        log.error('Browser tab not found', tab.id)
+        alert('Error: Browser tab not found')
+        return
+      }
+
+      makeTabActive(tab.id, ActivateTabEventTrigger.ChatCitation)
+      browserTab.sendWebviewEvent(WebViewEventReceiveNames.SeekToTimestamp, {
+        timestamp: timestamp
+      })
+    } else {
+      log.error('No tab in chat context found for resource', resourceId)
+      toasts.error('Failed to open citation')
+    }
   }
 
   const scrollWebviewToText = async (tabId: string, text: string) => {
@@ -3116,7 +3173,8 @@
                       pinned={false}
                       {spaces}
                       enableEditing
-                      showIncludeButton={$activeTabMagic?.showSidebar && tab.type === 'page'}
+                      showIncludeButton={$activeTabMagic?.showSidebar &&
+                        (tab.type === 'page' || tab.type === 'space')}
                       bind:this={activeTabComponent}
                       on:DragEnd={onDragculaTabDragEnd}
                       on:select={() => {}}
@@ -3138,7 +3196,8 @@
                       tabSize={Math.min(300, Math.max(24, tabSize))}
                       {activeTabId}
                       pinned={false}
-                      showIncludeButton={$activeTabMagic?.showSidebar && tab.type === 'page'}
+                      showIncludeButton={$activeTabMagic?.showSidebar &&
+                        (tab.type === 'page' || tab.type === 'space')}
                       on:DragEnd={onDragculaTabDragEnd}
                       on:select={handleTabSelect}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
@@ -3176,7 +3235,8 @@
                       pinned={false}
                       {spaces}
                       enableEditing
-                      showIncludeButton={$activeTabMagic?.showSidebar && tab.type === 'page'}
+                      showIncludeButton={$activeTabMagic?.showSidebar &&
+                        (tab.type === 'page' || tab.type === 'space')}
                       bind:this={activeTabComponent}
                       on:DragEnd={onDragculaTabDragEnd}
                       on:select={() => {}}
@@ -3213,7 +3273,8 @@
                       horizontalTabs={false}
                       {activeTabId}
                       pinned={false}
-                      showIncludeButton={$activeTabMagic?.showSidebar && tab.type === 'page'}
+                      showIncludeButton={$activeTabMagic?.showSidebar &&
+                        (tab.type === 'page' || tab.type === 'space')}
                       on:DragEnd={onDragculaTabDragEnd}
                       on:select={handleTabSelect}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
