@@ -184,7 +184,7 @@
     return {
       id: tab.id,
       label: tab.title,
-      value: tab.type === 'page' ? tab.currentLocation ?? tab.initialLocation : '',
+      value: tab.type === 'page' ? (tab.currentLocation ?? tab.initialLocation) : '',
       ...(tab.type === 'page'
         ? { iconUrl: tab.icon }
         : tab.type === 'space'
@@ -349,8 +349,8 @@
           [
             ResourceManager.SearchTagDeleted(false),
             ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
-            ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne')
-            // ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+            ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+            ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
             // ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
           ],
           { includeAnnotations: false }
