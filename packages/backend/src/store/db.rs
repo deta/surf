@@ -1375,8 +1375,6 @@ impl Database {
         })
     }
 
-    // TODO: optimize this
-    // TODO: move this to worker?
     pub fn search_resources(
         &self,
         keyword: &str,

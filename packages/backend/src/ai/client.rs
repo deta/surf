@@ -138,13 +138,11 @@ impl LocalAIClient {
 
     fn send_api_request_preamble(stream: &mut UnixStream, api_request: &str) -> BackendResult<()> {
         Self::send_message(stream, api_request)?;
-        println!("sent api request: {:#?}", api_request);
         let response = Self::read_message(stream)?;
         if !Self::is_ack_message(&response) {
-            println!("server returned no ack, response: {:#?}", response);
+            eprintln!("server returned no ack, response: {:#?}", response);
             return Err(BackendError::GenericError("server returned no ack".to_string()));
         }
-        println!("received api request ack");
         Ok(())
     }
 
@@ -153,18 +151,16 @@ impl LocalAIClient {
             .map_err(|e| BackendError::GenericError(format!("failed to serialize request: {:#?}", e)))?;
 
         let mut stream = UnixStream::connect(&self.socket_path)?;
-        println!("connected to socket: {:#?}", &self.socket_path);
 
         Self::send_api_request_preamble(&mut stream, "get_docs_similarity")?;
         Self::send_message(&mut stream, &message)?;
         Self::send_done(&mut stream)?;
-        println!("sent request");
-        println!("reading response");
         let mut server_message_buffer = String::new();
         loop {
             let message = Self::read_message(&mut stream)?;
             let (is_err, message) = Self::is_error(&message);
             if is_err {
+                eprintln!("failed to get docs similarity: {:#?}", message);
                 return Err(BackendError::GenericError(format!("failed to get docs similarity: {:#?}", message)));
             }
             let (is_done, message) = Self::is_done(&message);
@@ -173,10 +169,8 @@ impl LocalAIClient {
                 break;
             }
         }
-        println!("parsing response");
         let docs_similarity = serde_json::from_str::<Vec<DocsSimilarity>>(&server_message_buffer)
             .map_err(|e| BackendError::GenericError(format!("failed to parse response: {:#?}", e)))?;
-        println!("done");
         Ok(docs_similarity)
     }
 
@@ -185,18 +179,16 @@ impl LocalAIClient {
             .map_err(|e| BackendError::GenericError(format!("failed to serialize sentences: {:#?}", e)))?;
 
         let mut stream = UnixStream::connect(&self.socket_path)?;
-        println!("connected to socket: {:#?}", &self.socket_path);
 
         Self::send_api_request_preamble(&mut stream, "encode_sentences")?;
         Self::send_message_bytes(&mut stream, &message)?;
         Self::send_done(&mut stream)?;
-        println!("sent sentences");
-        println!("reading response");
         let mut server_message_buffer = String::new();
         loop {
             let message = Self::read_message(&mut stream)?;
             let (is_err, message) = Self::is_error(&message);
             if is_err {
+                eprintln!("failed to encode sentences: {:#?}", message);
                 return Err(BackendError::GenericError(format!("failed to encode sentences: {:#?}", message)));
             }
             let (is_done, message) = Self::is_done(&message);
@@ -205,12 +197,10 @@ impl LocalAIClient {
                 break;
             }
         }
-        println!("parsing response");
         let embeddings = serde_json::from_str::<Vec<Vec<f32>>>(
             &server_message_buffer
         )
             .map_err(|e| BackendError::GenericError(format!("failed to parse response: {:#?}", e)))?;
-        println!("done");
         Ok(embeddings)
     }
 
@@ -219,18 +209,16 @@ impl LocalAIClient {
             .map_err(|e| BackendError::GenericError(format!("failed to serialize request: {:#?}", e)))?;
 
         let mut stream = UnixStream::connect(&self.socket_path)?;
-        println!("connected to socket: {:#?}", &self.socket_path);
 
         Self::send_api_request_preamble(&mut stream, "filtered_search")?;
         Self::send_message(&mut stream, &message)?;
         Self::send_done(&mut stream)?;
-        println!("sent request");
-        println!("reading response");
         let mut server_message_buffer = String::new();
         loop {
             let message = Self::read_message(&mut stream)?;
             let (is_err, message) = Self::is_error(&message);
             if is_err {
+                eprintln!("failed to do filtered search: {:#?}", message);
                 return Err(BackendError::GenericError(format!("failed to do filtered search: {:#?}", message)));
             }
             let (is_done, message) = Self::is_done(&message);
@@ -239,10 +227,8 @@ impl LocalAIClient {
                 break;
             }
         }
-        println!("parsing response");
         let results = serde_json::from_str::<Vec<i64>>(&server_message_buffer)
             .map_err(|e| BackendError::GenericError(format!("failed to parse response: {:#?}", e)))?;
-        println!("done");
         Ok(results)
     }
 
@@ -251,18 +237,16 @@ impl LocalAIClient {
             .map_err(|e| BackendError::GenericError(format!("failed to serialize request: {:#?}", e)))?;
 
         let mut stream = UnixStream::connect(&self.socket_path)?;
-        println!("connected to socket: {:#?}", &self.socket_path);
 
         Self::send_api_request_preamble(&mut stream, "upsert_embeddings")?;
         Self::send_message(&mut stream, &message)?;
         Self::send_done(&mut stream)?;
-        println!("sent request");
-        println!("reading response");
         let mut server_message_buffer = String::new();
         loop {
             let message = Self::read_message(&mut stream)?;
             let (is_err, message) = Self::is_error(&message);
             if is_err {
+                eprintln!("failed to upsert embeddings: {:#?}", message);
                 return Err(BackendError::GenericError(format!("failed to upsert embeddings: {:#?}", message)));
             }
             let (is_done, message) = Self::is_done(&message);
@@ -281,13 +265,10 @@ impl LocalAIClient {
         let message = serde_json::to_string(&messages)
             .map_err(|e| BackendError::GenericError(format!("failed to serialize messages: {:#?}", e)))?;
         let mut stream = UnixStream::connect(&self.socket_path)?;
-        println!("connected to socket: {:#?}", &self.socket_path);
 
         Self::send_api_request_preamble(&mut stream, "get_docs_similarity")?;
         Self::send_message(&mut stream, &message)?;
         Self::send_done(&mut stream)?;
-        println!("sent messages");
-        println!("returning stream");
         Ok(Box::pin(LocalAIStream::new(stream)))
     }
 }
