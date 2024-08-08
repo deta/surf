@@ -21,6 +21,7 @@ import type { UserConfig, HorizonAction, EditablePrompt, UserSettings } from '@h
 
 import { getConfig } from '../main/config'
 
+const isDev = import.meta.env.DEV
 const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
@@ -43,12 +44,10 @@ const userConfig = getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
 //
 // TODO: do we need to handle the case where api_key is undefined?
 const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT || ''
-//const OPENAI_API_KEY = import.meta.env.P_VITE_OPEN_AI_API_KEY
-const OPENAI_API_KEY = userConfig.api_key
+const OPENAI_API_KEY = isDev ? import.meta.env.P_VITE_OPEN_AI_API_KEY : userConfig.api_key
 
 const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
-//const VISION_API_KEY = import.meta.env.P_VITE_VISION_API_KEY || ''
-const VISION_API_KEY = userConfig.api_key
+const VISION_API_KEY = isDev ? import.meta.env.P_VITE_VISION_API_KEY : userConfig.api_key
 
 let openai: OpenAI | null = null
 if (OPENAI_API_KEY) {

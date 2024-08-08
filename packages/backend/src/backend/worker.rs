@@ -47,6 +47,10 @@ impl Worker {
             .as_os_str()
             .to_string_lossy()
             .to_string();
+        let openai_api_endpoint = match openai_api_endpoint.is_empty() {
+            true => None, // uses default if None
+            false => Some(openai_api_endpoint),
+        };
 
         Self {
             db: Database::new(&db_path, true).unwrap(),
@@ -54,7 +58,7 @@ impl Worker {
                 openai_api_key,
                 local_ai_mode,
                 local_ai_socket_path,
-                Some(openai_api_endpoint),
+                openai_api_endpoint,
             )
             .unwrap(),
             tqueue_tx,

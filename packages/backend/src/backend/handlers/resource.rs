@@ -290,28 +290,30 @@ impl Worker {
             results_hashmap.insert(result.resource.resource.id.clone(), result);
         }
 
-        let vector_search_results = self.ai.vector_search(
-            &self.db,
-            query,
-            embeddings_limit as usize,
-            None,
-            true,
-            Some(embeddings_distance_threshold),
-        )?;
-        for result in vector_search_results {
-            if result.resource.resource_type.ends_with(".ignore") {
-                continue;
+        if semantic_search_enabled {
+            let vector_search_results = self.ai.vector_search(
+                &self.db,
+                query,
+                embeddings_limit as usize,
+                None,
+                true,
+                Some(embeddings_distance_threshold),
+            )?;
+            for result in vector_search_results {
+                if result.resource.resource_type.ends_with(".ignore") {
+                    continue;
+                }
+                results_hashmap.insert(
+                    result.resource.id.clone(),
+                    SearchResultItem {
+                        resource: result,
+                        engine: SearchEngine::Embeddings,
+                        card_ids: vec![],
+                        distance: None,
+                        ref_resource_id: None,
+                    },
+                );
             }
-            results_hashmap.insert(
-                result.resource.id.clone(),
-                SearchResultItem {
-                    resource: result,
-                    engine: SearchEngine::Embeddings,
-                    card_ids: vec![],
-                    distance: None,
-                    ref_resource_id: None,
-                },
-            );
         }
         let results = results_hashmap
             .into_iter()
