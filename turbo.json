@@ -1,12 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
-  "globalEnv": [
-    "WAYLAND_DISPLAY",
-    "XDG_RUNTIME_DIR",
-    "XDG_SESSION_TYPE",
-    "ELECTRON_OZONE_PLATFORM_HINT"
-  ],
+  "globalEnv": ["*"],
   "tasks": {
     "@horizon/backend#build": {
       "dependsOn": [],
