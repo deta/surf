@@ -1,3 +1,13 @@
+<script lang="ts" context="module">
+  export type ParsedSourceItem = {
+    title: string
+    link: string
+    comments: string
+    pubDate: string
+    sourceUrl: string
+  }
+</script>
+
 <script lang="ts">
   import { derived, writable } from 'svelte/store'
 
@@ -20,6 +30,7 @@
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
+    type ResourceDataLink,
     type ResourceDataPost,
     type Space,
     type SpaceEntry,
@@ -43,7 +54,7 @@
   import { clickOutside, tooltip } from '../../utils/directives'
   import { fly } from 'svelte/transition'
   import OasisSpaceSettings from './OasisSpaceSettings.svelte'
-  import { RSSParser } from '@horizon/web-parser/src/rss/index'
+  import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
   import { summarizeText } from '../../service/ai'
   import type { ResourceContent } from '@horizon/web-parser'
   import { checkIfYoutubeUrl } from '../../utils/url'
@@ -51,6 +62,8 @@
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab, TabPage } from '../Browser/types'
+  import { truncate } from '../../utils/text'
+  import PQueue from 'p-queue'
 
   export let spaceId: string
   export let active: boolean = false
@@ -199,7 +212,9 @@
       if (!skipSources && spaceData.liveModeEnabled) {
         if ((spaceData.sources ?? []).length > 0) {
           await loadSpaceSources(spaceData.sources!)
-        } else if (spaceData.smartFilterQuery) {
+        }
+
+        if (spaceData.smartFilterQuery) {
           await updateLiveSpaceContentsWithAI(spaceData.smartFilterQuery)
         }
       }
@@ -290,8 +305,8 @@
     try {
       loadingSpaceSources.set(true)
 
-      await Promise.all(
-        sources.map(async (source) => {
+      const fetchedSources = await Promise.all(
+        sources.map((source) => {
           try {
             if (
               forceFetch ||
@@ -300,18 +315,59 @@
                 REFRESH_SPACE_SOURCES_AFTER
             ) {
               log.debug('Fetching source:', source)
-              return await loadSpaceSource(source)
+              return fetchSpaceSource(source)
             } else {
               log.debug('Source already fetched recently, skipping:', source)
-              return Promise.resolve()
+              return Promise.resolve([])
             }
           } catch (error) {
             log.error('Error loading source:', error)
             toasts.error(`Failed to load source: ${source.url}`)
-            return Promise.resolve()
+            return Promise.resolve([])
           }
         })
       )
+
+      const items = fetchedSources.flat()
+
+      const MAX_CONCURRENT_ITEMS = 8
+      const PROCESS_TIMEOUT = 1000 * 15 // give each item max 15 seconds to process
+
+      const processedItems: Resource[] = []
+
+      log.debug('Processing items:', items)
+      const queue = new PQueue({
+        concurrency: MAX_CONCURRENT_ITEMS,
+        timeout: PROCESS_TIMEOUT,
+        autoStart: false
+      })
+
+      items.forEach((item) => {
+        queue.add(async () => {
+          log.debug('Processing item:', item)
+          const resource = await processRSSItem(item)
+          log.debug('Processed resource:', resource)
+
+          if (resource) {
+            processedItems.push(resource)
+          }
+        })
+      })
+
+      queue.start()
+
+      await queue.onIdle()
+      log.debug('Queue finished')
+
+      const resources = processedItems.filter((x) => x !== null) as Resource[]
+      log.debug('Parsed resources:', resources)
+
+      if (resources.length > 0) {
+        await resourceManager.addItemsToSpace(
+          spaceId,
+          resources.map((r) => r.id)
+        )
+      }
 
       await loadSpaceContents(spaceId, true)
     } catch (error) {
@@ -321,7 +377,7 @@
     }
   }
 
-  const loadSpaceSource = async (source: SpaceSource) => {
+  const fetchSpaceSource = async (source: SpaceSource) => {
     source.last_fetched_at = new Date().toISOString()
 
     space.update((s) => {
@@ -341,117 +397,89 @@
 
     log.debug('RSS result:', rssResult)
 
+    if (!rssResult.items) {
+      log.debug('No items found in RSS feed')
+      return []
+    }
+
     const MAX_ITEMS = 25
 
-    if (rssResult.items) {
-      const parsed = await Promise.all(
-        rssResult.items.slice(0, MAX_ITEMS).map(async (item) => {
-          try {
-            log.debug('Processing RSS item:', item)
+    const filtered = rssResult.items.filter((x) => x.link || x.comments)
+    return filtered.slice(0, MAX_ITEMS).map((item) => {
+      return {
+        title: item.title,
+        link: item.link,
+        comments: item.comments,
+        pubDate: item.pubDate,
+        sourceUrl: source.url
+      } as ParsedSourceItem
+    })
+  }
 
-            if (!item.link) {
-              log.debug('No link found in RSS item:', item)
-              return
-            }
+  const processRSSItem = async (item: ParsedSourceItem) => {
+    try {
+      log.debug('Processing RSS item:', item)
 
-            const sourceURL = new URL(source.url)
-            const canonicalURL =
-              sourceURL.hostname === 'news.ycombinator.com' ? item.comments : item.link
+      const sourceURL = new URL(item.sourceUrl)
+      const canonicalURL = sourceURL.hostname === 'news.ycombinator.com' ? item.comments : item.link
 
-            const existingResourceIds = await resourceManager.listResourceIDsByTags([
-              ResourceManager.SearchTagDeleted(false),
-              ResourceManager.SearchTagCanonicalURL(canonicalURL),
-              ResourceManager.SearchTagSpaceSource('rss')
-            ])
+      // add dummy item to space while processing
+      const data = {
+        url: canonicalURL,
+        title: item.title,
+        date_published: item.pubDate,
+        provider: sourceURL.hostname
+      } as ResourceDataLink
 
-            log.debug('Existing resources:', existingResourceIds)
+      const dummyResource = await resourceManager.createDummyResource(
+        ResourceTypes.LINK,
+        new Blob([JSON.stringify(data)], { type: 'application/json' })
+      )
 
-            if (existingResourceIds.length > 0) {
-              const resourceId = existingResourceIds[0]
-              log.debug('Resource already exists', resourceId)
+      log.debug('Created fake resource:', dummyResource)
 
-              // check if resource is in space
-              const resourceInSpace = $spaceContents.find((x) => x.resource_id === resourceId)
-              if (resourceInSpace) {
-                log.debug('Resource already in space, skipping')
-                return
-              } else {
-                log.debug('Resource not in space, adding')
-                const resource = await resourceManager.getResource(resourceId)
-                if (resource) {
-                  spaceContents.update((contents) => {
-                    return [
-                      ...contents,
-                      {
-                        id: resource.id,
-                        resource_id: resource.id,
-                        space_id: $space!.id,
-                        manually_added: 0,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                      }
-                    ]
-                  })
+      spaceContents.update((contents) => {
+        return [
+          ...contents,
+          {
+            id: dummyResource.id,
+            resource_id: dummyResource.id,
+            space_id: $space!.id,
+            manually_added: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ]
+      })
 
-                  return resource
-                }
-              }
-            }
+      const existingResourceIds = await resourceManager.listResourceIDsByTags([
+        ResourceManager.SearchTagDeleted(false),
+        ResourceManager.SearchTagCanonicalURL(canonicalURL),
+        ResourceManager.SearchTagSpaceSource('rss')
+      ])
 
-            let parsed: {
-              resource: ResourceObject
-              content?: ResourceContent
-            } | null = null
+      log.debug('Existing resources:', existingResourceIds)
 
-            if (checkIfYoutubeUrl(sourceURL)) {
-              log.debug('Youtube video, skipping webview parsing:', item)
+      if (existingResourceIds.length > 0) {
+        const resourceId = existingResourceIds[0]
+        log.debug('Resource already exists', resourceId)
 
-              const postData = RSSParser.parseYouTubeRSSItemToPost(item)
-              log.debug('Parsed youtube post data:', postData)
-
-              const resource = await resourceManager.createResource(
-                ResourceTypes.POST_YOUTUBE,
-                new Blob([JSON.stringify(postData)], { type: 'application/json' }),
-                {
-                  sourceURI: canonicalURL
-                },
-                [
-                  ResourceTag.canonicalURL(canonicalURL),
-                  ResourceTag.spaceSource('rss'),
-                  ResourceTag.hideInEverything(),
-                  ResourceTag.viewedByUser(false)
-                ]
-              )
-
-              parsed = {
-                resource,
-                content: {
-                  plain: postData.content_plain,
-                  html: null
-                }
-              }
-            } else {
-              parsed = await extractAndCreateWebResource(
-                resourceManager,
-                item.link ?? item.comments,
-                {
-                  sourceURI: canonicalURL
-                },
-                [
-                  ResourceTag.canonicalURL(canonicalURL),
-                  ResourceTag.spaceSource('rss'),
-                  ResourceTag.hideInEverything(),
-                  ResourceTag.viewedByUser(false)
-                ]
-              )
-            }
-
+        // check if resource is in space
+        const resourceInSpace = $spaceContents.find((x) => x.resource_id === resourceId)
+        if (resourceInSpace) {
+          log.debug('Resource already in space, skipping')
+          return null
+        } else {
+          log.debug('Resource not in space, adding')
+          const resource = await resourceManager.getResource(resourceId)
+          if (resource) {
             spaceContents.update((contents) => {
               return [
-                ...contents,
+                // remove dummy item
+                ...contents.filter((x) => x.resource_id !== dummyResource.id),
                 {
-                  id: parsed.resource.id,
-                  resource_id: parsed.resource.id,
+                  id: resource.id,
+                  resource_id: resource.id,
                   space_id: $space!.id,
                   manually_added: 0,
                   created_at: new Date().toISOString(),
@@ -460,54 +488,122 @@
               ]
             })
 
-            try {
-              let contentToSummarize: string | null = null
-              if (parsed.resource.type === ResourceTypes.POST_YOUTUBE) {
-                const data = await (parsed.resource as ResourcePost).getParsedData()
-                log.debug('Getting transcript for youtube video:', data.url)
-                const transcriptData = await resourceManager.sffs.getAIYoutubeTranscript(data.url)
-                log.debug('transcript:', transcriptData)
-
-                if (transcriptData) {
-                  contentToSummarize = transcriptData.transcript
-                }
-              } else if (parsed.content && (parsed.content.plain || parsed.content.html)) {
-                contentToSummarize = parsed.content.plain || parsed.content.html
-              }
-
-              if (contentToSummarize) {
-                const summary = await summarizeText(
-                  contentToSummarize,
-                  'Summarize the given text into a single paragraph with a maximum of 400 characters. Make sure you are still conveying the main idea of the text while keeping it concise. If possible try to be as close to 400 characters as possible. Do not go over 400 characters in any case.'
-                )
-                log.debug('summary:', summary)
-
-                await resourceManager.updateResourceMetadata(parsed.resource.id, {
-                  userContext: summary
-                })
-              }
-            } catch (error) {
-              log.error('Error summarizing content:', error)
-            }
-
-            log.debug('Created RSS resource:', parsed.resource)
-            return parsed.resource
-          } catch (error) {
-            log.error('Error processing RSS item:', error)
-            return null
+            return resource
           }
-        })
-      )
+        }
+      }
 
-      log.debug('Parsed resources:', parsed)
+      let parsed: {
+        resource: ResourceObject
+        content?: ResourceContent
+      } | null = null
 
-      const resources = parsed.filter((x) => x) as Resource[]
-      if (resources.length > 0) {
-        await resourceManager.addItemsToSpace(
-          spaceId,
-          resources.map((r) => r.id)
+      if (checkIfYoutubeUrl(sourceURL)) {
+        log.debug('Youtube video, skipping webview parsing:', item)
+
+        const postData = RSSParser.parseYouTubeRSSItemToPost(item)
+        log.debug('Parsed youtube post data:', postData)
+
+        const resource = await resourceManager.createResource(
+          ResourceTypes.POST_YOUTUBE,
+          new Blob([JSON.stringify(postData)], { type: 'application/json' }),
+          {
+            sourceURI: canonicalURL
+          },
+          [
+            ResourceTag.canonicalURL(canonicalURL),
+            ResourceTag.spaceSource('rss'),
+            ResourceTag.hideInEverything(),
+            ResourceTag.viewedByUser(false)
+          ]
+        )
+
+        parsed = {
+          resource,
+          content: {
+            plain: postData.content_plain,
+            html: null
+          }
+        }
+      } else {
+        parsed = await extractAndCreateWebResource(
+          resourceManager,
+          item.link ?? item.comments,
+          {
+            sourceURI: canonicalURL
+          },
+          [
+            ResourceTag.canonicalURL(canonicalURL),
+            ResourceTag.spaceSource('rss'),
+            ResourceTag.hideInEverything(),
+            ResourceTag.viewedByUser(false)
+          ]
         )
       }
+
+      spaceContents.update((contents) => [
+        // remove dummy item
+        ...contents.filter((x) => x.resource_id !== dummyResource.id),
+        {
+          id: parsed.resource.id,
+          resource_id: parsed.resource.id,
+          space_id: $space!.id,
+          manually_added: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ])
+
+      try {
+        let contentToSummarize: string | null = null
+        if (parsed.resource.type === ResourceTypes.POST_YOUTUBE) {
+          const data = await (parsed.resource as ResourcePost).getParsedData()
+          log.debug('Getting transcript for youtube video:', data.url)
+          const transcriptData = await resourceManager.sffs.getAIYoutubeTranscript(data.url)
+          log.debug('transcript:', transcriptData)
+
+          if (transcriptData) {
+            contentToSummarize = transcriptData.transcript
+          }
+        } else if (parsed.content && (parsed.content.plain || parsed.content.html)) {
+          contentToSummarize = parsed.content.plain || parsed.content.html
+        }
+
+        if (contentToSummarize) {
+          log.debug('Summarizing content:', truncate(contentToSummarize, 100))
+          let summary = await summarizeText(
+            contentToSummarize,
+            'Summarize the given text into a single paragraph with a maximum of 400 characters. Make sure you are still conveying the main idea of the text while keeping it concise. If possible try to be as close to 400 characters as possible. Do not go over 400 characters in any case.'
+          )
+
+          log.debug('summary:', summary)
+
+          if (summary) {
+            log.debug('updating resource metadata with summary:', summary)
+            await resourceManager.updateResourceMetadata(parsed.resource.id, {
+              userContext: summary
+            })
+
+            // HACK: this is needed for the preview to update with the summary
+            const contents = $spaceContents
+            spaceContents.set([])
+
+            await tick()
+
+            spaceContents.set(contents)
+          } else {
+            log.debug('summary generation failed')
+          }
+        }
+      } catch (error) {
+        log.error('Error summarizing content:', error)
+      }
+
+      log.debug('Created RSS resource:', parsed.resource)
+      return parsed.resource
+    } catch (error) {
+      log.error('Error processing RSS item:', error)
+      return null
     }
   }
 
@@ -1068,6 +1164,7 @@
         resourceIds={spaceResourceIds}
         selected={$selectedItem}
         showResourceSource={isSearching}
+        useMasonry={!$loadingSpaceSources}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:remove={handleResourceRemove}

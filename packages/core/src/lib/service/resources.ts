@@ -34,6 +34,7 @@ import {
 } from '@horizon/types'
 import { getContext, setContext } from 'svelte'
 import type { MediaParserResult } from './mediaImporter'
+import { generateID } from '../utils/id'
 
 /*
  TODO:
@@ -136,6 +137,8 @@ export const getPrimaryResourceType = (type: string) => {
   }
 }
 
+const DUMMY_PATH = '__dummy'
+
 export class Resource {
   id: string
   type: string
@@ -143,6 +146,7 @@ export class Resource {
   createdAt: string
   updatedAt: string
   deleted: boolean
+  dummy: boolean
 
   metadata?: SFFSResourceMetadata
   tags?: SFFSResourceTag[]
@@ -165,6 +169,7 @@ export class Resource {
     this.createdAt = data.createdAt
     this.updatedAt = data.updatedAt
     this.deleted = data.deleted
+    this.dummy = data.path === DUMMY_PATH
     this.metadata = data.metadata
     this.tags = data.tags
     this.annotations = data.annotations?.map((a) => new ResourceAnnotation(sffs, a))
@@ -199,6 +204,11 @@ export class Resource {
   }
 
   async writeData() {
+    if (this.dummy) {
+      this.log.debug('skipping writing resource data for dummy resource')
+      return
+    }
+
     this.log.debug('writing resource data to', this.path)
 
     if (!this.rawData) {
@@ -433,6 +443,56 @@ export class ResourceManager {
     return this.getResource(id, opts)
   }
 
+  async createDummyResource(
+    type: string,
+    data: Blob,
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
+    this.log.debug('creating dummy resource', type, data, metadata, tags)
+    const parsedMetadata = Object.assign(
+      {
+        name: '',
+        alt: '',
+        sourceURI: '',
+        userContext: ''
+      },
+      metadata
+    )
+
+    const resource = this.createResourceObject({
+      id: generateID(),
+      type: type,
+      path: DUMMY_PATH,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      deleted: false,
+      metadata: parsedMetadata,
+      tags: tags,
+      annotations: []
+    })
+
+    resource.rawData = data
+    resource.getData = () => Promise.resolve(data)
+
+    const text = await data.text()
+
+    if (resource instanceof ResourceNote) {
+      resource.parsedData.set(text)
+      resource.getContent = () => Promise.resolve(resource.parsedData)
+    } else if (resource instanceof ResourceJSON) {
+      const parsed = JSON.parse(text)
+      resource.parsedData = parsed
+      resource.getParsedData = () => Promise.resolve(parsed)
+    }
+
+    this.log.debug('created dummy resource', resource)
+
+    this.resources.update((resources) => [...resources, resource])
+
+    return resource as ResourceObject
+  }
+
   async createResource(
     type: string,
     data?: Blob,
@@ -573,6 +633,12 @@ export class ResourceManager {
   }
 
   async getResourceWithAnnotations(id: string) {
+    const loadedResources = get(this.resources)
+    const loadedResource = loadedResources.find((r) => r.id === id)
+    if (loadedResource) {
+      return loadedResource
+    }
+
     // read resource from sffs
     const resourceItem = await this.sffs.readResource(id, { includeAnnotations: true })
     if (!resourceItem) {
@@ -659,11 +725,13 @@ export class ResourceManager {
       throw new Error('resource not found')
     }
 
-    // delete resource from sffs
-    await this.sffs.deleteResource(id)
-    this.resources.update((resources) => resources.filter((r) => r.id !== id))
+    if (!resource.dummy) {
+      // delete resource from sffs
+      await this.sffs.deleteResource(id)
+      this.telemetry.trackEvent(TelemetryEventTypes.DeleteResource, { type: resource.type })
+    }
 
-    this.telemetry.trackEvent(TelemetryEventTypes.DeleteResource, { type: resource.type })
+    this.resources.update((resources) => resources.filter((r) => r.id !== id))
   }
 
   async reloadResource(id: string) {

@@ -97,3 +97,5 @@ export class RSSParser {
     return parser.parse()
   }
 }
+
+export type RSSItem = Awaited<ReturnType<typeof RSSParser.parse>>['items'][0]

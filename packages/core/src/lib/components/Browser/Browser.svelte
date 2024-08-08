@@ -109,6 +109,7 @@
     type DragculaDragEvent
   } from '@horizon/dragcula'
   import CustomPopover from './CustomPopover.svelte'
+  import { truncate } from '../../utils/text'
   //import '@horizon/dragcula/dist/styles.scss'
 
   let activeTabComponent: TabItem | null = null
@@ -1760,10 +1761,11 @@
 
       // create new space
       const space = await oasis.createSpace({
-        folderName: $activeTab.title ?? app.appName ?? 'Live Space',
+        folderName: truncate($activeTab.title ?? app.appName ?? 'Live Space', 35),
         showInSidebar: true,
         colors: ['#FFD700', '#FF8C00'],
         sources: [spaceSource],
+        sortBy: 'source_published_at',
         liveModeEnabled: true
       })
 

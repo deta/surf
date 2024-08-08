@@ -3,10 +3,12 @@
 
   import { useLogScope } from '../../utils/log'
   import Masonry from './MasonrySpace.svelte'
+  import OasisResourceLoader from './OasisResourceLoader.svelte'
 
   export let resourceIds: Readable<string[]>
   export let selected: string | null = null
   export let showResourceSource: boolean = false
+  export let useMasonry: boolean = true
 
   const log = useLogScope('OasisResourcesView')
   // const dispatch = createEventDispatcher<{ click: string }>()
@@ -34,19 +36,37 @@
 </script>
 
 <div class="wrapper">
-  <div bind:this={scrollElement} class="content">
-    {#key scrollElement}
-      <Masonry
-        renderContents={$renderContents}
-        {showResourceSource}
-        on:load-more={handleLoadChunk}
-        on:open
-        on:remove
-        on:new-tab
-        id={new Date()}
-      ></Masonry>
-    {/key}
-  </div>
+  {#if useMasonry}
+    <div bind:this={scrollElement} class="content">
+      {#key scrollElement}
+        <Masonry
+          renderContents={$renderContents}
+          {showResourceSource}
+          on:load-more={handleLoadChunk}
+          on:open
+          on:remove
+          on:new-tab
+          id={new Date()}
+        ></Masonry>
+      {/key}
+    </div>
+  {:else}
+    <div class="content flex flex-wrap gap-16">
+      {#each $renderContents as resourceId (resourceId)}
+        <div class="max-w-[420px] w-full">
+          <OasisResourceLoader
+            id={resourceId}
+            showSource={showResourceSource}
+            on:click
+            on:open
+            on:remove
+            on:load
+            on:new-tab
+          />
+        </div>
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <style lang="scss">

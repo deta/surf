@@ -400,7 +400,6 @@
       <Switch
         label="Auto Save Resources"
         color="#ff4eed"
-        reverse
         bind:checked={$autoSaveResources}
         on:update={handleLiveModeUpdate}
       />
@@ -487,6 +486,14 @@
     justify-content: space-between;
     gap: 1rem;
     width: 100%;
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      font-smooth: always;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
   }
 
   .folder-input {
