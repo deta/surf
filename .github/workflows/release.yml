@@ -24,9 +24,9 @@ jobs:
           # - os: macos-13
           #   architecture: x64
           #   build_command: yarn build:desktop:mac:x64
-          - os: ubuntu-latest
-            architecture: x64
-            build_command: yarn build:desktop:lin:x64
+          # - os: ubuntu-latest
+          #   architecture: x64
+          #   build_command: yarn build:desktop:lin:x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
