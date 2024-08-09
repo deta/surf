@@ -726,114 +726,138 @@
     }
   }
 
-  const handleDrop = async (e: CustomEvent<DragculaDragEvent>) => {
-    const drag = e.detail
+  const handleDrop = async (drag: DragculaDragEvent) => {
+    const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
 
-    if (!(drag instanceof DragculaDragEvent)) {
-      log.warn('Detected non-dragcula drag event!', e)
-      return
+    if (
+      ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
+        drag.from?.id || ''
+      ) &&
+      !drag.metaKey
+    ) {
+      drag.item!.dragEffect = 'copy' // Make sure tabs are always copy from sidebar
     }
 
-    const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
-    e.preventDefault()
-
     let resourceIds: string[] = []
-    if (drag.isNative) {
-      const event = new DragEvent('drop', { dataTransfer: drag.data })
-      log.debug('Dropped native', event)
+    try {
+      if (drag.isNative) {
+        const event = new DragEvent('drop', { dataTransfer: drag.data })
+        log.debug('Dropped native', event)
 
-      const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
-      if (isOwnDrop) {
-        log.debug('Own drop detected, ignoring...')
-        log.debug(event.dataTransfer?.files)
-        return
-      }
+        const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
+        if (isOwnDrop) {
+          log.debug('Own drop detected, ignoring...')
+          log.debug(event.dataTransfer?.files)
+          return
+        }
 
-      const parsed = await processDrop(event)
-      log.debug('Parsed', parsed)
+        const parsed = await processDrop(event)
+        log.debug('Parsed', parsed)
 
-      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-      log.debug('Resources', newResources)
+        const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+        log.debug('Resources', newResources)
 
-      newResources.forEach((r) => resourceIds.push(r.id))
-    } else {
-      log.debug('Dropped dragcula', drag.data)
+        newResources.forEach((r) => resourceIds.push(r.id))
+      } else {
+        log.debug('Dropped dragcula', drag.data)
 
-      const existingResources: string[] = []
+        const existingResources: string[] = []
 
-      const dragData = drag.data as { 'farc/tab': Tab; 'horizon/resource/id': string }
-      if (dragData['farc/tab'] !== undefined) {
-        if (dragData['horizon/resource/id'] !== undefined) {
-          const resourceId = dragData['horizon/resource/id']
-          resourceIds.push(resourceId)
-          existingResources.push(resourceId)
-        } else if (dragData['farc/tab'].type === 'page') {
-          const tab = dragData['farc/tab'] as TabPage
+        const dragData = drag.data as { 'surf/tab': Tab; 'horizon/resource/id': string }
+        if (dragData['surf/tab'] !== undefined) {
+          if (dragData['horizon/resource/id'] !== undefined) {
+            const resourceId = dragData['horizon/resource/id']
+            resourceIds.push(resourceId)
+            existingResources.push(resourceId)
+          } else if (dragData['surf/tab'].type === 'page') {
+            const tab = dragData['surf/tab'] as TabPage
 
-          if (tab.resourceBookmark) {
-            log.debug('Detected resource from dragged tab', tab.resourceBookmark)
-            resourceIds.push(tab.resourceBookmark)
-            existingResources.push(tab.resourceBookmark)
-          } else {
-            log.debug('Detected page from dragged tab', tab)
-            const newResources = await createResourcesFromMediaItems(
-              resourceManager,
-              [
-                {
-                  type: 'url',
-                  data: new URL(tab.currentLocation || tab.initialLocation),
-                  metadata: {}
-                }
-              ],
-              ''
-            )
-            log.debug('Resources', newResources)
-            newResources.forEach((r) => resourceIds.push(r.id))
+            if (tab.resourceBookmark) {
+              log.debug('Detected resource from dragged tab', tab.resourceBookmark)
+              resourceIds.push(tab.resourceBookmark)
+              existingResources.push(tab.resourceBookmark)
+            } else {
+              log.debug('Detected page from dragged tab', tab)
+              const newResources = await createResourcesFromMediaItems(
+                resourceManager,
+                [
+                  {
+                    type: 'url',
+                    data: new URL(tab.currentLocation || tab.initialLocation),
+                    metadata: {}
+                  }
+                ],
+                ''
+              )
+              log.debug('Resources', newResources)
+              newResources.forEach((r) => resourceIds.push(r.id))
+            }
           }
+        }
+
+        if (existingResources.length > 0) {
+          await Promise.all(
+            existingResources.map(async (resourceId) => {
+              const resource = await resourceManager.getResource(resourceId)
+              if (!resource) {
+                log.error('Resource not found')
+                return
+              }
+
+              log.debug('Detected resource from dragged tab', resource)
+
+              const isSilent =
+                resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT) !==
+                undefined
+              if (isSilent) {
+                // remove silent tag if it exists sicne the user is explicitly adding it
+                log.debug('Removing silent tag from resource', resourceId)
+                await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+              }
+            })
+          )
         }
       }
 
-      if (existingResources.length > 0) {
-        await Promise.all(
-          existingResources.map(async (resourceId) => {
-            const resource = await resourceManager.getResource(resourceId)
-            if (!resource) {
-              log.error('Resource not found')
-              return
-            }
+      if (spaceId !== 'all') {
+        await oasis.addResourcesToSpace(spaceId, resourceIds)
+        await loadSpaceContents(spaceId)
 
-            log.debug('Detected resource from dragged tab', resource)
-
-            const isSilent =
-              resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT) !==
-              undefined
-            if (isSilent) {
-              // remove silent tag if it exists sicne the user is explicitly adding it
-              log.debug('Removing silent tag from resource', resourceId)
-              await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+        resourceIds.forEach((id) => {
+          resourceManager.getResource(id).then((resource) => {
+            if (resource) {
+              telemetry.trackAddResourceToSpace(resource.type, AddResourceToSpaceEventTrigger.Drop)
             }
           })
-        )
+        })
+      } else {
+        await loadEverything()
       }
+    } catch (error) {
+      log.error('Error dropping:', error)
+      toast.error('Error dropping: ' + (error as Error).message)
+      drag.abort()
+      return
     }
-
-    await loadEverything()
+    drag.continue()
 
     toast.success(
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
     )
   }
 
-  const handleDragEnter = (e: CustomEvent<DragculaDragEvent>) => {
-    const drag = e.detail
-
-    const dragData = drag.data as { 'farc/tab': Tab }
-    if (
-      (active && e.detail.isNative) ||
-      (active && dragData['farc/tab'] !== undefined && dragData['farc/tab'].type !== 'space')
-    ) {
-      e.preventDefault() // Allow the drag
+  const handleDragEnter = (drag: DragculaDragEvent) => {
+    if (drag.data['surf/tab'] !== undefined) {
+      const dragData = drag.data as { 'surf/tab': Tab }
+      if ((active && drag.isNative) || (active && dragData['surf/tab'].type !== 'space')) {
+        drag.continue()
+        return
+      }
+    } else if (drag.data['oasis/resource'] !== undefined) {
+      drag.continue()
+      return
     }
+    drag.abort()
   }
 
   const openResourceDetailsModal = (resourceId: string) => {
@@ -1076,7 +1100,7 @@
     {:else}
       <div
         data-pane={1}
-        class="h-screen w-screen transition-all duration-400 ease-in-out"
+        class="h-screen w-screen transition-all duration-400 ease-out"
         bind:this={panelOneRef}
       >
         <div
@@ -1084,11 +1108,15 @@
           style="top: {$yPosition}; transform: translateX(-50%);"
         >
           {#if $currentPanel === 1}
-            <img class="browser-background" src={browserBackground} alt="background" />
+            <img
+              class="browser-background scroll-auto pointer-events-none select-none"
+              src={browserBackground}
+              alt="background"
+            />
           {/if}
 
           <Command.Root
-            class="[&_[data-cmdk-group-heading]]:text-neutral-500 w-[672px]   [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-4 [&_[data-cmdk-item]]:py-4 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
+            class="[&_[data-cmdk-group-heading]]:text-neutral-500  lg:w-[672px]   [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-4 [&_[data-cmdk-item]]:py-4 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
             loop
             shouldFilter={false}
             onKeydown={handleKeyDown}
@@ -1183,7 +1211,7 @@
           <div
             class="flex items-center justify-center transition-all duration-400 ease-in-out transform {$currentPanel ===
             1
-              ? 'mt-9'
+              ? 'pt-9'
               : 'mt-2 opacity-50 hover:opacity-100'}"
           >
             <button
@@ -1217,7 +1245,7 @@
 
       <div
         data-pane={2}
-        class="h-full full snap-start flex items-center justify-center"
+        class="h-full full snap-start flex items-center justify-center px-36"
         bind:this={panelTwoRef}
       >
         {#if $showCreationModal}
@@ -1235,66 +1263,68 @@
           </div>
         {/if}
 
-        <DropWrapper {spaceId} on:Drop={handleDrop} on:DragEnter={handleDragEnter}>
-          <div class="w-full h-full">
-            <div
-              class="relative transition-all duration-400 ease-in-out transform {$currentPanel === 1
-                ? 'opacity-50 hover:opacity-100'
-                : ''}"
-              style:margin-top={$currentPanel === 1 ? '-221px' : '9rem'}
-              on:wheel={handlePaneWheel}
-              bind:this={masonryRef}
-            >
-              <SpacesView
-                bind:this={createSpaceRef}
-                {spaces}
-                {resourceManager}
-                showPreview={true}
-                type="horizontal"
-                interactive={false}
-                on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
-                on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
-                on:open-creation-modal={() => showCreationModal.set(true)}
-                on:open-resource={handleOpen}
-              />
-            </div>
+        <DropWrapper
+          {spaceId}
+          on:Drop={(e) => handleDrop(e.detail)}
+          on:DragEnter={(e) => handleDragEnter(e.detail)}
+        >
+          <div
+            class="relative transition-all duration-400 ease-in-out transform {$currentPanel === 1
+              ? 'opacity-50 hover:opacity-100'
+              : ''}"
+            style:margin-top={$currentPanel === 1 ? '-221px' : '9rem'}
+            on:wheel={handlePaneWheel}
+            bind:this={masonryRef}
+          >
+            <SpacesView
+              bind:this={createSpaceRef}
+              {spaces}
+              {resourceManager}
+              showPreview={true}
+              type="horizontal"
+              interactive={false}
+              on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
+              on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
+              on:open-creation-modal={() => showCreationModal.set(true)}
+              on:open-resource={handleOpen}
+            />
+          </div>
 
-            {#if $resourcesToShow.length > 0}
-              <OasisResourcesViewSearchResult
-                resources={resourcesToShow}
-                selected={$selectedItem}
-                showResourceSource={!!$searchValue}
-                isEverythingSpace={true}
-                on:click={handleItemClick}
-                on:open={handleOpen}
-                on:open-space-as-tab
-                on:remove={handleResourceRemove}
-                on:new-tab
-                on:wheel={handleMasonryWheel}
-                bind:scrollTop={$scrollTop}
-              />
+          {#if $resourcesToShow.length > 0}
+            <OasisResourcesViewSearchResult
+              resources={resourcesToShow}
+              selected={$selectedItem}
+              showResourceSource={!!$searchValue}
+              isEverythingSpace={true}
+              on:click={handleItemClick}
+              on:open={handleOpen}
+              on:open-space-as-tab
+              on:remove={handleResourceRemove}
+              on:new-tab
+              on:wheel={handleMasonryWheel}
+              bind:scrollTop={$scrollTop}
+            />
 
-              {#if $loadingContents}
-                <div class="floating-loading">
-                  <Icon name="spinner" size="20px" />
-                </div>
-              {/if}
-            {:else if $loadingContents}
-              <div class="content-wrapper">
-                <div class="content">
-                  <Icon name="spinner" size="22px" />
-                  <p>Loading…</p>
-                </div>
-              </div>
-            {:else}
-              <div class="content-wrapper">
-                <div class="content">
-                  <Icon name="leave" size="22px" />
-                  <p>Oops! It seems like this Space is feeling a bit empty.</p>
-                </div>
+            {#if $loadingContents}
+              <div class="floating-loading">
+                <Icon name="spinner" size="20px" />
               </div>
             {/if}
-          </div>
+          {:else if $loadingContents}
+            <div class="content-wrapper">
+              <div class="content">
+                <Icon name="spinner" size="22px" />
+                <p>Loading…</p>
+              </div>
+            </div>
+          {:else}
+            <div class="content-wrapper">
+              <div class="content">
+                <Icon name="leave" size="22px" />
+                <p>Oops! It seems like this Space is feeling a bit empty.</p>
+              </div>
+            </div>
+          {/if}
         </DropWrapper>
       </div>
     {/if}

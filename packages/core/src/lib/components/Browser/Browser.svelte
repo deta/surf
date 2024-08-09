@@ -625,6 +625,11 @@
       return
     }
 
+    if ($showNewTabOverlay === true) {
+      setShowNewTabOverlay(false)
+      return
+    }
+
     if ($activeTab.pinned) {
       log.debug('Active tab is pinned, deactivating it')
       $activatedTabs = $activatedTabs.filter((id) => id !== $activeTab.id)
@@ -689,14 +694,6 @@
 
     if (newTab) {
       await handleBookmark(false, SaveToOasisEventTrigger.CreateMenu)
-    }
-  }
-
-  const toggleOasis = () => {
-    if (drawer.isShown()) {
-      drawer.close()
-    } else {
-      drawer.open()
     }
   }
 
@@ -835,12 +832,6 @@
       { active: true }
     )
   }, 200)
-
-  let keyBuffer = ''
-  let index: number
-  let keyTimeout: any
-  const KEY_TIMEOUT = 120
-  const MAX_TABS = 99
 
   // @ts-ignore
   let savedTabsOrientation = window.api.getUserConfigSettings()?.tabs_orientation
@@ -981,7 +972,10 @@
       activeTabComponent?.blur()
       // Note: even though the electron menu handles the shortcut this is still needed here
     } else if (isModKeyAndKeyPressed(e, 'w')) {
-      setShowNewTabOverlay(false)
+      if ($showNewTabOverlay) {
+        setShowNewTabOverlay(false)
+        return
+      }
       closeActiveTab(DeleteTabEventTrigger.Shortcut)
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
@@ -1046,37 +1040,6 @@
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
-
-  const handleAddressBarKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      showURLBar.set(!showURLBar)
-    }
-  }
-
-  const handleNewHorizon = async () => {
-    log.debug('Creating new horizon')
-
-    const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length + 1)
-    log.debug('New Horizon', newHorizon)
-
-    newHorizon.tint.set('#' + Math.floor(Math.random() * 16777215).toString(16) + '80')
-
-    await horizonManager.switchHorizon(newHorizon.id)
-
-    await tick()
-
-    await createTab<TabHorizon>(
-      {
-        horizonId: newHorizon.id,
-        title: newHorizon.data.name,
-        icon: '',
-        type: 'horizon'
-      },
-      { active: true }
-    )
-
-    addressValue.set(newHorizon.data.name)
-  }
 
   const createNewEmptyTab = async () => {
     showNewTabOverlay.set(true)
@@ -1995,9 +1958,7 @@
   }
 
   let maxWidth = window.innerWidth
-
   let tabSize = 0
-
   $: {
     const reservedSpace = 200 + 40 * $pinnedTabs.length + 200
     const availableSpace = maxWidth - reservedSpace
@@ -2075,6 +2036,7 @@
 
     // @ts-expect-error
     window.api.onReloadActiveTab((force: boolean) => {
+      if ($showNewTabOverlay) return
       if (force) {
         $activeBrowserTab?.forceReload()
       } else {
@@ -3287,7 +3249,9 @@
                       showIncludeButton={$activeTabMagic?.showSidebar &&
                         (tab.type === 'page' || tab.type === 'space')}
                       bind:this={activeTabComponent}
-                      on:select={() => {}}
+                      on:select={() => {
+                        setShowNewTabOverlay(false)
+                      }}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
@@ -3349,7 +3313,9 @@
                       showIncludeButton={$activeTabMagic?.showSidebar &&
                         (tab.type === 'page' || tab.type === 'space')}
                       bind:this={activeTabComponent}
-                      on:select={() => {}}
+                      on:select={() => {
+                        setShowNewTabOverlay(false)
+                      }}
                       on:remove-from-sidebar={handleRemoveFromSidebar}
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
@@ -3638,17 +3604,6 @@
                 />
               {:else if tab.type === 'history'}
                 <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
-              {:else}
-                <!-- <BrowserHomescreen
-                  {historyEntriesManager}
-                  active={$activeTabId === tab.id}
-                  on:navigate={handleTabNavigation}
-                  on:chat={handleCreateChat}
-                  on:rag={handleRag}
-                  on:create-tab-from-space={handleCreateTabFromSpace}
-                  on:new-tab={handleNewTab}
-                  {spaces}
-                /> -->
               {/if}
             </div>
           {/if}
