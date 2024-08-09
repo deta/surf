@@ -165,11 +165,15 @@ impl Worker {
         }))
     }
 
-    // TODO: how to handle filtering embedding resources on deletion
     pub fn remove_resource(&mut self, id: String) -> BackendResult<()> {
+        let embedding_keys = self
+            .db
+            .list_embedding_ids_by_type_resource_id(EmbeddingType::TextContent, &id)?;
+
         let mut tx = self.db.begin()?;
         Database::update_resource_deleted_tx(&mut tx, &id, 1)?;
         Database::update_resource_tag_by_name_tx(&mut tx, &ResourceTag::new_deleted(&id, true))?;
+        self.ai.upsert_embeddings(embedding_keys, vec![], vec![])?;
         tx.commit()?;
         Ok(())
     }
