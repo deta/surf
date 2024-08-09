@@ -4,10 +4,10 @@
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
-  import type { Tab, TabPage } from './types'
+  import type { Tab, TabPage, TabSpace } from './types'
   import { writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
-  import { HTMLDragZone, HTMLDragItem } from '@horizon/dragcula'
+  import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTagsBuiltInKeys, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
@@ -56,6 +56,8 @@
     'exclude-other-tabs': string
     'exclude-tab': string
     'include-tab': string
+    Drop: { drag: DragculaDragEvent; spaceId: string }
+    DragEnd: DragculaDragEvent
   }>()
   const resourceManager = useResourceManager()
 
@@ -180,11 +182,35 @@
     popoverVisible = false
   }
 
+  const handleDragStart = async (drag: DragculaDragEvent) => {
+    isDragging = true
+    drag.item!.data = {
+      'surf/tab': {
+        ...tab,
+        pinned
+      }
+    }
+    if (tab.resourceBookmark !== undefined && tab.resourceBookmark !== null) {
+      const resource = await resourceManager.getResource(tab.resourceBookmark)
+      if (resource !== null) drag.item!.data['horizon/resource/id'] = tab.resourceBookmark
+    }
+    drag.continue()
+  }
+  const handleDragEnd = (drag: DragculaDragEvent) => {
+    isDragging = false
+    dispatch('DragEnd', drag)
+  }
+
+  const handleDrop = async (drag: DragculaDragEvent) => {
+    dispatch('Drop', { drag, spaceId: (tab as TabSpace).spaceId })
+  }
+
   let isDragging = false
 </script>
 
-<!-- style:view-transition-name="tab-{tab.id}" -->
 <div
+  id="tab-{tab.id}"
+  draggable={true}
   class="tab {isActive
     ? 'text-sky-950 bg-sky-200 sticky   shadow-inner ring-[0.5px] ring-sky-500'
     : ''}
@@ -195,40 +221,23 @@
         ? 'py-1.5 px-2.5 rounded-xl'
         : 'py-1.5 px-1.5 rounded-xl'
       : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
+  class:opacity-75={hibernated}
+  class:pinned
   style={tabSize
     ? `width: ${tabSize}px; min-width: ${
         isActive && !pinned ? 260 : tabSize
       }px; max-width: ${tabSize}px;`
     : ''}
+  style:position="relative"
+  aria-hidden="true"
+  style:view-transition-name="tab-{tab.id}"
+  use:HTMLDragItem.action={{}}
   on:click={handleClick}
-  class:opacity-75={hibernated}
+  on:DragStart={handleDragStart}
+  on:DragEnd={handleDragEnd}
   on:mouseenter={() => (hovered = true)}
   on:mouseleave={() => {
     if (!popoverVisible) hovered = false
-  }}
-  aria-hidden="true"
-  class:pinned
-  draggable={true}
-  style:view-transition-name="tab-{tab.id}"
-  use:HTMLDragItem.action={{
-    id: tab.id,
-    data: { 'farc/tab': tab }
-  }}
-  on:DragStart={(e) => {
-    isDragging = true
-    e.item.data = {
-      'farc/tab': {
-        ...tab,
-        pinned
-      }
-    }
-    if (tab.resourceBookmark !== undefined) {
-      e.item.data['horizon/resource/id'] = tab.resourceBookmark
-    }
-  }}
-  on:DragEnd={(e) => {
-    isDragging = false
-    dispatch('DragEnd', e)
   }}
   use:tooltip={pinned
     ? {
@@ -240,6 +249,28 @@
       }
     : {}}
 >
+  <!-- Temporary DragZone overlay to allow dropping onto space tabs -->
+  {#if tab.type === 'space' && tab.spaceId !== 'all'}
+    <div
+      id="tabZone-{tab.id}"
+      class="tmp-tab-drop-zone"
+      style="position: absolute; inset-inline: 10%; inset-block: 20%;"
+      use:HTMLDragZone.action={{}}
+      on:DragEnter={(drag) => {
+        const dragData = drag.data
+        if (
+          drag.isNative ||
+          (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space')
+        ) {
+          drag.continue() // Allow the drag
+          return
+        }
+        drag.abort()
+      }}
+      on:Drop={handleDrop}
+    ></div>
+  {/if}
+
   <div
     class:icon-wrapper={true}
     class:flex-shrink-0={true}
@@ -496,9 +527,18 @@
       0.2s ease-in-out,
       transform 0s;
   }
-  :global(.tab[data-dragcula-dragging-item]) {
-    background: rgba(255, 255, 255, 0.6);
+  :global(.tab img) {
+    user-select: none;
+  }
+  :global(.tab[data-dragcula-dragging-item='true']) {
+    background: rgba(255, 255, 255, 0.9);
     opacity: 80%;
+  }
+  :global(.tab[data-dragcula-dragging-item='true'] .tmp-tab-drop-zone) {
+    pointer-events: none;
+  }
+  :global(body:not([data-dragcula-dragging='true']) .tmp-tab-drop-zone) {
+    display: none;
   }
   .icon-wrapper {
     width: 16px;

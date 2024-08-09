@@ -1,24 +1,82 @@
-import { get } from "svelte/store";
-import { DragZone } from "./index.js";
+export class StyleCache {
+  items = new Map<HTMLElement, Record<string, string[]>>();
 
-export const DEBUG = false;
-export const SUPPORTS_VIEW_TRANSITIONS = document.startViewTransition !== undefined; // TODO: test & check in startVT method
-
-export function createDragData(data: Omit<IDragData, "getDataTransfer">): IDragData {
-  const d = {
-    ...data,
-    getDataTransfer: () => {
-      console.log(this);
-      const dt = new DataTransfer();
-      // TODO: Fails on objects, we need some serialization / warning here!
-      for (const [key, value] of Object.entries(this)) {
-        if (key === "getDataTransfer") continue;
-        dt.setData(key, value);
-      }
-      return dt;
+  push(node: HTMLElement, prop: string, newVal?: string) {
+    if (!this.items.has(node)) this.items.set(node, {});
+    const cache = this.items.get(node);
+    if (!cache![prop]) cache![prop] = [];
+    cache![prop].push(node.style.getPropertyValue(prop));
+    if (newVal) node.style.setProperty(prop, newVal);
+  }
+  pushMany(node: HTMLElement, styles: Record<string, string>) {
+    for (const [prop, newVal] of Object.entries(styles)) {
+      this.push(node, prop, newVal);
     }
-  };
-  return d;
+  }
+  pop(node: HTMLElement, prop: string) {
+    const cache = this.items.get(node);
+    if (!cache) return;
+    if (cache[prop] && cache[prop].length > 0) {
+      const val = cache[prop].pop() as string;
+      if (val === "") node.style.removeProperty(prop);
+      else node.style.setProperty(prop, val);
+    }
+    if (cache[prop].length <= 0) {
+      delete cache[prop];
+    }
+    if (Object.entries(cache).length <= 0) {
+      this.items.delete(node);
+    }
+  }
+  popAll(node: HTMLElement, omit?: string[]) {
+    const cache = this.items.get(node);
+    if (!cache) return;
+    for (const key in cache) {
+      if (omit && omit.includes(key)) continue;
+      this.pop(node, key);
+    }
+    if (Object.entries(cache).length <= 0) {
+      this.items.delete(node);
+    }
+  }
+  /// Resets property to the first stored value
+  reset(node: HTMLElement, prop: string) {
+    const cache = this.items.get(node);
+    if (!cache) return;
+    if (cache[prop] && cache[prop].length > 0) {
+      const val = cache[prop].shift() as string;
+      if (val === "") node.style.removeProperty(prop);
+      else node.style.setProperty(prop, val);
+      delete cache[prop];
+    }
+    if (Object.entries(cache).length <= 0) {
+      this.items.delete(node);
+    }
+  }
+  resetAll(node: HTMLElement, omit?: string[]) {
+    const cache = this.items.get(node);
+    if (!cache) return;
+    for (const key in cache) {
+      if (omit && omit.includes(key)) continue;
+      this.reset(node, key);
+    }
+    if (Object.entries(cache).length <= 0) {
+      this.items.delete(node);
+    }
+  }
+
+  //apply(node: HTMLElement, prop: string) { }
+  //applyAll(node: HTMLElement, omit?: string[]) { }
+  transfer(node: HTMLElement, newNode: HTMLElement) {}
+
+  dump(label = "") {
+    console.log("Dumping style cache", label, this.items.size);
+    for (const [node, cache] of this.items.entries()) {
+      console.group(`[StyleCache] ${label} :: Node`, node);
+      console.table(cache);
+      console.groupEnd();
+    }
+  }
 }
 
 /**
@@ -61,8 +119,20 @@ export function createStyleCache() {
       items.delete(node);
     }
   }
+  function transfer(oldNode: HTMLElement, newNode: HTMLElement) {
+    console.warn("transfering styles", oldNode, newNode);
+    const cache = items.get(oldNode);
+    if (!cache) return;
+    items.set(newNode, cache);
+    items.delete(oldNode);
+    for (const [prop, val] of Object.entries(cache)) {
+      const oldVal = oldNode.style.getPropertyValue(prop);
+      console.log("transfer", prop, oldVal);
+      newNode.style.setProperty(prop, oldVal);
+    }
+  }
   function dump(label = "") {
-    return; // debug
+    //return; // debug
     console.trace("Dumping style cache", label, items.size);
     for (const [node, cache] of items.entries()) {
       console.group(`[StyleCache] ${label} :: Node`, node);
@@ -77,32 +147,20 @@ export function createStyleCache() {
     cacheMany,
     apply,
     applyAll,
+    transfer,
     dump
   };
 }
 
-export function findClosestDragZoneFromPoint(pageX: number, pageY: number): DragZone | null {
-  const posX = pageX - window.scrollX;
-  const posY = pageY - window.scrollY;
-  const target = document.elementFromPoint(posX, posY);
-  let el: HTMLElement | null = target as HTMLElement;
+/// Given a node, returns the next element, given a condition to match.
+export function nextElementSibling(
+  node: HTMLElement,
+  condition: (node: Element) => boolean
+): Element | null {
+  let el = node.nextElementSibling;
   while (el) {
-    if (el.getAttribute("data-dragcula-zone") !== null) {
-      const id = el.getAttribute("data-dragcula-zone")!;
-      return DragZone.ZONES.get(id) || null;
-    }
-    el = el.parentElement;
-  }
-  return null;
-}
-export function findClosestDragZoneFromEl(target: HTMLElement): DragZone | null {
-  let el: HTMLElement | null = target;
-  while (el !== null) {
-    if (el.getAttribute("data-dragcula-zone") !== null) {
-      const id = el.getAttribute("data-dragcula-zone")!;
-      return DragZone.ZONES.get(id) || null;
-    }
-    el = el.parentElement;
+    if (condition(el)) return el;
+    el = el.nextElementSibling;
   }
   return null;
 }

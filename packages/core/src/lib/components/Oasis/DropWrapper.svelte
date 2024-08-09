@@ -70,10 +70,9 @@
       return
     }
 
-    const accepted = !dispatch('Drop', e, { cancelable: true })
-    if (accepted) {
-      e.preventDefault()
-    }
+    e.preventDefault()
+    e.stopPropagation()
+    dispatch('Drop', e)
 
     counter = 0 // Reset counter to ensure dragover is removed
     dragOver = false

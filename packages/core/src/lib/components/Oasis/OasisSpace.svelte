@@ -854,127 +854,139 @@
     }
   }
 
-  const handleDrop = async (e: CustomEvent<DragculaDragEvent>) => {
-    const drag = e.detail
+  const handleDrop = async (drag: DragculaDragEvent) => {
+    const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
 
-    if (!(drag instanceof DragculaDragEvent)) {
-      log.warn('Detected non-dragcula drag event!', e)
-      return
+    if (
+      ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
+        drag.from?.id || ''
+      ) &&
+      !drag.metaKey
+    ) {
+      drag.item!.dragEffect = 'copy' // Make sure tabs are always copy from sidebar
     }
 
-    const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
-    e.preventDefault()
-
     let resourceIds: string[] = []
-    if (drag.isNative) {
-      const event = new DragEvent('drop', { dataTransfer: drag.data })
-      log.debug('Dropped native', event)
+    try {
+      if (drag.isNative) {
+        const event = new DragEvent('drop', { dataTransfer: drag.data })
+        log.debug('Dropped native', event)
 
-      const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
-      if (isOwnDrop) {
-        log.debug('Own drop detected, ignoring...')
-        log.debug(event.dataTransfer?.files)
-        return
-      }
+        const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
+        if (isOwnDrop) {
+          log.debug('Own drop detected, ignoring...')
+          log.debug(event.dataTransfer?.files)
+          return
+        }
 
-      const parsed = await processDrop(event)
-      log.debug('Parsed', parsed)
+        const parsed = await processDrop(event)
+        log.debug('Parsed', parsed)
 
-      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-      log.debug('Resources', newResources)
+        const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+        log.debug('Resources', newResources)
 
-      newResources.forEach((r) => resourceIds.push(r.id))
-    } else {
-      log.debug('Dropped dragcula', drag.data)
+        newResources.forEach((r) => resourceIds.push(r.id))
+      } else {
+        log.debug('Dropped dragcula', drag.data)
 
-      const existingResources: string[] = []
+        const existingResources: string[] = []
 
-      const dragData = drag.data as { 'farc/tab': Tab; 'horizon/resource/id': string }
-      if (dragData['farc/tab'] !== undefined) {
-        if (dragData['horizon/resource/id'] !== undefined) {
-          const resourceId = dragData['horizon/resource/id']
-          resourceIds.push(resourceId)
-          existingResources.push(resourceId)
-        } else if (dragData['farc/tab'].type === 'page') {
-          const tab = dragData['farc/tab'] as TabPage
+        const dragData = drag.data as { 'surf/tab': Tab; 'horizon/resource/id': string }
+        if (dragData['surf/tab'] !== undefined) {
+          if (dragData['horizon/resource/id'] !== undefined) {
+            const resourceId = dragData['horizon/resource/id']
+            resourceIds.push(resourceId)
+            existingResources.push(resourceId)
+          } else if (dragData['surf/tab'].type === 'page') {
+            const tab = dragData['surf/tab'] as TabPage
 
-          if (tab.resourceBookmark) {
-            log.debug('Detected resource from dragged tab', tab.resourceBookmark)
-            resourceIds.push(tab.resourceBookmark)
-            existingResources.push(tab.resourceBookmark)
-          } else {
-            log.debug('Detected page from dragged tab', tab)
-            const newResources = await createResourcesFromMediaItems(
-              resourceManager,
-              [
-                {
-                  type: 'url',
-                  data: new URL(tab.currentLocation || tab.initialLocation),
-                  metadata: {}
-                }
-              ],
-              ''
-            )
-            log.debug('Resources', newResources)
-            newResources.forEach((r) => resourceIds.push(r.id))
+            if (tab.resourceBookmark) {
+              log.debug('Detected resource from dragged tab', tab.resourceBookmark)
+              resourceIds.push(tab.resourceBookmark)
+              existingResources.push(tab.resourceBookmark)
+            } else {
+              log.debug('Detected page from dragged tab', tab)
+              const newResources = await createResourcesFromMediaItems(
+                resourceManager,
+                [
+                  {
+                    type: 'url',
+                    data: new URL(tab.currentLocation || tab.initialLocation),
+                    metadata: {}
+                  }
+                ],
+                ''
+              )
+              log.debug('Resources', newResources)
+              newResources.forEach((r) => resourceIds.push(r.id))
+            }
           }
+        }
+
+        if (existingResources.length > 0) {
+          await Promise.all(
+            existingResources.map(async (resourceId) => {
+              const resource = await resourceManager.getResource(resourceId)
+              if (!resource) {
+                log.error('Resource not found')
+                return
+              }
+
+              log.debug('Detected resource from dragged tab', resource)
+
+              const isSilent =
+                resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT) !==
+                undefined
+              if (isSilent) {
+                // remove silent tag if it exists sicne the user is explicitly adding it
+                log.debug('Removing silent tag from resource', resourceId)
+                await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+              }
+            })
+          )
         }
       }
 
-      if (existingResources.length > 0) {
-        await Promise.all(
-          existingResources.map(async (resourceId) => {
-            const resource = await resourceManager.getResource(resourceId)
-            if (!resource) {
-              log.error('Resource not found')
-              return
-            }
-
-            log.debug('Detected resource from dragged tab', resource)
-
-            const isSilent =
-              resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT) !==
-              undefined
-            if (isSilent) {
-              // remove silent tag if it exists sicne the user is explicitly adding it
-              log.debug('Removing silent tag from resource', resourceId)
-              await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+      if (spaceId !== 'all') {
+        await oasis.addResourcesToSpace(spaceId, resourceIds)
+        await loadSpaceContents(spaceId)
+        
+        resourceIds.forEach((id) => {
+          resourceManager.getResource(id).then((resource) => {
+            if (resource) {
+              telemetry.trackAddResourceToSpace(resource.type, AddResourceToSpaceEventTrigger.Drop)
             }
           })
-        )
-      }
-    }
-
-    if (spaceId !== 'all') {
-      await oasis.addResourcesToSpace(spaceId, resourceIds)
-      await loadSpaceContents(spaceId)
-
-      resourceIds.forEach((id) => {
-        resourceManager.getResource(id).then((resource) => {
-          if (resource) {
-            telemetry.trackAddResourceToSpace(resource.type, AddResourceToSpaceEventTrigger.Drop)
-          }
         })
-      })
-    } else {
-      await loadEverything()
+      } else {
+        await loadEverything()
+      }
+    } catch (error) {
+      log.error('Error dropping:', error)
+      toast.error('Error dropping: ' + (error as Error).message)
+      drag.abort()
+      return
+
     }
+    drag.continue()
 
     toast.success(
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
     )
   }
 
-  const handleDragEnter = (e: CustomEvent<DragculaDragEvent>) => {
-    const drag = e.detail
-
-    const dragData = drag.data as { 'farc/tab': Tab }
-    if (
-      (active && e.detail.isNative) ||
-      (active && dragData['farc/tab'] !== undefined && dragData['farc/tab'].type !== 'space')
-    ) {
-      e.preventDefault() // Allow the drag
+  const handleDragEnter = (drag: DragculaDragEvent) => {
+    if (drag.data['surf/tab'] !== undefined) {
+      const dragData = drag.data as { 'surf/tab': Tab }
+      if ((active && drag.isNative) || (active && dragData['surf/tab'].type !== 'space')) {
+        drag.continue()
+        return
+      }
+    } else if (drag.data['oasis/resource'] !== undefined) {
+      drag.continue()
+      return
     }
+    drag.abort()
   }
 
   const handleCreateResource = async (e: CustomEvent<string>) => {
@@ -1131,7 +1143,11 @@
   />
 {/if}
 
-<DropWrapper {spaceId} on:Drop={handleDrop} on:DragEnter={handleDragEnter}>
+<DropWrapper
+  {spaceId}
+  on:Drop={(e) => handleDrop(e.detail)}
+  on:DragEnter={(e) => handleDragEnter(e.detail)}
+>
   <div class="wrapper">
     <div class="drawer-bar">
       <div class="drawer-chat-search">

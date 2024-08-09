@@ -1,43 +1,7 @@
-/*import type { ActionReturn } from "svelte/action";
-import { DEBUG, DragculaCustomDragEvent, DragculaNativeDragEvent, type DragculaDragEvent, type DragEffect, type DragOperation } from "./index.js";
-import { get, writable, type Writable } from "svelte/store";
+import type { ActionReturn } from "svelte/action";
+import { DragculaDragEvent, type DragEffect, type DragOperation } from "./index.js";
+import { EventSpy, MOUSE_POS } from "./internal.js";
 
-export interface DragZoneActionProps {
-	id: string;
-	controller?: DragZone;
-
-	/// Use to check, whether the zone accepts the drag.
-	acceptDrag: (drag: DragculaDragEvent) => boolean;
-
-	//items: Writable<unknown[]> | unknown[];
-	//getItem: (id: string) => unknown
-}
-export interface DragZoneActionAttributes<T extends DragculaDragEvent> {
-	/// Whether the zone accepts any drops at all.
-	droppable?: boolean;
-
-	'on:DragEnter'?: (e: T) => void,
-	'on:DragOver'?: (e: T) => void,
-	'on:DragLeave'?: (e: T) => void,
-	'on:DragEnd'?: (e: T) => void,
-	'on:Drop'?: (e: T) => void,
-}
-
-export const DRAG_ZONES = new Map<string, DragZone>();*/
-
-import { get } from "svelte/store";
-import {
-  DragculaDragEvent,
-  DragItem,
-  HTMLDragItem,
-  type DragEffect,
-  type DragOperation
-} from "./index.js";
-import { ACTIVE_DRAG_OPERATION } from "./internal.js";
-import { tick } from "svelte";
-
-/* An abstract Zone, an item could be dragged over, and dropped into.
- */
 export class DragZone {
   static ZONES = new Map<string, DragZone>();
 
@@ -46,234 +10,257 @@ export class DragZone {
   /// === STATE
 
   protected _isTarget = false;
-  get isTarget(): boolean {
+  get isTarget() {
     return this._isTarget;
   }
   set isTarget(v: boolean) {
     this._isTarget = v;
   }
 
-  effectsAllowed: DragEffect[] = ["none", "move", "copy", "link"];
+  protected effectsAllowed: DragEffect[];
 
   /// === CONSTRUCTOR
 
-  constructor(props: { id?: string }) {
-    this.id = props.id || crypto.randomUUID();
+  constructor(props: { id?: string; effectsAllowed?: DragEffect[] }) {
+    this.id = props.id ?? crypto.getRandomValues(new Uint32Array(1))[0].toString(16);
+    this.effectsAllowed = props.effectsAllowed ?? ["move", "copy", "link", "none"];
 
+    // FIX: Removed for now to enable scuffed nesting lol
+    /*if (DragZone.ZONES.has(this.id)) {
+			throw new Error(`DragZone with id ${this.id} already exists!`);
+		}*/
     DragZone.ZONES.set(this.id, this);
   }
 
-  /// Lifecycle cleanup.
   destroy() {
-    DragZone.ZONES.delete(this.id);
+    //DragZone.ZONES.delete(this.id);
   }
 
   /// === EVENTS
 
-  onDragEnter(drag: DragOperation): boolean {
-    return true;
+  onDragEnter(drag?: DragOperation): Promise<boolean> {
+    return Promise.resolve(false);
   }
 
-  onDragOver(drag: DragOperation): boolean {
-    return true;
+  onDragLeave(drag?: DragOperation) {
+    this.isTarget = false;
   }
 
-  onDragLeave(drag: DragOperation) {}
+  onDragOver(drag?: DragOperation) {}
 
-  onDrop(drag: DragOperation) {}
+  onDrop(drag?: DragOperation) {
+    this.isTarget = false;
+  }
 }
 
 export class HTMLDragZone extends DragZone {
-  /// === CONFIG
-
-  readonly node: HTMLElement;
+  readonly element: HTMLElement;
 
   /// === STATE
 
   override set isTarget(v: boolean) {
     super.isTarget = v;
     if (v) {
-      document.body.setAttribute("data-dragcula-target", this.id.toString());
-      this.node.setAttribute("data-dragcula-targeting", "true");
+      this.element.setAttribute("data-dragcula-isTarget", "true");
+      document.body.setAttribute("data-dragcula.isTargeting", this.id);
     } else {
-      document.body.removeAttribute("data-dragcula-target");
-      this.node.removeAttribute("data-dragcula-targeting");
+      this.element.removeAttribute("data-dragcula-isTarget");
+      document.body.removeAttribute("data-dragcula.isTargeting");
     }
   }
 
   /// === CONSTRUCTOR
 
-  constructor(node: HTMLElement, props: { id?: string }) {
+  constructor(node: HTMLElement, props: { id?: string; effectsAllowed?: DragEffect[] }) {
+    props.id =
+      node.getAttribute("id") ??
+      props.id ??
+      crypto.getRandomValues(new Uint32Array(1))[0].toString(16);
     super(props);
-    this.node = node;
+    this.element = node;
 
-    this.node.setAttribute("data-dragcula-zone", this.id);
-    this.node.style.setProperty("view-transition-name", `dragcula-zone-${this.id}`);
+    this.element.setAttribute("data-dragcula-zone", this.id);
+    if (this.element.style.viewTransitionName === "") {
+      this.element.style.setProperty("view-transition-name", `dragcula-zone-${this.id}`);
+    }
 
-    this.node.addEventListener("drop", this.handleDrop);
-    this.node.addEventListener("dragenter", this.handleDragEnter);
-    this.node.addEventListener("dragleave", this.handleDragLeave);
-    this.node.addEventListener("dragover", this.handleDragOver);
+    this.applyDomAttributes();
+
+    this.element.addEventListener("drop", this.handleDrop);
+    this.element.addEventListener("dragenter", this.handleDragEnter);
+    this.element.addEventListener("dragleave", this.handleDragLeave);
+    this.element.addEventListener("dragover", this.handleDragOver);
   }
 
-  static action(node: HTMLElement, props: { id?: string }) {
-    const controller = new this(node, props);
-    controller.applyNodeAttributes();
+  destroy() {
+    this.element.removeEventListener("drop", this.handleDrop);
+    this.element.removeEventListener("dragenter", this.handleDragEnter);
+    this.element.removeEventListener("dragleave", this.handleDragLeave);
+    this.element.removeEventListener("dragover", this.handleDragOver);
 
+    super.destroy();
+  }
+
+  applyDomAttributes() {
+    // TODO: impl
+  }
+
+  static action(
+    node: HTMLElement,
+    props: { id?: string; effectsAllowed?: DragEffect[] }
+  ): ActionReturn {
+    const controller = new this(node, props);
     return {
       destroy() {
         controller.destroy();
       },
-      updated(props: any) {
-        controller.applyNodeAttributes();
+      update(props: any) {
+        // TODO: impl
       }
     };
   }
 
-  override destroy() {
-    // TODO: Remove as unuseful?
-    super.destroy();
-  }
+  /// === EVENTS
 
-  applyNodeAttributes() {}
+  override async onDrop(drag?: DragOperation): Promise<void> {
+    console.debug(`[HTMLDragZone:${this.id}] Drop`, drag);
+    super.onDrop(drag);
 
-  /// === DOM HANDLERS
-
-  protected _handleDragEnter(e: DragEvent) {
-    e.stopPropagation();
-    console.debug(`[HTMLDragZone::${this.id}] DragEnter`, e);
-
-    if (get(ACTIVE_DRAG_OPERATION) === null) {
-      console.debug(
-        `[HTMLDragZone::${this.id}] dragenter: No active drag operation, creating new with native DataTransfer.`
-      );
-      ACTIVE_DRAG_OPERATION.set({
-        id: crypto.randomUUID(),
-        status: "active",
-        item: e.dataTransfer || new DataTransfer(),
-        from: null,
-        to: this
-      });
+    if (drag === undefined) {
+      console.error("Not implemented, native drop");
+      // TODO: handle native drop
+      return Promise.reject();
     }
 
-    const drag = get(ACTIVE_DRAG_OPERATION)!;
-    // TODO: What if null?
-    if (this.onDragEnter(drag)) e.preventDefault();
-    this.isTarget = e.defaultPrevented;
-  }
-  protected handleDragEnter = this._handleDragEnter.bind(this);
+    const hasDragculaListeners = EventSpy.hasListenerOfType(this.element, "Drop");
+    const handlesDragculaEventCorrectly = EventSpy.allListenersHandleDragculaEvent(
+      this.element,
+      "Drop"
+    );
 
+    console.warn("onDrop", hasDragculaListeners, handlesDragculaEventCorrectly);
+
+    return await DragculaDragEvent.dispatch("Drop", drag, this.element);
+    /// FIX: beeing dispatch in svelte, out cheks dont work :(
+    /*	if (hasDragculaListeners && !handlesDragculaEventCorrectly) {
+			throw new Error(`[HTMLDragZone:${this.id}] Dragcula event listeners do not handle event correctly!`);
+		}
+		else if (hasDragculaListeners && handlesDragculaEventCorrectly) {
+			return await DragculaDragEvent.dispatch("Drop", drag, this.element);
+		}
+		else {
+			return DragculaDragEvent.dispatch("Drop", drag, this.element);
+		}*/
+  }
+
+  override async onDragEnter(drag?: DragOperation): Promise<boolean> {
+    console.debug(`[HTMLDragZone:${this.id}] DragEnter`, drag);
+    console.assert(
+      drag !== undefined,
+      "onDragEnter called with dragOperation === undefined! This should not happen!"
+    );
+    super.onDragEnter(drag);
+
+    const hasListener = EventSpy.hasListenerOfType(this.element, "DragEnter");
+    if (!hasListener) return false;
+
+    // TODO: Call event
+    try {
+      await DragculaDragEvent.dispatch("DragEnter", drag!, this.element);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  override onDragLeave(drag?: DragOperation) {
+    console.debug(`[HTMLDragZone:${this.id}] DragLeave`, drag);
+    super.onDragLeave(drag);
+  }
+
+  override onDragOver(drag?: DragOperation) {
+    //console.debug(`[HTMLDragZone:${this.id}] DragOver`, drag);
+    super.onDragOver(drag);
+  }
+
+  /// === DOM HANDLERS
+  protected handleDrop = this._handleDrop.bind(this);
+  protected handleDragEnter = this._handleDragEnter.bind(this);
+  protected handleDragLeave = this._handleDragLeave.bind(this);
+  protected handleDragOver = this._handleDragOver.bind(this);
+
+  protected _handleDrop(e: DragEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    console.debug(`[HTMLDragZone:${this.id}] drop (NATIVE)`, e);
+
+    if (document.activeDragOperation === undefined) {
+      console.error(`[HTMLDragZone:${this.id}] No active drag operation during NATIVE drop!`);
+      return;
+    }
+
+    document.activeDragOperation.item = e.dataTransfer || new DataTransfer();
+
+    this.onDrop(document.activeDragOperation);
+    document.activeDragOperation = undefined;
+  }
+  protected async _handleDragEnter(e: DragEvent) {
+    e.stopPropagation();
+    console.debug(`[HTMLDragZone:${this.id}] dragenter`, e);
+    if (document.activeDragOperation === undefined) {
+      console.log(
+        `[HTMLDragZone:${this.id}] No active drag operation! Creating one with native DataTransfer!`
+      );
+      document.activeDragOperation = {
+        id: crypto.getRandomValues(new Uint32Array(1))[0].toString(16),
+        status: "active",
+        from: null,
+        to: this,
+        item: e.dataTransfer || new DataTransfer()
+      };
+    }
+
+    if (await this.onDragEnter(document.activeDragOperation)) e.preventDefault();
+  }
+  protected _handleDragLeave(e: DragEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    console.debug(`[HTMLDragZone:${this.id}] dragleave`, e);
+    this.onDragLeave(document.activeDragOperation);
+  }
   protected _handleDragOver(e: DragEvent) {
     e.preventDefault();
     e.stopPropagation();
-    //console.debug(`[HTMLDragZone::${this.id}] DragOver`, e);
-    const drag = get(ACTIVE_DRAG_OPERATION);
-    if (!drag) {
-      console.assert(
-        false,
-        "No active drag operation found, but dragover event was triggered. THere should have been a drag operation started inside dragenter already!"
-      );
+    // FIX: Raw mous post? or why no work on axis zone?
+    //MOUSE_POS.x = e.clientX;
+    //MOUSE_POS.y = e.clientY;
+    this.onDragOver(document.activeDragOperation);
+    //e.preventDefault();
+    //console.debug(`[HTMLDragZone:${this.id}] dragover`, e);
+  }
+
+  /// === UTILS
+
+  static findClosestFromPoint(x: number, y: number): HTMLDragZone | null {
+    const el = document.elementFromPoint(x, y) as HTMLElement | null;
+    if (el === null) return null;
+    return this.findClosestFromElement(el);
+  }
+  static findClosestFromElement(element: HTMLElement): HTMLDragZone | null {
+    let el: HTMLElement | null = element;
+    while (el !== null) {
+      if (el.getAttribute("data-dragcula-zone") !== null) {
+        // FIX: This should always be an HTMLDragZone except in weird cases, specifying custom
+        // controller extended from DragZone.
+        // Should be fine for now though!
+        const zoneId = el.getAttribute("data-dragcula-zone")!;
+        if (!DragZone.ZONES.has(zoneId)) {
+          console.error("Target zone found, but controller is NULL");
+        }
+        return (DragZone.ZONES.get(el.getAttribute("data-dragcula-zone")!) as HTMLDragZone) || null;
+      }
+      el = el.parentElement;
     }
-    // TODO: What if null?
-    this.onDragOver(drag!);
+    return null;
   }
-  protected handleDragOver = this._handleDragOver.bind(this);
-
-  protected _handleDragLeave(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    console.debug(`[HTMLDragZone::${this.id}] DragLeave`, e);
-    const drag = get(ACTIVE_DRAG_OPERATION);
-    // TODO: What if null?
-    this.onDragLeave(drag!);
-    this.isTarget = false;
-  }
-  protected handleDragLeave = this._handleDragLeave.bind(this);
-
-  protected async _handleDrop(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    console.debug(`[HTMLDragZone::${this.id}] Drop`, e);
-
-    if (get(ACTIVE_DRAG_OPERATION) === null) {
-      console.debug(
-        `[HTMLDragZone::${this.id}] drop: No active drag operation, creating new with native DataTransfer.`
-      );
-
-      ACTIVE_DRAG_OPERATION.set({
-        id: crypto.randomUUID(),
-        status: "active",
-        item: e.dataTransfer || new DataTransfer(),
-        from: null,
-        to: this
-      });
-    }
-    ACTIVE_DRAG_OPERATION.update((v) => {
-      if (v.item instanceof DragItem) return v;
-      else v!.item = e.dataTransfer || new DataTransfer();
-      return v;
-    });
-
-    const drag = get(ACTIVE_DRAG_OPERATION)!;
-
-    // Setup vt & start
-
-    // TODO: Possibly wrap in try catch & set completed based on that?
-    // NOTE: negated as by default should abort to reset item, only on succesful drop
-    // should it be completed!
-    const completed = !this.node.dispatchEvent(
-      new DragculaDragEvent("Drop", {
-        id: drag.id,
-        status: drag.status,
-        item: drag.item,
-        from: drag.from || undefined,
-        to: drag.to || undefined,
-        bubbles: false
-      })
-    );
-
-    ACTIVE_DRAG_OPERATION.update((v) => {
-      (v!.status as "aborted" | "completed") = completed ? "completed" : "aborted";
-      return v;
-    });
-
-    await tick();
-
-    // NOTE: We need to dispatch this manually for custom drags.. see othr notes
-    if (drag.item instanceof DataTransfer) {
-      // NOTE: Ensures that this is ran after  DragItem on:dragend was called
-      // They have access to drag.status so they can handle the drop differently.
-      await new Promise((r) => setTimeout(r));
-    }
-
-    // NOTE: Ensures that this is ran after  DragItem on:dragend was called
-    // They have access to drag.status so they can handle the drop differently.
-    setTimeout(() => {
-      console.warn("_handleDrop ended");
-      // await tick();
-      // remove tmp vt names
-    });
-
-    // await tran sfinished
-    this.isTarget = false;
-  }
-  protected handleDrop = this._handleDrop.bind(this);
-
-  /// === EVENTS
-
-  override onDragEnter(drag: DragOperation): boolean {
-    const acceptDrag = !this.node.dispatchEvent(
-      new DragculaDragEvent("DragEnter", {
-        id: drag.id,
-        status: drag.status,
-        item: drag.item,
-        from: drag.from || undefined,
-        to: this
-      })
-    );
-
-    return acceptDrag;
-  }
-
-  override onDrop(drag: DragOperation) {}
 }

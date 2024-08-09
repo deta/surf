@@ -122,16 +122,17 @@
 
 <!-- svelte-ignore missing-declaration a11y-no-static-element-interactions -->
 <div
+  id={resource.id}
   {draggable}
-  on:dragstart={handleDragStart}
-  use:HTMLDragItem.action={{
-    id: resource.id,
-    data: {
-      'farc/resource': resource
-    }
-  }}
+  use:HTMLDragItem.action={{}}
   class="drag-item"
   style:view-transition-name="oasis-resource-{resource.id}"
+  on:DragStart={(drag) => {
+    drag.item.data = {
+      'oasis/resource': resource
+    }
+    drag.continue()
+  }}
 >
   <slot />
 </div>
