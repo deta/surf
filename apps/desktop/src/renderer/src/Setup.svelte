@@ -9,11 +9,11 @@
   const TERMS_URL = 'https://deta.surf/terms'
   const PRIVACY_URL = 'https://deta.surf/privacy'
 
-  let view: 'invite' | 'disclaimer' | 'prefs' | 'settings' | 'done' = 'invite'
+  let view: 'invite' | 'disclaimer' | 'ai_features' | 'language' | 'prefs' | 'done' = 'invite'
 
   let inviteCode = ''
   let embeddingModel = 'english_small'
-  let tabsOrientation = 'vertical'
+  let tabsOrientation = 'horizontal'
   let acceptedTerms = false
   let loading = false
   let error = ''
@@ -21,6 +21,13 @@
   let videoRefs = {
     vertical: null,
     horizontal: null
+  }
+
+  const languageConfig = {
+    english_small: 'English',
+    english_large: 'English XL',
+    multilingual_small: 'Polyglot',
+    multilingual_large: 'Polyglot XL'
   }
 
   const handleSubmit = async () => {
@@ -59,17 +66,17 @@
       error =
         'Sorry: failed to save your preference. Please try again or contact us if problem persists.'
     }
-    view = 'settings'
+    view = 'done'
   }
 
-  const handleSettingsSubmit = async () => {
+  const handleLanguageSubmit = async () => {
     try {
       // @ts-ignore
       await window.api.saveSettings({
         embedding_model: embeddingModel,
         tabs_orientation: tabsOrientation
       })
-      view = 'done'
+      view = 'prefs'
     } catch (e) {
       console.error(e)
       error =
@@ -77,8 +84,12 @@
     }
   }
 
-  const handleAcceptDisclaimer = () => {
-    view = 'prefs'
+  const handleAcceptDisclaimer = (currView) => () => {
+    if (currView === 'disclaimer') {
+      view = 'ai_features'
+    } else {
+      view = 'language'
+    }
   }
 
   const handleStart = () => {
@@ -93,28 +104,29 @@
       <img src={icon} alt="Surf icon" />
 
       <h1>Welcome to Surf!</h1>
-
       <form on:submit|preventDefault={handleSubmit}>
-        <p class="info text-md">
-          Surf is still under active development and you need to be part of our early adopter
-          program to use the app.
-        </p>
-
-        <div class="details">
+        <div class="welcome-text-wrap">
           <p class="info text-md">
-            Enter the <b>invite code</b> that was sent to you to get started:
+            Surf is under active development — you need to be part of our early access program to
+            use it.
           </p>
-          <input bind:value={inviteCode} class="input" placeholder="your invite code" required />
-        </div>
 
-        <div class="submit">
-          <label class="check">
-            <input bind:checked={acceptedTerms} type="checkbox" required />
-            <span>
-              I agree to the <a href={TERMS_URL} target="_blank">Terms and Conditions</a> and
-              <a href={PRIVACY_URL} target="_blank">Privacy Policy</a>
-            </span>
-          </label>
+          <div class="details" style="margin-top: 2rem;">
+            <p class="info text-md">
+              Enter your <b>invite code</b> to get started:
+            </p>
+            <input bind:value={inviteCode} class="input" placeholder="your code" required />
+          </div>
+
+          <div class="terms-privacy-wrap">
+            <label class="check">
+              <input bind:checked={acceptedTerms} type="checkbox" required />
+              <span>
+                I agree to the <a href={TERMS_URL} target="_blank">Terms and Conditions</a> and
+                <a href={PRIVACY_URL} target="_blank">Privacy Policy</a>.
+              </span>
+            </label>
+          </div>
         </div>
 
         <div class="submit">
@@ -125,12 +137,10 @@
             {#if loading}
               <button type="submit" disabled>Checking Invite…</button>
             {:else}
-              <button type="submit">Check Invite</button>
+              <button type="submit">Get Started</button>
             {/if}
             <p class="apply">
-              No invite code? <a href={REQUEST_INVITE_URL} target="_blank"
-                >Apply to be a early adopter</a
-              >
+              No invite code? <a href={REQUEST_INVITE_URL} target="_blank">Apply here</a>.
             </p>
           </div>
         </div>
@@ -138,12 +148,12 @@
     {:else if view === 'disclaimer'}
       <img src={icon} alt="Surf icon" />
 
-      <h1>One More Thing…</h1>
+      <h1>Telemetry, to improve Surf.</h1>
 
       <div class="details">
         <p class="info text-md">
-          We're in the early stages of developing Surf and to make the app better for you and others
-          we are keeping track of some of your activities within the app.
+          As part of the early access program, we track some of your usage of Surf. We do this to
+          make Surf better.
         </p>
       </div>
 
@@ -166,17 +176,15 @@
                 d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"
               /></svg
             >
-            <h2>What is being tracked</h2>
+            <h2>What shows up</h2>
           </div>
-
-          <ul>
-            <li>How many horizons and cards you create</li>
-            <li>What type of cards you create</li>
-            <li>How often you use the app</li>
-          </ul>
+          <p>
+            We track your interactions with app features and the types of data you store. For
+            example: activating a tab, opening the sidebar, or saving an image.
+          </p>
         </div>
 
-        <!-- <div class="box">
+        <div class="box">
           <div class="icon-heading">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -194,106 +202,150 @@
                 d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87"
               /><path d="M3 3l18 18" /></svg
             >
-            <h2>What is <i><b>not</b></i> being tracked</h2>
+            <h2>What does not</h2>
           </div>
+          <p>
+            The urls you visit and the contents of the data you store are in Surf are <i
+              ><b>not</b></i
+            > part of our Telemetry.
+          </p>
+        </div>
+        <div class="actions">
+          <button on:click={handleAcceptDisclaimer('disclaimer')}>I understand</button>
 
-          <ul>
-            <li>The notes you write</li>
-            <li>The images you save</li>
-            <li>What websites you navigate to</li>
-          </ul>
-        </div> -->
-
-        <div class="box">
-          <div class="icon-heading">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
-                d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6z"
-              /></svg
-            >
-            <h2>AI Features</h2>
-          </div>
-
-          <div class="details text-md">
-            <p>We process the following data on our servers:</p>
-            <ul>
-              <li>Images you save</li>
-              <li>Text content you summarize</li>
-              <li>Audio/Video content you transcribe</li>
-            </ul>
-            <p>
-              Read our <a href={PRIVACY_URL} target="_blank">Privacy Policy</a> for more info.
-            </p>
-          </div>
-
-          <!-- <ul>
-            <li>The notes you write</li>
-            <li>The images you save</li>
-            <li>What websites you navigate to</li>
-            <li>Any other personal data</li>
-          </ul> -->
+          <!-- <button on:click={handleClose} class="close">Close App Instead</button> -->
         </div>
       </div>
+    {:else if view === 'ai_features'}
+      <img src={icon} alt="Surf icon" />
+      <h1>Smart Surfing</h1>
+      <div class="box">
+        <div class="icon-heading">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
+              d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6z"
+            /></svg
+          >
+          <h2>AI Features</h2>
+        </div>
 
-      <div class="details">
-        <p class="info text-md">
-          If you have any questions or concerns, please contact us at <a
-            href="mailto:team@deta.space">team@deta.space</a
-          >.
-        </p>
+        <div class="details text-md">
+          <p>Surf offers AI features, which sends certain data to our servers and / or OpenAI:</p>
+          <ul>
+            <li>If you <b>save an image</b>, our servers tag them, to make them searchable.</li>
+            <li>
+              If you <b>chat</b> with a website or a Space, content from the website or Space is sent
+              to OpenAI through Deta's servers.
+            </li>
+            <li>
+              <b>Live Spaces</b> collect content from websites for you. If you create a Live Space, some
+              of this content is sent to OpenAI through Deta's servers (to create summaries).
+            </li>
+          </ul>
+          <p>
+            Read our <a href={PRIVACY_URL} target="_blank">Privacy Policy</a> for more info.
+          </p>
+        </div>
       </div>
-
       <div class="actions">
-        <button on:click={handleAcceptDisclaimer}>I Understand</button>
+        <button on:click={handleAcceptDisclaimer('ai_features')}>I understand</button>
 
         <!-- <button on:click={handleClose} class="close">Close App Instead</button> -->
       </div>
+    {:else if view === 'language'}
+      <img src={icon} alt="Surf icon" />
+      <h1>Language</h1>
+      <div class="settings-option">
+        <br />
+        <form class="radio-form" on:submit|preventDefault={handleLanguageSubmit}>
+          <div class="details">
+            <p class="info text-md">
+              Some of Surf's AI features are language dependent. For example, you can chat with
+              YouTube videos in Surf. Choose a language configuration that suits your needs.
+            </p>
+            <p class="info text-md">
+              <strong>English</strong> will give you the best experience for English content, but
+              Surf's AI features will not work with content in other languages. If you interact with
+              content in another language on a daily basis, select a <strong>Polyglot</strong> option.
+            </p>
+            <p class="info text-md">
+              <strong>XL</strong> options understand language better, but are slower and use more of
+              your computer's storage.
+            </p>
+          </div>
+
+          <div class="settings-ai-models">
+            <div class="radio-wrapper">
+              <input
+                type="radio"
+                id="english_small"
+                value="english_small"
+                checked
+                bind:group={embeddingModel}
+              />
+              <label for="english_small"> <span>English</span></label>
+            </div>
+            <div class="radio-wrapper">
+              <input
+                type="radio"
+                id="multilingual_small"
+                value="multilingual_small"
+                bind:group={embeddingModel}
+              />
+              <label for="multilingual_small"><span>Polyglot</span></label>
+            </div>
+            <div class="radio-wrapper">
+              <input
+                type="radio"
+                id="english_large"
+                value="english_large"
+                bind:group={embeddingModel}
+              />
+              <label for="english_large">
+                <span>English XL</span>
+              </label>
+            </div>
+            <div class="radio-wrapper">
+              <input
+                type="radio"
+                id="multilingual_large"
+                value="multilingual_large"
+                bind:group={embeddingModel}
+              />
+              <label for="multilingual_large">
+                <span>Polyglot XL</span>
+              </label>
+            </div>
+          </div>
+          <div class="details">
+            <p class="info text-md">You will not be able to change this for now.</p>
+          </div>
+          <div class="Submit radio-submit">
+            <button type="submit">Surf with {languageConfig[embeddingModel]}</button>
+          </div>
+        </form>
+      </div>
     {:else if view === 'prefs'}
       <img src={icon} alt="Surf icon" />
-      <h3>Choose your style</h3>
+      <h1>Surf Layout</h1>
 
       <div class="radio-container">
-        <div class="radio-item">
-          <input
-            type="radio"
-            id="vertical"
-            name="radio-group"
-            value="vertical"
-            checked
-            bind:group={tabsOrientation}
-          />
-          <label for="vertical">
-            <video
-              src={prefsVerticalVideo}
-              loop
-              muted
-              preload="auto"
-              on:mouseover={() => videoRefs.vertical?.play()}
-              on:mouseout={() => {
-                videoRefs.vertical?.pause()
-                videoRefs.vertical.currentTime = 0
-              }}
-              bind:this={videoRefs.vertical}
-            ></video>
-
-            <span>Vertical Tabs</span>
-          </label>
-        </div>
         <div class="radio-item">
           <input
             type="radio"
             id="horizontal"
             name="radio-group"
             value="horizontal"
+            checked
             bind:group={tabsOrientation}
           />
           <label for="horizontal">
@@ -313,81 +365,41 @@
             <span>Horizontal Tabs</span>
           </label>
         </div>
+        <div class="radio-item">
+          <input
+            type="radio"
+            id="vertical"
+            name="radio-group"
+            value="vertical"
+            bind:group={tabsOrientation}
+          />
+          <label for="vertical">
+            <video
+              src={prefsVerticalVideo}
+              loop
+              muted
+              preload="auto"
+              on:mouseover={() => videoRefs.vertical?.play()}
+              on:mouseout={() => {
+                videoRefs.vertical?.pause()
+                videoRefs.vertical.currentTime = 0
+              }}
+              bind:this={videoRefs.vertical}
+            ></video>
+
+            <span>Vertical Tabs</span>
+          </label>
+        </div>
       </div>
       <p>
-        You can easily change this behavior later at <br /> <span class="pill">View</span> →
+        You can change this behavior later at <br /> <span class="pill">View</span> →
         <span class="pill">Toggle Tabs Orientation</span>
       </p>
-      <button on:click={handleAcceptPrefs}>Apply Preferences</button>
-    {:else if view === 'settings'}
-      <img src={icon} alt="Surf icon" />
-      <h1>Model Settings</h1>
-      <div class="settings-option">
-        <h3>Your Local AI Model</h3>
-        <br />
-        <form on:submit|preventDefault={handleSettingsSubmit}>
-          <div class="details">
-            <p class="info text-md">
-              Select an AI model that will be used to process your data.
-              <strong>You will not be able to change this later.</strong>
-            </p>
-            <p class="info text-sm">
-              <strong><i>Large</i></strong> models are better but will use more storage and resources.
-            </p>
-          </div>
-
-          <div class="settings-ai-models">
-            <div>
-              <input
-                type="radio"
-                id="english_small"
-                value="english_small"
-                checked
-                bind:group={embeddingModel}
-              />
-              <label for="english_small"> <i>English</i></label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="english_large"
-                value="english_large"
-                bind:group={embeddingModel}
-              />
-              <label for="english_large">
-                <i> English Large</i>
-              </label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="multilingual_small"
-                value="multilingual_small"
-                bind:group={embeddingModel}
-              />
-              <label for="multilingual_small"><i>Multilingual</i></label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="multilingual_large"
-                value="multilingual_large"
-                bind:group={embeddingModel}
-              />
-              <label for="multilingual_large">
-                <i> Multilingual Large</i>
-              </label>
-            </div>
-          </div>
-          <div class="Submit">
-            <button type="submit">Save</button>
-          </div>
-        </form>
-      </div>
+      <button on:click={handleAcceptPrefs}>Surf {tabsOrientation}</button>
     {:else if view === 'done'}
       <img src={icon} alt="Surf icon" />
 
-      <h1>Thank you!</h1>
+      <h1>Thank you.</h1>
 
       <p class="text-lg">You're all set to start using Surf 🎉</p>
 
@@ -397,11 +409,11 @@
             >team@deta.space</a
           >
           or join our <a href="https://deta.surf/discord" target="_blank">Discord server</a> to chat
-          with the team and all our other amazing early adopters.
+          with the team and the other amazing early adopters.
         </p>
       </div>
 
-      <button on:click={handleStart}>Start Surf</button>
+      <button on:click={handleStart}>Go Surfing</button>
     {/if}
   </div>
 </main>
@@ -438,7 +450,19 @@
   }
 
   p {
-    margin-bottom: 0.75rem;
+    margin-top: 0.375rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .details ul {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--color-text);
+    font-weight: normal;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin-left: 0;
+    padding-left: 1rem;
   }
 
   span {
@@ -500,6 +524,7 @@
       font-size: 1rem;
       display: flex;
       flex-direction: column;
+      text-align: left;
       gap: 0.75rem;
       width: 100%;
     }
@@ -581,6 +606,18 @@
       }
     }
 
+    .welcome-text-wrap {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+
+    .terms-privacy-wrap {
+      display: flex;
+      margin-top: 3rem;
+      padding-left: 0.25rem;
+    }
+
     .box {
       width: 100%;
       display: flex;
@@ -638,11 +675,29 @@
       color: #dc3545;
     }
 
+    .radio-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding-left: 0.25rem;
+    }
+
     .radio-container {
       display: flex;
       gap: 20px;
       padding: 1rem 0.5rem;
     }
+
+    .radio-form {
+      display: flex;
+      padding-bottom: 2rem;
+      gap: 1rem;
+    }
+
+    .radio-submit {
+      margin-top: 2rem;
+    }
+
     .radio-item {
       .media-container {
         position: relative;
