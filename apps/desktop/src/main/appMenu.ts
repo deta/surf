@@ -180,6 +180,7 @@ const template = [
     submenu: [
       { label: 'Open Cheat Sheet', click: () => ipcSenders.openCheatSheet() },
       { label: 'Give Feedback', click: () => ipcSenders.openFeedbackPage() }
+      // { label: 'Add Demo Items', click: () => ipcSenders.addDemoItems() }
     ]
   }
 ]

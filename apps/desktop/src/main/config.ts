@@ -61,9 +61,9 @@ export const setBrowserConfig = (config: BrowserConfig) => {
 let userConfig: UserConfig | null = null
 
 export const getUserConfig = () => {
-  if (userConfig !== null) {
-    return userConfig
-  }
+  // if (userConfig !== null) {
+  //   return userConfig
+  // }
 
   const storedConfig = getConfig<UserConfig>(app.getPath('userData'), USER_CONFIG_NAME)
   if (!storedConfig.user_id) {

@@ -2,6 +2,8 @@
   import { onMount } from 'svelte'
   import { fade } from 'svelte/transition'
 
+  export let show = false
+
   let done = false
   onMount(() => {
     setTimeout(() => {
@@ -10,14 +12,14 @@
   })
 </script>
 
-{#if !done}
-  <div class="splash" transition:fade={{ duration: 150 }}>
+{#if !done || show}
+  <div class="splash">
     <svg
       id="Ebene_1"
       data-name="Ebene 1"
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 102.36 99.88"
-      style="margin-top:40%;"
+      style="margin-top: 30vh;"
       width="90px"
       height="90px"
     >
@@ -63,8 +65,8 @@
         </g>
       </g>
     </svg>
-    <span class="ttr" style="margin-top: 1rem;">Horizon</span>
-    <span class="ttr" style="margin-top: 4px; font-size: 0.9em;">by Deta</span>
+    <span class="" style="margin-top: 1rem; font-size: 1.1em; font-weight: 500;">Surf</span>
+    <span class="" style="margin-top: 4px; font-size: 1em;">by Deta</span>
   </div>
 {/if}
 

@@ -3,6 +3,7 @@ export type UserConfig = {
   api_key?: string
   email?: string
   defaultBrowser: boolean
+  initialized_tabs: boolean
   settings: UserSettings
 }
 

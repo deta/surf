@@ -62,9 +62,14 @@ export class Telemetry {
 
     this.log = useLogScope('telemetry')
   }
-  async init() {
-    // @ts-expect-error
-    this.userConfig = (await window.api.getUserConfig()) as UserConfig
+  async init(userConfig: UserConfig | null = null) {
+    if (userConfig) {
+      this.userConfig = userConfig
+    } else {
+      // @ts-expect-error
+      this.userConfig = (await window.api.getUserConfig()) as UserConfig
+    }
+
     const userID = this.userConfig.user_id
     if (!userID) {
       this.log.warn('No user ID found, disabling telemetry')

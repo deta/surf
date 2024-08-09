@@ -109,6 +109,10 @@ export function setupIpcHandlers() {
     updateUserConfig({ settings: settings })
   })
 
+  ipcMain.on('update-initialized-tabs', (_event, value) => {
+    updateUserConfig({ initialized_tabs: value })
+  })
+
   ipcMain.handle('get-app-info', () => {
     return {
       version: process.env.APP_VERSION ?? app.getVersion(),
@@ -190,6 +194,16 @@ export const ipcSenders = {
     }
 
     window.webContents.send('open-feedback-page')
+  },
+
+  addDemoItems: () => {
+    const window = getMainWindow()
+    if (!window) {
+      console.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('add-demo-items')
   },
 
   adBlockChanged: (partition: string, state: boolean) => {

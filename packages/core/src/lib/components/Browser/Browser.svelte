@@ -44,6 +44,7 @@
   import { type ShortcutMenuEvents } from '../Shortcut/ShortcutMenu.svelte'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import '../../../app.css'
+  import { createDemoItems } from './demoitems'
 
   import '../Horizon/index.scss'
   import type {
@@ -97,6 +98,7 @@
     WebViewEventReceiveNames,
     type AnnotationCommentData,
     type ResourceDataAnnotation,
+    type UserConfig,
     type WebViewEventAnnotation
   } from '@horizon/types'
   import { scrollToTextCode } from './inline'
@@ -202,6 +204,7 @@
   const showAppSidebar = writable(false)
   const activatedTabs = writable<string[]>([]) // for lazy loading
   const rightSidebarTab = writable<RightSidebarTab>('chat')
+  const showSplashScreen = writable(false)
   const cachedMagicTabs = new Set<string>()
   const downloadResourceMap = new Map<string, Download>()
   const downloadToastsMap = new Map<string, ToastItem>()
@@ -452,6 +455,7 @@
     tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'>,
     opts?: CreateTabOptions
   ) => {
+    console.log('CREATE TAB WITH', opts)
     const defaultOpts = {
       placeAtEnd: true,
       active: false
@@ -1994,6 +1998,12 @@
   onMount(async () => {
     window.addEventListener('resize', handleResize)
 
+    // @ts-expect-error
+    const userConfig = (await window.api.getUserConfig()) as UserConfig
+    log.debug('user config', userConfig)
+
+    await telemetry.init(userConfig)
+
     const horizonId = await horizonManager.init()
     log.debug('initialized', horizonId)
 
@@ -2024,6 +2034,11 @@
     // @ts-expect-error
     window.api.onToggleSidebar((visible?: boolean) => {
       changeLeftSidebarState(visible)
+    })
+
+    // @ts-expect-error
+    window.api.onAddDemoItems(async () => {
+      await createDemoItems(createTab, oasis, createSpaceTab, resourceManager)
     })
 
     // @ts-expect-error
@@ -2221,6 +2236,19 @@
     log.debug('tabs', $tabs)
 
     setupObserver()
+
+    if (!userConfig.initialized_tabs) {
+      log.debug('Creating initial tabs')
+
+      showSplashScreen.set(true)
+
+      await createDemoItems(createTab, oasis, createSpaceTab, resourceManager)
+
+      // @ts-ignore
+      await window.api.updateInitializedTabs(true)
+
+      showSplashScreen.set(false)
+    }
   })
 
   const turnMagicTabsIntoUnpinned = async () => {
@@ -2878,7 +2906,7 @@
   })
 </script>
 
-<SplashScreen />
+<SplashScreen show={$showSplashScreen} />
 
 <svelte:window on:keydown={handleKeyDown} />
 

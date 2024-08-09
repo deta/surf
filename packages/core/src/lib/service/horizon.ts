@@ -717,7 +717,7 @@ export class HorizonsManager {
 
   async init() {
     this.log.debug(`Initializing`)
-    await this.telemetry.init()
+    // await this.telemetry.init()
     const horizons = await this.loadHorizons()
 
     let storedHorizonId = this.activeHorizonStorage.getRaw()

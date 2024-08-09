@@ -314,6 +314,10 @@ const api = {
     ipcRenderer.send('store-settings', settings)
   },
 
+  updateInitializedTabs: async (value: boolean) => {
+    ipcRenderer.send('update-initialized-tabs', value)
+  },
+
   getAppInfo: () => ipcRenderer.invoke('get-app-info') as Promise<ElectronAppInfo>,
 
   interceptRequestsHeaders: async (
@@ -386,6 +390,10 @@ const api = {
 
   onReloadActiveTab: (callback: (force: boolean) => void) => {
     ipcRenderer.on('reload-active-tab', (_, force) => callback(force))
+  },
+
+  onAddDemoItems: (callback: (visible?: boolean) => void) => {
+    ipcRenderer.on('add-demo-items', (_) => callback())
   }
 }
 
