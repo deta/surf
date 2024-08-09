@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
   import { Resource, ResourceManager, useResourceManager } from '../../service/resources'
@@ -13,23 +13,33 @@
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import { useToasts } from '../../service/toast'
   import { hover, tooltip } from '../../utils/directives'
-  import { fade } from 'svelte/transition'
-  import { RefreshSpaceEventTrigger, UpdateSpaceSettingsEventTrigger } from '@horizon/types'
+  import { fade, slide } from 'svelte/transition'
+  import {
+    DeleteSpaceEventTrigger,
+    RefreshSpaceEventTrigger,
+    UpdateSpaceSettingsEventTrigger
+  } from '@horizon/types'
+  import { isModKeyPressed } from '../../utils/keyboard'
+
+  import type { TabSpace } from './types'
+  import { useTelemetry } from '../../service/telemetry'
 
   export let folder: Space
   export let selected: boolean
+  export let showPreview = true
 
   const log = useLogScope('Folder')
   const dispatch = createEventDispatcher<{
     delete: void
-    select: void
-    'add-folder-to-tabs': void
+    'space-selected': { id: string; canGoBack: boolean }
+    'open-space-as-tab': { space: Space; active: boolean }
     'update-data': Partial<SpaceData>
     'open-resource': string
   }>()
   const oasis = useOasis()
   const toast = useToasts()
   const resourceManager = useResourceManager()
+  const telemetry = useTelemetry()
 
   const hovered = writable(false)
   const draggedOver = writable(false)
@@ -71,6 +81,21 @@
     dispatch('select')
   }
 
+  const handleSpaceSelect = async (event: MouseEvent) => {
+    if (!(event.target as HTMLElement).closest('button')) {
+      try {
+        log.debug('Selected space:', folder.id)
+        if (isModKeyPressed(event)) {
+          dispatch('open-space-as-tab', { space: folder, active: event.shiftKey })
+        } else {
+          dispatch('space-selected', { id: folder.id, canGoBack: true })
+        }
+      } catch (error) {
+        log.error('Failed to select folder:', error)
+      }
+    }
+  }
+
   const handleBlur = () => {
     dispatch('update-data', { folderName: folderDetails.folderName })
 
@@ -83,15 +108,48 @@
     )
   }
 
-  const handleDelete = () => {
-    dispatch('delete')
+  const addItemToTabs = async () => {
+    const space = await oasis.getSpace(folder.id)
+    console.log('xxx-space', space)
+    try {
+      if (space) {
+        space.name.showInSidebar = true
+
+        await oasis.updateSpaceData(folder.id, {
+          showInSidebar: true
+        })
+
+        dispatch('open-space-as-tab', { space, active: false })
+
+        await tick()
+      }
+    } catch (error) {
+      log.error('[Folder.svelte] Failed to add folder to sidebar:', error)
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      const confirmed = confirm(`Are you sure you want to delete ${folder.name.folderName}?`)
+      if (!confirmed) {
+        return
+      }
+
+      log.debug('deleting space', folder.id)
+      await oasis.deleteSpace(folder.id)
+
+      await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpacesView)
+      toast.success('Space deleted!')
+    } catch (error) {
+      log.error('Failed to delete folder:', error)
+    }
   }
 
   const handleAddSpaceToTabs = () => {
     dispatch('add-folder-to-tabs')
   }
 
-  const createFolderWithAI = async (query: string) => {
+  export const createFolderWithAI = async (query: string) => {
     try {
       processing = true
 
@@ -213,53 +271,61 @@
 <div
   class="folder-wrapper {processing ? 'magic-in-progress' : ''} {$draggedOver ? 'draggedOver' : ''}"
   on:dragover={handleDragOver}
+  data-folder-id={folder.id}
   on:dragleave={handleDragLeave}
   on:drop={handleDrop}
   aria-hidden="true"
 >
   <div
     class="folder {selected ? 'active' : ''}"
-    on:click={handleClick}
+    style={showPreview ? 'height: 14rem' : ''}
+    on:click={handleSpaceSelect}
     aria-hidden="true"
     use:hover={hovered}
   >
-    <div class="previews">
-      {#await getPreviewResources(6)}
-        <div class="folder-empty-wrapper">
-          <div class="folder-empty">
-            <Icon name="spinner" />
-            <!-- <div>Empty Space, add it with life!</div> -->
-          </div>
-        </div>
-      {:then resources}
-        {#if resources.length > 0}
-          {#each resources as resource}
-            <div class="folder-preview" style="transform: rotate({getRandomRotation()});">
-              <ResourcePreviewClean
-                {resource}
-                showTitles={false}
-                showActions={false}
-                on:click={() => openResource(resource.id)}
-              />
-            </div>
-          {/each}
-        {:else}
+    {#if showPreview}
+      <div class="previews" transition:slide={{ axis: 'y' }}>
+        {#await getPreviewResources(4)}
           <div class="folder-empty-wrapper">
             <div class="folder-empty">
-              <Icon name="leave" />
+              <Icon name="spinner" />
               <!-- <div>Empty Space, add it with life!</div> -->
             </div>
           </div>
-        {/if}
-      {/await}
-    </div>
+        {:then resources}
+          {#if resources.length > 0}
+            {#each resources as resource}
+              <div class="folder-preview" style="transform: rotate({getRandomRotation()});">
+                <ResourcePreviewClean
+                  {resource}
+                  showTitles={false}
+                  interactive={false}
+                  on:click={() => openResource(resource.id)}
+                />
+              </div>
+            {/each}
+          {:else}
+            <div class="folder-empty-wrapper">
+              <div class="folder-empty">
+                <Icon name="leave" />
+                <!-- <div>Empty Space, add it with life!</div> -->
+              </div>
+            </div>
+          {/if}
+        {/await}
+      </div>
+    {/if}
+
     <div class="folder-label">
       <div class="folder-leading">
-        <SpaceIcon on:change={handleColorChange} {folder} />
+        <div class="space-icon-wrapper" on:click|stopPropagation aria-hidden="true">
+          <SpaceIcon on:change={handleColorChange} {folder} />
+        </div>
 
         <input
           bind:this={inputElement}
           id={`folder-input-${folder.id}`}
+          on:click|stopPropagation
           type="text"
           bind:value={folderDetails.folderName}
           on:blur={handleBlur}
@@ -272,12 +338,11 @@
       {#if $hovered}
         <div class="actions" in:fade={{ duration: 50 }} out:fade={{ duration: 100 }}>
           <button
-            on:click|stopPropagation={handleAddSpaceToTabs}
-            disabled={folder.name.showInSidebar}
+            on:click|stopPropagation={addItemToTabs}
             class="close"
-            use:tooltip={folder.name.showInSidebar ? 'Already open as Tab' : 'Open as Tab'}
+            use:tooltip={'Open as Tab'}
           >
-            <Icon name={folder.name.showInSidebar ? 'check' : 'list-add'} size="20px" />
+            <Icon name={'list-add'} size="20px" />
           </button>
 
           <button
@@ -296,6 +361,8 @@
 <style lang="scss">
   .folder-wrapper {
     position: relative;
+    pointer-events: auto;
+    width: 22rem;
   }
 
   .folder {
@@ -309,7 +376,8 @@
     gap: 10px;
     position: relative;
     color: #244581;
-    height: 24rem;
+    width: 22rem;
+    max-height: 14rem;
     font-weight: 500;
     letter-spacing: 0.0025em;
     font-smooth: always;
@@ -399,19 +467,39 @@
       justify-content: space-between;
       gap: 0.5rem;
       width: 100%;
+      position: relative;
 
       .actions {
+        position: absolute;
+        right: 0;
         display: flex;
         gap: 0.75rem;
         flex-shrink: 0;
+
+        button {
+          padding: 0.25rem;
+          &:hover {
+            border-radius: 4px;
+            background: #cee2ff;
+          }
+        }
       }
 
       .folder-leading {
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 0.5rem;
         flex: 1;
+        max-width: calc(100% - 4.5rem);
         overflow: hidden;
+      }
+
+      .space-icon-wrapper {
+        padding: 0.25rem;
+        border-radius: 4px;
+        &:hover {
+          background: #cee2ff;
+        }
       }
 
       .folder-input {

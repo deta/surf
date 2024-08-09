@@ -43,6 +43,7 @@ import Spinner from './Icons/Spinner.svelte'
 import Play from './Icons/Play.svelte'
 import Check from './Icons/Check.svelte'
 import Sparkles from './Icons/Sparkles.svelte'
+import SparklesFill from './Icons/SparklesFill.svelte'
 import World from './Icons/World.svelte'
 import Leave from './Icons/Leave.svelte'
 import LayoutGridAdd from './Icons/LayoutGridAdd.svelte'
@@ -74,6 +75,7 @@ import ListAdd from './Icons/ListAdd.svelte'
 import Moon from './Icons/Moon.svelte'
 import Minus from './Icons/Minus.svelte'
 import TriangleSquareCircle from './Icons/TriangleSquareCircle.svelte'
+import Wand from './Icons/Wand.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -122,6 +124,7 @@ export const icons = {
   play: Play,
   check: Check,
   sparkles: Sparkles,
+  'sparkles.fill': SparklesFill,
   world: World,
   leave: Leave,
   'layout-grid-add': LayoutGridAdd,
@@ -152,7 +155,8 @@ export const icons = {
   'list-add': ListAdd,
   moon: Moon,
   minus: Minus,
-  'triangle-square-circle': TriangleSquareCircle
+  'triangle-square-circle': TriangleSquareCircle,
+  wand: Wand
 }
 
 export type Icons = keyof typeof icons
@@ -202,6 +206,7 @@ export {
   Play,
   Check,
   Sparkles,
+  SparklesFill,
   World,
   Leave,
   LayoutGridAdd,
@@ -232,5 +237,6 @@ export {
   ListAdd,
   Moon,
   Minus,
-  TriangleSquareCircle
+  TriangleSquareCircle,
+  Wand
 }

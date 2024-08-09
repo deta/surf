@@ -62,6 +62,7 @@
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab, TabPage } from '../Browser/types'
+  import type { HistoryEntriesManager } from '../../service/history'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import {
     AddResourceToSpaceEventTrigger,
@@ -75,6 +76,8 @@
 
   export let spaceId: string
   export let active: boolean = false
+  export let historyEntriesManager: HistoryEntriesManager
+  export let showBackBtn = false
 
   $: isEverythingSpace = spaceId === 'all'
 
@@ -86,6 +89,7 @@
     'create-resource-from-oasis': string
     'new-tab': BrowserTabNewTabEvent
     deleted: string
+    'go-back': void
   }>()
   const toasts = useToasts()
 
@@ -103,9 +107,12 @@
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
   const loadingSpaceSources = writable(false)
+  const useMasonry = writable(true)
   const space = writable<Space | null>(null)
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
+
+  const canGoBack = writable(false)
 
   const REFRESH_SPACE_SOURCES_AFTER = 15 * 60 * 1000 // 15 minutes
 
@@ -360,6 +367,13 @@
 
       const items = fetchedSources.flat()
 
+      if (!items) {
+        log.debug('No items found')
+        return
+      }
+
+      useMasonry.set(false)
+
       const MAX_CONCURRENT_ITEMS = 8
       const PROCESS_TIMEOUT = 1000 * 15 // give each item max 15 seconds to process
 
@@ -405,6 +419,7 @@
     } catch (error) {
       log.error('Error loading space sources:', error)
     } finally {
+      useMasonry.set(true)
       loadingSpaceSources.set(false)
     }
   }
@@ -793,9 +808,12 @@
         }
 
         await resourceManager.deleteSpaceEntries([reference.entryId])
-        spaceContents.update((contents) => {
-          return contents.filter((x) => x.resource_id !== resourceId)
-        })
+
+        // HACK: this is needed for the preview to update with the summary
+        const contents = $spaceContents.filter((x) => x.resource_id !== resourceId)
+        spaceContents.set([])
+        await tick()
+        spaceContents.set(contents)
       }
     } catch (error) {
       log.error('Error removing references:', error)
@@ -804,9 +822,12 @@
     if (isEverythingSpace || isFromLiveSpace) {
       log.debug('deleting resource from oasis', resourceId)
       await resourceManager.deleteResource(resourceId)
-      everythingContents.update((contents) => {
-        return contents.filter((x) => x.id !== resourceId)
-      })
+
+      // HACK: this is needed for the preview to update with the summary
+      const contents = $everythingContents.filter((x) => x.id !== resourceId)
+      everythingContents.set([])
+      await tick()
+      everythingContents.set(contents)
     }
 
     log.debug('Resource removed:', resourceId)
@@ -950,7 +971,7 @@
       if (spaceId !== 'all') {
         await oasis.addResourcesToSpace(spaceId, resourceIds)
         await loadSpaceContents(spaceId)
-        
+
         resourceIds.forEach((id) => {
           resourceManager.getResource(id).then((resource) => {
             if (resource) {
@@ -966,7 +987,6 @@
       toast.error('Error dropping: ' + (error as Error).message)
       drag.abort()
       return
-
     }
     drag.continue()
 
@@ -1130,6 +1150,24 @@
   const handleOpen = (e: CustomEvent<string>) => {
     openResourceDetailsModal(e.detail)
   }
+
+  const handleSpaceSelected = (e: CustomEvent<{ id: string; canGoBack: boolean }>) => {
+    const spaceEvent = e.detail
+    log.debug('Space selected:', spaceEvent)
+
+    oasis.getSpaceContents(spaceEvent.id).then((resources) => {
+      log.debug('Space contents:', resources)
+      $spaceContents = resources
+    })
+
+    if (spaceEvent.canGoBack) {
+      canGoBack.set(spaceEvent.canGoBack)
+    }
+  }
+
+  const handleGoBack = () => {
+    dispatch('go-back')
+  }
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -1149,7 +1187,21 @@
   on:DragEnter={(e) => handleDragEnter(e.detail)}
 >
   <div class="wrapper">
-    <div class="drawer-bar">
+    <div
+      class="drawer-bar bg-gradient-to-b from-sky-100/90 to-transparent via-bg-sky-100/40 backdrop-blur-md backdrop-saturate-50"
+    >
+      {#if showBackBtn}
+        <div class="absolute top-6 left-6 z-10">
+          <button
+            on:click={handleGoBack}
+            class="flex items-center gap-2 rounded-lg text-md font-medium"
+          >
+            <Icon name="arrow.left" />
+            Go Back
+          </button>
+        </div>
+      {/if}
+
       <div class="drawer-chat-search">
         <div class="create-wrapper">
           <button
@@ -1175,7 +1227,7 @@
         </div>
 
         <div class="search-input-wrapper">
-          <SearchInput bind:value={$searchValue} on:chat={handleChat} on:search={handleSearch} />
+          <SearchInput bind:value={$searchValue} on:search={handleSearch} />
         </div>
 
         <div class="settings-wrapper">
@@ -1255,12 +1307,13 @@
         resourceIds={spaceResourceIds}
         selected={$selectedItem}
         showResourceSource={isSearching}
-        useMasonry={!$loadingSpaceSources}
+        useMasonry={$useMasonry}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:remove={handleResourceRemove}
         on:load={handleLoadResource}
         on:new-tab
+        on:create-tab-from-space
       />
 
       {#if $loadingContents}
@@ -1272,11 +1325,14 @@
       <OasisResourcesViewSearchResult
         resources={everythingContents}
         selected={$selectedItem}
-        searchResults={$searchResults}
+        scrollTop={0}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:remove={handleResourceRemove}
+        on:space-selected={handleSpaceSelected}
+        on:open-space-as-tab
         on:new-tab
+        isEverythingSpace={false}
       />
 
       {#if $loadingContents}
@@ -1335,7 +1391,6 @@
     position: relative;
     z-index: 10;
     width: 100%;
-    height: 3.3rem;
     max-width: 32rem;
     view-transition-name: search-transition;
     &.active {
@@ -1353,7 +1408,7 @@
   }
 
   .drawer-bar {
-    position: relative;
+    position: absolute;
     top: 0;
     left: 0;
     right: 0;

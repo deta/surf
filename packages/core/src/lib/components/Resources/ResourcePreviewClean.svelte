@@ -473,7 +473,7 @@
     gap: 0.75rem;
     top: 0;
     padding: 1rem;
-    right: 0;
+    right: 1.5rem;
     transform: translateX(45%) translateY(-45%);
     opacity: 0;
     margin-left: 0.5rem;

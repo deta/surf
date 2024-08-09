@@ -3,10 +3,12 @@
   import { onMount, onDestroy, tick, createEventDispatcher } from 'svelte'
   import { RedBlackTree } from './masonry/index'
   import type { Item, ScrollVelocity } from './masonry/types'
+  import Folder from '../Browser/Folder.svelte'
 
   export let renderContents: Item[] | string[] = []
   export let id: Date
   export let items: Item[] = []
+  export let isEverythingSpace: boolean
   export let showResourceSource: boolean = false
 
   let prevItemLength = 0
@@ -23,6 +25,7 @@
   let updateQueue: Item[] = []
   let isUpdating = false
   let created: Date
+  let itemsLoaded: boolean = false
 
   const BATCH_SIZE = 10
   const UPDATE_INTERVAL = 16
@@ -103,7 +106,7 @@
 
       this.initializeColumns()
 
-      window.addEventListener('resize', this.handleResize.bind(this))
+      window.addEventListener('resize', () => this.handleResize())
     }
 
     getColumnCount(): number {
@@ -129,13 +132,16 @@
       items.sort((a, b) => parseInt(a.style?.top || '0') - parseInt(b.style?.top || '0'))
 
       items.forEach((item) => {
-        const height = parseInt(item.style?.height || '0')
+        const height = item.dom?.classList.contains('space')
+          ? item.dom.offsetHeight
+          : parseInt(item.style?.height || '0')
+
         const shortestColumn = this.tree.findMin()
         const columnIndex = shortestColumn.column
         const top = shortestColumn.height
         const left = columnIndex * (this.columnWidth + this.gapPercentage)
 
-        const PADDING_TOP = 120
+        const PADDING_TOP = isEverythingSpace ? 0 : 100
 
         const itemStyle = {
           left: `${left}%`,
@@ -146,10 +152,14 @@
 
         item.style = itemStyle
 
-        const newHeight = top + height + 10 // 10px vertical gap
+        const newHeight = top + height + 44
         const updatedNode = this.tree.updateHeight(shortestColumn, newHeight)
         if (updatedNode) {
           this.columnNodes[columnIndex] = updatedNode
+        }
+
+        if (item.dom) {
+          item.dom.style.visibility = 'visible'
         }
       })
 
@@ -168,7 +178,8 @@
         left: `${left}%`,
         top: `${top}px`,
         height: `${height}px`,
-        width: `${this.columnWidth}%`
+        width: `${this.columnWidth}%`,
+        background: 'blue'
       }
 
       const newHeight = top + height + 10 // 10px vertical gap
@@ -205,9 +216,10 @@
 
   function observeItemHeightChange(item: Item) {
     const observer = new ResizeObserver(() => {
-      const resourcePreview = item.dom?.querySelector('.resource-preview')
-      if (resourcePreview) {
-        const height = resourcePreview.offsetHeight
+      const wrapper =
+        item.dom?.querySelector('.resource-preview') || item.dom?.querySelector('.folder-wrapper')
+      if (wrapper) {
+        const height = wrapper.offsetHeight
         item.style!.height = `${height}px`
         resizedItems.add(item)
 
@@ -248,12 +260,14 @@
     if (gridContainer) {
       gridContainer.removeEventListener('scroll', updateVisibleItems)
     }
-    window.removeEventListener('resize', masonryGrid.handleResize.bind(masonryGrid))
+    window.removeEventListener('resize', () => masonryGrid.handleResize())
   })
 
   function observeItems(gridContainer: HTMLElement | null) {
     items.forEach((item) => {
-      const dom = document.getElementById(`item-${item.id}`)
+      const dom = document.getElementById(
+        `item-${typeof item.id === 'object' ? item.id.id : item.id}`
+      )
       if (dom) {
         item.dom = dom
         observeItemHeightChange(item)
@@ -276,6 +290,8 @@
     const gridContainer = document.getElementById(id) as HTMLElement
     const scrollTop = gridContainer.scrollTop
     const viewportHeight = gridContainer.clientHeight
+
+    dispatch('scroll', { scrollTop, viewportHeight })
 
     gridItems = items.map((item) => {
       const itemTop = parseInt(item.style?.top || '0')
@@ -323,8 +339,8 @@
 
   function calculateItemsToLoad(velocity: number): number {
     const MIN_ITEMS = 1
-    const MAX_ITEMS = 25
-    const VELOCITY_FACTOR = 2
+    const MAX_ITEMS = 10
+    const VELOCITY_FACTOR = 1
 
     let items = Math.round(Math.log(velocity * VELOCITY_FACTOR + 1) * 10)
 
@@ -343,6 +359,13 @@
     updateVisibleItems()
 
     observeItems(gridContainer)
+  }
+
+  const handleWheel = (e: WheelEvent) => {
+    const gridContainer = document.getElementById(id) as HTMLElement
+    const scrollTop = gridContainer.scrollTop
+
+    dispatch('wheel', { event: e, scrollTop })
   }
 </script>
 
@@ -366,30 +389,43 @@
   }}
 />
 
-<div {id} class="masonry-grid">
-  <div class="debug">
+<div {id} class="masonry-grid" on:wheel={handleWheel}>
+  <!-- <div class="debug">
     Total items: {items.length} | Visible items: {gridItems.filter((item) => item.visible).length}
-  </div>
+  </div> -->
 
   {#each gridItems as item}
-    <div
-      class="item"
-      id="item-{item.id}"
-      class:visible={item.visible}
-      style="left: {item.style.left}; top: {item.style.top}; height: {item.style.height};"
-    >
-      <div class="item-details" bind:this={item.dom}>
-        <OasisResourceLoader
-          id={item.id}
-          showSource={showResourceSource}
-          on:click
-          on:open
-          on:remove
-          on:load
-          on:new-tab
-        />
+    {#if typeof item.id.name !== 'undefined'}
+      <div
+        class="item space"
+        id="item-{item.id.id}"
+        class:visible={item.visible}
+        style="left: {item.style.left}; top: {item.style.top};"
+      >
+        <div class="item-details" bind:this={item.dom}>
+          <Folder folder={item.id} selected={false} on:space-selected on:open-space-as-tab />
+        </div>
       </div>
-    </div>
+    {:else}
+      <div
+        class="item resource"
+        id="item-{item.id}"
+        class:visible={item.visible}
+        style="left: {item.style.left}; top: {item.style.top}; height: {item.style.height};"
+      >
+        <div class="item-details" bind:this={item.dom}>
+          <OasisResourceLoader
+            id={item.id}
+            showSource={showResourceSource}
+            on:click
+            on:open
+            on:remove
+            on:load
+            on:new-tab
+          />
+        </div>
+      </div>
+    {/if}
   {/each}
 </div>
 
@@ -410,16 +446,19 @@
     padding: 10px;
     transition:
       opacity 0s ease,
-      left 0.12s ease,
-      top 0.12s ease,
-      width 0.12s ease;
-    will-change: opacity, left, top, width;
+      left 0s ease,
+      top 0s ease,
+      width 0s ease,
+      visibility 0.12s ease;
+    will-change: opacity, left, top, width, visility;
     color: white;
     font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
+    height: fit-content !important;
     opacity: 0;
+    visibility: hidden;
   }
 
   .debug {
@@ -436,7 +475,6 @@
   .item-details {
     font-size: 0.8em;
     margin-top: 5px;
-    padding: 2rem 0;
     width: 100%;
   }
   .item.visible {

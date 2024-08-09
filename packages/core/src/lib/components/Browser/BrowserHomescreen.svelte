@@ -191,12 +191,6 @@
     out:fly={{ y: 25, duration: 160 }}
   >
     {#if !$showAllSpaces}
-      <div class="top-bar">
-        <button class="show-all-spaces" on:click={() => showAllSpaces.set(!$showAllSpaces)}>
-          <Icon name="leave" color="#7d7448" />
-          <span class="label">All Spaces</span>
-        </button>
-      </div>
       <div class="homescreen-content">
         <img class="browser-background" src={browserBackground} alt="background" />
         <div
@@ -305,23 +299,12 @@
   }
 
   .browser-homescreen {
-    position: absolute;
+    position: relative;
     bottom: 0;
     z-index: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #e6ddda 0%, #f8f7f1 100%);
-    overflow-y: scroll;
-
-    background: linear-gradient(
-      180deg,
-      color(display-p3 0.8941 0.8667 0.8549) 0%,
-      color(display-p3 0.9725 0.9686 0.949) 100%
-    );
-    border-top: 0.5px solid rgba(255, 255, 255, 0.4);
-
-    backdrop-filter: blur(12px);
-    border-radius: 12px;
+    top: 12rem;
 
     .homescreen-content {
       display: flex;
@@ -444,5 +427,9 @@
     &.deactivated {
       opacity: 0;
     }
+  }
+
+  .isActive {
+    pointer-events: auto;
   }
 </style>

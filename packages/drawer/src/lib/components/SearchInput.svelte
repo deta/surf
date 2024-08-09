@@ -48,10 +48,10 @@
       })
     }
 
-    if (event.shiftKey && event.key === 'Enter') {
-      dispatch('airequest', $searchValue)
-      console.log('Shift + Enter pressed', $searchValue)
-    }
+    // if (event.shiftKey && event.key === 'Enter') {
+    //   dispatch('airequest', $searchValue)
+    //   console.log('Shift + Enter pressed', $searchValue)
+    // }
   }
 
   function handleMouseMove(event: MouseEvent) {
@@ -91,7 +91,7 @@
         on:keydown={handleKeyDown}
         on:focus={handleFocus}
       />
-      <span class="label-secondary">press Shift + Enter for AI</span>
+      <!-- <span class="label-secondary">press Shift + Enter for AI</span> -->
     </div>
   </div>
 </div>

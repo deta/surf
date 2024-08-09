@@ -31,6 +31,7 @@
   export let hibernated = false
   export let tabSize: number | undefined = undefined
   export let horizontalTabs = true
+  export let removeHighlight = false
 
   export const editAddress = async () => {
     isEditing = true
@@ -68,7 +69,7 @@
   let popoverVisible = false
 
   // $: acceptDrop = tab.type === 'space'
-  $: isActive = tab.id === $activeTabId
+  $: isActive = tab.id === $activeTabId && !removeHighlight
   $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
   $: url =
     (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null

@@ -4,6 +4,7 @@
   import { useLogScope } from '../../utils/log'
   import Masonry from './MasonrySpace.svelte'
   import OasisResourceLoader from './OasisResourceLoader.svelte'
+  import { useDebounce } from '../../utils/debounce'
 
   export let resourceIds: Readable<string[]>
   export let selected: string | null = null
@@ -17,7 +18,7 @@
   const CHUNK_THRESHOLD = 300
 
   let scrollElement: HTMLDivElement
-  let refreshContentLayout: () => Promise<void>
+  let refreshContentLayout: () => void
 
   const renderLimit = writable(CHUNK_SIZE)
 
@@ -41,6 +42,7 @@
       {#key scrollElement}
         <Masonry
           renderContents={$renderContents}
+          isEverythingSpace={false}
           {showResourceSource}
           on:load-more={handleLoadChunk}
           on:open
@@ -51,7 +53,7 @@
       {/key}
     </div>
   {:else}
-    <div class="content flex flex-wrap gap-16">
+    <div class="content flex flex-wrap gap-16 pt-[100px]">
       {#each $renderContents as resourceId (resourceId)}
         <div class="max-w-[420px] w-full">
           <OasisResourceLoader
@@ -91,5 +93,12 @@
   .content {
     height: 100%;
     overflow: auto;
+  }
+
+  .go-back {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    z-index: 1000;
   }
 </style>

@@ -4,7 +4,7 @@ export const demoPages = [
   { id: random(), url: 'https://deta.surf' },
   {
     id: random(),
-    url: 'https://deta.notion.site/Cheatsheet-August-9-d97cea3be250465c8003ba6567b2ab7a?pvs=4',
+    url: 'https://deta.surf/cheatsheets/v0.0.1',
     active: true,
     pinned: true
   }
@@ -13,10 +13,7 @@ export const demoPages = [
 export const demoSpaces = [
   {
     name: 'Deta',
-    urls: [
-      'https://deta.surf',
-      'https://deta.notion.site/Cheatsheet-August-9-d97cea3be250465c8003ba6567b2ab7a?pvs=4'
-    ]
+    urls: ['https://deta.surf', 'https://deta.surf/cheatsheets/v0.0.1']
   }
 ]
 

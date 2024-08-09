@@ -1,26 +1,27 @@
 <script lang="ts">
   import { derived, writable, type Readable } from 'svelte/store'
-
+  import { createEventDispatcher } from 'svelte'
   import { useLogScope } from '../../utils/log'
   import type { ResourceSearchResultItem } from '../../service/resources'
   import Masonry from './MasonrySpace.svelte'
+  import SpacesView from './SpacesView.svelte'
+  import BrowserHomescreen from '../Browser/BrowserHomescreen.svelte'
+  import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
+  import { Motion, type MotionConfig } from './masonry/motion'
 
   export let resources: Readable<ResourceSearchResultItem[]>
   export let selected: string | null = null
-  export let searchResults: Readable<ResourceSearchResultItem[]>
+  export let isEverythingSpace: boolean
+  export let showResourceSource: boolean = false
 
   const log = useLogScope('OasisResourcesView')
-  // const dispatch = createEventDispatcher<{ click: string }>()
-
+  const dispatch = createEventDispatcher()
   const CHUNK_SIZE = 40
   const MAXIMUM_CHUNK_SIZE = 20
   const CHUNK_THRESHOLD = 300
-
   let scrollElement: HTMLDivElement
   let refreshContentLayout: () => Promise<void>
-
   const renderLimit = writable(CHUNK_SIZE)
-
   const renderContents = derived([resources, renderLimit], ([resources, renderLimit]) => {
     return resources.slice(0, renderLimit)
   })
@@ -30,13 +31,18 @@
       renderLimit.set($resources.length)
       return
     }
-
     if ($resources.length <= $renderContents.length) {
       return
     }
     const CHUNK_SIZE = e.detail
-
     renderLimit.update((limit) => limit + CHUNK_SIZE)
+  }
+
+  export let scrollTop: number
+
+  const handleScroll = (event: CustomEvent<{ scrollTop: number; viewportHeight: number }>) => {
+    dispatch('scroll', { scrollTop: event.detail.scrollTop })
+    scrollTop = event.detail.scrollTop
   }
 </script>
 
@@ -45,12 +51,18 @@
     {#key scrollElement}
       <Masonry
         renderContents={$renderContents.map((item) => item.id)}
+        {showResourceSource}
         on:load-more={handleLoadChunk}
         on:open
         on:remove
         on:load
         on:new-tab
+        on:space-selected
+        on:open-space-as-tab
+        on:scroll={handleScroll}
+        on:wheel
         id={new Date()}
+        {isEverythingSpace}
       ></Masonry>
     {/key}
   </div>
@@ -60,23 +72,30 @@
   .wrapper {
     height: 100%;
     overflow: hidden;
+    position: relative;
   }
-
   .header {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    padding: 2rem;
+    gap: 5rem;
+    padding: 0;
     padding-bottom: 0;
+    position: absolute;
+    top: 1rem;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    will-change: transform, opacity;
+    transform-origin: top center;
+    width: 100%;
+    /* height: calc(100vh - 400px); */
+    pointer-events: none;
   }
-
-  .title {
-    font-size: 1.5rem;
-    font-weight: bold;
-  }
-
   .content {
     height: 100%;
     overflow: auto;
+    padding-top: 4rem;
   }
 </style>

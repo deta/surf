@@ -1,10 +1,12 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
 
-  import { Icon } from '@horizon/icons'
   import { useDebounce } from '../../utils/debounce'
+  import * as Command from '../Command'
+  import { Icon } from '@horizon/icons'
 
-  export let value: string
+  export let value: string = ''
+  export let loading = false
 
   const dispatch = createEventDispatcher<{ search: string; chat: string; close: void }>()
 
@@ -15,15 +17,9 @@
   const debouncedSearch = useDebounce(search, 700)
 
   let inputRef: HTMLInputElement
-  let isFocused = false
-  let position = { x: 0, y: 0 }
-  let opacity = 0
 
   onMount(() => {
-    document.addEventListener('mousemove', handleMouseMove)
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-    }
+    inputRef.focus()
   })
 
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -36,176 +32,32 @@
     } else if (event.key === 'Escape') {
       dispatch('close')
     }
-
-    if (event.shiftKey && event.key === 'Enter') {
-      dispatch('chat', value)
-    }
-  }
-
-  function handleMouseMove(event: MouseEvent) {
-    if (!inputRef || isFocused) return
-
-    const rect = inputRef.getBoundingClientRect()
-    position.x = event.clientX - rect.left
-    position.y = event.clientY - rect.top
-    opacity = 1 // Ensure the spotlight effect is visible on mouse move
-  }
-
-  function handleFocus() {
-    isFocused = true
-    opacity = 1
-    inputRef.focus()
   }
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="input-container" class:isFocussed={isFocused}>
-  <div class="input-field-container" class:isFocussed={isFocused} on:click={handleFocus}>
-    <div class="icon-input">
-      <div class="icon">
-        <Icon name="search" color="#AAA7B1" size="28px" />
-      </div>
-      <input
-        bind:this={inputRef}
-        bind:value
-        type="message"
-        name="message"
-        placeholder="Search"
-        class="active"
-        on:keydown={handleKeyDown}
-        on:focus={handleFocus}
-      />
-      <span class="label-secondary">press Shift + Enter for AI</span>
-    </div>
-  </div>
+<div class="flex items-center bg-white px-4 rounded-xl gap-2">
+  {#if loading}
+    <Icon name="spinner" class="shrink-0 opacity-50 icon" />
+  {:else}
+    <Icon name="search" class="shrink-0 opacity-50 icon" />
+  {/if}
+  <input
+    bind:this={inputRef}
+    bind:value
+    type="message"
+    name="message"
+    placeholder="Search"
+    class="placeholder:text-neutral-500 flex w-full max-w-[calc(100%-3rem)] text-xl rounded-md bg-transparent py-4 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    on:keydown={handleKeyDown}
+  />
 </div>
 
 <style lang="scss">
-  :global(html)::view-transition-old(input-field-container-transition),
-  :global(html)::view-transition-new(input-field-container-transition) {
-    width: 100%;
-    height: 100%;
-  }
-
-  .input-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-    font-size: 1.25rem;
-    height: 100%;
-    cursor: default;
-    &.isFocussed {
-      // margin-top: 1rem;
-    }
-  }
-  .input-field-container {
-    display: flex;
-    justify-content: center;
-    flex-direction: column;
-    position: relative;
-    padding: 0.5rem 0 0.25rem 0;
-    background-color: #eeece0;
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    border-radius: 1rem;
-    view-transition-name: input-field-container-transition;
-    &.isFocussed {
-      width: 100%;
-      height: 100%;
-    }
-    &:hover {
-      background: #e8e4d4;
-    }
-    .icon-input {
-      display: flex;
-      justify-content: start;
-      align-items: center;
-      padding: 0.5rem 0;
-
-      .label-secondary {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        right: 0.75rem;
-        font-size: 0.75rem;
-        color: #7d7448;
-        margin-left: 0.5rem;
-      }
-    }
-    .toolbar {
-      width: 0;
-      view-transition-name: toolbar-transition;
-      .toolbar-row {
-        display: flex;
-        .suggestion {
-          position: relative;
-          display: flex;
-          justify-content: start;
-          align-items: center;
-          transition: all 240ms ease-out;
-          font-size: 1rem;
-          font-weight: 400;
-          gap: 0.25rem;
-          color: #7d7448;
-          padding: 0.5rem 0.75rem 0.5rem 0.5rem;
-          opacity: 0.6;
-          margin: 0.25rem;
-          width: fit-content;
-          border-radius: 6px;
-          // view-transition-name: add-files-transition;
-          &:hover {
-            background: rgba(61, 56, 78, 0.1);
-          }
-          &.hidden {
-            transform: translateY(10%);
-            opacity: 0;
-            height: 0;
-            padding: 0;
-            margin: 0;
-            transition: all 240ms ease-out;
-          }
-        }
-      }
-    }
+  .icon {
+    view-transition-name: search-icon-transition;
   }
 
   input {
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    cursor: text;
-    font-size: 1.125rem;
-    font-weight: 500;
-    border: 0;
-    border-radius: 0.65rem;
-    color: #7d7448;
-    opacity: 0.8;
-    padding-left: 0;
-    padding-bottom: 0.25rem;
-    opacity: 0;
-    width: 100%;
     view-transition-name: search-input-transition;
-    cursor: default !important;
-    position: absolute;
-    height: 50px;
-    padding-left: 3rem;
-    opacity: 1;
-    background: transparent;
-  }
-  input:focus {
-    outline: none;
-  }
-  .icon {
-    position: relative;
-    bottom: 0;
-    left: 0.85rem;
-    z-index: 5;
-    transition: all 240ms ease-out;
-    transform: translateX(0);
-    pointer-events: none;
-    z-index: 10;
-    view-transition-name: search-icon-transition;
   }
 </style>

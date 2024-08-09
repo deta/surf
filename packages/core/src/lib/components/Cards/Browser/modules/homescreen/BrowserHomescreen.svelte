@@ -187,17 +187,6 @@
     z-index: 0;
     width: 100%;
     height: auto;
-    border-top: 0.5px solid rgba(255, 255, 255, 0.4);
-    background: linear-gradient(0deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.3) 100%),
-      linear-gradient(
-        0deg,
-        rgba(210, 210, 210, 0.18) 0%,
-        rgba(172, 172, 172, 0.18) 48.96%,
-        rgba(193, 108, 164, 0.18) 100%
-      ),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.6) 75.4%, rgba(255, 255, 255, 0) 99.85%);
-
-    backdrop-filter: blur(12px);
 
     .homescreen-content {
       margin: 0 auto;

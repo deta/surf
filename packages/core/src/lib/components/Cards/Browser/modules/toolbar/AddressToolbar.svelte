@@ -367,6 +367,7 @@
           type: 'search',
           searchQuery: searchQuery
         } as HistoryEntry
+
         historyEntriesManager.addEntry(historyEntry)
 
         inputValue = new URL(matchingSearchEngine.getUrl(searchQuery)).href

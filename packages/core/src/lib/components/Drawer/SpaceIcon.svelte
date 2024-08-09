@@ -32,7 +32,7 @@
 
   export let folder: Space
 
-  $: parsedColors = getColors(folder.name.colors)
+  $: parsedColors = getColors(folder?.name?.colors ?? ['#76E0FF', '#4EC9FB'])
 
   const pickRandomColorPair = (colorPairs: [string, string][]): [string, string] => {
     if (folder?.id === 'all') {
@@ -65,7 +65,7 @@
   }
 
   onMount(() => {
-    const filtered = folder.name.colors?.filter((c) => c)
+    const filtered = folder?.name?.colors?.filter((c) => c)
     if (!filtered) {
       log.debug('No colors provided, picking random color pair')
       updateColor(false)

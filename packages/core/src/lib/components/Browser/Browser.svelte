@@ -127,6 +127,7 @@
     type DragOperation,
     type DragculaDragEvent
   } from '@horizon/dragcula'
+  import NewTabOverlay from './NewTabOverlay.svelte'
   import CustomPopover from './CustomPopover.svelte'
   import { truncate } from '../../utils/text'
   //import '@horizon/dragcula/dist/styles.scss'
@@ -135,7 +136,6 @@
   let drawer: Drawer
   let observer: IntersectionObserver
   let addressBarFocus = false
-  let showTabSearch = false
   let showLeftSidebar = true
   let showRightSidebar = false
   let rightPane: PaneAPI | undefined = undefined
@@ -176,6 +176,7 @@
 
   const log = useLogScope('Browser')
 
+  const showNewTabOverlay = writable(false)
   const tabs = writable<Tab[]>([])
   const addressValue = writable('')
   const activeTabId = useLocalStorageStore<string>('activeTabId', '')
@@ -389,6 +390,7 @@
       log.error('Tab not found', tabId)
       return
     }
+    showNewTabOverlay.set(false)
 
     const browserTab = $browserTabs[tabId]
 
@@ -972,13 +974,14 @@
 
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && rightPane?.isExpanded()) {
-      handleCollapseRight()
+    if (e.key === 'Escape') {
+      if (rightPane?.isExpanded()) handleCollapseRight()
     } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       activeTabComponent?.blur()
       // Note: even though the electron menu handles the shortcut this is still needed here
     } else if (isModKeyAndKeyPressed(e, 'w')) {
+      setShowNewTabOverlay(false)
       closeActiveTab(DeleteTabEventTrigger.Shortcut)
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
@@ -987,19 +990,25 @@
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       // this creates a new electron window
     } else if (e.ctrlKey && e.key === 'Tab') {
+      setShowNewTabOverlay(false)
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
+      setShowNewTabOverlay(false)
       activeTabComponent?.editAddress()
       handleFocus()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
-      showTabSearch = !showTabSearch
+      // showTabSearch = !showTabSearch
     } else if (isModKeyAndKeyPressed(e, 'y')) {
+      setShowNewTabOverlay(false)
       createHistoryTab()
     } else if (isModKeyAndKeyPressed(e, '+')) {
+      setShowNewTabOverlay(false)
       $activeBrowserTab?.zoomIn()
     } else if (isModKeyAndKeyPressed(e, '-')) {
+      setShowNewTabOverlay(false)
       $activeBrowserTab?.zoomOut()
     } else if (isModKeyAndKeyPressed(e, '0')) {
+      setShowNewTabOverlay(false)
       $activeBrowserTab?.resetZoom()
     } else if (isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])) {
       const index = parseInt(e.key, 10) - 1
@@ -1022,6 +1031,10 @@
         $activeBrowserTab?.goForward()
       }
     }
+  }
+
+  const setShowNewTabOverlay = (show: boolean) => {
+    showNewTabOverlay.set(show)
   }
 
   const handleToggleHorizontalTabs = () => {
@@ -1066,17 +1079,16 @@
   }
 
   const createNewEmptyTab = async () => {
-    log.debug('Creating new tab')
-
-    // check if there already exists an empty tab, if yes we just change to it
-    const emptyTab = $tabs.find((tab) => tab.type === 'empty')
-
-    if (emptyTab) {
-      makeTabActive(emptyTab.id)
-      return
-    }
-
-    await createTab<TabEmpty>({ title: 'New Tab', icon: '', type: 'empty' }, { active: true })
+    showNewTabOverlay.set(true)
+    // log.debug('Creating new tab')
+    // // check if there already exists an empty tab, if yes we just change to it
+    // const emptyTab = $tabs.find((tab) => tab.type === 'empty')
+    // if (emptyTab) {
+    //   makeTabActive(emptyTab.id)
+    //   return
+    // }
+    // const newTab = await createTab<TabEmpty>({ title: 'New Tab', icon: '', type: 'empty' })
+    // makeTabActive(newTab.id)
   }
 
   const debouncedCreateNewEmptyTab = useDebounce(createNewEmptyTab, 100)
@@ -1800,12 +1812,12 @@
     }
   }
 
-  const handleCreateTabFromSpace = async (e: CustomEvent<TabSpace>) => {
-    const tab = e.detail
+  const handleCreateTabFromSpace = async (e: CustomEvent<{ tab: TabSpace; active: boolean }>) => {
+    const { tab, active } = e.detail
 
     log.debug('create tab from sidebar', tab)
 
-    await createTab(tab)
+    await createTab(tab, { active: active })
 
     toasts.success('Space added to your Tabs!')
   }
@@ -1834,7 +1846,7 @@
 
       await telemetry.trackOpenSpace(OpenSpaceEventTrigger.SidebarMenu)
     } catch (error) {
-      log.error('Failed to delete folder:', error)
+      log.error('[Browser.svelte] Failed to add folder to sidebar:', error)
     }
 
     toasts.success('Space added to your Tabs!')
@@ -2053,7 +2065,7 @@
 
     // @ts-expect-error
     window.api.onCreateNewTab(() => {
-      createNewEmptyTab()
+      $showNewTabOverlay = !$showNewTabOverlay
     })
 
     // @ts-expect-error
@@ -2913,34 +2925,6 @@
 <ToastsProvider service={toasts} />
 
 <div class="antialiased w-screen h-screen will-change-auto transform-gpu relative">
-  <TabSearch
-    {historyEntriesManager}
-    bind:showTabSearch
-    activeTabs={$activeTabs}
-    on:activate-tab={(e) => makeTabActive(e.detail, ActivateTabEventTrigger.Search)}
-    on:close-active-tab={() => closeActiveTab(DeleteTabEventTrigger.CommandMenu)}
-    on:bookmark={() => handleBookmark(false, SaveToOasisEventTrigger.CommandMenu)}
-    on:toggle-sidebar={() => changeLeftSidebarState()}
-    on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
-    on:reload-window={() => $activeBrowserTab?.reload()}
-    on:open-space={handleCreateTabForSpace}
-    on:zoom={() => {
-      $activeBrowserTab?.zoomIn()
-    }}
-    on:zoom-out={() => {
-      $activeBrowserTab?.zoomOut()
-    }}
-    on:reset-zoom={() => {
-      $activeBrowserTab?.resetZoom()
-    }}
-    on:open-url={(e) => {
-      createPageTab(e.detail, { active: true, trigger: CreateTabEventTrigger.Search })
-    }}
-    on:open-resource={(e) => {
-      openResourceDetailsModal(e.detail, OpenResourceEventFrom.CommandMenu)
-    }}
-  />
-
   <SidebarPane
     {horizontalTabs}
     bind:this={sidebarComponent}
@@ -3124,6 +3108,7 @@
                 {#each $pinnedTabs as tab, index (tab.id + index)}
                   <TabItem
                     hibernated={!$activatedTabs.includes(tab.id)}
+                    removeHighlight={$showNewTabOverlay}
                     {tab}
                     horizontalTabs={true}
                     {activeTabId}
@@ -3180,6 +3165,7 @@
                           {#each $magicTabs as tab, index (tab.id + index)}
                             <TabItem
                               hibernated={!$activatedTabs.includes(tab.id)}
+                              removeHighlight={$showNewTabOverlay}
                               showClose
                               {tab}
                               {activeTabId}
@@ -3231,6 +3217,7 @@
                           {#each $magicTabs as tab, index (tab.id + index)}
                             <TabItem
                               hibernated={!$activatedTabs.includes(tab.id)}
+                              removeHighlight={$showNewTabOverlay}
                               showClose
                               horizontalTabs={false}
                               {tab}
@@ -3287,6 +3274,7 @@
                   {#if $activeTabId === tab.id}
                     <TabItem
                       hibernated={!$activatedTabs.includes(tab.id)}
+                      removeHighlight={$showNewTabOverlay}
                       showClose
                       tabSize={Math.min(300, Math.max(24, tabSize))}
                       {tab}
@@ -3348,6 +3336,7 @@
                   {#if $activeTabId === tab.id}
                     <TabItem
                       hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
+                      removeHighlight={$showNewTabOverlay}
                       showClose
                       horizontalTabs={false}
                       {tab}
@@ -3413,12 +3402,13 @@
                 bind:this={newTabButton}
                 class="transform select-none active:scale-95 space-x-2 {horizontalTabs
                   ? 'w-fit rounded-xl p-2'
-                  : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                  : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                class:bg-sky-200={$showNewTabOverlay}
                 on:click|preventDefault={() => createNewEmptyTab()}
               >
                 <Icon name="add" />
                 {#if !horizontalTabs}
-                  <span class="label">New Tab</span>
+                  <span class="label">Open Oasis</span>
                 {/if}
               </button>
             </div>
@@ -3434,10 +3424,11 @@
               class:opacity-0={isFirstButtonVisible}
               class:pointer-events-auto={!isFirstButtonVisible}
               class:pointer-events-none={isFirstButtonVisible}
+              class:bg-sky-200={$showNewTabOverlay}
             >
               <Icon name="add" />
               {#if !horizontalTabs}
-                <span class="label">New Tab</span>
+                <span class="label">Open Oasis</span>
               {/if}
             </button>
             <div
@@ -3486,19 +3477,11 @@
                   </div>
                 </CustomPopover>
               {/if}
-
-              <NewTabButton
-                {spaces}
-                on:create-tab-from-space={handleCreateTabForSpace}
-                on:create-new-space={handleCreateNewSpace}
-                on:create-new-history-tab={createHistoryTab}
-                on:create-new-tab={debouncedCreateNewEmptyTab}
-              />
             </div>
           </div>
         </div>
       {:else}
-        <OasisSidebar on:createTab={handleCreateTabFromSpace} />
+        <!-- <OasisSidebar on:createTab={handleCreateTabFromSpace} /> -->
       {/if}
     </div>
 
@@ -3518,6 +3501,42 @@
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showLeftSidebar}
       >
+        {#if $showNewTabOverlay}
+          <NewTabOverlay
+            spaceId={'all'}
+            active={true}
+            bind:showTabSearch={$showNewTabOverlay}
+            on:open-space-as-tab={handleCreateTabForSpace}
+            on:deleted={handleDeletedSpace}
+            on:new-tab={handleNewTab}
+            {historyEntriesManager}
+            activeTabs={$activeTabs}
+            on:activate-tab={handleTabSelect}
+            on:close-active-tab={closeActiveTab}
+            on:bookmark={handleBookmark}
+            on:toggle-sidebar={() => handleSidebarchange()}
+            on:create-tab-from-space={handleCreateTabFromSpace}
+            on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
+            on:reload-window={() => $activeBrowserTab?.reload()}
+            on:open-space={handleCreateTabForSpace}
+            on:zoom={() => {
+              $activeBrowserTab?.zoomIn()
+            }}
+            on:zoom-out={() => {
+              $activeBrowserTab?.zoomOut()
+            }}
+            on:reset-zoom={() => {
+              $activeBrowserTab?.resetZoom()
+            }}
+            on:open-url={(e) => {
+              createPageTab(e.detail, true)
+            }}
+            on:open-resource={(e) => {
+              openResource(e.detail)
+            }}
+          />
+        {/if}
+
         {#if $sidebarTab === 'oasis'}
           <div class="browser-window active" style="--scaling: 1;">
             <OasisSpace
@@ -3526,6 +3545,8 @@
               on:create-resource-from-oasis={handeCreateResourceFromOasis}
               on:deleted={handleDeletedSpace}
               on:new-tab={handleNewTab}
+              on:open-space-as-tab={handleCreateTabForSpace}
+              {historyEntriesManager}
             />
           </div>
         {/if}
@@ -3613,11 +3634,12 @@
                   on:create-resource-from-oasis={handeCreateResourceFromOasis}
                   on:deleted={handleDeletedSpace}
                   on:new-tab={handleNewTab}
+                  {historyEntriesManager}
                 />
               {:else if tab.type === 'history'}
                 <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
               {:else}
-                <BrowserHomescreen
+                <!-- <BrowserHomescreen
                   {historyEntriesManager}
                   active={$activeTabId === tab.id}
                   on:navigate={handleTabNavigation}
@@ -3626,7 +3648,7 @@
                   on:create-tab-from-space={handleCreateTabFromSpace}
                   on:new-tab={handleNewTab}
                   {spaces}
-                />
+                /> -->
               {/if}
             </div>
           {/if}

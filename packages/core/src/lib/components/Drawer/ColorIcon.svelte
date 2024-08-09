@@ -12,8 +12,10 @@
 <style lang="scss">
   .color-icon {
     flex-shrink: 0;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 100%;
+    height: 100%;
+    min-width: 1.25rem;
+    min-height: 1.25rem;
     border-radius: 50%;
     background: radial-gradient(
         95% 95% at 50% 10%,
