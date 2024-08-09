@@ -1,3 +1,4 @@
+import { useLogScope } from '@horizon/core/src/lib/utils/log'
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
@@ -15,6 +16,7 @@ import { createSetupWindow } from './setupWindow'
 import { checkIfAppIsActivated } from './activation'
 import { isDefaultBrowser } from './utils'
 
+const log = useLogScope('Main Index')
 const isDev = import.meta.env.DEV
 
 let child: ChildProcess
@@ -46,7 +48,7 @@ const handleOpenUrl = (url: string) => {
     const mainWindow = getMainWindow()
 
     if (!mainWindow || mainWindow?.isDestroyed()) {
-      console.warn('No main window found')
+      log.warn('No main window found')
 
       // If there are no windows, create one and then open the URL once it is ready
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -56,7 +58,7 @@ const handleOpenUrl = (url: string) => {
 
         createWindow()
       } else {
-        console.error('There are windows, but no main window')
+        log.error('There are windows, but no main window')
       }
 
       return
@@ -69,7 +71,7 @@ const handleOpenUrl = (url: string) => {
     mainWindow.focus()
     mainWindow.webContents.send('open-url', url)
   } catch (error) {
-    console.error('Error handling open URL:', error)
+    log.error('Error handling open URL:', error)
 
     // throw if development
     if (is.dev) {
@@ -100,7 +102,7 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     isAppLaunched = true
-    electronApp.setAppUserModelId('space.deta.horizon')
+    electronApp.setAppUserModelId('ea.browser.deta.surf')
 
     const userConfig = getUserConfig()
 
@@ -108,14 +110,14 @@ if (!gotTheLock) {
 
     if (!is.dev) {
       if (!userConfig.api_key) {
-        console.log('No api key found, prompting user to enter invite token')
+        log.debug('No api key found, prompting user to enter invite token')
         createSetupWindow()
         return
       }
 
       const isActivated = await checkIfAppIsActivated(userConfig.api_key)
       if (!isActivated) {
-        console.log('App not activated, prompting user to enter invite token again')
+        log.debug('App not activated, prompting user to enter invite token again')
         createSetupWindow()
         return
       }
@@ -150,15 +152,15 @@ if (!gotTheLock) {
     child = spawn(backendServerPath, [backendRootPath, 'false', embeddingModelMode])
 
     child.stdout?.on('data', (data) => {
-      console.log(`surfer-backend: ${data}`)
+      log.debug(`surfer-backend: ${data}`)
     })
 
     child.stderr?.on('data', (data) => {
-      console.error(`surfer-backend: ${data}`)
+      log.error(`surfer-backend: ${data}`)
     })
 
     child.on('exit', (code) => {
-      console.log(`Child process exited with code ${code}`)
+      log.debug(`Child process exited with code ${code}`)
     })
   })
 

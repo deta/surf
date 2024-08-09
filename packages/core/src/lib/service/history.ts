@@ -225,7 +225,6 @@ export class HistoryEntriesManager {
         const diff = b.score - a.score
         return diff === 0 ? b.visitCount - a.visitCount : diff
       })
-      //.map((item) => item.entry)
       .filter((item) => {
         const dedupKey =
           `${item.entry.url}|${item.entry.title}|${item.entry.searchQuery}`.toLowerCase()
@@ -236,8 +235,6 @@ export class HistoryEntriesManager {
           return true
         }
       })
-
-    console.log('final', sorted)
 
     return sorted as SearchHistoryEntry[]
   }

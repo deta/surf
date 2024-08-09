@@ -68,7 +68,7 @@
   }
 
   tabContext = cleanContext(tabContext)
-  log.info('tabContext', tabContext)
+  log.debug('tabContext', tabContext)
 
   const dispatch = createEventDispatcher<{
     clearAppSidebar: {}
@@ -105,7 +105,7 @@
       }
 
       const clean = cleanSource(appCode)
-      log.info('got source code:', clean)
+      log.debug('got source code:', clean)
       if (clean.startsWith('"Error code: 4')) {
         throw new Error('Page content is unfortunately too long')
       }

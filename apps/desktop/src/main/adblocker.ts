@@ -55,7 +55,6 @@ export function getAdblockerState(partition: string): boolean {
   const stored = config.adblockerEnabled ?? false
 
   if (stored !== isEnabled) {
-    console.warn('Adblocker state mismatch', { stored, isEnabled })
     setAdblockerState(partition, isEnabled)
   }
 

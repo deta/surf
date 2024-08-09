@@ -676,8 +676,6 @@
 
     if (!isEverythingSpace) {
       const result = await oasis.getSpaceContents(spaceId)
-      console.log('chatting with folder', result)
-
       resourceIds.set(result.map((r) => r.resource_id))
     } else {
       resourceIds.set([])

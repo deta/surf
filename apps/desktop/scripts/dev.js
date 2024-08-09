@@ -26,8 +26,7 @@ if (process.platform === 'linux') {
   process.env.ELECTRON_OZONE_PLATFORM_HINT = 'auto'
 }
 process.env.TESSDATA_PREFIX = path.resolve(__dirname, '..', 'resources', 'tessdata')
-// TODO: change this
-process.env.M_VITE_PRODUCT_NAME = 'Horizon-dev'
+process.env.M_VITE_PRODUCT_NAME = 'Surf-dev'
 
 const extraArgsIndex = process.argv.indexOf('--')
 const extraArgs = extraArgsIndex !== -1 ? process.argv.slice(extraArgsIndex + 1) : []

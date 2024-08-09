@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { useLogScope } from '../../utils/log'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
@@ -13,14 +14,16 @@
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import { tooltip as tooltip2 } from '../../utils/directives'
 
+  const log = useLogScope('Browser Tab')
+
   export let tab: Tab
   export let activeTabId: Writable<string>
   export let pinned: boolean
   export let showButtons: boolean = true
   export let showExcludeOthersButton: boolean = false
   export let showIncludeButton: boolean = false
-  export let bookmarkingInProgress: boolean
-  export let bookmarkingSuccess: boolean
+  export let bookmarkingInProgress: boolean = false
+  export let bookmarkingSuccess: boolean = false
   export let enableEditing = false
   export let showClose = false
   export let spaces
@@ -128,7 +131,7 @@
     try {
       space = await resourceManager.getSpace(id)
     } catch (error) {
-      console.error('Failed to fetch space:', error)
+      log.error('Failed to fetch space:', error)
     }
   }
 

@@ -26,7 +26,7 @@ export function createSettingsWindow() {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [`--userDataPath=${app.getPath('userData')}`],
       sandbox: false,
-      session: session.fromPartition('persist:horizon-session-v0'),
+      session: session.fromPartition('persist:surf-app-session'),
       webviewTag: true,
       defaultFontSize: 14
     }

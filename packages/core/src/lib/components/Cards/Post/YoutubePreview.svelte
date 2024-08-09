@@ -45,7 +45,7 @@
     }
 
     const fallbackURL = fallback
-    log.info('Returning fallback thumbnail URL')
+    log.debug('Returning fallback thumbnail URL')
     return fallbackURL
   }
 

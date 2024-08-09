@@ -512,7 +512,7 @@
       app = detectedApp
       url = detectedApp.canonicalUrl ?? tab.initialLocation
 
-      log.info('detecting app for url', url)
+      log.debug('detecting app for url', url)
 
       const matchingResources = await resourceManager.getResourcesFromSourceURL(url)
       let bookmarkedResource = matchingResources.find(

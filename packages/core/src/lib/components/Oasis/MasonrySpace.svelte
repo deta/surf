@@ -182,7 +182,6 @@
 
     handleResize() {
       const newColumnCount = this.getColumnCount()
-      console.log(`Window resized. New column count: ${newColumnCount}`)
       if (newColumnCount !== this.columnCount) {
         this.columnCount = newColumnCount
         this.columnWidth = (100 - this.gapPercentage * (this.columnCount - 1)) / this.columnCount

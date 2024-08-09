@@ -14,6 +14,7 @@ class Logger {
 
     this.scope = scope
 
+    // this.level = levelMap.indexOf('error')
     if (level) {
       this.level = levelMap.indexOf(level) || levelMap.indexOf('info')
     } else if (isDev) {

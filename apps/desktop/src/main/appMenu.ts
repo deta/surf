@@ -1,3 +1,4 @@
+import { useLogScope } from '@horizon/core/src/lib/utils/log'
 import { app, Menu } from 'electron'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
@@ -7,6 +8,7 @@ import { isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@horizon/types'
 import { createSettingsWindow } from './settingsWindow'
 
+const log = useLogScope('Main App Menu')
 const isMac = process.platform === 'darwin'
 
 const useAsDefaultBrowserClickHandler = () => {
@@ -31,7 +33,7 @@ const useAsDefaultBrowserClickHandler = () => {
       }
     }, timeout)
   } catch (error) {
-    console.error('Error setting as default browser:', error)
+    log.error('Error setting as default browser:', error)
   }
 }
 
@@ -105,7 +107,7 @@ const template = [
         label: 'Close Tab',
         accelerator: 'CmdOrCtrl+W',
         click: () => {
-          console.log('Close Tab')
+          log.log('Close Tab')
           ipcSenders.closeActiveTab()
         }
       }

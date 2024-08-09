@@ -7,10 +7,6 @@
   export let service: Toasts
 
   $: toasts = service.toasts
-
-  $: {
-    console.log('toasts', $toasts)
-  }
 </script>
 
 {#if $toasts}

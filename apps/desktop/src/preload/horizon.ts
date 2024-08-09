@@ -1,3 +1,4 @@
+import { useLogScope } from '@horizon/core/src/lib/utils/log'
 import { clipboard, contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import {
@@ -12,14 +13,13 @@ import path from 'path'
 import fetch from 'cross-fetch'
 import OpenAI, { toFile } from 'openai'
 import { minify } from 'html-minifier'
-
 import { createAPI } from '@horizon/api'
 import { actionsToRunnableTools } from './actions'
 import { ElectronAppInfo } from '@horizon/types'
-
 import type { UserConfig, HorizonAction, EditablePrompt, UserSettings } from '@horizon/types'
-
 import { getConfig } from '../main/config'
+
+const log = useLogScope('Horizon Preload')
 
 const isDev = import.meta.env.DEV
 const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
@@ -72,7 +72,7 @@ const api = {
   restartApp: () => ipcRenderer.invoke('restart-app'),
   toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
   updateTrafficLightsVisibility: (visible: boolean) => {
-    console.log('updateTrafficLightsVisibility', visible)
+    log.debug('updateTrafficLightsVisibility', visible)
     ipcRenderer.invoke('update-traffic-lights', { visible })
   },
 
@@ -114,7 +114,7 @@ const api = {
 
   fetchHTMLFromRemoteURL: async (url: string, opts?: RequestInit) => {
     try {
-      console.log('fetching', url, opts)
+      log.debug('fetching', url, opts)
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -165,7 +165,7 @@ const api = {
       })
     }
 
-    console.log('calling AI with messages', messages)
+    log.debug('calling AI with messages', messages)
 
     const chatCompletion = await openai.chat.completions.create({
       messages: messages,
@@ -219,11 +219,11 @@ const api = {
         tools: actionsToRunnableTools(actions)
       })
       .on('message', (message) => {
-        console.log(message)
+        log.debug(message)
       })
 
     const finalMessage = await runner.finalContent()
-    console.log('Final message:', finalMessage)
+    log.debug('Final message:', finalMessage)
     return finalMessage
   },
 
@@ -358,7 +358,7 @@ const api = {
     try {
       clipboard.writeText(content)
     } catch (err) {
-      console.error('Failed to copy: ', err)
+      log.error('Failed to copy: ', err)
     }
   },
 
@@ -641,7 +641,7 @@ if (process.contextIsolated) {
       resources
     })
   } catch (error) {
-    console.error(error)
+    log.error(error)
   }
 } else {
   // @ts-ignore (define in dts)

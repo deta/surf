@@ -163,8 +163,6 @@
 
     loadingResponse = true
 
-    console.log('Starting chat with these resource ids', resourceIds)
-
     const response = await sffs.sendAIChatMessage(
       chat.id,
       query,

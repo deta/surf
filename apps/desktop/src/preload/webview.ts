@@ -22,7 +22,7 @@ import {
 
 import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
-import CommentIndicator from './components/CommentIndicator.svelte'
+// import CommentIndicator from './components/CommentIndicator.svelte'
 import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
@@ -35,16 +35,16 @@ let selectionMenu: Menu | null = null
 let selectionMenuWrapper: ReturnType<typeof createComponentWrapper> | null = null
 
 // const clickOutsideHandlers = new Map<string, () => void>()
-
-const debouncedAppDetection = useDebounce(runAppDetection, 200)
+// debouncedAppDetection
+useDebounce(runAppDetection, 200)
 
 function runAppDetection() {
-  console.log('Running app detection on', window.location.href)
+  console.debug('Running app detection on', window.location.href)
   // TODO: pass the URL to the detection function so we don't have to initialize a new WebParser
   const webParser = new WebParser(window.location.href)
 
   const isSupported = webParser.isSupportedApp()
-  console.log('Is supported app', isSupported)
+  console.debug('Is supported app', isSupported)
 
   if (isSupported) {
     appParser = webParser.createAppParser()
@@ -64,7 +64,7 @@ function runAppDetection() {
     appInfo.rssFeedUrl = rssFeedUrl
   }
 
-  console.log('App detected:', appInfo)
+  console.debug('App detected:', appInfo)
   sendPageEvent(WebViewEventSendNames.DetectedApp, appInfo)
 
   return appParser
@@ -75,8 +75,8 @@ function runResourceDetection() {
   const appParser = runAppDetection()
   if (appParser) {
     appParser.extractResourceFromDocument(document).then((resource) => {
-      console.log('Resource', resource)
-      console.log('Sending detected-resource event')
+      console.debug('Resource', resource)
+      console.debug('Sending detected-resource event')
       sendPageEvent(WebViewEventSendNames.DetectedResource, resource)
     })
   } else {
@@ -92,7 +92,7 @@ function startResourcePicker() {
     if (appInfo.resourceNeedsPicking) {
       // @ts-ignore TODO: Fix this
       appParser.startResourcePicker(document, (resource: DetectedResource) => {
-        console.log('Picked resource', resource)
+        console.debug('Picked resource', resource)
 
         sendPageEvent(WebViewEventSendNames.DetectedResource, resource)
       })
@@ -106,10 +106,10 @@ function startResourcePicker() {
 function runServiceAction(id: string, inputs: WebServiceActionInputs) {
   const appParser = runAppDetection() as WebAppExtractorActions | undefined
   if (appParser) {
-    console.log('Running action', id, 'with input', inputs)
+    console.debug('Running action', id, 'with input', inputs)
     appParser.runAction(document, id, inputs).then((resource) => {
-      console.log('Resource', resource)
-      console.log('Sending action-output event')
+      console.debug('Resource', resource)
+      console.debug('Sending action-output event')
       sendPageEvent(WebViewEventSendNames.ActionOutput, { id, output: resource })
     })
   }
@@ -129,7 +129,7 @@ function createComponentWrapper(
   closeHandler?: () => void
 ) {
   const oldWrapper = document.getElementById(id)
-  console.log('old wrapper', oldWrapper)
+  console.debug('old wrapper', oldWrapper)
   oldWrapper?.parentNode?.removeChild(oldWrapper)
 
   const div = document.createElement(COMPONENT_WRAPPER_TAG)
@@ -181,62 +181,62 @@ function createComponentWrapper(
   }
 }
 
-function renderCommentIndicator(annotation: AnnotationCommentRange) {
-  const calculatePosition = (elem: Element) => {
-    const rangePosition = annotation.range.getBoundingClientRect()
-    const xRaw = rangePosition.left - elem.clientWidth - 10 + window.scrollX
-    const yRaw = rangePosition.top + window.scrollY
-    const x = `${cssKeepInBounds(xRaw, elem.clientWidth)}px`
-    const y = `${yRaw}px`
+// function renderCommentIndicator(annotation: AnnotationCommentRange) {
+//   const calculatePosition = (elem: Element) => {
+//     const rangePosition = annotation.range.getBoundingClientRect()
+//     const xRaw = rangePosition.left - elem.clientWidth - 10 + window.scrollX
+//     const yRaw = rangePosition.top + window.scrollY
+//     const x = `${cssKeepInBounds(xRaw, elem.clientWidth)}px`
+//     const y = `${yRaw}px`
 
-    return { x, y }
-  }
+//     return { x, y }
+//   }
 
-  const pos = calculatePosition(document.body)
+//   const pos = calculatePosition(document.body)
 
-  const wrapper = createComponentWrapper(
-    `deta-annotation-${annotation.id}`,
-    {
-      x: pos.x,
-      y: pos.y
-    },
-    'transform: translateY(-5px);',
-    'deta-annotation-comment-indicator'
-  )
+//   const wrapper = createComponentWrapper(
+//     `deta-annotation-${annotation.id}`,
+//     {
+//       x: pos.x,
+//       y: pos.y
+//     },
+//     'transform: translateY(-5px);',
+//     'deta-annotation-comment-indicator'
+//   )
 
-  const repositionWrapper = () => {
-    const pos = calculatePosition(wrapper.content)
-    wrapper.content.style.left = pos.x
-    wrapper.content.style.top = pos.y
-  }
+//   const repositionWrapper = () => {
+//     const pos = calculatePosition(wrapper.content)
+//     wrapper.content.style.left = pos.x
+//     wrapper.content.style.top = pos.y
+//   }
 
-  const indicator = new CommentIndicator({
-    target: wrapper.root,
-    props: {}
-  })
+//   const indicator = new CommentIndicator({
+//     target: wrapper.root,
+//     props: {}
+//   })
 
-  // listen for resize events and update the position of the indicator
-  const resizeObserver = new ResizeObserver(repositionWrapper)
-  resizeObserver.observe(annotation.range.commonAncestorContainer as Element)
+//   // listen for resize events and update the position of the indicator
+//   const resizeObserver = new ResizeObserver(repositionWrapper)
+//   resizeObserver.observe(annotation.range.commonAncestorContainer as Element)
 
-  // listen for page resize events and update the position of the indicator
-  window.addEventListener('resize', repositionWrapper)
+//   // listen for page resize events and update the position of the indicator
+//   window.addEventListener('resize', repositionWrapper)
 
-  indicator.$on('click', () => {
-    console.log('clicked on comment', annotation.id)
+//   indicator.$on('click', () => {
+//     console.debug('clicked on comment', annotation.id)
 
-    wrapper.remove()
+//     wrapper.remove()
 
-    // remove the event listeners when the indicator is closed
-    window.removeEventListener('resize', repositionWrapper)
-    resizeObserver.disconnect()
+//     // remove the event listeners when the indicator is closed
+//     window.removeEventListener('resize', repositionWrapper)
+//     resizeObserver.disconnect()
 
-    renderComment(annotation)
-  })
+//     renderComment(annotation)
+//   })
 
-  // finally show the indicator
-  wrapper.show()
-}
+//   // finally show the indicator
+//   wrapper.show()
+// }
 
 function cssKeepInBounds(raw: number, width: number, adjustment: number = 0) {
   const BOUNDS = 10
@@ -295,7 +295,7 @@ function renderComment(annotation: AnnotationCommentRange) {
   window.addEventListener('resize', repositionWrapper)
 
   const closeComment = () => {
-    console.log('Closing comment', annotation)
+    console.debug('Closing comment', annotation)
 
     wrapper.remove()
 
@@ -306,17 +306,17 @@ function renderComment(annotation: AnnotationCommentRange) {
     // renderCommentIndicator(annotation)
   }
 
-  comment.$on('close', (e) => {
+  comment.$on('close', (_) => {
     closeComment()
   })
 
-  comment.$on('remove', (e) => {
-    console.log('Removing annotation', annotation)
+  comment.$on('remove', (_) => {
+    console.debug('Removing annotation', annotation)
     sendPageEvent(WebViewEventSendNames.RemoveAnnotation, annotation.id)
   })
 
   comment.$on('updateContent', (e) => {
-    console.log('Updating annotation content', e.detail)
+    console.debug('Updating annotation content', e.detail)
 
     annotation.data.content_plain = e.detail.plain
     annotation.data.content_html = e.detail.html
@@ -334,7 +334,7 @@ function renderComment(annotation: AnnotationCommentRange) {
 }
 
 function openComment(annotation: AnnotationCommentRange) {
-  console.log('Opening comment', annotation)
+  console.debug('Opening comment', annotation)
   const oldComment = document.getElementById(`deta-annotation-comment-${annotation.id}`)
   if (oldComment) {
     oldComment.remove()
@@ -362,7 +362,7 @@ function handleRestoreAnnotation(
 
     const range = constructRange(annotation.anchor.data as AnnotationRangeData)
 
-    console.log('Restoring annotation', range)
+    console.debug('Restoring annotation', range)
     applyRangeHighlight(range, annotationEvent.id, annotation.type)
 
     const commentAnnotation = {
@@ -372,7 +372,7 @@ function handleRestoreAnnotation(
         annotation.type === 'comment' ? annotation.data : { content_plain: '', content_html: '' }
     } as AnnotationCommentRange
 
-    console.log('Injecting comment', commentAnnotation)
+    console.debug('Injecting comment', commentAnnotation)
     // renderCommentIndicator(commentAnnotation)
     applyRangeHighlight(range, annotationEvent.id, annotation.type, () => {
       renderComment(commentAnnotation)
@@ -385,7 +385,7 @@ function handleRestoreAnnotation(
     //     data: annotation.data
     //   } as AnnotationCommentRange
 
-    //   console.log('Injecting comment', commentAnnotation)
+    //   console.debug('Injecting comment', commentAnnotation)
     //   // renderCommentIndicator(commentAnnotation)
     //   applyRangeHighlight(range, annotationEvent.id, annotation.type, () => {
     //     renderComment(commentAnnotation)
@@ -399,7 +399,7 @@ function handleRestoreAnnotation(
 }
 
 function handleHighlightText(data: WebViewReceiveEvents[WebViewEventReceiveNames.HighlightText]) {
-  console.log('highlight webview text:', data)
+  console.debug('highlight webview text:', data)
   const texts = data.texts
 
   const style = document.createElement('style')
@@ -412,7 +412,7 @@ function handleHighlightText(data: WebViewReceiveEvents[WebViewEventReceiveNames
 
   // reset highlights
   const highlights = document.querySelectorAll('.citation-highlight')
-  console.log('Removing existing highlights', highlights)
+  console.debug('Removing existing highlights', highlights)
   highlights.forEach((highlight) => {
     highlight.classList.remove('citation-highlight')
   })
@@ -430,7 +430,7 @@ function handleHighlightText(data: WebViewReceiveEvents[WebViewEventReceiveNames
 
   const newHighlights = document.querySelectorAll('.citation-highlight')
   if (newHighlights.length > 0) {
-    console.log('Scrolling to highlight', newHighlights)
+    console.debug('Scrolling to highlight', newHighlights)
     newHighlights[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
   }
 }
@@ -438,7 +438,7 @@ function handleHighlightText(data: WebViewReceiveEvents[WebViewEventReceiveNames
 function handleSeekToTimestamp(
   data: WebViewReceiveEvents[WebViewEventReceiveNames.SeekToTimestamp]
 ) {
-  console.log('Seeking to timestamp', data)
+  console.debug('Seeking to timestamp', data)
   const timestamp = data.timestamp
   const video = document.querySelector('video')
   if (!video) {
@@ -452,7 +452,7 @@ function handleSeekToTimestamp(
 function handleScrollToAnnotation(
   data: WebViewReceiveEvents[WebViewEventReceiveNames.ScrollToAnnotation]
 ) {
-  console.log('Scrolling to annotation', data)
+  console.debug('Scrolling to annotation', data)
   const annotation = data.data
 
   const elements = document.querySelectorAll(`deta-annotation[id="${data.id}"]`)
@@ -461,7 +461,7 @@ function handleScrollToAnnotation(
     return
   }
 
-  console.log('Scrolling to element', elements)
+  console.debug('Scrolling to element', elements)
   elements[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
 
   // make the element glow for a short time
@@ -491,7 +491,7 @@ function handleScrollToAnnotation(
 window.addEventListener('DOMContentLoaded', async (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
     const target = e.target as HTMLElement
-    console.log('mouseup', target, target.id)
+    console.debug('mouseup', target, target.id)
     if (target.id === 'horizonTextDragHandle') {
       return
     }
@@ -556,7 +556,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
       selectionMenu.$on('save', (e) => {
         const text = e.detail
-        console.log('Saving text', text)
+        console.debug('Saving text', text)
 
         // re apply selection if it was removed accidentally
         if (selection && selectionRange) {
@@ -571,7 +571,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
         const rangeData = getRangeData(selectionRange)
 
-        console.log('Range data', rangeData)
+        console.debug('Range data', rangeData)
 
         sendPageEvent(WebViewEventSendNames.Annotate, {
           type: 'comment',
@@ -589,7 +589,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
         // sendPageEvent(WebViewEventSendNames.Bookmark, { text, url: window.location.href })
       })
 
-      selectionMenu.$on('highlight', (e) => {
+      selectionMenu.$on('highlight', (_) => {
         // const selection = window.getSelection()
         // if (!selection) return
         if (!selectionRange) {
@@ -600,7 +600,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
         // const range = selection?.getRangeAt(0)
         const rangeData = getRangeData(selectionRange)
 
-        console.log('Highlighting data', rangeData)
+        console.debug('Highlighting data', rangeData)
 
         sendPageEvent(WebViewEventSendNames.Annotate, {
           type: 'comment',
@@ -623,7 +623,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
       selectionMenu.$on('comment', (e) => {
         const content = e.detail
-        console.log('Commenting', content)
+        console.debug('Commenting', content)
 
         if (!selectionRange) {
           console.error('No selection range found')
@@ -632,7 +632,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
         const rangeData = getRangeData(selectionRange)
 
-        console.log('Highlighting data', rangeData)
+        console.debug('Highlighting data', rangeData)
 
         sendPageEvent(WebViewEventSendNames.Annotate, {
           type: 'comment',
@@ -658,7 +658,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
       selectionMenu.$on('transform', (e) => {
         const { query, type, includePageContext } = e.detail
-        console.log('transforming', type, query, text)
+        console.debug('transforming', type, query, text)
 
         // re apply selection if it was removed accidentally
         if (selection && selectionRange) {
@@ -680,7 +680,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
       })
 
       if (e.altKey) {
-        console.log('Alt key pressed, highlighting directly')
+        console.debug('Alt key pressed, highlighting directly')
         selectionMenu.handleMarker()
       }
 
@@ -715,12 +715,12 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     // mouseDownX = e.clientX // Store the X-coordinate on mousedown
 
     const target = e.target as HTMLElement
-    console.log('mousedown', target, target.id, target.tagName)
+    console.debug('mousedown', target, target.id, target.tagName)
 
     if (target.tagName !== COMPONENT_WRAPPER_TAG) {
       if (selectionMenuWrapper) {
         if (selectionMenu?.canClose()) {
-          console.log('Removing selection menu')
+          console.debug('Removing selection menu')
           selectionMenuWrapper.remove()
         } else {
           e.preventDefault()
@@ -733,9 +733,10 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     WebviewAnnotationEventNames.Click as any,
     (e: CustomEvent<WebviewAnnotationEvents[WebviewAnnotationEventNames.Click]>) => {
       const { id, type } = e.detail
-      console.log('Clicked on annotation', id, type)
+      console.debug('Clicked on annotation', id, type)
 
       if (type === 'comment') {
+        // TODO: will crash the app
         renderComment()
       }
 
@@ -815,7 +816,7 @@ function sendPageEvent<T extends keyof WebViewSendEvents>(
   name: T,
   data?: WebViewSendEvents[T]
 ): void {
-  console.log('Sending page event', name, data)
+  console.debug('Sending page event', name, data)
   ipcRenderer.sendToHost('webview-page-event', name, data)
 }
 
@@ -847,6 +848,6 @@ ipcRenderer.on('webview-event', (_event, payload) => {
 
 // @ts-expect-error
 window.insertText = (text: string) => {
-  console.log('Inserting text', text)
+  console.debug('Inserting text', text)
   sendPageEvent(WebViewEventSendNames.InsertText, text)
 }

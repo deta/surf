@@ -1,7 +1,7 @@
 import type { DetectedResource, WebViewEventSendNames, WebViewSendEvents } from '@horizon/types'
 import type { ChatMessageContentItem, AIChatMessageSource } from '../components/Browser/types'
 import { SIMPLE_SUMMARIZER_PROMPT } from '../constants/prompts'
-import log from '../utils/log'
+import log, { useLogScope } from '../utils/log'
 import { WebParser } from '@horizon/web-parser'
 import { PromptIDs, getPrompt } from './prompts'
 
@@ -43,8 +43,6 @@ export const parseXML = (xml: string) => {
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(`<xml>${xml}</xml>`, 'text/xml')
 
-  console.log('xmlDoc', xmlDoc)
-
   const parseError = xmlDoc.getElementsByTagName('parsererror')
   if (parseError.length > 0) {
     console.warn('Error parsing chat response: ' + parseError[0]?.textContent ?? 'unknown error')
@@ -64,8 +62,6 @@ export const parseXMLChatResponseSources = (xml: Document) => {
     const content = source.getElementsByTagName('content')[0]?.textContent
     const timestamp = source.getElementsByTagName('timestamp')[0]?.textContent
     const url = source.getElementsByTagName('url')[0]?.textContent
-
-    console.log('source', id, resource_id, content, timestamp, url)
 
     return {
       id,
@@ -92,8 +88,6 @@ export const parseXMLChatResponseAnswer = (xml: Document) => {
 
   for (let i = 0; i < answer.childNodes.length; i++) {
     const node = answer.childNodes[i]
-
-    console.log('node', node.nodeName, node)
 
     if (node.nodeName === 'citation') {
       items.push({ type: 'citation', content: node.textContent ?? '' })

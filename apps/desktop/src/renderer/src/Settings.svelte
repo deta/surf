@@ -25,11 +25,7 @@
   let migrationOutput: HTMLParagraphElement
   let migrating = false
 
-  $: console.log('prompts', prompts)
-
   const debouncedPromptUpdate = useDebounce((id: string, content: string) => {
-    console.log('prompt update', id, content)
-
     // @ts-ignore
     window.api.updatePrompt(id, content)
   }, 500)
@@ -37,8 +33,6 @@
   const getAppInfo = async () => {
     // @ts-ignore
     const info = await window.api.getAppInfo()
-
-    console.log(info)
     version = info.version
   }
 
@@ -70,7 +64,6 @@
 
     // @ts-ignore
     window.api.onSetPrompts((data) => {
-      console.log('set prompts', data)
       prompts = data
     })
 

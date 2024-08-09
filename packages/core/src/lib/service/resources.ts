@@ -634,7 +634,6 @@ export class ResourceManager {
       throw new Error('failed to fetch resource')
     }
     const obj = await res.json()
-    console.log('resource object', obj)
     return this.findOrCreateResourceObject(obj)
   }
 
@@ -988,7 +987,6 @@ export class ResourceManager {
 
   async getNumberOfReferencesInSpaces(resourceId: string): Promise<number> {
     const allFolders = await this.sffs.listSpaces()
-    console.log('allFolders', allFolders)
 
     let count = 0
     for (const folder of allFolders) {

@@ -1371,7 +1371,7 @@
     answerText: string,
     sourceUid?: string
   ) => {
-    log.info('highlighting text', resourceId, answerText, sourceUid)
+    log.debug('highlighting text', resourceId, answerText, sourceUid)
 
     const tabs = [...getTabsInChatContext(), ...$unpinnedTabs]
     let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId)
@@ -3387,7 +3387,6 @@
               {/if}
 
               <NewTabButton
-                {resourceManager}
                 {spaces}
                 on:create-tab-from-space={handleCreateTabForSpace}
                 on:create-new-space={handleCreateNewSpace}

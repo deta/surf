@@ -66,7 +66,6 @@
 
   export const canClose = () => {
     if ($view === 'comment') {
-      console.log('canClose', inputValue)
       return inputValue === '' || inputValue === '<p></p>'
     } else if ($view === 'ai') {
       return !running
@@ -175,7 +174,6 @@
   }
 
   const handleHashtags = (e: CustomEvent<string[]>) => {
-    console.log('tags', e.detail)
     tags = e.detail
   }
 </script>

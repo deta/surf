@@ -1,4 +1,4 @@
-import { sentryVitePlugin } from '@sentry/vite-plugin'
+// import { sentryVitePlugin } from '@sentry/vite-plugin'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
@@ -26,7 +26,7 @@ export default defineConfig({
 
       // Used to inject the styles from the preload script and svelte components into the webviews
       cssInjectedByJsPlugin({
-        injectCode: (cssCode, options) => {
+        injectCode: (cssCode, _options) => {
           return `window.addEventListener('DOMContentLoaded', () => { try{if(typeof document != 'undefined'){var elementStyle = document.createElement('style');elementStyle.id="webview-styles";elementStyle.appendChild(document.createTextNode(${cssCode}));document.head.appendChild(elementStyle);}}catch(e){console.error('vite-plugin-css-injected-by-js', e);} })`
         }
       }),
@@ -50,11 +50,11 @@ export default defineConfig({
     envPrefix: 'R_VITE_',
     plugins: [
       Markdown({ mode: [Mode.MARKDOWN] }),
-      svelte(),
-      sentryVitePlugin({
-        org: 'deta',
-        project: 'space-os-early-adopters'
-      })
+      svelte()
+      // sentryVitePlugin({
+      //   org: 'deta',
+      //   project: 'surf-early-adopters'
+      // })
     ],
     build: {
       rollupOptions: {

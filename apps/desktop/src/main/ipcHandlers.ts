@@ -1,3 +1,4 @@
+import { useLogScope } from '@horizon/core/src/lib/utils/log'
 import { ipcMain, app, session } from 'electron'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
@@ -8,6 +9,7 @@ import { getPlatform } from './utils'
 import { checkForUpdates } from './appUpdates'
 import { getSettingsWindow } from './settingsWindow'
 
+const log = useLogScope('Main IPC Handlers')
 let prompts: EditablePrompt[] = []
 
 export function setupIpcHandlers() {
@@ -71,10 +73,10 @@ export function setupIpcHandlers() {
   ipcMain.on(
     'start-drag',
     async (event, resourceId: string, filePath: string, fileType: string) => {
-      console.log('Start drag', resourceId, filePath, fileType)
+      log.debug('Start drag', resourceId, filePath, fileType)
       const sender = event.sender
       await handleDragStart(sender, resourceId, filePath, fileType)
-      console.log('Drag started')
+      log.debug('Drag started')
     }
   )
 
@@ -127,7 +129,7 @@ export function setupIpcHandlers() {
       let timeout
 
       webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-        console.log('Request intercepted:', details)
+        log.debug('Request intercepted:', details)
 
         callback({})
         cleanup()
@@ -149,7 +151,7 @@ export function setupIpcHandlers() {
   ipcMain.on('set-prompts', (_event, prompts: EditablePrompt[]) => {
     const window = getSettingsWindow()
     if (!window) {
-      console.error('Settings window not found')
+      log.error('Settings window not found')
       return
     }
 
@@ -173,7 +175,7 @@ export const ipcSenders = {
   openCheatSheet: () => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -183,7 +185,7 @@ export const ipcSenders = {
   openFeedbackPage: () => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -193,7 +195,7 @@ export const ipcSenders = {
   adBlockChanged: (partition: string, state: boolean) => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -203,7 +205,7 @@ export const ipcSenders = {
   trackEvent: (eventName: string, properties: Record<string, any>) => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -213,7 +215,7 @@ export const ipcSenders = {
   getPrompts: () => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -223,7 +225,7 @@ export const ipcSenders = {
   resetPrompt: (id: string) => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -233,7 +235,7 @@ export const ipcSenders = {
   updatePrompt: (id: string, content: string) => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -243,7 +245,7 @@ export const ipcSenders = {
   toggleSidebar: (visible?: boolean) => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -253,7 +255,7 @@ export const ipcSenders = {
   toggleTabsPosition: (visible?: boolean) => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -263,7 +265,7 @@ export const ipcSenders = {
   copyActiveTabURL: () => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -273,7 +275,7 @@ export const ipcSenders = {
   createNewTab: () => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -283,7 +285,7 @@ export const ipcSenders = {
   closeActiveTab: () => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 
@@ -293,7 +295,7 @@ export const ipcSenders = {
   reloadActiveTab: (force = false) => {
     const window = getMainWindow()
     if (!window) {
-      console.error('Main window not found')
+      log.error('Main window not found')
       return
     }
 

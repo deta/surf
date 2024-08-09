@@ -31,9 +31,6 @@
     ([$historyEntries, $searchTerm]) => {
       if (!$searchTerm) return $historyEntries
 
-      console.log('searching for:', $searchTerm)
-      console.log('entries:', $historyEntries)
-
       const lowercaseSearch = $searchTerm.toLowerCase()
       return $historyEntries.filter((entry) => {
         const { entryResource, linkedResource } = entry

@@ -8,7 +8,7 @@
 </script>
 
 <script lang="ts">
-  import { everythingSpace, ResourceManager } from '../../service/resources'
+  import { everythingSpace } from '../../service/resources'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { writable, derived, type Writable } from 'svelte/store'
@@ -44,20 +44,17 @@
     })
   })
   const handleCreateNewHistoryTab = () => {
-    console.log('Dispatching custom event from handleCreateNewHistoryTab')
     dispatch('create-new-history-tab')
     isOpen = false
   }
 
   const handleCreateNewTab = () => {
-    console.log('Dispatching custom event from handleCreateNewTab')
     dispatch('create-new-tab')
     isOpen = false
   }
 
   const handleClick = (index: number) => {
     selectedSpaceIndex = index
-    console.log('Dispatching custom event from handleClick')
     dispatch('create-tab-from-space', $filteredSpaces[selectedSpaceIndex])
     isOpen = false
   }
@@ -86,7 +83,6 @@
   }
 
   const confirmCreatingNewSpace = (processNaturalLanguage: boolean) => {
-    console.log('Confirming creation of new space')
     dispatch('create-new-space', { name: newSpaceName, processNaturalLanguage })
     isCreatingNewSpace.set(false)
     newSpaceName = ''

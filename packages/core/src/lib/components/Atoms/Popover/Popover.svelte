@@ -51,7 +51,6 @@
   }
 
   const handleForwardCreateTabFromSpace = (event) => {
-    console.log('iamhere', event.detail)
     dispatch('create-tab-from-space', event.detail)
   }
 

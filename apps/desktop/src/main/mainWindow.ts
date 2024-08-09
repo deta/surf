@@ -77,7 +77,7 @@ export function createWindow() {
         `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`
       ],
       sandbox: false,
-      session: session.fromPartition('persist:horizon-session-v0'),
+      session: session.fromPartition('persist:surf-app-session'),
       webviewTag: true,
       defaultFontSize: 14
     }

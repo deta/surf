@@ -39,7 +39,6 @@
 
     if (event.shiftKey && event.key === 'Enter') {
       dispatch('chat', value)
-      console.log('Shift + Enter pressed', value)
     }
   }
 

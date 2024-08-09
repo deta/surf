@@ -5,9 +5,9 @@
 
   import type { AppActivationResponse } from '@horizon/api'
 
-  const REQUEST_INVITE_URL = 'https://horizon.space'
-  const TERMS_URL = 'https://deta.space/terms'
-  const PRIVACY_URL = 'https://deta.space/privacy'
+  const REQUEST_INVITE_URL = 'https://deta.surf'
+  const TERMS_URL = 'https://deta.surf/terms'
+  const PRIVACY_URL = 'https://deta.surf/privacy'
 
   let view: 'invite' | 'disclaimer' | 'prefs' | 'settings' | 'done' = 'invite'
 
@@ -396,7 +396,7 @@
           If you have any questions or feedback, please email us at <a href="mailto:team@deta.space"
             >team@deta.space</a
           >
-          or join our <a href="https://horizon.space/discord" target="_blank">Discord server</a> to chat
+          or join our <a href="https://deta.surf/discord" target="_blank">Discord server</a> to chat
           with the team and all our other amazing early adopters.
         </p>
       </div>

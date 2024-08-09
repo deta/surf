@@ -14,7 +14,7 @@ const params = {
 
 function electronBuilderConfig() {
   return {
-    appId: 'browser.deta.surf.ea',
+    appId: 'ea.browser.deta.surf',
     productName: params.buildName,
     directories: {
       buildResources: params.buildResourcesDir || 'build/resources/prod'

@@ -1,3 +1,4 @@
+import { useLogScope } from '@horizon/core/src/lib/utils/log'
 import { session, ipcMain, app } from 'electron'
 import { getMainWindow } from './mainWindow'
 import { randomUUID } from 'crypto'
@@ -9,6 +10,8 @@ import {
   DownloadUpdatedMessage,
   DownloadDoneMessage
 } from '@horizon/core/src/lib/types'
+
+const log = useLogScope('Download Manager')
 
 export function initDownloadManager(partition: string) {
   const targetSession = session.fromPartition(partition)
@@ -25,7 +28,7 @@ export function initDownloadManager(partition: string) {
     downloadItem.setSavePath(tempDownloadPath)
     downloadItem.resume()
 
-    console.log('will-download', downloadItem.getURL(), filename)
+    log.debug('will-download', downloadItem.getURL(), filename)
 
     const moveTempFile = (finalPath: string) => {
       // copy to downloads folder
@@ -44,18 +47,18 @@ export function initDownloadManager(partition: string) {
         }
       }
 
-      console.log('saving download to system downloads', downloadFilePath)
+      log.debug('saving download to system downloads', downloadFilePath)
       fs.copyFile(tempDownloadPath, downloadFilePath, (err) => {
         if (err) {
-          console.error(`error copying file to downloads: ${err}`)
+          log.error(`error copying file to downloads: ${err}`)
           return
         }
       })
 
-      console.log('moving download to oasis directory', finalPath)
+      log.debug('moving download to oasis directory', finalPath)
       fs.rename(tempDownloadPath, finalPath, (err) => {
         if (err) {
-          console.error(`error moving file: ${err}`)
+          log.error(`error moving file: ${err}`)
           return
         }
       })
@@ -79,7 +82,7 @@ export function initDownloadManager(partition: string) {
         finalPath = path
       }
 
-      console.log(`download-path-response-${downloadId}`, path)
+      log.debug(`download-path-response-${downloadId}`, path)
 
       if (downloadItem.getState() === 'completed') {
         moveTempFile(finalPath)
@@ -87,7 +90,7 @@ export function initDownloadManager(partition: string) {
     })
 
     downloadItem.on('updated', (_event, state) => {
-      console.log(
+      log.debug(
         'download-updated',
         state,
         downloadItem.getReceivedBytes(),
@@ -106,7 +109,7 @@ export function initDownloadManager(partition: string) {
     downloadItem.once('done', (_event, state) => {
       let path: string
 
-      console.log('download-done', state, downloadItem.getFilename())
+      log.debug('download-done', state, downloadItem.getFilename())
 
       if (state === 'completed' && finalPath) {
         path = finalPath
