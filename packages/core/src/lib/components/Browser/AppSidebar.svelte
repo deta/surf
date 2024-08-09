@@ -92,7 +92,12 @@
     try {
       inputValue = ''
 
-      const createApp = savedInputValue.toLowerCase().startsWith('app:') || $activeToolTab === 'app'
+      if ($activeToolTab === 'app' && !savedInputValue.toLowerCase().startsWith('app:')) {
+        savedInputValue = `app: ${savedInputValue}`
+      }
+
+      const createApp = savedInputValue.toLowerCase().startsWith('app:')
+
       log.debug(
         createApp ? 'Creating app with input:' : 'Modifying page with input',
         savedInputValue,
