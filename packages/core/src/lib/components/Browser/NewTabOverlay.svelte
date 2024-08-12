@@ -1136,13 +1136,13 @@
                     <TabSearchItem {item} on:select={handleSelect} />
                   {/each}
 
-                  <!-- {#if tabs.length > 0}
-                          <Command.Group heading="Active Tabs">
-                            {#each tabs as item}
-                              <TabSearchItem {item} on:select={handleSelect} />
-                            {/each}
-                          </Command.Group>
-                        {/if} -->
+                  {#if tabs.length > 0}
+                    <Command.Group heading="Active Tabs">
+                      {#each tabs as item}
+                        <TabSearchItem {item} on:select={handleSelect} />
+                      {/each}
+                    </Command.Group>
+                  {/if}
 
                   {#if history.length > 0}
                     <Command.Group heading="History">
@@ -1245,7 +1245,7 @@
 
       <div
         data-pane={2}
-        class="h-full full snap-start flex items-center justify-center px-36"
+        class="h-full full snap-start flex items-center justify-center"
         bind:this={panelTwoRef}
       >
         {#if $showCreationModal}

@@ -306,10 +306,15 @@
     handleRightSidebarTabsChange($rightSidebarTab)
   }
 
-  $: canGoBack = $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
+  $: canGoBack =
+    $activeTab?.type === 'page' &&
+    $activeTab?.currentHistoryIndex > 0 &&
+    $showNewTabOverlay === false
   $: canGoForward =
     $activeTab?.type === 'page' &&
-    $activeTab?.currentHistoryIndex < $activeTab.historyStackIds.length - 1
+    $activeTab?.currentHistoryIndex < $activeTab.historyStackIds.length - 1 &&
+    $showNewTabOverlay === false
+  $: canReload = $activeTab?.type === 'page' && $showNewTabOverlay === false
 
   $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
     log.debug('Active tab is not in view, resetting')
@@ -3021,8 +3026,11 @@
               <Tooltip.Root openDelay={400} closeDelay={10}>
                 <Tooltip.Trigger>
                   <button
-                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canReload
+                      ? 'opacity-30 cursor-not-allowed'
+                      : 'cursor-pointer'}"
                     on:click={$activeBrowserTab?.reload}
+                    disabled={!canReload}
                   >
                     <span
                       class="group-hover:rotate-180 transition-transform ease-in-out duration-200"
