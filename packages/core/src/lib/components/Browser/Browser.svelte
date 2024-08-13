@@ -2001,7 +2001,7 @@
   $: {
     const reservedSpace = 200 + 40 * $pinnedTabs.length + 200
     const availableSpace = maxWidth - reservedSpace
-    tabSize = availableSpace / $unpinnedTabs.length
+    tabSize = availableSpace / ($unpinnedTabs.length + $magicTabs.length)
   }
   const handleResize = () => {
     maxWidth = window.innerWidth
@@ -2916,6 +2916,11 @@
   afterUpdate(() => {
     checkVisibility()
   })
+
+  $: maskClass = horizontalTabs ? 'horizontal' : 'vertical'
+  $: maskStyle = horizontalTabs
+    ? '--mask-direction: to right; --mask-size: 100% 100%;'
+    : '--mask-direction: to bottom; --mask-size: 100% 100%;'
 </script>
 
 <SplashScreen show={$showSplashScreen} />
@@ -3125,292 +3130,307 @@
             </div>
           </div>
 
-          {#if $activeTabMagic}
-            {#if $activeTabMagic.showSidebar}
-              <div
-                class="no-scrollbar relatie overflow-y-scroll max-h-[700px] flex-grow flex-shrink-0 w-full group {horizontalTabs
-                  ? 'max-w-[512px] no-scrollbar'
-                  : 'w-full'}"
-              >
-                <!-- <div
-                  style="opacity: 0.2"
-                  class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opcaity-20 group-hover:opacity-10 transition duration-1000 group-hover:duration-200 animate-tilt"
-                ></div> -->
-                <div
-                  class="relative bg-sky-100/50 rounded-2xl no-scrollbar
-                    {horizontalTabs ? 'h-full' : 'w-full'}"
-                >
-                  <div class={horizontalTabs ? 'px-1' : 'p-2'} class:magic={$magicTabs.length > 0}>
-                    {#if horizontalTabs}
+          <div class="masked-scroll-container overscroll-x-none" style={maskStyle}>
+            <div
+              class=" {horizontalTabs
+                ? 'overflow-x-scroll space-x-2 px-3'
+                : '  overflow-y-scroll space-y-2 py-3'} masked-content no-scrollbar flex"
+              class:flex-row={horizontalTabs}
+              class:items-center={horizontalTabs}
+              class:flex-col={!horizontalTabs}
+              on:wheel={(event) => {
+                if (horizontalTabs) {
+                }
+              }}
+            >
+              {#if $activeTabMagic}
+                {#if $activeTabMagic.showSidebar}
+                  <div
+                    class="no-scrollbar relative flex-grow flex-shrink-0 group {horizontalTabs
+                      ? ''
+                      : 'w-full'}"
+                  >
+                    <div
+                      class="relative bg-sky-100/60 rounded-2xl no-scrollbar
+                      {horizontalTabs ? 'h-full' : 'w-full'}"
+                    >
                       <div
-                        id="sidebar-magic-tabs"
-                        axis="horizontal"
-                        class="magic-horizontal"
-                        style="display: flex;"
-                        dragdeadzone="5"
-                        use:HTMLAxisDragZone.action={{}}
-                        on:Drop={handleDropSidebar}
-                        on:DragEnter={handleDragEnterSidebar}
+                        class={horizontalTabs ? 'px-1' : 'p-2'}
+                        class:magic={$magicTabs.length > 0}
                       >
-                        {#if $magicTabs.length === 0}
-                          <div class="flex flex-row items-center">
-                            <div class="ai-wrapper">
-                              <Icon name="ai" size={24 + 'px'} />
-                            </div>
-                            <span class="text-xs text-sky-800/50">
-                              General mode, drop tabs here!
-                            </span>
-                          </div>
-                        {:else}
-                          {#each $magicTabs as tab, index (tab.id + index)}
-                            <TabItem
-                              hibernated={!$activatedTabs.includes(tab.id)}
-                              removeHighlight={$showNewTabOverlay}
-                              showClose
-                              {tab}
-                              {activeTabId}
-                              pinned={false}
-                              showButtons={false}
-                              showExcludeOthersButton
-                              on:delete-tab={handleDeleteTab}
-                              on:unarchive-tab={handleUnarchiveTab}
-                              on:select={handleTabSelect}
-                              on:remove-from-sidebar={handleRemoveFromSidebar}
-                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                              on:exclude-tab={handleExcludeTabFromMagic}
-                              on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                            />
-                          {/each}
-                        {/if}
-                      </div>
-                    {:else}
-                      {#if $magicTabs.length > 0}
-                        <div
-                          class="flex flex-row gap-2 px-4 py-2 leading-5 items-center justify-center mb-1 mx-2"
-                        >
-                          <Icon name="sparkles" size="18" class="text-sky-800" />
-                          <span class="text-sm text-sky-800"
-                            >Chat with {$magicTabs.length === 1
-                              ? 'this tab'
-                              : $magicTabs.length === 2
-                                ? 'two tabs'
-                                : `${$magicTabs.length} tabs`}</span
+                        {#if horizontalTabs}
+                          <div
+                            id="sidebar-magic-tabs"
+                            axis="horizontal"
+                            class="magic-horizontal"
+                            style="display: flex;"
+                            dragdeadzone="5"
+                            use:HTMLAxisDragZone.action={{}}
+                            on:Drop={handleDropSidebar}
+                            on:DragEnter={handleDragEnterSidebar}
                           >
-                        </div>
-                      {/if}
-                      <div
-                        id="sidebar-magic-tabs"
-                        axis="vertical"
-                        dragdeadzone="5"
-                        use:HTMLAxisDragZone.action={{}}
-                        on:Drop={handleDropSidebar}
-                        on:DragEnter={handleDragEnterSidebar}
-                      >
-                        {#if $magicTabs.length === 0}
-                          <div class="flex flex-col items-center">
-                            <div class="ai-wrapper">
-                              <Icon name="ai" size={24 + 'px'} />
-                            </div>
-                            <span class="text-xs text-sky-800">General mode, drop tabs here!</span>
+                            {#if $magicTabs.length === 0}
+                              <div class="flex flex-row items-center">
+                                <div class="ai-wrapper">
+                                  <Icon name="ai" size={24 + 'px'} />
+                                </div>
+                                <span class="text-xs text-sky-800/50">
+                                  General mode, drop tabs here!
+                                </span>
+                              </div>
+                            {:else}
+                              {#each $magicTabs as tab, index (tab.id + index)}
+                                <TabItem
+                                  hibernated={!$activatedTabs.includes(tab.id)}
+                                  removeHighlight={$showNewTabOverlay}
+                                  showClose
+                                  tabSize={Math.min(300, Math.max(24, tabSize))}
+                                  {tab}
+                                  enableEditing
+                                  {activeTabId}
+                                  pinned={false}
+                                  showButtons={false}
+                                  showExcludeOthersButton
+                                  on:delete-tab={handleDeleteTab}
+                                  on:unarchive-tab={handleUnarchiveTab}
+                                  on:select={handleTabSelect}
+                                  on:remove-from-sidebar={handleRemoveFromSidebar}
+                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                  on:exclude-tab={handleExcludeTabFromMagic}
+                                  on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                                />
+                              {/each}
+                            {/if}
                           </div>
                         {:else}
-                          {#each $magicTabs as tab, index (tab.id + index)}
-                            <TabItem
-                              hibernated={!$activatedTabs.includes(tab.id)}
-                              removeHighlight={$showNewTabOverlay}
-                              showClose
-                              horizontalTabs={false}
-                              {tab}
-                              {activeTabId}
-                              pinned={false}
-                              showButtons={false}
-                              showExcludeOthersButton
-                              on:unarchive-tab={handleUnarchiveTab}
-                              on:delete-tab={handleDeleteTab}
-                              on:select={handleTabSelect}
-                              on:remove-from-sidebar={handleRemoveFromSidebar}
-                              on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                              on:exclude-tab={handleExcludeTabFromMagic}
-                              on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                            />
-                          {/each}
+                          {#if $magicTabs.length > 0}
+                            <div
+                              class="flex flex-row gap-2 px-4 py-2 leading-5 items-center justify-center mb-1 mx-2"
+                            >
+                              <Icon name="sparkles" size="18" class="text-sky-800" />
+                              <span class="text-sm text-sky-800"
+                                >Chat with {$magicTabs.length === 1
+                                  ? 'this tab'
+                                  : $magicTabs.length === 2
+                                    ? 'two tabs'
+                                    : `${$magicTabs.length} tabs`}</span
+                              >
+                            </div>
+                          {/if}
+                          <div
+                            id="sidebar-magic-tabs"
+                            axis="vertical"
+                            dragdeadzone="5"
+                            use:HTMLAxisDragZone.action={{}}
+                            on:Drop={handleDropSidebar}
+                            on:DragEnter={handleDragEnterSidebar}
+                          >
+                            {#if $magicTabs.length === 0}
+                              <div class="flex flex-col items-center">
+                                <div class="ai-wrapper">
+                                  <Icon name="ai" size={24 + 'px'} />
+                                </div>
+                                <span class="text-xs text-sky-800"
+                                  >General mode, drop tabs here!</span
+                                >
+                              </div>
+                            {:else}
+                              {#each $magicTabs as tab, index (tab.id + index)}
+                                <TabItem
+                                  hibernated={!$activatedTabs.includes(tab.id)}
+                                  removeHighlight={$showNewTabOverlay}
+                                  showClose
+                                  horizontalTabs={false}
+                                  {tab}
+                                  {activeTabId}
+                                  pinned={false}
+                                  showButtons={false}
+                                  showExcludeOthersButton
+                                  on:unarchive-tab={handleUnarchiveTab}
+                                  on:delete-tab={handleDeleteTab}
+                                  on:select={handleTabSelect}
+                                  on:remove-from-sidebar={handleRemoveFromSidebar}
+                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                  on:exclude-tab={handleExcludeTabFromMagic}
+                                  on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                                />
+                              {/each}
+                            {/if}
+                          </div>
                         {/if}
                       </div>
-                    {/if}
+                    </div>
                   </div>
+
+                  <div
+                    class="{!horizontalTabs
+                      ? 'w-1/2 mx-auto h-0.5'
+                      : 'h-4 w-0.5'} rounded-xl bg-sky-200"
+                  ></div>
+                {/if}
+              {/if}
+
+              <div
+                class="no-scrollbar relative h-full flex-grow w-full"
+                class:space-x-2={horizontalTabs}
+                class:items-center={horizontalTabs}
+                bind:this={containerRef}
+              >
+                {#if horizontalTabs}
+                  <div
+                    id="sidebar-unpinned-tabs"
+                    class="horizontal-tabs space-x-1 h-full"
+                    axis="horizontal"
+                    dragdeadzone="5"
+                    placeholder-size="60"
+                    use:HTMLAxisDragZone.action={{}}
+                    on:Drop={handleDropSidebar}
+                    on:DragEnter={handleDragEnterSidebar}
+                  >
+                    {#each $unpinnedTabs as tab, index (tab.id + index)}
+                      <!-- check if this tab is active -->
+                      {#if $activeTabId === tab.id}
+                        <TabItem
+                          hibernated={!$activatedTabs.includes(tab.id)}
+                          removeHighlight={$showNewTabOverlay}
+                          showClose
+                          tabSize={Math.min(300, Math.max(24, tabSize))}
+                          {tab}
+                          {activeTabId}
+                          bookmarkingInProgress={$bookmarkingInProgress}
+                          bookmarkingSuccess={$bookmarkingSuccess}
+                          pinned={false}
+                          {spaces}
+                          enableEditing
+                          showIncludeButton={$activeTabMagic?.showSidebar &&
+                            (tab.type === 'page' || tab.type === 'space')}
+                          bind:this={activeTabComponent}
+                          on:select={() => {}}
+                          on:remove-from-sidebar={handleRemoveFromSidebar}
+                          on:delete-tab={handleDeleteTab}
+                          on:input-enter={handleBlur}
+                          on:unarchive-tab={handleUnarchiveTab}
+                          on:bookmark={() => handleBookmark()}
+                          on:create-live-space={handleCreateLiveSpace}
+                          on:save-resource-in-space={handleSaveResourceInSpace}
+                          on:include-tab={handleIncludeTabInMagic}
+                          on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                          on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+                        />
+                      {:else}
+                        <TabItem
+                          showClose
+                          hibernated={!$activatedTabs.includes(tab.id)}
+                          {tab}
+                          tabSize={Math.min(300, Math.max(24, tabSize))}
+                          {activeTabId}
+                          pinned={false}
+                          showIncludeButton={$activeTabMagic?.showSidebar &&
+                            (tab.type === 'page' || tab.type === 'space')}
+                          on:select={handleTabSelect}
+                          on:remove-from-sidebar={handleRemoveFromSidebar}
+                          on:delete-tab={handleDeleteTab}
+                          on:input-enter={handleBlur}
+                          on:unarchive-tab={handleUnarchiveTab}
+                          on:include-tab={handleIncludeTabInMagic}
+                          on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                          on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+                        />
+                      {/if}
+                    {/each}
+                  </div>
+                {:else}
+                  <div
+                    id="sidebar-unpinned-tabs"
+                    class="vertical-tabs"
+                    axis="vertical"
+                    dragdeadzone="5"
+                    use:HTMLAxisDragZone.action={{}}
+                    on:Drop={handleDropSidebar}
+                    on:DragEnter={handleDragEnterSidebar}
+                  >
+                    {#each $unpinnedTabs as tab, index (tab.id + index)}
+                      <!-- check if this tab is active -->
+                      {#if $activeTabId === tab.id}
+                        <TabItem
+                          hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
+                          removeHighlight={$showNewTabOverlay}
+                          showClose
+                          horizontalTabs={false}
+                          {tab}
+                          {activeTabId}
+                          bookmarkingInProgress={$bookmarkingInProgress}
+                          bookmarkingSuccess={$bookmarkingSuccess}
+                          pinned={false}
+                          {spaces}
+                          enableEditing
+                          showIncludeButton={$activeTabMagic?.showSidebar &&
+                            (tab.type === 'page' || tab.type === 'space')}
+                          bind:this={activeTabComponent}
+                          on:select={() => {}}
+                          on:remove-from-sidebar={handleRemoveFromSidebar}
+                          on:delete-tab={handleDeleteTab}
+                          on:input-enter={handleBlur}
+                          on:unarchive-tab={handleUnarchiveTab}
+                          on:bookmark={() => handleBookmark()}
+                          on:create-live-space={handleCreateLiveSpace}
+                          on:save-resource-in-space={handleSaveResourceInSpace}
+                          on:include-tab={handleIncludeTabInMagic}
+                          on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                          on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+                        />
+                      {:else}
+                        <TabItem
+                          hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
+                          showClose
+                          {tab}
+                          horizontalTabs={false}
+                          {activeTabId}
+                          pinned={false}
+                          showIncludeButton={$activeTabMagic?.showSidebar &&
+                            (tab.type === 'page' || tab.type === 'space')}
+                          on:select={handleTabSelect}
+                          on:remove-from-sidebar={handleRemoveFromSidebar}
+                          on:delete-tab={handleDeleteTab}
+                          on:input-enter={handleBlur}
+                          on:unarchive-tab={handleUnarchiveTab}
+                          on:include-tab={handleIncludeTabInMagic}
+                          on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                          on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+                        />
+                      {/if}
+                    {/each}
+                  </div>
+                {/if}
+                <div
+                  style="position: absolute; top: {!horizontalTabs
+                    ? 42 * $unpinnedTabs.length
+                    : 0}px; left: {horizontalTabs
+                    ? (Math.min(300, Math.max(24, tabSize)) + 2) * $unpinnedTabs.length
+                    : 0}px; right: 0;"
+                  class:w-fit={horizontalTabs}
+                  class:h-full={horizontalTabs}
+                  class="select-none flex items-center justify-center"
+                  class:opacity-100={isFirstButtonVisible}
+                  class:opacity-0={!isFirstButtonVisible}
+                  class:pointer-events-auto={isFirstButtonVisible}
+                  class:pointer-events-none={!isFirstButtonVisible}
+                >
+                  <button
+                    bind:this={newTabButton}
+                    class="transform select-none active:scale-95 space-x-2 {horizontalTabs
+                      ? 'w-fit rounded-xl p-2'
+                      : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                    class:bg-sky-200={$showNewTabOverlay}
+                    on:click|preventDefault={() => createNewEmptyTab()}
+                  >
+                    <Icon name="add" />
+                    {#if !horizontalTabs}
+                      <span class="label">Open Oasis</span>
+                    {/if}
+                  </button>
                 </div>
               </div>
-
-              <div
-                class="{!horizontalTabs
-                  ? 'w-1/2 mx-auto h-0.5'
-                  : 'h-4 w-0.5'} rounded-xl bg-sky-200"
-              ></div>
-            {/if}
-          {/if}
-
-          <div
-            class="no-scrollbar relative h-full flex-grow w-full"
-            class:space-x-2={horizontalTabs}
-            class:items-center={horizontalTabs}
-            class:overflow-y-scroll={!horizontalTabs}
-            class:h-full={!horizontalTabs}
-            class:overflow-x-scroll={horizontalTabs}
-            bind:this={containerRef}
-          >
-            {#if horizontalTabs}
-              <div
-                id="sidebar-unpinned-tabs"
-                class="horizontal-tabs space-x-1"
-                axis="horizontal"
-                dragdeadzone="5"
-                placeholder-size="60"
-                use:HTMLAxisDragZone.action={{}}
-                on:Drop={handleDropSidebar}
-                on:DragEnter={handleDragEnterSidebar}
-              >
-                {#each $unpinnedTabs as tab, index (tab.id + index)}
-                  <!-- check if this tab is active -->
-                  {#if $activeTabId === tab.id}
-                    <TabItem
-                      hibernated={!$activatedTabs.includes(tab.id)}
-                      removeHighlight={$showNewTabOverlay}
-                      showClose
-                      tabSize={Math.min(300, Math.max(24, tabSize))}
-                      {tab}
-                      {activeTabId}
-                      bookmarkingInProgress={$bookmarkingInProgress}
-                      bookmarkingSuccess={$bookmarkingSuccess}
-                      pinned={false}
-                      {spaces}
-                      enableEditing
-                      showIncludeButton={$activeTabMagic?.showSidebar &&
-                        (tab.type === 'page' || tab.type === 'space')}
-                      bind:this={activeTabComponent}
-                      on:select={() => {}}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                      on:delete-tab={handleDeleteTab}
-                      on:input-enter={handleBlur}
-                      on:unarchive-tab={handleUnarchiveTab}
-                      on:bookmark={() => handleBookmark()}
-                      on:create-live-space={handleCreateLiveSpace}
-                      on:save-resource-in-space={handleSaveResourceInSpace}
-                      on:include-tab={handleIncludeTabInMagic}
-                      on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                      on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
-                    />
-                  {:else}
-                    <TabItem
-                      showClose
-                      hibernated={!$activatedTabs.includes(tab.id)}
-                      {tab}
-                      tabSize={Math.min(300, Math.max(24, tabSize))}
-                      {activeTabId}
-                      pinned={false}
-                      showIncludeButton={$activeTabMagic?.showSidebar &&
-                        (tab.type === 'page' || tab.type === 'space')}
-                      on:select={handleTabSelect}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                      on:delete-tab={handleDeleteTab}
-                      on:input-enter={handleBlur}
-                      on:unarchive-tab={handleUnarchiveTab}
-                      on:include-tab={handleIncludeTabInMagic}
-                      on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                      on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
-                    />
-                  {/if}
-                {/each}
-              </div>
-            {:else}
-              <div
-                id="sidebar-unpinned-tabs"
-                class="vertical-tabs"
-                axis="vertical"
-                dragdeadzone="5"
-                use:HTMLAxisDragZone.action={{}}
-                on:Drop={handleDropSidebar}
-                on:DragEnter={handleDragEnterSidebar}
-              >
-                {#each $unpinnedTabs as tab, index (tab.id + index)}
-                  <!-- check if this tab is active -->
-                  {#if $activeTabId === tab.id}
-                    <TabItem
-                      hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
-                      removeHighlight={$showNewTabOverlay}
-                      showClose
-                      horizontalTabs={false}
-                      {tab}
-                      {activeTabId}
-                      bookmarkingInProgress={$bookmarkingInProgress}
-                      bookmarkingSuccess={$bookmarkingSuccess}
-                      pinned={false}
-                      {spaces}
-                      enableEditing
-                      showIncludeButton={$activeTabMagic?.showSidebar &&
-                        (tab.type === 'page' || tab.type === 'space')}
-                      bind:this={activeTabComponent}
-                      on:select={() => {}}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                      on:delete-tab={handleDeleteTab}
-                      on:input-enter={handleBlur}
-                      on:unarchive-tab={handleUnarchiveTab}
-                      on:bookmark={() => handleBookmark()}
-                      on:create-live-space={handleCreateLiveSpace}
-                      on:save-resource-in-space={handleSaveResourceInSpace}
-                      on:include-tab={handleIncludeTabInMagic}
-                      on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                      on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
-                    />
-                  {:else}
-                    <TabItem
-                      hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
-                      showClose
-                      {tab}
-                      horizontalTabs={false}
-                      {activeTabId}
-                      pinned={false}
-                      showIncludeButton={$activeTabMagic?.showSidebar &&
-                        (tab.type === 'page' || tab.type === 'space')}
-                      on:select={handleTabSelect}
-                      on:remove-from-sidebar={handleRemoveFromSidebar}
-                      on:delete-tab={handleDeleteTab}
-                      on:input-enter={handleBlur}
-                      on:unarchive-tab={handleUnarchiveTab}
-                      on:include-tab={handleIncludeTabInMagic}
-                      on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                      on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
-                    />
-                  {/if}
-                {/each}
-              </div>
-            {/if}
-            <div
-              style="position: absolute; top: {!horizontalTabs
-                ? 42 * $unpinnedTabs.length
-                : 0}px; left: {horizontalTabs
-                ? (Math.min(300, Math.max(24, tabSize)) + 2) * $unpinnedTabs.length
-                : 0}px; right: 0;"
-              class:w-fit={horizontalTabs}
-              class:h-full={horizontalTabs}
-              class="select-none flex items-center justify-center"
-              class:opacity-100={isFirstButtonVisible}
-              class:opacity-0={!isFirstButtonVisible}
-              class:pointer-events-auto={isFirstButtonVisible}
-              class:pointer-events-none={!isFirstButtonVisible}
-            >
-              <button
-                bind:this={newTabButton}
-                class="transform select-none active:scale-95 space-x-2 {horizontalTabs
-                  ? 'w-fit rounded-xl p-2'
-                  : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
-                class:bg-sky-200={$showNewTabOverlay}
-                on:click|preventDefault={() => createNewEmptyTab()}
-              >
-                <Icon name="add" />
-                {#if !horizontalTabs}
-                  <span class="label">Open Oasis</span>
-                {/if}
-              </button>
             </div>
           </div>
 
@@ -4203,6 +4223,55 @@
     }
   }
 
+  .masked-scroll-container {
+    --mask-direction: to right;
+    --mask-size: 100% 100%;
+    --mask-repeat: no-repeat;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  .masked-content {
+    width: 100%;
+    height: 100%;
+    -webkit-mask-image: linear-gradient(
+      var(--mask-direction),
+      transparent,
+      black 2%,
+      black 98%,
+      transparent
+    );
+    -webkit-mask-size: var(--mask-size);
+    -webkit-mask-repeat: var(--mask-repeat);
+    mask-image: linear-gradient(
+      var(--mask-direction),
+      transparent,
+      black 2%,
+      black 98%,
+      transparent
+    );
+    mask-size: var(--mask-size);
+    mask-repeat: var(--mask-repeat);
+  }
+  .masked-content.horizontal {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .masked-content.vertical {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .masked-content::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .masked-content {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
   .tabs {
     position: relative;
     flex: 1;
@@ -4538,8 +4607,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: calc(48px);
-    height: calc(48px);
+    width: calc(32px);
+    height: calc(32px);
     background-repeat: no-repeat;
     background-position: center center;
     background-size: 86%;
