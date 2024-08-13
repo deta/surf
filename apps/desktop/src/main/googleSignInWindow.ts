@@ -1,15 +1,15 @@
 import { BrowserWindow } from 'electron'
 import { getMainWindow } from './mainWindow'
+import { isGoogleSignInUrl } from '@horizon/core/src/lib/utils/url'
 
 let signInWindow: BrowserWindow | null = null
 
 export function createGoogleSignInWindow(url: string): Promise<string | undefined> {
   return new Promise((resolve, _reject) => {
     if (signInWindow) {
-      try {
-        signInWindow.close()
-      } catch {}
-      signInWindow = null
+      signInWindow.show()
+      resolve(undefined)
+      return
     }
     let isResolved = false
 
@@ -30,17 +30,14 @@ export function createGoogleSignInWindow(url: string): Promise<string | undefine
 
     // not `close`
     signInWindow.on('closed', () => {
+      signInWindow = null
       if (!isResolved) resolve(undefined)
     })
     signInWindow.webContents.on('did-navigate', (_, url) => {
-      const googleSignIn =
-        url?.startsWith('https://accounts.google.com/v3/signin') ||
-        url?.startsWith('https://accounts.google.com/InteractiveLogin')
-
-      if (!googleSignIn) {
+      if (!isGoogleSignInUrl(url ?? '')) {
         resolve(url)
-        signInWindow?.close()
         isResolved = true
+        signInWindow?.close()
       }
     })
     // signInWindow.on('error', (error) => {

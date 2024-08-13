@@ -62,6 +62,7 @@
   import { handleInlineAI } from '../../service/ai'
   import { generateID } from '../../utils/id'
   import { useOasis } from '../../service/oasis'
+  import { isGoogleSignInUrl } from '../../utils/url'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<BrowserTabEvents>()
@@ -144,11 +145,7 @@
     debouncedAppDetection()
 
     let url = e.detail
-      const googleSignIn =
-        url?.startsWith('https://accounts.google.com/v3/signin') ||
-        url?.startsWith('https://accounts.google.com/InteractiveLogin')
-
-    if (googleSignIn) {
+    if (isGoogleSignInUrl(url ?? '')) {
       //@ts-ignore
       const navigatedUrl = await window.api.handleGoogleSignIn(url)
       if (navigatedUrl) webview.navigate(navigatedUrl)
