@@ -56,6 +56,7 @@
   export let showTitles: boolean = true
   export let interactive: boolean = true
   export let showSource: boolean = false
+  export let newTabOnClick: boolean = false
 
   const resourceManager = useResourceManager()
 
@@ -87,6 +88,9 @@
   )
 
   $: isSilent = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.SILENT)
+  $: canonicalUrl =
+    resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
+    resource.metadata?.sourceURI
 
   let data: ResourceData | null = null
   const handleData = (e: CustomEvent<ResourceData>) => {
@@ -111,10 +115,10 @@
   }
 
   const handleClick = async (e: MouseEvent) => {
-    if (isModKeyPressed(e)) {
+    if (isModKeyPressed(e) || newTabOnClick) {
       dispatch('new-tab', {
-        url: resource.metadata?.sourceURI!,
-        active: e.shiftKey,
+        url: canonicalUrl!,
+        active: e.shiftKey || newTabOnClick,
         trigger: CreateTabEventTrigger.OasisItem
       })
       return
@@ -142,9 +146,13 @@
   }
 
   const handleOpenAsNewTab = (e: MouseEvent) => {
+    if (!canonicalUrl) {
+      return
+    }
+
     e.stopImmediatePropagation()
     const payload = {
-      url: resource?.metadata?.sourceURI!,
+      url: canonicalUrl,
       active: true,
       trigger: CreateTabEventTrigger.OasisItem
     }
@@ -302,7 +310,7 @@
 
       {#if interactive}
         <div class="remove-wrapper">
-          {#if resource?.metadata?.sourceURI}
+          {#if canonicalUrl}
             <div class="remove rotated" on:click={handleOpenAsNewTab}>
               <Icon name="arrow.right" color="#AAA7B1" />
             </div>
@@ -330,17 +338,17 @@
         {/if}
 
         <div class="annotations">
-          {#if resource.metadata?.sourceURI}
+          {#if canonicalUrl}
             <img
               class="favicon"
-              src={`https://www.google.com/s2/favicons?domain=${resource.metadata?.sourceURI}&sz=48`}
+              src={`https://www.google.com/s2/favicons?domain=${canonicalUrl}&sz=48`}
               alt={`favicon`}
               loading="lazy"
             />
           {/if}
 
           <div>
-            {resource.metadata?.sourceURI ? getHostname(resource.metadata?.sourceURI) : 'Unknown'}
+            {canonicalUrl ? getHostname(canonicalUrl) : 'Unknown'}
           </div>
         </div>
       {/if}
@@ -349,7 +357,7 @@
 
   {#if interactive}
     <div class="remove-wrapper">
-      {#if resource?.metadata?.sourceURI}
+      {#if canonicalUrl}
         <div class="remove rotated" on:click={handleOpenAsNewTab}>
           <Icon name="arrow.right" color="#AAA7B1" />
         </div>

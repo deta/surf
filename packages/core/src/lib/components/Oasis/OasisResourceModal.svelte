@@ -50,7 +50,10 @@
 
   const toast = useToasts()
 
-  const initialSrc = resource?.metadata?.sourceURI || 'https://example.com'
+  const canonicalUrl = resource?.tags?.find(
+    (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+  )?.value
+  const initialSrc = canonicalUrl || resource?.metadata?.sourceURI || 'about:blank'
 
   function close() {
     dispatch('close')
@@ -310,6 +313,10 @@
     dispatch('new-tab', e.detail)
   }
 
+  const handleOpenUrl = (e: CustomEvent<string>) => {
+    webview.navigate(e.detail)
+  }
+
   const handleWebviewPageEvent = (e: CustomEvent<WebviewWrapperEvents['webview-page-event']>) => {
     const { type, data } = e.detail
 
@@ -375,9 +382,9 @@
   </div>
   <div id="mini-browser" class="mini-browser w-[90vw] mx-auto">
     <div class="resource-details">
-      <OasisResourceDetails {resource} on:new-tab={handleNewTab}>
+      <OasisResourceDetails {resource} on:new-tab={handleNewTab} on:open-url={handleOpenUrl}>
         <ResourceOverlay caption="Click to open in new tab">
-          <ResourcePreviewClean slot="content" {resource} />
+          <ResourcePreviewClean slot="content" {resource} newTabOnClick on:new-tab={handleNewTab} />
         </ResourceOverlay>
       </OasisResourceDetails>
     </div>

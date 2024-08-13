@@ -24,13 +24,14 @@
 
   const resourceManager = useResourceManager()
   const toasts = useToasts()
-  const dispatch = createEventDispatcher<{ 'new-tab': BrowserTabNewTabEvent }>()
+  const dispatch = createEventDispatcher<{ 'new-tab': BrowserTabNewTabEvent; 'open-url': string }>()
 
   let userContext = resource.metadata?.userContext
   let showAddTag = false
   let newTagValue = ''
   let localTags: SFFSResourceTag[] = []
   let blockAdd = false
+  let showSource = false
 
   let textareaRef: HTMLTextAreaElement
 
@@ -49,6 +50,9 @@
   }
 
   $: sourceURL = parseStringIntoUrl(resource.metadata?.sourceURI ?? '')
+  $: canonicalURL = parseStringIntoUrl(
+    resource?.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ?? ''
+  )
 
   function formatRelativeDate(dateIsoString: string) {
     return formatDistanceToNow(parseISO(dateIsoString), { addSuffix: true })
@@ -107,13 +111,25 @@
     }
   }
 
-  const handleOpenSource = (e: MouseEvent) => {
+  const handleOpenURL = (e: MouseEvent) => {
     e.preventDefault()
     dispatch('new-tab', {
-      url: sourceURL!.href,
+      url: canonicalURL!.href,
       active: true,
       trigger: CreateTabEventTrigger.OasisItem
     })
+  }
+
+  const handleOpenSource = (e: MouseEvent) => {
+    e.preventDefault()
+    showSource = true
+    dispatch('open-url', sourceURL!.href)
+  }
+
+  const handleOpenCanonical = (e: MouseEvent) => {
+    e.preventDefault()
+    showSource = false
+    dispatch('open-url', canonicalURL!.href)
   }
 </script>
 
@@ -123,14 +139,57 @@
     <slot />
   </div>
 
-  {#if sourceURL}
+  <!-- {#if canonicalURL}
     <div class="source">
       <div class="source-button" use:tooltip={'Open Source in New Tab (⌘+Enter)'}>
         <Link
-          url={sourceURL.href}
+          url={canonicalURL.href}
           label="Open as New Tab"
           locked={true}
-          on:click={handleOpenSource}
+          on:click={handleOpenURL}
+        />
+      </div>
+    </div>
+  {/if} -->
+
+  {#if sourceURL && sourceURL.hostname === 'news.ycombinator.com' && canonicalURL}
+    <div class="source">
+      <div class="source-button">
+        {#if showSource}
+          <Link url={canonicalURL.href} locked={true} hideArrow on:click={handleOpenCanonical}>
+            <div class="flex items-center gap-2">
+              <img
+                class="favicon"
+                src={`https://www.google.com/s2/favicons?domain=${canonicalURL.href}&sz=48`}
+                alt={`favicon`}
+                loading="lazy"
+              />
+              <p>View Posted Link</p>
+            </div>
+          </Link>
+        {:else}
+          <Link url={sourceURL.href} locked={true} hideArrow on:click={handleOpenSource}>
+            <div class="flex items-center gap-2">
+              <img
+                class="favicon"
+                src={`https://www.google.com/s2/favicons?domain=${sourceURL.href}&sz=48`}
+                alt={`favicon`}
+                loading="lazy"
+              />
+              <p>View Hacker News Post</p>
+            </div>
+          </Link>
+        {/if}
+      </div>
+    </div>
+  {:else if canonicalURL}
+    <div class="source">
+      <div class="source-button" use:tooltip={'Open Source in New Tab (⌘+Enter)'}>
+        <Link
+          url={canonicalURL.href}
+          label="Open as New Tab"
+          locked={true}
+          on:click={handleOpenURL}
         />
       </div>
     </div>
@@ -372,6 +431,15 @@
         opacity: 0.6;
       }
     }
+  }
+
+  .favicon {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 4px;
+    box-shadow:
+      0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
+      0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
   }
 
   .tags-wrapper {

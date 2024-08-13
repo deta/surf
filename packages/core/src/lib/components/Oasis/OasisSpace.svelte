@@ -467,8 +467,14 @@
     try {
       log.debug('Processing RSS item:', item)
 
-      const sourceURL = new URL(item.sourceUrl)
-      const canonicalURL = sourceURL.hostname === 'news.ycombinator.com' ? item.comments : item.link
+      let sourceURL = new URL(item.sourceUrl)
+
+      // for Hacker News item use the URL of the post as the source URL
+      if (sourceURL.hostname === 'news.ycombinator.com' && item.comments) {
+        sourceURL = new URL(item.comments)
+      }
+
+      const canonicalURL = item.link
 
       // add dummy item to space while processing
       const data = {
@@ -577,7 +583,7 @@
           resourceManager,
           item.link ?? item.comments,
           {
-            sourceURI: canonicalURL
+            sourceURI: sourceURL.href
           },
           [
             ResourceTag.canonicalURL(canonicalURL),
