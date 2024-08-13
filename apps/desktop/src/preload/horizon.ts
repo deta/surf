@@ -75,6 +75,9 @@ const api = {
     log.debug('updateTrafficLightsVisibility', visible)
     ipcRenderer.invoke('update-traffic-lights', { visible })
   },
+  handleGoogleSignIn: async (url: string): Promise<string | undefined> => {
+    return ipcRenderer.invoke('handle-google-sign-in', { url })
+  },
 
   onFullscreenChange: (callback: any) => {
     fullscreenHandlers.push(callback)

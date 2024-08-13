@@ -142,6 +142,17 @@
 
     debouncedTabUpdate()
     debouncedAppDetection()
+
+    let url = e.detail
+      const googleSignIn =
+        url?.startsWith('https://accounts.google.com/v3/signin') ||
+        url?.startsWith('https://accounts.google.com/InteractiveLogin')
+
+    if (googleSignIn) {
+      //@ts-ignore
+      const navigatedUrl = await window.api.handleGoogleSignIn(url)
+      if (navigatedUrl) webview.navigate(navigatedUrl)
+    }
   }
 
   const handleWebviewTitleChange = (e: CustomEvent<string>) => {
