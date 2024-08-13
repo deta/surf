@@ -3191,7 +3191,10 @@
                                   pinned={false}
                                   showButtons={false}
                                   showExcludeOthersButton
+                                  on:select={() => {}}
+                                  bind:this={activeTabComponent}
                                   on:delete-tab={handleDeleteTab}
+                                  on:input-enter={handleBlur}
                                   on:unarchive-tab={handleUnarchiveTab}
                                   on:select={handleTabSelect}
                                   on:remove-from-sidebar={handleRemoveFromSidebar}
