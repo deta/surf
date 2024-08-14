@@ -2205,8 +2205,6 @@
       downloadResourceMap.set(data.id, downloadData)
 
       return downloadData.savePath
-
-      checkScroll()
     })
 
     // @ts-ignore
@@ -2317,6 +2315,10 @@
     log.debug('tabs', $tabs)
 
     setupObserver()
+
+    await tick()
+
+    checkScroll()
 
     if (!userConfig.initialized_tabs) {
       log.debug('Creating initial tabs')
