@@ -9,7 +9,10 @@ import { WebParser } from '..'
 
 export const YoutubeRegexPatterns = {
   // example: /watch?v=I_wc3DfgQvs or /embed/I_wc3DfgQvs or /I_wc3DfgQvs /watch
-  video: /^\/[a-zA-Z0-9_-]+\/status\/[0-9]+\/?$/
+  video: /^\/[a-zA-Z0-9_-]+\/status\/[0-9]+\/?$/,
+  channelId: /channel\/([a-zA-Z0-9%_-]+)/,
+  channelName: /(?:c|user)\/[a-zA-Z0-9%_-]+/,
+  channelHandle: /@[a-zA-Z0-9%_-]+/
 }
 
 export type VideoData = {
@@ -117,6 +120,12 @@ export class YoutubeParser extends WebAppExtractor {
     if (videoId) {
       console.log('Detected video')
       return ResourceTypes.POST_YOUTUBE
+    } else if (this.url.pathname.includes('/playlist')) {
+      console.log('Detected playlist')
+      return ResourceTypes.PLAYLIST_YOUTUBE
+    } else if (this.isChannelUrl()) {
+      console.log('Detected channel')
+      return ResourceTypes.CHANNEL_YOUTUBE
     } else {
       console.log('Unknown resource type')
       return null
@@ -136,28 +145,31 @@ export class YoutubeParser extends WebAppExtractor {
     }
   }
 
-  private getChannelUrl(document: Document) {
+  private isChannelUrl() {
     // YouTube's canonical channel URLs look like /channel/AlphaNumericID
     // It also supports named channels of the form /c/MyChannelName
     // and handle links of the form /@MyChannelHandle.
     // Match also on '%' to handle non-latin character codes
     // Match on both of these to autodetect channel feeds on either URL
     const url = this.url.href
-    const idPattern = /channel\/([a-zA-Z0-9%_-]+)/
-    const namePattern = /(?:c|user)\/[a-zA-Z0-9%_-]+/
-    const handlePattern = /@[a-zA-Z0-9%_-]+/
     const urlPattern = new RegExp(
-      `${idPattern.source}|${namePattern.source}|${handlePattern.source}`
+      `${YoutubeRegexPatterns.channelId.source}|${YoutubeRegexPatterns.channelName.source}|${YoutubeRegexPatterns.channelHandle.source}`
     )
 
-    if (url.match(urlPattern)) {
+    return url.match(urlPattern) ? true : false
+  }
+
+  private getChannelUrl(document: Document) {
+    const isChannelUrl = this.isChannelUrl()
+
+    if (isChannelUrl) {
       const canonicalElem = document.querySelector("link[rel='canonical']")
       if (!canonicalElem) {
         return null
       }
 
       const canonicalUrl = (canonicalElem as HTMLLinkElement).href
-      const match = canonicalUrl.match(idPattern)
+      const match = canonicalUrl.match(YoutubeRegexPatterns.channelId)
       if (!match) {
         return null
       }

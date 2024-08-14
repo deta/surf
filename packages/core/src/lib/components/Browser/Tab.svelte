@@ -9,7 +9,7 @@
   import SpaceIcon from '../Drawer/SpaceIcon.svelte'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
-  import { ResourceTagsBuiltInKeys, type Space } from '../../types'
+  import { ResourceTagsBuiltInKeys, ResourceTypes, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import { tooltip as tooltip2 } from '../../utils/directives'
@@ -80,6 +80,25 @@
     } else {
       $inputUrl = tab.title
     }
+  }
+
+  $: showLiveSpaceButton = checkIfLiveSpacePossible(tab)
+
+  const checkIfLiveSpacePossible = (tab: Tab) => {
+    if (tab.type !== 'page') return false
+
+    if (tab.currentDetectedApp?.rssFeedUrl) return true
+
+    if (tab.currentDetectedApp?.appId === 'youtube') {
+      const isValidResource = [
+        ResourceTypes.CHANNEL_YOUTUBE,
+        ResourceTypes.PLAYLIST_YOUTUBE
+      ].includes(tab.currentDetectedApp?.resourceType as any)
+
+      return isValidResource
+    }
+
+    return false
   }
 
   const handleClick = (e: MouseEvent) => {
@@ -383,12 +402,12 @@
           </button>
         {/if}
 
-        {#if tab.type === 'page' && tab.currentDetectedApp?.rssFeedUrl && isActive}
+        {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <button
             on:click={handleCreateLiveSpace}
             class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
             use:tooltip={{
-              content: `Create ${tab.currentDetectedApp.appName} live Space`,
+              content: `Create ${tab.currentDetectedApp?.appName} live Space`,
               action: 'hover',
               position: 'left',
               animation: 'fade',

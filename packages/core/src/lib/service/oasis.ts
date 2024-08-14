@@ -9,7 +9,6 @@ import { useLocalStorageStore } from '../utils/localstorage'
 export class OasisService {
   spaces: Writable<Space[]>
   selectedSpace: Writable<string>
-  autoSaveResources: Writable<boolean>
 
   resourceManager: ResourceManager
   log: ReturnType<typeof useLogScope>
@@ -20,7 +19,6 @@ export class OasisService {
 
     this.spaces = writable<Space[]>([])
     this.selectedSpace = writable<string>('all')
-    this.autoSaveResources = useLocalStorageStore<boolean>('autoSaveResources', true)
 
     this.initSpaces()
   }

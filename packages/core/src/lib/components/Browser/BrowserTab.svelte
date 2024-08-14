@@ -61,6 +61,7 @@
   import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from './inline'
   import { handleInlineAI } from '../../service/ai'
   import { generateID } from '../../utils/id'
+  import { useConfig } from '../../service/config'
   import { useOasis } from '../../service/oasis'
   import { isGoogleSignInUrl } from '../../utils/url'
 
@@ -68,10 +69,10 @@
   const dispatch = createEventDispatcher<BrowserTabEvents>()
   const resourceManager = useResourceManager()
   const toasts = useToasts()
-  const oasis = useOasis()
+  const config = useConfig()
 
   const sffs = resourceManager.sffs
-  const autoSaveResources = oasis.autoSaveResources
+  const userConfigSettings = config.settings
 
   export let tab: TabPage
   export let historyEntriesManager: HistoryEntriesManager
@@ -109,6 +110,8 @@
   const historyStackIds = writable<string[]>(tab.historyStackIds)
   const currentHistoryIndex = writable(tab.currentHistoryIndex)
   const appDetectionRunning = writable(false)
+
+  $: autoSaveResources = $userConfigSettings.auto_save_resources
 
   // $: if (tab.historyStackIds) {
   //   let currentEntry = historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])
@@ -552,7 +555,7 @@
 
       log.debug('bookmarked resource found', bookmarkedResource)
       if (!bookmarkedResource) {
-        if ($autoSaveResources) {
+        if (autoSaveResources) {
           log.debug('creating new silent resource', url)
           bookmarkedResource = await createBookmarkResource(url, tab, true)
         } else {

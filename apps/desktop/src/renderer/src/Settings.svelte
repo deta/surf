@@ -3,27 +3,28 @@
   import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
 
-  import appIcon from './assets/icon.png'
+  import appIcon from './assets/icon_512.png'
   import inlineAIScreenshot from './assets/inline-ai.png'
   import pageInsightsScreenshot from './assets/page-insights.png'
   import customPromptsScreenshot from './assets/custom-prompts.png'
-  import promptFallback from './assets/prompt-fallback.png'
 
   import PromptSection from './components/PromptSection.svelte'
   import Prompt from './components/Prompt.svelte'
   import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
-  import type { EditablePrompt } from '@horizon/types'
+  import type { EditablePrompt, UserSettings } from '@horizon/types'
+  import SettingsOption from './components/SettingsOption.svelte'
+  import LayoutPicker from './components/LayoutPicker.svelte'
 
   // let error = ''
   // let loading = false
 
   let version = ''
-
-  const activeTab = writable<'general' | 'prompts'>('general')
-
   let prompts: EditablePrompt[] = []
   let migrationOutput: HTMLParagraphElement
   let migrating = false
+  let userConfigSettings: UserSettings | undefined = undefined
+
+  const activeTab = writable<'general' | 'appearance' | 'oasis' | 'prompts'>('general')
 
   const debouncedPromptUpdate = useDebounce((id: string, content: string) => {
     // @ts-ignore
@@ -54,12 +55,22 @@
     migrating = false
   }
 
+  const handleSettingsUpdate = async () => {
+    console.log('updating settings', userConfigSettings)
+    // @ts-ignore
+    await window.api.saveUserConfigSettings(userConfigSettings)
+  }
+
   // const handleStart = () => {
   //   // @ts-expect-error
   //   window.api.restartApp()
   // }
 
   onMount(async () => {
+    // @ts-ignore
+    userConfigSettings = window.api.getUserConfigSettings()
+    console.log('loaded settings', userConfigSettings)
+
     getAppInfo()
 
     // @ts-ignore
@@ -69,6 +80,12 @@
 
     // @ts-ignore
     window.api.getPrompts()
+
+    // @ts-ignore
+    window.api.onUserConfigSettingsChange((settings: UserSettings) => {
+      console.log('user config settings change', settings)
+      userConfigSettings = settings
+    })
   })
 </script>
 
@@ -84,6 +101,28 @@
     >
       <Icon name="settings" size="24" />
       <h1>General</h1>
+    </div>
+
+    <div
+      on:click={() => activeTab.set('appearance')}
+      role="tab"
+      tabindex="0"
+      class="tab no-drag"
+      class:active={$activeTab === 'appearance'}
+    >
+      <Icon name="sidebar.left" size="24" />
+      <h1>Appearance</h1>
+    </div>
+
+    <div
+      on:click={() => activeTab.set('oasis')}
+      role="tab"
+      tabindex="0"
+      class="tab no-drag"
+      class:active={$activeTab === 'oasis'}
+    >
+      <Icon name="leave" size="24" />
+      <h1>Oasis</h1>
     </div>
 
     <div
@@ -113,6 +152,41 @@
         <div class="migration-output">
           <p bind:this={migrationOutput}></p>
         </div>
+      </article>
+    {:else if $activeTab === 'appearance'}
+      <article class="general">
+        <LayoutPicker
+          bind:orientation={userConfigSettings.tabs_orientation}
+          on:update={handleSettingsUpdate}
+        />
+      </article>
+    {:else if $activeTab === 'oasis'}
+      <article class="oasis">
+        {#if userConfigSettings}
+          <SettingsOption
+            icon="bookmark"
+            title="Auto Save Resources"
+            description="If enabled, every web page you visit will be automatically saved to Oasis."
+            bind:value={userConfigSettings.auto_save_resources}
+            on:update={handleSettingsUpdate}
+          />
+
+          <SettingsOption
+            icon="search"
+            title="Use Semantic Search"
+            description="Use vector search to find resources in Oasis based on their semantic relevance."
+            bind:value={userConfigSettings.use_semantic_search}
+            on:update={handleSettingsUpdate}
+          />
+
+          <SettingsOption
+            icon="marker"
+            title="Show Annotations in Oasis"
+            description="If enabled annotations will be shown separately in Oasis. Otherwise they will be hidden behind the page they were created on unless your search for something."
+            bind:value={userConfigSettings.show_annotations_in_oasis}
+            on:update={handleSettingsUpdate}
+          />
+        {/if}
       </article>
     {:else if $activeTab === 'prompts'}
       <article class="prompts">
@@ -266,7 +340,7 @@
   .content-wrapper {
     flex: 1;
     overflow: auto;
-    padding: 1rem;
+    padding: 3rem;
     height: 100%;
     width: 100%;
   }
@@ -278,10 +352,6 @@
     align-items: center;
     justify-content: center;
     gap: 1rem;
-
-    img {
-      border-radius: 50%;
-    }
 
     h1 {
       font-size: 2rem;
@@ -329,10 +399,15 @@
     display: flex;
     flex-direction: column;
     gap: 2rem;
-    padding-top: 2rem;
   }
 
   .prompts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .oasis {
     display: flex;
     flex-direction: column;
     gap: 1rem;

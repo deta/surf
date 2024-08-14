@@ -140,7 +140,10 @@ export enum ResourceTypes {
   FLOWCHAT_FUN = 'application/vnd.space.custom.flowchart-fun',
 
   ANNOTATION = 'application/vnd.space.annotation',
-  HISTORY_ENTRY = 'application/vnd.space.history-entry'
+  HISTORY_ENTRY = 'application/vnd.space.history-entry',
+
+  CHANNEL_YOUTUBE = 'application/vnd.space.channel.youtube',
+  PLAYLIST_YOUTUBE = 'application/vnd.space.playlist.youtube'
 }
 
 export interface ResourceDataTypes {

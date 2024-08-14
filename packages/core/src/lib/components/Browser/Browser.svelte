@@ -94,11 +94,13 @@
     OpenSpaceEventTrigger,
     PageChatUpdateContextEventAction,
     ResourceTagsBuiltInKeys,
+    ResourceTypes,
     SaveToOasisEventTrigger,
     WebViewEventReceiveNames,
     type AnnotationCommentData,
     type ResourceDataAnnotation,
     type UserConfig,
+    type UserSettings,
     type WebViewEventAnnotation
   } from '@horizon/types'
   import { scrollToTextCode } from './inline'
@@ -130,6 +132,7 @@
   import NewTabOverlay from './NewTabOverlay.svelte'
   import CustomPopover from './CustomPopover.svelte'
   import { truncate } from '../../utils/text'
+  import { provideConfig } from '../../service/config'
   //import '@horizon/dragcula/dist/styles.scss'
 
   let activeTabComponent: TabItem | null = null
@@ -165,7 +168,9 @@
   const sffs = new SFFS()
   const oasis = provideOasis(resourceManager)
   const toasts = provideToasts()
+  const config = provideConfig()
 
+  const userConfigSettings = config.settings
   const tabsDB = storage.tabs
   const horizons = horizonManager.horizons
   const historyEntriesManager = horizonManager.historyEntriesManager
@@ -845,6 +850,14 @@
     localstorageTabsOrientation == null
       ? savedTabsOrientation === 'horizontal'
       : localstorageTabsOrientation === 'true'
+  let keyBuffer = ''
+  let index: number
+  let keyTimeout: any
+  const KEY_TIMEOUT = 120
+  const MAX_TABS = 99
+
+  $: savedTabsOrientation = $userConfigSettings.tabs_orientation
+  $: horizontalTabs = savedTabsOrientation === 'horizontal'
 
   const handleCollapseRight = () => {
     if (sidebarComponent) {
@@ -1041,7 +1054,12 @@
   const handleToggleHorizontalTabs = () => {
     const t = document.startViewTransition(() => {
       horizontalTabs = !horizontalTabs
-      localStorage.setItem('horizontalTabs', horizontalTabs.toString())
+
+      config.updateSettings({
+        tabs_orientation: horizontalTabs ? 'horizontal' : 'vertical'
+      })
+
+      // localStorage.setItem('horizontalTabs', horizontalTabs.toString())
       telemetry.trackToggleTabsOrientation(horizontalTabs ? 'horizontal' : 'vertical')
     })
   }
@@ -1907,17 +1925,38 @@
 
   const handleCreateLiveSpace = async (_e?: MouseEvent) => {
     try {
-      if ($activeTab?.type !== 'page' || !$activeTab.currentDetectedApp?.rssFeedUrl) {
-        log.debug('No RSS feed detected')
+      if ($activeTab?.type !== 'page' || !$activeTab.currentDetectedApp) {
+        log.debug('No app detected in active tab')
         return
       }
 
-      const app = $activeTab.currentDetectedApp
+      const toast = toasts.loading('Creating Live Space...')
+
+      let app = $activeTab.currentDetectedApp
+      if (app.appId === 'youtube') {
+        // For youtube we have to manually refresh the tab to make sure we are grabbing the feed of the right page as they don't update it on client side navigations
+        const validTypes = [ResourceTypes.CHANNEL_YOUTUBE, ResourceTypes.PLAYLIST_YOUTUBE]
+
+        if (validTypes.includes(app.resourceType as any)) {
+          log.debug('reloading tab to get RSS feed')
+
+          // TODO: find a better way to wait for the tab to reload and the new app to be detected
+          $activeBrowserTab.reload()
+          await wait(3000)
+
+          log.debug('reloaded tab app', $activeTab.currentDetectedApp)
+          app = $activeTab.currentDetectedApp
+        }
+      }
+
+      if (!app.rssFeedUrl) {
+        log.debug('No RSS feed found for app', app)
+        toast.error('No RSS feed found for this app')
+        return
+      }
 
       log.debug('create live space out of app', app)
-
       isCreatingLiveSpace.set(true)
-      const toast = toasts.loading('Creating Live Space...')
 
       const spaceSource = {
         id: generateID(),
@@ -1927,9 +1966,17 @@
         last_fetched_at: null
       } as SpaceSource
 
+      let name = $activeTab.title ?? app.appName
+      if (name) {
+        // remove strings like "(1238)" from the beginning which are usually notification counts
+        name = name.replace(/^\(\d+\)\s/, '')
+      } else {
+        name = 'Live Space'
+      }
+
       // create new space
       const space = await oasis.createSpace({
-        folderName: truncate($activeTab.title ?? app.appName ?? 'Live Space', 35),
+        folderName: truncate(name, 35),
         showInSidebar: true,
         colors: ['#FFD700', '#FF8C00'],
         sources: [spaceSource],
