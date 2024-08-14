@@ -1,9 +1,9 @@
 import { useLogScope } from '@horizon/core/src/lib/utils/log'
-import { app, Menu } from 'electron'
+import { app, Menu, shell } from 'electron'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
 import { toggleAdblocker } from './adblocker'
-import { resolve } from 'path'
+import { join, resolve } from 'path'
 import { isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@horizon/types'
 import { createSettingsWindow } from './settingsWindow'
@@ -37,6 +37,12 @@ const useAsDefaultBrowserClickHandler = () => {
   }
 }
 
+const showSurfDataInFinder = () => {
+  const userDataPath = app.getPath('userData')
+  const surfDataPath = join(userDataPath, 'sffs_backend')
+  shell.openPath(surfDataPath)
+}
+
 const template = [
   ...(isMac
     ? [
@@ -61,6 +67,10 @@ const template = [
             {
               label: 'Use as Default Browser',
               click: useAsDefaultBrowserClickHandler
+            },
+            {
+              label: 'Show Surf Data in Finder',
+              click: showSurfDataInFinder
             },
             { type: 'separator' },
             {
