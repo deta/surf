@@ -2,6 +2,12 @@
   export type WebviewNavigationEvent = { url: string; oldUrl: string }
   export type WebviewHistoryChangeEvent = { stack: string[]; index: number }
 
+  export type WebviewError = {
+    code: number
+    description: string
+    url: string
+  }
+
   export type WebviewEvents = {
     'webview-page-event': {
       type: WebViewEventSendNames
@@ -41,6 +47,7 @@
   export let historyStackIds: Writable<string[]>
   export let currentHistoryIndex: Writable<number>
   export let isLoading: Writable<boolean>
+  export let error: Writable<WebviewError | null>
   export let url = writable(src)
 
   export const title = writable('')
@@ -266,6 +273,10 @@
     */
     webview.addEventListener('did-start-loading', () => isLoading.set(true))
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
+    webview.addEventListener('did-fail-load', (e: Electron.DidFailLoadEvent) => {
+      log.debug('Failed to load', e.errorCode, e.errorDescription, e.validatedURL)
+      error.set({ code: e.errorCode, description: e.errorDescription, url: e.validatedURL })
+    })
     webview.addEventListener('did-finish-load', () => {
       dispatch('did-finish-load')
       didFinishLoad.set(true)

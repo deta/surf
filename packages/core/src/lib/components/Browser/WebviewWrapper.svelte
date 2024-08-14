@@ -27,12 +27,13 @@
   import { useLogScope } from '../../utils/log'
   import type { DetectedResource } from '../../types'
   import type { WebServiceActionInputs } from '@horizon/web-parser'
-  import Webview, { type WebviewEvents } from './Webview.svelte'
+  import Webview, { type WebviewError, type WebviewEvents } from './Webview.svelte'
   import FindInPage from './FindInPage.svelte'
   import HoverLinkPreview from './HoverLinkPreview.svelte'
   import ZoomPreview from './ZoomPreview.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import type { BrowserTabNewTabEvent } from './BrowserTab.svelte'
+  import ErrorPage from './ErrorPage.svelte'
 
   export let src: string
   export let partition: string
@@ -50,6 +51,7 @@
     ([$currentHistoryIndex, $historyStackIds]) => $currentHistoryIndex < $historyStackIds.length - 1
   )
   export const isLoading = writable(false)
+  export const error = writable<WebviewError | null>(null)
 
   const log = useLogScope('WebviewWrapper')
   const dispatch = createEventDispatcher<WebviewWrapperEvents>()
@@ -313,6 +315,10 @@
   <HoverLinkPreview show={!!hoverTargetUrl} url={hoverTargetUrl} />
 {/if}
 
+{#if $error}
+  <ErrorPage error={$error} on:reload={() => forceReload()} />
+{/if}
+
 <Webview
   {src}
   {partition}
@@ -320,6 +326,7 @@
   {historyStackIds}
   {currentHistoryIndex}
   {isLoading}
+  {error}
   {url}
   bind:webview
   bind:this={webviewComponent}
