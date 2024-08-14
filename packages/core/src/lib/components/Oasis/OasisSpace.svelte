@@ -1272,21 +1272,39 @@
           {/if}
         </div>
 
-        {#if $space && $space.name.liveModeEnabled}
-          <button
-            class="live-mode"
-            disabled={$loadingSpaceSources}
-            on:click={handleRefreshLiveSpace}
-            use:tooltip={{ text: 'Click to refresh', position: 'bottom' }}
-          >
-            {#if $loadingSpaceSources}
-              <Icon name="spinner" />
-              Refreshing…
-            {:else}
-              <Icon name="news" />
-              Live Space
-            {/if}
-          </button>
+        {#if $space && ($space.name.liveModeEnabled || ($space.name.sources ?? []).length > 0 || $space.name.smartFilterQuery)}
+          {#key $space.name.liveModeEnabled}
+            <button
+              class="live-mode"
+              class:live-enabled={$space.name.liveModeEnabled}
+              disabled={$loadingSpaceSources}
+              on:click={handleRefreshLiveSpace}
+              use:tooltip={{
+                text: $space.name.liveModeEnabled
+                  ? ($space.name.sources ?? []).length > 0
+                    ? 'The sources will automatically be loaded when you open the space. Click to manually refresh.'
+                    : 'New resources that match the smart query will automatically be added. Click to manually refresh.'
+                  : ($space.name.sources ?? []).length > 0
+                    ? 'Click to load the latest content from the connected sources'
+                    : 'Click to load the latest content based on the smart query',
+                position: 'bottom'
+              }}
+            >
+              {#if $loadingSpaceSources}
+                <Icon name="spinner" />
+                Refreshing…
+              {:else if $space.name.liveModeEnabled}
+                <Icon name="news" />
+                Live Space
+              {:else if ($space.name.sources ?? []).length > 0}
+                <Icon name="reload" />
+                Refresh Sources
+              {:else}
+                <Icon name="reload" />
+                Smart Refresh
+              {/if}
+            </button>
+          {/key}
         {/if}
 
         <div class="drawer-chat active">
@@ -1602,15 +1620,24 @@
     gap: 0.5rem;
     padding: 0.5rem;
     border-radius: 8px;
-    background: #ff4eed;
+    background: #ffffffc0;
     border: none;
-    color: white;
+    color: #6d6d79;
     font-size: 1rem;
     font-weight: 500;
     letter-spacing: 0.02rem;
 
+    &.live-enabled {
+      background: #ff4eed;
+      color: white;
+
+      &:hover {
+        background: #fb3ee9;
+      }
+    }
+
     &:hover {
-      background: #fb3ee9;
+      background: #ffffff;
     }
   }
 

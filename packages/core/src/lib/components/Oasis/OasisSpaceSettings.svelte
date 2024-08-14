@@ -245,6 +245,11 @@
           </div>
 
           <p>Add external feeds to pull in new content from.</p>
+
+          <p>
+            If the live mode is enabled these sources will automatically be loaded, otherwise you
+            can manually refresh.
+          </p>
         </div>
 
         {#if space.name.sources}
@@ -260,15 +265,11 @@
                 <h3 use:tooltip={source.url}>{getSourceName(source)}</h3>
               </div>
               <div class="meta">
-                {#if isLiveModeOn}
-                  <p>
-                    Last fetched: {source.last_fetched_at
-                      ? getHumanDistanceToNow(source.last_fetched_at)
-                      : 'never'}
-                  </p>
-                {:else}
-                  <p>Disabled because live mode is off.</p>
-                {/if}
+                <p>
+                  Last fetched: {source.last_fetched_at
+                    ? getHumanDistanceToNow(source.last_fetched_at)
+                    : 'never'}
+                </p>
 
                 <div class="meta-actions">
                   <button on:click={() => copySource(source)} use:tooltip={'Copy Source URL'}>
@@ -315,20 +316,16 @@
             <h2>Smart Oasis Filter</h2>
           </div>
 
-          <p>
-            Automatically add new items saved to Oasis to this space if they match the following
-            query.
-          </p>
+          <p>Add new items saved to Oasis to this space if they match this query.</p>
           <input
             placeholder="e.g. articles about electric cars"
-            disabled={!isLiveModeOn}
             bind:value={smartFilterQuery}
             on:blur={handleSmartQueryBlur}
             on:keydown={handleKeyDown}
           />
 
           {#if !isLiveModeOn}
-            <p><b>Note:</b> Disabled because Live Mode is turned off.</p>
+            <p><b>Note:</b> When Live Mode is turned off you need to manually refresh.</p>
           {/if}
         </div>
       </div>
