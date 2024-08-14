@@ -1045,6 +1045,7 @@
       localStorage.setItem('horizontalTabs', horizontalTabs.toString())
       telemetry.trackToggleTabsOrientation(horizontalTabs ? 'horizontal' : 'vertical')
     })
+    checkScroll()
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
@@ -2000,6 +2001,16 @@
 
   let tabSize = 0
 
+  $: plusBtnLeftPos = horizontalTabs
+    ? $unpinnedTabs.reduce(
+        (total, tab) =>
+          total + (tab.id === $activeTabId ? 260 : Math.min(300, Math.max(24, tabSize))) + 3,
+        0
+      ) +
+      Math.min(300, Math.max(96, tabSize)) * $magicTabs.length +
+      10
+    : 0
+
   $: {
     const reservedSpace = 200 + 40 * $pinnedTabs.length + 200
     const availableSpace = maxWidth - reservedSpace
@@ -2018,10 +2029,10 @@
 
       if (horizontalTabs) {
         $showStartMask = scrollLeft > 0
-        $showEndMask = scrollLeft + clientWidth <= scrollWidth - 10
+        $showEndMask = scrollLeft + clientWidth <= scrollWidth - 1
       } else {
         $showStartMask = scrollTop > 0
-        $showEndMask = scrollTop + clientHeight <= scrollHeight
+        $showEndMask = scrollTop + clientHeight <= scrollHeight - 1
       }
     }
   }
@@ -3433,10 +3444,7 @@
               <div
                 style="position: absolute; top: {!horizontalTabs
                   ? 42 * $unpinnedTabs.length
-                  : 0}px; left: {horizontalTabs
-                  ? (Math.min(300, Math.max(24, tabSize)) + 4) *
-                    ($unpinnedTabs.length + $magicTabs.length)
-                  : 0}px; right: 0;"
+                  : 0}px; left: {plusBtnLeftPos}px; right: 0;"
                 class:w-fit={horizontalTabs}
                 class:h-full={horizontalTabs}
                 class="select-none flex items-center justify-center"
