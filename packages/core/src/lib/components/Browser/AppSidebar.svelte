@@ -1,10 +1,14 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import { writable } from 'svelte/store'
+
   import { Icon } from '@horizon/icons'
+  import { Editor, getEditorContentText } from '@horizon/editor'
+
   import { useLogScope } from '../../utils/log'
   import { SFFS } from '../../service/sffs'
   import { useTelemetry } from '../../service/telemetry'
+  import { slide } from 'svelte/transition'
 
   export let tabContext: string
   export let sffs: SFFS
@@ -15,20 +19,40 @@
   let directCode = ''
   let inputValue = ''
   let app: HTMLIFrameElement
-  let inputElem: HTMLInputElement
+  let timeout: ReturnType<typeof setTimeout>
+  let editorFocused = false
+  let delayedEditorFocus = false
+  let editor: Editor
 
   const log = useLogScope('AppsSidebar')
   const telemetry = useTelemetry()
 
   const activeToolTab = writable<'app' | 'page'>('page')
 
-  $: if (inputValue.startsWith('app:')) {
+  $: if (inputValue.startsWith('app:') || inputValue.startsWith('<p>app:')) {
     activeToolTab.set('app')
+  }
+
+  // this is needed to properly handle the focus state of the editor and showing/hiding the button
+  $: if (editorFocused) {
+    log.debug('editor focused')
+    delayedEditorFocus = true
+
+    if (timeout) {
+      clearTimeout(timeout)
+    }
+  } else {
+    timeout = setTimeout(() => {
+      delayedEditorFocus = false
+    }, 100)
   }
 
   const changeToolTab = (tab: 'app' | 'page') => {
     activeToolTab.set(tab)
-    inputElem.focus()
+
+    if (delayedEditorFocus) {
+      editor.focus()
+    }
   }
 
   const cleanSource = (source: string) => {
@@ -88,11 +112,15 @@
   const handlePromptSubmit = async () => {
     fetching = true
     if (!inputValue) return
-    let savedInputValue = inputValue
+    let savedInputValue = getEditorContentText(inputValue)
     try {
       inputValue = ''
+      editor.clear()
+      editor.blur()
 
-      if ($activeToolTab === 'app' && !savedInputValue.toLowerCase().startsWith('app:')) {
+      const isAppPrompt = savedInputValue.toLowerCase().startsWith('app:')
+
+      if ($activeToolTab === 'app' && !isAppPrompt) {
         savedInputValue = `app: ${savedInputValue}`
       }
 
@@ -131,6 +159,7 @@
     } catch (error) {
       log.error('Failed to create app:', error)
       inputValue = savedInputValue
+      editor.setContent(savedInputValue)
       alert(error)
     } finally {
       fetching = false
@@ -149,6 +178,13 @@
     dispatch('clearAppSidebar', {})
 
     await telemetry.trackGoWildClear()
+  }
+
+  const handleInputKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handlePromptSubmit()
+    }
   }
 
   onMount(async () => {
@@ -175,7 +211,7 @@
       directCode = code
     }
 
-    inputElem.focus()
+    editor.focus()
   })
 
   onDestroy(async () => {
@@ -199,7 +235,7 @@
     {#if prompt}
       <div class="app-prompt">
         <div class="message">
-          <Icon name="message" />
+          <Icon name="message" size="20px" />
           <p>{prompt}</p>
         </div>
         {#if directCode !== ''}
@@ -220,42 +256,55 @@
     <iframe title="App" id={appId} frameborder="0" bind:this={app}></iframe>
   </div>
 
-  {#if !fetching}
-    <div class="tool-tabs">
-      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-      <div
-        on:click={() => changeToolTab('page')}
-        class="tab"
-        class:active={$activeToolTab === 'page'}
-      >
-        Modify Page
-      </div>
-      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-      <div
-        on:click={() => changeToolTab('app')}
-        class="tab"
-        class:active={$activeToolTab === 'app'}
-      >
-        Create App
-      </div>
-    </div>
-  {/if}
-
   <form on:submit|preventDefault={handlePromptSubmit} class="prompt">
-    <input
-      bind:this={inputElem}
-      bind:value={inputValue}
-      autofocus
-      placeholder="Tell me what you want.."
-    />
+    {#if !fetching}
+      <div class="tool-tabs">
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <div
+          on:click={() => changeToolTab('page')}
+          class="tab"
+          class:active={$activeToolTab === 'page'}
+        >
+          Modify Page
+        </div>
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <div
+          on:click={() => changeToolTab('app')}
+          class="tab"
+          class:active={$activeToolTab === 'app'}
+        >
+          Create App
+        </div>
+      </div>
+    {/if}
 
-    <button disabled={fetching} class="" type="submit">
-      {#if fetching}
-        <Icon name="spinner" />
-      {:else}
-        <Icon name="arrow.right" />
-      {/if}
-    </button>
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div class="editor-wrapper" on:keydown={handleInputKeydown}>
+      <Editor
+        bind:this={editor}
+        bind:content={inputValue}
+        bind:focused={editorFocused}
+        autofocus={false}
+        placeholder="Tell me what you want…"
+      />
+    </div>
+
+    {#if (inputValue && inputValue !== '<p></p>') || delayedEditorFocus}
+      <button
+        type="submit"
+        transition:slide={{ duration: 150 }}
+        disabled={fetching || inputValue === '<p></p>'}
+        class:filled={inputValue && inputValue !== '<p></p>'}
+      >
+        {#if fetching}
+          <div>Generating…</div>
+          <Icon name="spinner" />
+        {:else}
+          <div>Generate</div>
+          <Icon name="arrow.right" />
+        {/if}
+      </button>
+    {/if}
   </form>
 </div>
 
@@ -281,6 +330,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+    margin-bottom: 1rem;
 
     .tab {
       padding: 0.5rem 1rem;
@@ -290,7 +340,7 @@
       background: #fff;
       color: #3f3f3f;
       border: 1px solid transparent;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
       font-size: 0.9rem;
 
       &.active {
@@ -304,17 +354,6 @@
     }
   }
 
-  .prompt {
-    padding: 0.5rem;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
   .app-prompt {
     padding: 15px;
     background: rgb(255, 255, 255);
@@ -324,16 +363,27 @@
     display: flex;
     flex-direction: row;
     gap: 10px;
+    overflow: hidden;
   }
 
   .message {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     flex-shrink: 0;
+    width: 100%;
+
+    svg {
+      flex-shrink: 0;
+    }
 
     p {
+      flex: 1;
       margin: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
   }
 
@@ -368,20 +418,63 @@
     }
   }
 
-  .prompt button {
-    appearance: none;
-    border: none;
-    background: #f73b95;
-    color: #fff;
-    border-radius: 8px;
-    padding: 0;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
+  .prompt {
+    padding: 0.5rem;
     flex-shrink: 0;
+    // border-top: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 0;
+    font-family: inherit;
+
+    .editor-wrapper {
+      flex: 1;
+      background: #fff;
+      border: 1px solid #eeece0;
+      border-radius: 12px;
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    button {
+      appearance: none;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      height: min-content;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: #fd1bdf40;
+      color: white;
+      margin-top: 1rem;
+
+      div {
+        font-size: 1rem;
+      }
+
+      &:hover {
+        background: #fd1bdf69;
+      }
+
+      &.filled {
+        background: #f73b95;
+
+        &:hover {
+          background: #f92d90;
+        }
+      }
+
+      &:active {
+        background: #f73b95;
+      }
+    }
   }
 
   .header {
@@ -417,27 +510,6 @@
     h1 {
       font-size: 1.5rem;
       font-weight: 500;
-    }
-  }
-
-  input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid transparent;
-    border-radius: 5px;
-    font-size: 1rem;
-    background-color: #fff;
-    color: #3f3f3f;
-
-    &:hover {
-      background: #eeece0;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: #f73b95;
-      color: #000;
-      background-color: #ffffff;
     }
   }
 

@@ -7,7 +7,7 @@
 
   import { createEventDispatcher } from 'svelte'
 
-  export let label
+  export let label: string | undefined = undefined
   export let fontSize = 16
   export let checked = false
   export let color = 'CornflowerBlue'
@@ -29,7 +29,7 @@
 </script>
 
 <div class="s s--slider" style="font-size:{fontSize}px; --accent-color: {color}">
-  {#if !reverse}
+  {#if !reverse && label}
     <span id={`switch-${uniqueID}`}>{label}</span>
   {/if}
 
@@ -41,7 +41,7 @@
   >
   </button>
 
-  {#if reverse}
+  {#if reverse && label}
     <span id={`switch-${uniqueID}`}>{label}</span>
   {/if}
 </div>

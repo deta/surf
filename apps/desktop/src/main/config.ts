@@ -60,15 +60,28 @@ export const setBrowserConfig = (config: BrowserConfig) => {
 
 let userConfig: UserConfig | null = null
 
-export const getUserConfig = () => {
+export const getUserConfig = (path?: string) => {
   // if (userConfig !== null) {
   //   return userConfig
   // }
 
-  const storedConfig = getConfig<UserConfig>(app.getPath('userData'), USER_CONFIG_NAME)
+  const storedConfig = getConfig<UserConfig>(path ?? app.getPath('userData'), USER_CONFIG_NAME)
   if (!storedConfig.user_id) {
     storedConfig.user_id = uuidv4()
     storedConfig.defaultBrowser = false
+
+    setUserConfig(storedConfig as UserConfig)
+  }
+
+  if (!storedConfig.settings) {
+    storedConfig.settings = {
+      embedding_model: 'english_small',
+      tabs_orientation: 'vertical',
+      auto_save_resources: true,
+      use_semantic_search: true,
+      show_annotations_in_oasis: false
+    }
+
     setUserConfig(storedConfig as UserConfig)
   }
 

@@ -94,9 +94,14 @@
   import CreateNewSpace from './CreateNewSpace.svelte'
   import { spring } from 'svelte/motion'
   import { useDebounce } from '../../utils/debounce'
+  import { useConfig } from '../../service/config'
   export let activeTabs: Tab[] = []
   export let showTabSearch = false
+
   const dispatch = createEventDispatcher<OverlayEvents>()
+  const config = useConfig()
+  const userConfigSettings = config.settings
+
   let createSpaceRef: any
   let loading = false
   let page: 'tabs' | 'oasis' | 'history' | 'spaces' | null = null
@@ -546,10 +551,12 @@
       const resources = await resourceManager.listResourcesByTags(
         [
           ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
           ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
           ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+          ...($userConfigSettings.show_annotations_in_oasis
+            ? []
+            : [ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')])
         ],
         { includeAnnotations: true }
       )
@@ -622,10 +629,16 @@
       value = ''
     }
 
-    const result = await resourceManager.searchResources(value, [
-      ResourceManager.SearchTagDeleted(false),
-      ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
-    ])
+    const result = await resourceManager.searchResources(
+      value,
+      [
+        ResourceManager.SearchTagDeleted(false),
+        ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
+      ],
+      {
+        semanticEnabled: $userConfigSettings.use_semantic_search
+      }
+    )
 
     log.debug('searching all', result)
 
@@ -1072,6 +1085,7 @@
         showBackBtn
         {historyEntriesManager}
         on:go-back={() => selectedSpaceId.set(null)}
+        on:new-tab
       />
     {:else}
       <div

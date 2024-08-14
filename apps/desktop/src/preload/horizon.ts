@@ -17,7 +17,8 @@ import { createAPI } from '@horizon/api'
 import { actionsToRunnableTools } from './actions'
 import { ElectronAppInfo } from '@horizon/types'
 import type { UserConfig, HorizonAction, EditablePrompt, UserSettings } from '@horizon/types'
-import { getConfig } from '../main/config'
+import { getConfig, getUserConfig } from '../main/config'
+import { ipcSenders } from '../main/ipcHandlers'
 
 const log = useLogScope('Horizon Preload')
 
@@ -40,7 +41,7 @@ const webviewNewWindowHandlers = {}
 const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
 
-const userConfig = getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
+const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
 //
 // TODO: do we need to handle the case where api_key is undefined?
 const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT || ''
@@ -75,6 +76,9 @@ const api = {
     log.debug('updateTrafficLightsVisibility', visible)
     ipcRenderer.invoke('update-traffic-lights', { visible })
   },
+  handleGoogleSignIn: async (url: string): Promise<string | undefined> => {
+    return ipcRenderer.invoke('handle-google-sign-in', { url })
+  },
 
   onFullscreenChange: (callback: any) => {
     fullscreenHandlers.push(callback)
@@ -98,7 +102,7 @@ const api = {
       delete previewImageHandlers[horizonId]
     }
   },
-  getUserConfigSettings: () => userConfig.settings,
+
   fetchAsDataURL: async (url: string) => {
     try {
       const response = await fetch(url)
@@ -310,8 +314,17 @@ const api = {
     return data
   },
 
-  saveSettings: async (settings: UserSettings) => {
+  getUserConfigSettings: () => userConfig.settings,
+
+  saveUserConfigSettings: async (settings: UserSettings) => {
     ipcRenderer.send('store-settings', settings)
+  },
+
+  onUserConfigSettingsChange: (callback: (settings: UserSettings) => void) => {
+    ipcRenderer.on('user-config-settings-change', (_, settings) => {
+      userConfig.settings = settings
+      callback(settings)
+    })
   },
 
   updateInitializedTabs: async (value: boolean) => {
