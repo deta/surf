@@ -138,7 +138,7 @@ export class HTMLDragZone extends DragZone {
       "Drop"
     );
 
-    console.warn("onDrop", hasDragculaListeners, handlesDragculaEventCorrectly);
+    //console.warn("onDrop", hasDragculaListeners, handlesDragculaEventCorrectly);
 
     return await DragculaDragEvent.dispatch("Drop", drag, this.element);
     /// FIX: beeing dispatch in svelte, out cheks dont work :(
@@ -208,7 +208,7 @@ export class HTMLDragZone extends DragZone {
     e.stopPropagation();
     console.debug(`[HTMLDragZone:${this.id}] dragenter`, e);
     if (document.activeDragOperation === undefined) {
-      console.log(
+      console.debug(
         `[HTMLDragZone:${this.id}] No active drag operation! Creating one with native DataTransfer!`
       );
       document.activeDragOperation = {

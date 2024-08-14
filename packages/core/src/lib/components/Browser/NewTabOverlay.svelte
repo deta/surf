@@ -1096,6 +1096,7 @@
         showBackBtn
         {historyEntriesManager}
         on:go-back={() => selectedSpaceId.set(null)}
+        on:new-tab
       />
     {:else}
       <div

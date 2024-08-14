@@ -273,10 +273,7 @@ export class HTMLDragItem extends DragItem {
   }
 
   protected async rafCbk(_: number) {
-    console.assert(
-      this.previewElement !== undefined,
-      "Preview element is null! This should not happen!"
-    );
+    //console.assert(this.previewElement !== undefined, "Preview element is null! This should not happen!");
     if (this.previewElement === undefined) {
       this.raf = null;
       return;
@@ -304,7 +301,7 @@ export class HTMLDragItem extends DragItem {
       }
       if (newTargetId !== null) {
         const accepted = await overZone!.onDragEnter(drag);
-        console.warn("accepted", accepted);
+        //console.warn("accepted", accepted);
         drag.to = accepted ? overZone : null;
       }
     }
@@ -422,12 +419,7 @@ export class HTMLDragItem extends DragItem {
         this.element,
         "DragStart"
       );
-      console.log(
-        "hasDragculaListeners",
-        hasDragculaListeners,
-        "handlesDragculaEvent",
-        handlesDragculaEvent
-      );
+      //console.log("hasDragculaListeners", hasDragculaListeners, "handlesDragculaEvent", handlesDragculaEvent);
       if (hasDragculaListeners && !handlesDragculaEvent) {
         console.warn(
           "Element ",
@@ -491,9 +483,9 @@ export class HTMLDragItem extends DragItem {
         // TOOD: Reset vt name overrides
       });
     } catch (e) {
-      console.error(e);
+      //console.error(e);
       // TODO: Abort all
-      console.warn("Aborting drag operation!");
+      /////console.log("Aborting drag operation!");
       this.onDragEnd(drag);
     }
   }
@@ -528,7 +520,7 @@ export class HTMLDragItem extends DragItem {
     if (drag.status === "aborted") {
       this.pushViewTransitionName(this.element, `dragcula-dragItem`);
       //this.styles.push(this.element, "view-transition-name", `dragcula-dragItem`);
-      console.warn("Drag aborted, reseetting");
+      //console.log("Drag aborted, reseetting");
       if (this.previewMode === "hoist") {
         throw new Error("Hoist not implemented!");
         // NOTE: only readd if element / parent / next sib still exists.

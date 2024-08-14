@@ -2,9 +2,10 @@
   import { Icon } from '@horizon/icons'
 
   export let url: string
-  export let label: string
+  export let label: string | undefined = undefined
   export let color: string = '#281B53'
   export let locked: boolean = true
+  export let hideArrow: boolean = false
 
   const handleDragStart = (e: DragEvent) => {
     e.dataTransfer?.setData('text/html', url)
@@ -19,11 +20,18 @@
     style="color: {color}; text-decoration: none;"
     on:dragstart={handleDragStart}
     on:click
-    {...$$restProps}>{label}</a
+    {...$$restProps}
   >
-  <div class="arrow" class:locked>
-    <Icon name="arrow" {color} />
-  </div>
+    <slot>
+      {label}
+    </slot>
+  </a>
+
+  {#if !hideArrow}
+    <div class="arrow" class:locked>
+      <Icon name="arrow" {color} />
+    </div>
+  {/if}
 </div>
 
 <style lang="scss">

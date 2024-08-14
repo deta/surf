@@ -62,6 +62,7 @@
   import { handleInlineAI } from '../../service/ai'
   import { generateID } from '../../utils/id'
   import { useOasis } from '../../service/oasis'
+  import { isGoogleSignInUrl } from '../../utils/url'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<BrowserTabEvents>()
@@ -142,6 +143,13 @@
 
     debouncedTabUpdate()
     debouncedAppDetection()
+
+    let url = e.detail
+    if (isGoogleSignInUrl(url ?? '')) {
+      //@ts-ignore
+      const navigatedUrl = await window.api.handleGoogleSignIn(url)
+      if (navigatedUrl) webview.navigate(navigatedUrl)
+    }
   }
 
   const handleWebviewTitleChange = (e: CustomEvent<string>) => {

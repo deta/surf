@@ -8,6 +8,7 @@ import { EditablePrompt, ElectronAppInfo } from '@horizon/types'
 import { getPlatform } from './utils'
 import { checkForUpdates } from './appUpdates'
 import { getSettingsWindow } from './settingsWindow'
+import { createGoogleSignInWindow } from './googleSignInWindow'
 
 const log = useLogScope('Main IPC Handlers')
 let prompts: EditablePrompt[] = []
@@ -68,6 +69,10 @@ export function setupIpcHandlers() {
 
   ipcMain.handle('get-user-config', async (_) => {
     return getUserConfig()
+  })
+
+  ipcMain.handle('handle-google-sign-in', async (_, { url }) => {
+    return await createGoogleSignInWindow(url)
   })
 
   ipcMain.on(

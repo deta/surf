@@ -71,13 +71,13 @@ EventTarget.prototype.addEventListener = function (type, fn: any, capture) {
       ref: new WeakRef(fn)
     });
 
-    console.warn("Added Event Spy: ", type, fn);
+    //console.warn('Added Event Spy: ', type, fn);
     //console.warn(EVENT_SPY);
 
     this.f(
       type,
       (...args: any[]) => {
-        console.warn("Called listener", type, args);
+        //console.warn("Called listener", type, args);
         fn(...args);
       },
       capture

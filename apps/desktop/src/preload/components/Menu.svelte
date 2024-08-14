@@ -155,6 +155,9 @@
     } else if (shortcutCombo && e.key === 'k') {
       e.preventDefault()
       // showLinkMenu()
+    } else if (shortcutCombo && e.key === 'j') {
+      e.preventDefault()
+      showAIMenu()
     } else if (shortcutCombo && e.key === 'b') {
       if ($view === 'ai' && output) {
         e.preventDefault()
@@ -183,8 +186,8 @@
 <Wrapper bind:elem expanded={$view === 'comment'}>
   {#if $view === 'initial'}
     <div class="btn-row">
-      <Button on:click={() => showAIMenu()} kind="secondary">
-        <Icon name="sparkles" /> Ask AI
+      <Button on:click={() => showAIMenu()} kind="secondary" tooltip="Use AI Features">
+        <Icon name="sparkles" />
       </Button>
 
       <div class="divider"></div>
@@ -193,15 +196,15 @@
         <IconConfirmation bind:this={markerIcon} name="marker" />
       </Button>
 
-      <Button on:click={() => showCommentMenu()} icon="message" tooltip="Add Comment (⌘+Shift+M)" />
+      <Button on:click={() => showCommentMenu()} icon="message" tooltip="Add Comment" />
 
-      <div class="divider"></div>
+      <!-- <div class="divider"></div> -->
 
       <!-- svelte-ignore a11y-unknown-role -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
-      <div draggable="true" on:dragstart={handleDragStart} class="menu-drag-handle">
+      <!-- <div draggable="true" on:dragstart={handleDragStart} class="menu-drag-handle">
         <Icon name="grip.vertical" />
-      </div>
+      </div> -->
     </div>
   {:else if $view === 'ai'}
     <form on:submit|stopPropagation|preventDefault={handleAISubmit}>
@@ -304,7 +307,7 @@
   .btn-row {
     display: flex;
     align-items: stretch;
-    gap: 8px;
+    gap: 4px;
   }
 
   .menu-drag-handle {
