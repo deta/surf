@@ -3,7 +3,6 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
-import { spawn, type ChildProcess } from 'child_process'
 import { TelemetryEventTypes } from '@horizon/types'
 
 import { createWindow, getMainWindow } from './mainWindow'
@@ -15,13 +14,14 @@ import { getUserConfig, updateUserConfig } from './config'
 import { createSetupWindow } from './setupWindow'
 import { checkIfAppIsActivated } from './activation'
 import { isDefaultBrowser } from './utils'
+import { SurfBackendServerManager } from './surfBackend'
 
 const log = useLogScope('Main Index')
 const isDev = import.meta.env.DEV
 
-let child: ChildProcess
 let isAppLaunched = false
 let appOpenedWithURL: string | null = null
+let surfBackendManager: SurfBackendServerManager | null = null
 
 const config = {
   appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Surf',
@@ -128,6 +128,26 @@ if (!gotTheLock) {
     setAppMenu()
     createWindow()
 
+    const appPath = app.getAppPath() + (isDev ? '' : '.unpacked')
+    const userDataPath = app.getPath('userData')
+    const backendRootPath = join(userDataPath, 'sffs_backend')
+    const backendServerPath = join(appPath, 'resources', 'bin', 'surf-backend')
+
+    surfBackendManager = new SurfBackendServerManager(backendServerPath, [
+      backendRootPath,
+      'false',
+      process.env.M_VITE_EMBEDDING_MODEL_MODE || 'default'
+    ])
+
+    surfBackendManager?.on('stdout', (data) => log.info('[surf backend] stdout:', data))
+    surfBackendManager?.on('stderr', (data) => log.error('[surf backend] stderr:', data))
+    surfBackendManager?.on('exit', (code) => log.info('[surf backend] exited with code:', code))
+    surfBackendManager?.on('error', (error) => log.error('[surf backend] error:', error))
+    surfBackendManager?.on('warn', (message) => log.warn('[surf backend] warning:', message))
+    surfBackendManager?.on('info', (message) => log.info('[surf backend] info:', message))
+
+    surfBackendManager?.start()
+
     // we need to wait for the app/horizon to be ready before we can send any messages to the renderer
     ipcMain.once('app-ready', () => {
       const appIsDefaultBrowser = isDefaultBrowser()
@@ -141,26 +161,6 @@ if (!gotTheLock) {
       if (appOpenedWithURL) {
         handleOpenUrl(appOpenedWithURL!)
       }
-    })
-
-    const appPath = `${app.getAppPath()}${isDev ? '' : '.unpacked'}`
-    const backendRootPath = join(userDataPath, 'sffs_backend')
-    const backendServerPath = join(appPath, 'resources', 'bin', 'surf-backend')
-    const embeddingModelMode = isDev
-      ? config.embeddingModelMode
-      : userConfig.settings.embedding_model
-    child = spawn(backendServerPath, [backendRootPath, 'false', embeddingModelMode])
-
-    child.stdout?.on('data', (data) => {
-      log.debug(`surfer-backend: ${data}`)
-    })
-
-    child.stderr?.on('data', (data) => {
-      log.error(`surfer-backend: ${data}`)
-    })
-
-    child.on('exit', (code) => {
-      log.debug(`Child process exited with code ${code}`)
     })
   })
 
@@ -179,7 +179,7 @@ if (!gotTheLock) {
   })
 
   app.on('will-quit', () => {
-    child.kill()
+    surfBackendManager?.stop()
   })
 
   app.on('browser-window-focus', registerShortcuts)

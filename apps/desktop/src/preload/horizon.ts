@@ -16,9 +16,8 @@ import { minify } from 'html-minifier'
 import { createAPI } from '@horizon/api'
 import { actionsToRunnableTools } from './actions'
 import { ElectronAppInfo } from '@horizon/types'
-import type { UserConfig, HorizonAction, EditablePrompt, UserSettings } from '@horizon/types'
-import { getConfig, getUserConfig } from '../main/config'
-import { ipcSenders } from '../main/ipcHandlers'
+import type { HorizonAction, EditablePrompt, UserSettings } from '@horizon/types'
+import { getUserConfig } from '../main/config'
 
 const log = useLogScope('Horizon Preload')
 
@@ -28,11 +27,6 @@ const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
 const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
-
-// TODO: think this is useless?
-if (process.platform === 'win32') {
-  process.env.PATH += `;${APP_PATH}`
-}
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
