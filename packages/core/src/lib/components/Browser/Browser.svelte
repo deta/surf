@@ -1612,7 +1612,7 @@
     }
   }
 
-  const setPageChatState = async (enabled: boolean) => {
+  const setPageChatState = (enabled: boolean) => {
     log.debug('Toggling magic sidebar')
     const transition = document.startViewTransition(async () => {
       const tab = $activeTab as TabPage | null
@@ -1639,6 +1639,8 @@
         preparePageTabsForChatContext()
       })
     }
+
+    return transition.finished
   }
 
   const setAppSidebarState = async (enabled: boolean) => {
