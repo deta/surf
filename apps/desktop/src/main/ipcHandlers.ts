@@ -4,7 +4,7 @@ import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
 import { getUserConfig, updateUserConfig } from './config'
 import { handleDragStart } from './drag'
-import { EditablePrompt, ElectronAppInfo } from '@horizon/types'
+import { EditablePrompt, ElectronAppInfo, UserSettings } from '@horizon/types'
 import { getPlatform } from './utils'
 import { checkForUpdates } from './appUpdates'
 import { getSettingsWindow } from './settingsWindow'
@@ -112,6 +112,9 @@ export function setupIpcHandlers() {
 
   ipcMain.on('store-settings', (_event, settings) => {
     updateUserConfig({ settings: settings })
+
+    // notify other windows of the change
+    ipcSenders.userConfigSettingsChange(settings)
   })
 
   ipcMain.on('update-initialized-tabs', (_event, value) => {
@@ -319,5 +322,22 @@ export const ipcSenders = {
     }
 
     window.webContents.send('reload-active-tab', force)
+  },
+
+  userConfigSettingsChange(settings: UserSettings) {
+    // const window = getMainWindow()
+    // if (!window) {
+    //   log.error('Main window not found')
+    //   return
+    // }
+
+    // notify all windows
+
+    const windows = [getMainWindow(), getSettingsWindow()]
+
+    windows.forEach((window) => {
+      if (!window) return
+      window.webContents.send('user-config-settings-change', settings)
+    })
   }
 }

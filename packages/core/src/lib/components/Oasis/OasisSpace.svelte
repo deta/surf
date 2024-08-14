@@ -73,6 +73,7 @@
   } from '@horizon/types'
   import { truncate } from '../../utils/text'
   import PQueue from 'p-queue'
+  import { useConfig } from '../../service/config'
 
   export let spaceId: string
   export let active: boolean = false
@@ -83,6 +84,7 @@
 
   const log = useLogScope('OasisSpace')
   const oasis = useOasis()
+  const config = useConfig()
 
   const dispatch = createEventDispatcher<{
     open: string
@@ -96,6 +98,7 @@
   const resourceManager = oasis.resourceManager
   const spaces = oasis.spaces
   const telemetry = resourceManager.telemetry
+  const userConfigSettings = config.settings
 
   const searchValue = writable('')
   const showChat = writable(false)
@@ -751,11 +754,17 @@
 
     await telemetry.trackSearchOasis(!isEverythingSpace)
 
-    const result = await resourceManager.searchResources(value, [
-      ResourceManager.SearchTagDeleted(false),
-      ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-      ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
-    ])
+    const result = await resourceManager.searchResources(
+      value,
+      [
+        ResourceManager.SearchTagDeleted(false),
+        ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+        ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
+      ],
+      {
+        semanticEnabled: $userConfigSettings.use_semantic_search
+      }
+    )
 
     log.debug('searching all', result)
 

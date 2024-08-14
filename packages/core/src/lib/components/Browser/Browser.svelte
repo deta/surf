@@ -99,6 +99,7 @@
     type AnnotationCommentData,
     type ResourceDataAnnotation,
     type UserConfig,
+    type UserSettings,
     type WebViewEventAnnotation
   } from '@horizon/types'
   import { scrollToTextCode } from './inline'
@@ -130,6 +131,7 @@
   import NewTabOverlay from './NewTabOverlay.svelte'
   import CustomPopover from './CustomPopover.svelte'
   import { truncate } from '../../utils/text'
+  import { provideConfig } from '../../service/config'
   //import '@horizon/dragcula/dist/styles.scss'
 
   let activeTabComponent: TabItem | null = null
@@ -165,7 +167,9 @@
   const sffs = new SFFS()
   const oasis = provideOasis(resourceManager)
   const toasts = provideToasts()
+  const config = provideConfig()
 
+  const userConfigSettings = config.settings
   const tabsDB = storage.tabs
   const horizons = horizonManager.horizons
   const historyEntriesManager = horizonManager.historyEntriesManager
@@ -842,13 +846,8 @@
   const KEY_TIMEOUT = 120
   const MAX_TABS = 99
 
-  // @ts-ignore
-  let savedTabsOrientation = window.api.getUserConfigSettings()?.tabs_orientation
-  let localstorageTabsOrientation = localStorage.getItem('horizontalTabs')
-  let horizontalTabs =
-    localstorageTabsOrientation == null
-      ? savedTabsOrientation === 'horizontal'
-      : localstorageTabsOrientation === 'true'
+  $: savedTabsOrientation = $userConfigSettings.tabs_orientation
+  $: horizontalTabs = savedTabsOrientation === 'horizontal'
 
   const handleCollapseRight = () => {
     if (sidebarComponent) {
@@ -1042,7 +1041,12 @@
   const handleToggleHorizontalTabs = () => {
     const t = document.startViewTransition(() => {
       horizontalTabs = !horizontalTabs
-      localStorage.setItem('horizontalTabs', horizontalTabs.toString())
+
+      config.updateSettings({
+        tabs_orientation: horizontalTabs ? 'horizontal' : 'vertical'
+      })
+
+      // localStorage.setItem('horizontalTabs', horizontalTabs.toString())
       telemetry.trackToggleTabsOrientation(horizontalTabs ? 'horizontal' : 'vertical')
     })
   }

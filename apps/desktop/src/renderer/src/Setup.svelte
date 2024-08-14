@@ -1,9 +1,8 @@
 <script lang="ts">
   import icon from './assets/icon_512.png'
-  import prefsVerticalVideo from './assets/vertical.tabs.mp4'
-  import prefsHorizontalVideo from './assets/horizontal.tabs.mp4'
 
   import type { AppActivationResponse } from '@horizon/api'
+  import LayoutPicker from './components/LayoutPicker.svelte'
 
   const REQUEST_INVITE_URL = 'https://deta.surf'
   const TERMS_URL = 'https://deta.surf/terms'
@@ -13,15 +12,10 @@
 
   let inviteCode = ''
   let embeddingModel = 'english_small'
-  let tabsOrientation = 'horizontal'
+  let tabsOrientation: 'horizontal' | 'vertical' = 'horizontal'
   let acceptedTerms = false
   let loading = false
   let error = ''
-
-  let videoRefs = {
-    vertical: null,
-    horizontal: null
-  }
 
   const languageConfig = {
     english_small: 'English',
@@ -56,7 +50,7 @@
   const handleAcceptPrefs = async () => {
     try {
       // @ts-ignore
-      await window.api.saveSettings({
+      await window.api.saveUserConfigSettings({
         embedding_model: embeddingModel,
         tabs_orientation: tabsOrientation
       })
@@ -72,7 +66,7 @@
   const handleLanguageSubmit = async () => {
     try {
       // @ts-ignore
-      await window.api.saveSettings({
+      await window.api.saveUserConfigSettings({
         embedding_model: embeddingModel,
         tabs_orientation: tabsOrientation
       })
@@ -338,59 +332,8 @@
       <img src={icon} alt="Surf icon" />
       <h1>Surf Layout</h1>
 
-      <div class="radio-container">
-        <div class="radio-item">
-          <input
-            type="radio"
-            id="horizontal"
-            name="radio-group"
-            value="horizontal"
-            checked
-            bind:group={tabsOrientation}
-          />
-          <label for="horizontal">
-            <video
-              src={prefsHorizontalVideo}
-              loop
-              muted
-              preload="auto"
-              on:mouseover={() => videoRefs.horizontal?.play()}
-              on:mouseout={() => {
-                videoRefs.horizontal?.pause()
-                videoRefs.horizontal.currentTime = 0
-              }}
-              bind:this={videoRefs.horizontal}
-            ></video>
+      <LayoutPicker bind:orientation={tabsOrientation} />
 
-            <span>Horizontal Tabs</span>
-          </label>
-        </div>
-        <div class="radio-item">
-          <input
-            type="radio"
-            id="vertical"
-            name="radio-group"
-            value="vertical"
-            bind:group={tabsOrientation}
-          />
-          <label for="vertical">
-            <video
-              src={prefsVerticalVideo}
-              loop
-              muted
-              preload="auto"
-              on:mouseover={() => videoRefs.vertical?.play()}
-              on:mouseout={() => {
-                videoRefs.vertical?.pause()
-                videoRefs.vertical.currentTime = 0
-              }}
-              bind:this={videoRefs.vertical}
-            ></video>
-
-            <span>Vertical Tabs</span>
-          </label>
-        </div>
-      </div>
       <p>
         You can change this behavior later at <br /> <span class="pill">View</span> →
         <span class="pill">Toggle Tabs Orientation</span>
@@ -675,65 +618,6 @@
       color: #dc3545;
     }
 
-    .radio-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding-left: 0.25rem;
-    }
-
-    .radio-container {
-      display: flex;
-      gap: 20px;
-      padding: 1rem 0.5rem;
-    }
-
-    .radio-form {
-      display: flex;
-      padding-bottom: 2rem;
-      gap: 1rem;
-    }
-
-    .radio-submit {
-      margin-top: 2rem;
-    }
-
-    .radio-item {
-      .media-container {
-        position: relative;
-        overflow: hidden;
-        border-radius: 8px;
-      }
-
-      label {
-        cursor: pointer;
-      }
-    }
-
-    .radio-item input[type='radio'] {
-      display: none;
-    }
-    .radio-item label {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px;
-      gap: 1rem;
-      border: 0.5px solid #ccc;
-      border-radius: 12px;
-      transition: all 0.3s ease;
-    }
-
-    .radio-item label:hover {
-      background-color: #eff5ff;
-    }
-    .radio-item input[type='radio']:checked + label {
-      border-color: #3a83ea;
-      background-color: #e2eeff;
-    }
-    .radio-item span {
-      color: #333;
-    }
     .settings-ai-models {
       text-align: left;
     }
