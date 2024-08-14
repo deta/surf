@@ -1612,9 +1612,9 @@
     }
   }
 
-  const setPageChatState = async (enabled: boolean) => {
+  const setPageChatState = (enabled: boolean) => {
     log.debug('Toggling magic sidebar')
-    document.startViewTransition(async () => {
+    const transition = document.startViewTransition(async () => {
       const tab = $activeTab as TabPage | null
 
       if (!$activeTabMagic) return
@@ -1629,17 +1629,18 @@
         }
       })
 
-      await toggleTabsMagic(enabled)
-
+      toggleTabsMagic(enabled)
       await tick()
-
-      if (enabled) {
-        // Delay to let the sidebar open first
-        requestAnimationFrame(async () => {
-          await preparePageTabsForChatContext()
-        })
-      }
     })
+
+    if (enabled) {
+      // Delay to let the sidebar open first
+      requestAnimationFrame(() => {
+        preparePageTabsForChatContext()
+      })
+    }
+
+    return transition.finished
   }
 
   const setAppSidebarState = async (enabled: boolean) => {
