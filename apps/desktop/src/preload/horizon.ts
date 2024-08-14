@@ -453,15 +453,14 @@ export class ResourceHandle {
 
   static async open(
     rootPath: string,
-    filePath: string,
     resourceId: string,
     flags: string = 'a+'
   ): Promise<ResourceHandle> {
     const resolvedRootPath = path.resolve(rootPath)
-    const resolvedFilePath = path.resolve(resolvedRootPath, filePath)
+    const resolvedFilePath = path.resolve(resolvedRootPath, resourceId)
 
     if (!resolvedFilePath.startsWith(resolvedRootPath)) {
-      throw new Error('invalid file path')
+      throw new Error('Invalid resource ID')
     }
 
     const fd = await fsp.open(resolvedFilePath, flags)
@@ -603,13 +602,8 @@ const resources = (() => {
     return `${BACKEND_ROOT_PATH}/sffs.sqlite`
   }
 
-  async function openResource(filePath: string, resourceId: string, flags: string) {
-    const resourceHandle = await ResourceHandle.open(
-      BACKEND_RESOURCES_PATH,
-      filePath,
-      resourceId,
-      flags
-    )
+  async function openResource(resourceId: string, flags: string) {
+    const resourceHandle = await ResourceHandle.open(BACKEND_RESOURCES_PATH, resourceId, flags)
     resourceHandles.set(resourceId, resourceHandle)
 
     return resourceId

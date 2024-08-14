@@ -566,10 +566,10 @@ export class SFFS {
     }))
   }
 
-  async readDataFile(path: string, resourceId: string): Promise<Uint8Array> {
+  async readDataFile(resourceId: string): Promise<Uint8Array> {
     // this.log.debug('reading data file', path)
 
-    await this.fs.openResource(path, resourceId, 'r+')
+    await this.fs.openResource(resourceId, 'r+')
 
     const uInt8 = (await this.fs.readResource(resourceId)) as Promise<Uint8Array>
 
@@ -578,10 +578,10 @@ export class SFFS {
     return uInt8
   }
 
-  async writeDataFile(path: string, resourceId: string, data: Blob): Promise<void> {
-    this.log.debug('writing data file', path, data)
+  async writeDataFile(resourceId: string, data: Blob): Promise<void> {
+    this.log.debug('writing data file', data)
 
-    await this.fs.openResource(path, resourceId, 'w')
+    await this.fs.openResource(resourceId, 'w')
 
     const buffer = await data.arrayBuffer()
 
