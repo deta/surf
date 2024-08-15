@@ -528,7 +528,7 @@
     justify-content: center;
     height: fit-content !important;
     opacity: 0;
-    visibility: hidden;
+    visibility: visible;
   }
 
   .item:last-child {

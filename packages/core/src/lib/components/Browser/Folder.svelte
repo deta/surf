@@ -363,6 +363,7 @@
     position: relative;
     pointer-events: auto;
     width: 22rem;
+    padding: 0.5rem 0;
   }
 
   .folder {
@@ -377,7 +378,7 @@
     position: relative;
     color: #244581;
     width: 22rem;
-    max-height: 14rem;
+    max-height: 12rem;
     font-weight: 500;
     letter-spacing: 0.0025em;
     font-smooth: always;

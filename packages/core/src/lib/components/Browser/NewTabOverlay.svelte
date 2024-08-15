@@ -1216,7 +1216,7 @@
           <Command.Root
             class="[&_[data-cmdk-group-heading]]:text-neutral-500 {showTabSearch === 2 &&
             $selectedSpaceId === null
-              ? 'pt-4'
+              ? 'pt-2'
               : ''} !relative w-full transition-transform will-change-transform flex flex-col items-center justify-end  [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-4 [&_[data-cmdk-item]]:py-4 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
             loop
             shouldFilter={false}
