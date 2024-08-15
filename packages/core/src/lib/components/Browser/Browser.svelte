@@ -314,14 +314,12 @@
   }
 
   $: canGoBack =
-    $showNewTabOverlay !== 0 &&
-    $activeTab?.type === 'page' &&
-    $activeTab?.currentHistoryIndex > 0
+    $showNewTabOverlay === 0 && $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
   $: canGoForward =
-    $showNewTabOverlay !== 0 &&
+    $showNewTabOverlay === 0 &&
     $activeTab?.type === 'page' &&
     $activeTab?.currentHistoryIndex < $activeTab.historyStackIds.length - 1
-  $: canReload = $showNewTabOverlay !== 0 && $activeTab?.type === 'page'
+  $: canReload = $showNewTabOverlay === 0 && $activeTab?.type === 'page'
 
   $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
     log.debug('Active tab is not in view, resetting')
