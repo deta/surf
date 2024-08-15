@@ -3,7 +3,6 @@
 <script lang="ts">
   import { afterUpdate, onMount, setContext, tick } from 'svelte'
   import { slide } from 'svelte/transition'
-  import { tooltip } from '@svelte-plugins/tooltips'
   import { popover } from '../Atoms/Popover/popover'
   import SplashScreen from '../SplashScreen.svelte'
   import { writable, derived, get } from 'svelte/store'
@@ -133,6 +132,7 @@
   import CustomPopover from './CustomPopover.svelte'
   import { truncate } from '../../utils/text'
   import { provideConfig } from '../../service/config'
+  import { tooltip } from '../../utils/directives'
   //import '@horizon/dragcula/dist/styles.scss'
 
   let activeTabComponent: TabItem | null = null
@@ -3249,8 +3249,10 @@
                     : 'w-full'}"
                 >
                   <div
-                    class="relative bg-gradient-to-r from-sky-100/60 to-sky-200/90 rounded-xl no-scrollbar
-                      {horizontalTabs ? 'h-full' : 'w-full'}"
+                    class="relative rounded-xl no-scrollbar
+                      {horizontalTabs
+                      ? 'h-full bg-gradient-to-r from-pink-100/60 via-pink-200/80 to-pink-300/90'
+                      : 'w-full bg-gradient-to-r from-sky-100/60 to-sky-200/90'}"
                   >
                     <div class={horizontalTabs ? '' : 'p-2'} class:magic={$magicTabs.length > 0}>
                       {#if horizontalTabs}
@@ -3516,12 +3518,12 @@
                     class="transform select-none active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
                       : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
-                    class:bg-sky-200={$showNewTabOverlay !== 0}
+                    class:bg-sky-200={$showNewTabOverlay === 1}
                     on:click|preventDefault={() => createNewEmptyTab()}
                   >
                     <Icon name="add" />
                     {#if !horizontalTabs}
-                      <span class="label">Open Oasis</span>
+                      <span class="label">New Tab</span>
                     {/if}
                   </button>
                 </div>
@@ -3544,12 +3546,12 @@
                   class="transform select-none active:scale-95 space-x-2 {horizontalTabs
                     ? 'w-fit rounded-xl p-2'
                     : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
-                  class:bg-sky-200={$showNewTabOverlay !== 0}
+                  class:bg-sky-200={$showNewTabOverlay === 1}
                   on:click|preventDefault={() => createNewEmptyTab()}
                 >
                   <Icon name="add" />
                   {#if !horizontalTabs}
-                    <span class="label">Open Oasis</span>
+                    <span class="label">New Tab</span>
                   {/if}
                 </button>
               </div>
@@ -3566,28 +3568,17 @@
               class:opacity-0={isFirstButtonVisible}
               class:pointer-events-auto={!isFirstButtonVisible}
               class:pointer-events-none={isFirstButtonVisible}
-              class:bg-sky-200={$showNewTabOverlay !== 0}
+              class:bg-sky-200={$showNewTabOverlay === 1}
             >
               <Icon name="add" />
               {#if !horizontalTabs}
-                <span class="label">Open Oasis</span>
+                <span class="label">New Tab</span>
               {/if}
             </button>
             <div
               class="flex flex-row flex-shrink-0 items-center mx-auto"
               class:space-x-4={!horizontalTabs}
             >
-              <!-- <button
-                class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                on:click={() => toggleRightSidebar()}
-              >
-                {#if showRightSidebar}
-                  <Icon name="close" />
-                {:else}
-                  <Icon name="sidebar.right" />
-                {/if}
-              </button> -->
-
               {#if !horizontalTabs || (horizontalTabs && !showRightSidebar)}
                 <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
                   <button
@@ -3619,6 +3610,15 @@
                   </div>
                 </CustomPopover>
               {/if}
+
+              <button
+                use:tooltip={{ text: 'Open Oasis (⌘ + O)', position: 'top' }}
+                class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                on:click={() => ($showNewTabOverlay = 2)}
+                class:bg-sky-200={$showNewTabOverlay === 2}
+              >
+                <Icon name="leave" />
+              </button>
             </div>
           </div>
         </div>
