@@ -983,10 +983,8 @@
       activeTabComponent?.blur()
       // Note: even though the electron menu handles the shortcut this is still needed here
     } else if (isModKeyAndKeyPressed(e, 'w')) {
-      if ($showNewTabOverlay !== 0)
-      setShowNewTabOverlay(0)
-    else
-      closeActiveTab(DeleteTabEventTrigger.Shortcut)
+      if ($showNewTabOverlay !== 0) setShowNewTabOverlay(0)
+      else closeActiveTab(DeleteTabEventTrigger.Shortcut)
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
     } else if (isModKeyAndKeyPressed(e, 'd')) {
@@ -3283,7 +3281,7 @@
                             {#each $magicTabs as tab, index (tab.id + index)}
                               <TabItem
                                 hibernated={!$activatedTabs.includes(tab.id)}
-                                removeHighlight={$showNewtabOverlay !== 0}
+                                removeHighlight={$showNewTabOverlay !== 0}
                                 showClose
                                 tabSize={Math.min(300, Math.max(96, tabSize))}
                                 {tab}
@@ -3341,7 +3339,7 @@
                             {#each $magicTabs as tab, index (tab.id + index)}
                               <TabItem
                                 hibernated={!$activatedTabs.includes(tab.id)}
-                                removeHighlight={$showNewtabOverlay !== 0}
+                                removeHighlight={$showNewTabOverlay !== 0}
                                 showClose
                                 horizontalTabs={false}
                                 {tab}
@@ -3394,7 +3392,7 @@
                     {#if $activeTabId === tab.id}
                       <TabItem
                         hibernated={!$activatedTabs.includes(tab.id)}
-                        removeHighlight={$showNewtabOverlay !== 0}
+                        removeHighlight={$showNewTabOverlay !== 0}
                         showClose
                         tabSize={Math.min(300, Math.max(24, tabSize))}
                         {tab}
@@ -3456,7 +3454,7 @@
                     {#if $activeTabId === tab.id}
                       <TabItem
                         hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
-                        removeHighlight={$showNewtabOverlay !== 0}
+                        removeHighlight={$showNewTabOverlay !== 0}
                         showClose
                         horizontalTabs={false}
                         {tab}
@@ -3623,7 +3621,7 @@
       >
         <NewTabOverlay
           spaceId={'all'}
-          bind:showTabSearch={$showNewtabOverlay !== 0}
+          bind:showTabSearch={$showNewTabOverlay}
           on:open-space-as-tab={handleCreateTabForSpace}
           on:deleted={handleDeletedSpace}
           on:new-tab={handleNewTab}
