@@ -2031,17 +2031,16 @@
     ? $pinnedTabs.length * (23 + 4) +
       16 - // padding left and right
       4 + // remove last padding
-      24 + // padding between them
+      16 + // padding between them
       $unpinnedTabs.reduce(
         (total, tab) =>
           total +
-          8 +
+          7 +
           (tab.id === $activeTabId && tabSize && tabSize <= 260
             ? 260
             : Math.min(300, Math.max(24, tabSize))),
         0
-      ) -
-      8 + // remove last padding
+      ) + // remove last padding
       $magicTabs.reduce(
         (total, tab) =>
           total +
@@ -2049,11 +2048,11 @@
         0
       ) +
       120 + // the size of traffic lights plus back and forward buttons
-      ($magicTabs.length ? 16 : 0)
+      ($magicTabs.length > 0 ? 16 : 0)
     : 0
 
   $: {
-    const reservedSpace = 700 + $pinnedTabs.length * 50 + 32
+    const reservedSpace = 600 + $pinnedTabs.length * 50 + 32
     const availableSpace = maxWidth - reservedSpace
     const numberOfTabs = $unpinnedTabs.length + $magicTabs.length
     tabSize = availableSpace / numberOfTabs
