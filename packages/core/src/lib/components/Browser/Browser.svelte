@@ -1861,7 +1861,11 @@
 
       await tick()
 
-      await telemetry.trackOpenSpace(OpenSpaceEventTrigger.SidebarMenu)
+      await telemetry.trackOpenSpace(OpenSpaceEventTrigger.SidebarMenu, {
+        isLiveSpace: space.name.liveModeEnabled,
+        hasSources: (space.name.sources ?? []).length > 0,
+        hasSmartQuery: !!space.name.smartFilterQuery
+      })
     } catch (error) {
       log.error('[Browser.svelte] Failed to add folder to sidebar:', error)
     }

@@ -267,9 +267,15 @@ export class Telemetry {
     await this.trackEvent(TelemetryEventTypes.ChatWithSpace, {})
   }
 
-  async trackOpenSpace(trigger: OpenSpaceEventTrigger) {
+  async trackOpenSpace(
+    trigger: OpenSpaceEventTrigger,
+    metadata?: { isLiveSpace?: boolean; hasSources?: boolean; hasSmartQuery?: boolean }
+  ) {
     await this.trackEvent(TelemetryEventTypes.OpenSpace, {
-      trigger: trigger
+      trigger: trigger,
+      isLiveSpace: metadata?.isLiveSpace ?? false,
+      hasSources: metadata?.hasSources ?? false,
+      hasSmartQuery: metadata?.hasSmartQuery ?? false
     })
   }
 
