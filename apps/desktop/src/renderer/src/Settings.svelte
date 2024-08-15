@@ -144,6 +144,7 @@
         <h1>Surf v{version}</h1>
 
         <button on:click={checkForUpdates}>Check for Updates</button>
+        <!--
         <h2>Migration</h2>
         <button on:click={handleMigration} disabled={migrating}>Run Migration</button>
         {#if migrating}
@@ -152,6 +153,7 @@
         <div class="migration-output">
           <p bind:this={migrationOutput}></p>
         </div>
+        -->
       </article>
     {:else if $activeTab === 'appearance'}
       <article class="general">
