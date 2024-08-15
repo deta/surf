@@ -170,14 +170,14 @@
                 d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"
               /></svg
             >
-            <h2>What shows up</h2>
+            <h2>What is included</h2>
           </div>
           <p>
-            We track your interactions with app features and the types of data you store. For
-            example: activating a tab, opening the sidebar, or saving an image.
+            We track your interactions with app features, like activating a tab or opening the
+            sidebar. We also distinguish between the kinds of data you save, like an image vs.
+            YouTube video.
           </p>
         </div>
-
         <div class="box">
           <div class="icon-heading">
             <svg
@@ -196,12 +196,12 @@
                 d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87"
               /><path d="M3 3l18 18" /></svg
             >
-            <h2>What does not</h2>
+            <h2>What is not</h2>
           </div>
           <p>
             The urls you visit and the contents of the data you store are in Surf are <i
               ><b>not</b></i
-            > part of our Telemetry.
+            > part of our Telemetry. We do not track what is in the websites, images, or videos you save.
           </p>
         </div>
         <div class="actions">
@@ -262,14 +262,11 @@
         <br />
         <form class="radio-form" on:submit|preventDefault={handleLanguageSubmit}>
           <div class="details">
+            <p class="info text-md">Some of Surf's AI features are language dependent.</p>
             <p class="info text-md">
-              Some of Surf's AI features are language dependent. For example, you can chat with
-              YouTube videos in Surf. Choose a language configuration that suits your needs.
-            </p>
-            <p class="info text-md">
-              <strong>English</strong> will give you the best experience for English content, but
-              Surf's AI features will not work with content in other languages. If you interact with
-              content in another language on a daily basis, select a <strong>Polyglot</strong> option.
+              We recommend <strong>English</strong> if you primarily interact with English content.
+              If you regularly interact with content in another language, select a
+              <strong>Multi-lingual</strong> option.
             </p>
             <p class="info text-md">
               <strong>XL</strong> options understand language better, but are slower and use more of
@@ -295,7 +292,7 @@
                 value="multilingual_small"
                 bind:group={embeddingModel}
               />
-              <label for="multilingual_small"><span>Polyglot</span></label>
+              <label for="multilingual_small"><span>Multi-lingual</span></label>
             </div>
             <div class="radio-wrapper">
               <input
@@ -316,7 +313,7 @@
                 bind:group={embeddingModel}
               />
               <label for="multilingual_large">
-                <span>Polyglot XL</span>
+                <span>Multi-lingual XL</span>
               </label>
             </div>
           </div>

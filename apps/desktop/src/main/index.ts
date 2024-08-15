@@ -127,6 +127,7 @@ if (!gotTheLock) {
 
     setAppMenu()
     createWindow()
+    // createSetupWindow() for dev on setup window only
 
     const appPath = app.getAppPath() + (isDev ? '' : '.unpacked')
     const userDataPath = app.getPath('userData')
