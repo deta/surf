@@ -10,6 +10,14 @@ export class DOMExtractor {
     return this.document.querySelector(selector)
   }
 
+  getRawHTML() {
+    return this.document.documentElement.outerHTML
+  }
+
+  getInnerText() {
+    return this.document.body.innerText
+  }
+
   attachEventListener(node: Document | Element | Window, event: string, callback: EventListener) {
     node.addEventListener(event, callback)
 

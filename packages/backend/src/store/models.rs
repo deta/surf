@@ -136,7 +136,7 @@ impl ResourceTextContentType {
             ResourceTextContentType::ChatMessage => true,
             ResourceTextContentType::Document => true,
             ResourceTextContentType::Article => true,
-            ResourceTextContentType::Link => false,
+            ResourceTextContentType::Link => true,
             ResourceTextContentType::ChatThread => true,
             ResourceTextContentType::Annotation => true,
             ResourceTextContentType::Image => true,

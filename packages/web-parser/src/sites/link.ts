@@ -3,6 +3,7 @@ import { ResourceTypes, ResourceDataLink } from '@horizon/types'
 import { MetadataExtractor, WebAppExtractor } from '../extractors'
 import type { DetectedWebApp } from '../types'
 import { generateNameFromURL } from '../utils'
+import { DOMExtractor } from '../extractors/dom'
 
 export class LinkParser extends WebAppExtractor {
   metadataExtractor: MetadataExtractor
@@ -33,6 +34,7 @@ export class LinkParser extends WebAppExtractor {
 
   async extractResourceFromDocument(document: Document) {
     const metadata = this.metadataExtractor.extractMetadataFromDocument(document)
+    const domExtractor = new DOMExtractor(document)
 
     const resource = {
       title: metadata.title,
@@ -45,6 +47,8 @@ export class LinkParser extends WebAppExtractor {
       provider: metadata.provider,
       author: metadata.author,
       type: metadata.type,
+      content_plain: domExtractor.getInnerText(),
+      content_html: domExtractor.getRawHTML(),
       date_published: metadata.date_published,
       date_modified: metadata.date_modified
     } as ResourceDataLink

@@ -36,6 +36,8 @@ const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
 
 const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
+const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') ? 'multi' : 'en'
+
 //
 // TODO: do we need to handle the case where api_key is undefined?
 const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT || ''
@@ -566,7 +568,8 @@ const sffs = (() => {
     vision_api_endpoint: string,
     openai_api_key: string,
     openai_api_endpoint: string,
-    local_ai_mode: boolean = false
+    local_ai_mode: boolean = false,
+    language_setting: string
   ) {
     let fn = {}
     handle = sffs.js__backend_tunnel_init(
@@ -576,7 +579,8 @@ const sffs = (() => {
       vision_api_endpoint,
       openai_api_key,
       openai_api_endpoint,
-      local_ai_mode
+      local_ai_mode,
+      language_setting
     )
 
     Object.keys(sffs).forEach((key) => {
@@ -599,7 +603,8 @@ const sffs = (() => {
     VISION_API_ENDPOINT,
     OPENAI_API_KEY || '',
     OPENAI_API_ENDPOINT,
-    false
+    false,
+    LANGUAGE_SETTING
   )
 })()
 

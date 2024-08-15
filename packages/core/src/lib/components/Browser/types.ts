@@ -151,6 +151,7 @@ export type PageMagic = {
   showSidebar: boolean
   running: boolean
   initializing: boolean
+  errors: string[]
   responses: AIChatMessageParsed[]
 }
 

@@ -127,7 +127,7 @@
     message: AIChatMessageParsed,
     sourceUid?: string
   ) => {
-    log.debug('Citation clicked', sourceId, message)
+    log.debug('Citation clicked', sourceId, message, sourceUid)
     const source = (message.sources ?? []).find((s) => s.id === sourceId)
     if (!source) return
 
@@ -163,7 +163,7 @@
     }
 
     // const text = getEditorContentText(inputValue)
-    const savedInputValue = inputValue
+    const savedInputValue = inputValue.trim().replace('<p>', '').replace('</p>', '')
 
     try {
       log.debug('Handling chat submit', savedInputValue)
@@ -503,7 +503,7 @@
                   e.detail.citationID,
                   e.detail.text,
                   response,
-                  e.detail.sourceHash
+                  e.detail.sourceUid
                 )}
               showSourcesAtEnd={true}
             />
@@ -580,6 +580,13 @@
       <Icon name="spinner" />
       <p>Preparing tabs for the chat…</p>
     </div>
+  {:else if $magicPage.errors.length > 0}
+    {#each $magicPage.errors as error}
+      <div class="info-box">
+        <Icon name="alert-triangle" />
+        <p>Warning: {error}</p>
+      </div>
+    {/each}
   {/if}
 
   <form on:submit|preventDefault={handleChatSubmit} class="chat">

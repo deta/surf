@@ -1,31 +1,39 @@
 #![allow(dead_code)]
 
+pub fn transcript_chunking_prompt(transcript: &str) -> String {
+    format!(
+        "You are a helpful assistant that is being used in a question answering pipeline. 
+Chunk the following transcript into semantically meaningful parts in the smallest possible chunks.
+Do not modify the content of the transcript, just chunk it into smaller parts.
+
+Output a list of the chunks in the order they appear in the transcript separated by newline(`\n`).
+    
+Transcript:
+----------------------
+{}
+----------------------",
+        transcript
+    )
+    .to_string()
+}
+
 pub fn should_narrow_search_prompt() -> String {
     "You are a helpful assistant that is being used in a question answering pipeline during the search step.
-Determine whether a user query should lead to an additional search step to narrow down the search space or the entire context should be used.
-
-For e.g. 'What are the key points?' should use the entire context, while 'What are key points about ai?' should lead to a search step to narrow down the context.
-
-If a search step is needed, return 'true', otherwise return 'false'. Return nothing else!
-
-Using the entire context is more resource intensive so only return 'false' for very general queries.".to_string()
+A user has some context and a query, and you need to determine whether the query should lead to a vector search to narrow down the search space or not.
+Return 'true' if the query suggests needing search, otherwise return 'false' for general queries. For e.g., 'Summarize this' or 'what are the key points?' would not require a search, but questions about specifics will require a search.".to_string()
 }
 
 pub fn create_app_prompt(context: &str) -> String {
     format!("
 You are a developer that creates web-based apps in JavaScript, HTML, and CSS based on a user request.
 
-1. You create simple apps that run in an iframe embedded into a context webpage that is able change the context webpage itself if needed.
-2. The app can execute javacript in the context webpage (this javascript will only have access to the context webpage and not the app itself)  by using the `window.parent.postMessage` API to execute the javascript code:
-```js
-window.parent.postMessage({{ type: 'run_script', data: \"alert('this is an example')\" }}, '*');
-```
-3. The user will not refer to the context webpage as 'context webpage' or 'webpage', figure out if scripts should be executed in the context webpage or the app itself.
-4. The apps you create are complete, the users can not write any code themselves and you must create a fully functional app. 
-5. DO NOT ADD COMMENTS IN THE CODE, IT BREAKS THE APPS.
-6. Do not include any commentary, further instructions or explanations. 
-7. Use simple css to style the app in a minimalistic way.
-8. Hardcode any data needed from the context directly into the app. Add as much data as needed to make the app functional.
+1. You create simple apps that run in an iframe embedded into a context webpage.
+2. The user will not refer to the context webpage as 'context webpage' or 'webpage'.
+3. The apps you create are complete, the users can not write any code themselves and you must create a fully functional app. 
+4. DO NOT ADD COMMENTS IN THE CODE, IT BREAKS THE APPS.
+5. Do not include any commentary, further instructions or explanations. 
+6. Use simple css to style the app in a minimalistic way.
+7. Hardcode any data needed from the context directly into the app. Add as much data as needed to make the app functional.
 
 Context Webpage:
 ----------------------
@@ -74,11 +82,11 @@ pub fn chat_prompt(context: String, history: Option<String>) -> String {
 You are a Q&A expert system. Your responses must always be rooted in the context provided for each query. Here are some guidelines to follow:
 
 1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
-2. The answer should be enclosed in `<answer>` tag. 
+2. The answer should be enclosed in an `<answer>` tag. 
 3. Provide citations when possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context. 
 4. Use separate citation tags for each context id and do not separate multiple context ids with commas.
 5. Format the answer using HTML tags instead of Markdown. Make sure to use the appropriate HTML tags for headings, paragraphs, bold, italics, lists, and any other necessary formatting.
-6. Do not use phrases such as 'According to the context provided', 'Based on the context, ...' etc.
+6. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
 
 Context information:
 ----------------------
@@ -96,7 +104,7 @@ Here are some guidelines to follow:
 3. Provide citations when possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context. 
 4. Use separate citation tags for each context id and do not separate multiple context ids with commas.
 5. Format the answer using HTML tags instead of Markdown. Make sure to use the appropriate HTML tags for headings, paragraphs, bold, italics, lists, and any other necessary formatting.
-6. Do not use phrases such as 'According to the context provided', 'Based on the context, ...' etc.
+6. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
 
 Context information:
 ----------------------

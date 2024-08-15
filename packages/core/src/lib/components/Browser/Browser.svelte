@@ -197,8 +197,9 @@
   const activeTabMagic = writable<PageMagic>({
     running: false,
     showSidebar: false,
+    initializing: false,
     responses: [],
-    initializing: false
+    errors: []
   })
   const activeAppSidebarContext = writable<string>('') // TODO: support multiple contexts in the future
   const bookmarkingSuccess = writableAutoReset(false, 1000)
@@ -1389,7 +1390,7 @@
 
       if (!url) {
         log.error('no url found for resource', resourceId)
-        toasts.error('Failed to open citation')
+        toasts.error('Failed to highlight citation')
         return
       }
 
@@ -1406,55 +1407,58 @@
       const browserTab = $browserTabs[tab.id]
       if (!browserTab) {
         log.error('Browser tab not found', tab.id)
+        toasts.error('Failed to highlight citation')
         return
       }
 
       makeTabActive(tab.id, ActivateTabEventTrigger.ChatCitation)
 
+      log.debug('highlighting citation', tab.id, answerText, sourceUid)
       if (answerText === '') {
-        if (sourceUid) {
-          const source = await sffs.getAIChatDataSource(sourceUid)
-          if (source) {
-            answerText = source.content
-          } else {
-            return
-          }
-        } else {
+        if (!sourceUid) {
           return
         }
+        const source = await sffs.getAIChatDataSource(sourceUid)
+        if (!source) {
+          return
+        }
+        answerText = source.content
       }
 
+      const toast = toasts.loading('Highlighting citation..')
       const detectedResource = await browserTab.detectResource()
       if (!detectedResource) {
         log.error('no resource detected')
-        alert('Error: no resource detected')
+        toast.error('Failed to highlight citation')
         return
       }
-
       const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
       if (!content || !content.html) {
         log.debug('no content found from web parser')
-        alert('Error: no content found form web parser')
+        toast.error('Failed to parse content to highlight citation')
         return
       }
 
       const textElements = getTextElementsFromHtml(content.html)
       if (!textElements) {
         log.debug('no text elements found')
-        alert('Error: could not find any relevant text in the page')
+        toast.error('Failed to find source text in the page for citation')
         return
       }
 
-      const docsSimilarity = await sffs.getAIDocsSimilarity(answerText, textElements, 0.6)
+      log.debug('text elements length', textElements.length)
+      let docsSimilarity = await sffs.getAIDocsSimilarity(answerText, textElements, 0.5)
       if (!docsSimilarity || docsSimilarity.length === 0) {
         log.debug('no docs similarity found')
-        alert('Error: could not find any relevant text in the page')
+        toast.error('Failed to find source text in the page for citation')
         return
       }
 
+      docsSimilarity.sort((a, b) => a.similarity - b.similarity)
       const texts = []
       for (const docSimilarity of docsSimilarity) {
         const doc = textElements[docSimilarity.index]
+        log.debug('doc', doc)
         if (doc && doc.includes(' ')) {
           texts.push(doc)
         }
@@ -1463,9 +1467,10 @@
       browserTab.sendWebviewEvent(WebViewEventReceiveNames.HighlightText, {
         texts: texts
       })
+      toast.success('Citation highlighted')
     } else {
       log.error('No tab in chat context found for resource', resourceId)
-      toasts.error('Failed to open citation')
+      toasts.error('Failed to highlight citation')
     }
   }
 
@@ -1547,7 +1552,7 @@
     }
   }
 
-  const prepareTabForChatContext = async (tab: TabPage) => {
+  const prepareTabForChatContext = async (tab: TabPage | TabSpace, title: string) => {
     const isActivated = $activatedTabs.includes(tab.id)
     if (!isActivated) {
       log.debug('Tab not activated, activating first', tab)
@@ -1559,35 +1564,40 @@
       await wait(200)
     }
 
+    log.debug('Preparing tab for chat context', tab)
     if (tab.type === 'page' && !tab.resourceBookmark) {
+      log.debug('Bookmarking page tab', tab)
+      const browserTab = $browserTabs[tab.id]
+      if (!browserTab) {
+        log.error('Browser tab not found', tab.id)
+        throw Error(`Browser tab not found`)
+      }
       try {
-        log.debug('Bookmarking page tab', tab)
-        const browserTab = $browserTabs[tab.id]
         await browserTab.bookmarkPage(true)
       } catch (e) {
-        log.warn('Error bookmarking page tab', tab, e)
+        log.error('Error bookmarking page tab', e)
+        throw Error(`could not prepare tab '${title}'`)
       }
     }
   }
 
   const preparePageTabsForChatContext = async () => {
-    try {
-      updateActiveMagicPage({ initializing: true })
+    updateActiveMagicPage({ initializing: true, errors: [] })
 
-      const tabs = getTabsInChatContext()
-      log.debug('Making sure resources for all page tabs in context are extracted', tabs)
+    const tabs = getTabsInChatContext()
+    log.debug('Making sure resources for all page tabs in context are extracted', tabs)
 
-      await Promise.all(
-        tabs.map(async (tab) => {
-          await prepareTabForChatContext(tab)
-        })
-      )
-    } catch (e) {
-      log.error('Error preparing page tabs for chat context', e)
-    } finally {
-      log.debug('Done preparing page tabs for chat context')
-      updateActiveMagicPage({ initializing: false })
-    }
+    tabs.map(async (tab) => {
+      try {
+        await prepareTabForChatContext(tab, tab.title)
+      } catch (e: any) {
+        log.error('Error preparing page tabs for chat context', e)
+        let errors = $activeTabMagic.errors
+        updateActiveMagicPage({ errors: errors.concat(e.message) })
+      }
+    })
+    log.debug('Done preparing page tabs for chat context')
+    updateActiveMagicPage({ initializing: false })
   }
 
   const setPageChatState = async (enabled: boolean) => {
@@ -2446,7 +2456,7 @@
     }
   }
 
-  const handleExcludeOtherTabsFromMagic = (e: CustomEvent<string>) => {
+  const handleExcludeOtherTabsFromMagic = async (e: CustomEvent<string>) => {
     const tabId = e.detail
 
     // exclude all other tabs from magic
@@ -2463,7 +2473,7 @@
         return tab
       })
     })
-
+    await preparePageTabsForChatContext()
     tick().then(() => {
       telemetry.trackPageChatContextUpdate(
         PageChatUpdateContextEventAction.ExcludeOthers,
@@ -2472,7 +2482,7 @@
     })
   }
 
-  const handleExcludeTabFromMagic = (e: CustomEvent<string>) => {
+  const handleExcludeTabFromMagic = async (e: CustomEvent<string>) => {
     const tabId = e.detail
 
     // exclude the tab from magic
@@ -2489,7 +2499,7 @@
         return tab
       })
     })
-
+    await preparePageTabsForChatContext()
     tick().then(() => {
       telemetry.trackPageChatContextUpdate(
         PageChatUpdateContextEventAction.Remove,
@@ -2498,7 +2508,7 @@
     })
   }
 
-  const handleIncludeTabInMagic = (e: CustomEvent<string>) => {
+  const handleIncludeTabInMagic = async (e: CustomEvent<string>) => {
     const tabId = e.detail
 
     // include the tab in magic
@@ -2516,6 +2526,7 @@
       })
     })
 
+    await preparePageTabsForChatContext()
     tick().then(() => {
       telemetry.trackPageChatContextUpdate(PageChatUpdateContextEventAction.Add, $magicTabs.length)
     })
@@ -2788,7 +2799,7 @@
 
             if (dragData.type === 'page' && $activeTabMagic?.showSidebar) {
               log.debug('prepare tab for chat context after moving to magic')
-              prepareTabForChatContext(dragData)
+              prepareTabForChatContext(dragData, dragData.title)
             }
 
             telemetry.trackMoveTab(MoveTabEventAction.AddMagic)
@@ -2839,6 +2850,8 @@
 
         return newTabs
       })
+
+      await preparePageTabsForChatContext()
 
       log.debug('State updated successfully')
       // Mark the drop completed
@@ -3841,7 +3854,7 @@
             bind:inputValue={$magicInputValue}
             on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
             on:highlightWebviewText={(e) =>
-              highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
+              highlightWebviewText(e.detail.resourceId, e.detail.answerText, e.detail.sourceUid)}
             on:seekToTimestamp={(e) =>
               handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
             on:navigate={(e) => {

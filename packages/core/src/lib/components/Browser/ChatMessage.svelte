@@ -164,6 +164,13 @@
             return
           }
         }
+        citations.forEach((citation) => {
+          citation.classList.remove('clicked')
+        })
+        document.querySelectorAll('.citation-item').forEach((citation) => {
+          citation.classList.remove('clicked')
+        })
+        citation.classList.add('clicked')
         dispatch('citationClick', { citationID, text })
       })
 
@@ -197,8 +204,16 @@
         <div
           class="citation-item"
           class:wide={source.metadata?.timestamp || source.metadata?.url}
-          on:click={() =>
-            dispatch('citationClick', { citationID: source.id, text: '', sourceUid: source.uid })}
+          on:click={(e) => {
+            document.querySelectorAll('citation').forEach((citation) => {
+              citation.classList.remove('clicked')
+            })
+            document.querySelectorAll('.citation-item').forEach((citation) => {
+              citation.classList.remove('clicked')
+            })
+            e.currentTarget.classList.add('clicked')
+            dispatch('citationClick', { citationID: source.id, text: '', sourceUid: source.uid })
+          }}
           on:mouseenter={() => dispatch('citationHoverStart', source.id)}
           on:mouseleave={() => dispatch('citationHoverEnd', source.id)}
         >
@@ -320,6 +335,11 @@
   .citation-item div {
     font-size: 0.9rem;
     font-weight: 500;
+  }
+
+  :global(citation.clicked),
+  :global(.citation-item.clicked) {
+    background: #e4d3fd !important;
   }
 
   .citations-list {

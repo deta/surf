@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use super::client::{DocsSimilarityRequest, LocalAIClient, UpsertEmbeddingsRequest};
 use super::prompts::{
-    chat_prompt, command_prompt, create_app_prompt, general_chat_prompt, sql_query_generator_prompt, should_narrow_search_prompt 
+    chat_prompt, command_prompt, create_app_prompt, general_chat_prompt, transcript_chunking_prompt, should_narrow_search_prompt, sql_query_generator_prompt 
 };
 
 use std::pin::Pin;
@@ -182,11 +182,17 @@ impl AI {
         threshold: Option<f32>,
     ) -> BackendResult<Vec<DocsSimilarity>> {
         let threshold = threshold.unwrap_or(0.5);
+
+        // TOOD: what's a better strategy?
+        let mut num_docs = 3;
+        if docs.len() > 30 {
+            num_docs = 5
+        }
         self.local_ai_client.get_docs_similarity(DocsSimilarityRequest{
             query,
             docs,
             threshold,
-            num_docs: 5,
+            num_docs,
         })
     }
 
@@ -203,10 +209,27 @@ impl AI {
             },
         ];
         // TODO: use local mode
-        Ok(self.llm.create_chat_completion_blocking(messages)?
+        Ok(self.llm.create_chat_completion_blocking(messages, None)?
             .to_lowercase()
             .contains("true")
         )
+    }
+
+    #[allow(dead_code)]
+    pub fn chunk_transcript(&self, transcript: &str) -> BackendResult<Vec<String>> {
+        let prompt = transcript_chunking_prompt(transcript);
+        let messages = vec![
+            llm::models::Message {
+                role: "system".to_string(),
+                content: prompt,
+            },
+        ];
+        let output = self.llm.create_chat_completion_blocking(messages, None)?;
+        
+        Ok(output
+            .split("\n")
+            .map(|chunk| chunk.to_string())
+            .collect())
     }
 
     pub fn upsert_embeddings(
@@ -450,7 +473,7 @@ impl AI {
                 Ok(())
             })?;
         } else {
-            result = self.llm.create_chat_completion_blocking(messages)?;
+            result = self.llm.create_chat_completion_blocking(messages, None)?;
         }
         dbg!(&result);
         Ok(result)

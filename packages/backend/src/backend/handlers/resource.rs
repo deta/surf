@@ -476,6 +476,7 @@ impl Worker {
                 "content and metadata must have the same length".to_owned(),
             ));
         }
+
         let mut chunks: Vec<String> = vec![];
         let mut metadatas: Vec<ResourceTextContentMetadata> = vec![];
 

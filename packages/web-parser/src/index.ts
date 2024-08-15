@@ -183,6 +183,12 @@ export class WebParser {
         html: data.content_html,
         plain: data.content_plain
       }
+    } else if (type === ResourceTypes.LINK) {
+      const data = resourceData as ResourceDataLink
+      return {
+        html: data.content_html,
+        plain: data.content_plain
+      }
     } else if (type.startsWith(ResourceTypes.POST)) {
       const data = resourceData as ResourceDataPost
       return {

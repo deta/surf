@@ -34,7 +34,7 @@ let selectionMenu: Menu | null = null
 
 let selectionMenuWrapper: ReturnType<typeof createComponentWrapper> | null = null
 
-// const clickOutsideHandlers = new Map<string, () => void>()
+// const clickOutesouHandlers = new Map<string, () => void>()
 // debouncedAppDetection
 useDebounce(runAppDetection, 200)
 
@@ -401,11 +401,15 @@ function handleRestoreAnnotation(
 function handleHighlightText(data: WebViewReceiveEvents[WebViewEventReceiveNames.HighlightText]) {
   console.debug('highlight webview text:', data)
   const texts = data.texts
+  if (!texts || texts.length === 0) {
+    return
+  }
 
   const style = document.createElement('style')
   style.innerHTML = `
-            .citation-highlight{
-              background-color: yellow;
+            .citation-highlight {
+              background-color: #E4D3FD;
+              color: #2F2F59;
             }
         `
   document.head.appendChild(style)
@@ -415,24 +419,30 @@ function handleHighlightText(data: WebViewReceiveEvents[WebViewEventReceiveNames
   console.debug('Removing existing highlights', highlights)
   highlights.forEach((highlight) => {
     highlight.classList.remove('citation-highlight')
+    highlight.classList.remove('citation-to-scroll')
   })
 
   const paragraphs = document.querySelectorAll('p')
-  for (const text of texts) {
+  for (const [i, text] of texts.entries()) {
     paragraphs.forEach((p) => {
       const content = p.textContent?.trim() ?? ''
       if (text === content) {
         // highlight the paragraph
         p.classList.add('citation-highlight')
+        // the first paragraph is the most relevant
+        if (i == 0) {
+          p.classList.add('citation-to-scroll')
+        }
       }
     })
   }
 
-  const newHighlights = document.querySelectorAll('.citation-highlight')
-  if (newHighlights.length > 0) {
-    console.debug('Scrolling to highlight', newHighlights)
-    newHighlights[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+  const toScroll = document.querySelectorAll('.citation-to-scroll')
+  if (!toScroll || toScroll.length === 0) {
+    console.error('No element found to scroll')
+    return
   }
+  toScroll[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
 }
 
 function handleSeekToTimestamp(

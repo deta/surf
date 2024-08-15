@@ -1708,8 +1708,9 @@ impl Database {
             "SELECT DISTINCT M.*, R.* FROM resource_metadata M
             LEFT JOIN resources R ON M.resource_id = R.id
             LEFT JOIN embedding_resources E ON M.resource_id = E.resource_id
-            WHERE E.rowid IN ({}) GROUP BY R.id",
-            placeholders
+            WHERE E.rowid IN ({}) GROUP BY R.id ORDER BY {}",
+            placeholders,
+            Self::get_order_by_clause_for_embedding_row_ids("E.rowid", &row_ids)
         );
         let mut stmt = self.conn.prepare(&query)?;
         let mut results = vec![];
@@ -1794,6 +1795,15 @@ impl Database {
         Ok(results)
     }
 
+    fn get_order_by_clause_for_embedding_row_ids(column_name: &str, row_ids: &Vec<i64>) -> String {
+        let mut order_by_clause = String::from(format!("CASE {} ", column_name));
+        for (i, row_id) in row_ids.iter().enumerate() {
+            order_by_clause.push_str(&format!("WHEN {} THEN {} ", row_id, i));
+        }
+        order_by_clause.push_str(" END");
+        order_by_clause
+    }
+
     pub fn list_resources_by_embedding_row_ids(
         &self,
         row_ids: Vec<i64>,
@@ -1804,8 +1814,9 @@ impl Database {
             LEFT JOIN resources R ON M.resource_id = R.id
             LEFT JOIN resource_text_content C ON M.resource_id = C.resource_id 
             LEFT JOIN embedding_resources E ON M.resource_id = E.resource_id
-            WHERE E.rowid IN ({}) GROUP BY C.content",
-            placeholders
+            WHERE E.rowid IN ({}) GROUP BY C.content ORDER BY {}",
+            placeholders,
+            Self::get_order_by_clause_for_embedding_row_ids("E.rowid", &row_ids)
         );
         let mut stmt = self.conn.prepare(&query)?;
         let mut results = vec![];

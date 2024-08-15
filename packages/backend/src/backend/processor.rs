@@ -14,13 +14,17 @@ use ocrs::{ImageSource, OcrEngine, OcrEngineParams};
 use rten::Model;
 use serde::{Deserialize, Serialize};
 
-pub fn processor_thread_entry_point(tunnel: WorkerTunnel, app_path: String) {
+pub fn processor_thread_entry_point(
+    tunnel: WorkerTunnel,
+    app_path: String,
+    language: Option<String>,
+) {
     let ocr_engine = create_ocr_engine(&app_path).expect("failed to create the OCR engine");
 
     while let Ok(message) = tunnel.tqueue_rx.recv() {
         match message {
             ProcessorMessage::ProcessResource(resource) => {
-                let _ = handle_process_resource(&tunnel, resource, &ocr_engine)
+                let _ = handle_process_resource(&tunnel, resource, &ocr_engine, language.clone())
                     .map_err(|e| eprintln!("error while processing resource: {e:?}"));
             }
         }
@@ -28,6 +32,7 @@ pub fn processor_thread_entry_point(tunnel: WorkerTunnel, app_path: String) {
 }
 
 fn create_ocr_engine(app_path: &str) -> Result<OcrEngine, Box<dyn std::error::Error>> {
+    // TODO: not have the env var here
     let ocrs_folder = std::env::var("SURF_OCRS_FOLDER").unwrap_or(
         std::path::Path::new(app_path)
             .join("resources")
@@ -56,6 +61,7 @@ fn handle_process_resource(
     tunnel: &WorkerTunnel,
     resource: CompositeResource,
     ocr_engine: &OcrEngine,
+    language: Option<String>,
 ) -> BackendResult<()> {
     if !needs_processing(&resource.resource.resource_type) {
         return Ok(());
@@ -64,7 +70,7 @@ fn handle_process_resource(
     let resource_data = match resource.resource.resource_type.as_str() {
         t if t.starts_with("image/") || t == "application/pdf" => "".to_owned(),
         "application/vnd.space.post.youtube" => {
-            return process_youtube_video_data(&tunnel, &resource);
+            return process_youtube_video_data(&tunnel, &resource, language);
         }
         _ => std::fs::read_to_string(&resource.resource.resource_path)?,
     };
@@ -106,11 +112,13 @@ fn needs_processing(resource_type: &str) -> bool {
 
 pub fn get_youtube_contents_metadatas(
     source_uri: &str,
+    language: Option<String>,
 ) -> BackendResult<(Vec<String>, Vec<ResourceTextContentMetadata>)> {
     let runtime = tokio::runtime::Runtime::new()?;
     let transcripts = runtime
         .block_on(ytranscript::YoutubeTranscript::fetch_transcript(
-            source_uri, None,
+            source_uri,
+            Some(ytranscript::TranscriptConfig { lang: language }),
         ))
         .map_err(|e| BackendError::GenericError(e.to_string()))?;
     let mut contents: Vec<String> = vec![];
@@ -137,9 +145,10 @@ pub fn get_youtube_contents_metadatas(
 fn process_youtube_video_data(
     tunnel: &WorkerTunnel,
     resource: &CompositeResource,
+    language: Option<String>,
 ) -> BackendResult<()> {
     if let Some(metadata) = &resource.metadata {
-        let (contents, metadatas) = get_youtube_contents_metadatas(&metadata.source_uri)?;
+        let (contents, metadatas) = get_youtube_contents_metadatas(&metadata.source_uri, language)?;
         tunnel.worker_send_rust(
             WorkerMessage::ResourceMessage(ResourceMessage::BatchUpsertResourceTextContent {
                 resource_id: resource.resource.id.clone(),
@@ -259,10 +268,11 @@ fn process_resource_data(
                 .ok()
                 .map(|link_data| {
                     format!(
-                        "{} {} {}",
+                        "{} {} {}\n{}",
                         link_data.title.unwrap_or_default(),
                         link_data.description.unwrap_or_default(),
-                        link_data.url.unwrap_or_default()
+                        link_data.url.unwrap_or_default(),
+                        link_data.content_plain.unwrap_or_default()
                     )
                 }) {
                 Some(text) => Some((resource_text_content_type, text)),
@@ -484,6 +494,7 @@ struct LinkData {
     provider: Option<String>,
     title: Option<String>,
     url: Option<String>,
+    content_plain: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

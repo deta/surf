@@ -25,6 +25,7 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
     let openai_api_key = cx.argument::<JsString>(4)?.value(&mut cx);
     let openai_api_endpoint = cx.argument::<JsString>(5)?.value(&mut cx);
     let local_ai_mode = cx.argument::<JsBoolean>(6)?.value(&mut cx);
+    let language_setting = cx.argument::<JsString>(7)?.value(&mut cx);
     let tunnel = tunnel::WorkerTunnel::new(
         &mut cx,
         backend_root_path,
@@ -34,6 +35,7 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
         openai_api_key,
         openai_api_endpoint,
         local_ai_mode,
+        language_setting,
     );
 
     Ok(cx.boxed(tunnel))

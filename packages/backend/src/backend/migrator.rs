@@ -17,7 +17,8 @@ impl Worker {
             return Ok(());
         }
         let metadata = resource.metadata.as_ref().unwrap();
-        let (contents, metadatas) = get_youtube_contents_metadatas(&metadata.source_uri)?;
+        // TODO: language setting
+        let (contents, metadatas) = get_youtube_contents_metadatas(&metadata.source_uri, None)?;
         self.batch_upsert_resource_text_content(
             resource.resource.id.clone(),
             ResourceTextContentType::YoutubeTranscript,

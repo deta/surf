@@ -30,6 +30,7 @@ impl WorkerTunnel {
         openai_api_key: String,
         openai_api_endpoint: String,
         local_ai_mode: bool,
+        language_setting: String,
     ) -> Self
     where
         C: Context<'a>,
@@ -47,6 +48,7 @@ impl WorkerTunnel {
         // spawn the main SFFS thread
         let app_path_clone = app_path.clone();
         let openai_api_key_clone = openai_api_key.clone();
+        let language_setting_clone = language_setting.clone();
         std::thread::spawn(move || {
             worker_thread_entry_point(
                 worker_rx,
@@ -58,15 +60,21 @@ impl WorkerTunnel {
                 openai_api_key_clone,
                 openai_api_endpoint,
                 local_ai_mode,
+                language_setting,
             )
         });
 
+        let lang = match language_setting_clone.as_str() {
+            "en" => Some("en".to_string()),
+            _ => None,
+        };
         // spawn N worker threads
         (0..8).for_each(|_| {
             let tunnel_clone = tunnel.clone();
             let app_path_clone = app_path.clone();
+            let lang_clone = lang.clone();
             std::thread::spawn(move || {
-                processor_thread_entry_point(tunnel_clone, app_path_clone);
+                processor_thread_entry_point(tunnel_clone, app_path_clone, lang_clone);
             });
         });
 

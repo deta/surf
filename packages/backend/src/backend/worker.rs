@@ -19,6 +19,7 @@ pub struct Worker {
     pub app_path: String,
     pub backend_root_path: String,
     pub resources_path: String,
+    pub language_setting: String,
     pub async_runtime: tokio::runtime::Runtime,
 }
 
@@ -29,6 +30,7 @@ impl Worker {
         openai_api_key: String,
         openai_api_endpoint: String,
         local_ai_mode: bool,
+        language_setting: String,
         tqueue_tx: crossbeam::Sender<ProcessorMessage>,
         aiqueue_tx: crossbeam::Sender<AIMessage>,
     ) -> Self {
@@ -66,6 +68,7 @@ impl Worker {
             app_path,
             backend_root_path,
             resources_path,
+            language_setting,
             async_runtime: tokio::runtime::Runtime::new().unwrap(),
         }
     }
@@ -81,6 +84,7 @@ pub fn worker_thread_entry_point(
     openai_api_key: String,
     openai_api_endpoint: String,
     local_ai_mode: bool,
+    language_setting: String,
 ) {
     let mut worker = Worker::new(
         app_path,
@@ -88,6 +92,7 @@ pub fn worker_thread_entry_point(
         openai_api_key,
         openai_api_endpoint,
         local_ai_mode,
+        language_setting,
         tqueue_tx,
         aiqueue_tx,
     );

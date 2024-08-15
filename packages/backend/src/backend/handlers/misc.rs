@@ -198,8 +198,16 @@ impl Worker {
     }
 
     pub fn get_youtube_transcript(&self, video_url: String) -> BackendResult<YoutubeTranscript> {
+        let language: Option<String> = match self.language_setting.as_str() {
+            "en" => Some("en".to_string()),
+            _ => None,
+        };
+
         let transcripts = self.async_runtime
-            .block_on(ytranscript::YoutubeTranscript::fetch_transcript(&video_url, None))
+            .block_on(ytranscript::YoutubeTranscript::fetch_transcript(
+                &video_url, 
+                Some(ytranscript::TranscriptConfig{lang: language}))
+            )
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
         let mut all = String::new();
         let mut transcript_pieces: Vec<YoutubeTranscriptPiece> = vec![];

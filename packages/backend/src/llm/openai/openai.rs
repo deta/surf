@@ -198,10 +198,12 @@ impl OpenAI {
     pub fn create_chat_completion_blocking(
         &self,
         messages: Vec<Message>,
+        model: Option<String>,
     ) -> BackendResult<String> {
         let url = format!("{}/chat/completions", self.api_base_url);
+        let model = model.unwrap_or_else(|| self.model.clone());
         let request = ChatCompletionRequest {
-            model: self.model.clone(),
+            model,
             messages,
             stream: false,
         };
