@@ -2044,8 +2044,11 @@
           total + (tab.id === $activeTabId ? 260 : Math.min(300, Math.max(24, tabSize))) + 3,
         0
       ) +
-      Math.min(300, Math.max(96, tabSize)) * $magicTabs.length +
-      10
+      $magicTabs.reduce(
+        (total, tab) =>
+          total + (tab.id === $activeTabId ? 260 : Math.min(300, Math.max(96, tabSize))) + 3,
+        0
+      )
     : 0
 
   $: {
@@ -3357,7 +3360,7 @@
               {#if horizontalTabs}
                 <div
                   id="sidebar-unpinned-tabs"
-                  class="horizontal-tabs space-x-1 h-full"
+                  class="horizontal-tabs space-x-2 h-full divide-x-2 divide-sky-300/70"
                   axis="horizontal"
                   dragdeadzone="5"
                   placeholder-size="60"
@@ -3480,32 +3483,33 @@
                   {/each}
                 </div>
               {/if}
-              <div
-                style="position: absolute; top: {!horizontalTabs
-                  ? 42 * $unpinnedTabs.length
-                  : 0}px; left: {plusBtnLeftPos}px; right: 0;"
-                class:w-fit={horizontalTabs}
-                class:h-full={horizontalTabs}
-                class="select-none flex items-center justify-center"
-                class:opacity-100={isFirstButtonVisible}
-                class:opacity-0={!isFirstButtonVisible}
-                class:pointer-events-auto={isFirstButtonVisible}
-                class:pointer-events-none={!isFirstButtonVisible}
+            </div>
+
+            <div
+              style="position: absolute; top: {!horizontalTabs
+                ? 42 * $unpinnedTabs.length
+                : 0}px; left: {plusBtnLeftPos}px; right: 0;"
+              class:w-fit={horizontalTabs}
+              class:h-full={horizontalTabs}
+              class="select-none flex items-center justify-center"
+              class:opacity-100={isFirstButtonVisible}
+              class:opacity-0={!isFirstButtonVisible}
+              class:pointer-events-auto={isFirstButtonVisible}
+              class:pointer-events-none={!isFirstButtonVisible}
+            >
+              <button
+                bind:this={newTabButton}
+                class="transform select-none active:scale-95 space-x-2 {horizontalTabs
+                  ? 'w-fit rounded-xl p-2'
+                  : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                class:bg-sky-200={$showNewTabOverlay}
+                on:click|preventDefault={() => createNewEmptyTab()}
               >
-                <button
-                  bind:this={newTabButton}
-                  class="transform select-none active:scale-95 space-x-2 {horizontalTabs
-                    ? 'w-fit rounded-xl p-2'
-                    : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
-                  class:bg-sky-200={$showNewTabOverlay}
-                  on:click|preventDefault={() => createNewEmptyTab()}
-                >
-                  <Icon name="add" />
-                  {#if !horizontalTabs}
-                    <span class="label">Open Oasis</span>
-                  {/if}
-                </button>
-              </div>
+                <Icon name="add" />
+                {#if !horizontalTabs}
+                  <span class="label">Open Oasis</span>
+                {/if}
+              </button>
             </div>
           </div>
 
