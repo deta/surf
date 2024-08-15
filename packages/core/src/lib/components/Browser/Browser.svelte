@@ -2028,29 +2028,35 @@
   let tabSize = 0
 
   $: plusBtnLeftPos = horizontalTabs
-    ? $unpinnedTabs.reduce(
+    ? $pinnedTabs.length * (23 + 4) +
+      16 - // padding left and right
+      4 + // remove last padding
+      24 + // padding between them
+      $unpinnedTabs.reduce(
         (total, tab) =>
           total +
+          8 +
           (tab.id === $activeTabId && tabSize && tabSize <= 260
             ? 260
-            : Math.min(300, Math.max(24, tabSize))) +
-          6,
+            : Math.min(300, Math.max(24, tabSize))),
         0
-      ) +
+      ) -
+      8 + // remove last padding
       $magicTabs.reduce(
         (total, tab) =>
           total +
-          (tab.id === $activeTabId && tabSize <= 260 ? 260 : Math.min(300, Math.max(96, tabSize))) +
-          3,
+          (tab.id === $activeTabId && tabSize <= 260 ? 260 : Math.min(300, Math.max(96, tabSize))),
         0
-      )
+      ) +
+      120 + // the size of traffic lights plus back and forward buttons
+      ($magicTabs.length ? 16 : 0)
     : 0
 
   $: {
-    const reservedSpace = 200 + 40 * $pinnedTabs.length + 200
+    const reservedSpace = 700 + $pinnedTabs.length * 50 + 32
     const availableSpace = maxWidth - reservedSpace
     const numberOfTabs = $unpinnedTabs.length + $magicTabs.length
-    tabSize = availableSpace / (numberOfTabs || 1)
+    tabSize = availableSpace / numberOfTabs
   }
   const handleResize = () => {
     maxWidth = window.innerWidth
@@ -3532,7 +3538,7 @@
 
             {#if horizontalTabs}
               <div
-                style="position: absolute; top: 0px; left: {plusBtnLeftPos + 180}px; right: 0;"
+                style="position: absolute; top: 0px; left: {plusBtnLeftPos}px; right: 0;"
                 class:w-fit={horizontalTabs}
                 class:h-full={horizontalTabs}
                 class="select-none flex items-center justify-center"
