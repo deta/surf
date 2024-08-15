@@ -1305,7 +1305,7 @@
         <div class="absolute top-6 left-6 z-10">
           <button
             on:click={handleGoBack}
-            class="flex items-center gap-2 rounded-lg text-md font-medium"
+            class="z-10 flex items-center justify-center space-x-2 transition-transform cursor-pointer hover:bg-pink-300/50 px-2 py-1 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
           >
             <Icon name="arrow.left" />
             Go Back
@@ -1546,13 +1546,7 @@
 
   button {
     padding: 0.5rem;
-    border: none;
-    background: none;
     cursor: pointer;
-  }
-
-  button:hover {
-    background: #f0f0f0;
   }
 
   .search-input-wrapper {
