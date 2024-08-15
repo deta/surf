@@ -139,7 +139,11 @@
 
         await tick()
 
-        await telemetry.trackOpenSpace(OpenSpaceEventTrigger.SpacesView)
+        await telemetry.trackOpenSpace(OpenSpaceEventTrigger.SidebarMenu, {
+          isLiveSpace: space.name.liveModeEnabled,
+          hasSources: (space.name.sources ?? []).length > 0,
+          hasSmartQuery: !!space.name.smartFilterQuery
+        })
       }
     } catch (error) {
       log.error('Failed to delete folder:', error)
