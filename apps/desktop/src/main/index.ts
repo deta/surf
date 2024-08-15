@@ -143,6 +143,9 @@ if (!gotTheLock) {
     surfBackendManager?.on('stdout', (data) => log.info('[surf backend] stdout:', data))
     surfBackendManager?.on('stderr', (data) => log.error('[surf backend] stderr:', data))
     surfBackendManager?.on('exit', (code) => log.info('[surf backend] exited with code:', code))
+    surfBackendManager?.on('signal', (signal) =>
+      log.info('[surf backend] exited with signal:', signal)
+    )
     surfBackendManager?.on('error', (error) => log.error('[surf backend] error:', error))
     surfBackendManager?.on('warn', (message) => log.warn('[surf backend] warning:', message))
     surfBackendManager?.on('info', (message) => log.info('[surf backend] info:', message))

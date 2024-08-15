@@ -25,6 +25,9 @@ export class SurfBackendServerManager extends EventEmitter {
 
     this.killExistingProcess()
     this.spawnProcess()
+
+    this.isShuttingDown = false
+    this.restartAttempts = 0
   }
 
   stop(): void {
@@ -49,15 +52,27 @@ export class SurfBackendServerManager extends EventEmitter {
     })
 
     this.process.stdout?.on('data', (data: string) => {
-      this.emit('stdout', data.toString().trimEnd())
+      data
+        .toString()
+        .trimEnd()
+        .split('\n')
+        .forEach((line) => this.emit('stdout', line))
     })
 
     this.process.stderr?.on('data', (data: string) => {
-      this.emit('stderr', data.toString().trimEnd())
+      data
+        .toString()
+        .trimEnd()
+        .split('\n')
+        .forEach((line) => this.emit('stderr', line))
     })
 
-    this.process.on('exit', (code) => {
-      this.emit('exit', code)
+    this.process.on('exit', (exit, signal) => {
+      this.process = null
+
+      if (exit) this.emit('exit', exit)
+      if (signal) this.emit('signal', signal)
+
       if (!this.isShuttingDown) {
         this.handleUnexpectedExit()
       }

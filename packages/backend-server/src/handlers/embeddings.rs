@@ -151,19 +151,21 @@ pub fn handle_upsert_embeddings(
         Err(e) => return Err(e),
     };
 
-    send_to_main_thread(
-        &main_thread_tx,
-        Message::BatchAddEmbeddings(
-            response_tx,
-            request.new_keys.iter().map(|&x| x as u64).collect(),
-            embeddings,
-            10,
-        ),
-        &mut stream,
-    )?;
-    match response_rx.recv()? {
-        Ok(_) => {}
-        Err(e) => return Err(e),
+    if (request.new_keys.len()) > 0 {
+        send_to_main_thread(
+            &main_thread_tx,
+            Message::BatchAddEmbeddings(
+                response_tx,
+                request.new_keys.iter().map(|&x| x as u64).collect(),
+                embeddings,
+                10,
+            ),
+            &mut stream,
+        )?;
+        match response_rx.recv()? {
+            Ok(_) => {}
+            Err(e) => return Err(e),
+        }
     }
     try_stream_write_all(&mut stream, "ok");
     send_done(stream);

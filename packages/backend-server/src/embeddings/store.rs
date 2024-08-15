@@ -49,28 +49,19 @@ impl EmbeddingsStore {
         Ok(())
     }
 
-    pub fn batch_add(
-        &self,
-        ids: Vec<u64>,
-        embeddings: &Vec<Vec<f32>>,
-        batch_size: usize,
-    ) -> BackendResult<()> {
+    pub fn batch_add(&self, ids: Vec<u64>, embeddings: &Vec<Vec<f32>>) -> BackendResult<()> {
         if ids.len() != embeddings.len() {
             return Err(BackendError::GenericError(
                 "ids and embeddings must have the same length".to_string(),
             ));
         }
-        for (ids_chunk, embeddings_chunk) in
-            ids.chunks(batch_size).zip(embeddings.chunks(batch_size))
-        {
-            println!("reserving space for {} embeddings", embeddings_chunk.len());
-            self.index
-                .reserve(self.index.size() + embeddings_chunk.len())?;
-            println!("reserved capacity");
-            for (id, embedding) in ids_chunk.iter().zip(embeddings_chunk.iter()) {
-                self.index.add(*id, embedding)?;
-            }
+        println!("reserving space for {} embeddings", embeddings.len());
+        self.index.reserve(self.index.size() + embeddings.len())?;
+        println!("reserved capacity");
+        for (id, embedding) in ids.iter().zip(embeddings.iter()) {
+            self.index.add(*id, embedding)?;
         }
+
         self.index.save(&self.index_path)?;
         Ok(())
     }

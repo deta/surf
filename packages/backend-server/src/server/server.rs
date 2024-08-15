@@ -96,8 +96,8 @@ impl LocalAIServer {
                 Message::RemoveEmbedding(sender, id) => {
                     Self::try_send(sender, embeddings_store.remove(id));
                 }
-                Message::BatchAddEmbeddings(sender, ids, embeddings, size) => {
-                    Self::try_send(sender, embeddings_store.batch_add(ids, &embeddings, size));
+                Message::BatchAddEmbeddings(sender, ids, embeddings, _size) => {
+                    Self::try_send(sender, embeddings_store.batch_add(ids, &embeddings));
                 }
                 Message::BatchRemoveEmbeddings(sender, ids) => {
                     Self::try_send(sender, embeddings_store.batch_remove(ids));
