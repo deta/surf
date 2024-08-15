@@ -27,6 +27,7 @@
 
 <script lang="ts">
   import { derived, writable } from 'svelte/store'
+  import { Motion, AnimatePresence } from 'svelte-motion'
 
   import { useLogScope } from '../../utils/log'
   import { useOasis } from '../../service/oasis'
@@ -36,6 +37,7 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import {
     Resource,
+    ResourceJSON,
     ResourceManager,
     ResourcePost,
     ResourceTag,
@@ -75,9 +77,14 @@
   import { RSSParser } from '@horizon/web-parser/src/rss/index'
   import { summarizeText } from '../../service/ai'
   import type { ResourceContent } from '@horizon/web-parser'
-  import { checkIfYoutubeUrl } from '../../utils/url'
+  import {
+    checkIfYoutubeUrl,
+    optimisticCheckIfUrl,
+    optimisticCheckIfURLOrIPorFile,
+    parseStringIntoBrowserLocation
+  } from '../../utils/url'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
-  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
+  import { isModKeyAndKeyPressed, isModKeyPressed } from '../../utils/keyboard'
   import { DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab, TabPage, TabSpace } from '../Browser/types'
 
@@ -95,15 +102,17 @@
   import { spring } from 'svelte/motion'
   import { useDebounce } from '../../utils/debounce'
   import { useConfig } from '../../service/config'
+  import { Drawer } from 'vaul-svelte'
   export let activeTabs: Tab[] = []
-  export let showTabSearch = false
+  export let showTabSearch = 0
 
+  const log = useLogScope('NEWTABOVERLAY')
   const dispatch = createEventDispatcher<OverlayEvents>()
   const config = useConfig()
   const userConfigSettings = config.settings
 
   let createSpaceRef: any
-  let loading = false
+
   let page: 'tabs' | 'oasis' | 'history' | 'spaces' | null = null
   let filteredItems: CMDMenuItem[] = []
   let historyEntries: HistoryEntry[] = []
@@ -117,81 +126,76 @@
       { name: 'value', weight: 0.4 },
       { name: 'type', weight: 0.1 }
     ],
-    threshold: 0.4,
+    threshold: 0.7,
     includeScore: true
   }
-  let fuse: Fuse<any>
-  $: if ($searchValue.startsWith('@tabs ')) {
-    page = 'tabs'
-    setTimeout(() => {
-      $searchValue = ''
-    }, 1)
-  } else if ($searchValue.startsWith('@oasis ')) {
-    page = 'oasis'
-    setTimeout(() => {
-      $searchValue = ''
-    }, 1)
-  } else if ($searchValue.startsWith('@history ')) {
-    page = 'history'
-    setTimeout(() => {
-      $searchValue = ''
-    }, 1)
-  } else if ($searchValue.startsWith('@spaces ')) {
-    page = 'spaces'
-    setTimeout(() => {
-      $searchValue = ''
-    }, 1)
-  }
-  $: {
-    if (page === null) {
-      const items: CMDMenuItem[] = [
-        ...activeTabs.map((tab) => tabToItem(tab, { weight: 1.5 })),
-        ...historyEntries.map((entry) => historyEntryToItem(entry, { weight: 1 })),
-        ...$spaces.map((space) => spaceToItem(space, { weight: 1 })),
-        // ...oasisResources.map((resource) => resourceToItem(resource, { weight: 1 })),
-        ...browserCommands
-      ]
-      fuse = new Fuse(items, fuseOptions)
-      updateFilteredItems()
-    } else if (page === 'tabs') {
-      const items: CMDMenuItem[] = activeTabs.map((tab) => tabToItem(tab, { weight: 1.5 }))
-      fuse = new Fuse(items, fuseOptions)
-      updateFilteredItems()
-    } else if (page === 'history') {
-      const items: CMDMenuItem[] = historyEntries.map((entry) =>
-        historyEntryToItem(entry, { weight: 1 })
+
+  let selectFirstCommandItem: () => void
+
+  const preSelectedItemId = writable<string | null>(null)
+
+  const searchValue = writable('')
+
+  const oasisSearchResults = writable<Resource[]>([])
+  const googleSuggestionResults = writable<string[]>([])
+  const historyEntriesResults = writable<HistoryEntry[]>([])
+  const filteredCommandItems = writable<CMDMenuItem[]>([])
+
+  const isFetchingOasisSearchResults = writable(false)
+  const isFetchingGoogleSuggestionResults = writable(false)
+  const isFetchingHistoryEntriesResults = writable(false)
+  const isFilteringCommandItems = writable(false)
+
+  const isLoadingCommandItems = derived(
+    [
+      isFetchingOasisSearchResults,
+      isFetchingGoogleSuggestionResults,
+      isFetchingHistoryEntriesResults,
+      isFilteringCommandItems
+    ],
+    ([
+      isFetchingOasisSearchResults,
+      isFetchingGoogleSuggestionResults,
+      isFetchingHistoryEntriesResults,
+      isFilteringCommandItems
+    ]) => {
+      return (
+        isFetchingOasisSearchResults ||
+        isFetchingGoogleSuggestionResults ||
+        isFetchingHistoryEntriesResults ||
+        isFilteringCommandItems
       )
-      fuse = new Fuse(items, fuseOptions)
-      updateFilteredItems()
-    } else if (page === 'oasis') {
-      updateFilteredItems()
     }
-  }
-  $: if (showTabSearch || $currentPanel === 1) {
-    updateFilteredItems()
-  }
-  $: commands = filteredItems.filter((item) => item.type === 'command')
-  $: tabs = filteredItems.filter((item) => item.type === 'tab')
-  $: history = filteredItems.filter((item) => item.type === 'history').slice(0, 5)
-  $: resources = filteredItems.filter((item) => item.type === 'resource')
-  $: spacesItems = filteredItems.filter((item) => item.type === 'space' && item.id !== 'all')
-  $: suggestions = filteredItems.filter(
-    (item) => item.type === 'suggestion' || item.type === 'google-search'
   )
-  $: navigate = filteredItems.filter((item) => item.type === 'navigate')
-  $: other = filteredItems.filter(
-    (item) =>
-      item.type !== 'command' &&
-      item.type !== 'tab' &&
-      item.type !== 'suggestion' &&
-      item.type !== 'google-search' &&
-      item.type !== 'history' &&
-      item.type !== 'resource' &&
-      item.type !== 'space' &&
-      item.type !== 'navigate'
-  )
+
+  // $: commands = filteredItems.filter((item) => item.type === 'command')
+  // $: tabs = filteredItems.filter((item) => item.type === 'tab')
+  // $: history = filteredItems.filter((item) => item.type === 'history').slice(0, 5)
+  // $: resources = filteredItems.filter((item) => item.type === 'resource')
+  // $: spacesItems = filteredItems.filter((item) => item.type === 'space' && item.id !== 'all')
+  // $: suggestions = filteredItems.filter(
+  //   (item) => item.type === 'suggestion' || item.type === 'google-search'
+  // )
+  // $: navigate = filteredItems.filter((item) => item.type === 'navigate')
+  // $: other = filteredItems.filter(
+  //   (item) =>
+  //     item.type !== 'command' &&
+  //     item.type !== 'tab' &&
+  //     item.type !== 'suggestion' &&
+  //     item.type !== 'google-search' &&
+  //     item.type !== 'history' &&
+  //     item.type !== 'resource' &&
+  //     item.type !== 'space' &&
+  //     item.type !== 'navigate'
+  // )
+
+  $: commandItems = [
+    ...browserCommands,
+    ...$spaces.map((space) => spaceToItem(space, { weight: 1 }))
+  ]
+
   $: placeholder =
-    $currentPanel === 2
+    showTabSearch === 2
       ? 'Search Oasis...'
       : page === 'tabs'
         ? 'Search for a tab...'
@@ -218,6 +222,14 @@
   //     page = null
   //   }
   // }
+  //
+
+  const deboundedSelectFirstCommandItem = useDebounce(() => {
+    if (selectFirstCommandItem) {
+      selectFirstCommandItem()
+    }
+  }, 100)
+
   function tabToItem(tab: Tab, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
     return {
       id: tab.id,
@@ -232,6 +244,7 @@
       ...params
     } as CMDMenuItem
   }
+
   function historyEntryToItem(entry: HistoryEntry, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
     return {
       id: entry.id,
@@ -242,15 +255,15 @@
       ...params
     } as CMDMenuItem
   }
+
   function resourceToItem(resource: Resource, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
     const url =
       resource.metadata?.sourceURI ??
       resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value
-    const data = (resource as any).parsedData
-    log.debug('data', data)
+    const data = (resource as ResourceJSON<any>).parsedData
     return {
       id: resource.id,
-      label: data?.title || resource.metadata?.name || `${resource.id} - ${resource.type}`,
+      label: data?.title || resource.metadata?.name || url || `${resource.id} - ${resource.type}`,
       value: url,
       type: 'resource',
       description: getFileType(resource.type),
@@ -260,6 +273,7 @@
       ...params
     } as CMDMenuItem
   }
+
   function spaceToItem(space: Space, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
     return {
       id: space.id,
@@ -269,161 +283,301 @@
       ...params
     } as CMDMenuItem
   }
-  async function updateFilteredItems() {
-    if ($currentPanel === 1) {
-      let results = []
-      if (page === 'oasis') {
-        results = oasisResources.map((resource) => resourceToItem(resource, { score: 0.4 }))
-      } else if ($searchValue) {
-        const fuseResults = fuse.search($searchValue)
-        results = fuseResults.map((result) => ({ ...result.item, score: result.score }))
-        // Add Google search option as the first item if it's not an exact match
-        if (!results.some((item) => item.title === $searchValue || item.url === $searchValue)) {
-          results.unshift({
-            id: `google-search-${$searchValue}`,
-            type: 'google-search',
-            label: `Search Google for ${$searchValue}`,
-            value: $searchValue,
-            icon: 'search',
-            score: 0
-          })
-        }
-        results.push(
-          ...googleSuggestions.map((suggestion) => ({
-            type: 'suggestion',
-            label: suggestion,
-            value: suggestion,
-            icon: 'search',
-            score: 0.5
-          }))
-        )
-        const url = parseStringIntoUrl($searchValue)
-        if (url) {
-          results.push({
-            id: `open-search-url`,
-            type: 'navigate',
-            label: `Navigate to ${truncateURL(url.href)}`,
-            icon: 'world',
-            value: url.href,
-            score: 1
-          })
-        }
-        results = [
-          ...results,
-          ...oasisResources.map((resource) => resourceToItem(resource, { score: 0.4 }))
-        ]
-      } else if (page === 'spaces') {
-        results = $spaces.map((space) => spaceToItem(space, { score: 0.1 }))
-      } else if (page === 'tabs') {
-        results = activeTabs.map((tab) => tabToItem(tab, { score: 0 }))
-      } else if (page === 'history') {
-        results = historyEntries.map((entry) => historyEntryToItem(entry, { score: 0.1 }))
-      } else {
-        results = [
-          ...activeTabs.map((tab) => tabToItem(tab, { score: 0 })),
-          ...historyEntries.map((entry) => historyEntryToItem(entry, { score: 0.1 })),
-          ...$spaces.map((space) => spaceToItem(space, { score: 0.1 })),
-          ...oasisResources.map((resource) => resourceToItem(resource, { score: 0.1 })),
-          ...browserCommands.map((cmd) => ({ ...cmd, score: 0.2 }))
-        ]
+
+  function googleSuggestionToItem(suggestion: string) {
+    return {
+      id: `google-suggestion-${suggestion}`,
+      type: 'suggestion',
+      label: suggestion,
+      value: suggestion,
+      icon: 'search',
+      score: 0.5
+    } as CMDMenuItem
+  }
+  // async function updateFilteredItems() {
+  //   if (showTabSearch === 1) {
+  //     let results = []
+  //     if (page === 'oasis') {
+  //       results = oasisResources.map((resource) => resourceToItem(resource, { score: 0.4 }))
+  //     } else if ($searchValue) {
+  //       const fuseResults = fuse.search($searchValue)
+  //       results = fuseResults.map((result) => ({ ...result.item, score: result.score }))
+  //       // Add Google search option as the first item if it's not an exact match
+  //       if (!results.some((item) => item.title === $searchValue || item.url === $searchValue)) {
+  //         results.unshift({
+  //           id: `general-search-${$searchValue}`,
+  //           type: 'general-search',
+  //           label: `${$searchValue}`,
+  //           value: $searchValue,
+  //           icon: 'search',
+  //           score: 0
+  //         })
+  //       }
+  //       results.push(
+  //         ...googleSuggestions.map((suggestion) => ({
+  //           id: `google-suggestion-${suggestion}`,
+  //           type: 'suggestion',
+  //           label: suggestion,
+  //           value: suggestion,
+  //           icon: 'search',
+  //           score: 0.5
+  //         }))
+  //       )
+  //       const url = parseStringIntoBrowserLocation($searchValue)
+  //       if (url) {
+  //         const urlCommand = {
+  //           id: `open-search-url`,
+  //           type: 'navigate',
+  //           label: `Navigate to ${truncateURL(url)}`,
+  //           icon: 'world',
+  //           value: url,
+  //           score: 1
+  //         } as CMDMenuItem
+  //         results.unshift(urlCommand)
+  //       }
+  //       results = [
+  //         ...results,
+  //         ...oasisResources.map((resource) => resourceToItem(resource, { score: 0.4 }))
+  //       ]
+  //     } else if (page === 'spaces') {
+  //       results = $spaces.map((space) => spaceToItem(space, { score: 0.1 }))
+  //     } else if (page === 'tabs') {
+  //       results = activeTabs.map((tab) => tabToItem(tab, { score: 0 }))
+  //     } else if (page === 'history') {
+  //       results = historyEntries.map((entry) => historyEntryToItem(entry, { score: 0.1 }))
+  //     } else {
+  //       results = [
+  //         ...activeTabs.map((tab) => tabToItem(tab, { score: 0 })),
+  //         ...historyEntries.map((entry) => historyEntryToItem(entry, { score: 0.1 })),
+  //         ...$spaces.map((space) => spaceToItem(space, { score: 0.1 })),
+  //         ...oasisResources.map((resource) => resourceToItem(resource, { score: 0.1 })),
+  //         ...browserCommands.map((cmd) => ({ ...cmd, score: 0.2 }))
+  //       ]
+  //     }
+  //     results.sort((a, b) => (a.score || 0) - (b.score || 0))
+  //     // while (results.length < 5) {
+  //     //   results.push({
+  //     //     type: 'placeholder',
+  //     //     title: `Suggestion ${results.length + 1}`,
+  //     //     score: 1
+  //     //   })
+  //     // }
+  //     filteredItems = results.slice(0, 15)
+  //   }
+  // }
+
+  // TODO: this should be a proper subscribe
+  const commandFilter = derived([searchValue], ([searchValue]) => {
+    if (!searchValue) {
+      return []
+    }
+
+    log.debug('Filtering command items', searchValue)
+
+    if (searchValue.length > 2) {
+      if (!$isFilteringCommandItems) {
+        filterCommandItems(searchValue)
       }
-      results.sort((a, b) => (a.score || 0) - (b.score || 0))
-      // while (results.length < 5) {
-      //   results.push({
-      //     type: 'placeholder',
-      //     title: `Suggestion ${results.length + 1}`,
-      //     score: 1
+
+      if (!$isFetchingOasisSearchResults) {
+        fetchOasisResults(searchValue)
+      }
+
+      if (!$isFetchingGoogleSuggestionResults) {
+        fetchGoogleSuggestions(searchValue)
+      }
+
+      // if (!$isFetchingHistoryEntriesResults) {
+      //   fetchHistoryEntries(searchValue)?.then(() => {
+      //     log.debug('Fetched history entries done')
       //   })
       // }
-      filteredItems = results.slice(0, 15)
     }
-  }
-  const updateHistory = debounce(async ($searchValue: string) => {
-    if (!historyCache || Date.now() - historyCache.timestamp > CACHE_EXPIRY) {
-      log.debug('Fetching history entries...')
-      const entries = await historyEntriesManager.searchEntries($searchValue)
-      log.debug('History entries:', entries)
-      const sortedEntries = entries.sort(
-        (a, b) => new Date(b.entry.createdAt).getTime() - new Date(a.entry.createdAt).getTime()
-      )
-      const uniqueSites = Object.values(
-        sortedEntries.reduce(
-          (acc, entry) => {
-            if (
-              !acc[entry.site] ||
-              new Date(entry.entry.createdAt) > new Date(acc[entry.site].createdAt)
-            ) {
-              acc[entry.site] = entry.entry
-            }
-            return acc
-          },
-          {} as Record<string, HistoryEntry>
-        )
-      )
-      historyCache = { data: uniqueSites, timestamp: Date.now() }
+
+    return []
+  })
+
+  const commandFilterResult = derived(
+    [searchValue, commandFilter, filteredCommandItems, oasisSearchResults, googleSuggestionResults],
+    ([
+      searchValue,
+      commandFilter,
+      filteredCommandItems,
+      oasisSearchResults,
+      googleSuggestionResults
+    ]) => {
+      deboundedSelectFirstCommandItem()
+
+      const items = [
+        ...commandFilter,
+        ...filteredCommandItems,
+        // ...historyEntriesResults.map((entry) => historyEntryToItem(entry, { score: 0.1 })),
+        ...googleSuggestionResults.map((suggestion) => googleSuggestionToItem(suggestion)),
+        ...oasisSearchResults.map((resource) => resourceToItem(resource, { score: 0.4 }))
+      ]
+
+      if (!items.some((item) => item.label === searchValue || item.value === searchValue)) {
+        items.unshift({
+          id: `general-search-${searchValue}`,
+          type: 'general-search',
+          label: `${searchValue}`,
+          value: searchValue,
+          icon: 'search',
+          score: 1
+        })
+      }
+
+      const url = parseStringIntoBrowserLocation(searchValue)
+      if (url) {
+        items.unshift({
+          id: `open-search-url`,
+          type: 'navigate',
+          label: `Navigate to ${truncateURL(url)}`,
+          icon: 'world',
+          value: url,
+          score: 1
+        } as CMDMenuItem)
+      }
+
+      return items
     }
-    historyEntries = historyCache.data
-    updateFilteredItems()
-  }, 30)
-  // const fetchOasisResults = debounce(async (query: string) => {
+  )
+
+  const filterCommandItems = useDebounce((searchValue: string) => {
+    try {
+      $isFilteringCommandItems = true
+      const items = commandItems
+      const fuse = new Fuse(items, fuseOptions)
+
+      const fuseResults = fuse.search(searchValue)
+
+      const result = fuseResults
+        .map((result) => ({ ...result.item, score: result.score }))
+        .filter((x) => x.score! < fuseOptions.threshold) as CMDMenuItem[]
+      log.debug('Fuse search result items', result)
+
+      $filteredCommandItems = result
+    } catch (error) {
+      log.error('Error filtering command items:', error)
+      $filteredCommandItems = []
+    } finally {
+      $isFilteringCommandItems = false
+    }
+  }, 150)
+
+  // const fetchHistoryEntries = useDebounce(async ($searchValue: string) => {
   //   try {
-  //     loading = true
-  //     if (query.length > 2) {
-  //       // const data = await resourceManager.listResourcesByTags([
-  //       const data = await resourceManager.searchResources(
-  //         query,
-  //         [
-  //           ResourceManager.SearchTagDeleted(false),
-  //           ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
-  //           ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne')
-  //           // ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-  //           // ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
-  //         ],
-  //         { includeAnnotations: false }
+  //     if (!historyCache || Date.now() - historyCache.timestamp > CACHE_EXPIRY) {
+  //       $isFetchingHistoryEntriesResults = true
+  //       log.debug('Fetching history entries...')
+  //       const entries = await historyEntriesManager.searchEntries($searchValue)
+  //       log.debug('History entries:', entries)
+  //       const sortedEntries = entries.sort(
+  //         (a, b) => new Date(b.entry.createdAt).getTime() - new Date(a.entry.createdAt).getTime()
   //       )
-  //       log.debug('Oasis search results:', data)
-  //       oasisResources = data.map((x) => x.resource).slice(0, 5)
-  //       await Promise.all(
-  //         oasisResources.map((resource) => {
-  //           if (typeof (resource as any).getParsedData === 'function') {
-  //             return (resource as ResourceJSON<any>).getParsedData()
-  //           }
-  //         })
+  //       const uniqueSites = Object.values(
+  //         sortedEntries.reduce(
+  //           (acc, entry) => {
+  //             if (
+  //               !acc[entry.site] ||
+  //               new Date(entry.entry.createdAt) > new Date(acc[entry.site].createdAt)
+  //             ) {
+  //               acc[entry.site] = entry.entry
+  //             }
+  //             return acc
+  //           },
+  //           {} as Record<string, HistoryEntry>
+  //         )
   //       )
-  //     } else {
-  //       oasisResources = []
+  //       historyCache = { data: uniqueSites, timestamp: Date.now() }
   //     }
-  //     updateFilteredItems()
+
+  //     $historyEntriesResults = historyCache.data
   //   } catch (error) {
-  //     log.error('Error fetching Oasis search results:', error)
-  //     oasisResources = []
+  //     log.error('Error fetching history entries:', error)
+  //     $historyEntriesResults = []
   //   } finally {
-  //     loading = false
+  //     $isFetchingHistoryEntriesResults = false
   //   }
-  // }, 500)
-  const fetchGoogleSuggestions = debounce(async (query: string) => {
+  // }, 300)
+
+  const fetchOasisResults = useDebounce(async (query: string) => {
+    try {
+      $isFetchingOasisSearchResults = true
+      if (query.length > 2) {
+        // const data = await resourceManager.listResourcesByTags([
+        const data = await resourceManager.searchResources(
+          query,
+          [
+            ResourceManager.SearchTagDeleted(false),
+            ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+            // ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne')
+            // ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+            // ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
+          ],
+          { includeAnnotations: false }
+        )
+        log.debug('Oasis search results:', data)
+
+        const resources = data.map((x) => x.resource)
+
+        await Promise.all(
+          resources.map((resource) => {
+            if (resource instanceof ResourceJSON) {
+              return resource.getParsedData()
+            }
+          })
+        )
+
+        $oasisSearchResults = resources.slice(0, 5)
+      } else {
+        $oasisSearchResults = []
+      }
+      // updateFilteredItems()
+    } catch (error) {
+      log.error('Error fetching Oasis search results:', error)
+      $oasisSearchResults = []
+    } finally {
+      $isFetchingOasisSearchResults = false
+    }
+  }, 300)
+
+  const fetchGoogleSuggestions = useDebounce(async (query: string) => {
     try {
       if (query.length > 2) {
+        $isFetchingGoogleSuggestionResults = true
         // @ts-ignore
         const data = await window.api.fetchJSON(
-          `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`
+          `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`,
+          {
+            // HACK: this is needed to get Google to properly encode the suggestions, without this Umlaute are not encoded properly
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
+            }
+          }
         )
         log.debug('Google suggestions:', data)
-        googleSuggestions = data[1].slice(0, 5)
+        $googleSuggestionResults = data[1]
+          .slice(0, 4)
+          .filter((suggestion: string) => suggestion !== $searchValue)
       } else {
-        googleSuggestions = []
+        $googleSuggestionResults = []
       }
-      updateFilteredItems()
+      // updateFilteredItems()
     } catch (error) {
       log.error('Error fetching Google suggestions:', error)
-      googleSuggestions = []
+      $googleSuggestionResults = []
+    } finally {
+      $isFetchingGoogleSuggestionResults = false
     }
-  }, 100)
-  $: {
-    fetchGoogleSuggestions($searchValue)
-    updateHistory($searchValue)
-    // fetchOasisResults($searchValue)
-  }
+  }, 150)
+
+  // $: {
+  //   fetchGoogleSuggestions($searchValue)
+  //   updateHistory($searchValue)
+  //   fetchOasisResults($searchValue)
+  // }
   function handleSelect(e: CustomEvent<CMDMenuItem>) {
     const item = e.detail
     log.debug('handleSelect', item)
@@ -439,8 +593,23 @@
       }
     } else if (item.type === 'suggestion' || item.type === 'google-search') {
       dispatch('open-url', `https://www.google.com/search?q=${encodeURIComponent(item.value!)}`)
+    } else if (item.type === 'general-search') {
+      // check if it's a URL
+      const isValidURL = optimisticCheckIfURLOrIPorFile(item.value!)
+      console.error('isValidURL', isValidURL)
+      if (isValidURL) {
+        dispatch('open-url', item.value!)
+      } else {
+        dispatch('open-url', `https://www.google.com/search?q=${encodeURIComponent(item.value!)}`)
+      }
     } else if (item.type === 'resource') {
-      dispatch('open-resource', item.id!)
+      if (!item.id) {
+        log.error('Resource item has no ID:', item)
+        return
+      }
+
+      openResourceAsTab(item.id)
+      // dispatch('open-resource', item.id!)
     } else if (item.type === 'space') {
       const space = $spaces.find((x) => x.id === item.id)
       if (!space) {
@@ -455,7 +624,7 @@
     $searchValue = ''
     filteredItems = []
     googleSuggestions = []
-    showTabSearch = false
+    showTabSearch = 0
   }
   const browserCommands = [
     { id: 'close-active-tab', label: 'Close Tab', shortcut: '⌘W', type: 'command', icon: 'close' },
@@ -481,12 +650,10 @@
   ] as CMDMenuItem[]
 
   export let spaceId: string
-  export let active: boolean = false
   export let historyEntriesManager: HistoryEntriesManager
 
   $: isEverythingSpace = spaceId === 'all'
 
-  const log = useLogScope('NEWTABOVERLAY')
   const oasis = useOasis()
 
   const toasts = useToasts()
@@ -494,7 +661,6 @@
   const resourceManager = oasis.resourceManager
   const spaces = oasis.spaces
 
-  const searchValue = writable('')
   const showChat = writable(false)
   const resourceIds = writable<string[]>([])
   const chatPrompt = writable('')
@@ -512,14 +678,10 @@
   const everythingContents = writable<ResourceSearchResultItem[]>([])
   const spaceContents = writable<SpaceEntry[]>([])
 
-  const currentPanel = writable(1)
-
-  $: contents = $everythingContents
-
   const resourcesToShow = derived(
-    [searchValue, searchResults, everythingContents, currentPanel],
-    ([searchValue, searchResults, everythingContents, currentPanel]) => {
-      if (searchValue && currentPanel === 2) {
+    [searchValue, searchResults, everythingContents],
+    ([searchValue, searchResults, everythingContents]) => {
+      if (searchValue && showTabSearch === 2) {
         return searchResults
       }
 
@@ -527,16 +689,14 @@
     }
   )
 
+  $: log.debug('resourcesToShow', $resourcesToShow)
+
   const isResourceDetailsModalOpen = derived(
     [showResourceDetails, resourceDetailsModalSelected],
     ([$showResourceDetails, $resourceDetailsModalSelected]) => {
       return $showResourceDetails && !!$resourceDetailsModalSelected
     }
   )
-
-  $: if (active) {
-    loadEverything()
-  }
 
   const loadEverything = async () => {
     try {
@@ -575,7 +735,6 @@
 
       log.debug('Loaded everything:', items)
 
-      // searchValue.set('')
       searchResults.set([])
 
       everythingContents.set([])
@@ -590,29 +749,6 @@
     }
   }
 
-  const handleCloseChat = () => {
-    showChat.set(false)
-    searchValue.set('')
-    chatPrompt.set('')
-    resourceIds.set([])
-  }
-
-  const handleOpenNewResourceModal = () => {
-    showNewResourceModal.set(true)
-  }
-
-  const handleCloseNewResourceModal = () => {
-    showNewResourceModal.set(false)
-  }
-
-  const handleOpenSettingsModal = () => {
-    showSettingsModal.set(true)
-  }
-
-  const handleCloseSettingsModal = () => {
-    showSettingsModal.set(false)
-  }
-
   const handleSearch = async (searchValueInput: string) => {
     let value = searchValueInput
 
@@ -624,7 +760,6 @@
     const hashtagMatch = value.match(/#[a-zA-Z0-9]+/g)
     const hashtags = hashtagMatch ? hashtagMatch.map((x) => x.slice(1)) : []
 
-    // if all words are hashtags, clear the search
     if (hashtags.length === value.split(' ').length) {
       value = ''
     }
@@ -705,16 +840,20 @@
   }
 
   const handleKeyDown = async (e: KeyboardEvent) => {
-    if (!active) {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      showTabSearch = showTabSearch === 1 ? 2 : 1
       return
     }
+
+    if (showTabSearch !== 2) return
 
     log.debug('Key down:', e.key)
     if (e.key === 'Escape') {
       if ($showResourceDetails === true) {
         closeResourceDetailsModal()
       } else {
-        showTabSearch = false
+        showTabSearch = 0
       }
     } else if (
       e.key === ' ' &&
@@ -883,8 +1022,29 @@
     resourceDetailsModalSelected.set(null)
   }
 
-  const handleOpen = (e: CustomEvent<string>) => {
-    openResourceDetailsModal(e.detail)
+  const openResourceAsTab = async (id: string) => {
+    const resource = await resourceManager.getResource(id)
+    if (!resource) {
+      log.error('Resource not found')
+      return
+    }
+
+    const url =
+      resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
+      resource.metadata?.sourceURI
+    if (!url) {
+      // TODO: figure out what to do with resources that don't have a URL
+      log.error('Resource URL not found')
+      toasts.error('Resource can not be opened as a tab')
+      return
+    }
+
+    dispatch('new-tab', { url: url, active: true })
+  }
+
+  const handleOpen = async (e: CustomEvent<string>) => {
+    // openResourceDetailsModal(e.detail)
+    openResourceAsTab(e.detail)
   }
 
   const handleCreateSpace = async (e: CustomEvent<{ name: string; aiEnabled: boolean }>) => {
@@ -897,34 +1057,32 @@
     await createSpaceRef.createSpaceWithAI(spaceID, e.detail.name)
   }
 
-  let containerRef: HTMLDivElement
+  const focusInput = async (loop = false) => {
+    try {
+      log.debug('Focusing input...')
+      await tick()
 
-  const focusInput = () => {
-    const input = document.querySelector('input')
-    if (input) {
-      input.focus()
+      const inputElement = document.getElementById('search-field') as HTMLInputElement
+
+      if (inputElement) {
+        inputElement.focus()
+      }
+
+      if (!loop) {
+        await wait(300)
+        focusInput(true)
+      }
+    } catch (err) {
+      log.error('Failed to focus input:', err)
     }
   }
 
   onMount(() => {
     focusInput()
-
-    return currentPanel.subscribe(() => {
-      focusInput()
-    })
   })
 
-  let panelOneRef: HTMLDivElement
-  let panelTwoRef: HTMLDivElement
-  let masonryRef: HTMLDivElement
-
-  let blockScroll = false
-
-  const scrollTop = writable(0)
-  const yPosition = writable('10%')
-
-  $: {
-    yPosition.set($currentPanel === 1 ? '10%' : '24px')
+  $: if (showTabSearch === 1 || showTabSearch === 2) {
+    focusInput()
   }
 
   const debouncedSearch = useDebounce((value: string) => {
@@ -935,417 +1093,306 @@
     loadEverything()
   }, 200)
 
-  $: if ($currentPanel === 2 && !!$searchValue) {
+  $: if (showTabSearch === 2 && !!$searchValue) {
     log.debug('case 1')
     debouncedSearch($searchValue)
   }
 
-  $: if ($currentPanel === 2 && !$searchValue) {
+  $: if (showTabSearch === 2 && !$searchValue) {
     log.debug('case 2')
     $searchResults = []
-    // deboundedEverything()
-  }
-
-  $: if ($currentPanel === 1 && $searchResults.length > 0) {
-    log.debug('case 3')
     deboundedEverything()
-  }
-
-  function scrollToSmoothly(elem: Element, pos: number, time: number) {
-    let currentPos = elem.scrollTop
-    let start: null | number = null
-
-    if (time == null) time = 500
-    ;(pos = +pos), (time = +time)
-    window.requestAnimationFrame(function step(currentTime) {
-      start = !start ? currentTime : start
-      let progress = currentTime - start
-      if (currentPos < pos) {
-        const y = ((pos - currentPos) * progress) / time + currentPos
-        elem.scrollTo(0, y)
-      } else {
-        const y = currentPos - ((currentPos - pos) * progress) / time
-        elem.scrollTo(0, y)
-      }
-      if (progress < time) {
-        window.requestAnimationFrame(step)
-      } else {
-        elem.scrollTo(0, pos)
-      }
-    })
-  }
-
-  const SCROLL_DURATION = 400
-  const SCROLL_THRESHOLD = 50
-
-  $: log.debug('blockScroll', blockScroll)
-
-  function scrollToPanel(index: number) {
-    log.debug('scrollToPanel', index)
-
-    if (blockScroll) {
-      return
-    }
-
-    blockScroll = true
-
-    if (index === 1) {
-      panelOneRef.style.removeProperty('height')
-
-      let start: null | number = null
-
-      window.requestAnimationFrame(function step(currentTime) {
-        start = !start ? currentTime : start
-        let progress = currentTime - start
-
-        containerRef.scrollTop = 0
-
-        if (progress < SCROLL_DURATION) {
-          window.requestAnimationFrame(step)
-        } else {
-          containerRef.scrollTop = 0
-        }
-      })
-      // containerRef.scrollTo({ top: 0, behavior: 'smooth' })
-    } else {
-      panelOneRef.style.height = '0px'
-
-      let start: null | number = null
-
-      // containerRef.scrollTo({ top: 0, behavior: 'smooth' })
-
-      window.requestAnimationFrame(function step(currentTime) {
-        start = !start ? currentTime : start
-        let progress = currentTime - start
-
-        containerRef.scrollTop = 0
-
-        if (progress < SCROLL_DURATION) {
-          window.requestAnimationFrame(step)
-        } else {
-          containerRef.scrollTop = 0
-        }
-      })
-    }
-
-    setTimeout(() => {
-      blockScroll = false
-    }, 250)
-
-    $currentPanel = index
-  }
-
-  function handleMasonryWheel(e: CustomEvent<{ event: WheelEvent; scrollTop: number }>) {
-    const { event, scrollTop } = e.detail
-
-    log.debug('handleMasonryWheel', scrollTop, event.deltaY)
-
-    if (scrollTop === 0 && event.deltaY < 0) {
-      scrollToPanel(1)
-    } else {
-      masonryRef.scrollTop += event.deltaY
-    }
-  }
-
-  let blockContainerScroll = false
-
-  function handleScroll(e: Event) {
-    const currentScrollTop = containerRef.scrollTop
-
-    log.debug('handleScroll', currentScrollTop)
-
-    scrollTop.set(currentScrollTop)
-
-    if (currentScrollTop > SCROLL_THRESHOLD && !blockContainerScroll) {
-      blockContainerScroll = true
-      scrollToPanel(2)
-    }
-    if (currentScrollTop < SCROLL_THRESHOLD && $currentPanel !== 1) {
-      scrollToPanel(1)
-    }
-
-    if (currentScrollTop < SCROLL_THRESHOLD) {
-      blockContainerScroll = false
-    }
-  }
-
-  const handlePaneWheel = (e: WheelEvent) => {
-    log.debug('handlePaneWheel', $scrollTop, e.deltaY)
-    if ($currentPanel === 2 && e.deltaY < 0) {
-      scrollToPanel(1)
-    }
-  }
-
-  const handleScrollButton = () => {
-    if ($currentPanel === 1) {
-      scrollToPanel(2)
-    } else {
-      scrollToPanel(1)
-    }
   }
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
 
-{#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
+<!-- {#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
   <OasisResourceModalWrapper
     resourceId={$resourceDetailsModalSelected}
-    {active}
+    active
     on:close={() => closeResourceDetailsModal()}
     on:new-tab
   />
-{/if}
+{/if} -->
 
-<div class="absolute w-full h-full z-[5001] page-background rounded-lg overflow-hidden">
-  <div
-    class="h-full {$currentPanel === 1 ? 'overflow-y-scroll' : 'overflow-y-hidden'}"
-    bind:this={containerRef}
-    on:scroll={handleScroll}
-  >
-    {#if $selectedSpaceId !== null}
-      <OasisSpace
-        spaceId={$selectedSpaceId}
-        active
-        showBackBtn
-        {historyEntriesManager}
-        on:go-back={() => selectedSpaceId.set(null)}
-        on:new-tab
-      />
-    {:else}
-      <div
-        data-pane={1}
-        class="h-screen w-screen transition-all duration-400 ease-out"
-        bind:this={panelOneRef}
+<Drawer.Root
+  preventScroll
+  shouldScaleBackground
+  direction="bottom"
+  scrollLockTimeout={300}
+  open={showTabSearch !== 0}
+  closeOnEscape
+  onOpenChange={(e) => {
+    if (e === false) {
+      resetSearch()
+    }
+  }}
+>
+  <Drawer.Portal>
+    <Drawer.Overlay class="drawer-overlay fixed inset-0 z-10 transition-opacity duration-300" />
+    <Drawer.Content
+      class="drawer-content fixed inset-x-4 bottom-4 will-change-transform z-[50001] mx-auto overflow-hidden rounded-md transition duration-400 bg-[#FEFFFE] outline-none"
+      style="width: fit-content;"
+    >
+      <Motion
+        let:motion
+        animate={{
+          height: showTabSearch === 1 ? 'auto' : 'calc(100vh - 200px)',
+          width: showTabSearch === 1 ? '476px' : 'calc(70vw - 0px)',
+          transition: {
+            duration: showTabSearch === 1 ? 0.45 : 0.7,
+            ease: [0.16, 1, 0.3, 1]
+          }
+        }}
       >
-        <div
-          class="absolute left-1/2 -translate-x-1/2 z-[10001] transition-all duration-400 ease-in-out transform"
-          style="top: {$yPosition}; transform: translateX(-50%);"
-        >
-          {#if $currentPanel === 1}
-            <img
-              class="browser-background scroll-auto pointer-events-none select-none"
-              src={browserBackground}
-              alt="background"
-            />
+        <div use:motion>
+          {#if $searchValue.length > 0 && showTabSearch === 2}
+            <button
+              data-vaul-no-drag
+              class="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F8F9] text-[#949595] transition-transform focus:scale-95 focus-visible:shadow-focus-ring-button active:scale-75"
+              on:click={() => {
+                resetSearch()
+              }}
+            >
+              <Icon name="close" />
+            </button>
+          {:else if $searchValue.length === 0}
+            <!-- <div
+              class="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full transition-transform focus:scale-95 focus-visible:shadow-focus-ring-button active:scale-75 rotate-6"
+            >
+              <Icon name="face" size="28" />
+            </div> -->
+            <div
+              class="absolute right-4 transform h-8 bottom-4 z-10 flex items-center justify-center space-x-2 transition-transform cursor-pointer hover:bg-pink-500/20 px-2 py-1 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+              on:click={() => {
+                showTabSearch = showTabSearch === 1 ? 2 : 1
+              }}
+              aria-label="Switch tabs"
+            >
+              <span>Go to {showTabSearch === 1 ? 'Oasis' : 'Search'}</span>
+              <Command.Shortcut class="flex-shrink-0 bg-neutral-100 rounded-lg p-1"
+                >Tab</Command.Shortcut
+              >
+            </div>
           {/if}
-
           <Command.Root
-            class="[&_[data-cmdk-group-heading]]:text-neutral-500  lg:w-[672px]   [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-4 [&_[data-cmdk-item]]:py-4 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
+            class="[&_[data-cmdk-group-heading]]:text-neutral-500 {showTabSearch === 2
+              ? 'pt-4'
+              : ''} !relative w-full transition-transform will-change-transform flex flex-col items-center justify-end  [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-4 [&_[data-cmdk-item]]:py-4 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
             loop
             shouldFilter={false}
-            onKeydown={handleKeyDown}
+            bind:selectFirstCommandItem
           >
-            <Command.Input
-              id="search-field"
-              {placeholder}
-              {breadcrumb}
-              {loading}
-              bind:value={$searchValue}
-            />
-
-            {#if $currentPanel === 1 && $searchValue.length}
-              <Command.List>
-                {#if !page}
-                  {#each navigate as item}
-                    <TabSearchItem {item} on:select={handleSelect} />
-                  {/each}
-
-                  {#if tabs.length > 0}
-                    <Command.Group heading="Active Tabs">
-                      {#each tabs as item}
+            <AnimatePresence show={true} mode="popLayout">
+              <Motion
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{
+                  duration: 0.5,
+                  ease: [0.26, 0.08, 0.25, 1]
+                }}
+                let:motion
+              >
+                <div use:motion class="{showTabSearch === 1 ? 'w-full' : 'w-[70vw]'} h-full">
+                  {#if showTabSearch === 1 && $searchValue.length}
+                    <Command.List>
+                      {#each $commandFilterResult as item (item.id)}
                         <TabSearchItem {item} on:select={handleSelect} />
                       {/each}
-                    </Command.Group>
-                  {/if}
+                      <!-- {#if !page}
+                        {#each navigate as item}
+                          <TabSearchItem {item} on:select={handleSelect} />
+                        {/each}
 
-                  {#if history.length > 0}
-                    <Command.Group heading="History">
-                      {#each history as item}
-                        <TabSearchItem {item} on:select={handleSelect} />
-                      {/each}
-                    </Command.Group>
-                  {/if}
+                        <!-- {#if tabs.length > 0}
+                          <Command.Group heading="Active Tabs">
+                            {#each tabs as item}
+                              <TabSearchItem {item} on:select={handleSelect} />
+                            {/each}
+                          </Command.Group>
+                        {/if}
 
-                  {#if spacesItems.length > 0}
-                    <Command.Group heading="Spaces">
-                      {#each spacesItems as item}
-                        <TabSearchItem {item} on:select={handleSelect} />
-                      {/each}
-                    </Command.Group>
-                  {/if}
+                        {#if history.length > 0}
+                          <!-- <Command.Group heading="History">
+                            {#each history as item}
+                              <TabSearchItem {item} on:select={handleSelect} />
+                            {/each}
+                          <!-- </Command.Group>
+                        {/if}
 
-                  <!-- {#if resources.length > 0}
+                        {#if suggestions.length > 0}
+                          <!-- <Command.Group heading="Suggestions">
+                            {#each suggestions as item}
+                              <TabSearchItem {item} on:select={handleSelect} />
+                            {/each}
+                          <!-- </Command.Group>
+                        {/if}
+
+                        {#if spacesItems.length > 0}
+                          <!-- <Command.Group heading="Spaces">
+                            {#each spacesItems as item}
+                              <TabSearchItem {item} on:select={handleSelect} />
+                            {/each}
+                          <!-- </Command.Group>
+                        {/if}
+
+                        <!-- {#if resources.length > 0}
                           <Command.Group heading="Oasis">
                             {#each resources as item}
                               <TabSearchItem {item} on:select={handleSelect} />
                             {/each}
                           </Command.Group>
-                        {/if} -->
+                        {/if}
 
-                  <!-- {#if commands.length > 0}
-                          <Command.Group heading="Actions">
+                        {#if commands.length > 0}
+                          <!-- <Command.Group heading="Actions">
                             {#each commands as item}
                               <TabSearchItem {item} on:select={handleSelect} />
                             {/each}
-                          </Command.Group>
-                        {/if} -->
+                          <!-- </Command.Group>
+                        {/if}
 
-                  {#if suggestions.length > 0}
-                    <Command.Group heading="Suggestions">
-                      {#each suggestions as item}
-                        <TabSearchItem {item} on:select={handleSelect} />
-                      {/each}
-                    </Command.Group>
+                        {#each other as item}
+                          <TabSearchItem {item} on:select={handleSelect} />
+                        {/each}
+                      {:else if page === 'tabs'}
+                        {#each tabs as item}
+                          <TabSearchItem {item} on:select={handleSelect} />
+                        {/each}
+                      {:else if page === 'oasis'}
+                        {#each resources as item}
+                          <TabSearchItem {item} on:select={handleSelect} />
+                        {/each}
+                      {:else if page === 'history'}
+                        {#each history as item}
+                          <TabSearchItem {item} on:select={handleSelect} />
+                        {/each}
+                      {:else if page === 'spaces'}
+                        {#each spacesItems as item}
+                          <TabSearchItem {item} on:select={handleSelect} />
+                        {/each}
+                      {/if} -->
+                    </Command.List>
+                  {:else if showTabSearch === 2}
+                    {#if $showCreationModal}
+                      <div
+                        data-vaul-no-drag
+                        class="create-wrapper absolute inset-0 z-50 flex items-center justify-center bg-opacity-50 bg-red-50"
+                      >
+                        <div
+                          class="shadow-lg rounded-lg w-full h-full max-w-screen-lg max-h-screen-lg overflow-auto flex items-center justify-center"
+                        >
+                          <CreateNewSpace
+                            on:close-modal={() => showCreationModal.set(false)}
+                            on:submit={handleCreateSpace}
+                          />
+                        </div>
+                      </div>
+                    {/if}
+
+                    {#if $selectedSpaceId !== null}
+                      <OasisSpace
+                        spaceId={$selectedSpaceId}
+                        active
+                        showBackBtn
+                        hideResourcePreview
+                        handleEventsOutside
+                        {historyEntriesManager}
+                        on:open={handleOpen}
+                        on:go-back={() => selectedSpaceId.set(null)}
+                      />
+                    {:else}
+                      <DropWrapper
+                        {spaceId}
+                        on:Drop={(e) => handleDrop(e.detail)}
+                        on:DragEnter={(e) => handleDragEnter(e.detail)}
+                      >
+                        <div class="w-full h-[calc(100%-216px)] will-change-transform">
+                          <div class="relative will-change-transform">
+                            <SpacesView
+                              bind:this={createSpaceRef}
+                              {spaces}
+                              {resourceManager}
+                              showPreview={true}
+                              type="horizontal"
+                              interactive={false}
+                              on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
+                              on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
+                              on:open-creation-modal={() => showCreationModal.set(true)}
+                              on:open-resource={handleOpen}
+                            />
+                          </div>
+
+                          {#if $resourcesToShow.length > 0}
+                            <OasisResourcesViewSearchResult
+                              resources={resourcesToShow}
+                              selected={$selectedItem}
+                              showResourceSource={!!$searchValue}
+                              isEverythingSpace={true}
+                              newTabOnClick
+                              on:click={handleItemClick}
+                              on:open={handleOpen}
+                              on:open-space-as-tab
+                              on:remove={handleResourceRemove}
+                              on:new-tab
+                            />
+
+                            {#if $loadingContents}
+                              <div class="floating-loading">
+                                <Icon name="spinner" size="20px" />
+                              </div>
+                            {/if}
+                          {:else if $loadingContents}
+                            <div class="content-wrapper">
+                              <div class="content">
+                                <Icon name="spinner" size="22px" />
+                                <p>Loading…</p>
+                              </div>
+                            </div>
+                          {:else}
+                            <div class="content-wrapper">
+                              <div class="content">
+                                <Icon name="leave" size="22px" />
+                                <p>Oops! It seems like this Space is feeling a bit empty.</p>
+                              </div>
+                            </div>
+                          {/if}
+                        </div>
+                      </DropWrapper>
+                    {/if}
                   {/if}
+                </div>
+              </Motion>
+            </AnimatePresence>
 
-                  {#each other as item}
-                    <TabSearchItem {item} on:select={handleSelect} />
-                  {/each}
-                {:else if page === 'tabs'}
-                  {#each tabs as item}
-                    <TabSearchItem {item} on:select={handleSelect} />
-                  {/each}
-                {:else if page === 'oasis'}
-                  {#each resources as item}
-                    <TabSearchItem {item} on:select={handleSelect} />
-                  {/each}
-                {:else if page === 'history'}
-                  {#each history as item}
-                    <TabSearchItem {item} on:select={handleSelect} />
-                  {/each}
-                {:else if page === 'spaces'}
-                  {#each spacesItems as item}
-                    <TabSearchItem {item} on:select={handleSelect} />
-                  {/each}
-                {/if}
-              </Command.List>
+            {#if $selectedSpaceId === null || showTabSearch === 1}
+              <Command.Input
+                id="search-field"
+                {placeholder}
+                {breadcrumb}
+                loading={$isLoadingCommandItems}
+                bind:value={$searchValue}
+                class="w-full"
+              />
             {/if}
           </Command.Root>
-
-          <div
-            class="flex items-center justify-center transition-all duration-400 ease-in-out transform {$currentPanel ===
-            1
-              ? 'pt-9'
-              : 'mt-2 opacity-50 hover:opacity-100'}"
-          >
-            <button
-              on:click={handleScrollButton}
-              tabindex="-1"
-              class="text-neutral-700 flex select-none items-center gap-2 px-3 pl-4 py-2 rounded-xl transition-all ease-in-out hover:bg-[#f73b96e6] hover:text-white group"
-            >
-              <Icon
-                name="arrow.right"
-                style="transform: rotate({$currentPanel === 1 ? '90deg' : '-90deg'});"
-              />
-              {$currentPanel === 1 ? 'View Oasis' : 'Go Back'}
-              <Icon
-                name="arrow.right"
-                style="transform: rotate({$currentPanel === 1 ? '90deg' : '-90deg'});"
-              />
-              <!-- <span class="bg-neutral-300/80 text-neutral-700 group-hover:bg-[#ffb5d9e6] py-0.5 px-1 rounded-lg">Tab</span> -->
-            </button>
-          </div>
         </div>
-
-        <button
-          on:click={() => resetSearch()}
-          class="absolute top-3 left-3 z-[1000000] text-neutral-700 hover:text-neutral-500 px-3 py-2 rounded-xl opacity-50 hover:opacity-100 hover:bg-neutral-300/80 group"
-        >
-          Close <span class="bg-neutral-200 group-hover:bg-neutral-100 py-0.5 px-1 rounded-lg"
-            >ESC</span
-          >
-        </button>
-      </div>
-
-      <div
-        data-pane={2}
-        class="h-full full snap-start flex items-center justify-center"
-        bind:this={panelTwoRef}
-      >
-        {#if $showCreationModal}
-          <div
-            class="create-wrapper absolute inset-0 z-50 flex items-center justify-center bg-opacity-50 bg-red-50"
-          >
-            <div
-              class="shadow-lg rounded-lg w-full h-full max-w-screen-lg max-h-screen-lg overflow-auto flex items-center justify-center"
-            >
-              <CreateNewSpace
-                on:close-modal={() => showCreationModal.set(false)}
-                on:submit={handleCreateSpace}
-              />
-            </div>
-          </div>
-        {/if}
-
-        <DropWrapper
-          {spaceId}
-          on:Drop={(e) => handleDrop(e.detail)}
-          on:DragEnter={(e) => handleDragEnter(e.detail)}
-        >
-          <div
-            class="relative transition-all duration-400 ease-in-out transform {$currentPanel === 1
-              ? 'opacity-50 hover:opacity-100'
-              : ''}"
-            style:margin-top={$currentPanel === 1 ? '-221px' : '9rem'}
-            on:wheel={handlePaneWheel}
-            bind:this={masonryRef}
-          >
-            <SpacesView
-              bind:this={createSpaceRef}
-              {spaces}
-              {resourceManager}
-              showPreview={true}
-              type="horizontal"
-              interactive={false}
-              on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
-              on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
-              on:open-creation-modal={() => showCreationModal.set(true)}
-              on:open-resource={handleOpen}
-            />
-          </div>
-
-          {#if $resourcesToShow.length > 0}
-            <OasisResourcesViewSearchResult
-              resources={resourcesToShow}
-              selected={$selectedItem}
-              showResourceSource={!!$searchValue}
-              isEverythingSpace={true}
-              on:click={handleItemClick}
-              on:open={handleOpen}
-              on:open-space-as-tab
-              on:remove={handleResourceRemove}
-              on:new-tab
-              on:wheel={handleMasonryWheel}
-              bind:scrollTop={$scrollTop}
-            />
-
-            {#if $loadingContents}
-              <div class="floating-loading">
-                <Icon name="spinner" size="20px" />
-              </div>
-            {/if}
-          {:else if $loadingContents}
-            <div class="content-wrapper">
-              <div class="content">
-                <Icon name="spinner" size="22px" />
-                <p>Loading…</p>
-              </div>
-            </div>
-          {:else}
-            <div class="content-wrapper">
-              <div class="content">
-                <Icon name="leave" size="22px" />
-                <p>Oops! It seems like this Space is feeling a bit empty.</p>
-              </div>
-            </div>
-          {/if}
-        </DropWrapper>
-      </div>
-    {/if}
-  </div>
-</div>
+      </Motion>
+    </Drawer.Content>
+  </Drawer.Portal>
+</Drawer.Root>
 
 <style lang="scss">
+  [data-vaul-drawer]::after {
+    content: '';
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+  }
   .wrapper {
     display: flex;
     flex-direction: column;
@@ -1556,5 +1603,25 @@
     width: 40rem;
     height: 40rem;
     object-fit: cover;
+  }
+
+  /* Hides the Drawer when dragging but not targeting it */
+  :global(
+      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting='oasis-space-all'])
+        .drawer-content
+    ) {
+    transform: translateY(calc(100vh - 240px)) !important;
+  }
+
+  :global([data-dialog-portal] .drawer-overlay) {
+    background: rgba(0, 0, 0, 0.35);
+    opacity: 1;
+  }
+  :global(
+      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting='oasis-space-all'])
+        [data-dialog-portal]
+        .drawer-overlay
+    ) {
+    opacity: 0 !important;
   }
 </style>
