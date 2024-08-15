@@ -1,19 +1,18 @@
 <script lang="ts">
-  import OasisResourceLoader from './OasisResourceLoader.svelte'
   import { onMount, onDestroy, tick, createEventDispatcher } from 'svelte'
+  import { writable } from 'svelte/store'
+  import OasisResourceLoader from './OasisResourceLoader.svelte'
   import { RedBlackTree } from './masonry/index'
   import type { Item, ScrollVelocity } from './masonry/types'
   import Folder from '../Browser/Folder.svelte'
 
   export let renderContents: Item[] | string[] = []
   export let id: Date
-  export let items: Item[] = []
   export let isEverythingSpace: boolean
   export let showResourceSource: boolean = false
   export let newTabOnClick: boolean = false
 
   let prevItemLength = 0
-  let gridItems: Item[] = []
   let masonryGrid: MasonryGrid
   let resizeObserverDebounce: NodeJS.Timeout
   let resizedItems = new Set<Item>()
@@ -32,8 +31,53 @@
   const UPDATE_INTERVAL = 16
   const TIME_TILL_ACTIVATION = 2000
 
+  // Convert items into a writable store
+  const itemsStore = writable<Item[]>([])
+
+  // Subscribe to the items store to get the latest value
+  let items: Item[] = []
+  itemsStore.subscribe((value) => {
+    items = value
+  })
+
+  const gridItems = writable<Item[]>([])
+
   $: if (renderContents) {
-    queueUpdate(renderContents.slice(prevItemLength))
+    const diffItems = {
+      added: [],
+      removed: []
+    }
+
+    diffItems.removed = items.filter((item) => !renderContents.includes(item.id))
+
+    diffItems.added = renderContents
+      .filter((id) => !items.some((item) => item.id === id))
+      .map((id) => ({ id }))
+
+    console.log('xxx-Diff Items:', diffItems, new Date(), renderContents)
+
+    if (renderContents.length > prevItemLength) {
+      queueUpdate(renderContents.slice(prevItemLength))
+    } else if (renderContents.length < prevItemLength || diffItems.removed.length > 0) {
+      console.log('Before Removal - items:', items)
+      console.log('Before Removal - renderContents:', renderContents)
+
+      updateItems(diffItems)
+
+      tick().then(() => {
+        queueUpdate($gridItems)
+
+        const gridContainer = document.getElementById(id as unknown as string)
+
+        observeItems(gridContainer)
+        updateVisibleItems()
+      })
+    }
+
+    if ($gridItems.length < renderContents.length) {
+      console.warn('[Masonry.svelte] Not rendering all search results.')
+    }
+
     prevItemLength = renderContents.length
   }
 
@@ -61,7 +105,7 @@
       setTimeout(() => requestAnimationFrame(processUpdateQueue), delay)
     } else {
       isUpdating = false
-      const gridContainer = document.getElementById(id)
+      const gridContainer = document.getElementById(id as unknown as string)
       updateVisibleItems()
       await tick()
       observeItems(gridContainer)
@@ -70,6 +114,7 @@
 
   async function updateGridBatch(batch: Item[]) {
     const existingIds = new Set(items.map((item) => item.id))
+    const incomingIds = new Set(batch.map((item) => item.id))
     const newItems = batch.filter((item) => !existingIds.has(item.id))
 
     for (const item of newItems) {
@@ -221,11 +266,13 @@
         item.dom?.querySelector('.resource-preview') || item.dom?.querySelector('.folder-wrapper')
       if (wrapper) {
         const height = wrapper.offsetHeight
-        item.style!.height = `${height}px`
-        resizedItems.add(item)
+        if (item.style) {
+          item.style.height = `${height}px`
+          resizedItems.add(item)
+        }
 
         clearTimeout(resizeObserverDebounce)
-        resizeObserverDebounce = setTimeout(reinitializeGridAfterResize, 100)
+        resizeObserverDebounce = setTimeout(reinitializeGridAfterResize, 20)
       }
     })
     const element = item.dom?.querySelector('.wrapper')
@@ -237,8 +284,7 @@
   function reinitializeGridAfterResize() {
     if (resizedItems.size > 0) {
       const updatedItems = masonryGrid.reinitializeGrid(items)
-      items = updatedItems
-      gridItems = updatedItems
+      gridItems.set(updatedItems)
       resizedItems.clear()
       updateVisibleItems()
     }
@@ -246,7 +292,7 @@
 
   onMount(async () => {
     created = new Date()
-    const gridContainer = document.getElementById(id) as HTMLElement
+    const gridContainer = document.getElementById(id as unknown as string) as HTMLElement
     masonryGrid = new MasonryGrid(gridContainer)
 
     gridContainer?.addEventListener('scroll', updateVisibleItems)
@@ -257,7 +303,7 @@
   })
 
   onDestroy(() => {
-    const gridContainer = document.getElementById(id) as HTMLElement
+    const gridContainer = document.getElementById(id as unknown as string) as HTMLElement
     if (gridContainer) {
       gridContainer.removeEventListener('scroll', updateVisibleItems)
     }
@@ -272,7 +318,6 @@
         const dom = gridContainer.querySelector(`#${itemId}`) as HTMLElement
 
         if (dom) {
-          console.log('xxx-grid', dom)
           item.dom = dom
           observeItemHeightChange(item)
         }
@@ -286,30 +331,57 @@
       : { id: items.length + 1, content: `Item ${items.length + 1}` }
     const placedItem = masonryGrid.addItem(newItem)
     if (placedItem) {
-      items = [...items, placedItem]
-      gridItems = [...gridItems, placedItem]
+      itemsStore.update((current) => [...current, placedItem])
+      gridItems.update((current) => [...current, placedItem])
     }
+
+    updateVisibleItems()
+  }
+
+  function updateItems(diffItems: any) {
+    // Remove items
+    diffItems.removed.forEach((item) => {
+      const itemIndex = items.findIndex((i) => i.id === item.id)
+      if (itemIndex !== -1) {
+        itemsStore.update((current) => {
+          current.splice(itemIndex, 1)
+          return current
+        })
+        gridItems.update((current) => current.filter((_, i) => i !== itemIndex))
+      }
+    })
+
+    // Add items
+    diffItems.added.forEach((newItem) => {
+      itemsStore.update((current) => {
+        current.push(newItem)
+        return current
+      })
+      gridItems.update((current) => [...current, newItem])
+    })
   }
 
   function updateVisibleItems() {
-    const gridContainer = document.getElementById(id) as HTMLElement
+    const gridContainer = document.getElementById(id as unknown as string) as HTMLElement
     const scrollTop = gridContainer.scrollTop
     const viewportHeight = gridContainer.clientHeight
 
     dispatch('scroll', { scrollTop, viewportHeight })
 
-    gridItems = items.map((item) => {
-      const itemTop = parseInt(item.style?.top || '0')
-      const itemHeight = parseInt(item.style?.height || '0')
-      const itemBottom = itemTop + itemHeight
+    gridItems.update((currentItems) =>
+      currentItems.map((item) => {
+        const itemTop = parseInt(item.style?.top || '0')
+        const itemHeight = parseInt(item.style?.height || '0')
+        const itemBottom = itemTop + itemHeight
 
-      return {
-        ...item,
-        visible:
-          itemBottom > scrollTop - UPPER_OVERSHOOT_BOUND &&
-          itemTop < scrollTop + viewportHeight + LOWER_OVERSHOOT_BOUND
-      }
-    })
+        return {
+          ...item,
+          visible:
+            itemBottom > scrollTop - UPPER_OVERSHOOT_BOUND &&
+            itemTop < scrollTop + viewportHeight + LOWER_OVERSHOOT_BOUND
+        }
+      })
+    )
 
     const now = new Date().getTime()
     const lastUpdateTime = new Date(created).getTime()
@@ -326,7 +398,7 @@
         ? 3 * window.innerHeight * (scrollVelocity.velocity / 4)
         : 3 * window.innerHeight
 
-    const gridContainer = document.getElementById(id) as HTMLElement
+    const gridContainer = document.getElementById(id as unknown as string) as HTMLElement
 
     if (!gridContainer) {
       throw new Error('[MasonrySpace:isBottomReached()] Grid Container not found')
@@ -352,22 +424,8 @@
     return Math.max(MIN_ITEMS, Math.min(items, MAX_ITEMS))
   }
 
-  export function updateGrid(newData: Item[]) {
-    const gridContainer = document.getElementById(id) as HTMLElement
-
-    const existingIds = new Set(items.map((item) => item.id))
-
-    const newItems = newData.filter((item) => !existingIds.has(item.id))
-    newItems.forEach((item) => {
-      addItem(item)
-    })
-    updateVisibleItems()
-
-    observeItems(gridContainer)
-  }
-
   const handleWheel = (e: WheelEvent) => {
-    const gridContainer = document.getElementById(id) as HTMLElement
+    const gridContainer = document.getElementById(id as unknown as string) as HTMLElement
     const scrollTop = gridContainer.scrollTop
 
     dispatch('wheel', { event: e, scrollTop })
@@ -394,45 +452,50 @@
   }}
 />
 
-<div {id} data-vaul-no-drag class="masonry-grid" on:wheel={handleWheel}>
-  <!-- <div class="debug">
-    Total items: {items.length} | Visible items: {gridItems.filter((item) => item.visible).length}
-  </div> -->
+<!-- <pre style="position: fixed; top: 0; left: 0">{JSON.stringify(renderContents.length, null, 2)}</pre>
+<pre style="position: fixed; top: 1rem; right: 8rem; z-index: 10000">{JSON.stringify(
+    $gridItems.length,
+    null,
+    2
+  )}</pre> -->
 
-  {#each gridItems as item}
-    {#if typeof item.id.name !== 'undefined'}
-      <div
-        class="item space"
-        id="item-{item.id.id}"
-        style="left: {item.style.left}; top: {item.style.top};"
-      >
-        <div class="item-details" bind:this={item.dom}>
-          <Folder folder={item.id} selected={false} on:space-selected on:open-space-as-tab />
+<div {id} data-vaul-no-drag class="masonry-grid" on:wheel={handleWheel}>
+  {#each $gridItems as item}
+    {#key item.id}
+      {#if typeof item.id.name !== 'undefined'}
+        <div
+          class="item space"
+          id="item-{item.id.id}"
+          style="left: {item.style?.left}; top: {item.style?.top};"
+        >
+          <div class="item-details" bind:this={item.dom}>
+            <Folder folder={item.id} selected={false} on:space-selected on:open-space-as-tab />
+          </div>
         </div>
-      </div>
-    {:else}
-      <div
-        data-vaul-no-drag
-        class="item resource"
-        id="item-{item.id}"
-        class:visible={item.visible}
-        style="left: {item.style.left}; top: {item.style.top}; height: {item.style.height};"
-        bind:this={item.dom}
-      >
-        <div class="item-details">
-          <OasisResourceLoader
-            id={item.id}
-            showSource={showResourceSource}
-            {newTabOnClick}
-            on:click
-            on:open
-            on:remove
-            on:load
-            on:new-tab
-          />
+      {:else}
+        <div
+          data-vaul-no-drag
+          class="item resource"
+          id="item-{item.id}"
+          class:visible={item.visible}
+          style="left: {item.style?.left}; top: {item.style?.top}; height: {item.style?.height};"
+          bind:this={item.dom}
+        >
+          <div class="item-details">
+            <OasisResourceLoader
+              id={item.id}
+              showSource={showResourceSource}
+              {newTabOnClick}
+              on:click
+              on:open
+              on:remove
+              on:load
+              on:new-tab
+            />
+          </div>
         </div>
-      </div>
-    {/if}
+      {/if}
+    {/key}
   {/each}
 </div>
 
@@ -466,6 +529,10 @@
     height: fit-content !important;
     opacity: 0;
     visibility: hidden;
+  }
+
+  .item:last-child {
+    padding-bottom: 400px;
   }
 
   .debug {

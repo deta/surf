@@ -84,7 +84,7 @@ export class SurfBackendServerManager extends EventEmitter {
 
   private killExistingProcess(): void {
     try {
-      const processName = basename(this.serverPath);
+      const processName = basename(this.serverPath)
       if (process.platform === 'win32') {
         execSync(`taskkill /F /IM ${processName} /T`)
       } else {
