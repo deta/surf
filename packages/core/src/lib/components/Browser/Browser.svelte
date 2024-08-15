@@ -313,10 +313,13 @@
     handleRightSidebarTabsChange($rightSidebarTab)
   }
 
-  $: canGoBack = $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
+  $: canGoBack =
+    $showNewTabOverlay === 0 && $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
   $: canGoForward =
+    $showNewTabOverlay === 0 &&
     $activeTab?.type === 'page' &&
     $activeTab?.currentHistoryIndex < $activeTab.historyStackIds.length - 1
+  $: canReload = $showNewTabOverlay === 0 && $activeTab?.type === 'page'
 
   $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
     log.debug('Active tab is not in view, resetting')
@@ -632,6 +635,11 @@
       return
     }
 
+    if ($showNewTabOverlay !== 0) {
+      setShowNewTabOverlay(0)
+      return
+    }
+
     if ($activeTab.pinned) {
       log.debug('Active tab is pinned, deactivating it')
       $activatedTabs = $activatedTabs.filter((id) => id !== $activeTab.id)
@@ -696,14 +704,6 @@
 
     if (newTab) {
       await handleBookmark(false, SaveToOasisEventTrigger.CreateMenu)
-    }
-  }
-
-  const toggleOasis = () => {
-    if (drawer.isShown()) {
-      drawer.close()
-    } else {
-      drawer.open()
     }
   }
 
@@ -1062,37 +1062,6 @@
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
-
-  const handleAddressBarKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      showURLBar.set(!showURLBar)
-    }
-  }
-
-  const handleNewHorizon = async () => {
-    log.debug('Creating new horizon')
-
-    const newHorizon = await horizonManager.createHorizon('New Horizon ' + $horizons.length + 1)
-    log.debug('New Horizon', newHorizon)
-
-    newHorizon.tint.set('#' + Math.floor(Math.random() * 16777215).toString(16) + '80')
-
-    await horizonManager.switchHorizon(newHorizon.id)
-
-    await tick()
-
-    await createTab<TabHorizon>(
-      {
-        horizonId: newHorizon.id,
-        title: newHorizon.data.name,
-        icon: '',
-        type: 'horizon'
-      },
-      { active: true }
-    )
-
-    addressValue.set(newHorizon.data.name)
-  }
 
   const createNewEmptyTab = async () => {
     showNewTabOverlay.set(1)
@@ -2174,6 +2143,7 @@
 
     // @ts-expect-error
     window.api.onReloadActiveTab((force: boolean) => {
+      if ($showNewTabOverlay !== 0) return
       if (force) {
         $activeBrowserTab?.forceReload()
       } else {
@@ -3162,8 +3132,11 @@
               <Tooltip.Root openDelay={400} closeDelay={10}>
                 <Tooltip.Trigger>
                   <button
-                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canReload
+                      ? 'opacity-30 cursor-not-allowed'
+                      : 'cursor-pointer'}"
                     on:click={$activeBrowserTab?.reload}
+                    disabled={!canReload}
                   >
                     <span
                       class="group-hover:rotate-180 transition-transform ease-in-out duration-200"
@@ -3793,17 +3766,6 @@
                 />
               {:else if tab.type === 'history'}
                 <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
-              {:else}
-                <!-- <BrowserHomescreen
-                  {historyEntriesManager}
-                  active={$activeTabId === tab.id}
-                  on:navigate={handleTabNavigation}
-                  on:chat={handleCreateChat}
-                  on:rag={handleRag}
-                  on:create-tab-from-space={handleCreateTabFromSpace}
-                  on:new-tab={handleNewTab}
-                  {spaces}
-                /> -->
               {/if}
             </div>
           {/if}
