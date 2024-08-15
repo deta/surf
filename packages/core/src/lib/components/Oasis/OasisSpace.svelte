@@ -117,6 +117,7 @@
   const space = writable<Space | null>(null)
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
+  // const selectedFilter = writable<'all' | 'saved_by_user'>('all')
 
   const canGoBack = writable(false)
 
@@ -1298,7 +1299,7 @@
 >
   <div class="wrapper bg-sky-100/50">
     <div
-      class=" drawer-bar rounded-t-lg rounded-b-lg bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
+      class=" drawer-bar rounded-t-lg rounded-b-lg bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 bg-sky-100/90 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
       class:translate-y-24={hideBar}
     >
       {#if showBackBtn}
@@ -1443,6 +1444,13 @@
             </button>
           {/key}
         {/if}
+
+        <!-- <div class="rounded-lg bg-neutral-100 p-2 absolute right-3">
+          <select bind:value={$selectedFilter} class="bg-transparent focus:outline-none">
+            <option value="all">Show All</option>
+            <option value="saved_by_user">Saved by Me</option>
+          </select>
+        </div> -->
 
         <div class="drawer-chat active">
           <button class="close-button" on:click={handleCloseChat}>

@@ -15,7 +15,7 @@
   export let loading = false
 </script>
 
-<div class="flex items-center border-b px-4 gap-2 w-full" data-cmdk-input-wrapper="">
+<div class="flex items-center px-4 gap-2 w-full" data-cmdk-input-wrapper="">
   {#if breadcrumb}
     <div class="bg-neutral-200 py-1 px-2 rounded-lg flex-shrink-0">
       <span class="text-neutral-900 text-md">{breadcrumb}</span>

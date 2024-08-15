@@ -51,6 +51,7 @@
     ResourceTypes,
     type HistoryEntry,
     type ResourceDataPost,
+    type SFFSResourceTag,
     type Space,
     type SpaceEntry,
     type SpaceSource
@@ -103,6 +104,7 @@
   import { useDebounce } from '../../utils/debounce'
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
+  import { useLocalStorageStore } from '../../utils/localstorage'
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
 
@@ -145,6 +147,11 @@
   const isFetchingGoogleSuggestionResults = writable(false)
   const isFetchingHistoryEntriesResults = writable(false)
   const isFilteringCommandItems = writable(false)
+
+  const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
+    'oasis-filter-resources',
+    'all'
+  )
 
   const isLoadingCommandItems = derived(
     [
@@ -368,7 +375,7 @@
 
   // TODO: this should be a proper subscribe
   const commandFilter = derived([searchValue], ([searchValue]) => {
-    if (!searchValue) {
+    if (!searchValue || showTabSearch !== 1) {
       return []
     }
 
@@ -768,12 +775,35 @@
       value,
       [
         ResourceManager.SearchTagDeleted(false),
+        ...($selectedFilter === 'saved_by_user'
+          ? [
+              ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+              ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+              ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne')
+            ]
+          : []),
         ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
       ],
       {
         semanticEnabled: $userConfigSettings.use_semantic_search
       }
     )
+
+    // HACK: searching with a query and tags is broken right not so we need to filter manually
+    if ($selectedFilter === 'saved_by_user') {
+      const filtered = result.filter(
+        (x) =>
+          x.resource.tags?.findIndex(
+            (y) => y.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+          ) === -1 &&
+          x.resource.tags?.findIndex((y) => y.name === ResourceTagsBuiltInKeys.SILENT) === -1 &&
+          x.resource.type !== ResourceTypes.HISTORY_ENTRY
+      )
+
+      log.debug('searching saved_by_user', filtered)
+      searchResults.set(filtered)
+      return
+    }
 
     log.debug('searching all', result)
 
@@ -1093,6 +1123,11 @@
     loadEverything()
   }, 200)
 
+  const handleOasisFilterChange = (e: CustomEvent<string>) => {
+    log.debug('Filter change:', e.detail)
+    debouncedSearch($searchValue)
+  }
+
   $: if (showTabSearch === 2 && !!$searchValue) {
     log.debug('case 1')
     debouncedSearch($searchValue)
@@ -1164,10 +1199,9 @@
               <Icon name="face" size="28" />
             </div> -->
             <button
-              class="absolute right-4 transform  {showTabSearch === 2 &&
-              $selectedSpaceId !== null
+              class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
                 ? 'bottom-8'
-                : 'bottom-[12px]'} z-10 flex items-center justify-center space-x-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+                : 'bottom-3'} z-10 flex items-center justify-center space-x-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
               on:click={() => {
                 showTabSearch = showTabSearch === 1 ? 2 : 1
               }}
@@ -1372,14 +1406,37 @@
             </AnimatePresence>
 
             {#if $selectedSpaceId === null || showTabSearch === 1}
-              <Command.Input
-                id="search-field"
-                {placeholder}
-                {breadcrumb}
-                loading={$isLoadingCommandItems}
-                bind:value={$searchValue}
-                class="w-full"
-              />
+              <div
+                class={showTabSearch === 2
+                  ? 'w-full flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
+                  : 'w-full flex items-center justify-center p-2'}
+              >
+                <div class={'flex items-center relative'}>
+                  <Command.Input
+                    id="search-field"
+                    {placeholder}
+                    {breadcrumb}
+                    loading={$isLoadingCommandItems}
+                    bind:value={$searchValue}
+                    class={showTabSearch === 2
+                      ? 'w-[30rem] bg-neutral-100 rounded-lg p-2'
+                      : 'w-[30rem] py-4 pl-2'}
+                  />
+
+                  {#if showTabSearch === 2 && $selectedSpaceId === null && !!$searchValue}
+                    <div class="rounded-lg bg-neutral-100 p-2 absolute left-full">
+                      <select
+                        bind:value={$selectedFilter}
+                        on:change={handleOasisFilterChange}
+                        class="bg-transparent focus:outline-none"
+                      >
+                        <option value="all">Show All</option>
+                        <option value="saved_by_user">Saved by Me</option>
+                      </select>
+                    </div>
+                  {/if}
+                </div>
+              </div>
             {/if}
           </Command.Root>
         </div>

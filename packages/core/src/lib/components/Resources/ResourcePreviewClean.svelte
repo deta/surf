@@ -266,6 +266,13 @@
               Live Space
             </div>
           {/if}
+        {:else if resource.type === ResourceTypes.HISTORY_ENTRY}
+          <Icon name="history" size="16px" />
+          {#if $isHovered}
+            <div class="whitespace-nowrap ml-2 leading-4" transition:slide={{ axis: 'x' }}>
+              History
+            </div>
+          {/if}
         {:else}
           <Icon name="leave" size="16px" />
           {#if $isHovered}
