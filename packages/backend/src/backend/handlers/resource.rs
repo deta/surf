@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 use crate::{
     backend::{
@@ -222,8 +222,8 @@ impl Worker {
         &mut self,
         query: String,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
-        proximity_distance_threshold: Option<f32>,
-        proximity_limit: Option<i64>,
+        _proximity_distance_threshold: Option<f32>,
+        _proximity_limit: Option<i64>,
         semantic_search_enabled: Option<bool>,
         embeddings_distance_threshold: Option<f32>,
         embeddings_limit: Option<i64>,
@@ -240,16 +240,6 @@ impl Worker {
             }
         }
         let include_annotations = include_annotations.unwrap_or(false);
-        // TODO: find sane defaults for these
-        let proximity_distance_threshold = match proximity_distance_threshold {
-            Some(threshold) => threshold,
-            None => 500.0,
-        };
-
-        let proximity_limit = match proximity_limit {
-            Some(limit) => limit,
-            None => 10,
-        };
 
         let semantic_search_enabled = match semantic_search_enabled {
             Some(enabled) => enabled,
@@ -273,25 +263,25 @@ impl Worker {
         //     query_embedding = self.embedding_model.encode_single(&query)?;
         // }
 
-        let mut results_hashmap: HashMap<String, SearchResultItem> = HashMap::new();
+        let mut seen_keys: HashSet<String> = HashSet::new();
+        let mut results: Vec<SearchResultItem> = vec![];
 
-        let db_results = self.db.search_resources(
-            &query,
-            vec![],
-            resource_tag_filters,
-            proximity_distance_threshold,
-            proximity_limit,
-            semantic_search_enabled,
-            embeddings_distance_threshold,
-            embeddings_limit,
-            include_annotations,
-        )?;
+        let filtered_resource_ids = match resource_tag_filters {
+            Some(mut filters) => Some(self.db.list_resource_ids_by_tags(&mut filters)?),
+            None => None,
+        };
+
+        let db_results =
+            self.db
+                .search_resources(&query, &filtered_resource_ids, include_annotations)?;
 
         for result in db_results.items {
             if result.resource.resource.resource_type.ends_with(".ignore") {
                 continue;
             }
-            results_hashmap.insert(result.resource.resource.id.clone(), result);
+            // db_results are always unique by resource id
+            seen_keys.insert(result.resource.resource.id.clone());
+            results.push(result)
         }
 
         if semantic_search_enabled {
@@ -299,7 +289,7 @@ impl Worker {
                 &self.db,
                 query,
                 embeddings_limit as usize,
-                None,
+                filtered_resource_ids,
                 true,
                 Some(embeddings_distance_threshold),
             )?;
@@ -307,22 +297,19 @@ impl Worker {
                 if result.resource.resource_type.ends_with(".ignore") {
                     continue;
                 }
-                results_hashmap.insert(
-                    result.resource.id.clone(),
-                    SearchResultItem {
-                        resource: result,
-                        engine: SearchEngine::Embeddings,
-                        card_ids: vec![],
-                        distance: None,
-                        ref_resource_id: None,
-                    },
-                );
+                if seen_keys.contains(&result.resource.id) {
+                    continue;
+                }
+                seen_keys.insert(result.resource.id.clone());
+                results.push(SearchResultItem {
+                    resource: result,
+                    engine: SearchEngine::Embeddings,
+                    card_ids: vec![],
+                    ref_resource_id: None,
+                    distance: None,
+                });
             }
         }
-        let results = results_hashmap
-            .into_iter()
-            .map(|(_, v)| v)
-            .collect::<Vec<_>>();
         Ok(SearchResult {
             total: results.len() as i64,
             items: results,

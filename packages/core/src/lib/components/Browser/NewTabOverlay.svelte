@@ -789,22 +789,6 @@
       }
     )
 
-    // HACK: searching with a query and tags is broken right not so we need to filter manually
-    if ($selectedFilter === 'saved_by_user') {
-      const filtered = result.filter(
-        (x) =>
-          x.resource.tags?.findIndex(
-            (y) => y.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-          ) === -1 &&
-          x.resource.tags?.findIndex((y) => y.name === ResourceTagsBuiltInKeys.SILENT) === -1 &&
-          x.resource.type !== ResourceTypes.HISTORY_ENTRY
-      )
-
-      log.debug('searching saved_by_user', filtered)
-      searchResults.set(filtered)
-      return
-    }
-
     log.debug('searching all', result)
 
     searchResults.set(result)

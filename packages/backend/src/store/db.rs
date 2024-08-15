@@ -1378,27 +1378,23 @@ impl Database {
     pub fn search_resources(
         &self,
         keyword: &str,
-        _keyword_embedding: Vec<f32>,
-        tags: Option<Vec<ResourceTagFilter>>,
-        _proximity_distance_threshold: f32,
-        _proximity_limit: i64,
-        _semantic_search_enabled: bool,
-        _embeddings_distance_threshold: f32,
-        _embeddings_limit: i64,
+        filtered_resource_ids: &Option<Vec<String>>,
         include_annotations: bool,
     ) -> BackendResult<SearchResult> {
-        let mut filtered_resource_ids: Vec<String> = Vec::new();
-        if let Some(mut tags) = tags {
-            if !tags.is_empty() {
-                filtered_resource_ids = self.list_resource_ids_by_tags(&mut tags)?;
+        // The Some value in filtered_resource_ids indicates that the search MUST have the filter ids
+        // so if value is Some and empty, we return an empty result
+        let filtered_resource_ids = match filtered_resource_ids {
+            Some(ids) => {
+                if ids.is_empty() {
+                    return Ok(SearchResult {
+                        items: vec![],
+                        total: 0,
+                    });
+                }
+                ids
             }
-            if filtered_resource_ids.is_empty() {
-                return Ok(SearchResult {
-                    items: vec![],
-                    total: 0,
-                });
-            }
-        }
+            None => &vec![],
+        };
 
         let mut results = self.keyword_search(keyword, filtered_resource_ids.clone())?;
         if include_annotations {
@@ -1703,6 +1699,10 @@ impl Database {
         &self,
         row_ids: Vec<i64>,
     ) -> BackendResult<Vec<CompositeResource>> {
+        if row_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
         let placeholders = vec!["?"; row_ids.len()].join(",");
         let query = format!(
             "SELECT DISTINCT M.*, R.* FROM resource_metadata M
@@ -1808,6 +1808,10 @@ impl Database {
         &self,
         row_ids: Vec<i64>,
     ) -> BackendResult<Vec<CompositeResource>> {
+        if row_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
         let placeholders = vec!["?"; row_ids.len()].join(",");
         let query = format!(
             "SELECT DISTINCT M.*, R.*, C.* FROM resource_metadata M
