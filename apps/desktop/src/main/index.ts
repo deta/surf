@@ -127,6 +127,7 @@ if (!gotTheLock) {
 
     setAppMenu()
     createWindow()
+    // createSetupWindow() for dev on setup window only
 
     // we need to wait for the app/horizon to be ready before we can send any messages to the renderer
     ipcMain.once('app-ready', () => {
