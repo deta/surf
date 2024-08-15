@@ -14,6 +14,7 @@
     flex-shrink: 0;
     width: 100%;
     height: 100%;
+    aspect-ratio: 1 / 1;
     min-width: 1.25rem;
     min-height: 1.25rem;
     border-radius: 50%;

@@ -343,6 +343,14 @@ export function createCommand(props: CommandProps) {
 		return value;
 	}
 
+	function setFirstItemToSelected() {
+		const item = getValidItems().find((item) => !item.ariaDisabled);
+		if (!item) return;
+		const value = item.getAttribute(VALUE_ATTR);
+		if (!value) return;
+		updateState('value', value);
+	}
+
 	function score(value: string | undefined, search: string) {
 		const lowerCaseAndTrimmedValue = value?.toLowerCase().trim();
 		const filterFn = get(filter);
@@ -505,7 +513,8 @@ export function createCommand(props: CommandProps) {
 		state: stateStore,
 		handleRootKeydown,
 		commandEl,
-		ids
+		ids,
+		setFirstItemToSelected
 	};
 }
 

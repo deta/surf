@@ -2,9 +2,13 @@
   import { Command as CommandPrimitive } from '@horizon/cmdk-sv'
   import { cn } from '../../utils'
 
-  type $$Props = CommandPrimitive.CommandProps
+  type $$Props = {
+    value?: string
+    selectFirstCommandItem?: () => string | undefined
+  } & CommandPrimitive.RootProps
 
   export let value: $$Props['value'] = undefined
+  export let selectFirstCommandItem: () => string | undefined
 
   let className: string | undefined | null = undefined
   export { className as class }
@@ -16,6 +20,7 @@
     className
   )}
   bind:value
+  bind:selectFirstCommandItem
   {...$$restProps}
 >
   <slot />

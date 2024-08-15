@@ -11,6 +11,7 @@
   export let id: string
   export let selected: boolean = false
   export let showSource: boolean = false
+  export let newTabOnClick: boolean = false
 
   const log = useLogScope('OasisSpaceItem')
   const resourceManager = useResourceManager()
@@ -54,6 +55,7 @@
         {resource}
         {selected}
         {showSource}
+        {newTabOnClick}
         showSummary
         on:load
         on:click

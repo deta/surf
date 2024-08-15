@@ -2832,6 +2832,14 @@
     "@types/scheduler" "^0.16"
     csstype "^3.0.2"
 
+"@types/react@^18.2.42":
+  version "18.3.3"
+  resolved "https://registry.yarnpkg.com/@types/react/-/react-18.3.3.tgz#9679020895318b0915d7a3ab004d92d33375c45f"
+  integrity sha512-hti/R0pS0q1/xx+TsI73XIqk26eBsISZ2R0wUijXIngRK9R/e7Xw/cXVxQK7R5JjW+SV4zGcn5hXjudkN/pLIw==
+  dependencies:
+    "@types/prop-types" "*"
+    csstype "^3.0.2"
+
 "@types/relateurl@*":
   version "0.2.33"
   resolved "https://registry.yarnpkg.com/@types/relateurl/-/relateurl-0.2.33.tgz#fa174c30100d91e88d7b0ba60cefd7e8c532516f"
@@ -3580,7 +3588,7 @@ bindings@^1.4.0:
   dependencies:
     file-uri-to-path "1.0.0"
 
-bits-ui@^0.21.12:
+bits-ui@^0.21.12, bits-ui@^0.21.7:
   version "0.21.13"
   resolved "https://registry.yarnpkg.com/bits-ui/-/bits-ui-0.21.13.tgz#e3aa7f1c6a37f00ba935bf64d79671af584b47e8"
   integrity sha512-7nmOh6Ig7ND4DXZHv1FhNsY9yUGrad0+mf3tc4YN//3MgnJT1LnHtk4HZAKgmxCOe7txSX7/39LtYHbkrXokAQ==
@@ -7302,7 +7310,7 @@ matcher@^3.0.0:
   dependencies:
     escape-string-regexp "^4.0.0"
 
-"matchers@link:../../.cache/yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers":
+"matchers@link:../../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers":
   version "0.0.0"
   uid ""
 
@@ -7478,7 +7486,7 @@ mode-watcher@^0.0.2:
   resolved "https://registry.yarnpkg.com/mode-watcher/-/mode-watcher-0.0.2.tgz#4f821adf72ffae59f176cb61ce780bfc340a39f6"
   integrity sha512-sB9bHKyNfk2qftJC3zE7cVo9nrD7OgtaXeABuSs8/rozZFDnpvBQ/jcuECo/CmQ3N+el6oBS5hJNecuoboK8gA==
   dependencies:
-    matchers "link:../../.cache/yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers"
+    matchers "link:../../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers"
     svelte-persisted-store "^0.7.0"
 
 modify-filename@^1.1.0:
@@ -9703,6 +9711,17 @@ svelte-motion@^0.11.5:
     style-value-types "5.1.2"
     tslib "^2.2.0"
 
+svelte-motion@^0.12.2:
+  version "0.12.2"
+  resolved "https://registry.yarnpkg.com/svelte-motion/-/svelte-motion-0.12.2.tgz#507dd546761d1ecc7371750e53f1427cf82b814b"
+  integrity sha512-7RrdRz9iVP55B9HT/C0hYW3pyrKlF61kAby/AkDtOAP0uHFQDrfd0qQetDC81cEsK9b40jt+jfcqSAXcA7LPEw==
+  dependencies:
+    "@types/react" "^18.2.42"
+    framesync "^6.1.2"
+    popmotion "^11.0.5"
+    style-value-types "5.1.2"
+    tslib "^2.6.2"
+
 svelte-persisted-store@^0.7.0:
   version "0.7.0"
   resolved "https://registry.yarnpkg.com/svelte-persisted-store/-/svelte-persisted-store-0.7.0.tgz#7c29ab092d0ef12c370bde899cfa22772d229680"
@@ -10330,6 +10349,13 @@ validate-npm-package-license@^3.0.1:
   dependencies:
     spdx-correct "^3.0.0"
     spdx-expression-parse "^3.0.0"
+
+vaul-svelte@^0.3.2:
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/vaul-svelte/-/vaul-svelte-0.3.2.tgz#9087230bdf5f5e3dad08855f5f697f51c972ca26"
+  integrity sha512-X4OGWttSTVUl417qGDsSFgOvIx24DoiMRY/jaP9z0v9FL8LQQJ0RQ1ZM0QpdyQPRlNd24ewjNQHh5EgYDtfNpw==
+  dependencies:
+    bits-ui "^0.21.7"
 
 verror@^1.10.0:
   version "1.10.1"

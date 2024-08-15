@@ -21,6 +21,17 @@ export const optimisticCheckIfUrl = (url: string) => {
   return pattern.test(url)
 }
 
+export const optimisticCheckIfURLOrIPorFile = (url: string) => {
+  return (
+    optimisticCheckIfUrl(url) ||
+    isIP(url) ||
+    url.startsWith('file://') ||
+    url.startsWith('data:') ||
+    url.startsWith('blob:') ||
+    checkIfLocalhost(url)
+  )
+}
+
 export const stringToURLList = (input: string) => {
   const urlPattern =
     /(\bhttps?:\/\/[\w-]+(\.[\w-]+)+\.?(:\d+)?(\/\S*)?)|\bwww\.[\w-]+(\.[\w-]+)+\.?(:\d+)?(\/\S*)?|\b[\w-]+(\.[\w-]+)+\.[a-z]{2,}(:\d+)?(\/\S*)?/gi

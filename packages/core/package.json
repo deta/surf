@@ -47,6 +47,7 @@
     "sass": "^1.70.0",
     "svelte": "^4.2.8",
     "svelte-check": "^3.6.2",
+    "svelte-motion": "^0.12.2",
     "tailwindcss": "^3.4.4",
     "tslib": "^2.6.2",
     "typed-emitter": "^2.1.0",
@@ -66,6 +67,7 @@
     "svelte-dnd-list": "^0.1.8",
     "tailwind-merge": "^2.4.0",
     "tailwind-variants": "^0.2.1",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "vaul-svelte": "^0.3.2"
   }
 }

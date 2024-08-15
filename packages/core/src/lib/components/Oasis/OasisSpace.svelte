@@ -80,6 +80,9 @@
   export let active: boolean = false
   export let historyEntriesManager: HistoryEntriesManager
   export let showBackBtn = false
+  export let hideBar = false
+  export let hideResourcePreview = false
+  export let handleEventsOutside: boolean = false
 
   $: isEverythingSpace = spaceId === 'all'
 
@@ -811,7 +814,11 @@
   }
 
   const handleOpenSettingsModal = () => {
-    showSettingsModal.set(true)
+    if ($showSettingsModal === true) {
+      showSettingsModal.set(false)
+    } else {
+      showSettingsModal.set(true)
+    }
   }
 
   const handleCloseSettingsModal = () => {
@@ -933,7 +940,7 @@
     await telemetry.trackDeleteResource(resource.type, !isEverythingSpace)
   }
 
-  const handleItemClick = (e: CustomEvent<string>) => {
+  const handleItemClick = async (e: CustomEvent<string>) => {
     log.debug('Item clicked:', e.detail)
     selectedItem.set(e.detail)
   }
@@ -1247,7 +1254,11 @@
   }
 
   const handleOpen = (e: CustomEvent<string>) => {
-    openResourceDetailsModal(e.detail)
+    if (handleEventsOutside) {
+      dispatch('open', e.detail)
+    } else {
+      openResourceDetailsModal(e.detail)
+    }
   }
 
   const handleSpaceSelected = (e: CustomEvent<{ id: string; canGoBack: boolean }>) => {
@@ -1271,7 +1282,7 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-{#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
+{#if !hideResourcePreview && $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
   <OasisResourceModalWrapper
     resourceId={$resourceDetailsModalSelected}
     {active}
@@ -1285,9 +1296,10 @@
   on:Drop={(e) => handleDrop(e.detail)}
   on:DragEnter={(e) => handleDragEnter(e.detail)}
 >
-  <div class="wrapper">
+  <div class="wrapper bg-sky-100/50">
     <div
-      class="drawer-bar bg-gradient-to-b from-sky-100/90 to-transparent via-bg-sky-100/40 backdrop-blur-md backdrop-saturate-50"
+      class=" drawer-bar rounded-t-lg rounded-b-lg bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
+      class:translate-y-24={hideBar}
     >
       {#if showBackBtn}
         <div class="absolute top-6 left-6 z-10">
@@ -1308,7 +1320,7 @@
             on:click={handleOpenNewResourceModal}
             use:tooltip={{
               text: 'Create New Resource',
-              position: 'bottom'
+              position: 'top'
             }}
           >
             <Icon name="add" size="28px" />
@@ -1333,7 +1345,7 @@
           <button
             class="settings-toggle"
             on:click={handleOpenSettingsModal}
-            use:tooltip={{ text: 'Open Settings', position: 'bottom' }}
+            use:tooltip={{ text: 'Open Settings', position: 'top' }}
           >
             <Icon name="settings" size="25px" />
           </button>
@@ -1376,7 +1388,7 @@
                       : ($space.name.sources ?? []).length > 0
                         ? 'Click to load the latest content from the connected sources'
                         : 'Click to load the latest content based on the smart query',
-                position: 'bottom'
+                position: 'top'
               }}
             >
               {#if $loadingSpaceSources}
@@ -1524,7 +1536,6 @@
     flex-direction: column;
     gap: 1rem;
     height: 100%;
-    overflow: hidden;
     border-radius: 12px;
   }
 
@@ -1558,7 +1569,7 @@
 
   .modal-wrapper {
     position: absolute;
-    top: 4rem;
+    bottom: 4rem;
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
@@ -1566,7 +1577,7 @@
 
   .drawer-bar {
     position: absolute;
-    top: 0;
+    bottom: 0;
     left: 0;
     right: 0;
     z-index: 1000;
@@ -1689,7 +1700,6 @@
     height: 100%;
     max-width: 50vw;
     max-height: 70vh;
-    overflow-y: scroll;
     border-radius: 16px;
     transform: translateX(-50%);
     background: white;

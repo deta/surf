@@ -1,5 +1,44 @@
-export const DEBUG = false;
+export const DEV = import.meta.env.DEV;
+const VITE_LOG_LEVEL = import.meta.env.R_VITE_LOG_LEVEL;
+const logLevelMap = ["verbose", "debug", "info", "warn", "error"];
+export const LOG_LEVEL =
+  DEV === true ? logLevelMap.indexOf("verbose") : levelMap.indexOf(LOG_LEVEL ?? "info");
+type LogLevel = "verbose" | "debug" | "info" | "warn" | "error";
+
 export const SUPPORTS_VIEW_TRANSITIONS = document.startViewTransition !== undefined;
+
+export const log = {
+  log: (...data: any[]) => {
+    if (LOG_LEVEL <= logLevelMap.indexOf("verbose")) {
+      console.log(...args);
+    }
+  },
+  trace: (...args: any[]) => {
+    if (LOG_LEVEL <= logLevelMap.indexOf("trace")) {
+      console.trace(...args);
+    }
+  },
+  debug: (...args: any[]) => {
+    if (LOG_LEVEL <= logLevelMap.indexOf("debug")) {
+      console.debug(...args);
+    }
+  },
+  info: (...args: any[]) => {
+    if (LOG_LEVEL <= logLevelMap.indexOf("info")) {
+      console.info(...args);
+    }
+  },
+  warn: (...args: any[]) => {
+    if (LOG_LEVEL <= logLevelMap.indexOf("warn")) {
+      console.warn(...args);
+    }
+  },
+  error: (...args: any[]) => {
+    if (LOG_LEVEL <= logLevelMap.indexOf("error")) {
+      console.error(...args);
+    }
+  }
+};
 
 /// GLOBAL MOUSE LISTENER
 export let MOUSE_POS = { x: 0, y: 0 };
@@ -71,13 +110,13 @@ EventTarget.prototype.addEventListener = function (type, fn: any, capture) {
       ref: new WeakRef(fn)
     });
 
-    //console.warn('Added Event Spy: ', type, fn);
+    log.debug("Added Event Spy: ", type, fn);
     //console.warn(EVENT_SPY);
 
     this.f(
       type,
       (...args: any[]) => {
-        //console.warn("Called listener", type, args);
+        log.debug("Called listener", type, args);
         fn(...args);
       },
       capture

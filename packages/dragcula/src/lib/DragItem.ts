@@ -1,7 +1,7 @@
 import type { ActionReturn } from "svelte/action";
 import type { DragData, DragEffect, DragOperation } from "./types.js";
 import { createStyleCache, nextElementSibling, StyleCache } from "./utils.js";
-import { EventSpy, KEY_STATE, MOUSE_POS, SUPPORTS_VIEW_TRANSITIONS } from "./internal.js";
+import { log, EventSpy, KEY_STATE, MOUSE_POS, SUPPORTS_VIEW_TRANSITIONS } from "./internal.js";
 import { tick } from "svelte";
 import { HTMLDragZone } from "./DragZone.js";
 import { DragculaDragEvent } from "./Event.js";
@@ -54,7 +54,10 @@ export class DragItem {
       status: "active",
       from: null,
       to: null,
-      item: this
+      item: this,
+
+      clientX: MOUSE_POS.x,
+      clientY: MOUSE_POS.y
     };
   }
 
@@ -195,7 +198,7 @@ export class HTMLDragItem extends DragItem {
       oldNode.removeEventListener("dragstart", this.boundDragStart);
       this.styles.transfer(oldNode, this.element);
       if (document.activeDragOperation?.status === "finalizing") {
-        console.trace("Attaching to new with status", document.activeDragOperation?.status);
+        log.trace("Attaching to new with status", document.activeDragOperation?.status);
         this.pushViewTransitionName(this.element, `dragcula-dragItem`);
         //this.styles.push(this.element, "view-transition-name", `dragcula-dragItem`);
       }
@@ -225,11 +228,7 @@ export class HTMLDragItem extends DragItem {
       document.activeDragOperation.status === "finalizing"
     ) {
       const controller = this.ITEMS.get(id)!;
-      console.debug(
-        `[HTMLDragitem:${id}] Re-attaching item to existing controller!`,
-        node,
-        controller
-      );
+      log.debug(`[HTMLDragitem:${id}] Re-attaching item to existing controller!`, node, controller);
       controller.attach(node, controller.element);
       return controller;
     }
@@ -248,7 +247,7 @@ export class HTMLDragItem extends DragItem {
     )
       return;
 
-    console.debug("Deleting controller", this.id, document.activeDragOperation?.status);
+    log.debug("Deleting controller", this.id, document.activeDragOperation?.status);
 
     super.destroy();
 
@@ -260,7 +259,7 @@ export class HTMLDragItem extends DragItem {
   }
 
   static action(node: HTMLElement, props: { id?: string; data?: DragData }): ActionReturn {
-    const controller = HTMLDragItem.new(node, props);
+    const controller = this.new(node, props);
 
     return {
       destroy() {
@@ -280,7 +279,7 @@ export class HTMLDragItem extends DragItem {
     }
     const drag = document.activeDragOperation;
     if (!drag) {
-      console.error("raf withozut activ edrag!");
+      log.error("raf withozut activ edrag!");
       this.raf = null;
       return;
     }
@@ -288,20 +287,18 @@ export class HTMLDragItem extends DragItem {
     this.previewElement.style.transform = `translate(-50%, -50%) translate(${this.previewPosition.x}px, ${this.previewPosition.y}px)`;
 
     const overZone = HTMLDragZone.findClosestFromPoint(MOUSE_POS.x, MOUSE_POS.y);
-    console.debug("dragRaf overzone", overZone);
     const newTargetId = overZone?.id ?? null;
     const oldTargetId = drag.to?.id ?? null;
 
-    console.debug("dragRaf new/old target", newTargetId, oldTargetId);
-
     if (newTargetId !== oldTargetId) {
+      log.debug("dragRaf new/old target", newTargetId, oldTargetId);
       if (oldTargetId !== null) {
         drag.to!.onDragLeave(drag);
         drag.to = null;
       }
       if (newTargetId !== null) {
         const accepted = await overZone!.onDragEnter(drag);
-        //console.warn("accepted", accepted);
+        log.debug("zone accepted", accepted);
         drag.to = accepted ? overZone : null;
       }
     }
@@ -328,10 +325,15 @@ export class HTMLDragItem extends DragItem {
       document.activeDragOperation !== undefined,
       "No active drag operation! This should not happen!"
     );
-    this.onDrag(document.activeDragOperation!);
+
+    const drag = document.activeDragOperation!;
+    drag.clientX = MOUSE_POS.x;
+    drag.clientY = MOUSE_POS.y;
+
+    this.onDrag(drag);
   }
   protected async _handleMouseUp(e: MouseEvent) {
-    console.debug(`[HTMLDragItem:${this.id}] mouseup`, e);
+    log.debug(`[HTMLDragItem:${this.id}] mouseup`, e);
     console.assert(
       document.activeDragOperation !== undefined,
       "No active drag operation! This should not happen!"
@@ -384,7 +386,7 @@ export class HTMLDragItem extends DragItem {
   protected _handleDragStart(e: DragEvent) {
     e.preventDefault();
     e.stopPropagation();
-    console.debug(`[HTMLDragItem:${this.id}] dragstart`, e);
+    log.debug(`[HTMLDragItem:${this.id}] dragstart`, e);
 
     (this.nextElement as HTMLElement) = nextElementSibling(this.element, (el) =>
       el.hasAttribute("data-dragcula-item")
@@ -403,7 +405,7 @@ export class HTMLDragItem extends DragItem {
   /// === EVENTS
 
   override async onDragStart() {
-    console.debug(`[HTMLDragItem:${this.id}] DragStart`);
+    log.debug(`[HTMLDragItem:${this.id}] DragStart`);
     super.onDragStart();
     const drag = document.activeDragOperation;
     if (drag === undefined) {
@@ -419,9 +421,14 @@ export class HTMLDragItem extends DragItem {
         this.element,
         "DragStart"
       );
-      //console.log("hasDragculaListeners", hasDragculaListeners, "handlesDragculaEvent", handlesDragculaEvent);
+      log.debug(
+        "hasDragculaListeners",
+        hasDragculaListeners,
+        "handlesDragculaEvent",
+        handlesDragculaEvent
+      );
       if (hasDragculaListeners && !handlesDragculaEvent) {
-        console.warn(
+        log.warn(
           "Element ",
           this.element,
           " has DragStart listener(s), but not all handle Dragcula events correctly! Are you missing .continue() / .abort() ?"
@@ -483,9 +490,8 @@ export class HTMLDragItem extends DragItem {
         // TOOD: Reset vt name overrides
       });
     } catch (e) {
-      //console.error(e);
       // TODO: Abort all
-      /////console.log("Aborting drag operation!");
+      log.warn("Aborting drag operation!", e);
       this.onDragEnd(drag);
     }
   }
@@ -506,7 +512,7 @@ export class HTMLDragItem extends DragItem {
   }
 
   override onDragEnd(drag: DragOperation) {
-    console.debug(`[HTMLDragItem:${this.id}] DragEnd`, drag);
+    log.debug(`[HTMLDragItem:${this.id}] DragEnd`, drag);
 
     //console.assert(this.previewElement !== undefined, "Preview element is null in onDragEnd! This should not happen!");
     if (this.previewElement) this.styles.resetAll(this.previewElement);
@@ -517,10 +523,12 @@ export class HTMLDragItem extends DragItem {
       this.previewElement?.remove();
     }
 
+    this.styles.resetEverything();
+
     if (drag.status === "aborted") {
       this.pushViewTransitionName(this.element, `dragcula-dragItem`);
       //this.styles.push(this.element, "view-transition-name", `dragcula-dragItem`);
-      //console.log("Drag aborted, reseetting");
+      log.warn("Drag aborted, reseetting");
       if (this.previewMode === "hoist") {
         throw new Error("Hoist not implemented!");
         // NOTE: only readd if element / parent / next sib still exists.
@@ -529,8 +537,8 @@ export class HTMLDragItem extends DragItem {
       // TODO: Check clone / hosit & act
       if (drag.item instanceof DragItem) {
         /*if (drag.item.dragEffect === "move") {
-					this.
-				}*/
+          this.
+        }*/
       }
     }
 
@@ -550,12 +558,12 @@ export class HTMLDragItem extends DragItem {
   }
 
   override onDragEnter(drag: DragOperation) {
-    console.debug(`[HTMLDragItem:${this.id}] DragEnter`, drag);
+    log.debug(`[HTMLDragItem:${this.id}] DragEnter`, drag);
     super.onDragEnter(drag);
   }
 
   override onDragLeave(drag: DragOperation) {
-    console.debug(`[HTMLDragItem:${this.id}] DragLeave`, drag);
+    log.debug(`[HTMLDragItem:${this.id}] DragLeave`, drag);
     super.onDragLeave(drag);
   }
 }

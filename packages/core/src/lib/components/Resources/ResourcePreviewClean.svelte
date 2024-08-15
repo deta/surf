@@ -39,7 +39,6 @@
   import YoutubePreview from '../Cards/Post/YoutubePreview.svelte'
   import AnnotationPreview from '../Cards/Annotation/AnnotationPreview.svelte'
 
-  import log from '../../utils/log'
   import HistoryEntryPreview from '../Cards/Link/HistoryEntryPreview.svelte'
   import { getHumanDistanceToNow } from '../../utils/time'
   import { isModKeyPressed } from '../../utils/keyboard'
@@ -97,7 +96,10 @@
     data = e.detail
   }
 
+  let dragging = false
+
   const handleDragStart = (e: DragEvent) => {
+    dragging = true
     if (data) {
       if (resource.type.startsWith(ResourceTypes.POST)) {
         e.dataTransfer?.setData('text/uri-list', (data as ResourceDataPost)?.url ?? '')
@@ -115,6 +117,11 @@
   }
 
   const handleClick = async (e: MouseEvent) => {
+    if (dragging) {
+      dragging = false
+      return
+    }
+
     if (isModKeyPressed(e) || newTabOnClick) {
       dispatch('new-tab', {
         url: canonicalUrl!,
@@ -124,7 +131,6 @@
       return
     }
 
-    log.debug('Resource clicked', resource)
     if (resource.type === ResourceTypes.ANNOTATION) {
       const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
       if (annotatesTag) {
@@ -156,7 +162,6 @@
       active: true,
       trigger: CreateTabEventTrigger.OasisItem
     }
-    log.debug('Opening resource in new tab', payload)
 
     dispatch('new-tab', payload)
   }
@@ -175,6 +180,7 @@
 <div
   on:click={handleClick}
   class="resource-preview"
+  class:clickable={newTabOnClick}
   class:isSelected={selected}
   class:background={(isLiveSpaceResource && showSummary && resource.metadata?.userContext) ||
     showSource}
@@ -399,6 +405,10 @@
         animation-iteration-count: 1;
         animation-delay: 60ms;
       }
+    }
+
+    &.clickable {
+      cursor: pointer;
     }
 
     &.isSelected {
