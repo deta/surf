@@ -35,6 +35,7 @@
   import type { BrowserTabNewTabEvent } from './BrowserTab.svelte'
   import ErrorPage from './ErrorPage.svelte'
 
+  export let id: string | undefined
   export let src: string
   export let partition: string
   export let historyEntriesManager: HistoryEntriesManager
@@ -320,6 +321,7 @@
 {/if}
 
 <Webview
+  {id}
   {src}
   {partition}
   {historyEntriesManager}

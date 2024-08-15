@@ -944,7 +944,7 @@
 
   :global(.chat-message-content h2) {
     font-size: 1.4rem;
-    margin-top: 0.5rem !important;
+    margin-top: 1rem !important;
     margin-bottom: 0.5rem !important;
   }
 </style>

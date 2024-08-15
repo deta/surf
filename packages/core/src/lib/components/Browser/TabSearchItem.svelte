@@ -13,6 +13,7 @@
       | 'resource'
       | 'space'
       | 'navigate'
+      | 'general-search'
     icon?: Icons
     iconUrl?: string
     iconColors?: [string, string]
@@ -45,33 +46,62 @@
   //     return 'arrow.right' // Default icon for other types
   //   }
 
+  function getDescriptionFromType(type: CMDMenuItem['type']) {
+    switch (type) {
+      case 'command':
+        return 'Action'
+      case 'tab':
+        return 'Tab'
+      case 'suggestion':
+        return 'Suggestion'
+      case 'google-search':
+        return 'Google Search'
+      case 'history':
+        return 'History'
+      case 'resource':
+        return 'Resource'
+      case 'space':
+        return 'Space'
+      case 'navigate':
+        return 'Navigate'
+      case 'general-search':
+        return 'Search the web'
+      default:
+        return ''
+    }
+  }
+
   function handleSelect() {
     dispatch('select', item)
   }
 </script>
 
 <Command.Item value={item.id || item.value || item.label} onSelect={handleSelect}>
-  <div class="flex items-center justify-between gap-3">
-    <div class="flex items-center gap-2">
+  <div class="flex items-center justify-between gap-3 w-full group">
+    <div class="flex items-center gap-2 flex-grow min-w-0">
       {#if item.iconUrl}
-        <img src={item.iconUrl} alt="favicon" class="w-4 h-4" />
+        <img src={item.iconUrl} alt="favicon" class="w-4 h-4 flex-shrink-0" />
       {:else if item.iconColors}
-        <ColorIcon colors={item.iconColors} class="w-4 h-4" />
+        <div class="color-icon-wrapper w-fit h-fit flex-shrink-0">
+          <ColorIcon colors={item.iconColors} />
+        </div>
       {:else}
-        <Icon name={item.icon ?? 'arrow.right'} class="w-4 h-4" />
+        <Icon name={item.icon ?? 'arrow.right'} class="w-4 h-4 flex-shrink-0" />
       {/if}
 
-      <span class="truncate max-w-prose">
+      <span class="truncate flex-grow min-w-0">
         {item.label || item.value}
       </span>
     </div>
 
     {#if item.shortcut}
-      <Command.Shortcut>{item.shortcut}</Command.Shortcut>
+      <Command.Shortcut class="flex-shrink-0 bg-neutral-100 rounded-lg p-1"
+        >{item.shortcut}</Command.Shortcut
+      >
     {/if}
 
-    {#if item.description}
-      <Command.Description>{item.description}</Command.Description>
-    {/if}
+    <Command.Description class="flex-shrink-0"
+      >{item.description ?? getDescriptionFromType(item.type)}</Command.Description
+    >
   </div>
 </Command.Item>

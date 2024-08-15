@@ -233,6 +233,14 @@ const api = {
     }
   },
 
+  onOpenOasis: (callback) => {
+    try {
+      ipcRenderer.on('open-oasis', (_) => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
   onOpenCheatSheet: (callback) => {
     try {
       ipcRenderer.on('open-cheat-sheet', () => callback())

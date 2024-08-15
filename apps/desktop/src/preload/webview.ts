@@ -488,6 +488,85 @@ function handleScrollToAnnotation(
   }
 }
 
+/**
+ * We need this shitty serialization boilerplate, as we cannot ipc send DataTransfer directly..
+ * Would love to do but we need to break it down to string / ArrayBuffer primitives and re-assemble
+ * it in here.
+ */
+function deSerializeDragData(data: {
+  strings: { type: string; value: string | undefined }[]
+  files: { name: string; type: string; buffer: ArrayBuffer | undefined }[]
+}): DataTransfer {
+  const dataTransfer = new DataTransfer()
+  dataTransfer.dropEffect = 'move'
+  dataTransfer.effectAllowed = 'all'
+
+  for (const str of data.strings) {
+    dataTransfer.setData(str.type, str.value ?? '')
+  }
+
+  for (const f of data.files) {
+    if (!f.buffer) {
+      f.buffer = new ArrayBuffer(1)
+    }
+
+    const file = new File([f.buffer], f.name, { type: f.type })
+    dataTransfer.items.add(file)
+  }
+
+  return dataTransfer
+}
+
+function handleSimulateDragStart(
+  data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragStart]
+) {
+  console.debug('Simulating drag start', data)
+  window.dragcula = {
+    target: null,
+    dataTransfer: deSerializeDragData(data.data)
+  }
+}
+function handleSimulateDragUpdate(
+  data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragUpdate]
+) {
+  const target = document.elementFromPoint(data.clientX, data.clientY)
+  if (!target) return
+
+  const dataTransfer = window.dragcula.dataTransfer
+
+  if (window.dragcula.target !== target) {
+    if (window.dragcula.target !== null) {
+      const evt = new DragEvent('dragleave', { dataTransfer, bubbles: true })
+      window.dragcula.target.dispatchEvent(evt)
+    }
+    if (target !== null) {
+      const evt = new DragEvent('dragenter', { dataTransfer, bubbles: true, cancelable: true })
+      target.dispatchEvent(evt)
+    }
+  }
+  if (target !== null) {
+    const evt = new DragEvent('dragover', { dataTransfer, bubbles: true, cancelable: true })
+
+    target.dispatchEvent(evt)
+  }
+  window.dragcula.target = target
+}
+function handleSimulateDragEnd(
+  data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragEnd]
+) {
+  console.debug('Ending Drag', data, data.data)
+  if (data.action === 'drop') {
+    const target = document.elementFromPoint(data.clientX, data.clientY)
+    if (!target) return
+
+    const dataTransfer = window.dragcula.dataTransfer
+    const evt = new DragEvent('drop', { dataTransfer, bubbles: true })
+
+    target.dispatchEvent(evt)
+  }
+  window.dragcula = undefined
+}
+
 window.addEventListener('DOMContentLoaded', async (_) => {
   window.addEventListener('mouseup', (e: MouseEvent) => {
     const target = e.target as HTMLElement
@@ -808,6 +887,46 @@ window.addEventListener('wheel', (event: WheelEvent) => {
   })
 })
 
+window.addEventListener(
+  'mousemove',
+  (event: MouseEvent) => {
+    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+    // TODO: Fix missing types
+    sendPageEvent(WebViewEventSendNames.MouseMove, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pageX: event.pageX,
+      pageY: event.pageY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey
+    })
+  },
+  { passive: true, capture: true }
+)
+
+window.addEventListener(
+  'mouseup',
+  (event: MouseEvent) => {
+    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+    // TODO: Fix missing types
+    sendPageEvent(WebViewEventSendNames.MouseUp, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey
+    })
+  },
+  { passive: true, capture: true }
+)
+
 window.addEventListener('focus', (_event: FocusEvent) => {
   sendPageEvent(WebViewEventSendNames.Focus)
 })
@@ -816,7 +935,9 @@ function sendPageEvent<T extends keyof WebViewSendEvents>(
   name: T,
   data?: WebViewSendEvents[T]
 ): void {
-  console.debug('Sending page event', name, data)
+  // Ignore mouse related passthrough to avoid spam
+  if (![WebViewEventSendNames.MouseMove].includes(name))
+    console.debug('Sending page event', name, data)
   ipcRenderer.sendToHost('webview-page-event', name, data)
 }
 
@@ -843,6 +964,12 @@ ipcRenderer.on('webview-event', (_event, payload) => {
     handleHighlightText(data)
   } else if (type == WebViewEventReceiveNames.SeekToTimestamp) {
     handleSeekToTimestamp(data)
+  } else if (type === WebViewEventReceiveNames.SimulateDragStart) {
+    handleSimulateDragStart(data)
+  } else if (type === WebViewEventReceiveNames.SimulateDragUpdate) {
+    handleSimulateDragUpdate(data)
+  } else if (type === WebViewEventReceiveNames.SimulateDragEnd) {
+    handleSimulateDragEnd(data)
   }
 })
 

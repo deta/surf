@@ -1,3 +1,5 @@
+import { log } from "./internal.js";
+
 export class StyleCache {
   items = new Map<HTMLElement, Record<string, string[]>>();
 
@@ -64,19 +66,27 @@ export class StyleCache {
       this.items.delete(node);
     }
   }
+  // TODO: Rename to reset all (resetAll -> resetNode)
+  resetEverything() {
+    for (const [node, cache] of this.items.entries()) {
+      for (const prop in cache) {
+        this.resetAll(node);
+      }
+    }
+  }
 
   //apply(node: HTMLElement, prop: string) { }
   //applyAll(node: HTMLElement, omit?: string[]) { }
   transfer(node: HTMLElement, newNode: HTMLElement) {}
 
   dump(label = "") {
-    /*console.log("Dumping style cache", label, this.items.size)
-		for (const [node, cache] of this.items.entries()) {
-			console.group(`[StyleCache] ${label} :: Node`, node)
-			console.table(cache)
-			console.groupEnd();
-		}*/
-    // debug only
+    return;
+    log.log("Dumping style cache", label, this.items.size);
+    for (const [node, cache] of this.items.entries()) {
+      log.group(`[StyleCache] ${label} :: Node`, node);
+      log.table(cache);
+      log.groupEnd();
+    }
   }
 }
 

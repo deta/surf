@@ -120,6 +120,15 @@ const template = [
           log.log('Close Tab')
           ipcSenders.closeActiveTab()
         }
+      },
+      { type: 'separator' },
+      {
+        label: 'Open Oasis',
+        accelerator: 'CmdOrCtrl+O',
+        click: () => {
+          log.log('Open Oasis')
+          ipcSenders.openOasis()
+        }
       }
     ]
   },

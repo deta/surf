@@ -1,6 +1,6 @@
 import type { ActionReturn } from "svelte/action";
 import { DragculaDragEvent, type DragEffect, type DragOperation } from "./index.js";
-import { EventSpy, MOUSE_POS } from "./internal.js";
+import { EventSpy, log, MOUSE_POS } from "./internal.js";
 
 export class DragZone {
   static ZONES = new Map<string, DragZone>();
@@ -27,8 +27,8 @@ export class DragZone {
 
     // FIX: Removed for now to enable scuffed nesting lol
     /*if (DragZone.ZONES.has(this.id)) {
-			throw new Error(`DragZone with id ${this.id} already exists!`);
-		}*/
+      throw new Error(`DragZone with id ${this.id} already exists!`);
+    }*/
     DragZone.ZONES.set(this.id, this);
   }
 
@@ -62,10 +62,10 @@ export class HTMLDragZone extends DragZone {
     super.isTarget = v;
     if (v) {
       this.element.setAttribute("data-dragcula-isTarget", "true");
-      document.body.setAttribute("data-dragcula.isTargeting", this.id);
+      document.body.setAttribute("data-dragcula-isTargeting", this.id);
     } else {
       this.element.removeAttribute("data-dragcula-isTarget");
-      document.body.removeAttribute("data-dragcula.isTargeting");
+      document.body.removeAttribute("data-dragcula-isTargeting");
     }
   }
 
@@ -123,11 +123,11 @@ export class HTMLDragZone extends DragZone {
   /// === EVENTS
 
   override async onDrop(drag?: DragOperation): Promise<void> {
-    console.debug(`[HTMLDragZone:${this.id}] Drop`, drag);
+    log.debug(`[HTMLDragZone:${this.id}] Drop`, drag);
     super.onDrop(drag);
 
     if (drag === undefined) {
-      console.error("Not implemented, native drop");
+      log.error("Not implemented, native drop");
       // TODO: handle native drop
       return Promise.reject();
     }
@@ -138,23 +138,24 @@ export class HTMLDragZone extends DragZone {
       "Drop"
     );
 
-    //console.warn("onDrop", hasDragculaListeners, handlesDragculaEventCorrectly);
+    log.warn("onDrop", hasDragculaListeners, handlesDragculaEventCorrectly);
+
 
     return await DragculaDragEvent.dispatch("Drop", drag, this.element);
     /// FIX: beeing dispatch in svelte, out cheks dont work :(
     /*	if (hasDragculaListeners && !handlesDragculaEventCorrectly) {
-			throw new Error(`[HTMLDragZone:${this.id}] Dragcula event listeners do not handle event correctly!`);
-		}
-		else if (hasDragculaListeners && handlesDragculaEventCorrectly) {
-			return await DragculaDragEvent.dispatch("Drop", drag, this.element);
-		}
-		else {
-			return DragculaDragEvent.dispatch("Drop", drag, this.element);
-		}*/
+      throw new Error(`[HTMLDragZone:${this.id}] Dragcula event listeners do not handle event correctly!`);
+    }
+    else if (hasDragculaListeners && handlesDragculaEventCorrectly) {
+      return await DragculaDragEvent.dispatch("Drop", drag, this.element);
+    }
+    else {
+      return DragculaDragEvent.dispatch("Drop", drag, this.element);
+    }*/
   }
 
   override async onDragEnter(drag?: DragOperation): Promise<boolean> {
-    console.debug(`[HTMLDragZone:${this.id}] DragEnter`, drag);
+    log.debug(`[HTMLDragZone:${this.id}] DragEnter`, drag);
     console.assert(
       drag !== undefined,
       "onDragEnter called with dragOperation === undefined! This should not happen!"
@@ -174,13 +175,27 @@ export class HTMLDragZone extends DragZone {
   }
 
   override onDragLeave(drag?: DragOperation) {
-    console.debug(`[HTMLDragZone:${this.id}] DragLeave`, drag);
+    log.debug(`[HTMLDragZone:${this.id}] DragLeave`, drag);
     super.onDragLeave(drag);
+
+    try {
+      DragculaDragEvent.dispatch("DragLeave", drag!, this.element);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   override onDragOver(drag?: DragOperation) {
     //console.debug(`[HTMLDragZone:${this.id}] DragOver`, drag);
     super.onDragOver(drag);
+
+    try {
+      DragculaDragEvent.dispatch("DragOver", drag!, this.element);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /// === DOM HANDLERS
@@ -192,10 +207,10 @@ export class HTMLDragZone extends DragZone {
   protected _handleDrop(e: DragEvent) {
     e.stopPropagation();
     e.preventDefault();
-    console.debug(`[HTMLDragZone:${this.id}] drop (NATIVE)`, e);
+    log.debug(`[HTMLDragZone:${this.id}] drop (NATIVE)`, e);
 
     if (document.activeDragOperation === undefined) {
-      console.error(`[HTMLDragZone:${this.id}] No active drag operation during NATIVE drop!`);
+      log.error(`[HTMLDragZone:${this.id}] No active drag operation during NATIVE drop!`);
       return;
     }
 
@@ -206,9 +221,9 @@ export class HTMLDragZone extends DragZone {
   }
   protected async _handleDragEnter(e: DragEvent) {
     e.stopPropagation();
-    console.debug(`[HTMLDragZone:${this.id}] dragenter`, e);
+    log.debug(`[HTMLDragZone:${this.id}] dragenter`, e);
     if (document.activeDragOperation === undefined) {
-      console.debug(
+      log.debug(
         `[HTMLDragZone:${this.id}] No active drag operation! Creating one with native DataTransfer!`
       );
       document.activeDragOperation = {
@@ -225,7 +240,7 @@ export class HTMLDragZone extends DragZone {
   protected _handleDragLeave(e: DragEvent) {
     e.stopPropagation();
     e.preventDefault();
-    console.debug(`[HTMLDragZone:${this.id}] dragleave`, e);
+    log.debug(`[HTMLDragZone:${this.id}] dragleave`, e);
     this.onDragLeave(document.activeDragOperation);
   }
   protected _handleDragOver(e: DragEvent) {
@@ -255,7 +270,7 @@ export class HTMLDragZone extends DragZone {
         // Should be fine for now though!
         const zoneId = el.getAttribute("data-dragcula-zone")!;
         if (!DragZone.ZONES.has(zoneId)) {
-          console.error("Target zone found, but controller is NULL");
+          log.error("Target zone found, but controller is NULL");
         }
         return (DragZone.ZONES.get(el.getAttribute("data-dragcula-zone")!) as HTMLDragZone) || null;
       }

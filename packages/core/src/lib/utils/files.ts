@@ -63,7 +63,9 @@ export const humanFileTypes = {
   [ResourceTypes.DOCUMENT_SPACE_NOTE]: 'Document',
   [ResourceTypes.DOCUMENT]: 'Document',
   [ResourceTypes.TABLE_COLUMN]: 'Table Column',
-  [ResourceTypes.TABLE]: 'Table'
+  [ResourceTypes.TABLE]: 'Table',
+  [ResourceTypes.ANNOTATION]: 'Annotation',
+  [ResourceTypes.HISTORY_ENTRY]: 'Link'
 }
 
 export const getFileType = (fileType: string) => {
