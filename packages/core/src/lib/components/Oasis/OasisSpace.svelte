@@ -70,7 +70,8 @@
     CreateTabEventTrigger,
     DeleteSpaceEventTrigger,
     OpenResourceEventFrom,
-    RefreshSpaceEventTrigger
+    RefreshSpaceEventTrigger,
+    SaveToOasisEventTrigger
   } from '@horizon/types'
   import { truncate } from '../../utils/text'
   import PQueue from 'p-queue'
@@ -1067,6 +1068,7 @@
                 // remove silent tag if it exists sicne the user is explicitly adding it
                 log.debug('Removing silent tag from resource', resourceId)
                 await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+                telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, true)
               }
             })
           )

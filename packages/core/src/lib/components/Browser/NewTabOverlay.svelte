@@ -105,6 +105,7 @@
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
   import { useLocalStorageStore } from '../../utils/localstorage'
+  import { AddResourceToSpaceEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
 
@@ -667,6 +668,7 @@
 
   const resourceManager = oasis.resourceManager
   const spaces = oasis.spaces
+  const telemetry = resourceManager.telemetry
 
   const showChat = writable(false)
   const resourceIds = writable<string[]>([])
@@ -979,12 +981,13 @@
                 // remove silent tag if it exists sicne the user is explicitly adding it
                 log.debug('Removing silent tag from resource', resourceId)
                 await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+                telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, false)
               }
             })
           )
         }
       }
-
+      /*
       if (spaceId !== 'all') {
         await oasis.addResourcesToSpace(spaceId, resourceIds)
         await loadSpaceContents(spaceId)
@@ -999,6 +1002,8 @@
       } else {
         await loadEverything()
       }
+      */
+      await loadEverything()
     } catch (error) {
       log.error('Error dropping:', error)
       toast.error('Error dropping: ' + (error as Error).message)
