@@ -10,6 +10,7 @@
   export let items: Item[] = []
   export let isEverythingSpace: boolean
   export let showResourceSource: boolean = false
+  export let newTabOnClick: boolean = false
 
   let prevItemLength = 0
   let gridItems: Item[] = []
@@ -141,7 +142,7 @@
         const top = shortestColumn.height
         const left = columnIndex * (this.columnWidth + this.gapPercentage)
 
-        const PADDING_TOP = isEverythingSpace ? 0 : 100
+        const PADDING_TOP = 0
 
         const itemStyle = {
           left: `${left}%`,
@@ -265,12 +266,16 @@
 
   function observeItems(gridContainer: HTMLElement | null) {
     items.forEach((item) => {
-      const dom = document.getElementById(
-        `item-${typeof item.id === 'object' ? item.id.id : item.id}`
-      )
-      if (dom) {
-        item.dom = dom
-        observeItemHeightChange(item)
+      const itemId = `item-${typeof item.id === 'object' ? item.id.id : item.id}`
+
+      if (gridContainer) {
+        const dom = gridContainer.querySelector(`#${itemId}`) as HTMLElement
+
+        if (dom) {
+          console.log('xxx-grid', dom)
+          item.dom = dom
+          observeItemHeightChange(item)
+        }
       }
     })
   }
@@ -389,7 +394,7 @@
   }}
 />
 
-<div {id} class="masonry-grid" on:wheel={handleWheel}>
+<div {id} data-vaul-no-drag class="masonry-grid" on:wheel={handleWheel}>
   <!-- <div class="debug">
     Total items: {items.length} | Visible items: {gridItems.filter((item) => item.visible).length}
   </div> -->
@@ -399,7 +404,6 @@
       <div
         class="item space"
         id="item-{item.id.id}"
-        class:visible={item.visible}
         style="left: {item.style.left}; top: {item.style.top};"
       >
         <div class="item-details" bind:this={item.dom}>
@@ -408,15 +412,18 @@
       </div>
     {:else}
       <div
+        data-vaul-no-drag
         class="item resource"
         id="item-{item.id}"
         class:visible={item.visible}
         style="left: {item.style.left}; top: {item.style.top}; height: {item.style.height};"
+        bind:this={item.dom}
       >
-        <div class="item-details" bind:this={item.dom}>
+        <div class="item-details">
           <OasisResourceLoader
             id={item.id}
             showSource={showResourceSource}
+            {newTabOnClick}
             on:click
             on:open
             on:remove

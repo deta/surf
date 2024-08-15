@@ -180,7 +180,7 @@ export class Resource {
   }
 
   private async readDataAsBlob() {
-    const buffer = await this.sffs.readDataFile(this.path, this.id)
+    const buffer = await this.sffs.readDataFile(this.id)
 
     return new Blob([buffer], { type: this.type })
   }
@@ -216,7 +216,7 @@ export class Resource {
       return
     }
 
-    await this.sffs.writeDataFile(this.path, this.id, this.rawData)
+    await this.sffs.writeDataFile(this.id, this.rawData)
   }
 
   updateData(data: Blob, write = true) {

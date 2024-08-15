@@ -314,6 +314,16 @@ export const ipcSenders = {
     window.webContents.send('close-active-tab')
   },
 
+  openOasis: () => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('open-oasis')
+  },
+
   reloadActiveTab: (force = false) => {
     const window = getMainWindow()
     if (!window) {

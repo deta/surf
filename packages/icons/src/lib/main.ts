@@ -30,6 +30,7 @@ import ArrowHorizontal from './Icons/ArrowHorizontal.svelte'
 import ArrowDiagonalMinimize from './Icons/ArrowDiagonalMinimize.svelte'
 import Search from './Icons/Search.svelte'
 import Info from './Icons/Info.svelte'
+import Face from './Icons/Face.svelte'
 import File from './Icons/File.svelte'
 import Docs from './Icons/Docs.svelte'
 import Bookmark from './Icons/Bookmark.svelte'
@@ -111,6 +112,7 @@ export const icons = {
   arrowHorizontal: ArrowHorizontal,
   arrowDiagonalMinimize: ArrowDiagonalMinimize,
   info: Info,
+  face: Face,
   file: File,
   docs: Docs,
   bookmark: Bookmark,
@@ -193,6 +195,7 @@ export {
   ArrowDiagonalMinimize,
   Search,
   Info,
+  Face,
   File,
   Docs,
   Bookmark,

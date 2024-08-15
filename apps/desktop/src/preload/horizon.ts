@@ -16,9 +16,8 @@ import { minify } from 'html-minifier'
 import { createAPI } from '@horizon/api'
 import { actionsToRunnableTools } from './actions'
 import { ElectronAppInfo } from '@horizon/types'
-import type { UserConfig, HorizonAction, EditablePrompt, UserSettings } from '@horizon/types'
-import { getConfig, getUserConfig } from '../main/config'
-import { ipcSenders } from '../main/ipcHandlers'
+import type { HorizonAction, EditablePrompt, UserSettings } from '@horizon/types'
+import { getUserConfig } from '../main/config'
 
 const log = useLogScope('Horizon Preload')
 
@@ -28,11 +27,6 @@ const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
 const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
-
-// TODO: think this is useless?
-if (process.platform === 'win32') {
-  process.env.PATH += `;${APP_PATH}`
-}
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
@@ -234,6 +228,14 @@ const api = {
   onOpenURL: (callback) => {
     try {
       ipcRenderer.on('open-url', (_, url) => callback(url))
+    } catch (error) {
+      // noop
+    }
+  },
+
+  onOpenOasis: (callback) => {
+    try {
+      ipcRenderer.on('open-oasis', (_) => callback())
     } catch (error) {
       // noop
     }
@@ -459,15 +461,14 @@ export class ResourceHandle {
 
   static async open(
     rootPath: string,
-    filePath: string,
     resourceId: string,
     flags: string = 'a+'
   ): Promise<ResourceHandle> {
     const resolvedRootPath = path.resolve(rootPath)
-    const resolvedFilePath = path.resolve(resolvedRootPath, filePath)
+    const resolvedFilePath = path.resolve(resolvedRootPath, resourceId)
 
     if (!resolvedFilePath.startsWith(resolvedRootPath)) {
-      throw new Error('invalid file path')
+      throw new Error('Invalid resource ID')
     }
 
     const fd = await fsp.open(resolvedFilePath, flags)
@@ -609,13 +610,8 @@ const resources = (() => {
     return `${BACKEND_ROOT_PATH}/sffs.sqlite`
   }
 
-  async function openResource(filePath: string, resourceId: string, flags: string) {
-    const resourceHandle = await ResourceHandle.open(
-      BACKEND_RESOURCES_PATH,
-      filePath,
-      resourceId,
-      flags
-    )
+  async function openResource(resourceId: string, flags: string) {
+    const resourceHandle = await ResourceHandle.open(BACKEND_RESOURCES_PATH, resourceId, flags)
     resourceHandles.set(resourceId, resourceHandle)
 
     return resourceId

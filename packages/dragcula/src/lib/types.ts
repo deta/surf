@@ -16,4 +16,8 @@ export interface DragOperation {
   item: DragItem | DataTransfer;
 
   index?: number;
+
+  /// Metadata
+  clientX: number;
+  clientY: number;
 }

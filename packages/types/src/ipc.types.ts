@@ -15,11 +15,17 @@ export enum WebViewEventReceiveNames {
   RestoreAnnotation = 'restore_annotation',
   ScrollToAnnotation = 'scroll_to_annotation',
   HighlightText = 'highlight_text',
-  SeekToTimestamp = 'seek_to_timestamp'
+  SeekToTimestamp = 'seek_to_timestamp',
+  SimulateDragStart = 'simulate_drag_start',
+  SimulateDragUpdate = 'simulate_drag_update',
+  SimulateDragEnd = 'simulate_drag_end'
 }
 
 export enum WebViewEventSendNames {
   Wheel = 'wheel',
+  // NOTE: Using prefix for mouse events, not to confuse with app window events!
+  MouseMove = 'passthrough_mousemove',
+  MouseUp = 'passthrough_mouseup',
   Focus = 'focus',
   KeyUp = 'key_up',
   KeyDown = 'key_down',
@@ -107,6 +113,30 @@ export type WebViewEventUpdateAnnotation = {
   data: Partial<ResourceDataAnnotation['data']>
 }
 
+export type WebViewEventSimulateDragStart = {
+  lientX: number
+  clientY: number
+  data: {
+    strings: { type: string; value: undefined }[]
+    files: { name: string; type: string; buffer: undefined }[]
+  }
+}
+export type WebViewEventSimulateDragUpdate = {
+  clientX: number
+  clientY: number
+}
+export type WebViewEventSimulateDragEnd = {
+  action: 'abort' | 'drop'
+  clientX: number
+  clientY: number
+
+  /// additional data here if it needs to be overridden
+  data?: {
+    strings: { type: string; value: string }[]
+    files: { name: string; type: string; buffer: ArrayBuffer }[]
+  }
+}
+
 export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.GetSelection]: void
   [WebViewEventReceiveNames.GetResource]: void
@@ -117,10 +147,15 @@ export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.ScrollToAnnotation]: WebViewEventAnnotation
   [WebViewEventReceiveNames.HighlightText]: WebViewEventHighlightText
   [WebViewEventReceiveNames.SeekToTimestamp]: WebViewEventSeekToTimestamp
+  [WebViewEventReceiveNames.SimulateDragStart]: WebViewEventSimulateDragStart
+  [WebViewEventReceiveNames.SimulateDragUpdate]: WebViewEventSimulateDragUpdate
+  [WebViewEventReceiveNames.SimulateDragEnd]: WebViewEventSimulateDragEnd
 }
 
 export type WebViewSendEvents = {
   [WebViewEventSendNames.Wheel]: WebViewEventWheel
+  [WebViewEventSendNames.MouseMove]: MouseEvent
+  [WebViewEventSendNames.MouseUp]: MouseEvent
   [WebViewEventSendNames.Focus]: void
   [WebViewEventSendNames.KeyUp]: WebViewEventKeyUp
   [WebViewEventSendNames.KeyDown]: WebViewEventKeyDown

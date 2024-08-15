@@ -25,7 +25,8 @@
 		commandEl,
 		handleRootKeydown,
 		ids: commandIds,
-		state: stateStore
+		state: stateStore,
+		setFirstItemToSelected
 	} = createCommand({
 		label,
 		shouldFilter,
@@ -41,6 +42,8 @@
 		state,
 		ids
 	});
+
+	export const selectFirstCommandItem = setFirstItemToSelected;
 
 	function syncValueAndState(value: string | undefined) {
 		if (value && value !== $stateStore.value) {

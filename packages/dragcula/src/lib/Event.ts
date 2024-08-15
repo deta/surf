@@ -1,6 +1,6 @@
 import { DragItem } from "./DragItem.js";
 import type { DragZone } from "./index.js";
-import { KEY_STATE } from "./internal.js";
+import { KEY_STATE, MOUSE_POS } from "./internal.js";
 import type { DragData, DragEffect, DragOperation } from "./types.js";
 
 export type DragEventType =
@@ -60,6 +60,10 @@ export class DragculaDragEvent extends Event {
   readonly shiftKey: boolean = false;
   readonly altKey: boolean = false;
   readonly metaKey: boolean = false;
+
+  /// Passthrough of mousevent props
+  readonly clientX: number = MOUSE_POS.x;
+  readonly clientY: number = MOUSE_POS.y;
 
   protected promise: Promise<void>;
   continue = () => {};

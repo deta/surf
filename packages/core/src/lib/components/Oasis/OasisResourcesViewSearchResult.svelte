@@ -13,6 +13,7 @@
   export let selected: string | null = null
   export let isEverythingSpace: boolean
   export let showResourceSource: boolean = false
+  export let newTabOnClick: boolean = false
 
   const log = useLogScope('OasisResourcesView')
   const dispatch = createEventDispatcher()
@@ -52,6 +53,7 @@
       <Masonry
         renderContents={$renderContents.map((item) => item.id)}
         {showResourceSource}
+        {newTabOnClick}
         on:load-more={handleLoadChunk}
         on:open
         on:remove

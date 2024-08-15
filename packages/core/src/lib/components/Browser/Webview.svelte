@@ -2,6 +2,12 @@
   export type WebviewNavigationEvent = { url: string; oldUrl: string }
   export type WebviewHistoryChangeEvent = { stack: string[]; index: number }
 
+  export type WebviewError = {
+    code: number
+    description: string
+    url: string
+  }
+
   export type WebviewEvents = {
     'webview-page-event': {
       type: WebViewEventSendNames
@@ -33,7 +39,11 @@
   import { useLogScope } from '../../utils/log'
   import type { HistoryEntry } from '../../types'
   import { useDebounce } from '../../utils/debounce'
+  import type { ResourceObject } from '../../service/resources'
+  import type { Tab } from './types'
+  import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
 
+  export let id: string = crypto.randomUUID().split('-').slice(0, 1).join('')
   export let src: string
   export let partition: string
   export let historyEntriesManager: HistoryEntriesManager
@@ -41,6 +51,7 @@
   export let historyStackIds: Writable<string[]>
   export let currentHistoryIndex: Writable<number>
   export let isLoading: Writable<boolean>
+  export let error: Writable<WebviewError | null>
   export let url = writable(src)
 
   export const title = writable('')
@@ -148,6 +159,42 @@
       return
     }
 
+    // Handle passtrough events as we need to handle them differently
+    if ([WebViewEventSendNames.MouseMove, WebViewEventSendNames.MouseUp].includes(eventType)) {
+      if (
+        eventType === WebViewEventSendNames.MouseMove ||
+        eventType === WebViewEventSendNames.MouseUp
+      ) {
+        let data = eventData as MouseEvent
+        // We need to transform from webview relative to parent window relative
+        const webviewBounds = webview.getBoundingClientRect()
+        data.clientX += webviewBounds.left
+        data.clientY += webviewBounds.top
+        let evtName = ''
+        switch (eventType) {
+          case WebViewEventSendNames.MouseMove:
+            evtName = 'mousemove'
+            break
+          case WebViewEventSendNames.MouseUp:
+            evtName = 'mouseup'
+            break
+        }
+        window.dispatchEvent(
+          new MouseEvent(evtName, {
+            clientX: data.clientX,
+            clientY: data.clientY,
+            screenX: data.screenX,
+            screenY: data.screenY,
+            altKey: data.altKey,
+            ctrlKey: data.ctrlKey,
+            metaKey: data.metaKey,
+            shiftKey: data.shiftKey
+          })
+        )
+      }
+      return
+    }
+
     // check if valid event and if so pass it up
     if (Object.values(WebViewEventSendNames).includes(eventType)) {
       dispatch('webview-page-event', { type: eventType, data: eventData })
@@ -168,6 +215,145 @@
   const handleFaviconChange = (newFaviconURL: string) => {
     faviconURL.set(newFaviconURL)
     dispatch('favicon-change', newFaviconURL)
+  }
+
+  /**
+   * Convert drag data into serialized format transferable to webview.
+   * @param typesOnly - Use for all events except on:Drop, so that it doesnt fetch the data all the time during a drag as it should only be readable on drop anyways.
+   */
+  const serializeDragDataForWebview = async (
+    data: { [key: string]: unknown } | DataTransfer,
+    typesOnly = false
+  ): Promise<{
+    strings: { type: string; value: string | undefined }[]
+    files: { name: string; type: string; buffer: ArrayBuffer | undefined }[]
+  }> => {
+    const serialized: {
+      strings: { type: string; value: string | undefined }[]
+      files: {
+        name: string
+        type: string
+        buffer: ArrayBuffer | undefined
+      }[]
+    } = {
+      strings: [],
+      files: []
+    }
+    /// When the drag is a native drag, we need to handle it differently
+    if (data instanceof DataTransfer) {
+      // TODO: Handle native data conversion!
+    } else {
+      if (data['surf/tab'] !== undefined) {
+        const tab = data['surf/tab'] as Tab // TODO: This is prob the wrong type re: currentLocation ? @Maxi
+        if (typesOnly) {
+          serialized.strings.push({ type: 'surf/tab', value: undefined })
+        } else {
+          console.assert(
+            tab.currentLocation !== undefined,
+            'Tab does not have a current location, cannot be serialized!'
+          )
+          serialized.strings.push({ type: 'text/uri-list', value: tab.currentLocation })
+        }
+      }
+      if (data['oasis/resource'] !== undefined) {
+        const resource = data['oasis/resource'] as ResourceObject
+        if (
+          ['application/vnd.space.link', 'application/vnd.space.article'].includes(resource.type)
+        ) {
+          if (typesOnly) {
+            serialized.strings.push({ type: 'text/uri-list', value: undefined })
+          } else {
+            serialized.strings.push({ type: 'text/uri-list', value: resource.metadata?.sourceURI })
+          }
+        }
+
+        /// Default case is to treat as file
+        else {
+          if (typesOnly) {
+            serialized.files.push({
+              name: resource.metadata?.name ?? `File ${serialized.files.length + 1}`,
+              type: resource.type,
+              buffer: undefined
+            })
+          } else {
+            const blob = await resource.getData()
+            serialized.files.push({
+              name: resource.metadata?.name ?? `File ${serialized.files.length + 1}`,
+              type: blob.type,
+              buffer: await blob.arrayBuffer()
+            })
+          }
+        }
+      }
+    }
+    return serialized
+  }
+
+  const handleDragEnter = async (drag: DragculaDragEvent) => {
+    if (drag.item !== null) drag.item.dragEffect = 'copy'
+    // TODO: allow move item with meta key?
+    // convert coords to webview relative
+
+    const bounds = webview.getBoundingClientRect()
+    const clientX = drag.clientX - bounds.left
+    const clientY = drag.clientY - bounds.top
+
+    // TODO: Wrap Try catch abort
+    const data = await serializeDragDataForWebview(drag.data, false)
+    webview.send('webview-event', {
+      type: 'simulate_drag_start',
+      data: {
+        clientX,
+        clientY,
+        data
+      }
+    })
+    drag.continue()
+  }
+  const handleDragOver = (drag: DragculaDragEvent) => {
+    if (drag.item !== null) drag.item.dragEffect = 'copy'
+    // TODO: allow move with meta key?
+    // convert coords to webview relative
+
+    const bounds = webview.getBoundingClientRect()
+    const clientX = drag.clientX - bounds.left
+    const clientY = drag.clientY - bounds.top
+
+    // TODO: Wrap Try catch abort
+    webview.send('webview-event', {
+      type: 'simulate_drag_update',
+      data: {
+        clientX,
+        clientY
+      }
+    })
+    drag.continue()
+  }
+  const handleDrop = (drag: DragculaDragEvent) => {
+    const bounds = webview.getBoundingClientRect()
+    const clientX = drag.clientX - bounds.left
+    const clientY = drag.clientY - bounds.top
+    // TODO: Wrap Try catch abort
+    //const data = await serializeDragDataForWebview(drag.data, false)
+
+    webview.send('webview-event', {
+      type: 'simulate_drag_end',
+      data: {
+        action: 'drop',
+        clientX,
+        clientY
+        //data // Currently we dont update it.. but we could..
+      }
+    })
+  }
+  const handleDragLeave = (drag: DragculaDragEvent) => {
+    webview.send('webview-event', {
+      type: 'simulate_drag_end',
+      data: {
+        action: 'abort'
+      }
+    })
+    drag.continue()
   }
 
   /*
@@ -266,6 +452,10 @@
     */
     webview.addEventListener('did-start-loading', () => isLoading.set(true))
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
+    webview.addEventListener('did-fail-load', (e: Electron.DidFailLoadEvent) => {
+      log.debug('Failed to load', e.errorCode, e.errorDescription, e.validatedURL)
+      error.set({ code: e.errorCode, description: e.errorDescription, url: e.validatedURL })
+    })
     webview.addEventListener('did-finish-load', () => {
       dispatch('did-finish-load')
       didFinishLoad.set(true)
@@ -344,6 +534,7 @@
 </script>
 
 <webview
+  {id}
   bind:this={webview}
   {src}
   {partition}
@@ -351,6 +542,11 @@
   preload={`file://${PRELOAD_PATH}`}
   webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=14"
   allowpopups
+  use:HTMLDragZone.action={{}}
+  on:DragEnter={handleDragEnter}
+  on:DragOver={handleDragOver}
+  on:Drop={handleDrop}
+  on:DragLeave={handleDragLeave}
 />
 
 <style>
