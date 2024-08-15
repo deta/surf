@@ -19,6 +19,7 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import {
     Resource,
+    ResourceJSON,
     ResourceManager,
     ResourcePost,
     ResourceTag,
@@ -110,7 +111,6 @@
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
   const loadingSpaceSources = writable(false)
-  const useMasonry = writable(true)
   const space = writable<Space | null>(null)
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
@@ -125,6 +125,8 @@
 
   const spaceContents = writable<SpaceEntry[]>([])
   const everythingContents = writable<ResourceSearchResultItem[]>([])
+  const newlyLoadedResources = writable<string[]>([])
+  const processingSourceItems = writable<string[]>([])
 
   const spaceResourceIds = derived(
     [searchValue, spaceContents, searchResults],
@@ -225,12 +227,16 @@
 
       spaceContents.set(items)
 
+      if (skipSources) {
+        return
+      }
+
       const spaceData = fetchedSpace.name
 
       let addedResources = 0
       let fetchedSources = false
       let usedSmartQuery = false
-      if (!skipSources && spaceData.liveModeEnabled) {
+      if (spaceData.liveModeEnabled) {
         if ((spaceData.sources ?? []).length > 0) {
           fetchedSources = true
           const fetchedResources = await loadSpaceSources(spaceData.sources!)
@@ -246,6 +252,12 @@
             addedResources += fetchedResources.length
           }
         }
+      }
+
+      if ($newlyLoadedResources.length > 0 && $spaceContents.length === 0) {
+        await loadSpaceContents(spaceId, true)
+        newlyLoadedResources.set([])
+        processingSourceItems.set([])
       }
 
       // only track a refresh when one of the smart features is used
@@ -327,13 +339,19 @@
         return
       }
 
-      log.debug('Adding resources to space', results)
+      const newResults = results.filter(
+        (x) => $spaceContents.findIndex((y) => y.resource_id === x) === -1
+      )
+
+      log.debug('Adding resources to space', newResults)
+
+      newlyLoadedResources.update((resources) => [...resources, ...newResults])
 
       await oasis.addResourcesToSpace(spaceId, results)
 
-      await loadSpaceContents(spaceId, true)
+      // await loadSpaceContents(spaceId, true)
 
-      return results
+      return newResults
     } catch (error) {
       log.error('Error updating live space contents with AI:', error)
     } finally {
@@ -375,7 +393,7 @@
         return
       }
 
-      useMasonry.set(false)
+      processingSourceItems.set(items.map((x) => x.link))
 
       const MAX_CONCURRENT_ITEMS = 8
       const PROCESS_TIMEOUT = 1000 * 15 // give each item max 15 seconds to process
@@ -416,13 +434,12 @@
         )
       }
 
-      await loadSpaceContents(spaceId, true)
+      // await loadSpaceContents(spaceId, true)
 
       return resources
     } catch (error) {
       log.error('Error loading space sources:', error)
     } finally {
-      useMasonry.set(true)
       loadingSpaceSources.set(false)
     }
   }
@@ -480,33 +497,33 @@
       const canonicalURL = item.link
 
       // add dummy item to space while processing
-      const data = {
-        url: canonicalURL,
-        title: item.title,
-        date_published: item.pubDate,
-        provider: sourceURL.hostname
-      } as ResourceDataLink
+      // const data = {
+      //   url: canonicalURL,
+      //   title: item.title,
+      //   date_published: item.pubDate,
+      //   provider: sourceURL.hostname
+      // } as ResourceDataLink
 
-      const dummyResource = await resourceManager.createDummyResource(
-        ResourceTypes.LINK,
-        new Blob([JSON.stringify(data)], { type: 'application/json' })
-      )
+      // const dummyResource = await resourceManager.createDummyResource(
+      //   ResourceTypes.LINK,
+      //   new Blob([JSON.stringify(data)], { type: 'application/json' })
+      // )
 
-      log.debug('Created fake resource:', dummyResource)
+      // log.debug('Created fake resource:', dummyResource)
 
-      spaceContents.update((contents) => {
-        return [
-          ...contents,
-          {
-            id: dummyResource.id,
-            resource_id: dummyResource.id,
-            space_id: $space!.id,
-            manually_added: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ]
-      })
+      // spaceContents.update((contents) => {
+      //   return [
+      //     ...contents,
+      //     {
+      //       id: dummyResource.id,
+      //       resource_id: dummyResource.id,
+      //       space_id: $space!.id,
+      //       manually_added: 0,
+      //       created_at: new Date().toISOString(),
+      //       updated_at: new Date().toISOString()
+      //     }
+      //   ]
+      // })
 
       const existingResourceIds = await resourceManager.listResourceIDsByTags([
         ResourceManager.SearchTagDeleted(false),
@@ -529,20 +546,21 @@
           log.debug('Resource not in space, adding')
           const resource = await resourceManager.getResource(resourceId)
           if (resource) {
-            spaceContents.update((contents) => {
-              return [
-                // remove dummy item
-                ...contents.filter((x) => x.resource_id !== dummyResource.id),
-                {
-                  id: resource.id,
-                  resource_id: resource.id,
-                  space_id: $space!.id,
-                  manually_added: 0,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                }
-              ]
-            })
+            newlyLoadedResources.update((resources) => [...resources, resource.id])
+            // spaceContents.update((contents) => {
+            //   return [
+            //     // remove dummy item
+            //     ...contents.filter((x) => x.resource_id !== dummyResource.id),
+            //     {
+            //       id: resource.id,
+            //       resource_id: resource.id,
+            //       space_id: $space!.id,
+            //       manually_added: 0,
+            //       created_at: new Date().toISOString(),
+            //       updated_at: new Date().toISOString()
+            //     }
+            //   ]
+            // })
 
             return resource
           }
@@ -597,18 +615,18 @@
         )
       }
 
-      spaceContents.update((contents) => [
-        // remove dummy item
-        ...contents.filter((x) => x.resource_id !== dummyResource.id),
-        {
-          id: parsed.resource.id,
-          resource_id: parsed.resource.id,
-          space_id: $space!.id,
-          manually_added: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ])
+      // spaceContents.update((contents) => [
+      //   // remove dummy item
+      //   ...contents.filter((x) => x.resource_id !== dummyResource.id),
+      //   {
+      //     id: parsed.resource.id,
+      //     resource_id: parsed.resource.id,
+      //     space_id: $space!.id,
+      //     manually_added: 0,
+      //     created_at: new Date().toISOString(),
+      //     updated_at: new Date().toISOString()
+      //   }
+      // ])
 
       try {
         let contentToSummarize: string | null = null
@@ -641,12 +659,12 @@
             })
 
             // HACK: this is needed for the preview to update with the summary
-            const contents = $spaceContents
-            spaceContents.set([])
+            // const contents = $spaceContents
+            // spaceContents.set([])
 
-            await tick()
+            // await tick()
 
-            spaceContents.set(contents)
+            // spaceContents.set(contents)
           } else {
             log.debug('summary generation failed')
           }
@@ -654,6 +672,8 @@
       } catch (error) {
         log.error('Error summarizing content:', error)
       }
+
+      newlyLoadedResources.update((resources) => [...resources, parsed.resource.id])
 
       log.debug('Created RSS resource:', parsed.resource)
       return parsed.resource
@@ -666,6 +686,14 @@
   const handleRefreshLiveSpace = async () => {
     if (!$space) {
       log.error('No space found')
+      return
+    }
+
+    if ($newlyLoadedResources.length > 0) {
+      log.debug('Newly loaded resources found, skipping refresh')
+      await loadSpaceContents(spaceId, true)
+      newlyLoadedResources.set([])
+      processingSourceItems.set([])
       return
     }
 
@@ -687,10 +715,64 @@
       log.debug('No sources found')
     }
 
+    if ($newlyLoadedResources.length > 0) {
+      await loadSpaceContents(spaceId, true)
+      newlyLoadedResources.set([])
+      processingSourceItems.set([])
+    }
+
     await telemetry.trackRefreshSpaceContent(RefreshSpaceEventTrigger.LiveSpaceManuallyRefreshed, {
       usedSmartQuery: !!$space.name.smartFilterQuery,
       fetchedSources: !!sources,
       addedResources: addedResources > 0
+    })
+  }
+
+  const fetchNewlyAddedResourcePrevies = async (num = 3) => {
+    if ($newlyLoadedResources.length === 0) {
+      return []
+    }
+
+    const resourceIds = $newlyLoadedResources.slice(0, num)
+    log.debug('Fetching previews for newly added resources:', resourceIds)
+
+    const fetched = await Promise.all(
+      resourceIds.map(async (id) => {
+        const resource = await resourceManager.getResource(id)
+        if (!resource) {
+          log.error('Resource not found')
+          return null
+        }
+
+        const url =
+          resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
+          resource.metadata?.sourceURI
+        if (!url) {
+          log.error('Resource URL not found')
+          return null
+        }
+
+        return {
+          id: resource.id,
+          url: url
+        }
+      })
+    )
+
+    const items = fetched.filter((x) => x !== null)
+    log.debug('Fetched items:', items)
+
+    const uniqueHosts = Array.from(new Set(items.map((x) => new URL(x.url).hostname)))
+
+    // only return one item per host
+    return items.filter((x) => {
+      const host = new URL(x.url).hostname
+      if (uniqueHosts.includes(host)) {
+        uniqueHosts.splice(uniqueHosts.indexOf(host), 1)
+        return true
+      }
+
+      return false
     })
   }
 
@@ -985,7 +1067,7 @@
 
       if (spaceId !== 'all') {
         await oasis.addResourcesToSpace(spaceId, resourceIds)
-        await loadSpaceContents(spaceId)
+        await loadSpaceContents(spaceId, true)
 
         resourceIds.forEach((id) => {
           resourceManager.getResource(id).then((resource) => {
@@ -1029,7 +1111,7 @@
     showNewResourceModal.set(false)
 
     await wait(5000)
-    await loadSpaceContents(spaceId)
+    await loadSpaceContents(spaceId, true)
   }
 
   const handleDeleteAutoSaved = async () => {
@@ -1078,7 +1160,7 @@
 
     toasts.success('Space cleared!')
 
-    await loadSpaceContents($space.id)
+    await loadSpaceContents($space.id, true)
   }
 
   const handleDeleteSpace = async (e: CustomEvent<boolean>) => {
@@ -1114,7 +1196,9 @@
       await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
     } catch (error) {
       log.error('Error deleting space:', error)
-      toast.error('Error deleting space: ' + (error as Error).message)
+      toast.error(
+        'Error deleting space: ' + (typeof error === 'string' ? error : (error as Error).message)
+      )
     }
   }
 
@@ -1273,26 +1357,67 @@
         </div>
 
         {#if $space && ($space.name.liveModeEnabled || ($space.name.sources ?? []).length > 0 || $space.name.smartFilterQuery)}
-          {#key $space.name.liveModeEnabled}
+          {#key '' + $space.name.liveModeEnabled + ($newlyLoadedResources.length > 0)}
             <button
               class="live-mode"
-              class:live-enabled={$space.name.liveModeEnabled}
+              class:live-enabled={$space.name.liveModeEnabled &&
+                $newlyLoadedResources.length === 0 &&
+                !$loadingSpaceSources}
               disabled={$loadingSpaceSources}
               on:click={handleRefreshLiveSpace}
               use:tooltip={{
-                text: $space.name.liveModeEnabled
-                  ? ($space.name.sources ?? []).length > 0
-                    ? 'The sources will automatically be loaded when you open the space. Click to manually refresh.'
-                    : 'New resources that match the smart query will automatically be added. Click to manually refresh.'
-                  : ($space.name.sources ?? []).length > 0
-                    ? 'Click to load the latest content from the connected sources'
-                    : 'Click to load the latest content based on the smart query',
+                text:
+                  $newlyLoadedResources.length > 0
+                    ? 'New content has been added to the space. Click to refresh.'
+                    : $space.name.liveModeEnabled
+                      ? ($space.name.sources ?? []).length > 0
+                        ? 'The sources will automatically be loaded when you open the space. Click to manually refresh.'
+                        : 'New resources that match the smart query will automatically be added. Click to manually refresh.'
+                      : ($space.name.sources ?? []).length > 0
+                        ? 'Click to load the latest content from the connected sources'
+                        : 'Click to load the latest content based on the smart query',
                 position: 'bottom'
               }}
             >
               {#if $loadingSpaceSources}
                 <Icon name="spinner" />
-                Refreshing…
+                {#if $newlyLoadedResources.length > 0}
+                  <span
+                    >Processing items (<span class="tabular-nums"
+                      >{$newlyLoadedResources.length} / {$processingSourceItems.length}</span
+                    >)</span
+                  >
+                {:else if ($space.name.sources ?? []).length > 0}
+                  Loading source{($space.name.sources ?? []).length > 1 ? 's' : ''}…
+                {:else}
+                  Refreshing…
+                {/if}
+              {:else if $newlyLoadedResources.length > 0}
+                {#await fetchNewlyAddedResourcePrevies()}
+                  <Icon name="reload" />
+                  Update Space with {$newlyLoadedResources.length} items
+                {:then previews}
+                  <!-- <Icon name="reload" /> -->
+                  <div class="flex items-center -space-x-3">
+                    {#each previews as preview (preview.id)}
+                      <img
+                        class="w-6 h-6 rounded-lg overflow-hidden bg-white border-2 border-white/75 box-content"
+                        src={`https://www.google.com/s2/favicons?domain=${preview.url}&sz=48`}
+                        alt={`favicon`}
+                      />
+                    {/each}
+                  </div>
+
+                  {#if $newlyLoadedResources.length > previews.length}
+                    <span>+{$newlyLoadedResources.length - previews.length} new items</span>
+                  {:else}
+                    <span
+                      >{$newlyLoadedResources.length} new item{$newlyLoadedResources.length > 1
+                        ? 's'
+                        : ''}</span
+                    >
+                  {/if}
+                {/await}
               {:else if $space.name.liveModeEnabled}
                 <Icon name="news" />
                 Live Space
@@ -1340,7 +1465,6 @@
         resourceIds={spaceResourceIds}
         selected={$selectedItem}
         showResourceSource={isSearching}
-        useMasonry={$useMasonry}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:remove={handleResourceRemove}
@@ -1509,6 +1633,27 @@
         position: relative;
       }
     }
+  }
+
+  .new-content-btn {
+    position: absolute;
+    left: 50%;
+    top: 6rem;
+    transform: translateX(-50%);
+    z-index: 100000;
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0px 0px 0px 1px rgba(0, 0, 0, 0.2);
+    color: #6d6d79;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.02rem;
   }
 
   .search-debug {
