@@ -1612,7 +1612,7 @@
     }
   }
 
-  const setPageChatState = (enabled: boolean) => {
+  const setPageChatState = async (enabled: boolean) => {
     log.debug('Toggling magic sidebar')
     const transition = document.startViewTransition(async () => {
       const tab = $activeTab as TabPage | null
@@ -1633,14 +1633,14 @@
       await tick()
     })
 
+    await transition.finished
+
     if (enabled) {
       // Delay to let the sidebar open first
-      requestAnimationFrame(() => {
-        preparePageTabsForChatContext()
+      requestAnimationFrame(async () => {
+        await preparePageTabsForChatContext()
       })
     }
-
-    return transition.finished
   }
 
   const setAppSidebarState = async (enabled: boolean) => {
