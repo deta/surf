@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess, execSync } from 'child_process'
+
 import EventEmitter from 'events'
 import { basename } from 'path'
 
@@ -25,9 +26,7 @@ export class SurfBackendServerManager extends EventEmitter {
 
     this.killExistingProcess()
     this.spawnProcess()
-
     this.isShuttingDown = false
-    this.restartAttempts = 0
   }
 
   stop(): void {
@@ -52,6 +51,9 @@ export class SurfBackendServerManager extends EventEmitter {
     })
 
     this.process.stdout?.on('data', (data: string) => {
+      if (data.includes('healthy')) {
+        this.restartAttempts = 0
+      }
       data
         .toString()
         .trimEnd()
@@ -103,7 +105,7 @@ export class SurfBackendServerManager extends EventEmitter {
       if (process.platform === 'win32') {
         execSync(`taskkill /F /IM ${processName} /T`)
       } else {
-        execSync(`pkill -f ${processName}`)
+        execSync(`pkill -P ${process.pid} -f ${processName}`)
       }
       this.emit('info', 'killed existing surf backend server process')
     } catch (error) {

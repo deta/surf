@@ -1750,8 +1750,8 @@ impl Database {
     ) -> BackendResult<Vec<CompositeResource>> {
         let placeholders = vec!["?"; resource_ids.len()].join(",");
         let query = format!(
-            "SELECT DISTINCT M.*, R.*, C.* FROM resource_metadata M
-            LEFT JOIN resources R ON M.resource_id = R.id
+            "SELECT DISTINCT M.*, R.*, C.* FROM resources R
+            LEFT JOIN resource_metadata M ON M.resource_id = R.id
             LEFT JOIN resource_text_content C ON M.resource_id = C.resource_id 
             WHERE R.id IN ({}) GROUP BY C.content",
             placeholders
@@ -1760,6 +1760,18 @@ impl Database {
         let mut results = vec![];
         let results_iter =
             stmt.query_map(rusqlite::params_from_iter(resource_ids.iter()), |row| {
+                let text_content_id: Option<String> = row.get(12)?;
+                let text_content = match text_content_id {
+                    Some(id) => Some(ResourceTextContent {
+                        id,
+                        resource_id: row.get(13)?,
+                        content: row.get(14)?,
+                        content_type: row.get(15)?,
+                        metadata: row.get(16)?,
+                    }),
+                    None => None,
+                };
+
                 Ok(CompositeResource {
                     metadata: Some(ResourceMetadata {
                         id: row.get(0)?,
@@ -1777,13 +1789,7 @@ impl Database {
                         updated_at: row.get(10)?,
                         deleted: row.get(11)?,
                     },
-                    text_content: Some(ResourceTextContent {
-                        id: row.get(12)?,
-                        resource_id: row.get(13)?,
-                        content: row.get(14)?,
-                        content_type: row.get(15)?,
-                        metadata: row.get(16)?,
-                    }),
+                    text_content,
                     resource_tags: None,
                     resource_annotations: None,
                 })

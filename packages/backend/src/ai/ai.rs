@@ -326,7 +326,6 @@ impl AI {
         self.local_ai_client.encode_sentences(&sentences)
     }
 
-    // TODO: history and return sources separately 
     pub async fn chat(
         &self,
         contents_store: &Database,
@@ -362,6 +361,10 @@ impl AI {
             false => contents_store.list_resources_by_ids(resource_ids)?,
         };
         dbg!(&rag_results.len());
+        if rag_results.is_empty() {
+            return Err(BackendError::RAGEmptyContextError("No resources found for llm context".to_string()));
+        }
+
         let (sources, sources_xml, contexts) = self.get_sources_contexts(rag_results);
         dbg!(&sources.len());
         let messages = vec![
