@@ -136,7 +136,7 @@ if (!gotTheLock) {
     surfBackendManager = new SurfBackendServerManager(backendServerPath, [
       backendRootPath,
       'false',
-      process.env.M_VITE_EMBEDDING_MODEL_MODE || 'default'
+      isDev ? config.embeddingModelMode : userConfig.settings?.embedding_model
     ])
 
     surfBackendManager?.on('stdout', (data) => log.info('[surf backend] stdout:', data))
