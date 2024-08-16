@@ -229,6 +229,7 @@ impl Worker {
     }
 
     pub fn query_sffs_resources(&self, prompt: String) -> BackendResult<String> {
+        dbg!("query_sffs_resources", &prompt);
         let result = self.ai.get_sql_query(prompt)?;
         #[derive(serde::Deserialize, Debug)]
         struct JsonResult {
@@ -249,6 +250,7 @@ impl Worker {
                 .replace("```", "")
                 .as_str()
             ).map_err(|e| BackendError::GenericError(e.to_string()))?;
+        dbg!(&result);
         let mut resource_ids_first: HashSet<String> = HashSet::new();
         let mut resource_ids_stmt = self.db.conn.prepare(result.sql_query.as_str())?;
         let mut resource_ids_rows = resource_ids_stmt.query([])?;
@@ -261,7 +263,7 @@ impl Worker {
         if let Some(ref query) = result.embedding_search_query {
             let filter: Vec<String> = resource_ids_first.iter().map(|id| id.to_string()).collect();
             // TODO: why 100?
-            let resources = self.ai.vector_search(&self.db, query.clone(), 100, Some(filter), true, None)?;
+            let resources = self.ai.vector_search(&self.db, query.clone(), 100, Some(filter), true, Some(0.4))?;
             let mut resource_ids: HashSet<String> = HashSet::new();
             for resource in resources {
                 resource_ids.insert(resource.resource.id);

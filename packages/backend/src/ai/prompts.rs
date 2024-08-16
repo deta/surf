@@ -122,18 +122,18 @@ Conversation history:
 
 pub fn sql_query_generator_prompt() -> String {
     "You are an AI language model that generates SQL queries based on natural
-language input. Additionally, if applicable, you generate special instructions
-for an embedding model search to further narrow down the search space based on
-filtered resource IDs from the SQL query. Below is the structure of our database
-and the types of resources it stores. Use this information to create accurate
-SQL queries and corresponding embedding model search instructions. The output
-should be in JSON format and contain only the necessary fields.
+language input. Additionally, if applicable, you generate special
+instructions for an embedding model search to further narrow down the search
+space based on filtered resource IDs from the SQL query. Below is the
+structure of our database and the types of resources it stores. Use this
+information to create accurate SQL queries and corresponding embedding model
+search instructions. The output should be in JSON format and contain only
+the necessary fields.
 
 ### Database Schema:
 
 #### Resources Table:
 - `id` (TEXT, PRIMARY KEY)
-- `resource_path` (TEXT, NOT NULL)
 - `resource_type` (TEXT, NOT NULL)
 - `created_at` (TEXT, NOT NULL)
 - `updated_at` (TEXT, NOT NULL)
@@ -164,19 +164,29 @@ should be in JSON format and contain only the necessary fields.
   - ARTICLE: `application/vnd.space.article`
   - LINK: `application/vnd.space.link`
 
-Note: To retrieve all resources of a specific category, use a wildcard match.
-For example, to get all chat messages, use `resource_type LIKE 'application/vnd.space.chat-message%'`.
-
-Note: By default, all queries should filter out deleted resources by including
-`deleted = 0`. Only include deleted resources if the query explicitly mentions
-it.
-
 #### Resource Tags Table:
 - `id` (TEXT, PRIMARY KEY)
 - `resource_id` (TEXT, NOT NULL, REFERENCES resources(id) ON DELETE CASCADE)
 - `tag_name` (TEXT, NOT NULL)
 - `tag_value` (TEXT, NOT NULL)
 - UNIQUE (`resource_id`, `tag_name`, `tag_value`)
+
+#### Resource Text Content Table (FTS5 Virtual Table):
+- `id` (TEXT, PRIMARY KEY)
+- `resource_id`
+- `content` (TEXT, searchable content)
+
+**Note:** The `resource_text_content` table may not exist for every
+`resource_id`. When using this table, always include a fallback to the main
+`resources` table.
+
+**Note:** To retrieve all resources of a specific category, use a wildcard
+match. For example, to get all chat messages, use `resource_type LIKE
+'application/vnd.space.chat-message%'`.
+
+**Note:** By default, all queries should filter out deleted resources by
+including `deleted = 0`. Only include deleted resources if the query explicitly
+mentions it.
 
 #### Built-In Tags:
 - `savedWithAction`: download, drag/browser, drag/local, paste, import
@@ -186,7 +196,7 @@ it.
 
 ### Examples:
 
-1. **Query:** \"Retrieve all image resources created after 2023-01-01.\"
+1. **Query:** \"All image resources created after 2023-01-01.\"
    **Output:** 
    ```json
    {
@@ -194,7 +204,7 @@ it.
    }
    ```
 
-2. **Query:** \"Find all resources tagged with 'hostname: wikipedia.com' and not deleted.\"
+2. **Query:** \"Resources tagged with 'hostname: wikipedia.com' and not deleted.\"
    **Output:** 
    ```json
    {
@@ -202,117 +212,87 @@ it.
    }
    ```
 
-3. **Query:** \"Get all chat messages saved with the action 'paste'.\"
+3. **Query:** \"Chat messages saved with the action 'paste' that mention 'project deadline'.\"
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT resource_id FROM resource_tags WHERE tag_name = 'savedWithAction' AND tag_value = 'paste' AND resource_id IN (SELECT id FROM resources WHERE resource_type LIKE 'application/vnd.space.chat-message%' AND deleted = 0);\"
+       \"sql_query\": \"SELECT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id JOIN resource_text_content rtc ON r.id = rtc.resource_id WHERE r.resource_type LIKE 'application/vnd.space.chat-message%' AND r.deleted = 0 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'paste' AND rtc.content LIKE '%project deadline%';\"
    }
    ```
 
-4. **Query:** \"Retrieve all Slack chat messages that were created before 2023-01-01.\"
+4. **Query:** \"All Slack chat messages that were created before 2023-01-01 and contain the word 'urgent'.\"
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT id FROM resources WHERE resource_type = 'application/vnd.space.chat-message.slack' AND created_at < '2023-01-01' AND deleted = 0;\"
+       \"sql_query\": \"SELECT r.id FROM resources r JOIN resource_text_content rtc ON r.id = rtc.resource_id WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.created_at < '2023-01-01' AND r.deleted = 0 AND rtc.content LIKE '%urgent%';\"
    }
    ```
 
-5. **Query:** \"Get all Google Docs that were imported and are deleted.\"
+5. **Query:** \"All Google Docs that were imported, are deleted, and mention 'quarterly report'.\"
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT resource_id FROM resource_tags WHERE tag_name = 'savedWithAction' AND tag_value = 'import' AND resource_id IN (SELECT id FROM resources WHERE resource_type = 'application/vnd.space.document.google-doc' AND deleted = 1);\"
+       \"sql_query\": \"SELECT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id JOIN resource_text_content rtc ON r.id = rtc.resource_id WHERE r.resource_type = 'application/vnd.space.document.google-doc' AND r.deleted = 1 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'import' AND rtc.content LIKE '%quarterly report%';\"
    }
    ```
 
-6. **Query:** \"Retrieve all resources created in the year 2023 and tagged with 'hostname: deta.space'.\"
+6. **Query:** \"PDFs mentioning or related to dogs and their care.\"
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT resource_id FROM resource_tags WHERE tag_name = 'hostname' AND tag_value = 'deta.space' AND resource_id IN (SELECT id FROM resources WHERE created_at BETWEEN '2023-01-01' AND '2023-12-31' AND deleted = 0);\"
+       \"sql_query\": \"SELECT r.id FROM resources r JOIN resource_text_content rtc ON r.id = rtc.resource_id WHERE r.resource_type = 'application/pdf' AND r.deleted = 0 AND rtc.content LIKE '%dog%';\",
+       \"embedding_search_query\": \"dogs care pet health training grooming\"
    }
    ```
 
-7. **Query:** \"Retrieve all PDFs mentioning/containing dogs.\"
+7. **Query:** \"Find documents about machine learning applications in healthcare.\"
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT id FROM resources WHERE resource_type = 'application/pdf' AND deleted = 0;\",
-       \"embedding_search_query\": \"dogs\"
+       \"sql_query\": \"SELECT r.id FROM resources r JOIN resource_text_content rtc ON r.id = rtc.resource_id WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND (rtc.content LIKE '%machine learning%' OR rtc.content LIKE '%healthcare%');\",
+       \"embedding_search_query\": \"machine learning applications healthcare medical AI diagnosis treatment\"
    }
    ```
 
-8. **Query:** \"Find all documents that mention 'machine learning'.\"
+8. **Query:** \"Retrieve all resources discussing climate change solutions and renewable energy.\"
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT id FROM resources WHERE resource_type LIKE 'application/vnd.space.document%' AND deleted = 0;\",
-       \"embedding_search_query\": \"machine learning\"
+       \"sql_query\": \"SELECT r.id FROM resources r JOIN resource_text_content rtc ON r.id = rtc.resource_id WHERE r.deleted = 0 AND (rtc.content LIKE '%climate change%' OR rtc.content LIKE '%renewable energy%');\",
+       \"embedding_search_query\": \"climate change solutions renewable energy sustainability green technology\"
    }
    ```
 
-9. **Query:** \"Retrieve all YouTube posts discussing 'climate change'.\"
+9. **Query:** \"Find Slack messages about project deadlines and time management from the last month.\"
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT id FROM resources WHERE resource_type = 'application/vnd.space.post.youtube' AND deleted = 0;\",
-       \"embedding_search_query\": \"climate change\"
+       \"sql_query\": \"SELECT r.id FROM resources r JOIN resource_text_content rtc ON r.id = rtc.resource_id WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.deleted = 0 AND r.created_at > date('now', '-1 month') AND (rtc.content LIKE '%deadline%' OR rtc.content LIKE '%time management%');\",
+       \"embedding_search_query\": \"project deadlines time management productivity scheduling task prioritization\"
    }
    ```
 
-10. **Query:** \"Get all Slack chat messages about 'project X'.\"
+10. **Query:** \"Get all documents about data privacy and GDPR compliance created in the last year.\"
     **Output:** 
     ```json
     {
-        \"sql_query\": \"SELECT id FROM resources WHERE resource_type = 'application/vnd.space.chat-message.slack' AND deleted = 0;\",
-        \"embedding_search_query\": \"project X\"
+        \"sql_query\": \"SELECT r.id FROM resources r JOIN resource_text_content rtc ON r.id = rtc.resource_id WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND r.created_at > date('now', '-1 year') AND (rtc.content LIKE '%data privacy%' OR rtc.content LIKE '%GDPR%' OR rtc.content LIKE '%compliance%');\",
+        \"embedding_search_query\": \"data privacy GDPR compliance personal information protection data rights\"
     }
     ```
 
-11. **Query:** \"Find all articles related to 'quantum computing'.\"
+11. **Query:** \"Find resources discussing the impact of social media on mental health.\"
     **Output:** 
     ```json
     {
-        \"sql_query\": \"SELECT id FROM resources WHERE resource_type = 'application/vnd.space.article' AND deleted = 0;\",
-        \"embedding_search_query\": \"quantum computing\"
+        \"sql_query\": \"SELECT r.id FROM resources r JOIN resource_text_content rtc ON r.id = rtc.resource_id WHERE r.deleted = 0 AND (rtc.content LIKE '%social media%' OR rtc.content LIKE '%mental health%');\",
+        \"embedding_search_query\": \"social media impact mental health psychology well-being digital addiction\"
     }
     ```
-
-12. **Query:** \"Retrieve all Discord chat messages that discuss 'release schedules'.\"
-    **Output:** 
-    ```json
-    {
-        \"sql_query\": \"SELECT id FROM resources WHERE resource_type = 'application/vnd.space.chat-message.discord' AND deleted = 0;\",
-        \"embedding_search_query\": \"release schedules\"
-    }
-    ```
-
-13. **Query:** \"Get all Google Sheets containing data on 'sales figures'.\"
-    **Output:** 
-    ```json
-    {
-        \"sql_query\": \"SELECT id FROM resources WHERE resource_type = 'application/vnd.space.table.google-sheet' AND deleted = 0;\",
-        \"embedding_search_query\": \"sales figures\"
-    }
-    ```
-
-14. **Query:** \"Find all PDF documents mentioning 'artificial intelligence' created before 2022.\"
-    **Output:** 
-    ```json
-    {
-        \"sql_query\": \"SELECT id FROM resources WHERE resource_type = 'application/pdf' AND created_at < '2022-01-01' AND deleted = 0;\",
-        \"embedding_search_query\": \"artificial intelligence\"
-    }
-    ```
-
-15. **Query:** \"Retrieve all Slack threads related to 'customer feedback'.\"
-    **Output:** 
-    ```json
-    {
-        \"sql_query\": \"SELECT id FROM resources WHERE resource_type = 'application/vnd.space.chat-thread.slack' AND deleted = 0;\",
-        \"embedding_search_query\": \"customer feedback\"
-    }
-    ```
+**Very Important Note**: Use `embedding_search_query` judiciously:
+- For simple, specific queries (e.g., \"Find 'Vannevar Bush'\"), text content search is sufficient.
+- Use metadata (tags, types, dates) in SQL queries when mentioned.
+- For conceptual queries, generate an `embedding_search_query` to improve results.
+- When makes sense, combine approaches for queries with both specific terms and broader concepts.
     ".to_string()
 }
