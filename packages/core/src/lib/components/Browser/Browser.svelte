@@ -95,6 +95,7 @@
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     SaveToOasisEventTrigger,
+    UpdateSpaceSettingsEventTrigger,
     WebViewEventReceiveNames,
     type AnnotationCommentData,
     type ResourceDataAnnotation,
@@ -1936,63 +1937,82 @@
     }
   }
 
+  const createSpaceSourceFromActiveTab = async (tab: TabPage) => {
+    if (!tab.currentDetectedApp) {
+      log.debug('No app detected in tab', tab)
+      return null
+    }
+
+    let app = tab.currentDetectedApp
+    if (app.appId === 'youtube') {
+      // For youtube we have to manually refresh the tab to make sure we are grabbing the feed of the right page as they don't update it on client side navigations
+      const validTypes = [ResourceTypes.CHANNEL_YOUTUBE, ResourceTypes.PLAYLIST_YOUTUBE]
+
+      if (validTypes.includes(app.resourceType as any)) {
+        log.debug('reloading tab to get RSS feed')
+
+        // TODO: find a better way to wait for the tab to reload and the new app to be detected
+        $activeBrowserTab.reload()
+        await wait(3000)
+
+        log.debug('reloaded tab app', tab.currentDetectedApp)
+        app = tab.currentDetectedApp
+      }
+    }
+
+    if (!app.rssFeedUrl) {
+      log.debug('No RSS feed found for app', app)
+      return null
+    }
+
+    log.debug('create live space out of app', app)
+
+    let name = tab.title ?? app.appName
+    if (name) {
+      // remove strings like "(1238)" from the beginning which are usually notification counts
+      name = name.replace(/^\(\d+\)\s/, '')
+    }
+
+    const spaceSource = {
+      id: generateID(),
+      name: name ?? 'Unknown',
+      type: 'rss',
+      url: app.rssFeedUrl,
+      last_fetched_at: null
+    } as SpaceSource
+
+    return {
+      name: name ?? 'Live Space',
+      source: spaceSource
+    }
+  }
+
   const handleCreateLiveSpace = async (_e?: MouseEvent) => {
+    if ($activeTab?.type !== 'page') {
+      log.debug('No page tab active')
+      return
+    }
+
+    const toast = toasts.loading('Creating Live Space...')
+
     try {
-      if ($activeTab?.type !== 'page' || !$activeTab.currentDetectedApp) {
-        log.debug('No app detected in active tab')
-        return
-      }
-
-      const toast = toasts.loading('Creating Live Space...')
-
-      let app = $activeTab.currentDetectedApp
-      if (app.appId === 'youtube') {
-        // For youtube we have to manually refresh the tab to make sure we are grabbing the feed of the right page as they don't update it on client side navigations
-        const validTypes = [ResourceTypes.CHANNEL_YOUTUBE, ResourceTypes.PLAYLIST_YOUTUBE]
-
-        if (validTypes.includes(app.resourceType as any)) {
-          log.debug('reloading tab to get RSS feed')
-
-          // TODO: find a better way to wait for the tab to reload and the new app to be detected
-          $activeBrowserTab.reload()
-          await wait(3000)
-
-          log.debug('reloaded tab app', $activeTab.currentDetectedApp)
-          app = $activeTab.currentDetectedApp
-        }
-      }
-
-      if (!app.rssFeedUrl) {
-        log.debug('No RSS feed found for app', app)
-        toast.error('No RSS feed found for this app')
-        return
-      }
-
-      log.debug('create live space out of app', app)
       isCreatingLiveSpace.set(true)
 
-      const spaceSource = {
-        id: generateID(),
-        name: $activeTab.title ?? app.appName ?? 'Unknown',
-        type: 'rss',
-        url: app.rssFeedUrl,
-        last_fetched_at: null
-      } as SpaceSource
-
-      let name = $activeTab.title ?? app.appName
-      if (name) {
-        // remove strings like "(1238)" from the beginning which are usually notification counts
-        name = name.replace(/^\(\d+\)\s/, '')
-      } else {
-        name = 'Live Space'
+      const parsed = await createSpaceSourceFromActiveTab($activeTab)
+      if (!parsed) {
+        log.debug('No source found for live space')
+        toast.error('No feed found for this website')
+        return
       }
 
-      // create new space
+      const { name, source } = parsed
+
+      log.debug('creating live space', name, source)
       const space = await oasis.createSpace({
         folderName: truncate(name, 35),
         showInSidebar: true,
         colors: colorPairs[Math.floor(Math.random() * colorPairs.length)],
-        sources: [spaceSource],
+        sources: [source],
         sortBy: 'source_published_at',
         liveModeEnabled: true
       })
@@ -2008,6 +2028,66 @@
       toast.success('Live Space created!')
     } catch (e) {
       log.error('Error creating live space', e)
+      toast.error('Failed to create Live Space')
+    } finally {
+      isCreatingLiveSpace.set(false)
+    }
+  }
+
+  const handleAddSourceToSpace = async (e: CustomEvent<Space>) => {
+    if ($activeTab?.type !== 'page') {
+      log.debug('No page tab active')
+      return
+    }
+
+    const toast = toasts.loading('Adding source to Space...')
+
+    try {
+      isCreatingLiveSpace.set(true)
+
+      const space = e.detail
+
+      const parsed = await createSpaceSourceFromActiveTab($activeTab)
+      if (!parsed) {
+        log.debug('No source found for live space')
+        toast.error('No feed found for this website')
+        return
+      }
+
+      const { name, source } = parsed
+
+      log.debug('adding source to space', name, source)
+      await oasis.updateSpaceData(space.id, {
+        showInSidebar: true,
+        sources: [...(space.name.sources ?? []), source],
+        sortBy: 'source_published_at',
+        liveModeEnabled: true
+      })
+
+      log.debug('added source to space', space)
+
+      const existingTab = $unpinnedTabs.find(
+        (tab) => tab.type === 'space' && tab.spaceId === space.id
+      )
+
+      if (existingTab) {
+        makeTabActive(existingTab.id, ActivateTabEventTrigger.Click)
+      } else {
+        await createSpaceTab(space, true)
+      }
+
+      await telemetry.trackUpdateSpaceSettings(
+        {
+          setting: 'source',
+          change: 'added'
+        },
+        UpdateSpaceSettingsEventTrigger.TabLiveSpaceButton
+      )
+
+      toast.success('Page added as source to Space!')
+    } catch (e) {
+      log.error('Error creating live space', e)
+      toast.error('Failed to add source to Space')
     } finally {
       isCreatingLiveSpace.set(false)
     }
@@ -3488,6 +3568,7 @@
                         on:unarchive-tab={handleUnarchiveTab}
                         on:bookmark={() => handleBookmark()}
                         on:create-live-space={handleCreateLiveSpace}
+                        on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
                         on:include-tab={handleIncludeTabInMagic}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
@@ -3550,6 +3631,7 @@
                         on:unarchive-tab={handleUnarchiveTab}
                         on:bookmark={() => handleBookmark()}
                         on:create-live-space={handleCreateLiveSpace}
+                        on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
                         on:include-tab={handleIncludeTabInMagic}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}

@@ -154,7 +154,9 @@ export enum UpdateSpaceSettingsEventTrigger {
   /** Space settings were changed from the settings menu */
   SettingsMenu = 'settings_menu',
   /** Space settings were changed from the space preview in Oasis */
-  SpacePreview = 'space_preview'
+  SpacePreview = 'space_preview',
+  /** Space settings were changed when adding the tab as a source to the space */
+  TabLiveSpaceButton = 'tab_live_space_button'
 }
 
 export enum OpenSpaceEventTrigger {
