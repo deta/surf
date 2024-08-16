@@ -1184,7 +1184,7 @@
             </div> -->
             <button
               class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
-                ? 'bottom-8'
+                ? 'bottom-7'
                 : 'bottom-3'} z-10 flex items-center justify-center space-x-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
               on:click={() => {
                 showTabSearch = showTabSearch === 1 ? 2 : 1

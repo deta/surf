@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
 
   import { useDebounce } from '../../utils/debounce'
-  import Command from '../'
+  import { Command } from '../index'
   import { Icon } from '@horizon/icons'
 
   export let value: string = ''
