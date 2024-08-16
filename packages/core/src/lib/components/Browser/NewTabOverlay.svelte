@@ -863,18 +863,7 @@
     if (showTabSearch !== 2) return
 
     log.debug('Key down:', e.key)
-    if (e.key === 'Escape') {
-      if ($showResourceDetails === true) {
-        closeResourceDetailsModal()
-      } else {
-        showTabSearch = 0
-      }
-    } else if (
-      e.key === ' ' &&
-      $selectedItem &&
-      !$isResourceDetailsModalOpen &&
-      !$showSettingsModal
-    ) {
+    if (e.key === ' ' && $selectedItem && !$isResourceDetailsModalOpen && !$showSettingsModal) {
       e.preventDefault()
       openResourceDetailsModal($selectedItem)
     } else if (isModKeyAndKeyPressed(e, 'Enter') && $selectedItem && !$isResourceDetailsModalOpen) {
@@ -1141,7 +1130,6 @@
   direction="bottom"
   scrollLockTimeout={300}
   open={showTabSearch !== 0}
-  closeOnEscape
   onOpenChange={(e) => {
     if (e === false) {
       resetSearch()

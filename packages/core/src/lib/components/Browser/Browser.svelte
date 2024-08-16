@@ -15,7 +15,8 @@
     isModKeyAndKeyPressed,
     isModKeyAndKeysPressed,
     isModKeyAndShiftKeyAndKeyPressed,
-    isModKeyPressed
+    isModKeyPressed,
+    isOptKeyAndKeyPressed
   } from '../../utils/keyboard'
   import { wait, writableAutoReset } from '../../utils/time'
   import { createTelemetry, Telemetry } from '../../service/telemetry'
@@ -978,7 +979,19 @@
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
+      if ($showNewTabOverlay !== 0) return
       if (rightPane?.isExpanded()) handleCollapseRight()
+    } else if (isOptKeyAndKeyPressed(e, 'x')) {
+      toggleRightSidebar()
+    } else if (isOptKeyAndKeyPressed(e, 'a')) {
+      if ($rightSidebarTab === 'annotations' && showRightSidebar) handleCollapseRight()
+      else openRightSidebarTab('annotations')
+    } else if (isOptKeyAndKeyPressed(e, 'c')) {
+      if ($rightSidebarTab === 'chat' && showRightSidebar) handleCollapseRight()
+      else openRightSidebarTab('chat')
+    } else if (isOptKeyAndKeyPressed(e, 'g')) {
+      if ($rightSidebarTab === 'go-wild' && showRightSidebar) handleCollapseRight()
+      else openRightSidebarTab('go-wild')
     } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       activeTabComponent?.blur()
