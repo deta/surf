@@ -255,8 +255,7 @@
       </button>
       {#each type === 'horizontal' ? $spaces
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .filter((folder) => folder.id !== 'all')
-            .slice(0, 9) : $spaces
+            .filter((folder) => folder.id !== 'all') : $spaces
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             .filter((folder) => folder.id !== 'all') as folder (folder.id)}
         {#key folder.name.colors}
