@@ -2875,9 +2875,9 @@
   }
 
   const handleDropOnSpaceTab = async (drag: DragculaDragEvent, spaceId: string) => {
-    console.warn('DROP ON SPACE TAB', spaceId, drag)
-
-    const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+    const toast = toasts.loading(
+      `${spaceId === 'all' ? 'Saving to Oasis' : drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`
+    )
 
     if (
       ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
@@ -2975,7 +2975,7 @@
 
     drag.continue()
     console.warn('ADDING resources to spaceid', spaceId, resourceIds)
-    if (spaceId !== 'everything') {
+    if (spaceId !== 'all') {
       await oasis.addResourcesToSpace(spaceId, resourceIds)
       //await loadSpaceContents(spaceId)
     } else {
@@ -3612,11 +3612,30 @@
               {/if}
 
               <button
-                use:tooltip={{ text: 'Open Oasis (⌘ + O)', position: 'top' }}
+                use:tooltip={{ text: 'Open Oasis (⌘ + O)', position: horizontalTabs ? 'left' : 'top' }}
                 class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 on:click={() => ($showNewTabOverlay = 2)}
                 class:bg-sky-200={$showNewTabOverlay === 2}
               >
+                <div
+                  id="oasis-zone"
+                  class="oasis-drop-zone"
+                  style="position: absolute; inset-inline: 10%; inset-block: 20%;"
+                  use:HTMLDragZone.action={{}}
+                  on:DragEnter={(drag) => {
+                    const dragData = drag.data
+                    if (
+                      drag.isNative ||
+                      (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space')
+                    ) {
+                      drag.continue() // Allow the drag
+                      return
+                    }
+                    drag.abort()
+                  }}
+                  on:Drop={(drag) => handleDropOnSpaceTab(drag, 'all')}
+                ></div>
+
                 <Icon name="leave" />
               </button>
             </div>
