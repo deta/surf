@@ -2028,29 +2028,34 @@
   let tabSize = 0
 
   $: plusBtnLeftPos = horizontalTabs
-    ? $unpinnedTabs.reduce(
+    ? $pinnedTabs.length * (23 + 4) +
+      16 - // padding left and right
+      4 + // remove last padding
+      16 + // padding between them
+      $unpinnedTabs.reduce(
         (total, tab) =>
           total +
+          7 +
           (tab.id === $activeTabId && tabSize && tabSize <= 260
             ? 260
-            : Math.min(300, Math.max(24, tabSize))) +
-          6,
+            : Math.min(300, Math.max(24, tabSize))),
         0
-      ) +
+      ) + // remove last padding
       $magicTabs.reduce(
         (total, tab) =>
           total +
-          (tab.id === $activeTabId && tabSize <= 260 ? 260 : Math.min(300, Math.max(96, tabSize))) +
-          3,
+          (tab.id === $activeTabId && tabSize <= 260 ? 260 : Math.min(300, Math.max(96, tabSize))),
         0
-      )
+      ) +
+      120 + // the size of traffic lights plus back and forward buttons
+      ($magicTabs.length > 0 ? 16 : 0)
     : 0
 
   $: {
-    const reservedSpace = 200 + 40 * $pinnedTabs.length + 200
+    const reservedSpace = 600 + $pinnedTabs.length * 50 + 32
     const availableSpace = maxWidth - reservedSpace
     const numberOfTabs = $unpinnedTabs.length + $magicTabs.length
-    tabSize = availableSpace / (numberOfTabs || 1)
+    tabSize = availableSpace / numberOfTabs
   }
   const handleResize = () => {
     maxWidth = window.innerWidth
@@ -2878,7 +2883,9 @@
     console.warn('DROP ON SPACE TAB', spaceId, drag)
     if (drag.item !== null) drag.item.dragEffect = 'copy'
 
-    const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+    const toast = toasts.loading(
+      `${spaceId === 'all' ? 'Saving to Oasis' : drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`
+    )
 
     if (
       ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
@@ -2979,7 +2986,7 @@
 
     drag.continue()
     console.warn('ADDING resources to spaceid', spaceId, resourceIds)
-    if (spaceId !== 'everything') {
+    if (spaceId !== 'all') {
       await oasis.addResourcesToSpace(spaceId, resourceIds)
       //await loadSpaceContents(spaceId)
     } else {
@@ -3536,7 +3543,7 @@
 
             {#if horizontalTabs}
               <div
-                style="position: absolute; top: 0px; left: {plusBtnLeftPos + 180}px; right: 0;"
+                style="position: absolute; top: 0px; left: {plusBtnLeftPos}px; right: 0;"
                 class:w-fit={horizontalTabs}
                 class:h-full={horizontalTabs}
                 class="select-none flex items-center justify-center"
@@ -3616,11 +3623,30 @@
               {/if}
 
               <button
-                use:tooltip={{ text: 'Open Oasis (⌘ + O)', position: 'top' }}
+                use:tooltip={{ text: 'Open Oasis (⌘ + O)', position: horizontalTabs ? 'left' : 'top' }}
                 class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 on:click={() => ($showNewTabOverlay = 2)}
                 class:bg-sky-200={$showNewTabOverlay === 2}
               >
+                <div
+                  id="oasis-zone"
+                  class="oasis-drop-zone"
+                  style="position: absolute; inset-inline: 10%; inset-block: 20%;"
+                  use:HTMLDragZone.action={{}}
+                  on:DragEnter={(drag) => {
+                    const dragData = drag.data
+                    if (
+                      drag.isNative ||
+                      (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space')
+                    ) {
+                      drag.continue() // Allow the drag
+                      return
+                    }
+                    drag.abort()
+                  }}
+                  on:Drop={(drag) => handleDropOnSpaceTab(drag, 'all')}
+                ></div>
+
                 <Icon name="leave" />
               </button>
             </div>

@@ -86,6 +86,14 @@ export const isDateToday = (timestamp: number | string) => {
   return isToday(ms)
 }
 
+export const gracefullyParseDateStringtoISO = (dateString: string) => {
+  try {
+    return new Date(dateString).toISOString()
+  } catch (e) {
+    return null
+  }
+}
+
 export const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export const writableAutoReset = <T>(defaultValue: T, delay = 500) => {
