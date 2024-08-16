@@ -100,9 +100,9 @@
 
       log.debug(`Automatic Folder Generation request`, response)
 
-      const results = response.embedding_search_query
-        ? response.embedding_search_results
-        : response.sql_query_results
+      let results = response.sql_query_results
+      if (response.embedding_search_results && response.embedding_search_results.length > 0)
+        results = response.embedding_search_results
       log.debug('Automatic Folder generated with', results)
 
       if (!results) {
