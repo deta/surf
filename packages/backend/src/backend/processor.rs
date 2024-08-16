@@ -115,10 +115,14 @@ pub fn get_youtube_contents_metadatas(
     language: Option<String>,
 ) -> BackendResult<(Vec<String>, Vec<ResourceTextContentMetadata>)> {
     let runtime = tokio::runtime::Runtime::new()?;
+    let transcript_config = match language {
+        Some(lang) => Some(ytranscript::TranscriptConfig { lang: Some(lang) }),
+        _ => None,
+    };
     let transcripts = runtime
         .block_on(ytranscript::YoutubeTranscript::fetch_transcript(
             source_uri,
-            Some(ytranscript::TranscriptConfig { lang: language }),
+            transcript_config,
         ))
         .map_err(|e| BackendError::GenericError(e.to_string()))?;
     let mut contents: Vec<String> = vec![];

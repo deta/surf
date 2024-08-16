@@ -334,9 +334,14 @@
       })
     } catch (e) {
       log.error('Error doing magic', e)
+      let content = 'Failed to generate response.'
+      if ((e as any)?.includes('RAG Empty Context')) {
+        content = `Unfortunately, we failed to find relevant information to answer your query.
+\nPlease try asking a different question or add more tabs to the current context.`
+      }
       if (response) {
         updatePageMagicResponse(response.id, {
-          content: (e as any).message ?? 'Failed to generate response.',
+          content: content,
           status: 'error'
         })
       }

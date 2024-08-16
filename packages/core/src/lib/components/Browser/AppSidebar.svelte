@@ -232,23 +232,28 @@
   {/if}
 
   <div class="content">
+    {#if fetching}
+      <div class="app-prompt">
+        <div class="message">
+          <Icon name="spinner" />
+          {#if $activeToolTab === 'app'}
+            <p>Creating an app...</p>
+          {:else}
+            <p>Running...</p>
+          {/if}
+        </div>
+      </div>
+    {/if}
     {#if prompt}
       <div class="app-prompt">
         <div class="message">
           <Icon name="message" size="20px" />
           <p>{prompt}</p>
-        </div>
-        {#if directCode !== ''}
-          <button title="Run again" class="rerun-btn" on:click={handleCodeRerun}>
-            <Icon name="reload" />
-          </button>
-        {/if}
-      </div>
-    {:else if fetching}
-      <div class="app-prompt">
-        <div class="message">
-          <Icon name="spinner" />
-          <p>Generating...</p>
+          {#if directCode !== ''}
+            <button title="Run again" class="rerun-btn" on:click={handleCodeRerun}>
+              <Icon name="reload" />
+            </button>
+          {/if}
         </div>
       </div>
     {/if}
@@ -294,13 +299,20 @@
         type="submit"
         transition:slide={{ duration: 150 }}
         disabled={fetching || inputValue === '<p></p>'}
-        class:filled={inputValue && inputValue !== '<p></p>'}
+        class:filled={!fetching && inputValue && inputValue !== '<p></p>'}
       >
         {#if fetching}
-          <div>Generating…</div>
+          {#if $activeToolTab === 'app'}
+            <div>Creating…</div>
+          {:else}
+            <div>Running…</div>
+          {/if}
           <Icon name="spinner" />
+        {:else if $activeToolTab === 'app'}
+          <div>Create</div>
+          <Icon name="arrow.right" />
         {:else}
-          <div>Generate</div>
+          <div>Run</div>
           <Icon name="arrow.right" />
         {/if}
       </button>
