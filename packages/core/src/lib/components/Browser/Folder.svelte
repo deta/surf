@@ -13,7 +13,7 @@
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import { useToasts } from '../../service/toast'
   import { hover, tooltip } from '../../utils/directives'
-  import { fade, slide } from 'svelte/transition'
+  import { fade, fly } from 'svelte/transition'
   import {
     DeleteSpaceEventTrigger,
     RefreshSpaceEventTrigger,
@@ -302,7 +302,7 @@
     bind:this={previewContainer}
   >
     {#if $inView && showPreview}
-      <div class="previews" transition:slide={{ axis: 'y' }}>
+      <div class="previews" transition:fly={{ y: 15 }}>
         {#await getPreviewResources(4)}
           <div class="folder-empty-wrapper">
             <div class="folder-empty">
