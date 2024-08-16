@@ -6,14 +6,14 @@
   import { createEventDispatcher, onMount } from 'svelte'
 
   export let resource: Resource
-  export let blob: Blob
+  export let blob: Blob | undefined = undefined
   export let hideType = false
 
   const dispatch = createEventDispatcher<{ load: void }>()
 
-  $: name = resource?.metadata?.name
-  $: kind = getFileKind(blob.type)
-  $: type = getFileType(blob.type)
+  $: name = resource?.metadata?.name || 'Unknown File'
+  $: kind = getFileKind(resource.type)
+  $: type = getFileType(resource.type)
 
   // const openFile = () => {
   //     window.open(`file://${resource.path}`, "_blank")
@@ -48,15 +48,17 @@
         </div>
       {/if}
 
-      <div class="info">
-        <div class="size">
-          {toHumanFileSize(blob.size)}
-        </div>
+      {#if blob}
+        <div class="info">
+          <div class="size">
+            {toHumanFileSize(blob.size)}
+          </div>
 
-        <!-- <button on:click={openFile} class="action">
-                    Open
-                </button> -->
-      </div>
+          <!-- <button on:click={openFile} class="action">
+                      Open
+                  </button> -->
+        </div>
+      {/if}
     </div>
   </div>
 </div>
@@ -151,7 +153,7 @@
     font-size: 1.2rem;
     font-weight: 500;
     letter-spacing: 0.02rem;
-    color: var(--color-text);
+    color: #282f4b;
     flex-grow: 1;
     overflow: hidden;
     display: -webkit-box;

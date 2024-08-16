@@ -21,7 +21,10 @@ import {
   type CreateAnnotationEventType,
   CreateAnnotationEventTrigger,
   type OpenRightSidebarEventTab,
-  PageChatUpdateContextEventAction
+  PageChatUpdateContextEventAction,
+  type DeleteAnnotationEventType,
+  DeleteAnnotationEventTrigger,
+  SearchOasisEventTrigger
 } from '@horizon/types'
 
 import { HorizonDatabase } from './storage'
@@ -203,7 +206,7 @@ export class Telemetry {
     })
   }
 
-  async trackSearchOasis(searchingSpace: boolean) {
+  async trackSearchOasis(trigger: SearchOasisEventTrigger, searchingSpace: boolean) {
     await this.trackEvent(TelemetryEventTypes.SearchOasis, {
       searching: searchingSpace ? 'space' : 'oasis'
     })
@@ -315,16 +318,36 @@ export class Telemetry {
     })
   }
 
-  async trackPageChatMessageSent(numResourcesInContext: number, numPreviousMessages: number) {
-    await this.trackEvent(TelemetryEventTypes.PageChatMessageSent, {
-      context_size: numResourcesInContext,
-      num_messages: numPreviousMessages
+  async trackDeleteAnnotation(
+    type: DeleteAnnotationEventType,
+    trigger: DeleteAnnotationEventTrigger
+  ) {
+    await this.trackEvent(TelemetryEventTypes.DeleteAnnotation, {
+      type: type,
+      trigger: trigger
     })
   }
 
-  async trackPageChatCitationClick(type: 'timestamp' | 'text') {
+  async trackPageChatMessageSent(stats: {
+    contextSize: number
+    numSpaces: number
+    numPages: number
+    numPreviousMessages: number
+    embeddingModel?: string
+  }) {
+    await this.trackEvent(TelemetryEventTypes.PageChatMessageSent, {
+      context_size: stats.contextSize,
+      num_spaces: stats.numSpaces,
+      num_pages: stats.numPages,
+      num_messages: stats.numPreviousMessages,
+      embedding_model: stats.embeddingModel
+    })
+  }
+
+  async trackPageChatCitationClick(type: 'timestamp' | 'text', sourceTabType: 'page' | 'space') {
     await this.trackEvent(TelemetryEventTypes.PageChatCitationClick, {
-      type: type
+      type: type,
+      sourceTabType: sourceTabType
     })
   }
 

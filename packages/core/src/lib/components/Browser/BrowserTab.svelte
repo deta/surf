@@ -37,6 +37,7 @@
   import {
     CreateAnnotationEventTrigger,
     CreateTabEventTrigger,
+    DeleteAnnotationEventTrigger,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     WebViewEventReceiveNames,
@@ -305,12 +306,33 @@
   ) => {
     log.debug('webview annotation remove', annotationId)
 
+    const annotationResource = (await resourceManager.getResource(
+      annotationId
+    )) as ResourceAnnotation
+    if (!annotationResource) {
+      log.debug('annotation resource not found', annotationId)
+      toasts.error('Annotation not found!')
+      return
+    }
+
+    const annotationData = await annotationResource.getParsedData()
+
     await resourceManager.deleteResource(annotationId)
 
     toasts.success('Annotation deleted!')
 
     dispatch('reload-annotations', false)
     webview.reload()
+
+    const simplifiedAnnotationType =
+      (annotationData.data as AnnotationCommentData)?.content_html ||
+      (annotationData.data as AnnotationCommentData)?.content_plain
+        ? 'comment'
+        : 'highlight'
+    await resourceManager.telemetry.trackDeleteAnnotation(
+      simplifiedAnnotationType,
+      DeleteAnnotationEventTrigger.PageInline
+    )
   }
 
   const handleWebviewAnnotationUpdate = async (
@@ -557,6 +579,12 @@
       if (!bookmarkedResource) {
         if (autoSaveResources) {
           log.debug('creating new silent resource', url)
+          bookmarkedResource = await createBookmarkResource(url, tab, true)
+        } else if (pageMagic?.showSidebar) {
+          log.debug(
+            'creating new silent resource even if auto saved is disabled because chat is open',
+            url
+          )
           bookmarkedResource = await createBookmarkResource(url, tab, true)
         } else {
           log.debug('auto save resources disabled')

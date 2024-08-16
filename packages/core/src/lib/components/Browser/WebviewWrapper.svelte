@@ -129,7 +129,10 @@
   */
   export const focus = () => webview?.focus()
   export const reload = () => webview?.reload()
-  export const forceReload = () => webview?.reloadIgnoringCache()
+  export const forceReload = () => {
+    error.set(null)
+    webview?.reloadIgnoringCache()
+  }
   export const setMute = (isMuted: boolean) => webview?.setAudioMuted(isMuted)
   export const setZoomLevel = (n: number) => webview?.setZoomFactor(n)
   export const openDevTools = () => webview?.openDevTools()
@@ -320,26 +323,58 @@
   <ErrorPage error={$error} on:reload={() => forceReload()} />
 {/if}
 
-<Webview
-  {id}
-  {src}
-  {partition}
-  {historyEntriesManager}
-  {historyStackIds}
-  {currentHistoryIndex}
-  {isLoading}
-  {error}
-  {url}
-  bind:webview
-  bind:this={webviewComponent}
-  on:webview-page-event={handleWebviewPageEvent}
-  on:update-target-url={(e) => (hoverTargetUrl = e.detail)}
-  on:new-window={handleWebviewNewWindow}
-  on:found-in-page={handleWebviewFoundInPage}
-  on:navigation
-  on:did-finish-load
-  on:url-change
-  on:title-change
-  on:favicon-change
-  on:history-change
-/>
+<div class="webview-container">
+  {#if webview}
+    <FindInPage bind:this={findInPageComp} {webview} {getSelection} />
+    <ZoomPreview {zoomLevel} {showZoomPreview} />
+    <HoverLinkPreview show={!!hoverTargetUrl} url={hoverTargetUrl} />
+  {/if}
+
+  <Webview
+    {id}
+    {src}
+    {partition}
+    {historyEntriesManager}
+    {historyStackIds}
+    {currentHistoryIndex}
+    {isLoading}
+    {error}
+    {url}
+    bind:webview
+    bind:this={webviewComponent}
+    on:webview-page-event={handleWebviewPageEvent}
+    on:update-target-url={(e) => (hoverTargetUrl = e.detail)}
+    on:new-window={handleWebviewNewWindow}
+    on:found-in-page={handleWebviewFoundInPage}
+    on:navigation
+    on:did-finish-load
+    on:url-change
+    on:title-change
+    on:favicon-change
+    on:history-change
+  />
+
+  {#if $error}
+    <div class="error-overlay">
+      <ErrorPage error={$error} on:reload={() => forceReload()} />
+    </div>
+  {/if}
+</div>
+
+<style>
+  .webview-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .error-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    background-color: white;
+  }
+</style>

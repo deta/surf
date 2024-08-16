@@ -177,6 +177,27 @@ const template = [
         click: () => ipcSenders.toggleTabsPosition()
       },
       { type: 'separator' },
+      {
+        label: 'Toggle Right Sidebar',
+        accelerator: 'Alt+X',
+        click: () => ipcSenders.toggleRightSidebar()
+      },
+      {
+        label: 'Toggle Chat Mode',
+        accelerator: 'Alt+C',
+        click: () => ipcSenders.toggleChatMode()
+      },
+      {
+        label: 'Toggle Annotations',
+        accelerator: 'Alt+A',
+        click: () => ipcSenders.toggleAnnotations()
+      },
+      {
+        label: 'Toggle Go Wild',
+        accelerator: 'Alt+g',
+        click: () => ipcSenders.toggleGoWild()
+      },
+      { type: 'separator' },
       { role: 'resetZoom' },
       { role: 'zoomIn' },
       { role: 'zoomOut' },

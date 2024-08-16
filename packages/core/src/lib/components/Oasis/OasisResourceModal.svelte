@@ -11,6 +11,7 @@
   import {
     CreateAnnotationEventTrigger,
     CreateTabEventTrigger,
+    DeleteAnnotationEventTrigger,
     ResourceTagsBuiltInKeys,
     WebViewEventReceiveNames,
     WebViewEventSendNames,
@@ -231,13 +232,31 @@
   ) => {
     log.debug('Annotation removed', annotationId)
 
-    annotations = annotations.filter((annotation) => annotation.id !== annotationId)
+    const annotation = annotations.find((annotation) => annotation.id === annotationId)
+    if (!annotation) {
+      log.error('Annotation not found', annotationId)
+      toast.error('Annotation not found')
+      return
+    }
 
+    const annotationData = await annotation.getParsedData()
+
+    annotations = annotations.filter((annotation) => annotation.id !== annotationId)
     await resourceManager.deleteResource(annotationId)
 
     toast.success('Annotation removed!')
 
     webview.reload()
+
+    const simplifiedAnnotationType =
+      (annotationData.data as AnnotationCommentData)?.content_html ||
+      (annotationData.data as AnnotationCommentData)?.content_plain
+        ? 'comment'
+        : 'highlight'
+    await resourceManager.telemetry.trackDeleteAnnotation(
+      simplifiedAnnotationType,
+      DeleteAnnotationEventTrigger.PageSidebar
+    )
   }
 
   const handleAnnotationUpdate = async (

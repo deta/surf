@@ -616,6 +616,8 @@
         return
       }
 
+      telemetry.trackSearchOasis(SearchOasisEventTrigger.CommandMenu, false)
+
       openResourceAsTab(item.id)
       // dispatch('open-resource', item.id!)
     } else if (item.type === 'space') {
@@ -667,6 +669,7 @@
   const toasts = useToasts()
 
   const resourceManager = oasis.resourceManager
+  const telemetry = resourceManager.telemetry
   const spaces = oasis.spaces
   const telemetry = resourceManager.telemetry
 
@@ -773,6 +776,8 @@
       value = ''
     }
 
+    await telemetry.trackSearchOasis(SearchOasisEventTrigger.Oasis, false)
+
     const result = await resourceManager.searchResources(
       value,
       [
@@ -846,6 +851,8 @@
       })
     }
 
+    await telemetry.trackDeleteResource(resource.type, !isEverythingSpace)
+
     log.debug('Resource removed:', resourceId)
     toasts.success('Resource deleted!')
   }
@@ -865,18 +872,7 @@
     if (showTabSearch !== 2) return
 
     log.debug('Key down:', e.key)
-    if (e.key === 'Escape') {
-      if ($showResourceDetails === true) {
-        closeResourceDetailsModal()
-      } else {
-        showTabSearch = 0
-      }
-    } else if (
-      e.key === ' ' &&
-      $selectedItem &&
-      !$isResourceDetailsModalOpen &&
-      !$showSettingsModal
-    ) {
+    if (e.key === ' ' && $selectedItem && !$isResourceDetailsModalOpen && !$showSettingsModal) {
       e.preventDefault()
       openResourceDetailsModal($selectedItem)
     } else if (isModKeyAndKeyPressed(e, 'Enter') && $selectedItem && !$isResourceDetailsModalOpen) {
@@ -997,7 +993,6 @@
       /*
       if (spaceId !== 'all') {
         await oasis.addResourcesToSpace(spaceId, resourceIds)
-        await loadSpaceContents(spaceId)
 
         resourceIds.forEach((id) => {
           resourceManager.getResource(id).then((resource) => {
@@ -1144,6 +1139,10 @@
     debouncedSearch($searchValue)
   }
 
+  const debouncedTrackOpenOasis = useDebounce(() => {
+    telemetry.trackOpenOasis()
+  }, 500)
+
   $: if (showTabSearch === 2 && !!$searchValue) {
     log.debug('case 1')
     debouncedSearch($searchValue)
@@ -1153,6 +1152,10 @@
     log.debug('case 2')
     $searchResults = []
     deboundedEverything()
+  }
+
+  $: if (showTabSearch === 2) {
+    debouncedTrackOpenOasis()
   }
 </script>
 
@@ -1181,7 +1184,6 @@
   direction="bottom"
   scrollLockTimeout={300}
   open={showTabSearch !== 0}
-  closeOnEscape
   onOpenChange={(e) => {
     if (e === false) {
       resetSearch()

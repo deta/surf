@@ -52,8 +52,9 @@
     'unarchive-tab': string
     'input-enter': string
     bookmark: void
-    'save-resource-in-space': string
+    'save-resource-in-space': Space
     'create-live-space': void
+    'add-source-to-space': Space
     'exclude-other-tabs': string
     'exclude-tab': string
     'include-tab': string
@@ -178,7 +179,11 @@
     dispatch('create-live-space')
   }
 
-  const handleSaveResourceInSpace = (event: CustomEvent<string>) => {
+  const handleAddSourceToSpace = (event: CustomEvent<Space>) => {
+    dispatch('add-source-to-space', event.detail)
+  }
+
+  const handleSaveResourceInSpace = (event: CustomEvent<Space>) => {
     dispatch('save-resource-in-space', event.detail)
   }
 
@@ -318,7 +323,7 @@
     {/if}
   </div>
 
-  {#if showClose && ((tabSize && tabSize > 64 && horizontalTabs) || !horizontalTabs) && hovered}
+  {#if showClose && ((tabSize && tabSize > 64 && horizontalTabs) || !horizontalTabs || isActive) && hovered}
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
@@ -405,6 +410,8 @@
 
         {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <button
+            on:mouseenter={handlePopoverEnter}
+            on:mouseleave={() => setTimeout(() => handlePopoverLeave(), 100)}
             on:click={handleCreateLiveSpace}
             class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
             use:tooltip={{
@@ -413,6 +420,21 @@
               position: 'left',
               animation: 'fade',
               delay: 500
+            }}
+            on:save-resource-in-space={handleAddSourceToSpace}
+            on:popover-close={handlePopoverLeave}
+            use:popover={{
+              content: {
+                component: ShortcutSaveItem,
+                props: { resourceManager, spaces, infoText: 'Add page as a source to Space:' }
+              },
+              action: 'hover',
+              position: horizontalTabs ? 'bottom-center' : 'right-top',
+              style: {
+                backgroundColor: '#f5f5f5'
+              },
+              animation: 'fade',
+              delay: 700
             }}
           >
             <Icon name="news" />
@@ -434,7 +456,7 @@
               use:popover={{
                 content: {
                   component: ShortcutSaveItem,
-                  props: { resourceManager, spaces }
+                  props: { resourceManager, spaces, infoText: 'Save page to Space:' }
                 },
                 action: 'hover',
                 position: horizontalTabs ? 'bottom-center' : 'right-top',
@@ -545,7 +567,7 @@
 <style>
   .tab {
     transition:
-      0.2s ease-in-out,
+      0s ease-in-out,
       transform 0s;
   }
   :global(.tab img) {

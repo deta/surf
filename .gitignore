@@ -12,6 +12,7 @@ packages/core/src/output.css
 .env.development.local
 .env.test.local
 .env.production.local
+.envrc
 
 # Testing
 coverage

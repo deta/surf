@@ -5,6 +5,7 @@
 
   export let spaces: Writable<Space[]>
   export let closePopover: () => void
+  export let infoText: string | undefined = undefined
 
   let selectedSpaceIndex = 0
   let inputRef: HTMLInputElement
@@ -46,23 +47,25 @@
     }
   }
 
-  onMount(() => {
-    window.addEventListener('keydown', handleKeydown, true)
-    focusInput()
-    return () => {
-      window.removeEventListener('keydown', handleKeydown, true)
-    }
-  })
+  // onMount(() => {
+  //   window.addEventListener('keydown', handleKeydown, true)
+  //   focusInput()
+  //   return () => {
+  //     window.removeEventListener('keydown', handleKeydown, true)
+  //   }
+  // })
 </script>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="shortcut-wrapper" on:mouseleave={() => closePopover()}>
+  {#if infoText}
+    <span class="info">{infoText}</span>
+  {/if}
+
   {#if $filteredSpaces && $filteredSpaces.length > 0}
     {#each $filteredSpaces as space, index}
-      <span
-        class="label"
-        class:active={index === selectedSpaceIndex}
-        on:click={() => handleClick(index)}
-        aria-hidden="true">{space.name.folderName}</span
+      <span class="label" on:click={() => handleClick(index)} aria-hidden="true"
+        >{space.name.folderName}</span
       >
     {/each}
   {:else}
@@ -75,7 +78,7 @@
     display: flex;
     overflow-y: auto;
     flex-direction: column;
-    width: 18rem;
+    width: 19rem;
     max-height: 30rem;
     .label {
       display: flex;
@@ -85,7 +88,7 @@
       cursor: pointer;
       gap: 10px;
       position: relative;
-      color: #7d7448;
+      color: #3c371f;
       font-weight: 500;
       letter-spacing: 0.0025em;
       font-smooth: always;
@@ -135,5 +138,14 @@
     background-color: #ffffff;
     border-radius: 8px;
     color: white;
+  }
+
+  .info {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: left;
+    color: #7d7653;
+    // border-bottom: 1px solid #e0e0d1;
   }
 </style>
