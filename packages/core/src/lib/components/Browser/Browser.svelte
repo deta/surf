@@ -2109,8 +2109,7 @@
   let tabSize = 0
 
   $: plusBtnLeftPos = horizontalTabs
-    ? $pinnedTabs.length * (23 + 4) +
-      16 - // padding left and right
+    ? 16 - // padding left and right
       4 + // remove last padding
       16 + // padding between them
       $unpinnedTabs.reduce(
@@ -2129,7 +2128,8 @@
         0
       ) +
       120 + // the size of traffic lights plus back and forward buttons
-      ($magicTabs.length > 0 ? 16 : 0)
+      ($magicTabs.length > 0 ? 16 : 0) +
+      ($pinnedTabs.length > 0 ? $pinnedTabs.length * (23 + 4) : 182)
     : 0
 
   $: {
