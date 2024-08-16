@@ -77,5 +77,7 @@ fn main() {
         embedding_model_mode,
     )
     .unwrap();
+
+    println!("[LocalAIServer]: healthy");
     server.listen();
 }

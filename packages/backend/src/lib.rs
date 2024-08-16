@@ -21,6 +21,8 @@ pub enum BackendError {
     ReqwestError(#[from] reqwest::Error),
     #[error("Error: {0}")]
     OpenAIError(String),
+    #[error("RAG Empty Context error: {0}")]
+    RAGEmptyContextError(String),
     #[error("Generic error: {0}")]
     GenericError(String),
 }
