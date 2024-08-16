@@ -671,7 +671,6 @@
   const resourceManager = oasis.resourceManager
   const telemetry = resourceManager.telemetry
   const spaces = oasis.spaces
-  const telemetry = resourceManager.telemetry
 
   const showChat = writable(false)
   const resourceIds = writable<string[]>([])
