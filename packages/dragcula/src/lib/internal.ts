@@ -2,13 +2,13 @@ export const DEV = import.meta.env.DEV;
 const VITE_LOG_LEVEL = import.meta.env.R_VITE_LOG_LEVEL;
 const logLevelMap = ["verbose", "debug", "info", "warn", "error"];
 export const LOG_LEVEL =
-  DEV === true ? logLevelMap.indexOf("verbose") : levelMap.indexOf(LOG_LEVEL ?? "info");
+  DEV === true ? logLevelMap.indexOf("verbose") : logLevelMap.indexOf(VITE_LOG_LEVEL ?? "info");
 type LogLevel = "verbose" | "debug" | "info" | "warn" | "error";
 
 export const SUPPORTS_VIEW_TRANSITIONS = document.startViewTransition !== undefined;
 
 export const log = {
-  log: (...data: any[]) => {
+  log: (...args: any[]) => {
     if (LOG_LEVEL <= logLevelMap.indexOf("verbose")) {
       console.log(...args);
     }
