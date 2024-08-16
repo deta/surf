@@ -1066,9 +1066,10 @@
     await tick()
     const spaceID = await createSpaceRef.handleCreateSpace(e, e.detail.name, e.detail.aiEnabled)
 
-    console.log('AI Voodoo', spaceID)
-    await tick()
-    await createSpaceRef.createSpaceWithAI(spaceID, e.detail.name)
+    if (e.detail.aiEnabled) {
+      await tick()
+      await createSpaceRef.createSpaceWithAI(spaceID, e.detail.name)
+    }
   }
 
   const focusInput = async (loop = false) => {
