@@ -130,7 +130,9 @@ export enum SaveToOasisEventTrigger {
   /** Resource was created from the create menu */
   CreateMenu = 'create_menu',
   /** Page was saved from the command menu */
-  CommandMenu = 'command_menu'
+  CommandMenu = 'command_menu',
+  /** Page was saved by dropping into Oasis or a Space */
+  Drop = 'drop'
 }
 
 export enum SearchOasisEventTrigger {

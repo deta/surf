@@ -71,7 +71,7 @@
     DeleteSpaceEventTrigger,
     OpenResourceEventFrom,
     RefreshSpaceEventTrigger,
-    SearchOasisEventTrigger
+    SaveToOasisEventTrigger
   } from '@horizon/types'
   import { truncate } from '../../utils/text'
   import PQueue from 'p-queue'
@@ -1019,7 +1019,10 @@
         const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
         log.debug('Resources', newResources)
 
-        newResources.forEach((r) => resourceIds.push(r.id))
+        for (const r of newResources) {
+          resourceIds.push(r.id)
+          telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, true)
+        }
       } else {
         log.debug('Dropped dragcula', drag.data)
 
@@ -1052,7 +1055,11 @@
                 ''
               )
               log.debug('Resources', newResources)
-              newResources.forEach((r) => resourceIds.push(r.id))
+
+              for (const r of newResources) {
+                resourceIds.push(r.id)
+                telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, true)
+              }
             }
           }
         }
@@ -1075,6 +1082,7 @@
                 // remove silent tag if it exists sicne the user is explicitly adding it
                 log.debug('Removing silent tag from resource', resourceId)
                 await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+                telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, true)
               }
             })
           )

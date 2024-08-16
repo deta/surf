@@ -105,7 +105,7 @@
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
   import { useLocalStorageStore } from '../../utils/localstorage'
-  import { AddResourceToSpaceEventTrigger, SearchOasisEventTrigger } from '@horizon/types'
+  import { AddResourceToSpaceEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
 
@@ -671,6 +671,7 @@
   const resourceManager = oasis.resourceManager
   const telemetry = resourceManager.telemetry
   const spaces = oasis.spaces
+  const telemetry = resourceManager.telemetry
 
   const showChat = writable(false)
   const resourceIds = writable<string[]>([])
@@ -920,7 +921,10 @@
         const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
         log.debug('Resources', newResources)
 
-        newResources.forEach((r) => resourceIds.push(r.id))
+        for (const r of newResources) {
+          resourceIds.push(r.id)
+          telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
+        }
       } else {
         log.debug('Dropped dragcula', drag.data)
 
@@ -953,7 +957,11 @@
                 ''
               )
               log.debug('Resources', newResources)
-              newResources.forEach((r) => resourceIds.push(r.id))
+
+              for (const r of newResources) {
+                resourceIds.push(r.id)
+                telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
+              }
             }
           }
         }
@@ -976,12 +984,13 @@
                 // remove silent tag if it exists sicne the user is explicitly adding it
                 log.debug('Removing silent tag from resource', resourceId)
                 await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+                telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, false)
               }
             })
           )
         }
       }
-
+      /*
       if (spaceId !== 'all') {
         await oasis.addResourcesToSpace(spaceId, resourceIds)
 
@@ -995,6 +1004,8 @@
       } else {
         await loadEverything()
       }
+      */
+      await loadEverything()
     } catch (error) {
       log.error('Error dropping:', error)
       toast.error('Error dropping: ' + (error as Error).message)

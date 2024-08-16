@@ -2988,7 +2988,7 @@
     if (drag.item !== null) drag.item.dragEffect = 'copy'
 
     const toast = toasts.loading(
-      `${spaceId === 'all' ? 'Saving to Oasis' : drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`
+      `${spaceId === 'all' ? 'Saving to Oasis...' : drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`
     )
 
     if (
@@ -3019,7 +3019,10 @@
       const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
       log.debug('Resources', newResources)
 
-      newResources.forEach((r) => resourceIds.push(r.id))
+      for (const r of newResources) {
+        resourceIds.push(r.id)
+        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
+      }
     } else {
       try {
         const existingResources: string[] = []
@@ -3051,7 +3054,10 @@
                 ''
               )
               log.debug('Resources', newResources)
-              newResources.forEach((r) => resourceIds.push(r.id))
+              for (const r of newResources) {
+                resourceIds.push(r.id)
+                telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
+              }
             }
           }
         } else if (dragData['oasis/resource'] !== undefined) {
@@ -3077,6 +3083,11 @@
                 // remove silent tag if it exists sicne the user is explicitly adding it
                 log.debug('Removing silent tag from resource', resourceId)
                 await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+                telemetry.trackSaveToOasis(
+                  resource.type,
+                  SaveToOasisEventTrigger.Drop,
+                  spaceId !== 'all'
+                )
               }
             })
           )
