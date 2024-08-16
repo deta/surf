@@ -12,6 +12,7 @@
   import { generateID } from '../../utils/id'
   import { parseStringIntoBrowserLocation } from '../../utils/url'
   import {
+    isModKeyAndEventCodeIs,
     isModKeyAndKeyPressed,
     isModKeyAndKeysPressed,
     isModKeyAndShiftKeyAndKeyPressed,
@@ -1010,10 +1011,10 @@
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       setShowNewTabOverlay(0)
       createHistoryTab()
-    } else if (isModKeyAndKeyPressed(e, '+')) {
+    } else if (isModKeyAndEventCodeIs(e, 'Plus') || isModKeyAndEventCodeIs(e, 'Equal')) {
       setShowNewTabOverlay(0)
       $activeBrowserTab?.zoomIn()
-    } else if (isModKeyAndKeyPressed(e, '-')) {
+    } else if (isModKeyAndEventCodeIs(e, 'Minus')) {
       setShowNewTabOverlay(0)
       $activeBrowserTab?.zoomOut()
     } else if (isModKeyAndKeyPressed(e, '0')) {
