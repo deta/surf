@@ -1165,7 +1165,16 @@
           }
         }}
       >
-        <div use:motion>
+        <div
+          use:motion
+          on:DragEnd={(drag) => {
+            /// Note: This event bubbles up for any child DragZone, whenever a drag ends,
+            /// which originated from one of these child zones.
+            if (drag.status !== 'aborted' && drag.from.id.startsWith('oasis-space')) {
+              showTabSearch = 0
+            }
+          }}
+        >
           {#if $searchValue.length > 0 && showTabSearch === 2}
             <button
               data-vaul-no-drag

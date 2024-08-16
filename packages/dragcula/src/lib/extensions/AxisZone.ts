@@ -125,6 +125,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
 
     if (Math.sign(closestElement.dist) < 0) targetIndex++;
 
+    console.warn(targetIndex);
     if (targetIndex === -1) return [undefined, undefined];
     return [targetIndex, closestElement.dist];
     console.warn(this.#childrenCache[targetIndex]);
@@ -181,7 +182,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
   override onDragOver(drag?: DragOperation) {
     const [index, distance] = this.getIndexAtPoint(MOUSE_POS.x, MOUSE_POS.y);
 
-    //console.log("Index", index, distance);
+    console.log("Index", index, distance);
 
     if (index !== undefined && index !== this.lastIndex) {
       drag.index = index;

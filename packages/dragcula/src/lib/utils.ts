@@ -131,26 +131,25 @@ export function createStyleCache() {
     }
   }
   function transfer(oldNode: HTMLElement, newNode: HTMLElement) {
-    //console.warn("transfering styles", oldNode, newNode)
+    console.warn("transfering styles", oldNode, newNode);
     const cache = items.get(oldNode);
     if (!cache) return;
     items.set(newNode, cache);
     items.delete(oldNode);
     for (const [prop, val] of Object.entries(cache)) {
       const oldVal = oldNode.style.getPropertyValue(prop);
-      //console.log("transfer", prop, oldVal)
+      console.log("transfer", prop, oldVal);
       newNode.style.setProperty(prop, oldVal);
     }
   }
   function dump(label = "") {
     //return; // debug
-    /*console.trace("Dumping style cache", label, items.size)
-		for (const [node, cache] of items.entries()) {
-			console.group(`[StyleCache] ${label} :: Node`, node)
-			console.table(cache)
-			console.groupEnd();
-		}*/
-    // debug only
+    console.trace("Dumping style cache", label, items.size);
+    for (const [node, cache] of items.entries()) {
+      console.group(`[StyleCache] ${label} :: Node`, node);
+      console.table(cache);
+      console.groupEnd();
+    }
   }
 
   return {

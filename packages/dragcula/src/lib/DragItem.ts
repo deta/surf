@@ -272,7 +272,10 @@ export class HTMLDragItem extends DragItem {
   }
 
   protected async rafCbk(_: number) {
-    //console.assert(this.previewElement !== undefined, "Preview element is null! This should not happen!");
+    console.assert(
+      this.previewElement !== undefined,
+      "Preview element is null! This should not happen!"
+    );
     if (this.previewElement === undefined) {
       this.raf = null;
       return;
@@ -284,7 +287,7 @@ export class HTMLDragItem extends DragItem {
       return;
     }
 
-    this.previewElement.style.transform = `translate(-50%, -50%) translate(${this.previewPosition.x}px, ${this.previewPosition.y}px)`;
+    this.previewElement.style.transform = `translate(-50%, -50%) translate(${this.previewPosition.x}px, ${this.previewPosition.y}px)`; // var(--dragcula-transform)
 
     const overZone = HTMLDragZone.findClosestFromPoint(MOUSE_POS.x, MOUSE_POS.y);
     const newTargetId = overZone?.id ?? null;
@@ -365,6 +368,11 @@ export class HTMLDragItem extends DragItem {
       } else {
         drag.status = "aborted";
       }
+
+      if (drag.from !== null) {
+        drag.from.onDragEnd(drag);
+      }
+
       this.onDragEnd(drag);
 
       // NOTE: Needed so that DOM can change, items can be re-attached & finalized
