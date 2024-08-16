@@ -26,7 +26,7 @@
     type ResourceObject,
     type ResourceSearchResultItem
   } from '../../service/resources'
-  import { wait } from '../../utils/time'
+  import { gracefullyParseDateStringtoISO, wait } from '../../utils/time'
   import OasisResourcesView from './OasisResourcesView.svelte'
   import {
     ResourceTagsBuiltInKeys,
@@ -481,7 +481,7 @@
         title: item.title,
         link: item.link,
         comments: item.comments,
-        pubDate: item.pubDate,
+        pubDate: (item.pubDate && gracefullyParseDateStringtoISO(item.pubDate)) || '',
         sourceUrl: source.url
       } as ParsedSourceItem
     })
@@ -592,7 +592,10 @@
             ResourceTag.canonicalURL(canonicalURL),
             ResourceTag.spaceSource('rss'),
             ResourceTag.hideInEverything(),
-            ResourceTag.viewedByUser(false)
+            ResourceTag.viewedByUser(false),
+            ...(postData.date_published
+              ? [ResourceTag.sourcePublishedAt(postData.date_published)]
+              : [])
           ]
         )
 
@@ -614,7 +617,8 @@
             ResourceTag.canonicalURL(canonicalURL),
             ResourceTag.spaceSource('rss'),
             ResourceTag.hideInEverything(),
-            ResourceTag.viewedByUser(false)
+            ResourceTag.viewedByUser(false),
+            ...(item.pubDate ? [ResourceTag.sourcePublishedAt(item.pubDate)] : [])
           ]
         )
       }
