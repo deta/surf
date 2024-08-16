@@ -450,7 +450,10 @@
     /*
       Handle loading events
     */
-    webview.addEventListener('did-start-loading', () => isLoading.set(true))
+    webview.addEventListener('did-start-loading', () => {
+      isLoading.set(true)
+      error.set(null)
+    })
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
     webview.addEventListener('did-fail-load', (e: Electron.DidFailLoadEvent) => {
       log.debug('Failed to load', e.errorCode, e.errorDescription, e.validatedURL)
