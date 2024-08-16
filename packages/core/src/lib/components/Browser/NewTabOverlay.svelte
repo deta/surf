@@ -1344,12 +1344,14 @@
                         {historyEntriesManager}
                         on:open={handleOpen}
                         on:go-back={() => selectedSpaceId.set(null)}
+                        insideDrawer={true}
                       />
                     {:else}
                       <DropWrapper
                         {spaceId}
                         on:Drop={(e) => handleDrop(e.detail)}
                         on:DragEnter={(e) => handleDragEnter(e.detail)}
+                        zonePrefix="drawer-"
                       >
                         <div class="w-full h-[calc(100%-216px)] will-change-transform">
                           <div class="relative will-change-transform">
@@ -1672,7 +1674,7 @@
 
   /* Hides the Drawer when dragging but not targeting it */
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='oasis-space-'])
+      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='drawer-oasis-space-'])
         .drawer-content
     ) {
     transform: translateY(calc(100vh - 240px)) !important;
@@ -1683,7 +1685,7 @@
     opacity: 1;
   }
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='oasis-space-'])
+      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='drawer-oasis-space-'])
         [data-dialog-portal]
         .drawer-overlay
     ) {

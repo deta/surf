@@ -83,6 +83,7 @@
   export let hideBar = false
   export let hideResourcePreview = false
   export let handleEventsOutside: boolean = false
+  export let insideDrawer: boolean = false
 
   $: isEverythingSpace = spaceId === 'all'
 
@@ -1296,6 +1297,7 @@
   {spaceId}
   on:Drop={(e) => handleDrop(e.detail)}
   on:DragEnter={(e) => handleDragEnter(e.detail)}
+  zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
   <div class="wrapper bg-sky-100/50">
     <div
