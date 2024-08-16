@@ -544,7 +544,7 @@
 <style>
   .tab {
     transition:
-      0.2s ease-in-out,
+      0s ease-in-out,
       transform 0s;
   }
   :global(.tab img) {
