@@ -105,7 +105,11 @@
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
   import { useLocalStorageStore } from '../../utils/localstorage'
-  import { AddResourceToSpaceEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
+  import {
+    AddResourceToSpaceEventTrigger,
+    SaveToOasisEventTrigger,
+    SearchOasisEventTrigger
+  } from '@horizon/types'
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
 
