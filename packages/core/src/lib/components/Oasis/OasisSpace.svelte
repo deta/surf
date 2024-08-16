@@ -336,16 +336,20 @@
       const response = await resourceManager.getResourcesViaPrompt(stringifiedQuery)
       log.debug('AI response:', response)
 
-      const results = response.embedding_search_query
-        ? response.embedding_search_results
-        : response.sql_query_results
+      const results = new Set([
+        ...(response.embedding_search_results ?? []),
+        ...(response.sql_query_results ?? [])
+      ])
+
+      const resourceIds = Array.from(results)
+
       if (!results) {
         log.debug('No results found')
         toasts.info('No results found')
         return
       }
 
-      const newResults = results.filter(
+      const newResults = resourceIds.filter(
         (x) => $spaceContents.findIndex((y) => y.resource_id === x) === -1
       )
 
@@ -353,7 +357,7 @@
 
       newlyLoadedResources.update((resources) => [...resources, ...newResults])
 
-      await oasis.addResourcesToSpace(spaceId, results)
+      await oasis.addResourcesToSpace(spaceId, resourceIds)
 
       // await loadSpaceContents(spaceId, true)
 

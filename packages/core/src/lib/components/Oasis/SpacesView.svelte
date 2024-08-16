@@ -90,21 +90,23 @@
 
   export const createSpaceWithAI = async (
     spaceId: string,
-    name: string,
+    userPrompt: string,
     colors?: [string, string]
   ) => {
     try {
-      const userPrompt = name
-
       log.debug('Creating folder with AI', userPrompt)
 
       const response = await resourceManager.getResourcesViaPrompt(userPrompt)
 
       log.debug(`Automatic Folder Generation request`, response)
 
-      let results = response.sql_query_results
-      if (response.embedding_search_results && response.embedding_search_results.length > 0)
-        results = response.embedding_search_results
+      const results = new Set([
+        ...(response.embedding_search_results ?? []),
+        ...(response.sql_query_results ?? [])
+      ])
+
+      const resourceIds = Array.from(results)
+
       log.debug('Automatic Folder generated with', results)
 
       if (!results) {
@@ -118,13 +120,13 @@
         })
       }
 
-      await oasis.addResourcesToSpace(spaceId, results)
+      await oasis.addResourcesToSpace(spaceId, resourceIds)
 
       await resourceManager.telemetry.trackRefreshSpaceContent(
         RefreshSpaceEventTrigger.RenameSpaceWithAI,
         {
           usedSmartQuery: true,
-          addedResources: results.length > 0
+          addedResources: resourceIds.length > 0
         }
       )
 

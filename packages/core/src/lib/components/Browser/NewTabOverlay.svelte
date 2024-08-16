@@ -1102,7 +1102,7 @@
 
     if (e.detail.aiEnabled) {
       await tick()
-      await createSpaceRef.createSpaceWithAI(spaceID, e.detail.name, e.detail.colors)
+      await createSpaceRef.createSpaceWithAI(spaceID, e.detail.userPrompt, e.detail.colors)
     }
   }
 
