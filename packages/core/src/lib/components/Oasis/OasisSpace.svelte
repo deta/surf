@@ -1309,7 +1309,7 @@
   <div class="wrapper bg-sky-100/50">
     <div
       class=" drawer-bar rounded-t-lg rounded-b-lg bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 bg-sky-100/90 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
-      class:translate-y-24={hideBar}
+      class:translate-y-24={hideBar && active}
     >
       {#if showBackBtn}
         <div class="absolute top-6 left-6 z-10">
