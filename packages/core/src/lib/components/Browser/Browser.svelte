@@ -14,9 +14,7 @@
   import {
     isModKeyAndKeyPressed,
     isModKeyAndKeysPressed,
-    isModKeyAndShiftKeyAndKeyPressed,
-    isModKeyPressed,
-    isOptKeyAndKeyPressed
+    isModKeyAndShiftKeyAndKeyPressed
   } from '../../utils/keyboard'
   import { wait, writableAutoReset } from '../../utils/time'
   import { createTelemetry, Telemetry } from '../../service/telemetry'
