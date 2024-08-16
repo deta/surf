@@ -67,6 +67,7 @@
     background-color: rgba(255, 255, 255, 0.9);
     padding: 0.5rem 1rem;
     border-radius: 0.25rem;
+    z-index: 1000000;
     box-shadow:
       0px 0px 32px -1px rgba(0, 0, 0, 0.05),
       0px 14px 4px 0px #000,

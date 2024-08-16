@@ -1,20 +1,48 @@
-<script>
+<script lang="ts">
   import { Icon, IconConfirmation } from '@horizon/icons'
   import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
   import { writable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
+  import { ResourceOverlay } from '@horizon/drawer/src/lib/drawer'
+
+  import { colorPairs } from '../../service/oasis'
 
   const aiEnabled = writable(false)
   const name = writable('')
+  const colors = writable(colorPairs[Math.floor(Math.random() * colorPairs.length)])
   const dispatch = createEventDispatcher()
+
+  const newSpace = () => {
+    const now = new Date().toISOString()
+    return {
+      id: 'new',
+      name: {
+        folderName: 'New Space',
+        colors: $colors,
+        showInSidebar: true,
+        sources: [],
+        liveModeEnabled: false,
+        hideViewed: false,
+        smartFilterQuery: null,
+        sortBy: 'created_at'
+      },
+      created_at: now,
+      updated_at: now,
+      deleted: 0
+    }
+  }
 
   const handleCloseModal = () => {
     dispatch('close-modal')
   }
 
+  const handleColorChange = async (event: CustomEvent<[string, string]>) => {
+    colors.set(event.detail)
+  }
+
   const handleSubmit = () => {
-    dispatch('submit', { name: $name, aiEnabled: $aiEnabled })
+    dispatch('submit', { name: $name, aiEnabled: $aiEnabled, colors: $colors })
     dispatch('close-modal')
   }
 </script>
@@ -23,6 +51,10 @@
   on:keydown={(e) => {
     if (e.key === 'Escape') {
       handleCloseModal()
+    } else if (e.key === 'Enter') {
+      if ($name.length > 0) {
+        handleSubmit()
+      }
     }
   }}
 />
@@ -35,9 +67,11 @@
     >
   </div>
   <div class="dialog-body">
-    <div class="space-icon-wrapper">
-      <SpaceIcon />
-    </div>
+    <ResourceOverlay caption="Click to change color.">
+      <div slot="content" class="space-icon-wrapper transform active:scale-[98%]">
+        <SpaceIcon on:change={handleColorChange} folder={newSpace()} />
+      </div>
+    </ResourceOverlay>
     <div class="input-wrapper">
       <input
         type="text"

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, tick, onMount } from 'svelte'
   import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
   import { Resource, ResourceManager, useResourceManager } from '../../service/resources'
@@ -13,7 +13,7 @@
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import { useToasts } from '../../service/toast'
   import { hover, tooltip } from '../../utils/directives'
-  import { fade, slide } from 'svelte/transition'
+  import { fade, fly } from 'svelte/transition'
   import {
     DeleteSpaceEventTrigger,
     RefreshSpaceEventTrigger,
@@ -26,7 +26,7 @@
 
   export let folder: Space
   export let selected: boolean
-  export let showPreview = true
+  export let showPreview = false
 
   const log = useLogScope('Folder')
   const dispatch = createEventDispatcher<{
@@ -43,15 +43,18 @@
 
   const hovered = writable(false)
   const draggedOver = writable(false)
+  const inView = writable(false)
 
   let folderDetails = folder.name
   let inputWidth = `${folderDetails.folderName.length}ch`
   let processing = false
   let inputElement: HTMLInputElement
+  let previewContainer: HTMLDivElement
 
   const getPreviewResources = async (numberOfLatestResourcesToFetch: number) => {
-    let result: Resource[]
-    if (folder.id == 'all') {
+    let result: Resource[] = []
+
+    if (folder.id === 'all') {
       result = await resourceManager.listResourcesByTags([
         ResourceManager.SearchTagDeleted(false),
         ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
@@ -61,13 +64,13 @@
       ])
     } else {
       const contents = await resourceManager.getSpaceContents(folder.id)
-      const resources = await Promise.all(
-        contents
-          .slice(0, numberOfLatestResourcesToFetch)
-          .map((item) => resourceManager.getResource(item.resource_id))
-      )
 
-      result = resources.filter((x) => x != null)
+      for (const item of contents.slice(0, numberOfLatestResourcesToFetch)) {
+        const resource = await resourceManager.getResource(item.resource_id)
+        if (resource) result.push(resource)
+
+        await tick() // Yield to the event loop to avoid blocking
+      }
     }
 
     log.debug('Resources:', result)
@@ -110,7 +113,7 @@
 
   const addItemToTabs = async () => {
     const space = await oasis.getSpace(folder.id)
-    console.log('xxx-space', space)
+    log.debug('Adding space to tabs:', space)
     try {
       if (space) {
         space.name.showInSidebar = true
@@ -249,19 +252,33 @@
     dispatch('open-resource', id)
   }
 
-  // onMount(() => {
-  //   if (folder.id === activeFolderId) {
-  //     const inputElement = document.getElementById(`folder-input-${folder.id}`) as HTMLInputElement
-  //     if (inputElement) {
-  //       inputElement.select()
-  //     }
-  //   }
-  // })
   const getRandomRotation = () => {
     const maxRotation = 1.5
     const minRotation = -1.5
     return `${Math.random() * (maxRotation - minRotation) + minRotation}deg`
   }
+
+  const initializeIntersectionObserver = () => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            inView.set(true)
+            observer.disconnect() // Stop observing once it is in view
+          }
+        })
+      },
+      { threshold: 0.1 } // Trigger when 10% of the element is in view
+    )
+
+    if (previewContainer) {
+      observer.observe(previewContainer)
+    }
+  }
+
+  onMount(() => {
+    initializeIntersectionObserver()
+  })
 
   $: {
     inputWidth = `${folderDetails.folderName.length + 3}ch`
@@ -282,14 +299,14 @@
     on:click={handleSpaceSelect}
     aria-hidden="true"
     use:hover={hovered}
+    bind:this={previewContainer}
   >
-    {#if showPreview}
-      <div class="previews" transition:slide={{ axis: 'y' }}>
+    {#if $inView && showPreview}
+      <div class="previews" transition:fly={{ y: 15 }}>
         {#await getPreviewResources(4)}
           <div class="folder-empty-wrapper">
             <div class="folder-empty">
               <Icon name="spinner" />
-              <!-- <div>Empty Space, add it with life!</div> -->
             </div>
           </div>
         {:then resources}
@@ -308,7 +325,6 @@
             <div class="folder-empty-wrapper">
               <div class="folder-empty">
                 <Icon name="leave" />
-                <!-- <div>Empty Space, add it with life!</div> -->
               </div>
             </div>
           {/if}
