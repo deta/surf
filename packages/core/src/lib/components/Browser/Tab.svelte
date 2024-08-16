@@ -280,7 +280,8 @@
         const dragData = drag.data
         if (
           drag.isNative ||
-          (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space')
+          (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space') ||
+          dragData['oasis/resource'] !== undefined
         ) {
           drag.continue() // Allow the drag
           return

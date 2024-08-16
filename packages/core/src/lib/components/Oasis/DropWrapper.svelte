@@ -6,6 +6,7 @@
   export let acceptDrop: boolean = true
   export let dragOver: boolean = false
   export let spaceId: string = crypto.randomUUID()
+  export let zonePrefix: string | undefined
 
   const log = useLogScope('DropWrapper')
   const dispatch = createEventDispatcher<{
@@ -88,7 +89,7 @@
   class="drop-wrapper"
   class:dragover={dragOver}
   use:HTMLDragZone.action={{
-    id: `oasis-space-${spaceId}`
+    id: `${zonePrefix ?? ''}oasis-space-${spaceId}`
   }}
   on:Drop={handleDrop}
   on:DragEnter={handleDragEnter}

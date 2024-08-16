@@ -12,6 +12,7 @@
   import { generateID } from '../../utils/id'
   import { parseStringIntoBrowserLocation } from '../../utils/url'
   import {
+    isModKeyAndEventCodeIs,
     isModKeyAndKeyPressed,
     isModKeyAndKeysPressed,
     isModKeyAndShiftKeyAndKeyPressed,
@@ -105,7 +106,7 @@
   import { scrollToTextCode } from './inline'
   import { SFFS } from '../../service/sffs'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
-  import { provideOasis } from '../../service/oasis'
+  import { provideOasis, colorPairs } from '../../service/oasis'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
 
   import AnnotationsSidebar from './AnnotationsSidebar.svelte'
@@ -1010,10 +1011,10 @@
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       setShowNewTabOverlay(0)
       createHistoryTab()
-    } else if (isModKeyAndKeyPressed(e, '+')) {
+    } else if (isModKeyAndEventCodeIs(e, 'Plus') || isModKeyAndEventCodeIs(e, 'Equal')) {
       setShowNewTabOverlay(0)
       $activeBrowserTab?.zoomIn()
-    } else if (isModKeyAndKeyPressed(e, '-')) {
+    } else if (isModKeyAndEventCodeIs(e, 'Minus')) {
       setShowNewTabOverlay(0)
       $activeBrowserTab?.zoomOut()
     } else if (isModKeyAndKeyPressed(e, '0')) {
@@ -1990,7 +1991,7 @@
       const space = await oasis.createSpace({
         folderName: truncate(name, 35),
         showInSidebar: true,
-        colors: ['#FFD700', '#FF8C00'],
+        colors: colorPairs[Math.floor(Math.random() * colorPairs.length)],
         sources: [spaceSource],
         sortBy: 'source_published_at',
         liveModeEnabled: true
@@ -2880,7 +2881,12 @@
   }
 
   const handleDropOnSpaceTab = async (drag: DragculaDragEvent, spaceId: string) => {
-    const toast = toasts.loading(`${spaceId === 'all' ? 'Saving to Oasis' : 'Saving to Space'}`)
+    console.warn('DROP ON SPACE TAB', spaceId, drag)
+    if (drag.item !== null) drag.item.dragEffect = 'copy'
+
+    const toast = toasts.loading(
+      `${spaceId === 'all' ? 'Saving to Oasis...' : drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`
+    )
 
     if (
       ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
@@ -2918,7 +2924,7 @@
       try {
         const existingResources: string[] = []
 
-        const dragData = drag.data as { 'surf/tab': Tab; 'horizon/resource/id': string }
+        const dragData = drag.data as { 'surf/tab': Tab; 'oasis/resource': Resource }
         if (dragData['surf/tab'] !== undefined) {
           if (dragData['horizon/resource/id'] !== undefined) {
             const resourceId = dragData['horizon/resource/id']
@@ -2951,6 +2957,9 @@
               }
             }
           }
+        } else if (dragData['oasis/resource'] !== undefined) {
+          const resource = dragData['oasis/resource']
+          resourceIds.push(resource.id)
         }
 
         if (existingResources.length > 0) {

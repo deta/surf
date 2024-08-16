@@ -110,10 +110,10 @@ export class DragculaDragEvent extends Event {
   static dispatch(
     type: DragEventType,
     props: DragOperation & { bubbles?: boolean },
-    node: HTMLElement
+    target: EventTarget
   ): Promise<void> {
     const [e, p] = this.new(type, props);
-    node.dispatchEvent(e);
+    target.dispatchEvent(e);
     return p;
   }
 }

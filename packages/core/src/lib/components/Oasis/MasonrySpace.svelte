@@ -54,8 +54,6 @@
       .filter((id) => !items.some((item) => item.id === id))
       .map((id) => ({ id }))
 
-    console.log('xxx-Diff Items:', diffItems, new Date(), renderContents)
-
     if (renderContents.length > prevItemLength) {
       queueUpdate(renderContents.slice(prevItemLength))
     } else if (renderContents.length < prevItemLength || diffItems.removed.length > 0) {
