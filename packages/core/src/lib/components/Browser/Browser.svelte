@@ -2880,9 +2880,7 @@
   }
 
   const handleDropOnSpaceTab = async (drag: DragculaDragEvent, spaceId: string) => {
-    const toast = toasts.loading(
-      `${spaceId === 'all' ? 'Saving to Oasis' : drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`
-    )
+    const toast = toasts.loading(`${spaceId === 'all' ? 'Saving to Oasis' : 'Saving to Space'}`)
 
     if (
       ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
@@ -2914,7 +2912,7 @@
 
       for (const r of newResources) {
         resourceIds.push(r.id)
-        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, true)
+        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
       }
     } else {
       try {
@@ -2949,7 +2947,7 @@
               log.debug('Resources', newResources)
               for (const r of newResources) {
                 resourceIds.push(r.id)
-                telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, true)
+                telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
               }
             }
           }
@@ -2973,7 +2971,11 @@
                 // remove silent tag if it exists sicne the user is explicitly adding it
                 log.debug('Removing silent tag from resource', resourceId)
                 await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
-                telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, true)
+                telemetry.trackSaveToOasis(
+                  resource.type,
+                  SaveToOasisEventTrigger.Drop,
+                  spaceId !== 'all'
+                )
               }
             })
           )
@@ -3624,7 +3626,10 @@
               {/if}
 
               <button
-                use:tooltip={{ text: 'Open Oasis (⌘ + O)', position: horizontalTabs ? 'left' : 'top' }}
+                use:tooltip={{
+                  text: 'Open Oasis (⌘ + O)',
+                  position: horizontalTabs ? 'left' : 'top'
+                }}
                 class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 on:click={() => ($showNewTabOverlay = 2)}
                 class:bg-sky-200={$showNewTabOverlay === 2}
