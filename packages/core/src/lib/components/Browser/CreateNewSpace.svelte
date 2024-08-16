@@ -72,6 +72,10 @@
   on:keydown={(e) => {
     if (e.key === 'Escape') {
       handleCloseModal()
+    } else if (e.key === 'Enter') {
+      if ($name.length > 0) {
+        handleSubmit()
+      }
     }
   }}
 />
