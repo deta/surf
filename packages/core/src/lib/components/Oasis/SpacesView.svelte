@@ -46,7 +46,12 @@
   export let onBack = () => {}
   $: log.debug('Spaces:', $spaces)
 
-  export const handleCreateSpace = async (_e: MouseEvent, name: string, ai: boolean) => {
+  export const handleCreateSpace = async (
+    _e: MouseEvent,
+    name: string,
+    ai: boolean,
+    colors?: [string, string]
+  ) => {
     try {
       const newSpace = await oasis.createSpace({
         folderName: name ? name : 'New Space',
@@ -58,6 +63,12 @@
       selectedSpace.set(newSpace.id)
 
       await tick()
+
+      if (colors) {
+        await oasis.updateSpaceData(newSpace.id, {
+          colors: colors
+        })
+      }
 
       const inputElement = document.getElementById(
         `folder-input-${newSpace.id}`
@@ -75,7 +86,11 @@
     }
   }
 
-  export const createSpaceWithAI = async (spaceId: string, name: string) => {
+  export const createSpaceWithAI = async (
+    spaceId: string,
+    name: string,
+    colors?: [string, string]
+  ) => {
     try {
       const userPrompt = name
 
@@ -93,6 +108,12 @@
       if (!results) {
         log.warn('No results found for', userPrompt, response)
         return
+      }
+
+      if (colors) {
+        await oasis.updateSpaceData(spaceId, {
+          colors: colors
+        })
       }
 
       await oasis.addResourcesToSpace(spaceId, results)

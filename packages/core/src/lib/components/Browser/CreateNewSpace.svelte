@@ -1,20 +1,68 @@
-<script>
+<script lang="ts">
   import { Icon, IconConfirmation } from '@horizon/icons'
   import SpaceIcon from '@horizon/core/src/lib/components/Drawer/SpaceIcon.svelte'
   import { writable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
 
+  const colorPairs = [
+    ['#76E0FF', '#4EC9FB'],
+    ['#76FFB4', '#4FFBA0'],
+    ['#7FFF76', '#4FFA4C'],
+    ['#D8FF76', '#BAFB4E'],
+    ['#FFF776', '#FBE24E'],
+    ['#FFE076', '#FBC94E'],
+    ['#FFBA76', '#FB8E4E'],
+    ['#FF7676', '#FB4E4E'],
+    ['#FF76BA', '#FB4EC9'],
+    ['#D876FF', '#BA4EFB'],
+    ['#7676FF', '#4E4EFB'],
+    ['#76B4FF', '#4EA0FB'],
+    ['#76FFE0', '#4EFBC9'],
+    ['#76FFD8', '#4EFBBF'],
+    ['#76FFF7', '#4EFBE2'],
+    ['#76FFB4', '#4FFBA0'],
+    ['#76FF76', '#4FFB4E'],
+    ['#A4FF76', '#8EFB4E'],
+    ['#FFF776', '#FBE24E'],
+    ['#FFE076', '#FBC94E']
+  ]
+
   const aiEnabled = writable(false)
   const name = writable('')
+  const colors = writable(colorPairs[Math.floor(Math.random() * colorPairs.length)])
   const dispatch = createEventDispatcher()
+
+  const newSpace = () => {
+    const now = new Date().toISOString()
+    return {
+      id: 'new',
+      name: {
+        folderName: 'New Space',
+        colors: $colors,
+        showInSidebar: true,
+        sources: [],
+        liveModeEnabled: false,
+        hideViewed: false,
+        smartFilterQuery: null,
+        sortBy: 'created_at'
+      },
+      created_at: now,
+      updated_at: now,
+      deleted: 0
+    }
+  }
 
   const handleCloseModal = () => {
     dispatch('close-modal')
   }
 
+  const handleColorChange = async (event: CustomEvent<[string, string]>) => {
+    colors.set(event.detail)
+  }
+
   const handleSubmit = () => {
-    dispatch('submit', { name: $name, aiEnabled: $aiEnabled })
+    dispatch('submit', { name: $name, aiEnabled: $aiEnabled, colors: $colors })
     dispatch('close-modal')
   }
 </script>
@@ -36,7 +84,7 @@
   </div>
   <div class="dialog-body">
     <div class="space-icon-wrapper">
-      <SpaceIcon />
+      <SpaceIcon on:change={handleColorChange} folder={newSpace()} />
     </div>
     <div class="input-wrapper">
       <input

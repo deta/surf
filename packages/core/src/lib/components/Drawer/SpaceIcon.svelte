@@ -53,6 +53,8 @@
       }, 500)
     }
 
+    parsedColors = newColors
+
     return newColors
   }
 

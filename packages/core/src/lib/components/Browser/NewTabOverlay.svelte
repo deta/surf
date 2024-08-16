@@ -1061,14 +1061,21 @@
     openResourceAsTab(e.detail)
   }
 
-  const handleCreateSpace = async (e: CustomEvent<{ name: string; aiEnabled: boolean }>) => {
+  const handleCreateSpace = async (
+    e: CustomEvent<{ name: string; aiEnabled: boolean; colors: ['string', 'string'] }>
+  ) => {
     console.log('CREATING SPACE', e.detail.name, e.detail.aiEnabled)
     await tick()
-    const spaceID = await createSpaceRef.handleCreateSpace(e, e.detail.name, e.detail.aiEnabled)
+    const spaceID = await createSpaceRef.handleCreateSpace(
+      e,
+      e.detail.name,
+      e.detail.aiEnabled,
+      e.detail.colors
+    )
 
     if (e.detail.aiEnabled) {
       await tick()
-      await createSpaceRef.createSpaceWithAI(spaceID, e.detail.name)
+      await createSpaceRef.createSpaceWithAI(spaceID, e.detail.name, e.detail.colors)
     }
   }
 
