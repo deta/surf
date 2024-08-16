@@ -2876,6 +2876,7 @@
 
   const handleDropOnSpaceTab = async (drag: DragculaDragEvent, spaceId: string) => {
     console.warn('DROP ON SPACE TAB', spaceId, drag)
+    if (drag.item !== null) drag.item.dragEffect = 'copy'
 
     const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
 
@@ -2912,7 +2913,7 @@
       try {
         const existingResources: string[] = []
 
-        const dragData = drag.data as { 'surf/tab': Tab; 'horizon/resource/id': string }
+        const dragData = drag.data as { 'surf/tab': Tab; 'oasis/resource': Resource }
         if (dragData['surf/tab'] !== undefined) {
           if (dragData['horizon/resource/id'] !== undefined) {
             const resourceId = dragData['horizon/resource/id']
@@ -2942,6 +2943,9 @@
               newResources.forEach((r) => resourceIds.push(r.id))
             }
           }
+        } else if (dragData['oasis/resource'] !== undefined) {
+          const resource = dragData['oasis/resource']
+          resourceIds.push(resource.id)
         }
 
         if (existingResources.length > 0) {
