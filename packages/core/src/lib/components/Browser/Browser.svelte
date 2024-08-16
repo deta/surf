@@ -105,7 +105,7 @@
   import { scrollToTextCode } from './inline'
   import { SFFS } from '../../service/sffs'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
-  import { provideOasis } from '../../service/oasis'
+  import { provideOasis, colorPairs } from '../../service/oasis'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
 
   import AnnotationsSidebar from './AnnotationsSidebar.svelte'
@@ -1990,7 +1990,7 @@
       const space = await oasis.createSpace({
         folderName: truncate(name, 35),
         showInSidebar: true,
-        colors: ['#FFD700', '#FF8C00'],
+        colors: colorPairs[Math.floor(Math.random() * colorPairs.length)],
         sources: [spaceSource],
         sortBy: 'source_published_at',
         liveModeEnabled: true
