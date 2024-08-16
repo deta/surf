@@ -981,17 +981,6 @@
     if (e.key === 'Escape') {
       if ($showNewTabOverlay !== 0) return
       if (rightPane?.isExpanded()) handleCollapseRight()
-    } else if (isOptKeyAndKeyPressed(e, 'x')) {
-      toggleRightSidebar()
-    } else if (isOptKeyAndKeyPressed(e, 'a')) {
-      if ($rightSidebarTab === 'annotations' && showRightSidebar) handleCollapseRight()
-      else openRightSidebarTab('annotations')
-    } else if (isOptKeyAndKeyPressed(e, 'c')) {
-      if ($rightSidebarTab === 'chat' && showRightSidebar) handleCollapseRight()
-      else openRightSidebarTab('chat')
-    } else if (isOptKeyAndKeyPressed(e, 'g')) {
-      if ($rightSidebarTab === 'go-wild' && showRightSidebar) handleCollapseRight()
-      else openRightSidebarTab('go-wild')
     } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       activeTabComponent?.blur()
@@ -2153,6 +2142,29 @@
       } else {
         $showNewTabOverlay = 2
       }
+    })
+
+    // @ts-expect-error
+    window.api.toggleRightSidebar(() => {
+      toggleRightSidebar()
+    })
+
+    // @ts-expect-error
+    window.api.toggleChatMode(() => {
+      if ($rightSidebarTab === 'chat' && showRightSidebar) handleCollapseRight()
+      else openRightSidebarTab('chat')
+    })
+
+    // @ts-expect-error
+    window.api.toggleAnnotations(() => {
+      if ($rightSidebarTab === 'annotations' && showRightSidebar) handleCollapseRight()
+      else openRightSidebarTab('annotations')
+    })
+
+    // @ts-expect-error
+    window.api.toggleGoWild(() => {
+      if ($rightSidebarTab === 'go-wild' && showRightSidebar) handleCollapseRight()
+      else openRightSidebarTab('go-wild')
     })
 
     // @ts-expect-error

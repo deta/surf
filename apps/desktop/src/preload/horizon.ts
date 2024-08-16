@@ -243,6 +243,38 @@ const api = {
     }
   },
 
+  toggleRightSidebar: (callback) => {
+    try {
+      ipcRenderer.on('toggle-right-sidebar', () => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
+  toggleChatMode: (callback) => {
+    try {
+      ipcRenderer.on('toggle-chat-mode', () => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
+  toggleAnnotations: (callback) => {
+    try {
+      ipcRenderer.on('toggle-annotations', () => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
+  toggleGoWild: (callback) => {
+    try {
+      ipcRenderer.on('toggle-go-wild', () => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
   onOpenCheatSheet: (callback) => {
     try {
       ipcRenderer.on('open-cheat-sheet', () => callback())
