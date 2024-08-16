@@ -558,6 +558,12 @@
         if (autoSaveResources) {
           log.debug('creating new silent resource', url)
           bookmarkedResource = await createBookmarkResource(url, tab, true)
+        } else if (pageMagic?.showSidebar) {
+          log.debug(
+            'creating new silent resource even if auto saved is disabled because chat is open',
+            url
+          )
+          bookmarkedResource = await createBookmarkResource(url, tab, true)
         } else {
           log.debug('auto save resources disabled')
         }
