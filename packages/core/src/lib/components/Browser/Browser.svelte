@@ -3282,28 +3282,49 @@
                             </div>
                           {:else}
                             {#each $magicTabs as tab, index (tab.id + index)}
-                              <TabItem
-                                hibernated={!$activatedTabs.includes(tab.id)}
-                                removeHighlight={$showNewTabOverlay !== 0}
-                                showClose
-                                tabSize={Math.min(300, Math.max(96, tabSize))}
-                                {tab}
-                                enableEditing
-                                {activeTabId}
-                                pinned={false}
-                                showButtons={false}
-                                showExcludeOthersButton
-                                on:select={() => {}}
-                                bind:this={activeTabComponent}
-                                on:delete-tab={handleDeleteTab}
-                                on:input-enter={handleBlur}
-                                on:unarchive-tab={handleUnarchiveTab}
-                                on:select={handleTabSelect}
-                                on:remove-from-sidebar={handleRemoveFromSidebar}
-                                on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                                on:exclude-tab={handleExcludeTabFromMagic}
-                                on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                              />
+                              {#if $activeTabId === tab.id}
+                                <TabItem
+                                  hibernated={!$activatedTabs.includes(tab.id)}
+                                  removeHighlight={$showNewTabOverlay !== 0}
+                                  showClose
+                                  tabSize={Math.min(300, Math.max(96, tabSize))}
+                                  {tab}
+                                  enableEditing
+                                  {activeTabId}
+                                  pinned={false}
+                                  showExcludeOthersButton
+                                  on:select={() => {}}
+                                  bind:this={activeTabComponent}
+                                  on:delete-tab={handleDeleteTab}
+                                  on:input-enter={handleBlur}
+                                  on:unarchive-tab={handleUnarchiveTab}
+                                  on:select={() => {}}
+                                  on:remove-from-sidebar={handleRemoveFromSidebar}
+                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                  on:exclude-tab={handleExcludeTabFromMagic}
+                                  on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                                />
+                              {:else}
+                                <TabItem
+                                  hibernated={!$activatedTabs.includes(tab.id)}
+                                  showClose
+                                  tabSize={Math.min(300, Math.max(96, tabSize))}
+                                  {tab}
+                                  {activeTabId}
+                                  pinned={false}
+                                  showButtons={false}
+                                  showExcludeOthersButton
+                                  on:select={handleTabSelect}
+                                  on:delete-tab={handleDeleteTab}
+                                  on:input-enter={handleBlur}
+                                  on:unarchive-tab={handleUnarchiveTab}
+                                  on:select={handleTabSelect}
+                                  on:remove-from-sidebar={handleRemoveFromSidebar}
+                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                  on:exclude-tab={handleExcludeTabFromMagic}
+                                  on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                                />
+                              {/if}
                             {/each}
                           {/if}
                         </div>
@@ -3340,24 +3361,46 @@
                             </div>
                           {:else}
                             {#each $magicTabs as tab, index (tab.id + index)}
-                              <TabItem
-                                hibernated={!$activatedTabs.includes(tab.id)}
-                                removeHighlight={$showNewTabOverlay !== 0}
-                                showClose
-                                horizontalTabs={false}
-                                {tab}
-                                {activeTabId}
-                                pinned={false}
-                                showButtons={false}
-                                showExcludeOthersButton
-                                on:unarchive-tab={handleUnarchiveTab}
-                                on:delete-tab={handleDeleteTab}
-                                on:select={handleTabSelect}
-                                on:remove-from-sidebar={handleRemoveFromSidebar}
-                                on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
-                                on:exclude-tab={handleExcludeTabFromMagic}
-                                on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                              />
+                              {#if $activeTabId === tab.id}
+                                <TabItem
+                                  hibernated={!$activatedTabs.includes(tab.id)}
+                                  removeHighlight={$showNewTabOverlay !== 0}
+                                  showClose
+                                  horizontalTabs={false}
+                                  {tab}
+                                  enableEditing
+                                  bind:this={activeTabComponent}
+                                  on:select={() => {}}
+                                  {activeTabId}
+                                  pinned={false}
+                                  showExcludeOthersButton
+                                  on:unarchive-tab={handleUnarchiveTab}
+                                  on:delete-tab={handleDeleteTab}
+                                  on:remove-from-sidebar={handleRemoveFromSidebar}
+                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                  on:exclude-tab={handleExcludeTabFromMagic}
+                                  on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                                />
+                              {:else}
+                                <TabItem
+                                  hibernated={!$activatedTabs.includes(tab.id)}
+                                  removeHighlight={$showNewTabOverlay !== 0}
+                                  showClose
+                                  horizontalTabs={false}
+                                  {tab}
+                                  {activeTabId}
+                                  pinned={false}
+                                  showButtons={false}
+                                  showExcludeOthersButton
+                                  on:unarchive-tab={handleUnarchiveTab}
+                                  on:delete-tab={handleDeleteTab}
+                                  on:select={handleTabSelect}
+                                  on:remove-from-sidebar={handleRemoveFromSidebar}
+                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                  on:exclude-tab={handleExcludeTabFromMagic}
+                                  on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                                />
+                              {/if}
                             {/each}
                           {/if}
                         </div>
@@ -3617,7 +3660,10 @@
               {/if}
 
               <button
-                use:tooltip={{ text: 'Open Oasis (⌘ + O)', position: horizontalTabs ? 'left' : 'top' }}
+                use:tooltip={{
+                  text: 'Open Oasis (⌘ + O)',
+                  position: horizontalTabs ? 'left' : 'top'
+                }}
                 class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 on:click={() => ($showNewTabOverlay = 2)}
                 class:bg-sky-200={$showNewTabOverlay === 2}

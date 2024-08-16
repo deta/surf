@@ -317,7 +317,7 @@
     {/if}
   </div>
 
-  {#if showClose && ((tabSize && tabSize > 64 && horizontalTabs) || !horizontalTabs) && hovered}
+  {#if showClose && ((tabSize && tabSize > 64 && horizontalTabs) || !horizontalTabs || isActive) && hovered}
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
