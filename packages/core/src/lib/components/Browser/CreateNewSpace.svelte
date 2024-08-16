@@ -5,13 +5,17 @@
   import { createEventDispatcher } from 'svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
   import { ResourceOverlay } from '@horizon/drawer/src/lib/drawer'
+  import { Editor, getEditorContentText } from '@horizon/editor'
 
   import { colorPairs } from '../../service/oasis'
 
   const aiEnabled = writable(false)
   const name = writable('')
+  const userPrompt = writable('<p></p>')
   const colors = writable(colorPairs[Math.floor(Math.random() * colorPairs.length)])
   const dispatch = createEventDispatcher()
+
+  $: aiEnabled.set($userPrompt !== '<p></p>')
 
   const newSpace = () => {
     const now = new Date().toISOString()
@@ -42,7 +46,14 @@
   }
 
   const handleSubmit = () => {
-    dispatch('submit', { name: $name, aiEnabled: $aiEnabled, colors: $colors })
+    const sanitizedUserPrompt = $userPrompt.replace(/<\/?[^>]+(>|$)/g, '')
+    
+    dispatch('submit', {
+      name: $name,
+      aiEnabled: $aiEnabled,
+      colors: $colors,
+      userPrompt: sanitizedUserPrompt
+    })
     dispatch('close-modal')
   }
 </script>
@@ -55,6 +66,10 @@
       if ($name.length > 0) {
         handleSubmit()
       }
+    } else if (e.key === 'Tab') {
+      e.preventDefault()
+      e.stopPropagation()
+      e.stopImmediatePropagation()
     }
   }}
 />
@@ -62,6 +77,7 @@
 <div class="dialog">
   <div class="dialog-header">
     <h2>Create Space</h2>
+
     <button on:click={handleCloseModal} class="close-button" aria-label="Close">
       <Icon name="close" size="20px" /></button
     >
@@ -72,37 +88,48 @@
         <SpaceIcon on:change={handleColorChange} folder={newSpace()} />
       </div>
     </ResourceOverlay>
-    <div class="input-wrapper">
-      <input
-        type="text"
-        class="folder-name"
-        id="folder-name"
-        name="folder-name"
-        placeholder="Enter Space Name"
-        bind:value={$name}
-      />
-      <div
-        class="wand-wrapper cursor-pointer"
-        style="opacity: {$aiEnabled ? 0.8 : 0.4};"
-        use:tooltip={{
-          content: !$aiEnabled ? 'Enable AI auto fetching' : 'Disable AI auto fetching',
-          action: 'hover',
-          position: 'left',
-          animation: 'fade',
-          delay: 500
-        }}
-      >
-        <div on:click={() => aiEnabled.set(!$aiEnabled)} aria-hidden="true">
-          {#if !$aiEnabled}
-            <Icon name="sparkles" size="22px" />
-          {:else}
-            <Icon name="sparkles.fill" size="22px" color="#29A6F3" />
-          {/if}
+    <div class="input-group">
+      <div class="input-wrapper">
+        <input
+          type="text"
+          class="folder-name"
+          id="folder-name"
+          name="folder-name"
+          placeholder="Enter Space Name"
+          bind:value={$name}
+          tabindex="0"
+          autofocus
+          on:keydown={(e) => {
+            if (e.key === 'Tab') {
+              e.stopPropagation()
+              e.stopImmediatePropagation()
+            }
+          }}
+        />
+      </div>
+      <div class="input-wrapper">
+        <div class="folder-rules">
+          <Editor
+            bind:content={$userPrompt}
+            placeholder="Describe what you want in your space. (optional)"
+            tabindex="1"
+            autofocus={false}
+            on:keydown={(e) => {
+              if (e.key === 'Tab') {
+                e.stopPropagation()
+                e.stopImmediatePropagation()
+              }
+            }}
+          />
         </div>
+
+        {#if $aiEnabled}
+          <Icon name="sparkles.fill" size="22px" color="#29A6F3" />
+        {/if}
       </div>
       {#if $aiEnabled}
         <span class="ai-description"
-          >With AI enabled your computer will find all of the items when creating a space.</span
+          >Surf will automatically add content to your space that matches your description.</span
         >
       {/if}
     </div>
@@ -178,9 +205,17 @@
       height: 16rem;
     }
 
-    input.folder-name {
-      background: transparent;
+    .folder-name {
       font-size: 1.5rem;
+    }
+
+    .folder-rules {
+      font-size: 1.25rem;
+    }
+
+    input.folder-name,
+    .folder-rules {
+      background: transparent;
       font-weight: 500;
       min-width: 25rem;
       -webkit-font-smoothing: antialiased;
@@ -206,6 +241,7 @@
     justify-content: center;
     align-items: center;
     position: relative;
+    width: 28rem;
   }
   .wand-wrapper {
     display: flex;
@@ -265,10 +301,15 @@
   }
 
   .ai-description {
-    position: absolute;
-    top: 4rem;
+    position: relative;
+    top: 1rem;
     left: 0.5rem;
     right: 0.5rem;
-    opacity: 0.8;
+    display: block;
+    opacity: 0.6;
+    width: 28rem;
+    font-weight: 500;
+    font-size: 1.125rem;
+    color: #28568f;
   }
 </style>

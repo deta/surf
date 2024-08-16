@@ -1084,15 +1084,20 @@
   }
 
   const handleCreateSpace = async (
-    e: CustomEvent<{ name: string; aiEnabled: boolean; colors: ['string', 'string'] }>
+    e: CustomEvent<{
+      name: string
+      aiEnabled: boolean
+      colors: ['string', 'string']
+      userPrompt: string
+    }>
   ) => {
     console.log('CREATING SPACE', e.detail.name, e.detail.aiEnabled)
     await tick()
     const spaceID = await createSpaceRef.handleCreateSpace(
       e,
       e.detail.name,
-      e.detail.aiEnabled,
-      e.detail.colors
+      e.detail.colors,
+      e.detail.userPrompt
     )
 
     if (e.detail.aiEnabled) {

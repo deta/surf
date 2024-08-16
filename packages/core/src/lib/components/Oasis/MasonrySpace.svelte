@@ -411,7 +411,7 @@
 
   function calculateItemsToLoad(velocity: number): number {
     const MIN_ITEMS = 1
-    const MAX_ITEMS = 10
+    const MAX_ITEMS = 5
     const VELOCITY_FACTOR = 1
 
     let items = Math.round(Math.log(velocity * VELOCITY_FACTOR + 1) * 10)

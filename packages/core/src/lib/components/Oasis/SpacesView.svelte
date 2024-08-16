@@ -49,13 +49,15 @@
   export const handleCreateSpace = async (
     _e: MouseEvent,
     name: string,
-    ai: boolean,
-    colors?: [string, string]
+    colors?: [string, string],
+    userPrompt?: string
   ) => {
     try {
       const newSpace = await oasis.createSpace({
         folderName: name ? name : 'New Space',
-        colors: ['#FFBA76', '#FB8E4E']
+        colors: ['#FFBA76', '#FB8E4E'],
+        smartFilterQuery: userPrompt ? userPrompt : null,
+        liveModeEnabled: !!userPrompt
       })
 
       log.debug('New Folder:', newSpace)
