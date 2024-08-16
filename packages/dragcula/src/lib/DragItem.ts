@@ -82,6 +82,21 @@ export class DragItem {
  * component: Uses custom Svelte component as the preview.
  */
 type HTMLDragItemPreviewMode = "clone" | "hoist" | "component";
+
+export interface HTMLDragItemActionProps {
+  id?: string;
+}
+export interface HTMLDragItemActionAttributes {
+  /// dragPreviewMode
+
+  "on:DragStart"?: (drag: DragculaDragEvent) => void;
+  "on:Drag"?: (drag: DragculaDragEvent) => void;
+  "on:DragEnter"?: (drag: DragculaDragEvent) => void;
+  "on:DragLeave"?: (drag: DragculaDragEvent) => void;
+  "on:DragOver"?: (drag: DragculaDragEvent) => void;
+  "on:DragEnd"?: (drag: DragculaDragEvent) => void;
+}
+
 export class HTMLDragItem extends DragItem {
   /// Map of active HTMLDragItems used to find re-attach items e.g. during move.
   /// FIX: Maybe add some sort of limit / auto clean just to prevent memory buildup.
@@ -258,7 +273,10 @@ export class HTMLDragItem extends DragItem {
     HTMLDragItem.ITEMS.delete(this.id);
   }
 
-  static action(node: HTMLElement, props: { id?: string; data?: DragData }): ActionReturn {
+  static action(
+    node: HTMLElement,
+    props: { id?: string; data?: DragData }
+  ): ActionReturn<HTMLDragItemActionProps, HTMLDragItemActionAttributes> {
     const controller = this.new(node, props);
 
     return {
@@ -447,6 +465,7 @@ export class HTMLDragItem extends DragItem {
       } else if (hasDragculaListeners && handlesDragculaEvent) {
         await DragculaDragEvent.dispatch("DragStart", document.activeDragOperation, this.element);
       }
+      DragculaDragEvent.dispatch("DragStart", drag, window);
 
       window.addEventListener("mouseup", this.boundMouseUp, { capture: true, once: true });
       window.addEventListener("mousemove", this.boundMouseMove, { capture: true });
@@ -559,6 +578,7 @@ export class HTMLDragItem extends DragItem {
     super.onDragEnd(drag);
 
     DragculaDragEvent.dispatch("DragEnd", drag, this.element);
+    DragculaDragEvent.dispatch("DragEnd", drag, window);
     //DragculaDragEvent.dispatch("DragEnd", drag, HTMLDragItem.ITEMS.get(this.id)!.element);
 
     // TODO: Check if this.element is in the DOM, remove this controller if not

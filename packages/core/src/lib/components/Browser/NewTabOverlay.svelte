@@ -1013,9 +1013,21 @@
   }
 
   const handleDragEnter = (drag: DragculaDragEvent) => {
-    if (drag.data['surf/tab'] !== undefined) {
+    /*if (drag.data['surf/tab'] !== undefined) {
       const dragData = drag.data as { 'surf/tab': Tab }
       if ((active && drag.isNative) || (active && dragData['surf/tab'].type !== 'space')) {
+        drag.continue()
+        return
+      }
+    } else if (drag.data['oasis/resource'] !== undefined) {
+      drag.continue()
+      return
+    }
+    drag.abort()*/
+
+    if (drag.data['surf/tab'] !== undefined) {
+      const dragData = drag.data as { 'surf/tab': Tab }
+      if (drag.isNative || dragData['surf/tab'].type !== 'space') {
         drag.continue()
         return
       }
@@ -1124,7 +1136,15 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeyDown} />
+<svelte:window
+  on:keydown={handleKeyDown}
+  on:DragStart={(drag) => {
+    showTabSearch = 2
+  }}
+  on:DragEnd={(drag) => {
+    showTabSearch = 0
+  }}
+/>
 
 <!-- {#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
   <OasisResourceModalWrapper
@@ -1165,16 +1185,7 @@
           }
         }}
       >
-        <div
-          use:motion
-          on:DragEnd={(drag) => {
-            /// Note: This event bubbles up for any child DragZone, whenever a drag ends,
-            /// which originated from one of these child zones.
-            if (drag.from.id.startsWith('oasis-space')) {
-              showTabSearch = 0
-            }
-          }}
-        >
+        <div use:motion>
           {#if $searchValue.length > 0 && showTabSearch === 2}
             <button
               data-vaul-no-drag
@@ -1661,7 +1672,7 @@
 
   /* Hides the Drawer when dragging but not targeting it */
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting='oasis-space-all'])
+      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='oasis-space-'])
         .drawer-content
     ) {
     transform: translateY(calc(100vh - 240px)) !important;
@@ -1672,7 +1683,7 @@
     opacity: 1;
   }
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting='oasis-space-all'])
+      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='oasis-space-'])
         [data-dialog-portal]
         .drawer-overlay
     ) {

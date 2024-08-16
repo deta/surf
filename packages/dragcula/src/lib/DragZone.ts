@@ -56,6 +56,21 @@ export class DragZone {
   onDragEnd(drag: DragOperation) {}
 }
 
+export interface HTMLDragZoneActionProps {
+  id?: string;
+  effectsAllowed?: DragEffect[];
+}
+export interface HTMLDragZoneActionAttributes {
+  id?: string;
+  dragEffectsAllowed?: DragEffect[];
+
+  "on:DragEnter"?: (drag: DragculaDragEvent) => void;
+  "on:DragOver"?: (drag: DragculaDragEvent) => void;
+  "on:DragLeave"?: (drag: DragculaDragEvent) => void;
+  "on:DragEnd"?: (drag: DragculaDragEvent) => void;
+  "on:Drop"?: (drag: DragculaDragEvent) => void;
+}
+
 export class HTMLDragZone extends DragZone {
   readonly element: HTMLElement;
 
@@ -111,7 +126,7 @@ export class HTMLDragZone extends DragZone {
   static action(
     node: HTMLElement,
     props: { id?: string; effectsAllowed?: DragEffect[] }
-  ): ActionReturn {
+  ): ActionReturn<HTMLDragZoneActionProps, HTMLDragZoneActionAttributes> {
     const controller = new this(node, props);
     return {
       destroy() {
@@ -204,7 +219,7 @@ export class HTMLDragZone extends DragZone {
     log.debug(`[HTMLDragZone:${this.id}] DragEnd`, drag);
     super.onDragEnd(drag);
 
-    DragculaDragEvent.dispatch("DragEnd", { ...drag!, bubbles: true }, this.element);
+    DragculaDragEvent.dispatch("DragEnd", drag!, this.element);
   }
 
   /// === DOM HANDLERS
