@@ -324,6 +324,46 @@ export const ipcSenders = {
     window.webContents.send('open-oasis')
   },
 
+  toggleRightSidebar: (visible?: boolean) => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('toggle-right-sidebar', visible)
+  },
+
+  toggleChatMode: (visible?: boolean) => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('toggle-chat-mode', visible)
+  },
+
+  toggleAnnotations: (visible?: boolean) => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('toggle-annotations', visible)
+  },
+
+  toggleGoWild: (visible?: boolean) => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('toggle-go-wild', visible)
+  },
+
   reloadActiveTab: (force = false) => {
     const window = getMainWindow()
     if (!window) {
