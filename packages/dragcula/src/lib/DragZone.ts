@@ -51,6 +51,24 @@ export class DragZone {
   onDrop(drag?: DragOperation) {
     this.isTarget = false;
   }
+
+  /// Called only on the source zone of a drag, before DragItem onDragEnd is called
+  onDragEnd(drag: DragOperation) {}
+}
+
+export interface HTMLDragZoneActionProps {
+  id?: string;
+  effectsAllowed?: DragEffect[];
+}
+export interface HTMLDragZoneActionAttributes {
+  id?: string;
+  dragEffectsAllowed?: DragEffect[];
+
+  "on:DragEnter"?: (drag: DragculaDragEvent) => void;
+  "on:DragOver"?: (drag: DragculaDragEvent) => void;
+  "on:DragLeave"?: (drag: DragculaDragEvent) => void;
+  "on:DragEnd"?: (drag: DragculaDragEvent) => void;
+  "on:Drop"?: (drag: DragculaDragEvent) => void;
 }
 
 export class HTMLDragZone extends DragZone {
@@ -108,7 +126,7 @@ export class HTMLDragZone extends DragZone {
   static action(
     node: HTMLElement,
     props: { id?: string; effectsAllowed?: DragEffect[] }
-  ): ActionReturn {
+  ): ActionReturn<HTMLDragZoneActionProps, HTMLDragZoneActionAttributes> {
     const controller = new this(node, props);
     return {
       destroy() {
@@ -139,7 +157,6 @@ export class HTMLDragZone extends DragZone {
     );
 
     log.warn("onDrop", hasDragculaListeners, handlesDragculaEventCorrectly);
-
 
     return await DragculaDragEvent.dispatch("Drop", drag, this.element);
     /// FIX: beeing dispatch in svelte, out cheks dont work :(
@@ -196,6 +213,13 @@ export class HTMLDragZone extends DragZone {
     } catch {
       return false;
     }
+  }
+
+  override onDragEnd(drag: DragOperation) {
+    log.debug(`[HTMLDragZone:${this.id}] DragEnd`, drag);
+    super.onDragEnd(drag);
+
+    DragculaDragEvent.dispatch("DragEnd", drag!, this.element);
   }
 
   /// === DOM HANDLERS

@@ -1013,9 +1013,21 @@
   }
 
   const handleDragEnter = (drag: DragculaDragEvent) => {
-    if (drag.data['surf/tab'] !== undefined) {
+    /*if (drag.data['surf/tab'] !== undefined) {
       const dragData = drag.data as { 'surf/tab': Tab }
       if ((active && drag.isNative) || (active && dragData['surf/tab'].type !== 'space')) {
+        drag.continue()
+        return
+      }
+    } else if (drag.data['oasis/resource'] !== undefined) {
+      drag.continue()
+      return
+    }
+    drag.abort()*/
+
+    if (drag.data['surf/tab'] !== undefined) {
+      const dragData = drag.data as { 'surf/tab': Tab }
+      if (drag.isNative || dragData['surf/tab'].type !== 'space') {
         drag.continue()
         return
       }
@@ -1124,7 +1136,15 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeyDown} />
+<svelte:window
+  on:keydown={handleKeyDown}
+  on:DragStart={(drag) => {
+    showTabSearch = 2
+  }}
+  on:DragEnd={(drag) => {
+    showTabSearch = 0
+  }}
+/>
 
 <!-- {#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
   <OasisResourceModalWrapper
@@ -1324,12 +1344,14 @@
                         {historyEntriesManager}
                         on:open={handleOpen}
                         on:go-back={() => selectedSpaceId.set(null)}
+                        insideDrawer={true}
                       />
                     {:else}
                       <DropWrapper
                         {spaceId}
                         on:Drop={(e) => handleDrop(e.detail)}
                         on:DragEnter={(e) => handleDragEnter(e.detail)}
+                        zonePrefix="drawer-"
                       >
                         <div class="w-full h-[calc(100%-216px)] will-change-transform">
                           <div class="relative will-change-transform">
@@ -1652,7 +1674,7 @@
 
   /* Hides the Drawer when dragging but not targeting it */
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting='oasis-space-all'])
+      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='drawer-oasis-space-'])
         .drawer-content
     ) {
     transform: translateY(calc(100vh - 240px)) !important;
@@ -1663,7 +1685,7 @@
     opacity: 1;
   }
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting='oasis-space-all'])
+      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='drawer-oasis-space-'])
         [data-dialog-portal]
         .drawer-overlay
     ) {

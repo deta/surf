@@ -1,8 +1,18 @@
-import { HTMLDragZone } from "$lib/DragZone.js";
-import { DragculaDragEvent, type DragOperation } from "$lib/index.js";
+import {
+  HTMLDragZone,
+  type HTMLDragZoneActionAttributes,
+  type HTMLDragZoneActionProps
+} from "$lib/DragZone.js";
+import { type DragEffect, type DragOperation } from "$lib/index.js";
 import { MOUSE_POS } from "$lib/internal.js";
+import type { ActionReturn } from "svelte/action";
 
 export type Axis = "horizontal" | "vertical";
+
+export interface HTMLAxisDragZoneActionAttributes extends HTMLDragZoneActionAttributes {
+  axis?: Axis;
+  dragDeadzone?: number;
+}
 
 export class HTMLAxisDragZone extends HTMLDragZone {
   protected axis: Axis = "vertical";
@@ -77,6 +87,13 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     // TODO: CFG
   }
 
+  static override action(
+    node: HTMLElement,
+    props: { id?: string; effectsAllowed?: DragEffect[] }
+  ): ActionReturn<HTMLDragZoneActionProps, HTMLAxisDragZoneActionAttributes> {
+    return super.action(node, props);
+  }
+
   protected getIndexAtPoint(x: number, y: number): [number, number] | [undefined, undefined] {
     if (this.children.length <= 0) return [0, 0];
 
@@ -113,18 +130,19 @@ export class HTMLAxisDragZone extends HTMLDragZone {
 
     // Find target index of relativePoint
     /*	const targetIndex = this.#childrenCache.findIndex((child) => {
-				if (this.axis === "horizontal") {
-					return relativePoint.x >= child.rect.x && relativePoint.x <= child.rect.right;
-				}
-				else if (this.axis === "vertical") {
-					return relativePoint.y >= child.rect.y && relativePoint.y <= child.rect.y + child.rect.height;
-				}
-			})*/
+        if (this.axis === "horizontal") {
+          return relativePoint.x >= child.rect.x && relativePoint.x <= child.rect.right;
+        }
+        else if (this.axis === "vertical") {
+          return relativePoint.y >= child.rect.y && relativePoint.y <= child.rect.y + child.rect.height;
+        }
+      })*/
 
     let targetIndex = this.#childrenCache.findIndex((child) => child.el === closestElement.el);
 
     if (Math.sign(closestElement.dist) < 0) targetIndex++;
 
+    console.warn(targetIndex);
     if (targetIndex === -1) return [undefined, undefined];
     return [targetIndex, closestElement.dist];
     console.warn(this.#childrenCache[targetIndex]);
@@ -141,8 +159,8 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     let index = targetIndex; // this.#childrenCache.findIndex((child) => child.el === closestElement);
     //console.log("Closest", index, closestElement?.dist, closestElement?.el.innerHTML);
     /*if (closestElement.dist < 0 && this.#childrenCache[index].el === closestElement.el) {
-			index++;
-		}*/
+      index++;
+    }*/
 
     return index === undefined ? [undefined, undefined] : [index, distanceFromTargetIndexElement];
   }
@@ -181,7 +199,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
   override onDragOver(drag?: DragOperation) {
     const [index, distance] = this.getIndexAtPoint(MOUSE_POS.x, MOUSE_POS.y);
 
-    //console.log("Index", index, distance);
+    console.log("Index", index, distance);
 
     if (index !== undefined && index !== this.lastIndex) {
       drag.index = index;
