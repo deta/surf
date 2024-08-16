@@ -4,6 +4,7 @@
   import { writable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
+  import { ResourceOverlay } from '@horizon/drawer/src/lib/drawer'
 
   const colorPairs = [
     ['#76E0FF', '#4EC9FB'],
@@ -83,9 +84,11 @@
     >
   </div>
   <div class="dialog-body">
-    <div class="space-icon-wrapper">
-      <SpaceIcon on:change={handleColorChange} folder={newSpace()} />
-    </div>
+    <ResourceOverlay caption="Click to change color.">
+      <div slot="content" class="space-icon-wrapper transform active:scale-[98%]">
+        <SpaceIcon on:change={handleColorChange} folder={newSpace()} />
+      </div>
+    </ResourceOverlay>
     <div class="input-wrapper">
       <input
         type="text"
