@@ -47,6 +47,7 @@
   import { slide } from 'svelte/transition'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import { CreateTabEventTrigger } from '@horizon/types'
+  import log from '../../utils/log'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -69,6 +70,17 @@
 
   const isHovered = writable(false)
 
+  const OPENABLE_RESOURCES = [
+    ResourceTypes.LINK,
+    ResourceTypes.POST,
+    ResourceTypes.ARTICLE,
+    ResourceTypes.CHAT_MESSAGE,
+    ResourceTypes.CHAT_THREAD,
+    ResourceTypes.DOCUMENT,
+    ResourceTypes.ANNOTATION,
+    ResourceTypes.HISTORY_ENTRY
+  ]
+
   // TODO: figure out better way to do this
   $: textResource = resource as ResourceNote
   $: linkResource = resource as ResourceLink
@@ -90,6 +102,8 @@
   $: canonicalUrl =
     resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
     resource.metadata?.sourceURI
+
+  $: canOpenAsTab = !!canonicalUrl && OPENABLE_RESOURCES.some((x) => resource.type.startsWith(x))
 
   let data: ResourceData | null = null
   const handleData = (e: CustomEvent<ResourceData>) => {
@@ -122,10 +136,15 @@
       return
     }
 
-    if (isModKeyPressed(e) || newTabOnClick) {
+    if (!canOpenAsTab) {
+      log.debug('Resource cannot be opened as tab', resource)
+      return
+    }
+
+    if (newTabOnClick) {
       dispatch('new-tab', {
         url: canonicalUrl!,
-        active: e.shiftKey || newTabOnClick,
+        active: !isModKeyPressed(e),
         trigger: CreateTabEventTrigger.OasisItem
       })
       return
@@ -137,6 +156,17 @@
         dispatch('open', annotatesTag.value)
         return
       }
+
+      return
+    }
+
+    if (isModKeyPressed(e)) {
+      dispatch('new-tab', {
+        url: canonicalUrl!,
+        active: e.shiftKey,
+        trigger: CreateTabEventTrigger.OasisItem
+      })
+      return
     }
 
     dispatch('open', resource.id)
@@ -152,7 +182,7 @@
   }
 
   const handleOpenAsNewTab = (e: MouseEvent) => {
-    if (!canonicalUrl) {
+    if (!canonicalUrl || !canOpenAsTab) {
       return
     }
 
@@ -180,7 +210,7 @@
 <div
   on:click={handleClick}
   class="resource-preview"
-  class:clickable={newTabOnClick}
+  class:clickable={newTabOnClick && canOpenAsTab}
   class:isSelected={selected}
   class:background={(isLiveSpaceResource && showSummary && resource.metadata?.userContext) ||
     showSource}
@@ -323,7 +353,7 @@
 
       {#if interactive}
         <div class="remove-wrapper">
-          {#if canonicalUrl}
+          {#if canOpenAsTab}
             <div class="remove rotated" on:click={handleOpenAsNewTab}>
               <Icon name="arrow.right" color="#AAA7B1" />
             </div>
@@ -370,7 +400,7 @@
 
   {#if interactive}
     <div class="remove-wrapper">
-      {#if canonicalUrl}
+      {#if canOpenAsTab}
         <div class="remove rotated" on:click={handleOpenAsNewTab}>
           <Icon name="arrow.right" color="#AAA7B1" />
         </div>

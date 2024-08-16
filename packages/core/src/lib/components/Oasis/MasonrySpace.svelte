@@ -57,9 +57,6 @@
     if (renderContents.length > prevItemLength) {
       queueUpdate(renderContents.slice(prevItemLength))
     } else if (renderContents.length < prevItemLength || diffItems.removed.length > 0) {
-      console.log('Before Removal - items:', items)
-      console.log('Before Removal - renderContents:', renderContents)
-
       updateItems(diffItems)
 
       tick().then(() => {

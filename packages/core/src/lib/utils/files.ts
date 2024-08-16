@@ -55,6 +55,7 @@ export const humanFileTypes = {
   'application/vnd.oasis.opendocument.formula': 'OpenDocument Formula',
   'application/vnd.oasis.opendocument.database': 'OpenDocument Database',
   'application/vnd.oasis.opendocument.image': 'OpenDocument Image',
+  'application/x-apple-diskimage': 'Apple Disk Image',
   [ResourceTypes.LINK]: 'Link',
   [ResourceTypes.ARTICLE]: 'Article',
   [ResourceTypes.POST]: 'Post',

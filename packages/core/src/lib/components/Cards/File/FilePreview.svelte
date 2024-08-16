@@ -23,9 +23,14 @@
 
   onMount(async () => {
     try {
-      loading = true
-      data = await resource.getData()
-      dispatch('data', data)
+      log.debug('Loading file data')
+      if (resource.type.startsWith('image/')) {
+        loading = true
+        data = await resource.getData()
+        dispatch('data', data)
+      } else {
+        log.debug('Skipped loading data for file type', resource.type)
+      }
     } catch (e) {
       log.error(e)
     } finally {
@@ -52,6 +57,8 @@
     {:else}
       <UnknownFileView {resource} blob={data} hideType on:load={handleLoad} />
     {/if}
+  {:else}
+    <UnknownFileView {resource} hideType on:load={handleLoad} />
   {/if}
 </div>
 
