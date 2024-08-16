@@ -3,32 +3,10 @@
   import type { Space } from '../../types'
   import { useLogScope } from '../../utils/log'
   import ColorIcon from './ColorIcon.svelte'
+  import { colorPairs } from '../../service/oasis'
 
   const dispatch = createEventDispatcher<{ change: [string, string] }>()
   const log = useLogScope('SpaceIcon')
-
-  const colorPairs: [string, string][] = [
-    ['#76E0FF', '#4EC9FB'],
-    ['#76FFB4', '#4FFBA0'],
-    ['#7FFF76', '#4FFA4C'],
-    ['#D8FF76', '#BAFB4E'],
-    ['#FFF776', '#FBE24E'],
-    ['#FFE076', '#FBC94E'],
-    ['#FFBA76', '#FB8E4E'],
-    ['#FF7676', '#FB4E4E'],
-    ['#FF76BA', '#FB4EC9'],
-    ['#D876FF', '#BA4EFB'],
-    ['#7676FF', '#4E4EFB'],
-    ['#76B4FF', '#4EA0FB'],
-    ['#76FFE0', '#4EFBC9'],
-    ['#76FFD8', '#4EFBBF'],
-    ['#76FFF7', '#4EFBE2'],
-    ['#76FFB4', '#4FFBA0'],
-    ['#76FF76', '#4FFB4E'],
-    ['#A4FF76', '#8EFB4E'],
-    ['#FFF776', '#FBE24E'],
-    ['#FFE076', '#FBC94E']
-  ]
 
   export let folder: Space
 
