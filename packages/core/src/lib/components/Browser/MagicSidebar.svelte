@@ -27,6 +27,7 @@
   import { parseChatResponseSources } from '../../service/ai'
   import { useToasts } from '../../service/toast'
   import { useDebounce } from '../../utils/debounce'
+  import { useConfig } from '../../service/config'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -44,6 +45,9 @@
   const { copy, copied } = useClipboard()
   const resourceManager = useResourceManager()
   const toasts = useToasts()
+  const config = useConfig()
+
+  const userConfigSettings = config.settings
   const telemetry = resourceManager.telemetry
 
   const savedResponse = writable(false)
@@ -134,6 +138,12 @@
     const resource = await resourceManager.getResource(source.resource_id)
     if (!resource) return
 
+    // If the resource came from a tab directly we assume it was a page tab, otherwise it was a space tab
+    const sourceTab = tabsInContext.find((tab) =>
+      tab.type === 'page' ? tab.chatResourceBookmark === resource.id : false
+    )
+    const sourceTabType = sourceTab?.type === 'page' ? 'page' : 'space'
+
     if (
       resource.type === ResourceTypes.LINK ||
       resource.type === ResourceTypes.ARTICLE ||
@@ -143,7 +153,7 @@
         const timestamp = source.metadata.timestamp
         dispatch('seekToTimestamp', { resourceId: resource.id, timestamp: timestamp })
 
-        await telemetry.trackPageChatCitationClick('timestamp')
+        await telemetry.trackPageChatCitationClick('timestamp', sourceTabType)
       } else {
         dispatch('highlightWebviewText', {
           resourceId: resource.id,
@@ -151,7 +161,7 @@
           sourceUid: sourceUid
         })
 
-        await telemetry.trackPageChatCitationClick('text')
+        await telemetry.trackPageChatCitationClick('text', sourceTabType)
       }
     }
   }
@@ -314,7 +324,14 @@
 
       const previousMessages = $magicPage.responses.filter((message) => message.id !== response!.id)
 
-      await telemetry.trackPageChatMessageSent(resourceIds.length, previousMessages.length)
+      await telemetry.trackPageChatMessageSent({
+        contextSize: resourceIds.length,
+        numPages: tabsInContext.filter((tab) => tab.type === 'page' && tab.chatResourceBookmark)
+          .length,
+        numSpaces: tabsInContext.filter((tab) => tab.type === 'space').length,
+        numPreviousMessages: previousMessages.length,
+        embeddingModel: $userConfigSettings.embedding_model
+      })
     } catch (e) {
       log.error('Error doing magic', e)
       if (response) {

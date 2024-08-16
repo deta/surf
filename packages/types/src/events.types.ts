@@ -41,6 +41,7 @@ export enum TelemetryEventTypes {
 
   UseInlineAI = 'Use Inline AI',
   CreateAnnotation = 'Create Annotation',
+  DeleteAnnotation = 'Delete Annotation',
   PageChatMessageSent = 'Page Chat Message Sent',
   PageChatCitationClick = 'Page Chat Citation Click',
   PageChatClear = 'Page Chat Clear',
@@ -132,6 +133,13 @@ export enum SaveToOasisEventTrigger {
   CommandMenu = 'command_menu'
 }
 
+export enum SearchOasisEventTrigger {
+  /** Search was done from the new tab command menu */
+  CommandMenu = 'command_menu',
+  /** Search was done from the oasis search input */
+  Oasis = 'Oasis'
+}
+
 export enum CreateSpaceEventFrom {
   /** Space was created from the spaces view in Oasis */
   OasisSpacesView = 'oasis_spaces_view',
@@ -191,6 +199,13 @@ export enum CreateAnnotationEventTrigger {
   PageChatMessage = 'page_chat_message'
 }
 
+export enum DeleteAnnotationEventTrigger {
+  /** Annotation deleted from within the page */
+  PageInline = 'page_inline',
+  /** Annotation deleted from the sidebar */
+  PageSidebar = 'page_sidebar'
+}
+
 export enum PageChatUpdateContextEventAction {
   /** A tab was added to the context */
   Add = 'add',
@@ -208,6 +223,7 @@ export type UpdateSpaceSettingsEventChange = {
 export type InlineAIEventPromptType = WebViewEventTransform['type']
 
 export type CreateAnnotationEventType = AnnotationType
+export type DeleteAnnotationEventType = AnnotationType
 
 export type OpenRightSidebarEventTab = 'chat' | 'annotations' | 'go-wild'
 

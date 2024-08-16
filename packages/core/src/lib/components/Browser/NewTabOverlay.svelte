@@ -105,6 +105,7 @@
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
   import { useLocalStorageStore } from '../../utils/localstorage'
+  import { AddResourceToSpaceEventTrigger, SearchOasisEventTrigger } from '@horizon/types'
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
 
@@ -615,6 +616,8 @@
         return
       }
 
+      telemetry.trackSearchOasis(SearchOasisEventTrigger.CommandMenu, false)
+
       openResourceAsTab(item.id)
       // dispatch('open-resource', item.id!)
     } else if (item.type === 'space') {
@@ -666,6 +669,7 @@
   const toasts = useToasts()
 
   const resourceManager = oasis.resourceManager
+  const telemetry = resourceManager.telemetry
   const spaces = oasis.spaces
 
   const showChat = writable(false)
@@ -771,6 +775,8 @@
       value = ''
     }
 
+    await telemetry.trackSearchOasis(SearchOasisEventTrigger.Oasis, false)
+
     const result = await resourceManager.searchResources(
       value,
       [
@@ -843,6 +849,8 @@
         return contents.filter((x) => x.id !== resourceId)
       })
     }
+
+    await telemetry.trackDeleteResource(resource.type, !isEverythingSpace)
 
     log.debug('Resource removed:', resourceId)
     toasts.success('Resource deleted!')
@@ -976,7 +984,6 @@
 
       if (spaceId !== 'all') {
         await oasis.addResourcesToSpace(spaceId, resourceIds)
-        await loadSpaceContents(spaceId)
 
         resourceIds.forEach((id) => {
           resourceManager.getResource(id).then((resource) => {
@@ -1121,6 +1128,10 @@
     debouncedSearch($searchValue)
   }
 
+  const debouncedTrackOpenOasis = useDebounce(() => {
+    telemetry.trackOpenOasis()
+  }, 500)
+
   $: if (showTabSearch === 2 && !!$searchValue) {
     log.debug('case 1')
     debouncedSearch($searchValue)
@@ -1130,6 +1141,10 @@
     log.debug('case 2')
     $searchResults = []
     deboundedEverything()
+  }
+
+  $: if (showTabSearch === 2) {
+    debouncedTrackOpenOasis()
   }
 </script>
 

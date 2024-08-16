@@ -7,7 +7,12 @@
     type ResourceAnnotation
   } from '../../service/resources'
   import AnnotationItem from '../Oasis/AnnotationItem.svelte'
-  import type { ResourceDataAnnotation, WebViewEventAnnotation } from '@horizon/types'
+  import {
+    DeleteAnnotationEventTrigger,
+    type AnnotationCommentData,
+    type ResourceDataAnnotation,
+    type WebViewEventAnnotation
+  } from '@horizon/types'
   import { createEventDispatcher } from 'svelte'
   import autosize from 'svelte-autosize'
   import { Editor, getEditorContentText } from '@horizon/editor'
@@ -64,17 +69,34 @@
     const id = e.detail
     log.debug('Annotation delete', id)
 
+    const annotation = annotations.find((annotation) => annotation.id === id)
+    if (!annotation) {
+      log.error('Annotation not found', id)
+      toast.error('Annotation not found')
+      return
+    }
+
     const confirmed = window.confirm('Are you sure you want to delete the annotation?')
     if (!confirmed) return
 
+    const annotationData = await annotation.getParsedData()
+
     log.debug('Deleting annotation', id)
+    annotations = annotations.filter((annotation) => annotation.id !== id)
     await resourceManager.deleteResource(id)
 
     toast.success('Annotation deleted!')
-
-    annotations = annotations.filter((annotation) => annotation.id !== id)
-
     await loadAnnotations(resourceId!)
+
+    const simplifiedAnnotationType =
+      (annotationData.data as AnnotationCommentData)?.content_html ||
+      (annotationData.data as AnnotationCommentData)?.content_plain
+        ? 'comment'
+        : 'highlight'
+    await resourceManager.telemetry.trackDeleteAnnotation(
+      simplifiedAnnotationType,
+      DeleteAnnotationEventTrigger.PageSidebar
+    )
   }
 
   const handleAnnotationUpdate = async () => {

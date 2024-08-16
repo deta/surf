@@ -70,7 +70,8 @@
     CreateTabEventTrigger,
     DeleteSpaceEventTrigger,
     OpenResourceEventFrom,
-    RefreshSpaceEventTrigger
+    RefreshSpaceEventTrigger,
+    SearchOasisEventTrigger
   } from '@horizon/types'
   import { truncate } from '../../utils/text'
   import PQueue from 'p-queue'
@@ -847,7 +848,7 @@
       value = ''
     }
 
-    await telemetry.trackSearchOasis(!isEverythingSpace)
+    await telemetry.trackSearchOasis(SearchOasisEventTrigger.Oasis, !isEverythingSpace)
 
     const result = await resourceManager.searchResources(
       value,
@@ -938,12 +939,14 @@
       everythingContents.set([])
       await tick()
       everythingContents.set(contents)
+
+      await telemetry.trackDeleteResource(resource.type, false)
+    } else {
+      await telemetry.trackDeleteResource(resource.type, true)
     }
 
     log.debug('Resource removed:', resourceId)
     toasts.success('Resource deleted!')
-
-    await telemetry.trackDeleteResource(resource.type, !isEverythingSpace)
   }
 
   const handleItemClick = async (e: CustomEvent<string>) => {
