@@ -896,9 +896,11 @@ export class ResourceManager {
     const blob = new Blob([blobData], { type: type })
 
     const sourcePublishedAt = (data as any).date_published as string | undefined
-    const additionalTags = sourcePublishedAt
-      ? [ResourceTag.sourcePublishedAt(sourcePublishedAt)]
-      : []
+    const additionalTags =
+      sourcePublishedAt &&
+      tags?.findIndex((t) => t.name === ResourceTagsBuiltInKeys.SOURCE_PUBLISHED_AT) === -1
+        ? [ResourceTag.sourcePublishedAt(sourcePublishedAt)]
+        : []
     const allTags = [...(tags ?? []), ...additionalTags]
 
     return this.createResource(type, blob, metadata, allTags) as Promise<ResourceJSON<T>>
