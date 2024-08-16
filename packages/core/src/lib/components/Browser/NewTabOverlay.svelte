@@ -925,7 +925,10 @@
         const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
         log.debug('Resources', newResources)
 
-        newResources.forEach((r) => resourceIds.push(r.id))
+        for (const r of newResources) {
+          resourceIds.push(r.id)
+          telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
+        }
       } else {
         log.debug('Dropped dragcula', drag.data)
 
@@ -958,7 +961,11 @@
                 ''
               )
               log.debug('Resources', newResources)
-              newResources.forEach((r) => resourceIds.push(r.id))
+
+              for (const r of newResources) {
+                resourceIds.push(r.id)
+                telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
+              }
             }
           }
         }
