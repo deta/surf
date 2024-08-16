@@ -87,21 +87,22 @@ impl EmbeddingsStore {
         filter_keys: &Vec<u64>,
         threshold: &Option<f32>,
     ) -> BackendResult<Vec<u64>> {
-        let unfiltered_results = self.index.search(embedding, num_docs)?;
         let mut results = vec![];
-        for (key, distance) in unfiltered_results
+        let prefiltered_results = self
+            .index
+            .filtered_search(embedding, num_docs, |key| filter_keys.contains(&key))?;
+
+        for (key, distance) in prefiltered_results
             .keys
             .iter()
-            .zip(unfiltered_results.distances.iter())
+            .zip(prefiltered_results.distances.iter())
         {
-            if filter_keys.contains(key) {
-                if let Some(threshold) = threshold {
-                    if distance <= threshold {
-                        results.push((*key, *distance));
-                    }
-                } else {
+            if let Some(threshold) = threshold {
+                if distance <= threshold {
                     results.push((*key, *distance));
                 }
+            } else {
+                results.push((*key, *distance));
             }
         }
         results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());

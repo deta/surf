@@ -258,6 +258,7 @@ impl AI {
         dbg!(&query);
         dbg!(&num_docs);
         dbg!(&resource_ids);
+        dbg!(&distance_threshold);
 
         let keys: Vec<i64> = match resource_ids {
             Some(resource_ids) => contents_store.list_embedding_ids_by_resource_ids(resource_ids)?,

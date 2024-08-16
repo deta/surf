@@ -18,6 +18,8 @@
   // let error = ''
   // let loading = false
 
+  const isDev = import.meta.env.DEV
+
   let version = ''
   let prompts: EditablePrompt[] = []
   let migrationOutput: HTMLParagraphElement
@@ -144,16 +146,16 @@
         <h1>Surf v{version}</h1>
 
         <button on:click={checkForUpdates}>Check for Updates</button>
-        <!--
-        <h2>Migration</h2>
-        <button on:click={handleMigration} disabled={migrating}>Run Migration</button>
-        {#if migrating}
-          <Icon name="spinner" size="22px" />
+        {#if isDev}
+          <h2>Migration</h2>
+          <button on:click={handleMigration} disabled={migrating}>Run Migration</button>
+          {#if migrating}
+            <Icon name="spinner" size="22px" />
+          {/if}
         {/if}
         <div class="migration-output">
           <p bind:this={migrationOutput}></p>
         </div>
-        -->
       </article>
     {:else if $activeTab === 'appearance'}
       <article class="general">

@@ -128,11 +128,6 @@ impl Worker {
 
         println!("reindexing resource text content embeddings...");
         for (i, resource) in non_deleted_resources.iter().enumerate() {
-            /*
-            if resource.id != "caea2266-096d-428c-b310-fa8a1d4e7b56" {
-                continue;
-            }
-            */
             println!(
                 "\treindexing resource '{}' {}/{}...",
                 resource.id,

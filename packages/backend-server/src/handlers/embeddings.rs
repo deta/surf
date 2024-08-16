@@ -102,6 +102,8 @@ pub fn handle_filtered_search(
     let request = serde_json::from_str::<FilteredSearchRequest>(&client_message)?;
     dbg!(&request.query);
     dbg!(&request.num_docs);
+    dbg!(&request.keys);
+    dbg!(&request.threshold);
     let query_embedding = embedding_model.encode_single(&request.query)?;
     let (response_tx, response_rx) = std::sync::mpsc::channel();
 
