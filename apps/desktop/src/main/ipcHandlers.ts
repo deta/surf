@@ -386,7 +386,7 @@ export const ipcSenders = {
     const windows = [getMainWindow(), getSettingsWindow()]
 
     windows.forEach((window) => {
-      if (!window) return
+      if (!window || window.isDestroyed()) return
       window.webContents.send('user-config-settings-change', settings)
     })
   }
