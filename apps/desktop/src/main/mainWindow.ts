@@ -74,7 +74,8 @@ export function createWindow() {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [
         `--userDataPath=${app.getPath('userData')}`,
-        `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`
+        `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
+        `--tabSwitchingShortcutsDisable=${process.env.TAB_SWITCHING_SHORTCUTS_DISABLE}`
       ],
       sandbox: false,
       session: session.fromPartition('persist:surf-app-session'),
