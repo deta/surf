@@ -134,6 +134,7 @@
   import { truncate } from '../../utils/text'
   import { provideConfig } from '../../service/config'
   import { tooltip } from '../../utils/directives'
+  import { spawnBoxSmoke } from '../Effects/SmokeParticle.svelte'
   //import '@horizon/dragcula/dist/styles.scss'
 
   let activeTabComponent: TabItem | null = null
@@ -588,6 +589,14 @@
     activeTabsHistory.update((history) => history.filter((id) => id !== tabId))
     activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
 
+    const el = document.getElementById(`tab-${tabId}`)
+    const rect = el?.getBoundingClientRect()
+    spawnBoxSmoke(rect, {
+      densityN: 28,
+      size: 13,
+      //velocityScale: 0.5,
+      cloudPointN: 7
+    })
     await tick()
 
     if ($activeTabId === tabId) {
