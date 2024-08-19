@@ -13,6 +13,7 @@ export const isModKeyAndKeysPressed = (event: KeyboardEvent, keys: string[]) => 
 export const isModKeyAndShiftKeyAndKeyPressed = (event: KeyboardEvent, key: string) => {
   return isModKeyPressed(event) && event.shiftKey && event.key === key
 }
+
 export const isModKeyAndEventCodeIs = (event: KeyboardEvent, code: string) => {
   return isModKeyPressed(event) && event.code === code
 }

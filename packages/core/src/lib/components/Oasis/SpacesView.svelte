@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, tick } from 'svelte'
-  import { writable } from 'svelte/store'
+  import { writable, derived } from 'svelte/store'
 
   import { useLogScope } from '../../utils/log'
   import Folder from '../Browser/Folder.svelte'
@@ -242,6 +242,12 @@
   onMount(() => {
     log.debug('Mounted SpacesView')
   })
+
+  const filteredSpaces = derived(spaces, ($spaces) =>
+    $spaces
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .filter((folder) => folder.id !== 'all')
+  )
 </script>
 
 <div class="folders-sidebar">
@@ -257,12 +263,8 @@
         <Icon name="plus" />
         <span class="new-space-text">New Space</span>
       </button>
-      {#each type === 'horizontal' ? $spaces
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .filter((folder) => folder.id !== 'all') : $spaces
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .filter((folder) => folder.id !== 'all') as folder (folder.id)}
-        {#key folder.name.colors}
+      {#each $filteredSpaces as folder (folder.id)}
+        {#key folder.id}
           <div class="embla__slide">
             <Folder
               {folder}
