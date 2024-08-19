@@ -846,10 +846,20 @@ export class ResourceManager {
     const blobData = JSON.stringify(data)
     const blob = new Blob([blobData], { type: ResourceTypes.LINK })
 
+    const additionalTags = []
+
     const sourcePublishedAt = data.date_published
-    const additionalTags = sourcePublishedAt
-      ? [ResourceTag.sourcePublishedAt(sourcePublishedAt)]
-      : []
+    if (sourcePublishedAt) {
+      additionalTags.push(ResourceTag.sourcePublishedAt(sourcePublishedAt))
+    }
+
+    const existingCanoncialUrlTag = tags?.find(
+      (t) => t.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+    )
+    if (!existingCanoncialUrlTag && data.url) {
+      additionalTags.push(ResourceTag.canonicalURL(data.url))
+    }
+
     const allTags = [...(tags ?? []), ...additionalTags]
 
     return this.createResource(ResourceTypes.LINK, blob, metadata, allTags) as Promise<ResourceLink>

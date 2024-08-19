@@ -163,7 +163,7 @@
           const resource = await resourceManager.createDetectedResource(
             detectedResource,
             { sourceURI: link.url },
-            [ResourceTag.import()]
+            [ResourceTag.import(), ResourceTag.canonicalURL(link.url)]
           )
 
           log.debug('Resource created', resource)
@@ -185,7 +185,7 @@
           const resource = await resourceManager.createDetectedResource(
             detectedResource,
             { sourceURI: post.url },
-            [ResourceTag.import()]
+            [ResourceTag.import(), ResourceTag.canonicalURL(post.url)]
           )
 
           log.debug('Resource created', resource)
