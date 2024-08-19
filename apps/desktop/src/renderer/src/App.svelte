@@ -9,20 +9,12 @@
 
   const isDevMode = import.meta.env.DEV
 
-  let showDragBar = true
-
   onMount(() => {
     window.api.onFullscreenChange((fullscreen) => (showDragBar = !fullscreen))
   })
 </script>
 
 <div class="main relative">
-  {#if showDragBar}
-    <div class="drag-bar top"></div>
-    <!-- <div class="drag-bar bottom"></div> -->
-    <!-- <div class="drag-bar left"></div>
-    <div class="drag-bar right"></div> -->
-  {/if}
   <img
     class="w-screen h-screen absolute object-cover opacity-60 select-none pointer-events-none"
     src={browserBackground}
@@ -44,36 +36,5 @@
   .main {
     width: 100%;
     height: 100%;
-  }
-
-  .drag-bar {
-    position: fixed;
-    -webkit-app-region: drag;
-  }
-  .drag-bar.top {
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 20px;
-    z-index: -1;
-    width: 20%;
-  }
-  .drag-bar.bottom {
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 10px;
-  }
-  .drag-bar.left {
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 10px;
-  }
-  .drag-bar.right {
-    top: 0;
-    bottom: 0;
-    right: 0;
-    width: 10px;
   }
 </style>

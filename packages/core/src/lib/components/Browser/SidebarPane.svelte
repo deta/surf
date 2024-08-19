@@ -199,7 +199,7 @@
     >
       <slot name="sidebar" />
     </Pane>
-    <PaneResizer class="hover:bg-neutral-100 z-[50001] my-1.5 rounded-full">
+    <PaneResizer class="hover:bg-neutral-100 z-[50001] my-1.5 rounded-full no-drag">
       <div
         class:h-full={!horizontalTabs}
         class:w-1.5={!horizontalTabs}
@@ -213,7 +213,7 @@
       <Pane order={1}>
         <slot name="content" />
       </Pane>
-      <PaneResizer class="hover:bg-neutral-100 z-[50001] my-1.5 rounded-full">
+      <PaneResizer class="hover:bg-neutral-100 z-[50001] my-1.5 rounded-full no-drag">
         <div class="h-full w-1.5" />
       </PaneResizer>
       <Pane
