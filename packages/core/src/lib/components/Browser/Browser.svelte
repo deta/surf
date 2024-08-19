@@ -1012,13 +1012,18 @@
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       setShowNewTabOverlay(0)
       createHistoryTab()
-    } else if (isModKeyAndEventCodeIs(e, 'Plus') || isModKeyAndEventCodeIs(e, 'Equal')) {
+    } else if (
+      isModKeyAndEventCodeIs(e, 'Plus') ||
+      isModKeyAndEventCodeIs(e, 'Equal') ||
+      isModKeyAndEventCodeIs(e, 'BracketRight')
+    ) {
+      console.log('zoom in')
       setShowNewTabOverlay(0)
       $activeBrowserTab?.zoomIn()
-    } else if (isModKeyAndEventCodeIs(e, 'Minus')) {
+    } else if (isModKeyAndEventCodeIs(e, 'Minus') || isModKeyAndEventCodeIs(e, 'Slash')) {
       setShowNewTabOverlay(0)
       $activeBrowserTab?.zoomOut()
-    } else if (isModKeyAndKeyPressed(e, '0')) {
+    } else if (isModKeyAndKeyPressed(e, '0') || isModKeyAndEventCodeIs(e, 'Digit0')) {
       setShowNewTabOverlay(0)
       $activeBrowserTab?.resetZoom()
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'i')) {
