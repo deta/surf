@@ -3140,7 +3140,7 @@
 
 <ToastsProvider service={toasts} />
 
-<div class="antialiased w-screen h-screen will-change-auto transform-gpu relative">
+<div class="antialiased w-screen h-screen will-change-auto transform-gpu relative drag">
   <SidebarPane
     {horizontalTabs}
     bind:this={sidebarComponent}
@@ -3178,7 +3178,7 @@
               <Tooltip.Root openDelay={400} closeDelay={10}>
                 <Tooltip.Trigger>
                   <button
-                    class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    class="no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                     on:click={handleCollapse}
                   >
                     <span
@@ -3209,7 +3209,7 @@
               <Tooltip.Root openDelay={400} closeDelay={10}>
                 <Tooltip.Trigger>
                   <button
-                    class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
+                    class="no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
                       ? 'opacity-30 cursor-not-allowed'
                       : 'cursor-pointer'}"
                     disabled={!canGoBack}
@@ -3242,7 +3242,7 @@
               <Tooltip.Root openDelay={400} closeDelay={10}>
                 <Tooltip.Trigger>
                   <button
-                    class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoForward
+                    class="no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoForward
                       ? 'opacity-30 cursor-not-allowed'
                       : 'cursor-pointer'}"
                     disabled={!canGoForward}
@@ -3275,7 +3275,7 @@
               <Tooltip.Root openDelay={400} closeDelay={10}>
                 <Tooltip.Trigger>
                   <button
-                    class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canReload
+                    class="no-drag transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canReload
                       ? 'opacity-30 cursor-not-allowed'
                       : 'cursor-pointer'}"
                     on:click={$activeBrowserTab?.reload}
@@ -3307,7 +3307,7 @@
           </div>
 
           <div
-            class="bg-sky-50 my-auto rounded-xl shadow-md flex-shrink-0 overflow-x-scroll no-scrollbar"
+            class="bg-sky-50 no-drag my-auto rounded-xl shadow-md flex-shrink-0 overflow-x-scroll no-scrollbar"
             class:p-2={!horizontalTabs}
             class:p-0.5={horizontalTabs}
           >
@@ -3374,7 +3374,7 @@
             {#if $activeTabMagic}
               {#if $activeTabMagic.showSidebar}
                 <div
-                  class="no-scrollbar relative flex-grow flex-shrink-0 group {horizontalTabs
+                  class="no-scrollbar no-drag relative flex-grow flex-shrink-0 group {horizontalTabs
                     ? ''
                     : 'w-full'}"
                 >
@@ -3694,7 +3694,7 @@
                 >
                   <button
                     bind:this={newTabButton}
-                    class="transform select-none active:scale-95 space-x-2 {horizontalTabs
+                    class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
                       : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
                     class:bg-sky-200={$showNewTabOverlay === 1}
@@ -3722,7 +3722,7 @@
               >
                 <button
                   bind:this={newTabButton}
-                  class="transform select-none active:scale-95 space-x-2 {horizontalTabs
+                  class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                     ? 'w-fit rounded-xl p-2'
                     : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
                   class:bg-sky-200={$showNewTabOverlay === 1}
@@ -3739,7 +3739,7 @@
 
           <div class="flex {horizontalTabs ? 'flex-row items-center' : 'flex-col'} flex-shrink-0">
             <button
-              class="transform select-none active:scale-95 space-x-2 {horizontalTabs
+              class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                 ? 'w-fit rounded-xl p-2'
                 : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
               on:click|preventDefault={() => createNewEmptyTab()}
@@ -3762,7 +3762,7 @@
                 <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
                   <button
                     slot="trigger"
-                    class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    class="no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                     on:click={() => toggleRightSidebar()}
                   >
                     <Icon name="triangle-square-circle" />
@@ -3770,7 +3770,7 @@
 
                   <div
                     slot="content"
-                    class="flex flex-row items-center justify-center space-x-4 px-3 py-3"
+                    class="flex no-drag flex-row items-center justify-center space-x-4 px-3 py-3"
                   >
                     {#each $sidebarTools as tool}
                       <button
@@ -3795,7 +3795,7 @@
                   text: 'Open Oasis (⌘ + O)',
                   position: horizontalTabs ? 'left' : 'top'
                 }}
-                class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 on:click={() => ($showNewTabOverlay = 2)}
                 class:bg-sky-200={$showNewTabOverlay === 2}
               >
@@ -3878,7 +3878,7 @@
         />
 
         {#if $sidebarTab === 'oasis'}
-          <div class="browser-window active" style="--scaling: 1;">
+          <div class="browser-window active no-drag" style="--scaling: 1;">
             <OasisSpace
               spaceId={$selectedSpace}
               active
@@ -3903,7 +3903,7 @@
         {#each $activeTabs as tab (tab.id)}
           {#if $activatedTabs.includes(tab.id)}
             <div
-              class="browser-window will-change-contents transform-gpu"
+              class="browser-window will-change-contents transform-gpu no-drag"
               style="--scaling: 1;"
               class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
               class:magic-glow-big={$activeTabId === tab.id &&
@@ -3921,6 +3921,8 @@
                 {:else}
                   <div>Should not happen error: Failed to load main Horizon</div>
                 {/if} -->
+              <div class="w-full h-3 pointer-events-none fixed z-[1002] drag" />
+
               {#if tab.type === 'page'}
                 <BrowserTab
                   active={$activeTabId === tab.id}
@@ -3986,7 +3988,7 @@
         {/each}
 
         {#if !$activeTabs && !$activeTab}
-          <div class="" style="--scaling: 1;">
+          <div class="no-drag" style="--scaling: 1;">
             <BrowserHomescreen
               {historyEntriesManager}
               active
@@ -4003,7 +4005,7 @@
 
     <Tabs.Root
       bind:value={$rightSidebarTab}
-      class="h-full flex flex-col relative"
+      class="h-full flex flex-col relative no-drag"
       slot="right-sidebar"
       let:minimal
     >

@@ -1198,9 +1198,11 @@
   }}
 >
   <Drawer.Portal>
-    <Drawer.Overlay class="drawer-overlay fixed inset-0 z-10 transition-opacity duration-300" />
+    <Drawer.Overlay
+      class="drawer-overlay fixed inset-0 z-10 transition-opacity duration-300 no-drag"
+    />
     <Drawer.Content
-      class="drawer-content fixed inset-x-4 bottom-4 will-change-transform z-[50001] mx-auto overflow-hidden rounded-md transition duration-400 bg-[#FEFFFE] outline-none"
+      class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-md transition duration-400 bg-[#FEFFFE] outline-none"
       style="width: fit-content;"
     >
       <Motion

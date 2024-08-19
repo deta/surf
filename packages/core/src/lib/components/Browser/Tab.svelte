@@ -236,7 +236,7 @@
 <div
   id="tab-{tab.id}"
   draggable={true}
-  class="tab {isActive
+  class="tab no-drag {isActive
     ? 'text-sky-950 bg-sky-200 sticky   shadow-inner ring-[0.5px] ring-sky-500'
     : ''}
   flex items-center {pinned
