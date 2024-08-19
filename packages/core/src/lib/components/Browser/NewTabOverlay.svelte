@@ -63,7 +63,6 @@
   import {
     MEDIA_TYPES,
     createResourcesFromMediaItems,
-    extractAndCreateWebResource,
     processDrop,
     type MediaParserResult,
     type MediaParserResultURL,
