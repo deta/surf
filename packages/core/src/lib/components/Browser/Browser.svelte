@@ -3417,7 +3417,8 @@
                                   enableEditing
                                   {activeTabId}
                                   pinned={false}
-                                  showExcludeOthersButton
+                                  showExcludeOthersButton={$activeTabMagic?.showSidebar &&
+                                    (tab.type === 'page' || tab.type === 'space')}
                                   on:select={() => {}}
                                   bind:this={activeTabComponent}
                                   on:delete-tab={handleDeleteTab}
@@ -3438,7 +3439,8 @@
                                   {activeTabId}
                                   pinned={false}
                                   showButtons={false}
-                                  showExcludeOthersButton
+                                  showExcludeOthersButton={$activeTabMagic?.showSidebar &&
+                                    (tab.type === 'page' || tab.type === 'space')}
                                   on:select={handleTabSelect}
                                   on:delete-tab={handleDeleteTab}
                                   on:input-enter={handleBlur}
@@ -3498,7 +3500,8 @@
                                   on:select={() => {}}
                                   {activeTabId}
                                   pinned={false}
-                                  showExcludeOthersButton
+                                  showExcludeOthersButton={$activeTabMagic?.showSidebar &&
+                                    (tab.type === 'page' || tab.type === 'space')}
                                   on:unarchive-tab={handleUnarchiveTab}
                                   on:delete-tab={handleDeleteTab}
                                   on:remove-from-sidebar={handleRemoveFromSidebar}
@@ -3516,7 +3519,8 @@
                                   {activeTabId}
                                   pinned={false}
                                   showButtons={false}
-                                  showExcludeOthersButton
+                                  showExcludeOthersButton={$activeTabMagic?.showSidebar &&
+                                    (tab.type === 'page' || tab.type === 'space')}
                                   on:unarchive-tab={handleUnarchiveTab}
                                   on:delete-tab={handleDeleteTab}
                                   on:select={handleTabSelect}
