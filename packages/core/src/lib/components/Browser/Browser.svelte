@@ -1028,7 +1028,6 @@
       isModKeyAndEventCodeIs(e, 'Equal') ||
       isModKeyAndEventCodeIs(e, 'BracketRight')
     ) {
-      console.log('zoom in')
       setShowNewTabOverlay(0)
       $activeBrowserTab?.zoomIn()
     } else if (isModKeyAndEventCodeIs(e, 'Minus') || isModKeyAndEventCodeIs(e, 'Slash')) {
