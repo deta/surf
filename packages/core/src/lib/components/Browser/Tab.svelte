@@ -390,7 +390,7 @@
       {/if}
     </div>
 
-    {#if showButtons && !isEditing && hovered && ((tabSize && tabSize > 64) || isActive)}
+    {#if showButtons && !isEditing && hovered && ((tabSize && tabSize > 64) || isActive) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row space-x-2 right-0">
         {#if tab.archived}
           <button
