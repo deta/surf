@@ -15,6 +15,5 @@ export const isModKeyAndShiftKeyAndKeyPressed = (event: KeyboardEvent, key: stri
 }
 
 export const isModKeyAndEventCodeIs = (event: KeyboardEvent, code: string) => {
-  console.log(event.code, code)
   return isModKeyPressed(event) && event.code === code
 }
