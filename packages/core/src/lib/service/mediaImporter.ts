@@ -1,7 +1,7 @@
 import { hasClassOrParentWithClass } from '@horizon/tela'
 import { useLogScope } from '../utils/log'
 import { checkIfUrl, parseStringIntoUrl } from '../utils/url'
-import type { SFFSResourceMetadata, SFFSResourceTag } from '../types'
+import { ResourceTagsBuiltInKeys, type SFFSResourceMetadata, type SFFSResourceTag } from '../types'
 import { result } from 'lodash'
 import { Resource, ResourceTag, type ResourceManager } from './resources'
 import { WebParser } from '@horizon/web-parser'
@@ -450,7 +450,8 @@ export const createResourcesFromMediaItems = async (
           item.data.href,
           item.metadata,
           [
-            ResourceTag.dragBrowser() // we assume URLs were dragged from the browser
+            ResourceTag.canonicalURL(item.data.href),
+            ResourceTag.dragBrowser() // we assume URLs were dragged from the browser,
           ]
         )
         resource = parsed.resource

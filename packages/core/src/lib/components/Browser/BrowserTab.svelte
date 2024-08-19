@@ -402,9 +402,8 @@
 
     if (!tab.resourceBookmark) {
       const resource = await resourceManager.createResourceLink(
-        new Blob([JSON.stringify({ url: event.url })], { type: ResourceTypes.LINK }),
-        { name: tab?.title ?? '', sourceURI: event.url, alt: '' },
-        [ResourceTag.canonicalURL(event.url)]
+        { url: event.url },
+        { name: tab?.title ?? '', sourceURI: event.url, alt: '' }
       )
 
       log.debug('created resource', resource)
