@@ -71,7 +71,8 @@
     DeleteSpaceEventTrigger,
     OpenResourceEventFrom,
     RefreshSpaceEventTrigger,
-    SaveToOasisEventTrigger
+    SaveToOasisEventTrigger,
+    SearchOasisEventTrigger
   } from '@horizon/types'
   import { truncate } from '../../utils/text'
   import PQueue from 'p-queue'
