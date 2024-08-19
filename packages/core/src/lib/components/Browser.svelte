@@ -108,7 +108,7 @@
 
 
   let activeTabComponent: TabItem | null = null
-  let observer: IntersectionObserver
+  let drawer: Drawer
   let addressBarFocus = false
   let showLeftSidebar = true
   let showRightSidebar = false
@@ -459,23 +459,9 @@
       makeTabActive(newTab.id)
     }
 
+    checkScroll()
+
     return newTab
-  }
-
-  function setupObserver() {
-    observer = new IntersectionObserver(
-      ([entry]) => {
-        isFirstButtonVisible = entry.isIntersecting
-      },
-      {
-        root: null,
-        threshold: 0.01 // 1% visibility threshold
-      }
-    )
-
-    if (newTabButton) {
-      observer.observe(newTabButton)
-    }
   }
 
   const archiveTab = async (tabId: string) => {
@@ -559,9 +545,7 @@
 
     await tabsDB.delete(tabId)
 
-    observer.unobserve(newTabButton)
-    observer.observe(newTabButton)
-
+    checkScroll()
     if (tab.type === 'page' && trigger) {
       await telemetry.trackDeletePageTab(trigger)
     }
@@ -2071,32 +2055,17 @@
 
   let tabSize = 0
 
-  $: plusBtnLeftPos = horizontalTabs
-    ? 16 - // padding left and right
-      4 + // remove last padding
-      16 + // padding between them
-      $unpinnedTabs.reduce(
-        (total, tab) =>
-          total +
-          7 +
-          (tab.id === $activeTabId && tabSize && tabSize <= 260
-            ? 260
-            : Math.min(300, Math.max(24, tabSize))),
-        0
-      ) + // remove last padding
-      $magicTabs.reduce(
-        (total, tab) =>
-          total +
-          (tab.id === $activeTabId && tabSize <= 260 ? 260 : Math.min(300, Math.max(96, tabSize))),
-        0
-      ) +
-      120 + // the size of traffic lights plus back and forward buttons
-      ($magicTabs.length > 0 ? 16 : 0) +
-      ($pinnedTabs.length > 0 ? $pinnedTabs.length * (23 + 4) : 182)
-    : 0
-
+  $: plusBtnLeftPos = $unpinnedTabs.reduce(
+    (total, tab) =>
+      total +
+      4 +
+      (tab.id === $activeTabId && tabSize && tabSize <= 260
+        ? 260
+        : Math.min(300, Math.max(24, tabSize))),
+    0
+  )
   $: {
-    const reservedSpace = 600 + $pinnedTabs.length * 50 + 32
+    const reservedSpace = 400 + $pinnedTabs.length * 50 + 32
     const availableSpace = maxWidth - reservedSpace
     const numberOfTabs = $unpinnedTabs.length + $magicTabs.length
     tabSize = availableSpace / numberOfTabs
@@ -2116,7 +2085,7 @@
         $showEndMask = scrollLeft + clientWidth <= scrollWidth - 1
       } else {
         $showStartMask = scrollTop > 0
-        $showEndMask = scrollTop + clientHeight <= scrollHeight - 1
+        $showEndMask = scrollTop + clientHeight <= scrollHeight - 10
       }
     }
   }
@@ -2394,8 +2363,6 @@
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
     log.debug('tabs', $tabs)
-
-    setupObserver()
 
     await tick()
 
@@ -3072,22 +3039,6 @@
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
     )
   }
-
-  function checkVisibility() {
-    if (newTabButton && containerRef) {
-      const containerRect = containerRef.getBoundingClientRect()
-      const buttonRect = newTabButton.getBoundingClientRect()
-      isFirstButtonVisible =
-        buttonRect.top >= containerRect.top &&
-        buttonRect.left >= containerRect.left &&
-        buttonRect.bottom <= containerRect.bottom &&
-        buttonRect.right <= containerRect.right
-    }
-  }
-
-  afterUpdate(() => {
-    checkVisibility()
-  })
 </script>
 
 <SplashScreen show={$showSplashScreen} />
@@ -3510,7 +3461,7 @@
               {#if horizontalTabs}
                 <div
                   id="sidebar-unpinned-tabs"
-                  class="horizontal-tabs space-x-2 h-full divide-x-2 divide-sky-300/70"
+                  class="horizontal-tabs space-x-1 h-full divide-x-1 divide-sky-300/70"
                   axis="horizontal"
                   dragdeadzone="5"
                   placeholder-size="60"
@@ -3635,49 +3586,19 @@
                   {/each}
                 </div>
               {/if}
-              {#if !horizontalTabs}
-                <div
-                  style="position: absolute; top: {!horizontalTabs
-                    ? 42 * $unpinnedTabs.length
-                    : 0}px; left: 0px; right: 0;"
-                  class:w-fit={horizontalTabs}
-                  class:h-full={horizontalTabs}
-                  class="select-none flex items-center justify-center"
-                  class:opacity-100={isFirstButtonVisible}
-                  class:opacity-0={!isFirstButtonVisible}
-                  class:pointer-events-auto={isFirstButtonVisible}
-                  class:pointer-events-none={!isFirstButtonVisible}
-                >
-                  <button
-                    bind:this={newTabButton}
-                    class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
-                      ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
-                    class:bg-sky-200={$showNewTabOverlay === 1}
-                    on:click|preventDefault={() => createNewEmptyTab()}
-                  >
-                    <Icon name="add" />
-                    {#if !horizontalTabs}
-                      <span class="label">New Tab</span>
-                    {/if}
-                  </button>
-                </div>
-              {/if}
-            </div>
-
-            {#if horizontalTabs}
               <div
-                style="position: absolute; top: 0px; left: {plusBtnLeftPos}px; right: 0;"
+                style="position: absolute; top: {!horizontalTabs
+                  ? 42 * $unpinnedTabs.length
+                  : 0}px; left: {horizontalTabs ? plusBtnLeftPos : 0}px; right: 0;"
                 class:w-fit={horizontalTabs}
                 class:h-full={horizontalTabs}
                 class="select-none flex items-center justify-center"
-                class:opacity-100={isFirstButtonVisible}
-                class:opacity-0={!isFirstButtonVisible}
-                class:pointer-events-auto={isFirstButtonVisible}
-                class:pointer-events-none={!isFirstButtonVisible}
+                class:opacity-100={!$showEndMask}
+                class:opacity-0={$showEndMask}
+                class:pointer-events-auto={!$showEndMask}
+                class:pointer-events-none={$showEndMask}
               >
                 <button
-                  bind:this={newTabButton}
                   class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                     ? 'w-fit rounded-xl p-2'
                     : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
@@ -3690,7 +3611,7 @@
                   {/if}
                 </button>
               </div>
-            {/if}
+            </div>
           </div>
 
           <div class="flex {horizontalTabs ? 'flex-row items-center' : 'flex-col'} flex-shrink-0">
@@ -3699,10 +3620,10 @@
                 ? 'w-fit rounded-xl p-2'
                 : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
               on:click|preventDefault={() => createNewEmptyTab()}
-              class:opacity-100={!isFirstButtonVisible}
-              class:opacity-0={isFirstButtonVisible}
-              class:pointer-events-auto={!isFirstButtonVisible}
-              class:pointer-events-none={isFirstButtonVisible}
+              class:opacity-100={$showEndMask}
+              class:opacity-0={!$showEndMask}
+              class:pointer-events-auto={$showEndMask}
+              class:pointer-events-none={!$showEndMask}
               class:bg-sky-200={$showNewTabOverlay === 1}
             >
               <Icon name="add" />
