@@ -4,8 +4,10 @@
   import '../../app.css'
   import '../../output.css'
   import '../../../../../packages/core/src/output.css'
-  // import browserBackground from './assets/seatrain-upscaled-hightrain.webp'
   import browserBackground from './assets/bg.webp'
+  import DevOverlay from './DevOverlay.svelte'
+
+  const isDevMode = import.meta.env.DEV
 
   let showDragBar = true
 
@@ -22,11 +24,14 @@
     <div class="drag-bar right"></div> -->
   {/if}
   <img
-    class="w-screen h-screen absolute object-cover opacity-60"
+    class="w-screen h-screen absolute object-cover opacity-60 select-none pointer-events-none"
     src={browserBackground}
     alt="background"
   />
   <Browser />
+  {#if isDevMode}
+    <DevOverlay />
+  {/if}
 </div>
 
 <style>

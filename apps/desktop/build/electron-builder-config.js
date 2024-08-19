@@ -71,11 +71,11 @@ function electronBuilderConfig() {
     npmRebuild: false,
     publish: params.publishS3BucketName
       ? {
-          provider: 's3',
-          bucket: params.publishS3BucketName,
-          region: params.publishS3BucketRegion,
-          channel: params.releaseChannel
-        }
+        provider: 's3',
+        bucket: params.publishS3BucketName,
+        region: params.publishS3BucketRegion,
+        channel: params.releaseChannel
+      }
       : [],
     protocols: [
       {
@@ -91,7 +91,13 @@ function electronBuilderConfig() {
         rank: 'Default',
         ext: 'html'
       }
-    ]
+    ],
+    electronVersion: '31.4.0',
+    // electronDownload: {
+    //   customFilename: 'electron-v31.3.1+wvcus-darwin-arm64.zip',
+    //   customDir: 'v31.3.1+wvcus',
+    //   mirror: 'https://github.com/castlabs/electron-releases/releases/download/'
+    // }
   }
 }
 
