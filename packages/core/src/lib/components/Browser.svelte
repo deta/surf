@@ -2775,8 +2775,18 @@
       const resource = drag.data['oasis/resource']
 
       if (
-        resource.type === 'application/vnd.space.link' ||
-        resource.type === 'application/vnd.space.article'
+        (
+          [
+            ResourceTypes.LINK,
+            ResourceTypes.ARTICLE,
+            ResourceTypes.POST,
+            ResourceTypes.POST_YOUTUBE,
+            ResourceTypes.POST_TWITTER,
+            ResourceTypes.POST_REDDIT,
+            ResourceTypes.CHANNEL_YOUTUBE,
+            ResourceTypes.PLAYLIST_YOUTUBE
+          ] as string[]
+        ).includes(resource.type)
       ) {
         let tab = await createPageTab(resource.parsedData.url, {
           active: true,

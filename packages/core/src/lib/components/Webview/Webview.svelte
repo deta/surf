@@ -30,6 +30,7 @@
   import { derived, writable, type Writable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import {
+    ResourceTypes,
     WebViewEventSendNames,
     type WebViewReceiveEvents,
     type WebViewSendEvents
@@ -39,7 +40,7 @@
   import { useLogScope } from '../../utils/log'
   import type { HistoryEntry } from '../../types'
   import { useDebounce } from '../../utils/debounce'
-  import type { ResourceObject } from '../../service/resources'
+  import type { ResourceChatThread, ResourceLink, ResourceObject } from '../../service/resources'
   import type { Tab, TabPage } from '../../types/browser.types'
   import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
 
@@ -241,7 +242,20 @@
     }
     /// When the drag is a native drag, we need to handle it differently
     if (data instanceof DataTransfer) {
-      // TODO: Handle native data conversion!
+      for (const item of data.items) {
+        if (item.kind === 'string') {
+          const value = await new Promise<string>((resolve) => item.getAsString(resolve))
+          serialized.strings.push({ type: item.type, value })
+        } else if (item.kind === 'file') {
+          const file = item.getAsFile()
+          if (!file) continue
+          serialized.files.push({
+            name: file.name ?? `File ${serialized.files.length + 1}`,
+            type: file.type,
+            buffer: await file.arrayBuffer()
+          })
+        }
+      }
     } else {
       if (data['surf/tab'] !== undefined) {
         const tab = data['surf/tab'] as TabPage // TODO: This is prob the wrong type re: currentLocation ? @Maxi
@@ -254,12 +268,46 @@
       if (data['oasis/resource'] !== undefined) {
         const resource = data['oasis/resource'] as ResourceObject
         if (
-          ['application/vnd.space.link', 'application/vnd.space.article'].includes(resource.type)
+          (
+            [
+              ResourceTypes.LINK,
+              ResourceTypes.ARTICLE,
+              ResourceTypes.POST,
+              ResourceTypes.POST_REDDIT,
+              ResourceTypes.POST_TWITTER,
+              ResourceTypes.POST_YOUTUBE,
+              ResourceTypes.CHANNEL_YOUTUBE,
+              ResourceTypes.PLAYLIST_YOUTUBE
+            ] as string[]
+          ).includes(resource.type)
         ) {
           if (typesOnly) {
             serialized.strings.push({ type: 'text/uri-list', value: undefined })
           } else {
-            serialized.strings.push({ type: 'text/uri-list', value: resource.metadata?.sourceURI })
+            let url = ''
+            if (
+              (
+                [ResourceTypes.LINK, ResourceTypes.POST, ResourceTypes.ARTICLE] as string[]
+              ).includes(resource.type)
+            ) {
+              url = (await (resource as ResourceLink).getParsedData())?.url
+            } else {
+              url = resource.metadata?.sourceURI ?? ''
+            }
+            serialized.strings.push({ type: 'text/uri-list', value: url })
+          }
+        } else if (
+          ([ResourceTypes.CHAT_THREAD, ResourceTypes.CHAT_THREAD_SLACK] as string[]).includes(
+            resource.type
+          )
+        ) {
+          if (typesOnly) {
+            serialized.strings.push({ type: 'text/plain', value: undefined })
+          } else {
+            let text = ''
+            text = (await (resource as ResourceChatThread).getParsedData())?.content_plain
+            text += '\n\n' + (await (resource as ResourceChatThread).getParsedData())?.url
+            serialized.strings.push({ type: 'text/plain', value: text })
           }
         }
 
