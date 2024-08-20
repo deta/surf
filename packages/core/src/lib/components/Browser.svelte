@@ -104,6 +104,8 @@
   import { provideConfig } from '../service/config'
   import { tooltip } from '../utils/directives'
   import { HistoryEntriesManager } from '../service/history'
+  import { spawnBoxSmoke } from '../Effects/SmokeParticle.svelte'
+
 
   let activeTabComponent: TabItem | null = null
   let drawer: Drawer
@@ -509,6 +511,16 @@
   }
 
   const handleDeleteTab = async (e: CustomEvent<string>) => {
+    const rect = document.getElementById(`tab-${e.detail}`)?.getBoundingClientRect()
+    if (rect) {
+      spawnBoxSmoke(rect, {
+        densityN: 28,
+        size: 13,
+        //velocityScale: 0.5,
+        cloudPointN: 7
+      })
+    }
+
     await deleteTab(e.detail, DeleteTabEventTrigger.Click)
   }
 
