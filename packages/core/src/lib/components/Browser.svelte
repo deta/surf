@@ -4116,6 +4116,16 @@
   // Disable the zone of the drag item itself
   :global(body *[data-dragcula-dragging-item]) {
     pointer-events: none !important;
+    object-fit: cover;
+    max-width: 25ch;
+    max-height: 25ch;
+    opacity: 0.7;
+  }
+  :global(body *[data-dragcula-dragging-item].tab) {
+    pointer-events: none !important;
+    object-fit: cover;
+    max-width: 35ch;
+    max-height: 35ch;
   }
 
   :global(
