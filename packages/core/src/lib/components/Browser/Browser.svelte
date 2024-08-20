@@ -573,6 +573,16 @@
   }
 
   const handleDeleteTab = async (e: CustomEvent<string>) => {
+    const rect = document.getElementById(`tab-${e.detail}`)?.getBoundingClientRect()
+    if (rect) {
+      spawnBoxSmoke(rect, {
+        densityN: 28,
+        size: 13,
+        //velocityScale: 0.5,
+        cloudPointN: 7
+      })
+    }
+
     await deleteTab(e.detail, DeleteTabEventTrigger.Click)
   }
 
@@ -589,14 +599,6 @@
     activeTabsHistory.update((history) => history.filter((id) => id !== tabId))
     activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
 
-    const el = document.getElementById(`tab-${tabId}`)
-    const rect = el?.getBoundingClientRect()
-    spawnBoxSmoke(rect, {
-      densityN: 28,
-      size: 13,
-      //velocityScale: 0.5,
-      cloudPointN: 7
-    })
     await tick()
 
     if ($activeTabId === tabId) {
