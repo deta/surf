@@ -62,13 +62,13 @@ if (!GLOBAL_mouseMoveListener) {
 
 /// EVENT SYSTEM TRICKERY
 /// FIX: MEMORY LEAKKKKKS!
-const EVENT_SPY_TARGETS = [
+/*const EVENT_SPY_TARGETS = [
   "Drop",
   "DragStart",
   "DragEnter",
   "DragOver"
   //"onDragLeave",
-];
+];*/
 export class EventSpy {
   // <eventType, callback>
   callbacks = new Map<
@@ -81,20 +81,22 @@ export class EventSpy {
   >();
 
   static hasListenerOfType(node: Node, type: string) {
-    if (!EVENT_SPY.has(node)) return false;
-    return EVENT_SPY.get(node)!.callbacks.has(type);
+    return true;
+    /*if (!EVENT_SPY.has(node)) return false;
+    return EVENT_SPY.get(node)!.callbacks.has(type);*/
   }
   static allListenersHandleDragculaEvent(node: Node, type: string) {
-    if (!EVENT_SPY.has(node)) return false;
+    return true;
+    /*Üif (!EVENT_SPY.has(node)) return false;
     const callbacks = EVENT_SPY.get(node)!.callbacks.get(type);
     if (!callbacks) return false;
-    return callbacks.every((cb) => cb.handlesDragculaEvent);
+    return callbacks.every((cb) => cb.handlesDragculaEvent);*/
   }
 }
 
-var f = EventTarget.prototype.addEventListener;
-const EVENT_SPY = new WeakMap<Node, EventSpy>();
-EventTarget.prototype.addEventListener = function (type, fn: any, capture) {
+//var f = EventTarget.prototype.addEventListener;
+//const EVENT_SPY = new WeakMap<Node, EventSpy>();
+/*EventTarget.prototype.addEventListener = function(type, fn: any, capture) {
   this.f = f;
 
   if (EVENT_SPY_TARGETS.includes(type)) {
@@ -124,4 +126,4 @@ EventTarget.prototype.addEventListener = function (type, fn: any, capture) {
   } else {
     this.f(type, fn, capture);
   }
-};
+};*/
