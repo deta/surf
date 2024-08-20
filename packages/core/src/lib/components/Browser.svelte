@@ -22,7 +22,12 @@
   import SidebarPane from './Sidebars/SidebarPane.svelte'
 
   import type { PaneAPI } from 'paneforge'
-  import { Resource, ResourceTag, createResourceManager } from '../service/resources'
+  import {
+    Resource,
+    ResourceHistoryEntry,
+    ResourceTag,
+    createResourceManager
+  } from '../service/resources'
 
   import { type Space, type SpaceSource } from '../types'
 
@@ -2753,10 +2758,28 @@
       const resource = drag.data['oasis/resource']
 
       if (
-        resource.type === 'application/vnd.space.link' ||
-        resource.type === 'application/vnd.space.article'
+        (
+          [
+            ResourceTypes.LINK,
+            ResourceTypes.ARTICLE,
+            ResourceTypes.POST,
+            ResourceTypes.POST_YOUTUBE,
+            ResourceTypes.POST_TWITTER,
+            ResourceTypes.POST_REDDIT,
+            ResourceTypes.CHANNEL_YOUTUBE,
+            ResourceTypes.PLAYLIST_YOUTUBE,
+            ResourceTypes.CHAT_THREAD,
+            ResourceTypes.CHAT_THREAD_SLACK,
+            ResourceTypes.HISTORY_ENTRY
+          ] as string[]
+        ).includes(resource.type)
       ) {
-        let tab = await createPageTab(resource.parsedData.url, {
+        let url = resource.parsedData.url
+        if (resource.type === ResourceTypes.HISTORY_ENTRY) {
+          url = (resource as ResourceHistoryEntry).parsedData?.raw_url ?? url
+        }
+
+        let tab = await createPageTab(url, {
           active: true,
           trigger: CreateTabEventTrigger.Drop
         })
