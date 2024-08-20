@@ -20,13 +20,27 @@ import type { HorizonAction, EditablePrompt, UserSettings } from '@horizon/types
 import { getUserConfig } from '../main/config'
 
 const log = useLogScope('Horizon Preload')
-
 const isDev = import.meta.env.DEV
+
 const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
+const TAB_SWITCHING_SHORTCUTS_DISABLE =
+  (process.argv.find((arg) => arg.startsWith('--tabSwitchingShortcutsDisable='))?.split('=')[1] ??
+    '') === 'true'
+
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
 const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
+
+const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
+const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') ? 'multi' : 'en'
+
+// TODO: do we need to handle the case where api_key is undefined?
+const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT || ''
+const OPENAI_API_KEY = isDev ? import.meta.env.P_VITE_OPEN_AI_API_KEY : userConfig.api_key
+
+const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
+const VISION_API_KEY = isDev ? import.meta.env.P_VITE_VISION_API_KEY : userConfig.api_key
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
@@ -34,17 +48,6 @@ let mainNewWindowHandler: any = null
 const webviewNewWindowHandlers = {}
 const previewImageHandlers = {}
 const fullscreenHandlers = [] as any[]
-
-const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
-const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') ? 'multi' : 'en'
-
-//
-// TODO: do we need to handle the case where api_key is undefined?
-const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT || ''
-const OPENAI_API_KEY = isDev ? import.meta.env.P_VITE_OPEN_AI_API_KEY : userConfig.api_key
-
-const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
-const VISION_API_KEY = isDev ? import.meta.env.P_VITE_VISION_API_KEY : userConfig.api_key
 
 let openai: OpenAI | null = null
 if (OPENAI_API_KEY) {
@@ -56,6 +59,7 @@ if (OPENAI_API_KEY) {
 }
 
 const api = {
+  tabSwitchingShortcutsDisable: TAB_SWITCHING_SHORTCUTS_DISABLE,
   webviewDevToolsBtn: !import.meta.env.PROD || !!process.env.WEBVIEW_DEV_TOOLS_BTN,
   webviewPreloadPath: path.join(__dirname, '../preload/webview.js'),
   captureWebContents: () => ipcRenderer.invoke('capture-web-contents'),

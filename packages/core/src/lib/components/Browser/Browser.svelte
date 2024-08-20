@@ -1027,7 +1027,10 @@
       $activeBrowserTab?.resetZoom()
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'i')) {
       $activeBrowserTab?.openDevTools()
-    } else if (isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])) {
+    } else if (
+      !window.api.tabSwitchingShortcutsDisable &&
+      isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])
+    ) {
       const index = parseInt(e.key, 10) - 1
       const tabs = [...$pinnedTabs, ...$magicTabs, ...$unpinnedTabs]
 
