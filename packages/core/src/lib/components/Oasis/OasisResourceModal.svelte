@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import { HistoryEntriesManager } from '@horizon/core/src/lib/service/history'
-  import WebviewWrapper, { type WebviewWrapperEvents } from '../Browser/WebviewWrapper.svelte'
+  import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
   import {
     Resource,
     ResourceAnnotation,
@@ -26,7 +26,7 @@
   import { wait } from '@horizon/web-parser/src/utils'
   import OasisResourceDetails from './OasisResourceDetails.svelte'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
-  import ResourceOverlay from '@horizon/drawer/src/lib/components/ResourceOverlay.svelte'
+  import ResourceOverlay from '../Core/ResourceOverlay.svelte'
 
   import AnnotationItem from './AnnotationItem.svelte'
   import { useToasts } from '../../service/toast'

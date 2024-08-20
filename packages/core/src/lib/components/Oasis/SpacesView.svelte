@@ -3,7 +3,7 @@
   import { writable, derived } from 'svelte/store'
 
   import { useLogScope } from '../../utils/log'
-  import Folder from '../Browser/Folder.svelte'
+  import Folder from './Folder.svelte'
   import { Icon } from '@horizon/icons'
   import { useOasis } from '../../service/oasis'
   import emblaCarouselSvelte from 'embla-carousel-svelte'
@@ -11,8 +11,7 @@
   import { fly } from 'svelte/transition'
 
   import { useToasts } from '../../service/toast'
-  import type { TabSpace } from '@horizon/core/src/lib/components/Browser/types'
-  import type { SpaceData, SpaceSource } from '../../types'
+  import type { SpaceData, SpaceSource, TabSpace } from '../../types'
   import type { Writable } from 'svelte/store'
   import type { Space } from '@horizon/core/src/lib/types'
   import { useTelemetry } from '../../service/telemetry'

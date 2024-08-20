@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
   import { ResourceTypes } from '@horizon/types'
-  import FileIcon from '../Cards/File/FileIcon.svelte'
+  import FileIcon from './Previews/File/FileIcon.svelte'
   import { getFileKind, getFileType } from '../../utils/files'
 
   export let type: string

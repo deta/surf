@@ -6,8 +6,8 @@
   import { CreateTabEventTrigger, type ResourceDataHistoryEntry } from '@horizon/types'
   import { isModKeyPressed } from '../../utils/keyboard'
   import { Icon } from '@horizon/icons'
-  import type { ResourceHistoryEntryWithLinkedResource } from './types'
-  import type { BrowserTabNewTabEvent } from './BrowserTab.svelte'
+  import type { ResourceHistoryEntryWithLinkedResource } from '../../types/browser.types'
+  import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
 
   export let entry: ResourceHistoryEntryWithLinkedResource
 

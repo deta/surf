@@ -1,3 +1,2 @@
-export * from './Horizon/index'
-export * from './Browser/index'
-export * from './command/index'
+export * from './Command/index'
+export { default as Browser } from './Browser.svelte'

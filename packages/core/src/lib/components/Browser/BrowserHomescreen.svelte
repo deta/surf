@@ -14,10 +14,8 @@
 
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
   import browserBackground from '../../../../public/assets/foggy-placeholder.png'
-  import AddressToolbar, {
-    type ActionEvent
-  } from '../Cards/Browser/modules/toolbar/AddressToolbar.svelte'
-  import type { Tab, TabSpace } from './types'
+  import AddressToolbar, { type ActionEvent } from '../Atoms/Toolbar/AddressToolbar.svelte'
+  import type { Tab, TabSpace } from '../../types/browser.types'
   import { parseStringIntoBrowserLocation, parseStringIntoUrl } from '../../utils/url'
   import log from '../../utils/log'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
@@ -244,6 +242,7 @@
     {:else}
       <SpacesView
         onBack={() => showAllSpaces.set(false)}
+        {resourceManager}
         on:createTab={handleCreateTabFromOasisSidebar}
         on:open-resource={(e) => openResourceDetailsModal(e.detail)}
         {spaces}

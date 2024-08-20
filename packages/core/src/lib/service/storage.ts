@@ -1,9 +1,17 @@
 import Dexie from 'dexie'
 
 import { generateID } from '../utils/id'
-import type { Optional, LegacyResource } from '../types'
-import type { Chat, ChatMessage, Tab } from '../components/Browser/types'
+import type { Optional } from '../types'
+import type { Chat, ChatMessage, Tab } from '../types/browser.types'
 import type { EditablePrompt } from '@horizon/types'
+
+export interface LegacyResource {
+  id: string
+  data: Blob
+  createdAt: string
+  updatedAt: string
+  [key: string]: any
+}
 
 export class LocalStorage<T> {
   key: string

@@ -31,7 +31,7 @@
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { writable, type Unsubscriber } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
-  import type { AIChatMessageParsed, PageMagic, TabPage } from './types'
+  import type { AIChatMessageParsed, PageMagic, TabPage } from '../../types/browser.types'
   import { useLogScope } from '../../utils/log'
   import type { DetectedWebApp } from '@horizon/web-parser'
   import {
@@ -50,8 +50,8 @@
   } from '@horizon/types'
   import { wait } from '@horizon/web-parser/src/utils'
   import { useDebounce } from '../../utils/debounce'
-  import WebviewWrapper, { type WebviewWrapperEvents } from './WebviewWrapper.svelte'
-  import type { WebviewNavigationEvent } from './Webview.svelte'
+  import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
+  import type { WebviewNavigationEvent } from '../Webview/Webview.svelte'
   import {
     ResourceAnnotation,
     ResourceHistoryEntry,
@@ -59,7 +59,7 @@
     useResourceManager
   } from '../../service/resources'
   import { useToasts } from '../../service/toast'
-  import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from './inline'
+  import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from '../../constants/inline'
   import { handleInlineAI } from '../../service/ai'
   import { generateID } from '../../utils/id'
   import { useConfig } from '../../service/config'
