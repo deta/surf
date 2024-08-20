@@ -104,6 +104,7 @@
     size?: number
     velocityScale?: number
     cloudPointN?: number
+    duration?: number
   }
   export function spawnRadialSmoke(pos: { x: number; y: number }, props: SpawnProps = {}) {
     const randomPoints = []
@@ -144,14 +145,14 @@
       y: box.y + box.height / 2
     }
 
-    //const randomPoints = poissonDiskSampling(box, props.densityN ?? 20, 20)
-    const randomPoints = []
-    for (let i = 0; i <= props.densityN ?? 20; i++) {
+    const randomPoints = poissonDiskSampling(box, props.densityN ?? 20, 20)
+    /*const randomPoints = []
+    for (let i = 0; i <= (props.densityN ?? 20); i++) {
       randomPoints.push({
         x: box.x + Math.random() * box.width,
         y: box.y + Math.random() * box.height
       })
-    }
+    }*/
 
     for (const point of randomPoints) {
       // calc velocity from point to center of box
@@ -172,7 +173,7 @@
           height: props.size ?? 15,
           velocity,
           cloudPointN: props.cloudPointN ?? 5,
-          duration: 800
+          duration: props.duration ?? 800
         }
       })
       particle.$on('destroy', () => {
@@ -200,7 +201,12 @@
     destroy: void
   }>()
 
-  function generateCirclePoints(N, D, origin, angleOffset = 0) {
+  function generateCirclePoints(
+    N: number,
+    D: number,
+    origin: { x: number; y: number },
+    angleOffset: number = 0
+  ) {
     const points = []
     const angleStep = (2 * Math.PI) / N
     for (let i = 0; i < N; i++) {
@@ -212,7 +218,7 @@
     return points
   }
 
-  function generatePath(points) {
+  function generatePath(points: { x: number; y: number }[]) {
     if (points.length < 2) return ''
 
     let path = `M ${points[0].x} ${points[0].y}`
@@ -232,17 +238,16 @@
     return path
   }
 
-  let points = generateCirclePoints(
+  const points = generateCirclePoints(
     cloudPointN,
     27,
     { x: 50, y: 50 },
     Math.PI * Math.random() * 1.2
-  )
-  points = points.map((p) => ({
+  ).map((p) => ({
     x: p.x + (Math.random() - 0.5) * 12,
     y: p.y + (Math.random() - 0.5) * 12
   }))
-  $: combinedPath = generatePath(points)
+  const combinedPath = generatePath(points)
 
   function onAnimationEnded(e: AnimationEvent) {
     if (e.animationName === 'smokeVelocity') {
