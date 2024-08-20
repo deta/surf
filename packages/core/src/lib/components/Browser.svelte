@@ -104,8 +104,7 @@
   import { provideConfig } from '../service/config'
   import { tooltip } from '../utils/directives'
   import { HistoryEntriesManager } from '../service/history'
-  import { spawnBoxSmoke } from '../Effects/SmokeParticle.svelte'
-
+  import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
 
   let activeTabComponent: TabItem | null = null
   let drawer: Drawer
