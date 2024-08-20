@@ -37,9 +37,6 @@ jobs:
         run: |
           echo "installing horizon & external deps"
           yarn workspace desktop install --frozen-lockfile
-          echo "installing tela"
-          yarn workspace @horizon/tela install
-          yarn workspace @horizon/tela build
           echo "installing cmdk"
           yarn workspace @horizon/cmdk-sv install
           yarn workspace @horizon/cmdk-sv build

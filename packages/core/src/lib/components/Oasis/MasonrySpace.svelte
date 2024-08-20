@@ -4,7 +4,7 @@
   import OasisResourceLoader from './OasisResourceLoader.svelte'
   import { RedBlackTree } from './masonry/index'
   import type { Item, ScrollVelocity } from './masonry/types'
-  import Folder from '../Browser/Folder.svelte'
+  import Folder from './Folder.svelte'
 
   export let renderContents: Item[] | string[] = []
   export let id: Date

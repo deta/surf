@@ -99,21 +99,21 @@ export class EventSpy {
 /*EventTarget.prototype.addEventListener = function(type, fn: any, capture) {
   this.f = f;
 
-  if (EVENT_SPY_TARGETS.includes(type)) {
-    if (!EVENT_SPY.has(this)) {
-      EVENT_SPY.set(this, new EventSpy());
-    }
+//   if (EVENT_SPY_TARGETS.includes(type)) {
+//     if (!EVENT_SPY.has(this)) {
+//       EVENT_SPY.set(this, new EventSpy());
+//     }
 
-    const spy = EVENT_SPY.get(this)!;
-    if (!spy.callbacks.has(type)) spy.callbacks.set(type, []);
-    spy.callbacks.get(type)!.push({
-      handlesDragculaEvent:
-        fn.toString().includes(".continue()") || fn.toString().includes(".abort()"),
-      ref: new WeakRef(fn)
-    });
+//     const spy = EVENT_SPY.get(this)!;
+//     if (!spy.callbacks.has(type)) spy.callbacks.set(type, []);
+//     spy.callbacks.get(type)!.push({
+//       handlesDragculaEvent:
+//         fn.toString().includes(".continue()") || fn.toString().includes(".abort()"),
+//       ref: new WeakRef(fn)
+//     });
 
-    log.debug("Added Event Spy: ", type, fn);
-    //console.warn(EVENT_SPY);
+//     log.debug("Added Event Spy: ", type, fn);
+//     //console.warn(EVENT_SPY);
 
     this.f(
       type,

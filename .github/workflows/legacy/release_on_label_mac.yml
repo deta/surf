@@ -56,9 +56,6 @@ jobs:
           ls -la apps/desktop/external-deps/libtorch
           ls -la apps/desktop/external-deps/libtorch/lib
           ls -la apps/desktop/external-deps/libtorch/include
-          echo "installing tela"
-          yarn workspace @horizon/tela install
-          yarn workspace @horizon/tela build
           echo "installing cmdk"
           yarn workspace @horizon/cmdk-sv install
           yarn workspace @horizon/cmdk-sv build

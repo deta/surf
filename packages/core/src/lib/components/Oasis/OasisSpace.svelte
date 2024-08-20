@@ -14,7 +14,7 @@
   import { useLogScope } from '../../utils/log'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
-  import Chat from '../Browser/Chat.svelte'
+  import Chat from '../Chat/Chat.svelte'
   import SearchInput from './SearchInput.svelte'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import {
@@ -62,7 +62,7 @@
   import OasisResourceModalWrapper from './OasisResourceModalWrapper.svelte'
   import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { DragculaDragEvent } from '@horizon/dragcula'
-  import type { Tab, TabPage } from '../Browser/types'
+  import type { Tab, TabPage } from '../../types/browser.types'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import {

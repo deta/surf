@@ -5,8 +5,8 @@
   import { Icon } from '@horizon/icons'
   import { WebParser } from '@horizon/web-parser'
 
-  import TextPreview from '../Cards/Text/TextPreview.svelte'
-  import LinkPreview from '../Cards/Link/LinkPreview.svelte'
+  import TextPreview from './Previews/Text/TextPreview.svelte'
+  import LinkPreview from './Previews/Link/LinkPreview.svelte'
 
   import {
     ResourceHistoryEntry,
@@ -21,7 +21,7 @@
     type ResourceNote,
     type ResourcePost
   } from '../../service/resources'
-  import FilePreview from '../Cards/File/FilePreview.svelte'
+  import FilePreview from './Previews/File/FilePreview.svelte'
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
@@ -29,17 +29,16 @@
     type ResourceDataPost
   } from '../../types'
   import { getFileKind, getFileType } from '../../utils/files'
-  import FileIcon from '../Cards/File/FileIcon.svelte'
-  import PostPreview from '../Cards/Post/PostPreview.svelte'
-  import ChatMessagePreview from '../Cards/ChatMessage/ChatMessagePreview.svelte'
-  import ArticlePreview from '../Cards/Article/ArticlePreview.svelte'
-  import DocumentPreview from '../Cards/Document/DocumentPreview.svelte'
-  import ArticleProperties from '@horizon/drawer/src/lib/components/properties/ArticleProperties.svelte'
-  import ChatThreadPreview from '../Cards/ChatThread/ChatThreadPreview.svelte'
-  import YoutubePreview from '../Cards/Post/YoutubePreview.svelte'
-  import AnnotationPreview from '../Cards/Annotation/AnnotationPreview.svelte'
+  import FileIcon from './Previews/File/FileIcon.svelte'
+  import PostPreview from './Previews/Post/PostPreview.svelte'
+  import ChatMessagePreview from './Previews/ChatMessage/ChatMessagePreview.svelte'
+  import ArticlePreview from './Previews/Article/ArticlePreview.svelte'
+  import DocumentPreview from './Previews/Document/DocumentPreview.svelte'
+  import ChatThreadPreview from './Previews/ChatThread/ChatThreadPreview.svelte'
+  import YoutubePreview from './Previews/Post/YoutubePreview.svelte'
+  import AnnotationPreview from './Previews/Annotation/AnnotationPreview.svelte'
 
-  import HistoryEntryPreview from '../Cards/Link/HistoryEntryPreview.svelte'
+  import HistoryEntryPreview from './Previews/Link/HistoryEntryPreview.svelte'
   import { getHumanDistanceToNow } from '../../utils/time'
   import { isModKeyPressed } from '../../utils/keyboard'
   import { hover } from '../../utils/directives'
@@ -48,6 +47,7 @@
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import { CreateTabEventTrigger } from '@horizon/types'
   import log from '../../utils/log'
+  import ArticleProperties from './ArticleProperties.svelte'
 
   export let resource: Resource
   export let selected: boolean = false

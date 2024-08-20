@@ -2,7 +2,7 @@
   import type { Dialog as DialogPrimitive } from 'bits-ui'
   import type { Command as CommandPrimitive } from '@horizon/cmdk-sv'
   import Command from './command.svelte'
-  import * as Dialog from '../dialog'
+  import * as Dialog from '../Dialog'
 
   type $$Props = DialogPrimitive.Props & CommandPrimitive.CommandProps
 

@@ -1,5 +1,5 @@
 import type { DetectedResource, WebViewEventSendNames, WebViewSendEvents } from '@horizon/types'
-import type { ChatMessageContentItem, AIChatMessageSource } from '../components/Browser/types'
+import type { ChatMessageContentItem, AIChatMessageSource } from '../types/browser.types'
 import { SIMPLE_SUMMARIZER_PROMPT } from '../constants/prompts'
 import log, { useLogScope } from '../utils/log'
 import { WebParser } from '@horizon/web-parser'

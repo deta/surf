@@ -1,4 +1,3 @@
-import { hasClassOrParentWithClass } from '@horizon/tela'
 import { useLogScope } from '../utils/log'
 import { checkIfUrl, parseStringIntoUrl } from '../utils/url'
 import { ResourceTagsBuiltInKeys, type SFFSResourceMetadata, type SFFSResourceTag } from '../types'

@@ -68,7 +68,6 @@
     "build": {
       "dependsOn": [
         "^build",
-        "@horizon/tela#build",
         "@horizon/backend#build",
         "@horizon/backend-server#build",
         "@horizon/cmdk-sv#build"
@@ -81,7 +80,6 @@
     "desktop#dev": {
       "dependsOn": [
         "@horizon/dragcula#build",
-        "@horizon/tela#build",
         "@horizon/backend#dev",
         "@horizon/backend-server#build",
         "@horizon/cmdk-sv#build"
@@ -91,7 +89,6 @@
     "dev": {
       "dependsOn": [
         "@horizon/dragcula#build",
-        "@horizon/tela#build",
         "@horizon/backend#dev",
         "@horizon/backend-server#build",
         "@horizon/cmdk-sv#build"
