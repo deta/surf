@@ -254,7 +254,11 @@
 
         if (spaceData.smartFilterQuery) {
           usedSmartQuery = true
-          const fetchedResources = await updateLiveSpaceContentsWithAI(spaceData.smartFilterQuery)
+          const fetchedResources = await updateLiveSpaceContentsWithAI(
+            spaceData.smartFilterQuery,
+            spaceData.sql_query,
+            spaceData.embedding_query
+          )
           if (fetchedResources) {
             addedResources += fetchedResources.length
           }
@@ -327,15 +331,34 @@
     }
   }
 
-  const updateLiveSpaceContentsWithAI = async (query: string) => {
+  const updateLiveSpaceContentsWithAI = async (
+    query: string,
+    sql_query: string | undefined,
+    embedding_query: string | undefined
+  ) => {
     try {
       loadingSpaceSources.set(true)
 
-      const stringifiedQuery = JSON.stringify(query)
-      log.debug('AI prompt:', stringifiedQuery)
+      // const stringifiedQuery = JSON.stringify(query)
+      // const stringifiedSqlQuery = JSON.stringify(sql_query === '' ? undefined : sql_query)
+      // const stringifiedEmbeddingQuery = JSON.stringify(
+      //   embedding_query === '' ? undefined : sql_query
+      // )
+      log.debug('AI prompt:', query, sql_query, embedding_query)
 
-      const response = await resourceManager.getResourcesViaPrompt(stringifiedQuery)
+      const response = await resourceManager.getResourcesViaPrompt(
+        query,
+        sql_query === '' ? undefined : sql_query,
+        embedding_query === '' ? undefined : embedding_query
+      )
       log.debug('AI response:', response)
+
+      if ($space?.name.sql_query !== response.sql_query) {
+        await oasis.updateSpaceData(spaceId, {
+          sql_query: response.sql_query,
+          embedding_query: response.embedding_search_query ?? undefined
+        })
+      }
 
       const results = new Set([
         ...(response.embedding_search_results ?? []),
@@ -714,7 +737,11 @@
 
     let addedResources = 0
     if ($space.name.smartFilterQuery) {
-      const fetchedResources = await updateLiveSpaceContentsWithAI($space.name.smartFilterQuery)
+      const fetchedResources = await updateLiveSpaceContentsWithAI(
+        $space.name.smartFilterQuery,
+        $space.name.sql_query,
+        $space.name.embedding_query
+      )
       if (fetchedResources) {
         addedResources = fetchedResources.length
       }

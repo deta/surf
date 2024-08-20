@@ -225,7 +225,7 @@ mentions it.
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id LEFT JOIN resource_text_content rtc ON r.id = rtc.resource_id LEFT JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.resource_type LIKE 'application/vnd.space.chat-message%' AND r.deleted = 0 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'paste' AND (rtc.content LIKE '%project deadline%' OR rm.name LIKE '%project deadline%' OR rm.user_context LIKE '%project deadline%');\"
+       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type LIKE 'application/vnd.space.chat-message%' AND r.deleted = 0 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'paste' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'project deadline') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'project deadline'));\"
    }
    ```
 
@@ -233,7 +233,7 @@ mentions it.
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r LEFT JOIN resource_text_content rtc ON r.id = rtc.resource_id LEFT JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.created_at < '2023-01-01' AND r.deleted = 0 AND (rtc.content LIKE '%urgent%' OR rm.name LIKE '%urgent%' OR rm.user_context LIKE '%urgent%');\"
+       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.created_at < '2023-01-01' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'urgent') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'urgent'));\"
    }
    ```
 
@@ -241,7 +241,7 @@ mentions it.
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id LEFT JOIN resource_text_content rtc ON r.id = rtc.resource_id LEFT JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.resource_type = 'application/vnd.space.document.google-doc' AND r.deleted = 1 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'import' AND (rtc.content LIKE '%quarterly report%' OR rm.name LIKE '%quarterly report%' OR rm.user_context LIKE '%quarterly report%');\"
+       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type = 'application/vnd.space.document.google-doc' AND r.deleted = 1 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'import' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'quarterly report') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'quarterly report'));\"
    }
    ```
 
@@ -249,7 +249,7 @@ mentions it.
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r LEFT JOIN resource_text_content rtc ON r.id = rtc.resource_id LEFT JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.resource_type = 'application/pdf' AND r.deleted = 0 AND (rtc.content LIKE '%dog%' OR rm.name LIKE '%dog%' OR rm.alt LIKE '%dog%' OR rm.user_context LIKE '%dog%');\",
+       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/pdf' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'dog') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'dog'));\",
        \"embedding_search_query\": \"dogs care pet health training grooming\"
    }
    ```
@@ -258,7 +258,7 @@ mentions it.
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r LEFT JOIN resource_text_content rtc ON r.id = rtc.resource_id LEFT JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND (rtc.content LIKE '%machine learning%' OR rtc.content LIKE '%healthcare%' OR rm.name LIKE '%machine learning%' OR rm.name LIKE '%healthcare%' OR rm.user_context LIKE '%machine learning%' OR rm.user_context LIKE '%healthcare%');\",
+       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'machine learning' OR content MATCH 'healthcare') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'machine learning' OR resource_metadata MATCH 'healthcare'));\",
        \"embedding_search_query\": \"machine learning applications healthcare medical AI diagnosis treatment\"
    }
    ```
@@ -267,7 +267,7 @@ mentions it.
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r LEFT JOIN resource_text_content rtc ON r.id = rtc.resource_id LEFT JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.deleted = 0 AND (rtc.content LIKE '%climate change%' OR rtc.content LIKE '%renewable energy%' OR rm.name LIKE '%climate change%' OR rm.name LIKE '%renewable energy%' OR rm.user_context LIKE '%climate change%' OR rm.user_context LIKE '%renewable energy%');\",
+       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'climate change' OR content MATCH 'renewable energy') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'climate change' OR resource_metadata MATCH 'renewable energy'));\",
        \"embedding_search_query\": \"climate change solutions renewable energy sustainability green technology\"
    }
    ```
@@ -276,7 +276,7 @@ mentions it.
    **Output:** 
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r LEFT JOIN resource_text_content rtc ON r.id = rtc.resource_id LEFT JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.deleted = 0 AND r.created_at > date('now', '-1 month') AND (rtc.content LIKE '%deadline%' OR rtc.content LIKE '%time management%' OR rm.name LIKE '%deadline%' OR rm.name LIKE '%time management%' OR rm.user_context LIKE '%deadline%' OR rm.user_context LIKE '%time management%');\",
+       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.deleted = 0 AND r.created_at > date('now', '-1 month') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'deadline' OR content MATCH 'time management') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'deadline' OR resource_metadata MATCH 'time management'));\",
        \"embedding_search_query\": \"project deadlines time management productivity scheduling task prioritization\"
    }
    ```
@@ -285,7 +285,7 @@ mentions it.
     **Output:** 
     ```json
     {
-        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r LEFT JOIN resource_text_content rtc ON r.id = rtc.resource_id LEFT JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND r.created_at > date('now', '-1 year') AND (rtc.content LIKE '%data privacy%' OR rtc.content LIKE '%GDPR%' OR rtc.content LIKE '%compliance%' OR rm.name LIKE '%data privacy%' OR rm.name LIKE '%GDPR%' OR rm.name LIKE '%compliance%' OR rm.user_context LIKE '%data privacy%' OR rm.user_context LIKE '%GDPR%' OR rm.user_context LIKE '%compliance%');\",
+        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND r.created_at > date('now', '-1 year') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'data privacy' OR content MATCH 'GDPR' OR content MATCH 'compliance') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'data privacy' OR resource_metadata MATCH 'GDPR' OR resource_metadata MATCH 'compliance'));\",
         \"embedding_search_query\": \"data privacy GDPR compliance personal information protection data rights\"
     }
     ```
@@ -294,7 +294,7 @@ mentions it.
     **Output:** 
     ```json
     {
-        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r LEFT JOIN resource_text_content rtc ON r.id = rtc.resource_id LEFT JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.deleted = 0 AND (rtc.content LIKE '%social media%' OR rtc.content LIKE '%mental health%' OR rm.name LIKE '%social media%' OR rm.name LIKE '%mental health%' OR rm.user_context LIKE '%social media%' OR rm.user_context LIKE '%mental health%');\",
+        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'social media' OR content MATCH 'mental health') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'social media' OR resource_metadata MATCH 'mental health'));\",
         \"embedding_search_query\": \"social media impact mental health psychology well-being digital addiction\"
     }
     ```
