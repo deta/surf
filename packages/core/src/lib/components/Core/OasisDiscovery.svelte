@@ -3,7 +3,7 @@
   import { Icon } from '@horizon/icons'
   import type { Resource, ResourceManager } from '../../service/resources'
   import * as d3 from 'd3'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useClipboard } from '@horizon/core/src/lib/utils/clipboard'
+  import { useClipboard } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
 
   import Button, { type ButtonKind } from './Button.svelte'

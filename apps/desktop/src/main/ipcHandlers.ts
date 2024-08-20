@@ -1,4 +1,4 @@
-import { useLogScope } from '@horizon/core/src/lib/utils/log'
+import { useLogScope } from '@horizon/utils'
 import { ipcMain, app, session } from 'electron'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'

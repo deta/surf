@@ -1,7 +1,7 @@
 <script lang="ts">
   import { afterUpdate } from 'svelte'
   import { writable, get } from 'svelte/store'
-  import { generateRootDomain } from '@horizon/core/src/lib/utils/url'
+  import { generateRootDomain } from '@horizon/utils'
 
   import { Icon } from '@horizon/icons'
 

@@ -19,14 +19,11 @@
     Tab
   } from '../../types/browser.types'
   import ChatMessage from '../Chat/ChatMessage.svelte'
-  import { useClipboard } from '../../utils/clipboard'
-  import { useLogScope } from '../../utils/log'
+  import { useClipboard, generateID, useLogScope } from '@horizon/utils'
   import { ResourceManager, useResourceManager, type ResourceLink } from '../../service/resources'
   import { getPrompt, PromptIDs } from '../../service/prompts'
-  import { generateID } from '../../utils/id'
   import { parseChatResponseSources } from '../../service/ai'
   import { useToasts } from '../../service/toast'
-  import { useDebounce } from '../../utils/debounce'
   import { useConfig } from '../../service/config'
 
   export let inputValue = ''

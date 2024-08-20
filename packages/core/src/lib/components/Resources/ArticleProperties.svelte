@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
 
-  import { useLogScope } from '@horizon/core/src/lib/utils/log'
-  import { generateRootDomain } from '@horizon/core/src/lib/utils/url'
+  import { useLogScope, generateRootDomain } from '@horizon/utils'
   import type { Resourcearticle } from '@horizon/core/src/lib/service/resources'
   import type { ResourceDataarticle } from '@horizon/core/src/lib/types'
 

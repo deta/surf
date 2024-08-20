@@ -1,24 +1,24 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
-  import { useLogScope } from '../../utils/log'
+  import {
+    useLogScope,
+    getHumanDistanceToNow,
+    useClipboard,
+    truncate,
+    useDebounce
+  } from '@horizon/utils'
   import type { ResourceAnnotation } from '../../service/resources'
   import type {
     AnnotationCommentData,
     AnnotationRangeData,
     ResourceDataAnnotation
   } from '../../types'
-  import type { ResourcePreviewEvents } from '../Resources/events'
   import { Icon } from '@horizon/icons'
   import type { WebViewEventAnnotation } from '@horizon/types'
-  import { getHumanDistanceToNow } from '../../utils/time'
   import { tooltip } from '@svelte-plugins/tooltips'
-  import { useClipboard } from '../../utils/clipboard'
-  import { truncate } from '../../utils/text'
-  import { addISOWeekYears } from 'date-fns'
   import { Editor, getEditorContentText } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
-  import { useDebounce } from '../../utils/debounce'
   import { useToasts } from '../../service/toast'
   import { slide } from 'svelte/transition'
 

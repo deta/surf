@@ -1,4 +1,4 @@
-import { useLogScope } from '@horizon/core/src/lib/utils/log'
+import { useLogScope } from '@horizon/utils'
 import { app, Menu, shell } from 'electron'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'

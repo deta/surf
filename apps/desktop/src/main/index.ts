@@ -1,4 +1,4 @@
-import { useLogScope } from '@horizon/core/src/lib/utils/log'
+import { useLogScope } from '@horizon/utils'
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'

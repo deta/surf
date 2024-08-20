@@ -44,6 +44,7 @@
     "@horizon/editor": "*",
     "@horizon/types": "*",
     "@horizon/web-parser": "*",
+    "@horizon/utils": "*",
     "@sentry/vite-plugin": "^2.14.2",
     "@svelte-plugins/tooltips": "^3.0.1",
     "@sveltejs/vite-plugin-svelte": "^2.4.5",

@@ -11,7 +11,7 @@
   import { Icon } from '@horizon/icons'
   import { writable, derived, type Writable } from 'svelte/store'
   import type { Space } from '../../types'
-  import { tooltip } from '../../utils/directives'
+  import { tooltip } from '@horizon/utils'
 
   export let spaces: Writable<Space[]>
   export let closePopover: () => void

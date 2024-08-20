@@ -1,0 +1,11 @@
+{
+  "extends": "@horizon/typescript-config/base.json",
+  "include": ["src/**/*.ts", "src/**/*.json"],
+  "compilerOptions": {
+    "target": "ESNext",
+    "composite": true,
+    "outDir": "./build/",
+    "module": "ESNext",
+    "preserveValueImports": false
+  }
+}

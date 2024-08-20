@@ -22,7 +22,7 @@ import { BatchFetcher } from '../batcher'
 import { AppImporter } from './index'
 import { DetectedResource } from '../../types'
 import { WebParser, WebViewExtractor } from '../..'
-import { wait } from '../../utils'
+import { wait } from '@horizon/utils'
 
 export class YoutubePlaylistImporter extends AppImporter {
   webParser: WebParser

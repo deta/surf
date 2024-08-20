@@ -1,10 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import type { ResourceHistoryEntry } from '../../service/resources'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope, isModKeyPressed } from '@horizon/utils'
   import type { ResourcePreviewEvents } from '../Resources/events'
   import { CreateTabEventTrigger, type ResourceDataHistoryEntry } from '@horizon/types'
-  import { isModKeyPressed } from '../../utils/keyboard'
   import { Icon } from '@horizon/icons'
   import type { ResourceHistoryEntryWithLinkedResource } from '../../types/browser.types'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'

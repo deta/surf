@@ -8,7 +8,7 @@
   import Button from './Button.svelte'
   import CopyButton from './CopyButton.svelte'
   import Editor from '@horizon/editor/src/lib/components/Editor.svelte'
-  import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
+  import { useDebounce } from '@horizon/utils'
   import { getEditorContentText } from '@horizon/editor'
   import { fade, slide } from 'svelte/transition'
 

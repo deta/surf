@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { writable, derived } from 'svelte/store'
 
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import Folder from './Folder.svelte'
   import { Icon } from '@horizon/icons'
   import { useOasis } from '../../service/oasis'

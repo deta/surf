@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Command as CommandPrimitive } from '@horizon/cmdk-sv'
   import { Icon } from '@horizon/icons'
-  import { cn } from '../../utils'
+  import { cn } from '../../utils/tailwind'
 
   type $$Props = CommandPrimitive.InputProps & {
     breadcrumb?: string

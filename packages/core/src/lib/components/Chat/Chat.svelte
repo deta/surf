@@ -58,7 +58,7 @@
   import { writable, derived, get } from 'svelte/store'
 
   import type { ResourceLink, ResourceManager } from '../../service/resources'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope, generateID } from '@horizon/utils'
   import type {
     AIChat,
     AIChatMessageParsed,
@@ -66,7 +66,6 @@
     TabChat
   } from '../../types/browser.types'
   import { parseChatResponseSources } from '../../service/ai'
-  import { generateID } from '../../utils/id'
   import { SFFS } from '../../service/sffs'
   import ChatResponseSource from './ChatResponseSource.svelte'
   import { Icon } from '@horizon/icons'

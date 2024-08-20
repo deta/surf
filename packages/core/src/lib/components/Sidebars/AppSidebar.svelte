@@ -5,7 +5,7 @@
   import { Icon } from '@horizon/icons'
   import { Editor, getEditorContentText } from '@horizon/editor'
 
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import { SFFS } from '../../service/sffs'
   import { useTelemetry } from '../../service/telemetry'
   import { slide } from 'svelte/transition'

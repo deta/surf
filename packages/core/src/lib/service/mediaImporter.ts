@@ -1,7 +1,5 @@
-import { useLogScope } from '../utils/log'
-import { checkIfUrl, parseStringIntoUrl } from '../utils/url'
-import { ResourceTagsBuiltInKeys, type SFFSResourceMetadata, type SFFSResourceTag } from '../types'
-import { result } from 'lodash'
+import { useLogScope, checkIfUrl, parseStringIntoUrl } from '@horizon/utils'
+import { type SFFSResourceMetadata, type SFFSResourceTag } from '../types'
 import { Resource, ResourceTag, type ResourceManager } from './resources'
 import { WebParser } from '@horizon/web-parser'
 

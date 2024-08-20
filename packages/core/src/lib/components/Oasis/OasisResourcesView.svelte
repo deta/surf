@@ -1,10 +1,9 @@
 <script lang="ts">
   import { derived, writable, type Readable } from 'svelte/store'
 
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import Masonry from './MasonrySpace.svelte'
   import OasisResourceLoader from './OasisResourceLoader.svelte'
-  import { useDebounce } from '../../utils/debounce'
 
   export let resourceIds: Readable<string[]>
   export let selected: string | null = null

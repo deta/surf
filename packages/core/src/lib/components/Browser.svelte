@@ -5,19 +5,26 @@
   import SplashScreen from './Atoms/SplashScreen.svelte'
   import { writable, derived, get } from 'svelte/store'
   import { type WebviewWrapperEvents } from './Webview/WebviewWrapper.svelte'
-  import { useLogScope } from '../utils/log'
   import { Icon } from '@horizon/icons'
-  import { generateID } from '../utils/id'
-  import { parseStringIntoBrowserLocation } from '../utils/url'
   import {
     isModKeyAndEventCodeIs,
     isModKeyAndKeyPressed,
     isModKeyAndKeysPressed,
     isModKeyAndShiftKeyAndKeyPressed
-  } from '../utils/keyboard'
-  import { wait, writableAutoReset } from '../utils/time'
+  } from '@horizon/utils/src/keyboard'
   import { createTelemetry, Telemetry } from '../service/telemetry'
-  import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
+  import {
+    useDebounce,
+    wait,
+    writableAutoReset,
+    parseStringIntoBrowserLocation,
+    generateID,
+    useLogScope,
+    useLocalStorageStore,
+    truncate,
+    tooltip,
+    flyAndScale
+  } from '@horizon/utils'
   import { MEDIA_TYPES, createResourcesFromMediaItems, processDrop } from '../service/mediaImporter'
   import SidebarPane from './Sidebars/SidebarPane.svelte'
 
@@ -62,7 +69,6 @@
     DownloadUpdatedMessage,
     Optional
   } from '../types'
-  import { useLocalStorageStore } from '../utils/localstorage'
   import { WebParser } from '@horizon/web-parser'
   import Importer from './Core/Importer.svelte'
   import OasisDiscovery from './Core/OasisDiscovery.svelte'
@@ -101,13 +107,10 @@
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
   import { Tabs, Tooltip } from 'bits-ui'
   import BrowserHistory from './Browser/BrowserHistory.svelte'
-  import { flyAndScale } from '../utils'
   import { HTMLDragZone, HTMLAxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
   import NewTabOverlay from './Core/NewTabOverlay.svelte'
   import CustomPopover from './Atoms/CustomPopover.svelte'
-  import { truncate } from '../utils/text'
   import { provideConfig } from '../service/config'
-  import { tooltip } from '../utils/directives'
   import { HistoryEntriesManager } from '../service/history'
   import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
 

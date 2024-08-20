@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Command as CommandPrimitive } from '@horizon/cmdk-sv'
-  import { cn } from '../../utils'
+  import { cn } from '../../utils/tailwind'
 
   type $$Props = CommandPrimitive.ListProps
   let className: string | undefined | null = undefined

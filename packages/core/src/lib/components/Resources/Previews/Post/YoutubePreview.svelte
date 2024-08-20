@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
-  import { useLogScope } from '../../../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import type { ResourcePost } from '../../../../service/resources'
   import type { ResourceDataPost } from '../../../../types'
   import { Icon } from '@horizon/icons'

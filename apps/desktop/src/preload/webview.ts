@@ -23,7 +23,7 @@ import {
 import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
 // import CommentIndicator from './components/CommentIndicator.svelte'
-import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
+import { useDebounce } from '@horizon/utils'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 

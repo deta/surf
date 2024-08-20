@@ -1,12 +1,11 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
-  import { useLogScope } from '../../../../utils/log'
+  import { useLogScope, generateRootDomain } from '@horizon/utils'
   import type { ResourceHistoryEntry } from '../../../../service/resources'
   import type { ResourceDataHistoryEntry } from '@horizon/types'
 
   import Link from '../../../Atoms/Link.svelte'
-  import { generateRootDomain } from '../../../../utils/url'
   import LoadingBox from '../../../Atoms/LoadingBox.svelte'
   import type { ResourcePreviewEvents } from '../../../Resources/events'
 

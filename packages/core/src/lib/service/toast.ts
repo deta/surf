@@ -1,9 +1,7 @@
 import { writable, type Writable } from 'svelte/store'
 import type { Optional } from '../types'
-import { generateID } from '../utils/id'
+import { useLogScope, generateID } from '@horizon/utils'
 import { getContext, setContext } from 'svelte'
-import { useLogScope } from '../utils/log'
-import { update } from 'lodash'
 
 export type Toast = {
   id: string

@@ -30,7 +30,7 @@ export const generateRandomPastelColor = (seed?: string) => {
 }
 
 // Utility functions for color conversion
-export const hexToHsl = (hex) => {
+export const hexToHsl = (hex: string) => {
   hex = hex.replace(/^#/, '')
   let bigint = parseInt(hex, 16)
   let r = (bigint >> 16) & 255
@@ -40,9 +40,9 @@ export const hexToHsl = (hex) => {
   ;(r /= 255), (g /= 255), (b /= 255)
   let max = Math.max(r, g, b),
     min = Math.min(r, g, b)
-  let h,
-    s,
-    l = (max + min) / 2
+  let h: number = 0
+  let s
+  let l = (max + min) / 2
 
   if (max == min) {
     h = s = 0 // achromatic
@@ -65,7 +65,7 @@ export const hexToHsl = (hex) => {
   return [h * 360, s * 100, l * 100]
 }
 
-export const hslToHex = (h, s, l) => {
+export const hslToHex = (h: number, s: number, l: number) => {
   s /= 100
   l /= 100
   let c = (1 - Math.abs(2 * l - 1)) * s

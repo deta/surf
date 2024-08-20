@@ -10,7 +10,7 @@
 
   import PromptSection from './components/PromptSection.svelte'
   import Prompt from './components/Prompt.svelte'
-  import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
+  import { useDebounce } from '@horizon/utils'
   import type { EditablePrompt, UserSettings } from '@horizon/types'
   import SettingsOption from './components/SettingsOption.svelte'
   import LayoutPicker from './components/LayoutPicker.svelte'

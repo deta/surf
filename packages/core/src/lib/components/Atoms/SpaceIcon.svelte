@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import type { Space } from '../../types'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import ColorIcon from './ColorIcon.svelte'
   import { colorPairs } from '../../service/oasis'
 

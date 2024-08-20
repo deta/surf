@@ -1,6 +1,6 @@
 import { BrowserWindow, app } from 'electron'
 
-import { useDebounce } from '@horizon/core/src/lib/utils/debounce'
+import { useDebounce } from '@horizon/utils'
 import { getConfig, setConfig } from './config'
 
 export interface State {

@@ -7,6 +7,14 @@ export const prependProtocol = (url: string, secure = true) => {
   return url
 }
 
+export const makeAbsoluteURL = (urlOrPath: string, base: URL) => {
+  try {
+    return new URL(urlOrPath, base.origin).href
+  } catch (e) {
+    return null
+  }
+}
+
 export const checkIfUrl = (url: string) => {
   try {
     new URL(url)

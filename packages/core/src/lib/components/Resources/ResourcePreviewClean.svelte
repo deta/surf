@@ -28,7 +28,6 @@
     type ResourceData,
     type ResourceDataPost
   } from '../../types'
-  import { getFileKind, getFileType } from '../../utils/files'
   import FileIcon from './Previews/File/FileIcon.svelte'
   import PostPreview from './Previews/Post/PostPreview.svelte'
   import ChatMessagePreview from './Previews/ChatMessage/ChatMessagePreview.svelte'
@@ -39,14 +38,18 @@
   import AnnotationPreview from './Previews/Annotation/AnnotationPreview.svelte'
 
   import HistoryEntryPreview from './Previews/Link/HistoryEntryPreview.svelte'
-  import { getHumanDistanceToNow } from '../../utils/time'
-  import { isModKeyPressed } from '../../utils/keyboard'
-  import { hover } from '../../utils/directives'
   import { writable } from 'svelte/store'
   import { slide } from 'svelte/transition'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import { CreateTabEventTrigger } from '@horizon/types'
-  import log from '../../utils/log'
+  import {
+    useLogScope,
+    getHumanDistanceToNow,
+    isModKeyPressed,
+    hover,
+    getFileKind,
+    getFileType
+  } from '@horizon/utils'
   import ArticleProperties from './ArticleProperties.svelte'
 
   export let resource: Resource
@@ -58,6 +61,7 @@
   export let showSource: boolean = false
   export let newTabOnClick: boolean = false
 
+  const log = useLogScope('ResourcePreviewClean')
   const resourceManager = useResourceManager()
 
   const dispatch = createEventDispatcher<{

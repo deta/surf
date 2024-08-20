@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
 
-  import { useClipboard } from '@horizon/core/src/lib/utils/clipboard'
+  import { useClipboard } from '@horizon/utils'
   import { Icon, IconConfirmation } from '@horizon/icons'
   import Button from './Button.svelte'
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount, getContext, createEventDispatcher } from 'svelte'
 
-  import { useLogScope } from '../../../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import type { ResourceChatThread } from '../../../../service/resources'
   import type { ResourceDataChatThread } from '../../../../types'
   import Link from '../../../Atoms/Link.svelte'

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
 
-  import { useDebounce } from '../../utils/debounce'
+  import { useDebounce } from '@horizon/utils'
   import { Command } from '../index'
   import { Icon } from '@horizon/icons'
 

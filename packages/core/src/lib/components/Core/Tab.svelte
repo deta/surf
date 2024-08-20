@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope, tooltip as tooltip2 } from '@horizon/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
@@ -12,7 +12,6 @@
   import { ResourceTagsBuiltInKeys, ResourceTypes, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
-  import { tooltip as tooltip2 } from '../../utils/directives'
 
   const log = useLogScope('Browser Tab')
 

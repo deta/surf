@@ -1,4 +1,4 @@
-import { useLogScope, type ScopedLogger } from '../utils/log'
+import { useLogScope, type ScopedLogger } from '@horizon/utils'
 import type {
   AiSFFSQueryResponse,
   HistoryEntry,
@@ -222,7 +222,7 @@ export class SFFS {
             resource_id: '',
             tag_name: tag.name ?? '',
             tag_value: tag.value ?? ''
-          } as SFFSRawResourceTag)
+          }) as SFFSRawResourceTag
       )
     )
 
@@ -328,7 +328,7 @@ export class SFFS {
             tag_name: tag.name,
             tag_value: tag.value,
             op: tag.op ?? 'eq'
-          } as SFFSRawResourceTag)
+          }) as SFFSRawResourceTag
       )
     )
     const raw = await this.backend.js__store_list_resources_by_tags(tagsData)
@@ -358,7 +358,7 @@ export class SFFS {
             tag_name: tag.name ?? '',
             tag_value: tag.value ?? '',
             op: tag.op ?? 'eq'
-          } as SFFSRawResourceTag)
+          }) as SFFSRawResourceTag
       )
     )
     const raw = await this.backend.js__store_search_resources(

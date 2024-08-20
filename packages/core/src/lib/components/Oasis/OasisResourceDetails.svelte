@@ -1,7 +1,6 @@
 <script lang="ts">
   import { type Resource, useResourceManager } from '../../service/resources'
-  import { useLogScope } from '../../utils/log'
-  import { generateRootDomain, parseStringIntoUrl } from '../../utils/url'
+  import { useLogScope, parseStringIntoUrl, tooltip } from '@horizon/utils'
   import { formatDistanceToNow, parseISO } from 'date-fns'
   import autosize from 'svelte-autosize'
 
@@ -12,7 +11,6 @@
     type SFFSResourceTag
   } from '@horizon/types'
   import { Icon } from '@horizon/icons'
-  import { tooltip } from '../../utils/directives'
   import { useToasts } from '../../service/toast'
   import { createEventDispatcher } from 'svelte'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'

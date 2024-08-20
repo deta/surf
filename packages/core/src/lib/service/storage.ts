@@ -1,8 +1,8 @@
 import Dexie from 'dexie'
 
-import { generateID } from '../utils/id'
+import { generateID } from '@horizon/utils'
 import type { Optional } from '../types'
-import type { Chat, ChatMessage, Tab } from '../types/browser.types'
+import type { Tab } from '../types/browser.types'
 import type { EditablePrompt } from '@horizon/types'
 
 export interface LegacyResource {
@@ -160,8 +160,9 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
 export class HorizonDatabase extends Dexie {
   resources: HorizonStore<LegacyResource>
   tabs: HorizonStore<Tab>
-  chats: HorizonStore<Chat>
-  chatMessages: HorizonStore<ChatMessage>
+  // TODO: remove these unused stores
+  chats: HorizonStore<any>
+  chatMessages: HorizonStore<any>
   prompts: HorizonStore<EditablePrompt>
 
   constructor() {
@@ -260,8 +261,8 @@ export class HorizonDatabase extends Dexie {
 
     this.resources = new HorizonStore<LegacyResource>(this.table('resources'))
     this.tabs = new HorizonStore<Tab>(this.table('tabs'))
-    this.chats = new HorizonStore<Chat>(this.table('chats'))
-    this.chatMessages = new HorizonStore<ChatMessage>(this.table('chatMessages'))
+    this.chats = new HorizonStore<any>(this.table('chats'))
+    this.chatMessages = new HorizonStore<any>(this.table('chatMessages'))
     this.prompts = new HorizonStore<EditablePrompt>(this.table('prompts'))
   }
 }

@@ -1,4 +1,4 @@
-import { useLogScope } from '@horizon/core/src/lib/utils/log'
+import { useLogScope } from '@horizon/utils'
 import { clipboard, contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import {

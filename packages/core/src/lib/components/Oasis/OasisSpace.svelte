@@ -11,7 +11,16 @@
 <script lang="ts">
   import { derived, writable } from 'svelte/store'
 
-  import { useLogScope } from '../../utils/log'
+  import {
+    useLogScope,
+    parseTextIntoISOString,
+    wait,
+    clickOutside,
+    tooltip,
+    checkIfYoutubeUrl,
+    isModKeyAndKeyPressed,
+    truncate
+  } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
   import Chat from '../Chat/Chat.svelte'
@@ -26,7 +35,6 @@
     type ResourceObject,
     type ResourceSearchResultItem
   } from '../../service/resources'
-  import { gracefullyParseDateStringtoISO, wait } from '../../utils/time'
   import OasisResourcesView from './OasisResourcesView.svelte'
   import {
     ResourceTagsBuiltInKeys,
@@ -52,15 +60,12 @@
 
   import { useToasts } from '../../service/toast'
   import OasisResourcesViewSearchResult from './OasisResourcesViewSearchResult.svelte'
-  import { clickOutside, tooltip } from '../../utils/directives'
   import { fly } from 'svelte/transition'
   import OasisSpaceSettings from './OasisSpaceSettings.svelte'
   import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
   import { summarizeText } from '../../service/ai'
   import type { ResourceContent } from '@horizon/web-parser'
-  import { checkIfYoutubeUrl } from '../../utils/url'
   import OasisResourceModalWrapper from './OasisResourceModalWrapper.svelte'
-  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab, TabPage } from '../../types/browser.types'
   import type { HistoryEntriesManager } from '../../service/history'
@@ -74,7 +79,6 @@
     SaveToOasisEventTrigger,
     SearchOasisEventTrigger
   } from '@horizon/types'
-  import { truncate } from '../../utils/text'
   import PQueue from 'p-queue'
   import { useConfig } from '../../service/config'
 
@@ -511,7 +515,7 @@
         title: item.title,
         link: item.link,
         comments: item.comments,
-        pubDate: (item.pubDate && gracefullyParseDateStringtoISO(item.pubDate)) || '',
+        pubDate: (item.pubDate && parseTextIntoISOString(item.pubDate)) || '',
         sourceUrl: source.url
       } as ParsedSourceItem
     })

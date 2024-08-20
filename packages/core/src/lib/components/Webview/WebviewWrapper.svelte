@@ -24,14 +24,13 @@
     type WebViewSendEvents
   } from '@horizon/types'
   import type { HistoryEntriesManager } from '../../service/history'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope, isModKeyAndKeyPressed } from '@horizon/utils'
   import type { DetectedResource } from '../../types'
   import type { WebServiceActionInputs } from '@horizon/web-parser'
   import Webview, { type WebviewError, type WebviewEvents } from './Webview.svelte'
   import FindInPage from './FindInPage.svelte'
   import HoverLinkPreview from './HoverLinkPreview.svelte'
   import ZoomPreview from './ZoomPreview.svelte'
-  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import ErrorPage from './ErrorPage.svelte'
 

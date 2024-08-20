@@ -2,7 +2,7 @@
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { writable, derived } from 'svelte/store'
   import { Popover } from 'bits-ui'
-  import { flyAndScale } from '../../utils'
+  import { flyAndScale } from '@horizon/utils'
 
   export let initialPopoverOpened = false
   export let position: 'top' | 'bottom' | 'left' | 'right' = 'bottom'

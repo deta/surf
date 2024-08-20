@@ -5,7 +5,7 @@
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   //import { get } from 'svelte/store'
   //import { oasisAPIEndpoint } from './BrowserHomescreen.svelte'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
 
   export let source: AIChatMessageSource
   export let resourceManager: ResourceManager

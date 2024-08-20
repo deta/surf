@@ -1,6 +1,6 @@
 import type { UserSettings } from '@horizon/types'
 import { get, writable, type Writable } from 'svelte/store'
-import { useLogScope } from '../utils/log'
+import { useLogScope } from '@horizon/utils'
 import { getContext, setContext } from 'svelte'
 
 export class ConfigService {

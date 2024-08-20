@@ -1,6 +1,6 @@
 import { get, writable, type Writable } from 'svelte/store'
 
-import { useLogScope, type ScopedLogger } from '../utils/log'
+import { useLogScope, type ScopedLogger, generateID } from '@horizon/utils'
 import { SFFS } from './sffs'
 import {
   type AiSFFSQueryResponse,
@@ -33,8 +33,6 @@ import {
   type ResourceDataHistoryEntry
 } from '@horizon/types'
 import { getContext, setContext } from 'svelte'
-import type { MediaParserResult } from './mediaImporter'
-import { generateID } from '../utils/id'
 
 /*
  TODO:
@@ -573,7 +571,7 @@ export class ResourceManager {
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource),
           annotations: item.resource.annotations?.map((a) => this.findOrCreateResourceObject(a))
-        } as ResourceSearchResultItem)
+        }) as ResourceSearchResultItem
     )
 
     // we probably don't want to overwrite the existing resources
@@ -591,7 +589,7 @@ export class ResourceManager {
           engine: item.engine,
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource)
-        } as ResourceSearchResultItem)
+        }) as ResourceSearchResultItem
     )
 
     return results

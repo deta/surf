@@ -1,5 +1,5 @@
 import { WebMetadata } from '../types'
-import { makeAbsoluteURL, parseDateString } from '../utils'
+import { makeAbsoluteURL, parseTextIntoISOString } from '@horizon/utils'
 
 export class MetadataExtractor {
   url: URL
@@ -80,8 +80,8 @@ export class MetadataExtractor {
       icon: favicon ? makeAbsoluteURL(favicon, this.url) : null,
       language: language ?? null,
       author: getMeta('author', 'article:author'),
-      date_published: datePublished ? parseDateString(datePublished) : null,
-      date_modified: dateModified ? parseDateString(dateModified) : null,
+      date_published: datePublished ? parseTextIntoISOString(datePublished) : null,
+      date_modified: dateModified ? parseTextIntoISOString(dateModified) : null,
       provider: getMeta('provider', 'og:site_name') ?? this.url.hostname,
       type: getMeta('type', 'og:type'),
       keywords: keywords

@@ -29,7 +29,17 @@
   import { derived, writable } from 'svelte/store'
   import { Motion, AnimatePresence } from 'svelte-motion'
 
-  import { useLogScope } from '../../utils/log'
+  import {
+    useLogScope,
+    wait,
+    optimisticCheckIfURLOrIPorFile,
+    parseStringIntoBrowserLocation,
+    isModKeyAndKeyPressed,
+    truncateURL,
+    getFileType,
+    useDebounce,
+    useLocalStorageStore
+  } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
   import { createEventDispatcher, onMount, tick } from 'svelte'
@@ -42,7 +52,6 @@
     type ResourceObject,
     type ResourceSearchResultItem
   } from '../../service/resources'
-  import { wait } from '../../utils/time'
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
@@ -66,8 +75,6 @@
 
   import { useToasts } from '../../service/toast'
   import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
-  import { optimisticCheckIfURLOrIPorFile, parseStringIntoBrowserLocation } from '../../utils/url'
-  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
   import { DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab, TabPage, TabSpace } from '../../types/browser.types'
 
@@ -75,18 +82,14 @@
   import Fuse from 'fuse.js'
   import { debounce, result } from 'lodash'
   import CommandMenuItem, { type CMDMenuItem } from './CommandMenuItem.svelte'
-  import { parseStringIntoUrl, truncateURL } from '../../utils/url'
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
-  import { getFileType } from '../../utils/files'
   import * as Dialog from '../Dialog'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
   import SpacesView from '../Oasis/SpacesView.svelte'
   import CreateNewSpace from '../Oasis/CreateNewSpace.svelte'
   import { spring } from 'svelte/motion'
-  import { useDebounce } from '../../utils/debounce'
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
-  import { useLocalStorageStore } from '../../utils/localstorage'
   import {
     AddResourceToSpaceEventTrigger,
     SaveToOasisEventTrigger,

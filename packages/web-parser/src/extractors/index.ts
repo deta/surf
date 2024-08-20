@@ -1,3 +1,4 @@
+import { makeAbsoluteURL } from '@horizon/utils'
 import type { DetectedResource, DetectedWebApp, WebService, WebServiceAction } from '../types'
 
 export abstract class WebAppExtractor {
@@ -16,14 +17,6 @@ export abstract class WebAppExtractor {
   abstract extractResourceFromDocument(document: Document): Promise<DetectedResource | null>
 
   getRSSFeedUrl(document: Document) {
-    const makeAbsoluteURL = (urlOrPath: string, base: URL) => {
-      try {
-        return new URL(urlOrPath, base.origin).href
-      } catch (e) {
-        return null
-      }
-    }
-
     const getFeedLink = () => {
       const rssLink = document.querySelector('link[type="application/rss+xml"]')
       if (rssLink) {

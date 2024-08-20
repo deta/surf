@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { getHumanDistanceToNow } from '../../utils/time'
+  import { getHumanDistanceToNow } from '@horizon/utils'
 
   export let date: string | number
   export let update: boolean = true

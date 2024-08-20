@@ -3,7 +3,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { Resource, ResourceAnnotation, useResourceManager } from '../../service/resources'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import DragResourceWrapper from './DragResourceWrapper.svelte'
   import Skelleton from './OasisSkelleton.svelte'

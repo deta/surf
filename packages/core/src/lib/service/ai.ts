@@ -1,9 +1,11 @@
 import type { DetectedResource, WebViewEventSendNames, WebViewSendEvents } from '@horizon/types'
 import type { ChatMessageContentItem, AIChatMessageSource } from '../types/browser.types'
 import { SIMPLE_SUMMARIZER_PROMPT } from '../constants/prompts'
-import log, { useLogScope } from '../utils/log'
+import { useLogScope } from '@horizon/utils'
 import { WebParser } from '@horizon/web-parser'
 import { PromptIDs, getPrompt } from './prompts'
+
+const log = useLogScope('AI')
 
 export const summarizeText = async (text: string, additionalSystemPrompt?: string) => {
   // @ts-expect-error

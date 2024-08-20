@@ -1,10 +1,9 @@
 import { get, writable, type Writable } from 'svelte/store'
-import { useLogScope } from '../utils/log'
+import { useLogScope } from '@horizon/utils'
 import type { ResourceManager } from './resources'
 
 import type { Optional, Space, SpaceData } from '../types'
 import { getContext, setContext } from 'svelte'
-import { useLocalStorageStore } from '../utils/localstorage'
 
 export class OasisService {
   spaces: Writable<Space[]>

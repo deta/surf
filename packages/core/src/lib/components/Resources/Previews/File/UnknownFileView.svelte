@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
   import type { Resource } from '../../../../service/resources'
-  import { getFileKind, getFileType, toHumanFileSize } from '../../../../utils/files'
+  import { getFileKind, getFileType, toHumanFileSize } from '@horizon/utils'
   import FileIcon from './FileIcon.svelte'
   import { createEventDispatcher, onMount } from 'svelte'
 

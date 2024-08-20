@@ -1,0 +1,28 @@
+{
+  "name": "@horizon/utils",
+  "private": true,
+  "version": "0.0.0",
+  "svelte": "src/index.ts",
+  "main": "src/index.ts",
+  "files": [
+    "build",
+    "src/"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:types": "tsc --emitDeclarationOnly"
+  },
+  "devDependencies": {
+    "@horizon/eslint-config": "*",
+    "@horizon/types": "*",
+    "@horizon/typescript-config": "*",
+    "@types/uuid": "^10.0.0",
+    "date-fns": "^3.2.0",
+    "human-filetypes": "^1.1.3",
+    "is-ip": "^5.0.1",
+    "svelte": "^4.2.18",
+    "typescript": "^5.2.2",
+    "uuid": "^9.0.1"
+  },
+  "dependencies": {}
+}

@@ -11,6 +11,7 @@
   "devDependencies": {
     "@horizon/eslint-config": "*",
     "@horizon/types": "*",
+    "@horizon/utils": "*",
     "@horizon/typescript-config": "*",
     "typescript": "^5.2.2"
   },

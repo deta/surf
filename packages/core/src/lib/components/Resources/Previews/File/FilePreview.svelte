@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
-  import { useLogScope } from '../../../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import ImageView from './ImageView.svelte'
   import { Resource } from '../../../../service/resources'
   import UnknownFileView from './UnknownFileView.svelte'

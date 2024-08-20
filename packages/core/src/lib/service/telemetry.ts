@@ -26,8 +26,7 @@ import {
   SearchOasisEventTrigger
 } from '@horizon/types'
 
-import { HorizonDatabase } from './storage'
-import { useLogScope } from '../utils/log'
+import { useLogScope } from '@horizon/utils'
 import type { Tab } from '../types/browser.types'
 import { getPrimaryResourceType } from './resources'
 import { getContext, setContext } from 'svelte'

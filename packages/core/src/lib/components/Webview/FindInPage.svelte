@@ -2,8 +2,7 @@
   import { onMount } from 'svelte'
   import type { WebviewTag } from 'electron'
 
-  import { useLogScope } from '../../utils/log'
-  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
+  import { useLogScope, isModKeyAndKeyPressed } from '@horizon/utils'
 
   export let webview: WebviewTag
   export let value = ''

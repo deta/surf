@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements'
-  import { cn } from '../../utils'
+  import { cn } from '../../utils/tailwind'
 
   type $$Props = HTMLAttributes<HTMLSpanElement>
 

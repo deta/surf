@@ -6,10 +6,12 @@
   import { onMount, onDestroy } from 'svelte'
   import { writable } from 'svelte/store'
   import {
+    isModKeyPressed,
+    useLogScope,
     optimisticCheckIfUrl,
     parseStringIntoBrowserLocation,
     parseStringIntoUrl
-  } from '@horizon/core/src/lib/utils/url'
+  } from '@horizon/utils'
   import { createEventDispatcher } from 'svelte'
 
   import type { HistoryEntry, Optional } from '@horizon/core/src/lib/types'
@@ -17,8 +19,6 @@
   import ToolbarItem from './ToolbarItem.svelte'
   import ToolbarGroupHeader from './ToolbarGroupHeader.svelte'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../../constants/searchEngines'
-  import { isModKeyPressed } from '../../../utils/keyboard'
-  import log from '../../../utils/log'
   import type { HistoryEntriesManager } from '../../../service/history'
 
   export let inputValue: string
@@ -30,6 +30,7 @@
   let initialValue: string = ''
 
   const dispatch = createEventDispatcher<{ action: ActionEvent }>()
+  const log = useLogScope('AddressToolbar')
 
   let cardHistoryItems: any[] = cardHistory
     .map((item: any) => ({
@@ -106,8 +107,6 @@
           score: query.split(' ').reduce((acc, word) => acc + scoreHostname(hostname, word), 0)
         }
       })
-
-    console.log('missingRootResultsForSites', missingRootResultsForSites)
 
     return missingRootResultsForSites
   }
@@ -384,7 +383,6 @@
   }
 
   function handleClick(event: MouseEvent): void {
-    console.log('click')
     const target = event.target as HTMLElement
     // Find the closest .toolbar-item ancestor, in case the click was on a child element
     const toolbarItem = target.closest('.toolbar-item')

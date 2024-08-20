@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Resource } from '../../../../service/resources'
-  import { useLogScope } from '../../../../utils/log'
+  import { useLogScope } from '@horizon/utils'
 
   const log = useLogScope('VideoViewCard')
 

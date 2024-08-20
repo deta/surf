@@ -28,14 +28,14 @@ const formatDistanceLocale = {
 
 const formatDistance = (
   token: keyof typeof formatDistanceLocale,
-  count: string,
+  count: number,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   options: any
 ) => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   options = options || {}
 
-  const result = formatDistanceLocale[token].replace('{{count}}', count)
+  const result = formatDistanceLocale[token].replace('{{count}}', count + '')
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   if (options.addSuffix) {
@@ -86,14 +86,6 @@ export const isDateToday = (timestamp: number | string) => {
   return isToday(ms)
 }
 
-export const gracefullyParseDateStringtoISO = (dateString: string) => {
-  try {
-    return new Date(dateString).toISOString()
-  } catch (e) {
-    return null
-  }
-}
-
 export const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export const writableAutoReset = <T>(defaultValue: T, delay = 500) => {
@@ -110,4 +102,12 @@ export const writableAutoReset = <T>(defaultValue: T, delay = 500) => {
   }
 
   return { set, update: value.update, subscribe: value.subscribe } as typeof value
+}
+
+export const parseTextIntoISOString = (dateString: string) => {
+  try {
+    return new Date(dateString).toISOString()
+  } catch (e) {
+    return null
+  }
 }

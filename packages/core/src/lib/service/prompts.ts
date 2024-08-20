@@ -1,7 +1,5 @@
-import { get, writable } from 'svelte/store'
 import { INLINE_PROMPTS, PAGE_PROMPTS } from '../constants/prompts'
 import type { EditablePrompt } from '@horizon/types'
-import log from '../utils/log'
 import { HorizonDatabase } from './storage'
 
 export enum PromptIDs {
@@ -107,7 +105,6 @@ const resetChange = async (id: PromptIDs) => {
 }
 
 export const getPrompts = async () => {
-  log.debug('Getting prompts')
   const allChanges = await getChanges()
 
   return EDITABLE_PROMPTS.map((p) => {
@@ -121,7 +118,6 @@ export const getPrompts = async () => {
 }
 
 export const getPrompt = async (id: PromptIDs) => {
-  log.debug('Getting prompt', id)
   const prompt = EDITABLE_PROMPTS.find((p) => p.id === id)
   if (!prompt) {
     throw new Error(`Prompt with id ${id} not found`)
@@ -136,8 +132,6 @@ export const getPrompt = async (id: PromptIDs) => {
 }
 
 export const updatePrompt = async (id: PromptIDs, content: string) => {
-  log.debug('Updating prompt', id, content)
-
   const prompt = EDITABLE_PROMPTS.find((p) => p.id === id)
   if (!prompt) {
     throw new Error(`Prompt with id ${id} not found`)
@@ -147,8 +141,6 @@ export const updatePrompt = async (id: PromptIDs, content: string) => {
 }
 
 export const resetPrompt = (id: PromptIDs) => {
-  log.debug('Resetting prompt', id)
-
   const prompt = EDITABLE_PROMPTS.find((p) => p.id === id)
   if (!prompt) {
     throw new Error(`Prompt with id ${id} not found`)

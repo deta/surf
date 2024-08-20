@@ -1,8 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import type { AIChatMessageSource } from '../../types/browser.types'
-  import { useLogScope } from '../../utils/log'
-  import { useDebounce } from '../../utils/debounce'
+  import { useLogScope, useDebounce } from '@horizon/utils'
 
   export let content: string
   export let sources: AIChatMessageSource[] | undefined

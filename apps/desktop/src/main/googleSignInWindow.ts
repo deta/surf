@@ -1,6 +1,6 @@
 import { BrowserWindow } from 'electron'
 import { getMainWindow } from './mainWindow'
-import { isGoogleSignInUrl } from '@horizon/core/src/lib/utils/url'
+import { isGoogleSignInUrl } from '@horizon/utils'
 
 let signInWindow: BrowserWindow | null = null
 

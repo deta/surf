@@ -6,7 +6,7 @@
     ResourceJSON,
     ResourceNote
   } from '../../service/resources'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import { ResourceTypes, type ResourceData } from '@horizon/types'
   import { get } from 'svelte/store'
   import { MEDIA_TYPES } from '../../service/mediaImporter'

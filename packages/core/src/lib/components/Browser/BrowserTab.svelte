@@ -32,7 +32,7 @@
   import { writable, type Unsubscriber } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { AIChatMessageParsed, PageMagic, TabPage } from '../../types/browser.types'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope, useDebounce, isGoogleSignInUrl, wait } from '@horizon/utils'
   import type { DetectedWebApp } from '@horizon/web-parser'
   import {
     CreateAnnotationEventTrigger,
@@ -48,8 +48,6 @@
     type WebViewReceiveEvents,
     type WebViewSendEvents
   } from '@horizon/types'
-  import { wait } from '@horizon/web-parser/src/utils'
-  import { useDebounce } from '../../utils/debounce'
   import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
   import type { WebviewNavigationEvent } from '../Webview/Webview.svelte'
   import {
@@ -61,10 +59,8 @@
   import { useToasts } from '../../service/toast'
   import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from '../../constants/inline'
   import { handleInlineAI } from '../../service/ai'
-  import { generateID } from '../../utils/id'
   import { useConfig } from '../../service/config'
   import { useOasis } from '../../service/oasis'
-  import { isGoogleSignInUrl } from '../../utils/url'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<BrowserTabEvents>()

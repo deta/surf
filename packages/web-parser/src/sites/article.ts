@@ -3,7 +3,8 @@ import { Readability, isProbablyReaderable } from '@mozilla/readability'
 
 import { MetadataExtractor, WebAppExtractor } from '../extractors'
 import type { DetectedWebApp } from '../types'
-import { generateNameFromURL, parseDateString } from '../utils'
+import { generateNameFromURL } from '../utils'
+import { parseTextIntoISOString } from '@horizon/utils'
 
 export type RawArticleData = {
   title: string
@@ -58,7 +59,7 @@ export class ArticleParser extends WebAppExtractor {
 
     const metadata = this.metadataExtractor.extractMetadataFromDocument(document)
 
-    const publishedTime = parseDateString(parsed.publishedTime)
+    const publishedTime = parseTextIntoISOString(parsed.publishedTime)
 
     const resource = {
       title: parsed.title || metadata.title,

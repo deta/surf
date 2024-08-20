@@ -16,8 +16,7 @@
   import browserBackground from '../../../../public/assets/foggy-placeholder.png'
   import AddressToolbar, { type ActionEvent } from '../Atoms/Toolbar/AddressToolbar.svelte'
   import type { Tab, TabSpace } from '../../types/browser.types'
-  import { parseStringIntoBrowserLocation, parseStringIntoUrl } from '../../utils/url'
-  import log from '../../utils/log'
+  import { parseStringIntoBrowserLocation, parseStringIntoUrl, useLogScope } from '@horizon/utils'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { useResourceManager } from '../../service/resources'
   import { OpenResourceEventFrom } from '@horizon/types'
@@ -26,6 +25,7 @@
   export let spaces: Writable<Space[]>
   export let active = true
 
+  const log = useLogScope('BrowserHomescreen')
   const dispatch = createEventDispatcher<{
     navigate: string
     chat: string

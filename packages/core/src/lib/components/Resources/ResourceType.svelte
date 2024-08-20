@@ -2,7 +2,7 @@
   import { Icon } from '@horizon/icons'
   import { ResourceTypes } from '@horizon/types'
   import FileIcon from './Previews/File/FileIcon.svelte'
-  import { getFileKind, getFileType } from '../../utils/files'
+  import { getFileKind, getFileType } from '@horizon/utils'
 
   export let type: string
 </script>

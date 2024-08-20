@@ -5,8 +5,7 @@ import { getContext, setContext } from 'svelte'
 
 import type { Metadata } from '@horizon/types'
 
-import log from '@horizon/core/src/lib/utils/log'
-import { APIError, NetworkError } from '@horizon/core/src/lib/utils/errors'
+import { useLogScope, APIError, NetworkError } from '@horizon/utils'
 
 const HEADER_SPACE_CLIENT_KEY = 'X-Space-Client'
 
@@ -44,9 +43,13 @@ export class API {
   baseUrl: string
   captureExceptions: boolean
 
+  log: ReturnType<typeof useLogScope>
+
   constructor(baseUrl?: string, captureExceptions?: boolean) {
     this.baseUrl = baseUrl || `${location.origin}/api`
     this.captureExceptions = captureExceptions !== undefined ? captureExceptions : true
+
+    this.log = useLogScope('API')
   }
 
   static provide = (endpoint?: string) => {
@@ -114,7 +117,7 @@ export class API {
       ...options
     })
       .catch((err) => {
-        log.error(err)
+        this.log.error(err)
         if (err instanceof Error) {
           throw new NetworkError({
             cause: err
@@ -128,10 +131,10 @@ export class API {
         const isJson = contentType && contentType.indexOf('application/json') !== -1
 
         if (!response.ok) {
-          log.error(response)
+          this.log.error(response)
 
           if (response.status === 401 && !skipAuthRedirect) {
-            log.debug('Unauthorized!')
+            this.log.debug('Unauthorized!')
             window.location.href = '/login'
           }
 
@@ -205,7 +208,7 @@ export class API {
       skipAuthRedirect: true
     })
 
-    log.debug(response)
+    this.log.debug(response)
 
     return response as Metadata
   }
@@ -217,7 +220,7 @@ export class API {
       payload: metadata
     })
 
-    log.debug(response)
+    this.log.debug(response)
 
     return response.metadata as Metadata
   }

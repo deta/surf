@@ -7,19 +7,17 @@
   import { selectedFolder } from '../../stores/oasis'
   import type { Space, SpaceData } from '../../types'
   import { ResourceTagsBuiltInKeys, ResourceTypes } from '../../types'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope, hover, tooltip, isModKeyPressed } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { processDrop } from '../../service/mediaImporter'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import { useToasts } from '../../service/toast'
-  import { hover, tooltip } from '../../utils/directives'
   import { fade, fly } from 'svelte/transition'
   import {
     DeleteSpaceEventTrigger,
     RefreshSpaceEventTrigger,
     UpdateSpaceSettingsEventTrigger
   } from '@horizon/types'
-  import { isModKeyPressed } from '../../utils/keyboard'
 
   import type { TabSpace } from '../../types/browser.types'
   import { useTelemetry } from '../../service/telemetry'

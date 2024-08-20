@@ -1,7 +1,7 @@
 <script lang="ts">
   import { derived, writable, type Readable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import type { ResourceSearchResultItem } from '../../service/resources'
   import Masonry from './MasonrySpace.svelte'
   import SpacesView from './SpacesView.svelte'

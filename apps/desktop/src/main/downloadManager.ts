@@ -1,4 +1,4 @@
-import { useLogScope } from '@horizon/core/src/lib/utils/log'
+import { useLogScope } from '@horizon/utils'
 import { session, ipcMain, app } from 'electron'
 import { getMainWindow } from './mainWindow'
 import { randomUUID } from 'crypto'

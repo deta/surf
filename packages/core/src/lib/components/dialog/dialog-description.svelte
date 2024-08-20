@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Dialog as DialogPrimitive } from 'bits-ui'
-  import { cn } from '../../utils'
+  import { cn } from '../../utils/tailwind'
 
   type $$Props = DialogPrimitive.DescriptionProps
 

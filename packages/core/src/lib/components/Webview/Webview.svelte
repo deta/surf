@@ -37,9 +37,8 @@
   } from '@horizon/types'
 
   import type { HistoryEntriesManager } from '../../service/history'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope, useDebounce } from '@horizon/utils'
   import type { HistoryEntry } from '../../types'
-  import { useDebounce } from '../../utils/debounce'
   import type { ResourceChatThread, ResourceLink, ResourceObject } from '../../service/resources'
   import type { Tab, TabPage } from '../../types/browser.types'
   import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'

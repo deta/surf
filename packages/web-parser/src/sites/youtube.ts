@@ -2,7 +2,7 @@ import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
 
 import { WebAppExtractor } from '../extractors'
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
-import { makeAbsoluteURL } from '../utils'
+import { makeAbsoluteURL } from '@horizon/utils'
 import { DOMExtractor } from '../extractors/dom'
 import { SERVICES } from '../services'
 import { WebParser } from '..'

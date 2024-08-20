@@ -3,16 +3,18 @@
   import { Icon, IconConfirmation } from '@horizon/icons'
 
   import type { Space, SpaceSource } from '../../types'
-  import { useLogScope } from '../../utils/log'
+  import {
+    useLogScope,
+    tooltip,
+    parseStringIntoUrl,
+    generateID,
+    useDebounce,
+    getHumanDistanceToNow,
+    copyToClipboard
+  } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
-  import { tooltip } from '../../utils/directives'
   import Switch from '../Atoms/Switch.svelte'
-  import { parseStringIntoUrl } from '../../utils/url'
   import { useToasts } from '../../service/toast'
-  import { generateID } from '../../utils/id'
-  import { useDebounce } from '../../utils/debounce'
-  import { getHumanDistanceToNow } from '../../utils/time'
-  import { copyToClipboard } from '../../utils/clipboard'
 
   export let space: Space | null
 

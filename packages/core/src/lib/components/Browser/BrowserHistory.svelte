@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick, afterUpdate } from 'svelte'
   import type { ResourceHistoryEntryWithLinkedResource, TabHistory } from '../../types'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import { useResourceManager, type ResourceSearchResultItem } from '../../service/resources'
   import { derived, writable } from 'svelte/store'
   import BrowserHistoryEntry from './BrowserHistoryEntry.svelte'

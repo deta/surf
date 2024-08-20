@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import {
     useResourceManager,
     type Resource,

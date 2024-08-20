@@ -21,9 +21,8 @@
     type WebViewEventAnnotation,
     type WebViewSendEvents
   } from '@horizon/types'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope, isModKeyAndKeyPressed, useDebounce, wait } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
-  import { wait } from '@horizon/web-parser/src/utils'
   import OasisResourceDetails from './OasisResourceDetails.svelte'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import ResourceOverlay from '../Core/ResourceOverlay.svelte'
@@ -31,8 +30,6 @@
   import AnnotationItem from './AnnotationItem.svelte'
   import { useToasts } from '../../service/toast'
   import { handleInlineAI } from '../../service/ai'
-  import { isModKeyAndKeyPressed } from '../../utils/keyboard'
-  import { useDebounce } from '../../utils/debounce'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
 
   export let resource: Resource

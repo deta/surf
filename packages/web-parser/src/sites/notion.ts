@@ -3,7 +3,7 @@ import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../type
 import { APIExtractor, WebAppExtractor } from '../extractors'
 import { SERVICES } from '../services'
 
-import { wait } from '../utils'
+import { wait } from '@horizon/utils'
 
 export const NotionRegexPatterns = {
   page: /^\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/

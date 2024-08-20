@@ -9,12 +9,10 @@
     type DetectedResource
   } from '@horizon/web-parser'
   import { writable } from 'svelte/store'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import { tick } from 'svelte'
-  import { getFileType } from '../../utils/files'
   import ResourceType from '../Resources/ResourceType.svelte'
   import { ResourceTag, type ResourceManager } from '../../service/resources'
-  import { wait } from '../../utils/time'
   import type { BatchFetcher } from '@horizon/web-parser/src/importers/batcher'
 
   export let resourceManager: ResourceManager

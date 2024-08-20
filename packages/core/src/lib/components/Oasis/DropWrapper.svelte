@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { useLogScope } from '../../utils/log'
+  import { useLogScope } from '@horizon/utils'
   import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
 
   export let acceptDrop: boolean = true
