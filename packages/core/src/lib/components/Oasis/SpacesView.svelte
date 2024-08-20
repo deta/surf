@@ -116,7 +116,9 @@
 
       if (colors) {
         await oasis.updateSpaceData(spaceId, {
-          colors: colors
+          colors: colors,
+          sql_query: response.sql_query,
+          embedding_query: response.embedding_search_query ?? undefined
         })
       }
 

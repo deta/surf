@@ -161,7 +161,7 @@ pub enum MiscMessage {
     CreateAIChatMessage(String),
     GetAIChatMessage(String),
     DeleteAIChatMessage(String),
-    QuerySFFSResources(String),
+    QuerySFFSResources(String, Option<String>, Option<String>),
     GetAIChatDataSource(String),
     GetAIDocsSimilarity {
         query: String,

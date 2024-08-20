@@ -66,10 +66,18 @@ fn js_get_ai_docs_similarity(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_query_sffs_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
     let prompt = cx.argument::<JsString>(1)?.value(&mut cx);
+    let sql_query = cx
+        .argument_opt(2)
+        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
+        .map(|js_string| js_string.value(&mut cx));
+    let embedding_query = cx
+        .argument_opt(3)
+        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
+        .map(|js_string| js_string.value(&mut cx));
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::MiscMessage(MiscMessage::QuerySFFSResources(prompt)),
+        WorkerMessage::MiscMessage(MiscMessage::QuerySFFSResources(prompt, sql_query, embedding_query)),
         deferred,
     );
 

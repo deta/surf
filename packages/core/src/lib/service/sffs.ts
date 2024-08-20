@@ -296,7 +296,7 @@ export class SFFS {
             resource_id: '',
             tag_name: tag.name ?? '',
             tag_value: tag.value ?? ''
-          }) as SFFSRawResourceTag
+          } as SFFSRawResourceTag)
       )
     )
 
@@ -402,7 +402,7 @@ export class SFFS {
             tag_name: tag.name,
             tag_value: tag.value,
             op: tag.op ?? 'eq'
-          }) as SFFSRawResourceTag
+          } as SFFSRawResourceTag)
       )
     )
     const raw = await this.backend.js__store_list_resources_by_tags(tagsData)
@@ -432,7 +432,7 @@ export class SFFS {
             tag_name: tag.name ?? '',
             tag_value: tag.value ?? '',
             op: tag.op ?? 'eq'
-          }) as SFFSRawResourceTag
+          } as SFFSRawResourceTag)
       )
     )
     const raw = await this.backend.js__store_search_resources(
@@ -530,9 +530,17 @@ export class SFFS {
     await this.backend.js__store_delete_space_entries(entryIds)
   }
 
-  async getResourcesViaPrompt(query: string): Promise<AiSFFSQueryResponse> {
+  async getResourcesViaPrompt(
+    query: string,
+    sql_query: string | undefined,
+    embedding_query: string | undefined
+  ): Promise<AiSFFSQueryResponse> {
     this.log.debug('querying SFFS resources with AI', query)
-    const rawResponse = await this.backend.js__ai_query_sffs_resources(query)
+    const rawResponse = await this.backend.js__ai_query_sffs_resources(
+      query,
+      sql_query,
+      embedding_query
+    )
     this.log.debug('raw response', rawResponse)
     let response = this.parseData<AiSFFSQueryResponse>(rawResponse)
     if (!response) {

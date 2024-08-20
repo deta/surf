@@ -20,6 +20,8 @@ export interface SpaceData {
   hideViewed: boolean
   smartFilterQuery: string | null
   sortBy: 'created_at' | 'source_published_at'
+  sql_query: string | undefined
+  embedding_query: string | undefined
 }
 
 export interface SpaceSource {

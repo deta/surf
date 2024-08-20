@@ -573,7 +573,7 @@ export class ResourceManager {
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource),
           annotations: item.resource.annotations?.map((a) => this.findOrCreateResourceObject(a))
-        }) as ResourceSearchResultItem
+        } as ResourceSearchResultItem)
     )
 
     // we probably don't want to overwrite the existing resources
@@ -591,7 +591,7 @@ export class ResourceManager {
           engine: item.engine,
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource)
-        }) as ResourceSearchResultItem
+        } as ResourceSearchResultItem)
     )
 
     return results
@@ -1035,8 +1035,12 @@ export class ResourceManager {
     return references
   }
 
-  async getResourcesViaPrompt(query: string): Promise<AiSFFSQueryResponse> {
-    return await this.sffs.getResourcesViaPrompt(query)
+  async getResourcesViaPrompt(
+    query: string,
+    sql_query: string | undefined,
+    embedding_query: string | undefined
+  ): Promise<AiSFFSQueryResponse> {
+    return await this.sffs.getResourcesViaPrompt(query, sql_query, embedding_query)
   }
 
   static SearchTagCanonicalURL(url: string): SFFSResourceTag {
