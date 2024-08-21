@@ -26,6 +26,7 @@ export default defineConfig({
 
       // Used to inject the styles from the preload script and svelte components into the webviews
       cssInjectedByJsPlugin({
+        jsAssetsFilterFunction: (asset) => asset.fileName.endsWith('webview.js'),
         injectCode: (cssCode, _options) => {
           return `window.addEventListener('DOMContentLoaded', () => { try{if(typeof document != 'undefined'){var elementStyle = document.createElement('style');elementStyle.id="webview-styles";elementStyle.appendChild(document.createTextNode(${cssCode}));document.head.appendChild(elementStyle);}}catch(e){console.error('vite-plugin-css-injected-by-js', e);} })`
         }
@@ -41,6 +42,16 @@ export default defineConfig({
         input: {
           horizon: resolve(__dirname, 'src/preload/horizon.ts'),
           webview: resolve(__dirname, 'src/preload/webview.ts')
+        },
+        output: {
+          // This is needed to prevent rollup from creating a separate chunk for the webview.ts file
+          manualChunks(id) {
+            if (id.includes('webview.ts')) {
+              return 'webview'
+            }
+
+            return
+          }
         }
       }
     }
