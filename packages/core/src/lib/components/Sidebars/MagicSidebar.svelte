@@ -146,7 +146,10 @@
       resource.type === ResourceTypes.ARTICLE ||
       resource.type.startsWith(ResourceTypes.POST)
     ) {
-      if (resource.type === ResourceTypes.POST_YOUTUBE && source.metadata?.timestamp) {
+      if (
+        resource.type === ResourceTypes.POST_YOUTUBE &&
+        source.metadata?.timestamp !== undefined
+      ) {
         const timestamp = source.metadata.timestamp
         dispatch('seekToTimestamp', { resourceId: resource.id, timestamp: timestamp })
 

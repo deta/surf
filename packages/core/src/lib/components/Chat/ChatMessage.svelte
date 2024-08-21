@@ -130,7 +130,7 @@
         return
       }
 
-      if (source?.metadata?.timestamp) {
+      if (source?.metadata?.timestamp !== undefined) {
         citation.classList.add('wide')
         citation.innerHTML = `
             <img src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40" alt="YouTube icon" />
@@ -202,7 +202,7 @@
         <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div
           class="citation-item"
-          class:wide={source.metadata?.timestamp || source.metadata?.url}
+          class:wide={source.metadata?.timestamp !== undefined || source.metadata?.url}
           on:click={(e) => {
             document.querySelectorAll('citation').forEach((citation) => {
               citation.classList.remove('clicked')
@@ -216,7 +216,7 @@
           on:mouseenter={() => dispatch('citationHoverStart', source.id)}
           on:mouseleave={() => dispatch('citationHoverEnd', source.id)}
         >
-          {#if source.metadata?.timestamp}
+          {#if source.metadata?.timestamp !== undefined}
             <img
               src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
               alt="YouTube icon"
