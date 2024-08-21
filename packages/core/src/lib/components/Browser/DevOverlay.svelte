@@ -21,10 +21,8 @@
       try {
         const adapter = await (navigator as any).gpu.requestAdapter()
         const info = await adapter.requestAdapterInfo()
-        console.error('GPU Info:', info)
         gpuInfo = `${info.vendor} - ${info.architecture}`
       } catch (error) {
-        console.error('Error getting GPU info:', error)
         gpuInfo = 'Not available'
       }
     } else {
@@ -47,83 +45,86 @@
     }
   }
 
-  onMount(async () => {
-    await getGPUInfo()
+  onMount(() => {
+    return new Promise(async (resolve) => {
+      await getGPUInfo()
 
-    const startTime = performance.now()
-    let frameCount = 0
-    let lastTime = performance.now()
+      const startTime = performance.now()
+      let frameCount = 0
+      let lastTime = performance.now()
 
-    //input lag measurement
-    let lastInputTime = 0
-    document.addEventListener('input', () => {
-      lastInputTime = performance.now()
-    })
+      //input lag measurement
+      let lastInputTime = 0
+      document.addEventListener('input', () => {
+        lastInputTime = performance.now()
+      })
 
-    function updateMetrics() {
-      const now = performance.now()
-      frameCount++
+      function updateMetrics() {
+        const now = performance.now()
+        frameCount++
 
-      if (now - lastTime > 1000) {
-        fps = Math.round((frameCount * 1000) / (now - lastTime))
-        frameCount = 0
-        lastTime = now
+        if (now - lastTime > 1000) {
+          fps = Math.round((frameCount * 1000) / (now - lastTime))
+          frameCount = 0
+          lastTime = now
 
-        if (window.performance && (performance as any).memory) {
-          memory = Math.round((performance as any).memory.usedJSHeapSize / (1024 * 1024))
+          if (window.performance && (performance as any).memory) {
+            memory = Math.round((performance as any).memory.usedJSHeapSize / (1024 * 1024))
+          }
+
+          const cpuTimes = performance.now()
+          setTimeout(() => {
+            const cpuTimeDiff = performance.now() - cpuTimes
+            cpuUsage = Math.round((cpuTimeDiff / 1000) * 100)
+          }, 0)
+
+          const start = Date.now()
+          fetch('/ping').then(() => {
+            networkLatency = Date.now() - start
+          })
+
+          domNodes = document.getElementsByTagName('*').length
+
+          estimatePowerConsumption()
+
+          // Audio Contexts
+          audioContexts = (window as any).audioContexts?.length || 0
+
+          // hiresolution timer
+          const timerStart = performance.now()
+          setTimeout(() => {
+            timerPrecision = performance.now() - timerStart
+          }, 0)
+
+          // rendering pipeline
+          renderingPipeline = `Frames: ${fps}, Nodes: ${domNodes}`
+
+          // input Lag
+          if (lastInputTime) {
+            inputLag = performance.now() - lastInputTime
+            lastInputTime = 0
+          }
+
+          getV8Metrics()
         }
 
-        const cpuTimes = performance.now()
-        setTimeout(() => {
-          const cpuTimeDiff = performance.now() - cpuTimes
-          cpuUsage = Math.round((cpuTimeDiff / 1000) * 100)
-        }, 0)
-
-        const start = Date.now()
-        fetch('/ping').then(() => {
-          networkLatency = Date.now() - start
-        })
-
-        domNodes = document.getElementsByTagName('*').length
-
-        estimatePowerConsumption()
-
-        // Audio Contexts
-        audioContexts = (window as any).audioContexts?.length || 0
-
-        // hiresolution timer
-        const timerStart = performance.now()
-        setTimeout(() => {
-          timerPrecision = performance.now() - timerStart
-        }, 0)
-
-        // rendering pipeline
-        renderingPipeline = `Frames: ${fps}, Nodes: ${domNodes}`
-
-        // input Lag
-        if (lastInputTime) {
-          inputLag = performance.now() - lastInputTime
-          lastInputTime = 0
-        }
-
-        getV8Metrics()
+        requestAnimationFrame(updateMetrics)
       }
 
-      requestAnimationFrame(updateMetrics)
-    }
+      updateMetrics()
 
-    updateMetrics()
+      window.addEventListener('load', () => {
+        loadTime = Math.round(performance.now() - startTime)
+      })
 
-    window.addEventListener('load', () => {
-      loadTime = Math.round(performance.now() - startTime)
+      resolve(() => {})
     })
-
-    return () => {}
   })
 </script>
 
 <div
-  class="absolute bottom-0 right-0 w-fit p-1 bg-neutral-900 bg-opacity-50 text-neutral-100 font-mono text-xs"
+  class="absolute bottom-0 right-0 w-fit p-1 bg-neutral-900 bg-opacity-50 text-neutral-100 font-mono text-xs pointer-events-none"
+  style="z-index: 999999999999;"
 >
   <div class="flex justify-between items-center flex-col">
     <div class="flex flex-row items-center divide-x-1 space-x-2">

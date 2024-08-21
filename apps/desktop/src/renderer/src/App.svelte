@@ -1,17 +1,10 @@
 <script lang="ts">
   import { Browser } from '@horizon/core'
-  import { onMount } from 'svelte'
   import '../../app.css'
   import '../../output.css'
   import '../../../../../packages/core/src/output.css'
   import browserBackground from './assets/bg.webp'
-  import DevOverlay from './DevOverlay.svelte'
 
-  const isDevMode = import.meta.env.DEV
-
-  onMount(() => {
-    window.api.onFullscreenChange((fullscreen) => (showDragBar = !fullscreen))
-  })
 </script>
 
 <div class="main relative">
@@ -21,9 +14,6 @@
     alt="background"
   />
   <Browser />
-  {#if isDevMode}
-    <DevOverlay />
-  {/if}
 </div>
 
 <style>

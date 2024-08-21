@@ -113,11 +113,13 @@
   import { provideConfig } from '../service/config'
   import { HistoryEntriesManager } from '../service/history'
   import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
+  import DevOverlay from './Browser/DevOverlay.svelte'
 
   let activeTabComponent: TabItem | null = null
   let drawer: Drawer
   let addressBarFocus = false
   let showLeftSidebar = true
+  let showDevOverlay = import.meta.env.DEV || false
   let showRightSidebar = false
   let rightPane: PaneAPI | undefined = undefined
   let sidebarComponent: SidebarPane | null = null
@@ -928,6 +930,8 @@
     if (e.key === 'Escape') {
       if ($showNewTabOverlay !== 0) return
       if (rightPane?.isExpanded()) handleCollapseRight()
+    } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') { 
+      showDevOverlay = !showDevOverlay
     } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       activeTabComponent?.blur()
@@ -3086,6 +3090,11 @@
     )
   }
 </script>
+
+{#if showDevOverlay}
+<DevOverlay />
+{/if}
+
 
 <SplashScreen show={$showSplashScreen} />
 
