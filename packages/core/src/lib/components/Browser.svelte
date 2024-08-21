@@ -2307,8 +2307,17 @@
       }
 
       if (data.state === 'progressing') {
-        const progress = data.receivedBytes / data.totalBytes
-        toast.update(`Downloading "${downloadData.filename}" (${Math.round(progress * 100)}%)...`)
+        const progress =
+          isFinite(data.receivedBytes) && isFinite(data.totalBytes)
+            ? data.receivedBytes / data.totalBytes
+            : 0
+        const roundedPercent = Math.round(progress * 100)
+
+        if (roundedPercent >= 0 && roundedPercent <= 100) {
+          toast.update(`Downloading "${downloadData.filename}" (${roundedPercent}%)...`)
+        } else {
+          toast.update(`Downloading "${downloadData.filename}"...`)
+        }
       } else if (data.state === 'interrupted') {
         toast.error(`Download of "${downloadData.filename}" interrupted`)
       } else if (data.isPaused) {
