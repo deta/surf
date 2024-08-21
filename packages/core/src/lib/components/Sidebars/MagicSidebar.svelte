@@ -498,7 +498,7 @@
                 <button
                   on:click={() => saveResponseOutput(response)}
                   use:tooltip={{
-                    content: 'Save to Oasis',
+                    content: 'Save to My Stuff',
                     action: 'hover',
                     position: 'left',
                     animation: 'fade',

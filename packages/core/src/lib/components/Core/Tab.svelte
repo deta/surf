@@ -414,7 +414,7 @@
             on:click={handleCreateLiveSpace}
             class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
             use:tooltip={{
-              content: `Create ${tab.currentDetectedApp?.appName} live Space`,
+                content: `Create ${tab.title.slice(0, 5)}${tab.title.length>5 ? '...' : ''}  Space`,
               action: 'hover',
               position: 'left',
               animation: 'fade',
@@ -447,7 +447,7 @@
               on:mouseleave={() => setTimeout(() => handlePopoverLeave(), 100)}
               on:click={handleBookmark}
               use:tooltip2={{
-                text: isBookmarkedByUser ? 'Saved to Oasis' : 'Save to Oasis (⌘ + D)',
+                text: isBookmarkedByUser ? 'Saved to Your Stuff' : 'Save to My Stuff (⌘ + D)',
                 position: 'left'
               }}
               on:save-resource-in-space={handleSaveResourceInSpace}

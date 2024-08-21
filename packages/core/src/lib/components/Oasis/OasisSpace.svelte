@@ -1176,7 +1176,7 @@
 
   const handleDeleteAutoSaved = async () => {
     const confirmed = window.confirm(
-      'Are you sure you want to delete all auto-saved resources from Oasis?'
+      'Are you sure you want to delete all auto-saved resources from Your Stuff?'
     )
     if (!confirmed) {
       return
@@ -1486,7 +1486,7 @@
                 {/await}
               {:else if $space.name.liveModeEnabled}
                 <Icon name="news" />
-                Live Space
+                Auto Refresh
               {:else if ($space.name.sources ?? []).length > 0}
                 <Icon name="reload" />
                 Refresh Sources

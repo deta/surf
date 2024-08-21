@@ -930,7 +930,7 @@
     if (e.key === 'Escape') {
       if ($showNewTabOverlay !== 0) return
       if (rightPane?.isExpanded()) handleCollapseRight()
-    } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') { 
+    } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
       showDevOverlay = !showDevOverlay
     } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
@@ -1728,7 +1728,7 @@
       ...(tags?.map((tag) => ResourceTag.hashtag(tag)) ?? [])
     ])
 
-    toasts.success('Saved to Oasis!')
+    toasts.success('Saved to My Stuff!')
 
     const trigger =
       source === 'user'
@@ -1940,7 +1940,7 @@
     } as SpaceSource
 
     return {
-      name: name ?? 'Live Space',
+      name: name ?? 'Space',
       source: spaceSource
     }
   }
@@ -1951,7 +1951,7 @@
       return
     }
 
-    const toast = toasts.loading('Creating Live Space...')
+    const toast = toasts.loading('Creating Space...')
 
     try {
       isCreatingLiveSpace.set(true)
@@ -1983,10 +1983,10 @@
         isLiveSpace: true
       })
 
-      toast.success('Live Space created!')
+      toast.success('Space created!')
     } catch (e) {
       log.error('Error creating live space', e)
-      toast.error('Failed to create Live Space')
+      toast.error('Failed to create Space')
     } finally {
       isCreatingLiveSpace.set(false)
     }
@@ -2327,7 +2327,7 @@
       }
 
       if (data.state === 'completed') {
-        toast.success(`"${downloadData.filename}" saved to Oasis!`)
+        toast.success(`"${downloadData.filename}" saved to My Stuff!`)
       } else if (data.state === 'interrupted') {
         toast.error(`Download of "${downloadData.filename}" interrupted`)
       } else if (data.state === 'cancelled') {
@@ -2965,7 +2965,7 @@
     if (drag.item !== null) drag.item.dragEffect = 'copy'
 
     const toast = toasts.loading(
-      `${spaceId === 'all' ? 'Saving to Oasis...' : drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`
+      `${spaceId === 'all' ? 'Saving to Your Stuff...' : (drag.effect === 'move' ? 'Moving' : 'Copying') + 'to space...'}`
     )
 
     if (
@@ -3092,9 +3092,8 @@
 </script>
 
 {#if showDevOverlay}
-<DevOverlay />
+  <DevOverlay />
 {/if}
-
 
 <SplashScreen show={$showSplashScreen} />
 
@@ -3724,7 +3723,7 @@
 
               <button
                 use:tooltip={{
-                  text: 'Open Oasis (⌘ + O)',
+                  text: 'My Stuff (⌘ + O)',
                   position: horizontalTabs ? 'left' : 'top'
                 }}
                 class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"

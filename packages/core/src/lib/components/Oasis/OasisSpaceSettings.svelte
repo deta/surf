@@ -237,7 +237,7 @@
       </div>
 
       <Switch
-        label="Live"
+        label="Auto-refresh"
         color="#ff4eed"
         bind:checked={isLiveModeOn}
         on:update={handleLiveModeUpdate}
@@ -249,13 +249,13 @@
         <div class="info">
           <div class="title">
             <Icon name="news" size="20px" />
-            <h2>Sources</h2>
+            <h2>Subscriptions</h2>
           </div>
 
-          <p>Add external feeds to pull in new content from.</p>
+          <p>Subscriptions automatically bring content into your Space from external sources.</p>
 
           <p>
-            If the live mode is enabled these sources will automatically be loaded, otherwise you
+            If auto-refresh is enabled, these sources will automatically be loaded, otherwise you
             can manually refresh.
           </p>
         </div>
@@ -321,10 +321,10 @@
         <div class="smart-filter">
           <div class="title">
             <Icon name="sparkles" size="20px" />
-            <h2>Smart Oasis Filter</h2>
+            <h2>Smart Filter</h2>
           </div>
 
-          <p>Add new items saved to Oasis to this space if they match this query.</p>
+          <p>Automatically add new items you save to this Space, if they match your description.</p>
           <input
             placeholder="e.g. articles about electric cars"
             bind:value={smartFilterQuery}
@@ -333,7 +333,7 @@
           />
 
           {#if !isLiveModeOn}
-            <p><b>Note:</b> When Live Mode is turned off you need to manually refresh.</p>
+            <p><b>Note:</b> When auto-refresh is turned off, you need to manually refresh.</p>
           {/if}
         </div>
       </div>
@@ -434,7 +434,7 @@
   {:else}
     <div class="header">
       <!-- <SpaceIcon folder={space} /> -->
-      <h1>Oasis Settings</h1>
+      <h1>Settings</h1>
     </div>
 
     <div class="setting">
@@ -445,7 +445,9 @@
         on:update={handleLiveModeUpdate}
       />
 
-      <p><b>Note:</b> If enabled every web page you visit gets automatically saved to Oasis.</p>
+      <p>
+        <b>Note:</b> If enabled every web page you visit gets automatically saved to Your Stuff.
+      </p>
     </div>
 
     <div class="danger-zone">
@@ -482,7 +484,7 @@
           <div class="action">
             <div class="action-row">
               <h3>Delete Auto Saved Resources</h3>
-              <p>Remove all auto saved resources from Oasis.</p>
+              <p>Remove all auto saved resources from Your Stuff.</p>
             </div>
 
             <button on:click={handleDeleteAutoSaved}>

@@ -161,7 +161,7 @@
           id: `ask:oasis`,
           updatedAt: new Date().toISOString(),
           type: 'chat',
-          title: 'Ask Oasis AI',
+          title: 'Ask My Stuff',
           searchQuery: inputValue
         } as HistoryEntry,
         searchEngine: 'oasis',

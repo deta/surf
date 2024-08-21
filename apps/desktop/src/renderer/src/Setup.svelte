@@ -241,8 +241,8 @@
               to OpenAI through Deta's servers.
             </li>
             <li>
-              <b>Live Spaces</b> collect content from websites for you. If you create a Live Space, some
-              of this content is sent to OpenAI through Deta's servers (to create summaries).
+              Spaces can collect content from websites for you. If you add subscriptions, some of
+              this content is sent to OpenAI through Deta's servers (to create summaries).
             </li>
           </ul>
           <p>

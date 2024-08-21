@@ -411,7 +411,7 @@
                   <Icon name="spinner" size="30px" />
                   <h3 class="chat-memory">
                     {#if !tab.ragOnly}
-                      Asking Oasis AI…
+                      Asking Your Stuff
                     {:else}
                       Searching…
                     {/if}

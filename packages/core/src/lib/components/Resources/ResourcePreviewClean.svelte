@@ -297,7 +297,7 @@
           <Icon name="rss" size="16px" />
           {#if $isHovered}
             <div class="whitespace-nowrap ml-2 leading-4" transition:slide={{ axis: 'x' }}>
-              Live Space
+              Subscription
             </div>
           {/if}
         {:else if resource.type === ResourceTypes.HISTORY_ENTRY}

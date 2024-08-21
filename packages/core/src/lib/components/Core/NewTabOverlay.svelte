@@ -193,7 +193,7 @@
 
   $: placeholder =
     showTabSearch === 2
-      ? 'Search Oasis...'
+      ? 'Search Your Stuff...'
       : page === 'tabs'
         ? 'Search for a tab...'
         : page === 'oasis'
@@ -207,7 +207,7 @@
     page === 'tabs'
       ? 'Active Tabs'
       : page === 'oasis'
-        ? 'Oasis'
+        ? 'My Stuff'
         : page === 'history'
           ? 'History'
           : page === 'spaces'
@@ -1228,7 +1228,7 @@
               }}
               aria-label="Switch tabs"
             >
-              <span>Go to {showTabSearch === 1 ? 'Oasis' : 'Search'}</span>
+              <span>Go to {showTabSearch === 1 ? 'My Stuff' : 'Search'}</span>
               <Command.Shortcut class="flex-shrink-0 bg-neutral-100 rounded-lg p-1"
                 >Tab</Command.Shortcut
               >
@@ -1320,7 +1320,7 @@
                         {#each tabs as item}
                           <CommandMenuItem {item} on:select={handleSelect} />
                         {/each}
-                      {:else if page === 'oasis'}
+                      {:else if page === 'My Stuff'}
                         {#each resources as item}
                           <CommandMenuItem {item} on:select={handleSelect} />
                         {/each}

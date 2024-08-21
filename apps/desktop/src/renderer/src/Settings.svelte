@@ -124,7 +124,7 @@
       class:active={$activeTab === 'oasis'}
     >
       <Icon name="leave" size="24" />
-      <h1>Oasis</h1>
+      <h1>My Stuff</h1>
     </div>
 
     <div
@@ -170,7 +170,7 @@
           <SettingsOption
             icon="bookmark"
             title="Auto Save Resources"
-            description="If enabled, every web page you visit will be automatically saved to Oasis."
+            description="If enabled, every web page you visit will be automatically saved to Your Stuff."
             bind:value={userConfigSettings.auto_save_resources}
             on:update={handleSettingsUpdate}
           />
@@ -178,15 +178,15 @@
           <SettingsOption
             icon="search"
             title="Use Semantic Search"
-            description="Use vector search to find resources in Oasis based on their semantic relevance."
+            description="Use search to find resources in Your Stuff based on their semantic relevance."
             bind:value={userConfigSettings.use_semantic_search}
             on:update={handleSettingsUpdate}
           />
 
           <SettingsOption
             icon="marker"
-            title="Show Annotations in Oasis"
-            description="If enabled annotations will be shown separately in Oasis. Otherwise they will be hidden behind the page they were created on unless your search for something."
+            title="Show Annotations in My Stuff"
+            description="If enabled, annotations will be shown in My Stuff. Otherwise, you can only see them if you are on the page with the annotation, or if you search."
             bind:value={userConfigSettings.show_annotations_in_oasis}
             on:update={handleSettingsUpdate}
           />

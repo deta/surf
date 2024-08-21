@@ -227,14 +227,14 @@
               }}
               type="text"
               class="isActive"
-              placeholder="Enter a URL, search the web or ask Oasis AI"
+              placeholder="Enter a URL, search the web or ask Your Stuff"
               bind:this={inputEl}
               bind:value
               on:keyup={handleKeyUp}
             />
           </div>
           <div class="address-tip">
-            <p>Hit <span>↩</span> to open a site or <span>⌘ + ↩</span> to ask Oasis AI</p>
+            <p>Hit <span>↩</span> to open a site or <span>⌘ + ↩</span> to ask Your Stuff</p>
           </div>
           <!-- <div class="page-title">{$title}</div> -->
         </div>

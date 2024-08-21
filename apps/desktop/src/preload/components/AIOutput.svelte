@@ -30,7 +30,7 @@
 </div>
 
 <div class="actions">
-  <Button on:click={handleBookmark} tooltip="Add as Comment to Oasis">
+  <Button on:click={handleBookmark} tooltip="Save to My Stuff as a comment">
     <IconConfirmation bind:this={bookmarkingIcon} name="leave" />
   </Button>
 

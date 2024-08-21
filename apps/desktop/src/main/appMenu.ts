@@ -123,7 +123,7 @@ const template = [
       },
       { type: 'separator' },
       {
-        label: 'Open Oasis',
+        label: 'My Stuff',
         accelerator: 'CmdOrCtrl+O',
         click: () => {
           log.log('Open Oasis')

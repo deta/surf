@@ -329,7 +329,7 @@
     </div>
   {/if}
   <div class="content">
-    <h1>Oasis Discovery</h1>
+    <h1>Explore My Stuff</h1>
     <div class="backends">
       <div class="berttopic">
         <h2>BerTopic</h2>
