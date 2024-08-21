@@ -2054,6 +2054,17 @@
     const tab = $tabs.find((tab) => tab.type === 'space' && tab.spaceId === spaceId)
     if (tab) {
       log.debug('Deleting tab', tab.id)
+
+      const rect = document.getElementById(`tab-${tab.id}`)?.getBoundingClientRect()
+      if (rect) {
+        spawnBoxSmoke(rect, {
+          densityN: 28,
+          size: 13,
+          //velocityScale: 0.5,
+          cloudPointN: 7
+        })
+      }
+
       deleteTab(tab.id)
     }
   }
@@ -2484,6 +2495,16 @@
         })
 
         await tick()
+
+        const rect = document.getElementById(`tab-${tab.id}`)?.getBoundingClientRect()
+        if (rect) {
+          spawnBoxSmoke(rect, {
+            densityN: 28,
+            size: 13,
+            //velocityScale: 0.5,
+            cloudPointN: 7
+          })
+        }
 
         // await archiveTab(tabId)
 
