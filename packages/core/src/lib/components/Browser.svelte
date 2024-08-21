@@ -398,6 +398,10 @@
 
     if (trigger) {
       telemetry.trackActivateTab(trigger, tab.type)
+
+      if (tab.type === 'space') {
+        telemetry.trackActivateTabSpace(trigger)
+      }
     }
   }
 
@@ -555,8 +559,13 @@
     await tabsDB.delete(tabId)
 
     checkScroll()
-    if (tab.type === 'page' && trigger) {
-      await telemetry.trackDeletePageTab(trigger)
+
+    if (trigger) {
+      if (tab.type === 'page') {
+        await telemetry.trackDeletePageTab(trigger)
+      } else if (tab.type === 'space') {
+        await telemetry.trackDeleteSpaceTab(trigger)
+      }
     }
   }
 
@@ -2512,10 +2521,10 @@
 
         // await archiveTab(tabId)
 
-        await deleteTab(tabId)
+        await deleteTab(tabId, DeleteTabEventTrigger.Click)
       } else {
         // await archiveTab(tabId)
-        await deleteTab(tabId)
+        await deleteTab(tabId, DeleteTabEventTrigger.Click)
       }
 
       toasts.success('Space removed from sidebar!')

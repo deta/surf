@@ -151,6 +151,10 @@
         dispatch('seekToTimestamp', { resourceId: resource.id, timestamp: timestamp })
 
         await telemetry.trackPageChatCitationClick('timestamp', sourceTabType)
+
+        if (sourceTabType === 'space') {
+          await telemetry.trackPageChatCitationClickResourceFromSpace('timestamp')
+        }
       } else {
         dispatch('highlightWebviewText', {
           resourceId: resource.id,
@@ -159,6 +163,10 @@
         })
 
         await telemetry.trackPageChatCitationClick('text', sourceTabType)
+
+        if (sourceTabType === 'space') {
+          await telemetry.trackPageChatCitationClickResourceFromSpace('text')
+        }
       }
     }
   }
@@ -320,15 +328,22 @@
       updatePageMagicResponse(response.id, { status: 'success', content: content })
 
       const previousMessages = $magicPage.responses.filter((message) => message.id !== response!.id)
+      const numSpaces = tabsInContext.filter((tab) => tab.type === 'space').length
+      const numPages = tabsInContext.filter(
+        (tab) => tab.type === 'page' && tab.chatResourceBookmark
+      ).length
 
       await telemetry.trackPageChatMessageSent({
         contextSize: resourceIds.length,
-        numPages: tabsInContext.filter((tab) => tab.type === 'page' && tab.chatResourceBookmark)
-          .length,
-        numSpaces: tabsInContext.filter((tab) => tab.type === 'space').length,
+        numPages: numPages,
+        numSpaces: numSpaces,
         numPreviousMessages: previousMessages.length,
         embeddingModel: $userConfigSettings.embedding_model
       })
+
+      if (numSpaces > 0) {
+        await telemetry.trackChatWithSpace()
+      }
     } catch (e) {
       log.error('Error doing magic', e)
       let content = 'Failed to generate response.'

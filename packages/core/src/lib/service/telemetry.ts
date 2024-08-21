@@ -23,7 +23,8 @@ import {
   PageChatUpdateContextEventAction,
   type DeleteAnnotationEventType,
   DeleteAnnotationEventTrigger,
-  SearchOasisEventTrigger
+  SearchOasisEventTrigger,
+  ResourceTypes
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -161,8 +162,20 @@ export class Telemetry {
     })
   }
 
+  async trackActivateTabSpace(trigger: ActivateTabEventTrigger) {
+    await this.trackEvent(TelemetryEventTypes.ActivateTabSpace, {
+      trigger: trigger
+    })
+  }
+
   async trackDeletePageTab(trigger: DeleteTabEventTrigger) {
     await this.trackEvent(TelemetryEventTypes.DeleteTab, {
+      trigger: trigger
+    })
+  }
+
+  async trackDeleteSpaceTab(trigger: DeleteTabEventTrigger) {
+    await this.trackEvent(TelemetryEventTypes.DeleteTabSpace, {
       trigger: trigger
     })
   }
@@ -189,6 +202,14 @@ export class Telemetry {
     await this.trackEvent(TelemetryEventTypes.OpenRightSidebar, {
       tab: tab
     })
+
+    if (tab === 'chat') {
+      await this.trackOpenPageChat()
+    } else if (tab === 'go-wild') {
+      await this.trackOpenGoWild()
+    } else if (tab === 'annotations') {
+      await this.trackOpenAnnotations()
+    }
   }
 
   async trackFileDownload() {
@@ -215,6 +236,12 @@ export class Telemetry {
       kind: getPrimaryResourceType(type),
       from: from
     })
+
+    if (type === ResourceTypes.ANNOTATION) {
+      await this.trackEvent(TelemetryEventTypes.OpenAnnotationResource, {
+        from: from
+      })
+    }
   }
 
   async trackSaveToOasis(type: string, trigger: SaveToOasisEventTrigger, saveToSpace: boolean) {
@@ -325,6 +352,10 @@ export class Telemetry {
     })
   }
 
+  async trackOpenAnnotations() {
+    await this.trackEvent(TelemetryEventTypes.OpenAnnotationSidebar, {})
+  }
+
   async trackPageChatMessageSent(stats: {
     contextSize: number
     numSpaces: number
@@ -348,6 +379,12 @@ export class Telemetry {
     })
   }
 
+  async trackPageChatCitationClickResourceFromSpace(type: 'timestamp' | 'text') {
+    await this.trackEvent(TelemetryEventTypes.PageChatCitationClick, {
+      type: type
+    })
+  }
+
   async trackPageChatClear(numMessages: number) {
     await this.trackEvent(TelemetryEventTypes.PageChatClear, {
       num_messages: numMessages
@@ -359,6 +396,10 @@ export class Telemetry {
       action: action,
       context_size: numResources
     })
+  }
+
+  async trackOpenPageChat() {
+    await this.trackEvent(TelemetryEventTypes.OpenPageChatSidebar, {})
   }
 
   async trackGoWildModifyPage() {
@@ -375,6 +416,10 @@ export class Telemetry {
 
   async trackGoWildClear() {
     await this.trackEvent(TelemetryEventTypes.GoWildClear, {})
+  }
+
+  async trackOpenGoWild() {
+    await this.trackEvent(TelemetryEventTypes.OpenGoWildSidebar, {})
   }
 
   async trackUpdatePrompt(type: string) {
