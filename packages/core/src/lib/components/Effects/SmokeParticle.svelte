@@ -258,6 +258,7 @@
 
 <svg
   on:animationend={onAnimationEnded}
+  class="pointer-events-none"
   style="width: {width}px; height: {height}px; top: {yOrigin - height / 2}px; left: {xOrigin -
     width /
       2}px; --finalXOffset: {finalXOffset}px; --finalYOffset: {finalYOffset}px; animation: smokeVelocity {duration}ms cubic-bezier(0.19, 1, 0.22, 1);"
