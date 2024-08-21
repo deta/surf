@@ -2,12 +2,6 @@
   export type WebviewNavigationEvent = { url: string; oldUrl: string }
   export type WebviewHistoryChangeEvent = { stack: string[]; index: number }
 
-  export type WebviewError = {
-    code: number
-    description: string
-    url: string
-  }
-
   export type WebviewEvents = {
     'webview-page-event': {
       type: WebViewEventSendNames
@@ -42,6 +36,7 @@
   import type { ResourceChatThread, ResourceLink, ResourceObject } from '../../service/resources'
   import type { Tab, TabPage } from '../../types/browser.types'
   import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import type { WebviewError } from '../../constants/webviewErrors'
 
   export let id: string = crypto.randomUUID().split('-').slice(0, 1).join('')
   export let src: string
@@ -499,6 +494,10 @@
     })
     webview.addEventListener('did-stop-loading', () => isLoading.set(false))
     webview.addEventListener('did-fail-load', (e: Electron.DidFailLoadEvent) => {
+      if (!e.isMainFrame) {
+        return
+      }
+
       log.debug('Failed to load', e.errorCode, e.errorDescription, e.validatedURL)
       error.set({ code: e.errorCode, description: e.errorDescription, url: e.validatedURL })
     })
