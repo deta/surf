@@ -1772,8 +1772,10 @@
 
   const handleAnnotationSidebarReload = () => {
     log.debug('Annotation sidebar reload')
-    if ($activeBrowserTab) {
-      $activeBrowserTab.reload()
+
+    // TODO: implement IPC to update the annotation inline instead of reloading the page
+    if ($activeTab.type === 'page' && $activeTab?.currentDetectedApp?.appId !== 'youtube') {
+      $activeBrowserTab?.reload()
     }
   }
 

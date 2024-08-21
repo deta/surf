@@ -37,6 +37,10 @@
   let editorFocused = false
   let editor: Editor
 
+  $: sortedAnnotations = annotations.sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
+
   $: if (resourceId) {
     loadAnnotations(resourceId, true)
   }
@@ -98,8 +102,11 @@
     )
   }
 
-  const handleAnnotationUpdate = async () => {
-    dispatch('reload')
+  const handleAnnotationUpdate = async (e: CustomEvent<ResourceDataAnnotation>) => {
+    // check if inline anchor is present
+    if (e.detail.anchor) {
+      dispatch('reload')
+    }
   }
 
   const handleNotesSubmit = () => {
@@ -133,10 +140,10 @@
   </div> -->
 
   <div class="content">
-    {#if annotations.length > 0}
+    {#if sortedAnnotations.length > 0}
       <!-- The key block is needed to force a re-render when the annotation data changes as it is not reactive because of the data being stored as a file under the hood -->
       {#key loadingAnnotations}
-        {#each annotations as annotation (annotation.id)}
+        {#each sortedAnnotations as annotation (annotation.id)}
           <AnnotationItem
             resource={annotation}
             active={annotation.id === activeAnnotation}

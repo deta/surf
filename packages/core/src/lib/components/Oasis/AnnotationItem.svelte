@@ -30,7 +30,7 @@
   const dispatch = createEventDispatcher<{
     scrollTo: WebViewEventAnnotation
     delete: string
-    update: void
+    update: ResourceDataAnnotation
   }>()
   const toast = useToasts()
 
@@ -90,7 +90,7 @@
       }
     })
 
-    dispatch('update')
+    dispatch('update', annotation!)
 
     didSaveContent = true
     setTimeout(() => {
