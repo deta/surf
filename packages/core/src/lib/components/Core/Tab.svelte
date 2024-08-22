@@ -241,9 +241,7 @@
   flex items-center {pinned
     ? 'p-1 rounded-lg'
     : horizontalTabs
-      ? isActive
-        ? 'py-1.5 px-2.5 rounded-xl'
-        : 'py-1.5 px-1.5 rounded-xl'
+      ? 'py-1.5 px-2.5 rounded-xl'
       : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
   class:opacity-75={hibernated}
   class:bg-green-200={isActive && $inputUrl === 'surf.featurebase.app'}
