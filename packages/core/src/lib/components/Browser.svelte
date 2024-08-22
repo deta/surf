@@ -4882,7 +4882,7 @@
     background-repeat: no-repeat;
     background-position: center center;
     background-size: 86%;
-    background-image: url('../../../../../core/public/assets/ai.png');
+    background-image: url('../../../public/assets/ai.png');
     z-index: 10;
     &:before {
       content: '';
