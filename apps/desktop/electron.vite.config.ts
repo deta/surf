@@ -42,16 +42,6 @@ export default defineConfig({
         input: {
           horizon: resolve(__dirname, 'src/preload/horizon.ts'),
           webview: resolve(__dirname, 'src/preload/webview.ts')
-        },
-        output: {
-          // This is needed to prevent rollup from creating a separate chunk for the webview.ts file
-          manualChunks(id) {
-            if (id.includes('webview.ts')) {
-              return 'webview'
-            }
-
-            return
-          }
         }
       }
     }

@@ -1,4 +1,3 @@
-import { useLogScope } from '@horizon/utils'
 import { clipboard, contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import {
@@ -19,7 +18,6 @@ import { ElectronAppInfo } from '@horizon/types'
 import type { HorizonAction, EditablePrompt, UserSettings } from '@horizon/types'
 import { getUserConfig } from '../main/config'
 
-const log = useLogScope('Horizon Preload')
 const isDev = import.meta.env.DEV
 
 const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
@@ -73,7 +71,6 @@ const api = {
   restartApp: () => ipcRenderer.invoke('restart-app'),
   toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
   updateTrafficLightsVisibility: (visible: boolean) => {
-    log.debug('updateTrafficLightsVisibility', visible)
     ipcRenderer.invoke('update-traffic-lights', { visible })
   },
   handleGoogleSignIn: async (url: string): Promise<string | undefined> => {
@@ -118,7 +115,6 @@ const api = {
 
   fetchHTMLFromRemoteURL: async (url: string, opts?: RequestInit) => {
     try {
-      log.debug('fetching', url, opts)
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -168,8 +164,6 @@ const api = {
         messages.push({ role: 'user', content: prompt })
       })
     }
-
-    log.debug('calling AI with messages', messages)
 
     const chatCompletion = await openai.chat.completions.create({
       messages: messages,
@@ -223,11 +217,10 @@ const api = {
         tools: actionsToRunnableTools(actions)
       })
       .on('message', (message) => {
-        log.debug(message)
+        console.log(message)
       })
 
     const finalMessage = await runner.finalContent()
-    log.debug('Final message:', finalMessage)
     return finalMessage
   },
 
@@ -415,7 +408,7 @@ const api = {
     try {
       clipboard.writeText(content)
     } catch (err) {
-      log.error('Failed to copy: ', err)
+      console.error('Failed to copy: ', err)
     }
   },
 
@@ -699,7 +692,7 @@ if (process.contextIsolated) {
       resources
     })
   } catch (error) {
-    log.error(error)
+    console.error(error)
   }
 } else {
   // @ts-ignore (define in dts)
