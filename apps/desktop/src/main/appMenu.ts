@@ -218,8 +218,12 @@ const template = [
   {
     label: 'Help',
     submenu: [
-      { label: 'Open Cheat Sheet', click: () => ipcSenders.openCheatSheet() },
-      { label: 'Give Feedback', click: () => ipcSenders.openFeedbackPage() }
+      { label: 'Open Cheat Sheet', click: () => ipcSenders.openCheatSheet(), accelerator: 'F1' },
+      {
+        label: 'Give Feedback',
+        click: () => ipcSenders.openFeedbackPage(),
+        accelerator: 'CmdOrCtrl+Shift+H'
+      }
       // { label: 'Add Demo Items', click: () => ipcSenders.addDemoItems() }
     ]
   }

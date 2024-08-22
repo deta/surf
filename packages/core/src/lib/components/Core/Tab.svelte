@@ -246,6 +246,8 @@
         : 'py-1.5 px-1.5 rounded-xl'
       : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
   class:opacity-75={hibernated}
+  class:bg-green-200={isActive && $inputUrl === 'surf.featurebase.app'}
+  class:bg-sky-200={isActive && $inputUrl !== 'surf.featurebase.app'}
   class:pinned
   style={tabSize
     ? `width: ${tabSize}px; min-width: ${
@@ -414,7 +416,7 @@
             on:click={handleCreateLiveSpace}
             class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
             use:tooltip={{
-                content: `Create ${tab.title.slice(0, 5)}${tab.title.length>5 ? '...' : ''}  Space`,
+              content: `Create ${tab.title.slice(0, 5)}${tab.title.length > 5 ? '...' : ''}  Space`,
               action: 'hover',
               position: 'left',
               animation: 'fade',

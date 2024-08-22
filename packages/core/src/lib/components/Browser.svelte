@@ -2208,6 +2208,16 @@
     })
 
     // @ts-expect-error
+    window.api.onOpenFeedbackPage(() => {
+      openFeedback()
+    })
+
+    // @ts-expect-error
+    window.api.onOpenCheatSheet(() => {
+      openCheatSheet()
+    })
+
+    // @ts-expect-error
     window.api.onOpenOasis(() => {
       if ($showNewTabOverlay === 2) {
         $showNewTabOverlay = 0
@@ -2454,6 +2464,16 @@
       showSplashScreen.set(false)
     }
   })
+
+  const openFeedback = () => {
+    const url = 'https://surf.featurebase.app/'
+    window.open(url, '_blank')
+  }
+
+  const openCheatSheet = () => {
+    const url = 'https://deta.notion.site/Surf-v0-0-1-e9c49ddf02a8476fb3c53b7efdc7e0fd'
+    window.open(url, '_blank')
+  }
 
   const turnMagicTabsIntoUnpinned = async () => {
     const magicTabsArray = get(magicTabs)
