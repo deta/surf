@@ -47,63 +47,65 @@ export async function createDemoItems(
   createSpaceTab: any,
   resourceManager: ResourceManager
 ) {
-  for (const demoSpace of demoSpaces) {
-    const space = await oasis.createSpace({
-      folderName: demoSpace.name,
-      showInSidebar: true,
-      colors: ['#FFD700', '#FF8C00'],
-      sources: [],
-      sortBy: 'created_at',
-      liveModeEnabled: false
-    })
+  // for (const demoSpace of demoSpaces) {
+  //   const space = await oasis.createSpace({
+  //     folderName: demoSpace.name,
+  //     showInSidebar: true,
+  //     colors: ['#FFD700', '#FF8C00'],
+  //     sources: [],
+  //     sortBy: 'created_at',
+  //     liveModeEnabled: false,
+  //     sql_query: undefined,
+  //     embedding_query: undefined
+  //   })
 
-    if (demoSpace.urls) {
-      const urls = demoSpace.urls
+  //   if (demoSpace.urls) {
+  //     const urls = demoSpace.urls
 
-      const resources = await Promise.all(
-        urls.map(async (url) => {
-          const { resource } = await extractAndCreateWebResource(
-            resourceManager,
-            url,
-            {
-              sourceURI: url
-            },
-            [ResourceTag.canonicalURL(url)]
-          )
-          return resource.id
-        })
-      )
+  //     const resources = await Promise.all(
+  //       urls.map(async (url) => {
+  //         const { resource } = await extractAndCreateWebResource(
+  //           resourceManager,
+  //           url,
+  //           {
+  //             sourceURI: url
+  //           },
+  //           [ResourceTag.canonicalURL(url)]
+  //         )
+  //         return resource.id
+  //       })
+  //     )
 
-      oasis.addResourcesToSpace(space.id, resources)
-    }
+  //     oasis.addResourcesToSpace(space.id, resources)
+  //   }
 
-    createSpaceTab(space, false)
-  }
+  //   createSpaceTab(space, false)
+  // }
 
-  for (const space of liveSpaces) {
-    const liveSpace = await oasis.createSpace({
-      folderName: space.name,
-      showInSidebar: space.active,
-      colors: ['#FFD700', '#FF8C00'],
-      sources: [
-        {
-          id: '1',
-          name: space.name,
-          type: 'rss',
-          url: space.rss,
-          last_fetched_at: null
-        }
-      ],
-      sortBy: 'source_published_at',
-      liveModeEnabled: true
-    })
+  // for (const space of liveSpaces) {
+  //   const liveSpace = await oasis.createSpace({
+  //     folderName: space.name,
+  //     showInSidebar: space.active,
+  //     colors: ['#FFD700', '#FF8C00'],
+  //     sources: [
+  //       {
+  //         id: '1',
+  //         name: space.name,
+  //         type: 'rss',
+  //         url: space.rss,
+  //         last_fetched_at: null
+  //       }
+  //     ],
+  //     sortBy: 'source_published_at',
+  //     liveModeEnabled: true
+  //   })
 
-    if (space.active) {
-      createSpaceTab(liveSpace, false)
-    }
-  }
+  //   if (space.active) {
+  //     createSpaceTab(liveSpace, false)
+  //   }
+  // }
 
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+  // await new Promise((resolve) => setTimeout(resolve, 1000))
 
   demoPages.forEach((page) => {
     createTab(factoryData.tabPage(page.id, page.url, page.pinned ?? false), {

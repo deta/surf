@@ -77,7 +77,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 9999;
+    z-index: 10000000000;
     background: white;
     display: flex;
     justify-content: center;
