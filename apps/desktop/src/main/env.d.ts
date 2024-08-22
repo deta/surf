@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly M_VITE_PRODUCT_NAME?: string
   readonly M_VITE_USE_TMP_DATA_DIR?: string
   readonly M_VITE_DISABLE_AUTO_UPDATE?: string
+  readonly M_VITE_CREATE_SETUP_WINDOW?: string
 }
 
 interface ImportMeta {

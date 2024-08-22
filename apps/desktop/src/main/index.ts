@@ -28,7 +28,8 @@ const config = {
   appVersion: import.meta.env.M_VITE_APP_VERSION,
   useTmpDataDir: import.meta.env.M_VITE_USE_TMP_DATA_DIR === 'true',
   disableAutoUpdate: import.meta.env.M_VITE_DISABLE_AUTO_UPDATE === 'true',
-  embeddingModelMode: import.meta.env.M_VITE_EMBEDDING_MODEL_MODE || 'default'
+  embeddingModelMode: import.meta.env.M_VITE_EMBEDDING_MODEL_MODE || 'default',
+  forceSetupWindow: import.meta.env.M_VITE_CREATE_SETUP_WINDOW === 'true'
 }
 
 let userDataPath = join(dirname(app.getPath('userData')), config.appName)
@@ -127,7 +128,9 @@ if (!gotTheLock) {
 
     setAppMenu()
     createWindow()
-    // createSetupWindow() for dev on setup window only
+    if (config.forceSetupWindow) {
+      createSetupWindow()
+    }
 
     const appPath = app.getAppPath() + (isDev ? '' : '.unpacked')
     const userDataPath = app.getPath('userData')

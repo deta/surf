@@ -20,8 +20,8 @@
   const languageConfig = {
     english_small: 'English',
     english_large: 'English XL',
-    multilingual_small: 'Polyglot',
-    multilingual_large: 'Polyglot XL'
+    multilingual_small: 'Multi-language',
+    multilingual_large: 'Multi-language XL'
   }
 
   const handleSubmit = async () => {
@@ -37,7 +37,6 @@
         error = 'Invalid invite code.'
         return
       }
-
       view = 'disclaimer'
     } catch (e) {
       console.error(e)
@@ -165,17 +164,17 @@
               stroke-linecap="round"
               stroke-linejoin="round"
               ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
-                d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"
+                d="M10.585 10.587a2 2 0 0 0 2.829 2.828"
               /><path
-                d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"
-              /></svg
+                d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87"
+              /><path d="M3 3l18 18" /></svg
             >
-            <h2>What is included</h2>
+            <h2>What is not included</h2>
           </div>
           <p>
-            We track your interactions with app features, like activating a tab or opening the
-            sidebar. We also distinguish between the kinds of data you save, like an image vs.
-            YouTube video.
+            The urls you visit and the contents of the data you store are in Surf are <i
+              ><b>not</b></i
+            > part of our Telemetry. We do not track what is in the websites, images, or videos you save.
           </p>
         </div>
         <div class="box">
@@ -191,17 +190,17 @@
               stroke-linecap="round"
               stroke-linejoin="round"
               ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
-                d="M10.585 10.587a2 2 0 0 0 2.829 2.828"
+                d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"
               /><path
-                d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87"
-              /><path d="M3 3l18 18" /></svg
+                d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"
+              /></svg
             >
-            <h2>What is not</h2>
+            <h2>What is</h2>
           </div>
           <p>
-            The urls you visit and the contents of the data you store are in Surf are <i
-              ><b>not</b></i
-            > part of our Telemetry. We do not track what is in the websites, images, or videos you save.
+            We track your interactions with app features, like activating a tab or opening the
+            sidebar. We also distinguish between the kinds of data you save, like an image vs.
+            YouTube video.
           </p>
         </div>
         <div class="actions">
@@ -266,7 +265,7 @@
             <p class="info text-md">
               We recommend <strong>English</strong> if you primarily interact with English content.
               If you regularly interact with content in another language, select a
-              <strong>Multi-lingual</strong> option.
+              <strong>Multi-language</strong> option.
             </p>
             <p class="info text-md">
               <strong>XL</strong> options understand language better, but are slower and use more of
@@ -292,7 +291,7 @@
                 value="multilingual_small"
                 bind:group={embeddingModel}
               />
-              <label for="multilingual_small"><span>Multi-lingual</span></label>
+              <label for="multilingual_small"><span>Multi-language</span></label>
             </div>
             <div class="radio-wrapper">
               <input
@@ -313,7 +312,7 @@
                 bind:group={embeddingModel}
               />
               <label for="multilingual_large">
-                <span>Multi-lingual XL</span>
+                <span>Multi-language XL</span>
               </label>
             </div>
           </div>
