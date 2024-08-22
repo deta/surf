@@ -343,6 +343,7 @@ impl Worker {
     }
 }
 
+#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
 pub fn handle_misc_message(
     worker: &mut Worker,
     channel: &mut Channel,

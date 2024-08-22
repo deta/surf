@@ -6,19 +6,25 @@ use neon::prelude::{JsFunction, Root};
 
 pub enum TunnelOneshot {
     Javascript(neon::types::Deferred),
-    Rust(std::sync::mpsc::Sender<BackendResult<String>>),
+    Rust(crossbeam_channel::Sender<BackendResult<String>>),
 }
-pub struct TunnelMessage(pub WorkerMessage, pub Option<TunnelOneshot>);
+pub struct TunnelMessage(
+    pub WorkerMessage,
+    pub Option<TunnelOneshot>,
+    // pub tracing::Span,
+);
 
 #[derive(Debug)]
 pub enum ProcessorMessage {
     ProcessResource(CompositeResource),
 }
 
+#[derive(Debug)]
 pub enum AIMessage {
     DescribeImage(CompositeResource),
 }
 
+#[derive(Debug)]
 pub enum WorkerMessage {
     CardMessage(CardMessage),
     HistoryMessage(HistoryMessage),
@@ -30,6 +36,7 @@ pub enum WorkerMessage {
     UserdataMessage(UserdataMessage),
 }
 
+#[derive(Debug)]
 pub enum CardMessage {
     CreateCard(Card),
     GetCard(String),
@@ -42,6 +49,7 @@ pub enum CardMessage {
     ListCardsbyResourceID(String),
 }
 
+#[derive(Debug)]
 pub enum HistoryMessage {
     CreateHistoryEntry(HistoryEntry),
     GetAllHistoryEntries,
@@ -50,6 +58,7 @@ pub enum HistoryMessage {
     UpdateHistoryEntry(HistoryEntry),
 }
 
+#[derive(Debug)]
 pub enum HorizonMessage {
     CreateHorizon(String),
     ListHorizons,
@@ -57,11 +66,13 @@ pub enum HorizonMessage {
     RemoveHorizon(String),
 }
 
+#[derive(Debug)]
 pub struct CreateSpaceEntryInput {
     pub resource_id: String,
     pub manually_added: bool,
 }
 
+#[derive(Debug)]
 pub enum SpaceMessage {
     CreateSpace {
         name: String,
@@ -84,6 +95,7 @@ pub enum SpaceMessage {
     DeleteSpaceEntries(Vec<String>),
 }
 
+#[derive(Debug)]
 pub enum ResourceMessage {
     CreateResource {
         resource_type: String,
@@ -126,6 +138,7 @@ pub enum ResourceMessage {
     PostProcessJob(String),
 }
 
+#[derive(Debug)]
 pub enum ResourceTagMessage {
     CreateResourceTag(ResourceTag),
     RemoveResourceTag(String),
@@ -136,12 +149,14 @@ pub enum ResourceTagMessage {
     UpdateResourceTag(ResourceTag),
 }
 
+#[derive(Debug)]
 pub enum UserdataMessage {
     CreateUserdata(String),
     GetUserdataByUserId(String),
     RemoveUserdata(String),
 }
 
+#[derive(Debug)]
 pub enum MiscMessage {
     ChatQuery {
         callback: Root<JsFunction>,

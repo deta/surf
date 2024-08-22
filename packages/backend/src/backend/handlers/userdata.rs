@@ -33,6 +33,7 @@ impl Worker {
     }
 }
 
+#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
 pub fn handle_userdata_message(
     worker: &mut Worker,
     channel: &mut Channel,

@@ -27,6 +27,7 @@ if (process.platform === 'linux') {
 }
 process.env.TESSDATA_PREFIX = path.resolve(__dirname, '..', 'resources', 'tessdata')
 process.env.M_VITE_PRODUCT_NAME = 'Surf-dev'
+process.env.RUST_LOG = 'none,backend=TRACE'
 
 const extraArgsIndex = process.argv.indexOf('--')
 const extraArgs = extraArgsIndex !== -1 ? process.argv.slice(extraArgsIndex + 1) : []

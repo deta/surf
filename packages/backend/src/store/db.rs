@@ -83,8 +83,16 @@ pub struct VectorSearchResult {
 
 impl Database {
     pub fn new(db_path: &str, run_migrations: bool) -> BackendResult<Database> {
-        // Connection::open already handles creating the file if it doesn't exist
         let mut conn = Connection::open(db_path)?;
+
+        let journal_mode: String = conn
+            .query_row("PRAGMA journal_mode = WAL;", [], |row| row.get(0))
+            .map_err(BackendError::DatabaseError)?;
+        if journal_mode.to_lowercase() != "wal" {
+            return Err(BackendError::GenericError(
+                "failed to enable WAL mode".into(),
+            ));
+        }
 
         if run_migrations {
             let init_schema = Migrations::get("init.sql")

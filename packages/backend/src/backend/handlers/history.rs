@@ -31,6 +31,7 @@ impl Worker {
     }
 }
 
+#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
 pub fn handle_history_message(
     worker: &mut Worker,
     channel: &mut Channel,

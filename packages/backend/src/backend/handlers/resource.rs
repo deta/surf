@@ -552,6 +552,7 @@ impl Worker {
     }
 }
 
+#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
 pub fn handle_resource_tag_message(
     worker: &mut Worker,
     channel: &mut Channel,
@@ -579,6 +580,7 @@ pub fn handle_resource_tag_message(
     }
 }
 
+#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
 pub fn handle_resource_message(
     worker: &mut Worker,
     channel: &mut Channel,

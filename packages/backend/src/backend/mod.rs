@@ -8,6 +8,7 @@ pub mod worker;
 
 use crate::backend::message::{MiscMessage, WorkerMessage};
 use neon::prelude::*;
+use tracing_subscriber::fmt::format::FmtSpan;
 
 const _MODULE_PREFIX: &'static str = "backend";
 
@@ -18,6 +19,17 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
 }
 
 fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunnel>> {
+    tracing_subscriber::fmt()
+        .compact()
+        .with_target(false)
+        .with_line_number(true)
+        .with_thread_names(true)
+        .with_span_events(FmtSpan::CLOSE | FmtSpan::ENTER)
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .try_init()
+        .map_err(|err| eprintln!("failed to init tracing: {:?}", err))
+        .ok();
+
     let backend_root_path = cx.argument::<JsString>(0)?.value(&mut cx);
     let app_path = cx.argument::<JsString>(1)?.value(&mut cx);
     let vision_api_key = cx.argument::<JsString>(2)?.value(&mut cx);
@@ -38,6 +50,7 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
         language_setting,
     );
 
+    tracing::info!("rust<->node tunnel bridge initialized");
     Ok(cx.boxed(tunnel))
 }
 

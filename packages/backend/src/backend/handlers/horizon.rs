@@ -51,6 +51,7 @@ impl Worker {
     }
 }
 
+#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
 pub fn handle_horizon_message(
     worker: &mut Worker,
     channel: &mut Channel,

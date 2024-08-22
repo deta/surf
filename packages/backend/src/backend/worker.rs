@@ -9,7 +9,7 @@ use crate::{
 use crossbeam_channel as crossbeam;
 use neon::prelude::*;
 use serde::Serialize;
-use std::{path::Path, sync::mpsc};
+use std::path::Path;
 
 pub struct Worker {
     pub db: Database,
@@ -75,7 +75,7 @@ impl Worker {
 }
 
 pub fn worker_thread_entry_point(
-    worker_rx: mpsc::Receiver<TunnelMessage>,
+    worker_rx: crossbeam::Receiver<TunnelMessage>,
     tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     aiqueue_tx: crossbeam::Sender<AIMessage>,
     mut channel: Channel,

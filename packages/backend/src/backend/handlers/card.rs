@@ -154,6 +154,7 @@ impl Worker {
     }
 }
 
+#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
 pub fn handle_card_message(
     worker: &mut Worker,
     channel: &mut Channel,

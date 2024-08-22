@@ -35,6 +35,8 @@ html-escape = "0.2.13"
 ocrs = "0.8.0"
 rten = "0.10.0"
 image = "0.25.2"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
 [dependencies.neon]
 version = "1.0.0-alpha.4"
