@@ -23,11 +23,11 @@ export function createWindow() {
   const currentDisplay =
     winState.state.x && winState.state.y
       ? screen.getDisplayMatching({
-          x: winState.state.x,
-          y: winState.state.y,
-          width: winState.state.width,
-          height: winState.state.height
-        })
+        x: winState.state.x,
+        y: winState.state.y,
+        width: winState.state.width,
+        height: winState.state.height
+      })
       : screen.getPrimaryDisplay()
   const screenBounds = currentDisplay.bounds
 
@@ -66,7 +66,7 @@ export function createWindow() {
     fullscreenable: true,
     show: false,
     autoHideMenuBar: true,
-    frame: !(process.platform === 'darwin'),
+    frame: process.platform === 'darwin' ? false : true,
     titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
     // ...(process.platform === 'linux' ? { icon } : {}),
     trafficLightPosition: { x: 12.5, y: 12.5 },
@@ -77,9 +77,11 @@ export function createWindow() {
         `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
         `--tabSwitchingShortcutsDisable=${process.env.TAB_SWITCHING_SHORTCUTS_DISABLE}`
       ],
-      sandbox: false,
-      session: session.fromPartition('persist:surf-app-session'),
       webviewTag: true,
+      sandbox: false,
+      nodeIntegration: false,
+      contextIsolation: true,
+      session: session.fromPartition('persist:surf-app-session'),
       defaultFontSize: 14
     }
   })

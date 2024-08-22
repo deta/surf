@@ -63,7 +63,8 @@ function electronBuilderConfig() {
       artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
     },
     linux: {
-      target: ['AppImage', 'tar.gz'],
+      // target: ['AppImage', 'tar.gz'],
+      target: ['AppImage'],
       maintainer: 'deta.surf',
       artifactName: `${params.buildName}.\${arch}.\${ext}`,
       category: 'WebBrowser'
