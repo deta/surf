@@ -245,6 +245,7 @@ export class SFFS {
       id,
       opts?.includeAnnotations ?? false
     )
+
     const composite = this.parseData<SFFSRawCompositeResource>(dataString)
     if (!composite) {
       return null

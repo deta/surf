@@ -4,7 +4,6 @@
   import '../../output.css'
   import '../../../../../packages/core/src/output.css'
   import browserBackground from './assets/bg.webp'
-
 </script>
 
 <div class="main relative">

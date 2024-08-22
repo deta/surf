@@ -255,3 +255,147 @@ export class RedBlackTree {
     x.color = 'black'
   }
 }
+
+export class MasonryGrid {
+  container: HTMLElement
+  columnCount: number
+  gapPercentage: number
+  columnWidth: number
+  items: Item[]
+  isEverythingSpace: boolean
+  minHeight: number
+  maxHeight: number
+  tree: RedBlackTree
+  columnNodes: any[]
+  horizontalPadding: number
+
+  constructor(container: HTMLElement, isEverythingSpace: boolean = false) {
+    this.container = container
+    this.items = []
+    this.minHeight = 50
+    this.maxHeight = 450
+    this.tree = new RedBlackTree()
+    this.columnNodes = []
+    this.isEverythingSpace = isEverythingSpace
+    this.horizontalPadding = 28 // 20px horizontal padding
+
+    this.columnCount = this.getColumnCount()
+    this.gapPercentage = 1 // 2% gap (1% on each side)
+    this.columnWidth =
+      (100 -
+        this.gapPercentage * (this.columnCount - 1) -
+        ((2 * this.horizontalPadding) / this.container.offsetWidth) * 100) /
+      this.columnCount
+
+    this.initializeColumns()
+
+    // Bind the method to ensure 'this' context is correct
+    this.handleResize = this.handleResize.bind(this)
+  }
+
+  getColumnCount(): number {
+    const width = window.innerWidth
+    if (width < 800) return 1
+    if (width < 1100) return 2
+    if (width < 1400) return 3
+    if (width < 2000) return 4
+    return 5
+  }
+
+  initializeColumns() {
+    this.tree = new RedBlackTree()
+    this.columnNodes = []
+    for (let i = 0; i < this.columnCount; i++) {
+      this.columnNodes.push(this.tree.insert(i, 0))
+    }
+  }
+
+  reinitializeGrid(items: Item[], skipSort: boolean = false): Item[] {
+    this.initializeColumns()
+
+    if (!skipSort) {
+      items.sort((a, b) => parseInt(a.style?.top || '0') - parseInt(b.style?.top || '0'))
+    }
+
+    items.forEach((item) => {
+      const height = item.dom?.classList.contains('space')
+        ? item.dom.offsetHeight
+        : parseInt(item.style?.height || '0')
+
+      const shortestColumn = this.tree.findMin()
+      const columnIndex = shortestColumn.column
+      const left =
+        columnIndex * (this.columnWidth + this.gapPercentage) +
+        (this.horizontalPadding / this.container.offsetWidth) * 100
+      const top = shortestColumn.height
+
+      const PADDING_TOP = this.isEverythingSpace ? 100 : 20
+
+      const itemStyle = {
+        left: `${left}%`,
+        top: `${top + PADDING_TOP}px`,
+        height: `${height}px`,
+        width: `${this.columnWidth}%`
+      }
+
+      item.style = itemStyle
+
+      const newHeight = top + height + 44
+      const updatedNode = this.tree.updateHeight(shortestColumn, newHeight)
+      if (updatedNode) {
+        this.columnNodes[columnIndex] = updatedNode
+      }
+
+      if (item.dom) {
+        item.dom.style.visibility = 'visible'
+      }
+    })
+
+    return items
+  }
+
+  addItem(item: Item): Item | null {
+    const height = this.getRandomHeight()
+    const shortestColumn = this.tree.findMin()
+    if (!shortestColumn) return null
+    const columnIndex = shortestColumn.column
+    const left =
+      columnIndex * (this.columnWidth + this.gapPercentage) +
+      (this.horizontalPadding / this.container.offsetWidth) * 100
+    const top = shortestColumn.height
+
+    const itemStyle = {
+      left: `${left}%`,
+      top: `${top}px`,
+      height: `${height}px`,
+      width: `${this.columnWidth}%`,
+      background: 'blue'
+    }
+
+    const newHeight = top + height + 10 // 10px vertical gap
+    const updatedNode = this.tree.updateHeight(shortestColumn, newHeight)
+    if (updatedNode) {
+      this.columnNodes[columnIndex] = updatedNode
+    }
+
+    return { ...item, style: itemStyle, dom: null }
+  }
+
+  handleResize() {
+    const newColumnCount = this.getColumnCount()
+    if (newColumnCount !== this.columnCount) {
+      this.columnCount = newColumnCount
+      this.columnWidth =
+        (100 -
+          this.gapPercentage * (this.columnCount - 1) -
+          ((2 * this.horizontalPadding) / this.container.offsetWidth) * 100) /
+        this.columnCount
+      this.initializeColumns()
+      this.reinitializeGrid(this.items)
+    }
+  }
+
+  getRandomHeight(): number {
+    return Math.floor(Math.random() * (this.maxHeight - this.minHeight + 1)) + this.minHeight + 200
+  }
+}

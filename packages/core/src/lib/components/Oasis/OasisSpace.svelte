@@ -1544,6 +1544,7 @@
         on:load={handleLoadResource}
         on:new-tab
         on:create-tab-from-space
+        {searchValue}
       />
 
       {#if $loadingContents}
@@ -1563,6 +1564,7 @@
         on:open-space-as-tab
         on:new-tab
         isEverythingSpace={false}
+        {searchValue}
       />
 
       {#if $loadingContents}

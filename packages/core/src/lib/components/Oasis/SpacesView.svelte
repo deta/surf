@@ -6,8 +6,6 @@
   import Folder from './Folder.svelte'
   import { Icon } from '@horizon/icons'
   import { useOasis } from '../../service/oasis'
-  import emblaCarouselSvelte from 'embla-carousel-svelte'
-  import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures'
   import { fly } from 'svelte/transition'
 
   import { useToasts } from '../../service/toast'
@@ -23,8 +21,6 @@
   import type { ResourceManager } from '../../service/resources'
   import { RefreshSpaceEventTrigger } from '@horizon/types'
 
-  let folderRef: any
-
   const log = useLogScope('SpacesView')
   const oasis = useOasis()
   const toast = useToasts()
@@ -34,6 +30,8 @@
     'space-selected': { id: string; canGoBack: boolean }
     'open-creation-modal': void
   }>()
+
+  let sidebarElement: HTMLElement
 
   export let spaces: Writable<Space[]>
   export let interactive = true
@@ -52,6 +50,8 @@
     userPrompt?: string
   ) => {
     try {
+      const toasty = toast.loading('Creating Space...')
+
       const newSpace = await oasis.createSpace({
         folderName: name ? name : 'New Space',
         colors: ['#FFBA76', '#FB8E4E'],
@@ -80,6 +80,8 @@
 
       await telemetry.trackCreateSpace(CreateSpaceEventFrom.OasisSpacesView)
 
+      toasty.success('Folder created!')
+
       return newSpace.id
     } catch (error) {
       log.error('Failed to create folder:', error)
@@ -93,6 +95,7 @@
     colors?: [string, string]
   ) => {
     try {
+      const toasty = toast.loading('Creating Space with AI...')
       log.debug('Creating folder with AI', userPrompt)
 
       const response = await resourceManager.getResourcesViaPrompt(userPrompt)
@@ -131,7 +134,9 @@
         }
       )
 
-      toast.success('Folder created with AI!')
+      resourceIds.length === 0
+        ? toasty.info('No resources found for your description.')
+        : toasty.success('Folder created with AI!')
     } catch (err) {
       log.error('Failed to create folder with AI', err)
     } finally {
@@ -206,38 +211,15 @@
     }
   }
 
+  const handleWheel = (event: WheelEvent) => {
+    if (sidebarElement) {
+      event.preventDefault()
+      sidebarElement.scrollLeft += event.deltaY
+    }
+  }
+
   const handleShowCreationModal = () => {
     dispatch('open-creation-modal')
-  }
-
-  let embla: HTMLElement
-
-  let showBrowserHomescreen: boolean = true
-
-  let emblaCanScrollLeft = writable(false)
-  let emblaCanScrollRight = writable(true)
-
-  let emblaApi: any
-  let options = { loop: false, dragFree: true }
-  let plugins = [WheelGesturesPlugin({ forceWheelAxis: 'x' })]
-
-  function onInit(event: any) {
-    emblaApi = event.detail
-    emblaApi.slideNodes()
-    emblaApi.on('scroll', isScrolled)
-  }
-
-  function isScrolled(e: any) {
-    emblaCanScrollLeft.set(e.canScrollPrev())
-    emblaCanScrollRight.set(e.canScrollNext())
-  }
-
-  function handleNext() {
-    emblaApi.scrollNext()
-  }
-
-  function handlePrevious() {
-    emblaApi.scrollPrev()
   }
 
   onMount(() => {
@@ -251,56 +233,27 @@
   )
 </script>
 
-<div class="folders-sidebar">
-  <div
-    class="embla"
-    use:emblaCarouselSvelte={{ options, plugins }}
-    on:emblaInit={onInit}
-    class:scrolled={$emblaCanScrollLeft}
-    bind:this={embla}
-  >
-    <div class="embla__container">
-      <button class="action-new-space" on:click={handleShowCreationModal}>
-        <Icon name="plus" />
-        <span class="new-space-text">New Space</span>
-      </button>
-      {#each $filteredSpaces as folder (folder.id)}
-        {#key folder.id}
-          <div class="embla__slide">
-            <Folder
-              {folder}
-              on:select={() => handleSpaceSelect(folder.id)}
-              on:space-selected={() => handleSpaceSelect(folder.id)}
-              on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
-              on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
-              on:open-resource
-              selected={$selectedSpace === folder.id}
-              {showPreview}
-            />
-          </div>
-        {/key}
-      {/each}
-    </div>
-    {#if $emblaCanScrollLeft}
-      <button
-        class="embla__prev"
-        on:click={handlePrevious}
-        in:fly={{ x: 10, duration: 160 }}
-        out:fly={{ x: 10, duration: 160 }}
-      >
-        <Icon name="chevron.left" color="red" />
-      </button>
-    {/if}
-    {#if $emblaCanScrollRight}
-      <button
-        class="embla__next"
-        on:click={handleNext}
-        in:fly={{ x: -10, duration: 160 }}
-        out:fly={{ x: -10, duration: 160 }}
-      >
-        <Icon name="chevron.right" />
-      </button>
-    {/if}
+<div class="folders-sidebar p-2 pl-12" bind:this={sidebarElement} on:wheel|passive={handleWheel}>
+  <button class="action-new-space" on:click={handleShowCreationModal}>
+    <span class="new-space-text">New Space</span>
+  </button>
+  <div class="folders-wrapper">
+    {#each $filteredSpaces as folder (folder.id)}
+      {#key folder.id}
+        <div class="folder-wrapper">
+          <Folder
+            {folder}
+            on:select={() => handleSpaceSelect(folder.id)}
+            on:space-selected={() => handleSpaceSelect(folder.id)}
+            on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
+            on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+            on:open-resource
+            selected={$selectedSpace === folder.id}
+            {showPreview}
+          />
+        </div>
+      {/key}
+    {/each}
   </div>
 </div>
 
@@ -308,15 +261,54 @@
   .top-bar {
     display: flex;
     justify-content: space-between;
-    padding: 1rem;
     gap: 1rem;
     width: fit-content;
   }
   .folders-sidebar {
     position: relative;
-    padding: 0 0.5rem 0.5rem 0.5rem;
-    padding-top: 0;
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 3.5rem 0.6rem 2.75rem;
+    gap: 1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
     flex: 1;
+    scrollbar-width: none;
+    scrollbar-color: transparent transparent;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(24px);
+    border-bottom: 0.5px solid var(--Grey-2, #f4f4f4);
+    box-shadow:
+      0px 2px 1px 0px #000,
+      0px 2px 1px 0px rgba(0, 0, 0, 0.01),
+      0px 1px 1px 0px rgba(0, 0, 0, 0.05),
+      0px 0px 1px 0px rgba(0, 0, 0, 0.09);
+
+    box-shadow:
+      0px 2px 1px 0px color(display-p3 0 0 0 / 0),
+      0px 2px 1px 0px color(display-p3 0 0 0 / 0.01),
+      0px 1px 1px 0px color(display-p3 0 0 0 / 0.05),
+      0px 0px 1px 0px color(display-p3 0 0 0 / 0.09);
+  }
+
+  .folders-sidebar::-webkit-scrollbar {
+    width: 6px;
+    height: 0;
+  }
+
+  .folders-sidebar::-webkit-scrollbar-thumb {
+    background-color: darkgrey;
+    border-radius: 3px;
+  }
+
+  .folders-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .folders-wrapper {
+    display: flex;
+    gap: 1rem;
+    max-height: 100%;
   }
 
   button {
@@ -342,20 +334,22 @@
   }
 
   .folder-wrapper {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 1rem;
-    width: 100%;
+    min-width: 230px;
+    flex: 0 0 auto;
   }
 
   .action-new-space {
+    width: 22rem;
     .new-space-text {
       font-size: 1.1rem;
+      line-height: 1.2;
     }
     letter-spacing: 0.01em;
     margin: 0;
-    padding: 0.75rem 1rem;
+    height: 4.65rem;
+    padding: 0.75rem 2rem;
     opacity: 0.6;
+    border: 0.5px solid rgba(0, 0, 0, 0.12);
     &:hover {
       opacity: 1;
     }
@@ -365,50 +359,5 @@
     .label {
       letter-spacing: 0.04rem;
     }
-  }
-
-  .embla-wrapper {
-    position: relative;
-  }
-
-  .embla {
-    overflow: hidden;
-    -webkit-mask-image: linear-gradient(to right, #000 98%, transparent 100%);
-    &.scrolled {
-      -webkit-mask-image: linear-gradient(to right, transparent, #000 2%, #000 98%, transparent);
-    }
-  }
-  .embla__container {
-    display: flex;
-  }
-
-  .embla__prev,
-  .embla__next {
-    top: 40%;
-    background: white;
-    border: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 2rem;
-    cursor: pointer;
-    pointer-events: all;
-    transform: translateY(-50%);
-  }
-
-  .embla__prev {
-    position: absolute;
-    left: 2rem;
-  }
-
-  .embla__slide {
-    margin-right: 20px;
-    margin-left: 10px;
-  }
-
-  .embla__next {
-    position: absolute;
-    right: 2rem;
-    z-index: 10000;
   }
 </style>

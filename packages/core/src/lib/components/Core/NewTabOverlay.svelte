@@ -27,11 +27,9 @@
 
 <script lang="ts">
   import { derived, writable } from 'svelte/store'
-  import { Motion, AnimatePresence } from 'svelte-motion'
 
   import {
     useLogScope,
-    wait,
     optimisticCheckIfURLOrIPorFile,
     parseStringIntoBrowserLocation,
     isModKeyAndKeyPressed,
@@ -42,35 +40,25 @@
   } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
-  import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import {
     Resource,
     ResourceJSON,
     ResourceManager,
-    ResourcePost,
-    ResourceTag,
-    type ResourceObject,
     type ResourceSearchResultItem
   } from '../../service/resources'
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     type HistoryEntry,
-    type ResourceDataPost,
-    type SFFSResourceTag,
-    type Space,
-    type SpaceEntry,
-    type SpaceSource
+    type Space
   } from '../../types'
   import DropWrapper from '../Oasis/DropWrapper.svelte'
 
   import {
     MEDIA_TYPES,
     createResourcesFromMediaItems,
-    processDrop,
-    type MediaParserResult,
-    type MediaParserResultURL,
-    type MediaParserResultUnknown
+    processDrop
   } from '../../service/mediaImporter'
 
   import { useToasts } from '../../service/toast'
@@ -80,25 +68,19 @@
 
   import * as Command from '../Command'
   import Fuse from 'fuse.js'
-  import { debounce, result } from 'lodash'
   import CommandMenuItem, { type CMDMenuItem } from './CommandMenuItem.svelte'
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
-  import * as Dialog from '../Dialog'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
   import SpacesView from '../Oasis/SpacesView.svelte'
   import CreateNewSpace from '../Oasis/CreateNewSpace.svelte'
-  import { spring } from 'svelte/motion'
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
-  import {
-    AddResourceToSpaceEventTrigger,
-    SaveToOasisEventTrigger,
-    SearchOasisEventTrigger
-  } from '@horizon/types'
+  import { SaveToOasisEventTrigger, SearchOasisEventTrigger } from '@horizon/types'
   export let activeTabs: Tab[] = []
+  import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
   export let showTabSearch = 0
 
-  const log = useLogScope('NEWTABOVERLAY')
+  const log = useLogScope('NewTabOverlay')
   const dispatch = createEventDispatcher<OverlayEvents>()
   const config = useConfig()
   const userConfigSettings = config.settings
@@ -123,26 +105,19 @@
   }
 
   let selectFirstCommandItem: () => void
-
-  const preSelectedItemId = writable<string | null>(null)
-
   const searchValue = writable('')
-
   const oasisSearchResults = writable<Resource[]>([])
   const googleSuggestionResults = writable<string[]>([])
   const historyEntriesResults = writable<HistoryEntry[]>([])
   const filteredCommandItems = writable<CMDMenuItem[]>([])
-
   const isFetchingOasisSearchResults = writable(false)
   const isFetchingGoogleSuggestionResults = writable(false)
   const isFetchingHistoryEntriesResults = writable(false)
   const isFilteringCommandItems = writable(false)
-
   const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
     'oasis-filter-resources',
     'all'
   )
-
   const isLoadingCommandItems = derived(
     [
       isFetchingOasisSearchResults,
@@ -164,27 +139,6 @@
       )
     }
   )
-
-  // $: commands = filteredItems.filter((item) => item.type === 'command')
-  // $: tabs = filteredItems.filter((item) => item.type === 'tab')
-  // $: history = filteredItems.filter((item) => item.type === 'history').slice(0, 5)
-  // $: resources = filteredItems.filter((item) => item.type === 'resource')
-  // $: spacesItems = filteredItems.filter((item) => item.type === 'space' && item.id !== 'all')
-  // $: suggestions = filteredItems.filter(
-  //   (item) => item.type === 'suggestion' || item.type === 'google-search'
-  // )
-  // $: navigate = filteredItems.filter((item) => item.type === 'navigate')
-  // $: other = filteredItems.filter(
-  //   (item) =>
-  //     item.type !== 'command' &&
-  //     item.type !== 'tab' &&
-  //     item.type !== 'suggestion' &&
-  //     item.type !== 'google-search' &&
-  //     item.type !== 'history' &&
-  //     item.type !== 'resource' &&
-  //     item.type !== 'space' &&
-  //     item.type !== 'navigate'
-  // )
 
   $: commandItems = [
     ...browserCommands,
@@ -213,13 +167,6 @@
           : page === 'spaces'
             ? 'Spaces'
             : undefined
-  // function handleKeyDown(e: KeyboardEvent) {
-  //   log.debug('handleKeyDown', e.key, $searchValue)
-  //   if (e.key === 'Backspace' && page && $searchValue === '') {
-  //     page = null
-  //   }
-  // }
-  //
 
   const deboundedSelectFirstCommandItem = useDebounce(() => {
     if (selectFirstCommandItem) {
@@ -291,78 +238,6 @@
       score: 0.5
     } as CMDMenuItem
   }
-  // async function updateFilteredItems() {
-  //   if (showTabSearch === 1) {
-  //     let results = []
-  //     if (page === 'oasis') {
-  //       results = oasisResources.map((resource) => resourceToItem(resource, { score: 0.4 }))
-  //     } else if ($searchValue) {
-  //       const fuseResults = fuse.search($searchValue)
-  //       results = fuseResults.map((result) => ({ ...result.item, score: result.score }))
-  //       // Add Google search option as the first item if it's not an exact match
-  //       if (!results.some((item) => item.title === $searchValue || item.url === $searchValue)) {
-  //         results.unshift({
-  //           id: `general-search-${$searchValue}`,
-  //           type: 'general-search',
-  //           label: `${$searchValue}`,
-  //           value: $searchValue,
-  //           icon: 'search',
-  //           score: 0
-  //         })
-  //       }
-  //       results.push(
-  //         ...googleSuggestions.map((suggestion) => ({
-  //           id: `google-suggestion-${suggestion}`,
-  //           type: 'suggestion',
-  //           label: suggestion,
-  //           value: suggestion,
-  //           icon: 'search',
-  //           score: 0.5
-  //         }))
-  //       )
-  //       const url = parseStringIntoBrowserLocation($searchValue)
-  //       if (url) {
-  //         const urlCommand = {
-  //           id: `open-search-url`,
-  //           type: 'navigate',
-  //           label: `Navigate to ${truncateURL(url)}`,
-  //           icon: 'world',
-  //           value: url,
-  //           score: 1
-  //         } as CMDMenuItem
-  //         results.unshift(urlCommand)
-  //       }
-  //       results = [
-  //         ...results,
-  //         ...oasisResources.map((resource) => resourceToItem(resource, { score: 0.4 }))
-  //       ]
-  //     } else if (page === 'spaces') {
-  //       results = $spaces.map((space) => spaceToItem(space, { score: 0.1 }))
-  //     } else if (page === 'tabs') {
-  //       results = activeTabs.map((tab) => tabToItem(tab, { score: 0 }))
-  //     } else if (page === 'history') {
-  //       results = historyEntries.map((entry) => historyEntryToItem(entry, { score: 0.1 }))
-  //     } else {
-  //       results = [
-  //         ...activeTabs.map((tab) => tabToItem(tab, { score: 0 })),
-  //         ...historyEntries.map((entry) => historyEntryToItem(entry, { score: 0.1 })),
-  //         ...$spaces.map((space) => spaceToItem(space, { score: 0.1 })),
-  //         ...oasisResources.map((resource) => resourceToItem(resource, { score: 0.1 })),
-  //         ...browserCommands.map((cmd) => ({ ...cmd, score: 0.2 }))
-  //       ]
-  //     }
-  //     results.sort((a, b) => (a.score || 0) - (b.score || 0))
-  //     // while (results.length < 5) {
-  //     //   results.push({
-  //     //     type: 'placeholder',
-  //     //     title: `Suggestion ${results.length + 1}`,
-  //     //     score: 1
-  //     //   })
-  //     // }
-  //     filteredItems = results.slice(0, 15)
-  //   }
-  // }
-
   // TODO: this should be a proper subscribe
   const commandFilter = derived([searchValue], ([searchValue]) => {
     if (!searchValue || showTabSearch !== 1) {
@@ -593,7 +468,6 @@
     } else if (item.type === 'general-search') {
       // check if it's a URL
       const isValidURL = optimisticCheckIfURLOrIPorFile(item.value!)
-      console.error('isValidURL', isValidURL)
       if (isValidURL) {
         dispatch('open-url', item.value!)
       } else {
@@ -654,29 +528,19 @@
   $: isEverythingSpace = spaceId === 'all'
 
   const oasis = useOasis()
-
   const toasts = useToasts()
-
   const resourceManager = oasis.resourceManager
   const telemetry = resourceManager.telemetry
   const spaces = oasis.spaces
-
-  const showChat = writable(false)
-  const resourceIds = writable<string[]>([])
-  const chatPrompt = writable('')
   const selectedItem = writable<string | null>(null)
-  const showNewResourceModal = writable(false)
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
   const showCreationModal = writable(false)
-
   const selectedSpaceId = writable<string | null>(null)
-
   const searchResults = writable<ResourceSearchResultItem[]>([])
   const everythingContents = writable<ResourceSearchResultItem[]>([])
-  const spaceContents = writable<SpaceEntry[]>([])
 
   const resourcesToShow = derived(
     [searchValue, searchResults, everythingContents],
@@ -688,8 +552,6 @@
       return everythingContents
     }
   )
-
-  $: log.debug('resourcesToShow', $resourcesToShow, $everythingContents)
 
   const isResourceDetailsModalOpen = derived(
     [showResourceDetails, resourceDetailsModalSelected],
@@ -706,7 +568,6 @@
       }
 
       loadingContents.set(true)
-      searchResults.set([])
 
       const resources = await resourceManager.listResourcesByTags(
         [
@@ -734,12 +595,6 @@
         )
 
       log.debug('Loaded everything:', items)
-
-      searchResults.set([])
-
-      everythingContents.set([])
-
-      await tick()
 
       everythingContents.set(items)
     } catch (error) {
@@ -839,6 +694,8 @@
       })
     }
 
+    await handleSearch($searchValue)
+
     await telemetry.trackDeleteResource(resource.type, !isEverythingSpace)
 
     log.debug('Resource removed:', resourceId)
@@ -851,31 +708,21 @@
   }
 
   const handleKeyDown = async (e: KeyboardEvent) => {
-    if (e.key === 'Tab') {
-      e.preventDefault()
-      showTabSearch = showTabSearch === 1 ? 2 : 1
-      return
-    }
-
-    if (showTabSearch !== 2) return
-
-    log.debug('Key down:', e.key)
-    if (e.key === ' ' && $selectedItem && !$isResourceDetailsModalOpen && !$showSettingsModal) {
-      e.preventDefault()
-      openResourceDetailsModal($selectedItem)
-    } else if (isModKeyAndKeyPressed(e, 'Enter') && $selectedItem && !$isResourceDetailsModalOpen) {
-      e.preventDefault()
-
-      const resource = await resourceManager.getResource($selectedItem)
-      if (!resource) return
-
-      const url = resource.metadata?.sourceURI
-      if (!url) return
-
-      dispatch('new-tab', { url: url, active: e.shiftKey })
-    } else if (e.key === 'Backspace' && page && $searchValue === '') {
-      page = null
-    }
+    // if (showTabSearch !== 2) return
+    // log.debug('Key down:', e.key)
+    // if (e.key === ' ' && $selectedItem && !$isResourceDetailsModalOpen && !$showSettingsModal) {
+    //   e.preventDefault()
+    //   openResourceDetailsModal($selectedItem)
+    // } else if (isModKeyAndKeyPressed(e, 'Enter') && $selectedItem && !$isResourceDetailsModalOpen) {
+    //   e.preventDefault()
+    //   const resource = await resourceManager.getResource($selectedItem)
+    //   if (!resource) return
+    //   const url = resource.metadata?.sourceURI
+    //   if (!url) return
+    //   dispatch('new-tab', { url: url, active: e.shiftKey })
+    // } else if (e.key === 'Backspace' && page && $searchValue === '') {
+    //   page = null
+    // }
   }
 
   const handleDrop = async (drag: DragculaDragEvent) => {
@@ -1038,11 +885,6 @@
     showResourceDetails.set(true)
   }
 
-  const closeResourceDetailsModal = () => {
-    showResourceDetails.set(false)
-    resourceDetailsModalSelected.set(null)
-  }
-
   const openResourceAsTab = async (id: string) => {
     const resource = await resourceManager.getResource(id)
     if (!resource) {
@@ -1076,7 +918,6 @@
       userPrompt: string
     }>
   ) => {
-    console.log('CREATING SPACE', e.detail.name, e.detail.aiEnabled)
     await tick()
     const spaceID = await createSpaceRef.handleCreateSpace(
       e,
@@ -1089,34 +930,6 @@
       await tick()
       await createSpaceRef.createSpaceWithAI(spaceID, e.detail.userPrompt, e.detail.colors)
     }
-  }
-
-  const focusInput = async (loop = false) => {
-    try {
-      log.debug('Focusing input...')
-      await tick()
-
-      const inputElement = document.getElementById('search-field') as HTMLInputElement
-
-      if (inputElement) {
-        inputElement.focus()
-      }
-
-      if (!loop) {
-        await wait(300)
-        focusInput(true)
-      }
-    } catch (err) {
-      log.error('Failed to focus input:', err)
-    }
-  }
-
-  onMount(() => {
-    focusInput()
-  })
-
-  $: if (showTabSearch === 1 || showTabSearch === 2) {
-    focusInput()
   }
 
   const debouncedSearch = useDebounce((value: string) => {
@@ -1162,20 +975,8 @@
   }}
 />
 
-<!-- {#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
-  <OasisResourceModalWrapper
-    resourceId={$resourceDetailsModalSelected}
-    active
-    on:close={() => closeResourceDetailsModal()}
-    on:new-tab
-  />
-{/if} -->
-
 <Drawer.Root
-  preventScroll
-  shouldScaleBackground
   direction="bottom"
-  scrollLockTimeout={300}
   open={showTabSearch !== 0}
   onOpenChange={(e) => {
     if (e === false) {
@@ -1188,295 +989,231 @@
       class="drawer-overlay fixed inset-0 z-10 transition-opacity duration-300 no-drag"
     />
     <Drawer.Content
-      class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-md transition duration-400 bg-[#FEFFFE] outline-none"
+      class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-xl transition duration-400 bg-[#FEFFFE] outline-none"
       style="width: fit-content;"
     >
-      <Motion
+      <!-- <Motion
         let:motion
         animate={{
           height: showTabSearch === 1 ? 'auto' : 'calc(100vh - 200px)',
-          width: showTabSearch === 1 ? '476px' : 'calc(70vw - 0px)',
+          width: showTabSearch === 1 ? '496px' : 'calc(70vw - 0px)',
           transition: {
-            duration: showTabSearch === 1 ? 0.45 : 0.7,
+            duration: showTabSearch === 1 ? 0.45 : 0.8,
             ease: [0.16, 1, 0.3, 1]
           }
         }}
-      >
-        <div use:motion>
-          {#if $searchValue.length > 0 && showTabSearch === 2}
-            <button
-              data-vaul-no-drag
-              class="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F8F9] text-[#949595] transition-transform focus:scale-95 focus-visible:shadow-focus-ring-button active:scale-75"
-              on:click={() => {
-                resetSearch()
-              }}
-            >
-              <Icon name="close" />
-            </button>
-          {:else if $searchValue.length === 0}
-            <!-- <div
-              class="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full transition-transform focus:scale-95 focus-visible:shadow-focus-ring-button active:scale-75 rotate-6"
-            >
-              <Icon name="face" size="28" />
-            </div> -->
-            <button
-              class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
-                ? 'bottom-7'
-                : 'bottom-3'} z-10 flex items-center justify-center space-x-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
-              on:click={() => {
-                showTabSearch = showTabSearch === 1 ? 2 : 1
-              }}
-              aria-label="Switch tabs"
-            >
-              <span>Go to {showTabSearch === 1 ? 'My Stuff' : 'Search'}</span>
-              <Command.Shortcut class="flex-shrink-0 bg-neutral-100 rounded-lg p-1"
-                >Tab</Command.Shortcut
-              >
-            </button>
-          {/if}
-          <Command.Root
-            class="[&_[data-cmdk-group-heading]]:text-neutral-500 {showTabSearch === 2 &&
-            $selectedSpaceId === null
-              ? 'pt-2'
-              : ''} !relative w-full transition-transform will-change-transform flex flex-col items-center justify-end  [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-4 [&_[data-cmdk-item]]:py-4 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
-            loop
-            shouldFilter={false}
-            bind:selectFirstCommandItem
+      > -->
+      <div class="">
+        {#if $searchValue.length > 0 && showTabSearch === 2}
+          <button
+            data-vaul-no-drag
+            class="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F8F9] text-[#949595] transition-transform focus:scale-95 focus-visible:shadow-focus-ring-button active:scale-75"
+            on:click={() => {
+              resetSearch()
+            }}
           >
-            <AnimatePresence show={true} mode="popLayout">
-              <Motion
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{
-                  duration: 0.5,
-                  ease: [0.26, 0.08, 0.25, 1]
-                }}
-                let:motion
-              >
-                <div use:motion class="{showTabSearch === 1 ? 'w-full' : 'w-[70vw]'} h-full">
-                  {#if showTabSearch === 1 && $searchValue.length}
-                    <Command.List>
-                      {#each $commandFilterResult as item (item.id)}
-                        <CommandMenuItem {item} on:select={handleSelect} />
-                      {/each}
-                      <!-- {#if !page}
-                        {#each navigate as item}
-                          <CommandMenuItem {item} on:select={handleSelect} />
-                        {/each}
+            <Icon name="close" />
+          </button>
+        {:else if $searchValue.length === 0}
+          <button
+            class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
+              ? 'bottom-7'
+              : 'bottom-3'} z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+            on:click={() => {
+              showTabSearch = showTabSearch === 1 ? 2 : 1
+            }}
+            aria-label="Switch tabs"
+          >
+            <span>Go to {showTabSearch === 1 ? 'My Stuff' : 'Search'}</span>
+            <Command.Shortcut class="flex-shrink-0 bg-neutral-100 rounded-lg p-1">
+              {#if showTabSearch === 1}
+                {#if navigator.platform.startsWith('Mac')}
+                  ⌘O
+                {:else}
+                  Ctrl+O
+                {/if}
+              {:else if navigator.platform.startsWith('Mac')}
+                ⌘T
+              {:else}
+                Ctrl+T
+              {/if}
+            </Command.Shortcut>
+          </button>
+        {/if}
+        <Command.Root
+          class="[&_[data-cmdk-group-heading]]:text-neutral-500 {showTabSearch === 2 &&
+          $selectedSpaceId === null
+            ? ''
+            : ''} !relative w-full transition-transform will-change-transform flex flex-col items-center justify-end [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-4 [&_[data-cmdk-item]]:py-4 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
+          loop
+          shouldFilter={false}
+          bind:selectFirstCommandItem
+        >
+          <!-- <AnimatePresence show={true} mode="popLayout"> -->
+          <!-- <Motion
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{
+              duration: 0.5,
+              ease: [0.26, 0.08, 0.25, 1]
+            }}
+            let:motion
+          > -->
+          <div class={showTabSearch === 1 ? 'w-[514px] h-full' : 'w-[70vw] h-[calc(100vh-200px)]'}>
+            {#if showTabSearch === 1 && $searchValue.length}
+              <Command.List class="m-2 no-scrollbar">
+                {#each $commandFilterResult as item (item.id)}
+                  <CommandMenuItem {item} on:select={handleSelect} />
+                {/each}
+              </Command.List>
+            {:else if showTabSearch === 2}
+              {#if $showCreationModal}
+                <div
+                  data-vaul-no-drag
+                  class="create-wrapper absolute inset-0 z-50 flex items-center justify-center bg-opacity-50 bg-red-50"
+                >
+                  <div
+                    class=" rounded-lg w-full h-full max-w-screen-lg max-h-screen-lg overflow-auto flex items-center justify-center"
+                  >
+                    <CreateNewSpace
+                      on:close-modal={() => showCreationModal.set(false)}
+                      on:submit={handleCreateSpace}
+                    />
+                  </div>
+                </div>
+              {/if}
 
-                        <!-- {#if tabs.length > 0}
-                          <Command.Group heading="Active Tabs">
-                            {#each tabs as item}
-                              <CommandMenuItem {item} on:select={handleSelect} />
-                            {/each}
-                          </Command.Group>
-                        {/if}
+              {#if $selectedSpaceId !== null}
+                <OasisSpace
+                  spaceId={$selectedSpaceId}
+                  active
+                  showBackBtn
+                  hideResourcePreview
+                  handleEventsOutside
+                  {historyEntriesManager}
+                  on:open={handleOpen}
+                  on:go-back={() => selectedSpaceId.set(null)}
+                  insideDrawer={true}
+                  {searchValue}
+                />
+              {:else}
+                <DropWrapper
+                  {spaceId}
+                  on:Drop={(e) => handleDrop(e.detail)}
+                  on:DragEnter={(e) => handleDragEnter(e.detail)}
+                  zonePrefix="drawer-"
+                >
+                  <div class="w-full h-full">
+                    <div class="fixed top-0 z-50 w-full">
+                      <SpacesView
+                        bind:this={createSpaceRef}
+                        {spaces}
+                        {resourceManager}
+                        showPreview={true}
+                        type="horizontal"
+                        interactive={false}
+                        on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
+                        on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
+                        on:open-creation-modal={() => showCreationModal.set(true)}
+                        on:open-resource={handleOpen}
+                      />
+                    </div>
 
-                        {#if history.length > 0}
-                          <!-- <Command.Group heading="History">
-                            {#each history as item}
-                              <CommandMenuItem {item} on:select={handleSelect} />
-                            {/each}
-                          <!-- </Command.Group>
-                        {/if}
+                    {#if $resourcesToShow.length > 0}
+                      <OasisResourcesViewSearchResult
+                        resources={resourcesToShow}
+                        selected={$selectedItem}
+                        showResourceSource={!!$searchValue}
+                        isEverythingSpace={true}
+                        newTabOnClick
+                        on:click={handleItemClick}
+                        on:open={handleOpen}
+                        on:open-space-as-tab
+                        on:remove={handleResourceRemove}
+                        on:new-tab
+                        {searchValue}
+                      />
 
-                        {#if suggestions.length > 0}
-                          <!-- <Command.Group heading="Suggestions">
-                            {#each suggestions as item}
-                              <CommandMenuItem {item} on:select={handleSelect} />
-                            {/each}
-                          <!-- </Command.Group>
-                        {/if}
-
-                        {#if spacesItems.length > 0}
-                          <!-- <Command.Group heading="Spaces">
-                            {#each spacesItems as item}
-                              <CommandMenuItem {item} on:select={handleSelect} />
-                            {/each}
-                          <!-- </Command.Group>
-                        {/if}
-
-                        <!-- {#if resources.length > 0}
-                          <Command.Group heading="Oasis">
-                            {#each resources as item}
-                              <CommandMenuItem {item} on:select={handleSelect} />
-                            {/each}
-                          </Command.Group>
-                        {/if}
-
-                        {#if commands.length > 0}
-                          <!-- <Command.Group heading="Actions">
-                            {#each commands as item}
-                              <CommandMenuItem {item} on:select={handleSelect} />
-                            {/each}
-                          <!-- </Command.Group>
-                        {/if}
-
-                        {#each other as item}
-                          <CommandMenuItem {item} on:select={handleSelect} />
-                        {/each}
-                      {:else if page === 'tabs'}
-                        {#each tabs as item}
-                          <CommandMenuItem {item} on:select={handleSelect} />
-                        {/each}
-                      {:else if page === 'My Stuff'}
-                        {#each resources as item}
-                          <CommandMenuItem {item} on:select={handleSelect} />
-                        {/each}
-                      {:else if page === 'history'}
-                        {#each history as item}
-                          <CommandMenuItem {item} on:select={handleSelect} />
-                        {/each}
-                      {:else if page === 'spaces'}
-                        {#each spacesItems as item}
-                          <CommandMenuItem {item} on:select={handleSelect} />
-                        {/each}
-                      {/if} -->
-                    </Command.List>
-                  {:else if showTabSearch === 2}
-                    {#if $showCreationModal}
-                      <div
-                        data-vaul-no-drag
-                        class="create-wrapper absolute inset-0 z-50 flex items-center justify-center bg-opacity-50 bg-red-50"
-                      >
+                      {#if $loadingContents}
+                        <div class="floating-loading">
+                          <Icon name="spinner" size="20px" />
+                        </div>
+                      {/if}
+                    {:else if $loadingContents}
+                      <div class="content-wrapper">
+                        <div class="content">
+                          <Icon name="spinner" size="22px" />
+                          <p>Loading…</p>
+                        </div>
+                      </div>
+                    {:else}
+                      <div class="content-wrapper h-full flex items-center justify-center">
                         <div
-                          class="shadow-lg rounded-lg w-full h-full max-w-screen-lg max-h-screen-lg overflow-auto flex items-center justify-center"
+                          class="content flex flex-col items-center justify-center text-center space-y-4"
                         >
-                          <CreateNewSpace
-                            on:close-modal={() => showCreationModal.set(false)}
-                            on:submit={handleCreateSpace}
-                          />
+                          <Icon name="leave" size="22px" class="mb-2" />
+                          {#if $searchValue.length <= 3}
+                            <p class="text-lg font-medium text-gray-700">
+                              Please type at least 3 characters to search.
+                            </p>
+                          {:else}
+                            <p class="text-lg font-medium text-gray-700">
+                              No stuff found for "{$searchValue}". Try a different search term.
+                            </p>
+                          {/if}
                         </div>
                       </div>
                     {/if}
-
-                    {#if $selectedSpaceId !== null}
-                      <OasisSpace
-                        spaceId={$selectedSpaceId}
-                        active
-                        showBackBtn
-                        hideResourcePreview
-                        handleEventsOutside
-                        {historyEntriesManager}
-                        on:open={handleOpen}
-                        on:go-back={() => selectedSpaceId.set(null)}
-                        insideDrawer={true}
-                      />
-                    {:else}
-                      <DropWrapper
-                        {spaceId}
-                        on:Drop={(e) => handleDrop(e.detail)}
-                        on:DragEnter={(e) => handleDragEnter(e.detail)}
-                        zonePrefix="drawer-"
-                      >
-                        <div class="w-full h-[calc(100%-216px)] will-change-transform">
-                          <div class="relative will-change-transform">
-                            <SpacesView
-                              bind:this={createSpaceRef}
-                              {spaces}
-                              {resourceManager}
-                              showPreview={true}
-                              type="horizontal"
-                              interactive={false}
-                              on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
-                              on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
-                              on:open-creation-modal={() => showCreationModal.set(true)}
-                              on:open-resource={handleOpen}
-                            />
-                          </div>
-
-                          {#if $resourcesToShow.length > 0}
-                            <OasisResourcesViewSearchResult
-                              resources={resourcesToShow}
-                              selected={$selectedItem}
-                              showResourceSource={!!$searchValue}
-                              isEverythingSpace={true}
-                              newTabOnClick
-                              on:click={handleItemClick}
-                              on:open={handleOpen}
-                              on:open-space-as-tab
-                              on:remove={handleResourceRemove}
-                              on:new-tab
-                            />
-
-                            {#if $loadingContents}
-                              <div class="floating-loading">
-                                <Icon name="spinner" size="20px" />
-                              </div>
-                            {/if}
-                          {:else if $loadingContents}
-                            <div class="content-wrapper">
-                              <div class="content">
-                                <Icon name="spinner" size="22px" />
-                                <p>Loading…</p>
-                              </div>
-                            </div>
-                          {:else}
-                            <div class="content-wrapper">
-                              <div class="content">
-                                <Icon name="leave" size="22px" />
-                                <p>Oops! It seems like this Space is feeling a bit empty.</p>
-                              </div>
-                            </div>
-                          {/if}
-                        </div>
-                      </DropWrapper>
-                    {/if}
-                  {/if}
-                </div>
-              </Motion>
-            </AnimatePresence>
-
-            {#if $selectedSpaceId === null || showTabSearch === 1}
-              <div
-                class={showTabSearch === 2
-                  ? 'w-full flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
-                  : 'w-full flex items-center justify-center p-2'}
-              >
-                <div class={'flex items-center relative'}>
-                  <Command.Input
-                    id="search-field"
-                    {placeholder}
-                    {breadcrumb}
-                    loading={$isLoadingCommandItems}
-                    bind:value={$searchValue}
-                    class={showTabSearch === 2
-                      ? 'w-[30rem] bg-neutral-100 rounded-lg p-2'
-                      : 'w-[30rem] py-4 pl-2'}
-                  />
-
-                  {#if showTabSearch === 2 && $selectedSpaceId === null && !!$searchValue}
-                    <div class="rounded-lg bg-neutral-100 p-2 absolute left-full">
-                      <select
-                        bind:value={$selectedFilter}
-                        on:change={handleOasisFilterChange}
-                        class="bg-transparent focus:outline-none"
-                      >
-                        <option value="all">Show All</option>
-                        <option value="saved_by_user">Saved by Me</option>
-                      </select>
-                    </div>
-                  {/if}
-                </div>
-              </div>
+                  </div>
+                </DropWrapper>
+              {/if}
             {/if}
-          </Command.Root>
-        </div>
-      </Motion>
+          </div>
+          <!-- </Motion> -->
+          <!-- </AnimatePresence> -->
+
+          {#if $selectedSpaceId === null || showTabSearch === 1}
+            <div
+              class={showTabSearch === 2
+                ? 'w-full flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
+                : 'w-full flex items-center justify-center p-2  border-t-[1px] border-neutral-100'}
+            >
+              <div class={'flex items-center relative'}>
+                <Command.Input
+                  id="search-field"
+                  {placeholder}
+                  {breadcrumb}
+                  loading={$isLoadingCommandItems}
+                  bind:value={$searchValue}
+                  class={showTabSearch === 2
+                    ? 'w-[32rem] bg-neutral-100 rounded-lg p-2'
+                    : 'w-[32rem] py-4 pl-2'}
+                />
+
+                {#if showTabSearch === 2 && $selectedSpaceId === null && !!$searchValue}
+                  <div class="rounded-lg bg-neutral-100 p-2 absolute left-full">
+                    <select
+                      bind:value={$selectedFilter}
+                      on:change={handleOasisFilterChange}
+                      class="bg-transparent focus:outline-none"
+                    >
+                      <option value="all">Show All</option>
+                      <option value="saved_by_user">Saved by Me</option>
+                    </select>
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/if}
+        </Command.Root>
+      </div>
+      <!-- </Motion> -->
     </Drawer.Content>
   </Drawer.Portal>
 </Drawer.Root>
 
 <style lang="scss">
-  [data-vaul-drawer]::after {
-    content: '';
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: -1;
-  }
   .wrapper {
     display: flex;
     flex-direction: column;
@@ -1499,24 +1236,6 @@
     background: linear-gradient(180deg, #e6ddda 0%, #f8f7f1 100%);
   }
 
-  .tabs {
-    display: flex;
-    gap: 1rem;
-  }
-
-  .search-input-wrapper {
-    position: relative;
-    z-index: 10;
-    width: 100%;
-    height: 3.3rem;
-    max-width: 32rem;
-    view-transition-name: search-transition;
-    &.active {
-      height: auto;
-      width: 100%;
-    }
-  }
-
   .modal-wrapper {
     position: absolute;
     top: 4rem;
@@ -1530,163 +1249,6 @@
     left: 0;
     right: 0;
     z-index: 1000;
-
-    /* .drawer-chat-search {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      gap: 16px;
-      padding: 1rem 1rem 1rem 1rem;
-      transition: all 240ms ease-out;
-    } */
-  }
-
-  .search-debug {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    padding: 1rem;
-    padding-bottom: 1.5rem;
-    padding-top: 0.25rem;
-    background: rgba(255, 255, 255, 0.33);
-
-    input {
-      background: none;
-      padding: 0.5rem;
-      border-radius: 4px;
-      border: 1px solid rgba(0, 0, 0, 0.15);
-      font-size: 1rem;
-      font-weight: 500;
-      letter-spacing: 0.02rem;
-      width: 75px;
-      text-align: center;
-    }
-  }
-
-  .chat-wrapper {
-    position: absolute;
-    top: 1rem;
-    left: 50%;
-    right: 50%;
-    z-index: 100000;
-    width: 100%;
-    height: 100%;
-    max-width: 50vw;
-    max-height: 70vh;
-    overflow-y: scroll;
-    border-radius: 16px;
-    transform: translateX(-50%);
-    background: white;
-    box-shadow:
-      0px 0px 0px 1px rgba(0, 0, 0, 0.2),
-      0px 16.479px 41.197px 0px rgba(0, 0, 0, 0.46);
-
-    .close-button {
-      position: absolute;
-      top: 0.5rem;
-      left: 0.5rem;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 2rem;
-      height: 2rem;
-      flex-shrink: 0;
-      border-radius: 50%;
-      border: 0.5px solid rgba(0, 0, 0, 0.15);
-      transition: 60ms ease-out;
-      background: white;
-      z-index: 10000;
-      &.rotated {
-        transform: rotate(-45deg);
-      }
-      &:hover {
-        outline: 3px solid rgba(0, 0, 0, 0.15);
-      }
-    }
-  }
-
-  .content-wrapper {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #7d7448;
-
-    .content {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem;
-      opacity: 0.75;
-
-      p {
-        font-size: 1.2rem;
-      }
-    }
-  }
-
-  .settings-wrapper {
-    position: relative;
-
-    .settings-toggle {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: #7d7448;
-      opacity: 0.7;
-      &:hover {
-        opacity: 1;
-        background: transparent;
-      }
-    }
-  }
-
-  .live-mode {
-    appearance: none;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 8px;
-    background: #ff4eed;
-    border: none;
-    color: white;
-    font-size: 1rem;
-    font-weight: 500;
-    letter-spacing: 0.02rem;
-
-    &:hover {
-      background: #fb3ee9;
-    }
-  }
-
-  .floating-loading {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    opacity: 0.75;
-  }
-
-  .create-wrapper {
-    z-index: 1000000;
-    background: rgba(0, 0, 0, 0.65);
-  }
-
-  .browser-background {
-    margin: auto;
-    margin-bottom: 4rem;
-    width: 40rem;
-    height: 40rem;
-    object-fit: cover;
   }
 
   /* Hides the Drawer when dragging but not targeting it */

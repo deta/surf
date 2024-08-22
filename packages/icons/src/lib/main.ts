@@ -11,6 +11,7 @@ import ChevronRight from './Icons/ChevronRight.svelte'
 import Close from './Icons/Close.svelte'
 import Copy from './Icons/Copy.svelte'
 import Download from './Icons/Download.svelte'
+import Edit from './Icons/Edit.svelte'
 import Mute from './Icons/Muted.svelte'
 import Unmute from './Icons/Unmute.svelte'
 import Bold from './Icons/Bold.svelte'
@@ -92,6 +93,7 @@ export const icons = {
   close: Close,
   copy: Copy,
   download: Download,
+  edit: Edit,
   mute: Mute,
   unmute: Unmute,
   bold: Bold,
@@ -176,6 +178,7 @@ export {
   ChevronRight,
   Close,
   Copy,
+  Edit,
   Mute,
   Unmute,
   Bold,

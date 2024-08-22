@@ -262,7 +262,7 @@ export class HTMLDragItem extends DragItem {
     )
       return;
 
-    log.debug("Deleting controller", this.id, document.activeDragOperation?.status);
+    // log.debug("Deleting controller", this.id, document.activeDragOperation?.status);
 
     super.destroy();
 
@@ -413,7 +413,6 @@ export class HTMLDragItem extends DragItem {
     e.preventDefault();
     e.stopPropagation();
     log.debug(`[HTMLDragItem:${this.id}] dragstart`, e);
-
     (this.nextElement as HTMLElement) = nextElementSibling(this.element, (el) =>
       el.hasAttribute("data-dragcula-item")
     ) as HTMLElement;

@@ -1,7 +1,5 @@
-<svelte:options immutable />
-
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { Resource, ResourceAnnotation, useResourceManager } from '../../service/resources'
   import { useLogScope } from '@horizon/utils'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
@@ -15,7 +13,7 @@
 
   const log = useLogScope('OasisSpaceItem')
   const resourceManager = useResourceManager()
-  const dispatch = createEventDispatcher<{ load: Resource }>()
+  const dispatch = createEventDispatcher<{ load: Resource; rendered: void }>()
 
   let loading = false
   let resource: Resource | null = null
@@ -23,16 +21,12 @@
   const loadResource = async () => {
     try {
       log.debug('loadResource')
-
       loading = true
       const res = await resourceManager.getResourceWithAnnotations(id)
       if (!res) {
         return
       }
-
       resource = res
-      // disabled, since this is blocking the renderer
-      // log.debug('Loaded resource:', resource)
       dispatch('load', resource)
     } catch (e) {
       log.error(e)
@@ -46,6 +40,12 @@
       loadResource()
     }
   }
+
+  onMount(() => {
+    queueMicrotask(() => {
+      dispatch('rendered')
+    })
+  })
 </script>
 
 <div class="wrapper">

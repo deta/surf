@@ -2,12 +2,12 @@
 
 pub fn transcript_chunking_prompt(transcript: &str) -> String {
     format!(
-        "You are a helpful assistant that is being used in a question answering pipeline. 
+        "You are a helpful assistant that is being used in a question answering pipeline.
 Chunk the following transcript into semantically meaningful parts in the smallest possible chunks.
 Do not modify the content of the transcript, just chunk it into smaller parts.
 
 Output a list of the chunks in the order they appear in the transcript separated by newline(`\n`).
-    
+
 Transcript:
 ----------------------
 {}
@@ -29,9 +29,9 @@ You are a developer that creates web-based apps in JavaScript, HTML, and CSS bas
 
 1. You create simple apps that run in an iframe embedded into a context webpage.
 2. The user will not refer to the context webpage as 'context webpage' or 'webpage'.
-3. The apps you create are complete, the users can not write any code themselves and you must create a fully functional app. 
+3. The apps you create are complete, the users can not write any code themselves and you must create a fully functional app.
 4. DO NOT ADD COMMENTS IN THE CODE, IT BREAKS THE APPS.
-5. Do not include any commentary, further instructions or explanations. 
+5. Do not include any commentary, further instructions or explanations.
 6. Use simple css to style the app in a minimalistic way.
 7. Hardcode any data needed from the context directly into the app. Add as much data as needed to make the app functional.
 
@@ -43,12 +43,12 @@ Context Webpage:
 }
 
 pub fn command_prompt(context: &str) -> String {
-    format!(" 
+    format!("
 You are a developer that writes javascript code without any comments to perform various tasks on a webpage. You return the javascript code that a user runs in the browser console to perform the task.
 
 1. DO NOT ADD COMMENTS IN THE CODE, THE COMMENTS BREAK THE CODE WHEN RUN IN THE BROWSER CONSOLE.
 2. You are provided with the context webpage that the user is currently in.
-3. The code your write is complete, the users can not write any code themselves and you must create a fully functional script. 
+3. The code your write is complete, the users can not write any code themselves and you must create a fully functional script.
 4. Hardcode any data needed from the context directly into the script. Add as much data as needed to make the script functional.
 5. Do not include anything else like any commentary, further instructions, explanations or comments, only return the code.
 
@@ -64,7 +64,7 @@ pub fn general_chat_prompt(history: Option<String>) -> String {
         None => "You are a Q&A expert system. Help the user with their queries.".to_string(),
         Some(history) => format!("You are a Q&A expert system. Help the user with their queries.
 
-You are also provided with the conversation history with the user. Make sure to use relevant context from conversation history as needed. 
+You are also provided with the conversation history with the user. Make sure to use relevant context from conversation history as needed.
 Your answers must be enclosed in an `<answer>` tag.
 
 Conversation history:
@@ -82,8 +82,8 @@ pub fn chat_prompt(context: String, history: Option<String>) -> String {
 You are a Q&A expert system. Your responses must always be rooted in the context provided for each query. Here are some guidelines to follow:
 
 1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
-2. The answer should be enclosed in an `<answer>` tag. 
-3. Provide citations when possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context. 
+2. The answer should be enclosed in an `<answer>` tag.
+3. Provide citations when possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
 4. Use separate citation tags for each context id and do not separate multiple context ids with commas.
 5. ONLY USE HTML TAGS FOR FORMATTING. Use <h2> for headings, <p> for paragraphs, <b> for bold, <i> for italics, <ul> and <li> for lists, and any other necessary formatting.
 6. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
@@ -100,8 +100,8 @@ You are a Q&A expert system. Your responses must always be rooted in the context
 Here are some guidelines to follow:
 
 1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
-2. The answer should be enclosed in `<answer>` tag. 
-3. Provide citations when possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context. 
+2. The answer should be enclosed in `<answer>` tag.
+3. Provide citations when possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
 4. Use separate citation tags for each context id and do not separate multiple context ids with commas.
 5. ONLY USE HTML TAGS FOR FORMATTING. Use <h2> for headings, <p> for paragraphs, <b> for bold, <i> for italics, <ul> and <li> for lists, and any other necessary formatting.
 6. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
@@ -206,7 +206,7 @@ mentions it.
 ### Examples:
 
 1. **Query:** \"All image resources created after 2023-01-01.\"
-   **Output:** 
+   **Output:**
    ```json
    {
        \"sql_query\": \"SELECT id FROM resources WHERE resource_type LIKE 'image/%' AND created_at > '2023-01-01' AND deleted = 0;\"
@@ -214,7 +214,7 @@ mentions it.
    ```
 
 2. **Query:** \"Resources tagged with 'hostname: wikipedia.com' and not deleted.\"
-   **Output:** 
+   **Output:**
    ```json
    {
        \"sql_query\": \"SELECT resource_id FROM resource_tags WHERE tag_name = 'hostname' AND tag_value = 'wikipedia.com' AND resource_id IN (SELECT id FROM resources WHERE deleted = 0);\"
@@ -222,7 +222,7 @@ mentions it.
    ```
 
 3. **Query:** \"Chat messages saved with the action 'paste' that mention 'project deadline'.\"
-   **Output:** 
+   **Output:**
    ```json
    {
        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type LIKE 'application/vnd.space.chat-message%' AND r.deleted = 0 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'paste' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'project deadline') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'project deadline'));\"
@@ -230,7 +230,7 @@ mentions it.
    ```
 
 4. **Query:** \"All Slack chat messages that were created before 2023-01-01 and contain the word 'urgent'.\"
-   **Output:** 
+   **Output:**
    ```json
    {
        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.created_at < '2023-01-01' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'urgent') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'urgent'));\"
@@ -238,7 +238,7 @@ mentions it.
    ```
 
 5. **Query:** \"All Google Docs that were imported, are deleted, and mention 'quarterly report'.\"
-   **Output:** 
+   **Output:**
    ```json
    {
        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type = 'application/vnd.space.document.google-doc' AND r.deleted = 1 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'import' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'quarterly report') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'quarterly report'));\"
@@ -246,7 +246,7 @@ mentions it.
    ```
 
 6. **Query:** \"PDFs mentioning or related to dogs and their care.\"
-   **Output:** 
+   **Output:**
    ```json
    {
        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/pdf' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'dog') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'dog'));\",
@@ -255,7 +255,7 @@ mentions it.
    ```
 
 7. **Query:** \"Find documents about machine learning applications in healthcare.\"
-   **Output:** 
+   **Output:**
    ```json
    {
        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'machine learning' OR content MATCH 'healthcare') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'machine learning' OR resource_metadata MATCH 'healthcare'));\",
@@ -264,7 +264,7 @@ mentions it.
    ```
 
 8. **Query:** \"Retrieve all resources discussing climate change solutions and renewable energy.\"
-   **Output:** 
+   **Output:**
    ```json
    {
        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'climate change' OR content MATCH 'renewable energy') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'climate change' OR resource_metadata MATCH 'renewable energy'));\",
@@ -273,7 +273,7 @@ mentions it.
    ```
 
 9. **Query:** \"Find Slack messages about project deadlines and time management from the last month.\"
-   **Output:** 
+   **Output:**
    ```json
    {
        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.deleted = 0 AND r.created_at > date('now', '-1 month') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'deadline' OR content MATCH 'time management') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'deadline' OR resource_metadata MATCH 'time management'));\",
@@ -282,7 +282,7 @@ mentions it.
    ```
 
 10. **Query:** \"Get all documents about data privacy and GDPR compliance created in the last year.\"
-    **Output:** 
+    **Output:**
     ```json
     {
         \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND r.created_at > date('now', '-1 year') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'data privacy' OR content MATCH 'GDPR' OR content MATCH 'compliance') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'data privacy' OR resource_metadata MATCH 'GDPR' OR resource_metadata MATCH 'compliance'));\",
@@ -291,7 +291,7 @@ mentions it.
     ```
 
 11. **Query:** \"Find resources discussing the impact of social media on mental health.\"
-    **Output:** 
+    **Output:**
     ```json
     {
         \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'social media' OR content MATCH 'mental health') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'social media' OR resource_metadata MATCH 'mental health'));\",

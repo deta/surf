@@ -1,6 +1,7 @@
 <script lang="ts">
   import { derived, writable, type Readable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
+  import type { Writable } from 'svelte/store'
   import { useLogScope } from '@horizon/utils'
   import type { ResourceSearchResultItem } from '../../service/resources'
   import Masonry from './MasonrySpace.svelte'
@@ -14,6 +15,7 @@
   export let isEverythingSpace: boolean
   export let showResourceSource: boolean = false
   export let newTabOnClick: boolean = false
+  export let searchValue: Writable<string> | undefined
 
   const log = useLogScope('OasisResourcesView')
   const dispatch = createEventDispatcher()
@@ -49,24 +51,27 @@
 
 <div class="wrapper">
   <div bind:this={scrollElement} class="content">
-    {#key scrollElement}
-      <Masonry
-        renderContents={$renderContents.map((item) => item.id)}
-        {showResourceSource}
-        {newTabOnClick}
-        on:load-more={handleLoadChunk}
-        on:open
-        on:remove
-        on:load
-        on:new-tab
-        on:space-selected
-        on:open-space-as-tab
-        on:scroll={handleScroll}
-        on:wheel
-        id={new Date()}
-        {isEverythingSpace}
-      ></Masonry>
-    {/key}
+    {#if scrollElement}
+      {#key $searchValue === ''}
+        <Masonry
+          renderContents={$renderContents.map((item) => item.id)}
+          {showResourceSource}
+          {newTabOnClick}
+          on:load-more={handleLoadChunk}
+          on:open
+          on:remove
+          on:load
+          on:new-tab
+          on:space-selected
+          on:open-space-as-tab
+          on:scroll={handleScroll}
+          on:wheel
+          id={new Date()}
+          {searchValue}
+          {isEverythingSpace}
+        ></Masonry>
+      {/key}
+    {/if}
   </div>
 </div>
 

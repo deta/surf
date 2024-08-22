@@ -39,6 +39,7 @@
   const resourceManager = useResourceManager()
   const telemetry = useTelemetry()
 
+  const editMode = writable(false)
   const hovered = writable(false)
   const draggedOver = writable(false)
   const inView = writable(false)
@@ -48,6 +49,17 @@
   let processing = false
   let inputElement: HTMLInputElement
   let previewContainer: HTMLDivElement
+
+  $: if ($editMode === true) {
+    setTimeout(() => {
+      inputElement?.focus()
+      inputElement?.select()
+    }, 100)
+  } else {
+    setTimeout(() => {
+      inputElement?.blur()
+    }, 100)
+  }
 
   const getPreviewResources = async (numberOfLatestResourcesToFetch: number) => {
     let result: Resource[] = []
@@ -293,13 +305,13 @@
 >
   <div
     class="folder {selected ? 'active' : ''}"
-    style={showPreview ? 'height: 14rem' : ''}
-    on:click={handleSpaceSelect}
+    style={showPreview ? 'height: 4.5rem' : ''}
+    on:click={$editMode ? null : handleSpaceSelect}
     aria-hidden="true"
     use:hover={hovered}
     bind:this={previewContainer}
   >
-    {#if $inView && showPreview}
+    <!-- {#if $inView && showPreview}
       <div class="previews" transition:fly={{ y: 15 }}>
         {#await getPreviewResources(4)}
           <div class="folder-empty-wrapper">
@@ -328,7 +340,7 @@
           {/if}
         {/await}
       </div>
-    {/if}
+    {/if} -->
 
     <div class="folder-label">
       <div class="folder-leading">
@@ -336,35 +348,61 @@
           <SpaceIcon on:change={handleColorChange} {folder} />
         </div>
 
-        <input
-          bind:this={inputElement}
-          id={`folder-input-${folder.id}`}
-          on:click|stopPropagation
-          type="text"
-          bind:value={folderDetails.folderName}
-          on:blur={handleBlur}
-          class="folder-input"
-          style={`width: ${inputWidth}`}
-          on:keydown={handleKeyDown}
-        />
+        {#if $editMode}
+          <input
+            bind:this={inputElement}
+            id={`folder-input-${folder.id}`}
+            style={`width: ${inputWidth};`}
+            type="text"
+            bind:value={folderDetails.folderName}
+            on:blur={handleBlur}
+            class="folder-input isEditing"
+            on:keydown={handleKeyDown}
+          />
+        {:else}
+          <div
+            class="folder-input"
+            style={`width: ${inputWidth};`}
+            on:click|stopPropagation={handleSpaceSelect}
+          >
+            {folderDetails.folderName}
+          </div>
+        {/if}
       </div>
 
-      {#if $hovered}
-        <div class="actions" in:fade={{ duration: 50 }} out:fade={{ duration: 100 }}>
+      {#if !$editMode}
+        {#if $hovered}
           <button
             on:click|stopPropagation={addItemToTabs}
             class="close"
-            use:tooltip={'Open as Tab'}
+            use:tooltip={{ text: 'Open as Tab', position: 'left' }}
           >
             <Icon name={'list-add'} size="20px" />
           </button>
-
+          <button
+            on:click|stopPropagation={() => editMode.set(true)}
+            class="close"
+            use:tooltip={{ text: 'Edit', position: 'left' }}
+          >
+            <Icon name="edit" size="20px" />
+          </button>
+        {/if}
+      {:else}
+        <div class="actions" in:fade={{ duration: 50 }} out:fade={{ duration: 100 }}>
           <button
             on:click|stopPropagation={handleDelete}
             class="close"
-            use:tooltip={'Delete Space'}
+            use:tooltip={{ text: 'Delete Space', position: 'left' }}
           >
             <Icon name="trash" size="20px" />
+          </button>
+
+          <button
+            on:click|stopPropagation={() => editMode.set(false)}
+            class="close"
+            use:tooltip={{ text: 'Back', position: 'left' }}
+          >
+            <Icon name="check" size="20px" />
           </button>
         </div>
       {/if}
@@ -377,7 +415,6 @@
     position: relative;
     pointer-events: auto;
     width: 22rem;
-    padding: 0.5rem 0;
   }
 
   .folder {
@@ -506,7 +543,7 @@
         gap: 0.5rem;
         flex: 1;
         max-width: calc(100% - 4.5rem);
-        overflow: hidden;
+        overflow: visible;
       }
 
       .space-icon-wrapper {
@@ -536,6 +573,17 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+
+        &::selection {
+          background-color: rgba(0, 110, 255, 0.2);
+        }
+
+        &.isEditing {
+          border-radius: 4px;
+          padding: 0 0.25rem;
+          margin-top: -2px;
+          outline: 4px solid rgba(0, 110, 255, 0.4);
+        }
       }
 
       .folder-input:focus {
