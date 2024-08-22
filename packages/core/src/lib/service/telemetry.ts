@@ -380,7 +380,7 @@ export class Telemetry {
   }
 
   async trackPageChatCitationClickResourceFromSpace(type: 'timestamp' | 'text') {
-    await this.trackEvent(TelemetryEventTypes.PageChatCitationClick, {
+    await this.trackEvent(TelemetryEventTypes.PageChatCitationClickResourceFromSpace, {
       type: type
     })
   }
