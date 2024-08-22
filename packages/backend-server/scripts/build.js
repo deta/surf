@@ -4,7 +4,7 @@ const { join } = require('path')
 const binDir =
   process.env.RESOURCES_BIN_DIR || join(__dirname, '../../../apps/desktop/resources/bin')
 const sourceBin = 'backend-server'
-const targetBin = 'surf-backend'
+const targetBin = `surf-backend${process.platform === 'win32' ? '.exe' : ''}`
 const targetBinPath = join(binDir, targetBin)
 const extraArgsIndex = process.argv.indexOf('--')
 const extraArgs = extraArgsIndex !== -1 ? process.argv.slice(extraArgsIndex + 1) : []

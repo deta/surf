@@ -37,6 +37,7 @@ rten = "0.10.0"
 image = "0.25.2"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+uds_windows = "1.1.0"
 
 [dependencies.neon]
 version = "1.0.0-alpha.4"

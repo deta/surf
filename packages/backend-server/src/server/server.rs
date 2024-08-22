@@ -1,5 +1,8 @@
 use std::fs;
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::net::UnixListener;
+#[cfg(target_os = "windows")]
+use uds_windows::UnixListener;
 use std::path::PathBuf;
 
 use crate::embeddings::model::{EmbeddingModel, EmbeddingModelMode};

@@ -135,7 +135,12 @@ if (!gotTheLock) {
     const appPath = app.getAppPath() + (isDev ? '' : '.unpacked')
     const userDataPath = app.getPath('userData')
     const backendRootPath = join(userDataPath, 'sffs_backend')
-    const backendServerPath = join(appPath, 'resources', 'bin', 'surf-backend')
+    const backendServerPath = join(
+      appPath,
+      'resources',
+      'bin',
+      `surf-backend${process.platform === 'win32' ? '.exe' : ''}`
+    )
 
     surfBackendManager = new SurfBackendServerManager(backendServerPath, [
       backendRootPath,

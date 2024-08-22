@@ -12,7 +12,10 @@ use crate::llm::llama::llama::Llama;
 use crate::server::message::Message;
 use crate::BackendResult;
 use std::io::{Read, Write};
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::net::UnixStream;
+#[cfg(target_os = "windows")]
+use uds_windows::UnixStream;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
 

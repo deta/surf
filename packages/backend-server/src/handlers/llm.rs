@@ -1,6 +1,9 @@
 use crate::handlers::{try_stream_write_all, try_stream_write_all_bytes};
 use crate::llm::{llama::llama::Llama, models::Message};
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::net::UnixStream;
+#[cfg(target_os = "windows")]
+use uds_windows::UnixStream;
 
 pub fn handle_llm_chat_completion(model: &Llama, stream: &UnixStream, client_message: &str) {
     let chat_messages = match serde_json::from_str::<Vec<Message>>(&client_message) {
