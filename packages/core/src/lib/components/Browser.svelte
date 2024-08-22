@@ -397,6 +397,17 @@
       setAppSidebarState(false)
     }
 
+    setTimeout(() => {
+      const activeTabElement = document.getElementById(`tab-${tabId}`);
+      if (activeTabElement) {
+        activeTabElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+          inline: 'end'
+        })
+      }
+    }, 0)
+
     if (trigger) {
       telemetry.trackActivateTab(trigger, tab.type)
 
