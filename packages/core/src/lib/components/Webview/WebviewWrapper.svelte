@@ -34,6 +34,7 @@
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import ErrorPage from './ErrorPage.svelte'
   import type { WebviewError } from '../../constants/webviewErrors'
+  import { blur } from 'svelte/transition'
 
   export let src: string
   export let partition: string
@@ -320,6 +321,17 @@
 
 {#if $error}
   <ErrorPage error={$error} on:reload={() => forceReload()} />
+{/if}
+
+{#if webview && $isLoading === true}
+  <div
+    transition:blur={{ amount: 4, delay: 0.25 }}
+    class="absolute top-2 flex w-full justify-center z-[1001] pointer-events-none"
+  >
+    <div
+      class="left-0 h-[6px] animate-[border-width_0.7s_infinite_alternate] rounded-full bg-gradient-to-r from-sky-500/90 to-sky-500/90 via-sky-100/50 transition-all duration-100 ease-out shadow-2xl"
+    />
+  </div>
 {/if}
 
 <div class="webview-container">

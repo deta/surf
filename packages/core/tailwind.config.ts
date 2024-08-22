@@ -13,6 +13,20 @@ const config: Config = {
     },
     extend: {
       keyframes: {
+        'border-width': {
+          from: {
+            width: '36px',
+            opacity: '0',
+            transform: 'scale(0.8)',
+            filter: 'blur(4px)'
+          },
+          to: {
+            width: '124px',
+            opacity: '1',
+            transform: 'scale(1)',
+            filter: 'blur(0px)'
+          }
+        },
         tilt: {
           '0%, 50%, 100%': { transform: 'rotate(0deg)' },
           '25%': { transform: 'rotate(0.5deg)' },
