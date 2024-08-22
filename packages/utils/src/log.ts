@@ -36,7 +36,7 @@ class Logger {
 
   private getLevel() {
     // @ts-ignore
-    if (window.LOG_LEVEL) {
+    if (typeof window !== 'undefined' && window.LOG_LEVEL) {
       // @ts-ignore
       this.level = levelMap.indexOf(window.LOG_LEVEL) || this.level
     }
