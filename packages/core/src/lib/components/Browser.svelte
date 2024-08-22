@@ -23,7 +23,8 @@
     useLocalStorageStore,
     truncate,
     tooltip,
-    flyAndScale
+    flyAndScale,
+    type LogLevel
   } from '@horizon/utils'
   import { MEDIA_TYPES, createResourcesFromMediaItems, processDrop } from '../service/mediaImporter'
   import SidebarPane from './Sidebars/SidebarPane.svelte'
@@ -941,6 +942,15 @@
       if (rightPane?.isExpanded()) handleCollapseRight()
     } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
       showDevOverlay = !showDevOverlay
+
+      // @ts-ignore
+      if (window.LOG_LEVEL === 'debug') {
+        // @ts-ignore
+        window.setLogLevel('info')
+      } else {
+        // @ts-ignore
+        window.setLogLevel('debug')
+      }
     } else if (e.key === 'Enter' && addressBarFocus) {
       handleBlur()
       activeTabComponent?.blur()
@@ -2125,6 +2135,16 @@
 
   onMount(async () => {
     window.addEventListener('resize', handleResize)
+
+    // @ts-ignore
+    window.setLogLevel = (level: LogLevel) => {
+      // @ts-ignore
+      window.LOG_LEVEL = level
+      console.log(`[Logger]: Log level set to '${level}'`)
+      toasts.info(`Log level set to '${level}'`)
+
+      return level
+    }
 
     // @ts-expect-error
     const userConfig = (await window.api.getUserConfig()) as UserConfig

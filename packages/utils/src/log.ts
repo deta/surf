@@ -22,26 +22,45 @@ class Logger {
     } else {
       this.level = levelMap.indexOf('info')
     }
+
+    // @ts-ignore
+    if (typeof window !== 'undefined' && !window.LOG_LEVEL) {
+      // @ts-ignore
+      window.LOG_LEVEL = level
+    }
   }
 
   private getScope() {
     return this.scope ? `[${this.scope}]` : ''
   }
 
+  private getLevel() {
+    // @ts-ignore
+    if (window.LOG_LEVEL) {
+      // @ts-ignore
+      this.level = levelMap.indexOf(window.LOG_LEVEL) || this.level
+    }
+
+    return this.level
+  }
+
   log = (...data: any[]) => {
-    if (this.level <= levelMap.indexOf('verbose')) {
+    const level = this.getLevel()
+    if (level <= levelMap.indexOf('verbose')) {
       console.log(this.getScope(), ...data)
     }
   }
 
   debug = (...data: any[]) => {
-    if (this.level <= levelMap.indexOf('debug')) {
+    const level = this.getLevel()
+    if (level <= levelMap.indexOf('debug')) {
       console.log(this.getScope(), ...data)
     }
   }
 
   info = (...data: any[]) => {
-    if (this.level <= levelMap.indexOf('info')) {
+    const level = this.getLevel()
+    if (level <= levelMap.indexOf('info')) {
       console.log(this.getScope(), ...data)
     }
   }
@@ -53,13 +72,15 @@ class Logger {
   }
 
   error = (...data: any[]) => {
-    if (this.level <= levelMap.indexOf('error')) {
+    const level = this.getLevel()
+    if (level <= levelMap.indexOf('error')) {
       console.error(this.getScope(), ...data)
     }
   }
 
   json = (data: any) => {
-    if (this.level <= levelMap.indexOf('debug')) {
+    const level = this.getLevel()
+    if (level <= levelMap.indexOf('debug')) {
       console.log(JSON.stringify(data, null, 2))
     }
   }
