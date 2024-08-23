@@ -398,7 +398,7 @@
     }
 
     setTimeout(() => {
-      const activeTabElement = document.getElementById(`tab-${tabId}`);
+      const activeTabElement = document.getElementById(`tab-${tabId}`)
       if (activeTabElement) {
         activeTabElement.scrollIntoView({
           behavior: 'smooth',
@@ -548,7 +548,6 @@
 
     await deleteTab(e.detail, DeleteTabEventTrigger.Click)
   }
-
   const deleteTab = async (tabId: string, trigger?: DeleteTabEventTrigger) => {
     const tab = $tabs.find((tab) => tab.id === tabId)
     if (!tab) {
@@ -556,20 +555,24 @@
       return
     }
 
-    const activeTabIndex = $activeTabs.findIndex((tab) => tab.id === tabId)
+    const tabsInOrder = [...$pinnedTabs, ...$magicTabs, ...$unpinnedTabs]
+    const currentIndex = tabsInOrder.findIndex((tab) => tab.id === tabId)
 
     tabs.update((tabs) => tabs.filter((tab) => tab.id !== tabId))
-    activeTabsHistory.update((history) => history.filter((id) => id !== tabId))
     activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
 
     await tick()
 
     if ($activeTabId === tabId) {
-      makePreviousTabActive(activeTabIndex)
+      const updatedTabsInOrder = tabsInOrder.filter((tab) => tab.id !== tabId)
+      if (updatedTabsInOrder.length > 0) {
+        const newActiveTab =
+          updatedTabsInOrder[Math.min(currentIndex, updatedTabsInOrder.length - 1)]
+        makeTabActive(newActiveTab.id)
+      }
     }
 
     await tabsDB.delete(tabId)
-
     checkScroll()
 
     if (trigger) {
@@ -613,7 +616,6 @@
       log.error('No active tab')
       return
     }
-
     if ($showNewTabOverlay !== 0) {
       setShowNewTabOverlay(0)
       return
@@ -621,13 +623,15 @@
 
     if ($activeTab.pinned) {
       log.debug('Active tab is pinned, deactivating it')
-      $activatedTabs = $activatedTabs.filter((id) => id !== $activeTab.id)
+      const tabsInOrder = [...$pinnedTabs, ...$magicTabs, ...$unpinnedTabs]
+      const currentIndex = tabsInOrder.findIndex((tab) => tab.id === $activeTab.id)
+      activatedTabs.update((tabs) => tabs.filter((id) => id !== $activeTab.id))
 
-      const nextTabIndex = $unpinnedTabs.findIndex((tab) => tab.id === $activeTab.id) + 1
-      if ($unpinnedTabs[nextTabIndex]) {
-        makeTabActive($unpinnedTabs[nextTabIndex].id)
-      } else {
-        makeTabActive($unpinnedTabs[$unpinnedTabs.length - 1].id)
+      const nextTabIndex = currentIndex + 1
+      if (nextTabIndex < tabsInOrder.length) {
+        makeTabActive(tabsInOrder[nextTabIndex].id)
+      } else if (tabsInOrder.length > 1) {
+        makeTabActive(tabsInOrder[tabsInOrder.length - 2].id)
       }
     } else {
       await deleteTab($activeTab.id, trigger)
