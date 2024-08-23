@@ -95,12 +95,7 @@
     if (tab.currentDetectedApp?.rssFeedUrl) return true
 
     if (tab.currentDetectedApp?.appId === 'youtube') {
-      const isValidResource = [
-        ResourceTypes.CHANNEL_YOUTUBE,
-        ResourceTypes.PLAYLIST_YOUTUBE
-      ].includes(tab.currentDetectedApp?.resourceType as any)
-
-      return isValidResource
+      return true
     }
 
     return false

@@ -12,7 +12,8 @@ export const YoutubeRegexPatterns = {
   video: /^\/[a-zA-Z0-9_-]+\/status\/[0-9]+\/?$/,
   channelId: /channel\/([a-zA-Z0-9%_-]+)/,
   channelName: /(?:c|user)\/[a-zA-Z0-9%_-]+/,
-  channelHandle: /@[a-zA-Z0-9%_-]+/
+  channelHandle: /@[a-zA-Z0-9%_-]+/,
+  channelFeatured: /\/[a-zA-Z0-9%_-]+\/featured/
 }
 
 export type VideoData = {
@@ -153,34 +154,26 @@ export class YoutubeParser extends WebAppExtractor {
     // Match on both of these to autodetect channel feeds on either URL
     const url = this.url.href
     const urlPattern = new RegExp(
-      `${YoutubeRegexPatterns.channelId.source}|${YoutubeRegexPatterns.channelName.source}|${YoutubeRegexPatterns.channelHandle.source}`
+      `${YoutubeRegexPatterns.channelId.source}|${YoutubeRegexPatterns.channelName.source}|${YoutubeRegexPatterns.channelHandle.source}|${YoutubeRegexPatterns.channelFeatured.source}`
     )
 
     return url.match(urlPattern) ? true : false
   }
 
-  private getChannelUrl(document: Document) {
-    const isChannelUrl = this.isChannelUrl()
-
-    if (isChannelUrl) {
-      const canonicalElem = document.querySelector("link[rel='canonical']")
-      if (!canonicalElem) {
-        return null
-      }
-
-      const canonicalUrl = (canonicalElem as HTMLLinkElement).href
-      const match = canonicalUrl.match(YoutubeRegexPatterns.channelId)
-      if (!match) {
-        return null
-      }
-
-      const channelId = match[1]
-      const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`
-
-      return url
+  private getChannelID(document: Document) {
+    const canonicalElem = document.querySelector("link[rel='canonical']")
+    if (!canonicalElem) {
+      return null
     }
 
-    return null
+    const canonicalUrl = (canonicalElem as HTMLLinkElement).href
+    const match = canonicalUrl.match(YoutubeRegexPatterns.channelId)
+    if (!match) {
+      return null
+    }
+
+    const channelId = match[1]
+    return channelId
   }
 
   private getChannelIdentifier() {
@@ -272,9 +265,9 @@ export class YoutubeParser extends WebAppExtractor {
       return null
     }
 
-    const channelUrl = this.getChannelUrl(document)
-    if (channelUrl) {
-      return channelUrl
+    const channelId = this.getChannelID(document)
+    if (channelId) {
+      return `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`
     }
 
     console.log('No channel URL found')

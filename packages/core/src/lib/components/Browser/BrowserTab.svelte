@@ -645,17 +645,15 @@
           chatResourceBookmark: bookmarkedResource.id,
           resourceBookmarkedManually: !isSilent
         })
-
-        // if (!pageMagic) {
-        //   pageMagic = {
-        //     showSidebar: false,
-        //     running: false,
-        //     responses: []
-        //   } as PageMagic
-
-        //   log.debug('updating page magic', pageMagic)
-        //   dispatch('update-page-magic', pageMagic)
-        // }
+      } else {
+        log.debug('no bookmarked resource found')
+        tab.resourceBookmark = null
+        tab.chatResourceBookmark = null
+        dispatch('update-tab', {
+          resourceBookmark: null,
+          chatResourceBookmark: null,
+          resourceBookmarkedManually: false
+        })
       }
 
       const existingHistoryEntry = matchingResources.find(
