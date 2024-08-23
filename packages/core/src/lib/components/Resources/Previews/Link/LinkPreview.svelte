@@ -72,16 +72,16 @@
           alt={`${link?.provider} favicon`}
         />
         <div class="description">
-          {#if link?.description || link?.provider || ''}
-            {link?.description || link?.provider || ''}
-          {:else}
-            <Link
-              url={link?.url || '#'}
-              label={generateRootDomain(link?.url || '#')}
-              style="font-size: {'1rem'}"
-            />
+          {#if title}
+            {title}
           {/if}
         </div>
+
+        <Link
+          url={link?.url || '#'}
+          label={generateRootDomain(link?.url || '#')}
+          style="font-size: {'1rem'}"
+        />
       </div>
     {/if}
   </div>

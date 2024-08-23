@@ -337,8 +337,8 @@
 
   const updateLiveSpaceContentsWithAI = async (
     query: string,
-    sql_query: string | undefined,
-    embedding_query: string | undefined
+    sql_query: string | null,
+    embedding_query: string | null
   ) => {
     try {
       loadingSpaceSources.set(true)
@@ -352,8 +352,8 @@
 
       const response = await resourceManager.getResourcesViaPrompt(
         query,
-        sql_query === '' ? undefined : sql_query,
-        embedding_query === '' ? undefined : embedding_query
+        sql_query || undefined,
+        embedding_query || undefined
       )
       log.debug('AI response:', response)
 

@@ -1937,22 +1937,35 @@
       return null
     }
 
-    let app = tab.currentDetectedApp
-    if (app.appId === 'youtube') {
-      // For youtube we have to manually refresh the tab to make sure we are grabbing the feed of the right page as they don't update it on client side navigations
-      const validTypes = [ResourceTypes.CHANNEL_YOUTUBE, ResourceTypes.PLAYLIST_YOUTUBE]
+    log.debug('reloading tab to get RSS feed')
+    $activeBrowserTab.reload()
 
-      if (validTypes.includes(app.resourceType as any)) {
-        log.debug('reloading tab to get RSS feed')
-
-        // TODO: find a better way to wait for the tab to reload and the new app to be detected
-        $activeBrowserTab.reload()
-        await wait(3000)
-
-        log.debug('reloaded tab app', tab.currentDetectedApp)
-        app = tab.currentDetectedApp
-      }
+    const app = await $activeBrowserTab.waitForAppDetection(5000)
+    if (!app) {
+      log.debug('No app detected after reload')
+      return null
     }
+
+    log.debug('detected app', app)
+    // if (app.appId === 'youtube') {
+    //   // For youtube we have to manually refresh the tab to make sure we are grabbing the feed of the right page as they don't update it on client side navigations
+    //   const validTypes = [ResourceTypes.CHANNEL_YOUTUBE, ResourceTypes.PLAYLIST_YOUTUBE]
+
+    //   if (validTypes.includes(app.resourceType as any)) {
+    //     log.debug('reloading tab to get RSS feed')
+
+    //     $activeBrowserTab.reload()
+
+    //     const detectedApp = await $activeBrowserTab.waitForAppDetection(5000)
+    //     if (!detectedApp) {
+    //       log.debug('No app detected after reload')
+    //       return null
+    //     }
+
+    //     log.debug('reloaded tab app', detectedApp)
+    //     app = detectedApp
+    //   }
+    // }
 
     if (!app.rssFeedUrl) {
       log.debug('No RSS feed found for app', app)
@@ -3777,11 +3790,13 @@
                   <div
                     slot="content"
                     class="flex no-drag flex-row items-center justify-center space-x-4 px-3 py-3"
+                    let:closePopover
                   >
                     {#each $sidebarTools as tool}
                       <button
                         class="flex flex-col items-center space-y-2 disabled:opacity-40 disabled:cursor-not-allowed"
                         on:click={() => {
+                          closePopover()
                           openRightSidebarTab(tool.id)
                         }}
                         disabled={tool.disabled}

@@ -4,7 +4,6 @@
   import type { Space } from '../../types'
 
   export let spaces: Writable<Space[]>
-  export let closePopover: () => void
   export let infoText: string | undefined = undefined
 
   let selectedSpaceIndex = 0
@@ -30,7 +29,6 @@
     } else if (event.key === 'Enter') {
       console.log('Dispatching custom event from handleKeydown')
       dispatch('save-resource-in-space', $filteredSpaces[selectedSpaceIndex])
-      closePopover()
     }
   }
 
@@ -38,7 +36,6 @@
     selectedSpaceIndex = index
     console.log('Dispatching custom event from handleClick')
     dispatch('save-resource-in-space', $filteredSpaces[selectedSpaceIndex])
-    closePopover()
   }
 
   const focusInput = () => {
@@ -57,7 +54,7 @@
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="shortcut-wrapper" on:mouseleave={() => closePopover()}>
+<div class="shortcut-wrapper">
   {#if infoText}
     <span class="info">{infoText}</span>
   {/if}

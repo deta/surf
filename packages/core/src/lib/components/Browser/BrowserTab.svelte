@@ -32,7 +32,7 @@
   import { writable, type Unsubscriber } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { AIChatMessageParsed, PageMagic, TabPage } from '../../types/browser.types'
-  import { useLogScope, useDebounce, isGoogleSignInUrl, wait } from '@horizon/utils'
+  import { useLogScope, useDebounce, isGoogleSignInUrl, wait, generateID } from '@horizon/utils'
   import type { DetectedWebApp } from '@horizon/web-parser'
   import {
     CreateAnnotationEventTrigger,
@@ -44,6 +44,7 @@
     WebViewEventSendNames,
     type AnnotationCommentData,
     type ResourceDataAnnotation,
+    type ResourceDataLink,
     type WebViewEventKeyDown,
     type WebViewReceiveEvents,
     type WebViewSendEvents
@@ -107,6 +108,8 @@
   const historyStackIds = writable<string[]>(tab.historyStackIds)
   const currentHistoryIndex = writable(tab.currentHistoryIndex)
   const appDetectionRunning = writable(false)
+
+  const appDetectionCallbacks = new Map<string, (app: DetectedWebApp) => void>()
 
   $: autoSaveResources = $userConfigSettings.auto_save_resources
 
@@ -197,8 +200,24 @@
     log.debug('extracted resource data', detectedResource)
 
     if (!detectedResource) {
-      log.debug('no resource detected')
-      throw new Error('No resource detected')
+      // create basic link resource
+      const linkData = {
+        title: tab.title ?? '',
+        url: url
+      } as ResourceDataLink
+      const resource = await resourceManager.createResourceLink(
+        linkData,
+        { name: tab.title ?? '', sourceURI: url, alt: '' },
+        [
+          ResourceTag.canonicalURL(url),
+          ResourceTag.viewedByUser(true),
+          ...(silent ? [ResourceTag.silent()] : [])
+        ]
+      )
+
+      log.debug('created resource', resource)
+
+      return resource
     }
 
     const title = (detectedResource.data as any)?.title ?? tab.title ?? ''
@@ -283,6 +302,30 @@
     })
 
     return resource
+  }
+
+  export const waitForAppDetection = async (timeoutAfter = 3000) => {
+    let timeout: ReturnType<typeof setTimeout>
+
+    const id = generateID()
+
+    const cleanup = () => {
+      clearTimeout(timeout)
+      appDetectionCallbacks.delete(id)
+    }
+
+    return new Promise<DetectedWebApp | null>((resolve) => {
+      timeout = setTimeout(() => {
+        log.warn('waiting for app detection timed out')
+        cleanup()
+        resolve(null)
+      }, timeoutAfter)
+
+      appDetectionCallbacks.set(id, (app) => {
+        cleanup()
+        resolve(app)
+      })
+    })
   }
 
   const handleWebviewAnnotationClick = async (
@@ -517,6 +560,10 @@
 
       tab.currentDetectedApp = detectedApp
       dispatch('update-tab', { currentDetectedApp: detectedApp })
+
+      // run all app detection callbacks
+      const detectionCallbacks = Array.from(appDetectionCallbacks.values())
+      detectionCallbacks.forEach((callback) => callback(detectedApp))
 
       if ($appDetectionRunning) {
         log.debug('app detection already running')

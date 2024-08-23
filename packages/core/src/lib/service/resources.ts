@@ -1035,8 +1035,8 @@ export class ResourceManager {
 
   async getResourcesViaPrompt(
     query: string,
-    sql_query: string | undefined,
-    embedding_query: string | undefined
+    sql_query?: string,
+    embedding_query?: string
   ): Promise<AiSFFSQueryResponse> {
     return await this.sffs.getResourcesViaPrompt(query, sql_query, embedding_query)
   }

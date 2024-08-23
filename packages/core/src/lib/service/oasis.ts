@@ -43,7 +43,14 @@ export class OasisService {
   async createSpace(
     data: Optional<
       SpaceData,
-      'showInSidebar' | 'liveModeEnabled' | 'hideViewed' | 'smartFilterQuery' | 'sortBy' | 'sources'
+      | 'showInSidebar'
+      | 'liveModeEnabled'
+      | 'hideViewed'
+      | 'smartFilterQuery'
+      | 'sortBy'
+      | 'sources'
+      | 'sql_query'
+      | 'embedding_query'
     >
   ) {
     this.log.debug('creating space')
@@ -53,6 +60,8 @@ export class OasisService {
       liveModeEnabled: false,
       hideViewed: false,
       smartFilterQuery: null,
+      sql_query: null,
+      embedding_query: null,
       sortBy: 'created_at',
       sources: []
     }

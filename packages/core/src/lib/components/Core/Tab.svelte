@@ -12,6 +12,7 @@
   import { ResourceTagsBuiltInKeys, ResourceTypes, type Space } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
+  import CustomPopover from '../Atoms/CustomPopover.svelte'
 
   const log = useLogScope('Browser Tab')
 
@@ -62,11 +63,15 @@
   }>()
   const resourceManager = useResourceManager()
 
+  const liveSpacePopoverOpened = writable(false)
+  const saveToSpacePopoverOpened = writable(false)
+
   let addressInputElem: HTMLInputElement
   let space: Space | null = null
   let isEditing = false
   let hovered = false
   let popoverVisible = false
+  let popoverLiveSpaceVisible = false
 
   // $: acceptDrop = tab.type === 'space'
   $: isActive = tab.id === $activeTabId && !removeHighlight
@@ -171,18 +176,22 @@
     : ''
 
   const handleBookmark = () => {
+    saveToSpacePopoverOpened.set(false)
     dispatch('bookmark')
   }
 
   const handleCreateLiveSpace = () => {
+    liveSpacePopoverOpened.set(false)
     dispatch('create-live-space')
   }
 
   const handleAddSourceToSpace = (event: CustomEvent<Space>) => {
+    liveSpacePopoverOpened.set(false)
     dispatch('add-source-to-space', event.detail)
   }
 
   const handleSaveResourceInSpace = (event: CustomEvent<Space>) => {
+    saveToSpacePopoverOpened.set(false)
     dispatch('save-resource-in-space', event.detail)
   }
 
@@ -196,14 +205,6 @@
 
   const handleIncludeTab = () => {
     dispatch('include-tab', tab.id)
-  }
-
-  const handlePopoverEnter = () => {
-    popoverVisible = true
-  }
-
-  const handlePopoverLeave = () => {
-    popoverVisible = false
   }
 
   const handleDragStart = async (drag: DragculaDragEvent) => {
@@ -389,8 +390,8 @@
       {/if}
     </div>
 
-    {#if showButtons && !isEditing && hovered && ((tabSize && tabSize > 64) || isActive) && !showExcludeOthersButton}
-      <div class="items-center flex justify-end flex-row space-x-2 right-0">
+    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || isActive) && !showExcludeOthersButton}
+      <div class="items-center flex justify-end flex-row gap-3 right-0">
         {#if tab.archived}
           <button
             on:click|stopPropagation={handleUnarchive}
@@ -408,9 +409,27 @@
         {/if}
 
         {#if tab.type === 'page' && isActive && showLiveSpaceButton}
-          <button
-            on:mouseenter={handlePopoverEnter}
-            on:mouseleave={() => setTimeout(() => handlePopoverLeave(), 100)}
+          <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
+            <button
+              slot="trigger"
+              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+              on:click={handleCreateLiveSpace}
+            >
+              <Icon name="news" />
+            </button>
+
+            <div slot="content" class="no-drag p-1">
+              <ShortcutSaveItem
+                on:save-resource-in-space={handleAddSourceToSpace}
+                {spaces}
+                infoText="Add page as a source to Space:"
+              />
+            </div>
+          </CustomPopover>
+
+          <!-- <button
+            on:mouseenter={handlePopoverLiveSpaceEnter}
+            on:mouseleave={() => setTimeout(() => handlePopoverLiveSpaceLeave(), 100)}
             on:click={handleCreateLiveSpace}
             class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
             use:tooltip={{
@@ -421,7 +440,7 @@
               delay: 500
             }}
             on:save-resource-in-space={handleAddSourceToSpace}
-            on:popover-close={handlePopoverLeave}
+            on:popover-close={handlePopoverLiveSpaceLeave}
             use:popover={{
               content: {
                 component: ShortcutSaveItem,
@@ -437,12 +456,38 @@
             }}
           >
             <Icon name="news" />
-          </button>
+          </button> -->
         {/if}
 
         {#if tab.type === 'page' && isActive}
           {#key isBookmarkedByUser}
-            <button
+            <CustomPopover position="right" popoverOpened={saveToSpacePopoverOpened}>
+              <button
+                slot="trigger"
+                class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+                on:click={handleBookmark}
+              >
+                {#if bookmarkingInProgress}
+                  <Icon name="spinner" size="16px" />
+                {:else if bookmarkingSuccess}
+                  <Icon name="check" size="16px" />
+                {:else if isBookmarkedByUser}
+                  <Icon name="bookmarkFilled" size="16px" />
+                {:else}
+                  <Icon name="leave" size="16px" />
+                {/if}
+              </button>
+
+              <div slot="content" class="no-drag p-1">
+                <ShortcutSaveItem
+                  on:save-resource-in-space={handleSaveResourceInSpace}
+                  {spaces}
+                  infoText="Save page to Space:"
+                />
+              </div>
+            </CustomPopover>
+
+            <!-- <button
               on:mouseenter={handlePopoverEnter}
               on:mouseleave={() => setTimeout(() => handlePopoverLeave(), 100)}
               on:click={handleBookmark}
@@ -476,7 +521,7 @@
               {:else}
                 <Icon name="leave" size="16px" />
               {/if}
-            </button>
+            </button> -->
           {/key}
         {/if}
 

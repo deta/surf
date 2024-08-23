@@ -1,15 +1,17 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { writable, derived } from 'svelte/store'
-  import { Popover } from 'bits-ui'
+  import { Popover, type CustomEventHandler } from 'bits-ui'
   import { flyAndScale } from '@horizon/utils'
 
   export let initialPopoverOpened = false
   export let position: 'top' | 'bottom' | 'left' | 'right' = 'bottom'
+  export let popoverOpened = writable(initialPopoverOpened)
 
-  const popoverOpened = writable(initialPopoverOpened)
   let timerBeforePopoverClose: NodeJS.Timeout
   let timerBeforePopoverOpen: NodeJS.Timeout
+  let blockOpen = false
+
   const CLOSE_DELAY = 200
   const OPEN_DELAY = 400
 
@@ -17,12 +19,25 @@
     clearTimeout(timerBeforePopoverClose)
   }
 
-  const handleClick = () => {
+  const handleClick = (e: CustomEventHandler<MouseEvent, HTMLButtonElement>) => {
+    e.preventDefault()
+
     popoverOpened.set(false)
     clearTimeout(timerBeforePopoverOpen)
+
+    blockOpen = true
+
+    setTimeout(() => {
+      blockOpen = false
+    }, 500)
   }
 
   const handleMouseOver = () => {
+
+    if (blockOpen) {
+      return
+    }
+
     clearTimeout(timerBeforePopoverClose)
     timerBeforePopoverOpen = setTimeout(() => {
       popoverOpened.set(true)
@@ -34,6 +49,10 @@
     timerBeforePopoverClose = setTimeout(() => {
       popoverOpened.set(false)
     }, CLOSE_DELAY)
+  }
+
+  const closePopover = () => {
+    popoverOpened.set(false)
   }
 
   onDestroy(() => {
@@ -50,17 +69,6 @@
 <svelte:window on:keydown={handleKeyDown} />
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div
-  role="button"
-  tabindex="0"
-  on:mouseenter={handleMouseOver}
-  on:mouseleave={handleMouseOut}
-  on:focus={handleMouseOver}
-  on:dragenter={handleMouseOver}
-  on:click={handleClick}
->
-  <slot name="trigger" />
-</div>
 
 <Popover.Root
   open={$popoverOpened}
@@ -72,14 +80,22 @@
     }
   }}
 >
-  <Popover.Trigger
-    style="position: absolute; opacity: 0; {!$popoverOpened ? 'display: none;' : ''}"
-  />
+  <Popover.Trigger on:click={handleClick}>
+    <div
+      role="button"
+      tabindex="0"
+      on:mouseenter={handleMouseOver}
+      on:mouseleave={handleMouseOut}
+      on:dragenter={handleMouseOver}
+    >
+      <slot name="trigger" />
+    </div>
+  </Popover.Trigger>
   <Popover.Content
     class="z-30 max-w-[400px] max-h-[500px] "
     transition={flyAndScale}
-    sideOffset={20}
     side={position}
+    sideOffset={20}
   >
     <div
       on:mouseenter={handleMouseEnter}
@@ -88,9 +104,9 @@
       role="menu"
       tabindex="0"
     >
-      <Popover.Arrow size={4} />
+      <Popover.Arrow size={6} />
 
-      <slot name="content" />
+      <slot name="content" {closePopover} />
     </div>
   </Popover.Content>
 </Popover.Root>

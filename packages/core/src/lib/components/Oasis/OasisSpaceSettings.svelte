@@ -196,13 +196,13 @@
     }
 
     space.name.smartFilterQuery = smartFilterQuery ?? null
-    space.name.sql_query = undefined
-    space.name.embedding_query = undefined
+    space.name.sql_query = null
+    space.name.embedding_query = null
 
     await oasis.updateSpaceData(space.id, {
       smartFilterQuery: smartFilterQuery,
-      sql_query: undefined,
-      embedding_query: undefined
+      sql_query: null,
+      embedding_query: null
     })
 
     await telemetry.trackUpdateSpaceSettings({
