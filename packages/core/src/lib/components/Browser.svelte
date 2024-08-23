@@ -1189,10 +1189,10 @@
   }
   const debouncedCycleActiveTab = useDebounce(cycleActiveTab, 100)
 
-  const openUrlHandler = (url: string) => {
-    log.debug('open url', url)
+  const openUrlHandler = (url: string, active = true) => {
+    log.debug('open url', url, active)
 
-    createPageTab(url, { active: true, trigger: CreateTabEventTrigger.System })
+    createPageTab(url, { active: active, trigger: CreateTabEventTrigger.System })
   }
 
   const handleTabNavigation = (e: CustomEvent<string>) => {
@@ -2185,7 +2185,9 @@
       openUrlHandler(details.url)
     )
     // @ts-expect-error
-    window.api.onOpenURL((url: string) => openUrlHandler(url))
+    window.api.onOpenURL((details: { url: string; active: boolean }) => {
+      openUrlHandler(details.url, details.active)
+    })
 
     // @ts-expect-error
     window.api.onGetPrompts(() => {
@@ -3053,7 +3055,9 @@
     if (drag.item !== null) drag.item.dragEffect = 'copy'
 
     const toast = toasts.loading(
-      `${spaceId === 'all' ? 'Saving to Your Stuff...' : (drag.effect === 'move' ? 'Moving' : 'Copying') + 'to space...'}`
+      spaceId === 'all'
+        ? 'Saving to Your Stuff...'
+        : `${drag.effect === 'move' ? 'Moving' : 'Copying'} to Space...`
     )
 
     if (

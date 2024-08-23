@@ -70,7 +70,7 @@ const handleOpenUrl = (url: string) => {
     }
 
     mainWindow.focus()
-    mainWindow.webContents.send('open-url', url)
+    mainWindow.webContents.send('open-url', { url: url, active: true })
   } catch (error) {
     log.error('Error handling open URL:', error)
 

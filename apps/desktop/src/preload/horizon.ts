@@ -226,7 +226,7 @@ const api = {
 
   onOpenURL: (callback) => {
     try {
-      ipcRenderer.on('open-url', (_, url) => callback(url))
+      ipcRenderer.on('open-url', (_, { url, active }) => callback({ url, active }))
     } catch (error) {
       // noop
     }

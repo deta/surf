@@ -10,16 +10,26 @@ export function setupContextMenu(options: contextMenu.Options = {}) {
     showCopyImageAddress: true,
     showCopyLink: true,
     showCopyVideoAddress: true,
+    showInspectElement: true,
     prepend: (defaultActions, parameters) => [
+      {
+        label: 'Open in New Tab',
+        visible: parameters.linkURL.length > 0,
+        click: () => {
+          const mainWindow = getMainWindow()
+          mainWindow?.webContents.send('open-url', { url: parameters.linkURL, active: false })
+        }
+      },
+      defaultActions.separator(),
       {
         label: 'Search Google for “{selection}”',
         visible: parameters.selectionText.trim().length > 0,
         click: () => {
           const mainWindow = getMainWindow()
-          mainWindow?.webContents.send(
-            'open-url',
-            `https://google.com/search?q=${encodeURIComponent(parameters.selectionText)}`
-          )
+          mainWindow?.webContents.send('open-url', {
+            url: `https://google.com/search?q=${encodeURIComponent(parameters.selectionText)}`,
+            active: true
+          })
         }
       },
       {
@@ -27,19 +37,10 @@ export function setupContextMenu(options: contextMenu.Options = {}) {
         visible: parameters.selectionText.trim().length > 0,
         click: () => {
           const mainWindow = getMainWindow()
-          mainWindow?.webContents.send(
-            'open-url',
-            `https://www.perplexity.ai/?q=${encodeURIComponent(parameters.selectionText)}`
-          )
-        }
-      },
-      defaultActions.separator(),
-      {
-        label: 'Open in New Tab',
-        visible: parameters.linkURL.length > 0 && parameters.mediaType === 'none',
-        click: () => {
-          const mainWindow = getMainWindow()
-          mainWindow?.webContents.send('open-url', parameters.linkURL)
+          mainWindow?.webContents.send('open-url', {
+            url: `https://www.perplexity.ai/?q=${encodeURIComponent(parameters.selectionText)}`,
+            active: true
+          })
         }
       }
     ]
