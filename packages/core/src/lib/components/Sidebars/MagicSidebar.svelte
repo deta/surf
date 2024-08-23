@@ -61,6 +61,12 @@
   //   dispatch('updateMagicPage', $magicPage)
   // }, 500)
 
+  export const startChatWithQuery = async (query: string) => {
+    await handleClearChat()
+    inputValue = query
+    await handleChatSubmit()
+  }
+
   const updateMagicPage = (data: Partial<PageMagic>) => {
     if (data.chatId) {
       dispatch('updateActiveChatId', data.chatId)

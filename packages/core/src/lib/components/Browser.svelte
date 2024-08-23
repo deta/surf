@@ -125,6 +125,7 @@
   let rightPane: PaneAPI | undefined = undefined
   let sidebarComponent: SidebarPane | null = null
   let annotationsSidebar: AnnotationsSidebar
+  let magicSidebar: MagicSidebar
   let isFirstButtonVisible = true
   let newTabButton: Element
   let containerRef: Element
@@ -2122,6 +2123,24 @@
     }
   }
 
+  const handleCreateChatWithQuery = async (e: CustomEvent<string>) => {
+    const query = e.detail
+    log.debug('create chat with query', query)
+
+    openRightSidebarTab('chat')
+
+    await wait(500)
+
+    await excludeOtherTabsFromMagic($activeTabId)
+
+    if (magicSidebar) {
+      magicSidebar.startChatWithQuery(query)
+    } else {
+      log.error('Magic sidebar not found')
+      toasts.error('Failed to start chat with query')
+    }
+  }
+
   let maxWidth = window.innerWidth
 
   let tabSize = 0
@@ -2614,9 +2633,7 @@
     }
   }
 
-  const handleExcludeOtherTabsFromMagic = async (e: CustomEvent<string>) => {
-    const tabId = e.detail
-
+  const excludeOtherTabsFromMagic = async (tabId: string) => {
     // exclude all other tabs from magic
     tabs.update((x) => {
       return x.map((tab) => {
@@ -3479,7 +3496,7 @@
                                   on:unarchive-tab={handleUnarchiveTab}
                                   on:select={() => {}}
                                   on:remove-from-sidebar={handleRemoveFromSidebar}
-                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                  on:exclude-other-tabs={(e) => excludeOtherTabsFromMagic(e.detail)}
                                   on:exclude-tab={handleExcludeTabFromMagic}
                                   on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                                 />
@@ -3500,7 +3517,7 @@
                                   on:unarchive-tab={handleUnarchiveTab}
                                   on:select={handleTabSelect}
                                   on:remove-from-sidebar={handleRemoveFromSidebar}
-                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                  on:exclude-other-tabs={(e) => excludeOtherTabsFromMagic(e.detail)}
                                   on:exclude-tab={handleExcludeTabFromMagic}
                                   on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                                 />
@@ -3558,7 +3575,7 @@
                                   on:unarchive-tab={handleUnarchiveTab}
                                   on:delete-tab={handleDeleteTab}
                                   on:remove-from-sidebar={handleRemoveFromSidebar}
-                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                  on:exclude-other-tabs={(e) => excludeOtherTabsFromMagic(e.detail)}
                                   on:exclude-tab={handleExcludeTabFromMagic}
                                   on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                                 />
@@ -3578,7 +3595,7 @@
                                   on:delete-tab={handleDeleteTab}
                                   on:select={handleTabSelect}
                                   on:remove-from-sidebar={handleRemoveFromSidebar}
-                                  on:exclude-other-tabs={handleExcludeOtherTabsFromMagic}
+                                  on:exclude-other-tabs={(e) => excludeOtherTabsFromMagic(e.detail)}
                                   on:exclude-tab={handleExcludeTabFromMagic}
                                   on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                                 />
@@ -3871,6 +3888,7 @@
       >
         <NewTabOverlay
           spaceId={'all'}
+          activeTab={$activeTab}
           bind:showTabSearch={$showNewTabOverlay}
           on:open-space-as-tab={handleCreateTabForSpace}
           on:deleted={handleDeletedSpace}
@@ -3885,6 +3903,7 @@
           on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
           on:reload-window={() => $activeBrowserTab?.reload()}
           on:open-space={handleCreateTabForSpace}
+          on:create-chat={handleCreateChatWithQuery}
           on:zoom={() => {
             $activeBrowserTab?.zoomIn()
           }}
@@ -4055,6 +4074,7 @@
           <MagicSidebar
             magicPage={activeTabMagic}
             tabsInContext={$magicTabs}
+            bind:this={magicSidebar}
             bind:inputValue={$magicInputValue}
             on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
             on:highlightWebviewText={(e) =>

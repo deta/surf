@@ -13,6 +13,7 @@
     'open-url': string
     'activate-tab': string
     'open-resource': string
+    'create-chat': string
     'open-space': Space
     open: string
     'create-resource-from-oasis': string
@@ -76,9 +77,13 @@
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
   import { SaveToOasisEventTrigger, SearchOasisEventTrigger } from '@horizon/types'
-  export let activeTabs: Tab[] = []
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
+
+  export let activeTabs: Tab[] = []
   export let showTabSearch = 0
+  export let spaceId: string
+  export let historyEntriesManager: HistoryEntriesManager
+  export let activeTab: Tab | undefined = undefined
 
   const log = useLogScope('NewTabOverlay')
   const dispatch = createEventDispatcher<OverlayEvents>()
@@ -281,6 +286,19 @@
       deboundedSelectFirstCommandItem()
 
       const items = [
+        ...(activeTab && (activeTab.type === 'page' || activeTab.type === 'space')
+          ? [
+              {
+                id: `create-chat`,
+                type: 'command',
+                label: `Ask ${activeTab.type === 'space' ? 'Space' : 'Page'}: ${activeTab.title}`,
+                icon: 'message',
+                value: `Chat with ${searchValue}`,
+                // shortcut: '⌥C',
+                score: 0.9
+              }
+            ]
+          : []),
         ...commandFilter,
         ...filteredCommandItems,
         // ...historyEntriesResults.map((entry) => historyEntryToItem(entry, { score: 0.1 })),
@@ -296,7 +314,7 @@
           value: searchValue,
           icon: 'search',
           score: 1
-        })
+        } as CMDMenuItem)
       }
 
       const url = parseStringIntoBrowserLocation(searchValue)
@@ -460,6 +478,8 @@
     } else if (item.type === 'command' || item.type === 'navigate') {
       if (item.id === 'open-search-url') {
         dispatch('open-url', item.value!)
+      } else if (item.id === 'create-chat') {
+        dispatch('create-chat', $searchValue)
       } else {
         dispatch(item.id as keyof TabSearchEvents)
       }
@@ -522,9 +542,6 @@
     { id: 'zoom-out', label: 'Zoom Out', shortcut: '⌘-', type: 'command', icon: 'zoom-out' },
     { id: 'reset-zoom', label: 'Reset Zoom', shortcut: '⌘0', type: 'command', icon: 'maximize' }
   ] as CMDMenuItem[]
-
-  export let spaceId: string
-  export let historyEntriesManager: HistoryEntriesManager
 
   $: isEverythingSpace = spaceId === 'all'
 
@@ -1015,7 +1032,7 @@
           >
             <Icon name="close" />
           </button>
-        {:else if $searchValue.length === 0}
+        {:else}
           <button
             class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
               ? 'bottom-7'
@@ -1025,7 +1042,13 @@
             }}
             aria-label="Switch tabs"
           >
-            <span>Go to {showTabSearch === 1 ? 'My Stuff' : 'Search'}</span>
+            <span
+              >{showTabSearch === 1
+                ? $searchValue.length > 0
+                  ? 'Search My Stuff'
+                  : 'Open My Stuff'
+                : 'Search the Web'}</span
+            >
             <Command.Shortcut class="flex-shrink-0 bg-neutral-100 rounded-lg p-1">
               {#if showTabSearch === 1}
                 {#if navigator.platform.startsWith('Mac')}
