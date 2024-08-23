@@ -162,9 +162,9 @@
     }
   }
 
-  $: if (tab.type === 'space') {
-    fetchSpace(tab.spaceId)
-  }
+  // $: if (tab.type === 'space') {
+  //   fetchSpace(tab.spaceId)
+  // }
 
   $: sanitizedTitle = tab.title
     ? tab.type !== 'space'
@@ -229,6 +229,12 @@
   const handleDrop = async (drag: DragculaDragEvent) => {
     dispatch('Drop', { drag, spaceId: (tab as TabSpace).spaceId })
   }
+
+  onMount(() => {
+    if (tab.type === 'space') {
+      fetchSpace(tab.spaceId)
+    }
+  })
 
   let isDragging = false
 </script>

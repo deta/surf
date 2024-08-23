@@ -208,6 +208,10 @@
   }
 
   const handleFaviconChange = (newFaviconURL: string) => {
+    if ($faviconURL === newFaviconURL) {
+      return
+    }
+
     faviconURL.set(newFaviconURL)
     dispatch('favicon-change', newFaviconURL)
   }
