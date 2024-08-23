@@ -145,7 +145,19 @@ const template = [
         label: 'Copy URL',
         accelerator: 'CmdOrCtrl+Shift+C',
         click: () => ipcSenders.copyActiveTabURL()
-      }
+      },
+      { type: 'separator' },
+      ...(!isMac
+        ? [
+            {
+              label: 'Settings...',
+              accelerator: 'CmdOrCtrl+,',
+              click: () => {
+                createSettingsWindow()
+              }
+            }
+          ]
+        : [])
     ]
   },
   {
