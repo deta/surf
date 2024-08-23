@@ -498,6 +498,7 @@
     filteredItems = []
     googleSuggestions = []
     showTabSearch = 0
+    $selectedSpaceId = null
   }
   const browserCommands = [
     { id: 'close-active-tab', label: 'Close Tab', shortcut: '⌘W', type: 'command', icon: 'close' },
