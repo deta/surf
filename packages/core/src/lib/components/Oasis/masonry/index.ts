@@ -270,6 +270,10 @@ export class MasonryGrid {
   horizontalPadding: number
 
   constructor(container: HTMLElement, isEverythingSpace: boolean = false) {
+    if (!container || !container.offsetWidth) {
+      // console.warn('Invalid container element or container has no width. No Masonry Grid created.')
+      return
+    }
     this.container = container
     this.items = []
     this.minHeight = 50
@@ -294,11 +298,11 @@ export class MasonryGrid {
   }
 
   getColumnCount(): number {
-    const width = window.innerWidth
-    if (width < 800) return 1
-    if (width < 1100) return 2
-    if (width < 1400) return 3
-    if (width < 2000) return 4
+    const width = this.container.offsetWidth
+    if (width <= 600) return 1
+    if (width <= 900) return 2
+    if (width <= 1200) return 3
+    if (width <= 1800) return 4
     return 5
   }
 
@@ -311,11 +315,19 @@ export class MasonryGrid {
   }
 
   reinitializeGrid(items: Item[], skipSort: boolean = false): Item[] {
+    if (!this.tree) {
+      console.error('RedBlackTree is not initialized.')
+      return items
+    }
+
     this.initializeColumns()
 
     if (!skipSort) {
       items.sort((a, b) => parseInt(a.style?.top || '0') - parseInt(b.style?.top || '0'))
     }
+
+    const itemWidth =
+      100 / this.columnCount - (this.gapPercentage * (this.columnCount - 1)) / this.columnCount
 
     items.forEach((item) => {
       const height = item.dom?.classList.contains('space')
@@ -323,6 +335,10 @@ export class MasonryGrid {
         : parseInt(item.style?.height || '0')
 
       const shortestColumn = this.tree.findMin()
+      if (!shortestColumn) {
+        console.error('Failed to find the shortest column.')
+        return
+      }
       const columnIndex = shortestColumn.column
       const left =
         columnIndex * (this.columnWidth + this.gapPercentage) +
@@ -335,7 +351,7 @@ export class MasonryGrid {
         left: `${left}%`,
         top: `${top + PADDING_TOP}px`,
         height: `${height}px`,
-        width: `${this.columnWidth}%`
+        width: `${itemWidth}%`
       }
 
       item.style = itemStyle
@@ -382,7 +398,12 @@ export class MasonryGrid {
   }
 
   handleResize() {
+    if (!this.container || !this.container.offsetWidth) {
+      console.warn('ccc-Invalid container element or container has no width. Resize aborted.')
+      return
+    }
     const newColumnCount = this.getColumnCount()
+
     if (newColumnCount !== this.columnCount) {
       this.columnCount = newColumnCount
       this.columnWidth =

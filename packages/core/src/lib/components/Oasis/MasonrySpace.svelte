@@ -19,6 +19,9 @@
   let isUpdatingVisibleItems = false
   let updateVisibleItemsRequestId: number | null = null
   let resizeInterval: number | null = null
+  let resizeObserver = new ResizeObserver(() => {
+    handleResize()
+  })
 
   let masonryGrid: MasonryGrid
   let gridContainer: HTMLElement
@@ -65,7 +68,7 @@
   $: if ($searchValue) {
     clearTimeout(searchDebounceTimer)
     renderedItems = 0
-    searchDebounceTimer = setTimeout(updateGridAfterSearch, 3500)
+    searchDebounceTimer = setTimeout(updateGridAfterSearch, 500)
   }
 
   $: if (renderContents && !arraysEqual(renderContents, prevRenderContents)) {
@@ -107,8 +110,8 @@
     }
 
     // Start a new interval
-    resizeInterval = setInterval(() => {
-      handleRedraw()
+    resizeInterval = setInterval(async () => {
+      await handleRedraw()
     }, 500)
 
     // Set a timeout to clear the interval after 10 seconds
@@ -125,6 +128,13 @@
     if (gridContainer) {
       observeItems(gridContainer)
       updateVisibleItems()
+    }
+  }
+
+  function setItemDom(node: HTMLElement, item: Item) {
+    if (item && typeof item === 'object') {
+      item.dom = node
+      observeItemHeightChange(item)
     }
   }
 
@@ -147,7 +157,9 @@
       }
     })
 
-    gridObserver.observe(gridContainer, { childList: true, subtree: true })
+    if (gridObserver && gridContainer) {
+      gridObserver.observe(gridContainer, { childList: true, subtree: true })
+    }
   }
 
   function queueUpdate(newData: Item[]) {
@@ -262,16 +274,25 @@
   }
 
   function observeItems(gridContainer: HTMLElement | null) {
+    if (!gridContainer) return
+
     items.forEach((item) => {
-      const itemId = `item-${typeof item.id === 'object' ? item.id.id : item.id}`
+      if (!item) return // Skip if item is undefined
 
-      if (gridContainer) {
-        const dom = gridContainer.querySelector(`[id='${itemId}']`) as HTMLElement
+      const itemId = typeof item.id === 'object' ? item.id.id : item.id
+      if (itemId === undefined) return // Skip if itemId is undefined
 
-        if (dom) {
+      const dom = gridContainer.querySelector(`[id='item-${itemId}']`) as HTMLElement
+
+      if (dom) {
+        if (typeof item === 'object') {
           item.dom = dom
           observeItemHeightChange(item)
+        } else {
+          console.warn(`Item with id ${itemId} is not an object`)
         }
+      } else {
+        console.warn(`DOM element for item ${itemId} not found`)
       }
     })
   }
@@ -353,8 +374,8 @@
   function isBottomReached(): boolean {
     const BUFFER =
       scrollVelocity.velocity > 10
-        ? 3 * window.innerHeight * (scrollVelocity.velocity / 4)
-        : 3 * window.innerHeight
+        ? 3 * gridContainer.clientHeight * (scrollVelocity.velocity / 4)
+        : 3 * gridContainer.clientHeight
 
     if (!gridContainer) {
       throw new Error('[MasonrySpace:isBottomReached()] Grid Container not found')
@@ -391,10 +412,11 @@
     }
   }
 
-  function handleRedraw() {
+  async function handleRedraw() {
     if (masonryGrid) {
+      await tick()
       masonryGrid.handleResize()
-      updateVisibleItems()
+      updateGridAfterResize()
     }
   }
 
@@ -417,21 +439,38 @@
 
   onMount(async () => {
     created = new Date()
-    gridContainer = document.getElementById(id as unknown as string) as HTMLElement
     masonryGrid = new MasonryGrid(gridContainer, isEverythingSpace)
 
     setupGridObserver()
 
     gridContainer?.addEventListener('scroll', updateVisibleItems)
 
+    // This is needed for initial load. We need to wait for the resources to load
     if ('requestIdleCallback' in window) {
       ;(window as any).requestIdleCallback(idleCallback)
     } else {
       setTimeout(idleCallback, 500)
     }
 
-    // Add the event listener for resize
-    window.addEventListener('resize', handleResize)
+    // Start a new interval. This interval will redraw the grid every 500ms
+    // instead of waiting for the resources to load. This is way faster initially.
+    // This is needed for all other types of spaces
+    resizeInterval = setInterval(async () => {
+      // console.log('Redrawing grid')
+      await handleRedraw()
+    }, 500)
+
+    // Set a timeout to clear the interval after 10 seconds
+    setTimeout(() => {
+      if (resizeInterval) {
+        clearInterval(resizeInterval)
+        resizeInterval = null
+      }
+    }, 10000)
+
+    if (gridContainer) {
+      resizeObserver.observe(gridContainer)
+    }
   })
 
   onDestroy(() => {
@@ -453,7 +492,9 @@
     }
 
     // Remove the event listener for resize
-    window.removeEventListener('resize', handleResize)
+    if (resizeObserver) {
+      resizeObserver.disconnect()
+    }
   })
 </script>
 
@@ -477,18 +518,7 @@
   }}
 />
 
-<!-- <pre style="position: fixed; top: 0; left: 0; z-index: 10000">{JSON.stringify(
-    renderContents.length,
-    null,
-    2
-  )}</pre>
-<pre style="position: fixed; top: 1rem; right: 8rem; z-index: 10000">{JSON.stringify(
-    $gridItems.length,
-    null,
-    2
-  )}</pre> -->
-
-<div {id} class="masonry-grid" on:wheel={handleWheel}>
+<div {id} class="masonry-grid" on:wheel={handleWheel} bind:this={gridContainer}>
   {#each $gridItems as item, index (getUniqueKey(item, index))}
     <div
       data-vaul-no-drag
@@ -496,7 +526,7 @@
       id="item-{item.id}"
       class:visible={item.visible}
       style="left: {item.style?.left}; top: {item.style?.top}; height: {item.style?.height};"
-      bind:this={item.dom}
+      use:setItemDom={item}
     >
       <div class="item-details">
         <OasisResourceLoader
@@ -523,9 +553,10 @@
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 4rem;
     box-sizing: border-box;
     background: #f7f7f7;
+    container-type: inline-size;
+    container-name: masonry-grid;
   }
   .item {
     position: absolute;
@@ -537,7 +568,7 @@
       top 0s ease,
       width 0s ease,
       visibility 0.12s ease;
-    will-change: opacity, left, top, width, visility;
+    will-change: opacity, left, top, width, visibility;
     color: white;
     font-weight: bold;
     display: flex;
@@ -545,6 +576,7 @@
     justify-content: center;
     height: fit-content !important;
     opacity: 0;
+    width: 100%;
     visibility: visible;
   }
 
@@ -572,29 +604,29 @@
     opacity: 1;
   }
 
-  @media (max-width: 800px) {
+  @container masonry-grid (max-width: 600px) {
     .item {
-      width: 100%;
+      width: 92%;
     }
   }
-  @media (min-width: 801px) and (max-width: 1100px) {
+  @container masonry-grid (min-width: 601px) and (max-width: 900px) {
     .item {
-      width: 49%;
+      width: 45%;
     }
   }
-  @media (min-width: 1101px) and (max-width: 1400px) {
+  @container masonry-grid (min-width: 901px) and (max-width: 1200px) {
     .item {
       width: 32%;
     }
   }
-  @media (min-width: 1401px) and (max-width: 2000px) {
+  @container masonry-grid (min-width: 1201px) and (max-width: 1800px) {
     .item {
       width: 23.5%;
     }
   }
-  @media (min-width: 2001px) {
+  @container masonry-grid (min-width: 1801px) {
     .item {
-      width: 18.4%;
+      width: 19%;
     }
   }
 </style>

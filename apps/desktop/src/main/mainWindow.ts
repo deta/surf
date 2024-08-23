@@ -23,11 +23,11 @@ export function createWindow() {
   const currentDisplay =
     winState.state.x && winState.state.y
       ? screen.getDisplayMatching({
-        x: winState.state.x,
-        y: winState.state.y,
-        width: winState.state.width,
-        height: winState.state.height
-      })
+          x: winState.state.x,
+          y: winState.state.y,
+          width: winState.state.width,
+          height: winState.state.height
+        })
       : screen.getPrimaryDisplay()
   const screenBounds = currentDisplay.bounds
 

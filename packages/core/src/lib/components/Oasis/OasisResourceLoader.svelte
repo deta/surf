@@ -35,10 +35,8 @@
     }
   }
 
-  $: {
-    if (id) {
-      loadResource()
-    }
+  $: if (id) {
+    loadResource()
   }
 
   onMount(() => {

@@ -213,7 +213,6 @@
 
   const handleWheel = (event: WheelEvent) => {
     if (sidebarElement) {
-      event.preventDefault()
       sidebarElement.scrollLeft += event.deltaY
     }
   }

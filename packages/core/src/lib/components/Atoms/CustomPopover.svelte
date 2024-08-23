@@ -33,7 +33,6 @@
   }
 
   const handleMouseOver = () => {
-
     if (blockOpen) {
       return
     }
