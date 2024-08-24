@@ -10,178 +10,109 @@
 </script>
 
 <script lang="ts">
-  import { PaneGroup, Pane, PaneResizer, type PaneAPI } from 'paneforge'
-  import { createEventDispatcher, onMount } from 'svelte'
-  import { writable } from 'svelte/store'
+  import clsx from 'clsx'
 
-  const MIN_LEFT_SIDEBAR = 200
-  const MIN_RIGHT_SIDEBAR = 300
-  const RIGHT_SIDEBAR_MINIMAL_THRESHOLD = 450
+  const Open = {
+    Open: 'open',
+    Closed: 'closed'
+  } as const
 
-  const DEFAULT_LEFT_SIDEBAR_WIDTH = 300
-  const DEFAULT_RIGHT_SIDEBAR_WIDTH = 500
+  type Open = (typeof Open)[keyof typeof Open]
 
-  export let horizontalTabs: boolean = false
-  export let paneItem: PaneAPI | undefined = undefined
-  export let rightPaneItem: PaneAPI | undefined = undefined
-  export let rightSidebarHidden: boolean = true
-  export let leftSidebarHidden: boolean = false
+  let selected: string | null = null
+  let width = 250
+  let originalWidth = width
+  let originalClientX = width
+  let isDragging = false
+  let isOpen: Open = Open.Open
 
-  let rightSidebarMinimal = false
+  function handlePointerDown(e: PointerEvent) {
+    e.preventDefault()
+    originalWidth = width
+    originalClientX = e.clientX
+    isDragging = true
 
-  export const expandLeft = () => {
-    if (!$paneStore) return
+    function onPointerMove(e: PointerEvent) {
+      if (e.clientX < 50) isOpen = Open.Closed
+      else isOpen = Open.Open
 
-    $paneStore.expand()
-
-    const width = percentageToPx(paneSize)
-    if (width < MIN_LEFT_SIDEBAR) {
-      $paneStore.resize(pxToPercentage(DEFAULT_LEFT_SIDEBAR_WIDTH))
-    }
-  }
-
-  export const collapseLeft = () => {
-    if (!$paneStore) return
-
-    $paneStore.collapse()
-  }
-
-  export const expandRight = () => {
-    if (!$rightPaneStore) return
-
-    $rightPaneStore.expand()
-
-    const width = percentageToPx(rightPaneSize)
-    if (width < MIN_RIGHT_SIDEBAR) {
-      $rightPaneStore.resize(pxToPercentage(DEFAULT_RIGHT_SIDEBAR_WIDTH))
-    }
-  }
-
-  export const collapseRight = () => {
-    if (!$rightPaneStore) return
-
-    $rightPaneStore.collapse()
-  }
-
-  const paneStore = writable<PaneAPI | undefined>(undefined)
-  const rightPaneStore = writable<PaneAPI | undefined>(undefined)
-  const dispatch = createEventDispatcher<SidebarPaneEvents>()
-
-  let paneSize = 0
-  let rightPaneSize = 0
-
-  $: {
-    if (paneItem) {
-      paneStore.set(paneItem)
-    }
-  }
-
-  $: if ($paneStore) {
-    dispatch('pane-update', $paneStore)
-  }
-
-  $: {
-    if (rightPaneItem) {
-      rightPaneStore.set(rightPaneItem)
-    }
-  }
-
-  $: if ($rightPaneStore) {
-    dispatch('pane-update-right', $rightPaneStore)
-  }
-
-  const pxToPercentage = (px: number, widthOrHeight: 'width' | 'height' = 'width') => {
-    return (px / (widthOrHeight === 'width' ? window.innerWidth : window.innerHeight)) * 100
-  }
-  const percentageToPx = (percentage: number, widthOrHeight: 'width' | 'height' = 'width') => {
-    return (percentage / 100) * (widthOrHeight === 'width' ? window.innerWidth : window.innerHeight)
-  }
-
-  const handleCollapse = () => {
-    dispatch('collapsed-left-sidebar')
-  }
-
-  const handleExpand = () => {
-    if (paneSize === 0) return
-
-    dispatch('expanded-left-sidebar')
-  }
-
-  const handleRightCollapse = () => {
-    dispatch('collapsed-right-sidebar')
-  }
-
-  const handleRightExpand = () => {
-    if (rightPaneSize === 0) return
-
-    dispatch('expanded-right-sidebar')
-  }
-
-  const handleResizePane = (paneName: string, size: number) => {
-    if (paneName === 'sidebar') {
-      paneSize = size
-    } else {
-      rightPaneSize = size
+      width = Math.floor(clamp(originalWidth + e.clientX - originalClientX, 200, 400))
     }
 
-    if (size === 0) return
-
-    const width = percentageToPx(size, 'width')
-    if (paneName === 'sidebar' && width < MIN_LEFT_SIDEBAR) {
-      $paneStore?.collapse()
-    } else if (paneName === 'right-sidebar' && width < MIN_RIGHT_SIDEBAR) {
-      $rightPaneStore?.collapse()
+    function onPointerUp() {
+      window.removeEventListener('pointermove', onPointerMove)
+      isDragging = false
     }
 
-    if (paneName === 'right-sidebar') {
-      rightSidebarMinimal = width < RIGHT_SIDEBAR_MINIMAL_THRESHOLD
-      localStorage.setItem(`panelSize-${paneName}`, percentageToPx(size, 'width').toString())
-      return
-    } else {
-      localStorage.setItem(
-        `panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-${paneName}`,
-        percentageToPx(size, horizontalTabs ? 'height' : 'width').toString()
-      )
-    }
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp, { once: true })
   }
 
-  const handleResize = (e: Event) => {
-    const targetSidebar = Number(
-      localStorage.getItem(`panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`)
-    )
-    const targetRightSidebar = Number(localStorage.getItem('panelSize-right-sidebar'))
-
-    const newPercentageSidebar = pxToPercentage(targetSidebar, horizontalTabs ? 'height' : 'width')
-    const newPercentageRightSidebar = pxToPercentage(targetRightSidebar, 'width')
-
-    if (newPercentageSidebar !== 0 && !leftSidebarHidden) $paneStore?.resize(newPercentageSidebar)
-    if (newPercentageRightSidebar !== 0 && !rightSidebarHidden)
-      $rightPaneStore?.resize(newPercentageRightSidebar)
+  function toggleSidebar() {
+    isOpen = isOpen === Open.Closed ? Open.Open : Open.Closed
   }
 
-  onMount(() => {
-    if (rightSidebarHidden && $rightPaneStore) {
-      $rightPaneStore.collapse()
-    }
-  })
+  $: navClasses = clsx(
+    'fixed top-0 bottom-0 left-0 flex flex-col space-y-2 h-screen max-h-screen flex-shrink-0 bg-[rgb(251,251,250)] transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+    {
+      'cursor-col-resize': isDragging
+    },
+    isDragging
+      ? 'shadow-[rgba(0,0,0,0.2)_-2px_0px_0px_0px_inset]'
+      : 'shadow-[rgba(0,0,0,0.04)_-2px_0px_0px_0px_inset]',
+    isOpen === Open.Open ? 'translate-x-0' : '-translate-x-full'
+  )
+
+  $: buttonClasses = clsx(
+    'w-6 h-6 transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+    isOpen === Open.Open ? 'rotate-180' : 'rotate-0'
+  )
+
+  $: mainStyle = `padding-left: ${isOpen === Open.Open ? width : 0}px;`
+  $: mainClasses = clsx(
+    'flex flex-grow h-1/2',
+    isDragging
+      ? 'transition-none'
+      : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300'
+  )
 </script>
 
-<svelte:window on:resize={handleResize} />
+<div class="flex w-full h-full justify-start items-start no-drag">
+  <nav class={navClasses} aria-labelledby="nav-heading" style="width: {width}px;">
+    <slot name="sidebar" />
+    <button
+      class="absolute bg-red-500 p-1 border-y-2 border-r-2 border-[rgba(0,0,0,0.08)] text-slate-600 -bottom-0 -right-[34px] no-drag z-[500000000000001]"
+      style="z-index: 1231221312321312312221321313212112312321312;"
+      on:click={toggleSidebar}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class={buttonClasses}
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"
+        />
+      </svg>
+    </button>
 
+    <div class="absolute z-10 right-0 flex-grow-0 top-0 bottom-0 no-drag bg-red-500 w-3">
+      <div on:pointerdown={handlePointerDown} class="w-3 h-full cursor-col-resize shrink-0" />
+    </div>
+  </nav>
+
+  <main style={mainStyle} class={mainClasses}>
+    <slot name="content" />
+  </main>
+</div>
+<!--
 <PaneGroup direction={horizontalTabs ? 'vertical' : 'horizontal'} class="px-0.5">
   {#if horizontalTabs}
-    <!-- <Pane
-      defaultSize={localStorage.getItem('panelSize-horizontal-sidebar') === null
-        ? 3
-        : pxToPercentage(Number(localStorage.getItem('panelSize-horizontal-sidebar')), 'height')}
-      collapsible={false}
-      bind:pane={$paneStore}
-      onCollapse={handleCollapse}
-      onExpand={handleExpand}
-      onResize={(size) => handleResizePane('sidebar', size)}
-    >
-      <slot name="sidebar" />
-    </Pane> -->
     <div>
       <slot name="sidebar" />
     </div>
@@ -232,4 +163,4 @@
       </Pane>
     </PaneGroup>
   </Pane>
-</PaneGroup>
+</PaneGroup> -->

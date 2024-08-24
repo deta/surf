@@ -1029,7 +1029,7 @@
 >
   <Drawer.Portal>
     <Drawer.Overlay
-      class="drawer-overlay fixed inset-0 z-10 transition-opacity duration-300 no-drag"
+      class="drawer-overlay fixed inset-0 z-10 transition-opacity duration-300 no-drag backdrop-blur-[2px]"
     />
     <Drawer.Content
       class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-xl transition duration-400 bg-[#FEFFFE] outline-none"
