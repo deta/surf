@@ -5,7 +5,8 @@
 
   const Open = {
     Open: 'open',
-    Closed: 'closed'
+    Closed: 'closed',
+    Peek: 'peek'
   } as const
 
   type Open = (typeof Open)[keyof typeof Open]
@@ -15,8 +16,7 @@
   let originalWidth = width
   let originalClientX = width
   let isDragging = false
-  let isOpen: Open = Open.Open
-
+  let isOpen: Open = Open.Closed
   let ownerDocument: Document
 
   onMount(() => {
@@ -24,17 +24,13 @@
   })
 
   function handlePointerDown(e: PointerEvent) {
-    // this prevents dragging from selecting
     e.preventDefault()
-
     originalWidth = width
     originalClientX = e.clientX
     isDragging = true
 
     function onPointerMove(e: PointerEvent) {
       if (e.clientX < 50) isOpen = Open.Closed
-      else isOpen = Open.Open
-
       width = Math.floor(clamp(originalWidth + e.clientX - originalClientX, 200, 400))
     }
 
@@ -53,20 +49,35 @@
     isOpen = isOpen === Open.Closed ? Open.Open : Open.Closed
   }
 
+  function handleMouseEnter() {
+    if (isOpen === Open.Closed) {
+      isOpen = Open.Peek
+    }
+  }
+
+  function handleMouseLeave() {
+    if (isOpen === Open.Peek) {
+      isOpen = Open.Closed
+    }
+  }
+
+  $: console.error('isOpen', isOpen)
+
   $: navClasses = clsx(
     'fixed top-0 bottom-0 left-0 flex flex-col space-y-2 h-screen max-h-screen flex-shrink-0 bg-[rgb(251,251,250)] transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
     {
-      'cursor-col-resize': isDragging
+      'cursor-col-resize': isDragging,
+      'shadow-lg': isOpen === Open.Peek
     },
     isDragging
       ? 'shadow-[rgba(0,0,0,0.2)_-2px_0px_0px_0px_inset]'
       : 'shadow-[rgba(0,0,0,0.04)_-2px_0px_0px_0px_inset]',
-    isOpen === Open.Open ? 'translate-x-0' : '-translate-x-full'
+    isOpen === Open.Open || isOpen === Open.Peek ? 'translate-x-0' : '-translate-x-full'
   )
 
   $: buttonClasses = clsx(
     'w-6 h-6 transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
-    isOpen === Open.Open ? 'rotate-180' : 'rotate-0'
+    isOpen === Open.Open || isOpen === Open.Peek ? 'rotate-180' : 'rotate-0'
   )
 
   $: mainStyle = `padding-left: ${isOpen === Open.Open ? width : 0}px;`
@@ -76,10 +87,20 @@
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300'
   )
+
+  $: peekAreaClasses = clsx(
+    'fixed top-0 left-0 w-4 h-full z-50 no-drag',
+    isOpen === Open.Closed ? 'block' : 'hidden'
+  )
 </script>
 
 <div class="flex w-screen h-screen justify-start items-start">
-  <nav class={navClasses} aria-labelledby="nav-heading" style="width: {width}px;">
+  <nav
+    class={navClasses}
+    aria-labelledby="nav-heading"
+    style="width: {width}px; z-index: 10000000000000;"
+    on:mouseleave={handleMouseLeave}
+  >
     <div class="h-full overflow-auto">
       <slot name="sidebar" />
     </div>
@@ -102,16 +123,23 @@
         />
       </svg>
     </button>
-
     <div
       class="absolute z-10 right-0 bg-red-500 flex-grow-0 top-0 bottom-0 no-drag w-1 cursor-col-resize"
     >
       <div on:pointerdown={handlePointerDown} class="w-3 h-full cursor-col-resize shrink-0" />
     </div>
   </nav>
-
+  <div
+    class={peekAreaClasses}
+    on:mouseenter={handleMouseEnter}
+    on:mousemove={(e) => {
+      if (isOpen === Open.Closed) {
+        handleMouseEnter()
+      }
+    }}
+  />
   <main style={mainStyle} class={mainClasses}>
-    <div class="flex flex-col px-5 py-12 flex-grow overflow-auto">
+    <div class="flex flex-col flex-grow overflow-auto">
       <slot name="content" />
     </div>
   </main>

@@ -3916,7 +3916,7 @@
       slot="content"
       class="h-full w-full shadow-lg flex space-x-4 relative flex-row {horizontalTabs
         ? 'px-1.5'
-        : 'py-1.5'}"
+        : 'py-1.5 px-1.5'}"
     >
       <!-- {horizontalTabs ? `pb-1.5 ${showTabs && 'pt-1.5'}` : `pr-1.5 ${showTabs && 'pl-1.5'}`}  -->
       <div
