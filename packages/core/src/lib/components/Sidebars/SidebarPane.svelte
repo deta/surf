@@ -1,16 +1,7 @@
-<script lang="ts" context="module">
-  export type SidebarPaneEvents = {
-    'collapsed-left-sidebar': void
-    'expanded-left-sidebar': void
-    'pane-update': PaneAPI
-    'collapsed-right-sidebar': void
-    'expanded-right-sidebar': void
-    'pane-update-right': PaneAPI
-  }
-</script>
-
 <script lang="ts">
   import clsx from 'clsx'
+  import { clamp } from 'lodash'
+  import { onMount } from 'svelte'
 
   const Open = {
     Open: 'open',
@@ -26,8 +17,16 @@
   let isDragging = false
   let isOpen: Open = Open.Open
 
+  let ownerDocument: Document
+
+  onMount(() => {
+    ownerDocument = document
+  })
+
   function handlePointerDown(e: PointerEvent) {
+    // this prevents dragging from selecting
     e.preventDefault()
+
     originalWidth = width
     originalClientX = e.clientX
     isDragging = true
@@ -40,12 +39,14 @@
     }
 
     function onPointerUp() {
-      window.removeEventListener('pointermove', onPointerMove)
+      ownerDocument.removeEventListener('pointermove', onPointerMove)
       isDragging = false
     }
 
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerUp, { once: true })
+    ownerDocument.addEventListener('pointermove', onPointerMove)
+    ownerDocument.addEventListener('pointerup', onPointerUp, {
+      once: true
+    })
   }
 
   function toggleSidebar() {
@@ -70,19 +71,20 @@
 
   $: mainStyle = `padding-left: ${isOpen === Open.Open ? width : 0}px;`
   $: mainClasses = clsx(
-    'flex flex-grow h-1/2',
+    'flex flex-grow max-h-screen h-full px-2',
     isDragging
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300'
   )
 </script>
 
-<div class="flex w-full h-full justify-start items-start no-drag">
+<div class="flex w-screen h-screen justify-start items-start">
   <nav class={navClasses} aria-labelledby="nav-heading" style="width: {width}px;">
-    <slot name="sidebar" />
+    <div class="h-full overflow-auto">
+      <slot name="sidebar" />
+    </div>
     <button
-      class="absolute bg-red-500 p-1 border-y-2 border-r-2 border-[rgba(0,0,0,0.08)] text-slate-600 -bottom-0 -right-[34px] no-drag z-[500000000000001]"
-      style="z-index: 1231221312321312312221321313212112312321312;"
+      class="absolute bg-white p-1 border-y-2 border-r-2 border-[rgba(0,0,0,0.08)] text-slate-600 -right-[34px] no-drag cursor-pointer"
       on:click={toggleSidebar}
     >
       <svg
@@ -101,66 +103,16 @@
       </svg>
     </button>
 
-    <div class="absolute z-10 right-0 flex-grow-0 top-0 bottom-0 no-drag bg-red-500 w-3">
+    <div
+      class="absolute z-10 right-0 bg-red-500 flex-grow-0 top-0 bottom-0 no-drag w-1 cursor-col-resize"
+    >
       <div on:pointerdown={handlePointerDown} class="w-3 h-full cursor-col-resize shrink-0" />
     </div>
   </nav>
 
   <main style={mainStyle} class={mainClasses}>
-    <slot name="content" />
+    <div class="flex flex-col px-5 py-12 flex-grow overflow-auto">
+      <slot name="content" />
+    </div>
   </main>
 </div>
-<!--
-<PaneGroup direction={horizontalTabs ? 'vertical' : 'horizontal'} class="px-0.5">
-  {#if horizontalTabs}
-    <div>
-      <slot name="sidebar" />
-    </div>
-  {:else}
-    <Pane
-      defaultSize={localStorage.getItem('panelSize-vertical-sidebar') === null
-        ? 15
-        : pxToPercentage(Number(localStorage.getItem('panelSize-vertical-sidebar')))}
-      collapsible={true}
-      bind:pane={$paneStore}
-      onCollapse={handleCollapse}
-      onExpand={handleExpand}
-      onResize={(size) => handleResizePane('sidebar', size)}
-      order={1}
-    >
-      <slot name="sidebar" />
-    </Pane>
-    <PaneResizer class="hover:bg-neutral-100 z-[50001] my-1.5 rounded-full no-drag">
-      <div
-        class:h-full={!horizontalTabs}
-        class:w-1.5={!horizontalTabs}
-        class:w-full={horizontalTabs}
-        class:h-0.5={horizontalTabs}
-      />
-    </PaneResizer>
-  {/if}
-  <Pane order={2}>
-    <PaneGroup direction="horizontal">
-      <Pane order={1}>
-        <slot name="content" />
-      </Pane>
-      <PaneResizer class="hover:bg-neutral-100 z-[50001] my-1.5 rounded-full no-drag">
-        <div class="h-full w-1.5" />
-      </PaneResizer>
-      <Pane
-        order={2}
-        defaultSize={localStorage.getItem('panelSize-right-sidebar') === null
-          ? 15
-          : pxToPercentage(Number(localStorage.getItem('panelSize-right-sidebar')))}
-        collapsible={true}
-        class="bg-sky-50 mb-1.5 rounded-xl {horizontalTabs ? '' : 'mt-1.5'}"
-        onCollapse={handleRightCollapse}
-        onExpand={handleRightExpand}
-        bind:pane={$rightPaneStore}
-        onResize={(size) => handleResizePane('right-sidebar', size)}
-      >
-        <slot name="right-sidebar" minimal={rightSidebarMinimal} />
-      </Pane>
-    </PaneGroup>
-  </Pane>
-</PaneGroup> -->

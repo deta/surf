@@ -3914,7 +3914,7 @@
 
     <div
       slot="content"
-      class="h-full shadow-lg flex space-x-4 relative flex-row {horizontalTabs
+      class="h-full w-full shadow-lg flex space-x-4 relative flex-row {horizontalTabs
         ? 'px-1.5'
         : 'py-1.5'}"
     >
