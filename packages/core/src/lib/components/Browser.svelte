@@ -905,18 +905,14 @@
 
   const handleCollapse = () => {
     log.debug('Collapsing sidebar')
-    if (sidebarComponent) {
-      sidebarComponent.collapseLeft()
-      changeTraficLightsVisibility(false)
-    }
+    showLeftSidebar = false
+    changeTraficLightsVisibility(false)
   }
 
   const handleExpand = () => {
     log.debug('Expanding sidebar')
-    if (sidebarComponent) {
-      sidebarComponent.expandLeft()
-      changeTraficLightsVisibility(true)
-    }
+    showLeftSidebar = true
+    changeTraficLightsVisibility(true)
   }
 
   const handleRightSidebarTabsChange = (tab: RightSidebarTab) => {
@@ -3256,6 +3252,7 @@
   <SidebarPane
     {horizontalTabs}
     bind:this={sidebarComponent}
+    bind:showLeftSidebar
     on:collapsed-left-sidebar={() => handleLeftSidebarChange(false)}
     on:expanded-left-sidebar={() => handleLeftSidebarChange(true)}
     on:collapsed-right-sidebar={() => {
@@ -3266,8 +3263,6 @@
     }}
     bind:rightPaneItem={rightPane}
     on:pane-update-right={handleRightPaneUpdate}
-    rightSidebarHidden={!showRightSidebar}
-    leftSidebarHidden={!showLeftSidebar}
   >
     <div
       slot="sidebar"

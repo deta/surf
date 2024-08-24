@@ -1,84 +1,132 @@
 <script lang="ts">
-  import clsx from 'clsx'
-  import { clamp } from 'lodash'
-  import { onMount } from 'svelte'
+  import { onMount, createEventDispatcher } from 'svelte'
+  import { debounce } from 'lodash'
 
-  const Open = {
+  export let horizontalTabs = false
+  export let showLeftSidebar = true
+
+  const dispatch = createEventDispatcher()
+
+  const State = {
     Open: 'open',
     Closed: 'closed',
     Peek: 'peek'
   } as const
 
-  type Open = (typeof Open)[keyof typeof Open]
+  type SidebarState = (typeof State)[keyof typeof State]
 
-  export let horizontalTabs = false
-
-  let selected: string | null = null
-  let size = horizontalTabs ? 100 : 250
-  let originalSize = size
-  let originalClientPos = size
+  let size: number
+  let isOpen: SidebarState = State.Open
   let isDragging = false
-  let isOpen: Open = Open.Closed
   let ownerDocument: Document
+  let peekTimeout: ReturnType<typeof setTimeout> | null = null
+
+  const MIN_VERTICAL_SIZE = 200
+  const MAX_VERTICAL_SIZE = 400
+  const HORIZONTAL_SIZE = 40
+  const PEEK_DELAY = 300
+  const ERROR_ZONE = 20
 
   onMount(() => {
     ownerDocument = document
+    loadSavedSize()
   })
+
+  function loadSavedSize() {
+    const savedSize = Number(
+      localStorage.getItem(`panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`)
+    )
+    size = horizontalTabs ? HORIZONTAL_SIZE : savedSize || MIN_VERTICAL_SIZE
+    if (!horizontalTabs && (size < MIN_VERTICAL_SIZE || size > MAX_VERTICAL_SIZE)) {
+      size = MIN_VERTICAL_SIZE
+    }
+  }
+
+  const saveSizeToLocalStorage = debounce(() => {
+    if (!horizontalTabs) {
+      localStorage.setItem(`panelSize-vertical-sidebar`, size.toString())
+    }
+  }, 200)
 
   function handlePointerDown(e: PointerEvent) {
     e.preventDefault()
-    originalSize = size
-    originalClientPos = horizontalTabs ? e.clientY : e.clientX
     isDragging = true
+    const startPos = horizontalTabs ? e.clientY : e.clientX
+    const startSize = size
 
     function onPointerMove(e: PointerEvent) {
+      if (!isDragging) return
       const currentPos = horizontalTabs ? e.clientY : e.clientX
-      if (currentPos < (horizontalTabs ? 25 : 50)) isOpen = Open.Closed
-      size = Math.floor(
-        clamp(
-          originalSize +
-            (horizontalTabs ? currentPos - originalClientPos : currentPos - originalClientPos),
-          horizontalTabs ? 50 : 200,
-          horizontalTabs ? 200 : 400
-        )
-      )
+      const newSize = startSize + (horizontalTabs ? currentPos - startPos : currentPos - startPos)
+
+      if (horizontalTabs) {
+        isOpen = newSize > HORIZONTAL_SIZE / 2 ? State.Open : State.Closed
+        size = HORIZONTAL_SIZE
+      } else {
+        size = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
+        saveSizeToLocalStorage()
+      }
     }
 
     function onPointerUp() {
-      ownerDocument.removeEventListener('pointermove', onPointerMove)
       isDragging = false
     }
 
     ownerDocument.addEventListener('pointermove', onPointerMove)
-    ownerDocument.addEventListener('pointerup', onPointerUp, {
-      once: true
-    })
+    ownerDocument.addEventListener('pointerup', onPointerUp, { once: true })
+    ownerDocument.addEventListener('pointercancel', onPointerUp, { once: true })
   }
 
   function toggleBar() {
-    isOpen = isOpen === Open.Closed ? Open.Open : Open.Closed
+    isOpen = isOpen === State.Open ? State.Closed : State.Open
   }
 
   function handleMouseEnter() {
-    if (isOpen === Open.Closed) {
-      isOpen = Open.Peek
+    if (isOpen === State.Closed) {
+      clearTimeout(peekTimeout!)
+      isOpen = State.Peek
     }
   }
 
-  function handleMouseLeave() {
-    if (isOpen === Open.Peek) {
-      isOpen = Open.Closed
+  function handleMouseLeave(event: MouseEvent) {
+    if (isOpen === State.Peek) {
+      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+      const isWithinErrorZone =
+        event.clientX >= rect.left - ERROR_ZONE &&
+        event.clientX <= rect.right + ERROR_ZONE &&
+        event.clientY >= rect.top - ERROR_ZONE &&
+        event.clientY <= rect.bottom + ERROR_ZONE
+
+      if (!isWithinErrorZone) {
+        peekTimeout = setTimeout(() => {
+          isOpen = State.Closed
+        }, PEEK_DELAY)
+      }
     }
   }
 
-  $: console.error('isOpen', isOpen)
+  $: {
+    if (showLeftSidebar === true) {
+      isOpen = State.Open
+    } else if (showLeftSidebar === false) {
+      isOpen = State.Closed
+    }
+  }
 
-  $: barClasses = clsx(
+  // $: {
+  //   if (isOpen === State.Open) {
+  //     showLeftSidebar = true
+  //   } else if (isOpen === State.Closed) {
+  //     showLeftSidebar = false
+  //   }
+  // }
+
+  $: barClasses = [
     'fixed left-0 right-0 flex flex-shrink-0 bg-[rgb(251,251,250)] transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
     {
       'cursor-row-resize': horizontalTabs && isDragging,
       'cursor-col-resize': !horizontalTabs && isDragging,
-      'shadow-lg': isOpen === Open.Peek,
+      'shadow-lg': isOpen === State.Peek,
       'top-0 bottom-0 flex-col space-y-2': !horizontalTabs,
       'top-0 flex-row space-x-2': horizontalTabs
     },
@@ -89,40 +137,48 @@
       : horizontalTabs
         ? 'shadow-[rgba(0,0,0,0.04)_0px_-2px_0px_0px_inset]'
         : 'shadow-[rgba(0,0,0,0.04)_-2px_0px_0px_0px_inset]',
-    isOpen === Open.Open || isOpen === Open.Peek
+    isOpen === State.Open || isOpen === State.Peek
       ? 'translate-x-0 translate-y-0'
       : horizontalTabs
         ? '-translate-y-full'
         : '-translate-x-full'
-  )
+  ]
+    .filter(Boolean)
+    .join(' ')
 
-  $: buttonClasses = clsx(
+  $: buttonClasses = [
     'w-6 h-6 transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
-    isOpen === Open.Open || isOpen === Open.Peek
+    isOpen === State.Open || isOpen === State.Peek
       ? horizontalTabs
         ? 'rotate-90'
         : 'rotate-180'
       : horizontalTabs
         ? '-rotate-90'
         : 'rotate-0'
-  )
+  ].join(' ')
 
   $: mainStyle = horizontalTabs
-    ? `padding-top: ${isOpen === Open.Open ? size : 0}px;`
-    : `padding-left: ${isOpen === Open.Open ? size : 0}px;`
-  $: mainClasses = clsx(
+    ? `padding-top: ${isOpen === State.Open ? HORIZONTAL_SIZE : 0}px;`
+    : `padding-left: ${isOpen === State.Open ? size : 0}px;`
+  $: mainClasses = [
     'flex flex-grow max-h-screen h-full px-2',
     isDragging
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300'
-  )
+  ].join(' ')
 
-  $: peekAreaClasses = clsx(
+  $: peekAreaClasses = [
     'fixed z-50 no-drag',
-    isOpen === Open.Closed ? 'block' : 'hidden',
+    isOpen === State.Closed ? 'block' : 'hidden',
     horizontalTabs ? 'top-0 left-0 right-0 h-4' : 'top-0 left-0 w-4 h-full'
-  )
+  ].join(' ')
 </script>
+
+<svelte:window
+  on:pointermove={isDragging ? handlePointerDown : null}
+  on:pointerup={() => (isDragging = false)}
+  on:pointercancel={() => (isDragging = false)}
+/>
 
 <div class="flex w-screen h-screen justify-start items-start">
   <nav
@@ -135,8 +191,9 @@
       <slot name="sidebar" />
     </div>
     <button
-      class="absolute bg-white p-1 border-2 border-[rgba(0,0,0,0.08)] text-slate-600 no-drag cursor-pointer
-      {horizontalTabs ? '-bottom-[34px] left-1/2 -translate-x-1/2' : '-right-[34px]'} "
+      class="absolute bg-white p-1 border-2 border-[rgba(0,0,0,0.08)] text-slate-600 no-drag cursor-pointer {horizontalTabs
+        ? '-bottom-[34px] left-1/2 -translate-x-1/2'
+        : '-right-[34px]'}"
       on:click={toggleBar}
     >
       <svg
@@ -155,31 +212,19 @@
       </svg>
     </button>
     <div
-      class="absolute z-10 bg-red-500 flex-grow-0 no-drag cursor-{horizontalTabs
-        ? 'row'
-        : 'col'}-resize {!horizontalTabs ? 'right-0' : ''} {horizontalTabs
-        ? 'bottom-0'
-        : ''} {!horizontalTabs ? 'top-0 bottom-0 w-1' : ''} {horizontalTabs
-        ? 'left-0 right-0 h-1'
-        : ''}"
+      class="absolute z-10 bg-red-500 flex-grow-0 no-drag {horizontalTabs
+        ? 'bottom-0 left-0 right-0 h-1 cursor-row-resize'
+        : 'right-0 top-0 bottom-0 w-1 cursor-col-resize'}"
     >
       <div
         on:pointerdown={handlePointerDown}
-        class="{horizontalTabs
-          ? 'cursor-row-resize h-3 w-full'
-          : 'cursor-col-resize w-3 h-full'} shrink-0"
+        class="{horizontalTabs ? 'h-3 w-full' : 'w-3 h-full'} cursor-{horizontalTabs
+          ? 'row'
+          : 'col'}-resize shrink-0"
       />
     </div>
   </nav>
-  <div
-    class={peekAreaClasses}
-    on:mouseenter={handleMouseEnter}
-    on:mousemove={(e) => {
-      if (isOpen === Open.Closed) {
-        handleMouseEnter()
-      }
-    }}
-  />
+  <div class={peekAreaClasses} on:mouseenter={handleMouseEnter} />
   <main style={mainStyle} class={mainClasses}>
     <div class="flex flex-col flex-grow overflow-auto">
       <slot name="content" />
