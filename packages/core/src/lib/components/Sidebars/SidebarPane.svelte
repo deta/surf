@@ -11,10 +11,12 @@
 
   type Open = (typeof Open)[keyof typeof Open]
 
+  export let horizontalTabs = false
+
   let selected: string | null = null
-  let width = 250
-  let originalWidth = width
-  let originalClientX = width
+  let size = horizontalTabs ? 100 : 250
+  let originalSize = size
+  let originalClientPos = size
   let isDragging = false
   let isOpen: Open = Open.Closed
   let ownerDocument: Document
@@ -25,13 +27,21 @@
 
   function handlePointerDown(e: PointerEvent) {
     e.preventDefault()
-    originalWidth = width
-    originalClientX = e.clientX
+    originalSize = size
+    originalClientPos = horizontalTabs ? e.clientY : e.clientX
     isDragging = true
 
     function onPointerMove(e: PointerEvent) {
-      if (e.clientX < 50) isOpen = Open.Closed
-      width = Math.floor(clamp(originalWidth + e.clientX - originalClientX, 200, 400))
+      const currentPos = horizontalTabs ? e.clientY : e.clientX
+      if (currentPos < (horizontalTabs ? 25 : 50)) isOpen = Open.Closed
+      size = Math.floor(
+        clamp(
+          originalSize +
+            (horizontalTabs ? currentPos - originalClientPos : currentPos - originalClientPos),
+          horizontalTabs ? 50 : 200,
+          horizontalTabs ? 200 : 400
+        )
+      )
     }
 
     function onPointerUp() {
@@ -45,7 +55,7 @@
     })
   }
 
-  function toggleSidebar() {
+  function toggleBar() {
     isOpen = isOpen === Open.Closed ? Open.Open : Open.Closed
   }
 
@@ -63,24 +73,43 @@
 
   $: console.error('isOpen', isOpen)
 
-  $: navClasses = clsx(
-    'fixed top-0 bottom-0 left-0 flex flex-col space-y-2 h-screen max-h-screen flex-shrink-0 bg-[rgb(251,251,250)] transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+  $: barClasses = clsx(
+    'fixed left-0 right-0 flex flex-shrink-0 bg-[rgb(251,251,250)] transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
     {
-      'cursor-col-resize': isDragging,
-      'shadow-lg': isOpen === Open.Peek
+      'cursor-row-resize': horizontalTabs && isDragging,
+      'cursor-col-resize': !horizontalTabs && isDragging,
+      'shadow-lg': isOpen === Open.Peek,
+      'top-0 bottom-0 flex-col space-y-2': !horizontalTabs,
+      'top-0 flex-row space-x-2': horizontalTabs
     },
     isDragging
-      ? 'shadow-[rgba(0,0,0,0.2)_-2px_0px_0px_0px_inset]'
-      : 'shadow-[rgba(0,0,0,0.04)_-2px_0px_0px_0px_inset]',
-    isOpen === Open.Open || isOpen === Open.Peek ? 'translate-x-0' : '-translate-x-full'
+      ? horizontalTabs
+        ? 'shadow-[rgba(0,0,0,0.2)_0px_-2px_0px_0px_inset]'
+        : 'shadow-[rgba(0,0,0,0.2)_-2px_0px_0px_0px_inset]'
+      : horizontalTabs
+        ? 'shadow-[rgba(0,0,0,0.04)_0px_-2px_0px_0px_inset]'
+        : 'shadow-[rgba(0,0,0,0.04)_-2px_0px_0px_0px_inset]',
+    isOpen === Open.Open || isOpen === Open.Peek
+      ? 'translate-x-0 translate-y-0'
+      : horizontalTabs
+        ? '-translate-y-full'
+        : '-translate-x-full'
   )
 
   $: buttonClasses = clsx(
     'w-6 h-6 transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
-    isOpen === Open.Open || isOpen === Open.Peek ? 'rotate-180' : 'rotate-0'
+    isOpen === Open.Open || isOpen === Open.Peek
+      ? horizontalTabs
+        ? 'rotate-90'
+        : 'rotate-180'
+      : horizontalTabs
+        ? '-rotate-90'
+        : 'rotate-0'
   )
 
-  $: mainStyle = `padding-left: ${isOpen === Open.Open ? width : 0}px;`
+  $: mainStyle = horizontalTabs
+    ? `padding-top: ${isOpen === Open.Open ? size : 0}px;`
+    : `padding-left: ${isOpen === Open.Open ? size : 0}px;`
   $: mainClasses = clsx(
     'flex flex-grow max-h-screen h-full px-2',
     isDragging
@@ -89,24 +118,26 @@
   )
 
   $: peekAreaClasses = clsx(
-    'fixed top-0 left-0 w-4 h-full z-50 no-drag',
-    isOpen === Open.Closed ? 'block' : 'hidden'
+    'fixed z-50 no-drag',
+    isOpen === Open.Closed ? 'block' : 'hidden',
+    horizontalTabs ? 'top-0 left-0 right-0 h-4' : 'top-0 left-0 w-4 h-full'
   )
 </script>
 
 <div class="flex w-screen h-screen justify-start items-start">
   <nav
-    class={navClasses}
+    class={barClasses}
     aria-labelledby="nav-heading"
-    style="width: {width}px; z-index: 10000000000000;"
+    style="{horizontalTabs ? 'height' : 'width'}: {size}px; z-index: 10000000000000;"
     on:mouseleave={handleMouseLeave}
   >
-    <div class="h-full overflow-auto">
+    <div class="h-full w-full overflow-auto">
       <slot name="sidebar" />
     </div>
     <button
-      class="absolute bg-white p-1 border-y-2 border-r-2 border-[rgba(0,0,0,0.08)] text-slate-600 -right-[34px] no-drag cursor-pointer"
-      on:click={toggleSidebar}
+      class="absolute bg-white p-1 border-2 border-[rgba(0,0,0,0.08)] text-slate-600 no-drag cursor-pointer
+      {horizontalTabs ? '-bottom-[34px] left-1/2 -translate-x-1/2' : '-right-[34px]'} "
+      on:click={toggleBar}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -124,9 +155,20 @@
       </svg>
     </button>
     <div
-      class="absolute z-10 right-0 bg-red-500 flex-grow-0 top-0 bottom-0 no-drag w-1 cursor-col-resize"
+      class="absolute z-10 bg-red-500 flex-grow-0 no-drag cursor-{horizontalTabs
+        ? 'row'
+        : 'col'}-resize {!horizontalTabs ? 'right-0' : ''} {horizontalTabs
+        ? 'bottom-0'
+        : ''} {!horizontalTabs ? 'top-0 bottom-0 w-1' : ''} {horizontalTabs
+        ? 'left-0 right-0 h-1'
+        : ''}"
     >
-      <div on:pointerdown={handlePointerDown} class="w-3 h-full cursor-col-resize shrink-0" />
+      <div
+        on:pointerdown={handlePointerDown}
+        class="{horizontalTabs
+          ? 'cursor-row-resize h-3 w-full'
+          : 'cursor-col-resize w-3 h-full'} shrink-0"
+      />
     </div>
   </nav>
   <div
