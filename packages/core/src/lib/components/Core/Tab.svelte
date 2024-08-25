@@ -161,14 +161,15 @@
   //   fetchSpace(tab.spaceId)
   // }
 
+  // NOTE: commented out 'sanitizations' are not useful
   $: sanitizedTitle = tab.title
-    ? tab.type !== 'space'
-      ? tab.title
-          .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
-          .replace(/[\/\\]/g, '–')
-          .replace(/^\w/, (c) => c.toUpperCase())
-      : tab.title
-    : ''
+  // ? tab.type !== 'space'
+  //   ? tab.title
+  //       .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
+  //       .replace(/[\/\\]/g, '–')
+  //       .replace(/^\w/, (c) => c.toUpperCase())
+  //   : tab.title
+  // : ''
 
   const handleBookmark = () => {
     saveToSpacePopoverOpened.set(false)
