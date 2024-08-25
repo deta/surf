@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, createEventDispatcher } from 'svelte'
+  import { onMount, createEventDispatcher, onDestroy } from 'svelte'
   import { debounce } from 'lodash'
 
   export let horizontalTabs = false
@@ -22,32 +22,44 @@
   let startSize: number
   let ownerDocument: Document
   let peekTimeout: ReturnType<typeof setTimeout> | null = null
+  let transitionEndTimeout: ReturnType<typeof setTimeout> | null = null
+  let isTransitioning = false
+  let previousOrientation: boolean
 
   const MIN_VERTICAL_SIZE = 200
   const MAX_VERTICAL_SIZE = 400
   const HORIZONTAL_SIZE = 40
   const PEEK_DELAY = 300
-  const ERROR_ZONE = 20
+  const ERROR_ZONE = 40
+  const TRANSITION_DURATION = 300
 
   onMount(() => {
     ownerDocument = document
     loadSavedSize()
+    previousOrientation = horizontalTabs
+    ownerDocument.addEventListener('pointermove', handleGlobalPointerMove)
+    ownerDocument.addEventListener('pointerup', handleGlobalPointerUp)
+  })
+
+  onDestroy(() => {
+    ownerDocument?.removeEventListener('pointermove', handleGlobalPointerMove)
+    ownerDocument?.removeEventListener('pointerup', handleGlobalPointerUp)
   })
 
   function loadSavedSize() {
-    const savedSize = Number(
-      localStorage.getItem(`panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`)
-    )
-    size = horizontalTabs ? HORIZONTAL_SIZE : savedSize || MIN_VERTICAL_SIZE
+    const savedVerticalSize =
+      Number(localStorage.getItem('panelSize-vertical-sidebar')) || MIN_VERTICAL_SIZE
+    const savedHorizontalSize =
+      Number(localStorage.getItem('panelSize-horizontal-sidebar')) || HORIZONTAL_SIZE
+    size = horizontalTabs ? savedHorizontalSize : savedVerticalSize
     if (!horizontalTabs && (size < MIN_VERTICAL_SIZE || size > MAX_VERTICAL_SIZE)) {
       size = MIN_VERTICAL_SIZE
     }
   }
 
   const saveSizeToLocalStorage = debounce(() => {
-    if (!horizontalTabs) {
-      localStorage.setItem(`panelSize-vertical-sidebar`, size.toString())
-    }
+    const key = `panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`
+    localStorage.setItem(key, size.toString())
   }, 200)
 
   function handlePointerDown(e: PointerEvent) {
@@ -55,16 +67,12 @@
     isDragging = true
     startPos = horizontalTabs ? e.clientY : e.clientX
     startSize = size
-
-    ownerDocument.addEventListener('pointermove', handlePointerMove)
-    ownerDocument.addEventListener('pointerup', handlePointerUp)
-    ownerDocument.addEventListener('pointercancel', handlePointerUp)
   }
 
-  function handlePointerMove(e: PointerEvent) {
+  function handleGlobalPointerMove(e: PointerEvent) {
     if (!isDragging) return
     const currentPos = horizontalTabs ? e.clientY : e.clientX
-    const newSize = startSize + (horizontalTabs ? currentPos - startPos : currentPos - startPos)
+    const newSize = startSize + (horizontalTabs ? startPos - currentPos : currentPos - startPos)
 
     if (horizontalTabs) {
       isOpen = newSize > HORIZONTAL_SIZE / 2 ? State.Open : State.Closed
@@ -75,29 +83,24 @@
     }
   }
 
-  function handlePointerUp(e: PointerEvent) {
-    if (!isDragging) return
+  function handleGlobalPointerUp() {
     isDragging = false
-    ownerDocument.removeEventListener('pointermove', handlePointerMove)
-    ownerDocument.removeEventListener('pointerup', handlePointerUp)
-    ownerDocument.removeEventListener('pointercancel', handlePointerUp)
   }
 
   function toggleBar() {
     isOpen = isOpen === State.Open ? State.Closed : State.Open
+    startTransition()
   }
 
   function handleMouseEnter() {
     if (isOpen === State.Closed) {
       clearTimeout(peekTimeout!)
       isOpen = State.Peek
+      startTransition()
     }
   }
 
   function handleMouseLeave(event: MouseEvent) {
-    if (isDragging) {
-      handlePointerUp(event as unknown as PointerEvent)
-    }
     if (isOpen === State.Peek) {
       const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
       const isWithinErrorZone =
@@ -109,27 +112,47 @@
       if (!isWithinErrorZone) {
         peekTimeout = setTimeout(() => {
           isOpen = State.Closed
+          startTransition()
         }, PEEK_DELAY)
       }
     }
   }
 
+  function startTransition() {
+    isTransitioning = true
+    clearTimeout(transitionEndTimeout!)
+    transitionEndTimeout = setTimeout(() => {
+      isTransitioning = false
+    }, TRANSITION_DURATION)
+  }
+
   $: {
     if (showLeftSidebar === true) {
       isOpen = State.Open
+      startTransition()
     } else if (showLeftSidebar === false) {
       isOpen = State.Closed
+      startTransition()
+    }
+  }
+
+  $: {
+    // Handle orientation change
+    if (previousOrientation !== horizontalTabs) {
+      loadSavedSize()
+      previousOrientation = horizontalTabs
     }
   }
 
   $: barClasses = [
-    'fixed left-0 right-0 h-full flex flex-shrink-0 bg-[rgb(251,251,250)] transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+    'fixed left-0 right-0 h-full flex flex-shrink-0 transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
     {
       'cursor-row-resize': horizontalTabs && isDragging,
       'cursor-col-resize': !horizontalTabs && isDragging,
       'shadow-lg': isOpen === State.Peek,
       'top-0 bottom-0 flex-col space-y-2': !horizontalTabs,
-      'top-0 flex-row space-x-2': horizontalTabs
+      'top-0 flex-row space-x-2': horizontalTabs,
+      'bg-[rgb(251,251,250)]': isOpen === State.Peek || isOpen === State.Open || isTransitioning
     },
     isDragging
       ? horizontalTabs
@@ -163,6 +186,7 @@
     : `padding-left: ${isOpen === State.Open ? size : 0}px;`
   $: mainClasses = [
     'flex flex-grow max-h-screen h-full px-2',
+    isDragging ? 'pointer-events-none' : '',
     isDragging
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300'
@@ -182,7 +206,7 @@
     style="{horizontalTabs ? 'height' : 'width'}: {size}px; z-index: 10000000000000;"
     on:mouseleave={handleMouseLeave}
   >
-    <div class="h-full w-full overflow-auto no-scrollbar">
+    <div class="h-full w-full overflow-auto">
       <slot name="sidebar" />
     </div>
     <button
