@@ -18,6 +18,8 @@
   let size: number
   let isOpen: SidebarState = State.Open
   let isDragging = false
+  let startPos: number
+  let startSize: number
   let ownerDocument: Document
   let peekTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -51,30 +53,34 @@
   function handlePointerDown(e: PointerEvent) {
     e.preventDefault()
     isDragging = true
-    const startPos = horizontalTabs ? e.clientY : e.clientX
-    const startSize = size
+    startPos = horizontalTabs ? e.clientY : e.clientX
+    startSize = size
 
-    function onPointerMove(e: PointerEvent) {
-      if (!isDragging) return
-      const currentPos = horizontalTabs ? e.clientY : e.clientX
-      const newSize = startSize + (horizontalTabs ? currentPos - startPos : currentPos - startPos)
+    ownerDocument.addEventListener('pointermove', handlePointerMove)
+    ownerDocument.addEventListener('pointerup', handlePointerUp)
+    ownerDocument.addEventListener('pointercancel', handlePointerUp)
+  }
 
-      if (horizontalTabs) {
-        isOpen = newSize > HORIZONTAL_SIZE / 2 ? State.Open : State.Closed
-        size = HORIZONTAL_SIZE
-      } else {
-        size = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
-        saveSizeToLocalStorage()
-      }
+  function handlePointerMove(e: PointerEvent) {
+    if (!isDragging) return
+    const currentPos = horizontalTabs ? e.clientY : e.clientX
+    const newSize = startSize + (horizontalTabs ? currentPos - startPos : currentPos - startPos)
+
+    if (horizontalTabs) {
+      isOpen = newSize > HORIZONTAL_SIZE / 2 ? State.Open : State.Closed
+      size = HORIZONTAL_SIZE
+    } else {
+      size = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
+      saveSizeToLocalStorage()
     }
+  }
 
-    function onPointerUp() {
-      isDragging = false
-    }
-
-    ownerDocument.addEventListener('pointermove', onPointerMove)
-    ownerDocument.addEventListener('pointerup', onPointerUp, { once: true })
-    ownerDocument.addEventListener('pointercancel', onPointerUp, { once: true })
+  function handlePointerUp(e: PointerEvent) {
+    if (!isDragging) return
+    isDragging = false
+    ownerDocument.removeEventListener('pointermove', handlePointerMove)
+    ownerDocument.removeEventListener('pointerup', handlePointerUp)
+    ownerDocument.removeEventListener('pointercancel', handlePointerUp)
   }
 
   function toggleBar() {
@@ -89,6 +95,9 @@
   }
 
   function handleMouseLeave(event: MouseEvent) {
+    if (isDragging) {
+      handlePointerUp(event as unknown as PointerEvent)
+    }
     if (isOpen === State.Peek) {
       const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
       const isWithinErrorZone =
@@ -113,16 +122,8 @@
     }
   }
 
-  // $: {
-  //   if (isOpen === State.Open) {
-  //     showLeftSidebar = true
-  //   } else if (isOpen === State.Closed) {
-  //     showLeftSidebar = false
-  //   }
-  // }
-
   $: barClasses = [
-    'fixed left-0 right-0 flex flex-shrink-0 bg-[rgb(251,251,250)] transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+    'fixed left-0 right-0 h-full flex flex-shrink-0 bg-[rgb(251,251,250)] transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
     {
       'cursor-row-resize': horizontalTabs && isDragging,
       'cursor-col-resize': !horizontalTabs && isDragging,
@@ -174,12 +175,6 @@
   ].join(' ')
 </script>
 
-<svelte:window
-  on:pointermove={isDragging ? handlePointerDown : null}
-  on:pointerup={() => (isDragging = false)}
-  on:pointercancel={() => (isDragging = false)}
-/>
-
 <div class="flex w-screen h-screen justify-start items-start">
   <nav
     class={barClasses}
@@ -187,7 +182,7 @@
     style="{horizontalTabs ? 'height' : 'width'}: {size}px; z-index: 10000000000000;"
     on:mouseleave={handleMouseLeave}
   >
-    <div class="h-full w-full overflow-auto">
+    <div class="h-full w-full overflow-auto no-scrollbar">
       <slot name="sidebar" />
     </div>
     <button
