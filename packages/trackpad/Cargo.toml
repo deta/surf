@@ -1,0 +1,20 @@
+[package]
+name = "trackpad"
+version = "0.1.0"
+license = "MIT"
+edition = "2021"
+exclude = ["index.node"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+
+[dependencies.neon]
+version = "1.0.0-alpha.4"
+default-features = false
+features = ["napi-8"]
+
+[build-dependencies]
+cc = "1.1.14"
+pkg-config = "0.3.30"
