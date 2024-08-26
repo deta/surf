@@ -27,70 +27,66 @@
   $: strokeDashoffset = circumference - adjustedProgress * circumference
 
   $: ringColor = lightMode ? '#333333' : '#ffffff'
-
-  let visible = false
-  $: if (progress > 0 && !visible) visible = true
 </script>
 
-{#if visible}
-  <div class="swipe-indicator-container" in:fade={{ duration: 200 }}>
-    <div
-      class="arrow-container"
-      style="{arrowPosition}: 1rem;"
-      in:fly={{ x: direction === 'left' ? 100 : -100, duration: 500, easing: cubicOut }}
-    >
-      <svg class="progress-ring" width="100" height="100">
-        <circle
-          class="progress-ring__background"
-          stroke={lightMode ? '#e0e0e0' : '#333333'}
-          stroke-width="4"
-          fill="rgba(128, 128, 128, 0.8)"
-          r={circleRadius}
-          cx="50"
-          cy="50"
-        />
-        <circle
-          class="progress-ring__circle"
-          stroke={ringColor}
-          stroke-width="4"
-          fill="transparent"
-          r={circleRadius}
-          cx="50"
-          cy="50"
-          style="stroke-dasharray: {circumference}; stroke-dashoffset: {strokeDashoffset}"
-        />
+<div class="swipe-indicator-container" in:fade={{ duration: 200 }}>
+  <div
+    class="arrow-container"
+    style="{arrowPosition}: 1rem;"
+    in:fly={{ x: direction === 'left' ? 100 : -100, duration: 500, easing: cubicOut }}
+    out:fade={{ duration: 200 }}
+  >
+    <svg class="progress-ring" width="100" height="100">
+      <circle
+        class="progress-ring__background"
+        stroke={lightMode ? '#e0e0e0' : '#333333'}
+        stroke-width="4"
+        fill="rgba(128, 128, 128, 0.8)"
+        r={circleRadius}
+        cx="50"
+        cy="50"
+      />
+      <circle
+        class="progress-ring__circle"
+        stroke={ringColor}
+        stroke-width="4"
+        fill="transparent"
+        r={circleRadius}
+        cx="50"
+        cy="50"
+        style="stroke-dasharray: {circumference}; stroke-dashoffset: {strokeDashoffset}"
+      />
+    </svg>
+    <div class="arrow-circle">
+      <svg
+        class="arrow"
+        width="40"
+        height="40"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {#if direction === 'left'}
+          <path
+            d="M9 18L15 12L9 6"
+            stroke={ringColor}
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        {:else}
+          <path
+            d="M15 18L9 12L15 6"
+            stroke={ringColor}
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        {/if}
       </svg>
-      <div class="arrow-circle">
-        <svg
-          class="arrow"
-          width="40"
-          height="40"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {#if direction === 'left'}
-            <path
-              d="M9 18L15 12L9 6"
-              stroke={ringColor}
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          {:else}
-            <path
-              d="M15 18L9 12L15 6"
-              stroke={ringColor}
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          {/if}
-        </svg>
-      </div>
     </div>
   </div>
-{/if}
+</div>
 
 <style>
   .swipe-indicator-container {
