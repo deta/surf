@@ -36,6 +36,7 @@
   import type { WebviewError } from '../../constants/webviewErrors'
   import { blur } from 'svelte/transition'
 
+  export let id: string | undefined
   export let src: string
   export let partition: string
   export let historyEntriesManager: HistoryEntriesManager
@@ -342,6 +343,7 @@
   {/if}
 
   <Webview
+    {id}
     {src}
     {partition}
     {historyEntriesManager}

@@ -775,6 +775,7 @@
 </script>
 
 <WebviewWrapper
+  id="webview-{tab.id}"
   src={initialSrc}
   partition="persist:horizon"
   {historyEntriesManager}

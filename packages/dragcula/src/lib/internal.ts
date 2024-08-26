@@ -41,7 +41,7 @@ export const log = {
 };
 
 /// GLOBAL MOUSE LISTENER
-export let MOUSE_POS = { x: 0, y: 0 };
+export let MOUSE_POS = { x: 0, y: 0, screenX: 0, screenY: 0, pageX: 0, pageY: 0 };
 export let KEY_STATE = {
   shift: false,
   ctrl: false,
@@ -51,7 +51,14 @@ export let KEY_STATE = {
 let GLOBAL_mouseMoveListener: ((e: MouseEvent) => void) | null = null;
 if (!GLOBAL_mouseMoveListener) {
   GLOBAL_mouseMoveListener = (e: MouseEvent) => {
-    MOUSE_POS = { x: e.clientX, y: e.clientY };
+    MOUSE_POS = {
+      x: e.clientX,
+      y: e.clientY,
+      screenX: e.screenX,
+      screenY: e.screenY,
+      pageX: e.pageX,
+      pageY: e.pageY
+    };
     KEY_STATE.shift = e.shiftKey;
     KEY_STATE.ctrl = e.ctrlKey;
     KEY_STATE.alt = e.altKey;

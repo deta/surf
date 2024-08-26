@@ -64,6 +64,10 @@ export class DragculaDragEvent extends Event {
   /// Passthrough of mousevent props
   readonly clientX: number = MOUSE_POS.x;
   readonly clientY: number = MOUSE_POS.y;
+  readonly screenX: number = MOUSE_POS.screenX;
+  readonly screenY: number = MOUSE_POS.screenY;
+  readonly pageX: number = MOUSE_POS.pageX;
+  readonly pageY: number = MOUSE_POS.pageY;
 
   protected promise: Promise<void>;
   continue = () => {};

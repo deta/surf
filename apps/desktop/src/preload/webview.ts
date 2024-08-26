@@ -544,20 +544,60 @@ function handleSimulateDragUpdate(
 
   const dataTransfer = window.dragcula.dataTransfer
 
-  if (window.dragcula.target !== target) {
+  if (
+    window.dragcula.target !== target &&
+    !target.classList.contains('p-message_pane_drag_overlay')
+  ) {
+    console.log('New dragover target', target, window.dragcula.target)
     if (window.dragcula.target !== null) {
-      const evt = new DragEvent('dragleave', { dataTransfer, bubbles: true })
+      const evt = new DragEvent('dragleave', {
+        relatedTarget: target !== null ? target : undefined,
+
+        clientX: data.clientX,
+        clientY: data.clientY,
+        screenX: data.screenX,
+        screenY: data.screenY,
+        pageX: data.pageX,
+        pageY: data.pageY,
+
+        dataTransfer,
+        bubbles: true
+      })
       window.dragcula.target.dispatchEvent(evt)
     }
     if (target !== null) {
-      const evt = new DragEvent('dragenter', { dataTransfer, bubbles: true, cancelable: true })
+      const evt = new DragEvent('dragenter', {
+        relatedTarget: window.dragcula.target !== null ? window.dragcula.target : undefined,
+        clientX: data.clientX,
+        clientY: data.clientY,
+        screenX: data.screenX,
+        screenY: data.screenY,
+        pageX: data.pageX,
+        pageY: data.pageY,
+
+        dataTransfer,
+        bubbles: true,
+        cancelable: true
+      })
       target.dispatchEvent(evt)
     }
   }
   if (target !== null) {
-    const evt = new DragEvent('dragover', { dataTransfer, bubbles: true, cancelable: true })
+    const evt = new DragEvent('dragover', {
+      clientX: data.clientX,
+      clientY: data.clientY,
+      screenX: data.screenX,
+      screenY: data.screenY,
+      pageX: data.pageX,
+      pageY: data.pageY,
+
+      dataTransfer,
+      bubbles: true,
+      cancelable: true
+    })
 
     target.dispatchEvent(evt)
+    if (target.focus) target.focus()
   }
   window.dragcula.target = target
 }
@@ -570,9 +610,20 @@ function handleSimulateDragEnd(
     if (!target) return
 
     const dataTransfer = window.dragcula.dataTransfer
-    const evt = new DragEvent('drop', { dataTransfer, bubbles: true })
+    const evt = new DragEvent('drop', {
+      clientX: data.clientX,
+      clientY: data.clientY,
+      screenX: data.screenX,
+      screenY: data.screenY,
+      pageX: data.pageX,
+      pageY: data.pageY,
+
+      dataTransfer,
+      bubbles: true
+    })
 
     target.dispatchEvent(evt)
+    if (target.focus) target.focus()
   }
   window.dragcula = undefined
 }

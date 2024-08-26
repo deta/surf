@@ -32,8 +32,13 @@
 
   import type { HistoryEntriesManager } from '../../service/history'
   import { useLogScope, useDebounce } from '@horizon/utils'
-  import type { HistoryEntry } from '../../types'
-  import type { ResourceChatThread, ResourceLink, ResourceObject } from '../../service/resources'
+  import type { AnnotationHighlightData, HistoryEntry } from '../../types'
+  import type {
+    ResourceAnnotation,
+    ResourceChatThread,
+    ResourceLink,
+    ResourceObject
+  } from '../../service/resources'
   import type { Tab, TabPage } from '../../types/browser.types'
   import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
   import type { WebviewError } from '../../constants/webviewErrors'
@@ -275,7 +280,9 @@
               ResourceTypes.POST_TWITTER,
               ResourceTypes.POST_YOUTUBE,
               ResourceTypes.CHANNEL_YOUTUBE,
-              ResourceTypes.PLAYLIST_YOUTUBE
+              ResourceTypes.PLAYLIST_YOUTUBE,
+              ResourceTypes.CHAT_THREAD,
+              ResourceTypes.CHAT_THREAD_SLACK
             ] as string[]
           ).includes(resource.type)
         ) {
@@ -294,17 +301,18 @@
             }
             serialized.strings.push({ type: 'text/uri-list', value: url })
           }
-        } else if (
-          ([ResourceTypes.CHAT_THREAD, ResourceTypes.CHAT_THREAD_SLACK] as string[]).includes(
-            resource.type
-          )
-        ) {
+        } else if (([ResourceTypes.ANNOTATION] as string[]).includes(resource.type)) {
+          let text = ''
           if (typesOnly) {
             serialized.strings.push({ type: 'text/plain', value: undefined })
           } else {
-            let text = ''
-            text = (await (resource as ResourceChatThread).getParsedData())?.content_plain
-            text += '\n\n' + (await (resource as ResourceChatThread).getParsedData())?.url
+            const data = await (resource as ResourceAnnotation).getParsedData()
+            const userComment = data.data.content_plain ?? ''
+
+            text = `Highlight: ${data.anchor?.data['content_plain']}\n
+${userComment === '' ? '' : `Comment: ${userComment}`}\n
+Page: ${(resource as ResourceAnnotation).metadata?.sourceURI}\n
+Made with Deta Surf.`
             serialized.strings.push({ type: 'text/plain', value: text })
           }
         }
@@ -347,6 +355,10 @@
       data: {
         clientX,
         clientY,
+        screenX: drag.screenX,
+        screenY: drag.screenY,
+        pageX: drag.pageX - bounds.left,
+        pageY: drag.pageY - bounds.top,
         data
       }
     })
@@ -360,33 +372,50 @@
     const bounds = webview.getBoundingClientRect()
     const clientX = drag.clientX - bounds.left
     const clientY = drag.clientY - bounds.top
+    const screenX = drag.screenX
+    const screenY = drag.screenY
 
     // TODO: Wrap Try catch abort
     webview.send('webview-event', {
       type: 'simulate_drag_update',
       data: {
         clientX,
-        clientY
+        clientY,
+        screenX,
+        screenY,
+        pageX: drag.pageX - bounds.left,
+        pageY: drag.pageY - bounds.top
       }
     })
     drag.continue()
   }
-  const handleDrop = (drag: DragculaDragEvent) => {
+  const handleDrop = async (drag: DragculaDragEvent) => {
     const bounds = webview.getBoundingClientRect()
     const clientX = drag.clientX - bounds.left
     const clientY = drag.clientY - bounds.top
-    // TODO: Wrap Try catch abort
-    //const data = await serializeDragDataForWebview(drag.data, false)
+    const screenX = drag.screenX
+    const screenY = drag.screenY
 
-    webview.send('webview-event', {
+    // TODO: Wrap Try catch abort
+    const data = await serializeDragDataForWebview(drag.data, false)
+
+    await webview.send('webview-event', {
       type: 'simulate_drag_end',
       data: {
         action: 'drop',
         clientX,
-        clientY
+        clientY,
+        screenX,
+        screenY,
+        pageX: drag.pageX - bounds.left,
+        pageY: drag.pageY - bounds.top
         //data // Currently we dont update it.. but we could..
       }
     })
+
+    if (data.strings[0]?.type === 'text/plain') {
+      webview.insertText(data.strings[0].value)
+    }
   }
   const handleDragLeave = (drag: DragculaDragEvent) => {
     webview.send('webview-event', {
@@ -583,6 +612,7 @@
 </script>
 
 <webview
+  {id}
   bind:this={webview}
   {src}
   {partition}
