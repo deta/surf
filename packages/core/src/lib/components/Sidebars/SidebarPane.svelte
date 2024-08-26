@@ -30,8 +30,6 @@
   const MIN_VERTICAL_SIZE = 200
   const MAX_VERTICAL_SIZE = 400
   const HORIZONTAL_SIZE = 40
-  const PEEK_DELAY = 300
-  const ERROR_ZONE = 40
   const TRANSITION_DURATION = 300
 
   onMount(() => {
