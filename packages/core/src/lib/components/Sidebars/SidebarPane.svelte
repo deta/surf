@@ -101,10 +101,21 @@
     }
   }
 
-  function handleMouseLeave(event: MouseEvent) {
+  // Add these new variables
+  let mouseX: number = 0
+  let mouseY: number = 0
+  const BUFFER = 50 // Buffer zone in pixels
+
+  // Add this reactive statement to handle sidebar closing based on mouse position
+  $: {
     if (isOpen === State.Peek) {
-      isOpen = State.Closed
-      dispatch('peekClose')
+      if (horizontalTabs && mouseY > HORIZONTAL_SIZE + BUFFER) {
+        isOpen = State.Closed
+        dispatch('peekClose')
+      } else if (!horizontalTabs && mouseX > size + BUFFER) {
+        isOpen = State.Closed
+        dispatch('peekClose')
+      }
     }
   }
 
@@ -134,7 +145,10 @@
   }
 
   $: barClasses = [
-    'fixed left-0 right-0 h-full flex flex-shrink-0 transition-all rounded-xl bg-blue-100 ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+    'fixed left-0 right-0 h-full flex flex-shrink-0 rounded-xl bg-blue-100',
+    isDragging
+      ? 'transition-none'
+      : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
     {
       'cursor-row-resize': horizontalTabs && isDragging,
       'cursor-col-resize': !horizontalTabs && isDragging,
@@ -166,16 +180,22 @@
   $: peekAreaClasses = [
     'fixed z-50 no-drag',
     isOpen === State.Closed ? 'block' : 'hidden',
-    horizontalTabs ? 'top-0 left-0 right-0 h-4 bg-red-500' : 'top-0 left-0 w-4 h-full'
+    horizontalTabs ? 'top-0 left-0 right-0 h-4' : 'top-0 left-0 w-4 h-full'
   ].join(' ')
 </script>
+
+<svelte:window
+  on:mousemove={(e) => {
+    mouseX = e.clientX
+    mouseY = e.clientY
+  }}
+/>
 
 <div class="flex w-screen h-screen justify-start items-start">
   <nav
     class={barClasses}
     aria-labelledby="nav-heading"
     style="{horizontalTabs ? 'height' : 'width'}: {size}px; z-index: 10000000000000;"
-    on:mouseleave={handleMouseLeave}
   >
     <div class="h-full w-full">
       <slot name="sidebar" />
