@@ -217,6 +217,28 @@
     )[]
   })
 
+  const closedTabs = (() => {
+    const MAX_CLOSED_TABS = 96
+    let tabs: Tab[] = []
+
+    const push = (tab: Tab) => {
+      tabs.unshift(tab)
+      if (tabs.length > MAX_CLOSED_TABS) tabs.pop()
+    }
+
+    const pop = (): Tab | undefined => {
+      return tabs.shift()
+    }
+
+    return {
+      push,
+      pop,
+      get tabs() {
+        return tabs
+      }
+    }
+  })()
+
   const activeTab = derived([tabs, activeTabId], ([tabs, activeTabId]) => {
     return tabs.find((tab) => tab.id === activeTabId)
   })
@@ -549,6 +571,7 @@
 
     await deleteTab(e.detail, DeleteTabEventTrigger.Click)
   }
+
   const deleteTab = async (tabId: string, trigger?: DeleteTabEventTrigger) => {
     const tab = $tabs.find((tab) => tab.id === tabId)
     if (!tab) {
@@ -559,7 +582,13 @@
     const tabsInOrder = [...$pinnedTabs, ...$magicTabs, ...$unpinnedTabs]
     const currentIndex = tabsInOrder.findIndex((tab) => tab.id === tabId)
 
-    tabs.update((tabs) => tabs.filter((tab) => tab.id !== tabId))
+    tabs.update((tabs) =>
+      tabs.filter((tab) => {
+        const bool = tab.id === tabId
+        if (bool) closedTabs.push(tab)
+        return !bool
+      })
+    )
     activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
 
     await tick()
@@ -657,6 +686,14 @@
     // }
 
     // await deleteTab($activeTab.id)
+  }
+
+  const openClosedTab = async () => {
+    const tab = closedTabs.pop()
+    if (tab) {
+      log.debug('Opening previously closed tab')
+      await createTab(tab, { active: true })
+    }
   }
 
   const setActiveTabAsPinnedTab = async () => {
@@ -1013,6 +1050,8 @@
       $activeBrowserTab?.resetZoom()
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'i')) {
       $activeBrowserTab?.openDevTools()
+    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 't')) {
+      openClosedTab()
     } else if (
       !window.api.tabSwitchingShortcutsDisable &&
       isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])
