@@ -304,6 +304,9 @@
     return resource
   }
 
+  export const handleTrackpadScrollStart = () => webview?.handleTrackpadScrollStart()
+  export const handleTrackpadScrollStop = () => webview?.handleTrackpadScrollStop()
+
   export const waitForAppDetection = async (timeoutAfter = 3000) => {
     let timeout: ReturnType<typeof setTimeout>
 

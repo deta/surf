@@ -9,7 +9,7 @@ import { createWindow, getMainWindow } from './mainWindow'
 import { setAppMenu } from './appMenu'
 import { registerShortcuts, unregisterShortcuts } from './shortcuts'
 import { setupAdblocker } from './adblocker'
-import { ipcSenders, setupIpcHandlers } from './ipcHandlers'
+import { ipcSenders, setupIpc } from './ipcHandlers'
 import { getUserConfig, updateUserConfig } from './config'
 import { createSetupWindow } from './setupWindow'
 import { checkIfAppIsActivated } from './activation'
@@ -107,7 +107,7 @@ if (!gotTheLock) {
 
     const userConfig = getUserConfig()
 
-    setupIpcHandlers()
+    setupIpc()
 
     if (!is.dev) {
       if (!userConfig.api_key) {

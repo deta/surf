@@ -7322,7 +7322,7 @@ matcher@^3.0.0:
   dependencies:
     escape-string-regexp "^4.0.0"
 
-"matchers@link:../../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers":
+"matchers@link:../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers":
   version "0.0.0"
   uid ""
 
@@ -7498,7 +7498,7 @@ mode-watcher@^0.0.2:
   resolved "https://registry.npmjs.org/mode-watcher/-/mode-watcher-0.0.2.tgz"
   integrity sha512-sB9bHKyNfk2qftJC3zE7cVo9nrD7OgtaXeABuSs8/rozZFDnpvBQ/jcuECo/CmQ3N+el6oBS5hJNecuoboK8gA==
   dependencies:
-    matchers "link:../../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers"
+    matchers "link:../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers"
     svelte-persisted-store "^0.7.0"
 
 modify-filename@^1.1.0:

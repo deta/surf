@@ -25,9 +25,11 @@ function electronBuilderConfig() {
     files: [
       '!**/backend/target*',
       '!**/backend/src/*',
+      '!**/backend/migrations/*',
       '!**/backend-server/target*',
       '!**/backend-server/src/*',
-      '!**/backend/migrations/*',
+      '!**/trackpad/target*',
+      '!**/trackpad/src/*',
       '!**/.vscode/*',
       '!src/*',
       '!electron.vite.config.{js,ts,mjs,cjs}',

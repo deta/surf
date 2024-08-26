@@ -448,6 +448,14 @@ const api = {
 
   onAddDemoItems: (callback: (visible?: boolean) => void) => {
     ipcRenderer.on('add-demo-items', (_) => callback())
+  },
+
+  onTrackpadScrollStart: (callback: () => void) => {
+    ipcRenderer.on('trackpad-scroll-start', (_) => callback())
+  },
+
+  onTrackpadScrollStop: (callback: () => void) => {
+    ipcRenderer.on('trackpad-scroll-stop', (_) => callback())
   }
 }
 

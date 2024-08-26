@@ -20,15 +20,18 @@
     CreateTabEventTrigger,
     WebViewEventReceiveNames,
     WebViewEventSendNames,
+    type WebViewEventWheel,
     type WebViewReceiveEvents,
     type WebViewSendEvents
   } from '@horizon/types'
+  import { createHistorySwipeRecognizer, SWIPE_THRESHOLD } from '../../utils/historySwipeRecognizer'
   import type { HistoryEntriesManager } from '../../service/history'
   import { useLogScope, isModKeyAndKeyPressed } from '@horizon/utils'
   import type { DetectedResource } from '../../types'
   import type { WebServiceActionInputs } from '@horizon/web-parser'
   import Webview, { type WebviewEvents } from './Webview.svelte'
   import FindInPage from './FindInPage.svelte'
+  import HistorySwipeOverlay from './HistorySwipeOverlay.svelte'
   import HoverLinkPreview from './HoverLinkPreview.svelte'
   import ZoomPreview from './ZoomPreview.svelte'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
@@ -65,6 +68,17 @@
   let findInPageComp: FindInPage
   let hoverTargetUrl: string
   let zoomTimer: number
+
+  const { swipeDirection, swipeProgress, ...historySwipeRecognizer } = createHistorySwipeRecognizer(
+    canGoBack,
+    canGoForward,
+    () => goForward(),
+    () => goBack()
+  )
+  export const handleTrackpadScrollStart = historySwipeRecognizer.handleTrackpadScrollStart
+  export const handleTrackpadScrollStop = historySwipeRecognizer.handleTrackpadScrollStop
+
+  const handleWebviewWheel = (event: WebViewEventWheel) => historySwipeRecognizer.tick(event)
 
   const resetZoomTimer = () => {
     showZoomPreview.set(true)
@@ -105,6 +119,8 @@
 
     if (type === WebViewEventSendNames.KeyDown) {
       handleWebviewKeydown(data as WebViewSendEvents[WebViewEventSendNames.KeyDown])
+    } else if (type === WebViewEventSendNames.Wheel) {
+      handleWebviewWheel(data as WebViewSendEvents[WebViewEventSendNames.Wheel])
     }
 
     dispatch('webview-page-event', { type, data })
@@ -299,7 +315,7 @@
   */
   onMount(() => {
     let initial = true
-    const unsubZoom = zoomLevel.subscribe((level) => {
+    const unsubZoom = zoomLevel.subscribe((_level) => {
       if (initial) {
         initial = false
         return
@@ -336,6 +352,14 @@
 {/if}
 
 <div class="webview-container">
+  {#if $swipeDirection}
+    <HistorySwipeOverlay
+      direction={$swipeDirection}
+      progress={$swipeProgress}
+      threshold={SWIPE_THRESHOLD}
+    />
+  {/if}
+
   {#if webview}
     <FindInPage bind:this={findInPageComp} {webview} {getSelection} />
     <ZoomPreview {zoomLevel} {showZoomPreview} />

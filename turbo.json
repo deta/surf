@@ -11,6 +11,14 @@
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
     },
+    "@horizon/trackpad#build": {
+      "dependsOn": [],
+      "outputs": [".dist/**", "index.node"]
+    },
+    "@horizon/trackpad#dev": {
+      "dependsOn": [],
+      "outputs": [".dist/**", "index.node"]
+    },
     "@horizon/backend-server#build": {
       "outputs": ["backend-server"]
     },
@@ -80,6 +88,7 @@
     "desktop#dev": {
       "dependsOn": [
         "@horizon/dragcula#build",
+        "@horizon/trackpad#dev",
         "@horizon/backend#dev",
         "@horizon/backend-server#build",
         "@horizon/cmdk-sv#build"
@@ -89,6 +98,7 @@
     "dev": {
       "dependsOn": [
         "@horizon/dragcula#build",
+        "@horizon/trackpad#dev",
         "@horizon/backend#dev",
         "@horizon/backend-server#build",
         "@horizon/cmdk-sv#build"

@@ -2218,6 +2218,11 @@
   }
 
   onMount(async () => {
+    // @ts-ignore
+    window.api.onTrackpadScrollStart(() => $browserTabs[$activeTabId]?.handleTrackpadScrollStart())
+    // @ts-ignore
+    window.api.onTrackpadScrollStop(() => $browserTabs[$activeTabId]?.handleTrackpadScrollStop())
+
     window.addEventListener('resize', handleResize)
 
     // @ts-ignore

@@ -9,11 +9,37 @@ import { getPlatform } from './utils'
 import { checkForUpdates } from './appUpdates'
 import { getSettingsWindow } from './settingsWindow'
 import { createGoogleSignInWindow } from './googleSignInWindow'
+import trackpad from '@horizon/trackpad'
 
 const log = useLogScope('Main IPC Handlers')
-let prompts: EditablePrompt[] = []
+// let prompts: EditablePrompt[] = []
 
-export function setupIpcHandlers() {
+export function setupIpc() {
+  setupIpcSenders()
+  setupIpcHandlers()
+}
+
+function setupIpcSenders() {
+  trackpad.setScrollStartCallback(() => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+    window.webContents.send('trackpad-scroll-start')
+  })
+
+  trackpad.setScrollStopCallback(() => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+    window.webContents.send('trackpad-scroll-stop')
+  })
+}
+
+function setupIpcHandlers() {
   ipcMain.handle('set-adblocker-state', async (_, { partition, state }) => {
     return setAdblockerState(partition as string, state as boolean)
   })
