@@ -28,6 +28,7 @@ const child = spawn(command, args, {
 
 child.on('error', (error) => {
   console.error(`error: ${error.message}`)
+  process.exit(1)
 })
 
 child.on('close', (code) => {

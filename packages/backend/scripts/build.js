@@ -1,18 +1,4 @@
 const { spawn } = require('child_process')
-// const path = require('path')
-
-// TODO: we don't have any use for this
-// at the moment.
-//
-// const external_deps_path = path.resolve(
-//   __dirname,
-//   '..',
-//   '..',
-//   '..',
-//   'apps',
-//   'desktop',
-//   'external-deps'
-// )
 
 const extraArgsIndex = process.argv.indexOf('--')
 const extraArgs = extraArgsIndex !== -1 ? process.argv.slice(extraArgsIndex + 1) : []
@@ -36,8 +22,10 @@ const child = spawn(command, args, {
 
 child.on('error', (error) => {
   console.error(`error: ${error.message}`)
+  process.exit(1)
 })
 
 child.on('close', (code) => {
   console.log(`process exited with code ${code}`)
+  process.exit(code)
 })
