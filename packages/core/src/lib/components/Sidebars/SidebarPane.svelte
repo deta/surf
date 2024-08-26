@@ -32,7 +32,6 @@
   const PEEK_DELAY = 300
   const ERROR_ZONE = 40
   const TRANSITION_DURATION = 300
-  const BUFFER_ZONE = 20
 
   onMount(() => {
     ownerDocument = document
@@ -102,10 +101,9 @@
     }
   }
 
-  function handleOverlayMouseLeave() {
-    if (isOpen === State.Peek && peekTimeout) {
+  function handleMouseLeave(event: MouseEvent) {
+    if (isOpen === State.Peek) {
       isOpen = State.Closed
-      startTransition()
       dispatch('peekClose')
     }
   }
@@ -168,18 +166,8 @@
   $: peekAreaClasses = [
     'fixed z-50 no-drag',
     isOpen === State.Closed ? 'block' : 'hidden',
-    horizontalTabs ? 'top-0 left-0 right-0 h-5' : 'top-0 left-0 w-4 h-full'
+    horizontalTabs ? 'top-0 left-0 right-0 h-4 bg-red-500' : 'top-0 left-0 w-4 h-full'
   ].join(' ')
-
-  $: overlayClasses = [
-    'fixed z-40 bg-transparent',
-    isOpen === State.Peek ? 'block' : 'hidden',
-    horizontalTabs ? 'top-0 left-0 right-0' : 'top-0 left-0 bottom-0'
-  ].join(' ')
-
-  $: overlayStyle = horizontalTabs
-    ? `height: ${HORIZONTAL_SIZE + BUFFER_ZONE}px;`
-    : `width: ${size + BUFFER_ZONE}px;`
 </script>
 
 <div class="flex w-screen h-screen justify-start items-start">
@@ -187,6 +175,7 @@
     class={barClasses}
     aria-labelledby="nav-heading"
     style="{horizontalTabs ? 'height' : 'width'}: {size}px; z-index: 10000000000000;"
+    on:mouseleave={handleMouseLeave}
   >
     <div class="h-full w-full">
       <slot name="sidebar" />
@@ -206,9 +195,6 @@
   </nav>
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div class={peekAreaClasses} on:mouseenter={handleMouseEnter} />
-  <!-- Overlay for peek mode -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class={overlayClasses} style={overlayStyle} on:mouseleave={handleOverlayMouseLeave} />
   <main style={mainStyle} class={mainClasses}>
     <div class="flex flex-col flex-grow overflow-auto">
       <slot name="content" />
