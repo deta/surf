@@ -184,7 +184,7 @@
   $: peekAreaClasses = [
     'fixed z-50 no-drag',
     isOpen === State.Closed ? 'block' : 'hidden',
-    horizontalTabs ? 'top-0 left-0 right-0 h-4' : 'top-0 left-0 w-4 h-full'
+    horizontalTabs ? 'top-0 left-0 right-0 h-4 bg-red-500' : 'top-0 left-0 w-4 h-full'
   ].join(' ')
 </script>
 
@@ -195,30 +195,9 @@
     style="{horizontalTabs ? 'height' : 'width'}: {size}px; z-index: 10000000000000;"
     on:mouseleave={handleMouseLeave}
   >
-    <div class="h-full w-full overflow-auto">
+    <div class="h-full w-full">
       <slot name="sidebar" />
     </div>
-    <!-- <button
-      class="absolute bg-white p-1 border-2 border-[rgba(0,0,0,0.08)] text-slate-600 no-drag cursor-pointer {horizontalTabs
-        ? '-bottom-[34px] left-1/2 -translate-x-1/2'
-        : '-right-[34px]'}"
-      on:click={toggleBar}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class={buttonClasses}
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"
-        />
-      </svg>
-    </button> -->
     <div
       class="absolute z-10 bg-red-500 flex-grow-0 no-drag {horizontalTabs
         ? 'bottom-0 left-0 right-0 h-1 cursor-row-resize'
@@ -232,6 +211,7 @@
       />
     </div>
   </nav>
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div class={peekAreaClasses} on:mouseenter={handleMouseEnter} />
   <main style={mainStyle} class={mainClasses}>
     <div class="flex flex-col flex-grow overflow-auto">

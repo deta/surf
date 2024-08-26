@@ -3993,7 +3993,9 @@
                 tab.type === 'page' &&
                 $activeTabMagic?.running}
             >
-              <div class="w-full h-3 pointer-events-none fixed z-[1002] drag" />
+              {#if !horizontalTabs}<div
+                  class="w-full h-3 pointer-events-none fixed z-[1002] drag"
+                />{/if}
 
               {#if tab.type === 'page'}
                 <BrowserTab
