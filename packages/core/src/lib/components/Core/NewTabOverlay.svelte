@@ -110,6 +110,7 @@
   }
 
   let selectFirstCommandItem: () => void
+  let hasLoadedEverything = false
   const searchValue = writable('')
   const oasisSearchResults = writable<Resource[]>([])
   const googleSuggestionResults = writable<string[]>([])
@@ -144,6 +145,8 @@
       )
     }
   )
+
+  let hasSearched = false
 
   $: commandItems = [
     ...browserCommands,
@@ -519,6 +522,7 @@
     googleSuggestions = []
     showTabSearch = 0
     $selectedSpaceId = null
+    hasLoadedEverything = false
   }
   const browserCommands = [
     { id: 'close-active-tab', label: 'Close Tab', shortcut: '⌘W', type: 'command', icon: 'close' },
@@ -625,11 +629,6 @@
   const handleSearch = async (searchValueInput: string) => {
     let value = searchValueInput
 
-    if (!value) {
-      searchResults.set([])
-      return
-    }
-
     const hashtagMatch = value.match(/#[a-zA-Z0-9]+/g)
     const hashtags = hashtagMatch ? hashtagMatch.map((x) => x.slice(1)) : []
 
@@ -637,7 +636,11 @@
       value = ''
     }
 
-    await telemetry.trackSearchOasis(SearchOasisEventTrigger.Oasis, false)
+    // Only track telemetry if it's the first search after a reset
+    if (!hasSearched) {
+      await telemetry.trackSearchOasis(SearchOasisEventTrigger.Oasis, false)
+      hasSearched = true
+    }
 
     const result = await resourceManager.searchResources(
       value,
@@ -950,36 +953,58 @@
     }
   }
 
+  let isSearching = false
+  let searchTimeout: NodeJS.Timeout | null = null
+
   const debouncedSearch = useDebounce((value: string) => {
-    handleSearch(value)
-  }, 200)
+    if (showTabSearch !== 2) return
 
-  const deboundedEverything = useDebounce(() => {
-    loadEverything()
-  }, 200)
+    if (value.length === 0) {
+      searchResults.set([])
+      hasSearched = false
+      if (!hasLoadedEverything) {
+        hasLoadedEverything = true
+        loadEverything()
+      }
+    } else if (value.length > 3) {
+      handleSearch(value).then(() => {
+        isSearching = false
+      })
+    } else {
+      $searchResults = []
+    }
 
-  const handleOasisFilterChange = (e: CustomEvent<string>) => {
-    log.debug('Filter change:', e.detail)
-    debouncedSearch($searchValue)
-  }
+    hasLoadedEverything = value.length === 0
+  }, 300)
 
   const debouncedTrackOpenOasis = useDebounce(() => {
     telemetry.trackOpenOasis()
   }, 500)
 
-  $: if (showTabSearch === 2 && !!$searchValue) {
-    log.debug('case 1')
-    debouncedSearch($searchValue)
-  }
-
-  $: if (showTabSearch === 2 && !$searchValue) {
-    log.debug('case 2')
-    $searchResults = []
-    deboundedEverything()
-  }
+  let previousSearchValue = ''
 
   $: if (showTabSearch === 2) {
     debouncedTrackOpenOasis()
+    loadEverything()
+
+    if ($searchValue !== previousSearchValue) {
+      isSearching = true
+      previousSearchValue = $searchValue
+
+      if (searchTimeout) {
+        clearTimeout(searchTimeout)
+      }
+
+      // does two things: second layer flood defense & prevents empty state from loading everything immediately, which clogs input
+      searchTimeout = setTimeout(async () => {
+        await debouncedSearch($searchValue)
+      }, 300)
+    }
+  }
+
+  const handleOasisFilterChange = (e: CustomEvent<string>) => {
+    log.debug('Filter change:', e.detail)
+    debouncedSearch($searchValue)
   }
 </script>
 
@@ -1164,14 +1189,16 @@
                           <Icon name="spinner" size="20px" />
                         </div>
                       {/if}
-                    {:else if $loadingContents}
-                      <div class="content-wrapper">
-                        <div class="content">
+                    {:else if isSearching && $searchValue.length > 3}
+                      <div class="content-wrapper h-full flex items-center justify-center">
+                        <div
+                          class="content flex flex-col items-center justify-center text-center space-y-4"
+                        >
                           <Icon name="spinner" size="22px" />
-                          <p>Loading…</p>
+                          <p class="text-lg font-medium text-gray-700">Searching your stuff...</p>
                         </div>
                       </div>
-                    {:else}
+                    {:else if $resourcesToShow.length === 0 && $searchValue.length > 0}
                       <div class="content-wrapper h-full flex items-center justify-center">
                         <div
                           class="content flex flex-col items-center justify-center text-center space-y-4"
