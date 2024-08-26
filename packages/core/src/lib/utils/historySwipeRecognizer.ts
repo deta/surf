@@ -3,7 +3,7 @@ import { get, writable, type Readable } from 'svelte/store'
 
 export const MIN_MAGNITUDE = 50
 export const SWIPE_THRESHOLD = 200
-export const MAX_ANGLE_DEVIATION = Math.PI / 6
+export const MAX_ANGLE_DEVIATION = (5 * Math.PI) / 36 // 25 degrees
 
 const log = useLogScope('History Swipe Recognizer')
 
