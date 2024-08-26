@@ -38,7 +38,7 @@ export function setAdblockerState(partition: string, state: boolean): void {
   }
 
   // Store state
-  setBrowserConfig({ adblockerEnabled: state })
+  setBrowserConfig({ ...getBrowserConfig(), adblockerEnabled: state })
 
   // Notify renderer
   ipcSenders.adBlockChanged(partition, state)

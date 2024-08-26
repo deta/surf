@@ -45,6 +45,7 @@ export const setConfig = <T extends Config>(
 
 export type BrowserConfig = {
   adblockerEnabled: boolean
+  historySwipeGesture: boolean
 }
 
 const BROWSER_CONFIG_NAME = 'browser.json'

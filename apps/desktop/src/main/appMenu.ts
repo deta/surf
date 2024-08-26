@@ -7,6 +7,7 @@ import { join, resolve } from 'path'
 import { isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@horizon/types'
 import { createSettingsWindow } from './settingsWindow'
+import { toggleHistorySwipeGestureConfig } from './historySwipe'
 
 const log = useLogScope('Main App Menu')
 const isMac = process.platform === 'darwin'
@@ -46,46 +47,46 @@ const showSurfDataInFinder = () => {
 const template = [
   ...(isMac
     ? [
-        {
-          label: app.name,
-          submenu: [
-            {
-              label: 'About Surf',
-              role: 'about'
-            },
-            { type: 'separator' },
-            {
-              label: 'Preferences...',
-              accelerator: 'CmdOrCtrl+,',
-              click: () => createSettingsWindow()
-            },
-            { type: 'separator' },
-            {
-              label: 'Check for Updates...',
-              click: checkUpdatesMenuClickHandler
-            },
-            {
-              label: 'Use as Default Browser',
-              click: useAsDefaultBrowserClickHandler
-            },
-            {
-              label: 'Show Surf Data in Finder',
-              click: showSurfDataInFinder
-            },
-            { type: 'separator' },
-            {
-              id: 'adblocker',
-              label: 'Toggle Adblocker',
-              click: () => toggleAdblocker('persist:horizon')
-            },
-            { type: 'separator' },
-            {
-              label: 'Quit Surf',
-              role: 'quit'
-            }
-          ]
-        }
-      ]
+      {
+        label: app.name,
+        submenu: [
+          {
+            label: 'About Surf',
+            role: 'about'
+          },
+          { type: 'separator' },
+          {
+            label: 'Preferences...',
+            accelerator: 'CmdOrCtrl+,',
+            click: () => createSettingsWindow()
+          },
+          { type: 'separator' },
+          {
+            label: 'Check for Updates...',
+            click: checkUpdatesMenuClickHandler
+          },
+          {
+            label: 'Use as Default Browser',
+            click: useAsDefaultBrowserClickHandler
+          },
+          {
+            label: 'Show Surf Data in Finder',
+            click: showSurfDataInFinder
+          },
+          { type: 'separator' },
+          {
+            id: 'adblocker',
+            label: 'Toggle Adblocker',
+            click: () => toggleAdblocker('persist:horizon')
+          },
+          { type: 'separator' },
+          {
+            label: 'Quit Surf',
+            role: 'quit'
+          }
+        ]
+      }
+    ]
     : []),
   {
     label: 'File',
@@ -93,20 +94,20 @@ const template = [
       ...(isMac
         ? [{ role: 'close', accelerator: 'CmdOrCtrl+Shift+W' }]
         : [
-            { label: 'Check for Updates...', click: checkUpdatesMenuClickHandler },
-            {
-              label: 'Use as Default Browser',
-              click: useAsDefaultBrowserClickHandler
-            },
-            { type: 'separator' },
-            {
-              id: 'adblocker',
-              label: 'Toggle Adblocker',
-              click: () => toggleAdblocker('persist:horizon')
-            },
-            { type: 'separator' },
-            { role: 'quit' }
-          ]),
+          { label: 'Check for Updates...', click: checkUpdatesMenuClickHandler },
+          {
+            label: 'Use as Default Browser',
+            click: useAsDefaultBrowserClickHandler
+          },
+          { type: 'separator' },
+          {
+            id: 'adblocker',
+            label: 'Toggle Adblocker',
+            click: () => toggleAdblocker('persist:horizon')
+          },
+          { type: 'separator' },
+          { role: 'quit' }
+        ]),
       { type: 'separator' },
       {
         label: 'New Tab',
@@ -149,14 +150,14 @@ const template = [
       { type: 'separator' },
       ...(!isMac
         ? [
-            {
-              label: 'Settings...',
-              accelerator: 'CmdOrCtrl+,',
-              click: () => {
-                createSettingsWindow()
-              }
+          {
+            label: 'Settings...',
+            accelerator: 'CmdOrCtrl+,',
+            click: () => {
+              createSettingsWindow()
             }
-          ]
+          }
+        ]
         : [])
     ]
   },
@@ -186,6 +187,11 @@ const template = [
         label: 'Toggle Developer Tools',
         accelerator: isMac ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
         click: () => ipcSenders.openDevTools()
+      },
+      {
+        id: 'historySwipe',
+        label: 'Toggle History Swipe Gesture',
+        click: () => toggleHistorySwipeGestureConfig()
       },
       { type: 'separator' },
       {
@@ -257,10 +263,13 @@ export function setAppMenu(): void {
 }
 
 export function changeMenuItemLabel(id: string, newLabel: string): void {
-  if (template[0] && template[0].submenu) {
-    const adBlockItem = template[0].submenu.find((item) => (item as any).id === id)
-    if (adBlockItem && adBlockItem.label) {
-      adBlockItem.label = newLabel
+  for (let i = 0; i < template.length; i++) {
+    if (template[i] && template[i].submenu) {
+      const item = template[i].submenu.find((item) => (item as any).id === id)
+      if (item && item.label) {
+        item.label = newLabel
+        break
+      }
     }
   }
 

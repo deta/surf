@@ -9,34 +9,14 @@ import { getPlatform } from './utils'
 import { checkForUpdates } from './appUpdates'
 import { getSettingsWindow } from './settingsWindow'
 import { createGoogleSignInWindow } from './googleSignInWindow'
-import trackpad from '@horizon/trackpad'
+import { setupHistorySwipeIpcSenders } from './historySwipe'
 
 const log = useLogScope('Main IPC Handlers')
 // let prompts: EditablePrompt[] = []
 
 export function setupIpc() {
-  setupIpcSenders()
+  setupHistorySwipeIpcSenders()
   setupIpcHandlers()
-}
-
-function setupIpcSenders() {
-  trackpad.setScrollStartCallback(() => {
-    const window = getMainWindow()
-    if (!window) {
-      log.error('Main window not found')
-      return
-    }
-    window.webContents.send('trackpad-scroll-start')
-  })
-
-  trackpad.setScrollStopCallback(() => {
-    const window = getMainWindow()
-    if (!window) {
-      log.error('Main window not found')
-      return
-    }
-    window.webContents.send('trackpad-scroll-stop')
-  })
 }
 
 function setupIpcHandlers() {
