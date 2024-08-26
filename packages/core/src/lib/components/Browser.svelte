@@ -3263,6 +3263,8 @@
     }}
     bind:rightPaneItem={rightPane}
     on:pane-update-right={handleRightPaneUpdate}
+    on:peekClose={() => changeTraficLightsVisibility(false)}
+    on:peekOpen={() => changeTraficLightsVisibility(true)}
   >
     <div
       slot="sidebar"

@@ -97,24 +97,14 @@
       clearTimeout(peekTimeout!)
       isOpen = State.Peek
       startTransition()
+      dispatch('peekOpen')
     }
   }
 
   function handleMouseLeave(event: MouseEvent) {
     if (isOpen === State.Peek) {
-      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-      const isWithinErrorZone =
-        event.clientX >= rect.left - ERROR_ZONE &&
-        event.clientX <= rect.right + ERROR_ZONE &&
-        event.clientY >= rect.top - ERROR_ZONE &&
-        event.clientY <= rect.bottom + ERROR_ZONE
-
-      if (!isWithinErrorZone) {
-        peekTimeout = setTimeout(() => {
-          isOpen = State.Closed
-          startTransition()
-        }, PEEK_DELAY)
-      }
+      isOpen = State.Closed
+      dispatch('peekClose')
     }
   }
 
@@ -137,7 +127,6 @@
   }
 
   $: {
-    // Handle orientation change
     if (previousOrientation !== horizontalTabs) {
       loadSavedSize()
       previousOrientation = horizontalTabs
@@ -145,7 +134,7 @@
   }
 
   $: barClasses = [
-    'fixed left-0 right-0 h-full flex flex-shrink-0 transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+    'fixed left-0 right-0 h-full flex flex-shrink-0 transition-all bg-sky-100 ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
     {
       'cursor-row-resize': horizontalTabs && isDragging,
       'cursor-col-resize': !horizontalTabs && isDragging,
@@ -209,7 +198,7 @@
     <div class="h-full w-full overflow-auto">
       <slot name="sidebar" />
     </div>
-    <button
+    <!-- <button
       class="absolute bg-white p-1 border-2 border-[rgba(0,0,0,0.08)] text-slate-600 no-drag cursor-pointer {horizontalTabs
         ? '-bottom-[34px] left-1/2 -translate-x-1/2'
         : '-right-[34px]'}"
@@ -229,7 +218,7 @@
           d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"
         />
       </svg>
-    </button>
+    </button> -->
     <div
       class="absolute z-10 bg-red-500 flex-grow-0 no-drag {horizontalTabs
         ? 'bottom-0 left-0 right-0 h-1 cursor-row-resize'
