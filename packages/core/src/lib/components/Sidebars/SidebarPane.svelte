@@ -32,6 +32,7 @@
   const PEEK_DELAY = 300
   const ERROR_ZONE = 40
   const TRANSITION_DURATION = 300
+  const BUFFER_ZONE = 20
 
   onMount(() => {
     ownerDocument = document
@@ -101,9 +102,10 @@
     }
   }
 
-  function handleMouseLeave(event: MouseEvent) {
-    if (isOpen === State.Peek) {
+  function handleOverlayMouseLeave() {
+    if (isOpen === State.Peek && peekTimeout) {
       isOpen = State.Closed
+      startTransition()
       dispatch('peekClose')
     }
   }
@@ -134,7 +136,7 @@
   }
 
   $: barClasses = [
-    'fixed left-0 right-0 h-full flex flex-shrink-0 transition-all bg-sky-100 ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+    'fixed left-0 right-0 h-full flex flex-shrink-0 transition-all rounded-xl bg-blue-100 ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
     {
       'cursor-row-resize': horizontalTabs && isDragging,
       'cursor-col-resize': !horizontalTabs && isDragging,
@@ -143,13 +145,6 @@
       'top-0 flex-row space-x-2': horizontalTabs,
       'bg-[rgb(251,251,250)]': isOpen === State.Peek || isOpen === State.Open || isTransitioning
     },
-    isDragging
-      ? horizontalTabs
-        ? 'shadow-[rgba(0,0,0,0.2)_0px_-2px_0px_0px_inset]'
-        : 'shadow-[rgba(0,0,0,0.2)_-2px_0px_0px_0px_inset]'
-      : horizontalTabs
-        ? 'shadow-[rgba(0,0,0,0.04)_0px_-2px_0px_0px_inset]'
-        : 'shadow-[rgba(0,0,0,0.04)_-2px_0px_0px_0px_inset]',
     isOpen === State.Open || isOpen === State.Peek
       ? 'translate-x-0 translate-y-0'
       : horizontalTabs
@@ -158,17 +153,6 @@
   ]
     .filter(Boolean)
     .join(' ')
-
-  $: buttonClasses = [
-    'w-6 h-6 transition-transform ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
-    isOpen === State.Open || isOpen === State.Peek
-      ? horizontalTabs
-        ? 'rotate-90'
-        : 'rotate-180'
-      : horizontalTabs
-        ? '-rotate-90'
-        : 'rotate-0'
-  ].join(' ')
 
   $: mainStyle = horizontalTabs
     ? `padding-top: ${isOpen === State.Open ? HORIZONTAL_SIZE : 0}px;`
@@ -184,8 +168,18 @@
   $: peekAreaClasses = [
     'fixed z-50 no-drag',
     isOpen === State.Closed ? 'block' : 'hidden',
-    horizontalTabs ? 'top-0 left-0 right-0 h-4 bg-red-500' : 'top-0 left-0 w-4 h-full'
+    horizontalTabs ? 'top-0 left-0 right-0 h-5' : 'top-0 left-0 w-4 h-full'
   ].join(' ')
+
+  $: overlayClasses = [
+    'fixed z-40 bg-transparent',
+    isOpen === State.Peek ? 'block' : 'hidden',
+    horizontalTabs ? 'top-0 left-0 right-0' : 'top-0 left-0 bottom-0'
+  ].join(' ')
+
+  $: overlayStyle = horizontalTabs
+    ? `height: ${HORIZONTAL_SIZE + BUFFER_ZONE}px;`
+    : `width: ${size + BUFFER_ZONE}px;`
 </script>
 
 <div class="flex w-screen h-screen justify-start items-start">
@@ -193,13 +187,12 @@
     class={barClasses}
     aria-labelledby="nav-heading"
     style="{horizontalTabs ? 'height' : 'width'}: {size}px; z-index: 10000000000000;"
-    on:mouseleave={handleMouseLeave}
   >
     <div class="h-full w-full">
       <slot name="sidebar" />
     </div>
     <div
-      class="absolute z-10 bg-red-500 flex-grow-0 no-drag {horizontalTabs
+      class="absolute z-10 hover:bg-purple-500/50 transition-all duration-300 flex-grow-0 no-drag {horizontalTabs
         ? 'bottom-0 left-0 right-0 h-1 cursor-row-resize'
         : 'right-0 top-0 bottom-0 w-1 cursor-col-resize'}"
     >
@@ -213,6 +206,9 @@
   </nav>
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div class={peekAreaClasses} on:mouseenter={handleMouseEnter} />
+  <!-- Overlay for peek mode -->
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div class={overlayClasses} style={overlayStyle} on:mouseleave={handleOverlayMouseLeave} />
   <main style={mainStyle} class={mainClasses}>
     <div class="flex flex-col flex-grow overflow-auto">
       <slot name="content" />
