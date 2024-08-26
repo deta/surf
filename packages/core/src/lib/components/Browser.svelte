@@ -1048,8 +1048,6 @@
     } else if (isModKeyAndKeyPressed(e, '0') || isModKeyAndEventCodeIs(e, 'Digit0')) {
       setShowNewTabOverlay(0)
       $activeBrowserTab?.resetZoom()
-    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'i')) {
-      $activeBrowserTab?.openDevTools()
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 't')) {
       openClosedTab()
     } else if (
@@ -2292,6 +2290,11 @@
     // @ts-expect-error
     window.api.onOpenCheatSheet(() => {
       openCheatSheet()
+    })
+
+    // @ts-expect-error
+    window.api.onOpenDevtools(() => {
+      $activeBrowserTab?.openDevTools()
     })
 
     // @ts-expect-error

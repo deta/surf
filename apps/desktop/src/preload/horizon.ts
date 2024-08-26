@@ -280,6 +280,14 @@ const api = {
     }
   },
 
+  onOpenDevtools: (callback) => {
+    try {
+      ipcRenderer.on('open-devtools', () => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
   onOpenFeedbackPage: (callback) => {
     try {
       ipcRenderer.on('open-feedback-page', () => callback())

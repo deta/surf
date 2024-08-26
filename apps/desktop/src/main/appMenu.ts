@@ -165,7 +165,17 @@ const template = [
     submenu: [
       { label: 'Reload App', role: 'reload', accelerator: 'CmdOrCtrl+Alt+R' },
       { label: 'Force Reload App', role: 'forceReload', accelerator: 'CmdOrCtrl+Alt+Shift+R' },
-      { role: 'toggleDevTools' },
+      {
+        label: 'Toggle Developer Tools',
+        accelerator: isMac ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
+        click: () => ipcSenders.openDevTools()
+      },
+      {
+        label: 'Toggle Developer Tools for Surf',
+        accelerator: 'CmdOrCtrl+Shift+I',
+        role: 'toggleDevTools'
+      },
+      // { role: 'toggleDevTools' },
       { type: 'separator' },
       {
         label: 'Reload Tab',

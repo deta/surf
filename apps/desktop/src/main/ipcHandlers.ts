@@ -374,6 +374,16 @@ export const ipcSenders = {
     window.webContents.send('reload-active-tab', force)
   },
 
+  openDevTools: () => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    window.webContents.send('open-devtools')
+  },
+
   userConfigSettingsChange(settings: UserSettings) {
     // const window = getMainWindow()
     // if (!window) {
