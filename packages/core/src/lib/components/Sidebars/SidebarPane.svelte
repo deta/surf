@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, createEventDispatcher, onDestroy } from 'svelte'
   import { debounce } from 'lodash'
+  import { DragculaDragEvent } from '@horizon/dragcula'
 
   export let horizontalTabs = false
   export let showLeftSidebar = true
@@ -182,12 +183,21 @@
     isOpen === State.Closed ? 'block' : 'hidden',
     horizontalTabs ? 'top-0 left-0 right-0 h-4' : 'top-0 left-0 w-4 h-full'
   ].join(' ')
+
+  let isDraggingTab = false
 </script>
 
 <svelte:window
   on:mousemove={(e) => {
+    if (isDraggingTab) return
     mouseX = e.clientX
     mouseY = e.clientY
+  }}
+  on:DragStart={(drag) => {
+    isDraggingTab = true
+  }}
+  on:DragEnd={(drag) => {
+    isDraggingTab = false
   }}
 />
 
