@@ -60,7 +60,7 @@
     if (!horizontalTabs && (leftSize < MIN_VERTICAL_SIZE || leftSize > MAX_VERTICAL_SIZE)) {
       leftSize = MIN_VERTICAL_SIZE
     }
-    if (rightSize < MIN_VERTICAL_SIZE || rightSize > MAX_VERTICAL_SIZE) {
+    if (rightSize < MIN_VERTICAL_SIZE || rightSize > MAX_VERTICAL_RIGHT_SIZE) {
       rightSize = MIN_VERTICAL_SIZE
     }
   }
@@ -82,6 +82,8 @@
     }
     startPos = horizontalTabs && side === 'left' ? e.clientY : e.clientX
     startSize = side === 'left' ? leftSize : rightSize
+    ownerDocument.addEventListener('pointermove', handleGlobalPointerMove)
+    ownerDocument.addEventListener('pointerup', handleGlobalPointerUp)
   }
 
   function handleGlobalPointerMove(e: PointerEvent) {
@@ -97,7 +99,7 @@
       saveSizeToLocalStorage('left', leftSize)
     } else if (isDraggingRight) {
       const newSize = startSize - (e.clientX - startPos)
-      rightSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
+      rightSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_RIGHT_SIZE, newSize))
       saveSizeToLocalStorage('right', rightSize)
     }
   }
@@ -105,16 +107,16 @@
   function handleGlobalPointerUp() {
     isDraggingLeft = false
     isDraggingRight = false
+    ownerDocument.removeEventListener('pointermove', handleGlobalPointerMove)
+    ownerDocument.removeEventListener('pointerup', handleGlobalPointerUp)
   }
 
   function handleMouseEnter(side: 'left' | 'right') {
     if (side === 'left' && leftIsOpen === State.Closed) {
       leftIsOpen = State.Peek
-      // startTransition('left')
       dispatch('leftPeekOpen')
     } else if (side === 'right' && rightIsOpen === State.Closed) {
       rightIsOpen = State.Peek
-      // startTransition('right')
       dispatch('rightPeekOpen')
     }
   }
@@ -139,21 +141,7 @@
     }
   }
 
-  function startTransition(side: 'left' | 'right') {
-    // if (side === 'left') {
-    //   leftIsTransitioning = true
-    //   clearTimeout(leftTransitionEndTimeout!)
-    //   leftTransitionEndTimeout = setTimeout(() => {
-    //     leftIsTransitioning = false
-    //   }, TRANSITION_DURATION)
-    // } else {
-    //   rightIsTransitioning = true
-    //   clearTimeout(rightTransitionEndTimeout!)
-    //   rightTransitionEndTimeout = setTimeout(() => {
-    //     rightIsTransitioning = false
-    //   }, TRANSITION_DURATION)
-    // }
-  }
+  function startTransition(side: 'left' | 'right') {}
 
   $: {
     if (showLeftSidebar === true) {
@@ -206,25 +194,30 @@
     .join(' ')
 
   $: rightBarClasses = [
-    'fixed right-0 right-0 h-full flex flex-shrink-0 rounded-xl bg-blue-100 top-0 bottom-0 flex-col space-y-2',
+    `fixed right-0 flex flex-shrink-0 rounded-xl bg-blue-100 top-0 bottom-0 flex-col space-y-2`,
+    isDraggingRight
+      ? 'transition-none'
+      : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
     {
       'cursor-col-resize': isDraggingRight,
-      'shadow-lg': rightIsOpen === State.Peek
+      'shadow-lg': rightIsOpen === State.Peek,
+      'bg-[rgb(251,251,250)]':
+        rightIsOpen === State.Peek || rightIsOpen === State.Open || rightIsTransitioning
     },
-    rightIsOpen === State.Open || rightIsOpen === State.Peek
-      ? 'translate-x-0 translate-y-0'
-      : '-translate-x-full'
+    rightIsOpen === State.Open || rightIsOpen === State.Peek ? 'translate-x-0' : 'translate-x-full'
   ]
     .filter(Boolean)
     .join(' ')
 
-  $: mainStyle = horizontalTabs
-    ? `padding-top: ${leftIsOpen === State.Open ? HORIZONTAL_SIZE : 0}px;`
-    : `padding-left: ${leftIsOpen === State.Open ? leftSize : 0}px;`
+  $: mainStyle = `
+    ${horizontalTabs ? `padding-top: ${leftIsOpen === State.Open ? HORIZONTAL_SIZE : 0}px;` : ''}
+    ${!horizontalTabs ? `padding-left: ${leftIsOpen === State.Open ? leftSize : 0}px;` : ''}
+    padding-right: ${rightIsOpen === State.Open ? rightSize : 0}px;
+  `
   $: mainClasses = [
     'flex flex-grow max-h-screen h-full px-2',
-    isDraggingLeft ? 'pointer-events-none' : '',
-    isDraggingLeft
+    isDraggingLeft || isDraggingRight ? 'pointer-events-none' : '',
+    isDraggingLeft || isDraggingRight
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300'
   ].join(' ')
@@ -281,8 +274,28 @@
     </div>
   </nav>
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class={leftPeakAreaClasses} on:mouseenter={(e) => handleMouseEnter('left')} />
+  <div class={leftPeakAreaClasses} on:mouseenter={() => handleMouseEnter('left')} />
   <main style={mainStyle} class={mainClasses}>
     <slot name="content" />
   </main>
+
+  <div
+    class={rightBarClasses}
+    aria-labelledby="nav-heading"
+    style="width: {rightSize}px; z-index: 10000000000000;"
+  >
+    <div
+      class="absolute z-10 hover:bg-purple-500/50 transition-all duration-300 flex-grow-0 no-drag left-0 top-0 bottom-0 w-1 cursor-col-resize"
+    >
+      <div
+        on:pointerdown={(e) => handlePointerDown(e, 'right')}
+        class="w-3 h-full cursor-col-resize shrink-0"
+      />
+    </div>
+    <div class="h-full w-full">
+      <slot name="right-sidebar" />
+    </div>
+  </div>
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div class={rightPeakAreaClasses} on:mouseenter={() => handleMouseEnter('right')} />
 </div>

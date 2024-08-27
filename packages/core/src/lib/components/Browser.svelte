@@ -3253,6 +3253,7 @@
     {horizontalTabs}
     bind:this={sidebarComponent}
     bind:showLeftSidebar
+    bind:showRightSidebar
     on:collapsed-left-sidebar={() => handleLeftSidebarChange(false)}
     on:expanded-left-sidebar={() => handleLeftSidebarChange(true)}
     on:collapsed-right-sidebar={() => {
