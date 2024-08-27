@@ -857,20 +857,10 @@
     )
   }, 200)
 
-  let keyBuffer = ''
-  let index: number
-  let keyTimeout: any
-  const KEY_TIMEOUT = 120
-  const MAX_TABS = 99
-
   $: savedTabsOrientation = $userConfigSettings.tabs_orientation
   $: horizontalTabs = savedTabsOrientation === 'horizontal'
 
   const handleCollapseRight = () => {
-    if (sidebarComponent) {
-      sidebarComponent.collapseRight()
-    }
-
     if (showRightSidebar) {
       showRightSidebar = false
     }
@@ -881,10 +871,6 @@
   }
 
   const handleExpandRight = () => {
-    if (sidebarComponent) {
-      sidebarComponent.expandRight()
-    }
-
     showRightSidebar = true
   }
 
@@ -3909,7 +3895,7 @@
       {/if}
     </div>
 
-    <div slot="content" class="h-full w-full shadow-lg flex space-x-4 relative flex-row p-1.5">
+    <div slot="content" class="h-full w-full shadow-lg flex space-x-4 relative flex-row">
       <div
         style:view-transition-name="active-content-wrapper"
         class="w-full h-full overflow-hidden flex-grow"
