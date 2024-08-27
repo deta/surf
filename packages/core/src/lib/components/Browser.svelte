@@ -3261,10 +3261,9 @@
     on:expanded-right-sidebar={() => {
       showRightSidebar = true
     }}
-    bind:rightPaneItem={rightPane}
     on:pane-update-right={handleRightPaneUpdate}
-    on:peekClose={() => changeTraficLightsVisibility(false)}
-    on:peekOpen={() => changeTraficLightsVisibility(true)}
+    on:leftPeekClose={() => changeTraficLightsVisibility(false)}
+    on:leftPeekOpen={() => changeTraficLightsVisibility(true)}
   >
     <div
       slot="sidebar"

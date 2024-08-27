@@ -4,6 +4,7 @@
 
   export let horizontalTabs = false
   export let showLeftSidebar = true
+  export let showRightSidebar = true
 
   const dispatch = createEventDispatcher()
 
@@ -15,25 +16,30 @@
 
   type SidebarState = (typeof State)[keyof typeof State]
 
-  let size: number
-  let isOpen: SidebarState = State.Open
-  let isDragging = false
+  let leftSize: number
+  let rightSize: number
+  let leftIsOpen: SidebarState = State.Open
+  let rightIsOpen: SidebarState = State.Open
+  let isDraggingLeft = false
+  let isDraggingRight = false
   let startPos: number
   let startSize: number
   let ownerDocument: Document
   let peekTimeout: ReturnType<typeof setTimeout> | null = null
   let transitionEndTimeout: ReturnType<typeof setTimeout> | null = null
-  let isTransitioning = false
+  let leftIsTransitioning = false
+  let rightIsTransitioning = false
   let previousOrientation: boolean
 
   const MIN_VERTICAL_SIZE = 200
   const MAX_VERTICAL_SIZE = 400
+  const MAX_VERTICAL_RIGHT_SIZE = 600
   const HORIZONTAL_SIZE = 40
   const TRANSITION_DURATION = 300
 
   onMount(() => {
     ownerDocument = document
-    loadSavedSize()
+    loadSavedSizes()
     previousOrientation = horizontalTabs
     ownerDocument.addEventListener('pointermove', handleGlobalPointerMove)
     ownerDocument.addEventListener('pointerup', handleGlobalPointerUp)
@@ -44,53 +50,72 @@
     ownerDocument?.removeEventListener('pointerup', handleGlobalPointerUp)
   })
 
-  function loadSavedSize() {
+  function loadSavedSizes() {
     const savedVerticalSize =
       Number(localStorage.getItem('panelSize-vertical-sidebar')) || MIN_VERTICAL_SIZE
     const savedHorizontalSize =
       Number(localStorage.getItem('panelSize-horizontal-sidebar')) || HORIZONTAL_SIZE
-    size = horizontalTabs ? savedHorizontalSize : savedVerticalSize
-    if (!horizontalTabs && (size < MIN_VERTICAL_SIZE || size > MAX_VERTICAL_SIZE)) {
-      size = MIN_VERTICAL_SIZE
+    rightSize = Number(localStorage.getItem('panelSize-right-sidebar')) || MIN_VERTICAL_SIZE
+    leftSize = horizontalTabs ? savedHorizontalSize : savedVerticalSize
+    if (!horizontalTabs && (leftSize < MIN_VERTICAL_SIZE || leftSize > MAX_VERTICAL_SIZE)) {
+      leftSize = MIN_VERTICAL_SIZE
+    }
+    if (rightSize < MIN_VERTICAL_SIZE || rightSize > MAX_VERTICAL_SIZE) {
+      rightSize = MIN_VERTICAL_SIZE
     }
   }
 
-  const saveSizeToLocalStorage = debounce(() => {
-    const key = `panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`
+  const saveSizeToLocalStorage = debounce((side: 'left' | 'right', size: number) => {
+    const key =
+      side === 'left'
+        ? `panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`
+        : 'panelSize-right-sidebar'
     localStorage.setItem(key, size.toString())
   }, 200)
 
-  function handlePointerDown(e: PointerEvent) {
+  function handlePointerDown(e: PointerEvent, side: 'left' | 'right') {
     e.preventDefault()
-    isDragging = true
-    startPos = horizontalTabs ? e.clientY : e.clientX
-    startSize = size
+    if (side === 'left') {
+      isDraggingLeft = true
+    } else {
+      isDraggingRight = true
+    }
+    startPos = horizontalTabs && side === 'left' ? e.clientY : e.clientX
+    startSize = side === 'left' ? leftSize : rightSize
   }
 
   function handleGlobalPointerMove(e: PointerEvent) {
-    if (!isDragging) return
-    const currentPos = horizontalTabs ? e.clientY : e.clientX
-    const newSize = startSize + (horizontalTabs ? startPos - currentPos : currentPos - startPos)
-
-    if (horizontalTabs) {
-      isOpen = newSize > HORIZONTAL_SIZE / 2 ? State.Open : State.Closed
-      size = HORIZONTAL_SIZE
-    } else {
-      size = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
-      saveSizeToLocalStorage()
+    if (isDraggingLeft) {
+      if (horizontalTabs) {
+        const newSize = startSize + (startPos - e.clientY)
+        leftIsOpen = newSize > HORIZONTAL_SIZE / 2 ? State.Open : State.Closed
+        leftSize = HORIZONTAL_SIZE
+      } else {
+        const newSize = startSize + (e.clientX - startPos)
+        leftSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
+      }
+      saveSizeToLocalStorage('left', leftSize)
+    } else if (isDraggingRight) {
+      const newSize = startSize - (e.clientX - startPos)
+      rightSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
+      saveSizeToLocalStorage('right', rightSize)
     }
   }
 
   function handleGlobalPointerUp() {
-    isDragging = false
+    isDraggingLeft = false
+    isDraggingRight = false
   }
 
-  function handleMouseEnter() {
-    if (isOpen === State.Closed) {
-      clearTimeout(peekTimeout!)
-      isOpen = State.Peek
-      startTransition()
-      dispatch('peekOpen')
+  function handleMouseEnter(side: 'left' | 'right') {
+    if (side === 'left' && leftIsOpen === State.Closed) {
+      leftIsOpen = State.Peek
+      // startTransition('left')
+      dispatch('leftPeekOpen')
+    } else if (side === 'right' && rightIsOpen === State.Closed) {
+      rightIsOpen = State.Peek
+      // startTransition('right')
+      dispatch('rightPeekOpen')
     }
   }
 
@@ -99,56 +124,79 @@
   const BUFFER = 50
 
   $: {
-    if (isOpen === State.Peek) {
+    if (leftIsOpen === State.Peek) {
       if (horizontalTabs && mouseY > HORIZONTAL_SIZE + BUFFER) {
-        isOpen = State.Closed
-        dispatch('peekClose')
-      } else if (!horizontalTabs && mouseX > size + BUFFER) {
-        isOpen = State.Closed
-        dispatch('peekClose')
+        leftIsOpen = State.Closed
+        dispatch('leftPeekClose')
+      } else if (!horizontalTabs && mouseX > leftSize + BUFFER) {
+        leftIsOpen = State.Closed
+        dispatch('leftPeekClose')
       }
+    }
+    if (rightIsOpen === State.Peek && mouseX < window.innerWidth - rightSize - BUFFER) {
+      rightIsOpen = State.Closed
+      dispatch('rightPeekClose')
     }
   }
 
-  function startTransition() {
-    isTransitioning = true
-    clearTimeout(transitionEndTimeout!)
-    transitionEndTimeout = setTimeout(() => {
-      isTransitioning = false
-    }, TRANSITION_DURATION)
+  function startTransition(side: 'left' | 'right') {
+    // if (side === 'left') {
+    //   leftIsTransitioning = true
+    //   clearTimeout(leftTransitionEndTimeout!)
+    //   leftTransitionEndTimeout = setTimeout(() => {
+    //     leftIsTransitioning = false
+    //   }, TRANSITION_DURATION)
+    // } else {
+    //   rightIsTransitioning = true
+    //   clearTimeout(rightTransitionEndTimeout!)
+    //   rightTransitionEndTimeout = setTimeout(() => {
+    //     rightIsTransitioning = false
+    //   }, TRANSITION_DURATION)
+    // }
   }
 
   $: {
     if (showLeftSidebar === true) {
-      isOpen = State.Open
-      startTransition()
+      leftIsOpen = State.Open
+      startTransition('left')
     } else if (showLeftSidebar === false) {
-      isOpen = State.Closed
-      startTransition()
+      leftIsOpen = State.Closed
+      startTransition('left')
+    }
+  }
+
+  $: {
+    if (showRightSidebar === true) {
+      rightIsOpen = State.Open
+      startTransition('right')
+    } else if (showRightSidebar === false) {
+      rightIsOpen = State.Closed
+      startTransition('right')
     }
   }
 
   $: {
     if (previousOrientation !== horizontalTabs) {
-      loadSavedSize()
+      loadSavedSizes()
       previousOrientation = horizontalTabs
     }
   }
 
-  $: barClasses = [
+  $: leftBarClasses = [
     'fixed left-0 right-0 h-full flex flex-shrink-0 rounded-xl bg-blue-100',
-    isDragging
+    isDraggingLeft
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
     {
-      'cursor-row-resize': horizontalTabs && isDragging,
-      'cursor-col-resize': !horizontalTabs && isDragging,
-      'shadow-lg': isOpen === State.Peek,
+      'cursor-row-resize': horizontalTabs && isDraggingLeft,
+      'cursor-col-resize': !horizontalTabs && isDraggingLeft,
+      'shadow-lg': leftIsOpen === State.Peek,
       'top-0 bottom-0 flex-col space-y-2': !horizontalTabs,
       'top-0 flex-row space-x-2': horizontalTabs,
-      'bg-[rgb(251,251,250)]': isOpen === State.Peek || isOpen === State.Open || isTransitioning
+      'bg-[rgb(251,251,250)]':
+        leftIsOpen === State.Peek || leftIsOpen === State.Open || leftIsTransitioning
     },
-    isOpen === State.Open || isOpen === State.Peek
+    leftIsOpen === State.Open || leftIsOpen === State.Peek
       ? 'translate-x-0 translate-y-0'
       : horizontalTabs
         ? '-translate-y-full'
@@ -157,21 +205,40 @@
     .filter(Boolean)
     .join(' ')
 
+  $: rightBarClasses = [
+    'fixed right-0 right-0 h-full flex flex-shrink-0 rounded-xl bg-blue-100 top-0 bottom-0 flex-col space-y-2',
+    {
+      'cursor-col-resize': isDraggingRight,
+      'shadow-lg': rightIsOpen === State.Peek
+    },
+    rightIsOpen === State.Open || rightIsOpen === State.Peek
+      ? 'translate-x-0 translate-y-0'
+      : '-translate-x-full'
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   $: mainStyle = horizontalTabs
-    ? `padding-top: ${isOpen === State.Open ? HORIZONTAL_SIZE : 0}px;`
-    : `padding-left: ${isOpen === State.Open ? size : 0}px;`
+    ? `padding-top: ${leftIsOpen === State.Open ? HORIZONTAL_SIZE : 0}px;`
+    : `padding-left: ${leftIsOpen === State.Open ? leftSize : 0}px;`
   $: mainClasses = [
     'flex flex-grow max-h-screen h-full px-2',
-    isDragging ? 'pointer-events-none' : '',
-    isDragging
+    isDraggingLeft ? 'pointer-events-none' : '',
+    isDraggingLeft
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300'
   ].join(' ')
 
-  $: peekAreaClasses = [
+  $: leftPeakAreaClasses = [
     'fixed z-50 no-drag',
-    isOpen === State.Closed ? 'block' : 'hidden',
+    leftIsOpen === State.Closed ? 'block' : 'hidden',
     horizontalTabs ? 'top-0 left-0 right-0 h-4' : 'top-0 left-0 w-4 h-full'
+  ].join(' ')
+
+  $: rightPeakAreaClasses = [
+    'fixed z-50 no-drag',
+    rightIsOpen === State.Closed ? 'block' : 'hidden',
+    'top-0 right-0 w-4 h-full'
   ].join(' ')
 
   let isDraggingTab = false
@@ -193,9 +260,9 @@
 
 <div class="flex w-screen h-screen justify-start items-start">
   <nav
-    class={barClasses}
+    class={leftBarClasses}
     aria-labelledby="nav-heading"
-    style="{horizontalTabs ? 'height' : 'width'}: {size}px; z-index: 10000000000000;"
+    style="{horizontalTabs ? 'height' : 'width'}: {leftSize}px; z-index: 10000000000000;"
   >
     <div class="h-full w-full">
       <slot name="sidebar" />
@@ -206,7 +273,7 @@
         : 'right-0 top-0 bottom-0 w-1 cursor-col-resize'}"
     >
       <div
-        on:pointerdown={handlePointerDown}
+        on:pointerdown={(e) => handlePointerDown(e, 'left')}
         class="{horizontalTabs ? 'h-3 w-full' : 'w-3 h-full'} cursor-{horizontalTabs
           ? 'row'
           : 'col'}-resize shrink-0"
@@ -214,7 +281,7 @@
     </div>
   </nav>
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class={peekAreaClasses} on:mouseenter={handleMouseEnter} />
+  <div class={leftPeakAreaClasses} on:mouseenter={(e) => handleMouseEnter('left')} />
   <main style={mainStyle} class={mainClasses}>
     <slot name="content" />
   </main>
