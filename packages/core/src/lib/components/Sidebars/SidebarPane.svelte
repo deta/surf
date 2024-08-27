@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { useDebounce } from '@horizon/utils'
   import { onMount, createEventDispatcher, onDestroy } from 'svelte'
-  import { debounce } from 'lodash'
 
   export let horizontalTabs = false
   export let showLeftSidebar = true
@@ -22,6 +22,7 @@
   const HORIZONTAL_SIZE = 40
   const TRANSITION_DURATION = 300
   const BUFFER = 50
+  const CLOSE_THRESHOLD = 10
 
   let leftSize: number
   let rightSize: number
@@ -41,13 +42,13 @@
   let mouseX: number = 0
   let mouseY: number = 0
 
-  const saveSizeToLocalStorage = debounce((side: 'left' | 'right', size: number) => {
+  const saveSizeToLocalStorage = useDebounce((side: 'left' | 'right', size: number) => {
     const key =
       side === 'left'
         ? `panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`
         : 'panelSize-right-sidebar'
     localStorage.setItem(key, size.toString())
-  }, 200)
+  }, 100)
 
   function startTransition(side: 'left' | 'right') {}
 
@@ -78,21 +79,37 @@
     ownerDocument.addEventListener('pointermove', handleGlobalPointerMove)
     ownerDocument.addEventListener('pointerup', handleGlobalPointerUp)
   }
-
   function handleGlobalPointerMove(e: PointerEvent) {
     if (isDraggingLeft) {
       if (horizontalTabs) {
-        const newSize = startSize + (startPos - e.clientY)
-        leftIsOpen = newSize > HORIZONTAL_SIZE / 2 ? State.Open : State.Closed
-        leftSize = HORIZONTAL_SIZE
+        const newSize = startSize - (e.clientY - startPos)
+        if (newSize < CLOSE_THRESHOLD) {
+          leftIsOpen = State.Closed
+          leftSize = HORIZONTAL_SIZE
+          dispatch('leftPeekClose')
+        } else {
+          leftSize = HORIZONTAL_SIZE
+        }
       } else {
         const newSize = startSize + (e.clientX - startPos)
-        leftSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
+        if (newSize < MIN_VERTICAL_SIZE - CLOSE_THRESHOLD) {
+          leftIsOpen = State.Closed
+          leftSize = MIN_VERTICAL_SIZE
+          dispatch('leftPeekClose')
+        } else {
+          leftSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
+        }
       }
       saveSizeToLocalStorage('left', leftSize)
     } else if (isDraggingRight) {
       const newSize = startSize - (e.clientX - startPos)
-      rightSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_RIGHT_SIZE, newSize))
+      if (newSize < MIN_VERTICAL_SIZE - CLOSE_THRESHOLD) {
+        rightIsOpen = State.Closed
+        rightSize = MIN_VERTICAL_SIZE
+        dispatch('rightPeekClose')
+      } else {
+        rightSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_RIGHT_SIZE, newSize))
+      }
       saveSizeToLocalStorage('right', rightSize)
     }
   }
@@ -102,6 +119,17 @@
     isDraggingRight = false
     ownerDocument.removeEventListener('pointermove', handleGlobalPointerMove)
     ownerDocument.removeEventListener('pointerup', handleGlobalPointerUp)
+
+    if (!horizontalTabs && leftIsOpen !== State.Closed && leftSize < MIN_VERTICAL_SIZE) {
+      leftIsOpen = State.Closed
+      leftSize = MIN_VERTICAL_SIZE
+      dispatch('leftPeekClose')
+    }
+    if (rightIsOpen !== State.Closed && rightSize < MIN_VERTICAL_SIZE) {
+      rightIsOpen = State.Closed
+      rightSize = MIN_VERTICAL_SIZE
+      dispatch('rightPeekClose')
+    }
   }
 
   function handleMouseEnter(side: 'left' | 'right') {
