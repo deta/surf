@@ -617,7 +617,7 @@ Made with Deta Surf.`
   {src}
   {partition}
   preload={`file://${PRELOAD_PATH}`}
-  webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=14"
+  webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=14,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
   allowpopups
   use:HTMLDragZone.action={{}}
   on:DragEnter={handleDragEnter}
