@@ -16,6 +16,13 @@
 
   type SidebarState = (typeof State)[keyof typeof State]
 
+  const MIN_VERTICAL_SIZE = 200
+  const MAX_VERTICAL_SIZE = 400
+  const MAX_VERTICAL_RIGHT_SIZE = 600
+  const HORIZONTAL_SIZE = 40
+  const TRANSITION_DURATION = 300
+  const BUFFER = 50
+
   let leftSize: number
   let rightSize: number
   let leftIsOpen: SidebarState = State.Open
@@ -30,25 +37,19 @@
   let leftIsTransitioning = false
   let rightIsTransitioning = false
   let previousOrientation: boolean
+  let isDraggingTab = false
+  let mouseX: number = 0
+  let mouseY: number = 0
 
-  const MIN_VERTICAL_SIZE = 200
-  const MAX_VERTICAL_SIZE = 400
-  const MAX_VERTICAL_RIGHT_SIZE = 600
-  const HORIZONTAL_SIZE = 40
-  const TRANSITION_DURATION = 300
+  const saveSizeToLocalStorage = debounce((side: 'left' | 'right', size: number) => {
+    const key =
+      side === 'left'
+        ? `panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`
+        : 'panelSize-right-sidebar'
+    localStorage.setItem(key, size.toString())
+  }, 200)
 
-  onMount(() => {
-    ownerDocument = document
-    loadSavedSizes()
-    previousOrientation = horizontalTabs
-    ownerDocument.addEventListener('pointermove', handleGlobalPointerMove)
-    ownerDocument.addEventListener('pointerup', handleGlobalPointerUp)
-  })
-
-  onDestroy(() => {
-    ownerDocument?.removeEventListener('pointermove', handleGlobalPointerMove)
-    ownerDocument?.removeEventListener('pointerup', handleGlobalPointerUp)
-  })
+  function startTransition(side: 'left' | 'right') {}
 
   function loadSavedSizes() {
     const savedVerticalSize =
@@ -64,14 +65,6 @@
       rightSize = MIN_VERTICAL_SIZE
     }
   }
-
-  const saveSizeToLocalStorage = debounce((side: 'left' | 'right', size: number) => {
-    const key =
-      side === 'left'
-        ? `panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`
-        : 'panelSize-right-sidebar'
-    localStorage.setItem(key, size.toString())
-  }, 200)
 
   function handlePointerDown(e: PointerEvent, side: 'left' | 'right') {
     e.preventDefault()
@@ -121,10 +114,6 @@
     }
   }
 
-  let mouseX: number = 0
-  let mouseY: number = 0
-  const BUFFER = 50
-
   $: {
     if (leftIsOpen === State.Peek) {
       if (horizontalTabs && mouseY > HORIZONTAL_SIZE + BUFFER) {
@@ -144,8 +133,6 @@
       dispatch('rightPeekClose')
     }
   }
-
-  function startTransition(side: 'left' | 'right') {}
 
   $: {
     if (showLeftSidebar === true) {
@@ -248,7 +235,18 @@
     }
   `
 
-  let isDraggingTab = false
+  onMount(() => {
+    ownerDocument = document
+    loadSavedSizes()
+    previousOrientation = horizontalTabs
+    ownerDocument.addEventListener('pointermove', handleGlobalPointerMove)
+    ownerDocument.addEventListener('pointerup', handleGlobalPointerUp)
+  })
+
+  onDestroy(() => {
+    ownerDocument?.removeEventListener('pointermove', handleGlobalPointerMove)
+    ownerDocument?.removeEventListener('pointerup', handleGlobalPointerUp)
+  })
 </script>
 
 <svelte:window
