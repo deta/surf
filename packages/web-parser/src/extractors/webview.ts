@@ -39,8 +39,10 @@ export class WebViewExtractor {
     this.webview.partition = this.partition
     // @ts-ignore
     this.webview.preload = `file://${window.api.webviewPreloadPath}`
-    this.webview.webpreferences = 'autoplayPolicy=user-gesture-required'
-    this.webview.allowpopups = true
+    this.webview.webpreferences =
+      'autoplayPolicy=user-gesture-required,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true'
+    // webviews needed for extracting stuff don't need to create windows
+    this.webview.allowpopups = false
 
     this.webview.style.width = '100%'
     this.webview.style.height = '100%'
