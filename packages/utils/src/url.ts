@@ -1,5 +1,12 @@
 import { isIP } from 'is-ip'
 
+export const normalizeElectronUserAgent = (current: string): string => {
+  return current
+    .split(' ')
+    .filter((part) => !part.startsWith('Surf/') && !part.startsWith('Electron/'))
+    .join(' ')
+}
+
 export const prependProtocol = (url: string, secure = true) => {
   if (!url.startsWith('http')) {
     return secure ? `https://${url}` : `http://${url}`

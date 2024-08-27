@@ -5,6 +5,7 @@ import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
+import { normalizeElectronUserAgent } from '@horizon/utils'
 
 const isDev = import.meta.env.DEV
 
@@ -23,11 +24,11 @@ export function createWindow() {
   const currentDisplay =
     winState.state.x && winState.state.y
       ? screen.getDisplayMatching({
-        x: winState.state.x,
-        y: winState.state.y,
-        width: winState.state.width,
-        height: winState.state.height
-      })
+          x: winState.state.x,
+          y: winState.state.y,
+          width: winState.state.width,
+          height: winState.state.height
+        })
       : screen.getPrimaryDisplay()
   const screenBounds = currentDisplay.bounds
 
@@ -84,6 +85,17 @@ export function createWindow() {
       session: session.fromPartition('persist:surf-app-session'),
       defaultFontSize: 14
     }
+  })
+
+  const webviewSession = session.fromPartition('persist:horizon')
+  const webviewSessionUserAgent = normalizeElectronUserAgent(webviewSession.getUserAgent())
+  webviewSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    callback({
+      requestHeaders: {
+        ...details.requestHeaders,
+        'User-Agent': webviewSessionUserAgent
+      }
+    })
   })
 
   // TODO: proper session management?
