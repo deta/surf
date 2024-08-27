@@ -190,7 +190,7 @@
   }
 
   $: leftBarClasses = [
-    'fixed left-0 right-0 h-full flex flex-shrink-0 rounded-xl bg-blue-100',
+    'fixed left-0 right-0 h-full flex flex-shrink-0 bg-blue-100',
     isDraggingLeft
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
@@ -234,7 +234,7 @@
     padding-right: ${rightIsOpen === State.Open ? rightSize : 0}px;
   `
   $: mainClasses = [
-    'flex flex-grow max-h-screen h-full px-2',
+    'flex flex-grow max-h-screen h-full',
     isDraggingLeft || isDraggingRight ? 'pointer-events-none' : '',
     isDraggingLeft || isDraggingRight
       ? 'transition-none'

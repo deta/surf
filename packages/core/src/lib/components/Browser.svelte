@@ -3909,18 +3909,10 @@
       {/if}
     </div>
 
-    <div
-      slot="content"
-      class="h-full w-full shadow-lg flex space-x-4 relative flex-row {horizontalTabs
-        ? 'px-1.5'
-        : 'py-1.5 px-1.5'}"
-    >
-      <!-- {horizontalTabs ? `pb-1.5 ${showTabs && 'pt-1.5'}` : `pr-1.5 ${showTabs && 'pl-1.5'}`}  -->
+    <div slot="content" class="h-full w-full shadow-lg flex space-x-4 relative flex-row p-1.5">
       <div
         style:view-transition-name="active-content-wrapper"
         class="w-full h-full overflow-hidden flex-grow"
-        class:pb-1.5={horizontalTabs}
-        class:pt-1.5={horizontalTabs && !showLeftSidebar}
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showLeftSidebar}
