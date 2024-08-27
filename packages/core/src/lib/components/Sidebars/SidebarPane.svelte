@@ -130,12 +130,16 @@
       if (horizontalTabs && mouseY > HORIZONTAL_SIZE + BUFFER) {
         leftIsOpen = State.Closed
         dispatch('leftPeekClose')
-      } else if (!horizontalTabs && mouseX > leftSize + BUFFER) {
+      } else if (!horizontalTabs && mouseX > leftSize + BUFFER && !isDraggingLeft) {
         leftIsOpen = State.Closed
         dispatch('leftPeekClose')
       }
     }
-    if (rightIsOpen === State.Peek && mouseX < window.innerWidth - rightSize - BUFFER) {
+    if (
+      rightIsOpen === State.Peek &&
+      mouseX < window.innerWidth - rightSize - BUFFER &&
+      !isDraggingRight
+    ) {
       rightIsOpen = State.Closed
       dispatch('rightPeekClose')
     }
@@ -194,7 +198,7 @@
     .join(' ')
 
   $: rightBarClasses = [
-    `fixed right-0 flex flex-shrink-0 rounded-xl bg-blue-100 top-0 bottom-0 flex-col space-y-2`,
+    `fixed right-0 flex flex-shrink-0 rounded-xl bg-blue-100 bottom-0 flex-col space-y-2`,
     isDraggingRight
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
@@ -229,10 +233,20 @@
   ].join(' ')
 
   $: rightPeakAreaClasses = [
-    'fixed z-50 no-drag',
+    'fixed z-50 no-drag w-4',
     rightIsOpen === State.Closed ? 'block' : 'hidden',
-    'top-0 right-0 w-4 h-full'
+    'right-0 w-4 h-full'
   ].join(' ')
+
+  $: rightSidebarStyle = `
+    width: ${rightIsOpen === State.Closed ? '16px' : rightSize + 'px'};
+    z-index: 10000000000000;
+    ${
+      horizontalTabs && (leftIsOpen === State.Open || leftIsOpen === State.Peek)
+        ? `top: ${HORIZONTAL_SIZE}px;`
+        : 'top: 0;'
+    }
+  `
 
   let isDraggingTab = false
 </script>
@@ -279,11 +293,7 @@
     <slot name="content" />
   </main>
 
-  <div
-    class={rightBarClasses}
-    aria-labelledby="nav-heading"
-    style="width: {rightSize}px; z-index: 10000000000000;"
-  >
+  <div class={rightBarClasses} aria-labelledby="nav-heading" style={rightSidebarStyle}>
     <div
       class="absolute z-10 hover:bg-purple-500/50 transition-all duration-300 flex-grow-0 no-drag left-0 top-0 bottom-0 w-1 cursor-col-resize"
     >
@@ -297,5 +307,9 @@
     </div>
   </div>
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class={rightPeakAreaClasses} on:mouseenter={() => handleMouseEnter('right')} />
+  <div
+    class={rightPeakAreaClasses}
+    on:mouseenter={() => handleMouseEnter('right')}
+    style={rightSidebarStyle}
+  />
 </div>
