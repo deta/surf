@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, createEventDispatcher, onDestroy } from 'svelte'
   import { debounce } from 'lodash'
-  import { DragculaDragEvent } from '@horizon/dragcula'
 
   export let horizontalTabs = false
   export let showLeftSidebar = true
@@ -86,11 +85,6 @@
     isDragging = false
   }
 
-  function toggleBar() {
-    isOpen = isOpen === State.Open ? State.Closed : State.Open
-    startTransition()
-  }
-
   function handleMouseEnter() {
     if (isOpen === State.Closed) {
       clearTimeout(peekTimeout!)
@@ -100,12 +94,10 @@
     }
   }
 
-  // Add these new variables
   let mouseX: number = 0
   let mouseY: number = 0
-  const BUFFER = 50 // Buffer zone in pixels
+  const BUFFER = 50
 
-  // Add this reactive statement to handle sidebar closing based on mouse position
   $: {
     if (isOpen === State.Peek) {
       if (horizontalTabs && mouseY > HORIZONTAL_SIZE + BUFFER) {
@@ -224,8 +216,6 @@
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div class={peekAreaClasses} on:mouseenter={handleMouseEnter} />
   <main style={mainStyle} class={mainClasses}>
-    <div class="flex flex-col flex-grow overflow-auto">
-      <slot name="content" />
-    </div>
+    <slot name="content" />
   </main>
 </div>
