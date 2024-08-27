@@ -3237,18 +3237,8 @@
 <div class="antialiased w-screen h-screen will-change-auto transform-gpu relative drag">
   <SidebarPane
     {horizontalTabs}
-    bind:this={sidebarComponent}
     bind:showLeftSidebar
     bind:showRightSidebar
-    on:collapsed-left-sidebar={() => handleLeftSidebarChange(false)}
-    on:expanded-left-sidebar={() => handleLeftSidebarChange(true)}
-    on:collapsed-right-sidebar={() => {
-      showRightSidebar = false
-    }}
-    on:expanded-right-sidebar={() => {
-      showRightSidebar = true
-    }}
-    on:pane-update-right={handleRightPaneUpdate}
     on:leftPeekClose={() => changeTraficLightsVisibility(false)}
     on:leftPeekOpen={() => changeTraficLightsVisibility(true)}
   >
@@ -4089,7 +4079,7 @@
       </div>
 
       <Tabs.Content value="chat" class="flex-grow overflow-hidden">
-        {#if $activeTab && $activeTabMagic && $activeTabMagic?.showSidebar}
+        {#if $activeTab && $activeTabMagic}
           <MagicSidebar
             magicPage={activeTabMagic}
             tabsInContext={$magicTabs}
@@ -4147,59 +4137,6 @@
         {/if}
       </Tabs.Content>
     </Tabs.Root>
-    <!-- {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
-        <div
-          transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
-            'mt-1.5'} flex-shrink-0"
-        >
-          <MagicSidebar
-            magicPage={$activeTabMagic}
-            bind:inputValue={$magicInputValue}
-            on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
-            on:highlightWebviewText={(e) =>
-              highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
-            on:seekToTimestamp={(e) =>
-              handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
-            on:navigate={(e) => {
-              $browserTabs[$activeTabId].navigate(e.detail.url)
-            }}
-            on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
-            on:chat={() => handleChatSubmit($activeTabMagic)}
-            on:clearChat={() => handleChatClear(true)}
-            on:prompt={handleMagicSidebarPromptSubmit}
-          />
-        </div>
-      {:else if $showAppSidebar}
-        <div
-          transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
-            'mt-1.5'} flex-shrink-0"
-        >
-          <AppSidebar
-            {sffs}
-            appId={$activeAppId}
-            tabContext={$activeAppSidebarContext}
-            on:clearAppSidebar={() => handleAppSidebarClear(true)}
-            on:executeAppSidebarCode={(e) =>
-              handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
-          />
-        </div>
-      {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
-        <div
-          transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
-            'mt-1.5'} flex-shrink-0"
-        >
-          <AnnotationsSidebar
-            bind:this={annotationsSidebar}
-            resourceId={$activeTab.resourceBookmark}
-            on:scrollTo={handleAnnotationScrollTo}
-            on:create={handleAnnotationSidebarCreate}
-            on:reload={handleAnnotationSidebarReload}
-          />
-        </div>
-      {/if} -->
   </SidebarPane>
 </div>
 
