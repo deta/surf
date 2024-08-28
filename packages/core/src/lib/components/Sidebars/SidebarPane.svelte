@@ -1,235 +1,353 @@
-<script lang="ts" context="module">
-  export type SidebarPaneEvents = {
-    'collapsed-left-sidebar': void
-    'expanded-left-sidebar': void
-    'pane-update': PaneAPI
-    'collapsed-right-sidebar': void
-    'expanded-right-sidebar': void
-    'pane-update-right': PaneAPI
-  }
-</script>
-
 <script lang="ts">
-  import { PaneGroup, Pane, PaneResizer, type PaneAPI } from 'paneforge'
-  import { createEventDispatcher, onMount } from 'svelte'
-  import { writable } from 'svelte/store'
+  import { useDebounce } from '@horizon/utils'
+  import { onMount, createEventDispatcher, onDestroy } from 'svelte'
 
-  const MIN_LEFT_SIDEBAR = 200
-  const MIN_RIGHT_SIDEBAR = 300
-  const RIGHT_SIDEBAR_MINIMAL_THRESHOLD = 450
+  export let horizontalTabs = false
+  export let showLeftSidebar = true
+  export let showRightSidebar = true
 
-  const DEFAULT_LEFT_SIDEBAR_WIDTH = 300
-  const DEFAULT_RIGHT_SIDEBAR_WIDTH = 500
+  const dispatch = createEventDispatcher()
 
-  export let horizontalTabs: boolean = false
-  export let paneItem: PaneAPI | undefined = undefined
-  export let rightPaneItem: PaneAPI | undefined = undefined
-  export let rightSidebarHidden: boolean = true
-  export let leftSidebarHidden: boolean = false
+  const State = {
+    Open: 'open',
+    Closed: 'closed',
+    Peek: 'peek'
+  } as const
 
-  let rightSidebarMinimal = false
+  type SidebarState = (typeof State)[keyof typeof State]
 
-  export const expandLeft = () => {
-    if (!$paneStore) return
+  const MIN_VERTICAL_SIZE = 200
+  const MAX_VERTICAL_SIZE = 400
+  const MIN_VERTICAL_RIGHT_SIZE = 380
+  const MAX_VERTICAL_RIGHT_SIZE = 600
+  const HORIZONTAL_SIZE = 40
+  const TRANSITION_DURATION = 300
+  const BUFFER = 50
+  const CLOSE_THRESHOLD = 10
 
-    $paneStore.expand()
+  let leftSize: number
+  let rightSize: number
+  let leftIsOpen: SidebarState = State.Open
+  let rightIsOpen: SidebarState = State.Open
+  let isDraggingLeft = false
+  let isDraggingRight = false
+  let startPos: number
+  let startSize: number
+  let ownerDocument: Document
+  let peekTimeout: ReturnType<typeof setTimeout> | null = null
+  let transitionEndTimeout: ReturnType<typeof setTimeout> | null = null
+  let leftIsTransitioning = false
+  let rightIsTransitioning = false
+  let previousOrientation: boolean
+  let isDraggingTab = false
+  let mouseX: number = 0
+  let mouseY: number = 0
+  let peekBg: string = ''
 
-    const width = percentageToPx(paneSize)
-    if (width < MIN_LEFT_SIDEBAR) {
-      $paneStore.resize(pxToPercentage(DEFAULT_LEFT_SIDEBAR_WIDTH))
+  const saveSizeToLocalStorage = useDebounce((side: 'left' | 'right', size: number) => {
+    const key =
+      side === 'left'
+        ? `panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`
+        : 'panelSize-right-sidebar'
+    localStorage.setItem(key, size.toString())
+  }, 100)
+
+  function startTransition(side: 'left' | 'right') {}
+
+  function loadSavedSizes() {
+    const savedVerticalSize =
+      Number(localStorage.getItem('panelSize-vertical-sidebar')) || MIN_VERTICAL_SIZE
+    const savedHorizontalSize =
+      Number(localStorage.getItem('panelSize-horizontal-sidebar')) || HORIZONTAL_SIZE
+    rightSize = Number(localStorage.getItem('panelSize-right-sidebar')) || MIN_VERTICAL_SIZE
+    leftSize = horizontalTabs ? savedHorizontalSize : savedVerticalSize
+    if (!horizontalTabs && (leftSize < MIN_VERTICAL_SIZE || leftSize > MAX_VERTICAL_SIZE)) {
+      leftSize = MIN_VERTICAL_SIZE
+    }
+    if (rightSize < MIN_VERTICAL_RIGHT_SIZE || rightSize > MAX_VERTICAL_RIGHT_SIZE) {
+      rightSize = MIN_VERTICAL_RIGHT_SIZE
     }
   }
 
-  export const collapseLeft = () => {
-    if (!$paneStore) return
-
-    $paneStore.collapse()
+  function handlePointerDown(e: PointerEvent, side: 'left' | 'right') {
+    e.preventDefault()
+    if (side === 'left') {
+      isDraggingLeft = true
+    } else {
+      isDraggingRight = true
+    }
+    startPos = horizontalTabs && side === 'left' ? e.clientY : e.clientX
+    startSize = side === 'left' ? leftSize : rightSize
+    ownerDocument.addEventListener('pointermove', handleGlobalPointerMove)
+    ownerDocument.addEventListener('pointerup', handleGlobalPointerUp)
   }
-
-  export const expandRight = () => {
-    if (!$rightPaneStore) return
-
-    $rightPaneStore.expand()
-
-    const width = percentageToPx(rightPaneSize)
-    if (width < MIN_RIGHT_SIDEBAR) {
-      $rightPaneStore.resize(pxToPercentage(DEFAULT_RIGHT_SIDEBAR_WIDTH))
+  function handleGlobalPointerMove(e: PointerEvent) {
+    if (isDraggingLeft) {
+      if (horizontalTabs) {
+        const newSize = startSize - (e.clientY - startPos)
+        if (newSize < CLOSE_THRESHOLD) {
+          leftIsOpen = State.Closed
+          leftSize = HORIZONTAL_SIZE
+          dispatch('leftPeekClose')
+        } else {
+          leftSize = HORIZONTAL_SIZE
+        }
+      } else {
+        const newSize = startSize + (e.clientX - startPos)
+        if (newSize < MIN_VERTICAL_SIZE - CLOSE_THRESHOLD) {
+          leftIsOpen = State.Closed
+          leftSize = MIN_VERTICAL_SIZE
+          dispatch('leftPeekClose')
+        } else {
+          leftSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
+        }
+      }
+      saveSizeToLocalStorage('left', leftSize)
+    } else if (isDraggingRight) {
+      const newSize = startSize - (e.clientX - startPos)
+      if (newSize < MIN_VERTICAL_RIGHT_SIZE - CLOSE_THRESHOLD) {
+        rightIsOpen = State.Closed
+        showRightSidebar = false
+        rightSize = MIN_VERTICAL_RIGHT_SIZE
+        dispatch('rightPeekClose')
+      } else {
+        rightSize = Math.max(MIN_VERTICAL_RIGHT_SIZE, Math.min(MAX_VERTICAL_RIGHT_SIZE, newSize))
+      }
+      saveSizeToLocalStorage('right', rightSize)
     }
   }
 
-  export const collapseRight = () => {
-    if (!$rightPaneStore) return
+  function handleGlobalPointerUp() {
+    isDraggingLeft = false
+    isDraggingRight = false
+    ownerDocument.removeEventListener('pointermove', handleGlobalPointerMove)
+    ownerDocument.removeEventListener('pointerup', handleGlobalPointerUp)
 
-    $rightPaneStore.collapse()
+    if (!horizontalTabs && leftIsOpen !== State.Closed && leftSize < MIN_VERTICAL_SIZE) {
+      leftIsOpen = State.Closed
+      leftSize = MIN_VERTICAL_SIZE
+      dispatch('leftPeekClose')
+    }
+    if (rightIsOpen !== State.Closed && rightSize < MIN_VERTICAL_SIZE) {
+      rightIsOpen = State.Closed
+      rightSize = MIN_VERTICAL_SIZE
+      dispatch('rightPeekClose')
+    }
   }
 
-  const paneStore = writable<PaneAPI | undefined>(undefined)
-  const rightPaneStore = writable<PaneAPI | undefined>(undefined)
-  const dispatch = createEventDispatcher<SidebarPaneEvents>()
-
-  let paneSize = 0
-  let rightPaneSize = 0
+  function handleMouseEnter(side: 'left' | 'right') {
+    if (side === 'left' && leftIsOpen === State.Closed) {
+      leftIsOpen = State.Peek
+      dispatch('leftPeekOpen')
+      peekBg = 'bg-sky-100'
+    } else if (side === 'right' && rightIsOpen === State.Closed) {
+      rightIsOpen = State.Peek
+      dispatch('rightPeekOpen')
+    }
+  }
 
   $: {
-    if (paneItem) {
-      paneStore.set(paneItem)
-    }
-  }
+    if (leftIsOpen === State.Peek) {
+      if (horizontalTabs && mouseY > HORIZONTAL_SIZE + BUFFER) {
+        leftIsOpen = State.Closed
+        dispatch('leftPeekClose')
 
-  $: if ($paneStore) {
-    dispatch('pane-update', $paneStore)
+        // wait for the transition to finish, then change peekbg to transparent
+        peekTimeout = setTimeout(() => {
+          peekBg = ''
+        }, 300)
+      } else if (!horizontalTabs && mouseX > leftSize + BUFFER && !isDraggingLeft) {
+        leftIsOpen = State.Closed
+        dispatch('leftPeekClose')
+      }
+    }
+    if (
+      rightIsOpen === State.Peek &&
+      mouseX < window.innerWidth - rightSize - BUFFER &&
+      !isDraggingRight
+    ) {
+      rightIsOpen = State.Closed
+      dispatch('rightPeekClose')
+    }
   }
 
   $: {
-    if (rightPaneItem) {
-      rightPaneStore.set(rightPaneItem)
+    if (showLeftSidebar === true) {
+      leftIsOpen = State.Open
+      peekBg = ''
+      startTransition('left')
+    } else if (showLeftSidebar === false) {
+      leftIsOpen = State.Closed
+      startTransition('left')
     }
   }
 
-  $: if ($rightPaneStore) {
-    dispatch('pane-update-right', $rightPaneStore)
-  }
-
-  const pxToPercentage = (px: number, widthOrHeight: 'width' | 'height' = 'width') => {
-    return (px / (widthOrHeight === 'width' ? window.innerWidth : window.innerHeight)) * 100
-  }
-  const percentageToPx = (percentage: number, widthOrHeight: 'width' | 'height' = 'width') => {
-    return (percentage / 100) * (widthOrHeight === 'width' ? window.innerWidth : window.innerHeight)
-  }
-
-  const handleCollapse = () => {
-    dispatch('collapsed-left-sidebar')
-  }
-
-  const handleExpand = () => {
-    if (paneSize === 0) return
-
-    dispatch('expanded-left-sidebar')
-  }
-
-  const handleRightCollapse = () => {
-    dispatch('collapsed-right-sidebar')
-  }
-
-  const handleRightExpand = () => {
-    if (rightPaneSize === 0) return
-
-    dispatch('expanded-right-sidebar')
-  }
-
-  const handleResizePane = (paneName: string, size: number) => {
-    if (paneName === 'sidebar') {
-      paneSize = size
-    } else {
-      rightPaneSize = size
-    }
-
-    if (size === 0) return
-
-    const width = percentageToPx(size, 'width')
-    if (paneName === 'sidebar' && width < MIN_LEFT_SIDEBAR) {
-      $paneStore?.collapse()
-    } else if (paneName === 'right-sidebar' && width < MIN_RIGHT_SIDEBAR) {
-      $rightPaneStore?.collapse()
-    }
-
-    if (paneName === 'right-sidebar') {
-      rightSidebarMinimal = width < RIGHT_SIDEBAR_MINIMAL_THRESHOLD
-      localStorage.setItem(`panelSize-${paneName}`, percentageToPx(size, 'width').toString())
-      return
-    } else {
-      localStorage.setItem(
-        `panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-${paneName}`,
-        percentageToPx(size, horizontalTabs ? 'height' : 'width').toString()
-      )
+  $: {
+    if (showRightSidebar === true) {
+      rightIsOpen = State.Open
+      startTransition('right')
+    } else if (showRightSidebar === false) {
+      rightIsOpen = State.Closed
+      startTransition('right')
     }
   }
 
-  const handleResize = (e: Event) => {
-    const targetSidebar = Number(
-      localStorage.getItem(`panelSize-${horizontalTabs ? 'horizontal' : 'vertical'}-sidebar`)
-    )
-    const targetRightSidebar = Number(localStorage.getItem('panelSize-right-sidebar'))
-
-    const newPercentageSidebar = pxToPercentage(targetSidebar, horizontalTabs ? 'height' : 'width')
-    const newPercentageRightSidebar = pxToPercentage(targetRightSidebar, 'width')
-
-    if (newPercentageSidebar !== 0 && !leftSidebarHidden) $paneStore?.resize(newPercentageSidebar)
-    if (newPercentageRightSidebar !== 0 && !rightSidebarHidden)
-      $rightPaneStore?.resize(newPercentageRightSidebar)
+  $: {
+    if (previousOrientation !== horizontalTabs) {
+      loadSavedSizes()
+      previousOrientation = horizontalTabs
+    }
   }
+
+  $: leftBarClasses = [
+    'fixed left-0 right-0 h-full flex flex-shrink-0 drag',
+    peekBg,
+    isDraggingLeft
+      ? 'transition-none'
+      : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-200',
+    {
+      'cursor-row-resize': horizontalTabs && isDraggingLeft,
+      'cursor-col-resize': !horizontalTabs && isDraggingLeft,
+      'shadow-lg': leftIsOpen === State.Peek,
+      'top-0 bottom-0 flex-col space-y-2': !horizontalTabs,
+      'top-0 flex-row space-x-2': horizontalTabs
+    },
+    leftIsOpen === State.Open || leftIsOpen === State.Peek
+      ? 'translate-x-0 translate-y-0'
+      : horizontalTabs
+        ? '-translate-y-full'
+        : '-translate-x-full'
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  $: rightBarClasses = [
+    `fixed right-0 flex flex-shrink-0 rounded-xl bg-sky-50 bottom-0 flex-col space-y-2`,
+    isDraggingRight
+      ? 'transition-none'
+      : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+    {
+      'cursor-col-resize': isDraggingRight,
+      'shadow-lg': rightIsOpen === State.Peek,
+      'bg-[rgb(251,251,250)]':
+        rightIsOpen === State.Peek || rightIsOpen === State.Open || rightIsTransitioning
+    },
+    rightIsOpen === State.Open || rightIsOpen === State.Peek ? 'translate-x-0' : 'translate-x-full'
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  $: mainStyle = `
+    ${horizontalTabs ? `padding-top: ${leftIsOpen === State.Open ? HORIZONTAL_SIZE : 0}px;` : ''}
+    ${!horizontalTabs ? `padding-left: ${leftIsOpen === State.Open ? leftSize : 0}px;` : ''}
+    padding-right: ${rightIsOpen === State.Open ? rightSize : 0}px;
+  `
+  $: mainClasses = [
+    showRightSidebar ? 'mr-2' : '',
+    'flex flex-grow max-h-screen h-full',
+    isDraggingLeft || isDraggingRight ? 'pointer-events-none' : '',
+    isDraggingLeft || isDraggingRight
+      ? 'transition-none'
+      : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300'
+  ].join(' ')
+
+  $: leftPeakAreaClasses = [
+    'fixed z-50 no-drag',
+    leftIsOpen === State.Closed ? 'block' : 'hidden',
+    horizontalTabs ? 'top-0 left-0 right-0 h-4' : 'top-0 left-0 w-4 h-full'
+  ].join(' ')
+
+  $: rightPeakAreaClasses = [
+    'fixed z-50 no-drag w-4',
+    rightIsOpen === State.Closed ? 'block' : 'hidden',
+    'right-0 w-4 h-full'
+  ].join(' ')
+
+  $: rightSidebarStyle = `
+    width: ${rightIsOpen === State.Closed ? '16px' : rightSize + 'px'};
+    z-index: 10000000000000;
+    ${
+      horizontalTabs && (leftIsOpen === State.Open || leftIsOpen === State.Peek)
+        ? `top: ${HORIZONTAL_SIZE}px;`
+        : 'top: 0;'
+    }
+  `
 
   onMount(() => {
-    if (rightSidebarHidden && $rightPaneStore) {
-      $rightPaneStore.collapse()
-    }
+    ownerDocument = document
+    loadSavedSizes()
+    previousOrientation = horizontalTabs
+    ownerDocument.addEventListener('pointermove', handleGlobalPointerMove)
+    ownerDocument.addEventListener('pointerup', handleGlobalPointerUp)
+  })
+
+  onDestroy(() => {
+    ownerDocument?.removeEventListener('pointermove', handleGlobalPointerMove)
+    ownerDocument?.removeEventListener('pointerup', handleGlobalPointerUp)
   })
 </script>
 
-<svelte:window on:resize={handleResize} />
+<svelte:window
+  on:mousemove={(e) => {
+    if (isDraggingTab) return
+    mouseX = e.clientX
+    mouseY = e.clientY
+  }}
+  on:DragStart={(drag) => {
+    isDraggingTab = true
+  }}
+  on:DragEnd={(drag) => {
+    isDraggingTab = false
+  }}
+/>
 
-<PaneGroup direction={horizontalTabs ? 'vertical' : 'horizontal'} class="px-0.5">
-  {#if horizontalTabs}
-    <!-- <Pane
-      defaultSize={localStorage.getItem('panelSize-horizontal-sidebar') === null
-        ? 3
-        : pxToPercentage(Number(localStorage.getItem('panelSize-horizontal-sidebar')), 'height')}
-      collapsible={false}
-      bind:pane={$paneStore}
-      onCollapse={handleCollapse}
-      onExpand={handleExpand}
-      onResize={(size) => handleResizePane('sidebar', size)}
-    >
-      <slot name="sidebar" />
-    </Pane> -->
-    <div>
+<div class="flex w-screen h-screen justify-start items-start">
+  <nav
+    class={leftBarClasses}
+    aria-labelledby="nav-heading"
+    style="{horizontalTabs ? 'height' : 'width'}: {leftSize}px; z-index: 10000000000000;"
+  >
+    <div class="h-full w-full">
       <slot name="sidebar" />
     </div>
-  {:else}
-    <Pane
-      defaultSize={localStorage.getItem('panelSize-vertical-sidebar') === null
-        ? 15
-        : pxToPercentage(Number(localStorage.getItem('panelSize-vertical-sidebar')))}
-      collapsible={true}
-      bind:pane={$paneStore}
-      onCollapse={handleCollapse}
-      onExpand={handleExpand}
-      onResize={(size) => handleResizePane('sidebar', size)}
-      order={1}
-    >
-      <slot name="sidebar" />
-    </Pane>
-    <PaneResizer class="hover:bg-neutral-100 z-[50001] my-1.5 rounded-full no-drag">
+    {#if !horizontalTabs}
       <div
-        class:h-full={!horizontalTabs}
-        class:w-1.5={!horizontalTabs}
-        class:w-full={horizontalTabs}
-        class:h-0.5={horizontalTabs}
-      />
-    </PaneResizer>
-  {/if}
-  <Pane order={2}>
-    <PaneGroup direction="horizontal">
-      <Pane order={1}>
-        <slot name="content" />
-      </Pane>
-      <PaneResizer class="hover:bg-neutral-100 z-[50001] my-1.5 rounded-full no-drag">
-        <div class="h-full w-1.5" />
-      </PaneResizer>
-      <Pane
-        order={2}
-        defaultSize={localStorage.getItem('panelSize-right-sidebar') === null
-          ? 15
-          : pxToPercentage(Number(localStorage.getItem('panelSize-right-sidebar')))}
-        collapsible={true}
-        class="bg-sky-50 mb-1.5 rounded-xl {horizontalTabs ? '' : 'mt-1.5'}"
-        onCollapse={handleRightCollapse}
-        onExpand={handleRightExpand}
-        bind:pane={$rightPaneStore}
-        onResize={(size) => handleResizePane('right-sidebar', size)}
+        class="absolute z-10 hover:bg-purple-500/50 transition-all duration-300 flex-grow-0 no-drag {horizontalTabs
+          ? 'bottom-0 left-0 right-0 h-1 cursor-row-resize'
+          : 'right-0 top-0 bottom-0 w-1 cursor-col-resize'}"
       >
-        <slot name="right-sidebar" minimal={rightSidebarMinimal} />
-      </Pane>
-    </PaneGroup>
-  </Pane>
-</PaneGroup>
+        <div
+          on:pointerdown={(e) => handlePointerDown(e, 'left')}
+          class="{horizontalTabs ? 'h-3 w-full' : 'w-3 h-full'} cursor-{horizontalTabs
+            ? 'row'
+            : 'col'}-resize shrink-0"
+        />
+      </div>
+    {/if}
+  </nav>
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div class={leftPeakAreaClasses} on:mouseenter={() => handleMouseEnter('left')} />
+  <main style={mainStyle} class={mainClasses}>
+    <slot name="content" />
+  </main>
+
+  <div class={rightBarClasses} aria-labelledby="nav-heading" style={rightSidebarStyle}>
+    <div
+      class="absolute z-10 hover:bg-purple-500/50 transition-all duration-300 flex-grow-0 no-drag left-0 top-0 bottom-0 w-1 cursor-col-resize"
+    >
+      <div
+        on:pointerdown={(e) => handlePointerDown(e, 'right')}
+        class="w-3 h-full cursor-col-resize shrink-0"
+      />
+    </div>
+    <div class="h-full w-full">
+      <slot name="right-sidebar" />
+    </div>
+  </div>
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <!-- <div
+    class={rightPeakAreaClasses}
+    on:mouseenter={() => handleMouseEnter('right')}
+    style={rightSidebarStyle}
+  /> -->
+</div>

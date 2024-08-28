@@ -857,20 +857,10 @@
     )
   }, 200)
 
-  let keyBuffer = ''
-  let index: number
-  let keyTimeout: any
-  const KEY_TIMEOUT = 120
-  const MAX_TABS = 99
-
   $: savedTabsOrientation = $userConfigSettings.tabs_orientation
   $: horizontalTabs = savedTabsOrientation === 'horizontal'
 
   const handleCollapseRight = () => {
-    if (sidebarComponent) {
-      sidebarComponent.collapseRight()
-    }
-
     if (showRightSidebar) {
       showRightSidebar = false
     }
@@ -881,10 +871,6 @@
   }
 
   const handleExpandRight = () => {
-    if (sidebarComponent) {
-      sidebarComponent.expandRight()
-    }
-
     showRightSidebar = true
   }
 
@@ -905,18 +891,14 @@
 
   const handleCollapse = () => {
     log.debug('Collapsing sidebar')
-    if (sidebarComponent) {
-      sidebarComponent.collapseLeft()
-      changeTraficLightsVisibility(false)
-    }
+    showLeftSidebar = false
+    changeTraficLightsVisibility(false)
   }
 
   const handleExpand = () => {
     log.debug('Expanding sidebar')
-    if (sidebarComponent) {
-      sidebarComponent.expandLeft()
-      changeTraficLightsVisibility(true)
-    }
+    showLeftSidebar = true
+    changeTraficLightsVisibility(true)
   }
 
   const handleRightSidebarTabsChange = (tab: RightSidebarTab) => {
@@ -3260,19 +3242,10 @@
 <div class="antialiased w-screen h-screen will-change-auto transform-gpu relative drag">
   <SidebarPane
     {horizontalTabs}
-    bind:this={sidebarComponent}
-    on:collapsed-left-sidebar={() => handleLeftSidebarChange(false)}
-    on:expanded-left-sidebar={() => handleLeftSidebarChange(true)}
-    on:collapsed-right-sidebar={() => {
-      showRightSidebar = false
-    }}
-    on:expanded-right-sidebar={() => {
-      showRightSidebar = true
-    }}
-    bind:rightPaneItem={rightPane}
-    on:pane-update-right={handleRightPaneUpdate}
-    rightSidebarHidden={!showRightSidebar}
-    leftSidebarHidden={!showLeftSidebar}
+    bind:showLeftSidebar
+    bind:showRightSidebar
+    on:leftPeekClose={() => changeTraficLightsVisibility(false)}
+    on:leftPeekOpen={() => changeTraficLightsVisibility(true)}
   >
     <div
       slot="sidebar"
@@ -3291,36 +3264,35 @@
               ? 'pl-3'
               : 'w-full justify-between pl-[4.4rem]'}"
           >
-            {#if !horizontalTabs}
-              <Tooltip.Root openDelay={400} closeDelay={10}>
-                <Tooltip.Trigger>
-                  <button
-                    class="no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                    on:click={handleCollapse}
-                  >
-                    <span
-                      class="inline-block translate-x-0 transition-transform ease-in-out duration-200"
-                    >
-                      <Icon name="sidebar.left" />
-                    </span>
-                  </button>
-                </Tooltip.Trigger>
-                <Tooltip.Content
-                  transition={flyAndScale}
-                  transitionConfig={{ y: 8, duration: 150 }}
-                  sideOffset={8}
+            <Tooltip.Root openDelay={400} closeDelay={10}>
+              <Tooltip.Trigger>
+                <button
+                  class="no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class:rotate-90={horizontalTabs}
+                  on:click={() => changeLeftSidebarState()}
                 >
-                  <div class="bg-neutral-100">
-                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                  </div>
-                  <div
-                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                  <span
+                    class="inline-block translate-x-0 transition-transform ease-in-out duration-200"
                   >
-                    Toggle Sidebar (⌘ + B)
-                  </div>
-                </Tooltip.Content>
-              </Tooltip.Root>
-            {/if}
+                    <Icon name="sidebar.left" />
+                  </span>
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                transition={flyAndScale}
+                transitionConfig={{ y: 8, duration: 150 }}
+                sideOffset={8}
+              >
+                <div class="bg-neutral-100">
+                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                </div>
+                <div
+                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                >
+                  Toggle {horizontalTabs ? 'Topbar' : 'Sidebar'} (⌘ + Shift + B)
+                </div>
+              </Tooltip.Content>
+            </Tooltip.Root>
 
             <div class="flex flex-row items-center">
               <Tooltip.Root openDelay={400} closeDelay={10}>
@@ -3917,18 +3889,10 @@
       {/if}
     </div>
 
-    <div
-      slot="content"
-      class="h-full shadow-lg flex space-x-4 relative flex-row {horizontalTabs
-        ? 'px-1.5'
-        : 'py-1.5'}"
-    >
-      <!-- {horizontalTabs ? `pb-1.5 ${showTabs && 'pt-1.5'}` : `pr-1.5 ${showTabs && 'pl-1.5'}`}  -->
+    <div slot="content" class="h-full w-full shadow-lg flex space-x-4 relative flex-row">
       <div
         style:view-transition-name="active-content-wrapper"
         class="w-full h-full overflow-hidden flex-grow"
-        class:pb-1.5={horizontalTabs}
-        class:pt-1.5={horizontalTabs && !showLeftSidebar}
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showLeftSidebar}
@@ -4001,7 +3965,9 @@
                 tab.type === 'page' &&
                 $activeTabMagic?.running}
             >
-              <div class="w-full h-3 pointer-events-none fixed z-[1002] drag" />
+              {#if !horizontalTabs}<div
+                  class="w-full h-3 pointer-events-none fixed z-[1002] drag"
+                />{/if}
 
               {#if tab.type === 'page'}
                 <BrowserTab
@@ -4117,7 +4083,7 @@
       </div>
 
       <Tabs.Content value="chat" class="flex-grow overflow-hidden">
-        {#if $activeTab && $activeTabMagic && $activeTabMagic?.showSidebar}
+        {#if $activeTab && $activeTabMagic}
           <MagicSidebar
             magicPage={activeTabMagic}
             tabsInContext={$magicTabs}
@@ -4175,59 +4141,6 @@
         {/if}
       </Tabs.Content>
     </Tabs.Root>
-    <!-- {#if $activeTab && $activeTab.type === 'page' && $activeTabMagic && $activeTabMagic?.showSidebar}
-        <div
-          transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
-            'mt-1.5'} flex-shrink-0"
-        >
-          <MagicSidebar
-            magicPage={$activeTabMagic}
-            bind:inputValue={$magicInputValue}
-            on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
-            on:highlightWebviewText={(e) =>
-              highlightWebviewText(e.detail.resourceId, e.detail.answerText)}
-            on:seekToTimestamp={(e) =>
-              handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
-            on:navigate={(e) => {
-              $browserTabs[$activeTabId].navigate(e.detail.url)
-            }}
-            on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
-            on:chat={() => handleChatSubmit($activeTabMagic)}
-            on:clearChat={() => handleChatClear(true)}
-            on:prompt={handleMagicSidebarPromptSubmit}
-          />
-        </div>
-      {:else if $showAppSidebar}
-        <div
-          transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
-            'mt-1.5'} flex-shrink-0"
-        >
-          <AppSidebar
-            {sffs}
-            appId={$activeAppId}
-            tabContext={$activeAppSidebarContext}
-            on:clearAppSidebar={() => handleAppSidebarClear(true)}
-            on:executeAppSidebarCode={(e) =>
-              handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
-          />
-        </div>
-      {:else if $showAnnotationsSidebar && $activeTab?.type === 'page'}
-        <div
-          transition:slide={{ axis: 'x' }}
-          class="bg-neutral-50/80 backdrop-blur-sm rounded-xl w-[440px] h-auto mb-1.5 {!showLeftSidebar &&
-            'mt-1.5'} flex-shrink-0"
-        >
-          <AnnotationsSidebar
-            bind:this={annotationsSidebar}
-            resourceId={$activeTab.resourceBookmark}
-            on:scrollTo={handleAnnotationScrollTo}
-            on:create={handleAnnotationSidebarCreate}
-            on:reload={handleAnnotationSidebarReload}
-          />
-        </div>
-      {/if} -->
   </SidebarPane>
 </div>
 
