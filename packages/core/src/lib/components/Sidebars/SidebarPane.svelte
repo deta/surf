@@ -190,7 +190,7 @@
   }
 
   $: leftBarClasses = [
-    'fixed left-0 right-0 h-full flex flex-shrink-0 bg-blue-100',
+    'fixed left-0 right-0 h-full flex flex-shrink-0',
     isDraggingLeft
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
@@ -200,8 +200,7 @@
       'shadow-lg': leftIsOpen === State.Peek,
       'top-0 bottom-0 flex-col space-y-2': !horizontalTabs,
       'top-0 flex-row space-x-2': horizontalTabs,
-      'bg-[rgb(251,251,250)]':
-        leftIsOpen === State.Peek || leftIsOpen === State.Open || leftIsTransitioning
+      'bg-[rgb(251,251,250)]': leftIsOpen === State.Peek
     },
     leftIsOpen === State.Open || leftIsOpen === State.Peek
       ? 'translate-x-0 translate-y-0'
@@ -213,7 +212,7 @@
     .join(' ')
 
   $: rightBarClasses = [
-    `fixed right-0 flex flex-shrink-0 rounded-xl bg-blue-100 bottom-0 flex-col space-y-2`,
+    `fixed right-0 flex flex-shrink-0 rounded-xl bg-neutral-100 bottom-0 flex-col space-y-2`,
     isDraggingRight
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
@@ -300,18 +299,20 @@
     <div class="h-full w-full">
       <slot name="sidebar" />
     </div>
-    <div
-      class="absolute z-10 hover:bg-purple-500/50 transition-all duration-300 flex-grow-0 no-drag {horizontalTabs
-        ? 'bottom-0 left-0 right-0 h-1 cursor-row-resize'
-        : 'right-0 top-0 bottom-0 w-1 cursor-col-resize'}"
-    >
+    {#if !horizontalTabs}
       <div
-        on:pointerdown={(e) => handlePointerDown(e, 'left')}
-        class="{horizontalTabs ? 'h-3 w-full' : 'w-3 h-full'} cursor-{horizontalTabs
-          ? 'row'
-          : 'col'}-resize shrink-0"
-      />
-    </div>
+        class="absolute z-10 hover:bg-purple-500/50 transition-all duration-300 flex-grow-0 no-drag {horizontalTabs
+          ? 'bottom-0 left-0 right-0 h-1 cursor-row-resize'
+          : 'right-0 top-0 bottom-0 w-1 cursor-col-resize'}"
+      >
+        <div
+          on:pointerdown={(e) => handlePointerDown(e, 'left')}
+          class="{horizontalTabs ? 'h-3 w-full' : 'w-3 h-full'} cursor-{horizontalTabs
+            ? 'row'
+            : 'col'}-resize shrink-0"
+        />
+      </div>
+    {/if}
   </nav>
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div class={leftPeakAreaClasses} on:mouseenter={() => handleMouseEnter('left')} />

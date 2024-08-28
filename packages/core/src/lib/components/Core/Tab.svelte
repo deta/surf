@@ -239,7 +239,7 @@
   id="tab-{tab.id}"
   draggable={true}
   class="tab no-drag {isActive
-    ? 'text-sky-950 bg-sky-200 sticky   shadow-inner ring-[0.5px] ring-sky-500'
+    ? 'text-sky-950 bg-sky-200 sticky shadow-sm box-shadow-[0_0_0_1px_rgba(3,105,161,1)]'
     : ''}
   flex items-center {pinned
     ? 'p-1 rounded-lg'
