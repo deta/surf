@@ -18,6 +18,7 @@
 
   const MIN_VERTICAL_SIZE = 200
   const MAX_VERTICAL_SIZE = 400
+  const MIN_VERTICAL_RIGHT_SIZE = 380
   const MAX_VERTICAL_RIGHT_SIZE = 600
   const HORIZONTAL_SIZE = 40
   const TRANSITION_DURATION = 300
@@ -63,8 +64,8 @@
     if (!horizontalTabs && (leftSize < MIN_VERTICAL_SIZE || leftSize > MAX_VERTICAL_SIZE)) {
       leftSize = MIN_VERTICAL_SIZE
     }
-    if (rightSize < MIN_VERTICAL_SIZE || rightSize > MAX_VERTICAL_RIGHT_SIZE) {
-      rightSize = MIN_VERTICAL_SIZE
+    if (rightSize < MIN_VERTICAL_RIGHT_SIZE || rightSize > MAX_VERTICAL_RIGHT_SIZE) {
+      rightSize = MIN_VERTICAL_RIGHT_SIZE
     }
   }
 
@@ -104,12 +105,13 @@
       saveSizeToLocalStorage('left', leftSize)
     } else if (isDraggingRight) {
       const newSize = startSize - (e.clientX - startPos)
-      if (newSize < MIN_VERTICAL_SIZE - CLOSE_THRESHOLD) {
+      if (newSize < MIN_VERTICAL_RIGHT_SIZE - CLOSE_THRESHOLD) {
         rightIsOpen = State.Closed
-        rightSize = MIN_VERTICAL_SIZE
+        showRightSidebar = false
+        rightSize = MIN_VERTICAL_RIGHT_SIZE
         dispatch('rightPeekClose')
       } else {
-        rightSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_RIGHT_SIZE, newSize))
+        rightSize = Math.max(MIN_VERTICAL_RIGHT_SIZE, Math.min(MAX_VERTICAL_RIGHT_SIZE, newSize))
       }
       saveSizeToLocalStorage('right', rightSize)
     }
@@ -241,6 +243,7 @@
     padding-right: ${rightIsOpen === State.Open ? rightSize : 0}px;
   `
   $: mainClasses = [
+    showRightSidebar ? 'mr-2' : '',
     'flex flex-grow max-h-screen h-full',
     isDraggingLeft || isDraggingRight ? 'pointer-events-none' : '',
     isDraggingLeft || isDraggingRight
