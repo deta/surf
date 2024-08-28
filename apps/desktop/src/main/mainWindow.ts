@@ -5,7 +5,8 @@ import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
-import { normalizeElectronUserAgent } from '@horizon/utils'
+import { isGoogleSignInUrl, normalizeElectronUserAgent } from '@horizon/utils'
+import { getGoogleSignInWindowId } from './googleSignInWindow'
 
 const isDev = import.meta.env.DEV
 
@@ -93,7 +94,10 @@ export function createWindow() {
     callback({
       requestHeaders: {
         ...details.requestHeaders,
-        'User-Agent': webviewSessionUserAgent
+        'User-Agent':
+          getGoogleSignInWindowId() === details.webContentsId
+            ? details.requestHeaders['User-Agent']
+            : webviewSessionUserAgent
       }
     })
   })

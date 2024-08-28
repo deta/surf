@@ -1,8 +1,12 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, session } from 'electron'
 import { getMainWindow } from './mainWindow'
 import { isGoogleSignInUrl } from '@horizon/utils'
 
 let signInWindow: BrowserWindow | null = null
+
+export function getGoogleSignInWindowId(): number | undefined {
+  return signInWindow?.webContents.id
+}
 
 export function createGoogleSignInWindow(url: string): Promise<string | undefined> {
   return new Promise((resolve, _reject) => {
@@ -22,6 +26,7 @@ export function createGoogleSignInWindow(url: string): Promise<string | undefine
       webPreferences: {
         partition: 'persist:horizon',
         sandbox: true,
+        nodeIntegration: false,
         contextIsolation: true
       }
     })
