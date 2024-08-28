@@ -41,6 +41,7 @@
   let isDraggingTab = false
   let mouseX: number = 0
   let mouseY: number = 0
+  let peekBg: string = ''
 
   const saveSizeToLocalStorage = useDebounce((side: 'left' | 'right', size: number) => {
     const key =
@@ -136,6 +137,7 @@
     if (side === 'left' && leftIsOpen === State.Closed) {
       leftIsOpen = State.Peek
       dispatch('leftPeekOpen')
+      peekBg = 'bg-sky-100'
     } else if (side === 'right' && rightIsOpen === State.Closed) {
       rightIsOpen = State.Peek
       dispatch('rightPeekOpen')
@@ -147,6 +149,11 @@
       if (horizontalTabs && mouseY > HORIZONTAL_SIZE + BUFFER) {
         leftIsOpen = State.Closed
         dispatch('leftPeekClose')
+
+        // wait for the transition to finish, then change peekbg to transparent
+        peekTimeout = setTimeout(() => {
+          peekBg = ''
+        }, 300)
       } else if (!horizontalTabs && mouseX > leftSize + BUFFER && !isDraggingLeft) {
         leftIsOpen = State.Closed
         dispatch('leftPeekClose')
@@ -165,6 +172,7 @@
   $: {
     if (showLeftSidebar === true) {
       leftIsOpen = State.Open
+      peekBg = ''
       startTransition('left')
     } else if (showLeftSidebar === false) {
       leftIsOpen = State.Closed
@@ -190,17 +198,17 @@
   }
 
   $: leftBarClasses = [
-    'fixed left-0 right-0 h-full flex flex-shrink-0',
+    'fixed left-0 right-0 h-full flex flex-shrink-0 drag',
+    peekBg,
     isDraggingLeft
       ? 'transition-none'
-      : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+      : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-200',
     {
       'cursor-row-resize': horizontalTabs && isDraggingLeft,
       'cursor-col-resize': !horizontalTabs && isDraggingLeft,
       'shadow-lg': leftIsOpen === State.Peek,
       'top-0 bottom-0 flex-col space-y-2': !horizontalTabs,
-      'top-0 flex-row space-x-2': horizontalTabs,
-      'bg-[rgb(251,251,250)]': leftIsOpen === State.Peek
+      'top-0 flex-row space-x-2': horizontalTabs
     },
     leftIsOpen === State.Open || leftIsOpen === State.Peek
       ? 'translate-x-0 translate-y-0'
@@ -212,7 +220,7 @@
     .join(' ')
 
   $: rightBarClasses = [
-    `fixed right-0 flex flex-shrink-0 rounded-xl bg-neutral-100 bottom-0 flex-col space-y-2`,
+    `fixed right-0 flex flex-shrink-0 rounded-xl bg-sky-50 bottom-0 flex-col space-y-2`,
     isDraggingRight
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
