@@ -7,6 +7,7 @@ import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
 import { normalizeElectronUserAgent } from '@horizon/utils'
 import { getGoogleSignInWindowId } from './googleSignInWindow'
+import { setupPermissionHandlers } from './permissionHandler'
 
 const isDev = import.meta.env.DEV
 
@@ -101,6 +102,7 @@ export function createWindow() {
       }
     })
   })
+  setupPermissionHandlers(webviewSession)
 
   // TODO: proper session management?
   initAdblocker('persist:horizon')
