@@ -159,7 +159,28 @@ export function createWindow() {
         webContentsId: contents.id
       })
 
-      return { action: details.disposition === 'new-window' ? 'allow' : 'deny' }
+      // IMPORTANT NOTE: DO NOT expose any sort of Node.js capabilities to the newly
+      // created window here. The creation of it is controlled from the renderer. Because
+      // of this, Surf won't play well with websites that for some reason utilizes more
+      // than one window. In the future, Each new window we create should receive its own
+      // instance of Surf.
+      if (details.disposition === 'new-window') {
+        return {
+          action: 'allow',
+          createWindow: undefined,
+          outlivesOpener: false,
+          overrideBrowserWindowOptions: {
+            webPreferences: {
+              contextIsolation: true,
+              nodeIntegration: false,
+              sandbox: true,
+              webSecurity: true
+            }
+          }
+        }
+      } else {
+        return { action: 'deny' }
+      }
     })
 
     attachContextMenu(contents)
