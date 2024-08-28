@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    labels:
+      - 'npm'
+      - 'dependencies'
+    allow:
+      - dependency-type: 'all'
+    groups:
+      electron-minor-patch:
+        patterns:
+          - 'electron'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-patch'
+
+  - package-ecosystem: 'cargo'
+    directory: '/packages/'
+    schedule:
+      interval: 'weekly'
+    labels:
+      - 'rust'
+      - 'dependencies'
