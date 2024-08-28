@@ -5,7 +5,7 @@ import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
-import { isGoogleSignInUrl, normalizeElectronUserAgent } from '@horizon/utils'
+import { normalizeElectronUserAgent } from '@horizon/utils'
 import { getGoogleSignInWindowId } from './googleSignInWindow'
 
 const isDev = import.meta.env.DEV
@@ -124,6 +124,15 @@ export function createWindow() {
 
   mainWindow.on('leave-full-screen', () => {
     getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: false })
+  })
+
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('will-attach-webview', (_event, webPreferences, _params) => {
+      webPreferences.webSecurity = true
+      webPreferences.sandbox = true
+      webPreferences.nodeIntegration = false
+      webPreferences.contextIsolation = true
+    })
   })
 
   mainWindow.webContents.on('did-attach-webview', (_, contents) => {
