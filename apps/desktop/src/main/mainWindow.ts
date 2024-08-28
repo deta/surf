@@ -135,6 +135,23 @@ export function createWindow() {
     })
   })
 
+  // Prevent direct navigation in the main window by handling the `will-navigate`
+  // event and the `setWindowOpenHandler`. The main window should only host the SPA
+  // Surf frontend and not navigate away from it. Any requested navigations should
+  // be handled within the frontend.
+  mainWindow.webContents.on('will-navigate', (event) => {
+    getMainWindow()?.webContents.send('new-window-request', { url: event.url })
+    event.preventDefault()
+  })
+  mainWindow.webContents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
+    getMainWindow()?.webContents.send('new-window-request', details)
+    return { action: 'deny' }
+  })
+
+  // Handle navigation requests within webviews:
+  // 1. Set up a window open handler for each webview when it's attached.
+  // 2. Send navigation requests to the main window renderer (Surf preload) for handling.
+  // 3. Allow opening new windows but deny other requests, and handle them within the renderer.
   mainWindow.webContents.on('did-attach-webview', (_, contents) => {
     contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
       mainWindow?.webContents.send('new-window-request', {
@@ -146,16 +163,6 @@ export function createWindow() {
     })
 
     attachContextMenu(contents)
-  })
-
-  mainWindow.webContents.on('will-navigate', (event) => {
-    getMainWindow()?.webContents.send('new-window-request', { url: event.url })
-    event.preventDefault()
-  })
-
-  mainWindow.webContents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
-    getMainWindow()?.webContents.send('new-window-request', details)
-    return { action: 'deny' }
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
