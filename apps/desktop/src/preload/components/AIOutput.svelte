@@ -26,7 +26,7 @@
 </script>
 
 <div class="output">
-  {@html output}
+  {output}
 </div>
 
 <div class="actions">

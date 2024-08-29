@@ -12,7 +12,7 @@
 <div class="spoiler-container">
   <div class:spoiler-content-open={isOpen} class="spoiler-content">
     <div class="wrap"></div>
-    {@html html}
+    <iframe title="Document Preview" srcdoc={html} frameborder="0" sandbox="" />
   </div>
 </div>
 
@@ -46,7 +46,7 @@
       max-height 0.5s ease,
       padding 0.5s ease;
     padding: 4rem 3.5rem 0 3.5rem;
-    background-image: url('../../../../../../../packages/core/public/assets/paper.png');
+    background-image: url('../../../../../../public/assets/paper.png');
     background-size: cover;
     color: #3d3927;
     user-select: none;
@@ -55,6 +55,14 @@
     line-height: 1.4;
     font-size: 0.9rem;
     -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0));
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      user-select: none;
+      pointer-events: none;
+    }
   }
 
   @container spoiler-container (max-width: 15rem) {

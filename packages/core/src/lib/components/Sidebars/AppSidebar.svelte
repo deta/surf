@@ -1,3 +1,7 @@
+<script lang="ts" context="module">
+  export type ExecuteCodeInTabEvent = { tabId: string; appId: string; code: string }
+</script>
+
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import { writable } from 'svelte/store'
@@ -9,8 +13,12 @@
   import { SFFS } from '../../service/sffs'
   import { useTelemetry } from '../../service/telemetry'
   import { slide } from 'svelte/transition'
+  import type BrowserTab from '../Browser/BrowserTab.svelte'
+  import { useToasts } from '../../service/toast'
+  import type { Tab } from '../../types'
 
-  export let tabContext: string
+  export let activeBrowserTab: BrowserTab
+  export let activeTab: Tab
   export let sffs: SFFS
   export let appId: string
 
@@ -26,6 +34,11 @@
 
   const log = useLogScope('AppsSidebar')
   const telemetry = useTelemetry()
+  const toasts = useToasts()
+  const dispatch = createEventDispatcher<{
+    clear: void
+    'execute-tab-code': ExecuteCodeInTabEvent
+  }>()
 
   const activeToolTab = writable<'app' | 'page'>('page')
 
@@ -91,32 +104,68 @@
     return `\`\`\`html\n${clean}\n\`\`\``
   }
 
-  tabContext = cleanContext(tabContext)
-  log.debug('tabContext', tabContext)
-
-  const dispatch = createEventDispatcher<{
-    clearAppSidebar: {}
-    executeAppSidebarCode: { appId: string; code: string }
-  }>()
-
-  const handleMessageEvent = (e: any) => {
-    if (e.source.frameElement.id !== appId) {
-      return
+  const getTabContext = async (tab: BrowserTab) => {
+    const content = await tab.executeJavaScript('document.body.outerHTML.toString()')
+    if (!content) {
+      return null
     }
-    // TODO: figure out why debouncing is required, multiple messages are being sent
-    dispatch('executeAppSidebarCode', { appId: appId, code: cleanSource(e.data.data) })
+
+    let cleaned = content
+      .replace(/style="[^"]*"/g, '') // remove inline styles
+      .replace(/script="[^"]*"/g, '') // remove inline scripts
+      .replace(/<style([\s\S]*?)<\/style>/gi, '') // remove style tags
+      .replace(/<script([\s\S]*?)<\/script>/gi, '') // remove script tags
+
+    // @ts-ignore
+    const minified = window.api.minifyHtml(cleaned, {
+      collapseBooleanAttributes: true,
+      collapseWhitespace: true,
+      collapseInlineTagWhitespace: true,
+      continueOnParseError: true,
+      decodeEntities: true,
+      minifyCSS: true,
+      minifyJS: true,
+      removeComments: true,
+      removeAttributeQuotes: true,
+      removeEmptyAttributes: true,
+      removeEmptyElements: true,
+      removeOptionalTags: true,
+      removeRedundantAttributes: true,
+      removeScriptTypeAttributes: true,
+      removeStyleLinkTypeAttributes: true
+    })
+
+    return cleanContext(minified)
   }
 
-  window.addEventListener('message', handleMessageEvent)
+  // const handleMessageEvent = (e: any) => {
+  //   if (e.source.frameElement.id !== appId) {
+  //     return
+  //   }
+  //   // TODO: figure out why debouncing is required, multiple messages are being sent
+  //   dispatch('execute-tab-code', { tabId: activeTab.id, appId: appId, code: cleanSource(e.data.data) })
+  // }
 
   const handlePromptSubmit = async () => {
     fetching = true
+
     if (!inputValue) return
     let savedInputValue = getEditorContentText(inputValue)
+
     try {
       inputValue = ''
       editor.clear()
       editor.blur()
+
+      const tabId = activeTab.id
+      const tabContext = await getTabContext(activeBrowserTab)
+      if (!tabContext) {
+        log.error('no content found from javscript execution')
+        toasts.error('Error: failed to parse content for create app context')
+        inputValue = savedInputValue
+        editor.setContent(savedInputValue)
+        return
+      }
 
       const isAppPrompt = savedInputValue.toLowerCase().startsWith('app:')
 
@@ -153,7 +202,7 @@
       }
 
       directCode = clean
-      dispatch('executeAppSidebarCode', { appId: appId, code: clean })
+      dispatch('execute-tab-code', { tabId: tabId, appId: appId, code: clean })
 
       await telemetry.trackGoWildModifyPage()
     } catch (error) {
@@ -167,7 +216,7 @@
   }
 
   const handleCodeRerun = async () => {
-    dispatch('executeAppSidebarCode', { appId: appId, code: directCode })
+    dispatch('execute-tab-code', { tabId: activeTab.id, appId: appId, code: directCode })
 
     await telemetry.trackGoWildRerun()
   }
@@ -175,7 +224,7 @@
   const handleClear = async () => {
     prompt = ''
     app.srcdoc = ''
-    dispatch('clearAppSidebar', {})
+    dispatch('clear')
 
     await telemetry.trackGoWildClear()
   }
@@ -212,10 +261,6 @@
     }
 
     editor.focus()
-  })
-
-  onDestroy(async () => {
-    window.removeEventListener('message', handleMessageEvent)
   })
 </script>
 
@@ -258,7 +303,13 @@
       </div>
     {/if}
 
-    <iframe title="App" id={appId} frameborder="0" bind:this={app}></iframe>
+    <iframe
+      title="App"
+      id={appId}
+      frameborder="0"
+      sandbox="allow-scripts allow-forms"
+      bind:this={app}
+    ></iframe>
   </div>
 
   <form on:submit|preventDefault={handlePromptSubmit} class="prompt">

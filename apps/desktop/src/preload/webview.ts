@@ -156,7 +156,7 @@ function createComponentWrapper(
 
   document.body.appendChild(div)
 
-  const shadow = div.attachShadow({ mode: 'open' })
+  const shadow = div.attachShadow({ mode: 'closed' })
   const webviewStyles = document.getElementById('webview-styles')
   if (webviewStyles) {
     shadow.appendChild(webviewStyles.cloneNode(true))
@@ -902,6 +902,11 @@ window.addEventListener('keyup', (event: KeyboardEvent) => {
 })
 
 window.addEventListener('keydown', (event: KeyboardEvent) => {
+  // Ignore synthetic events that are not user generated
+  if (!event.isTrusted) {
+    return
+  }
+
   if (event.key === 'd' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
     startResourcePicker()
   }

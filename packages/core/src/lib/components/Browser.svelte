@@ -74,7 +74,7 @@
   import Importer from './Core/Importer.svelte'
   import OasisDiscovery from './Core/OasisDiscovery.svelte'
   import MagicSidebar from './Sidebars/MagicSidebar.svelte'
-  import AppSidebar from './Sidebars/AppSidebar.svelte'
+  import AppSidebar, { type ExecuteCodeInTabEvent } from './Sidebars/AppSidebar.svelte'
   import {
     ActivateTabEventTrigger,
     AddResourceToSpaceEventTrigger,
@@ -1689,55 +1689,61 @@
       return
     }
     */
-    const content = await $activeBrowserTab.executeJavaScript('document.body.outerHTML.toString()')
-    if (!content) {
-      log.debug('no content found from javscript execution')
-      toasts.error('Error: failed to parse content for create app context')
-      return
-    }
-    let cleaned = content
-      .replace(/style="[^"]*"/g, '') // remove inline styles
-      .replace(/script="[^"]*"/g, '') // remove inline scripts
-      .replace(/<style([\s\S]*?)<\/style>/gi, '') // remove style tags
-      .replace(/<script([\s\S]*?)<\/script>/gi, '') // remove script tags
+    // const content = await $activeBrowserTab.executeJavaScript('document.body.outerHTML.toString()')
+    // if (!content) {
+    //   log.debug('no content found from javscript execution')
+    //   toasts.error('Error: failed to parse content for create app context')
+    //   return
+    // }
+    // let cleaned = content
+    //   .replace(/style="[^"]*"/g, '') // remove inline styles
+    //   .replace(/script="[^"]*"/g, '') // remove inline scripts
+    //   .replace(/<style([\s\S]*?)<\/style>/gi, '') // remove style tags
+    //   .replace(/<script([\s\S]*?)<\/script>/gi, '') // remove script tags
 
-    // @ts-ignore
-    cleaned = window.api.minifyHtml(cleaned, {
-      collapseBooleanAttributes: true,
-      collapseWhitespace: true,
-      collapseInlineTagWhitespace: true,
-      continueOnParseError: true,
-      decodeEntities: true,
-      minifyCSS: true,
-      minifyJS: true,
-      removeComments: true,
-      removeAttributeQuotes: true,
-      removeEmptyAttributes: true,
-      removeEmptyElements: true,
-      removeOptionalTags: true,
-      removeRedundantAttributes: true,
-      removeScriptTypeAttributes: true,
-      removeStyleLinkTypeAttributes: true
-    })
+    // // @ts-ignore
+    // cleaned = window.api.minifyHtml(cleaned, {
+    //   collapseBooleanAttributes: true,
+    //   collapseWhitespace: true,
+    //   collapseInlineTagWhitespace: true,
+    //   continueOnParseError: true,
+    //   decodeEntities: true,
+    //   minifyCSS: true,
+    //   minifyJS: true,
+    //   removeComments: true,
+    //   removeAttributeQuotes: true,
+    //   removeEmptyAttributes: true,
+    //   removeEmptyElements: true,
+    //   removeOptionalTags: true,
+    //   removeRedundantAttributes: true,
+    //   removeScriptTypeAttributes: true,
+    //   removeStyleLinkTypeAttributes: true
+    // })
 
-    cleaned = activeAppSidebarContext.set(cleaned)
+    // cleaned = activeAppSidebarContext.set(cleaned)
 
     activeAppId.set(appId!)
     showAppSidebar.set(enabled)
   }
 
-  const handleExecuteAppSidebarCode = async (appId: string, code: string) => {
+  const handleExecuteAppSidebarCode = async (e: CustomEvent<ExecuteCodeInTabEvent>) => {
     try {
-      const t = $activeTab as TabPage
-      if (t.appId != appId) {
+      const { tabId, appId, code } = e.detail
+
+      const tab = $tabs.find((t) => t.id === tabId) as TabPage | undefined
+      const browserTab = $browserTabs[tabId]
+      if (!tab || !browserTab) {
+        log.error('Tab not found for executing code')
+        toasts.error('Failed to run go wild in page')
+        return
+      }
+
+      if (tab.appId !== appId) {
         log.error('App ID does not match active tab')
         return
       }
-      if (!$activeBrowserTab) {
-        log.debug('No active browser tab')
-        return
-      }
-      await $activeBrowserTab.executeJavaScript(code)
+
+      await browserTab.executeJavaScript(code)
     } catch (e) {
       log.error('Error executing app sidebar code:', e)
       toasts.error('Failed to run go wild in page')
@@ -4128,10 +4134,10 @@
           <AppSidebar
             {sffs}
             appId={$activeAppId}
-            tabContext={$activeAppSidebarContext}
-            on:clearAppSidebar={() => handleAppSidebarClear(true)}
-            on:executeAppSidebarCode={(e) =>
-              handleExecuteAppSidebarCode(e.detail.appId, e.detail.code)}
+            activeTab={$activeTab}
+            activeBrowserTab={$activeBrowserTab}
+            on:clear={() => handleAppSidebarClear(true)}
+            on:execute-tab-code={handleExecuteAppSidebarCode}
           />
         {:else}
           <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
