@@ -328,45 +328,13 @@ impl Worker {
             .send(ProcessorMessage::ProcessResource(resource.clone()))
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
-        self.aiqueue_tx
-            .send(AIMessage::DescribeImage(resource))
-            .map_err(|e| BackendError::GenericError(e.to_string()))
+        if resource.resource.resource_type.starts_with("image/") {
+            self.aiqueue_tx
+                .send(AIMessage::DescribeImage(resource))
+                .map_err(|e| BackendError::GenericError(e.to_string()))?
+        }
 
-        // // TODO: make use of strum(?) for this
-        // match resource.resource_type.as_str() {
-        //     "application/vnd.space.document.space-note" => {
-        //         let html_data = std::fs::read_to_string(resource.resource_path)?;
-        //         let mut output = String::new();
-        //         let mut in_tag = false;
-
-        //         for c in html_data.chars() {
-        //             match (in_tag, c) {
-        //                 (true, '>') => in_tag = false,
-        //                 (false, '<') => {
-        //                     in_tag = true;
-        //                     output.push(' ');
-        //                 }
-        //                 (false, _) => output.push(c),
-        //                 _ => (),
-        //             }
-        //         }
-
-        //         let output = output
-        //             .chars()
-        //             .take(256 * 3)
-        //             .collect::<String>()
-        //             .split_whitespace()
-        //             .collect::<Vec<_>>()
-        //             .join(" ");
-
-        //         self.db.create_resource_text_content(&ResourceTextContent {
-        //             id: random_uuid(),
-        //             resource_id,
-        //             content: output,
-        //         })
-        //     }
-        //     _ => Ok(()),
-        // }
+        Ok(())
     }
 
     pub fn update_resource_metadata(&mut self, metadata: ResourceMetadata) -> BackendResult<()> {
