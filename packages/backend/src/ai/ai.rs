@@ -197,6 +197,7 @@ impl AI {
             })
     }
 
+    #[tracing::instrument(level = "trace", skip(self))]
     pub fn should_cluster(&self, query: &str) -> BackendResult<bool> {
         let prompt = should_narrow_search_prompt();
         let messages = vec![
@@ -244,6 +245,7 @@ impl AI {
     }
 
     // TODO: what behavior if no num_docs and no resource_ids?
+    #[tracing::instrument(level = "trace", skip(self,contents_store))]
     pub fn vector_search(
         &self,
         contents_store: &Database,
@@ -254,11 +256,6 @@ impl AI {
         unique_resources_only: bool,
         distance_threshold: Option<f32>,
     ) -> BackendResult<Vec<CompositeResource>> {
-        dbg!(&query);
-        dbg!(&num_docs);
-        dbg!(&resource_ids);
-        dbg!(&distance_threshold);
-
         let keys: Vec<i64> = match resource_ids {
             Some(resource_ids) => {
                 contents_store.list_embedding_ids_by_resource_ids(resource_ids)?
@@ -275,7 +272,6 @@ impl AI {
                 keys,
                 threshold: distance_threshold,
             })?;
-        dbg!(&search_results);
         let resources = match unique_resources_only {
             false => contents_store.list_resources_by_embedding_row_ids(search_results)?,
             true => {
@@ -369,9 +365,6 @@ impl AI {
         }
         let resource_ids = resource_ids.unwrap_or(Vec::new());
 
-        dbg!(&query);
-        dbg!(should_cluster);
-
         let rag_results = match should_cluster {
             true => self.vector_search(
                 contents_store,
@@ -383,7 +376,6 @@ impl AI {
             )?,
             false => contents_store.list_resources_by_ids(resource_ids)?,
         };
-        dbg!(&rag_results.len());
         if rag_results.is_empty() {
             return Err(BackendError::RAGEmptyContextError(
                 "No resources found for llm context".to_string(),
@@ -391,7 +383,6 @@ impl AI {
         }
 
         let (sources, sources_xml, contexts) = self.get_sources_contexts(rag_results);
-        dbg!(&sources.len());
         let messages = vec![
             llm::models::Message {
                 role: "system".to_string(),
@@ -521,7 +512,6 @@ impl AI {
         } else {
             result = self.llm.create_chat_completion_blocking(messages, None)?;
         }
-        dbg!(&result);
         Ok(result)
     }
 }

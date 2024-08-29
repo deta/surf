@@ -338,7 +338,6 @@ impl Worker {
         sql_query: Option<String>,
         embedding_query: Option<String>,
     ) -> BackendResult<String> {
-        dbg!("query_sffs_resources", &prompt);
         #[derive(serde::Deserialize, Debug)]
         struct JsonResult {
             sql_query: String,
@@ -366,7 +365,6 @@ impl Worker {
             )
             .map_err(|e| BackendError::GenericError(e.to_string()))?,
         };
-        dbg!(&result);
         let mut resource_ids_first: HashSet<String> = HashSet::new();
         let mut resource_ids_stmt = self.db.conn.prepare(result.sql_query.as_str())?;
         let mut resource_ids_rows = resource_ids_stmt.query([])?;

@@ -48,10 +48,10 @@ const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') 
 
 // TODO: do we need to handle the case where api_key is undefined?
 const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT || ''
-const OPENAI_API_KEY = isDev ? import.meta.env.P_VITE_OPEN_AI_API_KEY : userConfig.api_key
+const OPENAI_API_KEY = isDev ? import.meta.env.P_VITE_OPEN_AI_API_KEY ?? userConfig.api_key : userConfig.api_key
 
 const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
-const VISION_API_KEY = isDev ? import.meta.env.P_VITE_VISION_API_KEY : userConfig.api_key
+const VISION_API_KEY = isDev ? import.meta.env.P_VITE_VISION_API_KEY ?? userConfig.api_key : userConfig.api_key
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
