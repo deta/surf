@@ -7,7 +7,7 @@ use crate::{
         worker::{send_worker_response, Worker},
     },
     store::{
-        db::Database,
+        db::{CompositeResource, Database},
         models::{
             random_uuid, AIChatHistory, AIChatSession, AIChatSessionMessage,
             AIChatSessionMessageSource, ResourceTextContent,
@@ -96,138 +96,206 @@ impl Worker {
         session_id: String,
         number_documents: i32,
         rag_only: bool,
-        mut callback: Root<JsFunction>,
+        callback: Root<JsFunction>,
         resource_ids: Option<Vec<String>>,
         general: bool,
     ) -> BackendResult<()> {
         let user_message = AIChatSessionMessage {
-            ai_session_id: session_id.clone(),
+            ai_session_id: session_id.to_owned(),
             role: "user".to_owned(),
-            content: query.clone(),
+            content: query.to_owned(),
             sources: None,
             created_at: chrono::Utc::now(),
         };
-        if rag_only {
-            let results = self.ai.vector_search(
-                &self.db,
-                query,
-                number_documents as usize,
-                resource_ids,
-                false,
-                None,
-            )?;
-            let mut sources_str = "<sources>".to_string();
-            let mut sources = vec![];
-            for (i, result) in results.iter().enumerate() {
-                let source = match AIChatSessionMessageSource::from_resource_index(&result, i) {
-                    Some(source) => source,
-                    None => {
-                        eprintln!(
-                            "Failed to get ai chat session message source from composite resource"
-                        );
-                        return Err(BackendError::GenericError(
-                            "Failed to get ai chat session message source from composite resource"
-                                .to_string(),
-                        ));
-                    }
-                };
-                sources_str.push_str(&source.to_xml());
-                sources.push(source);
-            }
-            sources_str.push_str("</sources>\n<answer> </answer>");
 
-            channel
-                .send(|mut cx| {
-                    let f = callback.into_inner(&mut cx);
-                    let this = cx.undefined();
-                    let args = vec![cx.string(sources_str).upcast::<JsValue>()];
-                    f.call(&mut cx, this, args).unwrap();
-                    Ok(f.root(&mut cx))
-                })
-                .join()
-                .map_err(|err| BackendError::GenericError(err.to_string()))?;
-            let mut tx = self.db.begin()?;
-            Database::create_ai_session_message_tx(&mut tx, &user_message)?;
-            Database::create_ai_session_message_tx(
-                &mut tx,
-                &AIChatSessionMessage {
-                    ai_session_id: session_id.clone(),
-                    role: "assistant".to_owned(),
-                    content: "".to_string(),
-                    sources: Some(sources),
-                    created_at: chrono::Utc::now(),
-                },
-            )?;
-            tx.commit()?;
-            return Ok(());
+        if rag_only {
+            self.handle_rag_only_query(
+                channel,
+                query,
+                number_documents,
+                resource_ids,
+                callback,
+                user_message,
+            )
+        } else {
+            self.handle_full_chat_query(
+                channel,
+                query,
+                session_id,
+                number_documents,
+                resource_ids,
+                general,
+                callback,
+                user_message,
+            )
+        }
+    }
+
+    fn handle_rag_only_query(
+        &mut self,
+        channel: &mut Channel,
+        query: String,
+        number_documents: i32,
+        resource_ids: Option<Vec<String>>,
+        callback: Root<JsFunction>,
+        user_message: AIChatSessionMessage,
+    ) -> BackendResult<()> {
+        let results = self.ai.vector_search(
+            &self.db,
+            query,
+            number_documents as usize,
+            resource_ids,
+            false,
+            None,
+        )?;
+
+        let (sources_str, sources) = self.process_search_results(&results)?;
+
+        self.send_callback(channel, callback, sources_str)?;
+        self.save_messages(user_message, String::new(), Some(sources))?;
+
+        Ok(())
+    }
+
+    fn process_search_results(
+        &self,
+        results: &[CompositeResource],
+    ) -> BackendResult<(String, Vec<AIChatSessionMessageSource>)> {
+        let mut sources_str = String::from("<sources>");
+        let mut sources = Vec::new();
+
+        for (i, result) in results.iter().enumerate() {
+            let source =
+                AIChatSessionMessageSource::from_resource_index(result, i).ok_or_else(|| {
+                    eprintln!(
+                        "Failed to get ai chat session message source from composite resource"
+                    );
+                    BackendError::GenericError(
+                        "Failed to get AI chat session message source from composite resource"
+                            .to_string(),
+                    )
+                })?;
+            sources_str.push_str(&source.to_xml());
+            sources.push(source);
         }
 
+        sources_str.push_str("</sources>\n<answer> </answer>");
+        Ok((sources_str, sources))
+    }
+
+    fn handle_full_chat_query(
+        &mut self,
+        channel: &mut Channel,
+        query: String,
+        session_id: String,
+        number_documents: i32,
+        resource_ids: Option<Vec<String>>,
+        general: bool,
+        callback: Root<JsFunction>,
+        user_message: AIChatSessionMessage,
+    ) -> BackendResult<()> {
         let history = self
             .ai
             .format_chat_history(self.db.list_ai_session_messages(&session_id)?);
         let should_cluster = self.ai.should_cluster(&query)?;
-        let mut assistant_message = String::new();
-        let mut sources: Vec<AIChatSessionMessageSource> = Vec::new();
-        self.async_runtime.block_on(async {
-            let (srcs, preamble, mut stream) = self
-                .ai
-                // TODO: history
-                .chat(
-                    &self.db,
-                    query,
-                    number_documents,
-                    resource_ids,
-                    general,
-                    should_cluster,
-                    history,
-                )
-                .await?;
-            sources = srcs;
-            callback = channel
-                .send(|mut cx| {
-                    let f = callback.into_inner(&mut cx);
-                    let this = cx.undefined();
-                    let args = vec![cx.string(preamble).upcast::<JsValue>()];
-                    f.call(&mut cx, this, args).unwrap();
-                    Ok(f.root(&mut cx))
-                })
-                .join()
-                .map_err(|err| BackendError::GenericError(err.to_string()))?;
 
-            while let Some(chunk) = stream.next().await {
-                match chunk {
-                    Err(err) => return Err(err),
-                    Ok(data) => {
-                        assistant_message.push_str(&data);
-                        callback = channel
-                            .send(|mut cx| {
-                                let f = callback.into_inner(&mut cx);
-                                let this = cx.undefined();
-                                let args = vec![cx.string(data).upcast::<JsValue>()];
-                                f.call(&mut cx, this, args).unwrap();
-                                Ok(f.root(&mut cx))
-                            })
-                            .join()
-                            .map_err(|err| BackendError::GenericError(err.to_string()))?;
-                    }
-                }
-            }
-
-            Ok(())
+        let (assistant_message, sources) = self.async_runtime.block_on(async {
+            self.process_chat_stream(
+                channel,
+                callback,
+                query,
+                number_documents,
+                resource_ids,
+                general,
+                should_cluster,
+                history,
+            )
+            .await
         })?;
+
+        self.save_messages(user_message, assistant_message, Some(sources))?;
+
+        Ok(())
+    }
+
+    async fn process_chat_stream(
+        &self,
+        channel: &mut Channel,
+        mut callback: Root<JsFunction>,
+        query: String,
+        number_documents: i32,
+        resource_ids: Option<Vec<String>>,
+        general: bool,
+        should_cluster: bool,
+        history: Option<String>,
+    ) -> BackendResult<(String, Vec<AIChatSessionMessageSource>)> {
+        let (sources, preamble, mut stream) = self
+            .ai
+            .chat(
+                &self.db,
+                query,
+                number_documents,
+                resource_ids,
+                general,
+                should_cluster,
+                history,
+            )
+            .await?;
+
+        callback = self.send_callback(channel, callback, preamble)?;
+
+        let mut assistant_message = String::new();
+        while let Some(chunk) = stream.next().await {
+            match chunk {
+                Ok(data) => {
+                    assistant_message.push_str(&data);
+                    callback = self.send_callback(channel, callback, data)?;
+                }
+                Err(err) => return Err(err),
+            }
+        }
+
+        Ok((assistant_message, sources))
+    }
+
+    fn send_callback(
+        &self,
+        channel: &mut Channel,
+        callback: Root<JsFunction>,
+        data: String,
+    ) -> BackendResult<Root<JsFunction>> {
+        channel
+            .send(|mut cx| {
+                let f = callback.into_inner(&mut cx);
+                let this = cx.undefined();
+                let args = vec![cx.string(data).upcast::<JsValue>()];
+                f.call(&mut cx, this, args).unwrap();
+                Ok(f.root(&mut cx))
+            })
+            .join()
+            .map_err(|err| BackendError::GenericError(err.to_string()))
+    }
+
+    fn save_messages(
+        &mut self,
+        user_message: AIChatSessionMessage,
+        assistant_message: String,
+        sources: Option<Vec<AIChatSessionMessageSource>>,
+    ) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::create_ai_session_message_tx(&mut tx, &user_message)?;
         Database::create_ai_session_message_tx(
             &mut tx,
             &AIChatSessionMessage {
-                ai_session_id: session_id.clone(),
+                ai_session_id: user_message.ai_session_id.clone(),
                 role: "assistant".to_owned(),
                 content: assistant_message,
-                sources: Some(sources.clone()),
+                sources,
                 created_at: chrono::Utc::now(),
             },
         )?;
-        Ok(tx.commit()?)
+        tx.commit()?;
+        Ok(())
     }
 
     pub fn get_youtube_transcript(&self, video_url: String) -> BackendResult<YoutubeTranscript> {
