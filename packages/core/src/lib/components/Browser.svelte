@@ -360,8 +360,6 @@
     }
   })
 
-  $: if ($activeBrowserTab) $activeBrowserTab.focus()
-
   const openResourceDetailsModal = (resourceId: string, from?: OpenResourceEventFrom) => {
     resourceDetailsModalSelected.set(resourceId)
     showResourceDetails.set(true)
@@ -559,7 +557,11 @@
   }
 
   const handleDeleteTab = async (e: CustomEvent<string>) => {
-    const rect = document.getElementById(`tab-${e.detail}`)?.getBoundingClientRect()
+    await deleteTab(e.detail, DeleteTabEventTrigger.Click)
+  }
+
+  const deleteTab = async (tabId: string, trigger?: DeleteTabEventTrigger) => {
+    const rect = document.getElementById(`tab-${tabId}`)?.getBoundingClientRect()
     if (rect) {
       spawnBoxSmoke(rect, {
         densityN: 28,
@@ -568,11 +570,6 @@
         cloudPointN: 7
       })
     }
-
-    await deleteTab(e.detail, DeleteTabEventTrigger.Click)
-  }
-
-  const deleteTab = async (tabId: string, trigger?: DeleteTabEventTrigger) => {
     const tab = $tabs.find((tab) => tab.id === tabId)
     if (!tab) {
       log.error('Tab not found', tabId)
@@ -874,10 +871,6 @@
     showRightSidebar = true
   }
 
-  const handleRightPaneUpdate = (event: CustomEvent<PaneAPI>) => {
-    rightPane = event.detail
-  }
-
   const toggleRightSidebar = () => {
     if (showRightSidebar) {
       handleCollapseRight()
@@ -974,7 +967,6 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       if ($showNewTabOverlay !== 0) return
-      if (rightPane?.isExpanded()) handleCollapseRight()
     } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
       showDevOverlay = !showDevOverlay
 

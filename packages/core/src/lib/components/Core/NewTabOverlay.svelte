@@ -289,19 +289,19 @@
       deboundedSelectFirstCommandItem()
 
       const items = [
-        ...(activeTab && (activeTab.type === 'page' || activeTab.type === 'space')
-          ? [
-              {
-                id: `create-chat`,
-                type: 'command',
-                label: `Ask ${activeTab.type === 'space' ? 'Space' : 'Page'}: ${activeTab.title}`,
-                icon: 'message',
-                value: `Chat with ${searchValue}`,
-                // shortcut: '⌥C',
-                score: 0.9
-              }
-            ]
-          : []),
+        // ...(activeTab && (activeTab.type === 'page' || activeTab.type === 'space')
+        //   ? [
+        //       {
+        //         id: `create-chat`,
+        //         type: 'command',
+        //         label: `Ask ${activeTab.type === 'space' ? 'Space' : 'Page'}: ${activeTab.title}`,
+        //         icon: 'message',
+        //         value: `Chat with ${searchValue}`,
+        //         // shortcut: '⌥C',
+        //         score: 0.9
+        //       }
+        //     ]
+        //   : []),
         ...commandFilter,
         ...filteredCommandItems,
         // ...historyEntriesResults.map((entry) => historyEntryToItem(entry, { score: 0.1 })),
@@ -1057,7 +1057,7 @@
           >
             <Icon name="close" />
           </button>
-        {:else}
+        {:else if $searchValue.length < 20}
           <button
             class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
               ? 'bottom-7'
@@ -1109,7 +1109,11 @@
             }}
             let:motion
           > -->
-          <div class={showTabSearch === 1 ? 'w-[514px] h-full' : 'w-[70vw] h-[calc(100vh-200px)]'}>
+          <div
+            class={showTabSearch === 1
+              ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : ''}`
+              : 'w-[70vw] h-[calc(100vh-200px)]'}
+          >
             {#if showTabSearch === 1 && $searchValue.length}
               <Command.List class="m-2 no-scrollbar">
                 {#each $commandFilterResult as item (item.id)}
@@ -1120,7 +1124,7 @@
               {#if $showCreationModal}
                 <div
                   data-vaul-no-drag
-                  class="create-wrapper absolute inset-0 z-50 flex items-center justify-center bg-opacity-50 bg-red-50"
+                  class="create-wrapper absolute inset-0 z-50 flex items-center justify-center bg-opacity-50"
                 >
                   <div
                     class=" rounded-lg w-full h-full max-w-screen-lg max-h-screen-lg overflow-auto flex items-center justify-center"
