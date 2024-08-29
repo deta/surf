@@ -55,23 +55,26 @@ export function setupPermissionHandlers(session: Electron.Session) {
 
     let shortCircuit: boolean | null = null
     switch (permission) {
+      // `persistent-storage` isn't a part of the public API for some reason
+      //@ts-ignore
+      case 'persistent-storage':
+      case 'idle-detection':
+      case 'fullscreen':
+      case 'window-management':
+        shortCircuit = true
+        break
+      // third party storage access, disable it for now
+      case 'storage-access':
+      case 'top-level-storage-access':
+        shortCircuit = false
+        break
       // TODO: `geolocation` doesn't work for some reason
       case 'geolocation':
         shortCircuit = false
         break
-      // `persistent-storage` isn't a part of the public API for some reason
-      //@ts-ignore
-      case 'persistent-storage':
-      case 'fullscreen':
-      // These usually require explicit user-action for them to be granted to the page.
+      // these usually require explicit user-action before they're granted to the page
       // case 'pointerLock':
       // case 'keyboardLock':
-      // case 'top-level-storage-access':
-      case 'storage-access':
-      case 'clipboard-sanitized-write':
-      case 'window-management':
-        shortCircuit = true
-        break
     }
     if (shortCircuit != null) {
       callback(shortCircuit)
