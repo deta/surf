@@ -123,10 +123,7 @@ impl WorkerTunnel {
     ) {
         let oneshot = oneshot.map(|oneshot| TunnelOneshot::Rust(oneshot));
         self.worker_tx
-            .send(TunnelMessage(
-                message,
-                oneshot,
-            ))
+            .send(TunnelMessage(message, oneshot))
             .expect("unbound channel send failed on worker queue")
     }
 }

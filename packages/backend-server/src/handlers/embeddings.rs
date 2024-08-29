@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::net::UnixStream;
+use std::sync::mpsc::{SendError, Sender};
 #[cfg(target_os = "windows")]
 use uds_windows::UnixStream;
-use std::sync::mpsc::{SendError, Sender};
 
 use crate::embeddings::model::EmbeddingModel;
 use crate::handlers::{try_stream_write_all, try_stream_write_all_bytes};

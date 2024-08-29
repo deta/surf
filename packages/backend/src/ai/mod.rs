@@ -77,7 +77,11 @@ fn js_query_sffs_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::MiscMessage(MiscMessage::QuerySFFSResources(prompt, sql_query, embedding_query)),
+        WorkerMessage::MiscMessage(MiscMessage::QuerySFFSResources(
+            prompt,
+            sql_query,
+            embedding_query,
+        )),
         deferred,
     );
 

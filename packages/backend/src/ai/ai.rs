@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 
 use super::client::{DocsSimilarityRequest, LocalAIClient, UpsertEmbeddingsRequest};
 use super::prompts::{
-    chat_prompt, command_prompt, create_app_prompt, general_chat_prompt, transcript_chunking_prompt, should_narrow_search_prompt, sql_query_generator_prompt 
+    chat_prompt, command_prompt, create_app_prompt, general_chat_prompt,
+    should_narrow_search_prompt, sql_query_generator_prompt, transcript_chunking_prompt,
 };
 
 use std::pin::Pin;
@@ -78,8 +79,8 @@ pub struct SimilarDocsRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DocsSimilarity {
-    pub index: u64, 
-    pub similarity: f32 
+    pub index: u64,
+    pub similarity: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -98,7 +99,7 @@ pub struct YoutubeTranscriptMetadata {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct YoutubeTranscript {
     pub transcript: String,
-    pub metadata: YoutubeTranscriptMetadata
+    pub metadata: YoutubeTranscriptMetadata,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -108,7 +109,6 @@ pub struct CreateAppRequest {
     pub contexts: Option<Vec<String>>,
     pub system_prompt: Option<String>,
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResourcesQueryRequest {
@@ -136,7 +136,7 @@ impl fmt::Display for DataSourceType {
 // TODO: move embeddings store and embedding model to backend server process
 pub struct AI {
     pub llm: openai::OpenAI, // TODO: use a trait
-    pub chunker: ContentChunker, 
+    pub chunker: ContentChunker,
     local_mode: bool,
     local_ai_client: LocalAIClient,
     async_runtime: tokio::runtime::Runtime,
@@ -144,7 +144,7 @@ pub struct AI {
 
 impl AI {
     pub fn new(
-        api_key: String, 
+        api_key: String,
         local_mode: bool,
         local_ai_socket_path: String,
         openai_api_endpoint: Option<String>,
@@ -177,7 +177,7 @@ impl AI {
 
     pub fn get_docs_similarity(
         &self,
-        query: String, 
+        query: String,
         docs: Vec<String>,
         threshold: Option<f32>,
     ) -> BackendResult<Vec<DocsSimilarity>> {
@@ -188,15 +188,16 @@ impl AI {
         if docs.len() > 30 {
             num_docs = 5
         }
-        self.local_ai_client.get_docs_similarity(DocsSimilarityRequest{
-            query,
-            docs,
-            threshold,
-            num_docs,
-        })
+        self.local_ai_client
+            .get_docs_similarity(DocsSimilarityRequest {
+                query,
+                docs,
+                threshold,
+                num_docs,
+            })
     }
 
-    pub fn should_cluster(&self, query: &str) -> BackendResult<bool>{
+    pub fn should_cluster(&self, query: &str) -> BackendResult<bool> {
         let prompt = should_narrow_search_prompt();
         let messages = vec![
             llm::models::Message {
@@ -209,78 +210,85 @@ impl AI {
             },
         ];
         // TODO: use local mode
-        Ok(self.llm.create_chat_completion_blocking(messages, None)?
+        Ok(self
+            .llm
+            .create_chat_completion_blocking(messages, None)?
             .to_lowercase()
-            .contains("true")
-        )
+            .contains("true"))
     }
 
     #[allow(dead_code)]
     pub fn chunk_transcript(&self, transcript: &str) -> BackendResult<Vec<String>> {
         let prompt = transcript_chunking_prompt(transcript);
-        let messages = vec![
-            llm::models::Message {
-                role: "system".to_string(),
-                content: prompt,
-            },
-        ];
+        let messages = vec![llm::models::Message {
+            role: "system".to_string(),
+            content: prompt,
+        }];
         let output = self.llm.create_chat_completion_blocking(messages, None)?;
-        
-        Ok(output
-            .split("\n")
-            .map(|chunk| chunk.to_string())
-            .collect())
+
+        Ok(output.split("\n").map(|chunk| chunk.to_string()).collect())
     }
 
     pub fn upsert_embeddings(
         &mut self,
         old_keys: Vec<i64>,
         new_keys: Vec<i64>,
-        chunks: Vec<String>
+        chunks: Vec<String>,
     ) -> BackendResult<()> {
-        self.local_ai_client.upsert_embeddings(UpsertEmbeddingsRequest{
-            old_keys,
-            new_keys,
-            chunks,
-        }) 
+        self.local_ai_client
+            .upsert_embeddings(UpsertEmbeddingsRequest {
+                old_keys,
+                new_keys,
+                chunks,
+            })
     }
-    
+
     // TODO: what behavior if no num_docs and no resource_ids?
-    pub fn vector_search(&self, 
-        contents_store: &Database, 
-        query: String, 
+    pub fn vector_search(
+        &self,
+        contents_store: &Database,
+        query: String,
         // matches all embeddings if None
         num_docs: usize,
         resource_ids: Option<Vec<String>>,
         unique_resources_only: bool,
         distance_threshold: Option<f32>,
-    ) -> BackendResult<Vec<CompositeResource>>{
+    ) -> BackendResult<Vec<CompositeResource>> {
         dbg!(&query);
         dbg!(&num_docs);
         dbg!(&resource_ids);
         dbg!(&distance_threshold);
 
         let keys: Vec<i64> = match resource_ids {
-            Some(resource_ids) => contents_store.list_embedding_ids_by_resource_ids(resource_ids)?,
-            None => contents_store.list_non_deleted_embedding_ids()?
+            Some(resource_ids) => {
+                contents_store.list_embedding_ids_by_resource_ids(resource_ids)?
+            }
+            None => contents_store.list_non_deleted_embedding_ids()?,
         };
         let keys: Vec<u64> = keys.iter().map(|id| *id as u64).collect();
 
-        let search_results = self.local_ai_client.filtered_search(FilteredSearchRequest{
-            query: query.clone(),
-            num_docs,
-            keys,
-            threshold: distance_threshold,
-        })?;
+        let search_results = self
+            .local_ai_client
+            .filtered_search(FilteredSearchRequest {
+                query: query.clone(),
+                num_docs,
+                keys,
+                threshold: distance_threshold,
+            })?;
         dbg!(&search_results);
-        let resources = match unique_resources_only{
+        let resources = match unique_resources_only {
             false => contents_store.list_resources_by_embedding_row_ids(search_results)?,
-            true => contents_store.list_unique_resources_only_by_embedding_row_ids(search_results)?,
+            true => {
+                contents_store.list_unique_resources_only_by_embedding_row_ids(search_results)?
+            }
         };
         Ok(resources)
     }
 
-    pub fn get_sources_contexts(&self, resources: Vec<CompositeResource>) -> (Vec<AIChatSessionMessageSource>, String, String) {
+    pub fn get_sources_contexts(
+        &self,
+        resources: Vec<CompositeResource>,
+    ) -> (Vec<AIChatSessionMessageSource>, String, String) {
         let mut sources = Vec::new();
         let mut sources_xml = "<sources>\n".to_string();
         let mut contexts = String::new();
@@ -304,7 +312,11 @@ impl AI {
         (sources, sources_xml, contexts)
     }
 
-    async fn general_chat(&self, query: String, history: Option<String>) -> BackendResult<(String, Pin<Box<dyn Stream<Item = BackendResult<String>>>>)> {
+    async fn general_chat(
+        &self,
+        query: String,
+        history: Option<String>,
+    ) -> BackendResult<(String, Pin<Box<dyn Stream<Item = BackendResult<String>>>>)> {
         let messages = vec![
             llm::models::Message {
                 role: "system".to_string(),
@@ -317,13 +329,17 @@ impl AI {
         ];
         let preamble = "<sources></sources>".to_string();
         let stream = match self.local_mode {
-            true => self.local_ai_client.create_chat_completion(messages).await?,
+            true => {
+                self.local_ai_client
+                    .create_chat_completion(messages)
+                    .await?
+            }
             false => self.llm.create_chat_completion(messages).await?,
         };
         Ok((preamble, stream))
     }
 
-    pub fn encode_sentences(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>>{ 
+    pub fn encode_sentences(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>> {
         self.local_ai_client.encode_sentences(&sentences)
     }
 
@@ -336,14 +352,20 @@ impl AI {
         general: bool,
         should_cluster: bool,
         history: Option<String>,
-    ) -> BackendResult<(Vec<AIChatSessionMessageSource>, String, Pin<Box<dyn Stream<Item = BackendResult<String>>>>)> {
+    ) -> BackendResult<(
+        Vec<AIChatSessionMessageSource>,
+        String,
+        Pin<Box<dyn Stream<Item = BackendResult<String>>>>,
+    )> {
         if general {
-            let (preamble, stream) = self.general_chat(query, history).await?;     
+            let (preamble, stream) = self.general_chat(query, history).await?;
             return Ok((Vec::new(), preamble, stream));
         }
-        
+
         if !should_cluster && resource_ids.is_none() {
-            return Err(BackendError::GenericError("Resource IDs must be provided if not clustering".to_string()));
+            return Err(BackendError::GenericError(
+                "Resource IDs must be provided if not clustering".to_string(),
+            ));
         }
         let resource_ids = resource_ids.unwrap_or(Vec::new());
 
@@ -358,12 +380,14 @@ impl AI {
                 Some(resource_ids),
                 false,
                 None,
-            )?, 
+            )?,
             false => contents_store.list_resources_by_ids(resource_ids)?,
         };
         dbg!(&rag_results.len());
         if rag_results.is_empty() {
-            return Err(BackendError::RAGEmptyContextError("No resources found for llm context".to_string()));
+            return Err(BackendError::RAGEmptyContextError(
+                "No resources found for llm context".to_string(),
+            ));
         }
 
         let (sources, sources_xml, contexts) = self.get_sources_contexts(rag_results);
@@ -377,9 +401,13 @@ impl AI {
                 role: "user".to_string(),
                 content: query,
             },
-        ]; 
+        ];
         let stream = match self.local_mode {
-            true => self.local_ai_client.create_chat_completion(messages).await?,
+            true => {
+                self.local_ai_client
+                    .create_chat_completion(messages)
+                    .await?
+            }
             false => self.llm.create_chat_completion(messages).await?,
         };
         Ok((sources, sources_xml, stream))
@@ -390,30 +418,33 @@ impl AI {
         let messages = vec![
             llm::models::Message {
                 role: "system".to_string(),
-                content: sql_query_generator_prompt()
+                content: sql_query_generator_prompt(),
             },
             llm::models::Message {
                 role: "user".to_string(),
-                content: prompt
-            }
+                content: prompt,
+            },
         ];
         match self.local_mode {
             true => {
                 let mut result = String::new();
                 self.async_runtime.block_on(async {
-                    let mut stream = self.local_ai_client.create_chat_completion(messages).await?;
+                    let mut stream = self
+                        .local_ai_client
+                        .create_chat_completion(messages)
+                        .await?;
                     while let Some(chunk) = stream.next().await {
                         match chunk {
                             Ok(chunk) => {
                                 result.push_str(&chunk);
-                            },
+                            }
                             Err(e) => return Err(e),
                         }
                     }
                     Ok(())
                 })?;
-                Ok(result)            
-            },
+                Ok(result)
+            }
             false => {
                 let mut result = String::new();
                 self.async_runtime.block_on(async {
@@ -422,7 +453,7 @@ impl AI {
                         match chunk {
                             Ok(chunk) => {
                                 result.push_str(&chunk);
-                            },
+                            }
                             Err(e) => return Err(e),
                         }
                     }
@@ -433,12 +464,19 @@ impl AI {
         }
     }
 
-    pub fn create_app(&self, prompt: String, _session_id: String, contexts: Option<Vec<String>>) -> BackendResult<String> {
-        // TODO: support multiple contexts 
+    pub fn create_app(
+        &self,
+        prompt: String,
+        _session_id: String,
+        contexts: Option<Vec<String>>,
+    ) -> BackendResult<String> {
+        // TODO: support multiple contexts
         let mut ctx = String::new();
         if let Some(contexts) = contexts {
             if contexts.len() > 1 {
-                return Err(BackendError::GenericError("Only one context is supported".to_string()));
+                return Err(BackendError::GenericError(
+                    "Only one context is supported".to_string(),
+                ));
             }
             ctx = contexts[0].clone();
         }
@@ -460,17 +498,21 @@ impl AI {
         ];
 
         // TODO: is this the best way to use tokio async runtime?
-        let runtime = tokio::runtime::Runtime::new().map_err(|e| BackendError::GenericError(e.to_string()))?;
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
         let mut result = String::new();
-        
+
         if self.local_mode {
             runtime.block_on(async {
-                let mut stream = self.local_ai_client.create_chat_completion(messages).await?;
+                let mut stream = self
+                    .local_ai_client
+                    .create_chat_completion(messages)
+                    .await?;
                 while let Some(chunk) = stream.next().await {
                     match chunk {
                         Ok(chunk) => {
                             result.push_str(&chunk);
-                        },
+                        }
                         Err(e) => return Err(e),
                     }
                 }

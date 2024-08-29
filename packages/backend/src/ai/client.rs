@@ -1,13 +1,13 @@
 use crate::{llm::models::Message, BackendError, BackendResult};
 use futures::Stream;
+use serde::{Deserialize, Serialize};
+use std::io::{Read, Write};
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::net::UnixStream;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 #[cfg(target_os = "windows")]
 use uds_windows::UnixStream;
-use std::pin::Pin;
-use std::io::{Read, Write};
-use std::task::{Context, Poll};
-use serde::{Deserialize, Serialize};
 
 use super::ai::DocsSimilarity;
 
@@ -37,14 +37,16 @@ pub struct FilteredSearchRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpsertEmbeddingsRequest {
-    pub old_keys: Vec<i64>, 
+    pub old_keys: Vec<i64>,
     pub new_keys: Vec<i64>,
     pub chunks: Vec<String>,
 }
 
 impl LocalAIStream {
     pub fn new(stream: UnixStream) -> Self {
-        Self { stream: Box::pin(stream)}
+        Self {
+            stream: Box::pin(stream),
+        }
     }
 }
 
@@ -54,7 +56,8 @@ impl Stream for LocalAIStream {
     fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Option<Self::Item>> {
         loop {
             let mut buffer = [0; 1024];
-            let bytes_read = self.stream
+            let bytes_read = self
+                .stream
                 .read(&mut buffer[..])
                 .expect("failed to read from client");
             if bytes_read == 0 {
@@ -73,9 +76,9 @@ impl LocalAIClient {
 
     fn read_message(stream: &mut UnixStream) -> BackendResult<String> {
         let mut buffer = [0; 1024];
-        let bytes_read = stream
-            .read(&mut buffer[..])
-            .map_err(|e| BackendError::GenericError(format!("failed to read from client: {:#?}", e)))?;
+        let bytes_read = stream.read(&mut buffer[..]).map_err(|e| {
+            BackendError::GenericError(format!("failed to read from client: {:#?}", e))
+        })?;
         if bytes_read == 0 {
             return Err(BackendError::GenericError("no bytes read".to_string()));
         }
@@ -89,8 +92,8 @@ impl LocalAIClient {
 
     #[allow(dead_code)]
     fn try_stream_shutdown(stream: &mut UnixStream) -> BackendResult<()> {
-        match stream.shutdown(std::net::Shutdown::Both){
-            Ok(_) => {},
+        match stream.shutdown(std::net::Shutdown::Both) {
+            Ok(_) => {}
             Err(e) => {
                 eprintln!("failed to shutdown stream: {:#?}", e);
             }
@@ -100,10 +103,13 @@ impl LocalAIClient {
 
     fn send_message(stream: &mut UnixStream, message: &str) -> BackendResult<()> {
         match stream.write_all(message.as_bytes()) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 eprintln!("failed to write message: {:#?}", e);
-                return Err(BackendError::GenericError(format!("failed to write message: {:#?}", e)));
+                return Err(BackendError::GenericError(format!(
+                    "failed to write message: {:#?}",
+                    e
+                )));
             }
         }
         Ok(())
@@ -111,10 +117,13 @@ impl LocalAIClient {
 
     fn send_message_bytes(stream: &mut UnixStream, message: &[u8]) -> BackendResult<()> {
         match stream.write_all(message) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 eprintln!("failed to write message bytes: {:#?}", e);
-                return Err(BackendError::GenericError(format!("failed to write message bytes: {:#?}", e)));
+                return Err(BackendError::GenericError(format!(
+                    "failed to write message bytes: {:#?}",
+                    e
+                )));
             }
         }
         Ok(())
@@ -144,14 +153,20 @@ impl LocalAIClient {
         let response = Self::read_message(stream)?;
         if !Self::is_ack_message(&response) {
             eprintln!("server returned no ack, response: {:#?}", response);
-            return Err(BackendError::GenericError("server returned no ack".to_string()));
+            return Err(BackendError::GenericError(
+                "server returned no ack".to_string(),
+            ));
         }
         Ok(())
     }
 
-    pub fn get_docs_similarity(&self, req: DocsSimilarityRequest) -> BackendResult<Vec<DocsSimilarity>> {
-        let message = serde_json::to_string(&req)
-            .map_err(|e| BackendError::GenericError(format!("failed to serialize request: {:#?}", e)))?;
+    pub fn get_docs_similarity(
+        &self,
+        req: DocsSimilarityRequest,
+    ) -> BackendResult<Vec<DocsSimilarity>> {
+        let message = serde_json::to_string(&req).map_err(|e| {
+            BackendError::GenericError(format!("failed to serialize request: {:#?}", e))
+        })?;
 
         let mut stream = UnixStream::connect(&self.socket_path)?;
 
@@ -164,7 +179,10 @@ impl LocalAIClient {
             let (is_err, message) = Self::is_error(&message);
             if is_err {
                 eprintln!("failed to get docs similarity: {:#?}", message);
-                return Err(BackendError::GenericError(format!("failed to get docs similarity: {:#?}", message)));
+                return Err(BackendError::GenericError(format!(
+                    "failed to get docs similarity: {:#?}",
+                    message
+                )));
             }
             let (is_done, message) = Self::is_done(&message);
             server_message_buffer.push_str(&message);
@@ -173,13 +191,16 @@ impl LocalAIClient {
             }
         }
         let docs_similarity = serde_json::from_str::<Vec<DocsSimilarity>>(&server_message_buffer)
-            .map_err(|e| BackendError::GenericError(format!("failed to parse response: {:#?}", e)))?;
+            .map_err(|e| {
+            BackendError::GenericError(format!("failed to parse response: {:#?}", e))
+        })?;
         Ok(docs_similarity)
     }
 
     pub fn encode_sentences(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>> {
-        let message = serde_json::to_vec(sentences)
-            .map_err(|e| BackendError::GenericError(format!("failed to serialize sentences: {:#?}", e)))?;
+        let message = serde_json::to_vec(sentences).map_err(|e| {
+            BackendError::GenericError(format!("failed to serialize sentences: {:#?}", e))
+        })?;
 
         let mut stream = UnixStream::connect(&self.socket_path)?;
 
@@ -192,7 +213,10 @@ impl LocalAIClient {
             let (is_err, message) = Self::is_error(&message);
             if is_err {
                 eprintln!("failed to encode sentences: {:#?}", message);
-                return Err(BackendError::GenericError(format!("failed to encode sentences: {:#?}", message)));
+                return Err(BackendError::GenericError(format!(
+                    "failed to encode sentences: {:#?}",
+                    message
+                )));
             }
             let (is_done, message) = Self::is_done(&message);
             server_message_buffer.push_str(&message);
@@ -200,16 +224,17 @@ impl LocalAIClient {
                 break;
             }
         }
-        let embeddings = serde_json::from_str::<Vec<Vec<f32>>>(
-            &server_message_buffer
-        )
-            .map_err(|e| BackendError::GenericError(format!("failed to parse response: {:#?}", e)))?;
+        let embeddings =
+            serde_json::from_str::<Vec<Vec<f32>>>(&server_message_buffer).map_err(|e| {
+                BackendError::GenericError(format!("failed to parse response: {:#?}", e))
+            })?;
         Ok(embeddings)
     }
 
     pub fn filtered_search(&self, req: FilteredSearchRequest) -> BackendResult<Vec<i64>> {
-        let message = serde_json::to_string(&req)
-            .map_err(|e| BackendError::GenericError(format!("failed to serialize request: {:#?}", e)))?;
+        let message = serde_json::to_string(&req).map_err(|e| {
+            BackendError::GenericError(format!("failed to serialize request: {:#?}", e))
+        })?;
 
         let mut stream = UnixStream::connect(&self.socket_path)?;
 
@@ -222,7 +247,10 @@ impl LocalAIClient {
             let (is_err, message) = Self::is_error(&message);
             if is_err {
                 eprintln!("failed to do filtered search: {:#?}", message);
-                return Err(BackendError::GenericError(format!("failed to do filtered search: {:#?}", message)));
+                return Err(BackendError::GenericError(format!(
+                    "failed to do filtered search: {:#?}",
+                    message
+                )));
             }
             let (is_done, message) = Self::is_done(&message);
             server_message_buffer.push_str(&message);
@@ -230,14 +258,16 @@ impl LocalAIClient {
                 break;
             }
         }
-        let results = serde_json::from_str::<Vec<i64>>(&server_message_buffer)
-            .map_err(|e| BackendError::GenericError(format!("failed to parse response: {:#?}", e)))?;
+        let results = serde_json::from_str::<Vec<i64>>(&server_message_buffer).map_err(|e| {
+            BackendError::GenericError(format!("failed to parse response: {:#?}", e))
+        })?;
         Ok(results)
     }
 
     pub fn upsert_embeddings(&self, req: UpsertEmbeddingsRequest) -> BackendResult<()> {
-        let message = serde_json::to_string(&req)
-            .map_err(|e| BackendError::GenericError(format!("failed to serialize request: {:#?}", e)))?;
+        let message = serde_json::to_string(&req).map_err(|e| {
+            BackendError::GenericError(format!("failed to serialize request: {:#?}", e))
+        })?;
 
         let mut stream = UnixStream::connect(&self.socket_path)?;
 
@@ -250,7 +280,10 @@ impl LocalAIClient {
             let (is_err, message) = Self::is_error(&message);
             if is_err {
                 eprintln!("failed to upsert embeddings: {:#?}", message);
-                return Err(BackendError::GenericError(format!("failed to upsert embeddings: {:#?}", message)));
+                return Err(BackendError::GenericError(format!(
+                    "failed to upsert embeddings: {:#?}",
+                    message
+                )));
             }
             let (is_done, message) = Self::is_done(&message);
             server_message_buffer.push_str(&message);
@@ -259,14 +292,21 @@ impl LocalAIClient {
             }
         }
         if server_message_buffer != "ok" {
-            return Err(BackendError::GenericError(format!("failed to upsert embeddings: {:#?}", server_message_buffer)));
+            return Err(BackendError::GenericError(format!(
+                "failed to upsert embeddings: {:#?}",
+                server_message_buffer
+            )));
         }
         Ok(())
     }
 
-    pub async fn create_chat_completion(&self, messages: Vec<Message>) -> BackendResult<Pin<Box<dyn Stream<Item = BackendResult<String>>>>> {
-        let message = serde_json::to_string(&messages)
-            .map_err(|e| BackendError::GenericError(format!("failed to serialize messages: {:#?}", e)))?;
+    pub async fn create_chat_completion(
+        &self,
+        messages: Vec<Message>,
+    ) -> BackendResult<Pin<Box<dyn Stream<Item = BackendResult<String>>>>> {
+        let message = serde_json::to_string(&messages).map_err(|e| {
+            BackendError::GenericError(format!("failed to serialize messages: {:#?}", e))
+        })?;
         let mut stream = UnixStream::connect(&self.socket_path)?;
 
         Self::send_api_request_preamble(&mut stream, "get_docs_similarity")?;

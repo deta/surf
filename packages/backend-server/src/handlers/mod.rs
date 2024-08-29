@@ -14,10 +14,10 @@ use crate::BackendResult;
 use std::io::{Read, Write};
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::net::UnixStream;
-#[cfg(target_os = "windows")]
-use uds_windows::UnixStream;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
+#[cfg(target_os = "windows")]
+use uds_windows::UnixStream;
 
 use crate::handlers::llm::handle_llm_chat_completion;
 
