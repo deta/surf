@@ -115,6 +115,7 @@
   import { HistoryEntriesManager } from '../service/history'
   import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
   import DevOverlay from './Browser/DevOverlay.svelte'
+  import { sanitizeHTML } from '@horizon/web-parser/src/utils'
 
   let activeTabComponent: TabItem | null = null
   let drawer: Drawer
@@ -176,7 +177,6 @@
     responses: [],
     errors: []
   })
-  const activeAppSidebarContext = writable<string>('') // TODO: support multiple contexts in the future
   const bookmarkingSuccess = writableAutoReset(false, 1000)
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
@@ -1675,52 +1675,6 @@
       // updateAppIdsForAppSidebar(appId)
       // await preparePageTabsForChatContext()
     }
-    /*
-    const detectedResource = await $activeBrowserTab.detectResource()
-    if (!detectedResource) {
-      log.error('no resource detected')
-      alert('Create App not supported currently for this page')
-      return
-    }
-    const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
-    if (!content || !content.html) {
-      log.debug('no content found from web parser')
-      alert('Error: no content found form web parser')
-      return
-    }
-    */
-    // const content = await $activeBrowserTab.executeJavaScript('document.body.outerHTML.toString()')
-    // if (!content) {
-    //   log.debug('no content found from javscript execution')
-    //   toasts.error('Error: failed to parse content for create app context')
-    //   return
-    // }
-    // let cleaned = content
-    //   .replace(/style="[^"]*"/g, '') // remove inline styles
-    //   .replace(/script="[^"]*"/g, '') // remove inline scripts
-    //   .replace(/<style([\s\S]*?)<\/style>/gi, '') // remove style tags
-    //   .replace(/<script([\s\S]*?)<\/script>/gi, '') // remove script tags
-
-    // // @ts-ignore
-    // cleaned = window.api.minifyHtml(cleaned, {
-    //   collapseBooleanAttributes: true,
-    //   collapseWhitespace: true,
-    //   collapseInlineTagWhitespace: true,
-    //   continueOnParseError: true,
-    //   decodeEntities: true,
-    //   minifyCSS: true,
-    //   minifyJS: true,
-    //   removeComments: true,
-    //   removeAttributeQuotes: true,
-    //   removeEmptyAttributes: true,
-    //   removeEmptyElements: true,
-    //   removeOptionalTags: true,
-    //   removeRedundantAttributes: true,
-    //   removeScriptTypeAttributes: true,
-    //   removeStyleLinkTypeAttributes: true
-    // })
-
-    // cleaned = activeAppSidebarContext.set(cleaned)
 
     activeAppId.set(appId!)
     showAppSidebar.set(enabled)

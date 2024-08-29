@@ -2,6 +2,8 @@ import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
 import type { DetectedWebApp, WebService } from '../types'
 
 import { APIExtractor, WebAppExtractor } from '../extractors'
+import { sanitizeHTML } from '../utils'
+import { parseStringIntoUrl } from '@horizon/utils'
 
 export const RedditRegexPatterns = {
   subreddit: /^\/r\/[a-zA-Z0-9_-]+\/?$/,
@@ -136,7 +138,6 @@ export class RedditParser extends WebAppExtractor {
   }
 
   private normalizePost(post: RedditPost) {
-    const links = post.url ? [post.url] : []
     let images: string[] = []
 
     // TODO: add support for more ways to get images
@@ -148,32 +149,37 @@ export class RedditParser extends WebAppExtractor {
       images = [post.thumbnail]
     }
 
+    const cleanImages = images
+      .map((img) => parseStringIntoUrl(img)?.href)
+      .filter((x) => !!x) as string[]
+    const cleanSubreddit = sanitizeHTML(post.subreddit)
+
     return {
-      post_id: post.id,
-      title: post.title,
-      url: `https://www.reddit.com${post.permalink}`,
+      post_id: sanitizeHTML(post.id),
+      title: sanitizeHTML(post.title),
+      url: parseStringIntoUrl(`https://www.reddit.com${post.permalink}`)?.href ?? this.url.href,
       date_published: new Date(post.created * 1000).toISOString(),
       date_edited: null,
       edited: post.edited,
       site_name: 'Reddit',
       site_icon: 'https://www.redditstatic.com/desktop2x/img/favicon/apple-icon-57x57.png',
 
-      author: post.author,
-      author_fullname: post.author_fullname,
+      author: sanitizeHTML(post.author),
+      author_fullname: sanitizeHTML(post.author_fullname),
       author_image: `https://www.redditstatic.com/avatars/avatar_default_15_24A0ED.png`,
       author_url: `https://www.reddit.com/user/${post.author_fullname}`,
 
-      excerpt: post.selftext,
-      content_plain: post.selftext,
-      content_html: post.selftext_html,
+      excerpt: sanitizeHTML(post.selftext),
+      content_plain: sanitizeHTML(post.selftext),
+      content_html: sanitizeHTML(post.selftext_html),
       lang: null,
 
-      links: links,
-      images: images,
+      links: [post.url],
+      images: cleanImages,
       video: [], // TODO: add video support
 
-      parent_url: `https://www.reddit.com/r/${post.subreddit}`,
-      parent_title: `/r/${post.subreddit}`,
+      parent_url: `https://www.reddit.com/r/${cleanSubreddit}`,
+      parent_title: `/r/${cleanSubreddit}`,
 
       stats: {
         views: post.view_count,

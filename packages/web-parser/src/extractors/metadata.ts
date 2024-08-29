@@ -1,5 +1,7 @@
+import { Readability } from '@mozilla/readability'
 import { WebMetadata } from '../types'
-import { makeAbsoluteURL, parseTextIntoISOString } from '@horizon/utils'
+import { makeAbsoluteURL, parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
+import { sanitizeHTML } from '../utils'
 
 export class MetadataExtractor {
   url: URL
@@ -76,8 +78,8 @@ export class MetadataExtractor {
     const parsed = {
       title: getMeta('title', 'og:title'),
       description: getMeta('description', 'og:description'),
-      image: image ? makeAbsoluteURL(image, this.url) : null,
-      icon: favicon ? makeAbsoluteURL(favicon, this.url) : null,
+      image: image ? parseStringIntoUrl(image, this.url)?.href : null,
+      icon: favicon ? parseStringIntoUrl(favicon, this.url)?.href : null,
       language: language ?? null,
       author: getMeta('author', 'article:author'),
       date_published: datePublished ? parseTextIntoISOString(datePublished) : null,
@@ -87,7 +89,43 @@ export class MetadataExtractor {
       keywords: keywords
     } as WebMetadata
 
-    return parsed
+    const cleanData = {
+      title: sanitizeHTML(parsed.title),
+      description: sanitizeHTML(parsed.description),
+      image: parsed.image,
+      icon: parsed.icon,
+      language: parsed.language ? sanitizeHTML(parsed.language) : null,
+      author: parsed.author ? sanitizeHTML(parsed.author) : null,
+      date_published: parsed.date_published,
+      date_modified: parsed.date_modified,
+      provider: parsed.provider ? sanitizeHTML(parsed.provider) : null,
+      type: parsed.type ? sanitizeHTML(parsed.type) : null,
+      keywords: parsed.keywords.map((keyword) => sanitizeHTML(keyword))
+    } as WebMetadata
+
+    return cleanData
+  }
+
+  extractContentFromDocument(document: Document) {
+    const documentClone = document.cloneNode(true) as Document
+    const parsed = new Readability(documentClone).parse()
+
+    if (!parsed) return null
+
+    const cleanData = {
+      title: sanitizeHTML(parsed.title),
+      content: sanitizeHTML(parsed.content),
+      textContent: sanitizeHTML(parsed.textContent),
+      length: parsed.length,
+      excerpt: sanitizeHTML(parsed.excerpt),
+      byline: sanitizeHTML(parsed.byline),
+      dir: parsed.dir,
+      siteName: sanitizeHTML(parsed.siteName),
+      lang: sanitizeHTML(parsed.lang),
+      publishedTime: parseTextIntoISOString(parsed.publishedTime)
+    } as typeof parsed
+
+    return cleanData
   }
 
   async extractRemote() {

@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify'
+
 export const generateNameFromURL = (url: string) => {
   try {
     const urlObj = new URL(url)
@@ -13,4 +15,8 @@ export const generateNameFromURL = (url: string) => {
   } catch (e) {
     return null
   }
+}
+
+export const sanitizeHTML = (html: string) => {
+  return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } })
 }

@@ -67,7 +67,7 @@ export const stringToURLList = (input: string) => {
   return urls
 }
 
-export const parseStringIntoUrl = (raw: string) => {
+export const parseStringIntoUrl = (raw: string, base?: URL) => {
   try {
     const isValidURL = optimisticCheckIfUrl(raw)
     if (!isValidURL) {
@@ -75,7 +75,7 @@ export const parseStringIntoUrl = (raw: string) => {
     }
 
     const text = prependProtocol(raw)
-    return new URL(text)
+    return base ? new URL(text, base.origin) : new URL(text)
   } catch (_) {
     return null
   }

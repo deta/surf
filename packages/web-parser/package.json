@@ -11,8 +11,10 @@
   "devDependencies": {
     "@horizon/eslint-config": "*",
     "@horizon/types": "*",
-    "@horizon/utils": "*",
     "@horizon/typescript-config": "*",
+    "@horizon/utils": "*",
+    "@types/dompurify": "^3.0.5",
+    "dompurify": "^3.1.6",
     "typescript": "^5.2.2"
   },
   "dependencies": {

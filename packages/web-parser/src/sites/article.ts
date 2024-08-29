@@ -3,8 +3,9 @@ import { Readability, isProbablyReaderable } from '@mozilla/readability'
 
 import { MetadataExtractor, WebAppExtractor } from '../extractors'
 import type { DetectedWebApp } from '../types'
-import { generateNameFromURL } from '../utils'
-import { parseTextIntoISOString } from '@horizon/utils'
+import { generateNameFromURL, sanitizeHTML } from '../utils'
+import { parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
+import { DOMExtractor } from '../extractors/dom'
 
 export type RawArticleData = {
   title: string
@@ -53,36 +54,39 @@ export class ArticleParser extends WebAppExtractor {
   }
 
   async extractResourceFromDocument(document: Document) {
-    const documentClone = document.cloneNode(true) as Document
-    const parsed = new Readability(documentClone).parse()
-    if (!parsed) return null
+    // Note: sanitization is already done in the metadata extractor
 
-    const metadata = this.metadataExtractor.extractMetadataFromDocument(document)
+    // Extract metadata from the document meta tags directly
+    const pageMetadata = this.metadataExtractor.extractMetadataFromDocument(document)
 
-    const publishedTime = parseTextIntoISOString(parsed.publishedTime)
+    // Extract metdata and content from the document using Readability.js
+    const readabilityMetadata = this.metadataExtractor.extractContentFromDocument(document)
+
+    // Extract the content from the document directly (fallback)
+    const content = new DOMExtractor(document).getContent()
 
     const resource = {
-      title: parsed.title || metadata.title,
+      title: readabilityMetadata?.title || pageMetadata.title,
       url: this.url.href,
-      date_published: publishedTime ?? metadata.date_published,
-      date_updated: metadata.date_modified,
+      date_published: readabilityMetadata?.publishedTime || pageMetadata.date_published,
+      date_updated: pageMetadata.date_modified,
 
-      site_name: parsed.siteName || metadata.provider,
-      site_icon: metadata.icon,
+      site_name: readabilityMetadata?.siteName || pageMetadata.provider,
+      site_icon: pageMetadata.icon,
 
-      author: parsed.byline || metadata.author,
+      author: readabilityMetadata?.byline || pageMetadata.author,
       author_image: null,
       author_url: null,
 
-      excerpt: parsed.excerpt || metadata.description,
-      content_plain: parsed.textContent,
-      content_html: parsed.content,
-      word_count: parsed.length,
-      lang: parsed.lang || metadata.language,
-      direction: parsed.dir,
+      excerpt: readabilityMetadata?.excerpt || pageMetadata.description,
+      content_plain: readabilityMetadata?.textContent || content.plain,
+      content_html: readabilityMetadata?.content || content.html,
+      word_count: readabilityMetadata?.length,
+      lang: readabilityMetadata?.lang || pageMetadata.language,
+      direction: readabilityMetadata?.dir,
 
       // TODO: extract images from the content
-      images: [metadata.image],
+      images: pageMetadata.image ? [pageMetadata.image] : [],
 
       category_name: null,
       category_url: null,

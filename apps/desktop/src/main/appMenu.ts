@@ -47,46 +47,46 @@ const showSurfDataInFinder = () => {
 const template = [
   ...(isMac
     ? [
-      {
-        label: app.name,
-        submenu: [
-          {
-            label: 'About Surf',
-            role: 'about'
-          },
-          { type: 'separator' },
-          {
-            label: 'Preferences...',
-            accelerator: 'CmdOrCtrl+,',
-            click: () => createSettingsWindow()
-          },
-          { type: 'separator' },
-          {
-            label: 'Check for Updates...',
-            click: checkUpdatesMenuClickHandler
-          },
-          {
-            label: 'Use as Default Browser',
-            click: useAsDefaultBrowserClickHandler
-          },
-          {
-            label: 'Show Surf Data in Finder',
-            click: showSurfDataInFinder
-          },
-          { type: 'separator' },
-          {
-            id: 'adblocker',
-            label: 'Toggle Adblocker',
-            click: () => toggleAdblocker('persist:horizon')
-          },
-          { type: 'separator' },
-          {
-            label: 'Quit Surf',
-            role: 'quit'
-          }
-        ]
-      }
-    ]
+        {
+          label: app.name,
+          submenu: [
+            {
+              label: 'About Surf',
+              role: 'about'
+            },
+            { type: 'separator' },
+            {
+              label: 'Preferences...',
+              accelerator: 'CmdOrCtrl+,',
+              click: () => createSettingsWindow()
+            },
+            { type: 'separator' },
+            {
+              label: 'Check for Updates...',
+              click: checkUpdatesMenuClickHandler
+            },
+            {
+              label: 'Use as Default Browser',
+              click: useAsDefaultBrowserClickHandler
+            },
+            {
+              label: 'Show Surf Data in Finder',
+              click: showSurfDataInFinder
+            },
+            { type: 'separator' },
+            {
+              id: 'adblocker',
+              label: 'Toggle Adblocker',
+              click: () => toggleAdblocker('persist:horizon')
+            },
+            { type: 'separator' },
+            {
+              label: 'Quit Surf',
+              role: 'quit'
+            }
+          ]
+        }
+      ]
     : []),
   {
     label: 'File',
@@ -94,20 +94,20 @@ const template = [
       ...(isMac
         ? [{ role: 'close', accelerator: 'CmdOrCtrl+Shift+W' }]
         : [
-          { label: 'Check for Updates...', click: checkUpdatesMenuClickHandler },
-          {
-            label: 'Use as Default Browser',
-            click: useAsDefaultBrowserClickHandler
-          },
-          { type: 'separator' },
-          {
-            id: 'adblocker',
-            label: 'Toggle Adblocker',
-            click: () => toggleAdblocker('persist:horizon')
-          },
-          { type: 'separator' },
-          { role: 'quit' }
-        ]),
+            { label: 'Check for Updates...', click: checkUpdatesMenuClickHandler },
+            {
+              label: 'Use as Default Browser',
+              click: useAsDefaultBrowserClickHandler
+            },
+            { type: 'separator' },
+            {
+              id: 'adblocker',
+              label: 'Toggle Adblocker',
+              click: () => toggleAdblocker('persist:horizon')
+            },
+            { type: 'separator' },
+            { role: 'quit' }
+          ]),
       { type: 'separator' },
       {
         label: 'New Tab',
@@ -150,14 +150,14 @@ const template = [
       { type: 'separator' },
       ...(!isMac
         ? [
-          {
-            label: 'Settings...',
-            accelerator: 'CmdOrCtrl+,',
-            click: () => {
-              createSettingsWindow()
+            {
+              label: 'Settings...',
+              accelerator: 'CmdOrCtrl+,',
+              click: () => {
+                createSettingsWindow()
+              }
             }
-          }
-        ]
+          ]
         : [])
     ]
   },

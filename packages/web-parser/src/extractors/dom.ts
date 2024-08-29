@@ -1,3 +1,5 @@
+import { sanitizeHTML } from '../utils'
+
 export class DOMExtractor {
   document: Document
 
@@ -10,12 +12,25 @@ export class DOMExtractor {
     return this.document.querySelector(selector)
   }
 
-  getRawHTML() {
+  private getRawHTML() {
     return this.document.documentElement.outerHTML
   }
 
-  getInnerText() {
+  private getInnerText() {
     return this.document.body.innerText
+  }
+
+  getContent() {
+    const html = this.getRawHTML()
+    const plain = this.getInnerText()
+
+    const cleanHTML = sanitizeHTML(html)
+    const cleanPlain = sanitizeHTML(plain)
+
+    return {
+      html: cleanHTML,
+      plain: cleanPlain
+    }
   }
 
   attachEventListener(node: Document | Element | Window, event: string, callback: EventListener) {

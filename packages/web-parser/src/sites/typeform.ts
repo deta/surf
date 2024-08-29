@@ -2,6 +2,7 @@ import { ResourceTypes, ResourceDataTable, ResourceDataTableColumn } from '@hori
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
 import { WebAppExtractorActions } from '../extractors'
 import { SERVICES } from '../services'
+import { sanitizeHTML } from '../utils'
 
 export const TypeformRegexPatterns = {
   table: /\/form\/([^\/]+)\/results#responses/
@@ -124,6 +125,7 @@ export class TypeformParser extends WebAppExtractorActions {
       const tColNames = [...responseTable.querySelectorAll('thead th').values()]
         .slice(1, -2)
         .map((e) => e.textContent)
+        .filter((x) => !!x) as string[]
       // We also slice start from 1 as first col is from html table checkbox component
       const tRows = [...responseTable.querySelectorAll('tbody tr').values()].map((e) =>
         [...e.querySelectorAll('td').values()].slice(1).map((e) => e.innerText)
@@ -139,10 +141,10 @@ export class TypeformParser extends WebAppExtractorActions {
       const formName = formNameInput?.value ?? 'Untitled Form'
 
       return {
-        table_id: formId,
-        name: formName,
-        columns: tColNames,
-        rows: tRows
+        table_id: sanitizeHTML(formId),
+        name: sanitizeHTML(formName),
+        columns: tColNames.map((col) => sanitizeHTML(col)),
+        rows: tRows.map((row) => row.map((cell) => sanitizeHTML(cell)))
       } as ResourceDataTable
     } catch (e) {
       console.error('Error getting table data', e)

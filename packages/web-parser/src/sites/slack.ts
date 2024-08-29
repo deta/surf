@@ -3,6 +3,8 @@ import { ResourceTypes, ResourceDataChatMessage, ResourceDataChatThread } from '
 import { WebAppExtractor } from '../extractors'
 import type { DetectedResource, DetectedWebApp, WebService } from '../types'
 import { DOMExtractor } from '../extractors/dom'
+import { parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
+import { sanitizeHTML } from '../utils'
 
 export type SlackMessageData = {
   messageId: string
@@ -302,20 +304,24 @@ export class SlackParser extends WebAppExtractor {
 
   private flattenMessagesPlain(messages: SlackMessageData[]): string {
     // turn into single string formmatted like "author at date: message"
-    return messages
+    const flattened = messages
       .map((message) => {
         return `${message.author} at ${message.date_published}: ${message.content}`
       })
       .join('\n')
+
+    return sanitizeHTML(flattened)
   }
 
   private flattenMessagesHtml(messages: SlackMessageData[]): string {
     // turn into single string of html formmatted in a way that looks like a chat thread
-    return messages
+    const flattened = messages
       .map((message) => {
         return `<a id="${message.messageId}" href="${message.url}"><p><span class="author">${message.author}</span> at <span class="date">${message.date_published}</span>:</p><div class="content">${message.contentHtml}</div></a>`
       })
       .join('\n')
+
+    return sanitizeHTML(flattened)
   }
 
   private extractThread(parent: Document | Element) {
@@ -335,11 +341,11 @@ export class SlackParser extends WebAppExtractor {
       title: null, // get thread title
       url: this.url.href,
       platform_name: 'Slack',
-      platform_icon: favicon,
+      platform_icon: favicon ? parseStringIntoUrl(favicon)?.href : null,
 
-      creator: initialMessage?.author ?? null,
-      creator_image: initialMessage?.author_image ?? null,
-      creator_url: initialMessage?.author_url ?? null,
+      creator: sanitizeHTML(initialMessage?.author ?? ''),
+      creator_image: parseStringIntoUrl(initialMessage?.author_image ?? '')?.href ?? null,
+      creator_url: parseStringIntoUrl(initialMessage?.author_url ?? '') ?? null,
       messages: normalizedMessages,
       content_plain: this.flattenMessagesPlain(messages),
       content_html: this.flattenMessagesHtml(messages)
@@ -361,24 +367,24 @@ export class SlackParser extends WebAppExtractor {
     const favicon = this.getFavicon(document)
 
     const resource = {
-      messageId: message.messageId,
-      url: message.url || this.url.href,
-      date_sent: message.date_published,
-      date_edited: message.date_edited,
+      messageId: sanitizeHTML(message.messageId),
+      url: parseStringIntoUrl(message.url, this.url)?.href || this.url.href,
+      date_sent: parseTextIntoISOString(message.date_published ?? ''),
+      date_edited: parseTextIntoISOString(message.date_edited ?? ''),
       platform_name: 'Slack',
-      platform_icon: favicon,
-      author: message.author,
-      author_image: message.author_image,
-      author_url: message.author_url,
+      platform_icon: parseStringIntoUrl(favicon ?? '', this.url)?.href,
+      author: sanitizeHTML(message.author),
+      author_image: parseStringIntoUrl(message.author_image, this.url)?.href,
+      author_url: parseStringIntoUrl(message.author_url, this.url)?.href,
 
-      content_plain: message.content,
-      content_html: message.contentHtml,
+      content_plain: sanitizeHTML(message.content),
+      content_html: sanitizeHTML(message.contentHtml),
 
       images: [],
       video: [],
 
-      parent_title: message.channel,
-      parent_url: message.channel_url ?? this.url.href,
+      parent_title: message.channel ? sanitizeHTML(message.channel) : null,
+      parent_url: parseStringIntoUrl(message.channel_url ?? '', this.url) ?? this.url.href,
       in_reply_to: null
     } as ResourceDataChatMessage
 

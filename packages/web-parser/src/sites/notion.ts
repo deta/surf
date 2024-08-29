@@ -3,7 +3,8 @@ import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../type
 import { APIExtractor, WebAppExtractor } from '../extractors'
 import { SERVICES } from '../services'
 
-import { wait } from '@horizon/utils'
+import { parseStringIntoUrl, parseTextIntoISOString, wait } from '@horizon/utils'
+import { sanitizeHTML } from '../utils'
 
 export const NotionRegexPatterns = {
   page: /^\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/
@@ -31,7 +32,10 @@ export class NotionParser extends WebAppExtractor {
     const rawPageId = this.url.pathname.split('/').pop()?.split('-').pop()
     if (!rawPageId) return null
 
-    return `${rawPageId.substring(0, 8)}-${rawPageId.substring(8, 12)}-${rawPageId.substring(12, 16)}-${rawPageId.substring(16, 20)}-${rawPageId.substring(20)}`
+    return `${rawPageId.substring(0, 8)}-${rawPageId.substring(8, 12)}-${rawPageId.substring(
+      12,
+      16
+    )}-${rawPageId.substring(16, 20)}-${rawPageId.substring(20)}`
   }
 
   private cleanedUpURL() {
@@ -158,9 +162,6 @@ export class NotionParser extends WebAppExtractor {
       const pageData = jsonResponse.recordMap.block[pageId].value
       const pageProperties = pageData.properties
 
-      const createdAt = new Date(pageData.created_time).toISOString()
-      const lastEditedTime = new Date(pageData.last_edited_time).toISOString()
-
       const pageTitle = pageProperties.title[0][0]
       const createdByNotionUserId = pageData.created_by_id
 
@@ -175,30 +176,26 @@ export class NotionParser extends WebAppExtractor {
       })
 
       const user = userResponse.recordMapWithRoles.notion_user[createdByNotionUserId].value
-      const author = user.email
-      const author_fullname = user.name
-      const author_image = user.profile_photo
-
       const contentElem = document.querySelector('.notion-page-content')
       const contentPlain = contentElem?.textContent
       const contentHtml = contentElem?.innerHTML
 
       return {
         url: this.url.href,
-        title: pageTitle,
-        date_created: createdAt,
-        date_edited: lastEditedTime,
+        title: sanitizeHTML(pageTitle),
+        date_created: parseTextIntoISOString(pageData.created_time),
+        date_edited: parseTextIntoISOString(pageData.last_edited_time),
 
         editor_name: 'Notion',
         editor_icon: 'https://www.notion.so/favicon.ico',
 
-        author: author,
-        author_fullname: author_fullname,
-        author_image: author_image,
+        author: sanitizeHTML(user.email),
+        author_fullname: sanitizeHTML(user.name),
+        author_image: parseStringIntoUrl(user.profile_photo, this.url)?.href,
         author_url: null,
 
-        content_plain: contentPlain,
-        content_html: contentHtml
+        content_plain: contentPlain ? sanitizeHTML(contentPlain) : null,
+        content_html: contentHtml ? sanitizeHTML(contentHtml) : null
       } as ResourceDataDocument
     } catch (e) {
       console.error('Error getting post data', e)

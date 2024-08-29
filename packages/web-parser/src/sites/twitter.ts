@@ -4,6 +4,8 @@ import { APIExtractor, WebAppExtractor } from '../extractors'
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
 import { SERVICES } from '../services'
 import { WebParser } from '..'
+import { sanitizeHTML } from '../utils'
+import { parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
 
 export const TwitterRegexPatterns = {
   // example: /@detahq/status/1441160730730736640
@@ -156,32 +158,36 @@ export class TwitterParser extends WebAppExtractor {
 
   private normalizePost(data: TweetData) {
     const [authorImage, ...images] = data.tweetImageSources
+
+    const cleanUsername = sanitizeHTML(data.username)
+    const cleanImages = images.map((img) => parseStringIntoUrl(img)?.href).filter((x) => !!x)
+
     return {
-      post_id: data.tweetId,
-      title: data.content,
+      post_id: sanitizeHTML(data.tweetId),
+      title: sanitizeHTML(data.content),
       url: this.url.href,
-      date_published: new Date(data.publishedAt).toISOString(),
+      date_published: parseTextIntoISOString(data.publishedAt),
       date_edited: null,
       edited: null,
       site_name: 'Twitter',
       site_icon: 'https://abs.twimg.com/responsive-web/web/icon-default.1ea219d5.png',
 
-      author: data.username,
-      author_fullname: data.author,
-      author_image: authorImage,
-      author_url: `https://www.twitter.com/${data.username}`,
+      author: sanitizeHTML(data.username),
+      author_fullname: sanitizeHTML(data.author),
+      author_image: parseStringIntoUrl(authorImage)?.href,
+      author_url: `https://www.twitter.com/${cleanUsername}`,
 
-      excerpt: data.content,
-      content_plain: data.content,
-      content_html: data.contentHtml,
+      excerpt: sanitizeHTML(data.content),
+      content_plain: sanitizeHTML(data.content),
+      content_html: sanitizeHTML(data.contentHtml),
       lang: null,
 
       links: [],
-      images: images,
+      images: cleanImages,
       video: [],
 
-      parent_url: `https://www.twitter.com/${data.username}`,
-      parent_title: `@${data.username}`,
+      parent_url: `https://www.twitter.com/${cleanUsername}`,
+      parent_title: `@${cleanUsername}`,
 
       stats: {
         views: null,
@@ -363,31 +369,35 @@ export class TwitterParser extends WebAppExtractor {
     console.log('tweet', tweet)
     console.log('author', author)
 
+    const cleanAuthorName = sanitizeHTML(author.screen_name)
+
     return {
-      post_id: tweet.id_str,
-      url: `https://www.twitter.com/${author.screen_name}/status/${tweet.id_str}`,
-      date_published: new Date(tweet.created_at).toISOString(),
+      post_id: sanitizeHTML(tweet.id_str),
+      url: `https://www.twitter.com/${cleanAuthorName}/status/${tweet.id_str}`,
+      date_published: parseTextIntoISOString(tweet.created_at),
       date_edited: null,
       edited: null,
       site_name: 'Twitter',
       site_icon: 'https://abs.twimg.com/responsive-web/web/icon-default.1ea219d5.png',
-      parent_title: `@${author.screen_name}`,
-      parent_url: `https://www.twitter.com/${author.screen_name}`,
-      author: author.screen_name,
-      author_fullname: author.name,
-      author_image: author.profile_image_url_https,
-      author_url: `https://www.twitter.com/${author.screen_name}`,
-      title: tweet.full_text,
-      excerpt: tweet.full_text,
-      content_plain: tweet.full_text,
-      content_html: tweet.full_text,
+      parent_title: `@${cleanAuthorName}`,
+      parent_url: `https://www.twitter.com/${cleanAuthorName}`,
+      author: cleanAuthorName,
+      author_fullname: sanitizeHTML(author.name),
+      author_image: parseStringIntoUrl(author.profile_image_url_https, this.url)?.href,
+      author_url: `https://www.twitter.com/${cleanAuthorName}`,
+      title: sanitizeHTML(tweet.full_text),
+      excerpt: sanitizeHTML(tweet.full_text),
+      content_plain: sanitizeHTML(tweet.full_text),
+      content_html: sanitizeHTML(tweet.full_text),
       stats: {
         views: null,
         up_votes: tweet.favorite_count,
         down_votes: null,
         comments: tweet.reply_count
       },
-      images: tweet.entities?.media?.map((media: any) => media.media_url_https)
+      images: tweet.entities?.media?.map(
+        (media: any) => parseStringIntoUrl(media.media_url_https, this.url)?.href
+      )
     } as ResourceDataPost
   }
 }

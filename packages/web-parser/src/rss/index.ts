@@ -1,5 +1,7 @@
 import { ResourceDataPost } from '@horizon/types'
+import { parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
 import Parser from 'rss-parser'
+import { sanitizeHTML } from '../utils'
 
 export class RSSParser {
   url: URL
@@ -70,21 +72,25 @@ export class RSSParser {
     return parser.parseString(html)
   }
 
-  static parseYouTubeRSSItemToPost(item: any) {
+  static parseYouTubeRSSItemToPost(item: RSSItem) {
+    const cleanAuthor = sanitizeHTML(item.author)
+    const rawImage = item['media:group']?.['media:thumbnail']?.[0]?.$?.views
+    const cleanImage = rawImage ? parseStringIntoUrl(rawImage)?.href : undefined
+
     return {
       post_id: item['yt:videoId'],
-      url: item.link,
-      title: item.title,
+      url: item.link ? parseStringIntoUrl(item.link)?.href : undefined,
+      title: item.title ? sanitizeHTML(item.title) : undefined,
       site_name: 'YouTube',
       site_icon: 'https://www.youtube.com/s/desktop/4b6b9b6f/img/favicon_32.png',
-      author: item.author,
-      author_fullname: item.author,
+      author: cleanAuthor,
+      author_fullname: cleanAuthor,
       author_url: '',
       content_plain: item['media:group']?.['media:description']?.[0],
       parent_url: `https://youtube.com/channel/${item['yt:channelId']}`,
-      parent_title: item.author,
-      date_published: item.pubDate,
-      images: [item['media:group']?.['media:thumbnail']?.[0]?.$?.views],
+      parent_title: cleanAuthor,
+      date_published: item.pubDate ? parseTextIntoISOString(item.pubDate) : undefined,
+      images: cleanImage ? [cleanImage] : [],
       stats: {
         views: item['media:group']?.['media:community']?.[0]['media:statistics']?.[0]?.$?.views,
         up_votes: item['media:group']?.['media:community']?.[0]?.['media:starRating']?.[0]?.$?.count

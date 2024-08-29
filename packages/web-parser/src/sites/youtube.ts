@@ -2,10 +2,11 @@ import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
 
 import { WebAppExtractor } from '../extractors'
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
-import { makeAbsoluteURL } from '@horizon/utils'
+import { makeAbsoluteURL, parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
 import { DOMExtractor } from '../extractors/dom'
 import { SERVICES } from '../services'
 import { WebParser } from '..'
+import { sanitizeHTML } from '../utils'
 
 export const YoutubeRegexPatterns = {
   // example: /watch?v=I_wc3DfgQvs or /embed/I_wc3DfgQvs or /I_wc3DfgQvs /watch
@@ -366,14 +367,15 @@ export class YoutubeParser extends WebAppExtractor {
       const channelUrlRaw = channelElem?.getAttribute('href')
       const channelUrl = channelUrlRaw ? makeAbsoluteURL(channelUrlRaw, this.url) : null
       const thumbnailUrl = video.querySelector('yt-image img')?.getAttribute('src')
+      const cleanThumbnailUrl = thumbnailUrl ? parseStringIntoUrl(thumbnailUrl)?.href : null
 
       return {
-        url: cleanUrl,
-        post_id: cleanUrl.split('=')[1],
-        title: title,
-        author: channelName,
-        author_url: channelUrl,
-        images: [thumbnailUrl]
+        url: parseStringIntoUrl(cleanUrl)?.href,
+        post_id: sanitizeHTML(cleanUrl.split('=')[1]),
+        title: title ? sanitizeHTML(title) : null,
+        author: channelName ? sanitizeHTML(channelName) : null,
+        author_url: channelUrl ? parseStringIntoUrl(channelUrl)?.href : null,
+        images: cleanThumbnailUrl ? [cleanThumbnailUrl] : []
       } as ResourceDataPost
     })
 
@@ -443,32 +445,35 @@ export class YoutubeParser extends WebAppExtractor {
   private normalizeVideo(data: VideoData) {
     const lang = document.documentElement.lang
 
+    const cleanImageUrl = parseStringIntoUrl(data.imageUrl, this.url)?.href
+    const cleanVideoUrl = parseStringIntoUrl(data.videoUrl, this.url)?.href
+
     return {
-      post_id: data.videoId,
-      title: data.title,
+      post_id: sanitizeHTML(data.videoId),
+      title: sanitizeHTML(data.title),
       url: this.url.href,
-      date_published: data.publishedAt ?? null,
+      date_published: parseTextIntoISOString(data.publishedAt) ?? null,
       date_edited: null,
       edited: null,
       site_name: 'YouTube',
       site_icon: `https://www.youtube.com/s/desktop/4b6b3e7e/img/favicon_32.png`,
 
-      author: data.creator,
-      author_fullname: data.creator,
-      author_image: data.creator_image,
-      author_url: data.creator_url,
+      author: sanitizeHTML(data.creator),
+      author_fullname: sanitizeHTML(data.creator),
+      author_image: parseStringIntoUrl(data.creator_image, this.url)?.href,
+      author_url: parseStringIntoUrl(data.creator_url, this.url)?.href,
 
-      excerpt: data.excerpt,
-      content_plain: data.description,
-      content_html: data.descriptionHtml,
-      lang: lang,
+      excerpt: sanitizeHTML(data.excerpt),
+      content_plain: data.description ? sanitizeHTML(data.description) : null,
+      content_html: data.descriptionHtml ? sanitizeHTML(data.descriptionHtml) : null,
+      lang: sanitizeHTML(lang),
 
       links: [],
-      images: [data.imageUrl],
-      video: [data.videoUrl],
+      images: cleanImageUrl ? [cleanImageUrl] : [],
+      video: cleanVideoUrl ? [cleanVideoUrl] : [],
 
-      parent_url: data.creator_url,
-      parent_title: data.creator,
+      parent_url: parseStringIntoUrl(data.creator_url, this.url)?.href,
+      parent_title: sanitizeHTML(data.creator),
 
       stats: {
         views: data.viewNumber,

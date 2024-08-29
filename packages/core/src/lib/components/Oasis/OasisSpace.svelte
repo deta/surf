@@ -5,6 +5,7 @@
     comments: string
     pubDate: string
     sourceUrl: string
+    rawData: RSSItem
   }
 </script>
 
@@ -19,7 +20,8 @@
     tooltip,
     checkIfYoutubeUrl,
     isModKeyAndKeyPressed,
-    truncate
+    truncate,
+    parseStringIntoUrl
   } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
@@ -81,6 +83,7 @@
   } from '@horizon/types'
   import PQueue from 'p-queue'
   import { useConfig } from '../../service/config'
+  import { sanitizeHTML } from '@horizon/web-parser/src/utils'
 
   export let spaceId: string
   export let active: boolean = false
@@ -512,11 +515,12 @@
     const filtered = rssResult.items.filter((x) => x.link || x.comments)
     return filtered.slice(0, MAX_ITEMS).map((item) => {
       return {
-        title: item.title,
-        link: item.link,
-        comments: item.comments,
+        title: item.title ? sanitizeHTML(item.title) : undefined,
+        link: item.link ? parseStringIntoUrl(item.link)?.href : undefined,
+        comments: item.comments ? parseStringIntoUrl(item.comments)?.href : undefined,
         pubDate: (item.pubDate && parseTextIntoISOString(item.pubDate)) || '',
-        sourceUrl: source.url
+        sourceUrl: source.url,
+        rawData: item
       } as ParsedSourceItem
     })
   }
@@ -613,7 +617,7 @@
       if (checkIfYoutubeUrl(sourceURL)) {
         log.debug('Youtube video, skipping webview parsing:', item)
 
-        const postData = RSSParser.parseYouTubeRSSItemToPost(item)
+        const postData = RSSParser.parseYouTubeRSSItemToPost(item.rawData)
         log.debug('Parsed youtube post data:', postData)
 
         const resource = await resourceManager.createResource(

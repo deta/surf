@@ -4,7 +4,7 @@ import log from '@horizon/utils/src/log'
 import { getBrowserConfig, setBrowserConfig } from './config'
 import { changeMenuItemLabel } from './appMenu'
 
-let historySwipeGestureEnabled = false;
+let historySwipeGestureEnabled = false
 
 export function getHistorySwipeGestureConfig() {
   return historySwipeGestureEnabled
