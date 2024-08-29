@@ -51,11 +51,30 @@ export function setupPermissionHandlers(session: Electron.Session) {
   // });
 
   session.setPermissionRequestHandler(async (_contents, permission, callback, details) => {
-    // console.log('PERMISSION REQUEST', permission, details);
+    // console.log('PERMISSION REQUEST', permission, details)
 
-    // TODO: locatio APIs do not work for some reason
-    if (permission === 'geolocation') {
-      callback(false)
+    let shortCircuit: boolean | null = null
+    switch (permission) {
+      // TODO: `geolocation` doesn't work for some reason
+      case 'geolocation':
+        shortCircuit = false
+        break
+      // `persistent-storage` isn't a part of the public API for some reason
+      //@ts-ignore
+      case 'persistent-storage':
+      case 'fullscreen':
+      // These usually require explicit user-action for them to be granted to the page.
+      // case 'pointerLock':
+      // case 'keyboardLock':
+      // case 'top-level-storage-access':
+      case 'storage-access':
+      case 'clipboard-sanitized-write':
+      case 'window-management':
+        shortCircuit = true
+        break
+    }
+    if (shortCircuit != null) {
+      callback(shortCircuit)
       return
     }
 
@@ -72,7 +91,7 @@ export function setupPermissionHandlers(session: Electron.Session) {
       defaultId: 1
     })
 
-    callback(response.response === 0 && preCheck)
+    callback(preCheck && response.response === 0)
   })
 
   // session.setDevicePermissionHandler((details: Electron.DevicePermissionHandlerHandlerDetails) => {
