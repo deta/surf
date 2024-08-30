@@ -3,6 +3,7 @@ import type { Config } from 'tailwindcss'
 const config: Config = {
   jit: true,
   content: ['./src/**/*.{html,js,svelte,ts}'],
+  plugins: [require('@tailwindcss/typography')],
   theme: {
     container: {
       center: true,
@@ -12,6 +13,37 @@ const config: Config = {
       }
     },
     extend: {
+      typography: ({ theme }) => ({
+        DEFAULT: {
+          css: {
+            code: {
+              backgroundColor: theme('colors.slate.100'),
+              borderRadius: theme('borderRadius.sm'),
+              paddingTop: theme('padding[1]'),
+              paddingRight: theme('padding[1.5]'),
+              paddingBottom: theme('padding[1]'),
+              paddingLeft: theme('padding[1.5]')
+            },
+            'code::before': {
+              content: 'normal'
+            },
+            'code::after': {
+              content: 'normal'
+            },
+            // remove all styles from pre tag since our syntax highlighter will take care of it
+            pre: {
+              backgroundColor: 'transparent',
+              padding: '0 !important',
+              paddingInline: '0 !important',
+              margin: '0 !important',
+              border: '0'
+            },
+            'pre code': {
+              padding: '1.5em !important'
+            }
+          }
+        }
+      }),
       keyframes: {
         'border-width': {
           from: {

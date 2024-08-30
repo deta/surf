@@ -190,13 +190,12 @@ export const normalizeURL = (url: string): string => {
 }
 
 // truncate the URL path and query params so the beggining and end of the URL are always visible, max length is 50. Make sure the full hostname is always visible
-export const truncateURL = (url: string) => {
+export const truncateURL = (url: string, maxLength = 75) => {
   if (!url) {
     return ''
   }
 
   const { hostname, pathname, search, protocol } = new URL(url)
-  const maxLength = 75
 
   let fullPath = pathname + search
 

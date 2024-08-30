@@ -1460,6 +1460,8 @@
         return
       }
 
+      log.debug('docs similarity', docsSimilarity)
+
       docsSimilarity.sort((a, b) => a.similarity - b.similarity)
       const texts = []
       for (const docSimilarity of docsSimilarity) {
@@ -1469,6 +1471,8 @@
           texts.push(doc)
         }
       }
+
+      // const texts = [textElements[docsSimilarity[0].index]]
 
       browserTab.sendWebviewEvent(WebViewEventReceiveNames.HighlightText, {
         texts: texts

@@ -45,6 +45,13 @@ export function tooltip(node: HTMLElement, opts: string | TooltipOptions) {
   node.setAttribute('data-tooltip-position', options.position)
 
   return {
+    update(newOpts: string | TooltipOptions) {
+      const parsedOptions = typeof newOpts === 'string' ? { text: newOpts } : newOpts
+      const options = Object.assign({}, defaultOptions, parsedOptions)
+
+      node.setAttribute('data-tooltip', options.text)
+      node.setAttribute('data-tooltip-position', options.position)
+    },
     destroy() {
       node.removeAttribute('data-tooltip')
       node.removeAttribute('data-tooltip-position')

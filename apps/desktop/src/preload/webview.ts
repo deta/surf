@@ -415,11 +415,12 @@ function handleHighlightText(data: WebViewReceiveEvents[WebViewEventReceiveNames
   document.head.appendChild(style)
 
   // reset highlights
-  const highlights = document.querySelectorAll('.citation-highlight')
+  const highlights = document.querySelectorAll('.citation-highlight') as NodeListOf<HTMLElement>
   console.debug('Removing existing highlights', highlights)
   highlights.forEach((highlight) => {
     highlight.classList.remove('citation-highlight')
     highlight.classList.remove('citation-to-scroll')
+    highlight.style.backgroundColor = 'initial'
   })
 
   const paragraphs = document.querySelectorAll('p')
@@ -433,6 +434,10 @@ function handleHighlightText(data: WebViewReceiveEvents[WebViewEventReceiveNames
         if (i == 0) {
           p.classList.add('citation-to-scroll')
         }
+
+        // adjust the hightlight strength based on the position of the text in the array (first is strongest)
+        const strength = 1 - i / texts.length
+        p.style.backgroundColor = `rgba(228, 211, 253, ${strength})`
       }
     })
   }

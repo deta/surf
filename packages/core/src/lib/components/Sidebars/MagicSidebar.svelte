@@ -19,6 +19,7 @@
     Tab
   } from '../../types/browser.types'
   import ChatMessage from '../Chat/ChatMessage.svelte'
+  import ChatMessageMarkdown from '../Chat/ChatMessageMarkdown.svelte'
   import { useClipboard, generateID, useLogScope } from '@horizon/utils'
   import { ResourceManager, useResourceManager, type ResourceLink } from '../../service/resources'
   import { getPrompt, PromptIDs } from '../../service/prompts'
@@ -319,8 +320,8 @@
             content += chunk
             updatePageMagicResponse(response?.id!, {
               content: content
-                // .replace('<answer>', '')
-                // .replace('</answer>', '')
+                .replace('<answer>', '')
+                .replace('</answer>', '')
                 // .replace('<citation>', '')
                 // .replace('</citation>', '')
                 .replace('<br>', '\n')
@@ -334,7 +335,10 @@
         }
       )
 
-      updatePageMagicResponse(response.id, { status: 'success', content: content })
+      updatePageMagicResponse(response.id, {
+        status: 'success',
+        content: content.replace('<answer>', '').replace('</answer>', '')
+      })
 
       const previousMessages = $magicPage.responses.filter((message) => message.id !== response!.id)
       const numSpaces = tabsInContext.filter((tab) => tab.type === 'space').length
@@ -538,7 +542,7 @@
               </div>
             </div>
 
-            <ChatMessage
+            <ChatMessageMarkdown
               content={response.content}
               sources={populateRenderAndChunkIds(response.sources)}
               on:citationClick={(e) =>
@@ -570,7 +574,7 @@
             <!-- {@html response.content} -->
 
             {#if response.content}
-              <ChatMessage
+              <ChatMessageMarkdown
                 content={response.content}
                 sources={populateRenderAndChunkIds(response.sources)}
                 on:citationClick={(e) =>
