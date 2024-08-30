@@ -60,6 +60,7 @@ export function setupPermissionHandlers(session: Electron.Session) {
       case 'persistent-storage':
       case 'idle-detection':
       case 'fullscreen':
+      case 'clipboard-sanitized-write':
       case 'window-management':
         shortCircuit = true
         break
