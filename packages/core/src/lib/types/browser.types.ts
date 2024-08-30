@@ -181,5 +181,3 @@ export type CreateTabOptions = {
   placeAtEnd?: boolean
   trigger?: CreateTabEventTrigger
 }
-
-export type RightSidebarTab = 'chat' | 'annotations' | 'go-wild'

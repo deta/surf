@@ -213,17 +213,17 @@ const template = [
       {
         label: 'Toggle Chat Mode',
         accelerator: 'Alt+C',
-        click: () => ipcSenders.toggleChatMode()
+        click: () => ipcSenders.toggleRightSidebarTab('chat')
       },
       {
         label: 'Toggle Annotations',
         accelerator: 'Alt+A',
-        click: () => ipcSenders.toggleAnnotations()
+        click: () => ipcSenders.toggleRightSidebarTab('annotations')
       },
       {
         label: 'Toggle Go Wild',
         accelerator: 'Alt+g',
-        click: () => ipcSenders.toggleGoWild()
+        click: () => ipcSenders.toggleRightSidebarTab('go-wild')
       },
       { type: 'separator' },
       { role: 'resetZoom' },
@@ -252,7 +252,6 @@ const template = [
         click: () => ipcSenders.openFeedbackPage(),
         accelerator: 'CmdOrCtrl+Shift+H'
       }
-      // { label: 'Add Demo Items', click: () => ipcSenders.addDemoItems() }
     ]
   }
 ]

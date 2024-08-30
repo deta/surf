@@ -92,7 +92,6 @@
 
       e.preventDefault()
 
-      // @ts-expect-error
       window.api.startDrag(resource.id, filePath, resource.type)
     } else {
       const blob = resource.rawData

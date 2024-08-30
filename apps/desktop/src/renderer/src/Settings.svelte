@@ -29,18 +29,15 @@
   const activeTab = writable<'general' | 'appearance' | 'oasis' | 'prompts'>('general')
 
   const debouncedPromptUpdate = useDebounce((id: string, content: string) => {
-    // @ts-ignore
     window.api.updatePrompt(id, content)
   }, 500)
 
   const getAppInfo = async () => {
-    // @ts-ignore
     const info = await window.api.getAppInfo()
     version = info.version
   }
 
   const checkForUpdates = async () => {
-    // @ts-ignore
     await window.api.checkForUpdates()
   }
 
@@ -59,8 +56,7 @@
 
   const handleSettingsUpdate = async () => {
     console.log('updating settings', userConfigSettings)
-    // @ts-ignore
-    await window.api.saveUserConfigSettings(userConfigSettings)
+    await window.api.updateUserConfigSettings(userConfigSettings)
   }
 
   // const handleStart = () => {
@@ -69,21 +65,17 @@
   // }
 
   onMount(async () => {
-    // @ts-ignore
     userConfigSettings = window.api.getUserConfigSettings()
     console.log('loaded settings', userConfigSettings)
 
     getAppInfo()
 
-    // @ts-ignore
     window.api.onSetPrompts((data) => {
       prompts = data
     })
 
-    // @ts-ignore
     window.api.getPrompts()
 
-    // @ts-ignore
     window.api.onUserConfigSettingsChange((settings: UserSettings) => {
       console.log('user config settings change', settings)
       userConfigSettings = settings

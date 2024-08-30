@@ -96,8 +96,18 @@ export const setUserConfig = (config: UserConfig) => {
   setConfig(app.getPath('userData'), config, USER_CONFIG_NAME)
 }
 
+export const updateUserConfigSettings = (settings: Partial<UserConfig['settings']>) => {
+  const currentConfig = getUserConfig()
+  const newConfig = { ...currentConfig, settings: { ...currentConfig.settings, ...settings } }
+  setUserConfig(newConfig)
+
+  return newConfig.settings
+}
+
 export const updateUserConfig = (config: Partial<UserConfig>) => {
   const currentConfig = getUserConfig()
   const newConfig = { ...currentConfig, ...config }
   setUserConfig(newConfig)
+
+  return newConfig
 }

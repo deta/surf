@@ -1,4 +1,5 @@
-import { WebViewEventTransform } from './ipc.types'
+import { RightSidebarTab } from './browser.types'
+import { WebViewEventTransform } from './ipc.webview.types'
 import { AnnotationCommentData, AnnotationType } from './resources.types'
 
 export enum TelemetryEventTypes {
@@ -235,7 +236,7 @@ export type InlineAIEventPromptType = WebViewEventTransform['type']
 export type CreateAnnotationEventType = AnnotationType
 export type DeleteAnnotationEventType = AnnotationType
 
-export type OpenRightSidebarEventTab = 'chat' | 'annotations' | 'go-wild'
+export type OpenRightSidebarEventTab = RightSidebarTab
 
 export interface ElectronAppInfo {
   version: string

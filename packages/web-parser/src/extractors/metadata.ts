@@ -132,13 +132,13 @@ export class MetadataExtractor {
     let html: string
     if (
       typeof window !== 'undefined' &&
-      // @ts-ignore
+      // @ts-expect-error
       typeof window.api !== 'undefined' &&
-      // @ts-ignore
+      // @ts-expect-error
       typeof window.api.fetchHTMLFromRemoteURL === 'function'
     ) {
       console.log('Using window.api')
-      // @ts-ignore
+      // @ts-expect-error
       html = await window.api.fetchHTMLFromRemoteURL(this.url.href)
     } else {
       console.log('Using fetch API')

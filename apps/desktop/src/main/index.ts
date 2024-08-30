@@ -15,6 +15,7 @@ import { createSetupWindow } from './setupWindow'
 import { checkIfAppIsActivated } from './activation'
 import { isDefaultBrowser } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
+import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 
 const log = useLogScope('Main Index')
 const isDev = import.meta.env.DEV
@@ -53,7 +54,7 @@ const handleOpenUrl = (url: string) => {
 
       // If there are no windows, create one and then open the URL once it is ready
       if (BrowserWindow.getAllWindows().length === 0) {
-        ipcMain.once('app-ready', () => {
+        IPC_EVENTS_MAIN.appReady.once(() => {
           handleOpenUrl(url)
         })
 
@@ -70,7 +71,8 @@ const handleOpenUrl = (url: string) => {
     }
 
     mainWindow.focus()
-    mainWindow.webContents.send('open-url', { url: url, active: true })
+
+    IPC_EVENTS_MAIN.openURL.sendToWebContents(mainWindow.webContents, { url: url, active: true })
   } catch (error) {
     log.error('Error handling open URL:', error)
 
@@ -161,7 +163,7 @@ if (!gotTheLock) {
     surfBackendManager?.start()
 
     // we need to wait for the app/horizon to be ready before we can send any messages to the renderer
-    ipcMain.once('app-ready', () => {
+    IPC_EVENTS_MAIN.appReady.once(() => {
       const appIsDefaultBrowser = isDefaultBrowser()
 
       // If the value stored in user config is different from the actual state, update the user config and track the event

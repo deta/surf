@@ -57,19 +57,12 @@
     TabOasisDiscovery,
     DroppedTab,
     TabHistory,
-    CreateTabOptions,
-    RightSidebarTab
+    CreateTabOptions
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
   import { HorizonDatabase } from '../service/storage'
-  import type {
-    Download,
-    DownloadDoneMessage,
-    DownloadRequestMessage,
-    DownloadUpdatedMessage,
-    Optional
-  } from '../types'
+  import type { Optional } from '../types'
   import { WebParser } from '@horizon/web-parser'
   import Importer from './Core/Importer.svelte'
   import OasisDiscovery from './Core/OasisDiscovery.svelte'
@@ -93,8 +86,12 @@
     WebViewEventReceiveNames,
     type AnnotationCommentData,
     type ResourceDataAnnotation,
-    type UserConfig,
-    type WebViewEventAnnotation
+    type WebViewEventAnnotation,
+    type RightSidebarTab,
+    type Download,
+    type DownloadDoneMessage,
+    type DownloadRequestMessage,
+    type DownloadUpdatedMessage
   } from '@horizon/types'
   import { scrollToTextCode } from '../constants/inline'
   import { SFFS } from '../service/sffs'
@@ -826,7 +823,6 @@
   const handleCopyLocation = useDebounce(() => {
     if ($activeTabLocation) {
       log.debug('Copying location to clipboard', $activeTabLocation)
-      // @ts-ignore
       window.api.copyToClipboard($activeTabLocation)
       toasts.success('Copied to Clipboard!')
     }
@@ -938,7 +934,6 @@
   }
 
   const changeTraficLightsVisibility = (visible: boolean) => {
-    // @ts-ignore
     window.api.updateTrafficLightsVisibility(visible)
   }
 
@@ -2156,11 +2151,6 @@
   }
 
   onMount(async () => {
-    // @ts-ignore
-    window.api.onTrackpadScrollStart(() => $browserTabs[$activeTabId]?.handleTrackpadScrollStart())
-    // @ts-ignore
-    window.api.onTrackpadScrollStop(() => $browserTabs[$activeTabId]?.handleTrackpadScrollStop())
-
     window.addEventListener('resize', handleResize)
 
     // @ts-ignore
@@ -2173,74 +2163,60 @@
       return level
     }
 
-    // @ts-expect-error
-    const userConfig = (await window.api.getUserConfig()) as UserConfig
+    const userConfig = await window.api.getUserConfig()
     log.debug('user config', userConfig)
 
     await telemetry.init(userConfig)
 
-    // @ts-expect-error
-    window.api.registerMainNewWindowHandler((details: { url: string }) =>
-      openUrlHandler(details.url)
-    )
-    // @ts-expect-error
-    window.api.onOpenURL((details: { url: string; active: boolean }) => {
+    // Handle new window requests from webviews
+    window.api.onNewWindowRequest((url) => openUrlHandler(url))
+
+    window.api.onOpenURL((details) => {
       openUrlHandler(details.url, details.active)
     })
 
-    // @ts-expect-error
+    window.api.onTrackpadScrollStart(() => $browserTabs[$activeTabId]?.handleTrackpadScrollStart())
+    window.api.onTrackpadScrollStop(() => $browserTabs[$activeTabId]?.handleTrackpadScrollStop())
+
     window.api.onGetPrompts(() => {
       return getPrompts()
     })
 
-    // @ts-expect-error
-    window.api.onUpdatePrompt((id: PromptIDs, content: string) => {
+    window.api.onUpdatePrompt((id, content) => {
       telemetry.trackUpdatePrompt(id)
-      return updatePrompt(id, content)
+
+      return updatePrompt(id as PromptIDs, content)
     })
 
-    // @ts-expect-error
-    window.api.onResetPrompt((id: PromptIDs) => {
+    window.api.onResetPrompt((id) => {
       telemetry.trackResetPrompt(id)
-      return resetPrompt(id)
+      return resetPrompt(id as PromptIDs)
     })
 
-    // @ts-expect-error
-    window.api.onToggleSidebar((visible?: boolean) => {
+    window.api.onToggleSidebar((visible) => {
       changeLeftSidebarState(visible)
     })
 
-    // @ts-expect-error
-    window.api.onAddDemoItems(async () => {
-      await createDemoItems(createTab, oasis, createSpaceTab, resourceManager)
-    })
-
-    // @ts-expect-error
     window.api.onToggleTabsPosition(() => {
       handleToggleHorizontalTabs()
     })
 
-    // @ts-expect-error
     window.api.onCopyActiveTabURL(() => {
       handleCopyLocation()
     })
 
-    // @ts-expect-error
     window.api.onOpenFeedbackPage(() => {
       openFeedback()
     })
 
-    // @ts-expect-error
     window.api.onOpenCheatSheet(() => {
       openCheatSheet()
     })
 
-    // @ts-expect-error
     window.api.onOpenDevtools(() => {
       $activeBrowserTab?.openDevTools()
     })
 
-    // @ts-expect-error
     window.api.onOpenOasis(() => {
       if ($showNewTabOverlay === 2) {
         $showNewTabOverlay = 0
@@ -2249,30 +2225,15 @@
       }
     })
 
-    // @ts-expect-error
     window.api.toggleRightSidebar(() => {
       toggleRightSidebar()
     })
 
-    // @ts-expect-error
-    window.api.toggleChatMode(() => {
-      if ($rightSidebarTab === 'chat' && showRightSidebar) handleCollapseRight()
-      else openRightSidebarTab('chat')
+    window.api.onToggleRightSidebarTab((tab) => {
+      if ($rightSidebarTab === tab && showRightSidebar) handleCollapseRight()
+      else openRightSidebarTab(tab)
     })
 
-    // @ts-expect-error
-    window.api.toggleAnnotations(() => {
-      if ($rightSidebarTab === 'annotations' && showRightSidebar) handleCollapseRight()
-      else openRightSidebarTab('annotations')
-    })
-
-    // @ts-expect-error
-    window.api.toggleGoWild(() => {
-      if ($rightSidebarTab === 'go-wild' && showRightSidebar) handleCollapseRight()
-      else openRightSidebarTab('go-wild')
-    })
-
-    // @ts-expect-error
     window.api.onCreateNewTab(() => {
       if ($showNewTabOverlay === 1) {
         $showNewTabOverlay = 0
@@ -2281,13 +2242,11 @@
       }
     })
 
-    // @ts-expect-error
     window.api.onCloseActiveTab(() => {
       closeActiveTab(DeleteTabEventTrigger.Shortcut)
     })
 
-    // @ts-expect-error
-    window.api.onReloadActiveTab((force: boolean) => {
+    window.api.onReloadActiveTab((force) => {
       if ($showNewTabOverlay !== 0) return
       if (force) {
         $activeBrowserTab?.forceReload()
@@ -2304,8 +2263,7 @@
       return name.length > max ? `${name.slice(0, max)}[...]${extension}` : raw
     }
 
-    // @ts-ignore
-    window.api.onRequestDownloadPath(async (data: DownloadRequestMessage) => {
+    window.api.onRequestDownloadPath(async (data) => {
       await tick()
 
       const existingDownload = downloadResourceMap.get(data.id)
@@ -2354,8 +2312,7 @@
       return downloadData.savePath
     })
 
-    // @ts-ignore
-    window.api.onDownloadUpdated((data: DownloadUpdatedMessage) => {
+    window.api.onDownloadUpdated((data) => {
       log.debug('download updated', data)
 
       const downloadData = downloadResourceMap.get(data.id)
@@ -2389,8 +2346,7 @@
       }
     })
 
-    // @ts-ignore
-    window.api.onDownloadDone(async (data: DownloadDoneMessage) => {
+    window.api.onDownloadDone(async (data) => {
       // TODO: trigger the post-processing call here
       log.debug('download done', data)
 
@@ -2445,7 +2401,6 @@
 
     // TODO: for safety we wait a bit before we tell the app that we are ready, we need a better way to do this
     setTimeout(() => {
-      // @ts-expect-error
       window.api.appIsReady()
     }, 2000)
 
@@ -2481,7 +2436,6 @@
 
       await createDemoItems(createTab, oasis, createSpaceTab, resourceManager)
 
-      // @ts-ignore
       await window.api.updateInitializedTabs(true)
 
       showSplashScreen.set(false)

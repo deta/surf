@@ -5,11 +5,7 @@ import { randomUUID } from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import mime from 'mime-types'
-import {
-  DownloadRequestMessage,
-  DownloadUpdatedMessage,
-  DownloadDoneMessage
-} from '@horizon/core/src/lib/types'
+import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 
 const log = useLogScope('Download Manager')
 
@@ -64,7 +60,13 @@ export function initDownloadManager(partition: string) {
       })
     }
 
-    getMainWindow()?.webContents.send('download-request', {
+    const webContents = getMainWindow()?.webContents
+    if (!webContents) {
+      log.error('No main window found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.downloadRequest.sendToWebContents(webContents, {
       id: downloadId,
       url: downloadItem.getURL(),
       filename: filename,
@@ -73,7 +75,7 @@ export function initDownloadManager(partition: string) {
       contentDisposition: downloadItem.getContentDisposition(),
       startTime: downloadItem.getStartTime(),
       hasUserGesture: downloadItem.hasUserGesture()
-    } as DownloadRequestMessage)
+    })
 
     ipcMain.once(`download-path-response-${downloadId}`, (_event, path) => {
       if (path) {
@@ -96,14 +98,15 @@ export function initDownloadManager(partition: string) {
         downloadItem.getReceivedBytes(),
         downloadItem.getTotalBytes()
       )
-      getMainWindow()?.webContents.send('download-updated', {
+
+      IPC_EVENTS_MAIN.downloadUpdated.sendToWebContents(webContents, {
         id: downloadId,
         state: state,
         receivedBytes: downloadItem.getReceivedBytes(),
         totalBytes: downloadItem.getTotalBytes(),
         isPaused: downloadItem.isPaused(),
         canResume: downloadItem.canResume()
-      } as DownloadUpdatedMessage)
+      })
     })
 
     downloadItem.once('done', (_event, state) => {
@@ -118,7 +121,7 @@ export function initDownloadManager(partition: string) {
         path = tempDownloadPath
       }
 
-      getMainWindow()?.webContents.send('download-done', {
+      IPC_EVENTS_MAIN.downloadDone.sendToWebContents(webContents, {
         id: downloadId,
         state: state,
         filename: downloadItem.getFilename(),
@@ -131,7 +134,7 @@ export function initDownloadManager(partition: string) {
         lastModifiedTime: downloadItem.getLastModifiedTime(),
         eTag: downloadItem.getETag(),
         savePath: path
-      } as DownloadDoneMessage)
+      })
     })
   })
 }

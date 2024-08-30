@@ -8,11 +8,11 @@ export function getGoogleSignInWindowId(): number | undefined {
   return signInWindow?.webContents.id
 }
 
-export function createGoogleSignInWindow(url: string): Promise<string | undefined> {
+export function createGoogleSignInWindow(url: string): Promise<string | null> {
   return new Promise((resolve, _reject) => {
     if (signInWindow) {
       signInWindow.show()
-      resolve(undefined)
+      resolve(null)
       return
     }
     let isResolved = false
@@ -36,7 +36,7 @@ export function createGoogleSignInWindow(url: string): Promise<string | undefine
     // not `close`
     signInWindow.on('closed', () => {
       signInWindow = null
-      if (!isResolved) resolve(undefined)
+      if (!isResolved) resolve(null)
     })
     signInWindow.webContents.on('did-navigate', (_, url) => {
       if (!isGoogleSignInUrl(url ?? '')) {

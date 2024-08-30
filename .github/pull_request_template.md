@@ -5,6 +5,7 @@ What does the PR change?
 <br>
 
 ## Checklist
+
 - [ ] changes adhere to our [style guide and best practices](https://www.notion.so/deta/Code-Style-Guide-and-Best-Practices-b414ce8e5f7845898d022d73db02ab17?pvs=4)
 - [ ] app starts normally during dev (run `yarn dev`)
 - [ ] app is able to be built (run `yarn build:desktop:mac:arm`)

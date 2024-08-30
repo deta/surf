@@ -67,8 +67,7 @@ export class Telemetry {
     if (userConfig) {
       this.userConfig = userConfig
     } else {
-      // @ts-expect-error
-      this.userConfig = (await window.api.getUserConfig()) as UserConfig
+      this.userConfig = await window.api.getUserConfig()
     }
 
     const userID = this.userConfig.user_id
@@ -78,8 +77,7 @@ export class Telemetry {
       return
     }
 
-    // @ts-expect-error
-    this.appInfo = (await window.api.getAppInfo()) as ElectronAppInfo
+    this.appInfo = await window.api.getAppInfo()
 
     amplitude.init(this.apiKey, userID, {
       defaultTracking: {
@@ -93,8 +91,7 @@ export class Telemetry {
     })
     amplitude.setOptOut(!this.active)
 
-    // @ts-expect-error
-    window.api.onTrackEvent((eventName: TelemetryEventTypes, properties: Record<string, any>) => {
+    window.api.onTrackEvent((eventName, properties) => {
       this.log.debug('Received track event from main process', eventName, properties)
       this.trackEvent(eventName, properties)
     })

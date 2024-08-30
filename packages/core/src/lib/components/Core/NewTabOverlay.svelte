@@ -439,7 +439,6 @@
     try {
       if (query.length > 2) {
         $isFetchingGoogleSuggestionResults = true
-        // @ts-ignore
         const data = await window.api.fetchJSON(
           `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`,
           {

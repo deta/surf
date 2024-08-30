@@ -60,7 +60,6 @@
   export const isMuted = writable(false)
   export const didFinishLoad = writable(false)
 
-  // @ts-ignore
   const PRELOAD_PATH = window.api.webviewPreloadPath
 
   const log = useLogScope('Webview')
@@ -506,7 +505,6 @@ Made with Deta Surf.`
       webviewWebContentsId = webview.getWebContentsId()
 
       if (!newWindowHandlerRegistered) {
-        // @ts-expect-error
         window.api.registerNewWindowHandler(
           webviewWebContentsId,
           (data: Electron.HandlerDetails) => {
@@ -605,7 +603,6 @@ Made with Deta Surf.`
 
   onDestroy(() => {
     if (newWindowHandlerRegistered && webviewWebContentsId !== null) {
-      // @ts-expect-error
       window.api.unregisterNewWindowHandler(webviewWebContentsId)
     }
   })

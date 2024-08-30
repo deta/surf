@@ -41,8 +41,7 @@ const processHTMLData = async (data: string) => {
       try {
         let source = img.src.startsWith('data:')
           ? img.src
-          : // @ts-ignore
-            await window.api.fetchAsDataURL(img.src)
+          : await window.api.fetchAsDataURL(img.src)
 
         const response = await fetch(source)
         if (!response.ok) throw new Error('failed to fetch')

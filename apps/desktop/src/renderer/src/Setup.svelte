@@ -1,8 +1,8 @@
 <script lang="ts">
   import icon from './assets/icon_512.png'
 
-  import type { AppActivationResponse } from '@horizon/api'
   import LayoutPicker from './components/LayoutPicker.svelte'
+  import type { UserSettings } from '@horizon/types'
 
   const REQUEST_INVITE_URL = 'https://deta.surf'
   const TERMS_URL = 'https://deta.surf/terms'
@@ -11,7 +11,7 @@
   let view: 'invite' | 'disclaimer' | 'ai_features' | 'language' | 'prefs' | 'done' = 'invite'
 
   let inviteCode = ''
-  let embeddingModel = 'english_small'
+  let embeddingModel: UserSettings['embedding_model'] = 'english_small'
   let tabsOrientation: 'horizontal' | 'vertical' = 'horizontal'
   let acceptedTerms = false
   let loading = false
@@ -28,11 +28,8 @@
     try {
       loading = true
 
-      // @ts-ignore
-      const data = (await window.api.activateAppUsingKey(
-        inviteCode,
-        acceptedTerms
-      )) as Promise<AppActivationResponse | null>
+      const data = await window.api.activateAppUsingKey(inviteCode, acceptedTerms)
+
       if (!data) {
         error = 'Invalid invite code.'
         return
@@ -48,8 +45,7 @@
 
   const handleAcceptPrefs = async () => {
     try {
-      // @ts-ignore
-      await window.api.saveUserConfigSettings({
+      await window.api.updateUserConfigSettings({
         embedding_model: embeddingModel,
         tabs_orientation: tabsOrientation
       })
@@ -64,8 +60,7 @@
 
   const handleLanguageSubmit = async () => {
     try {
-      // @ts-ignore
-      await window.api.saveUserConfigSettings({
+      await window.api.updateUserConfigSettings({
         embedding_model: embeddingModel,
         tabs_orientation: tabsOrientation
       })
@@ -86,7 +81,6 @@
   }
 
   const handleStart = () => {
-    // @ts-expect-error
     window.api.restartApp()
   }
 </script>

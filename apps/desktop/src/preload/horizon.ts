@@ -14,9 +14,19 @@ import OpenAI, { toFile } from 'openai'
 import { minify } from 'html-minifier'
 import { createAPI } from '@horizon/api'
 import { actionsToRunnableTools } from './actions'
-import { ElectronAppInfo } from '@horizon/types'
-import type { HorizonAction, EditablePrompt, UserSettings } from '@horizon/types'
+import type {
+  HorizonAction,
+  EditablePrompt,
+  UserSettings,
+  RightSidebarTab,
+  DownloadRequestMessage,
+  DownloadUpdatedMessage,
+  DownloadDoneMessage,
+  TelemetryEventTypes
+} from '@horizon/types'
 import { getUserConfig } from '../main/config'
+import { IPC_EVENTS_RENDERER, OpenURL } from '@horizon/core/src/lib/service/ipc/events'
+import { ChatCompletion } from 'openai/resources'
 
 const isDev = import.meta.env.DEV
 
@@ -42,10 +52,7 @@ const VISION_API_KEY = isDev ? import.meta.env.P_VITE_VISION_API_KEY : userConfi
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
-let mainNewWindowHandler: any = null
 const webviewNewWindowHandlers = {}
-const previewImageHandlers = {}
-const fullscreenHandlers = [] as any[]
 
 let openai: OpenAI | null = null
 if (OPENAI_API_KEY) {
@@ -60,43 +67,38 @@ const api = {
   tabSwitchingShortcutsDisable: TAB_SWITCHING_SHORTCUTS_DISABLE,
   webviewDevToolsBtn: !import.meta.env.PROD || !!process.env.WEBVIEW_DEV_TOOLS_BTN,
   webviewPreloadPath: path.join(__dirname, '../preload/webview.js'),
-  captureWebContents: () => ipcRenderer.invoke('capture-web-contents'),
-  getAdblockerState: (partition: string) =>
-    ipcRenderer.invoke('get-adblocker-state', { partition }),
-  setAdblockerState: (partition: string, state: boolean) =>
-    ipcRenderer.invoke('set-adblocker-state', { partition, state }),
-  requestNewPreviewImage: (horizonId: string) =>
-    ipcRenderer.invoke('request-new-preview-image', { horizonId }),
-  quitApp: () => ipcRenderer.invoke('quit-app'),
-  restartApp: () => ipcRenderer.invoke('restart-app'),
-  toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
-  updateTrafficLightsVisibility: (visible: boolean) => {
-    ipcRenderer.invoke('update-traffic-lights', { visible })
-  },
-  handleGoogleSignIn: async (url: string): Promise<string | undefined> => {
-    return ipcRenderer.invoke('handle-google-sign-in', { url })
+
+  captureWebContents: () => {
+    return IPC_EVENTS_RENDERER.captureWebContents.invoke()
   },
 
-  onFullscreenChange: (callback: any) => {
-    fullscreenHandlers.push(callback)
+  getAdblockerState: (partition: string) => {
+    return IPC_EVENTS_RENDERER.getAdblockerState.invoke(partition)
   },
-  registerMainNewWindowHandler: (callback: any) => {
-    mainNewWindowHandler = callback
+
+  setAdblockerState: (partition: string, state: boolean) => {
+    IPC_EVENTS_RENDERER.setAdblockerState.send({ partition, state })
   },
+
+  restartApp: () => {
+    IPC_EVENTS_RENDERER.restartApp.send()
+  },
+
+  updateTrafficLightsVisibility: (visible: boolean) => {
+    IPC_EVENTS_RENDERER.updateTrafficLights.send(visible)
+  },
+
+  handleGoogleSignIn: async (url: string) => {
+    return IPC_EVENTS_RENDERER.googleSignIn.invoke(url)
+  },
+
   registerNewWindowHandler: (webContentsId: number, callback: any) => {
     webviewNewWindowHandlers[webContentsId] = callback
   },
+
   unregisterNewWindowHandler: (webContentsId: number) => {
     if (webviewNewWindowHandlers[webContentsId]) {
       delete webviewNewWindowHandlers[webContentsId]
-    }
-  },
-  registerPreviewImageHandler: (horizonId: string, callback: any) => {
-    previewImageHandlers[horizonId] = callback
-  },
-  unregisterPreviewImageHandler: (horizonId: string) => {
-    if (previewImageHandlers[horizonId]) {
-      delete previewImageHandlers[horizonId]
     }
   },
 
@@ -165,11 +167,11 @@ const api = {
       })
     }
 
-    const chatCompletion = await openai.chat.completions.create({
+    const chatCompletion = (await openai.chat.completions.create({
       messages: messages,
       model: 'gpt-4o',
       ...opts
-    })
+    })) as unknown as OpenAI.Chat.Completions.ChatCompletion
 
     return chatCompletion.choices[0].message.content
   },
@@ -224,9 +226,9 @@ const api = {
     return finalMessage
   },
 
-  onOpenURL: (callback) => {
+  onOpenURL: (callback: (details: OpenURL) => void) => {
     try {
-      ipcRenderer.on('open-url', (_, { url, active }) => callback({ url, active }))
+      IPC_EVENTS_RENDERER.openURL.on((_, { url, active }) => callback({ url, active }))
     } catch (error) {
       // noop
     }
@@ -234,7 +236,7 @@ const api = {
 
   onOpenOasis: (callback) => {
     try {
-      ipcRenderer.on('open-oasis', (_) => callback())
+      IPC_EVENTS_RENDERER.openOasis.on((_) => callback())
     } catch (error) {
       // noop
     }
@@ -242,31 +244,15 @@ const api = {
 
   toggleRightSidebar: (callback) => {
     try {
-      ipcRenderer.on('toggle-right-sidebar', () => callback())
+      IPC_EVENTS_RENDERER.toggleRightSidebar.on(() => callback())
     } catch (error) {
       // noop
     }
   },
 
-  toggleChatMode: (callback) => {
+  onToggleRightSidebarTab: (callback: (tab: RightSidebarTab) => void) => {
     try {
-      ipcRenderer.on('toggle-chat-mode', () => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  toggleAnnotations: (callback) => {
-    try {
-      ipcRenderer.on('toggle-annotations', () => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  toggleGoWild: (callback) => {
-    try {
-      ipcRenderer.on('toggle-go-wild', () => callback())
+      IPC_EVENTS_RENDERER.toggleRightSidebarTab.on((_, tab) => callback(tab))
     } catch (error) {
       // noop
     }
@@ -274,7 +260,7 @@ const api = {
 
   onOpenCheatSheet: (callback) => {
     try {
-      ipcRenderer.on('open-cheat-sheet', () => callback())
+      IPC_EVENTS_RENDERER.openCheatSheet.on(() => callback())
     } catch (error) {
       // noop
     }
@@ -282,7 +268,7 @@ const api = {
 
   onOpenDevtools: (callback) => {
     try {
-      ipcRenderer.on('open-devtools', () => callback())
+      IPC_EVENTS_RENDERER.openDevTools.on(() => callback())
     } catch (error) {
       // noop
     }
@@ -290,49 +276,58 @@ const api = {
 
   onOpenFeedbackPage: (callback) => {
     try {
-      ipcRenderer.on('open-feedback-page', () => callback())
+      IPC_EVENTS_RENDERER.openFeedbackPage.on(() => callback())
     } catch (error) {
       // noop
     }
   },
 
   onAdBlockerStateChange: (callback) => {
-    ipcRenderer.on('adblocker-state-changed', (_, { partition, state }) => {
+    IPC_EVENTS_RENDERER.adBlockerStateChange.on((_, { partition, state }) => {
       callback(partition, state)
     })
   },
 
-  onTrackEvent: (callback) => {
+  onTrackEvent: (
+    callback: (name: TelemetryEventTypes, properties: Record<string, any>) => void
+  ) => {
     try {
-      ipcRenderer.on('track-event', (_, { eventName, properties }) =>
-        callback(eventName, properties)
-      )
+      IPC_EVENTS_RENDERER.trackEvent.on((_, { name, properties }) => callback(name, properties))
     } catch (error) {
       // noop
     }
   },
 
   appIsReady: () => {
-    ipcRenderer.send('app-ready')
+    IPC_EVENTS_RENDERER.appReady.send()
   },
 
-  getUserConfig: () => ipcRenderer.invoke('get-user-config'),
+  getUserConfig: () => {
+    return IPC_EVENTS_RENDERER.getUserConfig.invoke()
+  },
 
-  onRequestDownloadPath: (callback) => {
-    ipcRenderer.on('download-request', async (_event, data) => {
+  onRequestDownloadPath: (callback: (data: DownloadRequestMessage) => void) => {
+    IPC_EVENTS_RENDERER.downloadRequest.on(async (_, data) => {
       const path = await callback(data)
+      // TODO: refactor this to use the new event system
       ipcRenderer.send(`download-path-response-${data.id}`, path)
     })
   },
-  onDownloadUpdated: (callback) => {
-    ipcRenderer.on('download-updated', (_event, data) => callback(data))
-  },
-  onDownloadDone: (callback) => {
-    ipcRenderer.on('download-done', (_event, completion) => callback(completion))
+
+  onDownloadUpdated: (callback: (data: DownloadUpdatedMessage) => void) => {
+    IPC_EVENTS_RENDERER.downloadUpdated.on((_, data) => {
+      callback(data)
+    })
   },
 
-  startDrag: (resourceId: string, filePath: string, type: string) => {
-    ipcRenderer.send('start-drag', resourceId, filePath, type)
+  onDownloadDone: (callback: (data: DownloadDoneMessage) => void) => {
+    IPC_EVENTS_RENDERER.downloadDone.on((_, data) => {
+      callback(data)
+    })
+  },
+
+  startDrag: (resourceId: string, filePath: string, fileType: string) => {
+    IPC_EVENTS_RENDERER.startDrag.send({ resourceId, filePath, fileType })
   },
 
   transcribeAudioFile: async (path: string) => {
@@ -349,7 +344,7 @@ const api = {
 
     const data = await api.activateAppUsingKey(key, acceptedTerms)
     if (data !== null) {
-      ipcRenderer.send('store-api-key', data.api_key)
+      IPC_EVENTS_RENDERER.storeAPIKey.send(data.api_key)
     }
 
     return data
@@ -357,60 +352,71 @@ const api = {
 
   getUserConfigSettings: () => userConfig.settings,
 
-  saveUserConfigSettings: async (settings: UserSettings) => {
-    ipcRenderer.send('store-settings', settings)
+  updateUserConfigSettings: async (settings: Partial<UserSettings>) => {
+    IPC_EVENTS_RENDERER.updateUserConfigSettings.send(settings)
   },
 
   onUserConfigSettingsChange: (callback: (settings: UserSettings) => void) => {
-    ipcRenderer.on('user-config-settings-change', (_, settings) => {
+    IPC_EVENTS_RENDERER.userConfigSettingsChange.on((_, settings) => {
       userConfig.settings = settings
       callback(settings)
     })
   },
 
   updateInitializedTabs: async (value: boolean) => {
-    ipcRenderer.send('update-initialized-tabs', value)
+    IPC_EVENTS_RENDERER.updateInitializedTabs.send(value)
   },
 
-  getAppInfo: () => ipcRenderer.invoke('get-app-info') as Promise<ElectronAppInfo>,
+  getAppInfo: () => {
+    return IPC_EVENTS_RENDERER.getAppInfo.invoke()
+  },
 
   interceptRequestsHeaders: async (
     urls: string[],
     partition: string
   ): Promise<{ url: string; headers: Record<string, string> }> => {
-    return ipcRenderer.invoke('intercept-requests-headers', { urls, partition })
+    return IPC_EVENTS_RENDERER.interceptRequestHeaders.invoke({ urls, partition })
   },
 
-  checkForUpdates: () => ipcRenderer.send('check-for-updates'),
+  checkForUpdates: () => {
+    IPC_EVENTS_RENDERER.checkForUpdates.send()
+  },
 
   onGetPrompts: (callback: () => Promise<EditablePrompt[]>) => {
-    ipcRenderer.on('get-prompts', async (_) => {
+    IPC_EVENTS_RENDERER.requestPrompts.on(async (_event) => {
       const prompts = await callback()
-      ipcRenderer.send('set-prompts', prompts)
+
+      IPC_EVENTS_RENDERER.setPrompts.send(prompts)
     })
   },
 
   onUpdatePrompt: (callback: (id: string, content: string) => void) => {
-    ipcRenderer.on('update-prompt', (_, { id, content }) => callback(id, content))
+    IPC_EVENTS_RENDERER.updatePrompt.on((_, { id, content }) => callback(id, content))
   },
 
   onResetPrompt: (callback: (id: string) => void) => {
-    ipcRenderer.on('reset-prompt', (_, id) => callback(id))
+    IPC_EVENTS_RENDERER.resetPrompt.on((_event, id) => callback(id))
   },
 
   // Used by the Settings page
   onSetPrompts: (callback: (prompts: EditablePrompt[]) => void) => {
-    ipcRenderer.on('set-prompts', (_, prompts) => callback(prompts))
+    IPC_EVENTS_RENDERER.setPrompts.on((_, prompts) => callback(prompts))
   },
 
   // Used by the Settings page
-  getPrompts: () => ipcRenderer.send('get-prompts'),
+  getPrompts: () => {
+    IPC_EVENTS_RENDERER.requestPrompts.send()
+  },
 
   // Used by the Settings page
-  updatePrompt: (id: string, content: string) => ipcRenderer.send('update-prompt', { id, content }),
+  updatePrompt: (id: string, content: string) => {
+    IPC_EVENTS_RENDERER.updatePrompt.send({ id, content })
+  },
 
   // Used by the Settings page
-  resetPrompt: (id: string) => ipcRenderer.send('reset-prompt', id),
+  resetPrompt: (id: string) => {
+    IPC_EVENTS_RENDERER.resetPrompt.send(id)
+  },
 
   copyToClipboard: (content: any) => {
     try {
@@ -423,76 +429,57 @@ const api = {
   minifyHtml: (html: string, options: any) => minify(html, options),
 
   onToggleSidebar: (callback: (visible?: boolean) => void) => {
-    ipcRenderer.on('toggle-sidebar', (_, visible) => callback(visible))
+    IPC_EVENTS_RENDERER.toggleSidebar.on((_, visible) => callback(visible))
   },
 
   onToggleTabsPosition: (callback: () => void) => {
-    ipcRenderer.on('toggle-tabs-position', (_) => callback())
+    IPC_EVENTS_RENDERER.toggleTabsPosition.on((_) => callback())
   },
 
   onCopyActiveTabURL: (callback: () => void) => {
-    ipcRenderer.on('copy-active-tab-url', (_) => callback())
+    IPC_EVENTS_RENDERER.copyActiveTabUrl.on((_) => callback())
   },
 
   onCreateNewTab: (callback: () => void) => {
-    ipcRenderer.on('create-new-tab', (_) => callback())
+    IPC_EVENTS_RENDERER.createNewTab.on((_) => callback())
   },
 
   onCloseActiveTab: (callback: () => void) => {
-    ipcRenderer.on('close-active-tab', (_) => callback())
+    IPC_EVENTS_RENDERER.closeActiveTab.on((_) => callback())
   },
 
   onReloadActiveTab: (callback: (force: boolean) => void) => {
-    ipcRenderer.on('reload-active-tab', (_, force) => callback(force))
+    IPC_EVENTS_RENDERER.reloadActiveTab.on((_, force) => callback(force))
   },
 
-  onAddDemoItems: (callback: (visible?: boolean) => void) => {
-    ipcRenderer.on('add-demo-items', (_) => callback())
-  },
+  // testEvent: async () => {
+  //   const result = await testEvent.renderer.invoke({ name: 'Maxi', age: 12 })
+
+  //   return result
+  // },
 
   onTrackpadScrollStart: (callback: () => void) => {
-    ipcRenderer.on('trackpad-scroll-start', (_) => callback())
+    IPC_EVENTS_RENDERER.trackpadScrollStart.on((_) => callback())
   },
 
   onTrackpadScrollStop: (callback: () => void) => {
-    ipcRenderer.on('trackpad-scroll-stop', (_) => callback())
+    IPC_EVENTS_RENDERER.trackpadScrollStop.on((_) => callback())
+  },
+
+  onNewWindowRequest: (callback: (url: string) => void) => {
+    IPC_EVENTS_RENDERER.newWindowRequest.on((_, { webContentsId, url }) => {
+      if (!webContentsId) {
+        callback(url)
+        return
+      }
+
+      const handler = webviewNewWindowHandlers[webContentsId]
+      if (handler) {
+        handler(url)
+      }
+    })
   }
 }
-
-ipcRenderer.on('fullscreen-change', (_, { isFullscreen }) => {
-  fullscreenHandlers.forEach((handler) => handler(isFullscreen))
-})
-
-ipcRenderer.on('new-window-request', (_, { webContentsId, ...data }) => {
-  if (!webContentsId) {
-    if (mainNewWindowHandler) mainNewWindowHandler(data)
-    return
-  }
-
-  const handler = webviewNewWindowHandlers[webContentsId]
-  if (handler) {
-    handler(data)
-  }
-})
-
-ipcRenderer.on('new-preview-image', (_, { horizonId, buffer, width, height }) => {
-  const handler = previewImageHandlers[horizonId]
-  if (!handler) return
-
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-
-  buffer = new Uint8ClampedArray(buffer.buffer)
-  for (let i = 0; i < buffer.length; i += 4) {
-    let temp = buffer[i]
-    buffer[i] = buffer[i + 2]
-    buffer[i + 2] = temp
-  }
-
-  canvas?.getContext('2d')?.putImageData(new ImageData(buffer, width, height), 0, 0)
-  canvas.toBlob((blob) => handler(blob), 'image/png', 0.7)
-})
 
 export class ResourceHandle {
   private fd: fsp.FileHandle
@@ -718,3 +705,5 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.backend = backend
 }
+
+export type API = typeof api

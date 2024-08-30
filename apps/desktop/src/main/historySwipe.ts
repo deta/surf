@@ -3,6 +3,7 @@ import { getMainWindow } from './mainWindow'
 import log from '@horizon/utils/src/log'
 import { getBrowserConfig, setBrowserConfig } from './config'
 import { changeMenuItemLabel } from './appMenu'
+import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 
 let historySwipeGestureEnabled = false
 
@@ -34,7 +35,7 @@ export function setupHistorySwipeIpcSenders() {
       return
     }
 
-    window.webContents.send('trackpad-scroll-start')
+    IPC_EVENTS_MAIN.trackpadScrollStart.sendToWebContents(window.webContents)
   })
 
   trackpad.setScrollStopCallback(() => {
@@ -45,6 +46,6 @@ export function setupHistorySwipeIpcSenders() {
       return
     }
 
-    window.webContents.send('trackpad-scroll-stop')
+    IPC_EVENTS_MAIN.trackpadScrollStop.sendToWebContents(window.webContents)
   })
 }

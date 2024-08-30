@@ -8,7 +8,6 @@ import { PromptIDs, getPrompt } from './prompts'
 const log = useLogScope('AI')
 
 export const summarizeText = async (text: string, additionalSystemPrompt?: string) => {
-  // @ts-expect-error
   const summary = await window.api.createAIChatCompletion(
     text,
     SIMPLE_SUMMARIZER_PROMPT + (additionalSystemPrompt ? ' ' + additionalSystemPrompt : '')
@@ -16,7 +15,7 @@ export const summarizeText = async (text: string, additionalSystemPrompt?: strin
 
   log.debug('Summarized text', summary)
 
-  return summary as string
+  return summary
 }
 
 export const DUMMY_CHAT_RESPONSE = `
@@ -201,27 +200,22 @@ export const handleInlineAI = async (
     ...(includePageContext ? [`Additional context from the page: "${pageContext}"`] : [])
   ]
 
-  let transformation = ''
+  let transformation: string | null = ''
   if (type === 'summarize') {
     const prompt = await getPrompt(PromptIDs.INLINE_SUMMARIZER)
-    // @ts-expect-error
     transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
   } else if (type === 'explain') {
     const prompt = await getPrompt(PromptIDs.INLINE_EXPLAINER)
-    // @ts-expect-error
     transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
   } else if (type === 'translate') {
     const prompt = await getPrompt(PromptIDs.INLINE_TRANSLATE)
     log.debug('translate prompt', prompt)
-    // @ts-expect-error
     transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
   } else if (type === 'grammar') {
     const prompt = await getPrompt(PromptIDs.INLINE_GRAMMAR)
-    // @ts-expect-error
     transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
-  } else {
+  } else if (query) {
     const prompt = await getPrompt(PromptIDs.INLINE_TRANSFORM_USER)
-    // @ts-expect-error
     transformation = await window.api.createAIChatCompletion(
       [
         query,

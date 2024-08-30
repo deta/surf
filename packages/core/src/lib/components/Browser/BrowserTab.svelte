@@ -149,7 +149,6 @@
 
     let url = e.detail
     if (isGoogleSignInUrl(url ?? '')) {
-      //@ts-ignore
       const navigatedUrl = await window.api.handleGoogleSignIn(url)
       if (navigatedUrl) webview.navigate(navigatedUrl)
     }

@@ -41,7 +41,7 @@ export function createSettingsWindow() {
   })
 
   settingsWindow.webContents.on('will-navigate', (event) => {
-    // getMainWindow()?.webContents.send('new-window-request', { url: event.url })
+    // TODO: should we handle new windows here?
     event.preventDefault()
   })
 

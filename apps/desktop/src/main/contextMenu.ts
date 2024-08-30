@@ -1,5 +1,5 @@
 import contextMenu from 'electron-context-menu'
-import { getMainWindow } from './mainWindow'
+import { ipcSenders } from './ipcHandlers'
 
 export function setupContextMenu(options: contextMenu.Options = {}) {
   const defaultOpts: contextMenu.Options = {
@@ -16,8 +16,7 @@ export function setupContextMenu(options: contextMenu.Options = {}) {
         label: 'Open in New Tab',
         visible: parameters.linkURL.length > 0,
         click: () => {
-          const mainWindow = getMainWindow()
-          mainWindow?.webContents.send('open-url', { url: parameters.linkURL, active: false })
+          ipcSenders.openURL(parameters.linkURL, false)
         }
       },
       defaultActions.separator(),
@@ -25,22 +24,20 @@ export function setupContextMenu(options: contextMenu.Options = {}) {
         label: 'Search Google for “{selection}”',
         visible: parameters.selectionText.trim().length > 0,
         click: () => {
-          const mainWindow = getMainWindow()
-          mainWindow?.webContents.send('open-url', {
-            url: `https://google.com/search?q=${encodeURIComponent(parameters.selectionText)}`,
-            active: true
-          })
+          ipcSenders.openURL(
+            `https://google.com/search?q=${encodeURIComponent(parameters.selectionText)}`,
+            true
+          )
         }
       },
       {
         label: 'Search Perplexity for “{selection}”',
         visible: parameters.selectionText.trim().length > 0,
         click: () => {
-          const mainWindow = getMainWindow()
-          mainWindow?.webContents.send('open-url', {
-            url: `https://www.perplexity.ai/?q=${encodeURIComponent(parameters.selectionText)}`,
-            active: true
-          })
+          ipcSenders.openURL(
+            `https://www.perplexity.ai/?q=${encodeURIComponent(parameters.selectionText)}`,
+            true
+          )
         }
       }
     ]

@@ -7,6 +7,7 @@ import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
 import { normalizeElectronUserAgent } from '@horizon/utils'
 import { getGoogleSignInWindowId } from './googleSignInWindow'
+import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 
 const isDev = import.meta.env.DEV
@@ -120,13 +121,13 @@ export function createWindow() {
     }
   })
 
-  mainWindow.on('enter-full-screen', () => {
-    getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: true })
-  })
+  // mainWindow.on('enter-full-screen', () => {
+  //   getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: true })
+  // })
 
-  mainWindow.on('leave-full-screen', () => {
-    getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: false })
-  })
+  // mainWindow.on('leave-full-screen', () => {
+  //   getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: false })
+  // })
 
   app.on('web-contents-created', (_event, contents) => {
     contents.on('will-attach-webview', (_event, webPreferences, _params) => {
@@ -142,11 +143,25 @@ export function createWindow() {
   // Surf frontend and not navigate away from it. Any requested navigations should
   // be handled within the frontend.
   mainWindow.webContents.on('will-navigate', (event) => {
-    getMainWindow()?.webContents.send('new-window-request', { url: event.url })
+    const mainWindow = getMainWindow()
+    if (mainWindow) {
+      IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
+        url: event.url
+        // we are explicitly not sending the webContentsId here
+      })
+    }
+
     event.preventDefault()
   })
   mainWindow.webContents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
-    getMainWindow()?.webContents.send('new-window-request', details)
+    const mainWindow = getMainWindow()
+    if (mainWindow) {
+      IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
+        url: details.url
+        // we are explicitly not sending the webContentsId here
+      })
+    }
+
     return { action: 'deny' }
   })
 
@@ -156,10 +171,12 @@ export function createWindow() {
   // 3. Allow opening new windows but deny other requests, and handle them within the renderer.
   mainWindow.webContents.on('did-attach-webview', (_, contents) => {
     contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
-      mainWindow?.webContents.send('new-window-request', {
-        ...details,
-        webContentsId: contents.id
-      })
+      if (mainWindow) {
+        IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
+          url: details.url,
+          webContentsId: contents.id
+        })
+      }
 
       // IMPORTANT NOTE: DO NOT expose any sort of Node.js capabilities to the newly
       // created window here. The creation of it is controlled from the renderer. Because

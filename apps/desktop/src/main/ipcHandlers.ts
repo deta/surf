@@ -1,15 +1,17 @@
 import { useLogScope } from '@horizon/utils'
-import { ipcMain, app, session } from 'electron'
+import { app, session } from 'electron'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
-import { getUserConfig, updateUserConfig } from './config'
+import { getUserConfig, updateUserConfig, updateUserConfigSettings } from './config'
 import { handleDragStart } from './drag'
-import { EditablePrompt, ElectronAppInfo, UserSettings } from '@horizon/types'
+import { ElectronAppInfo, RightSidebarTab, UserSettings } from '@horizon/types'
 import { getPlatform } from './utils'
 import { checkForUpdates } from './appUpdates'
 import { getSettingsWindow } from './settingsWindow'
 import { createGoogleSignInWindow } from './googleSignInWindow'
 import { setupHistorySwipeIpcSenders } from './historySwipe'
+
+import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 
 const log = useLogScope('Main IPC Handlers')
 // let prompts: EditablePrompt[] = []
@@ -20,48 +22,17 @@ export function setupIpc() {
 }
 
 function setupIpcHandlers() {
-  ipcMain.handle('set-adblocker-state', async (_, { partition, state }) => {
-    return setAdblockerState(partition as string, state as boolean)
+  IPC_EVENTS_MAIN.setAdblockerState.on(async (_, { partition, state }) => {
+    setAdblockerState(partition, state)
   })
 
-  ipcMain.handle('get-adblocker-state', async (_, { partition }) => {
-    return getAdblockerState(partition as string)
+  IPC_EVENTS_MAIN.getAdblockerState.handle(async (_, partition) => {
+    return getAdblockerState(partition)
   })
 
-  ipcMain.handle('request-new-preview-image', async (event, { horizonId }) => {
+  IPC_EVENTS_MAIN.captureWebContents.handle(async () => {
     const window = getMainWindow()
-    if (!window) return
-
-    const rect = window.getContentBounds()
-    const image = await window.webContents.capturePage({
-      ...rect,
-      x: 70,
-      y: 0
-    })
-    const imageSize = image.getSize()
-
-    // schedule the closure to run in the
-    // next event loop tick and return from
-    // this function immediately
-    setTimeout(() => {
-      const buffer = image.toBitmap()
-      // `send` will throw if the recipient is destroyed
-      try {
-        event.sender.send('new-preview-image', {
-          horizonId,
-          buffer: buffer,
-          width: imageSize.width,
-          height: imageSize.height
-        })
-      } catch (_) {}
-    }, 0)
-
-    return
-  })
-
-  ipcMain.handle('capture-web-contents', async () => {
-    const window = getMainWindow()
-    if (!window) return
+    if (!window) return null
 
     const PADDING = 40
     const rect = window.getContentBounds()
@@ -73,68 +44,55 @@ function setupIpcHandlers() {
     return image.toDataURL()
   })
 
-  ipcMain.handle('get-user-config', async (_) => {
-    return getUserConfig()
-  })
-
-  ipcMain.handle('handle-google-sign-in', async (_, { url }) => {
-    return await createGoogleSignInWindow(url)
-  })
-
-  ipcMain.on(
-    'start-drag',
-    async (event, resourceId: string, filePath: string, fileType: string) => {
-      log.debug('Start drag', resourceId, filePath, fileType)
-      const sender = event.sender
-      await handleDragStart(sender, resourceId, filePath, fileType)
-      log.debug('Drag started')
-    }
-  )
-
-  ipcMain.handle('quit-app', () => {
-    app.quit()
-  })
-
-  ipcMain.handle('restart-app', () => {
+  IPC_EVENTS_MAIN.restartApp.on(() => {
     app.relaunch()
     app.exit()
   })
 
-  ipcMain.handle('toggle-fullscreen', () => {
-    const window = getMainWindow()
-    window?.setFullScreen(!window.fullScreen)
-  })
-
-  ipcMain.handle('update-traffic-lights', (_event, { visible }) => {
+  IPC_EVENTS_MAIN.updateTrafficLights.on((_, visible) => {
     if (process.platform == 'darwin') {
       const window = getMainWindow()
       window?.setWindowButtonVisibility(visible)
     }
   })
 
-  ipcMain.on('store-api-key', (_event, key: string) => {
+  IPC_EVENTS_MAIN.googleSignIn.handle(async (_, url) => {
+    return await createGoogleSignInWindow(url)
+  })
+
+  IPC_EVENTS_MAIN.getUserConfig.handle(async () => {
+    return getUserConfig()
+  })
+
+  IPC_EVENTS_MAIN.startDrag.on(async (event, { resourceId, filePath, fileType }) => {
+    log.debug('Start drag', resourceId, filePath, fileType)
+    const sender = event.sender
+    await handleDragStart(sender, resourceId, filePath, fileType)
+  })
+
+  IPC_EVENTS_MAIN.storeAPIKey.on(async (_, key) => {
     updateUserConfig({ api_key: key })
   })
 
-  ipcMain.on('store-settings', (_event, settings) => {
-    updateUserConfig({ settings: settings })
+  IPC_EVENTS_MAIN.updateUserConfigSettings.on(async (_, settings) => {
+    const updatedSettings = updateUserConfigSettings(settings)
 
     // notify other windows of the change
-    ipcSenders.userConfigSettingsChange(settings)
+    ipcSenders.userConfigSettingsChange(updatedSettings)
   })
 
-  ipcMain.on('update-initialized-tabs', (_event, value) => {
+  IPC_EVENTS_MAIN.updateInitializedTabs.on(async (_, value) => {
     updateUserConfig({ initialized_tabs: value })
   })
 
-  ipcMain.handle('get-app-info', () => {
+  IPC_EVENTS_MAIN.getAppInfo.handle(async () => {
     return {
       version: process.env.APP_VERSION ?? app.getVersion(),
       platform: getPlatform()
     } as ElectronAppInfo
   })
 
-  ipcMain.handle('intercept-requests-headers', (_event, { urls, partition }) => {
+  IPC_EVENTS_MAIN.interceptRequestHeaders.handle((_event, { urls, partition }) => {
     const filter = {
       urls: urls
     }
@@ -162,29 +120,29 @@ function setupIpcHandlers() {
     })
   })
 
-  ipcMain.on('check-for-updates', () => {
+  IPC_EVENTS_MAIN.checkForUpdates.on(() => {
     checkForUpdates()
   })
 
-  ipcMain.on('set-prompts', (_event, prompts: EditablePrompt[]) => {
+  IPC_EVENTS_MAIN.setPrompts.on((_event, prompts) => {
     const window = getSettingsWindow()
     if (!window) {
       log.error('Settings window not found')
       return
     }
 
-    window.webContents.send('set-prompts', prompts)
+    IPC_EVENTS_MAIN.setPrompts.sendToWebContents(window.webContents, prompts)
   })
 
-  ipcMain.on('get-prompts', (_event) => {
+  IPC_EVENTS_MAIN.requestPrompts.on((_event) => {
     ipcSenders.getPrompts()
   })
 
-  ipcMain.on('reset-prompt', (_event, id) => {
+  IPC_EVENTS_MAIN.resetPrompt.on((_event, id) => {
     ipcSenders.resetPrompt(id)
   })
 
-  ipcMain.on('update-prompt', (_event, { id, content }) => {
+  IPC_EVENTS_MAIN.updatePrompt.on((_event, { id, content }) => {
     ipcSenders.updatePrompt(id, content)
   })
 }
@@ -197,7 +155,7 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('open-cheat-sheet')
+    IPC_EVENTS_MAIN.openCheatSheet.sendToWebContents(window.webContents)
   },
 
   openFeedbackPage: () => {
@@ -207,17 +165,7 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('open-feedback-page')
-  },
-
-  addDemoItems: () => {
-    const window = getMainWindow()
-    if (!window) {
-      console.error('Main window not found')
-      return
-    }
-
-    window.webContents.send('add-demo-items')
+    IPC_EVENTS_MAIN.openFeedbackPage.sendToWebContents(window.webContents)
   },
 
   adBlockChanged: (partition: string, state: boolean) => {
@@ -227,17 +175,17 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('adblocker-state-changed', { partition, state })
+    IPC_EVENTS_MAIN.adBlockerStateChange.sendToWebContents(window.webContents, { partition, state })
   },
 
-  trackEvent: (eventName: string, properties: Record<string, any>) => {
+  trackEvent: (name: string, properties: Record<string, any>) => {
     const window = getMainWindow()
     if (!window) {
       log.error('Main window not found')
       return
     }
 
-    window.webContents.send('track-event', { eventName, properties })
+    IPC_EVENTS_MAIN.trackEvent.sendToWebContents(window.webContents, { name, properties })
   },
 
   getPrompts: () => {
@@ -247,7 +195,7 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('get-prompts')
+    IPC_EVENTS_MAIN.requestPrompts.sendToWebContents(window.webContents)
   },
 
   resetPrompt: (id: string) => {
@@ -257,7 +205,7 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('reset-prompt', id)
+    IPC_EVENTS_MAIN.resetPrompt.sendToWebContents(window.webContents, id)
   },
 
   updatePrompt: (id: string, content: string) => {
@@ -267,7 +215,7 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('update-prompt', { id, content })
+    IPC_EVENTS_MAIN.updatePrompt.sendToWebContents(window.webContents, { id, content })
   },
 
   toggleSidebar: (visible?: boolean) => {
@@ -277,17 +225,17 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('toggle-sidebar', visible)
+    IPC_EVENTS_MAIN.toggleSidebar.sendToWebContents(window.webContents, visible)
   },
 
-  toggleTabsPosition: (visible?: boolean) => {
+  toggleTabsPosition: () => {
     const window = getMainWindow()
     if (!window) {
       log.error('Main window not found')
       return
     }
 
-    window.webContents.send('toggle-tabs-position', visible)
+    IPC_EVENTS_MAIN.toggleTabsPosition.sendToWebContents(window.webContents)
   },
 
   copyActiveTabURL: () => {
@@ -297,7 +245,7 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('copy-active-tab-url')
+    IPC_EVENTS_MAIN.copyActiveTabUrl.sendToWebContents(window.webContents)
   },
 
   createNewTab: () => {
@@ -307,7 +255,7 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('create-new-tab')
+    IPC_EVENTS_MAIN.createNewTab.sendToWebContents(window.webContents)
   },
 
   closeActiveTab: () => {
@@ -317,7 +265,7 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('close-active-tab')
+    IPC_EVENTS_MAIN.closeActiveTab.sendToWebContents(window.webContents)
   },
 
   openOasis: () => {
@@ -327,47 +275,27 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('open-oasis')
+    IPC_EVENTS_MAIN.openOasis.sendToWebContents(window.webContents)
   },
 
-  toggleRightSidebar: (visible?: boolean) => {
+  toggleRightSidebar: () => {
     const window = getMainWindow()
     if (!window) {
       log.error('Main window not found')
       return
     }
 
-    window.webContents.send('toggle-right-sidebar', visible)
+    IPC_EVENTS_MAIN.toggleRightSidebar.sendToWebContents(window.webContents)
   },
 
-  toggleChatMode: (visible?: boolean) => {
+  toggleRightSidebarTab: (tab: RightSidebarTab) => {
     const window = getMainWindow()
     if (!window) {
       log.error('Main window not found')
       return
     }
 
-    window.webContents.send('toggle-chat-mode', visible)
-  },
-
-  toggleAnnotations: (visible?: boolean) => {
-    const window = getMainWindow()
-    if (!window) {
-      log.error('Main window not found')
-      return
-    }
-
-    window.webContents.send('toggle-annotations', visible)
-  },
-
-  toggleGoWild: (visible?: boolean) => {
-    const window = getMainWindow()
-    if (!window) {
-      log.error('Main window not found')
-      return
-    }
-
-    window.webContents.send('toggle-go-wild', visible)
+    IPC_EVENTS_MAIN.toggleRightSidebarTab.sendToWebContents(window.webContents, tab)
   },
 
   reloadActiveTab: (force = false) => {
@@ -377,7 +305,7 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('reload-active-tab', force)
+    IPC_EVENTS_MAIN.reloadActiveTab.sendToWebContents(window.webContents, force)
   },
 
   openDevTools: () => {
@@ -387,7 +315,17 @@ export const ipcSenders = {
       return
     }
 
-    window.webContents.send('open-devtools')
+    IPC_EVENTS_MAIN.openDevTools.sendToWebContents(window.webContents)
+  },
+
+  openURL: (url: string, active: boolean) => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.openURL.sendToWebContents(window.webContents, { url, active })
   },
 
   userConfigSettingsChange(settings: UserSettings) {
@@ -403,7 +341,8 @@ export const ipcSenders = {
 
     windows.forEach((window) => {
       if (!window || window.isDestroyed()) return
-      window.webContents.send('user-config-settings-change', settings)
+
+      IPC_EVENTS_MAIN.userConfigSettingsChange.sendToWebContents(window.webContents, settings)
     })
   }
 }
