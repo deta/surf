@@ -126,7 +126,7 @@
     dispatch('webview-page-event', { type, data })
   }
 
-  const handleWebviewNewWindow = async (e: CustomEvent<Electron.HandlerDetails>) => {
+  const handleWebviewNewWindow = async (e: CustomEvent<WebviewEvents['new-window']>) => {
     const disposition = e.detail.disposition
     if (disposition === 'new-window') return
 

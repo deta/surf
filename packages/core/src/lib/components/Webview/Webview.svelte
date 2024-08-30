@@ -7,7 +7,7 @@
       type: WebViewEventSendNames
       data: WebViewSendEvents[keyof WebViewSendEvents]
     }
-    'new-window': Electron.HandlerDetails
+    'new-window': NewWindowRequest
     'found-in-page': Electron.FoundInPageEvent
     'did-finish-load': void
     'update-target-url': string
@@ -42,6 +42,7 @@
   import type { Tab, TabPage } from '../../types/browser.types'
   import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
   import type { WebviewError } from '../../constants/webviewErrors'
+  import type { NewWindowRequest } from '../../service/ipc/events'
 
   export let id: string = crypto.randomUUID().split('-').slice(0, 1).join('')
   export let src: string
@@ -505,12 +506,9 @@ Made with Deta Surf.`
       webviewWebContentsId = webview.getWebContentsId()
 
       if (!newWindowHandlerRegistered) {
-        window.api.registerNewWindowHandler(
-          webviewWebContentsId,
-          (data: Electron.HandlerDetails) => {
-            dispatch('new-window', data)
-          }
-        )
+        window.api.registerNewWindowHandler(webviewWebContentsId, (details) => {
+          dispatch('new-window', details)
+        })
 
         newWindowHandlerRegistered = true
       }

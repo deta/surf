@@ -2169,7 +2169,10 @@
     await telemetry.init(userConfig)
 
     // Handle new window requests from webviews
-    window.api.onNewWindowRequest((url) => openUrlHandler(url))
+    window.api.onNewWindowRequest((details) => {
+      const active = details.disposition === 'foreground-tab'
+      openUrlHandler(details.url, active)
+    })
 
     window.api.onOpenURL((details) => {
       openUrlHandler(details.url, details.active)

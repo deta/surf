@@ -24,8 +24,9 @@ export interface TrackEvent {
 }
 
 export interface NewWindowRequest {
-  webContentsId?: number
   url: string
+  disposition?: Electron.HandlerDetails['disposition']
+  webContentsId?: number
 }
 
 export interface OpenURL {

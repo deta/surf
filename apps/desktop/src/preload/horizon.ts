@@ -25,7 +25,11 @@ import type {
   TelemetryEventTypes
 } from '@horizon/types'
 import { getUserConfig } from '../main/config'
-import { IPC_EVENTS_RENDERER, OpenURL } from '@horizon/core/src/lib/service/ipc/events'
+import {
+  IPC_EVENTS_RENDERER,
+  NewWindowRequest,
+  OpenURL
+} from '@horizon/core/src/lib/service/ipc/events'
 import { ChatCompletion } from 'openai/resources'
 
 const isDev = import.meta.env.DEV
@@ -52,7 +56,7 @@ const VISION_API_KEY = isDev ? import.meta.env.P_VITE_VISION_API_KEY : userConfi
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
-const webviewNewWindowHandlers = {}
+const webviewNewWindowHandlers: Record<number, (details: NewWindowRequest) => void> = {}
 
 let openai: OpenAI | null = null
 if (OPENAI_API_KEY) {
@@ -92,7 +96,10 @@ const api = {
     return IPC_EVENTS_RENDERER.googleSignIn.invoke(url)
   },
 
-  registerNewWindowHandler: (webContentsId: number, callback: any) => {
+  registerNewWindowHandler: (
+    webContentsId: number,
+    callback: (details: NewWindowRequest) => void
+  ) => {
     webviewNewWindowHandlers[webContentsId] = callback
   },
 
@@ -466,16 +473,16 @@ const api = {
     IPC_EVENTS_RENDERER.trackpadScrollStop.on((_) => callback())
   },
 
-  onNewWindowRequest: (callback: (url: string) => void) => {
-    IPC_EVENTS_RENDERER.newWindowRequest.on((_, { webContentsId, url }) => {
-      if (!webContentsId) {
-        callback(url)
+  onNewWindowRequest: (callback: (details: NewWindowRequest) => void) => {
+    IPC_EVENTS_RENDERER.newWindowRequest.on((_, details) => {
+      if (!details.webContentsId) {
+        callback(details)
         return
       }
 
-      const handler = webviewNewWindowHandlers[webContentsId]
+      const handler = webviewNewWindowHandlers[details.webContentsId]
       if (handler) {
-        handler(url)
+        handler(details)
       }
     })
   }

@@ -157,7 +157,8 @@ export function createWindow() {
     const mainWindow = getMainWindow()
     if (mainWindow) {
       IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
-        url: details.url
+        url: details.url,
+        disposition: details.disposition
         // we are explicitly not sending the webContentsId here
       })
     }
@@ -174,6 +175,7 @@ export function createWindow() {
       if (mainWindow) {
         IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
           url: details.url,
+          disposition: details.disposition,
           webContentsId: contents.id
         })
       }
