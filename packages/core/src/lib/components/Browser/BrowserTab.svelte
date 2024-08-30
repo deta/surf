@@ -614,11 +614,6 @@
         })
       }
 
-      if (sameAppDetected) {
-        log.debug('skipping rest of app detection as it has not changed')
-        return
-      }
-
       log.debug('bookmarked resource found', bookmarkedResource)
       if (!bookmarkedResource) {
         if (autoSaveResources) {
@@ -656,6 +651,11 @@
           chatResourceBookmark: null,
           resourceBookmarkedManually: false
         })
+      }
+
+      if (sameAppDetected) {
+        log.debug('skipping rest of app detection as it has not changed')
+        return
       }
 
       const existingHistoryEntry = matchingResources.find(

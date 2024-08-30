@@ -1250,7 +1250,11 @@
         )
 
         const existingResource = await resourceManager.getResource($activeTab.resourceBookmark)
-        if (existingResource) {
+        const isDeleted =
+          existingResource?.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
+            ?.value === 'true'
+
+        if (existingResource && !isDeleted) {
           const existingCanonical = (existingResource?.tags ?? []).find(
             (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
           )
@@ -1557,32 +1561,71 @@
   }
 
   const prepareTabForChatContext = async (tab: TabPage | TabSpace, title: string) => {
+    if (tab.type === 'space') {
+      log.debug('Preparing space tab for chat context', tab.id)
+      return
+    }
+
     const isActivated = $activatedTabs.includes(tab.id)
     if (!isActivated) {
-      log.debug('Tab not activated, activating first', tab)
+      log.debug('Tab not activated, activating first', tab.id)
       activatedTabs.update((tabs) => {
         return [...tabs, tab.id]
       })
 
       // give the tab some time to load
       await wait(200)
-    }
 
-    log.debug('Preparing tab for chat context', tab)
-    if (tab.type === 'page' && !tab.resourceBookmark) {
-      log.debug('Bookmarking page tab', tab)
       const browserTab = $browserTabs[tab.id]
       if (!browserTab) {
         log.error('Browser tab not found', tab.id)
         throw Error(`Browser tab not found`)
       }
-      try {
-        await browserTab.bookmarkPage(true)
-      } catch (e) {
-        log.error('Error bookmarking page tab', e)
-        throw Error(`could not prepare tab '${title}'`)
-      }
+
+      log.debug('Waiting for tab to become active', tab.id)
+      await browserTab.waitForAppDetection(3000)
     }
+
+    log.debug('Preparing tab for chat context', tab.id)
+    const getExistingResource = async () => {
+      const existingResourceId = tab.resourceBookmark ?? tab.chatResourceBookmark
+      if (!existingResourceId) {
+        return null
+      }
+
+      const fetchedResource = await resourceManager.getResource(existingResourceId)
+      const fetchedCanonical = (fetchedResource?.tags ?? []).find(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+      )?.value
+
+      if (fetchedCanonical !== tab.currentLocation) {
+        log.debug('Existing resource does not match current location', fetchedCanonical, tab.id)
+        return null
+      }
+
+      return fetchedResource
+    }
+
+    let tabResource = await getExistingResource()
+    if (!tabResource) {
+      log.debug('No existing resource found for tab', tab.id)
+      const browserTab = $browserTabs[tab.id]
+      if (!browserTab) {
+        log.error('Browser tab not found', tab.id)
+        throw Error(`Browser tab not found`)
+      }
+
+      log.debug('Bookmarking page for chat context', tab.id)
+      tabResource = await browserTab.bookmarkPage(true)
+    }
+
+    if (!tabResource) {
+      log.error('Failed to bookmark page for chat context', tab.id)
+      throw Error(`Failed to bookmark page for chat context`)
+    }
+
+    log.debug('Tab prepared for chat context', tab.id, tabResource)
+    return tabResource
   }
 
   const preparePageTabsForChatContext = async () => {
@@ -1591,15 +1634,18 @@
     const tabs = getTabsInChatContext()
     log.debug('Making sure resources for all page tabs in context are extracted', tabs)
 
-    tabs.map(async (tab) => {
-      try {
-        await prepareTabForChatContext(tab, tab.title)
-      } catch (e: any) {
-        log.error('Error preparing page tabs for chat context', e)
-        let errors = $activeTabMagic.errors
-        updateActiveMagicPage({ errors: errors.concat(e.message) })
-      }
-    })
+    await Promise.allSettled(
+      tabs.map(async (tab) => {
+        try {
+          await prepareTabForChatContext(tab, tab.title)
+        } catch (e: any) {
+          log.error('Error preparing page tabs for chat context', e)
+          let errors = $activeTabMagic.errors
+          updateActiveMagicPage({ errors: errors.concat(e.message) })
+        }
+      })
+    )
+
     log.debug('Done preparing page tabs for chat context')
     updateActiveMagicPage({ initializing: false })
   }
