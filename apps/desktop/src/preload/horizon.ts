@@ -207,7 +207,7 @@ const api = {
       ...opts
     })
 
-    return chatCompletion.choices[0].message.content
+    return (chatCompletion as ChatCompletion).choices[0].message.content
   },
 
   aiFunctionCalls: async (userPrompt: string, actions: HorizonAction[]) => {
@@ -378,10 +378,7 @@ const api = {
     return IPC_EVENTS_RENDERER.getAppInfo.invoke()
   },
 
-  interceptRequestsHeaders: async (
-    urls: string[],
-    partition: string
-  ): Promise<{ url: string; headers: Record<string, string> }> => {
+  interceptRequestsHeaders: async (urls: string[], partition: string) => {
     return IPC_EVENTS_RENDERER.interceptRequestHeaders.invoke({ urls, partition })
   },
 
@@ -458,12 +455,6 @@ const api = {
   onReloadActiveTab: (callback: (force: boolean) => void) => {
     IPC_EVENTS_RENDERER.reloadActiveTab.on((_, force) => callback(force))
   },
-
-  // testEvent: async () => {
-  //   const result = await testEvent.renderer.invoke({ name: 'Maxi', age: 12 })
-
-  //   return result
-  // },
 
   onTrackpadScrollStart: (callback: () => void) => {
     IPC_EVENTS_RENDERER.trackpadScrollStart.on((_) => callback())

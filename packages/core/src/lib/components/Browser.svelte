@@ -115,7 +115,6 @@
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
 
   let activeTabComponent: TabItem | null = null
-  let drawer: Drawer
   let addressBarFocus = false
   let showLeftSidebar = true
   let showDevOverlay = import.meta.env.DEV || false
@@ -1770,7 +1769,7 @@
     log.debug('Annotation sidebar reload')
 
     // TODO: implement IPC to update the annotation inline instead of reloading the page
-    if ($activeTab.type === 'page' && $activeTab?.currentDetectedApp?.appId !== 'youtube') {
+    if ($activeTab?.type === 'page' && $activeTab?.currentDetectedApp?.appId !== 'youtube') {
       $activeBrowserTab?.reload()
     }
   }
@@ -2432,7 +2431,7 @@
 
     checkScroll()
 
-    if (!userConfig.initialized_tabs) {
+    if (userConfig && !userConfig.initialized_tabs) {
       log.debug('Creating initial tabs')
 
       showSplashScreen.set(true)

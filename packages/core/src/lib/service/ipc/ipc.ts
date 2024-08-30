@@ -11,7 +11,7 @@ export interface IPCEvent {
 type HandleHandler<T extends IPCEvent> = (
   event: Electron.IpcMainInvokeEvent,
   payload: T['payload']
-) => T['output'] | Promise<T['output']>
+) => T['output'] | null | Promise<T['output'] | null>
 
 export class IPCService {
   addEvent<T>(name: string) {
@@ -31,7 +31,11 @@ export class IPCService {
       },
       main: {
         on: (handler: (event: Electron.IpcMainEvent, payload: T) => void) => {
-          ipcMain.on(name, handler)
+          ipcMain.on(name, (event, payload) => {
+            const sender = event.senderFrame
+            console.log('sender', sender)
+            handler(event, payload)
+          })
         },
         once: (handler: (event: Electron.IpcMainEvent, payload: T) => void) => {
           ipcMain.once(name, handler)
@@ -56,7 +60,7 @@ export class IPCService {
           if (mainProcess) {
             throw new Error('Cannot invoke events in main process')
           } else {
-            return ipcRenderer.invoke(name, payload) as Promise<T['output']>
+            return ipcRenderer.invoke(name, payload) as Promise<T['output'] | null>
           }
         }
       },
@@ -64,7 +68,13 @@ export class IPCService {
         handle: (handler: HandleHandler<T>) => {
           const mainProcess = !isRenderer()
           if (mainProcess) {
-            ipcMain.handle(name, handler)
+            // ipcMain.handle(name, handler)
+            ipcMain.handle(name, (event, payload) => {
+              const sender = event.sender
+
+              const mainWindow = console.log('sender', sender)
+              return handler(event, payload)
+            })
             return
           } else {
             throw new Error('Cannot handle events in renderer process')

@@ -11,7 +11,8 @@ import { getSettingsWindow } from './settingsWindow'
 import { createGoogleSignInWindow } from './googleSignInWindow'
 import { setupHistorySwipeIpcSenders } from './historySwipe'
 
-import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
+import { IPC_EVENTS_MAIN, TrackEvent } from '@horizon/core/src/lib/service/ipc/events'
+import { getSetupWindow } from './setupWindow'
 
 const log = useLogScope('Main IPC Handlers')
 // let prompts: EditablePrompt[] = []
@@ -21,16 +22,50 @@ export function setupIpc() {
   setupIpcHandlers()
 }
 
+// Make sure the sender is one of the main windows (main, settings, setup) to prevent spoofing of messages from other windows (very unlikely but still recommended)
+export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent) => {
+  const mainWindow = getMainWindow()
+  if (!mainWindow) {
+    log.error('Main window not found')
+    return false
+  }
+
+  const validIDs = [mainWindow.webContents.id]
+  const settingsWindow = getSettingsWindow()
+  const setupWindow = getSetupWindow()
+
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    validIDs.push(settingsWindow.webContents.id)
+  }
+
+  if (setupWindow && !setupWindow.isDestroyed()) {
+    validIDs.push(setupWindow.webContents.id)
+  }
+
+  if (!validIDs.includes(event.sender.id)) {
+    log.warn('Invalid sender:', event.senderFrame.url)
+    return false
+  }
+
+  return true
+}
+
 function setupIpcHandlers() {
-  IPC_EVENTS_MAIN.setAdblockerState.on(async (_, { partition, state }) => {
+  IPC_EVENTS_MAIN.setAdblockerState.on(async (event, { partition, state }) => {
+    if (!validateIPCSender(event)) return
+
     setAdblockerState(partition, state)
   })
 
-  IPC_EVENTS_MAIN.getAdblockerState.handle(async (_, partition) => {
+  IPC_EVENTS_MAIN.getAdblockerState.handle(async (event, partition) => {
+    if (!validateIPCSender(event)) return null
+
     return getAdblockerState(partition)
   })
 
-  IPC_EVENTS_MAIN.captureWebContents.handle(async () => {
+  IPC_EVENTS_MAIN.captureWebContents.handle(async (event) => {
+    if (!validateIPCSender(event)) return null
+
     const window = getMainWindow()
     if (!window) return null
 
@@ -44,55 +79,75 @@ function setupIpcHandlers() {
     return image.toDataURL()
   })
 
-  IPC_EVENTS_MAIN.restartApp.on(() => {
+  IPC_EVENTS_MAIN.restartApp.on((event) => {
+    if (!validateIPCSender(event)) return
+
     app.relaunch()
     app.exit()
   })
 
-  IPC_EVENTS_MAIN.updateTrafficLights.on((_, visible) => {
+  IPC_EVENTS_MAIN.updateTrafficLights.on((event, visible) => {
+    if (!validateIPCSender(event)) return
+
     if (process.platform == 'darwin') {
       const window = getMainWindow()
       window?.setWindowButtonVisibility(visible)
     }
   })
 
-  IPC_EVENTS_MAIN.googleSignIn.handle(async (_, url) => {
+  IPC_EVENTS_MAIN.googleSignIn.handle(async (event, url) => {
+    if (!validateIPCSender(event)) return null
+
     return await createGoogleSignInWindow(url)
   })
 
-  IPC_EVENTS_MAIN.getUserConfig.handle(async () => {
+  IPC_EVENTS_MAIN.getUserConfig.handle(async (event) => {
+    if (!validateIPCSender(event)) return null
+
     return getUserConfig()
   })
 
   IPC_EVENTS_MAIN.startDrag.on(async (event, { resourceId, filePath, fileType }) => {
+    if (!validateIPCSender(event)) return
+
     log.debug('Start drag', resourceId, filePath, fileType)
     const sender = event.sender
     await handleDragStart(sender, resourceId, filePath, fileType)
   })
 
-  IPC_EVENTS_MAIN.storeAPIKey.on(async (_, key) => {
+  IPC_EVENTS_MAIN.storeAPIKey.on(async (event, key) => {
+    if (!validateIPCSender(event)) return
+
     updateUserConfig({ api_key: key })
   })
 
-  IPC_EVENTS_MAIN.updateUserConfigSettings.on(async (_, settings) => {
+  IPC_EVENTS_MAIN.updateUserConfigSettings.on(async (event, settings) => {
+    if (!validateIPCSender(event)) return
+
     const updatedSettings = updateUserConfigSettings(settings)
 
     // notify other windows of the change
     ipcSenders.userConfigSettingsChange(updatedSettings)
   })
 
-  IPC_EVENTS_MAIN.updateInitializedTabs.on(async (_, value) => {
+  IPC_EVENTS_MAIN.updateInitializedTabs.on(async (event, value) => {
+    if (!validateIPCSender(event)) return
+
     updateUserConfig({ initialized_tabs: value })
   })
 
-  IPC_EVENTS_MAIN.getAppInfo.handle(async () => {
+  IPC_EVENTS_MAIN.getAppInfo.handle(async (event) => {
+    if (!validateIPCSender(event)) return null
+
     return {
       version: process.env.APP_VERSION ?? app.getVersion(),
       platform: getPlatform()
     } as ElectronAppInfo
   })
 
-  IPC_EVENTS_MAIN.interceptRequestHeaders.handle((_event, { urls, partition }) => {
+  IPC_EVENTS_MAIN.interceptRequestHeaders.handle((event, { urls, partition }) => {
+    if (!validateIPCSender(event)) return null
+
     const filter = {
       urls: urls
     }
@@ -120,11 +175,15 @@ function setupIpcHandlers() {
     })
   })
 
-  IPC_EVENTS_MAIN.checkForUpdates.on(() => {
+  IPC_EVENTS_MAIN.checkForUpdates.on((event) => {
+    if (!validateIPCSender(event)) return
+
     checkForUpdates()
   })
 
-  IPC_EVENTS_MAIN.setPrompts.on((_event, prompts) => {
+  IPC_EVENTS_MAIN.setPrompts.on((event, prompts) => {
+    if (!validateIPCSender(event)) return
+
     const window = getSettingsWindow()
     if (!window) {
       log.error('Settings window not found')
@@ -134,15 +193,21 @@ function setupIpcHandlers() {
     IPC_EVENTS_MAIN.setPrompts.sendToWebContents(window.webContents, prompts)
   })
 
-  IPC_EVENTS_MAIN.requestPrompts.on((_event) => {
+  IPC_EVENTS_MAIN.requestPrompts.on((event) => {
+    if (!validateIPCSender(event)) return
+
     ipcSenders.getPrompts()
   })
 
-  IPC_EVENTS_MAIN.resetPrompt.on((_event, id) => {
+  IPC_EVENTS_MAIN.resetPrompt.on((event, id) => {
+    if (!validateIPCSender(event)) return
+
     ipcSenders.resetPrompt(id)
   })
 
-  IPC_EVENTS_MAIN.updatePrompt.on((_event, { id, content }) => {
+  IPC_EVENTS_MAIN.updatePrompt.on((event, { id, content }) => {
+    if (!validateIPCSender(event)) return
+
     ipcSenders.updatePrompt(id, content)
   })
 }
@@ -178,7 +243,7 @@ export const ipcSenders = {
     IPC_EVENTS_MAIN.adBlockerStateChange.sendToWebContents(window.webContents, { partition, state })
   },
 
-  trackEvent: (name: string, properties: Record<string, any>) => {
+  trackEvent: (name: TrackEvent['name'], properties: TrackEvent['properties']) => {
     const window = getMainWindow()
     if (!window) {
       log.error('Main window not found')

@@ -70,6 +70,12 @@ export class Telemetry {
       this.userConfig = await window.api.getUserConfig()
     }
 
+    if (!this.userConfig) {
+      this.log.warn('No user config found, disabling telemetry')
+      this.active = false
+      return
+    }
+
     const userID = this.userConfig.user_id
     if (!userID) {
       this.log.warn('No user ID found, disabling telemetry')
@@ -87,7 +93,7 @@ export class Telemetry {
         formInteractions: false,
         fileDownloads: false
       },
-      appVersion: this.appInfo.version
+      appVersion: this.appInfo?.version
     })
     amplitude.setOptOut(!this.active)
 
