@@ -11,12 +11,12 @@ updates:
     allow:
       - dependency-type: 'all'
     groups:
-      electron-minor-patch:
+      npm-minor-patch:
         patterns:
-          - 'electron'
+          - '*'
         update-types:
-          - 'version-update:semver-minor'
-          - 'version-update:semver-patch'
+          - 'minor'
+          - 'patch'
 
   - package-ecosystem: 'cargo'
     directory: '/packages/'
