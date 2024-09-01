@@ -559,8 +559,26 @@ Made with Deta Surf.`
     webview.addEventListener('page-title-updated', (e: Electron.PageTitleUpdatedEvent) => {
       handlePageTitleChange(e.title)
     })
-    webview.addEventListener('page-favicon-updated', (e: Electron.PageFaviconUpdatedEvent) => {
-      handleFaviconChange(e.favicons[e.favicons.length - 1]) // Get the biggest favicon (last favicon in array)
+    webview.addEventListener('page-favicon-updated', (event: Electron.PageFaviconUpdatedEvent) => {
+      const getSize = (url: string): number => {
+        const dims = url.match(/(\d+)x(\d+)/)
+        return dims
+          ? parseInt(dims[1]) * parseInt(dims[2])
+          : Math.pow(parseInt(url.match(/\d+/)?.[0] || '0'), 2)
+      }
+
+      const getPriority = (url: string): number => {
+        if (url.startsWith('data:image/')) return 3
+        if (url.endsWith('.svg')) return 2
+        if (url.endsWith('.ico')) return 1
+        return 0
+      }
+
+      const sortedFavicons = event.favicons.sort((a, b) => {
+        return getPriority(b) - getPriority(a) || getSize(b) - getSize(a)
+      })
+
+      handleFaviconChange(sortedFavicons[0])
     })
     webview.addEventListener('update-target-url', (e: Electron.UpdateTargetUrlEvent) => {
       dispatch('update-target-url', e.url)
