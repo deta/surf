@@ -62,6 +62,8 @@
   export const didFinishLoad = writable(false)
 
   const PRELOAD_PATH = window.api.webviewPreloadPath
+  const ERROR_CODES_TO_IGNORE = [-3] // -3 is ERR_ABORTED
+  const NAVIGATION_DEBOUNCE_TIME = 500
 
   const log = useLogScope('Webview')
   const dispatch = createEventDispatcher<WebviewEvents>()
@@ -87,15 +89,16 @@
     dispatch('url-change', newUrl)
   }
 
-  const addHistoryEntry = async (newUrl: string) => {
+  const addHistoryEntry = useDebounce(async (newUrl: string) => {
     try {
-      log.debug('Adding history entry', newUrl)
       const oldUrl = $currentHistoryEntry?.url
 
       if (oldUrl && oldUrl === newUrl) {
-        log.debug('Skipping history entry for same URL')
+        log.debug('did Skipping history entry for same URL')
         return
       }
+
+      log.debug('did Adding history entry', newUrl, 'oldUrl', oldUrl)
 
       const entry: HistoryEntry = await historyEntriesManager.addEntry({
         type: 'navigation',
@@ -121,7 +124,7 @@
     } finally {
       programmaticNavigation = false
     }
-  }
+  }, NAVIGATION_DEBOUNCE_TIME)
 
   const handleRedirectNavigation = (newUrl: string) => {
     log.debug('Changing current location and history to', newUrl)
@@ -138,13 +141,14 @@
   }
 
   const handleNavigation = (newUrl: string) => {
+    updateUrl(newUrl)
+
     if (programmaticNavigation) {
       log.debug('Programmatic navigation, skipping history entry')
       programmaticNavigation = false
       return
     }
 
-    updateUrl(newUrl)
     addHistoryEntry(newUrl)
   }
 
@@ -528,6 +532,13 @@ Made with Deta Surf.`
       }
 
       log.debug('Failed to load', e.errorCode, e.errorDescription, e.validatedURL)
+
+      // Ignore errors that are not related to the webview itself or don't need an error page to be shown
+      if (ERROR_CODES_TO_IGNORE.includes(e.errorCode)) {
+        log.debug('Ignoring error code', e.errorCode)
+        return
+      }
+
       error.set({ code: e.errorCode, description: e.errorDescription, url: e.validatedURL })
     })
     webview.addEventListener('did-finish-load', () => {
@@ -588,15 +599,15 @@ Made with Deta Surf.`
       handleNavigation(e.url)
     })
 
-    webview.addEventListener(
-      'did-redirect-navigation',
-      (e: Electron.DidRedirectNavigationEvent) => {
-        // log.debug('did redirect navigation', e.url)
-        if (!e.isMainFrame || !e.isInPlace) return
+    // webview.addEventListener(
+    //   'did-redirect-navigation',
+    //   (e: Electron.DidRedirectNavigationEvent) => {
+    //     // log.debug('did redirect navigation', e.url)
+    //     if (!e.isMainFrame || !e.isInPlace) return
 
-        handleRedirectNavigation(e.url)
-      }
-    )
+    //     handleRedirectNavigation(e.url)
+    //   }
+    // )
   })
 
   onDestroy(() => {
