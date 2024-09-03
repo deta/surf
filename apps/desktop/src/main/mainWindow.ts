@@ -108,7 +108,11 @@ export function createWindow() {
   })
 
   applyCSPToSession(mainWindowSession)
-  setupPermissionHandlers(webviewSession)
+  // TODO: expose these to the renderer over IPC so
+  // that the user can alter the current cached state
+  //@ts-ignore
+  const { clearSessionPermissions, clearAllPermissions, removePermission } =
+    setupPermissionHandlers(webviewSession)
 
   // TODO: proper session management?
   initAdblocker('persist:horizon')

@@ -8,6 +8,25 @@ export type Config = {
   [key: string]: any
 }
 
+export type BrowserConfig = {
+  adblockerEnabled: boolean
+  historySwipeGesture: boolean
+}
+
+export interface PermissionDecision {
+  [origin: string]: {
+    [permission: string]: boolean
+  }
+}
+
+export type PermissionCache = {
+  [sessionId: string]: PermissionDecision
+}
+
+const BROWSER_CONFIG_NAME = 'browser.json'
+const USER_CONFIG_NAME = 'user.json'
+const PERMISSION_CONFIG_NAME = 'permissions.json'
+
 export const getConfig = <T extends Config>(
   configPath: string,
   fileName = 'config.json'
@@ -18,7 +37,6 @@ export const getConfig = <T extends Config>(
     if (fs.existsSync(fullPath)) {
       const raw = fs.readFileSync(fullPath, 'utf8')
       const data = JSON.parse(raw)
-
       return data as T
     } else {
       fs.writeFileSync(fullPath, JSON.stringify({}))
@@ -43,14 +61,6 @@ export const setConfig = <T extends Config>(
   }
 }
 
-export type BrowserConfig = {
-  adblockerEnabled: boolean
-  historySwipeGesture: boolean
-}
-
-const BROWSER_CONFIG_NAME = 'browser.json'
-const USER_CONFIG_NAME = 'user.json'
-
 export const getBrowserConfig = () => {
   return getConfig<BrowserConfig>(app.getPath('userData'), BROWSER_CONFIG_NAME)
 }
@@ -62,15 +72,11 @@ export const setBrowserConfig = (config: BrowserConfig) => {
 let userConfig: UserConfig | null = null
 
 export const getUserConfig = (path?: string) => {
-  // if (userConfig !== null) {
-  //   return userConfig
-  // }
-
   const storedConfig = getConfig<UserConfig>(path ?? app.getPath('userData'), USER_CONFIG_NAME)
+
   if (!storedConfig.user_id) {
     storedConfig.user_id = uuidv4()
     storedConfig.defaultBrowser = false
-
     setUserConfig(storedConfig as UserConfig)
   }
 
@@ -82,12 +88,10 @@ export const getUserConfig = (path?: string) => {
       use_semantic_search: true,
       show_annotations_in_oasis: false
     }
-
     setUserConfig(storedConfig as UserConfig)
   }
 
   userConfig = storedConfig as UserConfig
-
   return userConfig
 }
 
@@ -100,7 +104,6 @@ export const updateUserConfigSettings = (settings: Partial<UserConfig['settings'
   const currentConfig = getUserConfig()
   const newConfig = { ...currentConfig, settings: { ...currentConfig.settings, ...settings } }
   setUserConfig(newConfig)
-
   return newConfig.settings
 }
 
@@ -108,6 +111,67 @@ export const updateUserConfig = (config: Partial<UserConfig>) => {
   const currentConfig = getUserConfig()
   const newConfig = { ...currentConfig, ...config }
   setUserConfig(newConfig)
-
   return newConfig
+}
+
+let inMemoryPermissionConfig: PermissionCache | null = null
+
+export const getPermissionConfig = (): PermissionCache => {
+  if (!inMemoryPermissionConfig)
+    inMemoryPermissionConfig = getConfig<PermissionCache>(
+      app.getPath('userData'),
+      PERMISSION_CONFIG_NAME
+    ) as PermissionCache
+  return inMemoryPermissionConfig
+}
+
+export const setPermissionConfig = (config: PermissionCache): void => {
+  inMemoryPermissionConfig = config
+  setConfig(app.getPath('userData'), config, PERMISSION_CONFIG_NAME)
+}
+
+export const updatePermissionConfig = (
+  sessionId: string,
+  origin: string,
+  permission: string,
+  decision: boolean
+): PermissionCache => {
+  const currentConfig = getPermissionConfig()
+  if (!currentConfig[sessionId]) currentConfig[sessionId] = {}
+  if (!currentConfig[sessionId][origin]) currentConfig[sessionId][origin] = {}
+  currentConfig[sessionId][origin][permission] = decision
+
+  setPermissionConfig(currentConfig)
+  return currentConfig
+}
+
+export const removePermission = (
+  sessionId: string,
+  origin: string,
+  permission: string
+): PermissionCache => {
+  const currentConfig = getPermissionConfig()
+
+  if (currentConfig[sessionId]?.[origin]?.[permission] !== undefined) {
+    delete currentConfig[sessionId][origin][permission]
+    if (Object.keys(currentConfig[sessionId][origin]).length === 0)
+      delete currentConfig[sessionId][origin]
+    if (Object.keys(currentConfig[sessionId]).length === 0) delete currentConfig[sessionId]
+
+    setPermissionConfig(currentConfig)
+  }
+
+  return currentConfig
+}
+
+export const clearSessionPermissions = (sessionId: string): PermissionCache => {
+  const config = getPermissionConfig()
+  delete config[sessionId]
+  setPermissionConfig(config)
+  return config
+}
+
+export const clearAllPermissions = (): PermissionCache => {
+  setPermissionConfig({})
+  return {}
 }

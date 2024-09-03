@@ -1,5 +1,11 @@
 import { dialog, systemPreferences } from 'electron'
-import os from 'os'
+import {
+  getPermissionConfig,
+  updatePermissionConfig,
+  removePermission,
+  clearSessionPermissions,
+  clearAllPermissions
+} from './config'
 
 interface PermissionHandler {
   getDetail: (details: any) => string
@@ -18,7 +24,7 @@ const permissionHandlers: Record<string, PermissionHandler> = {
       `Media Types: ${details.mediaTypes?.join(', ') || 'Unknown'}
       Security Origin: ${details.securityOrigin || 'Unknown'}`,
     preCheck: async (details: Electron.MediaAccessPermissionRequest) => {
-      if (os.platform() !== 'darwin') return true
+      if (process.platform !== 'darwin') return true
 
       let allowAudio = true,
         allowVideo = true
@@ -39,20 +45,43 @@ const permissionHandlers: Record<string, PermissionHandler> = {
 const defaultHandler: PermissionHandler = {
   getDetail: (details: any) =>
     Object.entries(details)
-      .filter(([key]) => key !== 'requestingUrl')
+      .filter(([key]) => !['requestingUrl', 'isMainFrame'].includes(key))
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n')
 }
 
+const getUrlOrigin = (url: string): string | undefined => {
+  try {
+    const parsedUrl = new URL(url)
+    return parsedUrl.origin
+  } catch (error) {
+    return undefined
+  }
+}
+
 export function setupPermissionHandlers(session: Electron.Session) {
-  // session.setPermissionCheckHandler((_contents, permission, requestOrigin) => {
-  //   console.log('PERMISSION CHECK', permission, requestOrigin);
-  //   return true;
-  // });
+  const sessionId = session.getStoragePath() || 'default'
+
+  session.setPermissionCheckHandler((_contents, permission, requestingOrigin) => {
+    const origin = getUrlOrigin(requestingOrigin) // for normalization
+    if (!origin) return true
+
+    const config = getPermissionConfig()
+    const decision = config[sessionId]?.[requestingOrigin]?.[permission]
+    if (decision !== undefined) {
+      return decision
+    }
+    return true
+  })
 
   session.setPermissionRequestHandler(async (_contents, permission, callback, details) => {
-    // console.log('PERMISSION REQUEST', permission, details)
+    const origin = getUrlOrigin(details.requestingUrl) // for normalization
+    if (!origin) {
+      callback(false)
+      return
+    }
 
+    // TODO: short-circ these in `setPermissionCheckHandler` as well
     let shortCircuit: boolean | null = null
     switch (permission) {
       // `persistent-storage` isn't a part of the public API for some reason
@@ -64,21 +93,22 @@ export function setupPermissionHandlers(session: Electron.Session) {
       case 'window-management':
         shortCircuit = true
         break
-      // third party storage access, disable it for now
       case 'storage-access':
       case 'top-level-storage-access':
-        shortCircuit = false
-        break
-      // TODO: `geolocation` doesn't work for some reason
       case 'geolocation':
         shortCircuit = false
         break
-      // these usually require explicit user-action before they're granted to the page
-      // case 'pointerLock':
-      // case 'keyboardLock':
     }
-    if (shortCircuit != null) {
+    if (shortCircuit !== null) {
+      updatePermissionConfig(sessionId, origin, permission, shortCircuit)
       callback(shortCircuit)
+      return
+    }
+
+    const config = getPermissionConfig()
+    const cachedDecision = config[sessionId]?.[origin]?.[permission]
+    if (cachedDecision !== undefined) {
+      callback(cachedDecision)
       return
     }
 
@@ -90,16 +120,20 @@ export function setupPermissionHandlers(session: Electron.Session) {
       buttons: ['Allow', 'Deny'],
       title: 'Permission Request',
       message: `The application is requesting the following permission: ${permission}`,
-      detail: `Origin: ${details.requestingUrl}\n${handler.getDetail(details)}`,
+      detail: `Origin: ${origin}\n${handler.getDetail(details)}`,
       noLink: true,
       defaultId: 1
     })
 
-    callback(preCheck && response.response === 0)
+    const decision = preCheck && response.response === 0
+    updatePermissionConfig(sessionId, origin, permission, decision)
+    callback(decision)
   })
 
-  // session.setDevicePermissionHandler((details: Electron.DevicePermissionHandlerHandlerDetails) => {
-  //   console.log('PERMISSION DEVICE', details);
-  //   return false;
-  // })
+  return {
+    clearSessionPermissions: () => clearSessionPermissions(sessionId),
+    removePermission: (origin: string, permission: string) =>
+      removePermission(sessionId, origin, permission),
+    clearAllPermissions
+  }
 }
