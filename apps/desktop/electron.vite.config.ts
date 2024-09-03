@@ -63,9 +63,16 @@ export default defineConfig({
           main: resolve(__dirname, 'src/renderer/index.html'),
           setup: resolve(__dirname, 'src/renderer/setup.html'),
           settings: resolve(__dirname, 'src/renderer/settings.html')
-        }
+        },
+        // This is needed to get html-minifier-terser working in the browser context
+        external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js']
       },
       sourcemap: true
+    },
+    // This is needed to get html-minifier-terser working in the browser context: https://github.com/terser/html-minifier-terser/issues/160#issuecomment-1648837778
+    define: {
+      'process.env': {},
+      'process.platform': JSON.stringify(process.platform)
     }
   }
 })

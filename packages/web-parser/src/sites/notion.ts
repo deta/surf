@@ -4,7 +4,7 @@ import { APIExtractor, WebAppExtractor } from '../extractors'
 import { SERVICES } from '../services'
 
 import { parseStringIntoUrl, parseTextIntoISOString, wait } from '@horizon/utils'
-import { sanitizeHTML } from '../utils'
+import { minifyHTML, sanitizeHTML } from '../utils'
 
 export const NotionRegexPatterns = {
   page: /^\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/
@@ -180,6 +180,11 @@ export class NotionParser extends WebAppExtractor {
       const contentPlain = contentElem?.textContent
       const contentHtml = contentElem?.innerHTML
 
+      const cleanHTML = contentHtml ? sanitizeHTML(contentHtml) : null
+      const cleanPlain = contentPlain ? sanitizeHTML(contentPlain) : null
+
+      const minifiedHTML = cleanHTML ? await minifyHTML(cleanHTML) : null
+
       return {
         url: this.url.href,
         title: sanitizeHTML(pageTitle),
@@ -194,8 +199,8 @@ export class NotionParser extends WebAppExtractor {
         author_image: parseStringIntoUrl(user.profile_photo, this.url)?.href,
         author_url: null,
 
-        content_plain: contentPlain ? sanitizeHTML(contentPlain) : null,
-        content_html: contentHtml ? sanitizeHTML(contentHtml) : null
+        content_plain: cleanPlain,
+        content_html: minifiedHTML
       } as ResourceDataDocument
     } catch (e) {
       console.error('Error getting post data', e)

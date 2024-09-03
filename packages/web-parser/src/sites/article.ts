@@ -63,7 +63,7 @@ export class ArticleParser extends WebAppExtractor {
     const readabilityMetadata = this.metadataExtractor.extractContentFromDocument(document)
 
     // Extract the content from the document directly (fallback)
-    const content = new DOMExtractor(document).getContent()
+    const content = await new DOMExtractor(document).getContent()
 
     const resource = {
       title: readabilityMetadata?.title || pageMetadata.title,

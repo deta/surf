@@ -16,7 +16,7 @@
   import type BrowserTab from '../Browser/BrowserTab.svelte'
   import { useToasts } from '../../service/toast'
   import type { Tab } from '../../types'
-  import { sanitizeHTML } from '@horizon/web-parser/src/utils'
+  import { minifyHTML, sanitizeHTML } from '@horizon/web-parser/src/utils'
 
   export let activeBrowserTab: BrowserTab
   export let activeTab: Tab
@@ -111,26 +111,8 @@
       return null
     }
 
-    let cleaned = sanitizeHTML(content)
-
-    // @ts-ignore
-    const minified = window.api.minifyHtml(cleaned, {
-      collapseBooleanAttributes: true,
-      collapseWhitespace: true,
-      collapseInlineTagWhitespace: true,
-      continueOnParseError: true,
-      decodeEntities: true,
-      minifyCSS: true,
-      minifyJS: true,
-      removeComments: true,
-      removeAttributeQuotes: true,
-      removeEmptyAttributes: true,
-      removeEmptyElements: true,
-      removeOptionalTags: true,
-      removeRedundantAttributes: true,
-      removeScriptTypeAttributes: true,
-      removeStyleLinkTypeAttributes: true
-    })
+    const cleaned = sanitizeHTML(content)
+    const minified = await minifyHTML(cleaned)
 
     return cleanContext(minified)
   }

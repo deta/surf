@@ -35,7 +35,7 @@ export class LinkParser extends WebAppExtractor {
   async extractResourceFromDocument(document: Document) {
     // Note: sanitization is already done in the metadata extractor and the DOM extractor
     const metadata = this.metadataExtractor.extractMetadataFromDocument(document)
-    const content = new DOMExtractor(document).getContent()
+    const content = await new DOMExtractor(document).getContent()
 
     const resource = {
       title: metadata.title,

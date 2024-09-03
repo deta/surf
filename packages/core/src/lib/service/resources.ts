@@ -397,6 +397,12 @@ export class ResourceManager {
     this.resources = writable([])
     this.sffs = new SFFS()
     this.telemetry = telemetry
+
+    const isDev = import.meta.env.DEV
+    if (isDev) {
+      // @ts-ignore
+      window.resourceManager = this
+    }
   }
 
   private createResourceObject(data: SFFSResource): ResourceObject {

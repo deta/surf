@@ -1,4 +1,4 @@
-import { sanitizeHTML } from '../utils'
+import { minifyHTML, sanitizeHTML } from '../utils'
 
 export class DOMExtractor {
   document: Document
@@ -13,22 +13,24 @@ export class DOMExtractor {
   }
 
   private getRawHTML() {
-    return this.document.documentElement.outerHTML
+    return this.document.body.outerHTML
   }
 
   private getInnerText() {
     return this.document.body.innerText
   }
 
-  getContent() {
+  async getContent() {
     const html = this.getRawHTML()
     const plain = this.getInnerText()
 
     const cleanHTML = sanitizeHTML(html)
     const cleanPlain = sanitizeHTML(plain)
 
+    const minimizedHTML = await minifyHTML(cleanHTML)
+
     return {
-      html: cleanHTML,
+      html: minimizedHTML,
       plain: cleanPlain
     }
   }

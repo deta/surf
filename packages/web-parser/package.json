@@ -14,7 +14,9 @@
     "@horizon/typescript-config": "*",
     "@horizon/utils": "*",
     "@types/dompurify": "^3.0.5",
+    "@types/html-minifier-terser": "^7.0.2",
     "dompurify": "^3.1.6",
+    "html-minifier-terser": "^7.2.0",
     "typescript": "^5.2.2"
   },
   "dependencies": {

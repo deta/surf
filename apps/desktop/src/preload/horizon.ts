@@ -11,7 +11,6 @@ import {
 import path from 'path'
 import fetch from 'cross-fetch'
 import OpenAI, { toFile } from 'openai'
-import { minify } from 'html-minifier'
 import { createAPI } from '@horizon/api'
 import { actionsToRunnableTools } from './actions'
 import type {
@@ -429,8 +428,6 @@ const api = {
       console.error('Failed to copy: ', err)
     }
   },
-
-  minifyHtml: (html: string, options: any) => minify(html, options),
 
   onToggleSidebar: (callback: (visible?: boolean) => void) => {
     IPC_EVENTS_RENDERER.toggleSidebar.on((_, visible) => callback(visible))
