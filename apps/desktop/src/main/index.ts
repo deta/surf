@@ -126,6 +126,10 @@ if (!gotTheLock) {
       }
     }
 
+    if (isDev) {
+      app.dock?.setIcon(join(app.getAppPath(), 'build/resources/dev/icon.png'))
+    }
+
     await setupAdblocker()
 
     setAppMenu()
