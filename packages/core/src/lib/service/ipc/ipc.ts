@@ -31,11 +31,7 @@ export class IPCService {
       },
       main: {
         on: (handler: (event: Electron.IpcMainEvent, payload: T) => void) => {
-          ipcMain.on(name, (event, payload) => {
-            const sender = event.senderFrame
-            console.log('sender', sender)
-            handler(event, payload)
-          })
+          ipcMain.on(name, handler)
         },
         once: (handler: (event: Electron.IpcMainEvent, payload: T) => void) => {
           ipcMain.once(name, handler)
@@ -68,13 +64,7 @@ export class IPCService {
         handle: (handler: HandleHandler<T>) => {
           const mainProcess = !isRenderer()
           if (mainProcess) {
-            // ipcMain.handle(name, handler)
-            ipcMain.handle(name, (event, payload) => {
-              const sender = event.sender
-
-              const mainWindow = console.log('sender', sender)
-              return handler(event, payload)
-            })
+            ipcMain.handle(name, handler)
             return
           } else {
             throw new Error('Cannot handle events in renderer process')
