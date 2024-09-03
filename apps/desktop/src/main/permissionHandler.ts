@@ -100,7 +100,6 @@ export function setupPermissionHandlers(session: Electron.Session) {
         break
     }
     if (shortCircuit !== null) {
-      updatePermissionConfig(sessionId, origin, permission, shortCircuit)
       callback(shortCircuit)
       return
     }
