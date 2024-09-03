@@ -1,10 +1,13 @@
 import { app, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
+import { applyCSPToSession } from './csp'
 
 let setupWindow: BrowserWindow | undefined
 
 export function createSetupWindow() {
+  const setupWindowSession = session.fromPartition('persist:surf-app-session')
+
   setupWindow = new BrowserWindow({
     width: 600,
     height: 800,
@@ -19,11 +22,13 @@ export function createSetupWindow() {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [`--userDataPath=${app.getPath('userData')}`],
       sandbox: false,
-      session: session.fromPartition('persist:surf-app-session'),
+      session: setupWindowSession,
       webviewTag: true,
       defaultFontSize: 14
     }
   })
+
+  applyCSPToSession(setupWindowSession)
 
   setupWindow.on('ready-to-show', () => {
     if (!is.dev) {

@@ -9,6 +9,7 @@ import { normalizeElectronUserAgent } from '@horizon/utils'
 import { getGoogleSignInWindowId } from './googleSignInWindow'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
+import { applyCSPToSession } from './csp'
 
 const isDev = import.meta.env.DEV
 
@@ -61,6 +62,8 @@ export function createWindow() {
     height: Math.min(windowBounds.height, screenBounds.height)
   }
 
+  const mainWindowSession = session.fromPartition('persist:surf-app-session')
+
   mainWindow = new BrowserWindow({
     width: boundWindow.width,
     height: boundWindow.height,
@@ -85,7 +88,7 @@ export function createWindow() {
       sandbox: false,
       nodeIntegration: false,
       contextIsolation: true,
-      session: session.fromPartition('persist:surf-app-session'),
+      session: mainWindowSession,
       defaultFontSize: 14
     }
   })
@@ -103,6 +106,8 @@ export function createWindow() {
       }
     })
   })
+
+  applyCSPToSession(mainWindowSession)
   setupPermissionHandlers(webviewSession)
 
   // TODO: proper session management?
