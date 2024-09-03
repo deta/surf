@@ -180,6 +180,7 @@ export class HTMLDragItem extends DragItem {
   protected raf: number | null = null;
   protected rafInterval: Timer | null = null; // Used to emit drag events event when not moving mouse.
   protected previewPosition: { x: number; y: number } = { x: 0, y: 0 };
+  protected previewMomentum: { x: number; y: number } = { x: 0, y: 0 };
   protected initialElementSize: { w: number; h: number } = { w: 0, h: 0 };
 
   /// === CONSTRUCTOR
@@ -305,7 +306,11 @@ export class HTMLDragItem extends DragItem {
       return;
     }
 
-    this.previewElement.style.transform = `translate(-50%, -50%) translate(${this.previewPosition.x}px, ${this.previewPosition.y}px)`; // var(--dragcula-transform)
+    const clamp = (value: number, min: number, max: number) => {
+      return Math.min(Math.max(value, min), max);
+    };
+
+    this.previewElement.style.transform = `translate(-50%, -50%) translate(${this.previewPosition.x}px, ${this.previewPosition.y}px) rotate(${clamp(this.previewMomentum.x / 2.25, -45, 45)}deg)`;
 
     const overZone = HTMLDragZone.findClosestFromPoint(MOUSE_POS.x, MOUSE_POS.y);
     const newTargetId = overZone?.id ?? null;
@@ -469,7 +474,8 @@ export class HTMLDragItem extends DragItem {
       window.addEventListener("mouseup", this.boundMouseUp, { capture: true, once: true });
       window.addEventListener("mousemove", this.boundMouseMove, { capture: true });
       this.rafInterval = setInterval(() => {
-        if (this.raf === null) this.raf = requestAnimationFrame(this.boundRafCbk);
+        if (document.activeDragOperation) this.onDrag(document.activeDragOperation);
+        //if (this.raf === null) this.raf = requestAnimationFrame(this.boundRafCbk);
       }, 300);
 
       this.pushViewTransitionName(this.element, `dragcula-dragItem`);
@@ -525,6 +531,17 @@ export class HTMLDragItem extends DragItem {
   override async onDrag(drag: DragOperation) {
     //console.debug(`[HTMLDragItem:${this.id}] Drag`, drag);
     super.onDrag(drag);
+
+    // Reduce to 0
+    this.previewMomentum.x = (this.previewMomentum.x * 0.6 + this.previewMomentum.x * 7.0) / 9.0;
+    this.previewMomentum.y = (this.previewMomentum.y * 0.6 + this.previewMomentum.y * 7.0) / 9.0;
+    if (Math.abs(this.previewMomentum.x) < 0.1) this.previewMomentum.x = 0;
+    if (Math.abs(this.previewMomentum.y) < 0.1) this.previewMomentum.y = 0;
+
+    this.previewMomentum.x =
+      (drag.clientX - this.previewPosition.x + this.previewMomentum.x * 9.0) / 10.0;
+    this.previewMomentum.y =
+      (drag.clientY - this.previewPosition.y + this.previewMomentum.y * 9.0) / 10.0;
 
     this.previewPosition.x = MOUSE_POS.x;
     this.previewPosition.y = MOUSE_POS.y;
