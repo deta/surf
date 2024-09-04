@@ -24,15 +24,18 @@ export function setupIpc() {
 
 // Make sure the sender is one of the main windows (main, settings, setup) to prevent spoofing of messages from other windows (very unlikely but still recommended)
 export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent) => {
+  const validIDs: number[] = []
   const mainWindow = getMainWindow()
-  if (!mainWindow) {
-    log.error('Main window not found')
-    return false
-  }
-
-  const validIDs = [mainWindow.webContents.id]
   const settingsWindow = getSettingsWindow()
   const setupWindow = getSetupWindow()
+
+  if (!mainWindow) {
+    log.warn('Main window not found')
+  }
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    validIDs.push(mainWindow.webContents.id)
+  }
 
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     validIDs.push(settingsWindow.webContents.id)
