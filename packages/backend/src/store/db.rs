@@ -1714,9 +1714,9 @@ impl Database {
 
         let placeholders = vec!["?"; row_ids.len()].join(",");
         let query = format!(
-            "SELECT DISTINCT M.*, R.* FROM resource_metadata M
-            LEFT JOIN resources R ON M.resource_id = R.id
-            LEFT JOIN embedding_resources E ON M.resource_id = E.resource_id
+            "SELECT M.*, R.* FROM resources R 
+            LEFT JOIN resource_metadata M on M.resource_id = R.id
+            LEFT JOIN embedding_resources E ON E.resource_id = R.id 
             WHERE E.rowid IN ({}) GROUP BY R.id ORDER BY {}",
             placeholders,
             Self::get_order_by_clause_for_embedding_row_ids("E.rowid", &row_ids)
@@ -1829,11 +1829,11 @@ impl Database {
 
         let placeholders = vec!["?"; row_ids.len()].join(",");
         let query = format!(
-            "SELECT DISTINCT M.*, R.*, C.* FROM resource_metadata M
-            LEFT JOIN resources R ON M.resource_id = R.id
-            LEFT JOIN resource_text_content C ON M.resource_id = C.resource_id 
-            LEFT JOIN embedding_resources E ON M.resource_id = E.resource_id
-            WHERE E.rowid IN ({}) GROUP BY C.content ORDER BY {}",
+            "SELECT M.*, R.*, C.* FROM embedding_resources E
+            LEFT JOIN resource_text_content C ON E.content_id = C.rowid
+            LEFT JOIN resources R ON E.resource_id = R.id
+            LEFT JOIN resource_metadata M ON E.resource_id = M.resource_id
+            WHERE E.rowid IN ({}) ORDER BY {}",
             placeholders,
             Self::get_order_by_clause_for_embedding_row_ids("E.rowid", &row_ids)
         );
