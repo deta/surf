@@ -8,10 +8,20 @@ export const normalizeElectronUserAgent = (current: string): string => {
 }
 
 export const prependProtocol = (url: string, secure = true) => {
-  if (!url.startsWith('http')) {
-    return secure ? `https://${url}` : `http://${url}`
+  try {
+    if (!url.startsWith('http')) {
+      return secure ? `https://${url}` : `http://${url}`
+    }
+
+    const urlObj = new URL(url)
+    if (urlObj.protocol === 'http:') {
+      return secure ? urlObj.href.replace('http:', 'https:') : urlObj.href
+    }
+
+    return url
+  } catch (e) {
+    return url
   }
-  return url
 }
 
 export const makeAbsoluteURL = (urlOrPath: string, base: URL) => {
@@ -74,7 +84,7 @@ export const parseStringIntoUrl = (raw: string, base?: URL) => {
       return null
     }
 
-    const text = prependProtocol(raw)
+    const text = prependProtocol(raw, true)
     return base ? new URL(text, base.origin) : new URL(text)
   } catch (_) {
     return null
