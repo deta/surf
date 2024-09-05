@@ -20,11 +20,15 @@ on:
         type: boolean
         description: 'Run macOS x64 build'
         default: false
-      c_run_linux_arm:
+      c_run_windows_x64:
+        type: boolean
+        description: 'Run Windows x64 build'
+        default: false
+      d_run_linux_arm:
         type: boolean
         description: 'Run Linux ARM build'
         default: false
-      d_run_linux_x64:
+      e_run_linux_x64:
         type: boolean
         description: 'Run Linux x64 build'
         default: false
@@ -44,10 +48,13 @@ jobs:
           if [[ "${{ inputs.b_run_macos_x64 }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"macos-13\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:mac:x64\"},"
           fi
-          if [[ "${{ inputs.c_run_linux_arm }}" == "true" ]]; then
+          if [[ "${{ inputs.c_run_windows_x64 }}" == "true" ]]; then
+            matrix="$matrix{\"os\":\"windows-latest\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:win:x64\"},"
+          fi
+          if [[ "${{ inputs.d_run_linux_arm }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"linux-arm64-large\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:lin:arm\"},"
           fi
-          if [[ "${{ inputs.d_run_linux_x64 }}" == "true" ]]; then
+          if [[ "${{ inputs.e_run_linux_x64 }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"ubuntu-latest\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:lin:x64\"},"
           fi
           matrix="${matrix%,}]}"
@@ -64,14 +71,25 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Set up Windows build environment
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install visualstudio2019buildtools -y --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
+          choco install llvm -y
+          echo "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\Tools\VsDevCmd.bat" >> $env:GITHUB_PATH
+          echo "C:\Program Files\LLVM\bin" >> $env:GITHUB_PATH
+          cl
+          clang --version
+        shell: cmd
       - name: install dependencies
         run: |
           yarn config set network-timeout 300000
           yarn install --frozen-lockfile --network-timeout 300000
-      - name: clear cache and temporary files
-        run: |
-          yarn cache clean
-          rm -rf node_modules/.cache
       - name: build for ${{ matrix.os }}-${{ matrix.architecture }}
         run: ${{ matrix.build_command }}
         env:
@@ -130,6 +148,7 @@ jobs:
           tag_name: release-${{ github.sha }}
           files: |
             build/**/*.dmg
+            build/**/*.exe
             build/**/*.AppImage
             build/**/*.tar.gz
         env:
