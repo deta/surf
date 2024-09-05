@@ -130,6 +130,14 @@ const template = [
           log.log('Open Oasis')
           ipcSenders.openOasis()
         }
+      },
+      {
+        label: 'Browsing History',
+        accelerator: 'CmdOrCtrl+Y',
+        click: () => {
+          log.log('Open History')
+          ipcSenders.openHistory()
+        }
       }
     ]
   },

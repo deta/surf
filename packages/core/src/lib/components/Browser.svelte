@@ -2273,6 +2273,11 @@
       }
     })
 
+    window.api.onOpenHistory(() => {
+      setShowNewTabOverlay(0)
+      createHistoryTab()
+    })
+
     window.api.toggleRightSidebar(() => {
       toggleRightSidebar()
     })

@@ -248,6 +248,14 @@ const api = {
     }
   },
 
+  onOpenHistory: (callback) => {
+    try {
+      IPC_EVENTS_RENDERER.openHistory.on((_) => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
   toggleRightSidebar: (callback) => {
     try {
       IPC_EVENTS_RENDERER.toggleRightSidebar.on(() => callback())

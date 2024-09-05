@@ -115,6 +115,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   trackpadScrollStop: ipcService.addEvent<void>('trackpad-scroll-stop'),
   newWindowRequest: ipcService.addEvent<NewWindowRequest>('new-window-request'),
   openURL: ipcService.addEvent<OpenURL>('open-url'),
+  openHistory: ipcService.addEvent<void>('open-history'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),

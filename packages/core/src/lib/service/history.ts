@@ -1,6 +1,5 @@
 import { get, writable, type Writable } from 'svelte/store'
 import type { HistoryEntry } from '../types/index'
-import { HorizonDatabase } from './storage'
 
 import Fuse, { type FuseResult } from 'fuse.js'
 import { SFFS } from './sffs'
@@ -16,12 +15,10 @@ export type SearchHistoryEntry = {
 
 export class HistoryEntriesManager {
   entries: Writable<Map<string, HistoryEntry>>
-  db: HorizonDatabase
   sffs: SFFS
 
   constructor() {
     this.entries = writable(new Map())
-    this.db = new HorizonDatabase()
     this.sffs = new SFFS()
     this.init()
   }

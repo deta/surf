@@ -346,6 +346,16 @@ export const ipcSenders = {
     IPC_EVENTS_MAIN.openOasis.sendToWebContents(window.webContents)
   },
 
+  openHistory: () => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.openHistory.sendToWebContents(window.webContents)
+  },
+
   toggleRightSidebar: () => {
     const window = getMainWindow()
     if (!window) {

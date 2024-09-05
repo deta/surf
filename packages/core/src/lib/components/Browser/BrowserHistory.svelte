@@ -1,12 +1,10 @@
 <script lang="ts">
-  import { onMount, tick, afterUpdate } from 'svelte'
-  import type { ResourceHistoryEntryWithLinkedResource, TabHistory } from '../../types'
-  import { useLogScope } from '@horizon/utils'
-  import { useResourceManager, type ResourceSearchResultItem } from '../../service/resources'
+  import { onMount, afterUpdate } from 'svelte'
+  import type { HistoryEntry, TabHistory } from '../../types'
+  import { tooltip, useLogScope } from '@horizon/utils'
+  import { useResourceManager } from '../../service/resources'
   import { derived, writable } from 'svelte/store'
   import BrowserHistoryEntry from './BrowserHistoryEntry.svelte'
-  import { OpenResourceEventFrom, ResourceTagsBuiltInKeys } from '@horizon/types'
-  import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { Icon } from '@horizon/icons'
   import { useToasts } from '../../service/toast'
 
@@ -18,11 +16,7 @@
   const toasts = useToasts()
 
   const loading = writable(false)
-  const historyEntries = writable<ResourceHistoryEntryWithLinkedResource[]>([])
-  const showResourceDetails = writable(false)
-  const resourceDetailsModalSelected = writable<string | null>(null)
-
-  // New search-related state
+  const historyEntries = writable<HistoryEntry[]>([])
   const searchTerm = writable('')
 
   // Derived store for filtered entries
@@ -33,12 +27,11 @@
 
       const lowercaseSearch = $searchTerm.toLowerCase()
       return $historyEntries.filter((entry) => {
-        const { entryResource, linkedResource } = entry
-        const { title, raw_url, app_id } = entryResource.parsedData || {}
+        const { title, url } = entry || {}
 
         return (
           title?.toLowerCase().includes(lowercaseSearch) ||
-          raw_url?.toLowerCase().includes(lowercaseSearch)
+          url?.toLowerCase().includes(lowercaseSearch)
         )
       })
     }
@@ -67,29 +60,14 @@
 
       log.debug('fetching history...')
       const entries = await resourceManager.getHistoryEntries()
-      const sorted = entries.sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+
+      const filtered = entries.filter((entry) => entry.url && entry.type === 'navigation')
+      const sorted = filtered.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
 
-      const parsed = await Promise.all(
-        sorted.map(async (entry) => {
-          const linkedResourceTag = (entry.tags ?? []).find(
-            (tag) => tag.name === ResourceTagsBuiltInKeys.ANNOTATES
-          )?.value
-          const linkedResource = linkedResourceTag
-            ? await resourceManager.getResource(linkedResourceTag)
-            : null
-
-          return {
-            id: entry.id,
-            entryResource: entry,
-            linkedResource: linkedResource
-          } as ResourceHistoryEntryWithLinkedResource
-        })
-      )
-
-      log.debug('history entries:', parsed)
-      historyEntries.set(parsed)
+      log.debug('history entries:', sorted)
+      historyEntries.set(sorted)
     } catch (error) {
       log.error('Failed to fetch history:', error)
     } finally {
@@ -97,25 +75,11 @@
     }
   }
 
-  const openResourceDetailsModal = (resourceId: string) => {
-    resourceDetailsModalSelected.set(resourceId)
-    showResourceDetails.set(true)
-
-    resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
-      if (resource) {
-        resourceManager.telemetry.trackOpenResource(resource.type, OpenResourceEventFrom.History)
-      }
-    })
-  }
-
-  const closeResourceDetailsModal = () => {
-    showResourceDetails.set(false)
-    resourceDetailsModalSelected.set(null)
-  }
-
   const handleClearHistory = async () => {
     try {
-      const confirmed = window.confirm('Are you sure you want to clear your history?')
+      const confirmed = window.confirm(
+        'Are you sure you want to clear your history? This cannot be undone.'
+      )
       if (!confirmed) {
         return
       }
@@ -176,14 +140,6 @@
   }
 </script>
 
-{#if $showResourceDetails && $resourceDetailsModalSelected}
-  <OasisResourceModalWrapper
-    resourceId={$resourceDetailsModalSelected}
-    {active}
-    on:close={() => closeResourceDetailsModal()}
-    on:new-tab
-  />
-{/if}
 <div class="wrapper">
   <div class="content">
     <div class="header">
@@ -197,17 +153,21 @@
         <h1>History</h1>
       </div>
 
-      <!-- <input
-        type="text"
-        placeholder="Search history..."
-        bind:value={$searchTerm}
-        class="search-input"
-      /> -->
+      <div class="header-actions">
+        <input
+          type="text"
+          placeholder="Search history..."
+          bind:value={$searchTerm}
+          class="search-input"
+        />
 
-      <button on:click={handleClearHistory}>Clear</button>
+        <button on:click={handleClearHistory} use:tooltip={{ text: 'Clear history' }}>
+          <Icon name="trash" size="20px" />
+        </button>
+      </div>
     </div>
 
-    <div class="overflow-y-scroll p-4" bind:this={containerElement} on:scroll={handleScroll}>
+    <div class="overflow-y-scroll p-4 -m-4" bind:this={containerElement} on:scroll={handleScroll}>
       {#if $filteredEntries.length > 0}
         <div style="height: {totalHeight}px; position: relative">
           {#each visibleItems as item (item.id)}
@@ -215,12 +175,7 @@
               style="position: absolute; top: {(startIndex + visibleItems.indexOf(item)) *
                 (itemHeight + itemMargin)}px; left: 0; right: 0; margin-bottom: {itemMargin}px;"
             >
-              <BrowserHistoryEntry
-                entry={item}
-                on:open={() => openResourceDetailsModal(item.id)}
-                on:delete={() => deleteEntry(item.id)}
-                on:new-tab
-              />
+              <BrowserHistoryEntry entry={item} on:delete={() => deleteEntry(item.id)} on:new-tab />
             </div>
           {/each}
         </div>
@@ -241,9 +196,6 @@
 </div>
 
 <style lang="scss">
-  .items > div > div {
-    margin-bottom: 10px; /* Adds space between items */
-  }
   .wrapper {
     width: 100%;
     height: 100%;
@@ -271,13 +223,34 @@
     gap: 1rem;
 
     button {
-      background-color: transparent;
-      border: none;
-      font-size: 1.2rem;
+      background-color: #e6e3d7;
+      border-radius: 8px;
+      border: 1px solid #e5e2d5;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
       font-weight: 500;
       color: #7d7448;
       cursor: pointer;
+      flex-shrink: 0;
     }
+
+    input {
+      border: 1px solid #e5e2d5;
+      border-radius: 8px;
+      background-color: white;
+      padding: 0.5rem 1rem;
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: #7d7448;
+      outline: none;
+      width: 300px;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
   }
 
   .title {
@@ -286,6 +259,11 @@
     gap: 1rem;
     font-size: 1rem;
     font-weight: 500;
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 500;
+    }
   }
 
   .loading {

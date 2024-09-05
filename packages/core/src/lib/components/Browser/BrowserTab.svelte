@@ -28,10 +28,10 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { writable, type Unsubscriber } from 'svelte/store'
+  import { createEventDispatcher, onMount } from 'svelte'
+  import { writable } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
-  import type { AIChatMessageParsed, PageMagic, TabPage } from '../../types/browser.types'
+  import type { PageMagic, TabPage } from '../../types/browser.types'
   import { useLogScope, useDebounce, isGoogleSignInUrl, wait, generateID } from '@horizon/utils'
   import type { DetectedWebApp } from '@horizon/web-parser'
   import {
@@ -51,17 +51,11 @@
   } from '@horizon/types'
   import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
   import type { WebviewNavigationEvent } from '../Webview/Webview.svelte'
-  import {
-    ResourceAnnotation,
-    ResourceHistoryEntry,
-    ResourceTag,
-    useResourceManager
-  } from '../../service/resources'
+  import { ResourceAnnotation, ResourceTag, useResourceManager } from '../../service/resources'
   import { useToasts } from '../../service/toast'
   import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from '../../constants/inline'
   import { handleInlineAI } from '../../service/ai'
   import { useConfig } from '../../service/config'
-  import { useOasis } from '../../service/oasis'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<BrowserTabEvents>()
@@ -69,7 +63,6 @@
   const toasts = useToasts()
   const config = useConfig()
 
-  const sffs = resourceManager.sffs
   const userConfigSettings = config.settings
 
   export let tab: TabPage
@@ -112,17 +105,6 @@
   const appDetectionCallbacks = new Map<string, (app: DetectedWebApp) => void>()
 
   $: autoSaveResources = $userConfigSettings.auto_save_resources
-
-  // $: if (tab.historyStackIds) {
-  //   let currentEntry = historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])
-
-  //   if (currentEntry) {
-  //     src = currentEntry.url as string
-  //   } else {
-  //     console.log('currentEntry not found', tab.historyStackIds, tab.currentHistoryIndex)
-  //     src = tab.initialLocation
-  //   }
-  // }
 
   const debouncedAppDetection = useDebounce(async () => {
     await wait(500)
@@ -432,7 +414,7 @@
     log.debug('transformation output', transformation)
 
     webview.sendEvent(WebViewEventReceiveNames.TransformationOutput, {
-      text: transformation
+      text: transformation ?? ''
     })
 
     await resourceManager.telemetry.trackUseInlineAI(e.type, e.includePageContext)
@@ -657,78 +639,6 @@
         log.debug('skipping rest of app detection as it has not changed')
         return
       }
-
-      const existingHistoryEntry = matchingResources.find(
-        (resource) => resource.type === ResourceTypes.HISTORY_ENTRY
-      ) as ResourceHistoryEntry | undefined
-
-      if (existingHistoryEntry) {
-        const data = await existingHistoryEntry.getParsedData()
-        await existingHistoryEntry.updateParsedData({
-          ...data,
-          last_loaded: new Date().toISOString()
-        })
-        log.debug('updated history entry', existingHistoryEntry)
-      } else {
-        const historyEntry = await resourceManager.createResourceHistoryEntry(
-          {
-            raw_url: url,
-            title: tab.title ?? '',
-            app_id: tab.currentDetectedApp?.appId ?? null,
-            app_resource_identifier: tab.currentDetectedApp?.appResourceIdentifier ?? null,
-            last_loaded: new Date().toISOString()
-          },
-          {
-            sourceURI: url
-          },
-          [
-            ResourceTag.canonicalURL(url),
-            ...(bookmarkedResource ? [ResourceTag.annotates(bookmarkedResource.id)] : [])
-          ]
-        )
-
-        log.debug('created history entry', historyEntry)
-      }
-
-      // if ($activeTabId === tab.id) {
-      //   summarizePage(pageMagic)
-      // }
-
-      log.debug('page magic', pageMagic)
-
-      // if (!pageMagic) {
-      //   let responses: AIChatMessageParsed[] = []
-      //   if (tab?.chatId) {
-      //     const chat = await sffs.getAIChat(tab.chatId)
-      //     if (chat) {
-      //       const userMessages = chat.messages.filter((message) => message.role === 'user')
-      //       const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
-      //       const systemMessages = chat.messages.filter((message) => message.role === 'system')
-
-      //       responses = systemMessages.map((message, idx) => {
-      //         message.sources = message.sources
-      //         log.debug('Message', message)
-      //         return {
-      //           id: generateID(),
-      //           role: message.role,
-      //           query: queries[idx],
-      //           content: message.content.replace('<answer>', '').replace('</answer>', ''),
-      //           sources: message.sources,
-      //           status: 'success'
-      //         }
-      //       })
-      //     }
-      //   }
-
-      //   pageMagic = {
-      //     showSidebar: false,
-      //     running: false,
-      //     responses: responses
-      //   } as PageMagic
-
-      //   log.debug('updating page magic', pageMagic)
-      //   dispatch('update-page-magic', pageMagic)
-      // }
     } catch (e) {
       log.error('error handling webview app detection', e)
     } finally {

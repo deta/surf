@@ -675,12 +675,7 @@ export class ResourceManager {
   }
 
   async getHistoryEntries() {
-    const resources = await this.listResourcesByTags([
-      ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY),
-      ResourceManager.SearchTagDeleted(false)
-    ])
-
-    return resources as ResourceHistoryEntry[]
+    return this.sffs.getHistoryEntries()
   }
 
   addAnnotationToLoadedResource(resourceId: string, annotation: ResourceAnnotation) {
@@ -882,21 +877,6 @@ export class ResourceManager {
       metadata,
       tags
     ) as Promise<ResourceAnnotation>
-  }
-
-  async createResourceHistoryEntry(
-    data: ResourceDataHistoryEntry,
-    metadata?: Partial<SFFSResourceMetadata>,
-    tags?: SFFSResourceTag[]
-  ) {
-    const blobData = JSON.stringify(data)
-    const blob = new Blob([blobData], { type: ResourceTypes.HISTORY_ENTRY })
-    return this.createResource(
-      ResourceTypes.HISTORY_ENTRY,
-      blob,
-      metadata,
-      tags
-    ) as Promise<ResourceHistoryEntry>
   }
 
   async createDetectedResource<T>(
