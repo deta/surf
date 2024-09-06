@@ -245,7 +245,7 @@ impl AI {
     }
 
     // TODO: what behavior if no num_docs and no resource_ids?
-    #[tracing::instrument(level = "trace", skip(self,contents_store))]
+    #[tracing::instrument(level = "trace", skip(self, contents_store))]
     pub fn vector_search(
         &self,
         contents_store: &Database,
@@ -365,21 +365,29 @@ impl AI {
         }
         let resource_ids = resource_ids.unwrap_or(Vec::new());
 
-        let rag_results = match should_cluster {
+        let mut rag_results = match should_cluster {
             true => self.vector_search(
                 contents_store,
                 query.clone(),
                 number_documents as usize,
-                Some(resource_ids),
+                Some(resource_ids.clone()),
                 false,
                 None,
             )?,
-            false => contents_store.list_resources_by_ids(resource_ids)?,
+            false => contents_store.list_resources_by_ids(resource_ids.clone())?,
         };
         if rag_results.is_empty() {
-            return Err(BackendError::RAGEmptyContextError(
-                "No resources found for llm context".to_string(),
-            ));
+            // NOTE: this is a fallback solution to let the llm decide what to do if no rag results
+            // are found by sending everything to the llm
+            // side effect is context window might be too large
+            if should_cluster {
+                rag_results = contents_store.list_resources_by_ids(resource_ids)?;
+            }
+            if rag_results.is_empty() {
+                return Err(BackendError::RAGEmptyContextError(
+                    "No results found".to_string(),
+                ));
+            }
         }
 
         let (sources, sources_xml, contexts) = self.get_sources_contexts(rag_results);

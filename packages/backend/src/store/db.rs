@@ -84,7 +84,7 @@ pub struct VectorSearchResult {
 impl Database {
     pub fn new(db_path: &str, run_migrations: bool) -> BackendResult<Database> {
         let mut conn = Connection::open(db_path)?;
-        conn.busy_timeout(std::time::Duration::from_secs(10))?;
+        conn.busy_timeout(std::time::Duration::from_secs(60))?;
 
         let journal_mode: String = conn
             .query_row("PRAGMA journal_mode = WAL;", [], |row| row.get(0))

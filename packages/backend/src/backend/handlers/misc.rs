@@ -199,19 +199,30 @@ impl Worker {
             .format_chat_history(self.db.list_ai_session_messages(&session_id)?);
         let should_cluster = self.ai.should_cluster(&query)?;
 
-        let (assistant_message, sources) = self.async_runtime.block_on(async {
-            self.process_chat_stream(
-                channel,
-                callback,
-                query,
-                number_documents,
-                resource_ids,
-                general,
-                should_cluster,
-                history,
+        let (assistant_message, sources) = match self.async_runtime.block_on(async {
+            tokio::time::timeout(
+                std::time::Duration::from_secs(100),
+                self.process_chat_stream(
+                    channel,
+                    callback,
+                    query,
+                    number_documents,
+                    resource_ids,
+                    general,
+                    should_cluster,
+                    history,
+                ),
             )
             .await
-        })?;
+        }) {
+            Ok(Ok(result)) => result,
+            Ok(Err(err)) => return Err(err),
+            Err(_) => {
+                return Err(BackendError::GenericError(
+                    "Timeout while processing chat stream".to_string(),
+                ))
+            }
+        };
 
         self.save_messages(user_message, assistant_message, Some(sources))?;
 

@@ -362,7 +362,8 @@
       let content = 'Failed to generate response.'
       if ((e as any)?.includes('RAG Empty Context')) {
         content = `Unfortunately, we failed to find relevant information to answer your query.
-\nPlease try asking a different question or add more tabs to the current context.`
+\nThere might have been an issue with extracting all information from your current context.
+\nPlease try asking a different question or let us know if the issue persists.`
       }
       if (response) {
         updatePageMagicResponse(response.id, {
