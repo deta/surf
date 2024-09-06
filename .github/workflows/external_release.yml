@@ -146,7 +146,7 @@ jobs:
         with:
           draft: false
           prerelease: true
-          tag_name: release-${{ github.sha }}
+          tag_name: ${{ inputs.app_version }}
           files: |
             build/**/*.dmg
             build/**/*.exe
