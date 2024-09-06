@@ -1,15 +1,16 @@
-// import { sentryVitePlugin } from '@sentry/vite-plugin'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { defineConfig, externalizeDepsPlugin, bytecodePlugin } from 'electron-vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
-import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
-import replace from '@rollup/plugin-replace'
 import { resolve } from 'path'
 import { plugin as Markdown, Mode } from 'vite-plugin-markdown'
+import replace from '@rollup/plugin-replace'
+import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
+import obfuscator from 'rollup-plugin-obfuscator';
+// import { sentryVitePlugin } from '@sentry/vite-plugin'
 
 export default defineConfig({
   main: {
     envPrefix: 'M_VITE_',
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin(), bytecodePlugin({ removeBundleJS: true })],
     build: {
       rollupOptions: {
         input: {
@@ -35,15 +36,29 @@ export default defineConfig({
       // This is needed to get our tiptap editor working in the preload script as it tries to access the document before it is ready
       replace({
         'doc.documentElement.style': '{}'
-      })
+      }),
+      bytecodePlugin({ removeBundleJS: true, chunkAlias: ['horizon'] })
     ],
     build: {
       rollupOptions: {
         input: {
           horizon: resolve(__dirname, 'src/preload/horizon.ts'),
           webview: resolve(__dirname, 'src/preload/webview.ts')
-        }
-      }
+        },
+        output: {
+          manualChunks(id): string | void {
+            if (id.includes('horizon.ts')) return 'horizon'
+          }
+        },
+        plugins: [
+          obfuscator({
+            global: true,
+            options: {}
+          })
+        ]
+      },
+      sourcemap: process.env.NODE_ENV === 'development',
+      minify: !(process.env.NODE_ENV === 'development')
     }
   },
 
@@ -52,10 +67,6 @@ export default defineConfig({
     plugins: [
       Markdown({ mode: [Mode.MARKDOWN] }),
       svelte()
-      // sentryVitePlugin({
-      //   org: 'deta',
-      //   project: 'surf-early-adopters'
-      // })
     ],
     build: {
       rollupOptions: {
@@ -64,12 +75,17 @@ export default defineConfig({
           setup: resolve(__dirname, 'src/renderer/setup.html'),
           settings: resolve(__dirname, 'src/renderer/settings.html')
         },
-        // This is needed to get html-minifier-terser working in the browser context
-        external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js']
+        external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
+        plugins: [
+          obfuscator({
+            global: true,
+            options: {}
+          })
+        ]
       },
-      sourcemap: true
+      sourcemap: process.env.NODE_ENV === 'development',
+      minify: !(process.env.NODE_ENV === 'development')
     },
-    // This is needed to get html-minifier-terser working in the browser context: https://github.com/terser/html-minifier-terser/issues/160#issuecomment-1648837778
     define: {
       'process.env': {},
       'process.platform': JSON.stringify(process.platform)

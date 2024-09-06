@@ -73,8 +73,6 @@ if (OPENAI_API_KEY) {
 
 const api = {
   tabSwitchingShortcutsDisable: TAB_SWITCHING_SHORTCUTS_DISABLE,
-  webviewDevToolsBtn: !import.meta.env.PROD || !!process.env.WEBVIEW_DEV_TOOLS_BTN,
-  webviewPreloadPath: path.join(__dirname, '../preload/webview.js'),
 
   captureWebContents: () => {
     return IPC_EVENTS_RENDERER.captureWebContents.invoke()

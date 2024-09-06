@@ -1,5 +1,5 @@
 import { app, BrowserWindow, session, screen } from 'electron'
-import { join } from 'path'
+import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
@@ -63,7 +63,6 @@ export function createWindow() {
   }
 
   const mainWindowSession = session.fromPartition('persist:surf-app-session')
-
   mainWindow = new BrowserWindow({
     width: boundWindow.width,
     height: boundWindow.height,
@@ -138,20 +137,25 @@ export function createWindow() {
   //   getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: false })
   // })
 
-  app.on('web-contents-created', (_event, contents) => {
-    contents.on('will-attach-webview', (_event, webPreferences, _params) => {
-      webPreferences.webSecurity = true
-      webPreferences.sandbox = true
-      webPreferences.nodeIntegration = false
-      webPreferences.contextIsolation = true
-    })
-  })
+  setupWindowWebContentsHandlers(mainWindow.webContents)
 
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  } else {
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+}
+
+export function getMainWindow(): BrowserWindow | undefined {
+  return mainWindow
+}
+
+function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
   // Prevent direct navigation in the main window by handling the `will-navigate`
   // event and the `setWindowOpenHandler`. The main window should only host the SPA
   // Surf frontend and not navigate away from it. Any requested navigations should
   // be handled within the frontend.
-  mainWindow.webContents.on('will-navigate', (event) => {
+  contents.on('will-navigate', (event) => {
     const mainWindow = getMainWindow()
     if (mainWindow) {
       IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
@@ -162,7 +166,8 @@ export function createWindow() {
 
     event.preventDefault()
   })
-  mainWindow.webContents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
+
+  contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
     const mainWindow = getMainWindow()
     if (mainWindow) {
       IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
@@ -175,12 +180,21 @@ export function createWindow() {
     return { action: 'deny' }
   })
 
+  contents.on('will-attach-webview', (_event, webPreferences, _params) => {
+    webPreferences.webSecurity = true
+    webPreferences.sandbox = false
+    webPreferences.nodeIntegration = false
+    webPreferences.contextIsolation = true
+    webPreferences.preload = path.resolve(__dirname, '../preload/webview.js')
+  })
+
   // Handle navigation requests within webviews:
   // 1. Set up a window open handler for each webview when it's attached.
   // 2. Send navigation requests to the main window renderer (Surf preload) for handling.
   // 3. Allow opening new windows but deny other requests, and handle them within the renderer.
-  mainWindow.webContents.on('did-attach-webview', (_, contents) => {
+  contents.on('did-attach-webview', (_, contents) => {
     contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
+      const mainWindow = getMainWindow()
       if (mainWindow) {
         IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
           url: details.url,
@@ -215,14 +229,4 @@ export function createWindow() {
 
     attachContextMenu(contents)
   })
-
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  }
-}
-
-export function getMainWindow(): BrowserWindow | undefined {
-  return mainWindow
 }
