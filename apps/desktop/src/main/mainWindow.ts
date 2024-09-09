@@ -74,7 +74,7 @@ export function createWindow() {
     show: false,
     autoHideMenuBar: true,
     frame: process.platform === 'darwin' ? false : true,
-    titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
+    titleBarStyle: 'hidden',
     // ...(process.platform === 'linux' ? { icon } : {}),
     trafficLightPosition: { x: 12.5, y: 12.5 },
     webPreferences: {

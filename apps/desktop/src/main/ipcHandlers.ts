@@ -7,7 +7,7 @@ import { handleDragStart } from './drag'
 import { ElectronAppInfo, RightSidebarTab, UserSettings } from '@horizon/types'
 import { getPlatform } from './utils'
 import { checkForUpdates } from './appUpdates'
-import { getSettingsWindow } from './settingsWindow'
+import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 import { createGoogleSignInWindow } from './googleSignInWindow'
 import { setupHistorySwipeIpcSenders } from './historySwipe'
 
@@ -96,6 +96,29 @@ function setupIpcHandlers() {
       const window = getMainWindow()
       window?.setWindowButtonVisibility(visible)
     }
+  })
+
+  IPC_EVENTS_MAIN.controlWindow.on((event, action) => {
+    if (!validateIPCSender(event)) return
+
+    const window = getMainWindow()
+    if (!window) return
+
+    if (action === 'minimize') {
+      window.minimize()
+    } else if (action === 'toggle-maximize') {
+      window.isMaximized() ? window.unmaximize() : window.maximize()
+    } else if (action === 'close') {
+      window.close()
+    } else {
+      log.error('Invalid action', action)
+    }
+  })
+
+  IPC_EVENTS_MAIN.openSettings.on((event) => {
+    if (!validateIPCSender(event)) return
+
+    createSettingsWindow()
   })
 
   IPC_EVENTS_MAIN.googleSignIn.handle(async (event, url) => {

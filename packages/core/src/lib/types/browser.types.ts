@@ -181,3 +181,5 @@ export type CreateTabOptions = {
   placeAtEnd?: boolean
   trigger?: CreateTabEventTrigger
 }
+
+export type ControlWindow = 'minimize' | 'toggle-maximize' | 'close'

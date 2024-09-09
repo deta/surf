@@ -21,7 +21,7 @@ export function createSettingsWindow() {
     resizable: false,
     autoHideMenuBar: true,
     title: 'Settings',
-    frame: false, // TODO: Figure this out for windows but idc
+    frame: process.platform !== 'darwin',
     trafficLightPosition: { x: 18, y: 18 },
     titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
     // ...(process.platform === 'linux' ? { icon } : {}),

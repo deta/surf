@@ -10,6 +10,7 @@ import type {
   TelemetryEventTypes
 } from '@horizon/types'
 import { createIPCService, type IPCEvent } from './ipc'
+import type { ControlWindow } from '../../types'
 
 export const ipcService = createIPCService()
 
@@ -116,6 +117,8 @@ const IPC_EVENTS = ipcService.registerEvents({
   newWindowRequest: ipcService.addEvent<NewWindowRequest>('new-window-request'),
   openURL: ipcService.addEvent<OpenURL>('open-url'),
   openHistory: ipcService.addEvent<void>('open-history'),
+  controlWindow: ipcService.addEvent<ControlWindow>('control-window'),
+  openSettings: ipcService.addEvent<void>('open-settings'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),

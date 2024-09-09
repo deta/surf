@@ -30,6 +30,7 @@ import {
   OpenURL
 } from '@horizon/core/src/lib/service/ipc/events'
 import { ChatCompletion } from 'openai/resources'
+import { ControlWindow } from '@horizon/core/src/lib/types'
 
 const isDev = import.meta.env.DEV
 
@@ -93,6 +94,14 @@ const api = {
 
   updateTrafficLightsVisibility: (visible: boolean) => {
     IPC_EVENTS_RENDERER.updateTrafficLights.send(visible)
+  },
+
+  controlWindow: (action: ControlWindow) => {
+    IPC_EVENTS_RENDERER.controlWindow.send(action)
+  },
+
+  openSettings: () => {
+    IPC_EVENTS_RENDERER.openSettings.send()
   },
 
   handleGoogleSignIn: async (url: string) => {

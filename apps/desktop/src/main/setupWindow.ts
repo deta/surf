@@ -15,7 +15,7 @@ export function createSetupWindow() {
     show: false,
     resizable: false,
     autoHideMenuBar: true,
-    frame: false, // TODO: Figure this out for windows but idc
+    frame: false,
     // titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
     // ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {

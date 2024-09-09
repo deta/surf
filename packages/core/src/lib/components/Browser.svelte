@@ -59,7 +59,8 @@
     TabOasisDiscovery,
     DroppedTab,
     TabHistory,
-    CreateTabOptions
+    CreateTabOptions,
+    ControlWindow
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
@@ -115,6 +116,7 @@
   import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
   import DevOverlay from './Browser/DevOverlay.svelte'
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
+  import BrowserActions from './Browser/BrowserActions.svelte'
   import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
 
   let activeTabComponent: TabItem | null = null
@@ -194,6 +196,9 @@
   const downloadToastsMap = new Map<string, ToastItem>()
   const anyTabHovered = writable(false)
   const chatTooltipHovered = writable(false)
+
+  // on windows and linux the custom window actions are shown in the tab bar
+  const showCustomWindowActions = process.platform !== 'darwin'
 
   $: log.debug('right sidebar tab', $rightSidebarTab)
 
@@ -2501,6 +2506,14 @@
     }
   }
 
+  const controlWindow = (action: ControlWindow) => {
+    window.api.controlWindow(action)
+  }
+
+  const openSettings = () => {
+    window.api.openSettings()
+  }
+
   onMount(async () => {
     window.addEventListener('resize', handleResize)
 
@@ -3602,6 +3615,44 @@
 </pre> -->
 
 <div class="antialiased w-screen h-screen will-change-auto transform-gpu relative drag">
+  {#if !horizontalTabs && showCustomWindowActions}
+    <div class="flex flex-row items-center justify-between p-1">
+      <div>
+        <BrowserActions
+          {horizontalTabs}
+          {showCustomWindowActions}
+          {canGoBack}
+          {canGoForward}
+          {canReload}
+          on:go-back={() => $activeBrowserTab?.goBack()}
+          on:go-forward={() => $activeBrowserTab?.goForward()}
+          on:reload={() => $activeBrowserTab?.reload()}
+          on:toggle-sidebar={() => changeLeftSidebarState()}
+        />
+      </div>
+      <div class="flex flex-row items-center space-x-2 ml-5">
+        <button
+          on:click={() => controlWindow('minimize')}
+          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+        >
+          <Icon name="minus" />
+        </button>
+        <button
+          on:click={() => controlWindow('toggle-maximize')}
+          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+        >
+          <Icon name="rectangle" />
+        </button>
+        <button
+          on:click={() => controlWindow('close')}
+          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+        >
+          <Icon name="close" />
+        </button>
+      </div>
+    </div>
+  {/if}
+
   <SidebarPane
     {horizontalTabs}
     bind:showLeftSidebar
@@ -3625,144 +3676,22 @@
       {#if $sidebarTab !== 'oasis'}
         <div
           class="flex {!horizontalTabs
-            ? 'flex-col w-full py-1.5 space-y-4 px-2 h-full'
-            : 'flex-row items-center h-full ml-20 space-x-4 mr-4'} relative"
+            ? `flex-col w-full ${showCustomWindowActions ? 'h-[calc(100%-45px)]' : 'py-1.5 h-full'} space-y-4 px-2`
+            : `flex-row items-center h-full ${showCustomWindowActions ? '' : 'ml-20'} space-x-4 mr-4`} relative"
         >
-          <div
-            class="flex flex-row items-center flex-shrink-0 {horizontalTabs
-              ? 'pl-3'
-              : 'w-full justify-between pl-[4.4rem]'}"
-          >
-            <Tooltip.Root openDelay={400} closeDelay={10}>
-              <Tooltip.Trigger>
-                <button
-                  class="no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                  class:rotate-90={horizontalTabs}
-                  on:click={() => changeLeftSidebarState()}
-                >
-                  <span
-                    class="inline-block translate-x-0 transition-transform ease-in-out duration-200"
-                  >
-                    <Icon name="sidebar.left" />
-                  </span>
-                </button>
-              </Tooltip.Trigger>
-              <Tooltip.Content
-                transition={flyAndScale}
-                transitionConfig={{ y: 8, duration: 150 }}
-                sideOffset={8}
-              >
-                <div class="bg-neutral-100">
-                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                </div>
-                <div
-                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-                >
-                  Toggle {horizontalTabs ? 'Topbar' : 'Sidebar'} (⌘ + Shift + B)
-                </div>
-              </Tooltip.Content>
-            </Tooltip.Root>
-
-            <div class="flex flex-row items-center">
-              <Tooltip.Root openDelay={400} closeDelay={10}>
-                <Tooltip.Trigger>
-                  <button
-                    class="no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoBack
-                      ? 'opacity-30 cursor-not-allowed'
-                      : 'cursor-pointer'}"
-                    disabled={!canGoBack}
-                    on:click={$activeBrowserTab?.goBack}
-                  >
-                    <span
-                      class="inline-block translate-x-0 {canGoBack &&
-                        'group-hover:-translate-x-1'} transition-transform ease-in-out duration-200"
-                    >
-                      <Icon name="arrow.left" />
-                    </span>
-                  </button>
-                </Tooltip.Trigger>
-                <Tooltip.Content
-                  transition={flyAndScale}
-                  transitionConfig={{ y: 8, duration: 150 }}
-                  sideOffset={8}
-                >
-                  <div class="bg-neutral-100">
-                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                  </div>
-                  <div
-                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-                  >
-                    Go back (⌘ + ←)
-                  </div>
-                </Tooltip.Content>
-              </Tooltip.Root>
-
-              <Tooltip.Root openDelay={400} closeDelay={10}>
-                <Tooltip.Trigger>
-                  <button
-                    class="no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canGoForward
-                      ? 'opacity-30 cursor-not-allowed'
-                      : 'cursor-pointer'}"
-                    disabled={!canGoForward}
-                    on:click={$activeBrowserTab?.goForward}
-                  >
-                    <span
-                      class="inline-block translate-x-0 {canGoForward &&
-                        'group-hover:translate-x-1'} transition-transform ease-in-out duration-200"
-                    >
-                      <Icon name="arrow.right" />
-                    </span>
-                  </button>
-                </Tooltip.Trigger>
-                <Tooltip.Content
-                  transition={flyAndScale}
-                  transitionConfig={{ y: 8, duration: 150 }}
-                  sideOffset={8}
-                >
-                  <div class="bg-neutral-100">
-                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                  </div>
-                  <div
-                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-                  >
-                    Go forward (⌘ + →)
-                  </div>
-                </Tooltip.Content>
-              </Tooltip.Root>
-
-              <Tooltip.Root openDelay={400} closeDelay={10}>
-                <Tooltip.Trigger>
-                  <button
-                    class="no-drag transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 {!canReload
-                      ? 'opacity-30 cursor-not-allowed'
-                      : 'cursor-pointer'}"
-                    on:click={$activeBrowserTab?.reload}
-                    disabled={!canReload}
-                  >
-                    <span
-                      class="group-hover:rotate-180 transition-transform ease-in-out duration-200"
-                    >
-                      <Icon name="reload" />
-                    </span>
-                  </button>
-                </Tooltip.Trigger>
-                <Tooltip.Content
-                  transition={flyAndScale}
-                  transitionConfig={{ y: 8, duration: 150 }}
-                  sideOffset={8}
-                >
-                  <div class="bg-neutral-100">
-                    <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
-                  </div>
-                  <div
-                    class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-                  >
-                    Reload Page (⌘ + R)
-                  </div>
-                </Tooltip.Content>
-              </Tooltip.Root>
-            </div>
-          </div>
+          {#if horizontalTabs || !showCustomWindowActions}
+            <BrowserActions
+              {horizontalTabs}
+              {showCustomWindowActions}
+              {canGoBack}
+              {canGoForward}
+              {canReload}
+              on:go-back={() => $activeBrowserTab?.goBack()}
+              on:go-forward={() => $activeBrowserTab?.goForward()}
+              on:reload={() => $activeBrowserTab?.reload()}
+              on:toggle-sidebar={() => changeLeftSidebarState()}
+            />
+          {/if}
 
           <div
             class="bg-sky-50 no-drag my-auto rounded-xl shadow-md flex-shrink-0 overflow-x-scroll no-scrollbar"
@@ -4168,7 +4097,39 @@
 
                 <Icon name="leave" />
               </button>
+
+              {#if showCustomWindowActions}
+                <button
+                  on:click={() => openSettings()}
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                >
+                  <Icon name="settings" />
+                </button>
+              {/if}
             </div>
+
+            {#if horizontalTabs && showCustomWindowActions}
+              <div class="flex flex-row items-center space-x-2 ml-5">
+                <button
+                  on:click={() => controlWindow('minimize')}
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                >
+                  <Icon name="minus" />
+                </button>
+                <button
+                  on:click={() => controlWindow('toggle-maximize')}
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                >
+                  <Icon name="rectangle" />
+                </button>
+                <button
+                  on:click={() => controlWindow('close')}
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
+            {/if}
           </div>
         </div>
       {:else}
