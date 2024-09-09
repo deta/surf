@@ -49,7 +49,7 @@
     "rehype-sanitize": "^6.0.0",
     "rehype-stringify": "^10.0.0",
     "sass": "^1.70.0",
-    "svelte": "^4.2.8",
+    "svelte": "^4.2.19",
     "svelte-autosize": "^1.1.0",
     "svelte-check": "^3.6.2",
     "svelte-exmarkdown": "^3.0.5",
