@@ -223,7 +223,16 @@ export enum PageChatUpdateContextEventAction {
   /** A tab was removed from the context */
   Remove = 'remove',
   /** All other tabs were removed except one */
-  ExcludeOthers = 'exclude_others'
+  ExcludeOthers = 'exclude_others',
+  /** The active tab changed and was added to the context */
+  ActiveChanged = 'active_changed',
+  /** Multiple tabs were selected */
+  MultiSelect = 'multi_select'
+}
+
+export enum PageChatMessageSentEventError {
+  RAGEmptyContext = 'RAG_EMPTY_CONTEXT',
+  Other = 'OTHER'
 }
 
 export type UpdateSpaceSettingsEventChange = {

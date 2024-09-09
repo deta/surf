@@ -36,6 +36,7 @@
     comment: { plain: string; html: string; tags: string[] }
     link: void
     insert: string
+    addToChat: string
   }>()
 
   const runningText = derived(runningAction, (runningAction) => {
@@ -102,6 +103,10 @@
     })
   }
 
+  const handleAddToChat = () => {
+    dispatch('addToChat', text)
+  }
+
   const runAIAction = (type: WebViewEventTransform['type']) => {
     running = true
     $runningAction = type
@@ -152,9 +157,9 @@
     } else if (shortcutCombo && e.key === 'm') {
       e.preventDefault()
       showCommentMenu()
-    } else if (shortcutCombo && e.key === 'k') {
+    } else if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault()
-      // showLinkMenu()
+      handleAddToChat()
     } else if (shortcutCombo && e.key === 'j') {
       e.preventDefault()
       showAIMenu()
@@ -163,10 +168,11 @@
         e.preventDefault()
         handleSaveOutput()
       }
-    } else if (shortcutCombo && e.key === 'i') {
-      e.preventDefault()
-      handleInsert()
     }
+    // else if (shortcutCombo && e.key === 'i') {
+    //   e.preventDefault()
+    //   handleInsert()
+    // }
   }
 
   const handleInputKey = (e: KeyboardEvent) => {
@@ -197,6 +203,10 @@
       </Button>
 
       <Button on:click={() => showCommentMenu()} icon="message" tooltip="Add Comment" />
+
+      <!--<Button on:click={handleAddToChat} tooltip="Add to Chat (⌘+K)">
+        <Icon name="sparkles.fill" />
+      </Button>-->
 
       <!-- <div class="divider"></div> -->
 

@@ -24,7 +24,8 @@ import {
   type DeleteAnnotationEventType,
   DeleteAnnotationEventTrigger,
   SearchOasisEventTrigger,
-  ResourceTypes
+  ResourceTypes,
+  PageChatMessageSentEventError
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -365,13 +366,15 @@ export class Telemetry {
     numPages: number
     numPreviousMessages: number
     embeddingModel?: string
+    error?: PageChatMessageSentEventError
   }) {
     await this.trackEvent(TelemetryEventTypes.PageChatMessageSent, {
       context_size: stats.contextSize,
       num_spaces: stats.numSpaces,
       num_pages: stats.numPages,
       num_messages: stats.numPreviousMessages,
-      embedding_model: stats.embeddingModel
+      embedding_model: stats.embeddingModel,
+      error: stats.error
     })
   }
 
@@ -394,10 +397,15 @@ export class Telemetry {
     })
   }
 
-  async trackPageChatContextUpdate(action: PageChatUpdateContextEventAction, numResources: number) {
+  async trackPageChatContextUpdate(
+    action: PageChatUpdateContextEventAction,
+    numResources: number,
+    numChanged: number = 1
+  ) {
     await this.trackEvent(TelemetryEventTypes.PageChatContextUpdate, {
       action: action,
-      context_size: numResources
+      context_size: numResources,
+      changed: numChanged
     })
   }
 

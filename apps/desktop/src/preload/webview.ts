@@ -766,6 +766,18 @@ window.addEventListener('DOMContentLoaded', async (_) => {
         }
       })
 
+      selectionMenu.$on('addToChat', (e) => {
+        const text = e.detail
+
+        sendPageEvent(WebViewEventSendNames.AddToChat, text)
+
+        if (selection && selectionRange) {
+          selection.removeAllRanges()
+        }
+
+        selectionMenuWrapper?.remove()
+      })
+
       selectionMenu.$on('comment', (e) => {
         const content = e.detail
         console.debug('Commenting', content)

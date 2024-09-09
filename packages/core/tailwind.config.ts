@@ -1,9 +1,18 @@
 import type { Config } from 'tailwindcss'
+import plugin from 'tailwindcss/plugin'
 
 const config: Config = {
   jit: true,
   content: ['./src/**/*.{html,js,svelte,ts}'],
-  plugins: [require('@tailwindcss/typography')],
+  plugins: [
+    require('@tailwindcss/typography'),
+    plugin(({ addVariant }) => {
+      addVariant(
+        'prose-inline-code',
+        '&.prose :where(:not(pre)>code):not(:where([class~="not-prose"] *))'
+      )
+    })
+  ],
   theme: {
     container: {
       center: true,

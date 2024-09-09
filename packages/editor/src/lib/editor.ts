@@ -49,9 +49,6 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
           suggestion: suggestion
         })
       ]),
-  Placeholder.configure({
-    placeholder: opts?.placeholder ?? "Write something or type '/' for options…"
-  }),
   TaskItem,
   TaskList
   // Markdown,

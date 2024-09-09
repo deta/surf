@@ -23,6 +23,7 @@
   export let showExcludeOthersButton: boolean = false
   export let showIncludeButton: boolean = false
   export let bookmarkingInProgress: boolean = false
+  export let isUserSelected: boolean
   export let bookmarkingSuccess: boolean = false
   export let enableEditing = false
   export let showClose = false
@@ -32,21 +33,32 @@
   export let tabSize: number | undefined = undefined
   export let horizontalTabs = true
   export let removeHighlight = false
+  export let isSelected = false
+  export let isMagicActive = false
 
   export const editAddress = async () => {
     isEditing = true
-
     await tick()
-
-    addressInputElem.focus()
+    if (addressInputElem) {
+      addressInputElem.focus()
+      // Set cursor to end of input
+      addressInputElem.setSelectionRange(
+        addressInputElem.value.length,
+        addressInputElem.value.length
+      )
+    } else {
+      log.error('addressInputElem is not defined')
+    }
   }
 
   export const blur = () => {
-    addressInputElem.blur()
+    addressInputElem?.blur()
   }
 
   const dispatch = createEventDispatcher<{
     select: string
+    'multi-select': string
+    'passive-select': string
     'remove-from-sidebar': string
     'delete-tab': string
     'unarchive-tab': string
@@ -60,6 +72,9 @@
     'include-tab': string
     Drop: { drag: DragculaDragEvent; spaceId: string }
     DragEnd: DragculaDragEvent
+    edit: void
+    mouseenter: string
+    mouseleave: string
   }>()
   const resourceManager = useResourceManager()
 
@@ -68,6 +83,7 @@
 
   let addressInputElem: HTMLInputElement
   let space: Space | null = null
+  let isDragging = false
   let isEditing = false
   let hovered = false
   let popoverVisible = false
@@ -89,6 +105,20 @@
 
   $: showLiveSpaceButton = checkIfLiveSpacePossible(tab)
 
+  // $: if (tab.type === 'space') {
+  //   fetchSpace(tab.spaceId)
+  // }
+
+  // NOTE: commented out 'sanitizations' are not useful
+  $: sanitizedTitle = tab.title
+  // ? tab.type !== 'space'
+  //   ? tab.title
+  //       .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
+  //       .replace(/[\/\\]/g, '–')
+  //       .replace(/^\w/, (c) => c.toUpperCase())
+  //   : tab.title
+  // : ''
+
   const checkIfLiveSpacePossible = (tab: Tab) => {
     if (tab.type !== 'page') return false
 
@@ -102,10 +132,37 @@
   }
 
   const handleClick = (e: MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+    const clickedElement = e.target as HTMLElement
 
-    dispatch('select', tab.id)
+    if (e.shiftKey) {
+      e.preventDefault()
+      e.stopPropagation()
+      blur()
+
+      dispatch('multi-select', tab.id)
+      return
+    } else if (e.metaKey || e.ctrlKey) {
+      e.preventDefault()
+      e.stopPropagation()
+      blur()
+
+      dispatch('passive-select', tab.id)
+      return
+    } else if (clickedElement !== addressInputElem) {
+      e.preventDefault()
+      e.stopPropagation()
+
+      dispatch('select', tab.id)
+    }
+
+    if (clickedElement === addressInputElem) {
+      // && (e.shiftKey || e.metaKey || e.ctrlKey)
+      e.preventDefault()
+      //e.stopImmediatePropagation()
+      e.stopPropagation()
+      return
+      //blur()
+    }
   }
 
   const handleRemoveSpaceFromSidebar = (_e: MouseEvent) => {
@@ -120,21 +177,17 @@
     dispatch('unarchive-tab', tab.id)
   }
 
-  const handleInputFocus = async () => {
+  const handleInputFocus = () => {
     isEditing = true
-
     if (url) {
-      $inputUrl = isEditing ? url : new URL(url).hostname
+      $inputUrl = url
     }
 
-    // scroll to the end
+    // Use setTimeout to ensure this runs after the input value has been updated
     setTimeout(() => {
+      addressInputElem.setSelectionRange(0, addressInputElem.value.length)
       addressInputElem.scrollLeft = addressInputElem.scrollWidth
     }, 0)
-
-    await tick()
-
-    addressInputElem.select()
   }
 
   const handleInputBlur = () => {
@@ -145,7 +198,11 @@
     if (event.key === 'Enter') {
       dispatch('input-enter', $inputUrl)
     } else if (event.key === 'Escape') {
-      addressInputElem.blur()
+      if (addressInputElem) {
+        addressInputElem.blur()
+      } else {
+        log.error('addressInputElem is not defined')
+      }
     }
   }
 
@@ -156,20 +213,6 @@
       log.error('Failed to fetch space:', error)
     }
   }
-
-  // $: if (tab.type === 'space') {
-  //   fetchSpace(tab.spaceId)
-  // }
-
-  // NOTE: commented out 'sanitizations' are not useful
-  $: sanitizedTitle = tab.title
-  // ? tab.type !== 'space'
-  //   ? tab.title
-  //       .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
-  //       .replace(/[\/\\]/g, '–')
-  //       .replace(/^\w/, (c) => c.toUpperCase())
-  //   : tab.title
-  // : ''
 
   const handleBookmark = () => {
     saveToSpacePopoverOpened.set(false)
@@ -231,29 +274,22 @@
       fetchSpace(tab.spaceId)
     }
   })
-
-  let isDragging = false
 </script>
 
 <div
-  id="tab-{tab.id}"
   draggable={true}
-  class="tab no-drag {isActive
-    ? 'text-sky-950 bg-sky-200 sticky shadow-sm box-shadow-[0_0_0_1px_rgba(3,105,161,1)]'
-    : ''}
-  flex items-center {pinned
-    ? 'p-1 rounded-lg'
-    : horizontalTabs
-      ? 'py-1.5 px-2.5 rounded-xl'
-      : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none"
-  class:opacity-75={hibernated}
-  class:bg-green-200={isActive && $inputUrl === 'surf.featurebase.app'}
-  class:bg-sky-200={isActive && $inputUrl !== 'surf.featurebase.app'}
+  id="tab-{tab.id}"
+  class={`tab no-drag ${isActive ? 'active' : ''} ${tab.magic ? (isActive ? 'bg-pink-500/80 text-pink-950 shadow-inner ring-[0] ring-pink-600' : 'bg-pink-400/60 text-pink-950') : isActive ? 'text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px] ring-sky-500' : isSelected ? 'bg-white outline outline-2 outline-sky-500' : ''} flex items-center ${pinned ? 'p-1 rounded-lg' : horizontalTabs ? 'py-1.5 px-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none`}
+  class:bg-green-200={isActive && $inputUrl === 'surf.featurebase.app' && !tab.magic}
+  class:bg-sky-200={isActive && $inputUrl !== 'surf.featurebase.app' && !tab.magic}
   class:pinned
+  class:hovered
+  class:selected={isSelected}
+  class:combine-border={(isMagicActive && tab.magic) ||
+    (!isMagicActive && (isSelected || isActive))}
+  class:magic={tab.magic}
   style={tabSize
-    ? `width: ${tabSize}px; min-width: ${
-        isActive && !pinned ? 260 : tabSize
-      }px; max-width: ${tabSize}px;`
+    ? `width: ${tabSize}px; min-width: ${isActive && !pinned ? 260 : tabSize}px; max-width: ${tabSize}px;`
     : ''}
   style:position="relative"
   aria-hidden="true"
@@ -262,9 +298,13 @@
   on:click={handleClick}
   on:DragStart={handleDragStart}
   on:DragEnd={handleDragEnd}
-  on:mouseenter={() => (hovered = true)}
+  on:mouseenter={() => {
+    hovered = true
+    dispatch('mouseenter', tab.id)
+  }}
   on:mouseleave={() => {
     if (!popoverVisible) hovered = false
+    dispatch('mouseleave', tab.id)
   }}
   use:tooltip={pinned
     ? {
@@ -337,20 +377,6 @@
       >
         <Icon name="close" size="16px" />
       </button>
-      <!-- {:else if showExcludeOthersButton}
-      <button
-        on:click|stopPropagation={handleExcludeTab}
-        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-      >
-        <Icon name="minus" size="16px" />
-      </button>
-    {:else if showIncludeButton}
-      <button
-        on:click|stopPropagation={handleIncludeTab}
-        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-      >
-        <Icon name="add" size="16px" />
-      </button> -->
     {:else}
       <button
         on:click|stopPropagation={handleArchive}
@@ -375,14 +401,18 @@
           placeholder="Enter URL or search query"
           on:keydown={handleInputKeydown}
           bind:this={addressInputElem}
-          class="w-full h-full bg-transparent focus:outline-none group-active:select-none
-          {!isEditing
-            ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 bg-[length:250%_100%]'
-            : ''}
-          "
+          class={`w-full h-full bg-transparent focus:outline-none group-active:select-none
+          ${
+            !isEditing && !isMagicActive
+              ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 bg-[length:250%_100%] z-[60]'
+              : ''
+          }`}
         />
       {:else}
-        <div class=" whitespace-nowrap overflow-hidden truncate max-w-full">
+        <div
+          aria-hidden="true"
+          class={`whitespace-nowrap overflow-hidden truncate max-w-full ${isMagicActive && tab.magic ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 bg-[length:250%_100%]' : ''}`}
+        >
           {#if tab.type === 'space'}
             {tab.title}
           {:else}
@@ -428,37 +458,6 @@
               />
             </div>
           </CustomPopover>
-
-          <!-- <button
-            on:mouseenter={handlePopoverLiveSpaceEnter}
-            on:mouseleave={() => setTimeout(() => handlePopoverLiveSpaceLeave(), 100)}
-            on:click={handleCreateLiveSpace}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-            use:tooltip={{
-              content: `Create ${tab.title.slice(0, 5)}${tab.title.length > 5 ? '...' : ''}  Space`,
-              action: 'hover',
-              position: 'left',
-              animation: 'fade',
-              delay: 500
-            }}
-            on:save-resource-in-space={handleAddSourceToSpace}
-            on:popover-close={handlePopoverLiveSpaceLeave}
-            use:popover={{
-              content: {
-                component: ShortcutSaveItem,
-                props: { resourceManager, spaces, infoText: 'Add page as a source to Space:' }
-              },
-              action: 'hover',
-              position: horizontalTabs ? 'bottom-center' : 'right-top',
-              style: {
-                backgroundColor: '#f5f5f5'
-              },
-              animation: 'fade',
-              delay: 700
-            }}
-          >
-            <Icon name="news" />
-          </button> -->
         {/if}
 
         {#if tab.type === 'page' && isActive}
@@ -488,48 +487,12 @@
                 />
               </div>
             </CustomPopover>
-
-            <!-- <button
-              on:mouseenter={handlePopoverEnter}
-              on:mouseleave={() => setTimeout(() => handlePopoverLeave(), 100)}
-              on:click={handleBookmark}
-              use:tooltip2={{
-                text: isBookmarkedByUser ? 'Saved to Your Stuff' : 'Save to My Stuff (⌘ + D)',
-                position: 'left'
-              }}
-              on:save-resource-in-space={handleSaveResourceInSpace}
-              on:popover-close={handlePopoverLeave}
-              use:popover={{
-                content: {
-                  component: ShortcutSaveItem,
-                  props: { resourceManager, spaces, infoText: 'Save page to Space:' }
-                },
-                action: 'hover',
-                position: horizontalTabs ? 'bottom-center' : 'right-top',
-                style: {
-                  backgroundColor: '#f5f5f5'
-                },
-                animation: 'fade',
-                delay: 700
-              }}
-              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-            >
-              {#if bookmarkingInProgress}
-                <Icon name="spinner" size="16px" />
-              {:else if bookmarkingSuccess}
-                <Icon name="check" size="16px" />
-              {:else if isBookmarkedByUser}
-                <Icon name="bookmarkFilled" size="16px" />
-              {:else}
-                <Icon name="leave" size="16px" />
-              {/if}
-            </button> -->
           {/key}
         {/if}
 
-        {#if showIncludeButton}
+        <!-- {#if tab.magic}
           <button
-            on:click|stopPropagation={handleIncludeTab}
+            on:click|stopPropagation={handleExcludeTab}
             class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
             use:tooltip={{
               content: 'Add Tab to Context',
@@ -539,9 +502,9 @@
               delay: 500
             }}
           >
-            <Icon name="add" size="16px" />
+            <Icon name="minus" size="16px" />
           </button>
-        {/if}
+        {/if} -->
       </div>
     {:else if (showExcludeOthersButton || showIncludeButton) && hovered}
       <div class="items-center flex justify-end flex-row space-x-2 right-0">
@@ -576,41 +539,13 @@
               /><path d="M16 20h2a2 2 0 0 0 2 -2v-2" /></svg
             >
           </button>
-          <button
-            on:click|stopPropagation={handleExcludeTab}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-            use:tooltip={{
-              content: 'Remove Tab from Context',
-              action: 'hover',
-              position: 'left',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            <Icon name="minus" size="16px" />
-            <!-- <svg  xmlns="http://www.w3.org/2000/svg"  width="16"  height="16"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-focus-centered"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M4 8v-2a2 2 0 0 1 2 -2h2" /><path d="M4 16v2a2 2 0 0 0 2 2h2" /><path d="M16 4h2a2 2 0 0 1 2 2v2" /><path d="M16 20h2a2 2 0 0 0 2 -2v-2" /></svg> -->
-          </button>
-        {:else if showIncludeButton}
-          <button
-            on:click|stopPropagation={handleIncludeTab}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-            use:tooltip={{
-              content: 'Add Tab to Context',
-              action: 'hover',
-              position: 'left',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            <Icon name="add" size="16px" />
-          </button>
         {/if}
       </div>
     {/if}
   {/if}
 </div>
 
-<style>
+<style lang="scss">
   .tab {
     transition:
       0s ease-in-out,
@@ -635,5 +570,128 @@
     display: block;
     user-select: none;
     flex-shrink: 0;
+  }
+
+  .tab.selected:not(.active) {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.55);
+    outline: none;
+  }
+  /*.tab.magic:not(.active) {
+    //background: rgba(255, 205, 205, 0.55);
+    @apply bg-violet-600/25;
+  }*/
+
+  /* #FF729F */
+
+  /*.tab.magic {
+    background: #ff8cc6 !important;
+    color: #560027;
+    &:hover {
+      background: #ff578f !important;
+      color: #560027;
+    }
+  }
+
+  .tab.magic.active {
+    background: #ffccf1 !important;
+    color: #760042;
+  }*/
+
+  .tab.active {
+    background: #e0f2fe;
+    outline: none;
+  }
+
+  :global(.vertical-tabs) {
+    .tab.combine-border {
+      border-radius: 1rem 1rem 0 0;
+    }
+
+    .tab.combine-border + .combine-border {
+      border-radius: 0;
+    }
+
+    .tab.combine-border:has(+ :not(.combine-border)) {
+      border-radius: 0 0 1rem 1rem;
+    }
+
+    .tab:not(.combine-border) + .combine-border:has(+ :not(.combine-border)) {
+      border-radius: 1rem;
+    }
+
+    /* This fixes none borders for last element in list if selected. */
+    .tab:last-child.combine-border {
+      border-bottom-left-radius: 1rem;
+      border-bottom-right-radius: 1rem;
+    }
+    /* This fixes none borders for first element in list if selected. */
+    .tab:first-child.combine-border {
+      border-top-left-radius: 1rem;
+      border-top-right-radius: 1rem;
+    }
+  }
+
+  :global(.horizontal-tabs) {
+    .tab.combine-border {
+      border-radius: 1rem 0 0 1rem;
+
+      position: relative;
+      &::after {
+        content: '';
+        position: absolute;
+        right: -4px;
+        width: 4px;
+        height: 100%;
+        background: inherit;
+      }
+    }
+
+    .tab.combine-border + .combine-border {
+      border-radius: 0;
+    }
+
+    .tab.combine-border:has(+ :not(.combine-border)) {
+      border-radius: 0 1rem 1rem 0;
+
+      &::after {
+        content: unset;
+      }
+    }
+
+    .tab:not(.combine-border) + .combine-border:has(+ :not(.combine-border)) {
+      border-radius: 1rem;
+    }
+
+    /* This fixes none borders for last element in list if selected. */
+    .tab:last-child.combine-border {
+      border-top-right-radius: 1rem;
+      border-bottom-right-radius: 1rem;
+
+      &::after {
+        content: unset;
+      }
+    }
+    /* This fixes none borders for first element in list if selected. */
+    .tab:first-child.combine-border {
+      border-top-left-radius: 1rem;
+      border-bottom-left-radius: 1rem;
+    }
+  }
+
+  .tab.pinned.magic {
+    position: relative;
+    &::after {
+      position: absolute;
+      z-index: -1;
+      filter: blur(4px);
+      content: '';
+      inset: 0px;
+      border-radius: 15px;
+
+      //@apply animate-text-shimmer;
+      @apply bg-gradient-to-r from-indigo-600 to-blue-700 via-sky-400 bg-[length:250%_100%];
+      animation: text-shimmer 2s infinite linear;
+    }
   }
 </style>

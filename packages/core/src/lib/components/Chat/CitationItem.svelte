@@ -102,9 +102,9 @@
       src="https://www.google.com/s2/favicons?domain={source.metadata.url}&sz=40"
       alt="source icon"
     />
-    <div>#{renderID}</div>
+    <div class="font-sans text-xs uppercase tracking-wide">#{renderID}</div>
   {:else}
-    <div>#{renderID}</div>
+    <div class="font-sans text-xs uppercase tracking-wide">#{renderID}</div>
   {/if}
 </citation>
 
@@ -115,21 +115,31 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 6px;
     padding: 0.5rem;
-    background: rgb(226 240 255);
-    border: 1px solid rgb(183 198 218);
-    border-radius: 100%;
+    background: white;
+    border: 0.5px solid rgba(183, 198, 218, 0.4);
+    border-radius: 12px;
     font-size: 0.9rem;
     font-weight: 500;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 100%;
+    max-width: 6rem;
+    height: auto;
     text-align: center;
     user-select: none;
+    overflow: hidden;
+    text-transform: uppercase;
+    font-feature-settings: 'caps' on;
+    line-height: 1;
+    padding-top: calc(0.5rem + 1px);
+    padding-bottom: calc(0.5rem - 1px);
 
     div {
       font-size: 0.9rem;
       font-weight: 500;
+      white-space: nowrap; // Added to prevent text wrapping
+      overflow: hidden; // Added to prevent text overflow
+      text-overflow: ellipsis; // Added to show ellipsis for overflowing text
     }
 
     img {
@@ -138,18 +148,15 @@
       flex-shrink: 0;
       border-radius: 5px;
       margin: 0;
+      margin-top: -1px;
     }
 
     &.wide {
-      width: fit-content;
       height: auto;
-      padding: 0.1rem 0.4rem;
-      margin-top: -4px;
-      margin-bottom: -4px;
-      margin-left: 0.25rem;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.5rem;
       position: relative;
       top: 2px;
-      border-radius: 12px;
     }
 
     &.active {
@@ -157,12 +164,12 @@
       border: 1px solid #aa8df2;
 
       &:hover {
-        background: #dbc8f9;
+        background: rgba(183, 198, 218, 0.2);
       }
     }
 
     &:hover {
-      background: rgb(214, 234, 255);
+      background: rgba(183, 198, 218, 0.2);
     }
   }
 </style>

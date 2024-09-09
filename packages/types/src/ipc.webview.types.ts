@@ -40,7 +40,8 @@ export enum WebViewEventSendNames {
   InlineTextReplace = 'inline_text_replace',
   AnnotationClick = 'annotation_click',
   RemoveAnnotation = 'remove_annotation',
-  UpdateAnnotation = 'update_annotation'
+  UpdateAnnotation = 'update_annotation',
+  AddToChat = 'add_to_chat'
 }
 
 export type WebViewEventTransformationOutput = {
@@ -171,6 +172,7 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.AnnotationClick]: WebViewEventAnnotationClick
   [WebViewEventSendNames.RemoveAnnotation]: string
   [WebViewEventSendNames.UpdateAnnotation]: WebViewEventUpdateAnnotation
+  [WebViewEventSendNames.AddToChat]: string
 }
 
 export enum WebviewAnnotationEventNames {

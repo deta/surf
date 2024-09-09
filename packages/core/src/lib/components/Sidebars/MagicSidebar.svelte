@@ -1,35 +1,42 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
-  import { writable, type Writable } from 'svelte/store'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { derived, readable, writable, type Readable, type Writable } from 'svelte/store'
   import { fly, slide } from 'svelte/transition'
-  import { tooltip } from '@svelte-plugins/tooltips'
+  import { tooltip } from '@horizon/utils'
+  import { DropdownMenu } from 'bits-ui'
 
   import { Icon } from '@horizon/icons'
-  import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
+  import {
+    PageChatMessageSentEventError,
+    ResourceTypes,
+    type ResourceDataPost
+  } from '@horizon/types'
   import { Editor, getEditorContentText } from '@horizon/editor'
 
   import type {
     AIChatMessageSource,
     AIChatMessageParsed,
     PageMagic,
-    PageMagicResponse,
-    PageHighlight,
-    TabPage,
     AIChatMessageRole,
     Tab
   } from '../../types/browser.types'
   import ChatMessage from '../Chat/ChatMessage.svelte'
   import ChatMessageMarkdown from '../Chat/ChatMessageMarkdown.svelte'
-  import { useClipboard, generateID, useLogScope } from '@horizon/utils'
+  import ContextBubbles from '../Chat/ContextBubbles.svelte'
+  import { useClipboard, generateID, useLogScope, flyAndScale } from '@horizon/utils'
   import { ResourceManager, useResourceManager, type ResourceLink } from '../../service/resources'
   import { getPrompt, PromptIDs } from '../../service/prompts'
   import { parseChatResponseSources } from '../../service/ai'
   import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
+  import ChatContextTabPicker from '../Chat/ChatContextTabPicker.svelte'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
-  export let tabsInContext: Tab[] = []
+  export let tabsInContext: Readable<Tab[]> = readable([])
+  export let allTabs: Tab[] = []
+  export let activeTab: Tab | null = null
+  export let activeTabMagic: PageMagic
 
   const dispatch = createEventDispatcher<{
     highlightText: { tabId: string; text: string }
@@ -38,7 +45,12 @@
     navigate: { url: string }
     saveText: string
     updateActiveChatId: string
+    updateMagicTabs: string
+    'exclude-tab': string
+    'remove-magic-tab': Tab
+    'include-tab': string
   }>()
+
   const log = useLogScope('MagicSidebar')
   const { copy, copied } = useClipboard()
   const resourceManager = useResourceManager()
@@ -54,18 +66,45 @@
   let editorFocused = false
   let editor: Editor
 
-  $: log.debug('Magic Page', $magicPage)
-  $: log.debug('Magic Page Responses', $magicPage.responses)
+  let optPressed = writable(false)
+  let cmdPressed = writable(false)
+  let shiftPressed = writable(false)
+  let aPressed = writable(false)
+  let hasError = writable(false)
+  let errorMessage = writable('')
+  let lastCmdATime = 0
+  const CMD_A_DELAY = 300
+  const optToggled = writable(false)
+  const toggleSelectAll = writable(false)
+  const prevSelectedTabs: Writable<Tab[]> = writable([])
+  let tabPickerOpen = writable(false)
 
-  // const persistPageMagicChange = useDebounce(() => {
-  //   log.debug('Persisting page magic change', $magicPage)
-  //   dispatch('updateMagicPage', $magicPage)
-  // }, 500)
+  const chatBoxPlaceholder = /*writable('Ask anything...') */ derived(
+    [optPressed, cmdPressed, shiftPressed, magicPage, optToggled, tabsInContext],
+    ([$optPressed, $cmdPressed, $shiftPressed, $magicPage, $optToggled, $tabsInContext]) => {
+      if ($tabsInContext.length === 0) return 'Ask me anything...'
+      if ($magicPage.responses.length >= 1) return 'Ask a follow up...'
+      if ($tabsInContext.length === allTabs.length) return 'Ask anything about all tabs...'
+      return `Ask anything about ${$tabsInContext.length} ${
+        $tabsInContext.length === 1 ? 'tab' : 'tabs'
+      }...`
+    }
+  )
+
+  let autoScrollChat = true
+  let abortController: AbortController | null = null
 
   export const startChatWithQuery = async (query: string) => {
     await handleClearChat()
     inputValue = query
     await handleChatSubmit()
+  }
+
+  export const addChatWithQuery = async (query: string) => {
+    inputValue = '<blockquote>' + query + '</blockquote>' + '</br>'
+    editor.setContent(inputValue)
+    console.log('focus addChatWithQuery')
+    editor.focus()
   }
 
   const updateMagicPage = (data: Partial<PageMagic>) => {
@@ -92,7 +131,7 @@
 
   const updatePageMagicResponse = (responseId: string, updates: Partial<AIChatMessageParsed>) => {
     magicPage.update((page) => {
-      return {
+      const updatedPage = {
         ...page,
         responses: page.responses.map((response) => {
           if (response.id === responseId) {
@@ -104,6 +143,10 @@
           return response
         })
       }
+
+      tick().then(scrollToBottom)
+
+      return updatedPage
     })
   }
 
@@ -143,7 +186,7 @@
     if (!resource) return
 
     // If the resource came from a tab directly we assume it was a page tab, otherwise it was a space tab
-    const sourceTab = tabsInContext.find((tab) =>
+    const sourceTab = $tabsInContext.find((tab) =>
       tab.type === 'page' ? tab.chatResourceBookmark === resource.id : false
     )
     const sourceTabType = sourceTab?.type === 'page' ? 'page' : 'space'
@@ -187,14 +230,13 @@
       return
     }
 
-    // const text = getEditorContentText(inputValue)
     const savedInputValue = inputValue.trim().replace('<p>', '').replace('</p>', '')
+    autoScrollChat = true
 
     try {
       log.debug('Handling chat submit', savedInputValue)
       inputValue = ''
       editor.clear()
-      editor.blur()
 
       await sendChatMessage(savedInputValue)
     } catch (e) {
@@ -204,9 +246,25 @@
     }
   }
 
+  const handleSelectAllTabs = async () => {
+    log.debug('Selecting all tabs')
+  }
+
+  const scrollToBottom = () => {
+    if (!autoScrollChat) return
+    if (listElem) {
+      listElem.scrollTop = listElem.scrollHeight
+    }
+  }
+
+  const handleListWheel = (e: WheelEvent) => {
+    autoScrollChat = false
+  }
+
   const runPrompt = async (promptType: PromptIDs) => {
     try {
       log.debug('Handling prompt submit', promptType)
+      autoScrollChat = true
 
       const prompt = await getPrompt(promptType)
 
@@ -227,10 +285,111 @@
     await clearChat($magicPage.chatId)
   }
 
+  const handleClearContext = () => {
+    for (const t of $tabsInContext) {
+      dispatch('exclude-tab', t.id)
+    }
+    editor.focus()
+  }
+
   const handleInputKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    const currentTime = Date.now()
+    console.log('keydown', e.key)
+
+    if (e.key === 'Alt' || e.key === 'Option') {
+      $optPressed = true
+    } else if (e.key === 'Meta' || e.key === 'Control') {
+      $cmdPressed = true
+    } else if (e.key === 'Shift') {
+      shiftPressed.set(true)
+    } else if (e.key.toLowerCase() === 'a') {
+      aPressed.set(true)
+    } else if (e.key === 'a' && e.metaKey) {
+      lastCmdATime = currentTime
+    } else if (e.ctrlKey && e.key === 'Backspace') {
       e.preventDefault()
+      e.stopPropagation()
+      if (currentTime - lastCmdATime < CMD_A_DELAY) {
+        // If Cmd+A was pressed recently, don't clear chat
+        return
+      }
+      if (abortController) {
+        abortController.abort()
+        abortController = null
+      } else {
+        handleClearChat()
+      }
+    } else if (e.shiftKey && e.key === 'Backspace') {
+      // Shift + Backspace to clear context
+      e.preventDefault()
+      handleClearContext()
+    } else if (e.key === 'Enter' && !$shiftPressed) {
+      e.preventDefault()
+      if ($cmdPressed && $shiftPressed) {
+        selectedMode = 'all'
+      } else if ($optPressed) {
+        selectedMode = 'general'
+      } else {
+        selectedMode = 'active'
+      }
+      contextTabs = getContextTabs(selectedMode, $tabsInContext, allTabs, activeTab)
       handleChatSubmit()
+    } else if (e.key === 'Escape') {
+      if ($optToggled) {
+        e.stopPropagation()
+        e.stopImmediatePropagation()
+        e.preventDefault()
+        optToggled.set(false)
+        $tabPickerOpen = false
+        return
+      }
+    } else if (e.key === 'Enter' && $shiftPressed && $cmdPressed) {
+      if (inputValue !== '') {
+        contextTabs = allTabs
+        handleChatSubmit()
+      }
+    }
+
+    // Check for Cmd + Shift + A
+    if (
+      $cmdPressed &&
+      $shiftPressed &&
+      $aPressed &&
+      e.key.toLowerCase() === 'a' &&
+      $activeTabMagic.showSidebar
+    ) {
+      e.preventDefault()
+      if ($tabsInContext.length < allTabs.length) {
+        toggleSelectAll.set(false)
+      }
+
+      if ($toggleSelectAll) {
+        for (const t of allTabs) {
+          dispatch('exclude-tab', t.id)
+        }
+        for (const t of $prevSelectedTabs) {
+          dispatch('include-tab', t.id)
+        }
+      } else {
+        prevSelectedTabs.set($tabsInContext)
+        for (const t of allTabs) {
+          dispatch('include-tab', t.id)
+        }
+      }
+
+      toggleSelectAll.set(!$toggleSelectAll)
+    }
+  }
+
+  const handleInputKeyup = (e: KeyboardEvent) => {
+    if (e.key === 'Alt' || e.key === 'Option') {
+      $optPressed = false
+    } else if (e.key === 'Meta' || e.key === 'Control') {
+      $cmdPressed = false
+    } else if (e.key === 'Shift') {
+      $shiftPressed = false
+    } else if (e.key.toLowerCase() === 'a') {
+      $aPressed = false
     }
   }
 
@@ -248,6 +407,36 @@
     }
   }
 
+  let selectedMode: 'general' | 'all' | 'active' | 'context' = 'general'
+
+  function getContextTabs(
+    mode: 'general' | 'all' | 'active' | 'context',
+    tabsInContext: Tab[],
+    allTabs: Tab[],
+    activeTab: Tab | null
+  ): Tab[] {
+    let result: Tab[]
+    switch (mode) {
+      case 'general':
+        result = []
+        break
+      case 'all':
+        result = allTabs
+        break
+      case 'active':
+        result = tabsInContext
+        break
+      case 'context':
+        result = tabsInContext
+        break
+      default:
+        result = []
+    }
+    return result
+  }
+
+  let contextTabs: Tab[] = getContextTabs(selectedMode, $tabsInContext, allTabs, activeTab)
+
   const sendChatMessage = async (
     prompt: string,
     role: AIChatMessageRole = 'user',
@@ -259,17 +448,30 @@
       return
     }
 
-    if (tabsInContext.length === 0) {
+    errorMessage.set('')
+    hasError.set(false)
+
+    if (contextTabs.length === 0) {
       log.debug('No tabs in context, general chat:')
     } else {
-      log.debug('Tabs in context:', tabsInContext)
+      log.debug('Tabs in context:', contextTabs)
     }
 
     let response: AIChatMessageParsed | null = null
 
+    const generalMode = contextTabs.length === 0
+    const previousMessages = $magicPage.responses.filter(
+      (message) => message.id !== (response?.id ?? '')
+    )
+    const numSpaces = generalMode ? 0 : contextTabs.filter((tab) => tab.type === 'space').length
+    const numPages = generalMode
+      ? 0
+      : contextTabs.filter((tab) => tab.type === 'page' && tab.chatResourceBookmark).length
+    let contextSize = generalMode ? 0 : contextTabs.length
+
     try {
       const resourceIds: string[] = []
-      for (const tab of tabsInContext) {
+      for (const tab of contextTabs) {
         if (tab.type === 'page' && tab.chatResourceBookmark) {
           resourceIds.push(tab.chatResourceBookmark)
         } else if (tab.type === 'space') {
@@ -278,6 +480,10 @@
             resourceIds.push(...spaceContents.map((content) => content.resource_id))
           }
         }
+      }
+
+      if (!generalMode && resourceIds.length > 0) {
+        contextSize = resourceIds.length
       }
 
       response = {
@@ -295,6 +501,8 @@
       log.debug('calling the AI', prompt, resourceIds)
       let step = 'idle'
       let content = ''
+
+      abortController = new AbortController()
 
       await resourceManager.sffs.sendAIChatMessage(
         chatId!,
@@ -340,14 +548,8 @@
         content: content.replace('<answer>', '').replace('</answer>', '')
       })
 
-      const previousMessages = $magicPage.responses.filter((message) => message.id !== response!.id)
-      const numSpaces = tabsInContext.filter((tab) => tab.type === 'space').length
-      const numPages = tabsInContext.filter(
-        (tab) => tab.type === 'page' && tab.chatResourceBookmark
-      ).length
-
       await telemetry.trackPageChatMessageSent({
-        contextSize: resourceIds.length,
+        contextSize: contextSize,
         numPages: numPages,
         numSpaces: numSpaces,
         numPreviousMessages: previousMessages.length,
@@ -360,6 +562,8 @@
     } catch (e) {
       log.error('Error doing magic', e)
       let content = 'Failed to generate response.'
+      let error = PageChatMessageSentEventError.Other
+
       if ((e as any)?.includes('RAG Empty Context')) {
         content = `Unfortunately, we failed to find relevant information to answer your query.
 \nThere might have been an issue with extracting all information from your current context.
@@ -371,10 +575,29 @@
           status: 'error'
         })
       }
+      hasError.set(true)
+      errorMessage.set(content)
+      setTimeout(() => {
+        hasError.set(false)
+      }, 10000)
+
+      await telemetry.trackPageChatMessageSent({
+        contextSize: contextSize,
+        numPages: numPages,
+        numSpaces: numSpaces,
+        numPreviousMessages: previousMessages.length,
+        embeddingModel: $userConfigSettings.embedding_model,
+        error: error
+      })
+
+      if (numSpaces > 0) {
+        await telemetry.trackChatWithSpace()
+      }
 
       throw e
     } finally {
       updateMagicPage({ running: false })
+      abortController = null
     }
   }
 
@@ -455,6 +678,11 @@
     updateMagicPage({ chatId })
   }
 
+  const stopGeneration = async () => {
+    log.debug('Stopping generation')
+    updateMagicPage({ running: false })
+  }
+
   onMount(async () => {
     log.debug('Magic Sidebar mounted', $magicPage.chatId)
 
@@ -468,78 +696,29 @@
   })
 </script>
 
-<div class="flex flex-col gap-4 overflow-hidden p-4 h-full">
-  <!-- <div class="header">
-    <div class="title">
-      <Icon name="message" size="28px" />
-      <h1>Chat</h1>
-    </div>
-  </div> -->
-
-  {#if !$magicPage.running && $magicPage.responses.length >= 1}
-    <button on:click={handleClearChat} class="clear-btn">
-      <Icon name="add" />
-      New Chat
-    </button>
-  {/if}
-
-  <div class="content" bind:this={listElem}>
+<div class="flex flex-col h-full relative overflow-hidden">
+  <div
+    class="flex flex-col overflow-auto pb-[22rem] h-full"
+    bind:this={listElem}
+    on:wheel|passive={handleListWheel}
+  >
     {#if $magicPage.responses.length > 0}
       {#each $magicPage.responses as response, idx (response.id)}
         {#if response.status === 'success'}
-          <div class="output">
-            <div class="output-header">
-              <div class="input">
-                <div class="icon">
-                  {#if response.role === 'user'}
-                    <Icon name="user" size="20px" />
-                  {:else}
-                    <Icon name="sparkles" size="20px" />
-                  {/if}
-                </div>
-                <div class="query tiptap">
+          <div
+            class="text-lg flex flex-col gap-2 rounded-xl p-6 text-opacity-90 group relative bg-[#f5faff]"
+          >
+            <div class="">
+              <div
+                class="font-medium text-neutral-800 bg-sky-100 border-sky-200 border-1 px-4 py-2 rounded-xl w-fit mb-2"
+              >
+                <div class="tiptap query">
                   {#if response.role === 'user'}
                     {@html response.query}
                   {:else}
                     {sanitizeQuery(response.query)}
                   {/if}
                 </div>
-              </div>
-
-              <div class="output-actions">
-                <button
-                  on:click={() => copy(response.content)}
-                  use:tooltip={{
-                    content: 'Copy to Clipboard',
-                    action: 'hover',
-                    position: 'left',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  {#if $copied}
-                    <Icon name="check" />
-                  {:else}
-                    <Icon name="copy" />
-                  {/if}
-                </button>
-
-                <button
-                  on:click={() => saveResponseOutput(response)}
-                  use:tooltip={{
-                    content: 'Save to My Stuff',
-                    action: 'hover',
-                    position: 'left',
-                    animation: 'fade',
-                    delay: 500
-                  }}
-                >
-                  {#if $savedResponse}
-                    <Icon name="check" />
-                  {:else}
-                    <Icon name="leave" />
-                  {/if}
-                </button>
               </div>
             </div>
 
@@ -555,24 +734,55 @@
                 )}
               showSourcesAtEnd={true}
             />
+
+            <div
+              class="flex-row items-center mx-auto space-x-2 hidden group-hover:flex absolute -bottom-2 left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out"
+            >
+              <!--<button
+                on:click={() => saveResponseOutput(response)}
+                use:tooltip={{
+                  text: 'Save to My Stuff',
+                  position: 'left'
+                }}
+                class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center py-2 px-4 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+              >
+                {#if $savedResponse}
+                  Saved
+                {:else}
+                  Save
+                {/if}
+              </button>-->
+              <button
+                on:click={() => copy(response.content)}
+                use:tooltip={{
+                  text: 'Copy to Clipboard',
+                  position: 'left'
+                }}
+                class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center py-3 px-3 bg-sky-100 hover:bg-sky-100/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+              >
+                {#if $copied}
+                  <Icon name="check" />
+                {:else}
+                  <Icon name="copy" />
+                {/if}
+              </button>
+            </div>
           </div>
         {:else if response.status === 'pending'}
-          <div class="output">
-            <div class="output-header">
-              <div class="input">
+          <div
+            class="text-lg flex flex-col gap-2 rounded-xl p-8 text-opacity-90 group relative bg-[#f5faff]"
+          >
+            <div class="">
+              <div
+                class="font-medium flex gap-2 text-neutral-800 bg-sky-100 border-sky-200 border-1 px-4 py-2 rounded-xl w-fit mb-2"
+              >
                 <div class="icon">
                   <Icon name="spinner" />
                 </div>
+
                 <div class="tiptap query">{@html response.query}</div>
-                <!-- {#if response.role === 'user'}
-                  <p>{response.query}</p>
-                {:else}
-                  <p>Generating Page Summary…</p>
-                {/if} -->
               </div>
             </div>
-
-            <!-- {@html response.content} -->
 
             {#if response.content}
               <ChatMessageMarkdown
@@ -589,102 +799,222 @@
               />
             {/if}
           </div>
-        {:else if response.status === 'error'}
-          <div class="output">
+          <!-- {:else if response.status === 'error'}
+          <div
+            class="output text-lg flex flex-col gap-2 rounded-xl p-8 text-opacity-90 group relative bg-[#f5faff]"
+          >
             {response.content}
-          </div>
+          </div> -->
         {/if}
       {/each}
     {:else}
-      <div class="empty">
-        <div class="empty-title">
-          <Icon name="message" />
+      <div class="flex flex-col items-center justify-center empty">
+        <div class="empty-title" style="line-height: 1;">
+          <Icon name="chat" />
           <h1>New Chat</h1>
         </div>
-        <p>
-          Chat with your tabs to ask questions and more. <br />Drag tabs in and out of the context
-          in the left sidebar.
+
+        <p class="max-w-64 text-sky-900">
+          Ask anything about your tabs or use the chat icon to always switch to a general
+          conversation.
+        </p>
+        <p class="max-w-64 text-sky-900/60">
+          Selecting tabs work with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
+            .toLowerCase()
+            .indexOf('mac') > -1}⌘{:else}Ctrl{/if} + click or Shift + click ).
         </p>
       </div>
     {/if}
   </div>
 
-  <!--
-  {#if !magicPage.running}
-    <div class="prompts" transition:fly={{ y: 120 }}>
-      <button on:click={() => runPrompt(PromptIDs.PAGE_SUMMARIZER)}>
-        Summarize Page
-      </button>
-      <button on:click={() => runPrompt(PromptIDs.PAGE_TOC)}> Table of Contents </button>
-      <button on:click={() => runPrompt(PromptIDs.PAGE_TRANSLATOR)}>
-        Translate Page
-      </button>
-    </div>
-  {/if}
-  -->
-
-  {#if $magicPage.initializing}
-    <div class="info-box">
-      <Icon name="spinner" />
-      <p>Preparing tabs for the chat…</p>
-    </div>
-  {:else if $magicPage.errors.length > 0}
-    {#each $magicPage.errors as error}
-      <div class="info-box">
-        <Icon name="alert-triangle" />
-        <p>Warning: {error}</p>
-      </div>
-    {/each}
-  {/if}
-
-  <form on:submit|preventDefault={handleChatSubmit} class="chat">
-    <!-- <input bind:value={inputValue} placeholder="Ask your tabs…" /> -->
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="editor-wrapper" on:keydown={handleInputKeydown}>
-      <Editor
-        bind:this={editor}
-        bind:content={inputValue}
-        bind:focused={editorFocused}
-        autofocus={false}
-        placeholder="Chat with your tabs…"
-      />
-    </div>
-
-    <!-- {#if !magicPage.running && magicPage.responses.length >= 1}
-      <button on:click={handleClearChat} class="secondary">
-        <Icon name="trash" />
-      </button>
-    {/if} -->
-
-    <!-- <button disabled={$magicPage.responses.length > 1 && $magicPage.running} class="" type="submit">
-      {#if $magicPage.responses.length > 1 && $magicPage.running}
-        <Icon name="spinner" />
-      {:else}
-        <Icon name="arrow.right" />
-      {/if}
-    </button> -->
-
-    {#if (inputValue && inputValue !== '<p></p>') || editorFocused}
+  <div
+    class="chat bg-gradient-to-t from-sky-300/80 via-sky-300/30 to-transparent mx-auto absolute w-full bottom-0 rounded-xl flex flex-col shadow-xl"
+  >
+    {#if !$magicPage.running && $magicPage.responses.length >= 1}
       <button
-        type="submit"
-        transition:slide={{ duration: 150 }}
-        disabled={($magicPage.responses.length > 1 && $magicPage.running) ||
-          inputValue === '<p></p>'}
-        class:filled={inputValue && inputValue !== '<p></p>'}
+        on:click={() => {
+          if (!$magicPage.running) {
+            handleClearChat()
+          }
+        }}
+        class="transform mb-4 active:scale-95 appearance-none w-fit mx-auto border-[0.5px] border-sky-900/10 group margin-0 flex items-center px-3 py-2 bg-sky-100 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer text-xs"
       >
-        {#if $magicPage.responses.length > 1 && $magicPage.running}
-          <div>Generating…</div>
-          <Icon name="spinner" />
+        {#if navigator.platform.toLowerCase().indexOf('mac') > -1}
+          Ctrl + ⌫ Clear Chat
         {:else}
-          <div>Ask Tabs</div>
-          <Icon name="arrow.right" />
+          Strg+⌫ Clear Chat
         {/if}
       </button>
     {/if}
-  </form>
+
+    {#if $magicPage.errors.length > 0}
+      <div
+        class="err flex flex-col bg-yellow-50 border-t-yellow-300 border-l-yellow-300 border-r-yellow-300 border-[1px] py-4 pl-6 pr-12 gap-4 shadow-sm mx-12 rounded-t-xl text-lg leading-relaxed text-yellow-800 relative"
+      >
+        {#each $magicPage.errors as error}
+          <div class="info-box">
+            <Icon name="alert-triangle" />
+            <p>Warning: {error}</p>
+          </div>
+        {/each}
+        <p>Preparing tabs for the chat…</p>
+        <button
+          class="absolute top-3 right-3 text-yellow-800 hover:text-yellow-600"
+          on:click={() => hasError.set(false)}
+        >
+          <Icon name="close" />
+        </button>
+      </div>
+    {/if}
+
+    {#if $hasError}
+      <div
+        class="err flex flex-col bg-yellow-50 border-t-yellow-300 border-l-yellow-300 border-r-yellow-300 border-[1px] py-4 pl-6 pr-12 gap-4 shadow-sm mx-12 rounded-t-xl text-lg leading-relaxed text-yellow-800 relative"
+      >
+        {$errorMessage}
+        <button
+          class="absolute top-3 right-3 text-yellow-800 hover:text-yellow-600"
+          on:click={() => hasError.set(false)}
+        >
+          <Icon name="close" />
+        </button>
+      </div>
+    {/if}
+
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div
+      class="flex flex-col bg-sky-50 border-t-blue-300 border-l-blue-300 border-r-blue-300 border-[1px] p-4 gap-4 shadow-xl mx-8"
+      class:rounded-t-xl={inputValue.length < 100}
+      class:rounded-t-lg={inputValue.length >= 100}
+      on:keydown={handleInputKeydown}
+      on:keyup={handleInputKeyup}
+    >
+      <div class="flex flex-row gap-4 items-start">
+        <div class="flex-grow overflow-y-auto max-h-96">
+          <Editor
+            bind:this={editor}
+            bind:content={inputValue}
+            bind:focused={editorFocused}
+            autofocus={true}
+            placeholder={$chatBoxPlaceholder}
+          />
+        </div>
+      </div>
+
+      <div class="w-full flex justify-between items-center opacity-100 text-sm pb-0 pt-4">
+        <div class="flex items-center gap-2 relative">
+          {#if $tabPickerOpen}
+            <ChatContextTabPicker
+              tabItems={allTabs
+                .filter((e) => !$tabsInContext.includes(e))
+                .sort((a, b) => b.index - a.index)}
+              on:include-tab
+              on:close={() => {
+                $tabPickerOpen = false
+                editor.focus()
+              }}
+            />
+          {/if}
+          <button
+            disabled={allTabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
+            popovertarget="chat-add-context-tabs"
+            class="open-tab-picker hover:bg-blue-100 rounded-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            on:click={(e) => {
+              $tabPickerOpen = !$tabPickerOpen
+            }}
+            use:tooltip={{
+              text: 'Add tab',
+              position: 'right'
+            }}
+          >
+            <Icon name={'add'} size={'18px'} color="#1e3a8a" className="opacity-60" />
+          </button>
+
+          <!-- {#if $optToggled}
+            <div class="flex justify-center align-center w-full opacity-60">
+              <div
+                class="bg-sky-200 text-sky-800 font-medium py-1 pr-4 pl-2 rounded-full flex items-center animate-blur"
+              >
+                <span class="bg-blue-500 rounded-full w-5 h-5 mr-2"></span>
+                General Chat
+              </div>
+            </div>
+          {/if} -->
+        </div>
+
+        <div class="flex-shrink-0 flex items-center gap-2 opacity-60">
+          <button
+            class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-3 py-2 bg-sky-300 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
+            on:click={() => {
+              selectedMode = 'active'
+              contextTabs = getContextTabs(selectedMode, $tabsInContext, allTabs, activeTab)
+              handleChatSubmit()
+            }}
+            disabled={!inputValue || $magicPage.running}
+          >
+            {#if $magicPage.initializing && !$optToggled}
+              <Icon name="spinner" />
+            {:else}
+              Send ↩
+            {/if}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {#if $tabsInContext.length}
+      {#if !$optToggled}
+        <div
+          class="bg-sky-100 group flex flex-col gap-2 px-4 pt-2 pb-5 transition-all duration-300 mx-8 border border-blue-300"
+          transition:slide={{ duration: 150 }}
+        >
+          <div class=" flex-row items-center gap-2 flex">
+            <ContextBubbles
+              tabs={$tabsInContext.slice(0, 10)}
+              on:select-all-tabs={handleSelectAllTabs}
+              on:select
+              on:exclude-tab
+              on:include-tab
+            />
+            {#if $tabsInContext.length > 0}
+              <button
+                class="flex items-center gap-2 px-3 py-1 text-sm rounded-lg opacity-60 hover:bg-blue-200"
+                on:click={() => {
+                  handleClearContext()
+                }}
+                use:tooltip={{
+                  text: 'Shift + ⌫',
+                  position: 'left'
+                }}
+              >
+                Clear
+              </button>
+            {/if}
+          </div>
+        </div>
+      {/if}
+    {/if}
+  </div>
 </div>
+-
 
 <style lang="scss">
+  @keyframes blurIn {
+    0% {
+      filter: blur(10px);
+      transform: translateY(1rem);
+      opacity: 0;
+    }
+    100% {
+      filter: blur(0);
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  .animate-blur {
+    animation: blurIn 0.42s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  }
+
   .content {
     display: flex;
     flex-direction: column;
@@ -695,12 +1025,9 @@
   }
 
   .chat {
-    padding: 0.5rem;
     flex-shrink: 0;
-    border-top: 1px solid #e0e0e0;
     display: flex;
     flex-direction: column;
-    padding: 1rem 0;
     font-family: inherit;
 
     .editor-wrapper {
@@ -713,43 +1040,6 @@
       font-family: inherit;
       resize: vertical;
       min-height: 80px;
-    }
-
-    button {
-      appearance: none;
-      padding: 0.75rem;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      height: min-content;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      background: #fd1bdf40;
-      color: white;
-      margin-top: 1rem;
-
-      div {
-        font-size: 1rem;
-      }
-
-      &:hover {
-        background: #fd1bdf69;
-      }
-
-      &.filled {
-        background: #f73b95;
-
-        &:hover {
-          background: #f92d90;
-        }
-      }
-
-      &:active {
-        background: #f73b95;
-      }
     }
   }
 
@@ -868,27 +1158,6 @@
     }
   }
 
-  .output {
-    padding: 15px;
-    background: rgb(255, 255, 255);
-    border-radius: 8px;
-    font-size: 1.1rem;
-    color: #3f3f3f;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-
-    &:hover .output-actions button {
-      opacity: 0.5;
-    }
-  }
-
-  .output-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
   input {
     width: 100%;
     padding: 10px;
@@ -979,8 +1248,6 @@
     }
 
     p {
-      font-size: 1rem;
-      color: #666;
       text-align: center;
     }
   }

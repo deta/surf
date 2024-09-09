@@ -8,6 +8,7 @@
   import { Extension } from '@tiptap/core'
 
   import { createEditorExtensions } from '../editor'
+  import Placeholder from '@tiptap/extension-placeholder'
   // import BubbleMenu from './BubbleMenu.svelte'
 
   export let content: string
@@ -55,7 +56,7 @@
     name: 'keyboardHandler'
   })
 
-  const extension = KeyboardHandler.extend({
+  const extendKeyboardHandler = KeyboardHandler.extend({
     addKeyboardShortcuts() {
       return {
         Enter: () => {
@@ -82,8 +83,11 @@
   onMount(() => {
     editor = createEditor({
       extensions: [
-        ...createEditorExtensions({ placeholder, disableHashtag: !parseHashtags }),
-        extension
+        ...createEditorExtensions({ disableHashtag: !parseHashtags }),
+        extendKeyboardHandler,
+        Placeholder.configure({
+          placeholder: placeholder ?? "Write something or type '/' for options…"
+        })
       ],
       content: content,
       editable: !readOnly,
@@ -121,7 +125,7 @@
   })
 </script>
 
-<div class="editor">
+<div class="editor" style="--data-placeholder: '{placeholder}';">
   <!-- {#if editor && !readOnly}
     <BubbleMenu {editor} />
   {/if} -->
@@ -140,5 +144,10 @@
 
   :global(.editor-wrapper > div) {
     height: 100%;
+  }
+
+  /* HACK: This allows us to tap into svelte reacivity by getting placeholder from css variable. */
+  :global(.tiptap p.is-editor-empty:first-child::before) {
+    content: var(--data-placeholder);
   }
 </style>

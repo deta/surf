@@ -193,49 +193,52 @@
   })
 </script>
 
-<div bind:this={elem} class="message max-w-screen-2xl chat-message-content"></div>
+<div class="p-4 bg-purple-100 rounded-xl flex flex-col gap-4">
+  {#if sources && sources.length > 0 && showSourcesAtEnd}
+    <h3 class="text-2xl font-semibold">Sources</h3>
+    <div class="citations-list">
+      {#each sources as source, idx}
+        {#if idx <= 9}
+          <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+          <div
+            class="citation-item"
+            class:wide={source.metadata?.timestamp !== undefined || source.metadata?.url}
+            on:click={(e) => {
+              document.querySelectorAll('citation').forEach((citation) => {
+                citation.classList.remove('clicked')
+              })
+              document.querySelectorAll('.citation-item').forEach((citation) => {
+                citation.classList.remove('clicked')
+              })
+              e.currentTarget.classList.add('clicked')
+              dispatch('citationClick', { citationID: source.id, text: '', sourceUid: source.uid })
+            }}
+            on:mouseenter={() => dispatch('citationHoverStart', source.id)}
+            on:mouseleave={() => dispatch('citationHoverEnd', source.id)}
+          >
+            {#if source.metadata?.timestamp !== undefined}
+              <img
+                src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
+                alt="YouTube icon"
+              />
+              <div>{formatTimestamp(source.metadata.timestamp)}</div>
+            {:else if source.metadata?.url}
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${source.metadata.url}&sz=40`}
+                alt="source icon"
+              />
+              <div>#{source.render_id}</div>
+            {:else}
+              #{source.render_id}
+            {/if}
+          </div>
+        {/if}
+      {/each}
+    </div>
+  {/if}
 
-{#if sources && sources.length > 0 && showSourcesAtEnd}
-  <div class="citations-list">
-    {#each sources as source, idx}
-      {#if idx <= 9}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-        <div
-          class="citation-item"
-          class:wide={source.metadata?.timestamp !== undefined || source.metadata?.url}
-          on:click={(e) => {
-            document.querySelectorAll('citation').forEach((citation) => {
-              citation.classList.remove('clicked')
-            })
-            document.querySelectorAll('.citation-item').forEach((citation) => {
-              citation.classList.remove('clicked')
-            })
-            e.currentTarget.classList.add('clicked')
-            dispatch('citationClick', { citationID: source.id, text: '', sourceUid: source.uid })
-          }}
-          on:mouseenter={() => dispatch('citationHoverStart', source.id)}
-          on:mouseleave={() => dispatch('citationHoverEnd', source.id)}
-        >
-          {#if source.metadata?.timestamp !== undefined}
-            <img
-              src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
-              alt="YouTube icon"
-            />
-            <div>{formatTimestamp(source.metadata.timestamp)}</div>
-          {:else if source.metadata?.url}
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${source.metadata.url}&sz=40`}
-              alt="source icon"
-            />
-            <div>#{source.render_id}</div>
-          {:else}
-            #{source.render_id}
-          {/if}
-        </div>
-      {/if}
-    {/each}
-  </div>
-{/if}
+  <div bind:this={elem} class="message max-w-screen-2xl chat-message-content"></div>
+</div>
 
 <style lang="scss">
   .message {
@@ -342,9 +345,6 @@
   }
 
   .citations-list {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #ddd;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;

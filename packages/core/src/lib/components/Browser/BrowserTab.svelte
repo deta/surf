@@ -24,6 +24,7 @@
     'annotation-click': WebViewSendEvents[WebViewEventSendNames.AnnotationClick]
     'annotation-remove': WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
     'annotation-update': WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
+    'add-to-chat': WebViewSendEvents[WebViewEventSendNames.AddToChat]
   }
 </script>
 
@@ -447,6 +448,12 @@
     }
   }
 
+  const handleWebviewAddToChat = async (e: WebViewSendEvents[WebViewEventSendNames.AddToChat]) => {
+    log.debug('webview add to chat', e)
+
+    dispatch('add-to-chat', e)
+  }
+
   const handleWebviewAnnotation = async (
     annotationData: WebViewSendEvents[WebViewEventSendNames.Annotate]
   ) => {
@@ -675,6 +682,8 @@
       handleWebviewAnnotationUpdate(
         data as WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
       )
+    } else if (type === WebViewEventSendNames.AddToChat) {
+      handleWebviewAddToChat(data as WebViewSendEvents[WebViewEventSendNames.AddToChat])
     }
   }
 

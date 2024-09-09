@@ -2,11 +2,13 @@
 
 <script lang="ts">
   import { afterUpdate, onMount, setContext, tick } from 'svelte'
+  import { fly } from 'svelte/transition'
   import SplashScreen from './Atoms/SplashScreen.svelte'
-  import { writable, derived, get } from 'svelte/store'
+  import { writable, derived, get, type Writable } from 'svelte/store'
   import { type WebviewWrapperEvents } from './Webview/WebviewWrapper.svelte'
   import { Icon } from '@horizon/icons'
   import {
+    isModKeyPressed,
     isModKeyAndEventCodeIs,
     isModKeyAndKeyPressed,
     isModKeyAndKeysPressed,
@@ -113,9 +115,10 @@
   import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
   import DevOverlay from './Browser/DevOverlay.svelte'
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
+  import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
 
   let activeTabComponent: TabItem | null = null
-  let addressBarFocus = false
+  const addressBarFocus = writable(false)
   let showLeftSidebar = true
   let showDevOverlay = import.meta.env.DEV || false
   let showRightSidebar = false
@@ -128,6 +131,9 @@
   let containerRef: Element
   const showStartMask = writable(false)
   const showEndMask = writable(false)
+
+  const selectedTabs: Writable<Set<{ id: string; userSelected: boolean }>> = writable(new Set())
+  const lastSelectedTabId: Writable<string | null> = writable(null)
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -186,6 +192,8 @@
   const cachedMagicTabs = new Set<string>()
   const downloadResourceMap = new Map<string, Download>()
   const downloadToastsMap = new Map<string, ToastItem>()
+  const anyTabHovered = writable(false)
+  const chatTooltipHovered = writable(false)
 
   $: log.debug('right sidebar tab', $rightSidebarTab)
 
@@ -193,9 +201,15 @@
   setContext('selectedFolder', 'all')
 
   const activeTabs = derived([tabs], ([tabs]) => {
-    return tabs
-      .filter((tab) => !tab.archived)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    const uniqueTabs = new Map<string, Tab>()
+    tabs.forEach((tab) => {
+      if (!tab.archived && !uniqueTabs.has(tab.id)) {
+        uniqueTabs.set(tab.id, tab)
+      }
+    })
+    return Array.from(uniqueTabs.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
   })
 
   const pinnedTabs = derived([activeTabs], ([tabs]) => {
@@ -203,7 +217,7 @@
   })
 
   const unpinnedTabs = derived([activeTabs], ([tabs]) => {
-    return tabs.filter((tab) => !tab.pinned && !tab.magic).sort((a, b) => a.index - b.index)
+    return tabs.filter((tab) => !tab.pinned).sort((a, b) => a.index - b.index)
   })
 
   const magicTabs = derived([activeTabs], ([tabs]) => {
@@ -266,7 +280,7 @@
         id: 'chat',
         name: 'Chat',
         type: 'tool',
-        icon: $activeTabMagic ? ($activeTabMagic.running ? 'spinner' : 'message') : 'message',
+        icon: $activeTabMagic ? ($activeTabMagic.running ? 'spinner' : 'chat') : 'chat',
         disabled: !$activeTabMagic,
         showCondition: $activeTab && $activeTabMagic,
         fallbackContent: {
@@ -503,6 +517,11 @@
 
     checkScroll()
 
+    // Ensure the new tab is in context when the sidebar is open
+    if ($activeTabMagic.showSidebar) {
+      handleTabSelect(new CustomEvent('tab-select', { detail: newTab.id }))
+    }
+
     return newTab
   }
 
@@ -572,7 +591,7 @@
       return
     }
 
-    const tabsInOrder = [...$pinnedTabs, ...$magicTabs, ...$unpinnedTabs]
+    const tabsInOrder = [...$pinnedTabs, ...$unpinnedTabs]
     const currentIndex = tabsInOrder.findIndex((tab) => tab.id === tabId)
 
     tabs.update((tabs) =>
@@ -646,7 +665,7 @@
 
     if ($activeTab.pinned) {
       log.debug('Active tab is pinned, deactivating it')
-      const tabsInOrder = [...$pinnedTabs, ...$magicTabs, ...$unpinnedTabs]
+      const tabsInOrder = [...$pinnedTabs, ...$unpinnedTabs]
       const currentIndex = tabsInOrder.findIndex((tab) => tab.id === $activeTab.id)
       activatedTabs.update((tabs) => tabs.filter((id) => id !== $activeTab.id))
 
@@ -779,7 +798,7 @@
       blockBlurHandler = false
     }, 300)
 
-    addressBarFocus = false
+    addressBarFocus.set(false)
 
     let addressVal = activeTabComponent && get(activeTabComponent?.inputUrl)
     log.debug('Address bar blur', addressVal)
@@ -815,7 +834,7 @@
   }
 
   const handleFocus = () => {
-    addressBarFocus = true
+    addressBarFocus.set(true)
     activeTabComponent?.editAddress()
   }
 
@@ -891,11 +910,6 @@
 
   const handleRightSidebarTabsChange = (tab: RightSidebarTab) => {
     // check if sidebar is even open
-    if (!showRightSidebar) {
-      log.warn('Right sidebar is not open, ignoring tab change')
-      return
-    }
-
     log.debug('Right sidebar tab change', tab)
 
     // delay the tracking to make sure the sidebar can update first
@@ -932,6 +946,12 @@
     }
   }
 
+  const toggleRightSidebarTab = useDebounce((tab: RightSidebarTab) => {
+    log.debug('Toggling right sidebar tab', tab, $rightSidebarTab, showRightSidebar)
+    if ($rightSidebarTab === tab && showRightSidebar) handleCollapseRight()
+    else openRightSidebarTab(tab)
+  }, 100)
+
   const changeTraficLightsVisibility = (visible: boolean) => {
     window.api.updateTrafficLightsVisibility(visible)
   }
@@ -961,6 +981,7 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       if ($showNewTabOverlay !== 0) return
+      deselectAllTabs()
     } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
       showDevOverlay = !showDevOverlay
 
@@ -972,15 +993,26 @@
         // @ts-ignore
         window.setLogLevel('debug')
       }
-    } else if (e.key === 'Enter' && addressBarFocus) {
+    } else if (e.key === 'Enter' && $addressBarFocus) {
+      console.warn('addr foc')
       handleBlur()
       activeTabComponent?.blur()
-      // Note: even though the electron menu handles the shortcut this is still needed here
+    } else if (e.key === 'Enter' && $selectedTabs.size > 1) {
+      console.warn('enter magic')
+
+      startChatWithSelectedTabs()
+    } else if (e.key === 'Backspace' && $selectedTabs.size > 1 && !$activeTabMagic.showSidebar) {
+      const tabsToDelete = Array.from($selectedTabs)
+      tabsToDelete.forEach((tab) => deleteTab(tab.id))
+      selectedTabs.set(new Set())
     } else if (isModKeyAndKeyPressed(e, 'w')) {
+      // Note: even though the electron menu handles the shortcut this is still needed here
       if ($showNewTabOverlay !== 0) setShowNewTabOverlay(0)
       else closeActiveTab(DeleteTabEventTrigger.Shortcut)
       // } else if (isModKeyAndKeyPressed(e, 'p')) {
       // setActiveTabAsPinnedTab()
+    } else if (isModKeyAndKeyPressed(e, 'e')) {
+      toggleRightSidebarTab('chat')
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark(false, SaveToOasisEventTrigger.Shortcut)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
@@ -995,9 +1027,7 @@
       setShowNewTabOverlay(0)
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l')) {
-      setShowNewTabOverlay(0)
-      activeTabComponent?.editAddress()
-      handleFocus()
+      handleEdit()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
       // showTabSearch = !showTabSearch
     } else if (isModKeyAndKeyPressed(e, 'y')) {
@@ -1023,7 +1053,7 @@
       isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])
     ) {
       const index = parseInt(e.key, 10) - 1
-      const tabs = [...$pinnedTabs, ...$magicTabs, ...$unpinnedTabs]
+      const tabs = [...$pinnedTabs, ...$unpinnedTabs]
 
       if (index < 8) {
         if (index < tabs.length) {
@@ -1041,6 +1071,31 @@
       if (canGoForward) {
         $activeBrowserTab?.goForward()
       }
+    }
+  }
+
+  const startChatWithSelectedTabs = () => {
+    if (($activeTab?.type === 'page' || $activeTab?.type === 'space') && !showRightSidebar) {
+      toggleRightSidebar()
+      setPageChatState(true)
+      // Turn selected tabs into magic tabs
+      tabs.update((allTabs) => {
+        return allTabs.map((tab) => {
+          const isSelected = Array.from($selectedTabs).some((item) => item.id === tab.id)
+          if (isSelected) {
+            return { ...tab, magic: true }
+          }
+          return tab
+        })
+      })
+
+      // Update selectedTabs to reflect the change
+      selectedTabs.update((selected) => {
+        const updatedSelection = new Set(
+          Array.from(selected).map((item) => ({ ...item, userSelected: true }))
+        )
+        return updatedSelection
+      })
     }
   }
 
@@ -1171,7 +1226,6 @@
       return
     }
     let ordered = [
-      ...$magicTabs.sort((a, b) => a.index - b.index),
       ...$unpinnedTabs.sort((a, b) => a.index - b.index),
       ...$pinnedTabs.sort((a, b) => a.index - b.index)
     ].filter((tab) => !tab.archived)
@@ -1225,11 +1279,239 @@
     })
   }
 
-  const handleTabSelect = (event: CustomEvent<string>) => {
-    const newId = event.detail
-    log.debug('Active Tab ID:', newId)
+  const handleMultiSelect = (event: CustomEvent<string>) => {
+    const tabId = event.detail
+    const unpinnedTabsArray = get(unpinnedTabs)
+    const currentSelectedTabs = get(selectedTabs)
 
-    makeTabActive(newId, ActivateTabEventTrigger.Click)
+    if (!$lastSelectedTabId) {
+      lastSelectedTabId.set($activeTabId)
+    }
+
+    const startIndex = unpinnedTabsArray.findIndex((tab) => tab.id === $lastSelectedTabId)
+    const endIndex = unpinnedTabsArray.findIndex((tab) => tab.id === tabId)
+    const [start, end] = startIndex < endIndex ? [startIndex, endIndex] : [endIndex, startIndex]
+
+    // Check if the clicked tab is already selected
+    const isClickedTabSelected = Array.from(currentSelectedTabs).some((item) => item.id === tabId)
+
+    let numChanged = 0
+    selectedTabs.update((t) => {
+      const newSelection = new Set(t)
+
+      if (isClickedTabSelected) {
+        // Deselect the entire range
+        for (let i = start; i <= end; i++) {
+          const id = unpinnedTabsArray[i]?.id
+          if (id) {
+            const item = Array.from(newSelection).find((item) => item.id === id)
+            if (item) {
+              newSelection.delete(item)
+              numChanged--
+            }
+          }
+        }
+      } else {
+        // Select the entire range
+        for (let i = start; i <= end; i++) {
+          const id = unpinnedTabsArray[i]?.id
+          if (id) {
+            const item = Array.from(newSelection).find((item) => item.id === id)
+            if (!item) {
+              newSelection.add({ id, userSelected: true })
+              numChanged++
+            }
+          }
+        }
+      }
+
+      return newSelection
+    })
+
+    // Update magic status based on the new selection model
+    tabs.update((tabs) => {
+      const newSelection = get(selectedTabs)
+      return tabs.map((tab) => {
+        const shouldBeMagic =
+          $activeTabMagic.showSidebar && Array.from(newSelection).some((item) => item.id === tab.id)
+        return {
+          ...tab,
+          magic: shouldBeMagic
+        }
+      })
+    })
+
+    lastSelectedTabId.set(tabId)
+
+    // Ensure no gaps in selection when switching modes
+    if (!$activeTabMagic.showSidebar) {
+      selectedTabs.update((t) => new Set(t))
+    }
+
+    tick().then(() => {
+      telemetry.trackPageChatContextUpdate(
+        PageChatUpdateContextEventAction.MultiSelect,
+        $magicTabs.length,
+        numChanged
+      )
+    })
+  }
+
+  const handlePassiveSelect = (event: CustomEvent<string>) => {
+    const tabId = event.detail
+    let addedTabToMagic = false
+
+    selectedTabs.update((t) => {
+      const newSelection = new Set(t)
+      const isMagicMode = $activeTabMagic.showSidebar
+
+      const existingItem = Array.from(newSelection).find((item) => item.id === tabId)
+      if (existingItem) {
+        newSelection.delete(existingItem)
+      } else {
+        newSelection.add({ id: tabId, userSelected: true })
+      }
+
+      if (isMagicMode) {
+        tabs.update((t) => {
+          const updatedTabs = t.map((tab) => {
+            if (tab.id === tabId) {
+              addedTabToMagic = !existingItem
+              return { ...tab, magic: addedTabToMagic }
+            }
+            return tab
+          })
+          return updatedTabs
+        })
+      }
+
+      return newSelection
+    })
+
+    lastSelectedTabId.set(tabId)
+
+    tick().then(() => {
+      if (addedTabToMagic) {
+        telemetry.trackPageChatContextUpdate(
+          PageChatUpdateContextEventAction.Add,
+          $magicTabs.length
+        )
+      } else {
+        telemetry.trackPageChatContextUpdate(
+          PageChatUpdateContextEventAction.Remove,
+          $magicTabs.length
+        )
+      }
+    })
+  }
+
+  const handleTabSelect = (event: CustomEvent<string>) => {
+    const tabId = event.detail
+    const currentSelectedTabs = Array.from(get(selectedTabs))
+    const currentTab = currentSelectedTabs.find((item) => item.id === tabId)
+
+    // Update selectedTabs to only include the newly selected tab
+    if (!$activeTabMagic.showSidebar) {
+      selectedTabs.set(new Set([{ id: tabId, userSelected: currentTab?.userSelected || false }]))
+    }
+
+    makeTabActive(tabId, ActivateTabEventTrigger.Click)
+
+    // If chat mode is activated, update magic tabs
+    if ($activeTabMagic.showSidebar) {
+      updateMagicTabs(tabId, currentSelectedTabs, currentTab)
+      cleanUpSelectedTabs()
+      synchronizeMagicTabsWithSelection()
+      trackMagicTabChanges()
+    }
+
+    lastSelectedTabId.set(tabId)
+  }
+
+  const updateMagicTabs = (tabId: string, currentSelectedTabs: any[], currentTab: any) => {
+    tabs.update((allTabs) => {
+      return allTabs.map((tab) => {
+        // If the tab is the one that was just selected, mark it as a magic tab
+        if (tab.id === tabId) {
+          return { ...tab, magic: true }
+        }
+        // If the tab is the last selected tab, update its magic status based on user selection
+        else if (tab.id === $lastSelectedTabId) {
+          const isUserSelected = currentSelectedTabs.find(
+            (item) => item.id === tab.id
+          )?.userSelected
+          return { ...tab, magic: isUserSelected ? tab.magic : false }
+        }
+        // If the current tab is not user-selected and is not the active tab, remove it from selected tabs and mark it as non-magic
+        else if (!currentTab?.userSelected && tab.id !== $activeTabId) {
+          selectedTabs.update((t) => {
+            t.delete(currentTab)
+            return t
+          })
+          return { ...tab, magic: false }
+        }
+        // For all other tabs, return them unchanged
+        return tab
+      })
+    })
+  }
+
+  const cleanUpSelectedTabs = () => {
+    selectedTabs.update((t) => {
+      const newSelection = new Set(t)
+      newSelection.forEach((item) => {
+        if (!item.userSelected && item.id !== $activeTabId) {
+          newSelection.delete(item)
+        }
+      })
+      return newSelection
+    })
+  }
+
+  const synchronizeMagicTabsWithSelection = () => {
+    tabs.update((allTabs) => {
+      return allTabs.map((tab) => {
+        const isUserSelected = Array.from(get(selectedTabs)).some((item) => item.id === tab.id)
+        return { ...tab, magic: isUserSelected || tab.id === $activeTabId }
+      })
+    })
+  }
+
+  const trackMagicTabChanges = () => {
+    tick().then(() => {
+      telemetry.trackPageChatContextUpdate(
+        PageChatUpdateContextEventAction.ActiveChanged,
+        $magicTabs.length
+      )
+    })
+  }
+
+  const deselectAllTabs = () => {
+    log.debug('deselect tabs')
+    selectedTabs.set(new Set())
+    lastSelectedTabId.set(null)
+
+    tabs.update((x) => {
+      return x.map((tab) => {
+        return {
+          ...tab,
+          magic: false
+        }
+      })
+    })
+
+    activeTabId.set('')
+    activeTabMagic.set({
+      running: false,
+      showSidebar: false,
+      initializing: false,
+      responses: [],
+      errors: []
+    })
+
+    if (showRightSidebar) {
+      handleCollapseRight()
+    }
   }
 
   async function handleBookmark(
@@ -1652,32 +1934,56 @@
 
   const setPageChatState = async (enabled: boolean) => {
     log.debug('Toggling magic sidebar')
-    const transition = document.startViewTransition(async () => {
-      const tab = $activeTab as TabPage | null
+    const tab = $activeTab as TabPage | null
 
-      if (!$activeTabMagic) return
-      if (!tab) return
+    if (!$activeTabMagic) return
+    if (!tab) return
 
-      activeTabMagic.update((magic) => {
-        return {
-          ...magic,
-          initializing: enabled,
-          chatId: $activeChatId,
-          showSidebar: enabled
-        }
-      })
-
-      toggleTabsMagic(enabled)
-      await tick()
+    activeTabMagic.update((magic) => {
+      return {
+        ...magic,
+        initializing: enabled,
+        chatId: $activeChatId,
+        showSidebar: enabled
+      }
     })
 
-    await transition.finished
+    if (!enabled) {
+      selectedTabs.set(new Set())
+    }
 
     if (enabled) {
-      // Delay to let the sidebar open first
-      requestAnimationFrame(async () => {
-        await preparePageTabsForChatContext()
+      tabs.update((allTabs) => {
+        return allTabs.map((tab) => {
+          const isSelected = Array.from($selectedTabs).some((item) => item.id === tab.id)
+          if (isSelected) {
+            return { ...tab, magic: true }
+          }
+          return tab
+        })
       })
+
+      // Update the store with the changed tabs
+      for (const tab of $tabs) {
+        await tabsDB.update(tab.id, {
+          magic: Array.from($selectedTabs.values())
+            .map((e) => e.id)
+            .includes(tab.id)
+        })
+      }
+    }
+
+    if (!enabled) {
+      selectedTabs.set(new Set())
+      lastSelectedTabId.set(null)
+    }
+
+    // Clear the selection
+    toggleTabsMagic(enabled)
+    await tick()
+
+    if (enabled) {
+      await preparePageTabsForChatContext()
     }
   }
 
@@ -2172,7 +2478,7 @@
   $: {
     const reservedSpace = 400 + $pinnedTabs.length * 50 + 32
     const availableSpace = maxWidth - reservedSpace
-    const numberOfTabs = $unpinnedTabs.length + $magicTabs.length
+    const numberOfTabs = $unpinnedTabs.length
     tabSize = availableSpace / numberOfTabs
   }
   const handleResize = () => {
@@ -2202,7 +2508,7 @@
     window.setLogLevel = (level: LogLevel) => {
       // @ts-ignore
       window.LOG_LEVEL = level
-      console.log(`[Logger]: Log level set to '${level}'`)
+      log.debug(`[Logger]: Log level set to '${level}'`)
       toasts.info(`Log level set to '${level}'`)
 
       return level
@@ -2283,8 +2589,7 @@
     })
 
     window.api.onToggleRightSidebarTab((tab) => {
-      if ($rightSidebarTab === tab && showRightSidebar) handleCollapseRight()
-      else openRightSidebarTab(tab)
+      toggleRightSidebarTab(tab)
     })
 
     window.api.onCreateNewTab(() => {
@@ -2472,7 +2777,10 @@
     // })
 
     // if we have some magicTabs, make them unpinned
-    turnMagicTabsIntoUnpinned()
+
+    $tabs.forEach((tab: Tab) => {
+      handleExcludeTab(new CustomEvent('exclude-tab', { detail: tab.id }))
+    })
 
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
 
@@ -2503,51 +2811,6 @@
   const openCheatSheet = () => {
     const url = 'https://deta.notion.site/Surf-v0-0-1-e9c49ddf02a8476fb3c53b7efdc7e0fd'
     window.open(url, '_blank')
-  }
-
-  const turnMagicTabsIntoUnpinned = async () => {
-    const magicTabsArray = get(magicTabs)
-    const unpinnedTabsArray = get(unpinnedTabs)
-
-    if (magicTabsArray.length === 0) {
-      // No magic tabs to process
-      return
-    }
-
-    // Turn magic tabs into unpinned tabs
-    magicTabsArray.forEach((magicTab) => {
-      magicTab.magic = false
-      unpinnedTabsArray.push(magicTab)
-    })
-
-    // Clear the magic tabs array
-    magicTabsArray.length = 0
-
-    // Update indices of unpinned tabs
-    const updatedUnpinnedTabs = unpinnedTabsArray.map((tab, index) => ({ ...tab, index }))
-
-    // Update the tabs store
-    tabs.update((x) => {
-      return x.map((tab) => {
-        const updatedTab = updatedUnpinnedTabs.find((t) => t.id === tab.id)
-        if (updatedTab) {
-          tab.index = updatedTab.index
-          tab.magic = false
-          tab.pinned = false
-        }
-        return tab
-      })
-    })
-
-    // Update the store with the changed tabs
-    await bulkUpdateTabsStore(
-      updatedUnpinnedTabs.map((tab) => ({
-        id: tab.id,
-        updates: { pinned: false, magic: false, index: tab.index }
-      }))
-    )
-
-    log.debug('Magic tabs turned into unpinned tabs successfully')
   }
 
   const handleDrop = async (event: CustomEvent) => {
@@ -2649,7 +2912,59 @@
     })
   }
 
-  const handleExcludeTabFromMagic = async (e: CustomEvent<string>) => {
+  const removeMagicTab = (e: CustomEvent<Tab>) => {
+    const tab = e.detail
+
+    tabs.update((x) => {
+      return x.map((t) => {
+        if (t.id === tab.id) {
+          cachedMagicTabs.delete(tab.id)
+          return {
+            ...t,
+            magic: false
+          }
+        }
+        return t
+      })
+    })
+
+    // tick().then(() => {
+    //   telemetry.trackPageChatContextUpdate(
+    //     PageChatUpdateContextEventAction.Remove,
+    //     $magicTabs.length
+    //   )
+    // })
+  }
+
+  const includeTabAndExcludeOthersFromMagic = async (tabId: string) => {
+    // include the specified tab and exclude all others from magic
+    tabs.update((x) => {
+      return x.map((tab) => {
+        if (tab.id === tabId) {
+          cachedMagicTabs.add(tab.id)
+          return {
+            ...tab,
+            magic: true
+          }
+        } else {
+          cachedMagicTabs.delete(tab.id)
+          return {
+            ...tab,
+            magic: false
+          }
+        }
+      })
+    })
+    await preparePageTabsForChatContext()
+    tick().then(() => {
+      telemetry.trackPageChatContextUpdate(
+        PageChatUpdateContextEventAction.ExcludeOthers,
+        $magicTabs.length
+      )
+    })
+  }
+
+  const handleExcludeTab = async (e: CustomEvent<string>) => {
     const tabId = e.detail
 
     // exclude the tab from magic
@@ -2666,6 +2981,20 @@
         return tab
       })
     })
+
+    // deselect the tab
+    selectedTabs.update((t) => {
+      const newSelection = new Set(t)
+      Array.from(newSelection).forEach((item) => {
+        if (item.id === tabId) {
+          newSelection.delete(item)
+        }
+      })
+      return newSelection
+    })
+
+    lastSelectedTabId.set($activeTabId)
+
     await preparePageTabsForChatContext()
     tick().then(() => {
       telemetry.trackPageChatContextUpdate(
@@ -2678,12 +3007,9 @@
   const handleIncludeTabInMagic = async (e: CustomEvent<string>) => {
     const tabId = e.detail
 
-    // include the tab in magic
     tabs.update((x) => {
       return x.map((tab) => {
         if (tab.id === tabId) {
-          cachedMagicTabs.add(tab.id)
-
           return {
             ...tab,
             magic: true
@@ -2693,82 +3019,91 @@
       })
     })
 
+    selectedTabs.update((t) => {
+      const newSelection = new Set(t)
+      newSelection.add({ id: tabId, userSelected: true })
+      return newSelection
+    })
+
+    lastSelectedTabId.set($activeTabId)
+
     await preparePageTabsForChatContext()
     tick().then(() => {
       telemetry.trackPageChatContextUpdate(PageChatUpdateContextEventAction.Add, $magicTabs.length)
     })
   }
 
+  const handleEdit = async () => {
+    await tick()
+    setShowNewTabOverlay(0)
+    activeTabComponent?.editAddress()
+    handleFocus()
+  }
+
   const toggleTabsMagic = async (on: boolean) => {
+    const allTabs = get(tabs)
     const magicTabsArray = get(magicTabs)
     const unpinnedTabsArray = get(unpinnedTabs)
     const pinnedTabsArray = get(pinnedTabs)
 
-    // Update the indices of the tabs in all lists
-    const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
-    let newUnpinnedTabsArray: Tab[] = []
-
     if (on) {
       log.debug('Toggling tabs magic on', cachedMagicTabs.values())
 
-      if (cachedMagicTabs.size > 0) {
-        log.debug('Using cached magic tabs')
-        const cachedTabs = Array.from(cachedMagicTabs.values())
-        cachedTabs.forEach((id) => {
-          const tab = unpinnedTabsArray.find((t) => t.id === id)
-          if (tab) {
-            tab.magic = true
-          }
+      const activeTab = allTabs.find((tab) => tab.id === $activeTabId)
+      if (activeTab && (activeTab.type === 'page' || activeTab.type === 'space')) {
+        log.debug('Using current tab as magic tab')
+        cachedMagicTabs.add(activeTab.id)
+        tabs.update((x) => {
+          return x.map((tab) => {
+            if (tab.id === activeTab.id) {
+              return {
+                ...tab,
+                magic: true
+              }
+            }
+            return tab
+          })
         })
       } else {
-        log.debug('Creating new magic tabs')
-        // Move all unpinned tabs to magic tabs
-        unpinnedTabsArray.forEach((tab) => {
-          if (tab.type === 'page' || tab.type === 'space') {
-            tab.magic = true
-            cachedMagicTabs.add(tab.id)
-          }
-        })
+        log.debug('Current tab cannot be used as magic tab, using cached or all tabs')
+        if (cachedMagicTabs.size > 0) {
+          log.debug('Using cached magic tabs')
+          const cachedTabs = Array.from(cachedMagicTabs.values())
+          cachedTabs.forEach((id) => {
+            const tab = unpinnedTabsArray.find((t) => t.id === id)
+          })
+        } else {
+          log.debug('Creating new magic tabs')
+          // Move all unpinned tabs to magic tabs
+          unpinnedTabsArray.forEach((tab) => {
+            if (tab.type === 'page' || tab.type === 'space') {
+              cachedMagicTabs.add(tab.id)
+            }
+          })
+        }
       }
-
-      newUnpinnedTabsArray = []
     } else {
       log.debug('Toggling tabs magic off')
-      // Revert each magic tab to its previous state
-      magicTabsArray.forEach((magicTab) => {
-        magicTab.magic = false
-
-        if (magicTab.pinned) {
-          pinnedTabsArray.push(magicTab)
-        } else {
-          unpinnedTabsArray.push(magicTab)
-        }
-      })
-      // Reset magic tabs array
-      magicTabsArray.length = 0
-      newUnpinnedTabsArray = updateIndices(unpinnedTabsArray)
-    }
-
-    const newPinnedTabsArray = updateIndices(pinnedTabsArray)
-    const newMagicTabsArray = updateIndices(magicTabsArray)
-
-    // combine all lists back together
-    const newTabs = [...newUnpinnedTabsArray, ...newPinnedTabsArray, ...newMagicTabsArray]
-
-    log.debug('Toggled tabs magic', newTabs)
-
-    // only update the tabs that were changed (archived stay unaffected)
-    tabs.update((x) => {
-      return x.map((tab) => {
-        const newTab = newTabs.find((t) => t.id === tab.id)
-        if (newTab) {
-          tab.index = newTab.index
-          tab.pinned = newTab.pinned
-          tab.magic = newTab.magic
+      // When turning magic off, maintain the original order
+      const updatedTabs = allTabs.map((tab) => {
+        if (tab.magic) {
+          return { ...tab, magic: false }
         }
         return tab
       })
-    })
+
+      tabs.set(updatedTabs)
+    }
+
+    // Update indices while maintaining the original order
+    const updateIndices = (tabArray: Tab[]) => tabArray.map((tab, index) => ({ ...tab, index }))
+
+    const newUnpinnedTabsArray = updateIndices(allTabs.filter((t) => !t.pinned && !t.magic))
+    const newPinnedTabsArray = updateIndices(allTabs.filter((t) => t.pinned))
+    const newMagicTabsArray = updateIndices(allTabs.filter((t) => t.magic))
+
+    // Combine all lists back together, maintaining the original order
+    const newTabs = [...newUnpinnedTabsArray, ...newPinnedTabsArray, ...newMagicTabsArray]
 
     // Update the store with the changed tabs
     await bulkUpdateTabsStore(
@@ -2779,6 +3114,22 @@
     )
 
     log.debug('Tabs reset successfully')
+  }
+
+  const useAllTabsMagic = () => {
+    tabs.update((x) => {
+      return x.map((tab) => {
+        cachedMagicTabs.add(tab.id)
+        return {
+          ...tab,
+          magic: true
+        }
+      })
+    })
+    preparePageTabsForChatContext()
+    tick().then(() => {
+      telemetry.trackPageChatContextUpdate(PageChatUpdateContextEventAction.Add, $magicTabs.length)
+    })
   }
 
   const onDrop = async (event: CustomEvent<DroppedTab>, action: string) => {
@@ -2925,6 +3276,7 @@
       return
     }
 
+    // todo refactor this
     if (drag.data['surf/tab'] !== undefined) {
       const dragData = drag.data['surf/tab'] as Tab
       tabs.update((_tabs) => {
@@ -3014,7 +3366,7 @@
         // log.log(...pinnedTabsArray, ...unpinnedTabsArray, ...magicTabsArray)
 
         // Update the indices of the tabs in all lists
-        const updateIndices = (tabs: ITab[]) => tabs.map((tab, index) => ({ ...tab, index }))
+        const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
 
         unpinnedTabsArray = updateIndices(unpinnedTabsArray)
         pinnedTabsArray = updateIndices(pinnedTabsArray)
@@ -3044,8 +3396,39 @@
     }
   }
 
+  const handleAddToChat = (e: CustomEvent<string>) => {
+    const query = e.detail
+
+    openRightSidebarTab('chat')
+
+    if (magicSidebar) {
+      magicSidebar.addChatWithQuery(query)
+    } else {
+      log.error('Magic sidebar not found')
+      toasts.error('Failed to add to chat')
+    }
+  }
+  const handleTabMouseEnter = (e: CustomEvent<string>) => {
+    clearTimeout((handleTabMouseEnter as any).timeout)
+    clearTimeout((handleTabMouseLeave as any).timeout)
+    ;(handleTabMouseEnter as any).timeout = setTimeout(() => {
+      if (!$chatTooltipHovered) {
+        anyTabHovered.set(true)
+      }
+    }, 100)
+  }
+
+  const handleTabMouseLeave = (e: CustomEvent<string>) => {
+    clearTimeout((handleTabMouseLeave as any).timeout)
+    ;(handleTabMouseLeave as any).timeout = setTimeout(() => {
+      if (!$chatTooltipHovered) {
+        anyTabHovered.set(false)
+      }
+    }, 200)
+  }
+
   const handleTabDragEnd = async (drag: DragculaDragEvent) => {
-    console.debug('TAB DRAG END', drag.effect)
+    log.debug('TAB DRAG END', drag.effect)
 
     if (
       drag.status === 'done' &&
@@ -3060,7 +3443,7 @@
   }
 
   const handleDropOnSpaceTab = async (drag: DragculaDragEvent, spaceId: string) => {
-    console.warn('DROP ON SPACE TAB', spaceId, drag)
+    log.warn('DROP ON SPACE TAB', spaceId, drag)
     if (drag.item !== null) drag.item.dragEffect = 'copy'
 
     const toast = toasts.loading(
@@ -3178,7 +3561,7 @@
     }
 
     drag.continue()
-    console.warn('ADDING resources to spaceid', spaceId, resourceIds)
+    log.warn('ADDING resources to spaceid', spaceId, resourceIds)
     if (spaceId !== 'all') {
       await oasis.addResourcesToSpace(spaceId, resourceIds)
       //await loadSpaceContents(spaceId)
@@ -3202,6 +3585,22 @@
 
 <ToastsProvider service={toasts} />
 
+<!-- <pre
+  style="position: fixed; bottom: 1rem; right: 1rem; top:1rem; z-index: 10000; background: black; color: white; overflow-y: scroll;"
+  aria-hidden={true}>
+    {JSON.stringify(
+    {
+      timestamp: new Date().getTime(),
+      lastSelectedTabId: $lastSelectedTabId,
+      selectedTabs: Array.from($selectedTabs).map(
+        (tabId) => $tabs.find((tab) => tab.id === tabId)?.id
+      )
+    },
+    null,
+    2
+  )}
+</pre> -->
+
 <div class="antialiased w-screen h-screen will-change-auto transform-gpu relative drag">
   <SidebarPane
     {horizontalTabs}
@@ -3209,11 +3608,18 @@
     bind:showRightSidebar
     on:leftPeekClose={() => changeTraficLightsVisibility(false)}
     on:leftPeekOpen={() => changeTraficLightsVisibility(true)}
+    on:rightPeekOpen={() => {
+      setPageChatState(true)
+      telemetry.trackOpenRightSidebar($rightSidebarTab)
+    }}
+    on:rightPeekClose={() => {
+      cachedMagicTabs.clear()
+      setPageChatState(false)
+    }}
   >
     <div
       slot="sidebar"
       class="flex-grow {horizontalTabs ? 'w-full h-full py-1' : 'h-full'}"
-      class:magic={$magicTabs.length === 0 && $activeTabMagic?.showSidebar}
       style="z-index: 5000;"
     >
       {#if $sidebarTab !== 'oasis'}
@@ -3384,25 +3790,73 @@
                     horizontalTabs={true}
                     {activeTabId}
                     pinned={true}
+                    isMagicActive={$magicTabs.length > 0}
+                    isSelected={Array.from($selectedTabs).some((item) => item.id === tab.id)}
+                    isUserSelected={Array.from($selectedTabs).some(
+                      (item) => item.id === tab.id && item.userSelected
+                    )}
                     on:select={handleTabSelect}
                     on:remove-from-sidebar={handleRemoveFromSidebar}
                     on:unarchive-tab={handleUnarchiveTab}
                     on:delete-tab={handleDeleteTab}
+                    on:exclude-tab={handleExcludeTab}
                     on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                     on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+                    on:multi-select={handleMultiSelect}
+                    on:passive-select={handlePassiveSelect}
+                    on:include-tab={handleIncludeTabInMagic}
+                    on:edit={handleEdit}
+                    on:mouseenter={handleTabMouseEnter}
+                    on:mouseleave={handleTabMouseLeave}
                   />
                 {/each}
               {/if}
             </div>
           </div>
 
+          {#if ($selectedTabs.size > 1 && $magicTabs.length === 0) || $anyTabHovered || $magicTabs.length > 0}
+            <div
+              class="tooltip fixed top-[6.75rem] right-1 transform translate-x-0 bg-white/90 text-sky-600 rounded px-1 my-1 mx-2 border border-gray-100 overflow-visible z-50 w-fit rotate-1 transition-transform duration-300 cursor-default hover:bg-sky-100"
+              in:fly={{ y: 3, duration: 120 }}
+              out:fly={{ y: 3, duration: 120 }}
+              on:click={() => {
+                if ($magicTabs.length > 0) {
+                  deselectAllTabs()
+                }
+                startChatWithSelectedTabs()
+              }}
+              aria-hidden="true"
+              on:mouseenter={() => {
+                chatTooltipHovered.set(true)
+              }}
+              on:mouseleave={() => {
+                chatTooltipHovered.set(false)
+              }}
+            >
+              <div
+                class="magic-activated"
+                style="font-size: 12px; padding: 10px; margin: -10px;"
+                aria-hidden="true"
+                on:mouseenter={() => {
+                  chatTooltipHovered.set(true)
+                }}
+                on:mouseleave={() => {
+                  chatTooltipHovered.set(false)
+                }}
+              >
+                {#if !$magicTabs.length}
+                  Hit {navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl'} + E for chat.
+                {:else}
+                  Chat Active
+                {/if}
+              </div>
+            </div>
+          {/if}
+
           <div
             class=" {horizontalTabs
-              ? 'overflow-x-scroll space-x-2 px-3'
-              : '  overflow-y-scroll space-y-2 py-3'} w-full h-full inline-flex flex-nowrap overflow-hidden no-scrollbar
-
-
-              "
+              ? 'overflow-x-scroll space-x-2 px-3 outline'
+              : 'overflow-y-scroll space-y-2 py-3 outline'} w-full h-full inline-flex flex-nowrap overflow-hidden no-scrollbar outline'"
             class:flex-row={horizontalTabs}
             class:items-center={horizontalTabs}
             class:flex-col={!horizontalTabs}
@@ -3423,183 +3877,8 @@
                 );
               "
           >
-            {#if $activeTabMagic}
-              {#if $activeTabMagic.showSidebar}
-                <div
-                  class="no-scrollbar no-drag relative flex-grow flex-shrink-0 group {horizontalTabs
-                    ? ''
-                    : 'w-full'}"
-                >
-                  <div
-                    class="relative rounded-xl no-scrollbar
-                      {horizontalTabs
-                      ? 'h-full bg-gradient-to-r from-pink-100/60 via-pink-200/80 to-pink-300/90'
-                      : 'w-full bg-gradient-to-r from-sky-100/60 to-sky-200/90'}"
-                  >
-                    <div class={horizontalTabs ? '' : 'p-2'} class:magic={$magicTabs.length > 0}>
-                      {#if horizontalTabs}
-                        <div
-                          id="sidebar-magic-tabs"
-                          axis="horizontal"
-                          class="magic-horizontal"
-                          style="display: flex;"
-                          dragdeadzone="5"
-                          use:HTMLAxisDragZone.action={{}}
-                          on:Drop={handleDropSidebar}
-                          on:DragEnter={handleDragEnterSidebar}
-                        >
-                          {#if $magicTabs.length === 0}
-                            <div class="flex flex-row items-center">
-                              <div class="ai-wrapper">
-                                <Icon name="ai" size={24 + 'px'} />
-                              </div>
-                              <span class="text-xs text-sky-800/50">
-                                General mode, drop tabs here!
-                              </span>
-                            </div>
-                          {:else}
-                            {#each $magicTabs as tab, index (tab.id + index)}
-                              {#if $activeTabId === tab.id}
-                                <TabItem
-                                  hibernated={!$activatedTabs.includes(tab.id)}
-                                  removeHighlight={$showNewTabOverlay !== 0}
-                                  showClose
-                                  tabSize={Math.min(300, Math.max(96, tabSize))}
-                                  {tab}
-                                  enableEditing
-                                  {activeTabId}
-                                  pinned={false}
-                                  showExcludeOthersButton={$activeTabMagic?.showSidebar &&
-                                    (tab.type === 'page' || tab.type === 'space')}
-                                  on:select={() => {}}
-                                  bind:this={activeTabComponent}
-                                  on:delete-tab={handleDeleteTab}
-                                  on:input-enter={handleBlur}
-                                  on:unarchive-tab={handleUnarchiveTab}
-                                  on:select={() => {}}
-                                  on:remove-from-sidebar={handleRemoveFromSidebar}
-                                  on:exclude-other-tabs={(e) => excludeOtherTabsFromMagic(e.detail)}
-                                  on:exclude-tab={handleExcludeTabFromMagic}
-                                  on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                                />
-                              {:else}
-                                <TabItem
-                                  hibernated={!$activatedTabs.includes(tab.id)}
-                                  showClose
-                                  tabSize={Math.min(300, Math.max(96, tabSize))}
-                                  {tab}
-                                  {activeTabId}
-                                  pinned={false}
-                                  showButtons={false}
-                                  showExcludeOthersButton={$activeTabMagic?.showSidebar &&
-                                    (tab.type === 'page' || tab.type === 'space')}
-                                  on:select={handleTabSelect}
-                                  on:delete-tab={handleDeleteTab}
-                                  on:input-enter={handleBlur}
-                                  on:unarchive-tab={handleUnarchiveTab}
-                                  on:select={handleTabSelect}
-                                  on:remove-from-sidebar={handleRemoveFromSidebar}
-                                  on:exclude-other-tabs={(e) => excludeOtherTabsFromMagic(e.detail)}
-                                  on:exclude-tab={handleExcludeTabFromMagic}
-                                  on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                                />
-                              {/if}
-                            {/each}
-                          {/if}
-                        </div>
-                      {:else}
-                        {#if $magicTabs.length > 0}
-                          <div
-                            class="flex flex-row gap-2 px-4 py-2 leading-5 items-center justify-center mb-1 mx-2"
-                          >
-                            <Icon name="sparkles" size="18" class="text-sky-800" />
-                            <span class="text-sm text-sky-800"
-                              >Chat with {$magicTabs.length === 1
-                                ? 'this tab'
-                                : $magicTabs.length === 2
-                                  ? 'two tabs'
-                                  : `${$magicTabs.length} tabs`}</span
-                            >
-                          </div>
-                        {/if}
-                        <div
-                          id="sidebar-magic-tabs"
-                          axis="vertical"
-                          dragdeadzone="5"
-                          use:HTMLAxisDragZone.action={{}}
-                          on:Drop={handleDropSidebar}
-                          on:DragEnter={handleDragEnterSidebar}
-                        >
-                          {#if $magicTabs.length === 0}
-                            <div class="flex flex-col items-center">
-                              <div class="ai-wrapper">
-                                <Icon name="ai" size={24 + 'px'} />
-                              </div>
-                              <span class="text-xs text-sky-800">General mode, drop tabs here!</span
-                              >
-                            </div>
-                          {:else}
-                            {#each $magicTabs as tab, index (tab.id + index)}
-                              {#if $activeTabId === tab.id}
-                                <TabItem
-                                  hibernated={!$activatedTabs.includes(tab.id)}
-                                  removeHighlight={$showNewTabOverlay !== 0}
-                                  showClose
-                                  horizontalTabs={false}
-                                  {tab}
-                                  enableEditing
-                                  bind:this={activeTabComponent}
-                                  on:select={() => {}}
-                                  {activeTabId}
-                                  pinned={false}
-                                  showExcludeOthersButton={$activeTabMagic?.showSidebar &&
-                                    (tab.type === 'page' || tab.type === 'space')}
-                                  on:unarchive-tab={handleUnarchiveTab}
-                                  on:delete-tab={handleDeleteTab}
-                                  on:remove-from-sidebar={handleRemoveFromSidebar}
-                                  on:exclude-other-tabs={(e) => excludeOtherTabsFromMagic(e.detail)}
-                                  on:exclude-tab={handleExcludeTabFromMagic}
-                                  on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                                />
-                              {:else}
-                                <TabItem
-                                  hibernated={!$activatedTabs.includes(tab.id)}
-                                  removeHighlight={$showNewTabOverlay !== 0}
-                                  showClose
-                                  horizontalTabs={false}
-                                  {tab}
-                                  {activeTabId}
-                                  pinned={false}
-                                  showButtons={false}
-                                  showExcludeOthersButton={$activeTabMagic?.showSidebar &&
-                                    (tab.type === 'page' || tab.type === 'space')}
-                                  on:unarchive-tab={handleUnarchiveTab}
-                                  on:delete-tab={handleDeleteTab}
-                                  on:select={handleTabSelect}
-                                  on:remove-from-sidebar={handleRemoveFromSidebar}
-                                  on:exclude-other-tabs={(e) => excludeOtherTabsFromMagic(e.detail)}
-                                  on:exclude-tab={handleExcludeTabFromMagic}
-                                  on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                                />
-                              {/if}
-                            {/each}
-                          {/if}
-                        </div>
-                      {/if}
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  class="{!horizontalTabs
-                    ? 'w-1/2 mx-auto h-0.5'
-                    : 'h-4 w-0.5'} rounded-xl bg-sky-200"
-                ></div>
-              {/if}
-            {/if}
-
             <div
-              class="no-scrollbar relative h-full flex-grow w-full"
+              class="no-scrollbar relative h-full flex-grow w-full overflow-y-visible"
               class:space-x-2={horizontalTabs}
               class:items-center={horizontalTabs}
             >
@@ -3631,10 +3910,18 @@
                         enableEditing
                         showIncludeButton={$activeTabMagic?.showSidebar &&
                           (tab.type === 'page' || tab.type === 'space')}
+                        isMagicActive={$magicTabs.length > 0}
                         bind:this={activeTabComponent}
-                        on:select={() => {}}
+                        isSelected={Array.from($selectedTabs).some((item) => item.id === tab.id)}
+                        isUserSelected={Array.from($selectedTabs).some(
+                          (item) => item.id === tab.id && item.userSelected
+                        )}
+                        on:multi-select={handleMultiSelect}
+                        on:passive-select={handlePassiveSelect}
+                        on:select={handleTabSelect}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:delete-tab={handleDeleteTab}
+                        on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
                         on:unarchive-tab={handleUnarchiveTab}
                         on:bookmark={() => handleBookmark()}
@@ -3644,6 +3931,9 @@
                         on:include-tab={handleIncludeTabInMagic}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+                        on:edit={handleEdit}
+                        on:mouseenter={handleTabMouseEnter}
+                        on:mouseleave={handleTabMouseLeave}
                       />
                     {:else}
                       <TabItem
@@ -3655,14 +3945,25 @@
                         pinned={false}
                         showIncludeButton={$activeTabMagic?.showSidebar &&
                           (tab.type === 'page' || tab.type === 'space')}
+                        isSelected={Array.from($selectedTabs).some((item) => item.id === tab.id)}
+                        isUserSelected={Array.from($selectedTabs).some(
+                          (item) => item.id === tab.id && item.userSelected
+                        )}
+                        isMagicActive={$magicTabs.length > 0}
+                        on:multi-select={handleMultiSelect}
+                        on:passive-select={handlePassiveSelect}
                         on:select={handleTabSelect}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
+                        on:exclude-tab={handleExcludeTab}
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
                         on:unarchive-tab={handleUnarchiveTab}
                         on:include-tab={handleIncludeTabInMagic}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+                        on:edit={handleEdit}
+                        on:mouseenter={handleTabMouseEnter}
+                        on:mouseleave={handleTabMouseLeave}
                       />
                     {/if}
                   {/each}
@@ -3677,11 +3978,11 @@
                   on:Drop={handleDropSidebar}
                   on:DragEnter={handleDragEnterSidebar}
                 >
-                  {#each $unpinnedTabs as tab, index (tab.id + index)}
+                  {#each $unpinnedTabs as tab, index (tab.id)}
                     <!-- check if this tab is active -->
                     {#if $activeTabId === tab.id}
                       <TabItem
-                        hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
+                        hibernated={!$activatedTabs.includes(tab.id)}
                         removeHighlight={$showNewTabOverlay !== 0}
                         showClose
                         horizontalTabs={false}
@@ -3694,10 +3995,19 @@
                         enableEditing
                         showIncludeButton={$activeTabMagic?.showSidebar &&
                           (tab.type === 'page' || tab.type === 'space')}
+                        isMagicActive={$magicTabs.length > 0}
                         bind:this={activeTabComponent}
-                        on:select={() => {}}
+                        isSelected={Array.from($selectedTabs).some((item) => item.id === tab.id)}
+                        isUserSelected={Array.from($selectedTabs).some(
+                          (item) => item.id === tab.id && item.userSelected
+                        )}
+                        on:multi-select={handleMultiSelect}
+                        on:passive-select={handlePassiveSelect}
+                        on:select={handleTabSelect}
+                        on:exclude-tab={handleExcludeTab}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:delete-tab={handleDeleteTab}
+                        on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
                         on:unarchive-tab={handleUnarchiveTab}
                         on:bookmark={() => handleBookmark()}
@@ -3707,10 +4017,13 @@
                         on:include-tab={handleIncludeTabInMagic}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+                        on:edit={handleEdit}
+                        on:mouseenter={handleTabMouseEnter}
+                        on:mouseleave={handleTabMouseLeave}
                       />
                     {:else}
                       <TabItem
-                        hibernated={!$activatedTabs.includes($unpinnedTabs[index].id)}
+                        hibernated={!$activatedTabs.includes(tab.id)}
                         showClose
                         {tab}
                         horizontalTabs={false}
@@ -3718,7 +4031,15 @@
                         pinned={false}
                         showIncludeButton={$activeTabMagic?.showSidebar &&
                           (tab.type === 'page' || tab.type === 'space')}
+                        isSelected={Array.from($selectedTabs).some((item) => item.id === tab.id)}
+                        isUserSelected={Array.from($selectedTabs).some(
+                          (item) => item.id === tab.id && item.userSelected
+                        )}
+                        isMagicActive={$magicTabs.length > 0}
+                        on:multi-select={handleMultiSelect}
+                        on:passive-select={handlePassiveSelect}
                         on:select={handleTabSelect}
+                        on:exclude-tab={handleExcludeTab}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
@@ -3726,6 +4047,9 @@
                         on:include-tab={handleIncludeTabInMagic}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+                        on:edit={handleEdit}
+                        on:mouseenter={handleTabMouseEnter}
+                        on:mouseleave={handleTabMouseLeave}
                       />
                     {/if}
                   {/each}
@@ -3947,6 +4271,7 @@
                   on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
                   on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
                   on:keydown={(e) => handleKeyDown(e.detail)}
+                  on:add-to-chat={(e) => handleAddToChat(e)}
                 />
               {:else if tab.type === 'chat'}
                 <Chat
@@ -4047,22 +4372,30 @@
 
       <Tabs.Content value="chat" class="flex-grow overflow-hidden">
         {#if $activeTab && $activeTabMagic}
-          <MagicSidebar
-            magicPage={activeTabMagic}
-            tabsInContext={$magicTabs}
-            bind:this={magicSidebar}
-            bind:inputValue={$magicInputValue}
-            on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
-            on:highlightWebviewText={(e) =>
-              highlightWebviewText(e.detail.resourceId, e.detail.answerText, e.detail.sourceUid)}
-            on:seekToTimestamp={(e) =>
-              handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
-            on:navigate={(e) => {
-              $browserTabs[$activeTabId].navigate(e.detail.url)
-            }}
-            on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
-            on:updateActiveChatId={(e) => activeChatId.set(e.detail)}
-          />
+          {#key showRightSidebar}
+            <MagicSidebar
+              magicPage={activeTabMagic}
+              tabsInContext={magicTabs}
+              bind:this={magicSidebar}
+              allTabs={$tabs}
+              bind:inputValue={$magicInputValue}
+              on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
+              on:highlightWebviewText={(e) =>
+                highlightWebviewText(e.detail.resourceId, e.detail.answerText, e.detail.sourceUid)}
+              on:seekToTimestamp={(e) =>
+                handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
+              on:navigate={(e) => {
+                $browserTabs[$activeTabId].navigate(e.detail.url)
+              }}
+              on:select={handleTabSelect}
+              on:exclude-tab={handleExcludeTab}
+              on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
+              on:updateActiveChatId={(e) => activeChatId.set(e.detail)}
+              on:remove-magic-tab={removeMagicTab}
+              on:include-tab={handleIncludeTabInMagic}
+              {activeTabMagic}
+            />
+          {/key}
         {:else}
           <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
             <Icon name="info" />
@@ -4254,6 +4587,11 @@
     overflow: visible !important;
     background: transparent !important;
   }*/
+
+  :global(*) {
+    scrollbar-color: rgb(130, 130, 130) transparent;
+    scrollbar-width: thin;
+  }
 
   .messi {
     backdrop-filter: blur(10px);

@@ -340,14 +340,15 @@
         class="w-3 h-full cursor-col-resize shrink-0"
       />
     </div>
-    <div class="h-full w-full">
+    <!-- NOTE: This margin-top is weird, i dunno why it exists, but we have to kill it here -->
+    <div class="h-full w-full" style="margin-top: 0;">
       <slot name="right-sidebar" />
     </div>
   </div>
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <!-- <div
+  <div
     class={rightPeakAreaClasses}
     on:mouseenter={() => handleMouseEnter('right')}
     style={rightSidebarStyle}
-  /> -->
+  />
 </div>

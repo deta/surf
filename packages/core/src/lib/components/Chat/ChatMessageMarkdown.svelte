@@ -123,7 +123,7 @@
         <p>Second text with a citation <citation>2</citation></p>
         <p>Third text with no citation</p>
         <p>Forth <strong>text</strong> with a citation <citation>3</citation></p>
-    
+
         Parsed mapping:
 
         1: First text with a citation
@@ -211,19 +211,26 @@
   })
 </script>
 
-<!-- <pre>{content}</pre> -->
+<div class="py-6 px-8 bg-white rounded-2xl flex flex-col gap-4">
+  {#if sources && sources.length > 0 && showSourcesAtEnd}
+    <div class="flex flex-col gap-2">
+      <h3 class="text-md font-semibold my-1">Sources</h3>
 
-<MarkdownRenderer bind:element={contentElem} {content} />
+      <div
+        class="citations-list grid {sources &&
+        sources.some((s) => s.metadata?.timestamp !== undefined)
+          ? 'grid-cols-5'
+          : 'grid-cols-6'} gap-2"
+      >
+        {#each sources as source, idx}
+          {#if idx <= 9}
+            <CitationItem>{source.id}</CitationItem>
+          {/if}
+        {/each}
+      </div>
+    </div>
+    <!-- <h3 class="text-2xl font-semibold">Answer</h3> -->
+  {/if}
 
-{#if sources && sources.length > 0 && showSourcesAtEnd}
-  <div class="citations-list">
-    {#each sources as source, idx}
-      {#if idx <= 9}
-        <CitationItem>{source.id}</CitationItem>
-      {/if}
-    {/each}
-  </div>
-{/if}
-
-<style lang="scss">
-</style>
+  <MarkdownRenderer bind:element={contentElem} {content} />
+</div>

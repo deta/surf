@@ -220,7 +220,7 @@ const template = [
       },
       {
         label: 'Toggle Chat Mode',
-        accelerator: 'Alt+C',
+        accelerator: 'CmdOrCtrl+E',
         click: () => ipcSenders.toggleRightSidebarTab('chat')
       },
       {

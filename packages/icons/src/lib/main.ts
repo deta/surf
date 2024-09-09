@@ -6,6 +6,7 @@ import Archive from './Icons/Archive.svelte'
 import Arrow from './Icons/Arrow.svelte'
 import ArrowBackUp from './Icons/ArrowBackUp.svelte'
 import ArrowAutoFitUp from './Icons/ArrowAutoFitUp.svelte'
+import Chat from './Icons/Chat.svelte'
 import ChevronLeft from './Icons/ChevronLeft.svelte'
 import ChevronRight from './Icons/ChevronRight.svelte'
 import Close from './Icons/Close.svelte'
@@ -27,6 +28,7 @@ import ListNumbered from './Icons/ListNumbered.svelte'
 import ListCheck from './Icons/ListCheck.svelte'
 import Quote from './Icons/Quote.svelte'
 import CodeBlock from './Icons/CodeBlock.svelte'
+import Command from './Icons/Command.svelte'
 import ArrowHorizontal from './Icons/ArrowHorizontal.svelte'
 import ArrowDiagonalMinimize from './Icons/ArrowDiagonalMinimize.svelte'
 import Search from './Icons/Search.svelte'
@@ -91,7 +93,9 @@ export const icons = {
   'chevron.left': ChevronLeft,
   'chevron.right': ChevronRight,
   close: Close,
+  chat: Chat,
   copy: Copy,
+  command: Command,
   download: Download,
   edit: Edit,
   mute: Mute,
@@ -177,7 +181,9 @@ export {
   ChevronLeft,
   ChevronRight,
   Close,
+  Chat,
   Copy,
+  Command,
   Edit,
   Mute,
   Unmute,
