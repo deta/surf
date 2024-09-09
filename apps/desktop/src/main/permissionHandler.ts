@@ -1,4 +1,6 @@
-import { dialog, systemPreferences } from 'electron'
+// XXX: https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/modules/permissions/permission_descriptor.idl
+
+import { dialog } from 'electron'
 import {
   getPermissionConfig,
   updatePermissionConfig,
@@ -7,124 +9,178 @@ import {
   clearAllPermissions
 } from './config'
 
-interface PermissionHandler {
-  getDetail: (details: any) => string
-  preCheck?: (details: any) => Promise<boolean>
+interface PermissionRequest {
+  type: string
+  details: Record<string, any>
 }
 
-const permissionHandlers: Record<string, PermissionHandler> = {
-  fileSystem: {
-    getDetail: (details: Electron.FilesystemPermissionRequest) =>
-      `Path: ${details.filePath || 'Unknown'}
-      Access Type: ${details.fileAccessType || 'Unknown'}
-      Is Directory: ${details.isDirectory ? 'Yes' : 'No'}`
-  },
+interface PermissionHandler {
+  getName: (req: PermissionRequest) => string
+  getMessage: (req: PermissionRequest) => string
+}
+
+const handlers: Partial<Record<string, PermissionHandler>> = {
   media: {
-    getDetail: (details: Electron.MediaAccessPermissionRequest) =>
-      `Media Types: ${details.mediaTypes?.join(', ') || 'Unknown'}
-      Security Origin: ${details.securityOrigin || 'Unknown'}`,
-    preCheck: async (details: Electron.MediaAccessPermissionRequest) => {
-      if (process.platform !== 'darwin') return true
-
-      let allowAudio = true,
-        allowVideo = true
-      if (details.mediaTypes?.includes('audio'))
-        allowAudio = await systemPreferences.askForMediaAccess('microphone')
-      if (details.mediaTypes?.includes('video'))
-        allowVideo = await systemPreferences.askForMediaAccess('camera')
-
-      return allowAudio && allowVideo
+    getName: (req) => {
+      const types = req.details.mediaTypes || []
+      if (types.includes('audio') && types.includes('video')) return 'Camera and Microphone'
+      if (types.includes('audio')) return 'Microphone'
+      if (types.includes('video')) return 'Camera'
+      return 'Media'
+    },
+    getMessage: (req) => {
+      const types = req.details.mediaTypes || []
+      if (types.includes('audio') && types.includes('video'))
+        return 'This website wants to use your camera and microphone.'
+      if (types.includes('audio')) return 'This website wants to use your microphone.'
+      if (types.includes('video')) return 'This website wants to use your camera.'
+      return 'This website wants to access media devices.'
     }
   },
-  openExternal: {
-    getDetail: (details: Electron.OpenExternalPermissionRequest) =>
-      `External URL: ${details.externalURL || 'Unknown'}`
+  geolocation: {
+    getName: () => 'Location',
+    getMessage: () => 'This website wants to know your location.'
+  },
+  notifications: {
+    getName: () => 'Notifications',
+    getMessage: () => 'This website wants to send you notifications.'
+  },
+  'clipboard-read': {
+    getName: () => 'Clipboard',
+    getMessage: () => 'This website wants to read from your clipboard.'
+  },
+  'window-management': {
+    getName: () => 'Window Management',
+    getMessage: () => 'This website wants to manage browser windows.'
   }
+  // TODO: soooooon
+  // 'display-capture': {
+  //   getName: () => 'Screen Capture',
+  //   getMessage: () => 'This website wants to capture your screen content.'
+  // },
 }
 
 const defaultHandler: PermissionHandler = {
-  getDetail: (details: any) =>
-    Object.entries(details)
-      .filter(([key]) => !['requestingUrl', 'isMainFrame'].includes(key))
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('\n')
+  getName: (req) => prettifyPermissionType(req.type),
+  getMessage: (req) => `This website is requesting ${prettifyPermissionType(req.type)} permission.`
 }
 
-const getUrlOrigin = (url: string): string | undefined => {
+const getHandler = (type: string): PermissionHandler => {
+  return handlers[type] || defaultHandler
+}
+
+const getUrlOrigin = (url: string): string | null => {
   try {
-    const parsedUrl = new URL(url)
-    return parsedUrl.origin
+    return new URL(url).origin
   } catch (error) {
-    return undefined
+    return null
   }
+}
+
+const prettifyPermissionType = (type: string): string => {
+  return type
+    .split(/(?=[A-Z])|[-_]/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+const normalizePermissionType = (req: PermissionRequest): string => {
+  switch (req.type) {
+    case 'media':
+      // TODO: this can be handled in a better way
+      const types = req.details.mediaTypes || []
+      if (types.includes('audio') && types.includes('video')) return 'media:audio:video'
+      if (types.includes('audio')) return 'media:audio'
+      if (types.includes('video')) return 'media:video'
+    default:
+      return req.type
+  }
+}
+
+const formatWebsiteInfo = (url: string): string => {
+  try {
+    const { hostname, port } = new URL(url)
+    return `${hostname}${port ? ':' + port : ''}`
+  } catch (error) {
+    return url
+  }
+}
+
+const shouldShortCircuit = (permission: string): boolean | null => {
+  switch (permission) {
+    // these are not publicly documented permissions:
+    //  `sensors`, `screen-wake-lock`, `persistent-storage`
+    case 'sensors':
+    case 'screen-wake-lock':
+    case 'persistent-storage':
+    case 'idle-detection':
+    case 'fullscreen':
+    case 'clipboard-sanitized-write':
+    case 'pointerLock':
+    case 'keyboardLock':
+      return true
+    case 'storage-access':
+    case 'top-level-storage-access':
+    case 'display-capture':
+    case 'openExternal':
+    case 'mediaKeySystem':
+    case 'midi':
+      return false
+  }
+
+  return null
 }
 
 export function setupPermissionHandlers(session: Electron.Session) {
   const sessionId = session.getStoragePath() || 'default'
 
-  session.setPermissionCheckHandler((_contents, permission, requestingOrigin) => {
-    const origin = getUrlOrigin(requestingOrigin) // for normalization
-    if (!origin) return true
+  session.setPermissionCheckHandler((_contents, _permission, requestingOrigin, details) => {
+    const origin = getUrlOrigin(requestingOrigin)
+    if (origin === null) return true
+
+    const request: PermissionRequest = { type: _permission, details }
+    const permission = normalizePermissionType(request)
 
     const config = getPermissionConfig()
     const decision = config[sessionId]?.[requestingOrigin]?.[permission]
-    if (decision !== undefined) {
-      return decision
-    }
-    return true
+    return decision !== undefined ? decision : true
   })
 
-  session.setPermissionRequestHandler(async (_contents, permission, callback, details) => {
-    const origin = getUrlOrigin(details.requestingUrl) // for normalization
-    if (!origin) {
+  session.setPermissionRequestHandler(async (_contents, originalPermission, callback, details) => {
+    const origin = getUrlOrigin(details.requestingUrl)
+    if (origin === null) {
       callback(false)
       return
     }
 
-    // TODO: short-circ these in `setPermissionCheckHandler` as well
-    let shortCircuit: boolean | null = null
-    switch (permission) {
-      // `persistent-storage` isn't a part of the public API for some reason
-      //@ts-ignore
-      case 'persistent-storage':
-      case 'idle-detection':
-      case 'fullscreen':
-      case 'clipboard-sanitized-write':
-      case 'window-management':
-        shortCircuit = true
-        break
-      case 'storage-access':
-      case 'top-level-storage-access':
-      case 'geolocation':
-        shortCircuit = false
-        break
-    }
+    const request: PermissionRequest = { type: originalPermission, details }
+    const permission = normalizePermissionType(request)
+    let shortCircuit = shouldShortCircuit(permission)
     if (shortCircuit !== null) {
       callback(shortCircuit)
       return
     }
 
+    const websiteInfo = formatWebsiteInfo(details.requestingUrl)
     const config = getPermissionConfig()
     const cachedDecision = config[sessionId]?.[origin]?.[permission]
+
     if (cachedDecision !== undefined) {
       callback(cachedDecision)
       return
     }
-
-    const handler = permissionHandlers[permission] || defaultHandler
-    let preCheck = handler.preCheck ? await handler.preCheck(details) : true
-
+    const handler = getHandler(request.type)
     const response = await dialog.showMessageBox({
-      type: 'warning',
+      type: 'none',
       buttons: ['Allow', 'Deny'],
-      title: 'Permission Request',
-      message: `The application is requesting the following permission: ${permission}`,
-      detail: `Origin: ${origin}\n${handler.getDetail(details)}`,
-      noLink: true,
-      defaultId: 1
+      defaultId: 1,
+      cancelId: 1,
+      title: `${handler.getName(request)} Request`,
+      message: handler.getMessage(request),
+      detail: `${websiteInfo}`
     })
 
-    const decision = preCheck && response.response === 0
+    const decision = response.response === 0
     updatePermissionConfig(sessionId, origin, permission, decision)
     callback(decision)
   })
