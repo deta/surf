@@ -3653,12 +3653,9 @@
     </div>
   {/if}
 
-  <SidebarPane
-    {horizontalTabs}
-    bind:showLeftSidebar
-    bind:showRightSidebar
-    on:leftPeekClose={() => changeTraficLightsVisibility(false)}
-    on:leftPeekOpen={() => changeTraficLightsVisibility(true)}
+  <!-- 
+    NOTE: Removed from SidebarPane to disable chat peek for now.
+
     on:rightPeekOpen={() => {
       setPageChatState(true)
       telemetry.trackOpenRightSidebar($rightSidebarTab)
@@ -3667,6 +3664,13 @@
       cachedMagicTabs.clear()
       setPageChatState(false)
     }}
+-->
+  <SidebarPane
+    {horizontalTabs}
+    bind:showLeftSidebar
+    bind:showRightSidebar
+    on:leftPeekClose={() => changeTraficLightsVisibility(false)}
+    on:leftPeekOpen={() => changeTraficLightsVisibility(true)}
   >
     <div
       slot="sidebar"
