@@ -13,13 +13,15 @@
   export let content: string
   export let element: HTMLDivElement
 
+  const createRehypePlugin = (plugin: any, opts?: any): Plugin => {
+    return { rehypePlugin: opts ? [plugin, opts] : [plugin] }
+  }
+
   const plugins: Plugin[] = [
-    {
-      rehypePlugin: [rehypeRaw, rehypeSanitize, rehypeStringify]
-    },
-    {
-      rehypePlugin: [rehypeHighlight, { languages: all }]
-    },
+    createRehypePlugin(rehypeRaw),
+    createRehypePlugin(rehypeSanitize),
+    createRehypePlugin(rehypeStringify),
+    createRehypePlugin(rehypeHighlight, { languages: all }),
     { renderer: { citation: CitationItem, pre: CodeBlock, h4: 'h3', h5: 'h3' } }
   ]
 </script>
