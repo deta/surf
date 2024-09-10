@@ -3767,7 +3767,7 @@
               }}
             >
               <div
-                class="magic-activated"
+                class="magic-activated select-none"
                 style="font-size: 12px; padding: 10px; margin: -10px;"
                 aria-hidden="true"
                 on:mouseenter={() => {
