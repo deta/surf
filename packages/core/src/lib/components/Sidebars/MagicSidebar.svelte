@@ -860,7 +860,7 @@
         <p>Preparing tabs for the chat…</p>
         <button
           class="absolute top-3 right-3 text-yellow-800 hover:text-yellow-600"
-          on:click={() => hasError.set(false)}
+          on:click={() => magicPage.update((v) => ({ ...v, errors: [] }))}
         >
           <Icon name="close" />
         </button>
