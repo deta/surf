@@ -394,7 +394,7 @@
             class="close"
             use:tooltip={{ text: 'Delete Space', position: 'left' }}
           >
-            <Icon name="trash" size="20px" />
+            <Icon name="trash" size="16px" />
           </button>
 
           <button
@@ -402,7 +402,7 @@
             class="close"
             use:tooltip={{ text: 'Back', position: 'left' }}
           >
-            <Icon name="check" size="20px" />
+            <Icon name="check" size="16px" />
           </button>
         </div>
       {/if}

@@ -84,7 +84,6 @@
   import PQueue from 'p-queue'
   import { useConfig } from '../../service/config'
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
-  import { selectedFolder } from '../../stores/oasis'
 
   export let spaceId: string
   export let active: boolean = false
@@ -1355,9 +1354,8 @@
   on:DragEnter={(e) => handleDragEnter(e.detail)}
   zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
-  {$selectedFolder}
-  {#if true}
-    <div class="relative wrapper bg-sky-100/50">
+  <div class="relative wrapper bg-sky-100/50">
+    {#if !isEverythingSpace}
       <div
         class="drawer-bar bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 bg-sky-100/90 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
         class:translate-y-24={hideBar && active}
@@ -1505,82 +1503,82 @@
         </div>
         <!-- <ProgressiveBlur /> -->
       </div>
+    {/if}
 
-      {#if $showChat}
-        <div class="chat-wrapper">
-          <button class="close-button" on:click={handleCloseChat}>
-            <Icon name="close" size="15px" />
-          </button>
+    {#if $showChat}
+      <div class="chat-wrapper">
+        <button class="close-button" on:click={handleCloseChat}>
+          <Icon name="close" size="15px" />
+        </button>
 
-          <Chat
-            tab={{
-              type: 'chat',
-              query: $chatPrompt
-            }}
-            {resourceManager}
-            resourceIds={!isEverythingSpace ? $resourceIds : []}
-            on:navigate={(e) => {}}
-            on:updateTab={(e) => {}}
-          />
+        <Chat
+          tab={{
+            type: 'chat',
+            query: $chatPrompt
+          }}
+          {resourceManager}
+          resourceIds={!isEverythingSpace ? $resourceIds : []}
+          on:navigate={(e) => {}}
+          on:updateTab={(e) => {}}
+        />
+      </div>
+    {/if}
+
+    {#if $spaceResourceIds.length > 0}
+      <OasisResourcesView
+        resourceIds={spaceResourceIds}
+        selected={$selectedItem}
+        showResourceSource={isSearching}
+        on:click={handleItemClick}
+        on:open={handleOpen}
+        on:remove={handleResourceRemove}
+        on:load={handleLoadResource}
+        on:new-tab
+        on:create-tab-from-space
+        {searchValue}
+      />
+
+      {#if $loadingContents}
+        <div class="floating-loading">
+          <Icon name="spinner" size="20px" />
         </div>
       {/if}
+    {:else if isEverythingSpace && $everythingContents.length > 0}
+      <OasisResourcesViewSearchResult
+        resources={everythingContents}
+        selected={$selectedItem}
+        scrollTop={0}
+        on:click={handleItemClick}
+        on:open={handleOpen}
+        on:remove={handleResourceRemove}
+        on:space-selected={handleSpaceSelected}
+        on:open-space-as-tab
+        on:new-tab
+        isEverythingSpace={false}
+        {searchValue}
+      />
 
-      {#if $spaceResourceIds.length > 0}
-        <OasisResourcesView
-          resourceIds={spaceResourceIds}
-          selected={$selectedItem}
-          showResourceSource={isSearching}
-          on:click={handleItemClick}
-          on:open={handleOpen}
-          on:remove={handleResourceRemove}
-          on:load={handleLoadResource}
-          on:new-tab
-          on:create-tab-from-space
-          {searchValue}
-        />
-
-        {#if $loadingContents}
-          <div class="floating-loading">
-            <Icon name="spinner" size="20px" />
-          </div>
-        {/if}
-      {:else if isEverythingSpace && $everythingContents.length > 0}
-        <OasisResourcesViewSearchResult
-          resources={everythingContents}
-          selected={$selectedItem}
-          scrollTop={0}
-          on:click={handleItemClick}
-          on:open={handleOpen}
-          on:remove={handleResourceRemove}
-          on:space-selected={handleSpaceSelected}
-          on:open-space-as-tab
-          on:new-tab
-          isEverythingSpace={false}
-          {searchValue}
-        />
-
-        {#if $loadingContents}
-          <div class="floating-loading">
-            <Icon name="spinner" size="20px" />
-          </div>
-        {/if}
-      {:else if $loadingContents}
-        <div class="content-wrapper">
-          <div class="content">
-            <Icon name="spinner" size="22px" />
-            <p>Loading…</p>
-          </div>
-        </div>
-      {:else}
-        <div class="content-wrapper">
-          <div class="content">
-            <Icon name="leave" size="22px" />
-            <p>Oops! It seems like this Space is feeling a bit empty.</p>
-          </div>
+      {#if $loadingContents}
+        <div class="floating-loading">
+          <Icon name="spinner" size="20px" />
         </div>
       {/if}
-    </div>
-  {/if}
+    {:else if $loadingContents}
+      <div class="content-wrapper">
+        <div class="content">
+          <Icon name="spinner" size="22px" />
+          <p>Loading…</p>
+        </div>
+      </div>
+    {:else}
+      <div class="content-wrapper">
+        <div class="content">
+          <Icon name="leave" size="22px" />
+          <p>Oops! It seems like this Space is feeling a bit empty.</p>
+        </div>
+      </div>
+    {/if}
+  </div>
 </DropWrapper>
 
 <!-- </div> -->

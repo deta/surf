@@ -515,7 +515,7 @@
     transition: 240ms ease-out;
     padding: 0 2rem 2rem 2rem;
     margin-top: 2rem;
-
+    width: 100%;
     z-index: 100000;
   }
 

@@ -1232,7 +1232,7 @@
           <!-- </Motion> -->
           <!-- </AnimatePresence> -->
 
-          {#if $selectedSpaceId === null || showTabSearch === 1}
+          {#if $selectedSpaceId === 'all' || showTabSearch === 1}
             <div
               class={showTabSearch === 2
                 ? 'w-full flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
