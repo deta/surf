@@ -815,11 +815,10 @@
         </div>
 
         <p class="max-w-64 text-sky-900">
-          Ask anything about your tabs or use the chat icon to always switch to a general
-          conversation.
+          Ask anything about specific tabs or clear the context to switch to a general conversation.
         </p>
         <p class="max-w-64 text-sky-900/60">
-          Selecting tabs work with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
+          Select tabs with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
             .toLowerCase()
             .indexOf('mac') > -1}⌘{:else}Ctrl{/if} + click or Shift + click ).
         </p>
