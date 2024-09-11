@@ -306,7 +306,9 @@
       aPressed.set(true)
     } else if (e.key === 'a' && e.metaKey) {
       lastCmdATime = currentTime
-    } else if (e.ctrlKey && e.key === 'Backspace') {
+    }
+    // NOTE: Disabled for now as it interfears with text editing.
+    /*else if (e.ctrlKey && e.key === 'Backspace') {
       e.preventDefault()
       e.stopPropagation()
       if (currentTime - lastCmdATime < CMD_A_DELAY) {
@@ -319,7 +321,8 @@
       } else {
         handleClearChat()
       }
-    } else if (e.shiftKey && e.key === 'Backspace') {
+    }*/
+    else if (e.shiftKey && e.key === 'Backspace') {
       // Shift + Backspace to clear context
       e.preventDefault()
       handleClearContext()
@@ -706,7 +709,7 @@
       {#each $magicPage.responses as response, idx (response.id)}
         {#if response.status === 'success'}
           <div
-            class="text-lg flex flex-col gap-2 rounded-xl p-6 text-opacity-90 group relative bg-[#f5faff]"
+            class="response-wrapper text-lg flex flex-col gap-2 rounded-xl p-6 text-opacity-90 group relative bg-[#f5faff]"
           >
             <div class="">
               <div
@@ -815,11 +818,10 @@
         </div>
 
         <p class="max-w-64 text-sky-900">
-          Ask anything about your tabs or use the chat icon to always switch to a general
-          conversation.
+          Ask anything about specific tabs or clear the context to switch to a general conversation.
         </p>
         <p class="max-w-64 text-sky-900/60">
-          Selecting tabs work with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
+          Select tabs with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
             .toLowerCase()
             .indexOf('mac') > -1}⌘{:else}Ctrl{/if} + click or Shift + click ).
         </p>
@@ -832,6 +834,7 @@
   >
     {#if !$magicPage.running && $magicPage.responses.length >= 1}
       <button
+        transition:flyAndScale={{ duration: 125, y: 22 }}
         on:click={() => {
           if (!$magicPage.running) {
             handleClearChat()
@@ -840,9 +843,9 @@
         class="transform mb-4 active:scale-95 appearance-none w-fit mx-auto border-[0.5px] border-sky-900/10 group margin-0 flex items-center px-3 py-2 bg-sky-100 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer text-xs"
       >
         {#if navigator.platform.toLowerCase().indexOf('mac') > -1}
-          Ctrl + ⌫ Clear Chat
+          <!--⌘ + ⌫ -->Clear Chat
         {:else}
-          Strg+⌫ Clear Chat
+          <!--Ctrl + ⌫-->Clear Chat
         {/if}
       </button>
     {/if}
@@ -860,7 +863,7 @@
         <p>Preparing tabs for the chat…</p>
         <button
           class="absolute top-3 right-3 text-yellow-800 hover:text-yellow-600"
-          on:click={() => hasError.set(false)}
+          on:click={() => magicPage.update((v) => ({ ...v, errors: [] }))}
         >
           <Icon name="close" />
         </button>
@@ -1024,11 +1027,18 @@
     padding-bottom: 4rem;
   }
 
+  /* Prevent copy button cuttof */
+  .response-wrapper:hover {
+    position: relative;
+    z-index: 5;
+  }
+
   .chat {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     font-family: inherit;
+    z-index: 10;
 
     .editor-wrapper {
       flex: 1;
