@@ -706,7 +706,7 @@
       {#each $magicPage.responses as response, idx (response.id)}
         {#if response.status === 'success'}
           <div
-            class="text-lg flex flex-col gap-2 rounded-xl p-6 text-opacity-90 group relative bg-[#f5faff]"
+            class="response-wrapper text-lg flex flex-col gap-2 rounded-xl p-6 text-opacity-90 group relative bg-[#f5faff]"
           >
             <div class="">
               <div
@@ -1023,11 +1023,18 @@
     padding-bottom: 4rem;
   }
 
+  /* Prevent copy button cuttof */
+  .response-wrapper:hover {
+    position: relative;
+    z-index: 5;
+  }
+
   .chat {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     font-family: inherit;
+    z-index: 10;
 
     .editor-wrapper {
       flex: 1;
