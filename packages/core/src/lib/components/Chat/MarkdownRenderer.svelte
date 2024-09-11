@@ -1,7 +1,7 @@
 <script lang="ts">
   import Markdown, { type Plugin } from 'svelte-exmarkdown'
   import rehypeRaw from 'rehype-raw'
-  import rehypeSanitize from 'rehype-sanitize'
+  import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
   import rehypeStringify from 'rehype-stringify'
   import rehypeHighlight from 'rehype-highlight'
   import { all } from 'lowlight'
@@ -19,7 +19,14 @@
 
   const plugins: Plugin[] = [
     createRehypePlugin(rehypeRaw),
-    createRehypePlugin(rehypeSanitize),
+    createRehypePlugin(rehypeSanitize, {
+      ...defaultSchema,
+      tagNames: [
+        ...(defaultSchema.tagNames ?? []),
+        // allow custom citation tags so we can render them
+        'citation'
+      ]
+    }),
     createRehypePlugin(rehypeStringify),
     createRehypePlugin(rehypeHighlight, { languages: all }),
     { renderer: { citation: CitationItem, pre: CodeBlock, h4: 'h3', h5: 'h3' } }
