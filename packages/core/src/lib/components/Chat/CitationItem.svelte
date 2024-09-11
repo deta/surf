@@ -8,6 +8,8 @@
   import type { AIChatMessageSource } from '../../types'
   import { active } from 'd3'
 
+  export let className: string = ''
+
   const log = useLogScope('CitationItem')
 
   const citationHandler = getContext<CitationHandlerContext>(CITATION_HANDLER_CONTEXT)
@@ -85,6 +87,7 @@
   class:wide={(source?.metadata?.timestamp !== undefined && source.metadata.timestamp !== null) ||
     source?.metadata?.url}
   class:active={$highlightedCitation === uniqueID}
+  class={className}
   use:tooltip={{ text: tooltipText }}
 >
   <span bind:this={slotElem} style="display: none;">
@@ -122,8 +125,6 @@
     border-radius: 12px;
     font-size: 0.9rem;
     font-weight: 500;
-    width: 100%;
-    max-width: 6rem;
     height: auto;
     text-align: center;
     user-select: none;

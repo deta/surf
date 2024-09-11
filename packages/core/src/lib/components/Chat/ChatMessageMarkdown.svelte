@@ -224,7 +224,7 @@
       >
         {#each sources as source, idx}
           {#if idx <= 9}
-            <CitationItem>{source.id}</CitationItem>
+            <CitationItem className="!w-full max-w-24">{source.id}</CitationItem>
           {/if}
         {/each}
       </div>
