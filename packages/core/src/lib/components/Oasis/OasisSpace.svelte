@@ -1360,70 +1360,55 @@
       class:translate-y-24={hideBar && active}
     >
       {#if showBackBtn}
-        <div class="absolute top-6 left-6 z-10">
+        <div
+          class="absolute left-6 top-1/2 transform -translate-y-1/2 z-10 flex place-items-center"
+        >
           <button
             on:click={handleGoBack}
-            class="z-10 flex items-center justify-center space-x-2 transition-transform cursor-pointer hover:bg-pink-300/50 px-2 py-1 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+            class="z-10 flex items-center justify-center space-x-2 transition-transform cursor-pointer hover:bg-sky-200 px-4 py-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
           >
-            <Icon name="arrow.left" />
-            Go Back
+            <Icon name="arrow.left" size="20px" />
           </button>
+
+          <div class="settings-wrapper">
+            <button class="settings-toggle" on:click={handleOpenSettingsModal}>
+              {#if $space?.name.folderName}
+                <div
+                  class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800 hover:bg-sky-200 py-2 pl-3 pr-2 rounded-md"
+                >
+                  <span class="leading-tight font-medium">{$space.name.folderName}</span>
+                  <Icon name="chevron.down" size="20px" />
+                </div>
+              {/if}
+            </button>
+
+            {#if $showSettingsModal}
+              <div
+                class="modal-wrapper"
+                transition:fly={{ y: 10, duration: 160 }}
+                use:clickOutside={handleCloseSettingsModal}
+              >
+                <OasisSpaceSettings
+                  bind:space={$space}
+                  on:refresh={handleRefreshLiveSpace}
+                  on:clear={handleClearSpace}
+                  on:delete={handleDeleteSpace}
+                  on:load={handleLoadSpace}
+                  on:delete-auto-saved={handleDeleteAutoSaved}
+                />
+              </div>
+            {/if}
+          </div>
+
+          <!-- <button on:click={() => navigator.clipboard.writeText(JSON.stringify($space))}>
+            Copy Space Data
+          </button> -->
         </div>
       {/if}
 
       <div class="drawer-chat-search">
-        <div class="create-wrapper">
-          <button
-            class="create-new-resource"
-            on:click={handleOpenNewResourceModal}
-            use:tooltip={{
-              text: 'Create New Resource',
-              position: 'top'
-            }}
-          >
-            <Icon name="add" size="28px" />
-          </button>
-
-          {#if $showNewResourceModal}
-            <div
-              class="modal-wrapper"
-              transition:fly={{ y: 10, duration: 160 }}
-              use:clickOutside={handleCloseNewResourceModal}
-            >
-              <CreateNewResource on:open-and-create-resource={handleCreateResource} />
-            </div>
-          {/if}
-        </div>
-
         <div class="search-input-wrapper">
           <SearchInput bind:value={$searchValue} on:search={handleSearch} />
-        </div>
-
-        <div class="settings-wrapper">
-          <button
-            class="settings-toggle"
-            on:click={handleOpenSettingsModal}
-            use:tooltip={{ text: 'Open Settings', position: 'top' }}
-          >
-            <Icon name="settings" size="25px" />
-          </button>
-
-          {#if $showSettingsModal}
-            <div
-              class="modal-wrapper"
-              transition:fly={{ y: 10, duration: 160 }}
-              use:clickOutside={handleCloseSettingsModal}
-            >
-              <OasisSpaceSettings
-                bind:space={$space}
-                on:refresh={handleRefreshLiveSpace}
-                on:clear={handleClearSpace}
-                on:delete={handleDeleteSpace}
-                on:load={handleLoadSpace}
-                on:delete-auto-saved={handleDeleteAutoSaved}
-              />
-            </div>
-          {/if}
         </div>
 
         {#if $space && ($space.name.liveModeEnabled || ($space.name.sources ?? []).length > 0 || $space.name.smartFilterQuery)}
@@ -1629,16 +1614,15 @@
   }
 
   .modal-wrapper {
-    position: absolute;
-    bottom: 4rem;
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
+    top: 3rem;
+    left: 3rem;
     z-index: 100;
   }
 
   .drawer-bar {
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
     right: 0;
     z-index: 1000;
@@ -1821,6 +1805,7 @@
       justify-content: center;
       align-items: center;
       color: #7d7448;
+      padding: 0;
       opacity: 0.7;
       &:hover {
         opacity: 1;

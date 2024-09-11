@@ -47,7 +47,7 @@
     type="message"
     name="message"
     placeholder="Search"
-    class="placeholder:text-neutral-500 flex w-full max-w-[calc(100%-3rem)] text-xl rounded-md bg-transparent py-4 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    class="placeholder:text-neutral-500 flex w-full max-w-[calc(100%-3rem)] text-xl rounded-md bg-transparent py-3 outline-none disabled:cursor-not-allowed disabled:opacity-50"
     on:keydown={handleKeyDown}
   />
 </div>

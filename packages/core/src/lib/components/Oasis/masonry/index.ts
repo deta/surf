@@ -345,7 +345,7 @@ export class MasonryGrid {
         (this.horizontalPadding / this.container.offsetWidth) * 100
       const top = shortestColumn.height
 
-      const PADDING_TOP = this.isEverythingSpace ? 100 : 20
+      const PADDING_TOP = this.isEverythingSpace ? 100 : 90
 
       const itemStyle = {
         left: `${left}%`,
