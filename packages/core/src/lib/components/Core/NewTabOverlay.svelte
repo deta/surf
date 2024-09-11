@@ -1112,7 +1112,7 @@
           <div
             class={showTabSearch === 1
               ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : ''}`
-              : 'w-[85vw] h-[calc(100vh-200px)]'}
+              : 'w-[85vw] h-[90vh]'}
           >
             {#if showTabSearch === 1 && $searchValue.length}
               <Command.List class="m-2 no-scrollbar">
@@ -1235,8 +1235,8 @@
           {#if $selectedSpaceId === 'all' || showTabSearch === 1}
             <div
               class={showTabSearch === 2
-                ? 'w-full flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
-                : 'w-full flex items-center justify-center p-2  border-t-[1px] border-neutral-100'}
+                ? 'w-full absolute bottom-0 flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
+                : 'w-full absolute bottom-0 flex items-center justify-center p-2  border-t-[1px] border-neutral-100'}
             >
               <div class={'flex items-center relative'}>
                 <Command.Input
