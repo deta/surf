@@ -44,7 +44,7 @@ import { getContext, setContext } from 'svelte'
 export const everythingSpace = {
   id: 'all',
   name: {
-    folderName: 'Everything',
+    folderName: 'All my Stuff',
     colors: ['#76E0FF', '#4EC9FB'],
     showInSidebar: false,
     liveModeEnabled: false,

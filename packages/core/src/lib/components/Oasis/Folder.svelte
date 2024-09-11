@@ -553,7 +553,7 @@
         &.isEditing {
           border-radius: 4px;
           padding: 0 0.25rem;
-          margin-top: -2px;
+          margin: 0.4rem 0;
           outline: 4px solid rgba(0, 110, 255, 0.4);
         }
       }
