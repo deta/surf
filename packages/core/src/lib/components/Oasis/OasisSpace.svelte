@@ -84,6 +84,7 @@
   import PQueue from 'p-queue'
   import { useConfig } from '../../service/config'
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
+  import { selectedFolder } from '../../stores/oasis'
 
   export let spaceId: string
   export let active: boolean = false
@@ -1354,230 +1355,232 @@
   on:DragEnter={(e) => handleDragEnter(e.detail)}
   zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
-  <div class="wrapper bg-sky-100/50">
-    <div
-      class=" drawer-bar rounded-t-lg rounded-b-lg bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 bg-sky-100/90 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
-      class:translate-y-24={hideBar && active}
-    >
-      {#if showBackBtn}
-        <div
-          class="absolute left-6 top-1/2 transform -translate-y-1/2 z-10 flex place-items-center"
-        >
-          <button
+  {$selectedFolder}
+  {#if true}
+    <div class="relative wrapper bg-sky-100/50">
+      <div
+        class="drawer-bar bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 bg-sky-100/90 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
+        class:translate-y-24={hideBar && active}
+      >
+        {#if showBackBtn}
+          <div
+            class="absolute left-6 top-1/2 transform -translate-y-1/2 z-10 flex place-items-center"
+          >
+            <!-- <button
             on:click={handleGoBack}
             class="z-10 flex items-center justify-center space-x-2 transition-transform cursor-pointer hover:bg-sky-200 px-4 py-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
           >
             <Icon name="arrow.left" size="20px" />
-          </button>
+          </button> -->
 
-          <div class="settings-wrapper">
-            <button class="settings-toggle" on:click={handleOpenSettingsModal}>
-              {#if $space?.name.folderName}
+            <div class="settings-wrapper">
+              <button class="settings-toggle" on:click={handleOpenSettingsModal}>
+                {#if $space?.name.folderName}
+                  <div
+                    class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800 hover:bg-sky-200 py-2 pl-3 pr-2 rounded-md"
+                  >
+                    <span class="leading-tight font-medium">{$space.name.folderName}</span>
+                    <Icon name="chevron.down" size="20px" />
+                  </div>
+                {/if}
+              </button>
+
+              {#if $showSettingsModal}
                 <div
-                  class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800 hover:bg-sky-200 py-2 pl-3 pr-2 rounded-md"
+                  class="modal-wrapper"
+                  transition:fly={{ y: 10, duration: 160 }}
+                  use:clickOutside={handleCloseSettingsModal}
                 >
-                  <span class="leading-tight font-medium">{$space.name.folderName}</span>
-                  <Icon name="chevron.down" size="20px" />
+                  <OasisSpaceSettings
+                    bind:space={$space}
+                    on:refresh={handleRefreshLiveSpace}
+                    on:clear={handleClearSpace}
+                    on:delete={handleDeleteSpace}
+                    on:load={handleLoadSpace}
+                    on:delete-auto-saved={handleDeleteAutoSaved}
+                  />
                 </div>
               {/if}
-            </button>
+            </div>
 
-            {#if $showSettingsModal}
-              <div
-                class="modal-wrapper"
-                transition:fly={{ y: 10, duration: 160 }}
-                use:clickOutside={handleCloseSettingsModal}
-              >
-                <OasisSpaceSettings
-                  bind:space={$space}
-                  on:refresh={handleRefreshLiveSpace}
-                  on:clear={handleClearSpace}
-                  on:delete={handleDeleteSpace}
-                  on:load={handleLoadSpace}
-                  on:delete-auto-saved={handleDeleteAutoSaved}
-                />
-              </div>
-            {/if}
-          </div>
-
-          <!-- <button on:click={() => navigator.clipboard.writeText(JSON.stringify($space))}>
+            <!-- <button on:click={() => navigator.clipboard.writeText(JSON.stringify($space))}>
             Copy Space Data
           </button> -->
-        </div>
-      {/if}
-
-      <div class="drawer-chat-search">
-        <div class="search-input-wrapper">
-          <SearchInput bind:value={$searchValue} on:search={handleSearch} />
-        </div>
-
-        {#if $space && ($space.name.liveModeEnabled || ($space.name.sources ?? []).length > 0 || $space.name.smartFilterQuery)}
-          {#key '' + $space.name.liveModeEnabled + ($newlyLoadedResources.length > 0)}
-            <button
-              class="live-mode"
-              class:live-enabled={$space.name.liveModeEnabled &&
-                $newlyLoadedResources.length === 0 &&
-                !$loadingSpaceSources}
-              disabled={$loadingSpaceSources}
-              on:click={handleRefreshLiveSpace}
-              use:tooltip={{
-                text:
-                  $newlyLoadedResources.length > 0
-                    ? 'New content has been added to the space. Click to refresh.'
-                    : $space.name.liveModeEnabled
-                      ? ($space.name.sources ?? []).length > 0
-                        ? 'The sources will automatically be loaded when you open the space. Click to manually refresh.'
-                        : 'New resources that match the smart query will automatically be added. Click to manually refresh.'
-                      : ($space.name.sources ?? []).length > 0
-                        ? 'Click to load the latest content from the connected sources'
-                        : 'Click to load the latest content based on the smart query',
-                position: 'top'
-              }}
-            >
-              {#if $loadingSpaceSources}
-                <Icon name="spinner" />
-                {#if $newlyLoadedResources.length > 0}
-                  <span
-                    >Processing items (<span class="tabular-nums"
-                      >{$newlyLoadedResources.length} / {$processingSourceItems.length}</span
-                    >)</span
-                  >
-                {:else if ($space.name.sources ?? []).length > 0}
-                  Loading source{($space.name.sources ?? []).length > 1 ? 's' : ''}…
-                {:else}
-                  Refreshing…
-                {/if}
-              {:else if $newlyLoadedResources.length > 0}
-                {#await fetchNewlyAddedResourcePrevies()}
-                  <Icon name="reload" />
-                  Update Space with {$newlyLoadedResources.length} items
-                {:then previews}
-                  <!-- <Icon name="reload" /> -->
-                  <div class="flex items-center -space-x-3">
-                    {#each previews as preview (preview.id)}
-                      <img
-                        class="w-6 h-6 rounded-lg overflow-hidden bg-white border-2 border-white/75 box-content"
-                        src={`https://www.google.com/s2/favicons?domain=${preview.url}&sz=48`}
-                        alt={`favicon`}
-                      />
-                    {/each}
-                  </div>
-
-                  {#if $newlyLoadedResources.length > previews.length}
-                    <span>+{$newlyLoadedResources.length - previews.length} new items</span>
-                  {:else}
-                    <span
-                      >{$newlyLoadedResources.length} new item{$newlyLoadedResources.length > 1
-                        ? 's'
-                        : ''}</span
-                    >
-                  {/if}
-                {/await}
-              {:else if $space.name.liveModeEnabled}
-                <Icon name="news" />
-                Auto Refresh
-              {:else if ($space.name.sources ?? []).length > 0}
-                <Icon name="reload" />
-                Refresh Sources
-              {:else}
-                <Icon name="reload" />
-                Smart Refresh
-              {/if}
-            </button>
-          {/key}
+          </div>
         {/if}
 
-        <!-- <div class="rounded-lg bg-neutral-100 p-2 absolute right-3">
+        <div class="drawer-chat-search">
+          <div class="search-input-wrapper">
+            <SearchInput bind:value={$searchValue} on:search={handleSearch} />
+          </div>
+
+          {#if $space && ($space.name.liveModeEnabled || ($space.name.sources ?? []).length > 0 || $space.name.smartFilterQuery)}
+            {#key '' + $space.name.liveModeEnabled + ($newlyLoadedResources.length > 0)}
+              <button
+                class="live-mode"
+                class:live-enabled={$space.name.liveModeEnabled &&
+                  $newlyLoadedResources.length === 0 &&
+                  !$loadingSpaceSources}
+                disabled={$loadingSpaceSources}
+                on:click={handleRefreshLiveSpace}
+                use:tooltip={{
+                  text:
+                    $newlyLoadedResources.length > 0
+                      ? 'New content has been added to the space. Click to refresh.'
+                      : $space.name.liveModeEnabled
+                        ? ($space.name.sources ?? []).length > 0
+                          ? 'The sources will automatically be loaded when you open the space. Click to manually refresh.'
+                          : 'New resources that match the smart query will automatically be added. Click to manually refresh.'
+                        : ($space.name.sources ?? []).length > 0
+                          ? 'Click to load the latest content from the connected sources'
+                          : 'Click to load the latest content based on the smart query',
+                  position: 'top'
+                }}
+              >
+                {#if $loadingSpaceSources}
+                  <Icon name="spinner" />
+                  {#if $newlyLoadedResources.length > 0}
+                    <span
+                      >Processing items (<span class="tabular-nums"
+                        >{$newlyLoadedResources.length} / {$processingSourceItems.length}</span
+                      >)</span
+                    >
+                  {:else if ($space.name.sources ?? []).length > 0}
+                    Loading source{($space.name.sources ?? []).length > 1 ? 's' : ''}…
+                  {:else}
+                    Refreshing…
+                  {/if}
+                {:else if $newlyLoadedResources.length > 0}
+                  {#await fetchNewlyAddedResourcePrevies()}
+                    <Icon name="reload" />
+                    Update Space with {$newlyLoadedResources.length} items
+                  {:then previews}
+                    <!-- <Icon name="reload" /> -->
+                    <div class="flex items-center -space-x-3">
+                      {#each previews as preview (preview.id)}
+                        <img
+                          class="w-6 h-6 rounded-lg overflow-hidden bg-white border-2 border-white/75 box-content"
+                          src={`https://www.google.com/s2/favicons?domain=${preview.url}&sz=48`}
+                          alt={`favicon`}
+                        />
+                      {/each}
+                    </div>
+
+                    {#if $newlyLoadedResources.length > previews.length}
+                      <span>+{$newlyLoadedResources.length - previews.length} new items</span>
+                    {:else}
+                      <span
+                        >{$newlyLoadedResources.length} new item{$newlyLoadedResources.length > 1
+                          ? 's'
+                          : ''}</span
+                      >
+                    {/if}
+                  {/await}
+                {:else if $space.name.liveModeEnabled}
+                  <Icon name="news" />
+                  Auto Refresh
+                {:else if ($space.name.sources ?? []).length > 0}
+                  <Icon name="reload" />
+                  Refresh Sources
+                {:else}
+                  <Icon name="reload" />
+                  Smart Refresh
+                {/if}
+              </button>
+            {/key}
+          {/if}
+
+          <!-- <div class="rounded-lg bg-neutral-100 p-2 absolute right-3">
           <select bind:value={$selectedFilter} class="bg-transparent focus:outline-none">
             <option value="all">Show All</option>
             <option value="saved_by_user">Saved by Me</option>
           </select>
         </div> -->
 
-        <div class="drawer-chat active">
+          <div class="drawer-chat active">
+            <button class="close-button" on:click={handleCloseChat}>
+              <Icon name="close" size="15px" />
+            </button>
+          </div>
+        </div>
+        <!-- <ProgressiveBlur /> -->
+      </div>
+
+      {#if $showChat}
+        <div class="chat-wrapper">
           <button class="close-button" on:click={handleCloseChat}>
             <Icon name="close" size="15px" />
           </button>
+
+          <Chat
+            tab={{
+              type: 'chat',
+              query: $chatPrompt
+            }}
+            {resourceManager}
+            resourceIds={!isEverythingSpace ? $resourceIds : []}
+            on:navigate={(e) => {}}
+            on:updateTab={(e) => {}}
+          />
         </div>
-      </div>
-      <!-- <ProgressiveBlur /> -->
-    </div>
+      {/if}
 
-    {#if $showChat}
-      <div class="chat-wrapper">
-        <button class="close-button" on:click={handleCloseChat}>
-          <Icon name="close" size="15px" />
-        </button>
-
-        <Chat
-          tab={{
-            type: 'chat',
-            query: $chatPrompt
-          }}
-          {resourceManager}
-          resourceIds={!isEverythingSpace ? $resourceIds : []}
-          on:navigate={(e) => {}}
-          on:updateTab={(e) => {}}
+      {#if $spaceResourceIds.length > 0}
+        <OasisResourcesView
+          resourceIds={spaceResourceIds}
+          selected={$selectedItem}
+          showResourceSource={isSearching}
+          on:click={handleItemClick}
+          on:open={handleOpen}
+          on:remove={handleResourceRemove}
+          on:load={handleLoadResource}
+          on:new-tab
+          on:create-tab-from-space
+          {searchValue}
         />
-      </div>
-    {/if}
 
-    {#if $spaceResourceIds.length > 0}
-      <OasisResourcesView
-        resourceIds={spaceResourceIds}
-        selected={$selectedItem}
-        showResourceSource={isSearching}
-        on:click={handleItemClick}
-        on:open={handleOpen}
-        on:remove={handleResourceRemove}
-        on:load={handleLoadResource}
-        on:new-tab
-        on:create-tab-from-space
-        {searchValue}
-      />
+        {#if $loadingContents}
+          <div class="floating-loading">
+            <Icon name="spinner" size="20px" />
+          </div>
+        {/if}
+      {:else if isEverythingSpace && $everythingContents.length > 0}
+        <OasisResourcesViewSearchResult
+          resources={everythingContents}
+          selected={$selectedItem}
+          scrollTop={0}
+          on:click={handleItemClick}
+          on:open={handleOpen}
+          on:remove={handleResourceRemove}
+          on:space-selected={handleSpaceSelected}
+          on:open-space-as-tab
+          on:new-tab
+          isEverythingSpace={false}
+          {searchValue}
+        />
 
-      {#if $loadingContents}
-        <div class="floating-loading">
-          <Icon name="spinner" size="20px" />
+        {#if $loadingContents}
+          <div class="floating-loading">
+            <Icon name="spinner" size="20px" />
+          </div>
+        {/if}
+      {:else if $loadingContents}
+        <div class="content-wrapper">
+          <div class="content">
+            <Icon name="spinner" size="22px" />
+            <p>Loading…</p>
+          </div>
+        </div>
+      {:else}
+        <div class="content-wrapper">
+          <div class="content">
+            <Icon name="leave" size="22px" />
+            <p>Oops! It seems like this Space is feeling a bit empty.</p>
+          </div>
         </div>
       {/if}
-    {:else if isEverythingSpace && $everythingContents.length > 0}
-      <OasisResourcesViewSearchResult
-        resources={everythingContents}
-        selected={$selectedItem}
-        scrollTop={0}
-        on:click={handleItemClick}
-        on:open={handleOpen}
-        on:remove={handleResourceRemove}
-        on:space-selected={handleSpaceSelected}
-        on:open-space-as-tab
-        on:new-tab
-        isEverythingSpace={false}
-        {searchValue}
-      />
-
-      {#if $loadingContents}
-        <div class="floating-loading">
-          <Icon name="spinner" size="20px" />
-        </div>
-      {/if}
-    {:else if $loadingContents}
-      <div class="content-wrapper">
-        <div class="content">
-          <Icon name="spinner" size="22px" />
-          <p>Loading…</p>
-        </div>
-      </div>
-    {:else}
-      <div class="content-wrapper">
-        <div class="content">
-          <Icon name="leave" size="22px" />
-          <p>Oops! It seems like this Space is feeling a bit empty.</p>
-        </div>
-      </div>
-    {/if}
-  </div>
-  -
+    </div>
+  {/if}
 </DropWrapper>
 
 <!-- </div> -->
@@ -1615,14 +1618,14 @@
 
   .modal-wrapper {
     position: fixed;
-    top: 3rem;
+    bottom: 3rem;
     left: 3rem;
     z-index: 100;
   }
 
   .drawer-bar {
     position: absolute;
-    top: 0;
+    bottom: 0;
     left: 0;
     right: 0;
     z-index: 1000;

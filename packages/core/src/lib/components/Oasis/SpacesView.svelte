@@ -226,16 +226,19 @@
   })
 
   const filteredSpaces = derived(spaces, ($spaces) =>
-    $spaces
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .filter((folder) => folder.id !== 'all')
+    $spaces.sort((a, b) => {
+      if (a.id === 'all') return -1 // Move 'all' folder to the top
+      if (b.id === 'all') return 1
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() // Sort others by creation date
+    })
   )
 </script>
 
-<div class="folders-sidebar p-2 pl-12" bind:this={sidebarElement} on:wheel|passive={handleWheel}>
-  <button class="action-new-space" on:click={handleShowCreationModal}>
-    <span class="new-space-text">New Space</span>
-  </button>
+<div
+  class="folders-sidebar p-2 pl-12 w-[18rem] max-w-[18rem]"
+  bind:this={sidebarElement}
+  on:wheel|passive={handleWheel}
+>
   <div class="folders-wrapper">
     {#each $filteredSpaces as folder (folder.id)}
       {#key folder.id}
@@ -254,6 +257,10 @@
       {/key}
     {/each}
   </div>
+  <button class="action-new-space" on:click={handleShowCreationModal}>
+    <Icon name="add" size="1rem" />
+    <span class="new-space-text">New Space</span>
+  </button>
 </div>
 
 <style lang="scss">
@@ -266,9 +273,11 @@
   .folders-sidebar {
     position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    padding: 0.6rem 3.5rem 0.6rem 2.75rem;
-    gap: 1rem;
+    padding: 2rem 0.75rem;
+    gap: 0.5rem;
+    height: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     flex: 1;
@@ -277,17 +286,6 @@
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(24px);
     border-bottom: 0.5px solid var(--Grey-2, #f4f4f4);
-    box-shadow:
-      0px 2px 1px 0px #000,
-      0px 2px 1px 0px rgba(0, 0, 0, 0.01),
-      0px 1px 1px 0px rgba(0, 0, 0, 0.05),
-      0px 0px 1px 0px rgba(0, 0, 0, 0.09);
-
-    box-shadow:
-      0px 2px 1px 0px color(display-p3 0 0 0 / 0),
-      0px 2px 1px 0px color(display-p3 0 0 0 / 0.01),
-      0px 1px 1px 0px color(display-p3 0 0 0 / 0.05),
-      0px 0px 1px 0px color(display-p3 0 0 0 / 0.09);
   }
 
   .folders-sidebar::-webkit-scrollbar {
@@ -306,8 +304,10 @@
 
   .folders-wrapper {
     display: flex;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
     max-height: 100%;
+    width: 100%;
   }
 
   button {
@@ -323,32 +323,31 @@
     border-radius: 16px;
     background: var(--Black, #fff);
     background: var(--Black, color(display-p3 1 1 1));
-    box-shadow: 0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1);
-    box-shadow: 0px 0.933px 2.8px 0px color(display-p3 0 0 0 / 0.1);
 
     span {
       font-size: 1rem;
+      line-height: 1;
       letter-spacing: 0.01em;
     }
   }
 
   .folder-wrapper {
-    min-width: 230px;
+    min-width: 130px;
     flex: 0 0 auto;
   }
 
   .action-new-space {
-    width: 22rem;
+    width: 100%;
+    display: flex;
+    align-items: center;
     .new-space-text {
-      font-size: 1.1rem;
-      line-height: 1.2;
+      font-size: 1rem;
+      line-height: 1;
     }
     letter-spacing: 0.01em;
     margin: 0;
-    height: 4.65rem;
-    padding: 0.75rem 2rem;
+    padding: 0.75rem;
     opacity: 0.6;
-    border: 0.5px solid rgba(0, 0, 0, 0.12);
     &:hover {
       opacity: 1;
     }

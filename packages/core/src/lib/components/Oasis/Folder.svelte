@@ -304,8 +304,7 @@
   aria-hidden="true"
 >
   <div
-    class="folder {selected ? 'active' : ''}"
-    style={showPreview ? 'height: 4.5rem' : ''}
+    class="folder {selected ? 'bg-sky-100' : 'hover:bg-sky-50'}"
     on:click={$editMode ? null : handleSpaceSelect}
     aria-hidden="true"
     use:hover={hovered}
@@ -363,6 +362,7 @@
           <div
             class="folder-input"
             style={`width: ${inputWidth};`}
+            aria-hidden="true"
             on:click|stopPropagation={handleSpaceSelect}
           >
             {folderDetails.folderName}
@@ -377,14 +377,14 @@
             class="close"
             use:tooltip={{ text: 'Open as Tab', position: 'left' }}
           >
-            <Icon name={'list-add'} size="20px" />
+            <Icon name={'list-add'} size="18px" />
           </button>
           <button
             on:click|stopPropagation={() => editMode.set(true)}
             class="close"
             use:tooltip={{ text: 'Edit', position: 'left' }}
           >
-            <Icon name="edit" size="20px" />
+            <Icon name="edit" size="18px" />
           </button>
         {/if}
       {:else}
@@ -414,7 +414,7 @@
   .folder-wrapper {
     position: relative;
     pointer-events: auto;
-    width: 22rem;
+    width: 100%;
   }
 
   .folder {
@@ -422,13 +422,13 @@
     flex-direction: column;
     align-items: end;
     justify-content: space-between;
-    padding: 1.5rem;
+    padding: 0.5rem;
     border-radius: 12px;
     cursor: pointer;
-    gap: 10px;
+
     position: relative;
     color: #244581;
-    width: 22rem;
+    width: 100%;
     max-height: 12rem;
     font-weight: 500;
     letter-spacing: 0.0025em;
@@ -436,37 +436,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     z-index: 1000;
-    background: linear-gradient(0deg, #eef8fe 0%, #e3f4fc 4.18%),
-      linear-gradient(180deg, #f2fbfd 0%, #effafd 10.87%),
-      radial-gradient(41.69% 35.32% at 16.92% 87.63%, rgba(205, 231, 250, 0.85) 0%, #e4f2fb 100%),
-      linear-gradient(129deg, #f6fcfd 0.6%, #e6f8fe 44.83%, #e0f5fd 100%), var(--Black, #fff);
-
-    background: linear-gradient(
-        0deg,
-        color(display-p3 0.9412 0.9725 0.9922) 0%,
-        color(display-p3 0.902 0.9529 0.9843) 4.18%
-      ),
-      linear-gradient(
-        180deg,
-        color(display-p3 0.9569 0.9843 0.9922) 0%,
-        color(display-p3 0.9451 0.9804 0.9922 / 0) 10.87%
-      ),
-      radial-gradient(
-        41.69% 35.32% at 16.92% 87.63%,
-        color(display-p3 0.8222 0.9042 0.9735 / 0.85) 0%,
-        color(display-p3 0.9059 0.949 0.9804 / 0) 100%
-      ),
-      linear-gradient(
-        129deg,
-        color(display-p3 0.9686 0.9882 0.9922) 0.6%,
-        color(display-p3 0.9137 0.9686 0.9922) 44.83%,
-        color(display-p3 0.8941 0.9569 0.9882) 100%
-      ),
-      var(--Black, color(display-p3 1 1 1));
-
-    box-shadow: 0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1);
-    box-shadow: 0px 0.933px 2.8px 0px color(display-p3 0 0 0 / 0.1);
-
     .previews {
       position: relative;
       height: 100%;
@@ -559,19 +528,22 @@
         border: none;
         background: transparent;
         color: #244581;
-        font-size: 1.15rem;
+        font-size: 1rem;
         font-weight: 500;
         letter-spacing: 0.0025em;
+        line-height: 1;
         font-smooth: always;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        width: 100%;
+        max-width: 100%;
+        padding: 0.525rem 0 0.5rem 0;
         outline: none;
         width: fit-content;
 
         // truncate text
         white-space: nowrap;
-        overflow: hidden;
+        overflow-y: visible;
+        overflow-x: hidden;
         text-overflow: ellipsis;
 
         &::selection {
@@ -618,7 +590,7 @@
   .folder.active {
     color: #585130;
     z-index: 1000;
-    background-color: #fff;
+    background-color: #blue;
   }
 
   .draggedOver {

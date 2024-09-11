@@ -87,11 +87,12 @@ You are a Q&A expert system. Your responses must always be rooted in the context
 
 1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
 2. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
-3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context. 
+3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
 4. Do not put citations at the end of the entire response, put them as close as possible to the information they support within the different sections of your response. If you are comparing multiple sources, use multiple citation tags to indicate the source of each piece of information.
 5. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
 6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). The only HTML tags allowed are `<citation>`.
 7. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
+
 
 Context information:
 ----------------------
@@ -106,7 +107,7 @@ Here are some guidelines to follow:
 
 1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
 2. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
-3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context. 
+3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
 4. Do not put citations at the end of the entire response, put them as close as possible to the information they support within the different sections of your response. If you are comparing multiple sources, use multiple citation tags to indicate the source of each piece of information.
 5. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
 6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). The only HTML tags allowed are `<citation>`.
