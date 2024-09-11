@@ -306,7 +306,9 @@
       aPressed.set(true)
     } else if (e.key === 'a' && e.metaKey) {
       lastCmdATime = currentTime
-    } else if (e.ctrlKey && e.key === 'Backspace') {
+    }
+    // NOTE: Disabled for now as it interfears with text editing.
+    /*else if (e.ctrlKey && e.key === 'Backspace') {
       e.preventDefault()
       e.stopPropagation()
       if (currentTime - lastCmdATime < CMD_A_DELAY) {
@@ -319,7 +321,8 @@
       } else {
         handleClearChat()
       }
-    } else if (e.shiftKey && e.key === 'Backspace') {
+    }*/
+    else if (e.shiftKey && e.key === 'Backspace') {
       // Shift + Backspace to clear context
       e.preventDefault()
       handleClearContext()
@@ -831,6 +834,7 @@
   >
     {#if !$magicPage.running && $magicPage.responses.length >= 1}
       <button
+        transition:flyAndScale={{ duration: 125, y: 22 }}
         on:click={() => {
           if (!$magicPage.running) {
             handleClearChat()
@@ -839,9 +843,9 @@
         class="transform mb-4 active:scale-95 appearance-none w-fit mx-auto border-[0.5px] border-sky-900/10 group margin-0 flex items-center px-3 py-2 bg-sky-100 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer text-xs"
       >
         {#if navigator.platform.toLowerCase().indexOf('mac') > -1}
-          ⌘ + ⌫ Clear Chat
+          <!--⌘ + ⌫ -->Clear Chat
         {:else}
-          Ctrl + ⌫ Clear Chat
+          <!--Ctrl + ⌫-->Clear Chat
         {/if}
       </button>
     {/if}
