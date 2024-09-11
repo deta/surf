@@ -839,9 +839,9 @@
         class="transform mb-4 active:scale-95 appearance-none w-fit mx-auto border-[0.5px] border-sky-900/10 group margin-0 flex items-center px-3 py-2 bg-sky-100 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer text-xs"
       >
         {#if navigator.platform.toLowerCase().indexOf('mac') > -1}
-          Ctrl + ⌫ Clear Chat
+          ⌘ + ⌫ Clear Chat
         {:else}
-          Strg+⌫ Clear Chat
+          Ctrl + ⌫ Clear Chat
         {/if}
       </button>
     {/if}
