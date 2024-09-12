@@ -556,7 +556,7 @@ impl Database {
         id: &str,
     ) -> BackendResult<()> {
         tx.execute(
-            "DELETE FROM resource_metadata WHERE id = ?1",
+            "DELETE FROM resource_metadata WHERE resource_id = ?1",
             rusqlite::params![id],
         )?;
         Ok(())
@@ -672,7 +672,7 @@ impl Database {
         id: &str,
     ) -> BackendResult<()> {
         tx.execute(
-            "DELETE FROM resource_text_content WHERE id = ?1",
+            "DELETE FROM resource_text_content WHERE resource_id = ?1",
             rusqlite::params![id],
         )?;
         Ok(())

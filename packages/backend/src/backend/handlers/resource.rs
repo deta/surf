@@ -166,13 +166,29 @@ impl Worker {
     }
 
     pub fn remove_resource(&mut self, id: String) -> BackendResult<()> {
+        let resource = self.db.get_resource(&id)?;
+        // deletion is no-op if resource does not exist
+        if resource.is_none() {
+            return Ok(());
+        }
+
         let embedding_keys = self
             .db
             .list_embedding_ids_by_type_resource_id(EmbeddingType::TextContent, &id)?;
 
         let mut tx = self.db.begin()?;
+        /*
         Database::update_resource_deleted_tx(&mut tx, &id, 1)?;
         Database::update_resource_tag_by_name_tx(&mut tx, &ResourceTag::new_deleted(&id, true))?;
+        */
+        Database::remove_resource_tx(&mut tx, &id)?;
+        let resource_path = resource.unwrap().resource_path;
+        std::fs::remove_file(&resource_path).map_err(|e| {
+            BackendError::GenericError(format!(
+                "failed to remove resource file from disk: {:#?}",
+                e
+            ))
+        })?;
         self.ai.upsert_embeddings(embedding_keys, vec![], vec![])?;
         tx.commit()?;
         Ok(())
