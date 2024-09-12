@@ -634,6 +634,7 @@ function handleSimulateDragEnd(
 }
 
 window.addEventListener('DOMContentLoaded', async (_) => {
+  document.body.addEventListener('dragover', (e: DragEvent) => e.preventDefault())
   window.addEventListener('mouseup', (e: MouseEvent) => {
     const target = e.target as HTMLElement
     console.debug('mouseup', target, target.id)
@@ -1010,6 +1011,218 @@ window.addEventListener(
   { passive: true, capture: true }
 )
 
+window.addEventListener(
+  'dragover',
+  (event: DragEvent) => {
+    event.preventDefault()
+    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+    // TODO: Fix missing types
+    sendPageEvent(WebViewEventSendNames.DragOver, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pageX: event.pageX,
+      pageY: event.pageY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey
+    })
+  },
+  { capture: true } // TODO: Try no capture
+)
+
+// This is the "hack" we can use to detect whether we are inside / outside the webview when dragging.
+let dragDepth = 0
+window.addEventListener(
+  'dragenter',
+  (event: DragEvent) => {
+    dragDepth++
+    // Ignore stuff inside the webview
+    if (dragDepth > 1) return
+    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+    sendPageEvent(WebViewEventSendNames.DragEnter, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pageX: event.pageX,
+      pageY: event.pageY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey
+    })
+  },
+  { passive: true, capture: true }
+)
+
+window.addEventListener(
+  'dragleave',
+  (event: DragEvent) => {
+    dragDepth--
+    // Ignore stuff inside the webview
+    if (dragDepth > 0) return
+    dragDepth = 0
+    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+    sendPageEvent(WebViewEventSendNames.DragLeave, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pageX: event.pageX,
+      pageY: event.pageY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey
+    })
+  },
+  { passive: true, capture: true }
+)
+
+let once = false
+window.addEventListener(
+  'drop',
+  async (e: DragEvent) => {
+    if (once) return
+    once = true
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    e.dataTransfer!.effectAllowed = 'all'
+    e.dataTransfer!.dropEffect = 'move'
+    console.warn('Dropped!', e)
+    //console.warn("ffile", e.dataTransfer!.items[0]);
+
+    //const fPath = e.dataTransfer?.getData("oasis/resource");
+    //const fType = e.dataTransfer?.getData("oasis/type");
+    //const content = fs.readFileSync(fPath!)
+    //console.log("content", content)
+
+    //const f = new File([content.buffer], fPath!, { type: fType! });
+    const f = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
+    e.dataTransfer!.clearData()
+    const asd = new DataTransfer()
+
+    //e.dataTransfer!.items.add(f)
+    asd.items.add(f)
+    //asd.items.add("text/uri-list", "https://www.google.de")
+
+    //e.dataTransfer!.items.add(new File([blobba], 'keksaf.png', { type: 'image/png' }));
+    for (const item of asd.items) {
+      // e.dataTransfer!.items
+      if (item.kind === 'file') {
+        const f = item.getAsFile()!
+        console.log(`[drop] Received file of type ${item.type}`)
+        console.log(f.name, f.path, f.type, f.webkitRelativePath)
+        console.log('contents', await item.getAsFile()?.text())
+      } else {
+        item.getAsString((data) => {
+          console.log(`[drop] Received string: ${item.type} : ${data}`)
+        })
+      }
+    }
+
+    e.target!.dispatchEvent(
+      new DragEvent('drop', { dataTransfer: asd, bubbles: true, cancelable: true })
+    )
+
+    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+    sendPageEvent(WebViewEventSendNames.Drop, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pageX: event.pageX,
+      pageY: event.pageY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey
+    })
+    once = false
+  },
+  { capture: true }
+)
+
+let twice = false
+window.addEventListener(
+  'dragenter',
+  (e) => {
+    // TODO: Fully spec out re-thrown events
+    if (twice) return
+    twice = true
+    console.warn('dragenter', e.target, e)
+    e.preventDefault()
+    e.stopImmediatePropagation()
+
+    /*const fPath = e.dataTransfer?.getData("oasis/resource");
+  const fType = e.dataTransfer?.getData("oasis/type");
+  console.error("fPath", fPath, fType)
+  const content = fs.readFileSync(fPath!)
+  console.log("content", content)*/
+
+    const f = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
+    //console.warn(f)
+    e.dataTransfer!.clearData()
+    const asd = new DataTransfer()
+
+    //e.dataTransfer!.items.add(f)
+    //asd.items.add("text/uri-list", "https://www.google.de")
+    asd.items.add(f)
+
+    const ne = new DragEvent('dragenter', {
+      ...e,
+      dataTransfer: asd,
+      bubbles: true,
+      cancelable: true
+    })
+    e.target.dispatchEvent(ne)
+    twice = false
+  },
+  { capture: true }
+)
+
+let trice = false
+window.addEventListener(
+  'dragleave',
+  (e) => {
+    if (trice) return
+    trice = true
+    console.warn('dragleave', e.target, e)
+    e.preventDefault()
+    e.stopImmediatePropagation()
+
+    /*const fPath = e.dataTransfer?.getData("oasis/resource");
+  const fType = e.dataTransfer?.getData("oasis/type");
+  console.error("fPath", fPath, fType)
+  const content = fs.readFileSync(fPath!)
+  console.log("content", content)*/
+
+    const f = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
+    //console.warn(f)
+    e.dataTransfer!.clearData()
+    const asd = new DataTransfer()
+
+    //e.dataTransfer!.items.add(f)
+    //asd.items.add("text/uri-list", "https://www.google.de")
+    asd.items.add(f)
+
+    e.target.dispatchEvent(
+      new DragEvent('dragleave', {
+        ...e,
+        dataTransfer: asd,
+        bubbles: true,
+        cancelable: true,
+        relatedTarget: e.relatedTarget
+      })
+    )
+    trice = false
+  },
+  { capture: true }
+)
+
 window.addEventListener('focus', (_event: FocusEvent) => {
   sendPageEvent(WebViewEventSendNames.Focus)
 })
@@ -1047,13 +1260,13 @@ ipcRenderer.on('webview-event', (_event, payload) => {
     handleHighlightText(data)
   } else if (type == WebViewEventReceiveNames.SeekToTimestamp) {
     handleSeekToTimestamp(data)
-  } else if (type === WebViewEventReceiveNames.SimulateDragStart) {
+  } /*else if (type === WebViewEventReceiveNames.SimulateDragStart) {
     handleSimulateDragStart(data)
   } else if (type === WebViewEventReceiveNames.SimulateDragUpdate) {
     handleSimulateDragUpdate(data)
   } else if (type === WebViewEventReceiveNames.SimulateDragEnd) {
     handleSimulateDragEnd(data)
-  }
+  }*/
 })
 
 // @ts-expect-error

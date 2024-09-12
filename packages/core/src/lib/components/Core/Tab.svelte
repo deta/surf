@@ -247,6 +247,7 @@
   }
 
   const handleDragStart = async (drag: DragculaDragEvent) => {
+    drag.dataTransfer?.setData('text/plain', tab.title)
     isDragging = true
     drag.item!.data = {
       'surf/tab': {
@@ -348,8 +349,8 @@
       !pinned &&
       hovered) ||
       (isActive && showClose && !pinned && hovered)}
-    style:view-transition-name="tab-icon-{tab.id}"
   >
+    <!--     style:view-transition-name="tab-icon-{tab.id}" -->
     {#if tab.icon}
       <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
     {:else if tab.type === 'horizon'}
@@ -554,16 +555,44 @@
   :global(.tab img) {
     user-select: none;
   }
-  :global(.tab[data-dragcula-dragging-item='true']) {
-    background: rgba(255, 255, 255, 0.9);
-    opacity: 80%;
+
+  :global(.tab[data-dragging-item]) {
+    background: #e0f2fe;
+    opacity: 1;
   }
-  :global(.tab[data-dragcula-dragging-item='true'] .tmp-tab-drop-zone) {
+  :global(.tab[data-drag-preview]) {
+    background: rgba(255, 255, 255, 1);
+    opacity: 80%;
+    border: 2px solid rgba(10, 12, 24, 0.1);
+    box-shadow:
+      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
+      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
+  }
+  :global(.tab[data-drag-preview][data-drag-target^='webview']) {
+    /*border-width: 1.5px;
+    border-color: rgba(5, 5, 25, 0.3);
+    border-style: dashed;*/
+    background: #fff;
+    border: 1.5px dashed rgba(5, 5, 25, 0.3);
+    opacity: 95%;
+    // https://getcssscan.com/css-box-shadow-examples
+    box-shadow:
+      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
+      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
+  }
+  :global(body[data-dragging='true'] .tab:not([data-dragging-item])) {
+    background: transparent !important;
+  }
+  :global(body[data-dragging='true'] .tab:not([data-dragging-item])) {
+    box-shadow: none;
+  }
+
+  /*:global(.tab[data-dragcula-dragging-item='true'] .tmp-tab-drop-zone) {
     pointer-events: none;
   }
   :global(body:not([data-dragcula-dragging='true']) .tmp-tab-drop-zone) {
     display: none;
-  }
+  }*/
   .icon-wrapper {
     width: 16px;
     height: 16px;

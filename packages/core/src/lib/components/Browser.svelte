@@ -4406,17 +4406,65 @@
 </div>
 
 <style lang="scss">
+  :global(::view-transition-old(tab-6zht5lt23z)) {
+    display: none;
+  }
+  :global(::view-transition-old(tab-6zht5lt23z)) {
+    animation: none;
+  }
+
   /// DRAGCULA STATES NOTE: these should be @horizon/dragcula/dist/styles.css import, but this doesnt work currently!
   :global(::view-transition-group(*)) {
     animation-duration: 280ms;
-    animation-timing-function: cubic-bezier(0, 1, 0.41, 0.99);
+    animation-timing-function: ease; //cubic-bezier(0, 1, 0.41, 0.99);
   }
+
+  :global([data-drag-preview]) {
+    pointer-events: none !important;
+    user-select: none !important;
+    width: var(--drag-width, auto);
+    height: var(--drag-height, auto);
+    transform-origin: center center;
+    transform: translate(-50%, -50%) translate(var(--drag-offsetX, 0px), var(--drag-offsetY, 0px))
+      scale(var(--drag-scale, 1)) scale(var(--drag-scaleX, 1), var(--drag-scaleY, 1))
+      rotate(var(--drag-tilt, 0)) scale(var(--scale, 1)) !important;
+    transition:
+      transform 35ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      opacity 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      border 135ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      box-shadow 165ms cubic-bezier(0, 1.22, 0.73, 1.13) !important;
+    opacity: 85%;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+    /*scale: var(--scaleX, 1) var(--scaleY, 1);*/
+  }
+  :global([data-drag-preview]:hover) {
+    background: lime !important;
+  }
+  :global(body[data-dragging]:has([data-drag-target^='webview'])) {
+    cursor: wait !important;
+  }
+
+  /*:global([data-drag-preview][data-drag-target^='webview']) {
+    border-width: 1.5px;
+    border-color: rgba(5, 5, 25, 0.3);
+    border-style: dashed;
+    opacity: 95%;
+    // https://getcssscan.com/css-box-shadow-examples
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    box-shadow:
+      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
+      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
+  }*/
 
   :global(.dragcula-drop-indicator) {
     --color: #3765ee;
     --dotColor: white;
     --inset: 2%;
     background: var(--color);
+    transition:
+      top 100ms cubic-bezier(0.2, 0, 0, 1),
+      left 100ms cubic-bezier(0.2, 0, 0, 1);
   }
   :global(.dragcula-drop-indicator.dragcula-axis-vertical) {
     left: var(--inset);
@@ -4482,7 +4530,7 @@
 
   // Disables pointer events on all body elements if a drag operation is active
   // except, other drag zones.
-  :global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
+  /*:global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
     pointer-events: none;
   }
 
@@ -4524,7 +4572,7 @@
         )[data-dragcula-drag-effect='copy']
     ) {
     cursor: copy;
-  }
+  }*/
 
   /*:global(body[data-dragcula-dragging='true']) {
     cursor: grabbing;
@@ -4536,15 +4584,15 @@
   :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone]) {
     pointer-events: all;
   }*/
-  :global([data-dragcula-zone][axis='vertical']) {
+  :global([data-drag-zone][axis='vertical']) {
     // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
     padding-top: 1px;
     margin-top: -1px;
   }
-  :global([data-dragcula-zone='sidebar-pinned-tabs']) {
+  :global([data-drag-zone='sidebar-pinned-tabs']) {
     min-height: 24px;
   }
-  :global(.magic-tabs-wrapper [data-dragcula-zone]) {
+  :global(.magic-tabs-wrapper [data-drag-zone]) {
     min-height: 4rem !important;
     height: fit-content !important;
   }
@@ -4978,24 +5026,21 @@
       opacity: 0.4;
     }
   }
-  :global([data-dragcula-zone='sidebar-pinned-tabs']) {
+  :global([data-drag-zone='sidebar-pinned-tabs']) {
     height: fit-content !important;
     display: flex;
     justify-content: center;
     align-items: center;
   }
-  :global([data-dragcula-zone='sidebar-unpinned-tabs'].vertical-tabs) {
+  :global([data-drag-zone='sidebar-unpinned-tabs'].vertical-tabs) {
     min-height: 100%;
     height: auto;
   }
-  :global([data-dragcula-zone='sidebar-unpinned-tabs'].horizontal-tabs) {
+  :global([data-drag-zone='sidebar-unpinned-tabs'].horizontal-tabs) {
     min-width: 100%;
     width: auto;
     display: flex;
     flex-direction: row;
-  }
-  :global(.tab[data-dragcula-dragging]) {
-    background: white;
   }
 
   .divider {
@@ -5156,7 +5201,7 @@
     flex-direction: row;
   }
 
-  :global(.magic-tabs-wrapper [data-dragcula-zone]) {
+  :global(.magic-tabs-wrapper [data-drag-zone]) {
     min-height: 4rem !important;
     height: fit-content !important;
   }

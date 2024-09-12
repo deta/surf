@@ -1,123 +1,144 @@
-import { DragItem } from "./DragItem.js";
-import type { DragZone } from "./index.js";
-import { KEY_STATE, MOUSE_POS } from "./internal.js";
-import type { DragData, DragEffect, DragOperation } from "./types.js";
+import {
+  DragItem,
+  type DragData,
+  type DragOperation,
+  type DragZone,
+  type DropEffect
+} from "./index.js";
+import { assert } from "./utils/internal.js";
 
 export type DragEventType =
   | "DragStart"
   | "Drag"
   | "DragEnter"
+  | "DragTargetEnter"
   | "DragOver"
   | "DragLeave"
+  | "DragTargetLeave"
   | "Drop"
   | "DragEnd";
 
-export class DragculaDragEvent extends Event {
+interface IProps extends Omit<DragOperation, "isNative"> {
+  bubbles?: boolean;
+  event?: DragEvent;
+
+  index?: number | null;
+
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  shiftKey?: boolean;
+  altKey?: boolean;
+}
+
+export class DragculaDragEvent<
+  DataTypes extends { [key: string]: unknown } = {},
+  Data extends DataTransfer | DragData = any
+> extends Event {
   readonly id: string;
-  readonly status: "active" | "finalizing" | "aborted" | "done";
 
-  from: DragZone | null;
-  to: DragZone | null;
+  readonly from: DragZone | null;
+  readonly to: DragZone | null;
 
-  /// DragItem if custom drag, null if native drag!
-  item: DragItem | null;
+  readonly item: DragItem | null; // DragItem, null it native drag from outside
+  readonly dataTransfer: DataTransfer | null; // DataTransfer, if custom drag, still original event dataTransfer
 
-  get isNative(): boolean {
-    return this.item === null;
+  readonly index: number | null = null; // index used e.g. by AxisDragZone
+
+  readonly event?: DragEvent; // DragEvent passthrough from HTML... controllers.
+
+  readonly stoppedPropagation = false;
+  stopPropagation() {
+    (this.stoppedPropagation as boolean) = true;
   }
 
-  #dataTransfer?: DataTransfer; // native drag dataTransfer
-  get data(): DragData | DataTransfer {
-    if (this.isNative) {
-      console.assert(
-        this.#dataTransfer !== undefined,
-        "Native drag event without dataTransfer! This should not happen!"
-      );
-      return this.#dataTransfer!;
-    } else {
-      console.assert(this.item !== null, "Custom drag event without item! This should not happen!");
-      return this.item!.data;
-    }
-  }
+  protected _dispatchPromise: Promise<void>;
+  // @ts-ignore - this is ok as we assign it in the promise constructor
+  continue: () => void;
+  // @ts-ignore - this is ok as we assign it in the promise constructor
+  abort: () => void;
 
-  get effect(): DragEffect {
-    if (this.isNative) {
-      console.assert(
-        this.#dataTransfer !== undefined,
-        "Native drag event without dataTransfer! This should not happen!"
-      );
-      return this.#dataTransfer!.dropEffect as DragEffect;
-    } else {
-      console.assert(this.item !== null, "Custom drag event without item! This should not happen!");
-      return this.item!.dragEffect;
-    }
-  }
+  // === Mouse State passthrough
+  metaKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
 
-  index?: number;
-
-  /// Pass through key states so client can react
-  readonly ctrlKey: boolean = false;
-  readonly shiftKey: boolean = false;
-  readonly altKey: boolean = false;
-  readonly metaKey: boolean = false;
-
-  /// Passthrough of mousevent props
-  readonly clientX: number = MOUSE_POS.x;
-  readonly clientY: number = MOUSE_POS.y;
-  readonly screenX: number = MOUSE_POS.screenX;
-  readonly screenY: number = MOUSE_POS.screenY;
-  readonly pageX: number = MOUSE_POS.pageX;
-  readonly pageY: number = MOUSE_POS.pageY;
-
-  protected promise: Promise<void>;
-  continue = () => {};
-  abort = () => {};
-
-  protected constructor(
-    type: DragEventType,
-    props: DragOperation & {
-      bubbles?: boolean;
-    }
-  ) {
-    super(type, { bubbles: props.bubbles ?? false, cancelable: false });
+  protected constructor(type: DragEventType, props: IProps) {
+    super(type, { bubbles: props.bubbles ?? true });
 
     this.id = props.id;
-    this.status = props.status;
     this.from = props.from;
     this.to = props.to;
-    this.index = props.index;
-    if (props.item instanceof DataTransfer) {
-      this.#dataTransfer = props.item;
-      this.item = null;
-    } else if (props.item instanceof DragItem) {
-      this.item = props.item;
-    } else {
-      throw new Error("Constructing DragculaDragEvent with invalid item type!");
-    }
 
-    this.ctrlKey = KEY_STATE.ctrl;
-    this.shiftKey = KEY_STATE.shift;
-    this.altKey = KEY_STATE.alt;
-    this.metaKey = KEY_STATE.meta;
+    this.item = props.item ?? null;
+    this.dataTransfer = props.dataTransfer ?? null;
 
-    this.promise = new Promise((res, rej) => {
-      this.continue = res;
-      this.abort = rej;
+    /*if (props.item instanceof DataTransfer) {
+			this.#dataTransfer = props.item;
+			this.item = null;
+		} else if (props.item instanceof DragItem) {
+			this.item = props.item;
+		} else {
+			throw new Error("Constructing DragculaDragEvent with invalid item type!");
+		}*/
+
+    this._dispatchPromise = new Promise((resolve, reject) => {
+      this.continue = resolve;
+      this.abort = reject;
     });
+
+    this.event = props.event;
+    this.index = props.index ?? null;
+
+    // Mouse passthrough
+    this.metaKey = props.metaKey ?? false;
+    this.ctrlKey = props.ctrlKey ?? false;
+    this.shiftKey = props.shiftKey ?? false;
+    this.altKey = props.altKey ?? false;
   }
 
-  static new(type: DragEventType, props: any): [DragculaDragEvent, Promise<void>] {
+  static new(type: DragEventType, props: IProps): [DragculaDragEvent, Promise<void>] {
     const e = new this(type, props);
-    return [e, e.promise];
+
+    // NOTE: These cannot be awaited as they have to be sync in order for e.preventDefault() to work
+    if (["DragEnter"].includes(type)) e.continue();
+
+    return [e, e._dispatchPromise];
   }
 
   static dispatch(
     type: DragEventType,
-    props: DragOperation & { bubbles?: boolean },
-    target: EventTarget
-  ): Promise<void> {
+    target: EventTarget,
+    props: IProps
+  ): [DragculaDragEvent, Promise<void>] {
     const [e, p] = this.new(type, props);
     target.dispatchEvent(e);
-    return p;
+    return [e, p];
+  }
+
+  get isNative(): boolean {
+    return this.item === null && this.dataTransfer !== undefined;
+  }
+
+  get data(): DragData<DataTypes> | null {
+    if (this.isNative) {
+      return null;
+    } else {
+      assert(this.item !== null, "Custom drag event without item! This should not happen!");
+      return this.item?.data;
+    }
+  }
+
+  get effect(): DropEffect {
+    if (this.isNative) {
+      assert(
+        this.dataTransfer !== undefined,
+        "Native drag event without dataTransfer! This should not happen!"
+      );
+      return this.dataTransfer!.dropEffect as DropEffect;
+    } else {
+      assert(this.item !== null, "Custom drag event without item! This should not happen!");
+      return this.item!.dropEffect;
+    }
   }
 }

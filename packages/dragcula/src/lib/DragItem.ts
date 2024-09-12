@@ -1,119 +1,84 @@
 import type { ActionReturn } from "svelte/action";
-import type { DragData, DragEffect, DragOperation } from "./types.js";
-import { createStyleCache, nextElementSibling, StyleCache } from "./utils.js";
-import { log, EventSpy, KEY_STATE, MOUSE_POS, SUPPORTS_VIEW_TRANSITIONS } from "./internal.js";
-import { tick } from "svelte";
-import { HTMLDragZone } from "./DragZone.js";
+import { Dragcula, DragOperation, DragData } from "./Dragcula.js";
+import type { DragItemPreviewType, DropEffect, Vec2 } from "./types.type.js";
+import { assert, clamp, genId, getParentZoneEl, ii_TRACE, log } from "./utils/internal.js";
 import { DragculaDragEvent } from "./Event.js";
+import { DragZone } from "./DragZone.js";
 
 export class DragItem {
+  static ITEMS = new Map<string, DragItem>();
+
   readonly id: string;
 
-  /// === STATE
-
-  protected _isDragging = false;
-  get isDragging(): boolean {
-    return this._isDragging;
-  }
-  set isDragging(v: boolean) {
-    this._isDragging = v;
-  }
-
-  protected _canDrop = false;
-  get canDrop(): boolean {
-    return this._canDrop;
-  }
-  set canDrop(v: boolean) {
-    this._canDrop = v;
-  }
-
+  // === STATE
   data: DragData;
-  dragEffect: DragEffect;
+  dropEffect: DropEffect = "move";
 
-  /// === CONSTRUCTOR
+  // === CONSTRUCTOR
 
-  constructor(props: { id?: string; data?: DragData }) {
-    this.id = props.id ?? crypto.getRandomValues(new Uint32Array(1))[0].toString(16);
-    this.data = props.data ?? {};
-    this.dragEffect = "none";
+  constructor(id?: string, data?: DragData) {
+    this.id = id ?? genId();
+    this.data = data ?? new DragData();
+
+    DragItem.ITEMS.set(this.id, this);
   }
 
-  destroy() {}
+  destroy() {
+    DragItem.ITEMS.delete(this.id);
+  }
 
-  /// === EVENTS
+  // === EVENTS
 
-  /** Bootstrap the drag operation & handle possible DOM changes. */
-  onDragStart() {
+  protected onDragStart() {
     console.assert(
-      document.activeDragOperation === undefined,
+      Dragcula.get().activeDrag === null,
       "Another drag operation is already active! This should not happen!"
     );
 
-    document.activeDragOperation = {
-      id: crypto.getRandomValues(new Uint32Array(1))[0].toString(16),
-      status: "active",
-      from: null,
-      to: null,
-      item: this,
-
-      clientX: MOUSE_POS.x,
-      clientY: MOUSE_POS.y
-    };
+    Dragcula.get().activeDrag = DragOperation.new({
+      item: this
+    });
+    Dragcula.get().prepareDragOperation();
   }
 
-  onDrag(drag: DragOperation) {}
-  onDragEnd(drag: DragOperation) {
-    this.isDragging = false;
-    this.canDrop = false;
-    document.activeDragOperation = undefined;
-  }
+  public onDragTargetEnter(drag: DragOperation, e?: DragEvent) {}
 
-  onDragEnter(drag: DragOperation) {
-    this.canDrop = true;
-  }
-  onDragLeave(drag: DragOperation) {
-    this.canDrop = false;
+  /// e is defined when dispatched from browser, undefined when dispatched from code so drag is not only run whilst moving the mouse
+  protected onDrag(drag: DragOperation, e?: DragEvent) {}
+
+  public onDragTargetLeave(drag: DragOperation, e?: DragEvent) {}
+
+  protected onDragEnd(drag: DragOperation, e?: DragEvent) {
+    console.warn("onDragEnd native", Dragcula.get().activeDrag?.isNative);
+    Dragcula.get().cleanupDragOperation();
   }
 }
 
-/**
- * clone: Clones the DOM element as a preview.
- * hoist: Uses the original DOM element as a preview.
- * component: Uses custom Svelte component as the preview.
- */
-type HTMLDragItemPreviewMode = "clone" | "hoist" | "component";
-
-export interface HTMLDragItemActionProps {
+export interface HTMLDragItemProps {
   id?: string;
+  data?: DragData;
 }
-export interface HTMLDragItemActionAttributes {
+export interface HTMLDragItemAttributes {
   /// dragPreviewMode
+  id?: string;
 
   "on:DragStart"?: (drag: DragculaDragEvent) => void;
   "on:Drag"?: (drag: DragculaDragEvent) => void;
-  "on:DragEnter"?: (drag: DragculaDragEvent) => void;
-  "on:DragLeave"?: (drag: DragculaDragEvent) => void;
-  "on:DragOver"?: (drag: DragculaDragEvent) => void;
+  "on:DragTargetEnter"?: (drag: DragculaDragEvent) => void;
+  "on:DragTargetLeave"?: (drag: DragculaDragEvent) => void;
   "on:DragEnd"?: (drag: DragculaDragEvent) => void;
 }
 
 export class HTMLDragItem extends DragItem {
-  /// Map of active HTMLDragItems used to find re-attach items e.g. during move.
-  /// FIX: Maybe add some sort of limit / auto clean just to prevent memory buildup.
-  static ITEMS = new Map<string, HTMLDragItem>();
-
   protected static _activeTransition: ViewTransition | false = false;
   static get activeTransition() {
     return this._activeTransition;
-  }
-  static get useTransitions() {
-    return false; /*SUPPORTS_VIEW_TRANSITIONS && !document.dragculaDisableViewTransitions;*/
   }
   static async startTransition(
     cbk: () => void | Promise<void>,
     skipActive = true
   ): Promise<ViewTransition> {
-    if (HTMLDragItem.useTransitions === false) {
+    if (Dragcula.useViewTransitions === false) {
       await cbk();
       return {
         ready: Promise.resolve(),
@@ -134,480 +99,447 @@ export class HTMLDragItem extends DragItem {
     return HTMLDragItem._activeTransition;
   }
 
+  protected get prefix(): string {
+    return `\x1B[40;97m[DragItem::${this.id}]\x1B[m`;
+  }
+
+  readonly previewType: DragItemPreviewType;
   readonly element: HTMLElement;
-  protected readonly nextElement?: HTMLElement;
-  protected readonly parentElement: HTMLElement;
 
-  readonly previewMode: HTMLDragItemPreviewMode;
+  /// Used for hoist
+  //protected readonly nextElement?: HTMLElement;
+  //protected readonly parentElement?: HTMLElement;
 
-  /// === STATE
+  // === STATE
 
-  override set isDragging(v: boolean) {
-    super.isDragging = v;
-    const target = this.previewMode === "clone" ? this.previewElement : this.element;
-    if (v) {
-      target?.setAttribute("data-dragcula-dragging-item", "true");
-    } else {
-      target?.removeAttribute("data-dragcula-dragging-item");
-    }
-  }
-  override set canDrop(v: boolean) {
-    super.canDrop = v;
-    const target = this.previewMode === "clone" ? this.previewElement : this.element;
-    if (v) {
-      target?.setAttribute("data-dragcula-can-drop", "true");
-    } else {
-      target?.removeAttribute("data-dragcula-can-drop");
-    }
-  }
-
-  /// FIX: MAybe use WeakMap / auto cleanup somehow to prevent memory buildup.
-  /// Needs to still support referencing old dom items though somehow.
-  protected styles = new StyleCache();
-  /// NOTE: This looks a bit nasty
-  protected pushViewTransitionName(node: HTMLElement, val: string) {
-    if (HTMLDragItem.useTransitions === false) return;
-    this.styles.push(node, "view-transition-name", val);
-  }
-  protected popViewTransitionName(node: HTMLElement) {
-    if (HTMLDragItem.useTransitions === false) return;
-    this.styles.pop(node, "view-transition-name");
-  }
-
-  // Ref to the element which is used as a preview during drag.
   protected previewElement?: HTMLElement;
 
   protected raf: number | null = null;
-  protected rafInterval: Timer | null = null; // Used to emit drag events event when not moving mouse.
-  protected previewPosition: { x: number; y: number } = { x: 0, y: 0 };
-  protected previewMomentum: { x: number; y: number } = { x: 0, y: 0 };
-  protected initialElementSize: { w: number; h: number } = { w: 0, h: 0 };
+  protected dragInterval: Timer | null = null; // Used to emit drag events event when not moving mouse.
+  protected previewPosition: Vec2<number> & {
+    vx: number;
+    vy: number;
+    scaleX: number;
+    scaleY: number;
+  } = { x: 0, y: 0, vx: 0, vy: 0, scaleX: 1, scaleY: 1 }; // Position + velocity (movement delta)
+  protected previewSize: Vec2<number> = { x: 0, y: 0 };
+  protected previewVisible = true;
 
-  /// === CONSTRUCTOR
+  // === CONSTRUCTOR
 
-  /** Use static new method, as it handles re-attaching item to existing controller and
-   * sets the id from the id attribute if existis.
-   */
-  protected constructor(node: HTMLElement, props: { id?: string; data?: DragData }) {
-    super(props);
+  constructor(
+    node: HTMLElement,
+    props?: { id?: string; data?: DragData; previewType?: DragItemPreviewType }
+  ) {
+    super((props?.id ?? Boolean(node.id)) ? node.id : undefined, props?.data);
     this.element = node;
-    if (node.parentElement === null) throw new Error("HTMLDragItem must have a parent element!");
-    this.parentElement = node.parentElement!;
-    this.previewMode = "clone";
+    this.previewType = props?.previewType ?? "clone";
+    //this.parentElement = node.parentElement;
 
     this.attach(node);
-    HTMLDragItem.ITEMS.set(this.id, this);
+
+    Dragcula.get();
   }
 
-  /// Used to attach to a given node, or re-attach to a new node.
-  attach(node: HTMLElement, oldNode?: HTMLElement) {
+  attach(node: HTMLElement) {
     (this.element as HTMLElement) = node;
-    this.element.setAttribute("data-dragcula-item", this.id);
-    if (node.parentElement === null) throw new Error("HTMLDragItem must have a parent element!");
-    (this.parentElement as HTMLElement) = node.parentElement!;
+    log.trace(`${ii_TRACE} ${this.prefix}:attach`, this);
+    this.element.setAttribute("data-drag-item", this.id);
 
-    // TODO: Recover needed values from old controller
+    this.configureFromDOMAttributes();
 
-    this.applyDomAttributes();
-
-    if (oldNode) {
-      oldNode.removeEventListener("dragstart", this.boundDragStart);
-      this.styles.transfer(oldNode, this.element);
-      if (document.activeDragOperation?.status === "finalizing") {
-        log.trace("Attaching to new with status", document.activeDragOperation?.status);
-        this.pushViewTransitionName(this.element, `dragcula-dragItem`);
-        //this.styles.push(this.element, "view-transition-name", `dragcula-dragItem`);
-      }
-    }
-
-    //console.warn("Attaching dragstart", this.element)
-    this.element.addEventListener("dragstart", this.boundDragStart);
-    //this.isDragging = this.isDragging;
+    this.element.addEventListener("dragstart", this.handleDragStart, { capture: false });
+    this.element.addEventListener("dragend", this.handleDragEnd, { capture: false });
+    this.element.addEventListener("drag", this.handleDrag, { capture: true });
   }
 
-  /// Apply configuration attributes based on current attached HTMLElement.
-  applyDomAttributes() {
-    // TODO: preview-mode
-  }
-
-  static new(node: HTMLElement, props: { id?: string; data?: DragData }): HTMLDragItem {
-    const id = node.getAttribute("id") ?? props.id ?? undefined;
-    if (id === undefined) {
-      return new this(node, props);
-    } else props.id = id;
-
-    //console.warn("NEW status", document.activeDragOperation?.status, id)
-    if (
-      HTMLDragItem.ITEMS.has(id) &&
-      document.activeDragOperation !== undefined &&
-      document.activeDragOperation.item?.id === id &&
-      document.activeDragOperation.status === "finalizing"
-    ) {
-      const controller = this.ITEMS.get(id)!;
-      log.debug(`[HTMLDragitem:${id}] Re-attaching item to existing controller!`, node, controller);
-      controller.attach(node, controller.element);
-      return controller;
-    }
-
-    return new this(node, props);
-  }
-
-  override destroy() {
-    // If there is an active drag with this item, dont delete the controller
-    // so it can be re-attached to the new element.
-
-    if (
-      document.activeDragOperation !== undefined &&
-      (document.activeDragOperation.item as DragItem)?.id === this.id &&
-      ["active", "finalizing"].includes(document.activeDragOperation!.status)
-    )
-      return;
-
-    // log.debug("Deleting controller", this.id, document.activeDragOperation?.status);
+  destroy() {
+    log.trace(`${ii_TRACE} ${this.prefix}:destroy`, this);
+    //this.element.removeEventListener("dragstart", this.handleDragStart);
+    //this.element.removeEventListener("dragend", this.handleDragEnd);
+    //this.element.removeEventListener("drag", this.handleDrag, { capture: true });
 
     super.destroy();
+  }
 
-    // FIX: Willingly create memory leak!? buuut, prevents accidentally removing handle rbreaking this shit
-    // should be fine mostly, as elements re-render either way most of the time.
-    //this.element.removeEventListener("dragstart", this.boundDragStart);
-
-    HTMLDragItem.ITEMS.delete(this.id);
+  configureFromDOMAttributes() {
+    // TODO: this nees proper handling due to props override? (this.id as string) = this.element.getAttribute("id") ?? this.id;
+    // TODO: impl
   }
 
   static action(
     node: HTMLElement,
     props: { id?: string; data?: DragData }
-  ): ActionReturn<HTMLDragItemActionProps, HTMLDragItemActionAttributes> {
-    const controller = this.new(node, props);
-
+  ): ActionReturn<HTMLDragItemProps, HTMLDragItemAttributes> {
+    const item = new this(node, props);
     return {
       destroy() {
-        controller.destroy();
+        item.destroy();
       },
-      update(props: any) {
-        // TODO: impl
-      }
+      update() {}
     };
   }
 
-  protected async rafCbk(_: number) {
-    console.assert(
-      this.previewElement !== undefined,
-      "Preview element is null! This should not happen!"
-    );
+  // === DOM EVENTS
+  protected handleDragStart = this._handleDragStart.bind(this);
+  protected handleDrag = this._handleDrag.bind(this);
+  protected handleDragEnd = this._handleDragEnd.bind(this);
+  // NOTE: We still need a dedicated mosueUp, as dragEnd wont be fired until after drop..
+  // we already want to cancel timers on release though!
+  protected handleMouseUp = this._handleMouseUp.bind(this);
+
+  protected _handleDragStart(e: DragEvent) {
+    e.stopPropagation();
+    e.dataTransfer!.setDragImage(Dragcula.get().transparentImg, 0, 0); // FIX: CHECK dt
+    //e.dataTransfer!.setData("text", "test");
+    e.dataTransfer!.effectAllowed = "all";
+    e.dataTransfer!.dropEffect = "copy";
+
+    //	e.dataTransfer?.setData("text/uri-list", "https://foogle.com");
+    //e.dataTransfer!.setData("text", "FUCKCKC");
+    //e.dataTransfer!.setData("text/html", "<b>WTF NOTION?</b>");
+    //const aFileParts = ['<a id="a"><b id="b">hey!</b></a>'];
+    //
+    //e.dataTransfer!.items.add(new File([new Blob(aFileParts, { type: 'text/html' })], 'test.html'));
+
+    log.debug(`${this.prefix}:dragStart`, e);
+
+    // TODO: update paren t/ siblings
+    this.previewPosition.x = e.clientX;
+    this.previewPosition.y = e.clientY;
+    this.previewPosition.vx = 0;
+    this.previewPosition.vy = 0;
+
+    this.element.setAttribute("data-dragging-item", "");
+
+    this.onDragStart(e);
+  }
+
+  protected async _handleDragEnd(e: DragEvent) {
+    /*const target = e.target as HTMLElement;
+		if (!this.element.contains(target) || getParentZoneEl(target) !== this.element) return;*/
+
+    e.stopPropagation();
+    e.preventDefault();
+
+    log.debug(`${this.prefix}:dragEnd`, e);
+    const drag = Dragcula.get().activeDrag;
+    assert(drag !== null, "No active drag operation during handleDragEnd! This should not happen!");
+
+    // FIX: MAKE IT CANLELLE
+    if (HTMLDragItem.activeTransition) {
+      HTMLDragItem.activeTransition!.skipTransition();
+    }
+
+    const cancelled = drag.to === null || drag.to === drag.from;
+    if (cancelled) {
+      const vtName = this.element.style.viewTransitionName;
+      if (vtName !== "") {
+        this.previewElement.style.viewTransitionName = vtName;
+        this.element.style.viewTransitionName = "";
+      } else this.previewElement.style.viewTransitionName = "drag-item";
+      const transition = await HTMLDragItem.startTransition(() => {
+        if (vtName !== "") {
+          this.element.style.viewTransitionName = vtName;
+          this.previewElement.style.viewTransitionName = "";
+        } else this.element.style.viewTransitionName = "drag-item";
+
+        this.element.removeAttribute("data-dragging-item");
+        this.onDragEnd(drag, e);
+      });
+      transition.finished.then(() => {
+        this.element.style.viewTransitionName = "";
+      });
+      return;
+    }
+
+    // TODO: Check for ESC cancel
+    // TODO: Set status
+
+    this.element.removeAttribute("data-dragging-item");
+
+    this.onDragEnd(drag, e);
+  }
+
+  protected _handleDrag(e: DragEvent) {
+    e.stopPropagation();
+    const drag = Dragcula.get().activeDrag;
+    assert(drag !== null, "No active drag operation during handleDrag! This should not happen!");
+    this.onDrag(drag, e);
+  }
+
+  protected _handleMouseUp(e: MouseEvent) {
+    const drag = Dragcula.get().activeDrag;
+    clearInterval(this.dragInterval!);
+  }
+
+  // === EVENTS
+  protected boundRafCbk = this.rafCbk.bind(this);
+
+  protected override async onDragStart(e?: DragEvent) {
+    super.onDragStart();
+    const drag = Dragcula.get().activeDrag;
+    if (drag === null) {
+      throw new Error("No active drag operation during onDragStart! This should not happen!");
+    }
+    log.debug(`${this.prefix}:DragStart`, drag);
+
+    drag.dataTransfer = e?.dataTransfer ?? new DataTransfer();
+
+    const parentZoneEl = this.element.closest("[data-drag-zone]") as HTMLElement | null;
+    if (parentZoneEl !== null) {
+      const zone = DragZone.ZONES.get(parentZoneEl.getAttribute("data-drag-zone")!);
+      if (!zone) {
+        // TODO: Better more correct error msg.
+        log.warn(`${this.prefix} Parent zone not found during drag start! This should not happen!`);
+        throw new Error("Parent zone not found during drag start! This should not happen!");
+      }
+      drag.from = zone;
+    }
+
+    this.previewPosition.x = e?.clientX ?? 0;
+    this.previewPosition.y = e?.clientY ?? 0;
+    this.previewSize = { x: this.element.clientWidth, y: this.element.clientHeight };
+
+    // Create preview element
+    if (this.element.style.viewTransitionName === "")
+      this.element.style.viewTransitionName = "drag-item";
+    const transition = await HTMLDragItem.startTransition(() => {
+      if (this.previewType === "clone") {
+        //this.previewSize = { x: this.element.getBoundingClientRect().width, y: this.element.getBoundingClientRect().height };
+        this.previewElement = this.element.cloneNode(true) as HTMLElement;
+
+        let vtName = this.element.style.viewTransitionName;
+
+        this.previewElement.style.viewTransitionName = vtName;
+        this.element.style.viewTransitionName = "";
+
+        this.previewElement.setAttribute("data-drag-preview", "");
+        this.previewElement.style.pointerEvents = "none";
+        this.previewElement.style.position = "fixed";
+        this.previewElement.style.zIndex = "2147483647";
+        this.previewElement.style.left = "0px";
+        this.previewElement.style.top = "0px";
+        this.previewElement.style.setProperty("--drag-width", `${this.previewSize.x}px`);
+        this.previewElement.style.setProperty("--drag-height", `${this.previewSize.y}px`);
+        this.previewElement.style.setProperty("--drag-offsetX", `${this.previewPosition.x}px`);
+        this.previewElement.style.setProperty("--drag-offsetY", `${this.previewPosition.y}px`);
+      }
+
+      if (this.previewType === "clone") {
+        document.body.appendChild(this.previewElement!);
+      }
+
+      //window.addEventListener("mouseup", this.handleMouseUp, { once: true, capture: true });
+      this.dragInterval = setInterval(() => this.onDrag.bind(this)(drag), 300);
+
+      DragculaDragEvent.dispatch("DragStart", this.element, {
+        metaKey: e?.metaKey,
+        ctrlKey: e?.ctrlKey,
+        shiftKey: e?.shiftKey,
+        altKey: e?.altKey,
+        ...drag,
+        event: e,
+        bubbles: false
+      }); // no fck bubbles to annoy u ;) !
+    });
+    transition.updateCallbackDone.then(() => {
+      const parentZone = getParentZoneEl(this.element);
+      if (parentZone) {
+        const evt = new DragEvent("dragenter", {
+          dataTransfer: drag.dataTransfer,
+          bubbles: true,
+          clientX: e.clientX,
+          clientY: e.clientY
+        });
+        parentZone.dispatchEvent(evt);
+      }
+    });
+    transition.finished.then(() => {
+      if (this.previewElement) {
+        const vtName = this.previewElement.style.viewTransitionName;
+        if (vtName !== "drag-item") {
+          this.element.style.viewTransitionName = vtName;
+        }
+        this.previewElement.style.viewTransitionName = "";
+      }
+    });
+  }
+
+  lastOffset: Vec2<number> = { x: NaN, y: NaN }; // TODO: refac.
+  protected rafCbk(_: number) {
     if (this.previewElement === undefined) {
       this.raf = null;
       return;
     }
-    const drag = document.activeDragOperation;
-    if (!drag) {
-      log.error("raf withozut activ edrag!");
-      this.raf = null;
-      return;
+
+    // FIX:: Add down velocity
+    const tilt =
+      this.previewPosition.vx * 5 +
+      (Math.sign(this.previewPosition.vx) > 0
+        ? -this.previewPosition.vy * 3
+        : Math.sign(this.previewPosition.vx) < 0
+          ? this.previewPosition.vy * 3
+          : 0);
+
+    if (
+      this.lastOffset.x !== this.previewPosition.x ||
+      this.lastOffset.y !== this.previewPosition.y
+    ) {
+      this.previewElement!.style.setProperty("--drag-offsetX", `${this.previewPosition.x}px`);
+      this.previewElement!.style.setProperty("--drag-offsetY", `${this.previewPosition.y}px`);
+      this.lastOffset.x = this.previewPosition.x;
+      this.lastOffset.y = this.previewPosition.y;
     }
+    this.previewElement!.style.setProperty("--drag-tilt", `${clamp(tilt, -45, 45)}deg`);
+    this.previewElement!.style.setProperty("--drag-scaleX", this.previewPosition.scaleX.toString());
+    this.previewElement!.style.setProperty("--drag-scaleY", this.previewPosition.scaleY.toString());
 
-    const clamp = (value: number, min: number, max: number) => {
-      return Math.min(Math.max(value, min), max);
-    };
-
-    this.previewElement.style.transform = `translate(-50%, -50%) translate(${this.previewPosition.x}px, ${this.previewPosition.y}px) rotate(${clamp(this.previewMomentum.x / 2.25, -45, 45)}deg)`;
-
-    const overZone = HTMLDragZone.findClosestFromPoint(MOUSE_POS.x, MOUSE_POS.y);
-    const newTargetId = overZone?.id ?? null;
-    const oldTargetId = drag.to?.id ?? null;
-
-    if (newTargetId !== oldTargetId) {
-      log.debug("dragRaf new/old target", newTargetId, oldTargetId);
-      if (oldTargetId !== null) {
-        drag.to!.onDragLeave(drag);
-        drag.to = null;
-      }
-      if (newTargetId !== null) {
-        const accepted = await overZone!.onDragEnter(drag);
-        log.debug("zone accepted", accepted);
-        drag.to = accepted ? overZone : null;
-      }
-    }
-
-    if (drag.to !== null) {
-      drag.to.isTarget = true;
-      drag.to.onDragOver(drag);
-      this.canDrop = true;
-    } else {
-      this.canDrop = false;
-    }
+    //this.previewElement!.style.visibility = this.previewVisible ? "visible" : "hidden";
 
     this.raf = null;
   }
-  protected boundRafCbk = this.rafCbk.bind(this);
 
-  /// === DOM HANDLERS
-  protected boundMouseMove = this._handleMouseMove.bind(this);
-  protected boundMouseUp = this._handleMouseUp.bind(this);
-  protected boundDragStart = this._handleDragStart.bind(this);
+  override onDrag(drag: DragOperation, e?: DragEvent) {
+    super.onDrag(drag, e);
 
-  protected _handleMouseMove(e: MouseEvent) {
-    console.assert(
-      document.activeDragOperation !== undefined,
-      "No active drag operation! This should not happen!"
-    );
+    // Update velocity (decrease)
+    this.previewPosition.vx = (this.previewPosition.vx * 0.6 + this.previewPosition.vx * 7.0) / 9.0;
+    this.previewPosition.vy = (this.previewPosition.vy * 0.6 + this.previewPosition.vy * 7.0) / 9.0;
+    if (Math.abs(this.previewPosition.vx) < 0.1) this.previewPosition.vx = 0;
+    if (Math.abs(this.previewPosition.vy) < 0.1) this.previewPosition.vy = 0;
 
-    const drag = document.activeDragOperation!;
-    drag.clientX = MOUSE_POS.x;
-    drag.clientY = MOUSE_POS.y;
+    //const insideViewport = this.previewPosition.x > 1 && this.previewPosition.y > 1 && this.previewPosition.x < window.innerWidth && this.previewPosition.y < window.innerHeight;
 
-    this.onDrag(drag);
+    if (e) {
+      //this.previewVisible = true;
+
+      // Update velocity (increase from movemenet delta)
+      if (e.clientX >= 1 && e.clientY >= 1) {
+        this.previewPosition.vx =
+          (e.clientX - this.previewPosition.x + this.previewPosition.vx * 9.0) / 10.0;
+        this.previewPosition.vy =
+          (e.clientY - this.previewPosition.y + this.previewPosition.vy * 9.0) / 10.0;
+
+        this.previewPosition.x = e.clientX;
+        this.previewPosition.y = e.clientY;
+      }
+
+      /*if (this.previewPosition.x === 0 && this.previewPosition.y === 0) {
+				if (this.previewElement) this.previewElement!.style.visibility = "hidden";
+				this.previewVisible = false;
+			}
+			else {
+				if (this.previewElement && !this.previewVisible) {
+					this.previewElement!.style.visibility = "visible";
+					this.previewVisible = true
+				}
+			}
+
+			if (this.previewPosition.x <= this.previewSize.x / 2) {
+				const scale = 1; //lerp(0, 1, this.previewPosition.x / (this.previewSize.x / 2));
+				this.previewPosition.scaleX = lerp(0, 1, this.previewPosition.x / (this.previewSize.x / 2 * scale));
+				//this.previewElement!.style.setProperty("--scale", scale.toString());
+			} else if (this.previewPosition.x >= window.innerWidth - this.previewSize.x / 2) {
+				this.previewPosition.scaleX = lerp(0, 1, (window.innerWidth - this.previewPosition.x) / (this.previewSize.x / 2))
+			}
+			else {
+				this.previewPosition.scaleX = 1;
+			}
+			if (this.previewPosition.y <= this.previewSize.y / 2) {
+				this.previewPosition.scaleY = lerp(0, 1, this.previewPosition.y / (this.previewSize.y / 2));
+			} else if (this.previewPosition.y >= window.innerHeight - this.previewSize.y / 2) {
+				this.previewPosition.scaleY = lerp(0, 1, (window.innerHeight - this.previewPosition.y) / (this.previewSize.y / 2));
+			}
+			else {
+				this.previewPosition.scaleY = 1;
+			}*/
+    } /*else {
+
+			// Update velocity (increase from movemenet delta)
+			this.previewPosition.vx = (SPY_MOUSE_POS.x - this.previewPosition.x + this.previewPosition.vx * 9.0) / 10.0;
+			this.previewPosition.vy = (SPY_MOUSE_POS.y - this.previewPosition.y + this.previewPosition.vy * 9.0) / 10.0;
+
+			this.previewPosition.x = SPY_MOUSE_POS.x;
+			this.previewPosition.y = SPY_MOUSE_POS.y;
+		}*/
+
+    //if (insideViewport) this.previewVisible = true;
+    //else this.previewVisible = false;
+
+    /*if (HTMLDragItem.activeTransition) this.rafCbk(performance.now().valueOf());
+		else*/ if (this.raf === null) this.raf = requestAnimationFrame(this.boundRafCbk);
+
+    DragculaDragEvent.dispatch("Drag", this.element, {
+      metaKey: e?.metaKey,
+      ctrlKey: e?.ctrlKey,
+      shiftKey: e?.shiftKey,
+      altKey: e?.altKey,
+      ...drag,
+      event: e,
+      bubbles: false
+    });
+
+    if (HTMLDragItem.activeTransition && drag.to !== null) {
+      //drag.to.onDragOver(drag, e);
+    }
   }
-  protected async _handleMouseUp(e: MouseEvent) {
-    log.debug(`[HTMLDragItem:${this.id}] mouseup`, e);
-    console.assert(
-      document.activeDragOperation !== undefined,
-      "No active drag operation! This should not happen!"
-    );
-    const drag = document.activeDragOperation!;
 
-    window.removeEventListener("mouseup", this.boundMouseUp, { capture: true });
-    window.removeEventListener("mousemove", this.boundMouseMove, { capture: true });
-    clearInterval(this.rafInterval!);
+  override onDragTargetEnter(drag: DragOperation, e?: DragEvent) {
+    log.debug(`${this.prefix}:DragTargetEnter`, drag);
 
-    this.pushViewTransitionName(this.previewElement!, `dragcula-dragItem`);
-    //this.styles.push(this.previewElement!, "view-transition-name", `dragcula-dragItem`);
+    if (drag.to?.id) this.previewElement?.setAttribute("data-drag-target", drag.to.id);
 
-    const transition = await HTMLDragItem.startTransition(async () => {
-      this.pushViewTransitionName(this.element, `dragcula-dragItem`);
-      //this.styles.push(this.element, "view-transition-name", `dragcula-dragItem`);
-      drag.status = "finalizing";
-      this.popViewTransitionName(this.previewElement!);
-      //this.styles.pop(this.previewElement!, "view-transition-name");
-      if (drag.to !== null) {
-        try {
-          drag.to.onDrop(drag);
-          drag.status = "done";
-        } catch {
-          drag.status = "aborted";
-        }
-        // TODO: Dispatch drop event
-        // handle aborted
-      } else {
-        drag.status = "aborted";
-      }
-
-      if (drag.from !== null) {
-        drag.from.onDragEnd(drag);
-      }
-
-      this.onDragEnd(drag);
-
-      // NOTE: Needed so that DOM can change, items can be re-attached & finalized
-      await tick();
-
-      //this.onDragEnd(drag);
-    }, true);
-    transition.finished.finally(() => {
-      // TODO: Reset vt name overrides
-      if (this.previewElement) this.styles.resetAll(this.previewElement);
-      this.styles.resetAll(this.element);
-
-      // FIX: fix
-      //this.styles.dump("DragEnd");
-      //console.assert(this.styles.items.size === 0, "Style cache not empty after drag end! This should not happen!");
+    DragculaDragEvent.dispatch("DragTargetEnter", this.element, {
+      metaKey: e?.metaKey,
+      ctrlKey: e?.ctrlKey,
+      shiftKey: e?.shiftKey,
+      altKey: e?.altKey,
+      ...drag,
+      event: e,
+      bubbles: false
     });
   }
 
-  protected _handleDragStart(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    log.debug(`[HTMLDragItem:${this.id}] dragstart`, e);
-    (this.nextElement as HTMLElement) = nextElementSibling(this.element, (el) =>
-      el.hasAttribute("data-dragcula-item")
-    ) as HTMLElement;
-    this.previewPosition = { x: e.clientX, y: e.clientY };
+  override onDragTargetLeave(drag: DragOperation, e?: DragEvent) {
+    log.debug(`${this.prefix}:DragTargetLeave`, drag);
 
-    const style = window.getComputedStyle(this.element, null);
-    this.initialElementSize = {
-      w: parseFloat(style.getPropertyValue("width")),
-      h: parseFloat(style.getPropertyValue("height"))
-    };
-
-    this.onDragStart();
-  }
-
-  /// === EVENTS
-
-  override async onDragStart() {
-    log.debug(`[HTMLDragItem:${this.id}] DragStart`);
-    super.onDragStart();
-    const drag = document.activeDragOperation;
-    if (drag === undefined) {
-      throw new Error("No active drag operation during onDragStart! This should not happen!");
+    if (drag.to?.id !== this.previewElement?.getAttribute("data-drag-target")) {
+      log.warn(`${this.prefix}:DragTargetLeave: Drag target mismatch! This should not happen!`);
     }
+    if (drag.to === null) this.previewElement?.removeAttribute("data-drag-target");
 
-    const parentZone = HTMLDragZone.findClosestFromElement(this.parentElement);
-    if (parentZone !== null) document.activeDragOperation!.from = parentZone;
-
-    try {
-      const hasDragculaListeners = EventSpy.hasListenerOfType(this.element, "DragStart");
-      const handlesDragculaEvent = EventSpy.allListenersHandleDragculaEvent(
-        this.element,
-        "DragStart"
-      );
-      log.debug(
-        "hasDragculaListeners",
-        hasDragculaListeners,
-        "handlesDragculaEvent",
-        handlesDragculaEvent
-      );
-      if (hasDragculaListeners && !handlesDragculaEvent) {
-        log.warn(
-          "Element ",
-          this.element,
-          " has DragStart listener(s), but not all handle Dragcula events correctly! Are you missing .continue() / .abort() ?"
-        );
-        throw new Error(
-          "Element has DragStart listener(s), but not all handle Dragcula events correctly! Are you missing .continue() / .abort() ?"
-        );
-      } else if (hasDragculaListeners && handlesDragculaEvent) {
-        await DragculaDragEvent.dispatch("DragStart", document.activeDragOperation, this.element);
-      }
-      DragculaDragEvent.dispatch("DragStart", drag, window);
-
-      window.addEventListener("mouseup", this.boundMouseUp, { capture: true, once: true });
-      window.addEventListener("mousemove", this.boundMouseMove, { capture: true });
-      this.rafInterval = setInterval(() => {
-        if (document.activeDragOperation) this.onDrag(document.activeDragOperation);
-        //if (this.raf === null) this.raf = requestAnimationFrame(this.boundRafCbk);
-      }, 300);
-
-      this.pushViewTransitionName(this.element, `dragcula-dragItem`);
-      //this.styles.push(this.element, "view-transition-name", `dragcula-dragItem`)
-      this.styles.push(this.element, "position", "relative");
-      this.styles.push(this.element, "z-index", "2147483647");
-      this.element.setAttribute("data-dragging-item-source", "true");
-      if (this.previewMode === "clone") {
-        this.previewElement = this.element.cloneNode(true) as HTMLElement;
-        // Iterate all chidlren recusrively and remvoe any which have data-dragcula-zone attribute set
-        this.previewElement.querySelectorAll("[data-dragcula-zone]").forEach((el) => el.remove());
-
-        this.previewElement.style.pointerEvents = "none";
-        this.previewElement.style.position = "fixed";
-        this.previewElement.style.zIndex = "2147483647";
-        this.previewElement.style.width = `${this.initialElementSize.w}px`;
-        this.previewElement.style.height = `${this.initialElementSize.h}px`;
-        this.previewElement.style.left = `0`;
-        this.previewElement.style.top = `0`;
-        this.previewElement.style.transform = `translate(-50%, -50%) translate(${this.previewPosition.x}px, ${this.previewPosition.y}px)`;
-      } else if (this.previewMode === "hoist") {
-        throw new Error("Hoist not implemented!");
-        this.previewElement = this.element;
-      }
-      this.styles.dump();
-
-      const transition = await HTMLDragItem.startTransition(() => {
-        this.popViewTransitionName(this.element);
-        //this.styles.pop(this.element, "view-transition-name");
-        this.pushViewTransitionName(this.previewElement!, `dragcula-dragItem`);
-        //this.styles.push(this.previewElement!, "view-transition-name", `dragcula-dragItem`);
-
-        document.body.appendChild(this.previewElement!);
-        this.styles.pushMany(this.element, {
-          opacity: "0.5"
-        });
-
-        this.isDragging = true;
-        document.body.setAttribute("data-dragcula-dragging", "true");
-      }, true);
-      transition.finished.finally(() => {
-        this.styles.reset(this.element, "view-transition-name");
-        this.styles.reset(this.previewElement!, "view-transition-name");
-        // TOOD: Reset vt name overrides
-      });
-    } catch (e) {
-      // TODO: Abort all
-      log.warn("Aborting drag operation!", e);
-      this.onDragEnd(drag);
-    }
+    DragculaDragEvent.dispatch("DragTargetLeave", this.element, {
+      metaKey: e?.metaKey,
+      ctrlKey: e?.ctrlKey,
+      shiftKey: e?.shiftKey,
+      altKey: e?.altKey,
+      ...drag,
+      event: e,
+      bubbles: false
+    });
   }
 
-  override async onDrag(drag: DragOperation) {
-    //console.debug(`[HTMLDragItem:${this.id}] Drag`, drag);
-    super.onDrag(drag);
+  protected override onDragEnd(drag: DragOperation, e?: DragEvent) {
+    log.debug(`${this.prefix}:DragEnd`, drag, e);
 
-    // Reduce to 0
-    this.previewMomentum.x = (this.previewMomentum.x * 0.6 + this.previewMomentum.x * 7.0) / 9.0;
-    this.previewMomentum.y = (this.previewMomentum.y * 0.6 + this.previewMomentum.y * 7.0) / 9.0;
-    if (Math.abs(this.previewMomentum.x) < 0.1) this.previewMomentum.x = 0;
-    if (Math.abs(this.previewMomentum.y) < 0.1) this.previewMomentum.y = 0;
+    clearInterval(this.dragInterval!);
 
-    this.previewMomentum.x =
-      (drag.clientX - this.previewPosition.x + this.previewMomentum.x * 9.0) / 10.0;
-    this.previewMomentum.y =
-      (drag.clientY - this.previewPosition.y + this.previewMomentum.y * 9.0) / 10.0;
-
-    this.previewPosition.x = MOUSE_POS.x;
-    this.previewPosition.y = MOUSE_POS.y;
-
-    if (KEY_STATE.alt) this.dragEffect = "copy";
-    else this.dragEffect = "move";
-
-    document.body.setAttribute("data-dragcula-drag-effect", this.dragEffect);
-
-    if (this.raf === null) this.raf = requestAnimationFrame(this.boundRafCbk);
-  }
-
-  override onDragEnd(drag: DragOperation) {
-    log.debug(`[HTMLDragItem:${this.id}] DragEnd`, drag);
-
-    //console.assert(this.previewElement !== undefined, "Preview element is null in onDragEnd! This should not happen!");
-    if (this.previewElement) this.styles.resetAll(this.previewElement);
-
-    if (this.previewMode === "clone") {
-      this.element.removeAttribute("data-dragging-item-source");
-
+    if (this.previewType === "clone") {
       this.previewElement?.remove();
+      this.previewElement = undefined;
     }
 
-    this.styles.resetEverything();
+    DragculaDragEvent.dispatch("DragEnd", this.element, {
+      metaKey: e?.metaKey,
+      ctrlKey: e?.ctrlKey,
+      shiftKey: e?.shiftKey,
+      altKey: e?.altKey,
+      ...drag,
+      event: e,
+      bubbles: false
+    }); // no fck bubbles to annoy u ;) !
 
-    if (drag.status === "aborted") {
-      this.pushViewTransitionName(this.element, `dragcula-dragItem`);
-      //this.styles.push(this.element, "view-transition-name", `dragcula-dragItem`);
-      log.warn("Drag aborted, reseetting");
-      if (this.previewMode === "hoist") {
-        throw new Error("Hoist not implemented!");
-        // NOTE: only readd if element / parent / next sib still exists.
-      }
-    } else {
-      // TODO: Check clone / hosit & act
-      if (drag.item instanceof DragItem) {
-        /*if (drag.item.dragEffect === "move") {
-          this.
-        }*/
-      }
-    }
-
-    this.previewElement = undefined;
-    document.body.removeAttribute("data-dragcula-dragging");
-    document.body.removeAttribute("data-dragcula-drag-effect");
-
-    // NOTE: We call this last as it also resets document.activeDragOperation and we need it
-    // before for correct cleanup!
-    super.onDragEnd(drag);
-
-    DragculaDragEvent.dispatch("DragEnd", drag, this.element);
-    DragculaDragEvent.dispatch("DragEnd", drag, window);
-    //DragculaDragEvent.dispatch("DragEnd", drag, HTMLDragItem.ITEMS.get(this.id)!.element);
-
-    // TODO: Check if this.element is in the DOM, remove this controller if not
-    // -> The element was probably deleted in the background!
-  }
-
-  override onDragEnter(drag: DragOperation) {
-    log.debug(`[HTMLDragItem:${this.id}] DragEnter`, drag);
-    super.onDragEnter(drag);
-  }
-
-  override onDragLeave(drag: DragOperation) {
-    log.debug(`[HTMLDragItem:${this.id}] DragLeave`, drag);
-    super.onDragLeave(drag);
+    super.onDragEnd(drag, e);
   }
 }
