@@ -895,6 +895,7 @@
       [
         ResourceManager.SearchTagDeleted(false),
         ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
         ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
       ],
       {

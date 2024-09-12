@@ -21,6 +21,11 @@
     createRehypePlugin(rehypeRaw),
     createRehypePlugin(rehypeSanitize, {
       ...defaultSchema,
+      attributes: {
+        ...defaultSchema.attributes,
+        // allow custom citation tags so we can render them
+        citation: ['id']
+      },
       tagNames: [
         ...(defaultSchema.tagNames ?? []),
         // allow custom citation tags so we can render them

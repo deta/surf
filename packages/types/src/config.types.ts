@@ -10,7 +10,6 @@ export type UserConfig = {
 export type UserSettings = {
   embedding_model: 'english_small' | 'english_large' | 'multilingual_small' | 'multilingual_large'
   tabs_orientation: 'vertical' | 'horizontal'
-  auto_save_resources: boolean
   use_semantic_search: boolean
   show_annotations_in_oasis: boolean
 }

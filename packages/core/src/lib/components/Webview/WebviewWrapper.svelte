@@ -62,6 +62,7 @@
   const dispatch = createEventDispatcher<WebviewWrapperEvents>()
   const zoomLevel = writable<number>(1)
   const showZoomPreview = writable<boolean>(false)
+  const webviewReady = writable<boolean>(false)
 
   let webview: WebviewTag
   let webviewComponent: Webview
@@ -257,13 +258,30 @@
         }
       }
 
+      const handleDidFinishLoad = () => {
+        log.debug('webview finished loading, detecting resource')
+        sendEvent(WebViewEventReceiveNames.GetResource)
+      }
+
       timeout = setTimeout(() => {
         webview.removeEventListener('ipc-message', handleEvent)
+        webview.removeEventListener('did-finish-load', handleDidFinishLoad)
+        webview.removeEventListener('dom-ready', handleDidFinishLoad)
         resolve(null)
       }, timeoutNum)
 
       webview.addEventListener('ipc-message', handleEvent)
-      sendEvent(WebViewEventReceiveNames.GetResource)
+
+      if ($isLoading) {
+        log.debug('waiting for webview to finish loading before detecting resource')
+        webview.addEventListener('did-finish-load', handleDidFinishLoad)
+      } else if (!$webviewReady) {
+        log.debug('waiting for webview to be ready before detecting resource')
+        webview.addEventListener('dom-ready', handleDidFinishLoad)
+      } else {
+        log.debug('webview is ready, detecting resource immediately')
+        handleDidFinishLoad()
+      }
     })
   }
 
@@ -376,6 +394,7 @@
     {isLoading}
     {error}
     {url}
+    {webviewReady}
     {...$$restProps}
     bind:webview
     bind:this={webviewComponent}

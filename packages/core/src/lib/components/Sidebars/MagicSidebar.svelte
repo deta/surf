@@ -860,13 +860,22 @@
             <p>Warning: {error}</p>
           </div>
         {/each}
-        <p>Preparing tabs for the chat…</p>
+
         <button
           class="absolute top-3 right-3 text-yellow-800 hover:text-yellow-600"
           on:click={() => magicPage.update((v) => ({ ...v, errors: [] }))}
         >
           <Icon name="close" />
         </button>
+      </div>
+    {/if}
+
+    {#if $magicPage.initializing}
+      <div
+        transition:slide={{ duration: 150, axis: 'y', delay: 350 }}
+        class="err flex flex-col bg-blue-50 border-t-blue-300 border-l-blue-300 border-r-blue-300 border-[1px] py-2 pl-6 pr-12 gap-4 shadow-sm mx-12 rounded-t-xl text-lg leading-relaxed text-blue-800/60 relative"
+      >
+        Preparing tabs for the chat…
       </div>
     {/if}
 
@@ -955,7 +964,7 @@
             }}
             disabled={!inputValue || $magicPage.running}
           >
-            {#if $magicPage.initializing && !$optToggled}
+            {#if $magicPage.running && !$optToggled}
               <Icon name="spinner" />
             {:else}
               Send ↩

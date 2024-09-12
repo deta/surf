@@ -404,9 +404,9 @@
           [
             ResourceManager.SearchTagDeleted(false),
             ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
-            ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne')
+            ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+            ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
             // ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-            // ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
           ],
           { includeAnnotations: false }
         )
@@ -646,11 +646,9 @@
       [
         ResourceManager.SearchTagDeleted(false),
         ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
         ...($selectedFilter === 'saved_by_user'
-          ? [
-              ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-              ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
-            ]
+          ? [ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)]
           : []),
         ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
       ],

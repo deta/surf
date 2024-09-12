@@ -54,6 +54,7 @@
   export let isLoading: Writable<boolean>
   export let error: Writable<WebviewError | null>
   export let url = writable(src)
+  export let webviewReady = writable(false)
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
@@ -507,6 +508,7 @@ Made with Deta Surf.`
       Register a window handler to handle creating new tabs from the webview
     */
     webview.addEventListener('dom-ready', (_) => {
+      webviewReady.set(true)
       webviewWebContentsId = webview.getWebContentsId()
 
       if (!newWindowHandlerRegistered) {

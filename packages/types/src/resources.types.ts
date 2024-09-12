@@ -39,7 +39,8 @@ export enum ResourceTagsBuiltInKeys {
   VIEWED_BY_USER = 'viewedByUser', // resource was viewed by the user
   SILENT = 'silent', // resource was saved silently in the background and not by the user
   HIDE_IN_EVERYTHING = 'hideInEverything', // resource should not be shown in the Oasis Everything view
-  SOURCE_PUBLISHED_AT = 'sourcePublishedAt' // timestamp of when the resource was published by the source (e.g. tweet timestamp)
+  SOURCE_PUBLISHED_AT = 'sourcePublishedAt', // timestamp of when the resource was published by the source (e.g. tweet timestamp)
+  CREATED_FOR_CHAT = 'createdForChat' // resource was created for a chat
 }
 
 export interface ResourceTagsBuiltIn {
@@ -58,6 +59,7 @@ export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.SILENT]: boolean
   [ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING]: boolean
   [ResourceTagsBuiltInKeys.SOURCE_PUBLISHED_AT]: string
+  [ResourceTagsBuiltInKeys.CREATED_FOR_CHAT]: boolean
 }
 
 export interface SFFSResource {

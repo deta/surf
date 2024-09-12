@@ -524,7 +524,12 @@
 
     // Ensure the new tab is in context when the sidebar is open
     if ($activeTabMagic.showSidebar) {
-      handleTabSelect(new CustomEvent('tab-select', { detail: newTab.id }))
+      // TODO: this should be cleaned up more
+      if (active) {
+        handleTabSelect(new CustomEvent('tab-select', { detail: newTab.id }))
+      } else {
+        handlePassiveSelect(new CustomEvent('tab-select', { detail: newTab.id }))
+      }
     }
 
     return newTab
@@ -621,6 +626,25 @@
 
     await tabsDB.delete(tabId)
     checkScroll()
+
+    if (tab.type === 'page' && tab.chatResourceBookmark) {
+      const resource = await resourceManager.getResource(tab.chatResourceBookmark)
+      if (!resource) {
+        log.error('resource not found', tab.chatResourceBookmark)
+        return
+      }
+
+      const isSilent =
+        (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value ===
+        'true'
+
+      if (isSilent) {
+        log.debug('Deleting resource used in chat as tab was deleted', resource.id)
+        await resourceManager.deleteResource(resource.id)
+
+        updateTab(tab.id, { chatResourceBookmark: null })
+      }
+    }
 
     if (trigger) {
       if (tab.type === 'page') {
@@ -1289,6 +1313,8 @@
     const unpinnedTabsArray = get(unpinnedTabs)
     const currentSelectedTabs = get(selectedTabs)
 
+    const addedTabsToMagic: TabPage[] = []
+
     if (!$lastSelectedTabId) {
       lastSelectedTabId.set($activeTabId)
     }
@@ -1339,6 +1365,11 @@
       return tabs.map((tab) => {
         const shouldBeMagic =
           $activeTabMagic.showSidebar && Array.from(newSelection).some((item) => item.id === tab.id)
+
+        if (tab.type === 'page' && shouldBeMagic) {
+          addedTabsToMagic.push(tab)
+        }
+
         return {
           ...tab,
           magic: shouldBeMagic
@@ -1353,6 +1384,10 @@
       selectedTabs.update((t) => new Set(t))
     }
 
+    if (addedTabsToMagic.length > 0) {
+      preparePageTabsForChatContext(addedTabsToMagic)
+    }
+
     tick().then(() => {
       telemetry.trackPageChatContextUpdate(
         PageChatUpdateContextEventAction.MultiSelect,
@@ -1364,7 +1399,7 @@
 
   const handlePassiveSelect = (event: CustomEvent<string>) => {
     const tabId = event.detail
-    let addedTabToMagic = false
+    let addedTabToMagic: Tab | null = null
 
     selectedTabs.update((t) => {
       const newSelection = new Set(t)
@@ -1381,8 +1416,11 @@
         tabs.update((t) => {
           const updatedTabs = t.map((tab) => {
             if (tab.id === tabId) {
-              addedTabToMagic = !existingItem
-              return { ...tab, magic: addedTabToMagic }
+              const enableMagic = !existingItem
+              if (enableMagic) {
+                addedTabToMagic = tab
+              }
+              return { ...tab, magic: enableMagic }
             }
             return tab
           })
@@ -1394,6 +1432,10 @@
     })
 
     lastSelectedTabId.set(tabId)
+
+    if (addedTabToMagic) {
+      preparePageTabsForChatContext([addedTabToMagic])
+    }
 
     tick().then(() => {
       if (addedTabToMagic) {
@@ -1434,10 +1476,12 @@
   }
 
   const updateMagicTabs = (tabId: string, currentSelectedTabs: any[], currentTab: any) => {
+    let addedTabToMagic: Tab | null = null
     tabs.update((allTabs) => {
       return allTabs.map((tab) => {
         // If the tab is the one that was just selected, mark it as a magic tab
         if (tab.id === tabId) {
+          addedTabToMagic = tab
           return { ...tab, magic: true }
         }
         // If the tab is the last selected tab, update its magic status based on user selection
@@ -1459,6 +1503,10 @@
         return tab
       })
     })
+
+    if (addedTabToMagic) {
+      preparePageTabsForChatContext([addedTabToMagic])
+    }
   }
 
   const cleanUpSelectedTabs = () => {
@@ -1581,7 +1629,7 @@
         }
       }
 
-      const resource = await $activeBrowserTab.bookmarkPage(false)
+      const resource = await $activeBrowserTab.bookmarkPage()
 
       // automatically resets after some time
       toasts.success('Bookmarked Page!')
@@ -1619,6 +1667,25 @@
     if (tab.resourceBookmark) {
       log.debug('tab url changed, removing bookmark')
       updateTab(tab.id, { resourceBookmark: null, chatResourceBookmark: null })
+    }
+
+    if (tab.chatResourceBookmark) {
+      const resource = await resourceManager.getResource(tab.chatResourceBookmark)
+      if (!resource) {
+        return
+      }
+
+      const isSilent =
+        (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value ===
+        'true'
+
+      if (isSilent) {
+        log.debug(
+          'deleting silent chat resource as the tab has navigated away',
+          tab.chatResourceBookmark
+        )
+        await resourceManager.deleteResource(resource.id)
+      }
     }
   }
 
@@ -1847,7 +1914,7 @@
     }
   }
 
-  const prepareTabForChatContext = async (tab: TabPage | TabSpace, title: string) => {
+  const prepareTabForChatContext = async (tab: TabPage | TabSpace) => {
     if (tab.type === 'space') {
       log.debug('Preparing space tab for chat context', tab.id)
       return
@@ -1881,12 +1948,24 @@
       }
 
       const fetchedResource = await resourceManager.getResource(existingResourceId)
+      if (!fetchedResource) {
+        return null
+      }
+
       const fetchedCanonical = (fetchedResource?.tags ?? []).find(
         (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
       )?.value
 
       if (fetchedCanonical !== tab.currentLocation) {
         log.debug('Existing resource does not match current location', fetchedCanonical, tab.id)
+        return null
+      }
+
+      const isDeleted =
+        (fetchedResource?.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
+          ?.value === 'true'
+      if (isDeleted) {
+        log.debug('Existing resource is deleted, ignoring', fetchedResource.id)
         return null
       }
 
@@ -1903,7 +1982,7 @@
       }
 
       log.debug('Bookmarking page for chat context', tab.id)
-      tabResource = await browserTab.bookmarkPage(true)
+      tabResource = await browserTab.createResourceForChat()
     }
 
     if (!tabResource) {
@@ -1915,16 +1994,19 @@
     return tabResource
   }
 
-  const preparePageTabsForChatContext = async () => {
+  const preparePageTabsForChatContext = async (tabs?: Array<TabPage | TabSpace>) => {
     updateActiveMagicPage({ initializing: true, errors: [] })
 
-    const tabs = getTabsInChatContext()
+    if (!tabs) {
+      tabs = getTabsInChatContext()
+    }
+
     log.debug('Making sure resources for all page tabs in context are extracted', tabs)
 
     await Promise.allSettled(
       tabs.map(async (tab) => {
         try {
-          await prepareTabForChatContext(tab, tab.title)
+          await prepareTabForChatContext(tab)
         } catch (e: any) {
           log.error('Error preparing page tabs for chat context', e)
           let errors = $activeTabMagic.errors
@@ -2078,7 +2160,7 @@
     if (!bookmarkedResource) {
       log.debug('no bookmarked resource')
 
-      const resource = await $activeBrowserTab.bookmarkPage(true)
+      const resource = await $activeBrowserTab.bookmarkPage({ silent: true })
       bookmarkedResource = resource.id
     }
 
@@ -3349,7 +3431,7 @@
 
             if (dragData.type === 'page' && $activeTabMagic?.showSidebar) {
               log.debug('prepare tab for chat context after moving to magic')
-              prepareTabForChatContext(dragData, dragData.title)
+              preparePageTabsForChatContext([dragData])
             }
 
             telemetry.trackMoveTab(MoveTabEventAction.AddMagic)

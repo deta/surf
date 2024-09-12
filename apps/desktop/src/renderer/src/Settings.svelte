@@ -159,13 +159,13 @@
     {:else if $activeTab === 'oasis'}
       <article class="oasis">
         {#if userConfigSettings}
-          <SettingsOption
+          <!-- <SettingsOption
             icon="bookmark"
             title="Auto Save Resources"
             description="If enabled, every web page you visit will be automatically saved to Your Stuff."
             bind:value={userConfigSettings.auto_save_resources}
             on:update={handleSettingsUpdate}
-          />
+          /> -->
 
           <SettingsOption
             icon="search"

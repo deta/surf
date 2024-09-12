@@ -9,6 +9,7 @@
   import { active } from 'd3'
 
   export let className: string = ''
+  export let id: string = ''
 
   const log = useLogScope('CitationItem')
 
@@ -24,12 +25,17 @@
   let tooltipText: string
 
   const getID = () => {
-    const id = slotElem.innerText
-    if (!id) {
-      log.error('Citation item does not have an ID')
+    const innerId = slotElem.innerText
+    if (innerId) {
+      return innerId
     }
 
-    return id
+    if (id) {
+      return id.replace('user-content-', '')
+    }
+
+    log.error('Citation item does not have an ID')
+    return ''
   }
 
   const handleClick = (event: MouseEvent) => {
