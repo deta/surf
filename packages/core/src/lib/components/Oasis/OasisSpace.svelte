@@ -1407,7 +1407,7 @@
           </div>
         {/if}
 
-        <div class="drawer-chat-search">
+        <div class="drawer-chat-search bg-sky-50">
           <div class="search-input-wrapper">
             <SearchInput bind:value={$searchValue} on:search={handleSearch} />
           </div>
@@ -1636,7 +1636,7 @@
       justify-content: center;
       width: 100%;
       gap: 16px;
-      padding: 1rem 1rem 1rem 1rem;
+      padding: 0.5rem 1rem;
       transition: all 240ms ease-out;
       .drawer-chat {
         position: relative;

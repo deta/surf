@@ -117,6 +117,7 @@
   import DevOverlay from './Browser/DevOverlay.svelte'
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
   import BrowserActions from './Browser/BrowserActions.svelte'
+  import CreateLiveSpace from './Oasis/CreateLiveSpace.svelte'
   import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
 
   let activeTabComponent: TabItem | null = null
@@ -182,6 +183,7 @@
     errors: []
   })
   const bookmarkingSuccess = writableAutoReset(false, 1000)
+  const showCreateLiveSpaceDialog = writable(false)
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
   const activeTabsHistory = writable<string[]>([])
@@ -3854,7 +3856,7 @@
                         on:input-enter={handleBlur}
                         on:unarchive-tab={handleUnarchiveTab}
                         on:bookmark={() => handleBookmark()}
-                        on:create-live-space={handleCreateLiveSpace}
+                        on:create-live-space={() => showCreateLiveSpaceDialog.set(true)}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
                         on:include-tab={handleIncludeTabInMagic}
@@ -3940,7 +3942,7 @@
                         on:input-enter={handleBlur}
                         on:unarchive-tab={handleUnarchiveTab}
                         on:bookmark={() => handleBookmark()}
-                        on:create-live-space={handleCreateLiveSpace}
+                        on:create-live-space={() => showCreateLiveSpaceDialog.set(true)}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
                         on:include-tab={handleIncludeTabInMagic}

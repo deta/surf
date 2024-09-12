@@ -1059,7 +1059,7 @@
         {:else if $searchValue.length < 20}
           <button
             class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
-              ? 'bottom-7'
+              ? 'bottom-3'
               : 'bottom-3'} z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
             on:click={() => {
               showTabSearch = showTabSearch === 1 ? 2 : 1
@@ -1111,8 +1111,8 @@
           > -->
           <div
             class={showTabSearch === 1
-              ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : ''}`
-              : 'w-[85vw] h-[90vh]'}
+              ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : 'h-[58px]'}`
+              : 'w-[90vw] h-[calc(100vh-120px)]'}
           >
             {#if showTabSearch === 1 && $searchValue.length}
               <Command.List class="m-2 no-scrollbar">
@@ -1236,7 +1236,7 @@
             <div
               class={showTabSearch === 2
                 ? 'w-full absolute bottom-0 flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
-                : 'w-full absolute bottom-0 flex items-center justify-center p-2  border-t-[1px] border-neutral-100'}
+                : 'w-full absolute bottom-0 flex items-center justify-center p-2  border-t-[1px] border-neutral-100 bg-white'}
             >
               <div class={'flex items-center relative'}>
                 <Command.Input
