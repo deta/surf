@@ -9,7 +9,13 @@
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
-  import { ResourceTagsBuiltInKeys, ResourceTypes, type Space } from '../../types'
+  import {
+    ResourceTagsBuiltInKeys,
+    ResourceTypes,
+    type Space,
+    type DragTypes,
+    DragTypeNames
+  } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
@@ -246,24 +252,26 @@
     dispatch('include-tab', tab.id)
   }
 
-  const handleDragStart = async (drag: DragculaDragEvent) => {
-    drag.dataTransfer?.setData('text/plain', tab.title)
+  const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
     isDragging = true
-    drag.item!.data = {
-      'surf/tab': {
-        ...tab,
-        pinned
-      }
-    }
+
+    drag.item!.data.setData<DragTypes>(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
+
     if (tab.resourceBookmark !== undefined && tab.resourceBookmark !== null) {
-      const resource = await resourceManager.getResource(tab.resourceBookmark)
-      if (resource !== null) drag.item!.data['horizon/resource/id'] = tab.resourceBookmark
+      drag.item!.data.setData(DragTypeNames.ASYNC_SURF_RESOURCE, () =>
+        resourceManager.getResource(tab.resourceBookmark)
+      )
     }
     drag.continue()
   }
+
   const handleDragEnd = (drag: DragculaDragEvent) => {
     isDragging = false
     dispatch('DragEnd', drag)
+  }
+
+  const handleDragEnter = (drag: DragculaDragEvent) => {
+    drag.continue()
   }
 
   const handleDrop = async (drag: DragculaDragEvent) => {
@@ -325,7 +333,7 @@
       style="position: absolute; inset-inline: 10%; inset-block: 20%;"
       use:HTMLDragZone.action={{}}
       on:DragEnter={(drag) => {
-        const dragData = drag.data
+        /*const dragData = drag.data
         if (
           drag.isNative ||
           (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space') ||
@@ -334,7 +342,9 @@
           drag.continue() // Allow the drag
           return
         }
-        drag.abort()
+        drag.abort()*/
+        // TODO: FIX
+        drag.continue()
       }}
       on:Drop={handleDrop}
     ></div>

@@ -31,15 +31,14 @@ interface IProps extends Omit<DragOperation, "isNative"> {
 }
 
 export class DragculaDragEvent<
-  DataTypes extends { [key: string]: unknown } = {},
-  Data extends DataTransfer | DragData = any
+  DataTypes extends { [key: string]: any } = { [key: string]: any }
 > extends Event {
   readonly id: string;
 
   readonly from: DragZone | null;
   readonly to: DragZone | null;
 
-  readonly item: DragItem | null; // DragItem, null it native drag from outside
+  readonly item: DragItem<DataTypes> | null; // DragItem, null it native drag from outside
   readonly dataTransfer: DataTransfer | null; // DataTransfer, if custom drag, still original event dataTransfer
 
   readonly index: number | null = null; // index used e.g. by AxisDragZone

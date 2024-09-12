@@ -39,7 +39,7 @@
     createResourceManager
   } from '../service/resources'
 
-  import { type Space, type SpaceSource } from '../types'
+  import { DragTypeNames, type DragTypes, type Space, type SpaceSource } from '../types'
 
   import BrowserTab, { type BrowserTabNewTabEvent } from './Browser/BrowserTab.svelte'
   import BrowserHomescreen from './Browser/BrowserHomescreen.svelte'
@@ -3233,123 +3233,75 @@
     log.debug('State updated successfully')
   }
 
-  const handleDragEnterSidebar = async (drag: DragculaDragEvent) => {
+  const handleDragEnterSidebar = async (drag: DragculaDragEvent<DragTypes>) => {
     drag.continue()
   }
 
-  const handleDropSidebar = async (drag: DragculaDragEvent) => {
-    log.debug('DROP DRAGCULA', drag)
+  const handleDropSidebar = async (drag: DragculaDragEvent<DragTypes>) => {
+    log.debug('dropping onto sidebar', drag)
 
     if (drag.isNative) {
+      log.error('Native drop on sidebar not implemented yet!', drag)
       // TODO: Handle otherwise
       return
-    }
-
-    if (drag.data['oasis/resource'] !== undefined) {
-      const resource = drag.data['oasis/resource']
-
-      if (
-        (
-          [
-            ResourceTypes.LINK,
-            ResourceTypes.ARTICLE,
-            ResourceTypes.POST,
-            ResourceTypes.POST_YOUTUBE,
-            ResourceTypes.POST_TWITTER,
-            ResourceTypes.POST_REDDIT,
-            ResourceTypes.CHANNEL_YOUTUBE,
-            ResourceTypes.PLAYLIST_YOUTUBE,
-            ResourceTypes.CHAT_THREAD,
-            ResourceTypes.CHAT_THREAD_SLACK,
-            ResourceTypes.HISTORY_ENTRY
-          ] as string[]
-        ).includes(resource.type)
-      ) {
-        let url = resource.parsedData.url
-        if (resource.type === ResourceTypes.HISTORY_ENTRY) {
-          url = (resource as ResourceHistoryEntry).parsedData?.raw_url ?? url
-        }
-
-        let tab = await createPageTab(url, {
-          active: true,
-          trigger: CreateTabEventTrigger.Drop
-        })
-        tab.index = drag.index || 0
-
-        await bulkUpdateTabsStore(
-          get(tabs).map((tab) => ({
-            id: tab.id,
-            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
-          }))
-        )
-
-        log.debug('State updated successfully')
-      }
-      drag.continue()
-      return
-    }
-
-    // todo refactor this
-    if (drag.data['surf/tab'] !== undefined) {
-      const dragData = drag.data['surf/tab'] as Tab
+    } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
+      const droppedTab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
       tabs.update((_tabs) => {
         let unpinnedTabsArray = get(unpinnedTabs)
         let pinnedTabsArray = get(pinnedTabs)
         let magicTabsArray = get(magicTabs)
 
-        let fromTabs: ITab[]
-        let toTabs: ITab[]
+        let fromTabs: Tab[] = []
+        let toTabs: Tab[] = []
 
-        if (drag.from.id === 'sidebar-unpinned-tabs') {
+        if (drag.from?.id === 'sidebar-unpinned-tabs') {
           fromTabs = unpinnedTabsArray
-        } else if (drag.from.id === 'sidebar-pinned-tabs') {
+        } else if (drag.from?.id === 'sidebar-pinned-tabs') {
           fromTabs = pinnedTabsArray
-        } else if (drag.from.id === 'sidebar-magic-tabs') {
+        } else if (drag.from?.id === 'sidebar-magic-tabs') {
           fromTabs = magicTabsArray
         }
-        if (drag.to.id === 'sidebar-unpinned-tabs') {
+        if (drag.to?.id === 'sidebar-unpinned-tabs') {
           toTabs = unpinnedTabsArray
-        } else if (drag.to.id === 'sidebar-pinned-tabs') {
+        } else if (drag.to?.id === 'sidebar-pinned-tabs') {
           toTabs = pinnedTabsArray
-        } else if (drag.to.id === 'sidebar-magic-tabs') {
+        } else if (drag.to?.id === 'sidebar-magic-tabs') {
           toTabs = magicTabsArray
         }
 
         // CASE: to already includes tab
-        if (toTabs.find((v) => v.id === dragData.id)) {
-          log.warn('ONLY Update existin tab')
-          const existing = fromTabs.find((v) => v.id === dragData.id)
+        if (toTabs.find((v) => v.id === droppedTab.id)) {
+          const existing = fromTabs.find((v) => v.id === droppedTab.id)
           if (existing && drag.index !== undefined) {
-            existing.index = drag.index
+            existing.index = drag.index ?? 0
           }
           fromTabs.splice(
-            fromTabs.findIndex((v) => v.id === dragData.id),
+            fromTabs.findIndex((v) => v.id === droppedTab.id),
             1
           )
-          fromTabs.splice(existing.index, 0, existing)
+          fromTabs.splice(existing!.index, 0, existing!)
         } else {
-          log.warn('ADDING NEW ONE')
           // Remove old
-          const idx = fromTabs.findIndex((v) => v.id === dragData.id)
+          const idx = fromTabs.findIndex((v) => v.id === droppedTab.id)
           if (idx > -1) {
             fromTabs.splice(idx, 1)
           }
 
-          if (drag.to.id === 'sidebar-pinned-tabs') {
-            dragData.pinned = true
-            dragData.magic = false
+          if (drag.to?.id === 'sidebar-pinned-tabs') {
+            droppedTab.pinned = true
+            droppedTab.magic = false
 
-            cachedMagicTabs.delete(dragData.id)
+            cachedMagicTabs.delete(droppedTab.id)
             telemetry.trackMoveTab(MoveTabEventAction.Pin)
-          } else if (drag.to.id === 'sidebar-magic-tabs') {
-            dragData.pinned = false
-            dragData.magic = true
+          } else if (drag.to?.id === 'sidebar-magic-tabs') {
+            droppedTab.pinned = false
+            droppedTab.magic = true
 
-            cachedMagicTabs.add(dragData.id)
+            cachedMagicTabs.add(droppedTab.id)
 
-            if (dragData.type === 'page' && $activeTabMagic?.showSidebar) {
+            if (droppedTab.type === 'page' && $activeTabMagic?.showSidebar) {
               log.debug('prepare tab for chat context after moving to magic')
-              prepareTabForChatContext(dragData, dragData.title)
+              prepareTabForChatContext(droppedTab, droppedTab.title)
             }
 
             telemetry.trackMoveTab(MoveTabEventAction.AddMagic)
@@ -3358,7 +3310,7 @@
               magicTabsArray.length + 1
             )
           } else {
-            if (dragData.magic) {
+            if (droppedTab.magic) {
               telemetry.trackMoveTab(MoveTabEventAction.RemoveMagic)
               telemetry.trackPageChatContextUpdate(
                 PageChatUpdateContextEventAction.Remove,
@@ -3368,15 +3320,13 @@
               telemetry.trackMoveTab(MoveTabEventAction.Unpin)
             }
 
-            dragData.pinned = false
-            dragData.magic = false
-            cachedMagicTabs.delete(dragData.id)
+            droppedTab.pinned = false
+            droppedTab.magic = false
+            cachedMagicTabs.delete(droppedTab.id)
           }
 
-          toTabs.splice(drag.index || 0, 0, dragData)
+          toTabs.splice(drag.index || 0, 0, droppedTab)
         }
-
-        // log.log(...pinnedTabsArray, ...unpinnedTabsArray, ...magicTabsArray)
 
         // Update the indices of the tabs in all lists
         const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
@@ -3405,6 +3355,63 @@
 
       log.debug('State updated successfully')
       // Mark the drop completed
+      drag.continue()
+    } else if (
+      drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+      drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+    ) {
+      let resource: Resource | null = null
+      if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+        resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+      } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+        const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+        resource = await resourceFetcher()
+      }
+
+      if (resource === null) {
+        log.warn('Dropped resource but resource is null! Aborting drop!')
+        drag.abort()
+        return
+      }
+
+      if (
+        (
+          [
+            ResourceTypes.LINK,
+            ResourceTypes.ARTICLE,
+            ResourceTypes.POST,
+            ResourceTypes.POST_YOUTUBE,
+            ResourceTypes.POST_TWITTER,
+            ResourceTypes.POST_REDDIT,
+            ResourceTypes.CHANNEL_YOUTUBE,
+            ResourceTypes.PLAYLIST_YOUTUBE,
+            ResourceTypes.CHAT_THREAD,
+            ResourceTypes.CHAT_THREAD_SLACK,
+            ResourceTypes.HISTORY_ENTRY
+          ] as string[]
+        ).includes(resource.type)
+      ) {
+        // TODO: (dragcula): Can we use this / should use a different one?
+        let url = resource.parsedData.url
+        if (resource.type === ResourceTypes.HISTORY_ENTRY) {
+          url = (resource as ResourceHistoryEntry).parsedData?.raw_url ?? url
+        }
+
+        let tab = await createPageTab(url, {
+          active: true,
+          trigger: CreateTabEventTrigger.Drop
+        })
+        tab.index = drag.index || 0
+
+        await bulkUpdateTabsStore(
+          get(tabs).map((tab) => ({
+            id: tab.id,
+            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+          }))
+        )
+
+        log.debug('State updated successfully')
+      }
       drag.continue()
     }
   }
@@ -3441,8 +3448,7 @@
   }
 
   const handleTabDragEnd = async (drag: DragculaDragEvent) => {
-    log.debug('TAB DRAG END', drag.effect)
-
+    // TODO: (dragcula): migrate
     if (
       drag.status === 'done' &&
       drag.effect === 'move' &&
@@ -3455,9 +3461,10 @@
     drag.continue()
   }
 
-  const handleDropOnSpaceTab = async (drag: DragculaDragEvent, spaceId: string) => {
-    log.warn('DROP ON SPACE TAB', spaceId, drag)
-    if (drag.item !== null) drag.item.dragEffect = 'copy'
+  const handleDropOnSpaceTab = async (drag: DragculaDragEvent<DragTypes>, spaceId: string) => {
+    log.debug('dropping onto sidebar tab', drag)
+
+    if (drag.item !== null) drag.item.dropEffect = 'copy'
 
     const toast = toasts.loading(
       spaceId === 'all'
@@ -3471,13 +3478,13 @@
       ) &&
       !drag.metaKey
     ) {
-      drag.item!.dragEffect = 'copy' // Make sure tabs are always copy from sidebar
+      drag.item!.dropEffect = 'copy' // Make sure tabs are always copy from sidebar
     }
 
     let resourceIds: string[] = []
     if (drag.isNative) {
       log.debug('Dropped native', drag)
-      const event = new DragEvent('drop', { dataTransfer: drag.data })
+      const event = new DragEvent('drop', { dataTransfer: drag.dataTransfer })
       log.debug('native drop drop event emulated:', event)
 
       const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
@@ -3501,15 +3508,23 @@
       try {
         const existingResources: string[] = []
 
-        const dragData = drag.data as { 'surf/tab': Tab; 'oasis/resource': Resource }
-        if (dragData['surf/tab'] !== undefined) {
-          if (dragData['horizon/resource/id'] !== undefined) {
-            const resourceId = dragData['horizon/resource/id']
-            resourceIds.push(resourceId)
-            existingResources.push(resourceId)
-          } else if (dragData['surf/tab'].type === 'page') {
-            const tab = dragData['surf/tab'] as TabPage
-
+        if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+          const resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+          resourceIds.push(resource.id)
+        } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+          const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+          const resource = await resourceFetcher()
+          if (resource === null) {
+            //TODO :TOast error
+            log.warn('Dropped async resource, but resource is null, aborting drop!')
+            drag.abort()
+            return
+          }
+          resourceIds.push(resource.id)
+        } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
+          let tab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
+          if (tab.type === 'page') {
+            tab = tab as TabPage
             if (tab.resourceBookmark) {
               log.debug('Detected resource from dragged tab', tab.resourceBookmark)
               resourceIds.push(tab.resourceBookmark)
@@ -3534,9 +3549,6 @@
               }
             }
           }
-        } else if (dragData['oasis/resource'] !== undefined) {
-          const resource = dragData['oasis/resource']
-          resourceIds.push(resource.id)
         }
 
         if (existingResources.length > 0) {

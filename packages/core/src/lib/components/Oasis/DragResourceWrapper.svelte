@@ -10,14 +10,20 @@
   import { ResourceTypes, type ResourceData } from '@horizon/types'
   import { get } from 'svelte/store'
   import { MEDIA_TYPES } from '../../service/mediaImporter'
-  import { HTMLDragItem } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
+  import { DragTypeNames, type DragTypes } from '../../types'
 
   export let draggable = true
   export let resource: Resource
 
   const log = useLogScope('DragResourceWrapper')
 
-  const handleDragStart = (e: DragEvent) => {
+  const handleDragStart = (drag: DragculaDragEvent) => {
+    drag.item!.data.setData<DragTypes>(DragTypeNames.SURF_RESOURCE, resource)
+    drag.continue()
+  }
+
+  const OLD__handleDragStart = (e: DragEvent) => {
     log.debug('Item drag start', e, resource.id)
 
     // if (
@@ -126,12 +132,7 @@
   use:HTMLDragItem.action={{}}
   class="drag-item"
   style:view-transition-name="oasis-resource-{resource.id}"
-  on:DragStart={(drag) => {
-    drag.item.data = {
-      'oasis/resource': resource
-    }
-    drag.continue()
-  }}
+  on:DragStart={handleDragStart}
 >
   <slot />
 </div>

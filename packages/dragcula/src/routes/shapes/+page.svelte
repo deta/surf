@@ -60,7 +60,7 @@
     }
   ]);
 
-  async function handleDrop(drag: DragculaDragEvent) {
+  async function handleDrop(drag: DragculaDragEvent<{ item: IShape }>) {
     console.log("DROP", drag);
     const from =
       drag.from === null
@@ -90,7 +90,7 @@
             }
           })(drag.to.id);
 
-    const data = drag.data.getData("item") as IShape;
+    const data = drag.data.getData("item");
 
     from?.update((items) => {
       items.splice(

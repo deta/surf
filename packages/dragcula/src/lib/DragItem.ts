@@ -5,13 +5,13 @@ import { assert, clamp, genId, getParentZoneEl, ii_TRACE, log } from "./utils/in
 import { DragculaDragEvent } from "./Event.js";
 import { DragZone } from "./DragZone.js";
 
-export class DragItem {
+export class DragItem<DataTypes extends Record<string, any> = { [key: string]: any }> {
   static ITEMS = new Map<string, DragItem>();
 
   readonly id: string;
 
-  // === STATE
-  data: DragData;
+  // === STAT
+  data: DragData<DataTypes>;
   dropEffect: DropEffect = "move";
 
   // === CONSTRUCTOR

@@ -115,39 +115,148 @@ export class DragOperation {
   }
 }
 
-export class DragData<
-  T extends { [key: string]: unknown | (() => Promise<unknown>) } = { [key: string]: string }
-> {
-  #data = new Map<string, () => Promise<unknown> | unknown>();
+/*export class DragData<T extends { [key: string]: (unknown | (() => Promise<unknown>)) } = { [key: string]: string }> {
+	#data = new Map<string, unknown | (() => Promise<unknown>)>();
 
-  constructor(from?: Record<keyof T, unknown>) {
+	constructor(from?: Record<keyof T, unknown>) {
+		if (from) {
+			for (const [key, value] of Object.entries(from)) {
+				this.setData(key, value as any);
+			}
+		}
+	}
+
+	public clearData(key?: keyof T | (string & {})) {
+		if (!key) {
+			this.#data.clear();
+		}
+		else this.#data.delete(key as string);
+	}
+
+	public setData<K extends keyof T | (string & {})>(
+		key: K,
+		value: K extends keyof T
+			? T[K]
+			: unknown
+	) {
+		// @ts-ignore this still works for the returing type and is fine!
+		this.#data.set(key as string, value);
+	}
+
+	public getData<V extends string, K extends { [key: string]: (unknown | (() => Promise<unknown>)) } = { [key: string]: string }>(key: V): V extends keyof T ? T[V] : unknown {
+		const value = this.#data.get(key as string);
+		return (typeof value === 'function' ? value() : value) as K extends keyof T ? T[K] : unknown;
+	}
+
+	public hasData(key: keyof T | (string & {})): boolean {
+		return this.#data.has(key as string);
+	}
+}*/
+
+/*export class DragData<T extends Record<string, unknown | (() => Promise<unknown>)> = Record<string, string>> {
+	#data = new Map<string, unknown | (() => Promise<unknown>)>();
+
+	constructor(from?: Partial<T>) {
+		if (from) {
+			for (const [key, value] of Object.entries(from)) {
+				this.setData(key, value);
+			}
+		}
+	}
+
+	public clearData(key?: keyof T | string): void {
+		if (key === undefined) {
+			this.#data.clear();
+		} else {
+			this.#data.delete(String(key));
+		}
+	}
+
+	public setData<K extends keyof T | string>(
+		key: K,
+		value: K extends keyof T ? T[K] : unknown
+	): void {
+		this.#data.set(String(key), value);
+	}
+
+	public getData<K extends keyof T | string>(key: K): K extends keyof T ? T[K] : string {
+		const value = this.#data.get(String(key));
+		return (typeof value === 'function' ? value() : value) as K extends keyof T ? T[K] : string;
+	}
+
+	public hasData(key: keyof T | string): boolean {
+		return this.#data.has(String(key));
+	}
+}*/
+
+/*export class DragData<T extends Record<string, unknown> = Record<string, unknown>> {
+	#data = new Map<string, unknown>();
+
+	constructor(from?: Partial<T>) {
+		if (from) {
+			for (const [key, value] of Object.entries(from)) {
+				this.setData(key, value);
+			}
+		}
+	}
+
+	public clearData(key?: keyof T | string): void {
+		if (key === undefined) {
+			this.#data.clear();
+		} else {
+			this.#data.delete(String(key));
+		}
+	}
+
+	public setData<K extends keyof T | string>(
+		key: K,
+		value: K extends keyof T ? T[K] : unknown
+	): void {
+		this.#data.set(String(key), value);
+	}
+
+	public getData<TV extends { [key: string]: unknown } = T, UN extends { [key: keyof TV]: string }, K extends keyof TV | string = string>(key: K): K extends keyof TV ? TV[K] : unknown {
+		return this.#data.get(String(key)) as K extends keyof TV ? TV[K] : unknown;
+	}
+
+	public hasData(key: keyof T | string): boolean {
+		return this.#data.has(String(key));
+	}
+}*/
+
+export class DragData<T extends Record<string, any> = { [key: string]: any }> {
+  #data: Map<string, unknown> = new Map();
+
+  constructor(from?: Partial<T>) {
     if (from) {
       for (const [key, value] of Object.entries(from)) {
-        this.setData(key, value as any);
+        this.setData(key, value);
       }
     }
   }
 
-  public clearData(key?: keyof T | (string & {})) {
-    if (!key) {
-      this.#data.clear();
-    } else this.#data.delete(key as string);
+  public getData<K extends keyof T>(key: K): T[K];
+  public getData(key: string): unknown;
+  public getData(key: string): unknown {
+    return this.#data.get(key);
   }
 
-  public setData<K extends keyof T | (string & {})>(
-    key: K,
-    value: K extends keyof T ? T[K] : unknown
-  ) {
-    // @ts-ignore this still works for the returing type and is fine!
-    this.#data.set(key as string, value);
+  public setData<K extends keyof T>(key: K, value: T[K]): void;
+  public setData(key: string, value: unknown): void;
+  public setData(key: string, value: unknown): void {
+    this.#data.set(key, value);
   }
 
-  public getData<K extends keyof T | (string & {})>(key: K): K extends keyof T ? T[K] : unknown {
-    const value = this.#data.get(key as string);
-    return (typeof value === "function" ? value() : value) as K extends keyof T ? T[K] : unknown;
+  public hasData<K extends keyof T>(key: K): boolean;
+  public hasData(key: string): boolean;
+  public hasData(key: string): boolean {
+    return this.#data.has(key);
   }
 
-  public hasData(key: keyof T | (string & {})): boolean {
-    return this.#data.has(key as string);
+  public clearData<K extends keyof T>(key?: K): void;
+  public clearData(key?: string): void;
+  public clearData(key?: string): void {
+    if (key === undefined) this.#data.clear();
+    else this.#data.delete(key);
   }
 }
