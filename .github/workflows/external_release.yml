@@ -125,7 +125,7 @@ jobs:
           S3_UPDATES_BUCKET_NAME: ${{ secrets.S3_UPDATES_BUCKET_NAME }}
           S3_UPDATES_BUCKET_REGION: ${{ secrets.S3_UPDATES_BUCKET_REGION }}
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.os }}-${{ matrix.architecture }}
           path: |
@@ -138,7 +138,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           path: build/
       - name: create GitHub Release
