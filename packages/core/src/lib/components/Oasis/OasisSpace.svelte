@@ -85,6 +85,8 @@
   import { useConfig } from '../../service/config'
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
 
+  import CreateNewSpace from './CreateNewSpace.svelte'
+
   export let spaceId: string
   export let active: boolean = false
   export let historyEntriesManager: HistoryEntriesManager
@@ -1355,7 +1357,7 @@
   zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
   <div class="relative wrapper bg-sky-100/50">
-    {#if !isEverythingSpace}
+    {#if !isEverythingSpace && $space?.name.folderName !== 'New Space'}
       <div
         class="drawer-bar bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 bg-sky-100/90 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
         class:translate-y-24={hideBar && active}
@@ -1406,102 +1408,95 @@
           </button> -->
           </div>
         {/if}
+        {#if $space?.name.folderName !== 'New Space'}
+          <div class="drawer-chat-search bg-sky-50">
+            <div class="search-input-wrapper">
+              <SearchInput bind:value={$searchValue} on:search={handleSearch} />
+            </div>
 
-        <div class="drawer-chat-search bg-sky-50">
-          <div class="search-input-wrapper">
-            <SearchInput bind:value={$searchValue} on:search={handleSearch} />
-          </div>
-
-          {#if $space && ($space.name.liveModeEnabled || ($space.name.sources ?? []).length > 0 || $space.name.smartFilterQuery)}
-            {#key '' + $space.name.liveModeEnabled + ($newlyLoadedResources.length > 0)}
-              <button
-                class="live-mode"
-                class:live-enabled={$space.name.liveModeEnabled &&
-                  $newlyLoadedResources.length === 0 &&
-                  !$loadingSpaceSources}
-                disabled={$loadingSpaceSources}
-                on:click={handleRefreshLiveSpace}
-                use:tooltip={{
-                  text:
-                    $newlyLoadedResources.length > 0
-                      ? 'New content has been added to the space. Click to refresh.'
-                      : $space.name.liveModeEnabled
-                        ? ($space.name.sources ?? []).length > 0
-                          ? 'The sources will automatically be loaded when you open the space. Click to manually refresh.'
-                          : 'New resources that match the smart query will automatically be added. Click to manually refresh.'
-                        : ($space.name.sources ?? []).length > 0
-                          ? 'Click to load the latest content from the connected sources'
-                          : 'Click to load the latest content based on the smart query',
-                  position: 'top'
-                }}
-              >
-                {#if $loadingSpaceSources}
-                  <Icon name="spinner" />
-                  {#if $newlyLoadedResources.length > 0}
-                    <span
-                      >Processing items (<span class="tabular-nums"
-                        >{$newlyLoadedResources.length} / {$processingSourceItems.length}</span
-                      >)</span
-                    >
-                  {:else if ($space.name.sources ?? []).length > 0}
-                    Loading source{($space.name.sources ?? []).length > 1 ? 's' : ''}…
-                  {:else}
-                    Refreshing…
-                  {/if}
-                {:else if $newlyLoadedResources.length > 0}
-                  {#await fetchNewlyAddedResourcePrevies()}
-                    <Icon name="reload" />
-                    Update Space with {$newlyLoadedResources.length} items
-                  {:then previews}
-                    <!-- <Icon name="reload" /> -->
-                    <div class="flex items-center -space-x-3">
-                      {#each previews as preview (preview.id)}
-                        <img
-                          class="w-6 h-6 rounded-lg overflow-hidden bg-white border-2 border-white/75 box-content"
-                          src={`https://www.google.com/s2/favicons?domain=${preview.url}&sz=48`}
-                          alt={`favicon`}
-                        />
-                      {/each}
-                    </div>
-
-                    {#if $newlyLoadedResources.length > previews.length}
-                      <span>+{$newlyLoadedResources.length - previews.length} new items</span>
-                    {:else}
+            {#if $space && ($space.name.liveModeEnabled || ($space.name.sources ?? []).length > 0 || $space.name.smartFilterQuery)}
+              {#key '' + $space.name.liveModeEnabled + ($newlyLoadedResources.length > 0)}
+                <button
+                  class="live-mode"
+                  class:live-enabled={$space.name.liveModeEnabled &&
+                    $newlyLoadedResources.length === 0 &&
+                    !$loadingSpaceSources}
+                  disabled={$loadingSpaceSources}
+                  on:click={handleRefreshLiveSpace}
+                  use:tooltip={{
+                    text:
+                      $newlyLoadedResources.length > 0
+                        ? 'New content has been added to the space. Click to refresh.'
+                        : $space.name.liveModeEnabled
+                          ? ($space.name.sources ?? []).length > 0
+                            ? 'The sources will automatically be loaded when you open the space. Click to manually refresh.'
+                            : 'New resources that match the smart query will automatically be added. Click to manually refresh.'
+                          : ($space.name.sources ?? []).length > 0
+                            ? 'Click to load the latest content from the connected sources'
+                            : 'Click to load the latest content based on the smart query',
+                    position: 'top'
+                  }}
+                >
+                  {#if $loadingSpaceSources}
+                    <Icon name="spinner" />
+                    {#if $newlyLoadedResources.length > 0}
                       <span
-                        >{$newlyLoadedResources.length} new item{$newlyLoadedResources.length > 1
-                          ? 's'
-                          : ''}</span
+                        >Processing items (<span class="tabular-nums"
+                          >{$newlyLoadedResources.length} / {$processingSourceItems.length}</span
+                        >)</span
                       >
+                    {:else if ($space.name.sources ?? []).length > 0}
+                      Loading source{($space.name.sources ?? []).length > 1 ? 's' : ''}…
+                    {:else}
+                      Refreshing…
                     {/if}
-                  {/await}
-                {:else if $space.name.liveModeEnabled}
-                  <Icon name="news" />
-                  Auto Refresh
-                {:else if ($space.name.sources ?? []).length > 0}
-                  <Icon name="reload" />
-                  Refresh Sources
-                {:else}
-                  <Icon name="reload" />
-                  Smart Refresh
-                {/if}
+                  {:else if $newlyLoadedResources.length > 0}
+                    {#await fetchNewlyAddedResourcePrevies()}
+                      <Icon name="reload" />
+                      Update Space with {$newlyLoadedResources.length} items
+                    {:then previews}
+                      <!-- <Icon name="reload" /> -->
+                      <div class="flex items-center -space-x-3">
+                        {#each previews as preview (preview.id)}
+                          <img
+                            class="w-6 h-6 rounded-lg overflow-hidden bg-white border-2 border-white/75 box-content"
+                            src={`https://www.google.com/s2/favicons?domain=${preview.url}&sz=48`}
+                            alt={`favicon`}
+                          />
+                        {/each}
+                      </div>
+
+                      {#if $newlyLoadedResources.length > previews.length}
+                        <span>+{$newlyLoadedResources.length - previews.length} new items</span>
+                      {:else}
+                        <span
+                          >{$newlyLoadedResources.length} new item{$newlyLoadedResources.length > 1
+                            ? 's'
+                            : ''}</span
+                        >
+                      {/if}
+                    {/await}
+                  {:else if $space.name.liveModeEnabled}
+                    <Icon name="news" />
+                    Auto Refresh
+                  {:else if ($space.name.sources ?? []).length > 0}
+                    <Icon name="reload" />
+                    Refresh Sources
+                  {:else}
+                    <Icon name="reload" />
+                    Smart Refresh
+                  {/if}
+                </button>
+              {/key}
+            {/if}
+
+            <div class="drawer-chat active">
+              <button class="close-button" on:click={handleCloseChat}>
+                <Icon name="close" size="15px" />
               </button>
-            {/key}
-          {/if}
-
-          <!-- <div class="rounded-lg bg-neutral-100 p-2 absolute right-3">
-          <select bind:value={$selectedFilter} class="bg-transparent focus:outline-none">
-            <option value="all">Show All</option>
-            <option value="saved_by_user">Saved by Me</option>
-          </select>
-        </div> -->
-
-          <div class="drawer-chat active">
-            <button class="close-button" on:click={handleCloseChat}>
-              <Icon name="close" size="15px" />
-            </button>
+            </div>
           </div>
-        </div>
-        <!-- <ProgressiveBlur /> -->
+        {/if}
       </div>
     {/if}
 
@@ -1524,7 +1519,7 @@
       </div>
     {/if}
 
-    {#if $spaceResourceIds.length > 0}
+    {#if $spaceResourceIds.length > 0 && !isEverythingSpace}
       <OasisResourcesView
         resourceIds={spaceResourceIds}
         selected={$selectedItem}
@@ -1563,6 +1558,8 @@
           <Icon name="spinner" size="20px" />
         </div>
       {/if}
+    {:else if $space?.name.folderName === 'New Space'}
+      <CreateNewSpace />
     {:else if $loadingContents}
       <div class="content-wrapper">
         <div class="content">

@@ -930,6 +930,20 @@
     openResourceAsTab(e.detail)
   }
 
+  const handleCreateEmptySpace = async () => {
+    await tick()
+    const spaceID = await createSpaceRef.handleCreateSpace({
+      detail: {
+        name: 'New Space',
+        aiEnabled: false,
+        colors: ['#000000', '#ffffff'],
+        userPrompt: ''
+      }
+    })
+
+    selectedSpaceId.set(spaceID)
+  }
+
   const handleCreateSpace = async (
     e: CustomEvent<{
       name: string
@@ -1132,26 +1146,11 @@
                     interactive={false}
                     on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
                     on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
-                    on:open-creation-modal={() => showCreationModal.set(true)}
+                    on:create-empty-space={handleCreateEmptySpace}
                     on:open-resource={handleOpen}
                   />
                 </div>
                 <div class="stuff-wrap h-full w-full">
-                  {#if $showCreationModal}
-                    <div
-                      data-vaul-no-drag
-                      class="create-wrapper absolute inset-0 z-50 flex items-center justify-center bg-opacity-50"
-                    >
-                      <div
-                        class=" rounded-lg w-full h-full max-w-screen-lg max-h-screen-lg overflow-auto flex items-center justify-center"
-                      >
-                        <CreateNewSpace
-                          on:close-modal={() => showCreationModal.set(false)}
-                          on:submit={handleCreateSpace}
-                        />
-                      </div>
-                    </div>
-                  {/if}
                   {#if $selectedSpaceId !== null}
                     <OasisSpace
                       spaceId={$selectedSpaceId}

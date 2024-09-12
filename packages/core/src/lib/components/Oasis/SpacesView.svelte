@@ -28,7 +28,7 @@
   const dispatch = createEventDispatcher<{
     createTab: { tab: TabSpace; active: boolean }
     'space-selected': { id: string; canGoBack: boolean }
-    'open-creation-modal': void
+    'create-empty-space': void
   }>()
 
   let sidebarElement: HTMLElement
@@ -217,8 +217,8 @@
     }
   }
 
-  const handleShowCreationModal = () => {
-    dispatch('open-creation-modal')
+  const handleCreateEmptySpace = () => {
+    dispatch('create-empty-space')
   }
 
   onMount(() => {
@@ -257,7 +257,7 @@
       {/key}
     {/each}
   </div>
-  <button class="action-new-space" on:click={handleShowCreationModal}>
+  <button class="action-new-space" on:click={handleCreateEmptySpace}>
     <Icon name="add" size="1rem" />
     <span class="new-space-text">New Space</span>
   </button>
