@@ -385,6 +385,28 @@ impl Worker {
             resource_ids_first.insert(row.get(0)?);
         }
 
+        // TODO: is there a more performant way to do this?
+        let silent_resource_ids: HashSet<String> = self
+            .db
+            .conn
+            .prepare(&format!(
+                "SELECT resource_id FROM resource_tags
+                 WHERE resource_id IN ({})
+                 AND tag_name = 'silent' AND tag_value = 'true'",
+                std::iter::repeat("?")
+                    .take(resource_ids_first.len())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ))?
+            .query_map(
+                rusqlite::params_from_iter(resource_ids_first.iter()),
+                |row| row.get(0),
+            )?
+            .filter_map(Result::ok)
+            .collect();
+
+        resource_ids_first.retain(|id| !silent_resource_ids.contains(id));
+
         if let Some(ref query) = result.embedding_search_query {
             let filter: Vec<String> = resource_ids_first.iter().map(|id| id.to_string()).collect();
             // TODO: why 100?
