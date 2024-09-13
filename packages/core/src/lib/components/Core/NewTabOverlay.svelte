@@ -1012,7 +1012,7 @@
 
   onMount(() => {
     Dragcula.get().on('dragstart', () => {
-      setTimeout(() => (showTabSearch = 2), 1000)
+      setTimeout(() => (showTabSearch = 2), 10)
     })
     Dragcula.get().on('dragend', () => {
       showTabSearch = 0
@@ -1020,7 +1020,7 @@
   })
   onDestroy(() => {
     Dragcula.get().off('dragstart', () => {
-      setTimeout(() => (showTabSearch = 2), 1000)
+      setTimeout(() => (showTabSearch = 2), 10)
     })
     Dragcula.get().off('dragend', () => {
       showTabSearch = 0
