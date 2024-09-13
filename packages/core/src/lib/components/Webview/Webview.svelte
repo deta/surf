@@ -385,11 +385,9 @@ Made with Deta Surf.`
 
   const handleDragEnter = async (drag: DragculaDragEvent) => {
     webview.focus()
-    //if (drag.item !== null) drag.item.dragEffect = 'copy'
     drag.continue()
   }
   const handleDragOver = (drag: DragculaDragEvent) => {
-    //if (drag.item !== null) drag.item.dragEffect = 'copy'
     drag.continue()
   }
   const handleDrop = async (drag: DragculaDragEvent) => {
@@ -629,8 +627,6 @@ Made with Deta Surf.`
   on:DragOver={handleDragOver}
   on:Drop={handleDrop}
   on:DragLeave={handleDragLeave}
-  on:dragenter={(e) => e.preventDefault()}
-  on:dragover={(e) => e.preventDefault()}
   {...$$restProps}
 />
 

@@ -138,7 +138,6 @@ export class HTMLDragZone extends DragZone {
 
   protected _handleDrop(e: DragEvent) {
     if (!this.isTarget) return;
-    console.log("KEKE | _handleDrop", this.id);
     e.preventDefault();
     // NOTE: We still need to stop propagation here, so we can await the Drop handler
     // and decide whether to re-dispatch it on the parent.
@@ -165,7 +164,6 @@ export class HTMLDragZone extends DragZone {
 
     if (drag.to !== this) return;
 
-    console.log("KEKE | _handleDragOver", this.id, drag.to.id);
     //if (!this.element.contains((drag.item as HTMLDragItem).element)) {
     if (!this.acceptsCbk(drag)) return;
     //}
@@ -209,10 +207,6 @@ export class HTMLDragZone extends DragZone {
     /////if (getParentZoneEl(toEl) === this.element) return
 
     const fromZone = DragZone.ZONES.get((e.relatedTarget as HTMLElement)?.id);
-    console.warn("accepting zone ", this.id, e.relatedTarget);
-
-    console.log("KEKE | _handleDragEnter", this.id);
-
     log.debug(
       `${this.prefix}:${e.isTrusted && (Dragcula.get().activeDrag === null || Dragcula.get().activeDrag?.isNative) ? ii_NATIVE : ii_CUSTOM}:dragEnter ${fromZone ? `| from: ${fromZone.id}` : ""}`,
       e
@@ -241,19 +235,11 @@ export class HTMLDragZone extends DragZone {
     assert(drag !== null, "No active drag during dragLeave! This should not happen!");
 
     if (!this.acceptsCbk(drag)) return;
-    console.warn(this.element.contains(e.relatedTarget), e.relatedTarget);
     if (drag.to === this && this.element.contains(e.relatedTarget)) return;
 
     //console.warn("leave pre el", this.id, fromEl, getParentZoneEl(fromEl))
     //if (this.element.contains(fromEl) && getParentZoneEl(fromEl) !== this.element) return;
     //if (this.element.contains(fromEl) && this.element !== fromEl) return;
-    console.warn(
-      "dragleave",
-      this.id,
-      " || ",
-      getParentZoneEl(fromEl) === this.element,
-      getParentZoneEl(toEl) === this.element
-    );
     //if (getParentZoneEl(fromEl) === this.element) return; // && drag.to === this
     //if (getParentZoneEl(toEl) === this.element) return
 
@@ -267,8 +253,6 @@ export class HTMLDragZone extends DragZone {
 		}*/
 
     //if (e.defaultPrevented) return
-
-    console.log("KEKE | _handleDragLeave", this.id);
 
     //e.preventDefault(); ! not worky with them.?
     //e.stopPropagation(); //!not worky with them.?

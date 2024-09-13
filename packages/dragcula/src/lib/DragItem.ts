@@ -149,7 +149,10 @@ export class HTMLDragItem extends DragItem {
     this.configureFromDOMAttributes();
 
     this.element.addEventListener("dragstart", this.handleDragStart, { capture: false });
-    this.element.addEventListener("dragend", this.handleDragEnd, { capture: false });
+    //this.element.addEventListener("dragend", this.handleDragEnd, { capture: false });
+    this.element.addEventListener("dragend", (e) => setTimeout(() => this._handleDragEnd(e), 10), {
+      capture: false
+    }); // NOTE: This is a haky fix to make it work with webviews for now, as they need some ipc time and dont themselves dispatch drag events :''')
     this.element.addEventListener("drag", this.handleDrag, { capture: true });
   }
 

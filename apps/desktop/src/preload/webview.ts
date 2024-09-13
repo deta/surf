@@ -1037,22 +1037,22 @@ window.addEventListener(
 let dragDepth = 0
 window.addEventListener(
   'dragenter',
-  (event: DragEvent) => {
+  (e: DragEvent) => {
     dragDepth++
     // Ignore stuff inside the webview
     if (dragDepth > 1) return
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     sendPageEvent(WebViewEventSendNames.DragEnter, {
-      clientX: event.clientX,
-      clientY: event.clientY,
-      pageX: event.pageX,
-      pageY: event.pageY,
-      screenX: event.screenX,
-      screenY: event.screenY,
-      altKey: event.altKey,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      shiftKey: event.shiftKey
+      clientX: e.clientX,
+      clientY: e.clientY,
+      pageX: e.pageX,
+      pageY: e.pageY,
+      screenX: e.screenX,
+      screenY: e.screenY,
+      altKey: e.altKey,
+      ctrlKey: e.ctrlKey,
+      metaKey: e.metaKey,
+      shiftKey: e.shiftKey
     })
   },
   { passive: true, capture: true }
@@ -1060,23 +1060,23 @@ window.addEventListener(
 
 window.addEventListener(
   'dragleave',
-  (event: DragEvent) => {
+  (e: DragEvent) => {
     dragDepth--
     // Ignore stuff inside the webview
     if (dragDepth > 0) return
     dragDepth = 0
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     sendPageEvent(WebViewEventSendNames.DragLeave, {
-      clientX: event.clientX,
-      clientY: event.clientY,
-      pageX: event.pageX,
-      pageY: event.pageY,
-      screenX: event.screenX,
-      screenY: event.screenY,
-      altKey: event.altKey,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      shiftKey: event.shiftKey
+      clientX: e.clientX,
+      clientY: e.clientY,
+      pageX: e.pageX,
+      pageY: e.pageY,
+      screenX: e.screenX,
+      screenY: e.screenY,
+      altKey: e.altKey,
+      ctrlKey: e.ctrlKey,
+      metaKey: e.metaKey,
+      shiftKey: e.shiftKey
     })
   },
   { passive: true, capture: true }
@@ -1093,6 +1093,22 @@ window.addEventListener(
     e.dataTransfer!.effectAllowed = 'all'
     e.dataTransfer!.dropEffect = 'move'
     console.warn('Dropped!', e)
+
+    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+    sendPageEvent(WebViewEventSendNames.Drop, {
+      dataTransfer: e.dataTransfer,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      pageX: e.pageX,
+      pageY: e.pageY,
+      screenX: e.screenX,
+      screenY: e.screenY,
+      altKey: e.altKey,
+      ctrlKey: e.ctrlKey,
+      metaKey: e.metaKey,
+      shiftKey: e.shiftKey
+    })
+
     //console.warn("ffile", e.dataTransfer!.items[0]);
 
     //const fPath = e.dataTransfer?.getData("oasis/resource");
@@ -1127,21 +1143,10 @@ window.addEventListener(
     e.target!.dispatchEvent(
       new DragEvent('drop', { dataTransfer: asd, bubbles: true, cancelable: true })
     )
-
-    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
-    sendPageEvent(WebViewEventSendNames.Drop, {
-      clientX: event.clientX,
-      clientY: event.clientY,
-      pageX: event.pageX,
-      pageY: event.pageY,
-      screenX: event.screenX,
-      screenY: event.screenY,
-      altKey: event.altKey,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      shiftKey: event.shiftKey
-    })
     once = false
+    twice = false
+    trice = false
+    dragDepth = 0
   },
   { capture: true }
 )
