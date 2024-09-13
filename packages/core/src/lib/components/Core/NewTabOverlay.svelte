@@ -1161,6 +1161,7 @@
                       {historyEntriesManager}
                       on:open={handleOpen}
                       on:go-back={() => selectedSpaceId.set(null)}
+                      on:update-existing-space
                       insideDrawer={true}
                       {searchValue}
                     />

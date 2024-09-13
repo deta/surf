@@ -117,6 +117,7 @@
   import DevOverlay from './Browser/DevOverlay.svelte'
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
   import BrowserActions from './Browser/BrowserActions.svelte'
+  import StuffStack from './Browser/StuffStack.svelte'
   import CreateLiveSpace from './Oasis/CreateLiveSpace.svelte'
   import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
 

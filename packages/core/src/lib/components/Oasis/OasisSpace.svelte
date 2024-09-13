@@ -1337,6 +1337,35 @@
   const handleGoBack = () => {
     dispatch('go-back')
   }
+
+  const handleUpdateExistingSpace = async (e: CustomEvent) => {
+    const { space, name, processNaturalLanguage, userPrompt, resourceIds } = e.detail
+    if (!space) {
+      log.error('No space found')
+      return
+    }
+
+    try {
+      const updatedSpace = await oasis.updateSpaceData(space.id, {
+        folderName: name,
+        smartFilterQuery: processNaturalLanguage ? userPrompt : undefined
+      })
+
+      if (resourceIds && resourceIds.length > 0) {
+        await oasis.addResourcesToSpace(space.id, resourceIds)
+      }
+
+      $space = updatedSpace
+      await loadSpaceContents(space.id)
+      showSettingsModal.set(false)
+      toasts.success('Space updated successfully!')
+    } catch (error) {
+      log.error('Error updating space:', error)
+      toasts.error('Failed to update space: ' + (error as Error).message)
+    }
+  }
+
+  const handleAbortSpaceCreation = () => {}
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -1559,7 +1588,11 @@
         </div>
       {/if}
     {:else if $space?.name.folderName === 'New Space'}
-      <CreateNewSpace />
+      <CreateNewSpace
+        on:update-existing-space={handleUpdateExistingSpace}
+        on:abort-space-creation={handleAbortSpaceCreation}
+        {space}
+      />
     {:else if $loadingContents}
       <div class="content-wrapper">
         <div class="content">

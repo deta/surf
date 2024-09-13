@@ -1,14 +1,20 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
+  import { useLogScope, useDebounce } from '@horizon/utils'
+  import { useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
-  import { writable } from 'svelte/store'
-  import { createEventDispatcher } from 'svelte'
+  import { writable, derived } from 'svelte/store'
+  import { createEventDispatcher, tick } from 'svelte'
   import { Editor } from '@horizon/editor'
-  import { fly } from 'svelte/transition'
+  import { fly, scale } from 'svelte/transition'
   import { quartOut } from 'svelte/easing'
 
   import { colorPairs } from '../../service/oasis'
   import ResourceOverlay from '../Core/ResourceOverlay.svelte'
+  import SpacePreview from './SpacePreview.svelte'
+  import LoadingParticles from '../Effects/LoadingParticles.svelte'
+
+  import { type Space } from '../../types'
 
   const aiEnabled = writable(false)
   const name = writable('')
@@ -16,7 +22,14 @@
   const colors = writable(colorPairs[Math.floor(Math.random() * colorPairs.length)])
   const dispatch = createEventDispatcher()
   const userEnteredName = writable(false)
+  const previewIDs = writable<string[]>([])
+  const isLoading = writable(false)
   let editor: Editor
+
+  const log = useLogScope('OasisSpace')
+  const resourceManager = useResourceManager()
+
+  export let space: Space
 
   const templatePrompts = [
     { name: 'Screenshots', prompt: 'All my Screenshots' },
@@ -48,8 +61,8 @@
     }
   }
 
-  const handleCloseModal = () => {
-    dispatch('close-modal')
+  const handleAbortSpaceCreation = () => {
+    dispatch('abort-space-creation', space.id)
   }
 
   const handleColorChange = async (event: CustomEvent<[string, string]>) => {
@@ -59,21 +72,56 @@
   const handleSubmit = () => {
     const sanitizedUserPrompt = $userPrompt.replace(/<\/?[^>]+(>|$)/g, '')
 
-    dispatch('submit', {
+    dispatch('update-existing-space', {
       name: $name,
-      aiEnabled: $aiEnabled,
-      colors: $colors,
-      userPrompt: sanitizedUserPrompt
+      space: $space,
+      processNaturalLanguage: $aiEnabled,
+      userPrompt: sanitizedUserPrompt,
+      resourceIds: $previewIDs.length > 0 ? $previewIDs : undefined
     })
     dispatch('close-modal')
   }
 
-  const handleTemplatePromptClick = (template: { name: string; prompt: string }) => {
+  const handleTemplatePromptClick = async (template: { name: string; prompt: string }) => {
     userPrompt.set(`<p>${template.prompt}</p>`)
     editor.setContent($userPrompt)
     aiEnabled.set(true)
     if (!$userEnteredName || templatePrompts.some((t) => t.name === $name)) {
       name.set(template.name)
+    }
+
+    await previewAISpace($userPrompt)
+  }
+
+  const previewAISpace = async (userPrompt: string) => {
+    isLoading.set(true)
+    try {
+      log.debug('Requesting preview with prompt', userPrompt)
+
+      const response = await resourceManager.getResourcesViaPrompt(userPrompt)
+
+      log.debug(`Preview response`, response)
+
+      const results = new Set([
+        ...(response.embedding_search_results ?? []),
+        ...(response.sql_query_results ?? [])
+      ])
+
+      const resourceIds = Array.from(results)
+
+      log.debug('Fetched resource IDs', resourceIds)
+
+      previewIDs.set(resourceIds)
+
+      if (!results) {
+        log.warn('No results found for', userPrompt, response)
+        return
+      }
+    } catch (err) {
+      log.error('Failed to create previews with AI', err)
+    } finally {
+      isLoading.set(false)
+      await tick()
     }
   }
 
@@ -85,15 +133,24 @@
     }
   }
 
+  const debouncedPreviewAISpace = useDebounce(previewAISpace, 500)
+
   const handleEditorUpdate = (event) => {
     userPrompt.set(event.detail)
+
+    if (event.detail === '<p></p>') {
+      previewIDs.set([])
+      return
+    }
+
+    debouncedPreviewAISpace($userPrompt)
   }
 </script>
 
 <svelte:window
   on:keydown={(e) => {
     if (e.key === 'Escape') {
-      handleCloseModal()
+      handleAbortSpaceCreation()
     } else if (e.key === 'Enter') {
       if ($name.length > 0) {
         handleSubmit()
@@ -107,32 +164,69 @@
 />
 
 <div class="centered-content">
-  <ResourceOverlay caption="Click to change color.">
-    <div slot="content" class="space-icon-wrapper transform active:scale-[98%]">
-      <SpaceIcon on:change={handleColorChange} folder={newSpace()} />
+  <div class="input-wrapper">
+    <input
+      type="text"
+      class="folder-name"
+      id="folder-name"
+      name="folder-name"
+      placeholder="Enter Space Name"
+      bind:value={$name}
+      on:input={handleNameInput}
+      tabindex="0"
+      autofocus
+      on:keydown={(e) => {
+        if (e.key === 'Tab') {
+          e.stopPropagation()
+          e.stopImmediatePropagation()
+        }
+      }}
+    />
+  </div>
+
+  <div
+    class="fixed top-0 right-0 p-4 bg-gray-800 bg-opacity-75 text-white rounded-br-lg shadow-lg z-50"
+  >
+    <h3 class="text-sm font-semibold mb-2">Debug: Preview IDs</h3>
+    <h1 class="text-sm font-semibold mb-2">Prompt {$userPrompt}</h1>
+    <pre class="text-xs whitespace-pre-wrap break-all">
+      {JSON.stringify($previewIDs, null, 2)}
+    </pre>
+  </div>
+
+  <ResourceOverlay
+    caption="Click to change color."
+    interactive={$previewIDs.length === 0 ? true : false}
+  >
+    <div
+      slot="content"
+      class="space-icon-wrapper transform active:scale-[98%] relative"
+      class:has-preview={$previewIDs.length > 0}
+      transition:scale={{ duration: 300, easing: quartOut }}
+    >
+      {#if $isLoading}
+        <div
+          class={`absolute inset-4 z-20 flex items-center justify-center ${$previewIDs.length > 0 ? 'pt-[12rem]' : ''}`}
+        >
+          <LoadingParticles size={$previewIDs.length === 0 ? 300 : 700} />
+        </div>
+      {/if}
+      {#if $previewIDs.length > 0}
+        <div class="absolute inset-0 z-10">
+          {#key $previewIDs}
+            <SpacePreview resourceIDs={$previewIDs} showHeader={false} />
+          {/key}
+        </div>
+      {/if}
+      <div class="relative z-0">
+        <SpaceIcon on:change={handleColorChange} folder={newSpace()} />
+      </div>
     </div>
   </ResourceOverlay>
   <div class="input-group">
-    <div class="input-wrapper">
-      <input
-        type="text"
-        class="folder-name"
-        id="folder-name"
-        name="folder-name"
-        placeholder="Enter Space Name"
-        bind:value={$name}
-        on:input={handleNameInput}
-        tabindex="0"
-        autofocus
-        on:keydown={(e) => {
-          if (e.key === 'Tab') {
-            e.stopPropagation()
-            e.stopImmediatePropagation()
-          }
-        }}
-      />
-    </div>
-    <div class="ai-voodoo bg-white px-12 pt-8 pb-12 mb-16 mt-4 rounded-xl relative">
+    <div
+      class="ai-voodoo bg-white/95 backdrop-blur-md px-12 pt-8 pb-12 mb-16 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
+    >
       {#if $aiEnabled}
         <div
           class="ai-description"
@@ -144,7 +238,8 @@
           }}
         >
           <span
-            >Surf will now automatically add content to your space that matches your description.</span
+            >Surf will from now automatically add content to your space that matches your
+            description.</span
           >
           <Icon name="sparkles.fill" size="22px" color="#29A6F3" />
         </div>
@@ -177,7 +272,7 @@
                   ? 'bg-blue-200 text-blue-800'
                   : 'bg-gray-100 text-gray-800'
               } rounded-full px-4 py-2 text-sm font-medium hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
-              on:click={() => handleTemplatePromptClick(template)}
+              on:click={async () => await handleTemplatePromptClick(template)}
             >
               {template.prompt}
             </button>
@@ -187,7 +282,7 @@
     </div>
   </div>
   <div class="button-group">
-    <button on:click={handleCloseModal} class="cancel-button">Cancel</button>
+    <button on:click={handleAbortSpaceCreation} class="cancel-button">Cancel</button>
     <button on:click={handleSubmit} class="create-button">Create</button>
   </div>
 </div>
@@ -218,6 +313,12 @@
     width: 16rem;
     height: 16rem;
     margin-bottom: 2rem;
+    transition: all 0.3s ease-in-out;
+
+    &.has-preview {
+      width: 36rem;
+      height: 26rem;
+    }
   }
 
   .input-group {

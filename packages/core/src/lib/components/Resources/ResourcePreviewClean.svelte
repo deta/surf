@@ -432,6 +432,7 @@
     position: relative;
     display: flex;
     gap: 8px;
+    width: 100%;
     flex-direction: column;
     border-radius: 16px;
     overflow: visible;
