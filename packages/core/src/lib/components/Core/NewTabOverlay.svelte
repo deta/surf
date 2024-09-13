@@ -41,7 +41,7 @@
   } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import {
     Resource,
     ResourceJSON,
@@ -49,6 +49,7 @@
     type ResourceSearchResultItem
   } from '../../service/resources'
   import {
+    DragTypeNames,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     type DragTypes,
@@ -65,7 +66,7 @@
 
   import { useToasts } from '../../service/toast'
   import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
-  import { DragculaDragEvent } from '@horizon/dragcula'
+  import { Dragcula, DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab, TabPage, TabSpace } from '../../types/browser.types'
 
   import * as Command from '../Command'
@@ -1008,17 +1009,24 @@
     log.debug('Filter change:', e.detail)
     debouncedSearch($searchValue)
   }
-</script>
 
-<svelte:window
-  on:keydown={handleKeyDown}
-  on:DragStart={(drag) => {
-    showTabSearch = 2
-  }}
-  on:DragEnd={(drag) => {
-    showTabSearch = 0
-  }}
-/>
+  onMount(() => {
+    Dragcula.get().on('dragstart', () => {
+      setTimeout(() => (showTabSearch = 2), 1000)
+    })
+    Dragcula.get().on('dragend', () => {
+      showTabSearch = 0
+    })
+  })
+  onDestroy(() => {
+    Dragcula.get().off('dragstart', () => {
+      setTimeout(() => (showTabSearch = 2), 1000)
+    })
+    Dragcula.get().off('dragend', () => {
+      showTabSearch = 0
+    })
+  })
+</script>
 
 <Drawer.Root
   direction="bottom"
@@ -1155,6 +1163,18 @@
               {:else}
                 <DropWrapper
                   {spaceId}
+                  acceptsDrag={(drag) => {
+                    if (
+                      drag.isNative ||
+                      drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                      drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                      drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                    ) {
+                      return true
+                    }
+
+                    return false
+                  }}
                   on:Drop={(e) => handleDrop(e.detail)}
                   on:DragEnter={(e) => handleDragEnter(e.detail)}
                   zonePrefix="drawer-"
@@ -1318,6 +1338,7 @@
   :global([data-dialog-portal] .drawer-overlay) {
     background: rgba(0, 0, 0, 0.35);
     opacity: 1;
+    pointer-events: none;
   }
   :global(
       body[data-dragging='true']:not([data-drag-target^='drawer-oasis-space-'])

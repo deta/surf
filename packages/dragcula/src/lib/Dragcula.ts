@@ -70,7 +70,26 @@ export class Dragcula {
     log.debug(`${ii_DRAGCULA}\x1B[40;97m === Cleanup Drag`);
     document.body.removeAttribute("data-dragging");
 
+    this.#dragendHandlers.forEach((cb) => cb(this.activeDrag));
     this.activeDrag = null;
+  }
+
+  #dragstartHandlers = new Set<(e: DragOperation) => void>();
+  #dragendHandlers = new Set<(e: DragOperation) => void>();
+  public on(kind: "dragstart" | "dragend", cb: (e: DragOperation) => void) {
+    if (kind === "dragstart") this.#dragstartHandlers.add(cb);
+    else if (kind === "dragend") this.#dragendHandlers.add(cb);
+  }
+  public off(kind: "dragstart" | "dragend", cb: (e: DragOperation) => void) {
+    if (kind === "dragstart") this.#dragstartHandlers.delete(cb);
+    else if (kind === "dragend") this.#dragendHandlers.delete(cb);
+  }
+  public callHandlers(kind: "dragstart" | "dragend", e: DragOperation) {
+    if (kind === "dragstart") {
+      this.#dragstartHandlers.forEach((cb) => cb(e));
+    } else if (kind === "dragend") {
+      this.#dragendHandlers.forEach((cb) => cb(e));
+    }
   }
 }
 
@@ -126,115 +145,6 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
     return new this(props);
   }
 }
-
-/*export class DragData<T extends { [key: string]: (unknown | (() => Promise<unknown>)) } = { [key: string]: string }> {
-	#data = new Map<string, unknown | (() => Promise<unknown>)>();
-
-	constructor(from?: Record<keyof T, unknown>) {
-		if (from) {
-			for (const [key, value] of Object.entries(from)) {
-				this.setData(key, value as any);
-			}
-		}
-	}
-
-	public clearData(key?: keyof T | (string & {})) {
-		if (!key) {
-			this.#data.clear();
-		}
-		else this.#data.delete(key as string);
-	}
-
-	public setData<K extends keyof T | (string & {})>(
-		key: K,
-		value: K extends keyof T
-			? T[K]
-			: unknown
-	) {
-		// @ts-ignore this still works for the returing type and is fine!
-		this.#data.set(key as string, value);
-	}
-
-	public getData<V extends string, K extends { [key: string]: (unknown | (() => Promise<unknown>)) } = { [key: string]: string }>(key: V): V extends keyof T ? T[V] : unknown {
-		const value = this.#data.get(key as string);
-		return (typeof value === 'function' ? value() : value) as K extends keyof T ? T[K] : unknown;
-	}
-
-	public hasData(key: keyof T | (string & {})): boolean {
-		return this.#data.has(key as string);
-	}
-}*/
-
-/*export class DragData<T extends Record<string, unknown | (() => Promise<unknown>)> = Record<string, string>> {
-	#data = new Map<string, unknown | (() => Promise<unknown>)>();
-
-	constructor(from?: Partial<T>) {
-		if (from) {
-			for (const [key, value] of Object.entries(from)) {
-				this.setData(key, value);
-			}
-		}
-	}
-
-	public clearData(key?: keyof T | string): void {
-		if (key === undefined) {
-			this.#data.clear();
-		} else {
-			this.#data.delete(String(key));
-		}
-	}
-
-	public setData<K extends keyof T | string>(
-		key: K,
-		value: K extends keyof T ? T[K] : unknown
-	): void {
-		this.#data.set(String(key), value);
-	}
-
-	public getData<K extends keyof T | string>(key: K): K extends keyof T ? T[K] : string {
-		const value = this.#data.get(String(key));
-		return (typeof value === 'function' ? value() : value) as K extends keyof T ? T[K] : string;
-	}
-
-	public hasData(key: keyof T | string): boolean {
-		return this.#data.has(String(key));
-	}
-}*/
-
-/*export class DragData<T extends Record<string, unknown> = Record<string, unknown>> {
-	#data = new Map<string, unknown>();
-
-	constructor(from?: Partial<T>) {
-		if (from) {
-			for (const [key, value] of Object.entries(from)) {
-				this.setData(key, value);
-			}
-		}
-	}
-
-	public clearData(key?: keyof T | string): void {
-		if (key === undefined) {
-			this.#data.clear();
-		} else {
-			this.#data.delete(String(key));
-		}
-	}
-
-	public setData<K extends keyof T | string>(
-		key: K,
-		value: K extends keyof T ? T[K] : unknown
-	): void {
-		this.#data.set(String(key), value);
-	}
-
-	public getData<TV extends { [key: string]: unknown } = T, UN extends { [key: keyof TV]: string }, K extends keyof TV | string = string>(key: K): K extends keyof TV ? TV[K] : unknown {
-		return this.#data.get(String(key)) as K extends keyof TV ? TV[K] : unknown;
-	}
-
-	public hasData(key: keyof T | string): boolean {
-		return this.#data.has(String(key));
-	}
-}*/
 
 export class DragData<T extends Record<string, any> = { [key: string]: any }> {
   #data: Map<string, unknown> = new Map();

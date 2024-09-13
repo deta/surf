@@ -369,6 +369,8 @@ export class HTMLDragItem extends DragItem {
         this.previewElement.style.viewTransitionName = "";
       }
     });
+
+    Dragcula.get().callHandlers("dragstart", drag);
   }
 
   lastOffset: Vec2<number> = { x: NaN, y: NaN }; // TODO: refac.
