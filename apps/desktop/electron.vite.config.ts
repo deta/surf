@@ -4,13 +4,17 @@ import { resolve } from 'path'
 import { plugin as Markdown, Mode } from 'vite-plugin-markdown'
 import replace from '@rollup/plugin-replace'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
-import obfuscator from 'rollup-plugin-obfuscator';
-// import { sentryVitePlugin } from '@sentry/vite-plugin'
+import obfuscator from 'rollup-plugin-obfuscator'
+
+const disableAllObfuscation = process.env.DISABLE_ALL_OBFUSCATION === 'true'
 
 export default defineConfig({
   main: {
     envPrefix: 'M_VITE_',
-    plugins: [externalizeDepsPlugin(), bytecodePlugin({ removeBundleJS: true })],
+    plugins: [
+      externalizeDepsPlugin(),
+      ...(!disableAllObfuscation ? [bytecodePlugin({ removeBundleJS: true })] : [])
+    ],
     build: {
       rollupOptions: {
         input: {
@@ -24,20 +28,18 @@ export default defineConfig({
     plugins: [
       svelte(),
       externalizeDepsPlugin({ exclude: ['@horizon/backend'] }),
-
-      // Used to inject the styles from the preload script and svelte components into the webviews
       cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (asset) => asset.fileName.endsWith('webview.js'),
         injectCode: (cssCode, _options) => {
           return `window.addEventListener('DOMContentLoaded', () => { try{if(typeof document != 'undefined'){var elementStyle = document.createElement('style');elementStyle.id="webview-styles";elementStyle.appendChild(document.createTextNode(${cssCode}));document.head.appendChild(elementStyle);}}catch(e){console.error('vite-plugin-css-injected-by-js', e);} })`
         }
       }),
-
-      // This is needed to get our tiptap editor working in the preload script as it tries to access the document before it is ready
       replace({
         'doc.documentElement.style': '{}'
       }),
-      bytecodePlugin({ removeBundleJS: true, chunkAlias: ['horizon'] })
+      ...(!disableAllObfuscation
+        ? [bytecodePlugin({ removeBundleJS: true, chunkAlias: ['horizon'] })]
+        : [])
     ],
     build: {
       rollupOptions: {
@@ -51,23 +53,24 @@ export default defineConfig({
           }
         },
         plugins: [
-          obfuscator({
-            global: true,
-            options: {}
-          })
+          ...(!disableAllObfuscation
+            ? [
+                obfuscator({
+                  global: true,
+                  options: {}
+                })
+              ]
+            : [])
         ]
       },
-      sourcemap: process.env.NODE_ENV === 'development',
-      minify: !(process.env.NODE_ENV === 'development')
+      sourcemap: disableAllObfuscation || process.env.NODE_ENV === 'development',
+      minify: !disableAllObfuscation && process.env.NODE_ENV !== 'development'
     }
   },
 
   renderer: {
     envPrefix: 'R_VITE_',
-    plugins: [
-      Markdown({ mode: [Mode.MARKDOWN] }),
-      svelte()
-    ],
+    plugins: [Markdown({ mode: [Mode.MARKDOWN] }), svelte()],
     build: {
       rollupOptions: {
         input: {
@@ -77,14 +80,18 @@ export default defineConfig({
         },
         external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
         plugins: [
-          obfuscator({
-            global: true,
-            options: {}
-          })
+          ...(!disableAllObfuscation
+            ? [
+                obfuscator({
+                  global: true,
+                  options: {}
+                })
+              ]
+            : [])
         ]
       },
-      sourcemap: process.env.NODE_ENV === 'development',
-      minify: !(process.env.NODE_ENV === 'development')
+      sourcemap: disableAllObfuscation || process.env.NODE_ENV === 'development',
+      minify: !disableAllObfuscation && process.env.NODE_ENV !== 'development'
     },
     define: {
       'process.env': {},

@@ -12,6 +12,10 @@ on:
         type: boolean
         description: 'Notarize (macOS)?'
         default: true
+      disable_all_obfuscation:
+        type: boolean
+        description: 'Disable All Obfuscation'
+        default: false
       a_run_macos_arm:
         type: boolean
         description: 'Run macOS ARM build'
@@ -100,6 +104,7 @@ jobs:
           HUSKY: 0
           NODE_OPTIONS: --max_old_space_size=8192
           SHOULD_NOTARIZE: ${{ inputs.should_notarize }}
+          DISABLE_ALL_OBFUSCATION: ${{ inputs.disable_all_obfuscation }}
 
           PRODUCT_NAME: ${{ inputs.product_name }}
           M_VITE_PRODUCT_NAME: 'Surf'
