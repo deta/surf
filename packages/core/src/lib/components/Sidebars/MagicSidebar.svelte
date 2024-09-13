@@ -294,7 +294,6 @@
 
   const handleInputKeydown = (e: KeyboardEvent) => {
     const currentTime = Date.now()
-    console.log('keydown', e.key)
 
     if (e.key === 'Alt' || e.key === 'Option') {
       $optPressed = true
