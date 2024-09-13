@@ -78,7 +78,19 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
   readonly id: string;
 
   from: DragZone | null;
-  to: DragZone | null;
+  #to: DragZone | null;
+  get to() {
+    return this.#to;
+  }
+  set to(v: DragZone | null) {
+    this.#to = v;
+    if (v !== null) {
+      document.body.setAttribute("data-drag-target", v.id);
+    } else {
+      document.body.removeAttribute("data-drag-target");
+    }
+  }
+
   item: DragItem<DataTypes> | null; // DragItem, null it native drag from outside
   dataTransfer: DataTransfer | null; // DataTransfer, if custom drag, still original event dataTransfer
 
@@ -98,7 +110,7 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
   }) {
     this.id = props.id ?? genId();
     this.from = props.from || null;
-    this.to = props.to || null;
+    this.#to = props.to || null;
     this.item = props.item ?? null;
     this.dataTransfer = props.dataTransfer ?? null;
     this.index = props.index ?? null;

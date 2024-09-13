@@ -19,6 +19,9 @@ export class DragZone {
 
   readonly id: string;
 
+  // TODO: Move props into this to set
+  public readonly acceptsCbk: (drag: DragOperation) => boolean = () => false;
+
   // === STATE
 
   protected effectsAllowed: DropEffect[] = ["move", "copy", "link", "none"];
@@ -70,7 +73,6 @@ export class HTMLDragZone extends DragZone {
     return `\x1B[40;97m[DragZone::${this.id}]\x1B[m`;
   }
   readonly element: HTMLElement;
-  readonly acceptsCbk: (drag: DragOperation) => boolean = () => false;
 
   // === STATE
   protected _isTarget = false;
@@ -88,7 +90,7 @@ export class HTMLDragZone extends DragZone {
 
   constructor(node: HTMLElement, props?: HTMLDragZoneProps) {
     super(props?.id ?? (Boolean(node.id) ? node.id : undefined) ?? genId(), props?.effectsAllowed);
-    this.acceptsCbk = props?.accepts ?? this.acceptsCbk;
+    (this.acceptsCbk as any) = props?.accepts ?? this.acceptsCbk;
     this.element = node;
 
     this.element.setAttribute("data-drag-zone", this.id);
@@ -135,9 +137,12 @@ export class HTMLDragZone extends DragZone {
   protected handleDragOver = this._handleDragOver.bind(this);
 
   protected _handleDrop(e: DragEvent) {
+    if (!this.isTarget) return;
+    console.log("KEKE | _handleDrop", this.id);
     e.preventDefault();
     // NOTE: We still need to stop propagation here, so we can await the Drop handler
     // and decide whether to re-dispatch it on the parent.
+    // // TODO: FIGURE OTU ^ this
 
     log.debug(
       `${this.prefix}:${e.isTrusted && Dragcula.get().activeDrag?.isNative ? ii_NATIVE : ii_CUSTOM}:drop `,
@@ -158,6 +163,9 @@ export class HTMLDragZone extends DragZone {
     const drag = Dragcula.get().activeDrag;
     assert(drag !== null, "No active drag during dragOver! This should not happen!");
 
+    if (drag.to !== this) return;
+
+    console.log("KEKE | _handleDragOver", this.id, drag.to.id);
     //if (!this.element.contains((drag.item as HTMLDragItem).element)) {
     if (!this.acceptsCbk(drag)) return;
     //}
@@ -167,18 +175,9 @@ export class HTMLDragZone extends DragZone {
   }
 
   protected _handleDragEnter(e: DragEvent) {
-    if (this.isTarget) return;
+    if (e.defaultPrevented) return;
 
-    // @ts-ignore, fck webdev it actually exists in Chrome!
-    const toEl = e.toElement as HTMLElement;
-    // ONly enter if toEl closest zone is self
-    //if ((this.element.contains(toEl) && this.element !== toEl && this.isTarget)
-    //	|| this.element.contains(toEl) && getParentZoneEl(toEl) !== this.element) return
-
-    if (this.element.contains(toEl) && this.element !== toEl && this.isTarget) return;
-
-    const fromZone = DragZone.ZONES.get((e.relatedTarget as HTMLElement)?.id);
-
+    // Bootsteap deag as this is native entry point.
     if (e.isTrusted && Dragcula.get().activeDrag === null) {
       log.debug(`${this.prefix}:dragEnter Initializing drag for native event!`);
       Dragcula.get().activeDrag = DragOperation.new({
@@ -190,9 +189,29 @@ export class HTMLDragZone extends DragZone {
     const drag = Dragcula.get().activeDrag!;
     assert(drag !== null, "No active drag during dragEnter! This should not happen!");
 
-    //if (!this.element.contains((drag.item as HTMLDragItem).element)) {
-    if (!this.acceptsCbk(drag)) return;
-    //}
+    const accepted = this.acceptsCbk(drag);
+    if (!accepted) return;
+
+    /*
+				if (this.isTarget) {
+					e.preventDefault();
+					return;
+				}
+				if (e.defaultPrevented) return
+		*/
+    // @ts-ignore, fck webdev it actually exists in Chrome!
+    const toEl = e.toElement as HTMLElement;
+    // ONly enter if toEl closest zone is self
+    //if ((this.element.contains(toEl) && this.element !== toEl && this.isTarget)
+    //	|| this.element.contains(toEl) && getParentZoneEl(toEl) !== this.element) return
+
+    //if ((this.element.contains(toEl) && this.element !== toEl && this.isTarget)) return
+    /////if (getParentZoneEl(toEl) === this.element) return
+
+    const fromZone = DragZone.ZONES.get((e.relatedTarget as HTMLElement)?.id);
+    console.warn("accepting zone ", this.id, e.relatedTarget);
+
+    console.log("KEKE | _handleDragEnter", this.id);
 
     log.debug(
       `${this.prefix}:${e.isTrusted && (Dragcula.get().activeDrag === null || Dragcula.get().activeDrag?.isNative) ? ii_NATIVE : ii_CUSTOM}:dragEnter ${fromZone ? `| from: ${fromZone.id}` : ""}`,
@@ -201,23 +220,58 @@ export class HTMLDragZone extends DragZone {
 
     drag.to = this;
     e.preventDefault();
-    e.stopPropagation();
+    //e.stopPropagation();
     this.isTarget = true;
 
     this.onDragEnter(drag, e);
   }
 
   protected _handleDragLeave(e: DragEvent) {
-    if (!this.isTarget) return;
-
     // @ts-ignore, fck webdev it actually exists in Chrome!
     const fromEl = e.fromElement as HTMLElement;
-    //if (this.element.contains(fromEl) && getParentZoneEl(fromEl) === this.element) return;
+    // @ts-ignore, fck webdev it actually exists in Chrome!
+    const toEl = e.toElement as HTMLElement;
 
-    //e.preventDefault(); ! not worky with them.?
-    e.stopPropagation(); //!not worky with them.?
+    //if (!this.isTarget) return
+    /*else {
+			e.preventDefault();
+		}*/
+
     const drag = Dragcula.get().activeDrag!;
     assert(drag !== null, "No active drag during dragLeave! This should not happen!");
+
+    if (!this.acceptsCbk(drag)) return;
+    console.warn(this.element.contains(e.relatedTarget), e.relatedTarget);
+    if (drag.to === this && this.element.contains(e.relatedTarget)) return;
+
+    //console.warn("leave pre el", this.id, fromEl, getParentZoneEl(fromEl))
+    //if (this.element.contains(fromEl) && getParentZoneEl(fromEl) !== this.element) return;
+    //if (this.element.contains(fromEl) && this.element !== fromEl) return;
+    console.warn(
+      "dragleave",
+      this.id,
+      " || ",
+      getParentZoneEl(fromEl) === this.element,
+      getParentZoneEl(toEl) === this.element
+    );
+    //if (getParentZoneEl(fromEl) === this.element) return; // && drag.to === this
+    //if (getParentZoneEl(toEl) === this.element) return
+
+    // false true -> now target?
+
+    /*if (drag.to !== null && drag.to !== this) {
+			console.warn("leave", this.id, " >> ", drag.to.id)
+			if (!drag.to.acceptsCbk(drag)) {
+				return;
+			}
+		}*/
+
+    //if (e.defaultPrevented) return
+
+    console.log("KEKE | _handleDragLeave", this.id);
+
+    //e.preventDefault(); ! not worky with them.?
+    //e.stopPropagation(); //!not worky with them.?
 
     log.debug(`${this.prefix}:${drag.isNative ? ii_NATIVE : ii_CUSTOM}:dragLeave `, e);
 
@@ -240,6 +294,7 @@ export class HTMLDragZone extends DragZone {
       shiftKey: e.shiftKey,
       altKey: e.altKey,
       ...drag,
+      to: drag.to,
       event: e,
       bubbles: false
     });

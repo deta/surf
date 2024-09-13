@@ -332,9 +332,9 @@ group transform active:scale-[98%] group cursor-pointer gap-3 justify-center rel
       if (tab.type !== 'space' || tab.spaceId === 'all') return false
       if (
         drag.isNative ||
-        drag.item.data.hasData(DragTypeNames.SURF_TAB) ||
-        drag.item.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-        drag.item.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
       ) {
         return true
       }

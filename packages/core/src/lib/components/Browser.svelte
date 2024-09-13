@@ -3233,12 +3233,8 @@
     log.debug('State updated successfully')
   }
 
-  const handleDragEnterSidebar = async (drag: DragculaDragEvent<DragTypes>) => {
-    drag.continue()
-  }
-
   const handleDropSidebar = async (drag: DragculaDragEvent<DragTypes>) => {
-    log.debug('dropping onto sidebar', drag)
+    log.debug('dropping onto sidebar', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
 
     if (drag.isNative) {
       log.error('Native drop on sidebar not implemented yet!', drag)
@@ -3271,7 +3267,9 @@
 
         // CASE: to already includes tab
         if (toTabs.find((v) => v.id === droppedTab.id)) {
+          log.warn('ONLY Update existin tab')
           const existing = fromTabs.find((v) => v.id === droppedTab.id)
+          console.warn('existing tab', existing)
           if (existing && drag.index !== undefined) {
             existing.index = drag.index ?? 0
           }
@@ -3281,6 +3279,7 @@
           )
           fromTabs.splice(existing!.index, 0, existing!)
         } else {
+          log.warn('ADDING NEW ONE')
           // Remove old
           const idx = fromTabs.findIndex((v) => v.id === droppedTab.id)
           if (idx > -1) {
@@ -3720,9 +3719,20 @@
               class="flex items-center h-fit px-2 py-1"
               axis="horizontal"
               dragdeadzone="5"
-              use:HTMLAxisDragZone.action={{}}
+              use:HTMLAxisDragZone.action={{
+                accepts: (drag) => {
+                  if (
+                    drag.isNative ||
+                    drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                    drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                    drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                  ) {
+                    return true
+                  }
+                  return false
+                }
+              }}
               on:Drop={handleDropSidebar}
-              on:DragEnter={handleDragEnterSidebar}
             >
               {#if $pinnedTabs.length === 0}
                 <div class="">Drop Tabs here to pin them.</div>
@@ -3836,7 +3846,6 @@
                   placeholder-size="60"
                   use:HTMLAxisDragZone.action={{}}
                   on:Drop={handleDropSidebar}
-                  on:DragEnter={handleDragEnterSidebar}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id + index)}
                     <!-- check if this tab is active -->
@@ -3933,7 +3942,6 @@
                     }
                   }}
                   on:Drop={handleDropSidebar}
-                  on:DragEnter={handleDragEnterSidebar}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}
                     <!-- check if this tab is active -->
@@ -4108,17 +4116,19 @@
                   id="oasis-zone"
                   class="oasis-drop-zone"
                   style="position: absolute; inset-inline: 10%; inset-block: 20%;"
-                  use:HTMLDragZone.action={{}}
-                  on:DragEnter={(drag) => {
-                    const dragData = drag.data
-                    if (
-                      drag.isNative ||
-                      (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space')
-                    ) {
-                      drag.continue() // Allow the drag
-                      return
+                  use:HTMLDragZone.action={{
+                    accepts: (drag) => {
+                      if (
+                        drag.isNative ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                      ) {
+                        return true
+                      }
+
+                      return false
                     }
-                    drag.abort()
                   }}
                   on:Drop={(drag) => handleDropOnSpaceTab(drag, 'all')}
                 ></div>

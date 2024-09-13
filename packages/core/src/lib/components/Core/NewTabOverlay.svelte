@@ -51,6 +51,7 @@
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
+    type DragTypes,
     type HistoryEntry,
     type Space
   } from '../../types'
@@ -745,8 +746,10 @@
     // }
   }
 
-  const handleDrop = async (drag: DragculaDragEvent) => {
+  const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
     const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+
+    // FIX: (dragcula): FIFIIF
 
     if (
       ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
@@ -886,8 +889,8 @@
       return
     }
     drag.abort()*/
-
-    if (drag.data['surf/tab'] !== undefined) {
+    // TODO: Remove Dragcula v3
+    /*if (drag.data['surf/tab'] !== undefined) {
       const dragData = drag.data as { 'surf/tab': Tab }
       if (drag.isNative || dragData['surf/tab'].type !== 'space') {
         drag.continue()
@@ -897,7 +900,7 @@
       drag.continue()
       return
     }
-    drag.abort()
+    drag.abort()*/
   }
 
   const openResourceDetailsModal = (resourceId: string) => {
@@ -1307,8 +1310,7 @@
 
   /* Hides the Drawer when dragging but not targeting it */
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='drawer-oasis-space-'])
-        .drawer-content
+      body[data-dragging='true']:not([data-drag-target^='drawer-oasis-space-']) .drawer-content
     ) {
     transform: translateY(calc(100vh - 240px)) !important;
   }
@@ -1318,7 +1320,7 @@
     opacity: 1;
   }
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='drawer-oasis-space-'])
+      body[data-dragging='true']:not([data-drag-target^='drawer-oasis-space-'])
         [data-dialog-portal]
         .drawer-overlay
     ) {

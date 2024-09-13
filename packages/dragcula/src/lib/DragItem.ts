@@ -286,7 +286,9 @@ export class HTMLDragItem extends DragItem {
 
     drag.dataTransfer = e?.dataTransfer ?? new DataTransfer();
 
-    const parentZoneEl = this.element.closest("[data-drag-zone]") as HTMLElement | null;
+    const parentZoneEl = this.element.parentElement?.closest(
+      "[data-drag-zone]"
+    ) as HTMLElement | null;
     if (parentZoneEl !== null) {
       const zone = DragZone.ZONES.get(parentZoneEl.getAttribute("data-drag-zone")!);
       if (!zone) {

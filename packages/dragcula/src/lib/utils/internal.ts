@@ -61,10 +61,10 @@ export function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-export function getParentZoneEl(el: HTMLElement) {
-  return el.closest("[data-drag-zone]") as HTMLElement | null;
+export function getParentZoneEl(el?: HTMLElement) {
+  return el?.closest("[data-drag-zone]") as HTMLElement | null;
 }
-export function getParentZone(el: HTMLElement) {
+export function getParentZone(el?: HTMLElement) {
   const id = getParentZoneEl(el)?.getAttribute("data-drag-zone");
   return DragZone.ZONES.get(id ?? "") ?? null;
 }

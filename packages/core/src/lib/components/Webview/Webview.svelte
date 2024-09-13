@@ -32,7 +32,7 @@
 
   import type { HistoryEntriesManager } from '../../service/history'
   import { useLogScope, useDebounce } from '@horizon/utils'
-  import type { AnnotationHighlightData, HistoryEntry } from '../../types'
+  import { DragTypeNames, type AnnotationHighlightData, type HistoryEntry } from '../../types'
   import type {
     ResourceAnnotation,
     ResourceChatThread,
@@ -612,7 +612,19 @@ Made with Deta Surf.`
   preload={`file://${PRELOAD_PATH}`}
   webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=14,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
   allowpopups
-  use:HTMLDragZone.action={{}}
+  use:HTMLDragZone.action={{
+    accepts: (drag) => {
+      if (
+        drag.isNative ||
+        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        return true
+      }
+      return false
+    }
+  }}
   on:DragEnter={handleDragEnter}
   on:DragOver={handleDragOver}
   on:Drop={handleDrop}
