@@ -50,6 +50,9 @@ export class DragZone {
 export interface HTMLDragZoneProps {
   id?: string;
   effectsAllowed?: DropEffect[];
+  //
+  // TODO: Docs
+  accepts?: (drag: DragOperation) => boolean;
 }
 export interface HTMLDragZoneAttributes {
   id?: string;
@@ -67,6 +70,7 @@ export class HTMLDragZone extends DragZone {
     return `\x1B[40;97m[DragZone::${this.id}]\x1B[m`;
   }
   readonly element: HTMLElement;
+  readonly acceptsCbk: (drag: DragOperation) => boolean = () => false;
 
   // === STATE
   protected _isTarget = false;
@@ -83,7 +87,8 @@ export class HTMLDragZone extends DragZone {
   }
 
   constructor(node: HTMLElement, props?: HTMLDragZoneProps) {
-    super((props?.id ?? Boolean(node.id)) ? node.id : undefined, props?.effectsAllowed);
+    super(props?.id ?? (Boolean(node.id) ? node.id : undefined) ?? genId(), props?.effectsAllowed);
+    this.acceptsCbk = props?.accepts ?? this.acceptsCbk;
     this.element = node;
 
     this.element.setAttribute("data-drag-zone", this.id);
@@ -113,7 +118,7 @@ export class HTMLDragZone extends DragZone {
     node: HTMLElement,
     props: HTMLDragZoneProps
   ): ActionReturn<HTMLDragZoneProps, HTMLDragZoneAttributes> {
-    const zone = new this(node, { id: node.getAttribute("id") || undefined });
+    const zone = new this(node, props);
 
     return {
       destroy() {
@@ -148,37 +153,31 @@ export class HTMLDragZone extends DragZone {
   }
 
   protected _handleDragOver(e: DragEvent) {
+    if (!this.isTarget) return;
+
+    const drag = Dragcula.get().activeDrag;
+    assert(drag !== null, "No active drag during dragOver! This should not happen!");
+
+    //if (!this.element.contains((drag.item as HTMLDragItem).element)) {
+    if (!this.acceptsCbk(drag)) return;
+    //}
     e.preventDefault();
-    e.stopPropagation();
 
-    assert(
-      Dragcula.get().activeDrag !== null,
-      "No active drag during dragOver! This should not happen!"
-    );
-
-    this.onDragOver(Dragcula.get().activeDrag!, e);
+    this.onDragOver(drag, e);
   }
 
   protected _handleDragEnter(e: DragEvent) {
-    //e.preventDefault();
     if (this.isTarget) return;
 
     // @ts-ignore, fck webdev it actually exists in Chrome!
     const toEl = e.toElement as HTMLElement;
     // ONly enter if toEl closest zone is self
-    if (
-      (this.element.contains(toEl) && this.element !== toEl && this.isTarget) ||
-      (this.element.contains(toEl) && getParentZoneEl(toEl) !== this.element)
-    )
-      return;
+    //if ((this.element.contains(toEl) && this.element !== toEl && this.isTarget)
+    //	|| this.element.contains(toEl) && getParentZoneEl(toEl) !== this.element) return
 
-    e.preventDefault();
-    e.stopPropagation();
+    if (this.element.contains(toEl) && this.element !== toEl && this.isTarget) return;
+
     const fromZone = DragZone.ZONES.get((e.relatedTarget as HTMLElement)?.id);
-    log.debug(
-      `${this.prefix}:${e.isTrusted && (Dragcula.get().activeDrag === null || Dragcula.get().activeDrag?.isNative) ? ii_NATIVE : ii_CUSTOM}:dragEnter ${fromZone ? `| from: ${fromZone.id}` : ""}`,
-      e
-    );
 
     if (e.isTrusted && Dragcula.get().activeDrag === null) {
       log.debug(`${this.prefix}:dragEnter Initializing drag for native event!`);
@@ -190,10 +189,22 @@ export class HTMLDragZone extends DragZone {
     }
     const drag = Dragcula.get().activeDrag!;
     assert(drag !== null, "No active drag during dragEnter! This should not happen!");
-    drag.to = this;
 
+    //if (!this.element.contains((drag.item as HTMLDragItem).element)) {
+    if (!this.acceptsCbk(drag)) return;
+    //}
+
+    log.debug(
+      `${this.prefix}:${e.isTrusted && (Dragcula.get().activeDrag === null || Dragcula.get().activeDrag?.isNative) ? ii_NATIVE : ii_CUSTOM}:dragEnter ${fromZone ? `| from: ${fromZone.id}` : ""}`,
+      e
+    );
+
+    drag.to = this;
+    e.preventDefault();
+    e.stopPropagation();
     this.isTarget = true;
-    this.onDragEnter(drag);
+
+    this.onDragEnter(drag, e);
   }
 
   protected _handleDragLeave(e: DragEvent) {
@@ -201,10 +212,10 @@ export class HTMLDragZone extends DragZone {
 
     // @ts-ignore, fck webdev it actually exists in Chrome!
     const fromEl = e.fromElement as HTMLElement;
-    if (this.element.contains(fromEl) && getParentZoneEl(fromEl) === this.element) return;
+    //if (this.element.contains(fromEl) && getParentZoneEl(fromEl) === this.element) return;
 
     //e.preventDefault(); ! not worky with them.?
-    //e.stopPropagation(); ! not worky with them.?
+    e.stopPropagation(); //!not worky with them.?
     const drag = Dragcula.get().activeDrag!;
     assert(drag !== null, "No active drag during dragLeave! This should not happen!");
 
@@ -214,7 +225,7 @@ export class HTMLDragZone extends DragZone {
 
     if (drag.to === this) drag.to = null;
 
-    this.onDragLeave(Dragcula.get().activeDrag!);
+    this.onDragLeave(Dragcula.get().activeDrag!, e);
   }
 
   // === EVENTS
@@ -254,7 +265,7 @@ export class HTMLDragZone extends DragZone {
   protected override onDragEnter(drag: DragOperation, e?: DragEvent) {
     super.onDragEnter(drag);
 
-    DragculaDragEvent.dispatch("DragEnter", this.element, {
+    const [event, _] = DragculaDragEvent.dispatch("DragEnter", this.element, {
       metaKey: e?.metaKey,
       ctrlKey: e?.ctrlKey,
       shiftKey: e?.shiftKey,
@@ -263,6 +274,12 @@ export class HTMLDragZone extends DragZone {
       event: e,
       bubbles: false
     }); // no fck bubbles to annoy u ;) !
+
+    /*if (event.isContinued) {
+			e?.preventDefault();
+			drag.to = this;
+			this.isTarget = true;
+		}*/
 
     if (drag.item instanceof DragItem) drag.item.onDragTargetEnter(drag, e);
   }
@@ -284,7 +301,7 @@ export class HTMLDragZone extends DragZone {
 
   protected override onDragOver(drag: DragOperation, e?: DragEvent) {
     super.onDragOver(drag);
-    DragculaDragEvent.dispatch("DragOver", this.element, {
+    const [event, _] = DragculaDragEvent.dispatch("DragOver", this.element, {
       metaKey: e?.metaKey,
       ctrlKey: e?.ctrlKey,
       shiftKey: e?.shiftKey,
@@ -293,6 +310,8 @@ export class HTMLDragZone extends DragZone {
       event: e,
       bubbles: false
     }); // no fck bubbles to annoy u ;) !
+
+    //if (event.isContinued) e?.preventDefault();
   }
 
   protected override onDragEnd(drag: DragOperation, e?: DragEvent) {

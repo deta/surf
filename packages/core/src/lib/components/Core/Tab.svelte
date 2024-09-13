@@ -288,7 +288,28 @@
 <div
   draggable={true}
   id="tab-{tab.id}"
-  class={`tab no-drag ${isActive ? 'active' : ''} ${tab.magic ? (isActive ? 'bg-pink-500/80 text-pink-950 shadow-inner ring-[0] ring-pink-600' : 'bg-pink-400/60 text-pink-950') : isActive ? 'text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px] ring-sky-500' : isSelected ? 'bg-white outline outline-2 outline-sky-500' : ''} flex items-center ${pinned ? 'p-1 rounded-lg' : horizontalTabs ? 'py-1.5 px-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none`}
+  class={`tab no-drag 
+${isActive ? 'active' : ''} 
+${
+  tab.magic
+    ? isActive
+      ? 'bg-pink-500/80 text-pink-950 shadow-inner ring-[0] ring-pink-600'
+      : 'bg-pink-400/60 text-pink-950'
+    : isActive
+      ? 'text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px] ring-sky-500'
+      : isSelected
+        ? 'bg-white outline outline-2 outline-sky-500'
+        : ''
+} 
+flex items-center 
+${
+  pinned
+    ? 'p-0.5 rounded-lg'
+    : horizontalTabs
+      ? 'py-1.5 px-3 rounded-xl'
+      : 'px-4 py-2.5 rounded-2xl'
+} 
+group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none`}
   class:bg-green-200={isActive && $inputUrl === 'surf.featurebase.app' && !tab.magic}
   class:bg-sky-200={isActive && $inputUrl !== 'surf.featurebase.app' && !tab.magic}
   class:pinned
@@ -304,9 +325,24 @@
   aria-hidden="true"
   style:view-transition-name="tab-{tab.id}"
   use:HTMLDragItem.action={{}}
-  on:click={handleClick}
   on:DragStart={handleDragStart}
   on:DragEnd={handleDragEnd}
+  use:HTMLDragZone.action={{
+    accepts: (drag) => {
+      if (tab.type !== 'space' || tab.spaceId === 'all') return false
+      if (
+        drag.isNative ||
+        drag.item.data.hasData(DragTypeNames.SURF_TAB) ||
+        drag.item.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        return true
+      }
+      return false
+    }
+  }}
+  on:Drop={handleDrop}
+  on:click={handleClick}
   on:mouseenter={() => {
     hovered = true
     dispatch('mouseenter', tab.id)
@@ -326,12 +362,11 @@
     : {}}
 >
   <!-- Temporary DragZone overlay to allow dropping onto space tabs -->
-  {#if tab.type === 'space' && tab.spaceId !== 'all'}
+  <!--{#if tab.type === 'space' && tab.spaceId !== 'all'}
     <div
       id="tabZone-{tab.id}"
       class="tmp-tab-drop-zone"
       style="position: absolute; inset-inline: 10%; inset-block: 20%;"
-      use:HTMLDragZone.action={{}}
       on:DragEnter={(drag) => {
         /*const dragData = drag.data
         if (
@@ -348,7 +383,7 @@
       }}
       on:Drop={handleDrop}
     ></div>
-  {/if}
+  {/if}-->
 
   <div
     class:icon-wrapper={true}
@@ -558,6 +593,7 @@
 
 <style lang="scss">
   .tab {
+    border: 1.5px solid transparent;
     transition:
       0s ease-in-out,
       transform 0s;
@@ -595,6 +631,10 @@
   }
   :global(body[data-dragging='true'] .tab:not([data-dragging-item])) {
     box-shadow: none;
+  }
+
+  :global(.tab[data-drag-target='true']) {
+    border: 1.5px dashed rgba(5, 5, 25, 0.3);
   }
 
   /*:global(.tab[data-dragcula-dragging-item='true'] .tmp-tab-drop-zone) {
@@ -679,9 +719,10 @@
       &::after {
         content: '';
         position: absolute;
-        right: -4px;
-        width: 4px;
-        height: 100%;
+        right: -5px;
+        top: -1.5px;
+        bottom: -1.5px;
+        width: 3.5px;
         background: inherit;
       }
     }

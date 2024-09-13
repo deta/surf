@@ -51,6 +51,13 @@ export class DragculaDragEvent<
   }
 
   protected _dispatchPromise: Promise<void>;
+  #status: "pending" | "accepted" | "rejected" = "pending";
+  get isContinued(): boolean {
+    return this.#status === "accepted";
+  }
+  get isAborted(): boolean {
+    return this.#status === "rejected";
+  }
   // @ts-ignore - this is ok as we assign it in the promise constructor
   continue: () => void;
   // @ts-ignore - this is ok as we assign it in the promise constructor
@@ -82,8 +89,14 @@ export class DragculaDragEvent<
 		}*/
 
     this._dispatchPromise = new Promise((resolve, reject) => {
-      this.continue = resolve;
-      this.abort = reject;
+      this.continue = () => {
+        this.#status = "accepted";
+        resolve();
+      };
+      this.abort = () => {
+        this.#status = "rejected";
+        reject();
+      };
     });
 
     this.event = props.event;

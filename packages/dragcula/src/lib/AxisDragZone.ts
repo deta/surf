@@ -61,7 +61,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     node: HTMLElement,
     props: HTMLDragZoneProps
   ): ActionReturn<HTMLDragZoneProps, HTMLAxisDragZoneAttributes> {
-    const zone = new this(node, { id: node.getAttribute("id") || undefined });
+    const zone = new this(node, props);
 
     return {
       destroy() {

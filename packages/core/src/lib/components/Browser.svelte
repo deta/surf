@@ -3830,7 +3830,7 @@
               {#if horizontalTabs}
                 <div
                   id="sidebar-unpinned-tabs"
-                  class="horizontal-tabs space-x-1 h-full divide-x-1 divide-sky-300/70"
+                  class="horizontal-tabs space-x-1 h-full divide-x-1"
                   axis="horizontal"
                   dragdeadzone="5"
                   placeholder-size="60"
@@ -3919,7 +3919,19 @@
                   class="vertical-tabs"
                   axis="vertical"
                   dragdeadzone="5"
-                  use:HTMLAxisDragZone.action={{}}
+                  use:HTMLAxisDragZone.action={{
+                    accepts: (drag) => {
+                      if (
+                        drag.isNative ||
+                        drag.item.data.hasData(DragTypeNames.SURF_TAB) ||
+                        drag.item.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                        drag.item.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                      ) {
+                        return true
+                      }
+                      return false
+                    }
+                  }}
                   on:Drop={handleDropSidebar}
                   on:DragEnter={handleDragEnterSidebar}
                 >

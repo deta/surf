@@ -74,12 +74,12 @@ export class Dragcula {
   }
 }
 
-export class DragOperation {
+export class DragOperation<DataTypes extends { [key: string]: any } = { [key: string]: any }> {
   readonly id: string;
 
   from: DragZone | null;
   to: DragZone | null;
-  item: DragItem | null; // DragItem, null it native drag from outside
+  item: DragItem<DataTypes> | null; // DragItem, null it native drag from outside
   dataTransfer: DataTransfer | null; // DataTransfer, if custom drag, still original event dataTransfer
 
   index: number | null; // Generic index used by e.g. AxisDragZone
@@ -92,7 +92,7 @@ export class DragOperation {
     id?: string;
     from?: DragZone;
     to?: DragZone;
-    item?: DragItem;
+    item?: DragItem<any>;
     dataTransfer?: DataTransfer;
     index?: number;
   }) {

@@ -28,13 +28,10 @@
   class="file"
   style="--color: {color};"
   draggable="true"
-  use:HTMLDragItem.action={{
-    data: new DragData({ "test/file": file })
+  use:HTMLDragItem.action={{}}
+  use:HTMLDragZone.action={{
+    accepts: () => true
   }}
-  on:DragStart={(drag) => {
-    console.info("Drag started", drag);
-  }}
-  use:HTMLDragZone.action={{}}
   on:Drop={(drag) => {
     console.info("Dropped on file", drag);
     drag.continue();

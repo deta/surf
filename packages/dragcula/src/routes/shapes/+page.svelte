@@ -126,7 +126,12 @@
     id="squares"
     class="bucket"
     axis="vertical"
-    use:HTMLAxisDragZone.action={{}}
+    use:HTMLAxisDragZone.action={{
+      accepts: (drag) => {
+        console.log(drag);
+        return true;
+      }
+    }}
     on:Drop={handleDrop}
   >
     {#each $bucketSquare as item}
