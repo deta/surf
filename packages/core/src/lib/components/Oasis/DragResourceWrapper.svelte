@@ -140,7 +140,14 @@
 <style lang="scss">
   .drag-item {
     display: block;
-    width: 100%;
-    height: min-content;
+  }
+  :global(.drag-item[data-drag-preview]) {
+    box-shadow: none;
+    max-width: 25ch;
+  }
+  :global(.drag-item[data-drag-preview] .resource-preview .preview) {
+    box-shadow:
+      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
+      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
   }
 </style>
