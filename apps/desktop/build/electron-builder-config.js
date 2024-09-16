@@ -95,7 +95,7 @@ function electronBuilderConfig() {
         ext: 'html'
       }
     ],
-    electronVersion: '31.4.0'
+    electronVersion: '32.1.0'
     // electronDownload: {
     //   customFilename: 'electron-v31.3.1+wvcus-darwin-arm64.zip',
     //   customDir: 'v31.3.1+wvcus',
