@@ -183,7 +183,7 @@
     font-size: 0.95em;
     transform-origin: top left;
 
-    animation: scale-in 115ms cubic-bezier(0.19, 1, 0.22, 1);
+    animation: scale-in 145ms cubic-bezier(0.19, 1, 0.22, 1);
 
     &:focus {
       border-color: red !important;
