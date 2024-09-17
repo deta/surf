@@ -12,5 +12,5 @@ export type UserSettings = {
   tabs_orientation: 'vertical' | 'horizontal'
   use_semantic_search: boolean
   show_annotations_in_oasis: boolean
-  default_search_engine: string
+  search_engine: string
 }

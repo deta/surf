@@ -151,10 +151,8 @@
         </div>
         {#if userConfigSettings}
           <DefaultSearchEnginePicker
-            bind:value={userConfigSettings.default_search_engine}
-            on:update={(e) => {
-              console.error('new en', e.detail)
-            }}
+            bind:value={userConfigSettings.search_engine}
+            on:update={() => handleSettingsUpdate()}
           />
         {/if}
       </article>

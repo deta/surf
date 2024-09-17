@@ -90,7 +90,6 @@
   const dispatch = createEventDispatcher<OverlayEvents>()
   const config = useConfig()
   const userConfigSettings = config.settings
-  $userConfigSettings.default_search_engine = 'google'
 
   let createSpaceRef: any
 
@@ -450,7 +449,7 @@
   const fetchSearchEngineSuggestions = useDebounce(async (query: string) => {
     try {
       const engine =
-        SEARCH_ENGINES.find((e) => e.key === $userConfigSettings.default_search_engine) ??
+        //SEARCH_ENGINES.find((e) => e.key === $userConfigSettings.search_engine) ??
         SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
       if (!engine) throw new Error('No search engine / default engine found, config error?')
 
@@ -499,7 +498,7 @@
         dispatch('open-url', item.value!)
       } else {
         const engine =
-          SEARCH_ENGINES.find((e) => e.key === $userConfigSettings.default_search_engine) ??
+          SEARCH_ENGINES.find((e) => e.key === $userConfigSettings.search_engine) ??
           SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
         if (!engine) throw new Error('No search engine / default engine found, config error?')
 
