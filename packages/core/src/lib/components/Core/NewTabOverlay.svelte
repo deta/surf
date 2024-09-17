@@ -552,7 +552,7 @@
   const toasts = useToasts()
   const resourceManager = oasis.resourceManager
   const telemetry = resourceManager.telemetry
-  const spaces = oasis.spaces
+  const spaces = derived(oasis.spaces, ($spaces) => $spaces)
   const selectedItem = writable<string | null>(null)
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
@@ -587,6 +587,9 @@
         log.debug('Already loading everything')
         return
       }
+
+      // resets the selected space
+      oasis.resetSelectedSpace()
 
       loadingContents.set(true)
 
@@ -1137,21 +1140,23 @@
             {:else if showTabSearch === 2}
               <div class="flex h-full">
                 <div class="sidebar-wrap h-full bg-sky-500/40 w-[18rem] max-w-[18rem]">
-                  <SpacesView
-                    bind:this={createSpaceRef}
-                    {spaces}
-                    {resourceManager}
-                    showPreview={true}
-                    type="horizontal"
-                    interactive={false}
-                    on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
-                    on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
-                    on:create-empty-space={handleCreateEmptySpace}
-                    on:open-resource={handleOpen}
-                  />
+                  {#key $spaces}
+                    <SpacesView
+                      bind:this={createSpaceRef}
+                      {spaces}
+                      {resourceManager}
+                      showPreview={true}
+                      type="horizontal"
+                      interactive={false}
+                      on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
+                      on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
+                      on:create-empty-space={handleCreateEmptySpace}
+                      on:open-resource={handleOpen}
+                    />
+                  {/key}
                 </div>
                 <div class="stuff-wrap h-full w-full">
-                  {#if $selectedSpaceId !== null}
+                  {#if $selectedSpaceId !== null && $selectedSpaceId !== 'all'}
                     <OasisSpace
                       spaceId={$selectedSpaceId}
                       active
@@ -1161,7 +1166,6 @@
                       {historyEntriesManager}
                       on:open={handleOpen}
                       on:go-back={() => selectedSpaceId.set(null)}
-                      on:update-existing-space
                       insideDrawer={true}
                       {searchValue}
                     />
@@ -1174,19 +1178,21 @@
                     >
                       <div class="w-full h-full">
                         {#if $resourcesToShow.length > 0}
-                          <OasisResourcesViewSearchResult
-                            resources={resourcesToShow}
-                            selected={$selectedItem}
-                            showResourceSource={!!$searchValue}
-                            isEverythingSpace={true}
-                            newTabOnClick
-                            on:click={handleItemClick}
-                            on:open={handleOpen}
-                            on:open-space-as-tab
-                            on:remove={handleResourceRemove}
-                            on:new-tab
-                            {searchValue}
-                          />
+                          {#key $selectedSpaceId}
+                            <OasisResourcesViewSearchResult
+                              resources={resourcesToShow}
+                              selected={$selectedItem}
+                              showResourceSource={!!$searchValue}
+                              isEverythingSpace={true}
+                              newTabOnClick
+                              on:click={handleItemClick}
+                              on:open={handleOpen}
+                              on:open-space-as-tab
+                              on:remove={handleResourceRemove}
+                              on:new-tab
+                              {searchValue}
+                            />
+                          {/key}
 
                           {#if $loadingContents}
                             <div class="floating-loading">
@@ -1232,7 +1238,7 @@
           <!-- </Motion> -->
           <!-- </AnimatePresence> -->
 
-          {#if $selectedSpaceId === 'all' || showTabSearch === 1}
+          {#if $selectedSpaceId === 'all' || $selectedSpaceId === null || showTabSearch === 1}
             <div
               class={showTabSearch === 2
                 ? 'w-full absolute bottom-0 flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'

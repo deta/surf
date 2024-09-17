@@ -106,6 +106,7 @@
     open: string
     'create-resource-from-oasis': string
     'new-tab': BrowserTabNewTabEvent
+    'updated-spaces': string
     deleted: string
     'go-back': void
   }>()

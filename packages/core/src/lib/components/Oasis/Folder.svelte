@@ -158,10 +158,6 @@
     }
   }
 
-  const handleAddSpaceToTabs = () => {
-    dispatch('add-folder-to-tabs')
-  }
-
   export const createFolderWithAI = async (query: string) => {
     try {
       processing = true
@@ -354,7 +350,6 @@
             style={`width: ${inputWidth};`}
             type="text"
             bind:value={folderDetails.folderName}
-            on:blur={handleBlur}
             class="folder-input isEditing"
             on:keydown={handleKeyDown}
           />
@@ -398,7 +393,10 @@
           </button>
 
           <button
-            on:click|stopPropagation={() => editMode.set(false)}
+            on:click|stopPropagation={() => {
+              editMode.set(false)
+              console.log('ddd-shush')
+            }}
             class="close"
             use:tooltip={{ text: 'Back', position: 'left' }}
           >

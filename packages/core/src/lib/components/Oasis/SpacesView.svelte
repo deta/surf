@@ -13,11 +13,7 @@
   import type { Writable } from 'svelte/store'
   import type { Space } from '@horizon/core/src/lib/types'
   import { useTelemetry } from '../../service/telemetry'
-  import {
-    CreateSpaceEventFrom,
-    DeleteSpaceEventTrigger,
-    OpenSpaceEventTrigger
-  } from '@horizon/types'
+  import { CreateSpaceEventFrom, OpenSpaceEventTrigger } from '@horizon/types'
   import type { ResourceManager } from '../../service/resources'
   import { RefreshSpaceEventTrigger } from '@horizon/types'
 
@@ -42,6 +38,8 @@
 
   export let onBack = () => {}
   $: log.debug('Spaces:', $spaces)
+
+  $: log.debug('xxx-Spaces:', $selectedSpace)
 
   export const handleCreateSpace = async (
     _e: MouseEvent,

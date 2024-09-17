@@ -140,6 +140,10 @@ export class OasisService {
     return result
   }
 
+  async resetSelectedSpace() {
+    this.selectedSpace.set('all')
+  }
+
   static provide(resourceManager: ResourceManager) {
     const service = new OasisService(resourceManager)
 
