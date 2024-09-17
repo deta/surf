@@ -21,8 +21,17 @@
     type WebViewEventAnnotation,
     type WebViewSendEvents
   } from '@horizon/types'
-  import { useLogScope, isModKeyAndKeyPressed, useDebounce, wait } from '@horizon/utils'
-  import { Icon } from '@horizon/icons'
+  import {
+    useLogScope,
+    isModKeyAndKeyPressed,
+    useDebounce,
+    wait,
+    copyToClipboard,
+    parseStringIntoUrl,
+    getFileKind,
+    tooltip
+  } from '@horizon/utils'
+  import { Icon, IconConfirmation } from '@horizon/icons'
   import OasisResourceDetails from './OasisResourceDetails.svelte'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import ResourceOverlay from '../Core/ResourceOverlay.svelte'
@@ -31,27 +40,43 @@
   import { useToasts } from '../../service/toast'
   import { handleInlineAI } from '../../service/ai'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
+  import { useTabsManager } from '../../service/tabs'
+  import Image from '../Atoms/Image.svelte'
+  import { derived, writable } from 'svelte/store'
+  import FilePreview from '../Resources/Previews/File/FilePreview.svelte'
+  import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
 
   export let resource: Resource
   export let active: boolean = true
 
   let webview: WebviewWrapper
   let activeAnnotation = ''
+  let copyConfirmation: IconConfirmation
 
   const dispatch = createEventDispatcher<{
     close: void
-    'new-tab': BrowserTabNewTabEvent
   }>()
   const log = useLogScope('OasisResourceModal')
   const resourceManager = useResourceManager()
+  const tabsManager = useTabsManager()
   const historyEntriesManager = new HistoryEntriesManager()
-
   const toast = useToasts()
 
   const canonicalUrl = resource?.tags?.find(
     (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
   )?.value
-  const initialSrc = canonicalUrl || resource?.metadata?.sourceURI || 'about:blank'
+  const initialSrc = parseStringIntoUrl(canonicalUrl || resource?.metadata?.sourceURI || '')
+
+  const url = writable(initialSrc?.href ?? '')
+
+  const hostname = derived(url, (url) => {
+    try {
+      const urlObj = new URL(url)
+      return urlObj.hostname
+    } catch (err) {
+      return url
+    }
+  })
 
   function close() {
     dispatch('close')
@@ -65,8 +90,7 @@
     if (event.key === 'Escape') {
       close()
     } else if (isModKeyAndKeyPressed(event, 'Enter')) {
-      dispatch('new-tab', {
-        url: initialSrc,
+      tabsManager.openResourceAsTab(resource, {
         active: event.shiftKey,
         trigger: CreateTabEventTrigger.OasisItem
       })
@@ -75,6 +99,8 @@
 
   let loadingAnnotations = false
   let annotations: ResourceAnnotation[] = resource.annotations ?? []
+  let title = resource?.metadata?.name ?? canonicalUrl ?? 'Untitled'
+  let favicon = ''
 
   const loadAnnotations = async (resourceId: string) => {
     try {
@@ -324,12 +350,7 @@
     })
   }
 
-  const handleNewTab = (e: CustomEvent<BrowserTabNewTabEvent>) => {
-    dispatch('close')
-    dispatch('new-tab', e.detail)
-  }
-
-  const handleOpenUrl = (e: CustomEvent<string>) => {
+  const handleNavigate = (e: CustomEvent<string>) => {
     webview.navigate(e.detail)
   }
 
@@ -354,6 +375,33 @@
   const handleUrlChange = (e: CustomEvent<WebviewWrapperEvents['url-change']>) => {
     log.debug('url change', e.detail)
     debouncedAppDetection()
+  }
+
+  const handleWebviewTitleChange = (e: CustomEvent<string>) => {
+    log.debug('title change', e.detail)
+    title = e.detail
+  }
+
+  const handleWebviewFaviconChange = (e: CustomEvent<string>) => {
+    log.debug('favicon change', e.detail)
+    favicon = e.detail
+  }
+
+  const handleNewTab = () => {
+    tabsManager.openResourceAsTab(resource, {
+      active: true,
+      trigger: CreateTabEventTrigger.OasisItem
+    })
+    close()
+  }
+
+  const handleCopy = () => {
+    copyToClipboard($url)
+    copyConfirmation.showConfirmation()
+  }
+
+  const handleDownload = () => {
+    // TODO
   }
 
   onMount(async () => {
@@ -397,13 +445,18 @@
     <span class="label">Click or ESC to close</span>
   </div>
   <div id="mini-browser" class="mini-browser w-[90vw] mx-auto">
-    <div class="resource-details">
-      <OasisResourceDetails {resource} on:new-tab={handleNewTab} on:open-url={handleOpenUrl}>
+    <!-- <div class="resource-details">
+      <OasisResourceDetails {resource} on:navigate={handleNavigate} on:created-tab={() => close()}>
         <ResourceOverlay caption="Click to open in new tab">
-          <ResourcePreviewClean slot="content" {resource} newTabOnClick on:new-tab={handleNewTab} />
+          <ResourcePreviewClean
+            slot="content"
+            {resource}
+            newTabOnClick
+            on:created-tab={() => close()}
+          />
         </ResourceOverlay>
       </OasisResourceDetails>
-    </div>
+    </div> -->
 
     <!-- <BrowserTab
       {tab}
@@ -414,17 +467,82 @@
       on:annotationClick={handleAnnotationClick}
     /> -->
 
-    <WebviewWrapper
-      src={initialSrc}
-      partition="persist:horizon"
-      {historyEntriesManager}
-      bind:this={webview}
-      on:webview-page-event={handleWebviewPageEvent}
-      on:url-change={handleUrlChange}
-      on:did-finish-load={debouncedAppDetection}
-      on:new-tab
-      on:navigation
-    />
+    <div class="header">
+      <div class="info">
+        <div class="left-side">
+          <div class="icon-wrapper">
+            {#if initialSrc}
+              {#key favicon}
+                <Image src={favicon} alt={title} fallbackIcon="world" />
+              {/key}
+            {:else}
+              <FileIcon kind={getFileKind(resource.type)} width="100%" height="100%" />
+            {/if}
+          </div>
+
+          <div class="title truncate max-w-[600px]">
+            {title}
+          </div>
+        </div>
+
+        <div class="host">
+          {$hostname}
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <button
+          use:tooltip={{ text: 'Open in new tab' }}
+          on:click={handleNewTab}
+          class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg cursor-pointer"
+        >
+          <Icon name="arrow.diagonal" />
+        </button>
+
+        {#if initialSrc}
+          <button
+            use:tooltip={{ text: 'Copy URL' }}
+            on:click={handleCopy}
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg cursor-pointer"
+          >
+            <IconConfirmation bind:this={copyConfirmation} name="copy" />
+          </button>
+          <!-- {:else}
+        <button on:click={handleDownload} class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg cursor-pointer">
+          <IconConfirmation bind:this={copyConfirmation} name="download" />
+        </button> -->
+        {/if}
+
+        <button
+          use:tooltip={{ text: 'Close' }}
+          on:click={close}
+          class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg cursor-pointer"
+        >
+          <Icon name="close" />
+        </button>
+      </div>
+    </div>
+
+    <div class="mini-webview-wrapper">
+      {#if initialSrc}
+        <WebviewWrapper
+          id="mini-browser-webview"
+          src={initialSrc.href}
+          partition="persist:horizon"
+          {url}
+          {historyEntriesManager}
+          bind:this={webview}
+          on:webview-page-event={handleWebviewPageEvent}
+          on:url-change={handleUrlChange}
+          on:title-change={handleWebviewTitleChange}
+          on:favicon-change={handleWebviewFaviconChange}
+          on:did-finish-load={debouncedAppDetection}
+          on:navigation
+        />
+      {:else}
+        <FilePreview {resource} preview={false} />
+      {/if}
+    </div>
 
     <!-- <WebviewWrapper
       bind:this={webview}
@@ -440,7 +558,7 @@
       on:newWindowWebview={handleWebviewNewWindow}
     /> -->
 
-    <div class="annotations-view">
+    <!-- <div class="annotations-view">
       {#if annotations.length > 0}
         <div class="annotations">
           {#each annotations as annotation, idx (annotation.id + idx)}
@@ -467,7 +585,7 @@
           <p>Select any text on the page and click the marker icon to highlight it.</p>
         </div>
       {/if}
-    </div>
+    </div> -->
   </div>
 </div>
 
@@ -478,12 +596,12 @@
     justify-content: center;
     align-items: center;
     width: 100%;
-    height: 5rem;
+    height: 2rem;
     background: linear-gradient(to bottom, #34393d, transparent);
 
     .label {
       transition: 240ms ease-out;
-      color: #b8c7d0;
+      color: #d4dce0;
       user-select: none;
       opacity: 0;
     }
@@ -491,6 +609,7 @@
     &:hover {
       .label {
         opacity: 1;
+        padding-top: 2.5rem;
       }
     }
 
@@ -506,17 +625,71 @@
   .mini-browser {
     position: relative;
     display: flex;
-    gap: 2rem;
-    height: calc(100vh - 2rem);
+    flex-direction: column;
+    height: calc(100% - 3rem);
+    width: 100%;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     transition: 240ms ease-out;
-    padding: 0 2rem 2rem 2rem;
-    margin-top: 2rem;
+    padding: 0 3rem 3rem 3rem;
+    margin-top: 3rem;
 
     z-index: 100000;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: white;
+    border-radius: 12px;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+    border-bottom: 1px solid #e0e0e0;
+
+    .info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .left-side {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .title {
+      font-size: 1rem;
+      font-weight: 500;
+      opacity: 0.75;
+      transition: opacity 0.2s ease;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    .host {
+      font-size: 1rem;
+      opacity: 0.5;
+      transition: opacity 0.2s ease;
+
+      &:hover {
+        opacity: 0.75;
+      }
+    }
+  }
+
+  .icon-wrapper {
+    width: 16px;
+    height: 16px;
+    display: block;
+    user-select: none;
+    flex-shrink: 0;
   }
 
   .resource-details {
@@ -595,6 +768,15 @@
     height: 100%;
     background: rgba(0, 0, 0, 0.4);
     z-index: 10000000;
+  }
+
+  .mini-webview-wrapper {
+    height: 100%;
+    width: 100%;
     border-radius: 12px;
+    border-top-right-radius: 0;
+    border-top-left-radius: 0;
+    overflow: hidden;
+    background: black;
   }
 </style>

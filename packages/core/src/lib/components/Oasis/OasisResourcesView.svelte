@@ -51,7 +51,6 @@
             on:load-more={handleLoadChunk}
             on:open
             on:remove
-            on:new-tab
             id={new Date()}
             {searchValue}
           ></Masonry>
@@ -69,7 +68,6 @@
             on:open
             on:remove
             on:load
-            on:new-tab
           />
         </div>
       {/each}

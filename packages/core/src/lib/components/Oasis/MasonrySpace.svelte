@@ -537,7 +537,6 @@
           on:open
           on:remove
           on:load
-          on:new-tab
           on:rendered={handleItemRendered}
         />
       </div>

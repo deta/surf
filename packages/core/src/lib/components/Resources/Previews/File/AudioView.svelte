@@ -1,21 +1,60 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import type { Resource } from '../../../../service/resources'
-  import { useLogScope } from '@horizon/utils'
+  import { getFileType, useLogScope } from '@horizon/utils'
 
   const log = useLogScope('AudioViewCard')
 
   export let resource: Resource
   export let blob: Blob
 
-  $: name = resource?.metadata?.name
-  $: url = URL.createObjectURL(blob)
+  const name = resource?.metadata?.name
+  const url = URL.createObjectURL(blob)
+
+  onDestroy(() => {
+    URL.revokeObjectURL(url)
+  })
 </script>
 
-<audio title={name} src={url} controls></audio>
+<div class="wrapper">
+  <div class="title">
+    {name} - {getFileType(resource.type)}
+  </div>
+
+  <div class="audio">
+    <audio title={name} src={url} controls></audio>
+  </div>
+</div>
 
 <style lang="scss">
-  audio {
+  .wrapper {
     width: 100%;
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+
+  @media (max-width: 768px) {
+    .title {
+      display: none;
+    }
+  }
+
+  .audio {
+    width: 100%;
+
+    audio {
+      margin: auto;
+      width: 100%;
+      max-width: 950px;
+    }
   }
 </style>

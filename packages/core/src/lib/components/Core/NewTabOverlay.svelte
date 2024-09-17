@@ -15,13 +15,10 @@
     'open-resource': string
     'create-chat': string
     'open-space': Space
+    'create-note': string
     open: string
     'create-resource-from-oasis': string
     'create-tab-from-space': { tab: TabSpace; active: boolean }
-    'new-tab': {
-      url: string
-      active: boolean
-    }
     deleted: string
   }
 </script>
@@ -70,14 +67,19 @@
   import * as Command from '../Command'
   import Fuse from 'fuse.js'
   import CommandMenuItem, { type CMDMenuItem } from './CommandMenuItem.svelte'
-  import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
+  import type { HistoryEntriesManager } from '../../service/history'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
   import SpacesView from '../Oasis/SpacesView.svelte'
   import CreateNewSpace from '../Oasis/CreateNewSpace.svelte'
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
-  import { SaveToOasisEventTrigger, SearchOasisEventTrigger } from '@horizon/types'
-  import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
+  import {
+    CreateTabEventTrigger,
+    SaveToOasisEventTrigger,
+    SearchOasisEventTrigger
+  } from '@horizon/types'
+  import { useTabsManager } from '../../service/tabs'
+  import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
 
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
@@ -86,6 +88,7 @@
   export let activeTab: Tab | undefined = undefined
 
   const log = useLogScope('NewTabOverlay')
+  const tabsManager = useTabsManager()
   const dispatch = createEventDispatcher<OverlayEvents>()
   const config = useConfig()
   const userConfigSettings = config.settings
@@ -483,7 +486,7 @@
       } else if (item.id === 'create-chat') {
         dispatch('create-chat', $searchValue)
       } else {
-        dispatch(item.id as keyof TabSearchEvents)
+        dispatch(item.id as any)
       }
     } else if (item.type === 'suggestion' || item.type === 'google-search') {
       dispatch('open-url', `https://www.google.com/search?q=${encodeURIComponent(item.value!)}`)
@@ -543,7 +546,8 @@
     },
     { id: 'zoom', label: 'Zoom In', shortcut: '⌘+', type: 'command', icon: 'zoom-in' },
     { id: 'zoom-out', label: 'Zoom Out', shortcut: '⌘-', type: 'command', icon: 'zoom-out' },
-    { id: 'reset-zoom', label: 'Reset Zoom', shortcut: '⌘0', type: 'command', icon: 'maximize' }
+    { id: 'reset-zoom', label: 'Reset Zoom', shortcut: '⌘0', type: 'command', icon: 'maximize' },
+    { id: 'create-note', label: 'Create Note', shortcut: '⌘n', type: 'command', icon: 'docs' }
   ] as CMDMenuItem[]
 
   $: isEverythingSpace = spaceId === 'all'
@@ -725,24 +729,6 @@
     selectedItem.set(e.detail)
   }
 
-  const handleKeyDown = async (e: KeyboardEvent) => {
-    // if (showTabSearch !== 2) return
-    // log.debug('Key down:', e.key)
-    // if (e.key === ' ' && $selectedItem && !$isResourceDetailsModalOpen && !$showSettingsModal) {
-    //   e.preventDefault()
-    //   openResourceDetailsModal($selectedItem)
-    // } else if (isModKeyAndKeyPressed(e, 'Enter') && $selectedItem && !$isResourceDetailsModalOpen) {
-    //   e.preventDefault()
-    //   const resource = await resourceManager.getResource($selectedItem)
-    //   if (!resource) return
-    //   const url = resource.metadata?.sourceURI
-    //   if (!url) return
-    //   dispatch('new-tab', { url: url, active: e.shiftKey })
-    // } else if (e.key === 'Backspace' && page && $searchValue === '') {
-    //   page = null
-    // }
-  }
-
   const handleDrop = async (drag: DragculaDragEvent) => {
     const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
 
@@ -903,6 +889,11 @@
     showResourceDetails.set(true)
   }
 
+  const closeResourceDetailsModal = () => {
+    resourceDetailsModalSelected.set(null)
+    showResourceDetails.set(false)
+  }
+
   const openResourceAsTab = async (id: string) => {
     const resource = await resourceManager.getResource(id)
     if (!resource) {
@@ -920,12 +911,15 @@
       return
     }
 
-    dispatch('new-tab', { url: url, active: true })
+    tabsManager.addPageTab(url, {
+      active: true,
+      trigger: CreateTabEventTrigger.AddressBar
+    })
   }
 
   const handleOpen = async (e: CustomEvent<string>) => {
-    // openResourceDetailsModal(e.detail)
-    openResourceAsTab(e.detail)
+    openResourceDetailsModal(e.detail)
+    // openResourceAsTab(e.detail)
   }
 
   const handleCreateSpace = async (
@@ -999,6 +993,10 @@
     }
   }
 
+  $: if (showTabSearch !== 2) {
+    closeResourceDetailsModal()
+  }
+
   const handleOasisFilterChange = (e: CustomEvent<string>) => {
     log.debug('Filter change:', e.detail)
     debouncedSearch($searchValue)
@@ -1006,7 +1004,6 @@
 </script>
 
 <svelte:window
-  on:keydown={handleKeyDown}
   on:DragStart={(drag) => {
     showTabSearch = 2
   }}
@@ -1032,6 +1029,13 @@
       class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-xl transition duration-400 bg-[#FEFFFE] outline-none"
       style="width: fit-content;"
     >
+      {#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
+        <OasisResourceModalWrapper
+          resourceId={$resourceDetailsModalSelected}
+          active
+          on:close={() => closeResourceDetailsModal()}
+        />
+      {/if}
       <!-- <Motion
         let:motion
         animate={{
@@ -1177,11 +1181,11 @@
                         showResourceSource={!!$searchValue}
                         isEverythingSpace={true}
                         newTabOnClick
+                        scrollTop={0}
                         on:click={handleItemClick}
                         on:open={handleOpen}
                         on:open-space-as-tab
                         on:remove={handleResourceRemove}
-                        on:new-tab
                         {searchValue}
                       />
 

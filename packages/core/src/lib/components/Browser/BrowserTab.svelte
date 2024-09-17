@@ -7,7 +7,6 @@
 
   export type BrowserTabEvents = {
     // components own events
-    'new-tab': BrowserTabNewTabEvent
     navigation: WebviewNavigationEvent
     keydown: WebViewEventKeyDown
     'update-tab': Partial<TabPage>
@@ -779,6 +778,5 @@
   on:favicon-change={handleWebviewFaviconChange}
   on:history-change={handleHistoryChange}
   on:did-finish-load={debouncedAppDetection}
-  on:new-tab
   on:navigation
 />

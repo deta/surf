@@ -1,6 +1,6 @@
 import { get, writable, type Writable } from 'svelte/store'
 
-import { useLogScope, type ScopedLogger, generateID } from '@horizon/utils'
+import { useLogScope, type ScopedLogger, generateID, getFormattedDate } from '@horizon/utils'
 import { SFFS } from './sffs'
 import {
   type AiSFFSQueryResponse,
@@ -832,11 +832,16 @@ export class ResourceManager {
     metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {
+    const defaultMetadata = {
+      name: `Untitled ${getFormattedDate(Date.now())}`
+    }
+
+    const fullMetadata = Object.assign(defaultMetadata, metadata)
     const blob = new Blob([content], { type: ResourceTypes.DOCUMENT_SPACE_NOTE })
     return this.createResource(
       ResourceTypes.DOCUMENT_SPACE_NOTE,
       blob,
-      metadata,
+      fullMetadata,
       tags
     ) as Promise<ResourceNote>
   }

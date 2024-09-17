@@ -61,7 +61,6 @@
           on:open
           on:remove
           on:load
-          on:new-tab
           on:space-selected
           on:open-space-as-tab
           on:scroll={handleScroll}

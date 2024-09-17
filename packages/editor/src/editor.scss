@@ -109,43 +109,6 @@
     outline: none;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-weight: 600;
-    margin: 0.3em 0;
-  }
-
-  h1 {
-    font-size: 1.5em;
-  }
-
-  h2 {
-    font-size: 1.4em;
-  }
-
-  h3 {
-    font-size: 1.3em;
-  }
-
-  hr {
-    margin-block: 1ch;
-  }
-
-  a {
-    color: var(--color-link);
-    text-decoration: underline;
-    text-underline-offset:2px;
-    cursor: pointer;
-  }
-
-  a:hover {
-    color: var(--color-link-muted);
-  }
-
   ul[data-type="taskList"] {
     list-style: none;
     padding: 0;

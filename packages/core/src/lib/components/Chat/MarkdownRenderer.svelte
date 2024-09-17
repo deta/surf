@@ -10,6 +10,7 @@
   import CitationItem from './CitationItem.svelte'
   import CodeBlock from './CodeBlock.svelte'
 
+  export let id: string = ''
   export let content: string
   export let element: HTMLDivElement
 
@@ -39,6 +40,7 @@
 </script>
 
 <div
+  {id}
   bind:this={element}
   class="prose prose-lg prose-neutral prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg"
 >
