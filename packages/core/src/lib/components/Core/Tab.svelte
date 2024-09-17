@@ -565,6 +565,11 @@
       0s ease-in-out,
       transform 0s;
   }
+  :global(.tab[data-context-menu-anchor]) {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.55);
+    outline: none;
+  }
   :global(.tab img) {
     user-select: none;
   }

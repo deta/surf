@@ -14,8 +14,6 @@
         target = target.parentElement
       }
 
-      console.warn('contex target', target)
-
       if (target === null) return
       e.preventDefault()
 
@@ -23,12 +21,18 @@
       openContextMenu({
         x: e.clientX,
         y: e.clientY,
+        targetEl: target,
         items: target.contextmenu
       })
     })
   }
 
-  export function openContextMenu(props: { x: number; y: number; items: CtxItem[] }) {
+  export function openContextMenu(props: {
+    x: number
+    y: number
+    targetEl?: HTMLElement
+    items: CtxItem[]
+  }) {
     if (get(contextMenuOpen)) {
       closeContextMenu()
     }
@@ -38,6 +42,7 @@
       props: {
         targetX: props.x,
         targetY: props.y,
+        targetEl: props.targetEl ?? null,
         items: props.items
       }
     })
@@ -55,7 +60,7 @@
   }
   export interface CtxItemAction extends CtxItemBase {
     type: 'action'
-    kind?: 'default' | 'danger'
+    kind?: 'danger'
     text: string
     icon?: string
     action: () => void
@@ -78,17 +83,22 @@
 
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import type { ActionReturn } from 'svelte/action'
   import { derived, writable, get } from 'svelte/store'
 
   export let targetX: number
   export let targetY: number
+  export let targetEl: HTMLElement | null
   export let items: CtxItem[] = []
 
   let ref: HTMLElement | null = null
   onMount(() => {
     // if anchro el ref -> add data-contrext-anchor to it / remove it on destory
+    if (targetEl) {
+      targetEl.setAttribute('data-context-menu-anchor', '')
+    }
+
     if (!ref) throw new Error('Ref is null for context menu! Cannot update position correctly!')
     const width = ref.clientWidth
     const height = ref.clientHeight
@@ -103,10 +113,15 @@
       targetY = window.innerHeight - height - edgeOffset
     }
   })
+  onDestroy(() => {
+    if (targetEl) {
+      targetEl.removeAttribute('data-context-menu-anchor')
+    }
+  })
 </script>
 
 <svelte:window
-  on:click|capture={(e) => {
+  on:click={(e) => {
     if (!ref) return
     closeContextMenu()
   }}
@@ -122,8 +137,14 @@
     {#each items as item}
       {#if item.type === 'separator'}
         <hr />
-      {:else}
-        <li on:click={item.action} class:danger={item.kind === 'danger'}>
+      {:else if item.type === 'action'}
+        <li
+          on:click|capture={() => {
+            closeContextMenu()
+            item.action()
+          }}
+          class:danger={item.kind === 'danger'}
+        >
           {#if item.icon}
             <Icon name={item.icon} size="1.2em" />
           {/if}
@@ -171,7 +192,7 @@
     position: fixed;
     top: var(--y);
     left: var(--x);
-    z-index: 1000;
+    z-index: 2147483647; /* max value lol */
     width: 180px;
     height: fit-content;
     background: #fff;
@@ -183,7 +204,7 @@
     font-size: 0.95em;
     transform-origin: top left;
 
-    animation: scale-in 145ms cubic-bezier(0.19, 1, 0.22, 1);
+    animation: scale-in 125ms cubic-bezier(0.19, 1, 0.22, 1);
 
     &:focus {
       border-color: red !important;

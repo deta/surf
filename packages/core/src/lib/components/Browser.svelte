@@ -118,7 +118,7 @@
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
   import BrowserActions from './Browser/BrowserActions.svelte'
   import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
-  import { prepareContextMenu } from './Core/ContextMenu.svelte'
+  import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -3768,7 +3768,10 @@
         <div
           class="flex {!horizontalTabs
             ? `flex-col w-full ${showCustomWindowActions ? 'h-[calc(100%-45px)]' : 'py-1.5 h-full'} space-y-4 px-2`
-            : `flex-row items-center h-full ${showCustomWindowActions ? '' : 'ml-20'} space-x-4 mr-4`} relative"
+            : `flex-row items-center h-full ${showCustomWindowActions ? '' : 'ml-20'} space-x-4 mr-4`} relative no-drag"
+          use:contextMenu={{
+            items: [{ type: 'action', icon: 'add', text: 'New Tab' }]
+          }}
         >
           {#if horizontalTabs || !showCustomWindowActions}
             <BrowserActions
