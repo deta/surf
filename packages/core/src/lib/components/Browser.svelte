@@ -798,9 +798,11 @@
       )
 
       if (!matchingSearchEngine) {
-        const defaultSearchEngine = SEARCH_ENGINES.find(
-          (engine) => engine.key === DEFAULT_SEARCH_ENGINE
-        )!
+        const defaultSearchEngine =
+          SEARCH_ENGINES.find((e) => e.key === $userConfigSettings.search_engine) ??
+          SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+        if (!defaultSearchEngine)
+          throw new Error('No search engine / default engine found, config error?')
 
         log.debug('Using default search engine', defaultSearchEngine.key)
         const searchURL = defaultSearchEngine.getUrl(encodeURIComponent(value))

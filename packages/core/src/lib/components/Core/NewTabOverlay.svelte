@@ -490,7 +490,12 @@
         dispatch(item.id as keyof TabSearchEvents)
       }
     } else if (item.type === 'suggestion' || item.type === 'google-search') {
-      dispatch('open-url', `https://www.google.com/search?q=${encodeURIComponent(item.value!)}`)
+      const engine =
+        SEARCH_ENGINES.find((e) => e.key === $userConfigSettings.search_engine) ??
+        SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+      if (!engine) throw new Error('No search engine / default engine found, config error?')
+
+      dispatch('open-url', engine.getUrl(encodeURIComponent(item.value!)))
     } else if (item.type === 'general-search') {
       // check if it's a URL
       const isValidURL = optimisticCheckIfURLOrIPorFile(item.value!)
