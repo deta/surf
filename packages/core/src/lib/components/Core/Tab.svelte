@@ -13,6 +13,7 @@
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
+  import { contextMenu } from './ContextMenu.svelte'
 
   const log = useLogScope('Browser Tab')
 
@@ -315,6 +316,19 @@
         delay: 500
       }
     : {}}
+  use:contextMenu={{
+    items: [
+      { type: 'action', icon: 'leave', text: 'Save Tab' },
+      { type: 'action', icon: 'chat', text: 'Chat with tab' },
+      { type: 'separator' },
+
+      { type: 'action', icon: 'pin', text: 'Pin Tab' },
+      { type: 'action', icon: 'reload', text: 'Reload Tab' },
+      { type: 'action', icon: 'copy', text: 'Duplicate Tab' },
+      { type: 'separator' },
+      { type: 'action', icon: 'trash', text: 'Close tab', kind: 'danger' }
+    ]
+  }}
 >
   <!-- Temporary DragZone overlay to allow dropping onto space tabs -->
   {#if tab.type === 'space' && tab.spaceId !== 'all'}

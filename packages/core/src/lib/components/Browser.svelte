@@ -118,6 +118,7 @@
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
   import BrowserActions from './Browser/BrowserActions.svelte'
   import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
+  import { prepareContextMenu } from './Core/ContextMenu.svelte'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -2896,6 +2897,8 @@
 
       showSplashScreen.set(false)
     }
+
+    prepareContextMenu()
   })
 
   const openFeedback = () => {
