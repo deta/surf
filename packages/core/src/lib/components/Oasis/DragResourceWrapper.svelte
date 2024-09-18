@@ -11,7 +11,6 @@
   import { get } from 'svelte/store'
   import { MEDIA_TYPES } from '../../service/mediaImporter'
   import { HTMLDragItem } from '@horizon/dragcula'
-  import { contextMenu } from '../Core/ContextMenu.svelte'
 
   export let draggable = true
   export let resource: Resource
@@ -132,25 +131,6 @@
       'oasis/resource': resource
     }
     drag.continue()
-  }}
-  use:contextMenu={{
-    items: [
-      {
-        type: 'action',
-        icon: 'arrowDiagonal',
-        text: 'Open Resource',
-        action: () => console.log('Open Resource')
-      },
-      { type: 'action', icon: undefined, text: 'Preview Resource' },
-      { type: 'separator' },
-      {
-        type: 'action',
-        icon: 'trash',
-        text: 'Remove Resource',
-        kind: 'danger',
-        action: () => console.log('Remove Resource')
-      }
-    ]
   }}
 >
   <slot />
