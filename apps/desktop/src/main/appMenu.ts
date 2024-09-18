@@ -12,6 +12,8 @@ import { toggleHistorySwipeGestureConfig } from './historySwipe'
 const log = useLogScope('Main App Menu')
 const isMac = process.platform === 'darwin'
 
+let menu: Electron.Menu | null = null
+
 const useAsDefaultBrowserClickHandler = () => {
   try {
     // Register the app to handle URLs (from: https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app)
@@ -264,8 +266,12 @@ const template = [
   }
 ]
 
+export function getAppMenu(): Electron.Menu | null {
+  return menu
+}
+
 export function setAppMenu(): void {
-  const menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
+  menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
   Menu.setApplicationMenu(menu)
 }
 
