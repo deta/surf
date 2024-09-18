@@ -13,6 +13,7 @@
   import ResourceOverlay from '../Core/ResourceOverlay.svelte'
   import SpacePreview from './SpacePreview.svelte'
   import LoadingParticles from '../Effects/LoadingParticles.svelte'
+  import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
 
   import { type Space } from '../../types'
 
@@ -32,6 +33,8 @@
   const dispatch = createEventDispatcher()
   const userEnteredName = writable(false)
   const previewIDs = writable<string[]>([])
+  const previewResources = writable<any[]>([])
+  const fineTuneEnabled = writable(false)
   const isLoading = writable(false)
   const pillContent = writable('')
   const activePillConfig = writable<PromptConfig['pill'] | null>(null)
@@ -60,7 +63,9 @@
     }
   ]
 
-  $: aiEnabled.set($userPrompt !== '<p></p>')
+  $: if (!$fineTuneEnabled) {
+    aiEnabled.set($userPrompt !== '<p></p>')
+  }
 
   const newSpace = () => {
     const now = new Date().toISOString()
@@ -140,6 +145,17 @@
 
       previewIDs.set(resourceIds)
 
+      if (resourceIds.length > 0) {
+        const loadedResources = await Promise.all(
+          resourceIds.map((id) => resourceManager.getResourceWithAnnotations(id))
+        )
+        previewResources.set(loadedResources)
+        console.log('xxx-loadedresources', loadedResources)
+      } else {
+        console.log('xxx-reset')
+        previewResources.set([])
+      }
+
       if (!results) {
         log.warn('No results found for', userPrompt, response)
         return
@@ -200,60 +216,82 @@
 />
 
 <div class="centered-content">
-  <div class="input-wrapper">
-    <input
-      type="text"
-      class="folder-name"
-      id="folder-name"
-      name="folder-name"
-      placeholder="Enter Space Name"
-      bind:value={$name}
-      on:input={handleNameInput}
-      tabindex="0"
-      autofocus
-      on:keydown={(e) => {
-        if (e.key === 'Tab') {
-          e.stopPropagation()
-          e.stopImmediatePropagation()
-        }
-      }}
-    />
-  </div>
-
-  <ResourceOverlay
-    caption="Click to change color."
-    interactive={$previewIDs.length === 0 ? true : false}
+  <div
+    class="top-bar fixed top-0 right-0 flex justify-between items-center w-[calc(100%-18rem)] px-4 py-2 bg-white z-50 border-b border-gray-200"
+    style="border-bottom-width: 0.5px;"
   >
-    <div
-      slot="content"
-      class="space-icon-wrapper transform active:scale-[98%] relative"
-      class:has-preview={$previewIDs.length > 0}
-      transition:scale={{ duration: 300, easing: quartOut }}
-    >
-      {#if $isLoading}
-        <div
-          class={`absolute inset-4 z-20 flex items-center justify-center ${$previewIDs.length > 0 ? 'pt-[12rem]' : ''}`}
-        >
-          <LoadingParticles size={$previewIDs.length === 0 ? 300 : 700} />
-        </div>
-      {/if}
-      {#if $previewIDs.length > 0}
-        <div class="absolute inset-0 z-10">
-          {#key $previewIDs}
-            <SpacePreview resourceIDs={$previewIDs} showHeader={false} />
-          {/key}
-        </div>
-      {/if}
-      <div class="relative z-0">
-        <SpaceIcon on:change={handleColorChange} folder={newSpace()} />
-      </div>
+    <div class="input-wrapper flex-grow">
+      <input
+        type="text"
+        class="folder-name w-full text-lg font-medium text-gray-700 bg-transparent border-none focus:outline-none"
+        id="folder-name"
+        name="folder-name"
+        placeholder="Enter Space Name"
+        bind:value={$name}
+        on:input={handleNameInput}
+        tabindex="0"
+        autofocus
+        on:keydown={(e) => {
+          if (e.key === 'Tab') {
+            e.stopPropagation()
+            e.stopImmediatePropagation()
+          }
+        }}
+      />
     </div>
-  </ResourceOverlay>
-  <div class="input-group">
+    <div class="button-group flex space-x-2 ml-4">
+      <button
+        on:click={handleAbortSpaceCreation}
+        class="cancel-button px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+        >Cancel</button
+      >
+      <button
+        on:click={handleSubmit}
+        class="create-button px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors"
+        >Create</button
+      >
+    </div>
+  </div>
+  {#if !$fineTuneEnabled}
+    <ResourceOverlay
+      caption="Click to change color."
+      interactive={$previewIDs.length === 0 ? true : false}
+    >
+      <div
+        slot="content"
+        class="space-icon-wrapper transform active:scale-[98%] relative"
+        class:has-preview={$previewIDs.length > 0}
+        transition:scale={{ duration: 300, easing: quartOut }}
+      >
+        {#if $isLoading}
+          <div
+            class={`absolute inset-4 z-20 flex items-center justify-center ${$previewIDs.length > 0 ? 'pt-[12rem]' : ''}`}
+          >
+            <LoadingParticles size={$previewIDs.length === 0 ? 300 : 700} />
+          </div>
+        {/if}
+        {#if $previewIDs.length > 0}
+          <div class="absolute inset-0 z-10">
+            {#key $previewIDs}
+              <SpacePreview resourceIDs={$previewIDs} showHeader={false} />
+            {/key}
+          </div>
+        {/if}
+        <div class="relative z-0">
+          <SpaceIcon on:change={handleColorChange} folder={newSpace()} />
+        </div>
+      </div>
+    </ResourceOverlay>
+  {:else}
+    <div class="preview-resources-wrapper">
+      <OasisResourcesViewSearchResult resources={previewResources} />
+    </div>
+  {/if}
+  <div class="input-group" class:absolute={$fineTuneEnabled} class:bottom-0={$fineTuneEnabled}>
     <div
       class="ai-voodoo bg-white/95 backdrop-blur-md px-12 pt-8 pb-12 mb-16 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
     >
-      {#if $aiEnabled}
+      {#if $aiEnabled && !$fineTuneEnabled}
         <div
           class="ai-description"
           transition:fly={{
@@ -268,6 +306,16 @@
             description.</span
           >
           <Icon name="sparkles.fill" size="22px" color="#29A6F3" />
+        </div>
+      {/if}
+      {#if $previewIDs.length > 0 || $fineTuneEnabled}
+        <div class="flex justify-center -mt-12">
+          <button
+            class="fine-tune-button bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+            on:click={() => fineTuneEnabled.set(!$fineTuneEnabled)}
+          >
+            {$fineTuneEnabled ? 'Done Tuning' : 'Fine Tune Results'}
+          </button>
         </div>
       {/if}
       <div class="input-wrapper">
@@ -303,31 +351,28 @@
           {/if}
         </div>
       </div>
-
-      <div class="template-prompts">
-        <div class="prompt-pills mt-8 mb-4">
-          {#each templatePrompts as template}
-            <button
-              class={`prompt-pill ${
-                $userPrompt.startsWith(template.prompt)
-                  ? 'bg-blue-200 text-blue-800'
-                  : 'bg-gray-100 text-gray-800'
-              } rounded-full px-4 py-2 text-sm font-medium hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
-              on:click={async () => await handleTemplatePromptClick(template)}
-            >
-              {template.prompt}
-              {#if template.pill}
-                <span class="pill-placeholder">{template.pill.placeholder}</span>
-              {/if}
-            </button>
-          {/each}
+      {#if !$fineTuneEnabled}
+        <div class="template-prompts">
+          <div class="prompt-pills mt-8 mb-4">
+            {#each templatePrompts as template}
+              <button
+                class={`prompt-pill ${
+                  $userPrompt.startsWith(template.prompt)
+                    ? 'bg-blue-200 text-blue-800'
+                    : 'bg-gray-100 text-gray-800'
+                } rounded-full px-4 py-2 text-sm font-medium hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+                on:click={async () => await handleTemplatePromptClick(template)}
+              >
+                {template.prompt}
+                {#if template.pill}
+                  <span class="pill-placeholder">{template.pill.placeholder}</span>
+                {/if}
+              </button>
+            {/each}
+          </div>
         </div>
-      </div>
+      {/if}
     </div>
-  </div>
-  <div class="button-group">
-    <button on:click={handleAbortSpaceCreation} class="cancel-button">Cancel</button>
-    <button on:click={handleSubmit} class="create-button">Create</button>
   </div>
 </div>
 
@@ -341,6 +386,15 @@
     width: 100%;
     background: #f6faff;
     background: color(display-p3 0.9661 0.9801 1);
+    overflow-y: auto;
+  }
+
+  .preview-resources-wrapper {
+    width: -webkit-fill-available;
+    height: calc(100vh - 4rem);
+    position: fixed;
+    top: 4rem;
+    overflow-y: auto;
   }
 
   h2 {
@@ -378,7 +432,6 @@
     align-items: center;
     position: relative;
     width: 28rem;
-    margin-bottom: 1rem;
   }
 
   .folder-name {
@@ -393,11 +446,9 @@
     width: 100%;
     color: #28568f;
     transition: border-color 0.3s;
-    text-align: center;
 
     &::placeholder {
       color: rgba(40, 86, 143, 0.4);
-      text-align: center;
     }
 
     &:focus {
