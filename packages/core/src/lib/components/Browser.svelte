@@ -3147,6 +3147,42 @@
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
     )
   }
+
+  const handleOpenTabChat = (e: CustomEvent<string>) => {
+    // Called from tab context menu
+
+    // TODO: add to context if already chat open
+    const tabId = e.detail
+    const tab = $tabs.find((t) => t.id === tabId)
+    if (!tab) {
+      log.error('Tab not found', tabId)
+      return
+    }
+
+    // Open chat with the tab
+    openRightSidebarTab('chat')
+    includeTabAndExcludeOthersFromMagic(tabId)
+  }
+  const handlePinTab = (e: CustomEvent<string>) => {
+    const tabId = e.detail
+    const tab = $tabs.find((t) => t.id === tabId)
+    if (!tab) {
+      log.error('Tab not found', tabId)
+      return
+    }
+
+    tabsManager.update(tabId, { pinned: true })
+  }
+  const handleUnpinTab = (e: CustomEvent<string>) => {
+    const tabId = e.detail
+    const tab = $tabs.find((t) => t.id === tabId)
+    if (!tab) {
+      log.error('Tab not found', tabId)
+      return
+    }
+
+    tabsManager.update(tabId, { pinned: false })
+  }
 </script>
 
 {#if showDevOverlay}
@@ -3301,6 +3337,9 @@
                     on:multi-select={handleMultiSelect}
                     on:passive-select={handlePassiveSelect}
                     on:include-tab={handleIncludeTabInMagic}
+                    on:chat-with-tab={handleOpenTabChat}
+                    on:pin={handlePinTab}
+                    on:unpin={handleUnpinTab}
                     on:edit={handleEdit}
                     on:mouseenter={handleTabMouseEnter}
                     on:mouseleave={handleTabMouseLeave}
@@ -3377,6 +3416,14 @@
               class="no-scrollbar relative h-full flex-grow w-full overflow-y-visible"
               class:space-x-2={horizontalTabs}
               class:items-center={horizontalTabs}
+              use:contextMenu={{
+                canOpen: $selectedTabs.size > 1,
+                items: [
+                  { type: 'action', icon: 'leave', text: 'Group Tabs' },
+                  { type: 'separator' },
+                  { type: 'action', icon: 'trash', text: 'Archive Tabs', kind: 'danger' }
+                ]
+              }}
             >
               {#if horizontalTabs}
                 <div
@@ -3424,6 +3471,9 @@
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
                         on:include-tab={handleIncludeTabInMagic}
+                        on:chat-with-tab={handleOpenTabChat}
+                        on:pin={handlePinTab}
+                        on:unpin={handleUnpinTab}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}
@@ -3453,6 +3503,9 @@
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
                         on:include-tab={handleIncludeTabInMagic}
+                        on:chat-with-tab={handleOpenTabChat}
+                        on:pin={handlePinTab}
+                        on:unpin={handleUnpinTab}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}
@@ -3508,6 +3561,9 @@
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
                         on:include-tab={handleIncludeTabInMagic}
+                        on:chat-with-tab={handleOpenTabChat}
+                        on:pin={handlePinTab}
+                        on:unpin={handleUnpinTab}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}
@@ -3537,6 +3593,9 @@
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
                         on:include-tab={handleIncludeTabInMagic}
+                        on:chat-with-tab={handleOpenTabChat}
+                        on:pin={handlePinTab}
+                        on:unpin={handleUnpinTab}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}

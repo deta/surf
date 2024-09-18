@@ -1,4 +1,42 @@
 <script lang="ts" context="module">
+  /**
+   * The context (right click) menu should only be used thrugh these exposed
+   * methods and never instantiated manually!
+   *
+   * Strategy: Opening the menu requires a target element or manually specifying the items.
+   *  TODO: readme
+   */
+
+  export interface CtxItemBase {
+    type: 'separator' | 'action' | 'sub-menu'
+  }
+  export interface CtxItemSeparator extends CtxItemBase {
+    type: 'separator'
+  }
+  export interface CtxItemAction extends CtxItemBase {
+    type: 'action'
+    kind?: 'danger'
+    disabled?: boolean
+    text: string
+    icon?: string
+    action: () => void
+  }
+  export interface CtxItemSubMenu extends CtxItemBase {
+    type: 'sub-menu'
+    disabled?: boolean
+    text: string
+    icon?: string
+    items: CtxItem[]
+  }
+
+  export type CtxItem = CtxItemSeparator | CtxItemAction | CtxItemSubMenu
+
+  declare global {
+    interface HTMLElement {
+      contextMenuItems?: CtxItem[]
+    }
+  }
+
   import ContextMenu from './ContextMenu.svelte'
 
   const contextMenuOpen = writable(false)
@@ -9,8 +47,8 @@
   export function prepareContextMenu() {
     window.addEventListener('contextmenu', (e) => {
       // Find closest element which has contextMenuHint property set
-      let target = e.target as HTMLElement
-      while (target && !target.contextmenu) {
+      let target = e.target as HTMLElement | null
+      while (target && !target.contextMenuItems) {
         target = target.parentElement
       }
 
@@ -22,7 +60,7 @@
         x: e.clientX,
         y: e.clientY,
         targetEl: target,
-        items: target.contextmenu
+        items: target.contextMenuItems
       })
     })
   }
@@ -31,11 +69,14 @@
     x: number
     y: number
     targetEl?: HTMLElement
-    items: CtxItem[]
+    items?: CtxItem[]
   }) {
     if (get(contextMenuOpen)) {
       closeContextMenu()
     }
+    if (!props.targetEl && !props.items)
+      throw new Error('No target element or items provided for context menu!')
+
     contextMenuOpen.set(true)
     ctxMenuCmp = new ContextMenu({
       target: document.body,
@@ -52,49 +93,40 @@
     contextMenuOpen.set(false)
   }
 
-  export interface CtxItemBase {
-    type: 'separator' | 'action' | 'sub-menu'
-  }
-  export interface CtxItemSeparator extends CtxItemBase {
-    type: 'separator'
-  }
-  export interface CtxItemAction extends CtxItemBase {
-    type: 'action'
-    kind?: 'danger'
-    text: string
-    icon?: string
-    action: () => void
-  }
-  export type CtxItem = CtxItemSeparator | CtxItemAction
-
   export function contextMenu(
     node: HTMLElement,
     props: {
+      canOpen?: boolean
       items: CtxItem[]
     }
-  ): ActionReturn {
-    node.contextmenu = props.items
+  ): ActionReturn<any, any> {
+    node.contextMenuItems = props.items
+    if (props.canOpen === false) node.contextMenuItems = undefined
     return {
-      update() {},
-      destroy() {}
+      update(props: { canOpen?: boolean; items: CtxItem[] }) {
+        node.contextMenuItems = props.items
+        if (props.canOpen === false) node.contextMenuItems = undefined
+      },
+      destroy() {
+        node.contextMenuItems = undefined
+      }
     }
   }
 </script>
 
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
   import { onDestroy, onMount } from 'svelte'
   import type { ActionReturn } from 'svelte/action'
   import { derived, writable, get } from 'svelte/store'
+  import ContextMenuItems from './ContextMenuItems.svelte'
 
   export let targetX: number
   export let targetY: number
   export let targetEl: HTMLElement | null
   export let items: CtxItem[] = []
 
-  let ref: HTMLElement | null = null
+  let ref: HTMLDialogElement | null = null
   onMount(() => {
-    // if anchro el ref -> add data-contrext-anchor to it / remove it on destory
     if (targetEl) {
       targetEl.setAttribute('data-context-menu-anchor', '')
     }
@@ -103,7 +135,6 @@
     const width = ref.clientWidth
     const height = ref.clientHeight
 
-    // MOve targetX / Y if it + with / height exceedes viewport
     if (targetX + width > window.innerWidth) {
       const edgeOffset = window.innerWidth - targetX
       targetX = window.innerWidth - width - edgeOffset
@@ -112,6 +143,7 @@
       const edgeOffset = window.innerHeight - targetY
       targetY = window.innerHeight - height - edgeOffset
     }
+    ref.showModal()
   })
   onDestroy(() => {
     if (targetEl) {
@@ -120,59 +152,20 @@
   })
 </script>
 
-<svelte:window
+<dialog
+  id="context-menu"
+  bind:this={ref}
+  style="--x: {targetX}px; --y: {targetY}px;"
   on:click={(e) => {
-    if (!ref) return
     closeContextMenu()
   }}
-  on:keydown|capture={(e) => {
-    if (e.key === 'Escape') {
-      closeContextMenu()
-    }
+  on:contextmenu={(e) => {
+    e.preventDefault()
+    closeContextMenu()
   }}
-/>
-
-<dialog id="context-menu" bind:this={ref} style="--x: {targetX}px; --y: {targetY}px;" open>
-  <ul>
-    {#each items as item}
-      {#if item.type === 'separator'}
-        <hr />
-      {:else if item.type === 'action'}
-        <li
-          on:click|capture={() => {
-            closeContextMenu()
-            item.action()
-          }}
-          class:danger={item.kind === 'danger'}
-        >
-          {#if item.icon}
-            <Icon name={item.icon} size="1.2em" />
-          {/if}
-          {item.text}
-        </li>
-      {/if}
-    {/each}
-    <!--<li>
-      <Icon name="copy" size="1.2em" />
-      Copy Link
-    </li>
-    <li>
-      <Icon name="search" size="1.2em" />
-
-      Share
-    </li>
-    <li>
-      <Icon name="grid" size="1.2em" />
-
-      Create Group
-    </li>
-    <hr />
-    <li class="danger">
-      <Icon name="trash" size="1.2em" />
-
-      Archive
-    </li>-->
-  </ul>
+  autofocus
+>
+  <ContextMenuItems {items} />
 </dialog>
 
 <style lang="scss">
@@ -193,7 +186,7 @@
     top: var(--y);
     left: var(--x);
     z-index: 2147483647; /* max value lol */
-    width: 180px;
+    min-width: 180px;
     height: fit-content;
     background: #fff;
     padding: 0.25rem;
@@ -206,52 +199,8 @@
 
     animation: scale-in 125ms cubic-bezier(0.19, 1, 0.22, 1);
 
-    &:focus {
-      border-color: red !important;
-    }
-
-    ul {
-      width: auto;
-      display: flex;
-      flex-direction: column;
-
-      > li {
-        display: flex;
-        align-items: center;
-        gap: 0.35em;
-        padding: 0.4em 0.55em;
-        padding-bottom: 0.385rem;
-        border-radius: 6px;
-        font-weight: 500;
-        line-height: 1;
-        letter-spacing: 0.0125rem;
-        font-size: 0.99em;
-        color: #210e1f;
-        font-family: system-ui;
-        -webkit-font-smoothing: antialiased;
-        cursor: pointer;
-
-        --highlight-color: #2497e9;
-
-        &:hover {
-          background: var(--highlight-color);
-          color: #fff;
-        }
-
-        & * {
-          pointer-events: none;
-        }
-
-        &.danger {
-          --highlight-color: #ff4d4f;
-        }
-      }
-
-      hr {
-        margin-inline: 1.2ch;
-        margin-block: 0.25rem;
-        border-top: 0.07rem solid rgba(0, 0, 0, 0.15);
-      }
+    &::backdrop {
+      background-color: rgba(0, 0, 0, 0);
     }
   }
 </style>

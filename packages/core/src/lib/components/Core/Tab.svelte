@@ -15,8 +15,10 @@
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { contextMenu } from './ContextMenu.svelte'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
+  import { useTabsManager } from '../../service/tabs'
 
   const log = useLogScope('Browser Tab')
+  const tabsManager = useTabsManager()
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -65,12 +67,15 @@
     'delete-tab': string
     'input-enter': string
     bookmark: void
+    pin: string
+    unpin: string
     'save-resource-in-space': Space
     'create-live-space': void
     'add-source-to-space': Space
     'exclude-other-tabs': string
     'exclude-tab': string
     'include-tab': string
+    'chat-with-tab': string
     Drop: { drag: DragculaDragEvent; spaceId: string }
     DragEnd: DragculaDragEvent
     edit: void
@@ -81,6 +86,7 @@
 
   const liveSpacePopoverOpened = writable(false)
   const saveToSpacePopoverOpened = writable(false)
+  const selectedTabs = tabsManager.selectedTabs
 
   let addressInputElem: HTMLInputElement
   let space: Space | null = null
@@ -276,7 +282,7 @@
 <div
   draggable={true}
   id="tab-{tab.id}"
-  class={`tab no-drag ${isActive ? 'active' : ''} ${tab.magic ? (isActive ? 'bg-pink-500/80 text-pink-950 shadow-inner ring-[0] ring-pink-600' : 'bg-pink-400/60 text-pink-950') : isActive ? 'text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px] ring-sky-500' : isSelected ? 'bg-white outline outline-2 outline-sky-500' : ''} flex items-center ${pinned ? 'p-1 rounded-lg' : horizontalTabs ? 'py-1.5 px-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none`}
+  class={`tab no-drag ${isActive ? 'active' : ''} ${tab.magic ? (isActive ? 'shadow-inner ring-[0] ring-pink-600' : '') : isActive ? 'text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px] ring-sky-500' : isSelected ? 'bg-white outline outline-2 outline-sky-500' : ''} flex items-center ${pinned ? 'p-1 rounded-lg' : horizontalTabs ? 'py-1.5 px-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none`}
   class:bg-green-200={isActive && $inputUrl === 'surf.featurebase.app' && !tab.magic}
   class:bg-sky-200={isActive && $inputUrl !== 'surf.featurebase.app' && !tab.magic}
   class:pinned
@@ -313,16 +319,66 @@
       }
     : {}}
   use:contextMenu={{
+    canOpen: $selectedTabs.size <= 1,
     items: [
-      { type: 'action', icon: 'leave', text: 'Save Tab' },
-      { type: 'action', icon: 'chat', text: 'Chat with tab' },
+      {
+        type: 'action',
+        icon: 'leave',
+        text: 'Save',
+        action: () => handleBookmark(),
+        disabled: isBookmarkedByUser
+      },
+      {
+        type: 'action',
+        icon: 'chat',
+        text: 'Open Chat',
+        action: () => {
+          dispatch('select', tab.id)
+          dispatch('chat-with-tab', tab.id)
+        }
+      },
+      {
+        type: 'action',
+        icon: 'news',
+        text: 'Create Live Space',
+        action: () => handleCreateLiveSpace()
+      },
       { type: 'separator' },
 
-      { type: 'action', icon: 'pin', text: 'Pin Tab' },
-      { type: 'action', icon: 'reload', text: 'Reload Tab' },
-      { type: 'action', icon: 'copy', text: 'Duplicate Tab' },
+      tab.pinned
+        ? {
+            type: 'action',
+            icon: 'pinned-off',
+            text: 'Unpin',
+            action: () => dispatch('unpin', tab.id)
+          }
+        : { type: 'action', icon: 'pin', text: 'Pin', action: () => dispatch('pin', tab.id) },
+
+      /*{
+        type: 'sub-menu',
+        icon: '',
+        text: 'Add To Space',
+        disabled: true,
+        items: [].map((space) => {
+          return {
+            type: 'action',
+            icon: '',
+            text: space.title,
+            action: () => handleAddSourceToSpace({ detail: space })
+          }
+        })
+      },*/
+      /*{ type: 'action', icon: 'pin', text: 'Copy Link', action: () => {}, disabled: true },
+      { type: 'action', icon: 'reload', text: 'Reload', action: () => {}, disabled: true },
+      { type: 'action', icon: 'copy', text: 'Duplicate', action: () => {}, disabled: true },*/
       { type: 'separator' },
-      { type: 'action', icon: 'trash', text: 'Close tab', kind: 'danger' }
+      {
+        type: 'action',
+        icon: 'trash',
+        text: 'Close',
+        kind: 'danger',
+        action: () => handleArchive()
+      }
     ]
   }}
 >

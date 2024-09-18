@@ -80,6 +80,8 @@ import Moon from './Icons/Moon.svelte'
 import Minus from './Icons/Minus.svelte'
 import TriangleSquareCircle from './Icons/TriangleSquareCircle.svelte'
 import Wand from './Icons/Wand.svelte'
+import Pin from './Icons/Pin.svelte'
+import PinnedOff from './Icons/PinnedOff.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -164,7 +166,9 @@ export const icons = {
   moon: Moon,
   minus: Minus,
   'triangle-square-circle': TriangleSquareCircle,
-  wand: Wand
+  wand: Wand,
+  pin: Pin,
+  'pinned-off': PinnedOff
 }
 
 export type Icons = keyof typeof icons
@@ -250,5 +254,7 @@ export {
   Moon,
   Minus,
   TriangleSquareCircle,
-  Wand
+  Wand,
+  Pin,
+  PinnedOff
 }
