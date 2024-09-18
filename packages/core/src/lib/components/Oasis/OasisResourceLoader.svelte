@@ -1,48 +1,45 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
-  import { Resource, ResourceAnnotation, useResourceManager } from '../../service/resources'
   import { useLogScope } from '@horizon/utils'
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
-  import DragResourceWrapper from './DragResourceWrapper.svelte'
-  import Skelleton from './OasisSkelleton.svelte'
+  import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
 
-  export let id: string
+  import DragResourceWrapper from './DragResourceWrapper.svelte'
+  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
+
+  export let resourceOrId: string | Resource
   export let selected: boolean = false
   export let showSource: boolean = false
-  export let newTabOnClick: boolean = false
 
-  const log = useLogScope('OasisSpaceItem')
+  const log = useLogScope('OasisResourceLoader')
   const resourceManager = useResourceManager()
   const dispatch = createEventDispatcher<{ load: Resource; rendered: void }>()
 
-  let loading = false
-  let resource: Resource | null = null
+  let fetchedResource: Resource | null = null
+
+  $: resource = resourceOrId instanceof Resource ? resourceOrId : fetchedResource
 
   const loadResource = async () => {
     try {
-      log.debug('loadResource')
-      loading = true
-      const res = await resourceManager.getResourceWithAnnotations(id)
+      if (typeof resourceOrId !== 'string') {
+        fetchedResource = resourceOrId
+        dispatch('load', fetchedResource)
+        return
+      }
+
+      const res = await resourceManager.getResourceWithAnnotations(resourceOrId)
       if (!res) {
         return
       }
-      resource = res
-      dispatch('load', resource)
+      fetchedResource = res
+
+      dispatch('rendered')
     } catch (e) {
       log.error(e)
-    } finally {
-      loading = false
     }
   }
 
-  $: if (id) {
-    loadResource()
-  }
-
   onMount(() => {
-    queueMicrotask(() => {
-      dispatch('rendered')
-    })
+    loadResource()
   })
 </script>
 
@@ -51,9 +48,8 @@
     <DragResourceWrapper {resource}>
       <ResourcePreviewClean
         {resource}
-        {selected}
         {showSource}
-        {newTabOnClick}
+        {selected}
         showSummary
         on:load
         on:click
@@ -61,10 +57,6 @@
         on:remove
       />
     </DragResourceWrapper>
-  {:else if loading}
-    <Skelleton />
-  {:else}
-    <div>Resource not found</div>
   {/if}
 </div>
 

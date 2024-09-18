@@ -45,15 +45,23 @@
       {#if scrollElement}
         {#key $searchValue === ''}
           <Masonry
-            renderContents={$renderContents}
+            items={$renderContents.map((id) => ({ id, data: null }))}
             isEverythingSpace={false}
-            {showResourceSource}
-            on:load-more={handleLoadChunk}
-            on:open
-            on:remove
-            id={new Date()}
             {searchValue}
-          ></Masonry>
+            on:load-more={handleLoadChunk}
+            let:item
+            let:renderingDone={handleRenderingDone}
+          >
+            <OasisResourceLoader
+              resourceOrId={item.id}
+              showSource={showResourceSource}
+              on:click
+              on:open
+              on:remove
+              on:load
+              on:rendered={handleRenderingDone}
+            />
+          </Masonry>
         {/key}
       {/if}
     </div>
@@ -62,7 +70,7 @@
       {#each $renderContents as resourceId (resourceId)}
         <div class="max-w-[420px] w-full">
           <OasisResourceLoader
-            id={resourceId}
+            resourceOrId={resourceId}
             showSource={showResourceSource}
             on:click
             on:open
