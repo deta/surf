@@ -16,6 +16,15 @@
 
   import { type Space } from '../../types'
 
+  interface PromptConfig {
+    name: string
+    prompt: string
+    pill?: {
+      placeholder: string
+      position: 'after'
+    }
+  }
+
   const aiEnabled = writable(false)
   const name = writable('')
   const userPrompt = writable('<p></p>')
@@ -24,6 +33,8 @@
   const userEnteredName = writable(false)
   const previewIDs = writable<string[]>([])
   const isLoading = writable(false)
+  const pillContent = writable('')
+  const activePillConfig = writable<PromptConfig['pill'] | null>(null)
   let editor: Editor
 
   const log = useLogScope('OasisSpace')
@@ -31,12 +42,22 @@
 
   export let space: Space
 
-  const templatePrompts = [
-    { name: 'Screenshots', prompt: 'All my Screenshots' },
-    { name: 'Articles', prompt: 'Articles about...' },
+  const templatePrompts: PromptConfig[] = [
+    { name: 'Images', prompt: 'All my Images' },
     { name: 'Notion Documents', prompt: 'All my Notion Documents' },
-    { name: 'YouTube Videos', prompt: 'Youtube Videos I watched' },
-    { name: 'PDFs', prompt: 'Every PDF' }
+    { name: 'YouTube Videos', prompt: 'Youtube Videos' },
+    {
+      name: 'Articles',
+      prompt: 'Articles about',
+      pill: {
+        placeholder: 'Enter topic',
+        position: 'after'
+      }
+    },
+    {
+      name: 'PDFs',
+      prompt: 'Every PDF'
+    }
   ]
 
   $: aiEnabled.set($userPrompt !== '<p></p>')
@@ -82,9 +103,15 @@
     dispatch('close-modal')
   }
 
-  const handleTemplatePromptClick = async (template: { name: string; prompt: string }) => {
-    userPrompt.set(`<p>${template.prompt}</p>`)
-    editor.setContent($userPrompt)
+  const handleTemplatePromptClick = async (template: PromptConfig) => {
+    if (template.pill) {
+      userPrompt.set(`${template.prompt} `)
+      activePillConfig.set(template.pill)
+      pillContent.set('')
+    } else {
+      userPrompt.set(template.prompt)
+      activePillConfig.set(null)
+    }
     aiEnabled.set(true)
     if (!$userEnteredName || templatePrompts.some((t) => t.name === $name)) {
       name.set(template.name)
@@ -145,6 +172,15 @@
 
     debouncedPreviewAISpace($userPrompt)
   }
+
+  const handlePillInput = (event: Event) => {
+    const target = event.target as HTMLElement
+    pillContent.set(target.textContent || '')
+    const activePrompt = templatePrompts.find((p) => p.pill === $activePillConfig)
+    if (activePrompt) {
+      debouncedPreviewAISpace(`${activePrompt.prompt} ${$pillContent}`)
+    }
+  }
 </script>
 
 <svelte:window
@@ -182,16 +218,6 @@
         }
       }}
     />
-  </div>
-
-  <div
-    class="fixed top-0 right-0 p-4 bg-gray-800 bg-opacity-75 text-white rounded-br-lg shadow-lg z-50"
-  >
-    <h3 class="text-sm font-semibold mb-2">Debug: Preview IDs</h3>
-    <h1 class="text-sm font-semibold mb-2">Prompt {$userPrompt}</h1>
-    <pre class="text-xs whitespace-pre-wrap break-all">
-      {JSON.stringify($previewIDs, null, 2)}
-    </pre>
   </div>
 
   <ResourceOverlay
@@ -246,20 +272,35 @@
       {/if}
       <div class="input-wrapper">
         <div class="folder-rules">
-          <Editor
-            bind:this={editor}
-            content={$userPrompt}
-            on:update={handleEditorUpdate}
-            placeholder="Describe what you want in your space. (optional)"
-            tabindex="1"
-            autofocus={false}
-            on:keydown={(e) => {
-              if (e.key === 'Tab') {
-                e.stopPropagation()
-                e.stopImmediatePropagation()
-              }
-            }}
-          />
+          {#if $activePillConfig}
+            <div class="prompt-with-pill">
+              <span>{$userPrompt}</span>
+              <div
+                class="pill-content"
+                contenteditable="true"
+                on:input={handlePillInput}
+                on:focus={() => activePillConfig.set($activePillConfig)}
+                on:blur={() => activePillConfig.set($pillContent !== '' ? $activePillConfig : null)}
+              >
+                {$pillContent}
+              </div>
+            </div>
+          {:else}
+            <Editor
+              bind:this={editor}
+              content={$userPrompt}
+              on:update={handleEditorUpdate}
+              placeholder="Describe what you want in your space. (optional)"
+              tabindex="1"
+              autofocus={false}
+              on:keydown={(e) => {
+                if (e.key === 'Tab') {
+                  e.stopPropagation()
+                  e.stopImmediatePropagation()
+                }
+              }}
+            />
+          {/if}
         </div>
       </div>
 
@@ -268,13 +309,16 @@
           {#each templatePrompts as template}
             <button
               class={`prompt-pill ${
-                $userPrompt === `<p>${template.prompt}</p>`
+                $userPrompt.startsWith(template.prompt)
                   ? 'bg-blue-200 text-blue-800'
                   : 'bg-gray-100 text-gray-800'
               } rounded-full px-4 py-2 text-sm font-medium hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
               on:click={async () => await handleTemplatePromptClick(template)}
             >
               {template.prompt}
+              {#if template.pill}
+                <span class="pill-placeholder">{template.pill.placeholder}</span>
+              {/if}
             </button>
           {/each}
         </div>
@@ -467,29 +511,46 @@
   .prompt-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem 0.75rem;
-    max-width: 28rem;
-    justify-content: flex-start;
+    gap: 0.5rem;
   }
 
   .prompt-pill {
-    background-color: #e1f0ff;
-    color: #28568f;
-    border: none;
-    border-radius: 20px;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    flex: 0 1 auto;
+    display: flex;
+    align-items: center;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: calc(50% - 0.25rem);
+  }
 
-    &:hover {
-      background-color: #c1e0ff;
+  .prompt-with-pill {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 1.25rem;
+    color: #28568f;
+    padding: 0.5rem;
+  }
+
+  .pill-content {
+    display: inline-block;
+    background-color: #e1f0ff;
+    border-radius: 20px;
+    padding: 0.25rem 0.75rem;
+    margin: 0.25rem 0.5rem;
+    min-width: 100px;
+    outline: none;
+
+    &:empty::before {
+      content: attr(data-placeholder);
+      color: rgba(40, 86, 143, 0.4);
     }
+
+    &:focus {
+      box-shadow: 0 0 0 2px #47b1f3;
+    }
+  }
+
+  .pill-placeholder {
+    opacity: 0.6;
+    font-style: italic;
+    margin-left: 0.5rem;
   }
 </style>

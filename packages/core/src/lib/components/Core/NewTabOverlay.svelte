@@ -1157,18 +1157,20 @@
                 </div>
                 <div class="stuff-wrap h-full w-full">
                   {#if $selectedSpaceId !== null && $selectedSpaceId !== 'all'}
-                    <OasisSpace
-                      spaceId={$selectedSpaceId}
-                      active
-                      showBackBtn
-                      hideResourcePreview
-                      handleEventsOutside
-                      {historyEntriesManager}
-                      on:open={handleOpen}
-                      on:go-back={() => selectedSpaceId.set(null)}
-                      insideDrawer={true}
-                      {searchValue}
-                    />
+                    {#key $selectedSpaceId}
+                      <OasisSpace
+                        spaceId={$selectedSpaceId}
+                        active
+                        showBackBtn
+                        hideResourcePreview
+                        handleEventsOutside
+                        {historyEntriesManager}
+                        on:open={handleOpen}
+                        on:go-back={() => selectedSpaceId.set(null)}
+                        insideDrawer={true}
+                        {searchValue}
+                      />
+                    {/key}
                   {:else}
                     <DropWrapper
                       {spaceId}

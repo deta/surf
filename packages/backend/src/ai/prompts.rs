@@ -196,7 +196,6 @@ the necessary fields.
 - `savedWithAction`: download, drag/browser, drag/local, paste, import
 - `type`: string
 - `deleted`: boolean
-- `hostname`: string
 
 **Note:** The `resource_text_content` table may not exist for every
 `resource_id`. When using this table, always include a fallback to the main

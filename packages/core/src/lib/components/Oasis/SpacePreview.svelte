@@ -125,7 +125,9 @@
     <div class="relative h-[26rem] mb-6">
       {#each resourcesData as item, index}
         <div class="card" style={getTransformStyle(index, $activeIndex)}>
-          <ResourcePreviewClean resource={resources[index]} interactive={false} on:click />
+          <div class="overflow-hidden w-full h-full">
+            <ResourcePreviewClean resource={resources[index]} interactive={false} on:click />
+          </div>
         </div>
       {/each}
     </div>
@@ -179,6 +181,7 @@
     border: 0.5px solid rgba(67, 142, 239, 0.15);
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     will-change: transform;
+    overflow: hidden;
   }
 
   .active-bar {
