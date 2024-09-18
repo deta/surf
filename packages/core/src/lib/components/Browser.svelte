@@ -3280,7 +3280,27 @@
             ? `flex-col w-full ${showCustomWindowActions ? 'h-[calc(100%-45px)]' : 'py-1.5 h-full'} space-y-4 px-2`
             : `flex-row items-center h-full ${showCustomWindowActions ? '' : 'ml-20'} space-x-4 mr-4`} relative no-drag"
           use:contextMenu={{
-            items: [{ type: 'action', icon: 'add', text: 'New Tab' }]
+            items: [
+              {
+                type: 'action',
+                icon: 'add',
+                text: 'New Tab',
+                action: () => tabsManager.addPageTab('')
+              },
+              { type: 'separator' },
+              {
+                type: 'action',
+                icon: 'trash',
+                text: 'Close all unpinned',
+                kind: 'danger',
+                action: () => {
+                  const tabs = $unpinnedTabs
+                  for (const tab of tabs) {
+                    tabsManager.delete(tab.id, DeleteTabEventTrigger.CommandMenu)
+                  }
+                }
+              }
+            ]
           }}
         >
           {#if horizontalTabs || !showCustomWindowActions}

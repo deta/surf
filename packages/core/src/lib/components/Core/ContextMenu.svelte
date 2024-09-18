@@ -93,14 +93,16 @@
     contextMenuOpen.set(false)
   }
 
+  // TODO: (maxu): FIx typings
+  // NOTE: We allow undefined for more easy items construction (ternary)
   export function contextMenu(
     node: HTMLElement,
     props: {
       canOpen?: boolean
-      items: CtxItem[]
+      items: (CtxItem | undefined)[]
     }
   ): ActionReturn<any, any> {
-    node.contextMenuItems = props.items
+    node.contextMenuItems = props.items.filter((item) => item !== undefined) as CtxItem[]
     if (props.canOpen === false) node.contextMenuItems = undefined
     return {
       update(props: { canOpen?: boolean; items: CtxItem[] }) {

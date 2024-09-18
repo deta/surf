@@ -14,30 +14,32 @@
     : ''}
 >
   {#each items as item, i}
-    {#if item.type === 'separator'}
-      <hr />
-    {:else if item.type === 'action'}
-      <button
-        on:click={() => {
-          if (item.action) item.action()
-        }}
-        class:danger={item.kind === 'danger'}
-        disabled={item.disabled}
-      >
-        {#if item.icon}
-          <Icon name={item.icon} size="1.2em" />
-        {/if}
-        <span style="flex: 1; width:100%;">{item.text}</span>
-      </button>
-    {:else if item.type === 'sub-menu'}
-      <li class="sub-item" style="anchor-name: --sub-{i};">
-        {#if item.icon}
-          <Icon name={item.icon} size="1.2em" />
-        {/if}
-        <span style="flex: 1; width:100%;">{item.text} </span>
-        <Icon name="chevron.right" size="1.2em" style="align-self: flex-end;" />
-      </li>
-      <svelte:self items={item.items} subMenuRef={`${i}`} />
+    {#if item !== undefined}
+      {#if item.type === 'separator'}
+        <hr />
+      {:else if item.type === 'action'}
+        <button
+          on:click={() => {
+            if (item.action) item.action()
+          }}
+          class:danger={item.kind === 'danger'}
+          disabled={item.disabled}
+        >
+          {#if item.icon}
+            <Icon name={item.icon} size="1.2em" />
+          {/if}
+          <span style="flex: 1; width:100%;">{item.text}</span>
+        </button>
+      {:else if item.type === 'sub-menu'}
+        <li class="sub-item" style="anchor-name: --sub-{i};">
+          {#if item.icon}
+            <Icon name={item.icon} size="1.2em" />
+          {/if}
+          <span style="flex: 1; width:100%;">{item.text} </span>
+          <Icon name="chevron.right" size="1.2em" style="align-self: flex-end;" />
+        </li>
+        <svelte:self items={item.items} subMenuRef={`${i}`} />
+      {/if}
     {/if}
   {/each}
 </ul>

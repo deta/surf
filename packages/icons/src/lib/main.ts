@@ -82,6 +82,7 @@ import TriangleSquareCircle from './Icons/TriangleSquareCircle.svelte'
 import Wand from './Icons/Wand.svelte'
 import Pin from './Icons/Pin.svelte'
 import PinnedOff from './Icons/PinnedOff.svelte'
+import ArrowUpRight from './Icons/ArrowUpRight.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -140,6 +141,7 @@ export const icons = {
   'layout-grid-add': LayoutGridAdd,
   'arrow.left': ArrowLeft,
   'arrow.right': ArrowRight,
+  'arrow.up.right': ArrowUpRight,
   reload: Reload,
   trash: Trash,
   grid: Grid,
@@ -228,6 +230,7 @@ export {
   LayoutGridAdd,
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   Reload,
   Trash,
   Grid,

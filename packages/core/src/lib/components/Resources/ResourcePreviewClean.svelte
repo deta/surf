@@ -54,6 +54,7 @@
   } from '@horizon/utils'
   import ArticleProperties from './ArticleProperties.svelte'
   import { useTabsManager } from '../../service/tabs'
+  import { contextMenu } from '../Core/ContextMenu.svelte'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -182,13 +183,13 @@
     dispatch('load', resource.id)
   }
 
-  const handleRemove = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
+  const handleRemove = (e?: MouseEvent) => {
+    e?.stopImmediatePropagation()
     dispatch('remove', resource.id)
   }
 
-  const handleOpenAsNewTab = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
+  const handleOpenAsNewTab = (e?: MouseEvent) => {
+    e?.stopImmediatePropagation()
 
     openResourceAsTab({
       active: true,
@@ -215,8 +216,24 @@
   class:background={(isLiveSpaceResource && showSummary && resource.metadata?.userContext) ||
     showSource}
   style="--id:{resource.id};"
-  on:dragstart={handleDragStart}
-  draggable="true"
+  use:contextMenu={{
+    items: [
+      {
+        type: 'action',
+        icon: 'arrow.up.right',
+        text: 'Open',
+        action: () => handleOpenAsNewTab()
+      },
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: 'trash',
+        text: 'Remove',
+        kind: 'danger',
+        action: () => handleRemove()
+      }
+    ]
+  }}
 >
   <div
     class="preview"

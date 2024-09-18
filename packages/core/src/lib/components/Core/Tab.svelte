@@ -319,7 +319,7 @@
       }
     : {}}
   use:contextMenu={{
-    canOpen: $selectedTabs.size <= 1,
+    canOpen: isMagicActive || $selectedTabs.size <= 1,
     items: [
       {
         type: 'action',
@@ -328,15 +328,17 @@
         action: () => handleBookmark(),
         disabled: isBookmarkedByUser
       },
-      {
-        type: 'action',
-        icon: 'chat',
-        text: 'Open Chat',
-        action: () => {
-          dispatch('select', tab.id)
-          dispatch('chat-with-tab', tab.id)
-        }
-      },
+      isMagicActive
+        ? undefined
+        : {
+            type: 'action',
+            icon: 'chat',
+            text: 'Open Chat',
+            action: () => {
+              dispatch('select', tab.id)
+              dispatch('chat-with-tab', tab.id)
+            }
+          },
       {
         type: 'action',
         icon: 'news',
@@ -344,6 +346,22 @@
         action: () => handleCreateLiveSpace()
       },
       { type: 'separator' },
+
+      isMagicActive
+        ? tab.magic
+          ? {
+              type: 'action',
+              icon: '',
+              text: 'Remove from Chat context',
+              action: () => dispatch('exclude-tab', tab.id)
+            }
+          : {
+              type: 'action',
+              icon: '',
+              text: 'Add to Chat context',
+              action: () => dispatch('include-tab', tab.id)
+            }
+        : undefined,
 
       tab.pinned
         ? {
