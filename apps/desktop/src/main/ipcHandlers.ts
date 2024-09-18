@@ -56,16 +56,12 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
   return true
 }
 
-<<<<<<< HEAD
 function setupIpcHandlers(backendRootPath: string) {
-=======
-function setupIpcHandlers() {
   IPC_EVENTS_MAIN.showAppMenuPopup.on((event, _) => {
     if (!validateIPCSender(event)) return
     getAppMenu()?.popup()
   })
 
->>>>>>> 87f35008 (apps: desktop: show app menu popup handler)
   IPC_EVENTS_MAIN.setAdblockerState.on(async (event, { partition, state }) => {
     if (!validateIPCSender(event)) return
 

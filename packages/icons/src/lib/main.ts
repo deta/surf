@@ -83,6 +83,7 @@ import Wand from './Icons/Wand.svelte'
 import Pin from './Icons/Pin.svelte'
 import PinnedOff from './Icons/PinnedOff.svelte'
 import ArrowUpRight from './Icons/ArrowUpRight.svelte'
+import Menu from './Icons/Menu.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -130,6 +131,7 @@ export const icons = {
   'square.rotated': SquareRotated,
   rectangle: Rectangle,
   spinner: Spinner,
+  menu: Menu,
   'sidebar.left': SidebarLeft,
   'sidebar.right': SidebarRight,
   play: Play,
@@ -259,5 +261,6 @@ export {
   TriangleSquareCircle,
   Wand,
   Pin,
-  PinnedOff
+  PinnedOff,
+  Menu
 }
