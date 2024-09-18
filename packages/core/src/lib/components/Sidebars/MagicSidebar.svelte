@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { derived, readable, writable, type Readable, type Writable } from 'svelte/store'
   import { fly, slide } from 'svelte/transition'
-  import { tooltip } from '@horizon/utils'
+  import { tooltip, truncate } from '@horizon/utils'
   import { DropdownMenu } from 'bits-ui'
 
   import { Icon } from '@horizon/icons'
@@ -30,6 +30,7 @@
   import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import ChatContextTabPicker from '../Chat/ChatContextTabPicker.svelte'
+  import { useTabsManager } from '../../service/tabs'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -56,28 +57,32 @@
   const resourceManager = useResourceManager()
   const toasts = useToasts()
   const config = useConfig()
+  const tabsManager = useTabsManager()
 
   const userConfigSettings = config.settings
   const telemetry = resourceManager.telemetry
 
+  const optPressed = writable(false)
+  const cmdPressed = writable(false)
+  const shiftPressed = writable(false)
+  const aPressed = writable(false)
+  const hasError = writable(false)
+  const errorMessage = writable('')
+  const optToggled = writable(false)
+  const toggleSelectAll = writable(false)
+  const prevSelectedTabs: Writable<Tab[]> = writable([])
+  const tabPickerOpen = writable(false)
   const savedResponse = writable(false)
+  const savedChatResponses = writable<Record<string, string>>({})
+
+  const CMD_A_DELAY = 300
 
   let listElem: HTMLDivElement
   let editorFocused = false
   let editor: Editor
-
-  let optPressed = writable(false)
-  let cmdPressed = writable(false)
-  let shiftPressed = writable(false)
-  let aPressed = writable(false)
-  let hasError = writable(false)
-  let errorMessage = writable('')
   let lastCmdATime = 0
-  const CMD_A_DELAY = 300
-  const optToggled = writable(false)
-  const toggleSelectAll = writable(false)
-  const prevSelectedTabs: Writable<Tab[]> = writable([])
-  let tabPickerOpen = writable(false)
+  let autoScrollChat = true
+  let abortController: AbortController | null = null
 
   const chatBoxPlaceholder = /*writable('Ask anything...') */ derived(
     [optPressed, cmdPressed, shiftPressed, magicPage, optToggled, tabsInContext],
@@ -90,9 +95,6 @@
       }...`
     }
   )
-
-  let autoScrollChat = true
-  let abortController: AbortController | null = null
 
   export const startChatWithQuery = async (query: string) => {
     await handleClearChat()
@@ -151,16 +153,43 @@
   }
 
   const saveResponseOutput = async (response: AIChatMessageParsed) => {
-    const div = document.createElement('div')
-    div.innerHTML = response.content
-    const text = div.textContent || div.innerText || ''
+    log.debug('Saving chat response')
 
-    dispatch('saveText', text)
+    let content = response.content
+    const element = document.getElementById(`chat-response-${response.id}`)
+    if (element) {
+      content = element.innerHTML
+    }
 
-    savedResponse.set(true)
-    setTimeout(() => {
-      savedResponse.set(false)
-    }, 2000)
+    const resource = await resourceManager.createResourceNote(content, {
+      name: truncate(response.query, 50)
+    })
+
+    savedChatResponses.update((responses) => {
+      responses[response.id] = resource.id
+      return responses
+    })
+
+    log.debug('Saved response', resource)
+
+    toasts.success('Saved to My Stuff!')
+  }
+
+  const openResponseResource = async (responseId: string) => {
+    const resourceId = $savedChatResponses[responseId]
+    if (!resourceId) {
+      log.error('No resource found for response', responseId)
+      toasts.error('No resource found for response')
+      return
+    }
+
+    log.debug(tabsManager)
+
+    await tabsManager.openResourceAsTab(resourceId, {
+      active: true
+    })
+
+    log.debug('Opened saved response', resourceId)
   }
 
   const populateRenderAndChunkIds = (sources: AIChatMessageSource[] | undefined) => {
@@ -481,6 +510,8 @@
           if (spaceContents) {
             resourceIds.push(...spaceContents.map((content) => content.resource_id))
           }
+        } else if (tab.type === 'resource') {
+          resourceIds.push(tab.resourceId)
         }
       }
 
@@ -725,6 +756,7 @@
             </div>
 
             <ChatMessageMarkdown
+              id={`chat-response-${response.id}`}
               content={response.content}
               sources={populateRenderAndChunkIds(response.sources)}
               on:citationClick={(e) =>
@@ -740,20 +772,32 @@
             <div
               class="flex-row items-center mx-auto space-x-2 hidden group-hover:flex absolute -bottom-2 left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out"
             >
-              <!--<button
-                on:click={() => saveResponseOutput(response)}
-                use:tooltip={{
-                  text: 'Save to My Stuff',
-                  position: 'left'
-                }}
-                class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center py-2 px-4 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-              >
-                {#if $savedResponse}
+              {#if $savedChatResponses[response.id]}
+                <button
+                  on:click={() => openResponseResource(response.id)}
+                  use:tooltip={{
+                    text: 'Open as tab',
+                    position: 'left'
+                  }}
+                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center gap-2 py-2 px-4 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                >
+                  <Icon name="check" />
                   Saved
-                {:else}
+                </button>
+              {:else}
+                <button
+                  on:click={() => saveResponseOutput(response)}
+                  use:tooltip={{
+                    text: 'Save to My Stuff',
+                    position: 'left'
+                  }}
+                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center gap-2 py-2 px-4 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                >
+                  <Icon name="leave" />
                   Save
-                {/if}
-              </button>-->
+                </button>
+              {/if}
+
               <button
                 on:click={() => copy(response.content)}
                 use:tooltip={{
@@ -788,6 +832,7 @@
 
             {#if response.content}
               <ChatMessageMarkdown
+                id={`chat-response-${response.id}`}
                 content={response.content}
                 sources={populateRenderAndChunkIds(response.sources)}
                 on:citationClick={(e) =>

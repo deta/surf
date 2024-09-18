@@ -152,10 +152,15 @@ export class Telemetry {
     })
   }
 
-  async trackCreatePageTab(trigger: CreateTabEventTrigger, foreground: boolean) {
+  async trackCreateTab(
+    trigger: CreateTabEventTrigger,
+    foreground: boolean,
+    type: Tab['type'] = 'page'
+  ) {
     await this.trackEvent(TelemetryEventTypes.CreateTab, {
       trigger: trigger,
-      foreground: foreground
+      foreground: foreground,
+      type: type
     })
   }
 

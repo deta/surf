@@ -59,7 +59,6 @@
         on:click
         on:open
         on:remove
-        on:new-tab
       />
     </DragResourceWrapper>
   {:else if loading}

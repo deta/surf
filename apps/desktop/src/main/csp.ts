@@ -14,6 +14,15 @@ const CSP_DIRECTIVES = [
   // Allow images from same origin, data: URLs, and any HTTPS source (needed for tab favicons and resource previews)
   "img-src 'self' data: blob: https:",
 
+  // Allow object-src from same origin and blob: URLs (needed for PDF previews)
+  "object-src 'self' blob:",
+
+  // Allow frames from same origin and blob: URLs (needed for PDF previews)
+  "frame-src 'self' blob:",
+
+  // Allow media content from same origin and blob: URLs (needed for video previews)
+  "media-src 'self' blob:",
+
   // Allow connections to same origin, localhost (HTTP/WS), and specific APIs
   `connect-src 'self' http://localhost:* ws://localhost:* https://*.amplitude.com ${CSP_BACKEND_API} ${CSP_OPEN_AI}`,
 

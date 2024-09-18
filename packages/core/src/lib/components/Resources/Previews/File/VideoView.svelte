@@ -12,7 +12,10 @@
 </script>
 
 <!-- svelte-ignore a11y-media-has-caption -->
-<video title={name} src={url} controls></video>
+<video title={name} src={url} controls>
+  <source src={url} type={resource.type} />
+  Your browser does not support the video tag.
+</video>
 
 <style lang="scss">
   video {

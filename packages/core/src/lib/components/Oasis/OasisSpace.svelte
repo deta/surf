@@ -84,6 +84,7 @@
   import PQueue from 'p-queue'
   import { useConfig } from '../../service/config'
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
+  import { useTabsManager } from '../../service/tabs'
 
   export let spaceId: string
   export let active: boolean = false
@@ -103,11 +104,11 @@
   const dispatch = createEventDispatcher<{
     open: string
     'create-resource-from-oasis': string
-    'new-tab': BrowserTabNewTabEvent
     deleted: string
     'go-back': void
   }>()
   const toasts = useToasts()
+  const tabsManager = useTabsManager()
 
   const resourceManager = oasis.resourceManager
   const spaces = oasis.spaces
@@ -1021,8 +1022,7 @@
       const url = resource.metadata?.sourceURI
       if (!url) return
 
-      dispatch('new-tab', {
-        url: url,
+      tabsManager.addPageTab(url, {
         active: e.shiftKey,
         trigger: CreateTabEventTrigger.OasisItem
       })
@@ -1345,7 +1345,6 @@
     resourceId={$resourceDetailsModalSelected}
     {active}
     on:close={() => closeResourceDetailsModal()}
-    on:new-tab
   />
 {/if}
 
@@ -1547,7 +1546,6 @@
         on:open={handleOpen}
         on:remove={handleResourceRemove}
         on:load={handleLoadResource}
-        on:new-tab
         on:create-tab-from-space
         {searchValue}
       />
@@ -1567,7 +1565,6 @@
         on:remove={handleResourceRemove}
         on:space-selected={handleSpaceSelected}
         on:open-space-as-tab
-        on:new-tab
         isEverythingSpace={false}
         {searchValue}
       />

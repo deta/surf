@@ -175,7 +175,7 @@
               style="position: absolute; top: {(startIndex + visibleItems.indexOf(item)) *
                 (itemHeight + itemMargin)}px; left: 0; right: 0; margin-bottom: {itemMargin}px;"
             >
-              <BrowserHistoryEntry entry={item} on:delete={() => deleteEntry(item.id)} on:new-tab />
+              <BrowserHistoryEntry entry={item} on:delete={() => deleteEntry(item.id)} />
             </div>
           {/each}
         </div>

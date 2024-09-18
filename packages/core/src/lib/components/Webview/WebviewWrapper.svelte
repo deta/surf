@@ -4,7 +4,6 @@
       type: WebViewEventSendNames
       data: WebViewSendEvents[keyof WebViewSendEvents]
     }
-    'new-tab': BrowserTabNewTabEvent
     'did-finish-load': void
     navigation: { url: string; oldUrl: string }
     'url-change': string
@@ -38,6 +37,7 @@
   import ErrorPage from './ErrorPage.svelte'
   import type { WebviewError } from '../../constants/webviewErrors'
   import { blur } from 'svelte/transition'
+  import { useTabsManager } from '../../service/tabs'
 
   export let id: string | undefined
   export let src: string
@@ -59,7 +59,9 @@
   export const error = writable<WebviewError | null>(null)
 
   const log = useLogScope('WebviewWrapper')
+  const tabsManager = useTabsManager()
   const dispatch = createEventDispatcher<WebviewWrapperEvents>()
+
   const zoomLevel = writable<number>(1)
   const showZoomPreview = writable<boolean>(false)
   const webviewReady = writable<boolean>(false)
@@ -131,8 +133,7 @@
     const disposition = e.detail.disposition
     if (disposition === 'new-window') return
 
-    dispatch('new-tab', {
-      url: e.detail.url,
+    tabsManager.addPageTab(e.detail.url, {
       active: disposition === 'foreground-tab',
       trigger: CreateTabEventTrigger.Page
     })

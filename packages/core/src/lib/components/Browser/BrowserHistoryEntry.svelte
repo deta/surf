@@ -5,13 +5,14 @@
   import { Icon } from '@horizon/icons'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import type { HistoryEntry } from '../../types'
+  import { useTabsManager } from '../../service/tabs'
 
   export let entry: HistoryEntry
 
   const log = useLogScope('LinkPreview')
+  const tabsManager = useTabsManager()
   const dispatch = createEventDispatcher<{
     delete: void
-    'new-tab': BrowserTabNewTabEvent
   }>()
 
   let title = ''
@@ -22,8 +23,9 @@
   const handleClick = (e: MouseEvent) => {
     e.preventDefault()
 
-    dispatch('new-tab', {
-      url: entry?.url ?? '',
+    if (!entry.url) return
+
+    tabsManager.addPageTab(entry.url, {
       active: isModKeyPressed(e) ? e.shiftKey : true,
       trigger: CreateTabEventTrigger.History
     })

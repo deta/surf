@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useLogScope, tooltip as tooltip2 } from '@horizon/utils'
+  import { useLogScope, tooltip as tooltip2, getFileKind } from '@horizon/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
@@ -14,6 +14,7 @@
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { contextMenu } from './ContextMenu.svelte'
+  import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
 
   const log = useLogScope('Browser Tab')
 
@@ -62,7 +63,6 @@
     'passive-select': string
     'remove-from-sidebar': string
     'delete-tab': string
-    'unarchive-tab': string
     'input-enter': string
     bookmark: void
     'save-resource-in-space': Space
@@ -172,10 +172,6 @@
 
   const handleArchive = () => {
     dispatch('delete-tab', tab.id)
-  }
-
-  const handleUnarchive = () => {
-    dispatch('unarchive-tab', tab.id)
   }
 
   const handleInputFocus = () => {
@@ -374,6 +370,12 @@
       <Icon name="history" size="16px" />
     {:else if tab.type === 'space' && space}
       <SpaceIcon folder={space} />
+    {:else if tab.type === 'resource'}
+      {#if tab.resourceType === ResourceTypes.DOCUMENT_SPACE_NOTE}
+        <Icon name="docs" size="16px" />
+      {:else}
+        <FileIcon kind={getFileKind(tab.resourceType)} />
+      {/if}
     {:else}
       <Icon name="world" size="16px" />
     {/if}
@@ -438,22 +440,6 @@
 
     {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || isActive) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
-        {#if tab.archived}
-          <button
-            on:click|stopPropagation={handleUnarchive}
-            class="close"
-            use:tooltip={{
-              content: 'Move back to active tabs',
-              action: 'hover',
-              position: 'left',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            <Icon name="arrowbackup" size="16px" />
-          </button>
-        {/if}
-
         {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
             <button

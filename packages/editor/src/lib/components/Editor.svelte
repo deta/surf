@@ -130,7 +130,9 @@
     <BubbleMenu {editor} />
   {/if} -->
 
-  <div class="editor-wrapper">
+  <div
+    class="editor-wrapper prose prose-lg prose-neutral prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg"
+  >
     <EditorContent editor={$editor} />
   </div>
 </div>

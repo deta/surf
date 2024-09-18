@@ -176,7 +176,6 @@
     resourceId={$resourceDetailsModalSelected}
     {active}
     on:close={() => closeResourceDetailsModal()}
-    on:new-tab
   />
 {/if}
 

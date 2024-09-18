@@ -25,6 +25,7 @@
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
+    type CreateTabOptions,
     type ResourceData,
     type ResourceDataPost
   } from '../../types'
@@ -48,9 +49,11 @@
     isModKeyPressed,
     hover,
     getFileKind,
-    getFileType
+    getFileType,
+    parseStringIntoUrl
   } from '@horizon/utils'
   import ArticleProperties from './ArticleProperties.svelte'
+  import { useTabsManager } from '../../service/tabs'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -63,13 +66,14 @@
 
   const log = useLogScope('ResourcePreviewClean')
   const resourceManager = useResourceManager()
+  const tabsManager = useTabsManager()
 
   const dispatch = createEventDispatcher<{
     click: string
     remove: string
     load: string
     open: string
-    'new-tab': BrowserTabNewTabEvent
+    'created-tab': void
   }>()
 
   const isHovered = writable(false)
@@ -107,14 +111,17 @@
     resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
     resource.metadata?.sourceURI
 
-  $: canOpenAsTab = !!canonicalUrl && OPENABLE_RESOURCES.some((x) => resource.type.startsWith(x))
-
   let data: ResourceData | null = null
   const handleData = (e: CustomEvent<ResourceData>) => {
     data = e.detail
   }
 
   let dragging = false
+
+  const openResourceAsTab = (opts?: CreateTabOptions) => {
+    tabsManager.openResourceAsTab(resource, opts)
+    dispatch('created-tab')
+  }
 
   const handleDragStart = (e: DragEvent) => {
     dragging = true
@@ -140,19 +147,14 @@
       return
     }
 
-    if (!canOpenAsTab) {
-      log.debug('Resource cannot be opened as tab', resource)
-      return
-    }
+    // if (newTabOnClick) {
+    //   openResourceAsTab({
+    //     active: !isModKeyPressed(e) || e.shiftKey,
+    //     trigger: CreateTabEventTrigger.OasisItem
+    //   })
 
-    if (newTabOnClick) {
-      dispatch('new-tab', {
-        url: canonicalUrl!,
-        active: !isModKeyPressed(e),
-        trigger: CreateTabEventTrigger.OasisItem
-      })
-      return
-    }
+    //   return
+    // }
 
     if (resource.type === ResourceTypes.ANNOTATION) {
       const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
@@ -164,16 +166,16 @@
       return
     }
 
-    if (isModKeyPressed(e)) {
-      dispatch('new-tab', {
-        url: canonicalUrl!,
-        active: e.shiftKey,
+    if (e.shiftKey && !isModKeyPressed(e)) {
+      log.debug('opening resource in mini browser', resource.id)
+      dispatch('open', resource.id)
+    } else {
+      log.debug('opening resource in new tab', resource.id)
+      openResourceAsTab({
+        active: !isModKeyPressed(e) || e.shiftKey,
         trigger: CreateTabEventTrigger.OasisItem
       })
-      return
     }
-
-    dispatch('open', resource.id)
   }
 
   const handleLoad = () => {
@@ -186,18 +188,12 @@
   }
 
   const handleOpenAsNewTab = (e: MouseEvent) => {
-    if (!canonicalUrl || !canOpenAsTab) {
-      return
-    }
-
     e.stopImmediatePropagation()
-    const payload = {
-      url: canonicalUrl,
+
+    openResourceAsTab({
       active: true,
       trigger: CreateTabEventTrigger.OasisItem
-    }
-
-    dispatch('new-tab', payload)
+    })
   }
 
   const getHostname = (raw: string) => {
@@ -214,7 +210,7 @@
 <div
   on:click={handleClick}
   class="resource-preview"
-  class:clickable={newTabOnClick && canOpenAsTab}
+  class:clickable={newTabOnClick}
   class:isSelected={selected}
   class:background={(isLiveSpaceResource && showSummary && resource.metadata?.userContext) ||
     showSource}
@@ -322,8 +318,8 @@
     <div class="details">
       <div class="type">
         {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-          <!-- <Icon name="docs" size="20px" />
-        <div class="">Note</div> -->
+          <Icon name="docs" size="20px" />
+          <div class="">{resource.metadata?.name ?? 'Note'}</div>
         {:else if resource.type === ResourceTypes.LINK}
           <Icon name="link" size="20px" />
           <div class="">Link</div>
@@ -350,18 +346,19 @@
           <Icon name="history" size="20px" />
           <div class="">{getHumanDistanceToNow(historyEntryResource.createdAt)}</div>
         {:else}
-          <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
-          <div class="">{getFileType(resource.type) ?? 'File'}</div>
+          {#if resource.type.startsWith('image/')}
+            <FileIcon kind={getFileKind(resource.type)} width="20px" height="20px" />
+          {/if}
+          <div class="">{resource?.metadata?.name ?? getFileType(resource.type) ?? 'File'}</div>
         {/if}
       </div>
 
       {#if interactive}
         <div class="remove-wrapper">
-          {#if canOpenAsTab}
-            <div class="remove rotated" on:click={handleOpenAsNewTab}>
-              <Icon name="arrow.right" color="#AAA7B1" />
-            </div>
-          {/if}
+          <div class="remove rotated" on:click={handleOpenAsNewTab}>
+            <Icon name="arrow.right" color="#AAA7B1" />
+          </div>
+
           <div class="remove" on:click={handleRemove}>
             <Icon name="close" color="#AAA7B1" />
           </div>
@@ -404,11 +401,10 @@
 
   {#if interactive}
     <div class="remove-wrapper">
-      {#if canOpenAsTab}
-        <div class="remove rotated" on:click={handleOpenAsNewTab}>
-          <Icon name="arrow.right" color="#AAA7B1" />
-        </div>
-      {/if}
+      <div class="remove rotated" on:click={handleOpenAsNewTab}>
+        <Icon name="arrow.right" color="#AAA7B1" />
+      </div>
+
       <div class="remove" on:click={handleRemove}>
         <Icon name="close" color="#AAA7B1" />
       </div>
