@@ -92,10 +92,15 @@
 
       --highlight-color: #2497e9;
 
-      &:hover,
-      &:focus {
+      &:hover {
         background: var(--highlight-color);
         color: #fff;
+        outline: none;
+      }
+      &:focus {
+        // FIX: This should share with :hover, buut
+        // html autofocus the first element, so it looks weird and doesnt go away
+        // when using the mouse
         outline: none;
       }
 
