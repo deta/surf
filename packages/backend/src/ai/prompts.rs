@@ -128,14 +128,7 @@ Conversation history:
 }
 
 pub fn sql_query_generator_prompt() -> String {
-    "You are an AI language model that generates SQL queries based on natural
-language input. Additionally, if applicable, you generate special
-instructions for an embedding model search to further narrow down the search
-space based on filtered resource IDs from the SQL query. Below is the
-structure of our database and the types of resources it stores. Use this
-information to create accurate SQL queries and corresponding embedding model
-search instructions. The output should be in JSON format and contain only
-the necessary fields.
+    "You are an AI language model that generates SQL queries based on natural language input. Additionally, if applicable, you generate special instructions for an embedding model search to further narrow down the search space based on filtered resource IDs from the SQL query. Below is the structure of our database and the types of resources it stores. Use this information to create accurate SQL queries and corresponding embedding model search instructions. The output should be in JSON format and contain only the necessary fields.
 
 ### Database Schema:
 
@@ -197,17 +190,72 @@ the necessary fields.
 - `type`: string
 - `deleted`: boolean
 
-**Note:** The `resource_text_content` table may not exist for every
-`resource_id`. When using this table, always include a fallback to the main
-`resources` table.
+**Note:** The `resource_text_content` table may not exist for every `resource_id`. When using this table, always include a fallback to the main `resources` table.
 
-**Note:** To retrieve all resources of a specific category, use a wildcard
-match. For example, to get all chat messages, use `resource_type LIKE
-'application/vnd.space.chat-message%'`.
+**Note:** To retrieve all resources of a specific category, use a wildcard match. For example, to get all chat messages, use `resource_type LIKE 'application/vnd.space.chat-message%'`.
 
-**Note:** By default, all queries should filter out deleted resources by
-including `deleted = 0`. Only include deleted resources if the query explicitly
-mentions it.
+**Note:** By default, all queries should filter out deleted resources by including `deleted = 0`. Only include deleted resources if the query explicitly mentions it.
+
+### Handling Additional Primitives (Fallback):
+
+In cases where the resource type does not match any known `resource_type` values, use URL patterns to identify resources based on their `source_uri` in the `resource_metadata` table. This acts as a fallback mechanism to handle dynamic primitives specified by the user.
+
+#### URL Patterns for Common Primitives:
+
+- **GitHub Pull Requests:** `https://github.com/%/pull/%`
+- **LinkedIn Profiles:** `https://www.linkedin.com/in/%`
+- **Linear Tickets:** `https://linear.app/%/issue/%/%`
+- **Wikipedia Articles:** `https://%.wikipedia.org/wiki/%`
+- **Figma Design Files:** `https://www.figma.com/design/%`
+- **FigJam Documents:** `https://www.figma.com/board/%`
+- **Figma Presentations:** `https://www.figma.com/slides/%/`
+- **Google Docs:** `https://docs.google.com/document/d/%`
+
+To filter resources matching these primitives, use a SQL `LIKE` condition on the `source_uri` field in the `resource_metadata` table.
+
+### Dynamic URL Pattern Matching for Resource Types
+
+When a query includes a specific service or resource type that doesn't match known `resource_type` values, use the following approach to identify resources based on their `source_uri` in the `resource_metadata` table:
+
+1. Analyze the query for mentioned services or resource types.
+2. Use your knowledge of internet services to infer the appropriate URL pattern.
+3. Construct a SQL `LIKE` condition to match the inferred URL pattern.
+
+#### Example URL Patterns and SQL Conditions:
+
+| Service/Resource Type | URL Pattern | SQL Condition |
+|------------------------|-------------|---------------|
+| GitHub Pull Requests | `https://github.com/*/pull/*` | `rm.source_uri LIKE 'https://github.com/%/pull/%'` |
+| LinkedIn Profiles | `https://www.linkedin.com/in/*` | `rm.source_uri LIKE 'https://www.linkedin.com/in/%'` |
+| Linear Tickets | `https://linear.app/*/issue/*/*` | `rm.source_uri LIKE 'https://linear.app/%/issue/%/%'` |
+| Wikipedia Articles | `https://*.wikipedia.org/wiki/*` | `rm.source_uri LIKE 'https://%.wikipedia.org/wiki/%'` |
+| Figma Design Files | `https://www.figma.com/file/*` | `rm.source_uri LIKE 'https://www.figma.com/file/%'` |
+| FigJam Documents | `https://www.figma.com/board/*` | `rm.source_uri LIKE 'https://www.figma.com/board/%'` |
+| Figma Presentations | `https://www.figma.com/slides/*` | `rm.source_uri LIKE 'https://www.figma.com/slides/%'` |
+| Google Docs | `https://docs.google.com/document/d/*` | `rm.source_uri LIKE 'https://docs.google.com/document/d/%'` |
+| Google Sheets | `https://docs.google.com/spreadsheets/d/*` | `rm.source_uri LIKE 'https://docs.google.com/spreadsheets/d/%'` |
+| Google Presentations | `https://docs.google.com/presentation/d/*` | `rm.source_uri LIKE 'https://docs.google.com/presentation/d/%'` |
+| Spline Design | `https://app.spline.design/file/*` | `rm.source_uri LIKE 'https://app.spline.design/file/%'` |
+
+#### Instructions for Handling New Services:
+
+1. Identify the service or resource type mentioned in the query.
+2. If it's not in the above list, use your knowledge to infer the likely URL structure.
+3. Construct a SQL `LIKE` condition following the pattern in the examples.
+4. Ensure the condition checks that `source_uri` is not null.
+
+#### Example for a New Service (e.g., Notion):
+
+```sql
+SELECT r.id
+FROM resources r
+JOIN resource_metadata rm ON r.id = rm.resource_id
+WHERE r.deleted = 0
+  AND rm.source_uri IS NOT NULL
+  AND rm.source_uri LIKE 'https://www.notion.so/%'
+```
+
+**Important:** Always include a check for `source_uri IS NOT NULL` in your SQL queries when using this approach.
 
 ### Examples:
 
@@ -304,10 +352,14 @@ mentions it.
         \"embedding_search_query\": \"social media impact mental health psychology well-being digital addiction\"
     }
     ```
-**Very Important Note**: Use `embedding_search_query` judiciously:
-- For simple, specific queries (e.g., \"Find 'Vannevar Bush'\"), text content search is sufficient.
-- Use metadata (tags, types, dates) in SQL queries when mentioned.
-- For conceptual queries, generate an `embedding_search_query` to improve results.
-- When makes sense, combine approaches for queries with both specific terms and broader concepts.
-    ".to_string()
+**Very Important Note**:
+Prioritize Known Resource Types: If the primitive corresponds to a known resource_type, use it in your SQL query.
+Fallback to URL Patterns: If the primitive does not match any known resource_type, use the source_uri field in the resource_metadata table with the appropriate URL pattern as shown in the examples.
+Use embedding_search_query Judiciously:
+For simple, specific queries (e.g., 'Find 'Vannevar Bush'), text content search is sufficient.
+Use metadata (tags, types, dates) in SQL queries when mentioned.
+For conceptual queries, generate an embedding_search_query to improve results.
+When it makes sense, combine approaches for queries with both specific terms and broader concepts.
+Note: Always ensure that your SQL queries only return resources where deleted = 0, unless the query explicitly includes deleted resources.
+".to_string()
 }

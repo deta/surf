@@ -8,6 +8,7 @@
   import { Editor } from '@horizon/editor'
   import { fly, scale } from 'svelte/transition'
   import { quartOut } from 'svelte/easing'
+  import { superPrompt } from './prompt'
 
   import { colorPairs } from '../../service/oasis'
   import ResourceOverlay from '../Core/ResourceOverlay.svelte'
