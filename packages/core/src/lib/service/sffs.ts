@@ -459,14 +459,18 @@ export class SFFS {
 
   async getResourcesViaPrompt(
     query: string,
-    sql_query: string | undefined,
-    embedding_query: string | undefined
+    opts?: {
+      sql_query?: string
+      embedding_query?: string
+      embedding_distance_threshold?: number
+    }
   ): Promise<AiSFFSQueryResponse> {
     this.log.debug('querying SFFS resources with AI', query)
     const rawResponse = await this.backend.js__ai_query_sffs_resources(
       query,
-      sql_query,
-      embedding_query
+      opts?.sql_query,
+      opts?.embedding_query,
+      opts?.embedding_distance_threshold
     )
     this.log.debug('raw response', rawResponse)
     let response = this.parseData<AiSFFSQueryResponse>(rawResponse)

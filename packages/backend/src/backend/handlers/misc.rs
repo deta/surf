@@ -348,6 +348,7 @@ impl Worker {
         prompt: String,
         sql_query: Option<String>,
         embedding_query: Option<String>,
+        embedding_distance_threshold: Option<f32>,
     ) -> BackendResult<String> {
         #[derive(serde::Deserialize, Debug)]
         struct JsonResult {
@@ -409,6 +410,7 @@ impl Worker {
 
         if let Some(ref query) = result.embedding_search_query {
             let filter: Vec<String> = resource_ids_first.iter().map(|id| id.to_string()).collect();
+            //
             // TODO: why 100?
             let resources = self.ai.vector_search(
                 &self.db,
@@ -416,7 +418,7 @@ impl Worker {
                 100,
                 Some(filter),
                 true,
-                Some(0.4),
+                Some(embedding_distance_threshold.unwrap_or(0.4)),
             )?;
             let mut resource_ids: HashSet<String> = HashSet::new();
             for resource in resources {
@@ -491,11 +493,11 @@ pub fn handle_misc_message(
             oneshot,
             worker.create_app(prompt, session_id, contexts),
         ),
-        MiscMessage::QuerySFFSResources(prompt, sql_query, embedding_query) => {
+        MiscMessage::QuerySFFSResources(prompt, sql_query, embedding_query, embedding_distance_threshold) => {
             send_worker_response(
                 channel,
                 oneshot,
-                worker.query_sffs_resources(prompt, sql_query, embedding_query),
+                worker.query_sffs_resources(prompt, sql_query, embedding_query, embedding_distance_threshold),
             )
         }
         MiscMessage::GetAIChatDataSource(source_hash) => send_worker_response(
