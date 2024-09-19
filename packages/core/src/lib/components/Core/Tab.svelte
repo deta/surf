@@ -335,7 +335,7 @@
         type: 'action',
         hidden: isMagicActive,
         icon: 'chat',
-        text: 'Open Chat',
+        text: 'Open in Chat',
         action: () => {
           dispatch('select', tab.id)
           dispatch('chat-with-tab', tab.id)

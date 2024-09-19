@@ -3307,7 +3307,7 @@
               {
                 type: 'action',
                 icon: 'trash',
-                text: 'Close all unpinned',
+                text: 'Close All Unpinned Tabs',
                 kind: 'danger',
                 action: () => {
                   const tabs = $unpinnedTabs

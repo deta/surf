@@ -64,6 +64,7 @@
   export let interactive: boolean = true
   export let showSource: boolean = false
   export let newTabOnClick: boolean = false
+  export let everythingResource: boolean = true // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
 
   const log = useLogScope('ResourcePreviewClean')
   const resourceManager = useResourceManager()
@@ -239,14 +240,27 @@
       {
         type: 'action',
         icon: 'arrow.up.right',
-        text: 'Open',
+        text: 'Open as Tab',
+        action: () => handleOpenAsNewTab()
+      },
+      {
+        type: 'action',
+        icon: 'eye',
+        text: 'Open in Mini Browser',
+        action: () => handleOpenAsNewTab()
+      },
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: '',
+        text: `${true ? 'Reveal in Finder' : 'Open in Explorer'}`,
         action: () => handleOpenAsNewTab()
       },
       { type: 'separator' },
       {
         type: 'action',
         icon: 'trash',
-        text: 'Remove',
+        text: `${everythingResource ? 'Delete from Stuff' : 'Remove from Space'}`,
         kind: 'danger',
         action: () => handleRemove()
       }
