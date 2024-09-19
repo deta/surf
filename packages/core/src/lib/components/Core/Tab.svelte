@@ -13,9 +13,13 @@
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
+  import { contextMenu } from './ContextMenu.svelte'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
+  import { useTabsManager } from '../../service/tabs'
+  import { DeleteTabEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
 
   const log = useLogScope('Browser Tab')
+  const tabsManager = useTabsManager()
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -61,15 +65,18 @@
     'multi-select': string
     'passive-select': string
     'remove-from-sidebar': string
-    'delete-tab': string
+    'delete-tab': { tabId: string; trigger: DeleteTabEventTrigger }
     'input-enter': string
-    bookmark: void
+    bookmark: { trigger: SaveToOasisEventTrigger }
+    pin: string
+    unpin: string
     'save-resource-in-space': Space
     'create-live-space': void
     'add-source-to-space': Space
     'exclude-other-tabs': string
     'exclude-tab': string
     'include-tab': string
+    'chat-with-tab': string
     Drop: { drag: DragculaDragEvent; spaceId: string }
     DragEnd: DragculaDragEvent
     edit: void
@@ -80,6 +87,7 @@
 
   const liveSpacePopoverOpened = writable(false)
   const saveToSpacePopoverOpened = writable(false)
+  const selectedTabs = tabsManager.selectedTabs
 
   let addressInputElem: HTMLInputElement
   let space: Space | null = null
@@ -169,8 +177,8 @@
     dispatch('remove-from-sidebar', tab.id)
   }
 
-  const handleArchive = () => {
-    dispatch('delete-tab', tab.id)
+  const handleArchive = (trigger?: DeleteTabEventTrigger = DeleteTabEventTrigger.Click) => {
+    dispatch('delete-tab', { tabId: tab.id, trigger })
   }
 
   const handleInputFocus = () => {
@@ -210,9 +218,9 @@
     }
   }
 
-  const handleBookmark = () => {
+  const handleBookmark = (trigger?: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click) => {
     saveToSpacePopoverOpened.set(false)
-    dispatch('bookmark')
+    dispatch('bookmark', { trigger })
   }
 
   const handleCreateLiveSpace = () => {
@@ -275,7 +283,7 @@
 <div
   draggable={true}
   id="tab-{tab.id}"
-  class={`tab no-drag ${isActive ? 'active' : ''} ${tab.magic ? (isActive ? 'bg-pink-500/80 text-pink-950 shadow-inner ring-[0] ring-pink-600' : 'bg-pink-400/60 text-pink-950') : isActive ? 'text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px] ring-sky-500' : isSelected ? 'bg-white outline outline-2 outline-sky-500' : ''} flex items-center ${pinned ? 'p-1 rounded-lg' : horizontalTabs ? 'py-1.5 px-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none`}
+  class={`tab no-drag ${isActive ? 'active' : ''} ${tab.magic ? (isActive ? 'shadow-inner ring-[0] ring-pink-600' : '') : isActive ? 'text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px] ring-sky-500' : isSelected ? 'bg-white outline outline-2 outline-sky-500' : ''} flex items-center ${pinned ? 'p-1 rounded-lg' : horizontalTabs ? 'py-1.5 px-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none`}
   class:bg-green-200={isActive && $inputUrl === 'surf.featurebase.app' && !tab.magic}
   class:bg-sky-200={isActive && $inputUrl !== 'surf.featurebase.app' && !tab.magic}
   class:pinned
@@ -311,6 +319,72 @@
         delay: 500
       }
     : {}}
+  use:contextMenu={{
+    canOpen:
+      isMagicActive ||
+      $selectedTabs.size <= 1 ||
+      Array.from($selectedTabs.values()).find((e) => e.id === tab.id) === undefined,
+    items: [
+      {
+        type: 'action',
+        hidden: tab.type !== 'page',
+        disabled: isBookmarkedByUser || $activeTabId !== tab.id,
+        icon: 'leave',
+        text: 'Save',
+        action: () => handleBookmark(SaveToOasisEventTrigger.ContextMenu)
+      },
+      { type: 'separator' },
+
+      {
+        type: 'action',
+        hidden: isMagicActive,
+        icon: 'chat',
+        text: 'Open in Chat',
+        action: () => {
+          dispatch('select', tab.id)
+          dispatch('chat-with-tab', tab.id)
+        }
+      },
+      {
+        type: 'action',
+        icon: 'news',
+        text: 'Create Live Space',
+        action: () => handleCreateLiveSpace()
+      },
+
+      {
+        type: 'action',
+        hidden: !isMagicActive,
+        icon: '',
+        text: `${tab.magic ? 'Remove from' : 'Add to'} Chat`,
+        action: () =>
+          tab.magic ? dispatch('exclude-tab', tab.id) : dispatch('include-tab', tab.id)
+      },
+      {
+        type: 'action',
+        icon: 'link',
+        text: 'Copy URL',
+        action: () => {
+          if (url) navigator.clipboard.writeText(url)
+        }
+      },
+
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: tab.pinned ? `pinned-off` : `pin`,
+        text: tab.pinned ? 'Unpin' : 'Pin',
+        action: () => (tab.pinned ? dispatch('unpin', tab.id) : dispatch('pin', tab.id))
+      },
+      {
+        type: 'action',
+        icon: 'trash',
+        text: 'Close',
+        kind: 'danger',
+        action: () => handleArchive(DeleteTabEventTrigger.ContextMenu)
+      }
+    ]
+  }}
 >
   <!-- Temporary DragZone overlay to allow dropping onto space tabs -->
   {#if tab.type === 'space' && tab.spaceId !== 'all'}
@@ -536,6 +610,11 @@
     transition:
       0s ease-in-out,
       transform 0s;
+  }
+  :global(.tab[data-context-menu-anchor]) {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.55);
+    outline: none;
   }
   :global(.tab img) {
     user-select: none;

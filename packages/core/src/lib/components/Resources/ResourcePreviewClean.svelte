@@ -50,10 +50,14 @@
     hover,
     getFileKind,
     getFileType,
-    parseStringIntoUrl
+    parseStringIntoUrl,
+    isMac
   } from '@horizon/utils'
   import ArticleProperties from './ArticleProperties.svelte'
   import { useTabsManager } from '../../service/tabs'
+  import { contextMenu } from '../Core/ContextMenu.svelte'
+  import { useOasis } from '../../service/oasis'
+  import { getUnixTime } from 'date-fns'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -63,10 +67,12 @@
   export let interactive: boolean = true
   export let showSource: boolean = false
   export let newTabOnClick: boolean = false
+  export let everythingResource: boolean = true // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
 
   const log = useLogScope('ResourcePreviewClean')
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
+  const oasis = useOasis()
 
   const dispatch = createEventDispatcher<{
     click: string
@@ -77,6 +83,7 @@
   }>()
 
   const isHovered = writable(false)
+  const spaces = oasis.spaces
 
   const OPENABLE_RESOURCES = [
     ResourceTypes.LINK,
@@ -184,13 +191,13 @@
     dispatch('load', resource.id)
   }
 
-  const handleRemove = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
+  const handleRemove = (e?: MouseEvent) => {
+    e?.stopImmediatePropagation()
     dispatch('remove', resource.id)
   }
 
-  const handleOpenAsNewTab = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
+  const handleOpenAsNewTab = (e?: MouseEvent) => {
+    e?.stopImmediatePropagation()
 
     openResourceAsTab({
       active: true,
@@ -233,8 +240,57 @@
   class:background={(isLiveSpaceResource && showSummary && resource.metadata?.userContext) ||
     showSource}
   style="--id:{resource.id};"
-  on:dragstart={handleDragStart}
-  draggable="true"
+  use:contextMenu={{
+    items: [
+      {
+        type: 'action',
+        icon: 'arrow.up.right',
+        text: 'Open as Tab',
+        action: () => handleOpenAsNewTab()
+      },
+      {
+        type: 'action',
+        icon: 'eye',
+        text: 'Open in Mini Browser',
+        action: () => dispatch('open', resource.id)
+      },
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: '',
+        text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
+        action: () => handleOpenAsFile()
+      },
+      {
+        type: 'sub-menu',
+        icon: '',
+        text: `Add to Space`,
+        items: $spaces
+          ? [
+              ...$spaces
+                .filter((e) => e.name.folderName !== 'Everything')
+                .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+                .map((space) => ({
+                  type: 'action',
+                  icon: '',
+                  text: space.name.folderName,
+                  action: () => {
+                    oasis.addResourcesToSpace(space.id, [resource.id])
+                  }
+                }))
+            ]
+          : []
+      },
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: 'trash',
+        text: `${everythingResource ? 'Delete from Stuff' : 'Remove from Space'}`,
+        kind: 'danger',
+        action: () => handleRemove()
+      }
+    ]
+  }}
 >
   <div
     class="preview"

@@ -90,6 +90,7 @@ export enum CreateTabEventTrigger {
   History = 'history',
   /** Tab was created because a URL was opened outside of the app / by the system */
   System = 'system',
+  ContextMenu = 'context_menu',
   /** Tab was created by a unknown or other interaction */
   Other = 'Other'
 }
@@ -111,7 +112,9 @@ export enum DeleteTabEventTrigger {
   /** Tab was deleted by a keyboard shortcut */
   Shortcut = 'shortcut',
   /** Tab was deleted using the command menu */
-  CommandMenu = 'command_menu'
+  CommandMenu = 'command_menu',
+  /** Deleted from context menu */
+  ContextMenu = 'context_menu'
 }
 
 export enum MoveTabEventAction {
@@ -142,7 +145,9 @@ export enum SaveToOasisEventTrigger {
   /** Page was saved from the command menu */
   CommandMenu = 'command_menu',
   /** Page was saved by dropping into Oasis or a Space */
-  Drop = 'drop'
+  Drop = 'drop',
+  /** Saved from context menu */
+  ContextMenu = 'context_menu'
 }
 
 export enum SearchOasisEventTrigger {
@@ -158,7 +163,9 @@ export enum CreateSpaceEventFrom {
   /** Space was created from the space hover menu in the sidebar */
   SpaceHoverMenu = 'space_hover_menu',
   /** Space was created from the create live space button of a tab */
-  TabLiveSpaceButton = 'tab_live_space_button'
+  TabLiveSpaceButton = 'tab_live_space_button',
+  /** Created from context menu */
+  ContextMenu = 'context_menu' // TODO: ctx impl
 }
 
 export enum RefreshSpaceEventTrigger {
@@ -197,7 +204,9 @@ export enum DeleteSpaceEventTrigger {
   /** Space was deleted from the spaces view in Oasis */
   SpacesView = 'spaces_view',
   /** Space was deleted from its settings */
-  SpaceSettings = 'space_settings'
+  SpaceSettings = 'space_settings',
+  /** Deleted from context menu */
+  ContextMenu = 'context_menu' // TODO: ctx impl
 }
 
 export enum CreateAnnotationEventTrigger {
