@@ -82,6 +82,18 @@ pub struct VectorSearchResult {
     pub distance: f32,
 }
 
+fn enable_wal_mode(conn: &rusqlite::Connection) -> BackendResult<()> {
+    let journal_mode: String = conn
+        .query_row("PRAGMA journal_mode = WAL;", [], |row| row.get(0))
+        .map_err(BackendError::DatabaseError)?;
+    if journal_mode.to_lowercase() != "wal" {
+        return Err(BackendError::GenericError(
+            "failed to enable WAL mode".into(),
+        ));
+    }
+    Ok(())
+}
+
 impl Database {
     pub fn new(db_path: &str, run_migrations: bool) -> BackendResult<Database> {
         let mut conn = Connection::open(db_path)?;
@@ -91,14 +103,8 @@ impl Database {
         conn.busy_timeout(std::time::Duration::from_secs(60))?;
         read_only_conn.busy_timeout(std::time::Duration::from_secs(60))?;
 
-        let journal_mode: String = conn
-            .query_row("PRAGMA journal_mode = WAL;", [], |row| row.get(0))
-            .map_err(BackendError::DatabaseError)?;
-        if journal_mode.to_lowercase() != "wal" {
-            return Err(BackendError::GenericError(
-                "failed to enable WAL mode".into(),
-            ));
-        }
+        enable_wal_mode(&conn)?;
+        enable_wal_mode(&read_only_conn)?;
 
         if run_migrations {
             let init_schema = Migrations::get("init.sql")
