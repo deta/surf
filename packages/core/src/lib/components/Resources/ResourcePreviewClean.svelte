@@ -50,7 +50,8 @@
     hover,
     getFileKind,
     getFileType,
-    parseStringIntoUrl
+    parseStringIntoUrl,
+    isMac
   } from '@horizon/utils'
   import ArticleProperties from './ArticleProperties.svelte'
   import { useTabsManager } from '../../service/tabs'
@@ -253,7 +254,7 @@
       {
         type: 'action',
         icon: '',
-        text: `${navigator.platform.startsWith('Mac') ? 'Reveal in Finder' : 'Open in Explorer'}`,
+        text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
         action: () => handleOpenAsFile()
       },
       { type: 'separator' },
