@@ -1,3 +1,5 @@
+import type { Item, RenderItem } from './types'
+
 export class Node {
   column: number
   height: number
@@ -261,7 +263,7 @@ export class MasonryGrid {
   columnCount: number
   gapPercentage: number
   columnWidth: number
-  items: Item[]
+  items: RenderItem[]
   isEverythingSpace: boolean
   minHeight: number
   maxHeight: number
@@ -272,8 +274,11 @@ export class MasonryGrid {
   constructor(container: HTMLElement, isEverythingSpace: boolean = false) {
     if (!container || !container.offsetWidth) {
       // console.warn('Invalid container element or container has no width. No Masonry Grid created.')
-      return
+      throw new Error(
+        'Invalid container element or container has no width. No Masonry Grid created.'
+      )
     }
+
     this.container = container
     this.items = []
     this.minHeight = 50
@@ -314,7 +319,7 @@ export class MasonryGrid {
     }
   }
 
-  reinitializeGrid(items: Item[], skipSort: boolean = false): Item[] {
+  reinitializeGrid(items: RenderItem[], skipSort: boolean = false): RenderItem[] {
     if (!this.tree) {
       console.error('RedBlackTree is not initialized.')
       return items
@@ -370,7 +375,7 @@ export class MasonryGrid {
     return items
   }
 
-  addItem(item: Item): Item | null {
+  addItem(item: Item): RenderItem | null {
     const height = this.getRandomHeight()
     const shortestColumn = this.tree.findMin()
     if (!shortestColumn) return null

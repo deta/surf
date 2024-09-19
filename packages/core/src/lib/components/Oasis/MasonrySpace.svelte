@@ -1,32 +1,23 @@
 <script lang="ts">
   import { onMount, onDestroy, tick, createEventDispatcher } from 'svelte'
-  import { writable } from 'svelte/store'
-  import type { Writable } from 'svelte/store'
-  import OasisResourceLoader from './OasisResourceLoader.svelte'
-  import { MasonryGrid } from './masonry/index'
-  import type { Item, ScrollVelocity } from './masonry/types'
+  import { writable, type Writable } from 'svelte/store'
 
-  export let renderContents: Item[] | string[] = []
-  export let id: Date
+  import { MasonryGrid } from './masonry/index'
+  import type { Item, RenderItem, ScrollVelocity } from './masonry/types'
+
+  export let items: Item[] = []
   export let isEverythingSpace: boolean
-  export let showResourceSource: boolean = false
-  export let newTabOnClick: boolean = false
   export let searchValue: Writable<string> | undefined
 
-  let prevItemLength = 0
-  let prevRenderContents = []
-
+  let prevItems: Item[] = []
   let isUpdatingVisibleItems = false
   let updateVisibleItemsRequestId: number | null = null
-  let resizeInterval: number | null = null
-  let resizeObserver = new ResizeObserver(() => {
-    handleResize()
-  })
+  let resizeInterval: ReturnType<typeof setInterval> | null = null
 
   let masonryGrid: MasonryGrid
   let gridContainer: HTMLElement
   let resizeObserverDebounce: NodeJS.Timeout
-  let resizedItems = new Set<Item>()
+  let resizedItems = new Set<RenderItem>()
   let scrollVelocity: ScrollVelocity = {
     scrollTop: 0,
     timestamp: 0,
@@ -35,10 +26,8 @@
   let gridObserver: MutationObserver
 
   let updateQueue: Item[] = []
-  let created: Date
-  let searchDebounceTimer: number
+  let searchDebounceTimer: ReturnType<typeof setTimeout>
   let isProcessingQueue = false
-  let itemsLoaded: boolean = false
 
   let renderedItems = 0
 
@@ -53,16 +42,21 @@
   const UPPER_OVERSHOOT_BOUND = 1400
   const LOWER_OVERSHOOT_BOUND = 1400
 
-  let globallyAddedItems = 0
+  const itemsStore = writable<RenderItem[]>([])
+  const gridItems = writable<RenderItem[]>([])
 
-  const itemsStore = writable<Item[]>([])
-  const gridItems = writable<Item[]>([])
+  const dispatch = createEventDispatcher<{
+    wheel: { event: WheelEvent; scrollTop: number }
+    scroll: { scrollTop: number; viewportHeight: number }
+    'load-more': number
+  }>()
+  const resizeObserver = new ResizeObserver(() => {
+    handleResize()
+  })
 
-  const dispatch = createEventDispatcher()
-
-  let items: Item[] = []
+  let renderItems: RenderItem[] = []
   itemsStore.subscribe((value) => {
-    items = value
+    renderItems = value
   })
 
   $: if ($searchValue) {
@@ -71,29 +65,22 @@
     searchDebounceTimer = setTimeout(updateGridAfterSearch, 500)
   }
 
-  $: if (renderContents && !arraysEqual(renderContents, prevRenderContents)) {
-    prevRenderContents = [...renderContents]
+  $: if (items && !arraysEqual(items, prevItems)) {
+    prevItems = [...items]
 
-    const diffItems = {
-      added: [],
-      removed: []
+    const removed = renderItems.filter(
+      (renderItem) => !items.some((item) => item.id === renderItem.id)
+    )
+    const added = items.filter(
+      (item) => !renderItems.some((renderItem) => renderItem.id === item.id)
+    )
+
+    if (removed.length > 0) {
+      removeItems(removed)
     }
 
-    diffItems.removed = items.filter((item) => !renderContents.includes(item.id))
-    diffItems.added = renderContents
-      .filter((id) => !items.some((item) => item.id === id))
-      .map((id) => ({ id }))
-
-    if (diffItems.added.length > 0 || diffItems.removed.length > 0) {
-      if (renderContents.length > prevItemLength) {
-        queueUpdate(renderContents.slice(prevItemLength))
-      } else if (renderContents.length < prevItemLength || diffItems.removed.length > 0) {
-        updateItems(diffItems)
-        queueUpdate($gridItems)
-      }
-
-      globallyAddedItems += diffItems.added.length
-      prevItemLength = renderContents.length
+    if (added.length > 0) {
+      queueUpdate(added)
     }
   }
 
@@ -131,10 +118,18 @@
     }
   }
 
-  function setItemDom(node: HTMLElement, item: Item) {
-    if (item && typeof item === 'object') {
-      item.dom = node
-      observeItemHeightChange(item)
+  function setItemDom(node: HTMLElement, item: RenderItem) {
+    if (!item || typeof item !== 'object') {
+      return
+    }
+
+    item.dom = node
+    const unobserve = observeItemHeightChange(item)
+
+    return {
+      destroy() {
+        unobserve()
+      }
     }
   }
 
@@ -153,7 +148,7 @@
       }
 
       if (childrenChanged) {
-        queueUpdate($gridItems)
+        queueUpdate($gridItems.map((item) => ({ id: item.id, data: item.data })))
       }
     })
 
@@ -191,7 +186,7 @@
   }
 
   async function updateGridBatch(batch: Item[]) {
-    const existingIds = new Set(items.map((item) => item.id))
+    const existingIds = new Set(renderItems.map((item) => item.id))
     const newItems = batch.filter((item) => !existingIds.has(item.id))
 
     for (const item of newItems) {
@@ -200,18 +195,18 @@
     }
   }
 
-  function transformIncomingData(data: any): Item {
+  function transformIncomingData(data: any): RenderItem {
     return {
       id: data
     }
   }
 
-  function observeItemHeightChange(item: Item) {
+  function observeItemHeightChange(item: RenderItem) {
     const observer = new ResizeObserver(() => {
       const wrapper =
         item.dom?.querySelector('.resource-preview') || item.dom?.querySelector('.folder-wrapper')
       if (wrapper) {
-        const height = wrapper.offsetHeight
+        const height = (wrapper as HTMLElement).offsetHeight
         if (item.style) {
           item.style.height = `${height}px`
           resizedItems.add(item)
@@ -225,24 +220,25 @@
     if (element) {
       observer.observe(element)
     }
+
+    return () => {
+      observer.disconnect()
+    }
   }
 
   function reinitializeGridAfterResize() {
     if (resizedItems.size > 0) {
       const skipSort = $searchValue !== ''
-      const updatedItems = masonryGrid.reinitializeGrid(items, skipSort)
+      const updatedItems = masonryGrid.reinitializeGrid(renderItems, skipSort)
       gridItems.set(updatedItems)
       resizedItems.clear()
       updateVisibleItems()
     }
   }
 
-  function addItem(incomingItem: Item | null = null) {
+  function addItem(incomingItem: Item) {
     try {
-      const newItem = incomingItem
-        ? transformIncomingData(incomingItem)
-        : { id: items.length + 1, content: `Item ${items.length + 1}` }
-      const placedItem = masonryGrid.addItem(newItem)
+      const placedItem = masonryGrid.addItem(incomingItem)
       if (placedItem) {
         itemsStore.update((current) => [...current, placedItem])
         gridItems.update((current) => [...current, placedItem])
@@ -252,9 +248,9 @@
     }
   }
 
-  function updateItems(diffItems: any) {
-    diffItems.removed.forEach((item) => {
-      const itemIndex = items.findIndex((i) => i.id === item.id)
+  function removeItems(items: RenderItem[]) {
+    items.forEach((item) => {
+      const itemIndex = renderItems.findIndex((i) => i.id === item.id)
       if (itemIndex !== -1) {
         itemsStore.update((current) => {
           current.splice(itemIndex, 1)
@@ -263,23 +259,15 @@
         gridItems.update((current) => current.filter((_, i) => i !== itemIndex))
       }
     })
-
-    diffItems.added.forEach((newItem) => {
-      itemsStore.update((current) => {
-        current.push(newItem)
-        return current
-      })
-      gridItems.update((current) => [...current, newItem])
-    })
   }
 
   function observeItems(gridContainer: HTMLElement | null) {
     if (!gridContainer) return
 
-    items.forEach((item) => {
+    renderItems.forEach((item) => {
       if (!item) return // Skip if item is undefined
 
-      const itemId = typeof item.id === 'object' ? item.id.id : item.id
+      const itemId = item.id
       if (itemId === undefined) return // Skip if itemId is undefined
 
       const dom = gridContainer.querySelector(`[id='item-${itemId}']`) as HTMLElement
@@ -289,7 +277,7 @@
           item.dom = dom
           observeItemHeightChange(item)
         } else {
-          console.warn(`Item with id ${itemId} is not an object`)
+          console.warn(`RenderItem with id ${itemId} is not an object`)
         }
       } else {
         console.warn(`DOM element for item ${itemId} not found`)
@@ -313,7 +301,7 @@
       dispatch('scroll', { scrollTop, viewportHeight })
 
       const startTime = performance.now()
-      const updatedItems = []
+      const updatedItems: Array<RenderItem & { visible?: boolean; rendered?: boolean }> = []
 
       for (let i = 0; i < $gridItems.length; i++) {
         const item = $gridItems[i]
@@ -407,7 +395,7 @@
   async function updateGrid() {
     await tick()
     if (gridContainer && masonryGrid) {
-      masonryGrid.reinitializeGrid(items)
+      masonryGrid.reinitializeGrid(renderItems)
       updateVisibleItems()
     }
   }
@@ -425,11 +413,11 @@
     updateGridAfterResize()
   }
 
-  function getUniqueKey(item: Item, index: number) {
+  function getUniqueKey(item: RenderItem, index: number) {
     return `${item.id}-${index}`
   }
 
-  function arraysEqual(a, b) {
+  function arraysEqual(a: any[], b: any[]) {
     if (a.length !== b.length) return false
     for (let i = 0; i < a.length; i++) {
       if (a[i] !== b[i]) return false
@@ -438,7 +426,6 @@
   }
 
   onMount(async () => {
-    created = new Date()
     masonryGrid = new MasonryGrid(gridContainer, isEverythingSpace)
 
     setupGridObserver()
@@ -474,7 +461,6 @@
   })
 
   onDestroy(() => {
-    const gridContainer = document.getElementById(id as unknown as string) as HTMLElement
     if (gridContainer) {
       gridContainer.removeEventListener('scroll', updateVisibleItems)
     }
@@ -500,7 +486,6 @@
 
 <svelte:window
   on:wheel={(event) => {
-    const gridContainer = document.getElementById(id)
     const newScrollTop = gridContainer?.scrollTop
     const newTimestamp = event.timeStamp
 
@@ -518,7 +503,7 @@
   }}
 />
 
-<div {id} class="masonry-grid" on:wheel={handleWheel} bind:this={gridContainer}>
+<div class="masonry-grid" on:wheel={handleWheel} bind:this={gridContainer}>
   {#each $gridItems as item, index (getUniqueKey(item, index))}
     <div
       data-vaul-no-drag
@@ -529,16 +514,7 @@
       use:setItemDom={item}
     >
       <div class="item-details">
-        <OasisResourceLoader
-          id={item.id}
-          showSource={showResourceSource}
-          {newTabOnClick}
-          on:click
-          on:open
-          on:remove
-          on:load
-          on:rendered={handleItemRendered}
-        />
+        <slot item={{ id: item.id, data: item.data }} renderingDone={handleItemRendered}></slot>
       </div>
     </div>
   {/each}
@@ -581,17 +557,6 @@
 
   .item:last-child {
     padding-bottom: 400px;
-  }
-
-  .debug {
-    position: fixed;
-    bottom: 0.5rem;
-    right: 0.5rem;
-    border-radius: 4px;
-    background: black;
-    color: white;
-    padding: 10px;
-    z-index: 1000;
   }
 
   .item-details {

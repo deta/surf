@@ -5,10 +5,7 @@
   import { useLogScope } from '@horizon/utils'
   import type { ResourceSearchResultItem } from '../../service/resources'
   import Masonry from './MasonrySpace.svelte'
-  import SpacesView from './SpacesView.svelte'
-  import BrowserHomescreen from '../Browser/BrowserHomescreen.svelte'
-  import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
-  import { Motion, type MotionConfig } from './masonry/motion'
+  import OasisResourceLoader from './OasisResourceLoader.svelte'
 
   export let resources: Readable<ResourceSearchResultItem[]>
   export let selected: string | null = null
@@ -54,21 +51,25 @@
     {#if scrollElement}
       {#key $searchValue === ''}
         <Masonry
-          renderContents={$renderContents.map((item) => item.id)}
-          {showResourceSource}
-          {newTabOnClick}
+          items={$renderContents.map((item) => ({ id: item.id, data: item.resource }))}
           on:load-more={handleLoadChunk}
-          on:open
-          on:remove
-          on:load
-          on:space-selected
-          on:open-space-as-tab
           on:scroll={handleScroll}
           on:wheel
-          id={new Date()}
           {searchValue}
           {isEverythingSpace}
-        ></Masonry>
+          let:item
+          let:renderingDone={handleRenderingDone}
+        >
+          <OasisResourceLoader
+            resourceOrId={item.data ? item.data : item.id}
+            on:open
+            on:remove
+            on:load
+            on:space-selected
+            on:open-space-as-tab
+            on:rendered={handleRenderingDone}
+          />
+        </Masonry>
       {/key}
     {/if}
   </div>
