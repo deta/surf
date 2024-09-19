@@ -377,7 +377,7 @@ impl Worker {
             .map_err(|e| BackendError::GenericError(e.to_string()))?,
         };
         let mut resource_ids_first: HashSet<String> = HashSet::new();
-        let mut resource_ids_stmt = self.db.conn.prepare(result.sql_query.as_str())?;
+        let mut resource_ids_stmt = self.db.read_only_conn.prepare(result.sql_query.as_str())?;
         let mut resource_ids_rows = resource_ids_stmt.query([])?;
         let mut resource_ids_second = None;
 
