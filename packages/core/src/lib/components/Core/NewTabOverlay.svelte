@@ -92,6 +92,7 @@
   const dispatch = createEventDispatcher<OverlayEvents>()
   const config = useConfig()
   const userConfigSettings = config.settings
+  let oasisSpace: OasisSpace
 
   let createSpaceRef: any
 
@@ -961,6 +962,10 @@
     }
   }
 
+  const handleDeleteSpace = async () => {
+    await oasisSpace.handleDeleteSpace(new CustomEvent('delete', { detail: false }))
+  }
+
   let isSearching = false
   let searchTimeout: NodeJS.Timeout | null = null
 
@@ -1154,6 +1159,7 @@
                       on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
                       on:create-empty-space={handleCreateEmptySpace}
                       on:open-resource={handleOpen}
+                      on:delete-space={handleDeleteSpace}
                     />
                   {/key}
                 </div>
@@ -1170,6 +1176,7 @@
                         on:open={handleOpen}
                         on:go-back={() => selectedSpaceId.set(null)}
                         insideDrawer={true}
+                        bind:this={oasisSpace}
                         {searchValue}
                       />
                     {/key}

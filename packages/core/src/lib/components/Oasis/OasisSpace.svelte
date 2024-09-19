@@ -87,6 +87,7 @@
   import { useTabsManager } from '../../service/tabs'
 
   import CreateNewSpace from './CreateNewSpace.svelte'
+  import { selectedFolder } from '../../stores/oasis'
 
   export let spaceId: string
   export let active: boolean = false
@@ -1231,7 +1232,7 @@
     await loadSpaceContents($space.id, true)
   }
 
-  const handleDeleteSpace = async (e: CustomEvent<boolean>) => {
+  export const handleDeleteSpace = async (e: CustomEvent<boolean>) => {
     const shouldDeleteAllResources = e.detail
 
     const confirmed = window.confirm(
@@ -1367,7 +1368,12 @@
     }
   }
 
-  const handleAbortSpaceCreation = () => {}
+  const handleAbortSpaceCreation = async (e: CustomEvent<string>) => {
+    const spaceId = e.detail
+    await handleDeleteSpace(new CustomEvent('delete', { detail: false }))
+
+    dispatch('deleted', spaceId)
+  }
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />

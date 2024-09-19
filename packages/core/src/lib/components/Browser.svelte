@@ -1960,6 +1960,8 @@
 
       tabsManager.delete(tab.id)
     }
+
+    oasis.resetSelectedSpace()
   }
 
   const handleCreateNote = async (e: CustomEvent<string>) => {
@@ -3228,7 +3230,7 @@
     </div>
   {/if}
 
-  <!-- 
+  <!--
     NOTE: Removed from SidebarPane to disable chat peek for now.
 
     on:rightPeekOpen={() => {

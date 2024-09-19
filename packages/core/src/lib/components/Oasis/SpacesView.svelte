@@ -25,6 +25,7 @@
     createTab: { tab: TabSpace; active: boolean }
     'space-selected': { id: string; canGoBack: boolean }
     'create-empty-space': void
+    'delete-space': { id: string }
   }>()
 
   let sidebarElement: HTMLElement
@@ -201,6 +202,19 @@
 
   const handleSpaceSelect = async (id: string) => {
     try {
+      const space = $spaces.find((space) => space.id === $selectedSpace)
+
+      if (space?.name.folderName === 'New Space') {
+        const confirm = window.confirm('Do you want to cancel the space creation?')
+        if (confirm) {
+          dispatch('delete-space', { id: $selectedSpace })
+          selectedSpace.set('all')
+          return
+        } else {
+          return
+        }
+      }
+
       selectedSpace.set(id)
       log.debug('Selected space:', id)
       dispatch('space-selected', { id: id, canGoBack: true })
