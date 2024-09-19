@@ -30,11 +30,6 @@
 
 <div class="wrapper">
   {#if resource}
-    <!-- <div class="info">
-      <div class="title">{resource?.metadata?.name}</div>
-      <div class="description">{getFileType(resource?.type)}</div>
-    </div> -->
-
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
       <TextResource {resourceId} on:update-title={handleUpdateTitle} />
     {:else}
@@ -50,6 +45,7 @@
     width: 100%;
     height: 100%;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     background-color: #f8f7f2;
     border-radius: 0.5rem;

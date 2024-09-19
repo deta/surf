@@ -107,9 +107,13 @@ if (!gotTheLock) {
     isAppLaunched = true
     electronApp.setAppUserModelId('ea.browser.deta.surf')
 
+    const appPath = app.getAppPath() + (isDev ? '' : '.unpacked')
+    const userDataPath = app.getPath('userData')
+    const backendRootPath = join(userDataPath, 'sffs_backend')
+
     const userConfig = getUserConfig()
 
-    setupIpc()
+    setupIpc(backendRootPath)
 
     if (!is.dev) {
       if (!userConfig.api_key) {
@@ -137,10 +141,6 @@ if (!gotTheLock) {
     if (config.forceSetupWindow) {
       createSetupWindow()
     }
-
-    const appPath = app.getAppPath() + (isDev ? '' : '.unpacked')
-    const userDataPath = app.getPath('userData')
-    const backendRootPath = join(userDataPath, 'sffs_backend')
     const backendServerPath = join(
       appPath,
       'resources',

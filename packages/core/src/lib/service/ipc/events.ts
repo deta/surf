@@ -7,7 +7,8 @@ import type {
   DownloadDoneMessage,
   DownloadRequestMessage,
   DownloadUpdatedMessage,
-  TelemetryEventTypes
+  TelemetryEventTypes,
+  SFFSResource
 } from '@horizon/types'
 import { createIPCService, type IPCEvent } from './ipc'
 import type { ControlWindow } from '../../types'
@@ -119,6 +120,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   openHistory: ipcService.addEvent<void>('open-history'),
   controlWindow: ipcService.addEvent<ControlWindow>('control-window'),
   openSettings: ipcService.addEvent<void>('open-settings'),
+  openResourceLocally: ipcService.addEvent<SFFSResource>('open-resource-locally'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),

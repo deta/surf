@@ -24,7 +24,8 @@
     useLocalStorageStore,
     truncate,
     tooltip,
-    type LogLevel
+    type LogLevel,
+    isMac
   } from '@horizon/utils'
   import { MEDIA_TYPES, createResourcesFromMediaItems, processDrop } from '../service/mediaImporter'
   import SidebarPane from './Sidebars/SidebarPane.svelte'
@@ -198,7 +199,7 @@
   const showEndMask = writable(false)
 
   // on windows and linux the custom window actions are shown in the tab bar
-  const showCustomWindowActions = process.platform !== 'darwin'
+  const showCustomWindowActions = !isMac()
 
   $: log.debug('right sidebar tab', $rightSidebarTab)
 

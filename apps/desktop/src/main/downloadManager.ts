@@ -1,11 +1,13 @@
 import { useLogScope } from '@horizon/utils'
-import { session, ipcMain, app } from 'electron'
+import { session, ipcMain, app, shell } from 'electron'
 import { getMainWindow } from './mainWindow'
 import { randomUUID } from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import mime from 'mime-types'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
+import { SFFSResource } from '@horizon/types'
+import { isPathSafe } from './utils'
 
 const log = useLogScope('Download Manager')
 
@@ -137,4 +139,56 @@ export function initDownloadManager(partition: string) {
       })
     })
   })
+}
+
+/**
+ * Opens the file associtated with a resource in the user's downloads folder using the system file explorer.
+ * If the resource is not found in the downloads, it will be copied to the downloads directory.
+ */
+export const openResourceAsFile = async (resource: SFFSResource, resourcesDirectory: string) => {
+  const downloadsPath = app.getPath('downloads')
+  const resourceName = resource?.metadata?.name
+
+  if (resourceName) {
+    const downloadedFilePath = path.join(downloadsPath, resourceName)
+
+    if (!isPathSafe(downloadsPath, downloadedFilePath)) {
+      log.error('Download path is not safe:', downloadsPath, downloadedFilePath)
+      return
+    }
+
+    // check if the file exists
+    const exists = await fs.promises
+      .access(downloadedFilePath)
+      .then(() => true)
+      .catch(() => false)
+    if (exists) {
+      log.debug('Opening resource file at', downloadedFilePath)
+      shell.showItemInFolder(downloadedFilePath)
+      return
+    } else {
+      log.debug('Resource file not found at', downloadedFilePath)
+    }
+  }
+
+  const fileName = resourceName || resource.id
+
+  const internalFilePath = path.join(resourcesDirectory, resource.id)
+  const newDownloadFilePath = path.join(downloadsPath, fileName)
+
+  if (!isPathSafe(downloadsPath, internalFilePath)) {
+    log.error('Source path is not safe:', downloadsPath, internalFilePath)
+    return
+  }
+
+  if (!isPathSafe(downloadsPath, newDownloadFilePath)) {
+    log.error('Download path is not safe:', downloadsPath, newDownloadFilePath)
+    return
+  }
+
+  log.debug('Copying resource file from', internalFilePath, 'to:', newDownloadFilePath)
+  await fs.promises.copyFile(internalFilePath, newDownloadFilePath)
+
+  log.debug('Opening resource file at', newDownloadFilePath)
+  shell.showItemInFolder(newDownloadFilePath)
 }

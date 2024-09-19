@@ -111,6 +111,8 @@
     resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
     resource.metadata?.sourceURI
 
+  $: showOpenAsFile = !(Object.values(ResourceTypes) as string[]).includes(resource.type)
+
   let data: ResourceData | null = null
   const handleData = (e: CustomEvent<ResourceData>) => {
     data = e.detail
@@ -194,6 +196,22 @@
       active: true,
       trigger: CreateTabEventTrigger.OasisItem
     })
+  }
+
+  const handleOpenAsFile = () => {
+    if (resource.metadata?.name) {
+      window.api.openResourceLocally({
+        id: resource.id,
+        metadata: resource.metadata,
+        type: resource.type,
+        path: resource.path,
+        deleted: resource.deleted,
+        createdAt: resource.createdAt,
+        updatedAt: resource.updatedAt
+      })
+    } else {
+      alert('Failed to open file')
+    }
   }
 
   const getHostname = (raw: string) => {
@@ -355,6 +373,12 @@
 
       {#if interactive}
         <div class="remove-wrapper">
+          {#if showOpenAsFile}
+            <div class="remove" on:click|stopPropagation={handleOpenAsFile}>
+              <Icon name="download" color="#AAA7B1" />
+            </div>
+          {/if}
+
           <div class="remove rotated" on:click={handleOpenAsNewTab}>
             <Icon name="arrow.right" color="#AAA7B1" />
           </div>
@@ -399,8 +423,14 @@
     </div>
   {/if}
 
-  {#if interactive}
+  {#if interactive && !showTitles}
     <div class="remove-wrapper">
+      {#if showOpenAsFile}
+        <div class="remove" on:click={handleOpenAsFile}>
+          <Icon name="file" color="#AAA7B1" />
+        </div>
+      {/if}
+
       <div class="remove rotated" on:click={handleOpenAsNewTab}>
         <Icon name="arrow.right" color="#AAA7B1" />
       </div>
@@ -528,8 +558,8 @@
     gap: 0.75rem;
     top: 0;
     padding: 1rem;
-    right: 1.5rem;
-    transform: translateX(45%) translateY(-45%);
+    right: -2rem;
+    transform: translateY(-45%);
     opacity: 0;
     margin-left: 0.5rem;
     cursor: default;
