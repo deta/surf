@@ -15,6 +15,7 @@ struct Migrations;
 
 pub struct Database {
     pub conn: rusqlite::Connection,
+    pub read_only_conn: rusqlite::Connection,
 }
 
 pub struct PaginatedResources {
@@ -84,7 +85,11 @@ pub struct VectorSearchResult {
 impl Database {
     pub fn new(db_path: &str, run_migrations: bool) -> BackendResult<Database> {
         let mut conn = Connection::open(db_path)?;
+        let mut read_only_conn =
+            Connection::open_with_flags(db_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+
         conn.busy_timeout(std::time::Duration::from_secs(60))?;
+        read_only_conn.busy_timeout(std::time::Duration::from_secs(60))?;
 
         let journal_mode: String = conn
             .query_row("PRAGMA journal_mode = WAL;", [], |row| row.get(0))
@@ -114,8 +119,12 @@ impl Database {
         }
         // TODO: do we need this?
         rusqlite::vtab::array::load_module(&conn)?;
+        rusqlite::vtab::array::load_module(&read_only_conn)?;
 
-        Ok(Database { conn })
+        Ok(Database {
+            conn,
+            read_only_conn,
+        })
     }
 
     pub fn begin(&mut self) -> BackendResult<rusqlite::Transaction> {
