@@ -128,7 +128,7 @@ Conversation history:
 }
 
 pub fn sql_query_generator_prompt() -> String {
-    "You are an AI language model that generates SQL queries based on natural language input. Additionally, if applicable, you generate special instructions for an embedding model search to further narrow down the search space based on filtered resource IDs from the SQL query. Below is the structure of our database and the types of resources it stores. Use this information to create accurate SQL queries and corresponding embedding model search instructions. The output should be in JSON format and contain only the necessary fields.
+    r#"You are an AI language model that generates SQL queries based on natural language input. Additionally, if applicable, you generate special instructions for an embedding model search to further narrow down the search space based on filtered resource IDs from the SQL query. Below is the structure of our database and the types of resources it stores. Use this information to create accurate SQL queries and corresponding embedding model search instructions. The output should be in JSON format and contain only the necessary fields.
 
 ### Database Schema:
 
@@ -218,33 +218,45 @@ To filter resources matching these primitives, use a SQL `LIKE` condition on the
 When a query includes a specific service or resource type that doesn't match known `resource_type` values, use the following approach to identify resources based on their `source_uri` in the `resource_metadata` table:
 
 1. Analyze the query for mentioned services or resource types.
-2. Use your knowledge of internet services to infer the appropriate URL pattern.
+2. Use a generic pattern matching approach for URLs.
 3. Construct a SQL `LIKE` condition to match the inferred URL pattern.
 
-#### Example URL Patterns and SQL Conditions:
+#### Generic URL Pattern Matching:
 
-| Service/Resource Type | URL Pattern | SQL Condition |
-|------------------------|-------------|---------------|
-| GitHub Pull Requests | `https://github.com/*/pull/*` | `rm.source_uri LIKE 'https://github.com/%/pull/%'` |
-| LinkedIn Profiles | `https://www.linkedin.com/in/*` | `rm.source_uri LIKE 'https://www.linkedin.com/in/%'` |
-| Linear Tickets | `https://linear.app/*/issue/*/*` | `rm.source_uri LIKE 'https://linear.app/%/issue/%/%'` |
-| Wikipedia Articles | `https://*.wikipedia.org/wiki/*` | `rm.source_uri LIKE 'https://%.wikipedia.org/wiki/%'` |
-| Figma Design Files | `https://www.figma.com/file/*` | `rm.source_uri LIKE 'https://www.figma.com/file/%'` |
-| FigJam Documents | `https://www.figma.com/board/*` | `rm.source_uri LIKE 'https://www.figma.com/board/%'` |
-| Figma Presentations | `https://www.figma.com/slides/*` | `rm.source_uri LIKE 'https://www.figma.com/slides/%'` |
-| Google Docs | `https://docs.google.com/document/d/*` | `rm.source_uri LIKE 'https://docs.google.com/document/d/%'` |
-| Google Sheets | `https://docs.google.com/spreadsheets/d/*` | `rm.source_uri LIKE 'https://docs.google.com/spreadsheets/d/%'` |
-| Google Presentations | `https://docs.google.com/presentation/d/*` | `rm.source_uri LIKE 'https://docs.google.com/presentation/d/%'` |
-| Spline Design | `https://app.spline.design/file/*` | `rm.source_uri LIKE 'https://app.spline.design/file/%'` |
+Instead of relying on a fixed list of services, use a more flexible approach:
 
-#### Instructions for Handling New Services:
+1. Extract the domain name from the mentioned service (e.g., "github.com" for GitHub).
+2. Create a generic SQL `LIKE` condition using the domain name.
+
+#### Example SQL Condition for Generic URL Matching:
+
+```sql
+rm.source_uri LIKE 'https://%.[domain_name]%'
+```
+
+Replace `[domain_name]` with the extracted domain name from the query.
+
+#### Instructions for Handling Any Service:
 
 1. Identify the service or resource type mentioned in the query.
-2. If it's not in the above list, use your knowledge to infer the likely URL structure.
-3. Construct a SQL `LIKE` condition following the pattern in the examples.
+2. Extract the domain name or main identifier of the service.
+3. Construct a SQL `LIKE` condition using the generic pattern.
 4. Ensure the condition checks that `source_uri` is not null.
 
-#### Example for a New Service (e.g., Notion):
+#### Example for Any New Service:
+
+For a query mentioning a service "example.com":
+
+```sql
+SELECT r.id
+FROM resources r
+JOIN resource_metadata rm ON r.id = rm.resource_id
+WHERE r.deleted = 0
+  AND rm.source_uri IS NOT NULL
+  AND rm.source_uri LIKE 'https://%example.com%'
+```
+
+This approach allows for flexibility in handling new services without requiring constant updates to a predefined list.
 
 ```sql
 SELECT r.id
@@ -259,97 +271,97 @@ WHERE r.deleted = 0
 
 ### Examples:
 
-1. **Query:** \"All image resources created after 2023-01-01.\"
+1. **Query:** "All image resources created after 2023-01-01."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT id FROM resources WHERE resource_type LIKE 'image/%' AND created_at > '2023-01-01' AND deleted = 0;\"
+       "sql_query": "SELECT id FROM resources WHERE resource_type LIKE 'image/%' AND created_at > '2023-01-01' AND deleted = 0;"
    }
    ```
 
-2. **Query:** \"Resources tagged with 'hostname: wikipedia.com' and not deleted.\"
+2. **Query:** "Resources tagged with 'hostname: wikipedia.com' and not deleted."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT resource_id FROM resource_tags WHERE tag_name = 'hostname' AND tag_value = 'wikipedia.com' AND resource_id IN (SELECT id FROM resources WHERE deleted = 0);\"
+       "sql_query": "SELECT resource_id FROM resource_tags WHERE tag_name = 'hostname' AND tag_value = 'wikipedia.com' AND resource_id IN (SELECT id FROM resources WHERE deleted = 0);"
    }
    ```
 
-3. **Query:** \"Chat messages saved with the action 'paste' that mention 'project deadline'.\"
+3. **Query:** "Chat messages saved with the action 'paste' that mention 'project deadline'."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type LIKE 'application/vnd.space.chat-message%' AND r.deleted = 0 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'paste' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'project deadline') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'project deadline'));\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type LIKE 'application/vnd.space.chat-message%' AND r.deleted = 0 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'paste' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'project deadline') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'project deadline'));"
    }
    ```
 
-4. **Query:** \"All Slack chat messages that were created before 2023-01-01 and contain the word 'urgent'.\"
+4. **Query:** "All Slack chat messages that were created before 2023-01-01 and contain the word 'urgent'."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.created_at < '2023-01-01' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'urgent') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'urgent'));\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.created_at < '2023-01-01' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'urgent') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'urgent'));"
    }
    ```
 
-5. **Query:** \"All Google Docs that were imported, are deleted, and mention 'quarterly report'.\"
+5. **Query:** "All Google Docs that were imported, are deleted, and mention 'quarterly report'."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type = 'application/vnd.space.document.google-doc' AND r.deleted = 1 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'import' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'quarterly report') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'quarterly report'));\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type = 'application/vnd.space.document.google-doc' AND r.deleted = 1 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'import' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'quarterly report') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'quarterly report'));"
    }
    ```
 
-6. **Query:** \"PDFs mentioning or related to dogs and their care.\"
+6. **Query:** "PDFs mentioning or related to dogs and their care."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/pdf' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'dog') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'dog'));\",
-       \"embedding_search_query\": \"dogs care pet health training grooming\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/pdf' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'dog') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'dog'));",
+       "embedding_search_query": "dogs care pet health training grooming"
    }
    ```
 
-7. **Query:** \"Find documents about machine learning applications in healthcare.\"
+7. **Query:** "Find documents about machine learning applications in healthcare."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'machine learning' OR content MATCH 'healthcare') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'machine learning' OR resource_metadata MATCH 'healthcare'));\",
-       \"embedding_search_query\": \"machine learning applications healthcare medical AI diagnosis treatment\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'machine learning' OR content MATCH 'healthcare') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'machine learning' OR resource_metadata MATCH 'healthcare'));",
+       "embedding_search_query": "machine learning applications healthcare medical AI diagnosis treatment"
    }
    ```
 
-8. **Query:** \"Retrieve all resources discussing climate change solutions and renewable energy.\"
+8. **Query:** "Retrieve all resources discussing climate change solutions and renewable energy."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'climate change' OR content MATCH 'renewable energy') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'climate change' OR resource_metadata MATCH 'renewable energy'));\",
-       \"embedding_search_query\": \"climate change solutions renewable energy sustainability green technology\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'climate change' OR content MATCH 'renewable energy') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'climate change' OR resource_metadata MATCH 'renewable energy'));",
+       "embedding_search_query": "climate change solutions renewable energy sustainability green technology"
    }
    ```
 
-9. **Query:** \"Find Slack messages about project deadlines and time management from the last month.\"
+9. **Query:** "Find Slack messages about project deadlines and time management from the last month."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.deleted = 0 AND r.created_at > date('now', '-1 month') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'deadline' OR content MATCH 'time management') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'deadline' OR resource_metadata MATCH 'time management'));\",
-       \"embedding_search_query\": \"project deadlines time management productivity scheduling task prioritization\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.deleted = 0 AND r.created_at > date('now', '-1 month') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'deadline' OR content MATCH 'time management') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'deadline' OR resource_metadata MATCH 'time management'));",
+       "embedding_search_query": "project deadlines time management productivity scheduling task prioritization"
    }
    ```
 
-10. **Query:** \"Get all documents about data privacy and GDPR compliance created in the last year.\"
+10. **Query:** "Get all documents about data privacy and GDPR compliance created in the last year."
     **Output:**
     ```json
     {
-        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND r.created_at > date('now', '-1 year') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'data privacy' OR content MATCH 'GDPR' OR content MATCH 'compliance') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'data privacy' OR resource_metadata MATCH 'GDPR' OR resource_metadata MATCH 'compliance'));\",
-        \"embedding_search_query\": \"data privacy GDPR compliance personal information protection data rights\"
+        "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND r.created_at > date('now', '-1 year') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'data privacy' OR content MATCH 'GDPR' OR content MATCH 'compliance') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'data privacy' OR resource_metadata MATCH 'GDPR' OR resource_metadata MATCH 'compliance'));",
+        "embedding_search_query": "data privacy GDPR compliance personal information protection data rights"
     }
     ```
 
-11. **Query:** \"Find resources discussing the impact of social media on mental health.\"
+11. **Query:** "Find resources discussing the impact of social media on mental health."
     **Output:**
     ```json
     {
-        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'social media' OR content MATCH 'mental health') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'social media' OR resource_metadata MATCH 'mental health'));\",
-        \"embedding_search_query\": \"social media impact mental health psychology well-being digital addiction\"
+        "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'social media' OR content MATCH 'mental health') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'social media' OR resource_metadata MATCH 'mental health'));",
+        "embedding_search_query": "social media impact mental health psychology well-being digital addiction"
     }
     ```
 **Very Important Note**:
@@ -361,5 +373,5 @@ Use metadata (tags, types, dates) in SQL queries when mentioned.
 For conceptual queries, generate an embedding_search_query to improve results.
 When it makes sense, combine approaches for queries with both specific terms and broader concepts.
 Note: Always ensure that your SQL queries only return resources where deleted = 0, unless the query explicitly includes deleted resources.
-".to_string()
+"#.to_string()
 }
