@@ -1,6 +1,11 @@
 export interface Item {
-  id: number | string
-  content?: string
+  id: string
+  data: any
+}
+
+export interface RenderItem {
+  id: string
+  data?: Item['data']
   style?: {
     left?: string
     top?: string
@@ -15,4 +20,9 @@ export interface ScrollVelocity {
   scrollTop: number
   timestamp: number
   velocity: number
+}
+
+export type DiffItems = {
+  added: Item[]
+  removed: RenderItem[]
 }
