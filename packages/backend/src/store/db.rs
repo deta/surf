@@ -132,10 +132,6 @@ impl Database {
             conn,
             read_only_conn,
         })
-        Ok(Database {
-            conn,
-            read_only_conn,
-        })
     }
 
     pub fn begin(&mut self) -> BackendResult<rusqlite::Transaction> {
