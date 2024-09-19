@@ -56,6 +56,8 @@
   import ArticleProperties from './ArticleProperties.svelte'
   import { useTabsManager } from '../../service/tabs'
   import { contextMenu } from '../Core/ContextMenu.svelte'
+  import { useOasis } from '../../service/oasis'
+  import { getUnixTime } from 'date-fns'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -70,6 +72,7 @@
   const log = useLogScope('ResourcePreviewClean')
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
+  const oasis = useOasis()
 
   const dispatch = createEventDispatcher<{
     click: string
@@ -80,6 +83,7 @@
   }>()
 
   const isHovered = writable(false)
+  const spaces = oasis.spaces
 
   const OPENABLE_RESOURCES = [
     ResourceTypes.LINK,
@@ -256,6 +260,26 @@
         icon: '',
         text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
         action: () => handleOpenAsFile()
+      },
+      {
+        type: 'sub-menu',
+        icon: '',
+        text: `Add to Space`,
+        items: $spaces
+          ? [
+              ...$spaces
+                .filter((e) => e.name.folderName !== 'Everything')
+                .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+                .map((space) => ({
+                  type: 'action',
+                  icon: '',
+                  text: space.name.folderName,
+                  action: () => {
+                    oasis.addResourcesToSpace(space.id, [resource.id])
+                  }
+                }))
+            ]
+          : []
       },
       { type: 'separator' },
       {
