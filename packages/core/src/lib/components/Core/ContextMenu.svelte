@@ -130,7 +130,7 @@
 </script>
 
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte'
+  import { onDestroy, onMount, tick } from 'svelte'
   import type { ActionReturn } from 'svelte/action'
   import { derived, writable, get } from 'svelte/store'
   import ContextMenuItems from './ContextMenuItems.svelte'
@@ -142,7 +142,7 @@
   export let items: CtxItem[] = []
 
   let ref: HTMLDialogElement | null = null
-  onMount(() => {
+  onMount(async () => {
     if (targetEl) {
       targetEl.setAttribute('data-context-menu-anchor', '')
     }
@@ -153,6 +153,10 @@
       )
       return
     }
+
+    ref.showModal()
+
+    await tick()
     const width = ref.clientWidth
     const height = ref.clientHeight
 
@@ -164,7 +168,6 @@
       const edgeOffset = window.innerHeight - targetY
       targetY = window.innerHeight - height - edgeOffset
     }
-    ref.showModal()
   })
   onDestroy(() => {
     if (targetEl) {
