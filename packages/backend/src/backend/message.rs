@@ -69,7 +69,7 @@ pub enum HorizonMessage {
 #[derive(Debug)]
 pub struct CreateSpaceEntryInput {
     pub resource_id: String,
-    pub manually_added: bool,
+    pub manually_added: i32,
 }
 
 #[derive(Debug)]

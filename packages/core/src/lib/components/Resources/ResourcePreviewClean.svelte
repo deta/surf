@@ -63,6 +63,8 @@
   export let interactive: boolean = true
   export let showSource: boolean = false
   export let newTabOnClick: boolean = false
+  export let resourcesBlacklistable: boolean = false
+  export let resourceBlacklisted: boolean = false
 
   const log = useLogScope('ResourcePreviewClean')
   const resourceManager = useResourceManager()
@@ -74,6 +76,8 @@
     load: string
     open: string
     'created-tab': void
+    'whitelist-resource': string
+    'blacklist-resource': string
   }>()
 
   const isHovered = writable(false)
@@ -144,6 +148,10 @@
   }
 
   const handleClick = async (e: MouseEvent) => {
+    // TOOD: @felix replace this with interactive prop
+    if (resourcesBlacklistable) {
+      return
+    }
     if (dragging) {
       dragging = false
       return
@@ -189,6 +197,19 @@
     dispatch('remove', resource.id)
   }
 
+  const handleBlacklisting = (e: MouseEvent) => {
+    e.stopImmediatePropagation()
+    resourceBlacklisted = !resourceBlacklisted
+
+    if (resourceBlacklisted) {
+      // Handle removing from blacklist
+      dispatch('blacklist-resource', resource.id)
+    } else {
+      // Handle adding to blacklist
+      dispatch('whitelist-resource', resource.id)
+    }
+  }
+
   const handleOpenAsNewTab = (e: MouseEvent) => {
     e.stopImmediatePropagation()
 
@@ -212,6 +233,10 @@
     } else {
       alert('Failed to open file')
     }
+  }
+
+  const handleToggleBlacklisted = () => {
+    resourceBlacklisted = !resourceBlacklisted
   }
 
   const getHostname = (raw: string) => {
@@ -371,7 +396,7 @@
         {/if}
       </div>
 
-      {#if interactive}
+      {#if interactive && !resourcesBlacklistable}
         <div class="remove-wrapper">
           {#if showOpenAsFile}
             <div class="remove" on:click|stopPropagation={handleOpenAsFile}>
@@ -386,6 +411,16 @@
           <div class="remove" on:click={handleRemove}>
             <Icon name="close" color="#AAA7B1" />
           </div>
+        </div>
+      {/if}
+
+      {#if resourcesBlacklistable}
+        <div class="remove" on:click={handleBlacklisting}>
+          {#if resourceBlacklisted}
+            <Icon name="minus" color="#AAA7B1" />
+          {:else}
+            <Icon name="eye" color="#AAA7B1" />
+          {/if}
         </div>
       {/if}
 

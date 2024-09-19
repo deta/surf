@@ -27,13 +27,18 @@
     }
   }
 
+  interface PreviewID {
+    id: string
+    blacklisted: boolean
+  }
+
   const aiEnabled = writable(false)
   const name = writable('')
   const userPrompt = writable('<p></p>')
   const colors = writable(colorPairs[Math.floor(Math.random() * colorPairs.length)])
   const dispatch = createEventDispatcher()
   const userEnteredName = writable(false)
-  const previewIDs = writable<string[]>([])
+  const previewIDs = writable<PreviewID[]>([])
   const previewResources = writable<any[]>([])
   const fineTuneEnabled = writable(false)
   const isLoading = writable(false)
@@ -118,8 +123,8 @@
       processNaturalLanguage: $aiEnabled,
       userPrompt: sanitizedUserPrompt,
 
-      blacklistedResourceIds: undefined,
-      llmFetchedResourceIds: $previewIDs.length > 0 ? $previewIDs : undefined
+      blacklistedResourceIds: $previewIDs.filter((id) => id.blacklisted).map((id) => id.id),
+      llmFetchedResourceIds: $previewIDs.filter((id) => !id.blacklisted).map((id) => id.id)
     })
     dispatch('close-modal')
   }
@@ -168,7 +173,7 @@
         ...(response.sql_query_results ?? [])
       ])
 
-      const resourceIds = Array.from(results)
+      const resourceIds = Array.from(results).map((id) => ({ id, blacklisted: false }))
 
       log.debug('Fetched resource IDs', resourceIds)
 
@@ -176,7 +181,7 @@
 
       if (resourceIds.length > 0) {
         const loadedResources = await Promise.all(
-          resourceIds.map((id) => resourceManager.getResourceWithAnnotations(id))
+          resourceIds.map((id) => resourceManager.getResourceWithAnnotations(id.id))
         )
         previewResources.set(loadedResources)
         console.log('xxx-loadedresources', loadedResources)
@@ -190,7 +195,7 @@
         return
       }
     } catch (err) {
-      $previewIDs.set([])
+      previewIDs.set([])
       log.error('Failed to create previews with AI', err)
     } finally {
       isLoading.set(false)
@@ -228,6 +233,20 @@
     }
   }
 
+  const handleBlacklistResource = (event) => {
+    const resourceId = event.detail
+    previewIDs.update((ids) =>
+      ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: true } : id))
+    )
+  }
+
+  const handleWhitelistResource = (event) => {
+    const resourceId = event.detail
+    previewIDs.update((ids) =>
+      ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: false } : id))
+    )
+  }
+
   $: isCreateButtonDisabled = $name === '' && $userPrompt === '<p></p>'
 </script>
 
@@ -246,6 +265,16 @@
     }
   }}
 />
+
+<pre class="fixed top-0 z-[100000] bg-black text-white">
+  {#if $previewIDs.length}
+    {JSON.stringify($previewIDs)}
+  {:else if $previewIDs.length === 0}
+    No preview IDs
+  {:else}
+    {JSON.stringify($previewIDs) ?? 'null'}
+  {/if}
+</pre>
 
 <div class="centered-content">
   <div
@@ -305,7 +334,10 @@
         {#if $previewIDs.length > 0}
           <div class="absolute inset-0 z-10">
             {#key $previewIDs}
-              <SpacePreview resourceIDs={$previewIDs} showHeader={false} />
+              <SpacePreview
+                resourceIDs={$previewIDs.filter((id) => !id.blacklisted).map((id) => id.id)}
+                showHeader={false}
+              />
             {/key}
           </div>
         {/if}
@@ -315,7 +347,7 @@
       </div>
     </ResourceOverlay>
   {:else}
-    {#key $previewResources}
+    {#key $isLoading}
       <div
         class="preview-resources-wrapper"
         in:fly={{
@@ -330,7 +362,12 @@
           duration: 200
         }}
       >
-        <OasisResourcesViewSearchResult resources={previewResources} />
+        <OasisResourcesViewSearchResult
+          resources={previewResources}
+          resourcesBlacklistable={true}
+          on:blacklist-resource={handleBlacklistResource}
+          on:whitelist-resource={handleWhitelistResource}
+        />
       </div>
     {/key}
   {/if}

@@ -1,6 +1,6 @@
 export interface CreateSpaceEntryInput {
   resource_id: string
-  manually_added: boolean
+  manually_added: number
 }
 
 export interface Space {

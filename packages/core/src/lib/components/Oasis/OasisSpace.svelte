@@ -969,6 +969,12 @@
 
         await resourceManager.deleteSpaceEntries([reference.entryId])
 
+        await resourceManager.addItemsToSpace(
+          reference.folderId,
+          [reference.resourceId],
+          SpaceEntryOrigin.Blacklisted
+        )
+
         // HACK: this is needed for the preview to update with the summary
         const contents = $spaceContents.filter((x) => x.resource_id !== resourceId)
         spaceContents.set([])
@@ -1370,9 +1376,11 @@
           blacklistedResourceIds,
           SpaceEntryOrigin.Blacklisted
         )
+        log.debug('Blacklisted resources added to space:', blacklistedResourceIds)
       }
       if (llmFetchedResourceIds && llmFetchedResourceIds.length > 0) {
         await oasis.addResourcesToSpace(space.id, llmFetchedResourceIds, SpaceEntryOrigin.LlmQuery)
+        log.debug('LLM fetched resources added to space:', llmFetchedResourceIds)
       }
 
       $space = updatedSpace
