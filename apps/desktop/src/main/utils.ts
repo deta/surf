@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import path from 'path'
 
 export const isDefaultBrowser = () => {
   const isHttp = app.isDefaultProtocolClient('http')
@@ -20,4 +21,8 @@ export const getPlatform = () => {
   }
 
   return 'linux'
+}
+
+export const isPathSafe = (basePath: string, filePath: string): boolean => {
+  return path.resolve(basePath, filePath).startsWith(path.resolve(basePath))
 }

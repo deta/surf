@@ -5,6 +5,7 @@
     generateRandomPastelColor,
     getFileKind,
     getFileType,
+    isMac,
     toHumanFileSize
   } from '@horizon/utils'
   import FileIcon from './FileIcon.svelte'
@@ -16,13 +17,23 @@
 
   const dispatch = createEventDispatcher<{ load: void }>()
 
+  const isMacOs = isMac()
+
   $: name = resource?.metadata?.name || 'Unknown File'
   $: kind = getFileKind(resource.type)
   $: type = getFileType(resource.type)
 
-  // const openFile = () => {
-  //     window.open(`file://${resource.path}`, "_blank")
-  // }
+  const openFile = () => {
+    window.api.openResourceLocally({
+      id: resource.id,
+      metadata: resource.metadata,
+      type: resource.type,
+      path: resource.path,
+      deleted: resource.deleted,
+      createdAt: resource.createdAt,
+      updatedAt: resource.updatedAt
+    })
+  }
 
   onMount(() => {
     dispatch('load')
@@ -48,20 +59,6 @@
       <h1 class="title">
         {name || 'Untitled'}
       </h1>
-    {/if}
-
-    <div class="bottom">
-      <!-- {#if !preview}
-        <div class="type-info">
-          <div class="icon">
-            <FileIcon {kind} width="25px" height="25px" />
-          </div>
-
-          <div class="type">
-            {type}
-          </div>
-        </div>
-      {/if} -->
 
       {#if blob}
         <div class="info">
@@ -69,12 +66,24 @@
             {toHumanFileSize(blob.size)}
           </div>
 
-          <!-- <button on:click={openFile} class="action">
-                      Open
-                  </button> -->
+          -
+
+          <div class="type">
+            {getFileType(resource.type)}
+          </div>
         </div>
       {/if}
-    </div>
+
+      <div class="mt-6 flex items-center justify-center">
+        <button
+          on:click={openFile}
+          class="flex items-center gap-2 px-4 py-3 bg-sky-300/60 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer"
+        >
+          <Icon name="download" size="22px" />
+          {isMacOs ? 'Reveal in System Downloads' : 'Open in File Explorer'}
+        </button>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -144,14 +153,8 @@
     flex-shrink: 0;
   }
 
+  .size,
   .type {
-    margin: 0;
-    font-size: 1rem;
-    color: var(--color-text-muted);
-    font-weight: 500;
-  }
-
-  .size {
     font-size: 1.2rem;
     color: var(--color-text-muted);
     overflow: hidden;
@@ -178,19 +181,4 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
   }
-
-  // .action {
-  //     appearance: none;
-  //     background: none;
-  //     outline: none;
-  //     border: none;
-  //     padding: 0.5rem 1rem;
-  //     border-radius: 0.5rem;
-  //     background: var(--background-menu-muted);
-  //     color: var(--color-menu);
-  //     font-size: 1rem;
-  //     font-weight: 500;
-  //     cursor: pointer;
-  //     margin: 0;
-  // }
 </style>

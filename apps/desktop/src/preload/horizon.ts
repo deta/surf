@@ -21,7 +21,8 @@ import type {
   DownloadRequestMessage,
   DownloadUpdatedMessage,
   DownloadDoneMessage,
-  TelemetryEventTypes
+  TelemetryEventTypes,
+  SFFSResource
 } from '@horizon/types'
 import { getUserConfig } from '../main/config'
 import {
@@ -130,6 +131,10 @@ const api = {
     } catch (error) {
       throw error
     }
+  },
+
+  openResourceLocally: (resource: SFFSResource) => {
+    IPC_EVENTS_RENDERER.openResourceLocally.send(resource)
   },
 
   fetchHTMLFromRemoteURL: async (url: string, opts?: RequestInit) => {
