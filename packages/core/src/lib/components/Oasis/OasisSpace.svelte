@@ -358,11 +358,10 @@
       // )
       log.debug('AI prompt:', query, sql_query, embedding_query)
 
-      const response = await resourceManager.getResourcesViaPrompt(
-        query,
-        sql_query || undefined,
-        embedding_query || undefined
-      )
+      const response = await resourceManager.getResourcesViaPrompt(query, {
+        sql_query: sql_query || undefined,
+        embedding_query: embedding_query || undefined
+      })
       log.debug('AI response:', response)
 
       if ($space?.name.sql_query !== response.sql_query) {
