@@ -4,7 +4,7 @@
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
 
   import DragResourceWrapper from './DragResourceWrapper.svelte'
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
+  import ResourcePreview from '../Resources/ResourcePreview.svelte'
 
   export let resourceOrId: string | Resource
   export let selected: boolean = false
@@ -46,7 +46,7 @@
 <div class="wrapper">
   {#if resource}
     <DragResourceWrapper {resource}>
-      <ResourcePreviewClean
+      <ResourcePreview
         {resource}
         {showSource}
         {selected}
