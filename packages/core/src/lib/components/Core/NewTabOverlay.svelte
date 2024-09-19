@@ -1160,6 +1160,7 @@
                       on:create-empty-space={handleCreateEmptySpace}
                       on:open-resource={handleOpen}
                       on:delete-space={handleDeleteSpace}
+                      on:Drop
                     />
                   {/key}
                 </div>

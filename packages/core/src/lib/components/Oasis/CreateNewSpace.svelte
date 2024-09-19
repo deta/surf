@@ -40,6 +40,8 @@
   const clickedPill = writable(0)
   const activePillConfig = writable<PromptConfig['pill'] | null>(null)
   const semanticSearchThreshold = writable(0.4)
+  const semanticInputValue = writable(0.4)
+  const resultHasSemanticSearch = writable(false)
   let editor: Editor
 
   const log = useLogScope('OasisSpace')
@@ -69,7 +71,9 @@
     if ($previewIDs.length > 0) {
       fineTuneEnabled.set(true)
     } else {
-      fineTuneEnabled.set(false)
+      if ($userPrompt === '<p></p>') {
+        fineTuneEnabled.set(false)
+      }
     }
   }
 
@@ -152,6 +156,10 @@
 
       log.debug(`Preview response`, response)
 
+      resultHasSemanticSearch.set(
+        !!(response.embedding_search_results && response.embedding_search_results.length > 0)
+      )
+
       const results = new Set([
         ...(response.embedding_search_results ?? []),
         ...(response.sql_query_results ?? [])
@@ -179,6 +187,7 @@
         return
       }
     } catch (err) {
+      $previewIDs.set([])
       log.error('Failed to create previews with AI', err)
     } finally {
       isLoading.set(false)
@@ -312,24 +321,49 @@
       </div>
     </ResourceOverlay>
   {:else}
-    <div
-      class="preview-resources-wrapper"
-      in:fly={{
-        y: 0,
-        x: 0,
-        opacity: 0,
-        delay: 500,
-        duration: 1000
-      }}
-    >
-      <OasisResourcesViewSearchResult resources={previewResources} />
-    </div>
+    {#key $previewResources}
+      <div
+        class="preview-resources-wrapper"
+        in:fly={{
+          y: 20,
+          opacity: 0,
+          duration: 300,
+          delay: 150
+        }}
+        out:fly={{
+          y: -20,
+          opacity: 0,
+          duration: 200
+        }}
+      >
+        <OasisResourcesViewSearchResult resources={previewResources} />
+      </div>
+    {/key}
   {/if}
   <div
     class="input-group absolute transition-all duration-300"
     class:bottom-0={$fineTuneEnabled}
     class:bottom-4={!$fineTuneEnabled}
   >
+    {#if $isLoading && $fineTuneEnabled}
+      <div
+        class={`absolute inset-4 flex items-center justify-center ${$previewIDs.length > 0 ? 'pt-[12rem]' : ''}`}
+        in:fly={{
+          y: 20,
+          duration: 420,
+          opacity: 1,
+          easing: quartOut
+        }}
+        out:fly={{
+          y: 20,
+          duration: 420,
+          opacity: 0,
+          easing: quartOut
+        }}
+      >
+        <LoadingParticles size={$previewIDs.length === 0 ? 300 : 700} />
+      </div>
+    {/if}
     <div
       class="ai-voodoo bg-white/95 backdrop-blur-md px-12 pt-8 pb-12 mb-16 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
     >
@@ -398,13 +432,13 @@
         </div>
       </div>
 
-      {#if $fineTuneEnabled}
-        <div class="semantic-search-threshold-slider">
+      {#if $fineTuneEnabled && $resultHasSemanticSearch}
+        <div class="semantic-search-threshold-slider p-4">
           <label
             for="semantic-search-threshold"
             class="block text-sm font-medium text-gray-700 mb-2"
           >
-            Semantic Search Threshold
+            Prescision
           </label>
           <input
             type="range"
@@ -412,20 +446,18 @@
             name="semantic-search-threshold"
             min="0"
             max="1"
+            bind:value={$semanticInputValue}
             step="0.01"
             on:change={() => {
-              previewAISpace($userPrompt, $semanticSearchThreshold)
+              previewAISpace($userPrompt, $semanticInputValue)
             }}
             class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
           />
           <div class="flex justify-between text-xs text-gray-600 mt-1">
-            <span>0</span>
-            <span>0.5</span>
-            <span>1</span>
+            <span>Ignore Semantic</span>
+            <span>Recommended</span>
+            <span>Wider Range</span>
           </div>
-          <p class="text-sm text-gray-600 mt-2">
-            Current threshold: {$semanticSearchThreshold.toFixed(2)}
-          </p>
         </div>
       {/if}
       {#if !$fineTuneEnabled}

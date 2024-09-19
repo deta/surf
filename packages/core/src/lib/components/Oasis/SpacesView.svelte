@@ -262,6 +262,7 @@
             on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
             on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
             on:open-resource
+            on:Drop
             selected={$selectedSpace === folder.id}
             {showPreview}
           />

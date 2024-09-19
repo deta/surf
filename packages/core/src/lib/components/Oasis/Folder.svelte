@@ -8,6 +8,7 @@
   import type { Space, SpaceData } from '../../types'
   import { ResourceTagsBuiltInKeys, ResourceTypes } from '../../types'
   import { useLogScope, hover, tooltip, isModKeyPressed } from '@horizon/utils'
+  import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { useOasis } from '../../service/oasis'
   import { processDrop } from '../../service/mediaImporter'
   import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
@@ -33,6 +34,7 @@
     'open-space-as-tab': { space: Space; active: boolean }
     'update-data': Partial<SpaceData>
     'open-resource': string
+    Drop: { drag: DragculaDragEvent; spaceId: string }
   }>()
   const oasis = useOasis()
   const toast = useToasts()
@@ -203,25 +205,8 @@
     }
   }
 
-  const handleDrop = async (event: DragEvent) => {
-    event.preventDefault()
-
-    const mediaResults = await processDrop(event)
-
-    const resourceItems = mediaResults.filter((r) => r.type === 'resource')
-    if (resourceItems.length > 0) {
-      await resourceManager.addItemsToSpace(
-        folder.id,
-        resourceItems.map((r) => r.data as string)
-      )
-      log.debug(`Resources dropped into folder ${folder.name}`)
-
-      toast.success('Resources added to folder!')
-    } else {
-      log.debug('No resources found in drop event')
-    }
-
-    draggedOver.set(false)
+  const handleDrop = async (drag: DragculaDragEvent) => {
+    dispatch('Drop', { drag, spaceId: (tab as TabSpace).spaceId })
   }
 
   const handleColorChange = async (event: CustomEvent<[string, string]>) => {
@@ -294,10 +279,25 @@
 <div
   class="folder-wrapper {processing ? 'magic-in-progress' : ''} {$draggedOver ? 'draggedOver' : ''}"
   on:dragover={handleDragOver}
+  id={folder.id}
   data-folder-id={folder.id}
   on:dragleave={handleDragLeave}
   on:drop={handleDrop}
   aria-hidden="true"
+  use:HTMLDragZone.action={{}}
+  on:DragEnter={(drag) => {
+    const dragData = drag.data
+    if (
+      drag.isNative ||
+      (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space') ||
+      dragData['oasis/resource'] !== undefined
+    ) {
+      drag.continue()
+      return
+    }
+    drag.abort()
+  }}
+  on:Drop={handleDrop}
 >
   <div
     class="folder {selected ? 'bg-sky-100' : 'hover:bg-sky-50'}"

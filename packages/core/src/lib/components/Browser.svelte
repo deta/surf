@@ -3739,6 +3739,7 @@
           on:open-space={handleCreateTabForSpace}
           on:create-chat={handleCreateChatWithQuery}
           on:create-note={handleCreateNote}
+          on:Drop={handleDropOnSpaceTab}
           on:zoom={() => {
             $activeBrowserTab?.zoomIn()
           }}
