@@ -23,6 +23,7 @@ export enum TelemetryEventTypes {
   CreateTab = 'Create Tab',
   ActivateTab = 'Activate Tab',
   ActivateTabSpace = 'Activate Tab Space',
+  SelectTab = 'Select Tab',
   DeleteTab = 'Delete Tab',
   DeleteTabSpace = 'Delete Tab Space',
   MoveTab = 'Move Tab',
@@ -227,6 +228,15 @@ export enum PageChatUpdateContextEventAction {
   /** The active tab changed and was added to the context */
   ActiveChanged = 'active_changed',
   /** Multiple tabs were selected */
+  MultiSelect = 'multi_select'
+}
+
+export enum SelectTabEventAction {
+  /** A tab was added to the selection */
+  Add = 'add',
+  /** A tab was removed from the selection */
+  Remove = 'remove',
+  /** Multiple tabs were added to/removed from the selection */
   MultiSelect = 'multi_select'
 }
 
