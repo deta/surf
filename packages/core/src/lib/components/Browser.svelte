@@ -1140,8 +1140,8 @@
               )
               return newResources[0].id
             }
-          } else {
-            // TODO: (maxu): Handle other tab types -> resource ids
+          } else if (tab.type === 'resource') {
+            return (tab as TabResource).resourceId
           }
           return null
         })
