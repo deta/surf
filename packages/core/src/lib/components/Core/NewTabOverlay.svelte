@@ -80,6 +80,7 @@
   } from '@horizon/types'
   import { useTabsManager } from '../../service/tabs'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
+  import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../constants/searchEngines'
 
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
@@ -99,7 +100,7 @@
   let page: 'tabs' | 'oasis' | 'history' | 'spaces' | null = null
   let filteredItems: CMDMenuItem[] = []
   let historyEntries: HistoryEntry[] = []
-  let googleSuggestions: string[] = []
+  let searchEngineSuggestions: string[] = []
   let oasisResources: Resource[] = []
   const CACHE_EXPIRY = 1000 * 30 // 30 seconds
   let historyCache: { data: any[]; timestamp: number } | null = null
@@ -117,11 +118,11 @@
   let hasLoadedEverything = false
   const searchValue = writable('')
   const oasisSearchResults = writable<Resource[]>([])
-  const googleSuggestionResults = writable<string[]>([])
+  const searchEngineSuggestionResults = writable<string[]>([])
   const historyEntriesResults = writable<HistoryEntry[]>([])
   const filteredCommandItems = writable<CMDMenuItem[]>([])
   const isFetchingOasisSearchResults = writable(false)
-  const isFetchingGoogleSuggestionResults = writable(false)
+  const isFetchingSearchEngineSuggestionResults = writable(false)
   const isFetchingHistoryEntriesResults = writable(false)
   const isFilteringCommandItems = writable(false)
   const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
@@ -131,19 +132,19 @@
   const isLoadingCommandItems = derived(
     [
       isFetchingOasisSearchResults,
-      isFetchingGoogleSuggestionResults,
+      isFetchingSearchEngineSuggestionResults,
       isFetchingHistoryEntriesResults,
       isFilteringCommandItems
     ],
     ([
       isFetchingOasisSearchResults,
-      isFetchingGoogleSuggestionResults,
+      isFetchingSearchEngineSuggestionResults,
       isFetchingHistoryEntriesResults,
       isFilteringCommandItems
     ]) => {
       return (
         isFetchingOasisSearchResults ||
-        isFetchingGoogleSuggestionResults ||
+        isFetchingSearchEngineSuggestionResults ||
         isFetchingHistoryEntriesResults ||
         isFilteringCommandItems
       )
@@ -240,7 +241,8 @@
     } as CMDMenuItem
   }
 
-  function googleSuggestionToItem(suggestion: string) {
+  function searchEngineSuggestionToItem(suggestion: string) {
+    // TODO: OO
     return {
       id: `google-suggestion-${suggestion}`,
       type: 'suggestion',
@@ -267,8 +269,8 @@
         fetchOasisResults(searchValue)
       }
 
-      if (!$isFetchingGoogleSuggestionResults) {
-        fetchGoogleSuggestions(searchValue)
+      if (!$isFetchingOasisSearchResults) {
+        fetchSearchEngineSuggestions(searchValue)
       }
 
       // if (!$isFetchingHistoryEntriesResults) {
@@ -282,13 +284,19 @@
   })
 
   const commandFilterResult = derived(
-    [searchValue, commandFilter, filteredCommandItems, oasisSearchResults, googleSuggestionResults],
+    [
+      searchValue,
+      commandFilter,
+      filteredCommandItems,
+      oasisSearchResults,
+      searchEngineSuggestionResults
+    ],
     ([
       searchValue,
       commandFilter,
       filteredCommandItems,
       oasisSearchResults,
-      googleSuggestionResults
+      searchEngineSuggestionResults
     ]) => {
       deboundedSelectFirstCommandItem()
 
@@ -309,8 +317,11 @@
         ...commandFilter,
         ...filteredCommandItems,
         // ...historyEntriesResults.map((entry) => historyEntryToItem(entry, { score: 0.1 })),
-        ...googleSuggestionResults.map((suggestion) => googleSuggestionToItem(suggestion)),
-        ...oasisSearchResults.map((resource) => resourceToItem(resource, { score: 0.4 }))
+        ...searchEngineSuggestionResults.map((suggestion) =>
+          searchEngineSuggestionToItem(suggestion)
+        )
+        // NOTE: Disabled until it works better with the new stuff seach work
+        //...oasisSearchResults.map((resource) => resourceToItem(resource, { score: 0.4 }))
       ]
 
       if (!items.some((item) => item.label === searchValue || item.value === searchValue)) {
@@ -439,41 +450,34 @@
     }
   }, 300)
 
-  const fetchGoogleSuggestions = useDebounce(async (query: string) => {
+  const fetchSearchEngineSuggestions = useDebounce(async (query: string) => {
     try {
-      if (query.length > 2) {
-        $isFetchingGoogleSuggestionResults = true
-        const data = await window.api.fetchJSON(
-          `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`,
-          {
-            // HACK: this is needed to get Google to properly encode the suggestions, without this Umlaute are not encoded properly
-            headers: {
-              'User-Agent':
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
-            }
-          }
-        )
-        log.debug('Google suggestions:', data)
-        $googleSuggestionResults = data[1]
-          .slice(0, 4)
-          .filter((suggestion: string) => suggestion !== $searchValue)
-      } else {
-        $googleSuggestionResults = []
+      const engine =
+        //SEARCH_ENGINES.find((e) => e.key === $userConfigSettings.search_engine) ??
+        SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+      if (!engine) throw new Error('No search engine / default engine found, config error?')
+
+      if (engine.getCompletions !== undefined) {
+        if (query.length > 2) {
+          $isFetchingOasisSearchResults = true
+          const suggestions = await engine.getCompletions(query)
+          log.debug('Search engine suggestions:', suggestions)
+          $searchEngineSuggestionResults = suggestions[1] // TODO: -> Make this generalized for other engines
+            .slice(0, 4)
+            .filter((suggestion: string) => suggestion !== $searchValue)
+        } else {
+          $searchEngineSuggestionResults = []
+        }
       }
       // updateFilteredItems()
     } catch (error) {
-      log.error('Error fetching Google suggestions:', error)
-      $googleSuggestionResults = []
+      log.error('Error fetching Search Engine suggestions:', error)
+      $searchEngineSuggestionResults = []
     } finally {
-      $isFetchingGoogleSuggestionResults = false
+      $isFetchingOasisSearchResults = false
     }
   }, 150)
 
-  // $: {
-  //   fetchGoogleSuggestions($searchValue)
-  //   updateHistory($searchValue)
-  //   fetchOasisResults($searchValue)
-  // }
   function handleSelect(e: CustomEvent<CMDMenuItem>) {
     const item = e.detail
     log.debug('handleSelect', item)
@@ -490,14 +494,24 @@
         dispatch(item.id as any)
       }
     } else if (item.type === 'suggestion' || item.type === 'google-search') {
-      dispatch('open-url', `https://www.google.com/search?q=${encodeURIComponent(item.value!)}`)
+      const engine =
+        SEARCH_ENGINES.find((e) => e.key === $userConfigSettings.search_engine) ??
+        SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+      if (!engine) throw new Error('No search engine / default engine found, config error?')
+
+      dispatch('open-url', engine.getUrl(encodeURIComponent(item.value!)))
     } else if (item.type === 'general-search') {
       // check if it's a URL
       const isValidURL = optimisticCheckIfURLOrIPorFile(item.value!)
       if (isValidURL) {
         dispatch('open-url', item.value!)
       } else {
-        dispatch('open-url', `https://www.google.com/search?q=${encodeURIComponent(item.value!)}`)
+        const engine =
+          SEARCH_ENGINES.find((e) => e.key === $userConfigSettings.search_engine) ??
+          SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+        if (!engine) throw new Error('No search engine / default engine found, config error?')
+
+        dispatch('open-url', engine.getUrl(encodeURIComponent(item.value!)))
       }
     } else if (item.type === 'resource') {
       if (!item.id) {
@@ -522,7 +536,7 @@
   function resetSearch() {
     $searchValue = ''
     filteredItems = []
-    googleSuggestions = []
+    searchEngineSuggestions = []
     showTabSearch = 0
     $selectedSpaceId = null
     hasLoadedEverything = false

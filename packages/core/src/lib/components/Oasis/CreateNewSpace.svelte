@@ -254,10 +254,6 @@
   on:keydown={(e) => {
     if (e.key === 'Escape') {
       handleAbortSpaceCreation()
-    } else if (e.key === 'Enter') {
-      if ($name.length > 0 || $userPrompt !== '<p></p>') {
-        handleSubmit()
-      }
     } else if (e.key === 'Tab') {
       e.preventDefault()
       e.stopPropagation()
@@ -337,7 +333,7 @@
       </div>
     </ResourceOverlay>
   {:else}
-    {#key $isLoading}
+    {#key $isLoading && $previewIDs}
       <div
         class="preview-resources-wrapper"
         in:fly={{
@@ -386,7 +382,7 @@
       </div>
     {/if}
     <div
-      class="ai-voodoo bg-white/95 backdrop-blur-md px-12 pt-8 pb-12 mb-16 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
+      class="ai-voodoo bg-white/95 backdrop-blur-md px-12 pt-8 pb-8 mb-16 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
     >
       {#if $aiEnabled && !$fineTuneEnabled}
         <div

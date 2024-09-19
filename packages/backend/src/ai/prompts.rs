@@ -209,7 +209,9 @@ In cases where the resource type does not match any known `resource_type` values
 - **Figma Design Files:** `https://www.figma.com/design/%`
 - **FigJam Documents:** `https://www.figma.com/board/%`
 - **Figma Presentations:** `https://www.figma.com/slides/%/`
-- **Google Docs:** `https://docs.google.com/document/d/%`
+- **Google Docs or Documents:** `https://docs.google.com/document/d/%`
+- **Claude Artifacts:** `https://claude.ai/chat/%`
+- **Claude Chats:** `https://claude.ai/chat/%`
 
 To filter resources matching these primitives, use a SQL `LIKE` condition on the `source_uri` field in the `resource_metadata` table.
 

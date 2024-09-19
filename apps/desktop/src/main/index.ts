@@ -1,9 +1,10 @@
 import { useLogScope } from '@horizon/utils'
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
 import { TelemetryEventTypes } from '@horizon/types'
+import * as Sentry from '@sentry/electron/main'
 
 import { createWindow, getMainWindow } from './mainWindow'
 import { setAppMenu } from './appMenu'
@@ -30,7 +31,8 @@ const config = {
   useTmpDataDir: import.meta.env.M_VITE_USE_TMP_DATA_DIR === 'true',
   disableAutoUpdate: import.meta.env.M_VITE_DISABLE_AUTO_UPDATE === 'true',
   embeddingModelMode: import.meta.env.M_VITE_EMBEDDING_MODEL_MODE || 'default',
-  forceSetupWindow: import.meta.env.M_VITE_CREATE_SETUP_WINDOW === 'true'
+  forceSetupWindow: import.meta.env.M_VITE_CREATE_SETUP_WINDOW === 'true',
+  sentryDSN: import.meta.env.M_VITE_SENTRY_DSN
 }
 
 let userDataPath = join(dirname(app.getPath('userData')), config.appName)
@@ -44,6 +46,17 @@ if (config.useTmpDataDir) {
 }
 mkdirSync(userDataPath, { recursive: true })
 app.setPath('userData', userDataPath)
+
+// NOTE: sentry needs to be initialized only after the userDataPath is set
+if (config.sentryDSN) {
+  log.debug('Initializing Sentry')
+  Sentry.init({
+    dsn: config.sentryDSN,
+    enableTracing: false,
+    autoSessionTracking: false,
+    getSessions: () => [session.defaultSession, session.fromPartition('persist:surf-app-session')]
+  })
+}
 
 const handleOpenUrl = (url: string) => {
   try {

@@ -115,6 +115,7 @@
   import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
   import { createTabsManager } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
+  import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -285,8 +286,10 @@
     resourceDetailsModalSelected.set(null)
   }
 
-  const handleDeleteTab = async (e: CustomEvent<string>) => {
-    await tabsManager.delete(e.detail, DeleteTabEventTrigger.Click)
+  const handleDeleteTab = async (
+    e: CustomEvent<{ tabId: string; trigger: DeleteTabEventTrigger }>
+  ) => {
+    await tabsManager.delete(e.detail.tabId, e.detail.trigger)
   }
 
   const handeCreateResourceFromOasis = async (e: CustomEvent<string>) => {
@@ -331,9 +334,11 @@
       )
 
       if (!matchingSearchEngine) {
-        const defaultSearchEngine = SEARCH_ENGINES.find(
-          (engine) => engine.key === DEFAULT_SEARCH_ENGINE
-        )!
+        const defaultSearchEngine =
+          SEARCH_ENGINES.find((e) => e.key === $userConfigSettings.search_engine) ??
+          SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+        if (!defaultSearchEngine)
+          throw new Error('No search engine / default engine found, config error?')
 
         log.debug('Using default search engine', defaultSearchEngine.key)
         const searchURL = defaultSearchEngine.getUrl(encodeURIComponent(value))
@@ -1099,6 +1104,92 @@
     log.debug('create chat', e.detail)
 
     tabsManager.updateActive({ type: 'chat', query: e.detail, title: e.detail, icon: '' })
+  }
+
+  const createSpaceWithTabs = async (tabIds: string[]) => {
+    const toast = toasts.loading('Creating space with tabs..')
+    try {
+      const targetTabs = tabIds
+        .map((id) => $tabs.find((t: Tab) => t.id === id))
+        .filter((t) => t !== undefined) as Tab[]
+
+      // Create a new space
+      const newSpace = await oasis.createSpace({
+        folderName: 'New Space',
+        showInSidebar: true,
+        colors: ['#FFD700', '#FF8C00'], // Default colors, you can randomize this
+        sources: [],
+        sortBy: 'created_at',
+        liveModeEnabled: false
+      })
+
+      // Create resources from selected tabs and add them to the space
+      const resourceIds = []
+      for (const tab of targetTabs) {
+        if (tab.type === 'page') {
+          if (tab.resourceBookmark) {
+            const existingResource = await resourceManager.getResource(tab.resourceBookmark)
+            const isDeleted =
+              existingResource?.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
+                ?.value === 'true'
+
+            if (existingResource && !isDeleted) {
+              const existingCanonical = (existingResource?.tags ?? []).find(
+                (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+              )
+
+              log.debug('existing canonical', existingCanonical)
+
+              if (existingCanonical?.value === tab.currentLocation) {
+                log.debug('already bookmarked, removing silent tag', tab.resourceBookmark)
+
+                const isSilent = (existingResource.tags ?? []).some(
+                  (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+                )
+
+                if (isSilent) {
+                  // mark resource as not silent since the user is explicitely bookmarking it
+                  await resourceManager.deleteResourceTag(
+                    tab.resourceBookmark,
+                    ResourceTagsBuiltInKeys.SILENT
+                  )
+                }
+              }
+            }
+
+            resourceIds.push(tab.resourceBookmark)
+          } else {
+            const newResources = await createResourcesFromMediaItems(
+              resourceManager,
+              [
+                {
+                  type: 'url',
+                  data: new URL(tab.currentLocation || tab.initialLocation),
+                  metadata: {}
+                }
+              ],
+              ''
+            )
+            resourceIds.push(newResources[0].id)
+          }
+        } else if (tab.type === 'resource') {
+          resourceIds.push((tab as TabResource).resourceId)
+        }
+      }
+
+      const validResourceIds = resourceIds.filter((id) => id !== null) as string[]
+      await oasis.addResourcesToSpace(newSpace.id, validResourceIds)
+
+      await tabsManager.addSpaceTab(newSpace, { active: true })
+
+      $selectedTabs = new Set()
+      for (const tab of targetTabs) tabsManager.delete(tab.id, DeleteTabEventTrigger.ContextMenu)
+
+      toast.success('Space created!')
+    } catch (e) {
+      log.error('Failed to create space with tabs', e)
+      toast.error('Failed to create space with tabs!')
+    }
   }
 
   function handleRag(e: CustomEvent<string>) {
@@ -2407,6 +2498,8 @@
 
       showSplashScreen.set(false)
     }
+
+    prepareContextMenu()
   })
 
   const openFeedback = () => {
@@ -3163,6 +3256,42 @@
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
     )
   }
+
+  const handleOpenTabChat = (e: CustomEvent<string>) => {
+    // Called from tab context menu
+
+    // TODO: add to context if already chat open
+    const tabId = e.detail
+    const tab = $tabs.find((t) => t.id === tabId)
+    if (!tab) {
+      log.error('Tab not found', tabId)
+      return
+    }
+
+    // Open chat with the tab
+    openRightSidebarTab('chat')
+    includeTabAndExcludeOthersFromMagic(tabId)
+  }
+  const handlePinTab = (e: CustomEvent<string>) => {
+    const tabId = e.detail
+    const tab = $tabs.find((t) => t.id === tabId)
+    if (!tab) {
+      log.error('Tab not found', tabId)
+      return
+    }
+
+    tabsManager.update(tabId, { pinned: true })
+  }
+  const handleUnpinTab = (e: CustomEvent<string>) => {
+    const tabId = e.detail
+    const tab = $tabs.find((t) => t.id === tabId)
+    if (!tab) {
+      log.error('Tab not found', tabId)
+      return
+    }
+
+    tabsManager.update(tabId, { pinned: false })
+  }
 </script>
 
 {#if showDevOverlay}
@@ -3258,7 +3387,43 @@
         <div
           class="flex {!horizontalTabs
             ? `flex-col w-full ${showCustomWindowActions ? 'h-[calc(100%-45px)]' : 'py-1.5 h-full'} space-y-4 px-2`
-            : `flex-row items-center h-full ${showCustomWindowActions ? '' : 'ml-20'} space-x-4 mr-4`} relative"
+            : `flex-row items-center h-full ${showCustomWindowActions ? '' : 'ml-20'} space-x-4 mr-4`} relative no-drag"
+          use:contextMenu={{
+            items: [
+              {
+                type: 'action',
+                icon: 'add',
+                text: 'New Tab',
+                action: () => tabsManager.addPageTab('')
+              },
+              { type: 'separator' },
+              {
+                type: 'action',
+                icon: 'sidebar.left',
+                text: `${showLeftSidebar ? 'Hide' : 'Show'} ${horizontalTabs ? 'Tabs' : 'Sidebar'}`,
+                action: () => handleLeftSidebarChange(!showLeftSidebar)
+              },
+              {
+                type: 'action',
+                icon: '',
+                text: 'Toggle Tabs Orientation',
+                action: () => handleToggleHorizontalTabs()
+              },
+              { type: 'separator' },
+              {
+                type: 'action',
+                icon: 'trash',
+                text: 'Close All Unpinned Tabs',
+                kind: 'danger',
+                action: () => {
+                  const tabs = $unpinnedTabs
+                  for (const tab of tabs) {
+                    tabsManager.delete(tab.id, DeleteTabEventTrigger.CommandMenu)
+                  }
+                }
+              }
+            ]
+          }}
         >
           {#if horizontalTabs || !showCustomWindowActions}
             <BrowserActions
@@ -3314,6 +3479,9 @@
                     on:multi-select={handleMultiSelect}
                     on:passive-select={handlePassiveSelect}
                     on:include-tab={handleIncludeTabInMagic}
+                    on:chat-with-tab={handleOpenTabChat}
+                    on:pin={handlePinTab}
+                    on:unpin={handleUnpinTab}
                     on:edit={handleEdit}
                     on:mouseenter={handleTabMouseEnter}
                     on:mouseleave={handleTabMouseLeave}
@@ -3390,6 +3558,44 @@
               class="no-scrollbar relative h-full flex-grow w-full overflow-y-visible"
               class:space-x-2={horizontalTabs}
               class:items-center={horizontalTabs}
+              use:contextMenu={{
+                canOpen: $selectedTabs.size > 1,
+                items: [
+                  {
+                    type: 'action',
+                    icon: '',
+                    text: 'Create Space',
+                    action: () => {
+                      // selectedTabs has two types of ids: string and { id: string, userSelected: boolean }
+                      // we need to filter out the ones that are not userSelected
+                      const tabIds = $tabs
+                        .filter((tab) =>
+                          Array.from($selectedTabs).some((item) => item.id === tab.id)
+                        )
+                        .map((e) => e.id)
+                      createSpaceWithTabs(tabIds)
+                    }
+                  },
+                  {
+                    type: 'action',
+                    icon: 'chat',
+                    text: 'Open Tabs in Chat',
+                    action: () => startChatWithSelectedTabs()
+                  },
+                  { type: 'separator' },
+                  {
+                    type: 'action',
+                    icon: 'trash',
+                    text: 'Close Tabs',
+                    kind: 'danger',
+                    action: () => {
+                      for (const tab of $selectedTabs) {
+                        tabsManager.delete(tab.id, DeleteTabEventTrigger.ContextMenu)
+                      }
+                    }
+                  }
+                ]
+              }}
             >
               {#if horizontalTabs}
                 <div
@@ -3432,11 +3638,14 @@
                         on:delete-tab={handleDeleteTab}
                         on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
-                        on:bookmark={() => handleBookmark()}
-                        on:create-live-space={() => showCreateLiveSpaceDialog.set(true)}
+                        on:bookmark={(e) => handleBookmark(false, e.detail.trigger)}
+                        on:create-live-space={handleCreateLiveSpace}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
                         on:include-tab={handleIncludeTabInMagic}
+                        on:chat-with-tab={handleOpenTabChat}
+                        on:pin={handlePinTab}
+                        on:unpin={handleUnpinTab}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}
@@ -3466,6 +3675,9 @@
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
                         on:include-tab={handleIncludeTabInMagic}
+                        on:chat-with-tab={handleOpenTabChat}
+                        on:pin={handlePinTab}
+                        on:unpin={handleUnpinTab}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}
@@ -3516,11 +3728,14 @@
                         on:delete-tab={handleDeleteTab}
                         on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
-                        on:bookmark={() => handleBookmark()}
-                        on:create-live-space={() => showCreateLiveSpaceDialog.set(true)}
+                        on:bookmark={(e) => handleBookmark(false, e.detail.trigger)}
+                        on:create-live-space={handleCreateLiveSpace}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
                         on:include-tab={handleIncludeTabInMagic}
+                        on:chat-with-tab={handleOpenTabChat}
+                        on:pin={handlePinTab}
+                        on:unpin={handleUnpinTab}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}
@@ -3550,6 +3765,9 @@
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
                         on:include-tab={handleIncludeTabInMagic}
+                        on:chat-with-tab={handleOpenTabChat}
+                        on:pin={handlePinTab}
+                        on:unpin={handleUnpinTab}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}

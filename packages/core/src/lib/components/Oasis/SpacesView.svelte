@@ -206,14 +206,10 @@
       const space = $spaces.find((space) => space.id === $selectedSpace)
 
       if (space?.name.folderName === 'New Space') {
-        const confirm = window.confirm('Do you want to cancel the space creation?')
-        if (confirm) {
-          dispatch('delete-space', { id: $selectedSpace })
-          selectedSpace.set('all')
-          return
-        } else {
-          return
-        }
+        dispatch('delete-space', { id: $selectedSpace })
+
+        await tick()
+        selectedSpace.set('all')
       }
 
       selectedSpace.set(id)

@@ -82,6 +82,18 @@ pub struct VectorSearchResult {
     pub distance: f32,
 }
 
+fn enable_wal_mode(conn: &rusqlite::Connection) -> BackendResult<()> {
+    let journal_mode: String = conn
+        .query_row("PRAGMA journal_mode = WAL;", [], |row| row.get(0))
+        .map_err(BackendError::DatabaseError)?;
+    if journal_mode.to_lowercase() != "wal" {
+        return Err(BackendError::GenericError(
+            "failed to enable WAL mode".into(),
+        ));
+    }
+    Ok(())
+}
+
 impl Database {
     pub fn new(db_path: &str, run_migrations: bool) -> BackendResult<Database> {
         let mut conn = Connection::open(db_path)?;
@@ -91,14 +103,8 @@ impl Database {
         conn.busy_timeout(std::time::Duration::from_secs(60))?;
         read_only_conn.busy_timeout(std::time::Duration::from_secs(60))?;
 
-        let journal_mode: String = conn
-            .query_row("PRAGMA journal_mode = WAL;", [], |row| row.get(0))
-            .map_err(BackendError::DatabaseError)?;
-        if journal_mode.to_lowercase() != "wal" {
-            return Err(BackendError::GenericError(
-                "failed to enable WAL mode".into(),
-            ));
-        }
+        enable_wal_mode(&conn)?;
+        enable_wal_mode(&read_only_conn)?;
 
         if run_migrations {
             let init_schema = Migrations::get("init.sql")
@@ -757,7 +763,7 @@ impl Database {
 
     pub fn create_card_tx(tx: &mut rusqlite::Transaction, card: &mut Card) -> BackendResult<()> {
         tx.execute(
-            "INSERT INTO cards (id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data) 
+            "INSERT INTO cards (id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data)
             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.width, card.height, card.stacking_order, card.created_at, card.updated_at, card.data]
         )?;
@@ -799,7 +805,7 @@ impl Database {
         let cp = CardPosition::new(&[card.position_x, card.position_y]);
         Self::update_card_position_by_card_id_tx(tx, &card.id, &cp.position)?;
         tx.execute(
-            "UPDATE cards SET 
+            "UPDATE cards SET
             horizon_id = ?2, card_type = ?3, resource_id = ?4, position_x = ?5, position_y = ?6,
             width = ?7, height = ?9, stacking_order = ?10, updated_at = datetime('now'), data = ?11 WHERE id = ?1",
             rusqlite::params![card.id, card.horizon_id, card.card_type, card.resource_id, card.position_x, card.position_y, card.width, card.height, card.stacking_order, card.data]
@@ -871,9 +877,9 @@ impl Database {
 
     pub fn list_all_cards(&self, horizon_id: &str) -> BackendResult<Vec<Card>> {
         let query = "
-        SELECT id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data 
-        FROM cards 
-        WHERE horizon_id = ?1 
+        SELECT id, horizon_id, card_type, resource_id, position_x, position_y, width, height, stacking_order, created_at, updated_at, data
+        FROM cards
+        WHERE horizon_id = ?1
         ORDER BY stacking_order ASC";
 
         let mut stmt = self.conn.prepare(query)?;
@@ -1723,9 +1729,9 @@ impl Database {
 
         let placeholders = vec!["?"; row_ids.len()].join(",");
         let query = format!(
-            "SELECT M.*, R.* FROM resources R 
+            "SELECT M.*, R.* FROM resources R
             LEFT JOIN resource_metadata M on M.resource_id = R.id
-            LEFT JOIN embedding_resources E ON E.resource_id = R.id 
+            LEFT JOIN embedding_resources E ON E.resource_id = R.id
             WHERE E.rowid IN ({}) GROUP BY R.id ORDER BY {}",
             placeholders,
             Self::get_order_by_clause_for_embedding_row_ids("E.rowid", &row_ids)
@@ -1770,7 +1776,7 @@ impl Database {
         let query = format!(
             "SELECT DISTINCT M.*, R.*, C.* FROM resources R
             LEFT JOIN resource_metadata M ON M.resource_id = R.id
-            LEFT JOIN resource_text_content C ON M.resource_id = C.resource_id 
+            LEFT JOIN resource_text_content C ON M.resource_id = C.resource_id
             WHERE R.id IN ({}) GROUP BY C.content",
             placeholders
         );
@@ -1938,9 +1944,9 @@ impl Database {
         // the limit only applies to the vss_search filter and only after that the rowid and distance filters are applied
         let mut stmt = self.conn.prepare(
             "SELECT rowid, distance_cosine_f32(embedding, ?1) AS distance
-             FROM 
-                embeddings 
-             WHERE 
+             FROM
+                embeddings
+             WHERE
                 distance <= ?2
              ORDER BY distance ASC
              LIMIT ?3",
