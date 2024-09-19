@@ -90,6 +90,7 @@ export enum CreateTabEventTrigger {
   History = 'history',
   /** Tab was created because a URL was opened outside of the app / by the system */
   System = 'system',
+  ContextMenu = 'context_menu',
   /** Tab was created by a unknown or other interaction */
   Other = 'Other'
 }

@@ -320,7 +320,10 @@
       }
     : {}}
   use:contextMenu={{
-    canOpen: isMagicActive || $selectedTabs.size <= 1,
+    canOpen:
+      isMagicActive ||
+      $selectedTabs.size <= 1 ||
+      Array.from($selectedTabs.values()).find((e) => e.id === tab.id) === undefined,
     items: [
       {
         type: 'action',
@@ -358,7 +361,6 @@
       },
       {
         type: 'action',
-        hidden: isMagicActive,
         icon: 'link',
         text: 'Copy URL',
         action: () => {
