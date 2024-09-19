@@ -4,7 +4,9 @@
    * methods and never instantiated manually!
    *
    * Strategy: Opening the menu requires a target element or manually specifying the items.
-   *  TODO: readme
+   * When a target is specified, it will traverse it / its parents to find the contextMenuItems property.
+   *  -> When found, it will open the menu with these items.
+   *  -> When not found, it will not open the menu and return.
    */
 
   export interface CtxItemBase {
@@ -43,8 +45,13 @@
   export const CONTEXT_MENU_OPEN = derived(contextMenuOpen, ($contextMenuOpen) => $contextMenuOpen)
 
   let ctxMenuCmp: ContextMenu | null = null
+  let setupComplete = false
 
+  /**
+   * Call once at app startup to prepare listener.
+   */
   export function prepareContextMenu() {
+    if (setupComplete) return
     window.addEventListener('contextmenu', (e) => {
       // Find closest element which has contextMenuHint property set
       let target = e.target as HTMLElement | null
@@ -63,8 +70,13 @@
         items: target.contextMenuItems
       })
     })
+    setupComplete = true
   }
 
+  /**
+   * Open a context menu at the specified position.
+   * You must either specify a target element or items directly!
+   */
   export function openContextMenu(props: {
     x: number
     y: number
@@ -94,6 +106,7 @@
   }
 
   // TODO: (maxu): FIx typings
+  // TODO: (maxu): Add support for lazy evaluation of canOpen with reference to target element?
   // NOTE: We allow undefined for more easy items construction (ternary)
   export function contextMenu(
     node: HTMLElement,

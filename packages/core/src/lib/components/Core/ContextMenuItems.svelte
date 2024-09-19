@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { closeContextMenu, type CtxItem } from './ContextMenu.svelte'
+  import { type CtxItem } from './ContextMenu.svelte'
 
   export let items: CtxItem[]
   export let subMenuRef: string | undefined = undefined
@@ -122,7 +122,7 @@
         --highlight-color: #ff4d4f;
       }
 
-      svg {
+      :global(svg) {
         color: currentColor;
       }
     }
