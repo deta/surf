@@ -126,7 +126,6 @@ impl Database {
         // TODO: do we need this?
         rusqlite::vtab::array::load_module(&conn)?;
         rusqlite::vtab::array::load_module(&read_only_conn)?;
-        rusqlite::vtab::array::load_module(&read_only_conn)?;
 
         Ok(Database {
             conn,
