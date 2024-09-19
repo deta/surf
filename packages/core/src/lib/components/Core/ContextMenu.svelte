@@ -87,7 +87,7 @@
       closeContextMenu()
     }
     if (!props.targetEl && !props.items)
-      throw new Error('No target element or items provided for context menu!')
+      log.error('No target element or items provided for context menu!')
 
     contextMenuOpen.set(true)
     ctxMenuCmp = new ContextMenu({
@@ -134,6 +134,7 @@
   import type { ActionReturn } from 'svelte/action'
   import { derived, writable, get } from 'svelte/store'
   import ContextMenuItems from './ContextMenuItems.svelte'
+  import log from '@horizon/utils/src/log'
 
   export let targetX: number
   export let targetY: number
@@ -146,7 +147,12 @@
       targetEl.setAttribute('data-context-menu-anchor', '')
     }
 
-    if (!ref) throw new Error('Ref is null for context menu! Cannot update position correctly!')
+    if (!ref) {
+      log.error(
+        'Ref is null for context menu! Cannot update position correctly / show context menu!'
+      )
+      return
+    }
     const width = ref.clientWidth
     const height = ref.clientHeight
 
