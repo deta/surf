@@ -25,7 +25,8 @@ import {
   DeleteAnnotationEventTrigger,
   SearchOasisEventTrigger,
   ResourceTypes,
-  PageChatMessageSentEventError
+  PageChatMessageSentEventError,
+  SelectTabEventAction
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -152,10 +153,15 @@ export class Telemetry {
     })
   }
 
-  async trackCreatePageTab(trigger: CreateTabEventTrigger, foreground: boolean) {
+  async trackCreateTab(
+    trigger: CreateTabEventTrigger,
+    foreground: boolean,
+    type: Tab['type'] = 'page'
+  ) {
     await this.trackEvent(TelemetryEventTypes.CreateTab, {
       trigger: trigger,
-      foreground: foreground
+      foreground: foreground,
+      type: type
     })
   }
 
@@ -169,6 +175,18 @@ export class Telemetry {
   async trackActivateTabSpace(trigger: ActivateTabEventTrigger) {
     await this.trackEvent(TelemetryEventTypes.ActivateTabSpace, {
       trigger: trigger
+    })
+  }
+
+  async trackSelectTab(
+    action: SelectTabEventAction,
+    numTabsInSelection: number,
+    numChanged: number = 1
+  ) {
+    await this.trackEvent(TelemetryEventTypes.SelectTab, {
+      action: action,
+      selection_size: numTabsInSelection,
+      changed: numChanged
     })
   }
 

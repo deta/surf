@@ -1,20 +1,19 @@
 <svelte:options immutable={true} />
 
 <script lang="ts">
-  import { afterUpdate, onMount, setContext, tick } from 'svelte'
+  import { onMount, setContext, tick } from 'svelte'
   import { fly } from 'svelte/transition'
   import SplashScreen from './Atoms/SplashScreen.svelte'
   import { writable, derived, get, type Writable } from 'svelte/store'
   import { type WebviewWrapperEvents } from './Webview/WebviewWrapper.svelte'
   import { Icon } from '@horizon/icons'
   import {
-    isModKeyPressed,
     isModKeyAndEventCodeIs,
     isModKeyAndKeyPressed,
     isModKeyAndKeysPressed,
     isModKeyAndShiftKeyAndKeyPressed
   } from '@horizon/utils/src/keyboard'
-  import { createTelemetry, Telemetry } from '../service/telemetry'
+  import { createTelemetry } from '../service/telemetry'
   import {
     useDebounce,
     wait,
@@ -25,8 +24,8 @@
     useLocalStorageStore,
     truncate,
     tooltip,
-    flyAndScale,
-    type LogLevel
+    type LogLevel,
+    isMac
   } from '@horizon/utils'
   import { MEDIA_TYPES, createResourcesFromMediaItems, processDrop } from '../service/mediaImporter'
   import SidebarPane from './Sidebars/SidebarPane.svelte'
@@ -52,20 +51,18 @@
   import type {
     PageMagic,
     Tab,
-    TabChat,
-    TabImporter,
     TabPage,
     TabSpace,
-    TabOasisDiscovery,
     DroppedTab,
     TabHistory,
     CreateTabOptions,
-    ControlWindow
+    ControlWindow,
+    TabResource
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
   import { HorizonDatabase } from '../service/storage'
-  import type { Optional } from '../types'
+  import type { Optional, SFFSResourceMetadata, SFFSResourceTag } from '../types'
   import { WebParser } from '@horizon/web-parser'
   import Importer from './Core/Importer.svelte'
   import OasisDiscovery from './Core/OasisDiscovery.svelte'
@@ -92,9 +89,7 @@
     type WebViewEventAnnotation,
     type RightSidebarTab,
     type Download,
-    type DownloadDoneMessage,
-    type DownloadRequestMessage,
-    type DownloadUpdatedMessage
+    SelectTabEventAction
   } from '@horizon/types'
   import { scrollToTextCode } from '../constants/inline'
   import { SFFS } from '../service/sffs'
@@ -106,7 +101,7 @@
   import ToastsProvider from './Toast/ToastsProvider.svelte'
   import { provideToasts, type ToastItem } from '../service/toast'
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
-  import { Tabs, Tooltip } from 'bits-ui'
+  import { Tabs } from 'bits-ui'
   import BrowserHistory from './Browser/BrowserHistory.svelte'
   import { HTMLDragZone, HTMLAxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
   import NewTabOverlay from './Core/NewTabOverlay.svelte'
@@ -115,11 +110,11 @@
   import { HistoryEntriesManager } from '../service/history'
   import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
   import DevOverlay from './Browser/DevOverlay.svelte'
-  import { sanitizeHTML } from '@horizon/web-parser/src/utils'
   import BrowserActions from './Browser/BrowserActions.svelte'
-  import StuffStack from './Browser/StuffStack.svelte'
   import CreateLiveSpace from './Oasis/CreateLiveSpace.svelte'
   import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
+  import { createTabsManager } from '../service/tabs'
+  import ResourceTab from './Oasis/ResourceTab.svelte'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -131,13 +126,7 @@
   let annotationsSidebar: AnnotationsSidebar
   let magicSidebar: MagicSidebar
   let isFirstButtonVisible = true
-  let newTabButton: Element
   let containerRef: Element
-  const showStartMask = writable(false)
-  const showEndMask = writable(false)
-
-  const selectedTabs: Writable<Set<{ id: string; userSelected: boolean }>> = writable(new Set())
-  const lastSelectedTabId: Writable<string | null> = writable(null)
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -152,6 +141,7 @@
     trackHostnames: false
   })
 
+  const log = useLogScope('Browser')
   const resourceManager = createResourceManager(telemetry)
   const storage = new HorizonDatabase()
   const sffs = new SFFS()
@@ -159,21 +149,33 @@
   const oasis = provideOasis(resourceManager)
   const toasts = provideToasts()
   const config = provideConfig()
+  const tabsManager = createTabsManager(resourceManager, historyEntriesManager, telemetry)
 
   const userConfigSettings = config.settings
   const tabsDB = storage.tabs
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
 
-  const log = useLogScope('Browser')
+  const {
+    tabs,
+    activeTabId,
+    activeTab,
+    activeTabLocation,
+    activeBrowserTab,
+    activeTabs,
+    browserTabs,
+    pinnedTabs,
+    unpinnedTabs,
+    magicTabs,
+    activatedTabs,
+    showNewTabOverlay,
+    selectedTabs,
+    lastSelectedTabId
+  } = tabsManager
 
-  const showNewTabOverlay = writable(0)
-  const tabs = writable<Tab[]>([])
   const addressValue = writable('')
-  const activeTabId = useLocalStorageStore<string>('activeTabId', '')
   const activeChatId = useLocalStorageStore<string>('activeChatId', '')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
-  const browserTabs = writable<Record<string, BrowserTab>>({})
   const bookmarkingInProgress = writable(false)
   const magicInputValue = writable('')
   const activeTabMagic = writable<PageMagic>({
@@ -187,11 +189,9 @@
   const showCreateLiveSpaceDialog = writable(false)
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
-  const activeTabsHistory = writable<string[]>([])
   const isCreatingLiveSpace = writable(false)
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
-  const activatedTabs = writable<string[]>([]) // for lazy loading
   const rightSidebarTab = writable<RightSidebarTab>('chat')
   const showSplashScreen = writable(false)
   const cachedMagicTabs = new Set<string>()
@@ -199,87 +199,16 @@
   const downloadToastsMap = new Map<string, ToastItem>()
   const anyTabHovered = writable(false)
   const chatTooltipHovered = writable(false)
+  const showStartMask = writable(false)
+  const showEndMask = writable(false)
 
   // on windows and linux the custom window actions are shown in the tab bar
-  const showCustomWindowActions = process.platform !== 'darwin'
+  const showCustomWindowActions = !isMac()
 
   $: log.debug('right sidebar tab', $rightSidebarTab)
 
   // Set global context
   setContext('selectedFolder', 'all')
-
-  const activeTabs = derived([tabs], ([tabs]) => {
-    const uniqueTabs = new Map<string, Tab>()
-    tabs.forEach((tab) => {
-      if (!tab.archived && !uniqueTabs.has(tab.id)) {
-        uniqueTabs.set(tab.id, tab)
-      }
-    })
-    return Array.from(uniqueTabs.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-  })
-
-  const pinnedTabs = derived([activeTabs], ([tabs]) => {
-    return tabs.filter((tab) => tab.pinned).sort((a, b) => a.index - b.index)
-  })
-
-  const unpinnedTabs = derived([activeTabs], ([tabs]) => {
-    return tabs.filter((tab) => !tab.pinned).sort((a, b) => a.index - b.index)
-  })
-
-  const magicTabs = derived([activeTabs], ([tabs]) => {
-    return tabs.filter((tab) => tab.magic).sort((a, b) => a.index - b.index) as (
-      | TabPage
-      | TabSpace
-    )[]
-  })
-
-  const closedTabs = (() => {
-    const MAX_CLOSED_TABS = 96
-    let tabs: Tab[] = []
-
-    const push = (tab: Tab) => {
-      tabs.unshift(tab)
-      if (tabs.length > MAX_CLOSED_TABS) tabs.pop()
-    }
-
-    const pop = (): Tab | undefined => {
-      return tabs.shift()
-    }
-
-    return {
-      push,
-      pop,
-      get tabs() {
-        return tabs
-      }
-    }
-  })()
-
-  const activeTab = derived([tabs, activeTabId], ([tabs, activeTabId]) => {
-    return tabs.find((tab) => tab.id === activeTabId)
-  })
-
-  const activeTabLocation = derived(activeTab, (activeTab) => {
-    if (activeTab?.type === 'page') {
-      if (activeTab.currentLocation) {
-        return activeTab.currentLocation
-      }
-
-      const currentEntry = historyEntriesManager.getEntry(
-        activeTab.historyStackIds[activeTab.currentHistoryIndex]
-      )
-
-      return currentEntry?.url ?? null
-    }
-
-    return null
-  })
-
-  const activeBrowserTab = derived([browserTabs, activeTabId], ([browserTabs, activeTabId]) => {
-    return browserTabs[activeTabId]
-  })
 
   const sidebarTools = derived(
     [activeTabMagic, activeTab, showAppSidebar],
@@ -337,46 +266,8 @@
 
   $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
     log.debug('Active tab is not in view, resetting')
-    makePreviousTabActive()
+    tabsManager.makePreviousActive()
   }
-
-  activeTab.subscribe((tab) => {
-    if (!tab) return
-
-    if (tab?.type === 'page') {
-      if (tab.currentLocation) {
-        addressValue.set(tab.currentLocation)
-      } else {
-        const currentEntry = historyEntriesManager.getEntry(
-          tab.historyStackIds[tab.currentHistoryIndex]
-        )
-        addressValue.set(currentEntry?.url ?? tab.initialLocation)
-      }
-    } else if (tab?.type === 'chat') {
-      addressValue.set(tab.title)
-    } else {
-      addressValue.set('')
-    }
-
-    persistTabChanges(tab?.id, tab)
-  })
-
-  sidebarTab.subscribe((tab) => {
-    const tabsInView = $tabs.filter((tab) =>
-      $sidebarTab === 'active' ? !tab.archived : tab.archived
-    )
-
-    if (tabsInView.length === 0) {
-      log.debug('No tabs in view')
-      return
-    }
-
-    if (tab === 'archive' && !$activeTab?.archived) {
-      makeTabActive(tabsInView[0].id)
-    } else if (tab === 'active' && $activeTab?.archived) {
-      makeTabActive(tabsInView[0].id)
-    }
-  })
 
   const openResourceDetailsModal = (resourceId: string, from?: OpenResourceEventFrom) => {
     resourceDetailsModalSelected.set(resourceId)
@@ -394,348 +285,12 @@
     resourceDetailsModalSelected.set(null)
   }
 
-  const getSpace = (id: string) => {
-    return $spaces.find((space) => space.id === id)
-  }
-
-  const makeTabActive = (tabId: string, trigger?: ActivateTabEventTrigger) => {
-    log.debug('Making tab active', tabId)
-    const tab = $tabs.find((tab) => tab.id === tabId)
-    if (!tab) {
-      log.error('Tab not found', tabId)
-      return
-    }
-    showNewTabOverlay.set(0)
-
-    const browserTab = $browserTabs[tabId]
-
-    const activeElement = document.activeElement
-    if (activeElement && typeof (activeElement as any).blur === 'function') {
-      ;(activeElement as any).blur()
-    }
-
-    if (browserTab) {
-      if (typeof browserTab.focus === 'function') {
-        browserTab.focus()
-      }
-    }
-
-    activatedTabs.update((tabs) => {
-      if (tabs.includes(tabId)) {
-        return tabs
-      }
-
-      return [...tabs, tabId]
-    })
-
-    activeTabId.set(tabId)
-    addToActiveTabsHistory(tabId)
-    if ($showAppSidebar) {
-      setAppSidebarState(true)
-    } else {
-      setAppSidebarState(false)
-    }
-
-    setTimeout(() => {
-      const activeTabElement = document.getElementById(`tab-${tabId}`)
-      if (activeTabElement) {
-        activeTabElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'end',
-          inline: 'end'
-        })
-      }
-    }, 0)
-
-    if (trigger) {
-      telemetry.trackActivateTab(trigger, tab.type)
-
-      if (tab.type === 'space') {
-        telemetry.trackActivateTabSpace(trigger)
-      }
-    }
-  }
-
-  const makePreviousTabActive = (currentIndex?: number) => {
-    if ($activeTabs.length === 0) {
-      log.debug('No tabs in view')
-      return
-    }
-
-    const previousTab = $activeTabsHistory[$activeTabsHistory.length - 1]
-    const nextTabIndex = currentIndex
-      ? currentIndex + 1
-      : $activeTabs.findIndex((tab) => tab.id === $activeTabId)
-
-    log.debug('xx Previous tab', previousTab, 'Next tab index', nextTabIndex, $activeTabsHistory)
-
-    if (previousTab) {
-      makeTabActive(previousTab)
-    } else if (nextTabIndex >= $activeTabs.length && $activeTabs[0]) {
-      makeTabActive($activeTabs[0].id)
-    } else if ($activeTabs[nextTabIndex]) {
-      makeTabActive($activeTabs[nextTabIndex].id)
-    } else {
-      // go to last tab
-      if ($unpinnedTabs.length > 0) {
-        makeTabActive($unpinnedTabs[$unpinnedTabs.length - 1].id)
-      }
-    }
-  }
-
-  const createTab = async <T extends Tab>(
-    tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'>,
-    opts?: CreateTabOptions
-  ) => {
-    const defaultOpts = {
-      placeAtEnd: true,
-      active: false
-    }
-
-    const { placeAtEnd, active } = Object.assign(defaultOpts, opts)
-
-    const activeTabIndex =
-      $unpinnedTabs.find((tab) => tab.id === $activeTabId)?.index ?? $unpinnedTabs.length - 1
-    const nextTabIndex = $unpinnedTabs[activeTabIndex + 1]?.index ?? -1
-
-    // generate index in between active and next tab so that the new tab is placed in between
-    const TAB_INDEX_OFFSET = 0.1
-    const nextIndex =
-      nextTabIndex > 0 ? nextTabIndex - TAB_INDEX_OFFSET : activeTabIndex + TAB_INDEX_OFFSET
-
-    const newIndex = placeAtEnd ? Date.now() : nextIndex
-
-    log.debug('Creating tab', tab, 'at index', newIndex, $unpinnedTabs)
-
-    const newTab = await tabsDB.create({
-      archived: false,
-      pinned: false,
-      magic: false,
-      index: newIndex,
-      ...tab
-    })
-
-    log.debug('Created tab', newTab)
-    activatedTabs.update((tabs) => [...tabs, newTab.id])
-    tabs.update((tabs) => [...tabs, newTab])
-
-    if (active) {
-      makeTabActive(newTab.id)
-    }
-
-    checkScroll()
-
-    // Ensure the new tab is in context when the sidebar is open
-    if ($activeTabMagic.showSidebar) {
-      handleTabSelect(new CustomEvent('tab-select', { detail: newTab.id }))
-    }
-
-    return newTab
-  }
-
-  const archiveTab = async (tabId: string) => {
-    const tab = $tabs.find((tab) => tab.id === tabId)
-    if (!tab) {
-      log.error('Tab not found', tabId)
-      return
-    }
-
-    const activeTabIndex = $activeTabs.findIndex((tab) => tab.id === tabId)
-
-    updateTab(tabId, { archived: true })
-
-    // remove tab from active tabs history
-    activeTabsHistory.update((history) => history.filter((id) => id !== tabId))
-
-    await tick()
-
-    if ($activeTabId === tabId) {
-      makePreviousTabActive(activeTabIndex)
-    }
-  }
-
-  const unarchiveTab = async (tabId: string) => {
-    const tab = $tabs.find((tab) => tab.id === tabId)
-    if (!tab) {
-      log.error('Tab not found', tabId)
-      return
-    }
-
-    log.debug('Unarchiving tab', tabId)
-
-    // Mark tab as unarchived and update the creation date to now to make it appear at the bottom
-    updateTab(tabId, { archived: false })
-
-    sidebarTab.set('active')
-
-    await tick()
-
-    setTimeout(() => {
-      makeTabActive(tabId)
-    }, 50)
-  }
-
-  const handleUnarchiveTab = async (e: CustomEvent<string>) => {
-    await unarchiveTab(e.detail)
-  }
-
   const handleDeleteTab = async (e: CustomEvent<string>) => {
-    await deleteTab(e.detail, DeleteTabEventTrigger.Click)
-  }
-
-  const deleteTab = async (tabId: string, trigger?: DeleteTabEventTrigger) => {
-    const rect = document.getElementById(`tab-${tabId}`)?.getBoundingClientRect()
-    if (rect) {
-      spawnBoxSmoke(rect, {
-        densityN: 28,
-        size: 13,
-        //velocityScale: 0.5,
-        cloudPointN: 7
-      })
-    }
-    const tab = $tabs.find((tab) => tab.id === tabId)
-    if (!tab) {
-      log.error('Tab not found', tabId)
-      return
-    }
-
-    const tabsInOrder = [...$pinnedTabs, ...$unpinnedTabs]
-    const currentIndex = tabsInOrder.findIndex((tab) => tab.id === tabId)
-
-    tabs.update((tabs) =>
-      tabs.filter((tab) => {
-        const bool = tab.id === tabId
-        if (bool) closedTabs.push(tab)
-        return !bool
-      })
-    )
-    activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
-
-    await tick()
-
-    if ($activeTabId === tabId) {
-      const updatedTabsInOrder = tabsInOrder.filter((tab) => tab.id !== tabId)
-      if (updatedTabsInOrder.length > 0) {
-        const newActiveTab =
-          updatedTabsInOrder[Math.min(currentIndex, updatedTabsInOrder.length - 1)]
-        makeTabActive(newActiveTab.id)
-      }
-    }
-
-    await tabsDB.delete(tabId)
-    checkScroll()
-
-    if (trigger) {
-      if (tab.type === 'page') {
-        await telemetry.trackDeletePageTab(trigger)
-      } else if (tab.type === 'space') {
-        await telemetry.trackDeleteSpaceTab(trigger)
-      }
-    }
-  }
-
-  const persistTabChanges = async (tabId: string, updates: Partial<Tab>) => {
-    await tabsDB.update(tabId, updates)
-  }
-
-  const bulkUpdateTabsStore = async (items: { id: string; updates: Partial<Tab> }[]) => {
-    await tabsDB.bulkUpdate(items)
-  }
-
-  const updateTab = async (tabId: string, updates: Partial<Tab>) => {
-    log.debug('Updating tab', tabId, updates)
-    tabs.update((tabs) => {
-      const updatedTabs = tabs.map((tab) => {
-        if (tab.id === tabId) {
-          return {
-            ...tab,
-            ...updates
-          } as Tab
-        }
-
-        return tab
-      })
-
-      return updatedTabs
-    })
-    await persistTabChanges(tabId, updates)
-  }
-
-  const closeActiveTab = async (trigger?: DeleteTabEventTrigger) => {
-    if (!$activeTab) {
-      log.error('No active tab')
-      return
-    }
-    if ($showNewTabOverlay !== 0) {
-      setShowNewTabOverlay(0)
-      return
-    }
-
-    if ($activeTab.pinned) {
-      log.debug('Active tab is pinned, deactivating it')
-      const tabsInOrder = [...$pinnedTabs, ...$unpinnedTabs]
-      const currentIndex = tabsInOrder.findIndex((tab) => tab.id === $activeTab.id)
-      activatedTabs.update((tabs) => tabs.filter((id) => id !== $activeTab.id))
-
-      const nextTabIndex = currentIndex + 1
-      if (nextTabIndex < tabsInOrder.length) {
-        makeTabActive(tabsInOrder[nextTabIndex].id)
-      } else if (tabsInOrder.length > 1) {
-        makeTabActive(tabsInOrder[tabsInOrder.length - 2].id)
-      }
-    } else {
-      await deleteTab($activeTab.id, trigger)
-    }
-
-    /*
-    if ($activeTab.archived) {
-      await deleteTab($activeTab.id)
-    } else {
-      await archiveTab($activeTab.id)
-    }
-    */
-
-    // if ($activeTab.type === 'page') {
-    //   const currentEntry = historyEntriesManager.getEntry(
-    //     $activeTab.historyStackIds[$activeTab.currentHistoryIndex]
-    //   )
-
-    //   if (currentEntry) {
-    //     archiveTab(currentEntry.id)
-    //   }
-    // }
-
-    // await deleteTab($activeTab.id)
-  }
-
-  const openClosedTab = async () => {
-    const tab = closedTabs.pop()
-    if (tab) {
-      log.debug('Opening previously closed tab')
-      await createTab(tab, { active: true })
-    }
-  }
-
-  const setActiveTabAsPinnedTab = async () => {
-    if (!$activeTab) {
-      log.error('No active tab')
-      return
-    }
-
-    await updateTab($activeTab.id, { pinned: !$activeTab.pinned })
-  }
-
-  const updateActiveTab = (updates: Partial<Tab>) => {
-    if (!$activeTab) {
-      log.error('No active tab')
-      return
-    }
-
-    updateTab($activeTab.id, updates)
+    await tabsManager.delete(e.detail, DeleteTabEventTrigger.Click)
   }
 
   const handeCreateResourceFromOasis = async (e: CustomEvent<string>) => {
-    const newTab = await createPageTab(e.detail, {
+    const newTab = await tabsManager.addPageTab(e.detail, {
       active: true,
       trigger: CreateTabEventTrigger.OasisCreate
     })
@@ -818,18 +373,18 @@
     if ($activeTab?.type === 'page') {
       log.debug('Navigating to address from page', addressVal)
       const url = getNavigationURL(addressVal)
-      $activeBrowserTab.navigate(url)
+      $activeBrowserTab?.navigate(url)
 
       if (url === $activeTabLocation) {
-        $activeBrowserTab.reload()
+        $activeBrowserTab?.reload()
       } else {
-        updateActiveTab({ initialLocation: url })
+        tabsManager.updateActive({ initialLocation: url })
       }
     } else if ($activeTab?.type === 'empty') {
       log.debug('Navigating to address from empty tab', addressVal)
       const url = getNavigationURL(addressVal)
       log.debug('Converting empty tab to page', url)
-      updateActiveTab({
+      tabsManager.updateActive({
         type: 'page',
         initialLocation: url,
         historyStackIds: [],
@@ -837,7 +392,7 @@
       })
     } else if ($activeTab?.type === 'chat') {
       log.debug('Renaming chat tab', addressVal)
-      updateActiveTab({ title: addressVal })
+      tabsManager.updateActive({ title: addressVal })
     }
   }
 
@@ -862,11 +417,11 @@
     const historyTab = $tabs.find((tab) => tab.type === 'history')
 
     if (historyTab) {
-      makeTabActive(historyTab.id)
+      tabsManager.makeActive(historyTab.id)
       return
     }
 
-    await createTab<TabHistory>(
+    await tabsManager.create<TabHistory>(
       {
         title: 'History',
         icon: '',
@@ -1011,14 +566,12 @@
       startChatWithSelectedTabs()
     } else if (e.key === 'Backspace' && $selectedTabs.size > 1 && !$activeTabMagic.showSidebar) {
       const tabsToDelete = Array.from($selectedTabs)
-      tabsToDelete.forEach((tab) => deleteTab(tab.id))
+      tabsToDelete.forEach((tab) => tabsManager.delete(tab.id))
       selectedTabs.set(new Set())
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       // Note: even though the electron menu handles the shortcut this is still needed here
       if ($showNewTabOverlay !== 0) setShowNewTabOverlay(0)
-      else closeActiveTab(DeleteTabEventTrigger.Shortcut)
-      // } else if (isModKeyAndKeyPressed(e, 'p')) {
-      // setActiveTabAsPinnedTab()
+      else tabsManager.deleteActive(DeleteTabEventTrigger.Shortcut)
     } else if (isModKeyAndKeyPressed(e, 'e')) {
       toggleRightSidebarTab('chat')
     } else if (isModKeyAndKeyPressed(e, 'd')) {
@@ -1055,7 +608,7 @@
       setShowNewTabOverlay(0)
       $activeBrowserTab?.resetZoom()
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 't')) {
-      openClosedTab()
+      tabsManager.reopenDeleted()
     } else if (
       !window.api.tabSwitchingShortcutsDisable &&
       isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])
@@ -1065,11 +618,11 @@
 
       if (index < 8) {
         if (index < tabs.length) {
-          makeTabActive(tabs[index].id, ActivateTabEventTrigger.Shortcut)
+          tabsManager.makeActive(tabs[index].id, ActivateTabEventTrigger.Shortcut)
         }
       } else {
         // if 9 is pressed, go to the last tab
-        makeTabActive(tabs[tabs.length - 1].id, ActivateTabEventTrigger.Shortcut)
+        tabsManager.makeActive(tabs[tabs.length - 1].id, ActivateTabEventTrigger.Shortcut)
       }
     } else if (e.key === 'ArrowLeft' && e.metaKey) {
       if (canGoBack) {
@@ -1126,171 +679,33 @@
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
-
-  const createNewEmptyTab = async () => {
-    showNewTabOverlay.set(1)
-    // log.debug('Creating new tab')
-    // // check if there already exists an empty tab, if yes we just change to it
-    // const emptyTab = $tabs.find((tab) => tab.type === 'empty')
-    // if (emptyTab) {
-    //   makeTabActive(emptyTab.id)
-    //   return
-    // }
-    // const newTab = await createTab<TabEmpty>({ title: 'New Tab', icon: '', type: 'empty' })
-    // makeTabActive(newTab.id)
-  }
-
-  const debouncedCreateNewEmptyTab = useDebounce(createNewEmptyTab, 100)
-
-  const createPageTab = async (url: string, opts?: CreateTabOptions): Promise<TabPage> => {
-    log.debug('Creating new page tab')
-
-    const options = {
-      active: true,
-      placeAtEnd: true,
-      trigger: CreateTabEventTrigger.Other,
-      ...opts
-    }
-
-    const newTab = await createTab<TabPage>(
-      {
-        title: url,
-        icon: '',
-        type: 'page',
-        initialLocation: url,
-        historyStackIds: [],
-        currentHistoryIndex: -1
-      },
-      options
-    )
-
-    await telemetry.trackCreatePageTab(options.trigger, options.active)
-
-    return newTab as TabPage
-  }
-
-  const createSpaceTab = async (space: Space, active = true) => {
-    log.debug('Creating new space tab')
-    const newTab = await createTab<TabSpace>(
-      {
-        title: space.name.folderName,
-        icon: '',
-        spaceId: space.id,
-        type: 'space',
-        colors: space.name.colors
-      },
-      { active }
-    )
-
-    return newTab
-  }
-
-  const createChatTab = async (query: string, active = true) => {
-    log.debug('Creating new chat tab')
-    await createTab<TabChat>({ title: query, icon: '', type: 'chat', query: query }, { active })
-  }
-
-  const createImporterTab = async () => {
-    log.debug('Creating new importer tab')
-    await createTab<TabImporter>(
-      {
-        title: 'Importer',
-        icon: '',
-        type: 'importer',
-        index: 0,
-        pinned: false,
-        magic: false
-      },
-      { active: true }
-    )
-  }
-
-  const createOasisDiscoveryTab = async () => {
-    log.debug('Creating new oasis discovery tab')
-    await createTab<TabOasisDiscovery>(
-      {
-        title: 'Oasis Discovery',
-        icon: '',
-        type: 'oasis-discovery',
-        magic: false
-      },
-      { active: true }
-    )
-  }
-
-  const handleNewTab = (e: CustomEvent<BrowserTabNewTabEvent>) => {
-    const { url, active, trigger } = e.detail
-
-    if (url) {
-      createPageTab(url, { active, trigger, placeAtEnd: false })
-    } else {
-      createNewEmptyTab()
-    }
-  }
-
-  const cycleActiveTab = (previous: boolean) => {
-    if ($tabs.length === 0) {
-      log.debug('No tabs in view')
-      return
-    }
-    let ordered = [
-      ...$unpinnedTabs.sort((a, b) => a.index - b.index),
-      ...$pinnedTabs.sort((a, b) => a.index - b.index)
-    ].filter((tab) => !tab.archived)
-
-    const activeTabIndex = ordered.findIndex((tab) => tab.id === $activeTabId)
-    if (!previous) {
-      const nextTabIndex = activeTabIndex + 1
-      if (nextTabIndex >= ordered.length) {
-        makeTabActive(ordered[0].id, ActivateTabEventTrigger.Shortcut)
-      } else {
-        makeTabActive(ordered[nextTabIndex].id, ActivateTabEventTrigger.Shortcut)
-      }
-    } else {
-      const previousTabIndex = activeTabIndex - 1
-      if (previousTabIndex < 0) {
-        makeTabActive(ordered[ordered.length - 1].id, ActivateTabEventTrigger.Shortcut)
-      } else {
-        makeTabActive(ordered[previousTabIndex].id, ActivateTabEventTrigger.Shortcut)
-      }
-    }
-  }
-  const debouncedCycleActiveTab = useDebounce(cycleActiveTab, 100)
+  const debouncedCycleActiveTab = useDebounce(tabsManager.cycle, 100)
 
   const openUrlHandler = (url: string, active = true) => {
     log.debug('open url', url, active)
 
-    createPageTab(url, { active: active, trigger: CreateTabEventTrigger.System })
+    tabsManager.addPageTab(url, { active: active, trigger: CreateTabEventTrigger.System })
   }
 
   const handleTabNavigation = (e: CustomEvent<string>) => {
     log.debug('Navigating to', e.detail)
 
-    updateActiveTab({
+    tabsManager.updateActive({
       type: 'page',
       initialLocation: e.detail,
       historyStackIds: [],
       currentHistoryIndex: -1
     })
 
-    telemetry.trackCreatePageTab(CreateTabEventTrigger.AddressBar, true)
-  }
-
-  const addToActiveTabsHistory = (tabId: string) => {
-    activeTabsHistory.update((history) => {
-      if (history[history.length - 1] !== tabId) {
-        // remove tab from history if it already exists and add it to the end
-        return [...history.filter((id) => id !== tabId), tabId]
-      }
-
-      return history
-    })
+    telemetry.trackCreateTab(CreateTabEventTrigger.AddressBar, true)
   }
 
   const handleMultiSelect = (event: CustomEvent<string>) => {
     const tabId = event.detail
     const unpinnedTabsArray = get(unpinnedTabs)
     const currentSelectedTabs = get(selectedTabs)
+
+    const addedTabsToMagic: TabPage[] = []
 
     if (!$lastSelectedTabId) {
       lastSelectedTabId.set($activeTabId)
@@ -1342,6 +757,11 @@
       return tabs.map((tab) => {
         const shouldBeMagic =
           $activeTabMagic.showSidebar && Array.from(newSelection).some((item) => item.id === tab.id)
+
+        if (tab.type === 'page' && shouldBeMagic) {
+          addedTabsToMagic.push(tab)
+        }
+
         return {
           ...tab,
           magic: shouldBeMagic
@@ -1356,18 +776,27 @@
       selectedTabs.update((t) => new Set(t))
     }
 
+    if (addedTabsToMagic.length > 0) {
+      preparePageTabsForChatContext(addedTabsToMagic)
+    }
+
     tick().then(() => {
-      telemetry.trackPageChatContextUpdate(
-        PageChatUpdateContextEventAction.MultiSelect,
-        $magicTabs.length,
-        numChanged
-      )
+      if ($activeTabMagic.showSidebar) {
+        telemetry.trackPageChatContextUpdate(
+          PageChatUpdateContextEventAction.MultiSelect,
+          $magicTabs.length,
+          numChanged
+        )
+      } else {
+        telemetry.trackSelectTab(SelectTabEventAction.MultiSelect, $selectedTabs.size, numChanged)
+      }
     })
   }
 
   const handlePassiveSelect = (event: CustomEvent<string>) => {
     const tabId = event.detail
-    let addedTabToMagic = false
+    let addedTabToMagic: Tab | null = null
+    let addedTabToSelection = false
 
     selectedTabs.update((t) => {
       const newSelection = new Set(t)
@@ -1376,16 +805,21 @@
       const existingItem = Array.from(newSelection).find((item) => item.id === tabId)
       if (existingItem) {
         newSelection.delete(existingItem)
+        addedTabToSelection = false
       } else {
         newSelection.add({ id: tabId, userSelected: true })
+        addedTabToSelection = true
       }
 
       if (isMagicMode) {
         tabs.update((t) => {
           const updatedTabs = t.map((tab) => {
             if (tab.id === tabId) {
-              addedTabToMagic = !existingItem
-              return { ...tab, magic: addedTabToMagic }
+              const enableMagic = !existingItem
+              if (enableMagic) {
+                addedTabToMagic = tab
+              }
+              return { ...tab, magic: enableMagic }
             }
             return tab
           })
@@ -1398,16 +832,27 @@
 
     lastSelectedTabId.set(tabId)
 
+    if (addedTabToMagic) {
+      preparePageTabsForChatContext([addedTabToMagic])
+    }
+
     tick().then(() => {
-      if (addedTabToMagic) {
-        telemetry.trackPageChatContextUpdate(
-          PageChatUpdateContextEventAction.Add,
-          $magicTabs.length
-        )
+      if ($activeTabMagic.showSidebar) {
+        if (addedTabToMagic) {
+          telemetry.trackPageChatContextUpdate(
+            PageChatUpdateContextEventAction.Add,
+            $magicTabs.length
+          )
+        } else {
+          telemetry.trackPageChatContextUpdate(
+            PageChatUpdateContextEventAction.Remove,
+            $magicTabs.length
+          )
+        }
       } else {
-        telemetry.trackPageChatContextUpdate(
-          PageChatUpdateContextEventAction.Remove,
-          $magicTabs.length
+        telemetry.trackSelectTab(
+          addedTabToSelection ? SelectTabEventAction.Add : SelectTabEventAction.Remove,
+          $selectedTabs.size
         )
       }
     })
@@ -1423,7 +868,7 @@
       selectedTabs.set(new Set([{ id: tabId, userSelected: currentTab?.userSelected || false }]))
     }
 
-    makeTabActive(tabId, ActivateTabEventTrigger.Click)
+    tabsManager.makeActive(tabId, ActivateTabEventTrigger.Click)
 
     // If chat mode is activated, update magic tabs
     if ($activeTabMagic.showSidebar) {
@@ -1437,10 +882,12 @@
   }
 
   const updateMagicTabs = (tabId: string, currentSelectedTabs: any[], currentTab: any) => {
+    let addedTabToMagic: Tab | null = null
     tabs.update((allTabs) => {
       return allTabs.map((tab) => {
         // If the tab is the one that was just selected, mark it as a magic tab
         if (tab.id === tabId) {
+          addedTabToMagic = tab
           return { ...tab, magic: true }
         }
         // If the tab is the last selected tab, update its magic status based on user selection
@@ -1462,6 +909,10 @@
         return tab
       })
     })
+
+    if (addedTabToMagic) {
+      preparePageTabsForChatContext([addedTabToMagic])
+    }
   }
 
   const cleanUpSelectedTabs = () => {
@@ -1527,7 +978,7 @@
     trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click
   ): Promise<{ resource: Resource | null; isNew: boolean }> {
     try {
-      if (!$activeTabLocation || $activeTab?.type !== 'page')
+      if (!$activeTabLocation || $activeTab?.type !== 'page' || !$activeBrowserTab)
         return { resource: null, isNew: false }
 
       bookmarkingInProgress.set(true)
@@ -1572,7 +1023,7 @@
             //   openResourceDetailsModal($activeTab.resourceBookmark)
             // }
 
-            updateTab($activeTabId, { resourceBookmarkedManually: true })
+            tabsManager.update($activeTabId, { resourceBookmarkedManually: true })
 
             // If the resource hasn't been saved before we track the event
             if (isSilent) {
@@ -1584,7 +1035,7 @@
         }
       }
 
-      const resource = await $activeBrowserTab.bookmarkPage(false)
+      const resource = await $activeBrowserTab.bookmarkPage()
 
       // automatically resets after some time
       toasts.success('Bookmarked Page!')
@@ -1621,20 +1072,45 @@
 
     if (tab.resourceBookmark) {
       log.debug('tab url changed, removing bookmark')
-      updateTab(tab.id, { resourceBookmark: null, chatResourceBookmark: null })
+      tabsManager.update(tab.id, { resourceBookmark: null, chatResourceBookmark: null })
+    }
+
+    if (tab.chatResourceBookmark) {
+      const resource = await resourceManager.getResource(tab.chatResourceBookmark)
+      if (!resource) {
+        return
+      }
+
+      const isSilent =
+        (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value ===
+        'true'
+
+      if (isSilent) {
+        log.debug(
+          'deleting silent chat resource as the tab has navigated away',
+          tab.chatResourceBookmark
+        )
+        await resourceManager.deleteResource(resource.id)
+      }
     }
   }
 
   function handleCreateChat(e: CustomEvent<string>) {
     log.debug('create chat', e.detail)
 
-    updateActiveTab({ type: 'chat', query: e.detail, title: e.detail, icon: '' })
+    tabsManager.updateActive({ type: 'chat', query: e.detail, title: e.detail, icon: '' })
   }
 
   function handleRag(e: CustomEvent<string>) {
     log.debug('rag search', e.detail)
 
-    updateActiveTab({ type: 'chat', query: e.detail, title: e.detail, icon: '', ragOnly: true })
+    tabsManager.updateActive({
+      type: 'chat',
+      query: e.detail,
+      title: e.detail,
+      icon: '',
+      ragOnly: true
+    })
   }
 
   function updateActiveMagicPage(updates: Partial<PageMagic>) {
@@ -1674,7 +1150,7 @@
     log.debug('highlighting text', resourceId, answerText, sourceUid)
 
     const tabs = [...getTabsInChatContext(), ...$unpinnedTabs]
-    let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId)
+    let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId) || null
 
     if (!tab) {
       const resource = await resourceManager.getResource(resourceId)
@@ -1688,7 +1164,7 @@
         return
       }
 
-      tab = await createPageTab(url, {
+      tab = await tabsManager.addPageTab(url, {
         active: false,
         trigger: CreateTabEventTrigger.OasisChat
       })
@@ -1705,7 +1181,7 @@
         return
       }
 
-      makeTabActive(tab.id, ActivateTabEventTrigger.ChatCitation)
+      tabsManager.makeActive(tab.id, ActivateTabEventTrigger.ChatCitation)
 
       log.debug('highlighting citation', tab.id, answerText, sourceUid)
       if (answerText === '') {
@@ -1776,7 +1252,7 @@
     log.info('seeking to timestamp', resourceId, timestamp)
 
     const tabs = [...getTabsInChatContext(), ...$unpinnedTabs]
-    let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId)
+    let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId) || null
 
     if (!tab) {
       const resource = await resourceManager.getResource(resourceId)
@@ -1790,7 +1266,7 @@
         return
       }
 
-      tab = await createPageTab(url, {
+      tab = await tabsManager.addPageTab(url, {
         active: false,
         trigger: CreateTabEventTrigger.OasisChat
       })
@@ -1807,7 +1283,7 @@
         return
       }
 
-      makeTabActive(tab.id, ActivateTabEventTrigger.ChatCitation)
+      tabsManager.makeActive(tab.id, ActivateTabEventTrigger.ChatCitation)
       browserTab.sendWebviewEvent(WebViewEventReceiveNames.SeekToTimestamp, {
         timestamp: timestamp
       })
@@ -1844,14 +1320,14 @@
       }
       //updateAppIdsForAppSidebar(appId!)
       activeAppId.set(appId!)
-      updateTab($activeTabId, { appId: appId })
+      tabsManager.update($activeTabId, { appId: appId })
     } catch (e) {
       log.error('Error clearing app sidebar:', e)
     }
   }
 
-  const prepareTabForChatContext = async (tab: TabPage | TabSpace, title: string) => {
-    if (tab.type === 'space') {
+  const prepareTabForChatContext = async (tab: TabPage | TabSpace | TabResource) => {
+    if (tab.type === 'space' || tab.type === 'resource') {
       log.debug('Preparing space tab for chat context', tab.id)
       return
     }
@@ -1884,12 +1360,24 @@
       }
 
       const fetchedResource = await resourceManager.getResource(existingResourceId)
+      if (!fetchedResource) {
+        return null
+      }
+
       const fetchedCanonical = (fetchedResource?.tags ?? []).find(
         (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
       )?.value
 
       if (fetchedCanonical !== tab.currentLocation) {
         log.debug('Existing resource does not match current location', fetchedCanonical, tab.id)
+        return null
+      }
+
+      const isDeleted =
+        (fetchedResource?.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
+          ?.value === 'true'
+      if (isDeleted) {
+        log.debug('Existing resource is deleted, ignoring', fetchedResource.id)
         return null
       }
 
@@ -1906,7 +1394,7 @@
       }
 
       log.debug('Bookmarking page for chat context', tab.id)
-      tabResource = await browserTab.bookmarkPage(true)
+      tabResource = await browserTab.createResourceForChat()
     }
 
     if (!tabResource) {
@@ -1918,16 +1406,19 @@
     return tabResource
   }
 
-  const preparePageTabsForChatContext = async () => {
+  const preparePageTabsForChatContext = async (tabs?: Array<TabPage | TabSpace>) => {
     updateActiveMagicPage({ initializing: true, errors: [] })
 
-    const tabs = getTabsInChatContext()
+    if (!tabs) {
+      tabs = getTabsInChatContext()
+    }
+
     log.debug('Making sure resources for all page tabs in context are extracted', tabs)
 
     await Promise.allSettled(
       tabs.map(async (tab) => {
         try {
-          await prepareTabForChatContext(tab, tab.title)
+          await prepareTabForChatContext(tab)
         } catch (e: any) {
           log.error('Error preparing page tabs for chat context', e)
           let errors = $activeTabMagic.errors
@@ -2021,7 +1512,7 @@
         return
       }
 
-      updateTab(tab.id, { appId: appId })
+      tabsManager.update(tab.id, { appId: appId })
       // updateAppIdsForAppSidebar(appId)
       // await preparePageTabsForChatContext()
     }
@@ -2054,13 +1545,13 @@
     }
   }
 
-  const saveTextFromPage = async (
+  const createPageAnnotation = async (
     text: string,
     html?: string,
     tags?: string[],
     source?: AnnotationCommentData['source']
   ) => {
-    if ($activeTab?.type !== 'page') return
+    if ($activeTab?.type !== 'page' || !$activeBrowserTab) return
 
     const url = $activeTabLocation ?? $activeTab?.initialLocation
 
@@ -2081,7 +1572,7 @@
     if (!bookmarkedResource) {
       log.debug('no bookmarked resource')
 
-      const resource = await $activeBrowserTab.bookmarkPage(true)
+      const resource = await $activeBrowserTab.bookmarkPage({ silent: true })
       bookmarkedResource = resource.id
     }
 
@@ -2111,6 +1602,11 @@
 
   const handleAnnotationScrollTo = (e: CustomEvent<WebViewEventAnnotation>) => {
     log.debug('Annotation scroll to', e.detail)
+    if (!$activeBrowserTab) {
+      log.error('No active browser tab')
+      return
+    }
+
     $activeBrowserTab.sendWebviewEvent(WebViewEventReceiveNames.ScrollToAnnotation, e.detail)
   }
 
@@ -2119,7 +1615,12 @@
   ) => {
     log.debug('Annotation sidebar create', e.detail)
 
-    const annotation = await saveTextFromPage(e.detail.text, e.detail.html, e.detail.tags, 'user')
+    const annotation = await createPageAnnotation(
+      e.detail.text,
+      e.detail.html,
+      e.detail.tags,
+      'user'
+    )
 
     log.debug('created annotation', annotation)
     annotationsSidebar.reload()
@@ -2129,8 +1630,12 @@
     log.debug('Annotation sidebar reload')
 
     // TODO: implement IPC to update the annotation inline instead of reloading the page
-    if ($activeTab?.type === 'page' && $activeTab?.currentDetectedApp?.appId !== 'youtube') {
-      $activeBrowserTab?.reload()
+    if (
+      $activeTab?.type === 'page' &&
+      $activeTab?.currentDetectedApp?.appId !== 'youtube' &&
+      $activeBrowserTab
+    ) {
+      $activeBrowserTab.reload()
     }
   }
 
@@ -2139,7 +1644,7 @@
 
     log.debug('create tab from sidebar', tab)
 
-    await createTab(tab, { active: active })
+    await tabsManager.create(tab, { active: active })
 
     toasts.success('Space added to your Tabs!')
   }
@@ -2158,11 +1663,11 @@
         (tab) => tab.type === 'space' && tab.spaceId === space.id
       )
       if (existingTab) {
-        makeTabActive(existingTab.id)
+        tabsManager.makeActive(existingTab.id)
         return
       }
 
-      await createSpaceTab(space, true)
+      await tabsManager.addSpaceTab(space, { active: true })
 
       await tick()
 
@@ -2243,7 +1748,7 @@
       }
 
       if (newSpace) {
-        await createSpaceTab(newSpace, true)
+        await tabsManager.addSpaceTab(newSpace, { active: true })
       }
 
       await telemetry.trackCreateSpace(CreateSpaceEventFrom.SpaceHoverMenu, {
@@ -2264,6 +1769,11 @@
   const createSpaceSourceFromActiveTab = async (tab: TabPage) => {
     if (!tab.currentDetectedApp) {
       log.debug('No app detected in tab', tab)
+      return null
+    }
+
+    if (!$activeBrowserTab) {
+      log.error('No active browser tab')
       return null
     }
 
@@ -2356,7 +1866,7 @@
 
       log.debug('created space', space)
 
-      await createSpaceTab(space, true)
+      await tabsManager.addSpaceTab(space, { active: true })
 
       await telemetry.trackCreateSpace(CreateSpaceEventFrom.TabLiveSpaceButton, {
         isLiveSpace: true
@@ -2408,9 +1918,9 @@
       )
 
       if (existingTab) {
-        makeTabActive(existingTab.id, ActivateTabEventTrigger.Click)
+        tabsManager.makeActive(existingTab.id, ActivateTabEventTrigger.Click)
       } else {
-        await createSpaceTab(space, true)
+        await tabsManager.addSpaceTab(space, { active: true })
       }
 
       await telemetry.trackUpdateSpaceSettings(
@@ -2448,8 +1958,17 @@
         })
       }
 
-      deleteTab(tab.id)
+      tabsManager.delete(tab.id)
     }
+  }
+
+  const handleCreateNote = async (e: CustomEvent<string>) => {
+    const query = e.detail ?? ''
+    log.debug('create note with query', query)
+
+    const resource = await resourceManager.createResourceNote(query)
+    await tabsManager.addResourceTab(resource, { active: true })
+    toasts.success('Note created!')
   }
 
   const handleCreateChatWithQuery = async (e: CustomEvent<string>) => {
@@ -2516,6 +2035,90 @@
   const openSettings = () => {
     window.api.openSettings()
   }
+
+  onMount(() => {
+    const unsubscribeCreated = tabsManager.on('created', (tab, active) => {
+      checkScroll()
+
+      // Ensure the new tab is in context when the sidebar is open
+      if ($activeTabMagic.showSidebar) {
+        // TODO: this should be cleaned up more
+        if (active) {
+          handleTabSelect(new CustomEvent('tab-select', { detail: tab.id }))
+        } else {
+          handlePassiveSelect(new CustomEvent('tab-select', { detail: tab.id }))
+        }
+      }
+    })
+
+    const unsubscribeDeleted = tabsManager.on('deleted', async (tab) => {
+      checkScroll()
+
+      if (tab.type === 'page' && tab.chatResourceBookmark) {
+        const resource = await resourceManager.getResource(tab.chatResourceBookmark)
+        if (!resource) {
+          log.error('resource not found', tab.chatResourceBookmark)
+          return
+        }
+
+        const isSilent =
+          (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
+            ?.value === 'true'
+
+        if (isSilent) {
+          log.debug('Deleting resource used in chat as tab was deleted', resource.id)
+          await resourceManager.deleteResource(resource.id)
+
+          tabsManager.update(tab.id, { chatResourceBookmark: null })
+        }
+      }
+    })
+
+    const unsubscribeActiveTab = activeTab.subscribe((tab) => {
+      if (!tab) return
+
+      if (tab?.type === 'page') {
+        if (tab.currentLocation) {
+          addressValue.set(tab.currentLocation)
+        } else {
+          const currentEntry = historyEntriesManager.getEntry(
+            tab.historyStackIds[tab.currentHistoryIndex]
+          )
+          addressValue.set(currentEntry?.url ?? tab.initialLocation)
+        }
+      } else if (tab?.type === 'chat') {
+        addressValue.set(tab.title)
+      } else {
+        addressValue.set('')
+      }
+
+      // TODO: is this needed? persistTabChanges(tab?.id, tab)
+    })
+
+    const unsubscribeSidebarTab = sidebarTab.subscribe((tab) => {
+      const tabsInView = $tabs.filter((tab) =>
+        $sidebarTab === 'active' ? !tab.archived : tab.archived
+      )
+
+      if (tabsInView.length === 0) {
+        log.debug('No tabs in view')
+        return
+      }
+
+      if (tab === 'archive' && !$activeTab?.archived) {
+        tabsManager.makeActive(tabsInView[0].id)
+      } else if (tab === 'active' && $activeTab?.archived) {
+        tabsManager.makeActive(tabsInView[0].id)
+      }
+    })
+
+    return () => {
+      unsubscribeCreated()
+      unsubscribeDeleted()
+      unsubscribeActiveTab()
+      unsubscribeSidebarTab()
+    }
+  })
 
   onMount(async () => {
     window.addEventListener('resize', handleResize)
@@ -2617,7 +2220,7 @@
     })
 
     window.api.onCloseActiveTab(() => {
-      closeActiveTab(DeleteTabEventTrigger.Shortcut)
+      tabsManager.deleteActive(DeleteTabEventTrigger.Shortcut)
     })
 
     window.api.onReloadActiveTab((force) => {
@@ -2758,21 +2361,6 @@
     tabs.set(tabsList)
     log.debug('Tabs loaded', tabsList)
 
-    log.debug('Loading spaces')
-    const spacesList = await oasis.loadSpaces()
-
-    // add spaces to tabs if missing
-    // spacesList.forEach((space) => {
-    //   if (!tabsList.find((tab) => tab.type === 'space' && tab.spaceId === space.id)) {
-    //     createTab<TabSpace>({
-    //       type: 'space',
-    //       spaceId: space.id,
-    //       title: space.name,
-    //       icon: ''
-    //     })
-    //   }
-    // })
-
     // TODO: for safety we wait a bit before we tell the app that we are ready, we need a better way to do this
     setTimeout(() => {
       window.api.appIsReady()
@@ -2781,15 +2369,15 @@
     const activeTabs = tabsList.filter((tab) => !tab.archived)
 
     if (activeTabs.length === 0) {
-      createNewEmptyTab()
+      tabsManager.showNewTab()
     } else if ($activeTabId) {
-      makeTabActive($activeTabId)
+      tabsManager.makeActive($activeTabId)
     } else {
-      makeTabActive(activeTabs[activeTabs.length - 1].id)
+      tabsManager.makeActive(activeTabs[activeTabs.length - 1].id)
     }
 
     // activeTabs.forEach((tab, index) => {
-    //   updateTab(tab.id, { index: index })
+    //   tabsManager.update(tab.id, { index: index })
     // })
 
     // if we have some magicTabs, make them unpinned
@@ -2811,7 +2399,7 @@
 
       showSplashScreen.set(true)
 
-      await createDemoItems(createTab, oasis, createSpaceTab, resourceManager)
+      await createDemoItems(tabsManager.create, oasis, tabsManager.addSpaceTab, resourceManager)
 
       await window.api.updateInitializedTabs(true)
 
@@ -2892,10 +2480,10 @@
 
         // await archiveTab(tabId)
 
-        await deleteTab(tabId, DeleteTabEventTrigger.Click)
+        await tabsManager.delete(tabId, DeleteTabEventTrigger.Click)
       } else {
         // await archiveTab(tabId)
-        await deleteTab(tabId, DeleteTabEventTrigger.Click)
+        await tabsManager.delete(tabId, DeleteTabEventTrigger.Click)
       }
 
       toasts.success('Space removed from sidebar!')
@@ -3122,7 +2710,7 @@
     const newTabs = [...newUnpinnedTabsArray, ...newPinnedTabsArray, ...newMagicTabsArray]
 
     // Update the store with the changed tabs
-    await bulkUpdateTabsStore(
+    await tabsManager.bulkPersistChanges(
       newTabs.map((tab) => ({
         id: tab.id,
         updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
@@ -3226,7 +2814,7 @@
     })
 
     // Update the store with the changed tabs
-    await bulkUpdateTabsStore(
+    await tabsManager.bulkPersistChanges(
       newTabs.map((tab) => ({
         id: tab.id,
         updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
@@ -3249,45 +2837,29 @@
     }
 
     if (drag.data['oasis/resource'] !== undefined) {
-      const resource = drag.data['oasis/resource']
+      const resource = drag.data['oasis/resource'] as Resource
 
-      if (
-        (
-          [
-            ResourceTypes.LINK,
-            ResourceTypes.ARTICLE,
-            ResourceTypes.POST,
-            ResourceTypes.POST_YOUTUBE,
-            ResourceTypes.POST_TWITTER,
-            ResourceTypes.POST_REDDIT,
-            ResourceTypes.CHANNEL_YOUTUBE,
-            ResourceTypes.PLAYLIST_YOUTUBE,
-            ResourceTypes.CHAT_THREAD,
-            ResourceTypes.CHAT_THREAD_SLACK,
-            ResourceTypes.HISTORY_ENTRY
-          ] as string[]
-        ).includes(resource.type)
-      ) {
-        let url = resource.parsedData.url
-        if (resource.type === ResourceTypes.HISTORY_ENTRY) {
-          url = (resource as ResourceHistoryEntry).parsedData?.raw_url ?? url
-        }
+      let tab = await tabsManager.openResourceAsTab(resource, {
+        active: true,
+        trigger: CreateTabEventTrigger.Drop
+      })
 
-        let tab = await createPageTab(url, {
-          active: true,
-          trigger: CreateTabEventTrigger.Drop
-        })
-        tab.index = drag.index || 0
-
-        await bulkUpdateTabsStore(
-          get(tabs).map((tab) => ({
-            id: tab.id,
-            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
-          }))
-        )
-
-        log.debug('State updated successfully')
+      if (!tab) {
+        log.error('Failed to add page')
+        return
       }
+
+      tab.index = drag.index || 0
+
+      await tabsManager.bulkPersistChanges(
+        get(tabs).map((tab) => ({
+          id: tab.id,
+          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+        }))
+      )
+
+      log.debug('State updated successfully')
+
       drag.continue()
       return
     }
@@ -3300,8 +2872,8 @@
         let pinnedTabsArray = get(pinnedTabs)
         let magicTabsArray = get(magicTabs)
 
-        let fromTabs: ITab[]
-        let toTabs: ITab[]
+        let fromTabs: Tab[]
+        let toTabs: Tab[]
 
         if (drag.from.id === 'sidebar-unpinned-tabs') {
           fromTabs = unpinnedTabsArray
@@ -3352,7 +2924,7 @@
 
             if (dragData.type === 'page' && $activeTabMagic?.showSidebar) {
               log.debug('prepare tab for chat context after moving to magic')
-              prepareTabForChatContext(dragData, dragData.title)
+              preparePageTabsForChatContext([dragData])
             }
 
             telemetry.trackMoveTab(MoveTabEventAction.AddMagic)
@@ -3394,7 +2966,7 @@
         log.warn('New tabs', [...newTabs])
 
         // Update the store with the changed tabs
-        bulkUpdateTabsStore(
+        tabsManager.bulkPersistChanges(
           newTabs.map((tab) => ({
             id: tab.id,
             updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
@@ -3453,7 +3025,7 @@
         drag.to?.id || ''
       )
     ) {
-      await deleteTab(drag.data['surf/tab'].id)
+      await tabsManager.delete(drag.data['surf/tab'].id)
     }
     drag.continue()
   }
@@ -3656,12 +3228,9 @@
     </div>
   {/if}
 
-  <SidebarPane
-    {horizontalTabs}
-    bind:showLeftSidebar
-    bind:showRightSidebar
-    on:leftPeekClose={() => changeTraficLightsVisibility(false)}
-    on:leftPeekOpen={() => changeTraficLightsVisibility(true)}
+  <!-- 
+    NOTE: Removed from SidebarPane to disable chat peek for now.
+
     on:rightPeekOpen={() => {
       setPageChatState(true)
       telemetry.trackOpenRightSidebar($rightSidebarTab)
@@ -3670,6 +3239,13 @@
       cachedMagicTabs.clear()
       setPageChatState(false)
     }}
+-->
+  <SidebarPane
+    {horizontalTabs}
+    bind:showLeftSidebar
+    bind:showRightSidebar
+    on:leftPeekClose={() => changeTraficLightsVisibility(false)}
+    on:leftPeekOpen={() => changeTraficLightsVisibility(true)}
   >
     <div
       slot="sidebar"
@@ -3729,7 +3305,6 @@
                     )}
                     on:select={handleTabSelect}
                     on:remove-from-sidebar={handleRemoveFromSidebar}
-                    on:unarchive-tab={handleUnarchiveTab}
                     on:delete-tab={handleDeleteTab}
                     on:exclude-tab={handleExcludeTab}
                     on:DragEnd={(e) => handleTabDragEnd(e.detail)}
@@ -3766,7 +3341,7 @@
               }}
             >
               <div
-                class="magic-activated"
+                class="magic-activated select-none"
                 style="font-size: 12px; padding: 10px; margin: -10px;"
                 aria-hidden="true"
                 on:mouseenter={() => {
@@ -3855,7 +3430,6 @@
                         on:delete-tab={handleDeleteTab}
                         on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
-                        on:unarchive-tab={handleUnarchiveTab}
                         on:bookmark={() => handleBookmark()}
                         on:create-live-space={() => showCreateLiveSpaceDialog.set(true)}
                         on:add-source-to-space={handleAddSourceToSpace}
@@ -3889,7 +3463,6 @@
                         on:exclude-tab={handleExcludeTab}
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
-                        on:unarchive-tab={handleUnarchiveTab}
                         on:include-tab={handleIncludeTabInMagic}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
@@ -3941,7 +3514,6 @@
                         on:delete-tab={handleDeleteTab}
                         on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
-                        on:unarchive-tab={handleUnarchiveTab}
                         on:bookmark={() => handleBookmark()}
                         on:create-live-space={() => showCreateLiveSpaceDialog.set(true)}
                         on:add-source-to-space={handleAddSourceToSpace}
@@ -3975,7 +3547,6 @@
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
-                        on:unarchive-tab={handleUnarchiveTab}
                         on:include-tab={handleIncludeTabInMagic}
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
@@ -4004,7 +3575,7 @@
                     ? 'w-fit rounded-xl p-2'
                     : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
                   class:bg-sky-200={$showNewTabOverlay === 1}
-                  on:click|preventDefault={() => createNewEmptyTab()}
+                  on:click|preventDefault={() => tabsManager.showNewTab()}
                 >
                   <Icon name="add" />
                   {#if !horizontalTabs}
@@ -4020,7 +3591,7 @@
               class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                 ? 'w-fit rounded-xl p-2'
                 : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
-              on:click|preventDefault={() => createNewEmptyTab()}
+              on:click|preventDefault={() => tabsManager.showNewTab()}
               class:opacity-100={$showEndMask}
               class:opacity-0={!$showEndMask}
               class:pointer-events-auto={$showEndMask}
@@ -4136,7 +3707,7 @@
           </div>
         </div>
       {:else}
-        <!-- <OasisSidebar on:createTab={handleCreateTabFromSpace} /> -->
+        <!-- <OasisSidebar on:tabsManager.create={handleCreateTabFromSpace} /> -->
       {/if}
     </div>
 
@@ -4154,18 +3725,18 @@
           bind:showTabSearch={$showNewTabOverlay}
           on:open-space-as-tab={handleCreateTabForSpace}
           on:deleted={handleDeletedSpace}
-          on:new-tab={handleNewTab}
           {historyEntriesManager}
           activeTabs={$activeTabs}
           on:activate-tab={handleTabSelect}
-          on:close-active-tab={closeActiveTab}
-          on:bookmark={handleBookmark}
+          on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
+          on:bookmark={() => handleBookmark(false, SaveToOasisEventTrigger.CommandMenu)}
           on:toggle-sidebar={() => changeLeftSidebarState()}
           on:create-tab-from-space={handleCreateTabFromSpace}
           on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
           on:reload-window={() => $activeBrowserTab?.reload()}
           on:open-space={handleCreateTabForSpace}
           on:create-chat={handleCreateChatWithQuery}
+          on:create-note={handleCreateNote}
           on:zoom={() => {
             $activeBrowserTab?.zoomIn()
           }}
@@ -4176,7 +3747,10 @@
             $activeBrowserTab?.resetZoom()
           }}
           on:open-url={(e) => {
-            createPageTab(e.detail, true)
+            tabsManager.addPageTab(e.detail, {
+              active: true,
+              trigger: CreateTabEventTrigger.AddressBar
+            })
           }}
           on:open-resource={(e) => {
             openResource(e.detail)
@@ -4190,7 +3764,6 @@
               active
               on:create-resource-from-oasis={handeCreateResourceFromOasis}
               on:deleted={handleDeletedSpace}
-              on:new-tab={handleNewTab}
               on:open-space-as-tab={handleCreateTabForSpace}
               hideBar={$showNewTabOverlay !== 0}
               {historyEntriesManager}
@@ -4202,7 +3775,6 @@
           <OasisResourceModalWrapper
             resourceId={$resourceDetailsModalSelected}
             on:close={() => closeResourceDetailsModal()}
-            on:new-tab={handleNewTab}
           />
         {/if}
 
@@ -4222,14 +3794,12 @@
 
               {#if tab.type === 'page'}
                 <BrowserTab
-                  active={$activeTabId === tab.id}
                   {historyEntriesManager}
                   pageMagic={$activeTabMagic}
                   bind:this={$browserTabs[tab.id]}
                   bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
-                  on:new-tab={handleNewTab}
                   on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
-                  on:update-tab={(e) => updateTab(tab.id, e.detail)}
+                  on:update-tab={(e) => tabsManager.update(tab.id, e.detail)}
                   on:open-resource={(e) =>
                     openResourceDetailsModal(e.detail, OpenResourceEventFrom.Page)}
                   on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
@@ -4241,13 +3811,13 @@
                 <Chat
                   {tab}
                   {resourceManager}
-                  db={storage}
+                  resourceIds={[]}
                   on:navigate={(e) =>
-                    createPageTab(e.detail.url, {
+                    tabsManager.addPageTab(e.detail.url, {
                       active: e.detail.active,
                       trigger: CreateTabEventTrigger.OasisChat
                     })}
-                  on:updateTab={(e) => updateTab(tab.id, e.detail)}
+                  on:tabsManager.update={(e) => tabsManager.update(tab.id, e.detail)}
                   on:openResource={(e) =>
                     openResourceDetailsModal(e.detail, OpenResourceEventFrom.OasisChat)}
                 />
@@ -4261,12 +3831,13 @@
                   active={$activeTabId === tab.id}
                   on:create-resource-from-oasis={handeCreateResourceFromOasis}
                   on:deleted={handleDeletedSpace}
-                  on:new-tab={handleNewTab}
                   hideBar={$showNewTabOverlay !== 0}
                   {historyEntriesManager}
                 />
               {:else if tab.type === 'history'}
-                <BrowserHistory {tab} active={$activeTabId === tab.id} on:new-tab={handleNewTab} />
+                <BrowserHistory {tab} active={$activeTabId === tab.id} />
+              {:else if tab.type === 'resource'}
+                <ResourceTab {tab} on:update-tab={(e) => tabsManager.update(tab.id, e.detail)} />
               {/if}
             </div>
           {/if}
@@ -4280,7 +3851,6 @@
               on:navigate={handleTabNavigation}
               on:chat={handleCreateChat}
               on:rag={handleRag}
-              on:new-tab={handleNewTab}
               {spaces}
             />
           </div>
@@ -4353,7 +3923,6 @@
               }}
               on:select={handleTabSelect}
               on:exclude-tab={handleExcludeTab}
-              on:saveText={(e) => saveTextFromPage(e.detail, undefined, undefined, 'chat_ai')}
               on:updateActiveChatId={(e) => activeChatId.set(e.detail)}
               on:remove-magic-tab={removeMagicTab}
               on:include-tab={handleIncludeTabInMagic}
@@ -4661,8 +4230,8 @@
     :global(webview) {
       height: 100%;
       width: 100%;
-      border-radius: 0.5rem;
-      overflow: hidden;
+      // border-radius: 0.5rem;
+      // overflow: hidden;
     }
   }
   .link-preview-content {

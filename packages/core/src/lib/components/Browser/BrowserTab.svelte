@@ -7,7 +7,6 @@
 
   export type BrowserTabEvents = {
     // components own events
-    'new-tab': BrowserTabNewTabEvent
     navigation: WebviewNavigationEvent
     keydown: WebViewEventKeyDown
     'update-tab': Partial<TabPage>
@@ -25,6 +24,11 @@
     'annotation-remove': WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
     'annotation-update': WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
     'add-to-chat': WebViewSendEvents[WebViewEventSendNames.AddToChat]
+  }
+
+  export type BookmarkPageOpts = {
+    silent?: boolean
+    createdForChat?: boolean
   }
 </script>
 
@@ -52,7 +56,12 @@
   } from '@horizon/types'
   import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
   import type { WebviewNavigationEvent } from '../Webview/Webview.svelte'
-  import { ResourceAnnotation, ResourceTag, useResourceManager } from '../../service/resources'
+  import {
+    Resource,
+    ResourceAnnotation,
+    ResourceTag,
+    useResourceManager
+  } from '../../service/resources'
   import { useToasts } from '../../service/toast'
   import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from '../../constants/inline'
   import { handleInlineAI } from '../../service/ai'
@@ -104,8 +113,7 @@
   const appDetectionRunning = writable(false)
 
   const appDetectionCallbacks = new Map<string, (app: DetectedWebApp) => void>()
-
-  $: autoSaveResources = $userConfigSettings.auto_save_resources
+  const bookmarkingPromises = new Map<string, Promise<Resource>>()
 
   const debouncedAppDetection = useDebounce(async () => {
     await wait(500)
@@ -175,51 +183,88 @@
     // dispatch('update-tab', changes)
   }
 
-  async function createBookmarkResource(url: string, tab: TabPage, silent: boolean = false) {
+  async function createBookmarkResource(url: string, tab: TabPage, opts?: BookmarkPageOpts) {
     log.debug('bookmarking', url)
 
-    const detectedResource = await webview.detectResource()
-    log.debug('extracted resource data', detectedResource)
-
-    if (!detectedResource) {
-      // create basic link resource
-      const linkData = {
-        title: tab.title ?? '',
-        url: url
-      } as ResourceDataLink
-      const resource = await resourceManager.createResourceLink(
-        linkData,
-        { name: tab.title ?? '', sourceURI: url, alt: '' },
-        [
-          ResourceTag.canonicalURL(url),
-          ResourceTag.viewedByUser(true),
-          ...(silent ? [ResourceTag.silent()] : [])
-        ]
-      )
-
-      log.debug('created resource', resource)
-
-      return resource
+    const defaultOpts: BookmarkPageOpts = {
+      silent: false,
+      createdForChat: false
     }
 
-    const title = (detectedResource.data as any)?.title ?? tab.title ?? ''
+    const { silent, createdForChat } = Object.assign({}, defaultOpts, opts)
 
-    const resource = await resourceManager.createDetectedResource(
-      detectedResource,
-      { name: title, sourceURI: url, alt: '' },
-      [
-        ResourceTag.canonicalURL(url),
-        ResourceTag.viewedByUser(true),
-        ...(silent ? [ResourceTag.silent()] : [])
-      ]
-    )
+    let bookmarkingPromise = bookmarkingPromises.get(url)
+    if (bookmarkingPromise !== undefined) {
+      log.debug('already bookmarking page, piggybacking on existing promise')
+      return bookmarkingPromise
+    }
 
-    log.debug('created resource', resource)
+    bookmarkingPromise = new Promise(async (resolve, reject) => {
+      try {
+        const detectedResource = await webview.detectResource()
+        log.debug('extracted resource data', detectedResource)
 
-    return resource
+        if (!detectedResource) {
+          // create basic link resource
+          const linkData = {
+            title: tab.title ?? '',
+            url: url
+          } as ResourceDataLink
+          const resource = await resourceManager.createResourceLink(
+            linkData,
+            { name: tab.title ?? '', sourceURI: url, alt: '' },
+            [
+              ResourceTag.canonicalURL(url),
+              ResourceTag.viewedByUser(true),
+              ...(silent ? [ResourceTag.silent()] : []),
+              ...(createdForChat ? [ResourceTag.createdForChat()] : [])
+            ]
+          )
+
+          log.debug('created resource', resource)
+
+          resolve(resource)
+          return
+        }
+
+        const title = (detectedResource.data as any)?.title ?? tab.title ?? ''
+
+        const resource = await resourceManager.createDetectedResource(
+          detectedResource,
+          { name: title, sourceURI: url, alt: '' },
+          [
+            ResourceTag.canonicalURL(url),
+            ResourceTag.viewedByUser(true),
+            ...(silent ? [ResourceTag.silent()] : []),
+            ...(createdForChat ? [ResourceTag.createdForChat()] : [])
+          ]
+        )
+
+        log.debug('created resource', resource)
+
+        resolve(resource)
+      } catch (e) {
+        log.error('error creating bookmark resource', e)
+        reject(null)
+      }
+    })
+
+    bookmarkingPromises.set(url, bookmarkingPromise)
+    bookmarkingPromise.then(() => {
+      bookmarkingPromises.delete(url)
+    })
+
+    return bookmarkingPromise
   }
 
-  export async function bookmarkPage(silent = false) {
+  export async function bookmarkPage(opts?: BookmarkPageOpts) {
+    const defaultOpts: BookmarkPageOpts = {
+      silent: false,
+      createdForChat: false
+    }
+
+    const { silent, createdForChat } = Object.assign({}, defaultOpts, opts)
+
     let url =
       tab.currentLocation ??
       historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])?.url ??
@@ -238,14 +283,18 @@
       url = url.replace(/&t.*/g, '')
     }
 
-    if (tab.chatResourceBookmark) {
-      const fetchedResource = await resourceManager.getResource(tab.chatResourceBookmark)
+    if (tab.resourceBookmark) {
+      const fetchedResource = await resourceManager.getResource(tab.resourceBookmark)
       if (fetchedResource) {
+        const isDeleted =
+          (fetchedResource?.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
+            ?.value === 'true'
+
         const fetchedCanonical = (fetchedResource?.tags ?? []).find(
           (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
         )
 
-        if (fetchedCanonical?.value === url) {
+        if (!isDeleted && fetchedCanonical?.value === url) {
           log.debug('already bookmarked', url, fetchedResource.id)
 
           if (!silent) {
@@ -268,7 +317,7 @@
     }
 
     log.debug('bookmarking', url)
-    const resource = await createBookmarkResource(url, tab, silent)
+    const resource = await createBookmarkResource(url, tab, { silent, createdForChat })
 
     tab.resourceBookmark = resource.id
     tab.chatResourceBookmark = resource.id
@@ -284,6 +333,10 @@
     })
 
     return resource
+  }
+
+  export const createResourceForChat = async () => {
+    return bookmarkPage({ silent: true, createdForChat: true })
   }
 
   export const handleTrackpadScrollStart = () => webview?.handleTrackpadScrollStart()
@@ -467,7 +520,7 @@
     if (!bookmarkedResource) {
       log.debug('no bookmarked resource')
 
-      const resource = await bookmarkPage(true)
+      const resource = await bookmarkPage({ silent: true })
       bookmarkedResource = resource
     }
 
@@ -603,19 +656,34 @@
         })
       }
 
-      log.debug('bookmarked resource found', bookmarkedResource)
+      log.debug('bookmarked resource found', bookmarkedResource, tab)
       if (!bookmarkedResource) {
-        if (autoSaveResources) {
-          log.debug('creating new silent resource', url)
-          bookmarkedResource = await createBookmarkResource(url, tab, true)
-        } else if (pageMagic?.showSidebar) {
+        log.debug('creating new silent resource', url)
+        bookmarkedResource = await createBookmarkResource(url, tab, {
+          silent: true,
+          createdForChat: true
+        })
+      }
+
+      // Check if the detected resource is different from the one we previously bookmarked
+      // If it is and it is silent, delete it as it is no longer needed
+      if (tab.chatResourceBookmark && tab.chatResourceBookmark !== bookmarkedResource.id) {
+        const resource = await resourceManager.getResource(tab.chatResourceBookmark)
+        if (!resource) {
+          log.error('resource not found', tab.chatResourceBookmark)
+          return
+        }
+
+        const isSilent =
+          (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
+            ?.value === 'true'
+
+        if (isSilent) {
           log.debug(
-            'creating new silent resource even if auto saved is disabled because chat is open',
-            url
+            'deleting chat resource bookmark as the tab has been updated',
+            tab.chatResourceBookmark
           )
-          bookmarkedResource = await createBookmarkResource(url, tab, true)
-        } else {
-          log.debug('auto save resources disabled')
+          await resourceManager.deleteResource(resource.id)
         }
       }
 
@@ -710,6 +778,5 @@
   on:favicon-change={handleWebviewFaviconChange}
   on:history-change={handleHistoryChange}
   on:did-finish-load={debouncedAppDetection}
-  on:new-tab
   on:navigation
 />

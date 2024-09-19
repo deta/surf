@@ -39,13 +39,21 @@ const processHTMLData = async (data: string) => {
   const parsed = await Promise.all(
     images.map(async (img) => {
       try {
-        let source = img.src.startsWith('data:')
+        let dataUrl = img.src.startsWith('data:')
           ? img.src
           : await window.api.fetchAsDataURL(img.src)
 
-        const response = await fetch(source)
-        if (!response.ok) throw new Error('failed to fetch')
-        const blob = await response.blob()
+        // Convert data URL to Blob
+        const [metadata, base64Data] = dataUrl.split(',')
+        const mimeType = metadata.match(/:(.*?);/)?.[1] || 'image/png'
+        const binaryString = atob(base64Data)
+        const len = binaryString.length
+        const array = new Uint8Array(len)
+        for (let i = 0; i < len; i++) {
+          array[i] = binaryString.charCodeAt(i)
+        }
+
+        const blob = new Blob([array], { type: mimeType })
         const file = new File([blob], `image${num}.png`, { type: blob.type })
 
         num++

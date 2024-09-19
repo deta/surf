@@ -311,7 +311,6 @@
       resourceId={$clickedResource.id}
       active
       on:close={() => clickedResource.set(undefined)}
-      on:new-tab
     />
     <!-- <div class="overlay">
       <MiniBrowser

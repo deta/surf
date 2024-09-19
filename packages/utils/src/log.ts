@@ -14,7 +14,6 @@ class Logger {
 
     this.scope = scope
 
-    // this.level = levelMap.indexOf('error')
     if (level) {
       this.level = levelMap.indexOf(level) || levelMap.indexOf('info')
     } else if (isDev) {
@@ -44,48 +43,48 @@ class Logger {
     return this.level
   }
 
-  log = (...data: any[]) => {
+  log(...data: any[]) {
     const level = this.getLevel()
     if (level <= levelMap.indexOf('verbose')) {
       console.log(this.getScope(), ...data)
     }
   }
 
-  debug = (...data: any[]) => {
+  debug(...data: any[]) {
     const level = this.getLevel()
     if (level <= levelMap.indexOf('debug')) {
       console.log(this.getScope(), ...data)
     }
   }
 
-  info = (...data: any[]) => {
+  info(...data: any[]) {
     const level = this.getLevel()
     if (level <= levelMap.indexOf('info')) {
       console.log(this.getScope(), ...data)
     }
   }
 
-  warn = (...data: any[]) => {
+  warn(...data: any[]) {
     if (this.level <= levelMap.indexOf('warn')) {
       console.log(this.getScope(), ...data)
     }
   }
 
-  error = (...data: any[]) => {
+  error(...data: any[]) {
     const level = this.getLevel()
     if (level <= levelMap.indexOf('error')) {
       console.error(this.getScope(), ...data)
     }
   }
 
-  json = (data: any) => {
+  json(data: any) {
     const level = this.getLevel()
     if (level <= levelMap.indexOf('debug')) {
       console.log(JSON.stringify(data, null, 2))
     }
   }
 
-  static useLog = (scope: string) => {
+  static useLog(scope: string) {
     return new Logger(scope)
   }
 }
@@ -98,10 +97,10 @@ const defaultLogger = new Logger('')
 export const useLog = () => defaultLogger
 
 export default {
-  log: defaultLogger.log,
-  debug: defaultLogger.debug,
-  info: defaultLogger.info,
-  warn: defaultLogger.warn,
-  error: defaultLogger.error,
-  json: defaultLogger.json
+  log: defaultLogger.log.bind(defaultLogger),
+  debug: defaultLogger.debug.bind(defaultLogger),
+  info: defaultLogger.info.bind(defaultLogger),
+  warn: defaultLogger.warn.bind(defaultLogger),
+  error: defaultLogger.error.bind(defaultLogger),
+  json: defaultLogger.json.bind(defaultLogger)
 }

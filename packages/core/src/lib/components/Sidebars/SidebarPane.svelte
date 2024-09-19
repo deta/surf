@@ -346,9 +346,9 @@
     </div>
   </div>
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div
+  <!--<div
     class={rightPeakAreaClasses}
     on:mouseenter={() => handleMouseEnter('right')}
     style={rightSidebarStyle}
-  />
+  />-->
 </div>

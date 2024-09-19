@@ -1,23 +1,39 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
   import type { Resource } from '../../../../service/resources'
-  import { getFileKind, getFileType, toHumanFileSize } from '@horizon/utils'
+  import {
+    generateRandomPastelColor,
+    getFileKind,
+    getFileType,
+    isMac,
+    toHumanFileSize
+  } from '@horizon/utils'
   import FileIcon from './FileIcon.svelte'
   import { createEventDispatcher, onMount } from 'svelte'
 
   export let resource: Resource
   export let blob: Blob | undefined = undefined
-  export let hideType = false
+  export let preview = true
 
   const dispatch = createEventDispatcher<{ load: void }>()
+
+  const isMacOs = isMac()
 
   $: name = resource?.metadata?.name || 'Unknown File'
   $: kind = getFileKind(resource.type)
   $: type = getFileType(resource.type)
 
-  // const openFile = () => {
-  //     window.open(`file://${resource.path}`, "_blank")
-  // }
+  const openFile = () => {
+    window.api.openResourceLocally({
+      id: resource.id,
+      metadata: resource.metadata,
+      type: resource.type,
+      path: resource.path,
+      deleted: resource.deleted,
+      createdAt: resource.createdAt,
+      updatedAt: resource.updatedAt
+    })
+  }
 
   onMount(() => {
     dispatch('load')
@@ -25,28 +41,24 @@
 </script>
 
 <div class="wrapper">
-  <!-- <div class="background">
-        <div style="height: 100%; width: 100%; background-color: {generateRandomPastelColor(resource.id)}; opacity: 0.5;"></div>
-    </div> -->
+  <div class="background">
+    <div
+      style="height: 100%; width: 100%; background-color: {generateRandomPastelColor(
+        resource.id
+      )}; opacity: 0.75;"
+    ></div>
+  </div>
 
-  <div class="details" class:row={hideType}>
-    <h1 class="title">
-      {name || 'Untitled'}
-    </h1>
+  <div class="details">
+    <div class="icon" style="color: {generateRandomPastelColor(resource.id, 0.2)}">
+      <FileIcon {kind} width="35px" height="35px" />
+      <!-- <Icon name="file" size="25px" /> -->
+    </div>
 
-    <div class="bottom">
-      {#if !hideType}
-        <div class="type-info">
-          <div class="icon">
-            <FileIcon {kind} width="25px" height="25px" />
-            <!-- <Icon name="file" size="25px" /> -->
-          </div>
-
-          <div class="type">
-            {type}
-          </div>
-        </div>
-      {/if}
+    {#if !preview}
+      <h1 class="title">
+        {name || 'Untitled'}
+      </h1>
 
       {#if blob}
         <div class="info">
@@ -54,12 +66,24 @@
             {toHumanFileSize(blob.size)}
           </div>
 
-          <!-- <button on:click={openFile} class="action">
-                      Open
-                  </button> -->
+          -
+
+          <div class="type">
+            {getFileType(resource.type)}
+          </div>
         </div>
       {/if}
-    </div>
+
+      <div class="mt-6 flex items-center justify-center">
+        <button
+          on:click={openFile}
+          class="flex items-center gap-2 px-4 py-3 bg-sky-300/60 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer"
+        >
+          <Icon name="download" size="22px" />
+          {isMacOs ? 'Reveal in System Downloads' : 'Open in File Explorer'}
+        </button>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -67,24 +91,24 @@
   .wrapper {
     position: relative;
     height: 100%;
+    min-height: 200px;
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    cursor: pointer;
   }
 
-  // .background {
-  //     position: absolute;
-  //     top: 0;
-  //     left: 0;
-  //     right: 0;
-  //     bottom: 0;
-  //     background: var(--background);
-  //     z-index: -1;
-  // }
+  .background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--background);
+    z-index: -1;
+  }
 
   .details {
     padding: 1.25rem;
@@ -92,9 +116,11 @@
     border-radius: 0.75rem;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 0.25rem;
     width: 100%;
     max-width: 800px;
+    text-align: center;
 
     &.row {
       flex-direction: row;
@@ -106,6 +132,7 @@
   .info {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
   }
 
@@ -126,15 +153,9 @@
     flex-shrink: 0;
   }
 
+  .size,
   .type {
-    margin: 0;
-    font-size: 1rem;
-    color: var(--color-text-muted);
-    font-weight: 500;
-  }
-
-  .size {
-    font-size: 1rem;
+    font-size: 1.2rem;
     color: var(--color-text-muted);
     overflow: hidden;
     font-weight: 500;
@@ -144,14 +165,14 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     overflow: hidden;
   }
 
   .title {
     margin: 0;
-    font-size: 1.2rem;
-    font-weight: 500;
+    font-size: 1.5rem;
+    font-weight: 600;
     letter-spacing: 0.02rem;
     color: #282f4b;
     flex-grow: 1;
@@ -160,19 +181,4 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
   }
-
-  // .action {
-  //     appearance: none;
-  //     background: none;
-  //     outline: none;
-  //     border: none;
-  //     padding: 0.5rem 1rem;
-  //     border-radius: 0.5rem;
-  //     background: var(--background-menu-muted);
-  //     color: var(--color-menu);
-  //     font-size: 1rem;
-  //     font-weight: 500;
-  //     cursor: pointer;
-  //     margin: 0;
-  // }
 </style>

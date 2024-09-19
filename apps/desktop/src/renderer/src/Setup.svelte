@@ -261,10 +261,10 @@
               If you regularly interact with content in another language, select a
               <strong>Multi-language</strong> option.
             </p>
-            <p class="info text-md">
+            <!-- <p class="info text-md">
               <strong>XL</strong> options understand language better, but are slower and use more of
               your computer's storage.
-            </p>
+            </p> -->
           </div>
 
           <div class="settings-ai-models">
@@ -276,7 +276,7 @@
                 checked
                 bind:group={embeddingModel}
               />
-              <label for="english_small"> <span>English</span></label>
+              <label for="english_small"><span class="text-md">English</span></label>
             </div>
             <div class="radio-wrapper">
               <input
@@ -285,9 +285,9 @@
                 value="multilingual_small"
                 bind:group={embeddingModel}
               />
-              <label for="multilingual_small"><span>Multi-language</span></label>
+              <label for="multilingual_small"><span class="text-md">Multi-language</span></label>
             </div>
-            <div class="radio-wrapper">
+            <!-- <div class="radio-wrapper">
               <input
                 type="radio"
                 id="english_large"
@@ -297,8 +297,8 @@
               <label for="english_large">
                 <span>English XL</span>
               </label>
-            </div>
-            <div class="radio-wrapper">
+            </div> -->
+            <!-- <div class="radio-wrapper">
               <input
                 type="radio"
                 id="multilingual_large"
@@ -308,7 +308,7 @@
               <label for="multilingual_large">
                 <span>Multi-language XL</span>
               </label>
-            </div>
+            </div> -->
           </div>
           <div class="details">
             <p class="info text-md">You will not be able to change this for now.</p>

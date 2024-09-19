@@ -82,7 +82,7 @@ jobs:
           PRODUCT_NAME: Horizon
           SHOULD_NOTARIZE: false
           M_VITE_USE_TMP_DATA_DIR: true
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.architecture }}
           path: |
@@ -94,7 +94,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           path: build/
       - name: Create GitHub Release

@@ -54,6 +54,7 @@
   export let isLoading: Writable<boolean>
   export let error: Writable<WebviewError | null>
   export let url = writable(src)
+  export let webviewReady = writable(false)
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
@@ -61,7 +62,6 @@
   export const isMuted = writable(false)
   export const didFinishLoad = writable(false)
 
-  const PRELOAD_PATH = window.api.webviewPreloadPath
   const ERROR_CODES_TO_IGNORE = [-3] // -3 is ERR_ABORTED
   const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -507,6 +507,7 @@ Made with Deta Surf.`
       Register a window handler to handle creating new tabs from the webview
     */
     webview.addEventListener('dom-ready', (_) => {
+      webviewReady.set(true)
       webviewWebContentsId = webview.getWebContentsId()
 
       if (!newWindowHandlerRegistered) {
@@ -640,7 +641,6 @@ Made with Deta Surf.`
   bind:this={webview}
   {src}
   {partition}
-  preload={`file://${PRELOAD_PATH}`}
   webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=14,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
   allowpopups
   use:HTMLDragZone.action={{}}

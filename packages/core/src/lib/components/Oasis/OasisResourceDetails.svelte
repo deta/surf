@@ -14,6 +14,7 @@
   import { useToasts } from '../../service/toast'
   import { createEventDispatcher } from 'svelte'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
+  import { useTabsManager } from '../../service/tabs'
 
   const log = useLogScope('OasisResourceDetails')
 
@@ -22,7 +23,8 @@
 
   const resourceManager = useResourceManager()
   const toasts = useToasts()
-  const dispatch = createEventDispatcher<{ 'new-tab': BrowserTabNewTabEvent; 'open-url': string }>()
+  const tabsManager = useTabsManager()
+  const dispatch = createEventDispatcher<{ navigate: string; 'created-tab': void }>()
 
   let userContext = resource.metadata?.userContext
   let showAddTag = false
@@ -111,23 +113,25 @@
 
   const handleOpenURL = (e: MouseEvent) => {
     e.preventDefault()
-    dispatch('new-tab', {
-      url: canonicalURL!.href,
+
+    tabsManager.addPageTab(canonicalURL!.href, {
       active: true,
       trigger: CreateTabEventTrigger.OasisItem
     })
+
+    dispatch('created-tab')
   }
 
   const handleOpenSource = (e: MouseEvent) => {
     e.preventDefault()
     showSource = true
-    dispatch('open-url', sourceURL!.href)
+    dispatch('navigate', sourceURL!.href)
   }
 
   const handleOpenCanonical = (e: MouseEvent) => {
     e.preventDefault()
     showSource = false
-    dispatch('open-url', canonicalURL!.href)
+    dispatch('navigate', canonicalURL!.href)
   }
 </script>
 

@@ -21,7 +21,8 @@ import type {
   DownloadRequestMessage,
   DownloadUpdatedMessage,
   DownloadDoneMessage,
-  TelemetryEventTypes
+  TelemetryEventTypes,
+  SFFSResource
 } from '@horizon/types'
 import { getUserConfig } from '../main/config'
 import {
@@ -73,8 +74,6 @@ if (OPENAI_API_KEY) {
 
 const api = {
   tabSwitchingShortcutsDisable: TAB_SWITCHING_SHORTCUTS_DISABLE,
-  webviewDevToolsBtn: !import.meta.env.PROD || !!process.env.WEBVIEW_DEV_TOOLS_BTN,
-  webviewPreloadPath: path.join(__dirname, '../preload/webview.js'),
 
   captureWebContents: () => {
     return IPC_EVENTS_RENDERER.captureWebContents.invoke()
@@ -132,6 +131,10 @@ const api = {
     } catch (error) {
       throw error
     }
+  },
+
+  openResourceLocally: (resource: SFFSResource) => {
+    IPC_EVENTS_RENDERER.openResourceLocally.send(resource)
   },
 
   fetchHTMLFromRemoteURL: async (url: string, opts?: RequestInit) => {

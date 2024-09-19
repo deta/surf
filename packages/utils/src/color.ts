@@ -23,9 +23,9 @@ export const generateRandomHue = (seed?: string) => {
   return hue
 }
 
-export const generateRandomPastelColor = (seed?: string) => {
+export const generateRandomPastelColor = (seed?: string, opacity: number = 0.875) => {
   const hue = generateRandomHue(seed)
-  const pastel = `hsl(${hue}, 100%, 87.5%`
+  const pastel = `hsl(${hue}, 100%, ${opacity * 100}%)`
   return pastel
 }
 

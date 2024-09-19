@@ -1,6 +1,6 @@
 import { get, writable, type Writable } from 'svelte/store'
 
-import { useLogScope, type ScopedLogger, generateID } from '@horizon/utils'
+import { useLogScope, type ScopedLogger, generateID, getFormattedDate } from '@horizon/utils'
 import { SFFS } from './sffs'
 import {
   type AiSFFSQueryResponse,
@@ -108,6 +108,10 @@ export class ResourceTag {
 
   static sourcePublishedAt(value: string) {
     return { name: ResourceTagsBuiltInKeys.SOURCE_PUBLISHED_AT, value: value }
+  }
+
+  static createdForChat(value: boolean = true) {
+    return { name: ResourceTagsBuiltInKeys.CREATED_FOR_CHAT, value: `${value}` }
   }
 }
 
@@ -828,11 +832,16 @@ export class ResourceManager {
     metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {
+    const defaultMetadata = {
+      name: `Untitled ${getFormattedDate(Date.now())}`
+    }
+
+    const fullMetadata = Object.assign(defaultMetadata, metadata)
     const blob = new Blob([content], { type: ResourceTypes.DOCUMENT_SPACE_NOTE })
     return this.createResource(
       ResourceTypes.DOCUMENT_SPACE_NOTE,
       blob,
-      metadata,
+      fullMetadata,
       tags
     ) as Promise<ResourceNote>
   }
@@ -1027,6 +1036,19 @@ export class ResourceManager {
     return await this.sffs.getResourcesViaPrompt(query, sql_query, embedding_query)
   }
 
+  async getResourceData(resourceId: string) {
+    const resource = await this.getResource(resourceId)
+    if (!resource) {
+      return null
+    }
+
+    if (resource instanceof ResourceJSON) {
+      return resource.getParsedData(true)
+    } else {
+      return resource.getData()
+    }
+  }
+
   static SearchTagCanonicalURL(url: string): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url, op: 'eq' }
   }
@@ -1056,6 +1078,10 @@ export class ResourceManager {
 
   static SearchTagHideInEverything(value: boolean = true): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING, value: `${value}`, op: 'eq' }
+  }
+
+  static SearchTagCreatedForChat(value: boolean = true): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.CREATED_FOR_CHAT, value: `${value}`, op: 'eq' }
   }
 
   static provide(telemetry: Telemetry) {

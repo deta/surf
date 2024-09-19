@@ -8,7 +8,16 @@ export interface BaseTab {
   section?: string
   title: string
   icon: string
-  type: 'page' | 'horizon' | 'chat' | 'empty' | 'importer' | 'space' | 'oasis-discovery' | 'history'
+  type:
+    | 'page'
+    | 'horizon'
+    | 'chat'
+    | 'empty'
+    | 'importer'
+    | 'space'
+    | 'oasis-discovery'
+    | 'history'
+    | 'resource'
 
   archived: boolean
   index: number
@@ -65,6 +74,12 @@ export interface TabHistory extends BaseTab {
   type: 'history'
 }
 
+export interface TabResource extends BaseTab {
+  type: 'resource'
+  resourceId: string
+  resourceType: string
+}
+
 export type Tab =
   | TabPage
   | TabChat
@@ -74,7 +89,7 @@ export type Tab =
   | TabSpace
   | TabOasisDiscovery
   | TabHistory
-
+  | TabResource
 export type AIChat = {
   id: string
   messages: AIChatMessage[]
@@ -183,3 +198,15 @@ export type CreateTabOptions = {
 }
 
 export type ControlWindow = 'minimize' | 'toggle-maximize' | 'close'
+
+export type NewTabEvent = {
+  url: string
+  active: boolean
+  trigger?: CreateTabEventTrigger
+}
+
+export type NewResourceTabEvent = {
+  resourceId: string
+  active: boolean
+  trigger?: CreateTabEventTrigger
+}

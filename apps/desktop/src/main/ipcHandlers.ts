@@ -1,10 +1,11 @@
 import { useLogScope } from '@horizon/utils'
 import { app, session } from 'electron'
+import path from 'path'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
 import { getUserConfig, updateUserConfig, updateUserConfigSettings } from './config'
 import { handleDragStart } from './drag'
-import { ElectronAppInfo, RightSidebarTab, UserSettings } from '@horizon/types'
+import { ElectronAppInfo, RightSidebarTab, SFFSResource, UserSettings } from '@horizon/types'
 import { getPlatform } from './utils'
 import { checkForUpdates } from './appUpdates'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
@@ -13,13 +14,14 @@ import { setupHistorySwipeIpcSenders } from './historySwipe'
 
 import { IPC_EVENTS_MAIN, TrackEvent } from '@horizon/core/src/lib/service/ipc/events'
 import { getSetupWindow } from './setupWindow'
+import { openResourceAsFile } from './downloadManager'
 
 const log = useLogScope('Main IPC Handlers')
 // let prompts: EditablePrompt[] = []
 
-export function setupIpc() {
+export function setupIpc(backendRootPath: string) {
   setupHistorySwipeIpcSenders()
-  setupIpcHandlers()
+  setupIpcHandlers(backendRootPath)
 }
 
 // Make sure the sender is one of the main windows (main, settings, setup) to prevent spoofing of messages from other windows (very unlikely but still recommended)
@@ -53,7 +55,7 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
   return true
 }
 
-function setupIpcHandlers() {
+function setupIpcHandlers(backendRootPath: string) {
   IPC_EVENTS_MAIN.setAdblockerState.on(async (event, { partition, state }) => {
     if (!validateIPCSender(event)) return
 
@@ -235,6 +237,17 @@ function setupIpcHandlers() {
     if (!validateIPCSender(event)) return
 
     ipcSenders.updatePrompt(id, content)
+  })
+
+  IPC_EVENTS_MAIN.openResourceLocally.on((event, resource: SFFSResource) => {
+    if (!validateIPCSender(event)) return
+
+    try {
+      const resourcesDirectory = path.join(backendRootPath, 'resources')
+      openResourceAsFile(resource, resourcesDirectory)
+    } catch (error) {
+      log.error('Error opening resource file:', error)
+    }
   })
 }
 

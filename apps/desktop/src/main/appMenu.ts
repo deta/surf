@@ -176,7 +176,7 @@ const template = [
       { label: 'Force Reload App', role: 'forceReload', accelerator: 'CmdOrCtrl+Alt+Shift+R' },
       {
         label: 'Toggle Developer Tools for Surf',
-        accelerator: 'CmdOrCtrl+Shift+I',
+        accelerator: isMac ? 'Cmd+Shift+I' : 'Option+Shift+I',
         role: 'toggleDevTools'
       },
       // { role: 'toggleDevTools' },

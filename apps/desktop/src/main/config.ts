@@ -84,8 +84,7 @@ export const getUserConfig = (path?: string) => {
     storedConfig.settings = {
       embedding_model: 'english_small',
       tabs_orientation: 'vertical',
-      auto_save_resources: true,
-      use_semantic_search: true,
+      use_semantic_search: false,
       show_annotations_in_oasis: false
     }
     setUserConfig(storedConfig as UserConfig)

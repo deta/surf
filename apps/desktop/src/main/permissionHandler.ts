@@ -52,6 +52,10 @@ const handlers: Partial<Record<string, PermissionHandler>> = {
   'window-management': {
     getName: () => 'Window Management',
     getMessage: () => 'This website wants to manage browser windows.'
+  },
+  'persistent-storage': {
+    getName: () => 'Persistent Storage',
+    getMessage: () => 'This website wants to persist its data locally.'
   }
   // TODO: soooooon
   // 'display-capture': {
@@ -112,10 +116,11 @@ const shouldShortCircuit = (permission: string): boolean | null => {
     //  `sensors`, `screen-wake-lock`, `persistent-storage`
     case 'sensors':
     case 'screen-wake-lock':
-    case 'persistent-storage':
+    case 'system-wake-lock':
     case 'idle-detection':
     case 'fullscreen':
     case 'clipboard-sanitized-write':
+    case 'mediaKeySystem':
     case 'pointerLock':
     case 'keyboardLock':
       return true
@@ -123,7 +128,6 @@ const shouldShortCircuit = (permission: string): boolean | null => {
     case 'top-level-storage-access':
     case 'display-capture':
     case 'openExternal':
-    case 'mediaKeySystem':
     case 'midi':
       return false
   }

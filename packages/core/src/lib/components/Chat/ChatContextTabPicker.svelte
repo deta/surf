@@ -2,11 +2,8 @@
   import { Command, createState } from '@horizon/cmdk-sv'
   import { cn } from '../../utils/tailwind'
   import type { Tab } from '../../types'
-  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { createEventDispatcher, onMount } from 'svelte'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
-  import Image from '../Atoms/Image.svelte'
-  import { writable } from 'svelte/store'
   import { tooltip } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
 
@@ -73,12 +70,12 @@
 
 <svelte:window on:mouseup={handleMouseUp} />
 
+<!-- NOTE: NIE id=...!! CMDvK breakt sondt >:( -->
 <Command.Root
   loop
   {state}
   label="chat-add-context-tabs"
   class={cn('bg-sky-100 shadow-xl p-2 border-sky-200 border-2 rounded-xl')}
-  id="chat-add-context-tabs"
 >
   {#if tabItems.length > 0}
     <button
@@ -128,10 +125,10 @@
     {/each}
   </Command.List>
   <Command.Input
+    bind:value={search}
     autofocus
     on:keydown={handleKeyDown}
     class={cn('rounded-lg px-2 py-1 mt-2')}
-    bind:value={search}
   />
 </Command.Root>
 
@@ -143,7 +140,7 @@
     z-index: 99999999;
     top: -0.75rem;
     left: 0;
-    transform: translatey(-100%);
+    transform: translateY(-100%);
     min-width: 30ch;
     max-width: 30ch;
 

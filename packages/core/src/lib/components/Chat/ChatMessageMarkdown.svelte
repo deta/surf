@@ -28,6 +28,7 @@
   import MarkdownRenderer from './MarkdownRenderer.svelte'
   import { writable, type Writable } from 'svelte/store'
 
+  export let id: string = ''
   export let content: string
   export let sources: AIChatMessageSource[] | undefined
   export let showSourcesAtEnd: boolean = false
@@ -224,7 +225,7 @@
       >
         {#each sources as source, idx}
           {#if idx <= 9}
-            <CitationItem>{source.id}</CitationItem>
+            <CitationItem className="!w-full max-w-24">{source.id}</CitationItem>
           {/if}
         {/each}
       </div>
@@ -232,5 +233,5 @@
     <!-- <h3 class="text-2xl font-semibold">Answer</h3> -->
   {/if}
 
-  <MarkdownRenderer bind:element={contentElem} {content} />
+  <MarkdownRenderer bind:element={contentElem} {content} {id} />
 </div>

@@ -27,7 +27,7 @@ export class MetadataExtractor {
     return response.text()
   }
 
-  private createDocumentFromHTML = (html: string) => {
+  private createDocumentFromHTML(html: string) {
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
 
