@@ -227,34 +227,34 @@
         trigger: CreateTabEventTrigger.OasisItem
       })
     }
+  }
 
-    const handleOpenAsFile = () => {
-      if (resource.metadata?.name) {
-        window.api.openResourceLocally({
-          id: resource.id,
-          metadata: resource.metadata,
-          type: resource.type,
-          path: resource.path,
-          deleted: resource.deleted,
-          createdAt: resource.createdAt,
-          updatedAt: resource.updatedAt
-        })
-      } else {
-        alert('Failed to open file')
-      }
+  const handleOpenAsFile = () => {
+    if (resource.metadata?.name) {
+      window.api.openResourceLocally({
+        id: resource.id,
+        metadata: resource.metadata,
+        type: resource.type,
+        path: resource.path,
+        deleted: resource.deleted,
+        createdAt: resource.createdAt,
+        updatedAt: resource.updatedAt
+      })
+    } else {
+      alert('Failed to open file')
     }
+  }
 
-    const handleToggleBlacklisted = () => {
-      resourceBlacklisted = !resourceBlacklisted
-    }
+  const handleToggleBlacklisted = () => {
+    resourceBlacklisted = !resourceBlacklisted
+  }
 
-    const getHostname = (raw: string) => {
-      try {
-        const url = new URL(raw)
-        return url.hostname
-      } catch (error) {
-        return raw
-      }
+  const getHostname = (raw: string) => {
+    try {
+      const url = new URL(raw)
+      return url.hostname
+    } catch (error) {
+      return raw
     }
   }
 </script>
