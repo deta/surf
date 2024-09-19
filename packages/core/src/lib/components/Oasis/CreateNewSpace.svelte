@@ -266,16 +266,6 @@
   }}
 />
 
-<pre class="fixed top-0 z-[100000] bg-black text-white">
-  {#if $previewIDs.length}
-    {JSON.stringify($previewIDs)}
-  {:else if $previewIDs.length === 0}
-    No preview IDs
-  {:else}
-    {JSON.stringify($previewIDs) ?? 'null'}
-  {/if}
-</pre>
-
 <div class="centered-content">
   <div
     class="top-bar fixed top-0 right-0 flex justify-between items-center w-[calc(100%-18rem)] px-4 py-2 bg-white z-50 border-b border-gray-200"

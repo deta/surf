@@ -150,6 +150,7 @@
   const handleClick = async (e: MouseEvent) => {
     // TOOD: @felix replace this with interactive prop
     if (resourcesBlacklistable) {
+      handleBlacklisting()
       return
     }
     if (dragging) {
@@ -197,8 +198,7 @@
     dispatch('remove', resource.id)
   }
 
-  const handleBlacklisting = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
+  const handleBlacklisting = () => {
     resourceBlacklisted = !resourceBlacklisted
 
     if (resourceBlacklisted) {
@@ -257,7 +257,7 @@
   class:isSelected={selected}
   class:background={(isLiveSpaceResource && showSummary && resource.metadata?.userContext) ||
     showSource}
-  style="--id:{resource.id};"
+  style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
   on:dragstart={handleDragStart}
   draggable="true"
 >
@@ -321,6 +321,17 @@
       <FilePreview {resource} on:load={handleLoad} />
       <!-- {:else}
       <div class="text-base">Unknown</div> -->
+    {/if}
+
+    {#if resourcesBlacklistable}
+      <div class="resource-blacklistable" use:hover={isHovered}>
+        <Icon name="check" size="16px" />
+        {#if $isHovered}
+          <div class="whitespace-nowrap ml-2 leading-4" transition:slide={{ axis: 'x' }}>
+            Selected
+          </div>
+        {/if}
+      </div>
     {/if}
 
     {#if showSource}
@@ -411,16 +422,6 @@
           <div class="remove" on:click={handleRemove}>
             <Icon name="close" color="#AAA7B1" />
           </div>
-        </div>
-      {/if}
-
-      {#if resourcesBlacklistable}
-        <div class="remove" on:click={handleBlacklisting}>
-          {#if resourceBlacklisted}
-            <Icon name="minus" color="#AAA7B1" />
-          {:else}
-            <Icon name="eye" color="#AAA7B1" />
-          {/if}
         </div>
       {/if}
 
@@ -671,6 +672,27 @@
     gap: 0.5rem;
     font-size: 0.9rem;
     color: rgb(12 74 110/0.9);
+  }
+
+  .resource-blacklistable {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    background: rgba(0, 123, 255, 0.85);
+    backdrop-filter: blur(4px);
+    box-shadow: 0px 0.425px 0px 0px rgba(0, 83, 172, 0.25);
+    padding: 0.4rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgb(255, 255, 255);
+
+    &.hover {
+      background: rgba(255, 255, 255);
+      color: rgb(12 74 110);
+    }
   }
 
   .resource-source {
