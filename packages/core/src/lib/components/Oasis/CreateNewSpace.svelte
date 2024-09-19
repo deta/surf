@@ -225,15 +225,6 @@
     }
   }
 
-  const handleSliderChange = (event: Event) => {
-    const target = event.target as HTMLInputElement
-    semanticSearchThreshold.set(parseFloat(target.value))
-  }
-
-  const handleSliderRelease = () => {
-    previewAISpace($userPrompt, $semanticSearchThreshold)
-  }
-
   $: isCreateButtonDisabled = $name === '' && $userPrompt === '<p></p>'
 </script>
 
