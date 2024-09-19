@@ -2,7 +2,7 @@ import { get, writable, type Writable } from 'svelte/store'
 import { useLogScope } from '@horizon/utils'
 import type { ResourceManager } from './resources'
 
-import type { Optional, Space, SpaceData } from '../types'
+import type { Optional, Space, SpaceData, SpaceEntryOrigin } from '../types'
 import { getContext, setContext } from 'svelte'
 
 export class OasisService {
@@ -124,9 +124,9 @@ export class OasisService {
     })
   }
 
-  async addResourcesToSpace(spaceId: string, resourceIds: string[]) {
+  async addResourcesToSpace(spaceId: string, resourceIds: string[], origin: SpaceEntryOrigin) {
     this.log.debug('adding resources to space', spaceId, resourceIds)
-    await this.resourceManager.addItemsToSpace(spaceId, resourceIds)
+    await this.resourceManager.addItemsToSpace(spaceId, resourceIds, origin)
 
     this.log.debug('added resources to space, reloading spaces')
     await this.loadSpaces()

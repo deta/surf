@@ -6,7 +6,7 @@
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
   import type { Space, SpaceData } from '../../types'
-  import { ResourceTagsBuiltInKeys, ResourceTypes } from '../../types'
+  import { ResourceTagsBuiltInKeys, ResourceTypes, SpaceEntryOrigin } from '../../types'
   import { useLogScope, hover, tooltip, isModKeyPressed } from '@horizon/utils'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { useOasis } from '../../service/oasis'
@@ -186,7 +186,7 @@
         return
       }
 
-      await oasis.addResourcesToSpace(folder.id, results)
+      await oasis.addResourcesToSpace(folder.id, results, SpaceEntryOrigin.LlmQuery)
       selectedFolder.set(folder.id)
 
       await resourceManager.telemetry.trackRefreshSpaceContent(

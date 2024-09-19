@@ -32,6 +32,14 @@ export interface SpaceSource {
   last_fetched_at: string | null
 }
 
+export const SpaceEntryOrigin = {
+  Blacklisted: 2,
+  ManuallyAdded: 1,
+  LlmQuery: 0
+} as const
+
+export type SpaceEntryOrigin = (typeof SpaceEntryOrigin)[keyof typeof SpaceEntryOrigin]
+
 export interface SpaceEntry {
   id: string
   space_id: string

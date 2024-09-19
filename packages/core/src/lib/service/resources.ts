@@ -23,7 +23,8 @@ import {
   type SpaceEntry,
   type Space,
   type SpaceData,
-  type SpaceSource
+  type SpaceSource,
+  SpaceEntryOrigin
 } from '../types'
 import type { Telemetry } from './telemetry'
 import {
@@ -973,12 +974,12 @@ export class ResourceManager {
     return await this.sffs.deleteSpace(spaceId)
   }
 
-  async addItemsToSpace(space_id: string, resourceIds: string[]) {
+  async addItemsToSpace(space_id: string, resourceIds: string[], origin: SpaceEntryOrigin) {
     const existingItems = await this.getSpaceContents(space_id)
     const existingResourceIds = existingItems.map((item) => item.resource_id)
     const newItems = resourceIds.filter((id) => !existingResourceIds.includes(id))
 
-    return await this.sffs.addItemsToSpace(space_id, newItems)
+    return await this.sffs.addItemsToSpace(space_id, newItems, origin)
   }
 
   async getSpaceContents(space_id: string): Promise<SpaceEntry[]> {

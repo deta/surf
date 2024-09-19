@@ -9,7 +9,7 @@
   import { fly } from 'svelte/transition'
 
   import { useToasts } from '../../service/toast'
-  import type { SpaceData, SpaceSource, TabSpace } from '../../types'
+  import { SpaceEntryOrigin, type SpaceData, type SpaceSource, type TabSpace } from '../../types'
   import type { Writable } from 'svelte/store'
   import type { Space } from '@horizon/core/src/lib/types'
   import { useTelemetry } from '../../service/telemetry'
@@ -123,7 +123,8 @@
         })
       }
 
-      await oasis.addResourcesToSpace(spaceId, resourceIds)
+      // TODO(@felix): make sure resourceIds do not contain the blacklisted ones
+      await oasis.addResourcesToSpace(spaceId, resourceIds, SpaceEntryOrigin.LlmQuery)
 
       await resourceManager.telemetry.trackRefreshSpaceContent(
         RefreshSpaceEventTrigger.RenameSpaceWithAI,

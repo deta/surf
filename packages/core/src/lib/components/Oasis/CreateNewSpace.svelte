@@ -117,7 +117,9 @@
       space: $space,
       processNaturalLanguage: $aiEnabled,
       userPrompt: sanitizedUserPrompt,
-      resourceIds: $previewIDs.length > 0 ? $previewIDs : undefined
+
+      blacklistedResourceIds: undefined,
+      llmFetchedResourceIds: $previewIDs.length > 0 ? $previewIDs : undefined
     })
     dispatch('close-modal')
   }

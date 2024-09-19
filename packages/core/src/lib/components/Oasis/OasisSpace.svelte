@@ -41,6 +41,7 @@
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
+    SpaceEntryOrigin,
     type ResourceDataLink,
     type ResourceDataPost,
     type Space,
@@ -205,6 +206,8 @@
       log.debug('Fetched space:', fetchedSpace)
       space.set(fetchedSpace)
 
+      // TODO(@felix): instead of having one list, entries should be split into
+      // three lists, based on their `manually_added` attribute
       let items = await oasis.getSpaceContents(id)
       log.debug('Loaded space contents:', items)
 
@@ -393,7 +396,7 @@
 
       newlyLoadedResources.update((resources) => [...resources, ...newResults])
 
-      await oasis.addResourcesToSpace(spaceId, resourceIds)
+      await oasis.addResourcesToSpace(spaceId, resourceIds, SpaceEntryOrigin.LlmQuery)
 
       // await loadSpaceContents(spaceId, true)
 
@@ -1135,7 +1138,7 @@
       }
 
       if (spaceId !== 'all') {
-        await oasis.addResourcesToSpace(spaceId, resourceIds)
+        await oasis.addResourcesToSpace(spaceId, resourceIds, SpaceEntryOrigin.ManuallyAdded)
         await loadSpaceContents(spaceId, true)
 
         resourceIds.forEach((id) => {
@@ -1342,7 +1345,14 @@
   }
 
   const handleUpdateExistingSpace = async (e: CustomEvent) => {
-    const { space, name, processNaturalLanguage, userPrompt, resourceIds } = e.detail
+    const {
+      space,
+      name,
+      processNaturalLanguage,
+      userPrompt,
+      blacklistedResourceIds,
+      llmFetchedResourceIds
+    } = e.detail
     if (!space) {
       log.error('No space found')
       return
@@ -1354,8 +1364,15 @@
         smartFilterQuery: processNaturalLanguage ? userPrompt : undefined
       })
 
-      if (resourceIds && resourceIds.length > 0) {
-        await oasis.addResourcesToSpace(space.id, resourceIds)
+      if (blacklistedResourceIds && blacklistedResourceIds.length > 0) {
+        await oasis.addResourcesToSpace(
+          space.id,
+          blacklistedResourceIds,
+          SpaceEntryOrigin.Blacklisted
+        )
+      }
+      if (llmFetchedResourceIds && llmFetchedResourceIds.length > 0) {
+        await oasis.addResourcesToSpace(space.id, llmFetchedResourceIds, SpaceEntryOrigin.LlmQuery)
       }
 
       $space = updatedSpace
