@@ -327,10 +327,11 @@
     items: [
       {
         type: 'action',
+        hidden: tab.type !== 'page',
+        disabled: isBookmarkedByUser || $activeTabId !== tab.id,
         icon: 'leave',
         text: 'Save',
-        action: () => handleBookmark(SaveToOasisEventTrigger.ContextMenu),
-        disabled: isBookmarkedByUser
+        action: () => handleBookmark(SaveToOasisEventTrigger.ContextMenu)
       },
       { type: 'separator' },
 
@@ -375,24 +376,6 @@
         text: tab.pinned ? 'Unpin' : 'Pin',
         action: () => (tab.pinned ? dispatch('unpin', tab.id) : dispatch('pin', tab.id))
       },
-
-      /*{
-        type: 'sub-menu',
-        icon: '',
-        text: 'Add To Space',
-        disabled: true,
-        items: [].map((space) => {
-          return {
-            type: 'action',
-            icon: '',
-            text: space.title,
-            action: () => handleAddSourceToSpace({ detail: space })
-          }
-        })
-      },*/
-      /*{ type: 'action', icon: 'pin', text: 'Copy Link', action: () => {}, disabled: true },
-      { type: 'action', icon: 'reload', text: 'Reload', action: () => {}, disabled: true },
-      { type: 'action', icon: 'copy', text: 'Duplicate', action: () => {}, disabled: true },*/
       {
         type: 'action',
         icon: 'trash',
