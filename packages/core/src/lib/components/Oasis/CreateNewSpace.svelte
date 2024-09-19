@@ -37,6 +37,7 @@
   const fineTuneEnabled = writable(false)
   const isLoading = writable(false)
   const pillContent = writable('')
+  const clickedPill = writable(0)
   const activePillConfig = writable<PromptConfig['pill'] | null>(null)
   let editor: Editor
 
@@ -63,9 +64,15 @@
     }
   ]
 
-  $: if (!$fineTuneEnabled) {
-    aiEnabled.set($userPrompt !== '<p></p>')
+  $: {
+    if ($previewIDs.length > 0) {
+      fineTuneEnabled.set(true)
+    } else {
+      fineTuneEnabled.set(false)
+    }
   }
+
+  $: aiEnabled.set($userPrompt !== '<p></p>')
 
   const newSpace = () => {
     const now = new Date().toISOString()
@@ -109,6 +116,7 @@
   }
 
   const handleTemplatePromptClick = async (template: PromptConfig) => {
+    $clickedPill = $clickedPill + 1
     if (template.pill) {
       userPrompt.set(`${template.prompt} `)
       activePillConfig.set(template.pill)
@@ -283,11 +291,24 @@
       </div>
     </ResourceOverlay>
   {:else}
-    <div class="preview-resources-wrapper">
+    <div
+      class="preview-resources-wrapper"
+      in:fly={{
+        y: 0,
+        x: 0,
+        opacity: 0,
+        delay: 500,
+        duration: 1000
+      }}
+    >
       <OasisResourcesViewSearchResult resources={previewResources} />
     </div>
   {/if}
-  <div class="input-group" class:absolute={$fineTuneEnabled} class:bottom-0={$fineTuneEnabled}>
+  <div
+    class="input-group absolute transition-all duration-300"
+    class:bottom-0={$fineTuneEnabled}
+    class:bottom-4={!$fineTuneEnabled}
+  >
     <div
       class="ai-voodoo bg-white/95 backdrop-blur-md px-12 pt-8 pb-12 mb-16 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
     >
@@ -311,10 +332,12 @@
       {#if $previewIDs.length > 0 || $fineTuneEnabled}
         <div class="flex justify-center -mt-12">
           <button
-            class="fine-tune-button bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+            class={$fineTuneEnabled
+              ? 'fine-tune-button bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50'
+              : 'fine-tune-button bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50'}
             on:click={() => fineTuneEnabled.set(!$fineTuneEnabled)}
           >
-            {$fineTuneEnabled ? 'Done Tuning' : 'Fine Tune Results'}
+            {$fineTuneEnabled ? 'Back' : 'Show Grid View'}
           </button>
         </div>
       {/if}
@@ -334,20 +357,22 @@
               </div>
             </div>
           {:else}
-            <Editor
-              bind:this={editor}
-              content={$userPrompt}
-              on:update={handleEditorUpdate}
-              placeholder="Describe what you want in your space. (optional)"
-              tabindex="1"
-              autofocus={false}
-              on:keydown={(e) => {
-                if (e.key === 'Tab') {
-                  e.stopPropagation()
-                  e.stopImmediatePropagation()
-                }
-              }}
-            />
+            {#key $clickedPill}
+              <Editor
+                bind:this={editor}
+                content={$userPrompt}
+                on:update={handleEditorUpdate}
+                placeholder="Describe what you want in your space. (optional)"
+                tabindex="1"
+                autofocus={false}
+                on:keydown={(e) => {
+                  if (e.key === 'Tab') {
+                    e.stopPropagation()
+                    e.stopImmediatePropagation()
+                  }
+                }}
+              />
+            {/key}
           {/if}
         </div>
       </div>
@@ -387,6 +412,7 @@
     background: #f6faff;
     background: color(display-p3 0.9661 0.9801 1);
     overflow-y: auto;
+    padding-bottom: 12rem;
   }
 
   .preview-resources-wrapper {
