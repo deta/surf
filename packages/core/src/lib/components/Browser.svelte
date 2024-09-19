@@ -1108,7 +1108,7 @@
     try {
       const targetTabs = tabIds
         .map((id) => $tabs.find((t: Tab) => t.id === id))
-        .filter(Boolean) as Tab[]
+        .filter((t) => t !== undefined) as Tab[]
 
       // Create a new space
       const newSpace = await oasis.createSpace({
@@ -1121,31 +1121,58 @@
       })
 
       // Create resources from selected tabs and add them to the space
-      const resourceIds = await Promise.all(
-        targetTabs.map(async (tab) => {
-          if (tab.type === 'page') {
-            if (tab.resourceBookmark) {
-              return tab.resourceBookmark
-            } else {
-              const newResources = await createResourcesFromMediaItems(
-                resourceManager,
-                [
-                  {
-                    type: 'url',
-                    data: new URL(tab.currentLocation || tab.initialLocation),
-                    metadata: {}
-                  }
-                ],
-                ''
+      const resourceIds = []
+      for (const tab of targetTabs) {
+        if (tab.type === 'page') {
+          if (tab.resourceBookmark) {
+            const existingResource = await resourceManager.getResource(tab.resourceBookmark)
+            const isDeleted =
+              existingResource?.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
+                ?.value === 'true'
+
+            if (existingResource && !isDeleted) {
+              const existingCanonical = (existingResource?.tags ?? []).find(
+                (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
               )
-              return newResources[0].id
+
+              log.debug('existing canonical', existingCanonical)
+
+              if (existingCanonical?.value === tab.currentLocation) {
+                log.debug('already bookmarked, removing silent tag', tab.resourceBookmark)
+
+                const isSilent = (existingResource.tags ?? []).some(
+                  (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+                )
+
+                if (isSilent) {
+                  // mark resource as not silent since the user is explicitely bookmarking it
+                  await resourceManager.deleteResourceTag(
+                    tab.resourceBookmark,
+                    ResourceTagsBuiltInKeys.SILENT
+                  )
+                }
+              }
             }
-          } else if (tab.type === 'resource') {
-            return (tab as TabResource).resourceId
+
+            resourceIds.push(tab.resourceBookmark)
+          } else {
+            const newResources = await createResourcesFromMediaItems(
+              resourceManager,
+              [
+                {
+                  type: 'url',
+                  data: new URL(tab.currentLocation || tab.initialLocation),
+                  metadata: {}
+                }
+              ],
+              ''
+            )
+            resourceIds.push(newResources[0].id)
           }
-          return null
-        })
-      )
+        } else if (tab.type === 'resource') {
+          resourceIds.push((tab as TabResource).resourceId)
+        }
+      }
 
       const validResourceIds = resourceIds.filter((id) => id !== null) as string[]
       await oasis.addResourcesToSpace(newSpace.id, validResourceIds)
