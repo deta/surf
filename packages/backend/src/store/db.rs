@@ -85,7 +85,7 @@ pub struct VectorSearchResult {
 impl Database {
     pub fn new(db_path: &str, run_migrations: bool) -> BackendResult<Database> {
         let mut conn = Connection::open(db_path)?;
-        let mut read_only_conn =
+        let read_only_conn =
             Connection::open_with_flags(db_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
 
         conn.busy_timeout(std::time::Duration::from_secs(60))?;
