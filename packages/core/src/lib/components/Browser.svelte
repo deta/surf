@@ -88,7 +88,8 @@
     type ResourceDataAnnotation,
     type WebViewEventAnnotation,
     type RightSidebarTab,
-    type Download
+    type Download,
+    SelectTabEventAction
   } from '@horizon/types'
   import { scrollToTextCode } from '../constants/inline'
   import { SFFS } from '../service/sffs'
@@ -782,17 +783,22 @@
     }
 
     tick().then(() => {
-      telemetry.trackPageChatContextUpdate(
-        PageChatUpdateContextEventAction.MultiSelect,
-        $magicTabs.length,
-        numChanged
-      )
+      if ($activeTabMagic.showSidebar) {
+        telemetry.trackPageChatContextUpdate(
+          PageChatUpdateContextEventAction.MultiSelect,
+          $magicTabs.length,
+          numChanged
+        )
+      } else {
+        telemetry.trackSelectTab(SelectTabEventAction.MultiSelect, $selectedTabs.size, numChanged)
+      }
     })
   }
 
   const handlePassiveSelect = (event: CustomEvent<string>) => {
     const tabId = event.detail
     let addedTabToMagic: Tab | null = null
+    let addedTabToSelection = false
 
     selectedTabs.update((t) => {
       const newSelection = new Set(t)
@@ -801,8 +807,10 @@
       const existingItem = Array.from(newSelection).find((item) => item.id === tabId)
       if (existingItem) {
         newSelection.delete(existingItem)
+        addedTabToSelection = false
       } else {
         newSelection.add({ id: tabId, userSelected: true })
+        addedTabToSelection = true
       }
 
       if (isMagicMode) {
@@ -831,15 +839,22 @@
     }
 
     tick().then(() => {
-      if (addedTabToMagic) {
-        telemetry.trackPageChatContextUpdate(
-          PageChatUpdateContextEventAction.Add,
-          $magicTabs.length
-        )
+      if ($activeTabMagic.showSidebar) {
+        if (addedTabToMagic) {
+          telemetry.trackPageChatContextUpdate(
+            PageChatUpdateContextEventAction.Add,
+            $magicTabs.length
+          )
+        } else {
+          telemetry.trackPageChatContextUpdate(
+            PageChatUpdateContextEventAction.Remove,
+            $magicTabs.length
+          )
+        }
       } else {
-        telemetry.trackPageChatContextUpdate(
-          PageChatUpdateContextEventAction.Remove,
-          $magicTabs.length
+        telemetry.trackSelectTab(
+          addedTabToSelection ? SelectTabEventAction.Add : SelectTabEventAction.Remove,
+          $selectedTabs.size
         )
       }
     })
