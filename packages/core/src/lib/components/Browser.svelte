@@ -1104,73 +1104,62 @@
   }
 
   const createSpaceWithTabs = async (tabIds: string[]) => {
-    const tabs = tabIds
-      .map((id) => get(tabsManager.tabs).find((t: Tab) => t.id === id))
-      .filter(Boolean) as Tab[]
+    const toast = toasts.loading('Creating space with tabs..')
+    try {
+      const targetTabs = tabIds
+        .map((id) => $tabs.find((t: Tab) => t.id === id))
+        .filter(Boolean) as Tab[]
 
-    // Create a new space
-    const newSpace = await oasis.createSpace({
-      folderName: 'New Space',
-      showInSidebar: true,
-      colors: ['#FFD700', '#FF8C00'], // Default colors, you can randomize this
-      sources: [],
-      sortBy: 'created_at',
-      liveModeEnabled: false
-    })
-
-    // Create resources from selected tabs and add them to the space
-    const resourceIds = await Promise.all(
-      tabs.map(async (tab) => {
-        log.error('adding resources to space', selectedTabs)
-        if (tab.type === 'page') {
-          log.error('tab is a page', tab)
-          if (tab.resourceBookmark) {
-            log.error('tab has a resource bookmark', tab.resourceBookmark)
-            return tab.resourceBookmark
-          } else {
-            log.error('tab does not have a resource bookmark', tab)
-            const newResources = await createResourcesFromMediaItems(
-              resourceManager,
-              [
-                {
-                  type: 'url',
-                  data: new URL(tab.currentLocation || tab.initialLocation),
-                  metadata: {}
-                }
-              ],
-              ''
-            )
-            log.error('new resources', newResources)
-            return newResources[0].id
-          }
-        }
-        log.error('tab is not a page', tab)
-        return null
+      // Create a new space
+      const newSpace = await oasis.createSpace({
+        folderName: 'New Space',
+        showInSidebar: true,
+        colors: ['#FFD700', '#FF8C00'], // Default colors, you can randomize this
+        sources: [],
+        sortBy: 'created_at',
+        liveModeEnabled: false
       })
-    )
 
-    const validResourceIds = resourceIds.filter((id) => id !== null) as string[]
-    await oasis.addResourcesToSpace(newSpace.id, validResourceIds)
+      // Create resources from selected tabs and add them to the space
+      const resourceIds = await Promise.all(
+        targetTabs.map(async (tab) => {
+          if (tab.type === 'page') {
+            if (tab.resourceBookmark) {
+              return tab.resourceBookmark
+            } else {
+              const newResources = await createResourcesFromMediaItems(
+                resourceManager,
+                [
+                  {
+                    type: 'url',
+                    data: new URL(tab.currentLocation || tab.initialLocation),
+                    metadata: {}
+                  }
+                ],
+                ''
+              )
+              return newResources[0].id
+            }
+          } else {
+            // TODO: (maxu): Handle other tab types -> resource ids
+          }
+          return null
+        })
+      )
 
-    // Create a new tab for the space and make it active
-    await tabsManager.create<TabSpace>(
-      {
-        spaceId: newSpace.id,
-        title: newSpace.name.folderName,
-        colors: ['#FFD700', '#FF8C00'],
-        type: 'space',
-        icon: ''
-      },
-      {
-        active: true,
-        placeAtEnd: true,
-        trigger: CreateTabEventTrigger.ContextMenu
-      }
-    )
+      const validResourceIds = resourceIds.filter((id) => id !== null) as string[]
+      await oasis.addResourcesToSpace(newSpace.id, validResourceIds)
 
-    for (const tab of tabs) tabsManager.delete(tab.id)
+      await tabsManager.addSpaceTab(newSpace, { active: true })
 
-    $selectedTabs = new Set()
+      $selectedTabs = new Set()
+      for (const tab of targetTabs) tabsManager.delete(tab.id, DeleteTabEventTrigger.ContextMenu)
+
+      toast.success('Space created!')
+    } catch (e) {
+      log.error('Failed to create space with tabs', e)
+      toast.error('Failed to create space with tabs!')
+    }
   }
 
   function handleRag(e: CustomEvent<string>) {
@@ -3547,7 +3536,7 @@
                     action: () => {
                       // selectedTabs has two types of ids: string and { id: string, userSelected: boolean }
                       // we need to filter out the ones that are not userSelected
-                      const tabIds = get(tabsManager.tabs)
+                      const tabIds = $tabs
                         .filter((tab) =>
                           Array.from($selectedTabs).some((item) => item.id === tab.id)
                         )
