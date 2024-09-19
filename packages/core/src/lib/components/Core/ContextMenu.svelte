@@ -11,6 +11,7 @@
 
   export interface CtxItemBase {
     type: 'separator' | 'action' | 'sub-menu'
+    hidden?: boolean
   }
   export interface CtxItemSeparator extends CtxItemBase {
     type: 'separator'
@@ -112,7 +113,7 @@
     node: HTMLElement,
     props: {
       canOpen?: boolean
-      items: (CtxItem | undefined)[]
+      items: CtxItem[]
     }
   ): ActionReturn<any, any> {
     node.contextMenuItems = props.items.filter((item) => item !== undefined) as CtxItem[]

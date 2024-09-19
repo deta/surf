@@ -329,49 +329,41 @@
         action: () => handleBookmark(SaveToOasisEventTrigger.ContextMenu),
         disabled: isBookmarkedByUser
       },
-      isMagicActive
-        ? undefined
-        : {
-            type: 'action',
-            icon: 'chat',
-            text: 'Open Chat',
-            action: () => {
-              dispatch('select', tab.id)
-              dispatch('chat-with-tab', tab.id)
-            }
-          },
+      { type: 'separator' },
+
+      {
+        type: 'action',
+        hidden: isMagicActive,
+        icon: 'chat',
+        text: 'Open Chat',
+        action: () => {
+          dispatch('select', tab.id)
+          dispatch('chat-with-tab', tab.id)
+        }
+      },
       {
         type: 'action',
         icon: 'news',
         text: 'Create Live Space',
         action: () => handleCreateLiveSpace()
       },
+
+      {
+        type: 'action',
+        hidden: !isMagicActive,
+        icon: '',
+        text: `${tab.magic ? 'Remove from' : 'Add to'} Chat`,
+        action: () =>
+          tab.magic ? dispatch('exclude-tab', tab.id) : dispatch('include-tab', tab.id)
+      },
+
       { type: 'separator' },
-
-      isMagicActive
-        ? tab.magic
-          ? {
-              type: 'action',
-              icon: '',
-              text: 'Remove from Chat',
-              action: () => dispatch('exclude-tab', tab.id)
-            }
-          : {
-              type: 'action',
-              icon: '',
-              text: 'Add to Chat',
-              action: () => dispatch('include-tab', tab.id)
-            }
-        : undefined,
-
-      tab.pinned
-        ? {
-            type: 'action',
-            icon: 'pinned-off',
-            text: 'Unpin',
-            action: () => dispatch('unpin', tab.id)
-          }
-        : { type: 'action', icon: 'pin', text: 'Pin', action: () => dispatch('pin', tab.id) },
+      {
+        type: 'action',
+        icon: tab.pinned ? `pinned-off` : `pin`,
+        text: tab.pinned ? 'Unpin' : 'Pin',
+        action: () => (tab.pinned ? dispatch('unpin', tab.id) : dispatch('pin', tab.id))
+      },
 
       /*{
         type: 'sub-menu',
@@ -390,7 +382,6 @@
       /*{ type: 'action', icon: 'pin', text: 'Copy Link', action: () => {}, disabled: true },
       { type: 'action', icon: 'reload', text: 'Reload', action: () => {}, disabled: true },
       { type: 'action', icon: 'copy', text: 'Duplicate', action: () => {}, disabled: true },*/
-      { type: 'separator' },
       {
         type: 'action',
         icon: 'trash',

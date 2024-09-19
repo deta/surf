@@ -3293,6 +3293,19 @@
               { type: 'separator' },
               {
                 type: 'action',
+                icon: 'sidebar.left',
+                text: `${showLeftSidebar ? 'Hide' : 'Show'} ${horizontalTabs ? 'Tabs' : 'Sidebar'}`,
+                action: () => handleLeftSidebarChange(!showLeftSidebar)
+              },
+              {
+                type: 'action',
+                icon: '',
+                text: 'Toggle Tabs Orientation',
+                action: () => handleToggleHorizontalTabs()
+              },
+              { type: 'separator' },
+              {
+                type: 'action',
                 icon: 'trash',
                 text: 'Close all unpinned',
                 kind: 'danger',
@@ -3444,7 +3457,17 @@
                 items: [
                   { type: 'action', icon: '', text: 'Create Space' },
                   { type: 'separator' },
-                  { type: 'action', icon: 'trash', text: 'Archive Tabs', kind: 'danger' }
+                  {
+                    type: 'action',
+                    icon: 'trash',
+                    text: 'Archive Tabs',
+                    kind: 'danger',
+                    action: () => {
+                      for (const tab of $selectedTabs) {
+                        tabsManager.delete(tab.id, DeleteTabEventTrigger.ContextMenu)
+                      }
+                    }
+                  }
                 ]
               }}
             >

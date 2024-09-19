@@ -14,7 +14,7 @@
     : ''}
 >
   {#each items as item, i}
-    {#if item !== undefined}
+    {#if item !== undefined && item.hidden !== true}
       {#if item.type === 'separator'}
         <hr />
       {:else if item.type === 'action'}
