@@ -129,6 +129,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_UPDATES_BUCKET_NAME: ${{ secrets.S3_UPDATES_BUCKET_NAME }}
           S3_UPDATES_BUCKET_REGION: ${{ secrets.S3_UPDATES_BUCKET_REGION }}
+          M_VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_SURF_PROD }}
+          R_VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_SURF_PROD }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       - uses: actions/upload-artifact@v4
         with:

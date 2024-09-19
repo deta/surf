@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly R_VITE_APP_VERSION?: string
   readonly R_VITE_TELEMETRY_API_KEY?: string
   readonly R_VITE_CHEATSHEET_URL?: string
+  readonly R_VITE_SENTRY_DSN?: string
 }
 
 interface ImportMeta {
