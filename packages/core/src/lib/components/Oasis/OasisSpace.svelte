@@ -211,6 +211,8 @@
       let items = await oasis.getSpaceContents(id)
       log.debug('Loaded space contents:', items)
 
+      items = items.filter((item) => item.manually_added !== SpaceEntryOrigin.Blacklisted)
+
       searchValue.set('')
       searchResults.set([])
 
