@@ -282,8 +282,10 @@
     resourceDetailsModalSelected.set(null)
   }
 
-  const handleDeleteTab = async (e: CustomEvent<string>) => {
-    await tabsManager.delete(e.detail, DeleteTabEventTrigger.Click)
+  const handleDeleteTab = async (
+    e: CustomEvent<{ tabId: string; trigger: DeleteTabEventTrigger }>
+  ) => {
+    await tabsManager.delete(e.detail.tabId, e.detail.trigger)
   }
 
   const handeCreateResourceFromOasis = async (e: CustomEvent<string>) => {
@@ -3440,7 +3442,7 @@
               use:contextMenu={{
                 canOpen: $selectedTabs.size > 1,
                 items: [
-                  { type: 'action', icon: 'leave', text: 'Group Tabs' },
+                  { type: 'action', icon: '', text: 'Create Space' },
                   { type: 'separator' },
                   { type: 'action', icon: 'trash', text: 'Archive Tabs', kind: 'danger' }
                 ]
@@ -3487,7 +3489,7 @@
                         on:delete-tab={handleDeleteTab}
                         on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
-                        on:bookmark={() => handleBookmark()}
+                        on:bookmark={(e) => handleBookmark(false, e.detail.trigger)}
                         on:create-live-space={handleCreateLiveSpace}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
@@ -3577,7 +3579,7 @@
                         on:delete-tab={handleDeleteTab}
                         on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
-                        on:bookmark={() => handleBookmark()}
+                        on:bookmark={(e) => handleBookmark(false, e.detail.trigger)}
                         on:create-live-space={handleCreateLiveSpace}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}

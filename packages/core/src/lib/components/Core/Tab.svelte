@@ -16,6 +16,7 @@
   import { contextMenu } from './ContextMenu.svelte'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { useTabsManager } from '../../service/tabs'
+  import { DeleteTabEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
 
   const log = useLogScope('Browser Tab')
   const tabsManager = useTabsManager()
@@ -64,9 +65,9 @@
     'multi-select': string
     'passive-select': string
     'remove-from-sidebar': string
-    'delete-tab': string
+    'delete-tab': { tabId: string; trigger: DeleteTabEventTrigger }
     'input-enter': string
-    bookmark: void
+    bookmark: { trigger: SaveToOasisEventTrigger }
     pin: string
     unpin: string
     'save-resource-in-space': Space
@@ -176,8 +177,8 @@
     dispatch('remove-from-sidebar', tab.id)
   }
 
-  const handleArchive = () => {
-    dispatch('delete-tab', tab.id)
+  const handleArchive = (trigger?: DeleteTabEventTrigger = DeleteTabEventTrigger.Click) => {
+    dispatch('delete-tab', { tabId: tab.id, trigger })
   }
 
   const handleInputFocus = () => {
@@ -217,9 +218,9 @@
     }
   }
 
-  const handleBookmark = () => {
+  const handleBookmark = (trigger?: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click) => {
     saveToSpacePopoverOpened.set(false)
-    dispatch('bookmark')
+    dispatch('bookmark', { trigger })
   }
 
   const handleCreateLiveSpace = () => {
@@ -325,7 +326,7 @@
         type: 'action',
         icon: 'leave',
         text: 'Save',
-        action: () => handleBookmark(),
+        action: () => handleBookmark(SaveToOasisEventTrigger.ContextMenu),
         disabled: isBookmarkedByUser
       },
       isMagicActive
@@ -352,13 +353,13 @@
           ? {
               type: 'action',
               icon: '',
-              text: 'Remove from Chat context',
+              text: 'Remove from Chat',
               action: () => dispatch('exclude-tab', tab.id)
             }
           : {
               type: 'action',
               icon: '',
-              text: 'Add to Chat context',
+              text: 'Add to Chat',
               action: () => dispatch('include-tab', tab.id)
             }
         : undefined,
@@ -395,7 +396,7 @@
         icon: 'trash',
         text: 'Close',
         kind: 'danger',
-        action: () => handleArchive()
+        action: () => handleArchive(DeleteTabEventTrigger.ContextMenu)
       }
     ]
   }}
