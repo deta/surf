@@ -39,6 +39,7 @@
   const pillContent = writable('')
   const clickedPill = writable(0)
   const activePillConfig = writable<PromptConfig['pill'] | null>(null)
+  const semanticSearchThreshold = writable(0.4)
   let editor: Editor
 
   const log = useLogScope('OasisSpace')
@@ -104,9 +105,10 @@
 
   const handleSubmit = () => {
     const sanitizedUserPrompt = $userPrompt.replace(/<\/?[^>]+(>|$)/g, '')
+    const spaceName = $name || sanitizedUserPrompt
 
     dispatch('update-existing-space', {
-      name: $name,
+      name: spaceName,
       space: $space,
       processNaturalLanguage: $aiEnabled,
       userPrompt: sanitizedUserPrompt,
@@ -133,12 +135,20 @@
     await previewAISpace($userPrompt)
   }
 
-  const previewAISpace = async (userPrompt: string) => {
+  const previewAISpace = async (userPrompt: string, semanticThreshold?: number) => {
     isLoading.set(true)
     try {
       log.debug('Requesting preview with prompt', userPrompt)
 
-      const response = await resourceManager.getResourcesViaPrompt(userPrompt)
+      const options: {
+        embedding_query?: string
+        embedding_distance_threshold?: number
+      } = {
+        embedding_query: userPrompt,
+        embedding_distance_threshold: semanticThreshold
+      }
+
+      const response = await resourceManager.getResourcesViaPrompt(userPrompt, options)
 
       log.debug(`Preview response`, response)
 
@@ -205,6 +215,17 @@
       debouncedPreviewAISpace(`${activePrompt.prompt} ${$pillContent}`)
     }
   }
+
+  const handleSliderChange = (event: Event) => {
+    const target = event.target as HTMLInputElement
+    semanticSearchThreshold.set(parseFloat(target.value))
+  }
+
+  const handleSliderRelease = () => {
+    previewAISpace($userPrompt, $semanticSearchThreshold)
+  }
+
+  $: isCreateButtonDisabled = $name === '' && $userPrompt === '<p></p>'
 </script>
 
 <svelte:window
@@ -212,7 +233,7 @@
     if (e.key === 'Escape') {
       handleAbortSpaceCreation()
     } else if (e.key === 'Enter') {
-      if ($name.length > 0) {
+      if ($name.length > 0 || $userPrompt !== '<p></p>') {
         handleSubmit()
       }
     } else if (e.key === 'Tab') {
@@ -255,8 +276,8 @@
       >
       <button
         on:click={handleSubmit}
-        class="create-button px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors"
-        >Create</button
+        class="create-button px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:hover:bg-gray-400"
+        disabled={isCreateButtonDisabled}>Create</button
       >
     </div>
   </div>
@@ -376,6 +397,37 @@
           {/if}
         </div>
       </div>
+
+      {#if $fineTuneEnabled}
+        <div class="semantic-search-threshold-slider">
+          <label
+            for="semantic-search-threshold"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Semantic Search Threshold
+          </label>
+          <input
+            type="range"
+            id="semantic-search-threshold"
+            name="semantic-search-threshold"
+            min="0"
+            max="1"
+            step="0.01"
+            on:change={() => {
+              previewAISpace($userPrompt, $semanticSearchThreshold)
+            }}
+            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          />
+          <div class="flex justify-between text-xs text-gray-600 mt-1">
+            <span>0</span>
+            <span>0.5</span>
+            <span>1</span>
+          </div>
+          <p class="text-sm text-gray-600 mt-2">
+            Current threshold: {$semanticSearchThreshold.toFixed(2)}
+          </p>
+        </div>
+      {/if}
       {#if !$fineTuneEnabled}
         <div class="template-prompts">
           <div class="prompt-pills mt-8 mb-4">
@@ -551,7 +603,6 @@
     border: none;
     border-radius: 12px;
     cursor: pointer;
-    transition: background-color 0.3s;
   }
 
   .cancel-button {
@@ -565,7 +616,6 @@
   }
 
   .create-button {
-    background-color: #47b1f3;
     color: #fff;
   }
 
