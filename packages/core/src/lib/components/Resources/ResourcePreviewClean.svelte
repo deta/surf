@@ -253,7 +253,7 @@
       {
         type: 'action',
         icon: '',
-        text: `${true ? 'Reveal in Finder' : 'Open in Explorer'}`,
+        text: `${navigator.platform.startsWith('Mac') ? 'Reveal in Finder' : 'Open in Explorer'}`,
         action: () => handleOpenAsFile()
       },
       { type: 'separator' },
