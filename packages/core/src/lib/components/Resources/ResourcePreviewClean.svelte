@@ -247,14 +247,14 @@
         type: 'action',
         icon: 'eye',
         text: 'Open in Mini Browser',
-        action: () => handleOpenAsNewTab()
+        action: () => dispatch('open', resource.id)
       },
       { type: 'separator' },
       {
         type: 'action',
         icon: '',
         text: `${true ? 'Reveal in Finder' : 'Open in Explorer'}`,
-        action: () => handleOpenAsNewTab()
+        action: () => handleOpenAsFile()
       },
       { type: 'separator' },
       {

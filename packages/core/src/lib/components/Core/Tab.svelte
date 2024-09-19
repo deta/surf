@@ -356,6 +356,15 @@
         action: () =>
           tab.magic ? dispatch('exclude-tab', tab.id) : dispatch('include-tab', tab.id)
       },
+      {
+        type: 'action',
+        hidden: isMagicActive,
+        icon: 'link',
+        text: 'Copy URL',
+        action: () => {
+          if (url) navigator.clipboard.writeText(url)
+        }
+      },
 
       { type: 'separator' },
       {
