@@ -209,7 +209,7 @@
   }
 
   const handleDrop = async (drag: DragculaDragEvent) => {
-    dispatch('Drop', { drag, spaceId: (tab as TabSpace).spaceId })
+    dispatch('Drop', { drag, spaceId: folder.id })
   }
 
   const handleColorChange = async (event: CustomEvent<[string, string]>) => {

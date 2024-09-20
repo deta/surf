@@ -3132,7 +3132,7 @@
 
   const handleDropOnSpaceTab = async (drag: DragculaDragEvent, spaceId: string) => {
     log.warn('DROP ON SPACE TAB', spaceId, drag)
-    if (drag.item !== null) drag.item.dragEffect = 'copy'
+    if (drag.item !== null && drag.item !== undefined) drag.item.dragEffect = 'copy'
 
     const toast = toasts.loading(
       spaceId === 'all'
@@ -3241,9 +3241,10 @@
             })
           )
         }
-      } catch {
-        drag.abort()
+      } catch (e) {
         toast.error('Failed to add resources to space!')
+        console.error(e)
+        if (drag?.abort) drag.abort()
         return
       }
     }
@@ -3251,7 +3252,7 @@
     drag.continue()
     log.warn('ADDING resources to spaceid', spaceId, resourceIds)
     if (spaceId !== 'all') {
-      await oasis.addResourcesToSpace(spaceId, resourceIds)
+      await oasis.addResourcesToSpace(spaceId, resourceIds, SpaceEntryOrigin.ManuallyAdded)
       //await loadSpaceContents(spaceId)
     } else {
       //await loadEverything()
@@ -3962,7 +3963,7 @@
           on:open-space={handleCreateTabForSpace}
           on:create-chat={handleCreateChatWithQuery}
           on:create-note={handleCreateNote}
-          on:Drop={handleDropOnSpaceTab}
+          on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
           on:zoom={() => {
             $activeBrowserTab?.zoomIn()
           }}
