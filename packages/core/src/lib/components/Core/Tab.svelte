@@ -500,7 +500,7 @@
 
     {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || isActive) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
-        {#if tab.type === 'page' && isActive && showLiveSpaceButton}
+        <!-- {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
             <button
               slot="trigger"
@@ -540,7 +540,7 @@
               >
             </div>
           </CustomPopover>
-        {/if}
+        {/if} -->
 
         {#if tab.type === 'page' && isActive}
           {#key isBookmarkedByUser}

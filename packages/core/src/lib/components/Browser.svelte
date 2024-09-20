@@ -38,7 +38,7 @@
     createResourceManager
   } from '../service/resources'
 
-  import { type Space, type SpaceSource } from '../types'
+  import { SpaceEntryOrigin, type Space, type SpaceSource } from '../types'
 
   import BrowserTab, { type BrowserTabNewTabEvent } from './Browser/BrowserTab.svelte'
   import BrowserHomescreen from './Browser/BrowserHomescreen.svelte'
@@ -1785,7 +1785,11 @@
 
       if (resource) {
         log.debug('will add item', resource.id, 'to space', e.detail.id)
-        await resourceManager.addItemsToSpace(e.detail.id, [resource.id])
+        await resourceManager.addItemsToSpace(
+          e.detail.id,
+          [resource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
 
         // new resources are already tracked in the bookmarking function
         await telemetry.trackAddResourceToSpace(
@@ -2524,7 +2528,8 @@
     if (resourceItems.length > 0) {
       await resourceManager.addItemsToSpace(
         tab.spaceId,
-        resourceItems.map((r) => r.data as string)
+        resourceItems.map((r) => r.data as string),
+        SpaceEntryOrigin.ManuallyAdded
       )
       log.debug(`Resources dropped into folder ${tab.title}`)
 
