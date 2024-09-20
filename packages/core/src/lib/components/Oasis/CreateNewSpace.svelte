@@ -42,6 +42,7 @@
   const previewResources = writable<any[]>([])
   const fineTuneEnabled = writable(false)
   const isLoading = writable(false)
+  const loadingIndex = writable(0)
   const pillContent = writable('')
   const clickedPill = writable(0)
   const activePillConfig = writable<PromptConfig['pill'] | null>(null)
@@ -198,6 +199,7 @@
       previewIDs.set([])
       log.error('Failed to create previews with AI', err)
     } finally {
+      loadingIndex.set($loadingIndex + 1)
       isLoading.set(false)
       await tick()
     }
@@ -333,7 +335,7 @@
       </div>
     </ResourceOverlay>
   {:else}
-    {#key $isLoading && $previewIDs}
+    {#key $loadingIndex}
       <div
         class="preview-resources-wrapper"
         in:fly={{
@@ -358,7 +360,7 @@
     {/key}
   {/if}
   <div
-    class="input-group absolute transition-all duration-300"
+    class="input-group absolute transition-all duration-300 z-20"
     class:bottom-0={$fineTuneEnabled}
     class:bottom-4={!$fineTuneEnabled}
   >
@@ -413,7 +415,7 @@
           </button>
         </div>
       {/if}
-      <div class="input-wrapper">
+      <div class="input-wrapper z-20">
         <div class="folder-rules">
           {#if $activePillConfig}
             <div class="prompt-with-pill">
@@ -502,7 +504,7 @@
   </div>
   {#if $fineTuneEnabled && $previewIDs.length === 0}
     <div
-      class="empty-state-container flex flex-col items-center justify-center h-full absolute inset-0 pointer-events-none"
+      class="empty-state-container flex flex-col items-center justify-center h-full absolute inset-0 pointer-events-none z-10 bg-gray-100"
     >
       <div class="empty-state-icon mb-6">
         <Icon name="sparkles.fill" size="64px" color="#e5e5e5" />
