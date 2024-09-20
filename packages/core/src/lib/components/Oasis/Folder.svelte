@@ -234,9 +234,20 @@
     if (e.code === 'Space' && !e.shiftKey) {
       e.preventDefault()
       folderDetails.folderName = value + ' '
+    } else if (e.code === 'Enter') {
+      e.preventDefault()
+      if ($editMode) {
+        dispatch('update-data', { folderName: value })
+        editMode.set(false)
+      } else {
+        editMode.set(true)
+      }
     } else if (e.code === 'Enter' && e.shiftKey) {
       e.preventDefault()
       createFolderWithAI(value)
+    } else if (e.code === 'Escape') {
+      e.preventDefault()
+      editMode.set(false)
     }
   }
 
@@ -305,6 +316,7 @@
   <div
     class="folder {selected ? 'bg-sky-100' : 'hover:bg-sky-50'}"
     on:click={$editMode ? null : handleSpaceSelect}
+    on:dblclick={() => editMode.set(true)}
     aria-hidden="true"
     use:hover={hovered}
     bind:this={previewContainer}
@@ -393,17 +405,6 @@
             use:tooltip={{ text: 'Delete Space', position: 'left' }}
           >
             <Icon name="trash" size="16px" />
-          </button>
-
-          <button
-            on:click|stopPropagation={() => {
-              editMode.set(false)
-              console.log('ddd-shush')
-            }}
-            class="close"
-            use:tooltip={{ text: 'Back', position: 'left' }}
-          >
-            <Icon name="check" size="16px" />
           </button>
         </div>
       {/if}
