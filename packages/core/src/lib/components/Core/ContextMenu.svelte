@@ -200,9 +200,7 @@
   }}
   autofocus
 >
-  <form method="dialog" on:submit={() => closeContextMenu()}>
-    <ContextMenuItems {items} />
-  </form>
+  <ContextMenuItems {items} />
 </dialog>
 
 <style lang="scss">
