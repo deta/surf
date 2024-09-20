@@ -78,6 +78,11 @@ export interface InterceptRequestHeaders extends IPCEvent {
   }
 }
 
+export interface ScreenshotPage extends IPCEvent {
+  payload: { x: number; y: number; width: number; height: number }
+  output: string
+}
+
 const IPC_EVENTS = ipcService.registerEvents({
   // events that don't return a value
   updateTrafficLights: ipcService.addEvent<boolean>('update-traffic-lights'),
@@ -109,6 +114,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   createNewTab: ipcService.addEvent<void>('create-new-tab'),
   closeActiveTab: ipcService.addEvent<void>('close-active-tab'),
   openOasis: ipcService.addEvent<void>('open-oasis'),
+  startScreenshotPicker: ipcService.addEvent<void>('start-screenshot-picker'),
   toggleRightSidebar: ipcService.addEvent<void>('toggle-right-sidebar'),
   toggleRightSidebarTab: ipcService.addEvent<RightSidebarTab>('toggle-right-sidebar-tab'),
   reloadActiveTab: ipcService.addEvent<boolean>('reload-active-tab'),
@@ -131,7 +137,8 @@ const IPC_EVENTS = ipcService.registerEvents({
   getAppInfo: ipcService.addEventWithReturn<GetAppInfo>('get-app-info'),
   interceptRequestHeaders: ipcService.addEventWithReturn<InterceptRequestHeaders>(
     'intercept-request-headers'
-  )
+  ),
+  screenshotPage: ipcService.addEventWithReturn<ScreenshotPage>('screenshot-page')
 })
 
 export const IPC_EVENTS_MAIN = IPC_EVENTS.main

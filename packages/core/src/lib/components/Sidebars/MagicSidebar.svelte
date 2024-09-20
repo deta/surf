@@ -7,8 +7,10 @@
 
   import { Icon } from '@horizon/icons'
   import {
+    EventContext,
     PageChatMessageSentEventError,
     ResourceTypes,
+    SaveToOasisEventTrigger,
     type ResourceDataPost
   } from '@horizon/types'
   import { Editor, getEditorContentText } from '@horizon/editor'
@@ -172,6 +174,14 @@
       responses[response.id] = resource.id
       return responses
     })
+
+    await resourceManager.telemetry.trackSaveToOasis(
+      ResourceTypes.DOCUMENT_SPACE_NOTE,
+      SaveToOasisEventTrigger.Click,
+      false,
+      EventContext.Chat,
+      'text'
+    )
 
     log.debug('Saved response', resource)
 

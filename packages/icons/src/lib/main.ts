@@ -84,6 +84,10 @@ import Pin from './Icons/Pin.svelte'
 import PinnedOff from './Icons/PinnedOff.svelte'
 import ArrowUpRight from './Icons/ArrowUpRight.svelte'
 import Menu from './Icons/Menu.svelte'
+import Language from './Icons/Language.svelte'
+import CircleDot from './Icons/CircleDot.svelte'
+import MessageForward from './Icons/MessageForward.svelte'
+import Grammar from './Icons/Grammar.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -172,7 +176,11 @@ export const icons = {
   'triangle-square-circle': TriangleSquareCircle,
   wand: Wand,
   pin: Pin,
-  'pinned-off': PinnedOff
+  'pinned-off': PinnedOff,
+  language: Language,
+  'circle-dot': CircleDot,
+  'message-forward': MessageForward,
+  grammar: Grammar
 }
 
 export type Icons = keyof typeof icons
@@ -262,5 +270,9 @@ export {
   Wand,
   Pin,
   PinnedOff,
-  Menu
+  Menu,
+  Language,
+  CircleDot,
+  MessageForward,
+  Grammar
 }

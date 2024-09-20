@@ -26,6 +26,9 @@ import {
   SearchOasisEventTrigger,
   ResourceTypes,
   PageChatMessageSentEventError,
+  type AIMessageContext,
+  type AIMessageBaseMedia,
+  EventContext,
   SelectTabEventAction
 } from '@horizon/types'
 
@@ -266,12 +269,20 @@ export class Telemetry {
     }
   }
 
-  async trackSaveToOasis(type: string, trigger: SaveToOasisEventTrigger, saveToSpace: boolean) {
+  async trackSaveToOasis(
+    type: string,
+    trigger: SaveToOasisEventTrigger,
+    saveToSpace: boolean,
+    context?: EventContext,
+    baseMedia?: 'image' | 'text'
+  ) {
     await this.trackEvent(TelemetryEventTypes.SaveToOasis, {
-      type: type,
+      type,
       kind: getPrimaryResourceType(type),
       trigger: trigger,
-      saveTo: saveToSpace ? 'space' : 'oasis'
+      saveTo: saveToSpace ? 'space' : 'oasis',
+      context,
+      base_media: baseMedia
     })
   }
 
@@ -460,6 +471,24 @@ export class Telemetry {
   async trackResetPrompt(type: string) {
     await this.trackEvent(TelemetryEventTypes.ResetPrompt, {
       type: type
+    })
+  }
+
+  async trackAskInlineAI(data: { isFollowUp: boolean; baseMedia: AIMessageBaseMedia }) {
+    await this.trackEvent(TelemetryEventTypes.AskInlineAI, {
+      is_follow_up: data.isFollowUp,
+      base_media: data.baseMedia
+    })
+  }
+
+  async trackCopyScreenshot() {
+    await this.trackEvent(TelemetryEventTypes.CopyScreenshot, {})
+  }
+
+  async trackSaveAIResponse(data: { context: AIMessageContext; baseMedia: AIMessageBaseMedia }) {
+    await this.trackEvent(TelemetryEventTypes.SaveAIResponse, {
+      context: data.context,
+      base_media: data.baseMedia
     })
   }
 

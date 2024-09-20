@@ -645,6 +645,7 @@ export class SFFS {
       limit?: number
       ragOnly?: boolean
       resourceIds?: string[]
+      inlineImages?: string[]
       general?: boolean
     }
   ): Promise<void> {
@@ -656,7 +657,9 @@ export class SFFS {
       'limit:',
       opts?.limit,
       'resource ids filter:',
-      opts?.resourceIds
+      opts?.resourceIds,
+      'inline images length:',
+      opts?.inlineImages?.length
     )
     return await this.backend.js__ai_send_chat_message(
       query,
@@ -665,6 +668,7 @@ export class SFFS {
       opts?.limit ?? 20,
       opts?.ragOnly ?? false,
       opts?.resourceIds,
+      opts?.inlineImages,
       opts?.general ?? false
     )
   }

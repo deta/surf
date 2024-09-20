@@ -75,6 +75,10 @@ if (OPENAI_API_KEY) {
 const api = {
   tabSwitchingShortcutsDisable: TAB_SWITCHING_SHORTCUTS_DISABLE,
 
+  screenshotPage: (rect: { x: number; y: number; width: number; height: number }) => {
+    return IPC_EVENTS_RENDERER.screenshotPage.invoke(rect)
+  },
+
   captureWebContents: () => {
     return IPC_EVENTS_RENDERER.captureWebContents.invoke()
   },
@@ -259,6 +263,14 @@ const api = {
   onOpenOasis: (callback) => {
     try {
       IPC_EVENTS_RENDERER.openOasis.on((_) => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
+  onStartScreenshotPicker: (callback) => {
+    try {
+      IPC_EVENTS_RENDERER.startScreenshotPicker.on((_) => callback())
     } catch (error) {
       // noop
     }

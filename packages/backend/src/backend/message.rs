@@ -165,6 +165,7 @@ pub enum MiscMessage {
         session_id: String,
         rag_only: bool,
         resource_ids: Option<Vec<String>>,
+        inline_images: Option<Vec<String>>,
         general: bool,
     },
     CreateApp {

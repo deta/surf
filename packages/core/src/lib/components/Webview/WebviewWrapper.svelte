@@ -25,7 +25,7 @@
   } from '@horizon/types'
   import { createHistorySwipeRecognizer, SWIPE_THRESHOLD } from '../../utils/historySwipeRecognizer'
   import type { HistoryEntriesManager } from '../../service/history'
-  import { useLogScope, isModKeyAndKeyPressed } from '@horizon/utils'
+  import { useLogScope } from '@horizon/utils'
   import type { DetectedResource } from '../../types'
   import type { WebServiceActionInputs } from '@horizon/web-parser'
   import Webview, { type WebviewEvents } from './Webview.svelte'
