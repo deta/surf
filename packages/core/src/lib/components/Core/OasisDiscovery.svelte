@@ -4,7 +4,7 @@
   import type { Resource, ResourceManager } from '../../service/resources'
   import * as d3 from 'd3'
   import { useLogScope } from '@horizon/utils'
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
+  import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
 
   export let resourceManager: ResourceManager
@@ -324,7 +324,7 @@
     <div class="overlay-hover" style="top: {hoverPreviewTop}px; left: {hoverPreviewLeft}px;">
       <p>{hoveredTopic}</p>
       <br />
-      <ResourcePreviewClean resource={$hoveredResource} />
+      <ResourcePreview resource={$hoveredResource} />
     </div>
   {/if}
   <div class="content">

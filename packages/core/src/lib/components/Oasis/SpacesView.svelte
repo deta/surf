@@ -10,7 +10,7 @@
 
   import { useToasts } from '../../service/toast'
   import { SpaceEntryOrigin, type SpaceData, type SpaceSource, type TabSpace } from '../../types'
-  import type { Writable } from 'svelte/store'
+  import type { Readable } from 'svelte/store'
   import type { Space } from '@horizon/core/src/lib/types'
   import { useTelemetry } from '../../service/telemetry'
   import { CreateSpaceEventFrom, OpenSpaceEventTrigger } from '@horizon/types'
@@ -33,7 +33,7 @@
   let newSpaceButton: HTMLElement
   const isNewSpaceButtonSticky = writable(false)
 
-  export let spaces: Writable<Space[]>
+  export let spaces: Readable<Space[]>
   export let interactive = true
   export let type: 'grid' | 'horizontal' = 'grid'
   export let resourceManager: ResourceManager

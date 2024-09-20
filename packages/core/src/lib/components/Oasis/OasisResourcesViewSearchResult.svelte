@@ -10,8 +10,7 @@
   export let resources: Readable<ResourceSearchResultItem[]>
   export let selected: string | null = null
   export let isEverythingSpace: boolean
-  export let showResourceSource: boolean = false
-  export let newTabOnClick: boolean = false
+  export let isInSpace: boolean = false
   export let searchValue: Writable<string> | undefined
   export let resourcesBlacklistable: boolean = false
 
@@ -63,6 +62,7 @@
         >
           <OasisResourceLoader
             resourceOrId={item.data ? item.data : item.id}
+            {isInSpace}
             {resourcesBlacklistable}
             on:open
             on:remove

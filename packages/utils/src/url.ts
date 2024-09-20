@@ -243,3 +243,12 @@ export const isGoogleSignInUrl = (url: string) => {
     url?.startsWith('https://accounts.google.com/AddSession')
   )
 }
+
+export const getHostname = (raw: string) => {
+  try {
+    const url = new URL(raw)
+    return url.hostname
+  } catch (error) {
+    return null
+  }
+}
