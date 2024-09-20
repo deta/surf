@@ -74,6 +74,10 @@ fn js_query_sffs_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
         .argument_opt(3)
         .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
         .map(|js_string| js_string.value(&mut cx));
+    let embedidng_distance_threshold = cx
+        .argument_opt(4)
+        .and_then(|arg| arg.downcast::<JsNumber, FunctionContext>(&mut cx).ok())
+        .map(|js_number| js_number.value(&mut cx) as f32);
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
@@ -81,6 +85,7 @@ fn js_query_sffs_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             prompt,
             sql_query,
             embedding_query,
+            embedidng_distance_threshold,
         )),
         deferred,
     );

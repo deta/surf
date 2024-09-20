@@ -633,9 +633,9 @@
     right: 0;
     bottom: 0;
     transition: 240ms ease-out;
-    padding: 0 3rem 3rem 3rem;
-    margin-top: 3rem;
-
+    padding: 0 2rem 2rem 2rem;
+    margin-top: 2rem;
+    width: 100%;
     z-index: 100000;
   }
 

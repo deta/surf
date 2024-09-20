@@ -20,7 +20,8 @@ import type {
   SFFSSearchResultItem,
   Space,
   SpaceEntry,
-  SpaceData
+  SpaceData,
+  SpaceEntryOrigin
 } from '../types'
 
 import type {
@@ -432,10 +433,14 @@ export class SFFS {
     await this.backend.js__store_delete_space(space_id)
   }
 
-  async addItemsToSpace(space_id: string, resourceIds: string[]): Promise<void> {
+  async addItemsToSpace(
+    space_id: string,
+    resourceIds: string[],
+    origin: SpaceEntryOrigin
+  ): Promise<void> {
     const typedItems = resourceIds.map((id) => ({
       resource_id: id,
-      manually_added: false
+      manually_added: origin
     }))
 
     this.log.debug('creating space entries for space', space_id, 'entries:', typedItems)
@@ -459,14 +464,18 @@ export class SFFS {
 
   async getResourcesViaPrompt(
     query: string,
-    sql_query: string | undefined,
-    embedding_query: string | undefined
+    opts?: {
+      sql_query?: string
+      embedding_query?: string
+      embedding_distance_threshold?: number
+    }
   ): Promise<AiSFFSQueryResponse> {
     this.log.debug('querying SFFS resources with AI', query)
     const rawResponse = await this.backend.js__ai_query_sffs_resources(
       query,
-      sql_query,
-      embedding_query
+      opts?.sql_query,
+      opts?.embedding_query,
+      opts?.embedding_distance_threshold
     )
     this.log.debug('raw response', rawResponse)
     let response = this.parseData<AiSFFSQueryResponse>(rawResponse)

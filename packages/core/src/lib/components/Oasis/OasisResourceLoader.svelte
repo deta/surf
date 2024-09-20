@@ -9,6 +9,7 @@
   export let resourceOrId: string | Resource
   export let selected: boolean = false
   export let showSource: boolean = false
+  export let resourcesBlacklistable: boolean = false
 
   const log = useLogScope('OasisResourceLoader')
   const resourceManager = useResourceManager()
@@ -50,11 +51,14 @@
         {resource}
         {showSource}
         {selected}
+        {resourcesBlacklistable}
         showSummary
         on:load
         on:click
         on:open
         on:remove
+        on:blacklist-resource
+        on:whitelist-resource
       />
     </DragResourceWrapper>
   {/if}

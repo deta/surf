@@ -25,6 +25,7 @@
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
+    SpaceEntryOrigin,
     type CreateTabOptions,
     type ResourceData,
     type ResourceDataPost
@@ -67,6 +68,8 @@
   export let interactive: boolean = true
   export let showSource: boolean = false
   export let newTabOnClick: boolean = false
+  export let resourcesBlacklistable: boolean = false
+  export let resourceBlacklisted: boolean = false
   export let everythingResource: boolean = true // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
 
   const log = useLogScope('ResourcePreviewClean')
@@ -80,6 +83,8 @@
     load: string
     open: string
     'created-tab': void
+    'whitelist-resource': string
+    'blacklist-resource': string
   }>()
 
   const isHovered = writable(false)
@@ -151,6 +156,11 @@
   }
 
   const handleClick = async (e: MouseEvent) => {
+    // TOOD: @felix replace this with interactive prop
+    if (resourcesBlacklistable) {
+      handleBlacklisting()
+      return
+    }
     if (dragging) {
       dragging = false
       return
@@ -196,13 +206,28 @@
     dispatch('remove', resource.id)
   }
 
-  const handleOpenAsNewTab = (e?: MouseEvent) => {
-    e?.stopImmediatePropagation()
+  const handleBlacklisting = () => {
+    resourceBlacklisted = !resourceBlacklisted
 
-    openResourceAsTab({
-      active: true,
-      trigger: CreateTabEventTrigger.OasisItem
-    })
+    if (resourceBlacklisted) {
+      // Handle removing from blacklist
+      dispatch('blacklist-resource', resource.id)
+    } else {
+      // Handle adding to blacklist
+      dispatch('whitelist-resource', resource.id)
+    }
+  }
+
+  const handleOpenAsNewTab = (e: MouseEvent) => {
+    e.stopImmediatePropagation()
+    const handleOpenAsNewTab = (e?: MouseEvent) => {
+      e?.stopImmediatePropagation()
+
+      openResourceAsTab({
+        active: true,
+        trigger: CreateTabEventTrigger.OasisItem
+      })
+    }
   }
 
   const handleOpenAsFile = () => {
@@ -219,6 +244,10 @@
     } else {
       alert('Failed to open file')
     }
+  }
+
+  const handleToggleBlacklisted = () => {
+    resourceBlacklisted = !resourceBlacklisted
   }
 
   const getHostname = (raw: string) => {
@@ -239,7 +268,9 @@
   class:isSelected={selected}
   class:background={(isLiveSpaceResource && showSummary && resource.metadata?.userContext) ||
     showSource}
-  style="--id:{resource.id};"
+  style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
+  on:dragstart={handleDragStart}
+  draggable="true"
   use:contextMenu={{
     items: [
       {
@@ -268,14 +299,18 @@
         items: $spaces
           ? [
               ...$spaces
-                .filter((e) => e.name.folderName !== 'Everything')
+                .filter((e) => e.name.folderName.toLowerCase() !== 'all my stuff')
                 .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
                 .map((space) => ({
                   type: 'action',
                   icon: '',
                   text: space.name.folderName,
                   action: () => {
-                    oasis.addResourcesToSpace(space.id, [resource.id])
+                    oasis.addResourcesToSpace(
+                      space.id,
+                      [resource.id],
+                      SpaceEntryOrigin.ManuallyAdded
+                    )
                   }
                 }))
             ]
@@ -354,6 +389,17 @@
       <div class="text-base">Unknown</div> -->
     {/if}
 
+    {#if resourcesBlacklistable}
+      <div class="resource-blacklistable" use:hover={isHovered}>
+        <Icon name="check" size="16px" />
+        {#if $isHovered}
+          <div class="whitespace-nowrap ml-2 leading-4" transition:slide={{ axis: 'x' }}>
+            Selected
+          </div>
+        {/if}
+      </div>
+    {/if}
+
     {#if showSource}
       <div class="resource-source" use:hover={isHovered}>
         {#if isSilent}
@@ -427,7 +473,7 @@
         {/if}
       </div>
 
-      {#if interactive}
+      {#if interactive && !resourcesBlacklistable}
         <div class="remove-wrapper">
           {#if showOpenAsFile}
             <div class="remove" on:click|stopPropagation={handleOpenAsFile}>
@@ -514,6 +560,7 @@
     position: relative;
     display: flex;
     gap: 8px;
+    width: 100%;
     flex-direction: column;
     border-radius: 16px;
     overflow: visible;
@@ -691,6 +738,27 @@
     gap: 0.5rem;
     font-size: 0.9rem;
     color: rgb(12 74 110/0.9);
+  }
+
+  .resource-blacklistable {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    background: rgba(0, 123, 255, 0.85);
+    backdrop-filter: blur(4px);
+    box-shadow: 0px 0.425px 0px 0px rgba(0, 83, 172, 0.25);
+    padding: 0.4rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgb(255, 255, 255);
+
+    &.hover {
+      background: rgba(255, 255, 255);
+      color: rgb(12 74 110);
+    }
   }
 
   .resource-source {
