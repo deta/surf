@@ -151,6 +151,16 @@ const template = [
       { role: 'delete' },
       { role: 'selectAll' },
       { type: 'separator' },
+      // {
+      //   label: 'Find in Page',
+      //   accelerator: 'CmdOrCtrl+F',
+      //   click: () => ipcSenders.startFindInPage()
+      // },
+      {
+        label: 'Toggle Screenshot...',
+        accelerator: 'CmdOrCtrl+Shift+1',
+        click: () => ipcSenders.startScreenshotPicker()
+      },
       {
         label: 'Copy URL',
         accelerator: 'CmdOrCtrl+Shift+C',

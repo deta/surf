@@ -2,6 +2,7 @@ use core::fmt;
 
 use crate::ai::client::FilteredSearchRequest;
 use crate::embeddings::chunking::ContentChunker;
+use crate::llm::models::MessageContent;
 use crate::store::db::{CompositeResource, Database};
 use crate::store::models::{AIChatSessionMessage, AIChatSessionMessageSource};
 use crate::{llm, llm::openai::openai};
@@ -203,11 +204,11 @@ impl AI {
         let messages = vec![
             llm::models::Message {
                 role: "system".to_string(),
-                content: prompt,
+                content: vec![MessageContent::new_text(prompt)],
             },
             llm::models::Message {
                 role: "user".to_string(),
-                content: query.to_string(),
+                content: vec![MessageContent::new_text(query.to_string())],
             },
         ];
         // TODO: use local mode
@@ -223,7 +224,7 @@ impl AI {
         let prompt = transcript_chunking_prompt(transcript);
         let messages = vec![llm::models::Message {
             role: "system".to_string(),
-            content: prompt,
+            content: vec![MessageContent::new_text(prompt)],
         }];
         let output = self.llm.create_chat_completion_blocking(messages, None)?;
 
@@ -312,17 +313,26 @@ impl AI {
         &self,
         query: String,
         history: Option<String>,
+        inline_images: Option<Vec<String>>,
     ) -> BackendResult<(String, Pin<Box<dyn Stream<Item = BackendResult<String>>>>)> {
-        let messages = vec![
+        let mut messages = vec![
             llm::models::Message {
                 role: "system".to_string(),
-                content: general_chat_prompt(history),
+                content: vec![MessageContent::new_text(general_chat_prompt(history))],
             },
             llm::models::Message {
                 role: "user".to_string(),
-                content: query,
+                content: vec![MessageContent::new_text(query)],
             },
         ];
+        if let Some(inline_images) = inline_images {
+            for image in inline_images {
+                messages.push(llm::models::Message {
+                    role: "user".to_string(),
+                    content: vec![MessageContent::new_image(image)],
+                });
+            }
+        }
         let preamble = "<sources></sources>".to_string();
         let stream = match self.local_mode {
             true => {
@@ -345,6 +355,7 @@ impl AI {
         query: String,
         number_documents: i32,
         resource_ids: Option<Vec<String>>,
+        inline_images: Option<Vec<String>>,
         general: bool,
         should_cluster: bool,
         history: Option<String>,
@@ -354,7 +365,7 @@ impl AI {
         Pin<Box<dyn Stream<Item = BackendResult<String>>>>,
     )> {
         if general {
-            let (preamble, stream) = self.general_chat(query, history).await?;
+            let (preamble, stream) = self.general_chat(query, history, inline_images).await?;
             return Ok((Vec::new(), preamble, stream));
         }
 
@@ -391,16 +402,24 @@ impl AI {
         }
 
         let (sources, sources_xml, contexts) = self.get_sources_contexts(rag_results);
-        let messages = vec![
+        let mut messages = vec![
             llm::models::Message {
                 role: "system".to_string(),
-                content: chat_prompt(contexts, history),
+                content: vec![MessageContent::new_text(chat_prompt(contexts, history))],
             },
             llm::models::Message {
                 role: "user".to_string(),
-                content: query,
+                content: vec![MessageContent::new_text(query)],
             },
         ];
+        if let Some(inline_images) = inline_images {
+            for image in inline_images {
+                messages.push(llm::models::Message {
+                    role: "user".to_string(),
+                    content: vec![MessageContent::new_image(image)],
+                });
+            }
+        }
         let stream = match self.local_mode {
             true => {
                 self.local_ai_client
@@ -417,11 +436,11 @@ impl AI {
         let messages = vec![
             llm::models::Message {
                 role: "system".to_string(),
-                content: sql_query_generator_prompt(),
+                content: vec![MessageContent::new_text(sql_query_generator_prompt())],
             },
             llm::models::Message {
                 role: "user".to_string(),
-                content: prompt,
+                content: vec![MessageContent::new_text(prompt)],
             },
         ];
         match self.local_mode {
@@ -488,11 +507,11 @@ impl AI {
         let messages = vec![
             llm::models::Message {
                 role: "system".to_string(),
-                content: system_message,
+                content: vec![MessageContent::new_text(system_message)],
             },
             llm::models::Message {
                 role: "user".to_string(),
-                content: prompt,
+                content: vec![MessageContent::new_text(prompt)],
             },
         ];
 

@@ -12,8 +12,6 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    background: #fff;
-    padding: 4px;
     border-radius: 12px;
     box-shadow: 0 0 16px rgba(0, 0, 0, 0.2);
     border: 1px solid #f0f0f0;

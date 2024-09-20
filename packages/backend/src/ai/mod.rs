@@ -160,7 +160,24 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
         ),
         None => None,
     };
-    let general = cx.argument::<JsBoolean>(7)?.value(&mut cx);
+    let inline_images = match cx.argument_opt(7).filter(|arg| {
+        !(arg.is_a::<JsUndefined, FunctionContext>(&mut cx)
+            || arg.is_a::<JsNull, FunctionContext>(&mut cx))
+    }) {
+        Some(arg) => Some(
+            arg.downcast_or_throw::<JsArray, FunctionContext>(&mut cx)?
+                .to_vec(&mut cx)?
+                .iter()
+                .map(|value| {
+                    value
+                        .downcast_or_throw::<JsString, FunctionContext>(&mut cx)
+                        .map(|js_str| js_str.value(&mut cx))
+                })
+                .collect::<NeonResult<Vec<String>>>()?,
+        ),
+        None => None,
+    };
+    let general = cx.argument::<JsBoolean>(8)?.value(&mut cx);
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
@@ -171,6 +188,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             callback,
             rag_only,
             resource_ids,
+            inline_images,
             general,
         }),
         deferred,

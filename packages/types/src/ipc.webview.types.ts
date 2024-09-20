@@ -37,6 +37,7 @@ export enum WebViewEventSendNames {
   Transform = 'transform',
   Selection = 'selection',
   Annotate = 'annotate',
+  Copy = 'copy',
   InlineTextReplace = 'inline_text_replace',
   AnnotationClick = 'annotation_click',
   RemoveAnnotation = 'remove_annotation',
@@ -92,6 +93,7 @@ export type WebViewEventTransform = {
   query?: string
   type: 'summarize' | 'explain' | 'translate' | 'grammar' | 'custom'
   includePageContext: boolean
+  isFollowUp?: boolean
 }
 
 export type WebViewEventActionOutput = {
@@ -173,6 +175,7 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.RemoveAnnotation]: string
   [WebViewEventSendNames.UpdateAnnotation]: WebViewEventUpdateAnnotation
   [WebViewEventSendNames.AddToChat]: string
+  [WebViewEventSendNames.Copy]: string
 }
 
 export enum WebviewAnnotationEventNames {

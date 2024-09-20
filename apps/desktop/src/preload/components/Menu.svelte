@@ -13,6 +13,9 @@
   import Button from './Button.svelte'
   import { Editor, getEditorContentText } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
+  import ChatMessageMarkdown from '@horizon/core/src/lib/components/Chat/ChatMessageMarkdown.svelte'
+  import { tooltip, truncate, useLogScope } from '@horizon/utils'
+  import { onMount } from 'svelte'
 
   export let text = ''
 
@@ -24,13 +27,26 @@
   let elem: HTMLDivElement
   let inputElem: HTMLInputElement | HTMLTextAreaElement
   let markerIcon: IconConfirmation
+  let editorFocused = true
+  let editor: Editor
+  let menuItems = [
+    { name: 'Save...', icon: 'leave' },
+    { name: 'Copy', icon: 'copy' }
+  ]
+
+  let lastPrompt = ''
 
   const view = writable<'initial' | 'ai' | 'comment'>('initial')
   const runningAction = writable<WebViewEventTransform['type'] | null>(null)
 
   const dispatch = createEventDispatcher<{
     save: string
-    transform: { query?: string; type: WebViewEventTransform['type']; includePageContext: boolean }
+    transform: {
+      query?: string
+      type: WebViewEventTransform['type']
+      includePageContext: boolean
+      isFollowUp?: boolean
+    }
     copy: void
     highlight: void
     comment: { plain: string; html: string; tags: string[] }
@@ -92,15 +108,19 @@
     running = false
     inputValue = ''
     output = ''
+    lastPrompt = ''
   }
 
   const handleAISubmit = () => {
+    const savedInputValue = inputValue.trim().replace('<p>', '').replace('</p>', '')
     running = true
     dispatch('transform', {
       query: inputValue,
       type: 'custom',
-      includePageContext: includePageContext
+      includePageContext: includePageContext,
+      isFollowUp: lastPrompt !== ''
     })
+    lastPrompt = savedInputValue
   }
 
   const handleAddToChat = () => {
@@ -108,8 +128,11 @@
   }
 
   const runAIAction = (type: WebViewEventTransform['type']) => {
+    output = ''
     running = true
     $runningAction = type
+    lastPrompt = type
+    inputValue = ''
     dispatch('transform', { type: type, includePageContext: includePageContext })
   }
 
@@ -185,6 +208,30 @@
   const handleHashtags = (e: CustomEvent<string[]>) => {
     tags = e.detail
   }
+
+  const saveResponseOutput = async (response: string) => {
+    dispatch('save', response)
+  }
+
+  function handleAIMessageItemClick(index: number) {
+    switch (index) {
+      case 0:
+        saveResponseOutput(output)
+        break
+      case 1:
+        handleAIMessageCopy()
+        break
+    }
+  }
+
+  function handleAIMessageCopy() {
+    navigator.clipboard.writeText(output)
+    dispatch('copy')
+  }
+
+  onMount(() => {
+    resetMenu()
+  })
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -192,21 +239,21 @@
 <Wrapper bind:elem expanded={$view === 'comment'}>
   {#if $view === 'initial'}
     <div class="btn-row">
-      <Button on:click={() => showAIMenu()} kind="secondary" tooltip="Use AI Features">
+      <Button on:click={() => showAIMenu()} kind="secondary" tooltip="Ask AI">
         <Icon name="sparkles" />
       </Button>
 
       <div class="divider"></div>
 
-      <Button on:click={handleMarker} tooltip="Highlight and Save (⌘+Shift+H)">
+      <!-- <Button on:click={handleMarker} tooltip="Highlight and Save (⌘+Shift+H)">
         <IconConfirmation bind:this={markerIcon} name="marker" />
       </Button>
 
-      <Button on:click={() => showCommentMenu()} icon="message" tooltip="Add Comment" />
+      <Button on:click={() => showCommentMenu()} icon="message" tooltip="Add Comment" /> -->
 
-      <!--<Button on:click={handleAddToChat} tooltip="Add to Chat (⌘+K)">
-        <Icon name="sparkles.fill" />
-      </Button>-->
+      <Button on:click={handleAddToChat} tooltip="Add to Chat (⌘+K)">
+        <Icon name="message-forward" />
+      </Button>
 
       <!-- <div class="divider"></div> -->
 
@@ -217,44 +264,95 @@
       </div> -->
     </div>
   {:else if $view === 'ai'}
-    <form on:submit|stopPropagation|preventDefault={handleAISubmit}>
-      <input
-        bind:this={inputElem}
-        bind:value={inputValue}
-        on:keydown={handleInputKey}
-        on:keyup={handleInputKey}
-        on:keypress={handleInputKey}
-        disabled={running}
-        type="text"
-        placeholder={running ? $runningText : 'What do you want to do?'}
-      />
+    <div class="ai-menu">
+      <div class="top-section">
+        {#if output}
+          <div class="ai-response">
+            {#if lastPrompt && !running}
+              <div class="last-prompt">
+                {@html lastPrompt}
+              </div>
+            {/if}
+            <ChatMessageMarkdown content={output} sources={[]} inline id="chat-message" />
 
-      <Button
-        type="submit"
-        disabled={running}
-        tooltip={running ? 'Generating…' : 'Ask AI (↵)'}
-        kind="secondary"
-      >
-        {#if running}
-          <Icon name="spinner" />
-        {:else}
-          <Icon name="sparkles" />
+            {#if output.length > 0 && !running}
+              <div class="save-buttons">
+                {#each menuItems as item, index}
+                  <button on:click={() => handleAIMessageItemClick(index)}>
+                    <Icon name={item.icon} size="14px" className="!text-neutral-500" />
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
         {/if}
-      </Button>
-    </form>
 
-    {#if !running && !output}
-      {#if !inputValue}
-        <AiPrompts on:click={(e) => runAIAction(e.detail)} />
-      {/if}
+        <form
+          class="editor"
+          class:border-t={output}
+          on:submit|stopPropagation|preventDefault={handleAISubmit}
+        >
+          <div class="editor-wrappy">
+            <input
+              bind:this={inputElem}
+              bind:value={inputValue}
+              on:keydown={handleInputKey}
+              on:keyup={handleInputKey}
+              on:keypress={handleInputKey}
+              disabled={running}
+              type="text"
+              placeholder={running ? $runningText : 'Ask a question...'}
+            />
+            <!-- <Editor
+              bind:this={editor}
+              bind:content={inputValue}
+              bind:focused={editorFocused}
+              on:submit={handleAISubmit}
+              autofocus={true}
+              placeholder="Ask a question..."
+            /> -->
+          </div>
+        </form>
+      </div>
 
-      <label class="context-check">
-        <input type="checkbox" bind:checked={includePageContext} />
-        Include Page Context
-      </label>
-    {:else if output}
-      <AiOutput {output} on:save={handleSaveOutput} on:insert={handleInsert} />
-    {/if}
+      <div class="bar">
+        <div class="bar-wrapper">
+          <button
+            on:click={() => {
+              if (inputValue.length > 0 && !running) {
+                handleAISubmit()
+              } else {
+                resetMenu()
+              }
+            }}
+            disabled={inputValue.length > 0 && running}
+          >
+            {#if inputValue.length > 0 && !running}
+              <!-- <kbd class="text-neutral-500">↵</kbd> -->
+              <span>Submit</span>
+            {:else if running}
+              <div>
+                <span class="ball"></span>
+                <span class="ball" style="animation-delay: 0.2s;"></span>
+                <span class="ball" style="animation-delay: 0.4s;"></span>
+              </div>
+            {:else}
+              <!-- <kbd class="text-neutral-500 text-xs">ESC</kbd> -->
+              <span>Cancel</span>
+            {/if}
+          </button>
+
+          <div aria-disabled={running} style="opacity: {running ? 0.5 : 1}">
+            <AiPrompts on:click={(e) => runAIAction(e.detail)} />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- <label class="context-check">
+    <input type="checkbox" bind:checked={includePageContext} />
+    Include Page Context
+  </label> -->
   {:else if $view === 'comment'}
     <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <form
@@ -318,6 +416,9 @@
     display: flex;
     align-items: stretch;
     gap: 4px;
+    background: #fff;
+    padding: 4px;
+    border-radius: 12px;
   }
 
   .menu-drag-handle {
@@ -329,24 +430,150 @@
     pointer-events: auto;
   }
 
+  .ai-menu {
+    width: 400px;
+    border-radius: 0.5rem;
+  }
+
+  .top-section {
+    background-color: #fafafa;
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .ai-response {
+    overflow-y: auto;
+    max-height: 20rem;
+    padding-top: 0.5rem;
+    width: 100%;
+    overflow-x: hidden;
+    color: #262626 !important;
+  }
+
+  .last-prompt {
+    padding-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.75rem;
+    width: fit-content;
+    color: black;
+    font-weight: 600;
+  }
+
+  .save-buttons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  .save-buttons button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    user-select: none;
+    border-radius: 0.75rem;
+    padding: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    transition: background-color 0.2s;
+  }
+
+  .editor {
+    flex: 1;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .border-t {
+    border-top: 1px solid #e5e5e5;
+  }
+
+  .editor-wrappy {
+    flex-grow: 1;
+    overflow-y: auto;
+    max-height: 6rem;
+  }
+
+  .bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 0.25rem;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    background-color: #f5f5f5;
+    font-size: 14px;
+  }
+
+  .bar-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .bar-wrapper button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    user-select: none;
+    border-radius: 0.75rem;
+    padding: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    transition: background-color 0.2s;
+  }
+
+  .ball {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 100%;
+    background-color: #a3a3a3;
+    display: inline-block;
+    animation: flash 0.5s infinite;
+  }
+
+  @keyframes flash {
+    0% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
   form {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
 
     input {
-      padding: 8px;
-      border: 1px solid #f0f0f0;
-      background: #ebebeb;
-      border-radius: 8px;
-      font-size: 16px;
       width: 100%;
+      background-color: transparent;
+      border: none;
+      color: #262626;
       pointer-events: auto;
-      min-width: 350px;
-
       &:focus {
         outline: none;
-        border-color: #fd1bdf;
       }
     }
   }
@@ -394,7 +621,6 @@
 
     &:focus {
       outline: none;
-      border-color: #fd1bdf;
     }
   }
 </style>

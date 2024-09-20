@@ -37,14 +37,23 @@
   import { writable } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { PageMagic, TabPage } from '../../types/browser.types'
-  import { useLogScope, useDebounce, isGoogleSignInUrl, wait, generateID } from '@horizon/utils'
+  import {
+    useLogScope,
+    useDebounce,
+    isGoogleSignInUrl,
+    wait,
+    generateID,
+    truncate
+  } from '@horizon/utils'
   import type { DetectedWebApp } from '@horizon/web-parser'
   import {
     CreateAnnotationEventTrigger,
     CreateTabEventTrigger,
     DeleteAnnotationEventTrigger,
+    EventContext,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
+    SaveToOasisEventTrigger,
     WebViewEventReceiveNames,
     WebViewEventSendNames,
     type AnnotationCommentData,
@@ -471,7 +480,10 @@
       text: transformation ?? ''
     })
 
-    await resourceManager.telemetry.trackUseInlineAI(e.type, e.includePageContext)
+    await resourceManager.telemetry.trackAskInlineAI({
+      isFollowUp: e.isFollowUp ?? false,
+      baseMedia: 'text'
+    })
   }
 
   async function handleWebviewBookmark(event: WebViewSendEvents[WebViewEventSendNames.Bookmark]) {
@@ -511,6 +523,34 @@
     annotationData: WebViewSendEvents[WebViewEventSendNames.Annotate]
   ) => {
     log.debug('webview annotation', annotationData)
+
+    if ('source' in annotationData.data && annotationData.data.source === 'inline_ai') {
+      log.debug('Saving chat response')
+
+      let content: string = ''
+      const element = document.getElementById(`chat-message`)
+      if (element) {
+        content = element.innerHTML
+      }
+
+      const resource = await resourceManager.createResourceNote(annotationData.data.content_plain, {
+        name: truncate(annotationData.data.content_plain, 20)
+      })
+
+      log.debug('Saved response', resource)
+
+      toasts.success('Saved to My Stuff!')
+
+      await resourceManager.telemetry.trackSaveToOasis(
+        ResourceTypes.DOCUMENT_SPACE_NOTE,
+        SaveToOasisEventTrigger.Click,
+        false,
+        EventContext.Inline,
+        'text'
+      )
+
+      return
+    }
 
     const bookmarkedResourceId = tab.resourceBookmark
     let bookmarkedResource = bookmarkedResourceId
@@ -594,6 +634,11 @@
       simplifiedAnnotationType,
       annotationTrigger
     )
+  }
+
+  const handleWebviewCopy = async () => {
+    log.debug('webview copy')
+    toasts.success('Copied to clipboard!')
   }
 
   async function handleWebviewAppDetection(detectedApp: DetectedWebApp) {
@@ -752,6 +797,8 @@
       )
     } else if (type === WebViewEventSendNames.AddToChat) {
       handleWebviewAddToChat(data as WebViewSendEvents[WebViewEventSendNames.AddToChat])
+    } else if (type === WebViewEventSendNames.Copy) {
+      handleWebviewCopy()
     }
   }
 

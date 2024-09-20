@@ -68,8 +68,15 @@ export enum TelemetryEventTypes {
   ToggleSidebar = 'Toggle Sidebar',
   ToggleTabsOrientation = 'Toggle Tabs Orientation',
   FileDownload = 'File Download',
-  SetDefaultBrowser = 'Set Default Browser'
+  SetDefaultBrowser = 'Set Default Browser',
+
+  AskInlineAI = 'Ask Inline AI',
+  CopyScreenshot = 'Copy Screenshot',
+  SaveAIResponse = 'Save AI Response'
 }
+
+export type AIMessageContext = 'inline' | 'chat'
+export type AIMessageBaseMedia = 'image' | 'text' | 'webpage' | 'pdf'
 
 export enum CreateTabEventTrigger {
   /** Tab was created from the address bar */
@@ -148,6 +155,14 @@ export enum SaveToOasisEventTrigger {
   Drop = 'drop',
   /** Saved from context menu */
   ContextMenu = 'context_menu'
+}
+
+export enum EventContext {
+  /** Inline menu */
+  Inline = 'inline',
+  Chat = 'chat',
+  Tabs = 'tabs',
+  Overlay = 'overlay'
 }
 
 export enum SearchOasisEventTrigger {
