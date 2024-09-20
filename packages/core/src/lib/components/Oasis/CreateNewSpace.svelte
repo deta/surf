@@ -500,6 +500,21 @@
       {/if}
     </div>
   </div>
+  {#if $fineTuneEnabled && $previewIDs.length === 0}
+    <div
+      class="empty-state-container flex flex-col items-center justify-center h-full absolute inset-0 pointer-events-none"
+    >
+      <div class="empty-state-icon mb-6">
+        <Icon name="sparkles.fill" size="64px" color="#e5e5e5" />
+      </div>
+      <h3 class="empty-state-title text-2xl font-semibold text-gray-800 mb-2">
+        No resources found
+      </h3>
+      <p class="empty-state-description text-gray-600 text-center max-w-md">
+        Try adjusting your query.
+      </p>
+    </div>
+  {/if}
 </div>
 
 <style lang="scss">
