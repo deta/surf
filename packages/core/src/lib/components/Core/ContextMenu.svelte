@@ -53,24 +53,29 @@
    */
   export function prepareContextMenu() {
     if (setupComplete) return
-    window.addEventListener('contextmenu', (e) => {
-      // Find closest element which has contextMenuHint property set
-      let target = e.target as HTMLElement | null
-      while (target && !target.contextMenuItems) {
-        target = target.parentElement
-      }
+    window.addEventListener(
+      'contextmenu',
+      (e) => {
+        // Find closest element which has contextMenuHint property set
+        let target = e.target as HTMLElement | null
+        while (target && !target.contextMenuItems) {
+          target = target.parentElement
+        }
 
-      if (target === null) return
-      e.preventDefault()
+        if (target === null) return
+        e.preventDefault()
+        e.stopImmediatePropagation()
 
-      // TODO: give target ref
-      openContextMenu({
-        x: e.clientX,
-        y: e.clientY,
-        targetEl: target,
-        items: target.contextMenuItems
-      })
-    })
+        // TODO: give target ref
+        openContextMenu({
+          x: e.clientX,
+          y: e.clientY,
+          targetEl: target,
+          items: target.contextMenuItems
+        })
+      },
+      { capture: true }
+    )
     setupComplete = true
   }
 
@@ -100,10 +105,12 @@
         items: props.items
       }
     })
+    document.body.setAttribute('data-context-menu', 'true')
   }
   export function closeContextMenu() {
     ctxMenuCmp?.$destroy()
     contextMenuOpen.set(false)
+    document.body.removeAttribute('data-context-menu')
   }
 
   // TODO: (maxu): FIx typings
@@ -116,7 +123,8 @@
       items: CtxItem[]
     }
   ): ActionReturn<any, any> {
-    node.contextMenuItems = props.items.filter((item) => item !== undefined) as CtxItem[]
+    node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
+
     if (props.canOpen === false) node.contextMenuItems = undefined
     return {
       update(props: { canOpen?: boolean; items: CtxItem[] }) {
@@ -171,6 +179,9 @@
     }
   })
   onDestroy(() => {
+    if (ref) {
+      ref.close()
+    }
     if (targetEl) {
       targetEl.removeAttribute('data-context-menu-anchor')
     }
@@ -185,12 +196,13 @@
     closeContextMenu()
   }}
   on:contextmenu={(e) => {
-    e.preventDefault()
     closeContextMenu()
   }}
   autofocus
 >
-  <ContextMenuItems {items} />
+  <form method="dialog" on:submit={() => closeContextMenu()}>
+    <ContextMenuItems {items} />
+  </form>
 </dialog>
 
 <style lang="scss">
@@ -227,5 +239,9 @@
     &::backdrop {
       background-color: rgba(0, 0, 0, 0);
     }
+  }
+
+  :global(body[data-context-menu='true'] *) {
+    -webkit-app-region: no-drag !important;
   }
 </style>

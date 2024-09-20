@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { type CtxItem } from './ContextMenu.svelte'
+  import { closeContextMenu, type CtxItem } from './ContextMenu.svelte'
 
   export let items: CtxItem[]
   export let subMenuRef: string | undefined = undefined
@@ -19,6 +19,7 @@
         <hr />
       {:else if item.type === 'action'}
         <button
+          type="submit"
           on:click={() => {
             if (item.action) item.action()
           }}
