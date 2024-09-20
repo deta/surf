@@ -132,6 +132,7 @@
 
   <div
     class="editor-wrapper prose prose-lg prose-neutral prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg"
+    class:cursor-text={!readOnly}
   >
     <EditorContent editor={$editor} />
   </div>
@@ -141,7 +142,6 @@
   .editor-wrapper {
     height: 100%;
     overflow-y: auto;
-    cursor: text;
   }
 
   :global(.editor-wrapper > div) {
