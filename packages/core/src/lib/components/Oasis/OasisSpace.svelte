@@ -1175,6 +1175,7 @@
   }
 
   const handleDragEnter = (drag: DragculaDragEvent) => {
+    console.log('xxxxxxxxxxxxxdkopsadkosaokdpsa')
     if (drag.data['surf/tab'] !== undefined) {
       const dragData = drag.data as { 'surf/tab': Tab }
       if ((active && drag.isNative) || (active && dragData['surf/tab'].type !== 'space')) {

@@ -281,12 +281,19 @@ export class Telemetry {
 
   async trackCreateSpace(
     from: CreateSpaceEventFrom,
-    metadata?: { isLiveSpace?: boolean; createdUsingAI?: boolean }
+    metadata?: {
+      isLiveSpace?: boolean
+      createdUsingAI?: boolean
+      numberOfPrompts?: number
+      numberOfBlacklistedItems?: number
+    }
   ) {
     await this.trackEvent(TelemetryEventTypes.CreateSpace, {
       from: from,
       isLiveSpace: metadata?.isLiveSpace ?? false,
-      createdUsingAI: metadata?.createdUsingAI ?? false
+      createdUsingAI: metadata?.createdUsingAI ?? false,
+      numberOfPrompts: metadata?.numberOfPrompts,
+      numberOfBlacklistedItems: metadata?.numberOfBlacklistedItems
     })
   }
 

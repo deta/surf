@@ -3,6 +3,7 @@
   import { useLogScope, useDebounce } from '@horizon/utils'
   import { useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
+  import { CreateSpaceEventFrom } from '@horizon/types'
   import { writable, derived } from 'svelte/store'
   import { createEventDispatcher, tick } from 'svelte'
   import { Editor } from '@horizon/editor'
@@ -53,6 +54,7 @@
 
   const log = useLogScope('OasisSpace')
   const resourceManager = useResourceManager()
+  const telemetry = resourceManager.telemetry
 
   export let space: Space
 
@@ -114,7 +116,7 @@
     colors.set(event.detail)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const sanitizedUserPrompt = $userPrompt.replace(/<\/?[^>]+(>|$)/g, '')
     const spaceName = $name || sanitizedUserPrompt
 
@@ -128,6 +130,13 @@
       llmFetchedResourceIds: $previewIDs.filter((id) => !id.blacklisted).map((id) => id.id)
     })
     dispatch('close-modal')
+
+    await telemetry.trackCreateSpace(CreateSpaceEventFrom.OasisSpacesView, {
+      isLiveSpace: false,
+      createdUsingAI: $aiEnabled,
+      numberOfPrompts: $loadingIndex,
+      numberOfBlacklistedItems: $previewIDs.filter((id) => id.blacklisted).length
+    })
   }
 
   const handleTemplatePromptClick = async (template: PromptConfig) => {
