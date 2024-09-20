@@ -374,25 +374,28 @@
 
   .action-new-space {
     position: relative;
-    background: white;
     width: 100%;
     display: flex;
     align-items: center;
+    background: transparent;
+    color: rgba(0, 0, 0, 0.6);
     .new-space-text {
       font-size: 1rem;
       line-height: 1;
     }
     letter-spacing: 0.01em;
     margin: 0;
-    padding: 0.75rem;
+    padding: 1rem 0.75rem;
     opacity: 1;
     &:hover {
-      opacity: 1;
+      background: rgba(0, 0, 0, 0.03);
+      color: rgba(0, 0, 0, 0.8);
     }
     &.sticky {
       position: sticky;
       bottom: 0rem;
-      padding: 2rem 0.75rem 2rem 0.75rem;
+      background: white;
+      border: 0.5px solid var(--Grey-2, #f4f4f4);
     }
   }
 

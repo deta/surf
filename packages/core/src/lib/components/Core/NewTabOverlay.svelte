@@ -1273,7 +1273,7 @@
           {#if $selectedSpaceId === 'all' || $selectedSpaceId === null || showTabSearch === 1}
             <div
               class={showTabSearch === 2
-                ? 'w-full absolute bottom-0 flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
+                ? 'w-[calc(100%-18rem)] absolute bottom-0 right-0 flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
                 : 'w-full absolute bottom-0 flex items-center justify-center p-2  border-t-[1px] border-neutral-100 bg-white'}
             >
               <div class={'flex items-center relative'}>
