@@ -248,7 +248,7 @@ Replace `[domain_name]` with the extracted domain name from the query.
 
 #### Example for Any New Service:
 
-For a query mentioning a service "example.com":
+For a query mentioning a service "example.com" or "example":
 
 ```sql
 SELECT r.id
@@ -271,6 +271,14 @@ WHERE r.deleted = 0
 ```
 
 **Important:** Always include a check for `source_uri IS NOT NULL` in your SQL queries when using this approach.
+
+
+### Screenshot Detection:
+Use LIKE conditions in the resource_metadata table for efficient multi-platform, multi-language screenshot detection:
+
+SQL_QUERY: "SELECT id FROM resources r JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.resource_type LIKE 'image/%' AND r.deleted = 0 AND (rm.name LIKE 'Screenshot%' OR rm.name LIKE 'Bildschirmfoto%' OR rm.name LIKE 'Capture d''écran%' OR rm.name LIKE 'Captura de pantalla%' OR LOWER(rm.name) LIKE '%screenshot%');"
+
+This query covers macOS, Windows, and common translations, optimizing for both performance and language inclusivity.
 
 ### Examples:
 
