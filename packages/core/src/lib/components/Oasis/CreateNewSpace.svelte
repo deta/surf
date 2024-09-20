@@ -8,7 +8,6 @@
   import { Editor } from '@horizon/editor'
   import { fly, scale } from 'svelte/transition'
   import { quartOut } from 'svelte/easing'
-  import { superPrompt } from './prompt'
 
   import { colorPairs } from '../../service/oasis'
   import ResourceOverlay from '../Core/ResourceOverlay.svelte'
@@ -35,6 +34,7 @@
   const aiEnabled = writable(false)
   const name = writable('')
   const userPrompt = writable('<p></p>')
+  const previousUserPrompt = writable('<p></p>')
   const colors = writable(colorPairs[Math.floor(Math.random() * colorPairs.length)])
   const dispatch = createEventDispatcher()
   const userEnteredName = writable(false)
@@ -216,6 +216,7 @@
   const debouncedPreviewAISpace = useDebounce(previewAISpace, 500)
 
   const handleEditorUpdate = (event) => {
+    previousUserPrompt.set($userPrompt)
     userPrompt.set(event.detail)
 
     if (event.detail === '<p></p>') {
@@ -451,7 +452,7 @@
         </div>
       </div>
 
-      {#if $fineTuneEnabled && $resultHasSemanticSearch}
+      {#if $fineTuneEnabled && $resultHasSemanticSearch && $userPrompt !== $previousUserPrompt}
         <div class="semantic-search-threshold-slider p-4">
           <label
             for="semantic-search-threshold"

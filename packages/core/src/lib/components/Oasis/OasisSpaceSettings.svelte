@@ -245,7 +245,7 @@
     </div>
 
     <div class="content">
-      <div class="sources">
+      <!-- <div class="sources">
         <div class="info">
           <div class="title">
             <Icon name="news" size="20px" />
@@ -315,13 +315,13 @@
             </button>
           </div>
         {/if}
-      </div>
+      </div> -->
 
       <div class="setting">
         <div class="smart-filter">
           <div class="title">
             <Icon name="sparkles" size="20px" />
-            <h2>Smart Filter</h2>
+            <h2>Smart Spaces</h2>
           </div>
 
           <p>Automatically add new items you save to this Space, if they match your description.</p>
