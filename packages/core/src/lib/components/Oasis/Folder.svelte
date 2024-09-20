@@ -26,16 +26,10 @@
   export let folder: Space
   export let selected: boolean
   export let showPreview = false
+  export let isEditing = false // New prop to control editing state
 
   const log = useLogScope('Folder')
-  const dispatch = createEventDispatcher<{
-    delete: void
-    'space-selected': { id: string; canGoBack: boolean }
-    'open-space-as-tab': { space: Space; active: boolean }
-    'update-data': Partial<SpaceData>
-    'open-resource': string
-    Drop: { drag: DragculaDragEvent; spaceId: string }
-  }>()
+  const dispatch = createEventDispatcher()
   const oasis = useOasis()
   const toast = useToasts()
   const resourceManager = useResourceManager()
@@ -51,6 +45,14 @@
   let processing = false
   let inputElement: HTMLInputElement
   let previewContainer: HTMLDivElement
+
+  $: {
+    if (isEditing) {
+      editMode.set(true)
+    } else {
+      editMode.set(false)
+    }
+  }
 
   $: if ($editMode === true) {
     setTimeout(() => {
@@ -114,8 +116,13 @@
     }
   }
 
+  const handleDoubleClick = () => {
+    dispatch('editing-start', { id: folder.id })
+  }
+
   const handleBlur = () => {
     dispatch('update-data', { folderName: folderDetails.folderName })
+    dispatch('editing-end')
 
     resourceManager.telemetry.trackUpdateSpaceSettings(
       {
@@ -236,18 +243,13 @@
       folderDetails.folderName = value + ' '
     } else if (e.code === 'Enter') {
       e.preventDefault()
-      if ($editMode) {
-        dispatch('update-data', { folderName: value })
-        editMode.set(false)
-      } else {
-        editMode.set(true)
-      }
+      dispatch('editing-end')
     } else if (e.code === 'Enter' && e.shiftKey) {
       e.preventDefault()
       createFolderWithAI(value)
     } else if (e.code === 'Escape') {
       e.preventDefault()
-      editMode.set(false)
+      dispatch('editing-end')
     }
   }
 
@@ -316,7 +318,7 @@
   <div
     class="folder {selected ? 'bg-sky-100' : 'hover:bg-sky-50'}"
     on:click={$editMode ? null : handleSpaceSelect}
-    on:dblclick={() => editMode.set(true)}
+    on:dblclick={handleDoubleClick}
     aria-hidden="true"
     use:hover={hovered}
     bind:this={previewContainer}
@@ -367,6 +369,7 @@
             bind:value={folderDetails.folderName}
             class="folder-input isEditing"
             on:keydown={handleKeyDown}
+            on:blur={handleBlur}
           />
         {:else}
           <div
@@ -390,7 +393,7 @@
             <Icon name={'list-add'} size="18px" />
           </button>
           <button
-            on:click|stopPropagation={() => editMode.set(true)}
+            on:click|stopPropagation={handleDoubleClick}
             class="close"
             use:tooltip={{ text: 'Edit', position: 'left' }}
           >

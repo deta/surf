@@ -40,6 +40,9 @@
   export let showPreview = true
   const selectedSpace = oasis.selectedSpace
 
+  const renamingFolderId = writable(null)
+  const editingFolderId = writable(null)
+
   export let onBack = () => {}
   $: log.debug('Spaces:', $spaces)
 
@@ -227,6 +230,15 @@
     }
   }
 
+  const handleEditingStart = (event) => {
+    const newEditingId = event.detail.id
+    editingFolderId.set(newEditingId)
+  }
+
+  const handleEditingEnd = () => {
+    editingFolderId.set(null)
+  }
+
   const handleCreateEmptySpace = () => {
     dispatch('create-empty-space')
   }
@@ -281,7 +293,10 @@
             on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
             on:open-resource
             on:Drop
+            on:editing-start={handleEditingStart}
+            on:editing-end={handleEditingEnd}
             selected={$selectedSpace === folder.id}
+            isEditing={$editingFolderId === folder.id}
             {showPreview}
           />
         </div>
