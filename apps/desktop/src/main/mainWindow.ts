@@ -5,7 +5,7 @@ import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
-import { normalizeElectronUserAgent } from '@horizon/utils'
+import { isMac, normalizeElectronUserAgent } from '@horizon/utils'
 import { getGoogleSignInWindowId } from './googleSignInWindow'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
@@ -72,9 +72,9 @@ export function createWindow() {
     fullscreenable: true,
     show: false,
     autoHideMenuBar: true,
-    frame: import.meta.env.PLATFORM === 'darwin' ? false : true,
+    frame: isMac() ? false : true,
     titleBarStyle: 'hidden',
-    // ...(import.meta.env.PLATFORM === 'linux' ? { icon } : {}),
+    // ...(isLinux() ? { icon } : {}),
     trafficLightPosition: { x: 12.5, y: 12.5 },
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),

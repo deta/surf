@@ -2,6 +2,7 @@ import { app, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
+import { isMac } from '@horizon/utils'
 
 let settingsWindow: BrowserWindow | undefined
 
@@ -21,10 +22,10 @@ export function createSettingsWindow() {
     resizable: false,
     autoHideMenuBar: true,
     title: 'Settings',
-    frame: import.meta.env.PLATFORM !== 'darwin',
+    frame: !isMac(),
     trafficLightPosition: { x: 18, y: 18 },
-    titleBarStyle: import.meta.env.PLATFORM === 'darwin' ? 'hidden' : 'default',
-    // ...(import.meta.env.PLATFORM === 'linux' ? { icon } : {}),
+    titleBarStyle: isMac() ? 'hidden' : 'default',
+    // ...(isLinux() ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [`--userDataPath=${app.getPath('userData')}`],

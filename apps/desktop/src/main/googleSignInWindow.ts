@@ -1,6 +1,6 @@
 import { BrowserWindow, session } from 'electron'
 import { getMainWindow } from './mainWindow'
-import { isGoogleSignInUrl } from '@horizon/utils'
+import { isGoogleSignInUrl, isMac } from '@horizon/utils'
 
 let signInWindow: BrowserWindow | null = null
 
@@ -50,7 +50,7 @@ export function createGoogleSignInWindow(url: string): Promise<string | null> {
     //   reject(error)
     // })
 
-    if (import.meta.env.PLATFORM === 'darwin') {
+    if (isMac()) {
       signInWindow.webContents.on('did-finish-load', () => {
         if (isResolved) return
         signInWindow?.webContents.executeJavaScript(`

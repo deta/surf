@@ -1,4 +1,4 @@
-import { useLogScope } from '@horizon/utils'
+import { isMac, isWindows, useLogScope } from '@horizon/utils'
 import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
@@ -158,7 +158,7 @@ if (!gotTheLock) {
       appPath,
       'resources',
       'bin',
-      `surf-backend${import.meta.env.PLATFORM === 'win32' ? '.exe' : ''}`
+      `surf-backend${isWindows() ? '.exe' : ''}`
     )
 
     surfBackendManager = new SurfBackendServerManager(backendServerPath, [
@@ -204,7 +204,7 @@ if (!gotTheLock) {
   })
 
   app.on('window-all-closed', () => {
-    if (import.meta.env.PLATFORM !== 'darwin') {
+    if (!isMac()) {
       app.quit()
     }
   })

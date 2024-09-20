@@ -1,4 +1,4 @@
-import { useLogScope } from '@horizon/utils'
+import { isMac, useLogScope } from '@horizon/utils'
 import { app, Menu, shell } from 'electron'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
@@ -10,7 +10,6 @@ import { createSettingsWindow } from './settingsWindow'
 import { toggleHistorySwipeGestureConfig } from './historySwipe'
 
 const log = useLogScope('Main App Menu')
-const isMac = import.meta.env.PLATFORM === 'darwin'
 
 let menu: Electron.Menu | null = null
 
@@ -47,7 +46,7 @@ const showSurfDataInFinder = () => {
 }
 
 const template = [
-  ...(isMac
+  ...(isMac()
     ? [
         {
           label: app.name,
@@ -93,7 +92,7 @@ const template = [
   {
     label: 'File',
     submenu: [
-      ...(isMac
+      ...(isMac()
         ? [{ role: 'close', accelerator: 'CmdOrCtrl+Shift+W' }]
         : [
             { label: 'Check for Updates...', click: checkUpdatesMenuClickHandler },
@@ -158,7 +157,7 @@ const template = [
         click: () => ipcSenders.copyActiveTabURL()
       },
       { type: 'separator' },
-      ...(!isMac
+      ...(!isMac()
         ? [
             {
               label: 'Settings...',
@@ -178,7 +177,7 @@ const template = [
       { label: 'Force Reload App', role: 'forceReload', accelerator: 'CmdOrCtrl+Alt+Shift+R' },
       {
         label: 'Toggle Developer Tools for Surf',
-        accelerator: isMac ? 'Cmd+Shift+I' : 'Option+Shift+I',
+        accelerator: isMac() ? 'Cmd+Shift+I' : 'Option+Shift+I',
         role: 'toggleDevTools'
       },
       // { role: 'toggleDevTools' },
@@ -195,7 +194,7 @@ const template = [
       },
       {
         label: 'Toggle Developer Tools',
-        accelerator: isMac ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
+        accelerator: isMac() ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
         click: () => ipcSenders.openDevTools()
       },
       {
@@ -248,7 +247,7 @@ const template = [
     submenu: [
       { role: 'minimize' },
       { role: 'zoom' },
-      ...(isMac
+      ...(isMac()
         ? [{ type: 'separator' }, { role: 'front' }, { type: 'separator' }, { role: 'window' }]
         : [{ role: 'close' }])
     ]

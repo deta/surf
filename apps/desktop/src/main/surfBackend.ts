@@ -1,3 +1,4 @@
+import { isWindows } from '@horizon/utils'
 import { spawn, type ChildProcess, execSync } from 'child_process'
 
 import EventEmitter from 'events'
@@ -102,7 +103,7 @@ export class SurfBackendServerManager extends EventEmitter {
   private killExistingProcess(): void {
     try {
       const processName = basename(this.serverPath)
-      if (import.meta.env.PLATFORM === 'win32') {
+      if (isWindows()) {
         execSync(`taskkill /F /IM ${processName} /T`)
       } else {
         execSync(`pkill -P ${process.pid} -f ${processName}`)
