@@ -59,6 +59,8 @@
               on:open
               on:remove
               on:load
+              on:blacklist-resource
+              on:whitelist-resource
               on:rendered={handleRenderingDone}
             />
           </Masonry>
@@ -74,6 +76,8 @@
             {isInSpace}
             on:click
             on:open
+            on:blacklist-resource
+            on:whitelist-resource
             on:remove
             on:load
           />

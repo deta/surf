@@ -1,7 +1,17 @@
 <script lang="ts" context="module">
   export type ShortcutMenuEvents = {
     'create-tab-from-space': Space
-    'create-new-space': { name: string; processNaturalLanguage: boolean }
+    'create-new-space': {
+      name: string
+      processNaturalLanguage: boolean
+    }
+    'update-existing-space': {
+      name: string
+      space: Space
+      processNaturalLanguage: boolean
+      userPrompt: string
+      resourceIds?: string[]
+    }
   }
 </script>
 

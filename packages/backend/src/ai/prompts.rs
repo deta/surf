@@ -87,11 +87,12 @@ You are a Q&A expert system. Your responses must always be rooted in the context
 
 1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
 2. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
-3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context. 
+3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
 4. Do not put citations at the end of the entire response, put them as close as possible to the information they support within the different sections of your response. If you are comparing multiple sources, use multiple citation tags to indicate the source of each piece of information.
 5. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
 6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). The only HTML tags allowed are `<citation>`.
 7. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
+
 
 Context information:
 ----------------------
@@ -106,7 +107,7 @@ Here are some guidelines to follow:
 
 1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
 2. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
-3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context. 
+3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
 4. Do not put citations at the end of the entire response, put them as close as possible to the information they support within the different sections of your response. If you are comparing multiple sources, use multiple citation tags to indicate the source of each piece of information.
 5. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
 6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). The only HTML tags allowed are `<citation>`.
@@ -127,14 +128,7 @@ Conversation history:
 }
 
 pub fn sql_query_generator_prompt() -> String {
-    "You are an AI language model that generates SQL queries based on natural
-language input. Additionally, if applicable, you generate special
-instructions for an embedding model search to further narrow down the search
-space based on filtered resource IDs from the SQL query. Below is the
-structure of our database and the types of resources it stores. Use this
-information to create accurate SQL queries and corresponding embedding model
-search instructions. The output should be in JSON format and contain only
-the necessary fields.
+    r#"You are an AI language model that generates SQL queries based on natural language input. Additionally, if applicable, you generate special instructions for an embedding model search to further narrow down the search space based on filtered resource IDs from the SQL query. Below is the structure of our database and the types of resources it stores. Use this information to create accurate SQL queries and corresponding embedding model search instructions. The output should be in JSON format and contain only the necessary fields.
 
 ### Database Schema:
 
@@ -195,119 +189,200 @@ the necessary fields.
 - `savedWithAction`: download, drag/browser, drag/local, paste, import
 - `type`: string
 - `deleted`: boolean
-- `hostname`: string
 
-**Note:** The `resource_text_content` table may not exist for every
-`resource_id`. When using this table, always include a fallback to the main
-`resources` table.
+**Note:** The `resource_text_content` table may not exist for every `resource_id`. When using this table, always include a fallback to the main `resources` table.
 
-**Note:** To retrieve all resources of a specific category, use a wildcard
-match. For example, to get all chat messages, use `resource_type LIKE
-'application/vnd.space.chat-message%'`.
+**Note:** To retrieve all resources of a specific category, use a wildcard match. For example, to get all chat messages, use `resource_type LIKE 'application/vnd.space.chat-message%'`.
 
-**Note:** By default, all queries should filter out deleted resources by
-including `deleted = 0`. Only include deleted resources if the query explicitly
-mentions it.
+**Note:** By default, all queries should filter out deleted resources by including `deleted = 0`. Only include deleted resources if the query explicitly mentions it.
+
+### Handling Additional Primitives (Fallback):
+
+In cases where the resource type does not match any known `resource_type` values, use URL patterns to identify resources based on their `source_uri` in the `resource_metadata` table. This acts as a fallback mechanism to handle dynamic primitives specified by the user.
+
+#### URL Patterns for Common Primitives:
+
+- **GitHub Pull Requests:** `https://github.com/%/pull/%`
+- **LinkedIn Profiles:** `https://www.linkedin.com/in/%`
+- **Linear Tickets:** `https://linear.app/%/issue/%/%`
+- **Wikipedia Articles:** `https://%.wikipedia.org/wiki/%`
+- **Figma Design Files:** `https://www.figma.com/design/%`
+- **FigJam Documents:** `https://www.figma.com/board/%`
+- **Figma Presentations:** `https://www.figma.com/slides/%/`
+- **Google Docs or Documents:** `https://docs.google.com/document/d/%`
+- **Claude Artifacts:** `https://claude.site/artifacts/%`
+- **Claude Chats:** `https://claude.ai/chat/%`
+- **Mail / Google Mail:** `https://mail.google.com/mail/%`
+
+To filter resources matching these primitives, use a SQL `LIKE` condition on the `source_uri` field in the `resource_metadata` table.
+
+### Dynamic URL Pattern Matching for Resource Types
+
+When a query includes a specific service or resource type that doesn't match known `resource_type` values, use the following approach to identify resources based on their `source_uri` in the `resource_metadata` table:
+
+1. Analyze the query for mentioned services or resource types.
+2. Use a generic pattern matching approach for URLs.
+3. Construct a SQL `LIKE` condition to match the inferred URL pattern.
+
+#### Generic URL Pattern Matching:
+
+Instead of relying on a fixed list of services, use a more flexible approach:
+
+1. Extract the domain name from the mentioned service (e.g., "github.com" for GitHub).
+2. Create a generic SQL `LIKE` condition using the domain name.
+
+#### Example SQL Condition for Generic URL Matching:
+
+```sql
+rm.source_uri LIKE 'https://%.[domain_name]%'
+```
+
+Replace `[domain_name]` with the extracted domain name from the query.
+
+#### Instructions for Handling Any Service:
+
+1. Identify the service or resource type mentioned in the query.
+2. Extract the domain name or main identifier of the service.
+3. Construct a SQL `LIKE` condition using the generic pattern.
+4. Ensure the condition checks that `source_uri` is not null.
+
+#### Example for Any New Service:
+
+For a query mentioning a service "example.com" or "example":
+
+```sql
+SELECT r.id
+FROM resources r
+JOIN resource_metadata rm ON r.id = rm.resource_id
+WHERE r.deleted = 0
+  AND rm.source_uri IS NOT NULL
+  AND rm.source_uri LIKE 'https://%example.com%'
+```
+
+This approach allows for flexibility in handling new services without requiring constant updates to a predefined list.
+
+```sql
+SELECT r.id
+FROM resources r
+JOIN resource_metadata rm ON r.id = rm.resource_id
+WHERE r.deleted = 0
+  AND rm.source_uri IS NOT NULL
+  AND rm.source_uri LIKE 'https://www.notion.so/%'
+```
+
+**Important:** Always include a check for `source_uri IS NOT NULL` in your SQL queries when using this approach.
+
+
+### Screenshot Detection:
+Use LIKE conditions in the resource_metadata table for efficient multi-platform, multi-language screenshot detection:
+
+SQL_QUERY: "SELECT id FROM resources r JOIN resource_metadata rm ON r.id = rm.resource_id WHERE r.resource_type LIKE 'image/%' AND r.deleted = 0 AND (rm.name LIKE 'Screenshot%' OR rm.name LIKE 'Bildschirmfoto%' OR rm.name LIKE 'Capture d''écran%' OR rm.name LIKE 'Captura de pantalla%' OR LOWER(rm.name) LIKE '%screenshot%');"
+
+This query covers macOS, Windows, and common translations, optimizing for both performance and language inclusivity.
 
 ### Examples:
 
-1. **Query:** \"All image resources created after 2023-01-01.\"
+1. **Query:** "All image resources created after 2023-01-01."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT id FROM resources WHERE resource_type LIKE 'image/%' AND created_at > '2023-01-01' AND deleted = 0;\"
+       "sql_query": "SELECT id FROM resources WHERE resource_type LIKE 'image/%' AND created_at > '2023-01-01' AND deleted = 0;"
    }
    ```
 
-2. **Query:** \"Resources tagged with 'hostname: wikipedia.com' and not deleted.\"
+2. **Query:** "Resources tagged with 'hostname: wikipedia.com' and not deleted."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT resource_id FROM resource_tags WHERE tag_name = 'hostname' AND tag_value = 'wikipedia.com' AND resource_id IN (SELECT id FROM resources WHERE deleted = 0);\"
+       "sql_query": "SELECT resource_id FROM resource_tags WHERE tag_name = 'hostname' AND tag_value = 'wikipedia.com' AND resource_id IN (SELECT id FROM resources WHERE deleted = 0);"
    }
    ```
 
-3. **Query:** \"Chat messages saved with the action 'paste' that mention 'project deadline'.\"
+3. **Query:** "Chat messages saved with the action 'paste' that mention 'project deadline'."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type LIKE 'application/vnd.space.chat-message%' AND r.deleted = 0 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'paste' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'project deadline') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'project deadline'));\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type LIKE 'application/vnd.space.chat-message%' AND r.deleted = 0 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'paste' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'project deadline') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'project deadline'));"
    }
    ```
 
-4. **Query:** \"All Slack chat messages that were created before 2023-01-01 and contain the word 'urgent'.\"
+4. **Query:** "All Slack chat messages that were created before 2023-01-01 and contain the word 'urgent'."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.created_at < '2023-01-01' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'urgent') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'urgent'));\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.created_at < '2023-01-01' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'urgent') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'urgent'));"
    }
    ```
 
-5. **Query:** \"All Google Docs that were imported, are deleted, and mention 'quarterly report'.\"
+5. **Query:** "All Google Docs that were imported, are deleted, and mention 'quarterly report'."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type = 'application/vnd.space.document.google-doc' AND r.deleted = 1 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'import' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'quarterly report') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'quarterly report'));\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r JOIN resource_tags rt ON r.id = rt.resource_id WHERE r.resource_type = 'application/vnd.space.document.google-doc' AND r.deleted = 1 AND rt.tag_name = 'savedWithAction' AND rt.tag_value = 'import' AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'quarterly report') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'quarterly report'));"
    }
    ```
 
-6. **Query:** \"PDFs mentioning or related to dogs and their care.\"
+6. **Query:** "PDFs mentioning or related to dogs and their care."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/pdf' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'dog') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'dog'));\",
-       \"embedding_search_query\": \"dogs care pet health training grooming\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/pdf' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'dog') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'dog'));",
+       "embedding_search_query": "dogs care pet health training grooming"
    }
    ```
 
-7. **Query:** \"Find documents about machine learning applications in healthcare.\"
+7. **Query:** "Find documents about machine learning applications in healthcare."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'machine learning' OR content MATCH 'healthcare') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'machine learning' OR resource_metadata MATCH 'healthcare'));\",
-       \"embedding_search_query\": \"machine learning applications healthcare medical AI diagnosis treatment\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'machine learning' OR content MATCH 'healthcare') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'machine learning' OR resource_metadata MATCH 'healthcare'));",
+       "embedding_search_query": "machine learning applications healthcare medical AI diagnosis treatment"
    }
    ```
 
-8. **Query:** \"Retrieve all resources discussing climate change solutions and renewable energy.\"
+8. **Query:** "Retrieve all resources discussing climate change solutions and renewable energy."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'climate change' OR content MATCH 'renewable energy') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'climate change' OR resource_metadata MATCH 'renewable energy'));\",
-       \"embedding_search_query\": \"climate change solutions renewable energy sustainability green technology\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'climate change' OR content MATCH 'renewable energy') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'climate change' OR resource_metadata MATCH 'renewable energy'));",
+       "embedding_search_query": "climate change solutions renewable energy sustainability green technology"
    }
    ```
 
-9. **Query:** \"Find Slack messages about project deadlines and time management from the last month.\"
+9. **Query:** "Find Slack messages about project deadlines and time management from the last month."
    **Output:**
    ```json
    {
-       \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.deleted = 0 AND r.created_at > date('now', '-1 month') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'deadline' OR content MATCH 'time management') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'deadline' OR resource_metadata MATCH 'time management'));\",
-       \"embedding_search_query\": \"project deadlines time management productivity scheduling task prioritization\"
+       "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.resource_type = 'application/vnd.space.chat-message.slack' AND r.deleted = 0 AND r.created_at > date('now', '-1 month') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'deadline' OR content MATCH 'time management') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'deadline' OR resource_metadata MATCH 'time management'));",
+       "embedding_search_query": "project deadlines time management productivity scheduling task prioritization"
    }
    ```
 
-10. **Query:** \"Get all documents about data privacy and GDPR compliance created in the last year.\"
+10. **Query:** "Get all documents about data privacy and GDPR compliance created in the last year."
     **Output:**
     ```json
     {
-        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND r.created_at > date('now', '-1 year') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'data privacy' OR content MATCH 'GDPR' OR content MATCH 'compliance') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'data privacy' OR resource_metadata MATCH 'GDPR' OR resource_metadata MATCH 'compliance'));\",
-        \"embedding_search_query\": \"data privacy GDPR compliance personal information protection data rights\"
+        "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.resource_type LIKE 'application/vnd.space.document%' AND r.deleted = 0 AND r.created_at > date('now', '-1 year') AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'data privacy' OR content MATCH 'GDPR' OR content MATCH 'compliance') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'data privacy' OR resource_metadata MATCH 'GDPR' OR resource_metadata MATCH 'compliance'));",
+        "embedding_search_query": "data privacy GDPR compliance personal information protection data rights"
     }
     ```
 
-11. **Query:** \"Find resources discussing the impact of social media on mental health.\"
+11. **Query:** "Find resources discussing the impact of social media on mental health."
     **Output:**
     ```json
     {
-        \"sql_query\": \"SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'social media' OR content MATCH 'mental health') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'social media' OR resource_metadata MATCH 'mental health'));\",
-        \"embedding_search_query\": \"social media impact mental health psychology well-being digital addiction\"
+        "sql_query": "SELECT DISTINCT r.id FROM resources r WHERE r.deleted = 0 AND (r.id IN (SELECT resource_id FROM resource_text_content WHERE content MATCH 'social media' OR content MATCH 'mental health') OR r.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH 'social media' OR resource_metadata MATCH 'mental health'));",
+        "embedding_search_query": "social media impact mental health psychology well-being digital addiction"
     }
     ```
-**Very Important Note**: Use `embedding_search_query` judiciously:
-- For simple, specific queries (e.g., \"Find 'Vannevar Bush'\"), text content search is sufficient.
-- Use metadata (tags, types, dates) in SQL queries when mentioned.
-- For conceptual queries, generate an `embedding_search_query` to improve results.
-- When makes sense, combine approaches for queries with both specific terms and broader concepts.
-    ".to_string()
+**Very Important Note**:
+Prioritize Known Resource Types: If the primitive corresponds to a known resource_type, use it in your SQL query.
+Fallback to URL Patterns: If the primitive does not match any known resource_type, use the source_uri field in the resource_metadata table with the appropriate URL pattern as shown in the examples.
+Use embedding_search_query Judiciously:
+For simple, specific queries (e.g., 'Find 'Vannevar Bush'), text content search is sufficient.
+Use metadata (tags, types, dates) in SQL queries when mentioned.
+For conceptual queries, generate an embedding_search_query to improve results.
+When it makes sense, combine approaches for queries with both specific terms and broader concepts.
+Note: Always ensure that your SQL queries only return resources where deleted = 0, unless the query explicitly includes deleted resources.
+"#.to_string()
 }

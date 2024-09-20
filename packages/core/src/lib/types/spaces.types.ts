@@ -1,6 +1,6 @@
 export interface CreateSpaceEntryInput {
   resource_id: string
-  manually_added: boolean
+  manually_added: number
 }
 
 export interface Space {
@@ -31,6 +31,14 @@ export interface SpaceSource {
   url: string
   last_fetched_at: string | null
 }
+
+export const SpaceEntryOrigin = {
+  Blacklisted: 2,
+  ManuallyAdded: 1,
+  LlmQuery: 0
+} as const
+
+export type SpaceEntryOrigin = (typeof SpaceEntryOrigin)[keyof typeof SpaceEntryOrigin]
 
 export interface SpaceEntry {
   id: string

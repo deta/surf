@@ -9,6 +9,7 @@
   export let resourceOrId: string | Resource
   export let selected: boolean = false
   export let isInSpace: boolean = false
+  export let resourcesBlacklistable: boolean = false
 
   const log = useLogScope('OasisResourceLoader')
   const resourceManager = useResourceManager()
@@ -46,7 +47,18 @@
 <div class="wrapper">
   {#if resource}
     <DragResourceWrapper {resource}>
-      <ResourcePreview {resource} {selected} {isInSpace} on:load on:click on:open on:remove />
+      <ResourcePreview
+        {resource}
+        {selected}
+        {isInSpace}
+        {resourcesBlacklistable}
+        on:load
+        on:click
+        on:open
+        on:remove
+        on:blacklist-resource
+        on:whitelist-resource
+      />
     </DragResourceWrapper>
   {/if}
 </div>

@@ -38,7 +38,7 @@
     createResourceManager
   } from '../service/resources'
 
-  import { type Space, type SpaceSource } from '../types'
+  import { SpaceEntryOrigin, type Space, type SpaceSource } from '../types'
 
   import BrowserTab, { type BrowserTabNewTabEvent } from './Browser/BrowserTab.svelte'
   import BrowserHomescreen from './Browser/BrowserHomescreen.svelte'
@@ -112,6 +112,8 @@
   import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
   import DevOverlay from './Browser/DevOverlay.svelte'
   import BrowserActions from './Browser/BrowserActions.svelte'
+  import CreateLiveSpace from './Oasis/CreateLiveSpace.svelte'
+  import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
   import { createTabsManager } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
   import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
@@ -195,6 +197,7 @@
     errors: []
   })
   const bookmarkingSuccess = writableAutoReset(false, 1000)
+  const showCreateLiveSpaceDialog = writable(false)
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
   const isCreatingLiveSpace = writable(false)
@@ -1191,7 +1194,7 @@
       }
 
       const validResourceIds = resourceIds.filter((id) => id !== null) as string[]
-      await oasis.addResourcesToSpace(newSpace.id, validResourceIds)
+      await oasis.addResourcesToSpace(newSpace.id, validResourceIds, SpaceEntryOrigin.ManuallyAdded)
 
       await tabsManager.addSpaceTab(newSpace, { active: true })
 
@@ -1798,7 +1801,11 @@
 
       if (resource) {
         log.debug('will add item', resource.id, 'to space', e.detail.id)
-        await resourceManager.addItemsToSpace(e.detail.id, [resource.id])
+        await resourceManager.addItemsToSpace(
+          e.detail.id,
+          [resource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
 
         // new resources are already tracked in the bookmarking function
         await telemetry.trackAddResourceToSpace(
@@ -1814,61 +1821,61 @@
     }
   }
 
-  const handleCreateNewSpace = async (e: CustomEvent<ShortcutMenuEvents['create-new-space']>) => {
-    const { name, processNaturalLanguage } = e.detail
-    const toast = toasts.loading(
-      processNaturalLanguage ? 'Creating Space with AI...' : 'Creating Space...'
-    )
+  // const handleCreateNewSpace = async (e: CustomEvent<ShortcutMenuEvents['create-new-space']>) => {
+  //   const { name, processNaturalLanguage } = e.detail
+  //   const toast = toasts.loading(
+  //     processNaturalLanguage ? 'Creating Space with AI...' : 'Creating Space...'
+  //   )
 
-    try {
-      log.debug('Create new Space with Name', name, processNaturalLanguage)
+  //   try {
+  //     log.debug('Create new Space with Name', name, processNaturalLanguage)
 
-      const newSpace = await oasis.createSpace({
-        folderName: name,
-        colors: ['#FFBA76', '#FB8E4E'],
-        smartFilterQuery: processNaturalLanguage ? name : null
-      })
+  //     const newSpace = await oasis.createSpace({
+  //       folderName: name,
+  //       colors: ['#FFBA76', '#FB8E4E'],
+  //       smartFilterQuery: processNaturalLanguage ? name : null
+  //     })
 
-      log.debug('New Folder:', newSpace)
+  //     log.debug('New Folder:', newSpace)
 
-      if (processNaturalLanguage) {
-        const userPrompt = JSON.stringify(name)
+  //     if (processNaturalLanguage) {
+  //       const userPrompt = JSON.stringify(name)
 
-        const response = await resourceManager.getResourcesViaPrompt(userPrompt)
+  //       const response = await resourceManager.getResourcesViaPrompt(userPrompt)
 
-        log.debug(`Automatic Folder Generation request`, response)
+  //       log.debug(`Automatic Folder Generation request`, response)
 
-        const results = response.embedding_search_query
-          ? response.embedding_search_results
-          : response.sql_query_results
-        log.debug('Automatic Folder generated with', results)
+  //       const results = response.embedding_search_query
+  //         ? response.embedding_search_results
+  //         : response.sql_query_results
+  //       log.debug('Automatic Folder generated with', results)
 
-        if (!results) {
-          log.warn('No results found for', userPrompt, response)
-          return
-        }
+  //       if (!results) {
+  //         log.warn('No results found for', userPrompt, response)
+  //         return
+  //       }
 
-        await oasis.addResourcesToSpace(newSpace.id, results)
-      }
+  //       await oasis.addResourcesToSpace(newSpace.id, results)
+  //     }
 
-      if (newSpace) {
-        await tabsManager.addSpaceTab(newSpace, { active: true })
-      }
+  //     if (newSpace) {
+  //       await tabsManager.addSpaceTab(newSpace, { active: true })
+  //     }
 
-      await telemetry.trackCreateSpace(CreateSpaceEventFrom.SpaceHoverMenu, {
-        createdUsingAI: processNaturalLanguage
-      })
+  //     await telemetry.trackCreateSpace(CreateSpaceEventFrom.SpaceHoverMenu, {
+  //       createdUsingAI: processNaturalLanguage
+  //     })
 
-      toast.success('Space created!')
-    } catch (error) {
-      log.error('Failed to create new space:', error)
-      toast.error(
-        processNaturalLanguage
-          ? 'Failed to create new space with AI, try again with a different name'
-          : 'Failed to create new space'
-      )
-    }
-  }
+  //     toast.success('Space created!')
+  //   } catch (error) {
+  //     log.error('Failed to create new space:', error)
+  //     toast.error(
+  //       processNaturalLanguage
+  //         ? 'Failed to create new space with AI, try again with a different name'
+  //         : 'Failed to create new space'
+  //     )
+  //   }
+  // }
 
   const createSpaceSourceFromActiveTab = async (tab: TabPage) => {
     if (!tab.currentDetectedApp) {
@@ -2064,6 +2071,8 @@
 
       tabsManager.delete(tab.id)
     }
+
+    oasis.resetSelectedSpace()
   }
 
   const handleCreateNote = async (e: CustomEvent<string>) => {
@@ -2544,7 +2553,8 @@
     if (resourceItems.length > 0) {
       await resourceManager.addItemsToSpace(
         tab.spaceId,
-        resourceItems.map((r) => r.data as string)
+        resourceItems.map((r) => r.data as string),
+        SpaceEntryOrigin.ManuallyAdded
       )
       log.debug(`Resources dropped into folder ${tab.title}`)
 
@@ -3146,7 +3156,7 @@
 
   const handleDropOnSpaceTab = async (drag: DragculaDragEvent, spaceId: string) => {
     log.warn('DROP ON SPACE TAB', spaceId, drag)
-    if (drag.item !== null) drag.item.dragEffect = 'copy'
+    if (drag.item !== null && drag.item !== undefined) drag.item.dragEffect = 'copy'
 
     const toast = toasts.loading(
       spaceId === 'all'
@@ -3255,9 +3265,10 @@
             })
           )
         }
-      } catch {
-        drag.abort()
+      } catch (e) {
         toast.error('Failed to add resources to space!')
+        console.error(e)
+        if (drag?.abort) drag.abort()
         return
       }
     }
@@ -3265,7 +3276,7 @@
     drag.continue()
     log.warn('ADDING resources to spaceid', spaceId, resourceIds)
     if (spaceId !== 'all') {
-      await oasis.addResourcesToSpace(spaceId, resourceIds)
+      await oasis.addResourcesToSpace(spaceId, resourceIds, SpaceEntryOrigin.ManuallyAdded)
       //await loadSpaceContents(spaceId)
     } else {
       //await loadEverything()
@@ -3449,7 +3460,7 @@
     </div>
   {/if}
 
-  <!-- 
+  <!--
     NOTE: Removed from SidebarPane to disable chat peek for now.
 
     on:rightPeekOpen={() => {
@@ -4064,6 +4075,7 @@
           on:open-space={handleCreateTabForSpace}
           on:create-chat={handleCreateChatWithQuery}
           on:create-note={handleCreateNote}
+          on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
           on:zoom={() => {
             $activeBrowserTab?.zoomIn()
           }}

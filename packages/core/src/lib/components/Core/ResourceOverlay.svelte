@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
 
   export let caption = 'Drag me onto Horizon'
+  export let interactive = true
 
   let figure = null
   let captionElem = null // Add a reference to the caption element to measure its width
@@ -53,13 +54,15 @@
 
 <div class="figure" bind:this={figure}>
   <slot name="content" />
-  <div
-    bind:this={captionElem}
-    class="caption"
-    style={`left: ${captionStyle.x}px; top: ${captionStyle.y}px; opacity: ${captionStyle.opacity}; transform: ${captionStyle.transform};`}
-  >
-    {caption}
-  </div>
+  {#if interactive}
+    <div
+      bind:this={captionElem}
+      class="caption"
+      style={`left: ${captionStyle.x}px; top: ${captionStyle.y}px; opacity: ${captionStyle.opacity}; transform: ${captionStyle.transform};`}
+    >
+      {caption}
+    </div>
+  {/if}
 </div>
 
 <style>

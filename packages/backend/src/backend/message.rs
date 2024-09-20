@@ -69,7 +69,7 @@ pub enum HorizonMessage {
 #[derive(Debug)]
 pub struct CreateSpaceEntryInput {
     pub resource_id: String,
-    pub manually_added: bool,
+    pub manually_added: i32,
 }
 
 #[derive(Debug)]
@@ -177,7 +177,7 @@ pub enum MiscMessage {
     CreateAIChatMessage(String),
     GetAIChatMessage(String),
     DeleteAIChatMessage(String),
-    QuerySFFSResources(String, Option<String>, Option<String>),
+    QuerySFFSResources(String, Option<String>, Option<String>, Option<f32>),
     GetAIChatDataSource(String),
     GetAIDocsSimilarity {
         query: String,

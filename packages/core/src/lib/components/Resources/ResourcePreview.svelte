@@ -31,7 +31,8 @@
     ResourceTypes,
     type CreateTabOptions,
     type ResourceData,
-    type ResourceDataPost
+    type ResourceDataPost,
+    type SpaceEntryOrigin
   } from '../../types'
 
   import { writable, get } from 'svelte/store'
@@ -50,6 +51,7 @@
     getFileType,
     parseStringIntoUrl,
     getHostname,
+    hover,
     isMac
   } from '@horizon/utils'
   import { useTabsManager } from '../../service/tabs'
@@ -62,12 +64,15 @@
     type Mode,
     type Source
   } from './Previews/Preview.svelte'
+  import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let resource: Resource
   export let selected: boolean = false
   export let mode: Mode = 'full'
   export let isInSpace: boolean = false // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
+  export let resourcesBlacklistable: boolean = false
+  export let resourceBlacklisted: boolean = false
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
@@ -82,6 +87,8 @@
     load: string
     open: string
     'created-tab': void
+    'whitelist-resource': string
+    'blacklist-resource': string
   }>()
 
   const isHovered = writable(false)
@@ -423,6 +430,12 @@
   }
 
   const handleClick = async (e: MouseEvent) => {
+    // TOOD: @felix replace this with interactive prop
+    if (resourcesBlacklistable) {
+      handleBlacklisting()
+      return
+    }
+
     if (dragging) {
       dragging = false
       return
@@ -455,6 +468,18 @@
     dispatch('remove', resource.id)
   }
 
+  const handleBlacklisting = () => {
+    resourceBlacklisted = !resourceBlacklisted
+
+    if (resourceBlacklisted) {
+      // Handle removing from blacklist
+      dispatch('blacklist-resource', resource.id)
+    } else {
+      // Handle adding to blacklist
+      dispatch('whitelist-resource', resource.id)
+    }
+  }
+
   const handleOpenAsNewTab = (e?: MouseEvent) => {
     e?.stopImmediatePropagation()
 
@@ -480,6 +505,10 @@
     }
   }
 
+  const handleToggleBlacklisted = () => {
+    resourceBlacklisted = !resourceBlacklisted
+  }
+
   onMount(async () => {
     await loadResource()
   })
@@ -490,7 +519,7 @@
   on:click={handleClick}
   class="resource-preview clickable"
   class:isSelected={selected}
-  style="--id:{resource.id};"
+  style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
   use:contextMenu={{
     items: [
       {
@@ -523,14 +552,18 @@
         items: $spaces
           ? [
               ...$spaces
-                .filter((e) => e.name.folderName !== 'Everything')
+                .filter((e) => e.name.folderName.toLowerCase() !== 'all my stuff')
                 .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
                 .map((space) => ({
                   type: 'action',
                   icon: '',
                   text: space.name.folderName,
                   action: () => {
-                    oasis.addResourcesToSpace(space.id, [resource.id])
+                    oasis.addResourcesToSpace(
+                      space.id,
+                      [resource.id],
+                      SpaceEntryOrigin.ManuallyAdded
+                    )
                   }
                 }))
             ]
@@ -568,6 +601,17 @@
         <div class="title">Loading...</div>
         <div class="subtitle">Please wait</div>
       </div>
+    </div>
+  {/if}
+
+  {#if resourcesBlacklistable}
+    <div class="resource-blacklistable" use:hover={isHovered}>
+      <Icon name="check" size="16px" />
+      {#if $isHovered}
+        <div class="whitespace-nowrap ml-2 leading-4" transition:slide={{ axis: 'x' }}>
+          Selected
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -698,6 +742,27 @@
     gap: 0.5rem;
     color: var(--color-text-muted);
     width: 100%;
+  }
+
+  .resource-blacklistable {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    background: rgba(0, 123, 255, 0.85);
+    backdrop-filter: blur(4px);
+    box-shadow: 0px 0.425px 0px 0px rgba(0, 83, 172, 0.25);
+    padding: 0.4rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgb(255, 255, 255);
+
+    &.hover {
+      background: rgba(255, 255, 255);
+      color: rgb(12 74 110);
+    }
   }
 
   .remove-wrapper {
