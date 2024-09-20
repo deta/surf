@@ -22,6 +22,8 @@
   export let activeTab: Tab
   export let sffs: SFFS
   export let appId: string
+  export let experimentalMode = false
+  export let horizontalTabs = false
 
   let fetching = false
   let prompt = ''
@@ -39,6 +41,7 @@
   const dispatch = createEventDispatcher<{
     clear: void
     'execute-tab-code': ExecuteCodeInTabEvent
+    close: void
   }>()
 
   const activeToolTab = writable<'app' | 'page'>('page')
@@ -244,6 +247,23 @@
 </script>
 
 <div class="flex flex-col gap-4 overflow-hidden p-4 h-full">
+  {#if !experimentalMode}
+    <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 -m-4">
+      <div class="flex items-center justify-start text-lg p-1.5 font-semibold">Go Wild</div>
+
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <div
+        role="button"
+        tabindex="0"
+        on:click={() => dispatch('close')}
+        class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group cursor-pointer"
+      >
+        <Icon name="sidebar.right" class="group-hover:hidden" size="20px" />
+        <Icon name="close" class="hidden group-hover:block" size="20px" />
+      </div>
+    </div>
+  {/if}
   <!-- <div class="header">
     <div class="title">
       <Icon name="sparkles" size="28px" />
