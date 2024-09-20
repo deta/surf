@@ -1178,7 +1178,7 @@
       }
 
       const validResourceIds = resourceIds.filter((id) => id !== null) as string[]
-      await oasis.addResourcesToSpace(newSpace.id, validResourceIds)
+      await oasis.addResourcesToSpace(newSpace.id, validResourceIds, SpaceEntryOrigin.ManuallyAdded)
 
       await tabsManager.addSpaceTab(newSpace, { active: true })
 
@@ -1805,61 +1805,61 @@
     }
   }
 
-  const handleCreateNewSpace = async (e: CustomEvent<ShortcutMenuEvents['create-new-space']>) => {
-    const { name, processNaturalLanguage } = e.detail
-    const toast = toasts.loading(
-      processNaturalLanguage ? 'Creating Space with AI...' : 'Creating Space...'
-    )
+  // const handleCreateNewSpace = async (e: CustomEvent<ShortcutMenuEvents['create-new-space']>) => {
+  //   const { name, processNaturalLanguage } = e.detail
+  //   const toast = toasts.loading(
+  //     processNaturalLanguage ? 'Creating Space with AI...' : 'Creating Space...'
+  //   )
 
-    try {
-      log.debug('Create new Space with Name', name, processNaturalLanguage)
+  //   try {
+  //     log.debug('Create new Space with Name', name, processNaturalLanguage)
 
-      const newSpace = await oasis.createSpace({
-        folderName: name,
-        colors: ['#FFBA76', '#FB8E4E'],
-        smartFilterQuery: processNaturalLanguage ? name : null
-      })
+  //     const newSpace = await oasis.createSpace({
+  //       folderName: name,
+  //       colors: ['#FFBA76', '#FB8E4E'],
+  //       smartFilterQuery: processNaturalLanguage ? name : null
+  //     })
 
-      log.debug('New Folder:', newSpace)
+  //     log.debug('New Folder:', newSpace)
 
-      if (processNaturalLanguage) {
-        const userPrompt = JSON.stringify(name)
+  //     if (processNaturalLanguage) {
+  //       const userPrompt = JSON.stringify(name)
 
-        const response = await resourceManager.getResourcesViaPrompt(userPrompt)
+  //       const response = await resourceManager.getResourcesViaPrompt(userPrompt)
 
-        log.debug(`Automatic Folder Generation request`, response)
+  //       log.debug(`Automatic Folder Generation request`, response)
 
-        const results = response.embedding_search_query
-          ? response.embedding_search_results
-          : response.sql_query_results
-        log.debug('Automatic Folder generated with', results)
+  //       const results = response.embedding_search_query
+  //         ? response.embedding_search_results
+  //         : response.sql_query_results
+  //       log.debug('Automatic Folder generated with', results)
 
-        if (!results) {
-          log.warn('No results found for', userPrompt, response)
-          return
-        }
+  //       if (!results) {
+  //         log.warn('No results found for', userPrompt, response)
+  //         return
+  //       }
 
-        await oasis.addResourcesToSpace(newSpace.id, results)
-      }
+  //       await oasis.addResourcesToSpace(newSpace.id, results)
+  //     }
 
-      if (newSpace) {
-        await tabsManager.addSpaceTab(newSpace, { active: true })
-      }
+  //     if (newSpace) {
+  //       await tabsManager.addSpaceTab(newSpace, { active: true })
+  //     }
 
-      await telemetry.trackCreateSpace(CreateSpaceEventFrom.SpaceHoverMenu, {
-        createdUsingAI: processNaturalLanguage
-      })
+  //     await telemetry.trackCreateSpace(CreateSpaceEventFrom.SpaceHoverMenu, {
+  //       createdUsingAI: processNaturalLanguage
+  //     })
 
-      toast.success('Space created!')
-    } catch (error) {
-      log.error('Failed to create new space:', error)
-      toast.error(
-        processNaturalLanguage
-          ? 'Failed to create new space with AI, try again with a different name'
-          : 'Failed to create new space'
-      )
-    }
-  }
+  //     toast.success('Space created!')
+  //   } catch (error) {
+  //     log.error('Failed to create new space:', error)
+  //     toast.error(
+  //       processNaturalLanguage
+  //         ? 'Failed to create new space with AI, try again with a different name'
+  //         : 'Failed to create new space'
+  //     )
+  //   }
+  // }
 
   const createSpaceSourceFromActiveTab = async (tab: TabPage) => {
     if (!tab.currentDetectedApp) {

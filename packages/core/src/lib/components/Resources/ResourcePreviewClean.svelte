@@ -25,6 +25,7 @@
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
+    SpaceEntryOrigin,
     type CreateTabOptions,
     type ResourceData,
     type ResourceDataPost
@@ -305,7 +306,11 @@
                   icon: '',
                   text: space.name.folderName,
                   action: () => {
-                    oasis.addResourcesToSpace(space.id, [resource.id])
+                    oasis.addResourcesToSpace(
+                      space.id,
+                      [resource.id],
+                      SpaceEntryOrigin.ManuallyAdded
+                    )
                   }
                 }))
             ]
