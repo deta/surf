@@ -483,7 +483,8 @@
         // TODO: when re-enabling live-spaces we need to set if the items are blacklisted or not
         await resourceManager.addItemsToSpace(
           spaceId,
-          resources.map((r) => r.id)
+          resources.map((r) => r.id),
+          SpaceEntryOrigin.ManuallyAdded
         )
       }
 
