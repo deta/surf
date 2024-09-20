@@ -5,7 +5,7 @@
   import { useOasis } from '../../service/oasis'
   import { useResourceManager } from '../../service/resources'
 
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
+  import ResourcePreview from '../Resources/ResourcePreview.svelte'
 
   const oasis = useOasis()
   const resourceManager = useResourceManager()
@@ -126,12 +126,7 @@
       {#each resourcesData as item, index}
         <div class="card" style={getTransformStyle(index, $activeIndex)}>
           <div class="overflow-hidden w-full h-full">
-            <ResourcePreviewClean
-              resource={resources[index]}
-              interactive={false}
-              on:click
-              resourceBlacklistable={false}
-            />
+            <ResourcePreview resource={resources[index]} on:click resourcesBlacklistable={false} />
           </div>
         </div>
       {/each}

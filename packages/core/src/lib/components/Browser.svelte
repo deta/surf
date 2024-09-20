@@ -113,10 +113,8 @@
   import DevOverlay from './Browser/DevOverlay.svelte'
   import BrowserActions from './Browser/BrowserActions.svelte'
   import CreateLiveSpace from './Oasis/CreateLiveSpace.svelte'
-  import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
   import { createTabsManager } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
-  import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
   import ScreenshotPicker from './Webview/ScreenshotPicker.svelte'
   import {
     dataUrltoBlob,
