@@ -8,8 +8,6 @@
   import { Icon } from '@horizon/icons'
   import { useToasts } from '../../service/toast'
 
-  import StuffStack from './StuffStack.svelte'
-
   export let tab: TabHistory
   export let active: boolean = false
 
@@ -144,8 +142,6 @@
 
 <div class="wrapper">
   <div class="content">
-    <StuffStack />
-
     <div class="header">
       <div class="title">
         {#if $loading}
