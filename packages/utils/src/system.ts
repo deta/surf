@@ -1,7 +1,11 @@
 export const isMac = () => {
-  if (typeof process !== 'undefined' && process.platform) {
-    return process.platform === 'darwin'
-  }
+  return import.meta.env.PLATFORM === 'darwin'
+}
 
-  return false
+export const isWindows = () => {
+  return import.meta.env.PLATFORM === 'win32'
+}
+
+export const isLinux = () => {
+  return import.meta.env.PLATFORM === 'linux'
 }

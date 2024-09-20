@@ -10,7 +10,7 @@ export const isDefaultBrowser = () => {
 }
 
 export const getPlatform = () => {
-  const platform = process.platform
+  const platform = import.meta.env.PLATFORM
 
   if (platform === 'darwin') {
     return 'mac'
