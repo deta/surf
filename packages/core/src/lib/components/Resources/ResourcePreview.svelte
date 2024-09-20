@@ -49,9 +49,12 @@
     isModKeyPressed,
     getFileType,
     parseStringIntoUrl,
-    getHostname
+    getHostname,
+    isMac
   } from '@horizon/utils'
   import { useTabsManager } from '../../service/tabs'
+  import { contextMenu } from '../Core/ContextMenu.svelte'
+  import { useOasis } from '../../service/oasis'
   import Preview, {
     type Annotation,
     type Author,
@@ -65,10 +68,12 @@
   export let selected: boolean = false
   export let interactive: boolean = true
   export let mode: Mode = 'full'
+  export let everythingResource: boolean = true // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
+  const oasis = useOasis()
   const config = useConfig()
   const userConfigSettings = config.settings
 
@@ -81,6 +86,7 @@
   }>()
 
   const isHovered = writable(false)
+  const spaces = oasis.spaces
 
   $: annotations = resource.annotations ?? []
 
@@ -432,13 +438,13 @@
     }
   }
 
-  const handleRemove = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
+  const handleRemove = (e?: MouseEvent) => {
+    e?.stopImmediatePropagation()
     dispatch('remove', resource.id)
   }
 
-  const handleOpenAsNewTab = (e: MouseEvent) => {
-    e.stopImmediatePropagation()
+  const handleOpenAsNewTab = (e?: MouseEvent) => {
+    e?.stopImmediatePropagation()
 
     openResourceAsTab({
       active: true,
@@ -473,8 +479,57 @@
   class="resource-preview clickable"
   class:isSelected={selected}
   style="--id:{resource.id};"
-  on:dragstart={handleDragStart}
-  draggable="true"
+  use:contextMenu={{
+    items: [
+      {
+        type: 'action',
+        icon: 'arrow.up.right',
+        text: 'Open as Tab',
+        action: () => handleOpenAsNewTab()
+      },
+      {
+        type: 'action',
+        icon: 'eye',
+        text: 'Open in Mini Browser',
+        action: () => dispatch('open', resource.id)
+      },
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: '',
+        text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
+        action: () => handleOpenAsFile()
+      },
+      {
+        type: 'sub-menu',
+        icon: '',
+        text: `Add to Space`,
+        items: $spaces
+          ? [
+              ...$spaces
+                .filter((e) => e.name.folderName !== 'Everything')
+                .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+                .map((space) => ({
+                  type: 'action',
+                  icon: '',
+                  text: space.name.folderName,
+                  action: () => {
+                    oasis.addResourcesToSpace(space.id, [resource.id])
+                  }
+                }))
+            ]
+          : []
+      },
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: 'trash',
+        text: `${everythingResource ? 'Delete from Stuff' : 'Remove from Space'}`,
+        kind: 'danger',
+        action: () => handleRemove()
+      }
+    ]
+  }}
 >
   {#if previewData}
     <Preview

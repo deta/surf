@@ -121,6 +121,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   controlWindow: ipcService.addEvent<ControlWindow>('control-window'),
   openSettings: ipcService.addEvent<void>('open-settings'),
   openResourceLocally: ipcService.addEvent<SFFSResource>('open-resource-locally'),
+  showAppMenuPopup: ipcService.addEvent<void>('show-app-menu-popup'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),

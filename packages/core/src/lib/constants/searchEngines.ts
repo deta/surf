@@ -1,10 +1,29 @@
 export const DEFAULT_SEARCH_ENGINE = 'google'
-export const SEARCH_ENGINES = [
+export const SEARCH_ENGINES: {
+  key: string
+  title: string
+  shortcuts: string[]
+  getUrl: (query: string) => string
+  getCompletions?: (query: string) => Promise<string[]>
+}[] = [
   {
     key: 'google',
     title: 'Search with Google',
     shortcuts: ['gg', 'google'],
-    getUrl: (query: string) => `https://google.com/search?q=${query}`
+    getUrl: (query: string) => `https://google.com/search?q=${query}`,
+    getCompletions: async (query: string) => {
+      const data = await window.api.fetchJSON(
+        `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`,
+        {
+          // HACK: this is needed to get Google to properly encode the suggestions, without this Umlaute are not encoded properly
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
+          }
+        }
+      )
+      return data
+    }
   },
   {
     key: 'perplexity',
@@ -38,28 +57,22 @@ export const SEARCH_ENGINES = [
     getUrl: (query: string) => `https://www.ecosia.org/search?method=index&q=${query}`
   },
   {
-    key: 'startpage',
-    title: 'Search with Startpage',
-    shortcuts: ['startpage'],
-    getUrl: (query: string) => `https://www.startpage.com/sp/search?query=${query}`
+    key: 'brave',
+    title: 'Search with Brave',
+    shortcuts: ['brave'],
+    getUrl: (query: string) => `https://search.brave.com/search?source=web&q=${query}`
   },
-  {
-    key: 'phind',
-    title: 'Search with Phind',
-    shortcuts: ['phind'],
-    getUrl: (query: string) => `https://www.phind.com/search?q=${query}&ignoreSearchResults=false`
-  },
+  /*{
+      key: 'startpage',
+      title: 'Search with Startpage',
+      shortcuts: ['startpage'],
+      getUrl: (query: string) => `https://www.startpage.com/sp/search?query=${query}`
+    },*/
   {
     key: 'wolframalpha',
     title: 'Search WolframAlpha',
     shortcuts: ['wolframalpha'],
     getUrl: (query: string) => `https://www.wolframalpha.com/input?i=${query}`
-  },
-  {
-    key: 'lycos',
-    title: 'Search Lycos',
-    shortcuts: ['lycos'],
-    getUrl: (query: string) => `https://search.lycos.com/web/?q=${query}`
   },
   {
     key: 'twitter',

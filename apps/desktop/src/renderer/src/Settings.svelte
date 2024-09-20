@@ -14,6 +14,7 @@
   import type { EditablePrompt, UserSettings } from '@horizon/types'
   import SettingsOption from './components/SettingsOption.svelte'
   import LayoutPicker from './components/LayoutPicker.svelte'
+  import DefaultSearchEnginePicker from './components/DefaultSearchEnginePicker.svelte'
 
   // let error = ''
   // let loading = false
@@ -148,6 +149,12 @@
         <div class="migration-output">
           <p bind:this={migrationOutput}></p>
         </div>
+        {#if userConfigSettings}
+          <DefaultSearchEnginePicker
+            bind:value={userConfigSettings.search_engine}
+            on:update={() => handleSettingsUpdate()}
+          />
+        {/if}
       </article>
     {:else if $activeTab === 'appearance'}
       <article class="general">

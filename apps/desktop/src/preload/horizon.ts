@@ -497,6 +497,10 @@ const api = {
         handler(details)
       }
     })
+  },
+
+  showAppMenuPopup: () => {
+    IPC_EVENTS_RENDERER.showAppMenuPopup.send()
   }
 }
 

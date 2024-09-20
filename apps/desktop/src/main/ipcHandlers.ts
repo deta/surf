@@ -15,6 +15,7 @@ import { setupHistorySwipeIpcSenders } from './historySwipe'
 import { IPC_EVENTS_MAIN, TrackEvent } from '@horizon/core/src/lib/service/ipc/events'
 import { getSetupWindow } from './setupWindow'
 import { openResourceAsFile } from './downloadManager'
+import { getAppMenu } from './appMenu'
 
 const log = useLogScope('Main IPC Handlers')
 // let prompts: EditablePrompt[] = []
@@ -56,6 +57,11 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
 }
 
 function setupIpcHandlers(backendRootPath: string) {
+  IPC_EVENTS_MAIN.showAppMenuPopup.on((event, _) => {
+    if (!validateIPCSender(event)) return
+    getAppMenu()?.popup()
+  })
+
   IPC_EVENTS_MAIN.setAdblockerState.on(async (event, { partition, state }) => {
     if (!validateIPCSender(event)) return
 
