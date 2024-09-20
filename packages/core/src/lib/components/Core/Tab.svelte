@@ -120,10 +120,15 @@
   // NOTE: commented out 'sanitizations' are not useful
   $: sanitizedTitle = tab.title
     ? tab.type !== 'space'
-      ? tab.title
-          .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
-          .replace(/[\/\\]/g, '–')
-          .replace(/^\w/, (c) => c.toUpperCase())
+      ? (() => {
+          if (tab.title.toLowerCase().startsWith('http')) {
+            return tab.title
+          }
+          let title = tab.title
+            .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
+            .replace(/[\/\\]/g, '–')
+          return title !== tab.title ? title.replace(/^\w/, (c) => c.toUpperCase()) : title
+        })()
       : tab.title
     : ''
 
