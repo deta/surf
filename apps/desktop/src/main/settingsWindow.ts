@@ -29,10 +29,12 @@ export function createSettingsWindow() {
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [`--userDataPath=${app.getPath('userData')}`],
-      sandbox: false,
+      defaultFontSize: 14,
       session: settingsWindowSession,
-      webviewTag: true,
-      defaultFontSize: 14
+      webviewTag: false,
+      sandbox: false,
+      nodeIntegration: false,
+      contextIsolation: true
     }
   })
 
@@ -52,8 +54,7 @@ export function createSettingsWindow() {
   })
 
   settingsWindow.webContents.setWindowOpenHandler((_details: Electron.HandlerDetails) => {
-    // TODO: is this needed?
-    return { action: 'allow' }
+    return { action: 'deny' }
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
