@@ -29,6 +29,9 @@
   }>()
 
   let sidebarElement: HTMLElement
+  let foldersWrapper: HTMLElement
+  let newSpaceButton: HTMLElement
+  let isNewSpaceButtonSticky = false
 
   export let spaces: Writable<Space[]>
   export let interactive = true
@@ -228,8 +231,28 @@
     dispatch('create-empty-space')
   }
 
+  const updateNewSpaceButtonPosition = () => {
+    if (foldersWrapper && newSpaceButton) {
+      const foldersWrapperRect = foldersWrapper.getBoundingClientRect()
+      const newSpaceButtonRect = newSpaceButton.getBoundingClientRect()
+
+      if (foldersWrapperRect.bottom + newSpaceButtonRect.height > window.innerHeight - 400) {
+        isNewSpaceButtonSticky = true
+      } else {
+        isNewSpaceButtonSticky = false
+      }
+    }
+  }
+
   onMount(() => {
     log.debug('Mounted SpacesView')
+    const resizeObserver = new ResizeObserver(updateNewSpaceButtonPosition)
+    if (foldersWrapper) {
+      resizeObserver.observe(foldersWrapper)
+    }
+    return () => {
+      resizeObserver.disconnect()
+    }
   })
 
   const filteredSpaces = derived(spaces, ($spaces) =>
@@ -246,7 +269,7 @@
   bind:this={sidebarElement}
   on:wheel|passive={handleWheel}
 >
-  <div class="folders-wrapper">
+  <div class="folders-wrapper" bind:this={foldersWrapper}>
     {#each $filteredSpaces as folder (folder.id)}
       {#key folder.id}
         <div class="folder-wrapper">
@@ -265,7 +288,12 @@
       {/key}
     {/each}
   </div>
-  <button class="action-new-space" on:click={handleCreateEmptySpace}>
+  <button
+    class="action-new-space"
+    class:sticky={isNewSpaceButtonSticky}
+    on:click={handleCreateEmptySpace}
+    bind:this={newSpaceButton}
+  >
     <Icon name="add" size="1rem" />
     <span class="new-space-text">New Space</span>
   </button>
@@ -286,8 +314,8 @@
     padding: 2rem 0.75rem;
     gap: 0.5rem;
     height: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     flex: 1;
     scrollbar-width: none;
     scrollbar-color: transparent transparent;
@@ -345,6 +373,8 @@
   }
 
   .action-new-space {
+    position: relative;
+    background: white;
     width: 100%;
     display: flex;
     align-items: center;
@@ -355,9 +385,14 @@
     letter-spacing: 0.01em;
     margin: 0;
     padding: 0.75rem;
-    opacity: 0.6;
+    opacity: 1;
     &:hover {
       opacity: 1;
+    }
+    &.sticky {
+      position: sticky;
+      bottom: 0rem;
+      padding: 2rem 0.75rem 2rem 0.75rem;
     }
   }
 
