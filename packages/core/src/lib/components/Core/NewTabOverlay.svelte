@@ -1202,6 +1202,7 @@
                     {/key}
                   {:else}
                     <DropWrapper
+                      acceptDrop={true}
                       {spaceId}
                       on:Drop={(e) => handleDrop(e.detail)}
                       on:DragEnter={(e) => handleDragEnter(e.detail)}
