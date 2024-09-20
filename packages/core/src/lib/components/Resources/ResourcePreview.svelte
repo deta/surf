@@ -1,27 +1,31 @@
 <svelte:options immutable />
 
+<script lang="ts" context="module">
+  export type PreviewData = {
+    type: string
+    title?: string
+    content?: string
+    contentType?: ContentType
+    annotations?: Annotation[]
+    image?: string | Blob
+    url: string
+    source: Source
+    author?: Author
+    theme?: [string, string]
+  }
+</script>
+
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { WebParser } from '@horizon/web-parser'
 
-  import TextPreview from './Previews/Text/TextPreview.svelte'
-  import LinkPreview from './Previews/Link/LinkPreview.svelte'
-
   import {
-    ResourceHistoryEntry,
+    ResourceJSON,
+    ResourceNote,
     useResourceManager,
-    type Resource,
-    type ResourceAnnotation,
-    type ResourceArticle,
-    type ResourceChatMessage,
-    type ResourceChatThread,
-    type ResourceDocument,
-    type ResourceLink,
-    type ResourceNote,
-    type ResourcePost
+    type Resource
   } from '../../service/resources'
-  import FilePreview from './Previews/File/FilePreview.svelte'
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
@@ -29,45 +33,44 @@
     type ResourceData,
     type ResourceDataPost
   } from '../../types'
-  import FileIcon from './Previews/File/FileIcon.svelte'
-  import PostPreview from './Previews/Post/PostPreview.svelte'
-  import ChatMessagePreview from './Previews/ChatMessage/ChatMessagePreview.svelte'
-  import ArticlePreview from './Previews/Article/ArticlePreview.svelte'
-  import DocumentPreview from './Previews/Document/DocumentPreview.svelte'
-  import ChatThreadPreview from './Previews/ChatThread/ChatThreadPreview.svelte'
-  import YoutubePreview from './Previews/Post/YoutubePreview.svelte'
-  import AnnotationPreview from './Previews/Annotation/AnnotationPreview.svelte'
 
-  import HistoryEntryPreview from './Previews/Link/HistoryEntryPreview.svelte'
-  import { writable } from 'svelte/store'
-  import { slide } from 'svelte/transition'
-  import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
-  import { CreateTabEventTrigger } from '@horizon/types'
+  import { writable, get } from 'svelte/store'
+  import {
+    CreateTabEventTrigger,
+    type AnnotationCommentData,
+    type AnnotationRangeData,
+    type ResourceDataAnnotation,
+    type ResourceDataArticle,
+    type ResourceDataDocument,
+    type ResourceDataLink
+  } from '@horizon/types'
   import {
     useLogScope,
-    getHumanDistanceToNow,
     isModKeyPressed,
-    hover,
-    getFileKind,
     getFileType,
-    parseStringIntoUrl
+    parseStringIntoUrl,
+    getHostname
   } from '@horizon/utils'
-  import ArticleProperties from './ArticleProperties.svelte'
   import { useTabsManager } from '../../service/tabs'
-  import Preview from './Previews/Preview.svelte'
+  import Preview, {
+    type Annotation,
+    type Author,
+    type ContentType,
+    type Mode,
+    type Source
+  } from './Previews/Preview.svelte'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let resource: Resource
   export let selected: boolean = false
-  // export let annotations: ResourceAnnotation[] = []
-  export let showSummary: boolean = false
-  export let showTitles: boolean = true
   export let interactive: boolean = true
-  export let showSource: boolean = false
-  export let newTabOnClick: boolean = false
+  export let mode: Mode = 'full'
 
   const log = useLogScope('ResourcePreviewClean')
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
+  const config = useConfig()
+  const userConfigSettings = config.settings
 
   const dispatch = createEventDispatcher<{
     click: string
@@ -78,17 +81,6 @@
   }>()
 
   const isHovered = writable(false)
-
-  // TODO: figure out better way to do this
-  $: textResource = resource as ResourceNote
-  $: linkResource = resource as ResourceLink
-  $: postResource = resource as ResourcePost
-  $: articleResource = resource as ResourceArticle
-  $: chatMessageResource = resource as ResourceChatMessage
-  $: chatThreadResource = resource as ResourceChatThread
-  $: documentResource = resource as ResourceDocument
-  $: annotationResource = resource as ResourceAnnotation
-  $: historyEntryResource = resource as ResourceHistoryEntry
 
   $: annotations = resource.annotations ?? []
 
@@ -103,12 +95,291 @@
 
   $: showOpenAsFile = !(Object.values(ResourceTypes) as string[]).includes(resource.type)
 
-  let data: ResourceData | null = null
-  const handleData = (e: CustomEvent<ResourceData>) => {
-    data = e.detail
+  let resourceData: ResourceData | null = null
+  let previewData: PreviewData | null = null
+  let dragging = false
+
+  const cleanSource = (text: string) => {
+    if (text.trim() === 'Wikimedia Foundation, Inc.') {
+      return 'Wikipedia'
+    } else {
+      return text.trim()
+    }
   }
 
-  let dragging = false
+  const loadResource = async () => {
+    try {
+      if (resource instanceof ResourceJSON) {
+        resourceData = await resource.getParsedData()
+
+        const summary =
+          isLiveSpaceResource && resource.metadata?.userContext
+            ? resource.metadata?.userContext
+            : undefined
+
+        if (resource.type === ResourceTypes.LINK) {
+          const data = resourceData as unknown as ResourceDataLink
+          const hostname = getHostname(canonicalUrl ?? data.url)
+
+          let annotationItems: Annotation[] = []
+          if (!$userConfigSettings.show_annotations_in_oasis && annotations.length > 0) {
+            const annotationData = await annotations[0].getParsedData()
+            const comment = (annotationData.data as AnnotationCommentData).content_plain
+            const highlight = (annotationData.anchor?.data as AnnotationRangeData).content_plain
+            if (comment) {
+              annotationItems.push({ type: 'comment', content: comment })
+            } else if (highlight) {
+              annotationItems.push({ type: 'highlight', content: highlight })
+            }
+
+            annotations
+              .slice(1)
+              .forEach(() => annotationItems.push({ type: 'highlight', content: '' }))
+          }
+
+          previewData = {
+            type: resource.type,
+            title: data.title,
+            content: summary || data.description || data.content_plain || undefined,
+            contentType: 'plain',
+            annotations: annotationItems,
+            image: data.image ?? undefined,
+            url: data.url,
+            source: {
+              text: data.provider
+                ? cleanSource(data.provider)
+                : hostname || getFileType(resource.type),
+              imageUrl: data.icon ?? `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`,
+              icon: 'link'
+            },
+            theme: undefined
+          }
+        } else if (resource.type === ResourceTypes.ARTICLE) {
+          const data = resourceData as unknown as ResourceDataArticle
+          const hostname = getHostname(canonicalUrl ?? data.url)
+
+          log.debug('Article data', resource.annotations)
+
+          let annotationItems: Annotation[] = []
+          if (!$userConfigSettings.show_annotations_in_oasis && annotations.length > 0) {
+            const annotationData = await annotations[0].getParsedData()
+            const comment = (annotationData.data as AnnotationCommentData).content_plain
+            const highlight = (annotationData.anchor?.data as AnnotationRangeData).content_plain
+            if (comment) {
+              annotationItems.push({ type: 'comment', content: comment })
+            } else if (highlight) {
+              annotationItems.push({ type: 'highlight', content: highlight })
+            }
+
+            annotations
+              .slice(1)
+              .forEach(() => annotationItems.push({ type: 'highlight', content: '' }))
+          }
+
+          previewData = {
+            type: resource.type,
+            title: data.title,
+            content: summary || data.excerpt || data.content_plain || undefined,
+            contentType: 'plain',
+            annotations: annotationItems,
+            image: data.images[0] ?? undefined,
+            url: data.url,
+            source: {
+              text: data.site_name
+                ? cleanSource(data.site_name)
+                : hostname || getFileType(resource.type),
+              imageUrl:
+                data.site_icon ?? `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`,
+              icon: 'link'
+            },
+            // author: {
+            //   text: data.author || data.site_name,
+            //   imageUrl: data.author_image ?? undefined
+            // },
+            theme: undefined
+          }
+        }
+        if (resource.type.startsWith(ResourceTypes.POST)) {
+          const data = resourceData as unknown as ResourceDataPost
+          const hostname = getHostname(canonicalUrl ?? data.url)
+
+          let theme: [string, string] | undefined
+          if (resource.type === ResourceTypes.POST_REDDIT) {
+            theme = ['#ff4500', '#ff7947']
+          } else if (resource.type === ResourceTypes.POST_TWITTER) {
+            theme = ['#000', '#252525']
+          } else if (resource.type === ResourceTypes.POST_YOUTUBE) {
+            theme = undefined
+          }
+
+          const content = data.excerpt || data.content_plain
+
+          previewData = {
+            type: resource.type,
+            title: data.title && data.title !== content ? data.title : undefined,
+            content: summary || content || undefined,
+            contentType: 'plain',
+            image: resource.type === ResourceTypes.POST_YOUTUBE ? data.images[0] : undefined,
+            url: data.url,
+            source: {
+              text:
+                (resource.type === ResourceTypes.POST_REDDIT
+                  ? data.parent_title
+                  : data.site_name) ||
+                hostname ||
+                getFileType(resource.type),
+              imageUrl: `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`,
+              icon: 'link'
+            },
+            author: {
+              text: data.author || data.parent_title || undefined,
+              imageUrl: data.author_image || undefined
+            },
+            theme: theme
+          }
+        } else if (resource.type.startsWith(ResourceTypes.DOCUMENT)) {
+          const data = resourceData as unknown as ResourceDataDocument
+          const hostname = getHostname(canonicalUrl ?? data.url)
+
+          log.debug('Document data', data)
+
+          previewData = {
+            type: resource.type,
+            title: data.title || undefined,
+            content:
+              summary || (data.content_html && data.content_html !== '<p></p>')
+                ? data.content_html
+                : undefined,
+            contentType: 'html',
+            image: undefined,
+            url: data.url,
+            source: {
+              text: data.editor_name,
+              imageUrl: `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`
+            },
+            author: {
+              text: data.author || undefined,
+              imageUrl: data.author_image ?? undefined
+            },
+            theme: undefined
+          }
+        } else if (resource.type === ResourceTypes.ANNOTATION) {
+          const data = resourceData as unknown as ResourceDataAnnotation
+          const hostname = getHostname(canonicalUrl ?? data.data.url ?? '')
+
+          const commentContent = (data?.data as AnnotationCommentData).content_plain
+          const highlightContent = (data.anchor?.data as AnnotationRangeData).content_plain
+
+          const source =
+            data?.type === 'comment' ? (data.data as AnnotationCommentData).source : null
+          const sourceClean =
+            source === 'inline_ai' ? `Inline AI` : source === 'chat_ai' ? `Page AI` : undefined
+
+          previewData = {
+            type: resource.type,
+            title: undefined,
+            annotations: highlightContent ? [{ type: 'highlight', content: highlightContent }] : [],
+            content: commentContent,
+            contentType: 'plain',
+            image: undefined,
+            url: canonicalUrl ?? data.data.url ?? '',
+            source: {
+              text: hostname ?? getFileType(resource.type),
+              imageUrl: `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`
+            },
+            author: {
+              text: sourceClean || undefined,
+              imageUrl: undefined
+            },
+            theme: undefined
+          }
+        }
+      } else if (resource instanceof ResourceNote) {
+        const data = await resource.getContent()
+        const content = get(data)
+
+        previewData = {
+          type: resource.type,
+          title: undefined,
+          content: content && content !== '<p></p>' ? content : undefined,
+          contentType: 'rich_text',
+          image: undefined,
+          url: canonicalUrl ?? '',
+          source: {
+            text: resource?.metadata?.name || 'Note',
+            imageUrl: undefined,
+            icon: 'docs'
+          },
+          theme: undefined
+        }
+      } else if (resource.type.startsWith('image/')) {
+        const data = await resource.getData()
+        const hostname = getHostname(canonicalUrl ?? '')
+
+        previewData = {
+          type: resource.type,
+          title: resource?.metadata?.name,
+          content: undefined,
+          image: data,
+          url: canonicalUrl ?? '',
+          source: {
+            text: hostname ?? canonicalUrl ?? getFileType(resource.type),
+            imageUrl: hostname
+              ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`
+              : undefined
+          },
+          theme: undefined
+        }
+      } else {
+        const hostname = getHostname(canonicalUrl ?? '')
+
+        let sourceText = getFileType(resource.type)
+        if (hostname) {
+          sourceText = hostname
+        } else if (canonicalUrl) {
+          const url = parseStringIntoUrl(canonicalUrl)
+          if (url) {
+            sourceText = url.hostname
+          } else if (canonicalUrl.startsWith('file://')) {
+            sourceText = 'Local file'
+          } else if (canonicalUrl.startsWith('/Users/')) {
+            sourceText = 'Local file'
+          }
+        }
+
+        previewData = {
+          type: resource.type,
+          title: resource?.metadata?.name,
+          content: undefined,
+          image: undefined,
+          url: canonicalUrl ?? '',
+          source: {
+            text: sourceText,
+            imageUrl: hostname
+              ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`
+              : undefined
+          },
+          theme: undefined
+        }
+      }
+    } catch (e) {
+      log.error('Failed to load resource', e)
+      previewData = {
+        type: resource.type,
+        title: resource?.metadata?.name,
+        content: undefined,
+        image: undefined,
+        url: canonicalUrl ?? '',
+        source: {
+          text: canonicalUrl ?? getFileType(resource.type),
+          imageUrl: undefined
+        },
+        theme: undefined
+      }
+    } finally {
+      dispatch('load', resource.id)
+    }
+  }
 
   const openResourceAsTab = (opts?: CreateTabOptions) => {
     tabsManager.openResourceAsTab(resource, opts)
@@ -117,12 +388,12 @@
 
   const handleDragStart = (e: DragEvent) => {
     dragging = true
-    if (data) {
+    if (resourceData) {
       if (resource.type.startsWith(ResourceTypes.POST)) {
-        e.dataTransfer?.setData('text/uri-list', (data as ResourceDataPost)?.url ?? '')
+        e.dataTransfer?.setData('text/uri-list', (resourceData as ResourceDataPost)?.url ?? '')
       }
 
-      const content = WebParser.getResourceContent(resource.type, data)
+      const content = WebParser.getResourceContent(resource.type, resourceData)
       if (content.plain) {
         e.dataTransfer?.setData('text/plain', content.plain)
       }
@@ -161,10 +432,6 @@
     }
   }
 
-  const handleLoad = () => {
-    dispatch('load', resource.id)
-  }
-
   const handleRemove = (e: MouseEvent) => {
     e.stopImmediatePropagation()
     dispatch('remove', resource.id)
@@ -195,153 +462,61 @@
     }
   }
 
-  const getHostname = (raw: string) => {
-    try {
-      const url = new URL(raw)
-      return url.hostname
-    } catch (error) {
-      return raw
-    }
-  }
-
-  const redditResource = {
-    title: "The technology behind GitHub's new code search",
-    content:
-      'From launching our technology preview of the new and improved code search experience a year ago, to the public beta we released at GitHub Universe last November, there’s been a flurry of innovation and dramatic changes to some of the core GitHub product experiences around how we, as developers, find, read, and navigate code.',
-    image:
-      'https://external-preview.redd.it/the-technology-behind-githubs-new-code-search-v0-IOddQMDbthht07F_k5NCk9_OWNfuX_LyWNiAwHW3wHA.jpg?auto=webp&s=7ebe51c029a1ac1d9b238df5d6562e42ab976ade',
-    url: 'https://www.reddit.com/r/programming/comments/1fjziwr/the_technology_behind_githubs_new_code_search/',
-    source: {
-      text: 'r/programming',
-      imageUrl: 'https://www.google.com/s2/favicons?domain=https://reddit.com&sz=48'
-    },
-    author: {
-      text: 'Posted by StellarNavigator',
-      imageUrl: 'https://styles.redditmedia.com/t5_2fwo/styles/communityIcon_1bqa1ibfp8q11.png'
-    },
-    theme: ['#ff4500', '#ff7947'] as [string, string]
-  }
-
-  const twitterResource = {
-    title: '',
-    content:
-      "Over 4 years, 151 releases, and 4k commits later, the stabilization of the Deno Standard Library is finally complete 🎉 There's probably something in this closely audited library that you can use today. And no, you don't need to use Deno.",
-    image: '',
-    url: 'https://twitter.com/deno_land/status/1430630730730736640',
-    source: {
-      text: 'Tweet',
-      imageUrl: 'https://www.google.com/s2/favicons?domain=https://twitter.com&sz=48'
-    },
-    author: {
-      text: 'Posted by Deno',
-      imageUrl: 'https://pbs.twimg.com/profile_images/1267819337026420739/GBuq7wjs_400x400.jpg'
-    },
-    theme: ['#000', '#252525'] as [string, string]
-  }
-
-  const githubResource = {
-    title: 'cleanup masonry component, generalize it and fix reactivity issues',
-    content:
-      'Improves and cleans up the masonry component as previously when searching or making lots of changes to a space you might have ended up with the wrong resources being rendered.',
-    image: '',
-    url: 'https://github.com/deta/horizon/pull/731',
-    source: {
-      text: 'deta/horizon',
-      imageUrl: 'https://www.google.com/s2/favicons?domain=https://github.com&sz=48'
-    },
-    author: {
-      text: 'Opened by BetaHuhn',
-      imageUrl: 'https://avatars.githubusercontent.com/u/51766171?s=60&v=4'
-    },
-    theme: ['#24292e', '#6e5494'] as [string, string]
-  }
-
-  const youtubeResource = {
-    title: 'Exploring the secrets of Porsche with photographer Willem Verbeeck',
-    content: '',
-    image: 'https://img.youtube.com/vi/yRFBitjgmv0/mqdefault.jpg',
-    url: 'https://www.youtube.com/watch?v=yRFBitjgmv0&list=WL&index=61',
-    source: {
-      text: 'YouTube',
-      imageUrl: 'https://www.google.com/s2/favicons?domain=https://youtube.com&sz=48'
-    },
-    author: {
-      text: 'From Porsche',
-      imageUrl:
-        'https://yt3.ggpht.com/IY6Bnx7RbZOv2qXYUQ2irl4CZAXWv7woG_PY50O5w2-eHCz4uR0D8VEB40Dwwc83b2zsKOhj=s88-c-k-c0x00ffffff-no-rj'
-    },
-    theme: undefined
-  }
-
-  const articleZeitResource = {
-    title: 'Transporter mehr als doppelt so schwer beladen wie erlaubt',
-    content:
-      'In Mittelfranken stoppten Polizisten einen überladenen Kleintransporter auf der Autobahn 3 in Gremsdorf, der etwa 7,4 Tonnen wog, obwohl nur 3,5 Tonnen erlaubt waren. Die beiden Insassen wollten asiatische Lebensmittel von Prag nach London transportieren. Der Beifahrer, der auch Fahrzeughalter ist, war 2023 schon einmal mit einem überladenen Transporter angehalten worden. Nach Umschlag der Ladung und Zahlung einer Sicherheitsleistung von 500 Euro durften sie weiterfahren; ein Verfahren zur Abschöpfung des Gewinns wurde gegen den Unternehmer eingeleitet.',
-    image:
-      'https://img.zeit.de/news/2024-09/18/transporter-mehr-als-doppelt-so-schwer-beladen-wie-erlaubt-image-group/wide__660x371__desktop__scale_2',
-    url: 'https://www.zeit.de/news/2024-09/18/transporter-mehr-als-doppelt-so-schwer-beladen-wie-erlaubt',
-    source: {
-      text: 'zeit.de',
-      imageUrl: 'https://static.zeit.de/p/zeit.web/icons/favicon.svg'
-    },
-    author: {
-      text: 'From dpa Bayern',
-      imageUrl: ''
-    },
-    theme: undefined
-  }
-
-  const notionResource = {
-    title: 'Improve Resource Previews Spec',
-    content:
-      "An important consideration for the new previews is improving information passthrough and adapting the previews with the user's context. For example if the user annotated a page we should let the annotation pass through so they can easily identify it. Going forward we will have 4 different preview types, a minimal one, a media rich one, a content rich one and a full version with both media and content. We will choose the right one depending on what is saved in the space but the user can also manually change it for each space.",
-    image: '',
-    url: 'https://www.notion.so/deta/Improve-Resource-Previews-104a5244a717805c8256ccb0c2c947c5',
-    source: {
-      text: 'Deta',
-      imageUrl: 'https://www.google.com/s2/favicons?domain=https://notion.so&sz=48'
-    },
-    author: {
-      text: 'Created by Maximilian Schiller',
-      imageUrl: 'https://avatars.githubusercontent.com/u/51766171?s=60&v=4'
-    },
-    theme: undefined
-  }
-
-  const mockResources = [
-    redditResource,
-    twitterResource,
-    githubResource,
-    youtubeResource,
-    articleZeitResource,
-    notionResource
-  ]
-
-  // randomly choose between the mock resources
-  $: mockResource = mockResources[Math.floor(Math.random() * mockResources.length)]
+  onMount(async () => {
+    await loadResource()
+  })
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div
   on:click={handleClick}
-  class="resource-preview"
-  class:clickable={newTabOnClick}
+  class="resource-preview clickable"
   class:isSelected={selected}
   style="--id:{resource.id};"
   on:dragstart={handleDragStart}
   draggable="true"
 >
-  <Preview
-    {resource}
-    title={mockResource.title}
-    content={mockResource.content}
-    image={mockResource.image}
-    url={mockResource.url}
-    source={mockResource.source}
-    author={mockResource.author}
-    theme={mockResource.theme}
-    mode="full"
-  />
+  {#if previewData}
+    <Preview
+      {resource}
+      type={previewData.type}
+      title={previewData.title}
+      content={previewData.content}
+      contentType={previewData.contentType}
+      annotations={previewData.annotations}
+      image={previewData.image}
+      url={previewData.url}
+      source={previewData.source}
+      author={previewData.author}
+      theme={previewData.theme}
+      {mode}
+    />
+  {:else}
+    <div class="preview background">
+      <div class="details">
+        <div class="title">Loading...</div>
+        <div class="subtitle">Please wait</div>
+      </div>
+    </div>
+  {/if}
+
+  {#if interactive}
+    <div class="remove-wrapper">
+      {#if showOpenAsFile}
+        <div class="remove" on:click={handleOpenAsFile}>
+          <Icon name="file" color="#AAA7B1" />
+        </div>
+      {/if}
+
+      <div class="remove rotated" on:click={handleOpenAsNewTab}>
+        <Icon name="arrow.right" color="#AAA7B1" />
+      </div>
+
+      <div class="remove" on:click={handleRemove}>
+        <Icon name="close" color="#AAA7B1" />
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style lang="scss">

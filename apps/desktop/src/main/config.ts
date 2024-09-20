@@ -85,8 +85,13 @@ export const getUserConfig = (path?: string) => {
       embedding_model: 'english_small',
       tabs_orientation: 'vertical',
       use_semantic_search: false,
-      show_annotations_in_oasis: false
+      show_annotations_in_oasis: true
     }
+    setUserConfig(storedConfig as UserConfig)
+  }
+
+  if (storedConfig.settings.show_annotations_in_oasis === undefined) {
+    storedConfig.settings.show_annotations_in_oasis = true
     setUserConfig(storedConfig as UserConfig)
   }
 

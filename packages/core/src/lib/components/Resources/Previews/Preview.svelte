@@ -2,36 +2,67 @@
   export type Source = {
     text: string
     imageUrl?: string
+    icon?: Icons
   }
 
   export type Author = {
-    text: string
+    text?: string
     imageUrl?: string
+  }
+
+  export type Mode = 'full' | 'media' | 'content' | 'compact' | 'tiny'
+  export type ContentType = 'plain' | 'rich_text' | 'html' | 'markdown'
+
+  export type Annotation = {
+    type: 'highlight' | 'comment'
+    content: string
   }
 </script>
 
 <script lang="ts">
-  import { useLogScope } from '@horizon/utils'
+  import { getFileKind, useLogScope } from '@horizon/utils'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import Link from '../../Atoms/Link.svelte'
+  import ImageView from './File/ImageView.svelte'
+  import { Icon, type Icons } from '@horizon/icons'
+  import Image from '../../Atoms/Image.svelte'
+  import FileIcon from './File/FileIcon.svelte'
+  import { Editor } from '@horizon/editor'
+  import MarkdownRenderer from '../../Chat/MarkdownRenderer.svelte'
+  import { ResourceTypes } from '@horizon/types'
+  import FilePreview from './File/FilePreview.svelte'
+  import SourceItem from './Source.svelte'
 
   export let resource: Resource
 
-  export let title: string
-  export let image: string
-  export let content: string
-  export let url: string
+  export let type: string
+  export let title: string | undefined = undefined
+  export let image: string | Blob | undefined = undefined
+  export let content: string | undefined = undefined
+  export let contentType: ContentType = 'plain'
+  export let annotations: Annotation[] | undefined = undefined
+  export let url: string | undefined = undefined
   export let source: Source
   export let author: Author | undefined
   export let theme: [string, string] | undefined
 
-  export let mode: 'full' | 'media' | 'content' | 'compact' | 'tiny' = 'full'
+  export let mode: Mode = 'full'
 
   const log = useLogScope('PostPreview')
 
   let error = ''
 
   const MAX_TITLE_LENGTH = 300
+  const MAX_CONTENT_LENGTH = 500
+
+  $: showTitle = !(mode === 'media' && image)
+  $: showContent =
+    (mode === 'full' || mode === 'content' || (!title && !image)) &&
+    !((annotations || []).length > 0 && type !== ResourceTypes.ANNOTATION)
+  $: showAnnotations = mode === 'full' || mode === 'content' || (!title && !image)
+  $: showMedia = mode === 'full' || mode === 'media' || (!title && !content && image)
+  $: showAuthor = mode === 'full' || mode === 'content'
+  $: showSource = mode !== 'tiny' && !(mode === 'media' && type.startsWith('image/'))
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
@@ -43,67 +74,126 @@
   class:themed={!!theme}
   style="--color1: {theme && theme[0]}; --color2: {theme && theme[1]}"
 >
-  <div class="preview-card">
+  <div class="preview-card relative">
+    <!-- <div class="absolute top-1 right-1 z-50 {theme ? 'text-white/50' : 'text-black/50'}">
+      {mode} {type}
+    </div> -->
+
     <div class="inner">
       {#if error}
         <div class="title">{error}</div>
         <div class="subtitle">{url}</div>
-      {:else}
-        {#if image}
-          <div class="image">
-            <img src={image} alt={title} />
+      {:else if mode === 'tiny'}
+        <div class="tiny-wrapper">
+          <div class="tiny-icon">
+            {#if source.imageUrl}
+              <img class="favicon" src={source.imageUrl} alt={source.text} />
+            {:else if source.icon}
+              <Icon name={source.icon} />
+            {:else}
+              <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
+            {/if}
           </div>
+
+          <div class="from">
+            {title || content || source.text}
+          </div>
+        </div>
+      {:else}
+        {#if showMedia}
+          {#if image}
+            <div class="image">
+              {#if typeof image === 'string'}
+                <Image src={image} alt={title ?? ''} emptyOnError />
+              {:else}
+                <ImageView blob={image} />
+              {/if}
+            </div>
+          {:else if ![ResourceTypes.LINK, ResourceTypes.ARTICLE, ResourceTypes.POST, ResourceTypes.DOCUMENT].some( (t) => type.startsWith(t) )}
+            <FilePreview {resource} preview />
+          {/if}
         {/if}
 
-        <div class="details">
-          <div class="source">
-            <img class="favicon" src={source.imageUrl} alt={source.text} />
+        {#if showSource || (showTitle && title) || (showContent && content) || (showAuthor && author)}
+          <div class="details">
+            {#if showSource && mode !== 'compact' && source}
+              <SourceItem {type} {source} themed={!!theme} />
+            {/if}
 
-            <div class="from">
-              {source.text}
-            </div>
-          </div>
-
-          <div class="title">
-            {title}
-          </div>
-
-          {#if content}
-            <div class="content">
-              {content}
-            </div>
-          {/if}
-
-          <div class="metadata">
-            {#if author}
-              <div class="author">
-                {#if author.imageUrl}
-                  <img class="favicon" src={author.imageUrl} alt={author.text} />
-                {/if}
-
-                <div class="from">
-                  {author.text}
-                </div>
+            {#if showTitle && title}
+              <div class="title">
+                {truncate(title, MAX_TITLE_LENGTH)}
               </div>
             {/if}
 
-            <!-- {#if author}
-              <div class="author">
-                {#if author.imageUrl}
-                  <img
-                    class="favicon"
-                    src={author.imageUrl}
-                    alt={author.text}
-                  />
-                {/if}
+            {#if showAnnotations && annotations && (annotations || []).length > 0}
+              {@const annotation = annotations[0]}
 
-                <div class="from">
-                  {author.text}
+              <div class="annotation">
+                {#if annotation.type === 'highlight'}
+                  <div class="content quote">
+                    <mark>
+                      {truncate(annotations[0].content, MAX_CONTENT_LENGTH)}
+                    </mark>
+                  </div>
+                {:else}
+                  <div class="icon">
+                    <Icon name="message" />
+                  </div>
+                  <div class="content">
+                    {truncate(annotations[0].content, MAX_CONTENT_LENGTH)}
+                  </div>
+                {/if}
+              </div>
+            {/if}
+
+            {#if showContent && content}
+              <div class="content">
+                {#if contentType === 'plain'}
+                  {truncate(content, MAX_CONTENT_LENGTH)}
+                {:else if contentType === 'rich_text'}
+                  <Editor content={truncate(content, MAX_CONTENT_LENGTH)} readOnly />
+                {:else if contentType === 'html'}
+                  <iframe title="Document Preview" srcdoc={content} frameborder="0" sandbox="" />
+                {:else if contentType === 'markdown'}
+                  <MarkdownRenderer content={truncate(content, MAX_CONTENT_LENGTH)} />
+                {/if}
+              </div>
+            {/if}
+
+            {#if showAnnotations && annotations && annotations.length > 0}
+              {#if annotations.length > 1}
+                <div class="annotation-info">
+                  <Icon name="marker" />
+                  + {annotations.length - 1} more annotation{annotations.length > 2 ? 's' : ''}
+                </div>
+              {:else if annotations[0].type === 'highlight'}
+                <div class="annotation-info">
+                  <Icon name="marker" />
+                  Your Highlight
+                </div>
+              {/if}
+            {/if}
+
+            {#if showSource && mode === 'compact' && source && source.text}
+              <SourceItem {type} {source} themed={!!theme} />
+            {/if}
+
+            {#if showAuthor && author && author.text}
+              <div class="metadata">
+                <div class="author">
+                  {#if author.imageUrl}
+                    <img class="favicon" src={author.imageUrl} alt={author.text} />
+                  {/if}
+
+                  <div class="from">
+                    {author.text}
+                  </div>
                 </div>
               </div>
-            {/if} -->
+            {/if}
           </div>
-        </div>
+        {/if}
       {/if}
     </div>
   </div>
@@ -151,10 +241,18 @@
   .inner {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
     width: 100%;
     flex-shrink: 1;
     flex-grow: 1;
+  }
+
+  .tiny-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    font-weight: 500;
+    color: #281b53;
   }
 
   .details {
@@ -170,8 +268,8 @@
   .themed {
     .title,
     .content,
-    .source > .from,
-    .author > .from {
+    .from,
+    .from {
       color: #ffffff;
       opacity: 1;
     }
@@ -186,35 +284,39 @@
       0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
   }
 
-  .source .favicon {
-    width: 1.35rem;
-    height: 1.35rem;
-  }
-
-  .source,
   .author {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+  }
 
-    .from {
-      font-size: 1rem;
-      font-weight: 500;
-      text-decoration: none;
-      color: #281b53;
-      opacity: 0.65;
-    }
+  .from {
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    color: #281b53;
+    opacity: 0.65;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .author .from {
     font-size: 0.85rem;
   }
 
+  .tiny-icon {
+    flex-shrink: 0;
+    color: #281b53;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
   .image {
     width: 100%;
+    max-height: 300px;
     position: relative;
     overflow: hidden;
-    margin-bottom: -1rem;
     border-radius: 0.5rem;
     box-shadow:
       0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
@@ -224,6 +326,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center;
     }
   }
 
@@ -246,6 +349,41 @@
     max-width: 95%;
     overflow-wrap: break-word;
     hyphens: auto;
+
+    mark {
+      background-color: rgb(238, 229, 251);
+      color: #1c1c3b;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      user-select: none;
+      pointer-events: none;
+    }
+  }
+
+  .annotation {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #281b53;
+
+    .icon {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+  }
+
+  .annotation-info {
+    font-size: 0.85rem;
+    color: #281b53;
+    opacity: 0.65;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
   }
 
   .metadata {

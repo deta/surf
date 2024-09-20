@@ -46,16 +46,7 @@
 <div class="wrapper">
   {#if resource}
     <DragResourceWrapper {resource}>
-      <ResourcePreview
-        {resource}
-        {showSource}
-        {selected}
-        showSummary
-        on:load
-        on:click
-        on:open
-        on:remove
-      />
+      <ResourcePreview {resource} {selected} on:load on:click on:open on:remove />
     </DragResourceWrapper>
   {/if}
 </div>
