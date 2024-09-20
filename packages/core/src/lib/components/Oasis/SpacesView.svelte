@@ -31,7 +31,7 @@
   let sidebarElement: HTMLElement
   let foldersWrapper: HTMLElement
   let newSpaceButton: HTMLElement
-  let isNewSpaceButtonSticky = false
+  const isNewSpaceButtonSticky = writable(false)
 
   export let spaces: Writable<Space[]>
   export let interactive = true
@@ -236,10 +236,10 @@
       const foldersWrapperRect = foldersWrapper.getBoundingClientRect()
       const newSpaceButtonRect = newSpaceButton.getBoundingClientRect()
 
-      if (foldersWrapperRect.bottom + newSpaceButtonRect.height > window.innerHeight - 400) {
-        isNewSpaceButtonSticky = true
+      if (foldersWrapperRect.bottom + newSpaceButtonRect.height > window.innerHeight - 50) {
+        isNewSpaceButtonSticky.set(true)
       } else {
-        isNewSpaceButtonSticky = false
+        isNewSpaceButtonSticky.set(false)
       }
     }
   }
@@ -289,8 +289,9 @@
     {/each}
   </div>
   <button
-    class="action-new-space"
-    class:sticky={isNewSpaceButtonSticky}
+    class="action-new-space shadow-sm"
+    class:sticky={$isNewSpaceButtonSticky}
+    class:text-white={$isNewSpaceButtonSticky}
     on:click={handleCreateEmptySpace}
     bind:this={newSpaceButton}
   >
@@ -342,7 +343,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    max-height: 100%;
     width: 100%;
   }
 
@@ -379,6 +379,9 @@
     align-items: center;
     background: transparent;
     color: rgba(0, 0, 0, 0.6);
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border: 0.5px solid var(--Grey-2, #f4f4f4);
     .new-space-text {
       font-size: 1rem;
       line-height: 1;
@@ -393,9 +396,10 @@
     }
     &.sticky {
       position: sticky;
-      bottom: 0rem;
-      background: white;
-      border: 0.5px solid var(--Grey-2, #f4f4f4);
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px);
+      border-top: 0.5px solid var(--Grey-2, #f4f4f4);
     }
   }
 
