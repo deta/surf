@@ -212,7 +212,7 @@
   })
 </script>
 
-<div class="py-6 px-8 bg-white rounded-2xl flex flex-col gap-4">
+<div class="py-5 px-6 bg-white rounded-2xl flex flex-col gap-4">
   {#if sources && sources.length > 0 && showSourcesAtEnd}
     <div class="flex flex-col gap-2">
       <h3 class="text-md font-semibold my-1">Sources</h3>
