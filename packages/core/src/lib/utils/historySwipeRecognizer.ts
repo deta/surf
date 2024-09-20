@@ -1,11 +1,11 @@
 import { useLogScope } from '@horizon/utils'
 import { get, writable, type Readable } from 'svelte/store'
 
-export const MIN_MAGNITUDE = 50
-export const SWIPE_THRESHOLD = 200
-export const MAX_ANGLE_DEVIATION = (5 * Math.PI) / 36 // 25 degrees
-
 const log = useLogScope('History Swipe Recognizer')
+
+export const MIN_MAGNITUDE = 50
+export const SWIPE_THRESHOLD = 150
+export const MAX_ANGLE_DEVIATION = Math.PI / 12
 
 export const createHistorySwipeRecognizer = (
   canGoBack: Readable<boolean>,
@@ -34,28 +34,30 @@ export const createHistorySwipeRecognizer = (
     log.debug('handle trackpad scroll ended')
     isScrolling = false
 
-    swipeProgress.update((progress) => {
-      if (progress > SWIPE_THRESHOLD / 2) {
-        swipeDirection.update((direction) => {
-          if (direction === 'left' && get(canGoForward)) {
-            onSwipeLeft()
-          } else if (direction === 'right' && get(canGoBack)) {
-            onSwipeRight()
-          }
-          return direction
-        })
+    const currentProgress = get(swipeProgress)
+    const currentDirection = get(swipeDirection)
+
+    if (currentProgress > SWIPE_THRESHOLD / 2) {
+      if (currentDirection === 'left' && get(canGoForward)) {
+        onSwipeLeft()
+      } else if (currentDirection === 'right' && get(canGoBack)) {
+        onSwipeRight()
       }
-      return 0
-    })
+    }
+
     resetState()
   }
 
   const tick = (event: { deltaX: number; deltaY: number }) => {
     if (!isScrolling) return
 
-    log.debug(get(swipeDirection), get(swipeProgress), accumulatedDelta)
     accumulatedDelta.x += event.deltaX
     accumulatedDelta.y += event.deltaY
+
+    const magnitude = Math.hypot(accumulatedDelta.x, accumulatedDelta.y)
+    if (magnitude < MIN_MAGNITUDE) {
+      return
+    }
 
     const angle = Math.atan2(Math.abs(accumulatedDelta.y), Math.abs(accumulatedDelta.x))
     if (angle > MAX_ANGLE_DEVIATION) {
@@ -63,13 +65,18 @@ export const createHistorySwipeRecognizer = (
       return
     }
 
-    const magnitude = Math.hypot(accumulatedDelta.x, accumulatedDelta.y)
-    swipeProgress.set(Math.min(magnitude, SWIPE_THRESHOLD))
-    swipeDirection.set(
-      accumulatedDelta.x > 0 ? (get(canGoForward) ? 'left' : null) : get(canGoBack) ? 'right' : null
-    )
+    const progress = Math.max(0, Math.min(magnitude - MIN_MAGNITUDE, SWIPE_THRESHOLD))
+    swipeProgress.set(progress)
 
-    if (!get(swipeDirection)) resetState()
+    const direction = accumulatedDelta.x > 0 ? 'left' : 'right'
+    const newDirection =
+      direction === 'left' ? (get(canGoForward) ? 'left' : null) : get(canGoBack) ? 'right' : null
+
+    swipeDirection.set(newDirection)
+
+    if (!newDirection) resetState()
+
+    log.debug(newDirection, progress, accumulatedDelta)
   }
 
   return {
