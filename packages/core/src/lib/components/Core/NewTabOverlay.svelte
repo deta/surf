@@ -888,7 +888,10 @@
       return
     }
     drag.abort()*/
-
+    if (drag.isNative) {
+      drag.continue()
+      return
+    }
     if (drag.data['surf/tab'] !== undefined) {
       const dragData = drag.data as { 'surf/tab': Tab }
       if (drag.isNative || dragData['surf/tab'].type !== 'space') {
@@ -1206,7 +1209,7 @@
                       {spaceId}
                       on:Drop={(e) => handleDrop(e.detail)}
                       on:DragEnter={(e) => handleDragEnter(e.detail)}
-                      zonePrefix="drawer-"
+                      zonePrefix="drawerrr-"
                     >
                       <div class="w-full h-full">
                         {#if $resourcesToShow.length > 0}
