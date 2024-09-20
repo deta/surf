@@ -100,6 +100,9 @@
     if (!(event.target as HTMLElement).closest('button')) {
       try {
         log.debug('Selected space:', folder.id)
+        if (folder.name.folderName === 'New Space' && $selectedFolder === 'New Space') {
+          return
+        }
         if (isModKeyPressed(event)) {
           dispatch('open-space-as-tab', { space: folder, active: event.shiftKey })
         } else {

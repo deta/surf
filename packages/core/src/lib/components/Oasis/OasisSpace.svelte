@@ -143,6 +143,7 @@
   // const selectedSpace = derived([spaces, selectedSpaceId], ([$spaces, $selectedSpaceId]) => {
   //     return $spaces.find(space => space.id === $selectedSpaceId)
   // })
+  //
 
   const spaceContents = writable<SpaceEntry[]>([])
   const everythingContents = writable<ResourceSearchResultItem[]>([])

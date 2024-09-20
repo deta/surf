@@ -980,6 +980,10 @@
     await oasisSpace.handleDeleteSpace(new CustomEvent('delete', { detail: false }))
   }
 
+  const handleSpaceDeleted = async (e: CustomEvent) => {
+    selectedSpaceId.set('all')
+  }
+
   let isSearching = false
   let searchTimeout: NodeJS.Timeout | null = null
 
@@ -1190,6 +1194,7 @@
                         {historyEntriesManager}
                         on:open={handleOpen}
                         on:go-back={() => selectedSpaceId.set(null)}
+                        on:deleted={handleSpaceDeleted}
                         insideDrawer={true}
                         bind:this={oasisSpace}
                         {searchValue}

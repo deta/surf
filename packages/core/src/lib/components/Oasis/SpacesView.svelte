@@ -207,9 +207,7 @@
 
       if (space?.name.folderName === 'New Space') {
         dispatch('delete-space', { id: $selectedSpace })
-
-        await tick()
-        selectedSpace.set('all')
+        return
       }
 
       selectedSpace.set(id)

@@ -212,6 +212,7 @@ In cases where the resource type does not match any known `resource_type` values
 - **Google Docs or Documents:** `https://docs.google.com/document/d/%`
 - **Claude Artifacts:** `https://claude.site/artifacts/%`
 - **Claude Chats:** `https://claude.ai/chat/%`
+- **Mail / Google Mail:** `https://mail.google.com/mail/%`
 
 To filter resources matching these primitives, use a SQL `LIKE` condition on the `source_uri` field in the `resource_metadata` table.
 
