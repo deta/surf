@@ -21,10 +21,10 @@ export function createSettingsWindow() {
     resizable: false,
     autoHideMenuBar: true,
     title: 'Settings',
-    frame: process.platform !== 'darwin',
+    frame: import.meta.env.PLATFORM !== 'darwin',
     trafficLightPosition: { x: 18, y: 18 },
-    titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
-    // ...(process.platform === 'linux' ? { icon } : {}),
+    titleBarStyle: import.meta.env.PLATFORM === 'darwin' ? 'hidden' : 'default',
+    // ...(import.meta.env.PLATFORM === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [`--userDataPath=${app.getPath('userData')}`],

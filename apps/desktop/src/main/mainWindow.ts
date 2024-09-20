@@ -72,9 +72,9 @@ export function createWindow() {
     fullscreenable: true,
     show: false,
     autoHideMenuBar: true,
-    frame: process.platform === 'darwin' ? false : true,
+    frame: import.meta.env.PLATFORM === 'darwin' ? false : true,
     titleBarStyle: 'hidden',
-    // ...(process.platform === 'linux' ? { icon } : {}),
+    // ...(import.meta.env.PLATFORM === 'linux' ? { icon } : {}),
     trafficLightPosition: { x: 12.5, y: 12.5 },
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),

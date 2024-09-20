@@ -100,7 +100,7 @@ function setupIpcHandlers(backendRootPath: string) {
   IPC_EVENTS_MAIN.updateTrafficLights.on((event, visible) => {
     if (!validateIPCSender(event)) return
 
-    if (process.platform == 'darwin') {
+    if (import.meta.env.PLATFORM == 'darwin') {
       const window = getMainWindow()
       window?.setWindowButtonVisibility(visible)
     }

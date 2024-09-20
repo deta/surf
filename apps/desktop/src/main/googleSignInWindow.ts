@@ -50,7 +50,7 @@ export function createGoogleSignInWindow(url: string): Promise<string | null> {
     //   reject(error)
     // })
 
-    if (process.platform === 'darwin') {
+    if (import.meta.env.PLATFORM === 'darwin') {
       signInWindow.webContents.on('did-finish-load', () => {
         if (isResolved) return
         signInWindow?.webContents.executeJavaScript(`

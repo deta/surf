@@ -10,7 +10,7 @@ import { createSettingsWindow } from './settingsWindow'
 import { toggleHistorySwipeGestureConfig } from './historySwipe'
 
 const log = useLogScope('Main App Menu')
-const isMac = process.platform === 'darwin'
+const isMac = import.meta.env.PLATFORM === 'darwin'
 
 let menu: Electron.Menu | null = null
 

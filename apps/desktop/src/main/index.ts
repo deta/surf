@@ -158,7 +158,7 @@ if (!gotTheLock) {
       appPath,
       'resources',
       'bin',
-      `surf-backend${process.platform === 'win32' ? '.exe' : ''}`
+      `surf-backend${import.meta.env.PLATFORM === 'win32' ? '.exe' : ''}`
     )
 
     surfBackendManager = new SurfBackendServerManager(backendServerPath, [
@@ -204,7 +204,7 @@ if (!gotTheLock) {
   })
 
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
+    if (import.meta.env.PLATFORM !== 'darwin') {
       app.quit()
     }
   })

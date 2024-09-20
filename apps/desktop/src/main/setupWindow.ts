@@ -16,8 +16,8 @@ export function createSetupWindow() {
     resizable: false,
     autoHideMenuBar: true,
     frame: false,
-    // titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
-    // ...(process.platform === 'linux' ? { icon } : {}),
+    // titleBarStyle: import.meta.env.PLATFORM === 'darwin' ? 'hidden' : 'default',
+    // ...(import.meta.env.PLATFORM === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [`--userDataPath=${app.getPath('userData')}`],

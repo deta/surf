@@ -22,6 +22,9 @@ export default defineConfig({
           index: resolve(__dirname, 'src/main/index.ts')
         }
       }
+    },
+    define: {
+      'import.meta.env.PLATFORM': JSON.stringify(process.platform)
     }
   },
   preload: {
@@ -104,8 +107,7 @@ export default defineConfig({
       minify: !disableAllObfuscation && process.env.NODE_ENV !== 'development'
     },
     define: {
-      'process.env': {},
-      'process.platform': JSON.stringify(process.platform)
+      'import.meta.env.PLATFORM': JSON.stringify(process.platform)
     }
   }
 })
