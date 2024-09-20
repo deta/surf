@@ -109,7 +109,7 @@
                 <ImageView blob={image} />
               {/if}
             </div>
-          {:else if ![ResourceTypes.LINK, ResourceTypes.ARTICLE, ResourceTypes.POST, ResourceTypes.DOCUMENT].some( (t) => type.startsWith(t) )}
+          {:else if ![ResourceTypes.LINK, ResourceTypes.ARTICLE, ResourceTypes.POST, ResourceTypes.DOCUMENT, ResourceTypes.ANNOTATION].some( (t) => type.startsWith(t) )}
             <FilePreview {resource} preview />
           {/if}
         {/if}

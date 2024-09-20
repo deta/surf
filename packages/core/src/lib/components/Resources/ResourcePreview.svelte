@@ -206,6 +206,7 @@
           const data = resourceData as unknown as ResourceDataPost
           const hostname = getHostname(canonicalUrl ?? data.url)
 
+          let imageUrl: string | undefined
           let theme: [string, string] | undefined
           if (resource.type === ResourceTypes.POST_REDDIT) {
             theme = ['#ff4500', '#ff7947']
@@ -213,6 +214,22 @@
             theme = ['#000', '#252525']
           } else if (resource.type === ResourceTypes.POST_YOUTUBE) {
             theme = undefined
+
+            if (data.post_id) {
+              imageUrl = `https://img.youtube.com/vi/${data.post_id}/mqdefault.jpg`
+            } else {
+              const url = parseStringIntoUrl(data.url)
+              if (url) {
+                const videoId = url.searchParams.get('v')
+                if (videoId) {
+                  imageUrl = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+                }
+              }
+            }
+
+            if (!imageUrl) {
+              imageUrl = data.images[0]
+            }
           }
 
           const content = data.excerpt || data.content_plain
@@ -222,7 +239,7 @@
             title: data.title && data.title !== content ? data.title : undefined,
             content: summary || content || undefined,
             contentType: 'plain',
-            image: resource.type === ResourceTypes.POST_YOUTUBE ? data.images[0] : undefined,
+            image: imageUrl,
             url: data.url,
             source: {
               text:
