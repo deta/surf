@@ -38,6 +38,8 @@
   export let allTabs: Tab[] = []
   export let activeTab: Tab | null = null
   export let activeTabMagic: PageMagic
+  export let horizontalTabs = false
+  export let experimentalMode = false
 
   const dispatch = createEventDispatcher<{
     highlightText: { tabId: string; text: string }
@@ -50,6 +52,7 @@
     'exclude-tab': string
     'remove-magic-tab': Tab
     'include-tab': string
+    'close-chat': void
   }>()
 
   const log = useLogScope('MagicSidebar')
@@ -727,11 +730,44 @@
       await createNewChat()
     }
   })
+
+  $: smallSize = inputValue.length < 75
 </script>
 
 <div class="flex flex-col h-full relative overflow-hidden">
+  {#if !experimentalMode}
+    <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100">
+      {#if $magicPage.responses.length > 0}
+        <button
+          class="flex items-center gap-2 p-2 rounded-lg opacity-60 hover:bg-blue-200"
+          on:click={() => {
+            handleClearChat()
+          }}
+        >
+          <Icon name="add" />
+          New Chat
+        </button>
+      {:else}
+        <div class="flex items-center justify-start text-lg p-1.5 font-semibold">Chat</div>
+      {/if}
+
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      {#if !horizontalTabs}
+        <div
+          role="button"
+          tabindex="0"
+          on:click={() => dispatch('close-chat')}
+          class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group cursor-pointer"
+        >
+          <Icon name="sidebar.right" class="group-hover:hidden" size="20px" />
+          <Icon name="close" class="hidden group-hover:block" size="20px" />
+        </div>
+      {/if}
+    </div>
+  {/if}
   <div
-    class="flex flex-col overflow-auto pb-[22rem] h-full"
+    class="flex flex-col overflow-auto h-full pb-52 pt-2 overflow-x-hidden"
     bind:this={listElem}
     on:wheel|passive={handleListWheel}
   >
@@ -739,11 +775,11 @@
       {#each $magicPage.responses as response, idx (response.id)}
         {#if response.status === 'success'}
           <div
-            class="response-wrapper text-lg flex flex-col gap-2 rounded-xl p-6 text-opacity-90 group relative bg-[#f5faff]"
+            class="response-wrapper text-lg flex flex-col gap-2 rounded-xl p-4 text-opacity-90 group relative"
           >
             <div class="">
               <div
-                class="font-medium text-neutral-800 bg-sky-100 border-sky-200 border-1 px-4 py-2 rounded-xl w-fit mb-2"
+                class="font-medium text-neutral-800 bg-sky-100 border-sky-200 border-1 px-6 py-2 rounded-xl w-fit mb-2 truncate max-w-full"
               >
                 <div class="tiptap query">
                   {#if response.role === 'user'}
@@ -770,7 +806,7 @@
             />
 
             <div
-              class="flex-row items-center mx-auto space-x-2 hidden group-hover:flex absolute -bottom-2 left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out"
+              class="flex-row items-center mx-auto space-x-2 hidden group-hover:flex absolute text-sm -bottom-2 left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out"
             >
               {#if $savedChatResponses[response.id]}
                 <button
@@ -779,7 +815,7 @@
                     text: 'Open as tab',
                     position: 'left'
                   }}
-                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center gap-2 py-2 px-4 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 >
                   <Icon name="check" />
                   Saved
@@ -791,7 +827,7 @@
                     text: 'Save to My Stuff',
                     position: 'left'
                   }}
-                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center gap-2 py-2 px-4 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 >
                   <Icon name="leave" />
                   Save
@@ -804,23 +840,21 @@
                   text: 'Copy to Clipboard',
                   position: 'left'
                 }}
-                class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center py-3 px-3 bg-sky-100 hover:bg-sky-100/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center py-2.5 px-2.5 bg-sky-100 hover:bg-sky-100/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
               >
                 {#if $copied}
-                  <Icon name="check" />
+                  <Icon name="check" size="16px" />
                 {:else}
-                  <Icon name="copy" />
+                  <Icon name="copy" size="16px" />
                 {/if}
               </button>
             </div>
           </div>
         {:else if response.status === 'pending'}
-          <div
-            class="text-lg flex flex-col gap-2 rounded-xl p-8 text-opacity-90 group relative bg-[#f5faff]"
-          >
+          <div class="text-lg flex flex-col gap-2 rounded-xl p-4 text-opacity-90 group relative">
             <div class="">
               <div
-                class="font-medium flex gap-2 text-neutral-800 bg-sky-100 border-sky-200 border-1 px-4 py-2 rounded-xl w-fit mb-2"
+                class="font-medium flex gap-2 text-neutral-800 bg-sky-100 border-sky-200 border-1 px-4 py-2 rounded-xl w-fit mb-2 truncate max-w-full"
               >
                 <div class="icon">
                   <Icon name="spinner" />
@@ -854,6 +888,40 @@
           </div> -->
         {/if}
       {/each}
+
+      {#if $magicPage.errors.length > 0}
+        <div
+          class="flex flex-col bg-yellow-50 border-yellow-300 border-[1px] p-4 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 relative"
+        >
+          {#each $magicPage.errors as error}
+            <div class="info-box">
+              <Icon name="alert-triangle" />
+              <p>Warning: {error}</p>
+            </div>
+          {/each}
+
+          <button
+            class="absolute top-3 right-3 text-yellow-800 hover:text-yellow-600"
+            on:click={() => magicPage.update((v) => ({ ...v, errors: [] }))}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+      {/if}
+
+      {#if $hasError}
+        <div
+          class="flex flex-col bg-yellow-50 border-yellow-300 border-[1px] p-4 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 relative"
+        >
+          {$errorMessage}
+          <button
+            class="absolute top-5 right-4 text-yellow-800 hover:text-yellow-600"
+            on:click={() => hasError.set(false)}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+      {/if}
     {:else}
       <div class="flex flex-col items-center justify-center empty">
         <div class="empty-title" style="line-height: 1;">
@@ -861,22 +929,23 @@
           <h1>New Chat</h1>
         </div>
 
-        <p class="max-w-64 text-sky-900">
-          Ask anything about specific tabs or clear the context to switch to a general conversation.
+        <p class="text-sky-900">
+          Ask questions about specific tabs or start a general conversation.
         </p>
-        <p class="max-w-64 text-sky-900/60">
-          Select tabs with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
+        <p class=" text-sky-900/60">
+          Use the + icon or select tabs from the tab bar to add context.
+          <!-- Select tabs with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
             .toLowerCase()
-            .indexOf('mac') > -1}⌘{:else}Ctrl{/if} + click or Shift + click ).
+            .indexOf('mac') > -1}⌘{:else}Ctrl{/if} + click or Shift + click ). -->
         </p>
       </div>
     {/if}
   </div>
 
   <div
-    class="chat bg-gradient-to-t from-sky-300/80 via-sky-300/30 to-transparent mx-auto absolute w-full bottom-0 rounded-xl flex flex-col shadow-xl"
+    class="chat bg-gradient-to-t from-sky-300/20 via-sky-300/10 to-transparent mx-auto absolute w-full bottom-0 rounded-xl flex flex-col shadow-xl pb-2"
   >
-    {#if !$magicPage.running && $magicPage.responses.length >= 1}
+    {#if experimentalMode && !$magicPage.running && $magicPage.responses.length >= 1}
       <button
         transition:flyAndScale={{ duration: 125, y: 22 }}
         on:click={() => {
@@ -887,142 +956,25 @@
         class="transform mb-4 active:scale-95 appearance-none w-fit mx-auto border-[0.5px] border-sky-900/10 group margin-0 flex items-center px-3 py-2 bg-sky-100 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer text-xs"
       >
         {#if navigator.platform.toLowerCase().indexOf('mac') > -1}
-          <!--⌘ + ⌫ -->Clear Chat
+          Clear Chat
         {:else}
-          <!--Ctrl + ⌫-->Clear Chat
+          Clear Chat
         {/if}
       </button>
     {/if}
 
-    {#if $magicPage.errors.length > 0}
-      <div
-        class="err flex flex-col bg-yellow-50 border-t-yellow-300 border-l-yellow-300 border-r-yellow-300 border-[1px] py-4 pl-6 pr-12 gap-4 shadow-sm mx-12 rounded-t-xl text-lg leading-relaxed text-yellow-800 relative"
-      >
-        {#each $magicPage.errors as error}
-          <div class="info-box">
-            <Icon name="alert-triangle" />
-            <p>Warning: {error}</p>
-          </div>
-        {/each}
-
-        <button
-          class="absolute top-3 right-3 text-yellow-800 hover:text-yellow-600"
-          on:click={() => magicPage.update((v) => ({ ...v, errors: [] }))}
-        >
-          <Icon name="close" />
-        </button>
-      </div>
-    {/if}
-
     {#if $magicPage.initializing}
       <div
-        transition:slide={{ duration: 150, axis: 'y', delay: 350 }}
-        class="err flex flex-col bg-blue-50 border-t-blue-300 border-l-blue-300 border-r-blue-300 border-[1px] py-2 pl-6 pr-12 gap-4 shadow-sm mx-12 rounded-t-xl text-lg leading-relaxed text-blue-800/60 relative"
+        transition:slide={{ duration: 150, axis: 'y' }}
+        class="err flex flex-col bg-blue-50 border-t-blue-300 border-l-blue-300 border-r-blue-300 border-[1px] py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 relative"
       >
         Preparing tabs for the chat…
       </div>
-    {/if}
-
-    {#if $hasError}
-      <div
-        class="err flex flex-col bg-yellow-50 border-t-yellow-300 border-l-yellow-300 border-r-yellow-300 border-[1px] py-4 pl-6 pr-12 gap-4 shadow-sm mx-12 rounded-t-xl text-lg leading-relaxed text-yellow-800 relative"
-      >
-        {$errorMessage}
-        <button
-          class="absolute top-3 right-3 text-yellow-800 hover:text-yellow-600"
-          on:click={() => hasError.set(false)}
-        >
-          <Icon name="close" />
-        </button>
-      </div>
-    {/if}
-
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div
-      class="flex flex-col bg-sky-50 border-t-blue-300 border-l-blue-300 border-r-blue-300 border-[1px] p-4 gap-4 shadow-xl mx-8"
-      class:rounded-t-xl={inputValue.length < 100}
-      class:rounded-t-lg={inputValue.length >= 100}
-      on:keydown={handleInputKeydown}
-      on:keyup={handleInputKeyup}
-    >
-      <div class="flex flex-row gap-4 items-start">
-        <div class="flex-grow overflow-y-auto max-h-96">
-          <Editor
-            bind:this={editor}
-            bind:content={inputValue}
-            bind:focused={editorFocused}
-            autofocus={true}
-            placeholder={$chatBoxPlaceholder}
-          />
-        </div>
-      </div>
-
-      <div class="w-full flex justify-between items-center opacity-100 text-sm pb-0 pt-4">
-        <div class="flex items-center gap-2 relative">
-          {#if $tabPickerOpen}
-            <ChatContextTabPicker
-              tabItems={allTabs
-                .filter((e) => !$tabsInContext.includes(e))
-                .sort((a, b) => b.index - a.index)}
-              on:include-tab
-              on:close={() => {
-                $tabPickerOpen = false
-                editor.focus()
-              }}
-            />
-          {/if}
-          <button
-            disabled={allTabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
-            popovertarget="chat-add-context-tabs"
-            class="open-tab-picker hover:bg-blue-100 rounded-sm disabled:opacity-40 disabled:cursor-not-allowed"
-            on:click={(e) => {
-              $tabPickerOpen = !$tabPickerOpen
-            }}
-            use:tooltip={{
-              text: 'Add tab',
-              position: 'right'
-            }}
-          >
-            <Icon name={'add'} size={'18px'} color="#1e3a8a" className="opacity-60" />
-          </button>
-
-          <!-- {#if $optToggled}
-            <div class="flex justify-center align-center w-full opacity-60">
-              <div
-                class="bg-sky-200 text-sky-800 font-medium py-1 pr-4 pl-2 rounded-full flex items-center animate-blur"
-              >
-                <span class="bg-blue-500 rounded-full w-5 h-5 mr-2"></span>
-                General Chat
-              </div>
-            </div>
-          {/if} -->
-        </div>
-
-        <div class="flex-shrink-0 flex items-center gap-2 opacity-60">
-          <button
-            class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-3 py-2 bg-sky-300 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
-            on:click={() => {
-              selectedMode = 'active'
-              contextTabs = getContextTabs(selectedMode, $tabsInContext, allTabs, activeTab)
-              handleChatSubmit()
-            }}
-            disabled={!inputValue || $magicPage.running}
-          >
-            {#if $magicPage.running && !$optToggled}
-              <Icon name="spinner" />
-            {:else}
-              Send ↩
-            {/if}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    {#if $tabsInContext.length}
+    {:else if $tabsInContext.length}
       {#if !$optToggled}
         <div
-          class="bg-sky-100 group flex flex-col gap-2 px-4 pt-2 pb-5 transition-all duration-300 mx-8 border border-blue-300"
-          transition:slide={{ duration: 150 }}
+          class="flex flex-col bg-blue-50 border-t-blue-300 border-l-blue-300 border-r-blue-300 border-[1px] py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 relative"
+          transition:slide={{ duration: 150, axis: 'y', delay: 350 }}
         >
           <div class=" flex-row items-center gap-2 flex">
             <ContextBubbles
@@ -1034,7 +986,7 @@
             />
             {#if $tabsInContext.length > 0}
               <button
-                class="flex items-center gap-2 px-3 py-1 text-sm rounded-lg opacity-60 hover:bg-blue-200"
+                class="flex items-center gap-2 p-2 text-sm rounded-lg opacity-60 hover:bg-blue-200"
                 on:click={() => {
                   handleClearContext()
                 }}
@@ -1043,13 +995,79 @@
                   position: 'left'
                 }}
               >
-                Clear
+                <Icon name="close" />
               </button>
             {/if}
           </div>
         </div>
       {/if}
     {/if}
+
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div
+      class="flex bg-sky-50 border-blue-300 border-[1px] px-4 py-3 gap-2 shadow-lg mx-4"
+      class:rounded-2xl={smallSize}
+      class:rounded-xl={!smallSize}
+      class:flex-col={!smallSize}
+      class:items-center={smallSize}
+      on:keydown={handleInputKeydown}
+      on:keyup={handleInputKeyup}
+    >
+      <div class="flex-grow overflow-y-auto">
+        <Editor
+          bind:this={editor}
+          bind:content={inputValue}
+          bind:focused={editorFocused}
+          autofocus={true}
+          placeholder={$chatBoxPlaceholder}
+        />
+      </div>
+
+      <div class="flex items-center gap-2 relative justify-end">
+        {#if $tabPickerOpen}
+          <ChatContextTabPicker
+            tabItems={allTabs
+              .filter((e) => !$tabsInContext.includes(e))
+              .sort((a, b) => b.index - a.index)}
+            on:include-tab
+            on:close={() => {
+              $tabPickerOpen = false
+              editor.focus()
+            }}
+          />
+        {/if}
+        <button
+          disabled={allTabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
+          popovertarget="chat-add-context-tabs"
+          class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
+          on:click={(e) => {
+            $tabPickerOpen = !$tabPickerOpen
+          }}
+          use:tooltip={{
+            text: 'Add tab',
+            position: 'left'
+          }}
+        >
+          <Icon name={'add'} size={'18px'} color="#1e3a8a" className="opacity-60" />
+        </button>
+
+        <button
+          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
+          on:click={() => {
+            selectedMode = 'active'
+            contextTabs = getContextTabs(selectedMode, $tabsInContext, allTabs, activeTab)
+            handleChatSubmit()
+          }}
+          disabled={!inputValue || $magicPage.running}
+        >
+          {#if $magicPage.running && !$optToggled}
+            <Icon name="spinner" />
+          {:else}
+            <div class="rotate-90"><Icon name="arrow.left" /></div>
+          {/if}
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 -
@@ -1294,7 +1312,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 1rem;
+    gap: 0.8rem;
     padding: 1rem;
     opacity: 0.75;
     transition: opacity 0.2s ease;

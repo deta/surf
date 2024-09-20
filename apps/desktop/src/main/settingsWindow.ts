@@ -2,6 +2,7 @@ import { app, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
+import { isMac } from '@horizon/utils'
 
 let settingsWindow: BrowserWindow | undefined
 
@@ -21,17 +22,19 @@ export function createSettingsWindow() {
     resizable: false,
     autoHideMenuBar: true,
     title: 'Settings',
-    frame: process.platform !== 'darwin',
+    frame: !isMac(),
     trafficLightPosition: { x: 18, y: 18 },
-    titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
-    // ...(process.platform === 'linux' ? { icon } : {}),
+    titleBarStyle: isMac() ? 'hidden' : 'default',
+    // ...(isLinux() ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [`--userDataPath=${app.getPath('userData')}`],
-      sandbox: false,
+      defaultFontSize: 14,
       session: settingsWindowSession,
-      webviewTag: true,
-      defaultFontSize: 14
+      webviewTag: false,
+      sandbox: false,
+      nodeIntegration: false,
+      contextIsolation: true
     }
   })
 
@@ -51,8 +54,7 @@ export function createSettingsWindow() {
   })
 
   settingsWindow.webContents.setWindowOpenHandler((_details: Electron.HandlerDetails) => {
-    // TODO: is this needed?
-    return { action: 'allow' }
+    return { action: 'deny' }
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
