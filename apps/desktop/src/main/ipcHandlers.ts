@@ -1,4 +1,4 @@
-import { useLogScope } from '@horizon/utils'
+import { isMac, useLogScope } from '@horizon/utils'
 import { app, session } from 'electron'
 import path from 'path'
 import { setAdblockerState, getAdblockerState } from './adblocker'
@@ -100,7 +100,7 @@ function setupIpcHandlers(backendRootPath: string) {
   IPC_EVENTS_MAIN.updateTrafficLights.on((event, visible) => {
     if (!validateIPCSender(event)) return
 
-    if (process.platform == 'darwin') {
+    if (isMac()) {
       const window = getMainWindow()
       window?.setWindowButtonVisibility(visible)
     }

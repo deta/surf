@@ -154,6 +154,13 @@
             bind:value={userConfigSettings.search_engine}
             on:update={() => handleSettingsUpdate()}
           />
+          <SettingsOption
+            icon="filter"
+            title="Experimental Mode"
+            description="Experimental Mode contains new features that may be unstable or buggy."
+            bind:value={userConfigSettings.experimental_mode}
+            on:update={handleSettingsUpdate}
+          />
         {/if}
       </article>
     {:else if $activeTab === 'appearance'}

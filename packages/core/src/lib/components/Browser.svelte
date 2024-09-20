@@ -438,6 +438,7 @@
 
   $: savedTabsOrientation = $userConfigSettings.tabs_orientation
   $: horizontalTabs = savedTabsOrientation === 'horizontal'
+  $: experimentalMode = $userConfigSettings.experimental_mode
 
   const handleCollapseRight = () => {
     if (showRightSidebar) {
@@ -3835,38 +3836,54 @@
               class="flex flex-row flex-shrink-0 items-center mx-auto"
               class:space-x-4={!horizontalTabs}
             >
-              {#if !horizontalTabs || (horizontalTabs && !showRightSidebar)}
-                <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
-                  <button
-                    slot="trigger"
-                    class="no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                    on:click={() => toggleRightSidebar()}
-                  >
-                    <Icon name="triangle-square-circle" />
-                  </button>
+              {#if experimentalMode}
+                {#if !horizontalTabs || (horizontalTabs && !showRightSidebar)}
+                  <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
+                    <button
+                      slot="trigger"
+                      class="no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                      on:click={() => toggleRightSidebar()}
+                    >
+                      <Icon name="triangle-square-circle" />
+                    </button>
 
-                  <div
-                    slot="content"
-                    class="flex no-drag flex-row items-center justify-center space-x-4 px-3 py-3"
-                    let:closePopover
-                  >
-                    {#each $sidebarTools as tool}
-                      <button
-                        class="flex flex-col items-center space-y-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                        on:click={() => {
-                          closePopover()
-                          openRightSidebarTab(tool.id)
-                        }}
-                        disabled={tool.disabled}
-                      >
-                        <div class="p-4 rounded-xl bg-neutral-200/50 hover:bg-neutral-200">
-                          <Icon name={tool.icon} class="text-xl text-neutral-800" />
-                        </div>
-                        <span class="text-xs">{tool.name}</span>
-                      </button>
-                    {/each}
-                  </div>
-                </CustomPopover>
+                    <div
+                      slot="content"
+                      class="flex no-drag flex-row items-center justify-center space-x-4 px-3 py-3"
+                      let:closePopover
+                    >
+                      {#each $sidebarTools as tool}
+                        <button
+                          class="flex flex-col items-center space-y-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                          on:click={() => {
+                            closePopover()
+                            openRightSidebarTab(tool.id)
+                          }}
+                          disabled={tool.disabled}
+                        >
+                          <div class="p-4 rounded-xl bg-neutral-200/50 hover:bg-neutral-200">
+                            <Icon name={tool.icon} class="text-xl text-neutral-800" />
+                          </div>
+                          <span class="text-xs">{tool.name}</span>
+                        </button>
+                      {/each}
+                    </div>
+                  </CustomPopover>
+                {/if}
+              {:else}
+                <button
+                  use:tooltip={{
+                    text: 'Chat (⌘ + E)',
+                    position: horizontalTabs ? 'left' : 'top'
+                  }}
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  on:click={() => {
+                    toggleRightSidebarTab('chat')
+                  }}
+                  class:bg-sky-200={showRightSidebar && $rightSidebarTab === 'chat'}
+                >
+                  <Icon name="chat" />
+                </button>
               {/if}
 
               <button
@@ -3939,10 +3956,10 @@
       {/if}
     </div>
 
-    <div slot="content" class="h-full w-full shadow-lg flex space-x-4 relative flex-row">
+    <div slot="content" class="h-full w-full flex space-x-4 relative flex-row">
       <div
         style:view-transition-name="active-content-wrapper"
-        class="w-full h-full overflow-hidden flex-grow"
+        class="w-full h-full overflow-hidden flex-grow rounded-2xl"
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showLeftSidebar}
@@ -4093,45 +4110,47 @@
       slot="right-sidebar"
       let:minimal
     >
-      <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100">
-        <div class="flex items-center justify-start">
-          <!-- svelte-ignore a11y-click-events-have-key-events -->
-          <!-- svelte-ignore a11y-no-static-element-interactions -->
-          <div
-            role="button"
-            tabindex="0"
-            on:click={() => toggleRightSidebar()}
-            class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group cursor-pointer"
+      {#if experimentalMode}
+        <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100">
+          <div class="flex items-center justify-start">
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div
+              role="button"
+              tabindex="0"
+              on:click={() => toggleRightSidebar()}
+              class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group cursor-pointer"
+            >
+              <Icon name="sidebar.right" class="group-hover:hidden" size="20px" />
+              <Icon name="close" class="hidden group-hover:block" size="20px" />
+            </div>
+          </div>
+
+          <Tabs.List
+            class="grid w-full grid-cols-3 gap-1 rounded-9px bg-dark-10 text-sm font-semibold leading-[0.01em]"
           >
-            <Icon name="sidebar.right" class="group-hover:hidden" size="20px" />
-            <Icon name="close" class="hidden group-hover:block" size="20px" />
+            {#each $sidebarTools as tool}
+              <Tabs.Trigger
+                value={tool.id}
+                class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center gap-2 px-2 py-3 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer opacity-75 data-[state='active']:opacity-100 data-[state='active']:bg-sky-200 hover:bg-sky-100 data-[state='active']:hover:bg-sky-200/50"
+                disabled={tool.disabled}
+              >
+                {#if tool.icon}
+                  <Icon name={tool.icon} />
+                {/if}
+
+                {#if !minimal}
+                  <span> {tool.name}</span>
+                {/if}
+              </Tabs.Trigger>
+            {/each}
+          </Tabs.List>
+
+          <div class="p-1">
+            <div style="width: 20px; height: 20px;"></div>
           </div>
         </div>
-
-        <Tabs.List
-          class="grid w-full grid-cols-3 gap-1 rounded-9px bg-dark-10 text-sm font-semibold leading-[0.01em]"
-        >
-          {#each $sidebarTools as tool}
-            <Tabs.Trigger
-              value={tool.id}
-              class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center gap-2 px-2 py-3 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer opacity-75 data-[state='active']:opacity-100 data-[state='active']:bg-sky-200 hover:bg-sky-100 data-[state='active']:hover:bg-sky-200/50"
-              disabled={tool.disabled}
-            >
-              {#if tool.icon}
-                <Icon name={tool.icon} />
-              {/if}
-
-              {#if !minimal}
-                <span> {tool.name}</span>
-              {/if}
-            </Tabs.Trigger>
-          {/each}
-        </Tabs.List>
-
-        <div class="p-1">
-          <div style="width: 20px; height: 20px;"></div>
-        </div>
-      </div>
+      {/if}
 
       <Tabs.Content value="chat" class="flex-grow overflow-hidden">
         {#if $activeTab && $activeTabMagic}
@@ -4155,6 +4174,9 @@
               on:updateActiveChatId={(e) => activeChatId.set(e.detail)}
               on:remove-magic-tab={removeMagicTab}
               on:include-tab={handleIncludeTabInMagic}
+              {horizontalTabs}
+              on:close-chat={() => toggleRightSidebarTab('chat')}
+              {experimentalMode}
               {activeTabMagic}
             />
           {/key}
@@ -4173,6 +4195,9 @@
             on:scrollTo={handleAnnotationScrollTo}
             on:create={handleAnnotationSidebarCreate}
             on:reload={handleAnnotationSidebarReload}
+            {experimentalMode}
+            {horizontalTabs}
+            on:close={() => toggleRightSidebarTab('annotations')}
           />
         {:else}
           <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
@@ -4190,6 +4215,9 @@
             activeBrowserTab={$activeBrowserTab}
             on:clear={() => handleAppSidebarClear(true)}
             on:execute-tab-code={handleExecuteAppSidebarCode}
+            {experimentalMode}
+            {horizontalTabs}
+            on:close={() => toggleRightSidebarTab('go-wild')}
           />
         {:else}
           <div class="w-full h-full flex items-center justify-center flex-col opacity-50">

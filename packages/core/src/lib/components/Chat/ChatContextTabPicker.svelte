@@ -139,7 +139,7 @@
     /* we should just use isolation: isolate for contained things like the sidebar insted of these zindices */
     z-index: 99999999;
     top: -0.75rem;
-    left: 0;
+    right: 0;
     transform: translateY(-100%);
     min-width: 30ch;
     max-width: 30ch;
