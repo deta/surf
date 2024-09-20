@@ -164,8 +164,6 @@
           const data = resourceData as unknown as ResourceDataArticle
           const hostname = getHostname(canonicalUrl ?? data.url)
 
-          log.debug('Article data', resource.annotations)
-
           let annotationItems: Annotation[] = []
           if (!$userConfigSettings.show_annotations_in_oasis && annotations.length > 0) {
             const annotationData = await annotations[0].getParsedData()
@@ -246,8 +244,6 @@
         } else if (resource.type.startsWith(ResourceTypes.DOCUMENT)) {
           const data = resourceData as unknown as ResourceDataDocument
           const hostname = getHostname(canonicalUrl ?? data.url)
-
-          log.debug('Document data', data)
 
           previewData = {
             type: resource.type,
