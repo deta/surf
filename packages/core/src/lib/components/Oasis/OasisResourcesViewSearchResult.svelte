@@ -10,8 +10,7 @@
   export let resources: Readable<ResourceSearchResultItem[]>
   export let selected: string | null = null
   export let isEverythingSpace: boolean
-  export let showResourceSource: boolean = false
-  export let newTabOnClick: boolean = false
+  export let isInSpace: boolean = false
   export let searchValue: Writable<string> | undefined
 
   const log = useLogScope('OasisResourcesView')
@@ -62,6 +61,7 @@
         >
           <OasisResourceLoader
             resourceOrId={item.data ? item.data : item.id}
+            {isInSpace}
             on:open
             on:remove
             on:load

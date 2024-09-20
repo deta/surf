@@ -66,9 +66,8 @@
 
   export let resource: Resource
   export let selected: boolean = false
-  export let interactive: boolean = true
   export let mode: Mode = 'full'
-  export let everythingResource: boolean = true // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
+  export let isInSpace: boolean = false // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
@@ -490,12 +489,16 @@
         action: () => dispatch('open', resource.id)
       },
       { type: 'separator' },
-      {
-        type: 'action',
-        icon: '',
-        text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
-        action: () => handleOpenAsFile()
-      },
+      ...(showOpenAsFile
+        ? [
+            {
+              type: 'action',
+              icon: '',
+              text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
+              action: () => handleOpenAsFile()
+            }
+          ]
+        : []),
       {
         type: 'sub-menu',
         icon: '',
@@ -520,7 +523,7 @@
       {
         type: 'action',
         icon: 'trash',
-        text: `${everythingResource ? 'Delete from Stuff' : 'Remove from Space'}`,
+        text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
         kind: 'danger',
         action: () => handleRemove()
       }
@@ -551,7 +554,7 @@
     </div>
   {/if}
 
-  {#if interactive}
+  <!-- {#if interactive}
     <div class="remove-wrapper">
       {#if showOpenAsFile}
         <div class="remove" on:click|stopPropagation={handleOpenAsFile}>
@@ -567,7 +570,7 @@
         <Icon name="close" color="#AAA7B1" />
       </div>
     </div>
-  {/if}
+  {/if} -->
 </div>
 
 <style lang="scss">

@@ -1541,7 +1541,7 @@
       <OasisResourcesView
         resourceIds={spaceResourceIds}
         selected={$selectedItem}
-        showResourceSource={isSearching}
+        isInSpace={!isEverythingSpace}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:remove={handleResourceRemove}
