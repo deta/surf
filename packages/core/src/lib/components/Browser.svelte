@@ -3326,9 +3326,11 @@
   )}
 </pre> -->
 
-<div class="antialiased w-screen h-screen will-change-auto transform-gpu relative drag">
+<div
+  class="antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col"
+>
   {#if !horizontalTabs && showCustomWindowActions}
-    <div class="flex flex-row items-center justify-between p-1">
+    <div class="flex flex-row flex-shrink-0 items-center justify-between p-1">
       <div>
         <BrowserActions
           {horizontalTabs}
@@ -3393,7 +3395,7 @@
         <div
           class="flex {!horizontalTabs
             ? `flex-col w-full ${showCustomWindowActions ? 'h-[calc(100%-45px)]' : 'py-1.5 h-full'} space-y-4 px-2`
-            : `flex-row items-center h-full ${showCustomWindowActions ? '' : 'ml-20'} space-x-4 mr-4`} relative no-drag"
+            : `flex-row items-center h-full ${showCustomWindowActions ? '' : 'ml-20'} space-x-4 mr-4`} relative"
           use:contextMenu={{
             items: [
               {
@@ -3985,7 +3987,7 @@
         />
 
         {#if $sidebarTab === 'oasis'}
-          <div class="browser-window active no-drag" style="--scaling: 1;">
+          <div class="browser-window flex-grow active no-drag" style="--scaling: 1;">
             <OasisSpace
               spaceId={$selectedSpace}
               active
@@ -4008,7 +4010,7 @@
         {#each $activeTabs as tab (tab.id)}
           {#if $activatedTabs.includes(tab.id)}
             <div
-              class="browser-window will-change-contents transform-gpu no-drag"
+              class="browser-window flex-grow will-change-contents transform-gpu no-drag"
               style="--scaling: 1;"
               class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
               class:magic-glow-big={$activeTabId === tab.id &&

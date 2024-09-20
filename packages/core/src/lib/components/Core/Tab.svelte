@@ -333,7 +333,7 @@
         text: 'Save',
         action: () => handleBookmark(SaveToOasisEventTrigger.ContextMenu)
       },
-      { type: 'separator' },
+      { type: 'separator', hidden: tab.type !== 'page' },
 
       {
         type: 'action',
@@ -347,6 +347,7 @@
       },
       {
         type: 'action',
+        hidden: tab.type !== 'page',
         icon: 'news',
         text: 'Create Live Space',
         action: () => handleCreateLiveSpace()
@@ -362,6 +363,7 @@
       },
       {
         type: 'action',
+        hidden: tab.type !== 'page',
         icon: 'link',
         text: 'Copy URL',
         action: () => {

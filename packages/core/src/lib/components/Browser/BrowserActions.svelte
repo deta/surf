@@ -2,7 +2,6 @@
   import { Icon } from '@horizon/icons'
   import { flyAndScale } from '@horizon/utils'
   import { Tooltip } from 'bits-ui'
-  import type BrowserTab from './BrowserTab.svelte'
   import { createEventDispatcher } from 'svelte'
 
   export let horizontalTabs: boolean
@@ -16,6 +15,7 @@
     'go-forward': void
     reload: void
     'toggle-sidebar': void
+    'show-menu-options': void
   }>()
 </script>
 
@@ -26,6 +26,34 @@
       ? ''
       : 'w-full justify-between pl-[4.4rem]'}"
 >
+  {#if showCustomWindowActions}
+    <Tooltip.Root openDelay={400} closeDelay={10}>
+      <Tooltip.Trigger>
+        <button
+          class="no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+          on:click={window.api.showAppMenuPopup}
+        >
+          <span class="inline-block translate-x-0 transition-transform ease-in-out duration-200">
+            <Icon name="menu" />
+          </span>
+        </button>
+      </Tooltip.Trigger>
+      <Tooltip.Content
+        transition={flyAndScale}
+        transitionConfig={{ y: 8, duration: 150 }}
+        sideOffset={8}
+      >
+        <div class="bg-neutral-100">
+          <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+        </div>
+        <div
+          class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+        >
+          Show Menu Options
+        </div>
+      </Tooltip.Content>
+    </Tooltip.Root>
+  {/if}
   <Tooltip.Root openDelay={400} closeDelay={10}>
     <Tooltip.Trigger>
       <button

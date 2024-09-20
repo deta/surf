@@ -81,6 +81,7 @@
   import { useTabsManager } from '../../service/tabs'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../constants/searchEngines'
+  import { CONTEXT_MENU_OPEN } from './ContextMenu.svelte'
 
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
@@ -1056,6 +1057,7 @@
 />
 
 <Drawer.Root
+  dismissible={!$CONTEXT_MENU_OPEN}
   direction="bottom"
   open={showTabSearch !== 0}
   onOpenChange={(e) => {
