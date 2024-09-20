@@ -33,7 +33,6 @@
   } from '@horizon/utils'
   import { Icon, IconConfirmation } from '@horizon/icons'
   import OasisResourceDetails from './OasisResourceDetails.svelte'
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import ResourceOverlay from '../Core/ResourceOverlay.svelte'
 
   import AnnotationItem from './AnnotationItem.svelte'
@@ -445,28 +444,6 @@
     <span class="label">Click or ESC to close</span>
   </div>
   <div id="mini-browser" class="mini-browser w-[90vw] mx-auto">
-    <!-- <div class="resource-details">
-      <OasisResourceDetails {resource} on:navigate={handleNavigate} on:created-tab={() => close()}>
-        <ResourceOverlay caption="Click to open in new tab">
-          <ResourcePreviewClean
-            slot="content"
-            {resource}
-            newTabOnClick
-            on:created-tab={() => close()}
-          />
-        </ResourceOverlay>
-      </OasisResourceDetails>
-    </div> -->
-
-    <!-- <BrowserTab
-      {tab}
-      {historyEntriesManager}
-      bind:this={webview}
-      on:appDetection={handleAppDetection}
-      on:highlight={handleWebViewHighlight}
-      on:annotationClick={handleAnnotationClick}
-    /> -->
-
     <div class="header">
       <div class="info">
         <div class="left-side">
@@ -543,49 +520,6 @@
         <FilePreview {resource} preview={false} />
       {/if}
     </div>
-
-    <!-- <WebviewWrapper
-      bind:this={webview}
-      {src}
-      partition="persist:horizon"
-      {historyEntriesManager}
-      on:detectedApp={handleAppDetection}
-      on:annotate={handleWebViewAnnotation}
-      on:annotationClick={handleAnnotationClick}
-      on:annotationRemove={handleAnnotationRemove}
-      on:annotationUpdate={handleAnnotationUpdate}
-      on:transform={handleWebviewTransform}
-      on:newWindowWebview={handleWebviewNewWindow}
-    /> -->
-
-    <!-- <div class="annotations-view">
-      {#if annotations.length > 0}
-        <div class="annotations">
-          {#each annotations as annotation, idx (annotation.id + idx)}
-            <AnnotationItem
-              resource={annotation}
-              active={annotation.id === activeAnnotation}
-              background={false}
-              on:scrollTo={handleAnnotationSelect}
-              on:delete={handleAnnotationDelete}
-            />
-          {/each}
-        </div>
-      {:else if loadingAnnotations}
-        <div class="loading">
-          <Icon name="spinner" />
-          <p>Loading annotations…</p>
-        </div>
-      {:else}
-        <div class="empty-annotations">
-          <div class="empty-title">
-            <Icon name="marker" />
-            <h1>Nothing Annotated</h1>
-          </div>
-          <p>Select any text on the page and click the marker icon to highlight it.</p>
-        </div>
-      {/if}
-    </div> -->
   </div>
 </div>
 

@@ -66,7 +66,7 @@
   export let interactive: boolean = true
   export let mode: Mode = 'full'
 
-  const log = useLogScope('ResourcePreviewClean')
+  const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
   const config = useConfig()
@@ -503,16 +503,16 @@
   {#if interactive}
     <div class="remove-wrapper">
       {#if showOpenAsFile}
-        <div class="remove" on:click={handleOpenAsFile}>
+        <div class="remove" on:click|stopPropagation={handleOpenAsFile}>
           <Icon name="file" color="#AAA7B1" />
         </div>
       {/if}
 
-      <div class="remove rotated" on:click={handleOpenAsNewTab}>
+      <div class="remove rotated" on:click|stopPropagation={handleOpenAsNewTab}>
         <Icon name="arrow.right" color="#AAA7B1" />
       </div>
 
-      <div class="remove" on:click={handleRemove}>
+      <div class="remove" on:click|stopPropagation={handleRemove}>
         <Icon name="close" color="#AAA7B1" />
       </div>
     </div>
