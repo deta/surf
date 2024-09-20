@@ -89,6 +89,7 @@
     type WebViewEventAnnotation,
     type RightSidebarTab,
     type Download,
+    EventContext,
     SelectTabEventAction
   } from '@horizon/types'
   import { scrollToTextCode } from '../constants/inline'
@@ -115,6 +116,14 @@
   import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
   import { createTabsManager } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
+  import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
+  import ScreenshotPicker from './Webview/ScreenshotPicker.svelte'
+  import {
+    dataUrltoBlob,
+    captureScreenshot,
+    getHostFromURL,
+    getScreenshotFileName
+  } from '../utils/screenshot'
   import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
 
   let activeTabComponent: TabItem | null = null
@@ -174,6 +183,7 @@
     lastSelectedTabId
   } = tabsManager
 
+  const showScreenshotPicker = writable(false)
   const addressValue = writable('')
   const activeChatId = useLocalStorageStore<string>('activeChatId', '')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
@@ -550,6 +560,10 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       if ($showNewTabOverlay !== 0) return
+      if ($showScreenshotPicker) {
+        $showScreenshotPicker = false
+        return
+      }
       deselectAllTabs()
     } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
       showDevOverlay = !showDevOverlay
@@ -617,7 +631,8 @@
       tabsManager.reopenDeleted()
     } else if (
       !window.api.tabSwitchingShortcutsDisable &&
-      isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])
+      isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9']) &&
+      !e.shiftKey
     ) {
       const index = parseInt(e.key, 10) - 1
       const tabs = [...$pinnedTabs, ...$unpinnedTabs]
@@ -2296,6 +2311,15 @@
       }
     })
 
+    window.api.onStartScreenshotPicker(() => {
+      setShowNewTabOverlay(0)
+      if ($showScreenshotPicker === false) {
+        $showScreenshotPicker = true
+      } else {
+        $showScreenshotPicker = false
+      }
+    })
+
     window.api.onOpenHistory(() => {
       setShowNewTabOverlay(0)
       createHistoryTab()
@@ -2744,7 +2768,6 @@
     activeTabComponent?.editAddress()
     handleFocus()
   }
-
   const toggleTabsMagic = async (on: boolean) => {
     const allTabs = get(tabs)
     const magicTabsArray = get(magicTabs)
@@ -3264,6 +3287,65 @@
     )
   }
 
+  const handleScreenshot = async (
+    event: CustomEvent<{
+      rect: { x: number; y: number; width: number; height: number }
+      loading: boolean
+    }>
+  ) => {
+    try {
+      const blob = await captureScreenshot(event.detail.rect)
+      const host = getHostFromURL($activeTabLocation ?? 'https://surf.browser')
+      const fileName = getScreenshotFileName(host)
+
+      const metadata = {
+        name: fileName,
+        alt: `Screenshot of ${host} taken on ${new Date().toLocaleString()}`,
+        sourceURI: $activeTabLocation ?? 'surf',
+        userContext: 'Screenshot taken via WebviewWrapper'
+      }
+
+      const tags = [ResourceTag.screenshot()]
+      const type = 'image/png'
+
+      await resourceManager.createResource(type, blob, metadata, tags)
+      // update
+      await telemetry.trackSaveToOasis(
+        type,
+        SaveToOasisEventTrigger.Click,
+        false,
+        EventContext.Inline
+      )
+      toasts.success('Screenshot saved!')
+    } catch (error) {
+      toasts.error('Failed to save screenshot')
+    } finally {
+      if (!event.detail.loading) {
+        $showScreenshotPicker = false
+      }
+    }
+  }
+
+  const handleCopy = async (
+    event: CustomEvent<{
+      rect: { x: number; y: number; width: number; height: number }
+      loading: boolean
+    }>
+  ) => {
+    try {
+      const blob = await captureScreenshot(event.detail.rect)
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+      toasts.success('Screenshot copied to clipboard!')
+    } catch (error) {
+      log.error('Failed to copy screenshot to clipboard:', error)
+      toasts.error('Failed to copy screenshot to clipboard')
+    } finally {
+      if (!event.detail.loading) {
+        $showScreenshotPicker = false
+      }
+    }
+  }
+
   const handleOpenTabChat = (e: CustomEvent<string>) => {
     // Called from tab context menu
 
@@ -3327,8 +3409,18 @@
   )}
 </pre> -->
 
+{#if $showScreenshotPicker === true}
+  <ScreenshotPicker
+    on:screenshot={handleScreenshot}
+    on:copy={handleCopy}
+    on:cancel={() => ($showScreenshotPicker = false)}
+  />
+{/if}
+
 <div
   class="antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col"
+  class:drag={$showScreenshotPicker === false}
+  class:no-drag={$showScreenshotPicker === true}
 >
   {#if !horizontalTabs && showCustomWindowActions}
     <div class="flex flex-row flex-shrink-0 items-center justify-between p-1">
@@ -3384,6 +3476,7 @@
     {horizontalTabs}
     bind:showLeftSidebar
     bind:showRightSidebar
+    enablePeeking={$showScreenshotPicker === false}
     on:leftPeekClose={() => changeTraficLightsVisibility(false)}
     on:leftPeekOpen={() => changeTraficLightsVisibility(true)}
   >
@@ -4034,9 +4127,9 @@
                 tab.type === 'page' &&
                 $activeTabMagic?.running}
             >
-              {#if !horizontalTabs}<div
+              <!-- {#if !horizontalTabs}<div
                   class="w-full h-3 pointer-events-none fixed z-[1002] drag"
-                />{/if}
+                />{/if} -->
 
               {#if tab.type === 'page'}
                 <BrowserTab

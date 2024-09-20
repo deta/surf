@@ -98,6 +98,7 @@ impl Worker {
         rag_only: bool,
         callback: Root<JsFunction>,
         resource_ids: Option<Vec<String>>,
+        inline_images: Option<Vec<String>>,
         general: bool,
     ) -> BackendResult<()> {
         let user_message = AIChatSessionMessage {
@@ -124,6 +125,7 @@ impl Worker {
                 session_id,
                 number_documents,
                 resource_ids,
+                inline_images,
                 general,
                 callback,
                 user_message,
@@ -190,6 +192,7 @@ impl Worker {
         session_id: String,
         number_documents: i32,
         resource_ids: Option<Vec<String>>,
+        inline_images: Option<Vec<String>>,
         general: bool,
         callback: Root<JsFunction>,
         user_message: AIChatSessionMessage,
@@ -197,7 +200,11 @@ impl Worker {
         let history = self
             .ai
             .format_chat_history(self.db.list_ai_session_messages(&session_id)?);
-        let should_cluster = self.ai.should_cluster(&query)?;
+
+        let mut should_cluster = false;
+        if !general {
+            should_cluster = self.ai.should_cluster(&query)?;
+        }
 
         let (assistant_message, sources) = match self.async_runtime.block_on(async {
             tokio::time::timeout(
@@ -208,6 +215,7 @@ impl Worker {
                     query,
                     number_documents,
                     resource_ids,
+                    inline_images,
                     general,
                     should_cluster,
                     history,
@@ -236,6 +244,7 @@ impl Worker {
         query: String,
         number_documents: i32,
         resource_ids: Option<Vec<String>>,
+        inline_images: Option<Vec<String>>,
         general: bool,
         should_cluster: bool,
         history: Option<String>,
@@ -247,6 +256,7 @@ impl Worker {
                 query,
                 number_documents,
                 resource_ids,
+                inline_images,
                 general,
                 should_cluster,
                 history,
@@ -470,6 +480,7 @@ pub fn handle_misc_message(
             callback,
             rag_only,
             resource_ids,
+            inline_images,
             general,
         } => {
             let result = worker.send_chat_query(
@@ -480,6 +491,7 @@ pub fn handle_misc_message(
                 rag_only,
                 callback,
                 resource_ids,
+                inline_images,
                 general,
             );
             send_worker_response(channel, oneshot, result)

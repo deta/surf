@@ -5,6 +5,7 @@
   export let horizontalTabs = false
   export let showLeftSidebar = true
   export let showRightSidebar = true
+  export let enablePeeking = true
 
   const dispatch = createEventDispatcher()
 
@@ -200,7 +201,7 @@
   }
 
   $: leftBarClasses = [
-    'fixed left-0 right-0 h-full flex flex-shrink-0 drag',
+    'fixed left-0 right-0 h-full flex flex-shrink-0',
     peekBg,
     isDraggingLeft
       ? 'transition-none'
@@ -326,7 +327,10 @@
     {/if}
   </nav>
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class={leftPeakAreaClasses} on:mouseenter={() => handleMouseEnter('left')} />
+
+  {#if enablePeeking}
+    <div class={leftPeakAreaClasses} on:mouseenter={() => handleMouseEnter('left')} />
+  {/if}
   <main style={mainStyle} class={mainClasses}>
     <slot name="content" />
   </main>

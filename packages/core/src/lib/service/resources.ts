@@ -63,6 +63,10 @@ export class ResourceTag {
     return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'download' }
   }
 
+  static screenshot() {
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'screenshot' }
+  }
+
   static dragBrowser() {
     return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'drag/browser' }
   }
