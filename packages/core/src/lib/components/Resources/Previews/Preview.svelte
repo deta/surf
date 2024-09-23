@@ -87,7 +87,9 @@
         <div class="tiny-wrapper">
           <div class="tiny-icon">
             {#if source.imageUrl}
-              <img class="favicon" src={source.imageUrl} alt={source.text} />
+              <div class="favicon">
+                <Image src={source.imageUrl} alt={source.text} fallbackIcon="link" />
+              </div>
             {:else if source.icon}
               <Icon name={source.icon} />
             {:else}
@@ -183,7 +185,9 @@
               <div class="metadata">
                 <div class="author">
                   {#if author.imageUrl}
-                    <img class="favicon" src={author.imageUrl} alt={author.text} />
+                    <div class="favicon">
+                      <Image src={author.imageUrl} alt={author.text} emptyOnError />
+                    </div>
                   {/if}
 
                   <div class="from">

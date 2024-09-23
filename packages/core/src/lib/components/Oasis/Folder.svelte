@@ -21,6 +21,7 @@
 
   import type { TabSpace } from '../../types/browser.types'
   import { useTelemetry } from '../../service/telemetry'
+  import { contextMenu } from '../Core/ContextMenu.svelte'
 
   export let folder: Space
   export let selected: boolean
@@ -313,6 +314,14 @@
     drag.abort()
   }}
   on:Drop={handleDrop}
+  use:contextMenu={{
+    items: [
+      { type: 'action', icon: 'edit', text: 'Rename', action: handleDoubleClick },
+      { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
+      { type: 'separator' },
+      { type: 'action', icon: 'trash', text: 'Delete', kind: 'danger', action: handleDelete }
+    ]
+  }}
 >
   <div
     class="folder {selected ? 'bg-sky-100' : 'hover:bg-sky-50'}"
