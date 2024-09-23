@@ -50,7 +50,6 @@
       <ResourcePreview
         {resource}
         {selected}
-        showSummary
         {isInSpace}
         {resourcesBlacklistable}
         on:load

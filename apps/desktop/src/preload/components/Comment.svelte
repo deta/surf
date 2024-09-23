@@ -124,6 +124,7 @@
     padding: 12px;
     border-radius: 8px;
     user-select: text;
+    border: 2px solid #d4d4d4;
 
     p {
       margin: 0;

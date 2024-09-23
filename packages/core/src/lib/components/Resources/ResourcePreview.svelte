@@ -33,6 +33,7 @@
     type ResourceData,
     type ResourceDataPost,
     type SpaceEntryOrigin
+    type ResourceDataPost
   } from '../../types'
 
   import { writable, get } from 'svelte/store'
@@ -129,9 +130,14 @@
             ? resource.metadata?.userContext
             : undefined
 
+        // Workaround since for Figma it parses accessibility data instead of the actual content
+        const HIDE_CONTENT_FOR_SITES = ['figma.com', 'www.figma.com']
+
         if (resource.type === ResourceTypes.LINK) {
           const data = resourceData as unknown as ResourceDataLink
           const hostname = getHostname(canonicalUrl ?? data.url)
+
+          const hideContent = HIDE_CONTENT_FOR_SITES.some((site) => hostname === site)
 
           let annotationItems: Annotation[] = []
           if (!$userConfigSettings.show_annotations_in_oasis && annotations.length > 0) {
@@ -149,10 +155,13 @@
               .forEach(() => annotationItems.push({ type: 'highlight', content: '' }))
           }
 
+          const resourceContent = data.description || data.content_plain
+          const previewContent = summary || resourceContent || undefined
+
           previewData = {
             type: resource.type,
             title: data.title,
-            content: summary || data.description || data.content_plain || undefined,
+            content: hideContent ? undefined : previewContent,
             contentType: 'plain',
             annotations: annotationItems,
             image: data.image ?? undefined,
@@ -170,6 +179,8 @@
           const data = resourceData as unknown as ResourceDataArticle
           const hostname = getHostname(canonicalUrl ?? data.url)
 
+          const hideContent = HIDE_CONTENT_FOR_SITES.some((site) => hostname === site)
+
           let annotationItems: Annotation[] = []
           if (!$userConfigSettings.show_annotations_in_oasis && annotations.length > 0) {
             const annotationData = await annotations[0].getParsedData()
@@ -186,10 +197,13 @@
               .forEach(() => annotationItems.push({ type: 'highlight', content: '' }))
           }
 
+          const resourceContent = data.excerpt || data.content_plain
+          const previewContent = summary || resourceContent || undefined
+
           previewData = {
             type: resource.type,
             title: data.title,
-            content: summary || data.excerpt || data.content_plain || undefined,
+            content: hideContent ? undefined : previewContent,
             contentType: 'plain',
             annotations: annotationItems,
             image: data.images[0] ?? undefined,
@@ -212,6 +226,10 @@
         if (resource.type.startsWith(ResourceTypes.POST)) {
           const data = resourceData as unknown as ResourceDataPost
           const hostname = getHostname(canonicalUrl ?? data.url)
+
+          // Workaround since YouTube videos sometimes have the wrong description.
+          // TODO: fix the youtube parser and then remove this
+          const hideContent = resource.type === ResourceTypes.POST_YOUTUBE
 
           let imageUrl: string | undefined
           let theme: [string, string] | undefined
@@ -239,12 +257,13 @@
             }
           }
 
-          const content = data.excerpt || data.content_plain
+          const resourceContent = data.excerpt || data.content_plain
+          const previewContent = summary || resourceContent || undefined
 
           previewData = {
             type: resource.type,
-            title: data.title && data.title !== content ? data.title : undefined,
-            content: summary || content || undefined,
+            title: data.title && data.title !== resourceContent ? data.title : undefined,
+            content: hideContent ? undefined : previewContent,
             contentType: 'plain',
             image: imageUrl,
             url: data.url,

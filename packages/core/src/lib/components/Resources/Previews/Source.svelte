@@ -3,6 +3,7 @@
   import FileIcon from './File/FileIcon.svelte'
   import type { Source } from './Preview.svelte'
   import { getFileKind } from '@horizon/utils'
+  import Image from '../../Atoms/Image.svelte'
 
   export let type: string
   export let source: Source
@@ -12,7 +13,7 @@
 <div class="source" class:themed>
   <div class="icon">
     {#if source.imageUrl}
-      <img src={source.imageUrl} alt={source.text} />
+      <Image src={source.imageUrl} alt={source.text} fallbackIcon="link" />
     {:else if source.icon}
       <Icon name={source.icon} />
     {:else}

@@ -245,17 +245,17 @@
 
       <div class="divider"></div>
 
-      <!-- <Button on:click={handleMarker} tooltip="Highlight and Save (⌘+Shift+H)">
+      <Button on:click={handleMarker} tooltip="Highlight and Save (⌘+Shift+H)">
         <IconConfirmation bind:this={markerIcon} name="marker" />
       </Button>
 
-      <Button on:click={() => showCommentMenu()} icon="message" tooltip="Add Comment" /> -->
+      <Button on:click={() => showCommentMenu()} icon="message" tooltip="Add Comment" />
+
+      <div class="divider"></div>
 
       <Button on:click={handleAddToChat} tooltip="Add to Chat (⌘+K)">
         <Icon name="message-forward" />
       </Button>
-
-      <!-- <div class="divider"></div> -->
 
       <!-- svelte-ignore a11y-unknown-role -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -360,6 +360,7 @@
       on:keydown={handleInputKey}
       on:keyup={handleInputKey}
       on:keypress={handleInputKey}
+      class="comment-view"
     >
       <div class="editor-wrapper">
         <Editor
@@ -410,6 +411,13 @@
   .divider {
     width: 1px;
     background: #f0f0f0;
+  }
+
+  .comment-view {
+    gap: 4px;
+    background: #fff;
+    padding: 4px;
+    border-radius: 0.5rem;
   }
 
   .btn-row {
@@ -563,7 +571,6 @@
 
   form {
     display: flex;
-    flex-direction: column;
     gap: 8px;
 
     input {

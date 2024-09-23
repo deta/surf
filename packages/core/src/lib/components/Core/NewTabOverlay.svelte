@@ -1187,6 +1187,7 @@
                     />
                   {/key}
                 </div>
+
                 <div class="stuff-wrap h-full w-full">
                   {#if $selectedSpaceId !== null && $selectedSpaceId !== 'all'}
                     {#key $selectedSpaceId}
@@ -1219,9 +1220,7 @@
                             <OasisResourcesViewSearchResult
                               resources={resourcesToShow}
                               selected={$selectedItem}
-                              showResourceSource={!!$searchValue}
                               isEverythingSpace={true}
-                              newTabOnClick
                               isInSpace={false}
                               scrollTop={0}
                               on:click={handleItemClick}
