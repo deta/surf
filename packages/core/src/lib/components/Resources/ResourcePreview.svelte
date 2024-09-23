@@ -33,7 +33,6 @@
     type ResourceData,
     type ResourceDataPost,
     type SpaceEntryOrigin
-    type ResourceDataPost
   } from '../../types'
 
   import { writable, get } from 'svelte/store'

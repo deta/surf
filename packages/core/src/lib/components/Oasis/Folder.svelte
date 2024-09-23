@@ -359,35 +359,6 @@
           </div>
         {/if}
       </div>
-
-      {#if !$editMode}
-        {#if $hovered}
-          <button
-            on:click|stopPropagation={addItemToTabs}
-            class="close"
-            use:tooltip={{ text: 'Open as Tab', position: 'left' }}
-          >
-            <Icon name={'list-add'} size="18px" />
-          </button>
-          <button
-            on:click|stopPropagation={handleDoubleClick}
-            class="close"
-            use:tooltip={{ text: 'Edit', position: 'left' }}
-          >
-            <Icon name="edit" size="18px" />
-          </button>
-        {/if}
-      {:else}
-        <div class="actions" in:fade={{ duration: 50 }} out:fade={{ duration: 100 }}>
-          <button
-            on:click|stopPropagation={handleDelete}
-            class="close"
-            use:tooltip={{ text: 'Delete Space', position: 'left' }}
-          >
-            <Icon name="trash" size="16px" />
-          </button>
-        </div>
-      {/if}
     </div>
   </div>
 </div>
