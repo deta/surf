@@ -996,74 +996,22 @@
     trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click
   ): Promise<{ resource: Resource | null; isNew: boolean }> {
     try {
-      if (!$activeTabLocation || $activeTab?.type !== 'page' || !$activeBrowserTab)
+      if (!$activeTabLocation || $activeTab?.type !== 'page' || !$activeBrowserTab) {
         return { resource: null, isNew: false }
+      }
 
       bookmarkingInProgress.set(true)
 
-      if ($activeTab.resourceBookmark) {
-        log.debug(
-          'checking if existing bookmark still valid for url',
-          $activeTabLocation,
-          $activeTab.resourceBookmark
-        )
+      const resource = await $activeBrowserTab.bookmarkPage({
+        silent: false,
+        createdForChat: false,
+        freshWebview: true
+      })
 
-        const existingResource = await resourceManager.getResource($activeTab.resourceBookmark)
-        const isDeleted =
-          existingResource?.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
-            ?.value === 'true'
-
-        if (existingResource && !isDeleted) {
-          const existingCanonical = (existingResource?.tags ?? []).find(
-            (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-          )
-
-          log.debug('existing canonical', existingCanonical)
-
-          if (existingCanonical?.value === $activeTabLocation) {
-            log.debug('already bookmarked, removing silent tag', $activeTab.resourceBookmark)
-
-            const isSilent = (existingResource.tags ?? []).some(
-              (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
-            )
-
-            if (isSilent) {
-              // mark resource as not silent since the user is explicitely bookmarking it
-              await resourceManager.deleteResourceTag(
-                $activeTab.resourceBookmark,
-                ResourceTagsBuiltInKeys.SILENT
-              )
-            }
-
-            bookmarkingSuccess.set(true)
-
-            // if (openAfter) {
-            //   openResourceDetailsModal($activeTab.resourceBookmark)
-            // }
-
-            tabsManager.update($activeTabId, { resourceBookmarkedManually: true })
-
-            // If the resource hasn't been saved before we track the event
-            if (isSilent) {
-              await telemetry.trackSaveToOasis(existingResource.type, trigger, savedToSpace)
-            }
-
-            return { resource: existingResource, isNew: false }
-          }
-        }
-      }
-
-      const resource = await $activeBrowserTab.bookmarkPage()
-
-      // automatically resets after some time
       toasts.success('Bookmarked Page!')
       bookmarkingSuccess.set(true)
 
       await telemetry.trackSaveToOasis(resource.type, trigger, savedToSpace)
-
-      // if (openAfter) {
-      //   openResourceDetailsModal(resource.id)
-      // }
 
       return { resource, isNew: true }
     } catch (e) {

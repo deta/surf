@@ -2,6 +2,10 @@ import type { WebviewTag } from 'electron'
 import { DetectedResource, DetectedWebApp, WebServiceActionInputs } from '../types'
 import { WebViewEventReceiveNames, WebViewEventSendNames } from '@horizon/types'
 
+const DEFAULT_EXTRACTION_TIMEOUT = 10000
+const DEFAULT_INITIALIZING_TIMEOUT = 7000
+const DEFAULT_ACTION_TIMEOUT = 10000
+
 export class WebViewExtractor {
   url: URL
   document: Document
@@ -29,7 +33,7 @@ export class WebViewExtractor {
     this.resourceDetectionCallback = callback
   }
 
-  initializeWebview() {
+  initializeWebview(timeout: number = DEFAULT_INITIALIZING_TIMEOUT) {
     console.log('Initializing webview with location', this.url.href)
     this.webview = document.createElement('webview')
     if (!this.webview) return
@@ -89,10 +93,25 @@ export class WebViewExtractor {
 
     document.body.appendChild(this.webview)
 
+    let timeoutId: any
+
     return new Promise<void>((resolve, reject) => {
-      this.webview?.addEventListener('did-finish-load', () => {
+      const handleLoad = () => {
+        console.log('Webview loaded')
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+
         resolve()
-      })
+      }
+
+      timeoutId = setTimeout(() => {
+        console.log('webview still loading after timeout, running immidiately')
+        this.webview?.removeEventListener('did-finish-load', handleLoad)
+        handleLoad()
+      }, timeout)
+
+      this.webview?.addEventListener('did-finish-load', handleLoad)
 
       this.webview?.addEventListener('did-fail-load', () => {
         console.error('Webview failed to load')
@@ -113,7 +132,7 @@ export class WebViewExtractor {
     })
   }
 
-  async detectResource(timeout: number = 10000) {
+  async detectResource(timeout: number = DEFAULT_EXTRACTION_TIMEOUT) {
     return new Promise<any | null>(async (resolve) => {
       if (this.webview === null) {
         await this.initializeWebview()
@@ -126,7 +145,7 @@ export class WebViewExtractor {
         resolve(resource ?? null)
       }
 
-      await this.wait(1000)
+      await this.wait(500)
 
       this.webview?.send('webview-event', { type: WebViewEventReceiveNames.GetResource })
 
@@ -139,7 +158,11 @@ export class WebViewExtractor {
     })
   }
 
-  async runAction(id: string, inputs?: WebServiceActionInputs, timeoutNum: number = 10000) {
+  async runAction(
+    id: string,
+    inputs?: WebServiceActionInputs,
+    timeoutNum: number = DEFAULT_ACTION_TIMEOUT
+  ) {
     console.log('Running action', id, inputs)
     return new Promise<DetectedResource | null>(async (resolve) => {
       if (this.webview === null) {
