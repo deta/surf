@@ -76,7 +76,6 @@ export const createHistorySwipeRecognizer = (
 
     if (!newDirection) resetState()
 
-    log.debug(newDirection, progress, accumulatedDelta)
   }
 
   return {
