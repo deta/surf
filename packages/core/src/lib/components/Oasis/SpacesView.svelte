@@ -211,7 +211,7 @@
     try {
       const space = $spaces.find((space) => space.id === $selectedSpace)
 
-      if (space?.name.folderName === 'New Space') {
+      if (space?.name.folderName === 'New Space' && id !== $selectedSpace) {
         dispatch('delete-space', { id: $selectedSpace })
         return
       }
@@ -240,7 +240,10 @@
   }
 
   const handleCreateEmptySpace = () => {
-    dispatch('create-empty-space')
+    const selectedSpaceObj = $spaces.find((space) => space.id === $selectedSpace)
+    if (!selectedSpaceObj || selectedSpaceObj.name.folderName !== 'New Space') {
+      dispatch('create-empty-space')
+    }
   }
 
   const updateNewSpaceButtonPosition = () => {
@@ -307,6 +310,8 @@
     class="action-new-space"
     class:sticky={$isNewSpaceButtonSticky}
     class:text-white={$isNewSpaceButtonSticky}
+    class:disabled={$selectedSpace &&
+      $spaces.find((space) => space.id === $selectedSpace)?.name.folderName === 'New Space'}
     on:click={handleCreateEmptySpace}
     bind:this={newSpaceButton}
   >
@@ -437,6 +442,11 @@
       border: 0.5px solid rgba(67, 142, 239, 0.15);
       background: rgba(224, 242, 254, 0.6);
       color: rgba(0, 103, 185, 0.7); // Tinted text color for sticky state
+    }
+    &.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+      filter: grayscale(100%);
     }
     & .icon-wrapper {
       background: rgba(0, 122, 255, 0.9);

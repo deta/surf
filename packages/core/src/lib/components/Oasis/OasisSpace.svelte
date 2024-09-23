@@ -1250,14 +1250,19 @@
     await loadSpaceContents($space.id, true)
   }
 
-  export const handleDeleteSpace = async (e: CustomEvent<boolean>) => {
-    const shouldDeleteAllResources = e.detail
+  export const handleDeleteSpace = async (
+    e: CustomEvent<{ shouldDeleteAllResources: boolean; abortSpaceCreation?: boolean }>
+  ) => {
+    const { shouldDeleteAllResources, abortSpaceCreation = false } = e.detail
 
     const confirmed = window.confirm(
-      shouldDeleteAllResources
-        ? 'Are you sure you want to delete this space and all of its resources?'
-        : 'Are you sure you want to delete this space?'
+      abortSpaceCreation
+        ? 'Are you sure you want to abort the creation of this space?'
+        : shouldDeleteAllResources
+          ? 'Are you sure you want to delete this space and all of its resources?'
+          : 'Are you sure you want to abort the creation of this space?'
     )
+
     if (!confirmed) {
       return
     }
@@ -1404,7 +1409,11 @@
 
   const handleAbortSpaceCreation = async (e: CustomEvent<string>) => {
     const spaceId = e.detail
-    await handleDeleteSpace(new CustomEvent('delete', { detail: false }))
+    await handleDeleteSpace(
+      new CustomEvent('delete', {
+        detail: { shouldDeleteAllResources: false, abortSpaceCreation: true }
+      })
+    )
 
     dispatch('deleted', spaceId)
   }
