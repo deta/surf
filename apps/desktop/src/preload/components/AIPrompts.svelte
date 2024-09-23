@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte'
 
   import { Icon } from '@horizon/icons'
+  import { tooltip } from '@horizon/utils'
   import type { WebViewEventTransform } from '@horizon/types'
 
   const dispatch = createEventDispatcher<{ click: WebViewEventTransform['type'] }>()
@@ -12,31 +13,55 @@
 </script>
 
 <div class="actions">
-  <button on:click|preventDefault|stopPropagation={() => runAIAction('summarize')}>
-    <div>Summarize</div>
-    <Icon name="arrow.right" />
+  <button
+    on:click|preventDefault|stopPropagation={() => runAIAction('summarize')}
+    use:tooltip={{
+      text: 'Summarize',
+      position: 'top'
+    }}
+  >
+    <!-- <div>Summarize</div> -->
+    <Icon name="circle-dot" />
   </button>
 
-  <button on:click|preventDefault|stopPropagation={() => runAIAction('explain')}>
+  <!-- <button
+    on:click|preventDefault|stopPropagation={() => runAIAction('explain')}
+    use:tooltip={{
+      text: 'Explain',
+      position: 'top'
+    }}
+  >
     <div>Explain</div>
-    <Icon name="arrow.right" />
+    <Icon name="search" />
+  </button> -->
+
+  <button
+    on:click|preventDefault|stopPropagation={() => runAIAction('grammar')}
+    use:tooltip={{
+      text: 'Improve Writing',
+      position: 'top'
+    }}
+  >
+    <!-- <div>Improve Writing</div> -->
+    <Icon name="grammar" />
   </button>
 
-  <button on:click|preventDefault|stopPropagation={() => runAIAction('grammar')}>
-    <div>Improve Writing</div>
-    <Icon name="arrow.right" />
-  </button>
-
-  <button on:click|preventDefault|stopPropagation={() => runAIAction('translate')}>
-    <div>Translate</div>
-    <Icon name="arrow.right" />
+  <button
+    on:click|preventDefault|stopPropagation={() => runAIAction('translate')}
+    use:tooltip={{
+      text: 'Translate',
+      position: 'top'
+    }}
+  >
+    <!-- <div>Translate</div> -->
+    <Icon name="language" />
   </button>
 </div>
 
 <style lang="scss">
   .actions {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
 
     button {
       pointer-events: auto;
@@ -55,7 +80,7 @@
       gap: 8px;
       flex-shrink: 0;
       justify-content: space-between;
-      width: 100%;
+      width: fit-content;
       opacity: 0.75;
       font-size: 15px !important;
     }

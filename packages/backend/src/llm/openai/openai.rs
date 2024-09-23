@@ -1,4 +1,4 @@
-use crate::{llm::models::Message, BackendError, BackendResult};
+use crate::{llm::models::{Message, ChatCompletionMessage}, BackendError, BackendResult};
 
 use bytes::Bytes;
 use futures::Stream;
@@ -28,7 +28,7 @@ struct ChatCompletionChoiceDelta {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ChatCompletionChoice {
-    message: Option<Message>,
+    message: Option<ChatCompletionMessage>,
     index: u32,
     delta: Option<ChatCompletionChoiceDelta>,
 }
@@ -220,7 +220,10 @@ impl OpenAI {
             messages,
             stream: false,
         };
-        let response = self.client.post(url).json(&request).send()?;
+        let body = serde_json::to_string(&request).map_err(|e| {
+            BackendError::GenericError(format!("OpenAI client: failed to serialize request: {}", e))
+        })?;
+        let response = self.client.post(url).body(body).send()?;
         match response.error_for_status_ref() {
             Ok(_) => {
                 let body = response.text()?;
@@ -243,7 +246,11 @@ impl OpenAI {
             messages,
             stream: true,
         };
-        let response = self.async_client.post(url).json(&request).send().await?;
+        let body = serde_json::to_string(&request).map_err(|e| {
+            BackendError::GenericError(format!("OpenAI client: failed to serialize request: {}", e))
+        })?;
+        dbg!(body.clone());
+        let response = self.async_client.post(url).body(body).send().await?;
         match response.error_for_status_ref() {
             Ok(_) => {}
             Err(_) => return Err(parse_error(response.text().await?)),
@@ -255,6 +262,8 @@ impl OpenAI {
 
 #[cfg(test)]
 mod tests {
+    use crate::llm::models::MessageContent;
+
     use super::*;
     use futures::StreamExt;
     use tokio::runtime::Runtime;
@@ -267,7 +276,7 @@ mod tests {
 
         let messages = vec![Message {
             role: "user".to_string(),
-            content: "What is 42".to_string(),
+            content: vec![MessageContent::new_text("Hello!".to_string())], 
         }];
         let runtime = Runtime::new()?;
         let mut result = String::new();

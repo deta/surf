@@ -1,5 +1,5 @@
 import { isMac, useLogScope } from '@horizon/utils'
-import { app, session } from 'electron'
+import { ipcMain, app, session, webContents } from 'electron'
 import path from 'path'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
@@ -133,6 +133,16 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return null
 
     return await createGoogleSignInWindow(url)
+  })
+
+  IPC_EVENTS_MAIN.screenshotPage.handle(async (event, rect) => {
+    if (!validateIPCSender(event)) return null
+
+    const window = getMainWindow()
+    if (!window) return null
+
+    const image = await window.webContents.capturePage(rect)
+    return image.toDataURL()
   })
 
   IPC_EVENTS_MAIN.getUserConfig.handle(async (event) => {
@@ -386,6 +396,16 @@ export const ipcSenders = {
     }
 
     IPC_EVENTS_MAIN.openOasis.sendToWebContents(window.webContents)
+  },
+
+  startScreenshotPicker: () => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.startScreenshotPicker.sendToWebContents(window.webContents)
   },
 
   openHistory: () => {
