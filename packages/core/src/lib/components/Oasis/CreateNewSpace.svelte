@@ -461,7 +461,7 @@
         </div>
       </div>
 
-      {#if $fineTuneEnabled && $resultHasSemanticSearch && $userPrompt !== $previousUserPrompt}
+      <!-- {#if $fineTuneEnabled && $resultHasSemanticSearch && $userPrompt !== $previousUserPrompt}
         <div class="semantic-search-threshold-slider p-4">
           <label
             for="semantic-search-threshold"
@@ -488,7 +488,7 @@
             <span>Wider Range</span>
           </div>
         </div>
-      {/if}
+      {/if} -->
       {#if !$fineTuneEnabled}
         <div class="template-prompts">
           <div class="prompt-pills mt-8 mb-4">
