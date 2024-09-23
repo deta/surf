@@ -1,17 +1,36 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
   import { closeContextMenu, type CtxItem } from './ContextMenu.svelte'
+  import { onMount, tick } from 'svelte'
 
   export let items: CtxItem[]
   export let subMenuRef: string | undefined = undefined
+
+  let anchor: 'left' | 'right' = 'right'
+
+  onMount(async () => {
+    if (subMenuRef !== undefined) {
+      await tick()
+      const subMenu = document.querySelector(
+        `.sub-menu[data-sub-menu-ref="${subMenuRef}"]`
+      ) as HTMLElement
+      const box = subMenu?.getBoundingClientRect()
+
+      subMenu.classList.add('hidden')
+
+      if (box.left + box.width > window.innerWidth) {
+        anchor = 'left'
+      }
+    }
+  })
 </script>
 
 <ul
   class:sub-menu={subMenuRef !== undefined}
+  data-sub-menu-ref={subMenuRef}
   class:sub-items={subMenuRef !== undefined}
-  style={subMenuRef !== undefined
-    ? `position:fixed; position-anchor: --sub-${subMenuRef}; inset-block-start: anchor(start); inset-inline-start: anchor(self-end); margin: 0px; margin-left:-3px;`
-    : ''}
+  class:anchor-left={anchor === 'left'}
+  style={subMenuRef !== undefined ? `position:fixed; --sub-id: --sub-${subMenuRef};` : ''}
 >
   {#each items as item, i}
     {#if item !== undefined && item.hidden !== true}
@@ -29,7 +48,7 @@
           {#if item.icon}
             <Icon name={item.icon} size="1.2em" />
           {/if}
-          <span style="flex: 1; width:100%;">{item.text}</span>
+          <span class="truncate" style="flex: 1; width:100%; max-width: 20ch;">{item.text}</span>
         </button>
       {:else if item.type === 'sub-menu'}
         <li class="sub-item" style="anchor-name: --sub-{i};">
@@ -46,16 +65,64 @@
 </ul>
 
 <style lang="scss">
+  // Safe are experiment
+  /*@keyframes clip {
+    from {
+      visibility: visible;
+    }
+    99% {
+    }
+    100% {
+      visibility: hidden;
+    }
+  }*/
+
   /* NOTE: We only support a single sub-menu right now with this crude css */
   ul.sub-menu {
     height: fit-content;
+    max-height: 24.5ch;
+    overflow-y: auto;
     background: #fff;
     padding: 0.25rem;
     border-radius: 9px;
     border: 0.5px solid rgba(0, 0, 0, 0.25);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
     user-select: none;
-    display: none;
+    position-anchor: var(--sub-id);
+
+    margin: 0px;
+
+    /* Safe area experiment 
+    &::before {
+      content: '';
+      position: fixed;
+      position-anchor: var(--sub-id);
+      top: anchor(start);
+      left: anchor(start);
+      right: anchor(end);
+      height: 100%;
+      background: rgba(0, 0, 0, 0.25);
+      clip-path: polygon(0 0, 100% 100%, 100% 0);
+
+      //animation: clip 0.1s forwards;
+    }
+    */
+    :global(&.hidden) {
+      display: none;
+    }
+
+    &:not(.anchor-left) {
+      top: anchor(start);
+      left: anchor(self-end);
+      margin-left: -3px;
+    }
+
+    &.anchor-left {
+      top: anchor(self-start);
+      right: anchor(start);
+      left: unset;
+      margin-right: -3px;
+    }
   }
   ul.sub-menu:hover {
     display: flex;
@@ -69,8 +136,10 @@
 
   ul {
     width: auto;
-    display: flex;
     flex-direction: column;
+    &:not(.sub-menu) {
+      display: flex;
+    }
 
     > button,
     > li {
