@@ -367,7 +367,7 @@
     display: flex;
     align-items: center;
     margin: 0.5rem 0;
-    padding: 1rem 0;
+    padding: 1rem 0.5rem;
     gap: 0.5rem;
     background-color: transparent;
     border: 0;
@@ -403,17 +403,23 @@
       0 4px 8px rgba(67, 142, 239, 0.005);
     border: 0.5px solid rgba(67, 142, 239, 0.15);
     color: rgba(0, 103, 185, 0.7); // Tinted text color for sticky state
-
     backdrop-filter: blur(10px);
     .new-space-text {
       font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: 0.0025em;
+      font-smooth: always;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       line-height: 1;
       color: rgba(0, 82, 147, 0.9);
     }
     letter-spacing: 0.01em;
     margin: 0;
-    padding: 1rem 0.75rem;
+    gap: 0.75rem;
+    padding: 0.85rem;
     opacity: 1;
+
     &:hover {
       background: rgba(224, 242, 254, 1);
       color: rgba(0, 103, 185, 1);
@@ -429,6 +435,7 @@
         0 3px 6px rgba(67, 142, 239, 0.01),
         0 4px 8px rgba(67, 142, 239, 0.005);
       border: 0.5px solid rgba(67, 142, 239, 0.15);
+      background: rgba(224, 242, 254, 0.9);
       color: rgba(0, 103, 185, 0.7); // Tinted text color for sticky state
     }
     & .icon-wrapper {
@@ -438,6 +445,7 @@
       width: 18px;
       height: 18px;
       display: flex;
+      padding: 0 1px 0.5px 0;
       justify-content: center;
       align-items: center;
       -webkit-font-smoothing: antialiased;

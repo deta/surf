@@ -375,7 +375,7 @@
     flex-direction: column;
     align-items: end;
     justify-content: space-between;
-    padding: 0.5rem;
+    padding: 0.5rem 0.75rem;
     border-radius: 12px;
     cursor: pointer;
 
