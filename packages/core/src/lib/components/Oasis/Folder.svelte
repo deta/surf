@@ -464,7 +464,7 @@
         align-items: center;
         gap: 0.5rem;
         flex: 1;
-        max-width: calc(100% - 4.5rem);
+        max-width: calc(100% - 1rem);
         overflow: visible;
       }
 
