@@ -44,10 +44,6 @@
   const editingFolderId = writable(null)
 
   export let onBack = () => {}
-  $: log.debug('Spaces:', $spaces)
-
-  $: log.debug('xxx-Spaces:', $selectedSpace)
-
   export const handleCreateSpace = async (
     _e: MouseEvent,
     name: string,
