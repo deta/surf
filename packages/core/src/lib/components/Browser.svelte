@@ -2119,8 +2119,13 @@
     const numberOfTabs = $unpinnedTabs.length
     tabSize = availableSpace / numberOfTabs
   }
-  const handleResize = () => {
+  const handleResize = async () => {
+    const previousValue = $showNewTabOverlay
+    showNewTabOverlay.set(null)
+    await tick()
+    showNewTabOverlay.set(previousValue)
     maxWidth = window.innerWidth
+
     checkScroll()
   }
 
