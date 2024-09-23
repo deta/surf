@@ -4103,6 +4103,7 @@
               on:deleted={handleDeletedSpace}
               on:open-space-as-tab={handleCreateTabForSpace}
               hideBar={$showNewTabOverlay !== 0}
+              {experimentalMode}
               {historyEntriesManager}
             />
           </div>

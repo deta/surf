@@ -98,6 +98,7 @@
   export let hideResourcePreview = false
   export let handleEventsOutside: boolean = false
   export let insideDrawer: boolean = false
+  export let experimentalMode = false
 
   $: isEverythingSpace = spaceId === 'all'
 
@@ -1483,6 +1484,7 @@
                     on:delete={handleDeleteSpace}
                     on:load={handleLoadSpace}
                     on:delete-auto-saved={handleDeleteAutoSaved}
+                    {experimentalMode}
                   />
                 </div>
               {/if}

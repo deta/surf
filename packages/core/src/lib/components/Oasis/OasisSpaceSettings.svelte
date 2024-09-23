@@ -17,6 +17,7 @@
   import { useToasts } from '../../service/toast'
 
   export let space: Space | null
+  export let experimentalMode = false
 
   const dispatch = createEventDispatcher<{
     refresh: void
@@ -245,77 +246,79 @@
     </div>
 
     <div class="content">
-      <!-- <div class="sources">
-        <div class="info">
-          <div class="title">
-            <Icon name="news" size="20px" />
-            <h2>Subscriptions</h2>
+      {#if experimentalMode}
+        <div class="sources">
+          <div class="info">
+            <div class="title">
+              <Icon name="news" size="20px" />
+              <h2>Subscriptions</h2>
+            </div>
+
+            <p>Subscriptions automatically bring content into your Space from external sources.</p>
+
+            <p>
+              If auto-refresh is enabled, these sources will automatically be loaded, otherwise you
+              can manually refresh.
+            </p>
           </div>
 
-          <p>Subscriptions automatically bring content into your Space from external sources.</p>
+          {#if space.name.sources}
+            {#each space.name.sources as source}
+              <div class="source">
+                <div class="title">
+                  <img
+                    class="favicon"
+                    src={`https://www.google.com/s2/favicons?domain=${source.url}&sz=48`}
+                    alt={`favicon`}
+                  />
 
-          <p>
-            If auto-refresh is enabled, these sources will automatically be loaded, otherwise you
-            can manually refresh.
-          </p>
-        </div>
+                  <h3 use:tooltip={source.url}>{getSourceName(source)}</h3>
+                </div>
+                <div class="meta">
+                  <p>
+                    Last fetched: {source.last_fetched_at
+                      ? getHumanDistanceToNow(source.last_fetched_at)
+                      : 'never'}
+                  </p>
 
-        {#if space.name.sources}
-          {#each space.name.sources as source}
-            <div class="source">
-              <div class="title">
-                <img
-                  class="favicon"
-                  src={`https://www.google.com/s2/favicons?domain=${source.url}&sz=48`}
-                  alt={`favicon`}
-                />
+                  <div class="meta-actions">
+                    <button on:click={() => copySource(source)} use:tooltip={'Copy Source URL'}>
+                      <IconConfirmation bind:this={copySourceIcon} name="copy" />
+                    </button>
 
-                <h3 use:tooltip={source.url}>{getSourceName(source)}</h3>
-              </div>
-              <div class="meta">
-                <p>
-                  Last fetched: {source.last_fetched_at
-                    ? getHumanDistanceToNow(source.last_fetched_at)
-                    : 'never'}
-                </p>
-
-                <div class="meta-actions">
-                  <button on:click={() => copySource(source)} use:tooltip={'Copy Source URL'}>
-                    <IconConfirmation bind:this={copySourceIcon} name="copy" />
-                  </button>
-
-                  <button on:click={() => removeSource(source)} use:tooltip={'Remove Source'}>
-                    <Icon name="trash" />
-                  </button>
+                    <button on:click={() => removeSource(source)} use:tooltip={'Remove Source'}>
+                      <Icon name="trash" />
+                    </button>
+                  </div>
                 </div>
               </div>
+            {/each}
+          {/if}
+
+          {#if showAddSource}
+            <div class="add-source">
+              <input
+                placeholder="RSS feed URL"
+                autofocus
+                spellcheck="false"
+                bind:value={sourceValue}
+                on:blur={handleAddSourceBlur}
+              />
+
+              <button on:click={handleAddSource} class="icon">
+                <Icon name="add" />
+              </button>
             </div>
-          {/each}
-        {/if}
-
-        {#if showAddSource}
-          <div class="add-source">
-            <input
-              placeholder="RSS feed URL"
-              autofocus
-              spellcheck="false"
-              bind:value={sourceValue}
-              on:blur={handleAddSourceBlur}
-            />
-
-            <button on:click={handleAddSource} class="icon">
-              <Icon name="add" />
-            </button>
-          </div>
-        {:else}
-          <div class="add-source">
-            <button on:click={() => (showAddSource = true)} class="add-source">
-              <Icon name="add" />
-              Add Source
-            </button>
-          </div>
-        {/if}
-      </div> -->
+          {:else}
+            <div class="add-source">
+              <button on:click={() => (showAddSource = true)} class="add-source">
+                <Icon name="add" />
+                Add Source
+              </button>
+            </div>
+          {/if}
+        </div>
+      {/if}
 
       <div class="setting">
         <div class="smart-filter">
