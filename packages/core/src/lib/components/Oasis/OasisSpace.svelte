@@ -1267,7 +1267,9 @@
       return
     }
 
-    const toast = toasts.loading('Deleting space…')
+    if (!abortSpaceCreation) {
+      const toast = toasts.loading('Deleting space…')
+    }
 
     showSettingsModal.set(false)
 
@@ -1283,7 +1285,9 @@
 
       oasis.selectedSpace.set('all')
       dispatch('deleted', spaceId)
-      toast.success('Space deleted!')
+      if (!abortSpaceCreation) {
+        toast.success('Space deleted!')
+      }
 
       await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
     } catch (error) {
