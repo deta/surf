@@ -79,10 +79,6 @@
   $: {
     if ($previewIDs.length > 0) {
       fineTuneEnabled.set(true)
-    } else {
-      if ($userPrompt === '<p></p>') {
-        fineTuneEnabled.set(false)
-      }
     }
   }
 
