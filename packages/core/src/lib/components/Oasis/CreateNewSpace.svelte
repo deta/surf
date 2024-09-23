@@ -50,11 +50,15 @@
   const semanticSearchThreshold = writable(0.4)
   const semanticInputValue = writable(0.4)
   const resultHasSemanticSearch = writable(false)
+  const timeOfLastAIRequest = writable(new Date().getTime())
   let editor: Editor
 
   const log = useLogScope('OasisSpace')
   const resourceManager = useResourceManager()
   const telemetry = resourceManager.telemetry
+
+  let cancelToken = { cancelled: false }
+  const lastRequestTimestamp = writable(0)
 
   export let space: Space
 
@@ -159,6 +163,13 @@
 
   const previewAISpace = async (userPrompt: string, semanticThreshold?: number) => {
     isLoading.set(true)
+    const currentTimestamp = Date.now()
+    lastRequestTimestamp.set(currentTimestamp)
+
+    // Create a new cancel token for this request
+    cancelToken = { cancelled: false }
+    const currentCancelToken = cancelToken
+
     try {
       log.debug('Requesting preview with prompt', userPrompt)
 
@@ -171,6 +182,13 @@
       }
 
       const response = await resourceManager.getResourcesViaPrompt(userPrompt, options)
+
+      // Check if this request is still valid
+      if (currentCancelToken.cancelled || currentTimestamp !== $lastRequestTimestamp) {
+        isLoading.set(false)
+        log.debug('Request cancelled or outdated, ignoring results')
+        return
+      }
 
       log.debug(`Preview response`, response)
 
@@ -193,6 +211,13 @@
         const loadedResources = await Promise.all(
           resourceIds.map((id) => resourceManager.getResourceWithAnnotations(id.id))
         )
+
+        // Check again if this request is still valid
+        if (currentCancelToken.cancelled || currentTimestamp !== $lastRequestTimestamp) {
+          log.debug('Request cancelled or outdated, ignoring results')
+          return
+        }
+
         previewResources.set(loadedResources)
         console.log('xxx-loadedresources', loadedResources)
       } else {
@@ -205,12 +230,18 @@
         return
       }
     } catch (err) {
+      if (currentCancelToken.cancelled || currentTimestamp !== $lastRequestTimestamp) {
+        log.debug('Request cancelled or outdated, ignoring error')
+        return
+      }
       previewIDs.set([])
       log.error('Failed to create previews with AI', err)
     } finally {
-      loadingIndex.set($loadingIndex + 1)
-      isLoading.set(false)
-      await tick()
+      if (currentTimestamp === $lastRequestTimestamp) {
+        loadingIndex.set($loadingIndex + 1)
+        isLoading.set(false)
+        await tick()
+      }
     }
   }
 
@@ -222,7 +253,12 @@
     }
   }
 
-  const debouncedPreviewAISpace = useDebounce(previewAISpace, 500)
+  const debouncedPreviewAISpace = useDebounce((userPrompt: string) => {
+    // Cancel the previous request
+    cancelToken.cancelled = true
+    // Start a new request
+    previewAISpace(userPrompt)
+  }, 1000)
 
   const handleEditorUpdate = (event) => {
     previousUserPrompt.set($userPrompt)
@@ -233,6 +269,9 @@
       return
     }
 
+    // Cancel any ongoing request
+    cancelToken.cancelled = true
+    isLoading.set(true)
     debouncedPreviewAISpace($userPrompt)
   }
 
