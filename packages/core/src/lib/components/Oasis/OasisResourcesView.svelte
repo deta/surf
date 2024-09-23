@@ -7,7 +7,7 @@
 
   export let resourceIds: Readable<string[]>
   export let selected: string | null = null
-  export let showResourceSource: boolean = false
+  export let isInSpace: boolean = false
   export let useMasonry: boolean = true
   export let searchValue: Writable<string> | undefined
 
@@ -54,7 +54,7 @@
           >
             <OasisResourceLoader
               resourceOrId={item.id}
-              showSource={showResourceSource}
+              {isInSpace}
               on:click
               on:open
               on:remove
@@ -71,7 +71,7 @@
         <div class="max-w-[420px] w-full">
           <OasisResourceLoader
             resourceOrId={resourceId}
-            showSource={showResourceSource}
+            {isInSpace}
             on:click
             on:open
             on:remove

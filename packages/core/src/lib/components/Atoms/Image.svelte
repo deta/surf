@@ -5,6 +5,7 @@
   export let alt: string
   export let error = false
   export let fallbackIcon: Icons = 'file'
+  export let emptyOnError = false
 
   const handleError = (_e: Event) => {
     error = true
@@ -13,7 +14,7 @@
 
 {#if !error}
   <img {src} {alt} {...$$restProps} on:error={handleError} draggable="false" />
-{:else}
+{:else if !emptyOnError}
   <div class="image-error">
     <Icon name={fallbackIcon} size="100%" />
   </div>

@@ -1194,9 +1194,8 @@
                       <OasisResourcesViewSearchResult
                         resources={resourcesToShow}
                         selected={$selectedItem}
-                        showResourceSource={!!$searchValue}
+                        isInSpace={false}
                         isEverythingSpace={true}
-                        newTabOnClick
                         scrollTop={0}
                         on:click={handleItemClick}
                         on:open={handleOpen}

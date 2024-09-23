@@ -4,11 +4,11 @@
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
 
   import DragResourceWrapper from './DragResourceWrapper.svelte'
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
+  import ResourcePreview from '../Resources/ResourcePreview.svelte'
 
   export let resourceOrId: string | Resource
   export let selected: boolean = false
-  export let showSource: boolean = false
+  export let isInSpace: boolean = false
 
   const log = useLogScope('OasisResourceLoader')
   const resourceManager = useResourceManager()
@@ -46,16 +46,7 @@
 <div class="wrapper">
   {#if resource}
     <DragResourceWrapper {resource}>
-      <ResourcePreviewClean
-        {resource}
-        {showSource}
-        {selected}
-        showSummary
-        on:load
-        on:click
-        on:open
-        on:remove
-      />
+      <ResourcePreview {resource} {selected} {isInSpace} on:load on:click on:open on:remove />
     </DragResourceWrapper>
   {/if}
 </div>

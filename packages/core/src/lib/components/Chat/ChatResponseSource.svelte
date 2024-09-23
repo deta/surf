@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import type { Resource, ResourceAnnotation, ResourceManager } from '../../service/resources'
   import type { AIChatMessageSource } from '../../types/browser.types'
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
+  import ResourcePreview from '../Resources/ResourcePreview.svelte'
   //import { get } from 'svelte/store'
   //import { oasisAPIEndpoint } from './BrowserHomescreen.svelte'
   import { useLogScope } from '@horizon/utils'
@@ -48,7 +48,7 @@
 </script>
 
 {#if resource}
-  <ResourcePreviewClean {resource} on:click />
+  <ResourcePreview {resource} on:click />
 {:else if source.metadata && source.metadata.url}
   <div>
     {source.render_id})
