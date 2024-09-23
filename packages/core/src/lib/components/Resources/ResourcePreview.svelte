@@ -112,6 +112,24 @@
     }
   }
 
+  const cleanContent = (text: string, hostname: string | null) => {
+    if (!text) {
+      return null
+    }
+
+    if (hostname === 'github.com') {
+      const regex = /Contribute to ([\w-]+\/[\w-]+) development by creating an account on GitHub\./
+      const match = text.match(regex)
+      if (match) {
+        return null
+      }
+
+      return text
+    }
+
+    return text
+  }
+
   const loadResource = async () => {
     try {
       if (resource instanceof ResourceJSON) {
@@ -147,7 +165,10 @@
               .forEach(() => annotationItems.push({ type: 'highlight', content: '' }))
           }
 
-          const resourceContent = data.description || data.content_plain
+          const resourceContent = cleanContent(
+            data.description || data.content_plain || '',
+            hostname
+          )
           const previewContent = summary || resourceContent || undefined
 
           previewData = {
@@ -189,7 +210,7 @@
               .forEach(() => annotationItems.push({ type: 'highlight', content: '' }))
           }
 
-          const resourceContent = data.excerpt || data.content_plain
+          const resourceContent = cleanContent(data.excerpt || data.content_plain, hostname)
           const previewContent = summary || resourceContent || undefined
 
           previewData = {
