@@ -573,7 +573,7 @@
   const toasts = useToasts()
   const resourceManager = oasis.resourceManager
   const telemetry = resourceManager.telemetry
-  const spaces = derived(oasis.spaces, ($spaces) => $spaces)
+  const spaces = oasis.spaces
   const selectedItem = writable<string | null>(null)
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
