@@ -7,6 +7,7 @@
   export let subMenuRef: string | undefined = undefined
 
   let anchor: 'left' | 'right' = 'right'
+  let subMenuYOffset = 0
 
   onMount(async () => {
     if (subMenuRef !== undefined) {
@@ -21,6 +22,9 @@
       if (box.left + box.width > window.innerWidth) {
         anchor = 'left'
       }
+      if (box.top + box.height > window.innerHeight) {
+        subMenuYOffset = window.innerHeight - (box.top + box.height)
+      }
     }
   })
 </script>
@@ -30,7 +34,9 @@
   data-sub-menu-ref={subMenuRef}
   class:sub-items={subMenuRef !== undefined}
   class:anchor-left={anchor === 'left'}
-  style={subMenuRef !== undefined ? `position:fixed; --sub-id: --sub-${subMenuRef};` : ''}
+  style={subMenuRef !== undefined
+    ? `position:fixed; --sub-id: --sub-${subMenuRef}; --y-offset: ${subMenuYOffset}`
+    : ''}
 >
   {#each items as item, i}
     {#if item !== undefined && item.hidden !== true}
@@ -112,13 +118,13 @@
     }
 
     &:not(.anchor-left) {
-      top: anchor(start);
+      top: calc(anchor(start) - var(--y-offset));
       left: anchor(self-end);
       margin-left: -3px;
     }
 
     &.anchor-left {
-      top: anchor(self-start);
+      top: cacl(anchor(self-start) - var(--y-offset));
       right: anchor(start);
       left: unset;
       margin-right: -3px;
