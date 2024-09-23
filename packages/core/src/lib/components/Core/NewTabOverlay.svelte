@@ -1038,7 +1038,7 @@
     debouncedSearch($searchValue)
   }
 
-  onMount(() => {
+  /* onMount(() => {
     Dragcula.get().on('dragstart', () => {
       setTimeout(() => (showTabSearch = 2), 10)
     })
@@ -1053,7 +1053,7 @@
     Dragcula.get().off('dragend', () => {
       showTabSearch = 0
     })
-  })
+  })*/
 </script>
 
 <Drawer.Root

@@ -2959,46 +2959,15 @@
       log.error('Native drop on sidebar not implemented yet!', drag)
       // TODO: Handle otherwise
       return
-    }
-
-    if (drag.data['oasis/resource'] !== undefined) {
-      const resource = drag.data['oasis/resource'] as Resource
-
-      let tab = await tabsManager.openResourceAsTab(resource, {
-        active: true,
-        trigger: CreateTabEventTrigger.Drop
-      })
-
-      if (!tab) {
-        log.error('Failed to add page')
-        return
-      }
-
-      tab.index = drag.index || 0
-
-      await tabsManager.bulkPersistChanges(
-        get(tabs).map((tab) => ({
-          id: tab.id,
-          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
-        }))
-      )
-
-      log.debug('State updated successfully')
-
-      drag.continue()
-      return
-    }
-
-    // todo refactor this
-    if (drag.data['surf/tab'] !== undefined) {
-      const dragData = drag.data['surf/tab'] as Tab
+    } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
+      const droppedTab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
       tabs.update((_tabs) => {
         let unpinnedTabsArray = get(unpinnedTabs)
         let pinnedTabsArray = get(pinnedTabs)
         let magicTabsArray = get(magicTabs)
 
-        let fromTabs: Tab[]
-        let toTabs: Tab[]
+        let fromTabs: Tab[] = []
+        let toTabs: Tab[] = []
 
         if (drag.from?.id === 'sidebar-unpinned-tabs') {
           fromTabs = unpinnedTabsArray
@@ -3050,7 +3019,7 @@
 
             if (droppedTab.type === 'page' && $activeTabMagic?.showSidebar) {
               log.debug('prepare tab for chat context after moving to magic')
-              preparePageTabsForChatContext([dragData])
+              preparePageTabsForChatContext([droppedTab])
             }
 
             telemetry.trackMoveTab(MoveTabEventAction.AddMagic)
@@ -3123,45 +3092,29 @@
         return
       }
 
-      if (
-        (
-          [
-            ResourceTypes.LINK,
-            ResourceTypes.ARTICLE,
-            ResourceTypes.POST,
-            ResourceTypes.POST_YOUTUBE,
-            ResourceTypes.POST_TWITTER,
-            ResourceTypes.POST_REDDIT,
-            ResourceTypes.CHANNEL_YOUTUBE,
-            ResourceTypes.PLAYLIST_YOUTUBE,
-            ResourceTypes.CHAT_THREAD,
-            ResourceTypes.CHAT_THREAD_SLACK,
-            ResourceTypes.HISTORY_ENTRY
-          ] as string[]
-        ).includes(resource.type)
-      ) {
-        // TODO: (dragcula): Can we use this / should use a different one?
-        let url = resource.parsedData.url
-        if (resource.type === ResourceTypes.HISTORY_ENTRY) {
-          url = (resource as ResourceHistoryEntry).parsedData?.raw_url ?? url
-        }
+      let tab = await tabsManager.openResourceAsTab(resource, {
+        active: true,
+        trigger: CreateTabEventTrigger.Drop
+      })
 
-        let tab = await createPageTab(url, {
-          active: true,
-          trigger: CreateTabEventTrigger.Drop
-        })
-        tab.index = drag.index || 0
-
-        await bulkUpdateTabsStore(
-          get(tabs).map((tab) => ({
-            id: tab.id,
-            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
-          }))
-        )
-
-        log.debug('State updated successfully')
+      if (!tab) {
+        log.error('Failed to add page')
+        return
       }
+
+      tab.index = drag.index || 0
+
+      await tabsManager.bulkPersistChanges(
+        get(tabs).map((tab) => ({
+          id: tab.id,
+          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+        }))
+      )
+
+      log.debug('State updated successfully')
+
       drag.continue()
+      return
     }
   }
 
