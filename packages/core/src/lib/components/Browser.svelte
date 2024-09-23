@@ -3265,7 +3265,7 @@
         }
       } catch (e) {
         toast.error('Failed to add resources to space!')
-        console.error(e)
+        log.debug(e)
         if (drag?.abort) drag.abort()
         return
       }
