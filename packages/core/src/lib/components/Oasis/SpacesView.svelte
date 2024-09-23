@@ -304,14 +304,16 @@
     {/each}
   </div>
   <button
-    class="action-new-space shadow-sm"
+    class="action-new-space"
     class:sticky={$isNewSpaceButtonSticky}
     class:text-white={$isNewSpaceButtonSticky}
     on:click={handleCreateEmptySpace}
     bind:this={newSpaceButton}
   >
-    <Icon name="add" size="1rem" />
-    <span class="new-space-text">New Space</span>
+    <div class="icon-wrapper">
+      <Icon name="add" size="2rem" color={'white'} />
+    </div>
+    <span class="new-space-text">Create New Space</span>
   </button>
 </div>
 
@@ -393,28 +395,54 @@
     display: flex;
     align-items: center;
     background: transparent;
-    color: rgba(0, 0, 0, 0.6);
-    background: rgba(255, 255, 255, 0.6);
+    box-shadow:
+      0 1px 1px rgba(67, 142, 239, 0.05),
+      0 1px 2px rgba(67, 142, 239, 0.03),
+      0 2px 4px rgba(67, 142, 239, 0.02),
+      0 3px 6px rgba(67, 142, 239, 0.01),
+      0 4px 8px rgba(67, 142, 239, 0.005);
+    border: 0.5px solid rgba(67, 142, 239, 0.15);
+    color: rgba(0, 103, 185, 0.7); // Tinted text color for sticky state
+
     backdrop-filter: blur(10px);
-    border: 0.5px solid var(--Grey-2, #f4f4f4);
     .new-space-text {
       font-size: 1rem;
       line-height: 1;
+      color: rgba(0, 82, 147, 0.9);
     }
     letter-spacing: 0.01em;
     margin: 0;
     padding: 1rem 0.75rem;
     opacity: 1;
     &:hover {
-      background: rgba(0, 0, 0, 0.03);
-      color: rgba(0, 0, 0, 0.8);
+      background: rgba(224, 242, 254, 1);
+      color: rgba(0, 103, 185, 1);
     }
     &.sticky {
       position: sticky;
       bottom: 0;
-      background: rgba(255, 255, 255, 0.6);
       backdrop-filter: blur(10px);
-      border-top: 0.5px solid var(--Grey-2, #f4f4f4);
+      box-shadow:
+        0 1px 1px rgba(67, 142, 239, 0.05),
+        0 1px 2px rgba(67, 142, 239, 0.03),
+        0 2px 4px rgba(67, 142, 239, 0.02),
+        0 3px 6px rgba(67, 142, 239, 0.01),
+        0 4px 8px rgba(67, 142, 239, 0.005);
+      border: 0.5px solid rgba(67, 142, 239, 0.15);
+      color: rgba(0, 103, 185, 0.7); // Tinted text color for sticky state
+    }
+    & .icon-wrapper {
+      background: rgba(0, 122, 255, 0.9);
+      border: 1px solid rgba(67, 142, 239, 0.3);
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
     }
   }
 
