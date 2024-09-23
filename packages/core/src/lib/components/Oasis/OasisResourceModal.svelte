@@ -87,6 +87,7 @@
     }
 
     if (event.key === 'Escape') {
+      event.stopPropagation()
       close()
     } else if (isModKeyAndKeyPressed(event, 'Enter')) {
       tabsManager.openResourceAsTab(resource, {
@@ -437,7 +438,8 @@
   })
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<!-- NOTE: |capture isn't really a good solution for our ESC keyhandler issues.. but works in this case -->
+<svelte:window on:keydown|capture={handleKeydown} />
 
 <div class="mini-browser-wrapper">
   <div class="close-hitarea" on:click={close} aria-hidden="true">
