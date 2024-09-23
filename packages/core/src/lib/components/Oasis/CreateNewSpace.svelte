@@ -218,7 +218,7 @@
     }
   }
 
-  const debouncedPreviewAISpace = useDebounce(previewAISpace, 500)
+  const debouncedPreviewAISpace = useDebounce(previewAISpace, 860)
 
   const handleEditorUpdate = (event) => {
     previousUserPrompt.set($userPrompt)
