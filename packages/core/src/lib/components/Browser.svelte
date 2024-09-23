@@ -116,7 +116,6 @@
   import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
   import { createTabsManager } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
-  import ChatContextTabPicker from './Chat/ChatContextTabPicker.svelte'
   import ScreenshotPicker from './Webview/ScreenshotPicker.svelte'
   import {
     dataUrltoBlob,

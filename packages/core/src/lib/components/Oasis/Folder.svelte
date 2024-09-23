@@ -11,7 +11,6 @@
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { useOasis } from '../../service/oasis'
   import { processDrop } from '../../service/mediaImporter'
-  import ResourcePreviewClean from '../Resources/ResourcePreviewClean.svelte'
   import { useToasts } from '../../service/toast'
   import { fade, fly } from 'svelte/transition'
   import {
@@ -323,37 +322,6 @@
     use:hover={hovered}
     bind:this={previewContainer}
   >
-    <!-- {#if $inView && showPreview}
-      <div class="previews" transition:fly={{ y: 15 }}>
-        {#await getPreviewResources(4)}
-          <div class="folder-empty-wrapper">
-            <div class="folder-empty">
-              <Icon name="spinner" />
-            </div>
-          </div>
-        {:then resources}
-          {#if resources.length > 0}
-            {#each resources as resource}
-              <div class="folder-preview" style="transform: rotate({getRandomRotation()});">
-                <ResourcePreviewClean
-                  {resource}
-                  showTitles={false}
-                  interactive={false}
-                  on:click={() => openResource(resource.id)}
-                />
-              </div>
-            {/each}
-          {:else}
-            <div class="folder-empty-wrapper">
-              <div class="folder-empty">
-                <Icon name="leave" />
-              </div>
-            </div>
-          {/if}
-        {/await}
-      </div>
-    {/if} -->
-
     <div class="folder-label">
       <div class="folder-leading">
         <div class="space-icon-wrapper" on:click|stopPropagation aria-hidden="true">

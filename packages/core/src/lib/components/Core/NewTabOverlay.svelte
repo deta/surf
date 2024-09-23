@@ -1222,6 +1222,8 @@
                               showResourceSource={!!$searchValue}
                               isEverythingSpace={true}
                               newTabOnClick
+                              isInSpace={false}
+                              scrollTop={0}
                               on:click={handleItemClick}
                               on:open={handleOpen}
                               on:open-space-as-tab

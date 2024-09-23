@@ -193,7 +193,7 @@
   }
 
   async function createBookmarkResource(url: string, tab: TabPage, opts?: BookmarkPageOpts) {
-    log.debug('bookmarking', url)
+    log.debug('bookmarking', url, opts)
 
     const defaultOpts: BookmarkPageOpts = {
       silent: false,
