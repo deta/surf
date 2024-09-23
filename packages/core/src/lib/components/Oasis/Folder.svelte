@@ -375,8 +375,8 @@
     flex-direction: column;
     align-items: end;
     justify-content: space-between;
-    padding: 0.5rem 0.75rem;
-    border-radius: 12px;
+    padding: 0.525rem 0.75rem;
+    border-radius: 16px;
     cursor: pointer;
 
     position: relative;
@@ -477,7 +477,6 @@
       }
 
       .folder-input {
-        font-family: 'Inter', sans-serif;
         border: none;
         background: transparent;
         color: #244581;

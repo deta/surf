@@ -276,7 +276,7 @@
 
 <div class="centered-content">
   <div
-    class="top-bar fixed top-0 right-0 flex justify-between items-center w-[calc(100%-18rem)] px-4 py-2 bg-white z-50 border-b border-gray-200"
+    class="top-bar fixed bottom-0 right-0 flex justify-between items-center w-[calc(100%-18rem)] px-4 py-2 bg-white z-50 border-b border-gray-200"
     style="border-bottom-width: 0.5px;"
   >
     <div class="input-wrapper flex-grow">
@@ -547,7 +547,7 @@
     width: -webkit-fill-available;
     height: calc(100vh - 4rem);
     position: fixed;
-    top: 4rem;
+    top: 0;
     overflow-y: auto;
   }
 
@@ -577,7 +577,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 5rem;
   }
 
   .input-wrapper {

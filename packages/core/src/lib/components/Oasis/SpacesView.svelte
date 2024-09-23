@@ -394,7 +394,6 @@
     width: 100%;
     display: flex;
     align-items: center;
-    background: transparent;
     box-shadow:
       0 1px 1px rgba(67, 142, 239, 0.05),
       0 1px 2px rgba(67, 142, 239, 0.03),
@@ -402,7 +401,8 @@
       0 3px 6px rgba(67, 142, 239, 0.01),
       0 4px 8px rgba(67, 142, 239, 0.005);
     border: 0.5px solid rgba(67, 142, 239, 0.15);
-    color: rgba(0, 103, 185, 0.7); // Tinted text color for sticky state
+    color: rgba(0, 103, 185, 0.7);
+    background: rgba(224, 242, 254, 0.6);
     backdrop-filter: blur(10px);
     .new-space-text {
       font-size: 1rem;
@@ -435,7 +435,7 @@
         0 3px 6px rgba(67, 142, 239, 0.01),
         0 4px 8px rgba(67, 142, 239, 0.005);
       border: 0.5px solid rgba(67, 142, 239, 0.15);
-      background: rgba(224, 242, 254, 0.9);
+      background: rgba(224, 242, 254, 0.6);
       color: rgba(0, 103, 185, 0.7); // Tinted text color for sticky state
     }
     & .icon-wrapper {
