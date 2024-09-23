@@ -43,9 +43,11 @@
     isGoogleSignInUrl,
     wait,
     generateID,
-    truncate
+    truncate,
+    checkIfYoutubeUrl,
+    parseStringIntoUrl
   } from '@horizon/utils'
-  import type { DetectedWebApp } from '@horizon/web-parser'
+  import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
   import {
     CreateAnnotationEventTrigger,
     CreateTabEventTrigger,
@@ -263,7 +265,17 @@
 
     bookmarkingPromise = new Promise(async (resolve, reject) => {
       try {
-        const detectedResource = await webview.detectResource()
+        let detectedResource: DetectedResource | null = null
+
+        // YouTube doesn't update its metadata on client side navigations so we need to use a separate webview for more accurate data
+        if (checkIfYoutubeUrl(url)) {
+          log.debug('extracting resource data using separate webview')
+          const webParser = new WebParser(url)
+          detectedResource = await webParser.extractResourceUsingWebview(document)
+        } else {
+          detectedResource = await webview.detectResource()
+        }
+
         log.debug('extracted resource data', detectedResource)
 
         if (!detectedResource) {

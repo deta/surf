@@ -91,17 +91,17 @@ export const parseStringIntoUrl = (raw: string, base?: URL) => {
   }
 }
 
-export const checkIfYoutubeUrl = (url: URL) => {
+export const checkIfYoutubeUrl = (url: string) => {
   const youtubeRegex = /^(https?:\/\/)?(www\.)?(m\.)?(youtube(-nocookie)?\.com|youtu\.?be)\/.+$/
 
-  return youtubeRegex.test(url.toString())
+  return youtubeRegex.test(url)
 }
 
 export const getYoutubeVideoId = (url: URL) => {
   const youtubeVideoIdRegex =
     /(?:youtube(?:-nocookie)?\.com\/(?:[^/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
 
-  if (checkIfYoutubeUrl(url)) {
+  if (checkIfYoutubeUrl(url.href)) {
     return url.toString().match(youtubeVideoIdRegex)?.[1] ?? null
   }
   return null
