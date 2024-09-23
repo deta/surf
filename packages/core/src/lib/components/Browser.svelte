@@ -3751,6 +3751,7 @@
                         on:edit={handleEdit}
                         on:mouseenter={handleTabMouseEnter}
                         on:mouseleave={handleTabMouseLeave}
+                        {experimentalMode}
                       />
                     {:else}
                       <TabItem
@@ -3841,6 +3842,7 @@
                         on:edit={handleEdit}
                         on:mouseenter={handleTabMouseEnter}
                         on:mouseleave={handleTabMouseLeave}
+                        {experimentalMode}
                       />
                     {:else}
                       <TabItem
@@ -4092,6 +4094,7 @@
           on:open-resource={(e) => {
             openResource(e.detail)
           }}
+          {experimentalMode}
         />
 
         {#if $sidebarTab === 'oasis'}

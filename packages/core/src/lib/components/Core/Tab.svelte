@@ -40,6 +40,7 @@
   export let removeHighlight = false
   export let isSelected = false
   export let isMagicActive = false
+  export let experimentalMode = false
 
   export const editAddress = async () => {
     isEditing = true
@@ -507,47 +508,49 @@
 
     {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || isActive) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
-        <!-- {#if tab.type === 'page' && isActive && showLiveSpaceButton}
-          <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
-            <button
-              slot="trigger"
-              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-            >
-              <Icon name="news" />
-            </button>
+        {#if experimentalMode}
+          {#if tab.type === 'page' && isActive && showLiveSpaceButton}
+            <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
+              <button
+                slot="trigger"
+                class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+              >
+                <Icon name="news" />
+              </button>
 
-            <div slot="content" class="no-drag p-1">
-              <span class="p-4 mt-8"
-                >Create a page subscription to <span class="p-1 bg-white rounded-sm"
-                  >{tab.currentDetectedApp?.hostname}</span
-                ></span
-              >
-              <div class="flex w-full">
-                <button
-                  class="flex items-center justify-center w-1/2 p-2 m-1 transition-colors text-red-800 hover:text-red-950 hover:bg-red-200/80 rounded cursor-pointer"
+              <div slot="content" class="no-drag p-1">
+                <span class="p-4 mt-8"
+                  >Create a page subscription to <span class="p-1 bg-white rounded-sm"
+                    >{tab.currentDetectedApp?.hostname}</span
+                  ></span
                 >
-                  <Icon name="x" size="16px" />
-                  Cancel
-                </button>
-                <button
-                  class="flex items-center justify-center w-1/2 p-2 m-1 transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded cursor-pointer"
+                <div class="flex w-full">
+                  <button
+                    class="flex items-center justify-center w-1/2 p-2 m-1 transition-colors text-red-800 hover:text-red-950 hover:bg-red-200/80 rounded cursor-pointer"
+                  >
+                    <Icon name="x" size="16px" />
+                    Cancel
+                  </button>
+                  <button
+                    class="flex items-center justify-center w-1/2 p-2 m-1 transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded cursor-pointer"
+                  >
+                    <Icon name="check" size="16px" />
+                    Submit
+                  </button>
+                </div>
+                <ShortcutSaveItem
+                  on:save-resource-in-space={handleAddSourceToSpace}
+                  {spaces}
+                  infoText="or add updates from this site as a source to existing Space:"
+                />
+                <span class="p-4 mt-8"
+                  >A Live Space will automatically update and pull in everything that's new from
+                  that page.</span
                 >
-                  <Icon name="check" size="16px" />
-                  Submit
-                </button>
               </div>
-              <ShortcutSaveItem
-                on:save-resource-in-space={handleAddSourceToSpace}
-                {spaces}
-                infoText="or add updates from this site as a source to existing Space:"
-              />
-              <span class="p-4 mt-8"
-                >A Live Space will automatically update and pull in everything that's new from that
-                page.</span
-              >
-            </div>
-          </CustomPopover>
-        {/if} -->
+            </CustomPopover>
+          {/if}
+        {/if}
 
         {#if tab.type === 'page' && isActive}
           {#key isBookmarkedByUser}
