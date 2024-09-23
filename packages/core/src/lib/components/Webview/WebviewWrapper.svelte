@@ -235,7 +235,7 @@
     sendEvent(WebViewEventReceiveNames.GetResource)
   }
 
-  export const detectResource = (totalTimeout = 10000, pageLoadTimeout: 5000) => {
+  export const detectResource = (totalTimeout = 10000, pageLoadTimeout = 5000) => {
     return new Promise<DetectedResource | null>((resolve) => {
       let timeout: ReturnType<typeof setTimeout> | null = null
       let pageLoadTimeoutId: ReturnType<typeof setTimeout> | null = null
