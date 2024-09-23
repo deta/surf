@@ -208,6 +208,16 @@
     if (bookmarkingPromise !== undefined) {
       log.debug('already bookmarking page, piggybacking on existing promise')
 
+      /* 
+        Because a page might already be bookmarked when the page gets loaded we have to make sure
+        we are not bookmarking it twice if the user manually saves it quickly after the page loads
+        or hits the bookmark button multiple times.
+
+        Since the initial bookmarking call might create a silent resource we need to make sure that
+        we are updating the resource with the correct options if the user manually saves it.
+
+        This is a bit of a hacky solution but it works for now. 
+      */
       return new Promise(async (resolve, reject) => {
         try {
           const resource = await bookmarkingPromise!
@@ -218,14 +228,8 @@
           )
 
           if (hasSilentTag && !silent) {
-            log.warn(
-              'when handling existing promise resource was previously bookmarked silently, but now it is not'
-            )
             await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
           } else if (!hasSilentTag && silent) {
-            log.warn(
-              'when handling existing promise resource was not previously bookmarked silently, but now it is'
-            )
             await resourceManager.updateResourceTag(
               resource.id,
               ResourceTagsBuiltInKeys.SILENT,
@@ -238,17 +242,11 @@
           )
 
           if (hasCreatedForChatTag && !createdForChat) {
-            log.warn(
-              'when handling existing promise resource was previously created for chat, but now it is not'
-            )
             await resourceManager.deleteResourceTag(
               resource.id,
               ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
             )
           } else if (!hasCreatedForChatTag && createdForChat) {
-            log.warn(
-              'when handling existing promise resource was not previously created for chat, but now it is'
-            )
             await resourceManager.updateResourceTag(
               resource.id,
               ResourceTagsBuiltInKeys.CREATED_FOR_CHAT,
