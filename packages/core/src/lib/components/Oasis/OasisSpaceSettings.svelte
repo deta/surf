@@ -321,7 +321,7 @@
         <div class="smart-filter">
           <div class="title">
             <Icon name="sparkles" size="20px" />
-            <h2>Smart Spaces</h2>
+            <h2>Smart Space</h2>
           </div>
 
           <p>Automatically add new items you save to this Space, if they match your description.</p>
