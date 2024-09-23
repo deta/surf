@@ -593,8 +593,6 @@
     }
   )
 
-  $: log.debug('Resources to show:', $resourcesToShow)
-
   const isResourceDetailsModalOpen = derived(
     [showResourceDetails, resourceDetailsModalSelected],
     ([$showResourceDetails, $resourceDetailsModalSelected]) => {
