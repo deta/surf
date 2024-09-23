@@ -109,7 +109,7 @@
     open: string
     'create-resource-from-oasis': string
     'new-tab': BrowserTabNewTabEvent
-    'updated-spaces': string
+    'updated-space': string
     deleted: string
     'go-back': void
   }>()
@@ -1405,6 +1405,8 @@
       log.error('Error updating space:', error)
       toasts.error('Failed to update space: ' + (error as Error).message)
     }
+
+    dispatch('updated-space')
   }
 
   const handleAbortSpaceCreation = async (e: CustomEvent<string>) => {

@@ -125,6 +125,7 @@
   const isFetchingOasisSearchResults = writable(false)
   const isFetchingSearchEngineSuggestionResults = writable(false)
   const isFetchingHistoryEntriesResults = writable(false)
+  const isCreatingNewSpace = writable(false)
   const isFilteringCommandItems = writable(false)
   const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
     'oasis-filter-resources',
@@ -955,6 +956,7 @@
       }
     })
 
+    isCreatingNewSpace.set(true)
     selectedSpaceId.set(spaceID)
   }
 
@@ -982,10 +984,15 @@
 
   const handleDeleteSpace = async () => {
     await oasisSpace.handleDeleteSpace(new CustomEvent('delete', { detail: false }))
+    isCreatingNewSpace.set(false)
   }
 
   const handleSpaceDeleted = async (e: CustomEvent) => {
     selectedSpaceId.set('all')
+  }
+
+  const handleUpdatedSpace = () => {
+    isCreatingNewSpace.set(false)
   }
 
   let isSearching = false
@@ -1103,7 +1110,7 @@
           >
             <Icon name="close" />
           </button>
-        {:else if $searchValue.length < 20}
+        {:else if $searchValue.length < 20 && !$isCreatingNewSpace}
           <button
             class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
               ? 'bottom-3'
@@ -1201,6 +1208,7 @@
                         on:open={handleOpen}
                         on:go-back={() => selectedSpaceId.set(null)}
                         on:deleted={handleSpaceDeleted}
+                        on:updated-space={handleUpdatedSpace}
                         insideDrawer={true}
                         bind:this={oasisSpace}
                         {searchValue}
