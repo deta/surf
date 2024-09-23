@@ -26,6 +26,10 @@ export enum WebViewEventSendNames {
   // NOTE: Using prefix for mouse events, not to confuse with app window events!
   MouseMove = 'passthrough_mousemove',
   MouseUp = 'passthrough_mouseup',
+  DragEnter = 'passthrough_dragenter',
+  DragOver = 'passthrough_dragover',
+  DragLeave = 'passthrough_dragleave',
+  Drop = 'passthrough_drop',
   Focus = 'focus',
   KeyUp = 'key_up',
   KeyDown = 'key_down',
@@ -159,6 +163,10 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.Wheel]: WebViewEventWheel
   [WebViewEventSendNames.MouseMove]: MouseEvent
   [WebViewEventSendNames.MouseUp]: MouseEvent
+  [WebViewEventSendNames.DragEnter]: DragEvent
+  [WebViewEventSendNames.DragOver]: DragEvent
+  [WebViewEventSendNames.DragLeave]: DragEvent
+  [WebViewEventSendNames.Drop]: DragEvent
   [WebViewEventSendNames.Focus]: void
   [WebViewEventSendNames.KeyUp]: WebViewEventKeyUp
   [WebViewEventSendNames.KeyDown]: WebViewEventKeyDown

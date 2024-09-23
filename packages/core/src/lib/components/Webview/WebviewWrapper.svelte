@@ -38,6 +38,7 @@
   import type { WebviewError } from '../../constants/webviewErrors'
   import { blur } from 'svelte/transition'
   import { useTabsManager } from '../../service/tabs'
+  import { Dragcula } from '@horizon/dragcula'
 
   export let id: string | undefined
   export let src: string
@@ -124,6 +125,11 @@
       handleWebviewKeydown(data as WebViewSendEvents[WebViewEventSendNames.KeyDown])
     } else if (type === WebViewEventSendNames.Wheel) {
       handleWebviewWheel(data as WebViewSendEvents[WebViewEventSendNames.Wheel])
+    } else if (type === WebViewEventSendNames.DragOver) {
+      const drag = Dragcula.get().activeDrag
+      if (drag) {
+        drag.item?.onDrag(drag, data)
+      }
     }
 
     dispatch('webview-page-event', { type, data })

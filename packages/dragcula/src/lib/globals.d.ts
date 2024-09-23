@@ -1,7 +1,14 @@
-declare global {
-  interface Document {
-    activeDragOperation: DragOperation | undefined;
-  }
+interface Document {
+  startViewTransition(updateCallback: () => Promise<void> | void): ViewTransition;
 }
 
-export {};
+interface ViewTransition {
+  finished: Promise<void>;
+  ready: Promise<void>;
+  updateCallbackDone: Promise<void>;
+  skipTransition(): void;
+}
+
+interface CSSStyleDeclaration {
+  viewTransitionName: string;
+}

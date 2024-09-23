@@ -2,11 +2,13 @@
   import { createEventDispatcher } from 'svelte'
   import { useLogScope } from '@horizon/utils'
   import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import { DragTypeNames, type DragTypes } from '../../types'
 
   export let acceptDrop: boolean = true
   export let dragOver: boolean = false
   export let spaceId: string = crypto.randomUUID()
   export let zonePrefix: string | undefined
+  export let acceptsDrag: (drag: DragculaDragEvent<DragTypes>) => boolean = () => false
 
   const log = useLogScope('DropWrapper')
   const dispatch = createEventDispatcher<{
@@ -86,10 +88,11 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
+  id={`${zonePrefix ?? ''}oasis-space-${spaceId}`}
   class="drop-wrapper"
   class:dragover={dragOver}
   use:HTMLDragZone.action={{
-    id: `${zonePrefix ?? ''}oasis-space-${spaceId}`
+    accepts: acceptsDrag
   }}
   on:Drop={handleDrop}
   on:DragEnter={handleDragEnter}

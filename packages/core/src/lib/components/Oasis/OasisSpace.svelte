@@ -39,6 +39,7 @@
   } from '../../service/resources'
   import OasisResourcesView from './OasisResourcesView.svelte'
   import {
+    DragTypeNames,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     SpaceEntryOrigin,
@@ -1050,6 +1051,8 @@
   const handleDrop = async (drag: DragculaDragEvent) => {
     const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
 
+    // FIX: (dragcula): FIFIIF
+
     if (
       ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
         drag.from?.id || ''
@@ -1173,24 +1176,6 @@
     toast.success(
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
     )
-  }
-
-  const handleDragEnter = (drag: DragculaDragEvent) => {
-    if (drag.isNative) {
-      drag.continue()
-      return
-    }
-    if (drag.data['surf/tab'] !== undefined) {
-      const dragData = drag.data as { 'surf/tab': Tab }
-      if ((active && drag.isNative) || (active && dragData['surf/tab'].type !== 'space')) {
-        drag.continue()
-        return
-      }
-    } else if (drag.data['oasis/resource'] !== undefined) {
-      drag.continue()
-      return
-    }
-    drag.abort()
   }
 
   const handleCreateResource = async (e: CustomEvent<string>) => {
@@ -1423,7 +1408,18 @@
 <DropWrapper
   {spaceId}
   on:Drop={(e) => handleDrop(e.detail)}
-  on:DragEnter={(e) => handleDragEnter(e.detail)}
+  acceptsDrag={(drag) => {
+    if (
+      drag.isNative ||
+      drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+      drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+      drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+    ) {
+      return true
+    }
+
+    return false
+  }}
   zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
   <div class="relative wrapper bg-sky-100/50">

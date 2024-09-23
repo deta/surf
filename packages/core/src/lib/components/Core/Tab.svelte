@@ -9,7 +9,13 @@
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
-  import { ResourceTagsBuiltInKeys, ResourceTypes, type Space } from '../../types'
+  import {
+    ResourceTagsBuiltInKeys,
+    ResourceTypes,
+    type Space,
+    type DragTypes,
+    DragTypeNames
+  } from '../../types'
   import { popover } from '../Atoms/Popover/popover'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
@@ -255,23 +261,26 @@
     dispatch('include-tab', tab.id)
   }
 
-  const handleDragStart = async (drag: DragculaDragEvent) => {
+  const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
     isDragging = true
-    drag.item!.data = {
-      'surf/tab': {
-        ...tab,
-        pinned
-      }
-    }
+
+    drag.item!.data.setData<DragTypes>(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
+
     if (tab.resourceBookmark !== undefined && tab.resourceBookmark !== null) {
-      const resource = await resourceManager.getResource(tab.resourceBookmark)
-      if (resource !== null) drag.item!.data['horizon/resource/id'] = tab.resourceBookmark
+      drag.item!.data.setData(DragTypeNames.ASYNC_SURF_RESOURCE, () =>
+        resourceManager.getResource(tab.resourceBookmark)
+      )
     }
     drag.continue()
   }
+
   const handleDragEnd = (drag: DragculaDragEvent) => {
     isDragging = false
     dispatch('DragEnd', drag)
+  }
+
+  const handleDragEnter = (drag: DragculaDragEvent) => {
+    drag.continue()
   }
 
   const handleDrop = async (drag: DragculaDragEvent) => {
@@ -304,9 +313,24 @@
   aria-hidden="true"
   style:view-transition-name="tab-{tab.id}"
   use:HTMLDragItem.action={{}}
-  on:click={handleClick}
   on:DragStart={handleDragStart}
   on:DragEnd={handleDragEnd}
+  use:HTMLDragZone.action={{
+    accepts: (drag) => {
+      if (tab.type !== 'space' || tab.spaceId === 'all') return false
+      if (
+        drag.isNative ||
+        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        return true
+      }
+      return false
+    }
+  }}
+  on:Drop={handleDrop}
+  on:click={handleClick}
   on:mouseenter={() => {
     hovered = true
     dispatch('mouseenter', tab.id)
@@ -394,14 +418,13 @@
   }}
 >
   <!-- Temporary DragZone overlay to allow dropping onto space tabs -->
-  {#if tab.type === 'space' && tab.spaceId !== 'all'}
+  <!--{#if tab.type === 'space' && tab.spaceId !== 'all'}
     <div
       id="tabZone-{tab.id}"
       class="tmp-tab-drop-zone"
       style="position: absolute; inset-inline: 10%; inset-block: 20%;"
-      use:HTMLDragZone.action={{}}
       on:DragEnter={(drag) => {
-        const dragData = drag.data
+        /*const dragData = drag.data
         if (
           drag.isNative ||
           (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space') ||
@@ -410,11 +433,13 @@
           drag.continue() // Allow the drag
           return
         }
-        drag.abort()
+        drag.abort()*/
+        // TODO: FIX
+        drag.continue()
       }}
       on:Drop={handleDrop}
     ></div>
-  {/if}
+  {/if}-->
 
   <div
     class:icon-wrapper={true}
@@ -425,8 +450,8 @@
       !pinned &&
       hovered) ||
       (isActive && showClose && !pinned && hovered)}
-    style:view-transition-name="tab-icon-{tab.id}"
   >
+    <!--     style:view-transition-name="tab-icon-{tab.id}" -->
     {#if tab.icon}
       <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
     {:else if tab.type === 'horizon'}
@@ -636,6 +661,7 @@
 
 <style lang="scss">
   .tab {
+    border: 1.5px solid transparent;
     transition:
       0s ease-in-out,
       transform 0s;
@@ -648,16 +674,48 @@
   :global(.tab img) {
     user-select: none;
   }
-  :global(.tab[data-dragcula-dragging-item='true']) {
-    background: rgba(255, 255, 255, 0.9);
-    opacity: 80%;
+
+  :global(.tab[data-dragging-item]) {
+    background: #e0f2fe;
+    opacity: 1;
   }
-  :global(.tab[data-dragcula-dragging-item='true'] .tmp-tab-drop-zone) {
+  :global(.tab[data-drag-preview]) {
+    background: rgba(255, 255, 255, 1);
+    opacity: 80%;
+    border: 2px solid rgba(10, 12, 24, 0.1);
+    box-shadow:
+      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
+      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
+  }
+  :global(.tab[data-drag-preview][data-drag-target^='webview']) {
+    /*border-width: 1.5px;
+    border-color: rgba(5, 5, 25, 0.3);
+    border-style: dashed;*/
+    background: #fff;
+    border: 1.5px dashed rgba(5, 5, 25, 0.3);
+    opacity: 95%;
+    // https://getcssscan.com/css-box-shadow-examples
+    box-shadow:
+      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
+      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
+  }
+  :global(body[data-dragging='true'] .tab:not([data-dragging-item])) {
+    background: transparent !important;
+  }
+  :global(body[data-dragging='true'] .tab:not([data-dragging-item])) {
+    box-shadow: none;
+  }
+
+  :global(.tab[data-drag-target='true']) {
+    border: 1.5px dashed rgba(5, 5, 25, 0.3);
+  }
+
+  /*:global(.tab[data-dragcula-dragging-item='true'] .tmp-tab-drop-zone) {
     pointer-events: none;
   }
   :global(body:not([data-dragcula-dragging='true']) .tmp-tab-drop-zone) {
     display: none;
-  }
+  }*/
   .icon-wrapper {
     width: 16px;
     height: 16px;
@@ -734,9 +792,10 @@
       &::after {
         content: '';
         position: absolute;
-        right: -4px;
-        width: 4px;
-        height: 100%;
+        right: -5px;
+        top: -1.5px;
+        bottom: -1.5px;
+        width: 3.5px;
         background: inherit;
       }
     }

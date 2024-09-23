@@ -38,7 +38,7 @@
   } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import {
     Resource,
     ResourceJSON,
@@ -46,8 +46,10 @@
     type ResourceSearchResultItem
   } from '../../service/resources'
   import {
+    DragTypeNames,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
+    type DragTypes,
     type HistoryEntry,
     type Space
   } from '../../types'
@@ -61,7 +63,7 @@
 
   import { useToasts } from '../../service/toast'
   import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
-  import { DragculaDragEvent } from '@horizon/dragcula'
+  import { Dragcula, DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab, TabPage, TabSpace } from '../../types/browser.types'
 
   import * as Command from '../Command'
@@ -748,8 +750,10 @@
     selectedItem.set(e.detail)
   }
 
-  const handleDrop = async (drag: DragculaDragEvent) => {
+  const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
     const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+
+    // FIX: (dragcula): FIFIIF
 
     if (
       ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
@@ -878,21 +882,9 @@
   }
 
   const handleDragEnter = (drag: DragculaDragEvent) => {
-    /*if (drag.data['surf/tab'] !== undefined) {
-      const dragData = drag.data as { 'surf/tab': Tab }
-      if ((active && drag.isNative) || (active && dragData['surf/tab'].type !== 'space')) {
-        drag.continue()
-        return
-      }
-    } else if (drag.data['oasis/resource'] !== undefined) {
-      drag.continue()
-      return
-    }
-    drag.abort()*/
-    if (drag.isNative) {
-      drag.continue()
-      return
-    }
+    // TODO: Remove Dragcula v3
+    /*
+
     if (drag.data['surf/tab'] !== undefined) {
       const dragData = drag.data as { 'surf/tab': Tab }
       if (drag.isNative || dragData['surf/tab'].type !== 'space') {
@@ -903,7 +895,7 @@
       drag.continue()
       return
     }
-    drag.abort()
+    drag.abort()*/
   }
 
   const openResourceDetailsModal = (resourceId: string) => {
@@ -1045,16 +1037,24 @@
     log.debug('Filter change:', e.detail)
     debouncedSearch($searchValue)
   }
-</script>
 
-<svelte:window
-  on:DragStart={(drag) => {
-    showTabSearch = 2
-  }}
-  on:DragEnd={(drag) => {
-    showTabSearch = 0
-  }}
-/>
+  onMount(() => {
+    Dragcula.get().on('dragstart', () => {
+      setTimeout(() => (showTabSearch = 2), 10)
+    })
+    Dragcula.get().on('dragend', () => {
+      showTabSearch = 0
+    })
+  })
+  onDestroy(() => {
+    Dragcula.get().off('dragstart', () => {
+      setTimeout(() => (showTabSearch = 2), 10)
+    })
+    Dragcula.get().off('dragend', () => {
+      showTabSearch = 0
+    })
+  })
+</script>
 
 <Drawer.Root
   dismissible={!$CONTEXT_MENU_OPEN}
@@ -1356,8 +1356,7 @@
 
   /* Hides the Drawer when dragging but not targeting it */
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='drawer-oasis-space-'])
-        .drawer-content
+      body[data-dragging='true']:not([data-drag-target^='drawer-oasis-space-']) .drawer-content
     ) {
     transform: translateY(calc(100vh - 240px)) !important;
   }
@@ -1365,9 +1364,10 @@
   :global([data-dialog-portal] .drawer-overlay) {
     background: rgba(0, 0, 0, 0.35);
     opacity: 1;
+    pointer-events: none;
   }
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='drawer-oasis-space-'])
+      body[data-dragging='true']:not([data-drag-target^='drawer-oasis-space-'])
         [data-dialog-portal]
         .drawer-overlay
     ) {
