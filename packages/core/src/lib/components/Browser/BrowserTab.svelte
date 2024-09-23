@@ -205,7 +205,60 @@
     let bookmarkingPromise = bookmarkingPromises.get(url)
     if (bookmarkingPromise !== undefined) {
       log.debug('already bookmarking page, piggybacking on existing promise')
-      return bookmarkingPromise
+
+      return new Promise(async (resolve, reject) => {
+        try {
+          const resource = await bookmarkingPromise!
+
+          // make sure the previous promise was using the same options, if not overwrite it with the new ones
+          const hasSilentTag = (resource.tags ?? []).find(
+            (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+          )
+
+          if (hasSilentTag && !silent) {
+            log.warn(
+              'when handling existing promise resource was previously bookmarked silently, but now it is not'
+            )
+            await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+          } else if (!hasSilentTag && silent) {
+            log.warn(
+              'when handling existing promise resource was not previously bookmarked silently, but now it is'
+            )
+            await resourceManager.updateResourceTag(
+              resource.id,
+              ResourceTagsBuiltInKeys.SILENT,
+              'true'
+            )
+          }
+
+          const hasCreatedForChatTag = (resource.tags ?? []).find(
+            (tag) => tag.name === ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+          )
+
+          if (hasCreatedForChatTag && !createdForChat) {
+            log.warn(
+              'when handling existing promise resource was previously created for chat, but now it is not'
+            )
+            await resourceManager.deleteResourceTag(
+              resource.id,
+              ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+            )
+          } else if (!hasCreatedForChatTag && createdForChat) {
+            log.warn(
+              'when handling existing promise resource was not previously created for chat, but now it is'
+            )
+            await resourceManager.updateResourceTag(
+              resource.id,
+              ResourceTagsBuiltInKeys.CREATED_FOR_CHAT,
+              'true'
+            )
+          }
+
+          resolve(resource)
+        } catch (e) {
+          reject(null)
+        }
+      })
     }
 
     bookmarkingPromise = new Promise(async (resolve, reject) => {
