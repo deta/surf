@@ -1647,6 +1647,8 @@
       <CreateNewSpace
         on:update-existing-space={handleUpdateExistingSpace}
         on:abort-space-creation={handleAbortSpaceCreation}
+        on:creating-new-space
+        on:done-creating-new-space
         {space}
       />
     {:else if $loadingContents}

@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { useLogScope, useDebounce } from '@horizon/utils'
   import { useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { CreateSpaceEventFrom } from '@horizon/types'
-  import { writable, derived } from 'svelte/store'
+  import { writable, derived, type Writable } from 'svelte/store'
   import { createEventDispatcher, tick } from 'svelte'
   import { Editor } from '@horizon/editor'
   import { fly, scale } from 'svelte/transition'
@@ -62,6 +63,7 @@
   const telemetry = resourceManager.telemetry
 
   export let space: Space
+  export let isCreatingNewSpace: Writable<boolean>
 
   const templatePrompts: PromptConfig[] = [
     { name: 'Images', prompt: 'All my Images' },
@@ -285,6 +287,20 @@
       ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: false } : id))
     )
   }
+
+  onMount(() => {
+    if (isCreatingNewSpace) {
+      isCreatingNewSpace.set(true)
+    }
+    dispatch('creating-new-space')
+  })
+
+  onDestroy(() => {
+    if (isCreatingNewSpace) {
+      isCreatingNewSpace.set(false)
+    }
+    dispatch('done-creating-new-space')
+  })
 </script>
 
 <svelte:window

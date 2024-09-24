@@ -584,6 +584,7 @@
   const selectedSpaceId = writable<string | null>(null)
   const searchResults = writable<ResourceSearchResultItem[]>([])
   const everythingContents = writable<ResourceSearchResultItem[]>([])
+  const spaceCreationActive = writable(false)
 
   const resourcesToShow = derived(
     [searchValue, searchResults, everythingContents],
@@ -996,6 +997,14 @@
     isCreatingNewSpace.set(false)
   }
 
+  const handleCreatingNewSpace = () => {
+    isCreatingNewSpace.set(true)
+  }
+
+  const handleDoneCreatingNewSpace = () => {
+    isCreatingNewSpace.set(false)
+  }
+
   let isSearching = false
   let searchTimeout: NodeJS.Timeout | null = null
 
@@ -1121,8 +1130,9 @@
             }}
             aria-label="Switch tabs"
           >
-            <span
-              >{showTabSearch === 1
+            <span>
+              <!-- {createNewSpace.isCreatingNewSpace} -->
+              {showTabSearch === 1
                 ? $searchValue.length > 0
                   ? 'Search My Stuff'
                   : 'Open My Stuff'
@@ -1210,6 +1220,8 @@
                         on:go-back={() => selectedSpaceId.set(null)}
                         on:deleted={handleSpaceDeleted}
                         on:updated-space={handleUpdatedSpace}
+                        on:creating-new-space={handleCreatingNewSpace}
+                        on:done-creating-new-space={handleDoneCreatingNewSpace}
                         insideDrawer={true}
                         bind:this={oasisSpace}
                         {experimentalMode}
