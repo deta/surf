@@ -57,7 +57,8 @@
     TabHistory,
     CreateTabOptions,
     ControlWindow,
-    TabResource
+    TabResource,
+    BookmarkTabState
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
@@ -185,7 +186,6 @@
   const addressValue = writable('')
   const activeChatId = useLocalStorageStore<string>('activeChatId', '')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
-  const bookmarkingInProgress = writable(false)
   const magicInputValue = writable('')
   const activeTabMagic = writable<PageMagic>({
     running: false,
@@ -194,7 +194,7 @@
     responses: [],
     errors: []
   })
-  const bookmarkingSuccess = writableAutoReset(false, 1000)
+  const bookmarkingTabsState = writable<Record<string, BookmarkTabState>>({})
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
   const isCreatingLiveSpace = writable(false)
@@ -991,12 +991,27 @@
     }
   }
 
+  function updateBookmarkingTabState(tabId: string, value: BookmarkTabState | null) {
+    if (value === null) {
+      bookmarkingTabsState.update((state) => {
+        const newState = { ...state }
+        delete newState[tabId]
+        return newState
+      })
+    } else {
+      bookmarkingTabsState.update((state) => {
+        return { ...state, [tabId]: value }
+      })
+    }
+  }
+
   async function handleBookmark(
     tabId: string,
     savedToSpace = false,
     trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click
   ): Promise<{ resource: Resource | null; isNew: boolean }> {
     let toast: ToastItem | null = null
+
     try {
       const tab = $tabs.find((t: Tab) => t.id === tabId)
 
@@ -1005,11 +1020,8 @@
         return { resource: null, isNew: false }
       }
 
-      if (tabId === $activeTabId) {
-        bookmarkingInProgress.set(true)
-      } else {
-        toast = toasts.loading('Saving Page…')
-      }
+      updateBookmarkingTabState(tabId, 'in_progress')
+      toast = toasts.loading('Saving Page…')
 
       let browserTab = $browserTabs[tabId]
       const isActivated = $activatedTabs.includes(tab.id)
@@ -1038,27 +1050,27 @@
         freshWebview: true
       })
 
-      if (toast) {
-        toast?.success('Page Saved!')
-      } else {
-        bookmarkingSuccess.set(true)
-      }
+      updateBookmarkingTabState(tabId, 'success')
+      toast?.success('Page Saved!')
 
       await telemetry.trackSaveToOasis(resource.type, trigger, savedToSpace)
 
       return { resource, isNew: true }
     } catch (e) {
       log.error('error creating resource', e)
-      if (tabId === $activeTabId) {
-        toasts.error('Failed to save page!')
-      } else {
+
+      updateBookmarkingTabState(tabId, 'error')
+
+      if (toast) {
         toast?.error('Failed to save page!')
+      } else {
+        toasts.error('Failed to save page!')
       }
       return { resource: null, isNew: false }
     } finally {
-      if (!toast) {
-        bookmarkingInProgress.set(false)
-      }
+      setTimeout(() => {
+        updateBookmarkingTabState(tabId, null)
+      }, 1500)
     }
   }
 
@@ -3697,8 +3709,7 @@
                         tabSize={Math.min(300, Math.max(24, tabSize))}
                         {tab}
                         {activeTabId}
-                        bookmarkingInProgress={$bookmarkingInProgress}
-                        bookmarkingSuccess={$bookmarkingSuccess}
+                        bookmarkingState={$bookmarkingTabsState[tab.id]}
                         pinned={false}
                         {spaces}
                         enableEditing
@@ -3747,6 +3758,7 @@
                           (item) => item.id === tab.id && item.userSelected
                         )}
                         isMagicActive={$magicTabs.length > 0}
+                        bookmarkingState={$bookmarkingTabsState[tab.id]}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={handleTabSelect}
@@ -3788,8 +3800,7 @@
                         horizontalTabs={false}
                         {tab}
                         {activeTabId}
-                        bookmarkingInProgress={$bookmarkingInProgress}
-                        bookmarkingSuccess={$bookmarkingSuccess}
+                        bookmarkingState={$bookmarkingTabsState[tab.id]}
                         pinned={false}
                         {spaces}
                         enableEditing
@@ -3839,6 +3850,7 @@
                           (item) => item.id === tab.id && item.userSelected
                         )}
                         isMagicActive={$magicTabs.length > 0}
+                        bookmarkingState={$bookmarkingTabsState[tab.id]}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={handleTabSelect}
