@@ -32,7 +32,7 @@
     type CreateTabOptions,
     type ResourceData,
     type ResourceDataPost,
-    type SpaceEntryOrigin
+    SpaceEntryOrigin
   } from '../../types'
 
   import { writable, get } from 'svelte/store'
