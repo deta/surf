@@ -2,6 +2,7 @@ const productName = process.env.PRODUCT_NAME || 'Surf'
 const params = {
   buildTag: process.env.BUILD_TAG,
   shouldNotarize: process.env.SHOULD_NOTARIZE,
+  shouldSignWindows: process.env.SIGN_WINDOWS,
   appleTeamId: process.env.APPLE_TEAM_ID,
   buildName: process.env.BUILD_TAG ? `${productName}-${process.env.BUILD_TAG}` : productName,
   signIgnore: process.env.SIGN_IGNORE,
@@ -42,7 +43,10 @@ function electronBuilderConfig() {
     asarUnpack: ['resources/**', '**/*.node'],
     afterPack: 'build/afterpack.js',
     win: {
-      executableName: params.buildName
+      executableName: params.buildName,
+      signingHashAlgorithms: ['sha256'],
+      forceCodeSigning: params.shouldSignWindows === 'true',
+      sign: 'build/winSign.js'
     },
     nsis: {
       artifactName: `${params.buildName}-setup.$\{ext\}`,
