@@ -292,17 +292,17 @@
 </script>
 
 <div
-  id={folder.id}
-  draggable={true}
+  id={`folder-${folder.id}`}
   class="folder-wrapper {processing ? 'magic-in-progress' : ''}"
   data-vaul-no-drag
   data-folder-id={folder.id}
   aria-hidden="true"
+  draggable={true}
   use:HTMLDragItem.action={{}}
   on:DragStart={handleDragStart}
   use:HTMLDragZone.action={{
     accepts: (drag) => {
-      if (tab.type !== 'space' || tab.spaceId === 'all') return false
+      if (folder.id === 'all') return false
       if (
         drag.isNative ||
         drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
@@ -318,18 +318,6 @@
       }
       return false
     }
-  }}
-  on:DragEnter={(drag) => {
-    const dragData = drag.data
-    if (
-      drag.isNative ||
-      (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space') ||
-      dragData['oasis/resource'] !== undefined
-    ) {
-      drag.continue()
-      return
-    }
-    drag.abort()
   }}
   on:Drop={handleDrop}
   use:contextMenu={{

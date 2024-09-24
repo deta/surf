@@ -269,7 +269,7 @@ export class TabsManager {
     const nextIndex =
       nextTabIndex > 0 ? nextTabIndex - TAB_INDEX_OFFSET : activeTabIndex + TAB_INDEX_OFFSET
 
-    const newIndex = placeAtEnd ? Date.now() : nextIndex
+    const newIndex = opts?.index ?? (placeAtEnd ? Date.now() : nextIndex)
 
     this.log.debug('Creating tab', tab, 'at index', newIndex, this.unpinnedTabs)
 
@@ -567,6 +567,7 @@ export class TabsManager {
         title: url,
         icon: '',
         type: 'page',
+        index: opts?.index ?? undefined,
         initialLocation: url,
         historyStackIds: [],
         currentHistoryIndex: -1
@@ -591,7 +592,8 @@ export class TabsManager {
         icon: '',
         spaceId: space.id,
         type: 'space',
-        colors: space.name.colors
+        colors: space.name.colors,
+        index: opts?.index ?? undefined
       },
       opts
     )
@@ -607,6 +609,7 @@ export class TabsManager {
         title: resource?.metadata?.name ?? getFileType(resource.type) ?? 'Untitled',
         icon: '',
         type: 'resource',
+        index: opts?.index ?? undefined,
         resourceId: resource.id,
         resourceType: resource.type
       },

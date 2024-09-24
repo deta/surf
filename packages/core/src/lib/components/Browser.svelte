@@ -2940,7 +2940,7 @@
       log.debug('Resources', newResources)
 
       for (const r of newResources) {
-        await tabsManager.openResourceAsTab(r, { active: false })
+        await tabsManager.openResourceAsTab(r, { active: false, index: drag.index ?? undefined })
 
         telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
       }
@@ -3061,6 +3061,9 @@
       log.debug('State updated successfully')
       // Mark the drop completed
       drag.continue()
+    } else if (drag.item!.data.hasData(DragTypeNames.SURF_SPACE)) {
+      const space = drag.item!.data.getData(DragTypeNames.SURF_SPACE)
+      tabsManager.addSpaceTab(space, { active: false, index: drag.index ?? undefined })
     } else if (
       drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
       drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
@@ -3483,7 +3486,8 @@
                     drag.isNative ||
                     drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
                     drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-                    drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                    drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+                    drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
                   ) {
                     return true
                   }
@@ -3734,9 +3738,10 @@
                     accepts: (drag) => {
                       if (
                         drag.isNative ||
-                        drag.item.data.hasData(DragTypeNames.SURF_TAB) ||
-                        drag.item.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-                        drag.item.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
                       ) {
                         return true
                       }

@@ -1,5 +1,4 @@
-import type { Space } from '@horizon/types'
-import type { SFFSResource, Tab } from '.'
+import type { SFFSResource, Space, Tab } from '.'
 import type { Resource } from '../service/resources'
 
 export enum DragTypeNames {

@@ -264,23 +264,27 @@
   const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
     isDragging = true
 
-    drag.item!.data.setData<DragTypes>(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
+    drag.item!.data.setData(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
 
     if (tab.resourceBookmark !== undefined && tab.resourceBookmark !== null) {
       drag.item!.data.setData(DragTypeNames.ASYNC_SURF_RESOURCE, () =>
         resourceManager.getResource(tab.resourceBookmark)
       )
     }
+
+    if (tab.type === 'space') {
+      if (space === null) {
+        await fetchSpace(tab.spaceId)
+      }
+      drag.item!.data.setData(DragTypeNames.SURF_SPACE, space)
+    }
+
     drag.continue()
   }
 
   const handleDragEnd = (drag: DragculaDragEvent) => {
     isDragging = false
     dispatch('DragEnd', drag)
-  }
-
-  const handleDragEnter = (drag: DragculaDragEvent) => {
-    drag.continue()
   }
 
   const handleDrop = async (drag: DragculaDragEvent) => {
