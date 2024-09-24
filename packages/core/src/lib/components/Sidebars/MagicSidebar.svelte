@@ -33,6 +33,7 @@
   import { useConfig } from '../../service/config'
   import ChatContextTabPicker from '../Chat/ChatContextTabPicker.svelte'
   import { useTabsManager } from '../../service/tabs'
+  import Onboarding from '../Core/Onboarding.svelte'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -88,6 +89,7 @@
   let lastCmdATime = 0
   let autoScrollChat = true
   let abortController: AbortController | null = null
+  let onboardingOpen = writable(true)
 
   const chatBoxPlaceholder = /*writable('Ask anything...') */ derived(
     [optPressed, cmdPressed, shiftPressed, magicPage, optToggled, tabsInContext],
@@ -743,6 +745,10 @@
 
   $: smallSize = inputValue.length < 75
 </script>
+
+{#if $onboardingOpen}
+  <Onboarding />
+{/if}
 
 <div class="flex flex-col h-full relative overflow-hidden">
   {#if !experimentalMode}
