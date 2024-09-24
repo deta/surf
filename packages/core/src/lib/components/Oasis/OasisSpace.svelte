@@ -1464,7 +1464,7 @@
           </button> -->
 
             <div class="settings-wrapper">
-              <button class="settings-toggle" on:click={handleOpenSettingsModal}>
+              <button class="settings-toggle flex" on:click={handleOpenSettingsModal}>
                 {#if $space?.name.folderName}
                   <div
                     class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800 hover:bg-sky-200 py-2 pl-3 pr-2 rounded-md"
@@ -1472,6 +1472,14 @@
                     <span class="leading-tight font-medium">{$space.name.folderName}</span>
                     <Icon name="chevron.down" size="20px" />
                   </div>
+                  {#if $space.name.smartFilterQuery}
+                    <span
+                      class="absolute text-sm -right-[6.5rem] pointer-events-none flex items-center"
+                    >
+                      <span class="w-2 h-2 bg-blue-400 rounded-full animate-pulse mr-1.5"></span>
+                      <span class="text-blue-500"> Smart Space</span>
+                    </span>
+                  {/if}
                 {/if}
               </button>
 

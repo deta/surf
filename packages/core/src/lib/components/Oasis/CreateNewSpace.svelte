@@ -65,18 +65,29 @@
   export let space: Space
   export let isCreatingNewSpace: Writable<boolean>
 
+  // const templatePrompts: PromptConfig[] = [
+  //   { name: 'Images', prompt: 'All my Images' },
+  //   { name: 'Notion Documents', prompt: 'All my Notion Documents' },
+  //   { name: 'YouTube Videos', prompt: 'Youtube Videos' },
+  //   {
+  //     name: 'Articles',
+  //     prompt: 'Articles about',
+  //     pill: {
+  //       placeholder: 'Enter topic',
+  //       position: 'after'
+  //     }
+  //   },
+  //   {
+  //     name: 'PDFs',
+  //     prompt: 'Every PDF'
+  //   }
+  // ]
+
   const templatePrompts: PromptConfig[] = [
-    { name: 'Images', prompt: 'All my Images' },
-    { name: 'Notion Documents', prompt: 'All my Notion Documents' },
     { name: 'YouTube Videos', prompt: 'Youtube Videos' },
-    {
-      name: 'Articles',
-      prompt: 'Articles about',
-      pill: {
-        placeholder: 'Enter topic',
-        position: 'after'
-      }
-    },
+    { name: 'Images', prompt: 'All my Images' },
+    { name: 'Notion Documents', prompt: 'Notion Documents' },
+    { name: 'Github Pull Requests', prompt: 'Github Pull Requests' },
     {
       name: 'PDFs',
       prompt: 'Every PDF'
@@ -739,7 +750,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     border: none;
-    padding: 0.5rem;
+    padding: 0.5rem 0;
     width: 100%;
     color: #28568f;
     transition: border-color 0.3s;
