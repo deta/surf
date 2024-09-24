@@ -360,7 +360,10 @@ impl Worker {
             .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
         */
-        self.db.update_resource_metadata(&metadata)
+        let mut tx = self.db.begin()?;
+        Database::update_resource_metadata_tx(&mut tx, &metadata)?;
+        tx.commit()?;
+        Ok(())
     }
 
     pub fn create_resource_tag(&mut self, mut tag: ResourceTag) -> BackendResult<()> {

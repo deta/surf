@@ -8,6 +8,7 @@
   export type Author = {
     text?: string
     imageUrl?: string
+    icon?: Icons
   }
 
   export type Mode = 'full' | 'media' | 'content' | 'compact' | 'tiny'
@@ -42,9 +43,9 @@
   export let contentType: ContentType = 'plain'
   export let annotations: Annotation[] | undefined = undefined
   export let url: string | undefined = undefined
-  export let source: Source
-  export let author: Author | undefined
-  export let theme: [string, string] | undefined
+  export let source: Source | undefined = undefined
+  export let author: Author | undefined = undefined
+  export let theme: [string, string] | undefined = undefined
 
   export let mode: Mode = 'full'
 
@@ -86,11 +87,11 @@
       {:else if mode === 'tiny'}
         <div class="tiny-wrapper">
           <div class="tiny-icon">
-            {#if source.imageUrl}
+            {#if source?.imageUrl}
               <div class="favicon">
                 <Image src={source.imageUrl} alt={source.text} fallbackIcon="link" />
               </div>
-            {:else if source.icon}
+            {:else if source?.icon}
               <Icon name={source.icon} />
             {:else}
               <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
@@ -98,7 +99,7 @@
           </div>
 
           <div class="from">
-            {title || content || source.text}
+            {title || content || source?.text || author?.text || 'Untitled'}
           </div>
         </div>
       {:else}
@@ -181,18 +182,24 @@
               <SourceItem {type} {source} themed={!!theme} />
             {/if}
 
-            {#if showAuthor && author && author.text}
+            {#if showAuthor && author && (author.text || author.imageUrl || author.icon)}
               <div class="metadata">
                 <div class="author">
                   {#if author.imageUrl}
                     <div class="favicon">
-                      <Image src={author.imageUrl} alt={author.text} emptyOnError />
+                      <Image src={author.imageUrl} alt={author.text ?? ''} emptyOnError />
+                    </div>
+                  {:else if author.icon}
+                    <div class="favicon">
+                      <Icon name={author.icon} />
                     </div>
                   {/if}
 
-                  <div class="from">
-                    {author.text}
-                  </div>
+                  {#if author.text}
+                    <div class="from">
+                      {author.text}
+                    </div>
+                  {/if}
                 </div>
               </div>
             {/if}
@@ -283,6 +290,7 @@
     width: 1.25rem;
     height: 1.25rem;
     border-radius: 5.1px;
+    color: #281b53;
     box-shadow:
       0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
       0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
@@ -292,6 +300,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    overflow: hidden;
   }
 
   .from {
@@ -300,6 +309,7 @@
     text-decoration: none;
     color: #281b53;
     opacity: 0.65;
+    width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

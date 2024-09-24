@@ -50,7 +50,8 @@
     getFileType,
     parseStringIntoUrl,
     getHostname,
-    isMac
+    isMac,
+    truncateURL
   } from '@horizon/utils'
   import { useTabsManager } from '../../service/tabs'
   import { contextMenu } from '../Core/ContextMenu.svelte'
@@ -87,6 +88,8 @@
   const isHovered = writable(false)
   const spaces = oasis.spaces
 
+  const resourceState = resource.state
+
   $: annotations = resource.annotations ?? []
 
   $: isSilent = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.SILENT)
@@ -100,9 +103,33 @@
 
   $: showOpenAsFile = !(Object.values(ResourceTypes) as string[]).includes(resource.type)
 
+  $: processingSource =
+    (canonicalUrl
+      ? truncateURL(canonicalUrl, 25) || getFileType(resource.type)
+      : getFileType(resource.type)) || resource.type
+
+  $: if ($resourceState === 'updating') {
+    handleUpdating()
+  }
+
   let resourceData: ResourceData | null = null
   let previewData: PreviewData | null = null
   let dragging = false
+
+  const handleUpdating = () => {
+    log.debug('Resource is updating', resource.id)
+
+    const unsubscribe = resourceState.subscribe((state) => {
+      if (state === 'idle') {
+        log.debug('Resource is done updating, refreshing preview', resource.id)
+        loadResource()
+        unsubscribe()
+      } else if (state === 'error') {
+        log.error('Resource failed to update', resource.id)
+        unsubscribe()
+      }
+    })
+  }
 
   const cleanSource = (text: string) => {
     if (text.trim() === 'Wikimedia Foundation, Inc.') {
@@ -527,7 +554,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div
   on:click={handleClick}
-  class="resource-preview clickable"
+  class="resource-preview clickable relative"
   class:isSelected={selected}
   style="--id:{resource.id};"
   use:contextMenu={{
@@ -586,7 +613,23 @@
     ]
   }}
 >
-  {#if previewData}
+  {#if $resourceState === 'updating'}
+    <Preview
+      {resource}
+      type={resource.type}
+      title=""
+      url={canonicalUrl}
+      author={{
+        text: processingSource,
+        imageUrl: canonicalUrl
+          ? `https://www.google.com/s2/favicons?domain=${getHostname(canonicalUrl)}&sz=48`
+          : undefined,
+        icon: !canonicalUrl ? 'file' : undefined
+      }}
+      source={{ text: 'Generating Preview...', icon: 'spinner' }}
+      mode="content"
+    />
+  {:else if previewData}
     <Preview
       {resource}
       type={previewData.type}
@@ -609,6 +652,10 @@
       </div>
     </div>
   {/if}
+
+  <!-- <div class="absolute z-[10000] top-2 right-2 bg-black text-white p-2 rounded-lg">
+    State: {$resourceState}
+  </div> -->
 
   <!-- {#if interactive}
     <div class="remove-wrapper">

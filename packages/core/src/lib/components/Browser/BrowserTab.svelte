@@ -27,6 +27,7 @@
   }
 
   export type BookmarkPageOpts = {
+    freshWebview?: boolean
     silent?: boolean
     createdForChat?: boolean
   }
@@ -70,6 +71,7 @@
   import {
     Resource,
     ResourceAnnotation,
+    ResourceJSON,
     ResourceTag,
     useResourceManager
   } from '../../service/resources'
@@ -194,15 +196,43 @@
     // dispatch('update-tab', changes)
   }
 
-  async function createBookmarkResource(url: string, tab: TabPage, opts?: BookmarkPageOpts) {
+  async function extractResource(
+    url: string,
+    freshWebview = false
+  ): Promise<DetectedResource | null> {
+    log.debug('extracting resource data from', url, freshWebview ? 'using fresh webview' : '')
+
+    let detectedResource: DetectedResource | null = null
+
+    if (freshWebview) {
+      const webParser = new WebParser(url)
+      detectedResource = await webParser.extractResourceUsingWebview(document)
+    } else {
+      detectedResource = await webview.detectResource()
+    }
+
+    if (!detectedResource) {
+      log.debug('no resource detected')
+      return null
+    }
+
+    return detectedResource
+  }
+
+  async function createBookmarkResource(
+    url: string,
+    tab: TabPage,
+    opts?: BookmarkPageOpts
+  ): Promise<Resource> {
     log.debug('bookmarking', url, opts)
 
     const defaultOpts: BookmarkPageOpts = {
       silent: false,
-      createdForChat: false
+      createdForChat: false,
+      freshWebview: false
     }
 
-    const { silent, createdForChat } = Object.assign({}, defaultOpts, opts)
+    const { silent, createdForChat, freshWebview } = Object.assign({}, defaultOpts, opts)
 
     let bookmarkingPromise = bookmarkingPromises.get(url)
     if (bookmarkingPromise !== undefined) {
@@ -263,16 +293,7 @@
 
     bookmarkingPromise = new Promise(async (resolve, reject) => {
       try {
-        let detectedResource: DetectedResource | null = null
-
-        // YouTube doesn't update its metadata on client side navigations so we need to use a separate webview for more accurate data
-        if (checkIfYoutubeUrl(url)) {
-          log.debug('extracting resource data using separate webview')
-          const webParser = new WebParser(url)
-          detectedResource = await webParser.extractResourceUsingWebview(document)
-        } else {
-          detectedResource = await webview.detectResource()
-        }
+        const detectedResource = await extractResource(url, freshWebview)
 
         log.debug('extracted resource data', detectedResource)
 
@@ -329,13 +350,38 @@
     return bookmarkingPromise
   }
 
+  async function refreshResourceWithPage(resource: Resource, url: string) {
+    log.debug('updating resource with fresh data', resource.id)
+
+    resource.updateState('updating')
+
+    // Run resource detection on a fresh webview to get the latest data
+    const detectedResource = await extractResource(url, true)
+
+    log.debug('extracted resource data', detectedResource)
+
+    if (detectedResource) {
+      log.debug('updating resource with fresh data', detectedResource.data)
+      await resourceManager.updateResourceParsedData(resource.id, detectedResource.data)
+      await resourceManager.updateResourceMetadata(resource.id, {
+        name: (detectedResource.data as any).title || tab.title || '',
+        sourceURI: url
+      })
+    }
+
+    resource.updateState('idle')
+
+    return resource
+  }
+
   export async function bookmarkPage(opts?: BookmarkPageOpts) {
     const defaultOpts: BookmarkPageOpts = {
       silent: false,
-      createdForChat: false
+      createdForChat: false,
+      freshWebview: false
     }
 
-    const { silent, createdForChat } = Object.assign({}, defaultOpts, opts)
+    const { silent, createdForChat, freshWebview } = Object.assign({}, defaultOpts, opts)
 
     let url =
       tab.currentLocation ??
@@ -375,6 +421,11 @@
               fetchedResource.id,
               ResourceTagsBuiltInKeys.SILENT
             )
+
+            await resourceManager.deleteResourceTag(
+              fetchedResource.id,
+              ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+            )
           }
 
           tab.resourceBookmark = fetchedResource.id
@@ -383,13 +434,29 @@
             resourceBookmarkedManually: tab.resourceBookmarkedManually
           })
 
+          if (freshWebview) {
+            refreshResourceWithPage(fetchedResource, url)
+              .then((resource) => {
+                log.debug('refreshed resource', resource)
+              })
+              .catch((e) => {
+                log.error('error refreshing resource', e)
+                toasts.error('Failed to refresh resource')
+                resource.updateState('idle') // TODO: support error state
+              })
+          }
+
           return fetchedResource
         }
       }
     }
 
     log.debug('bookmarking', url)
-    const resource = await createBookmarkResource(url, tab, { silent, createdForChat })
+    const resource = await createBookmarkResource(url, tab, {
+      silent,
+      createdForChat,
+      freshWebview
+    })
 
     tab.resourceBookmark = resource.id
     tab.chatResourceBookmark = resource.id
@@ -769,7 +836,8 @@
         log.debug('creating new silent resource', url)
         bookmarkedResource = await createBookmarkResource(url, tab, {
           silent: true,
-          createdForChat: true
+          createdForChat: true,
+          freshWebview: false
         })
       }
 
@@ -800,12 +868,23 @@
           (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
         )
 
+        const isHideInEverything = (bookmarkedResource.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+        )
+
+        const isFromSpaceSource = (bookmarkedResource.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
+        )
+
+        const isFromLiveSpace = isHideInEverything && isFromSpaceSource
+        const manuallySaved = !isSilent && !isFromLiveSpace
+
         tab.resourceBookmark = bookmarkedResource.id
         tab.chatResourceBookmark = bookmarkedResource.id
         dispatch('update-tab', {
           resourceBookmark: bookmarkedResource.id,
           chatResourceBookmark: bookmarkedResource.id,
-          resourceBookmarkedManually: !isSilent
+          resourceBookmarkedManually: manuallySaved
         })
       } else {
         log.debug('no bookmarked resource found')
