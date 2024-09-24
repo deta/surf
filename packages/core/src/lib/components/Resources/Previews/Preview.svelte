@@ -68,6 +68,8 @@
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
   }
+
+  const IFRAME_STYLES = `<style> html { font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', sans-serif; } </style>`
 </script>
 
 <div
@@ -157,7 +159,12 @@
                 {:else if contentType === 'rich_text'}
                   <Editor content={truncate(content, MAX_CONTENT_LENGTH)} readOnly />
                 {:else if contentType === 'html'}
-                  <iframe title="Document Preview" srcdoc={content} frameborder="0" sandbox="" />
+                  <iframe
+                    title="Document Preview"
+                    srcdoc="{IFRAME_STYLES}{content}"
+                    frameborder="0"
+                    sandbox=""
+                  />
                 {:else if contentType === 'markdown'}
                   <MarkdownRenderer content={truncate(content, MAX_CONTENT_LENGTH)} />
                 {/if}
@@ -287,6 +294,7 @@
   }
 
   .favicon {
+    flex-shrink: 0;
     width: 1.25rem;
     height: 1.25rem;
     border-radius: 5.1px;
