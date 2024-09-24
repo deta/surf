@@ -18,6 +18,7 @@ export interface BaseTab {
     | 'oasis-discovery'
     | 'history'
     | 'resource'
+    | 'onboarding'
 
   archived: boolean
   index: number
@@ -80,6 +81,10 @@ export interface TabResource extends BaseTab {
   resourceType: string
 }
 
+export interface TabOnboarding extends BaseTab {
+  type: 'onboarding'
+}
+
 export type Tab =
   | TabPage
   | TabChat
@@ -90,6 +95,7 @@ export type Tab =
   | TabOasisDiscovery
   | TabHistory
   | TabResource
+  | TabOnboarding
 export type AIChat = {
   id: string
   messages: AIChatMessage[]

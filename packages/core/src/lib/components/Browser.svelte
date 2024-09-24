@@ -123,6 +123,7 @@
     getScreenshotFileName
   } from '../utils/screenshot'
   import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
+  import TabOnboarding from './Core/TabOnboarding.svelte'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -2528,10 +2529,27 @@
     window.open(url, '_blank')
   }
 
-  const openCheatSheet = () => {
-    const url = 'https://deta.notion.site/Surf-v0-0-1-e9c49ddf02a8476fb3c53b7efdc7e0fd'
-    window.open(url, '_blank')
-  }
+  const openCheatSheet = useDebounce(async (opts?: CreateTabOptions) => {
+    log.debug('Creating new onboarding tab')
+
+    // check if there already exists a history tab, if yes we just change to it
+
+    const onboardingTab = $tabs.find((tab) => tab.type === 'onboarding')
+
+    if (onboardingTab) {
+      tabsManager.makeActive(onboardingTab.id)
+      return
+    }
+
+    await tabsManager.create<TabOnboarding>(
+      {
+        title: 'Welcome To Surf',
+        icon: '',
+        type: 'onboarding'
+      },
+      { active: true }
+    )
+  }, 200)
 
   const handleDrop = async (event: CustomEvent) => {
     const tab = event.detail?.tab
@@ -4166,6 +4184,8 @@
                 <BrowserHistory {tab} active={$activeTabId === tab.id} />
               {:else if tab.type === 'resource'}
                 <ResourceTab {tab} on:update-tab={(e) => tabsManager.update(tab.id, e.detail)} />
+              {:else if tab.type === 'onboarding'}
+                <TabOnboarding />
               {/if}
             </div>
           {/if}
