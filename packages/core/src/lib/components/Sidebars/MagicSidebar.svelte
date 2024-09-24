@@ -747,7 +747,7 @@
 </script>
 
 {#if $onboardingOpen}
-  <Onboarding />
+  <Onboarding on:close={() => onboardingOpen.set(false)} />
 {/if}
 
 <div class="flex flex-col h-full relative overflow-hidden">

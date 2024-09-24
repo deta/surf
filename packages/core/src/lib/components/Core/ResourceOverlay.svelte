@@ -1,10 +1,10 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte'
 
-  export let caption = 'Drag me onto Horizon'
+  export let caption = null
 
-  let figure = null
-  let captionElem = null // Add a reference to the caption element to measure its width
+  let figure: HTMLElement | null = null
+  let captionElem: HTMLElement | null = null // Add a reference to the caption element to measure its width
   let captionStyle = { x: 0, y: 0, opacity: 0, transform: '' }
   let lastY = 0
   let lastTime = 0
@@ -12,22 +12,24 @@
   let rotation = 0
 
   onMount(() => {
-    figure.addEventListener('mousemove', handleMouseMove)
-    figure.addEventListener('mouseenter', () => {
-      captionStyle.opacity = 1
-    })
-    figure.addEventListener('mouseleave', handleMouseLeave)
+    if (figure) {
+      figure.addEventListener('mousemove', handleMouseMove)
+      figure.addEventListener('mouseenter', () => {
+        captionStyle.opacity = 1
+      })
+      figure.addEventListener('mouseleave', handleMouseLeave)
+    }
   })
 
-  const handleMouseMove = (event) => {
+  const handleMouseMove = (event: MouseEvent) => {
     const now = performance.now()
     const timeDiff = now - lastTime
-    const rect = figure.getBoundingClientRect()
+    const rect = figure!.getBoundingClientRect()
     let offsetX = event.clientX - rect.left
     const offsetY = event.clientY - rect.top
 
     // Prevent the caption from overflowing the figure boundaries
-    const maxOffsetX = rect.width - captionElem.offsetWidth
+    const maxOffsetX = rect.width - captionElem!.offsetWidth
     if (offsetX > maxOffsetX) offsetX = maxOffsetX
 
     captionStyle.x = offsetX
@@ -56,9 +58,13 @@
   <div
     bind:this={captionElem}
     class="caption"
-    style={`left: ${captionStyle.x}px; top: ${captionStyle.y}px; opacity: ${captionStyle.opacity}; transform: ${captionStyle.transform};`}
+    style={`left: ${captionStyle.x}px; top: ${captionStyle.y + (caption ? 0 : 60)}px; opacity: ${captionStyle.opacity}; transform: ${captionStyle.transform};`}
   >
-    {caption}
+    {#if caption}
+      {caption}
+    {:else}
+      <slot name="caption" />
+    {/if}
   </div>
 </div>
 
