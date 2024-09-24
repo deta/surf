@@ -762,8 +762,7 @@
           `,
         imgSrc: 'https://placehold.co/600x400',
         imgAlt: 'Context Window',
-        icon: `
-        `
+        iconName: 'sparkles'
       },
       {
         title: 'Add Context',
@@ -781,11 +780,7 @@
           `,
         imgSrc: 'https://placehold.co/600x400',
         imgAlt: 'Add Context',
-        icon: `
-          <div class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center font-semibold text-xl">
-            + 
-          </div>
-        `
+        iconName: 'add'
       },
       {
         title: 'Remove Context',

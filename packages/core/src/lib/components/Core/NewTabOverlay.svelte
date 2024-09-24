@@ -1152,7 +1152,8 @@
         <p>Save webpages, tweets, YouTube videos, screenshots, PDFs,and more.  It's way better than bookmarks.</p>
         `,
                       imgSrc: 'https://placehold.co/600x400',
-                      imgAlt: 'Save anything'
+                      imgAlt: 'Save anything',
+                      iconName: 'leave'
                     },
                     {
                       title: '(Auto)-organize',
@@ -1165,7 +1166,8 @@
         </p>
         `,
                       imgSrc: 'https://placehold.co/600x400',
-                      imgAlt: '(Auto)-organize'
+                      imgAlt: '(Auto)-organize',
+                      iconName: 'filter'
                     },
                     {
                       title: 'Find',
@@ -1175,7 +1177,8 @@
         </p>
         `,
                       imgSrc: 'https://placehold.co/600x400',
-                      imgAlt: 'Find'
+                      imgAlt: 'Find',
+                      iconName: 'search'
                     }
                   ]}
                   buttonText="Continue"

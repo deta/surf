@@ -17,6 +17,7 @@
     description: string
     hint?: string
     icon?: string
+    iconName?: string
     imgSrc: string
     imgAlt: string
   }>
@@ -28,7 +29,7 @@
 
 {#if title && sections}
   <div
-    class="absolute top-0 left-0 w-full h-full flex border border-gray-300 border-opacity-25 shadow-md shadow-gray-200 flex-col items-center justify-center bg-white/95 rounded-xl backdrop-blur-sm select-none text-lg gap-8 px-24"
+    class="absolute top-0 left-0 w-full h-full flex border border-gray-300 border-opacity-25 shadow-md shadow-gray-200 flex-col items-center justify-center bg-white/95 rounded-xl backdrop-blur-sm select-none text-lg gap-8 px-24 overflow-y-scroll"
     style="z-index: 2147483647;"
   >
     <div class="gap-4 flex flex-col items-center max-w-md">
@@ -44,11 +45,11 @@
           <div class="flex items-start gap-4" slot="content">
             {#if section.icon}
               {@html section.icon}
-            {:else}
+            {:else if section.iconName}
               <div
                 class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center font-semibold text-xl"
               >
-                <Icon name="add" />
+                <Icon name={section.iconName} />
               </div>
             {/if}
             <div class="flex-1 flex-grow">
