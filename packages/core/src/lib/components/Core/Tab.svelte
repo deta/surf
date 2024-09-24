@@ -270,9 +270,9 @@
     drag.item!.data.setData(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
 
     if (tab.resourceBookmark !== undefined && tab.resourceBookmark !== null) {
-      drag.item!.data.setData(DragTypeNames.ASYNC_SURF_RESOURCE, () =>
-        resourceManager.getResource(tab.resourceBookmark)
-      )
+      const resource = await resourceManager.getResource(tab.resourceBookmark)
+      drag.dataTransfer?.setData('application/json', JSON.stringify(resource))
+      drag.item!.data.setData(DragTypeNames.ASYNC_SURF_RESOURCE, () => resource)
     }
 
     if (tab.type === 'space') {
