@@ -43,6 +43,8 @@
   const previewResources = writable<any[]>([])
   const fineTuneEnabled = writable(false)
   const isLoading = writable(false)
+  const isTyping = writable(false)
+  const resultEmpty = writable(false)
   const loadingIndex = writable(0)
   const pillContent = writable('')
   const clickedPill = writable(0)
@@ -51,7 +53,9 @@
   const semanticInputValue = writable(0.4)
   const resultHasSemanticSearch = writable(false)
   const activeFetchingQuery = writable<string | null>(null)
+
   let editor: Editor
+  let shakeClass = ''
 
   const log = useLogScope('OasisSpace')
   const resourceManager = useResourceManager()
@@ -84,6 +88,19 @@
   }
 
   $: aiEnabled.set($userPrompt !== '<p></p>')
+
+  $: resultEmpty.set(
+    $previewIDs.length === 0 && $userPrompt !== '<p></p>' && !$isLoading && !$isTyping
+  )
+
+  $: isCreateButtonDisabled = $name === '' && $userPrompt === '<p></p>'
+
+  $: if ($resultEmpty) {
+    shakeClass = 'shake'
+    setTimeout(() => {
+      shakeClass = ''
+    }, 500) // Duration of the animation
+  }
 
   const newSpace = () => {
     const now = new Date().toISOString()
@@ -156,6 +173,7 @@
 
   const previewAISpace = async (prompt: string, semanticThreshold?: number) => {
     let actionCancelled = false
+    isTyping.set(false)
     isLoading.set(true)
     try {
       log.debug('Requesting preview with prompt', prompt)
@@ -235,6 +253,7 @@
   const handleEditorUpdate = (event) => {
     previousUserPrompt.set($userPrompt)
     userPrompt.set(event.detail)
+    isTyping.set(true)
 
     if (event.detail === '<p></p>') {
       previewIDs.set([])
@@ -266,8 +285,6 @@
       ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: false } : id))
     )
   }
-
-  $: isCreateButtonDisabled = $name === '' && $userPrompt === '<p></p>'
 </script>
 
 <svelte:window
@@ -326,7 +343,7 @@
     >
       <div
         slot="content"
-        class="space-icon-wrapper transform active:scale-[98%] relative"
+        class="space-icon-wrapper transform active:scale-[98%] relative {shakeClass}"
         class:has-preview={$previewIDs.length > 0}
         transition:scale={{ duration: 300, easing: quartOut }}
       >
@@ -345,6 +362,26 @@
                 showHeader={false}
               />
             {/key}
+          </div>
+        {:else if $resultEmpty}
+          <div
+            class="fixed z-50 flex items-center justify-center w-full h-full flex-col bg-gradient-to-br from-white via-blue-50 to-blue-100 pointer-events-none"
+          >
+            <div class="empty-state-icon mb-6">
+              <Icon name="sparkles.fill" size="42px" color="#ffffff" />
+            </div>
+            <h3
+              class="empty-state-title text-2xl font-medium text-white mb-2 mix-blend-screen"
+              style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
+            >
+              No resources found
+            </h3>
+            <p
+              class="empty-state-description text-white text-center max-w-md"
+              style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
+            >
+              Try adjusting your query.
+            </p>
           </div>
         {/if}
         <div class="relative z-0">
@@ -538,6 +575,28 @@
 </div>
 
 <style lang="scss">
+  @keyframes shake {
+    0% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-5px);
+    }
+    50% {
+      transform: translateX(5px);
+    }
+    75% {
+      transform: translateX(-5px);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  .shake {
+    animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+
   .centered-content {
     display: flex;
     flex-direction: column;
