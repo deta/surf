@@ -508,130 +508,130 @@ function handleScrollToAnnotation(
  * Would love to do but we need to break it down to string / ArrayBuffer primitives and re-assemble
  * it in here.
  */
-function deSerializeDragData(data: {
-  strings: { type: string; value: string | undefined }[]
-  files: { name: string; type: string; buffer: ArrayBuffer | undefined }[]
-}): DataTransfer {
-  const dataTransfer = new DataTransfer()
-  dataTransfer.dropEffect = 'move'
-  dataTransfer.effectAllowed = 'all'
+// function deSerializeDragData(data: {
+//   strings: { type: string; value: string | undefined }[]
+//   files: { name: string; type: string; buffer: ArrayBuffer | undefined }[]
+// }): DataTransfer {
+//   const dataTransfer = new DataTransfer()
+//   dataTransfer.dropEffect = 'move'
+//   dataTransfer.effectAllowed = 'all'
 
-  for (const str of data.strings) {
-    dataTransfer.setData(str.type, str.value ?? '')
-  }
+//   for (const str of data.strings) {
+//     dataTransfer.setData(str.type, str.value ?? '')
+//   }
 
-  for (const f of data.files) {
-    if (!f.buffer) {
-      f.buffer = new ArrayBuffer(1)
-    }
+//   for (const f of data.files) {
+//     if (!f.buffer) {
+//       f.buffer = new ArrayBuffer(1)
+//     }
 
-    const file = new File([f.buffer], f.name, { type: f.type })
-    dataTransfer.items.add(file)
-  }
+//     const file = new File([f.buffer], f.name, { type: f.type })
+//     dataTransfer.items.add(file)
+//   }
 
-  return dataTransfer
-}
+//   return dataTransfer
+// }
 
-function handleSimulateDragStart(
-  data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragStart]
-) {
-  console.debug('Simulating drag start', data)
-  window.dragcula = {
-    target: null,
-    dataTransfer: deSerializeDragData(data.data)
-  }
-}
-function handleSimulateDragUpdate(
-  data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragUpdate]
-) {
-  const target = document.elementFromPoint(data.clientX, data.clientY)
-  if (!target) return
+// function handleSimulateDragStart(
+//   data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragStart]
+// ) {
+//   console.debug('Simulating drag start', data)
+//   window.dragcula = {
+//     target: null,
+//     dataTransfer: deSerializeDragData(data.data)
+//   }
+// }
+// function handleSimulateDragUpdate(
+//   data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragUpdate]
+// ) {
+//   const target = document.elementFromPoint(data.clientX, data.clientY)
+//   if (!target) return
 
-  const dataTransfer = window.dragcula.dataTransfer
+//   const dataTransfer = window.dragcula.dataTransfer
 
-  if (
-    window.dragcula.target !== target &&
-    !target.classList.contains('p-message_pane_drag_overlay')
-  ) {
-    console.log('New dragover target', target, window.dragcula.target)
-    if (window.dragcula.target !== null) {
-      const evt = new DragEvent('dragleave', {
-        relatedTarget: target !== null ? target : undefined,
+//   if (
+//     window.dragcula.target !== target &&
+//     !target.classList.contains('p-message_pane_drag_overlay')
+//   ) {
+//     console.log('New dragover target', target, window.dragcula.target)
+//     if (window.dragcula.target !== null) {
+//       const evt = new DragEvent('dragleave', {
+//         relatedTarget: target !== null ? target : undefined,
 
-        clientX: data.clientX,
-        clientY: data.clientY,
-        screenX: data.screenX,
-        screenY: data.screenY,
-        pageX: data.pageX,
-        pageY: data.pageY,
+//         clientX: data.clientX,
+//         clientY: data.clientY,
+//         screenX: data.screenX,
+//         screenY: data.screenY,
+//         pageX: data.pageX,
+//         pageY: data.pageY,
 
-        dataTransfer,
-        bubbles: true
-      })
-      window.dragcula.target.dispatchEvent(evt)
-    }
-    if (target !== null) {
-      const evt = new DragEvent('dragenter', {
-        relatedTarget: window.dragcula.target !== null ? window.dragcula.target : undefined,
-        clientX: data.clientX,
-        clientY: data.clientY,
-        screenX: data.screenX,
-        screenY: data.screenY,
-        pageX: data.pageX,
-        pageY: data.pageY,
+//         dataTransfer,
+//         bubbles: true
+//       })
+//       window.dragcula.target.dispatchEvent(evt)
+//     }
+//     if (target !== null) {
+//       const evt = new DragEvent('dragenter', {
+//         relatedTarget: window.dragcula.target !== null ? window.dragcula.target : undefined,
+//         clientX: data.clientX,
+//         clientY: data.clientY,
+//         screenX: data.screenX,
+//         screenY: data.screenY,
+//         pageX: data.pageX,
+//         pageY: data.pageY,
 
-        dataTransfer,
-        bubbles: true,
-        cancelable: true
-      })
-      target.dispatchEvent(evt)
-    }
-  }
-  if (target !== null) {
-    const evt = new DragEvent('dragover', {
-      clientX: data.clientX,
-      clientY: data.clientY,
-      screenX: data.screenX,
-      screenY: data.screenY,
-      pageX: data.pageX,
-      pageY: data.pageY,
+//         dataTransfer,
+//         bubbles: true,
+//         cancelable: true
+//       })
+//       target.dispatchEvent(evt)
+//     }
+//   }
+//   if (target !== null) {
+//     const evt = new DragEvent('dragover', {
+//       clientX: data.clientX,
+//       clientY: data.clientY,
+//       screenX: data.screenX,
+//       screenY: data.screenY,
+//       pageX: data.pageX,
+//       pageY: data.pageY,
 
-      dataTransfer,
-      bubbles: true,
-      cancelable: true
-    })
+//       dataTransfer,
+//       bubbles: true,
+//       cancelable: true
+//     })
 
-    target.dispatchEvent(evt)
-    if (target.focus) target.focus()
-  }
-  window.dragcula.target = target
-}
-function handleSimulateDragEnd(
-  data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragEnd]
-) {
-  console.debug('Ending Drag', data, data.data)
-  if (data.action === 'drop') {
-    const target = document.elementFromPoint(data.clientX, data.clientY)
-    if (!target) return
+//     target.dispatchEvent(evt)
+//     if (target.focus) target.focus()
+//   }
+//   window.dragcula.target = target
+// }
+// function handleSimulateDragEnd(
+//   data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragEnd]
+// ) {
+//   console.debug('Ending Drag', data, data.data)
+//   if (data.action === 'drop') {
+//     const target = document.elementFromPoint(data.clientX, data.clientY)
+//     if (!target) return
 
-    const dataTransfer = window.dragcula.dataTransfer
-    const evt = new DragEvent('drop', {
-      clientX: data.clientX,
-      clientY: data.clientY,
-      screenX: data.screenX,
-      screenY: data.screenY,
-      pageX: data.pageX,
-      pageY: data.pageY,
+//     const dataTransfer = window.dragcula.dataTransfer
+//     const evt = new DragEvent('drop', {
+//       clientX: data.clientX,
+//       clientY: data.clientY,
+//       screenX: data.screenX,
+//       screenY: data.screenY,
+//       pageX: data.pageX,
+//       pageY: data.pageY,
 
-      dataTransfer,
-      bubbles: true
-    })
+//       dataTransfer,
+//       bubbles: true
+//     })
 
-    target.dispatchEvent(evt)
-    if (target.focus) target.focus()
-  }
-  window.dragcula = undefined
-}
+//     target.dispatchEvent(evt)
+//     if (target.focus) target.focus()
+//   }
+//   window.dragcula = undefined
+// }
 
 window.addEventListener('DOMContentLoaded', async (_) => {
   document.body.addEventListener('dragover', (e: DragEvent) => e.preventDefault())
@@ -700,7 +700,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
         }
       })
 
-      selectionMenu.$on('copy', (e) => {
+      selectionMenu.$on('copy', (_) => {
         sendPageEvent(WebViewEventSendNames.Copy)
       })
 
@@ -905,7 +905,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
       if (type === 'comment') {
         // TODO: will crash the app
-        renderComment()
+        // renderComment()
       }
 
       sendPageEvent(WebViewEventSendNames.AnnotationClick, { id, type })
@@ -987,6 +987,7 @@ window.addEventListener(
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     // TODO: Fix missing types
     sendPageEvent(WebViewEventSendNames.MouseMove, {
+      ...event,
       clientX: event.clientX,
       clientY: event.clientY,
       pageX: event.pageX,
@@ -1008,6 +1009,7 @@ window.addEventListener(
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     // TODO: Fix missing types
     sendPageEvent(WebViewEventSendNames.MouseUp, {
+      ...event,
       clientX: event.clientX,
       clientY: event.clientY,
       screenX: event.screenX,
@@ -1023,20 +1025,21 @@ window.addEventListener(
 
 window.addEventListener(
   'dragover',
-  (event: DragEvent) => {
-    event.preventDefault()
+  (e: DragEvent) => {
+    e.preventDefault()
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     sendPageEvent(WebViewEventSendNames.DragOver, {
-      clientX: event.clientX,
-      clientY: event.clientY,
-      pageX: event.pageX,
-      pageY: event.pageY,
-      screenX: event.screenX,
-      screenY: event.screenY,
-      altKey: event.altKey,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      shiftKey: event.shiftKey
+      ...e,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      pageX: e.pageX,
+      pageY: e.pageY,
+      screenX: e.screenX,
+      screenY: e.screenY,
+      altKey: e.altKey,
+      ctrlKey: e.ctrlKey,
+      metaKey: e.metaKey,
+      shiftKey: e.shiftKey
     })
   },
   { capture: true } // TODO: Try no capture
@@ -1073,6 +1076,7 @@ window.addEventListener(
     sendPageEvent(WebViewEventSendNames.DragEnter, {
       // TODO: (dnd): We need to serialize the datarasnfer, as its not directly serializable itself
       //dataTransfer: e.dataTransfer ?? new DataTransfer(),
+      ...e,
       clientX: e.clientX,
       clientY: e.clientY,
       pageX: e.pageX,
@@ -1097,6 +1101,7 @@ window.addEventListener(
     dragDepth = 0
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     sendPageEvent(WebViewEventSendNames.DragLeave, {
+      ...e,
       clientX: e.clientX,
       clientY: e.clientY,
       pageX: e.pageX,
@@ -1126,6 +1131,7 @@ window.addEventListener(
 
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     sendPageEvent(WebViewEventSendNames.Drop, {
+      ...e,
       dataTransfer: e.dataTransfer,
       clientX: e.clientX,
       clientY: e.clientY,
@@ -1148,7 +1154,7 @@ window.addEventListener(
 
     //const f = new File([content.buffer], fPath!, { type: fType! });
     const f = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
-    e.dataTransfer!.clearData()
+    // e.dataTransfer!.clearData()
     const asd = new DataTransfer()
 
     //e.dataTransfer!.items.add(f)
@@ -1156,7 +1162,8 @@ window.addEventListener(
     //asd.items.add("text/uri-list", "https://www.google.de")
 
     //e.dataTransfer!.items.add(new File([blobba], 'keksaf.png', { type: 'image/png' }));
-    for (const item of asd.items) {
+    // for (const item of asd.items) {
+    for (const item of e.dataTransfer!.items) {
       // e.dataTransfer!.items
       if (item.kind === 'file') {
         const f = item.getAsFile()!
@@ -1165,7 +1172,7 @@ window.addEventListener(
         console.log('contents', await item.getAsFile()?.text())
       } else {
         item.getAsString((data) => {
-          console.log(`[drop] Received string: ${item.type} : ${data}`)
+          console.log(`[drop] Received string:`, JSON.parse(data))
         })
       }
     }
@@ -1213,7 +1220,7 @@ window.addEventListener(
       bubbles: true,
       cancelable: true
     })
-    e.target.dispatchEvent(ne)
+    e.target?.dispatchEvent(ne)
     twice = false
   },
   { capture: true }
@@ -1244,7 +1251,7 @@ window.addEventListener(
     //asd.items.add("text/uri-list", "https://www.google.de")
     asd.items.add(f)
 
-    e.target.dispatchEvent(
+    e.target?.dispatchEvent(
       new DragEvent('dragleave', {
         ...e,
         dataTransfer: asd,
