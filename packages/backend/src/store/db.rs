@@ -300,8 +300,8 @@ impl Database {
         Ok(())
     }
 
-    pub fn touch_resource(&self, resource_id: &str) -> BackendResult<()> {
-        self.conn.execute(
+    pub fn touch_resource_tx(tx: &mut rusqlite::Transaction, resource_id: &str) -> BackendResult<()> {
+        tx.execute(
             "UPDATE resources SET updated_at = datetime('now') WHERE id = ?1",
             rusqlite::params![resource_id],
         )?;
@@ -495,6 +495,9 @@ impl Database {
             "INSERT INTO resource_tags (id, resource_id, tag_name, tag_value) VALUES (?1, ?2, ?3, ?4) ON CONFLICT(resource_id, tag_name, tag_value) DO NOTHING",
             rusqlite::params![resource_tag.id, resource_tag.resource_id, resource_tag.tag_name, resource_tag.tag_value]
         )?;
+
+        Self::touch_resource_tx(tx, &resource_tag.resource_id)?;
+
         Ok(())
     }
 
@@ -510,6 +513,9 @@ impl Database {
                 resource_tag.tag_value
             ],
         )?;
+
+        Self::touch_resource_tx(tx, &resource_tag.resource_id)?;
+
         Ok(())
     }
 
@@ -521,14 +527,26 @@ impl Database {
             "UPDATE resource_tags SET resource_id = ?2, tag_name = ?3, tag_value = ?4 WHERE id = ?1",
             rusqlite::params![resource_tag.id, resource_tag.resource_id, resource_tag.tag_name, resource_tag.tag_value]
         )?;
+
+        Self::touch_resource_tx(tx, &resource_tag.resource_id)?;
+
         Ok(())
     }
 
     pub fn remove_resource_tag_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
+        let resource_id: String = tx.query_row(
+            "SELECT resource_id FROM resource_tags WHERE id = ?1",
+            rusqlite::params![id],
+            |row| Ok(row.get(0)?),
+        )?;
+
         tx.execute(
             "DELETE FROM resource_tags WHERE id = ?1",
             rusqlite::params![id],
         )?;
+
+        Self::touch_resource_tx(tx, &resource_id)?;
+
         Ok(())
     }
 
@@ -541,6 +559,9 @@ impl Database {
             "DELETE FROM resource_tags WHERE resource_id = ?1 AND tag_name = ?2",
             rusqlite::params![resource_id, tag_name],
         )?;
+
+        Self::touch_resource_tx(tx, resource_id)?;
+
         Ok(())
     }
 
@@ -555,14 +576,17 @@ impl Database {
         Ok(())
     }
 
-    pub fn update_resource_metadata(
-        &mut self,
+    pub fn update_resource_metadata_tx(
+        tx: &mut rusqlite::Transaction,
         resource_metadata: &ResourceMetadata,
     ) -> BackendResult<()> {
-        self.conn.execute(
+        tx.execute(
             "UPDATE resource_metadata SET resource_id = ?2, name = ?3, source_uri = ?4, alt = ?5, user_context=?6 WHERE id = ?1",
             rusqlite::params![resource_metadata.id, resource_metadata.resource_id, resource_metadata.name, resource_metadata.source_uri, resource_metadata.alt, resource_metadata.user_context]
         )?;
+
+        Self::touch_resource_tx(tx, &resource_metadata.resource_id)?;
+
         Ok(())
     }
 
