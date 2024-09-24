@@ -353,7 +353,7 @@
       },
       {
         type: 'action',
-        hidden: tab.type !== 'page',
+        hidden: tab.type !== 'page' || !experimentalMode,
         icon: 'news',
         text: 'Create Live Space',
         action: () => handleCreateLiveSpace()
