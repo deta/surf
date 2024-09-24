@@ -50,7 +50,10 @@ export const everythingSpace = {
     showInSidebar: false,
     liveModeEnabled: false,
     hideViewed: false,
-    smartFilterQuery: null
+    smartFilterQuery: null,
+    sql_query: null,
+    embedding_query: null,
+    sortBy: 'created_at'
   },
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),

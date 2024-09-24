@@ -3,7 +3,10 @@ import type { Optional, Space, SpaceData } from '../types'
 import { ResourceManager, ResourceTag } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
 import type { useOasis } from './oasis'
-import { demoSpaces, liveSpaces, demoPages } from '../constants/examples'
+import { demoSpaces, liveSpaces, demoPages, builtInSpaces } from '../constants/examples'
+import { useLogScope } from '@horizon/utils'
+
+const log = useLogScope('DemoItems')
 
 export function random() {
   return Math.floor(Math.random() * 1000000)
@@ -47,17 +50,25 @@ export async function createDemoItems(
   createSpaceTab: any,
   resourceManager: ResourceManager
 ) {
-  // for (const demoSpace of demoSpaces) {
-  //   const space = await oasis.createSpace({
-  //     folderName: demoSpace.name,
-  //     showInSidebar: true,
-  //     colors: ['#FFD700', '#FF8C00'],
-  //     sources: [],
-  //     sortBy: 'created_at',
-  //     liveModeEnabled: false,
-  //     sql_query: undefined,
-  //     embedding_query: undefined
-  //   })
+  for (const builtInSpace of builtInSpaces) {
+    const data = Object.assign(
+      {},
+      {
+        folderName: 'New Space',
+        colors: ['#76E0FF', '#4EC9FB'],
+        showInSidebar: false,
+        liveModeEnabled: false,
+        hideViewed: false,
+        smartFilterQuery: null,
+        sql_query: null,
+        embedding_query: null,
+        sortBy: 'created_at'
+      },
+      builtInSpace
+    ) as SpaceData
+    const space = await oasis.createSpace(data)
+    log.debug('Created built-in space:', space)
+  }
 
   //   if (demoSpace.urls) {
   //     const urls = demoSpace.urls

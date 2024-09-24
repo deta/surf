@@ -2536,6 +2536,10 @@
       await window.api.updateInitializedTabs(true)
 
       showSplashScreen.set(false)
+    } else {
+      window.createDemoItems = () => {
+        createDemoItems(tabsManager.create, oasis, tabsManager.addSpaceTab, resourceManager)
+      }
     }
 
     prepareContextMenu()
