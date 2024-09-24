@@ -52,7 +52,7 @@
   ) => {
     try {
       const newSpace = await oasis.createSpace({
-        folderName: name ? name : 'New Space',
+        folderName: name ? name : '.tempspace',
         colors: ['#FFBA76', '#FB8E4E'],
         smartFilterQuery: userPrompt ? userPrompt : null,
         liveModeEnabled: !!userPrompt
@@ -203,7 +203,7 @@
     try {
       const space = $spaces.find((space) => space.id === $selectedSpace)
 
-      if (space?.name.folderName === 'New Space' && id !== $selectedSpace) {
+      if (space?.name.folderName === '.tempspace' && id !== $selectedSpace) {
         dispatch('delete-space', { id: $selectedSpace })
         return
       }
@@ -233,7 +233,7 @@
 
   const handleCreateEmptySpace = () => {
     const selectedSpaceObj = $spaces.find((space) => space.id === $selectedSpace)
-    if (!selectedSpaceObj || selectedSpaceObj.name.folderName !== 'New Space') {
+    if (!selectedSpaceObj || selectedSpaceObj.name.folderName !== '.tempspace') {
       dispatch('create-empty-space')
     }
   }
@@ -263,11 +263,13 @@
   })
 
   const filteredSpaces = derived(spaces, ($spaces) =>
-    $spaces.sort((a, b) => {
-      if (a.id === 'all') return -1 // Move 'all' folder to the top
-      if (b.id === 'all') return 1
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() // Sort others by creation date
-    })
+    $spaces
+      .filter((space) => space.name.folderName !== '.tempspace')
+      .sort((a, b) => {
+        if (a.id === 'all') return -1 // Move 'all' folder to the top
+        if (b.id === 'all') return 1
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() // Sort others by creation date
+      })
   )
 </script>
 
@@ -303,7 +305,7 @@
     class:sticky={$isNewSpaceButtonSticky}
     class:text-white={$isNewSpaceButtonSticky}
     class:disabled={$selectedSpace &&
-      $spaces.find((space) => space.id === $selectedSpace)?.name.folderName === 'New Space'}
+      $spaces.find((space) => space.id === $selectedSpace)?.name.folderName === '.tempspace'}
     on:click={handleCreateEmptySpace}
     bind:this={newSpaceButton}
   >

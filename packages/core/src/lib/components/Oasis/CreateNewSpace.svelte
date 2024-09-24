@@ -109,7 +109,7 @@
     return {
       id: 'new',
       name: {
-        folderName: 'New Space',
+        folderName: '.tempspace',
         colors: $colors,
         showInSidebar: true,
         sources: [],

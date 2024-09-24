@@ -102,7 +102,7 @@
     if (!(event.target as HTMLElement).closest('button')) {
       try {
         log.debug('Selected space:', folder.id)
-        if (folder.name.folderName === 'New Space' && $selectedFolder === 'New Space') {
+        if (folder.name.folderName === '.tempspace' && $selectedFolder === '.tempspace') {
           return
         }
         if (isModKeyPressed(event)) {

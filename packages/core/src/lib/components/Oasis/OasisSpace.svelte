@@ -1447,7 +1447,7 @@
   zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
   <div class="relative wrapper bg-sky-100/50">
-    {#if !isEverythingSpace && $space?.name.folderName !== 'New Space'}
+    {#if !isEverythingSpace && $space?.name.folderName !== '.tempspace'}
       <div
         class="drawer-bar bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 bg-sky-100/90 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
         class:translate-y-24={hideBar && active}
@@ -1499,7 +1499,7 @@
           </button> -->
           </div>
         {/if}
-        {#if $space?.name.folderName !== 'New Space'}
+        {#if $space?.name.folderName !== '.tempspace'}
           <div class="drawer-chat-search bg-sky-50">
             <div class="search-input-wrapper">
               <SearchInput bind:value={$searchValue} on:search={handleSearch} />
@@ -1647,7 +1647,7 @@
           <Icon name="spinner" size="20px" />
         </div>
       {/if}
-    {:else if $space?.name.folderName === 'New Space'}
+    {:else if $space?.name.folderName === '.tempspace'}
       <CreateNewSpace
         on:update-existing-space={handleUpdateExistingSpace}
         on:abort-space-creation={handleAbortSpaceCreation}

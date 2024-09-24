@@ -951,7 +951,7 @@
     await tick()
     const spaceID = await createSpaceRef.handleCreateSpace({
       detail: {
-        name: 'New Space',
+        name: '.tempspace',
         aiEnabled: false,
         colors: ['#000000', '#ffffff'],
         userPrompt: ''
