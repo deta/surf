@@ -82,6 +82,7 @@
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../constants/searchEngines'
   import { CONTEXT_MENU_OPEN } from './ContextMenu.svelte'
+  import Onboarding from './Onboarding.svelte'
 
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
@@ -113,6 +114,7 @@
     threshold: 0.7,
     includeScore: true
   }
+  let onboardingOpen = writable(true)
 
   let selectFirstCommandItem: () => void
   let hasLoadedEverything = false
@@ -1138,6 +1140,48 @@
                 {/each}
               </Command.List>
             {:else if showTabSearch === 2}
+              {#if $onboardingOpen}
+                <Onboarding
+                  on:close={() => onboardingOpen.set(false)}
+                  title="Stay on top of your stuff"
+                  tip="Tip: Hover over any element to see how it works."
+                  sections={[
+                    {
+                      title: 'Save anything',
+                      description: `
+        <p>Save webpages, tweets, YouTube videos, screenshots, PDFs,and more.  It's way better than bookmarks.</p>
+        `,
+                      imgSrc: 'https://placehold.co/600x400',
+                      imgAlt: 'Save anything'
+                    },
+                    {
+                      title: '(Auto)-organize',
+                      description: `
+      <p>
+          Create spaces and curate your items manually. Or let Surf do it for you.
+        </p>
+        <p class="opacity-70">
+         Hint: you can also drag anything out as, or into, a tab.
+        </p>
+        `,
+                      imgSrc: 'https://placehold.co/600x400',
+                      imgAlt: '(Auto)-organize'
+                    },
+                    {
+                      title: 'Find',
+                      description: `
+      <p>
+          Easily find anything you've saved, with Surf search. Works across images, webpages, files and more.
+        </p>
+        `,
+                      imgSrc: 'https://placehold.co/600x400',
+                      imgAlt: 'Find'
+                    }
+                  ]}
+                  buttonText="Continue"
+                />
+              {/if}
+
               {#if $showCreationModal}
                 <div
                   data-vaul-no-drag

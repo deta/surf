@@ -58,7 +58,9 @@
   <div
     bind:this={captionElem}
     class="caption"
-    style={`left: ${captionStyle.x}px; top: ${captionStyle.y + (caption ? 0 : 60)}px; opacity: ${captionStyle.opacity}; transform: ${captionStyle.transform};`}
+    style={`left: ${captionStyle.x}px; top: ${captionStyle.y + (caption ? 0 : 60)}px; opacity: ${captionStyle.opacity}; transform: ${captionStyle.transform}; 
+    z-index: 2147483647;
+    `}
   >
     {#if caption}
       {caption}

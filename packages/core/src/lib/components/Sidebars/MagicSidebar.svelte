@@ -747,7 +747,56 @@
 </script>
 
 {#if $onboardingOpen}
-  <Onboarding on:close={() => onboardingOpen.set(false)} />
+  <Onboarding
+    on:close={() => onboardingOpen.set(false)}
+    title="What You See is What You Chat"
+    tip="Tip: Hover over any element to see how it works."
+    sections={[
+      {
+        title: 'Context Window',
+        description: `
+          <p>Most chatbots are clueless about your stuff.</p>
+          <p>
+            Surf gives you high quality answers from the tabs, folders, and content you add to the
+            "Context Window".
+          </p>
+          `,
+        imgSrc: 'https://placehold.co/600x400',
+        imgAlt: 'Context Window'
+      },
+      {
+        title: 'Add Context',
+        description: `
+        <p>
+            Use <span class="font-mono bg-white/10 px-1 rounded-md">+</span> to include an item in your
+            chat.
+          </p>
+          <p class="opacity-70">
+            Hint: you can also <span class="font-mono bg-white/10 px-1 text-xl rounded-md">⌘</span>
+            or
+            <span class="font-mono bg-white/10 px-1 py-1 rounded-md text-sm">Shift</span> + click to
+            select multiple items.
+          </p>
+          `,
+        imgSrc: 'https://placehold.co/600x400',
+        imgAlt: 'Add Context'
+      },
+      {
+        title: 'Remove Context',
+        description: `
+        <p>
+            Remove an individual item by clicking it's own <span
+              class="font-mono bg-white/10 px-1 rounded-md">x</span
+            > button. Or clear the whole window to start fresh.
+          </p>
+          `,
+        imgSrc: 'https://placehold.co/600x400',
+        imgAlt: 'Remove Context'
+      }
+    ]}
+    warning="Chat can make mistakes. Verify results."
+    buttonText="Continue"
+  />
 {/if}
 
 <div class="flex flex-col h-full relative overflow-hidden">
