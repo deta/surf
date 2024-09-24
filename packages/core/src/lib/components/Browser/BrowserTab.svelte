@@ -350,6 +350,30 @@
     return bookmarkingPromise
   }
 
+  async function refreshResourceWithPage(resource: Resource, url: string) {
+    log.debug('updating resource with fresh data', resource.id)
+
+    resource.updateState('updating')
+
+    // Run resource detection on a fresh webview to get the latest data
+    const detectedResource = await extractResource(url, true)
+
+    log.debug('extracted resource data', detectedResource)
+
+    if (detectedResource) {
+      log.debug('updating resource with fresh data', detectedResource.data)
+      await resourceManager.updateResourceParsedData(resource.id, detectedResource.data)
+      await resourceManager.updateResourceMetadata(resource.id, {
+        name: (detectedResource.data as any).title || tab.title || '',
+        sourceURI: url
+      })
+    }
+
+    resource.updateState('idle')
+
+    return resource
+  }
+
   export async function bookmarkPage(opts?: BookmarkPageOpts) {
     const defaultOpts: BookmarkPageOpts = {
       silent: false,
@@ -397,6 +421,11 @@
               fetchedResource.id,
               ResourceTagsBuiltInKeys.SILENT
             )
+
+            await resourceManager.deleteResourceTag(
+              fetchedResource.id,
+              ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+            )
           }
 
           tab.resourceBookmark = fetchedResource.id
@@ -406,24 +435,15 @@
           })
 
           if (freshWebview) {
-            log.debug('updating resource with fresh data', fetchedResource.id)
-
-            // Run resource detection on a fresh webview to get the latest data
-            const detectedResource = await extractResource(url, true)
-
-            log.debug('extracted resource data', detectedResource)
-
-            if (detectedResource) {
-              log.debug('updating resource with fresh data', detectedResource.data)
-              await resourceManager.updateResourceParsedData(
-                fetchedResource.id,
-                detectedResource.data
-              )
-              await resourceManager.updateResourceMetadata(fetchedResource.id, {
-                name: (detectedResource.data as any).title || tab.title || '',
-                sourceURI: url
+            refreshResourceWithPage(fetchedResource, url)
+              .then((resource) => {
+                log.debug('refreshed resource', resource)
               })
-            }
+              .catch((e) => {
+                log.error('error refreshing resource', e)
+                toasts.error('Failed to refresh resource')
+                resource.updateState('idle') // TODO: support error state
+              })
           }
 
           return fetchedResource
@@ -848,12 +868,23 @@
           (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
         )
 
+        const isHideInEverything = (bookmarkedResource.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+        )
+
+        const isFromSpaceSource = (bookmarkedResource.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
+        )
+
+        const isFromLiveSpace = isHideInEverything && isFromSpaceSource
+        const manuallySaved = !isSilent && !isFromLiveSpace
+
         tab.resourceBookmark = bookmarkedResource.id
         tab.chatResourceBookmark = bookmarkedResource.id
         dispatch('update-tab', {
           resourceBookmark: bookmarkedResource.id,
           chatResourceBookmark: bookmarkedResource.id,
-          resourceBookmarkedManually: !isSilent
+          resourceBookmarkedManually: manuallySaved
         })
       } else {
         log.debug('no bookmarked resource found')

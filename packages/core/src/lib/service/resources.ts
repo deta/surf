@@ -31,7 +31,8 @@ import {
   type DetectedResource,
   type ResourceData,
   type ResourceDataAnnotation,
-  type ResourceDataHistoryEntry
+  type ResourceDataHistoryEntry,
+  type ResourceState
 } from '@horizon/types'
 import { getContext, setContext } from 'svelte'
 
@@ -166,6 +167,8 @@ export class Resource {
   readDataPromise: Promise<Blob> | null // used to avoid duplicate reads
   dataUsed: number // number of times the data is being used
 
+  state: Writable<ResourceState>
+
   sffs: SFFS
   log: ScopedLogger
 
@@ -187,6 +190,8 @@ export class Resource {
     this.rawData = null
     this.readDataPromise = null
     this.dataUsed = 0
+
+    this.state = writable('idle')
   }
 
   private async readDataAsBlob() {
@@ -299,6 +304,10 @@ export class Resource {
       this.dataUsed = 0
       this.rawData = null
     }
+  }
+
+  updateState(state: ResourceState) {
+    this.state.set(state)
   }
 }
 

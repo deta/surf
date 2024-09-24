@@ -218,7 +218,7 @@
     }
   }
 
-  const handleBookmark = (trigger?: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click) => {
+  const handleBookmark = (trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click) => {
     saveToSpacePopoverOpened.set(false)
     dispatch('bookmark', { trigger })
   }
@@ -328,9 +328,9 @@
       {
         type: 'action',
         hidden: tab.type !== 'page',
-        disabled: isBookmarkedByUser || $activeTabId !== tab.id,
-        icon: 'leave',
-        text: 'Save',
+        disabled: isBookmarkedByUser,
+        icon: isBookmarkedByUser ? 'check' : 'leave',
+        text: isBookmarkedByUser ? 'Saved' : 'Save',
         action: () => handleBookmark(SaveToOasisEventTrigger.ContextMenu)
       },
       { type: 'separator', hidden: tab.type !== 'page' },
@@ -500,9 +500,9 @@
       {/if}
     </div>
 
-    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || isActive) && !showExcludeOthersButton}
+    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || !isUserSelected) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
-        {#if tab.type === 'page' && isActive && showLiveSpaceButton}
+        <!-- {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
             <button
               slot="trigger"
@@ -520,15 +520,15 @@
               />
             </div>
           </CustomPopover>
-        {/if}
+        {/if} -->
 
-        {#if tab.type === 'page' && isActive}
+        {#if tab.type === 'page'}
           {#key isBookmarkedByUser}
             <CustomPopover position="right" popoverOpened={saveToSpacePopoverOpened}>
               <button
                 slot="trigger"
                 class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-                on:click={handleBookmark}
+                on:click|stopPropagation={handleBookmark}
               >
                 {#if bookmarkingInProgress}
                   <Icon name="spinner" size="16px" />
