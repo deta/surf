@@ -365,19 +365,19 @@
           </div>
         {:else if $resultEmpty}
           <div
-            class="fixed z-50 flex items-center justify-center w-full h-full flex-col bg-gradient-to-br from-white via-blue-50 to-blue-100 pointer-events-none"
+            class="fixed z-50 flex items-center justify-center w-full h-full flex-col pointer-events-none"
           >
-            <div class="empty-state-icon mb-6">
+            <div class="empty-state-icon text-gray-50 mb-2 mix-blend-darken opacity-100">
               <Icon name="sparkles.fill" size="42px" color="#ffffff" />
             </div>
             <h3
-              class="empty-state-title text-2xl font-medium text-white mb-2 mix-blend-screen"
+              class="empty-state-title text-2xl font-medium text-gray-50 mix-blend-darken opacity-100 mb-[0.25rem]"
               style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
             >
               No resources found
             </h3>
             <p
-              class="empty-state-description text-white text-center max-w-md"
+              class="empty-state-description text-center max-w-md text-gray-50 mb-2 mix-blend-darken opacity-100"
               style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
             >
               Try adjusting your query.
@@ -439,7 +439,8 @@
       </div>
     {/if}
     <div
-      class="ai-voodoo bg-white/95 backdrop-blur-md px-12 pt-8 pb-8 mb-16 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
+      class="ai-voodoo bg-white/95 backdrop-blur-md px-8 pt-4 pb-4 mb-20 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
+      class:loading={$fineTuneEnabled && $isLoading}
     >
       {#if $aiEnabled && !$fineTuneEnabled}
         <div
@@ -536,7 +537,7 @@
       {/if} -->
       {#if !$fineTuneEnabled}
         <div class="template-prompts">
-          <div class="prompt-pills mt-8 mb-4">
+          <div class="prompt-pills mt-4 mb-4">
             {#each templatePrompts as template}
               <button
                 class={`prompt-pill ${
@@ -577,24 +578,42 @@
 <style lang="scss">
   @keyframes shake {
     0% {
-      transform: translateX(0);
+      transform: translateX(0) rotate(0);
     }
-    25% {
-      transform: translateX(-5px);
+    10% {
+      transform: translateX(-5px) rotate(-1deg);
+    }
+    20% {
+      transform: translateX(5px) rotate(1deg);
+    }
+    30% {
+      transform: translateX(-5px) rotate(-1deg);
+    }
+    40% {
+      transform: translateX(5px) rotate(1deg);
     }
     50% {
-      transform: translateX(5px);
+      transform: translateX(-5px) rotate(-1deg);
     }
-    75% {
-      transform: translateX(-5px);
+    60% {
+      transform: translateX(5px) rotate(1deg);
+    }
+    70% {
+      transform: translateX(-5px) rotate(-1deg);
+    }
+    80% {
+      transform: translateX(5px) rotate(1deg);
+    }
+    90% {
+      transform: translateX(-3px) rotate(-0.5deg);
     }
     100% {
-      transform: translateX(0);
+      transform: translateX(0) rotate(0);
     }
   }
 
   .shake {
-    animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    animation: shake 1.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
   }
 
   .centered-content {
@@ -640,6 +659,41 @@
     }
   }
 
+  .ai-voodoo {
+    box-shadow:
+      0 1px 2px rgba(10, 20, 30, 0.09),
+      0 2px 4px rgba(10, 20, 30, 0.07),
+      0 4px 8px rgba(10, 20, 30, 0.03),
+      0 8px 16px rgba(10, 20, 30, 0.01);
+    &.loading {
+      outline: 3px solid transparent;
+      animation: moving-gradient 1s ease-in-out infinite;
+      box-shadow:
+        0 1px 2px rgba(186, 230, 253, 0.9),
+        0 2px 4px rgba(186, 230, 253, 0.8),
+        0 4px 8px rgba(186, 230, 253, 0.7),
+        0 8px 16px rgba(186, 230, 253, 0.9);
+    }
+  }
+
+  @keyframes moving-gradient {
+    0% {
+      outline-color: transparent;
+    }
+    25% {
+      outline-color: rgba(56, 189, 248, 0.5);
+    }
+    50% {
+      outline-color: rgba(56, 189, 248, 1);
+    }
+    75% {
+      outline-color: rgba(56, 189, 248, 0.5);
+    }
+    100% {
+      outline-color: transparent;
+    }
+  }
+
   .input-group {
     display: flex;
     flex-direction: column;
@@ -682,6 +736,7 @@
     background: transparent;
     font-weight: 500;
     min-width: 25rem;
+    margin-top: 8px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     border: none;
@@ -703,13 +758,13 @@
 
   .ai-description {
     position: absolute;
-    bottom: -32px;
+    bottom: -64px;
     right: 50%;
     transform: translateX(50%) rotate(0.75deg);
     display: flex;
     align-items: center;
     gap: 2rem;
-    opacity: 0.6;
+    opacity: 0.8;
     width: 100%;
     max-width: 24rem;
     font-weight: 500;
