@@ -55,6 +55,7 @@
   export let error: Writable<WebviewError | null>
   export let url = writable(src)
   export let webviewReady = writable(false)
+  export let acceptsDrags: boolean = false
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
@@ -604,7 +605,7 @@ Made with Deta Surf.`
 </script>
 
 <webview
-  {id}
+  id={`webview-${id}`}
   bind:this={webview}
   {src}
   {partition}
@@ -612,6 +613,7 @@ Made with Deta Surf.`
   allowpopups
   use:HTMLDragZone.action={{
     accepts: (drag) => {
+      if (!acceptsDrags) return false
       if (
         drag.isNative ||
         drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||

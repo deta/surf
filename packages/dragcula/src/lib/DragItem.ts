@@ -547,6 +547,8 @@ export class HTMLDragItem extends DragItem {
       bubbles: false
     }); // no fck bubbles to annoy u ;) !
 
+    document.body.removeAttribute("data-drag-target");
+
     super.onDragEnd(drag, e);
   }
 }

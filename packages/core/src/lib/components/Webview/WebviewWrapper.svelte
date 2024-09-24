@@ -47,6 +47,7 @@
   export let url: Writable<string> | undefined = undefined
   export let historyStackIds = writable<string[]>([])
   export let currentHistoryIndex = writable(-1)
+  export let acceptsDrags: boolean = false
 
   export const canGoBack = derived(
     currentHistoryIndex,
@@ -402,6 +403,7 @@
     {error}
     {url}
     {webviewReady}
+    {acceptsDrags}
     {...$$restProps}
     bind:webview
     bind:this={webviewComponent}

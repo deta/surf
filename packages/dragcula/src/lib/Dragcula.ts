@@ -36,6 +36,7 @@ export class Dragcula {
       if (!Dragcula.get().activeDrag?.isNative) return;
       setTimeout(() => this.cleanupDragOperation());
     });
+
     /*document.addEventListener("dragenter", (e) => {
 					if (this.activeDrag !== null) return
 					this.prepareDragOperation()
@@ -69,6 +70,7 @@ export class Dragcula {
   public cleanupDragOperation() {
     log.debug(`${ii_DRAGCULA}\x1B[40;97m === Cleanup Drag`);
     document.body.removeAttribute("data-dragging");
+    document.body.removeAttribute("data-drag-target");
 
     this.#dragendHandlers.forEach((cb) => cb(this.activeDrag));
     this.activeDrag = null;

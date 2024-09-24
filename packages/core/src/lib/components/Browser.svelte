@@ -2545,29 +2545,6 @@
     window.open(url, '_blank')
   }
 
-  const handleDrop = async (event: CustomEvent) => {
-    const tab = event.detail?.tab
-
-    event.preventDefault()
-
-    const mediaResults = await processDrop(event.detail.event)
-
-    const resourceItems = mediaResults.filter((r) => r.type === 'resource')
-
-    if (resourceItems.length > 0) {
-      await resourceManager.addItemsToSpace(
-        tab.spaceId,
-        resourceItems.map((r) => r.data as string),
-        SpaceEntryOrigin.ManuallyAdded
-      )
-      log.debug(`Resources dropped into folder ${tab.title}`)
-
-      toasts.success('Resources added to folder!')
-    } else {
-      log.debug('No resources found in drop event')
-    }
-  }
-
   const handleRemoveFromSidebar = async (e: CustomEvent) => {
     const tabId = e.detail
 
@@ -2956,8 +2933,18 @@
     log.debug('dropping onto sidebar', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
 
     if (drag.isNative) {
-      log.error('Native drop on sidebar not implemented yet!', drag)
-      // TODO: Handle otherwise
+      const parsed = await processDrop(drag.event!)
+      log.debug('Parsed', parsed)
+
+      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+      log.debug('Resources', newResources)
+
+      for (const r of newResources) {
+        await tabsManager.openResourceAsTab(r, { active: false })
+
+        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
+      }
+
       return
     } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
       const droppedTab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
@@ -3151,6 +3138,7 @@
 
   const handleTabDragEnd = async (drag: DragculaDragEvent) => {
     // TODO: (dragcula): migrate
+    return
     if (
       drag.status === 'done' &&
       drag.effect === 'move' &&
@@ -3174,132 +3162,54 @@
         : `${drag.effect === 'move' ? 'Moving' : 'Copying'} to Space...`
     )
 
-    if (
-      ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
-        drag.from?.id || ''
-      ) &&
-      !drag.metaKey
-    ) {
-      drag.item!.dropEffect = 'copy' // Make sure tabs are always copy from sidebar
-    }
-
-    let resourceIds: string[] = []
     if (drag.isNative) {
-      log.debug('Dropped native', drag)
-      const event = new DragEvent('drop', { dataTransfer: drag.dataTransfer })
-      log.debug('native drop drop event emulated:', event)
-
-      const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
-      if (isOwnDrop) {
-        log.debug('Own drop detected, ignoring...')
-        log.debug(event.dataTransfer?.files)
-        return
-      }
-
-      const parsed = await processDrop(event)
+      const parsed = await processDrop(drag.event!)
       log.debug('Parsed', parsed)
 
       const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
       log.debug('Resources', newResources)
 
+      await oasis.addResourcesToSpace(
+        spaceId,
+        newResources.map((r) => r.id),
+        SpaceEntryOrigin.ManuallyAdded
+      )
+
       for (const r of newResources) {
-        resourceIds.push(r.id)
-        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
+        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
       }
-    } else {
-      try {
-        const existingResources: string[] = []
 
-        if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
-          const resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
-          resourceIds.push(resource.id)
-        } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
-          const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
-          const resource = await resourceFetcher()
-          if (resource === null) {
-            //TODO :TOast error
-            log.warn('Dropped async resource, but resource is null, aborting drop!')
-            drag.abort()
-            return
-          }
-          resourceIds.push(resource.id)
-        } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
-          let tab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
-          if (tab.type === 'page') {
-            tab = tab as TabPage
-            if (tab.resourceBookmark) {
-              log.debug('Detected resource from dragged tab', tab.resourceBookmark)
-              resourceIds.push(tab.resourceBookmark)
-              existingResources.push(tab.resourceBookmark)
-            } else {
-              log.debug('Detected page from dragged tab', tab)
-              const newResources = await createResourcesFromMediaItems(
-                resourceManager,
-                [
-                  {
-                    type: 'url',
-                    data: new URL(tab.currentLocation || tab.initialLocation),
-                    metadata: {}
-                  }
-                ],
-                ''
-              )
-              log.debug('Resources', newResources)
-              for (const r of newResources) {
-                resourceIds.push(r.id)
-                telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
-              }
-            }
-          }
-        }
+      // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
+      //await oasis.loadSpaceContents(spaceId)
+    } else if (
+      drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+      drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+    ) {
+      let resource: Resource | null = null
+      if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+        resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+      } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+        const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+        resource = await resourceFetcher()
+      }
 
-        if (existingResources.length > 0) {
-          await Promise.all(
-            existingResources.map(async (resourceId) => {
-              const resource = await resourceManager.getResource(resourceId)
-              if (!resource) {
-                log.error('Resource not found')
-                return
-              }
-
-              log.debug('Detected resource from dragged tab', resource)
-
-              const isSilent =
-                resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT) !==
-                undefined
-              if (isSilent) {
-                // remove silent tag if it exists sicne the user is explicitly adding it
-                log.debug('Removing silent tag from resource', resourceId)
-                await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
-                telemetry.trackSaveToOasis(
-                  resource.type,
-                  SaveToOasisEventTrigger.Drop,
-                  spaceId !== 'all'
-                )
-              }
-            })
-          )
-        }
-      } catch (e) {
-        toast.error('Failed to add resources to space!')
-        console.error(e)
-        if (drag?.abort) drag.abort()
+      if (resource === null) {
+        log.warn('Dropped resource but resource is null! Aborting drop!')
+        drag.abort()
         return
       }
+
+      await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+
+      // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
+      //await loadSpaceContents(spaceId)
     }
 
     drag.continue()
-    log.warn('ADDING resources to spaceid', spaceId, resourceIds)
-    if (spaceId !== 'all') {
-      await oasis.addResourcesToSpace(spaceId, resourceIds, SpaceEntryOrigin.ManuallyAdded)
-      //await loadSpaceContents(spaceId)
-    } else {
-      //await loadEverything()
-    }
-
-    toast.success(
+    toast.success(`Resources copied'!`)
+    /*toast.success(
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
-    )
+    )*/
   }
 
   const handleScreenshot = async (
@@ -4362,13 +4272,6 @@
 </div>
 
 <style lang="scss">
-  :global(::view-transition-old(tab-6zht5lt23z)) {
-    display: none;
-  }
-  :global(::view-transition-old(tab-6zht5lt23z)) {
-    animation: none;
-  }
-
   /// DRAGCULA STATES NOTE: these should be @horizon/dragcula/dist/styles.css import, but this doesnt work currently!
   :global(::view-transition-group(*)) {
     animation-duration: 280ms;
@@ -4392,9 +4295,6 @@
     opacity: 85%;
     box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
     /*scale: var(--scaleX, 1) var(--scaleY, 1);*/
-  }
-  :global([data-drag-preview]:hover) {
-    background: lime !important;
   }
   :global(body[data-dragging]:has([data-drag-target^='webview'])) {
     cursor: wait !important;

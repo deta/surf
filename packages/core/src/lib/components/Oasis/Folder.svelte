@@ -5,8 +5,13 @@
   import { Resource, ResourceManager, useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
-  import type { Space, SpaceData } from '../../types'
-  import { ResourceTagsBuiltInKeys, ResourceTypes, SpaceEntryOrigin } from '../../types'
+  import type { DragTypes, Space, SpaceData } from '../../types'
+  import {
+    DragTypeNames,
+    ResourceTagsBuiltInKeys,
+    ResourceTypes,
+    SpaceEntryOrigin
+  } from '../../types'
   import { useLogScope, hover, tooltip, isModKeyPressed } from '@horizon/utils'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { useOasis } from '../../service/oasis'
@@ -37,7 +42,6 @@
 
   const editMode = writable(false)
   const hovered = writable(false)
-  const draggedOver = writable(false)
   const inView = writable(false)
 
   let folderDetails = folder.name
@@ -215,21 +219,16 @@
     }
   }
 
+  const handleDragStart = (drag: DragculaDragEvent<DragTypes>) => {
+    drag.item!.data.setData(DragTypeNames.SURF_SPACE, folder)
+    drag.continue()
+  }
   const handleDrop = async (drag: DragculaDragEvent) => {
     dispatch('Drop', { drag, spaceId: folder.id })
   }
 
   const handleColorChange = async (event: CustomEvent<[string, string]>) => {
     dispatch('update-data', { colors: event.detail })
-  }
-
-  const handleDragOver = (event: DragEvent) => {
-    event.preventDefault()
-    draggedOver.set(true)
-  }
-
-  const handleDragLeave = (event: DragEvent) => {
-    draggedOver.set(false)
   }
 
   const handleKeyDown = async (e: KeyboardEvent) => {
@@ -293,14 +292,33 @@
 </script>
 
 <div
-  class="folder-wrapper {processing ? 'magic-in-progress' : ''} {$draggedOver ? 'draggedOver' : ''}"
-  on:dragover={handleDragOver}
   id={folder.id}
+  draggable={true}
+  class="folder-wrapper {processing ? 'magic-in-progress' : ''}"
+  data-vaul-no-drag
   data-folder-id={folder.id}
-  on:dragleave={handleDragLeave}
-  on:drop={handleDrop}
   aria-hidden="true"
-  use:HTMLDragZone.action={{}}
+  use:HTMLDragItem.action={{}}
+  on:DragStart={handleDragStart}
+  use:HTMLDragZone.action={{
+    accepts: (drag) => {
+      if (tab.type !== 'space' || tab.spaceId === 'all') return false
+      if (
+        drag.isNative ||
+        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        // Cancel if tab dragged is a space itself
+        if (drag.item?.data.getData(DragTypeNames.SURF_TAB)?.type === 'space') {
+          return false
+        }
+
+        return true
+      }
+      return false
+    }
+  }}
   on:DragEnter={(drag) => {
     const dragData = drag.data
     if (
@@ -368,6 +386,19 @@
     position: relative;
     pointer-events: auto;
     width: 100%;
+  }
+
+  :global(.folder-wrapper[data-drag-preview]) {
+    width: var(--drag-width, auto) !important;
+    height: var(--drag-height, auto) !important;
+
+    background: rgba(255, 255, 255, 1);
+    border-radius: 16px;
+    opacity: 80%;
+    border: 2px solid rgba(10, 12, 24, 0.1);
+    box-shadow:
+      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
+      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
   }
 
   .folder {

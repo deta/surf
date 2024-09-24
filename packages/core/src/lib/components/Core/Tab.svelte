@@ -324,6 +324,11 @@
         drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
         drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
       ) {
+        // Cancel if tab dragged is a space itself
+        if (drag.item?.data.getData(DragTypeNames.SURF_TAB)?.type === 'space') {
+          return false
+        }
+
         return true
       }
       return false
