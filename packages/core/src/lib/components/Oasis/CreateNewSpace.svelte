@@ -479,7 +479,7 @@
         <div class="flex justify-center -mt-12">
           <button
             class={$fineTuneEnabled
-              ? 'fine-tune-button bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50'
+              ? 'fine-tune-button bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50'
               : 'fine-tune-button bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50'}
             on:click={() => fineTuneEnabled.set(!$fineTuneEnabled)}
           >
@@ -559,7 +559,7 @@
                 class={`prompt-pill ${
                   $userPrompt.startsWith(template.prompt)
                     ? 'bg-blue-200 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
+                    : 'bg-blue-50 text-blue-600/80'
                 } rounded-full px-4 py-2 text-sm font-medium hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
                 on:click={async () => await handleTemplatePromptClick(template)}
               >
