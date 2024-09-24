@@ -65,7 +65,9 @@
     {#if caption}
       {caption}
     {:else}
-      <slot name="caption" />
+      <div class="border-gray-300 border-opacity-50 shadow-lg shadow-gray-300 rounded-md">
+        <slot name="caption" />
+      </div>
     {/if}
   </div>
 </div>

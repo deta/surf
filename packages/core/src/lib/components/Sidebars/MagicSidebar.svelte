@@ -753,7 +753,6 @@
     tip="Tip: Hover over any element to see how it works."
     sections={[
       {
-        title: 'Context Window',
         description: `
           <p>Most chatbots are clueless about your stuff.</p>
           <p>
@@ -762,36 +761,52 @@
           </p>
           `,
         imgSrc: 'https://placehold.co/600x400',
-        imgAlt: 'Context Window'
+        imgAlt: 'Context Window',
+        icon: `
+        `
       },
       {
         title: 'Add Context',
         description: `
         <p>
-            Use <span class="font-mono bg-white/10 px-1 rounded-md">+</span> to include an item in your
+            Use <span class="font-mono bg-black/10 px-1 rounded-md">+</span> to include an item in your
             chat.
           </p>
           <p class="opacity-70">
-            Hint: you can also <span class="font-mono bg-white/10 px-1 text-xl rounded-md">⌘</span>
+            Hint: you can also <span class="font-mono bg-black/10 px-1 text-xl rounded-md">⌘</span>
             or
-            <span class="font-mono bg-white/10 px-1 py-1 rounded-md text-sm">Shift</span> + click to
+            <span class="font-mono bg-black/10 px-1 py-1 rounded-md text-sm">Shift</span> + click to
             select multiple items.
           </p>
           `,
         imgSrc: 'https://placehold.co/600x400',
-        imgAlt: 'Add Context'
+        imgAlt: 'Add Context',
+        icon: `
+          <div class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center font-semibold text-xl">
+            + 
+          </div>
+        `
       },
       {
         title: 'Remove Context',
         description: `
         <p>
             Remove an individual item by clicking it's own <span
-              class="font-mono bg-white/10 px-1 rounded-md">x</span
+              class="font-mono bg-black/10 px-1 rounded-md">x</span
             > button. Or clear the whole window to start fresh.
           </p>
           `,
         imgSrc: 'https://placehold.co/600x400',
-        imgAlt: 'Remove Context'
+        imgAlt: 'Remove Context',
+        icon: `
+          <div class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center">
+            <div
+              class="absolute -top-2 -left-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center"
+            >
+              X
+            </div>
+          </div>
+        `
       }
     ]}
     warning="Chat can make mistakes. Verify results."

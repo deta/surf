@@ -590,6 +590,7 @@
       if ($showNewTabOverlay !== 0) setShowNewTabOverlay(0)
       else tabsManager.deleteActive(DeleteTabEventTrigger.Shortcut)
     } else if (isModKeyAndKeyPressed(e, 'e')) {
+      if ($showNewTabOverlay !== 0) setShowNewTabOverlay(0)
       toggleRightSidebarTab('chat')
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark(false, SaveToOasisEventTrigger.Shortcut)

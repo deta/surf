@@ -8,13 +8,15 @@
   import { createEventDispatcher } from 'svelte'
   import overviewDemoFull from '../../../../public/assets/demo/overview-demo-full.gif'
   import ResourceOverlay from './ResourceOverlay.svelte'
+  import { Icon } from '@horizon/icons'
 
   export let title: string
   export let tip: string
   export let sections: Array<{
-    title: string
+    title?: string
     description: string
     hint?: string
+    icon?: string
     imgSrc: string
     imgAlt: string
   }>
@@ -26,7 +28,7 @@
 
 {#if title && sections}
   <div
-    class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center bg-black/50 rounded-xl backdrop-blur-sm select-none text-white text-lg gap-12 px-24"
+    class="absolute top-0 left-0 w-full h-full flex border border-gray-300 border-opacity-25 shadow-md shadow-gray-200 flex-col items-center justify-center bg-white/95 rounded-xl backdrop-blur-sm select-none text-lg gap-8 px-24"
     style="z-index: 2147483647;"
   >
     <div class="gap-4 flex flex-col items-center max-w-md">
@@ -34,29 +36,25 @@
       <p class="opacity-70 text-center">{tip}</p>
     </div>
 
-    <div class="flex flex-col gap-10 w-full max-w-md">
+    <div
+      class="flex flex-col gap-10 w-full max-w-md border-t-[0.07rem] border-t-[rgba(0,0,0,0.15)] pt-8"
+    >
       {#each sections as section}
         <ResourceOverlay>
           <div class="flex items-start gap-4" slot="content">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-12 h-12"
-            >
-              <rect width="32" height="32" rx="8" fill="#F0F0F0" />
-              <circle cx="8" cy="16" r="4" fill="#FFD700" />
-              <rect x="14" y="10" width="6" height="12" rx="2" fill="#000" />
-              <rect x="22" y="10" width="6" height="12" rx="2" fill="#000" />
-              <path
-                d="M20 16C20 14.8954 20.8954 14 22 14H26C27.1046 14 28 14.8954 28 16V20C28 21.1046 27.1046 22 26 22H22C20.8954 22 20 21.1046 20 20V16Z"
-                fill="#00BFFF"
-              />
-            </svg>
+            {#if section.icon}
+              {@html section.icon}
+            {:else}
+              <div
+                class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center font-semibold text-xl"
+              >
+                <Icon name="add" />
+              </div>
+            {/if}
             <div class="flex-1 flex-grow">
-              <h2 class="font-semibold">{section.title}</h2>
+              {#if section.title}
+                <h2 class="font-semibold">{section.title}</h2>
+              {/if}
               <div>{@html section.description}</div>
               {#if section.hint}
                 <p class="opacity-70">{section.hint}</p>
@@ -76,7 +74,7 @@
     {/if}
 
     <button
-      class="bg-sky-500 text-white py-2 px-4 rounded-2xl max-w-md"
+      class="bg-[#2497e9] text-white py-2 px-4 rounded-[8px] max-w-md"
       on:click={() => dispatch('close')}>{buttonText}</button
     >
   </div>
