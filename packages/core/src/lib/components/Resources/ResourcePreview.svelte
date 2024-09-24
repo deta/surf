@@ -73,6 +73,7 @@
   export let isInSpace: boolean = false // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
   export let resourcesBlacklistable: boolean = false
   export let resourceBlacklisted: boolean = false
+  export let interactionMode:
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
