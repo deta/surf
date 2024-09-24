@@ -315,15 +315,17 @@
   }}
 />
 
-<div class="centered-content">
+<div
+  class="flex flex-col items-center justify-center h-screen w-full bg-[#f6faff] overflow-y-auto pb-48 border border-natural-100 border-l-natural-100"
+>
   <div
-    class="top-bar fixed top-0 right-0 flex justify-between items-center w-[calc(100%-18rem)] px-4 py-2 bg-white z-50 border-t border-gray-200"
-    style="border-bottom-width: 0.5px;"
+    class="top-bar fixed top-0 right-0 flex justify-between items-center w-[calc(100%-19.5rem)] px-4 py-2 bg-white z-50 border border-gray-200"
+    style="border-bottom-width: 0.5px; margin: 0.75rem; border-radius: 12px;"
   >
     <div class="input-wrapper flex-grow">
       <input
         type="text"
-        class="folder-name w-full text-lg font-medium text-gray-700 bg-transparent border-none focus:outline-none"
+        class="folder-name w-full text-xl font-medium text-gray-700 bg-transparent border-none focus:outline-none"
         id="folder-name"
         name="folder-name"
         placeholder="Enter Space Name"
@@ -725,6 +727,7 @@
     align-items: center;
     position: relative;
     width: 28rem;
+    padding-left: 0.75rem;
   }
 
   .folder-rules {
