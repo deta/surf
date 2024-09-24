@@ -11,6 +11,7 @@
     children: writable([
       writable({
         name: "file1",
+        accepts: false,
         children: writable([
           writable({ name: "file1 next", children: writable([]) }),
           writable({ name: "file1 next next", children: writable([]) })
@@ -29,8 +30,9 @@
     pointer-events: none !important;
     user-select: none !important;
     transform-origin: center center;
-    transform: translate(-50%, -50%) translate(var(--offsetX, 0px), var(--offsetY, 0px))
-      scale(var(--scale, 1)) scale(var(--scaleX, 1), var(--scaleY, 1)) rotate(var(--tilt, 0));
+    transform: translate(-50%, -50%) translate(var(--drag-offsetX, 0px), var(--drag-offsetY, 0px))
+      scale(var(--drag-scale, 1)) scale(var(--drag-scaleX, 1), var(--drag-scaleY, 1))
+      rotate(var(--drag-tilt, 0));
     transition: transform 35ms cubic-bezier(0, 1.22, 0.73, 1.13);
     opacity: 75%;
     /*scale: var(--scaleX, 1) var(--scaleY, 1);*/

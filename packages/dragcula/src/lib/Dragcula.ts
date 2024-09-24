@@ -72,6 +72,10 @@ export class Dragcula {
     document.body.removeAttribute("data-dragging");
     document.body.removeAttribute("data-drag-target");
 
+    // Make sure no previews are dnagling
+    // FIX: Ideally this shouldnt happen in the first case.. but better save than sorry
+    document.querySelectorAll("[data-drag-preview]").forEach((el) => el.remove());
+
     this.#dragendHandlers.forEach((cb) => cb(this.activeDrag));
     this.activeDrag = null;
   }

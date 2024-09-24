@@ -263,6 +263,7 @@
 
   const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
     isDragging = true
+    blur()
 
     drag.item!.data.setData(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
 
@@ -508,7 +509,7 @@
     {/if}
   {/if}
   {#if (!tab.pinned || !pinned) && ((horizontalTabs && isActive) || !(horizontalTabs && tabSize && tabSize < 48))}
-    <div class=" relative flex-grow truncate mr-1">
+    <div class="title relative flex-grow truncate mr-1">
       {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && (hovered || isEditing)}
         <input
           type="text"
@@ -695,6 +696,22 @@
     box-shadow:
       rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
       rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
+
+    width: var(--drag-width, auto);
+    height: var(--drag-height, auto);
+    transition:
+      0s ease-in-out,
+      transform 35ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      width 175ms cubic-bezier(0.4, 0, 0.2, 1),
+      height 175ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  :global(.tab[data-drag-target='sidebar-pinned-tabs']) {
+    width: 38px;
+    height: 38px;
+
+    > .title {
+      display: none;
+    }
   }
   :global(.tab[data-drag-preview][data-drag-target^='webview']) {
     /*border-width: 1.5px;

@@ -8,6 +8,7 @@
 <script lang="ts">
   export let file: TFile;
 
+  const accepts = $file.accepts !== undefined ? file.accepts : true;
   const children = $file.children;
   const randomRgbColorFromStringHash = (str: string) => {
     let hash = 0;
@@ -17,7 +18,7 @@
 
     const c = (hash & 0x00ffffff).toString(16).toUpperCase();
 
-    return "#" + "00000".substring(0, 6 - c.length) + c;
+    return "#" + "00000".substring(0, 6 - c.length) + c + "44";
   };
 
   $: color = randomRgbColorFromStringHash($file.name);
@@ -30,13 +31,14 @@
   draggable="true"
   use:HTMLDragItem.action={{}}
   use:HTMLDragZone.action={{
-    accepts: () => true
+    accepts: () => accepts
   }}
   on:Drop={(drag) => {
     console.info("Dropped on file", drag);
     drag.continue();
   }}
 >
+  {accepts}
   <li style="display: flex; align-items: center; gap: 0.35rem;">
     <!--<div style="width: 8px; height: 8px; background: {color}; border-radius: 10px;"></div>-->
     {$file.name}
