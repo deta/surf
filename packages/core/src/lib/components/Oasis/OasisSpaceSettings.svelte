@@ -515,8 +515,8 @@
     backdrop-filter: blur(12px);
     border-radius: 12px;
     box-shadow:
-      0px 0px 0px 1px rgba(0, 0, 0, 0.2),
-      0px 16.479px 41.197px 0px rgba(0, 0, 0, 0.46);
+      0px 0px 0px 1px rgba(0, 0, 0, 0.07),
+      0px 4px 10px 0px rgba(0, 0, 0, 0.12);
   }
 
   .content {

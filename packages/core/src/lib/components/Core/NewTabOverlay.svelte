@@ -1122,8 +1122,8 @@
           </button>
         {:else if $searchValue.length < 20 && !$isCreatingNewSpace}
           <button
-            class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
-              ? 'bottom-3'
+            class="absolute right-4 transform {showTabSearch === 2
+              ? 'bottom-5'
               : 'bottom-3'} z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
             on:click={() => {
               showTabSearch = showTabSearch === 1 ? 2 : 1
@@ -1301,7 +1301,7 @@
           {#if $selectedSpaceId === 'all' || $selectedSpaceId === null || showTabSearch === 1}
             <div
               class={showTabSearch === 2
-                ? 'w-[calc(100%-18rem)] absolute bottom-0 right-0 flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
+                ? 'w-[calc(100%-19rem)] absolute bottom-0 right-0 flex items-center justify-center bg-white z-10 p-2 border-[1px] border-neutral-100 m-[0.5rem] rounded-lg'
                 : 'w-full absolute bottom-0 flex items-center justify-center p-2  border-t-[1px] border-neutral-100 bg-white'}
             >
               <div class={'flex items-center relative'}>

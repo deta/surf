@@ -1449,7 +1449,7 @@
   <div class="relative wrapper bg-sky-100/50">
     {#if !isEverythingSpace && $space?.name.folderName !== '.tempspace'}
       <div
-        class="drawer-bar bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 bg-sky-100/90 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
+        class="drawer-bar transition-transform duration-300 ease-in-out"
         class:translate-y-24={hideBar && active}
       >
         {#if showBackBtn}
@@ -1500,7 +1500,9 @@
           </div>
         {/if}
         {#if $space?.name.folderName !== '.tempspace'}
-          <div class="drawer-chat-search bg-sky-50">
+          <div
+            class="drawer-chat-search bg-gradient-to-t from-sky-100/50 to-transparent via-bg-sky-100/10 bg-sky-100/50 backdrop-blur-md backdrop-saturate-50"
+          >
             <div class="search-input-wrapper">
               <SearchInput bind:value={$searchValue} on:search={handleSearch} />
             </div>
@@ -1708,8 +1710,8 @@
 
   .modal-wrapper {
     position: fixed;
-    bottom: 3rem;
-    left: 3rem;
+    bottom: 4rem;
+    left: 0;
     z-index: 100;
   }
 
@@ -1719,10 +1721,12 @@
     left: 0;
     right: 0;
     z-index: 1000;
-    border-top: 0.5px solid rgba(0, 0, 0, 0.15);
+    margin: 0.5rem;
 
     .drawer-chat-search {
       position: relative;
+      border: 0.5px solid rgba(0, 0, 0, 0.15);
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
