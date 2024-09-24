@@ -1301,8 +1301,8 @@
           {#if $selectedSpaceId === 'all' || $selectedSpaceId === null || showTabSearch === 1}
             <div
               class={showTabSearch === 2
-                ? 'w-[calc(100%-19rem)] absolute bottom-0 right-0 flex items-center justify-center bg-white z-10 p-2 border-[1px] border-neutral-100 m-[0.5rem] rounded-lg'
-                : 'w-full absolute bottom-0 flex items-center justify-center p-2  border-t-[1px] border-neutral-100 bg-white'}
+                ? 'w-[calc(100%-19rem)] absolute bottom-0 right-0 flex items-center justify-center bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px] z-10 p-2 border-[1px] border-neutral-200 m-[0.5rem] rounded-2xl'
+                : 'w-full absolute bottom-0 flex items-center justify-center p-2 border-t-[1px] border-neutral-100 bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px]'}
             >
               <div class={'flex items-center relative'}>
                 <Command.Input
@@ -1312,7 +1312,7 @@
                   loading={$isLoadingCommandItems}
                   bind:value={$searchValue}
                   class={showTabSearch === 2
-                    ? 'w-[32rem] bg-neutral-100 rounded-lg p-2'
+                    ? 'w-[32rem] bg-neutral-200 rounded-lg py-2 px-4'
                     : 'w-[32rem] py-4 pl-2'}
                 />
 
