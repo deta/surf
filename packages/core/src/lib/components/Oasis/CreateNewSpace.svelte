@@ -390,13 +390,13 @@
               class="empty-state-title text-2xl font-medium text-gray-50 mix-blend-darken opacity-100 mb-[0.25rem]"
               style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
             >
-              No resources found
+              Create empty space
             </h3>
             <p
               class="empty-state-description text-center max-w-md text-gray-50 mb-2 mix-blend-darken opacity-100"
               style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
             >
-              Try adjusting your query.
+              future items will be<br /> dropped here.
             </p>
           </div>
         {/if}
@@ -508,7 +508,7 @@
                 bind:this={editor}
                 content={$userPrompt}
                 on:update={handleEditorUpdate}
-                placeholder="Describe what you want in your space. (optional)"
+                placeholder="Describe your space and stuff will be auto-fetched."
                 tabindex="1"
                 autofocus={false}
                 on:keydown={(e) => {
@@ -582,10 +582,10 @@
         <Icon name="sparkles.fill" size="64px" color="#e5e5e5" />
       </div>
       <h3 class="empty-state-title text-2xl font-semibold text-gray-800 mb-2">
-        No resources found
+        Create Empty Space
       </h3>
       <p class="empty-state-description text-gray-600 text-center max-w-md">
-        Try adjusting your query.
+        future items will be<br /> dropped here.
       </p>
     </div>
   {/if}
@@ -677,10 +677,12 @@
 
   .ai-voodoo {
     box-shadow:
-      0 1px 2px rgba(10, 20, 30, 0.09),
-      0 2px 4px rgba(10, 20, 30, 0.07),
-      0 4px 8px rgba(10, 20, 30, 0.03),
-      0 8px 16px rgba(10, 20, 30, 0.01);
+      0 1px 2px rgba(10, 20, 30, 0.2),
+      0 2px 4px rgba(10, 20, 30, 0.012),
+      0 4px 8px rgba(10, 20, 30, 0.09),
+      0 8px 16px rgba(10, 20, 30, 0.05);
+    outline: 4px solid rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(16px);
     &.loading {
       outline: 3px solid transparent;
       animation: moving-gradient 1s ease-in-out infinite;
@@ -723,28 +725,6 @@
     align-items: center;
     position: relative;
     width: 28rem;
-  }
-
-  .folder-name {
-    font-size: 1.25rem;
-    background: transparent;
-    font-weight: 500;
-    min-width: 25rem;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    border: none;
-    padding: 0.5rem;
-    width: 100%;
-    color: #28568f;
-    transition: border-color 0.3s;
-
-    &::placeholder {
-      color: rgba(40, 86, 143, 0.4);
-    }
-
-    &:focus {
-      outline: none;
-    }
   }
 
   .folder-rules {
