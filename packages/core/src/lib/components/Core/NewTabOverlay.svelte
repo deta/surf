@@ -1002,7 +1002,7 @@
   }
 
   const handleDoneCreatingNewSpace = () => {
-    isCreatingNewSpace.set(false)
+    isCreatingNewSpace.set(true)
   }
 
   let isSearching = false

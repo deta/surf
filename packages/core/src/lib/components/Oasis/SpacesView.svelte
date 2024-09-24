@@ -51,8 +51,6 @@
     userPrompt?: string
   ) => {
     try {
-      const toasty = toast.loading('Creating Space...')
-
       const newSpace = await oasis.createSpace({
         folderName: name ? name : 'New Space',
         colors: ['#FFBA76', '#FB8E4E'],
@@ -80,8 +78,6 @@
       }
 
       await telemetry.trackCreateSpace(CreateSpaceEventFrom.OasisSpacesView)
-
-      toasty.success('Folder created!')
 
       return newSpace.id
     } catch (error) {

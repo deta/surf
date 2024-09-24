@@ -681,7 +681,7 @@
       0 2px 4px rgba(10, 20, 30, 0.012),
       0 4px 8px rgba(10, 20, 30, 0.09),
       0 8px 16px rgba(10, 20, 30, 0.05);
-    outline: 4px solid rgba(255, 255, 255, 0.9);
+    outline: 4px solid rgba(56, 189, 248, 0.6);
     backdrop-filter: blur(16px);
     &.loading {
       outline: 3px solid transparent;
