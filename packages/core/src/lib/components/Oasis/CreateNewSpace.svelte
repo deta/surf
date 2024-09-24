@@ -50,6 +50,7 @@
   const semanticSearchThreshold = writable(0.4)
   const semanticInputValue = writable(0.4)
   const resultHasSemanticSearch = writable(false)
+  const activeFetchingQuery = writable<string | null>(null)
   let editor: Editor
 
   const log = useLogScope('OasisSpace')
@@ -153,22 +154,30 @@
     await previewAISpace($userPrompt)
   }
 
-  const previewAISpace = async (userPrompt: string, semanticThreshold?: number) => {
+  const previewAISpace = async (prompt: string, semanticThreshold?: number) => {
+    let actionCancelled = false
     isLoading.set(true)
     try {
-      log.debug('Requesting preview with prompt', userPrompt)
+      log.debug('Requesting preview with prompt', prompt)
 
       const options: {
         embedding_query?: string
         embedding_distance_threshold?: number
       } = {
-        embedding_query: userPrompt,
+        embedding_query: prompt,
         embedding_distance_threshold: semanticThreshold
       }
 
-      const response = await resourceManager.getResourcesViaPrompt(userPrompt, options)
+      const response = await resourceManager.getResourcesViaPrompt(prompt, options)
 
-      log.debug(`Preview response`, response)
+      log.debug(`bbb-Response before check`, prompt, $userPrompt)
+      if (prompt !== $userPrompt) {
+        log.debug(`bbb-Outdated Preview Response`, response)
+        actionCancelled = true
+        return
+      }
+
+      log.debug(`bbb-Preview response`, response)
 
       resultHasSemanticSearch.set(
         !!(response.embedding_search_results && response.embedding_search_results.length > 0)
@@ -181,7 +190,7 @@
 
       const resourceIds = Array.from(results).map((id) => ({ id, blacklisted: false }))
 
-      log.debug('Fetched resource IDs', resourceIds)
+      log.debug('bbb-Fetched resource IDs', resourceIds)
 
       previewIDs.set(resourceIds)
 
@@ -197,14 +206,17 @@
       }
 
       if (!results) {
-        log.warn('No results found for', userPrompt, response)
+        log.warn('No results found for', prompt, response)
         return
       }
     } catch (err) {
       previewIDs.set([])
       log.error('Failed to create previews with AI', err)
     } finally {
-      loadingIndex.set($loadingIndex + 1)
+      if (!actionCancelled) {
+        loadingIndex.set($loadingIndex + 1)
+      }
+
       isLoading.set(false)
       await tick()
     }

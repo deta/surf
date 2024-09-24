@@ -16,6 +16,7 @@
   import { createTelemetry } from '../service/telemetry'
   import {
     useDebounce,
+    useThrottle,
     wait,
     writableAutoReset,
     parseStringIntoBrowserLocation,
@@ -2119,12 +2120,18 @@
     const numberOfTabs = $unpinnedTabs.length
     tabSize = availableSpace / numberOfTabs
   }
-  const handleResize = async () => {
+
+  const handleOasisResize = useThrottle(async () => {
     const previousValue = $showNewTabOverlay
-    showNewTabOverlay.set(null)
+    showNewTabOverlay.set(-1)
     await tick()
     showNewTabOverlay.set(previousValue)
+  }, 100)
+
+  const handleResize = async () => {
     maxWidth = window.innerWidth
+
+    handleOasisResize()
 
     checkScroll()
   }
