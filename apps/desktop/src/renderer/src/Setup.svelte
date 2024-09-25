@@ -9,7 +9,7 @@
   const PRIVACY_URL = 'https://deta.surf/privacy'
 
   let view: 'invite' | 'disclaimer' | 'ai_features' | 'language' | 'prefs' | 'persona' | 'done' =
-    'ai_features'
+    'invite'
 
   let inviteCode = ''
   let embeddingModel: UserSettings['embedding_model'] = 'english_small'
@@ -336,8 +336,8 @@
       <button on:click={handleAcceptPrefs}>Surf {tabsOrientation}</button>
     {:else if view === 'persona'}
       <img src={icon} alt="Surf icon" />
-      <h1>Choose Your Personas</h1>
-      <p class="text-md">Select up to 3 personas that best describe you:</p>
+      <h1>Tell us about yourself</h1>
+      <p class="text-md">Select up to 3 that best describe you:</p>
 
       <div class="persona-grid">
         {#each personas as persona}
