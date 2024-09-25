@@ -521,6 +521,8 @@
     <div class="title relative flex-grow truncate mr-1">
       {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && (hovered || isEditing)}
         <input
+          draggable
+          on:dragstart|preventDefault|stopPropagation
           type="text"
           bind:value={$inputUrl}
           on:focus={handleInputFocus}
