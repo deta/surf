@@ -8,7 +8,7 @@ interface TokenData<T> {
 
 const tokens: Map<string, TokenData<any>> = new Map()
 
-const DEFAULT_TTL = 5e3
+const DEFAULT_TTL = 30_000
 
 const tokenManager = {
   create: <T>(data: T, ttl: number = DEFAULT_TTL): string => {
