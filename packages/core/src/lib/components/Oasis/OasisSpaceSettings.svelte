@@ -15,9 +15,12 @@
   import { useOasis } from '../../service/oasis'
   import Switch from '../Atoms/Switch.svelte'
   import { useToasts } from '../../service/toast'
+  import { useConfig } from '../../service/config'
 
   export let space: Space | null
-  export let experimentalMode = false
+  const config = useConfig()
+  const userConfigSettings = config.settings
+  let experimentalMode = $userConfigSettings.experimental_mode
 
   const dispatch = createEventDispatcher<{
     refresh: void

@@ -88,7 +88,6 @@
   export let spaceId: string
   export let historyEntriesManager: HistoryEntriesManager
   export let activeTab: Tab | undefined = undefined
-  export let experimentalMode = false
 
   const log = useLogScope('NewTabOverlay')
   const tabsManager = useTabsManager()
@@ -1228,7 +1227,6 @@
                         on:done-creating-new-space={handleDoneCreatingNewSpace}
                         insideDrawer={true}
                         bind:this={oasisSpace}
-                        {experimentalMode}
                         {searchValue}
                       />
                     {/key}

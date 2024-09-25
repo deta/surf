@@ -229,7 +229,6 @@
           resourceIds.map((id) => resourceManager.getResourceWithAnnotations(id.id))
         )
         previewResources.set(loadedResources)
-        console.log('xxx-loadedresources', loadedResources)
       } else {
         previewResources.set([])
       }
