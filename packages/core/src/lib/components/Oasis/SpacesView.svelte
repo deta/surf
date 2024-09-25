@@ -328,7 +328,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem 0.75rem;
+    padding: 2rem 0.75rem 1rem 0.75rem;
     gap: 0.5rem;
     height: 100%;
     overflow-x: hidden;
