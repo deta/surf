@@ -2531,11 +2531,15 @@
 
       showSplashScreen.set(true)
 
-      await createDemoItems(tabsManager.create, oasis, tabsManager.addSpaceTab, resourceManager)
+      await createDemoItems(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)
 
       await window.api.updateInitializedTabs(true)
 
       showSplashScreen.set(false)
+    } else {
+      window.createDemoItems = () => {
+        createDemoItems(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)
+      }
     }
 
     prepareContextMenu()

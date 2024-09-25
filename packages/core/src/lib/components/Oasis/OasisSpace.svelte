@@ -249,7 +249,28 @@
           .map((x) => items.find((y) => y.resource_id === x.id))
           .filter((x) => x !== undefined) as SpaceEntry[]
       } else {
-        log.debug('Skipping sorting, sorted by created_at')
+        log.debug('sorting by resource created_at')
+        const fullResources = (
+          await Promise.all(items.map((x) => resourceManager.getResource(x.resource_id)))
+        ).filter((x) => x !== null)
+
+        log.debug('Sorting full resources:', fullResources)
+        // Use the create_at field for sorting
+        const sorted = fullResources
+          .map((resource) => {
+            return {
+              id: resource.id,
+              createdAt: new Date(resource.createdAt)
+            }
+          })
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+
+        log.debug('Sorted resources:', sorted)
+
+        // sort the space entries based on the sorted resources
+        items = sorted
+          .map((x) => items.find((y) => y.resource_id === x.id))
+          .filter((x) => x !== undefined) as SpaceEntry[]
       }
 
       spaceContents.set(items)

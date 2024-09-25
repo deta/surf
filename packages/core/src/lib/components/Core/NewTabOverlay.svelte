@@ -603,7 +603,7 @@
     }
   )
 
-  const loadEverything = async (initialLoad = false) => {
+  const loadEverything = async () => {
     try {
       if ($loadingContents) {
         log.debug('Already loading everything')
@@ -614,11 +614,6 @@
       oasis.resetSelectedSpace()
 
       loadingContents.set(true)
-
-      if (initialLoad) {
-        everythingContents.set([])
-        await tick()
-      }
 
       const resources = await resourceManager.listResourcesByTags(
         [
@@ -634,7 +629,7 @@
       )
 
       const items = resources
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .map(
           (resource) =>
             ({
@@ -1030,15 +1025,16 @@
     if (value.length === 0) {
       searchResults.set([])
       hasSearched = false
-      isSearching = false
       if (!hasLoadedEverything) {
         hasLoadedEverything = true
         loadEverything()
       }
-    } else {
+    } else if (value.length > 3) {
       handleSearch(value).then(() => {
         isSearching = false
       })
+    } else {
+      $searchResults = []
     }
 
     hasLoadedEverything = value.length === 0
@@ -1052,21 +1048,21 @@
 
   $: if (showTabSearch === 2) {
     debouncedTrackOpenOasis()
-    loadEverything(true)
-  }
+    loadEverything()
 
-  $: if (showTabSearch === 2 && $searchValue !== previousSearchValue) {
-    isSearching = true
-    previousSearchValue = $searchValue
+    if ($searchValue !== previousSearchValue) {
+      isSearching = true
+      previousSearchValue = $searchValue
 
-    if (searchTimeout) {
-      clearTimeout(searchTimeout)
+      if (searchTimeout) {
+        clearTimeout(searchTimeout)
+      }
+
+      // does two things: second layer flood defense & prevents empty state from loading everything immediately, which clogs input
+      searchTimeout = setTimeout(async () => {
+        await debouncedSearch($searchValue)
+      }, 300)
     }
-
-    // does two things: second layer flood defense & prevents empty state from loading everything immediately, which clogs input
-    searchTimeout = setTimeout(async () => {
-      await debouncedSearch($searchValue)
-    }, 300)
   }
 
   $: if (showTabSearch !== 2) {
@@ -1274,7 +1270,7 @@
                               <Icon name="spinner" size="20px" />
                             </div>
                           {/if}
-                        {:else if isSearching && $searchValue.length > 0}
+                        {:else if isSearching && $searchValue.length > 3}
                           <div class="content-wrapper h-full flex items-center justify-center">
                             <div
                               class="content flex flex-col items-center justify-center text-center space-y-4"
@@ -1291,10 +1287,15 @@
                               class="content flex flex-col items-center justify-center text-center space-y-4"
                             >
                               <Icon name="leave" size="22px" class="mb-2" />
-
-                              <p class="text-lg font-medium text-gray-700">
-                                No stuff found for "{$searchValue}". Try a different search term.
-                              </p>
+                              {#if $searchValue.length <= 3}
+                                <p class="text-lg font-medium text-gray-700">
+                                  Please type at least 3 characters to search.
+                                </p>
+                              {:else}
+                                <p class="text-lg font-medium text-gray-700">
+                                  No stuff found for "{$searchValue}". Try a different search term.
+                                </p>
+                              {/if}
                             </div>
                           </div>
                         {/if}
@@ -1319,7 +1320,7 @@
                   id="search-field"
                   {placeholder}
                   {breadcrumb}
-                  loading={$isLoadingCommandItems || isSearching || $loadingContents}
+                  loading={$isLoadingCommandItems}
                   bind:value={$searchValue}
                   class={showTabSearch === 2
                     ? 'w-[32rem] bg-neutral-200 rounded-lg py-2 px-4'

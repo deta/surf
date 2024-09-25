@@ -55,6 +55,7 @@ export class OasisService {
       | 'sources'
       | 'sql_query'
       | 'embedding_query'
+      | 'builtIn'
     >
   ) {
     this.log.debug('creating space')
@@ -67,6 +68,7 @@ export class OasisService {
       sql_query: null,
       embedding_query: null,
       sortBy: 'created_at',
+      builtIn: false,
       sources: []
     }
 

@@ -35,7 +35,7 @@
     SpaceEntryOrigin
   } from '../../types'
 
-  import { writable, get } from 'svelte/store'
+  import { writable, get, derived } from 'svelte/store'
   import {
     CreateTabEventTrigger,
     type AnnotationCommentData,
@@ -101,6 +101,25 @@
 
   const isHovered = writable(false)
   const customTitleValue = writable(resource.metadata?.name ?? '')
+
+  const contextMenuSpaces = derived(spaces, (spaces) => {
+    return spaces
+      .filter(
+        (e) =>
+          e.name.folderName.toLowerCase() !== 'all my stuff' &&
+          e.name.folderName.toLowerCase() !== '.tempspace' &&
+          !e.name.builtIn
+      )
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .map((space) => ({
+        type: 'action',
+        icon: '',
+        text: space.name.folderName,
+        action: () => {
+          oasis.addResourcesToSpace(space.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+        }
+      }))
+  })
 
   $: annotations = resource.annotations ?? []
 
@@ -697,35 +716,18 @@
             }
           ]
         : []),
-      {
-        type: 'sub-menu',
-        icon: '',
-        text: `Add to Space`,
-        items: $spaces
-          ? [
-              ...$spaces
-                .filter(
-                  (e) =>
-                    e.name.folderName.toLowerCase() !== 'all my stuff' &&
-                    e.name.folderName.toLowerCase() !== '.tempspace'
-                )
-                .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-                .map((space) => ({
-                  type: 'action',
-                  icon: '',
-                  text: space.name.folderName,
-                  action: () => {
-                    oasis.addResourcesToSpace(
-                      space.id,
-                      [resource.id],
-                      SpaceEntryOrigin.ManuallyAdded
-                    )
-                  }
-                }))
-            ]
-          : []
-      },
-      { type: 'separator' },
+      ...($contextMenuSpaces.length > 0
+        ? [
+            {
+              type: 'sub-menu',
+              icon: '',
+              disabled: $contextMenuSpaces.length === 0,
+              text: `Add to Space`,
+              items: $contextMenuSpaces
+            },
+            { type: 'separator' }
+          ]
+        : []),
       ...(mode === 'full' ||
       mode === 'content' ||
       mode === 'compact' ||

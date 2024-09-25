@@ -12,7 +12,9 @@
   const dispatch = createEventDispatcher<{ 'save-resource-in-space': Space }>()
 
   const filteredSpaces = derived([spaces], ([spaces]) => {
-    return spaces.filter((space) => space.id !== 'all' && space.name.folderName !== '.tempspace')
+    return spaces.filter(
+      (space) => space.id !== 'all' && space.name.folderName !== '.tempspace' && !space.name.builtIn
+    )
   })
 
   const handleKeydown = (event: KeyboardEvent) => {

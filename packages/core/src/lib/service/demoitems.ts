@@ -3,7 +3,11 @@ import type { Optional, Space, SpaceData } from '../types'
 import { ResourceManager, ResourceTag } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
 import type { useOasis } from './oasis'
-import { demoSpaces, liveSpaces, demoPages } from '../constants/examples'
+import { demoSpaces, liveSpaces, demoPages, builtInSpaces } from '../constants/examples'
+import { useLogScope } from '@horizon/utils'
+import type { TabsManager } from './tabs'
+
+const log = useLogScope('DemoItems')
 
 export function random() {
   return Math.floor(Math.random() * 1000000)
@@ -35,29 +39,30 @@ export const factoryData = {
 }
 
 export async function createDemoItems(
-  createTab: (
-    tab: Optional<
-      Tab,
-      'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'
-    >,
-    opts?: CreateTabOptions,
-    pinned?: boolean
-  ) => void,
+  tabsManager: TabsManager,
   oasis: ReturnType<typeof useOasis>,
   createSpaceTab: any,
   resourceManager: ResourceManager
 ) {
-  // for (const demoSpace of demoSpaces) {
-  //   const space = await oasis.createSpace({
-  //     folderName: demoSpace.name,
-  //     showInSidebar: true,
-  //     colors: ['#FFD700', '#FF8C00'],
-  //     sources: [],
-  //     sortBy: 'created_at',
-  //     liveModeEnabled: false,
-  //     sql_query: undefined,
-  //     embedding_query: undefined
-  //   })
+  for (const builtInSpace of builtInSpaces) {
+    const data = Object.assign(
+      {
+        folderName: 'New Space',
+        colors: ['#76E0FF', '#4EC9FB'],
+        showInSidebar: false,
+        liveModeEnabled: false,
+        hideViewed: false,
+        smartFilterQuery: null,
+        sql_query: null,
+        embedding_query: null,
+        sortBy: 'created_at',
+        builtIn: true
+      },
+      builtInSpace
+    ) as SpaceData
+    const space = await oasis.createSpace(data)
+    log.debug('Created built-in space:', space)
+  }
 
   //   if (demoSpace.urls) {
   //     const urls = demoSpace.urls
@@ -108,8 +113,14 @@ export async function createDemoItems(
   // await new Promise((resolve) => setTimeout(resolve, 1000))
 
   demoPages.forEach((page) => {
-    createTab(factoryData.tabPage(page.id, page.url, page.pinned ?? false), {
-      active: page.active ?? false
-    })
+    tabsManager.addPageTab(
+      page.url,
+      {
+        active: page.active ?? false
+      },
+      {
+        pinned: page.pinned ?? false
+      }
+    )
   })
 }

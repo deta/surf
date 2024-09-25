@@ -22,6 +22,7 @@ export interface SpaceData {
   sortBy: 'created_at' | 'source_published_at'
   sql_query: string | null
   embedding_query: string | null
+  builtIn?: boolean
 }
 
 export interface SpaceSource {
