@@ -1163,6 +1163,7 @@ async function createNewDataTransfer(
     const file = new File([buffer], resource.metadata?.name || 'file', {
       type: resource.type || 'application/octet-stream'
     })
+    console.log('[drop] created file: ', file.name, file.type, file)
     const newDataTransfer = new DataTransfer()
     newDataTransfer.items.add(file)
     return newDataTransfer
@@ -1180,7 +1181,8 @@ const handleDragEnterLeave = (eventType: 'dragenter' | 'dragleave') => {
     e.preventDefault()
     e.stopImmediatePropagation()
 
-    const dummyFile = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
+    // TODO: (dnd): Rn we always attach a file so that the handler work correctly, this is weird tho if the drag itself has no data attached.
+    const dummyFile = new File([new ArrayBuffer(1)], 'dummy', { type: 'application/octet-stream' })
     const newDataTransfer = new DataTransfer()
     newDataTransfer.items.add(dummyFile)
 
@@ -1188,9 +1190,9 @@ const handleDragEnterLeave = (eventType: 'dragenter' | 'dragleave') => {
       new DragEvent(eventType, {
         ...e,
         dataTransfer: newDataTransfer,
+        relatedTarget: e.relatedTarget,
         bubbles: true,
-        cancelable: true,
-        relatedTarget: e.relatedTarget
+        cancelable: true
       })
     )
     isHandling = false
@@ -1431,7 +1433,7 @@ function sendPageEvent<T extends keyof WebViewSendEvents>(
   data?: WebViewSendEvents[T]
 ): void {
   // Ignore mouse related passthrough to avoid spam
-  if (![WebViewEventSendNames.MouseMove].includes(name))
+  if (![WebViewEventSendNames.MouseMove, WebViewEventSendNames.DragOver].includes(name))
     console.debug('Sending page event', name, data)
   ipcRenderer.sendToHost('webview-page-event', name, data)
 }

@@ -115,7 +115,8 @@
   }
 
   :global(.drop-wrapper[data-drag-target]) {
-    border: 1.5px dashed gray !important;
+    outline: 1.5px dashed gray !important;
+    outline-offset: -1.5px;
   }
 
   .dragover {

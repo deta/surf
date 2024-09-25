@@ -18,8 +18,11 @@
 
   const log = useLogScope('DragResourceWrapper')
 
-  const handleDragStart = (drag: DragculaDragEvent) => {
-    drag.item!.data.setData<DragTypes>(DragTypeNames.SURF_RESOURCE, resource)
+  const handleDragStart = (drag: DragculaDragEvent<DragTypes>) => {
+    drag.item!.data.setData(DragTypeNames.SURF_RESOURCE, resource)
+    drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resource.id)
+    drag.item!.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
+
     drag.continue()
   }
 

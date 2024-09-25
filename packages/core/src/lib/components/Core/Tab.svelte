@@ -269,11 +269,17 @@
 
     drag.item!.data.setData(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
 
+    if (tab.type === 'page' && tab.currentLocation)
+      drag.dataTransfer?.setData('text/uri-list', tab.currentLocation)
+
     // @ts-ignore
     const resourceId = tab.resourceBookmark ?? tab.resourceId
     if (resourceId) {
       drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resourceId)
       drag.item!.data.setData(DragTypeNames.SURF_RESOURCE_ID, resourceId)
+      drag.item!.data.setData(DragTypeNames.ASYNC_SURF_RESOURCE, () =>
+        resourceManager.getResource(resourceId)
+      )
     }
 
     if (tab.type === 'space') {
@@ -674,7 +680,7 @@
 
 <style lang="scss">
   .tab {
-    border: 1.5px solid transparent;
+    box-sizing: border-box !important;
     transition:
       0s ease-in-out,
       transform 0s;
@@ -705,6 +711,7 @@
     transition:
       0s ease-in-out,
       transform 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      outline 175ms cubic-bezier(0.4, 0, 0.2, 1),
       width 175ms cubic-bezier(0.4, 0, 0.2, 1),
       height 175ms cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
@@ -723,7 +730,7 @@
     border-color: rgba(5, 5, 25, 0.3);
     border-style: dashed;*/
     background: #fff;
-    border: 1.5px dashed rgba(5, 5, 25, 0.3);
+    border: 2px dotted rgba(5, 5, 25, 0.3);
     opacity: 95%;
     // https://getcssscan.com/css-box-shadow-examples
     box-shadow:
@@ -738,7 +745,8 @@
   }
 
   :global(.tab[data-drag-target='true']) {
-    border: 1.5px dashed rgba(5, 5, 25, 0.3);
+    outline: 1.5px dashed rgba(5, 5, 25, 0.3);
+    outline-offset: -1.5px;
   }
 
   /*:global(.tab[data-dragcula-dragging-item='true'] .tmp-tab-drop-zone) {
