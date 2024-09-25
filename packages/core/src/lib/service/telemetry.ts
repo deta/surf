@@ -48,6 +48,11 @@ export enum HorizonActivationSource {
   Oasis = 'oasis'
 }
 
+interface UserProperties {
+  personas: string[]
+  email?: string
+}
+
 // TODO: how much does telemetry hurt performance?
 export class Telemetry {
   apiKey: string
@@ -55,6 +60,7 @@ export class Telemetry {
   trackHostnames: boolean
   userConfig: UserConfig | null
   appInfo: ElectronAppInfo | null
+  personas: string[]
 
   log: ReturnType<typeof useLogScope>
 
@@ -65,7 +71,7 @@ export class Telemetry {
 
     this.userConfig = null
     this.appInfo = null
-
+    this.personas = []
     this.log = useLogScope('telemetry')
   }
   async init(userConfig: UserConfig | null = null) {
@@ -81,6 +87,7 @@ export class Telemetry {
       return
     }
 
+    this.personas = this.userConfig.settings.personas || []
     this.appInfo = await window.api.getAppInfo()
     const initOptions = {
       // TODO: default tracking will be deprecated by the ampltiude SDK
@@ -157,9 +164,12 @@ export class Telemetry {
 
     this.log.debug('Tracking event', eventName, eventProperties)
 
-    let user_properties = undefined
+    let user_properties: UserProperties = {
+      personas: this.personas
+    }
     if (!this.userConfig?.anon_telemetry) {
       user_properties = {
+        ...user_properties,
         email: this.userConfig?.email
       }
     }

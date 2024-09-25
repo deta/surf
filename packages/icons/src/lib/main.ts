@@ -88,6 +88,9 @@ import Language from './Icons/Language.svelte'
 import CircleDot from './Icons/CircleDot.svelte'
 import MessageForward from './Icons/MessageForward.svelte'
 import Grammar from './Icons/Grammar.svelte'
+import CursorArrowRays from './Icons/CursorArrowRays.svelte'
+import RectangleGroup from './Icons/RectangleGroup.svelte'
+import CursorGrab from './Icons/CursorGrab.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -180,7 +183,10 @@ export const icons = {
   language: Language,
   'circle-dot': CircleDot,
   'message-forward': MessageForward,
-  grammar: Grammar
+  grammar: Grammar,
+  'cursor-arrow-rays': CursorArrowRays,
+  'rectangle-group': RectangleGroup,
+  'cursor-grab': CursorGrab
 }
 
 export type Icons = keyof typeof icons
@@ -274,5 +280,8 @@ export {
   Language,
   CircleDot,
   MessageForward,
-  Grammar
+  Grammar,
+  CursorArrowRays,
+  RectangleGroup,
+  CursorGrab
 }

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session } from 'electron'
+import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
@@ -41,11 +41,17 @@ export function createSetupWindow() {
   })
 
   setupWindow.webContents.on('will-navigate', (event) => {
-    // TODO: should we handle new windows here?
+    // Prevent all navigation attempts
     event.preventDefault()
   })
 
-  setupWindow.webContents.setWindowOpenHandler((_details: Electron.HandlerDetails) => {
+  setupWindow.webContents.setWindowOpenHandler((details) => {
+    const REQUEST_INVITE_URL = 'https://deta.surf/'
+    const TERMS_URL = 'https://deta.surf/terms'
+    const PRIVACY_URL = 'https://deta.surf/privacy'
+    const ALLOWED_URLS = [REQUEST_INVITE_URL, TERMS_URL, PRIVACY_URL]
+
+    if (ALLOWED_URLS.includes(details.url)) shell.openExternal(details.url)
     return { action: 'deny' }
   })
 
