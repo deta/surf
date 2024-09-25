@@ -1,6 +1,20 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
   import ResourceOverlay from './ResourceOverlay.svelte'
+  import { wait } from '@horizon/utils'
+  import { onMount } from 'svelte'
+
+  onMount(async () => {
+    await wait(500)
+
+    const existingOnboardingSettings = window.api.getUserConfigSettings().onboarding
+    await window.api.updateUserConfigSettings({
+      onboarding: {
+        ...existingOnboardingSettings,
+        completed_welcome: true
+      }
+    })
+  })
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen bg-white/95 p-5 text-lg">
@@ -13,22 +27,12 @@
       </h1>
       <p class="text-2xl">Surf is a browser we're building to put us back in the drivers seat.</p>
     </div>
-    <div class="flex flex-col my-8 gap-4">
-      <iframe
-        width="560"
-        height="315"
-        src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-        title="YouTube video player"
-        class="bg-blue-500 w-full shadow-xl rounded-xl overflow-hidden"
-        frameborder="0"
-        allow="allowfullscreen"
-      ></iframe>
-
-      <!-- <webview
-        src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+    <div class="flex flex-col my-8 gap-4 h-[400px]">
+      <webview
+        src="https://www.youtube.com/embed/yye03KE958A"
+        class=" w-full h-full shadow-xl rounded-xl overflow-hidden"
         partition="app"
-        useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.6613.120 Safari/537.36"
-      /> -->
+      />
 
       <div class="flex justify-center border-t border-gray-300 pt-4 w-2/3 mx-auto opacity-70">
         Tip: Hover over any element to see how it works.
@@ -75,7 +79,7 @@
             <h2 class="font-semibold">Smart Select</h2>
             <div>
               <span class="font-mono bg-black/10 px-1 text-xl rounded-md"
-                >⌘ + <span class="text-sm">Shift</span> + 1</span
+                >⌘ + <span class="text-sm">Shift</span> + <span class="text-sm">1</span></span
               > or highlight any text and have fun.
             </div>
           </div>
@@ -91,7 +95,7 @@
           </div>
           <div class="flex-1 flex-grow">
             <h2 class="font-semibold">Universal Drag and Drop</h2>
-            <div>Drag and drop anything into Surf.</div>
+            <div>Drag and drop just about anything in Surf.</div>
           </div>
         </div>
       </ResourceOverlay>

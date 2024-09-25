@@ -34,7 +34,8 @@
     truncateURL,
     getFileType,
     useDebounce,
-    useLocalStorageStore
+    useLocalStorageStore,
+    tooltip
   } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
@@ -114,7 +115,7 @@
     threshold: 0.7,
     includeScore: true
   }
-  let onboardingOpen = writable(true)
+  let onboardingOpen = writable($userConfigSettings.onboarding.completed_stuff === false)
 
   let selectFirstCommandItem: () => void
   let hasLoadedEverything = false
@@ -1018,6 +1019,18 @@
     log.debug('Filter change:', e.detail)
     debouncedSearch($searchValue)
   }
+
+  const closeOnboarding = async () => {
+    onboardingOpen.set(false)
+
+    const existingOnboardingSettings = window.api.getUserConfigSettings().onboarding
+    await window.api.updateUserConfigSettings({
+      onboarding: {
+        ...existingOnboardingSettings,
+        completed_stuff: true
+      }
+    })
+  }
 </script>
 
 <svelte:window
@@ -1077,6 +1090,24 @@
             <Icon name="close" />
           </button>
         {:else if $searchValue.length < 20}
+          {#if showTabSearch === 2}
+            <button
+              class="absolute left-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
+                ? 'bottom-7'
+                : 'bottom-3'} z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+              on:click={() => {
+                $onboardingOpen = !$onboardingOpen
+              }}
+              use:tooltip={{
+                text: 'Need help?',
+                position: 'right'
+              }}
+              aria-label="Show onboarding"
+            >
+              <Icon name="info" />
+            </button>
+          {/if}
+
           <button
             class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
               ? 'bottom-7'
@@ -1142,7 +1173,7 @@
             {:else if showTabSearch === 2}
               {#if $onboardingOpen}
                 <Onboarding
-                  on:close={() => onboardingOpen.set(false)}
+                  on:close={closeOnboarding}
                   title="Stay on top of your stuff"
                   tip="Tip: Hover over any element to see how it works."
                   sections={[

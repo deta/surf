@@ -89,7 +89,7 @@
   let lastCmdATime = 0
   let autoScrollChat = true
   let abortController: AbortController | null = null
-  let onboardingOpen = writable(true)
+  let onboardingOpen = writable($userConfigSettings.onboarding.completed_chat === false)
 
   const chatBoxPlaceholder = /*writable('Ask anything...') */ derived(
     [optPressed, cmdPressed, shiftPressed, magicPage, optToggled, tabsInContext],
@@ -743,12 +743,24 @@
     }
   })
 
+  const closeOnboarding = async () => {
+    onboardingOpen.set(false)
+
+    const existingOnboardingSettings = window.api.getUserConfigSettings().onboarding
+    await window.api.updateUserConfigSettings({
+      onboarding: {
+        ...existingOnboardingSettings,
+        completed_chat: true
+      }
+    })
+  }
+
   $: smallSize = inputValue.length < 75
 </script>
 
 {#if $onboardingOpen}
   <Onboarding
-    on:close={() => onboardingOpen.set(false)}
+    on:close={closeOnboarding}
     title="What You See is What You Chat"
     tip="Tip: Hover over any element to see how it works."
     sections={[
@@ -761,7 +773,7 @@
           `,
         imgSrc: 'https://placehold.co/600x400',
         imgAlt: 'Context Window',
-        iconName: 'sparkles'
+        iconName: 'circle-dot'
       },
       {
         title: 'Add Context',
@@ -792,15 +804,7 @@
           `,
         imgSrc: 'https://placehold.co/600x400',
         imgAlt: 'Remove Context',
-        icon: `
-          <div class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center">
-            <div
-              class="absolute -top-2 -left-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center"
-            >
-              X
-            </div>
-          </div>
-        `
+        iconName: 'close'
       }
     ]}
     warning="Chat can make mistakes. Verify results."
@@ -822,7 +826,20 @@
           New Chat
         </button>
       {:else}
-        <div class="flex items-center justify-start text-lg p-1.5 font-semibold">Chat</div>
+        <div class="flex items-center justify-start text-lg p-1.5 font-semibold">
+          Chat <button
+            class="flex items-center gap-2 p-2 ml-2 rounded-lg opacity-60 hover:bg-blue-200"
+            on:click={() => {
+              $onboardingOpen = true
+            }}
+            use:tooltip={{
+              text: 'Need help?',
+              position: 'bottom'
+            }}
+          >
+            <Icon name="info" />
+          </button>
+        </div>
       {/if}
 
       <!-- svelte-ignore a11y-click-events-have-key-events -->
