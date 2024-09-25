@@ -232,7 +232,6 @@
         previewResources.set(loadedResources)
         console.log('xxx-loadedresources', loadedResources)
       } else {
-        console.log('xxx-reset')
         previewResources.set([])
       }
 
