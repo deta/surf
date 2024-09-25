@@ -94,6 +94,17 @@ fn enable_wal_mode(conn: &rusqlite::Connection) -> BackendResult<()> {
     Ok(())
 }
 
+fn escape_fts_query(keyword: &str) -> String {
+    let escaped_quotes = keyword.replace(r#"""#, r#"""""#);
+    let tokens: Vec<&str> = escaped_quotes.split_whitespace().collect();
+    
+    tokens
+        .into_iter()
+        .map(|token| format!(r#""{}""#, token))
+        .collect::<Vec<String>>()
+        .join(" ")
+}
+
 impl Database {
     pub fn new(db_path: &str, run_migrations: bool) -> BackendResult<Database> {
         let mut conn = Connection::open(db_path)?;
@@ -300,7 +311,10 @@ impl Database {
         Ok(())
     }
 
-    pub fn touch_resource_tx(tx: &mut rusqlite::Transaction, resource_id: &str) -> BackendResult<()> {
+    pub fn touch_resource_tx(
+        tx: &mut rusqlite::Transaction,
+        resource_id: &str,
+    ) -> BackendResult<()> {
         tx.execute(
             "UPDATE resources SET updated_at = datetime('now') WHERE id = ?1",
             rusqlite::params![resource_id],
@@ -1351,55 +1365,54 @@ impl Database {
         }
     }
 
-    // TODO: how can we use bm25 for this?
     pub fn keyword_search(
         &self,
         keyword: &str,
         filtered_resource_ids: Vec<String>,
     ) -> BackendResult<Vec<SearchResultItem>> {
         let mut results: Vec<SearchResultItem> = Vec::new();
-        //let keyword = format!("%{}%", keyword).to_string();
 
-        let mut rids: Vec<rusqlite::types::Value> = Vec::new();
-        let params = rusqlite::params![keyword];
+        let escaped_keyword = escape_fts_query(keyword);
+        let like_keyword = format!("%{}%", keyword.replace("%", "\\%").replace("_", "\\_"));
 
-        let mut query = "SELECT DISTINCT M.*, R.* FROM resource_metadata M
+        let base_query = "
+            SELECT DISTINCT M.*, R.* 
+            FROM resource_metadata M
             LEFT JOIN resources R ON M.resource_id = R.id
             WHERE (
                 R.id IN (SELECT T.resource_id FROM resource_text_content T WHERE T.content MATCH ?1)
-            OR
-                R.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH ?1)
-            )"
-        .to_owned();
-        let row_map_fn = Self::map_resource_and_metadata(None, SearchEngine::Keyword);
+                OR R.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH ?1)
+                OR R.resource_type LIKE ?2
+            )";
 
-        if !filtered_resource_ids.is_empty() {
-            // TODO: can this be optimized?
-            query = "SELECT DISTINCT M.*, R.* FROM resource_metadata M
-            LEFT JOIN resources R ON M.resource_id = R.id
-            WHERE (
-                R.id IN (SELECT T.resource_id FROM resource_text_content T WHERE T.content MATCH ?1 AND T.resource_id IN rarray(?2))
-            OR
-                R.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH ?1 AND M.resource_id IN rarray(?2))
-            )"
-            .to_owned();
-            for rid in filtered_resource_ids {
-                rids.push(rusqlite::types::Value::from(rid));
-            }
-            let params = rusqlite::params![keyword, Rc::new(rids)];
-            let mut stmt = self.conn.prepare(query.as_str())?;
-            let items = stmt.query_map(params, row_map_fn)?;
-            for i in items {
-                results.push(i?);
-            }
-            return Ok(results);
+        let (query, params) = if filtered_resource_ids.is_empty() {
+            (
+                format!("{} ORDER BY rank", base_query),
+                vec![escaped_keyword, like_keyword],
+            )
+        } else {
+            let placeholders = vec!["?"; filtered_resource_ids.len()].join(",");
+            let filtered_query = format!(
+                "
+                {}
+                AND R.id IN ({})
+                ORDER BY rank
+            ",
+                base_query, placeholders
+            );
+
+            let mut params = vec![escaped_keyword, like_keyword];
+            params.extend(filtered_resource_ids.iter().map(|id| id.to_string()));
+            (filtered_query, params)
+        };
+
+        let row_map_fn = Self::map_resource_and_metadata(None, SearchEngine::Keyword);
+        let mut stmt = self.conn.prepare(&query)?;
+        let items = stmt.query_map(rusqlite::params_from_iter(params.iter()), row_map_fn)?;
+        for item in items {
+            results.push(item?);
         }
-        let mut stmt = self.conn.prepare(query.as_str())?;
-        let items = stmt.query_map(params, row_map_fn)?;
-        for i in items {
-            results.push(i?);
-        }
-        println!("did some keyword search for: {keyword}");
+
         Ok(results)
     }
 
