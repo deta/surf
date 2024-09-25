@@ -35,7 +35,9 @@
   }
 </script>
 
-<div class="flex items-center bg-white px-4 rounded-xl gap-2">
+<div
+  class="flex items-center bg-white px-4 rounded-xl gap-2 border border-sky-400/40 outline outline-[0.5px] outline-offset-0 outline-sky-800/20"
+>
   {#if loading}
     <Icon name="spinner" class="shrink-0 opacity-50 icon" />
   {:else}

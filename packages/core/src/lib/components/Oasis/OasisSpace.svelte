@@ -1512,7 +1512,7 @@
         {/if}
         {#if $space?.name.folderName !== '.tempspace'}
           <div
-            class="drawer-chat-search bg-gradient-to-t from-sky-100/50 to-transparent via-bg-sky-100/10 bg-sky-100/50 backdrop-blur-md backdrop-saturate-50"
+            class="drawer-chat-search bg-gradient-to-t from-sky-100/70 to-transparent via-bg-sky-100/10 bg-sky-100/70 backdrop-blur-xl backdrop-saturate-50"
           >
             <div class="search-input-wrapper">
               <SearchInput bind:value={$searchValue} on:search={handleSearch} />
