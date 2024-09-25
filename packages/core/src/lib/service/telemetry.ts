@@ -55,6 +55,7 @@ export class Telemetry {
   trackHostnames: boolean
   userConfig: UserConfig | null
   appInfo: ElectronAppInfo | null
+  personas: string[]
 
   log: ReturnType<typeof useLogScope>
 
@@ -65,7 +66,7 @@ export class Telemetry {
 
     this.userConfig = null
     this.appInfo = null
-
+    this.personas = []
     this.log = useLogScope('telemetry')
   }
   async init(userConfig: UserConfig | null = null) {
@@ -89,6 +90,7 @@ export class Telemetry {
     }
 
     this.appInfo = await window.api.getAppInfo()
+    this.personas = this.userConfig.settings.personas || []
 
     amplitude.init(this.apiKey, userID, {
       defaultTracking: {
@@ -151,7 +153,8 @@ export class Telemetry {
       platform: this.appInfo?.platform,
       app_version: this.appInfo?.version,
       user_properties: {
-        email: this.userConfig?.email
+        email: this.userConfig?.email,
+        personas: this.personas
       }
     })
   }

@@ -9,7 +9,7 @@
   const PRIVACY_URL = 'https://deta.surf/privacy'
 
   let view: 'invite' | 'disclaimer' | 'ai_features' | 'language' | 'prefs' | 'persona' | 'done' =
-    'invite'
+    'ai_features'
 
   let inviteCode = ''
   let embeddingModel: UserSettings['embedding_model'] = 'english_small'
@@ -170,67 +170,37 @@
     {:else if view === 'disclaimer'}
       <img src={icon} alt="Surf icon" />
 
-      <h1>Telemetry, to improve Surf.</h1>
+      <h1>Early Access Program</h1>
 
       <div class="details">
-        <p class="info text-md">
-          As part of the early access program, we track some of your usage of Surf. We do this to
-          make Surf better.
-        </p>
+        <p class="info text-md">While Surf is in early access, we want to make two things clear:</p>
       </div>
 
       <div class="tracking">
         <div class="box">
           <div class="icon-heading">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
-                d="M10.585 10.587a2 2 0 0 0 2.829 2.828"
-              /><path
-                d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87"
-              /><path d="M3 3l18 18" /></svg
-            >
-            <h2>What is not included</h2>
+            <h2>Analytics</h2>
           </div>
           <p>
-            The urls you visit and the contents of the data you store are in Surf are <i
-              ><b>not</b></i
-            > part of our Telemetry. We do not track what is in the websites, images, or videos you save.
+            Surf collects some <b>anonymous</b> analytics which include interactions with certain app
+            features. We do not track the URLs you visit nor the contents of the data you store.
           </p>
+          <a href="https://deta.space/privacy" target="_blank" rel="noopener noreferrer"
+            >Learn more</a
+          >
         </div>
         <div class="box">
           <div class="icon-heading">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
-                d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"
-              /><path
-                d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"
-              /></svg
-            >
-            <h2>What is</h2>
+            <h2>Security</h2>
           </div>
           <p>
-            We track your interactions with app features, like activating a tab or opening the
-            sidebar. We also distinguish between the kinds of data you save, like an image vs.
-            YouTube video.
+            While we've taken great care in developing Surf , like any new software, there may be
+            minor areas for improvement.
           </p>
+          <p>All your data is stored locally on your device.</p>
+          <a href="https://deta.space/privacy" target="_blank" rel="noopener noreferrer"
+            >Learn more</a
+          >
         </div>
         <div class="actions">
           <button on:click={handleAcceptDisclaimer('disclaimer')}>I understand</button>

@@ -761,7 +761,7 @@
 {#if $onboardingOpen}
   <Onboarding
     on:close={closeOnboarding}
-    title="What You See is What You Chat"
+    title="What you see is what you chat"
     tip="Tip: Hover over any element to see how it works."
     sections={[
       {
@@ -773,7 +773,7 @@
           `,
         imgSrc: 'https://placehold.co/600x400',
         imgAlt: 'Context Window',
-        iconName: 'circle-dot'
+        iconName: 'menu'
       },
       {
         title: 'Add Context',

@@ -25,7 +25,7 @@
       >
         Welcome to Surf
       </h1>
-      <p class="text-2xl">Surf is a browser we're building to put us back in the drivers seat.</p>
+      <p class="text-2xl">Surf is like if your browser, Finder and ChatGPT had a baby.</p>
     </div>
     <div class="flex flex-col my-8 gap-4 h-[400px]">
       <webview
@@ -35,7 +35,7 @@
       />
 
       <div class="flex justify-center border-t border-gray-300 pt-4 w-2/3 mx-auto opacity-70">
-        Tip: Hover over any element to see how it works.
+        Tip: Hover over any element to see how it works or click it.
       </div>
     </div>
 
