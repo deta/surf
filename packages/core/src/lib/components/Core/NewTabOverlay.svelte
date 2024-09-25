@@ -63,7 +63,7 @@
 
   import { useToasts } from '../../service/toast'
   import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
-  import { Dragcula, DragculaDragEvent } from '@horizon/dragcula'
+  import { DragOperation, Dragcula, DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab, TabPage, TabSpace } from '../../types/browser.types'
 
   import * as Command from '../Command'
@@ -1044,9 +1044,16 @@
       showTabSearch = 2
     }, 150)
   }
-  const handleDragculaDragEnd = () => {
+  const handleDragculaDragEnd = (drag: DragOperation) => {
     // TODO: Only close when dropped outside
     if (dragculaDragStartOpenTimeout !== null) clearTimeout(dragculaDragStartOpenTimeout)
+
+    for (const id of ['drawer', 'folder-']) {
+      if (drag.to?.id.startsWith(id)) {
+        return
+      }
+    }
+
     showTabSearch = 0
   }
 
@@ -1087,6 +1094,7 @@
       class="drawer-overlay fixed inset-0 z-10 transition-opacity duration-300 no-drag"
     />
     <Drawer.Content
+      data-vaul-no-drag
       class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-xl transition duration-400 bg-[#FEFFFE] outline-none"
       style="width: fit-content;"
     >
