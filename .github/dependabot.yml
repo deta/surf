@@ -1,27 +1,11 @@
 version: 2
 updates:
   - package-ecosystem: 'npm'
-    directory: '/'
+    directory: '/apps/desktop'
     schedule:
-      interval: 'weekly'
-    open-pull-requests-limit: 10
+      interval: 'daily'
+    open-pull-requests-limit: 5
     labels:
-      - 'npm'
-      - 'dependencies'
+      - 'electron'
     allow:
-      - dependency-type: 'all'
-    groups:
-      npm-minor-patch:
-        patterns:
-          - '*'
-        update-types:
-          - 'minor'
-          - 'patch'
-
-  - package-ecosystem: 'cargo'
-    directory: '/packages/'
-    schedule:
-      interval: 'weekly'
-    labels:
-      - 'rust'
-      - 'dependencies'
+      - dependency-name: 'electron'

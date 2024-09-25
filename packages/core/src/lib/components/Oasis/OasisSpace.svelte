@@ -111,9 +111,10 @@
     open: string
     'create-resource-from-oasis': string
     'new-tab': BrowserTabNewTabEvent
-    'updated-space': string
+    'updated-space': string | undefined
     deleted: string
     'go-back': void
+    'select-space': string
   }>()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
@@ -250,7 +251,28 @@
           .map((x) => items.find((y) => y.resource_id === x.id))
           .filter((x) => x !== undefined) as SpaceEntry[]
       } else {
-        log.debug('Skipping sorting, sorted by created_at')
+        log.debug('sorting by resource created_at')
+        const fullResources = (
+          await Promise.all(items.map((x) => resourceManager.getResource(x.resource_id)))
+        ).filter((x) => x !== null)
+
+        log.debug('Sorting full resources:', fullResources)
+        // Use the create_at field for sorting
+        const sorted = fullResources
+          .map((resource) => {
+            return {
+              id: resource.id,
+              createdAt: new Date(resource.createdAt)
+            }
+          })
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+
+        log.debug('Sorted resources:', sorted)
+
+        // sort the space entries based on the sorted resources
+        items = sorted
+          .map((x) => items.find((y) => y.resource_id === x.id))
+          .filter((x) => x !== undefined) as SpaceEntry[]
       }
 
       spaceContents.set(items)
@@ -945,9 +967,9 @@
 
     const confirm = window.confirm(
       !isEverythingSpace && !isFromLiveSpace
-        ? `Remove reference? The original will still be in Everything.`
+        ? `Remove from '${$space?.name.folderName}'? \nIt will still be in 'All my Stuff'.`
         : numberOfReferences > 0
-          ? `This resource will be deleted permanently including all of its ${numberOfReferences} references.`
+          ? `This resource will be removed from ${numberOfReferences} space${numberOfReferences > 1 ? 's' : ''} and deleted permanently.`
           : `This resource will be deleted permanently.`
     )
 
@@ -1008,7 +1030,7 @@
     }
 
     log.debug('Resource removed:', resourceId)
-    toasts.success('Resource deleted!')
+    toasts.success(`Resource ${isEverythingSpace || isFromLiveSpace ? 'deleted' : 'removed'}!`)
   }
 
   const handleItemClick = async (e: CustomEvent<string>) => {
@@ -1290,20 +1312,19 @@
   }
 
   export const handleDeleteSpace = async (
-    e: CustomEvent<{ shouldDeleteAllResources: boolean; abortSpaceCreation?: boolean }>
+    shouldDeleteAllResources: boolean = false,
+    abortSpaceCreation: boolean = false
   ) => {
-    const { shouldDeleteAllResources, abortSpaceCreation = false } = e.detail
-
     const confirmed = window.confirm(
       abortSpaceCreation
         ? 'Are you sure you want to abort the creation of this space?'
         : shouldDeleteAllResources
           ? 'Are you sure you want to delete this space and all of its resources?'
-          : 'Are you sure you want to abort the creation of this space?'
+          : 'Are you sure you want to delete this space?'
     )
 
     if (!confirmed) {
-      return
+      return false
     }
 
     let toast
@@ -1327,14 +1348,16 @@
       dispatch('deleted', spaceId)
 
       if (!abortSpaceCreation) {
-        toast.success('Space deleted!')
+        toast?.success('Space deleted!')
       }
 
       await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
+
+      return true
     } catch (error) {
       log.error('Error deleting space:', error)
       if (!abortSpaceCreation) {
-        toast.error(
+        toast?.error(
           'Error deleting space: ' + (typeof error === 'string' ? error : (error as Error).message)
         )
       }
@@ -1425,46 +1448,55 @@
       return
     }
 
+    let createdSpace: Space | null = null
+
     try {
-      const updatedSpace = await oasis.updateSpaceData(space.id, {
+      await oasis.deleteSpace(space.id)
+
+      createdSpace = await oasis.createSpace({
+        ...space.name,
         folderName: name,
         smartFilterQuery: processNaturalLanguage ? userPrompt : undefined
       })
 
       if (blacklistedResourceIds && blacklistedResourceIds.length > 0) {
         await oasis.addResourcesToSpace(
-          space.id,
+          createdSpace.id,
           blacklistedResourceIds,
           SpaceEntryOrigin.Blacklisted
         )
         log.debug('Blacklisted resources added to space:', blacklistedResourceIds)
       }
       if (llmFetchedResourceIds && llmFetchedResourceIds.length > 0) {
-        await oasis.addResourcesToSpace(space.id, llmFetchedResourceIds, SpaceEntryOrigin.LlmQuery)
+        await oasis.addResourcesToSpace(
+          createdSpace.id,
+          llmFetchedResourceIds,
+          SpaceEntryOrigin.LlmQuery
+        )
         log.debug('LLM fetched resources added to space:', llmFetchedResourceIds)
       }
 
-      $space = updatedSpace
-      await loadSpaceContents(space.id)
+      $space = createdSpace
+      await loadSpaceContents(createdSpace.id)
       showSettingsModal.set(false)
       toasts.success('Space updated successfully!')
+
+      dispatch('select-space', createdSpace.id)
     } catch (error) {
       log.error('Error updating space:', error)
       toasts.error('Failed to update space: ' + (error as Error).message)
     }
 
-    dispatch('updated-space')
+    dispatch('updated-space', createdSpace?.id)
   }
 
   const handleAbortSpaceCreation = async (e: CustomEvent<string>) => {
     const spaceId = e.detail
-    await handleDeleteSpace(
-      new CustomEvent('delete', {
-        detail: { shouldDeleteAllResources: false, abortSpaceCreation: true }
-      })
-    )
+    const wasDeleted = await handleDeleteSpace(false, true)
 
-    dispatch('deleted', spaceId)
+    if (!wasDeleted) {
+      log.debug('Space creation aborted:', spaceId)
+    }
   }
 </script>
 
@@ -1545,7 +1577,7 @@
                     bind:space={$space}
                     on:refresh={handleRefreshLiveSpace}
                     on:clear={handleClearSpace}
-                    on:delete={handleDeleteSpace}
+                    on:delete={(e) => handleDeleteSpace(e.detail)}
                     on:load={handleLoadSpace}
                     on:delete-auto-saved={handleDeleteAutoSaved}
                   />

@@ -37,7 +37,7 @@
   export let isUserSelected: boolean
   export let enableEditing = false
   export let showClose = false
-  export let spaces
+  export let spaces: Writable<Space[]>
   export const inputUrl = writable<string>('')
   export let hibernated = false
   export let tabSize: number | undefined = undefined
