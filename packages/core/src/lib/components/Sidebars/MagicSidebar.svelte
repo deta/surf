@@ -33,7 +33,8 @@
   import { useConfig } from '../../service/config'
   import ChatContextTabPicker from '../Chat/ChatContextTabPicker.svelte'
   import { useTabsManager } from '../../service/tabs'
-  import { HTMLDragItem } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
+  import { DragTypeNames, type DragTypes } from '../../types'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -437,6 +438,36 @@
     }
   }
 
+  const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
+    if (drag.isNative) {
+      log.warn('Not yet implemented!')
+    } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
+      dispatch('include-tab', drag.item!.data.getData(DragTypeNames.SURF_TAB).id)
+    } else if (drag.item!.data.hasData(DragTypeNames.SURF_SPACE)) {
+      // TODO: (dnd / chat): Implement chat space behaviour
+    } else if (
+      drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+      drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+    ) {
+      let resource: Resource | null = null
+      if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+        resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+      } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+        const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+        resource = await resourceFetcher()
+      }
+
+      if (resource === null) {
+        log.warn('Dropped resource but resource is null! Aborting drop!')
+        drag.abort()
+        return
+      }
+
+      // TODO: (dnd / chat): Implement chat resource behaviour
+      log.warn('Not yet implemented')
+    }
+  }
+
   // HACK: Right now the saved chat doesn't store the query we provide, it only stores the raw message content. For system messages we don't want to display our long prompts.
   const sanitizeQuery = (raw: string) => {
     const query = raw.toLowerCase()
@@ -744,7 +775,24 @@
   $: smallSize = inputValue.length < 75
 </script>
 
-<div class="flex flex-col h-full relative overflow-hidden">
+<div
+  class="flex flex-col h-full relative overflow-hidden"
+  id="magic-chat"
+  use:HTMLDragZone.action={{
+    accepts: (drag) => {
+      if (
+        drag.isNative ||
+        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        return true
+      }
+      return false
+    }
+  }}
+  on:Drop={handleDrop}
+>
   {#if !experimentalMode}
     <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100">
       {#if $magicPage.responses.length > 0}
@@ -1104,6 +1152,11 @@
   }
   .animate-blur {
     animation: blurIn 0.42s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  }
+
+  :global(#magic-chat[data-drag-target]) {
+    outline: 2px dashed gray;
+    outline-offset: -2px;
   }
 
   .content {
