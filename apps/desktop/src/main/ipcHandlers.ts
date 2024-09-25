@@ -83,7 +83,7 @@ function setupIpcHandlers(backendRootPath: string) {
 
       return buffer
     } catch (error) {
-      console.log('what the hell', error)
+      console.log('failed to read resource file', error)
       return null
     } finally {
       if (fileHandle) {
