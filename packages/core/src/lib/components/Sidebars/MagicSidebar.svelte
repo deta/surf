@@ -848,10 +848,9 @@
               <button
                 draggable={true}
                 use:HTMLDragItem.action={{}}
-                on:DragStart={(e) => {
-                  //e.dataTransfer.setData('text/plain', response.content)
-                  e.dataTransfer.setData('text/html', response.content)
-                  e.item.data.setData('text/plain', response.content)
+                on:DragStart={(drag) => {
+                  drag.dataTransfer.setData('text/html', response.content)
+                  drag.item.data.setData('text/plain', response.content)
                   drag.continue()
                 }}
                 on:click={() => copy(response.content)}

@@ -277,6 +277,9 @@
     if (resourceId) {
       drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resourceId)
       drag.item!.data.setData(DragTypeNames.SURF_RESOURCE_ID, resourceId)
+      drag.item!.data.setData(DragTypeNames.ASYNC_SURF_RESOURCE, () =>
+        resourceManager.getResource(resourceId)
+      )
     }
 
     if (tab.type === 'space') {
