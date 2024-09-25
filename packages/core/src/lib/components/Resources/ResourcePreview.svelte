@@ -724,7 +724,7 @@
       {
         type: 'action',
         icon: 'trash',
-        text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
+        text: `${!isInSpace || isLiveSpaceResource ? 'Delete from Stuff' : 'Remove from Space'}`,
         kind: 'danger',
         action: () => handleRemove()
       }

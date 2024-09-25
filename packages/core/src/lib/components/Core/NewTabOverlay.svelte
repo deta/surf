@@ -716,7 +716,7 @@
       !isEverythingSpace && !isFromLiveSpace
         ? `Remove reference? The original will still be in Everything.`
         : numberOfReferences > 0
-          ? `This resource will be deleted permanently including all of its ${numberOfReferences} references.`
+          ? `This resource will be removed from ${numberOfReferences} space${numberOfReferences > 1 ? 's' : ''} and deleted permanently.`
           : `This resource will be deleted permanently.`
     )
 

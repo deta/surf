@@ -943,9 +943,9 @@
 
     const confirm = window.confirm(
       !isEverythingSpace && !isFromLiveSpace
-        ? `Remove reference? The original will still be in Everything.`
+        ? `Remove from '${$space?.name.folderName}'? \nIt will still be in 'All my Stuff'.`
         : numberOfReferences > 0
-          ? `This resource will be deleted permanently including all of its ${numberOfReferences} references.`
+          ? `This resource will be removed from ${numberOfReferences} space${numberOfReferences > 1 ? 's' : ''} and deleted permanently.`
           : `This resource will be deleted permanently.`
     )
 
@@ -1006,7 +1006,7 @@
     }
 
     log.debug('Resource removed:', resourceId)
-    toasts.success('Resource deleted!')
+    toasts.success(`Resource ${isEverythingSpace || isFromLiveSpace ? 'deleted' : 'removed'}!`)
   }
 
   const handleItemClick = async (e: CustomEvent<string>) => {
