@@ -1465,21 +1465,19 @@
 
             <div class="settings-wrapper flex">
               <button
-                class="settings-toggle flex items-start hover:bg-sky-200 rounded-md h-full gap-[0.33rem]"
+                class="settings-toggle flex flex-col items-start hover:bg-sky-200 rounded-md h-full gap-[0.33rem]"
                 on:click={handleOpenSettingsModal}
               >
                 {#if $space?.name.folderName}
                   <div
                     class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800 pl-3 pr-2"
                   >
-                    <span class="leading-tight font-medium leading-[1]"
-                      >{$space.name.folderName}</span
-                    >
+                    <span class="font-medium leading-[1]">{$space.name.folderName}</span>
                     <Icon name="chevron.down" size="20px" />
                   </div>
                   {#if $space.name.smartFilterQuery}
                     <span
-                      class="relative text-sm left-3 pointer-events-none flex items-center justify-center mb-[0.1rem]"
+                      class="relative text-sm left-3 pointer-events-none flex items-center justify-center mb-[0.1rem] place-self-start px-0.5"
                     >
                       <span class="w-2 h-2 bg-blue-400 rounded-full animate-pulse mr-1.5"></span>
                       <span class="text-blue-500 leading-[1]"> Smart Space</span>
