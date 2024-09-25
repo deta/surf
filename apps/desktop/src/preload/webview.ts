@@ -1161,6 +1161,20 @@ async function handleDrop(e: DragEvent) {
           pageY: e.pageY
         })
       )
+    } else {
+      e.target!.dispatchEvent(
+        new DragEvent('drop', {
+          dataTransfer: e.dataTransfer,
+          bubbles: true,
+          cancelable: true,
+          clientX: e.clientX,
+          clientY: e.clientY,
+          screenX: e.screenX,
+          screenY: e.screenY,
+          pageX: e.pageX,
+          pageY: e.pageY
+        })
+      )
     }
   } catch (error) {
     console.error('error handling drop:', error)
@@ -1524,7 +1538,7 @@ window.addEventListener('submit', (e: Event) => {
     if (protocol === 'http:' && window.location.protocol === 'https:') {
       if (
         !confirm(
-          "Warning: You are submitting a form via an insecure connection which could reveal the data you are sending to others. Are you sure you want to continue?"
+          'Warning: You are submitting a form via an insecure connection which could reveal the data you are sending to others. Are you sure you want to continue?'
         )
       ) {
         e.stopPropagation()
