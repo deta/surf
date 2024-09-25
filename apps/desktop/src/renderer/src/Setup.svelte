@@ -4,11 +4,12 @@
   import LayoutPicker from './components/LayoutPicker.svelte'
   import type { UserSettings } from '@horizon/types'
 
-  const REQUEST_INVITE_URL = 'https://deta.surf'
+  const REQUEST_INVITE_URL = 'https://deta.surf/'
   const TERMS_URL = 'https://deta.surf/terms'
   const PRIVACY_URL = 'https://deta.surf/privacy'
 
-  let view: 'invite' | 'disclaimer' | 'ai_features' | 'language' | 'prefs' | 'done' = 'invite'
+  let view: 'invite' | 'disclaimer' | 'ai_features' | 'language' | 'prefs' | 'persona' | 'done' =
+    'invite'
 
   let inviteCode = ''
   let embeddingModel: UserSettings['embedding_model'] = 'english_small'
@@ -16,6 +17,7 @@
   let acceptedTerms = false
   let loading = false
   let error = ''
+  let selectedPersonas: string[] = []
 
   const languageConfig = {
     english_small: 'English',
@@ -23,6 +25,19 @@
     multilingual_small: 'Multi-language',
     multilingual_large: 'Multi-language XL'
   }
+
+  const personas = [
+    'Student',
+    'Software Engineer',
+    'Designer',
+    'Entrepreneur',
+    'Marketing',
+    'Artist',
+    'Researcher',
+    'Product Manager',
+    'Writer',
+    'Other'
+  ]
 
   const handleSubmit = async () => {
     try {
@@ -55,7 +70,7 @@
       error =
         'Sorry: failed to save your preference. Please try again or contact us if problem persists.'
     }
-    view = 'done'
+    view = 'persona'
   }
 
   const handleLanguageSubmit = async () => {
@@ -82,6 +97,26 @@
 
   const handleStart = () => {
     window.api.restartApp()
+  }
+
+  function togglePersona(persona: string) {
+    if (selectedPersonas.includes(persona)) {
+      selectedPersonas = selectedPersonas.filter((p) => p !== persona)
+    } else if (selectedPersonas.length < 3) {
+      selectedPersonas = [...selectedPersonas, persona]
+    }
+  }
+
+  const handlePersonaSubmit = async () => {
+    try {
+      await window.api.updateUserConfigSettings({
+        personas: selectedPersonas
+      })
+      view = 'done'
+    } catch (e) {
+      console.error(e)
+      error = 'Failed to save personas, please try again.'
+    }
   }
 </script>
 
@@ -135,67 +170,37 @@
     {:else if view === 'disclaimer'}
       <img src={icon} alt="Surf icon" />
 
-      <h1>Telemetry, to improve Surf.</h1>
+      <h1>Early Access Program</h1>
 
       <div class="details">
-        <p class="info text-md">
-          As part of the early access program, we track some of your usage of Surf. We do this to
-          make Surf better.
-        </p>
+        <p class="info text-md">While Surf is in early access, we want to make two things clear:</p>
       </div>
 
       <div class="tracking">
         <div class="box">
           <div class="icon-heading">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
-                d="M10.585 10.587a2 2 0 0 0 2.829 2.828"
-              /><path
-                d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87"
-              /><path d="M3 3l18 18" /></svg
-            >
-            <h2>What is not included</h2>
+            <h2>Analytics</h2>
           </div>
           <p>
-            The urls you visit and the contents of the data you store are in Surf are <i
-              ><b>not</b></i
-            > part of our Telemetry. We do not track what is in the websites, images, or videos you save.
+            Surf collects some <b>anonymous</b> analytics which include interactions with certain app
+            features. We do not track the URLs you visit nor the contents of the data you store.
           </p>
+          <a href="https://deta.space/privacy" target="_blank" rel="noopener noreferrer"
+            >Learn more</a
+          >
         </div>
         <div class="box">
           <div class="icon-heading">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              ><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path
-                d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"
-              /><path
-                d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"
-              /></svg
-            >
-            <h2>What is</h2>
+            <h2>Security</h2>
           </div>
           <p>
-            We track your interactions with app features, like activating a tab or opening the
-            sidebar. We also distinguish between the kinds of data you save, like an image vs.
-            YouTube video.
+            While we've taken great care in developing Surf , like any new software, there may be
+            minor areas for improvement.
           </p>
+          <p>All your data is stored locally on your device.</p>
+          <a href="https://deta.space/privacy" target="_blank" rel="noopener noreferrer"
+            >Learn more</a
+          >
         </div>
         <div class="actions">
           <button on:click={handleAcceptDisclaimer('disclaimer')}>I understand</button>
@@ -329,6 +334,30 @@
         <span class="pill">Toggle Tabs Orientation</span>
       </p>
       <button on:click={handleAcceptPrefs}>Surf {tabsOrientation}</button>
+    {:else if view === 'persona'}
+      <img src={icon} alt="Surf icon" />
+      <h1>Tell us about yourself</h1>
+      <p class="text-md">Select up to 3 that best describe you:</p>
+
+      <div class="persona-grid">
+        {#each personas as persona}
+          <button
+            class="persona-button {selectedPersonas.includes(persona) ? 'selected' : ''}"
+            on:click={() => togglePersona(persona)}
+            disabled={selectedPersonas.length >= 3 && !selectedPersonas.includes(persona)}
+          >
+            {persona}
+          </button>
+        {/each}
+      </div>
+
+      <p class="selected-count">
+        Selected: {selectedPersonas.length}/3
+      </p>
+
+      <button on:click={handlePersonaSubmit} disabled={selectedPersonas.length === 0}>
+        Continue
+      </button>
     {:else if view === 'done'}
       <img src={icon} alt="Surf icon" />
 
@@ -433,6 +462,45 @@
     gap: 1.75rem;
     text-align: center;
     font-size: 1.075rem;
+
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .persona-button {
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      background-color: #e2e8f0;
+      color: #4a5568;
+      border: 2px solid transparent;
+
+      &:hover:not(:disabled) {
+        background-color: #cbd5e0;
+      }
+
+      &.selected {
+        background-color: #ebf8ff;
+        border-color: #4299e1;
+        color: #2b6cb0;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .selected-count {
+      font-size: 0.875rem;
+      color: #718096;
+      margin-bottom: 1rem;
+    }
 
     &.wide {
       max-width: 445px;
