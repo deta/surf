@@ -33,7 +33,11 @@ export class OasisService {
 
   async loadSpaces() {
     this.log.debug('loading spaces')
-    const result = await this.resourceManager.listSpaces()
+    let result = await this.resourceManager.listSpaces()
+
+    // TODO: Felix — Continuation on felix/tempspace-removal: Remove all .tempspaces
+    const filteredResult = result.filter((space) => space.name.folderName !== '.tempspace')
+    result = filteredResult
 
     this.log.debug('loaded spaces:', result)
     this.spaces.set(result)
