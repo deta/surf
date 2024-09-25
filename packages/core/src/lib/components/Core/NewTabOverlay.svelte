@@ -1195,7 +1195,7 @@
         `,
                       imgSrc: 'https://placehold.co/600x400',
                       imgAlt: '(Auto)-organize',
-                      iconName: 'filter'
+                      iconName: 'rectangle-group'
                     },
                     {
                       title: 'Find',

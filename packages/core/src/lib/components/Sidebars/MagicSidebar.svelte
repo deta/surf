@@ -773,7 +773,7 @@
           `,
         imgSrc: 'https://placehold.co/600x400',
         imgAlt: 'Context Window',
-        iconName: 'menu'
+        iconName: 'chat'
       },
       {
         title: 'Add Context',

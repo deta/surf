@@ -59,7 +59,7 @@
           <div
             class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center font-semibold text-xl"
           >
-            <Icon name="youtube" />
+            <Icon name="chat" />
           </div>
           <div class="flex-1 flex-grow">
             <h2 class="font-semibold">WYSYWIC</h2>
@@ -73,7 +73,7 @@
           <div
             class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center font-semibold text-xl"
           >
-            <Icon name="vision" />
+            <Icon name="cursor-arrow-rays" />
           </div>
           <div class="flex-1 flex-grow">
             <h2 class="font-semibold">Smart Select</h2>
@@ -91,7 +91,7 @@
           <div
             class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center font-semibold text-xl"
           >
-            <Icon name="dnd" />
+            <Icon name="cursor-grab" />
           </div>
           <div class="flex-1 flex-grow">
             <h2 class="font-semibold">Universal Drag and Drop</h2>
