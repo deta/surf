@@ -48,6 +48,11 @@ export enum HorizonActivationSource {
   Oasis = 'oasis'
 }
 
+interface UserProperties {
+  personas: string[]
+  email?: string
+}
+
 // TODO: how much does telemetry hurt performance?
 export class Telemetry {
   apiKey: string
@@ -158,12 +163,15 @@ export class Telemetry {
     }
 
     this.log.debug('Tracking event', eventName, eventProperties)
-    
-    let user_properties = {
+
+    let user_properties: UserProperties = {
       personas: this.personas
     }
     if (!this.userConfig?.anon_telemetry) {
-      user_properties.email = this.userConfig?.email;
+      user_properties = {
+        ...user_properties,
+        email: this.userConfig?.email
+      }
     }
     amplitude.track({
       event_type: eventName,
