@@ -1048,9 +1048,13 @@
     // TODO: Only close when dropped outside
     if (dragculaDragStartOpenTimeout !== null) clearTimeout(dragculaDragStartOpenTimeout)
 
-    for (const id of ['drawer', 'folder-']) {
-      if (drag.to?.id.startsWith(id)) {
-        return
+    for (const toId of ['drawer', 'folder-']) {
+      if (drag.to?.id.startsWith(toId)) {
+        for (const fromId of ['drawer', 'folder-']) {
+          if (drag.from?.id.startsWith(fromId)) {
+            return
+          }
+        }
       }
     }
 
