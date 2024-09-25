@@ -606,7 +606,7 @@
     }
   )
 
-  const loadEverything = async () => {
+  const loadEverything = async (initialLoad = false) => {
     try {
       if ($loadingContents) {
         log.debug('Already loading everything')
@@ -617,6 +617,12 @@
       oasis.resetSelectedSpace()
 
       loadingContents.set(true)
+
+      if (initialLoad) {
+        everythingContents.set([])
+        await tick()
+        telemetry.trackOpenOasis()
+      }
 
       const resources = await resourceManager.listResourcesByTags(
         [
@@ -632,7 +638,7 @@
       )
 
       const items = resources
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
         .map(
           (resource) =>
             ({
@@ -1043,29 +1049,24 @@
     hasLoadedEverything = value.length === 0
   }, 300)
 
-  const debouncedTrackOpenOasis = useDebounce(() => {
-    telemetry.trackOpenOasis()
-  }, 500)
-
   let previousSearchValue = ''
 
   $: if (showTabSearch === 2) {
-    debouncedTrackOpenOasis()
-    loadEverything()
+    loadEverything(true)
+  }
 
-    if ($searchValue !== previousSearchValue) {
-      isSearching = true
-      previousSearchValue = $searchValue
+  $: if (showTabSearch === 2 && $searchValue !== previousSearchValue) {
+    isSearching = true
+    previousSearchValue = $searchValue
 
-      if (searchTimeout) {
-        clearTimeout(searchTimeout)
-      }
-
-      // does two things: second layer flood defense & prevents empty state from loading everything immediately, which clogs input
-      searchTimeout = setTimeout(async () => {
-        await debouncedSearch($searchValue)
-      }, 300)
+    if (searchTimeout) {
+      clearTimeout(searchTimeout)
     }
+
+    // does two things: second layer flood defense & prevents empty state from loading everything immediately, which clogs input
+    searchTimeout = setTimeout(async () => {
+      await debouncedSearch($searchValue)
+    }, 300)
   }
 
   $: if (showTabSearch !== 2) {
