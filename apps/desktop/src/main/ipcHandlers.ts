@@ -1,12 +1,12 @@
 import { isMac, useLogScope } from '@horizon/utils'
-import { ipcMain, app, session, webContents } from 'electron'
+import { app, session } from 'electron'
 import path from 'path'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
 import { getUserConfig, updateUserConfig, updateUserConfigSettings } from './config'
 import { handleDragStart } from './drag'
 import { ElectronAppInfo, RightSidebarTab, SFFSResource, UserSettings } from '@horizon/types'
-import { getPlatform } from './utils'
+import { getPlatform, isPathSafe } from './utils'
 import { checkForUpdates } from './appUpdates'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 import { createGoogleSignInWindow } from './googleSignInWindow'
@@ -16,6 +16,9 @@ import { IPC_EVENTS_MAIN, TrackEvent } from '@horizon/core/src/lib/service/ipc/e
 import { getSetupWindow } from './setupWindow'
 import { openResourceAsFile } from './downloadManager'
 import { getAppMenu } from './appMenu'
+
+import fs from 'fs/promises'
+import tokenManager from './token'
 
 const log = useLogScope('Main IPC Handlers')
 // let prompts: EditablePrompt[] = []
@@ -57,6 +60,38 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
 }
 
 function setupIpcHandlers(backendRootPath: string) {
+  IPC_EVENTS_MAIN.tokenCreate.handle(async (event, data) => {
+    if (!validateIPCSender(event)) return null
+    return tokenManager.create(data)
+  })
+
+  IPC_EVENTS_MAIN.webviewReadResourceData.handle(async (_, { token, resourceId }) => {
+    if (!tokenManager.verify(token, resourceId)) return null
+    tokenManager.revoke(token)
+
+    let fileHandle: fs.FileHandle | null = null
+
+    try {
+      const base_path = path.join(app.getPath('userData'), 'sffs_backend', 'resources')
+      const resource_path = path.join(base_path, resourceId)
+      if (!isPathSafe(base_path, resource_path)) return null
+      fileHandle = await fs.open(resource_path, 'r')
+
+      const stats = await fileHandle.stat()
+      const buffer = Buffer.alloc(stats.size)
+      await fileHandle.read(buffer, 0, stats.size, 0)
+
+      return buffer
+    } catch (error) {
+      console.log('what the hell', error)
+      return null
+    } finally {
+      if (fileHandle) {
+        await fileHandle.close().catch(() => {})
+      }
+    }
+  })
+
   IPC_EVENTS_MAIN.showAppMenuPopup.on((event, _) => {
     if (!validateIPCSender(event)) return
     getAppMenu()?.popup()
