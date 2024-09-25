@@ -57,7 +57,8 @@
     TabHistory,
     CreateTabOptions,
     ControlWindow,
-    TabResource
+    TabResource,
+    BookmarkTabState
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
@@ -185,7 +186,6 @@
   const addressValue = writable('')
   const activeChatId = useLocalStorageStore<string>('activeChatId', '')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
-  const bookmarkingInProgress = writable(false)
   const magicInputValue = writable('')
   const activeTabMagic = writable<PageMagic>({
     running: false,
@@ -194,7 +194,7 @@
     responses: [],
     errors: []
   })
-  const bookmarkingSuccess = writableAutoReset(false, 1000)
+  const bookmarkingTabsState = writable<Record<string, BookmarkTabState>>({})
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
   const isCreatingLiveSpace = writable(false)
@@ -309,7 +309,7 @@
     await wait(10000)
 
     if (newTab) {
-      await handleBookmark(false, SaveToOasisEventTrigger.CreateMenu)
+      await handleBookmark(newTab.id, false, SaveToOasisEventTrigger.CreateMenu)
     }
   }
 
@@ -592,7 +592,7 @@
     } else if (isModKeyAndKeyPressed(e, 'e')) {
       toggleRightSidebarTab('chat')
     } else if (isModKeyAndKeyPressed(e, 'd')) {
-      handleBookmark(false, SaveToOasisEventTrigger.Shortcut)
+      handleBookmark($activeTabId, false, SaveToOasisEventTrigger.Shortcut)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       // this creates a new electron window
     } else if (isModKeyAndKeyPressed(e, 'o')) {
@@ -991,86 +991,86 @@
     }
   }
 
+  function updateBookmarkingTabState(tabId: string, value: BookmarkTabState | null) {
+    if (value === null) {
+      bookmarkingTabsState.update((state) => {
+        const newState = { ...state }
+        delete newState[tabId]
+        return newState
+      })
+    } else {
+      bookmarkingTabsState.update((state) => {
+        return { ...state, [tabId]: value }
+      })
+    }
+  }
+
   async function handleBookmark(
+    tabId: string,
     savedToSpace = false,
     trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click
   ): Promise<{ resource: Resource | null; isNew: boolean }> {
+    let toast: ToastItem | null = null
+
     try {
-      if (!$activeTabLocation || $activeTab?.type !== 'page' || !$activeBrowserTab)
+      const tab = $tabs.find((t: Tab) => t.id === tabId)
+
+      if (!tab || tab.type !== 'page') {
+        log.error('invalid tab for bookmarking', tab)
         return { resource: null, isNew: false }
-
-      bookmarkingInProgress.set(true)
-
-      if ($activeTab.resourceBookmark) {
-        log.debug(
-          'checking if existing bookmark still valid for url',
-          $activeTabLocation,
-          $activeTab.resourceBookmark
-        )
-
-        const existingResource = await resourceManager.getResource($activeTab.resourceBookmark)
-        const isDeleted =
-          existingResource?.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
-            ?.value === 'true'
-
-        if (existingResource && !isDeleted) {
-          const existingCanonical = (existingResource?.tags ?? []).find(
-            (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-          )
-
-          log.debug('existing canonical', existingCanonical)
-
-          if (existingCanonical?.value === $activeTabLocation) {
-            log.debug('already bookmarked, removing silent tag', $activeTab.resourceBookmark)
-
-            const isSilent = (existingResource.tags ?? []).some(
-              (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
-            )
-
-            if (isSilent) {
-              // mark resource as not silent since the user is explicitely bookmarking it
-              await resourceManager.deleteResourceTag(
-                $activeTab.resourceBookmark,
-                ResourceTagsBuiltInKeys.SILENT
-              )
-            }
-
-            bookmarkingSuccess.set(true)
-
-            // if (openAfter) {
-            //   openResourceDetailsModal($activeTab.resourceBookmark)
-            // }
-
-            tabsManager.update($activeTabId, { resourceBookmarkedManually: true })
-
-            // If the resource hasn't been saved before we track the event
-            if (isSilent) {
-              await telemetry.trackSaveToOasis(existingResource.type, trigger, savedToSpace)
-            }
-
-            return { resource: existingResource, isNew: false }
-          }
-        }
       }
 
-      const resource = await $activeBrowserTab.bookmarkPage()
+      updateBookmarkingTabState(tabId, 'in_progress')
+      toast = toasts.loading('Saving Page…')
 
-      // automatically resets after some time
-      toasts.success('Bookmarked Page!')
-      bookmarkingSuccess.set(true)
+      let browserTab = $browserTabs[tabId]
+      const isActivated = $activatedTabs.includes(tab.id)
+      if (!isActivated) {
+        log.debug('Tab not activated, activating first', tab.id)
+        activatedTabs.update((tabs) => {
+          return [...tabs, tab.id]
+        })
+
+        // give the tab some time to load
+        await wait(200)
+
+        browserTab = $browserTabs[tab.id]
+        if (!browserTab) {
+          log.error('Browser tab not found', tab.id)
+          throw Error(`Browser tab not found`)
+        }
+
+        log.debug('Waiting for tab to become active', tab.id)
+        await browserTab.waitForAppDetection(3000)
+      }
+
+      const resource = await browserTab.bookmarkPage({
+        silent: false,
+        createdForChat: false,
+        freshWebview: true
+      })
+
+      updateBookmarkingTabState(tabId, 'success')
+      toast?.success('Page Saved!')
 
       await telemetry.trackSaveToOasis(resource.type, trigger, savedToSpace)
-
-      // if (openAfter) {
-      //   openResourceDetailsModal(resource.id)
-      // }
 
       return { resource, isNew: true }
     } catch (e) {
       log.error('error creating resource', e)
+
+      updateBookmarkingTabState(tabId, 'error')
+
+      if (toast) {
+        toast?.error('Failed to save page!')
+      } else {
+        toasts.error('Failed to save page!')
+      }
       return { resource: null, isNew: false }
     } finally {
-      bookmarkingInProgress.set(false)
+      setTimeout(() => {
+        updateBookmarkingTabState(tabId, null)
+      }, 1500)
     }
   }
 
@@ -1793,7 +1793,7 @@
     const toast = toasts.loading('Adding resource to space...')
 
     try {
-      const { resource } = await handleBookmark(true, SaveToOasisEventTrigger.Click)
+      const { resource } = await handleBookmark($activeTabId, true, SaveToOasisEventTrigger.Click)
       log.debug('bookmarked resource', resource)
 
       if (resource) {
@@ -3709,8 +3709,7 @@
                         tabSize={Math.min(300, Math.max(24, tabSize))}
                         {tab}
                         {activeTabId}
-                        bookmarkingInProgress={$bookmarkingInProgress}
-                        bookmarkingSuccess={$bookmarkingSuccess}
+                        bookmarkingState={$bookmarkingTabsState[tab.id]}
                         pinned={false}
                         {spaces}
                         enableEditing
@@ -3729,7 +3728,7 @@
                         on:delete-tab={handleDeleteTab}
                         on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
-                        on:bookmark={(e) => handleBookmark(false, e.detail.trigger)}
+                        on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
                         on:create-live-space={handleCreateLiveSpace}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
@@ -3750,6 +3749,7 @@
                         {tab}
                         tabSize={Math.min(300, Math.max(24, tabSize))}
                         {activeTabId}
+                        {spaces}
                         pinned={false}
                         showIncludeButton={$activeTabMagic?.showSidebar &&
                           (tab.type === 'page' || tab.type === 'space')}
@@ -3758,6 +3758,7 @@
                           (item) => item.id === tab.id && item.userSelected
                         )}
                         isMagicActive={$magicTabs.length > 0}
+                        bookmarkingState={$bookmarkingTabsState[tab.id]}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={handleTabSelect}
@@ -3765,6 +3766,7 @@
                         on:exclude-tab={handleExcludeTab}
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
+                        on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
                         on:include-tab={handleIncludeTabInMagic}
                         on:chat-with-tab={handleOpenTabChat}
                         on:pin={handlePinTab}
@@ -3798,8 +3800,7 @@
                         horizontalTabs={false}
                         {tab}
                         {activeTabId}
-                        bookmarkingInProgress={$bookmarkingInProgress}
-                        bookmarkingSuccess={$bookmarkingSuccess}
+                        bookmarkingState={$bookmarkingTabsState[tab.id]}
                         pinned={false}
                         {spaces}
                         enableEditing
@@ -3819,7 +3820,7 @@
                         on:delete-tab={handleDeleteTab}
                         on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
-                        on:bookmark={(e) => handleBookmark(false, e.detail.trigger)}
+                        on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
                         on:create-live-space={handleCreateLiveSpace}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
@@ -3840,6 +3841,7 @@
                         {tab}
                         horizontalTabs={false}
                         {activeTabId}
+                        {spaces}
                         pinned={false}
                         showIncludeButton={$activeTabMagic?.showSidebar &&
                           (tab.type === 'page' || tab.type === 'space')}
@@ -3848,6 +3850,7 @@
                           (item) => item.id === tab.id && item.userSelected
                         )}
                         isMagicActive={$magicTabs.length > 0}
+                        bookmarkingState={$bookmarkingTabsState[tab.id]}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={handleTabSelect}
@@ -3855,6 +3858,7 @@
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
+                        on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
                         on:include-tab={handleIncludeTabInMagic}
                         on:chat-with-tab={handleOpenTabChat}
                         on:pin={handlePinTab}
@@ -4056,7 +4060,8 @@
           activeTabs={$activeTabs}
           on:activate-tab={handleTabSelect}
           on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
-          on:bookmark={() => handleBookmark(false, SaveToOasisEventTrigger.CommandMenu)}
+          on:bookmark={() =>
+            handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
           on:toggle-sidebar={() => changeLeftSidebarState()}
           on:create-tab-from-space={handleCreateTabFromSpace}
           on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}

@@ -76,7 +76,7 @@ export class MetadataExtractor {
     const dateModified = getMeta('date', 'article:modified_time')
 
     const parsed = {
-      title: getMeta('title', 'og:title'),
+      title: getMeta('title', 'og:title') ?? document.title,
       description: getMeta('description', 'og:description'),
       image: image ? parseStringIntoUrl(image, this.url)?.href : null,
       icon: favicon ? parseStringIntoUrl(favicon, this.url)?.href : null,

@@ -8,6 +8,7 @@
   export type Author = {
     text?: string
     imageUrl?: string
+    icon?: Icons
   }
 
   export type Mode = 'full' | 'media' | 'content' | 'compact' | 'tiny'
@@ -42,9 +43,9 @@
   export let contentType: ContentType = 'plain'
   export let annotations: Annotation[] | undefined = undefined
   export let url: string | undefined = undefined
-  export let source: Source
-  export let author: Author | undefined
-  export let theme: [string, string] | undefined
+  export let source: Source | undefined = undefined
+  export let author: Author | undefined = undefined
+  export let theme: [string, string] | undefined = undefined
 
   export let mode: Mode = 'full'
 
@@ -67,6 +68,8 @@
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
   }
+
+  const IFRAME_STYLES = `<style> html { font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', sans-serif; } </style>`
 </script>
 
 <div
@@ -86,11 +89,11 @@
       {:else if mode === 'tiny'}
         <div class="tiny-wrapper">
           <div class="tiny-icon">
-            {#if source.imageUrl}
+            {#if source?.imageUrl}
               <div class="favicon">
                 <Image src={source.imageUrl} alt={source.text} fallbackIcon="link" />
               </div>
-            {:else if source.icon}
+            {:else if source?.icon}
               <Icon name={source.icon} />
             {:else}
               <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
@@ -98,7 +101,7 @@
           </div>
 
           <div class="from">
-            {title || content || source.text}
+            {title || content || source?.text || author?.text || 'Untitled'}
           </div>
         </div>
       {:else}
@@ -156,7 +159,12 @@
                 {:else if contentType === 'rich_text'}
                   <Editor content={truncate(content, MAX_CONTENT_LENGTH)} readOnly />
                 {:else if contentType === 'html'}
-                  <iframe title="Document Preview" srcdoc={content} frameborder="0" sandbox="" />
+                  <iframe
+                    title="Document Preview"
+                    srcdoc="{IFRAME_STYLES}{content}"
+                    frameborder="0"
+                    sandbox=""
+                  />
                 {:else if contentType === 'markdown'}
                   <MarkdownRenderer content={truncate(content, MAX_CONTENT_LENGTH)} />
                 {/if}
@@ -181,18 +189,24 @@
               <SourceItem {type} {source} themed={!!theme} />
             {/if}
 
-            {#if showAuthor && author && author.text}
+            {#if showAuthor && author && (author.text || author.imageUrl || author.icon)}
               <div class="metadata">
                 <div class="author">
                   {#if author.imageUrl}
                     <div class="favicon">
-                      <Image src={author.imageUrl} alt={author.text} emptyOnError />
+                      <Image src={author.imageUrl} alt={author.text ?? ''} emptyOnError />
+                    </div>
+                  {:else if author.icon}
+                    <div class="favicon">
+                      <Icon name={author.icon} />
                     </div>
                   {/if}
 
-                  <div class="from">
-                    {author.text}
-                  </div>
+                  {#if author.text}
+                    <div class="from">
+                      {author.text}
+                    </div>
+                  {/if}
                 </div>
               </div>
             {/if}
@@ -280,9 +294,11 @@
   }
 
   .favicon {
+    flex-shrink: 0;
     width: 1.25rem;
     height: 1.25rem;
     border-radius: 5.1px;
+    color: #281b53;
     box-shadow:
       0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
       0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
@@ -292,6 +308,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    overflow: hidden;
   }
 
   .from {
@@ -300,6 +317,7 @@
     text-decoration: none;
     color: #281b53;
     opacity: 0.65;
+    width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
