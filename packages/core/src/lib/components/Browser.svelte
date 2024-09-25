@@ -4328,6 +4328,11 @@
     //cursor: wait !important;
   }
 
+  /* Necessary so that image & pdf view dont prevent dragging */
+  :global(body[data-dragging] webview:not([data-drag-zone])) {
+    pointer-events: none !important;
+  }
+
   :global(.dragcula-drop-indicator) {
     --color: #3765ee;
     --dotColor: white;
