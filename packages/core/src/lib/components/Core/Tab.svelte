@@ -269,6 +269,9 @@
 
     drag.item!.data.setData(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
 
+    if (tab.type === 'page' && tab.currentLocation)
+      drag.dataTransfer?.setData('text/uri-list', tab.currentLocation)
+
     // @ts-ignore
     const resourceId = tab.resourceBookmark ?? tab.resourceId
     if (resourceId) {
@@ -724,7 +727,7 @@
     border-color: rgba(5, 5, 25, 0.3);
     border-style: dashed;*/
     background: #fff;
-    border: 1.5px dotted rgba(5, 5, 25, 0.3);
+    border: 2px dotted rgba(5, 5, 25, 0.3);
     opacity: 95%;
     // https://getcssscan.com/css-box-shadow-examples
     box-shadow:
