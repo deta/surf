@@ -201,7 +201,6 @@
 
       const response = await resourceManager.getResourcesViaPrompt(prompt, options)
 
-      log.debug(`bbb-Response before check`, prompt, $userPrompt)
       if (prompt !== $userPrompt) {
         log.debug(`bbb-Outdated Preview Response`, response)
         actionCancelled = true
