@@ -351,7 +351,7 @@
           <input
             bind:this={inputElement}
             id={`folder-input-${folder.id}`}
-            style={`width: ${inputWidth};`}
+            style={`width: 100%;`}
             type="text"
             bind:value={folderDetails.folderName}
             class="folder-input isEditing"
