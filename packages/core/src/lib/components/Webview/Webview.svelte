@@ -65,6 +65,8 @@
   export const isMuted = writable(false)
   export const didFinishLoad = writable(false)
 
+  const resourceManager = useResourceManager()
+
   const ERROR_CODES_TO_IGNORE = [-3] // -3 is ERR_ABORTED
   const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -413,7 +415,7 @@ Made with Deta Surf.`
     drag.continue()
 
     if (!resourceId) return
-    const resource = await useResourceManager().getResource(resourceId)
+    const resource = await resourceManager.getResource(resourceId)
     if (!resource) return
     const token = await window.api.createToken(resource.id)
 
