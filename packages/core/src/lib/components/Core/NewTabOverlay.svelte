@@ -989,7 +989,7 @@
   }
 
   const handleDeleteSpace = async () => {
-    await oasisSpace.handleDeleteSpace(new CustomEvent('delete', { detail: false }))
+    await oasisSpace.handleDeleteSpace(false, true)
     isCreatingNewSpace.set(false)
   }
 

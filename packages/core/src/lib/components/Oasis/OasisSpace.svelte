@@ -1251,20 +1251,19 @@
   }
 
   export const handleDeleteSpace = async (
-    e: CustomEvent<{ shouldDeleteAllResources: boolean; abortSpaceCreation?: boolean }>
+    shouldDeleteAllResources: boolean = false,
+    abortSpaceCreation: boolean = false
   ) => {
-    const { shouldDeleteAllResources, abortSpaceCreation = false } = e.detail
-
     const confirmed = window.confirm(
       abortSpaceCreation
         ? 'Are you sure you want to abort the creation of this space?'
         : shouldDeleteAllResources
           ? 'Are you sure you want to delete this space and all of its resources?'
-          : 'Are you sure you want to abort the creation of this space?'
+          : 'Are you sure you want to delete this space?'
     )
 
     if (!confirmed) {
-      return
+      return false
     }
 
     let toast
@@ -1288,14 +1287,16 @@
       dispatch('deleted', spaceId)
 
       if (!abortSpaceCreation) {
-        toast.success('Space deleted!')
+        toast?.success('Space deleted!')
       }
 
       await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
+
+      return true
     } catch (error) {
       log.error('Error deleting space:', error)
       if (!abortSpaceCreation) {
-        toast.error(
+        toast?.error(
           'Error deleting space: ' + (typeof error === 'string' ? error : (error as Error).message)
         )
       }
@@ -1419,13 +1420,11 @@
 
   const handleAbortSpaceCreation = async (e: CustomEvent<string>) => {
     const spaceId = e.detail
-    await handleDeleteSpace(
-      new CustomEvent('delete', {
-        detail: { shouldDeleteAllResources: false, abortSpaceCreation: true }
-      })
-    )
+    const wasDeleted = await handleDeleteSpace(false, true)
 
-    dispatch('deleted', spaceId)
+    if (!wasDeleted) {
+      log.debug('Space creation aborted:', spaceId)
+    }
   }
 </script>
 
@@ -1495,7 +1494,7 @@
                     bind:space={$space}
                     on:refresh={handleRefreshLiveSpace}
                     on:clear={handleClearSpace}
-                    on:delete={handleDeleteSpace}
+                    on:delete={(e) => handleDeleteSpace(e.detail)}
                     on:load={handleLoadSpace}
                     on:delete-auto-saved={handleDeleteAutoSaved}
                   />
