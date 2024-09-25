@@ -203,12 +203,12 @@
       const response = await resourceManager.getResourcesViaPrompt(prompt, options)
 
       if (prompt !== $userPrompt) {
-        log.debug(`bbb-Outdated Preview Response`, response)
+        log.debug(`Outdated Preview Response`, response)
         actionCancelled = true
         return
       }
 
-      log.debug(`bbb-Preview response`, response)
+      log.debug(`Preview response`, response)
 
       resultHasSemanticSearch.set(
         !!(response.embedding_search_results && response.embedding_search_results.length > 0)
@@ -223,8 +223,6 @@
         id,
         blacklisted: $blacklistedResources.includes(id)
       }))
-
-      log.debug('bbb-Fetched resource IDs', resourceIds)
 
       previewIDs.set(resourceIds)
 

@@ -394,6 +394,26 @@
             },
             theme: undefined
           }
+        } else {
+          const data = resourceData as any
+          const hostname = getHostname(canonicalUrl ?? data.url)
+
+          previewData = {
+            type: resource.type,
+            title: resource?.metadata?.name || data.title || getFileType(resource.type),
+            content: data.content_plain,
+            contentType: 'plain',
+            image: data.image ?? undefined,
+            url: data.url,
+            source: {
+              text: data.provider
+                ? cleanSource(data.provider)
+                : hostname || getFileType(resource.type),
+              imageUrl: data.icon ?? `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`,
+              icon: 'link'
+            },
+            theme: undefined
+          }
         }
       } else if (resource instanceof ResourceNote) {
         const data = await resource.getContent()
