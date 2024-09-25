@@ -81,25 +81,37 @@ export class Telemetry {
       return
     }
 
-    const userID = this.userConfig.user_id
-    if (!userID) {
-      this.log.warn('No user ID found, disabling telemetry')
-      this.active = false
-      return
-    }
-
     this.appInfo = await window.api.getAppInfo()
-
-    amplitude.init(this.apiKey, userID, {
+    const initOptions = {
+      // TODO: default tracking will be deprecated by the ampltiude SDK
       defaultTracking: {
+        sessions: true,
         attribution: false,
         pageViews: false,
-        sessions: true,
         formInteractions: false,
         fileDownloads: false
       },
+      trackingOptions: {
+        ipAddress: false,
+        platform: true
+      },
       appVersion: this.appInfo?.version
-    })
+    }
+
+    let userID = this.userConfig.user_id
+    if (this.userConfig.anon_telemetry) {
+      // use the anonID as the user ID for telemetry
+      // which will not be tied to any user identifiable information
+      // and is generated & stored locally
+      this.log.debug('Using anon telemetry')
+      userID = this.userConfig.anon_id
+    }
+    if (!userID) {
+      this.log.warn('No user/anon ID found, disabling telemetry')
+      this.active = false
+      return
+    }
+    amplitude.init(this.apiKey, userID, initOptions)
     amplitude.setOptOut(!this.active)
 
     window.api.onTrackEvent((eventName, properties) => {
@@ -145,14 +157,18 @@ export class Telemetry {
 
     this.log.debug('Tracking event', eventName, eventProperties)
 
-    await amplitude.track({
+    let user_properties = undefined
+    if (!this.userConfig?.anon_telemetry) {
+      user_properties = {
+        email: this.userConfig?.email
+      }
+    }
+    amplitude.track({
       event_type: eventName,
       event_properties: eventProperties,
       platform: this.appInfo?.platform,
       app_version: this.appInfo?.version,
-      user_properties: {
-        email: this.userConfig?.email
-      }
+      user_properties: user_properties
     })
   }
 
