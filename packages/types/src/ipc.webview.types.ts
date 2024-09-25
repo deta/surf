@@ -29,6 +29,7 @@ export enum WebViewEventSendNames {
   DragEnter = 'passthrough_dragenter',
   DragOver = 'passthrough_dragover',
   DragLeave = 'passthrough_dragleave',
+  Drag = 'passthrough_drag',
   Drop = 'passthrough_drop',
   Focus = 'focus',
   KeyUp = 'key_up',

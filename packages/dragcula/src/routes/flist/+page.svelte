@@ -25,6 +25,17 @@
 
 <File file={root} />
 
+<br /><br />
+
+<div
+  class="hoverable"
+  on:dragenter={(e) => e.target.classList.add("hover")}
+  on:dragleave={(e) => e.target.classList.remove("hover")}
+>
+  hoverable
+  <span>foo</span>
+</div>
+
 <style>
   :global([data-drag-preview]) {
     pointer-events: none !important;
@@ -43,5 +54,15 @@
   }
   :global([data-drag-zone][data-drag-target="true"]) {
     border: 2px dashed gray;
+  }
+
+  .hoverable {
+    background: lightgray;
+    padding: 1rem;
+
+    &:hover,
+    &.hover {
+      background: gray;
+    }
   }
 </style>

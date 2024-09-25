@@ -3535,7 +3535,7 @@
 
           {#if ($selectedTabs.size > 1 && $magicTabs.length === 0) || $anyTabHovered || $magicTabs.length > 0}
             <div
-              class="tooltip fixed top-[6.75rem] right-1 transform translate-x-0 bg-white/90 text-sky-600 rounded px-1 my-1 mx-2 border border-gray-100 overflow-visible z-50 w-fit rotate-1 transition-transform duration-300 cursor-default hover:bg-sky-100"
+              class="chat-hint-tooltop tooltip fixed top-[6.75rem] right-1 transform translate-x-0 bg-white/90 text-sky-600 rounded px-1 my-1 mx-2 border border-gray-100 overflow-visible z-50 w-fit rotate-1 transition-transform duration-300 cursor-default hover:bg-sky-100"
               in:fly={{ y: 3, duration: 120 }}
               out:fly={{ y: 3, duration: 120 }}
               on:click={() => {
@@ -4293,7 +4293,7 @@
       scale(var(--drag-scale, 1)) scale(var(--drag-scaleX, 1), var(--drag-scaleY, 1))
       rotate(var(--drag-tilt, 0)) scale(var(--scale, 1)) !important;
     transition:
-      transform 35ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      transform 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
       opacity 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
       border 135ms cubic-bezier(0, 1.22, 0.73, 1.13),
       box-shadow 165ms cubic-bezier(0, 1.22, 0.73, 1.13) !important;
@@ -4302,21 +4302,10 @@
     /*scale: var(--scaleX, 1) var(--scaleY, 1);*/
   }
   :global(body[data-dragging]:has([data-drag-target^='webview'])) {
-    cursor: wait !important;
+    // NOTE: Only kinda works sometimes, still ahve to debug how/if we can reliably
+    // have custom cursors during native dndn.
+    //cursor: wait !important;
   }
-
-  /*:global([data-drag-preview][data-drag-target^='webview']) {
-    border-width: 1.5px;
-    border-color: rgba(5, 5, 25, 0.3);
-    border-style: dashed;
-    opacity: 95%;
-    // https://getcssscan.com/css-box-shadow-examples
-    box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
-    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
-    box-shadow:
-      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
-      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
-  }*/
 
   :global(.dragcula-drop-indicator) {
     --color: #3765ee;
@@ -4461,6 +4450,10 @@
     overflow: visible !important;
     background: transparent !important;
   }*/
+
+  :global(body[data-dragging='true'] .chat-hint-tooltop) {
+    opacity: 0;
+  }
 
   :global(*) {
     scrollbar-color: rgb(130, 130, 130) transparent;

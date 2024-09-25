@@ -106,9 +106,16 @@
     flex: 1;
     width: 100%;
     height: 100%;
-    transition-property: opacity background-color;
-    transition-duration: 0.2s;
+    transition-property:
+      opacity 0.2s,
+      background-color 0.2s,
+      border-color 175ms;
     transition-timing-function: ease-in-out;
+    border: 1.5px dashed transparent;
+  }
+
+  :global(.drop-wrapper[data-drag-target]) {
+    border: 1.5px dashed gray !important;
   }
 
   .dragover {

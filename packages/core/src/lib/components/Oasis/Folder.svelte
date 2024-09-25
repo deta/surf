@@ -373,6 +373,7 @@
   .folder-wrapper {
     position: relative;
     pointer-events: auto;
+    border: 1px dashed transparent;
     width: 100%;
   }
 
@@ -387,6 +388,10 @@
     box-shadow:
       rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
       rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
+  }
+  :global(.folder-wrapper[data-drag-target]) {
+    border: 1px dashed gray !important;
+    border-radius: 16px;
   }
 
   .folder {

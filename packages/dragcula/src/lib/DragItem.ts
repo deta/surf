@@ -49,7 +49,7 @@ export class DragItem<DataTypes extends Record<string, any> = { [key: string]: a
   public onDragTargetLeave(drag: DragOperation, e?: DragEvent) {}
 
   protected onDragEnd(drag: DragOperation, e?: DragEvent) {
-    console.warn("onDragEnd native", Dragcula.get().activeDrag?.isNative);
+    console.warn("onDragEnd isNative", Dragcula.get().activeDrag?.isNative);
     Dragcula.get().cleanupDragOperation();
   }
 }
@@ -207,6 +207,19 @@ export class HTMLDragItem extends DragItem {
 
     log.debug(`${this.prefix}:dragStart`, e);
 
+    /*// NOTE: HTML5 Honeypot fix as browsers dont fix weird bugs for shit :((
+		// see: https://www.youtube.com/watch?v=udE9qbFTeQg
+		const honeypot = document.createElement("div");
+		honeypot.style.position = "fixed";
+		const WIDTH = 30;
+		honeypot.style.top = `${e.clientY - WIDTH / 2}px`;
+		honeypot.style.left = `${e.clientX - WIDTH / 2}px`;
+		honeypot.style.width = `${WIDTH}px`;
+		honeypot.style.height = `${WIDTH}px`;
+		honeypot.style.background = "red";
+		honeypot.style.pointerEvents = "none";
+		document.body.appendChild(honeypot);*/
+
     // TODO: update paren t/ siblings
     this.previewPosition.x = e.clientX;
     this.previewPosition.y = e.clientY;
@@ -265,7 +278,7 @@ export class HTMLDragItem extends DragItem {
   }
 
   protected _handleDrag(e: DragEvent) {
-    e.stopPropagation();
+    //e.stopPropagation() // TODO: Issues?
     const drag = Dragcula.get().activeDrag;
     assert(drag !== null, "No active drag operation during handleDrag! This should not happen!");
     this.onDrag(drag, e);
@@ -300,6 +313,7 @@ export class HTMLDragItem extends DragItem {
         throw new Error("Parent zone not found during drag start! This should not happen!");
       }
       drag.from = zone;
+      Dragcula.get().targetDomElement.set(zone.element);
     }
 
     this.previewPosition.x = e?.clientX ?? 0;

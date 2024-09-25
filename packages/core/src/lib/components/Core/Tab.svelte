@@ -263,6 +263,8 @@
 
   const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
     isDragging = true
+    isEditing = false
+    hovered = false
     blur()
 
     drag.item!.data.setData(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
@@ -701,7 +703,7 @@
     height: var(--drag-height, auto);
     transition:
       0s ease-in-out,
-      transform 35ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      transform 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
       width 175ms cubic-bezier(0.4, 0, 0.2, 1),
       height 175ms cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
@@ -714,6 +716,8 @@
     }
   }
   :global(.tab[data-drag-preview][data-drag-target^='webview']) {
+    --scale: 0.88;
+
     /*border-width: 1.5px;
     border-color: rgba(5, 5, 25, 0.3);
     border-style: dashed;*/

@@ -1026,7 +1026,6 @@ window.addEventListener(
   (event: DragEvent) => {
     event.preventDefault()
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
-    // TODO: Fix missing types
     sendPageEvent(WebViewEventSendNames.DragOver, {
       clientX: event.clientX,
       clientY: event.clientY,
@@ -1042,6 +1041,25 @@ window.addEventListener(
   },
   { capture: true } // TODO: Try no capture
 )
+window.addEventListener(
+  'drag',
+  (event: DragEvent) => {
+    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+    sendPageEvent(WebViewEventSendNames.Drag, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pageX: event.pageX,
+      pageY: event.pageY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey
+    })
+  },
+  { capture: true }
+)
 
 // This is the "hack" we can use to detect whether we are inside / outside the webview when dragging.
 let dragDepth = 0
@@ -1053,6 +1071,8 @@ window.addEventListener(
     if (dragDepth > 1) return
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     sendPageEvent(WebViewEventSendNames.DragEnter, {
+      // TODO: (dnd): We need to serialize the datarasnfer, as its not directly serializable itself
+      //dataTransfer: e.dataTransfer ?? new DataTransfer(),
       clientX: e.clientX,
       clientY: e.clientY,
       pageX: e.pageX,

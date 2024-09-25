@@ -1,5 +1,12 @@
+import { writable } from "svelte/store";
 import type { DragItem, DragZone } from "./index.js";
-import { genId, ii_DRAGCULA, log, SUPPORTS_VIEW_TRANSITIONS } from "./utils/internal.js";
+import {
+  genId,
+  getParentZone,
+  ii_DRAGCULA,
+  log,
+  SUPPORTS_VIEW_TRANSITIONS
+} from "./utils/internal.js";
 
 /**
  * Global Dragcula Singleton.
@@ -24,12 +31,51 @@ export class Dragcula {
     this._useViewTransitions = v;
   }
 
+  // Workarounds for native drag shittyness
+  targetDomElement = writable<HTMLElement | null>(null);
+
   protected constructor() {
     const img = document.createElement("img");
     img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
     this.transparentImg = img;
 
+    // This should probably live somewhere else lol
+    function handleDragUpdate(e: DragEvent) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const activeDrag = Dragcula.get().activeDrag;
+      if (activeDrag === null) {
+        console.warn("handling drag event without activeDrag! This should not happen!");
+        return;
+      }
+      Dragcula.get().targetDomElement.set(el as HTMLElement);
+
+      const overZone = getParentZone(el as HTMLElement);
+      const newTargetId = overZone?.id ?? null;
+      const oldTargetId = activeDrag.to?.id ?? null;
+
+      if (newTargetId !== oldTargetId) {
+        if (oldTargetId !== null) {
+          const evt = new DragEvent("dragleave", {
+            dataTransfer: activeDrag.dataTransfer,
+            relatedTarget: el,
+            bubbles: true,
+            cancelable: true
+          });
+          activeDrag.to?._handleDragLeave(evt);
+        }
+        if (newTargetId !== null) {
+          const evt = new DragEvent("dragenter", {
+            dataTransfer: activeDrag.dataTransfer,
+            relatedTarget: activeDrag.to?.element ?? undefined,
+            bubbles: true,
+            cancelable: true
+          });
+          overZone?._handleDragEnter(evt);
+        }
+      }
+    }
     // Reset after native drop
+    // FIX: UNBIND
     document.addEventListener("drop", (e) => {
       // NOTE: This will cleanup after a native drop, as it wont have dragend called on any element.
       // TODO: Is this correct?
@@ -37,23 +83,9 @@ export class Dragcula {
       setTimeout(() => this.cleanupDragOperation());
     });
 
-    /*document.addEventListener("dragenter", (e) => {
-					if (this.activeDrag !== null) return
-					this.prepareDragOperation()
-				});
-				document.addEventListener("dragleave", (e) => {
-		
-					this.cleanupDragOperation()
-				});*/
-
-    /*window.addEventListener("dragenter", e => {
-			if (e.fromElement !== document.documentElement) return;
-			console.log("DRAGENTER")
-		});
-		window.addEventListener("dragleave", e => {
-			if (e.toElement !== document.documentElement) return;
-			console.log("DRAGLEAVE")
-		});*/
+    // FIX: UNBIND
+    document.addEventListener("drag", handleDragUpdate);
+    document.addEventListener("dragover", handleDragUpdate);
 
     // @ts-ignore
     window.Dragcula = this;

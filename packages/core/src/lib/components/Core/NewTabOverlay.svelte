@@ -1038,21 +1038,37 @@
     debouncedSearch($searchValue)
   }
 
+  let dragculaDragStartOpenTimeout: Timer | null = null // Used to delay opening stuff a bit, so that it doesnt laaagggg
+  const handleDragculaDragStart = () => {
+    dragculaDragStartOpenTimeout = setTimeout(() => {
+      showTabSearch = 2
+    }, 150)
+  }
+  const handleDragculaDragEnd = () => {
+    // TODO: Only close when dropped outside
+    if (dragculaDragStartOpenTimeout !== null) clearTimeout(dragculaDragStartOpenTimeout)
+    showTabSearch = 0
+  }
+
+  onDestroy(
+    Dragcula.get().targetDomElement.subscribe((el: HTMLElement) => {
+      // We need to manually query as bits-ui/svelte-vaul shit doesnt expose element ref.. because ofc why would anyone neeeed that!!?
+      const drawerContentEl = document.querySelector('.drawer-content')
+      if (drawerContentEl?.contains(el)) {
+        drawerContentEl?.classList.add('hovering')
+      } else {
+        drawerContentEl?.classList.remove('hovering')
+      }
+    })
+  )
+
   onMount(() => {
-    Dragcula.get().on('dragstart', () => {
-      setTimeout(() => (showTabSearch = 2), 0)
-    })
-    Dragcula.get().on('dragend', () => {
-      showTabSearch = 0
-    })
+    Dragcula.get().on('dragstart', handleDragculaDragStart)
+    Dragcula.get().on('dragend', handleDragculaDragEnd)
   })
   onDestroy(() => {
-    Dragcula.get().off('dragstart', () => {
-      setTimeout(() => (showTabSearch = 2), 0)
-    })
-    Dragcula.get().off('dragend', () => {
-      showTabSearch = 0
-    })
+    Dragcula.get().off('dragstart', handleDragculaDragStart)
+    Dragcula.get().off('dragend', handleDragculaDragEnd)
   })
 </script>
 
@@ -1157,9 +1173,11 @@
             let:motion
           > -->
           <div
-            class={showTabSearch === 1
-              ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : 'h-[58px]'}`
-              : 'w-[90vw] h-[calc(100vh-120px)]'}
+            class={`${
+              showTabSearch === 1
+                ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : 'h-[58px]'}`
+                : 'w-[90vw] h-[calc(100vh-120px)]'
+            }`}
           >
             {#if showTabSearch === 1 && $searchValue.length}
               <Command.List class="m-2 no-scrollbar">
@@ -1210,6 +1228,17 @@
                     <DropWrapper
                       acceptDrop={true}
                       {spaceId}
+                      acceptsDrag={(drag) => {
+                        if (
+                          drag.isNative ||
+                          drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                          drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                          drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                        ) {
+                          return true
+                        }
+                        return false
+                      }}
                       on:Drop={(e) => handleDrop(e.detail)}
                       on:DragEnter={(e) => handleDragEnter(e.detail)}
                       zonePrefix="drawerrr-"
@@ -1354,23 +1383,23 @@
     z-index: 1000;
   }
 
-  /* Hides the Drawer when dragging but not targeting it */
-  :global(
-      body[data-dragging='true']:not([data-drag-target^='drawer-oasis-space-']) .drawer-content
-    ) {
-    transform: translateY(calc(100vh - 240px)) !important;
-  }
-
   :global([data-dialog-portal] .drawer-overlay) {
     background: rgba(0, 0, 0, 0.35);
     opacity: 1;
+  }
+  :global(body[data-dragging='true'] .drawer-overlay) {
     pointer-events: none;
   }
   :global(
-      body[data-dragging='true']:not([data-drag-target^='drawer-oasis-space-'])
+      body[data-dragging='true']:not(:has(.drawer-content.hovering))
         [data-dialog-portal]
         .drawer-overlay
     ) {
     opacity: 0 !important;
+  }
+
+  /* Hides the Drawer when dragging but not targeting it */
+  :global(body[data-dragging='true'] .drawer-content:not(.hovering)) {
+    transform: translateY(calc(100vh - 150px)) !important;
   }
 </style>

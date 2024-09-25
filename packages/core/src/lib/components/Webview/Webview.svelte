@@ -26,6 +26,7 @@
   import {
     ResourceTypes,
     WebViewEventSendNames,
+    WebviewAnnotationEventNames,
     type WebViewReceiveEvents,
     type WebViewSendEvents
   } from '@horizon/types'
@@ -197,15 +198,22 @@
     // so, that dnd gets handled correctly
     if (eventType === WebViewEventSendNames.DragEnter) {
       const drag = Dragcula.get().activeDrag
-      if (!drag)
-        throw new Error(
+      if (!drag) {
+        // TODO: (dnd): Thsi isnt entirely correct. We actually need to bootstrap the drag differently,
+        // as it was first dragged over the webview.
+        // For now, we just return as this isnt fully there implementaiton wise.
+        /*throw new Error(
           "No active drag, can't forward webview dragenter event! This should not happen!"
-        )
+        )*/
+        return
+      }
+      let data = eventData as DragEvent
       const e = new DragEvent('dragenter', {
-        dataTransfer: drag?.dataTransfer,
+        dataTransfer: data.dataTransfer,
         // @ts-ignore It actually exists...
         toElement: webview,
-        fromElement: null
+        fromElement: null,
+        relatedTarget: null
       })
       webview.dispatchEvent(e)
     } else if (eventType === WebViewEventSendNames.DragLeave) {
@@ -229,15 +237,29 @@
         dataTransfer: drag?.dataTransfer
       })
       webview.dispatchEvent(e)
-    }
-
-    // NOTE: we modify dragover to have correct offset from webview.
-    // TODO: (perf): Not query bounding rect every time, just once when entering or sth.
-    if (eventType === WebViewEventSendNames.DragOver) {
+    } else if (
+      eventType === WebViewEventSendNames.Drag ||
+      eventType === WebViewEventSendNames.DragOver
+    ) {
       let data = eventData as DragEvent
       const webviewBounds = webview.getBoundingClientRect()
       data.clientX += webviewBounds.left
       data.clientY += webviewBounds.top
+      const e = new DragEvent('drag', {
+        dataTransfer: data.dataTransfer,
+        clientX: data.clientX,
+        clientY: data.clientY,
+        pageX: data.pageX,
+        pageY: data.pageY,
+        screenX: data.screenX,
+        screenY: data.screenY,
+        altKey: data.altKey,
+        ctrlKey: data.ctrlKey,
+        metaKey: data.metaKey,
+        shiftKey: data.shiftKey,
+        bubbles: true
+      })
+      webview.dispatchEvent(e)
     }
 
     // check if valid event and if so pass it up

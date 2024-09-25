@@ -183,6 +183,7 @@ export class HTMLDragZone extends DragZone {
         dataTransfer: e.dataTransfer ?? new DataTransfer()
       });
       Dragcula.get().prepareDragOperation();
+      Dragcula.get().callHandlers("dragstart", Dragcula.get().activeDrag);
     }
     const drag = Dragcula.get().activeDrag!;
     assert(drag !== null, "No active drag during dragEnter! This should not happen!");
