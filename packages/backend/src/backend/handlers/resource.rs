@@ -183,13 +183,20 @@ impl Worker {
         */
         Database::remove_resource_tx(&mut tx, &id)?;
         let resource_path = resource.unwrap().resource_path;
-        std::fs::remove_file(&resource_path).map_err(|e| {
-            BackendError::GenericError(format!(
-                "failed to remove resource file from disk: {:#?}",
-                e
-            ))
-        })?;
         self.ai.upsert_embeddings(embedding_keys, vec![], vec![])?;
+        match std::fs::remove_file(&resource_path) {
+            Ok(_) => {}
+            // Path not found is non-error
+            // this also happens if another resource was pointing to the same file and was already deleted
+            // or if the underlying file was deleted manually but the resource was not
+            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => {
+                return Err(BackendError::GenericError(format!(
+                    "failed to remove resource file from disk: {:#?}",
+                    e
+                )))
+            }
+        }
         tx.commit()?;
         Ok(())
     }
@@ -360,7 +367,10 @@ impl Worker {
             .send(AIMessage::GenerateMetadataEmbeddings(metadata.clone()))
             .map_err(|e| BackendError::GenericError(e.to_string()))?;
         */
-        self.db.update_resource_metadata(&metadata)
+        let mut tx = self.db.begin()?;
+        Database::update_resource_metadata_tx(&mut tx, &metadata)?;
+        tx.commit()?;
+        Ok(())
     }
 
     pub fn create_resource_tag(&mut self, mut tag: ResourceTag) -> BackendResult<()> {

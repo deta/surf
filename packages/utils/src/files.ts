@@ -69,7 +69,7 @@ export const humanFileTypes = {
   [ResourceTypes.HISTORY_ENTRY]: 'Link'
 }
 
-export const getFileType = (fileType: string) => {
+export const getFileType = (fileType: string): string => {
   if (!fileType) return 'unknown'
   const parsed = (humanFileTypes as any)[fileType]
   if (!parsed) {

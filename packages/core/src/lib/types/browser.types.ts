@@ -210,3 +210,5 @@ export type NewResourceTabEvent = {
   active: boolean
   trigger?: CreateTabEventTrigger
 }
+
+export type BookmarkTabState = 'idle' | 'in_progress' | 'success' | 'error'
