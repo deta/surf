@@ -604,7 +604,7 @@
     } else if (e.ctrlKey && e.key === 'Tab') {
       setShowNewTabOverlay(0)
       debouncedCycleActiveTab(e.shiftKey)
-    } else if (isModKeyAndKeyPressed(e, 'l')) {
+    } else if (isModKeyAndKeyPressed(e, 'l') && !e.shiftKey) {
       handleEdit()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
       // showTabSearch = !showTabSearch
