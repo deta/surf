@@ -24,6 +24,7 @@ import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
 // import CommentIndicator from './components/CommentIndicator.svelte'
 import { useDebounce } from '@horizon/utils'
+import { type Resource } from '@horizon/core/src/lib/service/resources'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 
@@ -634,7 +635,7 @@ function handleScrollToAnnotation(
 // }
 
 window.addEventListener('DOMContentLoaded', async (_) => {
-  document.body.addEventListener('dragover', (e: DragEvent) => e.preventDefault())
+  // document.body.addEventListener('dragover', (e: DragEvent) => e.preventDefault())
   window.addEventListener('mouseup', (e: MouseEvent) => {
     const target = e.target as HTMLElement
     console.debug('mouseup', target, target.id)
@@ -1023,71 +1024,68 @@ window.addEventListener(
   { passive: true, capture: true }
 )
 
+const createDragEventCopy = (e: DragEvent) => ({
+  ...e, // this exists to make TypeScript happy
+  clientX: e.clientX,
+  clientY: e.clientY,
+  pageX: e.pageX,
+  pageY: e.pageY,
+  screenX: e.screenX,
+  screenY: e.screenY,
+  altKey: e.altKey,
+  ctrlKey: e.ctrlKey,
+  metaKey: e.metaKey,
+  shiftKey: e.shiftKey
+})
+
+interface DragMetadata {
+  token: string
+  resource: Resource
+}
+
+let dragDepth = 0
+let isDropping = false
+let _dragMetadatas: DragMetadata[] = [] // List of drag metadatas
+
+ipcRenderer.on('set-drag-metadata', (_, data: string) => {
+  try {
+    _dragMetadatas.push(JSON.parse(data) as DragMetadata)
+  } catch (error) {
+    console.error('error parsing drag metadata:', error)
+  }
+})
+
+const getDragMetadata = async (resourceId: string): Promise<DragMetadata | null> => {
+  for (let i = 0; i < 5; i++) {
+    const index = _dragMetadatas.findIndex((m) => m.resource.id === resourceId)
+    if (index !== -1) return _dragMetadatas.splice(index, 1)[0]
+    if (i < 4) await new Promise((resolve) => setTimeout(resolve, 5))
+  }
+  return null
+}
+
 window.addEventListener(
   'dragover',
   (e: DragEvent) => {
     e.preventDefault()
-    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
-    sendPageEvent(WebViewEventSendNames.DragOver, {
-      ...e,
-      clientX: e.clientX,
-      clientY: e.clientY,
-      pageX: e.pageX,
-      pageY: e.pageY,
-      screenX: e.screenX,
-      screenY: e.screenY,
-      altKey: e.altKey,
-      ctrlKey: e.ctrlKey,
-      metaKey: e.metaKey,
-      shiftKey: e.shiftKey
-    })
+    sendPageEvent(WebViewEventSendNames.DragOver, createDragEventCopy(e))
   },
-  { capture: true } // TODO: Try no capture
+  { capture: true }
 )
 window.addEventListener(
   'drag',
   (event: DragEvent) => {
-    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
-    sendPageEvent(WebViewEventSendNames.Drag, {
-      clientX: event.clientX,
-      clientY: event.clientY,
-      pageX: event.pageX,
-      pageY: event.pageY,
-      screenX: event.screenX,
-      screenY: event.screenY,
-      altKey: event.altKey,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      shiftKey: event.shiftKey
-    })
+    sendPageEvent(WebViewEventSendNames.Drag, createDragEventCopy(event))
   },
   { capture: true }
 )
 
-// This is the "hack" we can use to detect whether we are inside / outside the webview when dragging.
-let dragDepth = 0
 window.addEventListener(
   'dragenter',
   (e: DragEvent) => {
     dragDepth++
-    // Ignore stuff inside the webview
     if (dragDepth > 1) return
-    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
-    sendPageEvent(WebViewEventSendNames.DragEnter, {
-      // TODO: (dnd): We need to serialize the datarasnfer, as its not directly serializable itself
-      //dataTransfer: e.dataTransfer ?? new DataTransfer(),
-      ...e,
-      clientX: e.clientX,
-      clientY: e.clientY,
-      pageX: e.pageX,
-      pageY: e.pageY,
-      screenX: e.screenX,
-      screenY: e.screenY,
-      altKey: e.altKey,
-      ctrlKey: e.ctrlKey,
-      metaKey: e.metaKey,
-      shiftKey: e.shiftKey
-    })
+    sendPageEvent(WebViewEventSendNames.DragEnter, createDragEventCopy(e))
   },
   { passive: true, capture: true }
 )
@@ -1096,174 +1094,329 @@ window.addEventListener(
   'dragleave',
   (e: DragEvent) => {
     dragDepth--
-    // Ignore stuff inside the webview
     if (dragDepth > 0) return
     dragDepth = 0
-    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
-    sendPageEvent(WebViewEventSendNames.DragLeave, {
-      ...e,
-      clientX: e.clientX,
-      clientY: e.clientY,
-      pageX: e.pageX,
-      pageY: e.pageY,
-      screenX: e.screenX,
-      screenY: e.screenY,
-      altKey: e.altKey,
-      ctrlKey: e.ctrlKey,
-      metaKey: e.metaKey,
-      shiftKey: e.shiftKey
-    })
+    sendPageEvent(WebViewEventSendNames.DragLeave, createDragEventCopy(e))
   },
   { passive: true, capture: true }
 )
 
-let once = false
-window.addEventListener(
-  'drop',
-  async (e: DragEvent) => {
-    if (once) return
-    once = true
+window.addEventListener('drop', handleDrop, { capture: true })
+
+async function handleDrop(e: DragEvent) {
+  if (isDropping) return
+  isDropping = true
+
+  try {
     e.preventDefault()
     e.stopImmediatePropagation()
     e.dataTransfer!.effectAllowed = 'all'
     e.dataTransfer!.dropEffect = 'move'
-    console.warn('Dropped!', e)
 
-    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     sendPageEvent(WebViewEventSendNames.Drop, {
-      ...e,
-      dataTransfer: e.dataTransfer,
-      clientX: e.clientX,
-      clientY: e.clientY,
-      pageX: e.pageX,
-      pageY: e.pageY,
-      screenX: e.screenX,
-      screenY: e.screenY,
-      altKey: e.altKey,
-      ctrlKey: e.ctrlKey,
-      metaKey: e.metaKey,
-      shiftKey: e.shiftKey
+      ...createDragEventCopy(e),
+      dataTransfer: e.dataTransfer
     })
 
-    //console.warn("ffile", e.dataTransfer!.items[0]);
+    const resourceId = e.dataTransfer?.getData('application/vnd.space.dragcula.resourceId')
+    if (!resourceId) return
+    const metadata = await getDragMetadata(resourceId)
+    if (!metadata) return
 
-    //const fPath = e.dataTransfer?.getData("oasis/resource");
-    //const fType = e.dataTransfer?.getData("oasis/type");
-    //const content = fs.readFileSync(fPath!)
-    //console.log("content", content)
-
-    //const f = new File([content.buffer], fPath!, { type: fType! });
-    const f = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
-    // e.dataTransfer!.clearData()
-    const asd = new DataTransfer()
-
-    //e.dataTransfer!.items.add(f)
-    asd.items.add(f)
-    //asd.items.add("text/uri-list", "https://www.google.de")
-
-    //e.dataTransfer!.items.add(new File([blobba], 'keksaf.png', { type: 'image/png' }));
-    // for (const item of asd.items) {
-    for (const item of e.dataTransfer!.items) {
-      // e.dataTransfer!.items
-      if (item.kind === 'file') {
-        const f = item.getAsFile()!
-        console.log(`[drop] Received file of type ${item.type}`)
-        console.log(f.name, f.path, f.type, f.webkitRelativePath)
-        console.log('contents', await item.getAsFile()?.text())
-      } else {
-        item.getAsString((data) => {
-          console.log(`[drop] Received string:`, JSON.parse(data))
+    const { token, resource } = metadata
+    const newDataTransfer = await createNewDataTransfer(token, resource)
+    if (newDataTransfer) {
+      e.target!.dispatchEvent(
+        new DragEvent('drop', {
+          dataTransfer: newDataTransfer,
+          bubbles: true,
+          cancelable: true
         })
-      }
+      )
     }
-
-    e.target!.dispatchEvent(
-      new DragEvent('drop', { dataTransfer: asd, bubbles: true, cancelable: true })
-    )
-    once = false
-    twice = false
-    trice = false
+  } catch (error) {
+    console.error('error handling drop:', error)
+  } finally {
+    isDropping = false
     dragDepth = 0
-  },
-  { capture: true }
-)
+  }
+}
 
-let twice = false
-window.addEventListener(
-  'dragenter',
-  (e) => {
-    // TODO: Fully spec out re-thrown events
-    if (twice) return
-    twice = true
-    console.warn('dragenter', e.target, e)
-    e.preventDefault()
-    e.stopImmediatePropagation()
-
-    /*const fPath = e.dataTransfer?.getData("oasis/resource");
-  const fType = e.dataTransfer?.getData("oasis/type");
-  console.error("fPath", fPath, fType)
-  const content = fs.readFileSync(fPath!)
-  console.log("content", content)*/
-
-    const f = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
-    //console.warn(f)
-    e.dataTransfer!.clearData()
-    const asd = new DataTransfer()
-
-    //e.dataTransfer!.items.add(f)
-    //asd.items.add("text/uri-list", "https://www.google.de")
-    asd.items.add(f)
-
-    const ne = new DragEvent('dragenter', {
-      ...e,
-      dataTransfer: asd,
-      bubbles: true,
-      cancelable: true
+async function createNewDataTransfer(
+  token: string,
+  resource: Resource
+): Promise<DataTransfer | null> {
+  console.time('[drop] fetching data')
+  try {
+    const buffer = await ipcRenderer.invoke('webview-read-resource-data', {
+      token,
+      resourceId: resource.id
     })
-    e.target?.dispatchEvent(ne)
-    twice = false
-  },
-  { capture: true }
-)
+    console.timeEnd('[drop] fetching data')
 
-let trice = false
-window.addEventListener(
-  'dragleave',
-  (e) => {
-    if (trice) return
-    trice = true
-    console.warn('dragleave', e.target, e)
+    if (!buffer) return null
+
+    const file = new File([buffer], resource.metadata?.name || 'file', {
+      type: resource.type || 'application/octet-stream'
+    })
+    const newDataTransfer = new DataTransfer()
+    newDataTransfer.items.add(file)
+    return newDataTransfer
+  } catch (error) {
+    console.error('error fetching file:', error)
+    return null
+  }
+}
+
+const handleDragEnterLeave = (eventType: 'dragenter' | 'dragleave') => {
+  let isHandling = false
+  return (e: DragEvent) => {
+    if (isHandling) return
+    isHandling = true
     e.preventDefault()
     e.stopImmediatePropagation()
 
-    /*const fPath = e.dataTransfer?.getData("oasis/resource");
-  const fType = e.dataTransfer?.getData("oasis/type");
-  console.error("fPath", fPath, fType)
-  const content = fs.readFileSync(fPath!)
-  console.log("content", content)*/
-
-    const f = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
-    //console.warn(f)
-    e.dataTransfer!.clearData()
-    const asd = new DataTransfer()
-
-    //e.dataTransfer!.items.add(f)
-    //asd.items.add("text/uri-list", "https://www.google.de")
-    asd.items.add(f)
+    const dummyFile = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
+    const newDataTransfer = new DataTransfer()
+    newDataTransfer.items.add(dummyFile)
 
     e.target?.dispatchEvent(
-      new DragEvent('dragleave', {
+      new DragEvent(eventType, {
         ...e,
-        dataTransfer: asd,
+        dataTransfer: newDataTransfer,
         bubbles: true,
         cancelable: true,
         relatedTarget: e.relatedTarget
       })
     )
-    trice = false
-  },
-  { capture: true }
-)
+    isHandling = false
+  }
+}
+
+window.addEventListener('dragenter', handleDragEnterLeave('dragenter'), { capture: true })
+window.addEventListener('dragleave', handleDragEnterLeave('dragleave'), { capture: true })
+
+// window.addEventListener(
+//   'dragover',
+//   (e: DragEvent) => {
+//     e.preventDefault()
+//     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+//     // TODO: Fix missing types
+//     sendPageEvent(WebViewEventSendNames.DragOver, {
+//       ...e,
+//       clientX: e.clientX,
+//       clientY: e.clientY,
+//       pageX: e.pageX,
+//       pageY: e.pageY,
+//       screenX: e.screenX,
+//       screenY: e.screenY,
+//       altKey: e.altKey,
+//       ctrlKey: e.ctrlKey,
+//       metaKey: e.metaKey,
+//       shiftKey: e.shiftKey
+//     })
+//   },
+//   { capture: true } // TODO: Try no capture
+// )
+
+// // This is the "hack" we can use to detect whether we are inside / outside the webview when dragging.
+// let dragDepth = 0
+// window.addEventListener(
+//   'dragenter',
+//   (e: DragEvent) => {
+//     dragDepth++
+//     // Ignore stuff inside the webview
+//     if (dragDepth > 1) return
+//     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+//     sendPageEvent(WebViewEventSendNames.DragEnter, {
+//       ...e,
+//       clientX: e.clientX,
+//       clientY: e.clientY,
+//       pageX: e.pageX,
+//       pageY: e.pageY,
+//       screenX: e.screenX,
+//       screenY: e.screenY,
+//       altKey: e.altKey,
+//       ctrlKey: e.ctrlKey,
+//       metaKey: e.metaKey,
+//       shiftKey: e.shiftKey
+//     })
+//   },
+//   { passive: true, capture: true }
+// )
+
+// window.addEventListener(
+//   'dragleave',
+//   (e: DragEvent) => {
+//     dragDepth--
+//     // Ignore stuff inside the webview
+//     if (dragDepth > 0) return
+//     dragDepth = 0
+//     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+//     sendPageEvent(WebViewEventSendNames.DragLeave, {
+//       ...e,
+//       clientX: e.clientX,
+//       clientY: e.clientY,
+//       pageX: e.pageX,
+//       pageY: e.pageY,
+//       screenX: e.screenX,
+//       screenY: e.screenY,
+//       altKey: e.altKey,
+//       ctrlKey: e.ctrlKey,
+//       metaKey: e.metaKey,
+//       shiftKey: e.shiftKey
+//     })
+//   },
+//   { passive: true, capture: true }
+// )
+
+// let once = false
+// window.addEventListener(
+//   'drop',
+//   async (e: DragEvent) => {
+//     if (once) return
+//     once = true
+//     e.preventDefault()
+//     e.stopImmediatePropagation()
+//     e.dataTransfer!.effectAllowed = 'all'
+//     e.dataTransfer!.dropEffect = 'move'
+//     console.warn('Dropped!', e)
+
+//     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
+//     sendPageEvent(WebViewEventSendNames.Drop, {
+//       ...e,
+//       dataTransfer: e.dataTransfer,
+//       clientX: e.clientX,
+//       clientY: e.clientY,
+//       pageX: e.pageX,
+//       pageY: e.pageY,
+//       screenX: e.screenX,
+//       screenY: e.screenY,
+//       altKey: e.altKey,
+//       ctrlKey: e.ctrlKey,
+//       metaKey: e.metaKey,
+//       shiftKey: e.shiftKey
+//     })
+
+//     //console.warn("ffile", e.dataTransfer!.items[0]);
+
+//     //const fPath = e.dataTransfer?.getData("oasis/resource");
+//     //const fType = e.dataTransfer?.getData("oasis/type");
+//     //const content = fs.readFileSync(fPath!)
+//     //console.log("content", content)
+
+//     //const f = new File([content.buffer], fPath!, { type: fType! });
+//     const f = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
+//     // e.dataTransfer!.clearData()
+//     const asd = new DataTransfer()
+
+//     //e.dataTransfer!.items.add(f)
+//     asd.items.add(f)
+//     //asd.items.add("text/uri-list", "https://www.google.de")
+
+//     //e.dataTransfer!.items.add(new File([blobba], 'keksaf.png', { type: 'image/png' }));
+//     // for (const item of asd.items) {
+//     for (const item of e.dataTransfer!.items) {
+//       // e.dataTransfer!.items
+//       if (item.kind === 'file') {
+//         const f = item.getAsFile()!
+//         console.log(`[drop] Received file of type ${item.type}`)
+//         console.log(f.name, f.path, f.type, f.webkitRelativePath)
+//         console.log('contents', await item.getAsFile()?.text())
+//       } else {
+//         item.getAsString((data) => {
+//           console.log(`[drop] Received string:`, JSON.parse(data))
+//         })
+//       }
+//     }
+
+//     e.target!.dispatchEvent(
+//       new DragEvent('drop', { dataTransfer: asd, bubbles: true, cancelable: true })
+//     )
+//     once = false
+//     twice = false
+//     trice = false
+//     dragDepth = 0
+//   },
+//   { capture: true }
+// )
+
+// let twice = false
+// window.addEventListener(
+//   'dragenter',
+//   (e) => {
+//     // TODO: Fully spec out re-thrown events
+//     if (twice) return
+//     twice = true
+//     console.warn('dragenter', e.target, e)
+//     e.preventDefault()
+//     e.stopImmediatePropagation()
+
+//     /*const fPath = e.dataTransfer?.getData("oasis/resource");
+//   const fType = e.dataTransfer?.getData("oasis/type");
+//   console.error("fPath", fPath, fType)
+//   const content = fs.readFileSync(fPath!)
+//   console.log("content", content)*/
+
+//     const f = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
+//     //console.warn(f)
+//     e.dataTransfer!.clearData()
+//     const asd = new DataTransfer()
+
+//     //e.dataTransfer!.items.add(f)
+//     //asd.items.add("text/uri-list", "https://www.google.de")
+//     asd.items.add(f)
+
+//     const ne = new DragEvent('dragenter', {
+//       ...e,
+//       dataTransfer: asd,
+//       bubbles: true,
+//       cancelable: true
+//     })
+//     e.target?.dispatchEvent(ne)
+//     twice = false
+//   },
+//   { capture: true }
+// )
+
+// let trice = false
+// window.addEventListener(
+//   'dragleave',
+//   (e) => {
+//     if (trice) return
+//     trice = true
+//     console.warn('dragleave', e.target, e)
+//     e.preventDefault()
+//     e.stopImmediatePropagation()
+
+//     /*const fPath = e.dataTransfer?.getData("oasis/resource");
+//   const fType = e.dataTransfer?.getData("oasis/type");
+//   console.error("fPath", fPath, fType)
+//   const content = fs.readFileSync(fPath!)
+//   console.log("content", content)*/
+
+//     const f = new File([new ArrayBuffer(1)], 'dummy', { type: 'image/png' })
+//     //console.warn(f)
+//     e.dataTransfer!.clearData()
+//     const asd = new DataTransfer()
+
+//     //e.dataTransfer!.items.add(f)
+//     //asd.items.add("text/uri-list", "https://www.google.de")
+//     asd.items.add(f)
+
+//     e.target?.dispatchEvent(
+//       new DragEvent('dragleave', {
+//         ...e,
+//         dataTransfer: asd,
+//         bubbles: true,
+//         cancelable: true,
+//         relatedTarget: e.relatedTarget
+//       })
+//     )
+//     trice = false
+//   },
+//   { capture: true }
+// )
 
 window.addEventListener('focus', (_event: FocusEvent) => {
   sendPageEvent(WebViewEventSendNames.Focus)

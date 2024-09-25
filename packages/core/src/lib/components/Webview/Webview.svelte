@@ -34,11 +34,12 @@
   import type { HistoryEntriesManager } from '../../service/history'
   import { useLogScope, useDebounce } from '@horizon/utils'
   import { DragTypeNames, type AnnotationHighlightData, type HistoryEntry } from '../../types'
-  import type {
-    ResourceAnnotation,
-    ResourceChatThread,
-    ResourceLink,
-    ResourceObject
+  import {
+    useResourceManager,
+    type ResourceAnnotation,
+    type ResourceChatThread,
+    type ResourceLink,
+    type ResourceObject
   } from '../../service/resources'
   import type { Tab, TabPage } from '../../types/browser.types'
   import { Dragcula, HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
@@ -407,9 +408,18 @@ Made with Deta Surf.`
   }
 
   const handleDragEnter = async (drag: DragculaDragEvent) => {
+    const resourceId = drag.item?.data.getData(DragTypeNames.SURF_RESOURCE_ID)
     webview.focus()
     drag.continue()
+
+    if (!resourceId) return
+    const resource = await useResourceManager().getResource(resourceId)
+    if (!resource) return
+    const token = await window.api.createToken(resource.id)
+
+    webview.send('set-drag-metadata', JSON.stringify({ token, resource }))
   }
+
   const handleDragOver = (drag: DragculaDragEvent) => {
     drag.continue()
   }

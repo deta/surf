@@ -164,6 +164,7 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.Wheel]: WebViewEventWheel
   [WebViewEventSendNames.MouseMove]: MouseEvent
   [WebViewEventSendNames.MouseUp]: MouseEvent
+  [WebViewEventSendNames.Drag]: DragEvent
   [WebViewEventSendNames.DragEnter]: DragEvent
   [WebViewEventSendNames.DragOver]: DragEvent
   [WebViewEventSendNames.DragLeave]: DragEvent

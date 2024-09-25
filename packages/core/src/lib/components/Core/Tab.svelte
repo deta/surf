@@ -269,10 +269,11 @@
 
     drag.item!.data.setData(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
 
-    if (tab.resourceBookmark !== undefined && tab.resourceBookmark !== null) {
-      const resource = await resourceManager.getResource(tab.resourceBookmark)
-      drag.dataTransfer?.setData('application/json', JSON.stringify(resource))
-      drag.item!.data.setData(DragTypeNames.ASYNC_SURF_RESOURCE, () => resource)
+    // @ts-ignore
+    const resourceId = tab.resourceBookmark ?? tab.resourceId
+    if (resourceId) {
+      drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resourceId)
+      drag.item!.data.setData(DragTypeNames.SURF_RESOURCE_ID, resourceId)
     }
 
     if (tab.type === 'space') {
