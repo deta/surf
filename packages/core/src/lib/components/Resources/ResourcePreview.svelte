@@ -76,6 +76,7 @@
   export let isInSpace: boolean = false // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
   export let resourcesBlacklistable: boolean = false
   export let resourceBlacklisted: boolean = false
+  export let interactive: boolean = false
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
@@ -635,6 +636,7 @@
   class:isSelected={selected}
   style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
   use:contextMenu={{
+    canOpen: interactive,
     items: [
       {
         type: 'action',

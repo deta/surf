@@ -436,6 +436,7 @@
           resourcesBlacklistable={true}
           on:blacklist-resource={handleBlacklistResource}
           on:whitelist-resource={handleWhitelistResource}
+          interactive={false}
         />
       </div>
     {/key}
