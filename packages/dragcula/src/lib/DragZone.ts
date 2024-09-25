@@ -222,21 +222,16 @@ export class HTMLDragZone extends DragZone {
   }
 
   protected _handleDragLeave(e: DragEvent) {
-    // @ts-ignore, fck webdev it actually exists in Chrome!
-    const fromEl = e.fromElement as HTMLElement;
-    // @ts-ignore, fck webdev it actually exists in Chrome!
-    const toEl = e.toElement as HTMLElement;
-
-    //if (!this.isTarget) return
-    /*else {
-			e.preventDefault();
-		}*/
+    /*// @ts-ignore, fck webdev it actually exists in Chrome!
+		const fromEl = e.fromElement as HTMLElement;
+		// @ts-ignore, fck webdev it actually exists in Chrome!
+		const toEl = e.toElement as HTMLElement;*/
 
     const drag = Dragcula.get().activeDrag!;
     assert(drag !== null, "No active drag during dragLeave! This should not happen!");
 
     if (!this.acceptsCbk(drag)) return;
-    if (drag.to === this && this.element.contains(e.relatedTarget)) return;
+    if (drag.to === this && this.element.contains(e?.relatedTarget)) return;
 
     //console.warn("leave pre el", this.id, fromEl, getParentZoneEl(fromEl))
     //if (this.element.contains(fromEl) && getParentZoneEl(fromEl) !== this.element) return;

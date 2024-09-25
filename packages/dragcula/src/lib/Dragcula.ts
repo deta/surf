@@ -1,5 +1,5 @@
 import { writable } from "svelte/store";
-import type { DragItem, DragZone } from "./index.js";
+import { HTMLDragZone, type DragItem, type DragZone } from "./index.js";
 import {
   genId,
   getParentZone,
@@ -112,6 +112,10 @@ export class Dragcula {
     log.debug(`${ii_DRAGCULA}\x1B[40;97m === Cleanup Drag`);
     document.body.removeAttribute("data-dragging");
     document.body.removeAttribute("data-drag-target");
+
+    HTMLDragZone.ZONES.forEach((zone) => {
+      zone._handleDragLeave();
+    });
 
     // Make sure no previews are dnagling
     // FIX: Ideally this shouldnt happen in the first case.. but better save than sorry
