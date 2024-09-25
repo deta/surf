@@ -120,8 +120,12 @@
     dispatch('editing-start', { id: folder.id })
   }
 
-  const handleBlur = () => {
-    dispatch('update-data', { folderName: folderDetails.folderName })
+  const handleBlur = async () => {
+    if (folderDetails.folderName.trim() !== '') {
+      dispatch('update-data', { folderName: folderDetails.folderName })
+    } else {
+      folderDetails.folderName = folder.name.folderName
+    }
     dispatch('editing-end')
 
     resourceManager.telemetry.trackUpdateSpaceSettings(
@@ -243,7 +247,9 @@
       folderDetails.folderName = value + ' '
     } else if (e.code === 'Enter') {
       e.preventDefault()
-      dispatch('editing-end')
+      if (value.trim() !== '') {
+        dispatch('editing-end')
+      }
     } else if (e.code === 'Enter' && e.shiftKey) {
       e.preventDefault()
       createFolderWithAI(value)
