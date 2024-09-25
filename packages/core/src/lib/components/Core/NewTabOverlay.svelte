@@ -1180,7 +1180,6 @@
                       />
                     {/key}
                   {:else}
-                    drooo
                     <DropWrapper
                       acceptDrop={true}
                       {spaceId}
