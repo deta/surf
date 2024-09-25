@@ -1373,7 +1373,6 @@ impl Database {
         let mut results: Vec<SearchResultItem> = Vec::new();
 
         let escaped_keyword = escape_fts_query(keyword);
-        let like_keyword = format!("%{}%", keyword.replace("%", "\\%").replace("_", "\\_"));
 
         let base_query = "
             SELECT DISTINCT M.*, R.* 
@@ -1382,13 +1381,12 @@ impl Database {
             WHERE (
                 R.id IN (SELECT T.resource_id FROM resource_text_content T WHERE T.content MATCH ?1)
                 OR R.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH ?1)
-                OR R.resource_type LIKE ?2
             )";
 
         let (query, params) = if filtered_resource_ids.is_empty() {
             (
                 format!("{} ORDER BY rank", base_query),
-                vec![escaped_keyword, like_keyword],
+                vec![escaped_keyword],
             )
         } else {
             let placeholders = vec!["?"; filtered_resource_ids.len()].join(",");
@@ -1401,8 +1399,8 @@ impl Database {
                 base_query, placeholders
             );
 
-            let mut params = vec![escaped_keyword, like_keyword];
-            params.extend(filtered_resource_ids.iter().map(|id| id.to_string()));
+            let mut params = vec![escaped_keyword];
+            params.extend(filtered_resource_ids);
             (filtered_query, params)
         };
 
