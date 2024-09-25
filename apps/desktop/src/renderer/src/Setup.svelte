@@ -4,7 +4,7 @@
   import LayoutPicker from './components/LayoutPicker.svelte'
   import type { UserSettings } from '@horizon/types'
 
-  const REQUEST_INVITE_URL = 'https://deta.surf'
+  const REQUEST_INVITE_URL = 'https://deta.surf/'
   const TERMS_URL = 'https://deta.surf/terms'
   const PRIVACY_URL = 'https://deta.surf/privacy'
 
