@@ -624,6 +624,12 @@
     await resourceManager.updateResourceMetadata(resource.id, { name: title })
   }
 
+  const handleStartEditTitle = async () => {
+    if (interactive) {
+      showEditMode = true
+    }
+  }
+
   onMount(async () => {
     await loadResource()
   })
@@ -757,7 +763,7 @@
       bind:editTitle={showEditMode}
       bind:titleValue={$customTitleValue}
       on:edit-title={handleEditTitle}
-      on:start-edit-title={() => (showEditMode = true)}
+      on:start-edit-title={handleStartEditTitle}
       on:click={handleTitleClick}
       {mode}
     />
