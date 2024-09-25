@@ -1075,9 +1075,7 @@
     //const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
     const toast = toasts.loading(`Copying to space...`)
 
-    // FIX: (dragcula): FIFIIF
-
-    log.debug('dropping onto sidebar', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
+    log.debug('dropping onto DropWrapper', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
 
     if (drag.isNative) {
       const parsed = await processDrop(drag.event!)
@@ -1522,7 +1520,6 @@
     ) {
       return true
     }
-
     return false
   }}
   zonePrefix={insideDrawer ? 'drawer-' : undefined}

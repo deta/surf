@@ -746,7 +746,7 @@
   }
 
   :global(.tab[data-drag-target='true']) {
-    outline: 1.5px dashed rgba(5, 5, 25, 0.3);
+    outline: 1.5px dashed rgba(5, 5, 25, 0.3) !important;
     outline-offset: -1.5px;
   }
 

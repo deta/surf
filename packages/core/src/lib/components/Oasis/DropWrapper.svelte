@@ -18,7 +18,7 @@
     Drop: DragculaDragEvent
   }>()
 
-  let counter = 0
+  /*let counter = 0
   let dragOverTimeout: ReturnType<typeof setTimeout> | null = null
 
   const handleDragEnter = (e: DragculaDragEvent) => {
@@ -65,24 +65,11 @@
     dragOverTimeout = setTimeout(() => {
       dragOver = false
     }, 100) // Adjust delay as needed, 100ms is just an example
-  }
+  }*/
 
-  const handleDrop = (e: DragculaDragEvent) => {
-    if (!acceptDrop) {
-      log.debug('Drop not accepted')
-      return
-    }
-
-    e.preventDefault()
-    e.stopPropagation()
-    dispatch('Drop', e)
-
-    counter = 0 // Reset counter to ensure dragover is removed
-    dragOver = false
-
-    if (dragOverTimeout) {
-      clearTimeout(dragOverTimeout)
-    }
+  const handleDrop = (drag: DragculaDragEvent) => {
+    dispatch('Drop', drag)
+    drag.continue()
   }
 </script>
 
@@ -95,8 +82,6 @@
     accepts: acceptsDrag
   }}
   on:Drop={handleDrop}
-  on:DragEnter={handleDragEnter}
-  on:DragLeave={handleDragLeave}
 >
   <slot />
 </div>
