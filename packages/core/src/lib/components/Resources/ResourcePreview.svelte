@@ -51,6 +51,7 @@
     parseStringIntoUrl,
     getHostname,
     isMac,
+    copyToClipboard,
     truncateURL
   } from '@horizon/utils'
   import { useTabsManager } from '../../service/tabs'
@@ -64,6 +65,7 @@
     type Source
   } from './Previews/Preview.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
+  import { useToasts } from '@horizon/core/src/lib/service/toast'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -74,6 +76,7 @@
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
   const oasis = useOasis()
+  const toasts = useToasts()
   const config = useConfig()
   const userConfigSettings = config.settings
 
@@ -85,10 +88,11 @@
     'created-tab': void
   }>()
 
-  const isHovered = writable(false)
   const spaces = oasis.spaces
-
   const resourceState = resource.state
+
+  const isHovered = writable(false)
+  const customTitleValue = writable(resource.metadata?.name ?? '')
 
   $: annotations = resource.annotations ?? []
 
@@ -115,6 +119,7 @@
   let resourceData: ResourceData | null = null
   let previewData: PreviewData | null = null
   let dragging = false
+  let showEditMode = false
 
   const handleUpdating = () => {
     log.debug('Resource is updating', resource.id)
@@ -200,7 +205,7 @@
 
           previewData = {
             type: resource.type,
-            title: data.title,
+            title: resource?.metadata?.name || data.title,
             content: hideContent ? undefined : previewContent,
             contentType: 'plain',
             annotations: annotationItems,
@@ -242,7 +247,7 @@
 
           previewData = {
             type: resource.type,
-            title: data.title,
+            title: resource?.metadata?.name || data.title,
             content: hideContent ? undefined : previewContent,
             contentType: 'plain',
             annotations: annotationItems,
@@ -302,7 +307,11 @@
 
           previewData = {
             type: resource.type,
-            title: data.title && data.title !== resourceContent ? data.title : undefined,
+            title:
+              (resource?.metadata?.name && resource?.metadata?.name !== resourceContent) ||
+              (data.title && data.title !== resourceContent)
+                ? resource?.metadata?.name || data.title || undefined
+                : undefined,
             content: hideContent ? undefined : previewContent,
             contentType: 'plain',
             image: imageUrl,
@@ -329,7 +338,7 @@
 
           previewData = {
             type: resource.type,
-            title: data.title || undefined,
+            title: resource?.metadata?.name || data.title || undefined,
             content:
               summary || (data.content_html && data.content_html !== '<p></p>')
                 ? data.content_html
@@ -361,7 +370,7 @@
 
           previewData = {
             type: resource.type,
-            title: undefined,
+            title: resource?.metadata?.name,
             annotations: highlightContent ? [{ type: 'highlight', content: highlightContent }] : [],
             content: commentContent,
             contentType: 'plain',
@@ -494,6 +503,10 @@
       return
     }
 
+    if (showEditMode) {
+      return
+    }
+
     if (resource.type === ResourceTypes.ANNOTATION) {
       const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
       if (annotatesTag) {
@@ -514,6 +527,10 @@
         trigger: CreateTabEventTrigger.OasisItem
       })
     }
+  }
+
+  const handleTitleClick = (e: CustomEvent<MouseEvent>) => {
+    handleClick(e.detail)
   }
 
   const handleRemove = (e?: MouseEvent) => {
@@ -546,6 +563,37 @@
     }
   }
 
+  const handleCopyToClipboard = () => {
+    if (canonicalUrl) {
+      copyToClipboard(canonicalUrl)
+      toasts.success('Copied URL to clipboard!')
+    }
+  }
+
+  const handleEditTitle = async (e: CustomEvent<string>) => {
+    const title = e.detail
+
+    showEditMode = false
+
+    // If the resource doesn't store a title separately we don't want to allow setting the name to empty values
+    if (
+      !title &&
+      (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE ||
+        !Object.values<string>(ResourceTypes).includes(resource.type))
+    ) {
+      return
+    }
+
+    // update the local resource first for instant feedback
+    resource.updateMetadata({ name: title })
+
+    // TODO: only update the relevant fields
+    loadResource()
+
+    // after the resource is updated, update the metadata in the database
+    await resourceManager.updateResourceMetadata(resource.id, { name: title })
+  }
+
   onMount(async () => {
     await loadResource()
   })
@@ -571,6 +619,16 @@
         text: 'Open in Mini Browser',
         action: () => dispatch('open', resource.id)
       },
+      ...(canonicalUrl
+        ? [
+            {
+              type: 'action',
+              icon: 'copy',
+              text: 'Copy URL',
+              action: () => handleCopyToClipboard()
+            }
+          ]
+        : []),
       { type: 'separator' },
       ...(showOpenAsFile
         ? [
@@ -603,6 +661,21 @@
           : []
       },
       { type: 'separator' },
+      ...(mode === 'full' ||
+      mode === 'content' ||
+      mode === 'compact' ||
+      (mode === 'media' && !previewData?.image)
+        ? [
+            {
+              type: 'action',
+              icon: 'edit',
+              text: previewData?.title || resource?.metadata?.name ? 'Edit Title' : 'Add Title',
+              action: () => {
+                showEditMode = true
+              }
+            }
+          ]
+        : []),
       {
         type: 'action',
         icon: 'trash',
@@ -642,6 +715,11 @@
       source={previewData.source}
       author={previewData.author}
       theme={previewData.theme}
+      bind:editTitle={showEditMode}
+      bind:titleValue={$customTitleValue}
+      on:edit-title={handleEditTitle}
+      on:start-edit-title={() => (showEditMode = true)}
+      on:click={handleTitleClick}
       {mode}
     />
   {:else}

@@ -33,6 +33,7 @@
   import { ResourceTypes } from '@horizon/types'
   import FilePreview from './File/FilePreview.svelte'
   import SourceItem from './Source.svelte'
+  import { createEventDispatcher } from 'svelte'
 
   export let resource: Resource
 
@@ -46,12 +47,20 @@
   export let source: Source | undefined = undefined
   export let author: Author | undefined = undefined
   export let theme: [string, string] | undefined = undefined
+  export let editTitle: boolean = false
+  export let titleValue: string = ''
 
   export let mode: Mode = 'full'
 
   const log = useLogScope('PostPreview')
+  const dispatch = createEventDispatcher<{
+    'edit-title': string
+    'start-edit-title': void
+    click: MouseEvent
+  }>()
 
   let error = ''
+  let titleInputElem: HTMLElement
 
   const MAX_TITLE_LENGTH = 300
   const MAX_CONTENT_LENGTH = 500
@@ -67,6 +76,62 @@
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
+  }
+
+  const handleEditTitleBlur = () => {
+    dispatch('edit-title', titleValue)
+  }
+
+  const handleTitleDoubleClick = () => {
+    dispatch('start-edit-title')
+  }
+
+  // Forward clicks on the title to the parent component if not handled by the double click
+  const handleTitleClick = (e: MouseEvent) => {
+    if (editTitle) {
+      return
+    }
+
+    setTimeout(() => {
+      if (!editTitle) {
+        dispatch('click', e)
+      }
+    }, 300)
+  }
+
+  const handleTitleKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleEditTitleBlur()
+    } else if (e.key === 'Escape') {
+      e.stopPropagation()
+      handleEditTitleBlur()
+    }
+  }
+
+  let previousEditTitle: boolean | null = null
+  $: if (editTitle && titleInputElem && previousEditTitle !== editTitle) {
+    previousEditTitle = editTitle
+
+    if (title && title !== content) {
+      titleValue = title
+    } else {
+      titleValue = resource?.metadata?.name ?? ''
+    }
+
+    setTimeout(() => {
+      titleInputElem.focus()
+
+      // Since the elem is not a real input, we need to set the cursor to the end of the text manually
+      const s = window.getSelection()
+      const r = document.createRange()
+      const e = titleInputElem.childElementCount > 0 ? titleInputElem.lastChild : titleInputElem
+      r.setStart(e!, 1)
+      r.setEnd(e!, 1)
+      s?.removeAllRanges()
+      s?.addRange(r)
+    }, 50)
+  } else if (!editTitle && previousEditTitle !== editTitle) {
+    previousEditTitle = editTitle
   }
 
   const IFRAME_STYLES = `<style> html { font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', sans-serif; } </style>`
@@ -125,10 +190,31 @@
               <SourceItem {type} {source} themed={!!theme} />
             {/if}
 
-            {#if showTitle && title}
-              <div class="title">
-                {truncate(title, MAX_TITLE_LENGTH)}
-              </div>
+            {#if showTitle}
+              {#if editTitle}
+                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                <div
+                  class="title edit"
+                  contenteditable="true"
+                  placeholder="Enter title"
+                  bind:this={titleInputElem}
+                  bind:textContent={titleValue}
+                  on:click|stopPropagation
+                  on:blur={handleEditTitleBlur}
+                  on:keydown={handleTitleKeydown}
+                  draggable={true}
+                  on:dragstart|preventDefault|stopPropagation
+                ></div>
+              {:else if title}
+                <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
+                <div
+                  class="title"
+                  on:dblclick|preventDefault|stopPropagation={handleTitleDoubleClick}
+                  on:click|stopPropagation={handleTitleClick}
+                >
+                  {truncate(title, MAX_TITLE_LENGTH)}
+                </div>
+              {/if}
             {/if}
 
             {#if showAnnotations && annotations && (annotations || []).length > 0}
@@ -359,6 +445,28 @@
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
+    overflow-wrap: break-word;
+
+    &.edit {
+      outline: none;
+      border-radius: 5px;
+      background: transparent;
+      width: 100%;
+      max-height: 16rem;
+      overflow: auto;
+
+      &:focus {
+        outline: 2px solid rgba(65, 128, 173, 0.851);
+        outline-offset: 3px;
+      }
+
+      &:empty:before {
+        content: attr(placeholder);
+        pointer-events: none;
+        display: block; /* For Firefox */
+        opacity: 0.5;
+      }
+    }
   }
 
   .content {
