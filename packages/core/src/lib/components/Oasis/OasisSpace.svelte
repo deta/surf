@@ -628,7 +628,7 @@
         content?: ResourceContent
       } | null = null
 
-      if (checkIfYoutubeUrl(sourceURL)) {
+      if (checkIfYoutubeUrl(sourceURL.href)) {
         log.debug('Youtube video, skipping webview parsing:', item)
 
         const postData = RSSParser.parseYouTubeRSSItemToPost(item.rawData)

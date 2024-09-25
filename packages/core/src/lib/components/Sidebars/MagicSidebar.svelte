@@ -110,7 +110,6 @@
   export const addChatWithQuery = async (query: string) => {
     inputValue = '<blockquote>' + query + '</blockquote>' + '</br>'
     editor.setContent(inputValue)
-    console.log('focus addChatWithQuery')
     editor.focus()
   }
 
