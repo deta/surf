@@ -1149,7 +1149,7 @@
                     {
                       title: 'Save anything',
                       description: `
-        <p>Save webpages, tweets, YouTube videos, screenshots, PDFs,and more.  It's way better than bookmarks.</p>
+        <p>Save webpages, tweets, YouTube videos, screenshots, PDFs,and more. </p>
         `,
                       imgSrc: 'https://placehold.co/600x400',
                       imgAlt: 'Save anything',
@@ -1161,9 +1161,6 @@
       <p>
           Create spaces and curate your items manually. Or let Surf do it for you.
         </p>
-        <p class="opacity-70">
-         Hint: you can also drag anything out as, or into, a tab.
-        </p>
         `,
                       imgSrc: 'https://placehold.co/600x400',
                       imgAlt: '(Auto)-organize',
@@ -1173,7 +1170,7 @@
                       title: 'Find',
                       description: `
       <p>
-          Easily find anything you've saved, with Surf search. Works across images, webpages, files and more.
+          Easily find anything you've saved, with Surf search. 
         </p>
         `,
                       imgSrc: 'https://placehold.co/600x400',

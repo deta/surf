@@ -754,7 +754,6 @@
     sections={[
       {
         description: `
-          <p>Most chatbots are clueless about your stuff.</p>
           <p>
             Surf gives you high quality answers from the tabs, folders, and content you add to the
             "Context Window".
