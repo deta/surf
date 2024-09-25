@@ -7,7 +7,8 @@ import replace from '@rollup/plugin-replace'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import obfuscator from 'rollup-plugin-obfuscator'
 
-const disableAllObfuscation = process.env.DISABLE_ALL_OBFUSCATION === 'true'
+const disableAllObfuscation =
+  process.env.DISABLE_ALL_OBFUSCATION === 'true' || process.env.NODE_ENV === 'development'
 
 export default defineConfig({
   main: {
@@ -67,7 +68,7 @@ export default defineConfig({
             : [])
         ]
       },
-      minify: !disableAllObfuscation && process.env.NODE_ENV !== 'development'
+      minify: !disableAllObfuscation
     }
   },
 
@@ -104,7 +105,7 @@ export default defineConfig({
         ]
       },
       //sourcemap: disableAllObfuscation || process.env.NODE_ENV === 'development',
-      minify: !disableAllObfuscation && process.env.NODE_ENV !== 'development'
+      minify: !disableAllObfuscation
     },
     define: {
       'import.meta.env.PLATFORM': JSON.stringify(process.platform)

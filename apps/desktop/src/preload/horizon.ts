@@ -75,6 +75,10 @@ if (OPENAI_API_KEY) {
 const api = {
   tabSwitchingShortcutsDisable: TAB_SWITCHING_SHORTCUTS_DISABLE,
 
+  createToken: (data: any) => {
+    return IPC_EVENTS_RENDERER.tokenCreate.invoke(data)
+  },
+
   screenshotPage: (rect: { x: number; y: number; width: number; height: number }) => {
     return IPC_EVENTS_RENDERER.screenshotPage.invoke(rect)
   },
