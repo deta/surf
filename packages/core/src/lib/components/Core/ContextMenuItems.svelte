@@ -35,7 +35,7 @@
   class:sub-items={subMenuRef !== undefined}
   class:anchor-left={anchor === 'left'}
   style={subMenuRef !== undefined
-    ? `position:fixed; --sub-id: --sub-${subMenuRef}; --y-offset: ${subMenuYOffset}`
+    ? `position:fixed; --sub-id: --sub-${subMenuRef}; --y-offset: ${subMenuYOffset}px;`
     : ''}
 >
   {#each items as item, i}
@@ -118,14 +118,16 @@
     }
 
     &:not(.anchor-left) {
-      top: calc(anchor(start) - var(--y-offset));
-      left: anchor(self-end);
+      top: anchor(top);
+      transform: translateY(var(--y-offset));
+      left: anchor(right);
       margin-left: -3px;
     }
 
     &.anchor-left {
-      top: cacl(anchor(self-start) - var(--y-offset));
-      right: anchor(start);
+      top: anchor(top);
+      transform: translateY(var(--y-offset));
+      right: anchor(left);
       left: unset;
       margin-right: -3px;
     }

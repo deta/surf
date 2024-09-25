@@ -1,9 +1,9 @@
-import type { Tab, CreateTabOptions, TabPage } from '../types/browser.types'
+import type { Tab, CreateTabOptions, TabPage, TabOnboarding } from '../types/browser.types'
 import type { Optional, Space, SpaceData } from '../types'
 import { ResourceManager, ResourceTag } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
 import type { useOasis } from './oasis'
-import { demoSpaces, liveSpaces, demoPages, builtInSpaces } from '../constants/examples'
+import { builtInSpaces } from '../constants/examples'
 import { useLogScope } from '@horizon/utils'
 import type { TabsManager } from './tabs'
 
@@ -112,15 +112,21 @@ export async function createDemoItems(
 
   // await new Promise((resolve) => setTimeout(resolve, 1000))
 
-  demoPages.forEach((page) => {
-    tabsManager.addPageTab(
-      page.url,
-      {
-        active: page.active ?? false
-      },
-      {
-        pinned: page.pinned ?? false
-      }
-    )
-  })
+  // demoPages.forEach((page) => {
+  //   tabManager.addPageTab(page.url, {
+  //     active: page.active ?? false
+  //   }, {
+  //     pinned: page.pinned ?? false
+  //   })
+  // })
+
+  await tabsManager.create<TabOnboarding>(
+    {
+      title: 'Welcome To Surf',
+      icon: 'https://deta.surf/favicon-32x32.png',
+      type: 'onboarding',
+      pinned: true
+    },
+    { active: true }
+  )
 }

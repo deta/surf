@@ -131,6 +131,7 @@
     getScreenshotFileName
   } from '../utils/screenshot'
   import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
+  import TabOnboarding from './Core/TabOnboarding.svelte'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -598,6 +599,7 @@
       if ($showNewTabOverlay !== 0) setShowNewTabOverlay(0)
       else tabsManager.deleteActive(DeleteTabEventTrigger.Shortcut)
     } else if (isModKeyAndKeyPressed(e, 'e')) {
+      if ($showNewTabOverlay !== 0) setShowNewTabOverlay(0)
       toggleRightSidebarTab('chat')
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.Shortcut)
@@ -2556,10 +2558,12 @@
     window.open(url, '_blank')
   }
 
-  const openCheatSheet = () => {
+  const openCheatSheet = useDebounce(async (opts?: CreateTabOptions) => {
     const url = 'https://deta.notion.site/Surf-v0-0-1-e9c49ddf02a8476fb3c53b7efdc7e0fd'
-    window.open(url, '_blank')
-  }
+    tabsManager.addPageTab(url, {
+      active: true
+    })
+  }, 200)
 
   const handleRemoveFromSidebar = async (e: CustomEvent) => {
     const tabId = e.detail
@@ -4156,6 +4160,8 @@
                 <BrowserHistory {tab} active={$activeTabId === tab.id} />
               {:else if tab.type === 'resource'}
                 <ResourceTab {tab} on:update-tab={(e) => tabsManager.update(tab.id, e.detail)} />
+              {:else if tab.type === 'onboarding'}
+                <TabOnboarding />
               {/if}
             </div>
           {/if}

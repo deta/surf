@@ -35,6 +35,7 @@
   import { useTabsManager } from '../../service/tabs'
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
   import { DragTypeNames, type DragTypes } from '../../types'
+  import Onboarding from '../Core/Onboarding.svelte'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -90,6 +91,7 @@
   let lastCmdATime = 0
   let autoScrollChat = true
   let abortController: AbortController | null = null
+  let onboardingOpen = writable($userConfigSettings.onboarding.completed_chat === false)
 
   const chatBoxPlaceholder = /*writable('Ask anything...') */ derived(
     [optPressed, cmdPressed, shiftPressed, magicPage, optToggled, tabsInContext],
@@ -772,8 +774,74 @@
     }
   })
 
+  const closeOnboarding = async () => {
+    onboardingOpen.set(false)
+
+    const existingOnboardingSettings = window.api.getUserConfigSettings().onboarding
+    await window.api.updateUserConfigSettings({
+      onboarding: {
+        ...existingOnboardingSettings,
+        completed_chat: true
+      }
+    })
+  }
+
   $: smallSize = inputValue.length < 75
 </script>
+
+{#if $onboardingOpen}
+  <Onboarding
+    on:close={closeOnboarding}
+    title="What you see is what you chat"
+    tip="Tip: Hover over any element to see how it works."
+    sections={[
+      {
+        description: `
+          <p>
+            Surf gives you high quality answers from the tabs, folders, and content you add to the
+            "Context Window".
+          </p>
+          `,
+        imgSrc: 'https://placehold.co/600x400',
+        imgAlt: 'Context Window',
+        iconName: 'chat'
+      },
+      {
+        title: 'Add Context',
+        description: `
+        <p>
+            Use <span class="font-mono bg-black/10 px-1 rounded-md">+</span> to include an item in your
+            chat.
+          </p>
+          <p class="opacity-70">
+            Hint: you can also <span class="font-mono bg-black/10 px-1 text-xl rounded-md">⌘</span>
+            or
+            <span class="font-mono bg-black/10 px-1 py-1 rounded-md text-sm">Shift</span> + click to
+            select multiple items.
+          </p>
+          `,
+        imgSrc: 'https://placehold.co/600x400',
+        imgAlt: 'Add Context',
+        iconName: 'add'
+      },
+      {
+        title: 'Remove Context',
+        description: `
+        <p>
+            Remove an individual item by clicking it's own <span
+              class="font-mono bg-black/10 px-1 rounded-md">x</span
+            > button. Or clear the whole window to start fresh.
+          </p>
+          `,
+        imgSrc: 'https://placehold.co/600x400',
+        imgAlt: 'Remove Context',
+        iconName: 'close'
+      }
+    ]}
+    warning="Chat can make mistakes. Verify results."
+    buttonText="Continue"
+  />
+{/if}
 
 <div
   class="flex flex-col h-full relative overflow-hidden"
@@ -806,7 +874,20 @@
           New Chat
         </button>
       {:else}
-        <div class="flex items-center justify-start text-lg p-1.5 font-semibold">Chat</div>
+        <div class="flex items-center justify-start text-lg p-1.5 font-semibold">
+          Chat <button
+            class="flex items-center gap-2 p-2 ml-2 rounded-lg opacity-60 hover:bg-blue-200"
+            on:click={() => {
+              $onboardingOpen = true
+            }}
+            use:tooltip={{
+              text: 'Need help?',
+              position: 'bottom'
+            }}
+          >
+            <Icon name="info" />
+          </button>
+        </div>
       {/if}
 
       <!-- svelte-ignore a11y-click-events-have-key-events -->

@@ -1,15 +1,15 @@
 import { random } from '../service/demoitems'
 import type { SpaceData, WithRequired } from '../types'
 
-export const demoPages = [
-  { id: random(), url: 'https://deta.surf' },
-  {
-    id: random(),
-    url: 'https://deta.surf/cheatsheets/v0.0.1',
-    active: true,
-    pinned: true
-  }
-]
+// export const demoPages = [
+//   { id: random(), url: 'https://deta.surf' },
+//   {
+//     id: random(),
+//     url: 'https://deta.surf/cheatsheets/v0.0.1',
+//     active: true,
+//     pinned: true
+//   }
+// ]
 
 export const builtInSpaces = [
   {
