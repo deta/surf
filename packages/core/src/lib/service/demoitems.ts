@@ -1,9 +1,10 @@
-import type { Tab, CreateTabOptions, TabPage } from '../types/browser.types'
+import type { Tab, CreateTabOptions, TabPage, TabOnboarding } from '../types/browser.types'
 import type { Optional, Space, SpaceData } from '../types'
 import { ResourceManager, ResourceTag } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
 import type { useOasis } from './oasis'
-import { demoSpaces, liveSpaces, demoPages } from '../constants/examples'
+import { demoSpaces, liveSpaces } from '../constants/examples'
+import type { TabsManager } from './tabs'
 
 export function random() {
   return Math.floor(Math.random() * 1000000)
@@ -35,14 +36,7 @@ export const factoryData = {
 }
 
 export async function createDemoItems(
-  createTab: (
-    tab: Optional<
-      Tab,
-      'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'
-    >,
-    opts?: CreateTabOptions,
-    pinned?: boolean
-  ) => void,
+  tabsManager: TabsManager,
   oasis: ReturnType<typeof useOasis>,
   createSpaceTab: any,
   resourceManager: ResourceManager
@@ -107,9 +101,21 @@ export async function createDemoItems(
 
   // await new Promise((resolve) => setTimeout(resolve, 1000))
 
-  demoPages.forEach((page) => {
-    createTab(factoryData.tabPage(page.id, page.url, page.pinned ?? false), {
-      active: page.active ?? false
-    })
-  })
+  // demoPages.forEach((page) => {
+  //   tabManager.addPageTab(page.url, {
+  //     active: page.active ?? false
+  //   }, {
+  //     pinned: page.pinned ?? false
+  //   })
+  // })
+
+  await tabsManager.create<TabOnboarding>(
+    {
+      title: 'Welcome To Surf',
+      icon: 'https://deta.surf/favicon-32x32.png',
+      type: 'onboarding',
+      pinned: true
+    },
+    { active: true }
+  )
 }

@@ -2514,7 +2514,7 @@
 
       showSplashScreen.set(true)
 
-      await createDemoItems(tabsManager.create, oasis, tabsManager.addSpaceTab, resourceManager)
+      await createDemoItems(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)
 
       await window.api.updateInitializedTabs(true)
 
@@ -2530,25 +2530,10 @@
   }
 
   const openCheatSheet = useDebounce(async (opts?: CreateTabOptions) => {
-    log.debug('Creating new onboarding tab')
-
-    // check if there already exists a history tab, if yes we just change to it
-
-    const onboardingTab = $tabs.find((tab) => tab.type === 'onboarding')
-
-    if (onboardingTab) {
-      tabsManager.makeActive(onboardingTab.id)
-      return
-    }
-
-    await tabsManager.create<TabOnboarding>(
-      {
-        title: 'Welcome To Surf',
-        icon: '',
-        type: 'onboarding'
-      },
-      { active: true }
-    )
+    const url = 'https://deta.notion.site/Surf-v0-0-1-e9c49ddf02a8476fb3c53b7efdc7e0fd'
+    tabsManager.addPageTab(url, {
+      active: true
+    })
   }, 200)
 
   const handleDrop = async (event: CustomEvent) => {
