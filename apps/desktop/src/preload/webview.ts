@@ -12,6 +12,7 @@ import {
 import {
   AnnotationCommentRange,
   AnnotationRangeData,
+  ResourceTypes,
   WebViewEventReceiveNames,
   WebViewEventSendNames,
   WebViewReceiveEvents,
@@ -24,7 +25,12 @@ import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
 // import CommentIndicator from './components/CommentIndicator.svelte'
 import { useDebounce } from '@horizon/utils'
-import { type Resource } from '@horizon/core/src/lib/service/resources'
+import {
+  ResourceArticle,
+  ResourceDocument,
+  ResourceLink,
+  type Resource
+} from '@horizon/core/src/lib/service/resources'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 
@@ -1123,16 +1129,28 @@ async function handleDrop(e: DragEvent) {
     })
 
     const resourceId = e.dataTransfer?.getData('application/vnd.space.dragcula.resourceId')
-    if (!resourceId) return
-    const metadata = await getDragMetadata(resourceId)
-    if (!metadata) return
+    if (resourceId) {
+      const metadata = await getDragMetadata(resourceId)
+      if (!metadata) return
 
-    const { token, resource } = metadata
-    const newDataTransfer = await createNewDataTransfer(token, resource)
-    if (newDataTransfer) {
+      const { token, resource } = metadata
+      const newDataTransfer = await createNewDataTransfer(token, resource)
+
+      for (const item of (newDataTransfer ?? e.dataTransfer)?.items ?? []) {
+        if (item.kind === 'file') {
+          const f = item.getAsFile()!
+          console.log(`[drop] new DT file of type ${item.type}`, f.name, f.type, f.path)
+          //console.log('contents', await item.getAsFile()?.text())
+        } else {
+          item.getAsString((data) => {
+            console.log(`[drop] new DT string:`, data)
+          })
+        }
+      }
+
       e.target!.dispatchEvent(
         new DragEvent('drop', {
-          dataTransfer: newDataTransfer,
+          dataTransfer: newDataTransfer ?? e.dataTransfer,
           bubbles: true,
           cancelable: true,
           clientX: e.clientX,
@@ -1171,7 +1189,17 @@ async function createNewDataTransfer(
     })
     console.log('[drop] created file: ', file.name, file.type, file)
     const newDataTransfer = new DataTransfer()
-    newDataTransfer.items.add(file)
+
+    if (resource.type === ResourceTypes.ARTICLE || resource.type === ResourceTypes.LINK) {
+      newDataTransfer.setData('text/uri-list', (resource as ResourceArticle).metadata?.sourceURI)
+    } else {
+      newDataTransfer.items.add(file)
+    }
+    // TODO: (dnd): Continue transforms for specific types
+    /*else if (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+      (resource as ResourceDocument).
+    }*/
+
     return newDataTransfer
   } catch (error) {
     console.error('error fetching file:', error)
