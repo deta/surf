@@ -1045,11 +1045,12 @@ interface DragMetadata {
 
 let dragDepth = 0
 let isDropping = false
-let _dragMetadatas: DragMetadata[] = [] // List of drag metadatas
+let _dragMetadatas: { [resourceId: string]: DragMetadata } = {}
 
 ipcRenderer.on('set-drag-metadata', (_, data: string) => {
   try {
-    _dragMetadatas.push(JSON.parse(data) as DragMetadata)
+    const metadata = JSON.parse(data) as DragMetadata
+    _dragMetadatas[metadata.resource.id] = metadata
   } catch (error) {
     console.error('error parsing drag metadata:', error)
   }
@@ -1057,8 +1058,11 @@ ipcRenderer.on('set-drag-metadata', (_, data: string) => {
 
 const getDragMetadata = async (resourceId: string): Promise<DragMetadata | null> => {
   for (let i = 0; i < 5; i++) {
-    const index = _dragMetadatas.findIndex((m) => m.resource.id === resourceId)
-    if (index !== -1) return _dragMetadatas.splice(index, 1)[0]
+    if (resourceId in _dragMetadatas) {
+      const metadata = _dragMetadatas[resourceId]
+      delete _dragMetadatas[resourceId]
+      return metadata
+    }
     if (i < 4) await new Promise((resolve) => setTimeout(resolve, 5))
   }
   return null
