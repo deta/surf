@@ -23,7 +23,6 @@
   })
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    event.stopPropagation()
     // check if key is searchable (alphanumeric, backspace, delete, etc.)
     if (event.key.length === 1 || event.key === 'Backspace' || event.key === 'Delete') {
       debouncedSearch()
