@@ -1134,7 +1134,13 @@ async function handleDrop(e: DragEvent) {
         new DragEvent('drop', {
           dataTransfer: newDataTransfer,
           bubbles: true,
-          cancelable: true
+          cancelable: true,
+          clientX: e.clientX,
+          clientY: e.clientY,
+          screenX: e.screenX,
+          screenY: e.screenY,
+          pageX: e.pageX,
+          pageY: e.pageY
         })
       )
     }
@@ -1192,7 +1198,13 @@ const handleDragEnterLeave = (eventType: 'dragenter' | 'dragleave') => {
         dataTransfer: newDataTransfer,
         relatedTarget: e.relatedTarget,
         bubbles: true,
-        cancelable: true
+        cancelable: true,
+        clientX: e.clientX,
+        clientY: e.clientY,
+        screenX: e.screenX,
+        screenY: e.screenY,
+        pageX: e.pageX,
+        pageY: e.pageY
       })
     )
     isHandling = false
