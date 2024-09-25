@@ -5,6 +5,7 @@ import { extractAndCreateWebResource } from './mediaImporter'
 import type { useOasis } from './oasis'
 import { demoSpaces, liveSpaces, demoPages, builtInSpaces } from '../constants/examples'
 import { useLogScope } from '@horizon/utils'
+import type { TabsManager } from './tabs'
 
 const log = useLogScope('DemoItems')
 
@@ -38,21 +39,13 @@ export const factoryData = {
 }
 
 export async function createDemoItems(
-  createTab: (
-    tab: Optional<
-      Tab,
-      'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'
-    >,
-    opts?: CreateTabOptions,
-    pinned?: boolean
-  ) => void,
+  tabsManager: TabsManager,
   oasis: ReturnType<typeof useOasis>,
   createSpaceTab: any,
   resourceManager: ResourceManager
 ) {
   for (const builtInSpace of builtInSpaces) {
     const data = Object.assign(
-      {},
       {
         folderName: 'New Space',
         colors: ['#76E0FF', '#4EC9FB'],
@@ -62,7 +55,8 @@ export async function createDemoItems(
         smartFilterQuery: null,
         sql_query: null,
         embedding_query: null,
-        sortBy: 'created_at'
+        sortBy: 'created_at',
+        builtIn: true
       },
       builtInSpace
     ) as SpaceData
@@ -119,8 +113,14 @@ export async function createDemoItems(
   // await new Promise((resolve) => setTimeout(resolve, 1000))
 
   demoPages.forEach((page) => {
-    createTab(factoryData.tabPage(page.id, page.url, page.pinned ?? false), {
-      active: page.active ?? false
-    })
+    tabsManager.addPageTab(
+      page.url,
+      {
+        active: page.active ?? false
+      },
+      {
+        pinned: page.pinned ?? false
+      }
+    )
   })
 }
