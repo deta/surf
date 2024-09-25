@@ -8,6 +8,7 @@
   export type Author = {
     text?: string
     imageUrl?: string
+    icon?: Icons
   }
 
   export type Mode = 'full' | 'media' | 'content' | 'compact' | 'tiny'
@@ -32,6 +33,7 @@
   import { ResourceTypes } from '@horizon/types'
   import FilePreview from './File/FilePreview.svelte'
   import SourceItem from './Source.svelte'
+  import { createEventDispatcher } from 'svelte'
 
   export let resource: Resource
 
@@ -42,15 +44,23 @@
   export let contentType: ContentType = 'plain'
   export let annotations: Annotation[] | undefined = undefined
   export let url: string | undefined = undefined
-  export let source: Source
-  export let author: Author | undefined
-  export let theme: [string, string] | undefined
+  export let source: Source | undefined = undefined
+  export let author: Author | undefined = undefined
+  export let theme: [string, string] | undefined = undefined
+  export let editTitle: boolean = false
+  export let titleValue: string = ''
 
   export let mode: Mode = 'full'
 
   const log = useLogScope('PostPreview')
+  const dispatch = createEventDispatcher<{
+    'edit-title': string
+    'start-edit-title': void
+    click: MouseEvent
+  }>()
 
   let error = ''
+  let titleInputElem: HTMLElement
 
   const MAX_TITLE_LENGTH = 300
   const MAX_CONTENT_LENGTH = 500
@@ -67,6 +77,64 @@
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
   }
+
+  const handleEditTitleBlur = () => {
+    dispatch('edit-title', titleValue)
+  }
+
+  const handleTitleDoubleClick = () => {
+    dispatch('start-edit-title')
+  }
+
+  // Forward clicks on the title to the parent component if not handled by the double click
+  const handleTitleClick = (e: MouseEvent) => {
+    if (editTitle) {
+      return
+    }
+
+    setTimeout(() => {
+      if (!editTitle) {
+        dispatch('click', e)
+      }
+    }, 300)
+  }
+
+  const handleTitleKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleEditTitleBlur()
+    } else if (e.key === 'Escape') {
+      e.stopPropagation()
+      handleEditTitleBlur()
+    }
+  }
+
+  let previousEditTitle: boolean | null = null
+  $: if (editTitle && titleInputElem && previousEditTitle !== editTitle) {
+    previousEditTitle = editTitle
+
+    if (title && title !== content) {
+      titleValue = title
+    } else {
+      titleValue = resource?.metadata?.name ?? ''
+    }
+
+    setTimeout(() => {
+      titleInputElem.focus()
+
+      // Since the elem is not a real input, we need to set the cursor to the end of the text manually
+      const s = window.getSelection()
+      const r = document.createRange()
+      const e = titleInputElem.childElementCount > 0 ? titleInputElem.lastChild : titleInputElem
+      r.setStart(e!, 1)
+      r.setEnd(e!, 1)
+      s?.removeAllRanges()
+      s?.addRange(r)
+    }, 50)
+  } else if (!editTitle && previousEditTitle !== editTitle) {
+    previousEditTitle = editTitle
+  }
+
+  const IFRAME_STYLES = `<style> html { font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', sans-serif; } </style>`
 </script>
 
 <div
@@ -86,11 +154,11 @@
       {:else if mode === 'tiny'}
         <div class="tiny-wrapper">
           <div class="tiny-icon">
-            {#if source.imageUrl}
+            {#if source?.imageUrl}
               <div class="favicon">
                 <Image src={source.imageUrl} alt={source.text} fallbackIcon="link" />
               </div>
-            {:else if source.icon}
+            {:else if source?.icon}
               <Icon name={source.icon} />
             {:else}
               <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
@@ -98,7 +166,7 @@
           </div>
 
           <div class="from">
-            {title || content || source.text}
+            {title || content || source?.text || author?.text || 'Untitled'}
           </div>
         </div>
       {:else}
@@ -122,10 +190,31 @@
               <SourceItem {type} {source} themed={!!theme} />
             {/if}
 
-            {#if showTitle && title}
-              <div class="title">
-                {truncate(title, MAX_TITLE_LENGTH)}
-              </div>
+            {#if showTitle}
+              {#if editTitle}
+                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                <div
+                  class="title edit"
+                  contenteditable="true"
+                  placeholder="Enter title"
+                  bind:this={titleInputElem}
+                  bind:textContent={titleValue}
+                  on:click|stopPropagation
+                  on:blur={handleEditTitleBlur}
+                  on:keydown={handleTitleKeydown}
+                  draggable={true}
+                  on:dragstart|preventDefault|stopPropagation
+                ></div>
+              {:else if title}
+                <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
+                <div
+                  class="title"
+                  on:dblclick|preventDefault|stopPropagation={handleTitleDoubleClick}
+                  on:click|stopPropagation={handleTitleClick}
+                >
+                  {truncate(title, MAX_TITLE_LENGTH)}
+                </div>
+              {/if}
             {/if}
 
             {#if showAnnotations && annotations && (annotations || []).length > 0}
@@ -156,7 +245,12 @@
                 {:else if contentType === 'rich_text'}
                   <Editor content={truncate(content, MAX_CONTENT_LENGTH)} readOnly />
                 {:else if contentType === 'html'}
-                  <iframe title="Document Preview" srcdoc={content} frameborder="0" sandbox="" />
+                  <iframe
+                    title="Document Preview"
+                    srcdoc="{IFRAME_STYLES}{content}"
+                    frameborder="0"
+                    sandbox=""
+                  />
                 {:else if contentType === 'markdown'}
                   <MarkdownRenderer content={truncate(content, MAX_CONTENT_LENGTH)} />
                 {/if}
@@ -181,18 +275,24 @@
               <SourceItem {type} {source} themed={!!theme} />
             {/if}
 
-            {#if showAuthor && author && author.text}
+            {#if showAuthor && author && (author.text || author.imageUrl || author.icon)}
               <div class="metadata">
                 <div class="author">
                   {#if author.imageUrl}
                     <div class="favicon">
-                      <Image src={author.imageUrl} alt={author.text} emptyOnError />
+                      <Image src={author.imageUrl} alt={author.text ?? ''} emptyOnError />
+                    </div>
+                  {:else if author.icon}
+                    <div class="favicon">
+                      <Icon name={author.icon} />
                     </div>
                   {/if}
 
-                  <div class="from">
-                    {author.text}
-                  </div>
+                  {#if author.text}
+                    <div class="from">
+                      {author.text}
+                    </div>
+                  {/if}
                 </div>
               </div>
             {/if}
@@ -280,9 +380,11 @@
   }
 
   .favicon {
+    flex-shrink: 0;
     width: 1.25rem;
     height: 1.25rem;
     border-radius: 5.1px;
+    color: #281b53;
     box-shadow:
       0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
       0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
@@ -292,6 +394,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    overflow: hidden;
   }
 
   .from {
@@ -300,6 +403,7 @@
     text-decoration: none;
     color: #281b53;
     opacity: 0.65;
+    width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -341,6 +445,28 @@
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
+    overflow-wrap: break-word;
+
+    &.edit {
+      outline: none;
+      border-radius: 5px;
+      background: transparent;
+      width: 100%;
+      max-height: 16rem;
+      overflow: auto;
+
+      &:focus {
+        outline: 2px solid rgba(65, 128, 173, 0.851);
+        outline-offset: 3px;
+      }
+
+      &:empty:before {
+        content: attr(placeholder);
+        pointer-events: none;
+        display: block; /* For Firefox */
+        opacity: 0.5;
+      }
+    }
   }
 
   .content {

@@ -1,7 +1,9 @@
 export type UserConfig = {
-  user_id: string
+  user_id?: string
   api_key?: string
   email?: string
+  anon_id?: string
+  anon_telemetry?: boolean
   defaultBrowser: boolean
   initialized_tabs: boolean
   settings: UserSettings

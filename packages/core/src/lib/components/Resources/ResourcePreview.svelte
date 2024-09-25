@@ -50,7 +50,9 @@
     getFileType,
     parseStringIntoUrl,
     getHostname,
-    isMac
+    isMac,
+    copyToClipboard,
+    truncateURL
   } from '@horizon/utils'
   import { useTabsManager } from '../../service/tabs'
   import { contextMenu } from '../Core/ContextMenu.svelte'
@@ -63,6 +65,7 @@
     type Source
   } from './Previews/Preview.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
+  import { useToasts } from '@horizon/core/src/lib/service/toast'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -73,6 +76,7 @@
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
   const oasis = useOasis()
+  const toasts = useToasts()
   const config = useConfig()
   const userConfigSettings = config.settings
 
@@ -84,8 +88,11 @@
     'created-tab': void
   }>()
 
-  const isHovered = writable(false)
   const spaces = oasis.spaces
+  const resourceState = resource.state
+
+  const isHovered = writable(false)
+  const customTitleValue = writable(resource.metadata?.name ?? '')
 
   $: annotations = resource.annotations ?? []
 
@@ -100,9 +107,34 @@
 
   $: showOpenAsFile = !(Object.values(ResourceTypes) as string[]).includes(resource.type)
 
+  $: processingSource =
+    (canonicalUrl
+      ? truncateURL(canonicalUrl, 25) || getFileType(resource.type)
+      : getFileType(resource.type)) || resource.type
+
+  $: if ($resourceState === 'updating') {
+    handleUpdating()
+  }
+
   let resourceData: ResourceData | null = null
   let previewData: PreviewData | null = null
   let dragging = false
+  let showEditMode = false
+
+  const handleUpdating = () => {
+    log.debug('Resource is updating', resource.id)
+
+    const unsubscribe = resourceState.subscribe((state) => {
+      if (state === 'idle') {
+        log.debug('Resource is done updating, refreshing preview', resource.id)
+        loadResource()
+        unsubscribe()
+      } else if (state === 'error') {
+        log.error('Resource failed to update', resource.id)
+        unsubscribe()
+      }
+    })
+  }
 
   const cleanSource = (text: string) => {
     if (text.trim() === 'Wikimedia Foundation, Inc.') {
@@ -110,6 +142,24 @@
     } else {
       return text.trim()
     }
+  }
+
+  const cleanContent = (text: string, hostname: string | null) => {
+    if (!text) {
+      return null
+    }
+
+    if (hostname === 'github.com') {
+      const regex = /Contribute to ([\w-]+\/[\w-]+) development by creating an account on GitHub\./
+      const match = text.match(regex)
+      if (match) {
+        return null
+      }
+
+      return text
+    }
+
+    return text
   }
 
   const loadResource = async () => {
@@ -147,12 +197,15 @@
               .forEach(() => annotationItems.push({ type: 'highlight', content: '' }))
           }
 
-          const resourceContent = data.description || data.content_plain
+          const resourceContent = cleanContent(
+            data.description || data.content_plain || '',
+            hostname
+          )
           const previewContent = summary || resourceContent || undefined
 
           previewData = {
             type: resource.type,
-            title: data.title,
+            title: resource?.metadata?.name || data.title,
             content: hideContent ? undefined : previewContent,
             contentType: 'plain',
             annotations: annotationItems,
@@ -189,12 +242,12 @@
               .forEach(() => annotationItems.push({ type: 'highlight', content: '' }))
           }
 
-          const resourceContent = data.excerpt || data.content_plain
+          const resourceContent = cleanContent(data.excerpt || data.content_plain, hostname)
           const previewContent = summary || resourceContent || undefined
 
           previewData = {
             type: resource.type,
-            title: data.title,
+            title: resource?.metadata?.name || data.title,
             content: hideContent ? undefined : previewContent,
             contentType: 'plain',
             annotations: annotationItems,
@@ -254,7 +307,11 @@
 
           previewData = {
             type: resource.type,
-            title: data.title && data.title !== resourceContent ? data.title : undefined,
+            title:
+              (resource?.metadata?.name && resource?.metadata?.name !== resourceContent) ||
+              (data.title && data.title !== resourceContent)
+                ? resource?.metadata?.name || data.title || undefined
+                : undefined,
             content: hideContent ? undefined : previewContent,
             contentType: 'plain',
             image: imageUrl,
@@ -281,7 +338,7 @@
 
           previewData = {
             type: resource.type,
-            title: data.title || undefined,
+            title: resource?.metadata?.name || data.title || undefined,
             content:
               summary || (data.content_html && data.content_html !== '<p></p>')
                 ? data.content_html
@@ -313,7 +370,7 @@
 
           previewData = {
             type: resource.type,
-            title: undefined,
+            title: resource?.metadata?.name,
             annotations: highlightContent ? [{ type: 'highlight', content: highlightContent }] : [],
             content: commentContent,
             contentType: 'plain',
@@ -446,6 +503,10 @@
       return
     }
 
+    if (showEditMode) {
+      return
+    }
+
     if (resource.type === ResourceTypes.ANNOTATION) {
       const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
       if (annotatesTag) {
@@ -466,6 +527,10 @@
         trigger: CreateTabEventTrigger.OasisItem
       })
     }
+  }
+
+  const handleTitleClick = (e: CustomEvent<MouseEvent>) => {
+    handleClick(e.detail)
   }
 
   const handleRemove = (e?: MouseEvent) => {
@@ -498,6 +563,37 @@
     }
   }
 
+  const handleCopyToClipboard = () => {
+    if (canonicalUrl) {
+      copyToClipboard(canonicalUrl)
+      toasts.success('Copied URL to clipboard!')
+    }
+  }
+
+  const handleEditTitle = async (e: CustomEvent<string>) => {
+    const title = e.detail
+
+    showEditMode = false
+
+    // If the resource doesn't store a title separately we don't want to allow setting the name to empty values
+    if (
+      !title &&
+      (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE ||
+        !Object.values<string>(ResourceTypes).includes(resource.type))
+    ) {
+      return
+    }
+
+    // update the local resource first for instant feedback
+    resource.updateMetadata({ name: title })
+
+    // TODO: only update the relevant fields
+    loadResource()
+
+    // after the resource is updated, update the metadata in the database
+    await resourceManager.updateResourceMetadata(resource.id, { name: title })
+  }
+
   onMount(async () => {
     await loadResource()
   })
@@ -506,7 +602,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div
   on:click={handleClick}
-  class="resource-preview clickable"
+  class="resource-preview clickable relative"
   class:isSelected={selected}
   style="--id:{resource.id};"
   use:contextMenu={{
@@ -523,6 +619,16 @@
         text: 'Open in Mini Browser',
         action: () => dispatch('open', resource.id)
       },
+      ...(canonicalUrl
+        ? [
+            {
+              type: 'action',
+              icon: 'copy',
+              text: 'Copy URL',
+              action: () => handleCopyToClipboard()
+            }
+          ]
+        : []),
       { type: 'separator' },
       ...(showOpenAsFile
         ? [
@@ -555,6 +661,21 @@
           : []
       },
       { type: 'separator' },
+      ...(mode === 'full' ||
+      mode === 'content' ||
+      mode === 'compact' ||
+      (mode === 'media' && !previewData?.image)
+        ? [
+            {
+              type: 'action',
+              icon: 'edit',
+              text: previewData?.title || resource?.metadata?.name ? 'Edit Title' : 'Add Title',
+              action: () => {
+                showEditMode = true
+              }
+            }
+          ]
+        : []),
       {
         type: 'action',
         icon: 'trash',
@@ -565,7 +686,23 @@
     ]
   }}
 >
-  {#if previewData}
+  {#if $resourceState === 'updating'}
+    <Preview
+      {resource}
+      type={resource.type}
+      title=""
+      url={canonicalUrl}
+      author={{
+        text: processingSource,
+        imageUrl: canonicalUrl
+          ? `https://www.google.com/s2/favicons?domain=${getHostname(canonicalUrl)}&sz=48`
+          : undefined,
+        icon: !canonicalUrl ? 'file' : undefined
+      }}
+      source={{ text: 'Generating Preview...', icon: 'spinner' }}
+      mode="content"
+    />
+  {:else if previewData}
     <Preview
       {resource}
       type={previewData.type}
@@ -578,6 +715,11 @@
       source={previewData.source}
       author={previewData.author}
       theme={previewData.theme}
+      bind:editTitle={showEditMode}
+      bind:titleValue={$customTitleValue}
+      on:edit-title={handleEditTitle}
+      on:start-edit-title={() => (showEditMode = true)}
+      on:click={handleTitleClick}
       {mode}
     />
   {:else}
@@ -588,6 +730,10 @@
       </div>
     </div>
   {/if}
+
+  <!-- <div class="absolute z-[10000] top-2 right-2 bg-black text-white p-2 rounded-lg">
+    State: {$resourceState}
+  </div> -->
 
   <!-- {#if interactive}
     <div class="remove-wrapper">

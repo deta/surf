@@ -4,7 +4,7 @@
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
-  import type { Tab, TabPage, TabSpace } from '../../types/browser.types'
+  import type { BookmarkTabState, Tab, TabPage, TabSpace } from '../../types/browser.types'
   import { writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
@@ -27,9 +27,8 @@
   export let showButtons: boolean = true
   export let showExcludeOthersButton: boolean = false
   export let showIncludeButton: boolean = false
-  export let bookmarkingInProgress: boolean = false
+  export let bookmarkingState: BookmarkTabState = 'idle'
   export let isUserSelected: boolean
-  export let bookmarkingSuccess: boolean = false
   export let enableEditing = false
   export let showClose = false
   export let spaces
@@ -177,7 +176,7 @@
     dispatch('remove-from-sidebar', tab.id)
   }
 
-  const handleArchive = (trigger?: DeleteTabEventTrigger = DeleteTabEventTrigger.Click) => {
+  const handleArchive = (trigger: DeleteTabEventTrigger = DeleteTabEventTrigger.Click) => {
     dispatch('delete-tab', { tabId: tab.id, trigger })
   }
 
@@ -218,7 +217,7 @@
     }
   }
 
-  const handleBookmark = (trigger?: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click) => {
+  const handleBookmark = (trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click) => {
     saveToSpacePopoverOpened.set(false)
     dispatch('bookmark', { trigger })
   }
@@ -328,9 +327,9 @@
       {
         type: 'action',
         hidden: tab.type !== 'page',
-        disabled: isBookmarkedByUser || $activeTabId !== tab.id,
-        icon: 'leave',
-        text: 'Save',
+        disabled: isBookmarkedByUser,
+        icon: isBookmarkedByUser ? 'check' : 'leave',
+        text: isBookmarkedByUser ? 'Saved' : 'Save',
         action: () => handleBookmark(SaveToOasisEventTrigger.ContextMenu)
       },
       { type: 'separator', hidden: tab.type !== 'page' },
@@ -500,9 +499,9 @@
       {/if}
     </div>
 
-    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || isActive) && !showExcludeOthersButton}
+    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || !isUserSelected) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
-        {#if tab.type === 'page' && isActive && showLiveSpaceButton}
+        <!-- {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
             <button
               slot="trigger"
@@ -520,20 +519,22 @@
               />
             </div>
           </CustomPopover>
-        {/if}
+        {/if} -->
 
-        {#if tab.type === 'page' && isActive}
+        {#if tab.type === 'page'}
           {#key isBookmarkedByUser}
             <CustomPopover position="right" popoverOpened={saveToSpacePopoverOpened}>
               <button
                 slot="trigger"
                 class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-                on:click={handleBookmark}
+                on:click|stopPropagation={handleBookmark}
               >
-                {#if bookmarkingInProgress}
+                {#if bookmarkingState === 'in_progress'}
                   <Icon name="spinner" size="16px" />
-                {:else if bookmarkingSuccess}
+                {:else if bookmarkingState === 'success'}
                   <Icon name="check" size="16px" />
+                {:else if bookmarkingState === 'error'}
+                  <Icon name="close" size="16px" />
                 {:else if isBookmarkedByUser}
                   <Icon name="bookmarkFilled" size="16px" />
                 {:else}

@@ -1071,3 +1071,21 @@ window.insertText = (text: string) => {
   console.debug('Inserting text', text)
   sendPageEvent(WebViewEventSendNames.InsertText, text)
 }
+
+window.addEventListener('submit', (e: Event) => {
+  // @ts-ignore
+  const action = e.target.action
+  if (action) {
+    const protocol = new URL(action).protocol
+    if (protocol === 'http:' && window.location.protocol === 'https:') {
+      if (
+        !confirm(
+          "Warning: You are submitting a form via an insecure connection which could reveal the data you are sending to others. Are you sure you want to continue?"
+        )
+      ) {
+        e.stopPropagation()
+        e.preventDefault()
+      }
+    }
+  }
+})
