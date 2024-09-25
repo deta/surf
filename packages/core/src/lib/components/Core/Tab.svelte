@@ -718,7 +718,7 @@
     width: 38px;
     height: 38px;
 
-    > .title {
+    > *:not(.icon-wrapper) {
       display: none;
     }
   }
