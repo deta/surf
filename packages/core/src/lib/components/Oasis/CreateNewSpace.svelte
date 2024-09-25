@@ -54,6 +54,7 @@
   const semanticInputValue = writable(0.4)
   const resultHasSemanticSearch = writable(false)
   const activeFetchingQuery = writable<string | null>(null)
+  const blacklistedResources = writable<string[]>([])
 
   let editor: Editor
   let shakeClass = ''
@@ -218,7 +219,10 @@
         ...(response.sql_query_results ?? [])
       ])
 
-      const resourceIds = Array.from(results).map((id) => ({ id, blacklisted: false }))
+      const resourceIds = Array.from(results).map((id) => ({
+        id,
+        blacklisted: $blacklistedResources.includes(id)
+      }))
 
       log.debug('bbb-Fetched resource IDs', resourceIds)
 
@@ -287,6 +291,10 @@
     previewIDs.update((ids) =>
       ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: true } : id))
     )
+
+    blacklistedResources.update((resourceIDs) => {
+      return [...resourceIDs, resourceId]
+    })
   }
 
   const handleWhitelistResource = (event) => {
@@ -294,6 +302,10 @@
     previewIDs.update((ids) =>
       ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: false } : id))
     )
+
+    blacklistedResources.update((resourceIDs) => {
+      return resourceIDs.filter((id) => id !== resourceId)
+    })
   }
 
   onMount(() => {

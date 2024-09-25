@@ -194,7 +194,7 @@ pub fn sql_query_generator_prompt() -> String {
 
 **Note:** To retrieve all resources of a specific category, use a wildcard match. For example, to get all chat messages, use `resource_type LIKE 'application/vnd.space.chat-message%'`.
 
-**Note:** By default, all queries should filter out deleted resources by including `deleted = 0`. Only include deleted resources if the query explicitly mentions it.
+**Super Important!:** By default, all queries should filter out deleted resources by including `deleted = 0`. Only include deleted resources if the query explicitly mentions it.
 
 ### Handling Additional Primitives (Fallback):
 
