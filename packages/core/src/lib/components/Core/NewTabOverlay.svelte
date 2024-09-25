@@ -88,7 +88,6 @@
   export let spaceId: string
   export let historyEntriesManager: HistoryEntriesManager
   export let activeTab: Tab | undefined = undefined
-  export let experimentalMode = false
 
   const log = useLogScope('NewTabOverlay')
   const tabsManager = useTabsManager()
@@ -712,7 +711,7 @@
       !isEverythingSpace && !isFromLiveSpace
         ? `Remove reference? The original will still be in Everything.`
         : numberOfReferences > 0
-          ? `This resource will be deleted permanently including all of its ${numberOfReferences} references.`
+          ? `This resource will be removed from ${numberOfReferences} space${numberOfReferences > 1 ? 's' : ''} and deleted permanently.`
           : `This resource will be deleted permanently.`
     )
 
@@ -985,7 +984,7 @@
   }
 
   const handleDeleteSpace = async () => {
-    await oasisSpace.handleDeleteSpace(new CustomEvent('delete', { detail: false }))
+    await oasisSpace.handleDeleteSpace(false, true)
     isCreatingNewSpace.set(false)
   }
 
@@ -993,8 +992,20 @@
     selectedSpaceId.set('all')
   }
 
-  const handleUpdatedSpace = () => {
+  const handleSpaceSelected = async (e: CustomEvent<string>) => {
+    log.debug('Space selected:', e.detail)
+    selectedSpaceId.set(e.detail)
+  }
+
+  const handleUpdatedSpace = async (e: CustomEvent<string | undefined>) => {
+    log.debug('Space updated:', e.detail)
     isCreatingNewSpace.set(false)
+    await tick()
+
+    if (e.detail) {
+      selectedSpaceId.set(e.detail)
+      oasis.selectedSpace.set(e.detail)
+    }
   }
 
   const handleCreatingNewSpace = () => {
@@ -1222,9 +1233,9 @@
                         on:updated-space={handleUpdatedSpace}
                         on:creating-new-space={handleCreatingNewSpace}
                         on:done-creating-new-space={handleDoneCreatingNewSpace}
+                        on:select-space={handleSpaceSelected}
                         insideDrawer={true}
                         bind:this={oasisSpace}
-                        {experimentalMode}
                         {searchValue}
                       />
                     {/key}

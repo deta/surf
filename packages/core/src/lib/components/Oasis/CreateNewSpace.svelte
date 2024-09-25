@@ -54,6 +54,7 @@
   const semanticInputValue = writable(0.4)
   const resultHasSemanticSearch = writable(false)
   const activeFetchingQuery = writable<string | null>(null)
+  const blacklistedResources = writable<string[]>([])
 
   let editor: Editor
   let shakeClass = ''
@@ -201,14 +202,13 @@
 
       const response = await resourceManager.getResourcesViaPrompt(prompt, options)
 
-      log.debug(`bbb-Response before check`, prompt, $userPrompt)
       if (prompt !== $userPrompt) {
-        log.debug(`bbb-Outdated Preview Response`, response)
+        log.debug(`Outdated Preview Response`, response)
         actionCancelled = true
         return
       }
 
-      log.debug(`bbb-Preview response`, response)
+      log.debug(`Preview response`, response)
 
       resultHasSemanticSearch.set(
         !!(response.embedding_search_results && response.embedding_search_results.length > 0)
@@ -219,9 +219,10 @@
         ...(response.sql_query_results ?? [])
       ])
 
-      const resourceIds = Array.from(results).map((id) => ({ id, blacklisted: false }))
-
-      log.debug('bbb-Fetched resource IDs', resourceIds)
+      const resourceIds = Array.from(results).map((id) => ({
+        id,
+        blacklisted: $blacklistedResources.includes(id)
+      }))
 
       previewIDs.set(resourceIds)
 
@@ -230,7 +231,6 @@
           resourceIds.map((id) => resourceManager.getResourceWithAnnotations(id.id))
         )
         previewResources.set(loadedResources)
-        console.log('xxx-loadedresources', loadedResources)
       } else {
         previewResources.set([])
       }
@@ -289,6 +289,10 @@
     previewIDs.update((ids) =>
       ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: true } : id))
     )
+
+    blacklistedResources.update((resourceIDs) => {
+      return [...resourceIDs, resourceId]
+    })
   }
 
   const handleWhitelistResource = (event) => {
@@ -296,6 +300,10 @@
     previewIDs.update((ids) =>
       ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: false } : id))
     )
+
+    blacklistedResources.update((resourceIDs) => {
+      return resourceIDs.filter((id) => id !== resourceId)
+    })
   }
 
   onMount(() => {
@@ -438,6 +446,7 @@
           resourcesBlacklistable={true}
           on:blacklist-resource={handleBlacklistResource}
           on:whitelist-resource={handleWhitelistResource}
+          interactive={false}
         />
       </div>
     {/key}

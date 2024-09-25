@@ -10,6 +10,7 @@
   export let selected: boolean = false
   export let isInSpace: boolean = false
   export let resourcesBlacklistable: boolean = false
+  export let interactive: boolean = true
 
   const log = useLogScope('OasisResourceLoader')
   const resourceManager = useResourceManager()
@@ -46,12 +47,29 @@
 
 <div class="wrapper">
   {#if resource}
-    <DragResourceWrapper {resource}>
+    {#if interactive}
+      <DragResourceWrapper {resource}>
+        <ResourcePreview
+          {resource}
+          {selected}
+          {isInSpace}
+          {resourcesBlacklistable}
+          {interactive}
+          on:load
+          on:click
+          on:open
+          on:remove
+          on:blacklist-resource
+          on:whitelist-resource
+        />
+      </DragResourceWrapper>
+    {:else}
       <ResourcePreview
         {resource}
         {selected}
         {isInSpace}
         {resourcesBlacklistable}
+        {interactive}
         on:load
         on:click
         on:open
@@ -59,7 +77,7 @@
         on:blacklist-resource
         on:whitelist-resource
       />
-    </DragResourceWrapper>
+    {/if}
   {/if}
 </div>
 

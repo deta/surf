@@ -1,5 +1,5 @@
 import { get, writable, type Writable } from 'svelte/store'
-import { useLogScope } from '@horizon/utils'
+import { generateID, useLogScope } from '@horizon/utils'
 import type { ResourceManager } from './resources'
 
 import type { Optional, Space, SpaceData, SpaceEntryOrigin } from '../types'
@@ -33,7 +33,11 @@ export class OasisService {
 
   async loadSpaces() {
     this.log.debug('loading spaces')
-    const result = await this.resourceManager.listSpaces()
+    let result = await this.resourceManager.listSpaces()
+
+    // TODO: Felix — Continuation on felix/tempspace-removal: Remove all .tempspaces
+    const filteredResult = result.filter((space) => space.name.folderName !== '.tempspace')
+    result = filteredResult
 
     this.log.debug('loaded spaces:', result)
     this.spaces.set(result)
@@ -69,6 +73,23 @@ export class OasisService {
     }
 
     const fullData = Object.assign({}, defaults, data)
+
+    if (fullData.folderName === '.tempspace') {
+      const fakeSpace = {
+        name: fullData,
+        id: generateID(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted: 0
+      } as Space
+      this.log.debug('created fake space:', fakeSpace)
+
+      this.spaces.update((spaces) => {
+        return [...spaces, fakeSpace]
+      })
+
+      return fakeSpace
+    }
 
     const result = await this.resourceManager.createSpace(fullData)
     if (!result) {

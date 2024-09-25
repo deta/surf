@@ -76,6 +76,7 @@
   export let isInSpace: boolean = false // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
   export let resourcesBlacklistable: boolean = false
   export let resourceBlacklisted: boolean = false
+  export let interactive: boolean = false
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
@@ -412,6 +413,26 @@
             },
             theme: undefined
           }
+        } else {
+          const data = resourceData as any
+          const hostname = getHostname(canonicalUrl ?? data.url)
+
+          previewData = {
+            type: resource.type,
+            title: resource?.metadata?.name || data.title || getFileType(resource.type),
+            content: data.content_plain,
+            contentType: 'plain',
+            image: data.image ?? undefined,
+            url: data.url,
+            source: {
+              text: data.provider
+                ? cleanSource(data.provider)
+                : hostname || getFileType(resource.type),
+              imageUrl: data.icon ?? `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`,
+              icon: 'link'
+            },
+            theme: undefined
+          }
         }
       } else if (resource instanceof ResourceNote) {
         const data = await resource.getContent()
@@ -642,6 +663,12 @@
     await resourceManager.updateResourceMetadata(resource.id, { name: title })
   }
 
+  const handleStartEditTitle = async () => {
+    if (interactive) {
+      showEditMode = true
+    }
+  }
+
   onMount(async () => {
     await loadResource()
   })
@@ -654,6 +681,7 @@
   class:isSelected={selected}
   style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
   use:contextMenu={{
+    canOpen: interactive,
     items: [
       {
         type: 'action',
@@ -718,7 +746,7 @@
       {
         type: 'action',
         icon: 'trash',
-        text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
+        text: `${!isInSpace || isLiveSpaceResource ? 'Delete from Stuff' : 'Remove from Space'}`,
         kind: 'danger',
         action: () => handleRemove()
       }
@@ -757,7 +785,7 @@
       bind:editTitle={showEditMode}
       bind:titleValue={$customTitleValue}
       on:edit-title={handleEditTitle}
-      on:start-edit-title={() => (showEditMode = true)}
+      on:start-edit-title={handleStartEditTitle}
       on:click={handleTitleClick}
       {mode}
     />
