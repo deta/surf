@@ -33,6 +33,7 @@
   import { useConfig } from '../../service/config'
   import ChatContextTabPicker from '../Chat/ChatContextTabPicker.svelte'
   import { useTabsManager } from '../../service/tabs'
+  import { HTMLDragItem } from '@horizon/dragcula'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -845,6 +846,14 @@
               {/if}
 
               <button
+                draggable={true}
+                use:HTMLDragItem.action={{}}
+                on:DragStart={(e) => {
+                  //e.dataTransfer.setData('text/plain', response.content)
+                  e.dataTransfer.setData('text/html', response.content)
+                  e.item.data.setData('text/plain', response.content)
+                  drag.continue()
+                }}
                 on:click={() => copy(response.content)}
                 use:tooltip={{
                   text: 'Copy to Clipboard',
