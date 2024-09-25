@@ -30,8 +30,10 @@ import type { Telemetry } from './telemetry'
 import {
   TelemetryEventTypes,
   type DetectedResource,
+  type ResourceData,
   type ResourceDataAnnotation,
-  type ResourceDataHistoryEntry
+  type ResourceDataHistoryEntry,
+  type ResourceState
 } from '@horizon/types'
 import { getContext, setContext } from 'svelte'
 
@@ -166,6 +168,8 @@ export class Resource {
   readDataPromise: Promise<Blob> | null // used to avoid duplicate reads
   dataUsed: number // number of times the data is being used
 
+  state: Writable<ResourceState>
+
   sffs: SFFS
   log: ScopedLogger
 
@@ -187,6 +191,8 @@ export class Resource {
     this.rawData = null
     this.readDataPromise = null
     this.dataUsed = 0
+
+    this.state = writable('idle')
   }
 
   private async readDataAsBlob() {
@@ -300,6 +306,10 @@ export class Resource {
       this.rawData = null
     }
   }
+
+  updateState(state: ResourceState) {
+    this.state.set(state)
+  }
 }
 
 // TODO: adapt to new resource data
@@ -343,6 +353,14 @@ export class ResourceJSON<T> extends Resource {
     super(sffs, data)
     this.parsedData = null
     // this.data = writable(null)
+  }
+
+  async updateData(data: Blob, write?: boolean): Promise<void> {
+    this.parsedData = null
+
+    await super.updateData(data, write)
+
+    await this.getParsedData(true)
   }
 
   async getParsedData(fresh = false) {
@@ -778,6 +796,17 @@ export class ResourceManager {
     }
 
     return resource.updateData(data, write)
+  }
+
+  async updateResourceParsedData(id: string, data: ResourceData, write = true) {
+    const resource = await this.getResource(id)
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    const blob = new Blob([JSON.stringify(data)], { type: resource.type })
+
+    return resource.updateData(blob, write)
   }
 
   async updateResourceMetadata(id: string, updates: Partial<SFFSResourceMetadata>) {

@@ -1,5 +1,9 @@
 name: Create an External Release
 
+permissions:
+  id-token: write
+  contents: write
+
 on:
   workflow_dispatch:
     inputs:
@@ -90,7 +94,23 @@ jobs:
           cl
           clang --version
         shell: cmd
-      - name: install dependencies
+      - name: Set up Windows Sign Tool
+        if: matrix.os == 'windows-latest'
+        run: dotnet tool install --no-cache --global AzureSignTool --version 5.0.0
+      - name: Azure Login
+        if: matrix.os == 'windows-latest'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Azure Key Vault Access Token
+        if: matrix.os == 'windows-latest'
+        run: |
+          $az_token=$(az account get-access-token --scope https://vault.azure.net/.default --query accessToken -o tsv)
+          echo "::add-mask::$az_token"
+          echo "AZURE_KEYVAULT_ACCESS_TOKEN=$az_token" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Install Dependencies
         run: |
           yarn config set network-timeout 300000
           yarn install --frozen-lockfile --network-timeout 300000
@@ -132,6 +152,14 @@ jobs:
           M_VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_SURF_PROD }}
           R_VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_SURF_PROD }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+          # windows code signing configuration
+          SIGN_WINDOWS: true
+          AZURE_KEYVAULT_CERTIFICATE_NAME: ${{ secrets.AZURE_KEYVAULT_CERTIFICATE_NAME }}
+          AZURE_KEYVAULT_URL: ${{ secrets.AZURE_KEYVAULT_URL }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_KEYVAULT_ACCESS_TOKEN: ${{ env.AZURE_KEYVAULT_ACCESS_TOKEN }}
 
       - uses: actions/upload-artifact@v4
         with:

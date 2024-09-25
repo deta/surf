@@ -66,7 +66,7 @@ class Logger {
 
   warn(...data: any[]) {
     if (this.level <= levelMap.indexOf('warn')) {
-      console.log(this.getScope(), ...data)
+      console.warn(this.getScope(), ...data)
     }
   }
 
