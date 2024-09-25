@@ -42,6 +42,15 @@ export class Dragcula {
     // This should probably live somewhere else lol
     function handleDragUpdate(e: DragEvent) {
       const el = document.elementFromPoint(e.clientX, e.clientY);
+
+      if (e.isTrusted && Dragcula.get().activeDrag === null) {
+        Dragcula.get().activeDrag = DragOperation.new({
+          dataTransfer: e.dataTransfer ?? new DataTransfer()
+        });
+        Dragcula.get().prepareDragOperation();
+        Dragcula.get().callHandlers("dragstart", Dragcula.get().activeDrag);
+      }
+
       const activeDrag = Dragcula.get().activeDrag;
       if (activeDrag === null) {
         console.warn("handling drag event without activeDrag! This should not happen!");

@@ -3096,6 +3096,7 @@
 
       let tab = await tabsManager.openResourceAsTab(resource, {
         active: true,
+        index: drag.index ?? 0,
         trigger: CreateTabEventTrigger.Drop
       })
 
