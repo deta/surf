@@ -109,9 +109,10 @@
     open: string
     'create-resource-from-oasis': string
     'new-tab': BrowserTabNewTabEvent
-    'updated-space': string
+    'updated-space': string | undefined
     deleted: string
     'go-back': void
+    'select-space': string
   }>()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
@@ -1387,35 +1388,46 @@
       return
     }
 
+    let createdSpace: Space | null = null
+
     try {
-      const updatedSpace = await oasis.updateSpaceData(space.id, {
+      await oasis.deleteSpace(space.id)
+
+      createdSpace = await oasis.createSpace({
+        ...space.name,
         folderName: name,
         smartFilterQuery: processNaturalLanguage ? userPrompt : undefined
       })
 
       if (blacklistedResourceIds && blacklistedResourceIds.length > 0) {
         await oasis.addResourcesToSpace(
-          space.id,
+          createdSpace.id,
           blacklistedResourceIds,
           SpaceEntryOrigin.Blacklisted
         )
         log.debug('Blacklisted resources added to space:', blacklistedResourceIds)
       }
       if (llmFetchedResourceIds && llmFetchedResourceIds.length > 0) {
-        await oasis.addResourcesToSpace(space.id, llmFetchedResourceIds, SpaceEntryOrigin.LlmQuery)
+        await oasis.addResourcesToSpace(
+          createdSpace.id,
+          llmFetchedResourceIds,
+          SpaceEntryOrigin.LlmQuery
+        )
         log.debug('LLM fetched resources added to space:', llmFetchedResourceIds)
       }
 
-      $space = updatedSpace
-      await loadSpaceContents(space.id)
+      $space = createdSpace
+      await loadSpaceContents(createdSpace.id)
       showSettingsModal.set(false)
       toasts.success('Space updated successfully!')
+
+      dispatch('select-space', createdSpace.id)
     } catch (error) {
       log.error('Error updating space:', error)
       toasts.error('Failed to update space: ' + (error as Error).message)
     }
 
-    dispatch('updated-space')
+    dispatch('updated-space', createdSpace?.id)
   }
 
   const handleAbortSpaceCreation = async (e: CustomEvent<string>) => {

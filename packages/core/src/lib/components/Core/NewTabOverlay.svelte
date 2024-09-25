@@ -997,8 +997,20 @@
     selectedSpaceId.set('all')
   }
 
-  const handleUpdatedSpace = () => {
+  const handleSpaceSelected = async (e: CustomEvent<string>) => {
+    log.debug('Space selected:', e.detail)
+    selectedSpaceId.set(e.detail)
+  }
+
+  const handleUpdatedSpace = async (e: CustomEvent<string | undefined>) => {
+    log.debug('Space updated:', e.detail)
     isCreatingNewSpace.set(false)
+    await tick()
+
+    if (e.detail) {
+      selectedSpaceId.set(e.detail)
+      oasis.selectedSpace.set(e.detail)
+    }
   }
 
   const handleCreatingNewSpace = () => {
@@ -1225,6 +1237,7 @@
                         on:updated-space={handleUpdatedSpace}
                         on:creating-new-space={handleCreatingNewSpace}
                         on:done-creating-new-space={handleDoneCreatingNewSpace}
+                        on:select-space={handleSpaceSelected}
                         insideDrawer={true}
                         bind:this={oasisSpace}
                         {searchValue}

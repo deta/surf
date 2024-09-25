@@ -1,5 +1,5 @@
 import { get, writable, type Writable } from 'svelte/store'
-import { useLogScope } from '@horizon/utils'
+import { generateID, useLogScope } from '@horizon/utils'
 import type { ResourceManager } from './resources'
 
 import type { Optional, Space, SpaceData, SpaceEntryOrigin } from '../types'
@@ -71,6 +71,23 @@ export class OasisService {
     }
 
     const fullData = Object.assign({}, defaults, data)
+
+    if (fullData.folderName === '.tempspace') {
+      const fakeSpace = {
+        name: fullData,
+        id: generateID(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted: 0
+      } as Space
+      this.log.debug('created fake space:', fakeSpace)
+
+      this.spaces.update((spaces) => {
+        return [...spaces, fakeSpace]
+      })
+
+      return fakeSpace
+    }
 
     const result = await this.resourceManager.createSpace(fullData)
     if (!result) {
