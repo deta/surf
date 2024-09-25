@@ -92,8 +92,14 @@ export const getUserConfig = (path?: string) => {
         completed_welcome: false,
         completed_chat: false,
         completed_stuff: false
-      }
+      },
+      personas: []
     }
+    setUserConfig(storedConfig as UserConfig)
+  }
+
+  if (storedConfig.settings.personas === undefined) {
+    storedConfig.settings.personas = []
     setUserConfig(storedConfig as UserConfig)
   }
 

@@ -19,4 +19,5 @@ export type UserSettings = {
     completed_chat: boolean
     completed_stuff: boolean
   }
+  personas: string[]
 }

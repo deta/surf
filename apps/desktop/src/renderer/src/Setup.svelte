@@ -8,7 +8,8 @@
   const TERMS_URL = 'https://deta.surf/terms'
   const PRIVACY_URL = 'https://deta.surf/privacy'
 
-  let view: 'invite' | 'disclaimer' | 'ai_features' | 'language' | 'prefs' | 'done' = 'invite'
+  let view: 'invite' | 'disclaimer' | 'ai_features' | 'language' | 'prefs' | 'persona' | 'done' =
+    'invite'
 
   let inviteCode = ''
   let embeddingModel: UserSettings['embedding_model'] = 'english_small'
@@ -16,6 +17,7 @@
   let acceptedTerms = false
   let loading = false
   let error = ''
+  let selectedPersonas: string[] = []
 
   const languageConfig = {
     english_small: 'English',
@@ -23,6 +25,19 @@
     multilingual_small: 'Multi-language',
     multilingual_large: 'Multi-language XL'
   }
+
+  const personas = [
+    'Student',
+    'Software Engineer',
+    'Designer',
+    'Entrepreneur',
+    'Marketing',
+    'Artist',
+    'Researcher',
+    'Product Manager',
+    'Writer',
+    'Other'
+  ]
 
   const handleSubmit = async () => {
     try {
@@ -55,7 +70,7 @@
       error =
         'Sorry: failed to save your preference. Please try again or contact us if problem persists.'
     }
-    view = 'done'
+    view = 'persona'
   }
 
   const handleLanguageSubmit = async () => {
@@ -82,6 +97,26 @@
 
   const handleStart = () => {
     window.api.restartApp()
+  }
+
+  function togglePersona(persona: string) {
+    if (selectedPersonas.includes(persona)) {
+      selectedPersonas = selectedPersonas.filter((p) => p !== persona)
+    } else if (selectedPersonas.length < 3) {
+      selectedPersonas = [...selectedPersonas, persona]
+    }
+  }
+
+  const handlePersonaSubmit = async () => {
+    try {
+      await window.api.updateUserConfigSettings({
+        personas: selectedPersonas
+      })
+      view = 'done'
+    } catch (e) {
+      console.error(e)
+      error = 'Failed to save personas, please try again.'
+    }
   }
 </script>
 
@@ -329,6 +364,30 @@
         <span class="pill">Toggle Tabs Orientation</span>
       </p>
       <button on:click={handleAcceptPrefs}>Surf {tabsOrientation}</button>
+    {:else if view === 'persona'}
+      <img src={icon} alt="Surf icon" />
+      <h1>Choose Your Personas</h1>
+      <p class="text-md">Select up to 3 personas that best describe you:</p>
+
+      <div class="persona-grid">
+        {#each personas as persona}
+          <button
+            class="persona-button {selectedPersonas.includes(persona) ? 'selected' : ''}"
+            on:click={() => togglePersona(persona)}
+            disabled={selectedPersonas.length >= 3 && !selectedPersonas.includes(persona)}
+          >
+            {persona}
+          </button>
+        {/each}
+      </div>
+
+      <p class="selected-count">
+        Selected: {selectedPersonas.length}/3
+      </p>
+
+      <button on:click={handlePersonaSubmit} disabled={selectedPersonas.length === 0}>
+        Continue
+      </button>
     {:else if view === 'done'}
       <img src={icon} alt="Surf icon" />
 
@@ -433,6 +492,45 @@
     gap: 1.75rem;
     text-align: center;
     font-size: 1.075rem;
+
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .persona-button {
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      background-color: #e2e8f0;
+      color: #4a5568;
+      border: 2px solid transparent;
+
+      &:hover:not(:disabled) {
+        background-color: #cbd5e0;
+      }
+
+      &.selected {
+        background-color: #ebf8ff;
+        border-color: #4299e1;
+        color: #2b6cb0;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .selected-count {
+      font-size: 0.875rem;
+      color: #718096;
+      margin-bottom: 1rem;
+    }
 
     &.wide {
       max-width: 445px;
