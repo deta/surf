@@ -87,7 +87,21 @@ export const getUserConfig = (path?: string) => {
       tabs_orientation: 'vertical',
       use_semantic_search: false,
       show_annotations_in_oasis: true,
-      experimental_mode: false
+      experimental_mode: false,
+      onboarding: {
+        completed_welcome: false,
+        completed_chat: false,
+        completed_stuff: false
+      }
+    }
+    setUserConfig(storedConfig as UserConfig)
+  }
+
+  if (storedConfig.settings.onboarding === undefined) {
+    storedConfig.settings.onboarding = {
+      completed_welcome: false,
+      completed_chat: false,
+      completed_stuff: false
     }
     setUserConfig(storedConfig as UserConfig)
   }

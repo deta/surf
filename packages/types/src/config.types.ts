@@ -14,4 +14,9 @@ export type UserSettings = {
   show_annotations_in_oasis: boolean
   experimental_mode: boolean
   search_engine: string
+  onboarding: {
+    completed_welcome: boolean
+    completed_chat: boolean
+    completed_stuff: boolean
+  }
 }
