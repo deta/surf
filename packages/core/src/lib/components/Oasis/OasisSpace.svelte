@@ -111,7 +111,7 @@
     open: string
     'create-resource-from-oasis': string
     'new-tab': BrowserTabNewTabEvent
-    'updated-spaces': string
+    'updated-space': string
     deleted: string
     'go-back': void
   }>()
@@ -629,7 +629,7 @@
         content?: ResourceContent
       } | null = null
 
-      if (checkIfYoutubeUrl(sourceURL)) {
+      if (checkIfYoutubeUrl(sourceURL.href)) {
         log.debug('Youtube video, skipping webview parsing:', item)
 
         const postData = RSSParser.parseYouTubeRSSItemToPost(item.rawData)
@@ -1289,19 +1289,27 @@
     await loadSpaceContents($space.id, true)
   }
 
-  export const handleDeleteSpace = async (e: CustomEvent<boolean>) => {
-    const shouldDeleteAllResources = e.detail
+  export const handleDeleteSpace = async (
+    e: CustomEvent<{ shouldDeleteAllResources: boolean; abortSpaceCreation?: boolean }>
+  ) => {
+    const { shouldDeleteAllResources, abortSpaceCreation = false } = e.detail
 
     const confirmed = window.confirm(
-      shouldDeleteAllResources
-        ? 'Are you sure you want to delete this space and all of its resources?'
-        : 'Are you sure you want to delete this space?'
+      abortSpaceCreation
+        ? 'Are you sure you want to abort the creation of this space?'
+        : shouldDeleteAllResources
+          ? 'Are you sure you want to delete this space and all of its resources?'
+          : 'Are you sure you want to abort the creation of this space?'
     )
+
     if (!confirmed) {
       return
     }
 
-    const toast = toasts.loading('Deleting space…')
+    let toast
+    if (!abortSpaceCreation) {
+      toast = toasts.loading('Deleting space…')
+    }
 
     showSettingsModal.set(false)
 
@@ -1317,14 +1325,19 @@
 
       oasis.selectedSpace.set('all')
       dispatch('deleted', spaceId)
-      toast.success('Space deleted!')
+
+      if (!abortSpaceCreation) {
+        toast.success('Space deleted!')
+      }
 
       await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
     } catch (error) {
       log.error('Error deleting space:', error)
-      toast.error(
-        'Error deleting space: ' + (typeof error === 'string' ? error : (error as Error).message)
-      )
+      if (!abortSpaceCreation) {
+        toast.error(
+          'Error deleting space: ' + (typeof error === 'string' ? error : (error as Error).message)
+        )
+      }
     }
   }
 
@@ -1439,11 +1452,17 @@
       log.error('Error updating space:', error)
       toasts.error('Failed to update space: ' + (error as Error).message)
     }
+
+    dispatch('updated-space')
   }
 
   const handleAbortSpaceCreation = async (e: CustomEvent<string>) => {
     const spaceId = e.detail
-    await handleDeleteSpace(new CustomEvent('delete', { detail: false }))
+    await handleDeleteSpace(
+      new CustomEvent('delete', {
+        detail: { shouldDeleteAllResources: false, abortSpaceCreation: true }
+      })
+    )
 
     dispatch('deleted', spaceId)
   }
@@ -1477,9 +1496,9 @@
   zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
   <div class="relative wrapper bg-sky-100/50">
-    {#if !isEverythingSpace && $space?.name.folderName !== 'New Space'}
+    {#if !isEverythingSpace && $space?.name.folderName !== '.tempspace'}
       <div
-        class="drawer-bar bg-gradient-to-t from-sky-100/90 to-transparent via-bg-sky-100/40 bg-sky-100/90 backdrop-blur-md backdrop-saturate-50 transition-transform duration-300 ease-in-out"
+        class="drawer-bar transition-transform duration-300 ease-in-out"
         class:translate-y-24={hideBar && active}
       >
         {#if showBackBtn}
@@ -1493,15 +1512,26 @@
             <Icon name="arrow.left" size="20px" />
           </button> -->
 
-            <div class="settings-wrapper">
-              <button class="settings-toggle" on:click={handleOpenSettingsModal}>
+            <div class="settings-wrapper flex">
+              <button
+                class="settings-toggle flex flex-col items-start hover:bg-sky-200 rounded-md h-full gap-[0.33rem]"
+                on:click={handleOpenSettingsModal}
+              >
                 {#if $space?.name.folderName}
                   <div
-                    class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800 hover:bg-sky-200 py-2 pl-3 pr-2 rounded-md"
+                    class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800 pl-3 pr-2"
                   >
-                    <span class="leading-tight font-medium">{$space.name.folderName}</span>
+                    <span class="font-medium leading-[1]">{$space.name.folderName}</span>
                     <Icon name="chevron.down" size="20px" />
                   </div>
+                  {#if $space.name.smartFilterQuery}
+                    <span
+                      class="relative text-sm left-3 pointer-events-none flex items-center justify-center mb-[0.1rem] place-self-start px-0.5"
+                    >
+                      <span class="w-2 h-2 bg-blue-400 rounded-full animate-pulse mr-1.5"></span>
+                      <span class="text-blue-500 leading-[1]"> Smart Space</span>
+                    </span>
+                  {/if}
                 {/if}
               </button>
 
@@ -1528,8 +1558,10 @@
           </button> -->
           </div>
         {/if}
-        {#if $space?.name.folderName !== 'New Space'}
-          <div class="drawer-chat-search bg-sky-50">
+        {#if $space?.name.folderName !== '.tempspace'}
+          <div
+            class="drawer-chat-search bg-gradient-to-t from-sky-100/70 to-transparent via-bg-sky-100/10 bg-sky-100/70 backdrop-blur-xl backdrop-saturate-50"
+          >
             <div class="search-input-wrapper">
               <SearchInput bind:value={$searchValue} on:search={handleSearch} />
             </div>
@@ -1676,10 +1708,12 @@
           <Icon name="spinner" size="20px" />
         </div>
       {/if}
-    {:else if $space?.name.folderName === 'New Space'}
+    {:else if $space?.name.folderName === '.tempspace'}
       <CreateNewSpace
         on:update-existing-space={handleUpdateExistingSpace}
         on:abort-space-creation={handleAbortSpaceCreation}
+        on:creating-new-space
+        on:done-creating-new-space
         {space}
       />
     {:else if $loadingContents}
@@ -1735,8 +1769,8 @@
 
   .modal-wrapper {
     position: fixed;
-    bottom: 3rem;
-    left: 3rem;
+    bottom: 4rem;
+    left: 0;
     z-index: 100;
   }
 
@@ -1746,10 +1780,12 @@
     left: 0;
     right: 0;
     z-index: 1000;
-    border-top: 0.5px solid rgba(0, 0, 0, 0.15);
+    margin: 0.5rem;
 
     .drawer-chat-search {
       position: relative;
+      border: 0.5px solid rgba(0, 0, 0, 0.15);
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;

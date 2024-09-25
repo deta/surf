@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { tweened } from 'svelte/motion'
   import { onMount, onDestroy } from 'svelte'
   import { cubicOut } from 'svelte/easing'
@@ -10,21 +10,22 @@
   const oasis = useOasis()
   const resourceManager = useResourceManager()
 
-  export let resourceIDs = []
-  export let showHeader = true
+  export let resourceIDs: string[] = []
+  export let showHeader: boolean = true
 
   // Define the activeIndex as a tweened value for smooth transitions
   let activeIndex = tweened(0, { duration: 200, easing: cubicOut })
 
   // Data to be populated with resources loaded in onMount
-  let resources = []
-  let resourcesData = []
-  let resourceDataLength = 0
+  let resources: any[] = []
+  let resourcesData: { id: string; title: string; type: string }[] = []
+  let resourceDataLength: number = 0
+  let previewContainerRef: HTMLDivElement
 
-  let spaceName = 'undefined'
+  let spaceName: string = 'undefined'
 
   // Color mapping for different types of cards
-  const typeColors = {
+  const typeColors: { [key: string]: string } = {
     travel: 'bg-blue-500',
     nature: 'bg-green-500',
     technology: 'bg-purple-500',
@@ -34,8 +35,8 @@
   }
 
   // Mouse movement handler to adjust active index based on mouse position
-  const handleMouseMove = (e) => {
-    const container = document.getElementById('preview-container')
+  const handleMouseMove = (e: MouseEvent) => {
+    const container = previewContainerRef
     if (container && isMouseOver) {
       const rect = container.getBoundingClientRect()
       const newIndex = Math.floor(((e.clientX - rect.left) / rect.width) * resourcesData.length)
@@ -80,7 +81,7 @@
   })
 
   // Calculate transform styles based on the card's index and activeIndex
-  const getTransformStyle = (index, activeIndex) => {
+  const getTransformStyle = (index: number, activeIndex: number) => {
     const offset = index - activeIndex
     const y = Math.abs(offset) * 3
     const x = offset * 10 // Increased horizontal offset for more pronounced spacing
@@ -91,7 +92,7 @@
   }
 
   // State to track if the mouse is over the component
-  let isMouseOver = false
+  let isMouseOver: boolean = false
 
   // Mouse enter and leave handlers
   const handleMouseEnter = () => {
@@ -107,6 +108,7 @@
 <div class="flex items-center justify-center p-24">
   <div
     id="preview-container"
+    bind:this={previewContainerRef}
     class="w-[400px] p-6 relative"
     on:mouseenter={handleMouseEnter}
     on:mouseleave={handleMouseLeave}

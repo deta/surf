@@ -242,9 +242,10 @@
     sendEvent(WebViewEventReceiveNames.GetResource)
   }
 
-  export const detectResource = (timeoutNum = 10000) => {
+  export const detectResource = (totalTimeout = 10000, pageLoadTimeout = 5000) => {
     return new Promise<DetectedResource | null>((resolve) => {
-      let timeout: any
+      let timeout: ReturnType<typeof setTimeout> | null = null
+      let pageLoadTimeoutId: ReturnType<typeof setTimeout> | null = null
 
       const handleEvent = (event: Electron.IpcMessageEvent) => {
         log.debug('Handling event while waiting for resource detection', event)
@@ -268,6 +269,11 @@
 
       const handleDidFinishLoad = () => {
         log.debug('webview finished loading, detecting resource')
+
+        if (pageLoadTimeoutId) {
+          clearTimeout(pageLoadTimeoutId)
+        }
+
         sendEvent(WebViewEventReceiveNames.GetResource)
       }
 
@@ -276,16 +282,25 @@
         webview.removeEventListener('did-finish-load', handleDidFinishLoad)
         webview.removeEventListener('dom-ready', handleDidFinishLoad)
         resolve(null)
-      }, timeoutNum)
+      }, totalTimeout)
 
       webview.addEventListener('ipc-message', handleEvent)
 
-      if ($isLoading) {
-        log.debug('waiting for webview to finish loading before detecting resource')
-        webview.addEventListener('did-finish-load', handleDidFinishLoad)
-      } else if (!$webviewReady) {
+      if (!$webviewReady) {
         log.debug('waiting for webview to be ready before detecting resource')
         webview.addEventListener('dom-ready', handleDidFinishLoad)
+      } else if ($isLoading) {
+        log.debug('waiting for webview to finish loading before detecting resource')
+        webview.addEventListener('did-finish-load', handleDidFinishLoad)
+
+        // If loading takes too long, detect resource immediately
+        pageLoadTimeoutId = setTimeout(() => {
+          if ($isLoading) {
+            log.debug('webview is still loading, detecting resource immediately')
+            webview.removeEventListener('did-finish-load', handleDidFinishLoad)
+            handleDidFinishLoad()
+          }
+        }, pageLoadTimeout)
       } else {
         log.debug('webview is ready, detecting resource immediately')
         handleDidFinishLoad()

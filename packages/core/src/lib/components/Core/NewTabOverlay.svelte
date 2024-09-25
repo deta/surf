@@ -127,6 +127,7 @@
   const isFetchingOasisSearchResults = writable(false)
   const isFetchingSearchEngineSuggestionResults = writable(false)
   const isFetchingHistoryEntriesResults = writable(false)
+  const isCreatingNewSpace = writable(false)
   const isFilteringCommandItems = writable(false)
   const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
     'oasis-filter-resources',
@@ -574,7 +575,7 @@
   const toasts = useToasts()
   const resourceManager = oasis.resourceManager
   const telemetry = resourceManager.telemetry
-  const spaces = derived(oasis.spaces, ($spaces) => $spaces)
+  const spaces = oasis.spaces
   const selectedItem = writable<string | null>(null)
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
@@ -584,6 +585,7 @@
   const selectedSpaceId = writable<string | null>(null)
   const searchResults = writable<ResourceSearchResultItem[]>([])
   const everythingContents = writable<ResourceSearchResultItem[]>([])
+  const spaceCreationActive = writable(false)
 
   const resourcesToShow = derived(
     [searchValue, searchResults, everythingContents],
@@ -603,7 +605,7 @@
     }
   )
 
-  const loadEverything = async () => {
+  const loadEverything = async (initialLoad = false) => {
     try {
       if ($loadingContents) {
         log.debug('Already loading everything')
@@ -614,6 +616,11 @@
       oasis.resetSelectedSpace()
 
       loadingContents.set(true)
+
+      if (initialLoad) {
+        everythingContents.set([])
+        await tick()
+      }
 
       const resources = await resourceManager.listResourcesByTags(
         [
@@ -629,7 +636,7 @@
       )
 
       const items = resources
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
         .map(
           (resource) =>
             ({
@@ -940,13 +947,14 @@
     await tick()
     const spaceID = await createSpaceRef.handleCreateSpace({
       detail: {
-        name: 'New Space',
+        name: '.tempspace',
         aiEnabled: false,
         colors: ['#000000', '#ffffff'],
         userPrompt: ''
       }
     })
 
+    isCreatingNewSpace.set(true)
     selectedSpaceId.set(spaceID)
   }
 
@@ -974,10 +982,23 @@
 
   const handleDeleteSpace = async () => {
     await oasisSpace.handleDeleteSpace(new CustomEvent('delete', { detail: false }))
+    isCreatingNewSpace.set(false)
   }
 
   const handleSpaceDeleted = async (e: CustomEvent) => {
     selectedSpaceId.set('all')
+  }
+
+  const handleUpdatedSpace = () => {
+    isCreatingNewSpace.set(false)
+  }
+
+  const handleCreatingNewSpace = () => {
+    isCreatingNewSpace.set(true)
+  }
+
+  const handleDoneCreatingNewSpace = () => {
+    isCreatingNewSpace.set(true)
   }
 
   let isSearching = false
@@ -989,16 +1010,15 @@
     if (value.length === 0) {
       searchResults.set([])
       hasSearched = false
+      isSearching = false
       if (!hasLoadedEverything) {
         hasLoadedEverything = true
         loadEverything()
       }
-    } else if (value.length > 3) {
+    } else {
       handleSearch(value).then(() => {
         isSearching = false
       })
-    } else {
-      $searchResults = []
     }
 
     hasLoadedEverything = value.length === 0
@@ -1012,21 +1032,21 @@
 
   $: if (showTabSearch === 2) {
     debouncedTrackOpenOasis()
-    loadEverything()
+    loadEverything(true)
+  }
 
-    if ($searchValue !== previousSearchValue) {
-      isSearching = true
-      previousSearchValue = $searchValue
+  $: if (showTabSearch === 2 && $searchValue !== previousSearchValue) {
+    isSearching = true
+    previousSearchValue = $searchValue
 
-      if (searchTimeout) {
-        clearTimeout(searchTimeout)
-      }
-
-      // does two things: second layer flood defense & prevents empty state from loading everything immediately, which clogs input
-      searchTimeout = setTimeout(async () => {
-        await debouncedSearch($searchValue)
-      }, 300)
+    if (searchTimeout) {
+      clearTimeout(searchTimeout)
     }
+
+    // does two things: second layer flood defense & prevents empty state from loading everything immediately, which clogs input
+    searchTimeout = setTimeout(async () => {
+      await debouncedSearch($searchValue)
+    }, 300)
   }
 
   $: if (showTabSearch !== 2) {
@@ -1131,18 +1151,19 @@
           >
             <Icon name="close" />
           </button>
-        {:else if $searchValue.length < 20}
+        {:else if $searchValue.length < 20 && !$isCreatingNewSpace}
           <button
-            class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
-              ? 'bottom-3'
+            class="absolute right-4 transform {showTabSearch === 2
+              ? 'bottom-5'
               : 'bottom-3'} z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
             on:click={() => {
               showTabSearch = showTabSearch === 1 ? 2 : 1
             }}
             aria-label="Switch tabs"
           >
-            <span
-              >{showTabSearch === 1
+            <span>
+              <!-- {createNewSpace.isCreatingNewSpace} -->
+              {showTabSearch === 1
                 ? $searchValue.length > 0
                   ? 'Search My Stuff'
                   : 'Open My Stuff'
@@ -1231,6 +1252,9 @@
                         on:open={handleOpen}
                         on:go-back={() => selectedSpaceId.set(null)}
                         on:deleted={handleSpaceDeleted}
+                        on:updated-space={handleUpdatedSpace}
+                        on:creating-new-space={handleCreatingNewSpace}
+                        on:done-creating-new-space={handleDoneCreatingNewSpace}
                         insideDrawer={true}
                         bind:this={oasisSpace}
                         {searchValue}
@@ -1278,7 +1302,7 @@
                               <Icon name="spinner" size="20px" />
                             </div>
                           {/if}
-                        {:else if isSearching && $searchValue.length > 3}
+                        {:else if isSearching && $searchValue.length > 0}
                           <div class="content-wrapper h-full flex items-center justify-center">
                             <div
                               class="content flex flex-col items-center justify-center text-center space-y-4"
@@ -1295,15 +1319,10 @@
                               class="content flex flex-col items-center justify-center text-center space-y-4"
                             >
                               <Icon name="leave" size="22px" class="mb-2" />
-                              {#if $searchValue.length <= 3}
-                                <p class="text-lg font-medium text-gray-700">
-                                  Please type at least 3 characters to search.
-                                </p>
-                              {:else}
-                                <p class="text-lg font-medium text-gray-700">
-                                  No stuff found for "{$searchValue}". Try a different search term.
-                                </p>
-                              {/if}
+
+                              <p class="text-lg font-medium text-gray-700">
+                                No stuff found for "{$searchValue}". Try a different search term.
+                              </p>
                             </div>
                           </div>
                         {/if}
@@ -1320,18 +1339,18 @@
           {#if $selectedSpaceId === 'all' || $selectedSpaceId === null || showTabSearch === 1}
             <div
               class={showTabSearch === 2
-                ? 'w-[calc(100%-18rem)] absolute bottom-0 right-0 flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
-                : 'w-full absolute bottom-0 flex items-center justify-center p-2  border-t-[1px] border-neutral-100 bg-white'}
+                ? 'w-[calc(100%-19rem)] absolute bottom-0 right-0 flex items-center justify-center bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px] z-10 p-2 border-[1px] border-neutral-200 m-[0.5rem] rounded-2xl'
+                : 'w-full absolute bottom-0 flex items-center justify-center p-2 border-t-[1px] border-neutral-100 bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px]'}
             >
               <div class={'flex items-center relative'}>
                 <Command.Input
                   id="search-field"
                   {placeholder}
                   {breadcrumb}
-                  loading={$isLoadingCommandItems}
+                  loading={$isLoadingCommandItems || isSearching || $loadingContents}
                   bind:value={$searchValue}
                   class={showTabSearch === 2
-                    ? 'w-[32rem] bg-neutral-100 rounded-lg p-2'
+                    ? 'w-[32rem] bg-neutral-200 rounded-lg py-2 px-4'
                     : 'w-[32rem] py-4 pl-2'}
                 />
 

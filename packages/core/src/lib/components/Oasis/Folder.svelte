@@ -40,15 +40,17 @@
   const resourceManager = useResourceManager()
   const telemetry = useTelemetry()
 
-  const editMode = writable(false)
-  const hovered = writable(false)
-  const inView = writable(false)
-
   let folderDetails = folder.name
   let inputWidth = `${folderDetails.folderName.length}ch`
   let processing = false
   let inputElement: HTMLInputElement
   let previewContainer: HTMLDivElement
+
+  const editMode = writable(false)
+  const hovered = writable(false)
+  const draggedOver = writable(false)
+  const inView = writable(false)
+  const previousName = writable(folderDetails.folderName)
 
   $: {
     if (isEditing) {
@@ -106,7 +108,7 @@
     if (!(event.target as HTMLElement).closest('button')) {
       try {
         log.debug('Selected space:', folder.id)
-        if (folder.name.folderName === 'New Space' && $selectedFolder === 'New Space') {
+        if (folder.name.folderName === '.tempspace' && $selectedFolder === '.tempspace') {
           return
         }
         if (isModKeyPressed(event)) {
@@ -124,8 +126,15 @@
     dispatch('editing-start', { id: folder.id })
   }
 
-  const handleBlur = () => {
-    dispatch('update-data', { folderName: folderDetails.folderName })
+  const handleBlur = async () => {
+    if (folderDetails.folderName.trim() !== '') {
+      dispatch('update-data', { folderName: folderDetails.folderName })
+    } else {
+      folderDetails.folderName = $previousName
+      dispatch('update-data', { folderName: $previousName })
+      previousName.set(folderDetails.folderName)
+      await tick()
+    }
     dispatch('editing-end')
 
     resourceManager.telemetry.trackUpdateSpaceSettings(
@@ -242,7 +251,9 @@
       folderDetails.folderName = value + ' '
     } else if (e.code === 'Enter') {
       e.preventDefault()
-      dispatch('editing-end')
+      if (value.trim() !== '') {
+        dispatch('editing-end')
+      }
     } else if (e.code === 'Enter' && e.shiftKey) {
       e.preventDefault()
       createFolderWithAI(value)
@@ -347,7 +358,7 @@
           <input
             bind:this={inputElement}
             id={`folder-input-${folder.id}`}
-            style={`width: ${inputWidth};`}
+            style={`width: 100%;`}
             type="text"
             bind:value={folderDetails.folderName}
             class="folder-input isEditing"
@@ -489,7 +500,7 @@
         align-items: center;
         gap: 0.5rem;
         flex: 1;
-        max-width: calc(100% - 4.5rem);
+        max-width: calc(100% - 1rem);
         overflow: visible;
       }
 

@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { useLogScope, useDebounce } from '@horizon/utils'
   import { useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { CreateSpaceEventFrom } from '@horizon/types'
-  import { writable, derived } from 'svelte/store'
+  import { writable, derived, type Writable } from 'svelte/store'
   import { createEventDispatcher, tick } from 'svelte'
   import { Editor } from '@horizon/editor'
   import { fly, scale } from 'svelte/transition'
@@ -43,6 +44,8 @@
   const previewResources = writable<any[]>([])
   const fineTuneEnabled = writable(false)
   const isLoading = writable(false)
+  const isTyping = writable(false)
+  const resultEmpty = writable(false)
   const loadingIndex = writable(0)
   const pillContent = writable('')
   const clickedPill = writable(0)
@@ -50,26 +53,42 @@
   const semanticSearchThreshold = writable(0.4)
   const semanticInputValue = writable(0.4)
   const resultHasSemanticSearch = writable(false)
+  const activeFetchingQuery = writable<string | null>(null)
+  const blacklistedResources = writable<string[]>([])
+
   let editor: Editor
+  let shakeClass = ''
 
   const log = useLogScope('OasisSpace')
   const resourceManager = useResourceManager()
   const telemetry = resourceManager.telemetry
 
   export let space: Space
+  export let isCreatingNewSpace: Writable<boolean>
+
+  // const templatePrompts: PromptConfig[] = [
+  //   { name: 'Images', prompt: 'All my Images' },
+  //   { name: 'Notion Documents', prompt: 'All my Notion Documents' },
+  //   { name: 'YouTube Videos', prompt: 'Youtube Videos' },
+  //   {
+  //     name: 'Articles',
+  //     prompt: 'Articles about',
+  //     pill: {
+  //       placeholder: 'Enter topic',
+  //       position: 'after'
+  //     }
+  //   },
+  //   {
+  //     name: 'PDFs',
+  //     prompt: 'Every PDF'
+  //   }
+  // ]
 
   const templatePrompts: PromptConfig[] = [
-    { name: 'Images', prompt: 'All my Images' },
-    { name: 'Notion Documents', prompt: 'All my Notion Documents' },
     { name: 'YouTube Videos', prompt: 'Youtube Videos' },
-    {
-      name: 'Articles',
-      prompt: 'Articles about',
-      pill: {
-        placeholder: 'Enter topic',
-        position: 'after'
-      }
-    },
+    { name: 'Images', prompt: 'All my Images' },
+    { name: 'Notion Documents', prompt: 'Notion Documents' },
+    { name: 'Github Pull Requests', prompt: 'Github Pull Requests' },
     {
       name: 'PDFs',
       prompt: 'Every PDF'
@@ -79,21 +98,30 @@
   $: {
     if ($previewIDs.length > 0) {
       fineTuneEnabled.set(true)
-    } else {
-      if ($userPrompt === '<p></p>') {
-        fineTuneEnabled.set(false)
-      }
     }
   }
 
   $: aiEnabled.set($userPrompt !== '<p></p>')
+
+  $: resultEmpty.set(
+    $previewIDs.length === 0 && $userPrompt !== '<p></p>' && !$isLoading && !$isTyping
+  )
+
+  $: isCreateButtonDisabled = $name === '' && $userPrompt === '<p></p>'
+
+  $: if ($resultEmpty) {
+    shakeClass = 'shake'
+    setTimeout(() => {
+      shakeClass = ''
+    }, 500) // Duration of the animation
+  }
 
   const newSpace = () => {
     const now = new Date().toISOString()
     return {
       id: 'new',
       name: {
-        folderName: 'New Space',
+        folderName: '.tempspace',
         colors: $colors,
         showInSidebar: true,
         sources: [],
@@ -157,22 +185,30 @@
     await previewAISpace($userPrompt)
   }
 
-  const previewAISpace = async (userPrompt: string, semanticThreshold?: number) => {
+  const previewAISpace = async (prompt: string, semanticThreshold?: number) => {
+    let actionCancelled = false
+    isTyping.set(false)
     isLoading.set(true)
     try {
-      log.debug('Requesting preview with prompt', userPrompt)
+      log.debug('Requesting preview with prompt', prompt)
 
       const options: {
         embedding_query?: string
         embedding_distance_threshold?: number
       } = {
-        embedding_query: userPrompt,
+        embedding_query: prompt,
         embedding_distance_threshold: semanticThreshold
       }
 
-      const response = await resourceManager.getResourcesViaPrompt(userPrompt, options)
+      const response = await resourceManager.getResourcesViaPrompt(prompt, options)
 
-      log.debug(`Preview response`, response)
+      if (prompt !== $userPrompt) {
+        log.debug(`bbb-Outdated Preview Response`, response)
+        actionCancelled = true
+        return
+      }
+
+      log.debug(`bbb-Preview response`, response)
 
       resultHasSemanticSearch.set(
         !!(response.embedding_search_results && response.embedding_search_results.length > 0)
@@ -183,9 +219,12 @@
         ...(response.sql_query_results ?? [])
       ])
 
-      const resourceIds = Array.from(results).map((id) => ({ id, blacklisted: false }))
+      const resourceIds = Array.from(results).map((id) => ({
+        id,
+        blacklisted: $blacklistedResources.includes(id)
+      }))
 
-      log.debug('Fetched resource IDs', resourceIds)
+      log.debug('bbb-Fetched resource IDs', resourceIds)
 
       previewIDs.set(resourceIds)
 
@@ -194,21 +233,22 @@
           resourceIds.map((id) => resourceManager.getResourceWithAnnotations(id.id))
         )
         previewResources.set(loadedResources)
-        console.log('xxx-loadedresources', loadedResources)
       } else {
-        console.log('xxx-reset')
         previewResources.set([])
       }
 
       if (!results) {
-        log.warn('No results found for', userPrompt, response)
+        log.warn('No results found for', prompt, response)
         return
       }
     } catch (err) {
       previewIDs.set([])
       log.error('Failed to create previews with AI', err)
     } finally {
-      loadingIndex.set($loadingIndex + 1)
+      if (!actionCancelled) {
+        loadingIndex.set($loadingIndex + 1)
+      }
+
       isLoading.set(false)
       await tick()
     }
@@ -222,11 +262,12 @@
     }
   }
 
-  const debouncedPreviewAISpace = useDebounce(previewAISpace, 500)
+  const debouncedPreviewAISpace = useDebounce(previewAISpace, 860)
 
   const handleEditorUpdate = (event) => {
     previousUserPrompt.set($userPrompt)
     userPrompt.set(event.detail)
+    isTyping.set(true)
 
     if (event.detail === '<p></p>') {
       previewIDs.set([])
@@ -250,6 +291,10 @@
     previewIDs.update((ids) =>
       ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: true } : id))
     )
+
+    blacklistedResources.update((resourceIDs) => {
+      return [...resourceIDs, resourceId]
+    })
   }
 
   const handleWhitelistResource = (event) => {
@@ -257,9 +302,25 @@
     previewIDs.update((ids) =>
       ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: false } : id))
     )
+
+    blacklistedResources.update((resourceIDs) => {
+      return resourceIDs.filter((id) => id !== resourceId)
+    })
   }
 
-  $: isCreateButtonDisabled = $name === '' && $userPrompt === '<p></p>'
+  onMount(() => {
+    if (isCreatingNewSpace) {
+      isCreatingNewSpace.set(true)
+    }
+    dispatch('creating-new-space')
+  })
+
+  onDestroy(() => {
+    if (isCreatingNewSpace) {
+      isCreatingNewSpace.set(false)
+    }
+    dispatch('done-creating-new-space')
+  })
 </script>
 
 <svelte:window
@@ -274,15 +335,17 @@
   }}
 />
 
-<div class="centered-content">
+<div
+  class="flex flex-col items-center justify-center h-screen w-full bg-[#f6faff] overflow-y-auto pb-48 border border-natural-100 border-l-natural-100"
+>
   <div
-    class="top-bar fixed bottom-0 right-0 flex justify-between items-center w-[calc(100%-18rem)] px-4 py-2 bg-white z-50 border-b border-gray-200"
-    style="border-bottom-width: 0.5px;"
+    class="top-bar fixed top-0 right-0 flex justify-between items-center w-[calc(100%-19.5rem)] px-4 py-2 bg-white z-50 border border-gray-200"
+    style="border-bottom-width: 0.5px; margin: 0.75rem; border-radius: 12px;"
   >
     <div class="input-wrapper flex-grow">
       <input
         type="text"
-        class="folder-name w-full text-lg font-medium text-gray-700 bg-transparent border-none focus:outline-none"
+        class="folder-name w-full text-xl font-medium text-gray-700 bg-transparent border-none focus:outline-none"
         id="folder-name"
         name="folder-name"
         placeholder="Enter Space Name"
@@ -318,7 +381,7 @@
     >
       <div
         slot="content"
-        class="space-icon-wrapper transform active:scale-[98%] relative"
+        class="space-icon-wrapper transform active:scale-[98%] relative {shakeClass}"
         class:has-preview={$previewIDs.length > 0}
         transition:scale={{ duration: 300, easing: quartOut }}
       >
@@ -337,6 +400,26 @@
                 showHeader={false}
               />
             {/key}
+          </div>
+        {:else if $resultEmpty}
+          <div
+            class="fixed z-50 flex items-center justify-center w-full h-full flex-col pointer-events-none"
+          >
+            <div class="empty-state-icon text-gray-50 mb-2 mix-blend-darken opacity-100">
+              <Icon name="sparkles.fill" size="42px" color="#ffffff" />
+            </div>
+            <h3
+              class="empty-state-title text-2xl font-medium text-gray-50 mix-blend-darken opacity-100 mb-[0.25rem]"
+              style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
+            >
+              Create empty space
+            </h3>
+            <p
+              class="empty-state-description text-center max-w-md text-gray-50 mb-2 mix-blend-darken opacity-100"
+              style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
+            >
+              future items will be<br /> dropped here.
+            </p>
           </div>
         {/if}
         <div class="relative z-0">
@@ -365,6 +448,7 @@
           resourcesBlacklistable={true}
           on:blacklist-resource={handleBlacklistResource}
           on:whitelist-resource={handleWhitelistResource}
+          interactive={false}
         />
       </div>
     {/key}
@@ -394,7 +478,8 @@
       </div>
     {/if}
     <div
-      class="ai-voodoo bg-white/95 backdrop-blur-md px-12 pt-8 pb-8 mb-16 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
+      class="ai-voodoo bg-white/95 backdrop-blur-md px-8 pt-4 pb-4 mb-20 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
+      class:loading={$fineTuneEnabled && $isLoading}
     >
       {#if $aiEnabled && !$fineTuneEnabled}
         <div
@@ -417,7 +502,7 @@
         <div class="flex justify-center -mt-12">
           <button
             class={$fineTuneEnabled
-              ? 'fine-tune-button bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50'
+              ? 'fine-tune-button bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50'
               : 'fine-tune-button bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50'}
             on:click={() => fineTuneEnabled.set(!$fineTuneEnabled)}
           >
@@ -446,7 +531,7 @@
                 bind:this={editor}
                 content={$userPrompt}
                 on:update={handleEditorUpdate}
-                placeholder="Describe what you want in your space. (optional)"
+                placeholder="Describe your space and stuff will be auto-fetched."
                 tabindex="1"
                 autofocus={false}
                 on:keydown={(e) => {
@@ -461,7 +546,7 @@
         </div>
       </div>
 
-      {#if $fineTuneEnabled && $resultHasSemanticSearch && $userPrompt !== $previousUserPrompt}
+      <!-- {#if $fineTuneEnabled && $resultHasSemanticSearch && $userPrompt !== $previousUserPrompt}
         <div class="semantic-search-threshold-slider p-4">
           <label
             for="semantic-search-threshold"
@@ -488,16 +573,16 @@
             <span>Wider Range</span>
           </div>
         </div>
-      {/if}
+      {/if} -->
       {#if !$fineTuneEnabled}
         <div class="template-prompts">
-          <div class="prompt-pills mt-8 mb-4">
+          <div class="prompt-pills mt-4 mb-4">
             {#each templatePrompts as template}
               <button
                 class={`prompt-pill ${
                   $userPrompt.startsWith(template.prompt)
                     ? 'bg-blue-200 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
+                    : 'bg-blue-50 text-blue-600/80'
                 } rounded-full px-4 py-2 text-sm font-medium hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
                 on:click={async () => await handleTemplatePromptClick(template)}
               >
@@ -520,16 +605,56 @@
         <Icon name="sparkles.fill" size="64px" color="#e5e5e5" />
       </div>
       <h3 class="empty-state-title text-2xl font-semibold text-gray-800 mb-2">
-        No resources found
+        Create Empty Space
       </h3>
       <p class="empty-state-description text-gray-600 text-center max-w-md">
-        Try adjusting your query.
+        future items will be<br /> dropped here.
       </p>
     </div>
   {/if}
 </div>
 
 <style lang="scss">
+  @keyframes shake {
+    0% {
+      transform: translateX(0) rotate(0);
+    }
+    10% {
+      transform: translateX(-5px) rotate(-1deg);
+    }
+    20% {
+      transform: translateX(5px) rotate(1deg);
+    }
+    30% {
+      transform: translateX(-5px) rotate(-1deg);
+    }
+    40% {
+      transform: translateX(5px) rotate(1deg);
+    }
+    50% {
+      transform: translateX(-5px) rotate(-1deg);
+    }
+    60% {
+      transform: translateX(5px) rotate(1deg);
+    }
+    70% {
+      transform: translateX(-5px) rotate(-1deg);
+    }
+    80% {
+      transform: translateX(5px) rotate(1deg);
+    }
+    90% {
+      transform: translateX(-3px) rotate(-0.5deg);
+    }
+    100% {
+      transform: translateX(0) rotate(0);
+    }
+  }
+
+  .shake {
+    animation: shake 1.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+
   .centered-content {
     display: flex;
     flex-direction: column;
@@ -547,7 +672,7 @@
     width: -webkit-fill-available;
     height: calc(100vh - 4rem);
     position: fixed;
-    top: 0;
+    top: 4.75rem;
     overflow-y: auto;
   }
 
@@ -573,6 +698,43 @@
     }
   }
 
+  .ai-voodoo {
+    box-shadow:
+      0 1px 2px rgba(10, 20, 30, 0.2),
+      0 2px 4px rgba(10, 20, 30, 0.012),
+      0 4px 8px rgba(10, 20, 30, 0.09),
+      0 8px 16px rgba(10, 20, 30, 0.05);
+    outline: 4px solid rgba(56, 189, 248, 0.6);
+    backdrop-filter: blur(16px);
+    &.loading {
+      outline: 3px solid transparent;
+      animation: moving-gradient 1s ease-in-out infinite;
+      box-shadow:
+        0 1px 2px rgba(186, 230, 253, 0.9),
+        0 2px 4px rgba(186, 230, 253, 0.8),
+        0 4px 8px rgba(186, 230, 253, 0.7),
+        0 8px 16px rgba(186, 230, 253, 0.9);
+    }
+  }
+
+  @keyframes moving-gradient {
+    0% {
+      outline-color: transparent;
+    }
+    25% {
+      outline-color: rgba(56, 189, 248, 0.5);
+    }
+    50% {
+      outline-color: rgba(56, 189, 248, 1);
+    }
+    75% {
+      outline-color: rgba(56, 189, 248, 0.5);
+    }
+    100% {
+      outline-color: transparent;
+    }
+  }
+
   .input-group {
     display: flex;
     flex-direction: column;
@@ -586,28 +748,7 @@
     align-items: center;
     position: relative;
     width: 28rem;
-  }
-
-  .folder-name {
-    font-size: 1.25rem;
-    background: transparent;
-    font-weight: 500;
-    min-width: 25rem;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    border: none;
-    padding: 0.5rem;
-    width: 100%;
-    color: #28568f;
-    transition: border-color 0.3s;
-
-    &::placeholder {
-      color: rgba(40, 86, 143, 0.4);
-    }
-
-    &:focus {
-      outline: none;
-    }
+    padding-left: 0.75rem;
   }
 
   .folder-rules {
@@ -615,10 +756,11 @@
     background: transparent;
     font-weight: 500;
     min-width: 25rem;
+    margin-top: 8px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     border: none;
-    padding: 0.5rem;
+    padding: 0.5rem 0;
     width: 100%;
     color: #28568f;
     transition: border-color 0.3s;
@@ -636,13 +778,13 @@
 
   .ai-description {
     position: absolute;
-    bottom: -32px;
+    bottom: -64px;
     right: 50%;
     transform: translateX(50%) rotate(0.75deg);
     display: flex;
     align-items: center;
     gap: 2rem;
-    opacity: 0.6;
+    opacity: 0.8;
     width: 100%;
     max-width: 24rem;
     font-weight: 500;

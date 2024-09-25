@@ -44,10 +44,6 @@
   const editingFolderId = writable(null)
 
   export let onBack = () => {}
-  $: log.debug('Spaces:', $spaces)
-
-  $: log.debug('xxx-Spaces:', $selectedSpace)
-
   export const handleCreateSpace = async (
     _e: MouseEvent,
     name: string,
@@ -55,10 +51,8 @@
     userPrompt?: string
   ) => {
     try {
-      const toasty = toast.loading('Creating Space...')
-
       const newSpace = await oasis.createSpace({
-        folderName: name ? name : 'New Space',
+        folderName: name ? name : '.tempspace',
         colors: ['#FFBA76', '#FB8E4E'],
         smartFilterQuery: userPrompt ? userPrompt : null,
         liveModeEnabled: !!userPrompt
@@ -84,8 +78,6 @@
       }
 
       await telemetry.trackCreateSpace(CreateSpaceEventFrom.OasisSpacesView)
-
-      toasty.success('Folder created!')
 
       return newSpace.id
     } catch (error) {
@@ -211,7 +203,7 @@
     try {
       const space = $spaces.find((space) => space.id === $selectedSpace)
 
-      if (space?.name.folderName === 'New Space') {
+      if (space?.name.folderName === '.tempspace' && id !== $selectedSpace) {
         dispatch('delete-space', { id: $selectedSpace })
         return
       }
@@ -240,7 +232,10 @@
   }
 
   const handleCreateEmptySpace = () => {
-    dispatch('create-empty-space')
+    const selectedSpaceObj = $spaces.find((space) => space.id === $selectedSpace)
+    if (!selectedSpaceObj || selectedSpaceObj.name.folderName !== '.tempspace') {
+      dispatch('create-empty-space')
+    }
   }
 
   const updateNewSpaceButtonPosition = () => {
@@ -268,11 +263,13 @@
   })
 
   const filteredSpaces = derived(spaces, ($spaces) =>
-    $spaces.sort((a, b) => {
-      if (a.id === 'all') return -1 // Move 'all' folder to the top
-      if (b.id === 'all') return 1
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() // Sort others by creation date
-    })
+    $spaces
+      .filter((space) => space.name.folderName !== '.tempspace')
+      .sort((a, b) => {
+        if (a.id === 'all') return -1 // Move 'all' folder to the top
+        if (b.id === 'all') return 1
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() // Sort others by creation date
+      })
   )
 </script>
 
@@ -307,6 +304,8 @@
     class="action-new-space"
     class:sticky={$isNewSpaceButtonSticky}
     class:text-white={$isNewSpaceButtonSticky}
+    class:disabled={$selectedSpace &&
+      $spaces.find((space) => space.id === $selectedSpace)?.name.folderName === '.tempspace'}
     on:click={handleCreateEmptySpace}
     bind:this={newSpaceButton}
   >
@@ -329,7 +328,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem 0.75rem;
+    padding: 2rem 0.75rem 1rem 0.75rem;
     gap: 0.5rem;
     height: 100%;
     overflow-x: hidden;
@@ -437,6 +436,11 @@
       border: 0.5px solid rgba(67, 142, 239, 0.15);
       background: rgba(224, 242, 254, 0.6);
       color: rgba(0, 103, 185, 0.7); // Tinted text color for sticky state
+    }
+    &.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+      filter: grayscale(100%);
     }
     & .icon-wrapper {
       background: rgba(0, 122, 255, 0.9);

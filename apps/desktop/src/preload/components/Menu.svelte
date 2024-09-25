@@ -124,7 +124,10 @@
   }
 
   const handleAddToChat = () => {
-    dispatch('addToChat', text)
+    if (text && text.length > 0) {
+      dispatch('addToChat', text)
+      text = ''
+    }
   }
 
   const runAIAction = (type: WebViewEventTransform['type']) => {
@@ -180,7 +183,7 @@
     } else if (shortcutCombo && e.key === 'm') {
       e.preventDefault()
       showCommentMenu()
-    } else if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    } else if ((e.metaKey || e.ctrlKey) && e.key === 'l' && e.shiftKey) {
       e.preventDefault()
       handleAddToChat()
     } else if (shortcutCombo && e.key === 'j') {
@@ -253,7 +256,7 @@
 
       <div class="divider"></div>
 
-      <Button on:click={handleAddToChat} tooltip="Add to Chat (⌘+K)">
+      <Button on:click={handleAddToChat} tooltip="Add to Chat (⌘+Shift+L)">
         <Icon name="message-forward" />
       </Button>
 
