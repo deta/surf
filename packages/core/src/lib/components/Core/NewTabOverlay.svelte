@@ -329,7 +329,12 @@
         //...oasisSearchResults.map((resource) => resourceToItem(resource, { score: 0.4 }))
       ]
 
-      if (!items.some((item) => item.label === searchValue || item.value === searchValue)) {
+      if (
+        !items.some(
+          (item) =>
+            (item.label === searchValue || item.value === searchValue) && item.type !== 'space'
+        )
+      ) {
         items.unshift({
           id: `general-search-${searchValue}`,
           type: 'general-search',
