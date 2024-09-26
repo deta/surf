@@ -637,7 +637,7 @@
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 't')) {
       tabsManager.reopenDeleted()
     } else if (
-      !window.api.tabSwitchingShortcutsDisable &&
+      !window.api.disableTabSwitchingShortcuts &&
       isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9']) &&
       !e.shiftKey
     ) {

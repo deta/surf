@@ -9,6 +9,7 @@ import {
   WriteStream
 } from 'fs'
 import path from 'path'
+import http from 'http'
 import fetch from 'cross-fetch'
 import OpenAI, { toFile } from 'openai'
 import { createAPI } from '@horizon/api'
@@ -32,15 +33,16 @@ import {
 } from '@horizon/core/src/lib/service/ipc/events'
 import { ChatCompletion } from 'openai/resources'
 import { ControlWindow } from '@horizon/core/src/lib/types'
+import EventEmitter from 'events'
 
 const isDev = import.meta.env.DEV
 
 const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
-const TAB_SWITCHING_SHORTCUTS_DISABLE =
-  (process.argv.find((arg) => arg.startsWith('--tabSwitchingShortcutsDisable='))?.split('=')[1] ??
-    '') === 'true'
+
+const ENABLE_DEBUG_PROXY = process.argv.includes('--enable-debug-proxy')
+const DISABLE_TAB_SWITCHING_SHORTCUTS = process.argv.includes('--disable-tab-switching-shortcuts')
 
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
 const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
@@ -73,7 +75,7 @@ if (OPENAI_API_KEY) {
 }
 
 const api = {
-  tabSwitchingShortcutsDisable: TAB_SWITCHING_SHORTCUTS_DISABLE,
+  disableTabSwitchingShortcuts: DISABLE_TAB_SWITCHING_SHORTCUTS,
 
   createToken: (data: any) => {
     return IPC_EVENTS_RENDERER.tokenCreate.invoke(data)
@@ -264,7 +266,7 @@ const api = {
     }
   },
 
-  onOpenOasis: (callback) => {
+  onOpenOasis: (callback: () => void) => {
     try {
       IPC_EVENTS_RENDERER.openOasis.on((_) => callback())
     } catch (error) {
@@ -272,7 +274,7 @@ const api = {
     }
   },
 
-  onStartScreenshotPicker: (callback) => {
+  onStartScreenshotPicker: (callback: () => void) => {
     try {
       IPC_EVENTS_RENDERER.startScreenshotPicker.on((_) => callback())
     } catch (error) {
@@ -280,7 +282,7 @@ const api = {
     }
   },
 
-  onOpenHistory: (callback) => {
+  onOpenHistory: (callback: () => void) => {
     try {
       IPC_EVENTS_RENDERER.openHistory.on((_) => callback())
     } catch (error) {
@@ -288,7 +290,7 @@ const api = {
     }
   },
 
-  toggleRightSidebar: (callback) => {
+  toggleRightSidebar: (callback: () => void) => {
     try {
       IPC_EVENTS_RENDERER.toggleRightSidebar.on(() => callback())
     } catch (error) {
@@ -304,7 +306,7 @@ const api = {
     }
   },
 
-  onOpenCheatSheet: (callback) => {
+  onOpenCheatSheet: (callback: () => void) => {
     try {
       IPC_EVENTS_RENDERER.openCheatSheet.on(() => callback())
     } catch (error) {
@@ -312,7 +314,7 @@ const api = {
     }
   },
 
-  onOpenDevtools: (callback) => {
+  onOpenDevtools: (callback: () => void) => {
     try {
       IPC_EVENTS_RENDERER.openDevTools.on(() => callback())
     } catch (error) {
@@ -320,7 +322,7 @@ const api = {
     }
   },
 
-  onOpenFeedbackPage: (callback) => {
+  onOpenFeedbackPage: (callback: () => void) => {
     try {
       IPC_EVENTS_RENDERER.openFeedbackPage.on(() => callback())
     } catch (error) {
@@ -328,7 +330,7 @@ const api = {
     }
   },
 
-  onAdBlockerStateChange: (callback) => {
+  onAdBlockerStateChange: (callback: (partition: string, state: boolean) => void) => {
     IPC_EVENTS_RENDERER.adBlockerStateChange.on((_, { partition, state }) => {
       callback(partition, state)
     })
@@ -352,7 +354,7 @@ const api = {
     return IPC_EVENTS_RENDERER.getUserConfig.invoke()
   },
 
-  onRequestDownloadPath: (callback: (data: DownloadRequestMessage) => void) => {
+  onRequestDownloadPath: (callback: (data: DownloadRequestMessage) => Promise<void>) => {
     IPC_EVENTS_RENDERER.downloadRequest.on(async (_, data) => {
       const path = await callback(data)
       // TODO: refactor this to use the new event system
@@ -626,14 +628,12 @@ export class ResourceHandle {
 
 const sffs = (() => {
   const sffs = require('@horizon/backend')
+
   let handle = null
+  let server: http.Server | null = null
+  const callbackEmitters = new Map()
 
-  const with_handle =
-    (fn: any) =>
-    (...args: any) =>
-      fn(handle, ...args)
-
-  function init(
+  const init = (
     root_path: string,
     vision_api_key: string,
     vision_api_endpoint: string,
@@ -641,8 +641,7 @@ const sffs = (() => {
     openai_api_endpoint: string,
     local_ai_mode: boolean = false,
     language_setting: string
-  ) {
-    let fn = {}
+  ) => {
     handle = sffs.js__backend_tunnel_init(
       root_path,
       APP_PATH,
@@ -654,20 +653,146 @@ const sffs = (() => {
       language_setting
     )
 
-    Object.keys(sffs).forEach((key) => {
-      if (
-        typeof sffs[key] === 'function' &&
-        key.startsWith('js__') &&
-        key !== 'js__backend_tunnel_init'
-      ) {
-        fn[key] = with_handle(sffs[key])
+    if (ENABLE_DEBUG_PROXY) {
+      setupDebugServer()
+    }
+
+    return Object.fromEntries(
+      Object.entries(sffs)
+        .filter(
+          ([key, value]) =>
+            typeof value === 'function' &&
+            key.startsWith('js__') &&
+            key !== 'js__backend_tunnel_init'
+        )
+        .map(([key, value]) => [
+          key,
+          ENABLE_DEBUG_PROXY ? createProxyFunction(key) : with_handle(value)
+        ])
+    )
+  }
+
+  const with_handle =
+    (fn: any) =>
+    (...args: any) =>
+      fn(handle, ...args)
+
+  const setupDebugServer = () => {
+    server = http.createServer((req: any, res: any) => {
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST, GET')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204)
+        res.end()
+        return
+      }
+
+      const [_, fn, action, callId] = req.url.split('/')
+
+      if (req.method === 'GET' && action === 'stream') {
+        handleSSE(res, callId)
+      } else if (req.method === 'POST') {
+        handlePostRequest(req, res, fn)
+      } else {
+        res.writeHead(404)
+        res.end()
       }
     })
 
-    return fn
+    server?.listen(0, 'localhost', () => {
+      console.log(`Debug server running on port ${(server?.address() as any).port}`)
+    })
   }
 
-  // TODO: add support for changing the local ai mode
+  const handleSSE = (res: any, callId: string) => {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive'
+    })
+
+    const emitter = new EventEmitter()
+    callbackEmitters.set(callId, emitter)
+
+    emitter.on('data', (data: any) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`)
+    })
+
+    res.on('close', () => {
+      callbackEmitters.delete(callId)
+    })
+  }
+
+  const handlePostRequest = (req: any, res: any, fn: string) => {
+    let body = ''
+    req.on('data', (chunk: any) => {
+      body += chunk.toString()
+    })
+    req.on('end', async () => {
+      const { args, callId } = JSON.parse(body)
+      try {
+        if (fn === 'js__ai_send_chat_message') {
+          args[2] = createProxyCallback(callId)
+        }
+        const result = await sffs[fn](handle, ...args)
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify(result))
+      } catch (error: any) {
+        res.writeHead(500, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: error.message }))
+      }
+    })
+  }
+
+  const createProxyCallback = (callId: string) => {
+    return (data: any) => {
+      let emitter = callbackEmitters.get(callId)
+      if (emitter) emitter.emit('data', data)
+    }
+  }
+
+  const createProxyFunction = (key: string) => {
+    return async (...args: any[]) => {
+      const isChat = key === 'js__ai_send_chat_message'
+      const callId = isChat ? Math.random().toString(36).slice(2, 11) : undefined
+
+      if (isChat) {
+        setupSSE(key, callId!, args[2])
+      }
+
+      const fetch = window.fetch.bind(window)
+      const response = await fetch(`http://localhost:${(server?.address() as any).port}/${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ args, callId })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error status: ${response.status}`)
+      }
+
+      return response.json()
+    }
+  }
+
+  const setupSSE = (key: string, callId: string, originalCallback: Function) => {
+    const eventSource = new EventSource(
+      `http://localhost:${(server?.address() as any).port}/${key}/stream/${callId}`
+    )
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      originalCallback(data)
+    }
+
+    eventSource.onerror = (error) => {
+      console.error('EventSource failed:', error)
+      eventSource.close()
+    }
+  }
+
   return init(
     BACKEND_ROOT_PATH,
     VISION_API_KEY || '',
@@ -742,7 +867,7 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.api = api
   // @ts-ignore (define in dts)
-  window.backend = backend
+  window.backend = { sffs, resources }
 }
 
 export type API = typeof api

@@ -81,7 +81,10 @@ export function createWindow() {
       additionalArguments: [
         `--userDataPath=${app.getPath('userData')}`,
         `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
-        `--tabSwitchingShortcutsDisable=${process.env.TAB_SWITCHING_SHORTCUTS_DISABLE}`
+        ...(process.env.ENABLE_DEBUG_PROXY ? ['--enable-debug-proxy'] : []),
+        ...(process.env.DISABLE_TAB_SWITCHING_SHORTCUTS
+          ? ['--disable-tab-switching-shortcuts']
+          : [])
       ],
       webviewTag: true,
       sandbox: false,
