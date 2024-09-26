@@ -1148,24 +1148,6 @@
             <Icon name="close" />
           </button>
         {:else if $searchValue.length < 20 && !$isCreatingNewSpace}
-          {#if showTabSearch === 2}
-            <button
-              class="absolute left-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
-                ? 'bottom-7'
-                : 'bottom-3'} z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
-              on:click={() => {
-                $onboardingOpen = !$onboardingOpen
-              }}
-              use:tooltip={{
-                text: 'Need help?',
-                position: 'right'
-              }}
-              aria-label="Show onboarding"
-            >
-              <Icon name="info" />
-            </button>
-          {/if}
-
           <button
             class="absolute right-4 transform {showTabSearch === 2
               ? 'bottom-5'
@@ -1283,7 +1265,23 @@
                   {/key}
                 </div>
 
-                <div class="stuff-wrap h-full w-full">
+                <div class="stuff-wrap h-full w-full relative">
+                  {#if showTabSearch === 2 && ($selectedSpaceId === 'all' || $selectedSpaceId === null)}
+                    <button
+                      class="absolute left-6 bottom-[1.4rem] transform z-[10000] flex items-center justify-center gap-2 transition-all cursor-pointer bg-white hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+                      on:click={() => {
+                        $onboardingOpen = !$onboardingOpen
+                      }}
+                      use:tooltip={{
+                        text: 'Need help?',
+                        position: 'right'
+                      }}
+                      aria-label="Show onboarding"
+                    >
+                      <Icon name="info" />
+                    </button>
+                  {/if}
+
                   {#if $selectedSpaceId !== null && $selectedSpaceId !== 'all'}
                     {#key $selectedSpaceId}
                       <OasisSpace
