@@ -1103,7 +1103,7 @@
       on:keydown={handleInputKeydown}
       on:keyup={handleInputKeyup}
     >
-      <div class="flex-grow overflow-y-auto">
+      <div class="flex-grow overflow-y-auto max-h-64">
         <Editor
           bind:this={editor}
           bind:content={inputValue}
