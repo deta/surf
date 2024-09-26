@@ -124,7 +124,9 @@ export class Dragcula {
       .querySelectorAll("[data-drag-target]")
       .forEach((el) => el.removeAttribute("data-drag-target"));
 
-    this.#dragendHandlers.forEach((cb) => cb(this.activeDrag));
+    for (const cb of this.#dragendHandlers) {
+      cb(this.activeDrag);
+    }
     this.activeDrag = null;
   }
 
