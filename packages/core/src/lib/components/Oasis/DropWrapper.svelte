@@ -79,6 +79,7 @@
   class="drop-wrapper"
   class:dragover={dragOver}
   use:HTMLDragZone.action={{
+    id: `${zonePrefix ?? ''}oasis-space-${spaceId}`,
     accepts: acceptsDrag
   }}
   on:Drop={handleDrop}

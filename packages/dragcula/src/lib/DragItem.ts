@@ -250,24 +250,6 @@ export class HTMLDragItem extends DragItem {
     const drag = Dragcula.get().activeDrag;
     assert(drag !== null, "No active drag operation during handleDragEnd! This should not happen!");
 
-    // FIX: (high): ONLY TMP FIXX!
-    const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
-    const zone = getParentZone(target);
-    drag.to = zone;
-    const dropEvt = new DragEvent("drop", {
-      ...e,
-      dataTransfer: e.dataTransfer,
-      bubbles: true,
-      cancelable: true,
-      clientX: e.clientX,
-      clientY: e.clientY,
-      screenX: e.screenX,
-      screenY: e.screenY,
-      pageX: e.pageX,
-      pageY: e.pageY
-    });
-    zone?.element?.dispatchEvent(dropEvt);
-
     // FIX: MAKE IT CANLELLE
     if (HTMLDragItem.activeTransition) {
       HTMLDragItem.activeTransition!.skipTransition();
