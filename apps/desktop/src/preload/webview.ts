@@ -29,6 +29,7 @@ import {
   ResourceArticle,
   ResourceDocument,
   ResourceLink,
+  ResourcePost,
   type Resource
 } from '@horizon/core/src/lib/service/resources'
 
@@ -1197,15 +1198,22 @@ async function createNewDataTransfer(
     console.timeEnd('[drop] fetching data')
 
     if (!buffer) return null
-
     const file = new File([buffer], resource.metadata?.name || 'file', {
       type: resource.type || 'application/octet-stream'
     })
     console.log('[drop] created file: ', file.name, file.type, file)
+
     const newDataTransfer = new DataTransfer()
 
-    if (resource.type === ResourceTypes.ARTICLE || resource.type === ResourceTypes.LINK) {
+    if (
+      resource.type === ResourceTypes.ARTICLE ||
+      resource.type === ResourceTypes.LINK ||
+      resource.type.startsWith(ResourceTypes.POST)
+    ) {
       newDataTransfer.setData('text/uri-list', (resource as ResourceArticle).metadata?.sourceURI)
+    } else if (resource.type.startsWith(ResourceTypes.DOCUMENT)) {
+      const parsedData = await (resource as ResourceDocument).getParsedData()
+      newDataTransfer.setData('text/html', parsedData.content_html)
     } else {
       newDataTransfer.items.add(file)
     }

@@ -234,10 +234,13 @@
     } else if (eventType === WebViewEventSendNames.Drop) {
       // FIX: This is never dispatched inside webviw
       const drag = Dragcula.get().activeDrag
-      if (!drag)
-        throw new Error("No active drag, can't forward webview drop event! This should not happen!")
+      if (!drag) {
+        // TODO: (dnd): Thsi isnt entirely correct. We actually need to bootstrap the drag differently,
+        // as it was first dragged over the webview.
+        //throw new Error("No active drag, can't forward webview drop event! This should not happen!")
+      }
       const e = new DragEvent('drop', {
-        dataTransfer: drag?.dataTransfer
+        dataTransfer: drag?.dataTransfer ?? new DataTransfer()
       })
       webview.dispatchEvent(e)
     } else if (
