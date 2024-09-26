@@ -56,6 +56,9 @@
     type Space
   } from '../../types'
   import DropWrapper from '../Oasis/DropWrapper.svelte'
+  import stuffAdd from '../../../../public/assets/demo/stuffsave.gif'
+  import stuffSmart from '../../../../public/assets/demo/stuffsmart.gif'
+  import stuffSearch from '../../../../public/assets/demo/stuffsearch.gif'
 
   import {
     MEDIA_TYPES,
@@ -1167,21 +1170,21 @@
                       {
                         title: 'Save anything',
                         description: `<p>Save webpages, tweets, YouTube videos, screenshots, PDFs,and more. </p>`,
-                        imgSrc: 'https://placehold.co/600x400',
+                        imgSrc: stuffAdd,
                         imgAlt: 'Save anything',
                         iconName: 'leave'
                       },
                       {
                         title: '(Auto)-organize',
                         description: `<p>Create spaces and curate your items manually. Or let Surf do it for you.</p>`,
-                        imgSrc: 'https://placehold.co/600x400',
+                        imgSrc: stuffSmart,
                         imgAlt: '(Auto)-organize',
                         iconName: 'rectangle-group'
                       },
                       {
                         title: 'Find',
                         description: `<p>Easily find anything you've saved, with Surf search.</p>`,
-                        imgSrc: 'https://placehold.co/600x400',
+                        imgSrc: stuffSearch,
                         imgAlt: 'Find',
                         iconName: 'search'
                       }

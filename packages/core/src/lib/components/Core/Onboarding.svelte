@@ -64,7 +64,7 @@
           </div>
 
           <div slot="caption">
-            <img src={overviewDemoFull} class="w-80 h-80 object-contain" alt={section.imgAlt} />
+            <img src={section.imgSrc} class="" alt={section.imgAlt} />
           </div>
         </ResourceOverlay>
       {/each}

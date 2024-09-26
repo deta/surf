@@ -4,6 +4,9 @@
   import { fly, slide } from 'svelte/transition'
   import { tooltip, truncate } from '@horizon/utils'
   import { DropdownMenu } from 'bits-ui'
+  import chatContextDemo from '../../../../public/assets/demo/chatcontext.gif'
+  import chatAdd from '../../../../public/assets/demo/chatadd.gif'
+  import chatRemove from '../../../../public/assets/demo/chatremove.gif'
 
   import { Icon } from '@horizon/icons'
   import {
@@ -802,38 +805,35 @@
             "Context Window".
           </p>
           `,
-        imgSrc: 'https://placehold.co/600x400',
         imgAlt: 'Context Window',
-        iconName: 'chat'
+        iconName: 'chat',
+        imgSrc: chatContextDemo
       },
       {
         title: 'Add Context',
         description: `
         <p>
-            Use <span class="font-mono bg-black/10 px-1 rounded-md">+</span> to include an item in your
+            Use <kbd class="px-2 py-0.5 text-lg font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg">+</kbd> to include an item in your
             chat.
           </p>
           <p class="opacity-70">
-            Hint: you can also <span class="font-mono bg-black/10 px-1 text-xl rounded-md">⌘</span>
-            or
-            <span class="font-mono bg-black/10 px-1 py-1 rounded-md text-sm">Shift</span> + click to
+            Hint: you can also <kbd class="px-2 py-0.5 text-lg font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg">${navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl'}</kbd> or <kbd class="px-2 py-1.5 text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg">Shift</kbd>
+            + click to
             select multiple items.
           </p>
           `,
-        imgSrc: 'https://placehold.co/600x400',
         imgAlt: 'Add Context',
-        iconName: 'add'
+        iconName: 'add',
+        imgSrc: chatAdd
       },
       {
         title: 'Remove Context',
         description: `
         <p>
-            Remove an individual item by clicking it's own <span
-              class="font-mono bg-black/10 px-1 rounded-md">x</span
-            > button. Or clear the whole window to start fresh.
+            Remove an individual item by clicking it's own <kbd class="px-2 py-0.5 text-lg font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg">x</kbd> button. Or clear the whole window to start fresh.
           </p>
           `,
-        imgSrc: 'https://placehold.co/600x400',
+        imgSrc: chatRemove,
         imgAlt: 'Remove Context',
         iconName: 'close'
       }

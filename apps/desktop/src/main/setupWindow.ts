@@ -46,12 +46,13 @@ export function createSetupWindow() {
   })
 
   setupWindow.webContents.setWindowOpenHandler((details) => {
-    const REQUEST_INVITE_URL = 'https://deta.surf/'
-    const TERMS_URL = 'https://deta.surf/terms'
-    const PRIVACY_URL = 'https://deta.surf/privacy'
-    const ALLOWED_URLS = [REQUEST_INVITE_URL, TERMS_URL, PRIVACY_URL]
+    const ALLOWED_DOMAINS = ['https://deta.surf', 'https://deta.notion.site']
 
-    if (ALLOWED_URLS.includes(details.url)) shell.openExternal(details.url)
+    let isAllowedUrl = ALLOWED_DOMAINS.some((domain) => details.url.startsWith(domain))
+    if (isAllowedUrl) {
+      shell.openExternal(details.url)
+    }
+
     return { action: 'deny' }
   })
 

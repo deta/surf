@@ -7,6 +7,9 @@
   const REQUEST_INVITE_URL = 'https://deta.surf/'
   const TERMS_URL = 'https://deta.surf/terms'
   const PRIVACY_URL = 'https://deta.surf/privacy'
+  const SECURITY_URL = 'https://deta.surf/security'
+  const ANALYTICS_URL = 'https://deta.surf/analytics'
+  const DISCORD_URL = 'https://deta.surf/discord'
 
   let view: 'invite' | 'disclaimer' | 'ai_features' | 'language' | 'prefs' | 'persona' | 'done' =
     'invite'
@@ -108,6 +111,9 @@
   }
 
   const handlePersonaSubmit = async () => {
+    if (selectedPersonas.length === 0) {
+      selectedPersonas = ['Other']
+    }
     try {
       await window.api.updateUserConfigSettings({
         personas: selectedPersonas
@@ -185,22 +191,18 @@
             Surf collects some <b>anonymous</b> analytics which include interactions with certain app
             features. We do not track the URLs you visit nor the contents of the data you store.
           </p>
-          <a href="https://deta.space/privacy" target="_blank" rel="noopener noreferrer"
-            >Learn more</a
-          >
+          <a href={ANALYTICS_URL} target="_blank" rel="noopener noreferrer">Learn more</a>
         </div>
         <div class="box">
           <div class="icon-heading">
             <h2>Security</h2>
           </div>
           <p>
-            While we've taken great care in developing Surf , like any new software, there may be
+            While we've taken great care in developing Surf, like any new software, there may be
             minor areas for improvement.
           </p>
           <p>All your data is stored locally on your device.</p>
-          <a href="https://deta.space/privacy" target="_blank" rel="noopener noreferrer"
-            >Learn more</a
-          >
+          <a href={SECURITY_URL} target="_blank" rel="noopener noreferrer">Learn more</a>
         </div>
         <div class="actions">
           <button on:click={handleAcceptDisclaimer('disclaimer')}>I understand</button>
@@ -351,9 +353,15 @@
         {/each}
       </div>
 
-      <p class="selected-count">
-        Selected: {selectedPersonas.length}/3
-      </p>
+      {#if selectedPersonas.length === 0}
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+        <p class="selected-count" on:click={() => handlePersonaSubmit()}>Skip</p>
+      {:else}
+        <p class="selected-count">
+          Selected: {selectedPersonas.length}/3
+        </p>
+      {/if}
 
       <button on:click={handlePersonaSubmit} disabled={selectedPersonas.length === 0}>
         Continue
@@ -370,8 +378,8 @@
           If you have any questions or feedback, please email us at <a href="mailto:team@deta.space"
             >team@deta.space</a
           >
-          or join our <a href="https://deta.surf/discord" target="_blank">Discord server</a> to chat
-          with the team and the other amazing early adopters.
+          or join our <a href={DISCORD_URL} target="_blank">Discord server</a> to chat with the team
+          and the other amazing early adopters.
         </p>
       </div>
 

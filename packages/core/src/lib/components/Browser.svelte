@@ -4195,7 +4195,11 @@
               {:else if tab.type === 'resource'}
                 <ResourceTab {tab} on:update-tab={(e) => tabsManager.update(tab.id, e.detail)} />
               {:else if tab.type === 'onboarding'}
-                <TabOnboarding />
+                <TabOnboarding
+                  on:openChat={() => openRightSidebarTab('chat')}
+                  on:openStuff={() => ($showNewTabOverlay = 2)}
+                  on:openScreenshot={() => ($showScreenshotPicker = true)}
+                />
               {/if}
             </div>
           {/if}
