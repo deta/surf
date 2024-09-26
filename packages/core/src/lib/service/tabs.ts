@@ -592,8 +592,7 @@ export class TabsManager {
         icon: '',
         spaceId: space.id,
         type: 'space',
-        colors: space.name.colors,
-        index: opts?.index ?? undefined
+        colors: space.name.colors
       },
       opts
     )

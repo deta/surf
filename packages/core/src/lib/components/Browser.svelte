@@ -3252,7 +3252,7 @@
     }
 
     drag.continue()
-    toast.success(`Resources copied'!`)
+    toast.success(`Resources copied!`)
     /*toast.success(
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
     )*/
