@@ -3223,6 +3223,28 @@
         return
       }
 
+      const isSilent =
+        resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value === 'true'
+      const hideInEverything =
+        resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
+          ?.value === 'true'
+
+      if (hideInEverything) {
+        // remove hide in everything tag if it exists since the user is explicitly adding it
+        log.debug('Removing hide in everything tag from resource', resource.id)
+        await resourceManager.deleteResourceTag(
+          resource.id,
+          ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+        )
+      }
+
+      if (isSilent) {
+        // remove silent tag if it exists since the user is explicitly adding it
+        log.debug('Removing silent tag from resource', resource.id)
+        await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+        telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
+      }
+
       await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
 
       // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?

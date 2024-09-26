@@ -956,9 +956,9 @@
     }
 
     const references = await resourceManager.getAllReferences(resourceId, $spaces)
-    const isFromLiveSpace = !!resource.tags?.find(
-      (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
-    )
+    // const isFromLiveSpace = !!resource.tags?.find(
+    //   (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
+    // )
 
     let numberOfReferences = 0
     if (isEverythingSpace) {
@@ -966,7 +966,7 @@
     }
 
     const confirm = window.confirm(
-      !isEverythingSpace && !isFromLiveSpace
+      !isEverythingSpace
         ? `Remove from '${$space?.name.folderName}'? \nIt will still be in 'All my Stuff'.`
         : numberOfReferences > 0
           ? `This resource will be removed from ${numberOfReferences} space${numberOfReferences > 1 ? 's' : ''} and deleted permanently.`
@@ -1014,7 +1014,7 @@
       log.error('Error removing references:', error)
     }
 
-    if (isEverythingSpace || isFromLiveSpace) {
+    if (isEverythingSpace) {
       log.debug('deleting resource from oasis', resourceId)
       await resourceManager.deleteResource(resourceId)
 
@@ -1030,7 +1030,7 @@
     }
 
     log.debug('Resource removed:', resourceId)
-    toasts.success(`Resource ${isEverythingSpace || isFromLiveSpace ? 'deleted' : 'removed'}!`)
+    toasts.success(`Resource ${isEverythingSpace ? 'deleted' : 'removed'}!`)
   }
 
   const handleItemClick = async (e: CustomEvent<string>) => {

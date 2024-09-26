@@ -294,8 +294,7 @@
             // },
             theme: undefined
           }
-        }
-        if (resource.type.startsWith(ResourceTypes.POST)) {
+        } else if (resource.type.startsWith(ResourceTypes.POST)) {
           const data = resourceData as unknown as ResourceDataPost
           const hostname = getHostname(canonicalUrl ?? data.url)
 
@@ -746,7 +745,7 @@
       {
         type: 'action',
         icon: 'trash',
-        text: `${!isInSpace || isLiveSpaceResource ? 'Delete from Stuff' : 'Remove from Space'}`,
+        text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
         kind: 'danger',
         action: () => handleRemove()
       }

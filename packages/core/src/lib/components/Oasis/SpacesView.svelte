@@ -425,6 +425,7 @@
     }
     &.sticky {
       position: sticky;
+      z-index: 1000;
       bottom: 0;
       backdrop-filter: blur(10px);
       box-shadow:
