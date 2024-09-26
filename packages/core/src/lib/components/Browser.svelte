@@ -3268,10 +3268,24 @@
               log.debug('Detected resource from dragged tab', resource)
 
               const isSilent =
-                resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT) !==
-                undefined
+                resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value ===
+                'true'
+              const hideInEverything =
+                resource.tags?.find(
+                  (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+                )?.value === 'true'
+
+              if (hideInEverything) {
+                // remove hide in everything tag if it exists since the user is explicitly adding it
+                log.debug('Removing hide in everything tag from resource', resourceId)
+                await resourceManager.deleteResourceTag(
+                  resourceId,
+                  ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+                )
+              }
+
               if (isSilent) {
-                // remove silent tag if it exists sicne the user is explicitly adding it
+                // remove silent tag if it exists since the user is explicitly adding it
                 log.debug('Removing silent tag from resource', resourceId)
                 await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
                 telemetry.trackSaveToOasis(
