@@ -567,7 +567,6 @@ export class TabsManager {
         title: url,
         icon: '',
         type: 'page',
-        index: opts?.index ?? undefined,
         initialLocation: url,
         historyStackIds: [],
         currentHistoryIndex: -1,
@@ -610,7 +609,6 @@ export class TabsManager {
         title: resource?.metadata?.name ?? getFileType(resource.type) ?? 'Untitled',
         icon: '',
         type: 'resource',
-        index: opts?.index ?? undefined,
         resourceId: resource.id,
         resourceType: resource.type
       },
