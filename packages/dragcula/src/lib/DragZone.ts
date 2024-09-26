@@ -192,12 +192,12 @@ export class HTMLDragZone extends DragZone {
     if (!accepted) return;
 
     /*
-				if (this.isTarget) {
-					e.preventDefault();
-					return;
-				}
-				if (e.defaultPrevented) return
-		*/
+        if (this.isTarget) {
+          e.preventDefault();
+          return;
+        }
+        if (e.defaultPrevented) return
+    */
     // @ts-ignore, fck webdev it actually exists in Chrome!
     const toEl = e.toElement as HTMLElement;
     // ONly enter if toEl closest zone is self
@@ -223,9 +223,9 @@ export class HTMLDragZone extends DragZone {
 
   protected _handleDragLeave(e: DragEvent) {
     /*// @ts-ignore, fck webdev it actually exists in Chrome!
-		const fromEl = e.fromElement as HTMLElement;
-		// @ts-ignore, fck webdev it actually exists in Chrome!
-		const toEl = e.toElement as HTMLElement;*/
+    const fromEl = e.fromElement as HTMLElement;
+    // @ts-ignore, fck webdev it actually exists in Chrome!
+    const toEl = e.toElement as HTMLElement;*/
 
     const drag = Dragcula.get().activeDrag!;
     assert(drag !== null, "No active drag during dragLeave! This should not happen!");
@@ -242,11 +242,11 @@ export class HTMLDragZone extends DragZone {
     // false true -> now target?
 
     /*if (drag.to !== null && drag.to !== this) {
-			console.warn("leave", this.id, " >> ", drag.to.id)
-			if (!drag.to.acceptsCbk(drag)) {
-				return;
-			}
-		}*/
+      console.warn("leave", this.id, " >> ", drag.to.id)
+      if (!drag.to.acceptsCbk(drag)) {
+        return;
+      }
+    }*/
 
     //if (e.defaultPrevented) return
 
@@ -311,10 +311,10 @@ export class HTMLDragZone extends DragZone {
     }); // no fck bubbles to annoy u ;) !
 
     /*if (event.isContinued) {
-			e?.preventDefault();
-			drag.to = this;
-			this.isTarget = true;
-		}*/
+      e?.preventDefault();
+      drag.to = this;
+      this.isTarget = true;
+    }*/
 
     if (drag.item instanceof DragItem) drag.item.onDragTargetEnter(drag, e);
   }

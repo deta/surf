@@ -1401,6 +1401,11 @@
     z-index: 1000;
   }
 
+  /* FIXES double drop as webview still consumes drop if pointer is inside overlay. */
+  :global(body:has(.drawer-content.hovering) webview) {
+    pointer-events: none !important;
+  }
+
   :global([data-dialog-portal] .drawer-overlay) {
     background: rgba(0, 0, 0, 0.35);
     opacity: 1;

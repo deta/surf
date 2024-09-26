@@ -1,7 +1,15 @@
 import type { ActionReturn } from "svelte/action";
 import { Dragcula, DragOperation, DragData } from "./Dragcula.js";
 import type { DragItemPreviewType, DropEffect, Vec2 } from "./types.type.js";
-import { assert, clamp, genId, getParentZoneEl, ii_TRACE, log } from "./utils/internal.js";
+import {
+  assert,
+  clamp,
+  genId,
+  getParentZone,
+  getParentZoneEl,
+  ii_TRACE,
+  log
+} from "./utils/internal.js";
 import { DragculaDragEvent } from "./Event.js";
 import { DragZone } from "./DragZone.js";
 
@@ -143,7 +151,7 @@ export class HTMLDragItem extends DragItem {
 
   attach(node: HTMLElement) {
     (this.element as HTMLElement) = node;
-    log.trace(`${ii_TRACE} ${this.prefix}:attach`, this);
+    //log.trace(`${ii_TRACE} ${this.prefix}:attach`, this);
     this.element.setAttribute("data-drag-item", this.id);
 
     this.configureFromDOMAttributes();
@@ -157,7 +165,7 @@ export class HTMLDragItem extends DragItem {
   }
 
   destroy() {
-    log.trace(`${ii_TRACE} ${this.prefix}:destroy`, this);
+    //log.trace(`${ii_TRACE} ${this.prefix}:destroy`, this);
     //this.element.removeEventListener("dragstart", this.handleDragStart);
     //this.element.removeEventListener("dragend", this.handleDragEnd);
     //this.element.removeEventListener("drag", this.handleDrag, { capture: true });
@@ -241,6 +249,24 @@ export class HTMLDragItem extends DragItem {
     log.debug(`${this.prefix}:dragEnd`, e);
     const drag = Dragcula.get().activeDrag;
     assert(drag !== null, "No active drag operation during handleDragEnd! This should not happen!");
+
+    // FIX: (high): ONLY TMP FIXX!
+    const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
+    const zone = getParentZone(target);
+    drag.to = zone;
+    const dropEvt = new DragEvent("drop", {
+      ...e,
+      dataTransfer: e.dataTransfer,
+      bubbles: true,
+      cancelable: true,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      screenX: e.screenX,
+      screenY: e.screenY,
+      pageX: e.pageX,
+      pageY: e.pageY
+    });
+    zone?.element?.dispatchEvent(dropEvt);
 
     // FIX: MAKE IT CANLELLE
     if (HTMLDragItem.activeTransition) {
