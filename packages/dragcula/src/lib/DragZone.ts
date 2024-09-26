@@ -294,6 +294,10 @@ export class HTMLDragZone extends DragZone {
       );
     } finally {
       //await tick();
+
+      if (drag.isNative) {
+        Dragcula.get().cleanupDragOperation();
+      }
     }
   }
 
