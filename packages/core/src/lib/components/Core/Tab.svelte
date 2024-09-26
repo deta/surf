@@ -681,7 +681,6 @@
 
 <style lang="scss">
   .tab {
-    box-sizing: border-box !important;
     transition:
       0s ease-in-out,
       transform 0s;

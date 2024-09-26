@@ -1208,12 +1208,10 @@ async function createNewDataTransfer(
     if (
       resource.type === ResourceTypes.ARTICLE ||
       resource.type === ResourceTypes.LINK ||
-      resource.type.startsWith(ResourceTypes.POST)
+      resource.type.startsWith(ResourceTypes.POST) ||
+      resource.type.startsWith(ResourceTypes.DOCUMENT)
     ) {
       newDataTransfer.setData('text/uri-list', (resource as ResourceArticle).metadata?.sourceURI)
-    } else if (resource.type.startsWith(ResourceTypes.DOCUMENT)) {
-      const parsedData = await (resource as ResourceDocument).getParsedData()
-      newDataTransfer.setData('text/html', parsedData.content_html)
     } else {
       newDataTransfer.items.add(file)
     }
