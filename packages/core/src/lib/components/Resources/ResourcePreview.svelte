@@ -267,8 +267,7 @@
             // },
             theme: undefined
           }
-        }
-        if (resource.type.startsWith(ResourceTypes.POST)) {
+        } else if (resource.type.startsWith(ResourceTypes.POST)) {
           const data = resourceData as unknown as ResourceDataPost
           const hostname = getHostname(canonicalUrl ?? data.url)
 
