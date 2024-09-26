@@ -7,40 +7,40 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      product_name:
+      a_product_name:
         type: string
         description: 'App Name'
         required: true
         default: 'Surf'
-      should_notarize:
+      b_should_notarize:
         type: boolean
         description: 'Notarize (macOS)?'
         default: true
-      sign_windows:
+      c_sign_windows:
         type: boolean
         description: 'Sign Windows build?'
         default: false
-      disable_all_obfuscation:
+      d_disable_all_obfuscation:
         type: boolean
         description: 'Disable All Obfuscation'
         default: false
-      a_run_macos_arm:
+      e_run_macos_arm:
         type: boolean
         description: 'Run macOS ARM build'
         default: true
-      b_run_macos_x64:
+      f_run_macos_x64:
         type: boolean
         description: 'Run macOS x64 build'
         default: false
-      c_run_windows_x64:
+      g_run_windows_x64:
         type: boolean
         description: 'Run Windows x64 build'
         default: false
-      d_run_linux_arm:
+      h_run_linux_arm:
         type: boolean
         description: 'Run Linux ARM build'
         default: false
-      e_run_linux_x64:
+      i_run_linux_x64:
         type: boolean
         description: 'Run Linux x64 build'
         default: false
@@ -54,19 +54,19 @@ jobs:
       - id: set-matrix
         run: |
           matrix="{\"include\":["
-          if [[ "${{ inputs.a_run_macos_arm }}" == "true" ]]; then
+          if [[ "${{ inputs.e_run_macos_arm }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"macos-14\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:mac:arm\"},"
           fi
-          if [[ "${{ inputs.b_run_macos_x64 }}" == "true" ]]; then
+          if [[ "${{ inputs.f_run_macos_x64 }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"macos-13\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:mac:x64\"},"
           fi
-          if [[ "${{ inputs.c_run_windows_x64 }}" == "true" ]]; then
+          if [[ "${{ inputs.g_run_windows_x64 }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"windows-latest\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:win:x64\"},"
           fi
-          if [[ "${{ inputs.d_run_linux_arm }}" == "true" ]]; then
+          if [[ "${{ inputs.h_run_linux_arm }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"linux-arm64-large\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:lin:arm\"},"
           fi
-          if [[ "${{ inputs.e_run_linux_x64 }}" == "true" ]]; then
+          if [[ "${{ inputs.i_run_linux_x64 }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"ubuntu-latest\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:lin:x64\"},"
           fi
           matrix="${matrix%,}]}"
@@ -79,15 +79,33 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
+
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            **/node_modules
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            **/target
+            apps/desktop/dist
+            **/build
+          key: ${{ runner.os }}-${{ matrix.architecture }}-deps-build-${{ hashFiles('**/yarn.lock', '**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.architecture }}-deps-build-
+
       - name: Set up Windows build environment
         if: matrix.os == 'windows-latest'
         run: |
@@ -98,26 +116,31 @@ jobs:
           cl
           clang --version
         shell: cmd
+
       - name: Set up Windows Sign Tool
-        if: matrix.os == 'windows-latest' && inputs.sign_windows == true
+        if: matrix.os == 'windows-latest' && inputs.c_sign_windows == true
         run: dotnet tool install --no-cache --global AzureSignTool --version 5.0.0
+
       - name: Azure Login
-        if: matrix.os == 'windows-latest' && inputs.sign_windows == true
+        if: matrix.os == 'windows-latest' && inputs.c_sign_windows == true
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Azure Key Vault Access Token
-        if: matrix.os == 'windows-latest' && inputs.sign_windows == true
+        if: matrix.os == 'windows-latest' && inputs.c_sign_windows == true
         run: |
           $az_token=$(az account get-access-token --scope https://vault.azure.net/.default --query accessToken -o tsv)
           echo "::add-mask::$az_token"
           echo "AZURE_KEYVAULT_ACCESS_TOKEN=$az_token" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Install dependencies
         run: |
           yarn config set network-timeout 300000
           yarn install --frozen-lockfile --network-timeout 300000
+
       - name: build for ${{ matrix.os }}-${{ matrix.architecture }}
         run: ${{ matrix.build_command }}
         env:
@@ -127,10 +150,10 @@ jobs:
 
           HUSKY: 0
           NODE_OPTIONS: --max_old_space_size=8192
-          SHOULD_NOTARIZE: ${{ inputs.should_notarize }}
-          DISABLE_ALL_OBFUSCATION: ${{ inputs.disable_all_obfuscation }}
+          SHOULD_NOTARIZE: ${{ inputs.b_should_notarize }}
+          DISABLE_ALL_OBFUSCATION: ${{ inputs.d_disable_all_obfuscation }}
 
-          PRODUCT_NAME: ${{ inputs.product_name }}
+          PRODUCT_NAME: ${{ inputs.a_product_name }}
           M_VITE_PRODUCT_NAME: 'Surf'
           BUILD_RESOURCES_DIR: build/resources/prod
 
@@ -153,7 +176,7 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
           # windows code signing configuration
-          SIGN_WINDOWS: ${{ inputs.sign_windows }}
+          SIGN_WINDOWS: ${{ inputs.c_sign_windows }}
           AZURE_KEYVAULT_CERTIFICATE_NAME: ${{ secrets.AZURE_KEYVAULT_CERTIFICATE_NAME }}
           AZURE_KEYVAULT_URL: ${{ secrets.AZURE_KEYVAULT_URL }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
