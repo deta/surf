@@ -1,8 +1,8 @@
 import { get, writable, type Writable } from 'svelte/store'
-import { useLogScope } from '@horizon/utils'
+import { generateID, useLogScope } from '@horizon/utils'
 import type { ResourceManager } from './resources'
 
-import type { Optional, Space, SpaceData } from '../types'
+import type { Optional, Space, SpaceData, SpaceEntryOrigin } from '../types'
 import { getContext, setContext } from 'svelte'
 
 export class OasisService {
@@ -33,7 +33,11 @@ export class OasisService {
 
   async loadSpaces() {
     this.log.debug('loading spaces')
-    const result = await this.resourceManager.listSpaces()
+    let result = await this.resourceManager.listSpaces()
+
+    // TODO: Felix — Continuation on felix/tempspace-removal: Remove all .tempspaces
+    const filteredResult = result.filter((space) => space.name.folderName !== '.tempspace')
+    result = filteredResult
 
     this.log.debug('loaded spaces:', result)
     this.spaces.set(result)
@@ -51,6 +55,7 @@ export class OasisService {
       | 'sources'
       | 'sql_query'
       | 'embedding_query'
+      | 'builtIn'
     >
   ) {
     this.log.debug('creating space')
@@ -63,10 +68,28 @@ export class OasisService {
       sql_query: null,
       embedding_query: null,
       sortBy: 'created_at',
+      builtIn: false,
       sources: []
     }
 
     const fullData = Object.assign({}, defaults, data)
+
+    if (fullData.folderName === '.tempspace') {
+      const fakeSpace = {
+        name: fullData,
+        id: generateID(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted: 0
+      } as Space
+      this.log.debug('created fake space:', fakeSpace)
+
+      this.spaces.update((spaces) => {
+        return [...spaces, fakeSpace]
+      })
+
+      return fakeSpace
+    }
 
     const result = await this.resourceManager.createSpace(fullData)
     if (!result) {
@@ -124,9 +147,9 @@ export class OasisService {
     })
   }
 
-  async addResourcesToSpace(spaceId: string, resourceIds: string[]) {
+  async addResourcesToSpace(spaceId: string, resourceIds: string[], origin: SpaceEntryOrigin) {
     this.log.debug('adding resources to space', spaceId, resourceIds)
-    await this.resourceManager.addItemsToSpace(spaceId, resourceIds)
+    await this.resourceManager.addItemsToSpace(spaceId, resourceIds, origin)
 
     this.log.debug('added resources to space, reloading spaces')
     await this.loadSpaces()
@@ -138,6 +161,10 @@ export class OasisService {
 
     this.log.debug('got space contents:', result)
     return result
+  }
+
+  async resetSelectedSpace() {
+    this.selectedSpace.set('all')
   }
 
   static provide(resourceManager: ResourceManager) {

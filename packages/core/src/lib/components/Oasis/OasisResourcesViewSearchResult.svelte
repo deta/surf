@@ -12,6 +12,8 @@
   export let isEverythingSpace: boolean
   export let isInSpace: boolean = false
   export let searchValue: Writable<string> | undefined
+  export let resourcesBlacklistable: boolean = false
+  export let interactive: boolean = true
 
   const log = useLogScope('OasisResourcesView')
   const dispatch = createEventDispatcher()
@@ -62,12 +64,16 @@
           <OasisResourceLoader
             resourceOrId={item.data ? item.data : item.id}
             {isInSpace}
+            {resourcesBlacklistable}
             on:open
             on:remove
             on:load
             on:space-selected
             on:open-space-as-tab
+            on:blacklist-resource
+            on:whitelist-resource
             on:rendered={handleRenderingDone}
+            {interactive}
           />
         </Masonry>
       {/key}

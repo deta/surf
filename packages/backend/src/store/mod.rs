@@ -179,8 +179,8 @@ fn js_create_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
                 .value(&mut cx);
             let manually_added = obj
                 .get_value::<FunctionContext, &str>(&mut cx, "manually_added")?
-                .downcast_or_throw::<JsBoolean, FunctionContext>(&mut cx)?
-                .value(&mut cx);
+                .downcast_or_throw::<JsNumber, FunctionContext>(&mut cx)?
+                .value(&mut cx) as i32;
             Ok(CreateSpaceEntryInput {
                 resource_id,
                 manually_added,

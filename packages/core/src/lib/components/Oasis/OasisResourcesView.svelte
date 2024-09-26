@@ -10,6 +10,7 @@
   export let isInSpace: boolean = false
   export let useMasonry: boolean = true
   export let searchValue: Writable<string> | undefined
+  export let interactive: boolean = true
 
   const log = useLogScope('OasisResourcesView')
   // const dispatch = createEventDispatcher<{ click: string }>()
@@ -59,7 +60,10 @@
               on:open
               on:remove
               on:load
+              on:blacklist-resource
+              on:whitelist-resource
               on:rendered={handleRenderingDone}
+              {interactive}
             />
           </Masonry>
         {/key}
@@ -74,8 +78,11 @@
             {isInSpace}
             on:click
             on:open
+            on:blacklist-resource
+            on:whitelist-resource
             on:remove
             on:load
+            {interactive}
           />
         </div>
       {/each}

@@ -1,6 +1,6 @@
 export interface CreateSpaceEntryInput {
   resource_id: string
-  manually_added: boolean
+  manually_added: number
 }
 
 export interface Space {
@@ -22,6 +22,7 @@ export interface SpaceData {
   sortBy: 'created_at' | 'source_published_at'
   sql_query: string | null
   embedding_query: string | null
+  builtIn?: boolean
 }
 
 export interface SpaceSource {
@@ -31,6 +32,14 @@ export interface SpaceSource {
   url: string
   last_fetched_at: string | null
 }
+
+export const SpaceEntryOrigin = {
+  Blacklisted: 2,
+  ManuallyAdded: 1,
+  LlmQuery: 0
+} as const
+
+export type SpaceEntryOrigin = (typeof SpaceEntryOrigin)[keyof typeof SpaceEntryOrigin]
 
 export interface SpaceEntry {
   id: string

@@ -14,6 +14,7 @@
   export let content: string
   export let element: HTMLDivElement | undefined = undefined
   export let size: 'sm' | 'lg' = 'lg'
+
   const createRehypePlugin = (plugin: any, opts?: any): Plugin => {
     return { rehypePlugin: opts ? [plugin, opts] : [plugin] }
   }

@@ -23,7 +23,6 @@
   })
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    event.stopPropagation()
     // check if key is searchable (alphanumeric, backspace, delete, etc.)
     if (event.key.length === 1 || event.key === 'Backspace' || event.key === 'Delete') {
       debouncedSearch()
@@ -35,7 +34,9 @@
   }
 </script>
 
-<div class="flex items-center bg-white px-4 rounded-xl gap-2">
+<div
+  class="flex items-center bg-white px-4 rounded-xl gap-2 border border-sky-400/40 outline outline-[0.5px] outline-offset-0 outline-sky-800/20"
+>
   {#if loading}
     <Icon name="spinner" class="shrink-0 opacity-50 icon" />
   {:else}
@@ -47,7 +48,7 @@
     type="message"
     name="message"
     placeholder="Search"
-    class="placeholder:text-neutral-500 flex w-full max-w-[calc(100%-3rem)] text-xl rounded-md bg-transparent py-4 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    class="placeholder:text-neutral-500 flex w-full max-w-[calc(100%-3rem)] text-xl rounded-md bg-transparent py-2.5 outline-none disabled:cursor-not-allowed disabled:opacity-50"
     on:keydown={handleKeyDown}
   />
 </div>

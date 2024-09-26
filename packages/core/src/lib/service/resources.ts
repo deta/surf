@@ -23,7 +23,8 @@ import {
   type SpaceEntry,
   type Space,
   type SpaceData,
-  type SpaceSource
+  type SpaceSource,
+  SpaceEntryOrigin
 } from '../types'
 import type { Telemetry } from './telemetry'
 import {
@@ -46,7 +47,7 @@ import { getContext, setContext } from 'svelte'
 export const everythingSpace = {
   id: 'all',
   name: {
-    folderName: 'Everything',
+    folderName: 'All my Stuff',
     colors: ['#76E0FF', '#4EC9FB'],
     showInSidebar: false,
     liveModeEnabled: false,
@@ -1009,12 +1010,12 @@ export class ResourceManager {
     return await this.sffs.deleteSpace(spaceId)
   }
 
-  async addItemsToSpace(space_id: string, resourceIds: string[]) {
+  async addItemsToSpace(space_id: string, resourceIds: string[], origin: SpaceEntryOrigin) {
     const existingItems = await this.getSpaceContents(space_id)
     const existingResourceIds = existingItems.map((item) => item.resource_id)
     const newItems = resourceIds.filter((id) => !existingResourceIds.includes(id))
 
-    return await this.sffs.addItemsToSpace(space_id, newItems)
+    return await this.sffs.addItemsToSpace(space_id, newItems, origin)
   }
 
   async getSpaceContents(space_id: string): Promise<SpaceEntry[]> {
@@ -1065,10 +1066,13 @@ export class ResourceManager {
 
   async getResourcesViaPrompt(
     query: string,
-    sql_query?: string,
-    embedding_query?: string
+    opts?: {
+      sql_query?: string
+      embedding_query?: string
+      embedding_distance_threshold?: number
+    }
   ): Promise<AiSFFSQueryResponse> {
-    return await this.sffs.getResourcesViaPrompt(query, sql_query, embedding_query)
+    return await this.sffs.getResourcesViaPrompt(query, opts)
   }
 
   async getResourceData(resourceId: string) {

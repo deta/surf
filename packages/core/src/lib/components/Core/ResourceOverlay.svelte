@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
 
+  export let interactive = true
   export let caption = null
 
   let figure: HTMLElement | null = null
@@ -55,21 +56,24 @@
 
 <div class="figure" bind:this={figure}>
   <slot name="content" />
-  <div
-    bind:this={captionElem}
-    class="caption"
-    style={`left: ${captionStyle.x}px; top: ${captionStyle.y + (caption ? 0 : 60)}px; opacity: ${captionStyle.opacity}; transform: ${captionStyle.transform}; 
-    z-index: 2147483647;
-    `}
-  >
-    {#if caption}
-      {caption}
-    {:else}
-      <div class="border-gray-300 border-opacity-50 shadow-lg shadow-gray-300 rounded-md">
-        <slot name="caption" />
-      </div>
-    {/if}
-  </div>
+
+  {#if interactive}
+    <div
+      bind:this={captionElem}
+      class="caption"
+      style={`left: ${captionStyle.x}px; top: ${captionStyle.y + (caption ? 0 : 60)}px; opacity: ${captionStyle.opacity}; transform: ${captionStyle.transform}; 
+      z-index: 2147483647;
+      `}
+    >
+      {#if caption}
+        {caption}
+      {:else}
+        <div class="border-gray-300 border-opacity-50 shadow-lg shadow-gray-300 rounded-md">
+          <slot name="caption" />
+        </div>
+      {/if}
+    </div>
+  {/if}
 </div>
 
 <style>

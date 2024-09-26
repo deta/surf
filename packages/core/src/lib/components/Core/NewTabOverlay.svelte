@@ -96,6 +96,7 @@
   const dispatch = createEventDispatcher<OverlayEvents>()
   const config = useConfig()
   const userConfigSettings = config.settings
+  let oasisSpace: OasisSpace
 
   let createSpaceRef: any
 
@@ -127,6 +128,7 @@
   const isFetchingOasisSearchResults = writable(false)
   const isFetchingSearchEngineSuggestionResults = writable(false)
   const isFetchingHistoryEntriesResults = writable(false)
+  const isCreatingNewSpace = writable(false)
   const isFilteringCommandItems = writable(false)
   const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
     'oasis-filter-resources',
@@ -584,6 +586,7 @@
   const selectedSpaceId = writable<string | null>(null)
   const searchResults = writable<ResourceSearchResultItem[]>([])
   const everythingContents = writable<ResourceSearchResultItem[]>([])
+  const spaceCreationActive = writable(false)
 
   const resourcesToShow = derived(
     [searchValue, searchResults, everythingContents],
@@ -610,11 +613,15 @@
         return
       }
 
+      // resets the selected space
+      oasis.resetSelectedSpace()
+
       loadingContents.set(true)
 
       if (initialLoad) {
         everythingContents.set([])
         await tick()
+        telemetry.trackOpenOasis()
       }
 
       const resources = await resourceManager.listResourcesByTags(
@@ -713,7 +720,7 @@
       !isEverythingSpace && !isFromLiveSpace
         ? `Remove reference? The original will still be in Everything.`
         : numberOfReferences > 0
-          ? `This resource will be deleted permanently including all of its ${numberOfReferences} references.`
+          ? `This resource will be removed from ${numberOfReferences} space${numberOfReferences > 1 ? 's' : ''} and deleted permanently.`
           : `This resource will be deleted permanently.`
     )
 
@@ -893,7 +900,10 @@
       return
     }
     drag.abort()*/
-
+    if (drag.isNative) {
+      drag.continue()
+      return
+    }
     if (drag.data['surf/tab'] !== undefined) {
       const dragData = drag.data as { 'surf/tab': Tab }
       if (drag.isNative || dragData['surf/tab'].type !== 'space') {
@@ -945,6 +955,21 @@
     // openResourceAsTab(e.detail)
   }
 
+  const handleCreateEmptySpace = async () => {
+    await tick()
+    const spaceID = await createSpaceRef.handleCreateSpace({
+      detail: {
+        name: '.tempspace',
+        aiEnabled: false,
+        colors: ['#000000', '#ffffff'],
+        userPrompt: ''
+      }
+    })
+
+    isCreatingNewSpace.set(true)
+    selectedSpaceId.set(spaceID)
+  }
+
   const handleCreateSpace = async (
     e: CustomEvent<{
       name: string
@@ -967,6 +992,39 @@
     }
   }
 
+  const handleDeleteSpace = async () => {
+    await oasisSpace.handleDeleteSpace(false, true)
+    isCreatingNewSpace.set(false)
+  }
+
+  const handleSpaceDeleted = async (e: CustomEvent) => {
+    selectedSpaceId.set('all')
+  }
+
+  const handleSpaceSelected = async (e: CustomEvent<string>) => {
+    log.debug('Space selected:', e.detail)
+    selectedSpaceId.set(e.detail)
+  }
+
+  const handleUpdatedSpace = async (e: CustomEvent<string | undefined>) => {
+    log.debug('Space updated:', e.detail)
+    isCreatingNewSpace.set(false)
+    await tick()
+
+    if (e.detail) {
+      selectedSpaceId.set(e.detail)
+      oasis.selectedSpace.set(e.detail)
+    }
+  }
+
+  const handleCreatingNewSpace = () => {
+    isCreatingNewSpace.set(true)
+  }
+
+  const handleDoneCreatingNewSpace = () => {
+    isCreatingNewSpace.set(true)
+  }
+
   let isSearching = false
   let searchTimeout: NodeJS.Timeout | null = null
 
@@ -976,28 +1034,24 @@
     if (value.length === 0) {
       searchResults.set([])
       hasSearched = false
-      isSearching = false
       if (!hasLoadedEverything) {
         hasLoadedEverything = true
         loadEverything()
       }
-    } else {
+    } else if (value.length > 3) {
       handleSearch(value).then(() => {
         isSearching = false
       })
+    } else {
+      $searchResults = []
     }
 
     hasLoadedEverything = value.length === 0
   }, 300)
 
-  const debouncedTrackOpenOasis = useDebounce(() => {
-    telemetry.trackOpenOasis()
-  }, 500)
-
   let previousSearchValue = ''
 
   $: if (showTabSearch === 2) {
-    debouncedTrackOpenOasis()
     loadEverything(true)
   }
 
@@ -1093,36 +1147,19 @@
           >
             <Icon name="close" />
           </button>
-        {:else if $searchValue.length < 20}
-          {#if showTabSearch === 2}
-            <button
-              class="absolute left-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
-                ? 'bottom-7'
-                : 'bottom-3'} z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
-              on:click={() => {
-                $onboardingOpen = !$onboardingOpen
-              }}
-              use:tooltip={{
-                text: 'Need help?',
-                position: 'right'
-              }}
-              aria-label="Show onboarding"
-            >
-              <Icon name="info" />
-            </button>
-          {/if}
-
+        {:else if $searchValue.length < 20 && !$isCreatingNewSpace}
           <button
-            class="absolute right-4 transform {showTabSearch === 2 && $selectedSpaceId !== null
-              ? 'bottom-7'
+            class="absolute right-4 transform {showTabSearch === 2
+              ? 'bottom-5'
               : 'bottom-3'} z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
             on:click={() => {
               showTabSearch = showTabSearch === 1 ? 2 : 1
             }}
             aria-label="Switch tabs"
           >
-            <span
-              >{showTabSearch === 1
+            <span>
+              <!-- {createNewSpace.isCreatingNewSpace} -->
+              {showTabSearch === 1
                 ? $searchValue.length > 0
                   ? 'Search My Stuff'
                   : 'Open My Stuff'
@@ -1143,6 +1180,7 @@
             </Command.Shortcut>
           </button>
         {/if}
+
         <Command.Root
           class="[&_[data-cmdk-group-heading]]:text-neutral-500 {showTabSearch === 2 &&
           $selectedSpaceId === null
@@ -1165,8 +1203,8 @@
           > -->
           <div
             class={showTabSearch === 1
-              ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : ''}`
-              : 'w-[70vw] h-[calc(100vh-200px)]'}
+              ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : 'h-[58px]'}`
+              : 'w-[90vw] h-[calc(100vh-120px)]'}
           >
             {#if showTabSearch === 1 && $searchValue.length}
               <Command.List class="m-2 no-scrollbar">
@@ -1175,164 +1213,181 @@
                 {/each}
               </Command.List>
             {:else if showTabSearch === 2}
-              {#if $onboardingOpen}
-                <Onboarding
-                  on:close={closeOnboarding}
-                  title="Stay on top of your stuff"
-                  tip="Tip: Hover over any element to see how it works."
-                  sections={[
-                    {
-                      title: 'Save anything',
-                      description: `
-        <p>Save webpages, tweets, YouTube videos, screenshots, PDFs,and more. </p>
-        `,
-                      imgSrc: 'https://placehold.co/600x400',
-                      imgAlt: 'Save anything',
-                      iconName: 'leave'
-                    },
-                    {
-                      title: '(Auto)-organize',
-                      description: `
-      <p>
-          Create spaces and curate your items manually. Or let Surf do it for you.
-        </p>
-        `,
-                      imgSrc: 'https://placehold.co/600x400',
-                      imgAlt: '(Auto)-organize',
-                      iconName: 'rectangle-group'
-                    },
-                    {
-                      title: 'Find',
-                      description: `
-      <p>
-          Easily find anything you've saved, with Surf search. 
-        </p>
-        `,
-                      imgSrc: 'https://placehold.co/600x400',
-                      imgAlt: 'Find',
-                      iconName: 'search'
-                    }
-                  ]}
-                  buttonText="Continue"
-                />
-              {/if}
+              <div class="flex h-full">
+                {#if $onboardingOpen}
+                  <Onboarding
+                    on:close={closeOnboarding}
+                    title="Stay on top of your stuff"
+                    tip="Tip: Hover over any element to see how it works."
+                    sections={[
+                      {
+                        title: 'Save anything',
+                        description: `<p>Save webpages, tweets, YouTube videos, screenshots, PDFs,and more. </p>`,
+                        imgSrc: 'https://placehold.co/600x400',
+                        imgAlt: 'Save anything',
+                        iconName: 'leave'
+                      },
+                      {
+                        title: '(Auto)-organize',
+                        description: `<p>Create spaces and curate your items manually. Or let Surf do it for you.</p>`,
+                        imgSrc: 'https://placehold.co/600x400',
+                        imgAlt: '(Auto)-organize',
+                        iconName: 'rectangle-group'
+                      },
+                      {
+                        title: 'Find',
+                        description: `<p>Easily find anything you've saved, with Surf search.</p>`,
+                        imgSrc: 'https://placehold.co/600x400',
+                        imgAlt: 'Find',
+                        iconName: 'search'
+                      }
+                    ]}
+                    buttonText="Continue"
+                  />
+                {/if}
 
-              {#if $showCreationModal}
-                <div
-                  data-vaul-no-drag
-                  class="create-wrapper absolute inset-0 z-50 flex items-center justify-center bg-opacity-50"
-                >
-                  <div
-                    class=" rounded-lg w-full h-full max-w-screen-lg max-h-screen-lg overflow-auto flex items-center justify-center"
-                  >
-                    <CreateNewSpace
-                      on:close-modal={() => showCreationModal.set(false)}
-                      on:submit={handleCreateSpace}
+                <div class="sidebar-wrap h-full bg-sky-500/40 w-[18rem] max-w-[18rem]">
+                  {#key $spaces}
+                    <SpacesView
+                      bind:this={createSpaceRef}
+                      {spaces}
+                      {resourceManager}
+                      showPreview={true}
+                      type="horizontal"
+                      interactive={false}
+                      on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
+                      on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
+                      on:create-empty-space={handleCreateEmptySpace}
+                      on:open-resource={handleOpen}
+                      on:delete-space={handleDeleteSpace}
+                      on:Drop
                     />
-                  </div>
+                  {/key}
                 </div>
-              {/if}
 
-              {#if $selectedSpaceId !== null}
-                <OasisSpace
-                  spaceId={$selectedSpaceId}
-                  active
-                  showBackBtn
-                  hideResourcePreview
-                  handleEventsOutside
-                  {historyEntriesManager}
-                  on:open={handleOpen}
-                  on:go-back={() => selectedSpaceId.set(null)}
-                  insideDrawer={true}
-                  {searchValue}
-                />
-              {:else}
-                <DropWrapper
-                  {spaceId}
-                  on:Drop={(e) => handleDrop(e.detail)}
-                  on:DragEnter={(e) => handleDragEnter(e.detail)}
-                  zonePrefix="drawer-"
-                >
-                  <div class="w-full h-full">
-                    <div class="fixed top-0 z-50 w-full">
-                      <SpacesView
-                        bind:this={createSpaceRef}
-                        {spaces}
-                        {resourceManager}
-                        showPreview={true}
-                        type="horizontal"
-                        interactive={false}
-                        on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
-                        on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
-                        on:open-creation-modal={() => showCreationModal.set(true)}
-                        on:open-resource={handleOpen}
-                      />
-                    </div>
+                <div class="stuff-wrap h-full w-full relative">
+                  {#if showTabSearch === 2 && ($selectedSpaceId === 'all' || $selectedSpaceId === null)}
+                    <button
+                      class="absolute left-6 bottom-[1.4rem] transform z-[10000] flex items-center justify-center gap-2 transition-all cursor-pointer bg-white hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+                      on:click={() => {
+                        $onboardingOpen = !$onboardingOpen
+                      }}
+                      use:tooltip={{
+                        text: 'Need help?',
+                        position: 'right'
+                      }}
+                      aria-label="Show onboarding"
+                    >
+                      <Icon name="info" />
+                    </button>
+                  {/if}
 
-                    {#if $resourcesToShow.length > 0}
-                      <OasisResourcesViewSearchResult
-                        resources={resourcesToShow}
-                        selected={$selectedItem}
-                        isInSpace={false}
-                        isEverythingSpace={true}
-                        scrollTop={0}
-                        on:click={handleItemClick}
+                  {#if $selectedSpaceId !== null && $selectedSpaceId !== 'all'}
+                    {#key $selectedSpaceId}
+                      <OasisSpace
+                        spaceId={$selectedSpaceId}
+                        active
+                        showBackBtn
+                        hideResourcePreview
+                        handleEventsOutside
+                        {historyEntriesManager}
                         on:open={handleOpen}
-                        on:open-space-as-tab
-                        on:remove={handleResourceRemove}
+                        on:go-back={() => selectedSpaceId.set(null)}
+                        on:deleted={handleSpaceDeleted}
+                        on:updated-space={handleUpdatedSpace}
+                        on:creating-new-space={handleCreatingNewSpace}
+                        on:done-creating-new-space={handleDoneCreatingNewSpace}
+                        on:select-space={handleSpaceSelected}
+                        insideDrawer={true}
+                        bind:this={oasisSpace}
                         {searchValue}
                       />
+                    {/key}
+                  {:else}
+                    <DropWrapper
+                      acceptDrop={true}
+                      {spaceId}
+                      on:Drop={(e) => handleDrop(e.detail)}
+                      on:DragEnter={(e) => handleDragEnter(e.detail)}
+                      zonePrefix="drawerrr-"
+                    >
+                      <div class="w-full h-full">
+                        {#if $resourcesToShow.length > 0}
+                          {#key $selectedSpaceId}
+                            <OasisResourcesViewSearchResult
+                              resources={resourcesToShow}
+                              selected={$selectedItem}
+                              isEverythingSpace={true}
+                              isInSpace={false}
+                              scrollTop={0}
+                              on:click={handleItemClick}
+                              on:open={handleOpen}
+                              on:open-space-as-tab
+                              on:remove={handleResourceRemove}
+                              on:new-tab
+                              {searchValue}
+                            />
+                          {/key}
 
-                      {#if $loadingContents}
-                        <div class="floating-loading">
-                          <Icon name="spinner" size="20px" />
-                        </div>
-                      {/if}
-                    {:else if isSearching && $searchValue.length > 0}
-                      <div class="content-wrapper h-full flex items-center justify-center">
-                        <div
-                          class="content flex flex-col items-center justify-center text-center space-y-4"
-                        >
-                          <Icon name="spinner" size="22px" />
-                          <p class="text-lg font-medium text-gray-700">Searching your stuff...</p>
-                        </div>
+                          {#if $loadingContents}
+                            <div class="floating-loading">
+                              <Icon name="spinner" size="20px" />
+                            </div>
+                          {/if}
+                        {:else if isSearching && $searchValue.length > 3}
+                          <div class="content-wrapper h-full flex items-center justify-center">
+                            <div
+                              class="content flex flex-col items-center justify-center text-center space-y-4"
+                            >
+                              <Icon name="spinner" size="22px" />
+                              <p class="text-lg font-medium text-gray-700">
+                                Searching your stuff...
+                              </p>
+                            </div>
+                          </div>
+                        {:else if $resourcesToShow.length === 0 && $searchValue.length > 0}
+                          <div class="content-wrapper h-full flex items-center justify-center">
+                            <div
+                              class="content flex flex-col items-center justify-center text-center space-y-4"
+                            >
+                              <Icon name="leave" size="22px" class="mb-2" />
+                              {#if $searchValue.length <= 3}
+                                <p class="text-lg font-medium text-gray-700">
+                                  Please type at least 3 characters to search.
+                                </p>
+                              {:else}
+                                <p class="text-lg font-medium text-gray-700">
+                                  No stuff found for "{$searchValue}". Try a different search term.
+                                </p>
+                              {/if}
+                            </div>
+                          </div>
+                        {/if}
                       </div>
-                    {:else if $resourcesToShow.length === 0 && $searchValue.length > 0}
-                      <div class="content-wrapper h-full flex items-center justify-center">
-                        <div
-                          class="content flex flex-col items-center justify-center text-center space-y-4"
-                        >
-                          <Icon name="leave" size="22px" class="mb-2" />
-
-                          <p class="text-lg font-medium text-gray-700">
-                            No stuff found for "{$searchValue}". Try a different search term.
-                          </p>
-                        </div>
-                      </div>
-                    {/if}
-                  </div>
-                </DropWrapper>
-              {/if}
+                    </DropWrapper>
+                  {/if}
+                </div>
+              </div>
             {/if}
           </div>
           <!-- </Motion> -->
           <!-- </AnimatePresence> -->
 
-          {#if $selectedSpaceId === null || showTabSearch === 1}
+          {#if $selectedSpaceId === 'all' || $selectedSpaceId === null || showTabSearch === 1}
             <div
               class={showTabSearch === 2
-                ? 'w-full flex items-center justify-center bg-white z-10 p-2 border-t-[1px] border-neutral-100'
-                : 'w-full flex items-center justify-center p-2  border-t-[1px] border-neutral-100'}
+                ? 'w-[calc(100%-19rem)] absolute bottom-0 right-0 flex items-center justify-center bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px] z-10 p-2 border-[1px] border-neutral-200 m-[0.5rem] rounded-2xl'
+                : 'w-full absolute bottom-0 flex items-center justify-center p-2 border-t-[1px] border-neutral-100 bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px]'}
             >
               <div class={'flex items-center relative'}>
                 <Command.Input
                   id="search-field"
                   {placeholder}
                   {breadcrumb}
-                  loading={$isLoadingCommandItems || isSearching || $loadingContents}
+                  loading={$isLoadingCommandItems}
                   bind:value={$searchValue}
                   class={showTabSearch === 2
-                    ? 'w-[32rem] bg-neutral-100 rounded-lg p-2'
+                    ? 'w-[32rem] bg-neutral-200 rounded-lg py-2 px-4'
                     : 'w-[32rem] py-4 pl-2'}
                 />
 

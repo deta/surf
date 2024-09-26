@@ -6,8 +6,9 @@
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
   import type { Space, SpaceData } from '../../types'
-  import { ResourceTagsBuiltInKeys, ResourceTypes } from '../../types'
+  import { ResourceTagsBuiltInKeys, ResourceTypes, SpaceEntryOrigin } from '../../types'
   import { useLogScope, hover, tooltip, isModKeyPressed } from '@horizon/utils'
+  import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { useOasis } from '../../service/oasis'
   import { processDrop } from '../../service/mediaImporter'
   import { useToasts } from '../../service/toast'
@@ -20,34 +21,39 @@
 
   import type { TabSpace } from '../../types/browser.types'
   import { useTelemetry } from '../../service/telemetry'
+  import { contextMenu } from '../Core/ContextMenu.svelte'
 
   export let folder: Space
   export let selected: boolean
   export let showPreview = false
+  export let isEditing = false // New prop to control editing state
 
   const log = useLogScope('Folder')
-  const dispatch = createEventDispatcher<{
-    delete: void
-    'space-selected': { id: string; canGoBack: boolean }
-    'open-space-as-tab': { space: Space; active: boolean }
-    'update-data': Partial<SpaceData>
-    'open-resource': string
-  }>()
+  const dispatch = createEventDispatcher()
   const oasis = useOasis()
   const toast = useToasts()
   const resourceManager = useResourceManager()
   const telemetry = useTelemetry()
-
-  const editMode = writable(false)
-  const hovered = writable(false)
-  const draggedOver = writable(false)
-  const inView = writable(false)
 
   let folderDetails = folder.name
   let inputWidth = `${folderDetails.folderName.length}ch`
   let processing = false
   let inputElement: HTMLInputElement
   let previewContainer: HTMLDivElement
+
+  const editMode = writable(false)
+  const hovered = writable(false)
+  const draggedOver = writable(false)
+  const inView = writable(false)
+  const previousName = writable(folderDetails.folderName)
+
+  $: {
+    if (isEditing) {
+      editMode.set(true)
+    } else {
+      editMode.set(false)
+    }
+  }
 
   $: if ($editMode === true) {
     setTimeout(() => {
@@ -97,6 +103,9 @@
     if (!(event.target as HTMLElement).closest('button')) {
       try {
         log.debug('Selected space:', folder.id)
+        if (folder.name.folderName === '.tempspace' && $selectedFolder === '.tempspace') {
+          return
+        }
         if (isModKeyPressed(event)) {
           dispatch('open-space-as-tab', { space: folder, active: event.shiftKey })
         } else {
@@ -108,8 +117,20 @@
     }
   }
 
-  const handleBlur = () => {
-    dispatch('update-data', { folderName: folderDetails.folderName })
+  const handleDoubleClick = () => {
+    dispatch('editing-start', { id: folder.id })
+  }
+
+  const handleBlur = async () => {
+    if (folderDetails.folderName.trim() !== '') {
+      dispatch('update-data', { folderName: folderDetails.folderName })
+    } else {
+      folderDetails.folderName = $previousName
+      dispatch('update-data', { folderName: $previousName })
+      previousName.set(folderDetails.folderName)
+      await tick()
+    }
+    dispatch('editing-end')
 
     resourceManager.telemetry.trackUpdateSpaceSettings(
       {
@@ -157,10 +178,6 @@
     }
   }
 
-  const handleAddSpaceToTabs = () => {
-    dispatch('add-folder-to-tabs')
-  }
-
   export const createFolderWithAI = async (query: string) => {
     try {
       processing = true
@@ -187,7 +204,7 @@
         return
       }
 
-      await oasis.addResourcesToSpace(folder.id, results)
+      await oasis.addResourcesToSpace(folder.id, results, SpaceEntryOrigin.LlmQuery)
       selectedFolder.set(folder.id)
 
       await resourceManager.telemetry.trackRefreshSpaceContent(
@@ -206,25 +223,8 @@
     }
   }
 
-  const handleDrop = async (event: DragEvent) => {
-    event.preventDefault()
-
-    const mediaResults = await processDrop(event)
-
-    const resourceItems = mediaResults.filter((r) => r.type === 'resource')
-    if (resourceItems.length > 0) {
-      await resourceManager.addItemsToSpace(
-        folder.id,
-        resourceItems.map((r) => r.data as string)
-      )
-      log.debug(`Resources dropped into folder ${folder.name}`)
-
-      toast.success('Resources added to folder!')
-    } else {
-      log.debug('No resources found in drop event')
-    }
-
-    draggedOver.set(false)
+  const handleDrop = async (drag: DragculaDragEvent) => {
+    dispatch('Drop', { drag, spaceId: folder.id })
   }
 
   const handleColorChange = async (event: CustomEvent<[string, string]>) => {
@@ -249,9 +249,17 @@
     if (e.code === 'Space' && !e.shiftKey) {
       e.preventDefault()
       folderDetails.folderName = value + ' '
+    } else if (e.code === 'Enter') {
+      e.preventDefault()
+      if (value.trim() !== '') {
+        dispatch('editing-end')
+      }
     } else if (e.code === 'Enter' && e.shiftKey) {
       e.preventDefault()
       createFolderWithAI(value)
+    } else if (e.code === 'Escape') {
+      e.preventDefault()
+      dispatch('editing-end')
     }
   }
 
@@ -297,15 +305,38 @@
 <div
   class="folder-wrapper {processing ? 'magic-in-progress' : ''} {$draggedOver ? 'draggedOver' : ''}"
   on:dragover={handleDragOver}
+  id={folder.id}
   data-folder-id={folder.id}
   on:dragleave={handleDragLeave}
   on:drop={handleDrop}
   aria-hidden="true"
+  use:HTMLDragZone.action={{}}
+  on:DragEnter={(drag) => {
+    const dragData = drag.data
+    if (
+      drag.isNative ||
+      (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space') ||
+      dragData['oasis/resource'] !== undefined
+    ) {
+      drag.continue()
+      return
+    }
+    drag.abort()
+  }}
+  on:Drop={handleDrop}
+  use:contextMenu={{
+    items: [
+      { type: 'action', icon: 'edit', text: 'Rename', action: handleDoubleClick },
+      { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
+      { type: 'separator' },
+      { type: 'action', icon: 'trash', text: 'Delete', kind: 'danger', action: handleDelete }
+    ]
+  }}
 >
   <div
-    class="folder {selected ? 'active' : ''}"
-    style={showPreview ? 'height: 4.5rem' : ''}
+    class="folder {selected ? 'bg-sky-100' : 'hover:bg-sky-50'}"
     on:click={$editMode ? null : handleSpaceSelect}
+    on:dblclick={handleDoubleClick}
     aria-hidden="true"
     use:hover={hovered}
     bind:this={previewContainer}
@@ -320,60 +351,24 @@
           <input
             bind:this={inputElement}
             id={`folder-input-${folder.id}`}
-            style={`width: ${inputWidth};`}
+            style={`width: 100%;`}
             type="text"
             bind:value={folderDetails.folderName}
-            on:blur={handleBlur}
             class="folder-input isEditing"
             on:keydown={handleKeyDown}
+            on:blur={handleBlur}
           />
         {:else}
           <div
             class="folder-input"
             style={`width: ${inputWidth};`}
+            aria-hidden="true"
             on:click|stopPropagation={handleSpaceSelect}
           >
             {folderDetails.folderName}
           </div>
         {/if}
       </div>
-
-      {#if !$editMode}
-        {#if $hovered}
-          <button
-            on:click|stopPropagation={addItemToTabs}
-            class="close"
-            use:tooltip={{ text: 'Open as Tab', position: 'left' }}
-          >
-            <Icon name={'list-add'} size="20px" />
-          </button>
-          <button
-            on:click|stopPropagation={() => editMode.set(true)}
-            class="close"
-            use:tooltip={{ text: 'Edit', position: 'left' }}
-          >
-            <Icon name="edit" size="20px" />
-          </button>
-        {/if}
-      {:else}
-        <div class="actions" in:fade={{ duration: 50 }} out:fade={{ duration: 100 }}>
-          <button
-            on:click|stopPropagation={handleDelete}
-            class="close"
-            use:tooltip={{ text: 'Delete Space', position: 'left' }}
-          >
-            <Icon name="trash" size="20px" />
-          </button>
-
-          <button
-            on:click|stopPropagation={() => editMode.set(false)}
-            class="close"
-            use:tooltip={{ text: 'Back', position: 'left' }}
-          >
-            <Icon name="check" size="20px" />
-          </button>
-        </div>
-      {/if}
     </div>
   </div>
 </div>
@@ -382,7 +377,7 @@
   .folder-wrapper {
     position: relative;
     pointer-events: auto;
-    width: 22rem;
+    width: 100%;
   }
 
   .folder {
@@ -390,13 +385,13 @@
     flex-direction: column;
     align-items: end;
     justify-content: space-between;
-    padding: 1.5rem;
-    border-radius: 12px;
+    padding: 0.525rem 0.75rem;
+    border-radius: 16px;
     cursor: pointer;
-    gap: 10px;
+
     position: relative;
     color: #244581;
-    width: 22rem;
+    width: 100%;
     max-height: 12rem;
     font-weight: 500;
     letter-spacing: 0.0025em;
@@ -404,37 +399,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     z-index: 1000;
-    background: linear-gradient(0deg, #eef8fe 0%, #e3f4fc 4.18%),
-      linear-gradient(180deg, #f2fbfd 0%, #effafd 10.87%),
-      radial-gradient(41.69% 35.32% at 16.92% 87.63%, rgba(205, 231, 250, 0.85) 0%, #e4f2fb 100%),
-      linear-gradient(129deg, #f6fcfd 0.6%, #e6f8fe 44.83%, #e0f5fd 100%), var(--Black, #fff);
-
-    background: linear-gradient(
-        0deg,
-        color(display-p3 0.9412 0.9725 0.9922) 0%,
-        color(display-p3 0.902 0.9529 0.9843) 4.18%
-      ),
-      linear-gradient(
-        180deg,
-        color(display-p3 0.9569 0.9843 0.9922) 0%,
-        color(display-p3 0.9451 0.9804 0.9922 / 0) 10.87%
-      ),
-      radial-gradient(
-        41.69% 35.32% at 16.92% 87.63%,
-        color(display-p3 0.8222 0.9042 0.9735 / 0.85) 0%,
-        color(display-p3 0.9059 0.949 0.9804 / 0) 100%
-      ),
-      linear-gradient(
-        129deg,
-        color(display-p3 0.9686 0.9882 0.9922) 0.6%,
-        color(display-p3 0.9137 0.9686 0.9922) 44.83%,
-        color(display-p3 0.8941 0.9569 0.9882) 100%
-      ),
-      var(--Black, color(display-p3 1 1 1));
-
-    box-shadow: 0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1);
-    box-shadow: 0px 0.933px 2.8px 0px color(display-p3 0 0 0 / 0.1);
-
     .previews {
       position: relative;
       height: 100%;
@@ -510,7 +474,7 @@
         align-items: center;
         gap: 0.5rem;
         flex: 1;
-        max-width: calc(100% - 4.5rem);
+        max-width: calc(100% - 1rem);
         overflow: visible;
       }
 
@@ -523,23 +487,25 @@
       }
 
       .folder-input {
-        font-family: 'Inter', sans-serif;
         border: none;
         background: transparent;
         color: #244581;
-        font-size: 1.15rem;
+        font-size: 1rem;
         font-weight: 500;
         letter-spacing: 0.0025em;
+        line-height: 1;
         font-smooth: always;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        width: 100%;
+        max-width: 100%;
+        padding: 0.525rem 0 0.5rem 0;
         outline: none;
         width: fit-content;
 
         // truncate text
         white-space: nowrap;
-        overflow: hidden;
+        overflow-y: visible;
+        overflow-x: hidden;
         text-overflow: ellipsis;
 
         &::selection {
@@ -549,7 +515,7 @@
         &.isEditing {
           border-radius: 4px;
           padding: 0 0.25rem;
-          margin-top: -2px;
+          margin: 0.4rem 0;
           outline: 4px solid rgba(0, 110, 255, 0.4);
         }
       }
@@ -586,7 +552,7 @@
   .folder.active {
     color: #585130;
     z-index: 1000;
-    background-color: #fff;
+    background-color: #blue;
   }
 
   .draggedOver {

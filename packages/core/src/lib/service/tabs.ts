@@ -554,7 +554,7 @@ export class TabsManager {
     this.showNewTabOverlay.set(1)
   }
 
-  async addPageTab(url: string, opts?: CreateTabOptions, tabOptions?: Partial<TabPage>) {
+  async addPageTab(url: string, opts?: CreateTabOptions, tabData?: Partial<TabPage>) {
     this.log.debug('Creating new page tab')
 
     if (!url) {
@@ -570,7 +570,7 @@ export class TabsManager {
         initialLocation: url,
         historyStackIds: [],
         currentHistoryIndex: -1,
-        ...tabOptions
+        ...tabData
       },
       opts
     )

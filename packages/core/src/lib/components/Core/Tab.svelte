@@ -31,7 +31,7 @@
   export let isUserSelected: boolean
   export let enableEditing = false
   export let showClose = false
-  export let spaces
+  export let spaces: Writable<Space[]>
   export const inputUrl = writable<string>('')
   export let hibernated = false
   export let tabSize: number | undefined = undefined
@@ -39,6 +39,7 @@
   export let removeHighlight = false
   export let isSelected = false
   export let isMagicActive = false
+  export let experimentalMode = false
 
   export const editAddress = async () => {
     isEditing = true
@@ -118,13 +119,18 @@
 
   // NOTE: commented out 'sanitizations' are not useful
   $: sanitizedTitle = tab.title
-  // ? tab.type !== 'space'
-  //   ? tab.title
-  //       .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
-  //       .replace(/[\/\\]/g, '–')
-  //       .replace(/^\w/, (c) => c.toUpperCase())
-  //   : tab.title
-  // : ''
+    ? tab.type !== 'space'
+      ? (() => {
+          if (tab.title.toLowerCase().startsWith('http')) {
+            return tab.title
+          }
+          let title = tab.title
+            .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
+            .replace(/[\/\\]/g, '–')
+          return title !== tab.title ? title.replace(/^\w/, (c) => c.toUpperCase()) : title
+        })()
+      : tab.title
+    : ''
 
   const checkIfLiveSpacePossible = (tab: Tab) => {
     if (tab.type !== 'page') return false
@@ -501,25 +507,44 @@
 
     {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || !isUserSelected) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
-        <!-- {#if tab.type === 'page' && isActive && showLiveSpaceButton}
-          <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
-            <button
-              slot="trigger"
-              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-              on:click={handleCreateLiveSpace}
-            >
-              <Icon name="news" />
-            </button>
+        {#if experimentalMode}
+          {#if tab.type === 'page' && isActive && showLiveSpaceButton}
+            <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
+              <button
+                slot="trigger"
+                class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+              >
+                <Icon name="news" />
+              </button>
 
-            <div slot="content" class="no-drag p-1">
-              <ShortcutSaveItem
-                on:save-resource-in-space={handleAddSourceToSpace}
-                {spaces}
-                infoText="Add page as a source to Space:"
-              />
-            </div>
-          </CustomPopover>
-        {/if} -->
+              <div slot="content" class="no-drag p-1">
+                <span class="px-4 py-8 mt-8">
+                  <br />Create a page subscription to <br />
+                  <span class="p-1 bg-white rounded-sm">
+                    {tab.currentDetectedApp?.hostname}
+                  </span>
+                </span>
+                <div class="flex w-full">
+                  <button
+                    class="flex items-center justify-center w-full p-2 m-1 transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded cursor-pointer rounded-md"
+                    on:click={handleCreateLiveSpace}
+                  >
+                    <Icon name="check" size="16px" />
+                    Submit
+                  </button>
+                </div>
+                <ShortcutSaveItem
+                  on:save-resource-in-space={handleAddSourceToSpace}
+                  {spaces}
+                  infoText="or add updates from this site as a source to existing Space:"
+                />
+                <span class="p-4 py-4 mt-8 w-full text-xs text-gray-500 text-center">
+                  A Live Space will automatically pull in new <br /> items from the page
+                </span>
+              </div>
+            </CustomPopover>
+          {/if}
+        {/if}
 
         {#if tab.type === 'page'}
           {#key isBookmarkedByUser}

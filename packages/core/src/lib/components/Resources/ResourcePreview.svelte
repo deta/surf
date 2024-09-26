@@ -31,10 +31,11 @@
     ResourceTypes,
     type CreateTabOptions,
     type ResourceData,
-    type ResourceDataPost
+    type ResourceDataPost,
+    SpaceEntryOrigin
   } from '../../types'
 
-  import { writable, get } from 'svelte/store'
+  import { writable, get, derived } from 'svelte/store'
   import {
     CreateTabEventTrigger,
     type AnnotationCommentData,
@@ -50,6 +51,7 @@
     getFileType,
     parseStringIntoUrl,
     getHostname,
+    hover,
     isMac,
     copyToClipboard,
     truncateURL
@@ -64,6 +66,7 @@
     type Mode,
     type Source
   } from './Previews/Preview.svelte'
+  import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
 
@@ -71,6 +74,9 @@
   export let selected: boolean = false
   export let mode: Mode = 'full'
   export let isInSpace: boolean = false // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
+  export let resourcesBlacklistable: boolean = false
+  export let resourceBlacklisted: boolean = false
+  export let interactive: boolean = false
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
@@ -86,6 +92,8 @@
     load: string
     open: string
     'created-tab': void
+    'whitelist-resource': string
+    'blacklist-resource': string
   }>()
 
   const spaces = oasis.spaces
@@ -93,6 +101,25 @@
 
   const isHovered = writable(false)
   const customTitleValue = writable(resource.metadata?.name ?? '')
+
+  const contextMenuSpaces = derived(spaces, (spaces) => {
+    return spaces
+      .filter(
+        (e) =>
+          e.name.folderName.toLowerCase() !== 'all my stuff' &&
+          e.name.folderName.toLowerCase() !== '.tempspace' &&
+          !e.name.builtIn
+      )
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .map((space) => ({
+        type: 'action',
+        icon: '',
+        text: space.name.folderName,
+        action: () => {
+          oasis.addResourcesToSpace(space.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+        }
+      }))
+  })
 
   $: annotations = resource.annotations ?? []
 
@@ -385,6 +412,26 @@
             },
             theme: undefined
           }
+        } else {
+          const data = resourceData as any
+          const hostname = getHostname(canonicalUrl ?? data.url)
+
+          previewData = {
+            type: resource.type,
+            title: resource?.metadata?.name || data.title || getFileType(resource.type),
+            content: data.content_plain,
+            contentType: 'plain',
+            image: data.image ?? undefined,
+            url: data.url,
+            source: {
+              text: data.provider
+                ? cleanSource(data.provider)
+                : hostname || getFileType(resource.type),
+              imageUrl: data.icon ?? `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`,
+              icon: 'link'
+            },
+            theme: undefined
+          }
         }
       } else if (resource instanceof ResourceNote) {
         const data = await resource.getContent()
@@ -497,6 +544,12 @@
   }
 
   const handleClick = async (e: MouseEvent) => {
+    // TOOD: @felix replace this with interactive prop
+    if (resourcesBlacklistable) {
+      handleBlacklisting()
+      return
+    }
+
     if (dragging) {
       dragging = false
       return
@@ -537,6 +590,18 @@
     dispatch('remove', resource.id)
   }
 
+  const handleBlacklisting = () => {
+    resourceBlacklisted = !resourceBlacklisted
+
+    if (resourceBlacklisted) {
+      // Handle removing from blacklist
+      dispatch('blacklist-resource', resource.id)
+    } else {
+      // Handle adding to blacklist
+      dispatch('whitelist-resource', resource.id)
+    }
+  }
+
   const handleOpenAsNewTab = (e?: MouseEvent) => {
     e?.stopImmediatePropagation()
 
@@ -560,6 +625,10 @@
     } else {
       alert('Failed to open file')
     }
+  }
+
+  const handleToggleBlacklisted = () => {
+    resourceBlacklisted = !resourceBlacklisted
   }
 
   const handleCopyToClipboard = () => {
@@ -593,6 +662,12 @@
     await resourceManager.updateResourceMetadata(resource.id, { name: title })
   }
 
+  const handleStartEditTitle = async () => {
+    if (interactive) {
+      showEditMode = true
+    }
+  }
+
   onMount(async () => {
     await loadResource()
   })
@@ -603,8 +678,9 @@
   on:click={handleClick}
   class="resource-preview clickable relative"
   class:isSelected={selected}
-  style="--id:{resource.id};"
+  style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
   use:contextMenu={{
+    canOpen: interactive,
     items: [
       {
         type: 'action',
@@ -639,27 +715,18 @@
             }
           ]
         : []),
-      {
-        type: 'sub-menu',
-        icon: '',
-        text: `Add to Space`,
-        items: $spaces
-          ? [
-              ...$spaces
-                .filter((e) => e.name.folderName !== 'Everything')
-                .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-                .map((space) => ({
-                  type: 'action',
-                  icon: '',
-                  text: space.name.folderName,
-                  action: () => {
-                    oasis.addResourcesToSpace(space.id, [resource.id])
-                  }
-                }))
-            ]
-          : []
-      },
-      { type: 'separator' },
+      ...($contextMenuSpaces.length > 0
+        ? [
+            {
+              type: 'sub-menu',
+              icon: '',
+              disabled: $contextMenuSpaces.length === 0,
+              text: `Add to Space`,
+              items: $contextMenuSpaces
+            },
+            { type: 'separator' }
+          ]
+        : []),
       ...(mode === 'full' ||
       mode === 'content' ||
       mode === 'compact' ||
@@ -717,7 +784,7 @@
       bind:editTitle={showEditMode}
       bind:titleValue={$customTitleValue}
       on:edit-title={handleEditTitle}
-      on:start-edit-title={() => (showEditMode = true)}
+      on:start-edit-title={handleStartEditTitle}
       on:click={handleTitleClick}
       {mode}
     />
@@ -727,6 +794,17 @@
         <div class="title">Loading...</div>
         <div class="subtitle">Please wait</div>
       </div>
+    </div>
+  {/if}
+
+  {#if resourcesBlacklistable}
+    <div class="resource-blacklistable" use:hover={isHovered}>
+      <Icon name="check" size="16px" />
+      {#if $isHovered}
+        <div class="whitespace-nowrap ml-2 leading-4" transition:slide={{ axis: 'x' }}>
+          Selected
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -861,6 +939,27 @@
     gap: 0.5rem;
     color: var(--color-text-muted);
     width: 100%;
+  }
+
+  .resource-blacklistable {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    background: rgba(0, 123, 255, 0.85);
+    backdrop-filter: blur(4px);
+    box-shadow: 0px 0.425px 0px 0px rgba(0, 83, 172, 0.25);
+    padding: 0.4rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgb(255, 255, 255);
+
+    &.hover {
+      background: rgba(255, 255, 255);
+      color: rgb(12 74 110);
+    }
   }
 
   .remove-wrapper {
