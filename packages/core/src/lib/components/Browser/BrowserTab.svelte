@@ -969,6 +969,7 @@
 
 <WebviewWrapper
   id="webview-{tab.id}"
+  style={$activeTabId !== tab.id ? 'pointer-events: none !important;' : ''}
   src={initialSrc}
   partition="persist:horizon"
   {historyEntriesManager}
