@@ -313,7 +313,6 @@
   on:DragStart={handleDragStart}
   use:HTMLDragZone.action={{
     accepts: (drag) => {
-      if (folder.id === 'all') return false
       if (
         drag.isNative ||
         drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
