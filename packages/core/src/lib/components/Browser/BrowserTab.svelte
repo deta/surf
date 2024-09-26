@@ -79,12 +79,15 @@
   import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from '../../constants/inline'
   import { handleInlineAI } from '../../service/ai'
   import { useConfig } from '../../service/config'
+  import { useTabsManager } from '../../service/tabs'
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<BrowserTabEvents>()
   const resourceManager = useResourceManager()
   const toasts = useToasts()
   const config = useConfig()
+  const tabs = useTabsManager()
+  const activeTabId = tabs.activeTabId
 
   const userConfigSettings = config.settings
 
@@ -966,12 +969,14 @@
 
 <WebviewWrapper
   id="webview-{tab.id}"
+  style={$activeTabId !== tab.id ? 'pointer-events: none !important;' : ''}
   src={initialSrc}
   partition="persist:horizon"
   {historyEntriesManager}
   {url}
   {historyStackIds}
   {currentHistoryIndex}
+  acceptsDrags={$activeTabId === tab.id}
   bind:this={webview}
   on:webview-page-event={handleWebviewPageEvent}
   on:url-change={handleUrlChange}

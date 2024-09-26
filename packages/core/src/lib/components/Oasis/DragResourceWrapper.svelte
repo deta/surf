@@ -10,14 +10,23 @@
   import { ResourceTypes, type ResourceData } from '@horizon/types'
   import { get } from 'svelte/store'
   import { MEDIA_TYPES } from '../../service/mediaImporter'
-  import { HTMLDragItem } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
+  import { DragTypeNames, type DragTypes } from '../../types'
 
   export let draggable = true
   export let resource: Resource
 
   const log = useLogScope('DragResourceWrapper')
 
-  const handleDragStart = (e: DragEvent) => {
+  const handleDragStart = (drag: DragculaDragEvent<DragTypes>) => {
+    drag.item!.data.setData(DragTypeNames.SURF_RESOURCE, resource)
+    drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resource.id)
+    drag.item!.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
+
+    drag.continue()
+  }
+
+  const OLD__handleDragStart = (e: DragEvent) => {
     log.debug('Item drag start', e, resource.id)
 
     // if (
@@ -126,12 +135,7 @@
   use:HTMLDragItem.action={{}}
   class="drag-item"
   style:view-transition-name="oasis-resource-{resource.id}"
-  on:DragStart={(drag) => {
-    drag.item.data = {
-      'oasis/resource': resource
-    }
-    drag.continue()
-  }}
+  on:DragStart={handleDragStart}
 >
   <slot />
 </div>
@@ -139,7 +143,14 @@
 <style lang="scss">
   .drag-item {
     display: block;
-    width: 100%;
-    height: min-content;
+  }
+  :global(.drag-item[data-drag-preview]) {
+    box-shadow: none;
+    max-width: 25ch;
+  }
+  :global(.drag-item[data-drag-preview] .resource-preview .preview) {
+    box-shadow:
+      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
+      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
   }
 </style>

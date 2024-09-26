@@ -200,6 +200,7 @@ export type ResourceHistoryEntryWithLinkedResource = {
 export type CreateTabOptions = {
   active?: boolean
   placeAtEnd?: boolean
+  index?: number
   trigger?: CreateTabEventTrigger
 }
 

@@ -269,7 +269,7 @@ export class TabsManager {
     const nextIndex =
       nextTabIndex > 0 ? nextTabIndex - TAB_INDEX_OFFSET : activeTabIndex + TAB_INDEX_OFFSET
 
-    const newIndex = placeAtEnd ? Date.now() : nextIndex
+    const newIndex = opts?.index ?? (placeAtEnd ? Date.now() : nextIndex)
 
     this.log.debug('Creating tab', tab, 'at index', newIndex, this.unpinnedTabs)
 

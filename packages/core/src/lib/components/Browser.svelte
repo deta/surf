@@ -39,7 +39,13 @@
     createResourceManager
   } from '../service/resources'
 
-  import { SpaceEntryOrigin, type Space, type SpaceSource } from '../types'
+  import {
+    DragTypeNames,
+    type DragTypes,
+    SpaceEntryOrigin,
+    type Space,
+    type SpaceSource
+  } from '../types'
 
   import BrowserTab, { type BrowserTabNewTabEvent } from './Browser/BrowserTab.svelte'
   import BrowserHomescreen from './Browser/BrowserHomescreen.svelte'
@@ -2559,29 +2565,6 @@
     })
   }, 200)
 
-  const handleDrop = async (event: CustomEvent) => {
-    const tab = event.detail?.tab
-
-    event.preventDefault()
-
-    const mediaResults = await processDrop(event.detail.event)
-
-    const resourceItems = mediaResults.filter((r) => r.type === 'resource')
-
-    if (resourceItems.length > 0) {
-      await resourceManager.addItemsToSpace(
-        tab.spaceId,
-        resourceItems.map((r) => r.data as string),
-        SpaceEntryOrigin.ManuallyAdded
-      )
-      log.debug(`Resources dropped into folder ${tab.title}`)
-
-      toasts.success('Resources added to folder!')
-    } else {
-      log.debug('No resources found in drop event')
-    }
-  }
-
   const handleRemoveFromSidebar = async (e: CustomEvent) => {
     const tabId = e.detail
 
@@ -2966,107 +2949,83 @@
     log.debug('State updated successfully')
   }
 
-  const handleDragEnterSidebar = async (drag: DragculaDragEvent) => {
-    drag.continue()
-  }
-
-  const handleDropSidebar = async (drag: DragculaDragEvent) => {
-    log.debug('DROP DRAGCULA', drag)
+  const handleDropSidebar = async (drag: DragculaDragEvent<DragTypes>) => {
+    log.debug('dropping onto sidebar', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
 
     if (drag.isNative) {
-      // TODO: Handle otherwise
-      return
-    }
+      const parsed = await processDrop(drag.event!)
+      log.debug('Parsed', parsed)
 
-    if (drag.data['oasis/resource'] !== undefined) {
-      const resource = drag.data['oasis/resource'] as Resource
+      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+      log.debug('Resources', newResources)
 
-      let tab = await tabsManager.openResourceAsTab(resource, {
-        active: true,
-        trigger: CreateTabEventTrigger.Drop
-      })
+      for (const r of newResources) {
+        await tabsManager.openResourceAsTab(r, { active: false, index: drag.index ?? undefined })
 
-      if (!tab) {
-        log.error('Failed to add page')
-        return
+        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
       }
 
-      tab.index = drag.index || 0
-
-      await tabsManager.bulkPersistChanges(
-        get(tabs).map((tab) => ({
-          id: tab.id,
-          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
-        }))
-      )
-
-      log.debug('State updated successfully')
-
-      drag.continue()
       return
-    }
-
-    // todo refactor this
-    if (drag.data['surf/tab'] !== undefined) {
-      const dragData = drag.data['surf/tab'] as Tab
+    } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
+      const droppedTab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
       tabs.update((_tabs) => {
         let unpinnedTabsArray = get(unpinnedTabs)
         let pinnedTabsArray = get(pinnedTabs)
         let magicTabsArray = get(magicTabs)
 
-        let fromTabs: Tab[]
-        let toTabs: Tab[]
+        let fromTabs: Tab[] = []
+        let toTabs: Tab[] = []
 
-        if (drag.from.id === 'sidebar-unpinned-tabs') {
+        if (drag.from?.id === 'sidebar-unpinned-tabs') {
           fromTabs = unpinnedTabsArray
-        } else if (drag.from.id === 'sidebar-pinned-tabs') {
+        } else if (drag.from?.id === 'sidebar-pinned-tabs') {
           fromTabs = pinnedTabsArray
-        } else if (drag.from.id === 'sidebar-magic-tabs') {
+        } else if (drag.from?.id === 'sidebar-magic-tabs') {
           fromTabs = magicTabsArray
         }
-        if (drag.to.id === 'sidebar-unpinned-tabs') {
+        if (drag.to?.id === 'sidebar-unpinned-tabs') {
           toTabs = unpinnedTabsArray
-        } else if (drag.to.id === 'sidebar-pinned-tabs') {
+        } else if (drag.to?.id === 'sidebar-pinned-tabs') {
           toTabs = pinnedTabsArray
-        } else if (drag.to.id === 'sidebar-magic-tabs') {
+        } else if (drag.to?.id === 'sidebar-magic-tabs') {
           toTabs = magicTabsArray
         }
 
         // CASE: to already includes tab
-        if (toTabs.find((v) => v.id === dragData.id)) {
+        if (toTabs.find((v) => v.id === droppedTab.id)) {
           log.warn('ONLY Update existin tab')
-          const existing = fromTabs.find((v) => v.id === dragData.id)
+          const existing = fromTabs.find((v) => v.id === droppedTab.id)
           if (existing && drag.index !== undefined) {
-            existing.index = drag.index
+            existing.index = drag.index ?? 0
           }
           fromTabs.splice(
-            fromTabs.findIndex((v) => v.id === dragData.id),
+            fromTabs.findIndex((v) => v.id === droppedTab.id),
             1
           )
-          fromTabs.splice(existing.index, 0, existing)
+          fromTabs.splice(existing!.index, 0, existing!)
         } else {
           log.warn('ADDING NEW ONE')
           // Remove old
-          const idx = fromTabs.findIndex((v) => v.id === dragData.id)
+          const idx = fromTabs.findIndex((v) => v.id === droppedTab.id)
           if (idx > -1) {
             fromTabs.splice(idx, 1)
           }
 
-          if (drag.to.id === 'sidebar-pinned-tabs') {
-            dragData.pinned = true
-            dragData.magic = false
+          if (drag.to?.id === 'sidebar-pinned-tabs') {
+            droppedTab.pinned = true
+            droppedTab.magic = false
 
-            cachedMagicTabs.delete(dragData.id)
+            cachedMagicTabs.delete(droppedTab.id)
             telemetry.trackMoveTab(MoveTabEventAction.Pin)
-          } else if (drag.to.id === 'sidebar-magic-tabs') {
-            dragData.pinned = false
-            dragData.magic = true
+          } else if (drag.to?.id === 'sidebar-magic-tabs') {
+            droppedTab.pinned = false
+            droppedTab.magic = true
 
-            cachedMagicTabs.add(dragData.id)
+            cachedMagicTabs.add(droppedTab.id)
 
-            if (dragData.type === 'page' && $activeTabMagic?.showSidebar) {
+            if (droppedTab.type === 'page' && $activeTabMagic?.showSidebar) {
               log.debug('prepare tab for chat context after moving to magic')
-              preparePageTabsForChatContext([dragData])
+              preparePageTabsForChatContext([droppedTab])
             }
 
             telemetry.trackMoveTab(MoveTabEventAction.AddMagic)
@@ -3075,7 +3034,7 @@
               magicTabsArray.length + 1
             )
           } else {
-            if (dragData.magic) {
+            if (droppedTab.magic) {
               telemetry.trackMoveTab(MoveTabEventAction.RemoveMagic)
               telemetry.trackPageChatContextUpdate(
                 PageChatUpdateContextEventAction.Remove,
@@ -3085,15 +3044,13 @@
               telemetry.trackMoveTab(MoveTabEventAction.Unpin)
             }
 
-            dragData.pinned = false
-            dragData.magic = false
-            cachedMagicTabs.delete(dragData.id)
+            droppedTab.pinned = false
+            droppedTab.magic = false
+            cachedMagicTabs.delete(droppedTab.id)
           }
 
-          toTabs.splice(drag.index || 0, 0, dragData)
+          toTabs.splice(drag.index || 0, 0, droppedTab)
         }
-
-        // log.log(...pinnedTabsArray, ...unpinnedTabsArray, ...magicTabsArray)
 
         // Update the indices of the tabs in all lists
         const updateIndices = (tabs: Tab[]) => tabs.map((tab, index) => ({ ...tab, index }))
@@ -3123,6 +3080,51 @@
       log.debug('State updated successfully')
       // Mark the drop completed
       drag.continue()
+    } else if (drag.item!.data.hasData(DragTypeNames.SURF_SPACE)) {
+      const space = drag.item!.data.getData(DragTypeNames.SURF_SPACE)
+      tabsManager.addSpaceTab(space, { active: false, index: drag.index ?? undefined })
+    } else if (
+      drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+      drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+    ) {
+      let resource: Resource | null = null
+      if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+        resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+      } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+        const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+        resource = await resourceFetcher()
+      }
+
+      if (resource === null) {
+        log.warn('Dropped resource but resource is null! Aborting drop!')
+        drag.abort()
+        return
+      }
+
+      let tab = await tabsManager.openResourceAsTab(resource, {
+        active: true,
+        index: drag.index ?? 0,
+        trigger: CreateTabEventTrigger.Drop
+      })
+
+      if (!tab) {
+        log.error('Failed to add page')
+        return
+      }
+
+      tab.index = drag.index || 0
+
+      await tabsManager.bulkPersistChanges(
+        get(tabs).map((tab) => ({
+          id: tab.id,
+          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+        }))
+      )
+
+      log.debug('State updated successfully')
+
+      drag.continue()
+      return
     }
   }
 
@@ -3158,8 +3160,8 @@
   }
 
   const handleTabDragEnd = async (drag: DragculaDragEvent) => {
-    log.debug('TAB DRAG END', drag.effect)
-
+    // TODO: (dragcula): migrate
+    return
     if (
       drag.status === 'done' &&
       drag.effect === 'move' &&
@@ -3172,9 +3174,10 @@
     drag.continue()
   }
 
-  const handleDropOnSpaceTab = async (drag: DragculaDragEvent, spaceId: string) => {
-    log.warn('DROP ON SPACE TAB', spaceId, drag)
-    if (drag.item !== null && drag.item !== undefined) drag.item.dragEffect = 'copy'
+  const handleDropOnSpaceTab = async (drag: DragculaDragEvent<DragTypes>, spaceId: string) => {
+    log.debug('dropping onto sidebar tab', drag)
+
+    if (drag.item !== null && drag.item !== undefined) drag.item.dropEffect = 'copy'
 
     const toast = toasts.loading(
       spaceId === 'all'
@@ -3182,141 +3185,76 @@
         : `${drag.effect === 'move' ? 'Moving' : 'Copying'} to Space...`
     )
 
-    if (
-      ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
-        drag.from?.id || ''
-      ) &&
-      !drag.metaKey
-    ) {
-      drag.item!.dragEffect = 'copy' // Make sure tabs are always copy from sidebar
-    }
-
-    let resourceIds: string[] = []
     if (drag.isNative) {
-      log.debug('Dropped native', drag)
-      const event = new DragEvent('drop', { dataTransfer: drag.data })
-      log.debug('native drop drop event emulated:', event)
-
-      const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
-      if (isOwnDrop) {
-        log.debug('Own drop detected, ignoring...')
-        log.debug(event.dataTransfer?.files)
-        return
-      }
-
-      const parsed = await processDrop(event)
+      const parsed = await processDrop(drag.event!)
       log.debug('Parsed', parsed)
 
       const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
       log.debug('Resources', newResources)
 
+      await oasis.addResourcesToSpace(
+        spaceId,
+        newResources.map((r) => r.id),
+        SpaceEntryOrigin.ManuallyAdded
+      )
+
       for (const r of newResources) {
-        resourceIds.push(r.id)
-        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
+        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
       }
-    } else {
-      try {
-        const existingResources: string[] = []
 
-        const dragData = drag.data as { 'surf/tab': Tab; 'oasis/resource': Resource }
-        if (dragData['surf/tab'] !== undefined) {
-          if (dragData['horizon/resource/id'] !== undefined) {
-            const resourceId = dragData['horizon/resource/id']
-            resourceIds.push(resourceId)
-            existingResources.push(resourceId)
-          } else if (dragData['surf/tab'].type === 'page') {
-            const tab = dragData['surf/tab'] as TabPage
+      // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
+      //await oasis.loadSpaceContents(spaceId)
+    } else if (
+      drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+      drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+    ) {
+      let resource: Resource | null = null
+      if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+        resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+      } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+        const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+        resource = await resourceFetcher()
+      }
 
-            if (tab.resourceBookmark) {
-              log.debug('Detected resource from dragged tab', tab.resourceBookmark)
-              resourceIds.push(tab.resourceBookmark)
-              existingResources.push(tab.resourceBookmark)
-            } else {
-              log.debug('Detected page from dragged tab', tab)
-              const newResources = await createResourcesFromMediaItems(
-                resourceManager,
-                [
-                  {
-                    type: 'url',
-                    data: new URL(tab.currentLocation || tab.initialLocation),
-                    metadata: {}
-                  }
-                ],
-                ''
-              )
-              log.debug('Resources', newResources)
-              for (const r of newResources) {
-                resourceIds.push(r.id)
-                telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
-              }
-            }
-          }
-        } else if (dragData['oasis/resource'] !== undefined) {
-          const resource = dragData['oasis/resource']
-          resourceIds.push(resource.id)
-        }
-
-        if (existingResources.length > 0) {
-          await Promise.all(
-            existingResources.map(async (resourceId) => {
-              const resource = await resourceManager.getResource(resourceId)
-              if (!resource) {
-                log.error('Resource not found')
-                return
-              }
-
-              log.debug('Detected resource from dragged tab', resource)
-
-              const isSilent =
-                resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value ===
-                'true'
-              const hideInEverything =
-                resource.tags?.find(
-                  (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-                )?.value === 'true'
-
-              if (hideInEverything) {
-                // remove hide in everything tag if it exists since the user is explicitly adding it
-                log.debug('Removing hide in everything tag from resource', resourceId)
-                await resourceManager.deleteResourceTag(
-                  resourceId,
-                  ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-                )
-              }
-
-              if (isSilent) {
-                // remove silent tag if it exists since the user is explicitly adding it
-                log.debug('Removing silent tag from resource', resourceId)
-                await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
-                telemetry.trackSaveToOasis(
-                  resource.type,
-                  SaveToOasisEventTrigger.Drop,
-                  spaceId !== 'all'
-                )
-              }
-            })
-          )
-        }
-      } catch (e) {
-        toast.error('Failed to add resources to space!')
-        log.debug(e)
-        if (drag?.abort) drag.abort()
+      if (resource === null) {
+        log.warn('Dropped resource but resource is null! Aborting drop!')
+        drag.abort()
         return
       }
+
+      const isSilent =
+        resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value === 'true'
+      const hideInEverything =
+        resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
+          ?.value === 'true'
+
+      if (hideInEverything) {
+        // remove hide in everything tag if it exists since the user is explicitly adding it
+        log.debug('Removing hide in everything tag from resource', resource.id)
+        await resourceManager.deleteResourceTag(
+          resource.id,
+          ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+        )
+      }
+
+      if (isSilent) {
+        // remove silent tag if it exists since the user is explicitly adding it
+        log.debug('Removing silent tag from resource', resource.id)
+        await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+        telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
+      }
+
+      await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+
+      // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
+      //await loadSpaceContents(spaceId)
     }
 
     drag.continue()
-    log.warn('ADDING resources to spaceid', spaceId, resourceIds)
-    if (spaceId !== 'all') {
-      await oasis.addResourcesToSpace(spaceId, resourceIds, SpaceEntryOrigin.ManuallyAdded)
-      //await loadSpaceContents(spaceId)
-    } else {
-      //await loadEverything()
-    }
-
-    toast.success(
+    toast.success(`Resources copied!`)
+    /*toast.success(
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
-    )
+    )*/
   }
 
   const handleScreenshot = async (
@@ -3584,9 +3522,21 @@
               class="flex items-center h-fit px-2 py-1"
               axis="horizontal"
               dragdeadzone="5"
-              use:HTMLAxisDragZone.action={{}}
+              use:HTMLAxisDragZone.action={{
+                accepts: (drag) => {
+                  if (
+                    drag.isNative ||
+                    drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                    drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                    drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+                    drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
+                  ) {
+                    return true
+                  }
+                  return false
+                }
+              }}
               on:Drop={handleDropSidebar}
-              on:DragEnter={handleDragEnterSidebar}
             >
               {#if $pinnedTabs.length === 0}
                 <div class="">Drop Tabs here to pin them.</div>
@@ -3627,7 +3577,7 @@
 
           {#if ($selectedTabs.size > 1 && $magicTabs.length === 0) || $anyTabHovered || $magicTabs.length > 0}
             <div
-              class="tooltip fixed top-[6.75rem] right-1 transform translate-x-0 bg-white/90 text-sky-600 rounded px-1 my-1 mx-2 border border-gray-100 overflow-visible z-50 w-fit rotate-1 transition-transform duration-300 cursor-default hover:bg-sky-100"
+              class="chat-hint-tooltop tooltip fixed top-[6.75rem] right-1 transform translate-x-0 bg-white/90 text-sky-600 rounded px-1 my-1 mx-2 border border-gray-100 overflow-visible z-50 w-fit rotate-1 transition-transform duration-300 cursor-default hover:bg-sky-100"
               in:fly={{ y: 3, duration: 120 }}
               out:fly={{ y: 3, duration: 120 }}
               on:click={() => {
@@ -3734,13 +3684,25 @@
               {#if horizontalTabs}
                 <div
                   id="sidebar-unpinned-tabs"
-                  class="horizontal-tabs space-x-1 h-full divide-x-1 divide-sky-300/70"
+                  class="horizontal-tabs space-x-1 h-full divide-x-1"
                   axis="horizontal"
                   dragdeadzone="5"
                   placeholder-size="60"
-                  use:HTMLAxisDragZone.action={{}}
+                  use:HTMLAxisDragZone.action={{
+                    accepts: (drag) => {
+                      if (
+                        drag.isNative ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
+                      ) {
+                        return true
+                      }
+                      return false
+                    }
+                  }}
                   on:Drop={handleDropSidebar}
-                  on:DragEnter={handleDragEnterSidebar}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id + index)}
                     <!-- check if this tab is active -->
@@ -3830,9 +3792,21 @@
                   class="vertical-tabs"
                   axis="vertical"
                   dragdeadzone="5"
-                  use:HTMLAxisDragZone.action={{}}
+                  use:HTMLAxisDragZone.action={{
+                    accepts: (drag) => {
+                      if (
+                        drag.isNative ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
+                      ) {
+                        return true
+                      }
+                      return false
+                    }
+                  }}
                   on:Drop={handleDropSidebar}
-                  on:DragEnter={handleDragEnterSidebar}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id)}
                     <!-- check if this tab is active -->
@@ -4030,17 +4004,19 @@
                   id="oasis-zone"
                   class="oasis-drop-zone"
                   style="position: absolute; inset-inline: 10%; inset-block: 20%;"
-                  use:HTMLDragZone.action={{}}
-                  on:DragEnter={(drag) => {
-                    const dragData = drag.data
-                    if (
-                      drag.isNative ||
-                      (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space')
-                    ) {
-                      drag.continue() // Allow the drag
-                      return
+                  use:HTMLDragZone.action={{
+                    accepts: (drag) => {
+                      if (
+                        drag.isNative ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                      ) {
+                        return true
+                      }
+
+                      return false
                     }
-                    drag.abort()
                   }}
                   on:Drop={(drag) => handleDropOnSpaceTab(drag, 'all')}
                 ></div>
@@ -4370,7 +4346,36 @@
   /// DRAGCULA STATES NOTE: these should be @horizon/dragcula/dist/styles.css import, but this doesnt work currently!
   :global(::view-transition-group(*)) {
     animation-duration: 280ms;
-    animation-timing-function: cubic-bezier(0, 1, 0.41, 0.99);
+    animation-timing-function: ease; //cubic-bezier(0, 1, 0.41, 0.99);
+  }
+
+  :global([data-drag-preview]) {
+    pointer-events: none !important;
+    user-select: none !important;
+    width: var(--drag-width, auto);
+    height: var(--drag-height, auto);
+    transform-origin: center center;
+    transform: translate(-50%, -50%) translate(var(--drag-offsetX, 0px), var(--drag-offsetY, 0px))
+      scale(var(--drag-scale, 1)) scale(var(--drag-scaleX, 1), var(--drag-scaleY, 1))
+      rotate(var(--drag-tilt, 0)) scale(var(--scale, 1)) !important;
+    transition:
+      transform 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      opacity 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      border 135ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      box-shadow 165ms cubic-bezier(0, 1.22, 0.73, 1.13) !important;
+    opacity: 85%;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+    /*scale: var(--scaleX, 1) var(--scaleY, 1);*/
+  }
+  :global(body[data-dragging]:has([data-drag-target^='webview'])) {
+    // NOTE: Only kinda works sometimes, still ahve to debug how/if we can reliably
+    // have custom cursors during native dndn.
+    //cursor: wait !important;
+  }
+
+  /* Necessary so that image & pdf view dont prevent dragging */
+  :global(body[data-dragging] webview:not([data-drag-zone])) {
+    pointer-events: none !important;
   }
 
   :global(.dragcula-drop-indicator) {
@@ -4378,6 +4383,9 @@
     --dotColor: white;
     --inset: 2%;
     background: var(--color);
+    transition:
+      top 100ms cubic-bezier(0.2, 0, 0, 1),
+      left 100ms cubic-bezier(0.2, 0, 0, 1);
   }
   :global(.dragcula-drop-indicator.dragcula-axis-vertical) {
     left: var(--inset);
@@ -4443,7 +4451,7 @@
 
   // Disables pointer events on all body elements if a drag operation is active
   // except, other drag zones.
-  :global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
+  /*:global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
     pointer-events: none;
   }
 
@@ -4485,7 +4493,7 @@
         )[data-dragcula-drag-effect='copy']
     ) {
     cursor: copy;
-  }
+  }*/
 
   /*:global(body[data-dragcula-dragging='true']) {
     cursor: grabbing;
@@ -4497,15 +4505,15 @@
   :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone]) {
     pointer-events: all;
   }*/
-  :global([data-dragcula-zone][axis='vertical']) {
+  :global([data-drag-zone][axis='vertical']) {
     // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
     padding-top: 1px;
     margin-top: -1px;
   }
-  :global([data-dragcula-zone='sidebar-pinned-tabs']) {
+  :global([data-drag-zone='sidebar-pinned-tabs']) {
     min-height: 24px;
   }
-  :global(.magic-tabs-wrapper [data-dragcula-zone]) {
+  :global(.magic-tabs-wrapper [data-drag-zone]) {
     min-height: 4rem !important;
     height: fit-content !important;
   }
@@ -4513,6 +4521,10 @@
     overflow: visible !important;
     background: transparent !important;
   }*/
+
+  :global(body[data-dragging='true'] .chat-hint-tooltop) {
+    opacity: 0;
+  }
 
   :global(*) {
     scrollbar-color: rgb(130, 130, 130) transparent;
@@ -4939,24 +4951,21 @@
       opacity: 0.4;
     }
   }
-  :global([data-dragcula-zone='sidebar-pinned-tabs']) {
+  :global([data-drag-zone='sidebar-pinned-tabs']) {
     height: fit-content !important;
     display: flex;
     justify-content: center;
     align-items: center;
   }
-  :global([data-dragcula-zone='sidebar-unpinned-tabs'].vertical-tabs) {
+  :global([data-drag-zone='sidebar-unpinned-tabs'].vertical-tabs) {
     min-height: 100%;
     height: auto;
   }
-  :global([data-dragcula-zone='sidebar-unpinned-tabs'].horizontal-tabs) {
+  :global([data-drag-zone='sidebar-unpinned-tabs'].horizontal-tabs) {
     min-width: 100%;
     width: auto;
     display: flex;
     flex-direction: row;
-  }
-  :global(.tab[data-dragcula-dragging]) {
-    background: white;
   }
 
   .divider {
@@ -5117,7 +5126,7 @@
     flex-direction: row;
   }
 
-  :global(.magic-tabs-wrapper [data-dragcula-zone]) {
+  :global(.magic-tabs-wrapper [data-drag-zone]) {
     min-height: 4rem !important;
     height: fit-content !important;
   }

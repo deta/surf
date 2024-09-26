@@ -38,6 +38,7 @@
   import type { WebviewError } from '../../constants/webviewErrors'
   import { blur } from 'svelte/transition'
   import { useTabsManager } from '../../service/tabs'
+  import { Dragcula } from '@horizon/dragcula'
 
   export let id: string | undefined
   export let src: string
@@ -46,6 +47,7 @@
   export let url: Writable<string> | undefined = undefined
   export let historyStackIds = writable<string[]>([])
   export let currentHistoryIndex = writable(-1)
+  export let acceptsDrags: boolean = false
 
   export const canGoBack = derived(
     currentHistoryIndex,
@@ -124,6 +126,11 @@
       handleWebviewKeydown(data as WebViewSendEvents[WebViewEventSendNames.KeyDown])
     } else if (type === WebViewEventSendNames.Wheel) {
       handleWebviewWheel(data as WebViewSendEvents[WebViewEventSendNames.Wheel])
+    } else if (type === WebViewEventSendNames.DragOver) {
+      const drag = Dragcula.get().activeDrag
+      if (drag) {
+        drag.item?.onDrag(drag, data)
+      }
     }
 
     dispatch('webview-page-event', { type, data })
@@ -411,6 +418,7 @@
     {error}
     {url}
     {webviewReady}
+    {acceptsDrags}
     {...$$restProps}
     bind:webview
     bind:this={webviewComponent}

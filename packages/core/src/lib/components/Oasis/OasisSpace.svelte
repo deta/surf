@@ -39,9 +39,11 @@
   } from '../../service/resources'
   import OasisResourcesView from './OasisResourcesView.svelte'
   import {
+    DragTypeNames,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     SpaceEntryOrigin,
+    type DragTypes,
     type ResourceDataLink,
     type ResourceDataPost,
     type Space,
@@ -1069,17 +1071,70 @@
     }
   }
 
-  const handleDrop = async (drag: DragculaDragEvent) => {
-    const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+  const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
+    //const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+    const toast = toasts.loading(`Copying to space...`)
 
-    if (
+    log.debug('dropping onto DropWrapper', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
+
+    if (drag.isNative) {
+      const parsed = await processDrop(drag.event!)
+      log.debug('Parsed', parsed)
+
+      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+      log.debug('Resources', newResources)
+
+      await oasis.addResourcesToSpace(
+        spaceId,
+        newResources.map((r) => r.id),
+        SpaceEntryOrigin.ManuallyAdded
+      )
+
+      for (const r of newResources) {
+        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
+      }
+
+      await loadSpaceContents(spaceId)
+    } else if (
+      drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+      drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+    ) {
+      let resource: Resource | null = null
+      if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+        resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+      } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+        const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+        resource = await resourceFetcher()
+      }
+
+      if (resource === null) {
+        log.warn('Dropped resource but resource is null! Aborting drop!')
+        drag.abort()
+        return
+      }
+
+      await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+
+      await loadSpaceContents(spaceId)
+    }
+    /* TODO: See if this is relevant.. is there a case whwere a tab would be prefeered instead of just handling the rosurce directory?
+
+    else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
+      const droppedTab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
+      
+    }*/
+
+    drag.continue()
+    toast.success(`Resources copied'!`)
+    return
+    /*if (
       ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
         drag.from?.id || ''
       ) &&
       !drag.metaKey
     ) {
       drag.item!.dragEffect = 'copy' // Make sure tabs are always copy from sidebar
-    }
+    }*/
 
     let resourceIds: string[] = []
     try {
@@ -1195,24 +1250,6 @@
     toast.success(
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
     )
-  }
-
-  const handleDragEnter = (drag: DragculaDragEvent) => {
-    if (drag.isNative) {
-      drag.continue()
-      return
-    }
-    if (drag.data['surf/tab'] !== undefined) {
-      const dragData = drag.data as { 'surf/tab': Tab }
-      if ((active && drag.isNative) || (active && dragData['surf/tab'].type !== 'space')) {
-        drag.continue()
-        return
-      }
-    } else if (drag.data['oasis/resource'] !== undefined) {
-      drag.continue()
-      return
-    }
-    drag.abort()
   }
 
   const handleCreateResource = async (e: CustomEvent<string>) => {
@@ -1474,7 +1511,17 @@
 <DropWrapper
   {spaceId}
   on:Drop={(e) => handleDrop(e.detail)}
-  on:DragEnter={(e) => handleDragEnter(e.detail)}
+  acceptsDrag={(drag) => {
+    if (
+      drag.isNative ||
+      drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+      drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+      drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+    ) {
+      return true
+    }
+    return false
+  }}
   zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
   <div class="relative wrapper bg-sky-100/50">

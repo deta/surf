@@ -12,6 +12,7 @@ import {
 import {
   AnnotationCommentRange,
   AnnotationRangeData,
+  ResourceTypes,
   WebViewEventReceiveNames,
   WebViewEventSendNames,
   WebViewReceiveEvents,
@@ -24,6 +25,13 @@ import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
 // import CommentIndicator from './components/CommentIndicator.svelte'
 import { useDebounce } from '@horizon/utils'
+import {
+  ResourceArticle,
+  ResourceDocument,
+  ResourceLink,
+  ResourcePost,
+  type Resource
+} from '@horizon/core/src/lib/service/resources'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 
@@ -503,137 +511,8 @@ function handleScrollToAnnotation(
   }
 }
 
-/**
- * We need this shitty serialization boilerplate, as we cannot ipc send DataTransfer directly..
- * Would love to do but we need to break it down to string / ArrayBuffer primitives and re-assemble
- * it in here.
- */
-function deSerializeDragData(data: {
-  strings: { type: string; value: string | undefined }[]
-  files: { name: string; type: string; buffer: ArrayBuffer | undefined }[]
-}): DataTransfer {
-  const dataTransfer = new DataTransfer()
-  dataTransfer.dropEffect = 'move'
-  dataTransfer.effectAllowed = 'all'
-
-  for (const str of data.strings) {
-    dataTransfer.setData(str.type, str.value ?? '')
-  }
-
-  for (const f of data.files) {
-    if (!f.buffer) {
-      f.buffer = new ArrayBuffer(1)
-    }
-
-    const file = new File([f.buffer], f.name, { type: f.type })
-    dataTransfer.items.add(file)
-  }
-
-  return dataTransfer
-}
-
-function handleSimulateDragStart(
-  data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragStart]
-) {
-  console.debug('Simulating drag start', data)
-  window.dragcula = {
-    target: null,
-    dataTransfer: deSerializeDragData(data.data)
-  }
-}
-function handleSimulateDragUpdate(
-  data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragUpdate]
-) {
-  const target = document.elementFromPoint(data.clientX, data.clientY)
-  if (!target) return
-
-  const dataTransfer = window.dragcula.dataTransfer
-
-  if (
-    window.dragcula.target !== target &&
-    !target.classList.contains('p-message_pane_drag_overlay')
-  ) {
-    console.log('New dragover target', target, window.dragcula.target)
-    if (window.dragcula.target !== null) {
-      const evt = new DragEvent('dragleave', {
-        relatedTarget: target !== null ? target : undefined,
-
-        clientX: data.clientX,
-        clientY: data.clientY,
-        screenX: data.screenX,
-        screenY: data.screenY,
-        pageX: data.pageX,
-        pageY: data.pageY,
-
-        dataTransfer,
-        bubbles: true
-      })
-      window.dragcula.target.dispatchEvent(evt)
-    }
-    if (target !== null) {
-      const evt = new DragEvent('dragenter', {
-        relatedTarget: window.dragcula.target !== null ? window.dragcula.target : undefined,
-        clientX: data.clientX,
-        clientY: data.clientY,
-        screenX: data.screenX,
-        screenY: data.screenY,
-        pageX: data.pageX,
-        pageY: data.pageY,
-
-        dataTransfer,
-        bubbles: true,
-        cancelable: true
-      })
-      target.dispatchEvent(evt)
-    }
-  }
-  if (target !== null) {
-    const evt = new DragEvent('dragover', {
-      clientX: data.clientX,
-      clientY: data.clientY,
-      screenX: data.screenX,
-      screenY: data.screenY,
-      pageX: data.pageX,
-      pageY: data.pageY,
-
-      dataTransfer,
-      bubbles: true,
-      cancelable: true
-    })
-
-    target.dispatchEvent(evt)
-    if (target.focus) target.focus()
-  }
-  window.dragcula.target = target
-}
-function handleSimulateDragEnd(
-  data: WebViewReceiveEvents[WebViewEventReceiveNames.SimulateDragEnd]
-) {
-  console.debug('Ending Drag', data, data.data)
-  if (data.action === 'drop') {
-    const target = document.elementFromPoint(data.clientX, data.clientY)
-    if (!target) return
-
-    const dataTransfer = window.dragcula.dataTransfer
-    const evt = new DragEvent('drop', {
-      clientX: data.clientX,
-      clientY: data.clientY,
-      screenX: data.screenX,
-      screenY: data.screenY,
-      pageX: data.pageX,
-      pageY: data.pageY,
-
-      dataTransfer,
-      bubbles: true
-    })
-
-    target.dispatchEvent(evt)
-    if (target.focus) target.focus()
-  }
-  window.dragcula = undefined
-}
-
 window.addEventListener('DOMContentLoaded', async (_) => {
+  // document.body.addEventListener('dragover', (e: DragEvent) => e.preventDefault())
   window.addEventListener('mouseup', (e: MouseEvent) => {
     const target = e.target as HTMLElement
     console.debug('mouseup', target, target.id)
@@ -699,7 +578,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
         }
       })
 
-      selectionMenu.$on('copy', (e) => {
+      selectionMenu.$on('copy', (_) => {
         sendPageEvent(WebViewEventSendNames.Copy)
       })
 
@@ -904,7 +783,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
       if (type === 'comment') {
         // TODO: will crash the app
-        renderComment()
+        // renderComment()
       }
 
       sendPageEvent(WebViewEventSendNames.AnnotationClick, { id, type })
@@ -986,6 +865,7 @@ window.addEventListener(
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     // TODO: Fix missing types
     sendPageEvent(WebViewEventSendNames.MouseMove, {
+      ...event,
       clientX: event.clientX,
       clientY: event.clientY,
       pageX: event.pageX,
@@ -1007,6 +887,7 @@ window.addEventListener(
     // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
     // TODO: Fix missing types
     sendPageEvent(WebViewEventSendNames.MouseUp, {
+      ...event,
       clientX: event.clientX,
       clientY: event.clientY,
       screenX: event.screenX,
@@ -1020,6 +901,237 @@ window.addEventListener(
   { passive: true, capture: true }
 )
 
+const createDragEventCopy = (e: DragEvent) => ({
+  ...e, // this exists to make TypeScript happy
+  clientX: e.clientX,
+  clientY: e.clientY,
+  pageX: e.pageX,
+  pageY: e.pageY,
+  screenX: e.screenX,
+  screenY: e.screenY,
+  altKey: e.altKey,
+  ctrlKey: e.ctrlKey,
+  metaKey: e.metaKey,
+  shiftKey: e.shiftKey
+})
+
+interface DragMetadata {
+  token: string
+  resource: Resource
+}
+
+let dragDepth = 0
+let isDropping = false
+let _dragMetadatas: { [resourceId: string]: DragMetadata } = {}
+
+ipcRenderer.on('set-drag-metadata', (_, data: string) => {
+  try {
+    const metadata = JSON.parse(data) as DragMetadata
+    _dragMetadatas[metadata.resource.id] = metadata
+  } catch (error) {
+    console.error('error parsing drag metadata:', error)
+  }
+})
+
+const getDragMetadata = async (resourceId: string): Promise<DragMetadata | null> => {
+  for (let i = 0; i < 5; i++) {
+    if (resourceId in _dragMetadatas) {
+      const metadata = _dragMetadatas[resourceId]
+      delete _dragMetadatas[resourceId]
+      return metadata
+    }
+    if (i < 4) await new Promise((resolve) => setTimeout(resolve, 5))
+  }
+  return null
+}
+
+window.addEventListener(
+  'dragover',
+  (e: DragEvent) => {
+    e.preventDefault()
+    sendPageEvent(WebViewEventSendNames.DragOver, createDragEventCopy(e))
+  },
+  { capture: true }
+)
+window.addEventListener(
+  'drag',
+  (event: DragEvent) => {
+    sendPageEvent(WebViewEventSendNames.Drag, createDragEventCopy(event))
+  },
+  { capture: true }
+)
+
+window.addEventListener(
+  'dragenter',
+  (e: DragEvent) => {
+    dragDepth++
+    if (dragDepth > 1) return
+    sendPageEvent(WebViewEventSendNames.DragEnter, createDragEventCopy(e))
+  },
+  { passive: true, capture: true }
+)
+
+window.addEventListener(
+  'dragleave',
+  (e: DragEvent) => {
+    dragDepth--
+    if (dragDepth > 0) return
+    dragDepth = 0
+    sendPageEvent(WebViewEventSendNames.DragLeave, createDragEventCopy(e))
+  },
+  { passive: true, capture: true }
+)
+
+window.addEventListener('drop', handleDrop, { capture: true })
+
+async function handleDrop(e: DragEvent) {
+  if (isDropping) return
+  isDropping = true
+
+  try {
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    e.dataTransfer!.effectAllowed = 'all'
+    e.dataTransfer!.dropEffect = 'move'
+
+    sendPageEvent(WebViewEventSendNames.Drop, {
+      ...createDragEventCopy(e),
+      dataTransfer: e.dataTransfer
+    })
+
+    const resourceId = e.dataTransfer?.getData('application/vnd.space.dragcula.resourceId')
+    if (resourceId) {
+      const metadata = await getDragMetadata(resourceId)
+      if (!metadata) return
+
+      const { token, resource } = metadata
+      const newDataTransfer = await createNewDataTransfer(token, resource)
+
+      for (const item of (newDataTransfer ?? e.dataTransfer)?.items ?? []) {
+        if (item.kind === 'file') {
+          const f = item.getAsFile()!
+          console.log(`[drop] new DT file of type ${item.type}`, f.name, f.type, f.path)
+          //console.log('contents', await item.getAsFile()?.text())
+        } else {
+          item.getAsString((data) => {
+            console.log(`[drop] new DT string:`, data)
+          })
+        }
+      }
+
+      e.target!.dispatchEvent(
+        new DragEvent('drop', {
+          dataTransfer: newDataTransfer ?? e.dataTransfer,
+          bubbles: true,
+          cancelable: true,
+          clientX: e.clientX,
+          clientY: e.clientY,
+          screenX: e.screenX,
+          screenY: e.screenY,
+          pageX: e.pageX,
+          pageY: e.pageY
+        })
+      )
+    } else {
+      e.target!.dispatchEvent(
+        new DragEvent('drop', {
+          dataTransfer: e.dataTransfer,
+          bubbles: true,
+          cancelable: true,
+          clientX: e.clientX,
+          clientY: e.clientY,
+          screenX: e.screenX,
+          screenY: e.screenY,
+          pageX: e.pageX,
+          pageY: e.pageY
+        })
+      )
+    }
+  } catch (error) {
+    console.error('error handling drop:', error)
+  } finally {
+    isDropping = false
+    dragDepth = 0
+  }
+}
+
+async function createNewDataTransfer(
+  token: string,
+  resource: Resource
+): Promise<DataTransfer | null> {
+  console.time('[drop] fetching data')
+  try {
+    const buffer = await ipcRenderer.invoke('webview-read-resource-data', {
+      token,
+      resourceId: resource.id
+    })
+    console.timeEnd('[drop] fetching data')
+
+    if (!buffer) return null
+    const file = new File([buffer], resource.metadata?.name || 'file', {
+      type: resource.type || 'application/octet-stream'
+    })
+    console.log('[drop] created file: ', file.name, file.type, file)
+
+    const newDataTransfer = new DataTransfer()
+
+    if (
+      resource.type === ResourceTypes.ARTICLE ||
+      resource.type === ResourceTypes.LINK ||
+      resource.type.startsWith(ResourceTypes.POST) ||
+      resource.type.startsWith(ResourceTypes.DOCUMENT)
+    ) {
+      newDataTransfer.setData('text/uri-list', (resource as ResourceArticle).metadata?.sourceURI)
+    } else {
+      newDataTransfer.items.add(file)
+    }
+    // TODO: (dnd): Continue transforms for specific types
+    /*else if (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+      (resource as ResourceDocument).
+    }*/
+
+    return newDataTransfer
+  } catch (error) {
+    console.error('error fetching file:', error)
+    return null
+  }
+}
+
+const handleDragEnterLeave = (eventType: 'dragenter' | 'dragleave') => {
+  let isHandling = false
+  return (e: DragEvent) => {
+    if (isHandling) return
+    isHandling = true
+    e.preventDefault()
+    e.stopImmediatePropagation()
+
+    // TODO: (dnd): Rn we always attach a file so that the handler work correctly, this is weird tho if the drag itself has no data attached.
+    const dummyFile = new File([new ArrayBuffer(1)], 'dummy', { type: 'application/octet-stream' })
+    const newDataTransfer = new DataTransfer()
+    newDataTransfer.items.add(dummyFile)
+
+    e.target?.dispatchEvent(
+      new DragEvent(eventType, {
+        ...e,
+        dataTransfer: newDataTransfer,
+        relatedTarget: e.relatedTarget,
+        bubbles: true,
+        cancelable: true,
+        clientX: e.clientX,
+        clientY: e.clientY,
+        screenX: e.screenX,
+        screenY: e.screenY,
+        pageX: e.pageX,
+        pageY: e.pageY
+      })
+    )
+    isHandling = false
+  }
+}
+
+window.addEventListener('dragenter', handleDragEnterLeave('dragenter'), { capture: true })
+window.addEventListener('dragleave', handleDragEnterLeave('dragleave'), { capture: true })
+
 window.addEventListener('focus', (_event: FocusEvent) => {
   sendPageEvent(WebViewEventSendNames.Focus)
 })
@@ -1029,7 +1141,7 @@ function sendPageEvent<T extends keyof WebViewSendEvents>(
   data?: WebViewSendEvents[T]
 ): void {
   // Ignore mouse related passthrough to avoid spam
-  if (![WebViewEventSendNames.MouseMove].includes(name))
+  if (![WebViewEventSendNames.MouseMove, WebViewEventSendNames.DragOver].includes(name))
     console.debug('Sending page event', name, data)
   ipcRenderer.sendToHost('webview-page-event', name, data)
 }
@@ -1057,13 +1169,13 @@ ipcRenderer.on('webview-event', (_event, payload) => {
     handleHighlightText(data)
   } else if (type == WebViewEventReceiveNames.SeekToTimestamp) {
     handleSeekToTimestamp(data)
-  } else if (type === WebViewEventReceiveNames.SimulateDragStart) {
+  } /*else if (type === WebViewEventReceiveNames.SimulateDragStart) {
     handleSimulateDragStart(data)
   } else if (type === WebViewEventReceiveNames.SimulateDragUpdate) {
     handleSimulateDragUpdate(data)
   } else if (type === WebViewEventReceiveNames.SimulateDragEnd) {
     handleSimulateDragEnd(data)
-  }
+  }*/
 })
 
 // @ts-expect-error
@@ -1080,7 +1192,7 @@ window.addEventListener('submit', (e: Event) => {
     if (protocol === 'http:' && window.location.protocol === 'https:') {
       if (
         !confirm(
-          "Warning: You are submitting a form via an insecure connection which could reveal the data you are sending to others. Are you sure you want to continue?"
+          'Warning: You are submitting a form via an insecure connection which could reveal the data you are sending to others. Are you sure you want to continue?'
         )
       ) {
         e.stopPropagation()

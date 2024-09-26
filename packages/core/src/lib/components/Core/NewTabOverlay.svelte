@@ -39,7 +39,7 @@
   } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import {
     Resource,
     ResourceJSON,
@@ -47,8 +47,11 @@
     type ResourceSearchResultItem
   } from '../../service/resources'
   import {
+    DragTypeNames,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
+    SpaceEntryOrigin,
+    type DragTypes,
     type HistoryEntry,
     type Space
   } from '../../types'
@@ -62,7 +65,7 @@
 
   import { useToasts } from '../../service/toast'
   import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
-  import { DragculaDragEvent } from '@horizon/dragcula'
+  import { DragOperation, Dragcula, DragculaDragEvent } from '@horizon/dragcula'
   import type { Tab, TabPage, TabSpace } from '../../types/browser.types'
 
   import * as Command from '../Command'
@@ -764,121 +767,51 @@
     selectedItem.set(e.detail)
   }
 
-  const handleDrop = async (drag: DragculaDragEvent) => {
-    const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+  const handleDropOnSpace = async (spaceId: string, drag: DragculaDragEvent<DragTypes>) => {
+    //const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
+    const toast = toasts.loading(`Adding to space...`)
 
-    if (
-      ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
-        drag.from?.id || ''
-      ) &&
-      !drag.metaKey
-    ) {
-      drag.item!.dragEffect = 'copy' // Make sure tabs are always copy from sidebar
-    }
-
-    let resourceIds: string[] = []
     try {
       if (drag.isNative) {
-        const event = new DragEvent('drop', { dataTransfer: drag.data })
-        log.debug('Dropped native', event)
-
-        const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
-        if (isOwnDrop) {
-          log.debug('Own drop detected, ignoring...')
-          log.debug(event.dataTransfer?.files)
-          return
-        }
-
-        const parsed = await processDrop(event)
+        const parsed = await processDrop(drag.event!)
         log.debug('Parsed', parsed)
 
         const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
         log.debug('Resources', newResources)
 
+        await oasis.addResourcesToSpace(
+          spaceId,
+          newResources.map((r) => r.id),
+          SpaceEntryOrigin.ManuallyAdded
+        )
+
         for (const r of newResources) {
-          resourceIds.push(r.id)
           telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
         }
-      } else {
-        log.debug('Dropped dragcula', drag.data)
-
-        const existingResources: string[] = []
-
-        const dragData = drag.data as { 'surf/tab': Tab; 'horizon/resource/id': string }
-        if (dragData['surf/tab'] !== undefined) {
-          if (dragData['horizon/resource/id'] !== undefined) {
-            const resourceId = dragData['horizon/resource/id']
-            resourceIds.push(resourceId)
-            existingResources.push(resourceId)
-          } else if (dragData['surf/tab'].type === 'page') {
-            const tab = dragData['surf/tab'] as TabPage
-
-            if (tab.resourceBookmark) {
-              log.debug('Detected resource from dragged tab', tab.resourceBookmark)
-              resourceIds.push(tab.resourceBookmark)
-              existingResources.push(tab.resourceBookmark)
-            } else {
-              log.debug('Detected page from dragged tab', tab)
-              const newResources = await createResourcesFromMediaItems(
-                resourceManager,
-                [
-                  {
-                    type: 'url',
-                    data: new URL(tab.currentLocation || tab.initialLocation),
-                    metadata: {}
-                  }
-                ],
-                ''
-              )
-              log.debug('Resources', newResources)
-
-              for (const r of newResources) {
-                resourceIds.push(r.id)
-                telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
-              }
-            }
-          }
+      } else if (
+        drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        let resource: Resource | null = null
+        if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+          resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+        } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+          const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+          resource = await resourceFetcher()
         }
 
-        if (existingResources.length > 0) {
-          await Promise.all(
-            existingResources.map(async (resourceId) => {
-              const resource = await resourceManager.getResource(resourceId)
-              if (!resource) {
-                log.error('Resource not found')
-                return
-              }
-
-              log.debug('Detected resource from dragged tab', resource)
-
-              const isSilent =
-                resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT) !==
-                undefined
-              if (isSilent) {
-                // remove silent tag if it exists sicne the user is explicitly adding it
-                log.debug('Removing silent tag from resource', resourceId)
-                await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
-                telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, false)
-              }
-            })
-          )
+        if (resource === null) {
+          log.warn('Dropped resource but resource is null! Aborting drop!')
+          drag.abort()
+          return
         }
-      }
-      /*
-      if (spaceId !== 'all') {
-        await oasis.addResourcesToSpace(spaceId, resourceIds)
 
-        resourceIds.forEach((id) => {
-          resourceManager.getResource(id).then((resource) => {
-            if (resource) {
-              telemetry.trackAddResourceToSpace(resource.type, AddResourceToSpaceEventTrigger.Drop)
-            }
-          })
-        })
-      } else {
-        await loadEverything()
+        await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+
+        // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
+        //await loadSpaceContents(spaceId)
       }
-      */
+
       await loadEverything()
     } catch (error) {
       log.error('Error dropping:', error)
@@ -888,38 +821,7 @@
     }
     drag.continue()
 
-    toast.success(
-      `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
-    )
-  }
-
-  const handleDragEnter = (drag: DragculaDragEvent) => {
-    /*if (drag.data['surf/tab'] !== undefined) {
-      const dragData = drag.data as { 'surf/tab': Tab }
-      if ((active && drag.isNative) || (active && dragData['surf/tab'].type !== 'space')) {
-        drag.continue()
-        return
-      }
-    } else if (drag.data['oasis/resource'] !== undefined) {
-      drag.continue()
-      return
-    }
-    drag.abort()*/
-    if (drag.isNative) {
-      drag.continue()
-      return
-    }
-    if (drag.data['surf/tab'] !== undefined) {
-      const dragData = drag.data as { 'surf/tab': Tab }
-      if (drag.isNative || dragData['surf/tab'].type !== 'space') {
-        drag.continue()
-        return
-      }
-    } else if (drag.data['oasis/resource'] !== undefined) {
-      drag.continue()
-      return
-    }
-    drag.abort()
+    toast.success(`Resources added!`)
   }
 
   const openResourceDetailsModal = (resourceId: string) => {
@@ -1093,16 +995,51 @@
       }
     })
   }
-</script>
 
-<svelte:window
-  on:DragStart={(drag) => {
-    showTabSearch = 2
-  }}
-  on:DragEnd={(drag) => {
+  let dragculaDragStartOpenTimeout: Timer | null = null // Used to delay opening stuff a bit, so that it doesnt laaagggg
+  const handleDragculaDragStart = () => {
+    dragculaDragStartOpenTimeout = setTimeout(() => {
+      showTabSearch = 2
+    }, 150)
+  }
+  const handleDragculaDragEnd = (drag: DragOperation) => {
+    // TODO: Only close when dropped outside
+    if (dragculaDragStartOpenTimeout !== null) clearTimeout(dragculaDragStartOpenTimeout)
+
+    for (const toId of ['drawer', 'folder-']) {
+      if (drag.to?.id.startsWith(toId)) {
+        for (const fromId of ['drawer', 'folder-']) {
+          if (drag.from?.id.startsWith(fromId)) {
+            return
+          }
+        }
+      }
+    }
+
     showTabSearch = 0
-  }}
-/>
+  }
+
+  onDestroy(
+    Dragcula.get().targetDomElement.subscribe((el: HTMLElement) => {
+      // We need to manually query as bits-ui/svelte-vaul shit doesnt expose element ref.. because ofc why would anyone neeeed that!!?
+      const drawerContentEl = document.querySelector('.drawer-content')
+      if (drawerContentEl?.contains(el)) {
+        drawerContentEl?.classList.add('hovering')
+      } else {
+        drawerContentEl?.classList.remove('hovering')
+      }
+    })
+  )
+
+  onMount(() => {
+    Dragcula.get().on('dragstart', handleDragculaDragStart)
+    Dragcula.get().on('dragend', handleDragculaDragEnd)
+  })
+  onDestroy(() => {
+    Dragcula.get().off('dragstart', handleDragculaDragStart)
+    Dragcula.get().off('dragend', handleDragculaDragEnd)
+  })
+</script>
 
 <Drawer.Root
   dismissible={!$CONTEXT_MENU_OPEN}
@@ -1119,6 +1056,7 @@
       class="drawer-overlay fixed inset-0 z-10 transition-opacity duration-300 no-drag"
     />
     <Drawer.Content
+      data-vaul-no-drag
       class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-xl transition duration-400 bg-[#FEFFFE] outline-none"
       style="width: fit-content;"
     >
@@ -1206,9 +1144,11 @@
             let:motion
           > -->
           <div
-            class={showTabSearch === 1
-              ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : 'h-[58px]'}`
-              : 'w-[90vw] h-[calc(100vh-120px)]'}
+            class={`${
+              showTabSearch === 1
+                ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : 'h-[58px]'}`
+                : 'w-[90vw] h-[calc(100vh-120px)]'
+            }`}
           >
             {#if showTabSearch === 1 && $searchValue.length}
               <Command.List class="m-2 no-scrollbar">
@@ -1311,9 +1251,19 @@
                     <DropWrapper
                       acceptDrop={true}
                       {spaceId}
-                      on:Drop={(e) => handleDrop(e.detail)}
-                      on:DragEnter={(e) => handleDragEnter(e.detail)}
-                      zonePrefix="drawerrr-"
+                      acceptsDrag={(drag) => {
+                        if (
+                          drag.isNative ||
+                          drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                          drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                          drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                        ) {
+                          return true
+                        }
+                        return false
+                      }}
+                      on:Drop={(e) => handleDropOnSpace(spaceId, e.detail)}
+                      zonePrefix="drawer-"
                     >
                       <div class="w-full h-full">
                         {#if $resourcesToShow.length > 0}
@@ -1450,23 +1400,28 @@
     z-index: 1000;
   }
 
-  /* Hides the Drawer when dragging but not targeting it */
-  :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='drawer-oasis-space-'])
-        .drawer-content
-    ) {
-    transform: translateY(calc(100vh - 240px)) !important;
+  /* FIXES double drop as webview still consumes drop if pointer is inside overlay. */
+  :global(body:has(.drawer-content.hovering) webview) {
+    pointer-events: none !important;
   }
 
   :global([data-dialog-portal] .drawer-overlay) {
     background: rgba(0, 0, 0, 0.35);
     opacity: 1;
   }
+  :global(body[data-dragging='true'] .drawer-overlay) {
+    pointer-events: none;
+  }
   :global(
-      body[data-dragcula-dragging='true']:not([data-dragcula-istargeting^='drawer-oasis-space-'])
+      body[data-dragging='true']:not(:has(.drawer-content.hovering))
         [data-dialog-portal]
         .drawer-overlay
     ) {
     opacity: 0 !important;
+  }
+
+  /* Hides the Drawer when dragging but not targeting it */
+  :global(body[data-dragging='true'] .drawer-content:not(.hovering)) {
+    transform: translateY(calc(100vh - 150px)) !important;
   }
 </style>

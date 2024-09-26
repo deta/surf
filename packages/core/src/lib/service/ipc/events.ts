@@ -83,6 +83,16 @@ export interface ScreenshotPage extends IPCEvent {
   output: string
 }
 
+export interface WebviewReadResourceData extends IPCEvent {
+  payload: { token: string; resourceId: string }
+  output: Uint8Array
+}
+
+export interface TokenCreate extends IPCEvent {
+  payload: any
+  output: string
+}
+
 const IPC_EVENTS = ipcService.registerEvents({
   // events that don't return a value
   updateTrafficLights: ipcService.addEvent<boolean>('update-traffic-lights'),
@@ -138,7 +148,11 @@ const IPC_EVENTS = ipcService.registerEvents({
   interceptRequestHeaders: ipcService.addEventWithReturn<InterceptRequestHeaders>(
     'intercept-request-headers'
   ),
-  screenshotPage: ipcService.addEventWithReturn<ScreenshotPage>('screenshot-page')
+  screenshotPage: ipcService.addEventWithReturn<ScreenshotPage>('screenshot-page'),
+  tokenCreate: ipcService.addEventWithReturn<TokenCreate>('token-create'),
+  webviewReadResourceData: ipcService.addEventWithReturn<WebviewReadResourceData>(
+    'webview-read-resource-data'
+  )
 })
 
 export const IPC_EVENTS_MAIN = IPC_EVENTS.main

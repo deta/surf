@@ -26,21 +26,23 @@
   import {
     ResourceTypes,
     WebViewEventSendNames,
+    WebviewAnnotationEventNames,
     type WebViewReceiveEvents,
     type WebViewSendEvents
   } from '@horizon/types'
 
   import type { HistoryEntriesManager } from '../../service/history'
   import { useLogScope, useDebounce } from '@horizon/utils'
-  import type { AnnotationHighlightData, HistoryEntry } from '../../types'
-  import type {
-    ResourceAnnotation,
-    ResourceChatThread,
-    ResourceLink,
-    ResourceObject
+  import { DragTypeNames, type AnnotationHighlightData, type HistoryEntry } from '../../types'
+  import {
+    useResourceManager,
+    type ResourceAnnotation,
+    type ResourceChatThread,
+    type ResourceLink,
+    type ResourceObject
   } from '../../service/resources'
   import type { Tab, TabPage } from '../../types/browser.types'
-  import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import { Dragcula, HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
   import type { WebviewError } from '../../constants/webviewErrors'
   import type { NewWindowRequest } from '../../service/ipc/events'
 
@@ -55,12 +57,15 @@
   export let error: Writable<WebviewError | null>
   export let url = writable(src)
   export let webviewReady = writable(false)
+  export let acceptsDrags: boolean = false
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
   export const playback = writable(false)
   export const isMuted = writable(false)
   export const didFinishLoad = writable(false)
+
+  const resourceManager = useResourceManager()
 
   const ERROR_CODES_TO_IGNORE = [-3] // -3 is ERR_ABORTED
   const NAVIGATION_DEBOUNCE_TIME = 500
@@ -165,38 +170,102 @@
 
     // Handle passtrough events as we need to handle them differently
     if ([WebViewEventSendNames.MouseMove, WebViewEventSendNames.MouseUp].includes(eventType)) {
-      if (
-        eventType === WebViewEventSendNames.MouseMove ||
-        eventType === WebViewEventSendNames.MouseUp
-      ) {
-        let data = eventData as MouseEvent
-        // We need to transform from webview relative to parent window relative
-        const webviewBounds = webview.getBoundingClientRect()
-        data.clientX += webviewBounds.left
-        data.clientY += webviewBounds.top
-        let evtName = ''
-        switch (eventType) {
-          case WebViewEventSendNames.MouseMove:
-            evtName = 'mousemove'
-            break
-          case WebViewEventSendNames.MouseUp:
-            evtName = 'mouseup'
-            break
-        }
-        window.dispatchEvent(
-          new MouseEvent(evtName, {
-            clientX: data.clientX,
-            clientY: data.clientY,
-            screenX: data.screenX,
-            screenY: data.screenY,
-            altKey: data.altKey,
-            ctrlKey: data.ctrlKey,
-            metaKey: data.metaKey,
-            shiftKey: data.shiftKey
-          })
-        )
+      let data = eventData as MouseEvent
+      // We need to transform from webview relative to parent window relative
+      const webviewBounds = webview.getBoundingClientRect()
+      let evtName = ''
+      switch (eventType) {
+        case WebViewEventSendNames.MouseMove:
+          evtName = 'mousemove'
+          break
+        case WebViewEventSendNames.MouseUp:
+          evtName = 'mouseup'
+          break
       }
+      window.dispatchEvent(
+        new MouseEvent(evtName, {
+          clientX: data.clientX + webviewBounds.left,
+          clientY: data.clientY + webviewBounds.top,
+          screenX: data.screenX,
+          screenY: data.screenY,
+          altKey: data.altKey,
+          ctrlKey: data.ctrlKey,
+          metaKey: data.metaKey,
+          shiftKey: data.shiftKey
+        })
+      )
       return
+    }
+
+    // This re-dispatches the drag events from inside the webview onto the webview element itself
+    // so, that dnd gets handled correctly
+    if (eventType === WebViewEventSendNames.DragEnter) {
+      const drag = Dragcula.get().activeDrag
+      if (!drag) {
+        // TODO: (dnd): Thsi isnt entirely correct. We actually need to bootstrap the drag differently,
+        // as it was first dragged over the webview.
+        // For now, we just return as this isnt fully there implementaiton wise.
+        /*throw new Error(
+          "No active drag, can't forward webview dragenter event! This should not happen!"
+        )*/
+        return
+      }
+      let data = eventData as DragEvent
+      const e = new DragEvent('dragenter', {
+        dataTransfer: data.dataTransfer,
+        // @ts-ignore It actually exists...
+        toElement: webview,
+        fromElement: null,
+        relatedTarget: null
+      })
+      webview.dispatchEvent(e)
+    } else if (eventType === WebViewEventSendNames.DragLeave) {
+      const drag = Dragcula.get().activeDrag
+      if (!drag)
+        throw new Error(
+          "No active drag, can't forward webview dragleave event! This should not happen!"
+        )
+      const e = new DragEvent('dragleave', {
+        dataTransfer: drag?.dataTransfer,
+        // @ts-ignore It actually exists...
+        fromElement: null
+      })
+      webview.dispatchEvent(e)
+    } else if (eventType === WebViewEventSendNames.Drop) {
+      // FIX: This is never dispatched inside webviw
+      const drag = Dragcula.get().activeDrag
+      if (!drag) {
+        // TODO: (dnd): Thsi isnt entirely correct. We actually need to bootstrap the drag differently,
+        // as it was first dragged over the webview.
+        //throw new Error("No active drag, can't forward webview drop event! This should not happen!")
+      }
+      const e = new DragEvent('drop', {
+        dataTransfer: drag?.dataTransfer ?? new DataTransfer()
+      })
+      webview.dispatchEvent(e)
+    } else if (
+      eventType === WebViewEventSendNames.Drag ||
+      eventType === WebViewEventSendNames.DragOver
+    ) {
+      let data = eventData as DragEvent
+      const webviewBounds = webview.getBoundingClientRect()
+      data.clientX += webviewBounds.left
+      data.clientY += webviewBounds.top
+      const e = new DragEvent('drag', {
+        dataTransfer: data.dataTransfer,
+        clientX: data.clientX,
+        clientY: data.clientY,
+        pageX: data.pageX,
+        pageY: data.pageY,
+        screenX: data.screenX,
+        screenY: data.screenY,
+        altKey: data.altKey,
+        ctrlKey: data.ctrlKey,
+        metaKey: data.metaKey,
+        shiftKey: data.shiftKey,
+        bubbles: true
+      })
+      webview.dispatchEvent(e)
     }
 
     // check if valid event and if so pass it up
@@ -344,90 +413,26 @@ Made with Deta Surf.`
   }
 
   const handleDragEnter = async (drag: DragculaDragEvent) => {
-    if (drag.item !== null) drag.item.dragEffect = 'copy'
-    // TODO: allow move item with meta key?
-    // convert coords to webview relative
-
-    const bounds = webview.getBoundingClientRect()
-    const clientX = drag.clientX - bounds.left
-    const clientY = drag.clientY - bounds.top
-
-    // TODO: Wrap Try catch abort
-    const data = await serializeDragDataForWebview(drag.data, false)
-    webview.send('webview-event', {
-      type: 'simulate_drag_start',
-      data: {
-        clientX,
-        clientY,
-        screenX: drag.screenX,
-        screenY: drag.screenY,
-        pageX: drag.pageX - bounds.left,
-        pageY: drag.pageY - bounds.top,
-        data
-      }
-    })
+    const resourceId = drag.item?.data.getData(DragTypeNames.SURF_RESOURCE_ID)
+    webview.focus()
     drag.continue()
+
+    if (!resourceId) return
+    const resource = await resourceManager.getResource(resourceId)
+    if (!resource) return
+    const token = await window.api.createToken(resource.id)
+
+    webview.send('set-drag-metadata', JSON.stringify({ token, resource }))
   }
+
   const handleDragOver = (drag: DragculaDragEvent) => {
-    if (drag.item !== null) drag.item.dragEffect = 'copy'
-    // TODO: allow move with meta key?
-    // convert coords to webview relative
-
-    const bounds = webview.getBoundingClientRect()
-    const clientX = drag.clientX - bounds.left
-    const clientY = drag.clientY - bounds.top
-    const screenX = drag.screenX
-    const screenY = drag.screenY
-
-    // TODO: Wrap Try catch abort
-    webview.send('webview-event', {
-      type: 'simulate_drag_update',
-      data: {
-        clientX,
-        clientY,
-        screenX,
-        screenY,
-        pageX: drag.pageX - bounds.left,
-        pageY: drag.pageY - bounds.top
-      }
-    })
     drag.continue()
   }
   const handleDrop = async (drag: DragculaDragEvent) => {
-    const bounds = webview.getBoundingClientRect()
-    const clientX = drag.clientX - bounds.left
-    const clientY = drag.clientY - bounds.top
-    const screenX = drag.screenX
-    const screenY = drag.screenY
-
-    // TODO: Wrap Try catch abort
-    const data = await serializeDragDataForWebview(drag.data, false)
-
-    await webview.send('webview-event', {
-      type: 'simulate_drag_end',
-      data: {
-        action: 'drop',
-        clientX,
-        clientY,
-        screenX,
-        screenY,
-        pageX: drag.pageX - bounds.left,
-        pageY: drag.pageY - bounds.top
-        //data // Currently we dont update it.. but we could..
-      }
-    })
-
-    if (data.strings[0]?.type === 'text/plain') {
-      webview.insertText(data.strings[0].value)
-    }
+    drag.continue()
   }
   const handleDragLeave = (drag: DragculaDragEvent) => {
-    webview.send('webview-event', {
-      type: 'simulate_drag_end',
-      data: {
-        action: 'abort'
-      }
-    })
+    webview.blur()
     drag.continue()
   }
 
@@ -637,13 +642,26 @@ Made with Deta Surf.`
 </script>
 
 <webview
-  {id}
+  id={`webview-${id}`}
   bind:this={webview}
   {src}
   {partition}
   webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=14,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
   allowpopups
-  use:HTMLDragZone.action={{}}
+  use:HTMLDragZone.action={{
+    accepts: (drag) => {
+      if (!acceptsDrags) return false
+      if (
+        drag.isNative ||
+        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        return true
+      }
+      return false
+    }
+  }}
   on:DragEnter={handleDragEnter}
   on:DragOver={handleDragOver}
   on:Drop={handleDrop}
