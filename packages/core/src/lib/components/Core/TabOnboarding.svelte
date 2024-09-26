@@ -36,7 +36,7 @@
 >
   <img src={onboBg} class="w-full h-full absolute top-0 left-0 opacity-20" alt="Welcome" />
   <div class="absolute bg-gradient-to-t from-white to-transparent w-full h-full" />
-  <div class="flex flex-col max-w-3xl gap-8">
+  <div class="flex flex-col max-w-3xl gap-8 relative z-10">
     <div class="flex flex-col gap-4 overflow-y-scroll" style="z-index: 2147483647">
       <h1
         class="font-bold text-5xl animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 bg-[length:250%_100%]"
