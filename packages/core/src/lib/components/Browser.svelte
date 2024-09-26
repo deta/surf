@@ -3667,7 +3667,20 @@
                   axis="horizontal"
                   dragdeadzone="5"
                   placeholder-size="60"
-                  use:HTMLAxisDragZone.action={{}}
+                  use:HTMLAxisDragZone.action={{
+                    accepts: (drag) => {
+                      if (
+                        drag.isNative ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
+                      ) {
+                        return true
+                      }
+                      return false
+                    }
+                  }}
                   on:Drop={handleDropSidebar}
                 >
                   {#each $unpinnedTabs as tab, index (tab.id + index)}
