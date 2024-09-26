@@ -2995,7 +2995,6 @@
         if (toTabs.find((v) => v.id === droppedTab.id)) {
           log.warn('ONLY Update existin tab')
           const existing = fromTabs.find((v) => v.id === droppedTab.id)
-          console.warn('existing tab', existing)
           if (existing && drag.index !== undefined) {
             existing.index = drag.index ?? 0
           }
