@@ -426,7 +426,19 @@
               fetchedResource.id,
               ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
             )
+
+            await resourceManager.deleteResourceTag(
+              fetchedResource.id,
+              ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+            )
           }
+
+          // Make sure the resource is up to date with at least the latest title and sourceURI
+          // Updating the resource also makes sure that the resource is visible at the top of the Everything view
+          await resourceManager.updateResourceMetadata(fetchedResource.id, {
+            name: tab.title ?? '',
+            sourceURI: url
+          })
 
           tab.resourceBookmark = fetchedResource.id
           dispatch('update-tab', {
