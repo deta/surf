@@ -66,7 +66,6 @@ function setupIpcHandlers(backendRootPath: string) {
   })
 
   IPC_EVENTS_MAIN.webviewReadResourceData.handle(async (_, { token, resourceId }) => {
-    console.log('verify', tokenManager.verify(token, resourceId))
     if (!tokenManager.verify(token, resourceId)) return null
     tokenManager.revoke(token)
 
