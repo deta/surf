@@ -1039,16 +1039,15 @@
     if (value.length === 0) {
       searchResults.set([])
       hasSearched = false
+      isSearching = false
       if (!hasLoadedEverything) {
         hasLoadedEverything = true
         loadEverything()
       }
-    } else if (value.length > 3) {
+    } else {
       handleSearch(value).then(() => {
         isSearching = false
       })
-    } else {
-      $searchResults = []
     }
 
     hasLoadedEverything = value.length === 0
@@ -1339,7 +1338,7 @@
                               <Icon name="spinner" size="20px" />
                             </div>
                           {/if}
-                        {:else if isSearching && $searchValue.length > 3}
+                        {:else if isSearching && $searchValue.length > 0}
                           <div class="content-wrapper h-full flex items-center justify-center">
                             <div
                               class="content flex flex-col items-center justify-center text-center space-y-4"
@@ -1356,15 +1355,10 @@
                               class="content flex flex-col items-center justify-center text-center space-y-4"
                             >
                               <Icon name="leave" size="22px" class="mb-2" />
-                              {#if $searchValue.length <= 3}
-                                <p class="text-lg font-medium text-gray-700">
-                                  Please type at least 3 characters to search.
-                                </p>
-                              {:else}
-                                <p class="text-lg font-medium text-gray-700">
-                                  No stuff found for "{$searchValue}". Try a different search term.
-                                </p>
-                              {/if}
+
+                              <p class="text-lg font-medium text-gray-700">
+                                No stuff found for "{$searchValue}". Try a different search term.
+                              </p>
                             </div>
                           </div>
                         {/if}
@@ -1389,7 +1383,7 @@
                   id="search-field"
                   {placeholder}
                   {breadcrumb}
-                  loading={$isLoadingCommandItems}
+                  loading={$isLoadingCommandItems || isSearching || $loadingContents}
                   bind:value={$searchValue}
                   class={showTabSearch === 2
                     ? 'w-[32rem] bg-neutral-200 rounded-lg py-2 px-4'
