@@ -268,6 +268,10 @@
       .sort((a, b) => {
         if (a.id === 'all') return -1 // Move 'all' folder to the top
         if (b.id === 'all') return 1
+
+        // move built in folders to the top behind 'all'
+        if (a.name.builtIn && !b.name.builtIn) return -1
+
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() // Sort others by creation date
       })
   )

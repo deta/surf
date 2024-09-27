@@ -457,12 +457,13 @@
 
         previewData = {
           type: resource.type,
-          title: resource?.metadata?.name,
+          title: undefined,
           content: undefined,
           image: data,
           url: canonicalUrl ?? '',
           source: {
-            text: hostname ?? canonicalUrl ?? getFileType(resource.type),
+            text:
+              resource?.metadata?.name || hostname || canonicalUrl || getFileType(resource.type),
             imageUrl: hostname
               ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=48`
               : undefined

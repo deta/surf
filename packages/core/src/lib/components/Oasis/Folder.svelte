@@ -111,7 +111,7 @@
         if (folder.name.folderName === '.tempspace' && $selectedFolder === '.tempspace') {
           return
         }
-        if (isModKeyPressed(event)) {
+        if (isModKeyPressed(event) && folder.id !== 'all') {
           dispatch('open-space-as-tab', { space: folder, active: event.shiftKey })
         } else {
           dispatch('space-selected', { id: folder.id, canGoBack: true })
@@ -333,9 +333,13 @@
   use:contextMenu={{
     items: [
       { type: 'action', icon: 'edit', text: 'Rename', action: handleDoubleClick },
-      { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
-      { type: 'separator' },
-      { type: 'action', icon: 'trash', text: 'Delete', kind: 'danger', action: handleDelete }
+      ...(folder.id !== 'all'
+        ? [
+            { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
+            { type: 'separator' },
+            { type: 'action', icon: 'trash', text: 'Delete', kind: 'danger', action: handleDelete }
+          ]
+        : [])
     ]
   }}
 >
