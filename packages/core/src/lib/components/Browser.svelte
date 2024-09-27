@@ -2523,7 +2523,7 @@
     // if we have some magicTabs, make them unpinned
 
     $tabs.forEach((tab: Tab) => {
-      handleExcludeTab(new CustomEvent('exclude-tab', { detail: tab.id }))
+      removeTabFromMagic(tab.id)
     })
 
     tabs.update((tabs) => tabs.sort((a, b) => a.index - b.index))
@@ -2694,9 +2694,7 @@
     })
   }
 
-  const handleExcludeTab = async (e: CustomEvent<string>) => {
-    const tabId = e.detail
-
+  const removeTabFromMagic = (tabId: string) => {
     // exclude the tab from magic
     tabs.update((x) => {
       return x.map((tab) => {
@@ -2722,6 +2720,12 @@
       })
       return newSelection
     })
+  }
+
+  const handleExcludeTab = async (e: CustomEvent<string>) => {
+    const tabId = e.detail
+
+    removeTabFromMagic(tabId)
 
     lastSelectedTabId.set($activeTabId)
 
