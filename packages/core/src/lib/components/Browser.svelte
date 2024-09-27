@@ -3137,12 +3137,15 @@
 
     openRightSidebarTab('chat')
 
-    if (magicSidebar) {
-      magicSidebar.addChatWithQuery(query)
-    } else {
-      log.error('Magic sidebar not found')
-      toasts.error('Failed to add to chat')
-    }
+    // wait for the magic sidebar to open
+    tick().then(() => {
+      if (magicSidebar) {
+        magicSidebar.addChatWithQuery(query)
+      } else {
+        log.error('Magic sidebar not found')
+        toasts.error('Failed to add to chat')
+      }
+    })
   }
   const handleTabMouseEnter = (e: CustomEvent<string>) => {
     clearTimeout((handleTabMouseEnter as any).timeout)

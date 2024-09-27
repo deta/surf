@@ -345,9 +345,12 @@
       />
     </div>
     <!-- NOTE: This margin-top is weird, i dunno why it exists, but we have to kill it here -->
-    <div class="h-full w-full" style="margin-top: 0;">
-      <slot name="right-sidebar" />
-    </div>
+
+    {#if showRightSidebar}
+      <div class="h-full w-full" style="margin-top: 0;">
+        <slot name="right-sidebar" />
+      </div>
+    {/if}
   </div>
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <!--<div
