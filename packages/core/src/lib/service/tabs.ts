@@ -15,6 +15,7 @@ import type {
   Optional,
   PageMagic,
   Space,
+  SpaceData,
   Tab,
   TabImporter,
   TabPage,
@@ -171,6 +172,12 @@ export class TabsManager {
         | TabSpace
       )[]
     })
+
+    const isDev = import.meta.env.DEV
+    if (isDev) {
+      // @ts-ignore
+      window.tabsManager = this
+    }
   }
 
   get tabsValue() {
@@ -658,6 +665,81 @@ export class TabsManager {
     )
 
     return newTab
+  }
+
+  async removeResourceBookmarks(resourceId: string) {
+    this.log.debug('Removing bookmarks for resource', resourceId)
+
+    const tabsToUpdate = this.tabsValue.filter(
+      (tab) => tab.type === 'page' && tab.resourceBookmark === resourceId
+    )
+    if (tabsToUpdate.length > 0) {
+      this.log.debug('Removing bookmarks', tabsToUpdate)
+      for (const tab of tabsToUpdate) {
+        await this.update(tab.id, {
+          resourceBookmark: null,
+          chatResourceBookmark: null,
+          resourceBookmarkedManually: false
+        })
+      }
+    }
+
+    // remove resource tabs of the same resource
+    const tabsToDelete = this.tabsValue.filter(
+      (tab) => tab.type === 'resource' && tab.resourceId === resourceId
+    )
+    if (tabsToDelete.length > 0) {
+      this.log.debug('Removing resource tabs', tabsToDelete)
+      for (const tab of tabsToDelete) {
+        await this.delete(tab.id)
+      }
+    }
+
+    return {
+      updated: tabsToUpdate.length,
+      deleted: tabsToDelete.length
+    }
+  }
+
+  async removeSpaceTabs(spaceId: string) {
+    this.log.debug('Removing space tabs for space', spaceId)
+
+    const tabsToDelete = this.tabsValue.filter(
+      (tab) => tab.type === 'space' && tab.spaceId === spaceId
+    )
+    if (tabsToDelete.length > 0) {
+      this.log.debug('Removing space tabs', tabsToDelete)
+      for (const tab of tabsToDelete) {
+        await this.delete(tab.id)
+      }
+    }
+
+    return tabsToDelete.length
+  }
+
+  async updateSpaceTabs(spaceId: string, updates: Partial<SpaceData>) {
+    this.log.debug('Updating space tabs for space', spaceId, updates)
+
+    const tabUpdates = {} as Partial<TabSpace>
+
+    if (updates.folderName) {
+      tabUpdates.title = updates.folderName
+    }
+
+    if (updates.colors) {
+      tabUpdates.colors = updates.colors
+    }
+
+    const tabsToUpdate = this.tabsValue.filter(
+      (tab) => tab.type === 'space' && tab.spaceId === spaceId
+    )
+
+    if (tabsToUpdate.length > 0) {
+      this.log.debug('Updating space tabs', tabsToUpdate)
+      for (const tab of tabsToUpdate) {
+        await this.update(tab.id, tabUpdates)
+      }
+    }
   }
 
   static provide(

@@ -27,6 +27,7 @@
   import type { TabSpace } from '../../types/browser.types'
   import { useTelemetry } from '../../service/telemetry'
   import { contextMenu } from '../Core/ContextMenu.svelte'
+  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
 
   export let folder: Space
   export let selected: boolean
@@ -39,6 +40,7 @@
   const toast = useToasts()
   const resourceManager = useResourceManager()
   const telemetry = useTelemetry()
+  const tabsManager = useTabsManager()
 
   let folderDetails = folder.name
   let inputWidth = `${folderDetails.folderName.length}ch`
@@ -175,6 +177,8 @@
 
       log.debug('deleting space', folder.id)
       await oasis.deleteSpace(folder.id)
+
+      await tabsManager.removeSpaceTabs(folder.id)
 
       await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpacesView)
       toast.success('Space deleted!')

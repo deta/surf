@@ -978,13 +978,7 @@
     }
 
     try {
-      if (isEverythingSpace) {
-        log.debug('removing resource references', references)
-        for (const reference of references) {
-          log.debug('deleting reference', reference)
-          await resourceManager.deleteSpaceEntries([reference.entryId])
-        }
-      } else {
+      if (!isEverythingSpace) {
         log.debug('removing resource entry from space...', resource)
 
         const reference = references.find(
@@ -1021,6 +1015,10 @@
       // HACK: this is needed for the preview to update with the summary
       const contents = $everythingContents.filter((x) => x.id !== resourceId)
       everythingContents.set([])
+
+      // update tabs to remove any links to the resource
+      await tabsManager.removeResourceBookmarks(resourceId)
+
       await tick()
       everythingContents.set(contents)
 
@@ -1341,6 +1339,8 @@
 
       log.debug('Deleting space', spaceId)
       await oasis.deleteSpace(spaceId)
+
+      await tabsManager.removeSpaceTabs(spaceId)
 
       oasis.selectedSpace.set('all')
       dispatch('deleted', spaceId)

@@ -1084,6 +1084,44 @@
     }
   }
 
+  const handleRemoveBookmark = async (tabId: string) => {
+    const tab = $tabs.find((t: Tab) => t.id === tabId)
+
+    if (!tab || tab.type !== 'page') {
+      log.error('invalid tab for bookmarking', tab)
+      return
+    }
+
+    const resourceId = tab.resourceBookmark
+    if (!resourceId) {
+      log.error('no resource bookmark found', tab)
+      return
+    }
+
+    const confirmed = await confirm('Are you sure you want to delete this page from your stuff?')
+    if (!confirmed) {
+      return
+    }
+
+    const toast = toasts.loading('Deleting from your stuff…')
+    updateBookmarkingTabState(tabId, 'in_progress')
+
+    try {
+      await resourceManager.deleteResource(resourceId)
+      tabsManager.update(tabId, {
+        resourceBookmark: null,
+        chatResourceBookmark: null,
+        resourceBookmarkedManually: false
+      })
+      toast.success('Deleted page from your stuff!')
+    } catch (e) {
+      log.error('error deleting resource', e)
+      toast.error('Failed to delete page from your stuff!')
+    }
+
+    updateBookmarkingTabState(tabId, null)
+  }
+
   async function handleWebviewTabNavigation(
     e: CustomEvent<WebviewWrapperEvents['navigation']>,
     tab: Tab
@@ -3552,6 +3590,7 @@
                   <TabItem
                     hibernated={!$activatedTabs.includes(tab.id)}
                     removeHighlight={$showNewTabOverlay !== 0}
+                    {experimentalMode}
                     {tab}
                     horizontalTabs={true}
                     {activeTabId}
@@ -3733,6 +3772,7 @@
                         isUserSelected={Array.from($selectedTabs).some(
                           (item) => item.id === tab.id && item.userSelected
                         )}
+                        {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={handleTabSelect}
@@ -3741,6 +3781,7 @@
                         on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
                         on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
+                        on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                         on:create-live-space={handleCreateLiveSpace}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
@@ -3753,7 +3794,6 @@
                         on:edit={handleEdit}
                         on:mouseenter={handleTabMouseEnter}
                         on:mouseleave={handleTabMouseLeave}
-                        {experimentalMode}
                       />
                     {:else}
                       <TabItem
@@ -3772,6 +3812,7 @@
                         )}
                         isMagicActive={$magicTabs.length > 0}
                         bookmarkingState={$bookmarkingTabsState[tab.id]}
+                        {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={handleTabSelect}
@@ -3780,6 +3821,7 @@
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
                         on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
+                        on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                         on:include-tab={handleIncludeTabInMagic}
                         on:chat-with-tab={handleOpenTabChat}
                         on:pin={handlePinTab}
@@ -3837,6 +3879,7 @@
                         isUserSelected={Array.from($selectedTabs).some(
                           (item) => item.id === tab.id && item.userSelected
                         )}
+                        {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={handleTabSelect}
@@ -3846,6 +3889,7 @@
                         on:exclude-tab={handleExcludeTab}
                         on:input-enter={handleBlur}
                         on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
+                        on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                         on:create-live-space={handleCreateLiveSpace}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={handleSaveResourceInSpace}
@@ -3858,7 +3902,6 @@
                         on:edit={handleEdit}
                         on:mouseenter={handleTabMouseEnter}
                         on:mouseleave={handleTabMouseLeave}
-                        {experimentalMode}
                       />
                     {:else}
                       <TabItem
@@ -3877,6 +3920,7 @@
                         )}
                         isMagicActive={$magicTabs.length > 0}
                         bookmarkingState={$bookmarkingTabsState[tab.id]}
+                        {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={handleTabSelect}
@@ -3885,6 +3929,7 @@
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
                         on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
+                        on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                         on:include-tab={handleIncludeTabInMagic}
                         on:chat-with-tab={handleOpenTabChat}
                         on:pin={handlePinTab}

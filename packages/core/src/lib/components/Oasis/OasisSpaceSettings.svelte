@@ -16,6 +16,7 @@
   import Switch from '../Atoms/Switch.svelte'
   import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
+  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
 
   export let space: Space | null
   const config = useConfig()
@@ -32,6 +33,7 @@
   const log = useLogScope('OasisSpaceSettings')
   const oasis = useOasis()
   const toasts = useToasts()
+  const tabsManager = useTabsManager()
   const telemetry = oasis.resourceManager.telemetry
   const autoSaveResources = oasis.autoSaveResources
 
@@ -51,6 +53,8 @@
 
     // TODO: rename tab as well
     await oasis.updateSpaceData(space.id, space.name)
+
+    await tabsManager.updateSpaceTabs(space.id, space.name)
 
     await telemetry.trackUpdateSpaceSettings({
       setting: 'name',

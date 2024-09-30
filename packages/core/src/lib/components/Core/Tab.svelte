@@ -83,6 +83,7 @@
     'exclude-tab': string
     'include-tab': string
     'chat-with-tab': string
+    'remove-bookmark': string
     Drop: { drag: DragculaDragEvent; spaceId: string }
     DragEnd: DragculaDragEvent
     edit: void
@@ -234,6 +235,10 @@
     dispatch('bookmark', { trigger })
   }
 
+  const handleRemoveBookmark = () => {
+    dispatch('remove-bookmark', tab.id)
+  }
+
   const handleCreateLiveSpace = () => {
     liveSpacePopoverOpened.set(false)
     dispatch('create-live-space')
@@ -381,6 +386,14 @@
         text: isBookmarkedByUser ? 'Saved' : 'Save',
         action: () => handleBookmark(SaveToOasisEventTrigger.ContextMenu)
       },
+      {
+        type: 'action',
+        hidden: tab.type !== 'page' || !isBookmarkedByUser,
+        icon: 'trash',
+        text: 'Delete from Stuff',
+        kind: 'danger',
+        action: () => handleRemoveBookmark()
+      },
       { type: 'separator', hidden: tab.type !== 'page' },
 
       {
@@ -395,7 +408,7 @@
       },
       {
         type: 'action',
-        hidden: tab.type !== 'page',
+        hidden: tab.type !== 'page' || !experimentalMode,
         icon: 'news',
         text: 'Create Live Space',
         action: () => handleCreateLiveSpace()
@@ -428,7 +441,7 @@
       },
       {
         type: 'action',
-        icon: 'trash',
+        icon: 'close',
         text: 'Close',
         kind: 'danger',
         action: () => handleArchive(DeleteTabEventTrigger.ContextMenu)

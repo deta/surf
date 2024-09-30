@@ -755,6 +755,9 @@
       everythingContents.update((contents) => {
         return contents.filter((x) => x.id !== resourceId)
       })
+
+      // update tabs to remove any links to the resource
+      await tabsManager.removeResourceBookmarks(resourceId)
     }
 
     await handleSearch($searchValue)

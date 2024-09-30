@@ -16,11 +16,13 @@
   import { CreateSpaceEventFrom, OpenSpaceEventTrigger } from '@horizon/types'
   import type { ResourceManager } from '../../service/resources'
   import { RefreshSpaceEventTrigger } from '@horizon/types'
+  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
 
   const log = useLogScope('SpacesView')
   const oasis = useOasis()
   const toast = useToasts()
   const telemetry = useTelemetry()
+  const tabsManager = useTabsManager()
   const dispatch = createEventDispatcher<{
     createTab: { tab: TabSpace; active: boolean }
     'space-selected': { id: string; canGoBack: boolean }
@@ -194,6 +196,8 @@
       }
 
       await oasis.updateSpaceData(id, updates)
+
+      await tabsManager.updateSpaceTabs(id, updates)
     } catch (error) {
       log.error('Failed to update folder:', error)
     }
