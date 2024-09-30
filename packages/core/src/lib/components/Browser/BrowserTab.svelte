@@ -457,7 +457,7 @@
               .catch((e) => {
                 log.error('error refreshing resource', e)
                 toasts.error('Failed to refresh resource')
-                resource.updateState('idle') // TODO: support error state
+                fetchedResource.updateState('idle') // TODO: support error state
               })
           }
 
