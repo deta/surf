@@ -711,7 +711,7 @@
             {
               type: 'action',
               icon: '',
-              text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
+              text: `${isMac() ? 'Reveal in Finder' : 'Open in File Manager'}`,
               action: () => handleOpenAsFile()
             }
           ]

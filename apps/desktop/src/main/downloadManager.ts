@@ -176,8 +176,8 @@ export const openResourceAsFile = async (resource: SFFSResource, resourcesDirect
   const internalFilePath = path.join(resourcesDirectory, resource.id)
   const newDownloadFilePath = path.join(downloadsPath, fileName)
 
-  if (!isPathSafe(downloadsPath, internalFilePath)) {
-    log.error('Source path is not safe:', downloadsPath, internalFilePath)
+  if (!isPathSafe(resourcesDirectory, internalFilePath)) {
+    log.error('Source path is not safe:', resourcesDirectory, internalFilePath)
     return
   }
 
