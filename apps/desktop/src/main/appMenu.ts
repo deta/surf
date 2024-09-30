@@ -295,6 +295,6 @@ export function changeMenuItemLabel(id: string, newLabel: string): void {
     }
   }
 
-  const menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
+  menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
   Menu.setApplicationMenu(menu)
 }
