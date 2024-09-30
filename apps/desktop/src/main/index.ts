@@ -1,10 +1,9 @@
 import { isMac, isWindows, useLogScope } from '@horizon/utils'
-import { app, BrowserWindow, ipcMain, session } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
 import { TelemetryEventTypes } from '@horizon/types'
-import * as Sentry from '@sentry/electron/main'
 
 import { createWindow, getMainWindow } from './mainWindow'
 import { setAppMenu } from './appMenu'
@@ -47,6 +46,7 @@ if (config.useTmpDataDir) {
 mkdirSync(userDataPath, { recursive: true })
 app.setPath('userData', userDataPath)
 
+/*
 // NOTE: sentry needs to be initialized only after the userDataPath is set
 if (config.sentryDSN) {
   log.debug('Initializing Sentry')
@@ -57,6 +57,7 @@ if (config.sentryDSN) {
     getSessions: () => [session.defaultSession, session.fromPartition('persist:surf-app-session')]
   })
 }
+*/
 
 const handleOpenUrl = (url: string) => {
   try {
