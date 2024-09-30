@@ -2,7 +2,7 @@ import { defineConfig, externalizeDepsPlugin, bytecodePlugin } from 'electron-vi
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { resolve } from 'path'
 import { plugin as Markdown, Mode } from 'vite-plugin-markdown'
-import { sentryVitePlugin } from '@sentry/vite-plugin'
+// import { sentryVitePlugin } from '@sentry/vite-plugin'
 import replace from '@rollup/plugin-replace'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import obfuscator from 'rollup-plugin-obfuscator'
@@ -75,12 +75,14 @@ export default defineConfig({
   renderer: {
     envPrefix: 'R_VITE_',
     plugins: [
+      /*
       sentryVitePlugin({
         org: 'deta',
         project: process.env.SENTRY_PROJECT,
         authToken: process.env.SENTRY_AUTH_TOKEN,
         telemetry: false
       }),
+      */
       Markdown({ mode: [Mode.MARKDOWN] }),
       svelte()
     ],

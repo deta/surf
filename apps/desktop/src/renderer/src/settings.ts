@@ -1,5 +1,7 @@
 import './assets/style.css'
 import Settings from './Settings.svelte'
+
+/*
 import * as Sentry from '@sentry/electron/renderer'
 import { init as svelteInit } from '@sentry/svelte'
 
@@ -14,6 +16,7 @@ if (sentryDSN) {
     svelteInit
   )
 }
+*/
 
 const app = new Settings({
   target: document.getElementById('app')
