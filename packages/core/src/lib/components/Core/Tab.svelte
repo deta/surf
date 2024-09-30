@@ -306,6 +306,13 @@
     dispatch('Drop', { drag, spaceId: (tab as TabSpace).spaceId })
   }
 
+  const handleMouseDown = (e: MouseEvent) => {
+    if (e.button === 1 && !pinned) {
+      e.preventDefault()
+      handleArchive(DeleteTabEventTrigger.Click)
+    }
+  }
+
   onMount(() => {
     if (tab.type === 'space') {
       fetchSpace(tab.spaceId)
@@ -355,6 +362,7 @@
   }}
   on:Drop={handleDrop}
   on:click={handleClick}
+  on:mousedown={handleMouseDown}
   on:mouseenter={() => {
     hovered = true
     dispatch('mouseenter', tab.id)
