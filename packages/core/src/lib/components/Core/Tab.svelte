@@ -838,7 +838,7 @@
 
   :global(.horizontal-tabs) {
     .tab.combine-border {
-      border-radius: 1rem 0 0 1rem;
+      border-radius: 0.75rem 0 0 0.75rem;
 
       position: relative;
       &::after {
@@ -857,7 +857,7 @@
     }
 
     .tab.combine-border:has(+ :not(.combine-border)) {
-      border-radius: 0 1rem 1rem 0;
+      border-radius: 0 0.75rem 0.75rem 0;
 
       &::after {
         content: unset;
@@ -865,13 +865,13 @@
     }
 
     .tab:not(.combine-border) + .combine-border:has(+ :not(.combine-border)) {
-      border-radius: 1rem;
+      border-radius: 0.75rem;
     }
 
     /* This fixes none borders for last element in list if selected. */
     .tab:last-child.combine-border {
-      border-top-right-radius: 1rem;
-      border-bottom-right-radius: 1rem;
+      border-top-right-radius: 0.75rem;
+      border-bottom-right-radius: 0.75rem;
 
       &::after {
         content: unset;
@@ -879,8 +879,8 @@
     }
     /* This fixes none borders for first element in list if selected. */
     .tab:first-child.combine-border {
-      border-top-left-radius: 1rem;
-      border-bottom-left-radius: 1rem;
+      border-top-left-radius: 0.75rem;
+      border-bottom-left-radius: 0.75rem;
     }
   }
 
