@@ -20,6 +20,10 @@ import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 const log = useLogScope('Main Index')
 const isDev = import.meta.env.DEV
 
+process.on('uncaughtException', (error: any) => {
+  log.error('Uncaught exception:', error)
+})
+
 let isAppLaunched = false
 let appOpenedWithURL: string | null = null
 let surfBackendManager: SurfBackendServerManager | null = null
