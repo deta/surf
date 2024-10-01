@@ -494,14 +494,14 @@ impl CardPosition {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, strum::EnumString, strum::AsRefStr)]
+#[derive(Debug, Serialize, Deserialize, Clone, strum::EnumString, strum::AsRefStr)]
 #[strum(ascii_case_insensitive)]
 pub enum HistoryEntryType {
     Search,
     Navigation,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HistoryEntry {
     #[serde(default = "random_uuid")]
     pub id: String,
