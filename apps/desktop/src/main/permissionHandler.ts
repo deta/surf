@@ -1,6 +1,6 @@
 // XXX: https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/modules/permissions/permission_descriptor.idl
 
-import { dialog } from 'electron'
+import { dialog, OpenExternalPermissionRequest } from 'electron'
 import {
   getPermissionConfig,
   updatePermissionConfig,
@@ -17,6 +17,7 @@ interface PermissionRequest {
 interface PermissionHandler {
   getName: (req: PermissionRequest) => string
   getMessage: (req: PermissionRequest) => string
+  getDialogBoxType: () => 'warning' | 'info'
 }
 
 const handlers: Partial<Record<string, PermissionHandler>> = {
@@ -35,27 +36,38 @@ const handlers: Partial<Record<string, PermissionHandler>> = {
       if (types.includes('audio')) return 'This website wants to use your microphone.'
       if (types.includes('video')) return 'This website wants to use your camera.'
       return 'This website wants to access media devices.'
-    }
+    },
+    getDialogBoxType: () => 'info'
   },
   geolocation: {
     getName: () => 'Location',
-    getMessage: () => 'This website wants to know your location.'
+    getMessage: () => 'This website wants to know your location.',
+    getDialogBoxType: () => 'info'
   },
   notifications: {
     getName: () => 'Notifications',
-    getMessage: () => 'This website wants to send you notifications.'
+    getMessage: () => 'This website wants to send you notifications.',
+    getDialogBoxType: () => 'info'
+  },
+  openExternal: {
+    getName: () => 'External Application',
+    getMessage: () => 'This website wants to open an external application.',
+    getDialogBoxType: () => 'warning'
   },
   'clipboard-read': {
     getName: () => 'Clipboard',
-    getMessage: () => 'This website wants to read from your clipboard.'
+    getMessage: () => 'This website wants to read from your clipboard.',
+    getDialogBoxType: () => 'info'
   },
   'window-management': {
     getName: () => 'Window Management',
-    getMessage: () => 'This website wants to manage browser windows.'
+    getMessage: () => 'This website wants to manage browser windows.',
+    getDialogBoxType: () => 'info'
   },
   'persistent-storage': {
     getName: () => 'Persistent Storage',
-    getMessage: () => 'This website wants to persist its data locally.'
+    getMessage: () => 'This website wants to persist its data locally.',
+    getDialogBoxType: () => 'info'
   }
   // TODO: soooooon
   // 'display-capture': {
@@ -66,7 +78,8 @@ const handlers: Partial<Record<string, PermissionHandler>> = {
 
 const defaultHandler: PermissionHandler = {
   getName: (req) => prettifyPermissionType(req.type),
-  getMessage: (req) => `This website is requesting ${prettifyPermissionType(req.type)} permission.`
+  getMessage: (req) => `This website is requesting ${prettifyPermissionType(req.type)} permission.`,
+  getDialogBoxType: () => 'info'
 }
 
 const getHandler = (type: string): PermissionHandler => {
@@ -127,12 +140,50 @@ const shouldShortCircuit = (permission: string): boolean | null => {
     case 'storage-access':
     case 'top-level-storage-access':
     case 'display-capture':
-    case 'openExternal':
     case 'midi':
       return false
   }
 
   return null
+}
+
+const allowedExternalProtocol = (
+  url: string | undefined
+): { valid: boolean; protocol?: string } => {
+  if (!url) {
+    return { valid: false }
+  }
+  try {
+    const { protocol } = new URL(url)
+    switch (protocol) {
+      case 'zoomus:':
+      case 'slack:':
+      case 'spotify:':
+      case 'steam:':
+      case 'discord:':
+      case 'skype:':
+      // microsoft teams
+      case 'msteams:':
+      case 'whatsapp:':
+      // telegram
+      case 'tg:':
+      case 'notion:':
+      case 'vscode:':
+      case 'mailto:':
+      // telephone dialer
+      case 'tel:':
+      // apple maps
+      case 'maps:':
+      // google maps
+      case 'comgooglemaps:':
+      case 'linkedin:':
+        return { valid: true, protocol: protocol }
+      default:
+        return { valid: false }
+    }
+  } catch (error) {
+    return { valid: false }
+  }
 }
 
 export function setupPermissionHandlers(session: Electron.Session) {
@@ -145,6 +196,9 @@ export function setupPermissionHandlers(session: Electron.Session) {
     const request: PermissionRequest = { type: _permission, details }
     const permission = normalizePermissionType(request)
 
+    if (permission === 'openExternal') {
+      return true
+    }
     const config = getPermissionConfig()
     const decision = config[sessionId]?.[requestingOrigin]?.[permission]
     return decision !== undefined ? decision : true
@@ -158,11 +212,24 @@ export function setupPermissionHandlers(session: Electron.Session) {
     }
 
     const request: PermissionRequest = { type: originalPermission, details }
-    const permission = normalizePermissionType(request)
+    let permission = normalizePermissionType(request)
     let shortCircuit = shouldShortCircuit(permission)
     if (shortCircuit !== null) {
       callback(shortCircuit)
       return
+    }
+
+    if (request.type === 'openExternal') {
+      const { valid, protocol } = allowedExternalProtocol(
+        (details as OpenExternalPermissionRequest).externalURL
+      )
+      if (!valid) {
+        callback(false)
+        return
+      }
+      if (protocol) {
+        permission = `${permission}:${protocol}`
+      }
     }
 
     const websiteInfo = formatWebsiteInfo(details.requestingUrl)
@@ -175,17 +242,19 @@ export function setupPermissionHandlers(session: Electron.Session) {
     }
     const handler = getHandler(request.type)
     const response = await dialog.showMessageBox({
-      type: 'none',
+      type: handler.getDialogBoxType(),
       buttons: ['Allow', 'Deny'],
       defaultId: 1,
       cancelId: 1,
       title: `${handler.getName(request)} Request`,
       message: handler.getMessage(request),
-      detail: `${websiteInfo}`
+      detail: `${websiteInfo}`,
+      checkboxLabel: 'Remember this decision',
+      checkboxChecked: false
     })
 
     const decision = response.response === 0
-    updatePermissionConfig(sessionId, origin, permission, decision)
+    if (response.checkboxChecked) updatePermissionConfig(sessionId, origin, permission, decision)
     callback(decision)
   })
 
