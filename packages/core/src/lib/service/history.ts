@@ -4,6 +4,16 @@ import type { HistoryEntry } from '../types/index'
 import Fuse, { type FuseResult } from 'fuse.js'
 import { SFFS } from './sffs'
 
+// exporting as a separate function because the HistoryEntriesManager loads all history entries by default on init
+// returns only a list of hostnames
+export async function searchHistoryEntriesByHostnamePrefix(
+  prefix: string,
+  since?: Date
+): Promise<HistoryEntry[]> {
+  const sffs = new SFFS()
+  return sffs.searchHistoryEntriesByHostnamePrefix(prefix, since)
+}
+
 export type SearchHistoryEntry = {
   site: string
   hostname: string

@@ -580,6 +580,20 @@ export class SFFS {
     await this.backend.js__store_remove_history_entry(id)
   }
 
+  // returns a list of unique hostnames
+  async searchHistoryEntriesByHostnamePrefix(
+    prefix: string,
+    since?: Date
+  ): Promise<HistoryEntry[]> {
+    this.log.debug('searching history entries by hostname prefix', prefix)
+    const raw = await this.backend.js__store_search_history_entries_by_hostname_prefix(
+      prefix,
+      since
+    )
+    const parsed = this.parseData<HistoryEntry[]>(raw)
+    return parsed ?? []
+  }
+
   async createAIChat(system_prompt?: string): Promise<string | null> {
     this.log.debug('creating ai chat (custom system prompt:', system_prompt, ')')
     return this.parseData<string>(await this.backend.js__store_create_ai_chat(system_prompt))
