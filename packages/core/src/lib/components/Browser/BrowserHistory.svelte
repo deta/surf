@@ -87,7 +87,9 @@
       const toast = toasts.loading('Clearing history...')
 
       log.debug('Clearing history...')
-      await Promise.all($historyEntries.map((entry) => resourceManager.deleteResource(entry.id)))
+      await Promise.all(
+        $historyEntries.map((entry) => resourceManager.deleteHistoryEntry(entry.id))
+      )
 
       historyEntries.set([])
       toast.success('History cleared!')
@@ -102,7 +104,7 @@
       historyEntries.set(updated)
 
       log.debug('Deleting history entry:', entryId)
-      await resourceManager.deleteResource(entryId)
+      await resourceManager.deleteHistoryEntry(entryId)
     } catch (error) {
       log.error('Failed to delete history entry:', error)
     }

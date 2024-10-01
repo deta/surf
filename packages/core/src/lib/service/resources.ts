@@ -768,6 +768,10 @@ export class ResourceManager {
     this.resources.update((resources) => resources.filter((r) => r.id !== id))
   }
 
+  async deleteHistoryEntry(id: string) {
+    await this.sffs.deleteHistoryEntry(id)
+  }
+
   async reloadResource(id: string) {
     const resourceItem = await this.sffs.readResource(id)
     if (!resourceItem) {
