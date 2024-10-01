@@ -505,13 +505,21 @@ pub fn handle_misc_message(
             oneshot,
             worker.create_app(prompt, session_id, contexts),
         ),
-        MiscMessage::QuerySFFSResources(prompt, sql_query, embedding_query, embedding_distance_threshold) => {
-            send_worker_response(
-                channel,
-                oneshot,
-                worker.query_sffs_resources(prompt, sql_query, embedding_query, embedding_distance_threshold),
-            )
-        }
+        MiscMessage::QuerySFFSResources(
+            prompt,
+            sql_query,
+            embedding_query,
+            embedding_distance_threshold,
+        ) => send_worker_response(
+            channel,
+            oneshot,
+            worker.query_sffs_resources(
+                prompt,
+                sql_query,
+                embedding_query,
+                embedding_distance_threshold,
+            ),
+        ),
         MiscMessage::GetAIChatDataSource(source_hash) => send_worker_response(
             channel,
             oneshot,

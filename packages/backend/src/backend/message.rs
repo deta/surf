@@ -114,12 +114,11 @@ pub enum ResourceMessage {
     SearchResources {
         query: String,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
-        proximity_distance_threshold: Option<f32>,
-        proximity_limit: Option<i64>,
         semantic_search_enabled: Option<bool>,
         embeddings_distance_threshold: Option<f32>,
         embeddings_limit: Option<i64>,
         include_annotations: Option<bool>,
+        space_id: Option<String>,
     },
     UpdateResourceMetadata(ResourceMetadata),
     UpsertResourceTextContent {

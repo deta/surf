@@ -241,16 +241,38 @@ impl Worker {
         self.db.list_resources_by_tags(tags)
     }
 
+    fn get_filtered_ids_for_search(
+        &mut self,
+        resource_tag_filters: Option<Vec<ResourceTagFilter>>,
+        space_id: Option<String>,
+    ) -> BackendResult<Option<Vec<String>>> {
+        if let Some(resource_tag_filters) = resource_tag_filters {
+            if let Some(space_id) = space_id {
+                return Ok(Some(self.db.list_resource_ids_by_tags_space_id(
+                    &resource_tag_filters,
+                    &space_id,
+                )?));
+            }
+            return Ok(Some(
+                self.db.list_resource_ids_by_tags(&resource_tag_filters)?,
+            ));
+        }
+        if let Some(space_id) = space_id {
+            return Ok(Some(self.db.list_resource_ids_by_space_id(&space_id)?));
+        }
+        Ok(None)
+    }
+
+    // TODO: break up this function
     pub fn search_resources(
         &mut self,
         query: String,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
-        _proximity_distance_threshold: Option<f32>,
-        _proximity_limit: Option<i64>,
         semantic_search_enabled: Option<bool>,
         embeddings_distance_threshold: Option<f32>,
         embeddings_limit: Option<i64>,
         include_annotations: Option<bool>,
+        space_id: Option<String>,
     ) -> BackendResult<SearchResult> {
         if let Some(resource_tag_filters) = &resource_tag_filters {
             // we use an `INTERSECT` for each resouce tag filter
@@ -278,21 +300,11 @@ impl Worker {
             None => 100,
         };
 
-        // let mut query_embedding: Vec<f32> = Vec::new();
-
-        // if query != "" && semantic_search_enabled {
-        //     // TODO: what if query is too big?
-        //     // TODO: can we use one of the ai threads instead of the main thread
-        //     query_embedding = self.embedding_model.encode_single(&query)?;
-        // }
-
         let mut seen_keys: HashSet<String> = HashSet::new();
         let mut results: Vec<SearchResultItem> = vec![];
 
-        let filtered_resource_ids = match resource_tag_filters {
-            Some(mut filters) => Some(self.db.list_resource_ids_by_tags(&mut filters)?),
-            None => None,
-        };
+        let filtered_resource_ids =
+            self.get_filtered_ids_for_search(resource_tag_filters, space_id)?;
 
         let db_results =
             self.db
@@ -536,7 +548,8 @@ impl Worker {
         match self.ai.upsert_embeddings(old_keys, new_row_ids, chunks) {
             Ok(_) => {}
             Err(e) => {
-                self.db.delete_all_embedding_resources(&resource_id, embedding_type)?;
+                self.db
+                    .delete_all_embedding_resources(&resource_id, embedding_type)?;
                 eprintln!("failed to upsert embeddings: {:#?}", e);
                 return Err(e);
             }
@@ -620,24 +633,22 @@ pub fn handle_resource_message(
         ResourceMessage::SearchResources {
             query,
             resource_tag_filters,
-            proximity_distance_threshold,
-            proximity_limit,
             semantic_search_enabled,
             embeddings_distance_threshold,
             embeddings_limit,
             include_annotations,
+            space_id,
         } => send_worker_response(
             channel,
             oneshot,
             worker.search_resources(
                 query,
                 resource_tag_filters,
-                proximity_distance_threshold,
-                proximity_limit,
                 semantic_search_enabled,
                 embeddings_distance_threshold,
                 embeddings_limit,
                 include_annotations,
+                space_id,
             ),
         ),
         ResourceMessage::UpdateResourceMetadata(metadata) => {

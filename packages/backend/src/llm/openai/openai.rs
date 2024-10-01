@@ -1,4 +1,7 @@
-use crate::{llm::models::{Message, ChatCompletionMessage}, BackendError, BackendResult};
+use crate::{
+    llm::models::{ChatCompletionMessage, Message},
+    BackendError, BackendResult,
+};
 
 use bytes::Bytes;
 use futures::Stream;
@@ -276,7 +279,7 @@ mod tests {
 
         let messages = vec![Message {
             role: "user".to_string(),
-            content: vec![MessageContent::new_text("Hello!".to_string())], 
+            content: vec![MessageContent::new_text("Hello!".to_string())],
         }];
         let runtime = Runtime::new()?;
         let mut result = String::new();

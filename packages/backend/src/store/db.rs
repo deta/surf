@@ -1104,7 +1104,7 @@ impl Database {
 
     pub fn list_resource_ids_by_tags(
         &self,
-        tags: &mut Vec<ResourceTagFilter>,
+        tags: &Vec<ResourceTagFilter>,
     ) -> BackendResult<Vec<String>> {
         let mut result = Vec::new();
         if tags.is_empty() {
@@ -1114,6 +1114,44 @@ impl Database {
         let mut stmt = self.conn.prepare(&query)?;
         let resource_ids =
             stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
+        for resource_id in resource_ids {
+            result.push(resource_id?);
+        }
+        Ok(result)
+    }
+
+    pub fn list_resource_ids_by_tags_space_id(
+        &self,
+        tags: &Vec<ResourceTagFilter>,
+        space_id: &str,
+    ) -> BackendResult<Vec<String>> {
+        if tags.is_empty() {
+            return self.list_resource_ids_by_space_id(space_id);
+        }
+        let mut result = Vec::new();
+        let (mut query, mut params) = Self::list_resource_ids_by_tags_query(tags, 0);
+
+        query = format!(
+            "{} INTERSECT SELECT resource_id FROM space_entries WHERE space_id = ?",
+            query
+        );
+        params.push(space_id.to_string());
+
+        let mut stmt = self.conn.prepare(&query)?;
+        let resource_ids =
+            stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
+        for resource_id in resource_ids {
+            result.push(resource_id?);
+        }
+        Ok(result)
+    }
+
+    pub fn list_resource_ids_by_space_id(&self, space_id: &str) -> BackendResult<Vec<String>> {
+        let mut result = Vec::new();
+        let mut stmt = self
+            .conn
+            .prepare("SELECT resource_id FROM space_entries WHERE space_id = ?1")?;
+        let resource_ids = stmt.query_map(rusqlite::params![space_id], |row| row.get(0))?;
         for resource_id in resource_ids {
             result.push(resource_id?);
         }
@@ -1632,7 +1670,11 @@ impl Database {
         Ok(history_entries)
     }
 
-    pub fn delete_all_embedding_resources(&self, resource_id: &str, embedding_type: EmbeddingType) -> BackendResult<()> {
+    pub fn delete_all_embedding_resources(
+        &self,
+        resource_id: &str,
+        embedding_type: EmbeddingType,
+    ) -> BackendResult<()> {
         self.conn.execute(
             "DELETE FROM embedding_resources WHERE resource_id = ?1 AND embedding_type = ?2",
             rusqlite::params![resource_id, embedding_type],
