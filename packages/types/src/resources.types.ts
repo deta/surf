@@ -78,11 +78,7 @@ export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'loc
 
 export interface SFFSSearchGeneralParameters {
   includeAnnotations?: boolean
-}
-
-export interface SFFSSearchProximityParameters {
-  proximityDistanceThreshold?: number // default 100,000
-  proximityLimit?: number
+  spaceId?: string
 }
 
 export interface SFFSSearchSemanticParameters {
@@ -91,9 +87,7 @@ export interface SFFSSearchSemanticParameters {
   semanticLimit?: number
 }
 
-export type SFFSSearchParameters = SFFSSearchGeneralParameters &
-  SFFSSearchProximityParameters &
-  SFFSSearchSemanticParameters
+export type SFFSSearchParameters = SFFSSearchGeneralParameters & SFFSSearchSemanticParameters
 
 export interface SFFSSearchResultItem {
   resource: SFFSResource

@@ -936,11 +936,12 @@
         ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
       ],
       {
-        semanticEnabled: $userConfigSettings.use_semantic_search
+        semanticEnabled: $userConfigSettings.use_semantic_search,
+        spaceId: spaceId ? spaceId : undefined
       }
     )
 
-    log.debug('searching all', result)
+    log.debug('search in space results:', result)
 
     searchResults.set(result.map((r) => r.resource.id))
   }

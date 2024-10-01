@@ -14,7 +14,6 @@ import type {
   SFFSResourceMetadata,
   SFFSResourceTag,
   SFFSSearchParameters,
-  SFFSSearchProximityParameters,
   SFFSSearchResult,
   SFFSSearchResultEngine,
   SFFSSearchResultItem,
@@ -366,12 +365,11 @@ export class SFFS {
     const raw = await this.backend.js__store_search_resources(
       query,
       tagsData,
-      parameters?.proximityDistanceThreshold,
-      parameters?.proximityLimit,
       parameters?.semanticEnabled,
       parameters?.semanticDistanceThreshold,
       parameters?.semanticLimit,
-      parameters?.includeAnnotations
+      parameters?.includeAnnotations,
+      parameters?.spaceId
     )
     const parsed = this.parseData<SFFSSearchResult>(raw)
     const items = parsed?.items ?? []

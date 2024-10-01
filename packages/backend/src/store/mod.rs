@@ -515,37 +515,31 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
         Ok(tags) => tags,
         Err(err) => return cx.throw_error(&err.to_string()),
     };
-    let proximity_distance_threshold = cx.argument_opt(3).and_then(|arg| {
-        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
-            .ok()
-            .map(|js_number| js_number.value(&mut cx) as f32)
-    });
-    let proximity_limit = cx.argument_opt(4).and_then(|arg| {
-        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
-            .ok()
-            .map(|js_number| js_number.value(&mut cx) as i64)
-    });
-
-    let semantic_search_enabled = cx.argument_opt(5).and_then(|arg| {
+    let semantic_search_enabled = cx.argument_opt(3).and_then(|arg| {
         arg.downcast::<JsBoolean, FunctionContext>(&mut cx)
             .ok()
             .map(|js_boolean| js_boolean.value(&mut cx) as bool)
     });
 
-    let embeddings_distance_threshold = cx.argument_opt(6).and_then(|arg| {
+    let embeddings_distance_threshold = cx.argument_opt(4).and_then(|arg| {
         arg.downcast::<JsNumber, FunctionContext>(&mut cx)
             .ok()
             .map(|js_number| js_number.value(&mut cx) as f32)
     });
-    let embeddings_limit = cx.argument_opt(7).and_then(|arg| {
+    let embeddings_limit = cx.argument_opt(5).and_then(|arg| {
         arg.downcast::<JsNumber, FunctionContext>(&mut cx)
             .ok()
             .map(|js_number| js_number.value(&mut cx) as i64)
     });
-    let include_annotations = cx.argument_opt(8).and_then(|arg| {
+    let include_annotations = cx.argument_opt(6).and_then(|arg| {
         arg.downcast::<JsBoolean, FunctionContext>(&mut cx)
             .ok()
             .map(|js_boolean| js_boolean.value(&mut cx))
+    });
+    let space_id = cx.argument_opt(7).and_then(|arg| {
+        arg.downcast::<JsString, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_string| js_string.value(&mut cx))
     });
 
     let (deferred, promise) = cx.promise();
@@ -553,12 +547,11 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
         WorkerMessage::ResourceMessage(ResourceMessage::SearchResources {
             query,
             resource_tag_filters,
-            proximity_distance_threshold,
-            proximity_limit,
             semantic_search_enabled,
             embeddings_distance_threshold,
             embeddings_limit,
             include_annotations,
+            space_id,
         }),
         deferred,
     );
