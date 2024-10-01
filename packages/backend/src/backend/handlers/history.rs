@@ -42,25 +42,24 @@ impl Worker {
         let mut unique_results: Vec<HistoryEntry> = Vec::new();
         let mut seen_urls: HashSet<String> = HashSet::new();
         for entry in &entries {
-            if entry.url.is_none() {
-                continue;
-            }
-            let url = match url::Url::parse(entry.url.as_ref().unwrap()) {
-                Ok(url) => url,
-                Err(_) => {
-                    continue;
+            if let Some(url) = entry.url.as_ref() {
+                let url = match url::Url::parse(url) {
+                    Ok(url) => url,
+                    Err(_) => {
+                        continue;
+                    }
+                };
+                if let Some(hostname) = url.host_str() {
+                    let clean_url = format!("{}://{}", url.scheme(), hostname);
+                    if seen_urls.contains(&clean_url) {
+                        continue;
+                    }
+                    seen_urls.insert(clean_url.clone());
+                    unique_results.push(HistoryEntry {
+                        url: Some(clean_url),
+                        ..entry.clone()
+                    });
                 }
-            };
-            if let Some(hostname) = url.host_str() {
-                let clean_url = format!("{}://{}", url.scheme(), hostname);
-                if seen_urls.contains(&clean_url) {
-                    continue;
-                }
-                seen_urls.insert(clean_url.clone());
-                unique_results.push(HistoryEntry {
-                    url: Some(clean_url),
-                    ..entry.clone()
-                });
             }
         }
         Ok(unique_results)
