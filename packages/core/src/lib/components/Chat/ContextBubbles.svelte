@@ -9,20 +9,32 @@
   import { writable } from 'svelte/store'
 
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
-  import type { Tab } from '../../types/browser.types'
+  import type { ContextItem, Tab } from '../../types/browser.types'
 
-  export let tabs: Tab[]
+  export let items: ContextItem[]
   let containerRef
   let isInitialized = false
   const oasis = useOasis()
 
-  $: pills = tabs.map((tab) => {
-    return {
-      favicon: tab.icon,
-      title: tab.title,
-      id: tab.id,
-      type: tab.type,
-      spaceId: tab.spaceId
+  const screenshotPreviews = new Map<string, string>()
+
+  $: pills = items.map((item) => {
+    if (item.type === 'tab') {
+      const tab = item.data
+      return {
+        id: item.id,
+        favicon: tab.icon,
+        title: tab.title,
+        type: tab.type,
+        spaceId: tab.type === 'space' ? tab.spaceId : undefined
+      }
+    } else {
+      return {
+        id: item.id,
+        favicon: undefined,
+        title: 'Screenshot',
+        type: item.type
+      }
     }
   })
 
@@ -30,8 +42,7 @@
 
   const dispatch = createEventDispatcher<{
     select: string
-    'select-all-tabs': void
-    'exclude-tab': string
+    'remove-item': string
   }>()
 
   $: pillProperties = spring(
@@ -48,6 +59,45 @@
     })),
     { stiffness: 0.5, damping: 0.8 }
   )
+
+  function getOrCreateScreenshotPreview(item: ContextItem) {
+    return new Promise<string | null>((resolve) => {
+      if (item.type !== 'screenshot') {
+        resolve(null)
+        return
+      }
+
+      if (screenshotPreviews.has(item.id)) {
+        resolve(screenshotPreviews.get(item.id) ?? null)
+        return
+      }
+
+      const blob = item.data
+
+      // reduce the size of the image to 32x32
+      const canvas = document.createElement('canvas')
+      canvas.width = 32
+      canvas.height = 32
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        resolve(null)
+        return
+      }
+
+      const image = new Image()
+      image.src = URL.createObjectURL(blob)
+
+      image.onload = () => {
+        ctx.drawImage(image, 0, 0, 32, 32)
+        const dataUrl = canvas.toDataURL()
+
+        URL.revokeObjectURL(image.src)
+
+        screenshotPreviews.set(item.id, dataUrl)
+        resolve(dataUrl)
+      }
+    })
+  }
 
   onMount(async () => {
     await initializePositions()
@@ -89,16 +139,12 @@
     await initializePositions()
   }
 
-  const handleSelectAllTabs = () => {
-    dispatch('select-all-tabs')
-  }
-
   const handleSelectTab = (tabId: string) => {
     dispatch('select', tabId)
   }
 
-  const handleExcludeTab = (tabId: string) => {
-    dispatch('exclude-tab', tabId)
+  const handleExcludeItem = (id: string) => {
+    dispatch('remove-item', id)
   }
 
   function handleMouseLeave(event: MouseEvent) {}
@@ -115,7 +161,7 @@
         class="absolute top-0 left-0 shine-border pill transform hover:translate-y-[-6px]"
         animate:flip={{ duration: 300 }}
         on:click={() => handleSelectTab(pill.id)}
-        on:contextmenu={() => handleExcludeTab(pill.id)}
+        on:contextmenu={() => handleExcludeItem(pill.id)}
         style="transform: translate({$pillProperties[pills.findIndex((p) => p.id === pill.id)]
           .x}px, {$pillProperties[pills.findIndex((p) => p.id === pill.id)]
           .y}px) rotate({$pillProperties[pills.findIndex((p) => p.id === pill.id)]
@@ -133,12 +179,12 @@
           <button
             class="remove absolute top-0 left-0 shadow-sm transform"
             style="background: white; border: 1px solid rgb(220,220,220); transform: translate(-20%, -20%); z-index: 10; width: 16px; aspect-ratio: 1 / 1; border-radius: 100%;"
-            on:click={() => handleExcludeTab(pill.id)}
+            on:click={() => handleExcludeItem(pill.id)}
           >
             <Icon name="close" size="11px" color="black" />
           </button>
           <div class="w-5 h-5 flex items-center justify-center flex-shrink-0">
-            {#if pill.type !== 'space'}
+            {#if pill.type === 'page'}
               <img
                 src={pill.favicon}
                 alt={pill.title}
@@ -146,12 +192,25 @@
                 style="transition: transform 0.3s;"
                 loading="lazy"
               />
-            {:else}
+            {:else if pill.type === 'space'}
               {#await oasis.getSpace(pill.spaceId) then fetchedSpace}
                 {#if fetchedSpace}
                   <SpaceIcon folder={fetchedSpace} />
                 {/if}
               {/await}
+            {:else}
+              {#await getOrCreateScreenshotPreview(items.find((i) => i.id === pill.id))}
+                <Icon name="spinner" />
+              {:then preview}
+                <img
+                  src={preview}
+                  alt={pill.title}
+                  class="w-full h-full object-contain"
+                  style="transition: transform 0.3s;"
+                  loading="lazy"
+                />
+              {/await}
+              <Icon name="screenshot" size="20px" color="black" />
             {/if}
           </div>
           <span

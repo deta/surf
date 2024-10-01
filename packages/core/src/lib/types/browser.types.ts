@@ -219,3 +219,17 @@ export type NewResourceTabEvent = {
 }
 
 export type BookmarkTabState = 'idle' | 'in_progress' | 'success' | 'error'
+
+export type ContextItem = ContextItemScreenshot | ContextItemTab
+
+export type ContextItemScreenshot = {
+  id: string
+  type: 'screenshot'
+  data: Blob
+}
+
+export type ContextItemTab = {
+  id: string
+  type: 'tab'
+  data: Tab
+}

@@ -22,6 +22,14 @@ export const dataUrltoBlob = (dataUrl: string): Blob => {
   return new Blob([arrayBuffer], { type: mimeType })
 }
 
+export const blobToDataUrl = (blob: Blob): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.readAsDataURL(blob)
+  })
+}
+
 export const captureScreenshot = async (rect: {
   x: number
   y: number

@@ -91,6 +91,7 @@ import Grammar from './Icons/Grammar.svelte'
 import CursorArrowRays from './Icons/CursorArrowRays.svelte'
 import RectangleGroup from './Icons/RectangleGroup.svelte'
 import CursorGrab from './Icons/CursorGrab.svelte'
+import Screenshot from './Icons/Screenshot.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -186,7 +187,8 @@ export const icons = {
   grammar: Grammar,
   'cursor-arrow-rays': CursorArrowRays,
   'rectangle-group': RectangleGroup,
-  'cursor-grab': CursorGrab
+  'cursor-grab': CursorGrab,
+  screenshot: Screenshot
 }
 
 export type Icons = keyof typeof icons
@@ -283,5 +285,6 @@ export {
   Grammar,
   CursorArrowRays,
   RectangleGroup,
-  CursorGrab
+  CursorGrab,
+  Screenshot
 }

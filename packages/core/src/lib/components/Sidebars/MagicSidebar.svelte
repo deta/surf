@@ -23,13 +23,19 @@
     AIChatMessageParsed,
     PageMagic,
     AIChatMessageRole,
-    Tab
+    Tab,
+    ContextItem
   } from '../../types/browser.types'
   import ChatMessage from '../Chat/ChatMessage.svelte'
   import ChatMessageMarkdown from '../Chat/ChatMessageMarkdown.svelte'
   import ContextBubbles from '../Chat/ContextBubbles.svelte'
   import { useClipboard, generateID, useLogScope, flyAndScale } from '@horizon/utils'
-  import { ResourceManager, useResourceManager, type ResourceLink } from '../../service/resources'
+  import {
+    Resource,
+    ResourceManager,
+    useResourceManager,
+    type ResourceLink
+  } from '../../service/resources'
   import { getPrompt, PromptIDs } from '../../service/prompts'
   import { parseChatResponseSources } from '../../service/ai'
   import { useToasts } from '../../service/toast'
@@ -39,10 +45,11 @@
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
   import { DragTypeNames, type DragTypes } from '../../types'
   import Onboarding from '../Core/Onboarding.svelte'
+  import { blobToDataUrl } from '../../utils/screenshot'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
-  export let tabsInContext: Readable<Tab[]> = readable([])
+  export let contextItems: Readable<ContextItem[]> = readable([])
   export let allTabs: Tab[] = []
   export let activeTab: Tab | null = null
   export let activeTabMagic: PageMagic
@@ -61,6 +68,9 @@
     'remove-magic-tab': Tab
     'include-tab': string
     'close-chat': void
+    'pick-screenshot': void
+    'remove-context-item': string
+    'add-context-item': ContextItem
   }>()
 
   const log = useLogScope('MagicSidebar')
@@ -96,14 +106,18 @@
   let abortController: AbortController | null = null
   let onboardingOpen = writable($userConfigSettings.onboarding.completed_chat === false)
 
+  const tabsInContext = derived(contextItems, (contextItems) => {
+    return contextItems.filter((item) => item.type === 'tab').map((item) => item.data)
+  })
+
   const chatBoxPlaceholder = /*writable('Ask anything...') */ derived(
-    [optPressed, cmdPressed, shiftPressed, magicPage, optToggled, tabsInContext],
-    ([$optPressed, $cmdPressed, $shiftPressed, $magicPage, $optToggled, $tabsInContext]) => {
-      if ($tabsInContext.length === 0) return 'Ask me anything...'
+    [optPressed, cmdPressed, shiftPressed, magicPage, optToggled, contextItems],
+    ([$optPressed, $cmdPressed, $shiftPressed, $magicPage, $optToggled, $contextItems]) => {
+      if ($contextItems.length === 0) return 'Ask me anything...'
       if ($magicPage.responses.length >= 1) return 'Ask a follow up...'
-      if ($tabsInContext.length === allTabs.length) return 'Ask anything about all tabs...'
-      return `Ask anything about ${$tabsInContext.length} ${
-        $tabsInContext.length === 1 ? 'tab' : 'tabs'
+      if ($contextItems.length === allTabs.length) return 'Ask anything about all tabs...'
+      return `Ask anything about ${$contextItems.length} ${
+        $contextItems.length === 1 ? 'tab' : 'tabs'
       }...`
     }
   )
@@ -334,10 +348,34 @@
   }
 
   const handleClearContext = () => {
-    for (const t of $tabsInContext) {
-      dispatch('exclude-tab', t.id)
+    for (const item of $contextItems) {
+      if (item.type === 'screenshot') {
+        dispatch('remove-context-item', item.id)
+      } else {
+        dispatch('exclude-tab', item.data.id)
+      }
     }
+
     editor.focus()
+  }
+
+  const handlePickScreenshot = () => {
+    dispatch('pick-screenshot')
+  }
+
+  const handleRemoveContextItem = (e: CustomEvent<string>) => {
+    const id = e.detail
+    const contextItem = $contextItems.find((item) => item.id === id)
+    if (!contextItem) {
+      log.error('Context item not found', id)
+      return
+    }
+
+    if (contextItem.type === 'tab') {
+      dispatch('exclude-tab', contextItem.data.id)
+    } else {
+      dispatch('remove-context-item', id)
+    }
   }
 
   const handleInputKeydown = (e: KeyboardEvent) => {
@@ -382,7 +420,7 @@
       } else {
         selectedMode = 'active'
       }
-      contextTabs = getContextTabs(selectedMode, $tabsInContext, allTabs, activeTab)
+      itemsInContext = getItemsInContext(selectedMode, $contextItems, allTabs, activeTab)
       handleChatSubmit()
     } else if (e.key === 'Escape') {
       if ($optToggled) {
@@ -395,7 +433,12 @@
       }
     } else if (e.key === 'Enter' && $shiftPressed && $cmdPressed) {
       if (inputValue !== '') {
-        contextTabs = allTabs
+        itemsInContext = allTabs.map((tab) => {
+          return {
+            type: 'tab',
+            data: tab
+          }
+        })
         handleChatSubmit()
       }
     }
@@ -468,8 +511,22 @@
         return
       }
 
-      // TODO: (dnd / chat): Implement chat resource behaviour
-      log.warn('Not yet implemented')
+      log.debug('dropped resource', resource)
+
+      if (resource.type.startsWith('image/')) {
+        const blob = await resource.getData()
+
+        log.debug('Adding image resource to chat context')
+
+        dispatch('add-context-item', {
+          id: resource.id,
+          type: 'screenshot',
+          data: blob
+        })
+      } else {
+        // TODO: (dnd / chat): Implement chat resource behaviour
+        log.warn('Not yet implemented')
+      }
     }
   }
 
@@ -489,33 +546,39 @@
 
   let selectedMode: 'general' | 'all' | 'active' | 'context' = 'general'
 
-  function getContextTabs(
+  function getItemsInContext(
     mode: 'general' | 'all' | 'active' | 'context',
-    tabsInContext: Tab[],
+    contextItems: ContextItem[],
     allTabs: Tab[],
     activeTab: Tab | null
-  ): Tab[] {
-    let result: Tab[]
+  ) {
+    let result: ContextItem[]
     switch (mode) {
       case 'general':
         result = []
         break
       case 'all':
-        result = allTabs
+        result = allTabs.map((tab) => {
+          return {
+            type: 'tab',
+            data: tab
+          }
+        })
         break
       case 'active':
-        result = tabsInContext
+        result = contextItems
         break
       case 'context':
-        result = tabsInContext
+        result = contextItems
         break
       default:
         result = []
     }
+
     return result
   }
 
-  let contextTabs: Tab[] = getContextTabs(selectedMode, $tabsInContext, allTabs, activeTab)
+  let itemsInContext = getItemsInContext(selectedMode, $contextItems, allTabs, activeTab)
 
   const sendChatMessage = async (
     prompt: string,
@@ -531,27 +594,31 @@
     errorMessage.set('')
     hasError.set(false)
 
-    if (contextTabs.length === 0) {
+    if (itemsInContext.length === 0) {
       log.debug('No tabs in context, general chat:')
     } else {
-      log.debug('Tabs in context:', contextTabs)
+      log.debug('Tabs in context:', itemsInContext)
     }
 
     let response: AIChatMessageParsed | null = null
 
-    const generalMode = contextTabs.length === 0
+    const tabsInContext = itemsInContext
+      .filter((item) => item.type === 'tab')
+      .map((item) => item.data)
+
+    const generalMode = itemsInContext.length === 0
     const previousMessages = $magicPage.responses.filter(
       (message) => message.id !== (response?.id ?? '')
     )
-    const numSpaces = generalMode ? 0 : contextTabs.filter((tab) => tab.type === 'space').length
+    const numSpaces = generalMode ? 0 : tabsInContext.filter((tab) => tab.type === 'space').length
     const numPages = generalMode
       ? 0
-      : contextTabs.filter((tab) => tab.type === 'page' && tab.chatResourceBookmark).length
-    let contextSize = generalMode ? 0 : contextTabs.length
+      : tabsInContext.filter((tab) => tab.type === 'page' && tab.chatResourceBookmark).length
+    let contextSize = generalMode ? 0 : itemsInContext.length
 
     try {
       const resourceIds: string[] = []
-      for (const tab of contextTabs) {
+      for (const tab of tabsInContext) {
         if (tab.type === 'page' && tab.chatResourceBookmark) {
           resourceIds.push(tab.chatResourceBookmark)
         } else if (tab.type === 'space') {
@@ -561,6 +628,16 @@
           }
         } else if (tab.type === 'resource') {
           resourceIds.push(tab.resourceId)
+        }
+      }
+
+      let inlineImages: string[] = []
+
+      const contextImages = $contextItems.filter((item) => item.type === 'screenshot')
+      if (contextImages.length > 0) {
+        for (const item of contextImages) {
+          const dataUrl = await blobToDataUrl(item.data)
+          inlineImages.push(dataUrl)
         }
       }
 
@@ -621,6 +698,7 @@
         {
           limit: 30,
           resourceIds: resourceIds,
+          inlineImages: inlineImages,
           general: resourceIds.length === 0
         }
       )
@@ -1116,7 +1194,7 @@
       >
         Preparing tabs for the chat…
       </div>
-    {:else if $tabsInContext.length}
+    {:else if $contextItems.length}
       {#if !$optToggled}
         <div
           class="flex flex-col bg-blue-50 border-t-blue-300 border-l-blue-300 border-r-blue-300 border-[1px] py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 relative"
@@ -1124,13 +1202,11 @@
         >
           <div class=" flex-row items-center gap-2 flex">
             <ContextBubbles
-              tabs={$tabsInContext.slice(0, 10)}
-              on:select-all-tabs={handleSelectAllTabs}
+              items={$contextItems.slice(0, 10)}
               on:select
-              on:exclude-tab
-              on:include-tab
+              on:remove-item={handleRemoveContextItem}
             />
-            {#if $tabsInContext.length > 0}
+            {#if $contextItems.length > 0}
               <button
                 class="flex items-center gap-2 p-2 text-sm rounded-lg opacity-60 hover:bg-blue-200"
                 on:click={() => {
@@ -1182,6 +1258,18 @@
             }}
           />
         {/if}
+
+        <button
+          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
+          on:click={handlePickScreenshot}
+          use:tooltip={{
+            text: 'Add Screenshot',
+            position: 'left'
+          }}
+        >
+          <Icon name="screenshot" color="#1e3a8a" className="opacity-60" />
+        </button>
+
         <button
           disabled={allTabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
           popovertarget="chat-add-context-tabs"
@@ -1201,7 +1289,7 @@
           class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
           on:click={() => {
             selectedMode = 'active'
-            contextTabs = getContextTabs(selectedMode, $tabsInContext, allTabs, activeTab)
+            itemsInContext = getItemsInContext(selectedMode, $contextItems, allTabs, activeTab)
             handleChatSubmit()
           }}
           disabled={!inputValue || $magicPage.running}

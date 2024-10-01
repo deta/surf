@@ -1,3 +1,7 @@
+<script lang="ts" context="module">
+  export type ScreenshotPickerMode = 'inline' | 'sidebar'
+</script>
+
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import { Icon } from '@horizon/icons'
@@ -11,10 +15,16 @@
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { EventContext, ResourceTypes, SaveToOasisEventTrigger } from '@horizon/types'
 
+  export let mode: ScreenshotPickerMode = 'inline'
+
   const sffs = new SFFS()
   const dispatch = createEventDispatcher<{
-    screenshot: { rect: { x: number; y: number; width: number; height: number }; loading: boolean }
+    save: { rect: { x: number; y: number; width: number; height: number }; loading: boolean }
     copy: { rect: { x: number; y: number; width: number; height: number }; loading: boolean }
+    'screenshot-for-chat': {
+      rect: { x: number; y: number; width: number; height: number }
+      loading: boolean
+    }
     askAi: { rect: { x: number; y: number; width: number; height: number }; prompt: string }
     cancel: void
   }>()
@@ -55,7 +65,7 @@
   let menuElement: HTMLElement
   let inside = false
   let menuWidth = 400
-  let menuHeight = 87
+  let menuHeight = mode === 'inline' ? 87 : 35
   let isResizingMenu = false
   let menuResizeStartX = 0
 
@@ -327,7 +337,7 @@
     isPending = false
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        dispatch('screenshot', { rect, loading })
+        dispatch('save', { rect, loading })
         setTimeout(() => {
           isCapturing = false
         }, 100)
@@ -348,6 +358,19 @@
     })
 
     await telemetry.trackCopyScreenshot()
+  }
+
+  function handleTakeScreenshotForChat() {
+    isCapturing = true
+    isPending = false
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        dispatch('screenshot-for-chat', { rect, loading })
+        setTimeout(() => {
+          isCapturing = false
+        }, 100)
+      })
+    })
   }
 
   function handleAIMessageCopy() {
@@ -726,114 +749,126 @@
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
       bind:this={menuElement}
-      class="screenshot-menu absolute rounded-lg w-[400px] flex flex-row gap-2"
+      class="screenshot-menu absolute rounded-lg flex flex-row gap-2 {mode === 'inline'
+        ? 'w-[400px]'
+        : 'w-fit'}"
       style={menuStyle}
       on:mousedown={handleMenuMouseDown}
     >
-      <div class="flex-1 shadow-xl">
-        <div class="bg-neutral-50 rounded-t-lg px-3 py-1">
-          {#if aiResponse}
-            <div
-              bind:this={aiResponseElement}
-              class="overflow-y-auto max-h-80 py-2 w-full overflow-x-hidden"
-            >
-              {#if lastPrompt}
-                <div class="font-semibold text-neutral-800 pt-2 rounded-xl w-fit mb-2">
-                  {@html lastPrompt}
-                </div>
-              {/if}
-              <ChatMessageMarkdown content={aiResponse} sources={[]} inline id="chat-message" />
-
-              {#if aiResponse.length > 0 && !loading}
-                <div class="flex flex-row items-center gap-2 justify-end my-2">
-                  {#each menuItems as item, index}
-                    <button
-                      class="flex gap-2 select-none items-center rounded-xl p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors"
-                      on:click={() => handleAIMessageItemClick(index)}
-                      use:tooltip={{
-                        text: item.name === 'Save...' ? 'Save' : 'Copy',
-                        position: 'top'
-                      }}
-                    >
-                      <Icon name={item.icon} size="14px" className="!text-neutral-500" />
-                    </button>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          {/if}
-
-          <form class="py-2 flex-1 border-neutral-200" class:border-t={aiResponse}>
-            <div class="flex-grow overflow-y-auto max-h-24 !text-md">
-              <Editor
-                bind:this={editor}
-                bind:content={prompt}
-                bind:focused={editorFocused}
-                on:submit={handleAISubmit}
-                autofocus={true}
-                placeholder="Ask a question..."
-              />
-            </div>
-          </form>
-        </div>
-
-        <div
-          class="flex flex-row justify-between items-center text-sm bg-neutral-100 rounded-b-lg px-1 py-1"
-        >
-          <div class="flex items-center gap-2">
-            <button
-              class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors"
-              on:click={() => {
-                if (prompt.length > 0 && !loading) {
-                  handleAISubmit()
-                } else {
-                  dispatch('cancel')
-                }
-              }}
-              disabled={prompt.length > 0 && loading}
-            >
-              {#if prompt.length > 0 && !loading}
-                <!-- <kbd class="text-neutral-500">↵</kbd> -->
-                <span>Submit</span>
-              {:else if loading}
-                <div>
-                  <span
-                    class="w-1.5 h-1.5 ml-1.5 rounded-full bg-neutral-400 inline-block animate-flash"
-                  ></span>
-                  <span
-                    class="w-1.5 h-1.5 ml-1.5 rounded-full bg-neutral-400 inline-block animate-flash [animation-delay:0.2s]"
-                  ></span>
-                  <span
-                    class="w-1.5 h-1.5 ml-1.5 rounded-full bg-neutral-400 inline-block animate-flash [animation-delay:0.4s]"
-                  ></span>
-                </div>
-              {:else}
-                <!-- <kbd class="text-neutral-500 text-xs">ESC</kbd> -->
-                <span>Cancel</span>
-              {/if}
-            </button>
-
-            <!-- {#if savedChatId && !loading}
-            <button
-              class="flex gap-2 select-none items-center rounded-xl p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors"
-              on:click={() => {
-                resetState()
-              }}
-              disabled={prompt.length > 0 && loading}
-            >
-              <kbd class="text-neutral-500 text-xs">
-                {#if navigator.userAgent.includes('Macintosh')}
-                  <kbd>⌘+⌫ </kbd>
-                {:else}
-                  <kbd>Ctrl+⌫</kbd>
+      {#if mode === 'inline'}
+        <div class="flex-1 shadow-xl">
+          <div class="bg-neutral-50 rounded-t-lg px-3 py-1">
+            {#if aiResponse}
+              <div
+                bind:this={aiResponseElement}
+                class="overflow-y-auto max-h-80 py-2 w-full overflow-x-hidden"
+              >
+                {#if lastPrompt}
+                  <div class="font-semibold text-neutral-800 pt-2 rounded-xl w-fit mb-2">
+                    {@html lastPrompt}
+                  </div>
                 {/if}
-              </kbd>
-              <span>Reset</span>
-            </button>
-          {/if} -->
+                <ChatMessageMarkdown content={aiResponse} sources={[]} inline id="chat-message" />
+
+                {#if aiResponse.length > 0 && !loading}
+                  <div class="flex flex-row items-center gap-2 justify-end my-2">
+                    {#each menuItems as item, index}
+                      <button
+                        class="flex gap-2 select-none items-center rounded-xl p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors"
+                        on:click={() => handleAIMessageItemClick(index)}
+                        use:tooltip={{
+                          text: item.name === 'Save...' ? 'Save' : 'Copy',
+                          position: 'top'
+                        }}
+                      >
+                        <Icon name={item.icon} size="14px" className="!text-neutral-500" />
+                      </button>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            {/if}
+
+            <form class="py-2 flex-1 border-neutral-200" class:border-t={aiResponse}>
+              <div class="flex-grow overflow-y-auto max-h-24 !text-md">
+                <Editor
+                  bind:this={editor}
+                  bind:content={prompt}
+                  bind:focused={editorFocused}
+                  on:submit={handleAISubmit}
+                  autofocus={true}
+                  placeholder="Ask a question..."
+                />
+              </div>
+            </form>
+          </div>
+
+          <div
+            class="flex flex-row justify-between items-center text-sm bg-neutral-100 rounded-b-lg px-1 py-1"
+          >
+            <div class="flex items-center gap-2">
+              <button
+                class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors"
+                on:click={() => {
+                  if (prompt.length > 0 && !loading) {
+                    handleAISubmit()
+                  } else {
+                    dispatch('cancel')
+                  }
+                }}
+                disabled={prompt.length > 0 && loading}
+              >
+                {#if prompt.length > 0 && !loading}
+                  <!-- <kbd class="text-neutral-500">↵</kbd> -->
+                  <span>Submit</span>
+                {:else if loading}
+                  <div>
+                    <span
+                      class="w-1.5 h-1.5 ml-1.5 rounded-full bg-neutral-400 inline-block animate-flash"
+                    ></span>
+                    <span
+                      class="w-1.5 h-1.5 ml-1.5 rounded-full bg-neutral-400 inline-block animate-flash [animation-delay:0.2s]"
+                    ></span>
+                    <span
+                      class="w-1.5 h-1.5 ml-1.5 rounded-full bg-neutral-400 inline-block animate-flash [animation-delay:0.4s]"
+                    ></span>
+                  </div>
+                {:else}
+                  <!-- <kbd class="text-neutral-500 text-xs">ESC</kbd> -->
+                  <span>Cancel</span>
+                {/if}
+              </button>
+
+              <!-- {#if savedChatId && !loading}
+              <button
+                class="flex gap-2 select-none items-center rounded-xl p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors"
+                on:click={() => {
+                  resetState()
+                }}
+                disabled={prompt.length > 0 && loading}
+              >
+                <kbd class="text-neutral-500 text-xs">
+                  {#if navigator.userAgent.includes('Macintosh')}
+                    <kbd>⌘+⌫ </kbd>
+                  {:else}
+                    <kbd>Ctrl+⌫</kbd>
+                  {/if}
+                </kbd>
+                <span>Reset</span>
+              </button>
+            {/if} -->
+            </div>
           </div>
         </div>
-      </div>
+      {:else}
+        <button
+          class="flex gap-2 select-none items-center h-fit rounded-lg p-2 text-base font-medium !ring-0 !ring-transparent transition-colors text-white/75 bg-blue-500 hover:!bg-blue-600"
+          on:click={handleTakeScreenshotForChat}
+        >
+          <Icon name="message" className="!text-neutral-500" />
+          Use in Chat
+        </button>
+      {/if}
     </div>
   {/if}
 </div>

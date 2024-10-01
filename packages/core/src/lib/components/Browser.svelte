@@ -65,7 +65,8 @@
     CreateTabOptions,
     ControlWindow,
     TabResource,
-    BookmarkTabState
+    BookmarkTabState,
+    ContextItem
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
@@ -123,7 +124,7 @@
   import CreateLiveSpace from './Oasis/CreateLiveSpace.svelte'
   import { createTabsManager } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
-  import ScreenshotPicker from './Webview/ScreenshotPicker.svelte'
+  import ScreenshotPicker, { type ScreenshotPickerMode } from './Webview/ScreenshotPicker.svelte'
   import {
     dataUrltoBlob,
     captureScreenshot,
@@ -191,6 +192,7 @@
   } = tabsManager
 
   const showScreenshotPicker = writable(false)
+  const screenshotPickerMode = writable<ScreenshotPickerMode>('inline')
   const addressValue = writable('')
   const activeChatId = useLocalStorageStore<string>('activeChatId', '')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
@@ -218,6 +220,7 @@
   const chatTooltipHovered = writable(false)
   const showStartMask = writable(false)
   const showEndMask = writable(false)
+  const chatScreenshots = writable<ContextItem[]>([])
 
   // on windows and linux the custom window actions are shown in the tab bar
   const showCustomWindowActions = !isMac()
@@ -268,6 +271,13 @@
       }
     ]
   )
+
+  const chatContextItems = derived([magicTabs, chatScreenshots], ([magicTabs, chatScreenshots]) => {
+    return [
+      ...chatScreenshots,
+      ...magicTabs.map((tab) => ({ id: tab.id, type: 'tab', data: tab }) as ContextItem)
+    ]
+  })
 
   $: {
     handleRightSidebarTabsChange($rightSidebarTab)
@@ -999,6 +1009,15 @@
     if (showRightSidebar) {
       handleCollapseRight()
     }
+  }
+
+  function openScreenshotPicker(mode: ScreenshotPickerMode = 'inline') {
+    $showScreenshotPicker = true
+    $screenshotPickerMode = mode
+  }
+
+  function handlePickScreenshotForChat() {
+    openScreenshotPicker('sidebar')
   }
 
   function updateBookmarkingTabState(tabId: string, value: BookmarkTabState | null) {
@@ -2370,7 +2389,7 @@
     window.api.onStartScreenshotPicker(() => {
       setShowNewTabOverlay(0)
       if ($showScreenshotPicker === false) {
-        $showScreenshotPicker = true
+        openScreenshotPicker()
       } else {
         $showScreenshotPicker = false
       }
@@ -3302,7 +3321,7 @@
     )*/
   }
 
-  const handleScreenshot = async (
+  const handleSaveScreenshot = async (
     event: CustomEvent<{
       rect: { x: number; y: number; width: number; height: number }
       loading: boolean
@@ -3341,7 +3360,7 @@
     }
   }
 
-  const handleCopy = async (
+  const handleCopyScreenshot = async (
     event: CustomEvent<{
       rect: { x: number; y: number; width: number; height: number }
       loading: boolean
@@ -3358,6 +3377,63 @@
       if (!event.detail.loading) {
         $showScreenshotPicker = false
       }
+    }
+  }
+
+  const handleTakeScreenshotForChat = async (
+    event: CustomEvent<{
+      rect: { x: number; y: number; width: number; height: number }
+      loading: boolean
+    }>
+  ) => {
+    try {
+      const blob = await captureScreenshot(event.detail.rect)
+
+      log.debug('Captured screenshot for chat', blob)
+
+      chatScreenshots.update((screenshots) => {
+        return [
+          ...screenshots,
+          {
+            id: generateID(),
+            type: 'screenshot',
+            data: blob
+          }
+        ]
+      })
+    } catch (error) {
+      log.error('Failed to create screenshot for chat:', error)
+      toasts.error('Failed to create screenshot for chat')
+    } finally {
+      if (!event.detail.loading) {
+        $showScreenshotPicker = false
+      }
+    }
+  }
+
+  const handleRemoveContextItem = (e: CustomEvent<string>) => {
+    const itemId = e.detail
+
+    const item = $chatContextItems.find((item) => item.id === itemId)
+    if (!item) {
+      log.error('Context item not found', itemId)
+      return
+    }
+
+    if (item.type === 'screenshot') {
+      chatScreenshots.update((screenshots) => {
+        return screenshots.filter((s) => s.id !== itemId)
+      })
+    }
+  }
+
+  const handleAddContextItem = (e: CustomEvent<ContextItem>) => {
+    const contextItem = e.detail
+
+    if (contextItem.type === 'screenshot') {
+      chatScreenshots.update((screenshots) => {
+        return [...screenshots, contextItem]
+      })
     }
   }
 
@@ -3426,8 +3502,10 @@
 
 {#if $showScreenshotPicker === true}
   <ScreenshotPicker
-    on:screenshot={handleScreenshot}
-    on:copy={handleCopy}
+    mode={$screenshotPickerMode}
+    on:save={handleSaveScreenshot}
+    on:copy={handleCopyScreenshot}
+    on:screenshot-for-chat={handleTakeScreenshotForChat}
     on:cancel={() => ($showScreenshotPicker = false)}
   />
 {/if}
@@ -4250,7 +4328,7 @@
                 <TabOnboarding
                   on:openChat={() => openRightSidebarTab('chat')}
                   on:openStuff={() => ($showNewTabOverlay = 2)}
-                  on:openScreenshot={() => ($showScreenshotPicker = true)}
+                  on:openScreenshot={() => openScreenshotPicker()}
                 />
               {/if}
             </div>
@@ -4325,7 +4403,7 @@
           {#key showRightSidebar}
             <MagicSidebar
               magicPage={activeTabMagic}
-              tabsInContext={magicTabs}
+              contextItems={chatContextItems}
               bind:this={magicSidebar}
               allTabs={$tabs}
               bind:inputValue={$magicInputValue}
@@ -4344,6 +4422,9 @@
               on:include-tab={handleIncludeTabInMagic}
               {horizontalTabs}
               on:close-chat={() => toggleRightSidebarTab('chat')}
+              on:pick-screenshot={handlePickScreenshotForChat}
+              on:remove-context-item={handleRemoveContextItem}
+              on:add-context-item={handleAddContextItem}
               {experimentalMode}
               {activeTabMagic}
             />
