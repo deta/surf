@@ -23,7 +23,7 @@ export function createSettingsWindow() {
     autoHideMenuBar: true,
     title: 'Settings',
     frame: !isMac(),
-    trafficLightPosition: { x: 18, y: 18 },
+    trafficLightPosition: { x: 24, y: 24 },
     titleBarStyle: isMac() ? 'hidden' : 'default',
     // ...(isLinux() ? { icon } : {}),
     webPreferences: {

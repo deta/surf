@@ -6,8 +6,9 @@ import { getMainWindow } from './mainWindow'
 import { getUserConfig, updateUserConfig, updateUserConfigSettings } from './config'
 import { handleDragStart } from './drag'
 import { ElectronAppInfo, RightSidebarTab, SFFSResource, UserSettings } from '@horizon/types'
-import { getPlatform, isPathSafe } from './utils'
+import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
 import { checkForUpdates } from './appUpdates'
+import { useAsDefaultBrowser } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 import { createGoogleSignInWindow } from './googleSignInWindow'
 import { setupHistorySwipeIpcSenders } from './historySwipe'
@@ -258,6 +259,18 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return
 
     checkForUpdates()
+  })
+
+  IPC_EVENTS_MAIN.useAsDefaultBrowser.on((event) => {
+    if (!validateIPCSender(event)) return
+
+    return useAsDefaultBrowser()
+  })
+
+  IPC_EVENTS_MAIN.isDefaultBrowser.handle((event) => {
+    if (!validateIPCSender(event)) return null
+
+    return isDefaultBrowser()
   })
 
   IPC_EVENTS_MAIN.setPrompts.on((event, prompts) => {

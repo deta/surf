@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
 
@@ -11,7 +11,7 @@
   import PromptSection from './components/PromptSection.svelte'
   import Prompt from './components/Prompt.svelte'
   import { useDebounce } from '@horizon/utils'
-  import type { EditablePrompt, UserSettings } from '@horizon/types'
+  import type { EditablePrompt, UserConfig, UserSettings } from '@horizon/types'
   import SettingsOption from './components/SettingsOption.svelte'
   import LayoutPicker from './components/LayoutPicker.svelte'
   import DefaultSearchEnginePicker from './components/DefaultSearchEnginePicker.svelte'
@@ -26,6 +26,10 @@
   let migrationOutput: HTMLParagraphElement
   let migrating = false
   let userConfigSettings: UserSettings | undefined = undefined
+  let userConfig: UserConfig | undefined = undefined
+  let checkInterval: NodeJS.Timeout
+
+  const isDefaultBrowser = writable(false)
 
   const activeTab = writable<'general' | 'appearance' | 'oasis' | 'prompts'>('general')
 
@@ -40,6 +44,15 @@
 
   const checkForUpdates = async () => {
     await window.api.checkForUpdates()
+  }
+
+  const useAsDefaultBrowser = async () => {
+    await window.api.useAsDefaultBrowser()
+
+    // This is needed because we do not know if the user accepted the prompt
+    checkInterval = setInterval(async () => {
+      isDefaultBrowser.set(await window.api.isDefaultBrowser())
+    }, 1000)
   }
 
   const handleMigration = async () => {
@@ -67,6 +80,8 @@
 
   onMount(async () => {
     userConfigSettings = window.api.getUserConfigSettings()
+    userConfig = await window.api.getUserConfig()
+    isDefaultBrowser.set(await window.api.isDefaultBrowser())
     console.log('loaded settings', userConfigSettings)
 
     getAppInfo()
@@ -81,6 +96,10 @@
       console.log('user config settings change', settings)
       userConfigSettings = settings
     })
+  })
+
+  onDestroy(() => {
+    clearInterval(checkInterval)
   })
 </script>
 
@@ -134,26 +153,41 @@
 
   <div class="content-wrapper">
     {#if $activeTab === 'general'}
+      {#if !$isDefaultBrowser}
+        <div class="default-wrapper">
+          Surf is not set as your default browser.
+          <button on:click={useAsDefaultBrowser}>Start using surf as your default</button>
+        </div>
+      {/if}
       <article class="general">
         <img src={appIcon} alt="App Icon" />
-        <h1>Surf v{version}</h1>
+        <div class="app-id">
+          <h1>Surf</h1>
+
+          <span class="version-pill">{version}</span>
+        </div>
 
         <button on:click={checkForUpdates}>Check for Updates</button>
-        {#if isDev}
-          <h2>Migration</h2>
-          <button on:click={handleMigration} disabled={migrating}>Run Migration</button>
-          {#if migrating}
-            <Icon name="spinner" size="22px" />
+
+        <div class="dev-wrapper">
+          {#if isDev}
+            <h3>Migration</h3>
+            <button on:click={handleMigration} disabled={migrating}>Run Migration</button>
+            {#if migrating}
+              <Icon name="spinner" size="22px" />
+            {/if}
           {/if}
-        {/if}
+        </div>
         <div class="migration-output">
           <p bind:this={migrationOutput}></p>
         </div>
         {#if userConfigSettings}
-          <DefaultSearchEnginePicker
-            bind:value={userConfigSettings.search_engine}
-            on:update={() => handleSettingsUpdate()}
-          />
+          <div class="search-wrapper">
+            <DefaultSearchEnginePicker
+              bind:value={userConfigSettings.search_engine}
+              on:update={() => handleSettingsUpdate()}
+            />
+          </div>
           <SettingsOption
             icon="filter"
             title="Experimental Mode"
@@ -269,9 +303,10 @@
     --color-brand-light: #ffa7f6;
     --color-link: #007bff;
     --color-link-dark: #0056b3;
-    --color-background: #f8f8f8;
+    --color-background: #fafafa;
     --color-background-dark: #f0f0f0;
     --color-background-light: #ffffff;
+    --color-border-dark: #d1d1d1;
     --color-border: #e0e0e0;
   }
 
@@ -279,13 +314,19 @@
     box-sizing: border-box;
   }
 
+  article {
+    position: relative;
+    top: 0;
+  }
+
   main {
     height: 100vh;
     width: 100vw;
     color: var(--color-text);
-    background: var(--color-background-light);
+    background-color: var(--color-background);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .drag {
@@ -311,14 +352,18 @@
   }
 
   .tabs {
+    position: fixed;
+    top: 0;
     display: flex;
     gap: 1rem;
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
     padding: 1rem;
-    background: var(--color-background);
+    background: var(--color-background-light);
     border-bottom: 1px solid var(--color-border);
+    width: 100%;
+    z-index: 10;
   }
 
   .tab {
@@ -348,11 +393,87 @@
   }
 
   .content-wrapper {
+    position: absolute;
+    top: 4.5rem;
+    display: flex;
+    flex-direction: column;
     flex: 1;
     overflow: auto;
     padding: 3rem;
-    height: 100%;
+    height: fit-content;
     width: 100%;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--color-background);
+    z-index: 0;
+  }
+
+  .default-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-background-light);
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 1.25rem;
+    padding: 1rem 1.25rem;
+    text-align: center;
+    width: fit-content;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    button {
+      padding: 8px 16px;
+      color: var(--color-text-light);
+      border: none;
+      border-radius: 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      position: relative;
+      overflow: hidden;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: all 0.5s;
+      }
+
+      &:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+
+        &::before {
+          left: 100%;
+        }
+      }
+
+      &:active {
+        transform: translateY(1px);
+      }
+    }
+  }
+
+  .dev-wrapper,
+  .search-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 36rem;
+
+    background-color: var(--color-background-dark);
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 1rem;
+    padding: 1rem;
+    margin: 1rem 0;
   }
 
   .general {
@@ -361,11 +482,26 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
+    gap: 0.5rem;
 
-    h1 {
-      font-size: 2rem;
-      font-weight: 700;
+    .app-id {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+      }
+
+      .version-pill {
+        font-size: 1rem;
+        line-height: 0.85;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        background: #d7e1fd;
+        color: #678fff;
+      }
     }
 
     button {

@@ -427,6 +427,14 @@ const api = {
     IPC_EVENTS_RENDERER.checkForUpdates.send()
   },
 
+  useAsDefaultBrowser: () => {
+    IPC_EVENTS_RENDERER.useAsDefaultBrowser.send()
+  },
+
+  isDefaultBrowser: () => {
+    return IPC_EVENTS_RENDERER.isDefaultBrowser.invoke()
+  },
+
   onGetPrompts: (callback: () => Promise<EditablePrompt[]>) => {
     IPC_EVENTS_RENDERER.requestPrompts.on(async (_event) => {
       const prompts = await callback()

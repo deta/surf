@@ -8,12 +8,13 @@ import { isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@horizon/types'
 import { createSettingsWindow } from './settingsWindow'
 import { toggleHistorySwipeGestureConfig } from './historySwipe'
+import { updateUserConfig } from './config'
 
 const log = useLogScope('Main App Menu')
 
 let menu: Electron.Menu | null = null
 
-const useAsDefaultBrowserClickHandler = () => {
+export const useAsDefaultBrowser = () => {
   try {
     // Register the app to handle URLs (from: https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app)
     if (process.defaultApp) {
@@ -31,7 +32,10 @@ const useAsDefaultBrowserClickHandler = () => {
     setTimeout(() => {
       const isSet = isDefaultBrowser()
       if (isSet) {
+        updateUserConfig({ defaultBrowser: true })
         ipcSenders.trackEvent(TelemetryEventTypes.SetDefaultBrowser, { value: true })
+      } else {
+        updateUserConfig({ defaultBrowser: false })
       }
     }, timeout)
   } catch (error) {
@@ -68,7 +72,7 @@ const template = [
             },
             {
               label: 'Use as Default Browser',
-              click: useAsDefaultBrowserClickHandler
+              click: useAsDefaultBrowser
             },
             {
               label: 'Show Surf Data in Finder',
@@ -98,7 +102,7 @@ const template = [
             { label: 'Check for Updates...', click: checkUpdatesMenuClickHandler },
             {
               label: 'Use as Default Browser',
-              click: useAsDefaultBrowserClickHandler
+              click: useAsDefaultBrowser
             },
             { type: 'separator' },
             {

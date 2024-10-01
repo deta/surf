@@ -29,9 +29,11 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    background: var(--color-background);
+    background: var(--color-background-dark);
+    border-bottom: 1px solid var(--color-border);
     padding: 1.5rem;
     border-radius: 12px;
+    width: 36rem;
 
     .info {
       display: flex;
