@@ -21,7 +21,9 @@
 
 	const selectedItemId = derived([valueStore, commandEl], ([$value, $commandEl]) => {
 		if (!isBrowser) return undefined;
-		const item = $commandEl?.querySelector(`${ITEM_SELECTOR}[${VALUE_ATTR}="${$value}"]`);
+		const item = $commandEl?.querySelector(
+			`${ITEM_SELECTOR}[${VALUE_ATTR}="${encodeURIComponent($value)}"]`
+		);
 		return item?.getAttribute('id');
 	});
 

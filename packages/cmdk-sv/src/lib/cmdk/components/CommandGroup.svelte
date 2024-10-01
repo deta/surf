@@ -33,7 +33,7 @@
 	function containerAction(node: HTMLElement) {
 		if (value) {
 			context.value(id, value);
-			node.setAttribute(VALUE_ATTR, value);
+			node.setAttribute(VALUE_ATTR, encodeURIComponent(value));
 			return;
 		}
 
@@ -44,7 +44,7 @@
 		}
 
 		context.value(id, value);
-		node.setAttribute(VALUE_ATTR, value);
+		node.setAttribute(VALUE_ATTR, encodeURIComponent(value));
 	}
 
 	$: containerAttrs = {

@@ -300,8 +300,8 @@ export function createCommand(props: CommandProps) {
 		// Sort the items
 		getValidItems(rootEl)
 			.sort((a, b) => {
-				const valueA = a.getAttribute(VALUE_ATTR) ?? '';
-				const valueB = b.getAttribute(VALUE_ATTR) ?? '';
+				const valueA = decodeURIComponent(a.getAttribute(VALUE_ATTR) ?? '');
+				const valueB = decodeURIComponent(b.getAttribute(VALUE_ATTR) ?? '');
 				return (scores.get(valueA) ?? 0) - (scores.get(valueB) ?? 0);
 			})
 			.forEach((item) => {
@@ -328,7 +328,9 @@ export function createCommand(props: CommandProps) {
 		groups
 			.sort((a, b) => b[1] - a[1])
 			.forEach((group) => {
-				const el = rootEl.querySelector(`${GROUP_SELECTOR}[${VALUE_ATTR}="${group[0]}"]`);
+				const el = rootEl.querySelector(
+					`${GROUP_SELECTOR}[${VALUE_ATTR}="${encodeURIComponent(group[0])}"]`
+				);
 				if (!isHTMLElement(el)) return;
 				el.parentElement?.appendChild(el);
 			});
@@ -340,7 +342,7 @@ export function createCommand(props: CommandProps) {
 		if (!item) return;
 		const value = item.getAttribute(VALUE_ATTR);
 		if (!value) return;
-		return value;
+		return decodeURIComponent(value);
 	}
 
 	function setFirstItemToSelected() {
@@ -348,7 +350,7 @@ export function createCommand(props: CommandProps) {
 		if (!item) return;
 		const value = item.getAttribute(VALUE_ATTR);
 		if (!value) return;
-		updateState('value', value);
+		updateState('value', decodeURIComponent(value));
 	}
 
 	function score(value: string | undefined, search: string) {
@@ -418,7 +420,7 @@ export function createCommand(props: CommandProps) {
 		}
 
 		if (newSelected) {
-			updateState('value', newSelected.getAttribute(VALUE_ATTR) ?? '');
+			updateState('value', decodeURIComponent(newSelected.getAttribute(VALUE_ATTR) ?? ''));
 		}
 	}
 
@@ -436,7 +438,7 @@ export function createCommand(props: CommandProps) {
 		}
 
 		if (item) {
-			updateState('value', item.getAttribute(VALUE_ATTR) ?? '');
+			updateState('value', decodeURIComponent(item.getAttribute(VALUE_ATTR) ?? ''));
 		} else {
 			updateSelectedByChange(change);
 		}
