@@ -97,7 +97,7 @@ fn enable_wal_mode(conn: &rusqlite::Connection) -> BackendResult<()> {
 fn escape_fts_query(keyword: &str) -> String {
     let escaped_quotes = keyword.replace(r#"""#, r#"""""#);
     let tokens: Vec<&str> = escaped_quotes.split_whitespace().collect();
-    
+
     tokens
         .into_iter()
         .map(|token| format!(r#""{}""#, token))
@@ -1630,6 +1630,14 @@ impl Database {
         }
 
         Ok(history_entries)
+    }
+
+    pub fn delete_all_embedding_resources(&self, resource_id: &str, embedding_type: EmbeddingType) -> BackendResult<()> {
+        self.conn.execute(
+            "DELETE FROM embedding_resources WHERE resource_id = ?1 AND embedding_type = ?2",
+            rusqlite::params![resource_id, embedding_type],
+        )?;
+        Ok(())
     }
 
     pub fn create_embedding_resource_tx(

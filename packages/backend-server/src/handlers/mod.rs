@@ -111,20 +111,19 @@ pub fn handle_client(
 
     loop {
         let (bytes_read, message) = read_msg(&stream)?;
-        println!(
-            "[LocalAIServer] received message with len: {:#?}",
-            message.len()
-        );
         if bytes_read == 0 {
             return Ok(());
         }
         let (is_done, message) = is_done(&message);
         client_message_buffer.push_str(&message);
         if is_done {
+            println!(
+                "[LocalAIServer] received message with len: {:#?}",
+                message.len()
+            );
             break;
         }
     }
-    dbg!(&client_message_buffer.len());
     match api_request {
         Requests::LLMChatCompletion => {
             if let Some(llm_model) = llm_model {

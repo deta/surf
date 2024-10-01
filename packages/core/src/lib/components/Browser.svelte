@@ -4115,10 +4115,10 @@
       {/if}
     </div>
 
-    <div slot="content" class="h-full w-full flex space-x-4 relative flex-row">
+    <div slot="content" class="h-full w-full flex relative flex-row">
       <div
         style:view-transition-name="active-content-wrapper"
-        class="w-full h-full overflow-hidden flex-grow rounded-2xl"
+        class="w-full h-full overflow-hidden flex-grow rounded-xl"
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showLeftSidebar}

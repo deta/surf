@@ -511,7 +511,6 @@ impl Worker {
                 "content_ids and chunks must have the same length".to_owned(),
             ));
         }
-        println!("upserting embedding");
 
         let mut tx = self.db.begin()?;
 
@@ -532,16 +531,16 @@ impl Worker {
             )?;
             new_row_ids.push(rowid);
         }
+        tx.commit()?;
+
         match self.ai.upsert_embeddings(old_keys, new_row_ids, chunks) {
             Ok(_) => {}
             Err(e) => {
-                tx.rollback()?;
+                self.db.delete_all_embedding_resources(&resource_id, embedding_type)?;
                 eprintln!("failed to upsert embeddings: {:#?}", e);
                 return Err(e);
             }
         }
-        tx.commit()?;
-        println!("added embeddings");
         Ok(())
     }
 }

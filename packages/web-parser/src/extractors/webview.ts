@@ -38,26 +38,6 @@ export class WebViewExtractor {
     this.webview = document.createElement('webview')
     if (!this.webview) return
 
-    this.webview.setAttribute('data-webview-extractor', 'true')
-    this.webview.src = this.url.href
-    this.webview.partition = this.partition
-    this.webview.webpreferences =
-      'autoplayPolicy=user-gesture-required,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true'
-    // webviews needed for extracting stuff don't need to create windows
-    this.webview.allowpopups = false
-
-    this.webview.style.width = '100%'
-    this.webview.style.height = '100%'
-    this.webview.style.position = 'fixed'
-    this.webview.style.top = '0'
-    this.webview.style.left = '0'
-    this.webview.style.zIndex = '999999'
-    this.webview.style.backgroundColor = 'white'
-    this.webview.style.border = 'none'
-    this.webview.style.overflow = 'hidden'
-    this.webview.style.opacity = '0'
-    this.webview.style.pointerEvents = 'none'
-
     this.webview.addEventListener('destroyed', () => {
       this.destroyWebview()
     })
@@ -91,6 +71,26 @@ export class WebViewExtractor {
       }
     })
 
+    this.webview.style.width = '100%'
+    this.webview.style.height = '100%'
+    this.webview.style.position = 'fixed'
+    this.webview.style.top = '0'
+    this.webview.style.left = '0'
+    this.webview.style.zIndex = '999999'
+    this.webview.style.backgroundColor = 'white'
+    this.webview.style.border = 'none'
+    this.webview.style.overflow = 'hidden'
+    this.webview.style.opacity = '0'
+    this.webview.style.pointerEvents = 'none'
+
+    this.webview.setAttribute('data-webview-extractor', 'true')
+    this.webview.src = this.url.href
+    this.webview.partition = this.partition
+    this.webview.webpreferences =
+      'autoplayPolicy=user-gesture-required,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true'
+    // webviews needed for extracting stuff don't need to create windows
+    this.webview.allowpopups = false
+
     document.body.appendChild(this.webview)
 
     let timeoutId: any
@@ -113,10 +113,12 @@ export class WebViewExtractor {
 
       this.webview?.addEventListener('did-finish-load', handleLoad)
 
-      this.webview?.addEventListener('did-fail-load', () => {
-        console.error('Webview failed to load')
-        this.destroyWebview()
-        reject()
+      this.webview?.addEventListener('did-fail-load', (event: Electron.DidFailLoadEvent) => {
+        if (event.isMainFrame) {
+          console.error('Webview failed to load', event)
+          this.destroyWebview()
+          reject()
+        }
       })
     })
   }
