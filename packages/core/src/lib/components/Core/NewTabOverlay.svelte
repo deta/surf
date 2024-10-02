@@ -335,8 +335,8 @@
         //     ]
         //   : []),
         ...commandFilter,
-        ...filteredCommandItems,
         ...historyEntriesResults.map((entry) => historyEntryToItem(entry)),
+        ...filteredCommandItems,
         ...searchEngineSuggestionResults.map((suggestion) =>
           searchEngineSuggestionToItem(suggestion)
         )
