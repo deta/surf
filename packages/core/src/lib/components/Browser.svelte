@@ -71,7 +71,12 @@
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
   import { HorizonDatabase } from '../service/storage'
-  import type { Optional, SFFSResourceMetadata, SFFSResourceTag } from '../types'
+  import type {
+    DownloadDoneMessage,
+    Optional,
+    SFFSResourceMetadata,
+    SFFSResourceTag
+  } from '../types'
   import { WebParser } from '@horizon/web-parser'
   import Importer from './Core/Importer.svelte'
   import OasisDiscovery from './Core/OasisDiscovery.svelte'
@@ -216,6 +221,7 @@
   const cachedMagicTabs = new Set<string>()
   const downloadResourceMap = new Map<string, Download>()
   const downloadToastsMap = new Map<string, ToastItem>()
+  const downloadIntercepters = new Map<string, (data: Download) => void>()
   const anyTabHovered = writable(false)
   const chatTooltipHovered = writable(false)
   const showStartMask = writable(false)
@@ -224,6 +230,8 @@
 
   // on windows and linux the custom window actions are shown in the tab bar
   const showCustomWindowActions = !isMac()
+
+  const CHAT_DOWNLOAD_INTERCEPT_TIMEOUT = 1000 * 60 // 60s
 
   $: log.debug('right sidebar tab', $rightSidebarTab)
 
@@ -1497,6 +1505,44 @@
     }
   }
 
+  const preparePDFPageForChat = async (tab: TabPage) => {
+    const browserTab = $browserTabs[tab.id]
+
+    const url = tab.currentLocation || tab.initialLocation
+
+    const downloadData = await new Promise<Download | null>((resolve) => {
+      const timeout = setTimeout(() => {
+        downloadIntercepters.delete(url)
+        resolve(null)
+      }, CHAT_DOWNLOAD_INTERCEPT_TIMEOUT)
+
+      downloadIntercepters.set(url, (data) => {
+        clearTimeout(timeout)
+        downloadIntercepters.delete(url)
+        resolve(data)
+      })
+
+      // initiate download
+      browserTab.downloadURL(url)
+    })
+
+    if (!downloadData) {
+      return null
+    }
+
+    log.debug('intercepted download', downloadData)
+
+    tabsManager.update(tab.id, {
+      chatResourceBookmark: downloadData.resourceId,
+      resourceBookmark: downloadData.resourceId,
+      resourceBookmarkedManually: false
+    })
+
+    const resource = await resourceManager.getResource(downloadData.resourceId)
+    log.debug('downloaded resource', resource)
+    return resource
+  }
+
   const prepareTabForChatContext = async (tab: TabPage | TabSpace | TabResource) => {
     if (tab.type === 'space' || tab.type === 'resource') {
       log.debug('Preparing space tab for chat context', tab.id)
@@ -1564,8 +1610,14 @@
         throw Error(`Browser tab not found`)
       }
 
-      log.debug('Bookmarking page for chat context', tab.id)
-      tabResource = await browserTab.createResourceForChat()
+      const detectedResourceType = tab.currentDetectedApp?.resourceType
+      if (detectedResourceType === 'application/pdf') {
+        log.debug('Page is PDF')
+        tabResource = await preparePDFPageForChat(tab)
+      } else {
+        log.debug('Bookmarking page for chat context', tab.id)
+        tabResource = await browserTab.createResourceForChat()
+      }
     }
 
     if (!tabResource) {
@@ -1577,7 +1629,7 @@
     return tabResource
   }
 
-  const preparePageTabsForChatContext = async (tabs?: Array<TabPage | TabSpace>) => {
+  const preparePageTabsForChatContext = async (tabs?: Array<TabPage | TabSpace | TabResource>) => {
     updateActiveMagicPage({ initializing: true, errors: [] })
 
     if (!tabs) {
@@ -1600,6 +1652,21 @@
 
     log.debug('Done preparing page tabs for chat context')
     updateActiveMagicPage({ initializing: false })
+  }
+
+  const handlePrepareTabForChat = async (e: CustomEvent<TabPage | TabSpace | TabResource>) => {
+    try {
+      const tab = e.detail
+      if (tab.type === 'page') {
+        await preparePDFPageForChat(tab)
+      }
+
+      log.debug('Done preparing page tab for chat context')
+    } catch (e: any) {
+      log.error('Error preparing page tabs for chat context', e)
+      let errors = $activeTabMagic.errors
+      updateActiveMagicPage({ errors: errors.concat(e.message) })
+    }
   }
 
   const setPageChatState = async (enabled: boolean) => {
@@ -2462,9 +2529,11 @@
 
       log.debug('new download request', downloadData)
 
-      const toast = toasts.loading(`Downloading "${downloadData.filename}"...`)
-
-      downloadToastsMap.set(data.id, toast)
+      const downloadIntercepter = downloadIntercepters.get(downloadData.url)
+      if (!downloadIntercepter) {
+        const toast = toasts.loading(`Downloading "${downloadData.filename}"...`)
+        downloadToastsMap.set(data.id, toast)
+      }
 
       // TODO: add metadata/tags here
       const resource = await resourceManager.createResource(
@@ -2474,7 +2543,10 @@
           name: data.filename,
           sourceURI: data.url
         },
-        [ResourceTag.download()]
+        [
+          ResourceTag.download(),
+          ...(downloadIntercepter ? [ResourceTag.silent(), ResourceTag.createdForChat()] : [])
+        ]
       )
 
       log.debug('resource for download created', downloadData, resource)
@@ -2497,7 +2569,6 @@
 
       const toast = downloadToastsMap.get(data.id)
       if (!toast) {
-        log.error('toast not found', data)
         return
       }
 
@@ -2521,7 +2592,6 @@
     })
 
     window.api.onDownloadDone(async (data) => {
-      // TODO: trigger the post-processing call here
       log.debug('download done', data)
 
       const downloadData = downloadResourceMap.get(data.id)
@@ -2530,27 +2600,30 @@
         return
       }
 
-      // if (data.state === 'completed') {
-      //   resourceManager.reloadResource(downloadData.resourceId)
-      // }
-
-      const toast = downloadToastsMap.get(data.id)
-      if (!toast) {
-        log.error('toast not found', data)
-        return
+      if (data.state === 'completed') {
+        resourceManager.reloadResource(downloadData.resourceId)
+        window.backend.resources.triggerPostProcessing(downloadData.resourceId)
       }
 
-      if (data.state === 'completed') {
-        toast.success(`"${downloadData.filename}" saved to My Stuff!`)
-      } else if (data.state === 'interrupted') {
-        toast.error(`Download of "${downloadData.filename}" interrupted`)
-      } else if (data.state === 'cancelled') {
-        toast.error(`Download of "${downloadData.filename}" cancelled`)
+      const toast = downloadToastsMap.get(data.id)
+      if (toast) {
+        if (data.state === 'completed') {
+          toast.success(`"${downloadData.filename}" saved to My Stuff!`)
+        } else if (data.state === 'interrupted') {
+          toast.error(`Download of "${downloadData.filename}" interrupted`)
+        } else if (data.state === 'cancelled') {
+          toast.error(`Download of "${downloadData.filename}" cancelled`)
+        }
       }
 
       downloadResourceMap.delete(data.id)
 
-      await telemetry.trackFileDownload()
+      const downloadIntercepter = downloadIntercepters.get(downloadData.url)
+      if (downloadIntercepter) {
+        downloadIntercepter(downloadData)
+      } else {
+        await telemetry.trackFileDownload()
+      }
     })
 
     const tabsList = await tabsDB.all()
@@ -2840,7 +2913,10 @@
       log.debug('Toggling tabs magic on', cachedMagicTabs.values())
 
       const activeTab = allTabs.find((tab) => tab.id === $activeTabId)
-      if (activeTab && (activeTab.type === 'page' || activeTab.type === 'space')) {
+      if (
+        activeTab &&
+        (activeTab.type === 'page' || activeTab.type === 'space' || activeTab.type === 'resource')
+      ) {
         log.debug('Using current tab as magic tab')
         cachedMagicTabs.add(activeTab.id)
         tabs.update((x) => {
@@ -4292,6 +4368,7 @@
                   on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
                   on:keydown={(e) => handleKeyDown(e.detail)}
                   on:add-to-chat={(e) => handleAddToChat(e)}
+                  on:prepare-tab-for-chat={handlePrepareTabForChat}
                 />
               {:else if tab.type === 'chat'}
                 <Chat

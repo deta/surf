@@ -12,6 +12,7 @@ import {
 import {
   AnnotationCommentRange,
   AnnotationRangeData,
+  DetectedWebApp,
   ResourceTypes,
   WebViewEventReceiveNames,
   WebViewEventSendNames,
@@ -24,14 +25,7 @@ import {
 import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
 // import CommentIndicator from './components/CommentIndicator.svelte'
-import { useDebounce } from '@horizon/utils'
-import {
-  ResourceArticle,
-  ResourceDocument,
-  ResourceLink,
-  ResourcePost,
-  type Resource
-} from '@horizon/core/src/lib/service/resources'
+import { ResourceArticle, type Resource } from '@horizon/core/src/lib/service/resources'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 
@@ -42,14 +36,28 @@ let selectionMenu: Menu | null = null
 
 let selectionMenuWrapper: ReturnType<typeof createComponentWrapper> | null = null
 
-// const clickOutesouHandlers = new Map<string, () => void>()
-// debouncedAppDetection
-useDebounce(runAppDetection, 200)
-
 function runAppDetection() {
   console.debug('Running app detection on', window.location.href)
   // TODO: pass the URL to the detection function so we don't have to initialize a new WebParser
   const webParser = new WebParser(window.location.href)
+
+  const isWebPage = document.contentType === 'text/html'
+
+  if (!isWebPage) {
+    const appInfo: DetectedWebApp = {
+      appId: window.location.hostname,
+      appName: window.location.hostname,
+      hostname: window.location.hostname,
+      canonicalUrl: window.location.href,
+      resourceType: document.contentType,
+      appResourceIdentifier: window.location.pathname,
+      resourceNeedsPicking: false
+    }
+
+    console.debug('App detected:', appInfo)
+    sendPageEvent(WebViewEventSendNames.DetectedApp, appInfo)
+    return
+  }
 
   const isSupported = webParser.isSupportedApp()
   console.debug('Is supported app', isSupported)

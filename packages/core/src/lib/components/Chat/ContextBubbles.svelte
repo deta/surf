@@ -3,13 +3,15 @@
   import { spring } from 'svelte/motion'
   import { flip } from 'svelte/animate'
   import { useOasis } from '../../service/oasis'
-  import { tooltip } from '@horizon/utils'
+  import { getFileKind, tooltip } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
   import ChatContextTabPicker from './ChatContextTabPicker.svelte'
   import { writable } from 'svelte/store'
 
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import type { ContextItem, Tab } from '../../types/browser.types'
+  import { ResourceTypes } from '@horizon/types'
+  import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
 
   export let items: ContextItem[]
   let containerRef
@@ -26,6 +28,7 @@
         favicon: tab.icon,
         title: tab.title,
         type: tab.type,
+        data: tab,
         spaceId: tab.type === 'space' ? tab.spaceId : undefined
       }
     } else {
@@ -192,13 +195,13 @@
                 style="transition: transform 0.3s;"
                 loading="lazy"
               />
-            {:else if pill.type === 'space'}
-              {#await oasis.getSpace(pill.spaceId) then fetchedSpace}
+            {:else if pill.type === 'space' && pill.data.type === 'space'}
+              {#await oasis.getSpace(pill.data.spaceId) then fetchedSpace}
                 {#if fetchedSpace}
                   <SpaceIcon folder={fetchedSpace} />
                 {/if}
               {/await}
-            {:else}
+            {:else if pill.type === 'screenshot'}
               {#await getOrCreateScreenshotPreview(items.find((i) => i.id === pill.id))}
                 <Icon name="spinner" />
               {:then preview}
@@ -211,6 +214,12 @@
                 />
               {/await}
               <Icon name="screenshot" size="20px" color="black" />
+            {:else if pill.type === 'resource' && pill.data.type === 'resource'}
+              {#if pill.data.resourceType === ResourceTypes.DOCUMENT_SPACE_NOTE}
+                <Icon name="docs" size="16px" />
+              {:else}
+                <FileIcon kind={getFileKind(pill.data.resourceType)} />
+              {/if}
             {/if}
           </div>
           <span

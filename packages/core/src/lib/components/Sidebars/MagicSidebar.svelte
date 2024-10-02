@@ -618,6 +618,8 @@
 
     try {
       const resourceIds: string[] = []
+      const inlineImages: string[] = []
+
       for (const tab of tabsInContext) {
         if (tab.type === 'page' && tab.chatResourceBookmark) {
           resourceIds.push(tab.chatResourceBookmark)
@@ -627,11 +629,18 @@
             resourceIds.push(...spaceContents.map((content) => content.resource_id))
           }
         } else if (tab.type === 'resource') {
-          resourceIds.push(tab.resourceId)
+          if (tab.resourceType === 'application/pdf') {
+            resourceIds.push(tab.resourceId)
+          } else if (tab.resourceType.startsWith('image/')) {
+            const resource = await resourceManager.getResource(tab.resourceId)
+            const blob = await resource?.getData()
+            if (blob) {
+              const dataUrl = await blobToDataUrl(blob)
+              inlineImages.push(dataUrl)
+            }
+          }
         }
       }
-
-      let inlineImages: string[] = []
 
       const contextImages = $contextItems.filter((item) => item.type === 'screenshot')
       if (contextImages.length > 0) {

@@ -24,6 +24,7 @@
     'annotation-remove': WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
     'annotation-update': WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
     'add-to-chat': WebViewSendEvents[WebViewEventSendNames.AddToChat]
+    'prepare-tab-for-chat': TabPage
   }
 
   export type BookmarkPageOpts = {
@@ -109,6 +110,8 @@
   export const zoomIn = () => webview.zoomIn()
   export const zoomOut = () => webview.zoomOut()
   export const resetZoom = () => webview.resetZoom()
+  export const downloadURL = (url: string, options?: Electron.DownloadURLOptions) =>
+    webview.downloadURL(url, options)
   export const sendWebviewEvent = <T extends keyof WebViewReceiveEvents>(
     name: T,
     data?: WebViewReceiveEvents[T]
@@ -848,6 +851,27 @@
 
       log.debug('bookmarked resource found', bookmarkedResource, tab)
       if (!bookmarkedResource) {
+        const detectedResourceType = detectedApp.resourceType
+        if (detectedResourceType === 'application/pdf') {
+          log.debug(
+            'tab is not a normal web page, skipping bookmarking process',
+            detectedResourceType
+          )
+          tab.resourceBookmark = null
+          tab.chatResourceBookmark = null
+          dispatch('update-tab', {
+            resourceBookmark: null,
+            chatResourceBookmark: null,
+            resourceBookmarkedManually: false
+          })
+
+          if (pageMagic?.showSidebar) {
+            dispatch('prepare-tab-for-chat', tab)
+          }
+
+          return
+        }
+
         log.debug('creating new silent resource', url)
         bookmarkedResource = await createBookmarkResource(url, tab, {
           silent: true,

@@ -170,6 +170,7 @@ export class TabsManager {
       return tabs.filter((tab) => tab.magic).sort((a, b) => a.index - b.index) as (
         | TabPage
         | TabSpace
+        | TabResource
       )[]
     })
 

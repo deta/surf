@@ -168,6 +168,8 @@
     webview?.stopFindInPage(action)
   export const executeJavaScript = (code: string, userGesture = false) =>
     webview?.executeJavaScript(code, userGesture)
+  export const downloadURL = (url: string, options?: Electron.DownloadURLOptions) =>
+    webview.downloadURL(url, options)
   export const goBack = () => webviewComponent.goBackInHistory()
   export const goForward = () => webviewComponent.goForwardInHistory()
   export const goToBeginning = (fallback?: string) =>

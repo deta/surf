@@ -354,7 +354,7 @@ const api = {
     return IPC_EVENTS_RENDERER.getUserConfig.invoke()
   },
 
-  onRequestDownloadPath: (callback: (data: DownloadRequestMessage) => Promise<void>) => {
+  onRequestDownloadPath: (callback: (data: DownloadRequestMessage) => Promise<string>) => {
     IPC_EVENTS_RENDERER.downloadRequest.on(async (_, data) => {
       const path = await callback(data)
       // TODO: refactor this to use the new event system
@@ -855,7 +855,19 @@ const resources = (() => {
     resourceHandles.delete(resourceId)
   }
 
-  return { openResource, readResource, writeResource, flushResource, closeResource, getDBPath }
+  async function triggerPostProcessing(resourceId: string) {
+    await (sffs as any).js__store_resource_post_process(resourceId)
+  }
+
+  return {
+    openResource,
+    readResource,
+    writeResource,
+    flushResource,
+    closeResource,
+    getDBPath,
+    triggerPostProcessing
+  }
 })()
 
 if (process.contextIsolated) {
