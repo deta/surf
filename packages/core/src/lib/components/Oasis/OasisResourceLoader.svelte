@@ -58,6 +58,7 @@
           on:load
           on:click
           on:open
+          on:open-and-chat
           on:remove
           on:blacklist-resource
           on:whitelist-resource
@@ -73,6 +74,7 @@
         on:load
         on:click
         on:open
+        on:open-and-chat
         on:remove
         on:blacklist-resource
         on:whitelist-resource

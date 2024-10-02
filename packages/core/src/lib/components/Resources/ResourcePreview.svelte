@@ -91,6 +91,7 @@
     remove: string
     load: string
     open: string
+    'open-and-chat': string
     'created-tab': void
     'whitelist-resource': string
     'blacklist-resource': string
@@ -695,6 +696,7 @@
         text: 'Open in Mini Browser',
         action: () => dispatch('open', resource.id)
       },
+      { type: 'separator' },
       ...(canonicalUrl
         ? [
             {
@@ -705,17 +707,13 @@
             }
           ]
         : []),
+      {
+        type: 'action',
+        icon: 'chat',
+        text: 'Open in Chat',
+        action: () => dispatch('open-and-chat', resource.id)
+      },
       { type: 'separator' },
-      ...(showOpenAsFile
-        ? [
-            {
-              type: 'action',
-              icon: '',
-              text: `${isMac() ? 'Reveal in Finder' : 'Open in File Manager'}`,
-              action: () => handleOpenAsFile()
-            }
-          ]
-        : []),
       ...($contextMenuSpaces.length > 0
         ? [
             {
@@ -724,6 +722,17 @@
               disabled: $contextMenuSpaces.length === 0,
               text: `Add to Space`,
               items: $contextMenuSpaces
+            },
+            { type: 'separator' }
+          ]
+        : []),
+      ...(showOpenAsFile
+        ? [
+            {
+              type: 'action',
+              icon: '',
+              text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
+              action: () => handleOpenAsFile()
             },
             { type: 'separator' }
           ]

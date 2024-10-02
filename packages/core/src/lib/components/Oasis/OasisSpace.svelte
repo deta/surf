@@ -1120,7 +1120,7 @@
 
     else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
       const droppedTab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
-      
+
     }*/
 
     drag.continue()
@@ -1708,6 +1708,7 @@
         isInSpace={!isEverythingSpace}
         on:click={handleItemClick}
         on:open={handleOpen}
+        on:open-and-chat
         on:remove={handleResourceRemove}
         on:load={handleLoadResource}
         on:create-tab-from-space
@@ -1726,6 +1727,7 @@
         scrollTop={0}
         on:click={handleItemClick}
         on:open={handleOpen}
+        on:open-and-chat
         on:remove={handleResourceRemove}
         on:space-selected={handleSpaceSelected}
         on:open-space-as-tab

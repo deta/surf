@@ -66,6 +66,7 @@
             {isInSpace}
             {resourcesBlacklistable}
             on:open
+            on:open-and-chat
             on:remove
             on:load
             on:space-selected

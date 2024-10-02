@@ -1202,6 +1202,7 @@
                       on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
                       on:create-empty-space={handleCreateEmptySpace}
                       on:open-resource={handleOpen}
+                      on:open-space-and-chat
                       on:delete-space={handleDeleteSpace}
                       on:Drop
                     />
@@ -1235,6 +1236,7 @@
                         handleEventsOutside
                         {historyEntriesManager}
                         on:open={handleOpen}
+                        on:open-and-chat
                         on:go-back={() => selectedSpaceId.set(null)}
                         on:deleted={handleSpaceDeleted}
                         on:updated-space={handleUpdatedSpace}
@@ -1275,6 +1277,7 @@
                               scrollTop={0}
                               on:click={handleItemClick}
                               on:open={handleOpen}
+                              on:open-and-chat
                               on:open-space-as-tab
                               on:remove={handleResourceRemove}
                               on:new-tab

@@ -2233,6 +2233,61 @@
     }
   }
 
+  const handleOpenAndChat = async (e: CustomEvent<string>) => {
+    const resourceId = e.detail
+
+    log.debug('create chat with resource', resourceId)
+
+    const resource = await resourceManager.getResource(resourceId, { includeAnnotations: false })
+
+    if (resource) {
+      const tab = await tabsManager.openResourceAsTab(resource, { active: true })
+
+      if (tab) {
+        openRightSidebarTab('chat')
+        await includeTabAndExcludeOthersFromMagic(tab.id)
+      } else {
+        log.error('Failed to open resource as tab')
+        toasts.error('Failed to open resource')
+      }
+    } else {
+      log.error('Resource not found', resourceId)
+      toasts.error('Resource not found')
+    }
+  }
+
+  const handleOpenSpaceAndChat = async (e: CustomEvent<string>) => {
+    const spaceId = e.detail
+
+    log.debug('create chat with space', spaceId)
+
+    const space = await oasis.getSpace(spaceId)
+
+    if (space) {
+      const tab = await tabsManager.addSpaceTab(space, { active: true })
+      if (tab) {
+        openRightSidebarTab('chat')
+        await includeTabAndExcludeOthersFromMagic(tab.id)
+
+        // Wait for the chat to be ready
+        await wait(500)
+
+        if (magicSidebar) {
+          magicSidebar.startChatWithQuery('')
+        } else {
+          log.error('Magic sidebar not found')
+          toasts.error('Failed to start chat with space')
+        }
+      } else {
+        log.error('Failed to open space as tab')
+        toasts.error('Failed to open space')
+      }
+    } else {
+      log.error('Space not found', spaceId)
+      toasts.error('Space not found')
+    }
+  }
+
   let maxWidth = window.innerWidth
 
   let tabSize = 0
@@ -4296,6 +4351,8 @@
           on:open-space={handleCreateTabForSpace}
           on:create-chat={handleCreateChatWithQuery}
           on:create-note={handleCreateNote}
+          on:open-and-chat={handleOpenAndChat}
+          on:open-space-and-chat={handleOpenSpaceAndChat}
           on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
           on:zoom={() => {
             $activeBrowserTab?.zoomIn()

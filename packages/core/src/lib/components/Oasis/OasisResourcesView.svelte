@@ -58,6 +58,7 @@
               {isInSpace}
               on:click
               on:open
+              on:open-and-chat
               on:remove
               on:load
               on:blacklist-resource
@@ -78,6 +79,7 @@
             {isInSpace}
             on:click
             on:open
+            on:open-and-chat
             on:blacklist-resource
             on:whitelist-resource
             on:remove

@@ -125,7 +125,9 @@
   }
 
   const handleDoubleClick = () => {
-    dispatch('editing-start', { id: folder.id })
+    if (folder.id !== 'all') {
+      dispatch('editing-start', { id: folder.id })
+    }
   }
 
   const handleBlur = async () => {
@@ -335,12 +337,19 @@
   }}
   on:Drop={handleDrop}
   use:contextMenu={{
+    canOpen: folder.id !== 'all',
     items: [
-      { type: 'action', icon: 'edit', text: 'Rename', action: handleDoubleClick },
       ...(folder.id !== 'all'
         ? [
             { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
+            {
+              type: 'action',
+              icon: 'chat',
+              text: 'Open in Chat',
+              action: () => dispatch('open-space-and-chat', folder.id)
+            },
             { type: 'separator' },
+            { type: 'action', icon: 'edit', text: 'Rename', action: handleDoubleClick },
             { type: 'action', icon: 'trash', text: 'Delete', kind: 'danger', action: handleDelete }
           ]
         : [])

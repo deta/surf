@@ -303,6 +303,7 @@
       await sendChatMessage(savedInputValue)
     } catch (e) {
       log.error('Error doing magic', e)
+
       inputValue = savedInputValue
       editor.setContent(savedInputValue)
     }
@@ -731,6 +732,11 @@
     } catch (e) {
       log.error('Error doing magic', e)
       let content = 'Failed to generate response.'
+
+      if (typeof e === 'string' && e.toLowerCase().includes('Content is too long'.toLowerCase())) {
+        content = 'The content is too long to process. Please try a more specific question.'
+      }
+
       let error = PageChatMessageSentEventError.Other
 
       if ((e as any)?.includes('RAG Empty Context')) {
@@ -1124,7 +1130,7 @@
 
       {#if $magicPage.errors.length > 0}
         <div
-          class="flex flex-col bg-yellow-50 border-yellow-300 border-[1px] p-4 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 relative"
+          class="flex flex-col bg-yellow-50 border-yellow-300 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 relative"
         >
           {#each $magicPage.errors as error}
             <div class="info-box">
@@ -1144,7 +1150,7 @@
 
       {#if $hasError}
         <div
-          class="flex flex-col bg-yellow-50 border-yellow-300 border-[1px] p-4 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 relative"
+          class="flex flex-col bg-yellow-50 border-yellow-300 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 relative"
         >
           {$errorMessage}
           <button
