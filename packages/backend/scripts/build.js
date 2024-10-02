@@ -14,10 +14,14 @@ const args = [
   ...extraArgs
 ]
 
+const env = {
+  // RUST_LOG: 'info'
+}
+
 const child = spawn(command, args, {
   stdio: 'inherit',
   shell: true,
-  env: process.env
+  env: { ...process.env, ...env }
 })
 
 child.on('error', (error) => {

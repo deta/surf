@@ -42,21 +42,39 @@ function electronBuilderConfig() {
     asar: true,
     asarUnpack: ['resources/**', '**/*.node'],
     afterPack: 'build/afterpack.js',
+    protocols: [
+      {
+        name: 'HTTP link',
+        schemes: ['http', 'https']
+      },
+      {
+        name: 'File',
+        schemes: ['file']
+      }
+    ],
     win: {
       executableName: params.buildName,
       signingHashAlgorithms: ['sha256'],
       forceCodeSigning: params.shouldSignWindows === 'true',
-      sign: 'build/winSign.js'
+      sign: 'build/winSign.js',
+      publisherName: 'Deta GmbH'
+      //verifyUpdateCodeSignature: false
     },
     nsis: {
       artifactName: `${params.buildName}-setup.$\{ext\}`,
       shortcutName: params.buildName,
       uninstallDisplayName: params.buildName,
-      createDesktopShortcut: 'always'
+      createDesktopShortcut: 'always',
+      include: 'build/installer.nsh',
+      perMachine: true,
+      allowElevation: true,
+      deleteAppDataOnUninstall: false
     },
     mac: {
       hardenedRuntime: true,
-      entitlementsInherit: `${params.buildResourcesDir || 'build/resources/prod'}/entitlements.mac.plist`,
+      entitlementsInherit: `${
+        params.buildResourcesDir || 'build/resources/prod'
+      }/entitlements.mac.plist`,
       extendInfo: [
         "NSCameraUsageDescription: Application requests access to the device's camera.",
         "NSMicrophoneUsageDescription: Application requests access to the device's microphone.",

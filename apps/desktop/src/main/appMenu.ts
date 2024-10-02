@@ -1,46 +1,82 @@
-import { isMac, useLogScope } from '@horizon/utils'
+import { isMac, isWindows, isLinux, useLogScope } from '@horizon/utils'
 import { app, Menu, shell } from 'electron'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
 import { toggleAdblocker } from './adblocker'
-import { join, resolve } from 'path'
+import { join } from 'path'
 import { isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@horizon/types'
 import { createSettingsWindow } from './settingsWindow'
 import { toggleHistorySwipeGestureConfig } from './historySwipe'
 import { updateUserConfig } from './config'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
 
 const log = useLogScope('Main App Menu')
+const execFileAsync = promisify(execFile)
 
 let menu: Electron.Menu | null = null
 
-export const useAsDefaultBrowser = () => {
-  try {
-    // Register the app to handle URLs (from: https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app)
-    if (process.defaultApp) {
-      if (process.argv.length >= 2) {
-        app.setAsDefaultProtocolClient('http', process.execPath, [resolve(process.argv[1])])
-        app.setAsDefaultProtocolClient('https', process.execPath, [resolve(process.argv[1])])
-      }
-    } else {
-      app.setAsDefaultProtocolClient('http')
-      app.setAsDefaultProtocolClient('https')
-    }
+const checkForChangeWithTimeout = async (checkFn: any, interval: number, timeout: number) => {
+  return new Promise(async (resolve) => {
+    let elapsed = 0
+    const initialResult = await checkFn()
 
-    // TODO: figure out a better way to do this. Problem: the setAsDefaultProtocolClient method doesn't actually tell us if the user set the app as the default browser through the system prompt or not.
-    const timeout = 1000 * 30 // 30 seconds
-    setTimeout(() => {
-      const isSet = isDefaultBrowser()
-      if (isSet) {
-        updateUserConfig({ defaultBrowser: true })
-        ipcSenders.trackEvent(TelemetryEventTypes.SetDefaultBrowser, { value: true })
-      } else {
-        updateUserConfig({ defaultBrowser: false })
+    const intervalId = setInterval(async () => {
+      elapsed += interval
+      const currentResult = await checkFn()
+
+      if (currentResult !== initialResult || elapsed >= timeout) {
+        clearInterval(intervalId)
+        resolve(currentResult !== initialResult)
       }
-    }, timeout)
+    }, interval)
+  })
+}
+
+const setAsDefaultBrowserWindows = async (): Promise<boolean> => {
+  try {
+    const command = 'start ms-settings:defaultapps?registeredAppMachine=Surf'
+    await execFileAsync('cmd', ['/c', command])
+
+    return (await checkForChangeWithTimeout(isDefaultBrowser, 1000, 10000)) as boolean
   } catch (error) {
-    log.error('Error setting as default browser:', error)
+    log.error('error setting as default browser on Windows:', error)
+    return false
   }
+}
+
+const setAsDefaultBrowserMac = async (): Promise<boolean> => {
+  try {
+    app.setAsDefaultProtocolClient('http')
+    app.setAsDefaultProtocolClient('https')
+
+    return (await checkForChangeWithTimeout(isDefaultBrowser, 1000, 10000)) as boolean
+  } catch (error) {
+    log.error('error setting as default browser on macOS:', error)
+    return false
+  }
+}
+
+const setAsDefaultBrowserLinux = async (): Promise<boolean> => {
+  return false
+}
+
+export const useAsDefaultBrowser = async (): Promise<void> => {
+  let isSet = false
+
+  if (isWindows()) {
+    isSet = await setAsDefaultBrowserWindows()
+  } else if (isMac()) {
+    isSet = await setAsDefaultBrowserMac()
+  } else if (isLinux()) {
+    isSet = await setAsDefaultBrowserLinux()
+  } else {
+    return
+  }
+
+  updateUserConfig({ defaultBrowser: isSet })
+  ipcSenders.trackEvent(TelemetryEventTypes.SetDefaultBrowser, { value: isSet })
 }
 
 const showSurfDataInFinder = () => {

@@ -40,6 +40,11 @@ on:
         type: boolean
         description: 'Run Linux x64 build'
         default: false
+      g_release_channel:
+        type: string
+        description: 'Release Channel'
+        required: true
+        default: 'surf-prod'
 
 jobs:
   determine_builds:
@@ -86,20 +91,20 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            **/node_modules
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-            **/target
-            apps/desktop/dist
-            **/build
-          key: ${{ runner.os }}-${{ matrix.architecture }}-deps-build-${{ hashFiles('**/yarn.lock', '**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.architecture }}-deps-build-
+      #- name: Cache dependencies
+      #  uses: actions/cache@v3
+      #  with:
+      #    path: |
+      #      **/node_modules
+      #      ~/.cargo/registry
+      #      ~/.cargo/git
+      #      target
+      #      **/target
+      #      apps/desktop/dist
+      #      **/build
+      #    key: ${{ runner.os }}-${{ matrix.architecture }}-deps-build-${{ hashFiles('**/yarn.lock', '**/Cargo.lock') }}
+      #    restore-keys: |
+      #      ${{ runner.os }}-${{ matrix.architecture }}-deps-build-
 
       - name: Set up Windows build environment
         if: matrix.os == 'windows-latest'
@@ -111,6 +116,11 @@ jobs:
           cl
           clang --version
         shell: cmd
+
+      - name: Install Dependencies
+        run: |
+          yarn config set network-timeout 300000
+          yarn install --frozen-lockfile --network-timeout 300000
 
       - name: Set up Windows Sign Tool
         if: matrix.os == 'windows-latest'
@@ -130,11 +140,6 @@ jobs:
           $az_token=$(az account get-access-token --scope https://vault.azure.net/.default --query accessToken -o tsv)
           echo "::add-mask::$az_token"
           echo "AZURE_KEYVAULT_ACCESS_TOKEN=$az_token" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-      - name: Install Dependencies
-        run: |
-          yarn config set network-timeout 300000
-          yarn install --frozen-lockfile --network-timeout 300000
 
       - name: build for ${{ matrix.os }}-${{ matrix.architecture }}
         run: ${{ matrix.build_command }}
@@ -166,7 +171,7 @@ jobs:
           P_VITE_API_BASE: ${{ secrets.API_BASE }}
           M_VITE_API_BASE: ${{ secrets.API_BASE }}
 
-          RELEASE_CHANNEL: surf-prod
+          RELEASE_CHANNEL: ${{ inputs.g_release_channel }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_UPDATES_BUCKET_NAME: ${{ secrets.S3_UPDATES_BUCKET_NAME }}

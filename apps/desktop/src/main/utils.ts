@@ -1,12 +1,53 @@
 import { app } from 'electron'
+import { execSync } from 'child_process'
 import path from 'path'
 
-export const isDefaultBrowser = () => {
-  const isHttp = app.isDefaultProtocolClient('http')
-  const isHttps = app.isDefaultProtocolClient('https')
+const isDefaultBrowserWindows = async () => {
+  try {
+    const httpProgId = execSync(
+      'reg query HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice /v ProgId',
+      { encoding: 'utf-8' }
+    ).toString()
 
-  // TODO: we are registering ourselves for both but when checking only ones seems to be set, needs more investigation
-  return isHttp || isHttps
+    const httpsProgId = execSync(
+      'reg query HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\https\\UserChoice /v ProgId',
+      { encoding: 'utf-8' }
+    ).toString()
+
+    const appProgId = 'ea.browser.deta.surf'
+
+    const isHttpDefault = httpProgId.includes(appProgId)
+    const isHttpsDefault = httpsProgId.includes(appProgId)
+
+    return isHttpDefault || isHttpsDefault
+  } catch (error) {
+    console.error('error checking default browser on Windows:', error)
+    return false
+  }
+}
+
+const isDefaultBrowserLinux = async () => {
+  return false
+}
+
+const isDefaultBrowserMac = async () => {
+  const isHttpDefault = app.isDefaultProtocolClient('http')
+  const isHttpsDefault = app.isDefaultProtocolClient('https')
+
+  return isHttpDefault || isHttpsDefault
+}
+
+export const isDefaultBrowser = async () => {
+  switch (getPlatform()) {
+    case 'windows':
+      return await isDefaultBrowserWindows()
+    case 'linux':
+      return await isDefaultBrowserLinux()
+    case 'mac':
+      return await isDefaultBrowserMac()
+    default:
+      return false
+  }
 }
 
 export const getPlatform = () => {

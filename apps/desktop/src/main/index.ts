@@ -106,6 +106,9 @@ const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
   app.quit()
 } else {
+  appOpenedWithURL =
+    process.argv.find((arg) => arg.startsWith('http://') || arg.startsWith('https://')) ?? null
+
   // Windows + Linux
   app.on('second-instance', (_event, commandLine) => {
     handleOpenUrl(commandLine.pop() ?? '')
@@ -185,8 +188,8 @@ if (!gotTheLock) {
     surfBackendManager?.start()
 
     // we need to wait for the app/horizon to be ready before we can send any messages to the renderer
-    IPC_EVENTS_MAIN.appReady.once(() => {
-      const appIsDefaultBrowser = isDefaultBrowser()
+    IPC_EVENTS_MAIN.appReady.once(async () => {
+      const appIsDefaultBrowser = await isDefaultBrowser()
 
       // If the value stored in user config is different from the actual state, update the user config and track the event
       if (userConfig.defaultBrowser !== appIsDefaultBrowser) {
