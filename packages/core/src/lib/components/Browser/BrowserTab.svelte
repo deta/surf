@@ -39,16 +39,7 @@
   import { writable } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { PageMagic, TabPage } from '../../types/browser.types'
-  import {
-    useLogScope,
-    useDebounce,
-    isGoogleSignInUrl,
-    wait,
-    generateID,
-    truncate,
-    checkIfYoutubeUrl,
-    parseStringIntoUrl
-  } from '@horizon/utils'
+  import { useLogScope, useDebounce, wait, generateID, truncate } from '@horizon/utils'
   import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
   import {
     CreateAnnotationEventTrigger,
@@ -156,12 +147,6 @@
 
     debouncedTabUpdate()
     debouncedAppDetection()
-
-    let url = e.detail
-    if (isGoogleSignInUrl(url ?? '')) {
-      // const navigatedUrl = await window.api.handleGoogleSignIn(url)
-      // if (navigatedUrl) webview.navigate(navigatedUrl)
-    }
   }
 
   const handleWebviewTitleChange = (e: CustomEvent<string>) => {
