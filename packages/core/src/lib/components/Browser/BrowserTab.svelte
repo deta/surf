@@ -159,8 +159,8 @@
 
     let url = e.detail
     if (isGoogleSignInUrl(url ?? '')) {
-      const navigatedUrl = await window.api.handleGoogleSignIn(url)
-      if (navigatedUrl) webview.navigate(navigatedUrl)
+      // const navigatedUrl = await window.api.handleGoogleSignIn(url)
+      // if (navigatedUrl) webview.navigate(navigatedUrl)
     }
   }
 

@@ -96,15 +96,16 @@ export function createWindow() {
   })
 
   const webviewSession = session.fromPartition('persist:horizon')
-  const webviewSessionUserAgent = normalizeElectronUserAgent(webviewSession.getUserAgent())
+  // const webviewSessionUserAgent = normalizeElectronUserAgent(webviewSession.getUserAgent())
   webviewSession.webRequest.onBeforeSendHeaders((details, callback) => {
     callback({
       requestHeaders: {
         ...details.requestHeaders,
-        'User-Agent':
-          getGoogleSignInWindowId() === details.webContentsId
-            ? details.requestHeaders['User-Agent']
-            : webviewSessionUserAgent
+        // 'User-Agent':
+        //   getGoogleSignInWindowId() === details.webContentsId
+        //     ? details.requestHeaders['User-Agent']
+        //     : webviewSession.getUserAgent()
+        'User-Agent': webviewSession.getUserAgent()
       }
     })
   })

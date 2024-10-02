@@ -48,6 +48,7 @@ export class TwitterImporter extends AppImporter {
     // we need to start intercepting requests before initializing the webview
     // @ts-expect-error
     window.api
+      // Dang. The partition here MUST not be the `persist:horizon` partition.
       .interceptRequestsHeaders(['https://x.com/i/api/*'], this.webviewExtractor.partition)
       .then((data: any) => {
         console.log('Intercepted', data)

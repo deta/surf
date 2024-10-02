@@ -419,8 +419,9 @@ const api = {
     return IPC_EVENTS_RENDERER.getAppInfo.invoke()
   },
 
-  interceptRequestsHeaders: async (urls: string[], partition: string) => {
-    return IPC_EVENTS_RENDERER.interceptRequestHeaders.invoke({ urls, partition })
+  interceptRequestsHeaders: (_urls: string[], _partition: string) => {
+    // return IPC_EVENTS_RENDERER.interceptRequestHeaders.invoke({ urls, partition })
+    return new Promise((_, reject) => reject())
   },
 
   checkForUpdates: () => {
