@@ -36,6 +36,11 @@ let selectionMenu: Menu | null = null
 
 let selectionMenuWrapper: ReturnType<typeof createComponentWrapper> | null = null
 
+// disable console logs in production
+if (!import.meta.env.DEV) {
+  console.debug = console.log = console.warn = console.error = () => {}
+}
+
 function runAppDetection() {
   console.debug('Running app detection on', window.location.href)
   // TODO: pass the URL to the detection function so we don't have to initialize a new WebParser
