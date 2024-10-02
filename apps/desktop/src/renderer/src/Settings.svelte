@@ -156,7 +156,7 @@
       {#if !$isDefaultBrowser}
         <div class="default-wrapper">
           Surf is not set as your default browser.
-          <button on:click={useAsDefaultBrowser}>Start using surf as your default</button>
+          <button on:click={useAsDefaultBrowser}>Set as your default browser</button>
         </div>
       {/if}
       <article class="general">
@@ -169,15 +169,15 @@
 
         <button on:click={checkForUpdates}>Check for Updates</button>
 
-        <div class="dev-wrapper">
-          {#if isDev}
+        {#if isDev}
+          <div class="dev-wrapper">
             <h3>Migration</h3>
             <button on:click={handleMigration} disabled={migrating}>Run Migration</button>
             {#if migrating}
               <Icon name="spinner" size="22px" />
             {/if}
-          {/if}
-        </div>
+          </div>
+        {/if}
         <div class="migration-output">
           <p bind:this={migrationOutput}></p>
         </div>
@@ -430,7 +430,12 @@
       font-weight: 500;
       cursor: pointer;
       transition: all 0.3s ease;
-      background: linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%);
+      background: radial-gradient(
+        circle at 50% -50%,
+        rgba(215, 143, 215, 1) 0%,
+        rgba(45, 150, 205, 1) 35%,
+        rgba(74, 144, 226, 1) 100%
+      );
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       text-transform: uppercase;
       letter-spacing: 1px;
