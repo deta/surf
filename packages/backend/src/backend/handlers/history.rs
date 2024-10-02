@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     backend::{
         message::{HistoryMessage, TunnelOneshot},
@@ -29,6 +31,39 @@ impl Worker {
     pub fn get_all_history_entries(&mut self) -> BackendResult<Vec<HistoryEntry>> {
         self.db.get_all_history_entries()
     }
+
+    pub fn search_history_by_hostname_prefix(
+        &mut self,
+        prefix: String,
+        since: Option<f64>,
+    ) -> BackendResult<Vec<HistoryEntry>> {
+        let entries = self.db.search_history_by_hostname_prefix(&prefix, since)?;
+
+        let mut unique_results: Vec<HistoryEntry> = Vec::new();
+        let mut seen_urls: HashSet<String> = HashSet::new();
+        for entry in &entries {
+            if let Some(url) = entry.url.as_ref() {
+                let url = match url::Url::parse(url) {
+                    Ok(url) => url,
+                    Err(_) => {
+                        continue;
+                    }
+                };
+                if let Some(hostname) = url.host_str() {
+                    let clean_url = format!("{}://{}", url.scheme(), hostname);
+                    if seen_urls.contains(&clean_url) {
+                        continue;
+                    }
+                    seen_urls.insert(clean_url.clone());
+                    unique_results.push(HistoryEntry {
+                        url: Some(clean_url),
+                        ..entry.clone()
+                    });
+                }
+            }
+        }
+        Ok(unique_results)
+    }
 }
 
 #[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
@@ -53,6 +88,13 @@ pub fn handle_history_message(
         }
         HistoryMessage::UpdateHistoryEntry(entry) => {
             send_worker_response(channel, oneshot, worker.update_history_entry(entry))
+        }
+        HistoryMessage::SearchHistoryEntriesByHostnamePrefix(prefix, since) => {
+            send_worker_response(
+                channel,
+                oneshot,
+                worker.search_history_by_hostname_prefix(prefix, since),
+            )
         }
     }
 }

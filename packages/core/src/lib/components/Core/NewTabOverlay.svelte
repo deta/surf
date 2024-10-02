@@ -75,6 +75,7 @@
   import Fuse from 'fuse.js'
   import CommandMenuItem, { type CMDMenuItem } from './CommandMenuItem.svelte'
   import type { HistoryEntriesManager } from '../../service/history'
+  import { searchHistoryEntriesByHostnamePrefix } from '../../service/history'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
   import SpacesView from '../Oasis/SpacesView.svelte'
   import CreateNewSpace from '../Oasis/CreateNewSpace.svelte'
@@ -216,10 +217,13 @@
   function historyEntryToItem(entry: HistoryEntry, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
     return {
       id: entry.id,
-      label: entry.title,
+      // we have to use the URL as the label because the title saved in the history entry
+      // will be the title of the page when it was saved with the full path
+      label: entry.url,
       value: entry.url,
       iconUrl: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(entry.url!)}`,
       type: 'history',
+      score: 0.4,
       ...params
     } as CMDMenuItem
   }
@@ -263,6 +267,7 @@
       score: 0.5
     } as CMDMenuItem
   }
+
   // TODO: this should be a proper subscribe
   const commandFilter = derived([searchValue], ([searchValue]) => {
     if (!searchValue || showTabSearch !== 1) {
@@ -276,19 +281,21 @@
         filterCommandItems(searchValue)
       }
 
+      /*
       if (!$isFetchingOasisSearchResults) {
         fetchOasisResults(searchValue)
       }
+      */
 
       if (!$isFetchingOasisSearchResults) {
         fetchSearchEngineSuggestions(searchValue)
       }
 
-      // if (!$isFetchingHistoryEntriesResults) {
-      //   fetchHistoryEntries(searchValue)?.then(() => {
-      //     log.debug('Fetched history entries done')
-      //   })
-      // }
+      if (!$isFetchingHistoryEntriesResults) {
+        fetchHistoryEntries(searchValue)?.then(() => {
+          log.debug('Fetched history entries done')
+        })
+      }
     }
 
     return []
@@ -300,14 +307,16 @@
       commandFilter,
       filteredCommandItems,
       oasisSearchResults,
-      searchEngineSuggestionResults
+      searchEngineSuggestionResults,
+      historyEntriesResults
     ],
     ([
       searchValue,
       commandFilter,
       filteredCommandItems,
       oasisSearchResults,
-      searchEngineSuggestionResults
+      searchEngineSuggestionResults,
+      historyEntriesResults
     ]) => {
       deboundedSelectFirstCommandItem()
 
@@ -327,7 +336,7 @@
         //   : []),
         ...commandFilter,
         ...filteredCommandItems,
-        // ...historyEntriesResults.map((entry) => historyEntryToItem(entry, { score: 0.1 })),
+        ...historyEntriesResults.map((entry) => historyEntryToItem(entry)),
         ...searchEngineSuggestionResults.map((suggestion) =>
           searchEngineSuggestionToItem(suggestion)
         )
@@ -389,41 +398,25 @@
     }
   }, 150)
 
-  // const fetchHistoryEntries = useDebounce(async ($searchValue: string) => {
-  //   try {
-  //     if (!historyCache || Date.now() - historyCache.timestamp > CACHE_EXPIRY) {
-  //       $isFetchingHistoryEntriesResults = true
-  //       log.debug('Fetching history entries...')
-  //       const entries = await historyEntriesManager.searchEntries($searchValue)
-  //       log.debug('History entries:', entries)
-  //       const sortedEntries = entries.sort(
-  //         (a, b) => new Date(b.entry.createdAt).getTime() - new Date(a.entry.createdAt).getTime()
-  //       )
-  //       const uniqueSites = Object.values(
-  //         sortedEntries.reduce(
-  //           (acc, entry) => {
-  //             if (
-  //               !acc[entry.site] ||
-  //               new Date(entry.entry.createdAt) > new Date(acc[entry.site].createdAt)
-  //             ) {
-  //               acc[entry.site] = entry.entry
-  //             }
-  //             return acc
-  //           },
-  //           {} as Record<string, HistoryEntry>
-  //         )
-  //       )
-  //       historyCache = { data: uniqueSites, timestamp: Date.now() }
-  //     }
-
-  //     $historyEntriesResults = historyCache.data
-  //   } catch (error) {
-  //     log.error('Error fetching history entries:', error)
-  //     $historyEntriesResults = []
-  //   } finally {
-  //     $isFetchingHistoryEntriesResults = false
-  //   }
-  // }, 300)
+  const fetchHistoryEntries = useDebounce(async ($searchValue: string) => {
+    if ($searchValue.length < 2) {
+      $historyEntriesResults = []
+      return
+    }
+    try {
+      $isFetchingHistoryEntriesResults = true
+      log.debug('Fetching history hostnames...')
+      const now = new Date()
+      const since = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 90) // 90 days
+      const hostnames = await searchHistoryEntriesByHostnamePrefix($searchValue, since)
+      $historyEntriesResults = hostnames
+    } catch (error) {
+      log.error('Error fetching history entries:', error)
+      $historyEntriesResults = []
+    } finally {
+      $isFetchingHistoryEntriesResults = false
+    }
+  }, 300)
 
   const fetchOasisResults = useDebounce(async (query: string) => {
     try {

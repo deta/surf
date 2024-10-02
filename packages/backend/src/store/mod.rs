@@ -3,6 +3,7 @@ pub mod models;
 
 use crate::backend::{message::*, tunnel::WorkerTunnel};
 use neon::prelude::*;
+use neon::types::JsDate;
 
 const _MODULE_PREFIX: &'static str = "store";
 
@@ -81,6 +82,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function(
         "js__store_get_all_history_entries",
         js_get_all_history_entries,
+    )?;
+    cx.export_function(
+        "js__store_search_history_entries_by_hostname_prefix",
+        js_search_history_entries_by_hostname_prefix,
     )?;
 
     cx.export_function("js__store_create_ai_chat", js_create_ai_chat)?;
@@ -742,6 +747,27 @@ fn js_get_all_history_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::HistoryMessage(HistoryMessage::GetAllHistoryEntries),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_search_history_entries_by_hostname_prefix(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let prefix = cx.argument::<JsString>(1)?.value(&mut cx);
+    let since = cx.argument_opt(2).and_then(|arg| {
+        arg.downcast::<JsDate, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_date| js_date.value(&mut cx) as f64)
+    });
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::HistoryMessage(HistoryMessage::SearchHistoryEntriesByHostnamePrefix(
+            prefix, since,
+        )),
         deferred,
     );
 

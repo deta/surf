@@ -1642,6 +1642,88 @@ impl Database {
         Ok(())
     }
 
+    pub fn search_history_by_hostname_prefix(
+        &self,
+        prefix: &str,
+        since: Option<f64>,
+    ) -> BackendResult<Vec<HistoryEntry>> {
+        let mut query = "
+            SELECT id, entry_type, url, title, search_query, created_at, updated_at
+            FROM history_entries
+            WHERE url LIKE ?1 OR url LIKE ?2 OR url LIKE ?3 OR url LIKE ?4
+        "
+        .to_string();
+
+        let mut results = Vec::new();
+
+        let https_prefix = format!("https://{}%", prefix);
+        let http_prefix = format!("http://{}%", prefix);
+        let www_https_prefix = format!("https://www.{}%", prefix);
+        let www_http_prefix = format!("http://www.{}%", prefix);
+
+        if let Some(since) = since {
+            query = format!(
+                "{} AND created_at >= datetime(?5, 'unixepoch') ORDER BY created_at DESC",
+                query
+            );
+            let mut stmt = self.read_only_conn.prepare(&query)?;
+            let items = stmt.query_map(
+                rusqlite::params![
+                    https_prefix,
+                    http_prefix,
+                    www_https_prefix,
+                    www_http_prefix,
+                    since
+                ],
+                |row| {
+                    Ok(HistoryEntry {
+                        id: row.get(0)?,
+                        // TODO: handle this better
+                        entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str())
+                            .unwrap(),
+                        url: row.get(2)?,
+                        title: row.get(3)?,
+                        search_query: row.get(4)?,
+                        created_at: row.get(5)?,
+                        updated_at: row.get(6)?,
+                    })
+                },
+            )?;
+            for item in items {
+                results.push(item?);
+            }
+            return Ok(results);
+        }
+        query = format!("{} ORDER BY created_at DESC", query);
+        let mut stmt = self.read_only_conn.prepare(&query)?;
+        let items = stmt.query_map(
+            rusqlite::params![
+                https_prefix,
+                http_prefix,
+                www_https_prefix,
+                www_http_prefix,
+                since
+            ],
+            |row| {
+                Ok(HistoryEntry {
+                    id: row.get(0)?,
+                    // TODO: handle this better
+                    entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str())
+                        .unwrap(),
+                    url: row.get(2)?,
+                    title: row.get(3)?,
+                    search_query: row.get(4)?,
+                    created_at: row.get(5)?,
+                    updated_at: row.get(6)?,
+                })
+            },
+        )?;
+        for item in items {
+            results.push(item?);
+        }
+        Ok(results)
+    }
+
     pub fn get_all_history_entries(&self) -> BackendResult<Vec<HistoryEntry>> {
         let mut stmt = self.conn.prepare(
             "

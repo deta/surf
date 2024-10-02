@@ -112,3 +112,6 @@ CREATE TABLE IF NOT EXISTS space_entries (
     updated_at TEXT NOT NULL,
     manually_added INTEGER NOT NULL
 );
+
+
+CREATE INDEX IF NOT EXISTS idx_history_entries_urls ON history_entries(url);

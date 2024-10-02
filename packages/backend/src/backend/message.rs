@@ -56,6 +56,7 @@ pub enum HistoryMessage {
     GetHistoryEntry(String),
     RemoveHistoryEntry(String),
     UpdateHistoryEntry(HistoryEntry),
+    SearchHistoryEntriesByHostnamePrefix(String, Option<f64>),
 }
 
 #[derive(Debug)]
