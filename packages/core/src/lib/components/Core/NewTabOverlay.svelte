@@ -91,7 +91,6 @@
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../constants/searchEngines'
   import { CONTEXT_MENU_OPEN } from './ContextMenu.svelte'
   import Onboarding from './Onboarding.svelte'
-  import HistoryEntryPreview from '../Resources/Previews/Link/HistoryEntryPreview.svelte'
 
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
