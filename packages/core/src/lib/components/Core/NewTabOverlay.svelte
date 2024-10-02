@@ -136,7 +136,6 @@
   const isFetchingOasisSearchResults = writable(false)
   const isFetchingSearchEngineSuggestionResults = writable(false)
   const isFetchingHistoryEntriesResults = writable(false)
-  const isFetchingHistoryHostnamesResults = writable(false)
   const isCreatingNewSpace = writable(false)
   const isFilteringCommandItems = writable(false)
   const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
@@ -148,21 +147,18 @@
       isFetchingOasisSearchResults,
       isFetchingSearchEngineSuggestionResults,
       isFetchingHistoryEntriesResults,
-      isFetchingHistoryHostnamesResults,
       isFilteringCommandItems
     ],
     ([
       isFetchingOasisSearchResults,
       isFetchingSearchEngineSuggestionResults,
       isFetchingHistoryEntriesResults,
-      isFetchingHistoryHostnamesResults,
       isFilteringCommandItems
     ]) => {
       return (
         isFetchingOasisSearchResults ||
         isFetchingSearchEngineSuggestionResults ||
         isFetchingHistoryEntriesResults ||
-        isFetchingHistoryHostnamesResults ||
         isFilteringCommandItems
       )
     }
