@@ -5,11 +5,11 @@ import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
-import { isMac, normalizeElectronUserAgent } from '@horizon/utils'
-import { getGoogleSignInWindowId } from './googleSignInWindow'
+import { isMac } from '@horizon/utils'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
+import { firefoxUA, normalizeElectronUserAgent } from './utils'
 
 const isDev = import.meta.env.DEV
 
@@ -96,18 +96,18 @@ export function createWindow() {
   })
 
   const webviewSession = session.fromPartition('persist:horizon')
-  // const webviewSessionUserAgent = normalizeElectronUserAgent(webviewSession.getUserAgent())
+  const webviewSessionUserAgent = normalizeElectronUserAgent(webviewSession.getUserAgent())
+
   webviewSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    callback({
-      requestHeaders: {
-        ...details.requestHeaders,
-        // 'User-Agent':
-        //   getGoogleSignInWindowId() === details.webContentsId
-        //     ? details.requestHeaders['User-Agent']
-        //     : webviewSession.getUserAgent()
-        'User-Agent': webviewSession.getUserAgent()
-      }
-    })
+    const { requestHeaders, url } = details
+    const isGoogleAccounts = new URL(url).hostname === 'accounts.google.com'
+    requestHeaders['User-Agent'] = isGoogleAccounts ? firefoxUA : webviewSessionUserAgent
+
+    const chromiumVersion = process.versions.chrome.split('.')[0]
+    requestHeaders['Sec-CH-UA'] = `"Chromium";v="${chromiumVersion}", " Not A;Brand";v="99"`
+    requestHeaders['Sec-CH-UA-Mobile'] = '?0'
+
+    callback({ requestHeaders })
   })
 
   applyCSPToSession(mainWindowSession)

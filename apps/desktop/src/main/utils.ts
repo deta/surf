@@ -67,3 +67,32 @@ export const getPlatform = () => {
 export const isPathSafe = (basePath: string, filePath: string): boolean => {
   return path.resolve(basePath, filePath).startsWith(path.resolve(basePath))
 }
+
+export const normalizeElectronUserAgent = (current: string): string => {
+  return current
+    .split(' ')
+    .filter((part) => !part.startsWith('Surf/') && !part.startsWith('Electron/'))
+    .join(' ')
+    .replace(
+      process.versions.chrome || '',
+      process.versions?.chrome
+        ? process.versions.chrome
+          .split('.')
+          .map((v, idx) => (idx === 0 ? v : '0'))
+          .join('.')
+        : ''
+    )
+}
+
+export const firefoxUA = (() => {
+  const platformMap = {
+    darwin: 'Macintosh; Intel Mac OS X 10.15',
+    win32: 'Windows NT 10.0; Win64; x64',
+    linux: 'X11; Linux x86_64'
+  }
+  const platform = platformMap[process.platform] || platformMap.linux
+  // estimate the firefox version
+  const fxVersion =
+    91 + Math.floor((Date.now() - 1628553600000) / (4.1 * 7 * 24 * 60 * 60 * 1000))
+  return `Mozilla/5.0 (${platform}; rv:${fxVersion}.0) Gecko/20100101 Firefox/${fxVersion}.0`
+})()
