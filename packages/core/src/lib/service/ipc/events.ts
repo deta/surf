@@ -46,11 +46,6 @@ export interface CaptureWebContents extends IPCEvent {
   output: string | null
 }
 
-export interface HandleGoogleSignIn extends IPCEvent {
-  payload: string
-  output: string | null
-}
-
 export interface GetUserConfig extends IPCEvent {
   payload: void
   output: UserConfig
@@ -148,7 +143,6 @@ const IPC_EVENTS = ipcService.registerEvents({
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),
   captureWebContents: ipcService.addEventWithReturn<CaptureWebContents>('capture-web-contents'),
-  googleSignIn: ipcService.addEventWithReturn<HandleGoogleSignIn>('google-sign-in'),
   getUserConfig: ipcService.addEventWithReturn<GetUserConfig>('get-user-config'),
   getAppInfo: ipcService.addEventWithReturn<GetAppInfo>('get-app-info'),
   interceptRequestHeaders: ipcService.addEventWithReturn<InterceptRequestHeaders>(

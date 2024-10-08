@@ -10,7 +10,6 @@ import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
 import { checkForUpdates } from './appUpdates'
 import { useAsDefaultBrowser } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
-import { createGoogleSignInWindow } from './googleSignInWindow'
 import { setupHistorySwipeIpcSenders } from './historySwipe'
 
 import { IPC_EVENTS_MAIN, TrackEvent } from '@horizon/core/src/lib/service/ipc/events'
@@ -163,12 +162,6 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return
 
     createSettingsWindow()
-  })
-
-  IPC_EVENTS_MAIN.googleSignIn.handle(async (event, url) => {
-    if (!validateIPCSender(event)) return null
-
-    return await createGoogleSignInWindow(url)
   })
 
   IPC_EVENTS_MAIN.screenshotPage.handle(async (event, rect) => {

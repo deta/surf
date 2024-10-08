@@ -233,14 +233,6 @@ export const truncateURL = (url: string, maxLength = 75) => {
   }
 }
 
-export const isGoogleSignInUrl = (url: string) => {
-  return (
-    url?.startsWith('https://accounts.google.com/v3/signin') ||
-    url?.startsWith('https://accounts.google.com/InteractiveLogin') ||
-    url?.startsWith('https://accounts.google.com/AddSession')
-  )
-}
-
 export const getHostname = (raw: string) => {
   try {
     const url = new URL(raw)

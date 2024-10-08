@@ -113,10 +113,6 @@ const api = {
     IPC_EVENTS_RENDERER.openSettings.send()
   },
 
-  handleGoogleSignIn: async (url: string) => {
-    return IPC_EVENTS_RENDERER.googleSignIn.invoke(url)
-  },
-
   registerNewWindowHandler: (
     webContentsId: number,
     callback: (details: NewWindowRequest) => void
