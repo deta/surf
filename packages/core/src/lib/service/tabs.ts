@@ -36,6 +36,7 @@ export type TabEvents = {
   deleted: (tab: Tab) => void
   updated: (tab: Tab) => void
   selected: (tab: Tab) => void
+  'url-changed': (tab: Tab, newUrl: string) => void
 }
 
 export const TABS_CONTEXT_KEY = 'tabs-manager'
@@ -256,6 +257,10 @@ export class TabsManager {
     }
   }
 
+  emit<E extends keyof TabEvents>(event: E, ...args: Parameters<TabEvents[E]>) {
+    this.eventEmitter.emit(event, ...args)
+  }
+
   async create<T extends Tab>(
     tab: Optional<T, 'id' | 'createdAt' | 'updatedAt' | 'archived' | 'pinned' | 'index' | 'magic'>,
     opts?: CreateTabOptions
@@ -307,7 +312,7 @@ export class TabsManager {
       this.makeActive(newTab.id)
     }
 
-    this.eventEmitter.emit('created', newTab, active)
+    this.emit('created', newTab, active)
 
     return newTab
   }
@@ -354,7 +359,7 @@ export class TabsManager {
 
     await this.db.delete(tabId)
 
-    this.eventEmitter.emit('deleted', tab)
+    this.emit('deleted', tab)
 
     if (trigger) {
       if (tab.type === 'page') {
@@ -384,7 +389,7 @@ export class TabsManager {
 
     await this.persistChanges(tabId, updates)
 
-    this.eventEmitter.emit('updated', this.tabsValue.find((tab) => tab.id === tabId)!)
+    this.emit('updated', this.tabsValue.find((tab) => tab.id === tabId)!)
   }
 
   async updateActive(updates: Partial<Tab>) {
@@ -477,7 +482,7 @@ export class TabsManager {
       }
     }, 0)
 
-    this.eventEmitter.emit('selected', tab)
+    this.emit('selected', tab)
 
     if (trigger) {
       this.telemetry.trackActivateTab(trigger, tab.type)

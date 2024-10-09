@@ -153,7 +153,12 @@ export const checkIfSpaceApp = (url: URL) => {
 }
 
 export const checkIfLocalhost = (raw: string) => {
-  return raw.startsWith('localhost') || raw === '127.0.0.1'
+  try {
+    const url = new URL(prependProtocol(raw, false))
+    return url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+  } catch (error) {
+    return false
+  }
 }
 
 export const checkIfIPAddress = (raw: string) => {
@@ -239,5 +244,21 @@ export const getHostname = (raw: string) => {
     return url.hostname
   } catch (error) {
     return null
+  }
+}
+
+export const checkIfSecureURL = (url: string) => {
+  try {
+    const isLocalhost = checkIfLocalhost(url)
+    if (isLocalhost) {
+      return true
+    }
+
+    const parsed = new URL(url)
+
+    // Any protocol other than http is considered secure here (https, ftp, etc)
+    return parsed.protocol !== 'http:'
+  } catch (error) {
+    return false
   }
 }

@@ -1,6 +1,13 @@
 <script lang="ts">
-  import { useLogScope, tooltip as tooltip2, getFileKind } from '@horizon/utils'
+  import {
+    useLogScope,
+    tooltip as tooltip2,
+    getFileKind,
+    getHostname,
+    checkIfSecureURL
+  } from '@horizon/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { slide } from 'svelte/transition'
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
@@ -23,6 +30,7 @@
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { useTabsManager } from '../../service/tabs'
   import { DeleteTabEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
+  import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
 
   const log = useLogScope('Browser Tab')
   const tabsManager = useTabsManager()
@@ -96,6 +104,8 @@
   const saveToSpacePopoverOpened = writable(false)
   const selectedTabs = tabsManager.selectedTabs
 
+  const SHOW_INSECURE_WARNING_TIMEOUT = 3000
+
   let addressInputElem: HTMLInputElement
   let space: Space | null = null
   let isDragging = false
@@ -103,6 +113,7 @@
   let hovered = false
   let popoverVisible = false
   let popoverLiveSpaceVisible = false
+  let showInsecureWarningText = false
 
   // $: acceptDrop = tab.type === 'space'
   $: isActive = tab.id === $activeTabId && !removeHighlight
@@ -110,9 +121,12 @@
   $: url =
     (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null
 
+  $: isInsecureUrl = tab.type === 'page' && url && !checkIfSecureURL(url)
+  $: hostname = url ? getHostname(url) : null
+
   $: if (tab.type === 'page' && !isEditing) {
-    if (url) {
-      $inputUrl = new URL(url).hostname
+    if (hostname) {
+      $inputUrl = isInsecureUrl ? `http://${hostname}` : hostname
     } else {
       $inputUrl = tab.title
     }
@@ -138,6 +152,23 @@
         })()
       : tab.title
     : ''
+
+  let insecureWarningTimeout: ReturnType<typeof setTimeout>
+  const handleTabUrlChange = (url: string | null) => {
+    log.debug('handleTabUrlChange', url)
+    if (insecureWarningTimeout) {
+      clearTimeout(insecureWarningTimeout)
+    }
+    if (url && !checkIfSecureURL(url)) {
+      showInsecureWarningText = true
+
+      insecureWarningTimeout = setTimeout(() => {
+        showInsecureWarningText = false
+      }, SHOW_INSECURE_WARNING_TIMEOUT)
+    } else {
+      showInsecureWarningText = false
+    }
+  }
 
   const checkIfLiveSpacePossible = (tab: Tab) => {
     if (tab.type !== 'page') return false
@@ -316,6 +347,14 @@
   onMount(() => {
     if (tab.type === 'space') {
       fetchSpace(tab.spaceId)
+    } else if (tab.type === 'page') {
+      const unsubURLChangeEvent = tabsManager.on('url-changed', (updatedTab, newUrl) => {
+        if (tab.id === updatedTab.id) {
+          handleTabUrlChange(newUrl)
+        }
+      })
+
+      return unsubURLChangeEvent
     }
   })
 </script>
@@ -696,6 +735,10 @@
           </button>
         {/if}
       </div>
+    {/if}
+
+    {#if isInsecureUrl && isActive}
+      <InsecurePageWarningIndicator showText={showInsecureWarningText && !isEditing} />
     {/if}
   {/if}
 </div>

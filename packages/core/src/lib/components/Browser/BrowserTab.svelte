@@ -136,6 +136,10 @@
     dispatch('update-tab', tab)
   }, 500)
 
+  const debouncedUrlUpdate = useDebounce(() => {
+    tabs.emit('url-changed', tab, $url)
+  }, 200)
+
   const handleUrlChange = async (e: CustomEvent<string>) => {
     // await wait(500)
     // log.debug('running app detection on', e.detail)
@@ -147,6 +151,7 @@
 
     debouncedTabUpdate()
     debouncedAppDetection()
+    debouncedUrlUpdate()
   }
 
   const handleWebviewTitleChange = (e: CustomEvent<string>) => {
