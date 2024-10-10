@@ -91,7 +91,6 @@ impl Worker {
 
     pub fn send_chat_query(
         &mut self,
-        channel: &mut Channel,
         query: String,
         session_id: String,
         number_documents: i32,
@@ -111,7 +110,6 @@ impl Worker {
 
         if rag_only {
             self.handle_rag_only_query(
-                channel,
                 query,
                 number_documents,
                 resource_ids,
@@ -120,7 +118,6 @@ impl Worker {
             )
         } else {
             self.handle_full_chat_query(
-                channel,
                 query,
                 session_id,
                 number_documents,
@@ -135,7 +132,6 @@ impl Worker {
 
     fn handle_rag_only_query(
         &mut self,
-        channel: &mut Channel,
         query: String,
         number_documents: i32,
         resource_ids: Option<Vec<String>>,
@@ -153,7 +149,7 @@ impl Worker {
 
         let (sources_str, sources) = self.process_search_results(&results)?;
 
-        self.send_callback(channel, callback, sources_str)?;
+        self.send_callback(callback, sources_str)?;
         self.save_messages(user_message, String::new(), Some(sources))?;
 
         Ok(())
@@ -187,7 +183,6 @@ impl Worker {
 
     fn handle_full_chat_query(
         &mut self,
-        channel: &mut Channel,
         query: String,
         session_id: String,
         number_documents: i32,
@@ -210,7 +205,6 @@ impl Worker {
             tokio::time::timeout(
                 std::time::Duration::from_secs(100),
                 self.process_chat_stream(
-                    channel,
                     callback,
                     query,
                     number_documents,
@@ -239,7 +233,6 @@ impl Worker {
 
     async fn process_chat_stream(
         &self,
-        channel: &mut Channel,
         mut callback: Root<JsFunction>,
         query: String,
         number_documents: i32,
@@ -263,14 +256,14 @@ impl Worker {
             )
             .await?;
 
-        callback = self.send_callback(channel, callback, preamble)?;
+        callback = self.send_callback(callback, preamble)?;
 
         let mut assistant_message = String::new();
         while let Some(chunk) = stream.next().await {
             match chunk {
                 Ok(data) => {
                     assistant_message.push_str(&data);
-                    callback = self.send_callback(channel, callback, data)?;
+                    callback = self.send_callback(callback, data)?;
                 }
                 Err(err) => return Err(err),
             }
@@ -281,11 +274,10 @@ impl Worker {
 
     fn send_callback(
         &self,
-        channel: &mut Channel,
         callback: Root<JsFunction>,
         data: String,
     ) -> BackendResult<Root<JsFunction>> {
-        channel
+        self.channel
             .send(|mut cx| {
                 let f = callback.into_inner(&mut cx);
                 let this = cx.undefined();
@@ -454,25 +446,25 @@ impl Worker {
     }
 }
 
-#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
+#[tracing::instrument(level = "trace", skip(worker, oneshot))]
 pub fn handle_misc_message(
     worker: &mut Worker,
-    channel: &mut Channel,
     oneshot: Option<TunnelOneshot>,
     message: MiscMessage,
 ) {
     match message {
         MiscMessage::Print(content) => {
-            send_worker_response(channel, oneshot, worker.print(content))
+            let result = worker.print(content);
+            send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::GetAIChatMessage(id) => {
-            send_worker_response(channel, oneshot, worker.get_ai_chat_message(id))
+            let result = worker.get_ai_chat_message(id);
+            send_worker_response(&mut worker.channel, oneshot, result)
         }
-        MiscMessage::CreateAIChatMessage(system_prompot) => send_worker_response(
-            channel,
-            oneshot,
-            worker.create_ai_chat_message(system_prompot),
-        ),
+        MiscMessage::CreateAIChatMessage(system_prompot) => {
+            let result = worker.create_ai_chat_message(system_prompot);
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
         MiscMessage::ChatQuery {
             query,
             session_id,
@@ -484,7 +476,6 @@ pub fn handle_misc_message(
             general,
         } => {
             let result = worker.send_chat_query(
-                channel,
                 query,
                 session_id,
                 number_documents,
@@ -494,58 +485,56 @@ pub fn handle_misc_message(
                 inline_images,
                 general,
             );
-            send_worker_response(channel, oneshot, result)
+            send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::CreateApp {
             prompt,
             session_id,
             contexts,
-        } => send_worker_response(
-            channel,
-            oneshot,
-            worker.create_app(prompt, session_id, contexts),
-        ),
+        } => {
+            let result = worker.create_app(prompt, session_id, contexts);
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
         MiscMessage::QuerySFFSResources(
             prompt,
             sql_query,
             embedding_query,
             embedding_distance_threshold,
-        ) => send_worker_response(
-            channel,
-            oneshot,
-            worker.query_sffs_resources(
+        ) => {
+            let result = worker.query_sffs_resources(
                 prompt,
                 sql_query,
                 embedding_query,
                 embedding_distance_threshold,
-            ),
-        ),
-        MiscMessage::GetAIChatDataSource(source_hash) => send_worker_response(
-            channel,
-            oneshot,
-            worker.get_ai_chat_data_source(source_hash),
-        ),
+            );
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
+        MiscMessage::GetAIChatDataSource(source_hash) => {
+            let result = worker.get_ai_chat_data_source(source_hash);
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
         MiscMessage::DeleteAIChatMessage(session_id) => {
-            send_worker_response(channel, oneshot, worker.delete_ai_chat_message(session_id))
+            let result = worker.delete_ai_chat_message(session_id);
+            send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::GetAIDocsSimilarity {
             query,
             docs,
             threshold,
-        } => send_worker_response(
-            channel,
-            oneshot,
-            worker.get_ai_docs_similarity(query, docs, threshold),
-        ),
+        } => {
+            let result = worker.get_ai_docs_similarity(query, docs, threshold);
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
         MiscMessage::GetYoutubeTranscript(video_url) => {
-            send_worker_response(channel, oneshot, worker.get_youtube_transcript(video_url))
+            let result = worker.get_youtube_transcript(video_url);
+            send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::RunMigration => {
             let result = worker.migrate_data("sffs.sqlite");
             if result.is_err() {
                 eprintln!("Failed to run migration: {:?}", result);
             }
-            send_worker_response(channel, oneshot, result)
+            send_worker_response(&mut worker.channel, oneshot, result)
         }
     }
 }

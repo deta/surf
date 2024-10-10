@@ -194,3 +194,20 @@ pub enum MiscMessage {
     GetYoutubeTranscript(String),
     RunMigration,
 }
+
+#[derive(Debug, serde::Serialize)]
+#[serde(tag = "type")]
+pub enum EventBusMessage {
+    ResourceProcessingMessage {
+        resource_id: String,
+        status: ResourceProcessingStatus,
+    },
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(tag = "type")]
+pub enum ResourceProcessingStatus {
+    Started,
+    Failed(String),
+    Finished,
+}

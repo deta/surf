@@ -8,7 +8,6 @@ use crate::{
     store::models::HistoryEntry,
     BackendResult,
 };
-use neon::prelude::Channel;
 
 impl Worker {
     pub fn create_history_entry(&mut self, entry: HistoryEntry) -> BackendResult<HistoryEntry> {
@@ -74,42 +73,40 @@ impl Worker {
     }
 }
 
-#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
+#[tracing::instrument(level = "trace", skip(worker, oneshot))]
 pub fn handle_history_message(
     worker: &mut Worker,
-    channel: &mut Channel,
     oneshot: Option<TunnelOneshot>,
     message: HistoryMessage,
 ) {
     match message {
         HistoryMessage::CreateHistoryEntry(entry) => {
-            send_worker_response(channel, oneshot, worker.create_history_entry(entry))
+            let result = worker.create_history_entry(entry);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         HistoryMessage::GetAllHistoryEntries => {
-            send_worker_response(channel, oneshot, worker.get_all_history_entries())
+            let result = worker.get_all_history_entries();
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         HistoryMessage::GetHistoryEntry(id) => {
-            send_worker_response(channel, oneshot, worker.get_history_entry(id))
+            let result = worker.get_history_entry(id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         HistoryMessage::RemoveHistoryEntry(id) => {
-            send_worker_response(channel, oneshot, worker.remove_history_entry(id))
+            let result = worker.remove_history_entry(id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         HistoryMessage::UpdateHistoryEntry(entry) => {
-            send_worker_response(channel, oneshot, worker.update_history_entry(entry))
+            let result = worker.update_history_entry(entry);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         HistoryMessage::SearchHistoryEntriesByHostnamePrefix(prefix, since) => {
-            send_worker_response(
-                channel,
-                oneshot,
-                worker.search_history_by_hostname_prefix(prefix, since),
-            )
+            let result = worker.search_history_by_hostname_prefix(prefix, since);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         HistoryMessage::SearchHistoryEntriesByUrlAndTitle(prefix, since) => {
-            send_worker_response(
-                channel,
-                oneshot,
-                worker.search_history_by_url_and_title(prefix, since),
-            )
+            let result = worker.search_history_by_url_and_title(prefix, since);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
     }
 }

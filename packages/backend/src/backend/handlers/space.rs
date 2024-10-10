@@ -9,7 +9,6 @@ use crate::{
     },
     BackendResult,
 };
-use neon::prelude::Channel;
 
 impl Worker {
     pub fn create_space(&mut self, name: &str) -> BackendResult<Space> {
@@ -81,37 +80,44 @@ impl Worker {
     }
 }
 
-#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
+#[tracing::instrument(level = "trace", skip(worker, oneshot))]
 pub fn handle_space_message(
     worker: &mut Worker,
-    channel: &mut Channel,
     oneshot: Option<TunnelOneshot>,
     message: SpaceMessage,
 ) {
     match message {
         SpaceMessage::CreateSpace { name } => {
-            send_worker_response(channel, oneshot, worker.create_space(&name))
+            let result = worker.create_space(&name);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         SpaceMessage::GetSpace(space_id) => {
-            send_worker_response(channel, oneshot, worker.get_space(&space_id))
+            let result = worker.get_space(&space_id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
-        SpaceMessage::ListSpaces => send_worker_response(channel, oneshot, worker.list_spaces()),
+        SpaceMessage::ListSpaces => {
+            let result = worker.list_spaces();
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
         SpaceMessage::UpdateSpace { space_id, name } => {
-            send_worker_response(channel, oneshot, worker.update_space_name(space_id, name))
+            let result = worker.update_space_name(space_id, name);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         SpaceMessage::DeleteSpace(space_id) => {
-            send_worker_response(channel, oneshot, worker.delete_space(&space_id))
+            let result = worker.delete_space(&space_id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
-        SpaceMessage::CreateSpaceEntries { entries, space_id } => send_worker_response(
-            channel,
-            oneshot,
-            worker.create_space_entries(space_id, entries),
-        ),
+        SpaceMessage::CreateSpaceEntries { entries, space_id } => {
+            let result = worker.create_space_entries(space_id, entries);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
         SpaceMessage::GetSpaceEntries { space_id } => {
-            send_worker_response(channel, oneshot, worker.get_space_entries(&space_id))
+            let result = worker.get_space_entries(&space_id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         SpaceMessage::DeleteSpaceEntries(entry_ids) => {
-            send_worker_response(channel, oneshot, worker.delete_space_entries(entry_ids))
+            let result = worker.delete_space_entries(entry_ids);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
     }
 }

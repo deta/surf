@@ -1,9 +1,3 @@
-use crossbeam_channel as crossbeam;
-use neon::{
-    prelude::Context,
-    types::{Deferred, Finalize},
-};
-
 use super::{
     ai::ai_thread_entry_point,
     message::{AIMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage},
@@ -11,12 +5,20 @@ use super::{
     worker::worker_thread_entry_point,
 };
 use crate::BackendResult;
+use crossbeam_channel as crossbeam;
+use neon::{
+    handle::Root,
+    prelude::Context,
+    types::{Deferred, Finalize, JsFunction},
+};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct WorkerTunnel {
     pub worker_tx: crossbeam::Sender<TunnelMessage>,
     pub tqueue_rx: crossbeam::Receiver<ProcessorMessage>,
     pub aiqueue_rx: crossbeam::Receiver<AIMessage>,
+    pub event_bus_rx_callback: Arc<Root<JsFunction>>,
 }
 
 impl WorkerTunnel {
@@ -30,6 +32,7 @@ impl WorkerTunnel {
         openai_api_endpoint: String,
         local_ai_mode: bool,
         language_setting: String,
+        event_bus_rx_callback: Root<JsFunction>,
     ) -> Self
     where
         C: Context<'a>,
@@ -37,10 +40,12 @@ impl WorkerTunnel {
         let (worker_tx, worker_rx) = crossbeam::unbounded();
         let (tqueue_tx, tqueue_rx) = crossbeam::unbounded();
         let (aiqueue_tx, aiqueue_rx) = crossbeam::unbounded();
+        let event_bus_rx_callback = Arc::new(event_bus_rx_callback);
         let tunnel = Self {
             worker_tx,
             tqueue_rx,
             aiqueue_rx,
+            event_bus_rx_callback: event_bus_rx_callback.clone(),
         };
 
         // spawn N worker threads
@@ -56,6 +61,7 @@ impl WorkerTunnel {
             let openai_api_endpoint_clone = openai_api_endpoint.clone();
             let language_setting_clone = language_setting.clone();
             let local_ai_mode_copy = local_ai_mode;
+            let event_bus_rx_callback_clone = event_bus_rx_callback.clone();
 
             std::thread::Builder::new()
                 .name(format!("W{n}"))
@@ -65,6 +71,7 @@ impl WorkerTunnel {
                         tqueue_tx_clone,
                         aiqueue_tx_clone,
                         libuv_ch,
+                        event_bus_rx_callback_clone,
                         app_path_clone,
                         backend_root_path_clone,
                         openai_api_key_clone,

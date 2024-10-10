@@ -3,7 +3,8 @@ use std::collections::HashSet;
 use crate::{
     backend::{
         message::{
-            AIMessage, ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot,
+            AIMessage, EventBusMessage, ProcessorMessage, ResourceMessage,
+            ResourceProcessingStatus, ResourceTagMessage, TunnelOneshot,
         },
         worker::{send_worker_response, Worker},
     },
@@ -20,7 +21,6 @@ use crate::{
     },
     BackendError, BackendResult,
 };
-use neon::prelude::Channel;
 use std::{path::Path, str::FromStr};
 
 impl Worker {
@@ -501,13 +501,19 @@ impl Worker {
             _ => (),
         }
 
-        Ok(self.upsert_embeddings(
-            resource_id,
+        self.upsert_embeddings(
+            resource_id.clone(),
             EmbeddingType::TextContent,
             old_keys,
             content_ids,
             chunks,
-        )?)
+        )?;
+
+        self.send_event_bus_message(EventBusMessage::ResourceProcessingMessage {
+            resource_id: resource_id.clone(),
+            status: ResourceProcessingStatus::Finished,
+        });
+        Ok(())
     }
 
     pub fn upsert_embeddings(
@@ -576,38 +582,38 @@ impl Worker {
     }
 }
 
-#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
+#[tracing::instrument(level = "trace", skip(worker, oneshot))]
 pub fn handle_resource_tag_message(
     worker: &mut Worker,
-    channel: &mut Channel,
     oneshot: Option<TunnelOneshot>,
     message: ResourceTagMessage,
 ) {
     match message {
         ResourceTagMessage::CreateResourceTag(tag) => {
-            send_worker_response(channel, oneshot, worker.create_resource_tag(tag))
+            let result = worker.create_resource_tag(tag);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceTagMessage::RemoveResourceTag(tag_id) => {
-            send_worker_response(channel, oneshot, worker.delete_resource_tag_by_id(tag_id))
+            let result = worker.delete_resource_tag_by_id(tag_id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceTagMessage::RemoveResourceTagByName {
             resource_id,
             tag_name,
-        } => send_worker_response(
-            channel,
-            oneshot,
-            worker.delete_resource_tag_by_name(resource_id, tag_name),
-        ),
+        } => {
+            let result = worker.delete_resource_tag_by_name(resource_id, tag_name);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
         ResourceTagMessage::UpdateResourceTag(tag) => {
-            send_worker_response(channel, oneshot, worker.update_resource_tag_by_name(tag))
+            let result = worker.update_resource_tag_by_name(tag);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
     }
 }
 
-#[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
+#[tracing::instrument(level = "trace", skip(worker, oneshot))]
 pub fn handle_resource_message(
     worker: &mut Worker,
-    channel: &mut Channel,
     oneshot: Option<TunnelOneshot>,
     message: ResourceMessage,
 ) {
@@ -616,37 +622,37 @@ pub fn handle_resource_message(
             resource_type,
             resource_tags,
             resource_metadata,
-        } => send_worker_response(
-            channel,
-            oneshot,
-            worker.create_resource(resource_type, resource_tags, resource_metadata),
-        ),
-        ResourceMessage::GetResource(id, include_annotations) => send_worker_response(
-            channel,
-            oneshot,
-            worker.read_resource(id, include_annotations),
-        ),
+        } => {
+            let result = worker.create_resource(resource_type, resource_tags, resource_metadata);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        ResourceMessage::GetResource(id, include_annotations) => {
+            let result = worker.read_resource(id, include_annotations);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
         ResourceMessage::RemoveResource(id) => {
-            send_worker_response(channel, oneshot, worker.remove_resource(id))
+            let result = worker.remove_resource(id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::RecoverResource(id) => {
-            send_worker_response(channel, oneshot, worker.recover_resource(id))
+            let result = worker.recover_resource(id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::ProximitySearchResources {
             resource_id,
             proximity_distance_threshold,
             proximity_limit,
-        } => send_worker_response(
-            channel,
-            oneshot,
-            worker.proximity_search_resources(
+        } => {
+            let result = worker.proximity_search_resources(
                 resource_id,
                 proximity_distance_threshold,
                 proximity_limit,
-            ),
-        ),
+            );
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
         ResourceMessage::ListResourcesByTags(tags) => {
-            send_worker_response(channel, oneshot, worker.list_resources_by_tags(tags))
+            let result = worker.list_resources_by_tags(tags);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::SearchResources {
             query,
@@ -656,10 +662,8 @@ pub fn handle_resource_message(
             embeddings_limit,
             include_annotations,
             space_id,
-        } => send_worker_response(
-            channel,
-            oneshot,
-            worker.search_resources(
+        } => {
+            let result = worker.search_resources(
                 query,
                 resource_tag_filters,
                 semantic_search_enabled,
@@ -667,44 +671,52 @@ pub fn handle_resource_message(
                 embeddings_limit,
                 include_annotations,
                 space_id,
-            ),
-        ),
+            );
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
         ResourceMessage::UpdateResourceMetadata(metadata) => {
-            send_worker_response(channel, oneshot, worker.update_resource_metadata(metadata))
+            let result = worker.update_resource_metadata(metadata);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::PostProcessJob(id) => {
-            send_worker_response(channel, oneshot, worker.post_process_job(id))
+            let result = worker.post_process_job(id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::UpsertResourceTextContent {
             resource_id,
             content,
             content_type,
             metadata,
-        } => send_worker_response(
-            channel,
-            oneshot,
-            worker.upsert_resource_text_content(resource_id, content, content_type, metadata),
-        ),
+        } => {
+            let result =
+                worker.upsert_resource_text_content(resource_id, content, content_type, metadata);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
         ResourceMessage::BatchUpsertResourceTextContent {
             resource_id,
             content_type,
             content,
             metadata,
-        } => send_worker_response(
-            channel,
-            oneshot,
-            worker.batch_upsert_resource_text_content(resource_id, content_type, content, metadata),
-        ),
-        ResourceMessage::UpsertResourceHash { resource_id, hash } => send_worker_response(
-            channel,
-            oneshot,
-            worker.upsert_resource_hash(resource_id, hash),
-        ),
+        } => {
+            let result = worker.batch_upsert_resource_text_content(
+                resource_id,
+                content_type,
+                content,
+                metadata,
+            );
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        ResourceMessage::UpsertResourceHash { resource_id, hash } => {
+            let result = worker.upsert_resource_hash(resource_id, hash);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
         ResourceMessage::GetResourceHash(resource_id) => {
-            send_worker_response(channel, oneshot, worker.get_resource_hash(resource_id))
+            let result = worker.get_resource_hash(resource_id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::DeleteResourceHash(resource_id) => {
-            send_worker_response(channel, oneshot, worker.delete_resource_hash(resource_id))
+            let result = worker.delete_resource_hash(resource_id);
+            send_worker_response(&mut worker.channel, oneshot, result);
         }
     }
 }

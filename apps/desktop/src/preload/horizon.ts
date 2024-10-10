@@ -560,7 +560,7 @@ export class ResourceHandle {
     }
 
     const fd = await fsp.open(resolvedFilePath, flags)
-    const initialHash = JSON.parse(await sffs.js__store_get_resource_hash(resourceId))
+    const initialHash = JSON.parse(await (sffs as any).js__store_get_resource_hash(resourceId))
     return new ResourceHandle(fd, resolvedFilePath, resourceId, initialHash)
   }
 
@@ -637,8 +637,8 @@ export class ResourceHandle {
     if (this.writeHappened) {
       const newHash = await this.computeResourceHash()
       if (this.currentHash !== newHash) {
-        await sffs.js__store_resource_post_process(this.resourceId)
-        await sffs.js__store_upsert_resource_hash(this.resourceId, newHash)
+        await (sffs as any).js__store_resource_post_process(this.resourceId)
+        await (sffs as any).js__store_upsert_resource_hash(this.resourceId, newHash)
       }
       this.currentHash = newHash
     }
@@ -663,6 +663,79 @@ const sffs = (() => {
   let server: http.Server | null = null
   const callbackEmitters = new Map()
 
+
+  enum ResourceProcessingStatusType {
+    Started = 'Started',
+    Failed = 'Failed',
+    Finished = 'Finished'
+  }
+
+  enum EventBusMessageType {
+    ResourceProcessingMessage = 'ResourceProcessingMessage'
+  }
+
+  type ResourceProcessingStatus =
+    | { type: ResourceProcessingStatusType.Started }
+    | { type: ResourceProcessingStatusType.Failed; message: string }
+    | { type: ResourceProcessingStatusType.Finished }
+
+  type EventBusMessage =
+    | {
+      type: EventBusMessageType.ResourceProcessingMessage
+      resource_id: string
+      status: ResourceProcessingStatus
+    }
+
+  const isResourceProcessingMessage = (obj: any): boolean => {
+    if (!obj || typeof obj.resource_id !== 'string' || !obj.status || typeof obj.status.type !== 'string') {
+      return false
+    }
+
+    switch (obj.status.type) {
+      case ResourceProcessingStatusType.Started:
+      case ResourceProcessingStatusType.Finished:
+        return true
+      case ResourceProcessingStatusType.Failed:
+        return typeof obj.message === 'string'
+    }
+
+    return false
+  }
+
+  const parseEventBusMessage = (event: string): EventBusMessage => {
+    const obj = JSON.parse(event)
+
+    if (!obj || typeof obj !== 'object' || typeof obj.type !== 'string') {
+      throw new Error(`invalid event bus message: ${obj}`)
+    }
+
+    switch (obj.type) {
+      case EventBusMessageType.ResourceProcessingMessage:
+        if (isResourceProcessingMessage(obj)) return obj as EventBusMessage
+        throw new Error(`event bus message doesn't match type ${obj.type}`)
+    }
+
+    throw new Error(`invalid event bus message type: ${obj.type}`)
+  }
+
+  const { js__backend_event_bus_register, js__backend_event_bus_callback } = (() => {
+    const handlers: ((event: EventBusMessage) => void)[] = []
+    const js__backend_event_bus_register = (handler: (event: EventBusMessage) => void) =>
+      handlers.push(handler)
+    const js__backend_event_bus_callback = (event: string) => {
+      let message: EventBusMessage
+      try {
+        message = parseEventBusMessage(event)
+      } catch (error) {
+        console.error('failed to parse event bus message', error)
+        return
+      }
+      handlers.map((handler) => handler(message))
+    }
+
+    return { js__backend_event_bus_register, js__backend_event_bus_callback }
+  })()
+
   const init = (
     root_path: string,
     vision_api_key: string,
@@ -680,32 +753,36 @@ const sffs = (() => {
       openai_api_key,
       openai_api_endpoint,
       local_ai_mode,
-      language_setting
+      language_setting,
+      js__backend_event_bus_callback
     )
 
     if (ENABLE_DEBUG_PROXY) {
       setupDebugServer()
     }
 
-    return Object.fromEntries(
-      Object.entries(sffs)
-        .filter(
-          ([key, value]) =>
-            typeof value === 'function' &&
-            key.startsWith('js__') &&
-            key !== 'js__backend_tunnel_init'
-        )
-        .map(([key, value]) => [
-          key,
-          ENABLE_DEBUG_PROXY ? createProxyFunction(key) : with_handle(value)
-        ])
-    )
+    return {
+      ...Object.fromEntries(
+        Object.entries(sffs)
+          .filter(
+            ([key, value]) =>
+              typeof value === 'function' &&
+              key.startsWith('js__') &&
+              key !== 'js__backend_tunnel_init'
+          )
+          .map(([key, value]) => [
+            key,
+            ENABLE_DEBUG_PROXY ? createProxyFunction(key) : with_handle(value)
+          ])
+      ),
+      js__backend_event_bus_register
+    }
   }
 
   const with_handle =
     (fn: any) =>
-    (...args: any) =>
-      fn(handle, ...args)
+      (...args: any) =>
+        fn(handle, ...args)
 
   const setupDebugServer = () => {
     server = http.createServer((req: any, res: any) => {

@@ -1,7 +1,10 @@
 use super::message::{AIMessage, ProcessorMessage, TunnelMessage, TunnelOneshot};
 use crate::{
     ai::ai::AI,
-    backend::{handlers::*, message::WorkerMessage},
+    backend::{
+        handlers::*,
+        message::{EventBusMessage, WorkerMessage},
+    },
     store::db::Database,
     BackendError, BackendResult,
 };
@@ -9,11 +12,13 @@ use crate::{
 use crossbeam_channel as crossbeam;
 use neon::prelude::*;
 use serde::Serialize;
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 pub struct Worker {
     pub db: Database,
     pub ai: AI,
+    pub channel: Channel,
+    pub event_bus_rx: Arc<Root<JsFunction>>,
     pub tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     pub aiqueue_tx: crossbeam::Sender<AIMessage>,
     pub app_path: String,
@@ -33,6 +38,8 @@ impl Worker {
         language_setting: String,
         tqueue_tx: crossbeam::Sender<ProcessorMessage>,
         aiqueue_tx: crossbeam::Sender<AIMessage>,
+        channel: Channel,
+        event_bus_rx: Arc<Root<JsFunction>>,
     ) -> Self {
         let db_path = Path::new(&backend_root_path)
             .join("surf-0-01.sqlite")
@@ -63,6 +70,8 @@ impl Worker {
                 openai_api_endpoint,
             )
             .unwrap(),
+            channel,
+            event_bus_rx,
             tqueue_tx,
             aiqueue_tx,
             app_path,
@@ -72,13 +81,36 @@ impl Worker {
             async_runtime: tokio::runtime::Runtime::new().unwrap(),
         }
     }
+
+    pub fn send_event_bus_message(&mut self, message: EventBusMessage) {
+        let message = match serde_json::to_string(&message) {
+            Ok(result) => result,
+            Err(e) => {
+                tracing::debug!("serde to json string failed: {e:?}");
+                return;
+            }
+        };
+        let event_bus_rx = self.event_bus_rx.clone();
+
+        self.channel.send(move |mut cx| {
+            let this = cx.undefined();
+            let event_bus_rx = event_bus_rx.to_inner(&mut cx);
+            let string = cx.string(message).as_value(&mut cx);
+            if let Err(e) = event_bus_rx.call(&mut cx, this, &[string]) {
+                tracing::debug!("event bus callback failed: {e:?}");
+            }
+
+            Ok(())
+        });
+    }
 }
 
 pub fn worker_thread_entry_point(
     worker_rx: crossbeam::Receiver<TunnelMessage>,
     tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     aiqueue_tx: crossbeam::Sender<AIMessage>,
-    mut channel: Channel,
+    channel: Channel,
+    event_bus_rx: Arc<Root<JsFunction>>,
     app_path: String,
     backend_root_path: String,
     openai_api_key: String,
@@ -95,33 +127,35 @@ pub fn worker_thread_entry_point(
         language_setting,
         tqueue_tx,
         aiqueue_tx,
+        channel,
+        event_bus_rx,
     );
 
     while let Ok(TunnelMessage(message, oneshot)) = worker_rx.recv() {
         match message {
-            WorkerMessage::MiscMessage(message) => {
-                handle_misc_message(&mut worker, &mut channel, oneshot, message)
+            WorkerMessage::CardMessage(_message) => {
+                // handle_card_message(&mut worker, oneshot, message)
             }
-            WorkerMessage::CardMessage(message) => {
-                handle_card_message(&mut worker, &mut channel, oneshot, message)
+            WorkerMessage::HorizonMessage(_message) => {
+                // handle_horizon_message(&mut worker, oneshot, message)
+            }
+            WorkerMessage::UserdataMessage(_message) => {
+                // handle_userdata_message(&mut worker, oneshot, message)
+            }
+            WorkerMessage::MiscMessage(message) => {
+                handle_misc_message(&mut worker, oneshot, message)
             }
             WorkerMessage::HistoryMessage(message) => {
-                handle_history_message(&mut worker, &mut channel, oneshot, message)
-            }
-            WorkerMessage::HorizonMessage(message) => {
-                handle_horizon_message(&mut worker, &mut channel, oneshot, message)
+                handle_history_message(&mut worker, oneshot, message)
             }
             WorkerMessage::ResourceMessage(message) => {
-                handle_resource_message(&mut worker, &mut channel, oneshot, message)
+                handle_resource_message(&mut worker, oneshot, message)
             }
             WorkerMessage::ResourceTagMessage(message) => {
-                handle_resource_tag_message(&mut worker, &mut channel, oneshot, message)
-            }
-            WorkerMessage::UserdataMessage(message) => {
-                handle_userdata_message(&mut worker, &mut channel, oneshot, message)
+                handle_resource_tag_message(&mut worker, oneshot, message)
             }
             WorkerMessage::SpaceMessage(message) => {
-                handle_space_message(&mut worker, &mut channel, oneshot, message)
+                handle_space_message(&mut worker, oneshot, message)
             }
         }
     }
