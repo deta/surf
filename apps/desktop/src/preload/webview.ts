@@ -21,11 +21,21 @@ import {
   WebviewAnnotationEventNames,
   WebviewAnnotationEvents
 } from '@horizon/types'
+import { unified } from 'unified'
+import rehypeParse from 'rehype-parse'
+import rehypeRemark from 'rehype-remark'
+import remarkGfm from 'remark-gfm'
+import remarkStringify from 'remark-stringify'
 
 import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
 // import CommentIndicator from './components/CommentIndicator.svelte'
-import { ResourceArticle, type Resource } from '@horizon/core/src/lib/service/resources'
+import {
+  ResourceArticle,
+  ResourceDocument,
+  type Resource
+} from '@horizon/core/src/lib/service/resources'
+import { normalizeURL } from '@horizon/utils'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 
@@ -1045,6 +1055,32 @@ async function handleDrop(e: DragEvent) {
           pageY: e.pageY
         })
       )
+
+      // TODO: Expand / Improve for specific apps using existing app detection logic
+      if (
+        normalizeURL(location.hostname) === 'notion.so' &&
+        newDataTransfer?.getData('text/html')
+      ) {
+        const contentHtml = newDataTransfer!.getData('text/html')
+
+        const contentMarkdown = String(
+          await unified()
+            .use(rehypeParse)
+            .use(remarkGfm)
+            .use(rehypeRemark)
+            .use(remarkStringify)
+            .process(contentHtml)
+        )
+
+        await navigator.clipboard.writeText(contentMarkdown)
+        const pasteEvent = new ClipboardEvent('paste', {
+          bubbles: true,
+          cancelable: true,
+          clipboardData: new DataTransfer()
+        })
+        pasteEvent.clipboardData?.setData('text/plain', contentMarkdown)
+        ;(document.activeElement ?? document.body).dispatchEvent(pasteEvent)
+      }
     } else {
       e.target!.dispatchEvent(
         new DragEvent('drop', {
@@ -1095,6 +1131,20 @@ async function createNewDataTransfer(
       resource.type.startsWith(ResourceTypes.DOCUMENT)
     ) {
       newDataTransfer.setData('text/uri-list', (resource as ResourceArticle).metadata?.sourceURI)
+
+      if (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+        let contentHtml = Buffer.from(buffer).toString()
+        newDataTransfer.setData('text/html', contentHtml)
+
+        // Convert to plain text
+        // var html = '<p>Some HTML</p>'
+        // var div = document.createElement('div')
+        // div.innerHTML = html
+        // var contentPlain = div.textContent || div.innerText || ''
+        const contentPlain = contentHtml.replace(/<[^>]+>/g, '')
+
+        newDataTransfer.setData('text/plain', contentPlain)
+      }
     } else {
       newDataTransfer.items.add(file)
     }

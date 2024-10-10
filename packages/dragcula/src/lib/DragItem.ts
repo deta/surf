@@ -18,7 +18,7 @@ export class DragItem<DataTypes extends Record<string, any> = { [key: string]: a
 
   readonly id: string;
 
-  // === STAT
+  // === STATE
   data: DragData<DataTypes>;
   dropEffect: DropEffect = "move";
 

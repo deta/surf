@@ -3144,6 +3144,9 @@
   const handleDropSidebar = async (drag: DragculaDragEvent<DragTypes>) => {
     log.debug('dropping onto sidebar', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
 
+    // Used to set pinned property later to drop at correct position
+    const pinned = drag.to?.id === 'sidebar-pinned-tabs'
+
     if (drag.isNative) {
       const parsed = await processDrop(drag.event!)
       log.debug('Parsed', parsed)
@@ -3152,7 +3155,14 @@
       log.debug('Resources', newResources)
 
       for (const r of newResources) {
-        await tabsManager.openResourceAsTab(r, { active: false, index: drag.index ?? undefined })
+        const tab = await tabsManager.openResourceAsTab(r, {
+          active: false,
+          index: drag.index ?? undefined
+        })
+
+        // NOTE: Should be opt? when creating tab, but currently api does not support and
+        // adding into CreateTabOptions doesnt match other tab apis props
+        if (pinned) tabsManager.update(tab!.id, { pinned })
 
         telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
       }
@@ -3274,7 +3284,11 @@
       drag.continue()
     } else if (drag.item!.data.hasData(DragTypeNames.SURF_SPACE)) {
       const space = drag.item!.data.getData(DragTypeNames.SURF_SPACE)
-      tabsManager.addSpaceTab(space, { active: false, index: drag.index ?? undefined })
+      const tab = await tabsManager.addSpaceTab(space, {
+        active: false,
+        index: drag.index ?? undefined
+      })
+      if (pinned) await tabsManager.update(tab!.id, { pinned })
     } else if (
       drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
       drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
@@ -3293,7 +3307,7 @@
         return
       }
 
-      let tab = await tabsManager.openResourceAsTab(resource, {
+      const tab = await tabsManager.openResourceAsTab(resource, {
         active: true,
         index: drag.index ?? 0,
         trigger: CreateTabEventTrigger.Drop
@@ -3304,14 +3318,17 @@
         return
       }
 
-      tab.index = drag.index || 0
+      if (pinned) await tabsManager.update(tab!.id, { pinned, index: drag.index ?? 0 })
+      //tab.index = drag.index || 0
+      // NOTE: Should be opt? when creating tab, but currently api does not support and
+      // adding into CreateTabOptions doesnt match other tab apis props
 
-      await tabsManager.bulkPersistChanges(
+      /*await tabsManager.bulkPersistChanges(
         get(tabs).map((tab) => ({
           id: tab.id,
           updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
         }))
-      )
+      )*/
 
       log.debug('State updated successfully')
 
