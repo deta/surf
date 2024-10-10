@@ -35,7 +35,9 @@
     getFileType,
     useDebounce,
     useLocalStorageStore,
-    tooltip
+    tooltip,
+    truncate,
+    normalizeURL
   } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
@@ -75,7 +77,6 @@
   import Fuse from 'fuse.js'
   import CommandMenuItem, { type CMDMenuItem } from './CommandMenuItem.svelte'
   import type { HistoryEntriesManager } from '../../service/history'
-  import { searchHistoryEntriesByHostnamePrefix } from '../../service/history'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
   import SpacesView from '../Oasis/SpacesView.svelte'
   import CreateNewSpace from '../Oasis/CreateNewSpace.svelte'
@@ -131,10 +132,12 @@
   const oasisSearchResults = writable<Resource[]>([])
   const searchEngineSuggestionResults = writable<string[]>([])
   const historyEntriesResults = writable<HistoryEntry[]>([])
+  const hostnameHistoryEntriesResults = writable<HistoryEntry[]>([])
   const filteredCommandItems = writable<CMDMenuItem[]>([])
   const isFetchingOasisSearchResults = writable(false)
   const isFetchingSearchEngineSuggestionResults = writable(false)
   const isFetchingHistoryEntriesResults = writable(false)
+  const isFetchingHostnameHistoryEntriesResults = writable(false)
   const isCreatingNewSpace = writable(false)
   const isFilteringCommandItems = writable(false)
   const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
@@ -146,18 +149,21 @@
       isFetchingOasisSearchResults,
       isFetchingSearchEngineSuggestionResults,
       isFetchingHistoryEntriesResults,
+      isFetchingHostnameHistoryEntriesResults,
       isFilteringCommandItems
     ],
     ([
       isFetchingOasisSearchResults,
       isFetchingSearchEngineSuggestionResults,
       isFetchingHistoryEntriesResults,
+      isFetchingHostnameHistoryEntriesResults,
       isFilteringCommandItems
     ]) => {
       return (
         isFetchingOasisSearchResults ||
         isFetchingSearchEngineSuggestionResults ||
         isFetchingHistoryEntriesResults ||
+        isFetchingHostnameHistoryEntriesResults ||
         isFilteringCommandItems
       )
     }
@@ -214,13 +220,33 @@
     } as CMDMenuItem
   }
 
-  function historyEntryToItem(entry: HistoryEntry, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
+  function hostnameHistoryEntryToItem(
+    entry: HistoryEntry,
+    params: Partial<CMDMenuItem> = {}
+  ): CMDMenuItem {
     return {
-      id: entry.id,
+      id: `hostname-${entry.id}`,
       // we have to use the URL as the label because the title saved in the history entry
       // will be the title of the page when it was saved with the full path
-      label: entry.url,
+      label: normalizeURL(entry.url!),
       value: entry.url,
+      iconUrl: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(entry.url!)}`,
+      type: 'suggestion-hostname',
+      score: 0.4,
+      ...params
+    } as CMDMenuItem
+  }
+
+  function historyEntryToItem(entry: HistoryEntry, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
+    const hasItemsWithSameTitle =
+      $historyEntriesResults.filter((e) => e.title === entry.title).length > 1
+    return {
+      id: `history-${entry.id}`,
+      label: hasItemsWithSameTitle
+        ? `${truncate(entry.title!, 25)}  —  ${truncateURL(entry.url!, 15)}`
+        : entry.title,
+      value: entry.url,
+      // description: truncateURL(entry.url, 10),
       iconUrl: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(entry.url!)}`,
       type: 'history',
       score: 0.4,
@@ -296,6 +322,12 @@
           log.debug('Fetched history entries done')
         })
       }
+
+      if (!$isFetchingHostnameHistoryEntriesResults) {
+        fetchHostnameEntries(searchValue)?.then(() => {
+          log.debug('Fetched hostname entries done')
+        })
+      }
     }
 
     return []
@@ -308,7 +340,8 @@
       filteredCommandItems,
       oasisSearchResults,
       searchEngineSuggestionResults,
-      historyEntriesResults
+      historyEntriesResults,
+      hostnameHistoryEntriesResults
     ],
     ([
       searchValue,
@@ -316,7 +349,8 @@
       filteredCommandItems,
       oasisSearchResults,
       searchEngineSuggestionResults,
-      historyEntriesResults
+      historyEntriesResults,
+      hostnameHistoryEntriesResults
     ]) => {
       deboundedSelectFirstCommandItem()
 
@@ -335,11 +369,20 @@
         //     ]
         //   : []),
         ...commandFilter,
-        ...historyEntriesResults.map((entry) => historyEntryToItem(entry)),
+        ...hostnameHistoryEntriesResults.map((entry) => hostnameHistoryEntryToItem(entry)),
         ...filteredCommandItems,
         ...searchEngineSuggestionResults.map((suggestion) =>
           searchEngineSuggestionToItem(suggestion)
-        )
+        ),
+        ...historyEntriesResults
+          // filter out history entries that are already in the hostname history entries
+          .filter(
+            (entry) =>
+              !hostnameHistoryEntriesResults.find(
+                (e) => e.id === entry.id || normalizeURL(e.url!) === normalizeURL(entry.url!)
+              )
+          )
+          .map((entry) => historyEntryToItem(entry))
         // NOTE: Disabled until it works better with the new stuff seach work
         //...oasisSearchResults.map((resource) => resourceToItem(resource, { score: 0.4 }))
       ]
@@ -350,14 +393,26 @@
             (item.label === searchValue || item.value === searchValue) && item.type !== 'space'
         )
       ) {
-        items.unshift({
+        const hostnameMatch = hostnameHistoryEntriesResults.find((entry) =>
+          normalizeURL(entry.url!).startsWith(normalizeURL(searchValue))
+        )
+
+        const generalSearchItem = {
           id: `general-search-${searchValue}`,
           type: 'general-search',
           label: `${searchValue}`,
           value: searchValue,
           icon: 'search',
           score: 1
-        } as CMDMenuItem)
+        } as CMDMenuItem
+
+        if (searchValue.length > 2 && hostnameMatch) {
+          // insert the general search item at the second position
+          items.splice(1, 0, generalSearchItem)
+        } else {
+          // insert the general search item at the top
+          items.unshift(generalSearchItem)
+        }
       }
 
       const url = parseStringIntoBrowserLocation(searchValue)
@@ -398,6 +453,29 @@
     }
   }, 150)
 
+  const fetchHostnameEntries = useDebounce(async ($searchValue: string) => {
+    if ($searchValue.length < 2) {
+      $hostnameHistoryEntriesResults = []
+      return
+    }
+    try {
+      $isFetchingHostnameHistoryEntriesResults = true
+      const now = new Date()
+      const since = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 90) // 90 days
+      const hostnames = await resourceManager.searchHistoryEntriesByHostnamePrefix(
+        $searchValue,
+        since
+      )
+      log.debug('Fetched hostname history entries:', hostnames)
+      $hostnameHistoryEntriesResults = hostnames.slice(0, 1)
+    } catch (error) {
+      log.error('Error fetching history entries:', error)
+      $hostnameHistoryEntriesResults = []
+    } finally {
+      $isFetchingHostnameHistoryEntriesResults = false
+    }
+  }, 300)
+
   const fetchHistoryEntries = useDebounce(async ($searchValue: string) => {
     if ($searchValue.length < 2) {
       $historyEntriesResults = []
@@ -405,11 +483,11 @@
     }
     try {
       $isFetchingHistoryEntriesResults = true
-      log.debug('Fetching history hostnames...')
       const now = new Date()
       const since = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 90) // 90 days
-      const hostnames = await searchHistoryEntriesByHostnamePrefix($searchValue, since)
-      $historyEntriesResults = hostnames
+      const entries = await resourceManager.searchHistoryEntriesByUrlAndTitle($searchValue, since)
+      log.debug('Fetched history entries:', entries)
+      $historyEntriesResults = entries.slice(0, 10)
     } catch (error) {
       log.error('Error fetching history entries:', error)
       $historyEntriesResults = []
@@ -471,8 +549,8 @@
           $isFetchingOasisSearchResults = true
           const suggestions = await engine.getCompletions(query)
           log.debug('Search engine suggestions:', suggestions)
-          $searchEngineSuggestionResults = suggestions[1] // TODO: -> Make this generalized for other engines
-            .slice(0, 4)
+          $searchEngineSuggestionResults = suggestions // TODO: -> Make this generalized for other engines
+            .slice(0, 3)
             .filter((suggestion: string) => suggestion !== $searchValue)
         } else {
           $searchEngineSuggestionResults = []
@@ -492,7 +570,7 @@
     log.debug('handleSelect', item)
     if (item.type === 'tab') {
       dispatch('activate-tab', item.id)
-    } else if (item.type === 'history') {
+    } else if (item.type === 'history' || item.type === 'suggestion-hostname') {
       dispatch('open-url', item.value!)
     } else if (item.type === 'command' || item.type === 'navigate') {
       if (item.id === 'open-search-url') {
@@ -1145,7 +1223,7 @@
           <div
             class={`${
               showTabSearch === 1
-                ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[314px]' : 'h-[58px]'}`
+                ? `w-[514px] overflow-y-scroll !no-scrollbar ${$searchValue.length > 0 ? 'h-[450px]' : 'h-[58px]'}`
                 : 'w-[90vw] h-[calc(100vh-120px)]'
             }`}
           >

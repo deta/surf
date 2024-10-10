@@ -64,6 +64,14 @@ impl Worker {
         }
         Ok(unique_results)
     }
+
+    pub fn search_history_by_url_and_title(
+        &mut self,
+        prefix: String,
+        since: Option<f64>,
+    ) -> BackendResult<Vec<HistoryEntry>> {
+        self.db.search_history_by_url_and_title(&prefix, since)
+    }
 }
 
 #[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
@@ -94,6 +102,13 @@ pub fn handle_history_message(
                 channel,
                 oneshot,
                 worker.search_history_by_hostname_prefix(prefix, since),
+            )
+        }
+        HistoryMessage::SearchHistoryEntriesByUrlAndTitle(prefix, since) => {
+            send_worker_response(
+                channel,
+                oneshot,
+                worker.search_history_by_url_and_title(prefix, since),
             )
         }
     }

@@ -772,6 +772,15 @@ export class ResourceManager {
     await this.sffs.deleteHistoryEntry(id)
   }
 
+  // returns only a list of hostnames
+  async searchHistoryEntriesByHostnamePrefix(prefix: string, since?: Date) {
+    return this.sffs.searchHistoryEntriesByHostnamePrefix(prefix, since)
+  }
+
+  async searchHistoryEntriesByUrlAndTitle(query: string, since?: Date) {
+    return this.sffs.searchHistoryEntriesByUrlAndTitle(query, since)
+  }
+
   async reloadResource(id: string) {
     const resourceItem = await this.sffs.readResource(id)
     if (!resourceItem) {

@@ -53,8 +53,11 @@ export class SFFS {
     // @ts-ignore
     this.fs = window.backend.resources
 
-    // @ts-ignore
-    window.sffs = this // TODO: remove this, just for debugging
+    const isDev = import.meta.env.DEV
+    if (isDev) {
+      // @ts-ignore
+      window.sffs = this
+    }
 
     if (!this.backend) {
       throw new Error('SFFS backend failed to initialize')
@@ -588,6 +591,13 @@ export class SFFS {
       prefix,
       since
     )
+    const parsed = this.parseData<HistoryEntry[]>(raw)
+    return parsed ?? []
+  }
+
+  async searchHistoryEntriesByUrlAndTitle(query: string, since?: Date): Promise<HistoryEntry[]> {
+    this.log.debug('searching history entries by url and title for', query)
+    const raw = await this.backend.js__store_search_history_entries_by_url_and_title(query, since)
     const parsed = this.parseData<HistoryEntry[]>(raw)
     return parsed ?? []
   }

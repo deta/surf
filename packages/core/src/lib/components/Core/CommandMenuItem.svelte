@@ -8,6 +8,7 @@
       | 'command'
       | 'tab'
       | 'suggestion'
+      | 'suggestion-hostname'
       | 'google-search'
       | 'history'
       | 'resource'
@@ -53,6 +54,7 @@
       case 'tab':
         return 'Tab'
       case 'suggestion':
+      case 'suggestion-hostname':
         return 'Suggestion'
       case 'google-search':
         return 'Google Search'

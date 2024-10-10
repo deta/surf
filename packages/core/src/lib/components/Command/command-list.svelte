@@ -7,9 +7,6 @@
   export { className as class }
 </script>
 
-<CommandPrimitive.List
-  class={cn('max-h-[450px] overflow-y-auto overflow-x-hidden', className)}
-  {...$$restProps}
->
+<CommandPrimitive.List class={cn('overflow-y-auto overflow-x-hidden', className)} {...$$restProps}>
   <slot />
 </CommandPrimitive.List>

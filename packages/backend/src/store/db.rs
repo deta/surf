@@ -1661,7 +1661,8 @@ impl Database {
         let www_https_prefix = format!("https://www.{}%", prefix);
         let www_http_prefix = format!("http://www.{}%", prefix);
 
-        if let Some(since) = since {
+        if let Some(mut since) = since {
+            since = since / 1000.0;
             query = format!(
                 "{} AND created_at >= datetime(?5, 'unixepoch') ORDER BY created_at DESC",
                 query
@@ -1697,13 +1698,7 @@ impl Database {
         query = format!("{} ORDER BY created_at DESC", query);
         let mut stmt = self.read_only_conn.prepare(&query)?;
         let items = stmt.query_map(
-            rusqlite::params![
-                https_prefix,
-                http_prefix,
-                www_https_prefix,
-                www_http_prefix,
-                since
-            ],
+            rusqlite::params![https_prefix, http_prefix, www_https_prefix, www_http_prefix],
             |row| {
                 Ok(HistoryEntry {
                     id: row.get(0)?,
@@ -1718,6 +1713,80 @@ impl Database {
                 })
             },
         )?;
+        for item in items {
+            results.push(item?);
+        }
+        Ok(results)
+    }
+
+    pub fn search_history_by_url_and_title(
+        &self,
+        search_string: &str,
+        since: Option<f64>,
+    ) -> BackendResult<Vec<HistoryEntry>> {
+        let mut query = "
+            SELECT id, entry_type, url, title, search_query, created_at, updated_at, COUNT(url) as url_count
+            FROM history_entries
+            WHERE (url LIKE ?1 OR title LIKE ?1)".to_string();
+
+        if let Some(_since) = since {
+            query.push_str(" AND created_at >= datetime(?2, 'unixepoch')");
+        }
+
+        query.push_str(
+            "
+            GROUP BY url
+            ORDER BY
+                CASE
+                    WHEN instr(substr(url, instr(url, '://') + 3), ?1) > 0 THEN 1
+                    WHEN title LIKE ?1 THEN 2
+                    WHEN url LIKE ?1 THEN 3
+                    ELSE 4
+                END,
+                url_count DESC,
+                created_at DESC
+            LIMIT 25",
+        );
+
+        let mut stmt = self.conn.prepare(&query)?;
+
+        let search_pattern = format!("%{}%", search_string);
+
+        let items: Box<dyn Iterator<Item = rusqlite::Result<HistoryEntry>>> =
+            if let Some(mut since) = since {
+                since = since / 1000.0;
+                Box::new(
+                    stmt.query_map(rusqlite::params![search_pattern, since], |row| {
+                        Ok(HistoryEntry {
+                            id: row.get(0)?,
+                            entry_type: HistoryEntryType::from_str(
+                                row.get::<_, String>(1)?.as_str(),
+                            )
+                            .unwrap(),
+                            url: row.get(2)?,
+                            title: row.get(3)?,
+                            search_query: row.get(4)?,
+                            created_at: row.get(5)?,
+                            updated_at: row.get(6)?,
+                        })
+                    })?,
+                )
+            } else {
+                Box::new(stmt.query_map(rusqlite::params![search_pattern], |row| {
+                    Ok(HistoryEntry {
+                        id: row.get(0)?,
+                        entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str())
+                            .unwrap(),
+                        url: row.get(2)?,
+                        title: row.get(3)?,
+                        search_query: row.get(4)?,
+                        created_at: row.get(5)?,
+                        updated_at: row.get(6)?,
+                    })
+                })?)
+            };
+
+        let mut results = Vec::new();
         for item in items {
             results.push(item?);
         }

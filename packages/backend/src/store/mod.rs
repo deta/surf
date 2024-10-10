@@ -87,6 +87,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         "js__store_search_history_entries_by_hostname_prefix",
         js_search_history_entries_by_hostname_prefix,
     )?;
+    cx.export_function(
+        "js__store_search_history_entries_by_url_and_title",
+        js_search_history_entries_by_url_and_title,
+    )?;
 
     cx.export_function("js__store_create_ai_chat", js_create_ai_chat)?;
     cx.export_function("js__store_get_ai_chat", js_get_ai_chat)?;
@@ -767,6 +771,27 @@ fn js_search_history_entries_by_hostname_prefix(mut cx: FunctionContext) -> JsRe
     tunnel.worker_send_js(
         WorkerMessage::HistoryMessage(HistoryMessage::SearchHistoryEntriesByHostnamePrefix(
             prefix, since,
+        )),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_search_history_entries_by_url_and_title(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let query = cx.argument::<JsString>(1)?.value(&mut cx);
+    let since = cx.argument_opt(2).and_then(|arg| {
+        arg.downcast::<JsDate, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_date| js_date.value(&mut cx) as f64)
+    });
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::HistoryMessage(HistoryMessage::SearchHistoryEntriesByUrlAndTitle(
+            query, since,
         )),
         deferred,
     );

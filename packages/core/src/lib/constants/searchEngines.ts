@@ -22,7 +22,7 @@ export const SEARCH_ENGINES: {
           }
         }
       )
-      return data
+      return data[1]
     }
   },
   {
