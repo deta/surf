@@ -661,6 +661,7 @@
           ResourceTypes.POST_YOUTUBE,
           new Blob([JSON.stringify(postData)], { type: 'application/json' }),
           {
+            name: postData.title ?? '',
             sourceURI: canonicalURL
           },
           [

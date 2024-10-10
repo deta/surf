@@ -504,6 +504,11 @@ export const extractAndCreateWebResource = async (
     }
   }
 
+  const title = (extractedResource.data as any)?.title ?? ''
+  metadata = {
+    name: title,
+    ...metadata
+  }
   const resource = await resourceManager.createDetectedResource(extractedResource, metadata, tags)
 
   const content = WebParser.getResourceContent(extractedResource.type, extractedResource.data)
