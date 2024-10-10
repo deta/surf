@@ -12,6 +12,7 @@
   import {
     EventContext,
     PageChatMessageSentEventError,
+    PageChatUpdateContextEventTrigger,
     ResourceTypes,
     SaveToOasisEventTrigger,
     type ResourceDataPost
@@ -24,7 +25,8 @@
     PageMagic,
     AIChatMessageRole,
     Tab,
-    ContextItem
+    ContextItem,
+    AddContextItemEvent
   } from '../../types/browser.types'
   import ChatMessage from '../Chat/ChatMessage.svelte'
   import ChatMessageMarkdown from '../Chat/ChatMessageMarkdown.svelte'
@@ -50,7 +52,6 @@
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
   export let contextItems: Readable<ContextItem[]> = readable([])
-  export let allTabs: Tab[] = []
   export let activeTab: Tab | null = null
   export let activeTabMagic: PageMagic
   export let horizontalTabs = false
@@ -70,7 +71,7 @@
     'close-chat': void
     'pick-screenshot': void
     'remove-context-item': string
-    'add-context-item': ContextItem
+    'add-context-item': AddContextItemEvent
   }>()
 
   const log = useLogScope('MagicSidebar')
@@ -80,6 +81,7 @@
   const config = useConfig()
   const tabsManager = useTabsManager()
 
+  const tabs = tabsManager.tabs
   const userConfigSettings = config.settings
   const telemetry = resourceManager.telemetry
 
@@ -115,12 +117,18 @@
     ([$optPressed, $cmdPressed, $shiftPressed, $magicPage, $optToggled, $contextItems]) => {
       if ($contextItems.length === 0) return 'Ask me anything...'
       if ($magicPage.responses.length >= 1) return 'Ask a follow up...'
-      if ($contextItems.length === allTabs.length) return 'Ask anything about all tabs...'
+      if ($contextItems.length === $tabs.length) return 'Ask anything about all tabs...'
       return `Ask anything about ${$contextItems.length} ${
         $contextItems.length === 1 ? 'tab' : 'tabs'
       }...`
     }
   )
+
+  const contextPickerTabs = derived([tabs, contextItems], ([tabs, contextItems]) => {
+    return tabs
+      .filter((e) => !contextItems.find((i) => i.type === 'tab' && i.data.id === e.id))
+      .sort((a, b) => b.index - a.index)
+  })
 
   export const startChatWithQuery = async (query: string) => {
     await handleClearChat()
@@ -350,10 +358,10 @@
 
   const handleClearContext = () => {
     for (const item of $contextItems) {
-      if (item.type === 'screenshot') {
-        dispatch('remove-context-item', item.id)
-      } else {
+      if (item.type === 'tab') {
         dispatch('exclude-tab', item.data.id)
+      } else {
+        dispatch('remove-context-item', item.id)
       }
     }
 
@@ -421,7 +429,7 @@
       } else {
         selectedMode = 'active'
       }
-      itemsInContext = getItemsInContext(selectedMode, $contextItems, allTabs, activeTab)
+      itemsInContext = getItemsInContext(selectedMode, $contextItems, activeTab)
       handleChatSubmit()
     } else if (e.key === 'Escape') {
       if ($optToggled) {
@@ -434,7 +442,7 @@
       }
     } else if (e.key === 'Enter' && $shiftPressed && $cmdPressed) {
       if (inputValue !== '') {
-        itemsInContext = allTabs.map((tab) => {
+        itemsInContext = $tabs.map((tab) => {
           return {
             type: 'tab',
             data: tab
@@ -453,12 +461,12 @@
       $activeTabMagic.showSidebar
     ) {
       e.preventDefault()
-      if ($tabsInContext.length < allTabs.length) {
+      if ($tabsInContext.length < $tabs.length) {
         toggleSelectAll.set(false)
       }
 
       if ($toggleSelectAll) {
-        for (const t of allTabs) {
+        for (const t of $tabs) {
           dispatch('exclude-tab', t.id)
         }
         for (const t of $prevSelectedTabs) {
@@ -466,7 +474,7 @@
         }
       } else {
         prevSelectedTabs.set($tabsInContext)
-        for (const t of allTabs) {
+        for (const t of $tabs) {
           dispatch('include-tab', t.id)
         }
       }
@@ -493,7 +501,16 @@
     } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
       dispatch('include-tab', drag.item!.data.getData(DragTypeNames.SURF_TAB).id)
     } else if (drag.item!.data.hasData(DragTypeNames.SURF_SPACE)) {
-      // TODO: (dnd / chat): Implement chat space behaviour
+      const space = drag.item!.data.getData(DragTypeNames.SURF_SPACE)
+
+      dispatch('add-context-item', {
+        item: {
+          id: space.id,
+          type: 'space',
+          data: space
+        },
+        trigger: PageChatUpdateContextEventTrigger.DragAndDrop
+      })
     } else if (
       drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
       drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
@@ -512,21 +529,30 @@
         return
       }
 
-      log.debug('dropped resource', resource)
+      log.debug('dropped resource, adding to context', resource)
 
       if (resource.type.startsWith('image/')) {
         const blob = await resource.getData()
 
-        log.debug('Adding image resource to chat context')
+        log.debug('Adding image resource as inline image to chat context')
 
         dispatch('add-context-item', {
-          id: resource.id,
-          type: 'screenshot',
-          data: blob
+          item: {
+            id: resource.id,
+            type: 'screenshot',
+            data: blob
+          },
+          trigger: PageChatUpdateContextEventTrigger.DragAndDrop
         })
       } else {
-        // TODO: (dnd / chat): Implement chat resource behaviour
-        log.warn('Not yet implemented')
+        dispatch('add-context-item', {
+          item: {
+            id: resource.id,
+            type: 'resource',
+            data: resource
+          },
+          trigger: PageChatUpdateContextEventTrigger.DragAndDrop
+        })
       }
     }
   }
@@ -550,7 +576,6 @@
   function getItemsInContext(
     mode: 'general' | 'all' | 'active' | 'context',
     contextItems: ContextItem[],
-    allTabs: Tab[],
     activeTab: Tab | null
   ) {
     let result: ContextItem[]
@@ -559,7 +584,7 @@
         result = []
         break
       case 'all':
-        result = allTabs.map((tab) => {
+        result = $tabs.map((tab) => {
           return {
             type: 'tab',
             data: tab
@@ -579,7 +604,7 @@
     return result
   }
 
-  let itemsInContext = getItemsInContext(selectedMode, $contextItems, allTabs, activeTab)
+  let itemsInContext = getItemsInContext(selectedMode, $contextItems, activeTab)
 
   const sendChatMessage = async (
     prompt: string,
@@ -621,33 +646,43 @@
       const resourceIds: string[] = []
       const inlineImages: string[] = []
 
-      for (const tab of tabsInContext) {
-        if (tab.type === 'page' && tab.chatResourceBookmark) {
-          resourceIds.push(tab.chatResourceBookmark)
-        } else if (tab.type === 'space') {
-          const spaceContents = await resourceManager.getSpaceContents(tab.spaceId)
-          if (spaceContents) {
-            resourceIds.push(...spaceContents.map((content) => content.resource_id))
-          }
-        } else if (tab.type === 'resource') {
-          if (tab.resourceType === 'application/pdf') {
-            resourceIds.push(tab.resourceId)
-          } else if (tab.resourceType.startsWith('image/')) {
-            const resource = await resourceManager.getResource(tab.resourceId)
-            const blob = await resource?.getData()
-            if (blob) {
-              const dataUrl = await blobToDataUrl(blob)
-              inlineImages.push(dataUrl)
-            }
+      const processSpace = async (spaceId: string) => {
+        const spaceContents = await resourceManager.getSpaceContents(spaceId)
+        if (spaceContents) {
+          resourceIds.push(...spaceContents.map((content) => content.resource_id))
+        }
+      }
+
+      const processResource = async (resourceId: string, type: string) => {
+        if (type === 'application/pdf') {
+          resourceIds.push(resourceId)
+        } else if (type.startsWith('image/')) {
+          const resource = await resourceManager.getResource(resourceId)
+          const blob = await resource?.getData()
+          if (blob) {
+            const dataUrl = await blobToDataUrl(blob)
+            inlineImages.push(dataUrl)
           }
         }
       }
 
-      const contextImages = $contextItems.filter((item) => item.type === 'screenshot')
-      if (contextImages.length > 0) {
-        for (const item of contextImages) {
-          const dataUrl = await blobToDataUrl(item.data)
-          inlineImages.push(dataUrl)
+      for (const item of $contextItems) {
+        log.debug('Processing context item', item)
+        if (item.type === 'tab') {
+          const tab = item.data
+          if (tab.type === 'page' && tab.chatResourceBookmark) {
+            resourceIds.push(tab.chatResourceBookmark)
+          } else if (tab.type === 'space') {
+            await processSpace(tab.spaceId)
+          } else if (tab.type === 'resource') {
+            await processResource(tab.id, tab.resourceType)
+          }
+        } else if (item.type === 'screenshot') {
+          inlineImages.push(await blobToDataUrl(item.data))
+        } else if (item.type === 'resource') {
+          resourceIds.push(item.data.id)
+        } else if (item.type === 'space') {
+          await processSpace(item.data.id)
         }
       }
 
@@ -945,7 +980,8 @@
         drag.isNative ||
         drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
         drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+        drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
       ) {
         return true
       }
@@ -1263,10 +1299,10 @@
       <div class="flex items-center gap-2 relative justify-end">
         {#if $tabPickerOpen}
           <ChatContextTabPicker
-            tabItems={allTabs
-              .filter((e) => !$tabsInContext.includes(e))
-              .sort((a, b) => b.index - a.index)}
+            {contextItems}
+            tabs={contextPickerTabs}
             on:include-tab
+            on:add-context-item
             on:close={() => {
               $tabPickerOpen = false
               editor.focus()
@@ -1286,7 +1322,7 @@
         </button>
 
         <button
-          disabled={allTabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
+          disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
           popovertarget="chat-add-context-tabs"
           class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
           on:click={(e) => {
@@ -1304,7 +1340,7 @@
           class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
           on:click={() => {
             selectedMode = 'active'
-            itemsInContext = getItemsInContext(selectedMode, $contextItems, allTabs, activeTab)
+            itemsInContext = getItemsInContext(selectedMode, $contextItems, activeTab)
             handleChatSubmit()
           }}
           disabled={!inputValue || $magicPage.running}

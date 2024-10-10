@@ -1,31 +1,177 @@
+<script lang="ts" context="module">
+  export type TabItem = {
+    id: string
+    type: 'page' | 'space' | 'resource'
+    label: string
+    value: string
+    icon?: string
+    iconUrl?: string
+  }
+</script>
+
 <script lang="ts">
   import { Command, createState } from '@horizon/cmdk-sv'
   import { cn } from '../../utils/tailwind'
-  import type { Tab } from '../../types'
+  import {
+    ResourceTagsBuiltInKeys,
+    ResourceTypes,
+    type AddContextItemEvent,
+    type ContextItem,
+    type Tab
+  } from '../../types'
   import { createEventDispatcher, onMount } from 'svelte'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
-  import { tooltip } from '@horizon/utils'
+  import {
+    getFileKind,
+    getFileType,
+    tooltip,
+    truncateURL,
+    useDebounce,
+    useLogScope
+  } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
+  import { ResourceManager, useResourceManager } from '@horizon/core/src/lib/service/resources'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
+  import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
+  import { derived, writable, type Readable } from 'svelte/store'
+  import { Icon } from '@horizon/icons'
+  import { PageChatUpdateContextEventTrigger } from '@horizon/types'
 
-  export let tabItems: Tab[] = []
+  export let tabs: Readable<Tab[]>
+  export let contextItems: Readable<ContextItem[]>
+
+  const log = useLogScope('ChatContextTabPicker')
   const oasis = useOasis()
+  const resourceManager = useResourceManager()
+  const config = useConfig()
+  const userConfigSettings = config.settings
 
   const dispatch = createEventDispatcher<{
     'include-tab': string
+    'add-context-item': AddContextItemEvent
     close: void
   }>()
 
   let ref: HTMLDivElement
   const state = createState({
-    value: `${tabItems[0].title};;${tabItems[0].type === 'page' ? `${tabItems[0].currentLocation};;` : ''}${tabItems[0].id}`
+    value: `tab;;${$tabs[0].id}`
   })
-  let search = ''
+
+  const searchResult = writable<TabItem[]>([])
+  const isSearching = writable(false)
+  const searchValue = writable('')
+
+  const tabItems = derived(
+    [searchResult, contextItems, tabs, searchValue],
+    ([searchResult, contextItems, tabs, searchValue]) =>
+      [
+        ...searchResult.filter(
+          (item) =>
+            contextItems.findIndex((ci) => ci.type === 'resource' && ci.data.id === item.id) === -1
+        ),
+        ...tabs
+          .filter((tab) => tab.title.toLowerCase().includes(searchValue.toLowerCase()))
+          .map((tab) => ({
+            id: tab.id,
+            type: tab.type,
+            label: tab.title,
+            value: `tab;;${tab.id}`,
+            ...(tab.type === 'space' ? { icon: tab.spaceId } : { iconUrl: tab.icon })
+          }))
+      ] as TabItem[]
+  )
+
+  $: handleSearchValueChange($searchValue)
 
   async function handleSubmitItem() {
-    dispatch('include-tab', $state.value.split(';;')[$state.value.split(';;').length - 1])
-    search = ''
+    const value = $state.value
+    const [type, id] = value.split(';;')
+
+    log.debug('submitting item', type, id)
+
+    if (type === 'tab') {
+      dispatch('include-tab', id)
+      $searchValue = ''
+    } else {
+      const resource = await resourceManager.getResource(id)
+      if (!resource) {
+        log.error('resource not found', id)
+        return
+      }
+
+      dispatch('add-context-item', {
+        item: {
+          id,
+          type: 'resource',
+          data: resource
+        },
+        trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+      })
+    }
+
+    // $searchValue = ''
     const inpEl = ref.querySelector('input') as HTMLInputElement
     inpEl?.focus()
+  }
+
+  async function searchStuff(value: string) {
+    try {
+      log.debug('searching for', value)
+
+      $isSearching = true
+
+      const result = await resourceManager.searchResources(
+        value,
+        [
+          ResourceManager.SearchTagDeleted(false),
+          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
+        ],
+        {
+          semanticEnabled: $userConfigSettings.use_semantic_search
+        }
+      )
+
+      const items = result.slice(0, 5).map((item) => {
+        const resource = item.resource
+
+        log.debug('search result item', resource)
+
+        const canonicalURL =
+          (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
+            ?.value || resource.metadata?.sourceURI
+
+        return {
+          id: resource.id,
+          type: 'resource',
+          label:
+            resource.metadata?.name ||
+            (canonicalURL ? truncateURL(canonicalURL, 15) : getFileType(resource.type)),
+          value: `resource;;${resource.id}`,
+          ...(canonicalURL
+            ? {
+                iconUrl: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(canonicalURL)}`
+              }
+            : { icon: getFileKind(resource.type) })
+        } as TabItem
+      })
+
+      log.debug('search result', items)
+
+      $searchResult = items
+    } catch (e) {
+      log.error('search error', e)
+    } finally {
+      $isSearching = false
+    }
+  }
+
+  const debouncedSearch = useDebounce(searchStuff, 300)
+
+  function handleSearchValueChange(value: string) {
+    $isSearching = true
+    debouncedSearch(value)
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -74,13 +220,14 @@
 <Command.Root
   loop
   {state}
+  shouldFilter={false}
   label="chat-add-context-tabs"
-  class={cn('bg-sky-100 shadow-xl p-2 border-sky-200 border-2 rounded-xl')}
+  class={cn('bg-sky-100 shadow-xl p-2 border-sky-200 border-2 rounded-xl relative')}
 >
-  {#if tabItems.length > 0}
+  {#if $tabItems.length > 0}
     <button
       on:click={() => {
-        for (const t of tabItems) {
+        for (const t of $tabItems) {
           dispatch('include-tab', t.id)
         }
         dispatch('close')
@@ -95,41 +242,56 @@
     </button>
   {/if}
   <Command.List>
-    <Command.Empty>No tabs to add.</Command.Empty>
-    {#each tabItems as tab}
-      <Command.Item
-        value={`${tab.title};;${tab.type === 'page' ? `${tab.currentLocation};;` : ''}${tab.id}`}
-        on:click={handleSubmitItem}
-      >
+    <Command.Empty>
+      {#if $isSearching}
+        Searching your stuff…
+      {:else}
+        No tabs to add.
+      {/if}
+    </Command.Empty>
+    {#each $tabItems as item, idx (item.id + idx)}
+      <Command.Item value={item.value} on:click={handleSubmitItem}>
         <div
           style="width: 14px; aspect-ratio: 1 / 1; display: block; user-select: none; flex-shrink: 0;"
         >
-          {#if tab.type !== 'space'}
+          {#if item.iconUrl}
             <img
-              src={tab.icon}
-              alt={tab.title}
+              src={item.iconUrl}
+              alt={item.label}
               class="w-full h-full object-contain"
               style="transition: transform 0.3s;"
               loading="lazy"
             />
+          {:else if item.icon}
+            {#if item.type === 'space'}
+              {#await oasis.getSpace(item.icon) then fetchedSpace}
+                {#if fetchedSpace}
+                  <SpaceIcon folder={fetchedSpace} />
+                {/if}
+              {/await}
+            {:else}
+              <FileIcon kind={item.icon} />
+            {/if}
           {:else}
-            {#await oasis.getSpace(tab.spaceId) then fetchedSpace}
-              {#if fetchedSpace}
-                <SpaceIcon folder={fetchedSpace} />
-              {/if}
-            {/await}
+            <Icon name="world" size="100%" />
           {/if}
         </div>
-        <span class="truncate">{tab.title}</span>
+        <span class="truncate">{item.label}</span>
       </Command.Item>
     {/each}
   </Command.List>
   <Command.Input
-    bind:value={search}
+    bind:value={$searchValue}
     autofocus
     on:keydown={handleKeyDown}
+    placeholder="Search tabs or your stuff"
     class={cn('rounded-lg px-2 py-1 mt-2')}
   />
+  {#if $isSearching}
+    <div class="absolute right-[0.85rem] bottom-[0.85rem] z-10 opacity-75">
+      <Icon name="spinner" size="17px" />
+    </div>
+  {/if}
 </Command.Root>
 
 <style lang="scss">

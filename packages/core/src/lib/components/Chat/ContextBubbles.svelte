@@ -3,14 +3,14 @@
   import { spring } from 'svelte/motion'
   import { flip } from 'svelte/animate'
   import { useOasis } from '../../service/oasis'
-  import { getFileKind, tooltip } from '@horizon/utils'
+  import { getFileKind, getFileType, getHostname, tooltip, truncateURL } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
   import ChatContextTabPicker from './ChatContextTabPicker.svelte'
   import { writable } from 'svelte/store'
 
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import type { ContextItem, Tab } from '../../types/browser.types'
-  import { ResourceTypes } from '@horizon/types'
+  import { ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
 
   export let items: ContextItem[]
@@ -31,12 +31,39 @@
         data: tab,
         spaceId: tab.type === 'space' ? tab.spaceId : undefined
       }
-    } else {
+    } else if (item.type === 'screenshot') {
       return {
         id: item.id,
         favicon: undefined,
         title: 'Screenshot',
         type: item.type
+      }
+    } else if (item.type === 'resource') {
+      const resource = item.data
+
+      const canonicalURL =
+        (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
+          ?.value ?? resource.metadata?.sourceURI
+
+      return {
+        id: resource.id,
+        favicon: canonicalURL
+          ? `https://www.google.com/s2/favicons?domain=${getHostname(canonicalURL)}&sz=48`
+          : undefined,
+        title:
+          resource.metadata?.name ??
+          (canonicalURL ? truncateURL(canonicalURL) : getFileType(resource.type)),
+        type: item.type,
+        data: item.data
+      }
+    } else if (item.type === 'space') {
+      const spaceData = item.data.name
+      return {
+        id: item.id,
+        favicon: spaceData.colors,
+        title: spaceData.folderName,
+        type: item.type,
+        data: item.data
       }
     }
   })
@@ -195,12 +222,16 @@
                 style="transition: transform 0.3s;"
                 loading="lazy"
               />
-            {:else if pill.type === 'space' && pill.data.type === 'space'}
-              {#await oasis.getSpace(pill.data.spaceId) then fetchedSpace}
-                {#if fetchedSpace}
-                  <SpaceIcon folder={fetchedSpace} />
-                {/if}
-              {/await}
+            {:else if pill.type === 'space'}
+              {#if pill?.data?.type === 'space'}
+                {#await oasis.getSpace(pill.data.spaceId) then fetchedSpace}
+                  {#if fetchedSpace}
+                    <SpaceIcon folder={fetchedSpace} />
+                  {/if}
+                {/await}
+              {:else}
+                <SpaceIcon folder={pill.data} />
+              {/if}
             {:else if pill.type === 'screenshot'}
               {#await getOrCreateScreenshotPreview(items.find((i) => i.id === pill.id))}
                 <Icon name="spinner" />
@@ -214,11 +245,19 @@
                 />
               {/await}
               <Icon name="screenshot" size="20px" color="black" />
-            {:else if pill.type === 'resource' && pill.data.type === 'resource'}
-              {#if pill.data.resourceType === ResourceTypes.DOCUMENT_SPACE_NOTE}
+            {:else if pill.type === 'resource'}
+              {#if pill.data.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
                 <Icon name="docs" size="16px" />
+              {:else if pill.favicon}
+                <img
+                  src={pill.favicon}
+                  alt={pill.title}
+                  class="w-full h-full object-contain"
+                  style="transition: transform 0.3s;"
+                  loading="lazy"
+                />
               {:else}
-                <FileIcon kind={getFileKind(pill.data.resourceType)} />
+                <FileIcon kind={getFileKind(pill.data.type)} />
               {/if}
             {/if}
           </div>

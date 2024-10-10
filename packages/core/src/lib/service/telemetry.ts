@@ -31,7 +31,8 @@ import {
   EventContext,
   SelectTabEventAction,
   DeleteResourceEventTrigger,
-  MultiSelectResourceEventAction
+  MultiSelectResourceEventAction,
+  PageChatUpdateContextEventTrigger
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -485,12 +486,14 @@ export class Telemetry {
   async trackPageChatContextUpdate(
     action: PageChatUpdateContextEventAction,
     numResources: number,
-    numChanged: number = 1
+    numChanged: number = 1,
+    trigger: PageChatUpdateContextEventTrigger = PageChatUpdateContextEventTrigger.TabSelection
   ) {
     await this.trackEvent(TelemetryEventTypes.PageChatContextUpdate, {
       action: action,
       context_size: numResources,
-      changed: numChanged
+      changed: numChanged,
+      trigger: trigger
     })
   }
 

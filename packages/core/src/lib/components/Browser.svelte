@@ -66,7 +66,8 @@
     ControlWindow,
     TabResource,
     BookmarkTabState,
-    ContextItem
+    ContextItem,
+    AddContextItemEvent
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
@@ -227,7 +228,7 @@
   const chatTooltipHovered = writable(false)
   const showStartMask = writable(false)
   const showEndMask = writable(false)
-  const chatScreenshots = writable<ContextItem[]>([])
+  const additionalChatContextItems = writable<ContextItem[]>([])
 
   // on windows and linux the custom window actions are shown in the tab bar
   const showCustomWindowActions = !isMac()
@@ -281,12 +282,15 @@
     ]
   )
 
-  const chatContextItems = derived([magicTabs, chatScreenshots], ([magicTabs, chatScreenshots]) => {
-    return [
-      ...chatScreenshots,
-      ...magicTabs.map((tab) => ({ id: tab.id, type: 'tab', data: tab }) as ContextItem)
-    ]
-  })
+  const chatContextItems = derived(
+    [magicTabs, additionalChatContextItems],
+    ([magicTabs, additionalChatContextItems]) => {
+      return [
+        ...additionalChatContextItems,
+        ...magicTabs.map((tab) => ({ id: tab.id, type: 'tab', data: tab }) as ContextItem)
+      ]
+    }
+  )
 
   $: {
     handleRightSidebarTabsChange($rightSidebarTab)
@@ -1344,10 +1348,19 @@
         return
       }
 
+      const existingContextTab = $chatContextItems.find(
+        (item) => item.type === 'resource' && item.data.id === resourceId
+      )
+
       tab = await tabsManager.addPageTab(url, {
         active: false,
         trigger: CreateTabEventTrigger.OasisChat
       })
+
+      if (existingContextTab) {
+        log.debug('removing existing context item for same resource', existingContextTab.id)
+        removeContextItem(existingContextTab.id)
+      }
 
       // give the new tab some time to load
       await wait(1000)
@@ -3631,9 +3644,9 @@
 
       log.debug('Captured screenshot for chat', blob)
 
-      chatScreenshots.update((screenshots) => {
+      additionalChatContextItems.update((additionalChatContextItems) => {
         return [
-          ...screenshots,
+          ...additionalChatContextItems,
           {
             id: generateID(),
             type: 'screenshot',
@@ -3651,30 +3664,31 @@
     }
   }
 
-  const handleRemoveContextItem = (e: CustomEvent<string>) => {
-    const itemId = e.detail
-
+  const removeContextItem = (itemId: string) => {
     const item = $chatContextItems.find((item) => item.id === itemId)
     if (!item) {
       log.error('Context item not found', itemId)
       return
     }
 
-    if (item.type === 'screenshot') {
-      chatScreenshots.update((screenshots) => {
-        return screenshots.filter((s) => s.id !== itemId)
-      })
-    }
+    additionalChatContextItems.update((additionalChatContextItems) => {
+      return additionalChatContextItems.filter((s) => s.id !== itemId)
+    })
   }
 
-  const handleAddContextItem = (e: CustomEvent<ContextItem>) => {
-    const contextItem = e.detail
+  const handleAddContextItem = (e: CustomEvent<AddContextItemEvent>) => {
+    const { item, trigger } = e.detail
 
-    if (contextItem.type === 'screenshot') {
-      chatScreenshots.update((screenshots) => {
-        return [...screenshots, contextItem]
-      })
-    }
+    additionalChatContextItems.update((additionalChatContextItems) => {
+      return [...additionalChatContextItems, item]
+    })
+
+    telemetry.trackPageChatContextUpdate(
+      PageChatUpdateContextEventAction.Add,
+      $chatContextItems.length + 1,
+      1,
+      trigger
+    )
   }
 
   const handleOpenTabChat = (e: CustomEvent<string>) => {
@@ -4649,7 +4663,6 @@
               magicPage={activeTabMagic}
               contextItems={chatContextItems}
               bind:this={magicSidebar}
-              allTabs={$tabs}
               bind:inputValue={$magicInputValue}
               on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
               on:highlightWebviewText={(e) =>
@@ -4667,7 +4680,7 @@
               {horizontalTabs}
               on:close-chat={() => toggleRightSidebarTab('chat')}
               on:pick-screenshot={handlePickScreenshotForChat}
-              on:remove-context-item={handleRemoveContextItem}
+              on:remove-context-item={(e) => removeContextItem(e.detail)}
               on:add-context-item={handleAddContextItem}
               {experimentalMode}
               {activeTabMagic}

@@ -1,5 +1,10 @@
-import type { CreateTabEventTrigger, DetectedWebApp } from '@horizon/types'
+import type {
+  CreateTabEventTrigger,
+  DetectedWebApp,
+  PageChatUpdateContextEventTrigger
+} from '@horizon/types'
 import type { Resource, ResourceHistoryEntry } from '../service/resources'
+import type { Space } from './spaces.types'
 
 export interface BaseTab {
   id: string
@@ -220,7 +225,11 @@ export type NewResourceTabEvent = {
 
 export type BookmarkTabState = 'idle' | 'in_progress' | 'success' | 'error'
 
-export type ContextItem = ContextItemScreenshot | ContextItemTab
+export type ContextItem =
+  | ContextItemScreenshot
+  | ContextItemTab
+  | ContextItemResource
+  | ContextItemSpace
 
 export type ContextItemScreenshot = {
   id: string
@@ -232,4 +241,21 @@ export type ContextItemTab = {
   id: string
   type: 'tab'
   data: Tab
+}
+
+export type ContextItemResource = {
+  id: string
+  type: 'resource'
+  data: Resource
+}
+
+export type ContextItemSpace = {
+  id: string
+  type: 'space'
+  data: Space
+}
+
+export type AddContextItemEvent = {
+  item: ContextItem
+  trigger: PageChatUpdateContextEventTrigger
 }

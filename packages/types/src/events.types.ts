@@ -267,6 +267,12 @@ export enum PageChatUpdateContextEventAction {
   MultiSelect = 'multi_select'
 }
 
+export enum PageChatUpdateContextEventTrigger {
+  DragAndDrop = 'drag_and_drop',
+  TabSelection = 'tab_selection',
+  ChatAddContextMenu = 'chat_add_context_menu'
+}
+
 export enum SelectTabEventAction {
   /** A tab was added to the selection */
   Add = 'add',
