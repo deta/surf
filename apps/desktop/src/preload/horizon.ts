@@ -34,6 +34,7 @@ import {
 import { ChatCompletion } from 'openai/resources'
 import { ControlWindow } from '@horizon/core/src/lib/types'
 import EventEmitter from 'events'
+import * as crypto from 'crypto'
 
 const isDev = import.meta.env.DEV
 
@@ -532,11 +533,18 @@ export class ResourceHandle {
   private filePath: string
   private resourceId: string
   private writeHappened = false
+  private currentHash: string
 
-  private constructor(fd: fsp.FileHandle, filePath: string, resourceId: string) {
+  private constructor(
+    fd: fsp.FileHandle,
+    filePath: string,
+    resourceId: string,
+    initialHash: string
+  ) {
     this.fd = fd
     this.filePath = filePath
     this.resourceId = resourceId
+    this.currentHash = initialHash
   }
 
   static async open(
@@ -552,7 +560,8 @@ export class ResourceHandle {
     }
 
     const fd = await fsp.open(resolvedFilePath, flags)
-    return new ResourceHandle(fd, resolvedFilePath, resourceId)
+    const initialHash = JSON.parse(await sffs.js__store_get_resource_hash(resourceId))
+    return new ResourceHandle(fd, resolvedFilePath, resourceId, initialHash)
   }
 
   async readAll(): Promise<Uint8Array> {
@@ -614,20 +623,36 @@ export class ResourceHandle {
     })
   }
 
-  async flush(): Promise<void> {
-    await this.fd.sync()
+  async computeResourceHash(algorithm = 'sha256'): Promise<string> {
+    const hash = crypto.createHash(algorithm)
+    return new Promise((resolve, reject) => {
+      const stream = createReadStream(this.filePath)
+      stream.on('data', (chunk) => hash.update(chunk))
+      stream.on('end', () => resolve(hash.digest('hex')))
+      stream.on('error', (err) => reject(err))
+    })
+  }
+
+  async onWriteHappened(): Promise<void> {
     if (this.writeHappened) {
-      await (sffs as any).js__store_resource_post_process(this.resourceId)
+      const newHash = await this.computeResourceHash()
+      if (this.currentHash !== newHash) {
+        await sffs.js__store_resource_post_process(this.resourceId)
+        await sffs.js__store_upsert_resource_hash(this.resourceId, newHash)
+      }
+      this.currentHash = newHash
     }
     this.writeHappened = false
   }
 
+  async flush(): Promise<void> {
+    await this.fd.sync()
+    await this.onWriteHappened()
+  }
+
   async close(): Promise<void> {
     await this.fd.close()
-    if (this.writeHappened) {
-      await (sffs as any).js__store_resource_post_process(this.resourceId)
-    }
-    this.writeHappened = false
+    await this.onWriteHappened()
   }
 }
 
