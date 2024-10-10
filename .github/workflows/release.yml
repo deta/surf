@@ -100,11 +100,9 @@ jobs:
             ~/.cargo/git
             target
             **/target
-            apps/desktop/dist
-            **/build
-          key: ${{ runner.os }}-${{ matrix.architecture }}-deps-build-${{ hashFiles('**/yarn.lock', '**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.architecture }}-build-cache-${{ hashFiles('**/yarn.lock', '**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.architecture }}-deps-build-
+            ${{ runner.os }}-${{ matrix.architecture }}-build-cache-
 
       - name: Set up Windows build environment
         if: matrix.os == 'windows-latest'
