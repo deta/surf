@@ -113,5 +113,9 @@ CREATE TABLE IF NOT EXISTS space_entries (
     manually_added INTEGER NOT NULL
 );
 
-
 CREATE INDEX IF NOT EXISTS idx_history_entries_urls ON history_entries(url);
+
+CREATE TABLE IF NOT EXISTS resource_content_hashes (
+    resource_id TEXT PRIMARY KEY REFERENCES resources(id) ON DELETE CASCADE,
+    content_hash TEXT NOT NULL
+);

@@ -135,6 +135,12 @@ pub enum ResourceMessage {
         content: Vec<String>,
         metadata: Vec<ResourceTextContentMetadata>,
     },
+    UpsertResourceHash {
+        resource_id: String,
+        hash: String,
+    },
+    GetResourceHash(String),
+    DeleteResourceHash(String),
     // ---
     PostProcessJob(String),
 }

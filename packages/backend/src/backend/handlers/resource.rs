@@ -556,6 +556,24 @@ impl Worker {
         }
         Ok(())
     }
+
+    pub fn upsert_resource_hash(&mut self, resource_id: String, hash: String) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::upsert_resource_hash_tx(&mut tx, &resource_id, &hash)?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn get_resource_hash(&mut self, resource_id: String) -> BackendResult<Option<String>> {
+        self.db.get_resource_hash(&resource_id)
+    }
+
+    pub fn delete_resource_hash(&mut self, resource_id: String) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::delete_resource_hash_tx(&mut tx, &resource_id)?;
+        tx.commit()?;
+        Ok(())
+    }
 }
 
 #[tracing::instrument(level = "trace", skip(worker, channel, oneshot))]
@@ -677,5 +695,16 @@ pub fn handle_resource_message(
             oneshot,
             worker.batch_upsert_resource_text_content(resource_id, content_type, content, metadata),
         ),
+        ResourceMessage::UpsertResourceHash { resource_id, hash } => send_worker_response(
+            channel,
+            oneshot,
+            worker.upsert_resource_hash(resource_id, hash),
+        ),
+        ResourceMessage::GetResourceHash(resource_id) => {
+            send_worker_response(channel, oneshot, worker.get_resource_hash(resource_id))
+        }
+        ResourceMessage::DeleteResourceHash(resource_id) => {
+            send_worker_response(channel, oneshot, worker.delete_resource_hash(resource_id))
+        }
     }
 }

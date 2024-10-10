@@ -105,6 +105,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_get_space_entries", js_get_space_entries)?;
     cx.export_function("js__store_delete_space_entries", js_delete_space_entries)?;
 
+    cx.export_function("js__store_upsert_resource_hash", js_upsert_resource_hash)?;
+    cx.export_function("js__store_get_resource_hash", js_get_resource_hash)?;
+    cx.export_function("js__store_delete_resource_hash", js_delete_resource_hash)?;
+
     Ok(())
 }
 
@@ -925,5 +929,45 @@ fn js_get_ai_chat(mut cx: FunctionContext) -> JsResult<JsPromise> {
         WorkerMessage::MiscMessage(MiscMessage::GetAIChatMessage(session_id)),
         deferred,
     );
+    Ok(promise)
+}
+
+fn js_upsert_resource_hash(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let hash = cx.argument::<JsString>(2)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceMessage(ResourceMessage::UpsertResourceHash { resource_id, hash }),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_get_resource_hash(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceMessage(ResourceMessage::GetResourceHash(resource_id)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_delete_resource_hash(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceMessage(ResourceMessage::DeleteResourceHash(resource_id)),
+        deferred,
+    );
+
     Ok(promise)
 }
