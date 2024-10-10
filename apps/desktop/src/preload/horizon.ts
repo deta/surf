@@ -812,10 +812,6 @@ const sffs = (() => {
 const resources = (() => {
   const resourceHandles = new Map<string, ResourceHandle>()
 
-  function getDBPath() {
-    return `${BACKEND_ROOT_PATH}/sffs.sqlite`
-  }
-
   async function openResource(resourceId: string, flags: string) {
     const resourceHandle = await ResourceHandle.open(BACKEND_RESOURCES_PATH, resourceId, flags)
     resourceHandles.set(resourceId, resourceHandle)
@@ -862,7 +858,6 @@ const resources = (() => {
     writeResource,
     flushResource,
     closeResource,
-    getDBPath,
     triggerPostProcessing
   }
 })()

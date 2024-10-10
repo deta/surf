@@ -64,10 +64,6 @@ export class SFFS {
     }
   }
 
-  getDBPath() {
-    return this.fs.getDBPath()
-  }
-
   convertCompositeResourceToResource(composite: SFFSRawCompositeResource): SFFSResource {
     return {
       id: composite.resource.id,
