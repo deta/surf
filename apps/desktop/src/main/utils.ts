@@ -77,9 +77,9 @@ export const normalizeElectronUserAgent = (current: string): string => {
       process.versions.chrome || '',
       process.versions?.chrome
         ? process.versions.chrome
-          .split('.')
-          .map((v, idx) => (idx === 0 ? v : '0'))
-          .join('.')
+            .split('.')
+            .map((v, idx) => (idx === 0 ? v : '0'))
+            .join('.')
         : ''
     )
 }
@@ -92,7 +92,6 @@ export const firefoxUA = (() => {
   }
   const platform = platformMap[process.platform] || platformMap.linux
   // estimate the firefox version
-  const fxVersion =
-    91 + Math.floor((Date.now() - 1628553600000) / (4.1 * 7 * 24 * 60 * 60 * 1000))
+  const fxVersion = 91 + Math.floor((Date.now() - 1628553600000) / (4.1 * 7 * 24 * 60 * 60 * 1000))
   return `Mozilla/5.0 (${platform}; rv:${fxVersion}.0) Gecko/20100101 Firefox/${fxVersion}.0`
 })()

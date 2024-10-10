@@ -104,7 +104,8 @@
     type RightSidebarTab,
     type Download,
     EventContext,
-    SelectTabEventAction
+    SelectTabEventAction,
+    MultiSelectResourceEventAction
   } from '@horizon/types'
   import { scrollToTextCode } from '../constants/inline'
   import { SFFS } from '../service/sffs'
@@ -2233,26 +2234,117 @@
     }
   }
 
-  const handleOpenAndChat = async (e: CustomEvent<string>) => {
-    const resourceId = e.detail
+  const handleOpenAndChat = async (e: CustomEvent<string | string[]>) => {
+    const resourceIds = Array.isArray(e.detail) ? e.detail : [e.detail]
 
-    log.debug('create chat with resource', resourceId)
+    log.debug('create chat with resources', resourceIds)
 
-    const resource = await resourceManager.getResource(resourceId, { includeAnnotations: false })
+    let validTabs: Tab[] = []
 
-    if (resource) {
-      const tab = await tabsManager.openResourceAsTab(resource, { active: true })
-
-      if (tab) {
-        openRightSidebarTab('chat')
-        await includeTabAndExcludeOthersFromMagic(tab.id)
-      } else {
-        log.error('Failed to open resource as tab')
-        toasts.error('Failed to open resource')
+    for (const id of resourceIds) {
+      try {
+        const resource = await resourceManager.getResource(id, { includeAnnotations: false })
+        if (resource) {
+          const tab = await tabsManager.openResourceAsTab(resource, {
+            active: true,
+            trigger: CreateTabEventTrigger.OasisMultiSelect
+          })
+          if (tab) {
+            validTabs.push(tab)
+          }
+        }
+      } catch (error) {
+        log.error(`Failed to process resource ${id}:`, error)
       }
+
+      if (resourceIds.length > 1) {
+        await telemetry.trackMultiSelectResourceAction(
+          MultiSelectResourceEventAction.AddToChat,
+          resourceIds.length
+        )
+      }
+    }
+
+    if (validTabs.length > 0) {
+      openRightSidebarTab('chat')
+
+      for (const tab of validTabs) {
+        try {
+          await includeTabAndExcludeOthersFromMagic(tab.id)
+        } catch (error) {
+          log.error(`Failed to include tab ${tab.id} in magic:`, error)
+        }
+      }
+
+      // Select the tabs
+      selectedTabs.set(new Set(validTabs.map((tab) => ({ id: tab.id, userSelected: true }))))
+
+      // Add tabs to magic
+      tabs.update((allTabs) => {
+        return allTabs.map((tab) => {
+          if (validTabs.some((validTab) => validTab.id === tab.id)) {
+            cachedMagicTabs.add(tab.id)
+            return { ...tab, magic: true }
+          }
+          return tab
+        })
+      })
+
+      try {
+        await preparePageTabsForChatContext(validTabs)
+      } catch (error) {
+        log.error('Failed to prepare page tabs for chat context:', error)
+      }
+
+      await tick()
+
+      telemetry.trackPageChatContextUpdate(PageChatUpdateContextEventAction.Add, validTabs.length)
     } else {
-      log.error('Resource not found', resourceId)
-      toasts.error('Resource not found')
+      log.error('No valid resources found or failed to open as tabs', resourceIds)
+      toasts.error('Failed to open resources')
+    }
+  }
+  const handleOpenTabs = async (e: CustomEvent<string | string[]>) => {
+    const tabIds = Array.isArray(e.detail) ? e.detail : [e.detail]
+    log.debug('open tabs', tabIds)
+
+    let validTabs: Tab[] = []
+
+    for (const id of tabIds) {
+      try {
+        const resource = await resourceManager.getResource(id, { includeAnnotations: false })
+        if (resource) {
+          const tab = await tabsManager.openResourceAsTab(resource, {
+            active: true,
+            trigger: CreateTabEventTrigger.OasisMultiSelect
+          })
+          if (tab) {
+            validTabs.push(tab)
+          }
+        }
+      } catch (error) {
+        log.error(`Failed to process resource ${id}:`, error)
+      }
+    }
+
+    if (tabIds.length > 1) {
+      await telemetry.trackMultiSelectResourceAction(
+        MultiSelectResourceEventAction.OpenAsTab,
+        tabIds.length
+      )
+    }
+
+    if (validTabs.length > 0) {
+      try {
+        await preparePageTabsForChatContext(validTabs as (TabPage | TabSpace | TabResource)[])
+      } catch (error) {
+        log.error('Failed to prepare page tabs for chat context:', error)
+      }
+
+      await tick()
+    } else {
+      log.error('No valid resources found or failed to open as tabs', tabIds)
+      toasts.error('Failed to open resources')
     }
   }
 
@@ -4369,6 +4461,7 @@
           on:create-chat={handleCreateChatWithQuery}
           on:create-note={handleCreateNote}
           on:open-and-chat={handleOpenAndChat}
+          on:batch-open={handleOpenTabs}
           on:open-space-and-chat={handleOpenSpaceAndChat}
           on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
           on:zoom={() => {

@@ -1,13 +1,17 @@
 <script lang="ts">
   import { onMount, onDestroy, tick, createEventDispatcher } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
+  import { useLogScope } from '@horizon/utils'
 
   import { MasonryGrid } from './masonry/index'
   import type { Item, RenderItem, ScrollVelocity } from './masonry/types'
+  import { selection, selectedItems, selectedItemIds, deselectAll } from './utils/select'
 
   export let items: Item[] = []
   export let isEverythingSpace: boolean
   export let searchValue: Writable<string> | undefined
+
+  const log = useLogScope('MasonrySpace')
 
   let prevItems: Item[] = []
   let isUpdatingVisibleItems = false
@@ -477,6 +481,8 @@
       cancelAnimationFrame(updateVisibleItemsRequestId)
     }
 
+    deselectAll()
+
     // Remove the event listener for resize
     if (resizeObserver) {
       resizeObserver.disconnect()
@@ -503,7 +509,13 @@
   }}
 />
 
-<div class="masonry-grid" on:wheel={handleWheel} bind:this={gridContainer}>
+<div
+  class="masonry-grid"
+  on:wheel={handleWheel}
+  bind:this={gridContainer}
+  use:selection
+  data-container
+>
   {#each $gridItems as item, index (getUniqueKey(item, index))}
     <div
       data-vaul-no-drag
@@ -520,7 +532,16 @@
   {/each}
 </div>
 
-<style>
+<style lang="scss">
+  :global([data-selectable].selected) {
+    background-image: linear-gradient(
+      to bottom right,
+      rgba(0, 123, 255, 0.3),
+      rgba(0, 123, 255, 0.2)
+    );
+    outline: 4px solid rgba(0, 123, 255, 0.4);
+  }
+
   .masonry-grid {
     position: absolute;
     top: 0;

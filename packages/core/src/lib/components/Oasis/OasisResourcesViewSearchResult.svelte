@@ -6,6 +6,14 @@
   import type { ResourceSearchResultItem } from '../../service/resources'
   import Masonry from './MasonrySpace.svelte'
   import OasisResourceLoader from './OasisResourceLoader.svelte'
+  import { selectedItemIds, deselectAll } from './utils/select'
+  import { contextMenu } from '../Core/ContextMenu.svelte'
+  import { useOasis } from '../../service/oasis'
+  import { useToasts } from '../../service/toast'
+  import { useTelemetry } from '../../service/telemetry'
+  import { MultiSelectResourceEventAction } from '@horizon/types'
+
+  import { SpaceEntryOrigin } from '../../types'
 
   export let resources: Readable<ResourceSearchResultItem[]>
   export let selected: string | null = null
@@ -17,6 +25,9 @@
 
   const log = useLogScope('OasisResourcesView')
   const dispatch = createEventDispatcher()
+  const toasts = useToasts()
+  const telemetry = useTelemetry()
+
   const CHUNK_SIZE = 40
   const MAXIMUM_CHUNK_SIZE = 20
   const CHUNK_THRESHOLD = 300
@@ -26,6 +37,9 @@
   const renderContents = derived([resources, renderLimit], ([resources, renderLimit]) => {
     return resources.slice(0, renderLimit)
   })
+
+  const oasis = useOasis()
+  const spaces = oasis.spaces
 
   const handleLoadChunk = (e: CustomEvent) => {
     if ($renderContents.length === 0) {
@@ -45,9 +59,84 @@
     dispatch('scroll', { scrollTop: event.detail.scrollTop })
     scrollTop = event.detail.scrollTop
   }
+
+  const handleBatchRemove = () => {
+    dispatch('batch-remove', $selectedItemIds)
+  }
+
+  const handleAddToSpace = async (spaceId: string) => {
+    const itemCount = $selectedItemIds.length
+    const spaceName = $spaces.find((space) => space.id === spaceId)?.name.folderName
+    try {
+      await oasis.addResourcesToSpace(spaceId, $selectedItemIds, SpaceEntryOrigin.ManuallyAdded)
+      toasts.success(`Added ${itemCount} item${itemCount > 1 ? 's' : ''} to ${spaceName}`)
+    } catch (error) {
+      toasts.error(`Failed to add items to space: ${error.message}`)
+    } finally {
+      await telemetry.trackMultiSelectResourceAction(
+        MultiSelectResourceEventAction.AddToSpace,
+        $selectedItemIds.length,
+        isInSpace ? 'space' : 'oasis'
+      )
+      deselectAll()
+    }
+  }
 </script>
 
-<div class="wrapper">
+<div
+  class="wrapper"
+  use:contextMenu={{
+    canOpen: $selectedItemIds.length > 1,
+    items: [
+      {
+        type: 'action',
+        icon: 'arrow.up.right',
+        text: 'Open as Tab',
+        action: () => {
+          dispatch('batch-open', $selectedItemIds)
+          deselectAll()
+        }
+      },
+      {
+        type: 'action',
+        icon: 'chat',
+        text: 'Open in Chat',
+        action: () => {
+          dispatch('open-and-chat', $selectedItemIds)
+          deselectAll()
+        }
+      },
+      { type: 'separator' },
+      {
+        type: 'sub-menu',
+        icon: '',
+        text: 'Add to Space',
+        items: $spaces
+          .filter(
+            (e) =>
+              e.name.folderName.toLowerCase() !== 'all my stuff' &&
+              e.name.folderName.toLowerCase() !== '.tempspace' &&
+              !e.name.builtIn
+          )
+          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+          .map((space) => ({
+            type: 'action',
+            icon: '',
+            text: space.name.folderName,
+            action: () => handleAddToSpace(space.id)
+          }))
+      },
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: 'trash',
+        text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
+        kind: 'danger',
+        action: () => handleBatchRemove()
+      }
+    ]
+  }}
+>
   <div bind:this={scrollElement} class="content">
     {#if scrollElement}
       {#key $searchValue === ''}

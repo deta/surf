@@ -42,6 +42,7 @@ export enum TelemetryEventTypes {
   UpdateSpaceSettings = 'Update Space Settings',
   RefreshSpaceContent = 'Refresh Space Content',
   ChatWithSpace = 'Chat with Space',
+  OpenResourceInChat = 'Open Resource in Chat',
 
   UseInlineAI = 'Use Inline AI',
   CreateAnnotation = 'Create Annotation',
@@ -72,7 +73,9 @@ export enum TelemetryEventTypes {
 
   AskInlineAI = 'Ask Inline AI',
   CopyScreenshot = 'Copy Screenshot',
-  SaveAIResponse = 'Save AI Response'
+  SaveAIResponse = 'Save AI Response',
+
+  MultiSelectResourceAction = 'Multi Select Resource Action'
 }
 
 export type AIMessageContext = 'inline' | 'chat'
@@ -85,6 +88,8 @@ export enum CreateTabEventTrigger {
   Page = 'page',
   /** Tab was created by opening the source of an item in Oasis */
   OasisItem = 'oasis_item',
+  /** Tab was created by opening multiple sources in Oasis */
+  OasisMultiSelect = 'oasis_multi_select',
   /** Tab was created by opening the source of a resource used in a chat */
   OasisChat = 'oasis_chat',
   /** Tab was created from the create menu in Oasis */
@@ -140,6 +145,13 @@ export enum OpenResourceEventFrom {
   NewTab = 'new_tab',
   Page = 'page',
   CommandMenu = 'command_menu'
+}
+
+export enum DeleteResourceEventTrigger {
+  /** Resource was deleted from the resource view in Oasis */
+  OasisItem = 'oasis',
+  /** Resource was deleted by selecting multiple in Oasis */
+  OasisMultiSelect = 'oasis_multi_select'
 }
 
 export enum SaveToOasisEventTrigger {
@@ -262,6 +274,13 @@ export enum SelectTabEventAction {
   Remove = 'remove',
   /** Multiple tabs were added to/removed from the selection */
   MultiSelect = 'multi_select'
+}
+
+export enum MultiSelectResourceEventAction {
+  OpenAsTab = 'open_as_tab',
+  AddToChat = 'add_to_chat',
+  AddToSpace = 'add_to_space',
+  Delete = 'delete'
 }
 
 export enum PageChatMessageSentEventError {

@@ -78,6 +78,7 @@
   import {
     AddResourceToSpaceEventTrigger,
     CreateTabEventTrigger,
+    DeleteResourceEventTrigger,
     DeleteSpaceEventTrigger,
     OpenResourceEventFrom,
     RefreshSpaceEventTrigger,
@@ -947,33 +948,34 @@
     searchResults.set(result.map((r) => r.resource.id))
   }
 
-  const handleResourceRemove = async (e: CustomEvent<string>) => {
-    const resourceId = e.detail
-    log.debug('removing resource', resourceId)
+  const handleResourceRemove = async (e: CustomEvent<string | string[]>) => {
+    const resourceIds = Array.isArray(e.detail) ? e.detail : [e.detail]
+    log.debug('removing resources', resourceIds)
 
-    const resource = await resourceManager.getResource(resourceId)
-    if (!resource) {
-      log.error('Resource not found')
+    const resources = await Promise.all(resourceIds.map((id) => resourceManager.getResource(id)))
+    const validResources = resources.filter((resource) => resource !== null) as Resource[]
+
+    if (validResources.length === 0) {
+      log.error('No valid resources found')
       return
     }
 
-    const references = await resourceManager.getAllReferences(resourceId, $spaces)
-    // const isFromLiveSpace = !!resource.tags?.find(
-    //   (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
-    // )
+    const allReferences = await Promise.all(
+      validResources.map((resource) => resourceManager.getAllReferences(resource.id, $spaces))
+    )
 
-    let numberOfReferences = 0
+    let totalNumberOfReferences = 0
     if (isEverythingSpace) {
-      numberOfReferences = references.length
+      totalNumberOfReferences = allReferences.reduce((sum, refs) => sum + refs.length, 0)
     }
 
-    const confirm = window.confirm(
-      !isEverythingSpace
-        ? `Remove from '${$space?.name.folderName}'? \nIt will still be in 'All my Stuff'.`
-        : numberOfReferences > 0
-          ? `This resource will be removed from ${numberOfReferences} space${numberOfReferences > 1 ? 's' : ''} and deleted permanently.`
-          : `This resource will be deleted permanently.`
-    )
+    const confirmMessage = !isEverythingSpace
+      ? `Remove ${validResources.length > 1 ? 'these resources' : 'this resource'} from '${$space?.name.folderName}'? \n${validResources.length > 1 ? 'They' : 'It'} will still be in 'All my Stuff'.`
+      : totalNumberOfReferences > 0
+        ? `These resources will be removed from ${totalNumberOfReferences} space${totalNumberOfReferences > 1 ? 's' : ''} and deleted permanently.`
+        : `These resources will be deleted permanently.`
+
+    const confirm = window.confirm(confirmMessage)
 
     if (!confirm) {
       return
@@ -981,27 +983,28 @@
 
     try {
       if (!isEverythingSpace) {
-        log.debug('removing resource entry from space...', resource)
+        log.debug('removing resource entries from space...', validResources)
 
-        const reference = references.find(
-          (x) => x.folderId === spaceId && x.resourceId === resource.id
+        const referencesToRemove = allReferences.flatMap((refs, index) =>
+          refs.filter((x) => x.folderId === spaceId && x.resourceId === validResources[index].id)
         )
-        if (!reference) {
-          log.error('Reference not found')
-          toasts.error('Reference not found')
+
+        if (referencesToRemove.length === 0) {
+          log.error('References not found')
+          toasts.error('References not found')
           return
         }
 
-        await resourceManager.deleteSpaceEntries([reference.entryId])
+        await resourceManager.deleteSpaceEntries(referencesToRemove.map((ref) => ref.entryId))
 
         await resourceManager.addItemsToSpace(
-          reference.folderId,
-          [reference.resourceId],
+          spaceId,
+          referencesToRemove.map((ref) => ref.resourceId),
           SpaceEntryOrigin.Blacklisted
         )
 
         // HACK: this is needed for the preview to update with the summary
-        const contents = $spaceContents.filter((x) => x.resource_id !== resourceId)
+        const contents = $spaceContents.filter((x) => !resourceIds.includes(x.resource_id))
         spaceContents.set([])
         await tick()
         spaceContents.set(contents)
@@ -1011,26 +1014,48 @@
     }
 
     if (isEverythingSpace) {
-      log.debug('deleting resource from oasis', resourceId)
-      await resourceManager.deleteResource(resourceId)
+      log.debug('deleting resources from oasis', resourceIds)
+      await Promise.all(resourceIds.map((id) => resourceManager.deleteResource(id)))
 
       // HACK: this is needed for the preview to update with the summary
-      const contents = $everythingContents.filter((x) => x.id !== resourceId)
+      const contents = $everythingContents.filter((x) => !resourceIds.includes(x.id))
       everythingContents.set([])
 
-      // update tabs to remove any links to the resource
-      await tabsManager.removeResourceBookmarks(resourceId)
+      // update tabs to remove any links to the resources
+      await Promise.all(resourceIds.map((id) => tabsManager.removeResourceBookmarks(id)))
 
       await tick()
       everythingContents.set(contents)
 
-      await telemetry.trackDeleteResource(resource.type, false)
+      await Promise.all(
+        validResources.map((resource) =>
+          telemetry.trackDeleteResource(
+            resource.type,
+            false,
+            validResources.length > 1
+              ? DeleteResourceEventTrigger.OasisMultiSelect
+              : DeleteResourceEventTrigger.OasisItem
+          )
+        )
+      )
     } else {
-      await telemetry.trackDeleteResource(resource.type, true)
+      await Promise.all(
+        validResources.map((resource) =>
+          telemetry.trackDeleteResource(
+            resource.type,
+            true,
+            validResources.length > 1
+              ? DeleteResourceEventTrigger.OasisMultiSelect
+              : DeleteResourceEventTrigger.OasisItem
+          )
+        )
+      )
     }
 
-    log.debug('Resource removed:', resourceId)
-    toasts.success(`Resource ${isEverythingSpace ? 'deleted' : 'removed'}!`)
+    log.debug('Resources removed:', resourceIds)
+    toasts.success(
+      `Resource${resourceIds.length > 1 ? 's' : ''} ${isEverythingSpace ? 'deleted' : 'removed'}!`
+    )
   }
 
   const handleItemClick = async (e: CustomEvent<string>) => {
@@ -1712,6 +1737,8 @@
         on:open-and-chat
         on:remove={handleResourceRemove}
         on:load={handleLoadResource}
+        on:batch-remove={handleResourceRemove}
+        on:batch-open
         on:create-tab-from-space
         {searchValue}
       />
@@ -1731,6 +1758,8 @@
         on:open-and-chat
         on:remove={handleResourceRemove}
         on:space-selected={handleSpaceSelected}
+        on:batch-remove
+        on:batch-open
         on:open-space-as-tab
         isEverythingSpace={false}
         {searchValue}

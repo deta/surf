@@ -84,6 +84,8 @@
   import { Drawer } from 'vaul-svelte'
   import {
     CreateTabEventTrigger,
+    DeleteResourceEventTrigger,
+    MultiSelectResourceEventAction,
     SaveToOasisEventTrigger,
     SearchOasisEventTrigger
   } from '@horizon/types'
@@ -778,32 +780,47 @@
     searchResults.set(result)
   }
 
-  const handleResourceRemove = async (e: CustomEvent<string>) => {
-    const resourceId = e.detail
-    log.debug('removing resource', resourceId)
+  const handleResourceRemove = async (e: CustomEvent<string | string[]>) => {
+    const resourceIds = Array.isArray(e.detail) ? e.detail : [e.detail]
+    log.debug('removing resources', resourceIds)
 
-    const resource = await resourceManager.getResource(resourceId)
-    if (!resource) {
-      log.error('Resource not found')
+    const resources = []
+    for (const resourceId of resourceIds) {
+      const resource = await resourceManager.getResource(resourceId)
+      if (!resource) {
+        log.error('Resource not found:', resourceId)
+        continue
+      }
+      resources.push(resource)
+    }
+
+    if (resources.length === 0) {
+      toasts.error('No resources found to remove.')
       return
     }
 
-    const references = await resourceManager.getAllReferences(resourceId, $spaces)
-    const isFromLiveSpace = !!resource.tags?.find(
-      (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
-    )
+    let totalReferences = 0
+    let isFromLiveSpace = false
 
-    let numberOfReferences = 0
-    if (isEverythingSpace) {
-      numberOfReferences = references.length
+    for (const resource of resources) {
+      const references = await resourceManager.getAllReferences(resource.id, $spaces)
+      if (isEverythingSpace) {
+        totalReferences += references.length
+      }
+      const resourceIsFromLiveSpace = !!resource.tags?.find(
+        (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
+      )
+      isFromLiveSpace = isFromLiveSpace || resourceIsFromLiveSpace
     }
 
     const confirm = window.confirm(
       !isEverythingSpace && !isFromLiveSpace
         ? `Remove reference? The original will still be in Everything.`
-        : numberOfReferences > 0
-          ? `This resource will be removed from ${numberOfReferences} space${numberOfReferences > 1 ? 's' : ''} and deleted permanently.`
-          : `This resource will be deleted permanently.`
+        : totalReferences > 0
+          ? `These resources will be removed from ${totalReferences} space${
+              totalReferences > 1 ? 's' : ''
+            } and deleted permanently.`
+          : `These resources will be deleted permanently.`
     )
 
     if (!confirm) {
@@ -811,32 +828,52 @@
     }
 
     try {
-      log.debug('removing resource references', references)
-      for (const reference of references) {
-        log.debug('deleting reference', reference)
-        await resourceManager.deleteSpaceEntries([reference.entryId])
+      for (const resource of resources) {
+        const references = await resourceManager.getAllReferences(resource.id, $spaces)
+        log.debug('removing resource references', references)
+        for (const reference of references) {
+          log.debug('deleting reference', reference)
+          await resourceManager.deleteSpaceEntries([reference.entryId])
+        }
+
+        if (isEverythingSpace) {
+          log.debug('deleting resource from oasis', resource.id)
+          await resourceManager.deleteResource(resource.id)
+          everythingContents.update((contents) => {
+            return contents.filter((x) => x.id !== resource.id)
+          })
+
+          // update tabs to remove any links to the resource
+          await tabsManager.removeResourceBookmarks(resource.id)
+        }
+
+        await telemetry.trackDeleteResource(
+          resource.type,
+          !isEverythingSpace,
+          resources.length > 1
+            ? DeleteResourceEventTrigger.OasisMultiSelect
+            : DeleteResourceEventTrigger.OasisItem
+        )
+
+        log.debug('Resource removed:', resource.id)
+      }
+
+      if (resources.length > 1) {
+        await telemetry.trackMultiSelectResourceAction(
+          MultiSelectResourceEventAction.Delete,
+          resources.length,
+          isEverythingSpace ? 'oasis' : 'space'
+        )
       }
     } catch (error) {
       log.error('Error removing references:', error)
     }
 
-    if (isEverythingSpace) {
-      log.debug('deleting resource from oasis', resourceId)
-      await resourceManager.deleteResource(resourceId)
-      everythingContents.update((contents) => {
-        return contents.filter((x) => x.id !== resourceId)
-      })
-
-      // update tabs to remove any links to the resource
-      await tabsManager.removeResourceBookmarks(resourceId)
+    if ($searchValue) {
+      await handleSearch($searchValue)
     }
 
-    await handleSearch($searchValue)
-
-    await telemetry.trackDeleteResource(resource.type, !isEverythingSpace)
-
-    log.debug('Resource removed:', resourceId)
-    toasts.success('Resource deleted!')
+    toasts.success('Resources deleted!')
   }
 
   const handleItemClick = (e: CustomEvent<string>) => {
@@ -1321,6 +1358,8 @@
                         on:creating-new-space={handleCreatingNewSpace}
                         on:done-creating-new-space={handleDoneCreatingNewSpace}
                         on:select-space={handleSpaceSelected}
+                        on:batch-open
+                        on:batch-remove={handleResourceRemove}
                         insideDrawer={true}
                         bind:this={oasisSpace}
                         {searchValue}
@@ -1358,6 +1397,8 @@
                               on:open-and-chat
                               on:open-space-as-tab
                               on:remove={handleResourceRemove}
+                              on:batch-remove={handleResourceRemove}
+                              on:batch-open
                               on:new-tab
                               {searchValue}
                             />

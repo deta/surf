@@ -86,6 +86,7 @@ import ArrowUpRight from './Icons/ArrowUpRight.svelte'
 import Menu from './Icons/Menu.svelte'
 import Language from './Icons/Language.svelte'
 import CircleDot from './Icons/CircleDot.svelte'
+import CircleCheck from './Icons/CircleCheck.svelte'
 import MessageForward from './Icons/MessageForward.svelte'
 import Grammar from './Icons/Grammar.svelte'
 import CursorArrowRays from './Icons/CursorArrowRays.svelte'
@@ -183,6 +184,7 @@ export const icons = {
   'pinned-off': PinnedOff,
   language: Language,
   'circle-dot': CircleDot,
+  'circle.check': CircleCheck,
   'message-forward': MessageForward,
   grammar: Grammar,
   'cursor-arrow-rays': CursorArrowRays,
@@ -254,6 +256,7 @@ export {
   Grid,
   FileTextAi,
   Message,
+  CircleCheck,
   GripVertical,
   Marker,
   TextInsert,

@@ -1,9 +1,18 @@
 <script lang="ts">
   import { derived, writable, type Readable } from 'svelte/store'
+  import { createEventDispatcher } from 'svelte'
   import type { Writable } from 'svelte/store'
   import { useLogScope } from '@horizon/utils'
   import Masonry from './MasonrySpace.svelte'
   import OasisResourceLoader from './OasisResourceLoader.svelte'
+  import { selectedItemIds, deselectAll } from './utils/select'
+  import { contextMenu } from '../Core/ContextMenu.svelte'
+  import { useOasis } from '../../service/oasis'
+  import { useToasts } from '../../service/toast'
+  import { useTelemetry } from '../../service/telemetry'
+  import { MultiSelectResourceEventAction } from '@horizon/types'
+
+  import { SpaceEntryOrigin } from '../../types'
 
   export let resourceIds: Readable<string[]>
   export let selected: string | null = null
@@ -13,7 +22,11 @@
   export let interactive: boolean = true
 
   const log = useLogScope('OasisResourcesView')
-  // const dispatch = createEventDispatcher<{ click: string }>()
+  const dispatch = createEventDispatcher()
+  const oasis = useOasis()
+  const spaces = oasis.spaces
+  const toasts = useToasts()
+  const telemetry = useTelemetry()
 
   const CHUNK_SIZE = 40
   const CHUNK_THRESHOLD = 300
@@ -38,9 +51,83 @@
     const CHUNK_SIZE = e.detail
     renderLimit.update((limit) => limit + CHUNK_SIZE)
   }
+
+  const handleAddToSpace = async (spaceId: string) => {
+    const itemCount = $selectedItemIds.length
+    const spaceName = $spaces.find((space) => space.id === spaceId)?.name.folderName
+    try {
+      await oasis.addResourcesToSpace(spaceId, $selectedItemIds, SpaceEntryOrigin.ManuallyAdded)
+      toasts.success(`Added ${itemCount} item${itemCount > 1 ? 's' : ''} to ${spaceName}`)
+    } catch (error) {
+      toasts.error(`Failed to add items to space: ${error.message}`)
+    } finally {
+      deselectAll()
+      await telemetry.trackMultiSelectResourceAction(
+        MultiSelectResourceEventAction.AddToSpace,
+        $selectedItemIds.length,
+        isInSpace ? 'space' : 'oasis'
+      )
+    }
+  }
 </script>
 
-<div class="wrapper">
+<div
+  class="wrapper"
+  use:contextMenu={{
+    canOpen: $selectedItemIds.length > 1,
+    items: [
+      {
+        type: 'action',
+        icon: 'arrow.up.right',
+        text: 'Open as Tab',
+        action: () => {
+          dispatch('batch-open', $selectedItemIds)
+          deselectAll()
+        }
+      },
+      {
+        type: 'action',
+        icon: 'chat',
+        text: 'Open in Chat',
+        action: () => {
+          dispatch('open-and-chat', $selectedItemIds)
+          deselectAll()
+        }
+      },
+      { type: 'separator' },
+      {
+        type: 'sub-menu',
+        icon: '',
+        text: 'Add to Space',
+        items: $spaces
+          .filter(
+            (e) =>
+              e.name.folderName.toLowerCase() !== 'all my stuff' &&
+              e.name.folderName.toLowerCase() !== '.tempspace' &&
+              !e.name.builtIn
+          )
+          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+          .map((space) => ({
+            type: 'action',
+            icon: '',
+            text: space.name.folderName,
+            action: () => handleAddToSpace(space.id)
+          }))
+      },
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: 'trash',
+        text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
+        kind: 'danger',
+        action: () => {
+          dispatch('batch-remove', $selectedItemIds)
+          deselectAll()
+        }
+      }
+    ]
+  }}
+>
   {#if useMasonry}
     <div bind:this={scrollElement} class="content">
       {#if scrollElement}

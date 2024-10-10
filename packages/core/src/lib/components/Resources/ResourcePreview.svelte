@@ -69,6 +69,10 @@
   import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import {
+    selectedItemIds,
+    addSelectionById
+  } from '@horizon/core/src/lib/components/Oasis/utils/select'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -143,6 +147,8 @@
   $: if ($resourceState === 'updating') {
     handleUpdating()
   }
+
+  $: $selectedItemIds.length > 1 ? (interactive = false) : (interactive = true)
 
   let resourceData: ResourceData | null = null
   let previewData: PreviewData | null = null
@@ -557,6 +563,10 @@
       return
     }
 
+    if ($selectedItemIds.length > 0) {
+      return
+    }
+
     if (showEditMode) {
       return
     }
@@ -568,6 +578,10 @@
         return
       }
 
+      return
+    }
+
+    if (!interactive) {
       return
     }
 
@@ -681,6 +695,8 @@
   class="resource-preview clickable relative"
   class:isSelected={selected}
   style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
+  data-selectable
+  data-selectable-id={resource.id}
   use:contextMenu={{
     canOpen: interactive,
     items: [
@@ -697,6 +713,18 @@
         action: () => dispatch('open', resource.id)
       },
       { type: 'separator' },
+      ...($selectedItemIds.length === 0
+        ? [
+            {
+              type: 'action',
+              icon: 'circle.check',
+              text: 'Select',
+              action: () => {
+                addSelectionById(resource.id)
+              }
+            }
+          ]
+        : []),
       ...(canonicalUrl
         ? [
             {

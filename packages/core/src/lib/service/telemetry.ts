@@ -29,7 +29,9 @@ import {
   type AIMessageContext,
   type AIMessageBaseMedia,
   EventContext,
-  SelectTabEventAction
+  SelectTabEventAction,
+  DeleteResourceEventTrigger,
+  MultiSelectResourceEventAction
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -267,11 +269,28 @@ export class Telemetry {
     await this.trackEvent(TelemetryEventTypes.FileDownload, {})
   }
 
-  async trackDeleteResource(type: string, fromSpace: boolean) {
+  async trackDeleteResource(
+    type: string,
+    fromSpace: boolean,
+    trigger: DeleteResourceEventTrigger = DeleteResourceEventTrigger.OasisItem
+  ) {
     await this.trackEvent(TelemetryEventTypes.DeleteResource, {
       type: type,
       kind: getPrimaryResourceType(type),
-      from: fromSpace ? 'space' : 'oasis'
+      from: fromSpace ? 'space' : 'oasis',
+      trigger: trigger
+    })
+  }
+
+  async trackMultiSelectResourceAction(
+    action: MultiSelectResourceEventAction,
+    count: number,
+    context: 'space' | 'oasis' = 'oasis'
+  ) {
+    await this.trackEvent(TelemetryEventTypes.MultiSelectResourceAction, {
+      action: action,
+      count: count,
+      context: context
     })
   }
 
@@ -358,6 +377,10 @@ export class Telemetry {
 
   async trackChatWithSpace() {
     await this.trackEvent(TelemetryEventTypes.ChatWithSpace, {})
+  }
+
+  async trackOpenResourceInChat() {
+    await this.trackEvent(TelemetryEventTypes.OpenResourceInChat, {})
   }
 
   async trackOpenSpace(
