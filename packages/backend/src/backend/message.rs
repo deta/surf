@@ -193,6 +193,7 @@ pub enum MiscMessage {
     },
     GetYoutubeTranscript(String),
     RunMigration,
+    SendEventBusMessage(EventBusMessage),
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -208,6 +209,6 @@ pub enum EventBusMessage {
 #[serde(tag = "type")]
 pub enum ResourceProcessingStatus {
     Started,
-    Failed(String),
+    Failed { message: String },
     Finished,
 }

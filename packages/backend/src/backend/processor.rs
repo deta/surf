@@ -24,8 +24,36 @@ pub fn processor_thread_entry_point(
     while let Ok(message) = tunnel.tqueue_rx.recv() {
         match message {
             ProcessorMessage::ProcessResource(resource) => {
-                let _ = handle_process_resource(&tunnel, resource, &ocr_engine, language.clone())
-                    .map_err(|e| eprintln!("error while processing resource: {e:?}"));
+                // TODO: create a helper method to send event bus messages
+                tunnel.worker_send_rust(
+                    WorkerMessage::MiscMessage(MiscMessage::SendEventBusMessage(
+                        EventBusMessage::ResourceProcessingMessage {
+                            resource_id: resource.resource.id.clone(),
+                            status: ResourceProcessingStatus::Started,
+                        },
+                    )),
+                    None,
+                );
+
+                let resource_id = resource.resource.id.clone();
+                if let Err(err) = handle_process_resource(
+                    &tunnel,
+                    resource.clone(),
+                    &ocr_engine,
+                    language.clone(),
+                ) {
+                    tunnel.worker_send_rust(
+                        WorkerMessage::MiscMessage(MiscMessage::SendEventBusMessage(
+                            EventBusMessage::ResourceProcessingMessage {
+                                resource_id: resource_id.clone(),
+                                status: ResourceProcessingStatus::Failed {
+                                    message: format!("error while processing resource: {err:?}"),
+                                },
+                            },
+                        )),
+                        None,
+                    );
+                }
             }
         }
     }

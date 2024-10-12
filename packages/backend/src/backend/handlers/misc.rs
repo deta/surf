@@ -536,5 +536,6 @@ pub fn handle_misc_message(
             }
             send_worker_response(&mut worker.channel, oneshot, result)
         }
+        MiscMessage::SendEventBusMessage(message) => worker.send_event_bus_message(message),
     }
 }

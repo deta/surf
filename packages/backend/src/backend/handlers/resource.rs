@@ -447,13 +447,18 @@ impl Worker {
 
         if content_type.should_store_embeddings() {
             self.upsert_embeddings(
-                resource_id,
+                resource_id.clone(),
                 EmbeddingType::TextContent,
                 old_keys,
                 content_ids,
                 chunks,
             )?;
         }
+
+        self.send_event_bus_message(EventBusMessage::ResourceProcessingMessage {
+            resource_id,
+            status: ResourceProcessingStatus::Finished,
+        });
         Ok(())
     }
 

@@ -1,13 +1,5 @@
-use super::message::{AIMessage, ProcessorMessage, TunnelMessage, TunnelOneshot};
-use crate::{
-    ai::ai::AI,
-    backend::{
-        handlers::*,
-        message::{EventBusMessage, WorkerMessage},
-    },
-    store::db::Database,
-    BackendError, BackendResult,
-};
+use super::message::{AIMessage, EventBusMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage};
+use crate::{ai::ai::AI, backend::handlers::*, store::db::Database, BackendError, BackendResult};
 
 use crossbeam_channel as crossbeam;
 use neon::prelude::*;
