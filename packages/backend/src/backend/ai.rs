@@ -45,24 +45,12 @@ impl AI {
                 .map_err(|e| eprintln!("failed to describe image: {e:#?}"))
                 .ok();
 
-            let mut embeddable_sentences: Vec<String> = vec![];
+            let mut tags: Vec<String> = vec![];
+            let mut captions: Vec<String> = vec![];
+
             if let Some(output) = output {
                 output.tags_result.values.iter().for_each(|tag| {
-                    tunnel.worker_send_rust(
-                        WorkerMessage::ResourceMessage(
-                            ResourceMessage::UpsertResourceTextContent {
-                                resource_id: composite_resource.resource.id.to_string(),
-                                content: tag.name.to_string(),
-                                content_type: models::ResourceTextContentType::ImageTags,
-                                metadata: ResourceTextContentMetadata {
-                                    timestamp: None,
-                                    url: None,
-                                },
-                            },
-                        ),
-                        None,
-                    );
-                    embeddable_sentences.push(tag.name.to_string());
+                    tags.push(tag.name.to_string());
                 });
 
                 output
@@ -70,22 +58,50 @@ impl AI {
                     .values
                     .iter()
                     .for_each(|caption| {
-                        tunnel.worker_send_rust(
-                            WorkerMessage::ResourceMessage(
-                                ResourceMessage::UpsertResourceTextContent {
-                                    resource_id: composite_resource.resource.id.to_string(),
-                                    content: caption.text.to_string(),
-                                    content_type: models::ResourceTextContentType::ImageCaptions,
-                                    metadata: ResourceTextContentMetadata {
+                        captions.push(caption.text.to_string());
+                    });
+
+                let tags_len = tags.len();
+                if !tags.is_empty() {
+                    tunnel.worker_send_rust(
+                        WorkerMessage::ResourceMessage(
+                            ResourceMessage::BatchUpsertResourceTextContent {
+                                resource_id: composite_resource.resource.id.to_string(),
+                                content_type: models::ResourceTextContentType::ImageTags,
+                                content: tags,
+                                metadata: vec![
+                                    ResourceTextContentMetadata {
                                         timestamp: None,
                                         url: None,
-                                    },
-                                },
-                            ),
-                            None,
-                        );
-                        embeddable_sentences.push(caption.text.to_string());
-                    });
+                                    };
+                                    tags_len
+                                ],
+                            },
+                        ),
+                        None,
+                    );
+                }
+
+                let captions_len = captions.len();
+                if !captions.is_empty() {
+                    tunnel.worker_send_rust(
+                        WorkerMessage::ResourceMessage(
+                            ResourceMessage::BatchUpsertResourceTextContent {
+                                resource_id: composite_resource.resource.id.to_string(),
+                                content_type: models::ResourceTextContentType::ImageCaptions,
+                                content: captions,
+                                metadata: vec![
+                                    ResourceTextContentMetadata {
+                                        timestamp: None,
+                                        url: None,
+                                    };
+                                    captions_len
+                                ],
+                            },
+                        ),
+                        None,
+                    );
+                }
             }
         }
         Ok(())
