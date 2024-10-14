@@ -231,10 +231,7 @@
               .forEach(() => annotationItems.push({ type: 'highlight', content: '' }))
           }
 
-          const resourceContent = cleanContent(
-            data.description || data.content_plain || '',
-            hostname
-          )
+          const resourceContent = cleanContent(data.description || '', hostname)
           const previewContent = summary || resourceContent || undefined
 
           previewData = {
@@ -847,7 +844,7 @@
   {/if}
 
   <!-- <div class="absolute z-[10000] top-2 right-2 bg-black text-white p-2 rounded-lg">
-    State: {$resourceState}
+    {resource.type}
   </div> -->
 
   <!-- {#if interactive}
