@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use crate::{
     backend::{
         message::{
-            AIMessage, EventBusMessage, ProcessorMessage, ResourceMessage,
-            ResourceProcessingStatus, ResourceTagMessage, TunnelOneshot,
+            AIMessage, ProcessorMessage, ResourceMessage,
+            ResourceTagMessage, TunnelOneshot,
         },
         worker::{send_worker_response, Worker},
     },
@@ -454,11 +454,6 @@ impl Worker {
                 chunks,
             )?;
         }
-
-        self.send_event_bus_message(EventBusMessage::ResourceProcessingMessage {
-            resource_id,
-            status: ResourceProcessingStatus::Finished,
-        });
         Ok(())
     }
 
@@ -513,11 +508,6 @@ impl Worker {
             content_ids,
             chunks,
         )?;
-
-        self.send_event_bus_message(EventBusMessage::ResourceProcessingMessage {
-            resource_id: resource_id.clone(),
-            status: ResourceProcessingStatus::Finished,
-        });
         Ok(())
     }
 

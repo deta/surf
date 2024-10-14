@@ -24,39 +24,49 @@ pub fn processor_thread_entry_point(
     while let Ok(message) = tunnel.tqueue_rx.recv() {
         match message {
             ProcessorMessage::ProcessResource(resource) => {
-                // TODO: create a helper method to send event bus messages
-                tunnel.worker_send_rust(
-                    WorkerMessage::MiscMessage(MiscMessage::SendEventBusMessage(
-                        EventBusMessage::ResourceProcessingMessage {
-                            resource_id: resource.resource.id.clone(),
-                            status: ResourceProcessingStatus::Started,
-                        },
-                    )),
-                    None,
-                );
-
                 let resource_id = resource.resource.id.clone();
-                if let Err(err) = handle_process_resource(
+                emit_processing_status(&tunnel, &resource_id, ResourceProcessingStatus::Started);
+
+                let result = handle_process_resource(
                     &tunnel,
                     resource.clone(),
                     &ocr_engine,
                     language.clone(),
-                ) {
-                    tunnel.worker_send_rust(
-                        WorkerMessage::MiscMessage(MiscMessage::SendEventBusMessage(
-                            EventBusMessage::ResourceProcessingMessage {
-                                resource_id: resource_id.clone(),
-                                status: ResourceProcessingStatus::Failed {
-                                    message: format!("error while processing resource: {err:?}"),
-                                },
-                            },
-                        )),
-                        None,
-                    );
+                );
+
+                match result {
+                    Ok(_) => emit_processing_status(
+                        &tunnel,
+                        &resource_id,
+                        ResourceProcessingStatus::Finished,
+                    ),
+                    Err(err) => emit_processing_status(
+                        &tunnel,
+                        &resource_id,
+                        ResourceProcessingStatus::Failed {
+                            message: format!("error while processing resource: {err:?}"),
+                        },
+                    ),
                 }
             }
         }
     }
+}
+
+fn emit_processing_status(
+    tunnel: &WorkerTunnel,
+    resource_id: &str,
+    status: ResourceProcessingStatus,
+) {
+    tunnel.worker_send_rust(
+        WorkerMessage::MiscMessage(MiscMessage::SendEventBusMessage(
+            EventBusMessage::ResourceProcessingMessage {
+                resource_id: resource_id.to_string(),
+                status,
+            },
+        )),
+        None,
+    );
 }
 
 fn create_ocr_engine(app_path: &str) -> Result<OcrEngine, Box<dyn std::error::Error>> {
@@ -95,38 +105,65 @@ fn handle_process_resource(
         return Ok(());
     }
 
-    let resource_data = match resource.resource.resource_type.as_str() {
-        t if t.starts_with("image/") || t == "application/pdf" => "".to_owned(),
-        "application/vnd.space.post.youtube" => {
-            return process_youtube_video_data(&tunnel, &resource, language);
+    let (contents, metadatas) = match resource.resource.resource_type.as_str() {
+        t if t.starts_with("image/") || t == "application/pdf" => {
+            process_resource_data(&resource, "", ocr_engine)
+                .map(|(_, content)| {
+                    (
+                        vec![content],
+                        vec![create_metadata_from_resource(&resource)],
+                    )
+                })
+                .unwrap_or_default()
         }
-        _ => std::fs::read_to_string(&resource.resource.resource_path)?,
+        "application/vnd.space.post.youtube" => resource
+            .metadata
+            .as_ref()
+            .map(|m| get_youtube_contents_metadatas(&m.source_uri, language))
+            .transpose()?
+            .unwrap_or_default(),
+        _ => {
+            let resource_data = std::fs::read_to_string(&resource.resource.resource_path)?;
+            process_resource_data(&resource, &resource_data, ocr_engine)
+                .map(|(_, content)| {
+                    (
+                        vec![content],
+                        vec![create_metadata_from_resource(&resource)],
+                    )
+                })
+                .unwrap_or_default()
+        }
     };
-    let output = process_resource_data(&resource, &resource_data, ocr_engine);
 
-    let metadata = match &resource.metadata {
-        Some(metadata) => ResourceTextContentMetadata {
-            timestamp: None,
-            url: Some(metadata.source_uri.clone()),
-        },
-        None => ResourceTextContentMetadata {
-            timestamp: None,
-            url: None,
-        },
-    };
-    if let Some((content_type, content)) = output {
+    if !contents.is_empty() {
+        let content_type =
+            ResourceTextContentType::from_resource_type(&resource.resource.resource_type)
+                .unwrap_or(ResourceTextContentType::Note);
+
+        let (tx, rx) = crossbeam_channel::bounded(1);
         tunnel.worker_send_rust(
-            WorkerMessage::ResourceMessage(ResourceMessage::UpsertResourceTextContent {
+            WorkerMessage::ResourceMessage(ResourceMessage::BatchUpsertResourceTextContent {
                 resource_id: resource.resource.id,
-                content,
                 content_type,
-                metadata,
+                content: contents,
+                metadata: metadatas,
             }),
-            None,
+            Some(tx),
         );
+
+        rx.recv().map_err(|_| {
+            BackendError::GenericError("failed to receive oneshot response".to_owned())
+        })??;
     }
 
     Ok(())
+}
+
+fn create_metadata_from_resource(resource: &CompositeResource) -> ResourceTextContentMetadata {
+    ResourceTextContentMetadata {
+        timestamp: None,
+        url: resource.metadata.as_ref().map(|m| m.source_uri.clone()),
+    }
 }
 
 fn needs_processing(resource_type: &str) -> bool {
@@ -171,27 +208,6 @@ pub fn get_youtube_contents_metadatas(
         }
     }
     Ok((contents, metadatas))
-}
-
-// TODO: how to get semantically meaningful chunks of text from youtube videos?
-fn process_youtube_video_data(
-    tunnel: &WorkerTunnel,
-    resource: &CompositeResource,
-    language: Option<String>,
-) -> BackendResult<()> {
-    if let Some(metadata) = &resource.metadata {
-        let (contents, metadatas) = get_youtube_contents_metadatas(&metadata.source_uri, language)?;
-        tunnel.worker_send_rust(
-            WorkerMessage::ResourceMessage(ResourceMessage::BatchUpsertResourceTextContent {
-                resource_id: resource.resource.id.clone(),
-                content_type: ResourceTextContentType::YoutubeTranscript,
-                content: contents,
-                metadata: metadatas,
-            }),
-            None,
-        );
-    }
-    Ok(())
 }
 
 fn process_resource_data(
