@@ -198,7 +198,6 @@ impl AI {
             })
     }
 
-    #[tracing::instrument(level = "trace", skip(self))]
     pub fn should_cluster(&self, query: &str) -> BackendResult<bool> {
         let prompt = should_narrow_search_prompt();
         let messages = vec![
@@ -246,7 +245,6 @@ impl AI {
     }
 
     // TODO: what behavior if no num_docs and no resource_ids?
-    #[tracing::instrument(level = "trace", skip(self, contents_store))]
     pub fn vector_search(
         &self,
         contents_store: &Database,

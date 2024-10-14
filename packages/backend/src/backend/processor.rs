@@ -1,7 +1,6 @@
-// TODO: new functions, handle errors properly
-
 use super::{message::*, tunnel::WorkerTunnel};
 use crate::{
+    backend::ai::AI,
     embeddings::chunking::ContentChunker,
     store::{
         db::CompositeResource,
@@ -14,59 +13,173 @@ use ocrs::{ImageSource, OcrEngine, OcrEngineParams};
 use rten::Model;
 use serde::{Deserialize, Serialize};
 
-pub fn processor_thread_entry_point(
+pub struct Processor {
     tunnel: WorkerTunnel,
-    app_path: String,
+    ai: AI,
+    ocr_engine: OcrEngine,
     language: Option<String>,
-) {
-    let ocr_engine = create_ocr_engine(&app_path).expect("failed to create the OCR engine");
+}
 
-    while let Ok(message) = tunnel.tqueue_rx.recv() {
-        match message {
-            ProcessorMessage::ProcessResource(resource) => {
-                let resource_id = resource.resource.id.clone();
-                emit_processing_status(&tunnel, &resource_id, ResourceProcessingStatus::Started);
+impl Processor {
+    pub fn new(
+        tunnel: WorkerTunnel,
+        app_path: String,
+        language: Option<String>,
+        vision_api_key: String,
+        vision_api_endpoint: String,
+    ) -> Self {
+        let ai = AI::new(&vision_api_key, &vision_api_endpoint);
+        let ocr_engine = create_ocr_engine(&app_path).expect("failed to create the OCR engine");
+        Self {
+            tunnel,
+            ai,
+            ocr_engine,
+            language,
+        }
+    }
 
-                let result = handle_process_resource(
-                    &tunnel,
-                    resource.clone(),
-                    &ocr_engine,
-                    language.clone(),
-                );
+    pub fn run(&self) {
+        while let Ok(message) = self.tunnel.tqueue_rx.recv() {
+            match message {
+                ProcessorMessage::ProcessResource(resource) => {
+                    let resource_id = resource.resource.id.clone();
+                    self.emit_processing_status(&resource_id, ResourceProcessingStatus::Started);
 
-                match result {
-                    Ok(_) => emit_processing_status(
-                        &tunnel,
-                        &resource_id,
-                        ResourceProcessingStatus::Finished,
-                    ),
-                    Err(err) => emit_processing_status(
-                        &tunnel,
-                        &resource_id,
-                        ResourceProcessingStatus::Failed {
-                            message: format!("error while processing resource: {err:?}"),
-                        },
-                    ),
+                    let result = self.handle_process_resource(resource);
+
+                    match result {
+                        Ok(_) => self.emit_processing_status(
+                            &resource_id,
+                            ResourceProcessingStatus::Finished,
+                        ),
+                        Err(err) => self.emit_processing_status(
+                            &resource_id,
+                            ResourceProcessingStatus::Failed {
+                                message: format!("error while processing resource: {err:?}"),
+                            },
+                        ),
+                    }
                 }
             }
         }
     }
+
+    fn emit_processing_status(&self, resource_id: &str, status: ResourceProcessingStatus) {
+        self.tunnel.worker_send_rust(
+            WorkerMessage::MiscMessage(MiscMessage::SendEventBusMessage(
+                EventBusMessage::ResourceProcessingMessage {
+                    resource_id: resource_id.to_string(),
+                    status,
+                },
+            )),
+            None,
+        );
+    }
+
+    fn handle_process_resource(&self, resource: CompositeResource) -> BackendResult<()> {
+        if !needs_processing(&resource.resource.resource_type) {
+            return Ok(());
+        }
+        let mut contents = Vec::new();
+        let mut metadatas = Vec::new();
+
+        match resource.resource.resource_type.as_str() {
+            t if t.starts_with("image/") => {
+                if let Some((content_type, content)) =
+                    process_resource_data(&resource, "", &self.ocr_engine)
+                {
+                    contents.push((content_type, vec![content]));
+                    metadatas.push(create_metadata_from_resource(&resource));
+                }
+
+                match self.ai.process_vision_message(&resource) {
+                    Ok(ai_results) => {
+                        for (content_type, content) in ai_results {
+                            let content_len = content.len();
+                            contents.push((content_type, content));
+                            metadatas.extend(vec![
+                                ResourceTextContentMetadata {
+                                    timestamp: None,
+                                    url: None,
+                                };
+                                content_len
+                            ]);
+                        }
+                    }
+                    Err(e) => tracing::error!("error processing image with AI: {:?}", e),
+                }
+            }
+            "application/pdf" => {
+                if let Some((content_type, content)) =
+                    process_resource_data(&resource, "", &self.ocr_engine)
+                {
+                    contents.push((content_type, vec![content]));
+                    metadatas.push(create_metadata_from_resource(&resource));
+                }
+            }
+            "application/vnd.space.post.youtube" => {
+                if let Some(metadata) = &resource.metadata {
+                    let (youtube_contents, youtube_metadatas) = get_youtube_contents_metadatas(
+                        &metadata.source_uri,
+                        self.language.clone(),
+                    )?;
+                    contents.push((ResourceTextContentType::YoutubeTranscript, youtube_contents));
+                    metadatas.extend(youtube_metadatas);
+                }
+            }
+            _ => {
+                let resource_data = std::fs::read_to_string(&resource.resource.resource_path)?;
+                if let Some((content_type, content)) =
+                    process_resource_data(&resource, &resource_data, &self.ocr_engine)
+                {
+                    contents.push((content_type, vec![content]));
+                    metadatas.push(create_metadata_from_resource(&resource));
+                }
+            }
+        }
+
+        tracing::debug!("contents length to be batch upserted: {}", contents.len());
+
+        for (content_type, content) in contents {
+            if !content.is_empty() {
+                let (tx, rx) = crossbeam_channel::bounded(1);
+                self.tunnel.worker_send_rust(
+                    WorkerMessage::ResourceMessage(
+                        ResourceMessage::BatchUpsertResourceTextContent {
+                            resource_id: resource.resource.id.clone(),
+                            content_type,
+                            content,
+                            metadata: metadatas.clone(),
+                        },
+                    ),
+                    Some(tx),
+                );
+
+                rx.recv().map_err(|_| {
+                    BackendError::GenericError("failed to receive oneshot response".to_owned())
+                })??;
+            }
+        }
+
+        Ok(())
+    }
 }
 
-fn emit_processing_status(
-    tunnel: &WorkerTunnel,
-    resource_id: &str,
-    status: ResourceProcessingStatus,
+pub fn processor_thread_entry_point(
+    tunnel: WorkerTunnel,
+    app_path: String,
+    language: Option<String>,
+    vision_api_key: String,
+    vision_api_endpoint: String,
 ) {
-    tunnel.worker_send_rust(
-        WorkerMessage::MiscMessage(MiscMessage::SendEventBusMessage(
-            EventBusMessage::ResourceProcessingMessage {
-                resource_id: resource_id.to_string(),
-                status,
-            },
-        )),
-        None,
+    let processor = Processor::new(
+        tunnel,
+        app_path,
+        language,
+        vision_api_key,
+        vision_api_endpoint,
     );
+    processor.run();
 }
 
 fn create_ocr_engine(app_path: &str) -> Result<OcrEngine, Box<dyn std::error::Error>> {
@@ -95,70 +208,6 @@ fn create_ocr_engine(app_path: &str) -> Result<OcrEngine, Box<dyn std::error::Er
     .map_err(|e| e.into())
 }
 
-fn handle_process_resource(
-    tunnel: &WorkerTunnel,
-    resource: CompositeResource,
-    ocr_engine: &OcrEngine,
-    language: Option<String>,
-) -> BackendResult<()> {
-    if !needs_processing(&resource.resource.resource_type) {
-        return Ok(());
-    }
-
-    let (contents, metadatas) = match resource.resource.resource_type.as_str() {
-        t if t.starts_with("image/") || t == "application/pdf" => {
-            process_resource_data(&resource, "", ocr_engine)
-                .map(|(_, content)| {
-                    (
-                        vec![content],
-                        vec![create_metadata_from_resource(&resource)],
-                    )
-                })
-                .unwrap_or_default()
-        }
-        "application/vnd.space.post.youtube" => resource
-            .metadata
-            .as_ref()
-            .map(|m| get_youtube_contents_metadatas(&m.source_uri, language))
-            .transpose()?
-            .unwrap_or_default(),
-        _ => {
-            let resource_data = std::fs::read_to_string(&resource.resource.resource_path)?;
-            process_resource_data(&resource, &resource_data, ocr_engine)
-                .map(|(_, content)| {
-                    (
-                        vec![content],
-                        vec![create_metadata_from_resource(&resource)],
-                    )
-                })
-                .unwrap_or_default()
-        }
-    };
-
-    if !contents.is_empty() {
-        let content_type =
-            ResourceTextContentType::from_resource_type(&resource.resource.resource_type)
-                .unwrap_or(ResourceTextContentType::Note);
-
-        let (tx, rx) = crossbeam_channel::bounded(1);
-        tunnel.worker_send_rust(
-            WorkerMessage::ResourceMessage(ResourceMessage::BatchUpsertResourceTextContent {
-                resource_id: resource.resource.id,
-                content_type,
-                content: contents,
-                metadata: metadatas,
-            }),
-            Some(tx),
-        );
-
-        rx.recv().map_err(|_| {
-            BackendError::GenericError("failed to receive oneshot response".to_owned())
-        })??;
-    }
-
-    Ok(())
-}
-
 fn create_metadata_from_resource(resource: &CompositeResource) -> ResourceTextContentMetadata {
     ResourceTextContentMetadata {
         timestamp: None,
@@ -177,17 +226,14 @@ fn needs_processing(resource_type: &str) -> bool {
 
 pub fn get_youtube_contents_metadatas(
     source_uri: &str,
-    language: Option<String>,
+    lang: Option<String>,
 ) -> BackendResult<(Vec<String>, Vec<ResourceTextContentMetadata>)> {
     let runtime = tokio::runtime::Runtime::new()?;
-    let transcript_config = match language {
-        Some(lang) => Some(ytranscript::TranscriptConfig { lang: Some(lang) }),
-        _ => None,
-    };
+    let transcript_config = ytranscript::TranscriptConfig { lang };
     let transcripts = runtime
         .block_on(ytranscript::YoutubeTranscript::fetch_transcript(
             source_uri,
-            transcript_config,
+            Some(transcript_config),
         ))
         .map_err(|e| BackendError::GenericError(e.to_string()))?;
     let mut contents: Vec<String> = vec![];

@@ -1,5 +1,4 @@
 use super::{
-    ai::ai_thread_entry_point,
     message::{AIMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage},
     processor::processor_thread_entry_point,
     worker::worker_thread_entry_point,
@@ -83,30 +82,24 @@ impl WorkerTunnel {
                 .unwrap();
         });
 
-        let lang = Some(language_setting).filter(|lang| lang == "en");
+        let language = Some(language_setting).filter(|lang| lang == "en");
         // spawn N processor threads
         (0..8).for_each(|n| {
             let tunnel_clone = tunnel.clone();
             let app_path_clone = app_path.clone();
-            let lang_clone = lang.clone();
+            let language_clone = language.clone();
+            let vision_api_key = vision_api_key.clone();
+            let vision_api_endpoint = vision_api_endpoint.clone();
             std::thread::Builder::new()
                 .name(format!("P{n}"))
                 .spawn(move || {
-                    processor_thread_entry_point(tunnel_clone, app_path_clone, lang_clone);
-                })
-                .unwrap();
-        });
-
-        // spawn N AI threads
-        (0..2).for_each(|n| {
-            let tunnel_clone = tunnel.clone();
-            let vision_api_key = vision_api_key.clone();
-            let vision_api_endpoint = vision_api_endpoint.clone();
-
-            std::thread::Builder::new()
-                .name(format!("A{n}"))
-                .spawn(move || {
-                    ai_thread_entry_point(tunnel_clone, vision_api_key, vision_api_endpoint);
+                    processor_thread_entry_point(
+                        tunnel_clone,
+                        app_path_clone,
+                        language_clone,
+                        vision_api_key,
+                        vision_api_endpoint,
+                    );
                 })
                 .unwrap();
         });
