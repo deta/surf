@@ -224,8 +224,6 @@
   const downloadResourceMap = new Map<string, Download>()
   const downloadToastsMap = new Map<string, ToastItem>()
   const downloadIntercepters = new Map<string, (data: Download) => void>()
-  const anyTabHovered = writable(false)
-  const chatTooltipHovered = writable(false)
   const showStartMask = writable(false)
   const showEndMask = writable(false)
   const additionalChatContextItems = writable<ContextItem[]>([])
@@ -3457,24 +3455,6 @@
       }
     })
   }
-  const handleTabMouseEnter = (e: CustomEvent<string>) => {
-    clearTimeout((handleTabMouseEnter as any).timeout)
-    clearTimeout((handleTabMouseLeave as any).timeout)
-    ;(handleTabMouseEnter as any).timeout = setTimeout(() => {
-      if (!$chatTooltipHovered) {
-        anyTabHovered.set(true)
-      }
-    }, 100)
-  }
-
-  const handleTabMouseLeave = (e: CustomEvent<string>) => {
-    clearTimeout((handleTabMouseLeave as any).timeout)
-    ;(handleTabMouseLeave as any).timeout = setTimeout(() => {
-      if (!$chatTooltipHovered) {
-        anyTabHovered.set(false)
-      }
-    }, 200)
-  }
 
   const handleTabDragEnd = async (drag: DragculaDragEvent) => {
     // TODO: (dragcula): migrate
@@ -3945,52 +3925,11 @@
                     on:pin={handlePinTab}
                     on:unpin={handleUnpinTab}
                     on:edit={handleEdit}
-                    on:mouseenter={handleTabMouseEnter}
-                    on:mouseleave={handleTabMouseLeave}
                   />
                 {/each}
               {/if}
             </div>
           </div>
-
-          {#if ($selectedTabs.size > 1 && $magicTabs.length === 0) || $anyTabHovered || $magicTabs.length > 0}
-            <div
-              class="chat-hint-tooltop tooltip fixed top-[6.75rem] right-1 transform translate-x-0 bg-white/90 text-sky-600 rounded px-1 my-1 mx-2 border border-gray-100 overflow-visible z-50 w-fit rotate-1 transition-transform duration-300 cursor-default hover:bg-sky-100"
-              in:fly={{ y: 3, duration: 120 }}
-              out:fly={{ y: 3, duration: 120 }}
-              on:click={() => {
-                if ($magicTabs.length > 0) {
-                  deselectAllTabs()
-                }
-                startChatWithSelectedTabs()
-              }}
-              aria-hidden="true"
-              on:mouseenter={() => {
-                chatTooltipHovered.set(true)
-              }}
-              on:mouseleave={() => {
-                chatTooltipHovered.set(false)
-              }}
-            >
-              <div
-                class="magic-activated select-none"
-                style="font-size: 12px; padding: 10px; margin: -10px;"
-                aria-hidden="true"
-                on:mouseenter={() => {
-                  chatTooltipHovered.set(true)
-                }}
-                on:mouseleave={() => {
-                  chatTooltipHovered.set(false)
-                }}
-              >
-                {#if !$magicTabs.length}
-                  Hit {navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl'} + E for chat.
-                {:else}
-                  Chat Active
-                {/if}
-              </div>
-            </div>
-          {/if}
 
           <div
             class=" {horizontalTabs
@@ -4124,8 +4063,6 @@
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}
-                        on:mouseenter={handleTabMouseEnter}
-                        on:mouseleave={handleTabMouseLeave}
                       />
                     {:else}
                       <TabItem
@@ -4161,8 +4098,6 @@
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}
-                        on:mouseenter={handleTabMouseEnter}
-                        on:mouseleave={handleTabMouseLeave}
                       />
                     {/if}
                   {/each}
@@ -4232,8 +4167,6 @@
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}
-                        on:mouseenter={handleTabMouseEnter}
-                        on:mouseleave={handleTabMouseLeave}
                       />
                     {:else}
                       <TabItem
@@ -4269,8 +4202,6 @@
                         on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                         on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                         on:edit={handleEdit}
-                        on:mouseenter={handleTabMouseEnter}
-                        on:mouseleave={handleTabMouseLeave}
                       />
                     {/if}
                   {/each}
