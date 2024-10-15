@@ -663,7 +663,6 @@ const sffs = (() => {
   let server: http.Server | null = null
   const callbackEmitters = new Map()
 
-
   enum ResourceProcessingStatusType {
     Started = 'Started',
     Failed = 'Failed',
@@ -679,15 +678,19 @@ const sffs = (() => {
     | { type: ResourceProcessingStatusType.Failed; message: string }
     | { type: ResourceProcessingStatusType.Finished }
 
-  type EventBusMessage =
-    | {
-      type: EventBusMessageType.ResourceProcessingMessage
-      resource_id: string
-      status: ResourceProcessingStatus
-    }
+  type EventBusMessage = {
+    type: EventBusMessageType.ResourceProcessingMessage
+    resource_id: string
+    status: ResourceProcessingStatus
+  }
 
   const isResourceProcessingMessage = (obj: any): boolean => {
-    if (!obj || typeof obj.resource_id !== 'string' || !obj.status || typeof obj.status.type !== 'string') {
+    if (
+      !obj ||
+      typeof obj.resource_id !== 'string' ||
+      !obj.status ||
+      typeof obj.status.type !== 'string'
+    ) {
       return false
     }
 
@@ -719,9 +722,13 @@ const sffs = (() => {
   }
 
   const { js__backend_event_bus_register, js__backend_event_bus_callback } = (() => {
-    const handlers: ((event: EventBusMessage) => void)[] = []
-    const js__backend_event_bus_register = (handler: (event: EventBusMessage) => void) =>
-      handlers.push(handler)
+    const handlers = new Set<(event: EventBusMessage) => void>()
+    const js__backend_event_bus_register = (
+      handler: (event: EventBusMessage) => void
+    ): (() => void) => {
+      handlers.add(handler)
+      return () => handlers.delete(handler)
+    }
     const js__backend_event_bus_callback = (event: string) => {
       let message: EventBusMessage
       try {
@@ -730,7 +737,7 @@ const sffs = (() => {
         console.error('failed to parse event bus message', error)
         return
       }
-      handlers.map((handler) => handler(message))
+      handlers.forEach((handler) => handler(message))
     }
 
     return { js__backend_event_bus_register, js__backend_event_bus_callback }
@@ -781,8 +788,8 @@ const sffs = (() => {
 
   const with_handle =
     (fn: any) =>
-      (...args: any) =>
-        fn(handle, ...args)
+    (...args: any) =>
+      fn(handle, ...args)
 
   const setupDebugServer = () => {
     server = http.createServer((req: any, res: any) => {
