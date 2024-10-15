@@ -1,28 +1,50 @@
+<script lang="ts" context="module">
+  export type Pill = {
+    id: string
+    favicon?: string
+    title: string
+    type: string
+    data?: any
+    spaceId?: string
+  }
+</script>
+
 <script lang="ts">
   import { onMount, afterUpdate, tick, createEventDispatcher } from 'svelte'
   import { spring } from 'svelte/motion'
   import { flip } from 'svelte/animate'
   import { useOasis } from '../../service/oasis'
-  import { getFileKind, getFileType, getHostname, tooltip, truncateURL } from '@horizon/utils'
+  import { getFileKind, getFileType, getHostname, truncateURL } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
-  import ChatContextTabPicker from './ChatContextTabPicker.svelte'
-  import { writable } from 'svelte/store'
 
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
-  import type { ContextItem, Tab } from '../../types/browser.types'
+  import type { ContextItem } from '../../types/browser.types'
   import { ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
+  import { useResourceManager } from '@horizon/core/src/lib/service/resources'
 
   export let items: ContextItem[]
-  let containerRef
-  let isInitialized = false
+
   const oasis = useOasis()
+  const resourceManager = useResourceManager()
 
   const screenshotPreviews = new Map<string, string>()
+  let isInitialized = false
 
   $: pills = items.map((item) => {
     if (item.type === 'tab') {
       const tab = item.data
+
+      if (tab.type === 'resource' && tab.resourceType.startsWith('image/')) {
+        return {
+          id: item.id,
+          favicon: undefined,
+          title: 'Screenshot',
+          type: 'image',
+          data: tab
+        }
+      }
+
       return {
         id: item.id,
         favicon: tab.icon,
@@ -36,10 +58,20 @@
         id: item.id,
         favicon: undefined,
         title: 'Screenshot',
-        type: item.type
+        type: 'image'
       }
     } else if (item.type === 'resource') {
       const resource = item.data
+
+      if (resource.type.startsWith('image/')) {
+        return {
+          id: resource.id,
+          favicon: undefined,
+          title: 'Image',
+          type: 'image',
+          data: item.data
+        }
+      }
 
       const canonicalURL =
         (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
@@ -66,7 +98,7 @@
         data: item.data
       }
     }
-  })
+  }) as Pill[]
 
   const containerWidth = spring(220, { stiffness: 0.2, damping: 0.7 })
 
@@ -81,7 +113,7 @@
       y: getSubtleVerticalOffset(),
       rotate: getSubtleRotation(),
       width: 40,
-      height: 36,
+      height: 40,
       borderRadius: 9,
       textOpacity: 0,
       textBlur: 10,
@@ -90,20 +122,8 @@
     { stiffness: 0.5, damping: 0.8 }
   )
 
-  function getOrCreateScreenshotPreview(item: ContextItem) {
+  function blobToDataUrl(blob: Blob) {
     return new Promise<string | null>((resolve) => {
-      if (item.type !== 'screenshot') {
-        resolve(null)
-        return
-      }
-
-      if (screenshotPreviews.has(item.id)) {
-        resolve(screenshotPreviews.get(item.id) ?? null)
-        return
-      }
-
-      const blob = item.data
-
       // reduce the size of the image to 32x32
       const canvas = document.createElement('canvas')
       canvas.width = 32
@@ -123,10 +143,49 @@
 
         URL.revokeObjectURL(image.src)
 
-        screenshotPreviews.set(item.id, dataUrl)
         resolve(dataUrl)
       }
     })
+  }
+
+  async function getOrCreateScreenshotPreview(item?: ContextItem) {
+    if (!item) {
+      return null
+    }
+
+    let blob: Blob
+
+    if (item.type === 'tab' && item.data.type === 'resource') {
+      const tabResource = item.data
+      if (!tabResource.resourceType.startsWith('image/')) {
+        return null
+      }
+
+      const resource = await resourceManager.getResource(tabResource.resourceId)
+      if (!resource) {
+        return null
+      }
+
+      blob = await resource.getData()
+      resource.releaseData()
+    } else if (item.type === 'screenshot') {
+      blob = item.data
+    } else {
+      return null
+    }
+
+    if (screenshotPreviews.has(item.id)) {
+      return screenshotPreviews.get(item.id) ?? null
+    }
+
+    const dataUrl = await blobToDataUrl(blob)
+    if (!dataUrl) {
+      return null
+    }
+
+    screenshotPreviews.set(item.id, dataUrl)
+
+    return dataUrl
   }
 
   onMount(async () => {
@@ -180,7 +239,7 @@
   function handleMouseLeave(event: MouseEvent) {}
 </script>
 
-<div class="relative w-full" style="height: 54px;" aria-hidden="true" bind:this={containerRef}>
+<div class="relative w-full" style="height: 54px;" aria-hidden="true">
   <div
     class="flex items-center h-full relative overflow-x-autoscrollbar-hide overflow-y-hidden"
     style="width: {$containerWidth}px; height: 64px; min-width: 100%;  overflow-x: scroll;"
@@ -199,7 +258,9 @@
       >
         <div
           aria-hidden="true"
-          class="pill flex items-center bg-white z-0 shadow-md pl-[11px] hover:bg-red-100 transform hover:translate-y-[-6px]"
+          class="pill flex items-center bg-white z-0 shadow-md {pill.type === 'image'
+            ? 'pl-[6.5px]'
+            : 'pl-[11px]'} hover:bg-red-100 transform hover:translate-y-[-6px]"
           style="width: {$pillProperties[pills.findIndex((p) => p.id === pill.id)]
             .width}px; height: {$pillProperties[pills.findIndex((p) => p.id === pill.id)]
             .height}px; border-radius: {$pillProperties[pills.findIndex((p) => p.id === pill.id)]
@@ -213,7 +274,11 @@
           >
             <Icon name="close" size="11px" color="black" />
           </button>
-          <div class="w-5 h-5 flex items-center justify-center flex-shrink-0">
+          <div
+            class="flex items-center justify-center flex-shrink-0 {pill.type === 'image'
+              ? 'w-8 h-8'
+              : 'w-5 h-5'}"
+          >
             {#if pill.type === 'page'}
               <img
                 src={pill.favicon}
@@ -232,19 +297,22 @@
               {:else}
                 <SpaceIcon folder={pill.data} />
               {/if}
-            {:else if pill.type === 'screenshot'}
+            {:else if pill.type === 'image'}
               {#await getOrCreateScreenshotPreview(items.find((i) => i.id === pill.id))}
                 <Icon name="spinner" />
               {:then preview}
-                <img
-                  src={preview}
-                  alt={pill.title}
-                  class="w-full h-full object-contain"
-                  style="transition: transform 0.3s;"
-                  loading="lazy"
-                />
+                {#if preview}
+                  <img
+                    src={preview}
+                    alt={pill.title}
+                    class="w-full h-full object-contain rounded"
+                    style="transition: transform 0.3s;"
+                    loading="lazy"
+                  />
+                {:else}
+                  <Icon name="screenshot" size="20px" color="black" />
+                {/if}
               {/await}
-              <Icon name="screenshot" size="20px" color="black" />
             {:else if pill.type === 'resource'}
               {#if pill.data.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
                 <Icon name="docs" size="16px" />

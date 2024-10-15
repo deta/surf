@@ -16,7 +16,7 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { WebParser } from '@horizon/web-parser'
 
@@ -683,6 +683,10 @@
 
   onMount(async () => {
     await loadResource()
+  })
+
+  onDestroy(() => {
+    resource.releaseData()
   })
 </script>
 

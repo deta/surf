@@ -533,6 +533,7 @@
 
       if (resource.type.startsWith('image/')) {
         const blob = await resource.getData()
+        resource.releaseData()
 
         log.debug('Adding image resource as inline image to chat context')
 
@@ -654,11 +655,18 @@
       }
 
       const processResource = async (resourceId: string, type: string) => {
+        log.debug('Processing resource', resourceId, type)
         if (type === 'application/pdf') {
           resourceIds.push(resourceId)
         } else if (type.startsWith('image/')) {
           const resource = await resourceManager.getResource(resourceId)
+          if (!resource) {
+            log.error('Failed to get resource', resourceId)
+            return
+          }
+
           const blob = await resource?.getData()
+          resource?.releaseData()
           if (blob) {
             const dataUrl = await blobToDataUrl(blob)
             inlineImages.push(dataUrl)
@@ -675,7 +683,7 @@
           } else if (tab.type === 'space') {
             await processSpace(tab.spaceId)
           } else if (tab.type === 'resource') {
-            await processResource(tab.id, tab.resourceType)
+            await processResource(tab.resourceId, tab.resourceType)
           }
         } else if (item.type === 'screenshot') {
           inlineImages.push(await blobToDataUrl(item.data))
