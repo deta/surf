@@ -52,11 +52,6 @@ export default defineConfig({
           horizon: resolve(__dirname, 'src/preload/horizon.ts'),
           webview: resolve(__dirname, 'src/preload/webview.ts')
         },
-        output: {
-          manualChunks(id): string | void {
-            if (id.includes('horizon.ts')) return 'horizon'
-          }
-        },
         plugins: [
           ...(!disableAllObfuscation
             ? [
