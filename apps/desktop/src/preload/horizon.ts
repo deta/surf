@@ -681,7 +681,7 @@ const sffs = (() => {
       case ResourceProcessingStatusType.Finished:
         return true
       case ResourceProcessingStatusType.Failed:
-        return typeof obj.message === 'string'
+        return typeof obj.status.message === 'string'
     }
 
     return false
