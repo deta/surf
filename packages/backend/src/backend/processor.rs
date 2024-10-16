@@ -226,14 +226,19 @@ fn needs_processing(resource_type: &str) -> bool {
 
 pub fn get_youtube_contents_metadatas(
     source_uri: &str,
-    lang: Option<String>,
+    language: Option<String>,
 ) -> BackendResult<(Vec<String>, Vec<ResourceTextContentMetadata>)> {
     let runtime = tokio::runtime::Runtime::new()?;
-    let transcript_config = ytranscript::TranscriptConfig { lang };
+    let transcript_config = match language {
+        Some(language) => Some(ytranscript::TranscriptConfig {
+            lang: Some(language),
+        }),
+        _ => None,
+    };
     let transcripts = runtime
         .block_on(ytranscript::YoutubeTranscript::fetch_transcript(
             source_uri,
-            Some(transcript_config),
+            transcript_config,
         ))
         .map_err(|e| BackendError::GenericError(e.to_string()))?;
     let mut contents: Vec<String> = vec![];
