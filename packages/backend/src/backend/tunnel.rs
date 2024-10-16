@@ -82,7 +82,9 @@ impl WorkerTunnel {
                 .unwrap();
         });
 
-        let language = Some(language_setting).filter(|lang| lang == "en");
+        // TODO: the ytranscript library expects language to be `Some`.
+        // Switch to another library and don't force the English language.
+        let language = Some("en".to_owned());
         // spawn N processor threads
         (0..8).for_each(|n| {
             let tunnel_clone = tunnel.clone();
