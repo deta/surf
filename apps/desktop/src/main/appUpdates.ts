@@ -10,6 +10,7 @@ autoUpdater.on('update-available', async (updateInfo) => {
     type: 'info',
     message: `New Version ${updateInfo.version} Available`,
     checkboxLabel: 'Update And Restart',
+    checkboxChecked: true,
     buttons: ['OK']
   })
   if (userAction.checkboxChecked) {
